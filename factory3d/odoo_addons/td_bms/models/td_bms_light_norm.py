@@ -7,7 +7,7 @@ KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 
 
 class F3dBmsLightNorm(models.Model):
-    _name = "f3d.bms.light.norm"
+    _name = "td.bms.light.norm"
     _description = "Будівля: норма освітленості"
     _order = "sequence, key"
     _rec_name = "name"
@@ -33,7 +33,7 @@ class F3dBmsLightNorm(models.Model):
     )
     note = fields.Text(string="Примітка")
     sources = fields.Text(string="Джерела", help="URL по рядку")
-    group_ids = fields.One2many("f3d.bms.light.group", "norm_id", string="Групи")
+    group_ids = fields.One2many("td.bms.light.group", "norm_id", string="Групи")
     group_count = fields.Integer(compute="_compute_group_count")
     active = fields.Boolean(default=True)
 

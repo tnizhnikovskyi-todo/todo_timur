@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-27 -->
-    <record id="view_f3d_fire_bacnet_device_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.fire.bacnet.device.wizard.form</field>
-        <field name="model">f3d.fire.bacnet.device.wizard</field>
+    <record id="view_td_fire_bacnet_device_wizard_form" model="ir.ui.view">
+        <field name="name">td.fire.bacnet.device.wizard.form</field>
+        <field name="model">td.fire.bacnet.device.wizard</field>
         <field name="arch" type="xml">
             <form string="Змінити BACnet device">
                 <div class="alert alert-warning" role="alert">

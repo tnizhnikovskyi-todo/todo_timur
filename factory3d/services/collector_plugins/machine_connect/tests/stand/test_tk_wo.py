@@ -32,7 +32,7 @@ def wo_read(o, wid, fields=None):
     return o.read(
         "mrp.workorder",
         wid,
-        fields or ["state", "qty_produced", "qty_production", "f3d_qty_counted", "f3d_auto_started", "time_ids"],
+        fields or ["state", "qty_produced", "qty_production", "td_qty_counted", "td_auto_started", "time_ids"],
     )[0]
 
 
@@ -65,7 +65,7 @@ def test_tk04_autostart_fake(fresh, sim):
         redirect_source(o, "UA-SAW-1", fake.endpoint)
         enable_write(o, ["UA-SAW-1"], ["workcenters/SAW-1/job_cmd"])
         assert wait(
-            lambda: o.search_read("f3d.source", [("code", "=", "UA-SAW-1")], ["state"])[0]["state"] == "online", 90, 3
+            lambda: o.search_read("td.source", [("code", "=", "UA-SAW-1")], ["state"])[0]["state"] == "online", 90, 3
         )
         mo = make_mo(o, "BR-K4", 2)
         wid = wo_of(o, mo, "SAW-1")
@@ -87,25 +87,25 @@ def test_tk04_autostart_fake(fresh, sim):
         assert wait(lambda: wo_read(o, wid)["state"] == "progress", 40, 1), "WO не стала progress"
         assert time.time() - t0 <= 15 + 3  # AC-95: ≤ 15 с після WORKING
         w = wo_read(o, wid)
-        ts = o.read("mrp.workcenter.productivity", w["time_ids"], ["create_uid", "f3d_auto", "date_end"])
+        ts = o.read("mrp.workcenter.productivity", w["time_ids"], ["create_uid", "td_auto", "date_end"])
         open_t = [t for t in ts if not t["date_end"]]
         assert len(open_t) == 1, ts
-        emp = o.read("mrp.workorder", wid, ["f3d_employee_id"])[0]["f3d_employee_id"]
-        emp_code = o.read("hr.employee", emp[0], ["f3d_code"])[0]["f3d_code"] if emp else None
+        emp = o.read("mrp.workorder", wid, ["td_employee_id"])[0]["td_employee_id"]
+        emp_code = o.read("hr.employee", emp[0], ["td_code"])[0]["td_code"] if emp else None
         bot = o.search_read("res.users", [("login", "=", "f3d_machine_bot")], ["id"], context={"active_test": False})[
             0
         ]["id"]
-        # DEC-1: у CE немає hr-зв'язку в таймері (mrp_workorder) — оператор у `f3d_employee_id` WO
+        # DEC-1: у CE немає hr-зв'язку в таймері (mrp_workorder) — оператор у `td_employee_id` WO
         assert (
             emp_code == "OP-SAW-1"
             and open_t[0]["create_uid"][0] == bot
-            and open_t[0]["f3d_auto"]
-            and w["f3d_auto_started"]
+            and open_t[0]["td_auto"]
+            and w["td_auto_started"]
         ), (emp, open_t)
         for n in (1, 2):
             fake.set("RelativePiecesOut", n, "SAW-1")
             time.sleep(3)
-        assert wait(lambda: round(wo_read(o, wid)["f3d_qty_counted"]) == 2, 30, 2), wo_read(o, wid)
+        assert wait(lambda: round(wo_read(o, wid)["td_qty_counted"]) == 2, 30, 2), wo_read(o, wid)
         fake.set_jobs([(job, "Completed")], "SAW-1")
         fake.set("CurrentState", 2, "SAW-1")
         assert wait(lambda: wo_read(o, wid)["state"] == "done", 150, 5), wo_read(o, wid)
@@ -127,7 +127,7 @@ def test_tk04_autostart_fake(fresh, sim):
         print(
             "ТК-04: Σ інтервалів working SAW-1, хв:",
             round(run_min, 2),
-            o.read("mrp.workorder", wid, ["f3d_run_min"])[0],
+            o.read("mrp.workorder", wid, ["td_run_min"])[0],
         )
     finally:
         fake.stop()
@@ -152,13 +152,13 @@ def test_tk05_slide1_counter(fresh, sim):
     for v in range(65538, 65537 + qty - 3 + 1):
         sim.hold("workcenters/SLIDE-1/pieces_out", v, 1800)
         time.sleep(8)
-    assert wait(lambda: round(wo_read(o, wid)["f3d_qty_counted"]) == qty, 40, 2), wo_read(o, wid)
+    assert wait(lambda: round(wo_read(o, wid)["td_qty_counted"]) == qty, 40, 2), wo_read(o, wid)
     sim.hold("workcenters/SLIDE-1/state", 0, 600)
     assert wait(lambda: wo_read(o, wid)["state"] == "done", 120, 3), wo_read(o, wid)
     assert wo_read(o, wid)["qty_produced"] == qty
     sim.hold("workcenters/SLIDE-1/alarm", 1, 120)
     assert wait(lambda: machine(o, "SLIDE-1")["state"] == "fault", 30, 1)
-    req = o.search_read("maintenance.request", [("f3d_signal_id.code", "=", "workcenters/SLIDE-1/alarm")], ["name"])
+    req = o.search_read("maintenance.request", [("td_signal_id.code", "=", "workcenters/SLIDE-1/alarm")], ["name"])
     assert len(req) == 1, req
 
 

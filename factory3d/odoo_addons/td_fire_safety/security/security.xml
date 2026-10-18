@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- SPEC §4.2 -->
-    <record id="privilege_f3d_fire" model="res.groups.privilege">
-        <field name="name">Завод 3D: пожежна безпека</field>
-        <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+    <record id="privilege_td_fire" model="res.groups.privilege">
+        <field name="name">Пожежна безпека</field>
+        <field name="category_id" ref="td_factory3d.module_category_factory3d"/>
         <field name="sequence">85</field>
     </record>
-    <record id="group_f3d_fire_drill" model="res.groups">
+    <record id="group_td_fire_drill" model="res.groups">
         <field name="name">Ведення навчальних тривог</field>
-        <field name="privilege_id" ref="privilege_f3d_fire"/>
+        <field name="privilege_id" ref="privilege_td_fire"/>
         <field name="sequence">10</field>
-        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+        <field name="implied_ids" eval="[Command.link(ref('td_factory3d.group_td_user'))]"/>
         <field name="comment">Інженер з пожежної безпеки: навчання, перекличка, коментарі в журналі, персональні дані навчань.</field>
     </record>
-    <record id="factory3d_base.group_f3d_manager" model="res.groups">
-        <field name="implied_ids" eval="[Command.link(ref('group_f3d_fire_drill'))]"/>
+    <record id="td_factory3d.group_td_manager" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_td_fire_drill'))]"/>
     </record>
 
     <!-- SPEC §4.3: глобальні record rules. Правило приладу — W1; навчання й люди — розкоментувати з моделями W4. -->
-    <record id="f3d_fire_panel_rule_company" model="ir.rule">
+    <record id="td_fire_panel_rule_company" model="ir.rule">
         <field name="name">Пожежна безпека: прилад, компанія</field>
-        <field name="model_id" ref="model_f3d_fire_panel"/>
+        <field name="model_id" ref="model_td_fire_panel"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="f3d_fire_drill_rule_company" model="ir.rule">
+    <record id="td_fire_drill_rule_company" model="ir.rule">
         <field name="name">Пожежна безпека: навчання, компанія</field>
-        <field name="model_id" ref="model_f3d_fire_drill"/>
+        <field name="model_id" ref="model_td_fire_drill"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="f3d_fire_drill_person_rule_company" model="ir.rule">
+    <record id="td_fire_drill_person_rule_company" model="ir.rule">
         <field name="name">Пожежна безпека: люди навчання, компанія</field>
-        <field name="model_id" ref="model_f3d_fire_drill_person"/>
+        <field name="model_id" ref="model_td_fire_drill_person"/>
         <field name="domain_force">[('drill_id.company_id', 'in', company_ids)]</field>
     </record>
 </odoo>

@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- W3: V-17 (РЦ і обладнання). Вид обладнання тримаємо тут, щоб не виходити за перелік файлів воркера. -->
 <odoo>
-    <record id="view_mrp_workcenter_form_f3d_energy" model="ir.ui.view">
-        <field name="name">mrp.workcenter.form.f3d.energy</field>
+    <record id="view_mrp_workcenter_form_td_energy" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.td.energy</field>
         <field name="model">mrp.workcenter</field>
         <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_f3d_energy_view" type="object" class="oe_stat_button" icon="fa-bolt"
-                        groups="factory3d_energy.group_f3d_energy_user" invisible="not f3d_energy_node_id">
-                    <field name="f3d_kwh_today" widget="statinfo" string="кВт·год сьогодні"/>
+                        groups="td_energy.group_td_energy_user" invisible="not td_energy_node_id">
+                    <field name="td_kwh_today" widget="statinfo" string="кВт·год сьогодні"/>
                 </button>
             </xpath>
             <xpath expr="//page[@name='f3d']" position="inside">
-                <group name="f3d_energy" string="Енергія" groups="factory3d_energy.group_f3d_energy_user">
-                    <field name="f3d_energy_node_id"/>
-                    <field name="f3d_energy_p_now"/>
-                    <field name="f3d_kwh_idle_today"/>
+                <group name="f3d_energy" string="Енергія" groups="td_energy.group_td_energy_user">
+                    <field name="td_energy_node_id"/>
+                    <field name="td_energy_p_now"/>
+                    <field name="td_kwh_idle_today"/>
                 </group>
             </xpath>
         </field>
     </record>
 
-    <record id="view_maintenance_equipment_form_f3d_energy" model="ir.ui.view">
-        <field name="name">maintenance.equipment.form.f3d.energy</field>
+    <record id="view_maintenance_equipment_form_td_energy" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.td.energy</field>
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_f3d_energy_nodes" type="object" class="oe_stat_button" icon="fa-bolt"
-                        groups="factory3d_energy.group_f3d_energy_user" invisible="not f3d_energy_node_count">
-                    <field name="f3d_energy_node_count" widget="statinfo" string="Вузли мережі"/>
+                        groups="td_energy.group_td_energy_user" invisible="not td_energy_node_count">
+                    <field name="td_energy_node_count" widget="statinfo" string="Вузли мережі"/>
                 </button>
             </xpath>
         </field>

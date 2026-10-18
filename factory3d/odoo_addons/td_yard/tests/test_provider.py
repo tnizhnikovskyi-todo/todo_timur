@@ -5,7 +5,7 @@ from odoo.tests import tagged
 from .flow import at, freeze
 from .gate_case import GateCase
 
-PROVIDER = "f3d.viewer.provider.yard"
+PROVIDER = "td.viewer.provider.yard"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_yard")
@@ -30,17 +30,17 @@ class TestYardProvider(GateCase):
         provider = self.env[PROVIDER]
         self.assertEqual(provider._f3d_sequence, 160)
         self.assertEqual(provider._f3d_sections, ("yard",))
-        self.assertEqual(provider._f3d_group, "factory3d_base.group_f3d_user")
-        self.assertEqual(provider._f3d_viewer_bus_models(), ["f3d.yard.visit", "f3d.yard.gate", "f3d.yard.scale"])
+        self.assertEqual(provider._f3d_group, "td_factory3d.group_td_user")
+        self.assertEqual(provider._f3d_viewer_bus_models(), ["td.yard.visit", "td.yard.gate", "td.yard.scale"])
         patch_ = {}
         provider._f3d_viewer_delta(patch_, {"changes": {}})
         self.assertEqual(patch_, {})
-        provider._f3d_viewer_delta(patch_, {"user": self.user_guard, "changes": {"f3d.yard.visit": {"YV/1"}}})
+        provider._f3d_viewer_delta(patch_, {"user": self.user_guard, "changes": {"td.yard.visit": {"YV/1"}}})
         self.assertIn("yard", patch_)
 
     def test_collect_sections_and_positions(self):  # AC-62
-        self.dock_t1.write({"f3d_x": 0.0, "f3d_y": 5.0})
-        self.dock_t3.write({"f3d_x": 150.0, "f3d_y": 15.0})
+        self.dock_t1.write({"td_x": 0.0, "td_y": 5.0})
+        self.dock_t3.write({"td_x": 150.0, "td_y": 15.0})
         with freeze(at(12, 45)):
             west = self._visit_at("АА1111КТ", "handling")
             west.booking_id = self._booking(west, self.dock_t1, at(12), at(13), confirm=True)
@@ -87,8 +87,8 @@ class TestYardProvider(GateCase):
 
     def test_infra_cards(self):  # AC-63
         self.gate_w.sudo().write({"last_plate": "АА4512КТ", "last_plate_at": at(9, 10), "passes_today": 7})
-        scale = self.env.ref("factory3d_yard.scale_truck")
-        self.env["f3d.yard.weighing"].sudo().create(
+        scale = self.env.ref("td_yard.scale_truck")
+        self.env["td.yard.weighing"].sudo().create(
             {"scale_id": scale.id, "kind": "check", "weight_kg": 21380.0, "plate": "АА4512КТ", "source": "manual"}
         )
         payload = {"infra": {"cards": {"GATE-W": {}, "TRUCK-SCALE": {}}}}
@@ -110,7 +110,7 @@ class TestYardProvider(GateCase):
             "cards": {"GENSET": {"rows": [["Стан", "резерв"]]}, "GATE-W": {"title": "КПП"}},
         }
         patch_ = {"infra": infra}
-        self.provider._f3d_viewer_delta(patch_, dict(self.ctx, changes={"f3d.yard.gate": {"GATE-W"}}))
+        self.provider._f3d_viewer_delta(patch_, dict(self.ctx, changes={"td.yard.gate": {"GATE-W"}}))
         self.assertIs(patch_["infra"], infra)
         self.assertEqual(infra["totals"], {"genset_kw": 348})
         self.assertEqual(infra["cards"]["GENSET"], {"rows": [["Стан", "резерв"]]})

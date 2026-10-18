@@ -2,10 +2,10 @@
 // AC-17 (JS): DXF з LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC → відрізки; мм → м, зсув і поворот з underlay_params.
 // AC-18 (JS): DWG — повідомлення «Конвертуйте в DXF; DWG буде на сервері», нічого не малюється.
 import { after, animationFrame, describe, expect, getFixture, test } from "@odoo/hoot";
-import { DWG_MESSAGE, defaultUnderlayParams, importUnderlayFile, loadDxfParser, parseDxf } from "@factory3d_constructor/editor/dxf";
-import { mountEditor, unmountEditor } from "@factory3d_constructor/editor/app";
-import { OdooStore } from "@factory3d_constructor/editor/store";
-import { E, S, V } from "@factory3d_constructor/editor/state";
+import { DWG_MESSAGE, defaultUnderlayParams, importUnderlayFile, loadDxfParser, parseDxf } from "@td_constructor/editor/dxf";
+import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
+import { OdooStore } from "@td_constructor/editor/store";
+import { E, S, V } from "@td_constructor/editor/state";
 import { near } from "./helpers";
 import { makeLoad, mockRpc } from "./fixtures";
 

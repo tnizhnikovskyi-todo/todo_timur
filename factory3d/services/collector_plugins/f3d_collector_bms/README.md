@@ -1,7 +1,7 @@
 # f3d-collector-bms
 
 Плагін колектора factory3d `helvarnet`: освітлення Helvar Imagine 950 (DALI) за протоколом HelvarNet (TCP 50000).
-Специфікація: `docs/modules/factory3d_bms/SPEC.md` §8, R-31…R-37.
+Специфікація: `docs/modules/td_bms/SPEC.md` §8, R-31…R-37.
 
 ## Встановлення
 

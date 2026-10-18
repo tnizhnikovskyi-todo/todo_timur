@@ -1,7 +1,7 @@
 """ТК-11, ТК-14, ТК-16 (SPEC §13.2): причини простоїв, 3D-переглядач, кінець зміни.
 
 Відхилення (TEST_REPORT): ТК-11 крок 4 (злиття із записом оператора в «Цеху») — MAN/Shop Floor (Enterprise `mrp_workorder`
-відсутній, DEC-1), покрито Odoo-тестом test_merge_operator; ТК-14 — `factory3d_viewer` не встановлено; ТК-16 — календар РЦ EDGE-3
+відсутній, DEC-1), покрито Odoo-тестом test_merge_operator; ТК-14 — `td_viewer3d` не встановлено; ТК-16 — календар РЦ EDGE-3
 підмінено на «зміна до now+9 хв» (SPEC: 15:00–15:40 за реальним календарем).
 """
 
@@ -28,27 +28,27 @@ def test_tk11_reasons(fresh, sim):
     assert abs((dt(d["date_start"]) - t_put).total_seconds()) <= 8, (d, t_put)  # час переходу, а не час запису
     loss = o.call("ir.model.data", "check_object_reference", "mrp", "block_reason0")[1]
     op = odoo_rpc.Odoo(login="stand_op", password="stand_op")
-    op.call("f3d.downtime", "action_set_reason", [d["id"]], loss)
-    r = o.read("f3d.downtime", d["id"], ["reason_source", "reason_state", "loss_id"])[0]
+    op.call("td.downtime", "action_set_reason", [d["id"]], loss)
+    r = o.read("td.downtime", d["id"], ["reason_source", "reason_state", "loss_id"])[0]
     assert (r["reason_source"], r["reason_state"]) == ("operator", "to_confirm") and r["loss_id"][0] == loss, r
     master = odoo_rpc.Odoo(login="stand_master", password="stand_master")
-    master.call("f3d.downtime", "action_confirm", [d["id"]])
-    assert o.read("f3d.downtime", d["id"], ["reason_state"])[0]["reason_state"] == "confirmed"
+    master.call("td.downtime", "action_confirm", [d["id"]])
+    assert o.read("td.downtime", d["id"], ["reason_state"])[0]["reason_state"] == "confirmed"
     # простій коротший за micro_stop_s (120 с) при закритті видаляється (R-05 п. 4) — тримаємо стан ≥ 3 хв, як у SPEC
     time.sleep(max(0.0, 180 - (datetime.now(UTC).replace(tzinfo=None) - t_put).total_seconds()))
     sim.release("workcenters/SAW-2/state")  # повернення до моделі емулятора
     assert wait(lambda: machine(o, "SAW-2")["state"] != "idle", 60, 2)
-    closed = o.read("f3d.downtime", d["id"], ["date_end"])[0]["date_end"]
+    closed = o.read("td.downtime", d["id"], ["date_end"])[0]["date_end"]
     assert closed, "простій не закрито"
     assert (
-        o.search_read("mrp.workcenter", [("f3d_code", "=", "SAW-2")], ["working_state"])[0]["working_state"]
+        o.search_read("mrp.workcenter", [("td_code", "=", "SAW-2")], ["working_state"])[0]["working_state"]
         != "blocked"
     )
 
 
 def test_tk14_viewer():
-    """ТК-14: 3D-переглядач (AC-86…88 на стенді) — `factory3d_viewer` у стенді не встановлено."""
-    pytest.skip("factory3d_viewer не встановлено в стенді (AC-70 skip до viewer); перевірка в UI — MAN")
+    """ТК-14: 3D-переглядач (AC-86…88 на стенді) — `td_viewer3d` у стенді не встановлено."""
+    pytest.skip("td_viewer3d не встановлено в стенді (AC-70 skip до viewer); перевірка в UI — MAN")
 
 
 @pytest.mark.timeout(3000)
@@ -83,7 +83,7 @@ def test_tk16_end_of_shift(fresh, sim):
     )
     o.write(
         "mrp.workcenter",
-        o.search_read("mrp.workcenter", [("f3d_code", "=", "EDGE-3")], ["id"])[0]["id"],
+        o.search_read("mrp.workcenter", [("td_code", "=", "EDGE-3")], ["id"])[0]["id"],
         {"resource_calendar_id": cal},
     )
     sim.hold("workcenters/EDGE-3/state", 2, 3600)  # простій через межу зміни
@@ -100,18 +100,18 @@ def test_tk16_end_of_shift(fresh, sim):
     )
     cron_run(o, "OEE змін")
     rows = o.search_read(
-        "f3d.oee.shift",
+        "td.oee.shift",
         [("code", "=", "EDGE-3"), ("date", "=", e_local.strftime("%Y-%m-%d"))],
         ["state", "oee", "availability", "performance", "quality", "run_min", "down_min", "unexplained_min", "ppt_min"],
     )
     assert rows and rows[0]["state"] == "closed", rows
-    state_after = o.read("f3d.oee.shift", rows[0]["id"], ["write_date"])[0]["write_date"]
+    state_after = o.read("td.oee.shift", rows[0]["id"], ["write_date"])[0]["write_date"]
     cron_run(o, "OEE змін")
-    assert o.read("f3d.oee.shift", rows[0]["id"], ["write_date"])[0]["write_date"] == state_after, (
+    assert o.read("td.oee.shift", rows[0]["id"], ["write_date"])[0]["write_date"] == state_after, (
         "повторний крон змінив закриту зміну"
     )
     for r in o.search_read(
-        "f3d.oee.shift",
+        "td.oee.shift",
         [],
         ["oee", "availability", "performance", "quality", "run_min", "down_min", "unexplained_min", "ppt_min"],
     ):

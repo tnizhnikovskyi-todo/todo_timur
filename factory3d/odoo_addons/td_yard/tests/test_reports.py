@@ -13,7 +13,7 @@ class TestYardReports(YardFlowCase):
                 {"arrived_at": at(9, 0), "at_dock_at": at(9, wait)}
             )
         self._visit(plate="АА9999КТ", carrier_id=carrier.id).write({"arrived_at": at(9, 0)})
-        group = self.env["f3d.yard.visit"].read_group(
+        group = self.env["td.yard.visit"].read_group(
             [("carrier_id", "=", carrier.id)], ["wait_min:avg"], ["carrier_id"]
         )
         self.assertEqual(group[0]["wait_min"], 30.0)
@@ -32,9 +32,9 @@ class TestYardReports(YardFlowCase):
             }
         )
         self.assertEqual((visit.wait_min, visit.dock_min, visit.total_min), (20.0, 80.0, 115.0))
-        Report = self.env["f3d.yard.dock.report"]
+        Report = self.env["td.yard.dock.report"]
         Report.flush_model()
-        self.env["f3d.yard.visit"].flush_model()
+        self.env["td.yard.visit"].flush_model()
         row = Report.search([("dock_id", "=", self.dock_t1.id)])
         self.assertEqual(len(row), 1)
         self.assertEqual((row.busy_min, row.idle_min, row.occupancy_pct, row.visit_count), (80.0, 400.0, 16.7, 1))

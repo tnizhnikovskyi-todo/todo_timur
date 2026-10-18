@@ -9,13 +9,13 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dAccessUserLink(models.Model):
-    _name = 'f3d.access.user.link'
+    _name = 'td.access.user.link'
     _description = 'СКУД: користувач BioStar'
     _order = 'server_id, biostar_user_id'
     _rec_name = 'biostar_user_id'
     _rec_names_search = ['biostar_user_id', 'biostar_name']
 
-    server_id = fields.Many2one('f3d.access.server', required=True, index=True, ondelete='cascade')
+    server_id = fields.Many2one('td.access.server', required=True, index=True, ondelete='cascade')
     company_id = fields.Many2one('res.company', related='server_id.company_id', store=True, index=True)
     biostar_user_id = fields.Char(string='Користувач BioStar (user_id)', required=True, index=True, size=64)
     biostar_name = fields.Char(string="Ім'я в BioStar", size=128, readonly=True)
@@ -58,11 +58,11 @@ class F3dAccessUserLink(models.Model):
             rec.display_name = "%s · %s" % (rec.biostar_user_id, who)
 
     def _compute_event_count(self):
-        if 'f3d.access.event' not in self.env:
+        if 'td.access.event' not in self.env:
             self.event_count = 0
             return
         for rec in self:
-            rec.event_count = self.env['f3d.access.event'].search_count([('link_id', '=', rec.id)])
+            rec.event_count = self.env['td.access.event'].search_count([('link_id', '=', rec.id)])
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -113,8 +113,8 @@ class F3dAccessUserLink(models.Model):
                                     employee.name, uid)
                 else:
                     vals = {'employee_id': employee.id, 'match': match}
-            elif not ambiguous and 'f3d.access.visitor' in self.env:
-                visitor = self.env['f3d.access.visitor'].sudo().search(
+            elif not ambiguous and 'td.access.visitor' in self.env:
+                visitor = self.env['td.access.visitor'].sudo().search(
                     [('biostar_user_id', '=', uid), ('server_id', '=', link.server_id.id)])
                 if len(visitor) == 1:
                     vals = {'visitor_id': visitor.id, 'match': 'visitor'}
@@ -126,14 +126,14 @@ class F3dAccessUserLink(models.Model):
         if kind == 'barcode':
             return Employee.search([('barcode', '=', uid)] + company)
         if kind == 'alias':
-            return Employee.search([('f3d_alias', '=', uid)] + company)
-        return Employee.search([('f3d_code', '!=', False)] + company).filtered(
-            lambda e: e.f3d_code.replace('-', '') == uid)
+            return Employee.search([('td_alias', '=', uid)] + company)
+        return Employee.search([('td_code', '!=', False)] + company).filtered(
+            lambda e: e.td_code.replace('-', '') == uid)
 
     @api.model
     def _f3d_match_employee(self, biostar_user_id, server=None):
         """R-03: знайти або створити зв'язок (server, user) і зіставити з працівником; повертає зв'язок."""
-        server = server or self.env['f3d.access.server'].sudo().search([('active', '=', True)], limit=1)
+        server = server or self.env['td.access.server'].sudo().search([('active', '=', True)], limit=1)
         link = self.sudo().with_context(active_test=False).search(
             [('server_id', '=', server.id), ('biostar_user_id', '=', biostar_user_id)], limit=1)
         if not link:
@@ -142,12 +142,12 @@ class F3dAccessUserLink(models.Model):
         return link
 
     def action_rematch(self):
-        if not self.env.su and not self.env.user.has_group('factory3d_access.group_f3d_access_admin'):
+        if not self.env.su and not self.env.user.has_group('td_access.group_td_access_admin'):
             raise AccessError("Підбирати працівників може лише адміністратор СКУД.")
         self.filtered(lambda r: r.match in ('none', 'barcode', 'alias', 'code'))._f3d_rematch()
         return True
 
     def action_open_events(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'f3d.access.event',
+        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'td.access.event',
                 'view_mode': 'list,form', 'domain': [('link_id', '=', self.id)]}

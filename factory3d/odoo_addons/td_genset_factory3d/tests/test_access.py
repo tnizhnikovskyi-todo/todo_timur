@@ -8,7 +8,7 @@ from odoo.tests import tagged
 from ..adapters import td_genset as td
 from .test_rules import GensetCase
 
-MODELS = ("f3d.genset.link", "f3d.genset.profile", "f3d.genset.event.map")
+MODELS = ("td.genset.link", "td.genset.profile", "td.genset.event.map")
 
 
 @tagged("post_install", "-at_install")
@@ -27,10 +27,10 @@ class TestAccess(GensetCase):
                 }
             )
         )
-        cls.has_viewer = "f3d.viewer.event" in cls.env
+        cls.has_viewer = "td.viewer.event" in cls.env
 
     def payload(self, user, **kw):
-        from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+        from odoo.addons.td_viewer3d.tools.payload import PayloadBuilder
 
         return PayloadBuilder(self.env(user=user), **kw).build()
 
@@ -63,9 +63,9 @@ class TestAccess(GensetCase):
     def test_params_admin_only(self):  # AC-33
         icp = self.env["ir.config_parameter"].with_user(self.user_manager)
         with self.assertRaises(AccessError):
-            icp.set_param("factory3d.genset.read_enabled", "True")
+            icp.set_param("td.genset.read_enabled", "True")
         with self.assertRaises(AccessError):
-            self.env["ir.config_parameter"].with_user(self.user_reader).search([("key", "=like", "factory3d.genset.%")])
+            self.env["ir.config_parameter"].with_user(self.user_reader).search([("key", "=like", "td.genset.%")])
 
     def test_no_commands_runtime(self):  # AC-58, ТБ-03
         self.set_param("write_enabled", "True")
@@ -80,8 +80,8 @@ class TestAccess(GensetCase):
 
     def test_nobody(self):  # AC-59
         with self.assertRaises(AccessError):
-            self.env["f3d.genset.link"].with_user(self.user_nobody).search([])
-        menu = self.env.ref("factory3d_genset.menu_f3d_genset")
+            self.env["td.genset.link"].with_user(self.user_nobody).search([])
+        menu = self.env.ref("td_genset_factory3d.menu_td_genset")
         self.assertNotIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_nobody)._visible_menu_ids())
         self.assertIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_reader)._visible_menu_ids())
         # reader читає зв'язку й профіль
@@ -111,7 +111,7 @@ class TestAccess(GensetCase):
     def test_private_methods_rpc(self):  # ТБ-02
         link = self.link.with_user(self.user_reader)
         for name in ("_publish_one", "_cron_publish", "_apply_event", "_compute_values"):
-            if not hasattr(self.env["f3d.genset.link"], name):
+            if not hasattr(self.env["td.genset.link"], name):
                 continue
             with self.assertRaises(AccessError, msg=name):
                 call_kw(link, name, [link.ids], {})

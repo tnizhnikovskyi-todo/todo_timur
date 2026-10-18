@@ -54,7 +54,7 @@ class Metrics:
         self.commands = Counter("collector_commands", "Команди за станом", ["state"], registry=r)
         self.clock_skew = Gauge("collector_clock_skew_seconds", "Розходження годинників з Odoo", registry=r)
         self.allowlist_denied = Counter("collector_allowlist_denied", "Відмови allow-list", registry=r)
-        # плагін sics (factory3d_yard §8.8): лише оголошення, лічильники збільшує плагін через getattr
+        # плагін sics (td_yard §8.8): лише оголошення, лічильники збільшує плагін через getattr
         sics_labels = ["type", "source"]
         self.collector_sics_frames_total = Counter("collector_sics_frames", "Кадри SICS", sics_labels, registry=r)
         self.collector_sics_reconnects_total = Counter(
@@ -63,7 +63,7 @@ class Metrics:
         self.collector_sics_errors_total = Counter(
             "collector_sics_errors", "Помилки SICS", [*sics_labels, "kind"], registry=r
         )
-        # плагін helvarnet (factory3d_bms §8.6): лише оголошення, значення змінює плагін через getattr
+        # плагін helvarnet (td_bms §8.6): лише оголошення, значення змінює плагін через getattr
         self.collector_helvarnet_queries_total = Counter(
             "collector_helvarnet_queries", "Запити HelvarNet", ["source", "cmd"], registry=r
         )

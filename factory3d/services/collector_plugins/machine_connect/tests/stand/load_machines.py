@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 MACHINES_CSV = (
-    Path(__file__).resolve().parents[5] / "odoo_addons" / "factory3d_machine_connect" / "data" / "mc_machines.csv"
+    Path(__file__).resolve().parents[5] / "odoo_addons" / "td_machine_connect" / "data" / "mc_machines.csv"
 )
 
 

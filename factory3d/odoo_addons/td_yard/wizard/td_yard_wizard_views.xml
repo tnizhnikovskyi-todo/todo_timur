@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_reject_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.yard.reject.wizard.form</field>
-        <field name="model">f3d.yard.reject.wizard</field>
+    <record id="view_td_yard_reject_wizard_form" model="ir.ui.view">
+        <field name="name">td.yard.reject.wizard.form</field>
+        <field name="model">td.yard.reject.wizard</field>
         <field name="arch" type="xml">
             <form string="Відхилити рейс">
                 <group>

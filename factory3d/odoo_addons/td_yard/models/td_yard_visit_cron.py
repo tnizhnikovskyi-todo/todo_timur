@@ -15,7 +15,7 @@ BATCH = 1000
 
 
 class F3dYardVisitCron(models.Model):
-    _inherit = "f3d.yard.visit"
+    _inherit = "td.yard.visit"
 
     @api.model
     def _cron_gc(self):
@@ -23,7 +23,7 @@ class F3dYardVisitCron(models.Model):
         env = self.env
         now = fields.Datetime.now()
         report = {"lpr_deleted": 0, "images_deleted": 0, "pii_cleared": 0, "weighings_deleted": 0}
-        Event = env["f3d.yard.lpr.event"].sudo()
+        Event = env["td.yard.lpr.event"].sudo()
         cutoff = now - timedelta(days=P.get_int(env, "lpr_keep_days"))
         while True:
             events = Event.search([("received_at", "<", cutoff)], limit=BATCH)
@@ -56,7 +56,7 @@ class F3dYardVisitCron(models.Model):
             visits.write({"driver_phone": False, "driver_doc": False, "pii_cleared": True})
             report["pii_cleared"] += len(visits)
         cutoff = now - timedelta(days=P.get_int(env, "weighing_unassigned_keep_days"))
-        Weighing = env["f3d.yard.weighing"].sudo()
+        Weighing = env["td.yard.weighing"].sudo()
         while True:
             old = Weighing.search([("state", "=", "unassigned"), ("ts", "<", cutoff)], limit=BATCH)
             if not old:
@@ -69,7 +69,7 @@ class F3dYardVisitCron(models.Model):
     @api.model
     def _cron_day_reset(self):
         """R-23: добові лічильники воріт."""
-        gates = self.env["f3d.yard.gate"].sudo().search([])
+        gates = self.env["td.yard.gate"].sudo().search([])
         for gate in gates:
             gate.write(
                 {
@@ -85,7 +85,7 @@ class F3dYardVisitCron(models.Model):
     @api.model
     def f3d_yard_run_migration(self):
         """Серверна дія V-34: повторити міграцію двору (лише адміністратор «Завод 3D»)."""
-        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError("Повторити міграцію може лише адміністратор «Завод 3D».")
         from ..hooks import run_all
 

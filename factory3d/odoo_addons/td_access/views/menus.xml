@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_f3d_access" name="Доступ" parent="factory3d_base.menu_f3d_root" sequence="70"
-              groups="group_f3d_access_security"/>
-    <menuitem id="menu_f3d_access_presence" name="Люди по зонах" parent="menu_f3d_access" sequence="10"
-              groups="group_f3d_access_security" action="action_f3d_access_presence"/>
-    <menuitem id="menu_f3d_access_event" name="Журнал подій" parent="menu_f3d_access" sequence="20"
-              groups="group_f3d_access_security" action="action_f3d_access_event"/>
-    <menuitem id="menu_f3d_access_visitor" name="Відвідувачі" parent="menu_f3d_access" sequence="30"
-              groups="group_f3d_access_security" action="action_f3d_access_visitor"/>
-    <menuitem id="menu_f3d_access_door" name="Двері" parent="menu_f3d_access" sequence="40"
-              groups="group_f3d_access_security" action="action_f3d_access_door"/>
-    <menuitem id="menu_f3d_access_device" name="Пристрої" parent="menu_f3d_access" sequence="50"
-              groups="group_f3d_access_security" action="action_f3d_access_device"/>
-    <menuitem id="menu_f3d_access_card" name="Картки" parent="menu_f3d_access" sequence="60"
-              groups="group_f3d_access_security" action="action_f3d_access_card"/>
-    <menuitem id="menu_f3d_access_user_link" name="Користувачі BioStar" parent="menu_f3d_access" sequence="70"
-              groups="group_f3d_access_admin" action="action_f3d_access_user_link"/>
-    <menuitem id="menu_f3d_access_reprocess" name="Повторна обробка" parent="menu_f3d_access" sequence="80"
-              groups="group_f3d_access_admin" action="action_f3d_access_reprocess_wizard"/>
-    <menuitem id="menu_f3d_access_server" name="Сервери BioStar" parent="menu_f3d_access" sequence="90"
-              groups="factory3d_base.group_f3d_admin" action="action_f3d_access_server"/>
-    <menuitem id="menu_f3d_access_att_server" name="Сервери BioStar"
+    <menuitem id="menu_td_access" name="Доступ" parent="td_factory3d.menu_td_root" sequence="70"
+              groups="group_td_access_security"/>
+    <menuitem id="menu_td_access_presence" name="Люди по зонах" parent="menu_td_access" sequence="10"
+              groups="group_td_access_security" action="action_td_access_presence"/>
+    <menuitem id="menu_td_access_event" name="Журнал подій" parent="menu_td_access" sequence="20"
+              groups="group_td_access_security" action="action_td_access_event"/>
+    <menuitem id="menu_td_access_visitor" name="Відвідувачі" parent="menu_td_access" sequence="30"
+              groups="group_td_access_security" action="action_td_access_visitor"/>
+    <menuitem id="menu_td_access_door" name="Двері" parent="menu_td_access" sequence="40"
+              groups="group_td_access_security" action="action_td_access_door"/>
+    <menuitem id="menu_td_access_device" name="Пристрої" parent="menu_td_access" sequence="50"
+              groups="group_td_access_security" action="action_td_access_device"/>
+    <menuitem id="menu_td_access_card" name="Картки" parent="menu_td_access" sequence="60"
+              groups="group_td_access_security" action="action_td_access_card"/>
+    <menuitem id="menu_td_access_user_link" name="Користувачі BioStar" parent="menu_td_access" sequence="70"
+              groups="group_td_access_admin" action="action_td_access_user_link"/>
+    <menuitem id="menu_td_access_reprocess" name="Повторна обробка" parent="menu_td_access" sequence="80"
+              groups="group_td_access_admin" action="action_td_access_reprocess_wizard"/>
+    <menuitem id="menu_td_access_server" name="Сервери BioStar" parent="menu_td_access" sequence="90"
+              groups="td_factory3d.group_td_admin" action="action_td_access_server"/>
+    <menuitem id="menu_td_access_att_server" name="Сервери BioStar"
               parent="hr_attendance.menu_hr_attendance_configuration" sequence="50"
-              groups="factory3d_base.group_f3d_admin" action="action_f3d_access_server"/>
-    <menuitem id="menu_f3d_access_att_report" name="Проходи СКУД" parent="hr_attendance.menu_hr_attendance_reporting"
-              sequence="20" groups="hr_attendance.group_hr_attendance_user,group_f3d_access_security"
-              action="action_f3d_access_event_report"/>
-    <menuitem id="menu_f3d_access_settings" name="Налаштування СКУД" parent="factory3d_base.menu_f3d_config"
-              sequence="70" groups="factory3d_base.group_f3d_admin" action="action_f3d_access_settings"/>
+              groups="td_factory3d.group_td_admin" action="action_td_access_server"/>
+    <menuitem id="menu_td_access_att_report" name="Проходи СКУД" parent="hr_attendance.menu_hr_attendance_reporting"
+              sequence="20" groups="hr_attendance.group_hr_attendance_user,group_td_access_security"
+              action="action_td_access_event_report"/>
+    <menuitem id="menu_td_access_settings" name="Налаштування СКУД" parent="td_factory3d.menu_td_config"
+              sequence="70" groups="td_factory3d.group_td_admin" action="action_td_access_settings"/>
 </odoo>

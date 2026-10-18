@@ -7,7 +7,7 @@ import tempfile
 
 from odoo.tests import BaseCase, tagged
 
-from odoo.addons.factory3d_viewer.tools import dates, static_data
+from odoo.addons.td_viewer3d.tools import dates, static_data
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -53,7 +53,7 @@ class TestStatic(BaseCase):
         manifest = json.loads(body)
         self.assertTrue(manifest["parts"])
         for part in manifest["parts"]:
-            self.assertRegex(part["file"], r"^/factory3d_viewer/static/model/parts/\w+\.glb\?v=[0-9a-f]{12}$")
+            self.assertRegex(part["file"], r"^/td_viewer3d/static/model/parts/\w+\.glb\?v=[0-9a-f]{12}$")
         self.assertEqual(hashlib.sha1(body).hexdigest(), sha1)
 
 

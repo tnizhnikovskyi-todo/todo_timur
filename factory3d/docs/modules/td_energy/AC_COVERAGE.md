@@ -1,7 +1,7 @@
-# factory3d_energy — карта покриття AC
+# td_energy — карта покриття AC
 
-Джерело AC — `SPEC.md`; результати стенда — `TEST_REPORT.md`; юніт-тести — `odoo_addons/factory3d_energy/tests/`.
-Тести стенда (pytest) — `tests/stand/`. Статус UT: `F3D_TEST_INSTALL=factory3d_energy run_tests.sh <db> /factory3d_energy` — 0 failed.
+Джерело AC — `SPEC.md`; результати стенда — `TEST_REPORT.md`; юніт-тести — `odoo_addons/td_energy/tests/`.
+Тести стенда (pytest) — `tests/stand/`. Статус UT: `F3D_TEST_INSTALL=td_energy run_tests.sh <db> /td_energy` — 0 failed.
 
 | AC | Тип | Юніт-тест | Стенд / MAN | Статус |
 |---|---|---|---|---|
@@ -67,9 +67,9 @@
 | AC-60 | UT | `test_ats.py::TestAts.test_incomer_fallback` | — | UT зелений |
 | AC-61 | UT | `test_payload.py::TestPayload.test_infra_cards_totals` | — | UT зелений |
 | AC-62 | UT | `test_ats.py::TestAts.test_bridge_mismatch_event` | — | UT зелений |
-| AC-63 | UT | `test_payload.py::TestPayload.test_energy_section_keys_and_numbers` | `stand/test_tk.py::test_tk12_viewer` | стенд ТК-12 / MAN: skip (factory3d_viewer) ; UT зелений |
+| AC-63 | UT | `test_payload.py::TestPayload.test_energy_section_keys_and_numbers` | `stand/test_tk.py::test_tk12_viewer` | стенд ТК-12 / MAN: skip (td_viewer3d) ; UT зелений |
 | AC-64 | UT | `test_payload.py::TestPayload.test_cells_states_consumers` | — | UT зелений |
-| AC-65 | UT | `test_payload.py::TestPayload.test_cost_hidden_kiosk` | `stand/test_tb.py::test_tb02_master_money_fields`<br>`stand/test_tk.py::test_tk12_viewer` | стенд ТК-12 / MAN: skip (factory3d_viewer) ; UT зелений |
+| AC-65 | UT | `test_payload.py::TestPayload.test_cost_hidden_kiosk` | `stand/test_tb.py::test_tb02_master_money_fields`<br>`stand/test_tk.py::test_tk12_viewer` | стенд ТК-12 / MAN: skip (td_viewer3d) ; UT зелений |
 | AC-66 | UT | `test_payload.py::TestPayload.test_workcenter_energy` | — | UT зелений |
 | AC-67 | UT | `test_payload.py::TestPayload.test_infra_cards_totals` | — | UT зелений |
 | AC-68 | UT | `test_payload.py::TestPayload.test_delta_deep_merge` | — | UT зелений |

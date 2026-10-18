@@ -31,7 +31,7 @@ def _num(value):
 
 
 class F3dGensetEventMap(models.Model):
-    _name = "f3d.genset.event.map"
+    _name = "td.genset.event.map"
     _description = "Генератор: мапа подій → заявки ТО"
     _order = "sequence, key"
 
@@ -134,7 +134,7 @@ class F3dGensetEventMap(models.Model):
         ts_txt = ts.replace(tzinfo=timezone.utc).astimezone(KYIV).strftime("%d.%m %H:%M") if ts else "—"
         ref = link.td_genset_ref
         raw = {
-            "code": link.f3d_code or "—",
+            "code": link.td_code or "—",
             "name": ev.get("name") or "—",
             "value": _num(ev.get("value")),
             "unit": ev.get("unit") or "",

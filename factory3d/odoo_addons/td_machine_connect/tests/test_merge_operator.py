@@ -22,7 +22,7 @@ class TestMerge(DowntimeMixin, F3DMachineCase):
         machine_rec = self.records(dt)
         self.assertEqual(len(machine_rec), 1)
         rec = self._operator_block(self.user_mrp, "mrp.block_reason1", "09:50")
-        self.assertEqual((rec.f3d_downtime_id, rec.f3d_source), (dt, "operator"))
+        self.assertEqual((rec.td_downtime_id, rec.td_source), (dt, "operator"))
         self.assertEqual(machine_rec.date_end, rec.date_start)
         self.assertTrue(machine_rec.exists() and rec.exists())
         self.assertEqual((dt.reason_source, dt.reason_state), ("operator", "to_confirm"))
@@ -31,7 +31,7 @@ class TestMerge(DowntimeMixin, F3DMachineCase):
         for prev, nxt in zip(recs, recs[1:], strict=False):
             self.assertLessEqual(prev.date_end or kt("23:00"), nxt.date_start)
         master_rec = self._operator_block(self.user_mrp_manager, "mrp.block_reason0", "09:55")
-        self.assertEqual(master_rec.f3d_source, "master")
+        self.assertEqual(master_rec.td_source, "master")
         self.assertEqual(dt.reason_state, "confirmed")
 
     def test_operator_block_before_stop(self):
@@ -39,12 +39,12 @@ class TestMerge(DowntimeMixin, F3DMachineCase):
         m = self.m_ua
         self.set_working(m)
         rec = self._operator_block(self.user_mrp, "mrp.block_reason0", "10:00")
-        self.assertFalse(rec.f3d_downtime_id)
+        self.assertFalse(rec.td_downtime_id)
         self.feed(self.ua(m, "10:05:00", state="READY"))
         self.tick("10:07:31")
         dt = m.current_downtime_id
         self.assertEqual(m.state, "idle")
-        self.assertEqual(rec.f3d_downtime_id, dt)
+        self.assertEqual(rec.td_downtime_id, dt)
         self.assertEqual(
             (dt.loss_id, dt.reason_source, dt.reason_state),
             (self.env.ref("mrp.block_reason0"), "operator", "to_confirm"),
@@ -56,13 +56,13 @@ class TestMerge(DowntimeMixin, F3DMachineCase):
         self.feed(self.ua(m, "10:00:00", state="READY"))
         dt = m.current_downtime_id
         rec = self._operator_block(self.user_mrp, "mrp.block_reason0", "10:05")
-        self.assertEqual(rec.f3d_downtime_id, dt)
+        self.assertEqual(rec.td_downtime_id, dt)
         self.assertEqual(self.wc_ua.working_state, "blocked")
         self.feed(self.ua(m, "10:20:00", state="WORKING"))
         self.assertEqual(rec.date_end, kt("10:20"))
         self.assertNotEqual(self.wc_ua.working_state, "blocked")
         self.assertTrue(rec.exists())
-        machine_rec = self.records(dt).filtered("f3d_auto")
+        machine_rec = self.records(dt).filtered("td_auto")
         self.assertEqual((machine_rec.date_start, machine_rec.date_end), (kt("10:00"), kt("10:05")))
 
     def test_unblock_reopens_fault_record(self):
@@ -78,7 +78,7 @@ class TestMerge(DowntimeMixin, F3DMachineCase):
         opened = self.records(dt).filtered(lambda r: not r.date_end)
         self.assertEqual(len(opened), 1)
         self.assertEqual(opened.description, "Аварія триває")
-        self.assertTrue(opened.f3d_auto)
+        self.assertTrue(opened.td_auto)
         self.assertEqual(self.wc_ua.working_state, "blocked")
 
     def test_working_operator_record_closed_by_cron(self):

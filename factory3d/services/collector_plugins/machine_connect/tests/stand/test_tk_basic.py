@@ -41,7 +41,7 @@ def snapshots() -> dict:
         + psql("SELECT max(write_date) FROM mrp_workcenter_productivity"),
         "S5": psql(
             "SELECT q.location_id, q.product_id, q.lot_id, q.quantity FROM stock_quant q JOIN stock_location l ON l.id = q.location_id "
-            "WHERE l.f3d_code LIKE 'PLT-%' ORDER BY 1, 2, 3, 4"
+            "WHERE l.td_code LIKE 'PLT-%' ORDER BY 1, 2, 3, 4"
         ),
     }
 
@@ -60,29 +60,29 @@ def test_tk01_install_migration_read(sim):
         assert before[k] == after[k], (k, before[k][:3], after[k][:3])  # AC-83…85: стандартні дані не змінились
     stand_sh("odoo-start")
     o = odoo_rpc.Odoo()
-    rep = json.loads(o.param("factory3d.machine_connect.migration_report"))
+    rep = json.loads(o.param("td.machine_connect.migration_report"))
     assert rep["state"] == "done" and rep["machines"] == 35, rep
-    assert o.count("f3d.machine") == 35
+    assert o.count("td.machine") == 35
     assert (
-        o.count("f3d.signal", [("module", "=", "machine_connect")]) >= 200
+        o.count("td.signal", [("module", "=", "machine_connect")]) >= 200
     )  # 207 = 35 верстатів + GANTRY-1 + CUTOPT (DEC-17)
     sim.scenario("shift", speed=1, trucks=False, people=False)
     stand_sh("collector-restart")
     t0 = time.time()
-    assert wait(lambda: o.count("f3d.machine", [("raw_ts", "!=", False)]) >= 35, 180, 3), (
+    assert wait(lambda: o.count("td.machine", [("raw_ts", "!=", False)]) >= 35, 180, 3), (
         "не всі верстати прочитано за 3 хв"
     )
     read_s = time.time() - t0
-    st = {m["state"] for m in o.search_read("f3d.machine", [], ["state"])}
+    st = {m["state"] for m in o.search_read("td.machine", [], ["state"])}
     assert "nodata" not in st, st
-    ms = o.search_read("f3d.machine", [], ["code", "state", "current_log_id"])
+    ms = o.search_read("td.machine", [], ["code", "state", "current_log_id"])
     assert all(m["current_log_id"] for m in ms), "у кожного верстата має бути відкритий інтервал журналу"
-    assert o.count("f3d.machine.state.log", [("date_end", "=", False)]) == 35
+    assert o.count("td.machine.state.log", [("date_end", "=", False)]) == 35
 
     def sources():
         return {
             s["code"]: s["state"]
-            for s in o.search_read("f3d.source", [("module", "=", "machine_connect")], ["code", "state"])
+            for s in o.search_read("td.source", [("module", "=", "machine_connect")], ["code", "state"])
         }
 
     wait(
@@ -92,7 +92,7 @@ def test_tk01_install_migration_read(sim):
     bad = {c: v for c, v in src.items() if v != "online"}
     assert len(src) == SOURCES_UA + 4 + 2 + 1, sorted(src)
     assert not bad, bad
-    assert o.count("f3d.command", MODULE_CMD) == 0
+    assert o.count("td.command", MODULE_CMD) == 0
     # R-26/DEC-1: модуль не змінює mrp.workorder/productivity автоматикою (макс. write_date = S4)
     assert psql("SELECT max(write_date) FROM mrp_workorder") == before["S4"][:1]
     print("ТК-01: читання 35 верстатів за", round(read_s), "с; стани:", sorted(st))
@@ -112,7 +112,7 @@ def test_tk02_machine_fault_cnc2(fresh, sim):
     react_s = time.time() - t0
     assert react_s <= 10 + 5  # AC-94: ≤ 10 с (запас на опитування)
     ev = wait(
-        lambda: o.search_read("f3d.machine.event", [("machine_id.code", "=", "CNC-2")], ["message_id", "text"]), 40, 2
+        lambda: o.search_read("td.machine.event", [("machine_id.code", "=", "CNC-2")], ["message_id", "text"]), 40, 2
     )
     assert ev, "подій верстата CNC-2 немає (BaseEventType від iot_sim → EV-01)"
     dts = wait(lambda: [d for d in downtimes(o, "CNC-2") if d["state_kind"] == "fault"], 20, 2)
@@ -123,7 +123,7 @@ def test_tk02_machine_fault_cnc2(fresh, sim):
         % (d["hint_loss_id"], d["hint_text"], [e["text"] for e in ev][:3])
     )
     req = o.search_read(
-        "maintenance.request", [("f3d_signal_id.code", "=", "workcenters/CNC-2/alarm")], ["name", "stage_id"]
+        "maintenance.request", [("td_signal_id.code", "=", "workcenters/CNC-2/alarm")], ["name", "stage_id"]
     )
     assert len(req) == 1 and "CNC-2" in req[0]["name"], req
     d = wait(
@@ -134,14 +134,14 @@ def test_tk02_machine_fault_cnc2(fresh, sim):
         2,
     )
     assert d and d["maintenance_request_id"][0] == req[0]["id"], downtimes(o, "CNC-2")
-    wc = o.search_read("mrp.workcenter", [("f3d_code", "=", "CNC-2")], ["working_state"])[0]
+    wc = o.search_read("mrp.workcenter", [("td_code", "=", "CNC-2")], ["working_state"])[0]
     assert wc["working_state"] == "blocked", wc
     sim.stop("machine_fault")
     assert wait(lambda: machine(o, "CNC-2")["state"] in ("idle", "off"), 120, 3)
     closed = wait(lambda: [x for x in downtimes(o, "CNC-2") if x["state_kind"] == "fault" and x["date_end"]], 30, 2)
     assert closed
     assert (
-        o.search_read("mrp.workcenter", [("f3d_code", "=", "CNC-2")], ["working_state"])[0]["working_state"]
+        o.search_read("mrp.workcenter", [("td_code", "=", "CNC-2")], ["working_state"])[0]["working_state"]
         != "blocked"
     )
     req2 = o.search_read("maintenance.request", [("id", "=", req[0]["id"])], ["stage_id"])[0]
@@ -155,10 +155,10 @@ def test_tk03_shift_read_only(fresh, sim):
     o = fresh(scenario=("shift", {"speed": 1, "trucks": False, "people": False}))
     t_start = utcnow()
     time.sleep(minutes * 60)
-    o.call("f3d.oee.shift", "_cron_oee") if False else None
+    o.call("td.oee.shift", "_cron_oee") if False else None
     elapsed = (utcnow() - t_start).total_seconds() / 60
     bad = []
-    for m in o.search_read("f3d.machine", [], ["code"], order="code"):
+    for m in o.search_read("td.machine", [], ["code"], order="code"):
         logs = state_log(o, m["code"])
         for a, b in zip(logs, logs[1:], strict=False):
             if a["date_end"] != b["date_start"]:
@@ -176,9 +176,9 @@ def test_tk03_shift_read_only(fresh, sim):
     ]
     assert o.count("mrp.workorder", [("write_uid", "=", bot)]) == 0
     assert o.count("mrp.workcenter.productivity", [("write_uid", "=", bot)]) == 0
-    assert o.count("f3d.command", MODULE_CMD) == 0
+    assert o.count("td.command", MODULE_CMD) == 0
     # iot_sim публікує події без MessageId (I0001/I0002 лише в тексті «Завдання … запущено/завершено», «Зміна розпочата»)
-    ev = o.search_read("f3d.machine.event", [], ["message_id", "text"], limit=50)
+    ev = o.search_read("td.machine.event", [], ["message_id", "text"], limit=50)
     assert ev, "події OPC UA-верстатів у «Подіях верстатів» відсутні"
     assert any("Завдання" in e["text"] or "Зміна" in e["text"] for e in ev), [e["text"] for e in ev][:5]
     assert o.count("mail.activity", [("summary", "ilike", "не знайдено в Odoo")]) == 0
@@ -212,16 +212,16 @@ def test_tk12_comm_loss_fake(fresh, sim):
         assert wait(lambda: machine(o, "CNC-3")["state"] == "nodata", 180, 3), machine(o, "CNC-3")
         nodata_s = time.time() - t0
         time.sleep(30)
-        assert o.count("maintenance.request", [("f3d_signal_id.code", "like", "CNC-3")]) == 0  # автодій немає
+        assert o.count("maintenance.request", [("td_signal_id.code", "like", "CNC-3")]) == 0  # автодій немає
         fake = FakeUa(("CNC-3",))
         fake.set("CurrentState", 3, "CNC-3")
         assert wait(lambda: machine(o, "CNC-3")["state"] == "working", 120, 3), machine(o, "CNC-3")
         logs = state_log(o, "CNC-3")
         assert any(x["state"] == "nodata" and x["date_end"] for x in logs), logs
-        sid = o.search_read("f3d.oee.shift", [("machine_id.code", "=", "CNC-3")], ["id"])
+        sid = o.search_read("td.oee.shift", [("machine_id.code", "=", "CNC-3")], ["id"])
         if sid:
-            o.call("f3d.oee.shift", "action_recompute", [sid[0]["id"]])
-            cov = o.search_read("f3d.oee.shift", [("machine_id.code", "=", "CNC-3")], ["coverage"])[0]["coverage"]
+            o.call("td.oee.shift", "action_recompute", [sid[0]["id"]])
+            cov = o.search_read("td.oee.shift", [("machine_id.code", "=", "CNC-3")], ["coverage"])[0]["coverage"]
             assert cov < 1, cov
         print("ТК-12: nodata через", round(nodata_s), "с")
     finally:

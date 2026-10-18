@@ -1,7 +1,7 @@
 """Розділ `layout` payload переглядача: чим діюча версія конструктора відрізняється від бази (PHASE2_VIEWER).
 
 База (baseline) — версія-імпорт seed (`is_seed`): те, що запечено в GLB «Переглядача». Діюча — остання опублікована.
-Порівнюються розміщення (код = `f3d_code` обладнання) і місця зі стелажами (префікс і коди комірок).
+Порівнюються розміщення (код = `td_code` обладнання) і місця зі стелажами (префікс і коди комірок).
 Коди й одиниці — як у конструкторі: метри, градуси проти годинникової стрілки при погляді зверху (Blender X/Y);
 переклад у three.js (x, z, −y) робить клієнт.
 
@@ -14,16 +14,16 @@ import logging
 from odoo.exceptions import UserError
 from odoo.tools import file_open
 
-from odoo.addons.factory3d_constructor.services import cells as cells_svc
-from odoo.addons.factory3d_constructor.services import geometry, snapshot
+from odoo.addons.td_constructor.services import cells as cells_svc
+from odoo.addons.td_constructor.services import geometry, snapshot
 
 _logger = logging.getLogger(__name__)
 
-MODELS = ("f3d.site", "f3d.layout.version", "f3d.slot", "f3d.placement", "f3d.equipment.variant")
+MODELS = ("td.site", "td.layout.version", "td.slot", "td.placement", "td.equipment.variant")
 CELL_TEMPLATES = ("pallet_rack", "cantilever", "shelf", "floor_stack")
 MODEL_URL = "/f3d/constructor/model/%d/glb"
 EPS = 1e-6
-INVENTORY_PATH = "factory3d_constructor/data/scene_inventory.json"
+INVENTORY_PATH = "td_constructor/data/scene_inventory.json"
 
 
 def _r(value):
@@ -53,8 +53,8 @@ def load_inventory():
 
 def pick_versions(env):
     """(площадка, база, діюча) для першої площадки з діючою версією, відмінною від бази; інакше None."""
-    Version = env["f3d.layout.version"]
-    for site in env["f3d.site"].search([("active_version_id", "!=", False)], order="sequence, id"):
+    Version = env["td.layout.version"]
+    for site in env["td.site"].search([("active_version_id", "!=", False)], order="sequence, id"):
         base = Version.search([("site_id", "=", site.id), ("is_seed", "=", True)], order="n", limit=1)
         active = site.active_version_id
         if base and active and active != base:
@@ -87,7 +87,7 @@ def _live(snap):
 def _variants(env, snaps):
     ids = {p.get("variant_id") for snap in snaps for p in snap.get("placements", []) if p.get("variant_id")}
     out = {}
-    for variant in env["f3d.equipment.variant"].with_context(active_test=False).browse(sorted(ids)).exists():
+    for variant in env["td.equipment.variant"].with_context(active_test=False).browse(sorted(ids)).exists():
         geom = variant._f3d_local_geometry()
         out[variant.id] = {
             "geom": geom,

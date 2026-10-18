@@ -13,8 +13,8 @@
                     odoo.__session_info__ = <t t-out="session_info_json"/>;
                 </script>
                 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-                <t t-call-assets="factory3d_viewer.assets_kiosk" t-js="false"/>
-                <t t-call-assets="factory3d_viewer.assets_kiosk" t-css="false"/>
+                <t t-call-assets="td_viewer3d.assets_kiosk" t-js="false"/>
+                <t t-call-assets="td_viewer3d.assets_kiosk" t-css="false"/>
             </t>
             <div id="f3d-kiosk" t-att-data-token="token" t-att-data-params="json.dumps(params or {})"/>
         </t>

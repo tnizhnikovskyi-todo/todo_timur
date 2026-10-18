@@ -36,12 +36,12 @@ class FakeOdoo:
                  "working_state": "normal"}],
             "stock.picking.batch": [
                 {"id": 1, "name": "BATCH/IN/00001", "dock_id": [11, "DOCK-W1"], "scheduled_date": "2026-10-12 03:30:00",
-                 "state": "in_progress", "picking_ids": [101], "f3d_code": "TRUCK-IN-1", "f3d_truck": "Фура Iveco",
-                 "f3d_plate": "AA7777KT"},
+                 "state": "in_progress", "picking_ids": [101], "td_code": "TRUCK-IN-1", "td_truck": "Фура Iveco",
+                 "td_plate": "AA7777KT"},
                 {"id": 2, "name": "BATCH/OUT/00004", "dock_id": [12, "DOCK-E2"], "scheduled_date": "2026-10-12 08:00:00",
-                 "state": "draft", "picking_ids": [102], "f3d_code": "TRUCK-OUT-1", "f3d_truck": "Фура Volvo",
-                 "f3d_plate": False}],
-            "stock.location": [{"id": 11, "f3d_code": "DOCK-W1"}, {"id": 12, "f3d_code": "DOCK-E2"}],
+                 "state": "draft", "picking_ids": [102], "td_code": "TRUCK-OUT-1", "td_truck": "Фура Volvo",
+                 "td_plate": False}],
+            "stock.location": [{"id": 11, "td_code": "DOCK-W1"}, {"id": 12, "td_code": "DOCK-E2"}],
             "stock.picking": [{"id": 101, "name": "WH/IN/1", "state": "assigned", "picking_type_code": "incoming"},
                               {"id": 102, "name": "WH/OUT/4", "state": "assigned", "picking_type_code": "outgoing"}],
             "stock.move": [{"picking_id": [101, "x"], "quantity": 6.0, "product_uom_qty": 10.0},
@@ -52,7 +52,7 @@ class FakeOdoo:
                 {"dayofweek": str(d), "hour_from": h0, "hour_to": h1}
                 for d in range(5) for h0, h1 in ((7.0, 11.5), (12.0, 15.5))],
             "maintenance.request": [{"id": 35, "equipment_id": [9, "RV-05"]}],
-            "maintenance.equipment": [{"id": 9, "f3d_code": "RV-05"}]}
+            "maintenance.equipment": [{"id": 9, "td_code": "RV-05"}]}
 
     async def search_read(self, model, domain, fields, **kw):
         self.calls.append(("search_read", model, domain))
@@ -70,7 +70,7 @@ class FakeOdoo:
 
     async def fields_get(self, model, attributes=None):
         self.calls.append(("fields_get", model))
-        return {"f3d_code": {}, **({"f3d_plate": {}} if self.plate_field else {})}
+        return {"td_code": {}, **({"td_plate": {}} if self.plate_field else {})}
 
 
 class Mono:

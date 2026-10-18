@@ -1,7 +1,7 @@
 /** @odoo-module */
 // 3D-сцена редактора (порт 40_scene.js; three r160 з бандла переглядача, рендер на вимогу, один WebGLRenderer).
 // Умовні моделі об'єктів без файла — `buildGenericModel` (W3, R-17); моделі варіантів — GLB із вкладень (API-10), завантажує app.js.
-import { buildGenericModel } from "@factory3d_constructor/model/generic";
+import { buildGenericModel } from "@td_constructor/model/generic";
 import { cellsOf, normalizeParams } from "./cells";
 import { FRONT_ANGLE, TPL } from "./data";
 import { polygonContains } from "./geometry";

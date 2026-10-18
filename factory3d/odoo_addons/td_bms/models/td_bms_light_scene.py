@@ -2,7 +2,7 @@ from odoo import fields, models
 
 
 class F3dBmsLightScene(models.Model):
-    _name = "f3d.bms.light.scene"
+    _name = "td.bms.light.scene"
     _description = "Будівля: сцена освітлення"
     _order = "number"
 

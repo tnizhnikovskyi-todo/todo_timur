@@ -4,8 +4,8 @@
 // f3d-loaders.esm.js, у якому `three` замінено shim-ом на `globalThis.__F3D_THREE__` (його виставляє loadThree()).
 // Обидва файли вантажаться динамічним import() за URL відносно сторінки (як core.js переглядача): у бандл Odoo вони не входять.
 
-export const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
-export const LOADERS_URL = "/factory3d_constructor/static/lib/f3d-loaders/f3d-loaders.esm.js";
+export const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
+export const LOADERS_URL = "/td_constructor/static/lib/f3d-loaders/f3d-loaders.esm.js";
 
 let threeMod = null;
 let threePromise = null;

@@ -1,4 +1,4 @@
-"""TCP-сеанс HelvarNet і пул сеансів (SPEC factory3d_bms §8.3, R-31, R-36)."""
+"""TCP-сеанс HelvarNet і пул сеансів (SPEC td_bms §8.3, R-31, R-36)."""
 
 from __future__ import annotations
 

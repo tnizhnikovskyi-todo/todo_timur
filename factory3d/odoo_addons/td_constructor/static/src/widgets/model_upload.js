@@ -27,7 +27,7 @@ function blobToBase64(blob) {
 }
 
 export class F3dModelUpload extends Component {
-    static template = "factory3d_constructor.ModelUpload";
+    static template = "td_constructor.ModelUpload";
     static props = {
         ...standardWidgetProps,
         maxMb: { type: Number, optional: true },
@@ -311,7 +311,7 @@ export class F3dModelUpload extends Component {
             view.setModel(object, { owns: false, labels: false });
             const blob = await view.snapshot(256, 256);
             if (blob) {
-                await this.orm.write("f3d.equipment.variant", [this.props.record.resId], { image: await blobToBase64(blob) });
+                await this.orm.write("td.equipment.variant", [this.props.record.resId], { image: await blobToBase64(blob) });
                 await this.props.record.load();
             }
         } catch {
@@ -336,7 +336,7 @@ export class F3dModelUpload extends Component {
             confirmLabel: _t("Видалити"),
             cancelLabel: _t("Скасувати"),
             confirm: async () => {
-                await this.orm.call("f3d.equipment.variant", "action_clear_model", [[this.props.record.resId]]);
+                await this.orm.call("td.equipment.variant", "action_clear_model", [[this.props.record.resId]]);
                 setStaged(this.props.record, null);
                 await this.props.record.load();
             },
@@ -348,7 +348,7 @@ export class F3dModelUpload extends Component {
         this.state.busy = true;
         this.state.error = "";
         try {
-            await this.orm.call("f3d.equipment.variant", "action_retry_convert", [[this.props.record.resId]]);
+            await this.orm.call("td.equipment.variant", "action_retry_convert", [[this.props.record.resId]]);
             await this.props.record.load();
         } catch (e) {
             this.state.error = e?.data?.message || e.message || String(e);

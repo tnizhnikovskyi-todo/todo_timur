@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="factory3d_constructor.ModelPreview">
+    <t t-name="td_constructor.ModelPreview">
         <div class="o_f3d_model_preview" t-att-data-mode="state.mode">
             <div class="o_f3d_mp_stage" t-ref="stage" aria-label="3D-превью моделі варіанта"/>
             <div t-if="state.noGl" class="o_f3d_mp_nogl">3D недоступне в цьому браузері</div>

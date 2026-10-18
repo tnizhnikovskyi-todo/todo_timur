@@ -5,14 +5,14 @@ import re
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from .f3d_fire_smoke_zone import COMPLIANCE, plant_size
+from .td_fire_smoke_zone import COMPLIANCE, plant_size
 
 CODE_RE = re.compile(r'^EX-[A-Z0-9]{1,4}$')
 SIDES = [('S', 'Південна стіна'), ('N', 'Північна стіна'), ('W', 'Західна стіна'), ('E', 'Східна стіна')]
 
 
 class F3dFireExit(models.Model):
-    _name = "f3d.fire.exit"
+    _name = "td.fire.exit"
     _description = "Евакуація: вихід"
     _order = "code"
     _rec_name = "display"
@@ -28,7 +28,7 @@ class F3dFireExit(models.Model):
     side = fields.Selection(SIDES, string="Стіна", required=True)
     width_m = fields.Float(string="Ширина у просвіті, м", digits=(4, 2), default=1.2)
     equipment_id = fields.Many2one('maintenance.equipment', string="Обладнання", ondelete='set null')
-    route_ids = fields.One2many('f3d.fire.route', 'exit_id', string="Маршрути")
+    route_ids = fields.One2many('td.fire.route', 'exit_id', string="Маршрути")
     route_count = fields.Integer(string="Маршрутів", compute='_compute_route_count')
     nearest_exit_m = fields.Float(
         string="До найближчого іншого виходу, м", digits=(8, 1), readonly=True)
@@ -76,7 +76,7 @@ class F3dFireExit(models.Model):
     @api.model
     def _dispersal_summary(self):
         """R-06 пп. 1–3, 5: підсумок по активних виходах (для панелі)."""
-        norm = self.env['f3d.fire.norm']
+        norm = self.env['td.fire.norm']
         exits = self.search([('active', '=', True)])
         length, width = plant_size(self.env)
         perimeter = 2 * (length + width)
@@ -95,7 +95,7 @@ class F3dFireExit(models.Model):
 
     def _recompute(self):
         """R-06 п. 4 (відстань до найближчого), R-07 (ширина дверей). Перераховує всі активні виходи."""
-        norm = self.env['f3d.fire.norm']
+        norm = self.env['td.fire.norm']
         door_min = norm.get('door_width_min')
         ref = norm.get_ref('door_width_min')
         all_active = self.search([('active', '=', True)])
@@ -116,7 +116,7 @@ class F3dFireExit(models.Model):
                 'compliance_note': "Ширина %s м при нормі ≥ %s м (%s)" % (rec.width_m, door_min, ref),
             })
         # ширина виходу впливає на маршрути до нього
-        self.env['f3d.fire.route'].search([('exit_id', 'in', (all_active | self).ids)])._recompute()
+        self.env['td.fire.route'].search([('exit_id', 'in', (all_active | self).ids)])._recompute()
 
     @api.model_create_multi
     def create(self, vals_list):

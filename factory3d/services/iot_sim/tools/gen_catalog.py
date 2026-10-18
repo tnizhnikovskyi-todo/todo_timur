@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Генерує catalog/signals.csv і data/f3d_sim_signal.csv Odoo-модуля з Додатка A SPEC.
+"""Генерує catalog/signals.csv і data/td_sim_signal.csv Odoo-модуля з Додатка A SPEC.
 
   python tools/gen_catalog.py          # згенерувати обидва файли
   python tools/gen_catalog.py --check  # звірити файли з Додатком A (код виходу 0/1)
@@ -17,9 +17,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 SERVICE_DIR = HERE.parents[1]
 FACTORY3D = HERE.parents[3]
-SPEC = FACTORY3D / "docs/modules/factory3d_iot_sim/SPEC.md"
+SPEC = FACTORY3D / "docs/modules/td_iot_sim/SPEC.md"
 SIGNALS_CSV = SERVICE_DIR / "catalog/signals.csv"
-ODOO_CSV = FACTORY3D / "odoo_addons/factory3d_iot_sim/data/f3d_sim_signal.csv"
+ODOO_CSV = FACTORY3D / "odoo_addons/td_iot_sim/data/td_sim_signal.csv"
 
 COLUMNS = ["n", "code", "device", "protocol", "address", "dtype", "unit", "scale",
            "nominal", "thresholds", "model", "status"]
@@ -72,7 +72,7 @@ def check() -> int:
             return 1
     a, b = read_csv(SIGNALS_CSV), read_csv(ODOO_CSV)
     if a != b:
-        print("ПОМИЛКА: signals.csv і f3d_sim_signal.csv розходяться", file=sys.stderr)
+        print("ПОМИЛКА: signals.csv і td_sim_signal.csv розходяться", file=sys.stderr)
         ok = False
     if SPEC.is_file():
         spec = parse_spec()

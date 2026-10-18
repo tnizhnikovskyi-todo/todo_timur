@@ -1,4 +1,4 @@
-"""Хуки установки/видалення factory3d_base (SPEC §5.3, §5.4)."""
+"""Хуки установки/видалення td_factory3d (SPEC §5.3, §5.4)."""
 import json
 import logging
 
@@ -6,11 +6,11 @@ from odoo import fields
 
 from . import batches, codes, docks, passports, x_fields, zones
 
-_logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
+_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
 
-PARAM_STATE = 'factory3d.base.migration_state'
-PARAM_REPORT = 'factory3d.base.migration_report'
-PARAM_RERUN = 'factory3d.base.migration_rerun_report'
+PARAM_STATE = 'td.base.migration_state'
+PARAM_REPORT = 'td.base.migration_report'
+PARAM_RERUN = 'td.base.migration_rerun_report'
 
 
 def _step(report, name, func, env, *args):
@@ -29,7 +29,7 @@ def write_report(env, report):
     migrate = report.get('batches.migrate') or {}
     drop = report.get('x_fields.drop_demo') or {}
     verify = report.get('batches.verify') or {}
-    keep = env['ir.config_parameter'].sudo().get_param('factory3d.base.keep_x_fields') == 'True'
+    keep = env['ir.config_parameter'].sudo().get_param('td.base.keep_x_fields') == 'True'
     params = env['ir.config_parameter'].sudo()
     previous = params.get_param(PARAM_STATE)
     if migrate.get('skipped') and previous in ('done', 'partial'):
@@ -77,7 +77,7 @@ def post_init_hook(env):
 
 
 def uninstall_hook(env):
-    """§5.4: відновити x_* (якщо дозволено параметром), потім прибрати параметри factory3d.base.*."""
+    """§5.4: відновити x_* (якщо дозволено параметром), потім прибрати параметри td.base.*."""
     res = x_fields.restore_on_uninstall(env)
     _logger.info("uninstall: %s", res)
-    env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.base.%')]).unlink()
+    env['ir.config_parameter'].sudo().search([('key', '=like', 'td.base.%')]).unlink()

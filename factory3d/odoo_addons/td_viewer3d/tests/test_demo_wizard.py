@@ -6,9 +6,9 @@ from odoo import SUPERUSER_ID
 from odoo.exceptions import UserError
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.wizard import demo_steps
-from odoo.addons.factory3d_viewer.wizard.demo_wizard import LABELS
-from odoo.addons.factory3d_viewer.wizard.orm_proxy import OrmProxy, key
+from odoo.addons.td_viewer3d.wizard import demo_steps
+from odoo.addons.td_viewer3d.wizard.demo_wizard import LABELS
+from odoo.addons.td_viewer3d.wizard.orm_proxy import OrmProxy, key
 
 from .common import F3dViewerBase
 
@@ -22,7 +22,7 @@ class TestDemoWizardGuard(F3dViewerBase):
     """Швидкі перевірки майстра демо (без заливки)."""
 
     def _wizard(self):
-        return self.env["f3d.demo.wizard"].with_user(self.user_admin).create({})
+        return self.env["td.demo.wizard"].with_user(self.user_admin).create({})
 
     def test_blocked_on_prod(self):
         """AC-35: demo_enabled=False → UserError, нічого не поставлено в чергу."""
@@ -32,7 +32,7 @@ class TestDemoWizardGuard(F3dViewerBase):
         with self.assertRaisesRegex(UserError, "Заливка демо вимкнена на цій базі"):
             wiz.action_run()
         self.assertEqual(wiz.state, "draft")
-        self.assertFalse(self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.demo_queue"))
+        self.assertFalse(self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_queue"))
 
     def test_steps_default_35(self):
         wiz = self._wizard()
@@ -54,15 +54,15 @@ class TestDemoWizardGuard(F3dViewerBase):
         action = wiz.action_run()
         self.assertEqual(action["res_id"], wiz.id)
         self.assertEqual(wiz.state, "queued")
-        cron = self.env.ref("factory3d_viewer.cron_f3d_demo")
+        cron = self.env.ref("td_viewer3d.cron_td_demo")
         self.assertTrue(cron.active)
-        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.demo_clock"),
+        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_clock"),
                          "2026-10-13 09:00")
-        self.assertIn('"settings"', self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.demo_queue"))
+        self.assertIn('"settings"', self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_queue"))
 
     def test_steps_from_form_without_name(self):
         """Вебклієнт не шле readonly name: кроки з форми валідні, ключ відновлюється."""
-        wiz = self.env["f3d.demo.wizard"].with_user(self.user_admin).create({"step_ids": [
+        wiz = self.env["td.demo.wizard"].with_user(self.user_admin).create({"step_ids": [
             (0, 0, {"label": LABELS["views"], "sequence": 40, "selected": True}),
             (0, 0, {"label": "довільна назва", "sequence": 310, "selected": True})]})
         self.assertEqual(wiz.step_ids.mapped("name"), ["views", "iot_module"])
@@ -74,7 +74,7 @@ class TestDemoWizardGuard(F3dViewerBase):
         wiz.step_ids.write({"selected": False})
         wiz.step_ids.filtered(lambda s: s.name in ("views", "iot_module")).write({"selected": True})
         wiz.action_run()
-        self.env["f3d.demo.wizard"].flush_model()
+        self.env["td.demo.wizard"].flush_model()
 
         def forbidden(self, *a, **kw):
             raise UserError("cron currently being executed")
@@ -85,7 +85,7 @@ class TestDemoWizardGuard(F3dViewerBase):
         self.assertIn("cycle_check:", wiz.log)
         # після завершення кнопка «Оновити» вимикає крон, і новий запуск можливий
         wiz.action_refresh()
-        self.assertFalse(self.env.ref("factory3d_viewer.cron_f3d_demo").active)
+        self.assertFalse(self.env.ref("td_viewer3d.cron_td_demo").active)
         wiz2 = self._wizard()
         wiz2.action_run()
         self.assertEqual(wiz2.state, "queued")
@@ -97,7 +97,7 @@ class TestDemoWizardGuard(F3dViewerBase):
         wiz.step_ids.filtered(lambda s: s.name == "calendar").write({"selected": True})
         wiz.action_run()
         with patch.object(demo_steps.Runner, "run", side_effect=RuntimeError("boom")), self.assertLogs(
-                "odoo.addons.factory3d_viewer.wizard.demo_wizard", "ERROR"):
+                "odoo.addons.td_viewer3d.wizard.demo_wizard", "ERROR"):
             wiz.with_user(SUPERUSER_ID)._cron_run()
         wiz.invalidate_recordset()
         self.assertEqual(wiz.state, "error")
@@ -150,11 +150,11 @@ class TestDemoWizardGuard(F3dViewerBase):
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer", "f3d_demo")
 class TestDemoWizard(F3dViewerBase):
     """AC-33. Повільний (≈ хвилини): виконується, лише коли на базі стоять CE-модулі заливки
-    (інакше skipTest, щоб типовий прогін /factory3d_viewer лишався швидким); окремий прогін
-    /factory3d_viewer:TestDemoWizard.
+    (інакше skipTest, щоб типовий прогін /td_viewer3d лишався швидким); окремий прогін
+    /td_viewer3d:TestDemoWizard.
 
-    База з factory3d_base + factory3d_viewer і CE-модулями кроку «modules»
-    (F3D_TEST_INSTALL=factory3d_viewer,purchase_stock,sale_stock,hr_attendance,stock_delivery,
+    База з td_factory3d + td_viewer3d і CE-модулями кроку «modules»
+    (F3D_TEST_INSTALL=td_viewer3d,purchase_stock,sale_stock,hr_attendance,stock_delivery,
     stock_picking_batch,stock_fleet)."""
 
     @classmethod
@@ -164,10 +164,10 @@ class TestDemoWizard(F3dViewerBase):
             [("name", "=", m), ("state", "=", "installed")]) == 0]
         if missing:
             cls.skipTest(cls, "заливка потребує модулів: " + ", ".join(missing))
-        cls.env["ir.config_parameter"].sudo().set_param("factory3d.viewer.demo_enabled", "True")
+        cls.env["ir.config_parameter"].sudo().set_param("td.viewer.demo_enabled", "True")
 
     def _run_all(self):
-        wiz = self.env["f3d.demo.wizard"].with_user(self.user_admin).create({})
+        wiz = self.env["td.demo.wizard"].with_user(self.user_admin).create({})
         wiz.action_run()
         self.assertEqual(wiz.state, "queued")
         wiz.with_user(SUPERUSER_ID)._cron_run()  # крон працює від base.user_root
@@ -195,7 +195,7 @@ class TestDemoWizard(F3dViewerBase):
         self.assertEqual(self._count("mrp.workcenter"), 35)
         self.assertEqual(self._count("mrp.production"), 32)
         wiz.action_refresh()  # поза кроном крон вимикається
-        self.assertFalse(self.env.ref("factory3d_viewer.cron_f3d_demo").active)
+        self.assertFalse(self.env.ref("td_viewer3d.cron_td_demo").active)
 
     def test_idempotent_rerun(self):
         """AC-33: повторний запуск не створює нових записів."""

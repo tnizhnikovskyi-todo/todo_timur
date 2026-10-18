@@ -1,7 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_genset_link_user,f3d.genset.link user,model_f3d_genset_link,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_genset_link_manager,f3d.genset.link manager,model_f3d_genset_link,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_genset_profile_user,f3d.genset.profile user,model_f3d_genset_profile,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_genset_profile_manager,f3d.genset.profile manager,model_f3d_genset_profile,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_genset_event_map_user,f3d.genset.event.map user,model_f3d_genset_event_map,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_genset_event_map_manager,f3d.genset.event.map manager,model_f3d_genset_event_map,factory3d_base.group_f3d_manager,1,1,1,1
+access_td_genset_link_user,td.genset.link user,model_td_genset_link,td_factory3d.group_td_user,1,0,0,0
+access_td_genset_link_manager,td.genset.link manager,model_td_genset_link,td_factory3d.group_td_manager,1,1,1,1
+access_td_genset_profile_user,td.genset.profile user,model_td_genset_profile,td_factory3d.group_td_user,1,0,0,0
+access_td_genset_profile_manager,td.genset.profile manager,model_td_genset_profile,td_factory3d.group_td_manager,1,1,1,1
+access_td_genset_event_map_user,td.genset.event.map user,model_td_genset_event_map,td_factory3d.group_td_user,1,0,0,0
+access_td_genset_event_map_manager,td.genset.event.map manager,model_td_genset_event_map,td_factory3d.group_td_manager,1,1,1,1

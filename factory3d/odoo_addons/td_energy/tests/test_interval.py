@@ -20,8 +20,8 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Interval = cls.env["f3d.energy.interval"]
-        cls.Event = cls.env["f3d.energy.event"]
+        cls.Interval = cls.env["td.energy.interval"]
+        cls.Event = cls.env["td.energy.event"]
         cls.day = (fields.Datetime.now() - timedelta(days=3)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     def at(self, h, m=0):
@@ -53,7 +53,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         self.assertEqual(meter.last_interval_start, self.rows(meter)[-1].ts_start)
 
     def test_no_tariff_event(self):  # AC-11
-        self.env.ref("factory3d_energy.tariff_demo").active = False
+        self.env.ref("td_energy.tariff_demo").active = False
         meter = self.mk_meter("PM-SAW-T")
         self.feed(meter.e_import_signal_id, [(self.at(1, 30), 10.0), (self.at(1, 45), 12.0), (self.at(2), 14.0)])
         self.build(self.at(2, 30))
@@ -115,7 +115,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
     def test_read_disabled(self):  # AC-24
         meter = self.mk_meter("PM-SAW-T")
         self.feed(meter.e_import_signal_id, [(self.at(1, 30), 1.0), (self.at(1, 45), 2.0), (self.at(2), 3.0)])
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.read_enabled", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.energy.read_enabled", "False")
         self.build(self.at(2, 30))
         self.assertFalse(self.rows(meter))
 
@@ -155,7 +155,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
                 ],
             }
         )
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.shift_calendar_id", str(cal.id))
+        self.env["ir.config_parameter"].sudo().set_param("td.energy.shift_calendar_id", str(cal.id))
         meter = self.mk_meter("PM-SAW-T")
         total = meter.e_import_signal_id
         shift = self.mk_signal(
@@ -175,7 +175,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
     def test_kwh_shift_counter_started_mid_shift(self):  # E-4
         """Лічильник звітує лише частину зміни (стенд, новий вузол): kwh_shift — від першого показання, `uncertain`;
         з показанням на початок зміни — як раніше (AC-83), `good`."""
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.shift_calendar_id", "")
+        self.env["ir.config_parameter"].sudo().set_param("td.energy.shift_calendar_id", "")
         meter = self.mk_meter("PM-OFFICE-T")
         total = meter.e_import_signal_id
         shift = self.mk_signal(

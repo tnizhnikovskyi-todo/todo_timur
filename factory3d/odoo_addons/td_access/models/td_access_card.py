@@ -8,8 +8,8 @@ from ..tools.biostar_client import BioStarError, BioStarWriteDisabled
 
 _logger = logging.getLogger(__name__)
 
-SECURITY = 'factory3d_access.group_f3d_access_security'
-ADMIN = 'factory3d_access.group_f3d_access_admin'
+SECURITY = 'td_access.group_td_access_security'
+ADMIN = 'td_access.group_td_access_admin'
 CARD_TYPE_ID = {'csn': 0, 'wiegand': 1, 'secure': 2, 'mobile': 4}
 SYNC_STATES = [('local', 'Лише в Odoo'), ('pending', 'Очікує запису'), ('synced', 'Синхронізовано'),
                ('error', 'Помилка')]
@@ -17,14 +17,14 @@ OPS = [('issue', 'Видати'), ('block', 'Заблокувати'), ('unblock
 
 
 class F3dAccessCard(models.Model):
-    _name = 'f3d.access.card'
+    _name = 'td.access.card'
     _description = 'СКУД: картка доступу'
     _inherit = ['mail.thread']
     _order = 'state, number'
     _rec_name = 'number'
 
     def _default_server_id(self):
-        Server = self.env['f3d.access.server'].sudo()
+        Server = self.env['td.access.server'].sudo()
         return (Server.search([('active', '=', True), ('company_id', '=', self.env.company.id)], limit=1)
                 or Server.search([('active', '=', True)], limit=1)).id
 
@@ -32,14 +32,14 @@ class F3dAccessCard(models.Model):
     card_type = fields.Selection(
         [('csn', 'CSN'), ('wiegand', 'Wiegand'), ('secure', 'Secure Credential'), ('mobile', 'Mobile CSN')],
         required=True, default='csn')
-    server_id = fields.Many2one('f3d.access.server', required=True, ondelete='restrict',
+    server_id = fields.Many2one('td.access.server', required=True, ondelete='restrict',
                                 default=lambda self: self._default_server_id())
     company_id = fields.Many2one('res.company', related='server_id.company_id', store=True, index=True)
     holder_type = fields.Selection(
         [('employee', 'Працівник'), ('visitor', 'Відвідувач'), ('pool', 'Пул відвідувачів')],
         required=True, default='employee', tracking=True)
     employee_id = fields.Many2one('hr.employee', index=True, ondelete='set null', tracking=True)
-    visitor_id = fields.Many2one('f3d.access.visitor', index=True, ondelete='set null', tracking=True)
+    visitor_id = fields.Many2one('td.access.visitor', index=True, ondelete='set null', tracking=True)
     state = fields.Selection(
         [('draft', 'Чернетка'), ('active', 'Видана'), ('blocked', 'Заблокована'), ('returned', 'Повернута'),
          ('lost', 'Втрачена')], required=True, default='draft', tracking=True)
@@ -171,7 +171,7 @@ class F3dAccessCard(models.Model):
         """(user_id BioStar, власник) картки: працівник через зв'язок, відвідувач через своє поле."""
         self.ensure_one()
         if self.employee_id:
-            link = self.env['f3d.access.user.link'].sudo().search(
+            link = self.env['td.access.user.link'].sudo().search(
                 [('server_id', '=', self.server_id.id), ('employee_id', '=', self.employee_id.id)], limit=1)
             return link.biostar_user_id or False, ('employee_id', self.employee_id)
         if self.visitor_id:
@@ -236,7 +236,7 @@ class F3dAccessCard(models.Model):
     def action_retry_sync(self):
         self._check_admin()
         if not P.get_flag(self.env, 'write_enabled'):
-            raise UserError("Запис у BioStar вимкнено стоп-краном factory3d.access.write_enabled.")
+            raise UserError("Запис у BioStar вимкнено стоп-краном td.access.write_enabled.")
         todo = self.filtered(lambda c: c.sync_state in ('error', 'local'))
         todo.write({'sync_state': 'pending'})
         todo._f3d_push()
@@ -263,5 +263,5 @@ class F3dAccessCard(models.Model):
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
-    f3d_access_card_ids = fields.One2many('f3d.access.card', 'employee_id', string='Картки доступу',
+    td_access_card_ids = fields.One2many('td.access.card', 'employee_id', string='Картки доступу',
                                           groups=SECURITY)

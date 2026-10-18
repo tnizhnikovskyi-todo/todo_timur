@@ -1,8 +1,8 @@
 /** @odoo-module */
 // AC-12, AC-14, AC-22, AC-31: JS-дзеркала R-01…R-10 за золотими фікстурами W1.
 import { describe, expect, test } from "@odoo/hoot";
-import { SLOT_TEMPLATES, cellCount, cellsOf, footprint, generateCells } from "@factory3d_constructor/editor/cells";
-import { runChecks, signature } from "@factory3d_constructor/editor/checks";
+import { SLOT_TEMPLATES, cellCount, cellsOf, footprint, generateCells } from "@td_constructor/editor/cells";
+import { runChecks, signature } from "@td_constructor/editor/checks";
 import {
     obbInsidePolygon,
     placementObb,
@@ -10,7 +10,7 @@ import {
     satPenetration,
     serviceObb,
     utilityPoints,
-} from "@factory3d_constructor/editor/geometry";
+} from "@td_constructor/editor/geometry";
 import { golden, near } from "./helpers";
 
 describe.current.tags("desktop");

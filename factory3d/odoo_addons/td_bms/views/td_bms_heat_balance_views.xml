@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_bms_heat_balance_form" model="ir.ui.view">
-        <field name="name">f3d.bms.heat.balance.form</field>
-        <field name="model">f3d.bms.heat.balance</field>
+    <record id="view_td_bms_heat_balance_form" model="ir.ui.view">
+        <field name="name">td.bms.heat.balance.form</field>
+        <field name="model">td.bms.heat.balance</field>
         <field name="arch" type="xml">
             <form>
                 <header>
                     <button name="action_recompute" type="object" string="Перерахувати" class="btn-primary"
-                            groups="factory3d_base.group_f3d_manager"/>
+                            groups="td_factory3d.group_td_manager"/>
                     <button name="action_reset_macro" type="object" string="Повернути значення макета"
-                            groups="factory3d_base.group_f3d_manager"
+                            groups="td_factory3d.group_td_manager"
                             confirm="Повернути параметри макета?"/>
                 </header>
                 <sheet>
@@ -118,10 +118,10 @@
         </field>
     </record>
 
-    <record id="action_f3d_bms_heat_balance_open" model="ir.actions.server">
+    <record id="action_td_bms_heat_balance_open" model="ir.actions.server">
         <field name="name">Тепловий баланс</field>
-        <field name="model_id" ref="model_f3d_bms_heat_balance"/>
+        <field name="model_id" ref="model_td_bms_heat_balance"/>
         <field name="state">code</field>
-        <field name="code">action = env['f3d.bms.heat.balance']._f3d_bms_get().get_formview_action()</field>
+        <field name="code">action = env['td.bms.heat.balance']._f3d_bms_get().get_formview_action()</field>
     </record>
 </odoo>

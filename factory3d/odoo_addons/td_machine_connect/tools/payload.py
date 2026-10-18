@@ -4,7 +4,7 @@ from datetime import timezone
 
 from odoo import fields
 
-from ..models.f3d_machine import KYIV, local
+from ..models.td_machine import KYIV, local
 
 GANTRY = "GANTRY-1"
 STATUS = {"fault": "stop", "working": "work"}
@@ -63,13 +63,13 @@ def _machine_node(env, machine):
         if dt.hint_text:
             down["hint"] = dt.hint_text
         node["downtime"] = down
-    logs = env["f3d.machine.state.log"].search(
+    logs = env["td.machine.state.log"].search(
         [("machine_id", "=", machine.id), ("date_start", ">=", _shift_start(machine))]
     )
     node["pieces_shift"] = int(sum(logs.mapped("pieces")))
     wo = machine.active_workorder_id
     if wo:
-        node["counted"] = _num(wo.f3d_qty_counted)
+        node["counted"] = _num(wo.td_qty_counted)
     if machine.state in STATUS:
         node["status"] = STATUS[machine.state]
     return node
@@ -77,7 +77,7 @@ def _machine_node(env, machine):
 
 def _gantry_node(env):
     """R-25 п. 2: стан порталу з `gantry_status` і активного завдання."""
-    Job = env["f3d.gantry.job"]
+    Job = env["td.gantry.job"]
     status = Job._f3d_gantry_status()
     job = Job.search([("state", "=", "active")], order="started, id", limit=1)
     return {
@@ -91,7 +91,7 @@ def _gantry_node(env):
         }
         if job
         else None,
-        "stacks": env["f3d.gantry.stack"].search_count([("ws_qty", ">", 0)]),
+        "stacks": env["td.gantry.stack"].search_count([("ws_qty", ">", 0)]),
         "aisles_open": list(status.get("aisles_open") or []),
         "alarms": list(status.get("alarms") or []),
     }
@@ -108,7 +108,7 @@ def build_machines(env, ctx, payload=None):
     payload = payload if isinstance(payload, dict) else {}
     out = {}
     wcs = _nodes(payload.get("workcenters"), "code")
-    machines = env["f3d.machine"].search(
+    machines = env["td.machine"].search(
         [("active", "=", True), ("code", "in", list(wcs))] if not full else [("active", "=", True)]
     )
     if machines:
@@ -116,7 +116,7 @@ def build_machines(env, ctx, payload=None):
     if GANTRY in _nodes(payload.get("equipment"), "code") or full:
         out["equipment"] = {GANTRY: {"gantry": _gantry_node(env)}}
     plt = [c for c in _nodes(payload.get("locations"), "code") if c.startswith("PLT-")]
-    stacks = env["f3d.gantry.stack"].search([("code", "in", plt)] if not full else [])
+    stacks = env["td.gantry.stack"].search([("code", "in", plt)] if not full else [])
     stacks = stacks.filtered("ws_seen")
     if stacks:
         out["locations"] = {
@@ -133,7 +133,7 @@ def build_machines(env, ctx, payload=None):
     prods = _nodes(payload.get("productions"), "name")
     if prods:
         out["productions"] = _productions(env, prods)
-    jobs = env["f3d.gantry.job"].search([("state", "in", ACTIVE_JOB)]) if payload.get("sheet_chain") else False
+    jobs = env["td.gantry.job"].search([("state", "in", ACTIVE_JOB)]) if payload.get("sheet_chain") else False
     if jobs:
         out["sheet_chain"] = {
             "stock": "портал: %d завд. · %d арк." % (len(jobs), sum(max(j.sheets - j.done, 0) for j in jobs))
@@ -144,8 +144,8 @@ def build_machines(env, ctx, payload=None):
 def _productions(env, prods):
     res = {}
     names = list(prods)
-    maps = env["f3d.cut.map"].search([("production_id.name", "in", names), ("state", "!=", "cancel")], order="id desc")
-    jobs = env["f3d.gantry.job"].search(
+    maps = env["td.cut.map"].search([("production_id.name", "in", names), ("state", "!=", "cancel")], order="id desc")
+    jobs = env["td.gantry.job"].search(
         [("production_id.name", "in", names), ("state", "!=", "cancelled")], order="id desc"
     )
     map_of, job_of = {}, {}

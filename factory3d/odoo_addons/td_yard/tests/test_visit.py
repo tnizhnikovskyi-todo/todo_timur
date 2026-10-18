@@ -78,7 +78,7 @@ class TestYardVisit(YardFlowCase):
         with self.assertRaises(AccessError):
             visit.with_user(self.user_reader).action_admit()
         stock_user = new_test_user(
-            self.env, "yard_stock", groups="factory3d_base.group_f3d_user,stock.group_stock_user"
+            self.env, "yard_stock", groups="td_factory3d.group_td_user,stock.group_stock_user"
         )
         with self.assertRaises(AccessError):
             visit.with_user(stock_user).action_admit()
@@ -95,7 +95,7 @@ class TestYardVisit(YardFlowCase):
         self.assertEqual(draft.state, "cancelled")
         arrived = self._visit()
         arrived._set_state("arrived")
-        Wizard = self.env["f3d.yard.reject.wizard"].with_user(self.user_guard)
+        Wizard = self.env["td.yard.reject.wizard"].with_user(self.user_guard)
         Wizard.create({"visit_id": arrived.id, "reason": "x"}).action_confirm()
         self.assertEqual(arrived.state, "rejected")
 
@@ -110,7 +110,7 @@ class TestYardVisit(YardFlowCase):
             arrived.unlink()
         visit = self._visit()
         booking = self._booking(visit, self.dock_t1, at(13), at(14))
-        wizard = self.env["f3d.yard.reject.wizard"].create(
+        wizard = self.env["td.yard.reject.wizard"].create(
             {"visit_id": visit.id, "reason_code": "no_booking", "reason": "немає документів"}
         )
         wizard.action_confirm()
@@ -132,28 +132,28 @@ class TestYardVisit(YardFlowCase):
             visit.visit_type = "outgoing"
 
     def test_driver_onchange(self):  # AC-16 (onchange)
-        carrier = self.env["res.partner"].create({"name": "Перевізник", "is_company": True, "f3d_is_carrier": True})
+        carrier = self.env["res.partner"].create({"name": "Перевізник", "is_company": True, "td_is_carrier": True})
         driver = self.env["res.partner"].create(
             {
                 "name": "Водій",
                 "phone": "+380501112233",
-                "f3d_is_driver": True,
-                "f3d_carrier_id": carrier.id,
-                "f3d_driver_doc": "ААА123456",
-                "f3d_default_plate": "ВІ 7777 ЕН",
+                "td_is_driver": True,
+                "td_carrier_id": carrier.id,
+                "td_driver_doc": "ААА123456",
+                "td_default_plate": "ВІ 7777 ЕН",
             }
         )
-        visit = self.env["f3d.yard.visit"].new({"driver_id": driver.id})
+        visit = self.env["td.yard.visit"].new({"driver_id": driver.id})
         visit._onchange_driver_id()
         self.assertEqual(
             (visit.driver_phone, visit.driver_doc, visit.carrier_id, visit.plate),
             ("+380501112233", "ААА123456", carrier, "ВІ 7777 ЕН"),
         )
         with self.assertRaises(AccessError):
-            driver.with_user(self.user_reader).read(["f3d_driver_doc"])
+            driver.with_user(self.user_reader).read(["td_driver_doc"])
         for pl in ("A", "AA#1"):
             with self.assertRaises(ValidationError):
-                driver.f3d_default_plate = pl
+                driver.td_default_plate = pl
 
     def test_partner_visit_count(self):  # AC-16
         partner = self.env["res.partner"].create({"name": "Усі ролі", "is_company": True})
@@ -161,6 +161,6 @@ class TestYardVisit(YardFlowCase):
         self._visit(carrier_id=partner.id)
         self._visit(driver_id=partner.id)
         self._visit()
-        self.assertEqual(partner.f3d_visit_count, 3)
-        self.assertEqual(partner.action_f3d_view_visits()["res_model"], "f3d.yard.visit")
+        self.assertEqual(partner.td_visit_count, 3)
+        self.assertEqual(partner.action_f3d_view_visits()["res_model"], "td.yard.visit")
         self.assertTrue(fields.Datetime.now())

@@ -1,4 +1,4 @@
-"""Фікстури тестів factory3d_machine_connect (SPEC §13.0.1).
+"""Фікстури тестів td_machine_connect (SPEC §13.0.1).
 
 Теги всіх класів: `@tagged('post_install', '-at_install', 'f3d', 'f3d_machine_connect')`.
 Від `F3DTelemetryMixin` використовуються лише `col`, `token`, `push()`, `set_sql()`, `api()`, `team_mech`, `user_plain`
@@ -13,14 +13,14 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 
-from odoo.addons.factory3d_telemetry.tests.common import F3DTelemetryMixin
+from odoo.addons.td_telemetry.tests.common import F3DTelemetryMixin
 from odoo.tests import HttpCase, TransactionCase, new_test_user
 
 from .. import hooks
 
 D0 = date(2026, 10, 12)  # понеділок, EEST (UTC+3)
 EEST = timedelta(hours=3)
-P = "factory3d.machine_connect."
+P = "td.machine_connect."
 
 PARAMS = {
     "read_enabled": "True",
@@ -84,7 +84,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
         icp = env["ir.config_parameter"].sudo()
         for key, val in PARAMS.items():
             icp.set_param(P + key, val)
-        cls.col = env["f3d.collector"].create({"code": "COL-T", "name": "Тестовий колектор"})
+        cls.col = env["td.collector"].create({"code": "COL-T", "name": "Тестовий колектор"})
         cls.token = cls._gen_token(cls.col)
         cls._setup_users()
         cls._setup_calendar()
@@ -95,7 +95,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
         cls._setup_machines()
         cls.startClassPatcher(
             patch.object(
-                type(cls.env["f3d.gantry.stack"]),
+                type(cls.env["td.gantry.stack"]),
                 "GANTRY_TARGETS",
                 ("SAW-1", "SAW-2", "SAW-3", "NEST-1", "SAW-T"),
             )
@@ -105,11 +105,11 @@ class F3DMachineMixin(F3DTelemetryMixin):
     @classmethod
     def _setup_users(cls):
         env, base = cls.env, "base.group_user,"
-        f3d = "factory3d_base."
+        f3d = "td_factory3d."
         mk = lambda login, groups: new_test_user(env, login=login, groups=groups, tz="Europe/Kyiv")  # noqa: E731
-        cls.user_f3d = mk("f3dm_user", base + f3d + "group_f3d_user")
-        cls.user_f3d_manager = mk("f3dm_manager", base + f3d + "group_f3d_manager")
-        cls.user_f3d_admin = mk("f3dm_admin", base + f3d + "group_f3d_admin")
+        cls.user_f3d = mk("f3dm_user", base + f3d + "group_td_user")
+        cls.user_f3d_manager = mk("f3dm_manager", base + f3d + "group_td_manager")
+        cls.user_f3d_admin = mk("f3dm_admin", base + f3d + "group_td_admin")
         cls.user_mrp = mk("f3dm_mrp", base + "mrp.group_mrp_user")
         cls.user_mrp_manager = mk("f3dm_mrp_manager", base + "mrp.group_mrp_manager")
         cls.user_stock = mk("f3dm_stock", base + "stock.group_stock_user")
@@ -123,7 +123,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
             ("emp_io", "Оператор IO (тест)", "OPIOT", "OP-IO-T"),
             ("emp_x", "Сторонній оператор", "OPXT", "OP-X-T"),
         ):
-            setattr(cls, attr, Emp.create({"name": name, "barcode": barcode, "f3d_code": code}))
+            setattr(cls, attr, Emp.create({"name": name, "barcode": barcode, "td_code": code}))
 
     @classmethod
     def _setup_calendar(cls):
@@ -153,8 +153,8 @@ class F3DMachineMixin(F3DTelemetryMixin):
             ("eq_io", "Верстат I/O (тест)", "IO-T"),
             ("eq_saw", "Розкрій (тест)", "SAW-T"),
         ):
-            setattr(cls, attr, Eq.create({"name": name, "f3d_code": code, "maintenance_team_id": cls.team_mech.id}))
-        cls.eq_gantry = Eq.search_f3d("GANTRY-1") or Eq.create({"name": "Портал (тест)", "f3d_code": "GANTRY-1"})
+            setattr(cls, attr, Eq.create({"name": name, "td_code": code, "maintenance_team_id": cls.team_mech.id}))
+        cls.eq_gantry = Eq.search_f3d("GANTRY-1") or Eq.create({"name": "Портал (тест)", "td_code": "GANTRY-1"})
         WC = env["mrp.workcenter"]
         for attr, name, code in (
             ("wc_ua", "Верстат OPC UA (тест)", "UA-T"),
@@ -165,7 +165,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
             setattr(
                 cls,
                 attr,
-                WC.create({"name": name, "f3d_code": code, "resource_calendar_id": cls.cal.id, "time_efficiency": 100}),
+                WC.create({"name": name, "td_code": code, "resource_calendar_id": cls.cal.id, "time_efficiency": 100}),
             )
         # DEC-1: у CE 19.0 немає wc.employee_ids (mrp_workorder, Enterprise) — очищаємо лише якщо поле є.
         if "employee_ids" in WC._fields:
@@ -179,10 +179,10 @@ class F3DMachineMixin(F3DTelemetryMixin):
         def prod(name, code, **kw):
             return Product.create({"name": name, "default_code": code, **kw})
 
-        board = {"is_storable": True, "tracking": "lot", "f3d_sheet_length_mm": 2800, "f3d_sheet_width_mm": 2070}
-        cls.board = prod("ДСП 16 мм тест 2800×2070", "BOARD-T", f3d_thickness_mm=16, **board)
-        cls.board2 = prod("ДСП 16 мм тест (інший декор)", "BOARD-T2", f3d_thickness_mm=16, **board)
-        cls.hdf = prod("ХДФ 3 мм тест 2800×2070", "HDF-T", f3d_thickness_mm=3, **board)
+        board = {"is_storable": True, "tracking": "lot", "td_sheet_length_mm": 2800, "td_sheet_width_mm": 2070}
+        cls.board = prod("ДСП 16 мм тест 2800×2070", "BOARD-T", td_thickness_mm=16, **board)
+        cls.board2 = prod("ДСП 16 мм тест (інший декор)", "BOARD-T2", td_thickness_mm=16, **board)
+        cls.hdf = prod("ХДФ 3 мм тест 2800×2070", "HDF-T", td_thickness_mm=3, **board)
         cls.edge = prod("Крайка тест", "EB-T", type="consu")
         cls.fg = prod("Тумба тест", "FG-T")
         Lot = cls.env["stock.lot"]
@@ -203,14 +203,14 @@ class F3DMachineMixin(F3DTelemetryMixin):
                     {
                         "name": code,
                         "location_id": wh.lot_stock_id.id,
-                        "f3d_code": code,
-                        "f3d_loc_kind": "stack",
-                        "f3d_capacity": 60,
+                        "td_code": code,
+                        "td_loc_kind": "stack",
+                        "td_capacity": 60,
                     }
                 ),
             )
-        cls.stack_t1 = env["f3d.gantry.stack"].create({"location_id": cls.loc_t1.id})
-        cls.stack_t2 = env["f3d.gantry.stack"].create({"location_id": cls.loc_t2.id})
+        cls.stack_t1 = env["td.gantry.stack"].create({"location_id": cls.loc_t1.id})
+        cls.stack_t2 = env["td.gantry.stack"].create({"location_id": cls.loc_t2.id})
 
     @classmethod
     def put_stock(cls, product, location, qty, lot=None):
@@ -220,7 +220,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
     @classmethod
     def _setup_sources_signals(cls):
         env = cls.env
-        Src, Sig = env["f3d.source"], env["f3d.signal"]
+        Src, Sig = env["td.source"], env["td.signal"]
         ua_params = {
             "endpoint": "opc.tcp://iot-sim:4840/f3d/",
             "security_mode": "None",
@@ -253,7 +253,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
         cut = {"base_url": "http://iot-sim:8083", "auth": "api_key", "key_ref": "F3D_CUTOPT_KEY", "vendor": "cutopt"}
         cls.src_ws = src("REST-WOODSTORE-T", "rest_vendor", ws)
         cls.src_cut = src("REST-CUTOPT-T", "rest_vendor", cut)
-        cls.src_der = env.ref("factory3d_machine_connect.source_mc_derived")
+        cls.src_der = env.ref("td_machine_connect.source_mc_derived")
 
         def make(code, protocol, io_unit, io_slot, source, eq, wc, prefix):
             sigs = {}
@@ -300,7 +300,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
 
     @classmethod
     def _setup_machines(cls):
-        Machine = cls.env["f3d.machine"]
+        Machine = cls.env["td.machine"]
 
         def mk(wc, protocol, source, prefix, eq, **kw):
             vals = {"workcenter_id": wc.id, "protocol": protocol, "equipment_id": eq.id if eq else False, **kw}
@@ -343,7 +343,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
     def enable_write(self):
         """Чотири запобіжники Odoo (п'ятий — `F3D_WRITE_ENABLED` колектора — в Odoo-тестах не діє)."""
         self._icp().set_param(P + "write_enabled", "True")
-        self._icp().set_param("factory3d.telemetry.write_enabled", "True")
+        self._icp().set_param("td.telemetry.write_enabled", "True")
         (self.src_ua | self.src_saw | self.src_ws | self.src_cut).write({"write_enabled": True})
         (self.sig_ua_cmd | self.sig_saw_cmd | self.sig_g_cmd | self.sig_cut_cmd).write({"write_enabled": True})
 
@@ -382,19 +382,19 @@ class F3DMachineMixin(F3DTelemetryMixin):
 
     def tick(self, t):
         with at(t):
-            self.env["f3d.machine"]._cron_tick()
+            self.env["td.machine"]._cron_tick()
 
     def oee_tick(self, t):
         with at(t):
-            self.env["f3d.oee.shift"]._cron_oee()
+            self.env["td.oee.shift"]._cron_oee()
 
     def gantry_tick(self, t):
         with at(t):
-            self.env["f3d.gantry.job"]._cron_gantry()
+            self.env["td.gantry.job"]._cron_gantry()
 
     def cutmap_tick(self, t):
         with at(t):
-            self.env["f3d.cut.map"]._cron_cutmap()
+            self.env["td.cut.map"]._cron_cutmap()
 
     def push_event(self, route, payload, source):
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -407,7 +407,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
             "headers": {},
             "payload": payload,
         }
-        return self.env["f3d.push.event"].sudo()._f3d_receive([ev], self.col)
+        return self.env["td.push.event"].sudo()._f3d_receive([ev], self.col)
 
     def ev_ua(self, m, message_id, category, text, t, kind="alarm", active=True):
         payload = {
@@ -431,7 +431,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
 
     def make_log(self, m, state, start, end=None, wo=None, pieces=0):
         return (
-            self.env["f3d.machine.state.log"]
+            self.env["td.machine.state.log"]
             .sudo()
             .create(
                 {
@@ -475,7 +475,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
                         0,
                         0,
                         {
-                            "name": "Операція %s" % wc.f3d_code,
+                            "name": "Операція %s" % wc.td_code,
                             "workcenter_id": wc.id,
                             "time_mode": "manual",
                             "time_cycle_manual": cycle,

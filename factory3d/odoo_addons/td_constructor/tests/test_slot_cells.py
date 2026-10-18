@@ -131,10 +131,10 @@ class TestSlotCellsOrm(F3DConstructorCase):
         self.assertEqual(slot.cell_count, 0)
 
     def test_ac16_no_gate_dock(self):
-        keys = set(self.env['f3d.term'].search([('term_type', '=', 'slot_type')]).mapped('key'))
+        keys = set(self.env['td.term'].search([('term_type', '=', 'slot_type')]).mapped('key'))
         self.assertEqual(keys, set(cells.SLOT_TEMPLATES))
         self.assertFalse(keys & {'gate', 'dock'})
-        selection = dict(self.env['f3d.slot']._fields['template'].selection)
+        selection = dict(self.env['td.slot']._fields['template'].selection)
         self.assertEqual(set(selection), set(cells.SLOT_TEMPLATES))
 
     def test_slot_rotation_and_cells_html(self):

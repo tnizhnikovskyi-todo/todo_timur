@@ -1,7 +1,7 @@
 # Документація factory3d — індекс
 
 Проєктна документація модулів Odoo 19 для 3D-моделі меблевого підприємства: прод-модулі, які на стенді
-працюють з емулятором обладнання `factory3d_iot_sim` замість реальних пристроїв. Стан на 14.10.2026 (після відповідей замовника й правки макета 12г).
+працюють з емулятором обладнання `td_iot_sim` замість реальних пристроїв. Стан на 14.10.2026 (після відповідей замовника й правки макета 12г).
 
 ## Спільні документи
 
@@ -18,19 +18,19 @@
 
 | # | Модуль | Фаза | Технічне рішення | Специфікація |
 |---|---|---|---|---|
-| 1 | `factory3d_base` | 1 | [v0.2, 378 р.](modules/factory3d_base/ARCHITECTURE.md) | [v0.2, 1 343 р.](modules/factory3d_base/SPEC.md) |
-| 2 | `factory3d_viewer` | 1 | [v0.2, 522 р.](modules/factory3d_viewer/ARCHITECTURE.md) | [v0.2, 2 152 р.](modules/factory3d_viewer/SPEC.md) |
-| 3 | `factory3d_iot_sim` | 1 | [v0.3, 323 р.](modules/factory3d_iot_sim/ARCHITECTURE.md) | [v0.3, 2 964 р.](modules/factory3d_iot_sim/SPEC.md) |
-| 4 | `factory3d_telemetry` | 2 | [v0.3, 522 р.](modules/factory3d_telemetry/ARCHITECTURE.md) | [v0.3, 2 409 р.](modules/factory3d_telemetry/SPEC.md) |
-| 5 | `factory3d_machine_connect` | 2 | [v0.2, 567 р.](modules/factory3d_machine_connect/ARCHITECTURE.md) | [v0.2, 2 883 р.](modules/factory3d_machine_connect/SPEC.md) |
-| 6 | `factory3d_energy` | 3 | [v0.2, 463 р.](modules/factory3d_energy/ARCHITECTURE.md) | [v0.2, 2 445 р.](modules/factory3d_energy/SPEC.md) |
-| 7 | `td_genset` (міст `factory3d_genset`) | 3 | [v0.3, 589 р.](modules/td_genset/ARCHITECTURE.md) | [v0.3, 1 720 р.](modules/td_genset/SPEC.md) |
-| 8 | `factory3d_yard` | 4 | [v0.3, 498 р.](modules/factory3d_yard/ARCHITECTURE.md) | [v0.2, 2 516 р.](modules/factory3d_yard/SPEC.md) |
-| 9 | `factory3d_access` | 4 | [v0.2, 506 р.](modules/factory3d_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/factory3d_access/SPEC.md) |
-| 10 | `factory3d_bms` | 5 | [v0.2, 444 р.](modules/factory3d_bms/ARCHITECTURE.md) | [v0.2, 1 812 р.](modules/factory3d_bms/SPEC.md) |
-| 11 | `factory3d_fire_safety` | 5 | [v0.3, 551 р.](modules/factory3d_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/factory3d_fire_safety/SPEC.md) |
-| 12 | `factory3d_constructor` | 6 | [v0.1, 295 р.](modules/factory3d_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/factory3d_constructor/SPEC.md) |
-| 13 | `factory3d_constructor_viewer` (міст «Конструктор» → «Переглядач») | 6 | [v0.1, 66 р.](modules/factory3d_constructor_viewer/ARCHITECTURE.md) | [v0.1, 110 р.](modules/factory3d_constructor_viewer/SPEC.md) |
+| 1 | `td_factory3d` | 1 | [v0.2, 378 р.](modules/td_factory3d/ARCHITECTURE.md) | [v0.2, 1 343 р.](modules/td_factory3d/SPEC.md) |
+| 2 | `td_viewer3d` | 1 | [v0.2, 522 р.](modules/td_viewer3d/ARCHITECTURE.md) | [v0.2, 2 152 р.](modules/td_viewer3d/SPEC.md) |
+| 3 | `td_iot_sim` | 1 | [v0.3, 323 р.](modules/td_iot_sim/ARCHITECTURE.md) | [v0.3, 2 964 р.](modules/td_iot_sim/SPEC.md) |
+| 4 | `td_telemetry` | 2 | [v0.3, 522 р.](modules/td_telemetry/ARCHITECTURE.md) | [v0.3, 2 409 р.](modules/td_telemetry/SPEC.md) |
+| 5 | `td_machine_connect` | 2 | [v0.2, 567 р.](modules/td_machine_connect/ARCHITECTURE.md) | [v0.2, 2 883 р.](modules/td_machine_connect/SPEC.md) |
+| 6 | `td_energy` | 3 | [v0.2, 463 р.](modules/td_energy/ARCHITECTURE.md) | [v0.2, 2 445 р.](modules/td_energy/SPEC.md) |
+| 7 | `td_genset` (міст `td_genset_factory3d`) | 3 | [v0.3, 589 р.](modules/td_genset/ARCHITECTURE.md) | [v0.3, 1 720 р.](modules/td_genset/SPEC.md) |
+| 8 | `td_yard` | 4 | [v0.3, 498 р.](modules/td_yard/ARCHITECTURE.md) | [v0.2, 2 516 р.](modules/td_yard/SPEC.md) |
+| 9 | `td_access` | 4 | [v0.2, 506 р.](modules/td_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/td_access/SPEC.md) |
+| 10 | `td_bms` | 5 | [v0.2, 444 р.](modules/td_bms/ARCHITECTURE.md) | [v0.2, 1 812 р.](modules/td_bms/SPEC.md) |
+| 11 | `td_fire_safety` | 5 | [v0.3, 551 р.](modules/td_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/td_fire_safety/SPEC.md) |
+| 12 | `td_constructor` | 6 | [v0.1, 295 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/td_constructor/SPEC.md) |
+| 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач») | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
 
 ## Як читати
 

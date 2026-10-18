@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §6. Підключено у W2: live (node), intervals, balance, rotate. Крон alloc додає W3. -->
 <odoo noupdate="1">
-    <record id="cron_f3d_energy_live" model="ir.cron">
+    <record id="cron_td_energy_live" model="ir.cron">
         <field name="name">Енергетика: живі показники</field>
-        <field name="model_id" ref="model_f3d_energy_node"/>
+        <field name="model_id" ref="model_td_energy_node"/>
         <field name="state">code</field>
         <field name="code">model._cron_live()</field>
         <field name="interval_number">1</field>
@@ -11,9 +11,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_energy_intervals" model="ir.cron">
+    <record id="cron_td_energy_intervals" model="ir.cron">
         <field name="name">Енергетика: 15-хвилинний профіль</field>
-        <field name="model_id" ref="model_f3d_energy_interval"/>
+        <field name="model_id" ref="model_td_energy_interval"/>
         <field name="state">code</field>
         <field name="code">model._cron_build()</field>
         <field name="interval_number">5</field>
@@ -21,9 +21,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_energy_alloc" model="ir.cron">
+    <record id="cron_td_energy_alloc" model="ir.cron">
         <field name="name">Енергетика: розподіл на виробництво</field>
-        <field name="model_id" ref="model_f3d_energy_alloc"/>
+        <field name="model_id" ref="model_td_energy_alloc"/>
         <field name="state">code</field>
         <field name="code">model._cron_alloc()</field>
         <field name="interval_number">15</field>
@@ -31,9 +31,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_energy_balance" model="ir.cron">
+    <record id="cron_td_energy_balance" model="ir.cron">
         <field name="name">Енергетика: баланс обліку</field>
-        <field name="model_id" ref="model_f3d_energy_balance"/>
+        <field name="model_id" ref="model_td_energy_balance"/>
         <field name="state">code</field>
         <field name="code">model._cron_balance()</field>
         <field name="interval_number">1</field>
@@ -42,9 +42,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_energy_rotate" model="ir.cron">
+    <record id="cron_td_energy_rotate" model="ir.cron">
         <field name="name">Енергетика: ротація</field>
-        <field name="model_id" ref="model_f3d_energy_interval"/>
+        <field name="model_id" ref="model_td_energy_interval"/>
         <field name="state">code</field>
         <field name="code">model._cron_rotate()</field>
         <field name="interval_number">1</field>

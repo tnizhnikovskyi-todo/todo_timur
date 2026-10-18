@@ -10,16 +10,16 @@ class TestRequests(FireCase):
     CODE = 'fire/groups/FA-CUT/state'
 
     def requests(self):
-        sig = self.env['f3d.signal'].search([('code', '=', self.CODE)])
-        return self.env['maintenance.request'].search([('f3d_signal_id', '=', sig.id)])
+        sig = self.env['td.signal'].search([('code', '=', self.CODE)])
+        return self.env['maintenance.request'].search([('td_signal_id', '=', sig.id)])
 
     def test_zone_fault_request_linked(self):
         self.push_text(self.CODE, 'fault', self.at(0))
         request = self.requests()
         self.assertEqual(len(request), 1)
-        self.assertEqual(request.f3d_fire_zone_id, self.z_cut)
+        self.assertEqual(request.td_fire_zone_id, self.z_cut)
         event = self.ev('fault', object_code='FA-CUT')
-        self.assertEqual(request.f3d_fire_event_id, event)
+        self.assertEqual(request.td_fire_event_id, event)
         self.assertEqual(event.request_id, request)
         self.assertEqual(request.maintenance_team_id, self.team)
         self.assertIn('Пожежна безпека: зона FA-CUT (Розкрій).', request.description)

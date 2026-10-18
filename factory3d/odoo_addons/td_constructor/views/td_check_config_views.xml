@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-06 -->
-    <record id="view_f3d_check_config_list" model="ir.ui.view">
-        <field name="name">f3d.check.config.list</field>
-        <field name="model">f3d.check.config</field>
+    <record id="view_td_check_config_list" model="ir.ui.view">
+        <field name="name">td.check.config.list</field>
+        <field name="model">td.check.config</field>
         <field name="arch" type="xml">
             <list string="Перевірки розкладки" editable="bottom" create="0" delete="0">
                 <field name="sequence" column_invisible="1"/>

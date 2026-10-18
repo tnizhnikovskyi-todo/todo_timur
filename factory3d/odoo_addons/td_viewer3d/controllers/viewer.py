@@ -22,10 +22,10 @@ SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
 SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
 MAX_CODES = 200
-GROUP_USER = "factory3d_base.group_f3d_user"
+GROUP_USER = "td_factory3d.group_td_user"
 GROUP_STOCK = "stock.group_stock_user"
-GROUP_MANAGER = "factory3d_base.group_f3d_manager"
-GROUP_ADMIN = "factory3d_base.group_f3d_admin"
+GROUP_MANAGER = "td_factory3d.group_td_manager"
+GROUP_ADMIN = "td_factory3d.group_td_admin"
 JSON_CT = "application/json; charset=utf-8"
 
 
@@ -247,7 +247,7 @@ class F3dViewerController(http.Controller):
         if equipment_id is not None and (isinstance(equipment_id, bool) or not isinstance(equipment_id, int)
                                          or not 0 < equipment_id < 2 ** 31):
             return plan_error(400, "bad_request", "Невалідний параметр: equipment_id")
-        return request.env["f3d.viewer.provider.maintenance"]._f3d_plan_maintenance(
+        return request.env["td.viewer.provider.maintenance"]._f3d_plan_maintenance(
             code=code, equipment_id=equipment_id)
 
     # --- знімки (API-05, API-06) -------------------------------------------
@@ -257,7 +257,7 @@ class F3dViewerController(http.Controller):
         date = kw.get("date") or dates.today(request.env)
         if not DATE_RE.match(date):
             return bad_request("Невалідний параметр: date")
-        snaps = request.env["f3d.viewer.snapshot"].search([("shift_date", "=", date)], order="ts asc, id asc")
+        snaps = request.env["td.viewer.snapshot"].search([("shift_date", "=", date)], order="ts asc, id asc")
         items = [{"id": s.id, "ts": dates.local(s.ts), "kind": s.kind, "size_kb": s.size_kb, "note": s.note or None}
                  for s in snaps]
         return json_response({"date": date, "snapshots": items, "mode": "snapshots" if len(items) >= 3 else "plan"})
@@ -267,7 +267,7 @@ class F3dViewerController(http.Controller):
         """`snapshot_id` приходить рядком: нечисловий id → 404 JSON (а не редирект маршрутизатора, V-3)."""
         raw_id = str(snapshot_id)
         sid = int(raw_id) if raw_id.isascii() and raw_id.isdigit() and len(raw_id) <= 9 else 0
-        snap = request.env["f3d.viewer.snapshot"].search([("id", "=", sid)], limit=1)
+        snap = request.env["td.viewer.snapshot"].search([("id", "=", sid)], limit=1)
         if not snap:
             return error("not_found", "Знімок не знайдено", 404)
         raw = base64.b64decode(snap.payload_file or b"")

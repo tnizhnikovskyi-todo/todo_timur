@@ -1,7 +1,7 @@
-# factory3d_fire_safety_viewer
+# td_fire_safety_viewer3d
 
-Міст (auto_install) між `factory3d_fire_safety` і `factory3d_viewer`: провайдери `f3d.viewer.provider.fire` (130) і
-`f3d.viewer.provider.evacuation` (140) для розділів `fire` і `evacuation` (SPEC M-17, R-20, R-21). Payload збирає
-`factory3d_fire_safety/tools/payload.py`. Власних моделей, даних і меню немає.
+Міст (auto_install) між `td_fire_safety` і `td_viewer3d`: провайдери `td.viewer.provider.fire` (130) і
+`td.viewer.provider.evacuation` (140) для розділів `fire` і `evacuation` (SPEC M-17, R-20, R-21). Payload збирає
+`td_fire_safety/tools/payload.py`. Власних моделей, даних і меню немає.
 
-Тест: `F3D_TEST_INSTALL=factory3d_base,factory3d_telemetry,factory3d_viewer,factory3d_fire_safety,factory3d_fire_safety_viewer factory3d/tools/odoo/run_tests.sh <db> /factory3d_fire_safety_viewer`
+Тест: `F3D_TEST_INSTALL=td_factory3d,td_telemetry,td_viewer3d,td_fire_safety,td_fire_safety_viewer3d factory3d/tools/odoo/run_tests.sh <db> /td_fire_safety_viewer3d`

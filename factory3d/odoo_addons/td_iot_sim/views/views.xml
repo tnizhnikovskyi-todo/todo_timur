@@ -122,7 +122,7 @@
   </record>
 
   <record id="view_equipment_form_signals" model="ir.ui.view">
-    <field name="name">maintenance.equipment.form.f3d.signals</field>
+    <field name="name">maintenance.equipment.form.td.signals</field>
     <field name="model">maintenance.equipment</field>
     <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
     <field name="arch" type="xml">

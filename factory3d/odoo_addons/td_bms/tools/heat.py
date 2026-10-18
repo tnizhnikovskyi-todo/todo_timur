@@ -1,4 +1,4 @@
-"""R-14…R-16: тепловий баланс цеху (без ORM). `p` — dict полів `f3d.bms.heat.balance`."""
+"""R-14…R-16: тепловий баланс цеху (без ORM). `p` — dict полів `td.bms.heat.balance`."""
 
 
 def _num(x, nd=2):

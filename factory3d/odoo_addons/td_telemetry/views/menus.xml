@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 (V-22). Замінює views/menus.xml після появи дій (action_* у views/*.xml, що йдуть раніше). -->
 <odoo>
-    <menuitem id="menu_f3d_telemetry" name="Телеметрія" parent="factory3d_base.menu_f3d_root" sequence="30"
-              groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_telemetry_overview" name="Огляд" parent="menu_f3d_telemetry" sequence="10"
-              action="action_f3d_source_overview" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_telemetry_signal" name="Сигнали" parent="menu_f3d_telemetry" sequence="20"
-              action="action_f3d_signal" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_telemetry_reading" name="Показання" parent="menu_f3d_telemetry" sequence="30"
-              action="action_f3d_reading" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_telemetry_reading_hour" name="Годинні агрегати" parent="menu_f3d_telemetry" sequence="35"
-              action="action_f3d_reading_hour" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_telemetry_source" name="Джерела" parent="menu_f3d_telemetry" sequence="40"
-              action="action_f3d_source" groups="factory3d_base.group_f3d_manager"/>
-    <menuitem id="menu_f3d_telemetry_collector" name="Колектори" parent="menu_f3d_telemetry" sequence="50"
-              action="action_f3d_collector" groups="factory3d_base.group_f3d_admin"/>
-    <menuitem id="menu_f3d_telemetry_command" name="Команди" parent="menu_f3d_telemetry" sequence="60"
-              action="action_f3d_command" groups="factory3d_base.group_f3d_manager"/>
-    <menuitem id="menu_f3d_telemetry_push_event" name="Події HTTP push" parent="menu_f3d_telemetry" sequence="70"
-              action="action_f3d_push_event" groups="factory3d_base.group_f3d_manager"/>
-    <menuitem id="menu_f3d_telemetry_config" name="Налаштування телеметрії" parent="factory3d_base.menu_f3d_config"
-              sequence="30" action="action_f3d_telemetry_settings" groups="factory3d_base.group_f3d_admin"/>
-    <menuitem id="menu_f3d_telemetry_maint" name="Телеметрія" parent="maintenance.menu_maintenance_title"
-              sequence="6" action="action_f3d_signal_alarm" groups="factory3d_base.group_f3d_user"/>
-    <!-- action_f3d_signal_alarm: копія action_f3d_signal з context={'search_default_alarm': 1} (SPEC §3) -->
+    <menuitem id="menu_td_telemetry" name="Телеметрія" parent="td_factory3d.menu_td_root" sequence="30"
+              groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_telemetry_overview" name="Огляд" parent="menu_td_telemetry" sequence="10"
+              action="action_td_source_overview" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_telemetry_signal" name="Сигнали" parent="menu_td_telemetry" sequence="20"
+              action="action_td_signal" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_telemetry_reading" name="Показання" parent="menu_td_telemetry" sequence="30"
+              action="action_td_reading" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_telemetry_reading_hour" name="Годинні агрегати" parent="menu_td_telemetry" sequence="35"
+              action="action_td_reading_hour" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_telemetry_source" name="Джерела" parent="menu_td_telemetry" sequence="40"
+              action="action_td_source" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_telemetry_collector" name="Колектори" parent="menu_td_telemetry" sequence="50"
+              action="action_td_collector" groups="td_factory3d.group_td_admin"/>
+    <menuitem id="menu_td_telemetry_command" name="Команди" parent="menu_td_telemetry" sequence="60"
+              action="action_td_command" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_telemetry_push_event" name="Події HTTP push" parent="menu_td_telemetry" sequence="70"
+              action="action_td_push_event" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_telemetry_config" name="Налаштування телеметрії" parent="td_factory3d.menu_td_config"
+              sequence="30" action="action_td_telemetry_settings" groups="td_factory3d.group_td_admin"/>
+    <menuitem id="menu_td_telemetry_maint" name="Телеметрія" parent="maintenance.menu_maintenance_title"
+              sequence="6" action="action_td_signal_alarm" groups="td_factory3d.group_td_user"/>
+    <!-- action_td_signal_alarm: копія action_td_signal з context={'search_default_alarm': 1} (SPEC §3) -->
 </odoo>

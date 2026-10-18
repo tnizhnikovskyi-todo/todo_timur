@@ -1,7 +1,7 @@
 # collector
 
 Колектор телеметрії factory3d: читає Modbus TCP / MQTT / BACnet/IP / HTTP push, буферизує в SQLite і
-відправляє в Odoo (`factory3d_telemetry`, `/f3d/telemetry/*`). Специфікація — SPEC §8.
+відправляє в Odoo (`td_telemetry`, `/f3d/telemetry/*`). Специфікація — SPEC §8.
 
 ## Запуск і тести
 
@@ -26,7 +26,7 @@
 |---|---|---|
 | `F3D_ODOO_URL` | обов'язково | адреса Odoo |
 | `F3D_ODOO_CA` | порожньо | CA для самопідписаного TLS |
-| `F3D_COLLECTOR_CODE` | обов'язково | код колектора (= `f3d.collector.code`) |
+| `F3D_COLLECTOR_CODE` | обов'язково | код колектора (= `td.collector.code`) |
 | `F3D_COLLECTOR_TOKEN` | обов'язково, ≥ 32 символи | Bearer-токен |
 | `F3D_CONFIG_POLL_S` | 60 | перечитування конфігурації |
 | `F3D_PUSH_INTERVAL_S` / `F3D_PUSH_MAX` | 5 / 1000 | період і розмір пакета (≤ 2000) |

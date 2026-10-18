@@ -40,10 +40,10 @@ PARAM_VALUES = {
     "stale_notify_min": "0",
 }
 CRONS = {  # xml-id -> (interval_number, interval_type)
-    "cron_f3d_telemetry_stale": (1, "minutes"),
-    "cron_f3d_telemetry_hour": (10, "minutes"),
-    "cron_f3d_telemetry_rotate": (1, "days"),
-    "cron_f3d_telemetry_commands_gc": (10, "minutes"),
+    "cron_td_telemetry_stale": (1, "minutes"),
+    "cron_td_telemetry_hour": (10, "minutes"),
+    "cron_td_telemetry_rotate": (1, "days"),
+    "cron_td_telemetry_commands_gc": (10, "minutes"),
 }
 SOURCES = {  # Додаток C.1: xml-id -> (code, type, ключові params)
     "source_mqtt_mobile": ("MQTT-MOBILE", "mqtt", {"host": "mosquitto", "port": 1883, "client_id": "f3d-collector"}),
@@ -61,31 +61,31 @@ class TestData(F3DTelemetryCase):
     def test_params(self):
         """AC-66: 16 параметрів §5.1."""
         icp = self.env["ir.config_parameter"].sudo()
-        records = icp.search([("key", "=like", "factory3d.telemetry.%")])
+        records = icp.search([("key", "=like", "td.telemetry.%")])
         self.assertEqual(sorted(r.key.rsplit(".", 1)[1] for r in records), sorted(PARAM_KEYS))
         for key, value in PARAM_VALUES.items():
             with self.subTest(key=key):
-                self.assertEqual(icp.get_param("factory3d.telemetry." + key), value)
-        team_id = icp.get_param("factory3d.telemetry.default_team_id")  # фікстури W0 задають команду (§13.0.1)
+                self.assertEqual(icp.get_param("td.telemetry." + key), value)
+        team_id = icp.get_param("td.telemetry.default_team_id")  # фікстури W0 задають команду (§13.0.1)
         self.assertTrue(team_id.isdigit() and self.env["maintenance.team"].browse(int(team_id)).exists())
 
     def test_crons(self):
         for xmlid, (number, interval_type) in CRONS.items():
             with self.subTest(cron=xmlid):
-                cron = self.env.ref("factory3d_telemetry." + xmlid)
+                cron = self.env.ref("td_telemetry." + xmlid)
                 self.assertEqual((cron.interval_number, cron.interval_type, cron.active), (number, interval_type, True))
 
     def test_rotate_nextcall_kyiv(self):
-        cron = self.env.ref("factory3d_telemetry.cron_f3d_telemetry_rotate")
+        cron = self.env.ref("td_telemetry.cron_td_telemetry_rotate")
         local = cron.nextcall.replace(tzinfo=timezone.utc).astimezone(self.KYIV)
         self.assertEqual(local.strftime("%H:%M"), "02:40")
 
     def test_sources_data(self):
-        collector = self.env.ref("factory3d_telemetry.collector_main")
+        collector = self.env.ref("td_telemetry.collector_main")
         self.assertEqual(collector.code, "COL-MAIN")
         for xmlid, (code, source_type, params) in SOURCES.items():
             with self.subTest(source=xmlid):
-                source = self.env.ref("factory3d_telemetry." + xmlid)
+                source = self.env.ref("td_telemetry." + xmlid)
                 self.assertEqual(
                     (source.code, source.type, source.collector_id, source.module),
                     (code, source_type, collector, "telemetry"),
@@ -100,14 +100,14 @@ class TestRunMigrationAction(F3DTelemetryCase):
     def test_manager_denied(self):
         """AC-67: права на дію «Повторити міграцію»."""
         with self.assertRaises(AccessError):
-            self.env["f3d.signal"].with_user(self.user_manager).f3d_run_migration()
+            self.env["td.signal"].with_user(self.user_manager).f3d_run_migration()
 
     def test_admin_notification(self):
-        Signal = self.env["f3d.signal"].with_user(self.user_admin)
+        Signal = self.env["td.signal"].with_user(self.user_admin)
         action = Signal.f3d_run_migration()
         self.assertEqual(action["tag"], "display_notification")
         self.assertTrue(action["params"]["sticky"])
         self.assertIn('"state"', action["params"]["message"])
         again = Signal.f3d_run_migration()
         self.assertIn('"signals_catalog": {"created": 0', again["params"]["message"])
-        self.assertEqual(self.env.ref("factory3d_telemetry.action_f3d_run_migration").model_id.model, "f3d.signal")
+        self.assertEqual(self.env.ref("td_telemetry.action_td_run_migration").model_id.model, "td.signal")

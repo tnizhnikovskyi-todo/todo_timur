@@ -18,7 +18,7 @@ class TestCards(AccessCase):
         vals = {'number': number, 'server_id': self.server.id, 'holder_type': 'employee',
                 'employee_id': self.emp_a.id}
         vals.update(kw)
-        return self.env['f3d.access.card'].create(vals)
+        return self.env['td.access.card'].create(vals)
 
     def _write(self, enabled):
         P.set_param(self.env, 'write_enabled', 'True' if enabled else 'False')
@@ -32,7 +32,7 @@ class TestCards(AccessCase):
     def _visitor(self, **kw):
         vals = {'name': 'Гість', 'host_employee_id': self.emp_a.id, 'server_id': self.server.id}
         vals.update(kw)
-        return self.env['f3d.access.visitor'].create(vals)
+        return self.env['td.access.visitor'].create(vals)
 
     def test_constraints(self):  # AC-39
         with self.assertRaisesRegex(ValidationError, 'лише цифри'):
@@ -144,7 +144,7 @@ class TestCards(AccessCase):
         self._card('502', state='active', biostar_card_id='6', sync_state='error', pending_op='block',
                    sync_attempts=10, employee_id=self.emp_b.id)
         with self.patch_client(fake):
-            self.env['f3d.access.card']._cron_card_sync()
+            self.env['td.access.card']._cron_card_sync()
         self.assertEqual([c for c in fake.calls if c[0] == 'update_user_cards'],
                          [('update_user_cards', 'TSTA1', [{'id': '5', 'is_blocked': 'false'}])])
         self.assertEqual(first.sync_state, 'synced')
@@ -154,7 +154,7 @@ class TestCards(AccessCase):
         self._card('501', state='active', biostar_card_id='5', sync_state='error', pending_op='block',
                    sync_attempts=3)
         with self.patch_client(fake):
-            self.env['f3d.access.card']._cron_card_sync()
+            self.env['td.access.card']._cron_card_sync()
         self.assertEqual(fake.calls, [])
 
     def test_retry_requires_write_enabled(self):

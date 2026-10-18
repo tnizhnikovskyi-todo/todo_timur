@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="0">
   <!-- 15 сценаріїв S-01…S-15 (SPEC §9.3); схеми можуть оновлюватись. -->
-  <record id="scenario_shift" model="f3d.sim.scenario">
+  <record id="scenario_shift" model="td.sim.scenario">
     <field name="code">shift</field>
     <field name="name">Робоча зміна</field>
     <field name="group">production</field>
@@ -11,7 +11,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'date': {'type': 'string'}, 'lines': {'type': 'array', 'items': {'type': 'string', 'enum': ['A', 'B', 'C', 'D', 'F']}}, 'speed': {'type': 'number', 'minimum': 0.5, 'maximum': 3}, 'trucks': {'type': 'boolean'}, 'people': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'speed': 1, 'trucks': True, 'people': True}"/>
   </record>
-  <record id="scenario_machine_fault" model="f3d.sim.scenario">
+  <record id="scenario_machine_fault" model="td.sim.scenario">
     <field name="code">machine_fault</field>
     <field name="name">Збій верстата</field>
     <field name="group">production</field>
@@ -21,7 +21,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'device': {'type': 'string'}, 'reason': {'type': 'string', 'enum': ['generic', 'spindle', 'emergency', 'power', 'comm', 'sensor']}, 'auto_clear_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True, 'required': ['device']}"/>
     <field name="params_default" eval="{'reason': 'generic', 'auto_clear_s': 0}"/>
   </record>
-  <record id="scenario_blackout" model="f3d.sim.scenario">
+  <record id="scenario_blackout" model="td.sim.scenario">
     <field name="code">blackout</field>
     <field name="name">Блекаут</field>
     <field name="group">energy</field>
@@ -31,7 +31,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'genset': {'type': 'boolean'}, 'restore_delay_s': {'type': 'integer', 'minimum': 0}, 'amf_master': {'type': 'string', 'enum': ['hgm', 'ats']}, 'genset_load_kw': {'type': 'number', 'minimum': 0, 'maximum': 558}, 'chp_island': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'genset': True, 'restore_delay_s': 60, 'amf_master': 'hgm', 'chp_island': False}"/>
   </record>
-  <record id="scenario_filter_clogged" model="f3d.sim.scenario">
+  <record id="scenario_filter_clogged" model="td.sim.scenario">
     <field name="code">filter_clogged</field>
     <field name="name">Забитий фільтр</field>
     <field name="group">bms</field>
@@ -41,7 +41,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'device': {'type': 'string'}, 'value': {'type': 'number'}, 'ramp_min': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True, 'required': ['device']}"/>
     <field name="params_default" eval="{'ramp_min': 2}"/>
   </record>
-  <record id="scenario_truck_no_booking" model="f3d.sim.scenario">
+  <record id="scenario_truck_no_booking" model="td.sim.scenario">
     <field name="code">truck_no_booking</field>
     <field name="name">Фура без бронювання</field>
     <field name="group">logistics</field>
@@ -51,7 +51,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'plate': {'type': 'string'}, 'gate': {'type': 'string', 'enum': ['GATE-W', 'GATE-E']}, 'wait_min': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'gate': 'GATE-W', 'wait_min': 10}"/>
   </record>
-  <record id="scenario_truck_arrival" model="f3d.sim.scenario">
+  <record id="scenario_truck_arrival" model="td.sim.scenario">
     <field name="code">truck_arrival</field>
     <field name="name">Прибуття фури</field>
     <field name="group">logistics</field>
@@ -61,7 +61,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'booking': {'type': 'string'}, 'plate': {'type': 'string'}, 'at': {'type': 'string'}, 'unload_min': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True, 'required': ['booking']}"/>
     <field name="params_default" eval="{'unload_min': 40}"/>
   </record>
-  <record id="scenario_fire_drill" model="f3d.sim.scenario">
+  <record id="scenario_fire_drill" model="td.sim.scenario">
     <field name="code">fire_drill</field>
     <field name="name">Пожежне навчання</field>
     <field name="group">safety</field>
@@ -71,7 +71,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'zone': {'type': 'string'}, 'detector': {'type': 'string'}, 'real': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'zone': 'FA-CNC', 'real': False}"/>
   </record>
-  <record id="scenario_spark" model="f3d.sim.scenario">
+  <record id="scenario_spark" model="td.sim.scenario">
     <field name="code">spark</field>
     <field name="name">Іскра</field>
     <field name="group">safety</field>
@@ -81,7 +81,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'fault': {'type': 'boolean'}, 'count': {'type': 'integer', 'minimum': 1, 'maximum': 5}, 'interval_s': {'type': 'integer', 'minimum': 1}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'fault': False, 'count': 1, 'interval_s': 30}"/>
   </record>
-  <record id="scenario_access_event" model="f3d.sim.scenario">
+  <record id="scenario_access_event" model="td.sim.scenario">
     <field name="code">access_event</field>
     <field name="name">Подія доступу</field>
     <field name="group">access</field>
@@ -91,7 +91,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'device': {'type': 'string'}, 'user': {'type': 'string'}, 'code': {'type': 'integer'}, 'tna_key': {'type': 'string', 'enum': ['1', '2', '']}, 'door_open': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'device': 'ACR-IN', 'code': 4102, 'tna_key': '1', 'door_open': True}"/>
   </record>
-  <record id="scenario_battery_low" model="f3d.sim.scenario">
+  <record id="scenario_battery_low" model="td.sim.scenario">
     <field name="code">battery_low</field>
     <field name="name">Низький заряд АКБ</field>
     <field name="group">logistics</field>
@@ -101,7 +101,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'device': {'type': 'string'}, 'level_pct': {'type': 'number', 'minimum': 0, 'maximum': 100}, 'note': {'type': 'string'}}, 'additionalProperties': True, 'required': ['device']}"/>
     <field name="params_default" eval="{'level_pct': 18}"/>
   </record>
-  <record id="scenario_compressor_fault" model="f3d.sim.scenario">
+  <record id="scenario_compressor_fault" model="td.sim.scenario">
     <field name="code">compressor_fault</field>
     <field name="name">Збій компресора</field>
     <field name="group">energy</field>
@@ -111,7 +111,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'kind': {'type': 'string', 'enum': ['pressure_drop', 'overtemp', 'comm']}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'kind': 'pressure_drop'}"/>
   </record>
-  <record id="scenario_pv_cloudy" model="f3d.sim.scenario">
+  <record id="scenario_pv_cloudy" model="td.sim.scenario">
     <field name="code">pv_cloudy</field>
     <field name="name">Хмарність СЕС</field>
     <field name="group">energy</field>
@@ -121,7 +121,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'cf': {'type': 'number', 'minimum': 0.05, 'maximum': 1}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'cf': 0.3}"/>
   </record>
-  <record id="scenario_boiler_refill" model="f3d.sim.scenario">
+  <record id="scenario_boiler_refill" model="td.sim.scenario">
     <field name="code">boiler_refill</field>
     <field name="name">Завантаження бункера котла</field>
     <field name="group">bms</field>
@@ -131,7 +131,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'level_pct': {'type': 'number', 'minimum': 0, 'maximum': 100}, 'force_on': {'type': 'integer', 'minimum': -1, 'maximum': 2}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'level_pct': 95, 'force_on': -1}"/>
   </record>
-  <record id="scenario_genset_test" model="f3d.sim.scenario">
+  <record id="scenario_genset_test" model="td.sim.scenario">
     <field name="code">genset_test</field>
     <field name="name">Тест генератора</field>
     <field name="group">energy</field>
@@ -141,7 +141,7 @@
     <field name="params_schema" eval="{'type': 'object', 'properties': {'test_on_load': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'test_on_load': False}"/>
   </record>
-  <record id="scenario_lighting_scene" model="f3d.sim.scenario">
+  <record id="scenario_lighting_scene" model="td.sim.scenario">
     <field name="code">lighting_scene</field>
     <field name="name">Сцена освітлення</field>
     <field name="group">bms</field>

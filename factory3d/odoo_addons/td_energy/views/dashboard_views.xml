@@ -2,9 +2,9 @@
 <!-- SPEC §3 V-20 (A-12): «Огляд» — kanban вузлів kind in (transformer, line); KPI-панелі немає (їх дає переглядач).
      Окрема дія «Пік і вартість» — pivot інтервалів фідерів. -->
 <odoo>
-    <record id="view_f3d_energy_node_kanban" model="ir.ui.view">
-        <field name="name">f3d.energy.node.kanban</field>
-        <field name="model">f3d.energy.node</field>
+    <record id="view_td_energy_node_kanban" model="ir.ui.view">
+        <field name="name">td.energy.node.kanban</field>
+        <field name="model">td.energy.node</field>
         <field name="arch" type="xml">
             <kanban create="false" edit="false" default_order="sequence, id">
                 <field name="name"/>
@@ -37,32 +37,32 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_overview" model="ir.actions.act_window">
+    <record id="action_td_energy_overview" model="ir.actions.act_window">
         <field name="name">Огляд</field>
-        <field name="res_model">f3d.energy.node</field>
+        <field name="res_model">td.energy.node</field>
         <field name="view_mode">kanban,list,form</field>
         <field name="domain">[('kind', 'in', ('transformer', 'line'))]</field>
     </record>
 
-    <record id="view_f3d_energy_interval_peak_pivot" model="ir.ui.view">
-        <field name="name">f3d.energy.interval.peak.pivot</field>
-        <field name="model">f3d.energy.interval</field>
+    <record id="view_td_energy_interval_peak_pivot" model="ir.ui.view">
+        <field name="name">td.energy.interval.peak.pivot</field>
+        <field name="model">td.energy.interval</field>
         <field name="arch" type="xml">
             <pivot>
                 <field name="day" type="row" interval="day"/>
                 <field name="kwh" type="measure"/>
                 <field name="kw_avg" type="measure" string="Пік, кВт"/>
-                <field name="cost" type="measure" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="cost" type="measure" groups="td_energy.group_td_energy_cost"/>
             </pivot>
         </field>
     </record>
 
-    <record id="action_f3d_energy_peak" model="ir.actions.act_window">
+    <record id="action_td_energy_peak" model="ir.actions.act_window">
         <field name="name">Пік і вартість</field>
-        <field name="res_model">f3d.energy.interval</field>
+        <field name="res_model">td.energy.interval</field>
         <field name="view_mode">pivot,list</field>
         <field name="domain">[('role', '=', 'feeder')]</field>
         <field name="view_ids" eval="[(5, 0, 0),
-            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_f3d_energy_interval_peak_pivot')})]"/>
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_td_energy_interval_peak_pivot')})]"/>
     </record>
 </odoo>

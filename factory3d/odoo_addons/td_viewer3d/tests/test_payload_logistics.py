@@ -3,7 +3,7 @@ from unittest.mock import patch
 from odoo import fields
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools import payload as payload_tools
+from odoo.addons.td_viewer3d.tools import payload as payload_tools
 
 from .common import F3dViewerBase, F3dViewerCase
 
@@ -15,18 +15,18 @@ class TestLogisticsSynthetic(F3dViewerBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user_plain = cls._make_user("f3d_plain", ["base.group_user", "factory3d_base.group_f3d_user"])
+        cls.user_plain = cls._make_user("f3d_plain", ["base.group_user", "td_factory3d.group_td_user"])
         env = cls.env
         wh = env["stock.warehouse"].search([], limit=1)
         cls.wh = wh
         cls.dock9 = env["stock.location"].create({
-            "name": "TST dock 9", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W9",
-            "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 5,
-            "f3d_alias": "UNLOAD-9", "f3d_side": "west", "f3d_dock_no": 9})
+            "name": "TST dock 9", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "DOCK-W9",
+            "td_kind": "dock", "td_x": 0, "td_y": 5,
+            "td_alias": "UNLOAD-9", "td_side": "west", "td_dock_no": 9})
         cls.dock8 = env["stock.location"].create({
-            "name": "TST dock 8", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W8",
-            "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 15,
-            "f3d_side": "west", "f3d_dock_no": 8})
+            "name": "TST dock 8", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "DOCK-W8",
+            "td_kind": "dock", "td_x": 0, "td_y": 15,
+            "td_side": "west", "td_dock_no": 8})
         cls.product = env["product.product"].create({"name": "TST item", "default_code": "TST-ITM",
                                                      "is_storable": True})
         cls.supplier = env["res.partner"].create({"name": "TST supplier"})
@@ -59,11 +59,11 @@ class TestLogisticsSynthetic(F3dViewerBase):
         self.assertEqual(rec["state"], "assigned")
 
     def test_dock_from_batch(self):
-        """AC-41: dock з батча, truck з f3d_code (не з f3d_truck)."""
+        """AC-41: dock з батча, truck з td_code (не з td_truck)."""
         p = self._picking(self.wh.lot_stock_id)
         batch = self.env["stock.picking.batch"].create({
-            "picking_type_id": self.wh.in_type_id.id, "dock_id": self.dock8.id, "f3d_code": "TRUCK-IN-9",
-            "f3d_truck": "Фура постачальника плит", "picking_ids": [(4, p.id)]})
+            "picking_type_id": self.wh.in_type_id.id, "dock_id": self.dock8.id, "td_code": "TRUCK-IN-9",
+            "td_truck": "Фура постачальника плит", "picking_ids": [(4, p.id)]})
         data = self._data()
         rec = self._find(data, p.name)
         self.assertEqual(rec["dock"], "DOCK-W8")

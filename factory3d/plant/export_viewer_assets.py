@@ -1,6 +1,6 @@
-"""Збирання статичних асетів модуля factory3d_viewer (SPEC §8.5, Додаток B).
+"""Збирання статичних асетів модуля td_viewer3d (SPEC §8.5, Додаток B).
 
-    python3 plant/export_viewer_assets.py odoo_addons/factory3d_viewer [--dist dist] [--no-three]
+    python3 plant/export_viewer_assets.py odoo_addons/td_viewer3d [--dist dist] [--no-three]
 
 Без Blender. Для бандла three потрібні node/npm (esbuild@0.21.5, three@0.160.0 ставляться в тимчасовий каталог).
 """

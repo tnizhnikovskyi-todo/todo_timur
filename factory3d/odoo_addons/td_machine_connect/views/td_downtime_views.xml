@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-07, V-08: f3d.downtime (SPEC §3) -->
+<!-- V-07, V-08: td.downtime (SPEC §3) -->
 <odoo>
-    <record id="view_f3d_downtime_list" model="ir.ui.view">
-        <field name="name">f3d.downtime.list</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_list" model="ir.ui.view">
+        <field name="name">td.downtime.list</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <list string="Простої" create="0" edit="0">
                 <field name="code"/>
@@ -28,9 +28,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_downtime_graph" model="ir.ui.view">
-        <field name="name">f3d.downtime.graph</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_graph" model="ir.ui.view">
+        <field name="name">td.downtime.graph</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <graph string="Парето втрат" type="bar">
                 <field name="loss_id" type="row"/>
@@ -39,9 +39,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_downtime_pivot" model="ir.ui.view">
-        <field name="name">f3d.downtime.pivot</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_pivot" model="ir.ui.view">
+        <field name="name">td.downtime.pivot</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <pivot string="Простої">
                 <field name="workcenter_id" type="row"/>
@@ -51,9 +51,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_downtime_kanban" model="ir.ui.view">
-        <field name="name">f3d.downtime.kanban</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_kanban" model="ir.ui.view">
+        <field name="name">td.downtime.kanban</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <kanban string="Без причини" create="0" records_draggable="0" quick_create="0">
                 <field name="code"/>
@@ -86,9 +86,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_downtime_form" model="ir.ui.view">
-        <field name="name">f3d.downtime.form</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_form" model="ir.ui.view">
+        <field name="name">td.downtime.form</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <form string="Простій" create="0">
                 <header>
@@ -136,7 +136,7 @@
                                     <field name="date_start"/>
                                     <field name="date_end"/>
                                     <field name="duration"/>
-                                    <field name="f3d_source"/>
+                                    <field name="td_source"/>
                                 </list>
                             </field>
                         </page>
@@ -150,9 +150,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_downtime_search" model="ir.ui.view">
-        <field name="name">f3d.downtime.search</field>
-        <field name="model">f3d.downtime</field>
+    <record id="view_td_downtime_search" model="ir.ui.view">
+        <field name="name">td.downtime.search</field>
+        <field name="model">td.downtime</field>
         <field name="arch" type="xml">
             <search string="Простої">
                 <field name="code"/>

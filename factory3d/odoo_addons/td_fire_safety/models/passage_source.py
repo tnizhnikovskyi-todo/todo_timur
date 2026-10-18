@@ -1,15 +1,15 @@
-"""Хук джерел проходів людей (SPEC M-12, M-12a): джерело — будь-яка модель з префіксом f3d.fire.passage.source."""
+"""Хук джерел проходів людей (SPEC M-12, M-12a): джерело — будь-яка модель з префіксом td.fire.passage.source."""
 from datetime import timedelta
 
 from odoo import api, models
 
 
 class F3dFirePassageSource(models.AbstractModel):
-    _name = "f3d.fire.passage.source"
+    _name = "td.fire.passage.source"
     _description = "Пожежна безпека: джерело даних про людей на об'єкті"
 
     _f3d_priority = 1000  # менше — пріоритетніше
-    PREFIX = "f3d.fire.passage.source."
+    PREFIX = "td.fire.passage.source."
 
     @api.model
     def _f3d_source_names(self):
@@ -27,7 +27,7 @@ class F3dFirePassageSource(models.AbstractModel):
             candidates.append((getattr(model, "_f3d_priority", 1000), name, model))
         if candidates:
             return min(candidates, key=lambda c: (c[0], c[1]))[2]
-        return self.env["f3d.fire.passage.source.hr_attendance"].sudo()
+        return self.env["td.fire.passage.source.hr_attendance"].sudo()
 
     @api.model
     def _f3d_source_key(self, model):
@@ -48,8 +48,8 @@ class F3dFirePassageSource(models.AbstractModel):
 
 
 class F3dFirePassageSourceHrAttendance(models.AbstractModel):
-    _name = "f3d.fire.passage.source.hr_attendance"
-    _inherit = "f3d.fire.passage.source"
+    _name = "td.fire.passage.source.hr_attendance"
+    _inherit = "td.fire.passage.source"
     _description = "Пожежна безпека: джерело проходів — відмітки hr.attendance"
 
     _f3d_priority = 100

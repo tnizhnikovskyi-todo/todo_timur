@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-01, V-02 -->
 <odoo>
-    <record id="view_f3d_genset_link_form" model="ir.ui.view">
-        <field name="name">f3d.genset.link.form</field>
-        <field name="model">f3d.genset.link</field>
+    <record id="view_td_genset_link_form" model="ir.ui.view">
+        <field name="name">td.genset.link.form</field>
+        <field name="model">td.genset.link</field>
         <field name="arch" type="xml">
             <form string="Зв'язка генератора">
                 <header>
                     <button name="action_check" type="object" string="Перевірити" class="btn-primary"
-                            groups="factory3d_base.group_f3d_manager"/>
+                            groups="td_factory3d.group_td_manager"/>
                     <button name="action_show_3d" type="object" string="Показати в 3D"/>
                 </header>
                 <sheet>
@@ -32,7 +32,7 @@
                     <group>
                         <group string="Зв'язка">
                             <field name="equipment_id"/>
-                            <field name="f3d_code" readonly="1"/>
+                            <field name="td_code" readonly="1"/>
                             <field name="td_genset_ref"/>
                             <field name="profile_id"/>
                             <field name="publish_enabled"/>
@@ -59,13 +59,13 @@
         </field>
     </record>
 
-    <record id="view_f3d_genset_link_list" model="ir.ui.view">
-        <field name="name">f3d.genset.link.list</field>
-        <field name="model">f3d.genset.link</field>
+    <record id="view_td_genset_link_list" model="ir.ui.view">
+        <field name="name">td.genset.link.list</field>
+        <field name="model">td.genset.link</field>
         <field name="arch" type="xml">
             <list string="Зв'язки генераторів" decoration-danger="not online">
                 <field name="name"/>
-                <field name="f3d_code"/>
+                <field name="td_code"/>
                 <field name="td_genset_ref"/>
                 <field name="profile_id"/>
                 <field name="state_code" column_invisible="1"/>
@@ -79,9 +79,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_genset_link" model="ir.actions.act_window">
+    <record id="action_td_genset_link" model="ir.actions.act_window">
         <field name="name">Зв'язка генератора</field>
-        <field name="res_model">f3d.genset.link</field>
+        <field name="res_model">td.genset.link</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

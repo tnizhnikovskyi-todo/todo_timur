@@ -8,11 +8,11 @@ from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 
-from odoo.addons.factory3d_base.tests.common import F3DCase
+from odoo.addons.td_factory3d.tests.common import F3DCase
 
 from ..adapters import telemetry
 
-TD = "odoo.addons.factory3d_genset.adapters.td_genset"
+TD = "odoo.addons.td_genset_factory3d.adapters.td_genset"
 STATE_MAP = {
     "standby": 1,
     "mains abnormal": 2,
@@ -69,24 +69,24 @@ class GensetCase(F3DCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        Passport, Equipment = env["f3d.equipment.passport"], env["maintenance.equipment"]
+        Passport, Equipment = env["td.equipment.passport"], env["maintenance.equipment"]
         cls.passport = Passport.search([("role", "=", "genset")], limit=1) or Passport.create(
             {"role": "genset", "manufacturer": "KOHLER-SDMO", "model": "D700"}
         )
         cls.passport_comp = Passport.search([("role", "=", "compressor")], limit=1) or Passport.create(
             {"role": "compressor", "manufacturer": "Atlas Copco", "model": "GA 37 VSD+"}
         )
-        cls.genset_eq = Equipment.search([("f3d_code", "=", "GENSET")], limit=1) or Equipment.create(
+        cls.genset_eq = Equipment.search([("td_code", "=", "GENSET")], limit=1) or Equipment.create(
             {
                 "name": "Дизель-генератор",
                 "serial_no": "GENSET",
-                "f3d_code": "GENSET",
-                "f3d_passport_id": cls.passport.id,
+                "td_code": "GENSET",
+                "td_passport_id": cls.passport.id,
             }
         )
-        env["f3d.genset.link"].search([]).write({"publish_enabled": False})
-        env["f3d.genset.link"].search([("equipment_id", "=", cls.genset_eq.id)]).unlink()
-        cls.profile = env.ref("factory3d_genset.profile_d700")
+        env["td.genset.link"].search([]).write({"publish_enabled": False})
+        env["td.genset.link"].search([("equipment_id", "=", cls.genset_eq.id)]).unlink()
+        cls.profile = env.ref("td_genset_factory3d.profile_d700")
         cls.td_gen = env["res.partner"].create({"name": "Генератор td_genset (тест)"})
 
     def setUp(self):
@@ -110,7 +110,7 @@ class GensetCase(F3DCase):
         self.set_param("read_enabled", "True")
         self.set_param("requests_enabled", "True")
         self.set_param("offline_min", "5")
-        self.link = self.env["f3d.genset.link"].create(
+        self.link = self.env["td.genset.link"].create(
             {
                 "equipment_id": self.genset_eq.id,
                 "td_genset_ref": "res.partner,%d" % self.td_gen.id,
@@ -122,7 +122,7 @@ class GensetCase(F3DCase):
         self.snap()
 
     def set_param(self, key, value):
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.genset." + key, value)
+        self.env["ir.config_parameter"].sudo().set_param("td.genset." + key, value)
 
     def snap(self, **over):
         self.snap_value = {"ts": fields.Datetime.now().replace(microsecond=0), **SNAP_LOADED, **over}
@@ -131,7 +131,7 @@ class GensetCase(F3DCase):
     def make_ats(self, position, src1, age_s=0, period_s=10):
         from datetime import timedelta
 
-        Signal = self.env["f3d.signal"]
+        Signal = self.env["td.signal"]
         ts = fields.Datetime.now().replace(microsecond=0) - timedelta(seconds=age_s)
         batch = []
         # власні коди: сигнали infra/ats/* з energy мають kind=state і не приймають числа
@@ -159,7 +159,7 @@ class TestLinkConstraints(GensetCase):
     def test_unique_equipment(self):  # AC-02
         other = self.env["res.partner"].create({"name": "Інший генератор"})
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"), self.cr.savepoint():
-            self.env["f3d.genset.link"].create(
+            self.env["td.genset.link"].create(
                 {
                     "equipment_id": self.genset_eq.id,
                     "td_genset_ref": "res.partner,%d" % other.id,
@@ -170,13 +170,13 @@ class TestLinkConstraints(GensetCase):
     def test_bad_equipment(self):  # AC-03
         other = self.env["res.partner"].create({"name": "Інший генератор"})
         Equipment = self.env["maintenance.equipment"]
-        nocode = Equipment.create({"name": "Без коду", "f3d_passport_id": self.passport.id})
-        comp = Equipment.create({"name": "Компресор", "f3d_code": "COMP-T", "f3d_passport_id": self.passport_comp.id})
+        nocode = Equipment.create({"name": "Без коду", "td_passport_id": self.passport.id})
+        comp = Equipment.create({"name": "Компресор", "td_code": "COMP-T", "td_passport_id": self.passport_comp.id})
         vals = {"td_genset_ref": "res.partner,%d" % other.id, "profile_id": self.profile.id}
         with self.assertRaisesRegex(ValidationError, "не має коду сцени"), self.cr.savepoint():
-            self.env["f3d.genset.link"].create({**vals, "equipment_id": nocode.id})
+            self.env["td.genset.link"].create({**vals, "equipment_id": nocode.id})
         with self.assertRaisesRegex(ValidationError, "має роль «compressor», потрібна «genset»"), self.cr.savepoint():
-            self.env["f3d.genset.link"].create({**vals, "equipment_id": comp.id})
+            self.env["td.genset.link"].create({**vals, "equipment_id": comp.id})
 
 
 @tagged("post_install", "-at_install")
@@ -264,7 +264,7 @@ class TestIsland(GensetCase):
 @tagged("post_install", "-at_install")
 class TestCritical(GensetCase):
     def _nodes(self):
-        Node, Signal = self.env["f3d.energy.node"], self.env["f3d.signal"]
+        Node, Signal = self.env["td.energy.node"], self.env["td.signal"]
         parent = Node.search([("kind", "=", "section")], limit=1)
         if not parent:
             self.skipTest("немає вузла-секції energy")
@@ -304,7 +304,7 @@ class TestCritical(GensetCase):
         self._nodes()
         self.set_param("critical_codes", "energy/consumers/CR-B/p_now")
         self.assertEqual(self.link._critical_kw()[0], 122.0)  # вузли є — параметр ігнорується
-        self.env["f3d.energy.node"].search([("is_critical", "=", True)]).write({"is_critical": False})
+        self.env["td.energy.node"].search([("is_critical", "=", True)]).write({"is_critical": False})
         total, missing, names = self.link._critical_kw()
         self.assertEqual((total, missing, names), (10.0, [], ["CR-B"]))
 
@@ -315,7 +315,7 @@ class TestProfileExport(GensetCase):
         profile = self.profile.with_user(self.user_manager)
         action = profile.action_export_relay_profile()
         att = self.env["ir.attachment"].search(
-            [("res_model", "=", "f3d.genset.profile"), ("res_id", "=", self.profile.id)], order="id desc", limit=1
+            [("res_model", "=", "td.genset.profile"), ("res_id", "=", self.profile.id)], order="id desc", limit=1
         )
         self.assertEqual(att.mimetype, "application/json")
         self.assertIn(str(att.id), action["url"])
@@ -331,7 +331,7 @@ class TestProfileExport(GensetCase):
         message = action["params"]["message"]
         self.assertIn("Записано в td_genset: 1", message)
         self.assertIn("пропущено (крива/поля немає): 0", message)
-        import odoo.addons.factory3d_genset.adapters.td_genset as td
+        import odoo.addons.td_genset_factory3d.adapters.td_genset as td
 
         args = td.set_fuel_rate.call_args[0]
         self.assertEqual((args[0], args[1]), (self.td_gen, 103.8))

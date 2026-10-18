@@ -6,7 +6,7 @@ from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
 from ..tools import geometry
-from .f3d_fire_system import SHORT_LABEL, SYS_LABEL
+from .td_fire_system import SHORT_LABEL, SYS_LABEL
 
 _logger = logging.getLogger(__name__)
 
@@ -14,16 +14,16 @@ STATES = [
     ("unknown", "Невідомо"), ("normal", "Норма"), ("prealarm", "Передтривога"), ("alarm", "ТРИВОГА"),
     ("fault", "Несправність"), ("disabled", "Вимкнення"), ("test", "Тест")]
 PRIORITY = {"alarm": 6, "prealarm": 5, "fault": 4, "disabled": 3, "test": 2, "normal": 1, "unknown": 0}
-PARAM_PREFIX = "factory3d.fire_safety."
+PARAM_PREFIX = "td.fire_safety."
 
 
 def fire_notify(env, model, codes, kind="state"):
-    """Подія шини переглядача (CF-04); без factory3d_viewer — нічого."""
-    if "f3d.viewer.event" in env:
+    """Подія шини переглядача (CF-04); без td_viewer3d — нічого."""
+    if "td.viewer.event" in env:
         try:
-            env["f3d.viewer.event"]._notify(model, list(codes), kind)
+            env["td.viewer.event"]._notify(model, list(codes), kind)
         except Exception:  # шина не повинна ламати зміну стану
-            _logger.exception("f3d.viewer.event._notify(%s, %s) не вдалося", model, codes)
+            _logger.exception("td.viewer.event._notify(%s, %s) не вдалося", model, codes)
 
 
 def _plural_warnings(n):
@@ -41,7 +41,7 @@ def _names(zones):
 
 
 class F3dFirePanel(models.Model):
-    _name = "f3d.fire.panel"
+    _name = "td.fire.panel"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _description = "Пожежна сигналізація: прилад"
     _order = "name"
@@ -50,23 +50,23 @@ class F3dFirePanel(models.Model):
     code = fields.Char(string="Код сцени", size=32, required=True, index=True, default="FACP-1")
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
     equipment_id = fields.Many2one(
-        "maintenance.equipment", string="Обладнання", ondelete="set null", domain=[("f3d_code", "!=", False)])
-    manufacturer = fields.Char(related="equipment_id.f3d_manufacturer", readonly=True)
-    model = fields.Char(related="equipment_id.f3d_model", readonly=True)
-    zone_id = fields.Many2one("f3d.zone", string="Зона розміщення", ondelete="set null")
+        "maintenance.equipment", string="Обладнання", ondelete="set null", domain=[("td_code", "!=", False)])
+    manufacturer = fields.Char(related="equipment_id.td_manufacturer", readonly=True)
+    model = fields.Char(related="equipment_id.td_model", readonly=True)
+    zone_id = fields.Many2one("td.zone", string="Зона розміщення", ondelete="set null")
     x = fields.Float(string="X, м", digits=(8, 2))
     y = fields.Float(string="Y, м", digits=(8, 2))
     source_id = fields.Many2one(
-        "f3d.source", string="Джерело BACnet", domain=[("type", "=", "bacnet_ip")], ondelete="set null")
+        "td.source", string="Джерело BACnet", domain=[("type", "=", "bacnet_ip")], ondelete="set null")
     io_source_id = fields.Many2one(
-        "f3d.source", string="Джерело вводів (ADAM)", domain=[("type", "=", "modbus_tcp")], ondelete="set null")
-    signal_state_id = fields.Many2one("f3d.signal", string="Сигнал: стан приладу (LSZ:0)", ondelete="set null")
-    signal_system_id = fields.Many2one("f3d.signal", string="Сигнал: системний стан (MSV:1)", ondelete="set null")
-    signal_alarms_id = fields.Many2one("f3d.signal", string="Сигнал: тривоги (PIV:1)", ondelete="set null")
-    signal_faults_id = fields.Many2one("f3d.signal", string="Сигнал: несправності (PIV:2)", ondelete="set null")
-    signal_disabled_id = fields.Many2one("f3d.signal", string="Сигнал: вимкнення (PIV:3)", ondelete="set null")
-    signal_sounders_id = fields.Many2one("f3d.signal", string="Сигнал: оповіщувачі (BV:10)", ondelete="set null")
-    signal_brigade_id = fields.Many2one("f3d.signal", string="Сигнал: передача на пульт (BV:11)", ondelete="set null")
+        "td.source", string="Джерело вводів (ADAM)", domain=[("type", "=", "modbus_tcp")], ondelete="set null")
+    signal_state_id = fields.Many2one("td.signal", string="Сигнал: стан приладу (LSZ:0)", ondelete="set null")
+    signal_system_id = fields.Many2one("td.signal", string="Сигнал: системний стан (MSV:1)", ondelete="set null")
+    signal_alarms_id = fields.Many2one("td.signal", string="Сигнал: тривоги (PIV:1)", ondelete="set null")
+    signal_faults_id = fields.Many2one("td.signal", string="Сигнал: несправності (PIV:2)", ondelete="set null")
+    signal_disabled_id = fields.Many2one("td.signal", string="Сигнал: вимкнення (PIV:3)", ondelete="set null")
+    signal_sounders_id = fields.Many2one("td.signal", string="Сигнал: оповіщувачі (BV:10)", ondelete="set null")
+    signal_brigade_id = fields.Many2one("td.signal", string="Сигнал: передача на пульт (BV:11)", ondelete="set null")
     state = fields.Selection(STATES, default="unknown", readonly=True, index=True, tracking=True)
     raw_state = fields.Char(string="Стан LSZ:0", size=32, readonly=True)
     system_state = fields.Integer(string="MSV:1", readonly=True)
@@ -84,14 +84,14 @@ class F3dFirePanel(models.Model):
     disabled_count = fields.Integer(readonly=True)
     sounders_active = fields.Boolean(readonly=True)
     brigade_transmitted = fields.Boolean(readonly=True)
-    loop_ids = fields.One2many("f3d.fire.loop", "panel_id")
-    zone_ids = fields.One2many("f3d.fire.zone", "panel_id")
+    loop_ids = fields.One2many("td.fire.loop", "panel_id")
+    zone_ids = fields.One2many("td.fire.zone", "panel_id")
     zone_count = fields.Integer(compute="_compute_counts")
     device_count = fields.Integer(compute="_compute_counts")
     event_count = fields.Integer(compute="_compute_counts")
     warn_count = fields.Integer(compute="_compute_counts")
     alarm_zone_count = fields.Integer(compute="_compute_counts")
-    alarm_zone_ids = fields.Many2many("f3d.fire.zone", compute="_compute_counts")
+    alarm_zone_ids = fields.Many2many("td.fire.zone", compute="_compute_counts")
     compliance_mcp_max_m = fields.Float(
         string="Найбільша відстань до ручного сповіщувача, м", digits=(8, 1), readonly=True)
     compliance_mcp_point = fields.Char(size=32, readonly=True)
@@ -113,7 +113,7 @@ class F3dFirePanel(models.Model):
     evac_max_distance_m = fields.Float(string="Найдовший шлях до виходу (макет), м", digits=(8, 1))
     evac_worst_x = fields.Float(digits=(8, 2))
     evac_worst_y = fields.Float(digits=(8, 2))
-    system_ids = fields.One2many("f3d.fire.system", "panel_id")
+    system_ids = fields.One2many("td.fire.system", "panel_id")
     systems_text = fields.Char(compute="_compute_systems_text")
     compliance_dirty = fields.Boolean(default=True)
     first_sync = fields.Boolean(default=True)
@@ -178,7 +178,7 @@ class F3dFirePanel(models.Model):
             rec.state_text = text
 
     def _compute_counts(self):
-        Zone, Device, Event = self.env["f3d.fire.zone"], self.env["f3d.fire.device"], self.env["f3d.fire.event"]
+        Zone, Device, Event = self.env["td.fire.zone"], self.env["td.fire.device"], self.env["td.fire.event"]
         since = fields.Datetime.now() - timedelta(days=7)
         for rec in self:
             zones = Zone.search([("panel_id", "=", rec.id)])
@@ -205,8 +205,8 @@ class F3dFirePanel(models.Model):
             rec.read_enabled = value
 
     def _compute_availability(self):
-        viewer = "f3d.viewer.provider" in self.env
-        sim = "f3d.sim.panel" in self.env
+        viewer = "td.viewer.provider" in self.env
+        sim = "td.sim.panel" in self.env
         for rec in self:
             rec.viewer_available = viewer
             rec.sim_available = sim
@@ -220,7 +220,7 @@ class F3dFirePanel(models.Model):
                 self.write({"raw_state": raw})
             return
         self.write({"state": new_state, "raw_state": raw, "state_ts": ts})
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         zones = self.zone_ids
         if new_state == "fault" and not zones.filtered(lambda z: z.state == "fault"):
             Event._log("fault", self.code, ts, "Несправність приладу %s: стан %s" % (self.code, raw),
@@ -233,7 +233,7 @@ class F3dFirePanel(models.Model):
             self._notify_alarm()
         if old == "alarm" and new_state in ("normal",):
             self._close_alarm_activity()
-        fire_notify(self.env, "f3d.fire.panel", [self.code], "state")
+        fire_notify(self.env, "td.fire.panel", [self.code], "state")
 
     def _set_comm(self, comm, ts):
         """R-12 п. 4–6: зміна зв'язку, події, активність."""
@@ -242,7 +242,7 @@ class F3dFirePanel(models.Model):
         if comm == old:
             return
         vals = {"comm": comm, "comm_since": ts}
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         first = self.first_sync
         if comm == "online":
             vals["first_sync"] = False
@@ -272,7 +272,7 @@ class F3dFirePanel(models.Model):
                 "Втрата зв'язку з приладом %s" % self.code, ev.text if ev else "")
             if hasattr(self, "_f3d_fire_comm_request"):
                 self._f3d_fire_comm_request(ts)
-        fire_notify(self.env, "f3d.fire.panel", [self.code], "state")
+        fire_notify(self.env, "td.fire.panel", [self.code], "state")
 
     # --- синхронізація з сигналами (R-19, R-22 п. 3) -------------------------------------------------------
     @api.model
@@ -299,7 +299,7 @@ class F3dFirePanel(models.Model):
         icp = self.env["ir.config_parameter"].sudo()
         team = self.env["maintenance.team"]
         for param_team in (self._get_param("team_id", 0), equipment.maintenance_team_id.id,
-                           int(icp.get_param("factory3d.telemetry.default_team_id") or 0)):
+                           int(icp.get_param("td.telemetry.default_team_id") or 0)):
             if param_team:
                 team = team.browse(param_team).exists()
                 if team:
@@ -312,7 +312,7 @@ class F3dFirePanel(models.Model):
             "maintenance_type": "corrective",
             "maintenance_team_id": team.id or False,
             "priority": "3",
-            "f3d_origin": "fire_comm",
+            "td_origin": "fire_comm",
             "request_date": fields.Date.today(),
             "schedule_date": fields.Datetime.now(),
             "description": "Автоматично: немає показань приладу %s (джерело %s) з %s; поріг %d с." % (
@@ -320,7 +320,7 @@ class F3dFirePanel(models.Model):
                 self._get_param("comm_lost_after_s", 180)),
         })
         self.sudo().write({"comm_request_id": request.id})
-        event = self.env["f3d.fire.event"].search(
+        event = self.env["td.fire.event"].search(
             [("etype", "=", "comm_lost"), ("panel_id", "=", self.id)], order="ts desc, id desc", limit=1)
         if event and not event.request_id:
             event.request_id = request.id
@@ -328,7 +328,7 @@ class F3dFirePanel(models.Model):
 
     # --- сповіщення ---------------------------------------------------------------------------------------
     def _alert_users(self):
-        xmlid = self._get_param("alert_group_xmlid", "factory3d_base.group_f3d_user")
+        xmlid = self._get_param("alert_group_xmlid", "td_factory3d.group_td_user")
         group = self.env.ref(xmlid, raise_if_not_found=False)
         if not group:
             return self.env["res.users"]
@@ -338,14 +338,14 @@ class F3dFirePanel(models.Model):
     def _schedule_activity(self, summary, note):
         """Активність «Пожежна тривога» кожному користувачу охорони; повертає створені."""
         self.ensure_one()
-        act_xmlid = "factory3d_fire_safety.mail_act_fire_alarm"
+        act_xmlid = "td_fire_safety.mail_act_fire_alarm"
         created = self.env["mail.activity"]
         users = self._alert_users()
         if not users:
             # F-1: порожня група сповіщення (alert_group_xmlid) — тривога без жодної активності; не мовчимо
             _logger.warning(
                 "Пожежна тривога без сповіщення: у групі %s немає активних користувачів (%s)",
-                self._get_param("alert_group_xmlid", "factory3d_base.group_f3d_user"), summary)
+                self._get_param("alert_group_xmlid", "td_factory3d.group_td_user"), summary)
         for user in users:
             try:
                 with self.env.cr.savepoint():
@@ -362,22 +362,22 @@ class F3dFirePanel(models.Model):
         zone_text = zone.display if zone else self.code
         dev_text = device.address if device else "—"
         summary = "Пожежна тривога: %s, сповіщувач %s" % (zone_text, dev_text)
-        event = self.env["f3d.fire.event"].search(
+        event = self.env["td.fire.event"].search(
             [("etype", "in", ("alarm", "prealarm")), ("panel_id", "=", self.id)], limit=1)
         created = self._schedule_activity(summary, event.text if event else summary)
         if created:
             self.sudo().write({"alarm_activity_id": created[0].id})
-        fire_notify(self.env, "f3d.fire.panel", [self.code], "state")
+        fire_notify(self.env, "td.fire.panel", [self.code], "state")
 
     def _close_comm_activity(self):
         for rec in self:
             acts = rec.sudo().activity_ids.filtered(
-                lambda a: a.activity_type_id == self.env.ref("factory3d_fire_safety.mail_act_fire_alarm")
+                lambda a: a.activity_type_id == self.env.ref("td_fire_safety.mail_act_fire_alarm")
                 and (a.summary or "").startswith("Втрата зв'язку"))
             acts.action_feedback(feedback="Зв'язок відновлено")
 
     def _close_alarm_activity(self):
-        act_type = self.env.ref("factory3d_fire_safety.mail_act_fire_alarm")
+        act_type = self.env.ref("td_fire_safety.mail_act_fire_alarm")
         for rec in self:
             acts = rec.sudo().activity_ids.filtered(
                 lambda a: a.activity_type_id == act_type and not (a.summary or "").startswith("Втрата зв'язку"))
@@ -396,12 +396,12 @@ class F3dFirePanel(models.Model):
 
     def _plant_size(self):
         icp = self.env["ir.config_parameter"].sudo()
-        return (float(icp.get_param("factory3d.base.plant_length_m", 150)),
-                float(icp.get_param("factory3d.base.plant_width_m", 72)))
+        return (float(icp.get_param("td.base.plant_length_m", 150)),
+                float(icp.get_param("td.base.plant_width_m", 72)))
 
     def _recompute_exits(self, panel):
-        """R-06 п. 1–3, 5 + R-07: підсумок рахує `f3d.fire.exit._dispersal_summary` (M-09)."""
-        Exit = self.env["f3d.fire.exit"]
+        """R-06 п. 1–3, 5 + R-07: підсумок рахує `td.fire.exit._dispersal_summary` (M-09)."""
+        Exit = self.env["td.fire.exit"]
         Exit.search([])._recompute()
         res = Exit._dispersal_summary()
         return {"compliance_exit_l_m": res["l_m"], "compliance_exit_pair_m": res["pair_m"],
@@ -418,7 +418,7 @@ class F3dFirePanel(models.Model):
                 "compliance_zones_total": len(zones),
                 "compliance_zones_ok": len(zones.filtered(lambda z: z.compliance == "ok")),
             }
-            Device = self.env["f3d.fire.device"]
+            Device = self.env["td.fire.device"]
             length, width = self._plant_size()
             mcps = Device.search([("type", "=", "mcp"), ("panel_id", "=", panel.id)])
             gap, pt = geometry.plant_grid_gap([(d.x, d.y) for d in mcps], length, width)
@@ -428,25 +428,25 @@ class F3dFirePanel(models.Model):
                 pt_text = geometry.fmt_point(*pt)
             vals.update({
                 "compliance_mcp_max_m": round(gap, 1), "compliance_mcp_point": pt_text,
-                "compliance_mcp_ok": gap <= self.env["f3d.fire.norm"].get("mcp_spacing", 30.0)})
+                "compliance_mcp_ok": gap <= self.env["td.fire.norm"].get("mcp_spacing", 30.0)})
             snd = Device.search([("type", "=", "sounder"), ("panel_id", "=", panel.id)])
             gap_s, _pt = geometry.plant_grid_gap([(d.x, d.y) for d in snd], length, width)
             vals["compliance_sounder_max_m"] = geometry.INF_GAP if gap_s == math.inf else round(gap_s, 1)
             # R-08
-            fire_zone_ids = set(self.env["f3d.fire.zone"].search([("panel_id", "!=", False)]).mapped("zone_id").ids)
-            missing = self.env["f3d.zone"].search([("zone_type", "!=", "outdoor")]).filtered(
+            fire_zone_ids = set(self.env["td.fire.zone"].search([("panel_id", "!=", False)]).mapped("zone_id").ids)
+            missing = self.env["td.zone"].search([("zone_type", "!=", "outdoor")]).filtered(
                 lambda z: z.id not in fire_zone_ids)
-            vals["compliance_missing_zones"] = ", ".join(sorted(missing.mapped("f3d_code"))) or False
+            vals["compliance_missing_zones"] = ", ".join(sorted(missing.mapped("td_code"))) or False
             # R-05…R-09 (моделі W3 — за наявності)
             routes_ok = routes_total = smoke_ok = smoke_total = 0
-            if "f3d.fire.exit" in self.env:
+            if "td.fire.exit" in self.env:
                 vals.update(self._recompute_exits(panel))
-            if "f3d.fire.route" in self.env:
-                routes = self.env["f3d.fire.route"].search([])
+            if "td.fire.route" in self.env:
+                routes = self.env["td.fire.route"].search([])
                 routes._recompute()
                 routes_total, routes_ok = len(routes), len(routes.filtered(lambda r: r.compliance == "ok"))
-            if "f3d.fire.smoke.zone" in self.env:
-                smoke = self.env["f3d.fire.smoke.zone"].search([])
+            if "td.fire.smoke.zone" in self.env:
+                smoke = self.env["td.fire.smoke.zone"].search([])
                 smoke._recompute()
                 smoke_total, smoke_ok = len(smoke), len(smoke.filtered(lambda r: r.compliance == "ok"))
             vals.update({
@@ -482,22 +482,22 @@ class F3dFirePanel(models.Model):
 
     def action_view_zones(self):
         self.ensure_one()
-        return self._act_window("f3d.fire.zone", "Зони сигналізації", [("panel_id", "=", self.id)],
+        return self._act_window("td.fire.zone", "Зони сигналізації", [("panel_id", "=", self.id)],
                                 "kanban,list,form")
 
     def action_view_warn_zones(self):
         self.ensure_one()
-        return self._act_window("f3d.fire.zone", "Зони з попередженням", [("panel_id", "=", self.id), ("warn", "=", True)],
+        return self._act_window("td.fire.zone", "Зони з попередженням", [("panel_id", "=", self.id), ("warn", "=", True)],
                                 "kanban,list,form")
 
     def action_view_devices(self):
         self.ensure_one()
-        return self._act_window("f3d.fire.device", "Пристрої", [("panel_id", "=", self.id)])
+        return self._act_window("td.fire.device", "Пристрої", [("panel_id", "=", self.id)])
 
     def action_view_events(self):
         self.ensure_one()
         since = fields.Datetime.now() - timedelta(days=7)
-        return self._act_window("f3d.fire.event", "Події за 7 діб",
+        return self._act_window("td.fire.event", "Події за 7 діб",
                                 [("panel_id", "=", self.id), ("ts", ">=", since)], "list,form,graph")
 
     def action_view_requests(self):
@@ -514,14 +514,14 @@ class F3dFirePanel(models.Model):
         old = (self.source_id.params or {}).get("device")
         return {
             "type": "ir.actions.act_window", "name": "Змінити BACnet device",
-            "res_model": "f3d.fire.bacnet.device.wizard", "view_mode": "form", "target": "new",
+            "res_model": "td.fire.bacnet.device.wizard", "view_mode": "form", "target": "new",
             "context": {"default_panel_id": self.id, "default_old_instance": old or 0}}
 
     def action_add_comment(self):
         self.ensure_one()
-        view = self.env.ref("factory3d_fire_safety.view_f3d_fire_event_form_manual", raise_if_not_found=False)
+        view = self.env.ref("td_fire_safety.view_td_fire_event_form_manual", raise_if_not_found=False)
         return {
-            "type": "ir.actions.act_window", "name": "Коментар у журнал", "res_model": "f3d.fire.event",
+            "type": "ir.actions.act_window", "name": "Коментар у журнал", "res_model": "td.fire.event",
             "view_mode": "form", "view_id": view.id if view else False, "target": "new",
             "context": {"default_etype": "manual", "default_level": "info", "default_source": "manual",
                         "default_object_code": self.code, "default_panel_id": self.id}}
@@ -530,7 +530,7 @@ class F3dFirePanel(models.Model):
         self.ensure_one()
         if self.compliance_dirty:
             self.action_recompute_compliance()
-        report = self.env.ref("factory3d_fire_safety.report_f3d_fire_evac_compliance", raise_if_not_found=False)
+        report = self.env.ref("td_fire_safety.report_td_fire_evac_compliance", raise_if_not_found=False)
         if not report:
             raise UserError("Звіт перевірки евакуації не встановлено.")
         return report.report_action(self)

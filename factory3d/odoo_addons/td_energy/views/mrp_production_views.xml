@@ -1,46 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- W3: V-15 (вкладка «Енергія» МО) -->
 <odoo>
-    <record id="view_mrp_production_form_f3d_energy" model="ir.ui.view">
-        <field name="name">mrp.production.form.f3d.energy</field>
+    <record id="view_mrp_production_form_td_energy" model="ir.ui.view">
+        <field name="name">mrp.production.form.td.energy</field>
         <field name="model">mrp.production</field>
         <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_f3d_view_alloc" type="object" class="oe_stat_button" icon="fa-bolt"
-                        groups="factory3d_energy.group_f3d_energy_user">
-                    <field name="f3d_energy_kwh" widget="statinfo" string="кВт·год"/>
+                        groups="td_energy.group_td_energy_user">
+                    <field name="td_energy_kwh" widget="statinfo" string="кВт·год"/>
                 </button>
             </xpath>
             <xpath expr="//notebook" position="inside">
-                <page name="f3d_energy" string="Енергія" groups="factory3d_energy.group_f3d_energy_user">
-                    <field name="f3d_energy_locked" invisible="1"/>
+                <page name="f3d_energy" string="Енергія" groups="td_energy.group_td_energy_user">
+                    <field name="td_energy_locked" invisible="1"/>
                     <group>
-                        <group name="f3d_energy_kwh" string="Енергія">
-                            <field name="f3d_energy_direct_kwh"/>
-                            <field name="f3d_energy_shared_kwh"/>
-                            <field name="f3d_energy_kwh"/>
-                            <field name="f3d_energy_state" widget="badge" decoration-success="f3d_energy_state == 'measured'"
-                                   decoration-warning="f3d_energy_state == 'partial'"
-                                   decoration-muted="f3d_energy_state in ('none', 'estimate')"/>
-                            <field name="f3d_energy_locked"/>
+                        <group name="td_energy_kwh" string="Енергія">
+                            <field name="td_energy_direct_kwh"/>
+                            <field name="td_energy_shared_kwh"/>
+                            <field name="td_energy_kwh"/>
+                            <field name="td_energy_state" widget="badge" decoration-success="td_energy_state == 'measured'"
+                                   decoration-warning="td_energy_state == 'partial'"
+                                   decoration-muted="td_energy_state in ('none', 'estimate')"/>
+                            <field name="td_energy_locked"/>
                         </group>
-                        <group name="f3d_energy_cost" string="Вартість" groups="factory3d_energy.group_f3d_energy_cost">
-                            <field name="f3d_energy_cost"/>
-                            <field name="f3d_energy_unit_cost"/>
-                            <field name="f3d_energy_applied_unit"/>
+                        <group name="td_energy_cost" string="Вартість" groups="td_energy.group_td_energy_cost">
+                            <field name="td_energy_cost"/>
+                            <field name="td_energy_unit_cost"/>
+                            <field name="td_energy_applied_unit"/>
                         </group>
                     </group>
                     <button name="action_f3d_energy_recompute" type="object" string="Перерахувати" class="btn-secondary"
-                            groups="factory3d_energy.group_f3d_energy_manager" invisible="f3d_energy_locked"/>
-                    <field name="f3d_energy_alloc_ids" readonly="1">
+                            groups="td_energy.group_td_energy_manager" invisible="td_energy_locked"/>
+                    <field name="td_energy_alloc_ids" readonly="1">
                         <list>
                             <field name="day"/>
                             <field name="workorder_id"/>
                             <field name="kind"/>
                             <field name="pool_id"/>
                             <field name="kwh"/>
-                            <field name="cost" groups="factory3d_energy.group_f3d_energy_cost"/>
+                            <field name="cost" groups="td_energy.group_td_energy_cost"/>
                             <field name="quality" widget="badge" decoration-success="quality == 'measured'"
                                    decoration-warning="quality in ('interpolated', 'partial')"
                                    decoration-muted="quality == 'estimate'"/>

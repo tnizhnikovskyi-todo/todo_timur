@@ -1,6 +1,6 @@
 from odoo.tests import HttpCase, tagged
 
-from odoo.addons.factory3d_viewer.tests.test_hoot import _hoot_hash
+from odoo.addons.td_viewer3d.tests.test_hoot import _hoot_hash
 from odoo.addons.web.tests.test_js import unit_test_error_checker
 
 
@@ -9,7 +9,7 @@ class TestLayoutHoot(HttpCase):
     """HOOT-тести моста (static/tests/hoot/*.test.js): applyLayout, додані об'єкти, порядок щодо stockLoad."""
 
     def test_hoot_suite(self):
-        flt = f"&id={_hoot_hash('@factory3d_constructor_viewer')}"
+        flt = f"&id={_hoot_hash('@td_constructor_viewer3d')}"
         self.browser_js(
             f"/web/tests?headless&loglevel=2&preset=desktop&timeout=60000{flt}",
             "",

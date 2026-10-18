@@ -2,7 +2,7 @@
 
 Результати друкуються рядками ``TP <id> <json>`` (pytest -s / -rA) і заносяться до TEST_REPORT.md.
 Межі: ТП-01 ≤ 60 с і 20 запитів; ТП-02 опитування ≤ 2 с, CPU воркера < 5 %; ТП-03 collect ≤ 200 мс,
-f3d_people_now (45 зон) ≤ 50 мс, Index Scan по ts; ТП-04 ротація 130 000 подій ≤ 120 с.
+td_people_now (45 зон) ≤ 50 мс, Index Scan по ts; ТП-04 ротація 130 000 подій ≤ 120 с.
 """
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ def test_tp02_daily_volume(odoo, sim, server_id):
         t0 = time.perf_counter()
         odoo.poll(server_id)
         durations.append(time.perf_counter() - t0)
-        rows.append(odoo.k("f3d.access.server", "read", [server_id], ["last_poll_rows"])[0]["last_poll_rows"])
+        rows.append(odoo.k("td.access.server", "read", [server_id], ["last_poll_rows"])[0]["last_poll_rows"])
     cpu1 = odoo_cpu_seconds()
     data = {"polls": len(durations), "mean_s": round(statistics.mean(durations), 3),
             "max_s": round(max(durations), 3), "p95_s": round(sorted(durations)[int(0.95 * len(durations)) - 1], 3),
@@ -103,13 +103,13 @@ def test_tp01_avalanche(odoo, sim, server_id, bs_http):
     odoo.param("page_size", "500")
     # initial_lookback_h обмежено 168 год (R-04): «простій» моделюється курсором на добу до першої події лавини
     cursor = (first_day - timedelta(days=1)).strftime("%Y-%m-%d 00:00:00")
-    odoo.k("f3d.access.server", "write", [server_id], {"last_event_ts": cursor, "last_event_biostar_id": False})
+    odoo.k("td.access.server", "write", [server_id], {"last_event_ts": cursor, "last_event_biostar_id": False})
     lines0 = proxy_lines()
     cpu0 = odoo_cpu_seconds()
     t0 = time.perf_counter()
     odoo.poll(server_id)
     elapsed = time.perf_counter() - t0
-    srv = odoo.k("f3d.access.server", "read", [server_id], ["last_poll_rows", "last_poll_new", "last_poll_more"])[0]
+    srv = odoo.k("td.access.server", "read", [server_id], ["last_poll_rows", "last_poll_new", "last_poll_more"])[0]
     data = {"sim_rows": rows_in_sim, "poll_s": round(elapsed, 2), "rows": srv["last_poll_rows"],
             "new": srv["last_poll_new"], "more": srv["last_poll_more"]}
     if PROXY_LOG:
@@ -126,7 +126,7 @@ def test_tp01_avalanche(odoo, sim, server_id, bs_http):
 
 # ---------------------------------------------------------------------------------------------- ТП-03
 def test_tp03_provider_and_people_now(odoo, server_id):
-    """130 000 подій у таблиці: `_f3d_viewer_collect` ≤ 200 мс, `f3d_people_now` 45 зон ≤ 50 мс, Index Scan по ts."""
+    """130 000 подій у таблиці: `_f3d_viewer_collect` ≤ 200 мс, `td_people_now` 45 зон ≤ 50 мс, Index Scan по ts."""
     res = shell_perf("collect")
     report("03", res)
     assert res["events_total"] >= 130_000
@@ -135,7 +135,7 @@ def test_tp03_provider_and_people_now(odoo, server_id):
     assert res["explain_today_index"], res
     # через RPC (з мережею й сериалізацією) — довідково
     t0 = time.perf_counter()
-    zones = odoo.k("f3d.zone", "search_read", [], ["f3d_people_now"])
+    zones = odoo.k("td.zone", "search_read", [], ["td_people_now"])
     report("03-rpc", {"zones": len(zones), "rpc_ms": round((time.perf_counter() - t0) * 1000, 1)})
 
 

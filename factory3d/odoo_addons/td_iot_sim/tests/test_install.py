@@ -5,7 +5,7 @@ from odoo.tests import TransactionCase, tagged
 class TestInstall(TransactionCase):
 
     def test_module_installed(self):
-        mod = self.env['ir.module.module'].search([('name', '=', 'factory3d_iot_sim')])
+        mod = self.env['ir.module.module'].search([('name', '=', 'td_iot_sim')])
         self.assertEqual(mod.state, 'installed')
 
     def test_level0_models_exist(self):

@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_picking_form_f3d_yard" model="ir.ui.view">
-        <field name="name">stock.picking.form.f3d.yard</field>
+    <record id="view_picking_form_td_yard" model="ir.ui.view">
+        <field name="name">stock.picking.form.td.yard</field>
         <field name="model">stock.picking</field>
         <field name="inherit_id" ref="stock.view_picking_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
-                <button name="action_f3d_open_visit" type="object" class="oe_stat_button" icon="fa-truck" string="Рейс" invisible="not f3d_visit_id"/>
+                <button name="action_f3d_open_visit" type="object" class="oe_stat_button" icon="fa-truck" string="Рейс" invisible="not td_visit_id"/>
             </xpath>
             <xpath expr="//page[@name='extra']" position="after">
-                <page name="f3d_yard" string="Двір" invisible="not f3d_visit_id and not f3d_net_weight_kg">
-                    <div class="alert alert-warning" invisible="f3d_weight_check != 'deviation'">Нетто відрізняється від маси за документом більше за допуск.</div>
+                <page name="f3d_yard" string="Двір" invisible="not td_visit_id and not td_net_weight_kg">
+                    <div class="alert alert-warning" invisible="td_weight_check != 'deviation'">Нетто відрізняється від маси за документом більше за допуск.</div>
                     <group>
-                        <field name="f3d_visit_id"/>
-                        <field name="f3d_net_weight_kg"/>
-                        <field name="f3d_expected_weight_kg"/>
-                        <field name="f3d_weight_check" widget="badge" decoration-success="f3d_weight_check == 'ok'" decoration-danger="f3d_weight_check == 'deviation'" decoration-muted="f3d_weight_check in ('none','no_reference')"/>
-                        <field name="f3d_weight_deviation_pct"/>
+                        <field name="td_visit_id"/>
+                        <field name="td_net_weight_kg"/>
+                        <field name="td_expected_weight_kg"/>
+                        <field name="td_weight_check" widget="badge" decoration-success="td_weight_check == 'ok'" decoration-danger="td_weight_check == 'deviation'" decoration-muted="td_weight_check in ('none','no_reference')"/>
+                        <field name="td_weight_deviation_pct"/>
                     </group>
                 </page>
             </xpath>
         </field>
     </record>
 
-    <record id="view_picking_list_f3d_yard" model="ir.ui.view">
-        <field name="name">stock.picking.list.f3d.yard</field>
+    <record id="view_picking_list_td_yard" model="ir.ui.view">
+        <field name="name">stock.picking.list.td.yard</field>
         <field name="model">stock.picking</field>
         <field name="inherit_id" ref="stock.vpicktree"/>
         <field name="arch" type="xml">
             <field name="origin" position="after">
-                <field name="f3d_weight_check" widget="badge" optional="hide" decoration-success="f3d_weight_check == 'ok'" decoration-danger="f3d_weight_check == 'deviation'" decoration-muted="f3d_weight_check in ('none','no_reference')"/>
-                <field name="f3d_net_weight_kg" optional="hide"/>
+                <field name="td_weight_check" widget="badge" optional="hide" decoration-success="td_weight_check == 'ok'" decoration-danger="td_weight_check == 'deviation'" decoration-muted="td_weight_check in ('none','no_reference')"/>
+                <field name="td_net_weight_kg" optional="hide"/>
             </field>
         </field>
     </record>

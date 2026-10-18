@@ -166,16 +166,16 @@ class FollowOdoo:
         o, w = self.odoo, self.world
         if self._plate_field is None:
             try:
-                self._plate_field = "f3d_plate" in await o.fields_get("stock.picking.batch")
+                self._plate_field = "td_plate" in await o.fields_get("stock.picking.batch")
             except Exception:  # noqa: BLE001 - поле необов'язкове
                 self._plate_field = False
-        bf = ["name", "dock_id", "scheduled_date", "state", "picking_ids", "f3d_code", "f3d_truck"]
+        bf = ["name", "dock_id", "scheduled_date", "state", "picking_ids", "td_code", "td_truck"]
         batches = await o.search_read(
             "stock.picking.batch", [("dock_id", "!=", False), ("state", "in", ["draft", "in_progress"])],
-            bf + (["f3d_plate"] if self._plate_field else []))
+            bf + (["td_plate"] if self._plate_field else []))
         dock_ids = sorted({d for b in batches if (d := _m2o_id(b.get("dock_id")))})
-        docks = {d["id"]: d.get("f3d_code") for d in
-                 (await o.read("stock.location", dock_ids, ["f3d_code"]) if dock_ids else [])}
+        docks = {d["id"]: d.get("td_code") for d in
+                 (await o.read("stock.location", dock_ids, ["td_code"]) if dock_ids else [])}
         pick_ids = sorted({i for b in batches for i in b.get("picking_ids", [])})
         pickings = await o.search_read("stock.picking", [("id", "in", pick_ids)],
                                        ["name", "state", "picking_type_code"]) if pick_ids else []
@@ -195,8 +195,8 @@ class FollowOdoo:
             plan = sum(qty.get(i, [0, 0])[1] for i in ids)
             kinds = {ptype.get(i) for i in ids}
             trucks.append({
-                "code": b.get("f3d_code") or None, "description": b.get("f3d_truck") or None,
-                "plate": (b.get("f3d_plate") or None) if self._plate_field else None,
+                "code": b.get("td_code") or None, "description": b.get("td_truck") or None,
+                "plate": (b.get("td_plate") or None) if self._plate_field else None,
                 "dock": docks.get(_m2o_id(b.get("dock_id"))), "batch": b["name"],
                 "type": "incoming" if "incoming" in kinds else "outgoing",
                 "scheduled": (b.get("scheduled_date") or "").replace(" ", "T") + "Z" if b.get("scheduled_date") else None,
@@ -239,9 +239,9 @@ class FollowOdoo:
         reqs = await o.search_read("maintenance.request", domain, ["equipment_id"])
         eq_ids = sorted({e for r in reqs if (e := _m2o_id(r.get("equipment_id")))})
         if eq_ids:
-            for e in await o.read("maintenance.equipment", eq_ids, ["f3d_code"]):
-                if e.get("f3d_code"):
-                    w.maintenance_closed.add(e["f3d_code"])
+            for e in await o.read("maintenance.equipment", eq_ids, ["td_code"]):
+                if e.get("td_code"):
+                    w.maintenance_closed.add(e["td_code"])
         try:  # заявки рівня 0 (x_f3d_signal.x_request_id); модель може бути відсутня
             sigs = await o.search_read("x_f3d_signal", [("x_request_id", "!=", False)],
                                        ["x_code", "x_request_id"])

@@ -1,63 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
     <record id="param_read_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.bms.read_enabled</field>
+        <field name="key">td.bms.read_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_write_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.bms.write_enabled</field>
+        <field name="key">td.bms.write_enabled</field>
         <field name="value">False</field>
     </record>
     <record id="param_calendar_id" model="ir.config_parameter">
-        <field name="key">factory3d.bms.calendar_id</field>
+        <field name="key">td.bms.calendar_id</field>
         <field name="value"></field>
     </record>
     <record id="param_light_check_delay" model="ir.config_parameter">
-        <field name="key">factory3d.bms.light_check_delay_min</field>
+        <field name="key">td.bms.light_check_delay_min</field>
         <field name="value">10</field>
     </record>
     <record id="param_light_norm_tol" model="ir.config_parameter">
-        <field name="key">factory3d.bms.light_norm_tolerance_pct</field>
+        <field name="key">td.bms.light_norm_tolerance_pct</field>
         <field name="value">5</field>
     </record>
     <record id="param_hvac_check_delay" model="ir.config_parameter">
-        <field name="key">factory3d.bms.hvac_check_delay_min</field>
+        <field name="key">td.bms.hvac_check_delay_min</field>
         <field name="value">10</field>
     </record>
     <record id="param_cold_delay" model="ir.config_parameter">
-        <field name="key">factory3d.bms.cold_delay_min</field>
+        <field name="key">td.bms.cold_delay_min</field>
         <field name="value">30</field>
     </record>
     <record id="param_indoor_min_work" model="ir.config_parameter">
-        <field name="key">factory3d.bms.indoor_min_work_c</field>
+        <field name="key">td.bms.indoor_min_work_c</field>
         <field name="value">16.0</field>
     </record>
     <record id="param_indoor_min_off" model="ir.config_parameter">
-        <field name="key">factory3d.bms.indoor_min_off_c</field>
+        <field name="key">td.bms.indoor_min_off_c</field>
         <field name="value">10.0</field>
     </record>
     <record id="param_heat_deficit_kw" model="ir.config_parameter">
-        <field name="key">factory3d.bms.heat_deficit_kw</field>
+        <field name="key">td.bms.heat_deficit_kw</field>
         <field name="value">20</field>
     </record>
     <record id="param_heat_deficit_delay" model="ir.config_parameter">
-        <field name="key">factory3d.bms.heat_deficit_delay_min</field>
+        <field name="key">td.bms.heat_deficit_delay_min</field>
         <field name="value">30</field>
     </record>
     <record id="param_check_heartbeat" model="ir.config_parameter">
-        <field name="key">factory3d.bms.check_heartbeat_min</field>
+        <field name="key">td.bms.check_heartbeat_min</field>
         <field name="value">10</field>
     </record>
     <record id="param_light_uf" model="ir.config_parameter">
-        <field name="key">factory3d.bms.light_uf</field>
+        <field name="key">td.bms.light_uf</field>
         <field name="value">0.7</field>
     </record>
     <record id="param_light_mf" model="ir.config_parameter">
-        <field name="key">factory3d.bms.light_mf</field>
+        <field name="key">td.bms.light_mf</field>
         <field name="value">0.8</field>
     </record>
     <record id="param_install_report" model="ir.config_parameter">
-        <field name="key">factory3d.bms.install_report</field>
+        <field name="key">td.bms.install_report</field>
         <field name="value">{}</field>
     </record>
 </odoo>

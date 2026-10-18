@@ -12,8 +12,8 @@ from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
-MODULE = "factory3d_energy"
-PARAM = "factory3d.energy."
+MODULE = "td_energy"
+PARAM = "td.energy."
 SHIFT_CALENDAR_NAME = "Зміна 1 (07:00–15:30)"
 DERIVED_CODE = "EN-DERIVED"
 THRESHOLDS = ("warn_low", "warn_high", "alarm_low", "alarm_high")
@@ -44,7 +44,7 @@ def _slug(code):
 
 
 def _step(name):
-    _logger.info("factory3d_energy: крок %s", name)
+    _logger.info("td_energy: крок %s", name)
 
 
 def _ensure_xmlid(env, name, record):
@@ -88,7 +88,7 @@ def params(env, report):
     icp = env["ir.config_parameter"].sudo()
     first_run = icp.get_param(PARAM + "install_report", "{}") in ("", "{}")
     if first_run:
-        icp.set_param(PARAM + "read_enabled", str(icp.get_param("factory3d.base.environment") == "test"))
+        icp.set_param(PARAM + "read_enabled", str(icp.get_param("td.base.environment") == "test"))
     if not icp.get_param(PARAM + "shift_calendar_id"):
         calendar = env["resource.calendar"].search([("name", "=", SHIFT_CALENDAR_NAME)], limit=1)
         calendar = calendar or env.company.resource_calendar_id
@@ -100,7 +100,7 @@ def derived_source(env, report):
     _step("2 derived_source")
     _, created = _upsert(
         env,
-        "f3d.source",
+        "td.source",
         DERIVED_CODE,
         {
             "name": "Енергетика: обчислені показники",
@@ -128,10 +128,10 @@ def pools(env, report):
                 workcenters |= found
             else:
                 wc_missing += 1
-                _logger.warning("factory3d_energy: пул %s: немає робочого центру %s", row["code"], code)
+                _logger.warning("td_energy: пул %s: немає робочого центру %s", row["code"], code)
         _upsert(
             env,
-            "f3d.energy.pool",
+            "td.energy.pool",
             row["code"],
             {
                 "name": row["name"],
@@ -153,7 +153,7 @@ def _depth(code, parents, seen=()):
 
 def nodes(env, report):
     _step("4 nodes")
-    Node = env["f3d.energy.node"].with_context(active_test=False)
+    Node = env["td.energy.node"].with_context(active_test=False)
     rows = _rows("energy_nodes.csv")
     parents = {r["code"]: r["parent"] for r in rows}
     ordered = sorted(rows, key=lambda r: _depth(r["code"], parents))  # предки — першими (обмеження: батько)
@@ -180,9 +180,9 @@ def nodes(env, report):
         if vals.get("alloc_role") == "direct" and not has_wc:
             vals["alloc_role"] = "none"
             stats["direct_without_wc"] += 1
-            _logger.warning("factory3d_energy: вузол %s: прямий споживач без робочого центру", row["code"])
+            _logger.warning("td_energy: вузол %s: прямий споживач без робочого центру", row["code"])
         if row["pool"]:
-            pool = env["f3d.energy.pool"].search([("code", "=", row["pool"])], limit=1)
+            pool = env["td.energy.pool"].search([("code", "=", row["pool"])], limit=1)
             if pool:
                 vals["pool_id"] = pool.id
         if row["parent"] and by_code.get(row["parent"]):
@@ -208,14 +208,14 @@ def nodes(env, report):
 
 def sources(env, report):
     _step("5 sources")
-    collector = env.ref("factory3d_telemetry.collector_main")
+    collector = env.ref("td_telemetry.collector_main")
     read_enabled = _bool_param(env, "read_enabled")
     rows = _rows("energy_sources.csv")
     for row in rows:
         equipment = env["maintenance.equipment"].search_f3d(row["equipment"]) if row["equipment"] else None
         _upsert(
             env,
-            "f3d.source",
+            "td.source",
             row["code"],
             {
                 "name": row["name"],
@@ -283,8 +283,8 @@ def _signal_vals(env, row, sources_by_code, thresholds_only=False):
 
 def signals(env, report):
     _step("6 signals")
-    Signal = env["f3d.signal"].with_context(active_test=False)
-    sources_by_code = {s.code: s for s in env["f3d.source"].with_context(active_test=False).search([])}
+    Signal = env["td.signal"].with_context(active_test=False)
+    sources_by_code = {s.code: s for s in env["td.source"].with_context(active_test=False).search([])}
     rows = _rows("energy_signals.csv")
     existing = {s.code: s for s in Signal.search([("code", "in", [r["code"] for r in rows])])}
     created = updated = thresholds = 0
@@ -336,17 +336,17 @@ def _max_kw(row, node):
 def meters(env, report):
     _step("7 meters")
     rows = _rows("energy_meters.csv")
-    Signal = env["f3d.signal"].with_context(active_test=False)
+    Signal = env["td.signal"].with_context(active_test=False)
 
     def sig(code):
         return Signal.search([("code", "=", code)], limit=1).id if code else False
 
     for row in rows:
-        node = env["f3d.energy.node"].search([("code", "=", row["node"])], limit=1)
-        source = env["f3d.source"].with_context(active_test=False).search([("code", "=", row["source"])], limit=1)
+        node = env["td.energy.node"].search([("code", "=", row["node"])], limit=1)
+        source = env["td.source"].with_context(active_test=False).search([("code", "=", row["source"])], limit=1)
         _upsert(
             env,
-            "f3d.energy.meter",
+            "td.energy.meter",
             row["code"],
             {
                 "name": row["name"],
@@ -366,7 +366,7 @@ def meters(env, report):
 
 def contract(env, report):
     _step("8 contract")
-    Tariff = env["f3d.energy.tariff"]
+    Tariff = env["td.energy.tariff"]
     for company in env["res.company"].search([]):
         Tariff._f3d_tariff_at(fields.Datetime.now(), company)._f3d_apply_contract_thresholds()
 
@@ -390,21 +390,21 @@ def run_bind(env):
 
 def post_init_hook(env):
     report = run_bind(env)
-    _logger.info("factory3d_energy: прив'язка даних: %s", dump(report))
+    _logger.info("td_energy: прив'язка даних: %s", dump(report))
 
 
 def uninstall_hook(env):
     """§5.4: сигнали з CSV — без джерела; створені модулем — неактивні; джерела енергетики — неактивні."""
     env = env(su=True, context=dict(env.context, tracking_disable=True))
     codes = [r["code"] for r in _rows("energy_signals.csv")]
-    Signal = env["f3d.signal"].with_context(active_test=False)
+    Signal = env["td.signal"].with_context(active_test=False)
     signals_ = Signal.search([("code", "in", codes)])
     signals_.write({"source_id": False})
-    created = env["ir.model.data"].search([("module", "=", MODULE), ("model", "=", "f3d.signal"),
+    created = env["ir.model.data"].search([("module", "=", MODULE), ("model", "=", "td.signal"),
                                             ("name", "=like", "sig\\_%")])  # fmt: skip
     ids = set(created.mapped("res_id"))
     signals_.filtered(lambda s: s.id in ids and s.origin in ("catalog", "module")).write({"active": False})
-    env["f3d.source"].with_context(active_test=False).search([("module", "=", "energy")]).filtered(
+    env["td.source"].with_context(active_test=False).search([("module", "=", "energy")]).filtered(
         lambda s: s.type != "f3d_energy"
     ).write({"active": False})
     env["ir.config_parameter"].sudo().search([("key", "=like", PARAM + "%")]).unlink()

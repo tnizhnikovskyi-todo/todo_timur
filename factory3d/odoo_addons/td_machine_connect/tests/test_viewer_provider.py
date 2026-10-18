@@ -1,4 +1,4 @@
-"""AC-86…AC-88: провайдер переглядача `f3d.viewer.provider.machines` (R-25, M-22). Без factory3d_viewer."""
+"""AC-86…AC-88: провайдер переглядача `td.viewer.provider.machines` (R-25, M-22). Без td_viewer3d."""
 
 from unittest.mock import patch
 
@@ -13,10 +13,10 @@ class TestViewerProvider(F3DMachineCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.provider = cls.env["f3d.viewer.provider.machines"]
+        cls.provider = cls.env["td.viewer.provider.machines"]
 
     def _shift(self, machine, oee=0.84):
-        shift = self.env["f3d.oee.shift"].create(
+        shift = self.env["td.oee.shift"].create(
             {
                 "machine_id": machine.id,
                 "date": self.D0,
@@ -51,11 +51,11 @@ class TestViewerProvider(F3DMachineCase):
         mo = self.make_mo(self.wc_saw, qty=14)
         wo = mo.workorder_ids[:1]
         self.m_saw.write({"state": "working", "state_since": self.kt("09:55"), "active_workorder_id": wo.id})
-        wo.f3d_qty_counted = 14
+        wo.td_qty_counted = 14
         self._shift(self.m_saw)
         self.make_log(self.m_saw, "working", "09:55", "10:25", wo=wo, pieces=80)
         loss = self.env.ref("mrp.block_reason1")
-        down = self.env["f3d.downtime"].create(
+        down = self.env["td.downtime"].create(
             {
                 "machine_id": self.m_cnc.id,
                 "date_start": self.kt("09:42"),
@@ -66,7 +66,7 @@ class TestViewerProvider(F3DMachineCase):
             }
         )
         self.m_cnc.write({"state": "fault", "state_since": self.kt("09:42"), "current_downtime_id": down.id})
-        job_model = self.env["f3d.gantry.job"]
+        job_model = self.env["td.gantry.job"]
         job_model._f3d_set_gantry_status(
             {"state": "moving", "aisles_open": [2], "alarms": ["Вакуум"], "vacuum_kpa": 71}
         )
@@ -85,7 +85,7 @@ class TestViewerProvider(F3DMachineCase):
                 "stack_id": self.stack_t1.id,
             }
         )
-        self.map = self.env["f3d.cut.map"].create(
+        self.map = self.env["td.cut.map"].create(
             {
                 "production_id": mo.id,
                 "workorder_id": wo.id,
@@ -164,22 +164,22 @@ class TestViewerProvider(F3DMachineCase):
         self.assertEqual(self.provider._f3d_viewer_collect({}, {}), None)
 
     def test_as_user(self):
-        """Провайдер працює від користувача запиту (`group_f3d_user`)."""
+        """Провайдер працює від користувача запиту (`group_td_user`)."""
         self._setup_live()
         payload = self._payload()
-        self.env["f3d.viewer.provider.machines"].with_user(self.user_f3d)._f3d_viewer_collect(payload, {})
+        self.env["td.viewer.provider.machines"].with_user(self.user_f3d)._f3d_viewer_collect(payload, {})
         self.assertEqual(payload["workcenters"]["SAW-T"]["machine_state"], "working")
         self.assertEqual(payload["equipment"]["GANTRY-1"]["gantry"]["state"], "moving")
 
     def test_bus_and_delta(self):
         self.assertEqual(self.provider._f3d_sequence, 75)
-        self.assertEqual(self.provider._f3d_group, "factory3d_base.group_f3d_user")
+        self.assertEqual(self.provider._f3d_group, "td_factory3d.group_td_user")
         self.assertEqual(self.provider._f3d_sections, ())
         self.assertEqual(
             self.provider._f3d_viewer_bus_models(),
             ["mrp.workcenter", "stock.location", "maintenance.equipment", "mrp.production"],
         )
-        self.assertFalse(self.provider._inherit and "f3d.viewer.provider" in str(self.provider._inherit))
+        self.assertFalse(self.provider._inherit and "td.viewer.provider" in str(self.provider._inherit))
         self._setup_live()
         patch_ = {"workcenters": {"SAW-T": {"code": "SAW-T", "status": "idle"}}}
         self.provider._f3d_viewer_delta(patch_, {})
@@ -191,9 +191,9 @@ class TestViewerProvider(F3DMachineCase):
         self.assertEqual(empty, {})
 
     def test_notify(self):
-        if "f3d.viewer.event" not in self.env:
-            self.skipTest("factory3d_viewer не встановлено")
-        Event = type(self.env["f3d.viewer.event"])
+        if "td.viewer.event" not in self.env:
+            self.skipTest("td_viewer3d не встановлено")
+        Event = type(self.env["td.viewer.event"])
         with patch.object(Event, "_notify") as notify:
             self.m_saw._f3d_notify()
         notify.assert_called_once_with("mrp.workcenter", ["SAW-T"], "state")

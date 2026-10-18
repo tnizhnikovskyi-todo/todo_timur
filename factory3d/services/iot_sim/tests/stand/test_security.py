@@ -10,7 +10,7 @@ import httpx
 
 from .conftest import ROOT, docker
 
-ODOO_CSV = ROOT.parents[1] / "odoo_addons" / "factory3d_iot_sim" / "data" / "f3d_sim_signal.csv"
+ODOO_CSV = ROOT.parents[1] / "odoo_addons" / "td_iot_sim" / "data" / "td_sim_signal.csv"
 COMPOSE = ["docker", "compose", "-f", "docker-compose.sim.yml"]
 
 

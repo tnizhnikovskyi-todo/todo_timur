@@ -3,7 +3,7 @@ import json
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_fire_safety.tools.payload import build_evacuation, build_fire
+from odoo.addons.td_fire_safety.tools.payload import build_evacuation, build_fire
 
 from .common import FireCase
 
@@ -62,7 +62,7 @@ class TestPayload(FireCase):
         self.assertIn('warning', fac)
         self.assertNotIn('maintenance_request', fac)
         self.push_value(DUST, 90.1, self.at(70))
-        request = self.env['maintenance.request'].search([('f3d_fire_zone_id', '=', self.z_fac.id)])
+        request = self.env['maintenance.request'].search([('td_fire_zone_id', '=', self.z_fac.id)])
         self.assertEqual(len(request), 1)
         fac = self.fire()['groups']['FA-FAC']
         self.assertEqual((fac['maintenance_request'], fac['maintenance_request_id']), (request.name, request.id))
@@ -71,8 +71,8 @@ class TestPayload(FireCase):
         """Viewer R-22: однойменні заявки на двох групах — кожна група віддає id своєї заявки."""
         Request = self.env['maintenance.request']
         stage = self.env['maintenance.stage'].search([('done', '=', False)], limit=1)
-        req_cut = Request.create({'name': 'Планове ТО', 'f3d_fire_zone_id': self.z_cut.id, 'stage_id': stage.id})
-        req_fac = Request.create({'name': 'Планове ТО', 'f3d_fire_zone_id': self.z_fac.id, 'stage_id': stage.id})
+        req_cut = Request.create({'name': 'Планове ТО', 'td_fire_zone_id': self.z_cut.id, 'stage_id': stage.id})
+        req_fac = Request.create({'name': 'Планове ТО', 'td_fire_zone_id': self.z_fac.id, 'stage_id': stage.id})
         self.assertNotEqual(req_cut.id, req_fac.id)
         groups = self.fire()['groups']
         self.assertEqual(groups['FA-CUT']['maintenance_request_id'], req_cut.id)
@@ -117,7 +117,7 @@ class TestPayload(FireCase):
 
     def test_devices_and_disabled(self):
         icp = self.env['ir.config_parameter'].sudo()
-        icp.set_param('factory3d.fire_safety.viewer_devices', 'True')
+        icp.set_param('td.fire_safety.viewer_devices', 'True')
         self.push_value(DUST, 86.1, self.at(0))
         data = self.fire(self.u)
         self.assertEqual(len(data['devices']), 353)
@@ -125,7 +125,7 @@ class TestPayload(FireCase):
         self.assertEqual(data['devices']['2.FAC.07']['zone'], 'FA-FAC')
         self.assertEqual(list(data)[-1], 'devices')
         json.dumps(data)
-        icp.set_param('factory3d.fire_safety.read_enabled', 'False')
+        icp.set_param('td.fire_safety.read_enabled', 'False')
         self.panel._cron_sync()
         self.assertEqual(self.panel.comm, 'off')
         self.assertEqual(self.fire()['totals']['state'], 'Обробка вимкнена')

@@ -1,8 +1,8 @@
 /** @odoo-module */
 // AC-41: умовні моделі за категорією (R-17).
 import { describe, expect, test } from "@odoo/hoot";
-import { GENERIC_CATEGORIES, buildGenericModel, clearGenericCache, genericCacheSize } from "@factory3d_constructor/model/generic";
-import { loadThree } from "@factory3d_constructor/model/three";
+import { GENERIC_CATEGORIES, buildGenericModel, clearGenericCache, genericCacheSize } from "@td_constructor/model/generic";
+import { loadThree } from "@td_constructor/model/three";
 import { sizeOf } from "./helpers";
 
 describe.current.tags("desktop");

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Зібрати шаблонну базу f3d_demo_tpl: f3d_template + демо меблевої фабрики (plant.odoo_push по XML-RPC)
-# + factory3d_base і factory3d_iot_sim (post_init_hook мігрує x_-поля демо, як на реальній базі).
+# Зібрати шаблонну базу td_demo_tpl: f3d_template + демо меблевої фабрики (plant.odoo_push по XML-RPC)
+# + td_factory3d і td_iot_sim (post_init_hook мігрує x_-поля демо, як на реальній базі).
 #
 #   make_demo_tpl.sh [--force] [--only <кроки push через кому>] [--skip <кроки через кому>]
 #
-# Ідемпотентний: якщо f3d_demo_tpl уже є — вихід (--force перезбирає). Далі тести беруть її як шаблон:
-#   F3D_TEST_INSTALL=factory3d_x F3D_TEMPLATE_DB=f3d_demo_tpl run_tests.sh f3d_<ім'я> /factory3d_x:TestY
+# Ідемпотентний: якщо td_demo_tpl уже є — вихід (--force перезбирає). Далі тести беруть її як шаблон:
+#   F3D_TEST_INSTALL=td_x F3D_TEMPLATE_DB=td_demo_tpl run_tests.sh f3d_<ім'я> /td_x:TestY
 # Вихідна база — F3D_DEMO_SRC_DB (за замовчуванням f3d_template), результат — F3D_DEMO_TPL_DB.
 # Повні логи: $ODOO_LOG_DIR/demo-push.log, update-<db>.log, serve-<db>.log.
 set -euo pipefail
@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
 done
 F3D_DEMO_MODULES="${F3D_DEMO_MODULES:-purchase_stock,sale_stock,hr_attendance,stock_delivery,stock_picking_batch,stock_fleet}"
 src="${F3D_DEMO_SRC_DB:-f3d_template}"
-db="${F3D_DEMO_TPL_DB:-f3d_demo_tpl}"
+db="${F3D_DEMO_TPL_DB:-td_demo_tpl}"
 f3d_require_db_name "$db"
 f3d_check_env
 f3d_require_pg
@@ -73,7 +73,7 @@ trap - EXIT
 
 # 2) модулі factory3d: post_init_hook мігрує демо
 exec 9>&-   # update.sh бере той самий lock
-F3D_TEST_INSTALL=factory3d_base,factory3d_iot_sim "$F3D_TOOLS_DIR/update.sh" "$db" | tail -5
+F3D_TEST_INSTALL=td_factory3d,td_iot_sim "$F3D_TOOLS_DIR/update.sh" "$db" | tail -5
 
 # 3) зафіксувати як шаблон
 f3d_psql -c "alter database \"$db\" with is_template true allow_connections false"

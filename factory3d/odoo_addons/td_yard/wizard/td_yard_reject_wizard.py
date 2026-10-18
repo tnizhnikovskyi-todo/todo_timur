@@ -1,10 +1,10 @@
 from odoo import fields, models
 
-from ..models.f3d_yard_visit import GRP_SEC, _f3d_yard_require
+from ..models.td_yard_visit import GRP_SEC, _f3d_yard_require
 
 
 class F3dYardRejectWizard(models.TransientModel):
-    _name = "f3d.yard.reject.wizard"
+    _name = "td.yard.reject.wizard"
     _description = "Двір: відхилення рейсу"
 
     REASONS = [
@@ -15,8 +15,8 @@ class F3dYardRejectWizard(models.TransientModel):
         ("other", "Інше"),
     ]
 
-    visit_id = fields.Many2one("f3d.yard.visit", string="Рейс", readonly=True)
-    event_id = fields.Many2one("f3d.yard.lpr.event", string="Подія LPR", readonly=True)
+    visit_id = fields.Many2one("td.yard.visit", string="Рейс", readonly=True)
+    event_id = fields.Many2one("td.yard.lpr.event", string="Подія LPR", readonly=True)
     reason = fields.Text(string="Причина", required=True)
     reason_code = fields.Selection(REASONS, string="Код причини", required=True, default="no_booking")
 
@@ -29,7 +29,7 @@ class F3dYardRejectWizard(models.TransientModel):
         elif self.event_id:
             event = self.event_id
             visit = (
-                self.env["f3d.yard.visit"]
+                self.env["td.yard.visit"]
                 .sudo()
                 .create({"visit_type": "other", "plate": event.plate_unicode or event.plate_raw, "is_walk_in": True})
             )

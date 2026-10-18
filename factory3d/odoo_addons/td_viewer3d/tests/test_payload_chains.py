@@ -4,8 +4,8 @@ import os
 
 from odoo.tests import BaseCase, tagged
 
-from odoo.addons.factory3d_viewer.tools import chains, static_data
-from odoo.addons.factory3d_viewer.tools.cycle_check import check
+from odoo.addons.td_viewer3d.tools import chains, static_data
+from odoo.addons.td_viewer3d.tools.cycle_check import check
 
 from .common import F3dViewerBase, F3dViewerCase
 
@@ -145,11 +145,11 @@ class TestChainsProvider(F3dViewerBase):
     def _collect(self, user, payload):
         env = self.env(user=user)
         ctx = {"sections": {}, "static": static_data.load(), "changes": {}, "codes": None}
-        env["f3d.viewer.provider.chains"]._f3d_viewer_collect(payload, ctx)
+        env["td.viewer.provider.chains"]._f3d_viewer_collect(payload, ctx)
         return ctx
 
     def test_registered(self):
-        prov = self.env["f3d.viewer.provider.chains"]
+        prov = self.env["td.viewer.provider.chains"]
         self.assertEqual(prov._f3d_sequence, 70)
         self.assertIn("sheet_chain", prov._f3d_sections)
 
@@ -185,10 +185,10 @@ class TestChains(F3dViewerCase):
         """AC-61."""
         data = self.payload(self.user_f3d, full=True)
         zones = data["zones"]
-        # test_factory3d_viewer (якщо встановлений) додає власну зону Z-TEST — вона не з демо
+        # test_td_viewer3d (якщо встановлений) додає власну зону Z-TEST — вона не з демо
         self.assertEqual(len([z for z in zones if z != "Z-TEST"]), 45)
         yard = zones["Z-YARD-W"]
-        zone = self.env["f3d.zone"].search([("f3d_code", "=", "Z-YARD-W")])
+        zone = self.env["td.zone"].search([("td_code", "=", "Z-YARD-W")])
         self.assertEqual(yard["zone_type"], "outdoor")
         self.assertEqual(yard["polygon"], zone.polygon)
         self.assertEqual(yard["locations"], [])
@@ -214,7 +214,7 @@ class TestChains(F3dViewerCase):
 
     def test_delta_on_mrp_production_change(self):
         """R-14: дельта chains викликає collect вбудованих провайдерів без помилок."""
-        from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder
+        from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
         res = DeltaBuilder(self.env(user=self.user_f3d), since=None,
                            changes={"mrp.production": {"WH/MO/TST"}}).build()
         self.assertFalse(res["patch"]["meta"].get("errors"))

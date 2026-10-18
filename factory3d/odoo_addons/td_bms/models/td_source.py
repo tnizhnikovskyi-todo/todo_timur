@@ -4,7 +4,7 @@ from odoo import api, fields, models
 class F3dSource(models.Model):
     """M-12 (CT-12, A-01): локальний тип джерела `f3d_bms` — обчислені перевірки модуля без колектора."""
 
-    _inherit = "f3d.source"
+    _inherit = "td.source"
 
     type = fields.Selection(
         selection_add=[("f3d_bms", "Будівля (обчислені)")],

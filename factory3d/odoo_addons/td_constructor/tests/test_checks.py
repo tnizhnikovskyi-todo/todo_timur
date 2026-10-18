@@ -136,7 +136,7 @@ class TestCheckConfigs(F3DConstructorCase):
     """AC-32: налаштування перевірок площадки (R-04) і їх схема (R-22)."""
 
     def test_ac32_default_configs_and_uniqueness(self):
-        site = self.env['f3d.site'].create({'name': "Нова", 'code': 'NEW'})
+        site = self.env['td.site'].create({'name': "Нова", 'code': 'NEW'})
         configs = {c.check_key: c for c in site.check_config_ids}
         self.assertEqual(set(configs), set(checks.CHECK_KEYS))
         self.assertEqual(
@@ -145,7 +145,7 @@ class TestCheckConfigs(F3DConstructorCase):
         self.assertEqual(configs['utility_reach'].params, {'max_m': 15.0})
         self.assertEqual(site.check_config_ids.sorted('sequence').mapped('check_key'), checks.CHECK_KEYS)
         with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():
-            self.env['f3d.check.config'].create({'site_id': site.id, 'check_key': 'fits', 'mode': 'warn'})
+            self.env['td.check.config'].create({'site_id': site.id, 'check_key': 'fits', 'mode': 'warn'})
 
     def test_params_validation(self):
         config = self.site.check_config_ids.filtered(lambda c: c.check_key == 'utility_reach')

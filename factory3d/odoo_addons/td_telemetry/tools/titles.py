@@ -35,7 +35,7 @@ def render_title(signal, value, rel, threshold, text=None):
     values = {
         "name": signal.name or "",
         "equipment": equipment.name if equipment else "",
-        "code": (equipment.f3d_code or "") if equipment else "",
+        "code": (equipment.td_code or "") if equipment else "",
         "quantity": signal.quantity or "",
         "value": fmt_num(value, decimals) if value is not None else "",
         "unit": signal.unit or "",

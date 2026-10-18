@@ -22,7 +22,7 @@ TRIGGER_CODES = (
 class F3dEnergyOutage(models.Model):
     """M-10. Відключення мережі (R-14)."""
 
-    _name = "f3d.energy.outage"
+    _name = "td.energy.outage"
     _description = "Енергетика: відключення мережі"
     _inherit = ["mail.thread"]
     _order = "ts_start desc"
@@ -50,7 +50,7 @@ class F3dEnergyOutage(models.Model):
     critical_kw = fields.Float(string="Критичне навантаження, кВт", digits=(10, 1))
     load_island_kw = fields.Float(string="Навантаження в острові, кВт", digits=(10, 1))
     shed_kw = fields.Float(string="Відключено, кВт", digits=(10, 1))
-    event_ids = fields.One2many("f3d.energy.event", "outage_id", string="Події")
+    event_ids = fields.One2many("td.energy.event", "outage_id", string="Події")
     note = fields.Text(string="Примітка")
 
     @api.depends("ts_start")
@@ -81,7 +81,7 @@ class F3dEnergyOutage(models.Model):
         """{код: (рядок сигналу, свіжий?)} для сигналів АВР і вводів."""
         factor = param_float(self.env, "ats_fresh_factor", 3.0)
         rows = (
-            self.env["f3d.signal"]
+            self.env["td.signal"]
             .sudo()
             .search_read(
                 [("code", "in", list(TRIGGER_CODES))],
@@ -97,7 +97,7 @@ class F3dEnergyOutage(models.Model):
     @api.model
     def _f3d_ats_totals(self):
         """Значення `energy/totals/p_now` (None — немає)."""
-        sig = self.env["f3d.signal"].sudo().search([("code", "=", "energy/totals/p_now")], limit=1)
+        sig = self.env["td.signal"].sudo().search([("code", "=", "energy/totals/p_now")], limit=1)
         return sig.last_value if sig and sig.last_ts else None
 
     # --- R-14 п. 2–10: крок автомата ---------------------------------------------------------------------
@@ -142,7 +142,7 @@ class F3dEnergyOutage(models.Model):
                 return self.browse()
             outage = self._f3d_ats_open(source, mode, text("src1_state") and ts_of("src1_state"), position, now)
         outage = outage.sudo()
-        Event = self.env["f3d.energy.event"]
+        Event = self.env["td.energy.event"]
         # п. 5: gen_start і FAIL START
         gen_on = text("gen_start", fresh_only=False) == "on"
         if gen_on and not outage.gen_start_at:
@@ -187,7 +187,7 @@ class F3dEnergyOutage(models.Model):
         ts = ts_src or (position[0]["last_ts"] if position[1] and source == "ats" else None) or now
         critical = 0.0
         try:
-            critical = self.env["f3d.energy.node"]._f3d_live_snapshot()["critical_kw"]
+            critical = self.env["td.energy.node"]._f3d_live_snapshot()["critical_kw"]
         except Exception:
             _logger.exception("f3d_energy: critical_kw при відкритті відключення")
         outage = self.sudo().create(
@@ -199,7 +199,7 @@ class F3dEnergyOutage(models.Model):
                 "critical_kw": critical,
             }
         )
-        self.env["f3d.energy.event"]._f3d_log(
+        self.env["td.energy.event"]._f3d_log(
             "bad",
             "outage",
             "ATS-1",
@@ -213,13 +213,13 @@ class F3dEnergyOutage(models.Model):
     def _f3d_ats_fail_start(self, outage, mode, gen_on, src2, now):
         """П. 5: реле `infra/ats/fail_start` і прапорець відключення."""
         limit = param_float(self.env, "ats_fail_start_s", 35.0)
-        Signal = self.env["f3d.signal"].sudo()
+        Signal = self.env["td.signal"].sudo()
         cur = Signal.search([("code", "=", ATS + "fail_start")], limit=1)
         age = (now - outage.gen_start_at).total_seconds() if gen_on and outage.gen_start_at else None
         if ats.fail_start_due(mode, age, src2, limit):
             if not outage.fail_start:
                 outage.fail_start = True
-                self.env["f3d.energy.event"]._f3d_log(
+                self.env["td.energy.event"]._f3d_log(
                     "bad",
                     "ats",
                     "ATS-1",
@@ -235,9 +235,9 @@ class F3dEnergyOutage(models.Model):
     @api.model
     def _f3d_ats_bridge_check(self, mode, now):
         """П. 10: узгодженість режиму АВР з налаштуванням моста генератора (раз на добу)."""
-        bridge = self.env["ir.config_parameter"].sudo().get_param("factory3d.genset.amf_master")
+        bridge = self.env["ir.config_parameter"].sudo().get_param("td.genset.amf_master")
         if bridge in ("hgm", "ats") and ats.amf_master(mode) in ("hgm", "ats") and ats.amf_master(mode) != bridge:
-            self.env["f3d.energy.event"]._f3d_log(
+            self.env["td.energy.event"]._f3d_log(
                 "warn",
                 "ats",
                 "ATS-1",

@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_visit_form" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.form</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_form" model="ir.ui.view">
+        <field name="name">td.yard.visit.form</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <form string="Рейс">
                 <header>
-                    <button name="action_plan" type="object" string="Запланувати" invisible="state != 'draft' or not booking_id" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
-                    <button name="action_arrive" type="object" string="Прибула" invisible="state not in ('draft','planned')" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_admit" type="object" string="Пропустити" class="btn-primary" invisible="state != 'arrived'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_call_to_dock" type="object" string="На ворота" class="btn-primary" invisible="state != 'queued'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_start_handling" type="object" string="Початок операції" invisible="state not in ('queued','at_dock')" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
-                    <button name="action_end_handling" type="object" string="Кінець операції" invisible="state != 'handling' or handling_end_at" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
-                    <button name="action_weigh" type="object" string="Зважити" invisible="state not in ('queued','at_dock','handling')" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
-                    <button name="action_leave" type="object" string="Виїхала" invisible="state not in ('queued','at_dock','handling','weighed')" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_reject_wizard" type="object" string="Відхилити" invisible="state not in ('draft','planned','arrived')" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_cancel" type="object" string="Скасувати" invisible="state not in ('draft','planned')" groups="factory3d_yard.group_f3d_yard_dispatcher" confirm="Скасувати рейс і бронювання?"/>
-                    <button name="action_draft" type="object" string="У чернетку" invisible="state != 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                    <button name="action_plan" type="object" string="Запланувати" invisible="state != 'draft' or not booking_id" groups="td_yard.group_td_yard_dispatcher"/>
+                    <button name="action_arrive" type="object" string="Прибула" invisible="state not in ('draft','planned')" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_admit" type="object" string="Пропустити" class="btn-primary" invisible="state != 'arrived'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_call_to_dock" type="object" string="На ворота" class="btn-primary" invisible="state != 'queued'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_start_handling" type="object" string="Початок операції" invisible="state not in ('queued','at_dock')" groups="td_yard.group_td_yard_security,stock.group_stock_user"/>
+                    <button name="action_end_handling" type="object" string="Кінець операції" invisible="state != 'handling' or handling_end_at" groups="td_yard.group_td_yard_security,stock.group_stock_user"/>
+                    <button name="action_weigh" type="object" string="Зважити" invisible="state not in ('queued','at_dock','handling')" groups="td_yard.group_td_yard_security,stock.group_stock_user"/>
+                    <button name="action_leave" type="object" string="Виїхала" invisible="state not in ('queued','at_dock','handling','weighed')" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_reject_wizard" type="object" string="Відхилити" invisible="state not in ('draft','planned','arrived')" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_cancel" type="object" string="Скасувати" invisible="state not in ('draft','planned')" groups="td_yard.group_td_yard_dispatcher" confirm="Скасувати рейс і бронювання?"/>
+                    <button name="action_draft" type="object" string="У чернетку" invisible="state != 'cancelled'" groups="td_yard.group_td_yard_dispatcher"/>
                     <button name="action_show_3d" type="object" string="Показати в 3D" icon="fa-cube" invisible="not scene_code and not dock_code"/>
                     <field name="state" widget="statusbar" statusbar_visible="planned,arrived,queued,at_dock,handling,weighed,left"/>
                 </header>
@@ -50,8 +50,8 @@
                         <group string="Фура й водій">
                             <field name="plate"/>
                             <field name="driver_id"/>
-                            <field name="driver_phone" groups="factory3d_yard.group_f3d_yard_security"/>
-                            <field name="driver_doc" groups="factory3d_yard.group_f3d_yard_security"/>
+                            <field name="driver_phone" groups="td_yard.group_td_yard_security"/>
+                            <field name="driver_doc" groups="td_yard.group_td_yard_security"/>
                         </group>
                     </group>
                     <notebook>
@@ -93,8 +93,8 @@
                                     <field name="slot_end"/>
                                     <field name="source"/>
                                     <field name="state" widget="badge" decoration-success="state == 'confirmed'" decoration-warning="state == 'requested'" decoration-muted="state == 'cancelled'"/>
-                                    <button name="action_confirm" type="object" string="Підтвердити" invisible="state != 'requested'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
-                                    <button name="action_cancel" type="object" string="Скасувати" invisible="state == 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                                    <button name="action_confirm" type="object" string="Підтвердити" invisible="state != 'requested'" groups="td_yard.group_td_yard_dispatcher"/>
+                                    <button name="action_cancel" type="object" string="Скасувати" invisible="state == 'cancelled'" groups="td_yard.group_td_yard_dispatcher"/>
                                 </list>
                             </field>
                         </page>
@@ -116,8 +116,8 @@
                                     <field name="partner_id"/>
                                     <field name="scheduled_date"/>
                                     <field name="state"/>
-                                    <field name="f3d_net_weight_kg"/>
-                                    <field name="f3d_weight_check"/>
+                                    <field name="td_net_weight_kg"/>
+                                    <field name="td_weight_check"/>
                                 </list>
                             </field>
                         </page>
@@ -134,9 +134,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_visit_list" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.list</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_list" model="ir.ui.view">
+        <field name="name">td.yard.visit.list</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <list string="Рейси" decoration-muted="state in ('left','cancelled','rejected')" decoration-warning="is_walk_in and state in ('arrived','queued')" decoration-danger="weight_check == 'deviation'">
                 <field name="name"/>
@@ -159,9 +159,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_visit_kanban" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.kanban</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_kanban" model="ir.ui.view">
+        <field name="name">td.yard.visit.kanban</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <kanban default_group_by="state" default_order="priority desc, planned_start, arrived_at" records_draggable="0" group_create="0" quick_create="0">
                 <field name="name"/>
@@ -190,9 +190,9 @@
                         </div>
                         <field name="progress" widget="percentage" invisible="state not in ('at_dock','handling')"/>
                         <footer>
-                            <button name="action_admit" type="object" class="btn btn-sm btn-primary" invisible="state != 'arrived'" groups="factory3d_yard.group_f3d_yard_security">Пропустити</button>
-                            <button name="action_call_to_dock" type="object" class="btn btn-sm btn-primary" invisible="state != 'queued'" groups="factory3d_yard.group_f3d_yard_security">На ворота</button>
-                            <button name="action_leave" type="object" class="btn btn-sm btn-primary" invisible="state != 'weighed'" groups="factory3d_yard.group_f3d_yard_security">Виїхала</button>
+                            <button name="action_admit" type="object" class="btn btn-sm btn-primary" invisible="state != 'arrived'" groups="td_yard.group_td_yard_security">Пропустити</button>
+                            <button name="action_call_to_dock" type="object" class="btn btn-sm btn-primary" invisible="state != 'queued'" groups="td_yard.group_td_yard_security">На ворота</button>
+                            <button name="action_leave" type="object" class="btn btn-sm btn-primary" invisible="state != 'weighed'" groups="td_yard.group_td_yard_security">Виїхала</button>
                         </footer>
                     </t>
                 </templates>
@@ -200,9 +200,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_visit_search" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.search</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_search" model="ir.ui.view">
+        <field name="name">td.yard.visit.search</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <search string="Рейси">
                 <field name="name"/>
@@ -236,9 +236,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_visit_pivot" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.pivot</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_pivot" model="ir.ui.view">
+        <field name="name">td.yard.visit.pivot</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <pivot string="Рейси (аналіз)">
                 <field name="carrier_id" type="row"/>
@@ -252,9 +252,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_visit_graph" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.graph</field>
-        <field name="model">f3d.yard.visit</field>
+    <record id="view_td_yard_visit_graph" model="ir.ui.view">
+        <field name="name">td.yard.visit.graph</field>
+        <field name="model">td.yard.visit</field>
         <field name="arch" type="xml">
             <graph string="Рейси по днях" type="bar" stacked="1">
                 <field name="day" interval="day" type="row"/>
@@ -263,18 +263,18 @@
         </field>
     </record>
 
-    <record id="action_f3d_yard_dispatch" model="ir.actions.act_window">
+    <record id="action_td_yard_dispatch" model="ir.actions.act_window">
         <field name="name">Диспетчерська</field>
-        <field name="res_model">f3d.yard.visit</field>
+        <field name="res_model">td.yard.visit</field>
         <field name="view_mode">kanban,list,form,pivot,graph</field>
         <field name="domain">[('state','not in',('cancelled',))]</field>
         <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html"><p class="o_view_nocontent_smiling_face">Немає рейсів на сьогодні. Створіть рейс або бронювання.</p></field>
     </record>
 
-    <record id="action_f3d_yard_visit" model="ir.actions.act_window">
+    <record id="action_td_yard_visit" model="ir.actions.act_window">
         <field name="name">Рейси</field>
-        <field name="res_model">f3d.yard.visit</field>
+        <field name="res_model">td.yard.visit</field>
         <field name="view_mode">list,form,kanban,pivot,graph</field>
     </record>
 </odoo>

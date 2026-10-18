@@ -1,4 +1,4 @@
-"""Допоміжні запити до моделей «Будівля» через XML-RPC (стенд factory3d_bms)."""
+"""Допоміжні запити до моделей «Будівля» через XML-RPC (стенд td_bms)."""
 
 from __future__ import annotations
 
@@ -41,26 +41,26 @@ GROUP_F = [
     "deviation",
     "deviation_text",
     "live_ts",
-    "f3d_bms_write_enabled",
+    "td_bms_write_enabled",
     "p_now_kw",
 ]
 
 
 def unit(o, code):
-    return o.search_read("f3d.bms.hvac.unit", [("code", "=", code)], UNIT_F, limit=1)[0]
+    return o.search_read("td.bms.hvac.unit", [("code", "=", code)], UNIT_F, limit=1)[0]
 
 
 def group(o, code):
-    return o.search_read("f3d.bms.light.group", [("code", "=", code)], GROUP_F, limit=1)[0]
+    return o.search_read("td.bms.light.group", [("code", "=", code)], GROUP_F, limit=1)[0]
 
 
 def panel(o, code):
-    return o.search_read("f3d.bms.light.panel", [("code", "=", code)], ["code", "state"], limit=1)[0]
+    return o.search_read("td.bms.light.panel", [("code", "=", code)], ["code", "state"], limit=1)[0]
 
 
 def balance(o):
     return o.search_read(
-        "f3d.bms.heat.balance",
+        "td.bms.heat.balance",
         [],
         [
             "outdoor_c",
@@ -82,7 +82,7 @@ def last_request_id(o):
 
 
 def bms_requests(o, rule=None, name=None, only_open=False, after_id=0):
-    dom = [("f3d_bms_rule", "!=", False)] if rule is None else [("f3d_bms_rule", "=", rule)]
+    dom = [("td_bms_rule", "!=", False)] if rule is None else [("td_bms_rule", "=", rule)]
     if after_id:
         dom.append(("id", ">", after_id))
     if name:
@@ -92,7 +92,7 @@ def bms_requests(o, rule=None, name=None, only_open=False, after_id=0):
     return o.search_read(
         "maintenance.request",
         dom,
-        ["name", "f3d_bms_rule", "maintenance_team_id", "stage_id", "description", "equipment_id"],
+        ["name", "td_bms_rule", "maintenance_team_id", "stage_id", "description", "equipment_id"],
         order="id",
     )
 
@@ -106,7 +106,7 @@ def episodes(o, rule=None, code=None, state=None):
     if state:
         dom.append(("state", "=", state))
     return o.search_read(
-        "f3d.bms.deviation", dom, ["name", "rule", "object_code", "state", "value", "request_id"], order="id"
+        "td.bms.deviation", dom, ["name", "rule", "object_code", "state", "value", "request_id"], order="id"
     )
 
 
@@ -123,7 +123,7 @@ def sig(o, code):
 
 def source(o, code):
     return o.search_read(
-        "f3d.source",
+        "td.source",
         [("code", "=", code)],
         ["code", "state", "params", "read_enabled", "write_enabled", "last_error"],
         limit=1,
@@ -157,9 +157,9 @@ def sleep_until(pred, timeout, step=5):
 
 
 def use_calendar(o, name=None):
-    """Ставить календар перевірок `factory3d.bms.calendar_id` (None — порожньо: календар компанії)."""
+    """Ставить календар перевірок `td.bms.calendar_id` (None — порожньо: календар компанії)."""
     cid = ""
     if name:
         cid = str(o.search_read("resource.calendar", [("name", "=", name)], ["id"], limit=1)[0]["id"])
-    o.param("factory3d.bms.calendar_id", cid)
+    o.param("td.bms.calendar_id", cid)
     return cid

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-01 -->
-    <record id="view_f3d_site_form" model="ir.ui.view">
-        <field name="name">f3d.site.form</field>
-        <field name="model">f3d.site</field>
+    <record id="view_td_site_form" model="ir.ui.view">
+        <field name="name">td.site.form</field>
+        <field name="model">td.site</field>
         <field name="arch" type="xml">
             <form string="Площадка">
                 <header>
                     <button name="action_open_constructor" type="object" string="Відкрити в конструкторі"
                             class="btn-primary"/>
                     <button name="action_publish_wizard" type="object" string="Опублікувати…"
-                            groups="factory3d_constructor.group_f3d_constructor_manager"
+                            groups="td_constructor.group_td_constructor_manager"
                             invisible="not has_changes"/>
                 </header>
                 <sheet>
@@ -90,9 +90,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_site_list" model="ir.ui.view">
-        <field name="name">f3d.site.list</field>
-        <field name="model">f3d.site</field>
+    <record id="view_td_site_list" model="ir.ui.view">
+        <field name="name">td.site.list</field>
+        <field name="model">td.site</field>
         <field name="arch" type="xml">
             <list string="Площадки">
                 <field name="sequence" widget="handle"/>
@@ -106,9 +106,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_site_search" model="ir.ui.view">
-        <field name="name">f3d.site.search</field>
-        <field name="model">f3d.site</field>
+    <record id="view_td_site_search" model="ir.ui.view">
+        <field name="name">td.site.search</field>
+        <field name="model">td.site</field>
         <field name="arch" type="xml">
             <search string="Площадки">
                 <field name="name"/>

@@ -1,72 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <!-- SPEC §5.1. Параметра factory3d.fire_safety.write_enabled немає (A-03) -->
+    <!-- SPEC §5.1. Параметра td.fire_safety.write_enabled немає (A-03) -->
     <record id="param_read_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.read_enabled</field>
+        <field name="key">td.fire_safety.read_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_comm_stale_after_s" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.comm_stale_after_s</field>
+        <field name="key">td.fire_safety.comm_stale_after_s</field>
         <field name="value">90</field>
     </record>
     <record id="param_comm_lost_after_s" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.comm_lost_after_s</field>
+        <field name="key">td.fire_safety.comm_lost_after_s</field>
         <field name="value">180</field>
     </record>
     <record id="param_dust_warn_pct" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.dust_warn_pct</field>
+        <field name="key">td.fire_safety.dust_warn_pct</field>
         <field name="value">80</field>
     </record>
     <record id="param_dust_alarm_pct" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.dust_alarm_pct</field>
+        <field name="key">td.fire_safety.dust_alarm_pct</field>
         <field name="value">90</field>
     </record>
     <record id="param_polymer_panels" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.polymer_panels</field>
+        <field name="key">td.fire_safety.polymer_panels</field>
         <field name="value">False</field>
     </record>
     <record id="param_cover_tol_m" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.cover_tol_m</field>
+        <field name="key">td.fire_safety.cover_tol_m</field>
         <field name="value">0.5</field>
     </record>
     <record id="param_drill_time_limit_s" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.drill_time_limit_s</field>
+        <field name="key">td.fire_safety.drill_time_limit_s</field>
         <field name="value">300</field>
     </record>
     <record id="param_drill_auto_create" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.drill_auto_create</field>
+        <field name="key">td.fire_safety.drill_auto_create</field>
         <field name="value">True</field>
     </record>
     <record id="param_drill_match_window_min" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.drill_match_window_min</field>
+        <field name="key">td.fire_safety.drill_match_window_min</field>
         <field name="value">30</field>
     </record>
     <record id="param_drill_auto_stop_s" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.drill_auto_stop_s</field>
+        <field name="key">td.fire_safety.drill_auto_stop_s</field>
         <field name="value">120</field>
     </record>
     <record id="param_drill_sim_duration_s" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.drill_sim_duration_s</field>
+        <field name="key">td.fire_safety.drill_sim_duration_s</field>
         <field name="value">300</field>
     </record>
     <record id="param_alert_group_xmlid" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.alert_group_xmlid</field>
-        <field name="value">factory3d_base.group_f3d_user</field>
+        <field name="key">td.fire_safety.alert_group_xmlid</field>
+        <field name="value">td_factory3d.group_td_user</field>
     </record>
     <record id="param_team_id" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.team_id</field>
+        <field name="key">td.fire_safety.team_id</field>
         <field name="value"></field>
     </record>
     <record id="param_viewer_devices" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.viewer_devices</field>
+        <field name="key">td.fire_safety.viewer_devices</field>
         <field name="value">False</field>
     </record>
     <record id="param_event_ack_required" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.event_ack_required</field>
+        <field name="key">td.fire_safety.event_ack_required</field>
         <field name="value">True</field>
     </record>
     <record id="param_migration_report" model="ir.config_parameter">
-        <field name="key">factory3d.fire_safety.migration_report</field>
+        <field name="key">td.fire_safety.migration_report</field>
         <field name="value">{}</field>
     </record>
 </odoo>

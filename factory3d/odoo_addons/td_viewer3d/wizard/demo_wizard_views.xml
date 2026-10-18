@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_demo_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.demo.wizard.form</field>
-        <field name="model">f3d.demo.wizard</field>
+    <record id="view_td_demo_wizard_form" model="ir.ui.view">
+        <field name="name">td.demo.wizard.form</field>
+        <field name="model">td.demo.wizard</field>
         <field name="arch" type="xml">
             <form string="Заливка демо-даних" create="false" edit="true">
                 <header>
@@ -60,9 +60,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_demo_wizard" model="ir.actions.act_window">
+    <record id="action_td_demo_wizard" model="ir.actions.act_window">
         <field name="name">Демо-дані</field>
-        <field name="res_model">f3d.demo.wizard</field>
+        <field name="res_model">td.demo.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>

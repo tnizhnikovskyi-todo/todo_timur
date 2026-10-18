@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 
-from odoo.addons.factory3d_telemetry.tests.common import F3DTelemetryCase
+from odoo.addons.td_telemetry.tests.common import F3DTelemetryCase
 from odoo.tests import tagged
 
 TAGS = ("post_install", "-at_install", "f3d", "f3d_telemetry_viewer")
@@ -15,7 +15,7 @@ class ProviderCase(F3DTelemetryCase):
     def setUpClass(cls):
         super().setUpClass()
         cls._setup_telemetry_fixtures()
-        cls.sig_vac = cls.env["f3d.signal"].create(
+        cls.sig_vac = cls.env["td.signal"].create(
             {
                 "code": "equipment/GANTRY-T/vacuum_kpa",
                 "name": "Вакуум",
@@ -26,7 +26,7 @@ class ProviderCase(F3DTelemetryCase):
                 "origin": "manual",
             }
         )
-        cls.provider = cls.env["f3d.viewer.provider.telemetry"]
+        cls.provider = cls.env["td.viewer.provider.telemetry"]
 
     def setUp(self):
         super().setUp()
@@ -74,13 +74,13 @@ class TestCollect(ProviderCase):
         self.assertEqual(eq["COMPRESSOR-T"]["pressure_bar"], 6.77)
         self.assertEqual(eq["GANTRY-T"]["vacuum_kpa"], -71.9)
         self.assertEqual(payload["energy"]["totals"], {"pv_kw": 12.5, "chp_kw": 397.3})
-        visible = self.env["f3d.signal"].search_count(
+        visible = self.env["td.signal"].search_count(
             [("active", "=", True), ("viewer_visible", "=", True), ("status", "!=", "unknown")]
         )
         self.assertEqual(
             payload["meta"]["iot"],
             {
-                "source": "телеметрія (factory3d_telemetry)",
+                "source": "телеметрія (td_telemetry)",
                 "signals": visible,
                 "alarms": 0,
                 "stale": 0,
@@ -114,7 +114,7 @@ class TestDelta(ProviderCase):
     def test_delta(self):
         self.fill()
         patch_ = {}
-        ctx = {"changes": {"f3d.signal": {"equipment/FL-C1-T/battery", "equipment/FL-C1-T/x"}}}
+        ctx = {"changes": {"td.signal": {"equipment/FL-C1-T/battery", "equipment/FL-C1-T/x"}}}
         self.provider._f3d_viewer_delta(patch_, ctx)
         self.assertEqual(patch_["signals"], [{"path": "equipment/FL-C1-T/battery", "value": 0.236}])
         self.assertIn("iot", patch_["meta"])
@@ -126,15 +126,15 @@ class TestDelta(ProviderCase):
         self.assertEqual(patch_, {})
 
     def test_bus_models(self):
-        self.assertEqual(self.provider._f3d_viewer_bus_models(), ["f3d.signal"])
+        self.assertEqual(self.provider._f3d_viewer_bus_models(), ["td.signal"])
 
 
 @tagged(*TAGS)
 class TestBus(ProviderCase):
     def test_debounce_10s(self):
-        if "f3d.viewer.event" not in self.env:
-            self.skipTest("factory3d_viewer не встановлено: немає f3d.viewer.event")
-        Event = type(self.env["f3d.viewer.event"])
+        if "td.viewer.event" not in self.env:
+            self.skipTest("td_viewer3d не встановлено: немає td.viewer.event")
+        Event = type(self.env["td.viewer.event"])
         with patch.object(Event, "_notify") as notify:
             for at, value in ((0, 50), (5, 49), (10, 48)):
                 with freeze_time(self.T0 + timedelta(seconds=at)):
@@ -143,9 +143,9 @@ class TestBus(ProviderCase):
         self.assertEqual(sent, [[self.sig_bat.code], [self.sig_bat.code]])
 
     def test_state_change_immediate(self):
-        if "f3d.viewer.event" not in self.env:
-            self.skipTest("factory3d_viewer не встановлено: немає f3d.viewer.event")
-        Event = type(self.env["f3d.viewer.event"])
+        if "td.viewer.event" not in self.env:
+            self.skipTest("td_viewer3d не встановлено: немає td.viewer.event")
+        Event = type(self.env["td.viewer.event"])
         with patch.object(Event, "_notify") as notify:
             for at, text in ((0, "busy"), (3, "charging")):
                 with freeze_time(self.T0 + timedelta(seconds=at)):

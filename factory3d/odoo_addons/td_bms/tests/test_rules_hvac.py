@@ -82,7 +82,7 @@ class HvacRulesCase(F3DBmsRulesMixin, F3DBmsHvacMixin, F3DBmsCase):
         )
         self.push("infra/totals/chp_heat_kw", at(7, 0), 497.0)
         self.push("equipment/BOILER/state", at(7, 0), text="fault")
-        units = self.env["f3d.bms.hvac.unit"].search([("kind", "in", ("roofvent", "ahu"))])
+        units = self.env["td.bms.hvac.unit"].search([("kind", "in", ("roofvent", "ahu"))])
         for unit in units:
             unit.heat_signal_id = self.define("ventilation/units/%s/heat_kw" % unit.code)
             self.push("ventilation/units/%s/heat_kw" % unit.code, at(7, 0), 23.0 if unit != units[-1] else 25.0)
@@ -151,7 +151,7 @@ class TestThresholds(HvacRulesCase):
     def alarm_request(self, code, ts, value=None, text=None):
         with freeze_time(at(7, 30)):
             self.push(code, ts, value=value, text=text)
-        return self.requests(self.env["f3d.signal"].search([("code", "=", code)]))
+        return self.requests(self.env["td.signal"].search([("code", "=", code)]))
 
     def test_filter_supply_rv05(self):
         sig = self.define(
@@ -168,7 +168,7 @@ class TestThresholds(HvacRulesCase):
         reqs = self.alarm_request(sig.code, at(7, 1), 285.2)
         self.assertEqual(len(reqs), 1)
         self.assertEqual(reqs.name, "Заміна фільтрів: перепад тиску 285 Па при нормі до 250")
-        self.assertEqual(reqs.f3d_bms_rule, "filter_supply")
+        self.assertEqual(reqs.td_bms_rule, "filter_supply")
         self.alarm_request(sig.code, at(7, 2), 248.0)
         self.assertEqual(sig.status, "alarm")
         self.alarm_request(sig.code, at(7, 3), 244.0)
@@ -186,7 +186,7 @@ class TestThresholds(HvacRulesCase):
         )
         reqs = self.alarm_request(sig.code, at(7, 1), 360.0)
         self.assertEqual(reqs.name, "Заміна фільтрів витяжки: перепад тиску 360 Па при нормі до 350")
-        self.assertEqual(reqs.f3d_bms_rule, "filter_extract")
+        self.assertEqual(reqs.td_bms_rule, "filter_extract")
 
     def test_unit_fault_frost(self):
         sig = self.rv7.state_signal_id
@@ -194,7 +194,7 @@ class TestThresholds(HvacRulesCase):
         sig.alarm_title = "{equipment}: аварія установки (стан «{text}»)"
         reqs = self.alarm_request(sig.code, at(7, 1), text="fault")
         self.assertEqual(reqs.name, "Дахова установка RV-07: аварія установки (стан «fault»)")
-        self.assertEqual(reqs.f3d_bms_rule, "unit_fault")
+        self.assertEqual(reqs.td_bms_rule, "unit_fault")
 
     def test_ef_chg_charging(self):
         sig = self.define(
@@ -206,7 +206,7 @@ class TestThresholds(HvacRulesCase):
             alarm_title="Витяжка зарядної станції (Ex): не працює під час заряджання — водень!",
         )
         reqs = self.alarm_request(sig.code, at(7, 1), text="stopped_charging")
-        self.assertEqual(reqs.f3d_bms_rule, "charging_vent")
+        self.assertEqual(reqs.td_bms_rule, "charging_vent")
 
     def test_ef_elec_overheat(self):
         sig = self.define(
@@ -223,7 +223,7 @@ class TestThresholds(HvacRulesCase):
         self.assertFalse(self.alarm_request(sig.code, at(7, 9), 36.2))
         reqs = self.alarm_request(sig.code, at(7, 10), 36.2)
         self.assertEqual(reqs.name, "Електрощитова: температура 36 °C при нормі до 35")
-        self.assertEqual(reqs.f3d_bms_rule, "overheat")
+        self.assertEqual(reqs.td_bms_rule, "overheat")
 
     def test_ahu_pressure(self):
         sig = self.define(
@@ -238,7 +238,7 @@ class TestThresholds(HvacRulesCase):
         )
         self.assertFalse(self.alarm_request(sig.code, at(7, 0), 2.0))
         reqs = self.alarm_request(sig.code, at(7, 5), 2.0)
-        self.assertEqual(reqs.f3d_bms_rule, "pressure")
+        self.assertEqual(reqs.td_bms_rule, "pressure")
 
     def test_boiler_fault(self):
         sig = self.define(
@@ -250,7 +250,7 @@ class TestThresholds(HvacRulesCase):
             alarm_title="{equipment}: аварія котельні (стан «{text}»)",
         )
         reqs = self.alarm_request(sig.code, at(7, 1), text="fault")
-        self.assertEqual(reqs.f3d_bms_rule, "boiler_fault")
+        self.assertEqual(reqs.td_bms_rule, "boiler_fault")
 
     def test_heat_deficit(self):
         sig = self._setup_deficit()
@@ -267,7 +267,7 @@ class TestThresholds(HvacRulesCase):
 
     def test_heat_no_data(self):
         sig = self._setup_deficit()
-        units = self.env["f3d.bms.hvac.unit"].search([("kind", "in", ("roofvent", "ahu"))])
+        units = self.env["td.bms.hvac.unit"].search([("kind", "in", ("roofvent", "ahu"))])
         for unit in units[:14]:
             unit.heat_signal_id.sudo().status = "unknown"
         with freeze_time(at(7, 1)):

@@ -19,7 +19,7 @@ EDGE_FIELDS = ("edge_top", "edge_bottom", "edge_left", "edge_right")
 
 
 class F3dCutPart(models.Model):
-    _name = "f3d.cut.part"
+    _name = "td.cut.part"
     _description = "Розкрій: деталь виробу"
     _order = "bom_id, sequence, part_code"
     _rec_name = "name"
@@ -33,7 +33,7 @@ class F3dCutPart(models.Model):
     width_mm = fields.Integer(string="Ширина, мм", required=True)
     qty = fields.Float(string="На виріб, шт", required=True, default=1.0, digits=(8, 2))
     material_role = fields.Selection(MATERIAL_ROLES, string="Матеріал", required=True, default="main")
-    material_product_id = fields.Many2one("product.product", string="Плита", domain="[('f3d_sheet_length_mm', '>', 0)]")
+    material_product_id = fields.Many2one("product.product", string="Плита", domain="[('td_sheet_length_mm', '>', 0)]")
     grain = fields.Selection(GRAINS, string="Текстура", default="0", required=True)
     edge_top = fields.Char(string="Крайка верх", size=32)
     edge_bottom = fields.Char(string="Крайка низ", size=32)

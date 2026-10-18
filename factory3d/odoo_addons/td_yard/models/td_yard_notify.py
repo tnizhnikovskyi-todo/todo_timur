@@ -30,37 +30,37 @@ def f3d_yard_bus_add(env, model, ids):
 
 
 class F3dYardGateNotify(models.Model):
-    _inherit = "f3d.yard.gate"
+    _inherit = "td.yard.gate"
 
     def _f3d_yard_notify(self):
         res = super()._f3d_yard_notify()
         gates = self.sudo()
-        f3d_yard_bus_add(self.env, "f3d.yard.gate", gates.ids)
-        ev = self.env["f3d.yard.visit"]._f3d_yard_viewer_event()
+        f3d_yard_bus_add(self.env, "td.yard.gate", gates.ids)
+        ev = self.env["td.yard.visit"]._f3d_yard_viewer_event()
         if ev:
             for gate in gates:
-                ev._notify("f3d.yard.gate", [gate.f3d_code], "state")
+                ev._notify("td.yard.gate", [gate.td_code], "state")
         return res
 
 
 class F3dYardScaleNotify(models.Model):
-    _inherit = "f3d.yard.scale"
+    _inherit = "td.yard.scale"
 
     def _f3d_yard_notify(self):
         res = super()._f3d_yard_notify()
         scales = self.sudo()
-        f3d_yard_bus_add(self.env, "f3d.yard.scale", scales.ids)
-        ev = self.env["f3d.yard.visit"]._f3d_yard_viewer_event()
+        f3d_yard_bus_add(self.env, "td.yard.scale", scales.ids)
+        ev = self.env["td.yard.visit"]._f3d_yard_viewer_event()
         if ev:
             for scale in scales:
-                ev._notify("f3d.yard.scale", [scale.f3d_code], "state")
+                ev._notify("td.yard.scale", [scale.td_code], "state")
         return res
 
 
 class F3dYardLprEventNotify(models.Model):
-    _inherit = "f3d.yard.lpr.event"
+    _inherit = "td.yard.lpr.event"
 
     def _f3d_yard_notify(self):
         res = super()._f3d_yard_notify()
-        f3d_yard_bus_add(self.env, "f3d.yard.lpr.event", self.ids)
+        f3d_yard_bus_add(self.env, "td.yard.lpr.event", self.ids)
         return res

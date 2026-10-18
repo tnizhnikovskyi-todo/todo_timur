@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- DEC-19: тег клієнтської дії f3d_constructor (на відміну від f3d_viewer.action); реєструє W2 -->
-    <record id="action_f3d_constructor" model="ir.actions.client">
+    <record id="action_td_constructor" model="ir.actions.client">
         <field name="name">Конструктор</field>
         <field name="tag">f3d_constructor</field>
         <field name="target">current</field>
         <field name="params" eval="{}"/>
     </record>
 
-    <record id="action_f3d_site" model="ir.actions.act_window">
+    <record id="action_td_site" model="ir.actions.act_window">
         <field name="name">Площадки</field>
-        <field name="res_model">f3d.site</field>
+        <field name="res_model">td.site</field>
         <field name="view_mode">list,form</field>
     </record>
-    <record id="action_f3d_layer" model="ir.actions.act_window">
+    <record id="action_td_layer" model="ir.actions.act_window">
         <field name="name">Шари</field>
-        <field name="res_model">f3d.layer</field>
+        <field name="res_model">td.layer</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_group_site': 1}</field>
     </record>
-    <record id="action_f3d_equipment_variant" model="ir.actions.act_window">
+    <record id="action_td_equipment_variant" model="ir.actions.act_window">
         <field name="name">Каталог варіантів</field>
-        <field name="res_model">f3d.equipment.variant</field>
+        <field name="res_model">td.equipment.variant</field>
         <field name="view_mode">kanban,list,form</field>
     </record>
-    <record id="action_f3d_layout_version" model="ir.actions.act_window">
+    <record id="action_td_layout_version" model="ir.actions.act_window">
         <field name="name">Версії планування</field>
-        <field name="res_model">f3d.layout.version</field>
+        <field name="res_model">td.layout.version</field>
         <field name="view_mode">list,form</field>
     </record>
-    <record id="action_f3d_term" model="ir.actions.act_window">
+    <record id="action_td_term" model="ir.actions.act_window">
         <field name="name">Довідники конструктора</field>
-        <field name="res_model">f3d.term</field>
+        <field name="res_model">td.term</field>
         <field name="view_mode">list</field>
     </record>
 </odoo>

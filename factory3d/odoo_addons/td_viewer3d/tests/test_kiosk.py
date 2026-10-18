@@ -5,7 +5,7 @@ from unittest.mock import patch
 from odoo.exceptions import AccessError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
-from odoo.addons.factory3d_viewer.controllers import kiosk as kiosk_ctrl
+from odoo.addons.td_viewer3d.controllers import kiosk as kiosk_ctrl
 
 from .common import F3dViewerBase
 
@@ -17,27 +17,27 @@ class TestKiosk(F3dViewerBase):
     """API-08/09 (параметри і налаштування): токен, стоп-кран, права на «Новий токен»."""
 
     def test_token_generated_32hex(self):
-        token = self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.kiosk_token")
+        token = self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_token")
         self.assertRegex(token or "", r"^[0-9a-f]{32}$")
 
     def test_new_token_admin_only(self):
-        """AC-50: менеджер без group_f3d_admin — URL порожній, «Новий токен» -> AccessError; адмін — працює."""
+        """AC-50: менеджер без group_td_admin — URL порожній, «Новий токен» -> AccessError; адмін — працює."""
         Settings = self.env["res.config.settings"]
         manager = Settings.with_user(self.user_manager).new({})
-        self.assertFalse(manager.f3d_kiosk_url)
+        self.assertFalse(manager.td_kiosk_url)
         with self.assertRaises(AccessError):
-            manager.action_f3d_new_kiosk_token()
+            manager.action_td_new_kiosk_token()
         admin = Settings.with_user(self.user_admin).new({})
-        old = self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.kiosk_token")
-        self.assertIn("/f3d/kiosk/" + old, admin.f3d_kiosk_url)
-        admin.action_f3d_new_kiosk_token()
-        new = self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.kiosk_token")
+        old = self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_token")
+        self.assertIn("/f3d/kiosk/" + old, admin.td_kiosk_url)
+        admin.action_td_new_kiosk_token()
+        new = self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_token")
         self.assertRegex(new, r"^[0-9a-f]{32}$")
         self.assertNotEqual(old, new)
 
     def test_kiosk_disabled_param(self):
         self.set_param("kiosk_enabled", "False")
-        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.kiosk_enabled"), "False")
+        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_enabled"), "False")
 
     def test_kiosk_ctx_hides_costs(self):
         data = self.payload(self.user_kiosk, kiosk=True, lite=True)
@@ -62,7 +62,7 @@ class TestKioskHttp(HttpCase, F3dViewerBase):
         kiosk_ctrl.reset_rate_limit()
         self.addCleanup(kiosk_ctrl.reset_rate_limit)
         self.set_param("kiosk_enabled", "True")
-        self.token = self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.kiosk_token")
+        self.token = self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_token")
         self.base = "/f3d/kiosk/" + self.token
 
     def _get(self, path="", **kw):
@@ -133,6 +133,6 @@ class TestKioskAssets(TransactionCase):
     """QA 16.10.2026: бандл `assets_kiosk` не компілювався (Undefined variable $theme-colors-rgb) -> кіоск без стилів."""
 
     def test_kiosk_bundle_compiles(self):
-        bundle = self.env["ir.qweb"]._get_asset_bundle("factory3d_viewer.assets_kiosk", css=True, js=False)
+        bundle = self.env["ir.qweb"]._get_asset_bundle("td_viewer3d.assets_kiosk", css=True, js=False)
         bundle.css()
         self.assertFalse(bundle.css_errors, "SCSS бандла assets_kiosk: %s" % "\n".join(bundle.css_errors))

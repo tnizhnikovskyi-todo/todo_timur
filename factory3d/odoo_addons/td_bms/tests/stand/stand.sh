@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Стенд factory3d_bms (SPEC §13.2) у процесному режимі без docker build: iot_sim і колектор — процеси з venv
+# Стенд td_bms (SPEC §13.2) у процесному режимі без docker build: iot_sim і колектор — процеси з venv
 # ($F3D_VENVS/{iot_sim,collector}; колектор з плагінами f3d-collector-bms/yard), MQTT-брокер — eclipse-mosquitto
 # у docker, а якщо образ недоступний — amqtt з $F3D_VENVS/broker (pip install amqtt). Odoo — tools/odoo/serve.sh.
 #   stand.sh up [db] | down [db] | collector-restart | seed [db] | token

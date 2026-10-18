@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-01…V-04: f3d.machine (SPEC §3) -->
+<!-- V-01…V-04: td.machine (SPEC §3) -->
 <odoo>
-    <record id="view_f3d_machine_kanban" model="ir.ui.view">
-        <field name="name">f3d.machine.kanban</field>
-        <field name="model">f3d.machine</field>
+    <record id="view_td_machine_kanban" model="ir.ui.view">
+        <field name="name">td.machine.kanban</field>
+        <field name="model">td.machine</field>
         <field name="arch" type="xml">
             <kanban default_group_by="zone_id" class="o_kanban_small_column" records_draggable="0" quick_create="0"
                     highlight_color="color" group_create="0" create="0">
@@ -41,9 +41,9 @@
                         </div>
                         <div class="mt-2">
                             <button type="object" name="action_open_reason_wizard" class="btn btn-sm btn-secondary me-1"
-                                    invisible="not current_downtime_id" groups="factory3d_base.group_f3d_user">Причина</button>
+                                    invisible="not current_downtime_id" groups="td_factory3d.group_td_user">Причина</button>
                             <button type="object" name="action_f3d_show" class="btn btn-sm btn-link"
-                                    groups="factory3d_base.group_f3d_user">3D</button>
+                                    groups="td_factory3d.group_td_user">3D</button>
                         </div>
                     </t>
                 </templates>
@@ -51,9 +51,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_list" model="ir.ui.view">
-        <field name="name">f3d.machine.list</field>
-        <field name="model">f3d.machine</field>
+    <record id="view_td_machine_list" model="ir.ui.view">
+        <field name="name">td.machine.list</field>
+        <field name="model">td.machine</field>
         <field name="arch" type="xml">
             <list string="Верстати">
                 <field name="code"/>
@@ -75,16 +75,16 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_form" model="ir.ui.view">
-        <field name="name">f3d.machine.form</field>
-        <field name="model">f3d.machine</field>
+    <record id="view_td_machine_form" model="ir.ui.view">
+        <field name="name">td.machine.form</field>
+        <field name="model">td.machine</field>
         <field name="arch" type="xml">
             <form string="Верстат">
                 <header>
                     <button name="action_test_connection" type="object" string="Перевірити підключення"/>
                     <button name="action_f3d_show" type="object" string="Показати в 3D"/>
                     <button name="action_reset_state" type="object" string="Скинути стан"
-                            groups="factory3d_base.group_f3d_admin"
+                            groups="td_factory3d.group_td_admin"
                             confirm="Закрити поточний інтервал і простій?"/>
                     <field name="state" widget="statusbar" readonly="1"/>
                 </header>
@@ -185,9 +185,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_search" model="ir.ui.view">
-        <field name="name">f3d.machine.search</field>
-        <field name="model">f3d.machine</field>
+    <record id="view_td_machine_search" model="ir.ui.view">
+        <field name="name">td.machine.search</field>
+        <field name="model">td.machine</field>
         <field name="arch" type="xml">
             <search string="Верстати">
                 <field name="code"/>

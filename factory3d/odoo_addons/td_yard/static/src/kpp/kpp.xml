@@ -8,7 +8,7 @@
                     <span class="f3d-kpp-clock fs-3 fw-bold" t-esc="state.data.now"/>
                 </div>
                 <div class="alert alert-warning" t-if="!state.data.read_enabled">
-                    Обробка показань і подій двору вимкнена (factory3d.yard.read_enabled).
+                    Обробка показань і подій двору вимкнена (td.yard.read_enabled).
                 </div>
 
                 <div class="f3d-kpp-top d-flex flex-wrap gap-3 mb-3">

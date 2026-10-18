@@ -5,24 +5,24 @@ from datetime import timedelta
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from odoo.addons.factory3d_telemetry.tools.ingest import parse_ts
+from odoo.addons.td_telemetry.tools.ingest import parse_ts
 
 from ..tools import params as P
 from ..tools import tz
-from .f3d_yard_visit import GRP_SEC, GRP_STOCK, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, GRP_STOCK, _f3d_yard_require
 
 _logger = logging.getLogger(__name__)
 
 
 class F3dYardScale(models.Model):
-    _name = "f3d.yard.scale"
-    _inherit = ["f3d.scene.mixin", "mail.thread"]
+    _name = "td.yard.scale"
+    _inherit = ["td.scene.mixin", "mail.thread"]
     _description = "Двір: автоваги"
-    _order = "f3d_code"
+    _order = "td_code"
     _rec_name = "name"
     _f3d_kind = "equipment"
 
-    f3d_code = fields.Char(required=True, size=32)
+    td_code = fields.Char(required=True, size=32)
     name = fields.Char(string="Назва", required=True, size=64)
     active = fields.Boolean(default=True)
     company_id = fields.Many2one(
@@ -31,10 +31,10 @@ class F3dYardScale(models.Model):
     pos_x = fields.Float(string="X, м", digits=(8, 2))
     pos_y = fields.Float(string="Y, м", digits=(8, 2))
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
-    zone_id = fields.Many2one("f3d.zone", string="Зона", ondelete="set null")
-    source_id = fields.Many2one("f3d.source", string="Джерело", ondelete="set null")
-    weight_signal_id = fields.Many2one("f3d.signal", string="Сигнал ваги", ondelete="set null")
-    stable_signal_id = fields.Many2one("f3d.signal", string="Сигнал стабільності", ondelete="set null")
+    zone_id = fields.Many2one("td.zone", string="Зона", ondelete="set null")
+    source_id = fields.Many2one("td.source", string="Джерело", ondelete="set null")
+    weight_signal_id = fields.Many2one("td.signal", string="Сигнал ваги", ondelete="set null")
+    stable_signal_id = fields.Many2one("td.signal", string="Сигнал стабільності", ondelete="set null")
     max_kg = fields.Float(string="НПВ, кг", default=60000)
     min_kg = fields.Float(string="НмПВ, кг", default=400)
     division_kg = fields.Float(string="Дискретність, кг", default=20)
@@ -52,7 +52,7 @@ class F3dYardScale(models.Model):
     candidate_kg = fields.Float(readonly=True)
     candidate_ts = fields.Datetime(readonly=True)
     captured_kg = fields.Float(readonly=True)
-    last_weighing_id = fields.Many2one("f3d.yard.weighing", string="Останнє зважування", compute="_compute_stats")
+    last_weighing_id = fields.Many2one("td.yard.weighing", string="Останнє зважування", compute="_compute_stats")
     today_count = fields.Integer(string="Зважувань сьогодні", compute="_compute_stats")
 
     @api.constrains("min_kg", "max_kg", "division_kg")
@@ -62,7 +62,7 @@ class F3dYardScale(models.Model):
                 raise ValidationError("Межі ваг: 0 < НмПВ < НПВ, дискретність > 0.")
 
     def _compute_stats(self):
-        Weighing = self.env["f3d.yard.weighing"]
+        Weighing = self.env["td.yard.weighing"]
         start, end = tz.day_bounds_utc(tz.local_day(fields.Datetime.now()))
         for scale in self:
             base = [("scale_id", "=", scale.id), ("state", "!=", "void")]
@@ -72,7 +72,7 @@ class F3dYardScale(models.Model):
     # ------------------------------------------------------------------ показання (M-13)
     @api.model
     def _f3d_yard_dispatch_scales(self, readings):
-        """Показання `yard/scale/*` з f3d.signal._f3d_ingest -> scale._f3d_yard_on_readings."""
+        """Показання `yard/scale/*` з td.signal._f3d_ingest -> scale._f3d_yard_on_readings."""
         scales = self.sudo().search([("active", "=", True)])
         mapping = {}
         for scale in scales:
@@ -97,7 +97,7 @@ class F3dYardScale(models.Model):
     def _f3d_yard_on_readings(self, items):
         """R-10, R-11: items = [(role, ts, value, q)], ts — naive UTC."""
         self.ensure_one()
-        self.env.cr.execute("SELECT id FROM f3d_yard_scale WHERE id = %s FOR UPDATE", [self.id])
+        self.env.cr.execute("SELECT id FROM td_yard_scale WHERE id = %s FOR UPDATE", [self.id])
         self.invalidate_recordset()
         by_ts = {}
         for role, ts, value, q in items:
@@ -150,7 +150,7 @@ class F3dYardScale(models.Model):
     def _f3d_yard_capture(self, weight, ts):
         """R-11 п. 5: призначення зважування рейсу в момент захоплення."""
         self.ensure_one()
-        Visit = self.env["f3d.yard.visit"].sudo()
+        Visit = self.env["td.yard.visit"].sudo()
         base = [("weighing_policy", "=", "in_out"), ("company_id", "=", self.company_id.id)]
 
         def has(visit, kind):
@@ -179,7 +179,7 @@ class F3dYardScale(models.Model):
             vals.update(visit_id=a_any.id, kind="out")
         else:
             vals.update(kind="check", state="unassigned", note="Кандидатів: %s" % len(first | a_any))
-        return self.env["f3d.yard.weighing"].sudo().create(vals)
+        return self.env["td.yard.weighing"].sudo().create(vals)
 
     # ------------------------------------------------------------------ дії
     def action_capture(self, visit=None):
@@ -205,7 +205,7 @@ class F3dYardScale(models.Model):
         if visit:
             kind = "out" if visit._f3d_yard_has_weighing("in") else "in"
             vals.update(visit_id=visit.id, kind=kind)
-            return self.env["f3d.yard.weighing"].create(vals)
+            return self.env["td.yard.weighing"].create(vals)
         weighing = self._f3d_yard_capture(self.last_weight_kg, self.last_ts)
         weighing.write({"user_id": self.env.user.id})
         return weighing

@@ -22,8 +22,8 @@ class TestTariff(F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Tariff = cls.env["f3d.energy.tariff"]
-        cls.demo = cls.env.ref("factory3d_energy.tariff_demo")
+        cls.Tariff = cls.env["td.energy.tariff"]
+        cls.demo = cls.env.ref("td_energy.tariff_demo")
 
     def day_night(self, **kw):
         vals = {
@@ -80,7 +80,7 @@ class TestTariff(F3DEnergyCase):
 
     def test_contract_thresholds(self):  # AC-10
         self.demo.write({"contract_kw": 900, "peak_warn_pct": 90})
-        sig = self.env["f3d.signal"].search([("code", "=", "energy/totals/grid15_kw")])
+        sig = self.env["td.signal"].search([("code", "=", "energy/totals/grid15_kw")])
         self.assertEqual((sig.warn_high, sig.alarm_high), (810, 900))
         self.assertTrue(sig.warn_high_on and sig.alarm_high_on)
         self.assertIn("договірної потужності", sig.alarm_title)

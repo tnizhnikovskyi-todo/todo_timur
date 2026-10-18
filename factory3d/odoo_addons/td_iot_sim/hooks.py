@@ -7,9 +7,9 @@ from odoo.exceptions import ValidationError
 from odoo.tools import file_path
 
 _logger = logging.getLogger(__name__)
-CATALOG = 'factory3d_iot_sim/data/f3d_sim_signal.csv'
+CATALOG = 'td_iot_sim/data/td_sim_signal.csv'
 
-# §5.2: f3d_role → (protocol, driver)
+# §5.2: td_role → (protocol, driver)
 ROLE_MAP = {}
 for _roles, _proto, _driver in (
     (('beam_saw', 'beam_saw_book', 'nesting_cnc', 'edgebander_laser', 'edgebander', 'ptp_cnc',
@@ -92,13 +92,13 @@ def _default_address(code, driver):
 
 
 def _ensure_devices(env):
-    """Крок 2: пристрої з обладнання з f3d_code + похідні + CUTOPT."""
-    Device = env['f3d.sim.device'].sudo()
+    """Крок 2: пристрої з обладнання з td_code + похідні + CUTOPT."""
+    Device = env['td.sim.device'].sudo()
     Workcenter = env['mrp.workcenter'].sudo()
     existing = {d.code: d for d in Device.search([])}
-    equipment = env['maintenance.equipment'].sudo().search([('f3d_code', '!=', False)])
-    wcs = {w.f3d_code: w for w in Workcenter.search([('f3d_code', '!=', False)])}
-    by_code = {e.f3d_code: e for e in equipment}
+    equipment = env['maintenance.equipment'].sudo().search([('td_code', '!=', False)])
+    wcs = {w.td_code: w for w in Workcenter.search([('td_code', '!=', False)])}
+    by_code = {e.td_code: e for e in equipment}
     to_create = []
 
     def add(code, name, proto, driver, eq=None, **extra):
@@ -106,15 +106,15 @@ def _ensure_devices(env):
             return
         vals = {'code': code, 'name': name or code, 'protocol': proto, 'driver': driver,
                 'equipment_id': eq.id if eq else False, 'workcenter_id': wcs[code].id if code in wcs else False,
-                'zone_id': eq.f3d_zone_id.id if eq and 'f3d_zone_id' in eq._fields and eq.f3d_zone_id else False,
+                'zone_id': eq.td_zone_id.id if eq and 'td_zone_id' in eq._fields and eq.td_zone_id else False,
                 'address': _default_address(code, driver),
                 'state': 'passive' if driver == 'passive' else 'unknown'}
         vals.update(extra)
         to_create.append(vals)
 
     for eq in equipment:
-        proto, driver = CODE_MAP.get(eq.f3d_code) or ROLE_MAP.get(eq.f3d_role or '') or ('none', 'passive')
-        add(eq.f3d_code, eq.name, proto, driver, eq)
+        proto, driver = CODE_MAP.get(eq.td_code) or ROLE_MAP.get(eq.td_role or '') or ('none', 'passive')
+        add(eq.td_code, eq.name, proto, driver, eq)
     if 'ACCESS' in by_code:
         for n, code in enumerate(('ACR-IN', 'ACR-ELEC', 'ACR-CHG', 'ACR-PAINT', 'ACR-SRV')):
             add(code, 'Зчитувач %s' % code, 'P-10', 'rest_biostar', by_code['ACCESS'],
@@ -141,9 +141,9 @@ def _ensure_devices(env):
 
 def _fill_addresses(env):
     """Крок 3а: unit id / instance з адрес першого сигналу пристрою (каталог = джерело правди)."""
-    Device = env['f3d.sim.device'].sudo()
+    Device = env['td.sim.device'].sudo()
     first = {}
-    for sig in env['f3d.sim.signal'].sudo().search([('protocol', '!=', 'none')], order='id'):
+    for sig in env['td.sim.signal'].sudo().search([('protocol', '!=', 'none')], order='id'):
         first.setdefault(sig.device_id.id, sig.address or '')
     for dev in Device.search([('driver', '!=', 'passive')]):
         addr = first.get(dev.id, '')
@@ -193,7 +193,7 @@ def _fill_params(env):
     Ідемпотентно й без перезапису ручних правок: `params` — лише порожні; `unit_id` — порожній або хибний
     (PM5560 вводу замість 96 у T1/T2); драйвер стає `passive` лише для пристрою без сигналів.
     """
-    Device = env['f3d.sim.device'].sudo()
+    Device = env['td.sim.device'].sudo()
     wanted = {code: (None, params) for code, params in _catalog_params(_read_catalog_rows()).items()}
     wanted.update(FIXED_LAYOUT)
     for dev in Device.search([('code', 'in', list(wanted) + list(PASSIVE_CODES))]):
@@ -220,37 +220,37 @@ def _check_level0(env):
         _logger.warning("f3d_iot_sim: модель x_f3d_signal відсутня (рівень 0 не встановлено)")
         return
     codes = {s.x_code for s in env['x_f3d_signal'].sudo().search([])}
-    mock = env['f3d.sim.signal'].sudo().search([('origin', '=', 'mock')])
+    mock = env['td.sim.signal'].sudo().search([('origin', '=', 'mock')])
     missing = [s.code for s in mock if s.level0_code not in codes]
     if missing and codes:
         _logger.warning("f3d_iot_sim: %d сигналів «макет» без x_f3d_signal: %s", len(missing), missing[:30])
 
 
 def apply_read_enabled(env):
-    """Крок 1а (CB-10, X-56): read_enabled за середовищем factory3d.base.environment."""
+    """Крок 1а (CB-10, X-56): read_enabled за середовищем td.base.environment."""
     ICP = env['ir.config_parameter'].sudo()
-    environment = ICP.get_param('factory3d.base.environment', 'prod')
-    ICP.set_param('factory3d.iot_sim.read_enabled', 'True' if environment == 'test' else 'False')
+    environment = ICP.get_param('td.base.environment', 'prod')
+    ICP.set_param('td.iot_sim.read_enabled', 'True' if environment == 'test' else 'False')
 
 
 def refresh_registry(env):
     """Кроки 2–4 + 3б: пристрої, каталог, адреси, params (ідемпотентно; також post-migrate 19.0.2.0.1)."""
     _ensure_devices(env)
-    env['f3d.sim.signal']._load_catalog(file_path(CATALOG))
+    env['td.sim.signal']._load_catalog(file_path(CATALOG))
     _fill_addresses(env)
     _fill_params(env)
     _check_level0(env)
 
 
 def post_init_hook(env):
-    Panel = env['f3d.sim.panel']
+    Panel = env['td.sim.panel']
     panel = Panel.get_panel()
     apply_read_enabled(env)
     refresh_registry(env)
-    if not (env['ir.config_parameter'].sudo().get_param('factory3d.iot_sim.url') or '').strip() \
+    if not (env['ir.config_parameter'].sudo().get_param('td.iot_sim.url') or '').strip() \
             and panel.state != 'unconfigured':  # без зайвого запису: хук також виконує post-migrate (ідемпотентно)
         panel.sudo().state = 'unconfigured'
-    env['f3d.sim.device'].sudo().search([('driver', '=', 'passive'), ('state', '=', 'unknown')]).write(
+    env['td.sim.device'].sudo().search([('driver', '=', 'passive'), ('state', '=', 'unknown')]).write(
         {'state': 'passive'})
 
 
@@ -258,11 +258,11 @@ def uninstall_hook(env):
     """A-11: прибрати запуски/події й параметри, крони вимкнути; x_-дані й обладнання не чіпати."""
     _logger.warning("f3d_iot_sim: деінсталяція видалить і дані рівня 0 (x_f3d_*), бо їх файли належать "
                     "модулю — робіть лише на копії (SPEC §5.3)")
-    panel = env['f3d.sim.panel'].sudo().search([], limit=1)
+    panel = env['td.sim.panel'].sudo().search([], limit=1)
     if panel:
         panel.message_post(body="Деінсталяція модуля: запуски й події емулятора видаляються.")
-    env['f3d.sim.event'].sudo().search([]).unlink()
-    env['f3d.sim.run'].sudo().search([]).unlink()
-    xmlids = env['ir.model.data'].sudo().search([('module', '=', 'factory3d_iot_sim'), ('model', '=', 'ir.cron')])
+    env['td.sim.event'].sudo().search([]).unlink()
+    env['td.sim.run'].sudo().search([]).unlink()
+    xmlids = env['ir.model.data'].sudo().search([('module', '=', 'td_iot_sim'), ('model', '=', 'ir.cron')])
     env['ir.cron'].sudo().browse(xmlids.mapped('res_id')).exists().write({'active': False})
-    env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.iot_sim.%')]).unlink()
+    env['ir.config_parameter'].sudo().search([('key', '=like', 'td.iot_sim.%')]).unlink()

@@ -32,7 +32,7 @@ export function renderTop() {
     pub.disabled = !canPublish();
     pub.title = pub.disabled
         ? S.rights.is_manager && !S.rights.can_publish
-            ? "Публікацію вимкнено (параметр factory3d.constructor.publish_enabled)"
+            ? "Публікацію вимкнено (параметр td.constructor.publish_enabled)"
             : "Публікує Менеджер у режимі редагування"
         : "";
     $("#btnNewSite").disabled = !canManage();

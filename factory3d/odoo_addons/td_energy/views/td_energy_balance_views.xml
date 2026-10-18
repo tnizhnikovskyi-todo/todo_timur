@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-12 -->
 <odoo>
-    <record id="view_f3d_energy_balance_list" model="ir.ui.view">
-        <field name="name">f3d.energy.balance.list</field>
-        <field name="model">f3d.energy.balance</field>
+    <record id="view_td_energy_balance_list" model="ir.ui.view">
+        <field name="name">td.energy.balance.list</field>
+        <field name="model">td.energy.balance</field>
         <field name="arch" type="xml">
             <list create="false" edit="false" delete="false">
                 <field name="hour"/>
@@ -19,9 +19,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_balance_search" model="ir.ui.view">
-        <field name="name">f3d.energy.balance.search</field>
-        <field name="model">f3d.energy.balance</field>
+    <record id="view_td_energy_balance_search" model="ir.ui.view">
+        <field name="name">td.energy.balance.search</field>
+        <field name="model">td.energy.balance</field>
         <field name="arch" type="xml">
             <search>
                 <field name="node_id"/>
@@ -35,9 +35,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_balance" model="ir.actions.act_window">
+    <record id="action_td_energy_balance" model="ir.actions.act_window">
         <field name="name">Баланс обліку</field>
-        <field name="res_model">f3d.energy.balance</field>
+        <field name="res_model">td.energy.balance</field>
         <field name="view_mode">list</field>
         <field name="context">{'search_default_deviation': 1}</field>
     </record>

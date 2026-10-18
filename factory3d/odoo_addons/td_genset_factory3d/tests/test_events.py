@@ -7,7 +7,7 @@ from odoo.tests import tagged
 
 from .test_rules import TD, GensetCase
 
-LINK = "odoo.addons.factory3d_genset.models.genset_link_events.F3dGensetLinkEvents"
+LINK = "odoo.addons.td_genset_factory3d.models.genset_link_events.F3dGensetLinkEvents"
 
 
 @tagged("post_install", "-at_install")
@@ -25,7 +25,7 @@ class TestEvents(GensetCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.Request = self.env["maintenance.request"]
-        self.Map = self.env["f3d.genset.event.map"]
+        self.Map = self.env["td.genset.event.map"]
 
     def ev(self, id_, name, severity, code="", value=None, unit=None, threshold=None, text=""):
         event = {
@@ -43,13 +43,13 @@ class TestEvents(GensetCase):
         return event
 
     def requests(self, key=None):
-        domain = [("equipment_id", "=", self.genset_eq.id), ("f3d_genset_event_key", "!=", False)]
+        domain = [("equipment_id", "=", self.genset_eq.id), ("td_genset_event_key", "!=", False)]
         if key:
-            domain = [("equipment_id", "=", self.genset_eq.id), ("f3d_genset_event_key", "=", key)]
+            domain = [("equipment_id", "=", self.genset_eq.id), ("td_genset_event_key", "=", key)]
         return self.Request.search(domain)
 
     def run_events(self):
-        self.env["f3d.genset.link"]._cron_events()
+        self.env["td.genset.link"]._cron_events()
 
     def done_stage(self):
         return self.env["maintenance.stage"].search([("done", "=", True)], limit=1)
@@ -65,11 +65,11 @@ class TestEvents(GensetCase):
         self.assertEqual(req.priority, "3")
         self.assertEqual(req.maintenance_type, "corrective")
         self.assertEqual(req.equipment_id, self.genset_eq)
-        self.assertEqual(req.f3d_equipment_code, "GENSET")
-        self.assertTrue(req.f3d_signal_id.code.endswith("/alarm_level"))
-        self.assertEqual(req.f3d_value, 0.8)
-        self.assertEqual(req.f3d_threshold, 1.0)
-        self.assertEqual(req.f3d_genset_event_key, "GENSET:LOW_OIL_PRESSURE_SD")
+        self.assertEqual(req.td_equipment_code, "GENSET")
+        self.assertTrue(req.td_signal_id.code.endswith("/alarm_level"))
+        self.assertEqual(req.td_value, 0.8)
+        self.assertEqual(req.td_threshold, 1.0)
+        self.assertEqual(req.td_genset_event_key, "GENSET:LOW_OIL_PRESSURE_SD")
         self.assertTrue(req.maintenance_team_id)
         self.assertLess(abs((req.schedule_date - fields.Datetime.now()).total_seconds()), 120)
 
@@ -97,7 +97,7 @@ class TestEvents(GensetCase):
         self.ev(1, "Щось нове", "shutdown")
         self.run_events()
         req = self.requests()
-        self.assertEqual(req.f3d_genset_event_key, "GENSET:DEFAULT_SHUTDOWN")
+        self.assertEqual(req.td_genset_event_key, "GENSET:DEFAULT_SHUTDOWN")
         self.assertEqual(req.name, "Генератор GENSET: аварійна зупинка — Щось нове")
         self.assertEqual((req.priority, req.maintenance_type), ("3", "corrective"))
 
@@ -168,7 +168,7 @@ class TestEvents(GensetCase):
         self.ev(1, "<script>alert(1)</script>", "shutdown", "../x; DROP TABLE", text="a" * 10240)
         self.run_events()
         req = self.requests()
-        self.assertEqual(req.f3d_genset_event_key, "GENSET:DEFAULT_SHUTDOWN")
+        self.assertEqual(req.td_genset_event_key, "GENSET:DEFAULT_SHUTDOWN")
         self.assertIn("&lt;script&gt;", req.description)
         self.assertNotIn("<script>", req.description)
         self.assertLessEqual(len(req.name), 120)
@@ -177,7 +177,7 @@ class TestEvents(GensetCase):
         self.ev(1, "Low Oil Pressure", "shutdown", "LOP_SD", 0.8, "бар", 1.0)
         self.run_events()
         req = self.requests()
-        signal = req.f3d_signal_id
+        signal = req.td_signal_id
         self.snap(alarms=[{"code": "low_oil_pressure_shutdown", "name": "x", "severity": "shutdown"}])
         self.link._publish_one()
         self.assertEqual(signal.status, "alarm")
@@ -194,7 +194,7 @@ class TestEvents(GensetCase):
         req = self.requests("GENSET:COMM_LOST")
         self.assertEqual(len(req), 1)
         self.assertIn("втрачено зв'язок з контролером", req.name)
-        self.assertTrue(req.f3d_signal_id.code.endswith("/online"))
+        self.assertTrue(req.td_signal_id.code.endswith("/online"))
         self.link._on_comm_restored()
         self.assertIn("Зв'язок відновлено", " ".join(req.message_ids.mapped("body")))
         self.assertFalse(req.stage_id.done)

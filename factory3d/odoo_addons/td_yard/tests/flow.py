@@ -82,12 +82,12 @@ class YardFlowCase(YardCase):
                 "name": code,
                 "usage": "internal",
                 "location_id": cls.wh.view_location_id.id,
-                "f3d_kind": "dock",
-                "f3d_code": code,
-                "f3d_side": side,
-                "f3d_dock_no": no,
-                "f3d_x": 10.0,
-                "f3d_y": 10.0,
+                "td_kind": "dock",
+                "td_code": code,
+                "td_side": side,
+                "td_dock_no": no,
+                "td_x": 10.0,
+                "td_y": 10.0,
             }
         )
 
@@ -138,10 +138,10 @@ class YardFlowCase(YardCase):
 
     def _visit(self, **vals):
         vals.setdefault("visit_type", "incoming")
-        return self.env["f3d.yard.visit"].create(vals)
+        return self.env["td.yard.visit"].create(vals)
 
     def _booking(self, visit, dock, start, end, confirm=False, **vals):
-        booking = self.env["f3d.yard.booking"].create(
+        booking = self.env["td.yard.booking"].create(
             dict(visit_id=visit.id if visit else False, dock_id=dock.id, slot_start=start, slot_end=end, **vals)
         )
         if confirm:

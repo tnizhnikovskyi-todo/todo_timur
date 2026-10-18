@@ -1,15 +1,15 @@
-# pre-commit для сервісу factory3d/services/iot_sim і Odoo-модуля factory3d_iot_sim (SPEC §14).
+# pre-commit для сервісу factory3d/services/iot_sim і Odoo-модуля td_iot_sim (SPEC §14).
 # Запуск: factory3d/services/iot_sim/.venv/bin/pre-commit run --all-files
-files: ^factory3d/(services/iot_sim|odoo_addons/factory3d_iot_sim)/
+files: ^factory3d/(services/iot_sim|odoo_addons/td_iot_sim)/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: check-xml
-        name: xml lint (odoo_addons/factory3d_iot_sim)
-        files: ^factory3d/odoo_addons/factory3d_iot_sim/.*\.xml$
+        name: xml lint (odoo_addons/td_iot_sim)
+        files: ^factory3d/odoo_addons/td_iot_sim/.*\.xml$
       - id: end-of-file-fixer
-        files: ^factory3d/(services/iot_sim|odoo_addons/factory3d_iot_sim)/.*\.(py|xml|md|yml|toml)$
+        files: ^factory3d/(services/iot_sim|odoo_addons/td_iot_sim)/.*\.(py|xml|md|yml|toml)$
         exclude: ^factory3d/services/iot_sim/(\.venv|catalog)/
   - repo: local
     hooks:

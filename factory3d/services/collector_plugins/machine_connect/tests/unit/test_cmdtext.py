@@ -11,7 +11,7 @@ from f3d_collector_mc import cmdtext
 
 PKG = Path(cmdtext.__file__)
 ROOT = next(p for p in PKG.parents if (p / "odoo_addons").is_dir())
-ODOO_TOOL = ROOT / "odoo_addons" / "factory3d_machine_connect" / "tools" / "commands.py"
+ODOO_TOOL = ROOT / "odoo_addons" / "td_machine_connect" / "tools" / "commands.py"
 
 FEED = {
     "stack": "PLT-03C",

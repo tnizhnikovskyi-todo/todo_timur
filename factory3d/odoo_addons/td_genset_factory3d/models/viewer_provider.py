@@ -1,5 +1,5 @@
 """M-08, A-18, X-20: провайдер переглядача — `AbstractModel` без `_inherit` (duck typing, ARCHITECTURE §6.7).
-Без `factory3d_viewer` модель просто ніхто не викликає; імпортів viewer на рівні модуля немає."""
+Без `td_viewer3d` модель просто ніхто не викликає; імпортів viewer на рівні модуля немає."""
 
 import logging
 from datetime import timezone
@@ -44,18 +44,18 @@ def _local(ts):
 
 
 class F3dViewerProviderGenset(models.AbstractModel):
-    _name = "f3d.viewer.provider.genset"
+    _name = "td.viewer.provider.genset"
     _description = "3D: постачальник даних генератора"
     _f3d_sequence = 155
     _f3d_sections = ("infra",)
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 
     def _f3d_viewer_collect(self, payload, ctx):
-        for link in self.env["f3d.genset.link"].sudo().search([("active", "=", True)]):
+        for link in self.env["td.genset.link"].sudo().search([("active", "=", True)]):
             self._collect_link(link, payload)
 
     def _collect_link(self, link, payload):
-        code, profile = link.f3d_code, link.profile_id
+        code, profile = link.td_code, link.profile_id
         pfx = telemetry.prefix(code)
         rows = telemetry.read_values(self.env, [pfx + leaf for leaf in telemetry.LEAFS])
         raw = {leaf: rows[pfx + leaf][0] for leaf in telemetry.LEAFS if pfx + leaf in rows}
@@ -171,7 +171,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
         try:
             info = td.last_test(link.td_genset_ref)
         except Exception:
-            _logger.debug("factory3d_genset: last_test недоступний", exc_info=True)
+            _logger.debug("td_genset_factory3d: last_test недоступний", exc_info=True)
             return "—"
         if not info or not info.get("ts"):
             return "—"
@@ -186,22 +186,22 @@ class F3dViewerProviderGenset(models.AbstractModel):
         changes = (ctx or {}).get("changes") or {}
         if not self._wants_delta(changes):
             return
-        from odoo.addons.factory3d_viewer.tools.payload import deep_merge
+        from odoo.addons.td_viewer3d.tools.payload import deep_merge
 
         tmp = {}
         self._f3d_viewer_collect(tmp, ctx)
         deep_merge(patch.setdefault("infra", {}), tmp.get("infra", {}))
 
     def _wants_delta(self, changes):
-        Link = self.env["f3d.genset.link"].sudo()
+        Link = self.env["td.genset.link"].sudo()
         if changes.get("maintenance.equipment"):
-            codes = set(Link.search([("active", "=", True)]).mapped("f3d_code"))
+            codes = set(Link.search([("active", "=", True)]).mapped("td_code"))
             if codes & set(changes["maintenance.equipment"]):
                 return True
-        signals = [str(c) for c in changes.get("f3d.signal") or ()]
+        signals = [str(c) for c in changes.get("td.signal") or ()]
         if any(c.startswith(("infra/genset/", "infra/ats/")) for c in signals):
             return True
         return bool(signals) and bool(set(signals) & set(Link._critical_signal_codes()))
 
     def _f3d_viewer_bus_models(self):
-        return ["maintenance.equipment", "f3d.signal"]
+        return ["maintenance.equipment", "td.signal"]

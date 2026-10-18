@@ -1,7 +1,7 @@
 /** @odoo-module */
 // Спільні хелпери HOOT-тестів редактора (файл без тестів): фікстури W1, мок RPC.
 
-export const FIXTURES = "/factory3d_constructor/static/tests/fixtures";
+export const FIXTURES = "/td_constructor/static/tests/fixtures";
 
 // Hoot підміняє window.fetch (дозволені лише blob:/data:), тож статику беремо рідним fetch із чистого iframe.
 let frame = null;

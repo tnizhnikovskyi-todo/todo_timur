@@ -81,7 +81,7 @@ class TestDesign(F3DBmsHvacMixin, F3DBmsCase):
             with self.subTest(vals=vals), self.assertRaises(ValidationError), self.cr.savepoint():
                 b.write(vals)
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"), self.cr.savepoint():
-            self.env["f3d.bms.heat.balance"].sudo().create({"company_id": b.company_id.id})
+            self.env["td.bms.heat.balance"].sudo().create({"company_id": b.company_id.id})
 
     def test_rights(self):
         with self.assertRaises(AccessError):
@@ -138,6 +138,6 @@ class TestLive(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual((live["boiler_state"], live["boilers_on"]), ("fault", 0))
 
     def test_get_creates(self):
-        self.env["f3d.bms.heat.balance"].sudo().search([]).unlink()
-        b = self.env["f3d.bms.heat.balance"]._f3d_bms_get()
+        self.env["td.bms.heat.balance"].sudo().search([]).unlink()
+        b = self.env["td.bms.heat.balance"]._f3d_bms_get()
         self.assertEqual(b.total_kw, 753)

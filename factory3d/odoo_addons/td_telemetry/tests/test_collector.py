@@ -33,7 +33,7 @@ class TestToken(F3DTelemetryCase):
     def test_generate_token(self):
         res = self._generate()
         self.assertEqual(res["type"], "ir.actions.act_window")
-        self.assertEqual(res["res_model"], "f3d.collector.token.wizard")
+        self.assertEqual(res["res_model"], "td.collector.token.wizard")
         self.assertEqual(res["target"], "new")
         token = res["context"]["default_token"]
         self.assertGreaterEqual(len(token), 43)
@@ -44,7 +44,7 @@ class TestToken(F3DTelemetryCase):
         bodies = " ".join(self.col.message_ids.mapped("body"))
         self.assertIn("Видано новий токен (…%s)" % token[-4:], bodies)
         self.assertNotIn(token, bodies)
-        self.assertEqual(self.env["f3d.collector"]._authenticate(token), self.col)
+        self.assertEqual(self.env["td.collector"]._authenticate(token), self.col)
 
     def test_generate_requires_admin(self):
         with self.assertRaises(AccessError):
@@ -52,7 +52,7 @@ class TestToken(F3DTelemetryCase):
 
     def test_authenticate_cases(self):
         token = self._generate()["context"]["default_token"]
-        Col = self.env["f3d.collector"]
+        Col = self.env["td.collector"]
         for case in (token + "x", "", "a" * 257, None):
             with self.subTest(case=case):
                 self.assertFalse(Col._authenticate(case))
@@ -60,12 +60,12 @@ class TestToken(F3DTelemetryCase):
     def test_inactive_collector(self):
         token = self._generate()["context"]["default_token"]
         self.col.active = False
-        self.assertFalse(self.env["f3d.collector"]._authenticate(token))
+        self.assertFalse(self.env["td.collector"]._authenticate(token))
 
     def test_regenerate_invalidates(self):
         old = self._generate()["context"]["default_token"]
         new = self._generate()["context"]["default_token"]
-        Col = self.env["f3d.collector"]
+        Col = self.env["td.collector"]
         self.assertFalse(Col._authenticate(old))
         self.assertEqual(Col._authenticate(new), self.col)
 
@@ -75,14 +75,14 @@ class TestToken(F3DTelemetryCase):
         col = self.col.with_user(self.user_admin)
         self.assertFalse(col.token_hash)
         self.assertFalse(col.token_hint)
-        self.assertFalse(self.env["f3d.collector"]._authenticate(token))
+        self.assertFalse(self.env["td.collector"]._authenticate(token))
         self.assertIn("Токен відкликано", " ".join(self.col.message_ids.mapped("body")))
 
 
 @tagged(*TAGS)
 class TestCollectorConstraints(F3DTelemetryCase):
     def _create(self, code, **kw):
-        return self.env["f3d.collector"].create({"code": code, "name": code, **kw})
+        return self.env["td.collector"].create({"code": code, "name": code, **kw})
 
     def test_code_valid(self):
         for code in ("COL-MAIN-T", "C1", "COL-2-YARD"):
@@ -141,7 +141,7 @@ class TestCollectorOffline(F3DTelemetryCase):
     def test_offline_after_3_intervals(self):
         with freeze_time(NOW):
             self._prepare(181)
-            self.env["f3d.signal"]._cron_stale()
+            self.env["td.signal"]._cron_stale()
             self.assertEqual(self.col.state, "offline")
             self.assertEqual((self.src_mb.state, self.src_mqtt.state), ("offline", "offline"))
             self.assertEqual(self.sig_press.status, "stale")
@@ -152,7 +152,7 @@ class TestCollectorOffline(F3DTelemetryCase):
     def test_online_within_window(self):
         with freeze_time(NOW):
             self._prepare(179)
-            self.env["f3d.signal"]._cron_stale()
+            self.env["td.signal"]._cron_stale()
             self.assertEqual(self.col.state, "online")
             self.assertEqual(self.sig_press.status, "ok")
 
@@ -196,26 +196,26 @@ class TestConfigPayload(F3DTelemetryCase):
     def test_rate_check_not_in_collector_row(self):
         """DEC-19 / T-2: ліміт частоти не пише рядок колектора (лише INSERT у журнал пакетів); колектори незалежні."""
         writes = []
-        orig = self.registry["f3d.collector"].write
+        orig = self.registry["td.collector"].write
 
         def spy(rec, vals):
             writes.append(set(vals))
             return orig(rec, vals)
 
-        self.env.cr.execute("SELECT write_date FROM f3d_collector WHERE id = %s", [self.col.id])
+        self.env.cr.execute("SELECT write_date FROM td_collector WHERE id = %s", [self.col.id])
         before = self.env.cr.fetchone()
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.push_rate_per_min", "3")
-        with freeze_time(NOW), patch.object(self.registry["f3d.collector"], "write", spy):
+        self.env["ir.config_parameter"].sudo().set_param("td.telemetry.push_rate_per_min", "3")
+        with freeze_time(NOW), patch.object(self.registry["td.collector"], "write", spy):
             self.assertEqual([self.col._rate_check() for _i in range(4)], [True, True, True, False])
             self.assertTrue(self.col2._rate_check())  # лічильник окремий для кожного колектора
         self.assertEqual(writes, [])
-        self.env.cr.execute("SELECT write_date FROM f3d_collector WHERE id = %s", [self.col.id])
+        self.env.cr.execute("SELECT write_date FROM td_collector WHERE id = %s", [self.col.id])
         self.assertEqual(self.env.cr.fetchone(), before)
         # прострочені рядки журналу прибирає крон
-        self.env.cr.execute("UPDATE f3d_collector_push SET ts = ts - interval '11 minutes'")
-        self.env["f3d.collector"]._cron_offline()
+        self.env.cr.execute("UPDATE td_collector_push SET ts = ts - interval '11 minutes'")
+        self.env["td.collector"]._cron_offline()
         self.env.cr.execute(
-            "SELECT COUNT(*) FROM f3d_collector_push WHERE collector_id IN %s", [(self.col.id, self.col2.id)]
+            "SELECT COUNT(*) FROM td_collector_push WHERE collector_id IN %s", [(self.col.id, self.col2.id)]
         )
         self.assertEqual(self.env.cr.fetchone()[0], 0)
 
@@ -235,13 +235,13 @@ class TestCollectorTouchThrottle(F3DTelemetryCase):
     def _touch(self, sec, ip="10.0.0.1", **kw):
         """Повертає кількість `write` на колекторі за виклик `_touch`."""
         writes = []
-        orig = self.registry["f3d.collector"].write
+        orig = self.registry["td.collector"].write
 
         def spy(rec, vals):
             writes.append(set(vals))
             return orig(rec, vals)
 
-        with self._at(sec), patch.object(self.registry["f3d.collector"], "write", spy):
+        with self._at(sec), patch.object(self.registry["td.collector"], "write", spy):
             self.col._touch(ip, **kw)
         return writes
 
@@ -297,8 +297,8 @@ class TestCollectorTouchThrottle(F3DTelemetryCase):
 
     def test_interval_parameter(self):
         icp = self.env["ir.config_parameter"].sudo()
-        icp.set_param("factory3d.telemetry.touch_interval_s", "0")
+        icp.set_param("td.telemetry.touch_interval_s", "0")
         self._touch(0)
         self.assertEqual(len(self._touch(1)), 1)
-        icp.set_param("factory3d.telemetry.touch_interval_s", "garbage")
+        icp.set_param("td.telemetry.touch_interval_s", "garbage")
         self.assertEqual(self._touch(2), [])  # некоректне значення → 30 с

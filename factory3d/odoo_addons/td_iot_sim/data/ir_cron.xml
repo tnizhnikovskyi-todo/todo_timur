@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="cron_f3d_sim_status" model="ir.cron">
+  <record id="cron_td_sim_status" model="ir.cron">
     <field name="name">Емулятор: опитати стан сервісу</field>
-    <field name="model_id" ref="model_f3d_sim_panel"/>
+    <field name="model_id" ref="model_td_sim_panel"/>
     <field name="state">code</field>
     <field name="code">model._cron_poll_status()</field>
     <field name="interval_number">1</field>
     <field name="interval_type">minutes</field>
     <field name="active" eval="True"/>
   </record>
-  <record id="cron_f3d_sim_gc" model="ir.cron">
+  <record id="cron_td_sim_gc" model="ir.cron">
     <field name="name">Емулятор: ротація подій</field>
-    <field name="model_id" ref="model_f3d_sim_event"/>
+    <field name="model_id" ref="model_td_sim_event"/>
     <field name="state">code</field>
     <field name="code">model._cron_gc()</field>
     <field name="interval_number">1</field>

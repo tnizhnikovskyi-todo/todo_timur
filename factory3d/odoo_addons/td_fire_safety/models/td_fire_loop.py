@@ -3,12 +3,12 @@ from odoo.exceptions import ValidationError
 
 
 class F3dFireLoop(models.Model):
-    _name = "f3d.fire.loop"
+    _name = "td.fire.loop"
     _description = "Пожежна сигналізація: шлейф"
     _order = "panel_id, number"
     _rec_name = "name"
 
-    panel_id = fields.Many2one("f3d.fire.panel", required=True, ondelete="cascade", index=True)
+    panel_id = fields.Many2one("td.fire.panel", required=True, ondelete="cascade", index=True)
     number = fields.Integer(string="Номер", required=True)
     name = fields.Char(compute="_compute_name", store=True)
     from_x_m = fields.Float(string="X від, м", digits=(8, 1))
@@ -19,12 +19,12 @@ class F3dFireLoop(models.Model):
     flame_count = fields.Integer(compute="_compute_device_counts", store=True)
     modules_count = fields.Integer(string="Модулі вводу")
     device_count = fields.Integer(compute="_compute_device_counts", store=True)
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал несправності (BV)", ondelete="set null")
+    signal_id = fields.Many2one("td.signal", string="Сигнал несправності (BV)", ondelete="set null")
     state = fields.Selection(
         [("unknown", "Невідомо"), ("ok", "Норма"), ("fault", "Несправність")], default="unknown", readonly=True)
     fault_since = fields.Datetime(readonly=True)
     request_id = fields.Many2one("maintenance.request", related="signal_id.maintenance_request_id", readonly=True)
-    device_ids = fields.One2many("f3d.fire.device", "loop_id")
+    device_ids = fields.One2many("td.fire.device", "loop_id")
 
     _f3d_fire_loop_number_uniq = models.Constraint(
         "UNIQUE(panel_id, number)", "Номер шлейфу має бути унікальним у межах приладу")
@@ -59,7 +59,7 @@ class F3dFireLoop(models.Model):
                 vals["fault_since"] = ts
             old = rec.state
             rec.write(vals)
-            Event = self.env["f3d.fire.event"]
+            Event = self.env["td.fire.event"]
             if new == "fault":
                 Event._log("loop_fault", "%s/L%d" % (rec.panel_id.code, rec.number), ts,
                            "Несправність шлейфу %d приладу %s" % (rec.number, rec.panel_id.code),

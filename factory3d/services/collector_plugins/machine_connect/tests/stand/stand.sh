@@ -67,13 +67,13 @@ case "$cmd" in
         sim_up
         "$T/serve.sh" stop all >/dev/null 2>&1 || true
         "$T/new_db.sh" "$SEED" >/dev/null
-        F3D_TEST_INSTALL=factory3d_telemetry "$T/update.sh" "$SEED" | tail -n 2
+        F3D_TEST_INSTALL=td_telemetry "$T/update.sh" "$SEED" | tail -n 2
         oshell "$SEED" < "$HERE/seed_pre.py"
         source "$T/env.sh"
         "$T/drop_db.sh" "$PRE" >/dev/null 2>&1 || true
         createdb -h localhost -U odoo -T "$SEED" "$PRE"
         # установка модуля в копію (ТК-01 повторює її з знімками S0–S5 на свіжій копії $SEED)
-        F3D_TEST_INSTALL=factory3d_machine_connect "$T/update.sh" "$PRE" | tail -n 2
+        F3D_TEST_INSTALL=td_machine_connect "$T/update.sh" "$PRE" | tail -n 2
         echo "база $PRE готова (установлено); шаблон $T0 — stand.sh template" ;;
     template)
         source "$T/env.sh"
@@ -88,7 +88,7 @@ case "$cmd" in
         "$T/drop_db.sh" --force "$DB" >/dev/null 2>&1 || true
         createdb -h localhost -U odoo -T "$src" "$DB" && echo "база $DB ← $src" ;;
     install)        # установка модуля в базу (ТК-01 крок 2)
-        F3D_TEST_INSTALL=factory3d_machine_connect "$T/update.sh" "${2:-f3d_mc_tk}" | tail -n 2 ;;
+        F3D_TEST_INSTALL=td_machine_connect "$T/update.sh" "${2:-f3d_mc_tk}" | tail -n 2 ;;
     serve)          # Odoo + колектор на базі db (емулятор — якщо не піднятий)
         hosts
         DB="${2:-f3d_mc_tk}"

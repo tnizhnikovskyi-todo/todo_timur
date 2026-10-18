@@ -5,7 +5,7 @@ import { click, queryAll, queryOne } from "@odoo/hoot-dom";
 import { animationFrame } from "@odoo/hoot-mock";
 import { mountWithCleanup, mockService, onRpc } from "@web/../tests/web_test_helpers";
 import { defineMailModels } from "@mail/../tests/mail_test_helpers";
-import { F3dBmsOverview } from "@factory3d_bms/overview/overview";
+import { F3dBmsOverview } from "@td_bms/overview/overview";
 
 describe.current.tags("desktop");
 
@@ -39,7 +39,7 @@ const DATA = {
 };
 
 test("F3dBmsOverview renders plan", async () => {
-    onRpc("f3d.bms.overview", "get_overview_data", () => DATA);
+    onRpc("td.bms.overview", "get_overview_data", () => DATA);
     await mountWithCleanup(F3dBmsOverview);
     await animationFrame();
     expect(queryAll("polygon").length).toBe(2);
@@ -51,8 +51,8 @@ test("F3dBmsOverview renders plan", async () => {
 
 test("F3dBmsOverview click opens form", async () => {
     const calls = [];
-    onRpc("f3d.bms.overview", "get_overview_data", () => DATA);
-    onRpc("f3d.bms.overview", "action_open", ({ args }) => {
+    onRpc("td.bms.overview", "get_overview_data", () => DATA);
+    onRpc("td.bms.overview", "action_open", ({ args }) => {
         calls.push(args);
         return false;
     });
@@ -61,5 +61,5 @@ test("F3dBmsOverview click opens form", async () => {
     await animationFrame();
     await click("polygon.o_f3d_bms_ok");
     await animationFrame();
-    expect(calls).toEqual([["f3d.bms.light.group", 11, "form"]]);
+    expect(calls).toEqual([["td.bms.light.group", 11, "form"]]);
 });

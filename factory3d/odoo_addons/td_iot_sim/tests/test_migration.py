@@ -5,7 +5,7 @@ from odoo.tests import TransactionCase, tagged
 
 from ..hooks import apply_read_enabled, post_init_hook
 
-SPEC_KEY = 'factory3d.iot_sim.read_enabled'
+SPEC_KEY = 'td.iot_sim.read_enabled'
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_iot_sim')
@@ -21,19 +21,19 @@ class TestMigration(TransactionCase):
                            'x_value': 10.0 + n, 'x_kind': 'x', 'x_unit': 'u', 'x_mode': 'noise',
                            'x_nominal': 10.0 + n})
         values = {s.x_code: s.x_value for s in Signal.search([('x_code', 'like', 'mig/test/')])}
-        panels = self.env['f3d.sim.panel'].search_count([])
-        scenarios = self.env['f3d.sim.scenario'].search_count([])
-        signals = self.env['f3d.sim.signal'].search_count([])
-        devices = self.env['f3d.sim.device'].search_count([])
+        panels = self.env['td.sim.panel'].search_count([])
+        scenarios = self.env['td.sim.scenario'].search_count([])
+        signals = self.env['td.sim.signal'].search_count([])
+        devices = self.env['td.sim.device'].search_count([])
         post_init_hook(self.env)  # повторний запуск — без дублікатів
         self.assertEqual({s.x_code: s.x_value for s in Signal.search([('x_code', 'like', 'mig/test/')])}, values)
-        self.assertEqual(self.env['f3d.sim.panel'].search_count([]), panels)
-        self.assertEqual(self.env['f3d.sim.scenario'].search_count([]), scenarios)
-        self.assertEqual(self.env['f3d.sim.signal'].search_count([]), signals)
-        self.assertEqual(self.env['f3d.sim.device'].search_count([]), devices)
-        self.assertTrue(self.env.ref('factory3d_iot_sim.cron_iot_sim'))
-        self.assertEqual(self.env.ref('factory3d_iot_sim.menu_iot_root').parent_id,
-                         self.env.ref('factory3d_iot_sim.menu_f3d_sim_root'))
+        self.assertEqual(self.env['td.sim.panel'].search_count([]), panels)
+        self.assertEqual(self.env['td.sim.scenario'].search_count([]), scenarios)
+        self.assertEqual(self.env['td.sim.signal'].search_count([]), signals)
+        self.assertEqual(self.env['td.sim.device'].search_count([]), devices)
+        self.assertTrue(self.env.ref('td_iot_sim.cron_iot_sim'))
+        self.assertEqual(self.env.ref('td_iot_sim.menu_iot_root').parent_id,
+                         self.env.ref('td_iot_sim.menu_td_sim_root'))
 
     def test_pre_migrate_runs(self):
         path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrations', '19.0.2.0.0', 'pre-migrate.py')
@@ -53,13 +53,13 @@ class TestMigration(TransactionCase):
     def _registry_snapshot(self):
         """{модель: {id: (code, write_date)}} — щоб побачити і дублікати, і зайві записи."""
         return {model: {r.id: (getattr(r, 'code', False), r.write_date) for r in self.env[model].sudo().search([])}
-                for model in ('f3d.sim.device', 'f3d.sim.signal', 'f3d.sim.panel', 'f3d.sim.scenario')}
+                for model in ('td.sim.device', 'td.sim.signal', 'td.sim.panel', 'td.sim.scenario')}
 
     def test_post_migrate_fills_registry_idempotently(self):
         """S-1: при `-u` з прототипу `post_init_hook` не викликається, реєстр порожній — post-migrate
         наповнює його тими самими кроками; другий виклик (база, де вже наповнено) нічого не змінює."""
-        Device = self.env['f3d.sim.device'].sudo()
-        Signal = self.env['f3d.sim.signal'].sudo()
+        Device = self.env['td.sim.device'].sudo()
+        Signal = self.env['td.sim.signal'].sudo()
         devices, signals = Device.search_count([]), Signal.search_count([])
         self.assertTrue(devices and signals)
         # база прототипу після `-u`: каталог і реєстр порожні
@@ -91,13 +91,13 @@ class TestMigration(TransactionCase):
 
     def test_hook_read_enabled_by_environment(self):
         ICP = self.env['ir.config_parameter'].sudo()
-        ICP.set_param('factory3d.iot_sim.write_enabled', 'False')
+        ICP.set_param('td.iot_sim.write_enabled', 'False')
         for environment, expected in (('test', 'True'), ('prod', 'False')):
-            ICP.set_param('factory3d.base.environment', environment)
+            ICP.set_param('td.base.environment', environment)
             for _ in range(2):  # повторний запуск — той самий результат
                 apply_read_enabled(self.env)
                 self.assertEqual(ICP.get_param(SPEC_KEY), expected)
-                self.assertEqual(ICP.get_param('factory3d.iot_sim.write_enabled'), 'False')
-        ICP.set_param('factory3d.base.environment', 'prod')
+                self.assertEqual(ICP.get_param('td.iot_sim.write_enabled'), 'False')
+        ICP.set_param('td.base.environment', 'prod')
         post_init_hook(self.env)
         self.assertEqual(ICP.get_param(SPEC_KEY), 'False')

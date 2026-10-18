@@ -23,7 +23,7 @@ DEFAULT_ADDRESS = {
 
 
 class F3dSource(models.Model):
-    _name = "f3d.source"
+    _name = "td.source"
     _description = "Телеметрія: джерело даних"
     _inherit = ["mail.thread"]
     _order = "collector_id, code"
@@ -56,7 +56,7 @@ class F3dSource(models.Model):
     name = fields.Char(string="Назва", required=True)
     active = fields.Boolean(default=True)
     type = fields.Selection(TYPES, string="Тип", required=True, tracking=True)
-    collector_id = fields.Many2one("f3d.collector", string="Колектор", ondelete="restrict", index=True, tracking=True)
+    collector_id = fields.Many2one("td.collector", string="Колектор", ondelete="restrict", index=True, tracking=True)
     is_local = fields.Boolean(string="Локальне (без колектора)", compute="_compute_is_local")
     equipment_id = fields.Many2one(
         "maintenance.equipment",
@@ -87,7 +87,7 @@ class F3dSource(models.Model):
     last_error = fields.Char(string="Остання помилка", readonly=True)
     error_count = fields.Integer(string="Кількість помилок", readonly=True, default=0)
     stats = fields.Json(string="Статистика", readonly=True)
-    signal_ids = fields.One2many("f3d.signal", "source_id", string="Сигнали")
+    signal_ids = fields.One2many("td.signal", "source_id", string="Сигнали")
     signal_count = fields.Integer(string="Сигналів", compute="_compute_counts")
     alarm_count = fields.Integer(string="Тривог", compute="_compute_counts")
     stale_count = fields.Integer(string="Без даних", compute="_compute_counts")
@@ -124,7 +124,7 @@ class F3dSource(models.Model):
     def _compute_counts(self):
         counts = {}
         if self.ids:
-            for src, status, count in self.env["f3d.signal"]._read_group(
+            for src, status, count in self.env["td.signal"]._read_group(
                 [("source_id", "in", self.ids)], ["source_id", "status"], ["__count"]
             ):
                 counts.setdefault(src.id, {})[status] = count
@@ -174,7 +174,7 @@ class F3dSource(models.Model):
                 if rec.type != vals["type"] and rec.signal_ids:
                     raise ValidationError(_("Тип джерела з сигналами змінити не можна — створіть нове джерело."))
         reset = bool(CONFIG_FIELDS & set(vals))
-        collectors = self.collector_id if reset else self.env["f3d.collector"]
+        collectors = self.collector_id if reset else self.env["td.collector"]
         res = super().write(vals)
         if "read_enabled" in vals:
             if vals["read_enabled"]:
@@ -228,7 +228,7 @@ class F3dSource(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Сигнали"),
-            "res_model": "f3d.signal",
+            "res_model": "td.signal",
             "view_mode": "list,form",
             "domain": [("source_id", "=", self.id)],
             "context": {"default_source_id": self.id},

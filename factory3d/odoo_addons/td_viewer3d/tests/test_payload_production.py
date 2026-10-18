@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools import dates, payload as payload_tools
+from odoo.addons.td_viewer3d.tools import dates, payload as payload_tools
 
 from .common import F3dViewerBase, F3dViewerCase
 
@@ -23,9 +23,9 @@ class TestProductionSynthetic(F3dViewerBase):
                                      "day_period": "morning"}) for d in range(7)]
         cls.calendar = env["resource.calendar"].create(
             {"name": "TST зміна 07-15", "tz": "Europe/Kyiv", "attendance_ids": att})
-        cls.wc1 = env["mrp.workcenter"].create({"name": "TST WC1", "code": "TSTWC1", "f3d_code": "TST-WC-1",
+        cls.wc1 = env["mrp.workcenter"].create({"name": "TST WC1", "code": "TSTWC1", "td_code": "TST-WC-1",
                                                 "resource_calendar_id": cls.calendar.id})
-        cls.wc2 = env["mrp.workcenter"].create({"name": "TST WC2", "code": "TSTWC2", "f3d_code": "TST-WC-2",
+        cls.wc2 = env["mrp.workcenter"].create({"name": "TST WC2", "code": "TSTWC2", "td_code": "TST-WC-2",
                                                 "resource_calendar_id": cls.calendar.id})
         cls.finished = env["product.product"].create({"name": "TST finished", "default_code": "TST-FIN",
                                                       "is_storable": True})
@@ -124,13 +124,13 @@ class TestProductionSynthetic(F3dViewerBase):
         self.assertEqual([c["product"] for c in mo["components"]], ["TST-CMP"])
         self.assertEqual(mo["components"][0]["qty"], 2)
         self.assertIn("energy_kwh", mo)
-        self.assertNotIn("energy_cost", mo)  # factory3d_energy немає / користувач без групи вартості
+        self.assertNotIn("energy_cost", mo)  # td_energy немає / користувач без групи вартості
 
     def test_energy_cost_requires_group(self):
         """AC-60 (мок групи): із групою — ключ є, кіоск — немає."""
         orig = payload_tools.group_ok
         group = self.env.ref(payload_tools.ENERGY_COST_GROUP, raise_if_not_found=False)
-        if group:  # factory3d_energy встановлено: його провайдер сам перевіряє реальну групу, а не мок
+        if group:  # td_energy встановлено: його провайдер сам перевіряє реальну групу, а не мок
             self.user_f3d.write({"group_ids": [(4, group.id)]})
 
         def fake(env, xmlid):
@@ -140,7 +140,7 @@ class TestProductionSynthetic(F3dViewerBase):
             self.assertNotIn("energy_cost", self._mo(self._data(kiosk=True)))
 
     def test_delta_selects_mo(self):
-        from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder
+        from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
         res = DeltaBuilder(self.env(user=self.user_f3d), since=None, changes={"mrp.production": {self.mo.name}}).build()
         patch_ = res["patch"]
         self.assertEqual([m["name"] for m in patch_["productions"]], [self.mo.name])
@@ -166,16 +166,16 @@ class TestProduction(F3dViewerCase):
         now = dates.utc("2026-10-12 10:30")
         today_start = dates.utc("2026-10-12 00:00")
         logs = env["mrp.workcenter.productivity"].search([
-            ("workcenter_id.f3d_code", "=", "SAW-1"), ("loss_id.loss_type", "=", "productive"),
+            ("workcenter_id.td_code", "=", "SAW-1"), ("loss_id.loss_type", "=", "productive"),
             "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
         expected = round(sum(
             (lg.duration or 0.0) if lg.date_end
             else max(0.0, (now - max(lg.date_start, today_start)).total_seconds() / 60) for lg in logs))
         self.assertTrue(expected)
         self.assertEqual(wc["productive_minutes"], expected)
-        workcenter = env["mrp.workcenter"].search([("f3d_code", "=", "SAW-1")])
+        workcenter = env["mrp.workcenter"].search([("td_code", "=", "SAW-1")])
         now_local = datetime.strptime(dates.local(now), dates.FMT)
-        start, end = env["f3d.viewer.provider.production"]._shift(workcenter, now_local, now_local.weekday())
+        start, end = env["td.viewer.provider.production"]._shift(workcenter, now_local, now_local.weekday())
         elapsed = max(1.0, (min(now_local, end) - start).total_seconds() / 60)
         self.assertAlmostEqual(wc["oee"], max(0.0, min(1.0, expected / elapsed)), delta=0.01)
         if expected == 176:  # еталонна демо-база

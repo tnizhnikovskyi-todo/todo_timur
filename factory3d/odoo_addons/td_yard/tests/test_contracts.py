@@ -43,26 +43,26 @@ class TestYardContracts(TransactionCase):
     """AC-78: контракти з суміжними модулями (CY-01…CY-08)."""
 
     def test_signal_ingest(self):
-        self.assertTrue(callable(self.env["f3d.signal"]._f3d_ingest))
-        params = inspect.signature(self.env["f3d.signal"]._f3d_ingest).parameters
+        self.assertTrue(callable(self.env["td.signal"]._f3d_ingest))
+        params = inspect.signature(self.env["td.signal"]._f3d_ingest).parameters
         self.assertTrue({"readings", "src", "collector"} <= set(params))
 
     def test_command_fields(self):
-        fields_ = self.env["f3d.command"]._fields
+        fields_ = self.env["td.command"]._fields
         for name in ("signal_id", "value", "state", "origin", "expires_at", "requested_by", "done_at", "error"):
             self.assertIn(name, fields_)
 
     def test_push_handler_routes(self):
-        self.assertIn("lpr", self.env["f3d.push.handler.yard"]._f3d_push_routes)
-        self.assertTrue(hasattr(self.env["f3d.push.handler"], "_f3d_push_routes"))
+        self.assertIn("lpr", self.env["td.push.handler.yard"]._f3d_push_routes)
+        self.assertTrue(hasattr(self.env["td.push.handler"], "_f3d_push_routes"))
 
     def test_batch_fields(self):
-        for name in ("dock_id", "end_date", "f3d_code"):
+        for name in ("dock_id", "end_date", "td_code"):
             self.assertIn(name, self.env["stock.picking.batch"]._fields)
 
     def test_scene_api(self):
         self.assertTrue(hasattr(self.env["maintenance.equipment"], "search_f3d"))
-        self.assertTrue(hasattr(self.env["f3d.zone"], "zone_at"))
+        self.assertTrue(hasattr(self.env["td.zone"], "zone_at"))
 
     def test_test_tags(self):
         for module in TEST_MODULES:

@@ -22,13 +22,13 @@ RULES = [
 class F3dBmsDeviation(models.Model):
     """M-08: журнал відхилень (епізоди сигналів модуля в стані `alarm`); веде лише крон (R-22)."""
 
-    _name = "f3d.bms.deviation"
+    _name = "td.bms.deviation"
     _description = "Будівля: відхилення"
     _order = "started desc, id desc"
     _rec_name = "name"
 
     name = fields.Char(string="Відхилення", size=256, required=True)
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
+    signal_id = fields.Many2one("td.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
     code = fields.Char(related="signal_id.code")
     rule = fields.Selection(RULES, string="Правило", required=True, index=True)
     object_kind = fields.Selection(
@@ -39,7 +39,7 @@ class F3dBmsDeviation(models.Model):
     equipment_id = fields.Many2one(
         "maintenance.equipment", string="Обладнання", related="signal_id.equipment_id", store=True
     )
-    zone_id = fields.Many2one("f3d.zone", string="Зона", ondelete="set null")
+    zone_id = fields.Many2one("td.zone", string="Зона", ondelete="set null")
     started = fields.Datetime(string="Початок", required=True, index=True)
     ended = fields.Datetime(string="Кінець")
     duration_min = fields.Float(string="Тривалість, хв", compute="_compute_duration", store=True, digits=(10, 1))
@@ -54,10 +54,10 @@ class F3dBmsDeviation(models.Model):
 
     def init(self):
         self.env.cr.execute(
-            "CREATE INDEX IF NOT EXISTS f3d_bms_deviation_state_started_idx ON f3d_bms_deviation (state, started)"
+            "CREATE INDEX IF NOT EXISTS td_bms_deviation_state_started_idx ON td_bms_deviation (state, started)"
         )
         self.env.cr.execute(
-            "CREATE INDEX IF NOT EXISTS f3d_bms_deviation_signal_state_idx ON f3d_bms_deviation (signal_id, state)"
+            "CREATE INDEX IF NOT EXISTS td_bms_deviation_signal_state_idx ON td_bms_deviation (signal_id, state)"
         )
 
     @api.depends("started", "ended")

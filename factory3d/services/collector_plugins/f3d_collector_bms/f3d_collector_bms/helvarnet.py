@@ -1,4 +1,4 @@
-"""Плагін `helvarnet`: освітлення Helvar Imagine 950 / DALI (SPEC factory3d_bms §8, R-31…R-37)."""
+"""Плагін `helvarnet`: освітлення Helvar Imagine 950 / DALI (SPEC td_bms §8, R-31…R-37)."""
 
 from __future__ import annotations
 

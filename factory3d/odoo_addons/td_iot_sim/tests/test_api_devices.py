@@ -9,7 +9,7 @@ AUTH = {'Authorization': 'Bearer ' + TOKEN}
 class TestApiDevices(HttpCase):
 
     def _set_token(self, value):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.iot_sim.export_token', value)
+        self.env['ir.config_parameter'].sudo().set_param('td.iot_sim.export_token', value)
 
     def test_devices_401_503_200_304(self):
         self._set_token('')
@@ -30,9 +30,9 @@ class TestApiDevices(HttpCase):
 
     def test_devices_content(self):
         self._set_token(TOKEN)
-        device = self.env['f3d.sim.device'].create({
+        device = self.env['td.sim.device'].create({
             'code': 'API-T1', 'name': 'API тест', 'protocol': 'P-01', 'driver': 'opcua_ww'})
-        self.env['f3d.sim.signal'].create({
+        self.env['td.sim.signal'].create({
             'code': 'workcenters/API-T1/state', 'device_id': device.id, 'protocol': 'P-01',
             'address': 'ns=2;s=API-T1.State', 'dtype': 'enum', 'origin': 'new', 'kind': 'state'})
         data = self.url_open('/f3d/sim/devices?protocol=P-01', headers=AUTH).json()
@@ -43,8 +43,8 @@ class TestApiDevices(HttpCase):
 
     def test_events_post_dedup(self):
         self._set_token(TOKEN)
-        scenario = self.env.ref('factory3d_iot_sim.scenario_spark')
-        run = self.env['f3d.sim.run'].create({'scenario_id': scenario.id, 'state': 'running'})
+        scenario = self.env.ref('td_iot_sim.scenario_spark')
+        run = self.env['td.sim.run'].create({'scenario_id': scenario.id, 'state': 'running'})
         body = {'events': [
             {'ts': '2026-10-13T20:05:11+03:00', 'kind': 'info', 'device': 'RV-05', 'message': 'Фільтр 285 Па',
              'payload': {'event_id': 'uuid-1'}},
@@ -56,7 +56,7 @@ class TestApiDevices(HttpCase):
         self.assertEqual(resp.json(), {'accepted': 2, 'rejected': []})
         run.invalidate_recordset()
         self.assertEqual(run.state, 'done')
-        self.assertEqual(self.env['f3d.sim.event'].search_count([('run_id', '=', run.id)]), 1)
+        self.assertEqual(self.env['td.sim.event'].search_count([('run_id', '=', run.id)]), 1)
         again = self.url_open('/f3d/sim/events', json=body, headers=AUTH).json()
         self.assertEqual(again['accepted'], 0)
         self.assertEqual({r['reason'] for r in again['rejected']}, {'duplicate'})
@@ -71,10 +71,10 @@ class TestApiDevices(HttpCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['ok'])
-        self.assertEqual(data['module'], 'factory3d_iot_sim')
+        self.assertEqual(data['module'], 'td_iot_sim')
         self.assertEqual(data['version'], '19.0.2.0.0')
-        self.assertEqual(data['signals'], self.env['f3d.sim.signal'].search_count([]))
-        self.assertEqual(data['devices'], self.env['f3d.sim.device'].search_count([]))
+        self.assertEqual(data['signals'], self.env['td.sim.signal'].search_count([]))
+        self.assertEqual(data['devices'], self.env['td.sim.device'].search_count([]))
 
     def test_bookings_truck_plate(self):
         self._set_token(TOKEN)
@@ -82,10 +82,10 @@ class TestApiDevices(HttpCase):
         dock = self.env['stock.location'].create({
             'name': 'Док-API-Т', 'usage': 'internal', 'location_id': wh.view_location_id.id,
             'barcode': 'DOCK-API-T'})
-        dock.write({'f3d_kind': 'dock', 'f3d_side': 'east', 'f3d_dock_no': 9, 'f3d_x': 10.0, 'f3d_y': 5.0,
-                    'f3d_code': 'DOCK-E9'})
+        dock.write({'td_kind': 'dock', 'td_side': 'east', 'td_dock_no': 9, 'td_x': 10.0, 'td_y': 5.0,
+                    'td_code': 'DOCK-E9'})
         batch = self.env['stock.picking.batch'].create({
-            'picking_type_id': wh.out_type_id.id, 'dock_id': dock.id, 'f3d_code': 'TRUCK-OUT-1',
+            'picking_type_id': wh.out_type_id.id, 'dock_id': dock.id, 'td_code': 'TRUCK-OUT-1',
             'scheduled_date': fields.Datetime.now()})
         data = self.url_open('/f3d/sim/devices', headers=AUTH).json()
         booking = [b for b in data['bookings'] if b['batch'] == batch.name]

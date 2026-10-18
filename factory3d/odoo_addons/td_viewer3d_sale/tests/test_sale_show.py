@@ -6,7 +6,7 @@ from odoo.tests import TransactionCase, new_test_user, tagged
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestSaleShow(TransactionCase):
-    """A-17, V-09, AC-55: міст-модуль factory3d_viewer_sale."""
+    """A-17, V-09, AC-55: міст-модуль td_viewer3d_sale."""
 
     @classmethod
     def setUpClass(cls):
@@ -19,12 +19,12 @@ class TestSaleShow(TransactionCase):
             "order_line": [(0, 0, {"product_id": cls.product.id, "product_uom_qty": 1})]})
 
     def test_auto_installed(self):
-        mod = self.env["ir.module.module"].search([("name", "=", "factory3d_viewer_sale")])
+        mod = self.env["ir.module.module"].search([("name", "=", "td_viewer3d_sale")])
         self.assertEqual(mod.state, "installed")
         self.assertTrue(mod.auto_install)
 
     def test_no_documents_raises(self):
-        self.assertFalse(self.so.f3d_has_3d)
+        self.assertFalse(self.so.td_has_3d)
         with self.assertRaises(UserError):
             self.so.action_f3d_show()
 
@@ -37,7 +37,7 @@ class TestSaleShow(TransactionCase):
             "date_start": "2026-10-12 10:00:00"})
         self.assertNotEqual(later, earlier)
         self.so.invalidate_recordset()
-        self.assertTrue(self.so.f3d_has_3d)
+        self.assertTrue(self.so.td_has_3d)
         act = self.so.action_f3d_show()
         self.assertEqual(act["tag"], "f3d_viewer.action")
         self.assertEqual(act["params"], {"mo": earlier.name, "so": self.so.name})
@@ -51,17 +51,17 @@ class TestSaleShow(TransactionCase):
         cancelled = picking.copy({"origin": self.so.name})
         cancelled.action_cancel()
         self.so.invalidate_recordset()
-        self.assertTrue(self.so.f3d_has_3d)
+        self.assertTrue(self.so.td_has_3d)
         self.assertEqual(self.so.action_f3d_show()["params"], {"picking": picking.name, "so": self.so.name})
 
     def test_button_in_view(self):
-        """V-09: кнопка в шапці з групою group_f3d_user; без групи — вилучена з arch."""
+        """V-09: кнопка в шапці з групою group_td_user; без групи — вилучена з arch."""
         user = new_test_user(self.env, login="f3d_sale_u", groups="base.group_user,sales_team.group_sale_salesman,"
-                                                                    "factory3d_base.group_f3d_user")
+                                                                    "td_factory3d.group_td_user")
         plain = new_test_user(self.env, login="f3d_sale_p", groups="base.group_user,sales_team.group_sale_salesman")
         xp = "//header//button[@name='action_f3d_show']"
         arch = lambda u: etree.fromstring(  # noqa: E731
             self.env["sale.order"].with_user(u).get_view(view_type="form")["arch"])
         self.assertEqual(len(arch(user).xpath(xp)), 1)
-        self.assertEqual(arch(user).xpath(xp)[0].get("invisible"), "not f3d_has_3d")
+        self.assertEqual(arch(user).xpath(xp)[0].get("invisible"), "not td_has_3d")
         self.assertFalse(arch(plain).xpath(xp))

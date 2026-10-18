@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-03, V-04 -->
 <odoo>
-    <record id="view_f3d_genset_profile_form" model="ir.ui.view">
-        <field name="name">f3d.genset.profile.form</field>
-        <field name="model">f3d.genset.profile</field>
+    <record id="view_td_genset_profile_form" model="ir.ui.view">
+        <field name="name">td.genset.profile.form</field>
+        <field name="model">td.genset.profile</field>
         <field name="arch" type="xml">
             <form string="Профіль генератора">
                 <header>
                     <button name="action_export_relay_profile" type="object"
                             string="Експорт профілю для fake_relay"/>
                     <button name="action_apply_to_td" type="object" string="Застосувати витрату до td_genset"
-                            groups="factory3d_base.group_f3d_manager"
+                            groups="td_factory3d.group_td_manager"
                             confirm="Записати 75 %-витрату в td_genset для всіх зв'язок з цим профілем?"/>
                 </header>
                 <sheet>
@@ -51,9 +51,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_genset_profile_list" model="ir.ui.view">
-        <field name="name">f3d.genset.profile.list</field>
-        <field name="model">f3d.genset.profile</field>
+    <record id="view_td_genset_profile_list" model="ir.ui.view">
+        <field name="name">td.genset.profile.list</field>
+        <field name="model">td.genset.profile</field>
         <field name="arch" type="xml">
             <list string="Профілі генераторів">
                 <field name="code"/>
@@ -66,9 +66,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_genset_profile" model="ir.actions.act_window">
+    <record id="action_td_genset_profile" model="ir.actions.act_window">
         <field name="name">Профілі генераторів</field>
-        <field name="res_model">f3d.genset.profile</field>
+        <field name="res_model">td.genset.profile</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

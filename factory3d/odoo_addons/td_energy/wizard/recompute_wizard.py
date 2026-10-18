@@ -3,7 +3,7 @@ from datetime import timedelta
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
-from odoo.addons.factory3d_telemetry.tools.titles import fmt_num
+from odoo.addons.td_telemetry.tools.titles import fmt_num
 
 from ..tools import dates
 
@@ -11,7 +11,7 @@ MAX_DAYS = 31
 
 
 class F3dEnergyRecomputeWizard(models.TransientModel):
-    _name = "f3d.energy.recompute.wizard"
+    _name = "td.energy.recompute.wizard"
     _description = "Енергетика: перерахунок"
 
     date_from = fields.Date(
@@ -28,13 +28,13 @@ class F3dEnergyRecomputeWizard(models.TransientModel):
         default="both",
     )
     meter_ids = fields.Many2many(
-        "f3d.energy.meter", "f3d_energy_recompute_wizard_meter_rel", "wizard_id", "meter_id", string="Лічильники"
+        "td.energy.meter", "td_energy_recompute_wizard_meter_rel", "wizard_id", "meter_id", string="Лічильники"
     )
     result = fields.Text(readonly=True)
 
     @api.model
     def _f3d_check_manager(self):
-        if not self.env.user.has_group("factory3d_energy.group_f3d_energy_manager"):
+        if not self.env.user.has_group("td_energy.group_td_energy_manager"):
             raise AccessError(_("Перерахунок енергії доступний енергетику."))
 
     def action_run(self):
@@ -49,15 +49,15 @@ class F3dEnergyRecomputeWizard(models.TransientModel):
         d1 = dates.local_day_bounds(self.date_to)[1]
         n_iv = n_new = n_days = n_skipped = 0
         if self.what in ("intervals", "both"):
-            Interval = self.env["f3d.energy.interval"].sudo()
-            meters = (self.meter_ids or self.env["f3d.energy.meter"].sudo().search([])).sudo()
+            Interval = self.env["td.energy.interval"].sudo()
+            meters = (self.meter_ids or self.env["td.energy.meter"].sudo().search([])).sudo()
             domain = [("meter_id", "in", meters.ids), ("ts_start", ">=", d0), ("ts_start", "<", d1)]
             before = Interval.search_count(domain)
             n_iv = Interval._f3d_rebuild(meters, d0, d1)
             n_new = max(Interval.search_count(domain) - before, 0)
         if self.what in ("alloc", "both"):
             days = [self.date_from + timedelta(days=i) for i in range((self.date_to - self.date_from).days + 1)]
-            stats = self.env["f3d.energy.alloc"].sudo()._f3d_alloc_days(days)
+            stats = self.env["td.energy.alloc"].sudo()._f3d_alloc_days(days)
             n_days, n_skipped = stats["days"], stats["skipped"]
         self.result = _(
             "Інтервалів: %(n)s (нових %(new)s), діб розподілу: %(days)s, зафіксованих рядків пропущено: %(skipped)s",

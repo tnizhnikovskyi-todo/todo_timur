@@ -24,15 +24,15 @@ def _is_num(value):
 
 
 class F3dZone(models.Model):
-    _name = 'f3d.zone'
-    _inherit = ['f3d.scene.mixin']
+    _name = 'td.zone'
+    _inherit = ['td.scene.mixin']
     _description = 'Зона цеху'
-    _order = 'sequence, f3d_code'
+    _order = 'sequence, td_code'
     _rec_name = 'name'
-    _rec_names_search = ['name', 'f3d_code']
+    _rec_names_search = ['name', 'td_code']
     _f3d_kind = 'zone'
 
-    f3d_code = fields.Char(required=True)  # довжину ≤ 32 перевіряє _check_f3d_codes (size=32 мовчки обрізало б, B-1)
+    td_code = fields.Char(required=True)  # довжину ≤ 32 перевіряє _check_f3d_codes (size=32 мовчки обрізало б, B-1)
     name = fields.Char(string='Назва', required=True, size=128)
     sequence = fields.Integer(default=10)
     zone_type = fields.Selection(ZONE_TYPES, string='Тип', required=True)
@@ -56,9 +56,9 @@ class F3dZone(models.Model):
     company_id = fields.Many2one(
         'res.company', required=True, index=True, default=lambda self: self.env.company)
     active = fields.Boolean(default=True)
-    location_ids = fields.One2many('stock.location', 'f3d_zone_id', string='Місця зберігання')
-    workcenter_ids = fields.One2many('mrp.workcenter', 'f3d_zone_id', string='Робочі центри')
-    equipment_ids = fields.One2many('maintenance.equipment', 'f3d_zone_id', string='Обладнання')
+    location_ids = fields.One2many('stock.location', 'td_zone_id', string='Місця зберігання')
+    workcenter_ids = fields.One2many('mrp.workcenter', 'td_zone_id', string='Робочі центри')
+    equipment_ids = fields.One2many('maintenance.equipment', 'td_zone_id', string='Обладнання')
     dock_location_ids = fields.Many2many(
         'stock.location', string='Ворота', compute='_compute_docks')
     location_count = fields.Integer(compute='_compute_counts')
@@ -113,20 +113,20 @@ class F3dZone(models.Model):
 
     @api.depends('location_ids')
     def _compute_docks(self):
-        # f3d_kind на stock.location з'являється з домішкою (W3); до того воріт немає
-        has_kind = 'f3d_kind' in self.env['stock.location']._fields
+        # td_kind на stock.location з'являється з домішкою (W3); до того воріт немає
+        has_kind = 'td_kind' in self.env['stock.location']._fields
         for zone in self:
             zone.dock_location_ids = zone.location_ids.filtered(
-                lambda loc: has_kind and loc.f3d_kind == 'dock')
+                lambda loc: has_kind and loc.td_kind == 'dock')
 
     def _compute_counts(self):
         for zone in self:
             zone.location_count = self.env['stock.location'].search_count(
-                [('f3d_zone_id', '=', zone.id)])
+                [('td_zone_id', '=', zone.id)])
             zone.workcenter_count = self.env['mrp.workcenter'].search_count(
-                [('f3d_zone_id', '=', zone.id)])
+                [('td_zone_id', '=', zone.id)])
             zone.equipment_count = self.env['maintenance.equipment'].search_count(
-                [('f3d_zone_id', '=', zone.id)])
+                [('td_zone_id', '=', zone.id)])
             zone.dock_count = len(zone.dock_location_ids)
 
     # --- constraints ---
@@ -135,7 +135,7 @@ class F3dZone(models.Model):
 
         def param(name, default):
             try:
-                return float(get('factory3d.base.site_%s_m' % name, default))
+                return float(get('td.base.site_%s_m' % name, default))
             except (TypeError, ValueError):
                 return default
         return (param('x0', SITE_DEFAULTS['x0']), param('y0', SITE_DEFAULTS['y0']),
@@ -161,7 +161,7 @@ class F3dZone(models.Model):
             elif self._polygon_area([tuple(p) for p in points]) <= 0:
                 reason = 'площа контуру має бути більшою за нуль'
             if reason:
-                raise ValidationError('Контур зони %s: %s' % (zone.f3d_code, reason))
+                raise ValidationError('Контур зони %s: %s' % (zone.td_code, reason))
 
     # --- API ---
     @staticmethod
@@ -200,8 +200,8 @@ class F3dZone(models.Model):
             'name': name,
             'res_model': res_model,
             'view_mode': 'list,form',
-            'domain': [('f3d_zone_id', '=', self.id)],
-            'context': {'default_f3d_zone_id': self.id},
+            'domain': [('td_zone_id', '=', self.id)],
+            'context': {'default_td_zone_id': self.id},
         }
 
     def action_view_locations(self):
@@ -222,19 +222,19 @@ class F3dZone(models.Model):
 class StockLocation(models.Model):
     _inherit = 'stock.location'
 
-    f3d_zone_id = fields.Many2one(
-        'f3d.zone', string='Зона цеху', index=True, ondelete='set null')
+    td_zone_id = fields.Many2one(
+        'td.zone', string='Зона цеху', index=True, ondelete='set null')
 
 
 class MrpWorkcenter(models.Model):
     _inherit = 'mrp.workcenter'
 
-    f3d_zone_id = fields.Many2one(
-        'f3d.zone', string='Зона цеху', index=True, ondelete='set null')
+    td_zone_id = fields.Many2one(
+        'td.zone', string='Зона цеху', index=True, ondelete='set null')
 
 
 class MaintenanceEquipment(models.Model):
     _inherit = 'maintenance.equipment'
 
-    f3d_zone_id = fields.Many2one(
-        'f3d.zone', string='Зона цеху', index=True, ondelete='set null')
+    td_zone_id = fields.Many2one(
+        'td.zone', string='Зона цеху', index=True, ondelete='set null')

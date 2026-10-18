@@ -3,7 +3,7 @@
 // «Відкрити в Odoo» для стелажів без власного запису (R-16 п. 5).
 import { describe, expect, test } from "@odoo/hoot";
 import { tick } from "@odoo/hoot-mock";
-import { DOC_STATES, docPill } from "@factory3d_viewer/viewer/format";
+import { DOC_STATES, docPill } from "@td_viewer3d/viewer/format";
 import { json, mountViewer } from "./helpers";
 
 const q = (el, sel) => el.querySelector(sel);

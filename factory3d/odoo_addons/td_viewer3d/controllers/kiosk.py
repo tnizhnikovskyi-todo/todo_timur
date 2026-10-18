@@ -17,7 +17,7 @@ from odoo.http import request
 
 from .viewer import CODE_RE, F3dViewerController
 
-PREFIX = "factory3d.viewer."
+PREFIX = "td.viewer."
 RATE_LIMIT = 10  # запитів
 RATE_WINDOW_S = 1.0  # за вікно
 MAX_TRACKED_IPS = 2048
@@ -68,7 +68,7 @@ class F3dKioskController(http.Controller):
     @staticmethod
     def _switch_to_kiosk_user():
         """Перемикає `request.env` на `user_kiosk` з `ctx.kiosk=True`; False, якщо користувача немає."""
-        user = request.env.ref("factory3d_viewer.user_kiosk", raise_if_not_found=False)
+        user = request.env.ref("td_viewer3d.user_kiosk", raise_if_not_found=False)
         if not user:
             return False
         context = {"kiosk": True, "tz": "Europe/Kyiv"}
@@ -112,7 +112,7 @@ class F3dKioskController(http.Controller):
             "session_info_json": Markup(json.dumps({"db": request.db, "lang": "uk_UA",
                                               "user_context": {"tz": "Europe/Kyiv"}})),
         }
-        return request.render("factory3d_viewer.kiosk_page", values)
+        return request.render("td_viewer3d.kiosk_page", values)
 
     # --- API-09 ------------------------------------------------------------
 

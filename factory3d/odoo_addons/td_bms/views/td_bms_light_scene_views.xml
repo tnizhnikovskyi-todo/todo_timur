@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_bms_light_scene_list" model="ir.ui.view">
-        <field name="name">f3d.bms.light.scene.list</field>
-        <field name="model">f3d.bms.light.scene</field>
+    <record id="view_td_bms_light_scene_list" model="ir.ui.view">
+        <field name="name">td.bms.light.scene.list</field>
+        <field name="model">td.bms.light.scene</field>
         <field name="arch" type="xml">
             <list string="Сцени DALI" editable="bottom">
                 <field name="block"/>
@@ -14,9 +14,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_bms_light_scene" model="ir.actions.act_window">
+    <record id="action_td_bms_light_scene" model="ir.actions.act_window">
         <field name="name">Сцени DALI</field>
-        <field name="res_model">f3d.bms.light.scene</field>
+        <field name="res_model">td.bms.light.scene</field>
         <field name="view_mode">list</field>
     </record>
 </odoo>

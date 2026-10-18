@@ -1,67 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
     <record id="param_read_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.read_enabled</field>
+        <field name="key">td.telemetry.read_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_write_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.write_enabled</field>
+        <field name="key">td.telemetry.write_enabled</field>
         <field name="value">False</field>
     </record>
     <record id="param_keep_days" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.keep_days</field>
+        <field name="key">td.telemetry.keep_days</field>
         <field name="value">30</field>
     </record>
     <record id="param_keep_hours_days" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.keep_hours_days</field>
+        <field name="key">td.telemetry.keep_hours_days</field>
         <field name="value">400</field>
     </record>
     <record id="param_default_store_period" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.default_store_period_s</field>
+        <field name="key">td.telemetry.default_store_period_s</field>
         <field name="value">300</field>
     </record>
     <record id="param_stale_periods" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.stale_periods</field>
+        <field name="key">td.telemetry.stale_periods</field>
         <field name="value">3</field>
     </record>
     <record id="param_stale_min_s" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.stale_min_s</field>
+        <field name="key">td.telemetry.stale_min_s</field>
         <field name="value">60</field>
     </record>
     <record id="param_bus_min_interval" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.bus_min_interval_s</field>
+        <field name="key">td.telemetry.bus_min_interval_s</field>
         <field name="value">10</field>
     </record>
     <record id="param_realarm_cooldown" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.realarm_cooldown_s</field>
+        <field name="key">td.telemetry.realarm_cooldown_s</field>
         <field name="value">3600</field>
     </record>
     <record id="param_push_max" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.push_max_readings</field>
+        <field name="key">td.telemetry.push_max_readings</field>
         <field name="value">2000</field>
     </record>
     <record id="param_push_rate" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.push_rate_per_min</field>
+        <field name="key">td.telemetry.push_rate_per_min</field>
         <field name="value">60</field>
     </record>
     <record id="param_meter_lead_pct" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.meter_lead_pct</field>
+        <field name="key">td.telemetry.meter_lead_pct</field>
         <field name="value">5</field>
     </record>
     <record id="param_default_team" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.default_team_id</field>
+        <field name="key">td.telemetry.default_team_id</field>
         <field name="value"></field>
     </record>
     <record id="param_drop_level0" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.drop_level0</field>
+        <field name="key">td.telemetry.drop_level0</field>
         <field name="value">False</field>
     </record>
     <record id="param_level0_migrated" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.level0_migrated</field>
+        <field name="key">td.telemetry.level0_migrated</field>
         <field name="value">{}</field>
     </record>
     <record id="param_stale_notify_min" model="ir.config_parameter">
-        <field name="key">factory3d.telemetry.stale_notify_min</field>
+        <field name="key">td.telemetry.stale_notify_min</field>
         <field name="value">0</field>
     </record>
 </odoo>

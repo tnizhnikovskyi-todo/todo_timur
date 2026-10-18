@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_cycle_check_form" model="ir.ui.view">
-        <field name="name">f3d.viewer.cycle.check.form</field>
-        <field name="model">f3d.viewer.cycle.check</field>
+    <record id="view_td_cycle_check_form" model="ir.ui.view">
+        <field name="name">td.viewer.cycle.check.form</field>
+        <field name="model">td.viewer.cycle.check</field>
         <field name="arch" type="xml">
             <form string="Перевірка циклу">
                 <sheet>
                     <field name="first_ref" invisible="1"/>
                     <group>
                         <group>
-                            <field name="payload_user_id" groups="factory3d_base.group_f3d_admin"/>
+                            <field name="payload_user_id" groups="td_factory3d.group_td_admin"/>
                             <field name="ran_at"/>
                         </group>
                         <group>
@@ -30,9 +30,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_cycle_check" model="ir.actions.act_window">
+    <record id="action_td_cycle_check" model="ir.actions.act_window">
         <field name="name">Перевірка циклу</field>
-        <field name="res_model">f3d.viewer.cycle.check</field>
+        <field name="res_model">td.viewer.cycle.check</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>

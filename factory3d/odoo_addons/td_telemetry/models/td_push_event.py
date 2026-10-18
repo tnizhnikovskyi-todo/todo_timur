@@ -53,7 +53,7 @@ def _device_ts(raw):
 
 
 class F3dPushEvent(models.Model):
-    _name = "f3d.push.event"
+    _name = "td.push.event"
     _description = "Телеметрія: подія HTTP push"
     _order = "ts desc"
     _log_access = False
@@ -61,7 +61,7 @@ class F3dPushEvent(models.Model):
     event_id = fields.Char(string="Ідентифікатор події", size=64, required=True, index=True)
     route = fields.Char(string="Маршрут", size=32, required=True, index=True)
     ts = fields.Datetime(string="Час події", required=True, index=True)
-    collector_id = fields.Many2one("f3d.collector", string="Колектор", ondelete="set null")
+    collector_id = fields.Many2one("td.collector", string="Колектор", ondelete="set null")
     remote = fields.Char(string="Відправник", size=64)
     payload = fields.Json(string="Тіло події")
     handled_by = fields.Char(string="Обробники", size=256)
@@ -74,7 +74,7 @@ class F3dPushEvent(models.Model):
     def _f3d_receive(self, events, collector):
         """R-22: журнал, обробники M-11 і показання сигналів `http_push` для пакета подій API-05."""
         received_at = fields.Datetime.now()
-        Handler = self.env["f3d.push.handler"]
+        Handler = self.env["td.push.handler"]
         accepted, rejected, handled = 0, [], {}
         for ev in events:
             event_id = ev["event_id"]
@@ -108,7 +108,7 @@ class F3dPushEvent(models.Model):
             count = 0
             if readings:
                 res = (
-                    self.env["f3d.signal"]
+                    self.env["td.signal"]
                     .sudo()
                     .with_context(f3d_received_at=received_at)
                     ._f3d_ingest(readings, src="collector", collector=collector)
@@ -135,9 +135,9 @@ class F3dPushEvent(models.Model):
     @api.model
     def _f3d_event_readings(self, route, payload, collector, received_at):
         """Показання сигналів `http_push` колектора, чий `address.route/match` підходить події (R-22, X-63)."""
-        keep_days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.keep_days", "30") or 30)
+        keep_days = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.keep_days", "30") or 30)
         signals = (
-            self.env["f3d.signal"]
+            self.env["td.signal"]
             .sudo()
             .search(
                 [

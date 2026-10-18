@@ -11,7 +11,7 @@ from ..tools import sim_catalog
 from ..tools import thresholds
 from ..tools.ingest import STATUS_LABELS, Ingester
 from ..tools.titles import fmt_num, render_title
-from .f3d_source import F3dSource
+from .td_source import F3dSource
 
 KYIV = ZoneInfo("Europe/Kyiv")
 ETAG_FIELDS = {
@@ -62,7 +62,7 @@ def _split_csv(text):
 
 
 class F3dSignal(models.Model):
-    _name = "f3d.signal"
+    _name = "td.signal"
     _description = "Телеметрія: сигнал"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -89,18 +89,18 @@ class F3dSignal(models.Model):
     equipment_id = fields.Many2one(
         "maintenance.equipment", string="Обладнання", ondelete="set null", index=True, tracking=True
     )
-    equipment_code = fields.Char(string="Код обладнання", related="equipment_id.f3d_code")
+    equipment_code = fields.Char(string="Код обладнання", related="equipment_id.td_code")
     workcenter_id = fields.Many2one("mrp.workcenter", string="Робочий центр", ondelete="set null")
-    source_id = fields.Many2one("f3d.source", string="Джерело", ondelete="set null", index=True, tracking=True)
+    source_id = fields.Many2one("td.source", string="Джерело", ondelete="set null", index=True, tracking=True)
     source_type = fields.Selection(related="source_id.type")
-    collector_id = fields.Many2one("f3d.collector", related="source_id.collector_id", store=True, index=True)
+    collector_id = fields.Many2one("td.collector", related="source_id.collector_id", store=True, index=True)
     address = fields.Json(string="Адреса в джерелі", default=lambda self: {})
     address_text = fields.Text(string="Адреса (JSON)", compute="_compute_address_text", inverse="_inverse_address_text")
     period_s = fields.Integer(string="Період, с", default=10)
     store_period_s = fields.Integer(
         string="Зберігати не частіше, с",
         default=lambda self: int(
-            self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.default_store_period_s", "300")
+            self.env["ir.config_parameter"].sudo().get_param("td.telemetry.default_store_period_s", "300")
         ),
     )
     scale = fields.Float(
@@ -158,7 +158,7 @@ class F3dSignal(models.Model):
         string="Походження",
     )
     module = fields.Selection(F3dSource.MODULES, string="Модуль-власник", default="telemetry", index=True)
-    derived_from_id = fields.Many2one("f3d.signal", string="Похідний від", ondelete="set null")
+    derived_from_id = fields.Many2one("td.signal", string="Похідний від", ondelete="set null")
     derive_rule = fields.Selection(
         [("none", "—"), ("rate_h", "Швидкість за годину (Δ/Δt)")], default="none", string="Правило похідної"
     )
@@ -166,7 +166,7 @@ class F3dSignal(models.Model):
     sim_params = fields.Json(string="Параметри макета")
     note = fields.Text(string="Примітка")
     reading_count = fields.Integer(string="Показань за 2 доби", compute="_compute_reading_count")
-    meter_equipment_ids = fields.One2many("maintenance.equipment", "f3d_meter_signal_id", string="ТО за лічильником")
+    meter_equipment_ids = fields.One2many("maintenance.equipment", "td_meter_signal_id", string="ТО за лічильником")
     is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
     states_text = fields.Char(
         string="Допустимі стани (через кому)", compute="_compute_states_text", inverse="_inverse_states_text"
@@ -220,7 +220,7 @@ class F3dSignal(models.Model):
             rec.sim_params_text = json.dumps(rec.sim_params or {}, ensure_ascii=False, indent=2)
 
     def _compute_is_f3d_manager(self):
-        is_manager = self.env.user.has_group("factory3d_base.group_f3d_manager")
+        is_manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
             rec.is_f3d_manager = is_manager
 
@@ -229,7 +229,7 @@ class F3dSignal(models.Model):
         if self.ids:
             since = fields.Datetime.now() - timedelta(hours=48)
             for sig, count in (
-                self.env["f3d.reading"]
+                self.env["td.reading"]
                 .sudo()
                 ._read_group([("signal_id", "in", self.ids), ("ts", ">=", since)], ["signal_id"], ["__count"])
             ):
@@ -252,7 +252,7 @@ class F3dSignal(models.Model):
 
     @api.constrains("source_id", "address")
     def _check_address(self):
-        local = self.env["f3d.source"]._f3d_local_types()
+        local = self.env["td.source"]._f3d_local_types()
         for rec in self:
             if rec.source_id and rec.address:
                 errors = address_tools.validate_address(rec.source_id.type, rec.address, local)
@@ -305,15 +305,15 @@ class F3dSignal(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        self.env["f3d.source"]._reset_etag(records.collector_id)
+        self.env["td.source"]._reset_etag(records.collector_id)
         return records
 
     def write(self, vals):
         reset = bool(ETAG_FIELDS & set(vals))
-        collectors = self.collector_id if reset else self.env["f3d.collector"]
+        collectors = self.collector_id if reset else self.env["td.collector"]
         res = super().write(vals)
         if reset:
-            self.env["f3d.source"]._reset_etag(collectors | self.collector_id)
+            self.env["td.source"]._reset_etag(collectors | self.collector_id)
         if THRESHOLD_FIELDS & set(vals):
             self._recompute_status()
         return res
@@ -370,10 +370,10 @@ class F3dSignal(models.Model):
 
     @api.model
     def _f3d_import_sim_catalog(self, codes=None, module=None, source_map=None, defaults=None):
-        """CT-11: імпорт `f3d.sim.signal` (iot_sim ≥ 2.0.0); без моделі — нулі й `state='skipped'`."""
-        if "f3d.sim.signal" not in self.env:
+        """CT-11: імпорт `td.sim.signal` (iot_sim ≥ 2.0.0); без моделі — нулі й `state='skipped'`."""
+        if "td.sim.signal" not in self.env:
             return {"created": 0, "updated": 0, "unparsed": [], "skipped": [], "state": "skipped"}
-        sims = self.env["f3d.sim.signal"].sudo().search([("code", "in", list(codes))] if codes is not None else [])
+        sims = self.env["td.sim.signal"].sudo().search([("code", "in", list(codes))] if codes is not None else [])
         if module:
             sims = sims.filtered(lambda s: sim_catalog.module_for_code(s.code) == module)
         rows = [{f: s[f] or "" for f in self.SIM_ROW_FIELDS} for s in sims]
@@ -386,8 +386,8 @@ class F3dSignal(models.Model):
         Існуючий сигнал: `address` лише якщо порожня, `source_id` лише якщо порожній, `sim_params` — додаються
         відсутні ключі; `last_*` не чіпаються. Новий — `origin` з `defaults` (умовчання `catalog`)."""
         Signal = self.sudo().with_context(active_test=False, tracking_disable=True, mail_create_nolog=True)
-        Source = self.env["f3d.source"].sudo().with_context(active_test=False)
-        local = self.env["f3d.source"]._f3d_local_types()
+        Source = self.env["td.source"].sudo().with_context(active_test=False)
+        local = self.env["td.source"]._f3d_local_types()
         result = {"created": 0, "updated": 0, "unparsed": [], "skipped": []}
         origin = defaults.get("origin")
         origin = origin if origin in ("sim_data", "catalog", "manual", "module") else "catalog"
@@ -460,8 +460,8 @@ class F3dSignal(models.Model):
 
     @api.model
     def f3d_run_migration(self):
-        """Дія «Повторити міграцію рівня 0» (§5.3): лише `group_f3d_admin`."""
-        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        """Дія «Повторити міграцію рівня 0» (§5.3): лише `group_td_admin`."""
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
         from .. import hooks  # noqa: PLC0415
 
@@ -503,14 +503,14 @@ class F3dSignal(models.Model):
 
     # --- заявки ТО (R-05, R-06) ----------------------------------------------------------------------
     def _open_request(self, value, text, ts):
-        """R-05: заявка ТО за тривогою. Поля `f3d_*` заявки пише лише якщо вони є (їх додає M-08)."""
+        """R-05: заявка ТО за тривогою. Поля `td_*` заявки пише лише якщо вони є (їх додає M-08)."""
         self.ensure_one()
         eq = self.equipment_id
         icp = self.env["ir.config_parameter"].sudo()
         threshold, rel = thresholds.breach_info(self._f3d_cfg(), value)
         team = eq.maintenance_team_id
-        if not team and (icp.get_param("factory3d.telemetry.default_team_id") or "").isdigit():
-            team = self.env["maintenance.team"].browse(int(icp.get_param("factory3d.telemetry.default_team_id")))
+        if not team and (icp.get_param("td.telemetry.default_team_id") or "").isdigit():
+            team = self.env["maintenance.team"].browse(int(icp.get_param("td.telemetry.default_team_id")))
         local_ts = ts.replace(tzinfo=timezone.utc).astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
         source = self.source_id.code or ""
         if self.kind == "state":
@@ -535,7 +535,7 @@ class F3dSignal(models.Model):
             "schedule_date": fields.Datetime.now(),
         }
         Request = self.env["maintenance.request"].sudo()
-        extra = {"f3d_signal_id": self.id, "f3d_origin": "threshold", "f3d_value": value, "f3d_threshold": threshold}
+        extra = {"td_signal_id": self.id, "td_origin": "threshold", "td_value": value, "td_threshold": threshold}
         vals.update({k: v for k, v in extra.items() if k in Request._fields and v is not None})
         request = Request.create(vals)
         self.sudo().with_context(mail_notrack=True).write({"maintenance_request_id": request.id})
@@ -546,7 +546,7 @@ class F3dSignal(models.Model):
         """R-06: заявку закрито — звільнити сигнал, перерахувати статус без мін. тривалості."""
         now = fields.Datetime.now()
         cooldown = int(
-            self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.realarm_cooldown_s", "3600") or 3600
+            self.env["ir.config_parameter"].sudo().get_param("td.telemetry.realarm_cooldown_s", "3600") or 3600
         )
         for rec in self:
             vals = {}
@@ -579,8 +579,8 @@ class F3dSignal(models.Model):
         """Вікно stale сигналу в секундах; для COV-сигналів BACnet — від `cov_check_s` (X-06)."""
         self.ensure_one()
         icp = self.env["ir.config_parameter"].sudo()
-        periods = int(icp.get_param("factory3d.telemetry.stale_periods", "3") or 3)
-        min_s = int(icp.get_param("factory3d.telemetry.stale_min_s", "60") or 60)
+        periods = int(icp.get_param("td.telemetry.stale_periods", "3") or 3)
+        min_s = int(icp.get_param("td.telemetry.stale_min_s", "60") or 60)
         p = self.period_s
         src = self.source_id
         if src and src.type == "bacnet_ip" and not (src.params or {}).get("read_only"):
@@ -602,8 +602,8 @@ class F3dSignal(models.Model):
     def _cron_stale(self):
         """R-07: сигнали без свіжих показань → stale; далі колектори офлайн (R-25)."""
         now = fields.Datetime.now()
-        min_s = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.stale_min_s", "60") or 60)
-        local = self.env["f3d.source"]._f3d_local_types()
+        min_s = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.stale_min_s", "60") or 60)
+        local = self.env["td.source"]._f3d_local_types()
         cands = self.sudo().search(
             [
                 ("status", "in", ("ok", "warn", "alarm")),
@@ -615,19 +615,19 @@ class F3dSignal(models.Model):
         )
         stale = cands.filtered(lambda s: s.last_ts < now - timedelta(seconds=s._f3d_stale_after()))
         stale._mark_stale("timeout")
-        self.env["f3d.collector"]._cron_offline()
+        self.env["td.collector"]._cron_offline()
 
     # --- шина, дії -----------------------------------------------------------------------------------
     def _notify_viewer(self, codes):
-        if "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("f3d.signal", codes, "signal")
+        if "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("td.signal", codes, "signal")
 
     def action_test_address(self):
         self.ensure_one()
         errors = []
         if self.source_id:
             errors = address_tools.validate_address(
-                self.source_id.type, self.address or {}, self.env["f3d.source"]._f3d_local_types()
+                self.source_id.type, self.address or {}, self.env["td.source"]._f3d_local_types()
             )
         message, kind = ("; ".join(errors), "danger") if errors else (_("Адреса коректна"), "success")
         return {
@@ -641,7 +641,7 @@ class F3dSignal(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Показання"),
-            "res_model": "f3d.reading",
+            "res_model": "td.reading",
             "view_mode": "graph,list",
             "domain": [("signal_id", "=", self.id)],
             "context": {"search_default_last_48h": 1},
@@ -663,7 +663,7 @@ class F3dSignal(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Команда на пристрій"),
-            "res_model": "f3d.command",
+            "res_model": "td.command",
             "view_mode": "form",
             "target": "new",
             "context": {"default_signal_id": self.id},

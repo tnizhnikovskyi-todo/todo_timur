@@ -4,11 +4,11 @@ import math
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
-from .f3d_fire_smoke_zone import COMPLIANCE, plant_size
+from .td_fire_smoke_zone import COMPLIANCE, plant_size
 
 
 class F3dFireRoute(models.Model):
-    _name = "f3d.fire.route"
+    _name = "td.fire.route"
     _description = "Евакуація: маршрут"
     _order = "zone_code"
     _rec_name = "name"
@@ -16,9 +16,9 @@ class F3dFireRoute(models.Model):
     code = fields.Char(string="Код у 3D", size=32, required=True, index=True)
     name = fields.Char(string="Назва", size=128, required=True)
     zone_id = fields.Many2one(
-        'f3d.zone', string="Зона", required=True, ondelete='cascade', index=True)
-    zone_code = fields.Char(related='zone_id.f3d_code', store=True)
-    exit_id = fields.Many2one('f3d.fire.exit', string="Вихід", required=True, ondelete='restrict')
+        'td.zone', string="Зона", required=True, ondelete='cascade', index=True)
+    zone_code = fields.Char(related='zone_id.td_code', store=True)
+    exit_id = fields.Many2one('td.fire.exit', string="Вихід", required=True, ondelete='restrict')
     length_m = fields.Float(string="Довжина шляху, м", digits=(8, 1), required=True)
     path = fields.Json(string="Шлях", required=True)
     path_text = fields.Text(
@@ -58,11 +58,11 @@ class F3dFireRoute(models.Model):
 
     def _norm_key(self):
         icp = self.env['ir.config_parameter'].sudo()
-        poly = (icp.get_param('factory3d.fire_safety.polymer_panels', 'False') or '').lower() in ('true', '1')
+        poly = (icp.get_param('td.fire_safety.polymer_panels', 'False') or '').lower() in ('true', '1')
         return 'evac_distance_polymer' if poly else 'evac_distance_prod_B'
 
     def _compute_norm_m(self):
-        value = self.env['f3d.fire.norm'].get(self._norm_key()) or 0.0
+        value = self.env['td.fire.norm'].get(self._norm_key()) or 0.0
         for rec in self:
             rec.norm_m = value
 
@@ -90,7 +90,7 @@ class F3dFireRoute(models.Model):
 
     def _recompute(self):
         """R-05, R-07."""
-        norm = self.env['f3d.fire.norm']
+        norm = self.env['td.fire.norm']
         key = self._norm_key()
         limit = norm.get(key)
         ref = norm.get_ref(key)

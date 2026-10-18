@@ -2,9 +2,9 @@ from odoo import api, fields, models
 
 
 class F3dSimScenario(models.Model):
-    _name = 'f3d.sim.scenario'
+    _name = 'td.sim.scenario'
     _description = 'Сценарій емулятора'
-    _inherit = ['f3d.sim.client']
+    _inherit = ['td.sim.client']
     _order = 'sequence, code'
 
     code = fields.Char(string='Код', required=True)
@@ -18,8 +18,8 @@ class F3dSimScenario(models.Model):
     duration_s = fields.Integer(string='Тривалість, с', help='0 = до зупинки')
     sequence = fields.Integer(string='Послідовність', default=10)
     active = fields.Boolean(default=True)
-    run_ids = fields.One2many('f3d.sim.run', 'scenario_id', string='Запуски')
-    last_run_id = fields.Many2one('f3d.sim.run', string='Останній запуск', compute='_compute_last_run')
+    run_ids = fields.One2many('td.sim.run', 'scenario_id', string='Запуски')
+    last_run_id = fields.Many2one('td.sim.run', string='Останній запуск', compute='_compute_last_run')
     write_enabled = fields.Boolean(compute='_compute_write_enabled')
 
     _scenario_code_uniq = models.Constraint('UNIQUE(code)', 'Код сценарію має бути унікальним')
@@ -36,5 +36,5 @@ class F3dSimScenario(models.Model):
 
     def action_start(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Запуск сценарію', 'res_model': 'f3d.sim.run.wizard',
+        return {'type': 'ir.actions.act_window', 'name': 'Запуск сценарію', 'res_model': 'td.sim.run.wizard',
                 'view_mode': 'form', 'target': 'new', 'context': {'default_scenario_id': self.id}}

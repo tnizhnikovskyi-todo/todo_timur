@@ -140,12 +140,12 @@ def test_tp04_cron_perf(odoo):
 
 
 def test_tp05_readings_rate(odoo):
-    """ТП-05: нові `f3d.reading` сигналів module='bms' за вікно (F3D_TP05_WINDOW_S, за замовч. 600 с) × (86 400/вікно)."""
+    """ТП-05: нові `td.reading` сигналів module='bms' за вікно (F3D_TP05_WINDOW_S, за замовч. 600 с) × (86 400/вікно)."""
     window = int(os.environ.get("F3D_TP05_WINDOW_S", "600"))
     dom = [("signal_id.module", "=", "bms")]
-    last = odoo.search_read("f3d.reading", dom, ["id"], order="id desc", limit=1)[0]["id"]
+    last = odoo.search_read("td.reading", dom, ["id"], order="id desc", limit=1)[0]["id"]
     time.sleep(window)
-    n = odoo.count("f3d.reading", dom + [("id", ">", last)])
+    n = odoo.count("td.reading", dom + [("id", ">", last)])
     day = round(n * 86400 / window)
     print(f"TP05 за {window} с {n} рядків → ≈ {day} за добу (норма ≤ 60 000)")
     assert day <= 60000

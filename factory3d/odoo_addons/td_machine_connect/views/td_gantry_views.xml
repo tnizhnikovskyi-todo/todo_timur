@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-15…V-19: f3d.gantry.stack, f3d.gantry.job (SPEC §3) -->
+<!-- V-15…V-19: td.gantry.stack, td.gantry.job (SPEC §3) -->
 <odoo>
-    <record id="view_f3d_gantry_stack_kanban" model="ir.ui.view">
-        <field name="name">f3d.gantry.stack.kanban</field>
-        <field name="model">f3d.gantry.stack</field>
+    <record id="view_td_gantry_stack_kanban" model="ir.ui.view">
+        <field name="name">td.gantry.stack.kanban</field>
+        <field name="model">td.gantry.stack</field>
         <field name="arch" type="xml">
             <kanban string="Портал: стоси" default_group_by="row" default_order="col" create="0"
                     records_draggable="0" quick_create="0" group_create="0">
@@ -34,7 +34,7 @@
                             <button type="object" name="action_replenish" class="btn btn-sm btn-secondary me-1"
                                     groups="stock.group_stock_user">Поповнити</button>
                             <button type="object" name="action_f3d_show" class="btn btn-sm btn-link"
-                                    groups="factory3d_base.group_f3d_user">3D</button>
+                                    groups="td_factory3d.group_td_user">3D</button>
                         </div>
                     </t>
                 </templates>
@@ -42,9 +42,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_stack_list" model="ir.ui.view">
-        <field name="name">f3d.gantry.stack.list</field>
-        <field name="model">f3d.gantry.stack</field>
+    <record id="view_td_gantry_stack_list" model="ir.ui.view">
+        <field name="name">td.gantry.stack.list</field>
+        <field name="model">td.gantry.stack</field>
         <field name="arch" type="xml">
             <list string="Стоси порталу" create="0" decoration-danger="state == 'diff'">
                 <field name="code"/>
@@ -64,9 +64,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_stack_form" model="ir.ui.view">
-        <field name="name">f3d.gantry.stack.form</field>
-        <field name="model">f3d.gantry.stack</field>
+    <record id="view_td_gantry_stack_form" model="ir.ui.view">
+        <field name="name">td.gantry.stack.form</field>
+        <field name="model">td.gantry.stack</field>
         <field name="arch" type="xml">
             <form string="Стос порталу">
                 <header>
@@ -83,7 +83,7 @@
                         <button name="action_view_quants" type="object" class="oe_stat_button" icon="fa-cubes"
                                 string="Залишки"/>
                         <button name="action_f3d_show" type="object" class="oe_stat_button" icon="fa-cube"
-                                string="3D" groups="factory3d_base.group_f3d_user"/>
+                                string="3D" groups="td_factory3d.group_td_user"/>
                     </div>
                     <h1><field name="code" readonly="1"/></h1>
                     <group>
@@ -136,9 +136,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_stack_search" model="ir.ui.view">
-        <field name="name">f3d.gantry.stack.search</field>
-        <field name="model">f3d.gantry.stack</field>
+    <record id="view_td_gantry_stack_search" model="ir.ui.view">
+        <field name="name">td.gantry.stack.search</field>
+        <field name="model">td.gantry.stack</field>
         <field name="arch" type="xml">
             <search string="Стоси порталу">
                 <field name="code"/>
@@ -156,9 +156,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_job_list" model="ir.ui.view">
-        <field name="name">f3d.gantry.job.list</field>
-        <field name="model">f3d.gantry.job</field>
+    <record id="view_td_gantry_job_list" model="ir.ui.view">
+        <field name="name">td.gantry.job.list</field>
+        <field name="model">td.gantry.job</field>
         <field name="arch" type="xml">
             <list string="Завдання порталу">
                 <field name="name"/>
@@ -181,9 +181,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_job_form" model="ir.ui.view">
-        <field name="name">f3d.gantry.job.form</field>
-        <field name="model">f3d.gantry.job</field>
+    <record id="view_td_gantry_job_form" model="ir.ui.view">
+        <field name="name">td.gantry.job.form</field>
+        <field name="model">td.gantry.job</field>
         <field name="arch" type="xml">
             <form string="Завдання порталу">
                 <header>
@@ -241,9 +241,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_job_kanban" model="ir.ui.view">
-        <field name="name">f3d.gantry.job.kanban</field>
-        <field name="model">f3d.gantry.job</field>
+    <record id="view_td_gantry_job_kanban" model="ir.ui.view">
+        <field name="name">td.gantry.job.kanban</field>
+        <field name="model">td.gantry.job</field>
         <field name="arch" type="xml">
             <kanban default_group_by="state" records_draggable="0" quick_create="0" group_create="0">
                 <templates>
@@ -263,9 +263,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_gantry_job_search" model="ir.ui.view">
-        <field name="name">f3d.gantry.job.search</field>
-        <field name="model">f3d.gantry.job</field>
+    <record id="view_td_gantry_job_search" model="ir.ui.view">
+        <field name="name">td.gantry.job.search</field>
+        <field name="model">td.gantry.job</field>
         <field name="arch" type="xml">
             <search string="Завдання порталу">
                 <field name="name"/>

@@ -17,10 +17,10 @@ from odoo.tools import file_open
 
 from ..tools import params as P
 
-_logger = logging.getLogger("odoo.addons.factory3d_yard.hooks")
+_logger = logging.getLogger("odoo.addons.td_yard.hooks")
 
-KEY_ENV = "factory3d.base.environment"
-CSV_PATH = "factory3d_yard/data/f3d_yard_signals.csv"
+KEY_ENV = "td.base.environment"
+CSV_PATH = "td_yard/data/td_yard_signals.csv"
 CALENDAR_NAME = "Зміна 1 (07:00–15:30)"
 BATCH_DESC_RE = re.compile(r"^(TRUCK-[A-Z0-9-]+) · (DOCK-[EW]\d)$")
 OUT_PLATE = "АА4512КТ"
@@ -58,8 +58,8 @@ SOURCES = (
         "equipment": "TRUCK-SCALE",
     },
 )
-HTTP_PUSH_XMLID = "factory3d_telemetry.source_http_push"
-COLLECTOR_XMLID = "factory3d_telemetry.collector_main"
+HTTP_PUSH_XMLID = "td_telemetry.source_http_push"
+COLLECTOR_XMLID = "td_telemetry.collector_main"
 
 PRODUCT_WEIGHTS = (
     ("DSP16-SON", 56.0),
@@ -96,14 +96,14 @@ def params(env):
 # ---------------------------------------------------------------- 1
 def gates_and_scale(env):
     """Крок 1: обладнання, зони, камери воріт і ваг (лише порожні поля)."""
-    Equipment, Zone = env["maintenance.equipment"], env["f3d.zone"]
+    Equipment, Zone = env["maintenance.equipment"], env["td.zone"]
     res = {"gates": 0, "scales": 0, "linked_equipment": 0, "cameras": 0, "zones": 0}
     camera = Equipment.search_f3d(CAMERA_EQUIPMENT)
     if not camera:
         _logger.warning("Обладнання %s для камер воріт не знайдено", CAMERA_EQUIPMENT)
     items = [(x, "gates") for x in GATE_LINKS] + [(SCALE_LINK, "scales")]
     for (xmlid, eq_code, zone_code), kind in items:
-        rec = _ref(env, "factory3d_yard.%s" % xmlid)
+        rec = _ref(env, "td_yard.%s" % xmlid)
         if not rec:
             continue
         res[kind] += 1
@@ -133,7 +133,7 @@ def gates_and_scale(env):
 # ---------------------------------------------------------------- 2
 def _collector(env):
     collector = _ref(env, COLLECTOR_XMLID)
-    return collector or env["f3d.collector"].search([("active", "=", True)], limit=1)
+    return collector or env["td.collector"].search([("active", "=", True)], limit=1)
 
 
 def _csv_rows():
@@ -147,7 +147,7 @@ def _flag(value):
 
 def signals_and_sources(env):
     """Крок 2: джерела й сигнали за кодом (без ir.model.data), прив'язка до воріт і ваг."""
-    Source, Signal, Equipment = env["f3d.source"], env["f3d.signal"], env["maintenance.equipment"]
+    Source, Signal, Equipment = env["td.source"], env["td.signal"], env["maintenance.equipment"]
     res = {"sources_created": 0, "sources_updated": 0, "http_push_reused": 0, "signals_created": 0}
     res.update(signals_updated=0, linked=0)
     collector = _collector(env)
@@ -219,7 +219,7 @@ def signals_and_sources(env):
             if src:
                 owners[row["owner"]]["source_id"] = src.id
     for xmlid, vals in owners.items():
-        rec = _ref(env, "factory3d_yard.%s" % xmlid)
+        rec = _ref(env, "td_yard.%s" % xmlid)
         if rec:
             rec.write(vals)
             res["linked"] += sum(1 for k in vals if k.endswith("_signal_id"))
@@ -242,9 +242,9 @@ def product_weights(env):
 
 # ---------------------------------------------------------------- 4
 def carrier_partners(env):
-    """Крок 4: перевізники доставки → партнери (лише порожній f3d_partner_id)."""
+    """Крок 4: перевізники доставки → партнери (лише порожній td_partner_id)."""
     res = {"carriers_linked": 0, "unmatched": 0}
-    for carrier in env["delivery.carrier"].search([("f3d_partner_id", "=", False)]):
+    for carrier in env["delivery.carrier"].search([("td_partner_id", "=", False)]):
         if carrier.name == "Власний транспорт":
             partner = env.company.partner_id
         else:
@@ -253,17 +253,17 @@ def carrier_partners(env):
         if not partner:
             res["unmatched"] += 1
             continue
-        carrier.f3d_partner_id = partner
-        partner.f3d_is_carrier = True
+        carrier.td_partner_id = partner
+        partner.td_is_carrier = True
         res["carriers_linked"] += 1
     return res
 
 
 # ---------------------------------------------------------------- 5
 def _candidate_batches(env):
-    """Пакети рейсів: за f3d_code TRUCK-%, інакше — за описом `TRUCK-… · DOCK-…`."""
+    """Пакети рейсів: за td_code TRUCK-%, інакше — за описом `TRUCK-… · DOCK-…`."""
     Batch = env["stock.picking.batch"]
-    batches = Batch.search([("f3d_code", "=like", "TRUCK-%")], order="id")
+    batches = Batch.search([("td_code", "=like", "TRUCK-%")], order="id")
     if batches:
         return batches, False
     by_desc = Batch
@@ -274,8 +274,8 @@ def _candidate_batches(env):
 
 
 def _batch_code(batch):
-    if batch.f3d_code:
-        return batch.f3d_code
+    if batch.td_code:
+        return batch.td_code
     match = BATCH_DESC_RE.match((batch.description or "").strip())
     return match.group(1) if match else False
 
@@ -286,16 +286,16 @@ def visits_from_batches(env):
     batches, by_desc = _candidate_batches(env)
     if not batches:
         return dict(res, skipped=1)
-    gate_w = _ref(env, "factory3d_yard.gate_w")
-    Visit = env["f3d.yard.visit"]
+    gate_w = _ref(env, "td_yard.gate_w")
+    Visit = env["td.yard.visit"]
     for batch in batches:
-        if batch.f3d_visit_ids:
+        if batch.td_visit_ids:
             continue
         picks = batch.picking_ids.sorted("name")
         visit_type = batch.picking_type_code if batch.picking_type_code in ("incoming", "outgoing") else "other"
         partner = picks[:1].partner_id.commercial_partner_id
         dcarrier = picks.carrier_id[:1]
-        carrier = partner if visit_type == "incoming" else dcarrier.f3d_partner_id
+        carrier = partner if visit_type == "incoming" else dcarrier.td_partner_id
         start = batch.scheduled_date or fields.Datetime.now()
         code = _batch_code(batch)
         vals = {
@@ -328,13 +328,13 @@ def bookings_from_batches(env):
     """Крок 6: бронювання за воротами й вікном пакета (рейси без бронювань)."""
     res = {"bookings": 0, "conflicts": 0}
     batches, _by_desc = _candidate_batches(env)
-    Booking = env["f3d.yard.booking"].with_context(f3d_yard_sync=True)
+    Booking = env["td.yard.booking"].with_context(f3d_yard_sync=True)
     slot_min = P.get_int(env, "slot_default_min")
     for batch in batches:
         dock = batch.dock_id
         if not dock or not batch.scheduled_date:
             continue
-        for visit in batch.f3d_visit_ids:
+        for visit in batch.td_visit_ids:
             if visit.booking_ids:
                 continue
             vals = {
@@ -359,15 +359,15 @@ def bookings_from_batches(env):
 def weighing_from_card(env):
     """Крок 7: зважування з картки ваг макета (рейс пакета TRUCK-OUT-1)."""
     res = {"weighings": 0}
-    scale = _ref(env, "factory3d_yard.scale_truck")
-    batch = env["stock.picking.batch"].search([("f3d_code", "=", OUT_CODE)], limit=1)
-    visit = batch.f3d_visit_ids[:1]
+    scale = _ref(env, "td_yard.scale_truck")
+    batch = env["stock.picking.batch"].search([("td_code", "=", OUT_CODE)], limit=1)
+    visit = batch.td_visit_ids[:1]
     if not (scale and visit):
         return res
-    if env["f3d.yard.weighing"].search_count([("visit_id", "=", visit.id), ("source", "=", "migration")]):
+    if env["td.yard.weighing"].search_count([("visit_id", "=", visit.id), ("source", "=", "migration")]):
         return res
     picking = env["stock.picking"].search([("name", "=", OUT_PICKING)], limit=1)
-    env["f3d.yard.weighing"].create(
+    env["td.yard.weighing"].create(
         {
             "scale_id": scale.id,
             "kind": "check",

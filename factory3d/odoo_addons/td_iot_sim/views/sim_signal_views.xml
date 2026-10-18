@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="view_f3d_sim_signal_list" model="ir.ui.view">
-    <field name="name">f3d.sim.signal.list</field>
-    <field name="model">f3d.sim.signal</field>
+  <record id="view_td_sim_signal_list" model="ir.ui.view">
+    <field name="name">td.sim.signal.list</field>
+    <field name="model">td.sim.signal</field>
     <field name="arch" type="xml">
       <list string="Каталог сигналів" create="false"
             decoration-danger="last_status == 'alarm'" decoration-warning="last_status == 'warn'"
@@ -25,9 +25,9 @@
     </field>
   </record>
 
-  <record id="view_f3d_sim_signal_form" model="ir.ui.view">
-    <field name="name">f3d.sim.signal.form</field>
-    <field name="model">f3d.sim.signal</field>
+  <record id="view_td_sim_signal_form" model="ir.ui.view">
+    <field name="name">td.sim.signal.form</field>
+    <field name="model">td.sim.signal</field>
     <field name="arch" type="xml">
       <form string="Сигнал" create="false" edit="false">
         <header>
@@ -64,9 +64,9 @@
     </field>
   </record>
 
-  <record id="view_f3d_sim_signal_search" model="ir.ui.view">
-    <field name="name">f3d.sim.signal.search</field>
-    <field name="model">f3d.sim.signal</field>
+  <record id="view_td_sim_signal_search" model="ir.ui.view">
+    <field name="name">td.sim.signal.search</field>
+    <field name="model">td.sim.signal</field>
     <field name="arch" type="xml">
       <search string="Сигнали">
         <field name="code"/>
@@ -84,9 +84,9 @@
     </field>
   </record>
 
-  <record id="action_f3d_sim_signal" model="ir.actions.act_window">
+  <record id="action_td_sim_signal" model="ir.actions.act_window">
     <field name="name">Каталог сигналів</field>
-    <field name="res_model">f3d.sim.signal</field>
+    <field name="res_model">td.sim.signal</field>
     <field name="view_mode">list,form</field>
   </record>
 </odoo>

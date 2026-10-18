@@ -9,7 +9,7 @@ import re
 from odoo import SUPERUSER_ID, http
 from odoo.http import request
 
-from ..models.f3d_cut_map import MAX_EXPORT_LINES, CutExportError
+from ..models.td_cut_map import MAX_EXPORT_LINES, CutExportError
 
 _logger = logging.getLogger(__name__)
 
@@ -28,20 +28,20 @@ class F3dCutMapController(http.Controller):
     def cutmap_export(self, map_id, **_kw):
         header = request.httprequest.headers.get("Authorization", "")
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
-        collector = request.env["f3d.collector"].sudo()._authenticate(token) if token and len(token) <= 256 else None
+        collector = request.env["td.collector"].sudo()._authenticate(token) if token and len(token) <= 256 else None
         # AC-67: токен колектора іншого (не власника джерела команд оптимізатора) → 401
-        if not collector or collector != request.env["f3d.cut.map"].sudo()._f3d_export_collector():
+        if not collector or collector != request.env["td.cut.map"].sudo()._f3d_export_collector():
             return _error(401, "unauthorized", "Невірний токен колектора")
         t = request.httprequest.headers.get(EXPORT_TOKEN_HEADER, "").strip()
         if not TOKEN_RE.match(t):
             return _error(400, "bad_token", "Невірний формат токена експорту (заголовок %s)" % EXPORT_TOKEN_HEADER)
         env = request.env(user=SUPERUSER_ID, context=dict(request.env.context, tz="UTC"))
-        CutMap = env["f3d.cut.map"]
+        CutMap = env["td.cut.map"]
         try:
             cut_map = CutMap._f3d_check_export_token(map_id, t)
         except CutExportError as e:
             return _error(e.status, e.code, e.message)
-        if env["f3d.cut.map.line"].search_count([("map_id", "=", cut_map.id)]) > MAX_EXPORT_LINES:
+        if env["td.cut.map.line"].search_count([("map_id", "=", cut_map.id)]) > MAX_EXPORT_LINES:
             cut_map.write({"state": "error", "error": "Забагато деталей для однієї карти", "export_token_hash": False})
             return _error(413, "too_large", "Забагато деталей для однієї карти")
         csv_text = (
@@ -50,7 +50,7 @@ class F3dCutMapController(http.Controller):
         body = {
             "map": cut_map.name,
             "external_ref": cut_map.production_id.name,
-            "machine": cut_map.workcenter_id.f3d_code or "",
+            "machine": cut_map.workcenter_id.td_code or "",
             "material": cut_map.material_product_id.default_code or "",
             "sheet": "%dx%dx%d" % (cut_map.sheet_length_mm, cut_map.sheet_width_mm, cut_map.thickness_mm),
             "priority": 5,

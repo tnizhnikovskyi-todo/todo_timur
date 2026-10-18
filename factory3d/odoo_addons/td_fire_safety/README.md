@@ -1,22 +1,22 @@
-# Завод 3D: Пожежна безпека (`factory3d_fire_safety`)
+# Завод 3D: Пожежна безпека (`td_fire_safety`)
 
-Пожежна сигналізація **лише для читання** (рішення D-07): модуль ніколи не пише в прилад і не створює `f3d.command`.
+Пожежна сигналізація **лише для читання** (рішення D-07): модуль ніколи не пише в прилад і не створює `td.command`.
 Додатково: іскрогасіння, димовидалення, спринклери, евакуація за нормами ДБН, навчальні тривоги.
 
 Статус: W0-скелет — файли даних і генератор готові, моделі додають W1…W4. Специфікація —
-`factory3d/docs/modules/factory3d_fire_safety/SPEC.md`.
+`factory3d/docs/modules/td_fire_safety/SPEC.md`.
 
 ## Дані з макета
 
 ```bash
 cd factory3d
-python3 odoo_addons/factory3d_fire_safety/tools/gen_data.py --root .   # перегенерувати data/f3d_fire_*.csv|xml
+python3 odoo_addons/td_fire_safety/tools/gen_data.py --root .   # перегенерувати data/td_fire_*.csv|xml
 ```
 
 Генератор детермінований; `tests/test_data_sync.py` (AC-71) перевіряє побайтову рівність із `data/`:
 
 ```bash
-cd factory3d && PYTHONPATH=<odoo> python -m pytest odoo_addons/factory3d_fire_safety/tests/test_data_sync.py -q
+cd factory3d && PYTHONPATH=<odoo> python -m pytest odoo_addons/td_fire_safety/tests/test_data_sync.py -q
 ```
 
 (`odoo` має бути в `PYTHONPATH`, бо pytest імпортує пакет модуля разом із `tests/__init__.py`.)
@@ -24,8 +24,8 @@ cd factory3d && PYTHONPATH=<odoo> python -m pytest odoo_addons/factory3d_fire_sa
 ## Тести Odoo
 
 ```bash
-F3D_TEST_INSTALL=factory3d_base,factory3d_telemetry,factory3d_fire_safety \
-  factory3d/tools/odoo/run_tests.sh f3d_fire_w0 /factory3d_fire_safety
+F3D_TEST_INSTALL=td_factory3d,td_telemetry,td_fire_safety \
+  factory3d/tools/odoo/run_tests.sh f3d_fire_w0 /td_fire_safety
 ```
 
 ## Нейтралізація

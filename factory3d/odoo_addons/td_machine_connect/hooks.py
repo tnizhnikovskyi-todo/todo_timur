@@ -13,8 +13,8 @@ from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
-MODULE = "factory3d_machine_connect"
-REPORT_KEY = "factory3d.machine_connect.migration_report"
+MODULE = "td_machine_connect"
+REPORT_KEY = "td.machine_connect.migration_report"
 CSV_NAMES = ("mc_machines", "mc_signals")
 # Шаблони сигналів, що застосовуються до протоколу верстата (колонка `protocol` у mc_signals.csv):
 # `any` — усім верстатам (обчислений стан); `gantry`, `cutopt` — окремі коди (GANTRY-1, CUTOPT).
@@ -39,7 +39,7 @@ def _csv_rows(env, name):
 
 
 def _signal_rows(code, protocol, io_unit, io_slot, name=None, with_meta=False):
-    """Значення для `f3d.signal.create` (без `source_id`, `equipment_id`, `workcenter_id`) для коду верстата/пристрою.
+    """Значення для `td.signal.create` (без `source_id`, `equipment_id`, `workcenter_id`) для коду верстата/пристрою.
 
     `protocol` ∈ `opcua` | `io` | `manual` | `gantry` | `cutopt`. Підстановки: `{C}` — `code`, `{N}` — `name`
     (за замовчуванням `code`), `{DI_RUN}` = 2·io_slot, `{DI_ALARM}` = 2·io_slot + 1, `{HR}` = 4·io_slot.
@@ -92,7 +92,7 @@ def _signal_rows(code, protocol, io_unit, io_slot, name=None, with_meta=False):
     return rows
 
 
-P = "factory3d.machine_connect."
+P = "td.machine_connect."
 UK_LOSSES = {
     "block_reason0": "Очікування матеріалу",
     "block_reason1": "Поломка",
@@ -145,9 +145,9 @@ def _int(value):
 
 # --- крок 0 ------------------------------------------------------------------------------------------------
 def params(env):
-    """§5.3 крок 0: `read_enabled`, `cutting_mode` — лише якщо відсутні (за `factory3d.base.environment`)."""
+    """§5.3 крок 0: `read_enabled`, `cutting_mode` — лише якщо відсутні (за `td.base.environment`)."""
     icp = env["ir.config_parameter"].sudo()
-    test = icp.get_param("factory3d.base.environment", "") == "test"
+    test = icp.get_param("td.base.environment", "") == "test"
     for key, value in (
         ("read_enabled", "True" if test else "False"),
         ("cutting_mode", "collector" if test else "manual"),
@@ -159,7 +159,7 @@ def params(env):
 
 # --- крок 1 ------------------------------------------------------------------------------------------------
 def losses(env):
-    """R-27 п. 1: переклади uk, категорія «Доступність», `f3d_planned` для «Перерви»."""
+    """R-27 п. 1: переклади uk, категорія «Доступність», `td_planned` для «Перерви»."""
     res = {"loss_translated": 0, "loss_category_fixed": 0, "loss_planned": 0}
     if env["res.lang"]._lang_get("uk_UA"):
         for xmlid, name in UK_LOSSES.items():
@@ -177,8 +177,8 @@ def losses(env):
             rec.loss_id = category
             res["loss_category_fixed"] += 1
     brk = env.ref("factory3d.loss_break", raise_if_not_found=False)
-    if brk and not brk.f3d_planned:
-        brk.f3d_planned = True
+    if brk and not brk.td_planned:
+        brk.td_planned = True
         res["loss_planned"] = 1
     return res
 
@@ -196,9 +196,9 @@ def sheets(env):
         .search(
             [
                 ("categ_id", "child_of", cats.ids),
-                ("f3d_sheet_length_mm", "=", 0),
-                ("f3d_sheet_width_mm", "=", 0),
-                ("f3d_thickness_mm", "=", 0),
+                ("td_sheet_length_mm", "=", 0),
+                ("td_sheet_width_mm", "=", 0),
+                ("td_thickness_mm", "=", 0),
             ]
         )
     )
@@ -209,9 +209,9 @@ def sheets(env):
             continue
         tmpl.write(
             {
-                "f3d_sheet_length_mm": int(size.group(1)),
-                "f3d_sheet_width_mm": int(size.group(2)),
-                "f3d_thickness_mm": round(float(thick.group(1).replace(",", "."))),
+                "td_sheet_length_mm": int(size.group(1)),
+                "td_sheet_width_mm": int(size.group(2)),
+                "td_thickness_mm": round(float(thick.group(1).replace(",", "."))),
             }
         )
         res["sheets_sized"] += 1
@@ -220,10 +220,10 @@ def sheets(env):
 
 # --- крок 3 ------------------------------------------------------------------------------------------------
 def machines(env):
-    """§5.3 крок 3: upsert `f3d.machine` за РЦ з `mc_machines.csv` (наявним — лише порожні зв'язки)."""
+    """§5.3 крок 3: upsert `td.machine` за РЦ з `mc_machines.csv` (наявним — лише порожні зв'язки)."""
     res = {"machines": 0, "with_operator": 0, "with_equipment": 0}
-    Machine = env["f3d.machine"].with_context(active_test=False, tracking_disable=True)
-    Source = env["f3d.source"].with_context(active_test=False)
+    Machine = env["td.machine"].with_context(active_test=False, tracking_disable=True)
+    Source = env["td.source"].with_context(active_test=False)
     missing = []
     for row in _csv_rows(env, "mc_machines"):
         code = row["code"]
@@ -269,10 +269,10 @@ def machines(env):
 def signals(env):
     """R-27 п. 3: upsert сигналів за `code` (207 = 35 верстатів + GANTRY-1 + оптимізатор), проводка `sig_*`."""
     res = {"signals_created": 0, "signals_bound": 0, "machines_wired": 0}
-    Signal = env["f3d.signal"].with_context(active_test=False, tracking_disable=True, mail_create_nolog=True)
-    Source = env["f3d.source"].with_context(active_test=False)
+    Signal = env["td.signal"].with_context(active_test=False, tracking_disable=True, mail_create_nolog=True)
+    Source = env["td.source"].with_context(active_test=False)
     sources = {s.code: s for s in Source.search([])}
-    Machine = env["f3d.machine"].with_context(active_test=False, tracking_disable=True)
+    Machine = env["td.machine"].with_context(active_test=False, tracking_disable=True)
     jobs = [(row["code"], row["protocol"], row["source"], _int(row["io_unit"]), _int(row["io_slot"]), row)
             for row in _csv_rows(env, "mc_machines")]  # fmt: skip
     jobs += [("GANTRY-1", "gantry", "", 0, 0, None), ("CUTOPT", "cutopt", "", 0, 0, None)]
@@ -296,7 +296,7 @@ def signals(env):
                     {
                         "module": MODULE,
                         "name": "sig_" + _slug(vals["code"]),
-                        "model": "f3d.signal",
+                        "model": "td.signal",
                         "res_id": sig.id,
                         "noupdate": True,
                     }
@@ -346,7 +346,7 @@ def migrate_store_period(env):
         if row["template"] in STORE_PERIOD_TEMPLATES and value > 0:
             regex = re.escape(row["code"]).replace(re.escape("{C}"), "[^/]+")
             patterns.append((re.compile(regex), value))
-    Signal = env["f3d.signal"].with_context(active_test=False, tracking_disable=True)
+    Signal = env["td.signal"].with_context(active_test=False, tracking_disable=True)
     fixed = 0
     for sig in Signal.search([("module", "=", "machine_connect"), ("store_period_s", "=", 0)]):
         for regex, value in patterns:
@@ -360,10 +360,10 @@ def migrate_store_period(env):
 
 # --- крок 5 ------------------------------------------------------------------------------------------------
 def stacks(env):
-    """§5.3 крок 5: `f3d.gantry.stack` для локацій-стосів `PLT-*`, правила поповнення."""
+    """§5.3 крок 5: `td.gantry.stack` для локацій-стосів `PLT-*`, правила поповнення."""
     res = {"stacks": 0, "orderpoints_linked": 0}
-    Stack = env["f3d.gantry.stack"].with_context(active_test=False, tracking_disable=True)
-    locs = env["stock.location"].search([("f3d_loc_kind", "=", "stack"), ("f3d_code", "=like", "PLT-%")])
+    Stack = env["td.gantry.stack"].with_context(active_test=False, tracking_disable=True)
+    locs = env["stock.location"].search([("td_loc_kind", "=", "stack"), ("td_code", "=like", "PLT-%")])
     for loc in locs:
         stack = Stack.search([("location_id", "=", loc.id)], limit=1) or Stack.create({"location_id": loc.id})
         if not stack.orderpoint_id:
@@ -391,26 +391,26 @@ def demo_journal(env, install_ts):
     res = {"timelog_marked": 0, "downtimes_created": 0, "downtimes_open": 0, "requests_linked": 0}
     cr = env.cr
     cr.execute(
-        "UPDATE mrp_workcenter_productivity SET f3d_source = 'demo' "
-        "WHERE f3d_source = 'operator' AND COALESCE(f3d_auto, false) = false AND f3d_downtime_id IS NULL "
+        "UPDATE mrp_workcenter_productivity SET td_source = 'demo' "
+        "WHERE td_source = 'operator' AND COALESCE(td_auto, false) = false AND td_downtime_id IS NULL "
         "AND create_date < %s",
         (install_ts,),
     )
     res["timelog_marked"] = cr.rowcount
-    env["mrp.workcenter.productivity"].invalidate_model(["f3d_source"])
+    env["mrp.workcenter.productivity"].invalidate_model(["td_source"])
     Productivity = env["mrp.workcenter.productivity"].with_context(active_test=False)
-    Downtime = env["f3d.downtime"].with_context(tracking_disable=True)
+    Downtime = env["td.downtime"].with_context(tracking_disable=True)
     recs = Productivity.search(
         [
-            ("f3d_source", "=", "demo"),
-            ("f3d_downtime_id", "=", False),
+            ("td_source", "=", "demo"),
+            ("td_downtime_id", "=", False),
             ("workorder_id", "=", False),
             ("loss_type", "in", ("availability", "quality")),
         ],
         order="date_start, id",
     )
     for rec in recs:
-        machine = rec.workcenter_id.f3d_machine_ids[:1]
+        machine = rec.workcenter_id.td_machine_ids[:1]
         if not machine:
             continue
         is_open = not rec.date_end
@@ -428,7 +428,7 @@ def demo_journal(env, install_ts):
                 "ppt_min": 0.0 if is_open else rec.duration,
             }
         )
-        rec.f3d_downtime_id = dt
+        rec.td_downtime_id = dt
         res["downtimes_created"] += 1
         if not is_open:
             continue
@@ -472,7 +472,7 @@ def _previous_install_ts(env):
 
 def run_migration(env):
     """Кроки 0–7 (§5.3); ідемпотентна. Повертає звіт (`state`: `done` | `partial` | `skipped`)."""
-    if not env.su and not env.user.has_group("factory3d_base.group_f3d_admin"):
+    if not env.su and not env.user.has_group("td_factory3d.group_td_admin"):
         raise AccessError("Запускати міграцію може лише адміністратор «Завод 3D».")
     env = env(su=True)
     # Позначка «до установки»: перший запуск — зараз; повтор (кнопка) — той самий момент (записи модуля не стають demo).
@@ -503,7 +503,7 @@ def post_init_hook(env):
 
 
 def uninstall_hook(env):
-    """§5.4: крони модуля неактивні, параметри `factory3d.machine_connect.%` видалено; сигнали, джерела — лишаються."""
+    """§5.4: крони модуля неактивні, параметри `td.machine_connect.%` видалено; сигнали, джерела — лишаються."""
     env = env(su=True)
     cron_ids = env["ir.model.data"].search([("module", "=", MODULE), ("model", "=", "ir.cron")]).mapped("res_id")
     env["ir.cron"].with_context(active_test=False).browse(cron_ids).exists().write({"active": False})

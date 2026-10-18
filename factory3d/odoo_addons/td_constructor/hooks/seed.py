@@ -15,7 +15,7 @@ from . import link
 
 _logger = logging.getLogger(__name__)
 
-SEED_FILE = 'factory3d_constructor/data/seed_site.json'
+SEED_FILE = 'td_constructor/data/seed_site.json'
 ROTATION_MODES = {'q': 'q', 'h': 'h', 'z': 'z', 'any': 'any'}
 
 
@@ -90,21 +90,21 @@ def normalize_seed(data):
 
 def seed_exists(env, data):
     return (
-        env['f3d.site'].with_context(active_test=False).search([('seed_key', '=', data['meta']['seed_key'])], limit=1)
+        env['td.site'].with_context(active_test=False).search([('seed_key', '=', data['meta']['seed_key'])], limit=1)
     )
 
 
 def _ref_group(env, role):
-    return env.ref('factory3d_constructor.group_f3d_constructor_%s' % role, raise_if_not_found=False)
+    return env.ref('td_constructor.group_td_constructor_%s' % role, raise_if_not_found=False)
 
 
 def ensure_variants(env, data):
     """Варіанти seed (за `passport_role` + назвою): знайти або створити.
 
     Повертає ({key: variant}, [ролі без паспорта])."""
-    Passport = env['f3d.equipment.passport'].with_context(active_test=False)
-    Variant = env['f3d.equipment.variant'].with_context(active_test=False)
-    terms = {(t.term_type, t.key): t.id for t in env['f3d.term'].search([])}
+    Passport = env['td.equipment.passport'].with_context(active_test=False)
+    Variant = env['td.equipment.variant'].with_context(active_test=False)
+    terms = {(t.term_type, t.key): t.id for t in env['td.term'].search([])}
     resolved, skipped = {}, []
     for item in data['variants']:
         passport = Passport.search([('role', '=', item['passport_role'])], limit=1)
@@ -117,7 +117,7 @@ def ensure_variants(env, data):
                     'role': item['passport_role'],
                     'manufacturer': spec.get('manufacturer') or "—",
                     'model': spec['model'],
-                    'f3d_category': spec.get('category') or 'other',
+                    'td_category': spec.get('category') or 'other',
                 }
             )
         if not passport:
@@ -170,21 +170,21 @@ def _short_model(passport):
 
 
 def existing_equipment(env, codes):
-    """{код: maintenance.equipment} для кодів розміщень: збіг за f3d_code, потім за f3d_alias, потім за serial_no
-    (лише записи без f3d_code) — так само, як це робить план публікації."""
+    """{код: maintenance.equipment} для кодів розміщень: збіг за td_code, потім за td_alias, потім за serial_no
+    (лише записи без td_code) — так само, як це робить план публікації."""
     Equipment = env['maintenance.equipment'].with_context(active_test=False)
     codes = list(codes)
     if not codes:
         return {}
     found = Equipment.search(
-        ['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('serial_no', 'in', codes)]
+        ['|', '|', ('td_code', 'in', codes), ('td_alias', 'in', codes), ('serial_no', 'in', codes)]
     )
     out = {}
-    for key in ('f3d_code', 'f3d_alias'):
+    for key in ('td_code', 'td_alias'):
         for rec in found:
             if rec[key] in codes:
                 out.setdefault(rec[key], rec)
-    for rec in found.filtered(lambda r: not r.f3d_code):
+    for rec in found.filtered(lambda r: not r.td_code):
         if rec.serial_no in codes:
             out.setdefault(rec.serial_no, rec)
     return out
@@ -198,7 +198,7 @@ def passport_variant(env, base, passport, cache):
     name = "%s (%d×%d×%d)" % (_short_model(passport), base.length_mm, base.width_mm, base.height_mm)
     key = (passport.id, name)
     if key not in cache:
-        Variant = env['f3d.equipment.variant'].with_context(active_test=False)
+        Variant = env['td.equipment.variant'].with_context(active_test=False)
         variant = Variant.search([('passport_id', '=', passport.id), ('name', '=', name)], limit=1)
         if not variant:
             variant = Variant.create(
@@ -237,7 +237,7 @@ def placement_variants(env, data, variants):
         variant = variants.get(item['variant'])
         if not variant:
             continue
-        passport = (equipment.get(item['code']) or env['maintenance.equipment']).f3d_passport_id
+        passport = (equipment.get(item['code']) or env['maintenance.equipment']).td_passport_id
         if passport and passport != variant.passport_id:
             variant = passport_variant(env, variant, passport, cache)
         out[item['uid']] = variant
@@ -246,7 +246,7 @@ def placement_variants(env, data, variants):
 
 def adapt_slots(env, data):
     """Місця на одну комірку (code_style='exact'): вид локації береться з наявної локації Odoo того самого коду
-    (f3d_code, потім f3d_alias, потім barcode), тож незмінена розкладка не пропонує оновлення локацій."""
+    (td_code, потім td_alias, потім barcode), тож незмінена розкладка не пропонує оновлення локацій."""
     exact = [
         item
         for item in data['slots']
@@ -256,15 +256,15 @@ def adapt_slots(env, data):
     if not codes:
         return 0
     Loc = env['stock.location'].with_context(active_test=False)
-    found = Loc.search(['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('barcode', 'in', codes)])
+    found = Loc.search(['|', '|', ('td_code', 'in', codes), ('td_alias', 'in', codes), ('barcode', 'in', codes)])
     by_code = {}
-    for key in ('f3d_code', 'f3d_alias', 'barcode'):
+    for key in ('td_code', 'td_alias', 'barcode'):
         for rec in found:
             if rec[key]:
                 by_code.setdefault(rec[key], rec)
     changed = 0
     for item in exact:
-        kind = by_code.get(item['code_prefix'], env['stock.location']).f3d_loc_kind
+        kind = by_code.get(item['code_prefix'], env['stock.location']).td_loc_kind
         if kind in cells_mod.LOC_KINDS and item['params'].get('loc_kind') != kind:
             item['params'] = dict(item['params'], loc_kind=kind)
             changed += 1
@@ -287,14 +287,14 @@ def load_seed(env, data):
         return site, {}, skipped, variants
     adapt_slots(env, data)
     by_placement = placement_variants(env, data, variants)
-    Layer, Slot, Placement = env['f3d.layer'], env['f3d.slot'], env['f3d.placement']
-    terms = {(t.term_type, t.key): t.id for t in env['f3d.term'].search([])}
+    Layer, Slot, Placement = env['td.layer'], env['td.slot'], env['td.placement']
+    terms = {(t.term_type, t.key): t.id for t in env['td.term'].search([])}
     building = data['site']['building']
     grid = data['site']['column_grid']
     parent = env['stock.location'].search(
         [('complete_name', '=', data['site'].get('default_parent') or 'WH/Stock')], limit=1
     )
-    site = env['f3d.site'].create(
+    site = env['td.site'].create(
         {
             'name': data['meta']['name'],
             'code': data['meta']['code'],
@@ -425,7 +425,7 @@ def resync_site(env, data=None):
         return {'status': 'skipped', 'reason': problem}
     variants, skipped = ensure_variants(env, data)
     report = {'status': 'fixed', 'flags': 0, 'slots': 0, 'placements': 0, 'layers': 0, 'skipped_variants': skipped}
-    layers = {x.uid: x for x in env['f3d.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])}
+    layers = {x.uid: x for x in env['td.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])}
     for item in data['layers']:  # старий сід ігнорував `visible`: усі 31 шар вмикались одразу й закривали верстати
         layer = layers.get(item['uid'])
         if layer and layer.visible != bool(item.get('visible', True)):
@@ -437,7 +437,7 @@ def resync_site(env, data=None):
             variant.write({'create_equipment': item['create_equipment']})
             report['flags'] += 1
     adapt_slots(env, data)
-    slots = {s.uid: s for s in env['f3d.slot'].with_context(active_test=False).search([('site_id', '=', site.id)])}
+    slots = {s.uid: s for s in env['td.slot'].with_context(active_test=False).search([('site_id', '=', site.id)])}
     for item in data['slots']:
         slot = slots.get(item['uid'])
         if not slot:
@@ -453,7 +453,7 @@ def resync_site(env, data=None):
             slot.write(vals)
             report['slots'] += 1
     placements = {
-        p.uid: p for p in env['f3d.placement'].with_context(active_test=False).search([('site_id', '=', site.id)])
+        p.uid: p for p in env['td.placement'].with_context(active_test=False).search([('site_id', '=', site.id)])
     }
     for uid, variant in placement_variants(env, data, variants).items():
         placement = placements.get(uid)

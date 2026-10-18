@@ -1,7 +1,7 @@
 /** @odoo-module */
 import { whenReady } from "@odoo/owl";
-import { F3dViewer } from "@factory3d_viewer/viewer/core";
-import { DataClient } from "@factory3d_viewer/viewer/data_client";
+import { F3dViewer } from "@td_viewer3d/viewer/core";
+import { DataClient } from "@td_viewer3d/viewer/data_client";
 
 /** FR-33: раз на добу о 04:00 перезавантажити сторінку кіоска (витоки пам'яті довгих сесій). */
 export function reloadAt0400(now = new Date(), reload = () => window.location.reload()) {

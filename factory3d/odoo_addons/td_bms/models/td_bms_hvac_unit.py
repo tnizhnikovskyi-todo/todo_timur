@@ -72,7 +72,7 @@ def _is_live(sig):
 
 
 class F3dBmsHvacUnit(models.Model):
-    _name = "f3d.bms.hvac.unit"
+    _name = "td.bms.hvac.unit"
     _description = "Будівля: установка вентиляції"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -94,14 +94,14 @@ class F3dBmsHvacUnit(models.Model):
         string="Вид",
         required=True,
     )
-    zone_id = fields.Many2one("f3d.zone", string="Зона", required=True, ondelete="restrict", index=True)
+    zone_id = fields.Many2one("td.zone", string="Зона", required=True, ondelete="restrict", index=True)
     zone_name = fields.Char(related="zone_id.name")
     x = fields.Float(string="X, м", digits=(8, 2))
     y = fields.Float(string="Y, м", digits=(8, 2))
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
-    passport_id = fields.Many2one("f3d.equipment.passport", string="Паспорт", ondelete="set null")
+    passport_id = fields.Many2one("td.equipment.passport", string="Паспорт", ondelete="set null")
     source_id = fields.Many2one(
-        "f3d.source", string="Джерело BACnet", domain="[('type','=','bacnet_ip')]", ondelete="set null"
+        "td.source", string="Джерело BACnet", domain="[('type','=','bacnet_ip')]", ondelete="set null"
     )
     bacnet_device = fields.Integer(string="BACnet device")
     fan_count = fields.Integer(string="Вентиляторів", default=1)
@@ -140,21 +140,21 @@ class F3dBmsHvacUnit(models.Model):
     calendar_id = fields.Many2one("resource.calendar", string="Робочий календар")
     note = fields.Text(string="Примітка")
 
-    airflow_signal_id = fields.Many2one("f3d.signal", string="Сигнал: витрата", ondelete="set null")
-    supply_signal_id = fields.Many2one("f3d.signal", string="Сигнал: приплив", ondelete="set null")
-    indoor_signal_id = fields.Many2one("f3d.signal", string="Сигнал: у зоні", ondelete="set null")
-    filter_signal_id = fields.Many2one("f3d.signal", string="Сигнал: фільтр припливу", ondelete="set null")
-    filter_extract_signal_id = fields.Many2one("f3d.signal", string="Сигнал: фільтр витяжки", ondelete="set null")
-    valve_signal_id = fields.Many2one("f3d.signal", string="Сигнал: клапан нагріву", ondelete="set null")
-    heat_signal_id = fields.Many2one("f3d.signal", string="Сигнал: тепло", ondelete="set null")
-    power_signal_id = fields.Many2one("f3d.signal", string="Сигнал: потужність", ondelete="set null")
-    mode_signal_id = fields.Many2one("f3d.signal", string="Сигнал: режим", ondelete="set null")
-    state_signal_id = fields.Many2one("f3d.signal", string="Сигнал: стан", ondelete="set null")
-    sp_day_signal_id = fields.Many2one("f3d.signal", string="Сигнал: уставка день", ondelete="set null")
-    sp_night_signal_id = fields.Many2one("f3d.signal", string="Сигнал: уставка ніч", ondelete="set null")
-    pressure_signal_id = fields.Many2one("f3d.signal", string="Сигнал: тиск у дільниці", ondelete="set null")
-    interlock_signal_id = fields.Many2one("f3d.signal", string="Сигнал: блокування з камерами", ondelete="set null")
-    check_signal_id = fields.Many2one("f3d.signal", string="Сигнал: перевірка", ondelete="set null")
+    airflow_signal_id = fields.Many2one("td.signal", string="Сигнал: витрата", ondelete="set null")
+    supply_signal_id = fields.Many2one("td.signal", string="Сигнал: приплив", ondelete="set null")
+    indoor_signal_id = fields.Many2one("td.signal", string="Сигнал: у зоні", ondelete="set null")
+    filter_signal_id = fields.Many2one("td.signal", string="Сигнал: фільтр припливу", ondelete="set null")
+    filter_extract_signal_id = fields.Many2one("td.signal", string="Сигнал: фільтр витяжки", ondelete="set null")
+    valve_signal_id = fields.Many2one("td.signal", string="Сигнал: клапан нагріву", ondelete="set null")
+    heat_signal_id = fields.Many2one("td.signal", string="Сигнал: тепло", ondelete="set null")
+    power_signal_id = fields.Many2one("td.signal", string="Сигнал: потужність", ondelete="set null")
+    mode_signal_id = fields.Many2one("td.signal", string="Сигнал: режим", ondelete="set null")
+    state_signal_id = fields.Many2one("td.signal", string="Сигнал: стан", ondelete="set null")
+    sp_day_signal_id = fields.Many2one("td.signal", string="Сигнал: уставка день", ondelete="set null")
+    sp_night_signal_id = fields.Many2one("td.signal", string="Сигнал: уставка ніч", ondelete="set null")
+    pressure_signal_id = fields.Many2one("td.signal", string="Сигнал: тиск у дільниці", ondelete="set null")
+    interlock_signal_id = fields.Many2one("td.signal", string="Сигнал: блокування з камерами", ondelete="set null")
+    check_signal_id = fields.Many2one("td.signal", string="Сигнал: перевірка", ondelete="set null")
 
     # --- живі значення (R-12, не зберігаються) ---
     airflow_m3h = fields.Float(string="Витрата, м³/год", digits=(10, 1), compute="_compute_live")
@@ -192,7 +192,7 @@ class F3dBmsHvacUnit(models.Model):
     request_ids = fields.Many2many("maintenance.request", compute="_compute_requests")
     request_count = fields.Integer(compute="_compute_requests")
     deviation_count = fields.Integer(compute="_compute_requests")
-    f3d_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
+    td_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
 
     _f3d_bms_unit_code_uniq = models.Constraint("UNIQUE(code)", "Код установки має бути унікальним.")
     _f3d_bms_unit_checks = models.Constraint(
@@ -262,14 +262,14 @@ class F3dBmsHvacUnit(models.Model):
     @api.model
     def _f3d_bms_env_params(self):
         """(t_set, t_out) для формул R-13: уставка балансу й живий зовнішній (інакше 9,0)."""
-        bal = self.env["f3d.bms.heat.balance"].sudo().search([("company_id", "=", self.env.company.id)], limit=1)
+        bal = self.env["td.bms.heat.balance"].sudo().search([("company_id", "=", self.env.company.id)], limit=1)
         t_set = bal.t_in_set if bal else 18.0
         t_out = bal.outdoor_signal_id.last_value if bal and _is_live(bal.outdoor_signal_id) else hvac.OUTDOOR_C
         return t_set, t_out
 
     def _signals(self):
         self.ensure_one()
-        return self.env["f3d.signal"].browse([self[f].id for f, _l in SIGNAL_FIELDS if self[f]])
+        return self.env["td.signal"].browse([self[f].id for f, _l in SIGNAL_FIELDS if self[f]])
 
     def _compute_live(self):
         static_all = self._f3d_bms_static_units()
@@ -376,17 +376,17 @@ class F3dBmsHvacUnit(models.Model):
         positive = operator in ("=", "in")
         if not texts:
             return [("id", "!=", 0)] if not positive else [("id", "=", 0)]
-        ids = self.env["f3d.signal"].sudo().search([("last_text", "in", texts)]).ids
+        ids = self.env["td.signal"].sudo().search([("last_text", "in", texts)]).ids
         domain = [("check_signal_id", "in", ids)]
         return domain if positive else [("check_signal_id", "not in", ids)]
 
     def _compute_requests(self):
-        has_dev = "f3d.bms.deviation" in self.env
+        has_dev = "td.bms.deviation" in self.env
         for rec in self:
             sigs = rec.sudo()._signals()
             reqs = (
                 self.env["maintenance.request"].search(
-                    [("f3d_signal_id", "in", sigs.ids), ("stage_id.done", "=", False)]
+                    [("td_signal_id", "in", sigs.ids), ("stage_id.done", "=", False)]
                 )
                 if sigs
                 else self.env["maintenance.request"]
@@ -394,7 +394,7 @@ class F3dBmsHvacUnit(models.Model):
             rec.request_ids = reqs
             rec.request_count = len(reqs)
             rec.deviation_count = (
-                self.env["f3d.bms.deviation"]
+                self.env["td.bms.deviation"]
                 .sudo()
                 .search_count([("object_code", "=", rec.code), ("state", "=", "open")])
                 if has_dev
@@ -402,14 +402,14 @@ class F3dBmsHvacUnit(models.Model):
             )
 
     def _compute_write_enabled(self):
-        enabled = self.env["ir.config_parameter"].sudo().get_param("factory3d.bms.write_enabled") == "True"
+        enabled = self.env["ir.config_parameter"].sudo().get_param("td.bms.write_enabled") == "True"
         for rec in self:
-            rec.f3d_bms_write_enabled = enabled
+            rec.td_bms_write_enabled = enabled
 
     # --- дії ---
     def action_f3d_show(self):
         self.ensure_one()
-        target = self.equipment_id if self.equipment_id.f3d_code else self.zone_id
+        target = self.equipment_id if self.equipment_id.td_code else self.zone_id
         return target.action_f3d_show()
 
     def action_open_command(self):
@@ -419,7 +419,7 @@ class F3dBmsHvacUnit(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Керування вентиляцією"),
-            "res_model": "f3d.bms.hvac.command.wizard",
+            "res_model": "td.bms.hvac.command.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_unit_ids": [self.id]},
@@ -431,7 +431,7 @@ class F3dBmsHvacUnit(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Графіки: %s", self.code),
-            "res_model": "f3d.reading",
+            "res_model": "td.reading",
             "view_mode": "graph,list",
             "domain": [("signal_id", "in", sigs.ids)],
             "context": {"search_default_last_48h": 1},
@@ -439,12 +439,12 @@ class F3dBmsHvacUnit(models.Model):
 
     def action_view_deviations(self):
         self.ensure_one()
-        if "f3d.bms.deviation" not in self.env:
+        if "td.bms.deviation" not in self.env:
             raise UserError(_("Журнал відхилень недоступний."))
         return {
             "type": "ir.actions.act_window",
             "name": _("Відхилення: %s", self.code),
-            "res_model": "f3d.bms.deviation",
+            "res_model": "td.bms.deviation",
             "view_mode": "list,form",
             "domain": [("object_code", "=", self.code)],
         }

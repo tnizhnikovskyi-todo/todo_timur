@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_bms_light_group_list" model="ir.ui.view">
-        <field name="name">f3d.bms.light.group.list</field>
-        <field name="model">f3d.bms.light.group</field>
+    <record id="view_td_bms_light_group_list" model="ir.ui.view">
+        <field name="name">td.bms.light.group.list</field>
+        <field name="model">td.bms.light.group</field>
         <field name="arch" type="xml">
             <list string="Групи освітлення">
-                <field name="sequence" widget="handle" groups="factory3d_base.group_f3d_manager"/>
+                <field name="sequence" widget="handle" groups="td_factory3d.group_td_manager"/>
                 <field name="code"/>
                 <field name="zone_name"/>
                 <field name="norm_id"/>
@@ -30,19 +30,19 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_light_group_form" model="ir.ui.view">
-        <field name="name">f3d.bms.light.group.form</field>
-        <field name="model">f3d.bms.light.group</field>
+    <record id="view_td_bms_light_group_form" model="ir.ui.view">
+        <field name="name">td.bms.light.group.form</field>
+        <field name="model">td.bms.light.group</field>
         <field name="arch" type="xml">
             <form string="Група освітлення">
                 <header>
                     <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
                             class="btn-secondary"/>
                     <button name="action_open_command" type="object" string="Керування"
-                            groups="factory3d_bms.group_f3d_bms_operator" invisible="not f3d_bms_write_enabled"/>
+                            groups="td_bms.group_td_bms_operator" invisible="not td_bms_write_enabled"/>
                 </header>
                 <sheet>
-                    <field name="f3d_bms_write_enabled" invisible="1"/>
+                    <field name="td_bms_write_enabled" invisible="1"/>
                     <field name="is_f3d_manager" invisible="1"/>
                     <field name="active" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
@@ -147,9 +147,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_light_group_kanban" model="ir.ui.view">
-        <field name="name">f3d.bms.light.group.kanban</field>
-        <field name="model">f3d.bms.light.group</field>
+    <record id="view_td_bms_light_group_kanban" model="ir.ui.view">
+        <field name="name">td.bms.light.group.kanban</field>
+        <field name="model">td.bms.light.group</field>
         <field name="arch" type="xml">
             <kanban default_group_by="panel_id" quick_create="false" class="o_kanban_small_column">
                 <field name="plan_state"/>
@@ -172,9 +172,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_light_group_search" model="ir.ui.view">
-        <field name="name">f3d.bms.light.group.search</field>
-        <field name="model">f3d.bms.light.group</field>
+    <record id="view_td_bms_light_group_search" model="ir.ui.view">
+        <field name="name">td.bms.light.group.search</field>
+        <field name="model">td.bms.light.group</field>
         <field name="arch" type="xml">
             <search string="Групи освітлення">
                 <field name="code"/>
@@ -201,9 +201,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_bms_light_group" model="ir.actions.act_window">
+    <record id="action_td_bms_light_group" model="ir.actions.act_window">
         <field name="name">Групи освітлення</field>
-        <field name="res_model">f3d.bms.light.group</field>
+        <field name="res_model">td.bms.light.group</field>
         <field name="view_mode">kanban,list,form</field>
     </record>
 </odoo>

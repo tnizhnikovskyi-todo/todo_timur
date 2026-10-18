@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Чистий стенд без docker: база f3d_energy_stand (factory3d_energy + залежності), Odoo на :18079, емулятор iot_sim
+# Чистий стенд без docker: база f3d_energy_stand (td_energy + залежності), Odoo на :18079, емулятор iot_sim
 # (локальний запуск) :8090/:502, колектор telemetry (COL-MAIN). Секрети — лише в змінних середовища.
 #   reset_stand.sh up | down
 # Потрібні: SIM_VENV (venv: `pip install -r services/iot_sim/requirements.txt -r services/collector/requirements.txt`
@@ -30,14 +30,14 @@ up)
     stop_pid collector; stop_pid sim
     "$T/serve.sh" stop "$DB" || true
     "$T/drop_db.sh" "$DB" >/dev/null 2>&1 || true
-    F3D_TEST_INSTALL=factory3d_energy "$T/new_db.sh" "$DB"
-    F3D_TEST_INSTALL=factory3d_energy "$T/update.sh" "$DB"
+    F3D_TEST_INSTALL=td_energy "$T/new_db.sh" "$DB"
+    F3D_TEST_INSTALL=td_energy "$T/update.sh" "$DB"
     "$T/serve.sh" "$DB" "$PORT"
     grep -q ' iot-sim$' /etc/hosts || echo "127.0.0.1 iot-sim" >> /etc/hosts
     # токен колектора COL-MAIN: у Odoo зберігається лише SHA-256
     HASH=$(printf '%s' "$COL_TOKEN" | sha256sum | cut -d' ' -f1)
     PGHOST=${PGHOST:-127.0.0.1} psql -U "${PGUSER:-odoo}" "$DB" -qc \
-        "UPDATE f3d_collector SET token_hash='$HASH', token_hint=right('$COL_TOKEN',4) WHERE code='COL-MAIN'"
+        "UPDATE td_collector SET token_hash='$HASH', token_hint=right('$COL_TOKEN',4) WHERE code='COL-MAIN'"
     rm -rf "$STAND_TMP/state"/* "$STAND_TMP/collector"/* 2>/dev/null || true
     (
         cd "$STAND_TMP"

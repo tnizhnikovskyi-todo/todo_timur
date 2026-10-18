@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <record id="seq_f3d_yard_visit" model="ir.sequence">
+    <record id="seq_td_yard_visit" model="ir.sequence">
         <field name="name">Рейс двору</field>
-        <field name="code">f3d.yard.visit</field>
+        <field name="code">td.yard.visit</field>
         <field name="prefix">YV/%(year)s/</field>
         <field name="padding">5</field>
         <field name="company_id" eval="False"/>
         <field name="implementation">standard</field>
     </record>
-    <record id="seq_f3d_yard_weighing" model="ir.sequence">
+    <record id="seq_td_yard_weighing" model="ir.sequence">
         <field name="name">Зважування двору</field>
-        <field name="code">f3d.yard.weighing</field>
+        <field name="code">td.yard.weighing</field>
         <field name="prefix">WG/%(year)s/</field>
         <field name="padding">5</field>
         <field name="company_id" eval="False"/>

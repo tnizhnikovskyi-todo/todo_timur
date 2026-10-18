@@ -1,11 +1,11 @@
-"""R-25: спільні кроки майстрів керування (перевірки, запобіжники, створення `f3d.command`)."""
+"""R-25: спільні кроки майстрів керування (перевірки, запобіжники, створення `td.command`)."""
 
 from datetime import timedelta
 
 from odoo import SUPERUSER_ID, fields
 from odoo.exceptions import AccessError, UserError
 
-OPERATOR = "factory3d_bms.group_f3d_bms_operator"
+OPERATOR = "td_bms.group_td_bms_operator"
 
 
 def check_operator(env):
@@ -19,10 +19,10 @@ def _flag(env, key):
 
 def check_switches(env):
     """R-25 п. 2–3: запобіжники модуля й телеметрії."""
-    if not _flag(env, "factory3d.bms.write_enabled"):
-        raise UserError("Керування вимкнено: модуль «Будівля» (factory3d.bms.write_enabled).")
-    if not _flag(env, "factory3d.telemetry.write_enabled"):
-        raise UserError("Керування вимкнено: телеметрія (factory3d.telemetry.write_enabled).")
+    if not _flag(env, "td.bms.write_enabled"):
+        raise UserError("Керування вимкнено: модуль «Будівля» (td.bms.write_enabled).")
+    if not _flag(env, "td.telemetry.write_enabled"):
+        raise UserError("Керування вимкнено: телеметрія (td.telemetry.write_enabled).")
 
 
 def check_signals(items):
@@ -38,7 +38,7 @@ def check_signals(items):
 
 def send(env, specs, expires_min, note, label):
     """R-25 п. 6–8. `specs` — [(об'єкт, сигнал, value, text)]; повертає `act_window` списку команд."""
-    Command = env["f3d.command"].with_user(SUPERUSER_ID)
+    Command = env["td.command"].with_user(SUPERUSER_ID)
     expires = fields.Datetime.now() + timedelta(minutes=expires_min)
     ids = []
     for obj, sig, value, text in specs:
@@ -61,7 +61,7 @@ def send(env, specs, expires_min, note, label):
     return {
         "type": "ir.actions.act_window",
         "name": "Команди",
-        "res_model": "f3d.command",
+        "res_model": "td.command",
         "view_mode": "list,form",
         "domain": [("id", "in", ids)],
     }

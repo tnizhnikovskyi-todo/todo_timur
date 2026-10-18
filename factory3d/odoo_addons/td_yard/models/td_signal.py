@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dSignal(models.Model):
-    _inherit = "f3d.signal"
+    _inherit = "td.signal"
 
     @api.model
     def _f3d_ingest(self, readings, src="module", collector=None):
@@ -28,9 +28,9 @@ class F3dSignal(models.Model):
         scales = [r for r in yard if r["code"].startswith("yard/scale/")]
         gates = [r for r in yard if r["code"].startswith("yard/gates/")]
         if scales:
-            self._f3d_yard_safe(lambda: self.env["f3d.yard.scale"].sudo()._f3d_yard_dispatch_scales(scales))
-        if gates and "f3d.yard.gate" in self.env:
-            self._f3d_yard_safe(lambda: self.env["f3d.yard.gate"].sudo()._f3d_yard_dispatch(gates))
+            self._f3d_yard_safe(lambda: self.env["td.yard.scale"].sudo()._f3d_yard_dispatch_scales(scales))
+        if gates and "td.yard.gate" in self.env:
+            self._f3d_yard_safe(lambda: self.env["td.yard.gate"].sudo()._f3d_yard_dispatch(gates))
         return res
 
     def _f3d_yard_safe(self, func):
@@ -38,4 +38,4 @@ class F3dSignal(models.Model):
             with self.env.cr.savepoint():
                 func()
         except Exception:
-            _logger.exception("factory3d_yard: обробка показань двору")
+            _logger.exception("td_yard: обробка показань двору")

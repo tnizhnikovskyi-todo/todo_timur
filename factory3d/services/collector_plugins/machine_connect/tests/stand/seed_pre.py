@@ -1,7 +1,7 @@
 """Наповнення бази стенда до установки модуля (DEPLOY_TEST п. 1–2 у середовищі без копії демо-бази timur-o19demo).
 
 Запуск: ``odoo-bin shell -d <db> < seed_pre.py`` (через ``stand.sh seed-pre``). Створює те, що в демо дає міграція
-factory3d_base: 35 РЦ і обладнання з ``f3d_code`` (коди з ``data/mc_machines.csv`` модуля), операторів ``OP-*``,
+td_factory3d: 35 РЦ і обладнання з ``td_code`` (коди з ``data/mc_machines.csv`` модуля), операторів ``OP-*``,
 календар (стенд: цілодобово 7 днів, щоб ТК не залежали від часу доби), служби, товари/партії/стоси ``PLT-*`` за
 станом woodStore емулятора й дві специфікації для ТК-04/05/06. Ідемпотентний.
 """
@@ -12,7 +12,7 @@ import os
 import urllib.request
 
 ROOT = os.environ.get("F3D_STAND_REPO", "/home/user/todo_timur")
-CSV = f"{ROOT}/factory3d/odoo_addons/factory3d_machine_connect/data/mc_machines.csv"
+CSV = f"{ROOT}/factory3d/odoo_addons/td_machine_connect/data/mc_machines.csv"
 WS_KEY = os.environ.get("SIM_WOODSTORE_APIKEY", "ws-key-stand-0123456789")
 
 Cal = env["resource.calendar"]  # noqa: F821
@@ -28,21 +28,21 @@ if not cal:
 
 team = env["maintenance.team"].search([("name", "=", "Служба головного механіка")], limit=1)  # noqa: F821
 team = team or env["maintenance.team"].create({"name": "Служба головного механіка"})  # noqa: F821
-env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.default_team_id", str(team.id))  # noqa: F821
+env["ir.config_parameter"].sudo().set_param("td.telemetry.default_team_id", str(team.id))  # noqa: F821
 
 Eq, WC, Emp = env["maintenance.equipment"], env["mrp.workcenter"], env["hr.employee"]  # noqa: F821
 rows = list(csv.DictReader(open(CSV, encoding="utf-8")))
 for r in rows:
     code = r["code"]
     if not Eq.search_f3d(code):
-        Eq.create({"name": "Верстат " + code, "f3d_code": code, "maintenance_team_id": team.id})
+        Eq.create({"name": "Верстат " + code, "td_code": code, "maintenance_team_id": team.id})
     if not WC.search_f3d(code):
-        WC.create({"name": "Верстат " + code, "f3d_code": code, "resource_calendar_id": cal.id, "time_efficiency": 100})
+        WC.create({"name": "Верстат " + code, "td_code": code, "resource_calendar_id": cal.id, "time_efficiency": 100})
     oc = r["operator_code"]
     if oc and not Emp.search_f3d(oc):
-        Emp.create({"name": "Оператор " + oc, "f3d_code": oc, "barcode": oc.replace("-", "")})
+        Emp.create({"name": "Оператор " + oc, "td_code": oc, "barcode": oc.replace("-", "")})
 if not Eq.search_f3d("GANTRY-1"):
-    Eq.create({"name": "Портал woodStore", "f3d_code": "GANTRY-1", "maintenance_team_id": team.id})
+    Eq.create({"name": "Портал woodStore", "td_code": "GANTRY-1", "maintenance_team_id": team.id})
 
 # --- користувачі стенда: оператор (SAW-2), майстер, начальник складу ----------------------------------------------------
 Users = env["res.users"].with_context(no_reset_password=True)  # noqa: F821
@@ -58,9 +58,9 @@ def user(login, xmlids):
     return u
 
 
-u_op = user("stand_op", "base.group_user,mrp.group_mrp_user,factory3d_base.group_f3d_user")
-u_master = user("stand_master", "base.group_user,mrp.group_mrp_manager,factory3d_base.group_f3d_manager")
-u_stock = user("stand_stock", "base.group_user,stock.group_stock_manager,factory3d_base.group_f3d_user")
+u_op = user("stand_op", "base.group_user,mrp.group_mrp_user,td_factory3d.group_td_user")
+u_master = user("stand_master", "base.group_user,mrp.group_mrp_manager,td_factory3d.group_td_manager")
+u_stock = user("stand_stock", "base.group_user,stock.group_stock_manager,td_factory3d.group_td_user")
 if not Emp.search([("user_id", "=", u_op.id)]):
     saw2 = Emp.search_f3d("OP-SAW-2")
     if saw2:
@@ -93,10 +93,10 @@ for s in stacks:
     )  # fmt: skip
     prods[pc] = p
 for s in stacks:
-    loc = Loc.search([("f3d_code", "=", s["id"])], limit=1) or Loc.create(
+    loc = Loc.search([("td_code", "=", s["id"])], limit=1) or Loc.create(
         {
-            "name": s["id"], "location_id": wh.lot_stock_id.id, "f3d_code": s["id"],
-            "f3d_loc_kind": "stack", "f3d_capacity": s["max"],
+            "name": s["id"], "location_id": wh.lot_stock_id.id, "td_code": s["id"],
+            "td_loc_kind": "stack", "td_capacity": s["max"],
         }
     )  # fmt: skip
     if s["product"] and not env["stock.quant"].search_count([("location_id", "=", loc.id)]):  # noqa: F821

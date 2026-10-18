@@ -8,17 +8,17 @@ import logging
 
 from odoo import SUPERUSER_ID, api
 
-from odoo.addons.factory3d_iot_sim.hooks import post_init_hook
+from odoo.addons.td_iot_sim.hooks import post_init_hook
 
 _logger = logging.getLogger(__name__)
 
 
 def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
-    devices = env['f3d.sim.device'].sudo().search_count([])
-    signals = env['f3d.sim.signal'].sudo().search_count([])
+    devices = env['td.sim.device'].sudo().search_count([])
+    signals = env['td.sim.signal'].sudo().search_count([])
     post_init_hook(env)
     _logger.info(
-        "factory3d_iot_sim: post-migrate з %s: пристроїв %d → %d, сигналів %d → %d",
-        version, devices, env['f3d.sim.device'].sudo().search_count([]),
-        signals, env['f3d.sim.signal'].sudo().search_count([]))
+        "td_iot_sim: post-migrate з %s: пристроїв %d → %d, сигналів %d → %d",
+        version, devices, env['td.sim.device'].sudo().search_count([]),
+        signals, env['td.sim.signal'].sudo().search_count([]))

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-    <record id="sig_fire_groups_fa_rcv_1_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_1_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-1/state</field>
         <field name="name">Стан зони FA-RCV-1 (Приймання плит · ворота 1)</field>
         <field name="kind">state</field>
@@ -21,7 +21,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_2_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_2_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-2/state</field>
         <field name="name">Стан зони FA-RCV-2 (Приймання плит · ворота 2)</field>
         <field name="kind">state</field>
@@ -41,7 +41,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_3_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_3_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-3/state</field>
         <field name="name">Стан зони FA-RCV-3 (Приймання плит · ворота 3)</field>
         <field name="kind">state</field>
@@ -61,7 +61,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_4_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_4_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-4/state</field>
         <field name="name">Стан зони FA-RCV-4 (Приймання фурнітури, контроль і карантин · ворота 4)</field>
         <field name="kind">state</field>
@@ -81,7 +81,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_5_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_5_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-5/state</field>
         <field name="name">Стан зони FA-RCV-5 (Приймання крайки · ворота 5)</field>
         <field name="kind">state</field>
@@ -101,7 +101,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_6_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_6_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-6/state</field>
         <field name="name">Стан зони FA-RCV-6 (Приймання ЛФМ · ворота 6)</field>
         <field name="kind">state</field>
@@ -121,7 +121,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_rcv_7_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_rcv_7_state" model="td.signal">
         <field name="code">fire/groups/FA-RCV-7/state</field>
         <field name="name">Стан зони FA-RCV-7 (Приймання пакматеріалів · ворота 7)</field>
         <field name="kind">state</field>
@@ -141,7 +141,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_sheets_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_sheets_state" model="td.signal">
         <field name="code">fire/groups/FA-SHEETS/state</field>
         <field name="name">Стан зони FA-SHEETS (Склад плит)</field>
         <field name="kind">state</field>
@@ -161,7 +161,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_hw_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_hw_state" model="td.signal">
         <field name="code">fire/groups/FA-HW/state</field>
         <field name="name">Стан зони FA-HW (Склад фурнітури)</field>
         <field name="kind">state</field>
@@ -181,7 +181,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_edge_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_edge_state" model="td.signal">
         <field name="code">fire/groups/FA-EDGE/state</field>
         <field name="name">Стан зони FA-EDGE (Склад крайки)</field>
         <field name="kind">state</field>
@@ -201,7 +201,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_pks_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_pks_state" model="td.signal">
         <field name="code">fire/groups/FA-PKS/state</field>
         <field name="name">Стан зони FA-PKS (Пакувальні матеріали)</field>
         <field name="kind">state</field>
@@ -221,7 +221,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_cut_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_cut_state" model="td.signal">
         <field name="code">fire/groups/FA-CUT/state</field>
         <field name="name">Стан зони FA-CUT (Розкрій)</field>
         <field name="kind">state</field>
@@ -241,7 +241,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_eb_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_eb_state" model="td.signal">
         <field name="code">fire/groups/FA-EB/state</field>
         <field name="name">Стан зони FA-EB (Крайкооблицювання)</field>
         <field name="kind">state</field>
@@ -261,7 +261,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_cnc_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_cnc_state" model="td.signal">
         <field name="code">fire/groups/FA-CNC/state</field>
         <field name="name">Стан зони FA-CNC (Присадка)</field>
         <field name="kind">state</field>
@@ -281,7 +281,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_sort_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_sort_state" model="td.signal">
         <field name="code">fire/groups/FA-SORT/state</field>
         <field name="name">Стан зони FA-SORT (Сортування деталей)</field>
         <field name="kind">state</field>
@@ -301,7 +301,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_fac_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_fac_state" model="td.signal">
         <field name="code">fire/groups/FA-FAC/state</field>
         <field name="name">Стан зони FA-FAC (Дільниця фасадів МДФ)</field>
         <field name="kind">state</field>
@@ -321,7 +321,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_asm_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_asm_state" model="td.signal">
         <field name="code">fire/groups/FA-ASM/state</field>
         <field name="name">Стан зони FA-ASM (Збирання)</field>
         <field name="kind">state</field>
@@ -341,7 +341,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_pre_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_pre_state" model="td.signal">
         <field name="code">fire/groups/FA-PRE/state</field>
         <field name="name">Стан зони FA-PRE (Буфер комплектів)</field>
         <field name="kind">state</field>
@@ -361,7 +361,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_maint_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_maint_state" model="td.signal">
         <field name="code">fire/groups/FA-MAINT/state</field>
         <field name="name">Стан зони FA-MAINT (Ремонтна дільниця)</field>
         <field name="kind">state</field>
@@ -381,7 +381,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_pack_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_pack_state" model="td.signal">
         <field name="code">fire/groups/FA-PACK/state</field>
         <field name="name">Стан зони FA-PACK (Пакування)</field>
         <field name="kind">state</field>
@@ -401,7 +401,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_post_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_post_state" model="td.signal">
         <field name="code">fire/groups/FA-POST/state</field>
         <field name="name">Стан зони FA-POST (Вихід з пакування)</field>
         <field name="kind">state</field>
@@ -421,7 +421,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_cmp_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_cmp_state" model="td.signal">
         <field name="code">fire/groups/FA-CMP/state</field>
         <field name="name">Стан зони FA-CMP (Компресорна)</field>
         <field name="kind">state</field>
@@ -441,7 +441,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_chg_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_chg_state" model="td.signal">
         <field name="code">fire/groups/FA-CHG/state</field>
         <field name="name">Стан зони FA-CHG (Зарядна станція)</field>
         <field name="kind">state</field>
@@ -461,7 +461,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_fg_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_fg_state" model="td.signal">
         <field name="code">fire/groups/FA-FG/state</field>
         <field name="name">Стан зони FA-FG (Склад готової продукції)</field>
         <field name="kind">state</field>
@@ -481,7 +481,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_elec_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_elec_state" model="td.signal">
         <field name="code">fire/groups/FA-ELEC/state</field>
         <field name="name">Стан зони FA-ELEC (Електрощитова)</field>
         <field name="kind">state</field>
@@ -501,7 +501,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_1_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_1_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-1/state</field>
         <field name="name">Стан зони FA-OUT-1 (Відвантаження · ворота 1)</field>
         <field name="kind">state</field>
@@ -521,7 +521,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_2_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_2_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-2/state</field>
         <field name="name">Стан зони FA-OUT-2 (Відвантаження · ворота 2)</field>
         <field name="kind">state</field>
@@ -541,7 +541,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_3_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_3_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-3/state</field>
         <field name="name">Стан зони FA-OUT-3 (Відвантаження · ворота 3)</field>
         <field name="kind">state</field>
@@ -561,7 +561,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_4_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_4_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-4/state</field>
         <field name="name">Стан зони FA-OUT-4 (Відвантаження · ворота 4)</field>
         <field name="kind">state</field>
@@ -581,7 +581,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_5_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_5_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-5/state</field>
         <field name="name">Стан зони FA-OUT-5 (Відвантаження · ворота 5)</field>
         <field name="kind">state</field>
@@ -601,7 +601,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_6_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_6_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-6/state</field>
         <field name="name">Стан зони FA-OUT-6 (Відвантаження · ворота 6)</field>
         <field name="kind">state</field>
@@ -621,7 +621,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_out_7_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_out_7_state" model="td.signal">
         <field name="code">fire/groups/FA-OUT-7/state</field>
         <field name="name">Стан зони FA-OUT-7 (Відвантаження · ворота 7)</field>
         <field name="kind">state</field>
@@ -641,7 +641,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_boiler_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_boiler_state" model="td.signal">
         <field name="code">fire/groups/FA-BOILER/state</field>
         <field name="name">Стан зони FA-BOILER (Котельня)</field>
         <field name="kind">state</field>
@@ -661,7 +661,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_state" model="f3d.signal">
+    <record id="sig_fire_totals_state" model="td.signal">
         <field name="code">fire/totals/state</field>
         <field name="name">Прилад FACP-1: стан (LSZ:0)</field>
         <field name="kind">state</field>
@@ -680,7 +680,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_system_state" model="f3d.signal">
+    <record id="sig_fire_totals_system_state" model="td.signal">
         <field name="code">fire/totals/system_state</field>
         <field name="name">Прилад FACP-1: системний стан (MSV:1)</field>
         <field name="kind">state</field>
@@ -700,7 +700,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_alarms" model="f3d.signal">
+    <record id="sig_fire_totals_alarms" model="td.signal">
         <field name="code">fire/totals/alarms</field>
         <field name="name">Прилад FACP-1: активні тривоги</field>
         <field name="kind">gauge</field>
@@ -719,7 +719,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_faults" model="f3d.signal">
+    <record id="sig_fire_totals_faults" model="td.signal">
         <field name="code">fire/totals/faults</field>
         <field name="name">Прилад FACP-1: несправності</field>
         <field name="kind">gauge</field>
@@ -738,7 +738,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_disabled" model="f3d.signal">
+    <record id="sig_fire_totals_disabled" model="td.signal">
         <field name="code">fire/totals/disabled</field>
         <field name="name">Прилад FACP-1: вимкнення</field>
         <field name="kind">gauge</field>
@@ -757,7 +757,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_loops_1_state" model="f3d.signal">
+    <record id="sig_fire_loops_1_state" model="td.signal">
         <field name="code">fire/loops/1/state</field>
         <field name="name">Шлейф 1: несправність</field>
         <field name="kind">state</field>
@@ -778,7 +778,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_loops_2_state" model="f3d.signal">
+    <record id="sig_fire_loops_2_state" model="td.signal">
         <field name="code">fire/loops/2/state</field>
         <field name="name">Шлейф 2: несправність</field>
         <field name="kind">state</field>
@@ -799,7 +799,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_loops_3_state" model="f3d.signal">
+    <record id="sig_fire_loops_3_state" model="td.signal">
         <field name="code">fire/loops/3/state</field>
         <field name="name">Шлейф 3: несправність</field>
         <field name="kind">state</field>
@@ -820,7 +820,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_loops_4_state" model="f3d.signal">
+    <record id="sig_fire_loops_4_state" model="td.signal">
         <field name="code">fire/loops/4/state</field>
         <field name="name">Шлейф 4: несправність</field>
         <field name="kind">state</field>
@@ -841,7 +841,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_sounders_active" model="f3d.signal">
+    <record id="sig_fire_totals_sounders_active" model="td.signal">
         <field name="code">fire/totals/sounders_active</field>
         <field name="name">Оповіщувачі увімкнено (BV:10)</field>
         <field name="kind">state</field>
@@ -861,7 +861,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_totals_brigade" model="f3d.signal">
+    <record id="sig_fire_totals_brigade" model="td.signal">
         <field name="code">fire/totals/brigade</field>
         <field name="name">Передано на пульт ДСНС (BV:11)</field>
         <field name="kind">state</field>
@@ -881,7 +881,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_spark_spark_1_state" model="f3d.signal">
+    <record id="sig_fire_spark_spark_1_state" model="td.signal">
         <field name="code">fire/spark/SPARK-1/state</field>
         <field name="name">Іскрогасіння: іскра (DI0)</field>
         <field name="kind">state</field>
@@ -901,7 +901,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_spark_spark_1_extinguishing" model="f3d.signal">
+    <record id="sig_fire_spark_spark_1_extinguishing" model="td.signal">
         <field name="code">fire/spark/SPARK-1/extinguishing</field>
         <field name="name">Іскрогасіння: гасіння (DI1)</field>
         <field name="kind">state</field>
@@ -921,7 +921,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_spark_spark_1_fault" model="f3d.signal">
+    <record id="sig_fire_spark_spark_1_fault" model="td.signal">
         <field name="code">fire/spark/SPARK-1/fault</field>
         <field name="name">Іскрогасіння: несправність (DI2)</field>
         <field name="kind">state</field>
@@ -942,7 +942,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_spark_spark_1_water_ok" model="f3d.signal">
+    <record id="sig_fire_spark_spark_1_water_ok" model="td.signal">
         <field name="code">fire/spark/SPARK-1/water_ok</field>
         <field name="name">Іскрогасіння: тиск води (DI3)</field>
         <field name="kind">state</field>
@@ -963,7 +963,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_spark_spark_1_count_today" model="f3d.signal">
+    <record id="sig_fire_spark_spark_1_count_today" model="td.signal">
         <field name="code">fire/spark/SPARK-1/count_today</field>
         <field name="name">Іскрогасіння: іскор за добу</field>
         <field name="kind">gauge</field>
@@ -982,7 +982,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_smoke_smoke_vents_state" model="f3d.signal">
+    <record id="sig_fire_smoke_smoke_vents_state" model="td.signal">
         <field name="code">fire/smoke/SMOKE-VENTS/state</field>
         <field name="name">Люки димовидалення відкриті (DI4)</field>
         <field name="kind">state</field>
@@ -1002,7 +1002,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_smoke_smoke_ctrl_fault" model="f3d.signal">
+    <record id="sig_fire_smoke_smoke_ctrl_fault" model="td.signal">
         <field name="code">fire/smoke/SMOKE-CTRL/fault</field>
         <field name="name">Щит D+H: несправність (DI5)</field>
         <field name="kind">state</field>
@@ -1023,7 +1023,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_smoke_smoke_ctrl_battery" model="f3d.signal">
+    <record id="sig_fire_smoke_smoke_ctrl_battery" model="td.signal">
         <field name="code">fire/smoke/SMOKE-CTRL/battery</field>
         <field name="name">Щит D+H: живлення від АКБ (DI6)</field>
         <field name="kind">state</field>
@@ -1043,7 +1043,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_soc_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_soc_state" model="td.signal">
         <field name="code">fire/groups/FA-SOC/state</field>
         <field name="name">Стан зони FA-SOC (Побутові приміщення)</field>
         <field name="kind">state</field>
@@ -1063,7 +1063,7 @@
         <field name="module">fire_safety</field>
         <field name="origin">module</field>
     </record>
-    <record id="sig_fire_groups_fa_office_state" model="f3d.signal">
+    <record id="sig_fire_groups_fa_office_state" model="td.signal">
         <field name="code">fire/groups/FA-OFFICE/state</field>
         <field name="name">Стан зони FA-OFFICE (Офіс)</field>
         <field name="kind">state</field>
@@ -1086,7 +1086,7 @@
     </data>
     <!-- Прив'язки signal_* моделей модуля (оновлюються при апгрейді) -->
     <data>
-    <record id="panel_facp_1" model="f3d.fire.panel">
+    <record id="panel_facp_1" model="td.fire.panel">
         <field name="source_id" ref="source_bacnet_facp_1"/>
         <field name="io_source_id" ref="source_mb_u85_io6"/>
         <field name="signal_state_id" ref="sig_fire_totals_state"/>
@@ -1097,124 +1097,124 @@
         <field name="signal_sounders_id" ref="sig_fire_totals_sounders_active"/>
         <field name="signal_brigade_id" ref="sig_fire_totals_brigade"/>
     </record>
-    <record id="loop_1" model="f3d.fire.loop">
+    <record id="loop_1" model="td.fire.loop">
         <field name="signal_id" ref="sig_fire_loops_1_state"/>
     </record>
-    <record id="loop_2" model="f3d.fire.loop">
+    <record id="loop_2" model="td.fire.loop">
         <field name="signal_id" ref="sig_fire_loops_2_state"/>
     </record>
-    <record id="loop_3" model="f3d.fire.loop">
+    <record id="loop_3" model="td.fire.loop">
         <field name="signal_id" ref="sig_fire_loops_3_state"/>
     </record>
-    <record id="loop_4" model="f3d.fire.loop">
+    <record id="loop_4" model="td.fire.loop">
         <field name="signal_id" ref="sig_fire_loops_4_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_1" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_1" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_1_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_2" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_2" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_2_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_3" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_3" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_3_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_4" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_4" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_4_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_5" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_5" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_5_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_6" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_6" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_6_state"/>
     </record>
-    <record id="fire_zone_fa_rcv_7" model="f3d.fire.zone">
+    <record id="fire_zone_fa_rcv_7" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_rcv_7_state"/>
     </record>
-    <record id="fire_zone_fa_sheets" model="f3d.fire.zone">
+    <record id="fire_zone_fa_sheets" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_sheets_state"/>
     </record>
-    <record id="fire_zone_fa_hw" model="f3d.fire.zone">
+    <record id="fire_zone_fa_hw" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_hw_state"/>
     </record>
-    <record id="fire_zone_fa_edge" model="f3d.fire.zone">
+    <record id="fire_zone_fa_edge" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_edge_state"/>
     </record>
-    <record id="fire_zone_fa_pks" model="f3d.fire.zone">
+    <record id="fire_zone_fa_pks" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_pks_state"/>
     </record>
-    <record id="fire_zone_fa_cut" model="f3d.fire.zone">
+    <record id="fire_zone_fa_cut" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_cut_state"/>
     </record>
-    <record id="fire_zone_fa_eb" model="f3d.fire.zone">
+    <record id="fire_zone_fa_eb" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_eb_state"/>
     </record>
-    <record id="fire_zone_fa_cnc" model="f3d.fire.zone">
+    <record id="fire_zone_fa_cnc" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_cnc_state"/>
     </record>
-    <record id="fire_zone_fa_sort" model="f3d.fire.zone">
+    <record id="fire_zone_fa_sort" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_sort_state"/>
     </record>
-    <record id="fire_zone_fa_fac" model="f3d.fire.zone">
+    <record id="fire_zone_fa_fac" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_fac_state"/>
     </record>
-    <record id="fire_zone_fa_asm" model="f3d.fire.zone">
+    <record id="fire_zone_fa_asm" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_asm_state"/>
     </record>
-    <record id="fire_zone_fa_pre" model="f3d.fire.zone">
+    <record id="fire_zone_fa_pre" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_pre_state"/>
     </record>
-    <record id="fire_zone_fa_maint" model="f3d.fire.zone">
+    <record id="fire_zone_fa_maint" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_maint_state"/>
     </record>
-    <record id="fire_zone_fa_pack" model="f3d.fire.zone">
+    <record id="fire_zone_fa_pack" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_pack_state"/>
     </record>
-    <record id="fire_zone_fa_post" model="f3d.fire.zone">
+    <record id="fire_zone_fa_post" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_post_state"/>
     </record>
-    <record id="fire_zone_fa_cmp" model="f3d.fire.zone">
+    <record id="fire_zone_fa_cmp" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_cmp_state"/>
     </record>
-    <record id="fire_zone_fa_chg" model="f3d.fire.zone">
+    <record id="fire_zone_fa_chg" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_chg_state"/>
     </record>
-    <record id="fire_zone_fa_fg" model="f3d.fire.zone">
+    <record id="fire_zone_fa_fg" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_fg_state"/>
     </record>
-    <record id="fire_zone_fa_elec" model="f3d.fire.zone">
+    <record id="fire_zone_fa_elec" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_elec_state"/>
     </record>
-    <record id="fire_zone_fa_out_1" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_1" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_1_state"/>
     </record>
-    <record id="fire_zone_fa_out_2" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_2" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_2_state"/>
     </record>
-    <record id="fire_zone_fa_out_3" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_3" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_3_state"/>
     </record>
-    <record id="fire_zone_fa_out_4" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_4" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_4_state"/>
     </record>
-    <record id="fire_zone_fa_out_5" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_5" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_5_state"/>
     </record>
-    <record id="fire_zone_fa_out_6" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_6" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_6_state"/>
     </record>
-    <record id="fire_zone_fa_out_7" model="f3d.fire.zone">
+    <record id="fire_zone_fa_out_7" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_out_7_state"/>
     </record>
-    <record id="fire_zone_fa_boiler" model="f3d.fire.zone">
+    <record id="fire_zone_fa_boiler" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_boiler_state"/>
     </record>
-    <record id="fire_zone_fa_soc" model="f3d.fire.zone">
+    <record id="fire_zone_fa_soc" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_soc_state"/>
     </record>
-    <record id="fire_zone_fa_office" model="f3d.fire.zone">
+    <record id="fire_zone_fa_office" model="td.fire.zone">
         <field name="signal_id" ref="sig_fire_groups_fa_office_state"/>
     </record>
-    <record id="system_spark_1" model="f3d.fire.system">
+    <record id="system_spark_1" model="td.fire.system">
         <field name="source_id" ref="source_mb_u85_io6"/>
         <field name="signal_state_id" ref="sig_fire_spark_spark_1_state"/>
         <field name="signal_active_id" ref="sig_fire_spark_spark_1_extinguishing"/>
@@ -1222,7 +1222,7 @@
         <field name="signal_water_id" ref="sig_fire_spark_spark_1_water_ok"/>
         <field name="signal_count_id" ref="sig_fire_spark_spark_1_count_today"/>
     </record>
-    <record id="system_smoke_ctrl" model="f3d.fire.system">
+    <record id="system_smoke_ctrl" model="td.fire.system">
         <field name="source_id" ref="source_mb_u85_io6"/>
         <field name="signal_state_id" ref="sig_fire_smoke_smoke_vents_state"/>
         <field name="signal_fault_id" ref="sig_fire_smoke_smoke_ctrl_fault"/>

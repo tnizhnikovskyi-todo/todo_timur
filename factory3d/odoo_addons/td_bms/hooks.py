@@ -19,8 +19,8 @@ from .tools import rules
 
 _logger = logging.getLogger(__name__)
 
-P = "factory3d.bms."
-CSV_FILE = "factory3d_bms/data/bms_signals.csv"
+P = "td.bms."
+CSV_FILE = "td_bms/data/bms_signals.csv"
 DERIVED_CODE = "BMS-DERIVED"
 EXPECTED_SIGNALS = 549
 CTX = {"active_test": False, "tracking_disable": True, "mail_create_nolog": True, "mail_notrack": True}
@@ -117,11 +117,11 @@ def _slug(code):
 
 
 def _signals(env):
-    return env["f3d.signal"].sudo().with_context(**CTX)
+    return env["td.signal"].sudo().with_context(**CTX)
 
 
 def _sources(env):
-    return env["f3d.source"].sudo().with_context(**CTX)
+    return env["td.source"].sudo().with_context(**CTX)
 
 
 def _csv_rows():
@@ -140,9 +140,9 @@ def _write_param(env):
 
 # --- крок 1 ----------------------------------------------------------------------------------------------
 def params(env):
-    """`read_enabled = (factory3d.base.environment == 'test')`, `write_enabled = False` (CB-10)."""
+    """`read_enabled = (td.base.environment == 'test')`, `write_enabled = False` (CB-10)."""
     icp = env["ir.config_parameter"].sudo()
-    read = icp.get_param("factory3d.base.environment") == "test"
+    read = icp.get_param("td.base.environment") == "test"
     icp.set_param(P + "read_enabled", "True" if read else "False")
     icp.set_param(P + "write_enabled", "False")
     return {"read_enabled": read}
@@ -150,7 +150,7 @@ def params(env):
 
 # --- крок 2 ----------------------------------------------------------------------------------------------
 def derived_source(env):
-    """Джерело `BMS-DERIVED` (M-12) з xml-id `factory3d_bms.source_bms_derived`; upsert за `code`."""
+    """Джерело `BMS-DERIVED` (M-12) з xml-id `td_bms.source_bms_derived`; upsert за `code`."""
     Source = _sources(env)
     vals = {
         "name": "Будівля: обчислені перевірки",
@@ -170,7 +170,7 @@ def derived_source(env):
         src = Source.create({**vals, "code": DERIVED_CODE, "read_enabled": _read_param(env), "write_enabled": False})
         created = 1
     env["ir.model.data"]._update_xmlids(
-        [{"xml_id": "factory3d_bms.source_bms_derived", "record": src, "noupdate": True}]
+        [{"xml_id": "td_bms.source_bms_derived", "record": src, "noupdate": True}]
     )
     return {"created": created}
 
@@ -201,10 +201,10 @@ def link_equipment(env):
                 _logger.warning("link_equipment: обладнання %s не знайдено", rec.code)
 
     ctx = {"active_test": False, "tracking_disable": True}
-    link(env["f3d.bms.light.panel"].with_context(**ctx).search([]), "panels")
-    link(env["f3d.bms.light.group"].with_context(**ctx).search([]), "groups")
-    link(env["f3d.bms.hvac.unit"].with_context(**ctx).search([]), "units")
-    for balance in env["f3d.bms.heat.balance"].with_context(**ctx).search([]):
+    link(env["td.bms.light.panel"].with_context(**ctx).search([]), "panels")
+    link(env["td.bms.light.group"].with_context(**ctx).search([]), "groups")
+    link(env["td.bms.hvac.unit"].with_context(**ctx).search([]), "units")
+    for balance in env["td.bms.heat.balance"].with_context(**ctx).search([]):
         for field, code in (("boiler_equipment_id", "BOILER"), ("chp_equipment_id", "CHP")):
             if balance[field]:
                 continue
@@ -272,7 +272,7 @@ def _definition_vals(row):
 
 
 def signals(env):
-    """CSV → `f3d.signal`: прив'язка `new=0`, створення відсутніх, оновлення визначень `new=1`."""
+    """CSV → `td.signal`: прив'язка `new=0`, створення відсутніх, оновлення визначень `new=1`."""
     env = env(su=True)
     Signal = _signals(env)
     Equipment = env["maintenance.equipment"].sudo()
@@ -328,7 +328,7 @@ def signals(env):
     if to_create:
         created = Signal.create(to_create)
         env["ir.model.data"]._update_xmlids(
-            [{"xml_id": "factory3d_bms.sig_" + _slug(sig.code), "record": sig, "noupdate": True} for sig in created]
+            [{"xml_id": "td_bms.sig_" + _slug(sig.code), "record": sig, "noupdate": True} for sig in created]
         )
         stats["created"] = len(created)
     report = dict(stats)
@@ -344,13 +344,13 @@ def link_signals(env):
     ctx = {"active_test": False, "tracking_disable": True}
     targets = {}
     for model, roles in (
-        ("f3d.bms.hvac.unit", UNIT_ROLES),
-        ("f3d.bms.light.group", GROUP_ROLES),
-        ("f3d.bms.light.panel", PANEL_ROLES),
+        ("td.bms.hvac.unit", UNIT_ROLES),
+        ("td.bms.light.group", GROUP_ROLES),
+        ("td.bms.light.panel", PANEL_ROLES),
     ):
         for rec in env[model].with_context(**ctx).search([]):
             targets[rec.code] = (rec, roles)
-    balance = env["f3d.bms.heat.balance"].with_context(**ctx).search([], limit=1)
+    balance = env["td.bms.heat.balance"].with_context(**ctx).search([], limit=1)
     if balance:
         targets["BALANCE"] = (balance, BALANCE_ROLES)
     rows = _csv_rows()
@@ -433,8 +433,8 @@ def write_flags(env, enabled=None):
     if on:
         on.write({"write_enabled": True})
     cancelled = 0
-    if not enabled and "f3d.command" in env:
-        queued = env["f3d.command"].sudo().search([("signal_id.module", "=", "bms"), ("state", "=", "queued")])
+    if not enabled and "td.command" in env:
+        queued = env["td.command"].sudo().search([("signal_id.module", "=", "bms"), ("state", "=", "queued")])
         if queued:
             queued.action_cancel()
             cancelled = len(queued)
@@ -449,7 +449,7 @@ def write_flags(env, enabled=None):
 
 # --- крок 8 ----------------------------------------------------------------------------------------------
 def recompute(env):
-    balance = env(su=True)["f3d.bms.heat.balance"]._f3d_bms_get()
+    balance = env(su=True)["td.bms.heat.balance"]._f3d_bms_get()
     balance.action_recompute()
     return {"total_kw": balance.total_kw}
 
@@ -464,15 +464,15 @@ def _deviation_meta(code, text=None):
 def demo_request(env):
     """Епізод журналу `open` для відкритих заявок на сигналах модуля у стані `alarm` (демо-дані base/telemetry)."""
     env = env(su=True)
-    if "f3d.bms.deviation" not in env:
+    if "td.bms.deviation" not in env:
         return {"deviations": 0}
-    Deviation = env["f3d.bms.deviation"].with_context(tracking_disable=True)
+    Deviation = env["td.bms.deviation"].with_context(tracking_disable=True)
     requests = env["maintenance.request"].search(
-        [("f3d_signal_id.module", "=", "bms"), ("f3d_signal_id.status", "=", "alarm"), ("stage_id.done", "=", False)]
+        [("td_signal_id.module", "=", "bms"), ("td_signal_id.status", "=", "alarm"), ("stage_id.done", "=", False)]
     )
     created = 0
     for req in requests:
-        sig = req.f3d_signal_id
+        sig = req.td_signal_id
         if Deviation.search_count([("signal_id", "=", sig.id), ("state", "=", "open")]):
             continue
         rule, kind, obj = _deviation_meta(sig.code, sig.last_text)
@@ -485,8 +485,8 @@ def demo_request(env):
                 "object_code": obj,
                 "started": req.create_date,
                 "state": "open",
-                "value": req.f3d_value,
-                "threshold": req.f3d_threshold,
+                "value": req.td_value,
+                "threshold": req.td_threshold,
                 "unit": sig.unit or False,
                 "request_id": req.id,
             }
@@ -546,11 +546,11 @@ def uninstall_hook(env):
     Signal = _signals(env)
     module_signals = Signal.search([("module", "=", "bms")])
     # xml-id сигналів прибираємо, щоб видалення модуля не знищило сигнали з історією показань
-    env["ir.model.data"].sudo().search([("module", "=", "factory3d_bms"), ("model", "=", "f3d.signal")]).unlink()
+    env["ir.model.data"].sudo().search([("module", "=", "td_bms"), ("model", "=", "td.signal")]).unlink()
     owned = module_signals.filtered(lambda s: s.origin in ("catalog", "module"))
     sim = module_signals.filtered(lambda s: s.origin == "sim_data")
-    if "f3d.command" in env:
-        queued = env["f3d.command"].sudo().search([("signal_id", "in", module_signals.ids), ("state", "=", "queued")])
+    if "td.command" in env:
+        queued = env["td.command"].sudo().search([("signal_id", "in", module_signals.ids), ("state", "=", "queued")])
         if queued:
             queued.action_cancel()
     if owned:

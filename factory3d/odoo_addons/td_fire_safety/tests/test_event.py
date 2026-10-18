@@ -11,7 +11,7 @@ from .common import FireCase
 class EventCase(FireCase):
 
     def log(self, etype='fault', code='FA-CUT', ts=None, text='Тест', **kw):
-        return self.env['f3d.fire.event']._log(etype, code, ts or self.T0, text, **kw)
+        return self.env['td.fire.event']._log(etype, code, ts or self.T0, text, **kw)
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_fire')
@@ -23,7 +23,7 @@ class TestEventLog(EventCase):
         self.assertEqual(e1, e2)
         e3 = self.log(ts=self.at(3))
         self.assertNotEqual(e1, e3)
-        self.assertEqual(self.env['f3d.fire.event'].search_count(
+        self.assertEqual(self.env['td.fire.event'].search_count(
             [('etype', '=', 'fault'), ('object_code', '=', 'FA-CUT')]), 2)
 
     def test_dedup_fills_message(self):
@@ -35,7 +35,7 @@ class TestEventLog(EventCase):
         ev = self.log('alarm', 'FA-CNC', zone_id=self.z_cnc.id, device_id=self.dev_cnc05.id)
         self.assertEqual(ev.scene_code, 'FA-CNC')
         self.assertEqual((ev.kind, ev.level), ('alarm', 'alarm'))
-        mcp = self.env['f3d.fire.device'].search([('type', '=', 'mcp')], limit=1)
+        mcp = self.env['td.fire.device'].search([('type', '=', 'mcp')], limit=1)
         ev2 = self.log('fault', mcp.address, device=mcp)
         self.assertEqual(ev2.scene_code, 'FA-MCP')
         ev3 = self.log('loop_fault', 'FACP-1', loop=self.loop2)
@@ -60,7 +60,7 @@ class TestEventLog(EventCase):
         self.assertFalse(ev.exists())
 
     def test_manual_create(self):
-        Event = self.env['f3d.fire.event']
+        Event = self.env['td.fire.event']
         with self.assertRaises(AccessError):
             Event.with_user(self.u).create({'etype': 'manual', 'text': 'x'})
         ev = Event.with_user(self.d).create({'etype': 'manual', 'text': 'Обхід виконано'})
@@ -100,7 +100,7 @@ class TestBacnetPush(EventCase):
 
     def setUp(self):
         super().setUp()
-        self.handler = self.env['f3d.push.handler.fire']
+        self.handler = self.env['td.push.handler.fire']
         if not self.panel.source_id and self.src_bac:
             self.panel.source_id = self.src_bac
 
@@ -119,9 +119,9 @@ class TestBacnetPush(EventCase):
         self.assertEqual(ev.device_id, self.dev_cnc05)
 
     def test_new_bacnet_event(self):
-        before = self.env['f3d.fire.event'].search_count([('etype', '=', 'bacnet')])
+        before = self.env['td.fire.event'].search_count([('etype', '=', 'bacnet')])
         self.handler._f3d_handle_push('bacnet_event', self.payload())
-        self.assertEqual(self.env['f3d.fire.event'].search_count([('etype', '=', 'bacnet')]), before + 1)
+        self.assertEqual(self.env['td.fire.event'].search_count([('etype', '=', 'bacnet')]), before + 1)
 
     def test_invalid_payload(self):
         data = self.payload()
@@ -131,5 +131,5 @@ class TestBacnetPush(EventCase):
 
     def test_control_chars(self):
         self.handler._f3d_handle_push('bacnet_event', self.payload(message_text='Тест\x00\x07 зона'))
-        ev = self.env['f3d.fire.event'].search([('etype', '=', 'bacnet')], limit=1)
+        ev = self.env['td.fire.event'].search([('etype', '=', 'bacnet')], limit=1)
         self.assertFalse(re.search(r'[\x00-\x08\x0a-\x1f\x7f]', ev.message_text))

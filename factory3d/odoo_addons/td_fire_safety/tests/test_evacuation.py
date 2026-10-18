@@ -8,7 +8,7 @@ from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.tools import mute_logger
 
-MOD = 'factory3d_fire_safety'
+MOD = 'td_fire_safety'
 # R-09: потрібна кількість люків за зонами
 NEED = {'SZ-1': 6, 'SZ-2': 6, 'SZ-3': 4, 'SZ-4': 6, 'SZ-5': 5, 'SZ-6': 6, 'SZ-7': 6, 'SZ-8': 5}
 AREAS = {'SZ-1': 1440, 'SZ-2': 1584, 'SZ-3': 920, 'SZ-4': 1380, 'SZ-5': 1300, 'SZ-6': 1440, 'SZ-7': 1440,
@@ -23,10 +23,10 @@ class EvacCase(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        cls.Exit = env['f3d.fire.exit']
-        cls.Route = env['f3d.fire.route']
-        cls.Smoke = env['f3d.fire.smoke.zone']
-        cls.Norm = env['f3d.fire.norm']
+        cls.Exit = env['td.fire.exit']
+        cls.Route = env['td.fire.route']
+        cls.Smoke = env['td.fire.smoke.zone']
+        cls.Norm = env['td.fire.norm']
         cls.icp = env['ir.config_parameter'].sudo()
         cls.refresh()
 
@@ -47,7 +47,7 @@ class EvacCase(TransactionCase):
 
     @contextmanager
     def viewer_installed(self, flag):
-        from odoo.addons.factory3d_base.models.f3d_scene_mixin import F3dSceneMixin
+        from odoo.addons.td_factory3d.models.td_scene_mixin import F3dSceneMixin
         with mock.patch.object(F3dSceneMixin, '_f3d_viewer_installed', return_value=flag):
             yield
 
@@ -66,7 +66,7 @@ class TestRoutes(EvacCase):
 
     def test_polymer(self):
         """AC-33: polymer_panels=True → норма 50, усі 32 відповідають."""
-        self.icp.set_param('factory3d.fire_safety.polymer_panels', 'True')
+        self.icp.set_param('td.fire_safety.polymer_panels', 'True')
         routes = self.Route.search([])
         routes._recompute()
         self.assertEqual(set(routes.mapped('norm_m')), {50.0})
@@ -81,7 +81,7 @@ class TestRoutes(EvacCase):
         self.assertEqual(len(routes) - len(failed), 26)
         self.assertEqual(set(failed.mapped('zone_code')),
                          {'Z-RCV-4', 'Z-SHEETS', 'Z-PRE', 'Z-MAINT', 'Z-FG', 'Z-OUT-4'})
-        panel = self.env['f3d.fire.panel'].search([], limit=1)
+        panel = self.env['td.fire.panel'].search([], limit=1)
         if 'compliance_routes_ok' in panel._fields and hasattr(panel, 'action_recompute_compliance'):
             panel.action_recompute_compliance()
             self.assertEqual(panel.compliance_routes_ok, 26)
@@ -109,7 +109,7 @@ class TestExits(EvacCase):
             self.assertAlmostEqual(self.exit_(code).nearest_exit_m, dist, 1, code)
         self.assertEqual(self.exit_('EX-S4').nearest_exit_m, 7.4)
         self.assertEqual(self.exit_('EX-S1').nearest_exit_m, 37.0)
-        panel = self.env['f3d.fire.panel'].search([], limit=1)
+        panel = self.env['td.fire.panel'].search([], limit=1)
         if 'compliance_exits_ok' in panel._fields and hasattr(panel, 'action_recompute_compliance'):
             panel.action_recompute_compliance()
             self.assertAlmostEqual(panel.compliance_exit_l_m, 31.6, 1)
@@ -124,7 +124,7 @@ class TestExits(EvacCase):
         self.assertTrue(summary['n_ok'])
         self.assertEqual(summary['pair_m'], 7.4)
         self.assertFalse(summary['ok'])
-        panel = self.env['f3d.fire.panel'].search([], limit=1)
+        panel = self.env['td.fire.panel'].search([], limit=1)
         if 'compliance_exits_ok' in panel._fields and hasattr(panel, 'action_recompute_compliance'):
             panel.action_recompute_compliance()
             self.assertFalse(panel.compliance_exits_ok)
@@ -171,7 +171,7 @@ class TestSmokeZones(EvacCase):
 
     def test_vent_archived(self):
         """AC-36: 0.SV.01 архівовано → SZ-1 warn."""
-        vent = self.env['f3d.fire.device'].search([('address', '=', '0.SV.01')])
+        vent = self.env['td.fire.device'].search([('address', '=', '0.SV.01')])
         self.assertEqual(len(vent), 1)
         vent.active = False
         sz1 = self.Smoke.search([('code', '=', 'SZ-1')])
@@ -207,7 +207,7 @@ class TestData(EvacCase):
         self.assertEqual(cnc.length_m, 29.8)
         self.assertEqual(cnc.point_count, 3)
         self.assertEqual(cnc.code, 'EVAC-CNC')
-        panel = self.env['f3d.fire.panel'].search([], limit=1)
+        panel = self.env['td.fire.panel'].search([], limit=1)
         self.assertEqual(panel.evac_max_distance_m, 45.3)
         self.assertEqual((panel.evac_worst_x, panel.evac_worst_y), (32.25, 33.75))
         self.assertEqual(self.env.ref('%s.exit_ex_s3' % MOD), s3)
@@ -235,11 +235,11 @@ class TestReport(EvacCase):
 
     def test_report_html(self):
         """AC-38: HTML звіту V-20 містить таблиці й ключові значення."""
-        panel = self.env['f3d.fire.panel'].search([], limit=1)
+        panel = self.env['td.fire.panel'].search([], limit=1)
         if hasattr(panel, 'action_recompute_compliance'):
             panel.action_recompute_compliance()
         html, _fmt = self.env['ir.actions.report']._render_qweb_html(
-            '%s.report_f3d_fire_evac_compliance' % MOD, panel.ids)
+            '%s.report_td_fire_evac_compliance' % MOD, panel.ids)
         html = html.decode()
         self.assertEqual(html.count('f3d-route-row'), 32)
         self.assertEqual(html.count('f3d-exit-row'), 12)
@@ -253,18 +253,18 @@ class TestReport(EvacCase):
 class TestPlantZone(EvacCase):
 
     def test_zone_fields(self):
-        """AC-39: поля M-13 на f3d.zone (потребує models/f3d_zone.py, W1)."""
-        z_cnc = self.env.ref('factory3d_base.zone_z_cnc')
-        self.assertEqual(z_cnc.f3d_fire_kind, 'multi')
-        self.assertEqual(z_cnc.f3d_evac_exit_code, 'EX-S3')
-        self.assertEqual(z_cnc.f3d_evac_length_m, 29.8)
-        z_office = self.env.ref('factory3d_base.zone_z_office')
-        self.assertEqual(z_office.f3d_fire_zone_count, 1)
-        self.assertEqual(z_office.f3d_fire_kind, 'smoke')
-        self.assertFalse(z_office.f3d_evac_route_id)
-        z_energy = self.env.ref('factory3d_base.zone_z_energy')
-        self.assertEqual(z_energy.f3d_fire_zone_count, 0)
-        self.assertFalse(z_energy.f3d_fire_state)
+        """AC-39: поля M-13 на td.zone (потребує models/td_zone.py, W1)."""
+        z_cnc = self.env.ref('td_factory3d.zone_z_cnc')
+        self.assertEqual(z_cnc.td_fire_kind, 'multi')
+        self.assertEqual(z_cnc.td_evac_exit_code, 'EX-S3')
+        self.assertEqual(z_cnc.td_evac_length_m, 29.8)
+        z_office = self.env.ref('td_factory3d.zone_z_office')
+        self.assertEqual(z_office.td_fire_zone_count, 1)
+        self.assertEqual(z_office.td_fire_kind, 'smoke')
+        self.assertFalse(z_office.td_evac_route_id)
+        z_energy = self.env.ref('td_factory3d.zone_z_energy')
+        self.assertEqual(z_energy.td_fire_zone_count, 0)
+        self.assertFalse(z_energy.td_fire_state)
 
     def test_route_show_3d(self):
         """AC-40: «Показати в 3D» повертає код шляху маршруту."""

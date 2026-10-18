@@ -21,7 +21,7 @@ PARAMS = {
     "meter_lead_pct": "5",
 }
 
-EQUIPMENT = {  # атрибут -> (назва, f3d_code, з командою)
+EQUIPMENT = {  # атрибут -> (назва, td_code, з командою)
     "eq_comp": ("Компресорна станція", "COMPRESSOR-T", True),
     "eq_rv": ("Припливно-витяжна установка RV-05 (тест)", "RV-05-T", True),
     "eq_flc1": ("Навантажувач (резерв) (тест)", "FL-C1-T", True),
@@ -52,27 +52,27 @@ class F3DTelemetryMixin:
     def _setup_base_fixtures(cls):
         icp = cls.env["ir.config_parameter"].sudo()
         for key, val in PARAMS.items():
-            icp.set_param("factory3d.telemetry." + key, val)
+            icp.set_param("td.telemetry." + key, val)
         cls.team_mech = cls.env["maintenance.team"].create({"name": "Служба головного механіка (тест)"})
         cls.team_default = cls.env["maintenance.team"].create({"name": "Команда за замовчуванням (тест)"})
-        icp.set_param("factory3d.telemetry.default_team_id", str(cls.team_default.id))
+        icp.set_param("td.telemetry.default_team_id", str(cls.team_default.id))
         stages = cls.env["maintenance.stage"].search([], order="sequence, id")
         cls.stage_new = stages.filtered(lambda s: not s.done)[:1]
         cls.stage_done = stages.filtered("done")[:1]
-        base = "factory3d_base."
+        base = "td_factory3d."
         cls.user_plain = new_test_user(cls.env, "f3dt_plain", groups="base.group_user")
-        cls.user_reader = new_test_user(cls.env, "f3dt_reader", groups="base.group_user," + base + "group_f3d_user")
+        cls.user_reader = new_test_user(cls.env, "f3dt_reader", groups="base.group_user," + base + "group_td_user")
         cls.user_mech = new_test_user(
             cls.env,
             "f3dt_mech",
-            groups="base.group_user," + base + "group_f3d_user,maintenance.group_equipment_manager",
+            groups="base.group_user," + base + "group_td_user,maintenance.group_equipment_manager",
         )
         cls.user_manager = new_test_user(
-            cls.env, "f3dt_manager", groups="base.group_user," + base + "group_f3d_manager"
+            cls.env, "f3dt_manager", groups="base.group_user," + base + "group_td_manager"
         )
-        cls.user_admin = new_test_user(cls.env, "f3dt_admin", groups="base.group_user," + base + "group_f3d_admin")
+        cls.user_admin = new_test_user(cls.env, "f3dt_admin", groups="base.group_user," + base + "group_td_admin")
         for attr, (name, code, with_team) in EQUIPMENT.items():
-            vals = {"name": name, "f3d_code": code}
+            vals = {"name": name, "td_code": code}
             if with_team:
                 vals["maintenance_team_id"] = cls.team_mech.id
             setattr(cls, attr, cls.env["maintenance.equipment"].create(vals))
@@ -80,7 +80,7 @@ class F3DTelemetryMixin:
     @classmethod
     def _setup_telemetry_fixtures(cls):
         """Колектори, джерела й сигнали (потребує моделей W1). Поля — за SPEC §2."""
-        Col, Src, Sig = cls.env["f3d.collector"], cls.env["f3d.source"], cls.env["f3d.signal"]
+        Col, Src, Sig = cls.env["td.collector"], cls.env["td.source"], cls.env["td.signal"]
         cls.col = Col.create({"code": "COL-T", "name": "Тестовий колектор"})
         cls.col2 = Col.create({"code": "COL-T2", "name": "Тестовий колектор 2"})
         cls.token = cls._gen_token(cls.col)
@@ -264,7 +264,7 @@ class F3DTelemetryMixin:
 
     # --- помічники ---
     def push(self, readings, collector=None, src="collector"):
-        return self.env["f3d.signal"].sudo()._f3d_ingest(readings, src=src, collector=collector or self.col)
+        return self.env["td.signal"].sudo()._f3d_ingest(readings, src=src, collector=collector or self.col)
 
     def rd(self, sig, value=None, text=None, at=0, q="good"):
         res = {"code": sig.code, "ts": self.T0 + timedelta(seconds=at), "value": value, "text": text, "q": q}
@@ -284,7 +284,7 @@ class F3DTelemetryMixin:
 
     @contextmanager
     def with_catalog_rows(self, rows):
-        with mock.patch("odoo.addons.factory3d_telemetry.hooks._catalog_rows", return_value=rows):
+        with mock.patch("odoo.addons.td_telemetry.hooks._catalog_rows", return_value=rows):
             yield
 
     # --- рівень 0 (Додаток D) ---
@@ -406,7 +406,7 @@ class F3DTelemetryMixin:
 
     def _level0_xmlid(self, name, record):
         self.env["ir.model.data"].create(
-            {"module": "factory3d_iot_sim", "name": name, "model": record._name, "res_id": record.id, "noupdate": True}
+            {"module": "td_iot_sim", "name": name, "model": record._name, "res_id": record.id, "noupdate": True}
         )
         return record
 
@@ -439,9 +439,9 @@ class F3DTelemetryMixin:
             )
 
     def _level0_service(self):
-        """Крон «IoT tick», меню й 7 представлень `factory3d_iot_sim.*` (створює, якщо iot_sim не встановлено)."""
+        """Крон «IoT tick», меню й 7 представлень `td_iot_sim.*` (створює, якщо iot_sim не встановлено)."""
         env = self.env
-        ref = lambda name: env.ref("factory3d_iot_sim." + name, raise_if_not_found=False)  # noqa: E731
+        ref = lambda name: env.ref("td_iot_sim." + name, raise_if_not_found=False)  # noqa: E731
         cron = ref("cron_iot_sim")
         if not cron:
             cron = self._level0_xmlid(
@@ -498,11 +498,11 @@ class F3DTelemetryMixin:
                     vals["inherit_id"] = env.ref(inherit).id
                 view = self._level0_xmlid(name, env["ir.ui.view"].create(vals))
             view.write({"active": True})
-        env["ir.config_parameter"].sudo().set_param("factory3d.iot_sim.level0_enabled", "True")
+        env["ir.config_parameter"].sudo().set_param("td.iot_sim.level0_enabled", "True")
 
     def make_level0(self, signals=None, readings=None):
         """SPEC §13.0.1: рівень 0 — моделі `x_f3d_*`, 7 сигналів (AC-53), 30 показань + 1 з `x_time=NULL`,
-        заявки A (`eq_rv`) і B (`eq_other`), крон/меню/представлення `factory3d_iot_sim.*`, параметр iot_sim."""
+        заявки A (`eq_rv`) і B (`eq_other`), крон/меню/представлення `td_iot_sim.*`, параметр iot_sim."""
         env = self.env
         self._level0_models()
         Sig, Read = env["x_f3d_signal"], env["x_f3d_reading"]

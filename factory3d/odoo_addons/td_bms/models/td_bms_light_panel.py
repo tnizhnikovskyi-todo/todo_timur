@@ -9,7 +9,7 @@ CODE_RE = re.compile(r"^LP-\d{1,3}$")
 
 
 class F3dBmsLightPanel(models.Model):
-    _name = "f3d.bms.light.panel"
+    _name = "td.bms.light.panel"
     _description = "Будівля: щит освітлення"
     _order = "code"
     _rec_name = "name"
@@ -19,18 +19,18 @@ class F3dBmsLightPanel(models.Model):
     name = fields.Char(string="Назва", size=128, required=True)
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
     source_id = fields.Many2one(
-        "f3d.source", string="Джерело HelvarNet", domain="[('type','=','helvarnet')]", ondelete="set null"
+        "td.source", string="Джерело HelvarNet", domain="[('type','=','helvarnet')]", ondelete="set null"
     )
     cluster = fields.Integer(string="Кластер", required=True, default=1)
     router = fields.Integer(string="Роутер", required=True)
     x = fields.Float(string="X, м", digits=(8, 2))
     y = fields.Float(string="Y, м", digits=(8, 2))
-    zone_id = fields.Many2one("f3d.zone", string="Зона розміщення", ondelete="set null")
-    group_ids = fields.One2many("f3d.bms.light.group", "panel_id", string="Групи")
+    zone_id = fields.Many2one("td.zone", string="Зона розміщення", ondelete="set null")
+    group_ids = fields.One2many("td.bms.light.group", "panel_id", string="Групи")
     group_count = fields.Integer(compute="_compute_totals", store=True)
     n_fixtures = fields.Integer(string="Світильників", compute="_compute_totals", store=True)
     p_inst_kw = fields.Float(string="Встановлена потужність, кВт", compute="_compute_totals", store=True, digits=(8, 1))
-    state_signal_id = fields.Many2one("f3d.signal", string="Сигнал: стан щита", ondelete="set null")
+    state_signal_id = fields.Many2one("td.signal", string="Сигнал: стан щита", ondelete="set null")
     meter_code = fields.Char(compute="_compute_meter_code")
     p_now_kw = fields.Float(string="Потужність зараз, кВт", digits=(8, 1), compute="_compute_live")
     p_source = fields.Selection(
@@ -77,7 +77,7 @@ class F3dBmsLightPanel(models.Model):
             rec.meter_code = "energy/consumers/%s/p_now" % rec.code if rec.code else False
 
     def _compute_is_f3d_manager(self):
-        manager = self.env.user.has_group("factory3d_base.group_f3d_manager")
+        manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
             rec.is_f3d_manager = manager
 
@@ -91,7 +91,7 @@ class F3dBmsLightPanel(models.Model):
         "state_signal_id.last_value",
     )
     def _compute_live(self):
-        Signal = self.env["f3d.signal"].sudo()
+        Signal = self.env["td.signal"].sudo()
         for rec in self:
             groups = rec.group_ids
             vals = [g._f3d_live_values() for g in groups]
@@ -127,7 +127,7 @@ class F3dBmsLightPanel(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Групи освітлення",
-            "res_model": "f3d.bms.light.group",
+            "res_model": "td.bms.light.group",
             "view_mode": "list,form",
             "domain": [("panel_id", "=", self.id)],
         }

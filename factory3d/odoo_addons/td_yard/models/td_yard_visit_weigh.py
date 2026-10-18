@@ -3,13 +3,13 @@
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from odoo.addons.factory3d_telemetry.tools.ingest import parse_ts
+from odoo.addons.td_telemetry.tools.ingest import parse_ts
 
 
 class F3dYardVisit(models.Model):
-    _inherit = "f3d.yard.visit"
+    _inherit = "td.yard.visit"
 
-    weighing_ids = fields.One2many("f3d.yard.weighing", "visit_id", string="Зважування")
+    weighing_ids = fields.One2many("td.yard.weighing", "visit_id", string="Зважування")
 
     @api.depends("weighing_ids.kind", "weighing_ids.ts", "weighing_ids.weight_kg", "weighing_ids.state")
     def _compute_weights(self):
@@ -18,7 +18,7 @@ class F3dYardVisit(models.Model):
     @api.model
     def _cron_queue(self):
         res = super()._cron_queue()
-        self.env["f3d.yard.scale"].sudo().search([("active", "=", True)])._f3d_yard_refresh_offline()  # R-16 п. 6
+        self.env["td.yard.scale"].sudo().search([("active", "=", True)])._f3d_yard_refresh_offline()  # R-16 п. 6
         return res
 
     def _f3d_yard_write_pickings(self, net=None):
@@ -26,14 +26,14 @@ class F3dYardVisit(models.Model):
         self.ensure_one()
         if net is None and self.weight_check == "none":
             for picking in self.batch_id.picking_ids.filtered(lambda p: p.state != "cancel").sudo():
-                picking.write({"f3d_net_weight_kg": 0.0, "f3d_weight_check": "none", "f3d_weight_deviation_pct": 0.0})
+                picking.write({"td_net_weight_kg": 0.0, "td_weight_check": "none", "td_weight_deviation_pct": 0.0})
             return
         return super()._f3d_yard_write_pickings(net=net)
 
     def _f3d_yard_do_weigh(self):
         """«Зважити»: захоплення свіжого показання ваг або форма ручного вводу (FR-28)."""
         self.ensure_one()
-        scale = self.env["f3d.yard.scale"].search([("company_id", "=", self.company_id.id)], limit=1)
+        scale = self.env["td.yard.scale"].search([("company_id", "=", self.company_id.id)], limit=1)
         kind = "out" if self._f3d_yard_has_weighing("in") else "in"
         if scale and scale.capture_state != "offline":
             try:
@@ -43,7 +43,7 @@ class F3dYardVisit(models.Model):
             if weighing:
                 return {
                     "type": "ir.actions.act_window",
-                    "res_model": "f3d.yard.weighing",
+                    "res_model": "td.yard.weighing",
                     "res_id": weighing.id,
                     "view_mode": "form",
                     "target": "current",
@@ -51,7 +51,7 @@ class F3dYardVisit(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Зважування вручну",
-            "res_model": "f3d.yard.weighing",
+            "res_model": "td.yard.weighing",
             "view_mode": "form",
             "target": "new",
             "context": {
@@ -66,15 +66,15 @@ class F3dYardVisit(models.Model):
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
-    f3d_weighing_ids = fields.One2many("f3d.yard.weighing", "picking_id", string="Зважування двору")
+    td_weighing_ids = fields.One2many("td.yard.weighing", "picking_id", string="Зважування двору")
 
 
 class F3dYardGate(models.Model):
-    _inherit = "f3d.yard.gate"
+    _inherit = "td.yard.gate"
 
     ROLES = ("state", "loop", "photocell", "passes", "cmd_open", "cmd_close", "cmd_hold")
 
-    scale_id = fields.Many2one("f3d.yard.scale", string="Автоваги", ondelete="set null")
+    scale_id = fields.Many2one("td.yard.scale", string="Автоваги", ondelete="set null")
 
     @api.model
     def _f3d_yard_dispatch(self, readings):

@@ -15,10 +15,10 @@ MECH = "Служба головного механіка"
 @pytest.fixture(autouse=True, scope="module")
 def fast_cooldown(odoo):
     """Закриття заявок «для гігієни» ставить request_closed_at; cooldown повторної заявки (R-05) на стенді — 1 с, не 3600 с."""
-    prev = odoo.param("factory3d.telemetry.realarm_cooldown_s")
-    odoo.param("factory3d.telemetry.realarm_cooldown_s", 1)
+    prev = odoo.param("td.telemetry.realarm_cooldown_s")
+    odoo.param("td.telemetry.realarm_cooldown_s", 1)
     yield
-    odoo.param("factory3d.telemetry.realarm_cooldown_s", prev or 3600)
+    odoo.param("td.telemetry.realarm_cooldown_s", prev or 3600)
 
 
 def _new(odoo, code, base):
@@ -49,7 +49,7 @@ def test_tk04_mqtt_battery(fresh_sim, odoo):
     new = wait(lambda: _new(odoo, code, base), 30, 1)
     assert new, "заявку «Зарядити АКБ» не створено"
     assert re.fullmatch(r"Зарядити АКБ: заряд 1[34],\d % при нормі від 15", new[0]["name"]), new[0]["name"]
-    assert new[0]["f3d_value"] < 15
+    assert new[0]["td_value"] < 15
     st = odoo.signal("equipment/FL-C1/state")
     assert st["last_text"] in ("busy", "charging", "idle"), st
     # емулятор: після заряду > 25 % сигнал повертається в ok (PUT пришвидшує сценарій заряду)
@@ -90,7 +90,7 @@ def test_tk05_ac85_filter_clogged(fresh_sim, odoo):
     odoo.close_request(new[0]["id"])
     assert wait(lambda: _status(odoo, code) == "ok", 90, 2), odoo.signal(code)
     sid = odoo.signal_id(code)
-    assert any("закрито" in m for m in odoo.chatter("f3d.signal", sid)), "у чаттері немає «Заявку … закрито»"
+    assert any("закрито" in m for m in odoo.chatter("td.signal", sid)), "у чаттері немає «Заявку … закрито»"
 
 
 @pytest.mark.timeout(1200)
@@ -98,13 +98,13 @@ def test_tk06_rv05_bacnet_cov_cooldown(fresh_sim, odoo, request):
     """ТК-06 (варіант B, адреса вручну): джерело BAC-105-RV-05 → значення ≤ 30 с; тривога без заявки під cooldown;
     нова заявка після cooldown; повернення в ok."""
     sim = fresh_sim
-    col = odoo.search_read("f3d.collector", [("code", "=", "COL-MAIN")], ["id"])[0]["id"]
-    src = odoo.search_read("f3d.source", [("code", "=", "BAC-105-RV-05")], ["id"])
+    col = odoo.search_read("td.collector", [("code", "=", "COL-MAIN")], ["id"])[0]["id"]
+    src = odoo.search_read("td.source", [("code", "=", "BAC-105-RV-05")], ["id"])
     src_id = (
         src[0]["id"]
         if src
         else odoo.call(
-            "f3d.source",
+            "td.source",
             "create",
             {
                 "code": "BAC-105-RV-05",
@@ -116,8 +116,8 @@ def test_tk06_rv05_bacnet_cov_cooldown(fresh_sim, odoo, request):
         )
     )
     code = "ventilation/units/RV-05/filter_dp_pa"
-    eq = odoo.search_read("maintenance.equipment", [("f3d_code", "=", "RV-05")], ["id"])[0]["id"]
-    sig = odoo.search_read("f3d.signal", [("code", "=", code)], ["id"])
+    eq = odoo.search_read("maintenance.equipment", [("td_code", "=", "RV-05")], ["id"])[0]["id"]
+    sig = odoo.search_read("td.signal", [("code", "=", code)], ["id"])
     vals = {
         "code": code,
         "name": "RV-05: перепад на фільтрі",
@@ -136,18 +136,18 @@ def test_tk06_rv05_bacnet_cov_cooldown(fresh_sim, odoo, request):
         "alarm_title": "Заміна фільтрів: перепад тиску {value} Па при нормі до {threshold}",
     }
     if sig:
-        odoo.write("f3d.signal", sig[0]["id"], vals)
+        odoo.write("td.signal", sig[0]["id"], vals)
     else:
-        odoo.call("f3d.signal", "create", vals)
+        odoo.call("td.signal", "create", vals)
 
     def cleanup():  # повернути базу до 7 джерел / 56 сигналів стенда (ТК-01, ТК-02 рахують їх)
-        sid = odoo.search_read("f3d.signal", [("code", "=", code)], ["id"])
+        sid = odoo.search_read("td.signal", [("code", "=", code)], ["id"])
         if sid:
-            odoo.call("f3d.signal", "unlink", [sid[0]["id"]])
-        odoo.call("f3d.source", "unlink", [src_id])
+            odoo.call("td.signal", "unlink", [sid[0]["id"]])
+        odoo.call("td.source", "unlink", [src_id])
 
     request.addfinalizer(cleanup)
-    odoo.param("factory3d.telemetry.realarm_cooldown_s", 60)
+    odoo.param("td.telemetry.realarm_cooldown_s", 60)
     _close_open(odoo, code)
     assert wait(lambda: odoo.signal(code)["last_ts"], 60, 2), "RV-05 не отримав значення"
     base = {r["id"] for r in odoo.requests(code)}
@@ -158,7 +158,7 @@ def test_tk06_rv05_bacnet_cov_cooldown(fresh_sim, odoo, request):
     odoo.close_request(first[0]["id"])
     time.sleep(10)
     assert _status(odoo, code) == "alarm", "після закриття заявки тривога має тривати"
-    assert any("Тривога триває" in m for m in odoo.chatter("f3d.signal", odoo.signal_id(code)))
+    assert any("Тривога триває" in m for m in odoo.chatter("td.signal", odoo.signal_id(code)))
     # реальний інтервал: COV-сигнал у спокої дає показання лише контрольним читанням раз на max(10·period_s, 300) с (R-07),
     # тож нова заявка — до 60 с cooldown + 300 с контрольного читання (SPEC ТК-06 очікує ≤ 2 хв — див. TEST_REPORT)
     again = wait(lambda: [r for r in _new(odoo, code, base) if r["id"] != first[0]["id"]], 420, 5)
@@ -168,7 +168,7 @@ def test_tk06_rv05_bacnet_cov_cooldown(fresh_sim, odoo, request):
     assert wait(lambda: _status(odoo, code) == "ok", 120, 3), odoo.signal(code)
     for r in _new(odoo, code, base):
         odoo.close_request(r["id"])
-    odoo.param("factory3d.telemetry.realarm_cooldown_s", 1)
+    odoo.param("td.telemetry.realarm_cooldown_s", 1)
 
 
 @pytest.mark.timeout(1800)
@@ -226,41 +226,41 @@ def test_tk07_compressor_pressure_and_overtemp(fresh_sim, odoo):
 def test_tk08_ac86_device_unreachable(fresh_sim, odoo):
     """ТК-08 / AC-86: fault comm COMPRESSOR → джерело error ≤ 2 хв, 5 сигналів stale, заявок 0; clear → online ≤ 60 с."""
     sim = fresh_sim
-    src = odoo.search_read("f3d.source", [("code", "=", "MB-U70-COMPRESSOR")], ["id"])[0]["id"]
-    sig_ids = [s["id"] for s in odoo.search_read("f3d.signal", [("source_id", "=", src)], ["id"])]
+    src = odoo.search_read("td.source", [("code", "=", "MB-U70-COMPRESSOR")], ["id"])[0]["id"]
+    sig_ids = [s["id"] for s in odoo.search_read("td.signal", [("source_id", "=", src)], ["id"])]
     assert len(sig_ids) == 5
-    n_req = odoo.count("maintenance.request", [("f3d_signal_id", "in", sig_ids)])
+    n_req = odoo.count("maintenance.request", [("td_signal_id", "in", sig_ids)])
     st, _ = sim.post("/device/COMPRESSOR/fault", {"reason": "comm"})
     assert st in (200, 201)
     # iot_sim 0.1.0 не знеструмлює Modbus unit 70 при fault comm (реагують лише MQTT/OPC UA — див. TEST_REPORT), тож
     # недоступність пристрою відтворюється вказівкою неіснуючого unit (емулятор відповідає 0x0B, як шлюз без пристрою)
-    params = odoo.search_read("f3d.source", [("id", "=", src)], ["params"])[0]["params"]
-    odoo.write("f3d.source", src, {"params": {**params, "unit": 71}})
+    params = odoo.search_read("td.source", [("id", "=", src)], ["params"])[0]["params"]
+    odoo.write("td.source", src, {"params": {**params, "unit": 71}})
     got = wait(
-        lambda: odoo.search_read("f3d.source", [("id", "=", src)], ["state", "last_error"])[0]["state"] == "error",
+        lambda: odoo.search_read("td.source", [("id", "=", src)], ["state", "last_error"])[0]["state"] == "error",
         130,
         3,
     )
     assert got, "джерело не перейшло в error ≤ 2 хв"
-    src_rec = odoo.search_read("f3d.source", [("id", "=", src)], ["last_error"])[0]
+    src_rec = odoo.search_read("td.source", [("id", "=", src)], ["last_error"])[0]
     assert src_rec["last_error"] and "token" not in src_rec["last_error"].lower()
     stale = wait(
         lambda: all(
-            s["status"] == "stale" for s in odoo.search_read("f3d.signal", [("id", "in", sig_ids)], ["status"])
+            s["status"] == "stale" for s in odoo.search_read("td.signal", [("id", "in", sig_ids)], ["status"])
         ),
         150,
         5,
     )
     assert stale, "5 сигналів компресора мають бути stale"
     time.sleep(20)
-    assert odoo.count("maintenance.request", [("f3d_signal_id", "in", sig_ids)]) == n_req, "з'явилась заявка"
+    assert odoo.count("maintenance.request", [("td_signal_id", "in", sig_ids)]) == n_req, "з'явилась заявка"
     assert sim.post("/device/COMPRESSOR/clear")[0] in (200, 201)
-    odoo.write("f3d.source", src, {"params": params})
-    assert wait(lambda: odoo.search_read("f3d.source", [("id", "=", src)], ["state"])[0]["state"] == "online", 90, 3)
+    odoo.write("td.source", src, {"params": params})
+    assert wait(lambda: odoo.search_read("td.source", [("id", "=", src)], ["state"])[0]["state"] == "online", 90, 3)
     ok = wait(
         lambda: all(
             s["status"] in ("ok", "warn", "alarm")
-            for s in odoo.search_read("f3d.signal", [("id", "in", sig_ids)], ["status"])
+            for s in odoo.search_read("td.signal", [("id", "in", sig_ids)], ["status"])
         ),
         90,
         3,

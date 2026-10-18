@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="factory3d_bms.Overview">
+    <t t-name="td_bms.Overview">
         <div class="o_f3d_bms_overview o_action overflow-auto p-3">
             <t t-if="state.data">
                 <t t-set="d" t-value="state.data"/>

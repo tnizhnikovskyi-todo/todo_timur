@@ -1,19 +1,19 @@
-# factory3d_bms — специфікація
+# td_bms — специфікація
 
-Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · технічне рішення: `docs/modules/factory3d_bms/ARCHITECTURE.md` (далі ARCH: FR-01…FR-26,
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · технічне рішення: `docs/modules/td_bms/ARCHITECTURE.md` (далі ARCH: FR-01…FR-26,
 CH-01…CH-06, A-01…A-21, Q-01…Q-14). Спирається на: каркас §5 (імена, стоп-крани, права), §6.4, §6.5 (рішення менеджера
-14.10: `bacnet_ip` — telemetry, `helvarnet` — bms), §6.6 P-08, §6.7, §6.8, D-08; `factory3d_base` CB-01, CB-03, CB-04,
-CB-07…CB-10, CB-12, Додаток C (зони); `factory3d_telemetry` M-02 `f3d.source`, M-03 `f3d.signal`, M-05
-`f3d.reading.hour`, M-06 `f3d.command`, M-08 `maintenance.request`, CT-02 (інтерфейс плагіна, §8.3), CT-03 і Додаток
+14.10: `bacnet_ip` — telemetry, `helvarnet` — bms), §6.6 P-08, §6.7, §6.8, D-08; `td_factory3d` CB-01, CB-03, CB-04,
+CB-07…CB-10, CB-12, Додаток C (зони); `td_telemetry` M-02 `td.source`, M-03 `td.signal`, M-05
+`td.reading.hour`, M-06 `td.command`, M-08 `maintenance.request`, CT-02 (інтерфейс плагіна, §8.3), CT-03 і Додаток
 A (схеми `bacnet_ip`, `helvarnet`), CT-05 (R-04…R-06), CT-07, CT-09, CT-10 (`_f3d_ingest`), CT-12/R-26 (локальні
-джерела), R-12, R-18, R-23, Додаток C.1 (`collector_main`, `BAC-140-BOILER`); `factory3d_viewer` M-01, M-03, R-01,
-R-14, Додаток A.13; `factory3d_energy` CE-02, CE-03, CE-06, A-19; `factory3d_fire_safety` A-20, CF-06, сигнал
-`fire/totals/system_state`; `factory3d_iot_sim` §8.10 (P-08), §9.1 R-22…R-24, §9.3 S-04, S-13, S-15, §7.2 API-12…API-16,
+джерела), R-12, R-18, R-23, Додаток C.1 (`collector_main`, `BAC-140-BOILER`); `td_viewer3d` M-01, M-03, R-01,
+R-14, Додаток A.13; `td_energy` CE-02, CE-03, CE-06, A-19; `td_fire_safety` A-20, CF-06, сигнал
+`fire/totals/system_state`; `td_iot_sim` §8.10 (P-08), §9.1 R-22…R-24, §9.3 S-04, S-13, S-15, §7.2 API-12…API-16,
 Додаток A.
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-16 (M-13 без `selection_add` поля `origin` — значення `module` у базовому
-selection telemetry M-03), X-19 (група `group_f3d_bms_operator` — у власному привілеї `privilege_f3d_bms` категорії
+selection telemetry M-03), X-19 (група `group_td_bms_operator` — у власному привілеї `privilege_td_bms` категорії
 factory3d, §4.2, AC-62), X-58 (ТК-02 — параметр сценарію лише `value`), X-71 (§8.9: запис MSV:1 за зворотним `map`),
-X-06 (§11 п. 4: COV допустимий, у v1 лишається опитування A-02), X-32 (§3: `menu_f3d_bms_config` під `menu_f3d_config`
+X-06 (§11 п. 4: COV допустимий, у v1 лишається опитування A-02), X-32 (§3: `menu_td_bms_config` під `menu_td_config`
 з sequence резерву 80); закрито Q-09 (X-34, X-40, X-58) і Q-10 (X-06).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-07, Q-08, Q-11, Q-12, Q-13, Q-14.
 
@@ -24,40 +24,40 @@ X-06 (§11 п. 4: COV допустимий, у v1 лишається опиту�
 
 ## 0. Дерево файлів модуля
 
-### 0.1 Odoo-модуль `odoo_addons/factory3d_bms`
+### 0.1 Odoo-модуль `odoo_addons/td_bms`
 
 ```
-odoo_addons/factory3d_bms/
+odoo_addons/td_bms/
 ├── __init__.py                      from . import models, wizard, tools; from .hooks import post_init_hook, uninstall_hook
 ├── __manifest__.py                  §1
 ├── hooks.py                         post_init_hook(env), uninstall_hook(env), run_install(env) — §5.3–§5.5 (R-29)
 ├── README.md                        установка, параметри, інструкції ARCH §4
 ├── CHANGELOG.md                     19.0.1.0.0 — перший випуск
 ├── models/
-│   ├── __init__.py                  порядок: f3d_source, f3d_signal, f3d_bms_light_norm, f3d_bms_light_panel,
-│   │                                f3d_bms_light_group, f3d_bms_light_scene, f3d_bms_hvac_unit, f3d_bms_heat_balance,
-│   │                                f3d_bms_deviation, f3d_bms_check, f3d_bms_overview, viewer_provider,
-│   │                                maintenance_request, maintenance_equipment, f3d_zone, res_config_settings
-│   ├── f3d_source.py                M-12 (тип f3d_bms, _f3d_local_types)
-│   ├── f3d_signal.py                M-13 (constraint запису, _f3d_ingest R-20)
-│   ├── f3d_bms_light_norm.py        M-01
-│   ├── f3d_bms_light_panel.py       M-02
-│   ├── f3d_bms_light_group.py       M-03 (R-01…R-06, CH-03)
-│   ├── f3d_bms_light_scene.py       M-04
-│   ├── f3d_bms_hvac_unit.py         M-05 (R-10…R-13, CH-03)
-│   ├── f3d_bms_heat_balance.py      M-06, M-07 (R-14…R-17)
-│   ├── f3d_bms_deviation.py         M-08
-│   ├── f3d_bms_check.py             AbstractModel f3d.bms.check: крон R-18…R-24, R-30
-│   ├── f3d_bms_overview.py          M-10 (R-28)
+│   ├── __init__.py                  порядок: td_source, td_signal, td_bms_light_norm, td_bms_light_panel,
+│   │                                td_bms_light_group, td_bms_light_scene, td_bms_hvac_unit, td_bms_heat_balance,
+│   │                                td_bms_deviation, td_bms_check, td_bms_overview, viewer_provider,
+│   │                                maintenance_request, maintenance_equipment, td_zone, res_config_settings
+│   ├── td_source.py                M-12 (тип f3d_bms, _f3d_local_types)
+│   ├── td_signal.py                M-13 (constraint запису, _f3d_ingest R-20)
+│   ├── td_bms_light_norm.py        M-01
+│   ├── td_bms_light_panel.py       M-02
+│   ├── td_bms_light_group.py       M-03 (R-01…R-06, CH-03)
+│   ├── td_bms_light_scene.py       M-04
+│   ├── td_bms_hvac_unit.py         M-05 (R-10…R-13, CH-03)
+│   ├── td_bms_heat_balance.py      M-06, M-07 (R-14…R-17)
+│   ├── td_bms_deviation.py         M-08
+│   ├── td_bms_check.py             AbstractModel td.bms.check: крон R-18…R-24, R-30
+│   ├── td_bms_overview.py          M-10 (R-28)
 │   ├── viewer_provider.py           M-11 (AbstractModel без _inherit, R-26, R-27)
 │   ├── maintenance_request.py       M-14
 │   ├── maintenance_equipment.py     M-16
-│   ├── f3d_zone.py                  M-15
+│   ├── td_zone.py                  M-15
 │   └── res_config_settings.py       M-17
 ├── wizard/
 │   ├── __init__.py
-│   ├── light_command_wizard.py      M-09a f3d.bms.light.command.wizard (R-25)
-│   ├── hvac_command_wizard.py       M-09b f3d.bms.hvac.command.wizard (R-25)
+│   ├── light_command_wizard.py      M-09a td.bms.light.command.wizard (R-25)
+│   ├── hvac_command_wizard.py       M-09b td.bms.hvac.command.wizard (R-25)
 │   └── command_wizard_views.xml     V-19, V-20
 ├── tools/
 │   ├── __init__.py
@@ -76,27 +76,27 @@ odoo_addons/factory3d_bms/
 ├── data/
 │   ├── ir_config_parameter.xml      §5.1 (noupdate="1")
 │   ├── ir_cron.xml                  §6
-│   ├── f3d_bms_light_norm_data.xml  13 норм (noupdate="1")
-│   ├── f3d_bms_light_scene_data.xml 6 сцен (noupdate="1")
-│   ├── f3d_bms_source_data.xml      32 джерела HelvarNet/BACnet (noupdate="1"), Додаток C
-│   ├── f3d_bms_light_data.xml       3 щити, 32 групи (noupdate="1"), Додаток A.1/A.2
-│   ├── f3d_bms_hvac_data.xml        29 установок, 1 тепловий баланс (noupdate="1"), Додаток A.3/A.4
+│   ├── td_bms_light_norm_data.xml  13 норм (noupdate="1")
+│   ├── td_bms_light_scene_data.xml 6 сцен (noupdate="1")
+│   ├── td_bms_source_data.xml      32 джерела HelvarNet/BACnet (noupdate="1"), Додаток C
+│   ├── td_bms_light_data.xml       3 щити, 32 групи (noupdate="1"), Додаток A.1/A.2
+│   ├── td_bms_hvac_data.xml        29 установок, 1 тепловий баланс (noupdate="1"), Додаток A.3/A.4
 │   ├── bms_signals.csv              549 сигналів (читає хук, не в `data` маніфесту), Додаток B
-│   ├── f3d_bms_actions.xml          ir.actions.server «Повторити установку даних будівлі», клієнтська дія огляду
+│   ├── td_bms_actions.xml          ir.actions.server «Повторити установку даних будівлі», клієнтська дія огляду
 │   └── neutralize.sql               §5.6
 ├── views/
 │   ├── menus.xml                    V-21
-│   ├── f3d_bms_light_norm_views.xml V-01
-│   ├── f3d_bms_light_panel_views.xml V-02, V-03
-│   ├── f3d_bms_light_group_views.xml V-04…V-07
-│   ├── f3d_bms_light_scene_views.xml V-08
-│   ├── f3d_bms_hvac_unit_views.xml  V-09…V-12
-│   ├── f3d_bms_heat_balance_views.xml V-13
-│   ├── f3d_bms_deviation_views.xml  V-14…V-16
-│   ├── f3d_zone_views.xml           V-17 (вкладка «Будівля» на зоні)
+│   ├── td_bms_light_norm_views.xml V-01
+│   ├── td_bms_light_panel_views.xml V-02, V-03
+│   ├── td_bms_light_group_views.xml V-04…V-07
+│   ├── td_bms_light_scene_views.xml V-08
+│   ├── td_bms_hvac_unit_views.xml  V-09…V-12
+│   ├── td_bms_heat_balance_views.xml V-13
+│   ├── td_bms_deviation_views.xml  V-14…V-16
+│   ├── td_zone_views.xml           V-17 (вкладка «Будівля» на зоні)
 │   ├── maintenance_views.xml        V-18 (обладнання, заявка)
 │   ├── res_config_settings_views.xml V-22
-│   └── f3d_bms_overview_views.xml   V-23 (ir.actions.client)
+│   └── td_bms_overview_views.xml   V-23 (ir.actions.client)
 ├── static/
 │   ├── description/icon.png         140×140
 │   ├── src/overview/overview.js     OWL F3dBmsOverview (R-28)
@@ -154,7 +154,7 @@ services/collector_plugins/f3d_collector_bms/
 {
     "name": "Завод 3D: будівля (освітлення, вентиляція, опалення)",
     "summary": "Групи освітлення за нормами, DALI/HelvarNet, дахові установки й котельня (BACnet), тепловий баланс, відхилення → заявки ТО",
-    "description": "factory3d_bms: норми освітленості, щити й групи освітлення LT-* (Helvar Imagine 950), установки "
+    "description": "td_bms: норми освітленості, щити й групи освітлення LT-* (Helvar Imagine 950), установки "
                    "RV-01…25, AHU-1, EF-*, котельня, тепловий баланс цеху, журнал відхилень, огляд будівлі, провайдери "
                    "3D-переглядача lighting/ventilation; плагін колектора helvarnet (services/collector_plugins/f3d_collector_bms).",
     "version": "19.0.1.0.0",
@@ -162,39 +162,39 @@ services/collector_plugins/f3d_collector_bms/
     "author": "ToDo",
     "website": "https://todo.ltd",
     "license": "LGPL-3",
-    "depends": ["factory3d_telemetry", "web"],
+    "depends": ["td_telemetry", "web"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
-        "data/f3d_bms_light_norm_data.xml",
-        "data/f3d_bms_light_scene_data.xml",
-        "data/f3d_bms_source_data.xml",
-        "data/f3d_bms_light_data.xml",
-        "data/f3d_bms_hvac_data.xml",
+        "data/td_bms_light_norm_data.xml",
+        "data/td_bms_light_scene_data.xml",
+        "data/td_bms_source_data.xml",
+        "data/td_bms_light_data.xml",
+        "data/td_bms_hvac_data.xml",
         "data/ir_cron.xml",
-        "data/f3d_bms_actions.xml",
+        "data/td_bms_actions.xml",
         "wizard/command_wizard_views.xml",
-        "views/f3d_bms_light_norm_views.xml",
-        "views/f3d_bms_light_panel_views.xml",
-        "views/f3d_bms_light_group_views.xml",
-        "views/f3d_bms_light_scene_views.xml",
-        "views/f3d_bms_hvac_unit_views.xml",
-        "views/f3d_bms_heat_balance_views.xml",
-        "views/f3d_bms_deviation_views.xml",
-        "views/f3d_zone_views.xml",
+        "views/td_bms_light_norm_views.xml",
+        "views/td_bms_light_panel_views.xml",
+        "views/td_bms_light_group_views.xml",
+        "views/td_bms_light_scene_views.xml",
+        "views/td_bms_hvac_unit_views.xml",
+        "views/td_bms_heat_balance_views.xml",
+        "views/td_bms_deviation_views.xml",
+        "views/td_zone_views.xml",
         "views/maintenance_views.xml",
         "views/res_config_settings_views.xml",
-        "views/f3d_bms_overview_views.xml",
+        "views/td_bms_overview_views.xml",
         "views/menus.xml",
     ],
     "assets": {
         "web.assets_backend": [
-            "factory3d_bms/static/src/overview/overview.js",
-            "factory3d_bms/static/src/overview/overview.xml",
-            "factory3d_bms/static/src/overview/overview.scss",
+            "td_bms/static/src/overview/overview.js",
+            "td_bms/static/src/overview/overview.xml",
+            "td_bms/static/src/overview/overview.scss",
         ],
-        "web.assets_unit_tests": ["factory3d_bms/static/tests/overview.test.js"],
+        "web.assets_unit_tests": ["td_bms/static/tests/overview.test.js"],
     },
     "demo": [],
     "post_init_hook": "post_init_hook",
@@ -207,8 +207,8 @@ services/collector_plugins/f3d_collector_bms/
 ```
 
 Порядок `data`: групи/правила → доступи → параметри → норми → сцени → джерела (посилаються на
-`factory3d_telemetry.collector_main`) → щити й групи (посилаються на норми, джерела, зони base
-`factory3d_base.zone_<slug>` і паспорти `factory3d_base.passport_<role>`) → установки й баланс → крон (після даних, щоб
+`td_telemetry.collector_main`) → щити й групи (посилаються на норми, джерела, зони base
+`td_factory3d.zone_<slug>` і паспорти `td_factory3d.passport_<role>`) → установки й баланс → крон (після даних, щоб
 перший прогін мав об'єкти) → дії → майстри → представлення → меню. `bms_signals.csv` у `data` не перелічений — його
 читає хук через `odoo.tools.file_open` (Json-колонки розбираються `json.loads`; CSV-імпорт Odoo писав би Json рядком).
 Python-залежностей в Odoo-модулі немає; `bacpypes3` — у колекторі telemetry; плагін `helvarnet` — лише stdlib
@@ -222,11 +222,11 @@ Python-залежностей в Odoo-модулі немає; `bacpypes3` — �
 `status`, `last_quality`, `maintenance_request_id`). Сигнал «живий», якщо `status ∈ {ok, warn, alarm}`; `stale`/`unknown`
 або відсутній — значення беруться з фолбеку (R-05, R-12, A-18), а `stale=True`.
 
-### M-01 `f3d.bms.light.norm` — норма освітленості (FR-01)
+### M-01 `td.bms.light.norm` — норма освітленості (FR-01)
 
 ```python
 class F3dBmsLightNorm(models.Model):
-    _name = "f3d.bms.light.norm"
+    _name = "td.bms.light.norm"
     _description = "Будівля: норма освітленості"
     _order = "sequence, key"
     _rec_name = "name"
@@ -245,7 +245,7 @@ class F3dBmsLightNorm(models.Model):
 | `ref_dbn` | Char(256) | `string="ДБН В.2.5-28"`, `default="ДБН В.2.5-28:2018 (зі Зміною № 1) — звірити розряд зорових робіт (Q-03)"` |
 | `note` | Text | `string="Примітка"` |
 | `sources` | Text | `string="Джерела"`, URL по рядку |
-| `group_ids` | One2many `f3d.bms.light.group` `norm_id` | `string="Групи"` |
+| `group_ids` | One2many `td.bms.light.group` `norm_id` | `string="Групи"` |
 | `group_count` | Integer | `compute="_compute_group_count"` |
 | `active` | Boolean | `default=True` |
 
@@ -258,11 +258,11 @@ class F3dBmsLightNorm(models.Model):
 `write`: зміна `lux` → чаттер не потрібен (модель без `mail.thread`); залежні `e_norm`/`design_ok` груп
 перераховуються через `depends` (M-03).
 
-### M-02 `f3d.bms.light.panel` — щит освітлення (FR-02)
+### M-02 `td.bms.light.panel` — щит освітлення (FR-02)
 
 ```python
 class F3dBmsLightPanel(models.Model):
-    _name = "f3d.bms.light.panel"
+    _name = "td.bms.light.panel"
     _description = "Будівля: щит освітлення"
     _order = "code"
     _rec_name = "name"
@@ -274,16 +274,16 @@ class F3dBmsLightPanel(models.Model):
 | `code` | Char(16) | `req`, `idx`, `string="Код"` (`LP-1`) |
 | `name` | Char(128) | `req`, `string="Назва"` («Щит освітлення ЩО-1 · склади сировини, приймання») |
 | `equipment_id` | Many2one `maintenance.equipment` | `string="Обладнання"`, `ondelete="set null"` |
-| `source_id` | Many2one `f3d.source` | `string="Джерело HelvarNet"`, `domain="[('type','=','helvarnet')]"`, `ondelete="set null"` |
+| `source_id` | Many2one `td.source` | `string="Джерело HelvarNet"`, `domain="[('type','=','helvarnet')]"`, `ondelete="set null"` |
 | `cluster` | Integer | `req`, `default=1`, `string="Кластер"` (1…253) |
 | `router` | Integer | `req`, `string="Роутер"` (1…254; `LP-1` → 1) |
 | `x`, `y` | Float | `digits=(8,2)`, `string="X, м"`/`"Y, м"` (північна стіна: y = 71,0) |
-| `zone_id` | Many2one `f3d.zone` | `string="Зона розміщення"`, `ondelete="set null"` |
-| `group_ids` | One2many `f3d.bms.light.group` `panel_id` | `string="Групи"` |
+| `zone_id` | Many2one `td.zone` | `string="Зона розміщення"`, `ondelete="set null"` |
+| `group_ids` | One2many `td.bms.light.group` `panel_id` | `string="Групи"` |
 | `group_count` | Integer | `compute="_compute_totals"`, `store=True` |
 | `n_fixtures` | Integer | `compute="_compute_totals"`, `store=True`, `string="Світильників"` = Σ `group_ids.n_fixtures` |
 | `p_inst_kw` | Float | `compute="_compute_totals"`, `store=True`, `digits=(8,1)`, `string="Встановлена потужність, кВт"` = `round(Σ group.p_inst_kw, 1)` |
-| `state_signal_id` | Many2one `f3d.signal` | `string="Сигнал: стан щита"`, `ondelete="set null"` |
+| `state_signal_id` | Many2one `td.signal` | `string="Сигнал: стан щита"`, `ondelete="set null"` |
 | `meter_code` | Char(64) | `compute`: `"energy/consumers/%s/p_now" % code` (A-16) |
 | `p_now_kw` | Float | живе (R-05 п. 6), `digits=(8,1)`, `string="Потужність зараз, кВт"` |
 | `p_source` | Selection | живе: `[('meter','Лічильник energy'),('dali','Сума груп (DALI)'),('design','Проєктна')]` |
@@ -304,11 +304,11 @@ class F3dBmsLightPanel(models.Model):
 не прив'язаний до обладнання з кодом сцени.")`; `action_view_groups(self)` — `act_window` груп
 (`domain=[('panel_id','=',id)]`).
 
-### M-03 `f3d.bms.light.group` — група освітлення (FR-03…FR-06, CH-03)
+### M-03 `td.bms.light.group` — група освітлення (FR-03…FR-06, CH-03)
 
 ```python
 class F3dBmsLightGroup(models.Model):
-    _name = "f3d.bms.light.group"
+    _name = "td.bms.light.group"
     _description = "Будівля: група освітлення"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -323,21 +323,21 @@ class F3dBmsLightGroup(models.Model):
 | `name` | Char(128) | `req`, `string="Назва"` («Освітлення: Розкрій») |
 | `sequence` | Integer | `default=10` (порядок каталогу: № групи × 10) |
 | `active` | Boolean | `default=True` |
-| `zone_id` | Many2one `f3d.zone` | `req`, `ondelete="restrict"`, `idx`, `string="Зона"` |
-| `zone_code` | Char | `related="zone_id.f3d_code"` |
+| `zone_id` | Many2one `td.zone` | `req`, `ondelete="restrict"`, `idx`, `string="Зона"` |
+| `zone_code` | Char | `related="zone_id.td_code"` |
 | `zone_name` | Char | `related="zone_id.name"` |
 | `area_m2` | Float | `related="zone_id.area_m2"`, `string="Площа, м²"` |
-| `norm_id` | Many2one `f3d.bms.light.norm` | `req`, `ondelete="restrict"`, `string="Вид робіт"`, `tracking=True` |
+| `norm_id` | Many2one `td.bms.light.norm` | `req`, `ondelete="restrict"`, `string="Вид робіт"`, `tracking=True` |
 | `e_norm` | Integer | `related="norm_id.lux"`, `string="Норма, лк"` |
-| `panel_id` | Many2one `f3d.bms.light.panel` | `req`, `ondelete="restrict"`, `idx`, `string="Щит"` |
+| `panel_id` | Many2one `td.bms.light.panel` | `req`, `ondelete="restrict"`, `idx`, `string="Щит"` |
 | `equipment_id` | Many2one `maintenance.equipment` | `string="Обладнання"`, `ondelete="set null"` |
-| `passport_id` | Many2one `f3d.equipment.passport` | `string="Паспорт світильника"`, `ondelete="set null"` |
+| `passport_id` | Many2one `td.equipment.passport` | `string="Паспорт світильника"`, `ondelete="set null"` |
 | `fixture_kind` | Selection | `[('highbay','Широка оптика (WB)'),('highbay_rack','Вузька оптика над проходами (NB)')]`, `req`, `string="Тип світильника"` |
 | `lumen` | Integer | `compute="_compute_fixture"`, `store=True`, `readonly=False`, `string="Світловий потік, лм"`: `passport_id.get_num('lumen')` або умовчання R-02 |
 | `watt` | Integer | `compute="_compute_fixture"`, `store=True`, `readonly=False`, `string="Потужність світильника, Вт"`: `passport_id.get_num('watt')` або умовчання |
 | `n_fixtures` | Integer | `req`, `string="Світильників встановлено"`, `tracking=True` |
-| `uf` | Float | `req`, `digits=(3,2)`, `default=lambda s: float(param('factory3d.bms.light_uf','0.7'))`, `string="Коефіцієнт використання UF"` |
-| `mf` | Float | `req`, `digits=(3,2)`, `default=lambda s: float(param('factory3d.bms.light_mf','0.8'))`, `string="Коефіцієнт експлуатації MF"` |
+| `uf` | Float | `req`, `digits=(3,2)`, `default=lambda s: float(param('td.bms.light_uf','0.7'))`, `string="Коефіцієнт використання UF"` |
+| `mf` | Float | `req`, `digits=(3,2)`, `default=lambda s: float(param('td.bms.light_mf','0.8'))`, `string="Коефіцієнт експлуатації MF"` |
 | `n_required` | Integer | `compute="_compute_design"`, `store=True`, `string="Світильників потрібно"` (R-03) |
 | `e_calc_raw` | Float | `compute="_compute_design"`, `store=True`, `digits=(10,3)` |
 | `e_calc` | Integer | `compute="_compute_design"`, `store=True`, `string="Розрахункова освітленість, лк"` (R-04) |
@@ -347,10 +347,10 @@ class F3dBmsLightGroup(models.Model):
 | `control_mode` | Selection | `[('shift','DALI: зміна, 100 %'),('presence','DALI: присутність і денне світло')]`, `req`, `string="Керування"` |
 | `check_off` | Boolean | `default=True`, `string="Перевіряти «вимкнено в робочий час»"` |
 | `check_norm` | Boolean | `compute="_compute_check_norm"`, `store=True`, `readonly=False`, `string="Перевіряти норму"`: `control_mode == 'shift'` (A-07) |
-| `calendar_id` | Many2one `resource.calendar` | `string="Робочий час"`, `help="Порожньо — параметр factory3d.bms.calendar_id або календар компанії"` |
+| `calendar_id` | Many2one `resource.calendar` | `string="Робочий час"`, `help="Порожньо — параметр td.bms.calendar_id або календар компанії"` |
 | `dali_group` | Integer | `req`, `string="DALI-група (G)"` (1…16383) |
 | `dali_devices` | Char(256) | `string="Пристрої DALI"`, формат `@c.r.s.d1-d2[;@c.r.s.d1-d2…]` (R-06), напр. `@1.2.1.1-27` |
-| `level_signal_id`, `power_signal_id`, `scene_signal_id`, `faults_signal_id`, `faulty_signal_id`, `check_signal_id` | Many2one `f3d.signal` | `ondelete="set null"`, `string="Сигнал: рівень"` / `"…: потужність"` / `"…: сцена"` / `"…: несправних"` / `"…: адреси несправних"` / `"…: перевірка"` |
+| `level_signal_id`, `power_signal_id`, `scene_signal_id`, `faults_signal_id`, `faulty_signal_id`, `check_signal_id` | Many2one `td.signal` | `ondelete="set null"`, `string="Сигнал: рівень"` / `"…: потужність"` / `"…: сцена"` / `"…: несправних"` / `"…: адреси несправних"` / `"…: перевірка"` |
 | `level_pct` | Float | живе, `digits=(5,1)`, `string="Рівень зараз, %"` (R-05) |
 | `level_source` | Selection | живе: `[('live','З DALI'),('design','Проєктний')]` |
 | `e_now` | Integer | живе, `string="Освітленість зараз, лк"` (R-05) |
@@ -365,9 +365,9 @@ class F3dBmsLightGroup(models.Model):
 | `plan_state` | Selection | живе, для огляду: `[('ok','Норма'),('low','Нижче норми'),('off','Вимкнено'),('fault','Є несправні'),('alarm','Відхилення'),('nodata','Немає даних')]` (R-28 п. 3) |
 | `off_since` | Datetime | `readonly=True`, `copy=False` — з якого часу рівень < 1 % (R-20) |
 | `low_since` | Datetime | `readonly=True`, `copy=False` — з якого часу `e_now < e_norm·(1 − tol)` при рівні ≥ 1 % (R-20) |
-| `request_ids` | Many2many `maintenance.request` | `compute="_compute_requests"`: заявки з `f3d_signal_id ∈ {6 сигналів}` і `stage_id.done=False` |
+| `request_ids` | Many2many `maintenance.request` | `compute="_compute_requests"`: заявки з `td_signal_id ∈ {6 сигналів}` і `stage_id.done=False` |
 | `request_count` | Integer | `compute="_compute_requests"` |
-| `deviation_count` | Integer | `compute`: відкриті `f3d.bms.deviation` з `object_code == code` |
+| `deviation_count` | Integer | `compute`: відкриті `td.bms.deviation` з `object_code == code` |
 | `note` | Text | |
 
 ```python
@@ -398,17 +398,17 @@ class F3dBmsLightGroup(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `action_f3d_show(self)` | `ensure_one()`; `equipment_id.action_f3d_show()` якщо `equipment_id.f3d_code`; інакше `zone_id.action_f3d_show()` |
-| `action_open_command(self)` | `act_window` `f3d.bms.light.command.wizard` (`target='new'`, `context={'default_group_ids': ids}`); перед цим `_f3d_bms_check_operator()` (R-25 п. 1) |
-| `action_view_readings(self)` | `act_window` `f3d.reading` (`graph,list`), `domain=[('signal_id','in',[level, power])]`, `context={'search_default_last_48h': 1}` |
-| `action_view_deviations(self)` | `act_window` `f3d.bms.deviation`, `domain=[('object_code','=',code)]` |
+| `action_f3d_show(self)` | `ensure_one()`; `equipment_id.action_f3d_show()` якщо `equipment_id.td_code`; інакше `zone_id.action_f3d_show()` |
+| `action_open_command(self)` | `act_window` `td.bms.light.command.wizard` (`target='new'`, `context={'default_group_ids': ids}`); перед цим `_f3d_bms_check_operator()` (R-25 п. 1) |
+| `action_view_readings(self)` | `act_window` `td.reading` (`graph,list`), `domain=[('signal_id','in',[level, power])]`, `context={'search_default_last_48h': 1}` |
+| `action_view_deviations(self)` | `act_window` `td.bms.deviation`, `domain=[('object_code','=',code)]` |
 | `action_view_requests(self)` | `act_window` `maintenance.request`, `domain=[('id','in',request_ids.ids)]` |
 | `@api.model _f3d_bms_light_power(self)` → dict | CH-03: для всіх активних груп `{code: {"zone": zone_code, "panel": panel_id.code, "p_now_kw": p_now_kw, "p_inst_kw": p_inst_kw, "level_pct": level_pct}}` |
-| `@api.model _f3d_bms_kwh(self, date_from, date_to)` → dict | CH-03: `read_group` `f3d.reading.hour` за `signal_id ∈ power_signal_id`, `hour ∈ [date_from, date_to)`, сума `v_avg` (кВт × 1 год) → `{code: round(kwh, 2)}`; групи без годин — `0.0` |
+| `@api.model _f3d_bms_kwh(self, date_from, date_to)` → dict | CH-03: `read_group` `td.reading.hour` за `signal_id ∈ power_signal_id`, `hour ∈ [date_from, date_to)`, сума `v_avg` (кВт × 1 год) → `{code: round(kwh, 2)}`; групи без годин — `0.0` |
 
-### M-04 `f3d.bms.light.scene` — сцена DALI (FR-18)
+### M-04 `td.bms.light.scene` — сцена DALI (FR-18)
 
-`_name = "f3d.bms.light.scene"`, `_description = "Будівля: сцена освітлення"`, `_order = "number"`.
+`_name = "td.bms.light.scene"`, `_description = "Будівля: сцена освітлення"`, `_order = "number"`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
@@ -423,11 +423,11 @@ class F3dBmsLightGroup(models.Model):
 Дані (iot_sim R-24 / §8.10.4, ПРИПУЩЕННЯ — сцени програмуються в Helvar Designer, Q-05): 1 «Зміна» 100; 2 «Прибирання»
 75; 3 «Половина» 50; 4 «Чергове освітлення» 25; 5 «Ніч» 10; 6 «Вимкнено» 0.
 
-### M-05 `f3d.bms.hvac.unit` — установка вентиляції (FR-07…FR-09, CH-03)
+### M-05 `td.bms.hvac.unit` — установка вентиляції (FR-07…FR-09, CH-03)
 
 ```python
 class F3dBmsHvacUnit(models.Model):
-    _name = "f3d.bms.hvac.unit"
+    _name = "td.bms.hvac.unit"
     _description = "Будівля: установка вентиляції"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -443,12 +443,12 @@ class F3dBmsHvacUnit(models.Model):
 | `sequence` | Integer | `default=10` |
 | `active` | Boolean | `default=True` |
 | `kind` | Selection | `[('roofvent','Дахова установка'),('ahu','Припливна установка'),('fan','Витяжний вентилятор'),('exfan','Витяжний вентилятор (Ex)')]`, `req`, `string="Вид"` |
-| `zone_id` | Many2one `f3d.zone` | `req`, `ondelete="restrict"`, `idx`, `string="Зона"` |
+| `zone_id` | Many2one `td.zone` | `req`, `ondelete="restrict"`, `idx`, `string="Зона"` |
 | `zone_name` | Char | `related="zone_id.name"` |
 | `x`, `y` | Float | `digits=(8,2)`, `string="X, м"`/`"Y, м"` (план; Додаток A.3) |
 | `equipment_id` | Many2one `maintenance.equipment` | `string="Обладнання"`, `ondelete="set null"` |
-| `passport_id` | Many2one `f3d.equipment.passport` | `string="Паспорт"`, `ondelete="set null"` |
-| `source_id` | Many2one `f3d.source` | `string="Джерело BACnet"`, `domain="[('type','=','bacnet_ip')]"`, `ondelete="set null"` |
+| `passport_id` | Many2one `td.equipment.passport` | `string="Паспорт"`, `ondelete="set null"` |
+| `source_id` | Many2one `td.source` | `string="Джерело BACnet"`, `domain="[('type','=','bacnet_ip')]"`, `ondelete="set null"` |
 | `bacnet_device` | Integer | `string="BACnet device"` (101…133) |
 | `fan_count` | Integer | `default=1`, `string="Вентиляторів"` (EF-ELEC — 2) |
 | `airflow_nom` | Float | `compute="_compute_nominals"`, `store=True`, `readonly=False`, `digits=(10,0)`, `string="Номінальна витрата, м³/год"` (R-10 п. 1) |
@@ -460,7 +460,7 @@ class F3dBmsHvacUnit(models.Model):
 | `t_supply_design` | Float | `digits=(4,1)`, `string="Приплив за проєктом, °C"` (AHU-1 — 21,0) |
 | `calendar_id` | Many2one `resource.calendar` | як у M-03 |
 | `note` | Text | `string="Примітка"` (з макета для AHU-1 і вентиляторів) |
-| `airflow_signal_id`, `supply_signal_id`, `indoor_signal_id`, `filter_signal_id`, `filter_extract_signal_id`, `valve_signal_id`, `heat_signal_id`, `power_signal_id`, `mode_signal_id`, `state_signal_id`, `sp_day_signal_id`, `sp_night_signal_id`, `pressure_signal_id`, `interlock_signal_id`, `check_signal_id` | Many2one `f3d.signal` | `ondelete="set null"`, `string="Сигнал: витрата"`, `"…: приплив"`, `"…: у зоні"`, `"…: фільтр припливу"`, `"…: фільтр витяжки"`, `"…: клапан нагріву"`, `"…: тепло"`, `"…: потужність"`, `"…: режим"`, `"…: стан"`, `"…: уставка день"`, `"…: уставка ніч"`, `"…: тиск у дільниці"`, `"…: блокування з камерами"`, `"…: перевірка"` |
+| `airflow_signal_id`, `supply_signal_id`, `indoor_signal_id`, `filter_signal_id`, `filter_extract_signal_id`, `valve_signal_id`, `heat_signal_id`, `power_signal_id`, `mode_signal_id`, `state_signal_id`, `sp_day_signal_id`, `sp_night_signal_id`, `pressure_signal_id`, `interlock_signal_id`, `check_signal_id` | Many2one `td.signal` | `ondelete="set null"`, `string="Сигнал: витрата"`, `"…: приплив"`, `"…: у зоні"`, `"…: фільтр припливу"`, `"…: фільтр витяжки"`, `"…: клапан нагріву"`, `"…: тепло"`, `"…: потужність"`, `"…: режим"`, `"…: стан"`, `"…: уставка день"`, `"…: уставка ніч"`, `"…: тиск у дільниці"`, `"…: блокування з камерами"`, `"…: перевірка"` |
 | `airflow_m3h` | Float | живе, `digits=(10,1)`, `string="Витрата, м³/год"` |
 | `k` | Float | живе, `digits=(4,3)`, `string="Частка номінальної витрати"` = `airflow_m3h / airflow_nom` (0, якщо `airflow_nom = 0`) |
 | `supply_c`, `indoor_c` | Float | живе, `digits=(5,1)`, `string="Приплив, °C"` / `"У зоні, °C"` |
@@ -496,15 +496,15 @@ class F3dBmsHvacUnit(models.Model):
 вентиляторів."`.
 
 Методи: `action_f3d_show(self)` (як M-03: обладнання, інакше зона); `action_open_command(self)` →
-`f3d.bms.hvac.command.wizard` (лише `kind in (roofvent, ahu)`, інакше `UserError("Керування вентиляторами EF не
+`td.bms.hvac.command.wizard` (лише `kind in (roofvent, ahu)`, інакше `UserError("Керування вентиляторами EF не
 передбачено (ARCH §1.4).")`); `action_view_readings`, `action_view_deviations`, `action_view_requests` — як M-03;
 `@api.model _f3d_bms_heat_now(self)` → `{code: heat_kw}` для `kind in (roofvent, ahu)` (CH-03).
 
-### M-06 `f3d.bms.heat.balance` — тепловий баланс цеху (FR-10, FR-11)
+### M-06 `td.bms.heat.balance` — тепловий баланс цеху (FR-10, FR-11)
 
 ```python
 class F3dBmsHeatBalance(models.Model):
-    _name = "f3d.bms.heat.balance"
+    _name = "td.bms.heat.balance"
     _description = "Будівля: тепловий баланс"
     _inherit = ["mail.thread"]
     _order = "company_id"
@@ -516,7 +516,7 @@ class F3dBmsHeatBalance(models.Model):
 | `company_id` | Many2one `res.company` | `req`, `default=lambda s: s.env.company`, `idx` |
 | `t_out_design` | Float | `digits=(4,1)`, `default=-15.0`, `string="Розрахункова зовнішня, °C"`, `tracking=True` (`T_OUT_DESIGN`) |
 | `t_in_set` | Float | `digits=(4,1)`, `default=18.0`, `string="Уставка в цеху, °C"` (`INDOOR_SET_C`) |
-| `length_m`, `width_m`, `height_m` | Float | `digits=(6,2)`, `default` з `factory3d.base.plant_length_m/width_m/height_m` (150 / 72 / 9; CB-12) |
+| `length_m`, `width_m`, `height_m` | Float | `digits=(6,2)`, `default` з `td.base.plant_length_m/width_m/height_m` (150 / 72 / 9; CB-12) |
 | `u_wall`, `u_roof`, `u_floor` | Float | `digits=(5,3)`, `default` 0,35 / 0,25 / 0,15, `string="U стін/покрівлі/підлоги, Вт/(м²·К)"`, `tracking=True` |
 | `infiltration_ach` | Float | `digits=(5,3)`, `default=0.1`, `string="Інфільтрація, обмінів/год"` |
 | `winter_oa_share` | Float | `digits=(4,2)`, `default=0.5`, `string="Частка зовнішнього повітря в установках узимку"` |
@@ -531,7 +531,7 @@ class F3dBmsHeatBalance(models.Model):
 | `chp_el_kw` | Float | `default` = `passport_chp.power_kw` або 800, `string="КГУ: електрична, кВт"` |
 | `chp_heat_kw`, `chp_heat_75_kw`, `chp_heat_50_kw` | Float | `default` = `get_num('heat_kw')` / `'heat_kw_75'` / `'heat_kw_50'` паспорта `chp` або 856 / 676 / 497 |
 | `chp_min_load` | Float | `digits=(4,2)`, `default=0.5` (паспорт `min_load`) |
-| `line_ids` | One2many `f3d.bms.heat.balance.line` `balance_id` | `string="Складові"` |
+| `line_ids` | One2many `td.bms.heat.balance.line` `balance_id` | `string="Складові"` |
 | `total_raw` | Float | `digits=(10,2)`, `readonly=True` |
 | `total_kw` | Integer | `readonly=True`, `string="Навантаження при розрахунковій, кВт"` |
 | `capacity_kw` | Integer | `readonly=True`, `string="Котли, кВт"` = `round(boilers·boiler_kw)` |
@@ -540,7 +540,7 @@ class F3dBmsHeatBalance(models.Model):
 | `note` | Char(512) | `readonly=True` (R-14 п. 9) |
 | `computed_at` | Datetime | `readonly=True` |
 | `boiler_equipment_id`, `chp_equipment_id` | Many2one `maintenance.equipment` | `ondelete="set null"` (`BOILER`, `CHP`) |
-| `outdoor_signal_id`, `boiler_state_signal_id`, `boiler_supply_signal_id`, `boiler_return_signal_id`, `boiler_heat_signal_id`, `silo_signal_id`, `chp_heat_signal_id`, `chp_el_signal_id`, `mains_signal_id`, `fire_signal_id`, `check_signal_id` | Many2one `f3d.signal` | `ondelete="set null"`; коди — §5.3 крок 5 |
+| `outdoor_signal_id`, `boiler_state_signal_id`, `boiler_supply_signal_id`, `boiler_return_signal_id`, `boiler_heat_signal_id`, `silo_signal_id`, `chp_heat_signal_id`, `chp_el_signal_id`, `mains_signal_id`, `fire_signal_id`, `check_signal_id` | Many2one `td.signal` | `ondelete="set null"`; коди — §5.3 крок 5 |
 | `outdoor_c` | Float | живе, `digits=(4,1)` |
 | `heat_need_kw` | Float | живе, `digits=(8,1)`, `string="Потреба зараз, кВт"` (R-16) |
 | `chp_heat_now_kw` | Float | живе, `digits=(8,1)`, `string="Тепло КГУ зараз, кВт"` (R-15) |
@@ -563,20 +563,20 @@ chp_heat_75_kw ≤ chp_heat_kw` → `ValidationError("Тепловий бала�
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `action_recompute(self)` | для кожного: `res = tools.heat.design_balance(params(self), units)` (R-14), де `units` — активні `f3d.bms.hvac.unit` (`kind`, `airflow_nom`); `line_ids = [Command.clear()] + [Command.create(l) for l in res['lines']]`; `write({total_raw, total_kw, capacity_kw, reserve, reserve_boilers, note, computed_at: now})`; чаттер «Перераховано: N кВт, запас X %» |
+| `action_recompute(self)` | для кожного: `res = tools.heat.design_balance(params(self), units)` (R-14), де `units` — активні `td.bms.hvac.unit` (`kind`, `airflow_nom`); `line_ids = [Command.clear()] + [Command.create(l) for l in res['lines']]`; `write({total_raw, total_kw, capacity_kw, reserve, reserve_boilers, note, computed_at: now})`; чаттер «Перераховано: N кВт, запас X %» |
 | `write(self, vals)` | після `super()`: якщо змінено будь-яке поле параметрів (список `DESIGN_FIELDS`) → `action_recompute()` |
 | `action_reset_macro(self)` | `write(<умовчання таблиці вище>)` (менеджер) → перерахунок |
 | `@api.model _f3d_bms_get(self)` | запис компанії `env.company`; немає → створює з умовчаннями й `action_recompute()` (sudo) |
 | `_f3d_bms_live(self)` → dict | `tools.heat.live_balance(...)` (R-15, R-16) — словник для огляду, провайдера й крона |
 
-### M-07 `f3d.bms.heat.balance.line` — складова балансу
+### M-07 `td.bms.heat.balance.line` — складова балансу
 
-`_name = "f3d.bms.heat.balance.line"`, `_description = "Будівля: складова теплового балансу"`, `_order = "balance_id,
+`_name = "td.bms.heat.balance.line"`, `_description = "Будівля: складова теплового балансу"`, `_order = "balance_id,
 sequence"`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `balance_id` | Many2one `f3d.bms.heat.balance` | `req`, `ondelete="cascade"`, `idx` |
+| `balance_id` | Many2one `td.bms.heat.balance` | `req`, `ondelete="cascade"`, `idx` |
 | `sequence` | Integer | `default=10` |
 | `key` | Selection | `[('trans','Огородження'),('infil','Інфільтрація'),('vent_rv','Дахові установки'),('vent_ahu','Приплив фасадів'),('internal','Внутрішні надходження')]`, `req` |
 | `name` | Char(256) | `req` (текст макета, R-14) |
@@ -584,11 +584,11 @@ sequence"`.
 | `kw_round` | Integer | `string="кВт"` = `round(kw)` |
 | `formula` | Char(512) | розшифровка з числами (R-14) |
 
-### M-08 `f3d.bms.deviation` — журнал відхилень (FR-12, A-14)
+### M-08 `td.bms.deviation` — журнал відхилень (FR-12, A-14)
 
 ```python
 class F3dBmsDeviation(models.Model):
-    _name = "f3d.bms.deviation"
+    _name = "td.bms.deviation"
     _description = "Будівля: відхилення"
     _order = "started desc, id desc"
     _rec_name = "name"
@@ -597,13 +597,13 @@ class F3dBmsDeviation(models.Model):
 | Поле | Тип | Параметри |
 |---|---|---|
 | `name` | Char(256) | `req`, `string="Відхилення"` (текст R-22) |
-| `signal_id` | Many2one `f3d.signal` | `req`, `ondelete="cascade"`, `idx` |
+| `signal_id` | Many2one `td.signal` | `req`, `ondelete="cascade"`, `idx` |
 | `code` | Char | `related="signal_id.code"` |
 | `rule` | Selection | `[('light_off','Світло вимкнено в робочий час'),('light_low','Освітленість нижче норми'),('light_fault','Аварія світильників'),('filter_supply','Фільтр припливу'),('filter_extract','Фільтр витяжки'),('unit_fault','Аварія установки'),('unit_off','Установка не працює в робочий час'),('cold','Холодно в зоні'),('overheat','Перегрів приміщення'),('charging_vent','Витяжка зарядної не працює під час заряджання'),('pressure','Тиск у дільниці фасадів'),('boiler_fault','Аварія котельні'),('heat_deficit','Дефіцит тепла'),('other','Інше')]`, `req`, `idx` |
 | `object_kind` | Selection | `[('group','Група освітлення'),('panel','Щит'),('unit','Установка'),('boiler','Котельня')]` |
 | `object_code` | Char(32) | `idx` (`LT-CUT`, `RV-05`, `BOILER`) |
 | `equipment_id` | Many2one `maintenance.equipment` | `related="signal_id.equipment_id"`, `store=True` |
-| `zone_id` | Many2one `f3d.zone` | `ondelete="set null"` |
+| `zone_id` | Many2one `td.zone` | `ondelete="set null"` |
 | `started` | Datetime | `req`, `idx` |
 | `ended` | Datetime | |
 | `duration_min` | Float | `compute="_compute_duration"`, `store=True`, `digits=(10,1)` = `(ended − started)` у хв (відкриті — `False`; у списку показується живе через `now`) |
@@ -614,86 +614,86 @@ class F3dBmsDeviation(models.Model):
 | `request_id` | Many2one `maintenance.request` | `ondelete="set null"` |
 | `note` | Text | |
 
-Індекси: `init()` → `CREATE INDEX IF NOT EXISTS f3d_bms_deviation_state_started_idx ON f3d_bms_deviation (state,
-started)`, `…_signal_state_idx ON f3d_bms_deviation (signal_id, state)`. Створення/закриття — лише крон (R-22,
-`sudo`); у формах `create="false"`; `write` дозволено полю `note` для `group_f3d_bms_operator`; `unlink` — лише
-`group_f3d_admin`.
+Індекси: `init()` → `CREATE INDEX IF NOT EXISTS td_bms_deviation_state_started_idx ON td_bms_deviation (state,
+started)`, `…_signal_state_idx ON td_bms_deviation (signal_id, state)`. Створення/закриття — лише крон (R-22,
+`sudo`); у формах `create="false"`; `write` дозволено полю `note` для `group_td_bms_operator`; `unlink` — лише
+`group_td_admin`.
 
 ### M-09 Майстри керування (Transient, FR-18, R-25)
 
-**M-09a `f3d.bms.light.command.wizard`**
+**M-09a `td.bms.light.command.wizard`**
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `group_ids` | Many2many `f3d.bms.light.group` | `req`, `string="Групи"` |
+| `group_ids` | Many2many `td.bms.light.group` | `req`, `string="Групи"` |
 | `action` | Selection | `[('scene','Викликати сцену'),('level','Встановити рівень')]`, `req`, `default='scene'` |
-| `scene_id` | Many2one `f3d.bms.light.scene` | `string="Сцена"` (обов'язкове при `scene`) |
+| `scene_id` | Many2one `td.bms.light.scene` | `string="Сцена"` (обов'язкове при `scene`) |
 | `level_pct` | Integer | `string="Рівень, %"` (0…100, обов'язкове при `level`) |
 | `fade_s` | Float | `digits=(6,1)`, `default=2.0`, `string="Час переходу, с"` (0…90 — максимум DALI за документом Helvar) |
 | `expires_min` | Integer | `default=10`, `string="Дійсна, хв"` (1…60) |
 | `note` | Char(256) | |
 
-`action_apply(self)` — R-25; повертає `act_window` списку створених `f3d.command`.
+`action_apply(self)` — R-25; повертає `act_window` списку створених `td.command`.
 
-**M-09b `f3d.bms.hvac.command.wizard`**
+**M-09b `td.bms.hvac.command.wizard`**
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `unit_ids` | Many2many `f3d.bms.hvac.unit` | `req`, `domain="[('kind','in',('roofvent','ahu'))]"` |
+| `unit_ids` | Many2many `td.bms.hvac.unit` | `req`, `domain="[('kind','in',('roofvent','ahu'))]"` |
 | `action` | Selection | `[('mode','Режим'),('setpoint_day','Уставка день'),('setpoint_night','Уставка ніч')]`, `req` |
 | `mode` | Selection | `[('VE','VE'),('VEL','VEL'),('AQ','AQ'),('REC','REC'),('EA','EA'),('SA','SA'),('ST','ST'),('Off','Off')]` з українськими підписами R-10 |
 | `value_c` | Float | `digits=(4,1)`, `string="Уставка, °C"` (5,0…30,0) |
 | `expires_min`, `note` | | як M-09a |
 
-### M-10 `f3d.bms.overview` — дані огляду (FR-14)
+### M-10 `td.bms.overview` — дані огляду (FR-14)
 
-`AbstractModel`, `_name = "f3d.bms.overview"`, `_description = "Будівля: огляд"`. Метод `@api.model
+`AbstractModel`, `_name = "td.bms.overview"`, `_description = "Будівля: огляд"`. Метод `@api.model
 get_overview_data(self) -> dict` — R-28 (виконується від користувача, без `sudo`; моделі без доступу → порожні
 розділи). Метод `@api.model action_open(self, model, res_id, what)` → `what ∈ {'form','show3d'}`: `form` →
-`act_window` форми запису; `show3d` → `env[model].browse(res_id).action_f3d_show()`; `model ∉ {f3d.bms.light.group,
-f3d.bms.light.panel, f3d.bms.hvac.unit, f3d.zone}` → `AccessError`.
+`act_window` форми запису; `show3d` → `env[model].browse(res_id).action_f3d_show()`; `model ∉ {td.bms.light.group,
+td.bms.light.panel, td.bms.hvac.unit, td.zone}` → `AccessError`.
 
 ### M-11 Провайдери переглядача — `AbstractModel` без `_inherit` (FR-20, A-06)
 
 ```python
 class F3dViewerProviderLighting(models.AbstractModel):
-    _name = "f3d.viewer.provider.lighting"
+    _name = "td.viewer.provider.lighting"
     _description = "3D: освітлення"
     _f3d_sequence = 110
     _f3d_sections = ("lighting",)
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 
 class F3dViewerProviderVentilation(models.AbstractModel):
-    _name = "f3d.viewer.provider.ventilation"
+    _name = "td.viewer.provider.ventilation"
     _description = "3D: вентиляція й опалення"
     _f3d_sequence = 120
     _f3d_sections = ("ventilation",)
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 ```
 
 | Метод | `.lighting` | `.ventilation` |
 |---|---|---|
 | `_f3d_viewer_collect(self, payload, ctx)` | `payload["lighting"] = tools.payload.build_lighting(self.env, ctx, payload.get("lighting") or ctx["static"].get("lighting") or {})` (R-26) | `payload["ventilation"] = tools.payload.build_ventilation(self.env, ctx, payload.get("ventilation") or ctx["static"].get("ventilation") or {})` (R-27) |
-| `_f3d_viewer_delta(self, patch, ctx)` | якщо в `ctx["changes"]` є модель `f3d.bms` або коди `f3d.signal` з префіксом `lighting/` чи `energy/consumers/LP-` → `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `patch["lighting"] = tmp["lighting"]`; інакше нічого | те саме для префіксів `ventilation/`, `equipment/BOILER/`, `infra/chp/`, `infra/totals/chp_kw`, `fire/totals/system_state`, `infra/ats/src1_ok` → `patch["ventilation"]` |
-| `_f3d_viewer_bus_models(self)` | `["f3d.signal", "f3d.bms"]` | `["f3d.signal", "f3d.bms"]` |
+| `_f3d_viewer_delta(self, patch, ctx)` | якщо в `ctx["changes"]` є модель `td.bms` або коди `td.signal` з префіксом `lighting/` чи `energy/consumers/LP-` → `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `patch["lighting"] = tmp["lighting"]`; інакше нічого | те саме для префіксів `ventilation/`, `equipment/BOILER/`, `infra/chp/`, `infra/totals/chp_kw`, `fire/totals/system_state`, `infra/ats/src1_ok` → `patch["ventilation"]` |
+| `_f3d_viewer_bus_models(self)` | `["td.signal", "td.bms"]` | `["td.signal", "td.bms"]` |
 
 Провайдер telemetry (95) уже записав `last_value` у вузли `lighting.groups[*]`/`ventilation.units[*]` (R-12
 telemetry); провайдери модуля замінюють розділи повністю тими самими значеннями (те саме округлення R-12) плюс
 обчисленими. Права: читання від користувача запиту; без доступу до моделей модуля — розділ лишається статичним.
-Без `factory3d_viewer` моделі не викликаються.
+Без `td_viewer3d` моделі не викликаються.
 
-### M-12 `f3d.source` — локальний тип `f3d_bms` (CT-12, A-01)
+### M-12 `td.source` — локальний тип `f3d_bms` (CT-12, A-01)
 
-`_inherit = "f3d.source"`; `type` — `selection_add=[('f3d_bms', 'Будівля (обчислені)')]`, `ondelete={'f3d_bms':
+`_inherit = "td.source"`; `type` — `selection_add=[('f3d_bms', 'Будівля (обчислені)')]`, `ondelete={'f3d_bms':
 'cascade'}`; `@api.model _f3d_local_types(self)` → `super()._f3d_local_types() + ['f3d_bms']`. Джерело `BMS-DERIVED`
-(xml-id `factory3d_bms.source_bms_derived`, створює хук §5.3 крок 2): `name="Будівля: обчислені перевірки"`,
+(xml-id `td_bms.source_bms_derived`, створює хук §5.3 крок 2): `name="Будівля: обчислені перевірки"`,
 `type='f3d_bms'`, `collector_id=False`, `params={}`, `module='bms'`, `read_enabled` = параметр
-`factory3d.bms.read_enabled`, `period_s_default=60`. `state` веде модуль: крон R-18 ставить `online` після успішного
+`td.bms.read_enabled`, `period_s_default=60`. `state` веде модуль: крон R-18 ставить `online` після успішного
 прогону, `error` + `last_error` при винятку (`sudo().write`).
 
-### M-13 `f3d.signal` — розширення (A-01, R-20)
+### M-13 `td.signal` — розширення (A-01, R-20)
 
-`_inherit = "f3d.signal"`:
+`_inherit = "td.signal"`:
 1. `origin` **не** розширюється (X-16): значення `('module', 'Дані модуля')` є в базовому selection telemetry M-03;
    292 власні сигнали модуля (Додаток B) створюються з `origin='module'`, 176 рядків каталогу iot_sim — `catalog`.
 2. `@api.constrains("write_enabled")`: для `module == 'bms'` і `write_enabled=True`: код не закінчується на
@@ -702,7 +702,7 @@ telemetry); провайдери модуля замінюють розділи 
 3. `@api.model _f3d_ingest(self, readings, src="module", collector=None)` (R-20): `res = super()._f3d_ingest(readings,
    src=src, collector=collector)`; якщо `self.env.context.get('f3d_bms_internal')` → повернути `res`; `codes = [c for c
    in res.get('changed_codes') or [] if c.startswith(('lighting/groups/', 'ventilation/units/'))]`; якщо `codes` і
-   параметр `factory3d.bms.read_enabled`: `with self.env.cr.savepoint(): self.env['f3d.bms.check'].sudo()._f3d_bms_on_ingest(codes)`;
+   параметр `td.bms.read_enabled`: `with self.env.cr.savepoint(): self.env['td.bms.check'].sudo()._f3d_bms_on_ingest(codes)`;
    будь-який виняток → `_logger.exception("bms after ingest")`, `res` не змінюється; повернути `res`.
 
 ### M-14 `maintenance.request` — розширення (FR-13, A-14)
@@ -711,21 +711,21 @@ telemetry); провайдери модуля замінюють розділи 
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `f3d_bms_rule` | Selection | ті самі значення, що `f3d.bms.deviation.rule`; `compute="_compute_f3d_bms_rule"`, `store=True`, `string="Правило «Будівля»"`: R-22 п. 1 за `f3d_signal_id.code` і `f3d_signal_id.module == 'bms'`, інакше `False` |
-| `f3d_bms_deviation_ids` | One2many `f3d.bms.deviation` `request_id` | `string="Відхилення"` |
-| `f3d_bms_enriched` | Boolean | `default=False`, `copy=False`, `readonly=True` — назву/значення вже доповнено (R-22 п. 3) |
+| `td_bms_rule` | Selection | ті самі значення, що `td.bms.deviation.rule`; `compute="_compute_f3d_bms_rule"`, `store=True`, `string="Правило «Будівля»"`: R-22 п. 1 за `td_signal_id.code` і `td_signal_id.module == 'bms'`, інакше `False` |
+| `td_bms_deviation_ids` | One2many `td.bms.deviation` `request_id` | `string="Відхилення"` |
+| `td_bms_enriched` | Boolean | `default=False`, `copy=False`, `readonly=True` — назву/значення вже доповнено (R-22 п. 3) |
 
-`_compute_f3d_bms_rule` (`@api.depends("f3d_signal_id")`): `tools.rules.rule_of(code, last_text)` (R-22 п. 1); для
-`…/check` — за `f3d_value`-незалежним текстом сигналу в момент обчислення.
+`_compute_f3d_bms_rule` (`@api.depends("td_signal_id")`): `tools.rules.rule_of(code, last_text)` (R-22 п. 1); для
+`…/check` — за `td_value`-незалежним текстом сигналу в момент обчислення.
 
-### M-15 `f3d.zone` — розширення
+### M-15 `td.zone` — розширення
 
-`_inherit = "f3d.zone"`: `f3d_light_group_ids` (One2many `f3d.bms.light.group` `zone_id`, `string="Освітлення"`),
-`f3d_hvac_unit_ids` (One2many `f3d.bms.hvac.unit` `zone_id`, `string="Вентиляція"`). Base не змінюється.
+`_inherit = "td.zone"`: `td_light_group_ids` (One2many `td.bms.light.group` `zone_id`, `string="Освітлення"`),
+`td_hvac_unit_ids` (One2many `td.bms.hvac.unit` `zone_id`, `string="Вентиляція"`). Base не змінюється.
 
 ### M-16 `maintenance.equipment` — розширення
 
-`_inherit = "maintenance.equipment"`: `f3d_bms_object` (Char, `compute`, не зберігається: `"group:<id>"`,
+`_inherit = "maintenance.equipment"`: `td_bms_object` (Char, `compute`, не зберігається: `"group:<id>"`,
 `"panel:<id>"`, `"unit:<id>"`, `"balance:<id>"` — перший об'єкт модуля з `equipment_id = self` (для `BOILER` —
 баланс) або `False`); метод `action_f3d_bms_open(self)` → форма відповідного об'єкта.
 
@@ -733,20 +733,20 @@ telemetry); провайдери модуля замінюють розділи 
 
 | Поле | Тип | `config_parameter` |
 |---|---|---|
-| `f3d_bms_read_enabled` | Boolean | `factory3d.bms.read_enabled` |
-| `f3d_bms_write_enabled` | Boolean | `factory3d.bms.write_enabled` (лише `group_f3d_admin`; `set_values` → R-30) |
-| `f3d_bms_calendar_id` | Many2one `resource.calendar` | `factory3d.bms.calendar_id` (id рядком) |
-| `f3d_bms_light_check_delay_min` | Integer | `factory3d.bms.light_check_delay_min` |
-| `f3d_bms_light_norm_tolerance_pct` | Float | `factory3d.bms.light_norm_tolerance_pct` |
-| `f3d_bms_hvac_check_delay_min` | Integer | `factory3d.bms.hvac_check_delay_min` |
-| `f3d_bms_cold_delay_min` | Integer | `factory3d.bms.cold_delay_min` |
-| `f3d_bms_indoor_min_work_c` | Float | `factory3d.bms.indoor_min_work_c` |
-| `f3d_bms_indoor_min_off_c` | Float | `factory3d.bms.indoor_min_off_c` |
-| `f3d_bms_heat_deficit_kw` | Float | `factory3d.bms.heat_deficit_kw` |
-| `f3d_bms_heat_deficit_delay_min` | Integer | `factory3d.bms.heat_deficit_delay_min` |
-| `f3d_bms_check_heartbeat_min` | Integer | `factory3d.bms.check_heartbeat_min` |
-| `f3d_bms_light_uf`, `f3d_bms_light_mf` | Float | `factory3d.bms.light_uf`, `factory3d.bms.light_mf` |
-| `f3d_bms_install_state` | Char | `compute`: `json.loads(param('install_report','{}')).get('state','—')` |
+| `td_bms_read_enabled` | Boolean | `td.bms.read_enabled` |
+| `td_bms_write_enabled` | Boolean | `td.bms.write_enabled` (лише `group_td_admin`; `set_values` → R-30) |
+| `td_bms_calendar_id` | Many2one `resource.calendar` | `td.bms.calendar_id` (id рядком) |
+| `td_bms_light_check_delay_min` | Integer | `td.bms.light_check_delay_min` |
+| `td_bms_light_norm_tolerance_pct` | Float | `td.bms.light_norm_tolerance_pct` |
+| `td_bms_hvac_check_delay_min` | Integer | `td.bms.hvac_check_delay_min` |
+| `td_bms_cold_delay_min` | Integer | `td.bms.cold_delay_min` |
+| `td_bms_indoor_min_work_c` | Float | `td.bms.indoor_min_work_c` |
+| `td_bms_indoor_min_off_c` | Float | `td.bms.indoor_min_off_c` |
+| `td_bms_heat_deficit_kw` | Float | `td.bms.heat_deficit_kw` |
+| `td_bms_heat_deficit_delay_min` | Integer | `td.bms.heat_deficit_delay_min` |
+| `td_bms_check_heartbeat_min` | Integer | `td.bms.check_heartbeat_min` |
+| `td_bms_light_uf`, `td_bms_light_mf` | Float | `td.bms.light_uf`, `td.bms.light_mf` |
+| `td_bms_install_state` | Char | `compute`: `json.loads(param('install_report','{}')).get('state','—')` |
 
 `set_values`: `read_enabled` змінився → R-29 п. 8 (прапори читання джерел модуля); `write_enabled` змінився → R-30.
 Межі: затримки 1…240 хв, допуск 0…50 %, температури −30…40, дефіцит 0…2 000; поза межами — `ValidationError`.
@@ -758,53 +758,53 @@ telemetry); провайдери модуля замінюють розділи 
 (`ok`/`on`/`none`), `decoration-warning` (`low`/`below_norm`/`standby`/`cold`), `decoration-danger`
 (`alarm`/`fault`/`off_in_work`/`not_running`/`deficit`), `decoration-muted` (`nodata`/`no_data`/`off_hours`/`off`).
 Живі поля — `readonly="1"`. Поля налаштувань (`zone_id`, `norm_id`, `n_fixtures`, `uf`, `mf`, `dali_*`, сигнали,
-номінали) — `readonly="not is_f3d_manager"` (поле `is_f3d_manager` — `compute` `user.has_group('factory3d_base.group_f3d_manager')`
+номінали) — `readonly="not is_f3d_manager"` (поле `is_f3d_manager` — `compute` `user.has_group('td_factory3d.group_td_manager')`
 на M-02, M-03, M-05, M-06; присутнє у формах невидимим).
 
-| ID | XML-id (`factory3d_bms.`) | Тип / модель | Структура |
+| ID | XML-id (`td_bms.`) | Тип / модель | Структура |
 |---|---|---|---|
-| V-01 | `view_f3d_bms_light_norm_list`, `_form` | list (editable=bottom для менеджера), form `f3d.bms.light.norm` | list: `sequence` (handle), `key`, `name`, `lux`, `ugr`, `ra`, `ref_en`, `ref_dbn` (optional show), `group_count`; form: `name` (title), група «Норма»: `key`, `lux`, `ugr`, `ra`; група «Підстави»: `ref_en`, `ref_dbn`, `sources` (widget `text`); `note`; вкладка «Групи» (`group_ids` readonly: `code`, `zone_name`, `e_calc`, `design_ok`) |
-| V-02 | `view_f3d_bms_light_panel_list` | list | `code`, `name`, `router`, `group_count`, `n_fixtures`, `p_inst_kw`, `p_now_kw`, `p_source` (optional hide), `state` (badge), `source_id` (optional show) |
-| V-03 | `view_f3d_bms_light_panel_form` | form | `<header>`: «Показати в 3D». Статбокс: `action_view_groups` (`group_count`, «Групи», `fa-lightbulb-o`). `name` (title), `code`; група «Роутер Helvar Imagine 950»: `source_id`, `cluster`, `router`, `equipment_id`; група «Розташування»: `zone_id`, `x`, `y`; група «Зараз» (readonly): `state`, `p_now_kw`, `p_source`, `n_fixtures`, `p_inst_kw`; вкладка «Групи» (`group_ids` readonly list: `code`, `zone_name`, `n_fixtures`, `level_pct`, `e_now`, `e_norm`, `deviation` badge); «Примітка» |
-| V-04 | `view_f3d_bms_light_group_list` | list | `sequence` (handle, лише менеджер), `code`, `zone_name`, `norm_id`, `e_norm`, `n_fixtures`, `n_required` (optional show), `e_calc` (`decoration-danger="not design_ok"`), `level_pct`, `e_now`, `p_now_kw`, `faults` (`decoration-danger="faults > 0"`), `deviation` (badge), `panel_id` (optional show), `dali_group` (optional hide), `control_mode` (optional hide), `request_count` (optional show) |
-| V-05 | `view_f3d_bms_light_group_form` | form | `<header>`: «Показати в 3D», «Керування» (`action_open_command`, `groups="factory3d_bms.group_f3d_bms_operator"`, `invisible="not f3d_bms_write_enabled"` — поле `compute` з параметра). Статбокс: `action_view_requests` (`request_count`, «Заявки», `fa-wrench`), `action_view_deviations` (`deviation_count`, «Відхилення», `fa-exclamation-triangle`), `action_view_readings` («Графік рівня», `fa-line-chart`). `name` (title), `code`; група «Зона й норма»: `zone_id`, `area_m2`, `norm_id`, `e_norm`, `control_mode`, `level_design`, `check_off`, `check_norm`, `calendar_id`; група «Світильники»: `passport_id`, `fixture_kind`, `lumen`, `watt`, `n_fixtures`, `panel_id`, `equipment_id`. Вкладка «Розрахунок»: `uf`, `mf`, `n_required`, `e_calc`, `design_ok` (badge «Норму виконано»/«Нижче норми»), `p_inst_kw`, статичний `<div class="text-muted">` «E = N · Φ · UF · MF / A; N потрібно = ⌈Eн · A / (Φ · UF · MF)⌉ (метод коефіцієнта використання, plant/lighting.py)». Вкладка «Зараз» (readonly): `level_pct`, `level_source`, `e_now`, `p_now_kw`, `scene`, `faults`, `faulty`, `deviation` (badge), `deviation_text`, `live_ts`, `stale`, `off_since`, `low_since`. Вкладка «DALI»: `dali_group`, `dali_devices`, `level_signal_id`, `power_signal_id`, `scene_signal_id`, `faults_signal_id`, `faulty_signal_id`, `check_signal_id`. «Примітка». Чаттер |
-| V-06 | `view_f3d_bms_light_group_kanban` | kanban | `default_group_by="panel_id"`, `quick_create="false"`; картка: смуга кольору за `plan_state` (ok — зелена, low — жовта, off/nodata — сіра, fault/alarm — червона), `code`, `zone_name`, «`e_now` / `e_norm` лк», «`level_pct` %», `n_fixtures` світильн., `faults` (якщо > 0 — червоний бейдж), кнопка «3D» (`action_f3d_show`) |
-| V-07 | `view_f3d_bms_light_group_search` | search | поля `code`, `name`, `zone_id`, `panel_id`, `norm_id`; фільтри «Відхилення» (`deviation in ('off_in_work','below_norm')` — пошук через `_search_deviation`), «Нижче норми за проєктом» (`design_ok = False`), «Є несправні» (`faults_signal_id.last_value > 0`), «Керування: зміна» / «присутність» (`control_mode`), «Архівні»; group by `panel_id`, `norm_id`, `control_mode` |
-| V-08 | `view_f3d_bms_light_scene_list` | list editable (менеджер) | `block`, `number`, `name`, `level_pct`, `note` |
-| V-09 | `view_f3d_bms_hvac_unit_list` | list | `code`, `name` (optional hide), `kind`, `zone_name`, `mode_label`, `state` (badge), `airflow_m3h`, `airflow_nom` (optional hide), `supply_c`, `indoor_c`, `heating_valve` (widget `percentage`), `heat_kw`, `filter_dp_pa` (`decoration-danger="filter_dp_pa > 250"`), `filter_extract_dp_pa` (optional hide), `p_now_kw`, `deviation` (badge), `request_count` (optional show) |
-| V-10 | `view_f3d_bms_hvac_unit_form` | form | `<header>`: «Показати в 3D», «Керування» (`action_open_command`, оператор, `invisible="not f3d_bms_write_enabled or kind not in ('roofvent','ahu')"`). Статбокс: заявки, відхилення, «Графіки» (`action_view_readings`: витрата, фільтр, приплив, тепло). `name` (title), `code`; група «Установка»: `kind`, `zone_id`, `x`, `y`, `equipment_id`, `passport_id`, `source_id`, `bacnet_device`; група «Номінали»: `airflow_nom`, `heat_nom_kw`, `p_inst_kw`, `fan_count`, `required_m3h` (`invisible="kind != 'exfan'"`), `t_supply_design` (`invisible="kind != 'ahu'"`), `mode_design`, `required_in_work`, `calendar_id`. Вкладка «Зараз» (readonly): `mode_label`, `mode_code`, `state`, `airflow_m3h`, `k` (widget `percentage`), `supply_c`, `indoor_c`, `heating_valve` (percentage), `heat_kw`, `p_now_kw`, `filter_dp_pa`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `room_pressure_pa` (`invisible="kind != 'ahu'"`), `deviation` (badge), `deviation_text`, `live_ts`, `stale`. Вкладка «BACnet» — 15 полів сигналів. «Примітка» (`note`). Чаттер |
-| V-11 | `view_f3d_bms_hvac_unit_kanban` | kanban | `default_group_by="kind"`; картка: смуга за `plan_state`, `code`, `zone_name`, `mode_label`, «`airflow_m3h` м³/год», фільтр «`filter_dp_pa` Па» (червоний > 250), «`heat_kw` кВт», кнопка «3D» |
-| V-12 | `view_f3d_bms_hvac_unit_search` | search | поля `code`, `zone_id`, `kind`; фільтри «Відхилення» (`_search_deviation`), «Фільтр понад норму» (`filter_signal_id.status = 'alarm'`), «Дахові установки» (`kind='roofvent'`), «Вентилятори» (`kind in (fan, exfan)`); group by `kind`, `zone_id`, `mode_design` |
-| V-13 | `view_f3d_bms_heat_balance_form` | form `f3d.bms.heat.balance` | `<header>`: «Перерахувати» (`action_recompute`, менеджер), «Повернути значення макета» (`action_reset_macro`, менеджер, `confirm="Повернути параметри макета?"`). Заголовок `name`; група «Зараз» (readonly): `outdoor_c`, `heat_need_kw`, `chp_heat_now_kw`, `chp_source`, `boilers_on_calc`, `boilers_on`, `boiler_state`, `boiler_load` (percentage), `boiler_heat_kw`, `supply_c`, `return_c`, `silo_fill` (percentage), `deficit_kw`, `deviation` (badge), `deviation_text`; група «Зима, розрахунок» (readonly): `total_kw`, `capacity_kw`, `chp_heat_kw`, `reserve` (percentage, «Запас із КГУ»), `reserve_boilers` (percentage), `computed_at`; `line_ids` (list readonly: `name`, `kw_round`, `formula`); `note`. Вкладка «Параметри» (менеджер редагує): `t_out_design`, `t_in_set`, `length_m`, `width_m`, `height_m`, `u_wall`, `u_roof`, `u_floor`, `infiltration_ach`, `winter_oa_share`, `heat_recovery`, `air_wh_m3k`, `ahu_design_share`, `ahu_supply_c`, `internal_gains_kw`, `boilers`, `boiler_kw`, `boiler_stage_share`, `chp_el_kw`, `chp_heat_kw`, `chp_heat_75_kw`, `chp_heat_50_kw`, `chp_min_load`. Вкладка «Сигнали» — 11 сигналів, `boiler_equipment_id`, `chp_equipment_id`. Чаттер. Кнопки «Показати в 3D» котельні (`boiler_equipment_id.action_f3d_show` через метод `action_show_boiler`) |
-| V-14 | `view_f3d_bms_deviation_list` | list `f3d.bms.deviation` (`create="false"`) | `started`, `object_code`, `rule`, `name`, `value`, `threshold`, `unit`, `duration_min`, `state` (badge: open → danger, closed → muted), `request_id`, `ended` (optional hide); `decoration-danger="state == 'open'"` |
-| V-15 | `view_f3d_bms_deviation_graph`, `_pivot` | graph (bar, `rule`, `__count`), pivot (рядки `rule`, стовпці `started:week`, міри `__count`, `duration_min`) | |
-| V-16 | `view_f3d_bms_deviation_search`, `_form` | search: поля `object_code`, `rule`, `equipment_id`, `zone_id`; фільтри «Відкриті» (`state='open'`), «Сьогодні», «7 днів», «Освітлення» (`object_kind in (group, panel)`), «Вентиляція» (`unit`), «Котельня» (`boiler`); group by `rule`, `object_code`, `started:day`. form readonly, крім `note` | |
-| V-17 | `view_f3d_zone_form_bms` | form inherit `factory3d_base.view_f3d_zone_form` | `//notebook` inside: `<page name="f3d_bms" string="Будівля" invisible="not f3d_light_group_ids and not f3d_hvac_unit_ids">`: `f3d_light_group_ids` (readonly: `code`, `e_norm`, `e_calc`, `level_pct`, `e_now`, `deviation`), `f3d_hvac_unit_ids` (readonly: `code`, `mode_label`, `airflow_m3h`, `filter_dp_pa`, `deviation`) |
-| V-18 | `view_maintenance_equipment_form_bms`, `view_maintenance_request_form_bms` | inherit `maintenance.hr_equipment_view_form`, `maintenance.hr_equipment_request_view_form` | обладнання: `//div[@name='button_box']` inside — кнопка `action_f3d_bms_open` («Будівля», `fa-building`, `invisible="not f3d_bms_object"`); заявка: у групі «Телеметрія» telemetry (V-20 telemetry, `//group[@name='f3d_telemetry']`) після `f3d_threshold` — `f3d_bms_rule` (`invisible="not f3d_bms_rule"`), `f3d_bms_deviation_ids` (readonly list: `started`, `ended`, `value`, `state`) ; список заявок: `f3d_bms_rule` (optional hide); пошук: group by `f3d_bms_rule` |
-| V-19 | `view_f3d_bms_light_command_wizard_form` | form M-09a | `<div class="alert alert-warning">` «Команда виконається, лише якщо керування дозволено в модулі «Будівля», телеметрії, джерелі, сигналі й колекторі»; `group_ids` (tags), `action` (radio), `scene_id` (`invisible="action != 'scene'"`, `required="action == 'scene'"`), `level_pct` (`invisible="action != 'level'"`), `fade_s`, `expires_min`, `note`; footer «Надіслати» (`action_apply`, `btn-primary`), «Скасувати» |
-| V-20 | `view_f3d_bms_hvac_command_wizard_form` | form M-09b | те саме попередження; `unit_ids`, `action`, `mode` (`invisible="action != 'mode'"`), `value_c` (`invisible="action == 'mode'"`), `expires_min`, `note` |
+| V-01 | `view_td_bms_light_norm_list`, `_form` | list (editable=bottom для менеджера), form `td.bms.light.norm` | list: `sequence` (handle), `key`, `name`, `lux`, `ugr`, `ra`, `ref_en`, `ref_dbn` (optional show), `group_count`; form: `name` (title), група «Норма»: `key`, `lux`, `ugr`, `ra`; група «Підстави»: `ref_en`, `ref_dbn`, `sources` (widget `text`); `note`; вкладка «Групи» (`group_ids` readonly: `code`, `zone_name`, `e_calc`, `design_ok`) |
+| V-02 | `view_td_bms_light_panel_list` | list | `code`, `name`, `router`, `group_count`, `n_fixtures`, `p_inst_kw`, `p_now_kw`, `p_source` (optional hide), `state` (badge), `source_id` (optional show) |
+| V-03 | `view_td_bms_light_panel_form` | form | `<header>`: «Показати в 3D». Статбокс: `action_view_groups` (`group_count`, «Групи», `fa-lightbulb-o`). `name` (title), `code`; група «Роутер Helvar Imagine 950»: `source_id`, `cluster`, `router`, `equipment_id`; група «Розташування»: `zone_id`, `x`, `y`; група «Зараз» (readonly): `state`, `p_now_kw`, `p_source`, `n_fixtures`, `p_inst_kw`; вкладка «Групи» (`group_ids` readonly list: `code`, `zone_name`, `n_fixtures`, `level_pct`, `e_now`, `e_norm`, `deviation` badge); «Примітка» |
+| V-04 | `view_td_bms_light_group_list` | list | `sequence` (handle, лише менеджер), `code`, `zone_name`, `norm_id`, `e_norm`, `n_fixtures`, `n_required` (optional show), `e_calc` (`decoration-danger="not design_ok"`), `level_pct`, `e_now`, `p_now_kw`, `faults` (`decoration-danger="faults > 0"`), `deviation` (badge), `panel_id` (optional show), `dali_group` (optional hide), `control_mode` (optional hide), `request_count` (optional show) |
+| V-05 | `view_td_bms_light_group_form` | form | `<header>`: «Показати в 3D», «Керування» (`action_open_command`, `groups="td_bms.group_td_bms_operator"`, `invisible="not td_bms_write_enabled"` — поле `compute` з параметра). Статбокс: `action_view_requests` (`request_count`, «Заявки», `fa-wrench`), `action_view_deviations` (`deviation_count`, «Відхилення», `fa-exclamation-triangle`), `action_view_readings` («Графік рівня», `fa-line-chart`). `name` (title), `code`; група «Зона й норма»: `zone_id`, `area_m2`, `norm_id`, `e_norm`, `control_mode`, `level_design`, `check_off`, `check_norm`, `calendar_id`; група «Світильники»: `passport_id`, `fixture_kind`, `lumen`, `watt`, `n_fixtures`, `panel_id`, `equipment_id`. Вкладка «Розрахунок»: `uf`, `mf`, `n_required`, `e_calc`, `design_ok` (badge «Норму виконано»/«Нижче норми»), `p_inst_kw`, статичний `<div class="text-muted">` «E = N · Φ · UF · MF / A; N потрібно = ⌈Eн · A / (Φ · UF · MF)⌉ (метод коефіцієнта використання, plant/lighting.py)». Вкладка «Зараз» (readonly): `level_pct`, `level_source`, `e_now`, `p_now_kw`, `scene`, `faults`, `faulty`, `deviation` (badge), `deviation_text`, `live_ts`, `stale`, `off_since`, `low_since`. Вкладка «DALI»: `dali_group`, `dali_devices`, `level_signal_id`, `power_signal_id`, `scene_signal_id`, `faults_signal_id`, `faulty_signal_id`, `check_signal_id`. «Примітка». Чаттер |
+| V-06 | `view_td_bms_light_group_kanban` | kanban | `default_group_by="panel_id"`, `quick_create="false"`; картка: смуга кольору за `plan_state` (ok — зелена, low — жовта, off/nodata — сіра, fault/alarm — червона), `code`, `zone_name`, «`e_now` / `e_norm` лк», «`level_pct` %», `n_fixtures` світильн., `faults` (якщо > 0 — червоний бейдж), кнопка «3D» (`action_f3d_show`) |
+| V-07 | `view_td_bms_light_group_search` | search | поля `code`, `name`, `zone_id`, `panel_id`, `norm_id`; фільтри «Відхилення» (`deviation in ('off_in_work','below_norm')` — пошук через `_search_deviation`), «Нижче норми за проєктом» (`design_ok = False`), «Є несправні» (`faults_signal_id.last_value > 0`), «Керування: зміна» / «присутність» (`control_mode`), «Архівні»; group by `panel_id`, `norm_id`, `control_mode` |
+| V-08 | `view_td_bms_light_scene_list` | list editable (менеджер) | `block`, `number`, `name`, `level_pct`, `note` |
+| V-09 | `view_td_bms_hvac_unit_list` | list | `code`, `name` (optional hide), `kind`, `zone_name`, `mode_label`, `state` (badge), `airflow_m3h`, `airflow_nom` (optional hide), `supply_c`, `indoor_c`, `heating_valve` (widget `percentage`), `heat_kw`, `filter_dp_pa` (`decoration-danger="filter_dp_pa > 250"`), `filter_extract_dp_pa` (optional hide), `p_now_kw`, `deviation` (badge), `request_count` (optional show) |
+| V-10 | `view_td_bms_hvac_unit_form` | form | `<header>`: «Показати в 3D», «Керування» (`action_open_command`, оператор, `invisible="not td_bms_write_enabled or kind not in ('roofvent','ahu')"`). Статбокс: заявки, відхилення, «Графіки» (`action_view_readings`: витрата, фільтр, приплив, тепло). `name` (title), `code`; група «Установка»: `kind`, `zone_id`, `x`, `y`, `equipment_id`, `passport_id`, `source_id`, `bacnet_device`; група «Номінали»: `airflow_nom`, `heat_nom_kw`, `p_inst_kw`, `fan_count`, `required_m3h` (`invisible="kind != 'exfan'"`), `t_supply_design` (`invisible="kind != 'ahu'"`), `mode_design`, `required_in_work`, `calendar_id`. Вкладка «Зараз» (readonly): `mode_label`, `mode_code`, `state`, `airflow_m3h`, `k` (widget `percentage`), `supply_c`, `indoor_c`, `heating_valve` (percentage), `heat_kw`, `p_now_kw`, `filter_dp_pa`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `room_pressure_pa` (`invisible="kind != 'ahu'"`), `deviation` (badge), `deviation_text`, `live_ts`, `stale`. Вкладка «BACnet» — 15 полів сигналів. «Примітка» (`note`). Чаттер |
+| V-11 | `view_td_bms_hvac_unit_kanban` | kanban | `default_group_by="kind"`; картка: смуга за `plan_state`, `code`, `zone_name`, `mode_label`, «`airflow_m3h` м³/год», фільтр «`filter_dp_pa` Па» (червоний > 250), «`heat_kw` кВт», кнопка «3D» |
+| V-12 | `view_td_bms_hvac_unit_search` | search | поля `code`, `zone_id`, `kind`; фільтри «Відхилення» (`_search_deviation`), «Фільтр понад норму» (`filter_signal_id.status = 'alarm'`), «Дахові установки» (`kind='roofvent'`), «Вентилятори» (`kind in (fan, exfan)`); group by `kind`, `zone_id`, `mode_design` |
+| V-13 | `view_td_bms_heat_balance_form` | form `td.bms.heat.balance` | `<header>`: «Перерахувати» (`action_recompute`, менеджер), «Повернути значення макета» (`action_reset_macro`, менеджер, `confirm="Повернути параметри макета?"`). Заголовок `name`; група «Зараз» (readonly): `outdoor_c`, `heat_need_kw`, `chp_heat_now_kw`, `chp_source`, `boilers_on_calc`, `boilers_on`, `boiler_state`, `boiler_load` (percentage), `boiler_heat_kw`, `supply_c`, `return_c`, `silo_fill` (percentage), `deficit_kw`, `deviation` (badge), `deviation_text`; група «Зима, розрахунок» (readonly): `total_kw`, `capacity_kw`, `chp_heat_kw`, `reserve` (percentage, «Запас із КГУ»), `reserve_boilers` (percentage), `computed_at`; `line_ids` (list readonly: `name`, `kw_round`, `formula`); `note`. Вкладка «Параметри» (менеджер редагує): `t_out_design`, `t_in_set`, `length_m`, `width_m`, `height_m`, `u_wall`, `u_roof`, `u_floor`, `infiltration_ach`, `winter_oa_share`, `heat_recovery`, `air_wh_m3k`, `ahu_design_share`, `ahu_supply_c`, `internal_gains_kw`, `boilers`, `boiler_kw`, `boiler_stage_share`, `chp_el_kw`, `chp_heat_kw`, `chp_heat_75_kw`, `chp_heat_50_kw`, `chp_min_load`. Вкладка «Сигнали» — 11 сигналів, `boiler_equipment_id`, `chp_equipment_id`. Чаттер. Кнопки «Показати в 3D» котельні (`boiler_equipment_id.action_f3d_show` через метод `action_show_boiler`) |
+| V-14 | `view_td_bms_deviation_list` | list `td.bms.deviation` (`create="false"`) | `started`, `object_code`, `rule`, `name`, `value`, `threshold`, `unit`, `duration_min`, `state` (badge: open → danger, closed → muted), `request_id`, `ended` (optional hide); `decoration-danger="state == 'open'"` |
+| V-15 | `view_td_bms_deviation_graph`, `_pivot` | graph (bar, `rule`, `__count`), pivot (рядки `rule`, стовпці `started:week`, міри `__count`, `duration_min`) | |
+| V-16 | `view_td_bms_deviation_search`, `_form` | search: поля `object_code`, `rule`, `equipment_id`, `zone_id`; фільтри «Відкриті» (`state='open'`), «Сьогодні», «7 днів», «Освітлення» (`object_kind in (group, panel)`), «Вентиляція» (`unit`), «Котельня» (`boiler`); group by `rule`, `object_code`, `started:day`. form readonly, крім `note` | |
+| V-17 | `view_td_zone_form_bms` | form inherit `td_factory3d.view_td_zone_form` | `//notebook` inside: `<page name="f3d_bms" string="Будівля" invisible="not td_light_group_ids and not td_hvac_unit_ids">`: `td_light_group_ids` (readonly: `code`, `e_norm`, `e_calc`, `level_pct`, `e_now`, `deviation`), `td_hvac_unit_ids` (readonly: `code`, `mode_label`, `airflow_m3h`, `filter_dp_pa`, `deviation`) |
+| V-18 | `view_maintenance_equipment_form_bms`, `view_maintenance_request_form_bms` | inherit `maintenance.hr_equipment_view_form`, `maintenance.hr_equipment_request_view_form` | обладнання: `//div[@name='button_box']` inside — кнопка `action_f3d_bms_open` («Будівля», `fa-building`, `invisible="not td_bms_object"`); заявка: у групі «Телеметрія» telemetry (V-20 telemetry, `//group[@name='f3d_telemetry']`) після `td_threshold` — `td_bms_rule` (`invisible="not td_bms_rule"`), `td_bms_deviation_ids` (readonly list: `started`, `ended`, `value`, `state`) ; список заявок: `td_bms_rule` (optional hide); пошук: group by `td_bms_rule` |
+| V-19 | `view_td_bms_light_command_wizard_form` | form M-09a | `<div class="alert alert-warning">` «Команда виконається, лише якщо керування дозволено в модулі «Будівля», телеметрії, джерелі, сигналі й колекторі»; `group_ids` (tags), `action` (radio), `scene_id` (`invisible="action != 'scene'"`, `required="action == 'scene'"`), `level_pct` (`invisible="action != 'level'"`), `fade_s`, `expires_min`, `note`; footer «Надіслати» (`action_apply`, `btn-primary`), «Скасувати» |
+| V-20 | `view_td_bms_hvac_command_wizard_form` | form M-09b | те саме попередження; `unit_ids`, `action`, `mode` (`invisible="action != 'mode'"`), `value_c` (`invisible="action == 'mode'"`), `expires_min`, `note` |
 | V-21 | меню (`views/menus.xml`) | `ir.ui.menu`, дії | таблиця нижче |
-| V-22 | `res_config_settings_view_form_f3d_bms` | inherit `base.res_config_settings_view_form` | блок «Завод 3D» (як telemetry V-21: `//block[@name='factory3d_base_settings']` або власний `name="factory3d_bms_settings"`): «Будівля»: `f3d_bms_read_enabled` («Читати освітлення й вентиляцію»), `f3d_bms_write_enabled` («Дозволити керування», `groups="factory3d_base.group_f3d_admin"`); «Перевірки»: `f3d_bms_calendar_id`, `light_check_delay_min`, `light_norm_tolerance_pct`, `hvac_check_delay_min`, `cold_delay_min`, `indoor_min_work_c`, `indoor_min_off_c`, `heat_deficit_kw`, `heat_deficit_delay_min`, `check_heartbeat_min`; «Розрахунок освітлення»: `light_uf`, `light_mf`; «Дані»: `f3d_bms_install_state`, кнопка «Повторити установку даних» (admin) |
-| V-23 | `action_f3d_bms_overview` | `ir.actions.client`, `tag="factory3d_bms.overview"`, `name="Будівля"`, `target="current"` | OWL-компонент R-28 |
+| V-22 | `res_config_settings_view_form_td_bms` | inherit `base.res_config_settings_view_form` | блок «Завод 3D» (як telemetry V-21: `//block[@name='td_base_settings']` або власний `name="td_bms_settings"`): «Будівля»: `td_bms_read_enabled` («Читати освітлення й вентиляцію»), `td_bms_write_enabled` («Дозволити керування», `groups="td_factory3d.group_td_admin"`); «Перевірки»: `td_bms_calendar_id`, `light_check_delay_min`, `light_norm_tolerance_pct`, `hvac_check_delay_min`, `cold_delay_min`, `indoor_min_work_c`, `indoor_min_off_c`, `heat_deficit_kw`, `heat_deficit_delay_min`, `check_heartbeat_min`; «Розрахунок освітлення»: `light_uf`, `light_mf`; «Дані»: `td_bms_install_state`, кнопка «Повторити установку даних» (admin) |
+| V-23 | `action_td_bms_overview` | `ir.actions.client`, `tag="td_bms.overview"`, `name="Будівля"`, `target="current"` | OWL-компонент R-28 |
 
-Меню (CB-09, sequence 80 під `factory3d_base.menu_f3d_root`):
+Меню (CB-09, sequence 80 під `td_factory3d.menu_td_root`):
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
-| `menu_f3d_bms` | Будівля | `factory3d_base.menu_f3d_root` | 80 | `group_f3d_user` | — |
-| `menu_f3d_bms_overview` | Огляд | `menu_f3d_bms` | 10 | `group_f3d_user` | `action_f3d_bms_overview` |
-| `menu_f3d_bms_lighting` | Освітлення | `menu_f3d_bms` | 20 | `group_f3d_user` | — |
-| `menu_f3d_bms_light_group` | Групи | `menu_f3d_bms_lighting` | 10 | `group_f3d_user` | `action_f3d_bms_light_group` (kanban,list,form) |
-| `menu_f3d_bms_light_panel` | Щити | `menu_f3d_bms_lighting` | 20 | `group_f3d_user` | `action_f3d_bms_light_panel` (list,form) |
-| `menu_f3d_bms_light_norm` | Норми освітленості | `menu_f3d_bms_lighting` | 30 | `group_f3d_user` | `action_f3d_bms_light_norm` (list,form) |
-| `menu_f3d_bms_hvac` | Вентиляція й опалення | `menu_f3d_bms` | 30 | `group_f3d_user` | — |
-| `menu_f3d_bms_hvac_unit` | Установки | `menu_f3d_bms_hvac` | 10 | `group_f3d_user` | `action_f3d_bms_hvac_unit` (list,kanban,form) |
-| `menu_f3d_bms_heat_balance` | Тепловий баланс | `menu_f3d_bms_hvac` | 20 | `group_f3d_user` | `action_f3d_bms_heat_balance_open` (`ir.actions.server`, `code="action = env['f3d.bms.heat.balance']._f3d_bms_get().get_formview_action()"`) |
-| `menu_f3d_bms_deviation` | Відхилення | `menu_f3d_bms` | 40 | `group_f3d_user` | `action_f3d_bms_deviation` (list,graph,pivot,form; `context={'search_default_open': 1}`) |
-| `menu_f3d_bms_config` | Будівля | `factory3d_base.menu_f3d_config` | 80 | `group_f3d_manager` | — |
-| `menu_f3d_bms_config_scene` | Сцени DALI | `menu_f3d_bms_config` | 10 | `group_f3d_manager` | `action_f3d_bms_light_scene` |
-| `menu_f3d_bms_config_settings` | Налаштування будівлі | `menu_f3d_bms_config` | 20 | `group_f3d_admin` | `action_f3d_bms_settings` (`res.config.settings`, `context={'module': 'factory3d_bms'}`) |
-| `menu_f3d_bms_config_reinstall` | Повторити установку даних будівлі | `menu_f3d_bms_config` | 90 | `group_f3d_admin` | `ir.actions.server` `action_f3d_bms_reinstall`: `code="action = env['f3d.bms.check'].f3d_bms_reinstall_data()"` |
+| `menu_td_bms` | Будівля | `td_factory3d.menu_td_root` | 80 | `group_td_user` | — |
+| `menu_td_bms_overview` | Огляд | `menu_td_bms` | 10 | `group_td_user` | `action_td_bms_overview` |
+| `menu_td_bms_lighting` | Освітлення | `menu_td_bms` | 20 | `group_td_user` | — |
+| `menu_td_bms_light_group` | Групи | `menu_td_bms_lighting` | 10 | `group_td_user` | `action_td_bms_light_group` (kanban,list,form) |
+| `menu_td_bms_light_panel` | Щити | `menu_td_bms_lighting` | 20 | `group_td_user` | `action_td_bms_light_panel` (list,form) |
+| `menu_td_bms_light_norm` | Норми освітленості | `menu_td_bms_lighting` | 30 | `group_td_user` | `action_td_bms_light_norm` (list,form) |
+| `menu_td_bms_hvac` | Вентиляція й опалення | `menu_td_bms` | 30 | `group_td_user` | — |
+| `menu_td_bms_hvac_unit` | Установки | `menu_td_bms_hvac` | 10 | `group_td_user` | `action_td_bms_hvac_unit` (list,kanban,form) |
+| `menu_td_bms_heat_balance` | Тепловий баланс | `menu_td_bms_hvac` | 20 | `group_td_user` | `action_td_bms_heat_balance_open` (`ir.actions.server`, `code="action = env['td.bms.heat.balance']._f3d_bms_get().get_formview_action()"`) |
+| `menu_td_bms_deviation` | Відхилення | `menu_td_bms` | 40 | `group_td_user` | `action_td_bms_deviation` (list,graph,pivot,form; `context={'search_default_open': 1}`) |
+| `menu_td_bms_config` | Будівля | `td_factory3d.menu_td_config` | 80 | `group_td_manager` | — |
+| `menu_td_bms_config_scene` | Сцени DALI | `menu_td_bms_config` | 10 | `group_td_manager` | `action_td_bms_light_scene` |
+| `menu_td_bms_config_settings` | Налаштування будівлі | `menu_td_bms_config` | 20 | `group_td_admin` | `action_td_bms_settings` (`res.config.settings`, `context={'module': 'td_bms'}`) |
+| `menu_td_bms_config_reinstall` | Повторити установку даних будівлі | `menu_td_bms_config` | 90 | `group_td_admin` | `ir.actions.server` `action_td_bms_reinstall`: `code="action = env['td.bms.check'].f3d_bms_reinstall_data()"` |
 
 ## 4. Права
 
@@ -812,75 +812,75 @@ telemetry); провайдери модуля замінюють розділи 
 
 ```csv
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_bms_light_norm_user,f3d.bms.light.norm user,model_f3d_bms_light_norm,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_light_norm_manager,f3d.bms.light.norm manager,model_f3d_bms_light_norm,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_light_panel_user,f3d.bms.light.panel user,model_f3d_bms_light_panel,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_light_panel_manager,f3d.bms.light.panel manager,model_f3d_bms_light_panel,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_light_group_user,f3d.bms.light.group user,model_f3d_bms_light_group,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_light_group_manager,f3d.bms.light.group manager,model_f3d_bms_light_group,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_light_scene_user,f3d.bms.light.scene user,model_f3d_bms_light_scene,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_light_scene_manager,f3d.bms.light.scene manager,model_f3d_bms_light_scene,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_hvac_unit_user,f3d.bms.hvac.unit user,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_hvac_unit_manager,f3d.bms.hvac.unit manager,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_heat_balance_user,f3d.bms.heat.balance user,model_f3d_bms_heat_balance,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_heat_balance_manager,f3d.bms.heat.balance manager,model_f3d_bms_heat_balance,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_bms_heat_balance_line_user,f3d.bms.heat.balance.line user,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_heat_balance_line_manager,f3d.bms.heat.balance.line manager,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_bms_deviation_user,f3d.bms.deviation user,model_f3d_bms_deviation,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_bms_deviation_operator,f3d.bms.deviation operator,model_f3d_bms_deviation,factory3d_bms.group_f3d_bms_operator,1,1,0,0
-access_f3d_bms_deviation_admin,f3d.bms.deviation admin,model_f3d_bms_deviation,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_bms_light_command_wizard_operator,f3d.bms.light.command.wizard operator,model_f3d_bms_light_command_wizard,factory3d_bms.group_f3d_bms_operator,1,1,1,1
-access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator,model_f3d_bms_hvac_command_wizard,factory3d_bms.group_f3d_bms_operator,1,1,1,1
+access_td_bms_light_norm_user,td.bms.light.norm user,model_td_bms_light_norm,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_light_norm_manager,td.bms.light.norm manager,model_td_bms_light_norm,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_light_panel_user,td.bms.light.panel user,model_td_bms_light_panel,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_light_panel_manager,td.bms.light.panel manager,model_td_bms_light_panel,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_light_group_user,td.bms.light.group user,model_td_bms_light_group,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_light_group_manager,td.bms.light.group manager,model_td_bms_light_group,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_light_scene_user,td.bms.light.scene user,model_td_bms_light_scene,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_light_scene_manager,td.bms.light.scene manager,model_td_bms_light_scene,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_hvac_unit_user,td.bms.hvac.unit user,model_td_bms_hvac_unit,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_hvac_unit_manager,td.bms.hvac.unit manager,model_td_bms_hvac_unit,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_heat_balance_user,td.bms.heat.balance user,model_td_bms_heat_balance,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_heat_balance_manager,td.bms.heat.balance manager,model_td_bms_heat_balance,td_factory3d.group_td_manager,1,1,1,0
+access_td_bms_heat_balance_line_user,td.bms.heat.balance.line user,model_td_bms_heat_balance_line,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_heat_balance_line_manager,td.bms.heat.balance.line manager,model_td_bms_heat_balance_line,td_factory3d.group_td_manager,1,1,1,1
+access_td_bms_deviation_user,td.bms.deviation user,model_td_bms_deviation,td_factory3d.group_td_user,1,0,0,0
+access_td_bms_deviation_operator,td.bms.deviation operator,model_td_bms_deviation,td_bms.group_td_bms_operator,1,1,0,0
+access_td_bms_deviation_admin,td.bms.deviation admin,model_td_bms_deviation,td_factory3d.group_td_admin,1,1,1,1
+access_td_bms_light_command_wizard_operator,td.bms.light.command.wizard operator,model_td_bms_light_command_wizard,td_bms.group_td_bms_operator,1,1,1,1
+access_td_bms_hvac_command_wizard_operator,td.bms.hvac.command.wizard operator,model_td_bms_hvac_command_wizard,td_bms.group_td_bms_operator,1,1,1,1
 ```
 
-Абстрактні `f3d.bms.overview`, `f3d.bms.check`, `f3d.viewer.provider.lighting/.ventilation` рядків не потребують.
-`f3d.bms.deviation.write` для оператора обмежено кодом: `write(vals)` → якщо `set(vals) - {'note'}` і не `env.su` →
+Абстрактні `td.bms.overview`, `td.bms.check`, `td.viewer.provider.lighting/.ventilation` рядків не потребують.
+`td.bms.deviation.write` для оператора обмежено кодом: `write(vals)` → якщо `set(vals) - {'note'}` і не `env.su` →
 `AccessError("Журнал відхилень веде система; можна змінювати лише примітку.")`.
 
 ### 4.2 Групи (`security/security.xml`)
 
 ```xml
-<record id="privilege_f3d_bms" model="res.groups.privilege">
+<record id="privilege_td_bms" model="res.groups.privilege">
     <field name="name">Завод 3D: будівля</field>
-    <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+    <field name="category_id" ref="td_factory3d.module_category_factory3d"/>
     <field name="sequence">80</field>
 </record>
-<record id="group_f3d_bms_operator" model="res.groups">
+<record id="group_td_bms_operator" model="res.groups">
     <field name="name">Будівля: оператор</field>
-    <field name="privilege_id" ref="privilege_f3d_bms"/>
+    <field name="privilege_id" ref="privilege_td_bms"/>
     <field name="sequence">10</field>
     <field name="comment">Енергетик, головний механік: керування освітленням і вентиляцією (якщо дозволено), журнал відхилень.</field>
-    <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('td_factory3d.group_td_user'))]"/>
 </record>
-<record id="factory3d_base.group_f3d_manager" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_f3d_bms_operator'))]"/>
+<record id="td_factory3d.group_td_manager" model="res.groups">
+    <field name="implied_ids" eval="[Command.link(ref('group_td_bms_operator'))]"/>
 </record>
 ```
 
-Ланцюжок: `group_f3d_user` ⊂ `group_f3d_bms_operator` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` ⊂ `base.group_system`.
-Група — у власному привілеї `privilege_f3d_bms` (sequence 80 = резерв меню bms) категорії
-`factory3d_base.module_category_factory3d` (X-19); драбина base `privilege_f3d` (Користувач/Менеджер/Адміністратор, CB-10)
-не змінюється — base лише отримує implied-зв'язок `group_f3d_manager` → `group_f3d_bms_operator`.
+Ланцюжок: `group_td_user` ⊂ `group_td_bms_operator` ⊂ `group_td_manager` ⊂ `group_td_admin` ⊂ `base.group_system`.
+Група — у власному привілеї `privilege_td_bms` (sequence 80 = резерв меню bms) категорії
+`td_factory3d.module_category_factory3d` (X-19); драбина base `privilege_td` (Користувач/Менеджер/Адміністратор, CB-10)
+не змінюється — base лише отримує implied-зв'язок `group_td_manager` → `group_td_bms_operator`.
 
 ### 4.3 Record rules
 
 | XML-id | Модель | Домен | Групи |
 |---|---|---|---|
-| `f3d_bms_heat_balance_rule_company` | `f3d.bms.heat.balance` | `[('company_id','in',company_ids)]` | глобальне |
+| `td_bms_heat_balance_rule_company` | `td.bms.heat.balance` | `[('company_id','in',company_ids)]` | глобальне |
 
 Решта моделей — без компанії (одна будівля; як зони base без компанії в мультикомпанійному режимі — CB-03 має
-`company_id`, групи успадковують видимість зони через `zone_id`: record rule base на `f3d.zone` → недоступна зона робить
+`company_id`, групи успадковують видимість зони через `zone_id`: record rule base на `td.zone` → недоступна зона робить
 групу нечитабельною лише для `zone_id`; окреме правило не потрібне).
 
 ### 4.4 Захист полів і дій
 
-- Поля налаштувань груп/установок/балансу — запис лише `group_f3d_manager` (ACL); оператор має читання + майстри.
-- `f3d.bms.light.group.action_open_command`, майстри M-09 — `_f3d_bms_check_operator()`: `has_group('factory3d_bms.group_f3d_bms_operator')`
+- Поля налаштувань груп/установок/балансу — запис лише `group_td_manager` (ACL); оператор має читання + майстри.
+- `td.bms.light.group.action_open_command`, майстри M-09 — `_f3d_bms_check_operator()`: `has_group('td_bms.group_td_bms_operator')`
   інакше `AccessError("Керування доступне енергетику й головному механіку (група «Будівля: оператор»).")`.
-- `res.config.settings.f3d_bms_write_enabled` — `groups="factory3d_base.group_f3d_admin"`; `set_values` перевіряє групу
+- `res.config.settings.td_bms_write_enabled` — `groups="td_factory3d.group_td_admin"`; `set_values` перевіряє групу
   ще раз (поле може прийти з RPC) → `AccessError`.
-- `f3d_bms_reinstall_data` — лише `group_f3d_admin` → інакше `AccessError`.
-- Сигнали модуля пишуться в `f3d.signal` лише хуком (`sudo`) і кроном через CT-10; ACL telemetry (менеджер) діє для
+- `f3d_bms_reinstall_data` — лише `group_td_admin` → інакше `AccessError`.
+- Сигнали модуля пишуться в `td.signal` лише хуком (`sudo`) і кроном через CT-10; ACL telemetry (менеджер) діє для
   ручних правок порогів у формі сигналу.
 
 ## 5. Дані
@@ -889,46 +889,46 @@ access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator
 
 | key | value | XML-id | Примітка |
 |---|---|---|---|
-| `factory3d.bms.read_enabled` | `True` | `param_read_enabled` | хук перезаписує за CB-10 |
-| `factory3d.bms.write_enabled` | `False` | `param_write_enabled` | |
-| `factory3d.bms.calendar_id` | `` | `param_calendar_id` | порожньо — календар компанії |
-| `factory3d.bms.light_check_delay_min` | `10` | `param_light_check_delay` | |
-| `factory3d.bms.light_norm_tolerance_pct` | `5` | `param_light_norm_tol` | |
-| `factory3d.bms.hvac_check_delay_min` | `10` | `param_hvac_check_delay` | |
-| `factory3d.bms.cold_delay_min` | `30` | `param_cold_delay` | |
-| `factory3d.bms.indoor_min_work_c` | `16.0` | `param_indoor_min_work` | |
-| `factory3d.bms.indoor_min_off_c` | `10.0` | `param_indoor_min_off` | |
-| `factory3d.bms.heat_deficit_kw` | `20` | `param_heat_deficit_kw` | |
-| `factory3d.bms.heat_deficit_delay_min` | `30` | `param_heat_deficit_delay` | |
-| `factory3d.bms.check_heartbeat_min` | `10` | `param_check_heartbeat` | |
-| `factory3d.bms.light_uf` | `0.7` | `param_light_uf` | `plant/lighting.py:UF` |
-| `factory3d.bms.light_mf` | `0.8` | `param_light_mf` | `MF` |
-| `factory3d.bms.install_report` | `{}` | `param_install_report` | звіт хука |
+| `td.bms.read_enabled` | `True` | `param_read_enabled` | хук перезаписує за CB-10 |
+| `td.bms.write_enabled` | `False` | `param_write_enabled` | |
+| `td.bms.calendar_id` | `` | `param_calendar_id` | порожньо — календар компанії |
+| `td.bms.light_check_delay_min` | `10` | `param_light_check_delay` | |
+| `td.bms.light_norm_tolerance_pct` | `5` | `param_light_norm_tol` | |
+| `td.bms.hvac_check_delay_min` | `10` | `param_hvac_check_delay` | |
+| `td.bms.cold_delay_min` | `30` | `param_cold_delay` | |
+| `td.bms.indoor_min_work_c` | `16.0` | `param_indoor_min_work` | |
+| `td.bms.indoor_min_off_c` | `10.0` | `param_indoor_min_off` | |
+| `td.bms.heat_deficit_kw` | `20` | `param_heat_deficit_kw` | |
+| `td.bms.heat_deficit_delay_min` | `30` | `param_heat_deficit_delay` | |
+| `td.bms.check_heartbeat_min` | `10` | `param_check_heartbeat` | |
+| `td.bms.light_uf` | `0.7` | `param_light_uf` | `plant/lighting.py:UF` |
+| `td.bms.light_mf` | `0.8` | `param_light_mf` | `MF` |
+| `td.bms.install_report` | `{}` | `param_install_report` | звіт хука |
 
 Читання булевих: `get_param(key, 'False') in ('True', 'true', '1')`; чисел — `float(get_param(key) or default)` з
 умовчанням таблиці при помилці розбору (WARNING у лог).
 
 ### 5.2 Data-файли з макета і генератор `tools/gen_data.py`
 
-Запуск (розробник, з кореня репозиторію): `python3 odoo_addons/factory3d_bms/tools/gen_data.py --root .`. Імпортує
+Запуск (розробник, з кореня репозиторію): `python3 odoo_addons/td_bms/tools/gen_data.py --root .`. Імпортує
 `plant.lighting`, `plant.ventilation`, `plant.layout`, читає `plant/lux_norms.json`, `plant/equipment_specs.json`;
 пише детерміновано (сортування, без часових міток):
 
-- **`data/f3d_bms_light_norm_data.xml`** — 13 `f3d.bms.light.norm` (xml-id `norm_<key>`; `sequence` = порядок у
+- **`data/td_bms_light_norm_data.xml`** — 13 `td.bms.light.norm` (xml-id `norm_<key>`; `sequence` = порядок у
   json × 10; `name` — `plant/lighting.py:NORM_NAMES`, для `sanding` — «шліфування, оздоблення фасадів», для
   `quality_control` — «контроль якості»; `lux`, `ugr`, `ra`, `ref_en` = `ref`, `note`, `sources` = `"\n".join(sources)`).
   Ефективні значення лк — Додаток A.0.
-- **`data/f3d_bms_light_scene_data.xml`** — 6 сцен M-04 (xml-id `scene_1…scene_6`).
-- **`data/f3d_bms_source_data.xml`** — 32 `f3d.source` (Додаток C): xml-id `source_hn_lp_<n>` і `source_bac_<device>`;
-  `collector_id` → `factory3d_telemetry.collector_main`; `module='bms'`; `read_enabled` у XML `True` (хук виправляє за
+- **`data/td_bms_light_scene_data.xml`** — 6 сцен M-04 (xml-id `scene_1…scene_6`).
+- **`data/td_bms_source_data.xml`** — 32 `td.source` (Додаток C): xml-id `source_hn_lp_<n>` і `source_bac_<device>`;
+  `collector_id` → `td_telemetry.collector_main`; `module='bms'`; `read_enabled` у XML `True` (хук виправляє за
   параметром); `write_enabled=False`; `params` — `eval` Python-словника.
-- **`data/f3d_bms_light_data.xml`** — 3 щити (xml-id `panel_lp_<n>`) і 32 групи (xml-id `group_<slug>`, slug = код
+- **`data/td_bms_light_data.xml`** — 3 щити (xml-id `panel_lp_<n>`) і 32 групи (xml-id `group_<slug>`, slug = код
   у нижньому регістрі з `-`→`_`: `group_lt_cut`): `code`, `name` (= назва обладнання в демо «Освітлення: <назва зони>»),
-  `sequence`, `zone_id` → `factory3d_base.zone_<slug зони>`, `norm_id` → `norm_<task>`, `panel_id`, `passport_id` →
-  `factory3d_base.passport_highbay` / `passport_highbay_rack`, `fixture_kind`, `n_fixtures`, `level_design`,
+  `sequence`, `zone_id` → `td_factory3d.zone_<slug зони>`, `norm_id` → `norm_<task>`, `panel_id`, `passport_id` →
+  `td_factory3d.passport_highbay` / `passport_highbay_rack`, `fixture_kind`, `n_fixtures`, `level_design`,
   `control_mode` (`shift`, якщо `level == 1.0`, інакше `presence`), `dali_group` (= № у каталозі 1…32), `dali_devices`
   (R-06). Повний зміст — Додаток A.1, A.2.
-- **`data/f3d_bms_hvac_data.xml`** — 29 установок (xml-id `unit_<slug>`: `unit_rv_05`, `unit_ahu_1`, `unit_ef_elec`)
+- **`data/td_bms_hvac_data.xml`** — 29 установок (xml-id `unit_<slug>`: `unit_rv_05`, `unit_ahu_1`, `unit_ef_elec`)
   і баланс `heat_balance_main` (умовчання M-06, `company_id` → `base.main_company`). Додаток A.3.
 - **`data/bms_signals.csv`** (549 рядків, Додаток B): `code,name,quantity,kind,unit,object,role,equipment,source,
   address,period_s,store_period_s,scale,decimals,states,alarm_low,alarm_high,warn_high,alarm_states,alarm_title,
@@ -941,32 +941,32 @@ access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator
 ### 5.3 `post_init_hook(env)` — кроки, джерела, ідемпотентність, очікувані кількості (R-29)
 
 `hooks.run_install(env) -> dict`; `post_init_hook = run_install + звіт`. Усе в транзакції установки; виняток на
-будь-якому кроці відкочує установку. Логер `odoo.addons.factory3d_bms.hooks`, INFO з лічильниками.
+будь-якому кроці відкочує установку. Логер `odoo.addons.td_bms.hooks`, INFO з лічильниками.
 
 | # | Функція | Що робить | Ідемпотентність | Очікувано (копія демо з base + telemetry) | Чиста база (base + telemetry) |
 |---|---|---|---|---|---|
-| 1 | `params(env)` | `read_enabled = (factory3d.base.environment == 'test')`; `write_enabled = 'False'` | перезапис | `read_enabled=True` | те саме |
-| 2 | `derived_source(env)` | `f3d.source` `BMS-DERIVED` (M-12) з xml-id `factory3d_bms.source_bms_derived` (через `ir.model.data` `_update_xmlids`) | upsert за `code` | `created: 1` | те саме |
+| 1 | `params(env)` | `read_enabled = (td.base.environment == 'test')`; `write_enabled = 'False'` | перезапис | `read_enabled=True` | те саме |
+| 2 | `derived_source(env)` | `td.source` `BMS-DERIVED` (M-12) з xml-id `td_bms.source_bms_derived` (через `ir.model.data` `_update_xmlids`) | upsert за `code` | `created: 1` | те саме |
 | 3 | `link_equipment(env)` | для щитів, груп, установок: `env['maintenance.equipment'].search_f3d(code)` → `equipment_id` (лише порожні); баланс: `boiler_equipment_id = search_f3d('BOILER')`, `chp_equipment_id = search_f3d('CHP')`; джерела модуля: `equipment_id` = обладнання з кодом у `code` джерела (`BAC-105-RV-05` → `RV-05`, `HN-LP-2` → `LP-2`) | лише порожні | `panels: 3`, `groups: 32`, `units: 29`, `balance: 2`, `sources: 32`, `not_found: 0` | `not_found: 66` (WARNING на кожен) |
-| 4 | `signals(env)` | `bms_signals.csv`: `sig = search([('code','=',code)], active_test=False)`; `new=0` і є → `write` полів прив'язки (`source_id`, `address`, `period_s`, `store_period_s`, `scale`, `decimals`, `viewer_visible`, `module='bms'`, `active=True`, `equipment_id` якщо порожнє; пороги/`alarm_title`/`hysteresis` — лише з непорожніх колонок); `new=0` і немає (чиста база) або `new=1` і немає → `create` (усі колонки; `origin` з CSV; `equipment_id` = `search_f3d(equipment)`; `source_id` за кодом джерела; `write_enabled=False`); `new=1` і є → `write` визначення без `last_*`/`status`/`origin`; xml-id `factory3d_bms.sig_<slug>` для створених (`slug` — правило telemetry Додаток D) | upsert за `code` | `created: 468`, `updated: 81`, `no_equipment: 0` | `created: 549`, `updated: 0` |
+| 4 | `signals(env)` | `bms_signals.csv`: `sig = search([('code','=',code)], active_test=False)`; `new=0` і є → `write` полів прив'язки (`source_id`, `address`, `period_s`, `store_period_s`, `scale`, `decimals`, `viewer_visible`, `module='bms'`, `active=True`, `equipment_id` якщо порожнє; пороги/`alarm_title`/`hysteresis` — лише з непорожніх колонок); `new=0` і немає (чиста база) або `new=1` і немає → `create` (усі колонки; `origin` з CSV; `equipment_id` = `search_f3d(equipment)`; `source_id` за кодом джерела; `write_enabled=False`); `new=1` і є → `write` визначення без `last_*`/`status`/`origin`; xml-id `td_bms.sig_<slug>` для створених (`slug` — правило telemetry Додаток D) | upsert за `code` | `created: 468`, `updated: 81`, `no_equipment: 0` | `created: 549`, `updated: 0` |
 | 5 | `link_signals(env)` | поля сигналів M-02/M-03/M-05/M-06 за кодами Додатка B (колонки `object`, `role`); баланс: `outdoor` = `ventilation/totals/outdoor_c`, `boiler_state` = `equipment/BOILER/state`, `boiler_supply` = `…/supply_c` (telemetry), `boiler_return` = `…/return_c`, `boiler_heat` = `…/heat_kw`, `silo` = `…/silo_fill` (telemetry), `chp_heat` = `infra/chp/heat_kw` (energy, якщо існує), `chp_el` = `infra/totals/chp_kw` (energy/рівень 0, якщо існує), `mains` = `infra/ats/src1_ok` (energy, якщо існує), `fire` = `fire/totals/system_state` (fire_safety, якщо існує), `check` = `ventilation/heat_plant/check` | перезапис | `links: 549 − 0` (усі ролі), `optional_missing: ['infra/chp/heat_kw', 'infra/ats/src1_ok', 'fire/totals/system_state']` (на демо без energy/fire_safety; `infra/totals/chp_kw` є з рівня 0) | ті самі `optional_missing` + `infra/totals/chp_kw` |
 | 6 | `read_flags(env)` | джерела модуля (32 + `BMS-DERIVED`): `read_enabled` = параметр п. 1 | перезапис | `sources_read: 33` | те саме |
 | 7 | `write_flags(env)` | R-30 з `write_enabled=False` | перезапис | `signals_write: 0` | те саме |
-| 8 | `recompute(env)` | `f3d.bms.heat.balance._f3d_bms_get().action_recompute()`; групи — stored compute уже пораховані | — | `total_kw: 753` | `753` |
-| 9 | `demo_request(env)` | для відкритих заявок із `f3d_signal_id.module == 'bms'` і статусом сигналу `alarm` — епізод журналу `state='open'`, `started = request.create_date`, `value = f3d_value`, `threshold = f3d_threshold`, `request_id` | за `(signal_id, state='open')` | `deviations: 1` (заявка id 6, RV-05) | 0 |
-| 10 | `report(env, report)` | `factory3d.bms.install_report = json.dumps({state, ts, ...})`; `state='partial'`, якщо `not_found > 0` або сигналів створено/оновлено менше за 549, інакше `done` | перезапис | `done` | `partial` (немає обладнання) |
+| 8 | `recompute(env)` | `td.bms.heat.balance._f3d_bms_get().action_recompute()`; групи — stored compute уже пораховані | — | `total_kw: 753` | `753` |
+| 9 | `demo_request(env)` | для відкритих заявок із `td_signal_id.module == 'bms'` і статусом сигналу `alarm` — епізод журналу `state='open'`, `started = request.create_date`, `value = td_value`, `threshold = td_threshold`, `request_id` | за `(signal_id, state='open')` | `deviations: 1` (заявка id 6, RV-05) | 0 |
+| 10 | `report(env, report)` | `td.bms.install_report = json.dumps({state, ts, ...})`; `state='partial'`, якщо `not_found > 0` або сигналів створено/оновлено менше за 549, інакше `done` | перезапис | `done` | `partial` (немає обладнання) |
 
-Метод `f3d.bms.check.f3d_bms_reinstall_data()` (`@api.model`, лише `group_f3d_admin`) → `hooks.run_install(env)`,
+Метод `td.bms.check.f3d_bms_reinstall_data()` (`@api.model`, лише `group_td_admin`) → `hooks.run_install(env)`,
 повертає `display_notification` зі звітом (`sticky=True`). Повторний запуск: кроки 2–9 нічого не дублюють (лічильники
 `created: 0`).
 
 ### 5.4 `uninstall_hook(env)`
 
-1. `env['ir.config_parameter'].search([('key','=like','factory3d.bms.%')]).unlink()`.
+1. `env['ir.config_parameter'].search([('key','=like','td.bms.%')]).unlink()`.
 2. Сигнали `module='bms'` з `origin ∈ {catalog, module}` → `write({'active': False, 'source_id': False, 'write_enabled': False})`;
    81 сигнал макета (`origin='sim_data'`) → `write({'source_id': False, 'address': {}, 'write_enabled': False})`.
-3. Відкриті `f3d.command` на сигналах модуля у `queued` → `cancelled` (через `action_cancel`).
-4. `maintenance.request`, `f3d.reading`, `f3d.reading.hour` — не чіпаються; моделі модуля, джерела з даних модуля і
+3. Відкриті `td.command` на сигналах модуля у `queued` → `cancelled` (через `action_cancel`).
+4. `maintenance.request`, `td.reading`, `td.reading.hour` — не чіпаються; моделі модуля, джерела з даних модуля і
    тип `f3d_bms` (`ondelete='cascade'` → `BMS-DERIVED`) видаляються стандартно.
 
 ### 5.5 Повторна установка
@@ -977,26 +977,26 @@ access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator
 ### 5.6 `data/neutralize.sql`
 
 ```sql
--- factory3d_bms: нейтралізація копії проду (CB-10, каркас §5)
-UPDATE ir_config_parameter SET value = 'False' WHERE key IN ('factory3d.bms.read_enabled', 'factory3d.bms.write_enabled');
+-- td_bms: нейтралізація копії проду (CB-10, каркас §5)
+UPDATE ir_config_parameter SET value = 'False' WHERE key IN ('td.bms.read_enabled', 'td.bms.write_enabled');
 UPDATE ir_cron c SET active = false FROM ir_model_data d
-  WHERE d.model = 'ir.cron' AND d.res_id = c.id AND d.module = 'factory3d_bms';
-UPDATE f3d_source SET read_enabled = false, write_enabled = false, state = 'disabled' WHERE module = 'bms';
-UPDATE f3d_signal SET write_enabled = false WHERE module = 'bms';
+  WHERE d.model = 'ir.cron' AND d.res_id = c.id AND d.module = 'td_bms';
+UPDATE td_source SET read_enabled = false, write_enabled = false, state = 'disabled' WHERE module = 'bms';
+UPDATE td_signal SET write_enabled = false WHERE module = 'bms';
 ```
 
 ## 6. Крони й фонові процеси (`data/ir_cron.xml`)
 
 | XML-id | Назва | Інтервал | Модель / метод | Один прогін | Ліміти |
 |---|---|---|---|---|---|
-| `cron_f3d_bms_check` | Будівля: перевірка відхилень | 1 хв, `active=True` | `f3d.bms.check._cron_check` | якщо `read_enabled=False` → вихід; інакше: (1) `SignalCache` усіх сигналів модуля (один `search_read`, 549); (2) робочий час (R-18) для календарів груп/установок; (3) придушення (R-21); (4) правила груп (R-19), установок (R-23), котельні (R-24) → список показань стан-сигналів, що змінили текст або чекають heartbeat; (5) один `env['f3d.signal'].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(readings, src='module')`; (6) доповнення нових заявок і журнал (R-22); (7) `BMS-DERIVED.state='online'`, `last_ok=now`; (8) шина CH-06 для об'єктів зі зміненим відхиленням | ≤ 2 с на 61 об'єкт; виняток → `BMS-DERIVED.state='error'`, `last_error` (≤ 512), лог `exception`, транзакція крона відкочується (наступний прогін повторить) |
+| `cron_td_bms_check` | Будівля: перевірка відхилень | 1 хв, `active=True` | `td.bms.check._cron_check` | якщо `read_enabled=False` → вихід; інакше: (1) `SignalCache` усіх сигналів модуля (один `search_read`, 549); (2) робочий час (R-18) для календарів груп/установок; (3) придушення (R-21); (4) правила груп (R-19), установок (R-23), котельні (R-24) → список показань стан-сигналів, що змінили текст або чекають heartbeat; (5) один `env['td.signal'].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(readings, src='module')`; (6) доповнення нових заявок і журнал (R-22); (7) `BMS-DERIVED.state='online'`, `last_ok=now`; (8) шина CH-06 для об'єктів зі зміненим відхиленням | ≤ 2 с на 61 об'єкт; виняток → `BMS-DERIVED.state='error'`, `last_error` (≤ 512), лог `exception`, транзакція крона відкочується (наступний прогін повторить) |
 
 Крон від `base.user_root`; заявок напряму не створює (лише через telemetry CT-05 у п. 5).
 
 ## 7. HTTP/JSON API
 
 Власних HTTP-маршрутів немає. Показання надходять через telemetry API-02 (колектор) і CT-10 (крон). Клієнт OWL
-викликає ORM: `orm.call('f3d.bms.overview', 'get_overview_data', [])` і `orm.call('f3d.bms.overview', 'action_open',
+викликає ORM: `orm.call('td.bms.overview', 'get_overview_data', [])` і `orm.call('td.bms.overview', 'action_open',
 [model, res_id, what])` — стандартний `/web/dataset/call_kw` із сесією користувача (права ORM). Контракт відповіді
 `get_overview_data` — R-28.
 
@@ -1178,17 +1178,17 @@ class HelvarNetPlugin(SourcePlugin):
 
 | ID | Правило | Алгоритм | Приклад |
 |---|---|---|---|
-| R-18 | **Робочий час** (`tools.schedule.work_interval_at`) | Календар: `calendar_id` групи/установки → параметр `factory3d.bms.calendar_id` → `company.resource_calendar_id`. `dt` (UTC naive) → aware UTC; `intervals = cal._work_intervals_batch(dt − 12 год, dt + 12 год, compute_leaves=True)[False]`; повернути `(start, stop)` інтервалу з `start ≤ dt < stop` (UTC naive) або `None`. Кеш на прогін крона за `(calendar_id, хвилина)` | «Зміна 1» (Europe/Kyiv): вт 14.10.2026 10:00 Київ (07:00 UTC) → `(04:00, 08:30)` UTC; 11:45 Київ (обід) → `None`; 15:31 → `None`; сб 18.10 10:00 → `None`; день із `resource.calendar.leaves` компанії → `None` |
+| R-18 | **Робочий час** (`tools.schedule.work_interval_at`) | Календар: `calendar_id` групи/установки → параметр `td.bms.calendar_id` → `company.resource_calendar_id`. `dt` (UTC naive) → aware UTC; `intervals = cal._work_intervals_batch(dt − 12 год, dt + 12 год, compute_leaves=True)[False]`; повернути `(start, stop)` інтервалу з `start ≤ dt < stop` (UTC naive) або `None`. Кеш на прогін крона за `(calendar_id, хвилина)` | «Зміна 1» (Europe/Kyiv): вт 14.10.2026 10:00 Київ (07:00 UTC) → `(04:00, 08:30)` UTC; 11:45 Київ (обід) → `None`; 15:31 → `None`; сб 18.10 10:00 → `None`; день із `resource.calendar.leaves` компанії → `None` |
 | R-19 | **Перевірка групи освітлення** (`tools.rules.light_check`) | Вхід: `live(level)`, `level_pct`, `e_now_raw`, `E_н`, `tol = light_norm_tolerance_pct/100`, `interval` (R-18), `mains_lost` (R-21), `off_since`, `low_since`, `delay = light_check_delay_min`, `now`. 1) `not live` → «немає даних»; 2) `interval is None` → «поза робочим часом»; 3) `mains_lost` → «немає мережі (живлення від резерву)»; 4) `start = interval[0]`; `check_off ∧ level_pct < 1 ∧ off_since ∧ now − max(off_since, start) ≥ delay` → «вимкнено в робочий час»; 5) `check_norm ∧ level_pct ≥ 1 ∧ e_now_raw < E_н·(1 − tol) ∧ low_since ∧ now − max(low_since, start) ≥ delay` → «нижче норми»; 6) інакше «норма». Тексти `states` сигналу `…/check` і ключі `deviation`: «норма» `none`, «поза робочим часом» `off_hours`, «вимкнено в робочий час» `off_in_work`, «нижче норми» `below_norm`, «немає даних» `no_data`, «немає мережі (живлення від резерву)» `no_mains`; `alarm_states = ["вимкнено в робочий час", "нижче норми"]` | LT-CUT, вт, рівень 0 з 09:55: о 10:04 «норма», о 10:05 «вимкнено в робочий час»; рівень 60 з 10:00: `305,2 < 475` → о 10:10 «нижче норми»; рівень 95: `483,3 ≥ 475` → «норма»; LT-SHEETS (`check_norm=False`) рівень 50 → «норма»; рівень 0 з учора 18:00 → о 07:09 «норма», о 07:10 «вимкнено…»; 11:40 → «поза робочим часом» |
-| R-20 | **Умови «з якого часу»** (`f3d.bms.check._f3d_bms_on_ingest(codes)` і крок крона) | Для коду `lighting/groups/<G>/level`: `v = last_value`, `ts = last_ts`; `v < 1` і `off_since` порожнє → `off_since = ts`; `v ≥ 1` → `off_since = False`; `e = e_calc_raw · v / 100`; `v ≥ 1 ∧ e < E_н·(1 − tol)` і `low_since` порожнє → `low_since = ts`; інакше (`v < 1` або `e ≥ …`) → `low_since = False`. Для `ventilation/units/<U>/state` або `/mode`: `not_running = state == 'stopped' ∨ mode ∈ {ST, Off}` (не `fault`/`frost`) → `off_since` як вище; для `/indoor_c`: `< indoor_min_work_c` → `cold_since`, `< indoor_min_off_c` → `cold_off_since`. Крон (п. 4 §6) робить те саме з поточних значень, якщо поле не відповідає поточній умові (час = `now`). Під час придушення (R-21) `off_since = False` | `level` 0 з `ts=09:55:12` → `off_since = 09:55:12`; наступне 0 о 10:00 — без змін; 60 о 10:00 → `off_since=False`, `low_since=10:00` |
-| R-21 | **Придушення** (`tools.rules.suppression`) | `mains_lost` = сигнал `infra/ats/src1_ok` (CE-02) живий і `last_value == 0`; `fire_active` = сигнал `fire/totals/system_state` живий і `last_text ∈ {alarm, test}`, або `'f3d.fire.drill' in env` і `env['f3d.fire.drill'].sudo()._f3d_is_active_at(now)` (CF-06). Освітлення: `mains_lost` → «немає мережі…». Установки RV/AHU: `mains_lost` → «немає мережі…»; `fire_active ∧ not_running` → «зупинено пожежною сигналізацією»; після зняття — звичайна перевірка з новою затримкою (бо `off_since` скинуто) | навчання S-07 о 10:00: усі RV `ST` → «зупинено пожежною сигналізацією», заявок 0; відбій 10:05, RV-07 не запустилась → о 10:15 «не працює в робочий час» |
-| R-22 | **Правило заявки, журнал, доповнення назв** (`tools.rules.rule_of`, `tools.titles`) | 1) `rule_of(code, text)`: `…/filter_dp_pa` → `filter_supply`; `…/filter_extract_dp_pa` → `filter_extract`; `ventilation/units/EF-CHG/state` → `charging_vent`; інші `ventilation/units/*/state` → `unit_fault`; `ventilation/units/EF-ELEC/indoor_c` → `overheat`; `…/room_pressure_pa` → `pressure`; `lighting/groups/*/faults` → `light_fault`; `lighting/groups/*/check`: «вимкнено в робочий час» → `light_off`, «нижче норми» → `light_low`; `ventilation/units/*/check`: «не працює в робочий час» → `unit_off`, «холодно в зоні» → `cold`; `equipment/BOILER/state` → `boiler_fault`; `ventilation/heat_plant/check` → `heat_deficit`; інше → `other`. 2) **Журнал** (кожен прогін після CT-10): сигнали модуля зі `status='alarm'` без відкритого епізоду → `create` (`started = status_since or now`, `value`, `threshold` — спрацьований поріг (`alarm_high`/`alarm_low`) або значення R-22 п. 3, `unit`, `object_*`, `zone_id`, `request_id = maintenance_request_id`, `name` — назва заявки або текст п. 3); відкриті епізоди сигналів зі `status ≠ alarm` → `state='closed'`, `ended = status_since or now`; відкриті без `request_id` → підставити, коли з'явилась; `value` оновлюється найгіршим (більшим для верхнього порогу, меншим для нижнього). 3) **Доповнення назв** заявок на сигналах `…/check` з `f3d_bms_enriched=False`: `name`, `f3d_value`, `f3d_threshold` за таблицею R-22a; `description += "\n" + рядок деталей`; `f3d_bms_enriched=True`. Для `light_fault` — лише `description += "Несправні світильники: <faulty>; щит <LP>, DALI-група G:<g>."`. Числа: лк, %, кВт — цілі; °C — 1 знак, кома | див. R-22a |
+| R-20 | **Умови «з якого часу»** (`td.bms.check._f3d_bms_on_ingest(codes)` і крок крона) | Для коду `lighting/groups/<G>/level`: `v = last_value`, `ts = last_ts`; `v < 1` і `off_since` порожнє → `off_since = ts`; `v ≥ 1` → `off_since = False`; `e = e_calc_raw · v / 100`; `v ≥ 1 ∧ e < E_н·(1 − tol)` і `low_since` порожнє → `low_since = ts`; інакше (`v < 1` або `e ≥ …`) → `low_since = False`. Для `ventilation/units/<U>/state` або `/mode`: `not_running = state == 'stopped' ∨ mode ∈ {ST, Off}` (не `fault`/`frost`) → `off_since` як вище; для `/indoor_c`: `< indoor_min_work_c` → `cold_since`, `< indoor_min_off_c` → `cold_off_since`. Крон (п. 4 §6) робить те саме з поточних значень, якщо поле не відповідає поточній умові (час = `now`). Під час придушення (R-21) `off_since = False` | `level` 0 з `ts=09:55:12` → `off_since = 09:55:12`; наступне 0 о 10:00 — без змін; 60 о 10:00 → `off_since=False`, `low_since=10:00` |
+| R-21 | **Придушення** (`tools.rules.suppression`) | `mains_lost` = сигнал `infra/ats/src1_ok` (CE-02) живий і `last_value == 0`; `fire_active` = сигнал `fire/totals/system_state` живий і `last_text ∈ {alarm, test}`, або `'td.fire.drill' in env` і `env['td.fire.drill'].sudo()._f3d_is_active_at(now)` (CF-06). Освітлення: `mains_lost` → «немає мережі…». Установки RV/AHU: `mains_lost` → «немає мережі…»; `fire_active ∧ not_running` → «зупинено пожежною сигналізацією»; після зняття — звичайна перевірка з новою затримкою (бо `off_since` скинуто) | навчання S-07 о 10:00: усі RV `ST` → «зупинено пожежною сигналізацією», заявок 0; відбій 10:05, RV-07 не запустилась → о 10:15 «не працює в робочий час» |
+| R-22 | **Правило заявки, журнал, доповнення назв** (`tools.rules.rule_of`, `tools.titles`) | 1) `rule_of(code, text)`: `…/filter_dp_pa` → `filter_supply`; `…/filter_extract_dp_pa` → `filter_extract`; `ventilation/units/EF-CHG/state` → `charging_vent`; інші `ventilation/units/*/state` → `unit_fault`; `ventilation/units/EF-ELEC/indoor_c` → `overheat`; `…/room_pressure_pa` → `pressure`; `lighting/groups/*/faults` → `light_fault`; `lighting/groups/*/check`: «вимкнено в робочий час» → `light_off`, «нижче норми» → `light_low`; `ventilation/units/*/check`: «не працює в робочий час» → `unit_off`, «холодно в зоні» → `cold`; `equipment/BOILER/state` → `boiler_fault`; `ventilation/heat_plant/check` → `heat_deficit`; інше → `other`. 2) **Журнал** (кожен прогін після CT-10): сигнали модуля зі `status='alarm'` без відкритого епізоду → `create` (`started = status_since or now`, `value`, `threshold` — спрацьований поріг (`alarm_high`/`alarm_low`) або значення R-22 п. 3, `unit`, `object_*`, `zone_id`, `request_id = maintenance_request_id`, `name` — назва заявки або текст п. 3); відкриті епізоди сигналів зі `status ≠ alarm` → `state='closed'`, `ended = status_since or now`; відкриті без `request_id` → підставити, коли з'явилась; `value` оновлюється найгіршим (більшим для верхнього порогу, меншим для нижнього). 3) **Доповнення назв** заявок на сигналах `…/check` з `td_bms_enriched=False`: `name`, `td_value`, `td_threshold` за таблицею R-22a; `description += "\n" + рядок деталей`; `td_bms_enriched=True`. Для `light_fault` — лише `description += "Несправні світильники: <faulty>; щит <LP>, DALI-група G:<g>."`. Числа: лк, %, кВт — цілі; °C — 1 знак, кома | див. R-22a |
 | R-23 | **Перевірка установки** (`tools.rules.unit_check`, лише `kind ∈ {roofvent, ahu}`) | 1) витрата й стан не живі → «немає даних»; 2) `mains_lost` → «немає мережі (живлення від резерву)»; 3) `fire_active ∧ not_running` → «зупинено пожежною сигналізацією»; 4) `interval is None`: `indoor` живий `< indoor_min_off_c` і `now − cold_off_since ≥ cold_delay` → «холодно в зоні»; інакше «поза робочим часом»; 5) у робочий час: `required_in_work ∧ not_running ∧ now − max(off_since, start) ≥ hvac_check_delay` → «не працює в робочий час»; `indoor < indoor_min_work_c ∧ now − max(cold_since, start) ≥ cold_delay` → «холодно в зоні»; інакше «норма». `VEL` у робочий час — не відхилення. Тексти/ключі: «норма» `none`, «поза робочим часом» `off_hours`, «не працює в робочий час» `not_running`, «холодно в зоні» `cold`, «немає даних» `no_data`, «зупинено пожежною сигналізацією» `fire`, «немає мережі (живлення від резерву)» `no_mains`; `alarm_states = ["не працює в робочий час", "холодно в зоні"]`. Пороги сигналів (CT-05, у даних): фільтр припливу `alarm_high=250`, `hysteresis=5`; витяжки `350`/`10`; `state` `alarm_states=["fault","frost"]`; EF-CHG `["stopped_charging"]`; EF-ELEC `indoor_c` `alarm_high=35`, `hysteresis=1`, `min_duration_s=600`; AHU-1 `room_pressure_pa` `alarm_high=0`, `hysteresis=1`, `min_duration_s=300` | RV-05 вт 10:00, `ST` з 09:50 → о 10:00 «не працює в робочий час»; 23:00, `ST`, 15 °C → «поза робочим часом»; 23:00, 9 °C з 22:20 → о 22:50 «холодно в зоні»; 10:00, 15,5 °C з 09:30 → «холодно в зоні»; RV-05 `VEL` о 10:00 → «норма»; `fault` → заявка лише за `state` (CT-05), перевірка — «норма» |
 | R-24 | **Перевірка котельні / дефіцит тепла** | `need`, `deficit` — R-16; немає живих `heat_kw` у ≥ 50 % RV/AHU або стану котельні → «немає даних»; `deficit > heat_deficit_kw` → `deficit_since` (якщо порожнє — `now`); `deficit ≤ поріг` → `deficit_since = False`; `deficit_since ∧ now − deficit_since ≥ heat_deficit_delay` → «дефіцит тепла»; інакше «норма». Сигнал `ventilation/heat_plant/check` (обладнання `BOILER`), `states = ["норма", "дефіцит тепла", "немає даних"]`, `alarm_states = ["дефіцит тепла"]`. Аварія котельні — окремо за `equipment/BOILER/state` (`alarm_states=["fault"]`, CT-05) | `deficit 103` з 10:00 → о 10:30 «дефіцит тепла»; `deficit 15` → «норма» |
 
 **R-22a. Тексти й значення заявок відхилень** (`tools.titles`; `{zone}` = `zone_id.name`):
 
-| Правило | `name` | `f3d_value` / `f3d_threshold` | Рядок `description` | Приклад |
+| Правило | `name` | `td_value` / `td_threshold` | Рядок `description` | Приклад |
 |---|---|---|---|---|
 | `light_off` | «Освітлення {code} ({zone}): вимкнено в робочий час — рівень {level} % при нормі {e_norm} лк» | `e_now` / `E_н` | «Група DALI G:{g}, щит {panel}; вимкнено з {off_since Київ}.» | «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк» |
 | `light_low` | «Освітлення {code} ({zone}): ≈ {e_now} лк при нормі {e_norm} лк (рівень {level} %)» | `e_now` / `E_н` | «Розрахунок: {e_calc} лк при 100 %, допуск {tol} %; з {low_since Київ}.» | «Освітлення LT-CUT (Розкрій): ≈ 305 лк при нормі 500 лк (рівень 60 %)» |
@@ -1201,9 +1201,9 @@ class HelvarNetPlugin(SourcePlugin):
 
 | ID | Правило | Алгоритм | Приклад |
 |---|---|---|---|
-| R-25 | **Команди з майстрів** (FR-18, A-09) | 1) `_f3d_bms_check_operator()`; 2) параметр `factory3d.bms.write_enabled` → інакше `UserError("Керування вимкнено: модуль «Будівля» (factory3d.bms.write_enabled).")`; 3) `factory3d.telemetry.write_enabled` → інакше `UserError("Керування вимкнено: телеметрія (factory3d.telemetry.write_enabled).")`; 4) для кожної групи/установки: сигнал (`level_signal_id` / `scene_signal_id` / `mode_signal_id` / `sp_day_signal_id` / `sp_night_signal_id`) має `write_enabled` і `source_id.write_enabled` — інакше список у `UserError("Запис вимкнено на: LT-CUT (джерело HN-LP-2), …")`; 5) валідація: рівень 0…100, сцена — запис M-04, режим — 8 кодів, уставка 5,0…30,0; 6) `cmd = env['f3d.command'].with_user(SUPERUSER_ID).create({'signal_id', 'value', 'text', 'expires_at': now + expires_min, 'origin': 'bms', 'requested_by': env.uid, 'note': note})`: рівень → `value=level_pct`, `text="fade=<fade_s>"`; сцена → `value=scene.number`, `text="fade=<fade_s>"`; режим → `value=False`, `text=<код>`; уставка → `value=value_c`, `text=False`; 7) чаттер об'єкта «Надіслано команду: <дія> (<користувач>), команда #<id>»; 8) повернути `act_window` `f3d.command` (`domain=[('id','in',ids)]`) | оператор, усе дозволено: LT-MAINT, сцена 3 → команда `value=3`, `text="fade=2.0"`, `requested_by=оператор`; без `write_enabled` модуля → `UserError` п. 2; RV-05 режим `VEL` → `text="VEL"` |
+| R-25 | **Команди з майстрів** (FR-18, A-09) | 1) `_f3d_bms_check_operator()`; 2) параметр `td.bms.write_enabled` → інакше `UserError("Керування вимкнено: модуль «Будівля» (td.bms.write_enabled).")`; 3) `td.telemetry.write_enabled` → інакше `UserError("Керування вимкнено: телеметрія (td.telemetry.write_enabled).")`; 4) для кожної групи/установки: сигнал (`level_signal_id` / `scene_signal_id` / `mode_signal_id` / `sp_day_signal_id` / `sp_night_signal_id`) має `write_enabled` і `source_id.write_enabled` — інакше список у `UserError("Запис вимкнено на: LT-CUT (джерело HN-LP-2), …")`; 5) валідація: рівень 0…100, сцена — запис M-04, режим — 8 кодів, уставка 5,0…30,0; 6) `cmd = env['td.command'].with_user(SUPERUSER_ID).create({'signal_id', 'value', 'text', 'expires_at': now + expires_min, 'origin': 'bms', 'requested_by': env.uid, 'note': note})`: рівень → `value=level_pct`, `text="fade=<fade_s>"`; сцена → `value=scene.number`, `text="fade=<fade_s>"`; режим → `value=False`, `text=<код>`; уставка → `value=value_c`, `text=False`; 7) чаттер об'єкта «Надіслано команду: <дія> (<користувач>), команда #<id>»; 8) повернути `act_window` `td.command` (`domain=[('id','in',ids)]`) | оператор, усе дозволено: LT-MAINT, сцена 3 → команда `value=3`, `text="fade=2.0"`, `requested_by=оператор`; без `write_enabled` модуля → `UserError` п. 2; RV-05 режим `VEL` → `text="VEL"` |
 | R-29 | **Установка даних** | §5.3; сигнали з CSV — правило оновлення `new=0` (лише прив'язка) і `new=1` (визначення без `last_*`); посилання моделей на сигнали за `(object, role)` CSV | — |
-| R-30 | **Прапори запису** (A-21) | `write_enabled=True` → `f3d.source` `HN-LP-1…3`, `BAC-101…125`, `BAC-130-AHU-1`: `write_enabled=True`; 142 сигнали з `writable=1` (CSV): `write_enabled=True`; чаттер джерел; `False` → те саме `False` для всіх джерел/сигналів модуля; відкриті `f3d.command` модуля в `queued` → `cancelled` | `True` → 29 джерел, 142 сигнали; `False` → 0 і 0 |
+| R-30 | **Прапори запису** (A-21) | `write_enabled=True` → `td.source` `HN-LP-1…3`, `BAC-101…125`, `BAC-130-AHU-1`: `write_enabled=True`; 142 сигнали з `writable=1` (CSV): `write_enabled=True`; чаттер джерел; `False` → те саме `False` для всіх джерел/сигналів модуля; відкриті `td.command` модуля в `queued` → `cancelled` | `True` → 29 джерел, 142 сигнали; `False` → 0 і 0 |
 
 ### 9.5 Переглядач і огляд
 
@@ -1211,7 +1211,7 @@ class HelvarNetPlugin(SourcePlugin):
 |---|---|---|---|
 | R-26 | **Розділ `lighting`** (`tools.payload.build_lighting(env, ctx, static)`) | `groups = {}`: для активних груп за `sequence`: `rec = dict(static.get('groups', {}).get(code, {}))`; `rec.update({zone: zone_code, zone_name, task: norm.key, task_name: norm.name, kind: fixture_kind, panel: panel.code, n: n_fixtures, lumen, watt, area: round(area_m2), e_norm, e_calc, level: round(level_pct/100, 3), e_now, p_inst: p_inst_kw, p_now: round(p_now_kw, 2), control: label(control_mode)})` + `dali_group`, `faults`, `faulty`, `scene`, `deviation`, `deviation_text`, `stale`, `level_source`; групи статики без запису ORM — як є. `panels`: `{code: {name, groups: [коди за sequence], n, p_inst: round(Σ, 1), p_now: round(p_now_kw, 1), state, p_source}}`. `uf`/`mf` — параметри (0,7 / 0,8); `norms_ref = {key: ref_en}` для активних норм. Ключі верхнього рівня — `groups`, `panels`, `uf`, `mf`, `norms_ref` (A.13) | без живих даних: `groups["LT-CUT"]` = `{"zone": "Z-CUT", "zone_name": "Розкрій", "task": "woodworking_machine", "task_name": "верстатна обробка деревини", "kind": "highbay", "panel": "LP-2", "n": 27, "lumen": 20500, "watt": 126, "area": 609, "e_norm": 500, "e_calc": 509, "level": 1.0, "e_now": 509, "p_inst": 3.4, "p_now": 3.4, "control": "DALI: зміна, 100 %", …}`; `panels["LP-1"]` = `{"n": 50, "p_inst": 6.3, "p_now": 5.6, …}` |
 | R-27 | **Розділ `ventilation`** (`build_ventilation`) | `units`: для активних установок: база — статика `units[code]`; оновлення: `name`, `kind` (`roofvent`/`ahu`/`fan`/`exfan`), `zone` (код), `mode` (`mode_label`), `airflow_m3h`, `airflow_nom` (ціле), `supply_c`, `indoor_c`, `heating_valve`, `heat_kw` (лише RV/AHU), `p_inst`, `p_now`, `filter_dp_pa` (RV/AHU), `state` (R-11), `maintenance_request` (назва найстарішої відкритої заявки на сигналах установки, інакше ключ видаляється) і `maintenance_request_id` (id тієї ж заявки: назви заявок не унікальні, клієнт шукає заявку за id — viewer R-22; у delta, `ctx['delta']`, обидва ключі при відсутності заявки пишуться як `null`), `note` + `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`; значення — R-12 з округленням telemetry R-12. `totals` — R-17. `heat_balance` = `{t_out: t_out_design, items: [{name, kw: kw_round}], total: total_kw, capacity: capacity_kw, chp_kw: round(chp_heat_kw), reserve, note}`. `boiler` = `{state, supply_c, return_c, silo_fill (частка), heat_kw}` | без живих даних: `units`, `totals`, `heat_balance` = `dist/odoo_demo.json.ventilation` (крім ключів `maintenance_request` і `maintenance_request_id`, що беруться з живих заявок: «MR/…» заявки id 6 для RV-05) |
-| R-28 | **Огляд будівлі** (`f3d.bms.overview.get_overview_data`) | Відповідь: `{"ts": ISO UTC "Z", "work_time": bool (R-18 для календаря компанії), "plan": {"width": plant_length_m, "depth": plant_width_m}, "zones": [{"id", "code", "name", "polygon", "group": код|null, "state": plan_state|null}] (зони `zone_type != 'outdoor'`), "groups": [{"id", "code", "zone", "e_now", "e_norm", "level", "faults", "state", "deviation_text"}], "panels": [{"id", "code", "x", "y", "state", "p_now"}], "units": [{"id", "code", "kind", "x", "y", "zone", "mode_label", "state", "plan_state", "airflow", "filter_dp", "deviation_text"}], "kpi": {"groups_ok", "groups_total", "lighting_kw", "units_on", "units_total", "airflow", "heat_need", "chp_heat", "boilers_on", "deficit", "open_deviations", "open_requests"}, "heat": {<R-16 поля>, "design": {"total", "capacity", "chp", "reserve", "lines": [{"name", "kw"}]}}, "deviations": [≤ 50 відкритих: {"id", "started" (Київ "YYYY-MM-DD HH:MM"), "object_code", "rule", "name", "request"}]}`. `plan_state` установки: `alarm_count > 0` або `deviation ∈ {not_running, cold}` → `alarm`; `stale` → `nodata`; `state ∈ {on}` → `on`; інакше `standby`. `groups_ok` — групи з `plan_state ∈ {ok}` | на демо без живих даних: 34 зони, 32 групи (`groups_ok` 32: 22 групи «зміни» з рівнем 100 % і 10 груп «присутності» без перевірки норми), 3 щити, 29 установок, `heat_need 322`, `chp_heat 497`, `boilers_on 0`, `deficit 0`, `open_deviations 1` і `open_requests 1` (RV-05, заявка id 6) |
+| R-28 | **Огляд будівлі** (`td.bms.overview.get_overview_data`) | Відповідь: `{"ts": ISO UTC "Z", "work_time": bool (R-18 для календаря компанії), "plan": {"width": plant_length_m, "depth": plant_width_m}, "zones": [{"id", "code", "name", "polygon", "group": код|null, "state": plan_state|null}] (зони `zone_type != 'outdoor'`), "groups": [{"id", "code", "zone", "e_now", "e_norm", "level", "faults", "state", "deviation_text"}], "panels": [{"id", "code", "x", "y", "state", "p_now"}], "units": [{"id", "code", "kind", "x", "y", "zone", "mode_label", "state", "plan_state", "airflow", "filter_dp", "deviation_text"}], "kpi": {"groups_ok", "groups_total", "lighting_kw", "units_on", "units_total", "airflow", "heat_need", "chp_heat", "boilers_on", "deficit", "open_deviations", "open_requests"}, "heat": {<R-16 поля>, "design": {"total", "capacity", "chp", "reserve", "lines": [{"name", "kw"}]}}, "deviations": [≤ 50 відкритих: {"id", "started" (Київ "YYYY-MM-DD HH:MM"), "object_code", "rule", "name", "request"}]}`. `plan_state` установки: `alarm_count > 0` або `deviation ∈ {not_running, cold}` → `alarm`; `stale` → `nodata`; `state ∈ {on}` → `on`; інакше `standby`. `groups_ok` — групи з `plan_state ∈ {ok}` | на демо без живих даних: 34 зони, 32 групи (`groups_ok` 32: 22 групи «зміни» з рівнем 100 % і 10 груп «присутності» без перевірки норми), 3 щити, 29 установок, `heat_need 322`, `chp_heat 497`, `boilers_on 0`, `deficit 0`, `open_deviations 1` і `open_requests 1` (RV-05, заявка id 6) |
 
 ### 9.6 Плагін `helvarnet`
 
@@ -1252,13 +1252,13 @@ class HelvarNetPlugin(SourcePlugin):
 Переходи аналогічні 10.1: «не працює…» і «холодно…» — після затримок; «зупинено пожежною…»/«немає мережі» мають
 пріоритет і скидають `off_since`. Котельня: `норма ⇄ дефіцит тепла` (після `heat_deficit_delay`), `немає даних`.
 
-### 10.3 Епізод журналу (`f3d.bms.deviation.state`)
+### 10.3 Епізод журналу (`td.bms.deviation.state`)
 
 `open` (сигнал модуля перейшов у `status='alarm'`) → `closed` (сигнал вийшов з `alarm`: `ok`, `warn`, `stale`,
 `unknown`). `stale` закриває епізод з `note` «закрито: немає даних». Повторна тривога → новий епізод. Видалення —
 лише адміністратор.
 
-### 10.4 Стан щита (`f3d.bms.light.panel.state`)
+### 10.4 Стан щита (`td.bms.light.panel.state`)
 
 `unknown` (немає сигналу) → `ok` / `fault` (плагін R-34) → `offline` (джерело `offline/error/disabled` або сигнал
 `stale`) → назад за першим живим показанням.
@@ -1268,12 +1268,12 @@ class HelvarNetPlugin(SourcePlugin):
 `on ⇄ standby ⇄ off`, будь-який → `fault` (стан `fault`/`frost`, EF-CHG `stopped_charging`) → за станом сигналу.
 Котельня (iot_sim §10): `standby(1) ⇄ K1(2) ⇄ K1+K2(3)`, будь-який → `fault(4)` → `standby`.
 
-### 10.6 Команда (`f3d.command.state`, telemetry §10.4)
+### 10.6 Команда (`td.command.state`, telemetry §10.4)
 
 `queued` (майстер R-25) → `sent` → `done`/`failed` (плагін R-37 / `bacnet_ip`) | `expired` | `cancelled` (R-30 при
 вимкненні `write_enabled`).
 
-### 10.7 Звіт установки (`factory3d.bms.install_report.state`)
+### 10.7 Звіт установки (`td.bms.install_report.state`)
 
 `{}` → `done` | `partial` (немає обладнання/сигналів); `partial` → `done` після появи обладнання й
 `f3d_bms_reinstall_data`.
@@ -1303,10 +1303,10 @@ class HelvarNetPlugin(SourcePlugin):
 8. **Виняток у крону** — транзакція відкочується, `BMS-DERIVED.state='error'`, `last_error`; наступний прогін через
    1 хв. Виняток у `_f3d_ingest`-перевизначенні — лог, push telemetry не відкочується (savepoint).
 9. **Дублікати** — стан-сигнал пишеться лише при зміні тексту/heartbeat; `(signal_id, ts)` унікальні (telemetry); епізод
-   журналу — один відкритий на сигнал (перевірка перед `create`); доповнення назви — один раз (`f3d_bms_enriched`).
+   журналу — один відкритий на сигнал (перевірка перед `create`); доповнення назви — один раз (`td_bms_enriched`).
 10. **Заявку закрито, а відхилення триває** — telemetry R-06 (нова не раніше `realarm_cooldown_s`); епізод журналу
     лишається `open` з `request_id` закритої заявки, при новій заявці — `request_id` оновлюється.
-11. **Команда не виконана** (`failed`, `expired`) — статус і текст помилки в `f3d.command` (telemetry); чаттер
+11. **Команда не виконана** (`failed`, `expired`) — статус і текст помилки в `td.command` (telemetry); чаттер
     групи/установки отримує «Команда #<id>: <стан> — <помилка>» (крон R-22 при наступному прогоні для команд з
     `origin='bms'` і зміненим станом).
 12. **Невідповідність кількості пристроїв DALI** (`dali_devices` ≠ `n_fixtures`) — `ValidationError` у формі; з роутера
@@ -1317,21 +1317,21 @@ class HelvarNetPlugin(SourcePlugin):
 ## 12. Acceptance Criteria
 
 Формат: Given / When / Then; тип перевірки: **UT**, **PT**, **TC**, **MAN**. «Демо» — копія бази `odoo` з установленими
-`factory3d_base`, `factory3d_telemetry`, `factory3d_bms`; «чиста» — база з `--without-demo=all` і тими самими модулями.
+`td_factory3d`, `td_telemetry`, `td_bms`; «чиста» — база з `--without-demo=all` і тими самими модулями.
 
 | ID | FR / R | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-01 | FR-01, R-01 | Given установку; Then 13 `f3d.bms.light.norm` з `lux`: `woodworking_machine` 500, `woodworking_bench` 300, `spraying` 750, `sanding` 750, `quality_control` 1000, `storage_racks` **150**, `storage_floor` 100, `packing_dispatch` 300, `loading_ramps` 150, `switchgear_room` 200, `compressor_room` 200, `battery_charging` **200**, `corridors_traffic` 150; `ref_en` `storage_racks` = «EN 12464-1:2021, табл. 13, реф. 13.2 (ред. 2011 — 5.5.2)»; `ref_dbn` непорожній. When норма з `lux=0` / дубль `key` → `IntegrityError`; `key='Woodworking'` → `ValidationError` | UT |
+| AC-01 | FR-01, R-01 | Given установку; Then 13 `td.bms.light.norm` з `lux`: `woodworking_machine` 500, `woodworking_bench` 300, `spraying` 750, `sanding` 750, `quality_control` 1000, `storage_racks` **150**, `storage_floor` 100, `packing_dispatch` 300, `loading_ramps` 150, `switchgear_room` 200, `compressor_room` 200, `battery_charging` **200**, `corridors_traffic` 150; `ref_en` `storage_racks` = «EN 12464-1:2021, табл. 13, реф. 13.2 (ред. 2011 — 5.5.2)»; `ref_dbn` непорожній. When норма з `lux=0` / дубль `key` → `IntegrityError`; `key='Woodworking'` → `ValidationError` | UT |
 | AC-02 | FR-03, FR-04, R-03, R-04 | Given установку (зони base з даних); Then 32 групи; для кожної рядка Додатка A.1: `zone_code`, `norm_id.key`, `fixture_kind`, `panel_id.code`, `n_fixtures`, `round(area_m2)`, `e_norm`, `n_required`, `e_calc`, `p_inst_kw` (до 0,01), `level_design`, `control_mode`, `dali_group`, `dali_devices` збігаються; `design_ok=True` для всіх 32; Σ `n_fixtures` = 320, Σ `p_inst_kw` = 40,32 | UT |
 | AC-03 | FR-04, R-03, R-04 | Given зона 100 м², норма 300 лк, Φ 20 500, UF 0,7, MF 0,8; When `n_fixtures=3`; Then `n_required = ⌈300·100/11 480⌉ = 3`, `e_calc = round(3·11 480/100) = 344`, `design_ok=True`, `p_inst_kw=0.38`. When `n_fixtures=2` → `e_calc=230`, `design_ok=False`. When зона 1 м², 100 лк → `n_required=1`. When зона без контуру → `ValidationError` | UT |
-| AC-04 | FR-03, R-02 | Given паспорт без `lumen`/`watt`; When група `fixture_kind='highbay'` → `lumen=24000`, `watt=160`; `highbay_rack` → 19 000 / 130; With паспорт `factory3d_base.passport_highbay` → 20 500 / 126; ручна зміна `lumen` (менеджер) зберігається, `e_calc` перераховано | UT |
+| AC-04 | FR-03, R-02 | Given паспорт без `lumen`/`watt`; When група `fixture_kind='highbay'` → `lumen=24000`, `watt=160`; `highbay_rack` → 19 000 / 130; With паспорт `td_factory3d.passport_highbay` → 20 500 / 126; ручна зміна `lumen` (менеджер) зберігається, `e_calc` перераховано | UT |
 | AC-05 | FR-03, R-06 | Given дані; Then `dali_devices` 32 груп = Додаток A.1 (LT-FAC `@1.2.3.1-64;@1.2.4.1-27`, LT-OUT-2 `@1.3.2.1-4`); `tools.lighting.pack_dali([(code, n) …])` для LP-1/2/3 повертає ті самі рядки; When `dali_devices='@1.2.1.1-26'` при `n_fixtures=27` → `ValidationError` «Пристроїв DALI 26, а світильників 27.»; `@1.3.1.1-27` на LT-CUT (щит LP-2) → «Адреса @1.3.1.1 не належить щиту LP-2.»; `'@1.2.1.1-27#'` → `ValidationError` | UT |
 | AC-06 | FR-03 | When друга група з `dali_group=12` → `IntegrityError`; `code='lt-cut'` → `ValidationError`; `level_design=1.2` / `uf=0` → `IntegrityError` (CHECK) | UT |
 | AC-07 | FR-05, R-05 | Given LT-CUT, сигнали без показань; Then `level_pct=100`, `level_source='design'`, `e_now=509`, `p_now_kw=3.4`, `stale=True`, `scene=0`, `faults=0`. When `_f3d_ingest` `level=60`, `p_now=2.04`, `scene=3`, `faults=1`, `faulty` текст `1.2.1.5` (ts=now) → `level_pct=60`, `'live'`, `e_now=305`, `p_now_kw=2.04`, `scene=3`, `faults=1`, `faulty='1.2.1.5'`, `stale=False`, `plan_state='fault'`. LT-SHEETS без даних → `e_now=92`, `p_now_kw=1.21` | UT |
 | AC-08 | FR-02, R-05 п. 6, A-16 | Given щити без живих даних; Then LP-1 `p_now_kw=5.6`, `p_source='design'`, `n_fixtures=50`, `p_inst_kw=6.3`; LP-2 23,2 / 184 / 23,2; LP-3 9,5 / 86 / 10,8. When жива потужність LT-CUT 2,0 → LP-2 `p_source='dali'`, `p_now_kw = round(2.0 + 3.4 + 3.4 + 1.51 + 11.47, 1) = 21.8`. When сигнал `energy/consumers/LP-2/p_now` (створений тестом, `module='energy'`) живий 22,7 → `22.7`, `'meter'` | UT |
 | AC-09 | FR-02 | Given `lighting/panels/LP-2/state` `fault` (живий) → `state='fault'`; джерело `HN-LP-2` `state='error'` → `offline`; сигнал без показань → `unknown` | UT |
 | AC-10 | R-05 п. 7 | Таблиця: (faults 1) → `fault`; (check «вимкнено…») → `alarm`; (рівень не живий) → `nodata`; (рівень 0, живий) → `off`; (LT-CUT 60 %, `check_norm`) → `low`; (LT-SHEETS 50 %, `check_norm=False`) → `ok`; (LT-CUT 100 %) → `ok` | UT |
-| AC-11 | CH-03 | Given LT-CUT `p_now=3.4` живий; Then `_f3d_bms_light_power()['LT-CUT'] == {'zone': 'Z-CUT', 'panel': 'LP-2', 'p_now_kw': 3.4, 'p_inst_kw': 3.4, 'level_pct': 100.0}` (рівень живий 100). Given 3 агрегати `f3d.reading.hour` сигналу потужності LT-CUT з `v_avg` 3,4 / 3,4 / 1,7 у вікні; When `_f3d_bms_kwh(d0, d1)`; Then `{'LT-CUT': 8.5, …інші 0.0}` | UT |
+| AC-11 | CH-03 | Given LT-CUT `p_now=3.4` живий; Then `_f3d_bms_light_power()['LT-CUT'] == {'zone': 'Z-CUT', 'panel': 'LP-2', 'p_now_kw': 3.4, 'p_inst_kw': 3.4, 'level_pct': 100.0}` (рівень живий 100). Given 3 агрегати `td.reading.hour` сигналу потужності LT-CUT з `v_avg` 3,4 / 3,4 / 1,7 у вікні; When `_f3d_bms_kwh(d0, d1)`; Then `{'LT-CUT': 8.5, …інші 0.0}` | UT |
 | AC-12 | V-07 | When `search([('deviation','in',['off_in_work','below_norm'])])` при LT-CUT check «нижче норми», LT-EB «норма»; Then лише LT-CUT; `('deviation','=','none')` → без LT-CUT | UT |
 | AC-13 | FR-10, R-14 | Given установку; Then баланс компанії: 4 рядки `kw_round` 189 / 109 / 247 / 208, назви як макет (`Інфільтрація крізь ворота (0,1 обміну/год)`, `Дахові установки: 50 % зовнішнього повітря, рекуперація 78 %`), `total_kw=753`, `total_raw` ≈ 752,69 (±0,01), `capacity_kw=990`, `chp_heat_kw=856`, `reserve=1.45`, `reserve_boilers=0.32`, `note` = «Оцінка, не проєкт: U стін 0,35, покрівлі 0,25, підлоги 0,15 Вт/(м²·К); внутрішні теплонадходження від верстатів (сотні кВт у зміну) не враховано — це запас.» | UT |
 | AC-14 | FR-10, R-14 | When `u_wall=0.5` (менеджер) → перерахунок автоматично: огородження 208, `total_kw=772`; `internal_gains_kw=100` → 5-й рядок −100, `total_kw=672` (при `u_wall=0.5`); `action_reset_macro()` → 753, 4 рядки; користувач без менеджера `write` → `AccessError` | UT |
@@ -1353,36 +1353,36 @@ class HelvarNetPlugin(SourcePlugin):
 | AC-30 | A-01, CT-12 | `BMS-DERIVED`: `type='f3d_bms'`, `is_local=True`, без колектора; сигнали `…/check` на ньому; telemetry `_cron_stale()` не робить їх `stale` (через 2 год без показань); у `collector._config_payload()` джерела немає; push колектора на `…/check` → `rejected: foreign_signal`; крон пише показання лише при зміні тексту або через `check_heartbeat_min` (10 хв: о 10:05 і 10:15, не о 10:06) | UT |
 | AC-31 | FR-09, R-23 | RV-05, вт: `mode=ST` з 09:50 → о 09:59 «норма», о 10:00 «не працює в робочий час» → заявка; `mode=VEL` → «норма»; `state=fault` і `ST` → перевірка «норма» (аварія — окремо за `state`); EF-ELEC `stopped` у робочий час → перевірки немає (сигналу `check` немає) | UT |
 | AC-32 | FR-09, R-23 | RV-05 `indoor=15.5` з 09:30 → о 10:00 «холодно в зоні»; 23:00, `indoor=15` → «поза робочим часом»; 23:00 `indoor=9` з 22:20 → о 22:50 «холодно в зоні» (заявка «… у зоні 9,0 °C при нормі від 10,0 °C») | UT |
-| AC-33 | FR-25, R-21 | сигнал `fire/totals/system_state` (створений тестом) `test`, RV-07 `stopped` → «зупинено пожежною сигналізацією», заявки немає; `normal` о 10:05 → о 10:15 «не працює…»; без сигналу, з моделлю-заглушкою `f3d.fire.drill` (`_f3d_is_active_at` → True через `patch`) — те саме; `src1_ok=0` → «немає мережі…» | UT |
-| AC-34 | FR-09, CT-05 | `_f3d_ingest` `ventilation/units/RV-05/filter_dp_pa = 285.2` → одна заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на `RV-05`, `f3d_bms_rule='filter_supply'`; 248 → `alarm` триває (гістерезис 5); 244 → `ok`; `…/filter_extract_dp_pa = 360` → «Заміна фільтрів витяжки: перепад тиску 360 Па при нормі до 350», `f3d_bms_rule='filter_extract'` | UT |
+| AC-33 | FR-25, R-21 | сигнал `fire/totals/system_state` (створений тестом) `test`, RV-07 `stopped` → «зупинено пожежною сигналізацією», заявки немає; `normal` о 10:05 → о 10:15 «не працює…»; без сигналу, з моделлю-заглушкою `td.fire.drill` (`_f3d_is_active_at` → True через `patch`) — те саме; `src1_ok=0` → «немає мережі…» | UT |
+| AC-34 | FR-09, CT-05 | `_f3d_ingest` `ventilation/units/RV-05/filter_dp_pa = 285.2` → одна заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на `RV-05`, `td_bms_rule='filter_supply'`; 248 → `alarm` триває (гістерезис 5); 244 → `ok`; `…/filter_extract_dp_pa = 360` → «Заміна фільтрів витяжки: перепад тиску 360 Па при нормі до 350», `td_bms_rule='filter_extract'` | UT |
 | AC-35 | FR-09 | `RV-07/state` `fault` → «Дахова установка RV-07: аварія установки (стан «fault»)», правило `unit_fault`; `frost` — те саме; `EF-CHG/state` `stopped_charging` → «Витяжка зарядної станції (Ex): не працює під час заряджання — водень!», `charging_vent`; `EF-ELEC/indoor_c` 36,2 протягом 600 с (`decimals=0`) → «Електрощитова: температура 36 °C при нормі до 35», `overheat` (599 с — ще ні); `AHU-1/room_pressure_pa` 2,0 протягом 300 с (`decimals=0`) → «Дільниця фасадів: тиск 2 Па при нормі до 0 (має бути розрідження)», `pressure`. Назви з `alarm_title` формує telemetry R-05 (числа — за `decimals`, кома) | UT |
 | AC-36 | FR-10, FR-11, R-24 | живі `heat_kw` 26 установок Σ 600, `infra/totals/chp_kw` 397,3 (сигнал тесту), `equipment/BOILER/state` `fault` → `deficit 103`; о T+29 хв «норма», T+30 хв «дефіцит тепла» → заявка «Котельня: дефіцит тепла 103 кВт (потреба 600 кВт, джерела 497 кВт)» на `BOILER`; стан `fault` окремо → заявка «Котельня на відходах (2 × Kalvis K-500M): аварія котельні (стан «fault»)», `boiler_fault`; < 13 живих `heat_kw` → «немає даних» | UT |
-| AC-37 | FR-13, R-22 | після AC-26 заявка: `name` «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк», `f3d_value=0`, `f3d_threshold=500`, `description` містить «Група DALI G:12, щит LP-2; вимкнено з 14.10.2026 09:55.», `f3d_bms_rule='light_off'`, `f3d_bms_enriched=True`, `maintenance_type='corrective'`, команда — «Служба головного механіка»; повторні прогони — `name` незмінний, заявок 1 | UT |
+| AC-37 | FR-13, R-22 | після AC-26 заявка: `name` «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк», `td_value=0`, `td_threshold=500`, `description` містить «Група DALI G:12, щит LP-2; вимкнено з 14.10.2026 09:55.», `td_bms_rule='light_off'`, `td_bms_enriched=True`, `maintenance_type='corrective'`, команда — «Служба головного механіка»; повторні прогони — `name` незмінний, заявок 1 | UT |
 | AC-38 | R-22a | `light_low` (LT-CUT 60 %) → «Освітлення LT-CUT (Розкрій): ≈ 305 лк при нормі 500 лк (рівень 60 %)», 305 / 500; `unit_off` RV-05 → «Установка RV-05 (Склад плит): не працює в робочий час — режим «Очікування»»; `cold` → «Установка RV-05 (Склад плит): у зоні 15,5 °C при нормі від 16,0 °C»; `heat_deficit` → AC-36 | UT |
 | AC-39 | FR-06, R-22, R-34 | `lighting/groups/LT-CUT/faults = 1` → заявка «Аварія світильників LT-CUT: несправних 1 шт. при нормі 0», `light_fault`; `faulty='1.2.1.5'` → `description` містить «Несправні світильники: 1.2.1.5; щит LP-2, DALI-група G:12.»; `faults=0` → `status='ok'`, заявка відкрита до закриття | UT |
 | AC-40 | FR-12, R-22 | після AC-34 і крону: епізод `rule='filter_supply'`, `object_code='RV-05'`, `object_kind='unit'`, `value=285.2`, `threshold=250`, `unit='Па'`, `request_id` = заявка, `state='open'`, `zone_id=Z-SHEETS`; значення 300 → `value=300`; 244 → крон → `closed`, `ended` = `status_since`, `duration_min` > 0; повторна тривога → новий епізод (2 записи) | UT |
 | AC-41 | R-22, telemetry R-06 | заявку з AC-26 переведено в `Repaired`, група лишається вимкненою; Then нової заявки немає (cooldown 3 600 с); епізод `open`; через 3 601 с (freeze_time) наступний heartbeat → нова заявка, епізод `request_id` = нова, доповнена | UT |
-| AC-42 | FR-20, R-26, CH-02 | Given дані без живих показань, статика `tests/data/static_bms.json`; When `env['f3d.viewer.provider.lighting']._f3d_viewer_collect(payload, ctx)`; Then для кожної з 32 груп ключі A.13 (`zone`, `zone_name`, `task`, `task_name`, `kind`, `panel`, `n`, `lumen`, `watt`, `area`, `e_norm`, `e_calc`, `level`, `e_now`, `p_inst`, `p_now`, `control`) == `dist/odoo_demo.json.lighting.groups[code]`; `panels` (`name`, `groups`, `n`, `p_inst`, `p_now`) == макет; `uf=0.7`, `mf=0.8`; `norms_ref` == макет (13 ключів); додаткові ключі CH-02 присутні | UT |
+| AC-42 | FR-20, R-26, CH-02 | Given дані без живих показань, статика `tests/data/static_bms.json`; When `env['td.viewer.provider.lighting']._f3d_viewer_collect(payload, ctx)`; Then для кожної з 32 груп ключі A.13 (`zone`, `zone_name`, `task`, `task_name`, `kind`, `panel`, `n`, `lumen`, `watt`, `area`, `e_norm`, `e_calc`, `level`, `e_now`, `p_inst`, `p_now`, `control`) == `dist/odoo_demo.json.lighting.groups[code]`; `panels` (`name`, `groups`, `n`, `p_inst`, `p_now`) == макет; `uf=0.7`, `mf=0.8`; `norms_ref` == макет (13 ключів); додаткові ключі CH-02 присутні | UT |
 | AC-43 | FR-20, R-27 | те саме для `ventilation`: 29 `units` (ключі A.13 крім `maintenance_request`) == `dist/odoo_demo.json.ventilation.units` (числа — до округлення telemetry R-12 значень статики, тобто рівні), `totals` (AC-17), `heat_balance` == макет (`t_out -15.0`, 4 items, `total 753`, `capacity 990`, `chp_kw 856`, `reserve 1.45`, `note`); на демо `units["RV-05"].maintenance_request` = назва заявки id 6, `maintenance_request_id` = 6; дві однойменні заявки на різних установках → у кожної свій id (`test_maintenance_request_id_same_name`) | UT + TC |
 | AC-44 | R-26, R-27 | живі: LT-CUT `level=60` → `level 0.6`, `e_now 305`; RV-05 `mode=ST`, `state=stopped` → `mode «Очікування»`, `mode_code «ST»`, `state «standby»`; `heating_valve` 12 % → 0.12; `supply_c` 19,337 → 19.34; `airflow_m3h` 5 852,544 → 5852.5; `faults` 1 → ключ `faults: 1`, `faulty: "1.2.1.5"` | UT |
-| AC-45 | M-11, A-06 | `_f3d_viewer_delta(patch, ctx)` з `changes={'f3d.signal': {'equipment/COMPRESSOR/pressure_bar'}}` → `patch` порожній; з `{'f3d.signal': {'lighting/groups/LT-CUT/level'}}` → `patch['lighting']` повний розділ, `ventilation` немає; `{'f3d.bms': {'RV-05'}}` → обидва провайдери пишуть свої розділи; моделі мають `_name` з префіксом `f3d.viewer.provider.` і **не** успадковують `f3d.viewer.provider` (`_inherit` порожній); користувач без `group_f3d_user` → розділ не змінюється; без `factory3d_viewer` установка й тести модуля проходять | UT |
-| AC-46 | FR-14, R-28 | `get_overview_data()` на установленій базі: `zones` — 34 (без `outdoor`), кожна з `polygon` ≥ 3 точок; `groups` 32, `panels` 3 (LP-1 x=40,0), `units` 29 (RV-05 x=21,5, y=33,5); `kpi.groups_total=32`, `units_total=29`; `heat.design.total=753`; `deviations` — список відкритих ≤ 50; користувач без доступу до `f3d.bms.hvac.unit` → `units=[]` без винятку | UT |
-| AC-47 | FR-14 | `action_open('f3d.bms.light.group', id, 'form')` → `act_window` форми; `'show3d'` → дія `action_f3d_show` обладнання LT-CUT; `model='res.users'` → `AccessError`. Hoot-тест `overview.test.js`: монтування `F3dBmsOverview` з фіктивними даними (2 зони, 1 установка) рендерить 2 `polygon` з класами `o_f3d_bms_ok`/`o_f3d_bms_alarm`, 1 `circle`, KPI «32 / 32»; клік по зоні викликає `orm.call(..., 'action_open', [...,'form'])` | UT (JS) |
+| AC-45 | M-11, A-06 | `_f3d_viewer_delta(patch, ctx)` з `changes={'td.signal': {'equipment/COMPRESSOR/pressure_bar'}}` → `patch` порожній; з `{'td.signal': {'lighting/groups/LT-CUT/level'}}` → `patch['lighting']` повний розділ, `ventilation` немає; `{'td.bms': {'RV-05'}}` → обидва провайдери пишуть свої розділи; моделі мають `_name` з префіксом `td.viewer.provider.` і **не** успадковують `td.viewer.provider` (`_inherit` порожній); користувач без `group_td_user` → розділ не змінюється; без `td_viewer3d` установка й тести модуля проходять | UT |
+| AC-46 | FR-14, R-28 | `get_overview_data()` на установленій базі: `zones` — 34 (без `outdoor`), кожна з `polygon` ≥ 3 точок; `groups` 32, `panels` 3 (LP-1 x=40,0), `units` 29 (RV-05 x=21,5, y=33,5); `kpi.groups_total=32`, `units_total=29`; `heat.design.total=753`; `deviations` — список відкритих ≤ 50; користувач без доступу до `td.bms.hvac.unit` → `units=[]` без винятку | UT |
+| AC-47 | FR-14 | `action_open('td.bms.light.group', id, 'form')` → `act_window` форми; `'show3d'` → дія `action_f3d_show` обладнання LT-CUT; `model='res.users'` → `AccessError`. Hoot-тест `overview.test.js`: монтування `F3dBmsOverview` з фіктивними даними (2 зони, 1 установка) рендерить 2 `polygon` з класами `o_f3d_bms_ok`/`o_f3d_bms_alarm`, 1 `circle`, KPI «32 / 32»; клік по зоні викликає `orm.call(..., 'action_open', [...,'form'])` | UT (JS) |
 | AC-48 | FR-21, §5.3 | чиста база (base + telemetry без демо-обладнання): Then 13 норм, 6 сцен, 3 щити, 32 групи, 29 установок, 1 баланс (4 рядки, 753), 33 джерела модуля (32 + `BMS-DERIVED`), 549 сигналів `module='bms'` (`created: 549`), `install_report.state='partial'`, `not_found: 66`; установка без винятків | UT |
 | AC-49 | FR-21, A-04 | демо: `install_report` `created: 468`, `updated: 81`; 81 сигнал `ventilation/*` має `origin='sim_data'`, `last_value` і `status` як до установки (знімок), `source_id` = `BAC-<dev>-<code>`, адреса за Додатком B; сигнал RV-05 `filter_dp_pa` має `maintenance_request_id` = заявка id 6; 176 нових — `origin='catalog'`, 292 — `origin='module'` | TC |
 | AC-50 | §5.3 крок 3 | демо: `equipment_id` у 32 груп (`LT-CUT` → «Освітлення: Розкрій»), 3 щитів, 29 установок (RV-05 → «Припливно-витяжна установка RV-05»), баланс → `BOILER`, `CHP`; 32 джерела з обладнанням | TC |
 | AC-51 | Додаток B | Then `ventilation/units/RV-05/filter_dp_pa`: `source_id.code='BAC-105-RV-05'`, `address={"object":"AI","instance":4,"property":"present-value","mode":"poll","doc":"AI:4 RV-05_FreshAirFilterDp"}`, `period_s=30`, `store_period_s=600`, `alarm_high=250`, `hysteresis=5`; `lighting/groups/LT-CUT/level`: `HN-LP-2`, `{"group":12,"query":"level","devices":["@1.2.1.1-27"],"sample":3}`, `unit='%'`, `period_s=60`, `store_period_s=900`; `lighting/groups/LT-CUT/check`: `BMS-DERIVED`, `kind='state'`, `states` 6, `alarm_states` 2, `viewer_visible=False`; `ventilation/units/RV-05/mode`: `states` = 8 кодів, `map` 1…8; усі 549 — `write_enabled=False`; усі адреси BACnet проходять `tools.address.validate_address('bacnet_ip', …)` telemetry | UT |
 | AC-52 | §5.3 крок 9 | демо: 1 епізод журналу `open`, `rule='filter_supply'`, `object_code='RV-05'`, `request_id` = id 6, `started` = `create_date` заявки | TC |
 | AC-53 | §5.3 | `f3d_bms_reinstall_data()` адміністратором вдруге → `created: 0`, кількості моделей і сигналів незмінні, епізодів журналу 1 | UT + TC |
-| AC-54 | FR-19 | `factory3d.base.environment='prod'` до установки → `factory3d.bms.read_enabled='False'`, 33 джерела `read_enabled=False` (`state='disabled'`); `test` → `True`; усі 15 параметрів §5.1 існують | UT |
-| AC-55 | FR-21, §5.4 | `uninstall_hook(env)` на тестовій базі: параметри `factory3d.bms.*` відсутні; 468 сигналів — `active=False`, без джерела; 81 — `source_id=False`, `address={}`; заявки й показання на місці | UT |
+| AC-54 | FR-19 | `td.base.environment='prod'` до установки → `td.bms.read_enabled='False'`, 33 джерела `read_enabled=False` (`state='disabled'`); `test` → `True`; усі 15 параметрів §5.1 існують | UT |
+| AC-55 | FR-21, §5.4 | `uninstall_hook(env)` на тестовій базі: параметри `td.bms.*` відсутні; 468 сигналів — `active=False`, без джерела; 81 — `source_id=False`, `address={}`; заявки й показання на місці | UT |
 | AC-56 | FR-19 | `cr.execute(neutralize.sql)` → `read_enabled/write_enabled='False'`, крон модуля `active=False`, джерела модуля `read_enabled=False`, `state='disabled'`, сигнали `write_enabled=False`; файл виконується без помилки | UT |
-| AC-57 | FR-18, R-30, A-21 | адміністратор `f3d_bms_write_enabled=True` → 29 джерел `write_enabled=True` (не `BAC-131…133`, не `BAC-140-BOILER`), 142 сигнали (`level`, `scene` ×32; `mode`, `setpoint_day_c`, `setpoint_night_c` ×26); `False` → 0 і 0, команди модуля в `queued` → `cancelled`; менеджер (не адмін) через RPC → `AccessError` | UT |
-| AC-58 | FR-18, R-25 | оператор, усі прапори ввімкнені (telemetry `write_enabled=True` параметр): майстер LT-MAINT сцена 3, `fade_s=2` → 1 `f3d.command` `signal=lighting/groups/LT-MAINT/scene`, `value=3`, `text='fade=2.0'`, `origin='bms'`, `requested_by`=оператор, `state='queued'`, `expires_at` = now + 10 хв; рівень 50 на LT-CUT і LT-EB → 2 команди; чаттер групи «Надіслано команду…» | UT |
-| AC-59 | R-25 | користувач `group_f3d_user` → `AccessError`; `factory3d.bms.write_enabled=False` → `UserError` «Керування вимкнено: модуль «Будівля» (factory3d.bms.write_enabled).»; telemetry вимкнено → відповідний текст; `HN-LP-3.write_enabled=False` → «Запис вимкнено на: LT-MAINT (джерело HN-LP-3)»; рівень 120 → `ValidationError` | UT |
+| AC-57 | FR-18, R-30, A-21 | адміністратор `td_bms_write_enabled=True` → 29 джерел `write_enabled=True` (не `BAC-131…133`, не `BAC-140-BOILER`), 142 сигнали (`level`, `scene` ×32; `mode`, `setpoint_day_c`, `setpoint_night_c` ×26); `False` → 0 і 0, команди модуля в `queued` → `cancelled`; менеджер (не адмін) через RPC → `AccessError` | UT |
+| AC-58 | FR-18, R-25 | оператор, усі прапори ввімкнені (telemetry `write_enabled=True` параметр): майстер LT-MAINT сцена 3, `fade_s=2` → 1 `td.command` `signal=lighting/groups/LT-MAINT/scene`, `value=3`, `text='fade=2.0'`, `origin='bms'`, `requested_by`=оператор, `state='queued'`, `expires_at` = now + 10 хв; рівень 50 на LT-CUT і LT-EB → 2 команди; чаттер групи «Надіслано команду…» | UT |
+| AC-59 | R-25 | користувач `group_td_user` → `AccessError`; `td.bms.write_enabled=False` → `UserError` «Керування вимкнено: модуль «Будівля» (td.bms.write_enabled).»; telemetry вимкнено → відповідний текст; `HN-LP-3.write_enabled=False` → «Запис вимкнено на: LT-MAINT (джерело HN-LP-3)»; рівень 120 → `ValidationError` | UT |
 | AC-60 | FR-18, M-13 | майстер установок: RV-05 режим `VEL` → команда `text='VEL'`; уставка ніч 12,0 → `value=12.0` на `…/setpoint_night_c`; EF-ELEC у майстрі → домен виключає; `write_enabled=True` на `ventilation/units/EF-ELEC/state`, `equipment/BOILER/return_c` або `ventilation/units/RV-05/heating_valve` → `ValidationError` «…не керується» | UT |
-| AC-61 | FR-17 | `user` (лише `group_f3d_user`): читає всі моделі, `write` групи → `AccessError`; оператор: `write({'note'})` епізоду — ок, `write({'state'})` → `AccessError`; менеджер: редагує групи/установки/баланс/норми; `unlink` епізоду — лише адмін | UT |
-| AC-62 | FR-16, FR-17 | групи: `group_f3d_bms_operator.implied_ids ∋ group_f3d_user`, `group_f3d_manager.implied_ids ∋ group_f3d_bms_operator`; меню §3 з xml-id, `sequence` (`menu_f3d_bms` = 80 під `menu_f3d_root`, `menu_f3d_bms_config` = 80 під `menu_f3d_config` — X-32), групами; `group_f3d_bms_operator.privilege_id` = `factory3d_bms.privilege_f3d_bms`, його `category_id` = `factory3d_base.module_category_factory3d`; `group_f3d_bms_operator` не входить у групи `factory3d_base.privilege_f3d` (X-19) | UT |
+| AC-61 | FR-17 | `user` (лише `group_td_user`): читає всі моделі, `write` групи → `AccessError`; оператор: `write({'note'})` епізоду — ок, `write({'state'})` → `AccessError`; менеджер: редагує групи/установки/баланс/норми; `unlink` епізоду — лише адмін | UT |
+| AC-62 | FR-16, FR-17 | групи: `group_td_bms_operator.implied_ids ∋ group_td_user`, `group_td_manager.implied_ids ∋ group_td_bms_operator`; меню §3 з xml-id, `sequence` (`menu_td_bms` = 80 під `menu_td_root`, `menu_td_bms_config` = 80 під `menu_td_config` — X-32), групами; `group_td_bms_operator.privilege_id` = `td_bms.privilege_td_bms`, його `category_id` = `td_factory3d.module_category_factory3d`; `group_td_bms_operator` не входить у групи `td_factory3d.privilege_td` (X-19) | UT |
 | AC-63 | §4.4, §13.3 | `f3d_bms_reinstall_data()` менеджером → `AccessError`; `action_open('res.partner', …)` → `AccessError`; `dali_devices="@1.2.1.1-27;DROP"` → `ValidationError` | UT |
 | AC-64 | R-31 | `build_query(2, 152, address='@1.2.1.5')` == `">V:2,C:152,@1.2.1.5#"`; `build_query(2, 161, group=12)` == `">V:2,C:161,G:12#"`; `build_query(2, 102, address='@1')` == `">V:2,C:102,@1#"`; `build_command(2, 13, 12, level=60, fade_cs=100)` == `">V:2,C:13,G:12,L:60,F:100,A:1#"`; `build_command(2, 11, 12, scene=3, block=1, fade_cs=200)` == `">V:2,C:11,G:12,B:1,S:3,F:200,A:1#"`; `group=0`/`level=101`/адреса `@1.2.1` → `ValueError` | PT |
 | AC-65 | R-31 | `parse_frame("?V:2,C:152,@1.2.1.5=75#")` → `reply`, `cmd=152`, `address='@1.2.1.5'`, `answer='75'`; `"!V:2,C:104,@2.2.1.1=11#"` → `error`, `answer='11'`; `">V:2,C:13,G:12,L:60,F:100#"` → `push`, `params={'G':'12','L':'60','F':'100'}`; `"?V:2,C:164,G:16=@1.2.3.1,@1.2.3.2$"` → `partial`; `"hello#"` → `ProtocolError`; `split_stream(b'xx?V:2,C:191=2#>V:2,C:13,G:1,L:5#?V:2')` → 2 кадри, залишок `b'?V:2'`; кадр 1 600 байт → `ProtocolError` | PT |
@@ -1412,25 +1412,25 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 **Odoo `tests/common.py`** — `class F3DBmsCase(TransactionCase)` (теги `post_install`, `-at_install`, `f3d`, `f3d_bms`),
 `setUpClass`:
-- `cls.zone_cut = env.ref('factory3d_base.zone_z_cut')`, `cls.zone_sheets = env.ref('factory3d_base.zone_z_sheets')`;
-  `cls.group_cut = env.ref('factory3d_bms.group_lt_cut')`, `cls.group_sheets`, `cls.group_eb`, `cls.group_maint`;
-  `cls.panel2 = env.ref('factory3d_bms.panel_lp_2')`; `cls.rv05 = env.ref('factory3d_bms.unit_rv_05')`, `cls.rv07`,
-  `cls.ahu`, `cls.ef_elec`, `cls.ef_chg`; `cls.balance = env['f3d.bms.heat.balance']._f3d_bms_get()`;
+- `cls.zone_cut = env.ref('td_factory3d.zone_z_cut')`, `cls.zone_sheets = env.ref('td_factory3d.zone_z_sheets')`;
+  `cls.group_cut = env.ref('td_bms.group_lt_cut')`, `cls.group_sheets`, `cls.group_eb`, `cls.group_maint`;
+  `cls.panel2 = env.ref('td_bms.panel_lp_2')`; `cls.rv05 = env.ref('td_bms.unit_rv_05')`, `cls.rv07`,
+  `cls.ahu`, `cls.ef_elec`, `cls.ef_chg`; `cls.balance = env['td.bms.heat.balance']._f3d_bms_get()`;
 - обладнання для заявок: якщо `search_f3d('LT-CUT')` порожньо (чиста база) — тест створює `maintenance.equipment`
-  `name="Освітлення: Розкрій"`, `serial_no` і `f3d_code` `LT-CUT`, команду `cls.team = maintenance.team «Служба головного
+  `name="Освітлення: Розкрій"`, `serial_no` і `td_code` `LT-CUT`, команду `cls.team = maintenance.team «Служба головного
   механіка (тест)»` і прив'язує `group_cut.equipment_id`, сигнали (`equipment_id`); те саме для `RV-05`, `RV-07`,
   `EF-ELEC`, `EF-CHG`, `AHU-1`, `BOILER`;
-- користувачі: `cls.user_reader` (`base.group_user` + `group_f3d_user`), `cls.user_operator` (+ `group_f3d_bms_operator`),
-  `cls.user_manager` (+ `group_f3d_manager`), `cls.user_admin` (+ `group_f3d_admin`);
+- користувачі: `cls.user_reader` (`base.group_user` + `group_td_user`), `cls.user_operator` (+ `group_td_bms_operator`),
+  `cls.user_manager` (+ `group_td_manager`), `cls.user_admin` (+ `group_td_admin`);
 - календар `cls.cal_shift` — копія «Зміна 1» (пн–пт 07:00–11:30, 12:00–15:30, `tz='Europe/Kyiv'`), параметр
-  `factory3d.bms.calendar_id = cal_shift.id`; `cls.cal_24` (7 × 00:00–24:00) для ТК-подібних тестів;
-- хелпери: `ingest(code, value=None, text=None, ts=None)` → `env['f3d.signal'].sudo()._f3d_ingest([{...}], src='module')`
+  `td.bms.calendar_id = cal_shift.id`; `cls.cal_24` (7 × 00:00–24:00) для ТК-подібних тестів;
+- хелпери: `ingest(code, value=None, text=None, ts=None)` → `env['td.signal'].sudo()._f3d_ingest([{...}], src='module')`
   (`ts` за замовчуванням — `fields.Datetime.now()`, у тестах — `freezegun`/`odoo.tests.freeze_time`); `run_check(at)` —
-  `with freeze_time(at): env['f3d.bms.check']._cron_check()`; `set_sql(signal, **vals)` — пряме `UPDATE f3d_signal`
+  `with freeze_time(at): env['td.bms.check']._cron_check()`; `set_sql(signal, **vals)` — пряме `UPDATE td_signal`
   (`last_value`, `last_text`, `last_ts`, `status`) + `invalidate_model`; `kyiv(y, m, d, hh, mm)` → UTC naive; `make_signal(code,
   **vals)` (для сигналів energy/fire_safety у тестах: `infra/ats/src1_ok`, `infra/chp/heat_kw`, `infra/totals/chp_kw`,
   `energy/consumers/LP-2/p_now`, `fire/totals/system_state`, без джерела);
-- `cls.static = json.load(file_open('factory3d_bms/tests/data/static_bms.json'))` — розділи `lighting` і
+- `cls.static = json.load(file_open('td_bms/tests/data/static_bms.json'))` — розділи `lighting` і
   `ventilation` з `dist/odoo_demo.json` (генерує `tools/gen_data.py`, файл у репозиторії);
 - `ctx(static=None, changes=None)` → словник `ctx` viewer M-01 (`user`, `now`, `static={'lighting':…, 'ventilation':…}`,
   `changes`).
@@ -1445,7 +1445,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 ### 13.1 Юніт-тести
 
-#### 13.1.1 Odoo (`odoo-bin -d f3d_test -i factory3d_base,factory3d_telemetry,factory3d_bms --test-tags /factory3d_bms --stop-after-init`)
+#### 13.1.1 Odoo (`odoo-bin -d f3d_test -i td_factory3d,td_telemetry,td_bms --test-tags /td_bms --stop-after-init`)
 
 | Файл / клас | Тести | AC | Фікстури | Що саме assert |
 |---|---|---|---|---|
@@ -1455,18 +1455,18 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | `::TestDali` | `test_devices_match_appendix`, `test_pack_dali_function`, `test_count_mismatch`, `test_wrong_router`, `test_injection_rejected`, `test_unique_dali_group`, `test_code_and_checks` | AC-05, AC-06, AC-63 | дані | рядки `dali_devices`; тексти `ValidationError` |
 | `test_lighting_live.py::TestLive` | `test_design_fallback`, `test_live_values`, `test_sheets_design`, `test_plan_state_table` | AC-07, AC-10 | `ingest` | поля M-03 |
 | `::TestPanel` | `test_design_sums`, `test_dali_sum`, `test_meter_priority`, `test_state` | AC-08, AC-09 | `make_signal('energy/consumers/LP-2/p_now')`, `set_sql` джерела `HN-LP-2.state='error'` | `p_now_kw`, `p_source`, `state` |
-| `::TestContracts` | `test_light_power`, `test_kwh_from_hours`, `test_search_deviation` | AC-11, AC-12 | `f3d.reading.hour` створюються ORM у тесті | dict рівність; `search` |
+| `::TestContracts` | `test_light_power`, `test_kwh_from_hours`, `test_search_deviation` | AC-11, AC-12 | `td.reading.hour` створюються ORM у тесті | dict рівність; `search` |
 | `test_heat_balance.py::TestDesign` | `test_macro_753`, `test_param_change_recompute`, `test_internal_gains`, `test_reset_macro`, `test_constraints`, `test_rights` | AC-13, AC-14, AC-18 | `cls.balance` | `kw_round` рядків, `total_kw`, `reserve`, `note`; `AccessError` для `user_reader` |
 | `::TestLive` | `test_chp_heat_table`, `test_live_balance_table`, `test_totals_static` | AC-15…AC-17 | чисті функції `tools.heat`; `build_ventilation` | таблиці значень |
 | `test_hvac_live.py::TestNominals` | `test_nominals`, `test_coordinates`, `test_constraints` | AC-19, AC-24 | дані | значення |
 | `::TestState` | `test_mode_labels_states` (таблиця AC-20), `test_fallback_formulas`, `test_live_precedence`, `test_heat_now_contract` | AC-20…AC-23 | `ingest`, статика | значення, `stale` |
 | `test_rules_lighting.py::TestSchedule` | `test_work_interval` | AC-25 | `cal_shift`, leave | кортежі/`None` |
-| `::TestLightRules` | `test_off_in_work_delay`, `test_off_since_yesterday`, `test_lunch_and_after_shift`, `test_check_off_false`, `test_below_norm`, `test_tolerance_zero`, `test_presence_not_checked`, `test_no_data`, `test_mains_suppression` | AC-26…AC-28 | `run_check`, `ingest`, `make_signal('infra/ats/src1_ok')` | `check_signal_id.last_text`, `status`, кількість `maintenance.request` з `f3d_signal_id` |
-| `::TestIngestHook` | `test_since_from_reading_ts`, `test_internal_context_skips`, `test_exception_isolated`, `test_read_disabled_skips` | AC-29 | `unittest.mock.patch.object(type(env['f3d.bms.check']), '_f3d_bms_on_ingest')` | виклики mock; `res` `_f3d_ingest`; `off_since` |
-| `::TestDerivedSource` | `test_local_source`, `test_not_stale_by_telemetry`, `test_foreign_push_rejected`, `test_heartbeat` | AC-30 | `env['f3d.signal']._cron_stale()`, `f3d.collector` тесту з токеном і `_config_payload()` | стани, кількість `f3d.reading` сигналу `check` |
+| `::TestLightRules` | `test_off_in_work_delay`, `test_off_since_yesterday`, `test_lunch_and_after_shift`, `test_check_off_false`, `test_below_norm`, `test_tolerance_zero`, `test_presence_not_checked`, `test_no_data`, `test_mains_suppression` | AC-26…AC-28 | `run_check`, `ingest`, `make_signal('infra/ats/src1_ok')` | `check_signal_id.last_text`, `status`, кількість `maintenance.request` з `td_signal_id` |
+| `::TestIngestHook` | `test_since_from_reading_ts`, `test_internal_context_skips`, `test_exception_isolated`, `test_read_disabled_skips` | AC-29 | `unittest.mock.patch.object(type(env['td.bms.check']), '_f3d_bms_on_ingest')` | виклики mock; `res` `_f3d_ingest`; `off_since` |
+| `::TestDerivedSource` | `test_local_source`, `test_not_stale_by_telemetry`, `test_foreign_push_rejected`, `test_heartbeat` | AC-30 | `env['td.signal']._cron_stale()`, `td.collector` тесту з токеном і `_config_payload()` | стани, кількість `td.reading` сигналу `check` |
 | `test_rules_hvac.py::TestUnitRules` | `test_not_running`, `test_vel_ok`, `test_fault_separate`, `test_fans_no_check`, `test_cold_work`, `test_cold_off_hours`, `test_fire_suppression_signal`, `test_fire_suppression_drill_mock`, `test_mains` | AC-31…AC-33 | `run_check`, `ingest`, `make_signal('fire/totals/system_state')` | тексти, заявки |
-| `::TestThresholds` | `test_filter_supply_rv05`, `test_filter_extract`, `test_unit_fault_frost`, `test_ef_chg_charging`, `test_ef_elec_overheat`, `test_ahu_pressure`, `test_boiler_fault`, `test_heat_deficit` | AC-34…AC-36 | `ingest` | `name`, `f3d_bms_rule`, кількість заявок |
-| `test_requests.py::TestEnrichment` | `test_light_off_title`, `test_titles_table`, `test_faults_description`, `test_idempotent` | AC-37…AC-39 | після правил | `name`, `f3d_value`, `f3d_threshold`, `description`, `f3d_bms_enriched` |
+| `::TestThresholds` | `test_filter_supply_rv05`, `test_filter_extract`, `test_unit_fault_frost`, `test_ef_chg_charging`, `test_ef_elec_overheat`, `test_ahu_pressure`, `test_boiler_fault`, `test_heat_deficit` | AC-34…AC-36 | `ingest` | `name`, `td_bms_rule`, кількість заявок |
+| `test_requests.py::TestEnrichment` | `test_light_off_title`, `test_titles_table`, `test_faults_description`, `test_idempotent` | AC-37…AC-39 | після правил | `name`, `td_value`, `td_threshold`, `description`, `td_bms_enriched` |
 | `::TestJournal` | `test_open_update_close`, `test_new_episode`, `test_cooldown_new_request` | AC-40, AC-41 | `freeze_time` | поля епізодів, кількості |
 | `test_viewer_provider.py::TestLightingSection` | `test_static_equals_macro`, `test_live_values` | AC-42, AC-44 | `cls.static`, `ctx()` | порівняння словників A.13 з `cls.static` (точна рівність) |
 | `::TestVentilationSection` | `test_static_equals_macro`, `test_maintenance_request_key`, `test_maintenance_request_id_same_name`, `test_maintenance_request_id_cleared`, `test_live_values` | AC-43, AC-44 | ті самі | порівняння |
@@ -1474,9 +1474,9 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | `test_overview.py::TestOverview` | `test_structure_counts`, `test_access_partial`, `test_action_open` | AC-46, AC-47, AC-63 | користувачі | ключі, кількості, `AccessError` |
 | `test_hooks.py::TestInstall` | `test_counts_clean`, `test_signal_definitions`, `test_reinstall_idempotent`, `test_params_environment`, `test_uninstall_hook`, `test_neutralize` | AC-48, AC-51, AC-53…AC-56 | `hooks.run_install(env)`, `uninstall_hook(env)` у транзакції тесту | кількості, `install_report`, поля сигналів, `validate_address` |
 | `test_commands.py::TestWriteFlags` | `test_enable_disable`, `test_manager_rpc_denied` | AC-57 | `res.config.settings` | кількості прапорів |
-| `::TestWizards` | `test_light_scene`, `test_light_level_multi`, `test_refusals`, `test_hvac_mode_setpoint`, `test_forbidden_write_flags` | AC-58…AC-60 | `user_operator`, `set_param('factory3d.telemetry.write_enabled','True')` | поля `f3d.command`, тексти `UserError`/`ValidationError` |
-| `test_security.py::TestRights` | `test_acl_matrix`, `test_groups_chain`, `test_own_privilege`, `test_menus`, `test_reinstall_admin_only` | AC-61…AC-63 | користувачі | `AccessError`; `env.ref(menu).sequence`; `privilege_id`/`category_id` групи оператора, група оператора поза `factory3d_base.privilege_f3d` (X-19) |
-| `static/tests/overview.test.js` (hoot, `--test-tags /factory3d_bms` через `HttpCase.start_tour`-незалежний `web.assets_unit_tests`) | `F3dBmsOverview renders plan`, `click opens form` | AC-47 | `mockService("orm", …)` з фіктивною відповіддю R-28 | кількість `polygon`/`circle`, класи, виклик `orm.call` |
+| `::TestWizards` | `test_light_scene`, `test_light_level_multi`, `test_refusals`, `test_hvac_mode_setpoint`, `test_forbidden_write_flags` | AC-58…AC-60 | `user_operator`, `set_param('td.telemetry.write_enabled','True')` | поля `td.command`, тексти `UserError`/`ValidationError` |
+| `test_security.py::TestRights` | `test_acl_matrix`, `test_groups_chain`, `test_own_privilege`, `test_menus`, `test_reinstall_admin_only` | AC-61…AC-63 | користувачі | `AccessError`; `env.ref(menu).sequence`; `privilege_id`/`category_id` групи оператора, група оператора поза `td_factory3d.privilege_td` (X-19) |
+| `static/tests/overview.test.js` (hoot, `--test-tags /td_bms` через `HttpCase.start_tour`-незалежний `web.assets_unit_tests`) | `F3dBmsOverview renders plan`, `click opens form` | AC-47 | `mockService("orm", …)` з фіктивною відповіддю R-28 | кількість `polygon`/`circle`, класи, виклик `orm.call` |
 
 #### 13.1.2 Плагін (`pytest services/collector_plugins/f3d_collector_bms -q`)
 
@@ -1485,7 +1485,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | `test_protocol.py` | `test_build_query`, `test_build_command`, `test_build_invalid`, `test_parse_reply_error_push_partial`, `test_split_stream`, `test_frame_too_long`, `test_decode_level`, `test_expand_devices`, `test_schemas`, `test_allowed_commands` | AC-64…AC-67, AC-73 | точні рядки; `Frame`; винятки; `jsonschema.validate` (бібліотека є в колекторі) |
 | `test_plugin_helvarnet.py` | `test_level_sample_median`, `test_membership_cache_fallback`, `test_power_scene`, `test_faults_faulty_router`, `test_push_emit`, `test_write_ack_verify_fail`, `test_write_not_supported`, `test_version_fallback`, `test_reconnect_offline_allowlist`, `test_rate_limit_timeouts`, `test_shared_connection`, `test_entry_point` | AC-68…AC-72, AC-74…AC-78 | `Reading`; лічильники кадрів фейка; час виконання (`time.monotonic`); `health()` |
 
-#### 13.1.3 Синхронізація даних з макетом (`pytest odoo_addons/factory3d_bms/tests/test_data_sync.py`, поза Odoo)
+#### 13.1.3 Синхронізація даних з макетом (`pytest odoo_addons/td_bms/tests/test_data_sync.py`, поза Odoo)
 
 `test_generated_files_match`: `gen_data.py --out <tmp>` → файли побайтово = `data/*` і `tests/data/static_bms.json`;
 `test_groups_vs_macro`: для 32 груп `plant.lighting.layout(...)` → `n`, `e_calc`, `p_inst`, `area` = Додаток A.1;
@@ -1496,17 +1496,17 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 Передумови (усі ТК): `docker compose -f docker-compose.sim.yml --profile dev up -d` (iot_sim, mosquitto); образ колектора
 з `f3d-collector-bms` (`requirements-extra.txt`), `F3D_ALLOW_HOSTS=iot-sim,mosquitto`, `F3D_WRITE_ENABLED=0`; Odoo 19 з
-копією демо (`odoo_f3d_bms`), установлені `factory3d_base`, `factory3d_telemetry`, `factory3d_bms` (і `factory3d_viewer`
+копією демо (`odoo_f3d_bms`), установлені `td_factory3d`, `td_telemetry`, `td_bms` (і `td_viewer3d`
 для ТК-10); токен колектора; змінна `SIM=http://127.0.0.1:8090/sim/v1`, `AUTH="Authorization: Bearer $SIM_API_TOKEN"`.
 Для ТК з перевірками робочого часу менеджер створює календар «Цілодобово (ТК)» (7 × 00:00–24:00) і ставить його в
-`factory3d.bms.calendar_id`, затримки `light_check_delay_min=1`, `hvac_check_delay_min=1`, `cold_delay_min=1`,
+`td.bms.calendar_id`, затримки `light_check_delay_min=1`, `hvac_check_delay_min=1`, `cold_delay_min=1`,
 `heat_deficit_delay_min=1`; telemetry `realarm_cooldown_s=60`. Час очікування — з запасом на опитування 30/60 с, push 5 с
 і крон 60 с.
 
 | ТК | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|
 | ТК-01 Підключення | запустити колектор; 3 хв | Завод 3D → Телеметрія → Огляд: 32 джерела bms `online`, `BMS-DERIVED` `online`; Будівля → Огляд: 32 групи з `level_source=live`, 29 установок без `stale`; сигнали `module=bms`: `ok` усі, крім `ventilation/units/RV-05/filter_dp_pa` (`alarm`, емулятор стартує з 285) | Огляд, список сигналів (фільтр «Мій модуль» = bms) |
-| ТК-02 `filter_clogged` RV-05 | 1) заявку id 6 перевести в «Repaired»; `curl -X POST $SIM/reset -H "$AUTH" -d '{"keep_time":true}'` → RV-05 120 Па, сигнал `ok` ≤ 2 хв; 2) `curl -X POST $SIM/scenario/filter_clogged/start -H "$AUTH" -H 'Content-Type: application/json' -d '{"run_ref":"RUN/TK02","params":{"device":"RV-05","value":285,"ramp_min":2}}'` (лише `value` — iot_sim S-04, X-58); 3) чекати 4 хв; 4) закрити нову заявку, `POST $SIM/scenario/filter_clogged/stop` | 3) сигнал `filter_dp_pa` 285 ± 5, `alarm`; нова заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на RV-05, команда «Служба головного механіка», `f3d_bms_rule=filter_supply`; епізод журналу `open`; картка RV-05 у переглядачі «Фільтр 285 Па · замінити»; огляд — RV-05 червоний; 4) ≤ 3 хв сигнал `ok`, епізод `closed` | Обслуговування → Заявки; Будівля → Відхилення; 3D |
+| ТК-02 `filter_clogged` RV-05 | 1) заявку id 6 перевести в «Repaired»; `curl -X POST $SIM/reset -H "$AUTH" -d '{"keep_time":true}'` → RV-05 120 Па, сигнал `ok` ≤ 2 хв; 2) `curl -X POST $SIM/scenario/filter_clogged/start -H "$AUTH" -H 'Content-Type: application/json' -d '{"run_ref":"RUN/TK02","params":{"device":"RV-05","value":285,"ramp_min":2}}'` (лише `value` — iot_sim S-04, X-58); 3) чекати 4 хв; 4) закрити нову заявку, `POST $SIM/scenario/filter_clogged/stop` | 3) сигнал `filter_dp_pa` 285 ± 5, `alarm`; нова заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на RV-05, команда «Служба головного механіка», `td_bms_rule=filter_supply`; епізод журналу `open`; картка RV-05 у переглядачі «Фільтр 285 Па · замінити»; огляд — RV-05 червоний; 4) ≤ 3 хв сигнал `ok`, епізод `closed` | Обслуговування → Заявки; Будівля → Відхилення; 3D |
 | ТК-03 Освітлення вимкнене / нижче норми | календар «Цілодобово (ТК)»; 1) `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK03A","params":{"group":"LT-CUT","level":0,"duration_s":900}}`; 2) `…/start` `{"run_ref":"RUN/TK03B","params":{"group":"LT-EB","level":60,"duration_s":900}}`; чекати 3 хв | 1) `lighting/groups/LT-CUT/level=0` ≤ 10 с (push); ≤ 2,5 хв заявка «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк»; 2) LT-EB `e_now = 329` → заявка «Освітлення LT-EB (Крайкооблицювання): ≈ 329 лк при нормі 500 лк (рівень 60 %)»; огляд: Z-CUT сірий/червоний, Z-EB червоний; після `stop` — «норма», епізоди `closed` | Заявки, Відхилення, Огляд |
 | ТК-04 Аварія світильника | менеджер ставить сигналам `lighting/groups/LT-CUT/faults` і `/faulty` `period_s=60`; `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK04","params":{"group":"LT-CUT","scene":1,"fault_device":"@1.2.1.5","duration_s":900}}`; 3 хв | `faults=1`, `faulty='1.2.1.5'`; заявка «Аварія світильників LT-CUT: несправних 1 шт. при нормі 0», в описі «Несправні світильники: 1.2.1.5; щит LP-2, DALI-група G:12.»; щит LP-2 `state=fault`; після `stop` — `faults=0` | форма групи, щита; заявка |
 | ТК-05 Нічне зниження | менеджер створює календар «Без робочого часу (ТК)» (без інтервалів) і ставить його в параметр; `POST $SIM/time` `{"set":"<сьогодні>T23:00:00+03:00"}`; 3 хв | RV/AHU: `mode=ST`, `state=stopped` → `state=standby`, `mode_label` «Очікування»; `heat_kw` → 0, `heat_need_kw` падає до 0; `setpoint_night_c=14.0`; перевірки «поза робочим часом»; **жодної** нової заявки й епізоду; потім календар «Цілодобово (ТК)» → ≤ 3 хв заявки «Установка RV-xx (…): не працює в робочий час — режим «Очікування»» (перевірка контрасту, 26 заявок) — закрити масово; повернути `POST $SIM/time {"set":"<сьогодні>T10:00:00+03:00"}` | Установки (kanban), Тепловий баланс, Заявки |
@@ -1514,15 +1514,15 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | ТК-07 HelvarNet недоступний | менеджер: `HN-LP-2.params.port = 50999`; 4 хв; повернути 50000 | ≤ 2 хв `HN-LP-2.state=error` («Connection refused»); ≤ 3 хв 5 груп LP-2 `stale`, перевірки «немає даних», щит LP-2 `offline`; нових заявок 0; огляд — Z-CUT…Z-FAC заштриховані; після повернення ≤ 2 хв `online`, значення живі, «норма» | Телеметрія → Огляд; Будівля → Огляд |
 | ТК-08 BACnet-пристрій мовчить | `POST $SIM/device/RV-07/fault` `{"reason":"comm"}`; 3 хв; `clear` | `BAC-107-RV-07` `error`, сигнали RV-07 `stale` ≤ 90 с після помилки; перевірка RV-07 «немає даних»; заявок немає; `clear` → `online`, «норма» | Телеметрія → Джерела |
 | ТК-09 Керування | адміністратор: Будівля «Дозволити керування», Телеметрія «Дозволяти команди», колектор `F3D_WRITE_ENABLED=1` (перезапуск); оператор: LT-MAINT → «Керування» → сцена 3; RV-05 → режим `VEL`; потім адміністратор вимикає керування | команда LT-MAINT `done` ≤ 15 с (`result` містить `ack` або `verified`), рівень групи 50 % ≤ 60 с; RV-05 команда `done`, `mode=VEL` ≤ 60 с; після вимкнення — майстер не відкривається (`UserError`), прапори `write_enabled` 0/0 | Телеметрія → Команди; форми |
-| ТК-10 Інтерфейс і 3D | з `factory3d_viewer`: Будівля → Огляд — план, KPI, вкладки; група LT-CUT → «Показати в 3D»; переглядач: картка LT-CUT, RV-05, «Теплова мережа» | картки показують ті самі числа, що форми (`e_now`, режим, витрата, фільтр, «Зима −15 °C ≈ 753 кВт з 990 кВт двох котлів і 856 кВт КГУ»); живе оновлення ≤ 15 с після зміни рівня (ТК-03) | UI, 3D |
-| ТК-11 Пожежне навчання (з `factory3d_fire_safety`, інакше MAN-пропуск) | календар «Цілодобово (ТК)»; `POST $SIM/scenario/fire_drill/start` `{"run_ref":"RUN/TK11","params":{"zone":"FA-CNC","duration_s":300}}`; 8 хв | ≤ 1 хв RV/AHU `ST`; `fire/totals/system_state=test`; перевірки «зупинено пожежною сигналізацією»; заявок «не працює…» 0; після завершення установки запускаються, перевірки «норма» | Установки, Заявки |
+| ТК-10 Інтерфейс і 3D | з `td_viewer3d`: Будівля → Огляд — план, KPI, вкладки; група LT-CUT → «Показати в 3D»; переглядач: картка LT-CUT, RV-05, «Теплова мережа» | картки показують ті самі числа, що форми (`e_now`, режим, витрата, фільтр, «Зима −15 °C ≈ 753 кВт з 990 кВт двох котлів і 856 кВт КГУ»); живе оновлення ≤ 15 с після зміни рівня (ТК-03) | UI, 3D |
+| ТК-11 Пожежне навчання (з `td_fire_safety`, інакше MAN-пропуск) | календар «Цілодобово (ТК)»; `POST $SIM/scenario/fire_drill/start` `{"run_ref":"RUN/TK11","params":{"zone":"FA-CNC","duration_s":300}}`; 8 хв | ≤ 1 хв RV/AHU `ST`; `fire/totals/system_state=test`; перевірки «зупинено пожежною сигналізацією»; заявок «не працює…» 0; після завершення установки запускаються, перевірки «норма» | Установки, Заявки |
 | ТК-12 Звірка з пристроєм | `curl -s "$SIM/signals?device=RV-08" -H "$AUTH"`; `printf '>V:2,C:152,@1.2.1.1#' \| nc -q1 iot-sim 50000` (з контейнера колектора) | значення в Odoo (форма RV-08, LT-CUT) збігаються з емулятором (± шум за 30 с; рівень — точно) | термінал, форми |
 
 ### 13.3 Тести безпеки (ТБ)
 
 | ТБ | Перевірка | Як |
 |---|---|---|
-| ТБ-01 | користувач без `group_f3d_user` не читає моделі модуля, меню «Будівля» невидиме | UT `test_acl_matrix` |
+| ТБ-01 | користувач без `group_td_user` не читає моделі модуля, меню «Будівля» невидиме | UT `test_acl_matrix` |
 | ТБ-02 | оператор не змінює налаштування груп/установок/балансу; не видаляє журнал | AC-61 |
 | ТБ-03 | команда неможлива без будь-якого з п'яти запобіжників; з `F3D_WRITE_ENABLED=0` колектор не забирає команди → `expired` за 10 хв | AC-57…AC-59, ТК-09 (варіант з `F3D_WRITE_ENABLED=0`) |
 | ТБ-04 | заборонені записи: EF-*, котельня, AO:1/AO:2/BV:1, G:40, інші команди HelvarNet | AC-60, AC-73 |
@@ -1541,14 +1541,14 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | ТП-02 | 3 роутери, 32 групи, 320 пристроїв | обхід несправностей ≤ 30 с при `rate_per_s=20`; рівень/потужність/сцена 32 груп ≤ 10 с за хвилину | лог плагіна (`sweep done in …`), PT з фейком 320 пристроїв і `rate_per_s=100` ≤ 5 с |
 | ТП-03 | ≈ 12 показань/с від bms у push | API-02 telemetry p95 ≤ 1 с на пакет 1 000 | метрика `collector_push_latency_seconds` |
 | ТП-04 | крон перевірок 61 об'єкт + журнал 549 сигналів | ≤ 2 с на прогін; провайдери ≤ 300 мс; `get_overview_data` ≤ 500 мс | UT `test_perf_check` (`time.perf_counter`, демо-дані), лог крона |
-| ТП-05 | доба роботи стенда | ≤ 60 000 нових рядків `f3d.reading` сигналів `module='bms'` | SQL `SELECT count(*) FROM f3d_reading r JOIN f3d_signal s ON s.id=r.signal_id WHERE s.module='bms' AND r.ts > now() - interval '1 day'` |
+| ТП-05 | доба роботи стенда | ≤ 60 000 нових рядків `td.reading` сигналів `module='bms'` | SQL `SELECT count(*) FROM td_reading r JOIN td_signal s ON s.id=r.signal_id WHERE s.module='bms' AND r.ts > now() - interval '1 day'` |
 
-### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/factory3d_bms/DEPLOY_TEST.md`, здає W7) — «одна зона → усі»
+### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/td_bms/DEPLOY_TEST.md`, здає W7) — «одна зона → усі»
 
 1. Дамп бази `odoo` тестового сервера → `odoo_f3d_bms`; знімок `SELECT code, last_value, status, maintenance_request_id
-   FROM f3d_signal WHERE code LIKE 'ventilation/%'` (після установки telemetry).
-2. Установити `factory3d_bms`; лог без ERROR; `install_report.state='done'`, лічильники §5.3 (468/81, 65 обладнання).
-3. Прогнати `--test-tags /factory3d_bms` на `odoo_f3d_bms` → 0 падінь; `pytest` плагіна й `test_data_sync.py` → 0 падінь.
+   FROM td_signal WHERE code LIKE 'ventilation/%'` (після установки telemetry).
+2. Установити `td_bms`; лог без ERROR; `install_report.state='done'`, лічильники §5.3 (468/81, 65 обладнання).
+3. Прогнати `--test-tags /td_bms` на `odoo_f3d_bms` → 0 падінь; `pytest` плагіна й `test_data_sync.py` → 0 падінь.
 4. **Одна зона:** параметр `read_enabled=True`, але всім джерелам модуля `read_enabled=False`, крім `BAC-108-RV-08`,
    `BAC-109-RV-09`, `HN-LP-2`; запустити колектор; ТК-12 для RV-08, RV-09, LT-CUT; переконатися, що інші джерела
    `disabled`, заявок по інших об'єктах немає; ТК-03 (лише LT-CUT).
@@ -1564,9 +1564,9 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 - ТК-01…ТК-10, ТК-12 пройдені на стенді (ТК-11 — за наявності fire_safety), протокол у `TEST_REPORT.md` з фактичними
   числами; ТБ-01…ТБ-10, ТП-01…ТП-05 виконані.
 - Кожен AC-01…AC-78 має зелений тест або відмітку ТК/MAN у протоколі; покриття FR — таблиця під §12.
-- `ruff check` (довжина рядка 120) без помилок для `odoo_addons/factory3d_bms` і `services/collector_plugins/f3d_collector_bms`;
+- `ruff check` (довжина рядка 120) без помилок для `odoo_addons/td_bms` і `services/collector_plugins/f3d_collector_bms`;
   `eslint`/`prettier` проєкту — для `static/src`.
-- Жодного `x_`-поля; `grep -rn "x_f3d" odoo_addons/factory3d_bms` порожній.
+- Жодного `x_`-поля; `grep -rn "x_f3d" odoo_addons/td_bms` порожній.
 - `neutralize.sql` перевірений (AC-56); стоп-крани описані в README; `write_enabled` за замовчуванням `False`.
 - README модуля (установка, параметри, 6 інструкцій ARCH §4), README плагіна (встановлення в образ, `params`/`address`,
   обмеження), `CHANGELOG.md` `19.0.1.0.0`.
@@ -1598,7 +1598,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 ## Додаток A. Дані з макета
 
-### A.0 Норми освітленості (`data/f3d_bms_light_norm_data.xml`, з `plant/lux_norms.json`, R-01)
+### A.0 Норми освітленості (`data/td_bms_light_norm_data.xml`, з `plant/lux_norms.json`, R-01)
 
 | key | name | lux | UGR | Ra | ref_en |
 |---|---|---|---|---|---|
@@ -1618,7 +1618,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 `ref_en` у даних — повний рядок `ref` json («EN 12464-1:2021, …»); `note`, `sources` — з json; `ref_dbn` — умовчання M-01.
 
-### A.1 Групи освітлення (`data/f3d_bms_light_data.xml`; перевірка R-03/R-04/R-06; Φ = 20 500 лм, W = 126 Вт для всіх)
+### A.1 Групи освітлення (`data/td_bms_light_data.xml`; перевірка R-03/R-04/R-06; Φ = 20 500 лм, W = 126 Вт для всіх)
 
 Колонки: № (= `dali_group`, `sequence` = № × 10) | `code` | зона | назва зони | `norm` (task) | `fixture_kind` | `panel` | `n_fixtures` | `area_m2` | `E_н` | `n_required` | `e_calc` | `level_design` | `control_mode` | G | `dali_devices` | `p_inst_kw`.
 
@@ -1658,7 +1658,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | 32 | LT-OUT-7 | Z-OUT-7 | Відвантаження · ворота 7 | packing_dispatch | highbay | LP-3 | 4 | 150.8 | 300 | 4 | 305 | 1.0 | shift | 32 | @1.3.2.21-24 | 0.5 |
 
 Разом 320 світильників, `p_inst` 40,32 кВт; режим «зміна» — 22 групи, «присутність» — 10. `name` групи = «Освітлення:
-<назва зони>» (як обладнання демо). `passport_id` = `factory3d_base.passport_highbay_rack` для `highbay_rack`, інакше
+<назва зони>» (як обладнання демо). `passport_id` = `td_factory3d.passport_highbay_rack` для `highbay_rack`, інакше
 `passport_highbay`.
 
 ### A.2 Щити освітлення (`panel_lp_<n>`)
@@ -1671,7 +1671,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 
 `x` — `plant/lighting.py:PANELS`; `y = 71,0` — біля північної стіни всередині зони (план); `cluster = 1`.
 
-### A.3 Установки (`data/f3d_bms_hvac_data.xml`, `unit_<slug>`; з `plant/ventilation.py`, паспортів і `dist/odoo_demo.json`)
+### A.3 Установки (`data/td_bms_hvac_data.xml`, `unit_<slug>`; з `plant/ventilation.py`, паспортів і `dist/odoo_demo.json`)
 
 | code | name | kind | device | x | y | zone | mode_design | airflow_nom | heat_nom | p_inst | fan_count | required_in_work | статика макета (витрата / тепло / клапан / p_now / фільтр / стан) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -1793,7 +1793,7 @@ EF-CMP 132, EF-CHG 133), `<G>` — код групи, `<g>` — DALI-група 
 `BOILER` `return_c`, `state`); `origin='module'` — 292; `writable=1` — 142; на `BMS-DERIVED` — 59; BACnet — 327;
 HelvarNet — 163.
 
-## Додаток C. Джерела модуля (`data/f3d_bms_source_data.xml`; `collector_id = factory3d_telemetry.collector_main`, `module='bms'`, `write_enabled=False`)
+## Додаток C. Джерела модуля (`data/td_bms_source_data.xml`; `collector_id = td_telemetry.collector_main`, `module='bms'`, `write_enabled=False`)
 
 | xml-id | `code` | `type` | `name` | `params` | `period_s_default` |
 |---|---|---|---|---|---|

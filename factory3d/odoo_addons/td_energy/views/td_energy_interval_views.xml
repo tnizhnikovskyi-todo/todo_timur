@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-07, V-08 -->
 <odoo>
-    <record id="view_f3d_energy_interval_graph" model="ir.ui.view">
-        <field name="name">f3d.energy.interval.graph</field>
-        <field name="model">f3d.energy.interval</field>
+    <record id="view_td_energy_interval_graph" model="ir.ui.view">
+        <field name="name">td.energy.interval.graph</field>
+        <field name="model">td.energy.interval</field>
         <field name="arch" type="xml">
             <graph type="bar" stacked="1">
                 <field name="ts_start" interval="hour"/>
@@ -13,23 +13,23 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_interval_pivot" model="ir.ui.view">
-        <field name="name">f3d.energy.interval.pivot</field>
-        <field name="model">f3d.energy.interval</field>
+    <record id="view_td_energy_interval_pivot" model="ir.ui.view">
+        <field name="name">td.energy.interval.pivot</field>
+        <field name="model">td.energy.interval</field>
         <field name="arch" type="xml">
             <pivot>
                 <field name="node_id" type="row"/>
                 <field name="day" type="col"/>
                 <field name="kwh" type="measure"/>
-                <field name="cost" type="measure" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="cost" type="measure" groups="td_energy.group_td_energy_cost"/>
                 <field name="kw_avg" type="measure"/>
             </pivot>
         </field>
     </record>
 
-    <record id="view_f3d_energy_interval_list" model="ir.ui.view">
-        <field name="name">f3d.energy.interval.list</field>
-        <field name="model">f3d.energy.interval</field>
+    <record id="view_td_energy_interval_list" model="ir.ui.view">
+        <field name="name">td.energy.interval.list</field>
+        <field name="model">td.energy.interval</field>
         <field name="arch" type="xml">
             <list create="false" edit="false" delete="false">
                 <field name="ts_start"/>
@@ -39,17 +39,17 @@
                 <field name="kwh_export" optional="hide"/>
                 <field name="kw_avg"/>
                 <field name="zone_id"/>
-                <field name="price" groups="factory3d_energy.group_f3d_energy_cost"/>
-                <field name="cost" sum="Разом" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="price" groups="td_energy.group_td_energy_cost"/>
+                <field name="cost" sum="Разом" groups="td_energy.group_td_energy_cost"/>
                 <field name="quality" widget="badge" decoration-success="quality == 'measured'"
                        decoration-warning="quality in ('interpolated', 'reset')" decoration-danger="quality == 'missing'"/>
             </list>
         </field>
     </record>
 
-    <record id="view_f3d_energy_interval_search" model="ir.ui.view">
-        <field name="name">f3d.energy.interval.search</field>
-        <field name="model">f3d.energy.interval</field>
+    <record id="view_td_energy_interval_search" model="ir.ui.view">
+        <field name="name">td.energy.interval.search</field>
+        <field name="model">td.energy.interval</field>
         <field name="arch" type="xml">
             <search>
                 <field name="meter_id"/>
@@ -74,9 +74,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_interval" model="ir.actions.act_window">
+    <record id="action_td_energy_interval" model="ir.actions.act_window">
         <field name="name">Профіль</field>
-        <field name="res_model">f3d.energy.interval</field>
+        <field name="res_model">td.energy.interval</field>
         <field name="view_mode">graph,pivot,list</field>
         <field name="context">{'search_default_today': 1, 'search_default_role_feeder': 1}</field>
     </record>

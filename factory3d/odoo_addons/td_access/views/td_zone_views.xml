@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_zone_form_f3d_access" model="ir.ui.view">
-        <field name="name">f3d.zone.form.f3d.access</field>
-        <field name="model">f3d.zone</field>
-        <field name="inherit_id" ref="factory3d_base.view_f3d_zone_form"/>
+    <record id="view_td_zone_form_td_access" model="ir.ui.view">
+        <field name="name">td.zone.form.td.access</field>
+        <field name="model">td.zone</field>
+        <field name="inherit_id" ref="td_factory3d.view_td_zone_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_people" type="object" class="oe_stat_button" icon="fa-users"
-                        groups="factory3d_access.group_f3d_access_security">
-                    <field name="f3d_people_now" widget="statinfo" string="Людей зараз"/>
+                        groups="td_access.group_td_access_security">
+                    <field name="td_people_now" widget="statinfo" string="Людей зараз"/>
                 </button>
             </xpath>
         </field>
     </record>
 
-    <record id="view_f3d_zone_kanban_f3d_access" model="ir.ui.view">
-        <field name="name">f3d.zone.kanban.f3d.access</field>
-        <field name="model">f3d.zone</field>
-        <field name="inherit_id" ref="factory3d_base.view_f3d_zone_kanban"/>
+    <record id="view_td_zone_kanban_td_access" model="ir.ui.view">
+        <field name="name">td.zone.kanban.td.access</field>
+        <field name="model">td.zone</field>
+        <field name="inherit_id" ref="td_factory3d.view_td_zone_kanban"/>
         <field name="arch" type="xml">
             <field name="color" position="after">
-                <field name="f3d_people_now"/>
+                <field name="td_people_now"/>
             </field>
             <xpath expr="//div[hasclass('text-muted')][last()]" position="after">
-                <div t-if="record.f3d_people_now.raw_value &gt; 0">Людей зараз: <field name="f3d_people_now"/></div>
+                <div t-if="record.td_people_now.raw_value &gt; 0">Людей зараз: <field name="td_people_now"/></div>
             </xpath>
         </field>
     </record>

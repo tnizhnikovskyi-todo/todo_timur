@@ -8,7 +8,7 @@ from odoo.modules import module as odoo_module
 from odoo.exceptions import UserError, ValidationError
 
 from ..tools import dates
-from .f3d_fire_panel import fire_notify
+from .td_fire_panel import fire_notify
 
 _logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def _seconds(delta):
 
 
 class F3dFireDrill(models.Model):
-    _name = "f3d.fire.drill"
+    _name = "td.fire.drill"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _description = "Пожежна безпека: навчальна тривога"
     _order = "planned_ts desc, id desc"
@@ -52,12 +52,12 @@ class F3dFireDrill(models.Model):
         [("sim", "Емулятор"), ("panel_test", "Тест приладу"), ("tabletop", "Настільне")],
         string="Режим", required=True, default="panel_test", tracking=True)
     planned_ts = fields.Datetime(string="Заплановано на", tracking=True)
-    zone_id = fields.Many2one("f3d.fire.zone", string="Зона пожежі", required=True, ondelete="restrict",
+    zone_id = fields.Many2one("td.fire.zone", string="Зона пожежі", required=True, ondelete="restrict",
                               tracking=True)
     device_id = fields.Many2one(
-        "f3d.fire.device", string="Сповіщувач", ondelete="set null",
+        "td.fire.device", string="Сповіщувач", ondelete="set null",
         domain="[('zone_id', '=', zone_id), ('is_detector', '=', True)]")
-    template_id = fields.Many2one("f3d.fire.drill.template", string="Шаблон", ondelete="set null",
+    template_id = fields.Many2one("td.fire.drill.template", string="Шаблон", ondelete="set null",
                                   default=lambda self: self._default_template())
     responsible_id = fields.Many2one("res.users", string="Відповідальний", default=lambda self: self.env.user)
     start_ts = fields.Datetime(string="Початок", readonly=True)
@@ -67,11 +67,11 @@ class F3dFireDrill(models.Model):
     sim_run_ref = fields.Char(string="Запуск емулятора", size=32, readonly=True)
     sim_available = fields.Boolean(compute="_compute_sim_available")
     real_alarm = fields.Boolean(string="Справжня тривога під час навчання", readonly=True)
-    step_ids = fields.One2many("f3d.fire.drill.step", "drill_id", string="Кроки", copy=True)
+    step_ids = fields.One2many("td.fire.drill.step", "drill_id", string="Кроки", copy=True)
     person_ids = fields.One2many(
-        "f3d.fire.drill.person", "drill_id", string="Люди", copy=False,
-        groups="factory3d_fire_safety.group_f3d_fire_drill,hr.group_hr_user")
-    event_ids = fields.One2many("f3d.fire.event", "drill_id", string="Події", readonly=True)
+        "td.fire.drill.person", "drill_id", string="Люди", copy=False,
+        groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user")
+    event_ids = fields.One2many("td.fire.event", "drill_id", string="Події", readonly=True)
     steps_done = fields.Integer(compute="_compute_steps", store=True)
     steps_total = fields.Integer(compute="_compute_steps", store=True)
     on_site_count = fields.Integer(string="На об'єкті", compute="_compute_people", store=True, compute_sudo=True)
@@ -99,15 +99,15 @@ class F3dFireDrill(models.Model):
     # --- значення за замовчуванням -----------------------------------------------------------------------
     @api.model
     def _default_template(self):
-        return self.env["f3d.fire.drill.template"].sudo().search([("is_default", "=", True)], limit=1).id
+        return self.env["td.fire.drill.template"].sudo().search([("is_default", "=", True)], limit=1).id
 
     @api.model
     def _default_time_limit(self):
-        return self.env["f3d.fire.panel"]._get_param("drill_time_limit_s", 300)
+        return self.env["td.fire.panel"]._get_param("drill_time_limit_s", 300)
 
     @api.model
     def _param(self, key, default):
-        return self.env["f3d.fire.panel"]._get_param(key, default)
+        return self.env["td.fire.panel"]._get_param(key, default)
 
     # --- обчислювані поля --------------------------------------------------------------------------------
     @api.depends("start_ts", "end_ts")
@@ -125,7 +125,7 @@ class F3dFireDrill(models.Model):
                 rec.elapsed_s = _seconds(rec.end_ts - rec.start_ts) if rec.start_ts and rec.end_ts else 0
 
     def _compute_sim_available(self):
-        available = "f3d.sim.run" in self.env
+        available = "td.sim.run" in self.env
         for rec in self:
             rec.sim_available = available
 
@@ -201,7 +201,7 @@ class F3dFireDrill(models.Model):
         no_steps = []
         for i, vals in enumerate(vals_list):
             if vals.get("name", "/") == "/":
-                vals["name"] = seq.next_by_code("f3d.fire.drill") or "/"
+                vals["name"] = seq.next_by_code("td.fire.drill") or "/"
             if not vals.get("step_ids"):
                 no_steps.append(i)
         records = super().create(vals_list)
@@ -219,7 +219,7 @@ class F3dFireDrill(models.Model):
     def _fill_steps(self):
         """Кроки з шаблона (A-29): плейсхолдери {detector}, {zone}, {sounders}; невідомі лишаються як є."""
         for rec in self:
-            sounders = self.env["f3d.fire.device"].sudo().search_count(
+            sounders = self.env["td.fire.device"].sudo().search_count(
                 [("type", "=", "sounder"), ("active", "=", True)])
             ctx = _SafeDict(detector=rec.device_id.address or "—", zone=rec.zone_id.name, sounders=sounders)
             commands = [Command.clear()]
@@ -236,11 +236,11 @@ class F3dFireDrill(models.Model):
     # --- переходи ----------------------------------------------------------------------------------------
     def _notify_state(self):
         for rec in self:
-            fire_notify(self.env, "f3d.fire.drill", [rec.name], "state")
+            fire_notify(self.env, "td.fire.drill", [rec.name], "state")
 
     def _log_event(self, etype, text, ts, key=None, **extra):
         self.ensure_one()
-        return self.env["f3d.fire.event"]._log(
+        return self.env["td.fire.event"]._log(
             etype, self.zone_id.code, ts, text, source="drill", key=key or "%s:%s" % (etype, self.name),
             zone_id=self.zone_id.id, device_id=self.device_id.id or False, drill_id=self.id, **extra)
 
@@ -255,7 +255,7 @@ class F3dFireDrill(models.Model):
         return True
 
     def action_start(self, ts=None, source="manual"):
-        base = self.env["f3d.fire.passage.source"]
+        base = self.env["td.fire.passage.source"]
         for rec in self:
             if rec.state not in ("draft", "planned"):
                 raise UserError("Почати можна лише чернетку або заплановане навчання.")
@@ -334,7 +334,7 @@ class F3dFireDrill(models.Model):
         if self.state != "evaluating":
             raise UserError("Перекличка — після завершення навчання.")
         action = self.env["ir.actions.act_window"]._for_xml_id(
-            "factory3d_fire_safety.action_f3d_fire_drill_rollcall")
+            "td_fire_safety.action_td_fire_drill_rollcall")
         action["context"] = {"default_drill_id": self.id}
         return action
 
@@ -374,7 +374,7 @@ class F3dFireDrill(models.Model):
         return True
 
     def action_print(self):
-        return self.env.ref("factory3d_fire_safety.report_f3d_fire_drill").report_action(self)
+        return self.env.ref("td_fire_safety.report_td_fire_drill").report_action(self)
 
     def action_f3d_show(self):
         self.ensure_one()
@@ -383,7 +383,7 @@ class F3dFireDrill(models.Model):
     # --- хід навчання ------------------------------------------------------------------------------------
     def _passage_model(self):
         self.ensure_one()
-        base = self.env["f3d.fire.passage.source"]
+        base = self.env["td.fire.passage.source"]
         name = base.PREFIX + (self.passage_source or "")
         if self.passage_source and name in self.env.registry:
             return self.env[name].sudo()
@@ -413,7 +413,7 @@ class F3dFireDrill(models.Model):
             domain.append(("ts", "<=", self.end_ts))
         if zone:
             domain.append(("zone_id", "=", zone.id))
-        return self.env["f3d.fire.event"].sudo().search(domain, order="ts, id")
+        return self.env["td.fire.event"].sudo().search(domain, order="ts, id")
 
     def _auto_done_ts(self, key, now):
         """R-17: час виконання кроку з auto_key або False."""
@@ -428,16 +428,16 @@ class F3dFireDrill(models.Model):
             exits = self.sudo().person_ids.filtered("exit_ts").mapped("exit_ts")
             return min(exits) if exits else False
         if key == "ventilation":
-            signals = env["f3d.signal"].sudo().search(
+            signals = env["td.signal"].sudo().search(
                 [("code", "=like", "ventilation/units/%/mode"), ("source_id", "!=", False)])
             if signals and all(s.last_text in ("ST", "Off") and s.last_ts and s.last_ts >= self.start_ts
                                for s in signals):
                 return max(signals.mapped("last_ts"))
             return False
         if key == "doors":
-            if "f3d.access.door" not in env:
+            if "td.access.door" not in env:
                 return False
-            Door = env["f3d.access.door"].sudo()
+            Door = env["td.access.door"].sudo()
             doors = Door.search([("is_perimeter", "=", True)] if "is_perimeter" in Door._fields else [])
             if doors and all(d.state in ("unlocked", "open") for d in doors):
                 return now
@@ -446,10 +446,10 @@ class F3dFireDrill(models.Model):
             workcenters = self.zone_id.sudo().zone_id.workcenter_ids
             if not workcenters:
                 return False
-            codes = ["workcenters/%s/machine_state" % wc.f3d_code for wc in workcenters if wc.f3d_code]
+            codes = ["workcenters/%s/machine_state" % wc.td_code for wc in workcenters if wc.td_code]
             if not codes:
                 return False
-            signals = env["f3d.signal"].sudo().search([("code", "in", codes)])
+            signals = env["td.signal"].sudo().search([("code", "in", codes)])
             if len(signals) < len(codes) or any(s.last_text not in ("fault", "off", "idle") for s in signals):
                 return False
             return max([self.start_ts] + [s.last_ts for s in signals if s.last_ts])
@@ -480,7 +480,7 @@ class F3dFireDrill(models.Model):
         if panel.state not in ("normal", "unknown") or any(
                 z.state not in ("normal", "unknown") for z in panel.zone_ids):
             return False
-        ends = self.env["f3d.fire.event"].sudo().search(
+        ends = self.env["td.fire.event"].sudo().search(
             [("etype", "in", ("test_end", "reset")), ("zone_id", "=", zone.id),
              ("ts", ">=", self.start_ts - LEAD)], order="ts desc, id desc", limit=1)
         if not ends or (now - ends.ts).total_seconds() < self._param("drill_auto_stop_s", 120):
@@ -527,7 +527,7 @@ class F3dFireDrill(models.Model):
 
     @api.model
     def _f3d_is_active_at(self, ts):
-        """CF-06 (для factory3d_access): чи йшло навчання в момент ts (UTC naive)."""
+        """CF-06 (для td_access): чи йшло навчання в момент ts (UTC naive)."""
         return self.sudo().search_count([
             ("start_ts", "!=", False), ("start_ts", "<=", ts), "|", ("end_ts", "=", False), ("end_ts", ">=", ts),
             ("state", "in", ("running", "evaluating", "done", "cancelled"))]) > 0
@@ -575,11 +575,11 @@ class F3dFireDrill(models.Model):
 
 
 class F3dFireDrillStep(models.Model):
-    _name = "f3d.fire.drill.step"
+    _name = "td.fire.drill.step"
     _description = "Навчальна тривога: крок"
     _order = "drill_id, sequence, id"
 
-    drill_id = fields.Many2one("f3d.fire.drill", required=True, ondelete="cascade", index=True)
+    drill_id = fields.Many2one("td.fire.drill", required=True, ondelete="cascade", index=True)
     sequence = fields.Integer(default=10)
     t_plan_s = fields.Integer(string="План, с", required=True, default=0)
     who = fields.Char(string="Хто", size=64, required=True)
@@ -621,11 +621,11 @@ class F3dFireDrillStep(models.Model):
 
 
 class F3dFireDrillPerson(models.Model):
-    _name = "f3d.fire.drill.person"
+    _name = "td.fire.drill.person"
     _description = "Навчальна тривога: людина на об'єкті"
     _order = "drill_id, seq"
 
-    drill_id = fields.Many2one("f3d.fire.drill", required=True, ondelete="cascade", index=True)
+    drill_id = fields.Many2one("td.fire.drill", required=True, ondelete="cascade", index=True)
     seq = fields.Integer(string="№")
     employee_id = fields.Many2one("hr.employee", ondelete="set null", index=True)
     since = fields.Datetime(string="На об'єкті з")
@@ -663,7 +663,7 @@ class F3dFireDrillPerson(models.Model):
 
 
 class F3dFireDrillTemplate(models.Model):
-    _name = "f3d.fire.drill.template"
+    _name = "td.fire.drill.template"
     _description = "Навчальна тривога: шаблон"
     _order = "sequence, id"
 
@@ -671,9 +671,9 @@ class F3dFireDrillTemplate(models.Model):
     sequence = fields.Integer(default=10)
     is_default = fields.Boolean(string="За замовчуванням")
     duration_s = fields.Integer(string="Тривалість, с", default=300)
-    default_zone_id = fields.Many2one("f3d.fire.zone", string="Зона за замовчуванням")
-    default_device_id = fields.Many2one("f3d.fire.device", string="Сповіщувач за замовчуванням")
-    step_ids = fields.One2many("f3d.fire.drill.template.step", "template_id", string="Кроки", copy=True)
+    default_zone_id = fields.Many2one("td.fire.zone", string="Зона за замовчуванням")
+    default_device_id = fields.Many2one("td.fire.device", string="Сповіщувач за замовчуванням")
+    step_ids = fields.One2many("td.fire.drill.template.step", "template_id", string="Кроки", copy=True)
     note = fields.Text(string="Примітка")
     active = fields.Boolean(default=True)
 
@@ -684,11 +684,11 @@ class F3dFireDrillTemplate(models.Model):
 
 
 class F3dFireDrillTemplateStep(models.Model):
-    _name = "f3d.fire.drill.template.step"
+    _name = "td.fire.drill.template.step"
     _description = "Навчальна тривога: крок шаблона"
     _order = "template_id, sequence, id"
 
-    template_id = fields.Many2one("f3d.fire.drill.template", required=True, ondelete="cascade", index=True)
+    template_id = fields.Many2one("td.fire.drill.template", required=True, ondelete="cascade", index=True)
     sequence = fields.Integer(default=10)
     t_plan_s = fields.Integer(string="План, с", default=0)
     who = fields.Char(string="Хто", size=64, required=True)

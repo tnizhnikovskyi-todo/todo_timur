@@ -1,9 +1,9 @@
 /** @odoo-module */
 // AC-40 (JS): формати, відмова .skp; AC-34 (JS): ліміт 20 МБ.
 import { describe, expect, test } from "@odoo/hoot";
-import { ACCEPT, detectFormat, pickMainFile, rejectMessage } from "@factory3d_constructor/model/formats";
-import { ModelImportError } from "@factory3d_constructor/model/normalize";
-import { importModelFiles } from "@factory3d_constructor/model/import";
+import { ACCEPT, detectFormat, pickMainFile, rejectMessage } from "@td_constructor/model/formats";
+import { ModelImportError } from "@td_constructor/model/normalize";
+import { importModelFiles } from "@td_constructor/model/import";
 import { file } from "./helpers";
 
 describe.current.tags("desktop");

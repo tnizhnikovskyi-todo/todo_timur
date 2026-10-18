@@ -62,8 +62,8 @@ class TestLiveCron(F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Node = cls.env["f3d.energy.node"]
-        cls.Signal = cls.env["f3d.signal"]
+        cls.Node = cls.env["td.energy.node"]
+        cls.Signal = cls.env["td.signal"]
 
     def put(self, values, seconds_ago=5):
         ts = fields.Datetime.now() - timedelta(seconds=seconds_ago)
@@ -108,8 +108,8 @@ class TestLiveCron(F3DEnergyCase):
         self.assertAlmostEqual(self.sig("infra/totals/export_kw").last_value, 42.0, places=1)
         self.assertEqual(self.Node.search([("code", "=", "PFC-1")]).pfc_q_now, 100)
         self.assertEqual(self.Node.search([("code", "=", "PFC-2")]).pfc_q_now, 50)
-        self.assertTrue(self.env["f3d.energy.event"].search([("kind", "=", "pfc"), ("code", "=", "PFC-1")]))
-        self.assertEqual(self.env.ref("factory3d_energy.source_en_derived").state, "online")
+        self.assertTrue(self.env["td.energy.event"].search([("kind", "=", "pfc"), ("code", "=", "PFC-1")]))
+        self.assertEqual(self.env.ref("td_energy.source_en_derived").state, "online")
 
     def test_cron_live_stale_feeders(self):  # AC-29 (3 несвіжі фідери)
         self.put_lines(names=("BW-3", "BW-2", "C1"))

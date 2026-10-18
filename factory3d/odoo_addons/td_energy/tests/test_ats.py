@@ -18,9 +18,9 @@ class TestAts(EnergyMixin, F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Signal = cls.env["f3d.signal"]
-        cls.Outage = cls.env["f3d.energy.outage"]
-        cls.Event = cls.env["f3d.energy.event"]
+        cls.Signal = cls.env["td.signal"]
+        cls.Outage = cls.env["td.energy.outage"]
+        cls.Event = cls.env["td.energy.event"]
         cls.T = cls.base_day(cls).replace(hour=10, minute=5)
         cls.Outage.search([]).unlink()
 
@@ -123,7 +123,7 @@ class TestAts(EnergyMixin, F3DEnergyCase):
 
     def test_bridge_mismatch_event(self):  # AC-62
         T = self.T
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.genset.amf_master", "hgm")
+        self.env["ir.config_parameter"].sudo().set_param("td.genset.amf_master", "hgm")
         self.put(A + "mode", T, text="auto")
         self.put(A + "mode", T + timedelta(seconds=10), text="auto")
         self.put(A + "position", T + timedelta(seconds=20), value=2)

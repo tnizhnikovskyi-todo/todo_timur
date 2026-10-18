@@ -1,7 +1,7 @@
 from odoo.exceptions import ValidationError
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_base.hooks import docks
+from odoo.addons.td_factory3d.hooks import docks
 
 from .common import F3DCase
 
@@ -11,9 +11,9 @@ class TestDockConstraints(F3DCase):
 
     def test_requires_side_no(self):  # AC-20
         with self.assertRaisesRegex(ValidationError, 'Для воріт задайте сторону й номер'):
-            self.dock_w1.f3d_kind = 'dock'
+            self.dock_w1.td_kind = 'dock'
         self.make_dock(self.dock_w1, 'west', 1, 0.0, 5.0)
-        self.assertEqual(self.dock_w1.f3d_kind, 'dock')
+        self.assertEqual(self.dock_w1.td_kind, 'dock')
 
     def test_unique_side_no(self):
         self.make_dock(self.dock_w1, 'west', 1, 0.0, 5.0)
@@ -22,11 +22,11 @@ class TestDockConstraints(F3DCase):
 
     def test_kind_mismatch(self):
         with self.assertRaisesRegex(ValidationError, 'лише для виду «Ворота»'):
-            self.loc_in.f3d_dock_no = 2
+            self.loc_in.td_dock_no = 2
 
     def test_kind_zone_forbidden(self):
         with self.assertRaisesRegex(ValidationError, 'Місце зберігання може бути лише'):
-            self.loc_in.f3d_kind = 'zone'
+            self.loc_in.td_kind = 'zone'
 
     def test_coords_bounds(self):  # AC-23
         with self.assertRaises(ValidationError):
@@ -35,8 +35,8 @@ class TestDockConstraints(F3DCase):
             self.make_dock(self.dock_e1, 'east', 1, 150.0, -1.0)
 
     def test_capacity_default(self):
-        self.assertEqual(self.loc_in.f3d_kind, 'location')
-        self.assertEqual(self.loc_in.f3d_capacity, 0)
+        self.assertEqual(self.loc_in.td_kind, 'location')
+        self.assertEqual(self.loc_in.td_capacity, 0)
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')
@@ -50,7 +50,7 @@ class TestRegister(F3DCase):
         self.assertIn(self.dock_w1, in_type.dock_ids)
         self.assertNotIn(self.dock_w1, out_type.dock_ids)
         self.assertIn(self.dock_e1, out_type.dock_ids)
-        self.assertEqual(self.dock_w1.f3d_dock_picking_type_ids, in_type)
+        self.assertEqual(self.dock_w1.td_dock_picking_type_ids, in_type)
 
     def test_register_idempotent(self):
         self.make_dock(self.dock_w1, 'west', 1, 0.0, 5.0)
@@ -71,10 +71,10 @@ class TestRegister(F3DCase):
         with self.with_data_file('scene_docks.csv', rows):
             res = docks.register(self.env)
         self.assertEqual(res['docks'], 2)
-        self.assertEqual(self.dock_w1.f3d_code, 'DOCK-W1')
-        self.assertEqual(self.dock_w1.f3d_alias, 'UNLOAD-T1')
+        self.assertEqual(self.dock_w1.td_code, 'DOCK-W1')
+        self.assertEqual(self.dock_w1.td_alias, 'UNLOAD-T1')
         self.assertEqual(self.dock_w1.barcode, 'UNLOAD-T1')
-        self.assertEqual(self.dock_w1.f3d_accepts, self.categ_boards)
+        self.assertEqual(self.dock_w1.td_accepts, self.categ_boards)
         self.assertEqual(self.wh.in_type_id.dock_ids, self.dock_w1)
         self.assertEqual(self.wh.out_type_id.dock_ids, self.dock_e1)
         with self.with_data_file('scene_docks.csv', rows):

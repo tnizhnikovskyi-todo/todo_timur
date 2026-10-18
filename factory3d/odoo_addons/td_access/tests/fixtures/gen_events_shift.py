@@ -7,7 +7,7 @@ import json
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CODES_CSV = os.path.join(HERE, '..', '..', '..', 'factory3d_base', 'data', 'scene_employee_codes.csv')
+CODES_CSV = os.path.join(HERE, '..', '..', '..', 'td_factory3d', 'data', 'scene_employee_codes.csv')
 DAY = '2026-10-12'
 ACR = {'in': ('5390001', '1'), 'elec': ('5390002', '2'), 'paint': ('5390004', '4'), 'srv': ('5390005', '5')}
 
@@ -39,8 +39,8 @@ def build():
     with open(CODES_CSV, encoding='utf-8') as fh:
         people = list(csv.DictReader(fh))
     for person in people:
-        minute = 40 + det(person['f3d_code'], mod=20)
-        code = 4102 if det(person['f3d_code']) % 2 == 0 else 4867
+        minute = 40 + det(person['td_code'], mod=20)
+        code = 4102 if det(person['td_code']) % 2 == 0 else 4867
         rows.append(row(stamp(minute), code, person['barcode'], 'in', tna='1'))
         for offset, door_code in ((0, 20480), (1, 20992), (6, 21248)):
             rows.append(row(stamp(minute, offset), door_code, None, 'in'))

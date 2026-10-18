@@ -4,7 +4,7 @@ import { Component, onMounted, onWillStart, onWillUnmount, useState } from "@odo
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
-const MODEL = "f3d.bms.overview";
+const MODEL = "td.bms.overview";
 const REFRESH_MS = 30000;
 const GROUP_STATES = { ok: "Норма", low: "Нижче норми", off: "Вимкнено", nodata: "Немає даних", fault: "Несправність", alarm: "Відхилення" };
 const UNIT_STATES = { on: "Працює", standby: "Очікування", nodata: "Немає даних", alarm: "Відхилення" };
@@ -19,7 +19,7 @@ const RULES = {
 
 /** Огляд будівлі (FR-14, R-28): план цеху з зонами за станом груп освітлення, установки, KPI, тепло, відхилення. */
 export class F3dBmsOverview extends Component {
-    static template = "factory3d_bms.Overview";
+    static template = "td_bms.Overview";
     static props = ["*"];
 
     setup() {
@@ -92,15 +92,15 @@ export class F3dBmsOverview extends Component {
 
     openZone(zone) {
         const group = this.state.data.groups.find((g) => g.code === zone.group);
-        return group ? this.open("f3d.bms.light.group", group.id, "form") : this.open("f3d.zone", zone.id, "form");
+        return group ? this.open("td.bms.light.group", group.id, "form") : this.open("td.zone", zone.id, "form");
     }
 
     openUnit(unit) {
-        return this.open("f3d.bms.hvac.unit", unit.id, "form");
+        return this.open("td.bms.hvac.unit", unit.id, "form");
     }
 
     openPanel(panel) {
-        return this.open("f3d.bms.light.panel", panel.id, "form");
+        return this.open("td.bms.light.panel", panel.id, "form");
     }
 
     show3d(model, id) {
@@ -108,4 +108,4 @@ export class F3dBmsOverview extends Component {
     }
 }
 
-registry.category("actions").add("factory3d_bms.overview", F3dBmsOverview);
+registry.category("actions").add("td_bms.overview", F3dBmsOverview);

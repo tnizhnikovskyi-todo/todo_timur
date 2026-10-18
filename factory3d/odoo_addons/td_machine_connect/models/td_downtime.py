@@ -4,19 +4,19 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
 from ..tools import ppt
-from .f3d_machine import local
+from .td_machine import local
 
 _logger = logging.getLogger(__name__)
 
 
 class F3dDowntime(models.Model):
-    _name = "f3d.downtime"
+    _name = "td.downtime"
     _description = "Верстати: простій"
     _inherit = ["mail.thread"]
     _order = "date_start desc, id desc"
 
     name = fields.Char(compute="_compute_name", store=True)
-    machine_id = fields.Many2one("f3d.machine", string="Верстат", required=True, index=True, ondelete="cascade")
+    machine_id = fields.Many2one("td.machine", string="Верстат", required=True, index=True, ondelete="cascade")
     workcenter_id = fields.Many2one("mrp.workcenter", related="machine_id.workcenter_id", store=True, index=True)
     code = fields.Char(related="machine_id.code", store=True)
     company_id = fields.Many2one("res.company", related="machine_id.company_id", store=True, index=True)
@@ -38,10 +38,10 @@ class F3dDowntime(models.Model):
         ondelete="restrict",
         tracking=True,
         domain="[('loss_type', 'in', ('availability', 'quality'))]",
-        default=lambda s: s.env.ref("factory3d_machine_connect.loss_unknown", raise_if_not_found=False),
+        default=lambda s: s.env.ref("td_machine_connect.loss_unknown", raise_if_not_found=False),
     )
     loss_type = fields.Selection(related="loss_id.loss_type")
-    planned = fields.Boolean(related="loss_id.f3d_planned", string="Плановий")
+    planned = fields.Boolean(related="loss_id.td_planned", string="Плановий")
     reason_source = fields.Selection(
         [
             ("auto", "Автоматично"),
@@ -69,7 +69,7 @@ class F3dDowntime(models.Model):
     )
     hint_loss_id = fields.Many2one("mrp.workcenter.productivity.loss", string="Підказка", ondelete="set null")
     hint_text = fields.Char(string="Звідки підказка", size=256)
-    event_id = fields.Many2one("f3d.machine.event", string="Подія верстата", ondelete="set null")
+    event_id = fields.Many2one("td.machine.event", string="Подія верстата", ondelete="set null")
     workorder_id = fields.Many2one("mrp.workorder", string="Завдання", ondelete="set null")
     production_id = fields.Many2one("mrp.production", related="workorder_id.production_id", store=True)
     employee_id = fields.Many2one("hr.employee", string="Працівник (причина)", ondelete="set null")
@@ -77,7 +77,7 @@ class F3dDowntime(models.Model):
     reason_at = fields.Datetime(readonly=True)
     confirmed_by = fields.Many2one("res.users", string="Підтвердив", readonly=True)
     confirmed_at = fields.Datetime(readonly=True)
-    productivity_ids = fields.One2many("mrp.workcenter.productivity", "f3d_downtime_id", string="Записи журналу часу")
+    productivity_ids = fields.One2many("mrp.workcenter.productivity", "td_downtime_id", string="Записи журналу часу")
     maintenance_request_id = fields.Many2one("maintenance.request", string="Заявка ТО", ondelete="set null")
     note = fields.Text(string="Примітка")
     has_loss_tool = fields.Boolean(compute="_compute_has_loss_tool")
@@ -88,7 +88,7 @@ class F3dDowntime(models.Model):
 
     def init(self):
         self.env.cr.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS f3d_downtime_open_uniq ON f3d_downtime (machine_id) "
+            "CREATE UNIQUE INDEX IF NOT EXISTS td_downtime_open_uniq ON td_downtime (machine_id) "
             "WHERE date_end IS NULL"
         )
 
@@ -151,7 +151,7 @@ class F3dDowntime(models.Model):
     def action_confirm(self):
         if not (self.env.su or self.env.user.has_group("mrp.group_mrp_manager")):
             raise AccessError(_("Підтверджує простій майстер."))
-        unknown = self.env.ref("factory3d_machine_connect.loss_unknown")
+        unknown = self.env.ref("td_machine_connect.loss_unknown")
         for rec in self:
             if rec.loss_id == unknown:
                 raise UserError(_("Спершу вкажіть причину простою %s.", rec.display_name))
@@ -165,7 +165,7 @@ class F3dDowntime(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Причина простою"),
-            "res_model": "f3d.downtime.reason.wizard",
+            "res_model": "td.downtime.reason.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_downtime_id": self.id},
@@ -189,7 +189,7 @@ class F3dDowntime(models.Model):
                     "reason_at": fields.Datetime.now(),
                 }
             )
-            rec.sudo().productivity_ids.filtered("f3d_auto").write({"loss_id": loss.id})
+            rec.sudo().productivity_ids.filtered("td_auto").write({"loss_id": loss.id})
             rec.sudo().message_post(body=_("Причина: %(loss)s (%(who)s)", loss=loss.sudo().name, who=who))
 
     def _f3d_set_hint(self, loss, text, event, apply):
@@ -215,7 +215,7 @@ class F3dDowntime(models.Model):
             ppt_min = ppt.total_min(ppt.ppt_intervals(self.env, wc, dt.date_start, end))
             tech = machine._f3d_tech_env()
             recs = dt.productivity_ids
-            operator = [(r.date_start, r.date_end or end) for r in recs if not r.f3d_auto]
+            operator = [(r.date_start, r.date_end or end) for r in recs if not r.td_auto]
             for rec in recs.filtered(lambda r: not r.date_end):
                 rec.with_env(tech).write({"date_end": max(end, rec.date_start)})
             if dt.state_kind != "fault" and ppt_min * 60 < machine.micro_stop_s:
@@ -241,6 +241,6 @@ class F3dDowntime(models.Model):
         return super().write(vals)
 
     def unlink(self):
-        if not (self.env.su or self.env.user.has_group("factory3d_base.group_f3d_admin")):
+        if not (self.env.su or self.env.user.has_group("td_factory3d.group_td_admin")):
             raise AccessError(_("Простій видаляє лише адміністратор."))
         return super().unlink()

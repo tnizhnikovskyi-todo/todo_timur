@@ -1,4 +1,4 @@
-"""M-03: подія шини f3d.viewer.event, коалесценція повідомлень (R-15), крон сигналів."""
+"""M-03: подія шини td.viewer.event, коалесценція повідомлень (R-15), крон сигналів."""
 import logging
 from datetime import timedelta
 from functools import partial
@@ -9,7 +9,7 @@ from ..tools import dates
 
 _logger = logging.getLogger(__name__)
 
-PREFIX = "factory3d.viewer."
+PREFIX = "td.viewer."
 NOTIFY_KEY = "f3d_viewer.notify"
 SNAPSHOT_KEY = "f3d_viewer.event_snapshot"
 CODES_CAP = 500
@@ -29,7 +29,7 @@ def _int(value, default):
 
 
 class F3dViewerEvent(models.Model):
-    _name = "f3d.viewer.event"
+    _name = "td.viewer.event"
     _description = "3D: подія зміни стану"
     _order = "ts desc, id desc"
     _log_access = False
@@ -46,7 +46,7 @@ class F3dViewerEvent(models.Model):
 
     def init(self):
         self.env.cr.execute(
-            "CREATE INDEX IF NOT EXISTS f3d_viewer_event_ts_model_idx ON f3d_viewer_event (ts, model)")
+            "CREATE INDEX IF NOT EXISTS td_viewer_event_ts_model_idx ON td_viewer_event (ts, model)")
 
     @api.depends("codes")
     def _compute_n(self):
@@ -86,7 +86,7 @@ class F3dViewerEvent(models.Model):
                 now = fields.Datetime.now()
                 for (model, kind), codes in sorted(data.items()):
                     codes = sorted(codes)[:CODES_CAP]
-                    env["f3d.viewer.event"].sudo().create(
+                    env["td.viewer.event"].sudo().create(
                         {"ts": now, "model": model, "codes": codes, "kind": kind, "user_id": env.uid})
                     if bus_on:
                         env["bus.bus"]._sendone(
@@ -114,7 +114,7 @@ class F3dViewerEvent(models.Model):
             return
         try:
             with env.cr.savepoint():
-                env["f3d.viewer.snapshot"].sudo()._take(kind="event", note="; ".join(notes))
+                env["td.viewer.snapshot"].sudo()._take(kind="event", note="; ".join(notes))
         except Exception:  # noqa: BLE001
             _logger.exception("не вдалося зробити знімок за подією")
 

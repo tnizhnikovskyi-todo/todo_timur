@@ -1,21 +1,21 @@
-# factory3d_iot_sim — специфікація
+# td_iot_sim — специфікація
 
 Версія 0.3 · 14.10.2026 (0.2 — 14.10.2026, 0.1 — 13.10.2026) · технічне рішення — `ARCHITECTURE.md` (поруч). Мова: українська; технічні імена — англійською.
 
 Зміни: 16.10.2026 — QA-фікс ST-2: LPR push (§8.13.2) шле `X-F3D-Token` зі змінної `SIM_LPR_PUSH_TOKEN` (маска в логах); заголовок не додається, якщо змінну не задано; змінна додана в таблицю змінних середовища.
 
-Зміни: 15.10.2026 — за рішеннями модуля (build/modules/factory3d_iot_sim.md): DEC-4 (§11 і `test_clock.py`: перехід на зимовий час 25.10.2026, а не 26.10), DEC-11 (AC-11: коефіцієнт `0,92 + 0,08·r` дає 0,84…1,0, а не 0,92…1,0).
+Зміни: 15.10.2026 — за рішеннями модуля (build/modules/td_iot_sim.md): DEC-4 (§11 і `test_clock.py`: перехід на зимовий час 25.10.2026, а не 26.10), DEC-11 (AC-11: коефіцієнт `0,92 + 0,08·r` дає 0,84…1,0, а не 0,92…1,0).
 
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-75 (§8.1.3–8.1.4: `genset_relay` за td_genset §8.5 CI-02 — `RELAY_PROFILE=d700`, `RELAY_PORT=8000`, `RELAY_SIM_TOKEN`, `RELAY_TIME_FACTOR`, `RELAY_TZ`, healthcheck, мережі `f3d_sim` + `odoo_default`; `SIM_GENSET_RELAY_TOKEN` = `${RELAY_SIM_TOKEN}`), X-76 (Додаток A: рядок 334 `equipment/GANTRY-1/stacks` → `protocol=none`, обчислює machine_connect; новий рядок 1 166 `equipment/CUTOPT/cmd` `protocol=none`, пасивний пристрій `CUTOPT`; каталог 1 166 = 1 015 + 151, пристроїв 274), X-78 (межа генератора — ESP 558 кВт, перевірено; примітка в `SIM_GENSET_KW_MAX`), X-79 (§8.11.1 LSP id ручних/оповіщувачів/полум'я за fire R-23/A-09, 292 LSP; примітка про LSP-рядки в Додатку A); нові AC-66…AC-68, ТК-18 (v0.3).
 
-Зміни (v0.2): 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-15 (`bookings.truck` = `f3d_code`; follow_odoo читає `f3d_code`/`f3d_truck`/`f3d_plate`, ворота — `dock_id.f3d_code`), X-31 (меню під `factory3d_base.menu_f3d_root`, sequence 90; налаштування — під `menu_f3d_config`), X-34 (каталог +503 рядки № 663–1 165 з додатків energy/fire_safety/yard/machine_connect/bms; рядки 644/646/654/656 — по одному входу), X-35 (149 рядків `protocol=none` «обчислює <модуль>», не в `/signals`), X-36 (`fire/totals/state` = LSZ:0, MSV:1 → `fire/totals/system_state`; шлейф — лише `fault(reason=loop)`), X-37 (Cerberus — BV/PIV), X-38 (`…/state` без заявок, `JobOrderID = WO%05d`, завершені JobOrder у списку), X-39 (%-сигнали `scale` ×1), X-40 (стан щита — агрегат роутера, R-23 `heat_nom = 116,8`, біти C:110 за Helvar, EF-CHG — тривога), X-41 (ATyS p — Annexe III, §8.9.4), X-42 (Modbus — PDU за документом вендора, §8.4.1), X-43 (ADAM — молодше слово першим), X-47 (DO5 — «тримати» GATE-E), X-48 (LPR: `capture_timestamp = sim_now`, `plateList` — назва списку, `plateListMode`), X-49 (номер з `f3d_plate`; `АА4512КТ` — TRUCK-OUT-1), X-50 (BioStar 4102/4867 за `det % 2`, сортування за зростанням, `offset`/`hint`), X-51 (LUNA2000 без перекриттів), X-54 (приклад API-01 з base C/D), X-56 (`read_enabled` за `factory3d.base.environment`), X-58 (`value` у прикладі `filter_clogged`), X-59 (CI-01: `amf_master`, `genset_load_kw`, `test_on_load`, API-F-01…F-09), X-60 (`fault`/`clear` на пасивних `FA-*`), X-61 (+9 споживачів u51–59), X-64 (HelvarNet: `A:1`, відповідь у версії запиту, C:164 з кадрами `$`, `SIM_HELVAR_VERSION`), X-65 (розкладка DALI за bms R-06 / Додаток A.1), X-67 (острів: `P_genset = Σ критичних − chp_kw − pv_now + bess_kw`, 0…558 кВт; параметр `chp_island`), X-72 (Modbus-адреси в каталозі й таблицях — форма `u<unit> fc<n> pdu<addr>[+<count>]`); нові AC-51…AC-65, ТК-17; закрито Q-07 (X-41), Q-09 (X-53), Q-15 (X-59).
+Зміни (v0.2): 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-15 (`bookings.truck` = `td_code`; follow_odoo читає `td_code`/`td_truck`/`td_plate`, ворота — `dock_id.td_code`), X-31 (меню під `td_factory3d.menu_td_root`, sequence 90; налаштування — під `menu_td_config`), X-34 (каталог +503 рядки № 663–1 165 з додатків energy/fire_safety/yard/machine_connect/bms; рядки 644/646/654/656 — по одному входу), X-35 (149 рядків `protocol=none` «обчислює <модуль>», не в `/signals`), X-36 (`fire/totals/state` = LSZ:0, MSV:1 → `fire/totals/system_state`; шлейф — лише `fault(reason=loop)`), X-37 (Cerberus — BV/PIV), X-38 (`…/state` без заявок, `JobOrderID = WO%05d`, завершені JobOrder у списку), X-39 (%-сигнали `scale` ×1), X-40 (стан щита — агрегат роутера, R-23 `heat_nom = 116,8`, біти C:110 за Helvar, EF-CHG — тривога), X-41 (ATyS p — Annexe III, §8.9.4), X-42 (Modbus — PDU за документом вендора, §8.4.1), X-43 (ADAM — молодше слово першим), X-47 (DO5 — «тримати» GATE-E), X-48 (LPR: `capture_timestamp = sim_now`, `plateList` — назва списку, `plateListMode`), X-49 (номер з `td_plate`; `АА4512КТ` — TRUCK-OUT-1), X-50 (BioStar 4102/4867 за `det % 2`, сортування за зростанням, `offset`/`hint`), X-51 (LUNA2000 без перекриттів), X-54 (приклад API-01 з base C/D), X-56 (`read_enabled` за `td.base.environment`), X-58 (`value` у прикладі `filter_clogged`), X-59 (CI-01: `amf_master`, `genset_load_kw`, `test_on_load`, API-F-01…F-09), X-60 (`fault`/`clear` на пасивних `FA-*`), X-61 (+9 споживачів u51–59), X-64 (HelvarNet: `A:1`, відповідь у версії запиту, C:164 з кадрами `$`, `SIM_HELVAR_VERSION`), X-65 (розкладка DALI за bms R-06 / Додаток A.1), X-67 (острів: `P_genset = Σ критичних − chp_kw − pv_now + bess_kw`, 0…558 кВт; параметр `chp_island`), X-72 (Modbus-адреси в каталозі й таблицях — форма `u<unit> fc<n> pdu<addr>[+<count>]`); нові AC-51…AC-65, ТК-17; закрито Q-07 (X-41), Q-09 (X-53), Q-15 (X-59).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-08, Q-10, Q-11, Q-12, Q-13.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: Додаток A — нові рядки 1 167 `fire/groups/FA-SOC/state` (dev 200 LSZ:34) і 1 168 `fire/groups/FA-OFFICE/state` (LSZ:35), дописані в кінець без перенумерації; каталог 1 166 → 1 168 (веде емулятор 1 015 → 1 017, власні 662 → 664, P-09: 53 → 55, нові 970 → 972, з них fire_safety 52 → 54); §8.11.1 — LSZ:1…35, LSP 292 → 302 (сповіщувачів 212 → 222, усі нові — шлейф 3), PIV запиленості до 222; пристроїв 274 → 276 (обладнання base 208 → 210); §5.1, §5.3, API-01, API-02, API-10, API-16, S-07, AC-02, AC-05, AC-22, AC-24, AC-25, AC-62, AC-66, §13 (ТК-08, ТП-05, ТП-06, DEPLOY_TEST).
 Зміни: 14.10.2026 — R-04: поріг тривоги температури трансформатора 140 °C (відповідь № 24).
 
-Контракти, на які спирається документ: `docs/ARCHITECTURE.md` §5 (конвенції імен сигналів, стоп-крани, права), §6.1–6.3 (`f3d.scene.mixin.f3d_code`, `f3d.zone`, ворота-`stock.location`, паспорт `maintenance.equipment.f3d_*`), §6.6 (протокольна матриця P-01…P-13, REST `/sim/v1/*`, режими `scenario`/`follow_odoo`), §6.7 (шляхи даних переглядача), §6.8 (заявки ТО), рішення D-01, D-05…D-09, D-13, D-20 (адреси Modbus — PDU за вендором, ADAM — молодше слово першим), D-21 (ATyS p — Annexe III), D-23 (AMF — варіант A); реєстр `docs/CONSISTENCY.md` (X-xx); рішення автора A-01…A-12 (`ARCHITECTURE.md` §7).
+Контракти, на які спирається документ: `docs/ARCHITECTURE.md` §5 (конвенції імен сигналів, стоп-крани, права), §6.1–6.3 (`td.scene.mixin.td_code`, `td.zone`, ворота-`stock.location`, паспорт `maintenance.equipment.f3d_*`), §6.6 (протокольна матриця P-01…P-13, REST `/sim/v1/*`, режими `scenario`/`follow_odoo`), §6.7 (шляхи даних переглядача), §6.8 (заявки ТО), рішення D-01, D-05…D-09, D-13, D-20 (адреси Modbus — PDU за вендором, ADAM — молодше слово першим), D-21 (ATyS p — Annexe III), D-23 (AMF — варіант A); реєстр `docs/CONSISTENCY.md` (X-xx); рішення автора A-01…A-12 (`ARCHITECTURE.md` §7).
 
-Що цей документ **віддає** іншим модулям (посилатися за ідентифікаторами `factory3d_iot_sim <ID>`): протокольні карти **P-01…P-12** (§8.3–§8.14), каталог сигналів **Додаток A** (1 168 рядків: 1 017 веде емулятор, 151 ведуть модулі-власники — X-34, X-35, X-76; № 1 167–1 168 — зони `FA-SOC`, `FA-OFFICE`, № 12г), **API-01…API-03** (Odoo), **API-10…API-19** (`/sim/v1`), **API-20…API-27** (woodStore), **API-30…API-34** (`/jobs`), **API-40…API-46** (BioStar 2), схема MQTT P-06 (§8.8), формат LPR і SICS (§8.13), правила R-01…R-30 (§9), сценарії S-01…S-15 (§9.3).
+Що цей документ **віддає** іншим модулям (посилатися за ідентифікаторами `td_iot_sim <ID>`): протокольні карти **P-01…P-12** (§8.3–§8.14), каталог сигналів **Додаток A** (1 168 рядків: 1 017 веде емулятор, 151 ведуть модулі-власники — X-34, X-35, X-76; № 1 167–1 168 — зони `FA-SOC`, `FA-OFFICE`, № 12г), **API-01…API-03** (Odoo), **API-10…API-19** (`/sim/v1`), **API-20…API-27** (woodStore), **API-30…API-34** (`/jobs`), **API-40…API-46** (BioStar 2), схема MQTT P-06 (§8.8), формат LPR і SICS (§8.13), правила R-01…R-30 (§9), сценарії S-01…S-15 (§9.3).
 
 ---
 
@@ -37,7 +37,7 @@ services/iot_sim/
 │   ├── zones.json                  полігони зон (резерв; основне джерело — API-01)
 │   └── passports.json              витяг із plant/equipment_specs.json (номінали)
 ├── tools/
-│   ├── gen_catalog.py              генерує signals.csv і data/f3d_sim_signal.csv Odoo-модуля з правил §5.2/§8
+│   ├── gen_catalog.py              генерує signals.csv і data/td_sim_signal.csv Odoo-модуля з правил §5.2/§8
 │   ├── gen_devices.py              генерує devices.yaml з dist/odoo_demo.json + equipment_specs.json
 │   └── mkcert.sh                   самопідписані сертифікати для OPC UA і BioStar (dev)
 ├── iot_sim/
@@ -105,10 +105,10 @@ services/iot_sim/
     └── conftest.py                 фікстури: world(seed), running servers (порти з SIM_TEST_PORT_BASE)
 ```
 
-### 0.2 Odoo-модуль `odoo_addons/factory3d_iot_sim`
+### 0.2 Odoo-модуль `odoo_addons/td_iot_sim`
 
 ```
-odoo_addons/factory3d_iot_sim/
+odoo_addons/td_iot_sim/
 ├── __manifest__.py                 19.0.2.0.0 (§1)
 ├── __init__.py                     models, controllers, hooks (post_init_hook, uninstall_hook)
 ├── hooks.py                        post_init_hook / uninstall_hook (§5.3)
@@ -117,11 +117,11 @@ odoo_addons/factory3d_iot_sim/
 │   ├── models.xml                  ← без змін, успадковано (рівень 0: x_f3d_signal, x_f3d_reading)
 │   ├── actions.xml                 ← без змін (action_iot_tick, cron_iot_sim, start/stop/tick_now)
 │   ├── level0.xml                  перейменування крона/меню рівня 0 (§5.1)
-│   ├── ir_config_parameter.xml     параметри factory3d.iot_sim.* (§5.1)
-│   ├── ir_cron.xml                 cron_f3d_sim_status, cron_f3d_sim_gc (§6)
-│   ├── ir_sequence.xml             f3d.sim.run
-│   ├── f3d_sim_scenario.xml        15 сценаріїв (§5.1)
-│   └── f3d_sim_signal.csv          каталог = Додаток A (копія services/iot_sim/catalog/signals.csv)
+│   ├── ir_config_parameter.xml     параметри td.iot_sim.* (§5.1)
+│   ├── ir_cron.xml                 cron_td_sim_status, cron_td_sim_gc (§6)
+│   ├── ir_sequence.xml             td.sim.run
+│   ├── td_sim_scenario.xml        15 сценаріїв (§5.1)
+│   └── td_sim_signal.csv          каталог = Додаток A (копія services/iot_sim/catalog/signals.csv)
 ├── models/
 │   ├── __init__.py
 │   ├── sim_panel.py                M-01
@@ -133,7 +133,7 @@ odoo_addons/factory3d_iot_sim/
 │   ├── maintenance_equipment.py    M-07
 │   ├── mrp_workcenter.py           M-08
 │   ├── res_config_settings.py      M-09
-│   └── sim_client.py               AbstractModel f3d.sim.client: HTTP до /sim/v1 (§2.10)
+│   └── sim_client.py               AbstractModel td.sim.client: HTTP до /sim/v1 (§2.10)
 ├── wizard/
 │   ├── __init__.py
 │   ├── sim_fault_wizard.py         M-10
@@ -184,7 +184,7 @@ odoo_addons/factory3d_iot_sim/
     "author": "ToDo",
     "license": "LGPL-3",
     "website": "https://todo.ltd",
-    "depends": ["factory3d_base"],
+    "depends": ["td_factory3d"],
     "external_dependencies": {"python": ["requests"]},
     "data": [
         # рівень 0 — успадковані файли data-модуля, ПЕРШИМИ і без змін (інакше Odoo видалить записи)
@@ -197,7 +197,7 @@ odoo_addons/factory3d_iot_sim/
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/level0.xml",
-        "data/f3d_sim_scenario.xml",
+        "data/td_sim_scenario.xml",
         "data/ir_cron.xml",
         "views/sim_panel_views.xml",
         "views/sim_device_views.xml",
@@ -218,17 +218,17 @@ odoo_addons/factory3d_iot_sim/
 }
 ```
 
-Примітки: `factory3d_base` транзитивно дає `maintenance`, `mrp`, `mrp_maintenance`, `hr`, `stock`, `stock_picking_batch`; `data/f3d_sim_signal.csv` завантажує `post_init_hook` (не через `data`, бо потрібні `device_id` за кодом); `requests` є в стандартній поставці Odoo.
+Примітки: `td_factory3d` транзитивно дає `maintenance`, `mrp`, `mrp_maintenance`, `hr`, `stock`, `stock_picking_batch`; `data/td_sim_signal.csv` завантажує `post_init_hook` (не через `data`, бо потрібні `device_id` за кодом); `requests` є в стандартній поставці Odoo.
 
 ---
 
 ## 2. Моделі
 
-Спільне: усі нові моделі `_description` українською, `_order` як зазначено, без `x_`-полів. Доступ до сервісу — лише через домішку `f3d.sim.client` (§2.10): вона перевіряє стоп-крани й ховає токен.
+Спільне: усі нові моделі `_description` українською, `_order` як зазначено, без `x_`-полів. Доступ до сервісу — лише через домішку `td.sim.client` (§2.10): вона перевіряє стоп-крани й ховає токен.
 
-### 2.1 M-01 `f3d.sim.panel` — пульт
+### 2.1 M-01 `td.sim.panel` — пульт
 
-`_name = "f3d.sim.panel"`, `_description = "Пульт емулятора обладнання"`, `_order = "id"`, `_rec_name = "name"`, домішки: `f3d.sim.client`, `mail.thread` (журнал дій у чаттері). Один запис на базу (SQL-constraint `panel_single` через `_check_single`).
+`_name = "td.sim.panel"`, `_description = "Пульт емулятора обладнання"`, `_order = "id"`, `_rec_name = "name"`, домішки: `td.sim.client`, `mail.thread` (журнал дій у чаттері). Один запис на базу (SQL-constraint `panel_single` через `_check_single`).
 
 | Поле | Тип | Параметри |
 |---|---|---|
@@ -238,41 +238,41 @@ odoo_addons/factory3d_iot_sim/
 | `last_error` | Char | «Остання помилка», readonly |
 | `version` | Char | «Версія сервісу», readonly |
 | `mode` | Selection | «Режим»: `[("scenario","Сценарій"),("follow_odoo","За Odoo")]`, readonly (фактичний режим сервісу) |
-| `mode_new` | Selection | «Новий режим», ті самі значення, default з `factory3d.iot_sim.mode` |
+| `mode_new` | Selection | «Новий режим», ті самі значення, default з `td.iot_sim.mode` |
 | `factor` | Float | «Прискорення (факт)», digits (6,2), readonly |
 | `factor_new` | Float | «Нове прискорення», default 1.0; `_check_factor`: 0,1 ≤ x ≤ 60, інакше `ValidationError("Прискорення має бути від 0,1 до 60")` |
 | `sim_time` | Datetime | «Час емулятора», readonly |
 | `uptime_s` | Integer | «Аптайм, с», readonly |
 | `seed` | Integer | «Зерно», readonly |
-| `active_run_ids` | One2many | `f3d.sim.run`, `panel_id`, domain `[("state","in",["queued","running","stopping"])]`, «Активні запуски» |
+| `active_run_ids` | One2many | `td.sim.run`, `panel_id`, domain `[("state","in",["queued","running","stopping"])]`, «Активні запуски» |
 | `alarm_count` | Integer | «Сигналів у тривозі», readonly |
-| `device_count` | Integer | «Пристроїв», compute `_compute_counts` (search_count `f3d.sim.device`) |
+| `device_count` | Integer | «Пристроїв», compute `_compute_counts` (search_count `td.sim.device`) |
 | `signal_count` | Integer | «Сигналів», compute |
 | `protocol_status` | Json | «Стан протоколів», readonly: `{"opcua": "ok", "modbus": "ok", …}` з API-10 |
 | `odoo_stale` | Boolean | «Дані Odoo застарілі (follow_odoo)», readonly |
 | `level0_state` | Selection | «Рівень 0»: `[("auto_off","Авто: вимкнено (сервіс онлайн)"),("auto_on","Авто: увімкнено (сервіс офлайн)"),("forced_on","Примусово увімкнено"),("forced_off","Примусово вимкнено")]`, default `auto_off`, tracking |
 | `level0_signal_count` | Integer | compute: `search_count` у `x_f3d_signal`, якщо модель є в `self.env`, інакше 0 |
-| `read_enabled` | Boolean | compute non-stored з `factory3d.iot_sim.read_enabled` (для `invisible` у формі) |
-| `write_enabled` | Boolean | compute non-stored з `factory3d.iot_sim.write_enabled` |
+| `read_enabled` | Boolean | compute non-stored з `td.iot_sim.read_enabled` (для `invisible` у формі) |
+| `write_enabled` | Boolean | compute non-stored з `td.iot_sim.write_enabled` |
 
 Методи (усі з `self.ensure_one()`):
 
 - `get_panel()` (`@api.model`): повертає єдиний запис, створює при відсутності.
 - `action_check()`: `self._sim_get("/status")` → `_apply_status(payload)`; при помилці — `state="offline"`, `last_error`. Повертає `ir.actions.client` `display_notification`.
-- `_apply_status(payload)`: пише `state` (`online`, або `locked`, якщо `payload["enabled"] is False`, або `degraded`, якщо в `payload["protocols"]` є не `ok`), `last_contact=now`, `version`, `mode`, `factor`, `sim_time` (ISO → UTC), `uptime_s`, `seed`, `alarm_count`, `protocol_status`, `odoo_stale`; синхронізує `f3d.sim.run.state` за `payload["runs"]` (§7.2 API-10); оновлює `f3d.sim.device.state` за `payload["devices_fault"]` (список кодів у збої).
-- `action_apply_factor()`: вимагає `write_enabled` (інакше `UserError("Команди на емулятор вимкнено стоп-краном factory3d.iot_sim.write_enabled")`); якщо `mode == "follow_odoo"` і `factor_new != 1` → `UserError("У режимі «За Odoo» прискорення фіксовано 1 (A-12)")`; `POST /time {"factor": factor_new}`; `message_post`.
+- `_apply_status(payload)`: пише `state` (`online`, або `locked`, якщо `payload["enabled"] is False`, або `degraded`, якщо в `payload["protocols"]` є не `ok`), `last_contact=now`, `version`, `mode`, `factor`, `sim_time` (ISO → UTC), `uptime_s`, `seed`, `alarm_count`, `protocol_status`, `odoo_stale`; синхронізує `td.sim.run.state` за `payload["runs"]` (§7.2 API-10); оновлює `td.sim.device.state` за `payload["devices_fault"]` (список кодів у збої).
+- `action_apply_factor()`: вимагає `write_enabled` (інакше `UserError("Команди на емулятор вимкнено стоп-краном td.iot_sim.write_enabled")`); якщо `mode == "follow_odoo"` і `factor_new != 1` → `UserError("У режимі «За Odoo» прискорення фіксовано 1 (A-12)")`; `POST /time {"factor": factor_new}`; `message_post`.
 - `action_apply_mode()`: `write_enabled`; `POST /mode {"mode": mode_new}`; після зміни на `follow_odoo` ставить `factor_new=1` і викликає `action_apply_factor()`.
-- `action_reset()`: `write_enabled`; `POST /reset {"keep_time": true}`; закриває всі активні `f3d.sim.run` → `stopped`.
+- `action_reset()`: `write_enabled`; `POST /reset {"keep_time": true}`; закриває всі активні `td.sim.run` → `stopped`.
 - `action_stop_all()`: `write_enabled`; `POST /stop-all`; `state="locked"`.
 - `action_level0_force_on()` / `action_level0_force_off()` / `action_level0_auto()`: пишуть `level0_state` і негайно викликають `_sync_level0()`.
-- `_sync_level0()`: вирішує активність крона `factory3d_iot_sim.cron_iot_sim`: `forced_on` → active True; `forced_off` → False; `auto_*`: якщо `state == "online"` → False і `level0_state="auto_off"`; якщо сервіс офлайн довше `factory3d.iot_sim.level0_after_min` хвилин і `factory3d.iot_sim.level0_enabled` → True і `auto_on`. Пише в чаттер лише при зміні.
+- `_sync_level0()`: вирішує активність крона `td_iot_sim.cron_iot_sim`: `forced_on` → active True; `forced_off` → False; `auto_*`: якщо `state == "online"` → False і `level0_state="auto_off"`; якщо сервіс офлайн довше `td.iot_sim.level0_after_min` хвилин і `td.iot_sim.level0_enabled` → True і `auto_on`. Пише в чаттер лише при зміні.
 - `_cron_poll_status()` (`@api.model`): якщо `read_enabled` і `url` заданий → `action_check()` (без сповіщення), потім `_sync_level0()`; якщо `read_enabled` False → нічого, крім `_sync_level0()` з припущенням «офлайн».
-- `action_open_signals()`: act_window на `f3d.sim.signal`.
-- `action_refresh_signals()`: `write_enabled` не потрібен (читання); `GET /signals` (пакетно, `?limit=1000&offset=`) → оновлює `f3d.sim.signal.last_value/last_status/last_ts` (`write` батчами по 200); не частіше ніж раз на 60 с (`last_signals_refresh` у `ir.config_parameter`), інакше `UserError("Оновлення сигналів — не частіше ніж раз на хвилину")`.
+- `action_open_signals()`: act_window на `td.sim.signal`.
+- `action_refresh_signals()`: `write_enabled` не потрібен (читання); `GET /signals` (пакетно, `?limit=1000&offset=`) → оновлює `td.sim.signal.last_value/last_status/last_ts` (`write` батчами по 200); не частіше ніж раз на 60 с (`last_signals_refresh` у `ir.config_parameter`), інакше `UserError("Оновлення сигналів — не частіше ніж раз на хвилину")`.
 
-### 2.2 M-02 `f3d.sim.device` — пристрій емулятора
+### 2.2 M-02 `td.sim.device` — пристрій емулятора
 
-`_name = "f3d.sim.device"`, `_description = "Пристрій емулятора"`, `_order = "protocol, code"`, `_rec_name = "code"`, домішки `f3d.sim.client`.
+`_name = "td.sim.device"`, `_description = "Пристрій емулятора"`, `_order = "protocol, code"`, `_rec_name = "code"`, домішки `td.sim.client`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
@@ -280,7 +280,7 @@ odoo_addons/factory3d_iot_sim/
 | `name` | Char | «Назва», required |
 | `equipment_id` | Many2one | `maintenance.equipment`, «Обладнання», ondelete `set null`, index |
 | `workcenter_id` | Many2one | `mrp.workcenter`, «Робочий центр», ondelete `set null` |
-| `zone_id` | Many2one | `f3d.zone`, «Зона», ondelete `set null` |
+| `zone_id` | Many2one | `td.zone`, «Зона», ondelete `set null` |
 | `protocol` | Selection | «Протокол»: `P-01`…`P-13`, `none` (пасивне); required; default `none` |
 | `driver` | Selection | «Драйвер»: `opcua_ww`, `modbus_pm5560`, `modbus_sun2000`, `modbus_luna2000`, `modbus_elektronikon`, `modbus_atys`, `modbus_tedom`, `modbus_adam6050`, `modbus_adam6060`, `modbus_adam6017`, `modbus_adam6015`, `bacnet_roofvent`, `bacnet_ahu`, `bacnet_fan`, `bacnet_boiler`, `bacnet_facp`, `helvarnet_router`, `mqtt_mobile`, `rest_woodstore`, `rest_biostar`, `http_lpr`, `sics_scale`, `genset_relay`, `passive`; required; default `passive` |
 | `unit_id` | Integer | «Modbus unit id» (0 = н/д); `_check_unit`: 0…247; SQL `device_unit_uniq UNIQUE(unit_id) WHERE unit_id > 0` реалізовано як `_check_unit_unique` (пошук дублікатів) |
@@ -291,23 +291,23 @@ odoo_addons/factory3d_iot_sim/
 | `state` | Selection | «Стан»: `unknown`, `ok`, `fault`, `offline`, `passive`; default `unknown`; readonly |
 | `fault_reason` | Char | «Причина збою», readonly |
 | `last_update` | Datetime | readonly |
-| `signal_ids` | One2many | `f3d.sim.signal`, `device_id` |
+| `signal_ids` | One2many | `td.sim.signal`, `device_id` |
 | `signal_count` | Integer | compute |
 | `note` | Text | «Примітка» |
-| `role` | Char | related `equipment_id.f3d_role`, readonly |
-| `model` | Char | related `equipment_id.f3d_model`, readonly |
+| `role` | Char | related `equipment_id.td_role`, readonly |
+| `model` | Char | related `equipment_id.td_model`, readonly |
 
 Методи: `action_fault()` → відкриває M-10 з `default_device_id`; `action_clear()`: `write_enabled`; `POST /device/{code}/clear`; `state="ok"`, `fault_reason=False`; `message_post`. `_set_fault(reason, note)`: `write_enabled`; `POST /device/{code}/fault {"reason": reason, "note": note}`; `state="fault"`. `action_open_signals()`. `name_get` → `"{code} — {name}"`.
 
-### 2.3 M-03 `f3d.sim.signal` — каталог сигналів
+### 2.3 M-03 `td.sim.signal` — каталог сигналів
 
-`_name = "f3d.sim.signal"`, `_description = "Сигнал емулятора (каталог)"`, `_order = "device_id, code"`, `_rec_name = "code"`.
+`_name = "td.sim.signal"`, `_description = "Сигнал емулятора (каталог)"`, `_order = "device_id, code"`, `_rec_name = "code"`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
 | `code` | Char | «Код-шлях», required, index; SQL `signal_code_uniq UNIQUE(code)` «Код сигналу має бути унікальним»; regex `^[a-z_]+(/[A-Za-z0-9_\-\.]+)+$` |
 | `name` | Char | «Назва» |
-| `device_id` | Many2one | `f3d.sim.device`, required, ondelete `cascade` |
+| `device_id` | Many2one | `td.sim.device`, required, ondelete `cascade` |
 | `protocol` | Selection | як у M-02, required; `none` — рядок, який обчислює модуль-власник або який є командою модуля-власника (Додаток A, колонка P-xx = «—»; X-34, X-35, X-76): емулятор його не веде й не віддає в `GET /sim/v1/signals`, рядок лишається довідковим для API-01 і міграції телеметрії |
 | `address` | Char | «Адреса в джерелі», required; для Modbus — PDU-форма `u<unit> fc<n> pdu<addr>[+<count>] <type>[ little]` (telemetry Q-04, X-42), далі номер за документом вендора; для `protocol='none'` — текст «обчислює <модуль> (<правило>) — без адреси» або, для команди, «команда <плагін> <cmd>, власник <модуль> (…) — без адреси» (`equipment/CUTOPT/cmd`, X-76) |
 | `dtype` | Char | «Тип» (`F32`, `I64`, `U16`, `Boolean`, `enum`, `event`…) |
@@ -326,9 +326,9 @@ odoo_addons/factory3d_iot_sim/
 
 Методи: `action_read_now()`: `GET /signals/{code}` → `last_*`; для `protocol='none'` — `UserError("Сигнал обчислює модуль-власник, емулятор його не веде")` без HTTP-запиту. `@api.model _load_catalog(path)`: читає CSV (§5.1), `create`/`write` за `code` (ідемпотентно), колонка `protocol` `—` → `none`, прив'язує `device_id` за колонкою `device`; невідомий пристрій → `WARNING` у лог і створення пристрою `passive` з цим кодом (щоб каталог не губився).
 
-### 2.4 M-04 `f3d.sim.scenario` — сценарій
+### 2.4 M-04 `td.sim.scenario` — сценарій
 
-`_name = "f3d.sim.scenario"`, `_description = "Сценарій емулятора"`, `_order = "sequence, code"`.
+`_name = "td.sim.scenario"`, `_description = "Сценарій емулятора"`, `_order = "sequence, code"`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
@@ -341,20 +341,20 @@ odoo_addons/factory3d_iot_sim/
 | `duration_s` | Integer | 0 = до зупинки |
 | `sequence` | Integer | default 10 |
 | `active` | Boolean | default True |
-| `run_ids` | One2many | `f3d.sim.run`, `scenario_id` |
+| `run_ids` | One2many | `td.sim.run`, `scenario_id` |
 | `last_run_id` | Many2one | compute |
 
 Методи: `action_start()` → відкриває M-11 з `default_scenario_id`.
 
-### 2.5 M-05 `f3d.sim.run` — запуск сценарію
+### 2.5 M-05 `td.sim.run` — запуск сценарію
 
-`_name = "f3d.sim.run"`, `_description = "Запуск сценарію"`, `_order = "start_ts desc, id desc"`, домішки `f3d.sim.client`, `mail.thread`.
+`_name = "td.sim.run"`, `_description = "Запуск сценарію"`, `_order = "start_ts desc, id desc"`, домішки `td.sim.client`, `mail.thread`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `name` | Char | sequence `f3d.sim.run` (`RUN/%(year)s/0001`), readonly |
-| `panel_id` | Many2one | `f3d.sim.panel`, default `get_panel()` |
-| `scenario_id` | Many2one | `f3d.sim.scenario`, required, ondelete `restrict` |
+| `name` | Char | sequence `td.sim.run` (`RUN/%(year)s/0001`), readonly |
+| `panel_id` | Many2one | `td.sim.panel`, default `get_panel()` |
+| `scenario_id` | Many2one | `td.sim.scenario`, required, ondelete `restrict` |
 | `params` | Json | фактичні параметри |
 | `user_id` | Many2one | `res.users`, default поточний |
 | `start_ts` | Datetime | default now |
@@ -362,22 +362,22 @@ odoo_addons/factory3d_iot_sim/
 | `state` | Selection | `queued`, `running`, `stopping`, `done`, `failed`, `stopped`; default `queued`; tracking |
 | `sim_run_id` | Char | id запуску в сервісі (відповідь API-13) |
 | `message` | Text | результат / помилка |
-| `event_ids` | One2many | `f3d.sim.event`, `run_id` |
+| `event_ids` | One2many | `td.sim.event`, `run_id` |
 | `duration_s` | Integer | compute `stop_ts - start_ts` |
 
 Методи: `action_stop()`: `write_enabled`; `POST /scenario/{code}/stop {"run_id": sim_run_id}`; `state="stopping"` (до підтвердження статусом) або `stopped`, якщо сервіс відповів `stopped`. `_create_and_start(scenario, params)` (`@api.model`): валідує `params` проти `params_schema` (jsonschema-lite: тип, enum, min/max — власна функція `_validate_params`), створює запис, `POST /scenario/{code}/start {"run_ref": name, "params": params}` → `sim_run_id`, `state="running"`; помилка → `state="failed"`, `message`.
 
-### 2.6 M-06 `f3d.sim.event` — подія від емулятора
+### 2.6 M-06 `td.sim.event` — подія від емулятора
 
-`_name = "f3d.sim.event"`, `_description = "Подія емулятора"`, `_order = "ts desc, id desc"`.
+`_name = "td.sim.event"`, `_description = "Подія емулятора"`, `_order = "ts desc, id desc"`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
 | `ts` | Datetime | required, index |
 | `kind` | Selection | `scenario`, `fault`, `alarm`, `info`, `error`, `command`; required |
 | `device_code` | Char | index |
-| `device_id` | Many2one | `f3d.sim.device`, compute stored за `device_code` |
-| `run_id` | Many2one | `f3d.sim.run`, ondelete `set null` |
+| `device_id` | Many2one | `td.sim.device`, compute stored за `device_code` |
+| `run_id` | Many2one | `td.sim.run`, ondelete `set null` |
 | `message` | Char | required |
 | `payload` | Json | |
 
@@ -385,42 +385,42 @@ odoo_addons/factory3d_iot_sim/
 
 ### 2.7 M-07 `maintenance.equipment` (розширення)
 
-Додані поля: `f3d_sim_device_id` (Many2one `f3d.sim.device`, compute stored `_compute_f3d_sim_device` за `f3d_code` = `device.code`, readonly), `f3d_sim_state` (related `f3d_sim_device_id.state`), `f3d_sim_fault_reason` (related), `f3d_sim_protocol` (related). Методи: `action_f3d_sim_fault()` / `action_f3d_sim_clear()` — делегують у M-02. Без перевизначення `create/write`.
+Додані поля: `td_sim_device_id` (Many2one `td.sim.device`, compute stored `_compute_f3d_sim_device` за `td_code` = `device.code`, readonly), `td_sim_state` (related `td_sim_device_id.state`), `td_sim_fault_reason` (related), `td_sim_protocol` (related). Методи: `action_f3d_sim_fault()` / `action_f3d_sim_clear()` — делегують у M-02. Без перевизначення `create/write`.
 
 ### 2.8 M-08 `mrp.workcenter` (розширення)
 
-`f3d_sim_device_id` (Many2one, compute non-stored: пристрій, у якого `workcenter_id == self`), `f3d_sim_state` (related). Кнопка «Емулятор» відкриває пристрій.
+`td_sim_device_id` (Many2one, compute non-stored: пристрій, у якого `workcenter_id == self`), `td_sim_state` (related). Кнопка «Емулятор» відкриває пристрій.
 
 ### 2.9 M-09 `res.config.settings` (розширення)
 
 | Поле | Тип | `config_parameter` |
 |---|---|---|
-| `f3d_sim_url` | Char «Адреса сервісу емулятора» | `factory3d.iot_sim.url` |
-| `f3d_sim_token` | Char (widget password) «Токен /sim/v1» | `factory3d.iot_sim.token` |
-| `f3d_sim_export_token` | Char (password) «Токен експорту (емулятор → Odoo)» | `factory3d.iot_sim.export_token` |
-| `f3d_sim_read_enabled` | Boolean «Опитувати стан сервісу» | `factory3d.iot_sim.read_enabled` |
-| `f3d_sim_write_enabled` | Boolean «Дозволити команди (сценарії, збої, час)» | `factory3d.iot_sim.write_enabled` |
-| `f3d_sim_mode` | Selection «Режим за замовчуванням» | `factory3d.iot_sim.mode` |
-| `f3d_sim_level0_enabled` | Boolean «Рівень 0 при офлайні» | `factory3d.iot_sim.level0_enabled` |
-| `f3d_sim_level0_after_min` | Integer «Вмикати рівень 0 через, хв» | `factory3d.iot_sim.level0_after_min` |
-| `f3d_sim_timeout_s` | Integer | `factory3d.iot_sim.timeout_s` |
-| `f3d_sim_keep_days` | Integer | `factory3d.iot_sim.keep_days` |
+| `td_sim_url` | Char «Адреса сервісу емулятора» | `td.iot_sim.url` |
+| `td_sim_token` | Char (widget password) «Токен /sim/v1» | `td.iot_sim.token` |
+| `td_sim_export_token` | Char (password) «Токен експорту (емулятор → Odoo)» | `td.iot_sim.export_token` |
+| `td_sim_read_enabled` | Boolean «Опитувати стан сервісу» | `td.iot_sim.read_enabled` |
+| `td_sim_write_enabled` | Boolean «Дозволити команди (сценарії, збої, час)» | `td.iot_sim.write_enabled` |
+| `td_sim_mode` | Selection «Режим за замовчуванням» | `td.iot_sim.mode` |
+| `td_sim_level0_enabled` | Boolean «Рівень 0 при офлайні» | `td.iot_sim.level0_enabled` |
+| `td_sim_level0_after_min` | Integer «Вмикати рівень 0 через, хв» | `td.iot_sim.level0_after_min` |
+| `td_sim_timeout_s` | Integer | `td.iot_sim.timeout_s` |
+| `td_sim_keep_days` | Integer | `td.iot_sim.keep_days` |
 
-Методи: `action_f3d_sim_generate_export_token()` — `secrets.token_hex(32)`; `action_f3d_sim_check()` — `panel.action_check()`. Читати/писати ці поля може лише `group_f3d_admin` (`groups` на полях).
+Методи: `action_f3d_sim_generate_export_token()` — `secrets.token_hex(32)`; `action_f3d_sim_check()` — `panel.action_check()`. Читати/писати ці поля може лише `group_td_admin` (`groups` на полях).
 
-### 2.10 Домішка `f3d.sim.client` (AbstractModel)
+### 2.10 Домішка `td.sim.client` (AbstractModel)
 
-`_sim_url()`: `factory3d.iot_sim.url` без кінцевого `/` + `/sim/v1`; порожнє → `UserError("Адресу сервісу емулятора не налаштовано (Налаштування → Factory3D → Емулятор)")`.
+`_sim_url()`: `td.iot_sim.url` без кінцевого `/` + `/sim/v1`; порожнє → `UserError("Адресу сервісу емулятора не налаштовано (Налаштування → Factory3D → Емулятор)")`.
 `_sim_headers()`: `{"Authorization": "Bearer " + token, "Accept": "application/json"}`; токен ніколи не логуються.
-`_sim_get(path, params=None)` / `_sim_post(path, json=None)`: `requests` з `timeout = factory3d.iot_sim.timeout_s`; `POST` вимагає `write_enabled` (інакше `UserError`), `GET` — `read_enabled`; відповіді: 2xx → `json()`, 401 → `UserError("Емулятор відхилив токен")`, 423 → `UserError("Емулятор заблоковано стоп-краном (SIM_ENABLED=0)")`, 404 → `UserError("Невідомий об'єкт: …")`, 422 → `UserError(detail)`, інше/мережа → `UserError("Сервіс емулятора недоступний: …")`. Усі виклики пишуть `f3d.sim.event(kind="command")` для POST (без токена в payload).
+`_sim_get(path, params=None)` / `_sim_post(path, json=None)`: `requests` з `timeout = td.iot_sim.timeout_s`; `POST` вимагає `write_enabled` (інакше `UserError`), `GET` — `read_enabled`; відповіді: 2xx → `json()`, 401 → `UserError("Емулятор відхилив токен")`, 423 → `UserError("Емулятор заблоковано стоп-краном (SIM_ENABLED=0)")`, 404 → `UserError("Невідомий об'єкт: …")`, 422 → `UserError(detail)`, інше/мережа → `UserError("Сервіс емулятора недоступний: …")`. Усі виклики пишуть `td.sim.event(kind="command")` для POST (без токена в payload).
 
-### 2.11 M-10 `f3d.sim.fault.wizard` (TransientModel)
+### 2.11 M-10 `td.sim.fault.wizard` (TransientModel)
 
 Поля: `device_id` (required), `reason` Selection `[("generic","Загальний збій"),("spindle","Шпиндель/привід"),("emergency","Аварійна кнопка"),("power","Втрата живлення"),("comm","Втрата зв'язку"),("sensor","Датчик"),("loop","Лінія (шлейф) пожежної сигналізації")]` default `generic` (для пасивних пристроїв P-09 з `params.lsz` — `sensor`; `loop` дозволено лише для них, інакше `ValidationError("Причина «Лінія» — лише для зон пожежної сигналізації")`; X-36, X-60), `note` Char. `action_confirm()` → `device_id._set_fault(reason, note)`.
 
-### 2.12 M-11 `f3d.sim.run.wizard` (TransientModel)
+### 2.12 M-11 `td.sim.run.wizard` (TransientModel)
 
-Поля: `scenario_id` (required), `params_text` Text (JSON, default = `params_default` сценарію, красиво відформатований), `device_id` Many2one `f3d.sim.device` (для сценаріїв із параметром `device`; domain із `params_schema.properties.device.enum`, якщо є), `zone_id` Many2one `f3d.zone` (для `fire_drill`). `action_confirm()`: збирає `params` (JSON + `device`/`zone` → code), `f3d.sim.run._create_and_start(...)`, повертає act_window на створений запуск.
+Поля: `scenario_id` (required), `params_text` Text (JSON, default = `params_default` сценарію, красиво відформатований), `device_id` Many2one `td.sim.device` (для сценаріїв із параметром `device`; domain із `params_schema.properties.device.enum`, якщо є), `zone_id` Many2one `td.zone` (для `fire_drill`). `action_confirm()`: збирає `params` (JSON + `device`/`zone` → code), `td.sim.run._create_and_start(...)`, повертає act_window на створений запуск.
 
 ---
 
@@ -428,35 +428,35 @@ odoo_addons/factory3d_iot_sim/
 
 | ID | XML-id | Тип | Модель | Структура |
 |---|---|---|---|---|
-| V-01 | `factory3d_iot_sim.view_f3d_sim_panel_form` | form | `f3d.sim.panel` | заголовок `name`; статусбар `state` (readonly); кнопки у `header`: «Перевірити зв'язок» (`action_check`, завжди), «Застосувати прискорення» (`action_apply_factor`, `invisible: not write_enabled`), «Застосувати режим» (`action_apply_mode`), «Скинути світ» (`action_reset`, confirm «Скинути стан емулятора до початкового?»), «Стоп-кран сервісу» (`action_stop_all`, `btn-danger`, confirm), «Рівень 0: увімкнути» / «вимкнути» / «авто»; `group` «Сервіс»: `version`, `last_contact`, `last_error`, `uptime_s`, `seed`, `odoo_stale`; `group` «Час і режим»: `mode`, `mode_new`, `factor`, `factor_new`, `sim_time`; `group` «Лічильники»: `device_count` (кнопка → пристрої), `signal_count` (кнопка `action_open_signals`), `alarm_count`, `level0_state`, `level0_signal_count`; `notebook`: «Активні запуски» (`active_run_ids`, list readonly з кнопкою «Зупинити»), «Протоколи» (`protocol_status` widget `json`), «Сценарії» (вбудований list `f3d.sim.scenario` з кнопкою «Запустити»); чаттер |
-| V-02 | `view_f3d_sim_device_list` | list | `f3d.sim.device` | `code`, `name`, `protocol`, `driver`, `unit_id`, `instance`, `address`, `state` (decoration-danger `state=='fault'`, muted `passive`), `equipment_id`, `workcenter_id`, `signal_count`; `default_order="protocol, code"` |
-| V-03 | `view_f3d_sim_device_form` | form | `f3d.sim.device` | header: «Збій» (`action_fault`, invisible `state=='fault' or not write_enabled`), «Скинути» (`action_clear`, invisible `state!='fault'`); статусбар `state`; group «Пристрій»: `code`, `name`, `equipment_id`, `workcenter_id`, `zone_id`, `role`, `model`; group «Протокол»: `protocol`, `driver`, `unit_id`, `instance`, `address`, `params` (json), `enabled`; group «Стан»: `fault_reason`, `last_update`; notebook «Сигнали» (`signal_ids` list: `code`, `address`, `dtype`, `unit`, `last_value`, `last_status`, `last_ts`); «Примітка» |
-| V-04 | `view_f3d_sim_device_search` | search | `f3d.sim.device` | поля `code`, `name`, `address`; фільтри «У збої» (`state='fault'`), «Активні» (`enabled`), по протоколах P-01…P-12; групування за `protocol`, `driver`, `state` |
-| V-05 | `view_f3d_sim_signal_list` | list | `f3d.sim.signal` | `code`, `device_id`, `protocol`, `address`, `dtype`, `unit`, `scale`, `nominal`, `thresholds`, `model_rule`, `origin`, `last_value`, `last_status` (decoration-danger `alarm`, warning `warn`, muted `stale`), `last_ts`; `create="false"`, `editable` ні |
-| V-06 | `view_f3d_sim_signal_form` + `view_f3d_sim_signal_search` | form/search | `f3d.sim.signal` | усі поля readonly, кнопка «Прочитати зараз» (`action_read_now`); пошук за `code`, `device_id`, `address`; фільтри «Макет» / «Нові», «Тривога»; групування за `device_id`, `protocol`, `origin` |
-| V-07 | `view_f3d_sim_scenario_list/form/kanban` | list, form, kanban | `f3d.sim.scenario` | list: `sequence` (handle), `code`, `name`, `group`, `duration_s`, `last_run_id`, кнопка «Запустити» (`action_start`, invisible `not write_enabled`); form: `code` (readonly після створення), `name`, `group`, `description`, `params_schema`, `params_default` (json), `duration_s`, `active`; notebook «Запуски» (`run_ids`); kanban — картки по `group` з кнопкою «Запустити» |
-| V-08 | `view_f3d_sim_run_list/form/search` | list/form/search | `f3d.sim.run` | list: `name`, `scenario_id`, `state` (decoration), `user_id`, `start_ts`, `stop_ts`, `duration_s`, кнопка «Зупинити» (`action_stop`, invisible `state not in ('queued','running')`); form: header «Зупинити», статусбар; `params` (json readonly), `sim_run_id`, `message`; notebook «Події» (`event_ids`); чаттер; search: фільтри «Активні», «Невдалі», групування за `scenario_id`, `state`, `user_id` |
-| V-09 | `view_f3d_sim_event_list/search` | list/search | `f3d.sim.event` | `ts`, `kind` (decoration-danger `error`/`alarm`, warning `fault`), `device_code`, `device_id`, `run_id`, `message`; `create="false" edit="false"`; search: `device_code`, `message`, фільтри за `kind`, «Сьогодні» |
-| V-10 | `view_maintenance_equipment_form_f3d_sim` | form inherit `maintenance.hr_equipment_view_form` | `maintenance.equipment` | `xpath //notebook` → page «Емулятор» (`invisible: not f3d_sim_device_id`): `f3d_sim_device_id`, `f3d_sim_protocol`, `f3d_sim_state`, `f3d_sim_fault_reason`; кнопки «Збій»/«Скинути» (`groups="factory3d_base.group_f3d_manager"`); стоїть **після** успадкованої сторінки «Сигнали» (рівень 0) |
-| V-11 | `res_config_settings_view_form_f3d_sim` | form inherit `base.res_config_settings_view_form` | `res.config.settings` | блок `app_settings_block` `data-string="Factory3D"` (створює `factory3d_base`; якщо відсутній — власний `data-key="factory3d_base"`), секція «Емулятор обладнання»: поля M-09, кнопки «Перевірити зв'язок», «Згенерувати токен експорту»; `groups="factory3d_base.group_f3d_admin"` |
-| V-12 | `view_f3d_sim_fault_wizard_form`, `view_f3d_sim_run_wizard_form` | form (wizard) | M-10, M-11 | fault: `device_id` (readonly), `reason`, `note`, footer «Поставити збій»/«Скасувати»; run: `scenario_id` (readonly), `device_id` (invisible якщо схема без `device`), `zone_id` (invisible якщо без `zone`), `params_text` (widget `ace` mode json), footer «Запустити» |
-| V-13 | `view_mrp_workcenter_form_f3d_sim` | form inherit `mrp.mrp_workcenter_view` | `mrp.workcenter` | у `button_box` кнопка-статистика «Емулятор» (`f3d_sim_state`), відкриває `f3d_sim_device_id` |
+| V-01 | `td_iot_sim.view_td_sim_panel_form` | form | `td.sim.panel` | заголовок `name`; статусбар `state` (readonly); кнопки у `header`: «Перевірити зв'язок» (`action_check`, завжди), «Застосувати прискорення» (`action_apply_factor`, `invisible: not write_enabled`), «Застосувати режим» (`action_apply_mode`), «Скинути світ» (`action_reset`, confirm «Скинути стан емулятора до початкового?»), «Стоп-кран сервісу» (`action_stop_all`, `btn-danger`, confirm), «Рівень 0: увімкнути» / «вимкнути» / «авто»; `group` «Сервіс»: `version`, `last_contact`, `last_error`, `uptime_s`, `seed`, `odoo_stale`; `group` «Час і режим»: `mode`, `mode_new`, `factor`, `factor_new`, `sim_time`; `group` «Лічильники»: `device_count` (кнопка → пристрої), `signal_count` (кнопка `action_open_signals`), `alarm_count`, `level0_state`, `level0_signal_count`; `notebook`: «Активні запуски» (`active_run_ids`, list readonly з кнопкою «Зупинити»), «Протоколи» (`protocol_status` widget `json`), «Сценарії» (вбудований list `td.sim.scenario` з кнопкою «Запустити»); чаттер |
+| V-02 | `view_td_sim_device_list` | list | `td.sim.device` | `code`, `name`, `protocol`, `driver`, `unit_id`, `instance`, `address`, `state` (decoration-danger `state=='fault'`, muted `passive`), `equipment_id`, `workcenter_id`, `signal_count`; `default_order="protocol, code"` |
+| V-03 | `view_td_sim_device_form` | form | `td.sim.device` | header: «Збій» (`action_fault`, invisible `state=='fault' or not write_enabled`), «Скинути» (`action_clear`, invisible `state!='fault'`); статусбар `state`; group «Пристрій»: `code`, `name`, `equipment_id`, `workcenter_id`, `zone_id`, `role`, `model`; group «Протокол»: `protocol`, `driver`, `unit_id`, `instance`, `address`, `params` (json), `enabled`; group «Стан»: `fault_reason`, `last_update`; notebook «Сигнали» (`signal_ids` list: `code`, `address`, `dtype`, `unit`, `last_value`, `last_status`, `last_ts`); «Примітка» |
+| V-04 | `view_td_sim_device_search` | search | `td.sim.device` | поля `code`, `name`, `address`; фільтри «У збої» (`state='fault'`), «Активні» (`enabled`), по протоколах P-01…P-12; групування за `protocol`, `driver`, `state` |
+| V-05 | `view_td_sim_signal_list` | list | `td.sim.signal` | `code`, `device_id`, `protocol`, `address`, `dtype`, `unit`, `scale`, `nominal`, `thresholds`, `model_rule`, `origin`, `last_value`, `last_status` (decoration-danger `alarm`, warning `warn`, muted `stale`), `last_ts`; `create="false"`, `editable` ні |
+| V-06 | `view_td_sim_signal_form` + `view_td_sim_signal_search` | form/search | `td.sim.signal` | усі поля readonly, кнопка «Прочитати зараз» (`action_read_now`); пошук за `code`, `device_id`, `address`; фільтри «Макет» / «Нові», «Тривога»; групування за `device_id`, `protocol`, `origin` |
+| V-07 | `view_td_sim_scenario_list/form/kanban` | list, form, kanban | `td.sim.scenario` | list: `sequence` (handle), `code`, `name`, `group`, `duration_s`, `last_run_id`, кнопка «Запустити» (`action_start`, invisible `not write_enabled`); form: `code` (readonly після створення), `name`, `group`, `description`, `params_schema`, `params_default` (json), `duration_s`, `active`; notebook «Запуски» (`run_ids`); kanban — картки по `group` з кнопкою «Запустити» |
+| V-08 | `view_td_sim_run_list/form/search` | list/form/search | `td.sim.run` | list: `name`, `scenario_id`, `state` (decoration), `user_id`, `start_ts`, `stop_ts`, `duration_s`, кнопка «Зупинити» (`action_stop`, invisible `state not in ('queued','running')`); form: header «Зупинити», статусбар; `params` (json readonly), `sim_run_id`, `message`; notebook «Події» (`event_ids`); чаттер; search: фільтри «Активні», «Невдалі», групування за `scenario_id`, `state`, `user_id` |
+| V-09 | `view_td_sim_event_list/search` | list/search | `td.sim.event` | `ts`, `kind` (decoration-danger `error`/`alarm`, warning `fault`), `device_code`, `device_id`, `run_id`, `message`; `create="false" edit="false"`; search: `device_code`, `message`, фільтри за `kind`, «Сьогодні» |
+| V-10 | `view_maintenance_equipment_form_td_sim` | form inherit `maintenance.hr_equipment_view_form` | `maintenance.equipment` | `xpath //notebook` → page «Емулятор» (`invisible: not td_sim_device_id`): `td_sim_device_id`, `td_sim_protocol`, `td_sim_state`, `td_sim_fault_reason`; кнопки «Збій»/«Скинути» (`groups="td_factory3d.group_td_manager"`); стоїть **після** успадкованої сторінки «Сигнали» (рівень 0) |
+| V-11 | `res_config_settings_view_form_td_sim` | form inherit `base.res_config_settings_view_form` | `res.config.settings` | блок `app_settings_block` `data-string="Factory3D"` (створює `td_factory3d`; якщо відсутній — власний `data-key="td_factory3d"`), секція «Емулятор обладнання»: поля M-09, кнопки «Перевірити зв'язок», «Згенерувати токен експорту»; `groups="td_factory3d.group_td_admin"` |
+| V-12 | `view_td_sim_fault_wizard_form`, `view_td_sim_run_wizard_form` | form (wizard) | M-10, M-11 | fault: `device_id` (readonly), `reason`, `note`, footer «Поставити збій»/«Скасувати»; run: `scenario_id` (readonly), `device_id` (invisible якщо схема без `device`), `zone_id` (invisible якщо без `zone`), `params_text` (widget `ace` mode json), footer «Запустити» |
+| V-13 | `view_mrp_workcenter_form_td_sim` | form inherit `mrp.mrp_workcenter_view` | `mrp.workcenter` | у `button_box` кнопка-статистика «Емулятор» (`td_sim_state`), відкриває `td_sim_device_id` |
 
 ### 3.14 Меню й дії
 
-Пульт емулятора — під коренем `factory3d_base.menu_f3d_root` («Завод 3D») із зарезервованим `sequence` 90 (base CB-09; X-31); рівень 0 (`menu_iot_root`) — його підпункт; пункт налаштувань — під `factory3d_base.menu_f3d_config` з тим самим `sequence` 90 (правило CB-09/X-32). У меню «Обслуговування» модуль пунктів не додає (там `sequence` 6 — ярлик telemetry).
+Пульт емулятора — під коренем `td_factory3d.menu_td_root` («Завод 3D») із зарезервованим `sequence` 90 (base CB-09; X-31); рівень 0 (`menu_iot_root`) — його підпункт; пункт налаштувань — під `td_factory3d.menu_td_config` з тим самим `sequence` 90 (правило CB-09/X-32). У меню «Обслуговування» модуль пунктів не додає (там `sequence` 6 — ярлик telemetry).
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
-| `menu_f3d_sim_root` | Емулятор | `factory3d_base.menu_f3d_root` | 90 | `group_f3d_user` | — |
-| `menu_f3d_sim_panel` | Пульт | `menu_f3d_sim_root` | 1 | `group_f3d_user` | `action_f3d_sim_panel` (`ir.actions.server`, код: `action = env['f3d.sim.panel'].get_panel().get_formview_action()`) |
-| `menu_f3d_sim_scenarios` | Сценарії | root | 2 | `group_f3d_user` | `action_f3d_sim_scenario` (kanban,list,form) |
-| `menu_f3d_sim_runs` | Запуски | root | 3 | `group_f3d_user` | `action_f3d_sim_run` (list,form) |
-| `menu_f3d_sim_devices` | Пристрої | root | 4 | `group_f3d_user` | `action_f3d_sim_device` (list,form), context `search_default_group_protocol` |
-| `menu_f3d_sim_signals` | Каталог сигналів | root | 5 | `group_f3d_user` | `action_f3d_sim_signal` (list,form) |
-| `menu_f3d_sim_events` | Події | root | 6 | `group_f3d_user` | `action_f3d_sim_event` (list) |
-| `menu_iot_root` (успадковане) | Рівень 0 (без сервісу) | **перенесено** під `menu_f3d_sim_root` | 9 | `group_f3d_admin` | — (дочірні «Сигнали обладнання», «Журнал показань», «Оновити зараз», «Увімкнути/Зупинити імітацію» лишаються) |
-| `menu_f3d_sim_settings` | Налаштування емулятора | `factory3d_base.menu_f3d_config` | 90 | `group_f3d_admin` | `action_f3d_sim_settings` (`res.config.settings`, context `module=factory3d_iot_sim`) |
+| `menu_td_sim_root` | Емулятор | `td_factory3d.menu_td_root` | 90 | `group_td_user` | — |
+| `menu_td_sim_panel` | Пульт | `menu_td_sim_root` | 1 | `group_td_user` | `action_td_sim_panel` (`ir.actions.server`, код: `action = env['td.sim.panel'].get_panel().get_formview_action()`) |
+| `menu_td_sim_scenarios` | Сценарії | root | 2 | `group_td_user` | `action_td_sim_scenario` (kanban,list,form) |
+| `menu_td_sim_runs` | Запуски | root | 3 | `group_td_user` | `action_td_sim_run` (list,form) |
+| `menu_td_sim_devices` | Пристрої | root | 4 | `group_td_user` | `action_td_sim_device` (list,form), context `search_default_group_protocol` |
+| `menu_td_sim_signals` | Каталог сигналів | root | 5 | `group_td_user` | `action_td_sim_signal` (list,form) |
+| `menu_td_sim_events` | Події | root | 6 | `group_td_user` | `action_td_sim_event` (list) |
+| `menu_iot_root` (успадковане) | Рівень 0 (без сервісу) | **перенесено** під `menu_td_sim_root` | 9 | `group_td_admin` | — (дочірні «Сигнали обладнання», «Журнал показань», «Оновити зараз», «Увімкнути/Зупинити імітацію» лишаються) |
+| `menu_td_sim_settings` | Налаштування емулятора | `td_factory3d.menu_td_config` | 90 | `group_td_admin` | `action_td_sim_settings` (`res.config.settings`, context `module=td_iot_sim`) |
 
 ---
 
@@ -466,47 +466,47 @@ odoo_addons/factory3d_iot_sim/
 
 ```
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_sim_panel_user,f3d.sim.panel user,model_f3d_sim_panel,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_panel_manager,f3d.sim.panel manager,model_f3d_sim_panel,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_panel_admin,f3d.sim.panel admin,model_f3d_sim_panel,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_device_user,f3d.sim.device user,model_f3d_sim_device,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_device_manager,f3d.sim.device manager,model_f3d_sim_device,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_device_admin,f3d.sim.device admin,model_f3d_sim_device,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_signal_user,f3d.sim.signal user,model_f3d_sim_signal,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_signal_manager,f3d.sim.signal manager,model_f3d_sim_signal,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_signal_admin,f3d.sim.signal admin,model_f3d_sim_signal,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_scenario_user,f3d.sim.scenario user,model_f3d_sim_scenario,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_scenario_manager,f3d.sim.scenario manager,model_f3d_sim_scenario,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_sim_scenario_admin,f3d.sim.scenario admin,model_f3d_sim_scenario,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_run_user,f3d.sim.run user,model_f3d_sim_run,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_run_manager,f3d.sim.run manager,model_f3d_sim_run,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_sim_run_admin,f3d.sim.run admin,model_f3d_sim_run,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_event_user,f3d.sim.event user,model_f3d_sim_event,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_event_admin,f3d.sim.event admin,model_f3d_sim_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_fault_wizard,f3d.sim.fault.wizard,model_f3d_sim_fault_wizard,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_sim_run_wizard,f3d.sim.run.wizard,model_f3d_sim_run_wizard,factory3d_base.group_f3d_manager,1,1,1,1
+access_td_sim_panel_user,td.sim.panel user,model_td_sim_panel,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_panel_manager,td.sim.panel manager,model_td_sim_panel,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_panel_admin,td.sim.panel admin,model_td_sim_panel,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_device_user,td.sim.device user,model_td_sim_device,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_device_manager,td.sim.device manager,model_td_sim_device,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_device_admin,td.sim.device admin,model_td_sim_device,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_signal_user,td.sim.signal user,model_td_sim_signal,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_signal_manager,td.sim.signal manager,model_td_sim_signal,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_signal_admin,td.sim.signal admin,model_td_sim_signal,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_scenario_user,td.sim.scenario user,model_td_sim_scenario,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_scenario_manager,td.sim.scenario manager,model_td_sim_scenario,td_factory3d.group_td_manager,1,1,1,0
+access_td_sim_scenario_admin,td.sim.scenario admin,model_td_sim_scenario,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_run_user,td.sim.run user,model_td_sim_run,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_run_manager,td.sim.run manager,model_td_sim_run,td_factory3d.group_td_manager,1,1,1,0
+access_td_sim_run_admin,td.sim.run admin,model_td_sim_run,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_event_user,td.sim.event user,model_td_sim_event,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_event_admin,td.sim.event admin,model_td_sim_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_fault_wizard,td.sim.fault.wizard,model_td_sim_fault_wizard,td_factory3d.group_td_manager,1,1,1,1
+access_td_sim_run_wizard,td.sim.run.wizard,model_td_sim_run_wizard,td_factory3d.group_td_manager,1,1,1,1
 ```
 
 Успадковані рядки `access_x_f3d_signal_user`, `access_x_f3d_reading_user` (`base.group_user`, повні права) лишаються в `data/models.xml` без змін до міграції телеметрією (A-09).
 
 ### 4.2 Правила записів
 
-Немає (одна компанія в демо; модель не мультикомпанійна). `f3d.sim.event` створюється контролером API-03 через `sudo()` після перевірки токена.
+Немає (одна компанія в демо; модель не мультикомпанійна). `td.sim.event` створюється контролером API-03 через `sudo()` після перевірки токена.
 
 ### 4.3 Групи
 
-Власних груп модуль не створює; використовує `factory3d_base.group_f3d_user` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` (⊂ `base.group_system`). Поля токенів у M-09 — `groups="factory3d_base.group_f3d_admin"`.
+Власних груп модуль не створює; використовує `td_factory3d.group_td_user` ⊂ `group_td_manager` ⊂ `group_td_admin` (⊂ `base.group_system`). Поля токенів у M-09 — `groups="td_factory3d.group_td_admin"`.
 
 ### 4.4 `neutralize.sql`
 
 ```sql
 UPDATE ir_cron SET active = false WHERE id IN (
-  SELECT res_id FROM ir_model_data WHERE module = 'factory3d_iot_sim' AND model = 'ir.cron');
+  SELECT res_id FROM ir_model_data WHERE module = 'td_iot_sim' AND model = 'ir.cron');
 UPDATE ir_config_parameter SET value = 'False' WHERE key IN
-  ('factory3d.iot_sim.read_enabled', 'factory3d.iot_sim.write_enabled', 'factory3d.iot_sim.level0_enabled');
+  ('td.iot_sim.read_enabled', 'td.iot_sim.write_enabled', 'td.iot_sim.level0_enabled');
 UPDATE ir_config_parameter SET value = '' WHERE key IN
-  ('factory3d.iot_sim.url', 'factory3d.iot_sim.token', 'factory3d.iot_sim.export_token');
-UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
+  ('td.iot_sim.url', 'td.iot_sim.token', 'td.iot_sim.export_token');
+UPDATE td_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 ```
 
 ---
@@ -517,17 +517,17 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 
 | Файл | Що створює | Джерело | xml-id | Ідемпотентність |
 |---|---|---|---|---|
-| `models.xml`, `actions.xml`, `views/views.xml` | рівень 0 (без змін) | data-модуль 19.0.1.0.0 | `factory3d_iot_sim.model_x_f3d_signal`, …, `cron_iot_sim`, `menu_iot_root`… | повторне завантаження не змінює значень полів (`ir.model.fields` без `noupdate`, але значення сигналів — у записах, яких data не торкається) |
-| `level0.xml` | `cron_iot_sim`: `name` → «Емулятор IoT: рівень 0 (без сервісу)»; `menu_iot_root`: `parent_id` → `menu_f3d_sim_root`, `name` → «Рівень 0 (без сервісу)», `sequence` 9, `groups_id` → `group_f3d_admin` | — | ті самі xml-id (оновлення) | так |
-| `ir_config_parameter.xml` | 10 параметрів §3 ARCHITECTURE з `noupdate="1"`: `url=""`, `token=""`, `export_token=""`, `read_enabled=True` (умовчання XML; `post_init_hook` крок 1а перераховує за `factory3d.base.environment`, CB-10, X-56), `write_enabled=False`, `mode=follow_odoo`, `level0_enabled=True`, `level0_after_min=5`, `timeout_s=5`, `keep_days=14` | — | `param_f3d_iot_sim_<key>` | `noupdate` |
-| `ir_sequence.xml` | `f3d.sim.run`: prefix `RUN/%(year)s/`, padding 4 | — | `seq_f3d_sim_run` | `noupdate` |
-| `ir_cron.xml` | C-01, C-02 (§6) | — | `cron_f3d_sim_status`, `cron_f3d_sim_gc` | так |
-| `f3d_sim_scenario.xml` | 15 сценаріїв S-01…S-15 (§9.3) з `code`, `name`, `group`, `params_schema`, `params_default`, `duration_s` | §9.3 | `scenario_<code>` | `noupdate="0"` (схеми можуть оновлюватись) |
-| `f3d_sim_signal.csv` | 1 168 рядків каталогу (1 017 з протоколом + 151 з `protocol` `—` = `none`, X-34, X-35, X-61, X-76); колонки: `code,name,device,protocol,address,dtype,unit,scale,nominal,thresholds,model_rule,origin,level0_code,kind` | Додаток A (`tools/gen_catalog.py`; рядки 663…1 166 — з додатків модулів-власників; 1 167–1 168 — власні, зони LSZ 34–35) | — (завантажує hook, ключ `code`) | upsert за `code` |
+| `models.xml`, `actions.xml`, `views/views.xml` | рівень 0 (без змін) | data-модуль 19.0.1.0.0 | `td_iot_sim.model_x_f3d_signal`, …, `cron_iot_sim`, `menu_iot_root`… | повторне завантаження не змінює значень полів (`ir.model.fields` без `noupdate`, але значення сигналів — у записах, яких data не торкається) |
+| `level0.xml` | `cron_iot_sim`: `name` → «Емулятор IoT: рівень 0 (без сервісу)»; `menu_iot_root`: `parent_id` → `menu_td_sim_root`, `name` → «Рівень 0 (без сервісу)», `sequence` 9, `groups_id` → `group_td_admin` | — | ті самі xml-id (оновлення) | так |
+| `ir_config_parameter.xml` | 10 параметрів §3 ARCHITECTURE з `noupdate="1"`: `url=""`, `token=""`, `export_token=""`, `read_enabled=True` (умовчання XML; `post_init_hook` крок 1а перераховує за `td.base.environment`, CB-10, X-56), `write_enabled=False`, `mode=follow_odoo`, `level0_enabled=True`, `level0_after_min=5`, `timeout_s=5`, `keep_days=14` | — | `param_f3d_iot_sim_<key>` | `noupdate` |
+| `ir_sequence.xml` | `td.sim.run`: prefix `RUN/%(year)s/`, padding 4 | — | `seq_td_sim_run` | `noupdate` |
+| `ir_cron.xml` | C-01, C-02 (§6) | — | `cron_td_sim_status`, `cron_td_sim_gc` | так |
+| `td_sim_scenario.xml` | 15 сценаріїв S-01…S-15 (§9.3) з `code`, `name`, `group`, `params_schema`, `params_default`, `duration_s` | §9.3 | `scenario_<code>` | `noupdate="0"` (схеми можуть оновлюватись) |
+| `td_sim_signal.csv` | 1 168 рядків каталогу (1 017 з протоколом + 151 з `protocol` `—` = `none`, X-34, X-35, X-61, X-76); колонки: `code,name,device,protocol,address,dtype,unit,scale,nominal,thresholds,model_rule,origin,level0_code,kind` | Додаток A (`tools/gen_catalog.py`; рядки 663…1 166 — з додатків модулів-власників; 1 167–1 168 — власні, зони LSZ 34–35) | — (завантажує hook, ключ `code`) | upsert за `code` |
 
 ### 5.2 Таблиця «роль паспорта → протокол/драйвер» (для `post_init_hook`)
 
-| `f3d_role` (base) / код | protocol | driver | unit_id / instance / address |
+| `td_role` (base) / код | protocol | driver | unit_id / instance / address |
 |---|---|---|---|
 | `beam_saw`, `beam_saw_book`, `nesting_cnc`, `edgebander_laser`, `edgebander`, `ptp_cnc`, `throughfeed_drilling`, `dowel_inserting`, `sorting_cell`, `case_clamp_auto` (15 РЦ HOMAG) | P-01 | `opcua_ww` | address `ns=2;s=<code>` |
 | `board_storage` (GANTRY-1) | P-03 | `rest_woodstore` | address `http://iot-sim:8082/api/v1`; також OPC UA `ns=2;s=GANTRY-1` |
@@ -563,18 +563,18 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 ### 5.3 `post_init_hook` (кроки, очікувані кількості на копії демо-бази)
 
 0. `migrations/19.0.2.0.0/pre-migrate.py`: якщо в `ir_module_module` версія `19.0.1.0.0` — записати в лог «upgrade from data module»; перевірити, що `ir_model` з `model='x_f3d_signal'` існує, інакше лише WARNING (свіжа база без рівня 0 допустима).
-1. Створити `f3d.sim.panel` (1).
-1а. Стоп-кран опитування за середовищем (base CB-10, X-56; як у всіх модулів зі стоп-кранами): `factory3d.iot_sim.read_enabled = 'True'`, якщо `factory3d.base.environment == 'test'`, інакше `'False'` (перезапис при кожному запуску хука); `write_enabled` не змінюється (умовчання `False`); `neutralize.sql` — без змін. Очікувано на копії демо (`environment=test`): `read_enabled=True`; на проді (`prod`) — `False`.
-2. Для кожного `maintenance.equipment` з `f3d_code` (після `factory3d_base` — 210, з `FA-SOC`, `FA-OFFICE`): створити/оновити `f3d.sim.device` за таблицею §5.2 (ключ `code = f3d_code`); для `ACCESS`, `CCTV`, `PV-INV` створити похідні пристрої (`ACR-*` ×5, `TURN-1`, `CAM-05/06`, `PV-INV-1..8`), для лічильників споживачів — `<code>-PM` (49) з `equipment_id` того самого обладнання; пасивний пристрій `CUTOPT` (оптимізатор розкрою P-04, без `equipment_id`, `protocol='none'`) — для довідкового рядка `equipment/CUTOPT/cmd` (X-76). Очікувано: 210 + 5 + 1 + 2 + 8 + 49 + 1 = **276** пристроїв, з них `passive` ≈ 100 (стелажі, світильники-групи, сповіщувачі-групи, ІТ, принтери, ваги Odoo IoT, двері…).
-3. Завантажити `data/f3d_sim_signal.csv` → `f3d.sim.signal` (**1 168**: `protocol≠none` — 1 017, `none` — 151), прив'язка `device_id` за колонкою `device` (пристрої з кроку 2; для `energy/consumers/<X>/*` — пристрій `<X>-PM`, 49 шт. включно з unit 51–59, X-61; для `energy/cells/Q1` — `Q1`; для `energy/lines/BW-1` — `QF-1`; для `equipment/CUTOPT/cmd` — `CUTOPT`; для `infra/pv/PV-INV-n/*` (32 сигнали: `p_kw`, `status`, `kwh_today`, `kwh_total` × 8) — похідний пристрій `PV-INV-n` (unit 60+n), а не батьківський `PV-INV`: колонка `device` каталогу лишається `PV-INV`, прив'язку за шляхом сигналу виконує `_catalog_device_code`; якщо похідних пристроїв немає — сигнал лишається на `PV-INV`; `infra/totals/pv_now` — на `PV-INV`); очікувано 0 рядків без пристрою.
+1. Створити `td.sim.panel` (1).
+1а. Стоп-кран опитування за середовищем (base CB-10, X-56; як у всіх модулів зі стоп-кранами): `td.iot_sim.read_enabled = 'True'`, якщо `td.base.environment == 'test'`, інакше `'False'` (перезапис при кожному запуску хука); `write_enabled` не змінюється (умовчання `False`); `neutralize.sql` — без змін. Очікувано на копії демо (`environment=test`): `read_enabled=True`; на проді (`prod`) — `False`.
+2. Для кожного `maintenance.equipment` з `td_code` (після `td_factory3d` — 210, з `FA-SOC`, `FA-OFFICE`): створити/оновити `td.sim.device` за таблицею §5.2 (ключ `code = td_code`); для `ACCESS`, `CCTV`, `PV-INV` створити похідні пристрої (`ACR-*` ×5, `TURN-1`, `CAM-05/06`, `PV-INV-1..8`), для лічильників споживачів — `<code>-PM` (49) з `equipment_id` того самого обладнання; пасивний пристрій `CUTOPT` (оптимізатор розкрою P-04, без `equipment_id`, `protocol='none'`) — для довідкового рядка `equipment/CUTOPT/cmd` (X-76). Очікувано: 210 + 5 + 1 + 2 + 8 + 49 + 1 = **276** пристроїв, з них `passive` ≈ 100 (стелажі, світильники-групи, сповіщувачі-групи, ІТ, принтери, ваги Odoo IoT, двері…).
+3. Завантажити `data/td_sim_signal.csv` → `td.sim.signal` (**1 168**: `protocol≠none` — 1 017, `none` — 151), прив'язка `device_id` за колонкою `device` (пристрої з кроку 2; для `energy/consumers/<X>/*` — пристрій `<X>-PM`, 49 шт. включно з unit 51–59, X-61; для `energy/cells/Q1` — `Q1`; для `energy/lines/BW-1` — `QF-1`; для `equipment/CUTOPT/cmd` — `CUTOPT`; для `infra/pv/PV-INV-n/*` (32 сигнали: `p_kw`, `status`, `kwh_today`, `kwh_total` × 8) — похідний пристрій `PV-INV-n` (unit 60+n), а не батьківський `PV-INV`: колонка `device` каталогу лишається `PV-INV`, прив'язку за шляхом сигналу виконує `_catalog_device_code`; якщо похідних пристроїв немає — сигнал лишається на `PV-INV`; `infra/totals/pv_now` — на `PV-INV`); очікувано 0 рядків без пристрою.
 4. Для `origin=mock` (196): `level0_code = code`; перевірити наявність `x_f3d_signal` з таким `x_code` — очікувано 196/196; невідповідності → WARNING зі списком.
 5. Сценарії — з data (15).
 6. Крон рівня 0: не чіпати (стан вирішить перший прогін C-01).
-7. `ir.config_parameter`: якщо `factory3d.iot_sim.url` порожній — `state="unconfigured"` у пульті.
+7. `ir.config_parameter`: якщо `td.iot_sim.url` порожній — `state="unconfigured"` у пульті.
 
 Повторний запуск hook (reinstall/upgrade) не створює дублікатів (ключі `code`).
 
-`uninstall_hook`: `ir.cron` модуля → `active=False` (рівень 0 теж), `ir.config_parameter factory3d.iot_sim.*` → видалити, `f3d.sim.run`/`f3d.sim.event` — видалити (A-11). Моделі `f3d.sim.*` видаляються Odoo разом із модулем; `x_*` лишаються (їх data-файли належать модулю, тож Odoo **видалить** і їх при повній деінсталяції — це задокументоване застереження: деінсталяцію до міграції телеметрією робити лише на копії; `uninstall_hook` пише WARNING у лог і в чаттер пульта перед видаленням).
+`uninstall_hook`: `ir.cron` модуля → `active=False` (рівень 0 теж), `ir.config_parameter td.iot_sim.*` → видалити, `td.sim.run`/`td.sim.event` — видалити (A-11). Моделі `f3d.sim.*` видаляються Odoo разом із модулем; `x_*` лишаються (їх data-файли належать модулю, тож Odoo **видалить** і їх при повній деінсталяції — це задокументоване застереження: деінсталяцію до міграції телеметрією робити лише на копії; `uninstall_hook` пише WARNING у лог і в чаттер пульта перед видаленням).
 
 ---
 
@@ -582,8 +582,8 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 
 | ID | xml-id | Назва | Інтервал | Метод | Що робить за прогін | Ліміти |
 |---|---|---|---|---|---|---|
-| C-01 | `cron_f3d_sim_status` | Емулятор: опитати стан сервісу | 1 хв | `f3d.sim.panel._cron_poll_status` | 1 × `GET /sim/v1/status` (якщо `read_enabled` і `url`), `_apply_status`, `_sync_level0` | таймаут `timeout_s`; помилка → `state=offline`, не кидає виняток |
-| C-02 | `cron_f3d_sim_gc` | Емулятор: ротація подій | 1 доба 03:10 | `f3d.sim.event._gc(keep_days)` | `unlink` подій старіших за `factory3d.iot_sim.keep_days` | батчами по 5 000 |
+| C-01 | `cron_td_sim_status` | Емулятор: опитати стан сервісу | 1 хв | `td.sim.panel._cron_poll_status` | 1 × `GET /sim/v1/status` (якщо `read_enabled` і `url`), `_apply_status`, `_sync_level0` | таймаут `timeout_s`; помилка → `state=offline`, не кидає виняток |
+| C-02 | `cron_td_sim_gc` | Емулятор: ротація подій | 1 доба 03:10 | `td.sim.event._gc(keep_days)` | `unlink` подій старіших за `td.iot_sim.keep_days` | батчами по 5 000 |
 | рівень 0 | `cron_iot_sim` (успадкований) | Емулятор IoT: рівень 0 (без сервісу) | 1 хв | `action_iot_tick` (без змін) | 196 сигналів за старими формулами, показання раз на 10 хв, ротація 2 доби, заявки ТО | `active` керується C-01/пультом |
 
 У сервісі фонові таски (asyncio): `clock` (1 с), `world.tick` (1 с), `snapshot` (60 с), `odoo.follow` (10 с / 60 с), `devices_client.refresh` (1 год), `events_push` (API-03, 10 с або 100 подій), `mqtt_publisher` (1–5 с), `lpr_push` (за подією), протокольні сервери — постійно.
@@ -594,11 +594,11 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 
 ### 7.1 Odoo-контролери (модуль пульта), `controllers/sim_api.py`
 
-Спільне: `type="http"`, `auth="public"`, `csrf=False`, перевірка `Authorization: Bearer <factory3d.iot_sim.export_token>` (порожній токен у налаштуваннях = API вимкнено → 503 `{"error":"export token not configured"}`); порівняння `hmac.compare_digest`; усі відповіді `application/json; charset=utf-8`; помилки `{"error": "<код>", "detail": "<текст>"}`; 401 при невірному токені; `sudo()` після перевірки.
+Спільне: `type="http"`, `auth="public"`, `csrf=False`, перевірка `Authorization: Bearer <td.iot_sim.export_token>` (порожній токен у налаштуваннях = API вимкнено → 503 `{"error":"export token not configured"}`); порівняння `hmac.compare_digest`; усі відповіді `application/json; charset=utf-8`; помилки `{"error": "<код>", "detail": "<текст>"}`; 401 при невірному токені; `sudo()` після перевірки.
 
 #### API-01 `GET /f3d/sim/devices`
 
-Параметри запиту: `?protocol=P-05` (фільтр), `?since=<ETag>` не підтримується; заголовок `If-None-Match: "<etag>"` → 304. `ETag` = sha256 від `write_date` max по `f3d.sim.device`, `f3d.sim.signal`, `f3d.zone`, `stock.picking.batch`, `hr.employee` + кількості.
+Параметри запиту: `?protocol=P-05` (фільтр), `?since=<ETag>` не підтримується; заголовок `If-None-Match: "<etag>"` → 304. `ETag` = sha256 від `write_date` max по `td.sim.device`, `td.sim.signal`, `td.zone`, `stock.picking.batch`, `hr.employee` + кількості.
 
 Відповідь 200 (JSON-схема, скорочено; повні обов'язкові поля позначено `*`):
 
@@ -634,17 +634,17 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 }
 ```
 
-Обов'язкові: `version*`, `generated_at*`, `devices[]*` з `code*`, `name*`, `protocol*`, `driver*`, `enabled*`, `signals[]*` (можливо порожній) з `code*`, `address*`, `dtype*`, `kind*`; `zones[]*` (`code*`, `polygon*` ≥ 3 точок; береться з `f3d.zone` base; якщо полігонів у base ще немає — порожній список, емулятор бере `catalog/zones.json`); `docks[]*` (base Додаток D: `code` = `stock.location.f3d_code`, `x`/`y` — координати воріт, `accepts` — назви категорій `product.category` з `f3d_accepts`; X-54); `shifts[]*` (з `resource.calendar` компанії); `employees[]*` (усі `hr.employee` з `barcode`); `bookings[]*` (`stock.picking.batch` у станах `draft/in_progress` з `dock_id`, `scheduled_date` ± 2 доби): `batch` = `name`, `truck` = `f3d_code` (єдиний код фури в 3D, base CB-06; X-15), `dock` = `dock_id.f3d_code`, `plate` = `f3d_plate` (держномер рейсу двору, `factory3d_yard` M-07; поле читається, лише якщо воно є в моделі — yard необов'язковий), порожнє або без yard → `null` (емулятор генерує номер, §8.13.2; X-49); `f3d_truck` (опис/назва фури з макета, не номер) в API-01 не передається. Приклад вище — демо після міграції yard: `TRUCK-OUT-1` (`BATCH/OUT/00004`, `WH/OUT/00413`) має `f3d_plate = АА4512КТ` (картка ваг макета), `TRUCK-IN-1` — `null`.
+Обов'язкові: `version*`, `generated_at*`, `devices[]*` з `code*`, `name*`, `protocol*`, `driver*`, `enabled*`, `signals[]*` (можливо порожній) з `code*`, `address*`, `dtype*`, `kind*`; `zones[]*` (`code*`, `polygon*` ≥ 3 точок; береться з `td.zone` base; якщо полігонів у base ще немає — порожній список, емулятор бере `catalog/zones.json`); `docks[]*` (base Додаток D: `code` = `stock.location.td_code`, `x`/`y` — координати воріт, `accepts` — назви категорій `product.category` з `td_accepts`; X-54); `shifts[]*` (з `resource.calendar` компанії); `employees[]*` (усі `hr.employee` з `barcode`); `bookings[]*` (`stock.picking.batch` у станах `draft/in_progress` з `dock_id`, `scheduled_date` ± 2 доби): `batch` = `name`, `truck` = `td_code` (єдиний код фури в 3D, base CB-06; X-15), `dock` = `dock_id.td_code`, `plate` = `td_plate` (держномер рейсу двору, `td_yard` M-07; поле читається, лише якщо воно є в моделі — yard необов'язковий), порожнє або без yard → `null` (емулятор генерує номер, §8.13.2; X-49); `td_truck` (опис/назва фури з макета, не номер) в API-01 не передається. Приклад вище — демо після міграції yard: `TRUCK-OUT-1` (`BATCH/OUT/00004`, `WH/OUT/00413`) має `td_plate = АА4512КТ` (картка ваг макета), `TRUCK-IN-1` — `null`.
 
 Коди: 200, 304, 401, 503. Ідемпотентно; ліміт — без пагінації (≈ 276 пристроїв × ~3 сигнали ≈ 400 КБ).
 
 #### API-02 `GET /f3d/sim/health`
 
-Без токена. 200 `{"ok": true, "module": "factory3d_iot_sim", "version": "19.0.2.0.0", "devices": 276, "signals": 1168, "panel_state": "online"}` (`signals` — усі записи `f3d.sim.signal`, включно з 151 `protocol=none`).
+Без токена. 200 `{"ok": true, "module": "td_iot_sim", "version": "19.0.2.0.0", "devices": 276, "signals": 1168, "panel_state": "online"}` (`signals` — усі записи `td.sim.signal`, включно з 151 `protocol=none`).
 
 #### API-03 `POST /f3d/sim/events`
 
-Тіло: `{"events": [{"ts": "2026-10-13T20:05:11+03:00", "kind": "scenario|fault|alarm|info|error", "device": "RV-05", "run_ref": "RUN/2026/0007", "sim_run_id": "r-01J…", "message": "Фільтр RV-05: 285 Па", "payload": {}}]}` (≤ 100 подій, ≤ 256 КБ). Дія: створити `f3d.sim.event` (прив'язка `run_id` за `run_ref` або `sim_run_id`); події `kind=scenario` з `payload.state in (done, failed, stopped)` переводять `f3d.sim.run.state`. Відповідь 200 `{"accepted": n, "rejected": [{"index": i, "reason": "…"}]}`; 400 при невалідному JSON; 413 при перевищенні; 401. Ідемпотентність: за `payload.event_id` (UUID від сервісу) — дублікати відкидаються з `reason="duplicate"`.
+Тіло: `{"events": [{"ts": "2026-10-13T20:05:11+03:00", "kind": "scenario|fault|alarm|info|error", "device": "RV-05", "run_ref": "RUN/2026/0007", "sim_run_id": "r-01J…", "message": "Фільтр RV-05: 285 Па", "payload": {}}]}` (≤ 100 подій, ≤ 256 КБ). Дія: створити `td.sim.event` (прив'язка `run_id` за `run_ref` або `sim_run_id`); події `kind=scenario` з `payload.state in (done, failed, stopped)` переводять `td.sim.run.state`. Відповідь 200 `{"accepted": n, "rejected": [{"index": i, "reason": "…"}]}`; 400 при невалідному JSON; 413 при перевищенні; 401. Ідемпотентність: за `payload.event_id` (UUID від сервісу) — дублікати відкидаються з `reason="duplicate"`.
 
 ### 7.2 REST керування емулятором `/sim/v1/*` (сервіс, порт 8090, FastAPI)
 
@@ -663,7 +663,7 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 | API-18 | `GET /health`; `GET /metrics` | — | health: `{"status": "ok|degraded|locked", "protocols": {…}, "uptime_s"}`; metrics: Prometheus text (`iot_sim_signal_value{code=…}`, `iot_sim_tick_seconds`, `iot_sim_protocol_up{proto=…}`, `iot_sim_events_total{kind=…}`) | без токена, лише з мережі `f3d_sim` |
 | API-19 | `GET /events` | — | `{"items": [{"id": "e-…", "ts", "kind", "device", "run_id", "message", "payload"}], "next": "e-…"}` з `?since=<id>`, `?kind=`, `?device=`, `?limit=500` | кільцевий буфер 10 000 |
 | — | `POST /lpr-sink` | JSON Axis (§8.13.2) | `{"received": true}` | заглушка приймача LPR для фази 1; складає у `events` як `kind=info, device=CAM-xx` |
-| — | `GET /catalog/signals.csv`, `GET /catalog/devices.json` | — | файли каталогу (для `factory3d_telemetry` і тестів) | токен |
+| — | `GET /catalog/signals.csv`, `GET /catalog/devices.json` | — | файли каталогу (для `td_telemetry` і тестів) | токен |
 
 Приклад запуску сценарію (параметр рівня фільтра — `value` за схемою S-04, не `dp_pa`; X-58):
 
@@ -853,7 +853,7 @@ volumes: {iot_sim_state: {}}
 | `…/SerialNumber` | `<C>.Identification.SerialNumber` | String | R | `= <C>` (як `serial_no` в Odoo) |
 | `…/DeviceClass` | `<C>.Identification.DeviceClass` | String | R | `"PanelSaw"`, `"NestingMachine"`, `"EdgeBander"`, `"CNCMachiningCenter"`, `"ThroughfeedDrilling"`, `"DowelInserting"`, `"SortingCell"`, `"CaseClamp"`, `"StorageSystem"` |
 | `…/YearOfConstruction` | `<C>.Identification.YearOfConstruction` | UInt16 | R | 2024 |
-| `…/SoftwareRevision`, `HardwareRevision`, `ProductCode`, `AssetId`, `ComponentName`, `Location` | … | String/LocalizedText | R (AssetId, ComponentName, Location — RW) | `AssetId = <C>` (= `f3d_code`), `Location = "<zone code>"` |
+| `…/SoftwareRevision`, `HardwareRevision`, `ProductCode`, `AssetId`, `ComponentName`, `Location` | … | String/LocalizedText | R (AssetId, ComponentName, Location — RW) | `AssetId = <C>` (= `td_code`), `Location = "<zone code>"` |
 | `State` | `<C>.State` | BaseObjectType (`IWwStateType`) | — | |
 | `State/Machine` | `<C>.State.Machine` | (`IWwBaseStateType`) | — | |
 | `State/Machine/Overview/CurrentState` | `<C>.State.Machine.Overview.CurrentState` | `7:WwUnitStateEnumeration` | R | `OFFLINE=0, STANDBY=1, READY=2, WORKING=3, ERROR=4` за R-14 |
@@ -922,7 +922,7 @@ async with Client("opc.tcp://iot-sim:4840/f3d/") as c:
 | 90 | ADAM-6017 AI-1: DUST-1 витрата (AI0), перепад (AI1), SPRINKLERS (AI2), AIR-RING (AI3) | §8.9.6 |
 | 96 | ADAM-6015 RTD-1: T1 (RTD0–2), T2 (RTD3–5) | §8.9.6 |
 
-У проді кожен пристрій має свою IP-адресу (`f3d.source.address = host:502`, unit 1 або адреса RS-485 за шлюзом); каталог сигналів лишається тим самим — змінюється лише `source`.
+У проді кожен пристрій має свою IP-адресу (`td.source.address = host:502`, unit 1 або адреса RS-485 за шлюзом); каталог сигналів лишається тим самим — змінюється лише `source`.
 
 #### 8.4.2 Додаток P-02 — ADAM-6050 для верстатів без інтерфейсу
 
@@ -954,7 +954,7 @@ DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — рез
 
 ### 8.5 Додаток P-03 — «woodStore API v1» (портал STORETEQ P-500)
 
-**ПРИПУЩЕННЯ, звірити з HOMAG** (інтерфейс woodStore закритий; Q-02). Контракт наш; клієнт — `factory3d_machine_connect` (плагін `woodstore`). Базова адреса `http://iot-sim:8082/api/v1`, заголовок `X-Api-Key: <SIM_WOODSTORE_APIKEY>`, JSON UTF-8, часи ISO 8601. Помилки: `{"error": {"code": "NOT_FOUND|CONFLICT|VALIDATION|LOCKED", "message": "…"}}`.
+**ПРИПУЩЕННЯ, звірити з HOMAG** (інтерфейс woodStore закритий; Q-02). Контракт наш; клієнт — `td_machine_connect` (плагін `woodstore`). Базова адреса `http://iot-sim:8082/api/v1`, заголовок `X-Api-Key: <SIM_WOODSTORE_APIKEY>`, JSON UTF-8, часи ISO 8601. Помилки: `{"error": {"code": "NOT_FOUND|CONFLICT|VALIDATION|LOCKED", "message": "…"}}`.
 
 | ID | Метод і шлях | Запит | Відповідь | Примітки |
 |---|---|---|---|---|
@@ -1028,7 +1028,7 @@ DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — рез
 | 3220–3223 | `fc3 pdu3219+4` | Reactive Energy Delivered | INT64 | ВАр·год | 1 | R | |
 | 2700–2701 | `fc3 pdu2699+2` | Active Energy Delivered (Float32-копія) | F32 | кВт·год | 1 | R | те саме, що 3204 / 1000 |
 | 2704–2705 | `fc3 pdu2703+2` | Active Energy Received (Float32) | F32 | кВт·год | 1 | R | |
-| 2018 (ПРИПУЩЕННЯ) | `fc3 pdu2017` | Breaker state (лише unit 1–8) | UINT16 | — | — | R | 0 open / 1 closed / 2 tripped — замість карти Micrologic X/IFE; на проді — інший `f3d.source` |
+| 2018 (ПРИПУЩЕННЯ) | `fc3 pdu2017` | Breaker state (лише unit 1–8) | UINT16 | — | — | R | 0 open / 1 closed / 2 tripped — замість карти Micrologic X/IFE; на проді — інший `td.source` |
 | 5680 | `fc3 pdu5679` (запис FC 06/16) | Command Semaphore (FAQ FA234017) | UINT16 | — | — | R/W | повертається, запис логується; команда 2020 «Reset All Energies» → обнулення 3204+ (лише `write_enabled` споживача) |
 
 Невизначені регістри в діапазоні 0–6000 повертають 0 (не виняток) — так поводиться реальний PM5xxx для зарезервованих адрес? **Ні** — емулятор повертає виняток 0x02 поза описаними діапазонами, щоб тести ловили хибні адреси.
@@ -1037,7 +1037,7 @@ DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — рез
 
 `meter.py` рахує: споживач (unit 11–59) — `P` з моделі пристрою (верстат R-02, інженерія `noise`), `Q = P·tan(acos PF)`; фідер (unit 3–8) — сума своїх споживачів за `energy.lines` макета (BW-1: SAW-1, SAW-2, EDGE-1, EDGE-2, CNC-1, CNC-2, SORT-1; BW-2: SAW-3, SLIDE-1, VSAW-1, NEST-1, EDGE-3, CNC-3, BORE-1, CNC-4, DOWEL-1, GANTRY-1; BW-3: SAND-1, AUTOSPRAY-1, UV-1, HINGE-1, GLUE-1, PRESS-1, SPRAY-1, DRY-1; BW-4: ASMLINE-1, ASM-1…6, PACK-1, PACK-2, BOX-1, PACKLINE-1; C1: COMPRESSOR, DUST-1, BOILER; C2: CHARGING, OFFICE, LP-1..3, RV-ALL, AHU-1, EF-*); ввід (unit 1/2) — сума секції (секція 1: QF-3, QF-2, QF-C1; секція 2: QF-1, QF-4, QF-C2) мінус СЕС/КГУ/BESS за R-13 (генерація приєднана до секції 2: PV, CHP, BESS — ПРИПУЩЕННЯ однолінійної схеми). cos φ вводу після компенсації = 0,97.
 
-**Обчислювані величини (X-35).** `energy/consumers/*/kwh_shift`, `infra/totals/pv_now`, `infra/totals/grid_kw`, `infra/totals/export_kw`, `infra/ats/src1_ok`/`src2_ok`, `infra/ats/fail_start` обчислює `factory3d_energy` на джерелі `EN-DERIVED` (energy CE-09) з регістрів пристроїв (PM5560 3204–3207/3208–3211, SUN2000 32080, ATyS 20486/20487); у каталозі це рядки з `protocol` «—» без адреси. Емулятор такі величини протоколами не віддає й у `GET /sim/v1/signals` не публікує; `meter.py`/`ats.py` рахують їх лише як внутрішні (`World.kwh_shift`, баланс R-13, стан АВР R-22) — для моделей і юніт-тестів (AC-06).
+**Обчислювані величини (X-35).** `energy/consumers/*/kwh_shift`, `infra/totals/pv_now`, `infra/totals/grid_kw`, `infra/totals/export_kw`, `infra/ats/src1_ok`/`src2_ok`, `infra/ats/fail_start` обчислює `td_energy` на джерелі `EN-DERIVED` (energy CE-09) з регістрів пристроїв (PM5560 3204–3207/3208–3211, SUN2000 32080, ATyS 20486/20487); у каталозі це рядки з `protocol` «—» без адреси. Емулятор такі величини протоколами не віддає й у `GET /sim/v1/signals` не публікує; `meter.py`/`ats.py` рахують їх лише як внутрішні (`World.kwh_shift`, баланс R-13, стан АВР R-22) — для моделей і юніт-тестів (AC-06).
 
 ### 8.8 Додаток P-06 — MQTT-телематика рухомої техніки
 
@@ -1222,11 +1222,11 @@ Enum `Device status` (32089), підмножина, яку використов�
 |---|---|---|---|---|
 | 10 с | `mrp.workorder` | `[("state","in",["ready","progress","done"]), ("date_finished",">=", sim_now − 1 день) або state != done]` | `id, name, state, workcenter_id, production_id, qty_produced, qty_production, duration, duration_expected, date_start, working_state` | `World.workcenters[code].job`, стани ISA-95 (§8.3.2), R-14, R-16 (`pieces_out` ← `qty_produced` як нижня межа) |
 | 10 с | `mrp.workcenter` | `[]` | `code, working_state` | `blocked` → `Flags.Error`/`DI fault`, `CurrentState=ERROR` (CNC-2 у демо) |
-| 60 с | `stock.picking.batch` | `[("dock_id","!=",False), ("state","in",["draft","in_progress"])]` | `name, dock_id, scheduled_date, state, picking_ids, f3d_code, f3d_truck` (base M-04) + `f3d_plate` (yard M-07 — лише якщо поле є, перевірка `fields_get`) | `World.trucks` (R-29): код фури в 3D = `f3d_code` (base CB-06), опис = `f3d_truck` (назва з макета, не номер), держномер = `f3d_plate` (порожнє / немає yard → генерується, §8.13.2), ворота = `dock_id.f3d_code` (`DOCK-W1`; `barcode` воріт — `UNLOAD-1`, base Додаток D); X-15, X-49 |
+| 60 с | `stock.picking.batch` | `[("dock_id","!=",False), ("state","in",["draft","in_progress"])]` | `name, dock_id, scheduled_date, state, picking_ids, td_code, td_truck` (base M-04) + `td_plate` (yard M-07 — лише якщо поле є, перевірка `fields_get`) | `World.trucks` (R-29): код фури в 3D = `td_code` (base CB-06), опис = `td_truck` (назва з макета, не номер), держномер = `td_plate` (порожнє / немає yard → генерується, §8.13.2), ворота = `dock_id.td_code` (`DOCK-W1`; `barcode` воріт — `UNLOAD-1`, base Додаток D); X-15, X-49 |
 | 60 с | `stock.picking` | `[("id","in", batch.picking_ids)]` | `name, state, picking_type_code, move_ids.quantity/product_uom_qty` | прогрес розвантаження/завантаження (R-29) |
 | 60 с | `hr.employee` | `[("barcode","!=",False)]` | `name, barcode, resource_calendar_id, job_title` | `World.people` (R-28) |
 | 60 с | `resource.calendar.attendance` | календарі з попереднього запиту | `dayofweek, hour_from, hour_to` | розклад зміни (R-28, R-24) |
-| 60 с | `maintenance.request` | `[("stage_id.done","=",True), ("write_date",">=", last_poll)]` + поле `x_request_id` рівня 0 через `x_f3d_signal` (`[("x_request_id","!=",False)]` → `x_code`, `x_request_id.stage_id.done`) | `equipment_id.f3d_code`, `f3d_signal_id.code` (якщо телеметрія є) | `World.maintenance_closed` → скидання `drift` (R-09) |
+| 60 с | `maintenance.request` | `[("stage_id.done","=",True), ("write_date",">=", last_poll)]` + поле `x_request_id` рівня 0 через `x_f3d_signal` (`[("x_request_id","!=",False)]` → `x_code`, `x_request_id.stage_id.done`) | `equipment_id.td_code`, `td_signal_id.code` (якщо телеметрія є) | `World.maintenance_closed` → скидання `drift` (R-09) |
 | 1 год | `GET /f3d/sim/devices` (API-01) | — | весь реєстр | перезавантаження каталогу (без переривання значень) |
 
 При помилці читання > `SIM_ODOO_STALE_S` — `odoo_stale=true` в `/status`, емулятор продовжує з останнім відомим станом (не переходить у `scenario` сам); після відновлення — повна синхронізація. У `follow_odoo` планувальник зміни/фур/людей **не** генерує власних завдань і фур, але продовжує фізику (АКБ, фільтри, баланс) і рух техніки за завданнями з Odoo (`current_task` ← `stock.picking` з `vehicle`?) — у фазі 1 рух техніки в `follow_odoo` іде за розкладом R-19 без прив'язки до документів.
@@ -1417,7 +1417,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
  "sensorProviderID": "CAM-05"}
 ```
 
-`sensorProviderID` = код камери (`CAM-05` в'їзд → `GEOtarget GATE-W`, `carMoveDirection in`; `CAM-06` виїзд → `GATE-E`, `out`). Час події (X-48): `capture_timestamp` = `frame_timestamp` = `sim_now` у мілісекундах UNIX (UTC), `capture_ts` — те саме в наносекундах, `datetime` — той самий момент у локальному часі камери (`Europe/Kyiv`, формат `YYYYMMDD HHMMSSmmm`); у прикладі — 14.10.2026 08:15:05,507 Київ = 05:15:05,507 UTC = `1791954905507`. Споживачі беруть `capture_timestamp`, поза вікном — час прийому (telemetry R-22, yard R-07 п. 4). Списки (X-48): в Axis LPV `plateList` — **назва** списку, у який потрапив номер, режим списку — `plateListMode`; емулятор веде один список дозволених номерів `f3d_bookings` (номери з `bookings` API-01 або розкладу макета): номер є в списку → `plateList="f3d_bookings"`, `plateListMode="allow"`, `plateListDescription` = «<batch> <dock> <partner>» бронювання; немає (сценарій `truck_no_booking`) → `plateList=""`, `plateListMode="none"`, `plateListDescription=""`. Номери фур (X-49): номер = `bookings[].plate` (API-01, з `stock.picking.batch.f3d_plate` yard M-07), якщо не `null`; інакше генерується детерміновано (`AA` + 4 цифри + 2 літери з det(`truck`)). Демо-номер `АА4512КТ` (картка ваг макета, `WH/OUT/00413`) належить `TRUCK-OUT-1`, а не `TRUCK-IN-1`; приклад вище — в'їзд `TRUCK-OUT-1` через GATE-W (R-29: в'їзд завжди через GATE-W). Кирилиця в `plateUnicode`, латиниця в `plateText`.
+`sensorProviderID` = код камери (`CAM-05` в'їзд → `GEOtarget GATE-W`, `carMoveDirection in`; `CAM-06` виїзд → `GATE-E`, `out`). Час події (X-48): `capture_timestamp` = `frame_timestamp` = `sim_now` у мілісекундах UNIX (UTC), `capture_ts` — те саме в наносекундах, `datetime` — той самий момент у локальному часі камери (`Europe/Kyiv`, формат `YYYYMMDD HHMMSSmmm`); у прикладі — 14.10.2026 08:15:05,507 Київ = 05:15:05,507 UTC = `1791954905507`. Споживачі беруть `capture_timestamp`, поза вікном — час прийому (telemetry R-22, yard R-07 п. 4). Списки (X-48): в Axis LPV `plateList` — **назва** списку, у який потрапив номер, режим списку — `plateListMode`; емулятор веде один список дозволених номерів `f3d_bookings` (номери з `bookings` API-01 або розкладу макета): номер є в списку → `plateList="f3d_bookings"`, `plateListMode="allow"`, `plateListDescription` = «<batch> <dock> <partner>» бронювання; немає (сценарій `truck_no_booking`) → `plateList=""`, `plateListMode="none"`, `plateListDescription=""`. Номери фур (X-49): номер = `bookings[].plate` (API-01, з `stock.picking.batch.td_plate` yard M-07), якщо не `null`; інакше генерується детерміновано (`AA` + 4 цифри + 2 літери з det(`truck`)). Демо-номер `АА4512КТ` (картка ваг макета, `WH/OUT/00413`) належить `TRUCK-OUT-1`, а не `TRUCK-IN-1`; приклад вище — в'їзд `TRUCK-OUT-1` через GATE-W (R-29: в'їзд завжди через GATE-W). Кирилиця в `plateUnicode`, латиниця в `plateText`.
 
 #### 8.13.3 Автоваги TRUCK-SCALE — SICS-сумісний ASCII по TCP (порт 4001)
 
@@ -1453,7 +1453,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 ### 8.15 Рушій сценаріїв і режими
 
-- `ScenarioRunner` тримає реєстр сценаріїв (клас на сценарій, `name`, `title_uk`, `group`, `ParamsModel` (pydantic), `duration_s`, `conflicts` — множина пристроїв/ресурсів, які сценарій блокує). `start(name, params, run_ref)` → валідація → перевірка конфліктів (409) → `Run{id: "r-<ulid>", state: running, started, ends}` → корутина `run(world, params, stop_event)`; `stop(run_id)` ставить `stop_event`, сценарій зобов'язаний відкотити тимчасові зміни (`cleanup()`), стан `stopped`; природне завершення → `done` з `result`; виняток → `failed` (подія `error`). Кожна зміна стану запуску — подія `scenario` (API-03 → `f3d.sim.run.state`).
+- `ScenarioRunner` тримає реєстр сценаріїв (клас на сценарій, `name`, `title_uk`, `group`, `ParamsModel` (pydantic), `duration_s`, `conflicts` — множина пристроїв/ресурсів, які сценарій блокує). `start(name, params, run_ref)` → валідація → перевірка конфліктів (409) → `Run{id: "r-<ulid>", state: running, started, ends}` → корутина `run(world, params, stop_event)`; `stop(run_id)` ставить `stop_event`, сценарій зобов'язаний відкотити тимчасові зміни (`cleanup()`), стан `stopped`; природне завершення → `done` з `result`; виняток → `failed` (подія `error`). Кожна зміна стану запуску — подія `scenario` (API-03 → `td.sim.run.state`).
 - Режим `scenario`: планувальник `World.shift_planner` генерує день за календарем (R-14: завдання на всіх РЦ за маршрутами макета; R-29: фури за `bookings` або, без Odoo, за розкладом `dist/odoo_demo.json → pickings`); сценарії накладаються на планувальник. Режим `follow_odoo`: планувальник вимкнено, стан беруть із Odoo (§8.9.7); сценарії дозволені, крім `shift` (409 «shift недоступний у follow_odoo»). Перемикання режиму (API-15) не скидає значень сигналів.
 - Сценарії можуть виконуватись паралельно, якщо не конфліктують за пристроями (`machine_fault CNC-2` ∥ `filter_clogged RV-05`; `blackout` конфліктує з усім енергетичним).
 
@@ -1503,16 +1503,16 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | R-26 | Іскрогасіння | фонові події: Пуассон із середнім 1 іскра/8 год у зміні, поки працюють SAW-*/NEST-1 (`det`-керований генератор, не випадковий); `spark` сценарій — негайно; DI0 імпульс 0,6 с, DI1 2 с, `count_today += 1`, подія WARNING «Іскрогасіння: іскру виявлено на магістралі аспірації над лінією A, гасіння 0,6 с»; `fault=true` → DI2=1, заявка | макет: 08:47 іскра |
 | R-27 | Димовидалення | `u85 DI4` = 1, якщо тривога/навчання (R-25) або `DO0` отримав імпульс (`SIM_WRITE_ACCEPT`); відкриття 60 с; закриття після скидання за 90 с; `blackout` → DI6=1 (АКБ), через 72 год DI5=1 | |
 | R-28 | СКУД | працівники з API-01 (`employees`, 35 з бейджами); вхід `06:40 + (det(code) mod 20) хв` (як `step_attendance` макета), подія 4102 (Verify success — card), якщо `det(code) % 2 == 0`, інакше 4867 (Identify success — face) (`det` — FNV-1a 32, як `plant/odoo_demo.py:det`; X-50, access §13.1); `tna_key=1`; вихід `15:30 + (det(code) mod 20)`, `tna_key=2`; під час зміни: електрик (`OP-W1` як черговий) → ACR-ELEC 09:51, комірники → ACR-PAINT (OP-W2 10:20), ACR-CHG (FL-C* повернення), ACR-SRV (адміністратор 1 раз/день); `access_event` сценарій — довільна подія (параметри `device`, `user`, `code`); `on_site = входи − виходи` за добу; `fire_drill` — R-25 | демо: 35 відміток входу 06:40–07:00 → `hr.attendance` у фазі 4; OP-SAW-1 → 06:52, код за `det % 2` |
-| R-29 | Двір | фура з `bookings` (API-01) або розкладу макета: прибуття на GATE-W за `scheduled − 20 хв` (incoming) / на GATE-E `scheduled − 10 хв` (outgoing порожня → заїжджає через GATE-W; ПРИПУЩЕННЯ: в'їзд завжди через GATE-W, виїзд через GATE-E); послідовність incoming: `expected → at_gate` (LPR `new`, DI1=1 петля) → якщо бронювання є і (`SIM_YARD_AUTOGATE` або DO0 отримано) → `DI0=1` через 5 с → `weigh_in` (на вагах 60 с, брутто) → `to_dock` (3 хв) → `at_dock` (розвантаження за прогресом `stock.picking` у follow_odoo або 40 хв у scenario) → `to_exit` (2 хв) → `weigh_out` (тара) → GATE-E `at_gate → left` (LPR `CAM-06`); номер фури — `bookings[].plate` (API-01, `f3d_plate`), інакше генерується (§8.13.2, X-49); LPR з бронюванням — `plateList="f3d_bookings"`, `plateListMode="allow"` (X-48); без бронювання → `rejected`: стоїть на петлі, LPR `plateList=""`, `plateListMode="none"`, подія WARNING «Фура АА1234КТ без бронювання біля воріт в'їзду», через 10 хв їде (або `truck_arrival` з `booking=true` її впускає); `passes_today` — лічильник петлі | демо: TRUCK-IN-1 (`BATCH/IN/00001`, DOCK-W1, 06:30) → у знімку 10:30 стоїть `at_dock`, розвантажено 60 % |
+| R-29 | Двір | фура з `bookings` (API-01) або розкладу макета: прибуття на GATE-W за `scheduled − 20 хв` (incoming) / на GATE-E `scheduled − 10 хв` (outgoing порожня → заїжджає через GATE-W; ПРИПУЩЕННЯ: в'їзд завжди через GATE-W, виїзд через GATE-E); послідовність incoming: `expected → at_gate` (LPR `new`, DI1=1 петля) → якщо бронювання є і (`SIM_YARD_AUTOGATE` або DO0 отримано) → `DI0=1` через 5 с → `weigh_in` (на вагах 60 с, брутто) → `to_dock` (3 хв) → `at_dock` (розвантаження за прогресом `stock.picking` у follow_odoo або 40 хв у scenario) → `to_exit` (2 хв) → `weigh_out` (тара) → GATE-E `at_gate → left` (LPR `CAM-06`); номер фури — `bookings[].plate` (API-01, `td_plate`), інакше генерується (§8.13.2, X-49); LPR з бронюванням — `plateList="f3d_bookings"`, `plateListMode="allow"` (X-48); без бронювання → `rejected`: стоїть на петлі, LPR `plateList=""`, `plateListMode="none"`, подія WARNING «Фура АА1234КТ без бронювання біля воріт в'їзду», через 10 хв їде (або `truck_arrival` з `booking=true` її впускає); `passes_today` — лічильник петлі | демо: TRUCK-IN-1 (`BATCH/IN/00001`, DOCK-W1, 06:30) → у знімку 10:30 стоїть `at_dock`, розвантажено 60 % |
 | R-30 | Ваги | `weight = 0 ± 20`; при `weigh_in/out`: протягом 3 с `D` (динамічно) лінійно до цільової, далі `S` ± 20 кг; брутто = `14 000 + Σ(qty·маса_од)`: аркуш ДСП 16 мм 2800×2070 — 56 кг, МДФ 18 — 70, ХДФ 3 — 12, палета ГП — 420, фурнітура/крайка/ЛФМ — за документом 0,02–1,2 кг/од; `> 60 000` → `S +` | WH/IN/00128: 120 ДСП16 + 80 ДСП16 → 200·56 = 11 200 → брутто 25 200 кг |
 
 ### 9.2 Пороги й статуси
 
-`status`: `alarm`, якщо `alarm=above ∧ v > threshold` або `alarm=below ∧ v < threshold` (макет) або для нових сигналів — правило з колонки «Пороги» Додатка A; `warn` — у межах 10 % до порога (`above`: `v > 0,9·threshold`); `stale` — модель не оновлювала значення > 3·період (лише при `fault reason=comm`); інакше `ok`. Перехід `ok/warn → alarm` — подія `alarm` з повідомленням `«<Назва>: <значення> <од> при нормі <до|від> <поріг>»`; `alarm → ok` — подія `info` «повернувся в норму». У фазі 1 заявки ТО створює лише рівень 0 (Odoo) — емулятор лише сигналізує; у фазі 2 — `factory3d_telemetry` за §6.8 каркаса.
+`status`: `alarm`, якщо `alarm=above ∧ v > threshold` або `alarm=below ∧ v < threshold` (макет) або для нових сигналів — правило з колонки «Пороги» Додатка A; `warn` — у межах 10 % до порога (`above`: `v > 0,9·threshold`); `stale` — модель не оновлювала значення > 3·період (лише при `fault reason=comm`); інакше `ok`. Перехід `ok/warn → alarm` — подія `alarm` з повідомленням `«<Назва>: <значення> <од> при нормі <до|від> <поріг>»`; `alarm → ok` — подія `info` «повернувся в норму». У фазі 1 заявки ТО створює лише рівень 0 (Odoo) — емулятор лише сигналізує; у фазі 2 — `td_telemetry` за §6.8 каркаса.
 
 ### 9.3 Сценарії (S-01…S-15)
 
-Загальні параметри всіх: `duration_s` (int, ≥ 0; 0 — до зупинки; default — у таблиці), `note` (string). Схеми — JSON Schema draft 2020-12 (у `f3d.sim.scenario.params_schema` і `GET /sim/v1/scenarios`).
+Загальні параметри всіх: `duration_s` (int, ≥ 0; 0 — до зупинки; default — у таблиці), `note` (string). Схеми — JSON Schema draft 2020-12 (у `td.sim.scenario.params_schema` і `GET /sim/v1/scenarios`).
 
 | ID | `name` | Група | Параметри (`params_schema`) | Що робить | Що видно (3D/Odoo/протоколи) | Конфлікти |
 |---|---|---|---|---|---|---|
@@ -1548,13 +1548,13 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | Завдання ISA-95 | NotAllowedToStart → AllowedToStart → Running → (Interrupted/Held ⇄ Running) → Ended/Completed; будь-який → Ended/Cancelled (Cancel), Running → Aborted (Abort) | Odoo (`follow_odoo`) або планувальник/методи OPC UA/`/jobs release` | Running ⇒ `RecipeInRun`; Completed ⇒ `RunsGood += 1`, JobResponse |
 | Техніка (`state`) | idle → busy (завдання/зміна) → to_charge (`battery ≤ 20`) → charging (у Z-CHG) → idle (`battery ≥ 95`); будь-який → offline (`fault comm`) → попередній (`clear`); busy → fault (`fault`) | R-05, R-19, сценарії S-10, S-02 | MQTT `event` на кожен перехід; `hours` рахуються в busy/to_charge |
 | Фура | expected → at_gate → (weigh_in → to_dock → at_dock → to_exit → weigh_out → at_gate_out → left) \| rejected → left | R-29; S-05, S-06; DO шлагбаума | LPR події, DI/DO, SICS, події `yard` |
-| Запуск сценарію | queued → running → (stopping →) stopped \| done \| failed | API-13 start/stop, завершення `duration_s`, виняток | події `scenario`, API-03 → `f3d.sim.run` |
+| Запуск сценарію | queued → running → (stopping →) stopped \| done \| failed | API-13 start/stop, завершення `duration_s`, виняток | події `scenario`, API-03 → `td.sim.run` |
 | Сервіс | starting → running ⇄ degraded; running → locked (`stop-all`/`SIM_ENABLED=0`) → running (`resume`); → stopped | health §8.16 | `/health`, Docker HEALTHCHECK |
 | Зона пожежної (LSZ) | quiet → pre-alarm → alarm → quiet (reset); quiet → test-alarm → quiet; quiet ⇄ fault (API-12 `fault`/`clear` на `FA-*`, X-60); quiet → not-ready (вимкнена) | R-25; S-07; API-12 | COV, EventNotification, каскад R-25; `fault(reason=loop)` — ще й BV шлейфу (X-36) |
 | АВР (ATyS) | `20483`: 2 (I, мережа) → 1 (Position 0, ODT 3 с) → 3 (II, генератор) → 1 → 2 (Annexe III, X-41) | R-22 (варіант A — за `breaker` HGM з API-F-01; B — таймери ATyS) | `20482` режим, `20484` реле пуску (варіант B), `20486`/`20487` стани джерел, лічильник 20510 |
 | Котельня (MSV:1) | standby(1) ⇄ K1(2) ⇄ K1+K2(3); будь-який → fault(4) → standby (clear) | R-10, S-13 | BI:1/2, бункер |
 | Шлагбаум | closed → opening (5 с) → open → closing (після петлі + 15 с) → closed; open (held), поки свій канал «тримати» = 1: GATE-W — DO4 (`u86 fc1 pdu20`), GATE-E — DO5 (`pdu21`) (X-47) | DO0/DO1, R-29, R-25 | DI0/DI2, лічильник проїздів |
-| Пульт Odoo `f3d.sim.panel.state` | unconfigured → offline ⇄ online ⇄ degraded; online → locked (стоп-кран сервісу) | C-01, кнопки | `_sync_level0` |
+| Пульт Odoo `td.sim.panel.state` | unconfigured → offline ⇄ online ⇄ degraded; online → locked (стоп-кран сервісу) | C-01, кнопки | `_sync_level0` |
 | Рівень 0 (`level0_state`) | auto_off ⇄ auto_on (за офлайном > N хв); → forced_on / forced_off (кнопки) → auto_* («авто») | C-01, кнопки | `cron_iot_sim.active` |
 
 ---
@@ -1615,15 +1615,15 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | AC-22 | Given `SIM_CATALOG_SOURCE=odoo`, Odoo віддає API-01; When старт; Then `/status.odoo.catalog_source="odoo"`, `devices=276`; при недоступному Odoo — `"local"`, `devices ≥ 276` з yaml | TC | FR-19 |
 | AC-23 | Given `SIM_ALLOW_OUTBOUND=mosquitto`; When `SIM_LPR_PUSH_URL=http://10.0.0.1/`; Then жодного TCP-з'єднання до 10.0.0.1 (перевірка через `iot_sim_outbound_denied_total ≥ 1` і мок-сокет у юніт-тесті), подія `error` | UT+TC | FR-20 |
 | AC-24 | Given запущений сервіс; When `GET /sim/v1/metrics`; Then є `iot_sim_up 1`, `iot_sim_protocol_up{proto="opcua"} 1`, `iot_sim_signals_total 1017` | TC | FR-22 |
-| AC-25 | Given копія демо-бази з data-модулем 19.0.1.0.0 (196 `x_f3d_signal`, N `x_f3d_reading`); When оновити модуль до 19.0.2.0.0; Then `x_f3d_signal` = 196 з тими самими `x_value`, `x_f3d_reading` = N, крон `cron_iot_sim` існує, меню «Рівень 0 (без сервісу)» під «Емулятор», `f3d.sim.panel` = 1, `f3d.sim.device` = 276, `f3d.sim.signal` = 1 168 (з них `protocol=none` — 151), `origin=mock` = 196 і всі мають `level0_code` з існуючим `x_code`, `f3d.sim.scenario` = 15 | UT (`test_migration`, з фікстурою data-модуля) + DEPLOY_TEST | FR-23, FR-25, FR-26 |
+| AC-25 | Given копія демо-бази з data-модулем 19.0.1.0.0 (196 `x_f3d_signal`, N `x_f3d_reading`); When оновити модуль до 19.0.2.0.0; Then `x_f3d_signal` = 196 з тими самими `x_value`, `x_f3d_reading` = N, крон `cron_iot_sim` існує, меню «Рівень 0 (без сервісу)» під «Емулятор», `td.sim.panel` = 1, `td.sim.device` = 276, `td.sim.signal` = 1 168 (з них `protocol=none` — 151), `origin=mock` = 196 і всі мають `level0_code` з існуючим `x_code`, `td.sim.scenario` = 15 | UT (`test_migration`, з фікстурою data-модуля) + DEPLOY_TEST | FR-23, FR-25, FR-26 |
 | AC-26 | Given сервіс онлайн, `read_enabled=True`; When C-01; Then `panel.state=online`, `version`, `mode`, `factor`, `sim_time` заповнені, `cron_iot_sim.active=False`, `level0_state=auto_off` | UT (мок HTTP) | FR-24, FR-28 |
 | AC-27 | Given сервіс офлайн 6 хв, `level0_enabled=True`, `level0_after_min=5`; When C-01; Then `cron_iot_sim.active=True`, `level0_state=auto_on`, чаттер пульта має запис | UT | FR-28 |
 | AC-28 | Given `write_enabled=False`; When `panel.action_apply_factor()`; Then `UserError` зі словами «стоп-краном», HTTP-запит не виконано (мок не викликано) | UT | FR-29 |
-| AC-29 | Given `write_enabled=True`, менеджер f3d; When майстер M-11 для `filter_clogged` з `device=RV-05`; Then `f3d.sim.run` створено `state=running`, `sim_run_id` з відповіді, подія `command` без токена в `payload` | UT (мок) | FR-24 |
-| AC-30 | Given API-03 з валідним `export_token`; When POST 2 події, одна з `payload.state=done` і `run_ref` існуючого запуску; Then 200 `accepted=2`, `f3d.sim.run.state=done`, повтор тих самих `event_id` → `accepted=0`, `rejected[*].reason=duplicate` | UT HttpCase | FR-24 |
-| AC-31 | Given `export_token` порожній; When `GET /f3d/sim/devices`; Then 503; з невірним токеном → 401; з вірним → 200, `devices` містить `SAW-1` з 8 сигналами `workcenters/SAW-1/*` (`state`, `mode`, `alarm`, `pieces_out`, `job`, `event`, `job_cmd`, `machine_state`) і `SAW-1-PM` з 3 (`energy/consumers/SAW-1/p_now`, `kwh_shift`, `kwh_total`; X-34), `bookings[]` з `truck` = `f3d_code`, `plate` = `f3d_plate` або `null` (X-15, X-49), `zones`, `docks` = 14, `shifts` = 1 («Зміна 1»), `employees` = 35, `bookings` = 6; `If-None-Match` з поточним ETag → 304 | UT HttpCase | FR-25, FR-26 |
-| AC-32 | Given користувач лише `group_f3d_user`; When відкриває пульт/пристрої/сигнали; Then читає; `write` на `f3d.sim.device` → `AccessError`; кнопки сценаріїв невидимі | UT | §4 |
-| AC-33 | Given обладнання CNC-2 з `f3d_code`; When відкрити форму; Then вкладка «Емулятор» показує `f3d_sim_state`; кнопка «Збій» (менеджер) → M-10 → запис `f3d.sim.device.state=fault` | UT | FR-27 |
+| AC-29 | Given `write_enabled=True`, менеджер f3d; When майстер M-11 для `filter_clogged` з `device=RV-05`; Then `td.sim.run` створено `state=running`, `sim_run_id` з відповіді, подія `command` без токена в `payload` | UT (мок) | FR-24 |
+| AC-30 | Given API-03 з валідним `export_token`; When POST 2 події, одна з `payload.state=done` і `run_ref` існуючого запуску; Then 200 `accepted=2`, `td.sim.run.state=done`, повтор тих самих `event_id` → `accepted=0`, `rejected[*].reason=duplicate` | UT HttpCase | FR-24 |
+| AC-31 | Given `export_token` порожній; When `GET /f3d/sim/devices`; Then 503; з невірним токеном → 401; з вірним → 200, `devices` містить `SAW-1` з 8 сигналами `workcenters/SAW-1/*` (`state`, `mode`, `alarm`, `pieces_out`, `job`, `event`, `job_cmd`, `machine_state`) і `SAW-1-PM` з 3 (`energy/consumers/SAW-1/p_now`, `kwh_shift`, `kwh_total`; X-34), `bookings[]` з `truck` = `td_code`, `plate` = `td_plate` або `null` (X-15, X-49), `zones`, `docks` = 14, `shifts` = 1 («Зміна 1»), `employees` = 35, `bookings` = 6; `If-None-Match` з поточним ETag → 304 | UT HttpCase | FR-25, FR-26 |
+| AC-32 | Given користувач лише `group_td_user`; When відкриває пульт/пристрої/сигнали; Then читає; `write` на `td.sim.device` → `AccessError`; кнопки сценаріїв невидимі | UT | §4 |
+| AC-33 | Given обладнання CNC-2 з `td_code`; When відкрити форму; Then вкладка «Емулятор» показує `td_sim_state`; кнопка «Збій» (менеджер) → M-10 → запис `td.sim.device.state=fault` | UT | FR-27 |
 | AC-34 | Given `neutralize.sql` на копії; When виконано; Then усі крони модуля неактивні, параметри стоп-кранів `False`, url/токени порожні, `panel.state=unconfigured` | DEPLOY_TEST | FR-29 |
 | AC-35 | Given лог сервісу при `SIM_LOG_LEVEL=DEBUG`; When виконано запити з токенами/паролями; Then у логах жодного значення токена/пароля (grep за значенням = 0 збігів); `GET /status` не містить токенів | TC | FR-30 |
 | AC-36 | Given OPC UA клієнт `asyncua`; When читає `Objects/Machines`; Then 16 об'єктів типу `WwMachineType`, у `SAW-1` є `Identification.Manufacturer="HOMAG"`, `State.Machine.Flags.*` 26 булевих, `Values.RelativePiecesOut` UInt64, `JobManagement.JobOrderControl.JobOrderList` масив; анонімний `write` у `CurrentState` → `BadNotWritable` | TC | P-01 |
@@ -1648,8 +1648,8 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | AC-55 | Given 35 працівників (API-01); When sim-час 06:40–07:00; Then код події входу кожного = 4102, якщо `det(code) % 2 == 0`, інакше 4867 (X-50); When `POST /api/events/search` з `orders [{"column": "datetime", "descending": false}]`, `limit=10`, `offset=0`, далі `offset=10`; Then `datetime` не спадає в межах і між сторінками, 20 різних `id` без пропусків; запит з `hint` = `rows[-1].hint` першої сторінки (без `offset`) дає ту саму другу сторінку; `descending=true` — спадання | UT+TC | FR-13 |
 | AC-56 | Given панель у `quiet`; When `POST /sim/v1/device/FA-CUT/fault {"reason": "sensor"}`; Then 200, `LSZ:12` = fault(3), `LSZ:0` = fault, `MSV:1` = 3, `PIV:2` = 1, BV шлейфу FA-CUT = 0, подія `fault` (X-36, X-60); `POST …/clear` → `quiet`, `PIV:2` = 0; `{"reason": "loop"}` → ще й BV шлейфу = 1; `{"reason": "spindle"}` → 422; `fault` на `PV-ROOF` (пасивний без `lsz`) → 422 | TC | FR-12, FR-15 |
 | AC-57 | Given TCP-клієнт на 50000, `SIM_HELVAR_VERSION=2`; When `>V:2,C:13,G:19,L:50,F:200,A:1#`; Then відповідь відправнику `!V:2,C:13,G:19,L:50,F:200,A:1=0#` і push `>V:2,C:13,G:19,L:50,F:200#` усім клієнтам; без `A` — лише push; `>V:1,C:152,@1.3.1.20#` → `?V:1,C:152,@1.3.1.20=50#` (версія відповіді = версії запиту); `>V:2,C:164,G:16#` → кадр `?V:2,C:164,G:16=@1.2.3.1,…,@1.2.3.64$` і кадр `?V:2,C:164,G:16=@1.2.4.1,…,@1.2.4.27#`; `>V:2,C:191#` → `?V:2,C:191=2#`. Given `SIM_HELVAR_VERSION=1`; Then `>V:2,C:152,@1.2.1.1#` → `!V:2,C:152,@1.2.1.1=18#`, `>V:1,C:191#` → `?V:1,C:191=1#` (X-64) | TC | P-08 |
-| AC-58 | Given `factory3d.base.environment=prod`; When `post_init_hook`; Then `factory3d.iot_sim.read_enabled='False'`, `write_enabled` не змінено; Given `environment=test`; Then `read_enabled='True'`; повторний запуск хука — той самий результат (X-56) | UT | FR-29 |
-| AC-59 | Given модуль установлено; Then `menu_f3d_sim_root.parent_id` = `factory3d_base.menu_f3d_root`, `sequence` = 90; `menu_iot_root.parent_id` = `menu_f3d_sim_root`, `sequence` = 9; `menu_f3d_sim_settings.parent_id` = `factory3d_base.menu_f3d_config`, `sequence` = 90; серед дочірніх `maintenance.menu_maintenance_title` пунктів модуля немає (X-31) | UT | §3.14 |
+| AC-58 | Given `td.base.environment=prod`; When `post_init_hook`; Then `td.iot_sim.read_enabled='False'`, `write_enabled` не змінено; Given `environment=test`; Then `read_enabled='True'`; повторний запуск хука — той самий результат (X-56) | UT | FR-29 |
+| AC-59 | Given модуль установлено; Then `menu_td_sim_root.parent_id` = `td_factory3d.menu_td_root`, `sequence` = 90; `menu_iot_root.parent_id` = `menu_td_sim_root`, `sequence` = 9; `menu_td_sim_settings.parent_id` = `td_factory3d.menu_td_config`, `sequence` = 90; серед дочірніх `maintenance.menu_maintenance_title` пунктів модуля немає (X-31) | UT | §3.14 |
 | AC-60 | Given мок `fake_relay` (API-F-01…F-09) і `blackout {"duration_s": 120}` з умовчаннями (`amf_master=hgm`, `chp_island=false`); When мок повертає `breaker="gen"`; Then емулятор викликав API-F-02 `mains {"available": false}` рівно раз, `u71 pdu20483` = 3, API-F-04 `load {"kw": 348 ± 1}` (`P_genset = P_crit − chp_kw − pv_now + bess_kw`, X-67); з `chp_island=true` (день) → `chp_kw = 348`, `load {"kw": 0}`; з `genset_load_kw=200` → `load {"kw": 200}`; з `amf_master=ats` → API-F-03 `remote_start {"on": true}` через 3 ± 1 с, API-F-02 не викликано, `20484` = 1, `20482` = 16; без `gen_ok` 30 с → подія «FAIL START», `20483` = 2; `genset_test {"test_on_load": false}` → `remote_start` on, через `duration_s` off, `20483` = 2 весь час; порожній `SIM_GENSET_RELAY_TOKEN` → запасний режим (переключення через 15 с), запуск не `failed` (X-59) | UT (мок HTTP) + TC | FR-16, FR-11 |
 | AC-61 | Given клієнт `bacpypes3`; When `ReadProperty dev 200 object-list`; Then типи об'єктів ⊂ {`device`, `life-safety-zone`, `life-safety-point`, `binary-value`, `multi-state-value`, `positive-integer-value`} — жодного AI/AV/BI (X-37); `BV:1…4` = 0, `BV:10` = 0, `BV:11` = 0, `PIV:1…3` = 0, `PIV:21607` = 82, `MSV:1` = 1 (`fire/totals/system_state`), `LSZ:0` = quiet (`fire/totals/state`, X-36); `WriteProperty` у BV/PIV/MSV → `write-access-denied` | TC | FR-12, P-09 |
 | AC-62 | Given `catalog/signals.csv`; Then 1 168 рядків, коди унікальні, № 1…662 — колишні коди без перенумерації; № 1 167–1 168 — `fire/groups/FA-SOC/state` (LSZ:34) і `fire/groups/FA-OFFICE/state` (LSZ:35), P-09 (№ 12г); 151 рядок `protocol=none` (energy 55, machine_connect 37, bms 59) з адресою «обчислює <модуль> …» (X-34, X-35; рядок 1 166 — «команда rest_vendor cutopt, власник machine_connect …», X-76); рядки 663–680 — `energy/consumers/<X>/p_now\|kwh_shift` для unit 51…59 (X-61); рядки 644/646/654/656 — по одному входу; рядки 600–602 — агрегат роутера `@1.<r>.0.0`; 58 рядків `…/level`, `…/heating_valve` — `scale` ×1 (X-39); `GET /sim/v1/signals` → `count=1017`, жодного коду `protocol=none`, `GET /signals/energy/consumers/SAW-1/kwh_shift` → 404; `u51 fc3 pdu3059+2` = `p_now` OFFICE (17,6 ± 10 %) | UT+TC | FR-02, FR-26 |
@@ -1690,7 +1690,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | `test_models_hvac.py` | `test_heat_formula_bms_r13`, `test_valve_percent`, `test_ef_chg_alarm`, `test_lighting_level_percent`, `test_c110_bits` | `roofvent("RV-05")`, `roofvent("RV-01")`, `fan("EF-CHG")`, `lighting` | `heat` 6,9 / 17,3 кВт, `heating_valve` 6 / 15 %, AO:1 у %; `level` 100 %; EF-CHG `stopped_charging` 61 с → `alarm`; C:110 `=2#`, у `blackout` EMERGENCY `=1024#` (X-39, X-40) | AC-64 |
 | `test_lighting_layout.py` | `test_dali_layout_matches_bms` | `tests/data/bms_dali_devices.csv` (копія bms Додаток A.1) | склад 32 груп за правилом bms R-06 = таблиця bms A.1 дослівно (X-65) | AC-65 |
 
-Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install, f3d`, `SimCase` з `responses`-подібним моком `requests` через `unittest.mock.patch("requests.Session.request")`):
+Odoo (`odoo_addons/td_iot_sim/tests`, теги `post_install, -at_install, f3d`, `SimCase` з `responses`-подібним моком `requests` через `unittest.mock.patch("requests.Session.request")`):
 
 | Файл | Тест | Фікстури | Assert | AC |
 |---|---|---|---|---|
@@ -1698,9 +1698,9 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | `test_device.py` | `test_fault_wizard_calls_api`, `test_clear`, `test_code_regex`, `test_unit_unique`, `test_reason_loop_only_lsz` | пристрій CNC-2, пасивний `FA-CUT` (`params.lsz=12`) | `state=fault`, тіло запиту `{"reason":"spindle"}`, `ValidationError` для `cnc 2`, дубль unit → помилка; `reason=loop` для CNC-2 → `ValidationError`, для `FA-CUT` — запит `{"reason":"loop"}` (X-60) | AC-33, AC-56 |
 | `test_signal_catalog.py` | `test_csv_loaded_1168`, `test_mock_signals_have_level0`, `test_unknown_device_creates_passive`, `test_computed_protocol_none` | hook | 1 168, 196 з `level0_code`, WARNING; 151 запис `protocol='none'`, `action_read_now` на них → `UserError` без HTTP | AC-25, AC-62 |
 | `test_scenario_run.py` | `test_run_wizard_creates_run`, `test_validate_params`, `test_stop` | мок 201 | AC-29 | AC-29 |
-| `test_api_devices.py` (HttpCase) | `test_devices_401_503_200_304`, `test_events_post_dedup`, `test_health`, `test_bookings_truck_plate` | токен у параметрі; пакет з `f3d_code='TRUCK-OUT-1'` і (якщо yard) `f3d_plate` | AC-30, AC-31; `bookings[].truck` = `f3d_code`, `plate` = `f3d_plate` або `null`; `docks[].accepts` — назви категорій, `zones` Z-CUT за base C (X-15, X-49, X-54) | AC-30, AC-31 |
+| `test_api_devices.py` (HttpCase) | `test_devices_401_503_200_304`, `test_events_post_dedup`, `test_health`, `test_bookings_truck_plate` | токен у параметрі; пакет з `td_code='TRUCK-OUT-1'` і (якщо yard) `td_plate` | AC-30, AC-31; `bookings[].truck` = `td_code`, `plate` = `td_plate` або `null`; `docks[].accepts` — назви категорій, `zones` Z-CUT за base C (X-15, X-49, X-54) | AC-30, AC-31 |
 | `test_security.py` | `test_user_readonly`, `test_manager_no_settings`, `test_token_fields_admin_only` | користувачі 3 груп | `AccessError`; поля токенів недоступні менеджеру (`fields_get` без них) | AC-32 |
-| `test_migration.py` | `test_upgrade_keeps_level0`, `test_hook_read_enabled_by_environment` | фікстура: встановити data-модуль з `odoo_addons/factory3d_iot_sim` 19.0.1.0.0 (копія в `tests/fixtures/level0/`), створити 196 `x_f3d_signal` через `signal_specs`, потім `upgrade`; параметр `factory3d.base.environment` = `test` / `prod` | AC-25 кількості; `read_enabled` = `'True'` / `'False'` після хука (X-56) | AC-25, AC-58 |
+| `test_migration.py` | `test_upgrade_keeps_level0`, `test_hook_read_enabled_by_environment` | фікстура: встановити data-модуль з `odoo_addons/td_iot_sim` 19.0.1.0.0 (копія в `tests/fixtures/level0/`), створити 196 `x_f3d_signal` через `signal_specs`, потім `upgrade`; параметр `td.base.environment` = `test` / `prod` | AC-25 кількості; `read_enabled` = `'True'` / `'False'` після хука (X-56) | AC-25, AC-58 |
 
 ### 13.2 Стендові сценарії (ТК) — проти `docker compose --profile dev`
 
@@ -1718,11 +1718,11 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТК-08 | Пожежна панель: навчання і несправність | `fire_drill FA-CNC` ; потім `filter_clogged FA-FAC value=92` | 1) COV на LSZ:14, BV:10, dev 105 BV:1; 2) читання LSP:21405; 3) write LSZ/BV/PIV → denied; 4) PIV:21607 після другого сценарію; 5) `POST /device/FA-CUT/fault {"reason":"sensor"}` → `clear`, потім `{"reason":"loop"}`; 6) `object-list` dev 200; 7) RPM `object-name` LSP:19001, 29113, 29201 | AC-15, AC-50, AC-56, AC-61, AC-66 (302 LSP, `1.MCP.01`/`2.SND.13`/`2.FLM.01`, X-79); BioStar події 20480 на 5 дверях; u85 DI4 | `/events?kind=fire`, журнал подій 3D |
 | ТК-09 | Іскрогасіння, димовидалення | `spark count=2 interval_s=30` | 1) опитування `u85 fc2 pdu0+7` кожні 0,2 с; 2) лічильник `u85 fc3 pdu0+2`; 3) write DO0 (FC 05 `pdu16`) | імпульси 0,6/2 с, `count_today += 2`, DI4 через 60 с після DO0 | — |
 | ТК-10 | СКУД: BioStar 2 | sim-час 06:30 (`POST /time {set}`), `factor=10` | 1) login; 2) 5 хв реального часу; 3) `events/search` за ACR-IN; 4) `access_event ACR-ELEC code=6400`; 5) logout, повтор запиту | AC-16, AC-41, AC-55; сторінки `descending=false` через `offset` і `hint` однакові; `6400` з `user` і дверима 2; після logout → 401 | — |
-| ТК-11 | Двір: LPR, шлагбаум, ваги | `truck_arrival BATCH/IN/00001`, потім `truck_no_booking` | 1) приймач LPR (`/lpr-sink` або тестовий HTTP-сервер у `SIM_LPR_PUSH_URL`); 2) опитування `u86 fc2 pdu0+6`, `fc1 pdu16+6`; 3) SICS `SIR` потік; 4) події; 5) `truck_arrival BATCH/OUT/00004` (номер з `f3d_plate`) | AC-17, AC-18, AC-42, AC-54 | 3D: фура біля воріт, `/events?kind=yard` |
+| ТК-11 | Двір: LPR, шлагбаум, ваги | `truck_arrival BATCH/IN/00001`, потім `truck_no_booking` | 1) приймач LPR (`/lpr-sink` або тестовий HTTP-сервер у `SIM_LPR_PUSH_URL`); 2) опитування `u86 fc2 pdu0+6`, `fc1 pdu16+6`; 3) SICS `SIR` потік; 4) події; 5) `truck_arrival BATCH/OUT/00004` (номер з `td_plate`) | AC-17, AC-18, AC-42, AC-54 | 3D: фура біля воріт, `/events?kind=yard` |
 | ТК-12 | Верстати без інтерфейсу: цикли | `shift`, `machine_fault ASM-3 reason=emergency` | 1) `u82`/`u83 fc2 pdu0+12`, `fc3 pdu0+20`; 2) 10 хв sim; 3) fault/clear | AC-37; ASM-3 coil fault=1, run=0; лічильник ASM-1 += 1 за 6 хв | — |
 | ТК-13 | REST керування і стоп-крани | — | 1) усі ендпоінти API-10…API-19 з/без токена; 2) `stop-all` → POST → 423; `resume`; 3) `SIM_ENABLED=0` рестарт; 4) `PUT /signals/... hold` | AC-21, AC-24, AC-45, AC-50 | — |
 | ТК-14 | Прискорення часу | `factor=10`, `shift` | 1) 10 хв реального часу; 2) порівняти лічильники з ТК при `factor=1` за 100 хв sim | AC-06, AC-21; підписники бачать стрибки ≤ 10 с sim на 1 с реального | — |
-| ТК-15 | Odoo-пульт наскрізно | сервіс + копія демо-бази з модулем 19.0.2.0.0 | 1) Налаштування → url/токени → «Перевірити зв'язок»; 2) Пульт: прискорення 5 (у `scenario`), режим; 3) Сценарії → `filter_clogged` (`device=RV-05`, `value=285`) → запуск; 4) Обладнання CNC-2 → «Збій» → «Скинути»; 5) зупинити сервіс на 6 хв → рівень 0 увімкнувся; запустити → вимкнувся | AC-25…AC-29, AC-33, AC-58, AC-59; пульт — у меню «Завод 3D → Емулятор» (X-31); у `f3d.sim.event` — події запуску; заявка ТО від рівня 0 для RV-05 (якщо рівень 0 був активний) | Odoo UI, чаттер пульта |
+| ТК-15 | Odoo-пульт наскрізно | сервіс + копія демо-бази з модулем 19.0.2.0.0 | 1) Налаштування → url/токени → «Перевірити зв'язок»; 2) Пульт: прискорення 5 (у `scenario`), режим; 3) Сценарії → `filter_clogged` (`device=RV-05`, `value=285`) → запуск; 4) Обладнання CNC-2 → «Збій» → «Скинути»; 5) зупинити сервіс на 6 хв → рівень 0 увімкнувся; запустити → вимкнувся | AC-25…AC-29, AC-33, AC-58, AC-59; пульт — у меню «Завод 3D → Емулятор» (X-31); у `td.sim.event` — події запуску; заявка ТО від рівня 0 для RV-05 (якщо рівень 0 був активний) | Odoo UI, чаттер пульта |
 | ТК-16 | Відновлення після рестарту | `shift` 5 хв, `machine_fault CNC-3` | 1) `docker restart iot_sim`; 2) `/status`, лічильники, стан CNC-3 | AC-48: лічильники продовжені, CNC-3 у fault (запуск `running` або закритий `stopped` з повідомленням «restored») | лог «restored snapshot» |
 | ТК-17 | HelvarNet: версії, підтвердження, склад груп | `SIM_HELVAR_VERSION=2`, потім рестарт з `1`; `lighting_scene {"group": "LT-CUT", "fault_device": "@1.2.1.5"}` | 1) два TCP-клієнти на 50000; 2) C:13 з `A:1` і без; 3) C:152 з `V:1`/`V:2`; 4) C:164 для G:12, G:16 (кадри `$`); 5) C:110 `@1.2.1.5`; 6) C:191; 7) після рестарту з `1` — `V:2` → 18 | AC-39, AC-57, AC-64, AC-65; відповіді у версії запиту, `!…=0#` лише при `A:1`, склад груп = bms Додаток A.1 (X-64, X-65) | `/signals?prefix=lighting/groups/LT-CUT` |
 | ТК-18 | Compose: `genset_relay` за CI-02 | `.env` з `RELAY_SIM_TOKEN` (32 симв.), `TD_GENSET_PATH` на клон `td_genset` | 1) `docker compose --profile dev config`; 2) `up -d iot_sim mosquitto genset_relay`; 3) `docker compose ps` (health); 4) з контейнера Odoo `curl http://genset_relay:8000/sim/v1/state` з токеном і без; 5) `GET /sim/v1/status` емулятора → `protocols`, стан генератора | AC-68: env і мережі за td_genset §8.5; з токеном 200 `profile=D700`, без — 401; емулятор не в запасному режимі (немає події «Ретранслятор генератора недоступний») (X-75) | `docker compose ps`, лог `iot_sim` |
@@ -1735,10 +1735,10 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТБ-02 | REST без токена / з хибним / з токеном іншої довжини; 6 хибних за хвилину | 401; 429 на 60 с |
 | ТБ-03 | Ін'єкції: `POST /device/../etc/passwd/fault`, `code="CNC-2; DROP"`, 10 КБ `note`, `params` з вкладеністю 100 | 404/422, сервіс живий, лог без трасувань |
 | ТБ-04 | BACnet write у dev 200 (LSZ, LSP, PIV, BV, MSV), `ReinitializeDevice`, `DeviceCommunicationControl`; OPC UA write у `State.*`; Modbus write у PM5560/Huawei RO; BioStar `DELETE /api/users/1` | усі відхилені, подія/лог WARNING, стан не змінився |
-| ТБ-05 | Хеші каталогу: `services/iot_sim/catalog/signals.csv`, `odoo_addons/.../data/f3d_sim_signal.csv`, `GET /sim/v1/catalog/signals.csv`, `GET /f3d/sim/devices` (сигнали) | 4 однакові множини `code+address`; тест падає при розсинхроні |
+| ТБ-05 | Хеші каталогу: `services/iot_sim/catalog/signals.csv`, `odoo_addons/.../data/td_sim_signal.csv`, `GET /sim/v1/catalog/signals.csv`, `GET /f3d/sim/devices` (сигнали) | 4 однакові множини `code+address`; тест падає при розсинхроні |
 | ТБ-06 | Логи з `SIM_LOG_LEVEL=DEBUG` після 15 хв роботи і ТК-10/13 | `grep` за значеннями `SIM_API_TOKEN`, `SIM_BIOSTAR_PASS`, `SIM_ODOO_APIKEY`, `bs-session-id` → 0 збігів |
 | ТБ-07 | Allow-list: `SIM_LPR_PUSH_URL` і `SIM_ODOO_URL` на хост поза списком | жодного з'єднання (tcpdump у контейнері-спостерігачі), метрика `outbound_denied` |
-| ТБ-08 | Odoo: користувач `group_f3d_user` — спроби `write/create/unlink` на всіх моделях модуля; менеджер — доступ до `res.config.settings` полів токенів; `f3d_sim_reader` — спроба `write` через XML-RPC | `AccessError`; поля відсутні; `AccessError` |
+| ТБ-08 | Odoo: користувач `group_td_user` — спроби `write/create/unlink` на всіх моделях модуля; менеджер — доступ до `res.config.settings` полів токенів; `f3d_sim_reader` — спроба `write` через XML-RPC | `AccessError`; поля відсутні; `AccessError` |
 | ТБ-09 | API-01/03 з `export_token` ≠ `token` (переплутані) | 401; жоден з токенів не приймається «навхрест» |
 | ТБ-10 | `neutralize.sql` на копії, потім спроба кнопок | `UserError` «не налаштовано», крони неактивні |
 
@@ -1751,19 +1751,19 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТП-03 | BACnet: `ReadPropertyMultiple` усіх ~400 об'єктів щосекунди + 120 COV | відповіді < 2 с за цикл; CPU BACnet-таска < 30 % |
 | ТП-04 | OPC UA: 10 клієнтів × підписка на всі 720 вузлів, publishing 500 мс | DataChange затримка < 1 с; пам'ять стабільна 30 хв |
 | ТП-05 | `GET /sim/v1/signals` (1017) 10 раз/с | p95 < 100 мс |
-| ТП-06 | Odoo: C-01 протягом 24 год, 2 000 подій/добу через API-03 | крон ≤ 1 с на прогін; `f3d.sim.event` ротація працює; `f3d.sim.signal` refresh 1017 записів (без `protocol=none`) ≤ 5 с |
+| ТП-06 | Odoo: C-01 протягом 24 год, 2 000 подій/добу через API-03 | крон ≤ 1 с на прогін; `td.sim.event` ротація працює; `td.sim.signal` refresh 1017 записів (без `protocol=none`) ≤ 5 с |
 | ТП-07 | `factor=60`, 8 год sim за 8 хв | лічильники збігаються з `factor=1` еталоном ± 0,5 %; жодних пропущених подій зміни (06:40 відмітки, 07:00 старт) |
 
 ### 13.5 Чек-лист DEPLOY_TEST
 
 1. Зняти копію демо-бази (`odoo` на timur-o19demo) → `odoo_test_sim`; зафіксувати: `x_f3d_signal`=196, `x_f3d_reading`=N, `maintenance.equipment`=210, стан крона рівня 0.
-2. Встановити/оновити `factory3d_base` (хвиля 1), потім `factory3d_iot_sim` 19.0.2.0.0 (`-u factory3d_iot_sim`), перевірити лог hook: `devices=276`, `signals=1168` (`protocol=none` 151), `level0 matched=196/196`, `scenarios=15`, `read_enabled` за `factory3d.base.environment` (крок 1а).
+2. Встановити/оновити `td_factory3d` (хвиля 1), потім `td_iot_sim` 19.0.2.0.0 (`-u td_iot_sim`), перевірити лог hook: `devices=276`, `signals=1168` (`protocol=none` 151), `level0 matched=196/196`, `scenarios=15`, `read_enabled` за `td.base.environment` (крок 1а).
 3. AC-25 кількості; відкрити меню «Завод 3D → Емулятор» → 7 пунктів (у «Обслуговуванні» пункту «Емулятор» немає; налаштування — «Завод 3D → Налаштування → Налаштування емулятора»); «Рівень 0» — під ним успадковані (AC-59).
 4. Підняти compose (`--profile dev`), заповнити Налаштування, «Перевірити зв'язок» → онлайн; переконатися, що крон рівня 0 вимкнувся (≤ 1 хв).
 5. ТК-15 повністю; ТК-13 стоп-крани.
 6. `neutralize.sql` на другій копії → ТБ-10.
 7. Відкат: `-u` назад не підтримується Odoo — відновити копію з п. 1; перевірити, що x_-дані не змінилися (порівняти `x_value` 196 записів — очікувано відрізняються лише ті, що оновив крон рівня 0 за час тесту).
-8. Записати результати в `docs/modules/factory3d_iot_sim/TEST_REPORT.md` (ТК/ТБ/ТП таблиця зелене/червоне, версії образів, хеш каталогу).
+8. Записати результати в `docs/modules/td_iot_sim/TEST_REPORT.md` (ТК/ТБ/ТП таблиця зелене/червоне, версії образів, хеш каталогу).
 
 ---
 
@@ -1790,15 +1790,15 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 
 ## Додаток A. Каталог сигналів
 
-Джерело істини для `f3d.sim.signal` (Odoo), `services/iot_sim/catalog/signals.csv` і для `factory3d_telemetry M-02 f3d.signal` (міграція у фазі 2). Згенеровано `tools/gen_catalog.py` з `plant/odoo_flows.py:signal_specs` (рядки «макет», 196, значення «Номінал (старт)» = `x_value`/`x_nominal` демо-бази на 13.10.2026) і правил §5.2/§8 (рядки «новий» № 197…662 і 1 167–1 168, 468); рядки № 663…1 166 (504) — з додатків модулів-власників (X-34, X-61, X-76; джерело істини для цих рядків — додаток модуля): № 663–680 — споживачі unit 51…59 (energy Додаток C), 681–688 — fire_safety Додаток B, 689–698 — yard Додаток A, 699–807 — energy Додаток C, 808–873 — machine_connect Додаток C.2, 874–1 165 — bms Додаток B, 1 166 — machine_connect Додаток C.2 `cut_cmd` (`equipment/CUTOPT/cmd`, X-18, X-76; доданий у кінець, щоб не перенумеровувати), 1 167–1 168 — власні рядки P-09: стани зон `FA-SOC` (LSZ:34) і `FA-OFFICE` (LSZ:35), групи макета за відповіддю № 12г (дописані в кінець, щоб не перенумеровувати; fire_safety Додаток B № 53–54). Номери 1…662 не змінено (на них посилаються fire, yard, energy, telemetry); рядки 644, 646, 654, 656 звужено до одного входу, решта входів — нові рядки 684–698; рядок 334 `equipment/GANTRY-1/stacks` переведено в `protocol=none` — його обчислює machine_connect, сирі дані стосів — лише через woodStore REST (X-76). Колонки: код-шлях (= `x_code` макета / шлях у даних переглядача §6.7 каркаса) | пристрій (код сцени; для лічильників споживачів фактичний пристрій емулятора — `<код>-PM`) | протокол P-xx (`—` = `protocol='none'`: величину обчислює модуль-власник або це команда модуля-власника, емулятор її не веде — X-35, X-76) | адреса в джерелі (Modbus — **PDU-форма** `Modbus u<unit> fc<n> pdu<addr>[+<count>] <type>[ little]` за документом вендора (§8.4.1; telemetry R-24 шаблон (0), Q-04; X-42, X-72), після `·` — номер і назва за документом вендора; OPC UA NodeId `ns=2;s=…`; BACnet `dev <instance> <тип>:<instance>`; MQTT топік і JSON-шлях; REST шлях і JSON-шлях; HelvarNet команда; для `—` — «обчислює <модуль> (<правило>) — без адреси») | тип | одиниця | масштаб (множник для переглядача/споживача; `R-20` — за формулою ADAM; відсоткові сигнали — ×1, частка лише в payload, X-39) | номінал (старт; у дужках `шум`/`швидкість` макета) | пороги (`>`/`<` поріг → `alarm`; «межа» — `x_limit`) | модель поведінки (R-xx або «обчислює <модуль>») | статус (макет/новий).
+Джерело істини для `td.sim.signal` (Odoo), `services/iot_sim/catalog/signals.csv` і для `td_telemetry M-02 td.signal` (міграція у фазі 2). Згенеровано `tools/gen_catalog.py` з `plant/odoo_flows.py:signal_specs` (рядки «макет», 196, значення «Номінал (старт)» = `x_value`/`x_nominal` демо-бази на 13.10.2026) і правил §5.2/§8 (рядки «новий» № 197…662 і 1 167–1 168, 468); рядки № 663…1 166 (504) — з додатків модулів-власників (X-34, X-61, X-76; джерело істини для цих рядків — додаток модуля): № 663–680 — споживачі unit 51…59 (energy Додаток C), 681–688 — fire_safety Додаток B, 689–698 — yard Додаток A, 699–807 — energy Додаток C, 808–873 — machine_connect Додаток C.2, 874–1 165 — bms Додаток B, 1 166 — machine_connect Додаток C.2 `cut_cmd` (`equipment/CUTOPT/cmd`, X-18, X-76; доданий у кінець, щоб не перенумеровувати), 1 167–1 168 — власні рядки P-09: стани зон `FA-SOC` (LSZ:34) і `FA-OFFICE` (LSZ:35), групи макета за відповіддю № 12г (дописані в кінець, щоб не перенумеровувати; fire_safety Додаток B № 53–54). Номери 1…662 не змінено (на них посилаються fire, yard, energy, telemetry); рядки 644, 646, 654, 656 звужено до одного входу, решта входів — нові рядки 684–698; рядок 334 `equipment/GANTRY-1/stacks` переведено в `protocol=none` — його обчислює machine_connect, сирі дані стосів — лише через woodStore REST (X-76). Колонки: код-шлях (= `x_code` макета / шлях у даних переглядача §6.7 каркаса) | пристрій (код сцени; для лічильників споживачів фактичний пристрій емулятора — `<код>-PM`) | протокол P-xx (`—` = `protocol='none'`: величину обчислює модуль-власник або це команда модуля-власника, емулятор її не веде — X-35, X-76) | адреса в джерелі (Modbus — **PDU-форма** `Modbus u<unit> fc<n> pdu<addr>[+<count>] <type>[ little]` за документом вендора (§8.4.1; telemetry R-24 шаблон (0), Q-04; X-42, X-72), після `·` — номер і назва за документом вендора; OPC UA NodeId `ns=2;s=…`; BACnet `dev <instance> <тип>:<instance>`; MQTT топік і JSON-шлях; REST шлях і JSON-шлях; HelvarNet команда; для `—` — «обчислює <модуль> (<правило>) — без адреси») | тип | одиниця | масштаб (множник для переглядача/споживача; `R-20` — за формулою ADAM; відсоткові сигнали — ×1, частка лише в payload, X-39) | номінал (старт; у дужках `шум`/`швидкість` макета) | пороги (`>`/`<` поріг → `alarm`; «межа» — `x_limit`) | модель поведінки (R-xx або «обчислює <модуль>») | статус (макет/новий).
 
 Зведення: усього **1 168** сигналів, з них емулятор веде **1 017**, ведуть модулі-власники **151** (`protocol` «—»: energy 55 — `kwh_shift` ×49, `pv_now`, `grid_kw`, `export_kw`, `src1_ok`, `src2_ok`, `fail_start`; machine_connect 37 — `machine_state` ×35, `equipment/GANTRY-1/stacks` (обчислює), `equipment/CUTOPT/cmd` (команда rest_vendor) — X-76; bms 59 — `check`); за протоколами — P-01: 105, P-02: 60, P-03: 5, P-05: 172, P-06: 40, P-07: 62, P-08: 492 (BACnet 329 + HelvarNet 163), P-09: 55, P-10: 7, P-11: 18, P-12: 1, «—»: 151; макет — 196 (`noise` 73, `energy` 40, `machine` 35, `drift` 28, `hours` 9, `drain` 8, `counter` 1, `level` 1, `solar` 1; з них 41 — обчислювані energy: `kwh_shift` ×40 і `pv_now`), нові — 972 (для `machine_connect` 205, `energy` 190, `telemetry` 29, `bms` 468, `fire_safety` 54, `access` 7, `yard` 18, `td_genset` 1 — за колонкою P-xx і споживачем матриці §6.6).
 
-LSP-рядки (X-79): сигнали окремих адресних пристроїв панелі FACP-1 — `fire/devices/<address>/state` (LSP:<id>) і, для сповіщувачів, `fire/devices/<address>/dust` (PIV:<id>) — у каталог не входять: їх створює `factory3d_fire_safety` (M-04 `action_create_signals`) з `lsp_instance` за правилом fire R-23 (A-09); емулятор віддає ці 302 об'єкти LSP (222 сповіщувачі, 36 ручних, 41 оповіщувач, 3 полум'я) з тими самими id — §8.11.1. У каталозі LSP id згадано лише в рядку 189 (`2.FAC.07` → PIV:21607 = LSP:21607).
+LSP-рядки (X-79): сигнали окремих адресних пристроїв панелі FACP-1 — `fire/devices/<address>/state` (LSP:<id>) і, для сповіщувачів, `fire/devices/<address>/dust` (PIV:<id>) — у каталог не входять: їх створює `td_fire_safety` (M-04 `action_create_signals`) з `lsp_instance` за правилом fire R-23 (A-09); емулятор віддає ці 302 об'єкти LSP (222 сповіщувачі, 36 ручних, 41 оповіщувач, 3 полум'я) з тими самими id — §8.11.1. У каталозі LSP id згадано лише в рядку 189 (`2.FAC.07` → PIV:21607 = LSP:21607).
 
 Сигнали `infra/pv/PV-INV-n/*` (рядки № 394…417 і 792…799) прив'язані до похідних пристроїв `PV-INV-n` (§5.3 п. 3, колонка «Пристрій» нижче); у `signals.csv` каталогу колонка `device` для них лишається `PV-INV`.
 
-| № | Код-шлях (`f3d.signal.code`) | Пристрій (код сцени) | P-xx | Адреса в джерелі | Тип | Одиниця | Масштаб | Номінал (старт) | Пороги | Модель поведінки | Статус |
+| № | Код-шлях (`td.signal.code`) | Пристрій (код сцени) | P-xx | Адреса в джерелі | Тип | Одиниця | Масштаб | Номінал (старт) | Пороги | Модель поведінки | Статус |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | `energy/consumers/SAW-1/p_now` | SAW-1 | P-05 | Modbus u11 fc3 pdu3059+2 f32 · PM5560 3060–3061 Active Power Total | F32 | кВт | ×1 | 12.18 (шум 0.08, швидк. 1.92/хв) | — | machine (R-02 потужність верстата за станом РЦ) | макет |
 | 2 | `energy/consumers/SAW-1/kwh_shift` | SAW-1 | — | обчислює energy (R-11, `EN-DERIVED`) — без адреси (X-35) | number | кВт·год | — | 50.5 | — | обчислює energy (R-03 емулятора — лише внутрішня величина) | макет |

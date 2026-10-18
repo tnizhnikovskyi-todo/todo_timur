@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W3: V-19 і дія майстра перерахунку; пункт меню `menu_f3d_energy_recompute` додає W5 (views/menus.xml). -->
+<!-- W3: V-19 і дія майстра перерахунку; пункт меню `menu_td_energy_recompute` додає W5 (views/menus.xml). -->
 <odoo>
-    <record id="view_f3d_energy_recompute_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.energy.recompute.wizard.form</field>
-        <field name="model">f3d.energy.recompute.wizard</field>
+    <record id="view_td_energy_recompute_wizard_form" model="ir.ui.view">
+        <field name="name">td.energy.recompute.wizard.form</field>
+        <field name="model">td.energy.recompute.wizard</field>
         <field name="arch" type="xml">
             <form string="Перерахунок енергії">
                 <group>
@@ -21,9 +21,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_recompute_wizard" model="ir.actions.act_window">
+    <record id="action_td_energy_recompute_wizard" model="ir.actions.act_window">
         <field name="name">Перерахувати енергію</field>
-        <field name="res_model">f3d.energy.recompute.wizard</field>
+        <field name="res_model">td.energy.recompute.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>

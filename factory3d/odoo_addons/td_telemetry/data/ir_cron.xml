@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §6. nextcall rotate ставить хук. -->
 <odoo noupdate="1">
-    <record id="cron_f3d_telemetry_stale" model="ir.cron">
+    <record id="cron_td_telemetry_stale" model="ir.cron">
         <field name="name">Телеметрія: застарілі сигнали й офлайн-колектори</field>
-        <field name="model_id" ref="model_f3d_signal"/>
+        <field name="model_id" ref="model_td_signal"/>
         <field name="state">code</field>
         <field name="code">model._cron_stale()</field>
         <field name="interval_number">1</field>
@@ -11,9 +11,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_telemetry_hour" model="ir.cron">
+    <record id="cron_td_telemetry_hour" model="ir.cron">
         <field name="name">Телеметрія: годинні агрегати</field>
-        <field name="model_id" ref="model_f3d_reading_hour"/>
+        <field name="model_id" ref="model_td_reading_hour"/>
         <field name="state">code</field>
         <field name="code">model._cron_aggregate()</field>
         <field name="interval_number">10</field>
@@ -21,9 +21,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_telemetry_rotate" model="ir.cron">
+    <record id="cron_td_telemetry_rotate" model="ir.cron">
         <field name="name">Телеметрія: ротація показань</field>
-        <field name="model_id" ref="model_f3d_reading"/>
+        <field name="model_id" ref="model_td_reading"/>
         <field name="state">code</field>
         <field name="code">model._cron_rotate()</field>
         <field name="interval_number">1</field>
@@ -31,9 +31,9 @@
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_telemetry_commands_gc" model="ir.cron">
+    <record id="cron_td_telemetry_commands_gc" model="ir.cron">
         <field name="name">Телеметрія: прострочені команди</field>
-        <field name="model_id" ref="model_f3d_command"/>
+        <field name="model_id" ref="model_td_command"/>
         <field name="state">code</field>
         <field name="code">model._cron_expire()</field>
         <field name="interval_number">10</field>

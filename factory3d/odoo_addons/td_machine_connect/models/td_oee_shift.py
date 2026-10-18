@@ -6,7 +6,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError
 
 from ..tools import oee, ppt
-from .f3d_machine import param
+from .td_machine import param
 
 _logger = logging.getLogger(__name__)
 
@@ -31,14 +31,14 @@ def _day_bounds(day: date):
 
 
 class F3dOeeShift(models.Model):
-    _name = "f3d.oee.shift"
+    _name = "td.oee.shift"
     _description = "Верстати: OEE за зміну"
     _order = "date desc, code"
 
-    machine_id = fields.Many2one("f3d.machine", required=True, index=True, ondelete="cascade")
+    machine_id = fields.Many2one("td.machine", required=True, index=True, ondelete="cascade")
     workcenter_id = fields.Many2one("mrp.workcenter", related="machine_id.workcenter_id", store=True, index=True)
     code = fields.Char(related="machine_id.code", store=True)
-    zone_id = fields.Many2one("f3d.zone", related="machine_id.zone_id", store=True)
+    zone_id = fields.Many2one("td.zone", related="machine_id.zone_id", store=True)
     company_id = fields.Many2one("res.company", related="machine_id.company_id", store=True)
     date = fields.Date(string="Дата зміни", required=True, index=True)
     date_start = fields.Datetime(string="Початок зміни")
@@ -151,7 +151,7 @@ class F3dOeeShift(models.Model):
         """R-14 п. 2: поточна зміна кожного підключеного верстата; вчорашня відкрита — закривається."""
         today = _local_date(fields.Datetime.now())
         machines = (
-            self.env["f3d.machine"].sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id")
+            self.env["td.machine"].sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id")
         )  # DEC-19: стабільний порядок
         for machine in machines:
             try:
@@ -175,7 +175,7 @@ class F3dOeeShift(models.Model):
             machine.write({"oee_shift_id": rec.id})
 
     def action_recompute(self):
-        if not (self.env.is_superuser() or self.env.user.has_group("factory3d_base.group_f3d_manager")):
+        if not (self.env.is_superuser() or self.env.user.has_group("td_factory3d.group_td_manager")):
             raise AccessError(_("Перерахувати OEE може лише менеджер."))
         for rec in self.sudo():
             self._f3d_compute(rec.machine_id, rec.date, close=rec.state == "closed")
@@ -208,7 +208,7 @@ class F3dOeeShift(models.Model):
 
 
 class F3dMachineOee(models.Model):
-    _inherit = "f3d.machine"
+    _inherit = "td.machine"
 
     # --- R-28: інтервали для енергії -----------------------------------------------------------------
     @api.model
@@ -234,7 +234,7 @@ class F3dMachineOee(models.Model):
         """R-28 п. 1: `{wo_id: [(start, end, state), …]}` для `working`/`setup`, UTC naive."""
         now = fields.Datetime.now()
         domain = [("state", "in", ("working", "setup")), ("workorder_id", "in", workorders.ids)]
-        logs = self.env["f3d.machine.state.log"].sudo().search(domain + self._f3d_log_domain(date_from, date_to))
+        logs = self.env["td.machine.state.log"].sudo().search(domain + self._f3d_log_domain(date_from, date_to))
         res = {}
         for log in logs.sorted("date_start"):
             start, end = self._f3d_clipped(log, date_from, date_to, now)
@@ -248,7 +248,7 @@ class F3dMachineOee(models.Model):
         now = fields.Datetime.now()
         domain = [("workcenter_id", "=", workcenter.id)] + self._f3d_log_domain(date_from, date_to)
         res = []
-        for log in self.env["f3d.machine.state.log"].sudo().search(domain).sorted("date_start"):
+        for log in self.env["td.machine.state.log"].sudo().search(domain).sorted("date_start"):
             start, end = self._f3d_clipped(log, date_from, date_to, now)
             if end > start:
                 res.append((start, end, log.state, log.workorder_id.id or False))
@@ -266,7 +266,7 @@ class F3dMachineOee(models.Model):
         return wo.duration_expected / wo.qty_production if wo.qty_production else 0.0
 
     def _f3d_oee(self, t0, t1):
-        """R-13: показники OEE верстата за `[t0, t1)` (naive UTC) — словник полів `f3d.oee.shift` + `source`."""
+        """R-13: показники OEE верстата за `[t0, t1)` (naive UTC) — словник полів `td.oee.shift` + `source`."""
         self.ensure_one()
         wc = self.workcenter_id.sudo()
         env = self.env
@@ -274,7 +274,7 @@ class F3dMachineOee(models.Model):
         # прості (R-13 п. 1, 10)
         losses = {}
         for dt in (
-            env["f3d.downtime"]
+            env["td.downtime"]
             .sudo()
             .search(
                 [
@@ -287,12 +287,12 @@ class F3dMachineOee(models.Model):
             )
         ):
             iv = ppt.clip([(dt.date_start, dt.date_end or t1)], t0, t1)
-            if dt.loss_id.f3d_planned:
+            if dt.loss_id.td_planned:
                 inp["planned"] += iv
             else:
                 losses.setdefault(dt.loss_id, []).extend(iv)
         inp["losses"] = [(loss.id, loss.name, ivs) for loss, ivs in losses.items()]
-        logs = env["f3d.machine.state.log"].sudo().search([("machine_id", "=", self.id)] + self._f3d_log_domain(t0, t1))
+        logs = env["td.machine.state.log"].sudo().search([("machine_id", "=", self.id)] + self._f3d_log_domain(t0, t1))
         wos = env["mrp.workorder"]
         if logs:
             source = "machine"

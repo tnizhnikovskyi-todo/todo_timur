@@ -7,8 +7,8 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools.states import parse_ts
-from .f3d_gantry_stack import gantry_cmd_signal
-from .f3d_machine import param_bool
+from .td_gantry_stack import gantry_cmd_signal
+from .td_machine import param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ TERMINAL = ("done", "cancelled")
 
 
 class F3dGantryJob(models.Model):
-    _name = "f3d.gantry.job"
+    _name = "td.gantry.job"
     _description = "Портал: завдання"
     _inherit = ["mail.thread"]
     _order = "id desc"
@@ -32,7 +32,7 @@ class F3dGantryJob(models.Model):
         string="Номер",
         required=True,
         copy=False,
-        default=lambda s: s.env["ir.sequence"].next_by_code("f3d.gantry.job"),
+        default=lambda s: s.env["ir.sequence"].next_by_code("td.gantry.job"),
     )
     ws_id = fields.Char(string="Номер у woodStore", size=32, index=True, copy=False)
     type = fields.Selection(
@@ -48,14 +48,14 @@ class F3dGantryJob(models.Model):
     origin = fields.Selection(
         [("odoo", "Odoo"), ("machine", "Портал")], required=True, default="odoo", string="Створено в"
     )
-    stack_id = fields.Many2one("f3d.gantry.stack", string="Стос", ondelete="set null")
+    stack_id = fields.Many2one("td.gantry.stack", string="Стос", ondelete="set null")
     target_workcenter_id = fields.Many2one(
         "mrp.workcenter",
         string="На верстат",
         ondelete="set null",
-        domain="[('f3d_code', 'in', ('SAW-1', 'SAW-2', 'SAW-3', 'NEST-1'))]",
+        domain="[('td_code', 'in', ('SAW-1', 'SAW-2', 'SAW-3', 'NEST-1'))]",
     )
-    target_code = fields.Char(related="target_workcenter_id.f3d_code")
+    target_code = fields.Char(related="target_workcenter_id.td_code")
     sheets = fields.Integer(string="Листів", required=True, default=1)
     done = fields.Integer(string="Подано", default=0, tracking=True)
     product_id = fields.Many2one("product.product", string="Плита")
@@ -64,7 +64,7 @@ class F3dGantryJob(models.Model):
     external_ref = fields.Char(string="Документ", size=64, help="Назва МО")
     production_id = fields.Many2one("mrp.production", ondelete="set null", index=True)
     workorder_id = fields.Many2one("mrp.workorder", ondelete="set null")
-    cut_map_id = fields.Many2one("f3d.cut.map", ondelete="set null")
+    cut_map_id = fields.Many2one("td.cut.map", ondelete="set null")
     state = fields.Selection(
         [
             ("draft", "Чернетка"),
@@ -81,8 +81,8 @@ class F3dGantryJob(models.Model):
         default="draft",
         tracking=True,
     )
-    command_id = fields.Many2one("f3d.command", string="Команда", ondelete="set null")
-    cancel_command_id = fields.Many2one("f3d.command", ondelete="set null")
+    command_id = fields.Many2one("td.command", string="Команда", ondelete="set null")
+    cancel_command_id = fields.Many2one("td.command", ondelete="set null")
     error = fields.Char(size=512, readonly=True)
     ws_created = fields.Datetime(readonly=True)
     started = fields.Datetime(readonly=True)
@@ -99,7 +99,7 @@ class F3dGantryJob(models.Model):
 
     @api.constrains("type", "product_id", "target_workcenter_id", "state")
     def _check_feed(self):
-        targets = self.env["f3d.gantry.stack"].GANTRY_TARGETS
+        targets = self.env["td.gantry.stack"].GANTRY_TARGETS
         for rec in self:
             if rec.type != "feed" or rec.state in ("draft", "cancelled"):
                 continue
@@ -140,12 +140,12 @@ class F3dGantryJob(models.Model):
 
     @api.model
     def _f3d_notify_equipment(self):
-        if "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("maintenance.equipment", ["GANTRY-1"], "state")
+        if "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("maintenance.equipment", ["GANTRY-1"], "state")
 
     @api.model
     def _f3d_gantry_status(self):
-        raw = self.env["ir.config_parameter"].sudo().get_param("factory3d.machine_connect.gantry_status", "{}")
+        raw = self.env["ir.config_parameter"].sudo().get_param("td.machine_connect.gantry_status", "{}")
         try:
             data = json.loads(raw or "{}")
         except ValueError:
@@ -155,7 +155,7 @@ class F3dGantryJob(models.Model):
     @api.model
     def _f3d_set_gantry_status(self, data):
         self.env["ir.config_parameter"].sudo().set_param(
-            "factory3d.machine_connect.gantry_status", json.dumps(data, ensure_ascii=False, sort_keys=True)
+            "td.machine_connect.gantry_status", json.dumps(data, ensure_ascii=False, sort_keys=True)
         )
 
     def _check_group(self, xmlid):
@@ -189,8 +189,8 @@ class F3dGantryJob(models.Model):
             if not rec.ws_id:
                 raise UserError(_("Завдання ще не прийняте порталом: скасування неможливе."))
             try:
-                cmd = self.env["f3d.command"]._f3d_mc_create_command(
-                    gantry_cmd_signal(self.env), "cancel", {"id": rec.ws_id}, {"f3d_gantry_job_id": rec.id}
+                cmd = self.env["td.command"]._f3d_mc_create_command(
+                    gantry_cmd_signal(self.env), "cancel", {"id": rec.ws_id}, {"td_gantry_job_id": rec.id}
                 )
             except UserError as e:
                 raise UserError(_("Скасування в порталі потребує дозволу запису.")) from e
@@ -200,12 +200,12 @@ class F3dGantryJob(models.Model):
     # --- R-16 п. 1: створення з МО --------------------------------------------------------------------
     @api.model
     def _f3d_from_production(self, production, workorder=None, cut_map=None, sheets=None):
-        targets = self.env["f3d.gantry.stack"].GANTRY_TARGETS
+        targets = self.env["td.gantry.stack"].GANTRY_TARGETS
         production = production.sudo()
         wo = (
             workorder
             or production.workorder_ids.filtered(
-                lambda w: w.state not in ("done", "cancel") and w.workcenter_id.f3d_code in targets
+                lambda w: w.state not in ("done", "cancel") and w.workcenter_id.td_code in targets
             )[:1]
         )
         if not wo:
@@ -213,7 +213,7 @@ class F3dGantryJob(models.Model):
         product = cut_map.material_product_id if cut_map else self.env["product.product"]
         moves = production.move_raw_ids.filtered(lambda m: m.state not in ("done", "cancel"))
         if not product:
-            plates = moves.filtered(lambda m: m.product_id.f3d_thickness_mm >= 8).sorted(
+            plates = moves.filtered(lambda m: m.product_id.td_thickness_mm >= 8).sorted(
                 "product_uom_qty", reverse=True
             )
             product = plates[:1].product_id
@@ -229,13 +229,13 @@ class F3dGantryJob(models.Model):
             qty = int(move.product_uom_qty - sum(existing.mapped("sheets")))
         if qty <= 0:
             raise UserError(_("Плити для %s уже подано.", production.name))
-        stack = self.env["f3d.gantry.stack"]
+        stack = self.env["td.gantry.stack"]
         lot = self.env["stock.lot"]
-        lines = move.move_line_ids.filtered(lambda ml: ml.location_id.f3d_loc_kind == "stack").sorted(
+        lines = move.move_line_ids.filtered(lambda ml: ml.location_id.td_loc_kind == "stack").sorted(
             "quantity", reverse=True
         )
         if lines:
-            stack = self.env["f3d.gantry.stack"].sudo().search([("location_id", "=", lines[0].location_id.id)], limit=1)
+            stack = self.env["td.gantry.stack"].sudo().search([("location_id", "=", lines[0].location_id.id)], limit=1)
             lot = lines[0].lot_id
         return self.sudo().create(
             {
@@ -269,8 +269,8 @@ class F3dGantryJob(models.Model):
             }
             try:
                 with self.env.cr.savepoint():
-                    cmd = self.env["f3d.command"]._f3d_mc_create_command(
-                        signal, "feed", fields_, {"f3d_gantry_job_id": rec.id}
+                    cmd = self.env["td.command"]._f3d_mc_create_command(
+                        signal, "feed", fields_, {"td_gantry_job_id": rec.id}
                     )
             except UserError as e:
                 msg = str(e.args[0] if e.args else e)
@@ -327,7 +327,7 @@ class F3dGantryJob(models.Model):
         vals = {}
         if item.get("type") in ("feed", "restack", "return", "count"):
             vals["type"] = item["type"]
-        stack = env["f3d.gantry.stack"].sudo().search([("code", "=", item.get("source"))], limit=1)
+        stack = env["td.gantry.stack"].sudo().search([("code", "=", item.get("source"))], limit=1)
         if item.get("source") and not stack:
             _logger.warning("woodStore: невідомий стос %s", item["source"])
         if stack:
@@ -420,7 +420,7 @@ class F3dGantryJob(models.Model):
     def _f3d_link_cut_map(self):
         for rec in self:
             cut_map = (
-                self.env["f3d.cut.map"]
+                self.env["td.cut.map"]
                 .sudo()
                 .search(
                     [
@@ -450,7 +450,7 @@ class F3dGantryJob(models.Model):
                 job.write({"state": "done", "finished": ts, "done": max(job.done, len(job.sheet_log or []))})
                 job._f3d_consume()
             elif kind == "stack_empty":
-                stack = self.env["f3d.gantry.stack"].sudo().search([("code", "=", item.get("stack"))], limit=1)
+                stack = self.env["td.gantry.stack"].sudo().search([("code", "=", item.get("stack"))], limit=1)
                 if stack:
                     stack._f3d_refresh()
                     stack.message_post(body=_("Стос порожній за даними порталу."), subtype_xmlid="mail.mt_note")
@@ -472,7 +472,7 @@ class F3dGantryJob(models.Model):
         log = list(self.sheet_log or [])
         if any(e.get("id") == item.get("id") for e in log):
             return
-        stack = self.env["f3d.gantry.stack"].sudo().search([("code", "=", item.get("stack"))], limit=1)
+        stack = self.env["td.gantry.stack"].sudo().search([("code", "=", item.get("stack"))], limit=1)
         log.append({"id": item.get("id"), "ts": ts.isoformat(), "stack": item.get("stack"), "lot": stack.ws_lot or ""})
         log = log[-SHEET_LOG_MAX:]
         vals = {"sheet_log": log, "done": max(self.done, len(log))}
@@ -511,7 +511,7 @@ class F3dGantryJob(models.Model):
 
     # --- R-17: списання плити в МО --------------------------------------------------------------------
     def _f3d_consume(self):
-        tech = self.env["f3d.machine"]._f3d_tech_env()
+        tech = self.env["td.machine"]._f3d_tech_env()
         for rec in self:
             prod = rec.production_id
             if rec.type != "feed" or not rec.product_id or not prod or prod.state not in MO_LIVE:
@@ -526,7 +526,7 @@ class F3dGantryJob(models.Model):
                 continue
             groups = {}
             log = (rec.sheet_log or [])[int(rec.consumed_qty) : int(rec.consumed_qty) + n]
-            Stack = self.env["f3d.gantry.stack"].sudo()
+            Stack = self.env["td.gantry.stack"].sudo()
             for entry in log:
                 stack = Stack.search([("code", "=", entry.get("stack"))], limit=1)
                 key = (stack.location_id.id, stack.odoo_lot_id.id or rec.lot_id.id)
@@ -596,7 +596,7 @@ class F3dGantryJob(models.Model):
     def _cron_gantry(self):
         """R-15 п. 1–5, R-16 п. 2/5, R-18 п. 1 (SPEC §6). Кожен запис — у `savepoint`."""
         sudo = self.sudo()
-        for stack in sudo.env["f3d.gantry.stack"].search([], limit=CRON_STACKS_LIMIT):
+        for stack in sudo.env["td.gantry.stack"].search([], limit=CRON_STACKS_LIMIT):
             try:
                 with self.env.cr.savepoint():
                     stack._f3d_refresh()
@@ -623,7 +623,7 @@ class F3dGantryJob(models.Model):
         sudo._f3d_check_idle()
         try:
             with self.env.cr.savepoint():
-                sudo.env["f3d.gantry.stack"]._f3d_cron_replenish()
+                sudo.env["td.gantry.stack"]._f3d_cron_replenish()
         except Exception:
             _logger.exception("Поповнення стосів не вдалося")
         return True
@@ -631,8 +631,8 @@ class F3dGantryJob(models.Model):
     @api.model
     def _f3d_auto_feed(self):
         """R-16 п. 1: перше завдання черги кожного верстата порталу -> завдання `to_send`."""
-        targets = self.env["f3d.gantry.stack"].GANTRY_TARGETS
-        for wc in self.env["mrp.workcenter"].search([("f3d_code", "in", list(targets))]):
+        targets = self.env["td.gantry.stack"].GANTRY_TARGETS
+        for wc in self.env["mrp.workcenter"].search([("td_code", "in", list(targets))]):
             wo = self.env["mrp.workorder"].search([("workcenter_id", "=", wc.id), ("state", "=", "progress")], limit=1)
             if not wo:
                 wos = self.env["mrp.workorder"].search([("workcenter_id", "=", wc.id), ("state", "=", "ready")])

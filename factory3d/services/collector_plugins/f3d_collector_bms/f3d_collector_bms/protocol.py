@@ -1,4 +1,4 @@
-"""Кадрування й розбір ASCII HelvarNet (SPEC factory3d_bms §8.3, R-31). Чисті функції, без мережі."""
+"""Кадрування й розбір ASCII HelvarNet (SPEC td_bms §8.3, R-31). Чисті функції, без мережі."""
 
 from __future__ import annotations
 

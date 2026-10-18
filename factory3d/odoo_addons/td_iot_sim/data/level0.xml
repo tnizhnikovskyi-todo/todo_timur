@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <!-- Рівень 0: перейменування крона. Меню menu_iot_root переносимо в views/menus.xml
-       (після menu_f3d_sim_root: у data-порядку SPEC §1 level0.xml іде раніше за menus.xml). -->
+       (після menu_td_sim_root: у data-порядку SPEC §1 level0.xml іде раніше за menus.xml). -->
   <record id="cron_iot_sim" model="ir.cron">
     <field name="name">Емулятор IoT: рівень 0 (без сервісу)</field>
   </record>

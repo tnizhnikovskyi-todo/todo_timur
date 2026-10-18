@@ -9,7 +9,7 @@ from odoo.tests import TransactionCase, tagged
 from .common import P, F3DMachineCase
 
 TAGS = ("post_install", "-at_install", "f3d", "f3d_machine_connect")
-MODEL = "odoo.addons.factory3d_machine_connect.models.f3d_machine"
+MODEL = "odoo.addons.td_machine_connect.models.td_machine"
 
 
 class _SqlSpy:
@@ -43,7 +43,7 @@ class TestPushOrder(F3DMachineCase):
     def test_dispatch_locks_machines_in_id_order(self):
         """Push блокує верстати за зростанням id незалежно від порядку показань — як крон і `_f3d_mark_nodata`."""
         ids = []
-        Machine = self.registry["f3d.machine"]
+        Machine = self.registry["td.machine"]
         orig = Machine._f3d_lock
 
         def lock(rec):
@@ -63,10 +63,10 @@ class TestPushOrder(F3DMachineCase):
     def _machine_updates(self, readings):
         with _SqlSpy() as spy:
             self.feed(readings)
-        return spy.like('update "f3d_machine"')
+        return spy.like('update "td_machine"')
 
     def test_unchanged_push_does_not_write_machine_row(self):
-        """Показання без змін не пишуть f3d_machine; мітки `raw_ts`/`pieces_ts` — не частіше за HEARTBEAT_S."""
+        """Показання без змін не пишуть td_machine; мітки `raw_ts`/`pieces_ts` — не частіше за HEARTBEAT_S."""
         m = self.m_ua
         first = self.ua(m, "10:00:00", state="WORKING", mode="AUTOMATIC", pieces=5, job="J-1")
         updates = self._machine_updates(first)
@@ -96,8 +96,8 @@ class TestPushOrder(F3DMachineCase):
 class TestTickOrder(F3DMachineCase):
     def test_tick_batches_in_id_order_skip_locked(self):
         """Крон: верстати за id, пачками по TICK_BATCH, блокування `FOR UPDATE SKIP LOCKED` (без очікування)."""
-        Machine = self.registry["f3d.machine"]
-        expected = self.env["f3d.machine"].search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
+        Machine = self.registry["td.machine"]
+        expected = self.env["td.machine"].search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
         self.assertGreaterEqual(len(expected), 3)
         seen = []
         orig = Machine._f3d_tick_extra
@@ -109,7 +109,7 @@ class TestTickOrder(F3DMachineCase):
         with patch(MODEL + ".TICK_BATCH", 2), patch.object(Machine, "_f3d_tick_extra", spy_tick), _SqlSpy() as sql:
             self.tick("10:30:30")
         self.assertEqual(seen, expected)
-        locks = sql.like("from f3d_machine", "for update")
+        locks = sql.like("from td_machine", "for update")
         self.assertEqual(len(locks), -(-len(expected) // 2), locks)
         for q in locks:
             self.assertIn("order by id for update skip locked", " ".join(q.lower().split()))
@@ -132,10 +132,10 @@ class TestTickSkipLocked(TransactionCase):
             env = api.Environment(cr, SUPERUSER_ID, {})
             icp = env["ir.config_parameter"]
             self._old_param = icp.get_param(P + "read_enabled")
-            self._old_source_state = env.ref("factory3d_machine_connect.source_mc_derived").state
+            self._old_source_state = env.ref("td_machine_connect.source_mc_derived").state
             icp.set_param(P + "read_enabled", "True")
-            wcs = env["mrp.workcenter"].create([{"name": "Lock %d" % i, "f3d_code": "LK-%d" % i} for i in range(3)])
-            machines = env["f3d.machine"].create(
+            wcs = env["mrp.workcenter"].create([{"name": "Lock %d" % i, "td_code": "LK-%d" % i} for i in range(3)])
+            machines = env["td.machine"].create(
                 [{"workcenter_id": wc.id, "protocol": "manual", "read_enabled": True} for wc in wcs]
             )
             self.wc_ids, self.machine_ids = wcs.ids, machines.sorted("id").ids
@@ -143,14 +143,14 @@ class TestTickSkipLocked(TransactionCase):
     def _drop_fixtures(self):
         with self.db.cursor() as cr:
             env = api.Environment(cr, SUPERUSER_ID, {})
-            env["f3d.machine"].browse(self.machine_ids).exists().unlink()
+            env["td.machine"].browse(self.machine_ids).exists().unlink()
             env["mrp.workcenter"].browse(self.wc_ids).exists().unlink()
             env["ir.config_parameter"].set_param(P + "read_enabled", self._old_param or False)
-            env.ref("factory3d_machine_connect.source_mc_derived").write({"state": self._old_source_state})
+            env.ref("td_machine_connect.source_mc_derived").write({"state": self._old_source_state})
 
     def _tick(self):
         """`_cron_tick` на окремому з'єднанні; повертає (id оброблених верстатів, тривалість, с)."""
-        Machine = self.registry["f3d.machine"]
+        Machine = self.registry["td.machine"]
         seen = []
         orig = Machine._f3d_tick_extra
 
@@ -161,7 +161,7 @@ class TestTickSkipLocked(TransactionCase):
         started = time.monotonic()
         with patch.object(Machine, "_f3d_tick_extra", spy), self.db.cursor() as cr:
             cr.execute("SET lock_timeout = '3s'")  # без SKIP LOCKED тест впав би помилкою, а не завис
-            api.Environment(cr, SUPERUSER_ID, {})["f3d.machine"]._cron_tick()
+            api.Environment(cr, SUPERUSER_ID, {})["td.machine"]._cron_tick()
             cr.execute("RESET lock_timeout")
         return seen, time.monotonic() - started
 
@@ -169,7 +169,7 @@ class TestTickSkipLocked(TransactionCase):
         first, locked, last = self.machine_ids
         holder = self.db.cursor()  # окрема транзакція, як push, що блокує рядок
         self.addCleanup(holder.close)
-        holder.execute("SELECT id FROM f3d_machine WHERE id = %s FOR UPDATE", [locked])
+        holder.execute("SELECT id FROM td_machine WHERE id = %s FOR UPDATE", [locked])
         seen, elapsed = self._tick()
         self.assertLess(elapsed, 3)
         self.assertIn(first, seen)

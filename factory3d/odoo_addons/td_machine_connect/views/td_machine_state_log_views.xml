@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-05, V-06: f3d.machine.state.log (SPEC §3) -->
+<!-- V-05, V-06: td.machine.state.log (SPEC §3) -->
 <odoo>
-    <record id="view_f3d_machine_state_log_list" model="ir.ui.view">
-        <field name="name">f3d.machine.state.log.list</field>
-        <field name="model">f3d.machine.state.log</field>
+    <record id="view_td_machine_state_log_list" model="ir.ui.view">
+        <field name="name">td.machine.state.log.list</field>
+        <field name="model">td.machine.state.log</field>
         <field name="arch" type="xml">
             <list string="Журнал станів" create="0" edit="0" delete="0">
                 <field name="code"/>
@@ -25,9 +25,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_state_log_graph" model="ir.ui.view">
-        <field name="name">f3d.machine.state.log.graph</field>
-        <field name="model">f3d.machine.state.log</field>
+    <record id="view_td_machine_state_log_graph" model="ir.ui.view">
+        <field name="name">td.machine.state.log.graph</field>
+        <field name="model">td.machine.state.log</field>
         <field name="arch" type="xml">
             <graph string="Журнал станів" type="bar" stacked="1">
                 <field name="code" type="row"/>
@@ -37,9 +37,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_state_log_pivot" model="ir.ui.view">
-        <field name="name">f3d.machine.state.log.pivot</field>
-        <field name="model">f3d.machine.state.log</field>
+    <record id="view_td_machine_state_log_pivot" model="ir.ui.view">
+        <field name="name">td.machine.state.log.pivot</field>
+        <field name="model">td.machine.state.log</field>
         <field name="arch" type="xml">
             <pivot string="Журнал станів">
                 <field name="code" type="row"/>
@@ -50,9 +50,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_machine_state_log_search" model="ir.ui.view">
-        <field name="name">f3d.machine.state.log.search</field>
-        <field name="model">f3d.machine.state.log</field>
+    <record id="view_td_machine_state_log_search" model="ir.ui.view">
+        <field name="name">td.machine.state.log.search</field>
+        <field name="model">td.machine.state.log</field>
         <field name="arch" type="xml">
             <search string="Журнал станів">
                 <field name="code"/>

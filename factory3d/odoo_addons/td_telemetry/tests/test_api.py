@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from odoo import fields
-from odoo.addons.factory3d_telemetry.models.push_handler import F3dPushHandler
+from odoo.addons.td_telemetry.models.push_handler import F3dPushHandler
 from odoo.exceptions import ValidationError
 from odoo.modules.module import Manifest
 from odoo.tests import tagged
@@ -88,7 +88,7 @@ class TestConfig(ApiCase):
         self.assertFalse(src["read_enabled"])
 
     def test_global_disabled(self):
-        self.icp.set_param("factory3d.telemetry.read_enabled", "False")
+        self.icp.set_param("td.telemetry.read_enabled", "False")
         _s, body, _h = self.get("config")
         self.assertFalse(body["read_enabled"])
         self.assertFalse(any(s["read_enabled"] for s in body["sources"]))
@@ -153,7 +153,7 @@ class TestAuth(ApiCase):
     def test_health_with_token(self):
         status, body, _h = self.get("health")
         self.assertEqual(status, 200)
-        Signal = self.env["f3d.signal"]
+        Signal = self.env["td.signal"]
         self.assertEqual(body["collector"]["code"], "COL-T")
         self.assertEqual(
             body["counts"],
@@ -161,7 +161,7 @@ class TestAuth(ApiCase):
                 "signals": Signal.search_count([]),
                 "alarms": Signal.search_count([("status", "=", "alarm")]),
                 "stale": Signal.search_count([("status", "=", "stale")]),
-                "sources_online": self.env["f3d.source"].search_count([("state", "=", "online")]),
+                "sources_online": self.env["td.source"].search_count([("state", "=", "online")]),
             },
         )
 
@@ -289,16 +289,16 @@ class TestPush(ApiCase):
         packet = self.packet()
         self.post("push", packet)
         self.reload()
-        before = self.env["f3d.reading"].search_count([])
+        before = self.env["td.reading"].search_count([])
         last = self.sig_press.last_value
         status, res, _h = self.post("push", packet)
         self.assertEqual((status, res["stored"], res["duplicates"], res["changed"]), (200, 0, 4, []))
         self.reload()
-        self.assertEqual(self.env["f3d.reading"].search_count([]), before)
+        self.assertEqual(self.env["td.reading"].search_count([]), before)
         self.assertEqual(self.sig_press.last_value, last)
 
     def test_push_read_disabled_423(self):
-        self.icp.set_param("factory3d.telemetry.read_enabled", "False")
+        self.icp.set_param("td.telemetry.read_enabled", "False")
         status, res, _h = self.post("push", self.packet())
         self.assertEqual((status, res["error"]["code"]), (423, "read_disabled"))
         self.reload()
@@ -307,14 +307,14 @@ class TestPush(ApiCase):
         self.assertEqual(status, 423)
 
     def test_push_rate_limited_429(self):
-        self.icp.set_param("factory3d.telemetry.push_rate_per_min", "3")
+        self.icp.set_param("td.telemetry.push_rate_per_min", "3")
         empty = {"collector": "COL-T", "readings": []}
         codes = [self.post("push", empty)[0] for _ in range(3)]
         self.assertEqual(codes, [200, 200, 200])
         status, res, headers = self.post("push", empty)
         self.assertEqual((status, res["error"]["code"], headers["Retry-After"]), (429, "rate_limited", "10"))
         # вікно минуло: пакети в журналі ліміту старші за 60 с (AC-41)
-        self.env.cr.execute("UPDATE f3d_collector_push SET ts = ts - interval '61 seconds'")
+        self.env.cr.execute("UPDATE td_collector_push SET ts = ts - interval '61 seconds'")
         self.assertEqual(self.post("push", empty)[0], 200)
 
 
@@ -340,12 +340,12 @@ def _event(sig_provider="CAM-05", suffix="", seconds=-2, **extra):
 @tagged(*TAGS)
 class TestEvent(ApiCase):
     def test_event_ok(self):
-        # без обробників маршруту: модулі на кшталт factory3d_yard реєструють власні (`handled` залежить від них)
+        # без обробників маршруту: модулі на кшталт td_yard реєструють власні (`handled` залежить від них)
         with patch.object(F3dPushHandler, "_f3d_handler_models", return_value=[]):
             status, res, _h = self.post("event", {"collector": "COL-T", "events": [_event()]})
         self.assertEqual((status, res), (200, {"accepted": 1, "rejected": [], "handled": {}}))
         self.reload()
-        ev = self.env["f3d.push.event"].search([("route", "=", "lpr")])
+        ev = self.env["td.push.event"].search([("route", "=", "lpr")])
         self.assertEqual((len(ev), ev.signal_count, ev.remote, ev.collector_id), (1, 1, "10.90.2.5", self.col))
         self.assertEqual(ev.payload["plateText"], "AA4512KT")
         self.assertEqual(self.sig_plate.last_text, "AA4512KT")
@@ -367,7 +367,7 @@ class TestEvent(ApiCase):
     def test_event_413_423(self):
         status, _r, _h = self.post("event", {"events": [_event(suffix=str(i)) for i in range(101)]})
         self.assertEqual(status, 413)
-        self.icp.set_param("factory3d.telemetry.read_enabled", "False")
+        self.icp.set_param("td.telemetry.read_enabled", "False")
         status, _r, _h = self.post("event", {"events": [_event()]})
         self.assertEqual(status, 423)
 
@@ -375,21 +375,21 @@ class TestEvent(ApiCase):
 class CommandCase(ApiCase):
     def setUp(self):
         super().setUp()
-        self.icp.set_param("factory3d.telemetry.write_enabled", "True")
+        self.icp.set_param("td.telemetry.write_enabled", "True")
         self.src_bac.write_enabled = True
         self.src_other.write_enabled = True
         self.sig_valve.write_enabled = True
         self.sig_foreign.write_enabled = True
 
     def command(self, sig=None, **kw):
-        return self.env["f3d.command"].create({"signal_id": (sig or self.sig_valve).id, "value": 80, **kw})
+        return self.env["td.command"].create({"signal_id": (sig or self.sig_valve).id, "value": 80, **kw})
 
 
 @tagged(*TAGS)
 class TestCommandsApi(CommandCase):
     def test_commands_write_disabled(self):
         a = self.command()
-        self.icp.set_param("factory3d.telemetry.write_enabled", "False")
+        self.icp.set_param("td.telemetry.write_enabled", "False")
         _s, res, _h = self.get("commands")
         self.assertEqual(res, {"commands": [], "write_enabled": False})
         self.reload()
@@ -458,7 +458,7 @@ class TestCommandsApi(CommandCase):
 @tagged(*TAGS)
 class TestIngestEntryPoint(ApiCase):
     def spy(self):
-        model = type(self.env["f3d.signal"])
+        model = type(self.env["td.signal"])
         return patch.object(model, "_f3d_ingest", autospec=True, side_effect=model._f3d_ingest)
 
     def test_push_goes_through_f3d_ingest(self):
@@ -479,12 +479,12 @@ class TestIngestEntryPoint(ApiCase):
         self.assertEqual(spy.call_args.kwargs["collector"], self.col)
 
     def test_rejected_push_no_ingest(self):
-        self.icp.set_param("factory3d.telemetry.push_rate_per_min", "1")
+        self.icp.set_param("td.telemetry.push_rate_per_min", "1")
         with self.spy() as spy:
             self.post("push", {"readings": []})
             spy.reset_mock()
             self.assertEqual(self.post("push", {"readings": []})[0], 429)
-            self.icp.set_param("factory3d.telemetry.read_enabled", "False")
+            self.icp.set_param("td.telemetry.read_enabled", "False")
             self.assertEqual(self.post("push", {"readings": []})[0], 423)
         self.assertEqual(spy.call_count, 0)
 
@@ -523,7 +523,7 @@ class TestCommandPayload(CommandCase):
             self.assertEqual((status, res["error"]["code"]), (400, "bad_schema"))
         self.reload()
         self.assertEqual(cmd.state, "sent")
-        self.assertEqual(Manifest.for_addon("factory3d_telemetry")["version"], "19.0.1.1.0")
+        self.assertEqual(Manifest.for_addon("td_telemetry")["version"], "19.0.1.1.0")
 
 
 @tagged(*TAGS, "f3d_perf")
@@ -531,7 +531,7 @@ class TestPushPerf(ApiCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Signal = cls.env["f3d.signal"]
+        Signal = cls.env["td.signal"]
         cls.perf = [
             Signal.create(
                 {
@@ -564,7 +564,7 @@ class TestPushPerf(ApiCase):
         durations = []
         for run in range(5):
             body = {"collector": "COL-T", "readings": self.batch(1000, run * 100)}
-            self.icp.set_param("factory3d.telemetry.push_rate_per_min", "1000")
+            self.icp.set_param("td.telemetry.push_rate_per_min", "1000")
             t0 = time.perf_counter()
             status, res, _h = self.post("push", body)
             durations.append(time.perf_counter() - t0)

@@ -2,7 +2,7 @@ from odoo import Command, _, api, fields, models
 from odoo.exceptions import ValidationError
 
 from ..tools import heat, hvac
-from .f3d_bms_hvac_unit import _is_live
+from .td_bms_hvac_unit import _is_live
 
 DESIGN_FIELDS = [
     "t_out_design",
@@ -64,16 +64,16 @@ MACRO_DEFAULTS = {
 
 
 class F3dBmsHeatBalance(models.Model):
-    _name = "f3d.bms.heat.balance"
+    _name = "td.bms.heat.balance"
     _description = "Будівля: тепловий баланс"
     _inherit = ["mail.thread"]
     _order = "company_id"
 
     def _default_plant(self, key, default):
-        return float(self.env["ir.config_parameter"].sudo().get_param("factory3d.base.plant_%s_m" % key, default))
+        return float(self.env["ir.config_parameter"].sudo().get_param("td.base.plant_%s_m" % key, default))
 
     def _default_chp(self, key, default):
-        passport = self.env["f3d.equipment.passport"].sudo().search([("role", "=", "chp")], limit=1)
+        passport = self.env["td.equipment.passport"].sudo().search([("role", "=", "chp")], limit=1)
         if not passport:
             return default
         if key == "power_kw":
@@ -114,7 +114,7 @@ class F3dBmsHeatBalance(models.Model):
         string="КГУ: теплова при 50 %, кВт", default=lambda s: s._default_chp("heat_kw_50", 497.0)
     )
     chp_min_load = fields.Float(string="КГУ: мінімальне навантаження", digits=(4, 2), default=0.5)
-    line_ids = fields.One2many("f3d.bms.heat.balance.line", "balance_id", string="Складові")
+    line_ids = fields.One2many("td.bms.heat.balance.line", "balance_id", string="Складові")
     total_raw = fields.Float(digits=(10, 2), readonly=True)
     total_kw = fields.Integer(string="Навантаження при розрахунковій, кВт", readonly=True)
     capacity_kw = fields.Integer(string="Котли, кВт", readonly=True)
@@ -124,17 +124,17 @@ class F3dBmsHeatBalance(models.Model):
     computed_at = fields.Datetime(readonly=True)
     boiler_equipment_id = fields.Many2one("maintenance.equipment", string="Котельня", ondelete="set null")
     chp_equipment_id = fields.Many2one("maintenance.equipment", string="КГУ", ondelete="set null")
-    outdoor_signal_id = fields.Many2one("f3d.signal", string="Сигнал: зовнішня температура", ondelete="set null")
-    boiler_state_signal_id = fields.Many2one("f3d.signal", string="Сигнал: стан котельні", ondelete="set null")
-    boiler_supply_signal_id = fields.Many2one("f3d.signal", string="Сигнал: подача", ondelete="set null")
-    boiler_return_signal_id = fields.Many2one("f3d.signal", string="Сигнал: зворот", ondelete="set null")
-    boiler_heat_signal_id = fields.Many2one("f3d.signal", string="Сигнал: тепло котлів", ondelete="set null")
-    silo_signal_id = fields.Many2one("f3d.signal", string="Сигнал: заповнення бункера", ondelete="set null")
-    chp_heat_signal_id = fields.Many2one("f3d.signal", string="Сигнал: тепло КГУ", ondelete="set null")
-    chp_el_signal_id = fields.Many2one("f3d.signal", string="Сигнал: електрична потужність КГУ", ondelete="set null")
-    mains_signal_id = fields.Many2one("f3d.signal", string="Сигнал: мережа", ondelete="set null")
-    fire_signal_id = fields.Many2one("f3d.signal", string="Сигнал: пожежна сигналізація", ondelete="set null")
-    check_signal_id = fields.Many2one("f3d.signal", string="Сигнал: перевірка", ondelete="set null")
+    outdoor_signal_id = fields.Many2one("td.signal", string="Сигнал: зовнішня температура", ondelete="set null")
+    boiler_state_signal_id = fields.Many2one("td.signal", string="Сигнал: стан котельні", ondelete="set null")
+    boiler_supply_signal_id = fields.Many2one("td.signal", string="Сигнал: подача", ondelete="set null")
+    boiler_return_signal_id = fields.Many2one("td.signal", string="Сигнал: зворот", ondelete="set null")
+    boiler_heat_signal_id = fields.Many2one("td.signal", string="Сигнал: тепло котлів", ondelete="set null")
+    silo_signal_id = fields.Many2one("td.signal", string="Сигнал: заповнення бункера", ondelete="set null")
+    chp_heat_signal_id = fields.Many2one("td.signal", string="Сигнал: тепло КГУ", ondelete="set null")
+    chp_el_signal_id = fields.Many2one("td.signal", string="Сигнал: електрична потужність КГУ", ondelete="set null")
+    mains_signal_id = fields.Many2one("td.signal", string="Сигнал: мережа", ondelete="set null")
+    fire_signal_id = fields.Many2one("td.signal", string="Сигнал: пожежна сигналізація", ondelete="set null")
+    check_signal_id = fields.Many2one("td.signal", string="Сигнал: перевірка", ondelete="set null")
     # --- живі значення (R-15, R-16) ---
     outdoor_c = fields.Float(string="Зовнішня, °C", digits=(4, 1), compute="_compute_live")
     heat_need_kw = fields.Float(string="Потреба зараз, кВт", digits=(8, 1), compute="_compute_live")
@@ -195,7 +195,7 @@ class F3dBmsHeatBalance(models.Model):
     # --- проєктний розрахунок ---
     def action_recompute(self):
         units = [
-            {"kind": u.kind, "airflow_nom": u.airflow_nom} for u in self.env["f3d.bms.hvac.unit"].sudo().search([])
+            {"kind": u.kind, "airflow_nom": u.airflow_nom} for u in self.env["td.bms.hvac.unit"].sudo().search([])
         ]
         for rec in self:
             res = heat.design_balance(rec._params(), units)
@@ -253,7 +253,7 @@ class F3dBmsHeatBalance(models.Model):
             return sig.last_value if _is_live(sig) else None
 
         outdoor = val(self.outdoor_signal_id)
-        need = sum(self.env["f3d.bms.hvac.unit"]._f3d_bms_heat_now().values())
+        need = sum(self.env["td.bms.hvac.unit"]._f3d_bms_heat_now().values())
         chp, source = heat.chp_heat(val(self.chp_el_signal_id), p, val(self.chp_heat_signal_id))
         state_sig = self.boiler_state_signal_id
         state_text = state_sig.last_text if _is_live(state_sig) else None
@@ -290,11 +290,11 @@ class F3dBmsHeatBalance(models.Model):
 
 
 class F3dBmsHeatBalanceLine(models.Model):
-    _name = "f3d.bms.heat.balance.line"
+    _name = "td.bms.heat.balance.line"
     _description = "Будівля: складова теплового балансу"
     _order = "balance_id, sequence"
 
-    balance_id = fields.Many2one("f3d.bms.heat.balance", required=True, ondelete="cascade", index=True)
+    balance_id = fields.Many2one("td.bms.heat.balance", required=True, ondelete="cascade", index=True)
     sequence = fields.Integer(default=10)
     key = fields.Selection(
         [

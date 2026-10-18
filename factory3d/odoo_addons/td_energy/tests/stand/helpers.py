@@ -1,4 +1,4 @@
-"""Клієнти стенду factory3d_energy: XML-RPC до Odoo і REST керування емулятора (/sim/v1)."""
+"""Клієнти стенду td_energy: XML-RPC до Odoo і REST керування емулятора (/sim/v1)."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class Odoo:
             lines = [ln for ln in str(fault.faultString).strip().splitlines() if ln.strip()]
             raise OdooFault(f"{model}.{method}: {lines[-1] if lines else fault.faultCode}") from None
 
-    def param(self, key: str, value: str | None, prefix: str = "factory3d.energy."):
+    def param(self, key: str, value: str | None, prefix: str = "td.energy."):
         full = prefix + key
         ids = self.k("ir.config_parameter", "search", [("key", "=", full)])
         if value is None:
@@ -57,7 +57,7 @@ class Odoo:
 
     def signal(self, code: str) -> dict:
         rows = self.k(
-            "f3d.signal",
+            "td.signal",
             "search_read",
             [("code", "=", code)],
             ["last_value", "last_ts", "last_quality", "status"],
@@ -72,11 +72,11 @@ class Odoo:
             for r in self.k(
                 "ir.model.data",
                 "search_read",
-                [("module", "=", "factory3d_energy"), ("model", "=", "f3d.source")],
+                [("module", "=", "td_energy"), ("model", "=", "td.source")],
                 ["res_id"],
             )
         ]
-        return self.k("f3d.source", "search", [("id", "in", ids), ("code", "!=", "EN-DERIVED")])
+        return self.k("td.source", "search", [("id", "in", ids), ("code", "!=", "EN-DERIVED")])
 
     def ref_id(self, xmlid: str) -> int:
         mod, name = xmlid.split(".", 1)

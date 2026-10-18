@@ -4,24 +4,24 @@ from odoo import api, fields, models
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
-    f3d_visit_id = fields.Many2one("f3d.yard.visit", string="Рейс двору", related="batch_id.f3d_visit_id")
-    f3d_net_weight_kg = fields.Float(string="Нетто з автоваг, кг", digits=(12, 1), readonly=True, copy=False)
-    f3d_expected_weight_kg = fields.Float(
+    td_visit_id = fields.Many2one("td.yard.visit", string="Рейс двору", related="batch_id.td_visit_id")
+    td_net_weight_kg = fields.Float(string="Нетто з автоваг, кг", digits=(12, 1), readonly=True, copy=False)
+    td_expected_weight_kg = fields.Float(
         string="Маса за документом, кг", digits=(12, 1), compute="_compute_f3d_expected"
     )
-    f3d_weight_check = fields.Selection(
+    td_weight_check = fields.Selection(
         [("none", "Не зважено"), ("ok", "У допуску"), ("deviation", "Відхилення"), ("no_reference", "Немає еталона")],
         string="Звірка ваги",
         readonly=True,
         copy=False,
         default="none",
     )
-    f3d_weight_deviation_pct = fields.Float(string="Відхилення, %", digits=(6, 2), readonly=True, copy=False)
+    td_weight_deviation_pct = fields.Float(string="Відхилення, %", digits=(6, 2), readonly=True, copy=False)
 
     @api.depends("move_ids.product_qty", "move_ids.quantity", "move_ids.product_id.weight", "state")
     def _compute_f3d_expected(self):
         for picking in self:
-            picking.f3d_expected_weight_kg = picking._f3d_expected_kg()[0]
+            picking.td_expected_weight_kg = picking._f3d_expected_kg()[0]
 
     def _f3d_expected_kg(self):
         """(маса документа, кг; чи є еталон — усі рухи мають product.weight > 0) — R-12 п. 2."""
@@ -46,8 +46,8 @@ class StockPicking(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Рейс",
-            "res_model": "f3d.yard.visit",
-            "res_id": self.f3d_visit_id.id,
+            "res_model": "td.yard.visit",
+            "res_id": self.td_visit_id.id,
             "view_mode": "form",
         }
 
@@ -56,7 +56,7 @@ class StockPicking(models.Model):
         res = super()._action_done()
         if not self.env.context.get("f3d_yard_no_auto"):
             for batch in batches:
-                visit = batch.f3d_visit_id.sudo()
+                visit = batch.td_visit_id.sudo()
                 if not visit or visit.state not in ("queued", "at_dock", "handling"):
                     continue
                 if any(p.state not in ("done", "cancel") for p in batch.picking_ids):
@@ -77,7 +77,7 @@ class StockMoveLine(models.Model):
         if self.env.context.get("f3d_yard_no_auto"):
             return
         for line in self.filtered(lambda ml: ml.quantity > 0 and ml.picking_id.batch_id):
-            visit = line.picking_id.batch_id.f3d_visit_id.sudo()
+            visit = line.picking_id.batch_id.td_visit_id.sudo()
             if visit.state in ("queued", "at_dock"):
                 visit.action_start_handling(auto=True)
 

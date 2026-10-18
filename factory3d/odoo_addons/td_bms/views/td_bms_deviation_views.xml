@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_bms_deviation_list" model="ir.ui.view">
-        <field name="name">f3d.bms.deviation.list</field>
-        <field name="model">f3d.bms.deviation</field>
+    <record id="view_td_bms_deviation_list" model="ir.ui.view">
+        <field name="name">td.bms.deviation.list</field>
+        <field name="model">td.bms.deviation</field>
         <field name="arch" type="xml">
             <list string="Відхилення" create="false" decoration-danger="state == 'open'">
                 <field name="started"/>
@@ -21,9 +21,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_deviation_graph" model="ir.ui.view">
-        <field name="name">f3d.bms.deviation.graph</field>
-        <field name="model">f3d.bms.deviation</field>
+    <record id="view_td_bms_deviation_graph" model="ir.ui.view">
+        <field name="name">td.bms.deviation.graph</field>
+        <field name="model">td.bms.deviation</field>
         <field name="arch" type="xml">
             <graph string="Відхилення" type="bar">
                 <field name="rule"/>
@@ -31,9 +31,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_deviation_pivot" model="ir.ui.view">
-        <field name="name">f3d.bms.deviation.pivot</field>
-        <field name="model">f3d.bms.deviation</field>
+    <record id="view_td_bms_deviation_pivot" model="ir.ui.view">
+        <field name="name">td.bms.deviation.pivot</field>
+        <field name="model">td.bms.deviation</field>
         <field name="arch" type="xml">
             <pivot string="Відхилення">
                 <field name="rule" type="row"/>
@@ -43,9 +43,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_deviation_form" model="ir.ui.view">
-        <field name="name">f3d.bms.deviation.form</field>
-        <field name="model">f3d.bms.deviation</field>
+    <record id="view_td_bms_deviation_form" model="ir.ui.view">
+        <field name="name">td.bms.deviation.form</field>
+        <field name="model">td.bms.deviation</field>
         <field name="arch" type="xml">
             <form string="Відхилення" create="false" delete="false">
                 <header>
@@ -78,9 +78,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_deviation_search" model="ir.ui.view">
-        <field name="name">f3d.bms.deviation.search</field>
-        <field name="model">f3d.bms.deviation</field>
+    <record id="view_td_bms_deviation_search" model="ir.ui.view">
+        <field name="name">td.bms.deviation.search</field>
+        <field name="model">td.bms.deviation</field>
         <field name="arch" type="xml">
             <search string="Відхилення">
                 <field name="object_code"/>
@@ -105,9 +105,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_bms_deviation" model="ir.actions.act_window">
+    <record id="action_td_bms_deviation" model="ir.actions.act_window">
         <field name="name">Відхилення</field>
-        <field name="res_model">f3d.bms.deviation</field>
+        <field name="res_model">td.bms.deviation</field>
         <field name="view_mode">list,graph,pivot,form</field>
         <field name="context">{'search_default_open': 1}</field>
     </record>

@@ -7,7 +7,7 @@ KEY_RE = re.compile(r"^[A-Za-z0-9_]+$")  # у макеті є ключ evac_dist
 
 
 class F3dFireNorm(models.Model):
-    _name = "f3d.fire.norm"
+    _name = "td.fire.norm"
     _description = "Пожежна безпека: норма"
     _order = "group, sequence, key"
     _rec_name = "name"
@@ -69,4 +69,4 @@ class F3dFireNorm(models.Model):
     def _after_change(self, changed):
         self.env.registry.clear_cache()
         if changed & {"value", "value_set", "active", "key"}:
-            self.env["f3d.fire.panel"]._schedule_compliance()
+            self.env["td.fire.panel"]._schedule_compliance()

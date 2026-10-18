@@ -1,4 +1,4 @@
-"""R-24 (CT-11): розбір адрес каталогу емулятора factory3d_iot_sim в `address` сигналу (SPEC Додаток A.1).
+"""R-24 (CT-11): розбір адрес каталогу емулятора td_iot_sim в `address` сигналу (SPEC Додаток A.1).
 
 Чисті функції без ORM: `parse_sim_address`, `source_key` (Додаток C.3), `module_for_code` / `kind_for_mode`
 (R-15), `equipment_code`, `parse_nominal`, `parse_enum_map`.

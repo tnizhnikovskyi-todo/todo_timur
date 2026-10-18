@@ -2,8 +2,8 @@ from unittest.mock import Mock, patch
 
 from odoo.tests import BaseCase, tagged
 
-from odoo.addons.factory3d_viewer.tools.cycle_check import check
-from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+from odoo.addons.td_viewer3d.tools.cycle_check import check
+from odoo.addons.td_viewer3d.tools.payload import PayloadBuilder
 
 from .common import F3dViewerBase, F3dViewerCase
 
@@ -37,16 +37,16 @@ class TestCycleCheck(F3dViewerCase):
                                      (4, self.env.ref("mrp.group_mrp_user").id)]
 
     def test_ok_on_demo(self):
-        if "f3d.viewer.provider.logistics" not in self.env:
+        if "td.viewer.provider.logistics" not in self.env:
             self.skipTest("немає вбудованих провайдерів (W1b)")
         data = PayloadBuilder(self.env(user=self.user_admin), full=True).build()
         self.assertEqual(check(data), [])
 
     def test_wizard_ok_on_demo(self):
         """AC-36: «Перевірка циклу → Запустити» на демо-базі."""
-        if "f3d.viewer.provider.logistics" not in self.env:
+        if "td.viewer.provider.logistics" not in self.env:
             self.skipTest("немає вбудованих провайдерів (W1b)")
-        wiz = self.env["f3d.viewer.cycle.check"].with_user(self.user_admin).create({})
+        wiz = self.env["td.viewer.cycle.check"].with_user(self.user_admin).create({})
         wiz.action_run()
         self.assertEqual((wiz.state, wiz.issue_count), ("ok", 0))
 
@@ -56,7 +56,7 @@ class TestCycleCheck(F3dViewerCase):
         if not picking:
             self.skipTest("немає WH/OUT/00412")
         picking.with_context(tracking_disable=True).action_cancel()
-        wiz = self.env["f3d.viewer.cycle.check"].with_user(self.user_admin).create({})
+        wiz = self.env["td.viewer.cycle.check"].with_user(self.user_admin).create({})
         wiz.action_run()
         self.assertEqual(wiz.state, "issues")
         self.assertIn("S00087", wiz.result_html)
@@ -67,8 +67,8 @@ class TestCycleCheck(F3dViewerCase):
 class TestCycleCheckWizard(F3dViewerBase):
 
     def _run(self, issues, payload):
-        wiz = self.env["f3d.viewer.cycle.check"].with_user(self.user_admin).create({})
-        base = "odoo.addons.factory3d_viewer.wizard.cycle_check_wizard"
+        wiz = self.env["td.viewer.cycle.check"].with_user(self.user_admin).create({})
+        base = "odoo.addons.td_viewer3d.wizard.cycle_check_wizard"
         with patch(base + ".check", return_value=issues), \
                 patch(base + ".PayloadBuilder.build", return_value=payload):
             wiz.action_run()
@@ -90,10 +90,10 @@ class TestCycleCheckWizard(F3dViewerBase):
         self.assertTrue(wiz.ran_at)
 
     def test_non_admin_uses_own_payload_user(self):
-        wiz = self.env["f3d.viewer.cycle.check"].with_user(self.user_manager).create({})
+        wiz = self.env["td.viewer.cycle.check"].with_user(self.user_manager).create({})
         wiz.payload_user_id = self.user_kiosk
         seen = []
-        base = "odoo.addons.factory3d_viewer.wizard.cycle_check_wizard"
+        base = "odoo.addons.td_viewer3d.wizard.cycle_check_wizard"
         with patch(base + ".check", return_value=[]), patch(
                 base + ".PayloadBuilder",
                 side_effect=lambda env, **kw: seen.append(env.uid) or Mock(build=lambda: {})):

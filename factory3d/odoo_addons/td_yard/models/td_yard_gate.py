@@ -1,4 +1,4 @@
-"""M-03 f3d.yard.gate: КПП / шлагбаум (SPEC R-15…R-17)."""
+"""M-03 td.yard.gate: КПП / шлагбаум (SPEC R-15…R-17)."""
 
 import logging
 from datetime import timedelta
@@ -8,7 +8,7 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import params as P
 from ..tools import tz
-from .f3d_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _f3d_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -42,12 +42,12 @@ def _fresh(sig, now, max_age_s):
 
 
 class F3dYardGate(models.Model):
-    _name = "f3d.yard.gate"
-    _inherit = ["f3d.scene.mixin", "mail.thread", "mail.activity.mixin"]
+    _name = "td.yard.gate"
+    _inherit = ["td.scene.mixin", "mail.thread", "mail.activity.mixin"]
     _description = "Двір: КПП і шлагбаум"
-    _order = "sequence, f3d_code"
+    _order = "sequence, td_code"
     _rec_name = "name"
-    _rec_names_search = ["name", "f3d_code", "camera_code"]
+    _rec_names_search = ["name", "td_code", "camera_code"]
     _f3d_kind = "other"
     STATES = [
         ("closed", "Закритий"),
@@ -57,7 +57,7 @@ class F3dYardGate(models.Model):
         ("unknown", "Невідомо"),
     ]
 
-    f3d_code = fields.Char(required=True)
+    td_code = fields.Char(required=True)
     name = fields.Char(string="Назва", size=64, required=True)
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
@@ -69,17 +69,17 @@ class F3dYardGate(models.Model):
     pos_x = fields.Float(string="X, м", digits=(8, 2))
     pos_y = fields.Float(string="Y, м", digits=(8, 2))
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
-    zone_id = fields.Many2one("f3d.zone", string="Зона", ondelete="set null")
+    zone_id = fields.Many2one("td.zone", string="Зона", ondelete="set null")
     camera_code = fields.Char(string="Камера LPR", size=32, index=True, help="sensorProviderID камери Axis (CAM-05)")
     camera_equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання камери", ondelete="set null")
-    source_id = fields.Many2one("f3d.source", string="Модуль I/O", ondelete="set null")
-    state_signal_id = fields.Many2one("f3d.signal", string="Сигнал: стріла відкрита", ondelete="set null")
-    loop_signal_id = fields.Many2one("f3d.signal", string="Сигнал: петля", ondelete="set null")
-    photocell_signal_id = fields.Many2one("f3d.signal", string="Сигнал: фотоелемент", ondelete="set null")
-    passes_signal_id = fields.Many2one("f3d.signal", string="Сигнал: лічильник проїздів", ondelete="set null")
-    cmd_open_signal_id = fields.Many2one("f3d.signal", string="Команда: відкрити", ondelete="set null")
-    cmd_close_signal_id = fields.Many2one("f3d.signal", string="Команда: закрити", ondelete="set null")
-    cmd_hold_signal_id = fields.Many2one("f3d.signal", string="Команда: тримати", ondelete="set null")
+    source_id = fields.Many2one("td.source", string="Модуль I/O", ondelete="set null")
+    state_signal_id = fields.Many2one("td.signal", string="Сигнал: стріла відкрита", ondelete="set null")
+    loop_signal_id = fields.Many2one("td.signal", string="Сигнал: петля", ondelete="set null")
+    photocell_signal_id = fields.Many2one("td.signal", string="Сигнал: фотоелемент", ondelete="set null")
+    passes_signal_id = fields.Many2one("td.signal", string="Сигнал: лічильник проїздів", ondelete="set null")
+    cmd_open_signal_id = fields.Many2one("td.signal", string="Команда: відкрити", ondelete="set null")
+    cmd_close_signal_id = fields.Many2one("td.signal", string="Команда: закрити", ondelete="set null")
+    cmd_hold_signal_id = fields.Many2one("td.signal", string="Команда: тримати", ondelete="set null")
     invert_di = fields.Boolean(
         string="Інверсія входів", default=False, help="Контакти NC: 0 = активний стан (ризик монтажу ARCH §5.3)"
     )
@@ -102,12 +102,12 @@ class F3dYardGate(models.Model):
     last_tailgate_at = fields.Datetime(readonly=True)
     last_plate = fields.Char(string="Останній номер", size=16, readonly=True, groups=GRP_SEC)
     last_plate_at = fields.Datetime(readonly=True)
-    pending_visit_id = fields.Many2one("f3d.yard.visit", string="Очікує проїзду", readonly=True, ondelete="set null")
-    open_cmd_id = fields.Many2one("f3d.command", readonly=True, ondelete="set null")
+    pending_visit_id = fields.Many2one("td.yard.visit", string="Очікує проїзду", readonly=True, ondelete="set null")
+    open_cmd_id = fields.Many2one("td.command", readonly=True, ondelete="set null")
     opened_at = fields.Datetime(readonly=True)
     hold_until = fields.Datetime(string="Утримання до", readonly=True)
-    last_command_id = fields.Many2one("f3d.command", readonly=True, ondelete="set null")
-    command_ids = fields.One2many("f3d.command", "f3d_yard_gate_id", string="Команди")
+    last_command_id = fields.Many2one("td.command", readonly=True, ondelete="set null")
+    command_ids = fields.One2many("td.command", "td_yard_gate_id", string="Команди")
     can_command = fields.Boolean(compute="_compute_can_command")
     command_block_reason = fields.Char(compute="_compute_can_command")
     note = fields.Text()
@@ -135,30 +135,30 @@ class F3dYardGate(models.Model):
         gate = self.sudo()
         if not P.get_bool(self.env, "write_enabled"):
             return (
-                "Команди на шлагбаум вимкнено (factory3d.yard.write_enabled). "
+                "Команди на шлагбаум вимкнено (td.yard.write_enabled). "
                 "Відкрийте шлагбаум з пульта CAME і натисніть «Відкрито вручну»."
             )
         sig = gate[KIND_SIGNAL[kind]]
         if not (sig and sig.active and sig.write_enabled and sig.source_id.write_enabled):
             return "Сигнал команди «%s» для %s не налаштований або запис на сигналі/джерелі вимкнено." % (
                 KIND_LABELS[kind],
-                gate.f3d_code,
+                gate.td_code,
             )
         if kind in ("open", "close"):
             ph = gate.photocell_signal_id
             if not _fresh(ph, now, P.get_int(self.env, "signal_max_age_s")):
                 return "Немає свіжих даних фотоелемента %s (останні: %s)." % (
-                    ph.code if ph else gate.f3d_code,
+                    ph.code if ph else gate.td_code,
                     tz.local_hm(ph.last_ts) if ph and ph.last_ts else "—",
                 )
             if (ph.last_value >= 0.5) != gate.invert_di:
                 return "Під стрілою перешкода (фотоелемент %s) — команда заборонена." % ph.code
         busy = (
-            self.env["f3d.command"]
+            self.env["td.command"]
             .sudo()
             .search(
                 [
-                    ("f3d_yard_gate_id", "=", gate.id),
+                    ("td_yard_gate_id", "=", gate.id),
                     ("state", "in", ("queued", "sent")),
                     ("requested_at", ">", now - timedelta(seconds=P.get_int(self.env, "cmd_cooldown_s"))),
                 ],
@@ -168,11 +168,11 @@ class F3dYardGate(models.Model):
         )
         if busy:
             return "Попередня команда «%s» ще виконується (з %s)." % (
-                KIND_LABELS.get(busy.f3d_yard_kind, busy.f3d_yard_kind or "?"),
+                KIND_LABELS.get(busy.td_yard_kind, busy.td_yard_kind or "?"),
                 tz.local_hm(busy.requested_at),
             )
         if reason in AUTO_REASONS and gate.state == "error":
-            return "Ворота %s у стані помилки — авто-відкриття вимкнено." % gate.f3d_code
+            return "Ворота %s у стані помилки — авто-відкриття вимкнено." % gate.td_code
         return None
 
     def action_command(self, kind, visit=None, reason="manual"):
@@ -187,7 +187,7 @@ class F3dYardGate(models.Model):
         else:
             raise ValueError("Невідома причина команди: %r" % reason)
         gate = self.sudo()
-        self.env.cr.execute("SELECT id FROM f3d_yard_gate WHERE id = %s FOR UPDATE", [gate.id])
+        self.env.cr.execute("SELECT id FROM td_yard_gate WHERE id = %s FOR UPDATE", [gate.id])
         now = fields.Datetime.now()
         error = gate._f3d_yard_check(kind, reason, now)
         if error:
@@ -195,7 +195,7 @@ class F3dYardGate(models.Model):
         visit = visit.sudo() if visit else None
         requested_by = self.env.uid if reason == "manual" else self.env.ref("base.user_root").id
         cmd = (
-            self.env["f3d.command"]
+            self.env["td.command"]
             .sudo()
             .create(
                 {
@@ -205,11 +205,11 @@ class F3dYardGate(models.Model):
                     "requested_at": now,
                     "expires_at": now + timedelta(seconds=P.get_int(self.env, "cmd_expire_s")),
                     "requested_by": requested_by,
-                    "note": "%s %s · %s" % (kind, gate.f3d_code, (visit.name if visit else "") or ""),
-                    "f3d_yard_gate_id": gate.id,
-                    "f3d_yard_visit_id": visit.id if visit else False,
-                    "f3d_yard_kind": kind,
-                    "f3d_yard_reason": reason,
+                    "note": "%s %s · %s" % (kind, gate.td_code, (visit.name if visit else "") or ""),
+                    "td_yard_gate_id": gate.id,
+                    "td_yard_visit_id": visit.id if visit else False,
+                    "td_yard_kind": kind,
+                    "td_yard_reason": reason,
                 }
             )
         )
@@ -223,7 +223,7 @@ class F3dYardGate(models.Model):
         gate.write(vals)
         if kind == "open":
             gate._f3d_yard_count_permit(visit)
-        text = "Команда «%s» %s (#%s) · %s" % (KIND_LABELS[kind], gate.f3d_code, cmd.id, CMD_STATE_LABELS[cmd.state])
+        text = "Команда «%s» %s (#%s) · %s" % (KIND_LABELS[kind], gate.td_code, cmd.id, CMD_STATE_LABELS[cmd.state])
         gate.message_post(body=text)
         if visit:
             visit.message_post(body=text)
@@ -282,9 +282,9 @@ class F3dYardGate(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Команди",
-            "res_model": "f3d.command",
+            "res_model": "td.command",
             "view_mode": "list,form",
-            "domain": [("f3d_yard_gate_id", "=", self.id)],
+            "domain": [("td_yard_gate_id", "=", self.id)],
         }
 
     def _f3d_yard_count_permit(self, visit=None):
@@ -374,7 +374,7 @@ class F3dYardGate(models.Model):
                         "handling",
                         "weighed",
                     ):
-                        visit.sudo().action_leave(ts, note="виїзд за петлею %s" % gate.f3d_code)
+                        visit.sudo().action_leave(ts, note="виїзд за петлею %s" % gate.td_code)
                     gate.pending_visit_id = False
                 gate.loop_occupied = occ
             elif role == "photocell":
@@ -485,7 +485,7 @@ class F3dYardGate(models.Model):
             self.activity_schedule(
                 "mail.mail_activity_data_warning",
                 user_id=self.responsible_id.id,
-                summary="Помилка воріт %s" % self.f3d_code,
+                summary="Помилка воріт %s" % self.td_code,
                 note=self.last_error,
             )
 
@@ -497,5 +497,5 @@ class F3dYardGate(models.Model):
                 with self.env.cr.savepoint():
                     gate._f3d_yard_refresh_state()
             except Exception:
-                _logger.exception("f3d_yard: оновлення стану воріт %s", gate.f3d_code)
+                _logger.exception("f3d_yard: оновлення стану воріт %s", gate.td_code)
         return True

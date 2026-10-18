@@ -1,6 +1,6 @@
-# factory3d_constructor_viewer — технічне рішення
+# td_constructor_viewer3d — технічне рішення
 
-Міст (`auto_install`) між модулями `factory3d_constructor` («Конструктор») і `factory3d_viewer` («Переглядач»).
+Міст (`auto_install`) між модулями `td_constructor` («Конструктор») і `td_viewer3d` («Переглядач»).
 Етап 2 за `build/constructor/PHASE2_VIEWER.md` (рішення CD-25): що опубліковано в «Конструкторі», те й видно у «Переглядачі».
 Будівля, інженерія й живі дані лишаються як є. Документ короткий: власних моделей, меню й прав немає.
 
@@ -9,8 +9,8 @@
 | Етап | Стан |
 |---|---|
 | ТР, SPEC | цей документ і [SPEC.md](SPEC.md) |
-| Розробка | `odoo_addons/factory3d_constructor_viewer`, гілка `claude/f3d-constructor-p2` |
-| Залежності | `factory3d_constructor`, `factory3d_viewer` (Odoo: `bus` через viewer) |
+| Розробка | `odoo_addons/td_constructor_viewer3d`, гілка `claude/f3d-constructor-p2` |
+| Залежності | `td_constructor`, `td_viewer3d` (Odoo: `bus` через viewer) |
 
 ## 1. Опис процесу і функціональні вимоги
 
@@ -24,25 +24,25 @@
 
 ## 2. Технічна реалізація
 
-1. **Сервер.** Провайдер `f3d.viewer.provider.layout` (`_f3d_sequence = 180`, група `group_f3d_user`) за duck-typing контрактом
+1. **Сервер.** Провайдер `td.viewer.provider.layout` (`_f3d_sequence = 180`, група `group_td_user`) за duck-typing контрактом
    viewer R-01 п. 3. `_f3d_viewer_collect` кладе в `/f3d/viewer/data` ключ `layout`; `_f3d_viewer_delta` — повну заміну `layout`
-   (або `null`) при події `f3d.layout.version`. `f3d.layout.version` (create/unlink) шле подію шини (`kind=state`).
+   (або `null`) при події `td.layout.version`. `td.layout.version` (create/unlink) шле подію шини (`kind=state`).
 2. **Різниця.** `tools/layout.py`: знімок бази (версія-імпорт seed, `is_seed`) проти діючої версії площадки; ключ — код розміщення,
-   префікс місця й коди комірок. Положення бази — з опису сцени `factory3d_constructor/data/scene_inventory.json`
+   префікс місця й коди комірок. Положення бази — з опису сцени `td_constructor/data/scene_inventory.json`
    (код → `x, y, z, L, W, H, yaw`; те, що запечено в GLB), без нього — зі знімка бази.
 3. **Клієнт.** Ядро viewer має лише точку розширення (`registerViewerExtension`, viewer R-25). Розширення моста
    (`static/src/layout/*.js`) реєструється з модуля й застосовує `D.layout` до сцени: `layout.js` (зсув, ховання, додане),
    `slot_view.js` (каркас і комірки місця), `generic_models.js` (умовні моделі за категорією, перенесені з прототипу).
 4. **Кіоск.** Той самий payload (токен, без сесії); GLB варіанта віддає `/f3d/kiosk/<токен>/layout/model/<variant_id>`
    (контролер моста). Немає права читати версії — ключа `layout` немає, без помилок.
-5. **Бандли.** JS моста додається у `web.assets_backend` і `factory3d_viewer.assets_kiosk`; HOOT — у `web.assets_unit_tests`.
+5. **Бандли.** JS моста додається у `web.assets_backend` і `td_viewer3d.assets_kiosk`; HOOT — у `web.assets_unit_tests`.
 
 ## 3. Налаштування системи
 
 | Об'єкт | Параметр | Значення | Коментар |
 |---|---|---|---|
 | Модуль | `auto_install` | так | ставиться разом із обома залежностями |
-| Права | групи | без нових | розділ `layout` бачить `group_f3d_user`; читання версій — права `factory3d_constructor` |
+| Права | групи | без нових | розділ `layout` бачить `group_td_user`; читання версій — права `td_constructor` |
 | Дані | `scene_inventory.json` | кладе «Конструктор» | немає файла — база береться зі знімка версії-імпорту |
 
 ## 4. Інструкція
@@ -62,5 +62,5 @@
 
 ## 6. План сборки агентами
 
-Один воркер: бекенд моста + клієнт + тести; файли лише модуля `factory3d_constructor_viewer`, точка розширення в
-`factory3d_viewer/static/src/viewer/{core,stock_load}.js`, HOOT `factory3d_viewer/static/tests/hoot/extension.test.js`.
+Один воркер: бекенд моста + клієнт + тести; файли лише модуля `td_constructor_viewer3d`, точка розширення в
+`td_viewer3d/static/src/viewer/{core,stock_load}.js`, HOOT `td_viewer3d/static/tests/hoot/extension.test.js`.

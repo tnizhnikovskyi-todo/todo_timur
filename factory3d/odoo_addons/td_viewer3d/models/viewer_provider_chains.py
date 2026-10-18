@@ -17,8 +17,8 @@ UPSTREAM = ("stock", "production", "logistics", "quality")
 
 class F3dViewerProviderChains(models.AbstractModel):
     """M-01g: ланцюжки, шляхи матеріалів, живі поля зон (R-10…R-13)."""
-    _name = "f3d.viewer.provider.chains"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.chains"
+    _inherit = "td.viewer.provider"
     _description = "3D: постачальник — ланцюжки й зони"
 
     _f3d_sequence = 70
@@ -67,9 +67,9 @@ class F3dViewerProviderChains(models.AbstractModel):
 
     @api.model
     def _f3d_chains_zones(self, payload, ctx):
-        """R-13 (X-29): живі поля всіх активних `f3d.zone`, злиті глибоко зі статичним записом."""
+        """R-13 (X-29): живі поля всіх активних `td.zone`, злиті глибоко зі статичним записом."""
         env = self.env
-        if not payload_tools.access_ok(env, "f3d.zone"):
+        if not payload_tools.access_ok(env, "td.zone"):
             return
         static = (ctx.get("static") or {}).get("zones") or {}
         known = set(payload["locations"]) if isinstance(payload.get("locations"), dict) else None
@@ -78,8 +78,8 @@ class F3dViewerProviderChains(models.AbstractModel):
             if p.get("dock"):
                 by_dock.setdefault(p["dock"], []).append(p["name"])
         zones = payload.setdefault("zones", {})
-        for zone in env["f3d.zone"].search_fetch([("active", "=", True)], order="sequence, f3d_code"):
-            code = zone.f3d_code
+        for zone in env["td.zone"].search_fetch([("active", "=", True)], order="sequence, td_code"):
+            code = zone.td_code
             st = static.get(code)
             rec = {"name": zone.name, "zone_type": zone.zone_type}
             if zone.polygon:
@@ -94,8 +94,8 @@ class F3dViewerProviderChains(models.AbstractModel):
             if st is not None:
                 locs, wcs = list(st.get("locations") or []), list(st.get("workcenters") or [])
             else:
-                locs = [c for c in zone.location_ids.mapped("f3d_code") if c]
-                wcs = [c for c in zone.workcenter_ids.mapped("f3d_code") if c]
+                locs = [c for c in zone.location_ids.mapped("td_code") if c]
+                wcs = [c for c in zone.workcenter_ids.mapped("td_code") if c]
             if known is not None:
                 locs = [c for c in locs if c in known]
             rec["locations"], rec["workcenters"] = locs, wcs

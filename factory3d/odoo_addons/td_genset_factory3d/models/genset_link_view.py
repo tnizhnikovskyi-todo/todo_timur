@@ -6,7 +6,7 @@ from ..adapters import telemetry
 class F3dGensetLinkView(models.Model):
     """R-05 (з уже прочитаних значень) і R-13 (коди критичних споживачів) для провайдера переглядача."""
 
-    _inherit = "f3d.genset.link"
+    _inherit = "td.genset.link"
 
     def _island_state_from_signals(self, vals=None, pos=None, s1=None):
         """R-05 без нового читання знімка. `vals` — {leaf: значення} щойно прочитаних сигналів генератора;
@@ -39,13 +39,13 @@ class F3dGensetLinkView(models.Model):
     def _critical_signal_codes(self):
         """Коди сигналів критичних споживачів R-04 (для умови дельти R-13 п. 1в)."""
         codes = []
-        if "f3d.energy.node" in self.env:
-            nodes = self.env["f3d.energy.node"].sudo().search_read([("is_critical", "=", True)], ["code", "kind"])
+        if "td.energy.node" in self.env:
+            nodes = self.env["td.energy.node"].sudo().search_read([("is_critical", "=", True)], ["code", "kind"])
             for node in nodes:
                 folder = {"consumer": "consumers", "line": "lines"}.get(node["kind"])
                 if folder:
                     codes.append("energy/%s/%s/p_now" % (folder, node["code"]))
         if not codes:
-            raw = self.env["ir.config_parameter"].sudo().get_param("factory3d.genset.critical_codes", "") or ""
+            raw = self.env["ir.config_parameter"].sudo().get_param("td.genset.critical_codes", "") or ""
             codes = [c.strip() for c in raw.split(",") if c.strip()]
         return codes

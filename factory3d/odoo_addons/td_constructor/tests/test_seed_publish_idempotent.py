@@ -12,13 +12,13 @@ class SeedPublishCase(F3DConstructorCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
-        cls.seed_site = cls.env['f3d.site'].search([('seed_key', '=', 'main_demo')], limit=1)
-        cls.demo = bool(cls.env['stock.location'].search_count([('f3d_code', '=', DEMO_CODE)]))
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
+        cls.seed_site = cls.env['td.site'].search([('seed_key', '=', 'main_demo')], limit=1)
+        cls.demo = bool(cls.env['stock.location'].search_count([('td_code', '=', DEMO_CODE)]))
 
     def wizard(self, site=None):
         action = (site or self.seed_site).with_user(self.u_manager).action_publish_wizard()
-        return self.env['f3d.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
+        return self.env['td.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
 
     def kinds(self, plan):
         out = {}
@@ -67,12 +67,12 @@ class TestSeedPublishIdempotent(SeedPublishCase):
         """Об'єкт з наявним обладнанням, що має паспорт, стоїть на варіанті ЦЬОГО паспорта, а не зведеного."""
         if not self.demo:
             self.skipTest("Немає демо-даних: перевірка лише на копії демо-бази")
-        placements = self.env['f3d.placement'].search([('site_id', '=', self.seed_site.id)])
+        placements = self.env['td.placement'].search([('site_id', '=', self.seed_site.id)])
         checked = 0
         for placement in placements:
             equipment = placement.equipment_id
-            if equipment and equipment.f3d_passport_id:
-                self.assertEqual(placement.variant_id.passport_id, equipment.f3d_passport_id, placement.code)
+            if equipment and equipment.td_passport_id:
+                self.assertEqual(placement.variant_id.passport_id, equipment.td_passport_id, placement.code)
                 checked += 1
         self.assertGreater(checked, 100)
         for code in ('ATS-1', 'BESS', 'CHP', 'COMPRESSOR', 'EF-CHG', 'RV-01', 'LT-OUT-1'):
@@ -87,9 +87,9 @@ class TestSeedPublishIdempotent(SeedPublishCase):
 
         report = hooks.run_seed_hook(self.env)
         self.assertEqual(report['unlinked']['locations'], [])
-        gate = self.env['stock.location'].search([('f3d_alias', '=', 'UNLOAD-3')])
-        self.assertEqual((gate.f3d_code, gate.f3d_site_id), ('DOCK-W3', self.seed_site))
-        waste = self.env['f3d.slot'].search([('site_id', '=', self.seed_site.id), ('code_prefix', '=', 'WASTE')])
+        gate = self.env['stock.location'].search([('td_alias', '=', 'UNLOAD-3')])
+        self.assertEqual((gate.td_code, gate.td_site_id), ('DOCK-W3', self.seed_site))
+        waste = self.env['td.slot'].search([('site_id', '=', self.seed_site.id), ('code_prefix', '=', 'WASTE')])
         self.assertEqual(waste._f3d_cells(), [])
 
     def test_plain_db_publish_then_plan_is_empty(self):
@@ -104,7 +104,7 @@ class TestSeedPublishIdempotent(SeedPublishCase):
         self.assertEqual((kinds.get('update', 0), kinds.get('archive', 0)), (0, 0))
         self.assertGreater(kinds.get('create', 0), 600)
         scene = set(
-            self.env['f3d.placement']
+            self.env['td.placement']
             .search([('site_id', '=', site.id), ('variant_id.create_equipment', '=', False)])
             .mapped('code')
         )
@@ -135,10 +135,10 @@ class TestSeedMigration(SeedPublishCase):
         env = self.env(context=dict(self.env.context, f3d_no_touch=True, tracking_disable=True))
         data = seed.normalize_seed(seed.read_seed())
         variants, _skipped = seed.ensure_variants(env, data)
-        placements = {p.uid: p for p in env['f3d.placement'].search([('site_id', '=', site.id)])}
+        placements = {p.uid: p for p in env['td.placement'].search([('site_id', '=', site.id)])}
         for item in data['placements']:
             placements[item['uid']].write({'variant_id': variants[item['variant']].id})
-        for slot in env['f3d.slot'].search([('site_id', '=', site.id)]):
+        for slot in env['td.slot'].search([('site_id', '=', site.id)]):
             if slot.template == 'floor_stack' and (slot.params or {}).get('code_style') == 'exact':
                 slot.write({'params': dict(slot.params, loc_kind='stack'), 'overrides': {}})
         for variant in variants.values():
@@ -158,7 +158,7 @@ class TestSeedMigration(SeedPublishCase):
         self.assertGreater(before['update'], 30)  # вид локацій: stack → area/kit
         counts = {
             model: self.env[model].with_context(active_test=False).search_count([])
-            for model in ('maintenance.equipment', 'stock.location', 'f3d.equipment.passport')
+            for model in ('maintenance.equipment', 'stock.location', 'td.equipment.passport')
         }
         rev = (site.draft_rev, site.published_rev, site.active_version_id)
 
@@ -172,7 +172,7 @@ class TestSeedMigration(SeedPublishCase):
             counts,
             {
                 model: self.env[model].with_context(active_test=False).search_count([])
-                for model in ('maintenance.equipment', 'stock.location', 'f3d.equipment.passport')
+                for model in ('maintenance.equipment', 'stock.location', 'td.equipment.passport')
             },
             "Записи Odoo не створюються й не видаляються",
         )
@@ -197,7 +197,7 @@ class TestSeedMigration(SeedPublishCase):
         env = self.env(context=dict(self.env.context, f3d_no_touch=True, tracking_disable=True))
         data = seed.normalize_seed(seed.read_seed())
         want = {item['uid']: bool(item.get('visible', True)) for item in data['layers']}
-        layers = env['f3d.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])
+        layers = env['td.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])
         layers.write({'visible': True})
         snapshot.rebuild_version(site, site.version_ids)
         report = seed.resync_site(self.env)
@@ -213,7 +213,7 @@ class TestSeedMigration(SeedPublishCase):
         site = self.seed_site
         self.assertTrue(site)
         self.assertEqual(seed.resync_site(self.env)['status'], 'fixed')
-        placement = self.env['f3d.placement'].search([('site_id', '=', site.id)], limit=1)
+        placement = self.env['td.placement'].search([('site_id', '=', site.id)], limit=1)
         placement.sudo().with_context(f3d_no_touch=False).write({'name': "Змінено користувачем"})
         self.assertTrue(site.has_changes)
         sha = site.version_ids.snapshot_sha1
@@ -229,12 +229,12 @@ class TestPublishRules(F3DConstructorCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
-        Passport = cls.env['f3d.equipment.passport']
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
+        Passport = cls.env['td.equipment.passport']
         cls.scene_passport = Passport.create(
-            {'role': 'scene_test', 'manufacturer': "—", 'model': "Об’єкти сцени · Тест", 'f3d_category': 'other'}
+            {'role': 'scene_test', 'manufacturer': "—", 'model': "Об’єкти сцени · Тест", 'td_category': 'other'}
         )
-        cls.scene_variant = cls.env['f3d.equipment.variant'].create(
+        cls.scene_variant = cls.env['td.equipment.variant'].create(
             {
                 'passport_id': cls.scene_passport.id,
                 'name': "Сцена",
@@ -244,7 +244,7 @@ class TestPublishRules(F3DConstructorCase):
             }
         )
         cls.real_passport = Passport.create(
-            {'role': 'real_ats', 'manufacturer': "Socomec", 'model': "ATyS", 'f3d_category': 'panel'}
+            {'role': 'real_ats', 'manufacturer': "Socomec", 'model': "ATyS", 'td_category': 'panel'}
         )
 
     def plan_lines(self, kind, model):
@@ -264,53 +264,53 @@ class TestPublishRules(F3DConstructorCase):
 
     def test_generic_passport_never_overwrites_existing(self):
         equipment = self.env['maintenance.equipment'].create(
-            {'name': "ATS", 'f3d_code': 'TQM-3', 'f3d_passport_id': self.real_passport.id}
+            {'name': "ATS", 'td_code': 'TQM-3', 'td_passport_id': self.real_passport.id}
         )
-        empty = self.env['maintenance.equipment'].create({'name': "Без паспорта", 'f3d_code': 'TQM-4'})
+        empty = self.env['maintenance.equipment'].create({'name': "Без паспорта", 'td_code': 'TQM-4'})
         self.make_placement(code='TQM-3', variant=self.scene_variant)
         self.make_placement(code='TQM-4', variant=self.scene_variant, x=24.0)
         for line in self.plan_lines('update', publish.EQUIPMENT):
-            self.assertNotIn('f3d_passport_id', line['vals'], line['code'])
+            self.assertNotIn('td_passport_id', line['vals'], line['code'])
         self.wizard_confirm()
-        self.assertEqual(equipment.f3d_passport_id, self.real_passport)
-        self.assertFalse(empty.f3d_passport_id)
+        self.assertEqual(equipment.td_passport_id, self.real_passport)
+        self.assertFalse(empty.td_passport_id)
         # справжній паспорт, відмінний від наявного, лишається пропозицією оновлення (R-12)
         self.make_placement(code='TQM-5', variant=self.variant, x=28.0)
         other = self.env['maintenance.equipment'].create(
-            {'name': "Інший", 'f3d_code': 'TQM-5', 'f3d_passport_id': self.real_passport.id}
+            {'name': "Інший", 'td_code': 'TQM-5', 'td_passport_id': self.real_passport.id}
         )
         lines = self.plan_lines('update', publish.EQUIPMENT)
         self.assertEqual(
-            [(line['code'], line['vals']['f3d_passport_id']) for line in lines if line['code'] == 'TQM-5'],
+            [(line['code'], line['vals']['td_passport_id']) for line in lines if line['code'] == 'TQM-5'],
             [('TQM-5', self.passport.id)],
         )
-        self.assertEqual(other.f3d_passport_id, self.real_passport)
+        self.assertEqual(other.td_passport_id, self.real_passport)
 
     def wizard_confirm(self):
         action = self.site.with_user(self.u_manager).action_publish_wizard()
-        wizard = self.env['f3d.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
+        wizard = self.env['td.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
         wizard.action_confirm()
 
     def test_existing_equipment_zone_is_not_changed(self):
-        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'f3d_code': 'TQM-6'})
+        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'td_code': 'TQM-6'})
         self.make_placement(code='TQM-6', variant=self.variant)
         self.wizard_confirm()
-        self.assertFalse(existing.f3d_zone_id)  # зону наявного обладнання задає каталог base, не публікація
+        self.assertFalse(existing.td_zone_id)  # зону наявного обладнання задає каталог base, не публікація
 
     def test_second_scene_code_alias_is_not_a_conflict(self):
-        """Ворота DOCK-T1 = майданчик UNL-T1 (f3d_alias): місце UNL-T1 зв'язується з ними, без конфлікту й архівації."""
+        """Ворота DOCK-T1 = майданчик UNL-T1 (td_alias): місце UNL-T1 зв'язується з ними, без конфлікту й архівації."""
         gate = self.env['stock.location'].create(
             {
                 'name': "Ворота T1",
                 'usage': 'internal',
                 'location_id': self.wh_stock.id,
                 'barcode': 'UNL-T1',
-                'f3d_code': 'DOCK-T1',
-                'f3d_alias': 'UNL-T1',
-                'f3d_loc_kind': 'area',
+                'td_code': 'DOCK-T1',
+                'td_alias': 'UNL-T1',
+                'td_loc_kind': 'area',
             }
         )
-        gate.sudo().write({'f3d_site_id': self.site.id})
+        gate.sudo().write({'td_site_id': self.site.id})
         slot = self.make_slot(
             prefix='UNL-T1', template='floor_stack', rows=1, cols=1, cell_l=3.0, cell_w=2.0, max_height=1.0,
             code_style='exact', loc_kind='area',
@@ -322,10 +322,10 @@ class TestPublishRules(F3DConstructorCase):
         self.assertEqual(self.plan_lines('archive', publish.LOCATION), [])
         # kind 'area' збігається з локацією; різні види — оновлення
         update = self.plan_lines('update', publish.LOCATION)
-        self.assertEqual([line['vals'] for line in update], [{'f3d_slot_uid': slot.uid}])
+        self.assertEqual([line['vals'] for line in update], [{'td_slot_uid': slot.uid}])
         slot.params = dict(slot.params, loc_kind='kit')
         update = self.plan_lines('update', publish.LOCATION)
-        self.assertEqual(update[0]['vals']['f3d_loc_kind'], 'kit')
+        self.assertEqual(update[0]['vals']['td_loc_kind'], 'kit')
 
     def test_barcode_with_other_scene_code_is_still_a_conflict(self):
         self.env['stock.location'].create(
@@ -334,7 +334,7 @@ class TestPublishRules(F3DConstructorCase):
                 'usage': 'internal',
                 'location_id': self.wh_stock.id,
                 'barcode': 'UNL-T2',
-                'f3d_code': 'DOCK-T2',
+                'td_code': 'DOCK-T2',
             }
         )
         self.make_slot(
@@ -358,7 +358,7 @@ class TestPublishRules(F3DConstructorCase):
     def test_seed_variant_of_the_equipment_passport(self):
         """Сід: розміщення з наявним обладнанням, що має паспорт, отримує варіант ЦЬОГО паспорта (геометрія та сама)."""
         self.env['maintenance.equipment'].create(
-            {'name': "ATS", 'f3d_code': 'TQM-7', 'f3d_passport_id': self.real_passport.id}
+            {'name': "ATS", 'td_code': 'TQM-7', 'td_passport_id': self.real_passport.id}
         )
         data = {
             'placements': [

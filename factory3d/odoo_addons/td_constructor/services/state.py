@@ -107,8 +107,8 @@ def variant_dict(variant):
 def checks_state(site):
     """Стан чернетки для `run_checks`: лише активні шари, місця й розміщення; варіанти — ті, що використані."""
     layers = site.layer_ids.filtered('active')
-    slots = site.env['f3d.slot'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
-    placements = site.env['f3d.placement'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
+    slots = site.env['td.slot'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
+    placements = site.env['td.placement'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
     variants = placements.mapped('variant_id')
     layer_data = []
     for layer in layers:
@@ -138,7 +138,7 @@ def check_configs(site):
 
 def eps_m(env):
     try:
-        return float(env['ir.config_parameter'].sudo().get_param('factory3d.constructor.eps_mm', 1)) / 1000.0
+        return float(env['ir.config_parameter'].sudo().get_param('td.constructor.eps_mm', 1)) / 1000.0
     except ValueError:
         return checks_mod.DEFAULT_EPS_M
 

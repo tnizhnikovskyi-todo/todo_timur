@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="factory3d_constructor.ModelUpload">
+    <t t-name="td_constructor.ModelUpload">
         <div class="o_f3d_model_upload">
             <div class="o_f3d_mu_row">
                 <button type="button" class="btn btn-primary o_f3d_mu_pick" t-on-click="pickFiles" t-att-disabled="state.busy">

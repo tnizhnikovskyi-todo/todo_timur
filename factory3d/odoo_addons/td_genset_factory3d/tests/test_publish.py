@@ -9,7 +9,7 @@ from odoo.tools import mute_logger
 from ..adapters import telemetry
 from .test_rules import TD, GensetCase
 
-LINK_LOGGER = "odoo.addons.factory3d_genset.models.genset_link"
+LINK_LOGGER = "odoo.addons.td_genset_factory3d.models.genset_link"
 PFX = "infra/genset/GENSET/"
 
 
@@ -17,10 +17,10 @@ PFX = "infra/genset/GENSET/"
 class TestPublish(GensetCase):
     def readings(self, link=None):
         link = link or self.link
-        return self.env["f3d.reading"].search([("signal_id.code", "=like", telemetry.prefix(link.f3d_code) + "%")])
+        return self.env["td.reading"].search([("signal_id.code", "=like", telemetry.prefix(link.td_code) + "%")])
 
     def values(self):
-        signals = self.env["f3d.signal"].search([("code", "=like", PFX + "%")])
+        signals = self.env["td.signal"].search([("code", "=like", PFX + "%")])
         return {s.code[len(PFX) :]: s for s in signals}
 
     def test_publish_values(self):  # AC-07
@@ -51,7 +51,7 @@ class TestPublish(GensetCase):
         self.set_param("read_enabled", "False")
         self.link._cron_publish()
         self.assertFalse(self.readings())
-        with self.assertRaisesRegex(UserError, "factory3d.genset.read_enabled"):
+        with self.assertRaisesRegex(UserError, "td.genset.read_enabled"):
             self.link.with_user(self.user_manager).action_check()
 
     def test_idempotent_same_ts(self):  # AC-10
@@ -87,7 +87,7 @@ class TestPublish(GensetCase):
             self.assertFalse(sig.maintenance_request_id)
 
     def test_offline_min_changes_period(self):  # AC-62
-        self.env["res.config.settings"].create({"f3d_genset_offline_min": 10}).set_values()
+        self.env["res.config.settings"].create({"td_genset_offline_min": 10}).set_values()
         for s in self.values().values():
             self.assertEqual(s.period_s, 200)
 
@@ -134,10 +134,10 @@ class TestPublish(GensetCase):
 
     def test_adapter_not_verified_and_isolation(self):  # MG-11
         eq2 = self.env["maintenance.equipment"].create(
-            {"name": "Генератор 2", "f3d_code": "GENSET-2", "f3d_passport_id": self.passport.id}
+            {"name": "Генератор 2", "td_code": "GENSET-2", "td_passport_id": self.passport.id}
         )
         gen2 = self.env["res.partner"].create({"name": "Генератор td_genset 2"})
-        link2 = self.env["f3d.genset.link"].create(
+        link2 = self.env["td.genset.link"].create(
             {"equipment_id": eq2.id, "td_genset_ref": "res.partner,%d" % gen2.id, "profile_id": self.profile.id}
         )
         good = self.snap()
@@ -148,7 +148,7 @@ class TestPublish(GensetCase):
             return good
 
         with mock.patch(TD + ".snapshot", side_effect=snapshot), mute_logger(LINK_LOGGER):
-            self.env["f3d.genset.link"]._cron_publish()
+            self.env["td.genset.link"]._cron_publish()
         self.assertEqual(self.link.last_publish_error, "NotImplementedError: ADP-03: звірити з td_genset")
         self.assertTrue(link2.last_publish_ts)
         self.assertFalse(link2.last_publish_error)

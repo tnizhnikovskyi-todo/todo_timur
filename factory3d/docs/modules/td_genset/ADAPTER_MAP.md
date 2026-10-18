@@ -1,7 +1,7 @@
-# ADAPTER_MAP: factory3d_genset ↔ td_genset (Odoo 19)
+# ADAPTER_MAP: td_genset_factory3d ↔ td_genset (Odoo 19)
 
-Джерело правди — `odoo_addons/factory3d_genset/adapters/td_genset.py`; звірено з `odoo_addons/td_genset/models/*.py`.
-Тест-контракт: `factory3d_genset/tests/test_adapter_contract.py`.
+Джерело правди — `odoo_addons/td_genset_factory3d/adapters/td_genset.py`; звірено з `odoo_addons/td_genset/models/*.py`.
+Тест-контракт: `td_genset_factory3d/tests/test_adapter_contract.py`.
 
 ## Таблиця імен
 

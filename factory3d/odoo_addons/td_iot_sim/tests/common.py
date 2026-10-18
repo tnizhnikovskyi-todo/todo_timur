@@ -24,11 +24,11 @@ class SimCase(TransactionCase):
         super().setUpClass()
         base_user = 'base.group_user'
         cls.user_reader = new_test_user(
-            cls.env, login='f3d_sim_reader', groups=f'{base_user},factory3d_base.group_f3d_user')
+            cls.env, login='f3d_sim_reader', groups=f'{base_user},td_factory3d.group_td_user')
         cls.user_manager = new_test_user(
-            cls.env, login='f3d_sim_manager', groups=f'{base_user},factory3d_base.group_f3d_manager')
+            cls.env, login='f3d_sim_manager', groups=f'{base_user},td_factory3d.group_td_manager')
         cls.user_admin = new_test_user(
-            cls.env, login='f3d_sim_admin', groups=f'{base_user},factory3d_base.group_f3d_admin')
+            cls.env, login='f3d_sim_admin', groups=f'{base_user},td_factory3d.group_td_admin')
 
     def setUp(self):
         super().setUp()
@@ -39,11 +39,11 @@ class SimCase(TransactionCase):
         self.addCleanup(patcher.stop)
         self.set_params(url=SIM_URL, token=SIM_TOKEN, read_enabled='True', write_enabled='True',
                         level0_enabled='True', level0_after_min='5')
-        self.panel = self.env['f3d.sim.panel'].get_panel()
+        self.panel = self.env['td.sim.panel'].get_panel()
 
     def set_params(self, **kwargs):
         for key, value in kwargs.items():
-            self.env['ir.config_parameter'].sudo().set_param('factory3d.iot_sim.' + key, value)
+            self.env['ir.config_parameter'].sudo().set_param('td.iot_sim.' + key, value)
 
     def respond(self, method, path, status=200, data=None):
         self.responses[(method, path)] = (status, data)
@@ -62,4 +62,4 @@ class SimCase(TransactionCase):
 
     def make_device(self, code, **vals):
         vals.setdefault('name', code)
-        return self.env['f3d.sim.device'].create(dict(vals, code=code))
+        return self.env['td.sim.device'].create(dict(vals, code=code))

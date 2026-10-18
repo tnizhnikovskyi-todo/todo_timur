@@ -23,7 +23,7 @@ CLOCKS = [
 @tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")
 class TestOeeDayFilter(F3DMachineCase):
     def test_filters_follow_kyiv_day_at_any_hour(self):
-        Shift = self.env["f3d.oee.shift"].sudo()
+        Shift = self.env["td.oee.shift"].sudo()
         for now in CLOCKS:
             today = now.replace(tzinfo=timezone.utc).astimezone(KYIV).date()
             week, month = today - timedelta(days=today.weekday()), today.replace(day=1)
@@ -52,6 +52,6 @@ class TestOeeDayFilter(F3DMachineCase):
                 all_rows.unlink()
 
     def test_search_view_does_not_use_browser_date(self):
-        arch = self.env.ref("factory3d_machine_connect.view_f3d_oee_shift_search").arch_db
+        arch = self.env.ref("td_machine_connect.view_td_oee_shift_search").arch_db
         self.assertNotIn("context_today", arch)
         self.assertIn("is_today", arch)

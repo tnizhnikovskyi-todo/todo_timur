@@ -9,14 +9,14 @@ class TestVariant(F3DConstructorCase):
     """AC-19, AC-20, AC-21."""
 
     def test_ac19_passport_variants_and_categories(self):
-        passport = self.env['f3d.equipment.passport'].create({'role': 'test_other', 'manufacturer': "T", 'model': "M"})
-        self.assertEqual(passport.f3d_category, 'other')
-        variant = self.env['f3d.equipment.variant'].create(
+        passport = self.env['td.equipment.passport'].create({'role': 'test_other', 'manufacturer': "T", 'model': "M"})
+        self.assertEqual(passport.td_category, 'other')
+        variant = self.env['td.equipment.variant'].create(
             {'passport_id': passport.id, 'name': "V1", 'length_mm': 1000, 'width_mm': 500, 'height_mm': 800}
         )
         self.assertEqual(passport.variant_ids, variant)
         self.assertEqual(passport.variant_count, 1)
-        self.assertEqual(passport.action_view_variants()['res_model'], 'f3d.equipment.variant')
+        self.assertEqual(passport.action_view_variants()['res_model'], 'td.equipment.variant')
 
     def test_ac20_fields_and_validation(self):
         variant = self.variant
@@ -39,8 +39,8 @@ class TestVariant(F3DConstructorCase):
                     {'kind': 'electric', 'x_mm': -1800, 'y_mm': 0, 'z_mm': 500},
                     {'kind': 'air', 'x_mm': 1800, 'y_mm': 0, 'z_mm': 400},
                 ],
-                'allowed_layer_kind_ids': [(6, 0, self.env['f3d.term'].search([('key', '=', 'production')]).ids)],
-                'allowed_slot_type_ids': [(6, 0, self.env['f3d.term'].search([('key', '=', 'machine_spot')]).ids)],
+                'allowed_layer_kind_ids': [(6, 0, self.env['td.term'].search([('key', '=', 'production')]).ids)],
+                'allowed_slot_type_ids': [(6, 0, self.env['td.term'].search([('key', '=', 'machine_spot')]).ids)],
             }
         )
         self.assertEqual(len(variant.utilities), 2)
@@ -53,19 +53,19 @@ class TestVariant(F3DConstructorCase):
                 variant.write(bad)
 
     def test_ac21_inherit_from_passport_and_floor_load(self):
-        passport = self.env['f3d.equipment.passport'].create(
+        passport = self.env['td.equipment.passport'].create(
             {
                 'role': 'test_inherit',
                 'manufacturer': "T",
                 'model': "Станок",
-                'f3d_category': 'machine',
+                'td_category': 'machine',
                 'dim_l_mm': 4000,
                 'dim_w_mm': 1200,
                 'dim_h_mm': 1600,
                 'power_kw': 11,
             }
         )
-        variant = self.env['f3d.equipment.variant'].create(
+        variant = self.env['td.equipment.variant'].create(
             {'passport_id': passport.id, 'name': "Авто", 'weight_kg': 2400}
         )
         self.assertEqual(

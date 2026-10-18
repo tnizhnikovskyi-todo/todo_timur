@@ -1,21 +1,21 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_access_server_admin,f3d.access.server access admin,model_f3d_access_server,group_f3d_access_admin,1,0,0,0
-access_f3d_access_server_f3d_admin,f3d.access.server f3d admin,model_f3d_access_server,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_access_device_user,f3d.access.device user,model_f3d_access_device,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_access_device_admin,f3d.access.device admin,model_f3d_access_device,group_f3d_access_admin,1,1,1,1
-access_f3d_access_door_user,f3d.access.door user,model_f3d_access_door,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_access_door_security,f3d.access.door security,model_f3d_access_door,group_f3d_access_security,1,1,0,0
-access_f3d_access_door_admin,f3d.access.door admin,model_f3d_access_door,group_f3d_access_admin,1,1,1,1
-access_f3d_access_user_link_security,f3d.access.user.link security,model_f3d_access_user_link,group_f3d_access_security,1,0,0,0
-access_f3d_access_user_link_hr,f3d.access.user.link hr,model_f3d_access_user_link,hr_attendance.group_hr_attendance_user,1,0,0,0
-access_f3d_access_user_link_admin,f3d.access.user.link admin,model_f3d_access_user_link,group_f3d_access_admin,1,1,1,1
-access_f3d_access_event_security,f3d.access.event security,model_f3d_access_event,group_f3d_access_security,1,0,0,0
-access_f3d_access_event_hr,f3d.access.event hr,model_f3d_access_event,hr_attendance.group_hr_attendance_user,1,0,0,0
-access_f3d_access_event_f3d_admin,f3d.access.event f3d admin,model_f3d_access_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_access_presence_security,f3d.access.presence security,model_f3d_access_presence,group_f3d_access_security,1,0,0,0
-access_f3d_access_presence_hr,f3d.access.presence hr,model_f3d_access_presence,hr_attendance.group_hr_attendance_user,1,0,0,0
-access_f3d_access_reprocess_wizard_admin,f3d.access.event.reprocess.wizard admin,model_f3d_access_event_reprocess_wizard,group_f3d_access_admin,1,1,1,1
-access_f3d_access_card_security,f3d.access.card security,model_f3d_access_card,group_f3d_access_security,1,1,1,0
-access_f3d_access_card_admin,f3d.access.card admin,model_f3d_access_card,group_f3d_access_admin,1,1,1,1
-access_f3d_access_visitor_security,f3d.access.visitor security,model_f3d_access_visitor,group_f3d_access_security,1,1,1,1
-access_f3d_access_visitor_hr,f3d.access.visitor hr,model_f3d_access_visitor,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_td_access_server_admin,td.access.server access admin,model_td_access_server,group_td_access_admin,1,0,0,0
+access_td_access_server_td_admin,td.access.server f3d admin,model_td_access_server,td_factory3d.group_td_admin,1,1,1,1
+access_td_access_device_user,td.access.device user,model_td_access_device,td_factory3d.group_td_user,1,0,0,0
+access_td_access_device_admin,td.access.device admin,model_td_access_device,group_td_access_admin,1,1,1,1
+access_td_access_door_user,td.access.door user,model_td_access_door,td_factory3d.group_td_user,1,0,0,0
+access_td_access_door_security,td.access.door security,model_td_access_door,group_td_access_security,1,1,0,0
+access_td_access_door_admin,td.access.door admin,model_td_access_door,group_td_access_admin,1,1,1,1
+access_td_access_user_link_security,td.access.user.link security,model_td_access_user_link,group_td_access_security,1,0,0,0
+access_td_access_user_link_hr,td.access.user.link hr,model_td_access_user_link,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_td_access_user_link_admin,td.access.user.link admin,model_td_access_user_link,group_td_access_admin,1,1,1,1
+access_td_access_event_security,td.access.event security,model_td_access_event,group_td_access_security,1,0,0,0
+access_td_access_event_hr,td.access.event hr,model_td_access_event,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_td_access_event_td_admin,td.access.event f3d admin,model_td_access_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_access_presence_security,td.access.presence security,model_td_access_presence,group_td_access_security,1,0,0,0
+access_td_access_presence_hr,td.access.presence hr,model_td_access_presence,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_td_access_reprocess_wizard_admin,td.access.event.reprocess.wizard admin,model_td_access_event_reprocess_wizard,group_td_access_admin,1,1,1,1
+access_td_access_card_security,td.access.card security,model_td_access_card,group_td_access_security,1,1,1,0
+access_td_access_card_admin,td.access.card admin,model_td_access_card,group_td_access_admin,1,1,1,1
+access_td_access_visitor_security,td.access.visitor security,model_td_access_visitor,group_td_access_security,1,1,1,1
+access_td_access_visitor_hr,td.access.visitor hr,model_td_access_visitor,hr_attendance.group_hr_attendance_user,1,0,0,0

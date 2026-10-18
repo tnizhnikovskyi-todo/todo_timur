@@ -5,7 +5,7 @@ import re
 from .codes import is_valid_code
 from .x_fields import read_manual_field
 
-_logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
+_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
 
 SNAPSHOT_KEY = 'f3d_moves_snapshot'
 
@@ -60,14 +60,14 @@ def migrate(env):
             batch = cache.get(truck) or _find_truck_batch(env, truck, picking)
             if batch:
                 vals = {}
-                if batch.f3d_truck != truck:
-                    vals['f3d_truck'] = truck
-                if not batch.f3d_code and is_valid_code(truck):
-                    vals['f3d_code'] = truck
-                if vehicle and not batch.f3d_vehicle_id:
+                if batch.td_truck != truck:
+                    vals['td_truck'] = truck
+                if not batch.td_code and is_valid_code(truck):
+                    vals['td_code'] = truck
+                if vehicle and not batch.td_vehicle_id:
                     equipment = Equipment.search_f3d(vehicle)
                     if equipment:
-                        vals['f3d_vehicle_id'] = equipment.id
+                        vals['td_vehicle_id'] = equipment.id
                 if vals:
                     batch.write(vals)
                     if batch.id not in created:
@@ -108,9 +108,9 @@ def _batch_vals(env, picking, dock_code, truck, vehicle, truck_cat, Loc, Equipme
         'description': ' · '.join(filter(None, [truck, dock_code, vehicle])),
     }
     if truck:
-        vals['f3d_truck'] = truck
+        vals['td_truck'] = truck
         if is_valid_code(truck):
-            vals['f3d_code'] = truck
+            vals['td_code'] = truck
     if dock_code:
         dock = Loc.search_f3d(dock_code)
         if dock:
@@ -120,7 +120,7 @@ def _batch_vals(env, picking, dock_code, truck, vehicle, truck_cat, Loc, Equipme
     if vehicle:
         equipment = Equipment.search_f3d(vehicle)
         if equipment:
-            vals['f3d_vehicle_id'] = equipment.id
+            vals['td_vehicle_id'] = equipment.id
     return vals
 
 
@@ -131,15 +131,15 @@ def verify(env):
     mismatches = []
     for picking in env['stock.picking'].browse(ids):
         batch = picking.batch_id
-        if picking.id in x_dock and batch.dock_id.f3d_code != x_dock[picking.id]:
+        if picking.id in x_dock and batch.dock_id.td_code != x_dock[picking.id]:
             mismatches.append("%s: x_dock=%s, batch.dock=%s" % (
-                picking.name, x_dock[picking.id], batch.dock_id.f3d_code or None))
-        if picking.id in x_truck and batch.f3d_code != x_truck[picking.id]:
+                picking.name, x_dock[picking.id], batch.dock_id.td_code or None))
+        if picking.id in x_truck and batch.td_code != x_truck[picking.id]:
             mismatches.append("%s: x_truck=%s, batch.code=%s" % (
-                picking.name, x_truck[picking.id], batch.f3d_code or None))
-        if picking.id in x_vehicle and batch.f3d_vehicle_id.f3d_code != x_vehicle[picking.id]:
+                picking.name, x_truck[picking.id], batch.td_code or None))
+        if picking.id in x_vehicle and batch.td_vehicle_id.td_code != x_vehicle[picking.id]:
             mismatches.append("%s: x_vehicle=%s, batch.vehicle=%s" % (
-                picking.name, x_vehicle[picking.id], batch.f3d_vehicle_id.f3d_code or None))
+                picking.name, x_vehicle[picking.id], batch.td_vehicle_id.td_code or None))
     moves_changed = 0
     before = env.cr.cache.get(SNAPSHOT_KEY)
     if before is not None:

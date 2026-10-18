@@ -12,7 +12,7 @@ from .geometry import make_obb, rotate
 
 CODE_MAX_LEN = 32  # CB-01: довжина коду сцени
 PREFIX_MAX_LEN = 22  # суфікс комірки до 9 символів
-# значення stock.location.f3d_loc_kind (factory3d_base): вид комірки шаблону floor_stack береться з наявної локації
+# значення stock.location.td_loc_kind (td_factory3d): вид комірки шаблону floor_stack береться з наявної локації
 LOC_KINDS = ('stack', 'area', 'kit', 'bin', 'shelf', 'pallet_cell')
 
 # Параметри шаблонів: ключ → (мін, макс, умовчання, тип). Умовчання — ПРИПУЩЕННЯ для нового місця з UI.
@@ -72,7 +72,7 @@ SLOT_TEMPLATES = {
         },
         'choices': {
             'code_style': (('default', 'exact'), 'default'),
-            'loc_kind': (LOC_KINDS, 'stack'),  # вид локації Odoo (f3d_loc_kind): стос, майданчик, візок тощо
+            'loc_kind': (LOC_KINDS, 'stack'),  # вид локації Odoo (td_loc_kind): стос, майданчик, візок тощо
         },
     },
     'machine_spot': {

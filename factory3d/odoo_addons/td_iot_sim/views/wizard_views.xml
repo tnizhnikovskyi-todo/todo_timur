@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="view_f3d_sim_fault_wizard_form" model="ir.ui.view">
-    <field name="name">f3d.sim.fault.wizard.form</field>
-    <field name="model">f3d.sim.fault.wizard</field>
+  <record id="view_td_sim_fault_wizard_form" model="ir.ui.view">
+    <field name="name">td.sim.fault.wizard.form</field>
+    <field name="model">td.sim.fault.wizard</field>
     <field name="arch" type="xml">
       <form string="Поставити збій">
         <group>
@@ -18,9 +18,9 @@
     </field>
   </record>
 
-  <record id="view_f3d_sim_run_wizard_form" model="ir.ui.view">
-    <field name="name">f3d.sim.run.wizard.form</field>
-    <field name="model">f3d.sim.run.wizard</field>
+  <record id="view_td_sim_run_wizard_form" model="ir.ui.view">
+    <field name="name">td.sim.run.wizard.form</field>
+    <field name="model">td.sim.run.wizard</field>
     <field name="arch" type="xml">
       <form string="Запуск сценарію">
         <field name="has_device" invisible="1"/>

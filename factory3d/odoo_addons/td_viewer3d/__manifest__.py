@@ -1,18 +1,18 @@
 {
-    "name": "Завод 3D: переглядач",
+    "name": "Переглядач",
     "summary": "3D-переглядач заводу всередині Odoo: живі дані з ORM, «Показати в 3D», журнал станів, кіоск",
     "version": "19.0.1.0.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Manufacturing",
     "website": "https://todo.ltd",
-    "depends": ["factory3d_base", "bus", "web"],
+    "depends": ["td_factory3d", "bus", "web"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
         "data/params.xml",
         "data/actions.xml",
-        # kiosk_user.xml після actions.xml: користувач посилається на action_f3d_viewer
+        # kiosk_user.xml після actions.xml: користувач посилається на action_td_viewer
         "security/kiosk_user.xml",
         "data/cron.xml",
         "views/viewer_snapshot_views.xml",
@@ -26,11 +26,11 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "factory3d_viewer/static/src/viewer/viewer.scss",
-            "factory3d_viewer/static/src/viewer/*.js",
-            "factory3d_viewer/static/src/action/*",
+            "td_viewer3d/static/src/viewer/viewer.scss",
+            "td_viewer3d/static/src/viewer/*.js",
+            "td_viewer3d/static/src/action/*",
         ],
-        "factory3d_viewer.assets_kiosk": [
+        "td_viewer3d.assets_kiosk": [
             ("include", "web._assets_helpers"),
             ("include", "web._assets_backend_helpers"),
             "web/static/src/scss/pre_variables.scss",
@@ -40,16 +40,16 @@
             ("include", "web._assets_bootstrap_backend"),
             ("include", "web._assets_core"),  # module_loader.js, owl.js, odoo_module.js — уже тут
             "web/static/src/libs/fontawesome/css/font-awesome.css",
-            "factory3d_viewer/static/src/viewer/viewer.scss",
-            "factory3d_viewer/static/src/kiosk/kiosk.scss",
-            "factory3d_viewer/static/src/viewer/*.js",
-            "factory3d_viewer/static/src/kiosk/*.js",
+            "td_viewer3d/static/src/viewer/viewer.scss",
+            "td_viewer3d/static/src/kiosk/kiosk.scss",
+            "td_viewer3d/static/src/viewer/*.js",
+            "td_viewer3d/static/src/kiosk/*.js",
         ],
         "web.assets_tests": [
-            "factory3d_viewer/static/tests/tours/*.js",
+            "td_viewer3d/static/tests/tours/*.js",
         ],
         "web.assets_unit_tests": [
-            "factory3d_viewer/static/tests/hoot/*",
+            "td_viewer3d/static/tests/hoot/*",
         ],
     },
     "post_init_hook": "post_init",

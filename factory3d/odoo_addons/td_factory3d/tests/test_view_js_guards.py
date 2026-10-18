@@ -5,7 +5,7 @@
 * домен не вміє порівнювати поле з полем: `('ws_qty', '<', 'min_qty')` порівнює з рядком (ValueError у search_count).
 * `oe_stat_button` лише на <button>: <div> з icon Odoo 19 не оформлює (ні іконки, ні рамки — «Ворота» у зоні);
 * віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у debug).
-Перевіряються усі встановлені factory3d_* і td_genset (у прогоні «Run A» — всі 18 модулів).
+Перевіряються усі встановлені модулі td_* разом із td_genset (у прогоні «Run A» — всі 18 модулів).
 """
 import ast
 import re
@@ -33,7 +33,7 @@ class TestViewJsGuards(TransactionCase):
 
     def _f3d_views(self):
         modules = self.env['ir.module.module'].search([('state', '=', 'installed')]).filtered(
-            lambda m: m.name.startswith('factory3d_') or m.name == 'td_genset').mapped('name')
+            lambda m: m.name.startswith('td_')).mapped('name')
         data = self.env['ir.model.data'].search([('model', '=', 'ir.ui.view'), ('module', 'in', modules)])
         return self.env['ir.ui.view'].browse(data.mapped('res_id')).exists().filtered(lambda v: v.type != 'qweb')
 

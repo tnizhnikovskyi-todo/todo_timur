@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Чистий стенд без docker: база f3d_access_stand (factory3d_base + factory3d_access), Odoo на :18079, емулятор iot_sim
+# Чистий стенд без docker: база f3d_access_stand (td_factory3d + td_access), Odoo на :18079, емулятор iot_sim
 # (локальний запуск сервісу) на :8090/:8443/:8081. Секрети — лише в змінних середовища/тимчасовому каталозі.
 #   reset_stand.sh up | down
 # Потрібні: SIM_VENV (venv з requirements.txt сервісу), STAND_TMP (каталог для env/логів/стану емулятора).
@@ -28,8 +28,8 @@ up)
     stop_sim
     "$T/serve.sh" stop "$DB" || true
     "$T/drop_db.sh" "$DB" >/dev/null 2>&1 || true
-    F3D_TEST_INSTALL=factory3d_base,factory3d_access "$T/new_db.sh" "$DB"
-    F3D_TEST_INSTALL=factory3d_base,factory3d_access "$T/update.sh" "$DB"
+    F3D_TEST_INSTALL=td_factory3d,td_access "$T/new_db.sh" "$DB"
+    F3D_TEST_INSTALL=td_factory3d,td_access "$T/update.sh" "$DB"
     "$T/serve.sh" "$DB" "$PORT"
     rm -rf "$STAND_TMP/state"/* 2>/dev/null || true
     cd "$STAND_TMP"           # BioStar TLS-сертифікат (./certs) і знімок світу — поза репозиторієм

@@ -5,20 +5,20 @@ from odoo.exceptions import UserError
 
 
 class F3dSimRunWizard(models.TransientModel):
-    _name = 'f3d.sim.run.wizard'
+    _name = 'td.sim.run.wizard'
     _description = 'Запуск сценарію емулятора'
 
-    scenario_id = fields.Many2one('f3d.sim.scenario', string='Сценарій', required=True)
+    scenario_id = fields.Many2one('td.sim.scenario', string='Сценарій', required=True)
     params_text = fields.Text(string='Параметри (JSON)')
-    device_id = fields.Many2one('f3d.sim.device', string='Пристрій')
-    zone_id = fields.Many2one('f3d.zone', string='Зона')
+    device_id = fields.Many2one('td.sim.device', string='Пристрій')
+    zone_id = fields.Many2one('td.zone', string='Зона')
     has_device = fields.Boolean(compute='_compute_schema_flags')
     has_zone = fields.Boolean(compute='_compute_schema_flags')
 
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        scenario = self.env['f3d.sim.scenario'].browse(res.get('scenario_id'))
+        scenario = self.env['td.sim.scenario'].browse(res.get('scenario_id'))
         if scenario and 'params_text' in fields_list and not res.get('params_text'):
             res['params_text'] = json.dumps(scenario.params_default or {}, indent=2, ensure_ascii=False)
         return res
@@ -45,7 +45,7 @@ class F3dSimRunWizard(models.TransientModel):
         if self.device_id:
             params['device'] = self.device_id.code
         if self.zone_id:
-            params['zone'] = self.zone_id.f3d_code
-        run = self.env['f3d.sim.run']._create_and_start(self.scenario_id, params)
-        return {'type': 'ir.actions.act_window', 'name': 'Запуск', 'res_model': 'f3d.sim.run',
+            params['zone'] = self.zone_id.td_code
+        run = self.env['td.sim.run']._create_and_start(self.scenario_id, params)
+        return {'type': 'ir.actions.act_window', 'name': 'Запуск', 'res_model': 'td.sim.run',
                 'view_mode': 'form', 'res_id': run.id}

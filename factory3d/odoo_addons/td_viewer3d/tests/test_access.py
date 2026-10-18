@@ -4,12 +4,12 @@ import unittest
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools import payload as payload_tools
-from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+from odoo.addons.td_viewer3d.tools import payload as payload_tools
+from odoo.addons.td_viewer3d.tools.payload import PayloadBuilder
 
 from .common import F3dViewerBase
 
-ZZ_TEST = "f3d.viewer.provider.zz_test"
+ZZ_TEST = "td.viewer.provider.zz_test"
 MODULE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -19,7 +19,7 @@ class TestAccess(F3dViewerBase):
     def _capture_ctx(self):
         """Перехоплює ctx, який збирач передає першому провайдеру (потрібен zz_test)."""
         if ZZ_TEST not in self.env:
-            raise unittest.SkipTest("test_factory3d_viewer не встановлено")
+            raise unittest.SkipTest("test_td_viewer3d не встановлено")
         seen = []
         cls = type(self.env[ZZ_TEST])
         orig = cls._f3d_viewer_collect
@@ -32,7 +32,7 @@ class TestAccess(F3dViewerBase):
 
     def test_nobody_gets_denied(self):
         if ZZ_TEST not in self.env:
-            self.skipTest("test_factory3d_viewer не встановлено")
+            self.skipTest("test_td_viewer3d не встановлено")
         data = PayloadBuilder(self.env(user=self.user_nobody)).build()
         self.assertEqual(data["meta"]["sections"]["zones"], "denied")
         self.assertNotIn("Z-TEST", data.get("zones", {}))
@@ -67,7 +67,7 @@ class TestAccess(F3dViewerBase):
 
     def test_mrp_denied(self):
         """AC-14 (потрібні вбудовані провайдери W1b)."""
-        if "f3d.viewer.provider.production" not in self.env:
+        if "td.viewer.provider.production" not in self.env:
             self.skipTest("немає вбудованого провайдера production")
         data = PayloadBuilder(self.env(user=self.user_stock_only)).build()
         self.assertEqual(data["productions"], [])
@@ -76,9 +76,9 @@ class TestAccess(F3dViewerBase):
         self.assertEqual(data["meta"]["sections"]["productions"], "denied")
 
     def test_stock_denied(self):
-        if "f3d.viewer.provider.stock" not in self.env:
+        if "td.viewer.provider.stock" not in self.env:
             self.skipTest("немає вбудованого провайдера stock")
-        plain = self._make_user("f3d_plain_only", ["base.group_user", "factory3d_base.group_f3d_user"])
+        plain = self._make_user("f3d_plain_only", ["base.group_user", "td_factory3d.group_td_user"])
         data = PayloadBuilder(self.env(user=plain)).build()
         self.assertEqual(data["locations"], {})
         self.assertEqual(data["meta"]["sections"]["locations"], "denied")

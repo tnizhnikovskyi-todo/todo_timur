@@ -5,7 +5,7 @@ import logging
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 
-from ..models.f3d_cut_map import STATE_LABELS
+from ..models.td_cut_map import STATE_LABELS
 from ..tools import cutcsv
 
 _logger = logging.getLogger(__name__)
@@ -14,10 +14,10 @@ _logger = logging.getLogger(__name__)
 class F3dCutPlanImportWizard(models.TransientModel):
     """M-25: імпорт плану (ручний режим)."""
 
-    _name = "f3d.cut.plan.import.wizard"
+    _name = "td.cut.plan.import.wizard"
     _description = "Розкрій: імпорт плану"
 
-    map_id = fields.Many2one("f3d.cut.map", required=True, readonly=True)
+    map_id = fields.Many2one("td.cut.map", required=True, readonly=True)
     file = fields.Binary(required=True)
     filename = fields.Char()
 

@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-24: вкладка «Пожежна сигналізація» джерела (M-15) -->
-    <record id="view_f3d_source_form_fire" model="ir.ui.view">
-        <field name="name">f3d.source.form.fire</field>
-        <field name="model">f3d.source</field>
-        <field name="inherit_id" ref="factory3d_telemetry.view_f3d_source_form"/>
+    <record id="view_td_source_form_fire" model="ir.ui.view">
+        <field name="name">td.source.form.fire</field>
+        <field name="model">td.source</field>
+        <field name="inherit_id" ref="td_telemetry.view_td_source_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='write_enabled']" position="attributes">
-                <attribute name="readonly">f3d_fire_readonly</attribute>
+                <attribute name="readonly">td_fire_readonly</attribute>
             </xpath>
             <xpath expr="//sheet" position="inside">
-                <div class="alert alert-danger" role="alert" invisible="not f3d_fire_readonly">
+                <div class="alert alert-danger" role="alert" invisible="not td_fire_readonly">
                     Джерело пожежної сигналізації: лише читання (D-07). Запис у прилад неможливий.
                 </div>
             </xpath>
             <xpath expr="//notebook" position="inside">
-                <page name="f3d_fire" string="Пожежна сигналізація" invisible="not f3d_fire_readonly">
+                <page name="f3d_fire" string="Пожежна сигналізація" invisible="not td_fire_readonly">
                     <group>
                         <group string="Лише читання">
-                            <field name="f3d_fire_readonly" readonly="1"/>
+                            <field name="td_fire_readonly" readonly="1"/>
                         </group>
                         <group string="Дозвіл монтажника">
-                            <field name="f3d_fire_consent_date"/>
-                            <field name="f3d_fire_consent_person"/>
-                            <field name="f3d_fire_consent_doc"/>
-                            <field name="f3d_fire_consent_attachment_id"
-                                   domain="[('res_model', '=', 'f3d.source'), ('res_id', '=', id)]"/>
+                            <field name="td_fire_consent_date"/>
+                            <field name="td_fire_consent_person"/>
+                            <field name="td_fire_consent_doc"/>
+                            <field name="td_fire_consent_attachment_id"
+                                   domain="[('res_model', '=', 'td.source'), ('res_id', '=', id)]"/>
                         </group>
                     </group>
                 </page>

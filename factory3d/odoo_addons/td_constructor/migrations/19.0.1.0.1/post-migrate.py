@@ -10,17 +10,17 @@ import logging
 
 from odoo import SUPERUSER_ID, api
 
-from odoo.addons.factory3d_constructor.hooks import seed
-from odoo.addons.factory3d_constructor.services.schemas import SCENE_ROLE_PREFIX
+from odoo.addons.td_constructor.hooks import seed
+from odoo.addons.td_constructor.services.schemas import SCENE_ROLE_PREFIX
 
-_logger = logging.getLogger('odoo.addons.factory3d_constructor.migrations')
+_logger = logging.getLogger('odoo.addons.td_constructor.migrations')
 
 
 def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
     # нове поле: усі наявні варіанти отримали умовчання «створювати», зведені варіанти сцени — вимикаємо
     scene = (
-        env['f3d.equipment.variant']
+        env['td.equipment.variant']
         .with_context(active_test=False)
         .search([('create_equipment', '=', True)])
         .filtered(lambda v: (v.passport_id.role or '').startswith(SCENE_ROLE_PREFIX))
@@ -32,4 +32,4 @@ def migrate(cr, version):
     except Exception:
         _logger.exception("Виправлення посіяної площадки не виконано; публікацію перевірте вручну")
         return
-    _logger.info("factory3d_constructor 19.0.1.0.1: прапорців %d, %s", len(scene), report)
+    _logger.info("td_constructor 19.0.1.0.1: прапорців %d, %s", len(scene), report)

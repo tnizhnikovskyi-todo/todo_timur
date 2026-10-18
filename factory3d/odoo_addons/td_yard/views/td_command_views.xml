@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_command_list_yard" model="ir.ui.view">
-        <field name="name">f3d.command.list.yard</field>
-        <field name="model">f3d.command</field>
-        <field name="inherit_id" ref="factory3d_telemetry.view_f3d_command_list"/>
+    <record id="view_td_command_list_yard" model="ir.ui.view">
+        <field name="name">td.command.list.yard</field>
+        <field name="model">td.command</field>
+        <field name="inherit_id" ref="td_telemetry.view_td_command_list"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='signal_id']" position="after">
-                <field name="f3d_yard_gate_id" optional="show"/>
-                <field name="f3d_yard_kind" optional="show"/>
-                <field name="f3d_yard_visit_id" optional="hide"/>
+                <field name="td_yard_gate_id" optional="show"/>
+                <field name="td_yard_kind" optional="show"/>
+                <field name="td_yard_visit_id" optional="hide"/>
             </xpath>
         </field>
     </record>
 
-    <record id="view_f3d_command_form_yard" model="ir.ui.view">
-        <field name="name">f3d.command.form.yard</field>
-        <field name="model">f3d.command</field>
-        <field name="inherit_id" ref="factory3d_telemetry.view_f3d_command_form"/>
+    <record id="view_td_command_form_yard" model="ir.ui.view">
+        <field name="name">td.command.form.yard</field>
+        <field name="model">td.command</field>
+        <field name="inherit_id" ref="td_telemetry.view_td_command_form"/>
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="inside">
-                <group string="Двір" invisible="not f3d_yard_gate_id">
-                    <field name="f3d_yard_gate_id"/>
-                    <field name="f3d_yard_visit_id"/>
-                    <field name="f3d_yard_kind"/>
-                    <field name="f3d_yard_reason"/>
+                <group string="Двір" invisible="not td_yard_gate_id">
+                    <field name="td_yard_gate_id"/>
+                    <field name="td_yard_visit_id"/>
+                    <field name="td_yard_kind"/>
+                    <field name="td_yard_reason"/>
                 </group>
             </xpath>
         </field>
     </record>
 
-    <record id="action_f3d_yard_command" model="ir.actions.act_window">
+    <record id="action_td_yard_command" model="ir.actions.act_window">
         <field name="name">Команди на шлагбауми</field>
-        <field name="res_model">f3d.command</field>
+        <field name="res_model">td.command</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[('f3d_yard_gate_id', '!=', False)]</field>
+        <field name="domain">[('td_yard_gate_id', '!=', False)]</field>
     </record>
 
-    <menuitem id="menu_f3d_yard_commands" action="action_f3d_yard_command" name="Команди на шлагбауми" parent="menu_f3d_yard_journals" sequence="30" groups="group_f3d_yard_security"/>
+    <menuitem id="menu_td_yard_commands" action="action_td_yard_command" name="Команди на шлагбауми" parent="menu_td_yard_journals" sequence="30" groups="group_td_yard_security"/>
 </odoo>

@@ -4,7 +4,7 @@ import re
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-from .f3d_machine_event import CATEGORIES
+from .td_machine_event import CATEGORIES
 
 _logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ MESSAGE_RE = re.compile(r"^[A-Z0-9]{1,15}\*?$")
 
 
 class F3dMachineMessage(models.Model):
-    _name = "f3d.machine.message"
+    _name = "td.machine.message"
     _description = "Верстати: повідомлення верстата"
     _order = "sequence, message_id"
 

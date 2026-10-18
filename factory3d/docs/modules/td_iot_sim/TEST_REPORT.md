@@ -1,7 +1,7 @@
-# TEST_REPORT — factory3d_iot_sim (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
+# TEST_REPORT — td_iot_sim (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
 
-Воркер W6, 15.10.2026. Гілка `claude/f3d-factory3d_iot_sim`. Сервіс `factory3d/services/iot_sim/`, модуль Odoo
-`factory3d/odoo_addons/factory3d_iot_sim/` 19.0.2.0.0. Код стенда — `factory3d/services/iot_sim/tests/stand/` (`pytest -m stand`),
+Воркер W6, 15.10.2026. Гілка `claude/f3d-td_iot_sim`. Сервіс `factory3d/services/iot_sim/`, модуль Odoo
+`factory3d/odoo_addons/td_iot_sim/` 19.0.2.0.0. Код стенда — `factory3d/services/iot_sim/tests/stand/` (`pytest -m stand`),
 підняти — `tests/stand/up.sh`. Чек-лист розгортання — `DEPLOY_TEST.md`.
 
 ## Середовище і обмеження
@@ -10,9 +10,9 @@
 |---|---|
 | Docker | 29.8.2; образи: `python:3.12-slim` (з вшитим CA проксі, лише для збірки), `eclipse-mosquitto:2.0.20`, `f3d_iot_sim` (збірка з `Dockerfile`) |
 | Бібліотеки клієнтів | pymodbus 3.9.2, asyncua 1.1.6, bacpypes3 0.0.102, paho-mqtt 2.1.0, httpx 0.28.1, pytest 9.1.1 |
-| Хеш каталогу | `sha256:e14fc2041e68a0e667307150f8ae4d561f9229dafffc998f635199fa08f13533` (`catalog/signals.csv` = `data/f3d_sim_signal.csv` = `GET /catalog/signals.csv`) |
+| Хеш каталогу | `sha256:e14fc2041e68a0e667307150f8ae4d561f9229dafffc998f635199fa08f13533` (`catalog/signals.csv` = `data/td_sim_signal.csv` = `GET /catalog/signals.csv`) |
 | Стенд | `docker compose -f docker-compose.sim.yml --profile dev` (iot_sim + mosquitto). **Без `genset_relay`**: у `td_genset` (`origin/claude/dreamy-ramanujan-p2wlej`) немає каталогу `relay/` і `/sim/v1` API-F (є лише `smartgen/tools/fake_relay.py` зі старим інтерфейсом) → запасний режим §8.14 |
-| Odoo | Odoo 19.0 CE зі шаблонної бази `f3d_template` + `factory3d_iot_sim` (**копії демо-бази немає**): `f3d.sim.device`=230, `f3d.sim.signal`=1168 (151 `protocol=none`), сценаріїв 15; дані РЦ/працівників сідуються `test_odoo_e2e.py` через XML-RPC (2 РЦ, 35 працівників) |
+| Odoo | Odoo 19.0 CE зі шаблонної бази `f3d_template` + `td_iot_sim` (**копії демо-бази немає**): `td.sim.device`=230, `td.sim.signal`=1168 (151 `protocol=none`), сценаріїв 15; дані РЦ/працівників сідуються `test_odoo_e2e.py` через XML-RPC (2 РЦ, 35 працівників) |
 | Доступ клієнтів | Порти §8.1.3 не публікуються на хост (ТБ-01); тести ходять на IP контейнера в мережі `f3d_sim` (маршрутизується з хоста), REST/OPC UA — на `127.0.0.1:8090/4840` |
 | Скорочення | 15 хв → 45–110 с (на `factor=10`), 10 хв → 120 с, 30 хв → 60–75 с, 24 год (ТП-06) — не прогнано; кожне скорочення позначено «скорочено» |
 
@@ -55,12 +55,12 @@
 | ТБ-02 | Без токена / хибний / довжиною 200 → 401; 6 хибних за хвилину → 429 (навіть із вірним токеном із того ж IP), через 60 с знімається | **прогнан** | `test_rest.py::test_tb02…` |
 | ТБ-03 | `../etc/passwd`, `CNC-2; DROP`, `note` 10 КБ, `params` вкладеністю 100, ім'я сценарію з `;` → 404/422, сервіс живий, у логу без трасувань | **прогнан** | `test_rest.py::test_tb03…` |
 | ТБ-04 | BACnet dev 200: write LSZ/BV/PIV/MSV → `write-access-denied`, `ReinitializeDevice`/`DeviceCommunicationControl` відхилено; OPC UA write у `State.*` — анонімом **і** користувачем `collector` → відхилено (дефект виправлено); Modbus FC06 у PM5560 → 0x02; BioStar `DELETE /api/users/1` → 403/404/405. Modbus write у Huawei RO — не перевірено окремо | **прогнан** (частково по Huawei) | `test_mqtt_bacnet.py::test_tk08…`, `test_opcua_portal.py::test_tb04…`, `test_modbus.py::test_tk02…`, `test_misc.py::test_tk10_biostar_session_and_6400` |
-| ТБ-05 | Чотири множини `code+address` (1168) збігаються: `catalog/signals.csv`, `data/f3d_sim_signal.csv`, `GET /catalog/signals.csv`, `GET /f3d/sim/devices` (Odoo); sha256 перших трьох однаковий; `GET /signals` ⊂ каталогу | **прогнан** | `test_security.py::test_tb05…`, `test_odoo_security.py::test_tb05…` |
+| ТБ-05 | Чотири множини `code+address` (1168) збігаються: `catalog/signals.csv`, `data/td_sim_signal.csv`, `GET /catalog/signals.csv`, `GET /f3d/sim/devices` (Odoo); sha256 перших трьох однаковий; `GET /signals` ⊂ каталогу | **прогнан** | `test_security.py::test_tb05…`, `test_odoo_security.py::test_tb05…` |
 | ТБ-06 | Лог контейнера (`SIM_LOG_LEVEL=DEBUG`, весь прогін ≈ 27 хв, включно з ТК-10/13) не містить значень `SIM_API_TOKEN`, `SIM_BIOSTAR_PASS`, `SIM_WOODSTORE_APIKEY`, `SIM_JOBS_APIKEY`, `SIM_OPCUA_PASS`, `bs-session-id`. `SIM_ODOO_APIKEY` — на стенді без Odoo-змінної (e2e-прогін окремо, лог не перевірявся) | **прогнан** (частково по `SIM_ODOO_APIKEY`) | `test_rest.py::test_tb06…` |
 | ТБ-07 | `SIM_LPR_PUSH_URL` = хост поза allow-list: `iot_sim_outbound_denied_total` ≥ 1, у логу «outbound denied»; tcpdump-спостерігача не використано (метрика + лог) | **прогнан** (без tcpdump) | `test_security.py::test_tb07…` |
-| ТБ-08 | `group_f3d_user`: `create/write/unlink` на `f3d.sim.{panel,device,signal,scenario,run,event}` → `AccessError`; менеджер: полів токенів у `res.config.settings` немає (адмін — є) | **прогнан** | `test_odoo_security.py::test_tb08…` (+ модульні `test_security.py`) |
+| ТБ-08 | `group_td_user`: `create/write/unlink` на `f3d.sim.{panel,device,signal,scenario,run,event}` → `AccessError`; менеджер: полів токенів у `res.config.settings` немає (адмін — є) | **прогнан** | `test_odoo_security.py::test_tb08…` (+ модульні `test_security.py`) |
 | ТБ-09 | `token` замість `export_token` на `/f3d/sim/devices` і `/f3d/sim/events` → 401; `export_token` як токен REST керування → 401 | **прогнан** | `test_odoo_security.py::test_tb09…` |
-| ТБ-10 | `neutralize.sql` на копії бази: крони `cron_iot_sim`/`cron_f3d_sim_status` неактивні, `state=unconfigured`; «Перевірити зв'язок» → повідомлення «вимкнено/не налаштовано», `stop-all`/`reset`/`apply_factor` → `UserError` | **прогнан** | `test_odoo_security.py::test_tb10…` |
+| ТБ-10 | `neutralize.sql` на копії бази: крони `cron_iot_sim`/`cron_td_sim_status` неактивні, `state=unconfigured`; «Перевірити зв'язок» → повідомлення «вимкнено/не налаштовано», `stop-all`/`reset`/`apply_factor` → `UserError` | **прогнан** | `test_odoo_security.py::test_tb10…` |
 
 ## ТП — продуктивність (§13.4)
 
@@ -73,7 +73,7 @@
 | ТП-03 | RPM `present-value` усіх об'єктів RV-01…25 щосекунди + COV 120 об'єктів, 60 с | 525 об'єктів RV-01…25, 120 COV; цикл RPM: середній 0,14 с, максимум 0,21 с (критерій < 2 с); CPU контейнера 0,03 ядра | **прогнан** (скорочено; CPU — контейнера, не окремо BACnet-таска) | `test_perf.py::test_tp03…` |
 | ТП-04 | 10 клієнтів × підписка на всі CurrentState/RelativePiecesOut (32 вузли, не 720), publishing 500 мс, 75 с (замість 30 хв) | 90 вимірів: p50 = 0,69 с, p95 = 1,39 с, максимум 1,39 с (критерій < 1 с для медіани виконується, для p95 — ні: див. «Спостереження») | **прогнан частково**: затримка виміряна від `PUT /signals`; стабільність пам'яті 30 хв — не перевірялась | `test_opcua_portal.py::test_tp04…` |
 | ТП-05 | `GET /signals` (1017) 10 раз/с, 20 с | p95 < 100 мс (є в тесті), `count ≥ 900` | **прогнан** | `test_rest.py::test_tp05…` |
-| ТП-06 | Odoo: `refresh_signals` ≤ 5 с (≥ 1000 `f3d.sim.signal` без `none`), 2 000 подій через API-03 (по 100) ≤ 60 с, дедуплікація. **24 год крона — не прогнано** | див. тест | **частково** | `test_odoo_e2e.py::test_tp06…` |
+| ТП-06 | Odoo: `refresh_signals` ≤ 5 с (≥ 1000 `td.sim.signal` без `none`), 2 000 подій через API-03 (по 100) ≤ 60 с, дедуплікація. **24 год крона — не прогнано** | див. тест | **частково** | `test_odoo_e2e.py::test_tp06…` |
 | ТП-07 | 30 хв sim: `factor=60` (30 с) проти `factor=10` (3 хв), той самий seed після `reset`; лічильники РЦ і кількість подій | 84 лічильники `pieces_out`: розбіжностей 0 (допуск ± 0,5 % / ± 1 шт); подій 58 (`factor=10`) проти 60 (`factor=60`) | **прогнан** (скорочено: 30 хв замість 8 год; еталон `factor=10`, не `factor=1`) | `test_perf.py::test_tp07…` |
 
 ## Знайдені й виправлені дефекти
@@ -111,10 +111,10 @@
 | `pytest tests -q` | 451 passed; покриття `iot_sim/core`+`models` — 99 % |
 | `ruff` / `mypy --strict` | чисто (`mypy` у `pyproject.toml`; 84 точкових `# type: ignore[код]`, переважно «Cannot infer type of lambda» і Any від bacpypes3/asyncua без заглушок) |
 | `pre-commit run --all-files` (корінь, `.pre-commit-config.yaml`: ruff+isort(I), xml lint, end-of-file, mypy) | Passed |
-| `tools/gen_catalog.py --check` | OK, 1168 сигналів; sha256 `signals.csv` = `f3d_sim_signal.csv` |
+| `tools/gen_catalog.py --check` | OK, 1168 сигналів; sha256 `signals.csv` = `td_sim_signal.csv` |
 | ТБ-05 | зелений (прогін стенду; після правок типів файли каталогу не змінювались) |
-| Odoo `run_tests.sh f3d_iot_sim_dod /factory3d_iot_sim` (`factory3d_base,factory3d_iot_sim`) | OK, 0 failed of 40 tests |
-| `CHANGELOG.md` сервісу 0.1.0 і модуля 19.0.2.0.0, `static/description/icon.png` | додано (іконка — з `factory3d_base`) |
+| Odoo `run_tests.sh f3d_iot_sim_dod /td_iot_sim` (`td_factory3d,td_iot_sim`) | OK, 0 failed of 40 tests |
+| `CHANGELOG.md` сервісу 0.1.0 і модуля 19.0.2.0.0, `static/description/icon.png` | додано (іконка — з `td_factory3d`) |
 | Не виконано | перегляд безпеки менеджером, звірка §4 ARCHITECTURE з UI, `compose --profile demo up ≤ 60 с` (demo-профіль лише `config`) |
 
 ## Спостереження без змін коду (потребують рішення)

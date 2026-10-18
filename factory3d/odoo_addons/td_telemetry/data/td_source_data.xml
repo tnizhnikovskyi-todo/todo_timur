@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §5.2, Додаток C.1. equipment_id не ставиться: його проставляє хук (крок 3). -->
 <odoo noupdate="1">
-    <record id="collector_main" model="f3d.collector">
+    <record id="collector_main" model="td.collector">
         <field name="code">COL-MAIN</field>
         <field name="name">Основний колектор (стенд)</field>
     </record>
 
-    <record id="source_mqtt_mobile" model="f3d.source">
+    <record id="source_mqtt_mobile" model="td.source">
         <field name="code">MQTT-MOBILE</field>
         <field name="name">Телематика техніки (MQTT)</field>
         <field name="type">mqtt</field>
@@ -16,7 +16,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "mosquitto", "port": 1883, "username": "collector", "password_ref": "F3D_MQTT_PASSWORD", "client_id": "f3d-collector", "topics": ["f3d/mobile/+/telemetry", "f3d/mobile/+/status"], "status_topic": "f3d/mobile/{device}/status", "status_online_path": "$.online", "keepalive_s": 30, "tls": False}'/>
     </record>
-    <record id="source_mb_u70_compressor" model="f3d.source">
+    <record id="source_mb_u70_compressor" model="td.source">
         <field name="code">MB-U70-COMPRESSOR</field>
         <field name="name">Компресор Elektronikon Mk5 (u70)</field>
         <field name="type">modbus_tcp</field>
@@ -26,7 +26,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 70, "timeout_s": 3, "retries": 2, "max_block": 100}'/>
     </record>
-    <record id="source_mb_u84_io5" model="f3d.source">
+    <record id="source_mb_u84_io5" model="td.source">
         <field name="code">MB-U84-IO5</field>
         <field name="name">ADAM-6050 IO-5: аспірація, вода (u84)</field>
         <field name="type">modbus_tcp</field>
@@ -36,7 +36,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 84, "timeout_s": 3, "retries": 2}'/>
     </record>
-    <record id="source_mb_u90_ai1" model="f3d.source">
+    <record id="source_mb_u90_ai1" model="td.source">
         <field name="code">MB-U90-AI1</field>
         <field name="name">ADAM-6017 AI-1: аспірація, спринклери, пневмокільце (u90)</field>
         <field name="type">modbus_tcp</field>
@@ -46,7 +46,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 90, "timeout_s": 3, "retries": 2}'/>
     </record>
-    <record id="source_mb_u96_rtd1" model="f3d.source">
+    <record id="source_mb_u96_rtd1" model="td.source">
         <field name="code">MB-U96-RTD1</field>
         <field name="name">ADAM-6015 RTD-1: трансформатори (u96)</field>
         <field name="type">modbus_tcp</field>
@@ -56,7 +56,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 96, "timeout_s": 3, "retries": 2}'/>
     </record>
-    <record id="source_bac_140_boiler" model="f3d.source">
+    <record id="source_bac_140_boiler" model="td.source">
         <field name="code">BAC-140-BOILER</field>
         <field name="name">Котельня Kalvis (BACnet dev 140)</field>
         <field name="type">bacnet_ip</field>
@@ -66,7 +66,7 @@
         <field name="write_enabled" eval="False"/>
         <field name="params" eval='{"host": "iot-sim", "port": 47808, "device": 140, "network": 2, "timeout_s": 5, "rpm": True, "rpm_max": 50, "cov_lifetime_s": 300}'/>
     </record>
-    <record id="source_http_push" model="f3d.source">
+    <record id="source_http_push" model="td.source">
         <field name="code">HTTP-PUSH</field>
         <field name="name">Приймач HTTP push (Axis LPV)</field>
         <field name="type">http_push</field>

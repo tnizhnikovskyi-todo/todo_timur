@@ -19,8 +19,8 @@ class AllocMixin(EnergyMixin):
 
     @classmethod
     def alloc_setup(cls, days_back=3):
-        cls.Alloc = cls.env["f3d.energy.alloc"]
-        cls.Node = cls.env["f3d.energy.node"]
+        cls.Alloc = cls.env["td.energy.alloc"]
+        cls.Node = cls.env["td.energy.node"]
         cls.now = fields.Datetime.now()
         cls.day = dates.local_day(cls.now - timedelta(days=days_back))
         cls.d0, cls.d1 = dates.local_day_bounds(cls.day)
@@ -50,7 +50,7 @@ class AllocMixin(EnergyMixin):
         node = self.mk_meter("PM-" + code, max_kw=max_kw).node_id
         vals = {"alloc_role": role}
         if role == "shared":
-            pool = self.env["f3d.energy.pool"].search([("code", "=", pool_code)]) or self.env["f3d.energy.pool"].create(
+            pool = self.env["td.energy.pool"].search([("code", "=", pool_code)]) or self.env["td.energy.pool"].create(
                 {"code": pool_code, "name": pool_code, "driver": driver}
             )
             vals["pool_id"] = pool.id
@@ -125,7 +125,7 @@ class TestDirect(AllocMixin, F3DEnergyCase):
         self.assertAlmostEqual(row.minutes, 78.0, places=1)
         self.assertAlmostEqual(row.cost, 144.14, places=2)
         self.assertEqual(row.quality, "measured")
-        self.assertAlmostEqual(mo.workorder_ids.f3d_energy_direct_kwh, 17.160, places=3)
+        self.assertAlmostEqual(mo.workorder_ids.td_energy_direct_kwh, 17.160, places=3)
 
     def test_estimate_mo231(self):  # AC-38
         spec = [("SAW-T", 24, 0.55, 78), ("EDGE-T", 67.5, 0.65, 63), ("CNC-T", 22, 0.5, 74),
@@ -135,15 +135,15 @@ class TestDirect(AllocMixin, F3DEnergyCase):
         for wo, (_c, _p, _lf, minutes) in zip(mo.workorder_ids.sorted("id"), spec, strict=True):
             self.log(wo, self.at(1), self.at(1) + timedelta(minutes=minutes))
         self.run_day()
-        got = {wo.workcenter_id.code: wo.f3d_energy_direct_kwh for wo in mo.workorder_ids}
+        got = {wo.workcenter_id.code: wo.td_energy_direct_kwh for wo in mo.workorder_ids}
         for code, kwh in (("SAW-T", 17.160), ("EDGE-T", 46.069), ("CNC-T", 13.567), ("SORT-T", 4.350),
                           ("ASMLINE-T", 5.067)):  # fmt: skip
             self.assertAlmostEqual(got[code], kwh, places=3, msg=code)
         self.assertEqual(set(self.rows("direct").mapped("quality")), {"estimate"})
-        self.assertAlmostEqual(mo.f3d_energy_kwh, 86.213, places=3)
-        self.assertAlmostEqual(mo.f3d_energy_cost, 724.18, places=2)
-        self.assertEqual(mo.f3d_energy_state, "estimate")
-        self.assertAlmostEqual(mo.f3d_energy_unit_cost, 724.18 / 26, places=3)
+        self.assertAlmostEqual(mo.td_energy_kwh, 86.213, places=3)
+        self.assertAlmostEqual(mo.td_energy_cost, 724.18, places=2)
+        self.assertEqual(mo.td_energy_state, "estimate")
+        self.assertAlmostEqual(mo.td_energy_unit_cost, 724.18 / 26, places=3)
 
     def test_concurrent_split(self):  # AC-39
         node = self.mk_direct("SAW-T")
@@ -217,7 +217,7 @@ class TestPools(AllocMixin, F3DEnergyCase):
         self.assertAlmostEqual(a.cost, 49.29, places=2)
         self.assertAlmostEqual(b.kwh, 26.007, places=3)
         self.assertAlmostEqual(b.cost, 218.46, places=2)
-        self.assertAlmostEqual(self.mo_a.workorder_ids.f3d_energy_kwh, 1.98 + 5.868 + 2.486, places=3)
+        self.assertAlmostEqual(self.mo_a.workorder_ids.td_energy_kwh, 1.98 + 5.868 + 2.486, places=3)
 
     def test_light_time_driver(self):  # AC-43
         self.setup_slot()
@@ -247,10 +247,10 @@ class TestPools(AllocMixin, F3DEnergyCase):
         b_before = self.shared(self.pool_dust, self.mo_b).kwh
         # нові показання: +10 кВт·год аспірації наприкінці слота
         self.env.cr.execute(
-            "UPDATE f3d_reading SET value = value + 10 WHERE signal_id = %s AND ts >= %s",
+            "UPDATE td_reading SET value = value + 10 WHERE signal_id = %s AND ts >= %s",
             (self.dust.meter_id.e_import_signal_id.id, self.at(2, 57)),
         )
-        self.env["f3d.reading"].invalidate_model()
+        self.env["td.reading"].invalidate_model()
         self.run_day()
         self.assertEqual({r.id: (r.kwh, r.cost, r.write_date) for r in a_rows}, snap)
         b_after = self.shared(self.pool_dust, self.mo_b)
@@ -261,7 +261,7 @@ class TestPools(AllocMixin, F3DEnergyCase):
         self.assertAlmostEqual(un.kwh, pool_total - a_stored - b_after.kwh, delta=0.003)
 
     def test_wizard(self):  # AC-85
-        Wizard = self.env["f3d.energy.recompute.wizard"]
+        Wizard = self.env["td.energy.recompute.wizard"]
         today = fields.Date.context_today(Wizard)
         wiz = Wizard.with_user(self.u_energy).create({"date_from": today - timedelta(days=32), "date_to": today})
         with self.assertRaises(UserError):

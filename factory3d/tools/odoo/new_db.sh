@@ -4,7 +4,7 @@
 #   new_db.sh <name>
 #
 # Копія займає секунди; у базі стоять стандартні залежності factory3d (див. setup.sh, ENV.md) без
-# демо-даних. Модулі factory3d_* не встановлюються — для цього update.sh <name> (сам обере -i чи -u)
+# демо-даних. Модулі td_* не встановлюються — для цього update.sh <name> (сам обере -i чи -u)
 # або run_tests.sh <name>.
 set -euo pipefail
 # shellcheck source=env.sh

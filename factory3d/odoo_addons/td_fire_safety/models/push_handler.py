@@ -15,8 +15,8 @@ BACK_TO_NORMAL = {"alarm": "reset", "prealarm": "reset", "fault": "fault_ok", "d
 
 
 class F3dPushHandlerFire(models.AbstractModel):
-    _name = "f3d.push.handler.fire"
-    _inherit = "f3d.push.handler"
+    _name = "td.push.handler.fire"
+    _inherit = "td.push.handler"
     _description = "Пожежна безпека: обробник повідомлень BACnet"
     _f3d_push_routes = ("bacnet_event",)
 
@@ -54,8 +54,8 @@ class F3dPushHandlerFire(models.AbstractModel):
             return super()._f3d_handle_push(route, event)
         data = self._f3d_parse((event or {}).get("payload"))
         env = self.env
-        Event = env["f3d.fire.event"].sudo()
-        panel = env["f3d.fire.panel"].sudo().search([], limit=1)
+        Event = env["td.fire.event"].sudo()
+        panel = env["td.fire.panel"].sudo().search([], limit=1)
         device_no = ((panel.source_id.params or {}).get("device") if panel.source_id else None)
         if device_no is not None and device_no != data["device"]:
             return None  # X-44: чужий device instance, DEBUG
@@ -63,12 +63,12 @@ class F3dPushHandlerFire(models.AbstractModel):
         obj, inst = data["object"], data["instance"]
         links = {"panel_id": panel.id}
         if obj == "LSZ" and inst:
-            zone = env["f3d.fire.zone"].sudo().search([("lsz_instance", "=", inst)], limit=1)
+            zone = env["td.fire.zone"].sudo().search([("lsz_instance", "=", inst)], limit=1)
             if zone:
                 code = zone.code
                 links["zone_id"] = zone.id
         elif obj == "LSP":
-            device = env["f3d.fire.device"].sudo().search([("lsp_instance", "=", inst)], limit=1)
+            device = env["td.fire.device"].sudo().search([("lsp_instance", "=", inst)], limit=1)
             if device:
                 code = device.address
                 links.update(device_id=device.id, zone_id=device.zone_id.id)
@@ -77,10 +77,10 @@ class F3dPushHandlerFire(models.AbstractModel):
         etype = self._f3d_etype(state, to_state, states.normalize(data["from"]))
         ts = data["ts"]
         message = data["text"]
-        found_dev = env["f3d.fire.device"]
+        found_dev = env["td.fire.device"]
         match = ADDRESS_RE.search(message) if message else None
         if match:
-            found_dev = env["f3d.fire.device"].sudo().search([("address", "=", match.group(0))], limit=1)
+            found_dev = env["td.fire.device"].sudo().search([("address", "=", match.group(0))], limit=1)
         if etype:
             existing = Event.search([
                 ("etype", "=", etype), ("object_code", "=", code),

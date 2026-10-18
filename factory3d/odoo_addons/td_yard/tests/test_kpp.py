@@ -19,7 +19,7 @@ class TestYardKpp(GateCase):
         return visit
 
     def _data(self, user=None):
-        Visit = self.env["f3d.yard.visit"].with_user(user or self.user_guard)
+        Visit = self.env["td.yard.visit"].with_user(user or self.user_guard)
         return Visit.kpp_data()
 
     def test_kpp_data(self):  # AC-56
@@ -59,10 +59,10 @@ class TestYardKpp(GateCase):
         self.assertIn("write_enabled", data["can"]["command_reason"])
         self.assertTrue(all("write_enabled" in (g["command_block"] or "") for g in data["gates"]))
         with self.assertRaises(AccessError):
-            self.env["f3d.yard.visit"].with_user(self.user_reader).kpp_data()
+            self.env["td.yard.visit"].with_user(self.user_reader).kpp_data()
 
     def test_views(self):  # AC-53
-        Visit, Booking = self.env["f3d.yard.visit"], self.env["f3d.yard.booking"]
+        Visit, Booking = self.env["td.yard.visit"], self.env["td.yard.booking"]
         views = Visit.get_views([(False, t) for t in ("kanban", "list", "form", "pivot", "graph", "search")])
         self.assertEqual(len(views["views"]), 6)
         views = Booking.get_views([(False, t) for t in ("calendar", "list", "form", "search")])
@@ -89,9 +89,9 @@ class TestYardKpp(GateCase):
         self.assertEqual(data["at_gate"], [])
 
     def test_kpp_unassigned_weighing_card(self):
-        scale = self.env.ref("factory3d_yard.scale_truck")
+        scale = self.env.ref("td_yard.scale_truck")
         w = (
-            self.env["f3d.yard.weighing"]
+            self.env["td.yard.weighing"]
             .sudo()
             .create(
                 {"scale_id": scale.id, "kind": "check", "weight_kg": 21000.0, "state": "unassigned", "source": "auto"}
@@ -103,7 +103,7 @@ class TestYardKpp(GateCase):
         self.assertEqual(data["scale"]["code"], "TRUCK-SCALE")
 
     def test_kpp_action(self):  # AC-57
-        Visit = self.env["f3d.yard.visit"].with_user(self.user_guard)
+        Visit = self.env["td.yard.visit"].with_user(self.user_guard)
         with freeze(at(12, 45)):
             visit = self._arrived("АА1234КТ")
             P.set_param(self.env, "write_enabled", "False")
@@ -116,13 +116,13 @@ class TestYardKpp(GateCase):
             self.assertIsNone(res["action"])
             other = self._arrived("АА7777КТ", book=False)
             res = Visit.kpp_action("reject", visit_id=other.id)
-            self.assertEqual(res["action"]["res_model"], "f3d.yard.reject.wizard")
+            self.assertEqual(res["action"]["res_model"], "td.yard.reject.wizard")
             self.assertEqual(res["action"]["context"]["kpp"], 1)
             ev = self.recv(
                 lpr_event(2, plateText="ZZ9999ZZ", plateUnicode=None, capture_timestamp=capture_ms(at(12, 44)))
             )
             res = Visit.kpp_action("walk_in", event_id=ev.id)
-            self.assertEqual(res["action"]["res_model"], "f3d.yard.walkin.wizard")
+            self.assertEqual(res["action"]["res_model"], "td.yard.walkin.wizard")
             res = Visit.kpp_action("dismiss", event_id=ev.id)
             self.assertTrue(res["ok"])
             self.assertFalse(ev.kpp_alert)
@@ -136,7 +136,7 @@ class TestYardKpp(GateCase):
             self.assertEqual(visit.state, "left")
 
     def test_kpp_action_open_and_link(self):
-        Visit = self.env["f3d.yard.visit"].with_user(self.user_guard)
+        Visit = self.env["td.yard.visit"].with_user(self.user_guard)
         now = at(12, 45)
         with freeze(now):
             self.put(self.gate_w, "photocell", 0, now)
@@ -158,23 +158,23 @@ class TestYardKpp(GateCase):
                 self.gate_w._f3d_yard_notify()
             self.env.cr.precommit.run()
         calls = [c.args for c in sendone.call_args_list]
-        self.assertEqual(sorted(a[2]["model"] for a in calls), ["f3d.yard.gate", "f3d.yard.visit"])
+        self.assertEqual(sorted(a[2]["model"] for a in calls), ["td.yard.gate", "td.yard.visit"])
         self.assertTrue(all(a[0] == "f3d_yard" and a[1] == "f3d_yard/update" for a in calls))
 
     def test_viewer_notify(self):  # AC-64
         ev = MagicMock()
         visit = self._arrived("АА1234КТ", book=False)
-        Visit = type(self.env["f3d.yard.visit"])
+        Visit = type(self.env["td.yard.visit"])
         with patch.object(Visit, "_f3d_yard_viewer_event", return_value=ev):
             with freeze(at(12, 50)):
                 visit.action_admit(open_gate=False)
-            ev._notify.assert_any_call("f3d.yard.visit", [visit.name, visit.scene_code, visit.dock_code], "doc")
+            ev._notify.assert_any_call("td.yard.visit", [visit.name, visit.scene_code, visit.dock_code], "doc")
             ev.reset_mock()
             self.gate_w._f3d_yard_notify()
-            ev._notify.assert_called_once_with("f3d.yard.gate", ["GATE-W"], "state")
+            ev._notify.assert_called_once_with("td.yard.gate", ["GATE-W"], "state")
             ev.reset_mock()
-            self.env.ref("factory3d_yard.scale_truck")._f3d_yard_notify()
-            ev._notify.assert_called_once_with("f3d.yard.scale", ["TRUCK-SCALE"], "state")
+            self.env.ref("td_yard.scale_truck")._f3d_yard_notify()
+            ev._notify.assert_called_once_with("td.yard.scale", ["TRUCK-SCALE"], "state")
 
     def test_no_show_cron(self):  # R-19 п. 2
         P.set_param(self.env, "no_show_min", "120")
@@ -183,7 +183,7 @@ class TestYardKpp(GateCase):
         fresh = self._visit(plate="АА4321КТ", batch_id=self._batch().id)
         self._booking(fresh, self.dock_t2, at(12), at(13), confirm=True)
         with freeze(at(12, 5)):
-            self.env["f3d.yard.visit"]._cron_queue()
+            self.env["td.yard.visit"]._cron_queue()
         self.assertTrue(visit.is_no_show)
         self.assertFalse(fresh.is_no_show)
 
@@ -191,10 +191,10 @@ class TestYardKpp(GateCase):
         visit = self._arrived("АА1234КТ", book=False)
         with freeze(at(12, 50)):
             visit.action_admit(open_gate=False)
-            self.env["f3d.yard.visit"]._cron_queue()
+            self.env["td.yard.visit"]._cron_queue()
             self.assertEqual(visit.state, "queued")
             P.set_param(self.env, "auto_call_next", "True")
-            self.env["f3d.yard.visit"]._cron_queue()
+            self.env["td.yard.visit"]._cron_queue()
         self.assertEqual(visit.state, "at_dock")
 
     def test_kpp_data_speed(self):  # AC-58 (швидкодія)
@@ -228,17 +228,17 @@ class TestYardKppTours(HttpCase):
         cls.guard = new_test_user(
             cls.env,
             "yard_tour",
-            groups="factory3d_yard.group_f3d_yard_security,factory3d_yard.group_f3d_yard_dispatcher",
+            groups="td_yard.group_td_yard_security,td_yard.group_td_yard_dispatcher",
         )
         P.set_param(cls.env, "write_enabled", "False")
-        Visit = cls.env["f3d.yard.visit"]
+        Visit = cls.env["td.yard.visit"]
         for plate in ("АА7310КТ", "АА7311КТ"):
             Visit.create({"visit_type": "incoming", "plate": plate}).action_arrive()
 
     def test_kpp_tour(self):  # AC-58
-        self.start_tour("/odoo/action-factory3d_yard.action_f3d_yard_kpp", "f3d_yard_kpp_tour", login="yard_tour")
+        self.start_tour("/odoo/action-td_yard.action_td_yard_kpp", "f3d_yard_kpp_tour", login="yard_tour")
 
     def test_dispatch_tour(self):  # AC-54
         self.start_tour(
-            "/odoo/action-factory3d_yard.action_f3d_yard_dispatch", "f3d_yard_dispatch_tour", login="yard_tour"
+            "/odoo/action-td_yard.action_td_yard_dispatch", "f3d_yard_dispatch_tour", login="yard_tour"
         )

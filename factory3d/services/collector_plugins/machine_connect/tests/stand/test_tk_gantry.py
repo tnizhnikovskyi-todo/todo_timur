@@ -26,7 +26,7 @@ GCMD = "equipment/GANTRY-1/cmd"
 
 def job_read(o, jid):
     return o.read(
-        "f3d.gantry.job",
+        "td.gantry.job",
         jid,
         [
             "state",
@@ -46,7 +46,7 @@ def job_read(o, jid):
 
 def stack_read(o, code):
     return o.search_read(
-        "f3d.gantry.stack",
+        "td.gantry.stack",
         [("code", "=", code)],
         [
             "ws_qty",
@@ -76,9 +76,9 @@ def test_tk06_feed_by_mo(fresh, sim):
     jid = act["res_id"]
     job = job_read(o, jid)
     assert job["sheets"] == 4 and job["state"] in ("draft", "to_send"), job
-    code = o.read("f3d.gantry.stack", job["stack_id"][0], ["code"])[0]["code"]
+    code = o.read("td.gantry.stack", job["stack_id"][0], ["code"])[0]["code"]
     before = stack_read(o, code)
-    o.call("f3d.gantry.job", "action_send", [jid])
+    o.call("td.gantry.job", "action_send", [jid])
     cmd = wait(lambda: next((c for c in commands(o, GCMD) if c["state"] == "done"), None), 90, 2)
     assert cmd, commands(o, GCMD)
     assert (cmd["text"] or "").startswith("feed;%s;SAW-1;4;" % code) or cmd["payload"].get("op") == "feed", cmd
@@ -93,7 +93,7 @@ def test_tk06_feed_by_mo(fresh, sim):
     assert after["fed_unconsumed"] == 4 and after["state"] == "ok", after
     moves = o.search_read(
         "stock.move",
-        [("raw_material_production_id", "=", mo["id"]), ("location_id.f3d_code", "=", code)],
+        [("raw_material_production_id", "=", mo["id"]), ("location_id.td_code", "=", code)],
         ["state", "quantity"],
     )
     print("ТК-06: стос", code, "до", before["ws_qty"], "після", after["ws_qty"], "рухи МО:", moves)
@@ -116,11 +116,11 @@ def test_tk07_stack_diff_fix(fresh, sim):
     assert s1 and s1["state"] == "pending", s1
     s2 = wait(lambda: (s := stack_read(o, "PLT-01B")) and s["state"] == "diff" and s, 11 * 60, 15)
     assert s2, stack_read(o, "PLT-01B")
-    sid = o.search_read("f3d.gantry.stack", [("code", "=", "PLT-01B")], ["id"])[0]["id"]
-    acts = o.search_read("mail.activity", [("res_model", "=", "f3d.gantry.stack"), ("res_id", "=", sid)], ["summary"])
+    sid = o.search_read("td.gantry.stack", [("code", "=", "PLT-01B")], ["id"])[0]["id"]
+    acts = o.search_read("mail.activity", [("res_model", "=", "td.gantry.stack"), ("res_id", "=", sid)], ["summary"])
     assert len(acts) == 1 and "PLT-01B" in (acts[0]["summary"] or ""), acts
     stock = as_user("stand_stock")
-    stock.call("f3d.gantry.stack", "action_accept_portal", [sid])
+    stock.call("td.gantry.stack", "action_accept_portal", [sid])
     s3 = stack_read(o, "PLT-01B")
     assert s3["state"] == "ok" and abs(s3["odoo_qty"] - (s3["ws_qty"] + s3["fed_unconsumed"])) < 0.01, s3
     # крок 5: портал розійшовся в інший бік → «Виправити портал» (команда `stack`)
@@ -130,7 +130,7 @@ def test_tk07_stack_diff_fix(fresh, sim):
         o, "PLT-01B"
     )
     exp = stack_read(o, "PLT-01B")["expected_qty"]
-    stock.call("f3d.gantry.stack", "action_fix_portal", [sid])
+    stock.call("td.gantry.stack", "action_fix_portal", [sid])
     cmd = wait(
         lambda: next(
             (c for c in commands(o, GCMD) if c["state"] == "done" and (c["payload"] or {}).get("op") == "stack"), None
@@ -169,7 +169,7 @@ def test_tk08_portal_events(fresh, sim):
     assert st in (200, 201, 202), (st, d)
     jobs = wait(
         lambda: o.search_read(
-            "f3d.gantry.job", [("origin", "=", "machine")], ["id", "state", "done", "sheet_log", "production_id"]
+            "td.gantry.job", [("origin", "=", "machine")], ["id", "state", "done", "sheet_log", "production_id"]
         ),
         120,
         5,
@@ -179,7 +179,7 @@ def test_tk08_portal_events(fresh, sim):
         lambda: (
             (
                 x := o.search_read(
-                    "f3d.gantry.job", [("origin", "=", "machine")], ["state", "done", "sheet_log", "production_id"]
+                    "td.gantry.job", [("origin", "=", "machine")], ["state", "done", "sheet_log", "production_id"]
                 )[0]
             )
             and x["state"] == "done"
@@ -210,7 +210,7 @@ def test_tk15_stop_cranes(fresh, sim):
     assert wait(lambda: machine(o, "SLIDE-1")["state"] == "working", 40, 1)
     time.sleep(180)  # крок 1 (SPEC: 10 хв): автостарт вимкнено
     assert o.read("mrp.workorder", wid, ["state"])[0]["state"] == "ready"
-    o.param("factory3d.machine_connect.auto_start_enabled", "True")  # крок 2
+    o.param("td.machine_connect.auto_start_enabled", "True")  # крок 2
     sim.hold("workcenters/SLIDE-1/state", 0, 1800)
     time.sleep(10)
     sim.hold("workcenters/SLIDE-1/state", 1, 1800)
@@ -218,30 +218,30 @@ def test_tk15_stop_cranes(fresh, sim):
         "автостарт I/O не спрацював"
     )
     # крок 4–6: read_enabled=False
-    o.param("factory3d.machine_connect.read_enabled", "False")
+    o.param("td.machine_connect.read_enabled", "False")
     sim.hold("workcenters/SAW-1/state", 3, 600)
     time.sleep(60)
     assert machine(o, "SAW-1")["state"] != "working"
-    src = o.search_read("f3d.source", [("code", "=", "MC-DERIVED")], ["state"])[0]["state"]
-    o.param("factory3d.machine_connect.read_enabled", "True")
+    src = o.search_read("td.source", [("code", "=", "MC-DERIVED")], ["state"])[0]["state"]
+    o.param("td.machine_connect.read_enabled", "True")
     print("ТК-15: MC-DERIVED при read_enabled=False:", src)
     # крок 7: п'ять запобіжників
     enable_write(o, ["REST-WOODSTORE"], [GCMD])
     mo2 = make_mo(o, "BR-K4", 14)
-    sigid = o.search_read("f3d.signal", [("code", "=", GCMD)], ["id"])[0]["id"]
-    srcid = o.search_read("f3d.source", [("code", "=", "REST-WOODSTORE")], ["id"])[0]["id"]
+    sigid = o.search_read("td.signal", [("code", "=", GCMD)], ["id"])[0]["id"]
+    srcid = o.search_read("td.source", [("code", "=", "REST-WOODSTORE")], ["id"])[0]["id"]
     guards = [
-        ("module", lambda v: o.param("factory3d.machine_connect.write_enabled", "True" if v else "False")),
-        ("telemetry", lambda v: o.param("factory3d.telemetry.write_enabled", "True" if v else "False")),
-        ("source", lambda v: o.write("f3d.source", srcid, {"write_enabled": v})),
-        ("signal", lambda v: o.write("f3d.signal", sigid, {"write_enabled": v})),
+        ("module", lambda v: o.param("td.machine_connect.write_enabled", "True" if v else "False")),
+        ("telemetry", lambda v: o.param("td.telemetry.write_enabled", "True" if v else "False")),
+        ("source", lambda v: o.write("td.source", srcid, {"write_enabled": v})),
+        ("signal", lambda v: o.write("td.signal", sigid, {"write_enabled": v})),
     ]
     for name, setter in guards:
         setter(False)
         act = o.call("mrp.production", "action_f3d_feed_gantry", [mo2["id"]])
         err = None
         try:
-            o.call("f3d.gantry.job", "action_send", [act["res_id"]])
+            o.call("td.gantry.job", "action_send", [act["res_id"]])
         except RuntimeError as e:
             err = str(e)
         n = len([c for c in commands(o, GCMD) if c["state"] != "failed"])
@@ -249,12 +249,12 @@ def test_tk15_stop_cranes(fresh, sim):
         assert n == 0, (name, "команду створено при вимкненому запобіжнику", commands(o, GCMD))
         setter(True)
         jid = act["res_id"]
-        o.call("f3d.gantry.job", "action_cancel", [jid]) if o.read("f3d.gantry.job", jid, ["state"])[0][
+        o.call("td.gantry.job", "action_cancel", [jid]) if o.read("td.gantry.job", jid, ["state"])[0][
             "state"
         ] != "cancelled" else None
     # п'ятий: F3D_WRITE_ENABLED=0 в колекторі → команда `queued` → `expired`
     stand_sh("collector-restart", env={"F3D_WRITE_ENABLED": "0"})
     act = o.call("mrp.production", "action_f3d_feed_gantry", [mo2["id"]])
-    o.call("f3d.gantry.job", "action_send", [act["res_id"]])
+    o.call("td.gantry.job", "action_send", [act["res_id"]])
     c = wait(lambda: next((x for x in commands(o, GCMD) if x["state"] in ("expired", "failed")), None), 20 * 60, 20)
     assert c and c["state"] == "expired", commands(o, GCMD)

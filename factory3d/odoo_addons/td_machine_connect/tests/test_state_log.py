@@ -15,7 +15,7 @@ class TestStateLog(F3DMachineCase):
         return log
 
     def _logs(self, m):
-        return self.env["f3d.machine.state.log"].search([("machine_id", "=", m.id)], order="date_start, id")
+        return self.env["td.machine.state.log"].search([("machine_id", "=", m.id)], order="date_start, id")
 
     def test_transition_closes_and_opens(self):
         m = self.m_ua
@@ -30,7 +30,7 @@ class TestStateLog(F3DMachineCase):
         self.assertEqual((new.state, new.date_start, new.source), ("working", self.kt("09:55"), "machine"))
         self.assertEqual(new.raw, "WORKING/AUTOMATIC")
         self.assertEqual(
-            self.env["f3d.machine.state.log"].search_count([("machine_id", "=", m.id), ("date_end", "=", False)]), 1
+            self.env["td.machine.state.log"].search_count([("machine_id", "=", m.id), ("date_end", "=", False)]), 1
         )
         logs = self._logs(m)
         for prev, nxt in zip(logs, logs[1:], strict=False):
@@ -75,7 +75,7 @@ class TestStateLog(F3DMachineCase):
         self._set_state(m, "idle", "09:50")
         self.feed(self.ua(m, "09:55:00", state="WORKING", mode="AUTOMATIC"))
         self.assertEqual(self.sig_ua_mstate.last_text, "working")
-        reading = self.env["f3d.reading"].search([("signal_id", "=", self.sig_ua_mstate.id)])
+        reading = self.env["td.reading"].search([("signal_id", "=", self.sig_ua_mstate.id)])
         self.assertEqual(reading.mapped("src"), ["module"])
 
     def test_collector_cannot_feed_derived(self):
@@ -90,5 +90,5 @@ class TestStateLog(F3DMachineCase):
         self.assertEqual(m.state, "nodata")
         self.assertEqual(m.current_log_id.state, "nodata")
         self.assertEqual(
-            self.env["f3d.machine.state.log"].search_count([("machine_id", "=", m.id), ("date_end", "=", False)]), 1
+            self.env["td.machine.state.log"].search_count([("machine_id", "=", m.id), ("date_end", "=", False)]), 1
         )

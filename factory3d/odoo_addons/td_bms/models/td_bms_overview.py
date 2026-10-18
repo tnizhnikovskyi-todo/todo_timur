@@ -1,4 +1,4 @@
-"""M-10 f3d.bms.overview: дані огляду будівлі (FR-14, R-28). Права користувача запиту, без `sudo`."""
+"""M-10 td.bms.overview: дані огляду будівлі (FR-14, R-28). Права користувача запиту, без `sudo`."""
 
 from datetime import timezone
 
@@ -7,7 +7,7 @@ from odoo.exceptions import AccessError
 
 from ..tools import schedule, titles
 
-OPEN_MODELS = ("f3d.bms.light.group", "f3d.bms.light.panel", "f3d.bms.hvac.unit", "f3d.zone")
+OPEN_MODELS = ("td.bms.light.group", "td.bms.light.panel", "td.bms.hvac.unit", "td.zone")
 HEAT_KEYS = (
     "outdoor_c",
     "heat_need_kw",
@@ -32,7 +32,7 @@ def _kyiv(dt):
 
 
 class F3dBmsOverview(models.AbstractModel):
-    _name = "f3d.bms.overview"
+    _name = "td.bms.overview"
     _description = "Будівля: огляд"
 
     def _can_read(self, model):
@@ -44,7 +44,7 @@ class F3dBmsOverview(models.AbstractModel):
 
     def _work_time(self, now):
         icp = self.env["ir.config_parameter"].sudo()
-        cal_id = (icp.get_param("factory3d.bms.calendar_id") or "").strip()
+        cal_id = (icp.get_param("td.bms.calendar_id") or "").strip()
         calendar = self.env["resource.calendar"].sudo().browse(int(cal_id)) if cal_id.isdigit() else None
         if not calendar or not calendar.exists():
             calendar = self.env.company.sudo().resource_calendar_id
@@ -55,10 +55,10 @@ class F3dBmsOverview(models.AbstractModel):
         env = self.env
         now = fields.Datetime.now()
         icp = env["ir.config_parameter"].sudo()
-        groups = self._search("f3d.bms.light.group")
-        panels = self._search("f3d.bms.light.panel")
-        units = self._search("f3d.bms.hvac.unit")
-        zones = self._search("f3d.zone", [("zone_type", "!=", "outdoor")])
+        groups = self._search("td.bms.light.group")
+        panels = self._search("td.bms.light.panel")
+        units = self._search("td.bms.hvac.unit")
+        zones = self._search("td.zone", [("zone_type", "!=", "outdoor")])
         group_by_zone = {}
         for g in groups.sorted(lambda g: (g.sequence, g.code)):
             group_by_zone.setdefault(g.zone_id.id, g)
@@ -69,7 +69,7 @@ class F3dBmsOverview(models.AbstractModel):
             {
                 "id": g.id,
                 "code": g.code,
-                "zone": g.zone_id.f3d_code,
+                "zone": g.zone_id.td_code,
                 "e_now": g.e_now,
                 "e_norm": g.e_norm,
                 "level": round(g.level_pct / 100.0, 3),
@@ -86,7 +86,7 @@ class F3dBmsOverview(models.AbstractModel):
                 "kind": u.kind,
                 "x": u.x,
                 "y": u.y,
-                "zone": u.zone_id.f3d_code,
+                "zone": u.zone_id.td_code,
                 "mode_label": u.mode_label,
                 "state": u.state,
                 "plan_state": u.plan_state,
@@ -101,13 +101,13 @@ class F3dBmsOverview(models.AbstractModel):
             "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "work_time": self._work_time(now),
             "plan": {
-                "width": float(icp.get_param("factory3d.base.plant_length_m", 150)),
-                "depth": float(icp.get_param("factory3d.base.plant_width_m", 72)),
+                "width": float(icp.get_param("td.base.plant_length_m", 150)),
+                "depth": float(icp.get_param("td.base.plant_width_m", 72)),
             },
             "zones": [
                 {
                     "id": z.id,
-                    "code": z.f3d_code,
+                    "code": z.td_code,
                     "name": z.name,
                     "polygon": z.polygon or [],
                     "group": group_by_zone[z.id].code if z.id in group_by_zone else None,
@@ -139,9 +139,9 @@ class F3dBmsOverview(models.AbstractModel):
         }
 
     def _heat(self):
-        if not self._can_read("f3d.bms.heat.balance"):
+        if not self._can_read("td.bms.heat.balance"):
             return {"live": {}, "data": {}}
-        bal = self.env["f3d.bms.heat.balance"]._f3d_bms_get()
+        bal = self.env["td.bms.heat.balance"]._f3d_bms_get()
         live = bal._f3d_bms_live()
         data = {k: live[k] for k in HEAT_KEYS}
         data["design"] = {
@@ -154,9 +154,9 @@ class F3dBmsOverview(models.AbstractModel):
         return {"live": live, "data": data}
 
     def _deviations(self):
-        if not self._can_read("f3d.bms.deviation"):
+        if not self._can_read("td.bms.deviation"):
             return {"count": 0, "rows": []}
-        Dev = self.env["f3d.bms.deviation"]
+        Dev = self.env["td.bms.deviation"]
         domain = [("state", "=", "open")]
         return {
             "count": Dev.search_count(domain),

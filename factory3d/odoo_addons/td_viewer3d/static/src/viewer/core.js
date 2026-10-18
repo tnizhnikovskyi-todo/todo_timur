@@ -16,7 +16,7 @@ import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
 import { createStockLoad, liveLine } from "./stock_load.js";
 
-const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
+const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 
 // Точка розширення ядра (SPEC R-25): модуль-міст реєструє обробник, який ядро викликає з `applyLayout(D.layout)`
 // після завантаження моделі, на кожній повній дельті й зміні розкладки — ДО `stockLoad.sync`, щоб вантаж за залишками

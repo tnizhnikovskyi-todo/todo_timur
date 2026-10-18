@@ -2,59 +2,59 @@
 <!-- SPEC §5.1 -->
 <odoo noupdate="1">
     <record id="param_read_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.genset.read_enabled</field>
+        <field name="key">td.genset.read_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_requests_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.genset.requests_enabled</field>
+        <field name="key">td.genset.requests_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_write_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.genset.write_enabled</field>
+        <field name="key">td.genset.write_enabled</field>
         <field name="value">False</field>
     </record>
     <record id="param_amf_master" model="ir.config_parameter">
-        <field name="key">factory3d.genset.amf_master</field>
+        <field name="key">td.genset.amf_master</field>
         <field name="value">hgm</field>
     </record>
     <record id="param_offline_min" model="ir.config_parameter">
-        <field name="key">factory3d.genset.offline_min</field>
+        <field name="key">td.genset.offline_min</field>
         <field name="value">5</field>
     </record>
     <record id="param_ats_position_code" model="ir.config_parameter">
-        <field name="key">factory3d.genset.ats_position_code</field>
+        <field name="key">td.genset.ats_position_code</field>
         <field name="value">infra/ats/position</field>
     </record>
     <record id="param_ats_src1_code" model="ir.config_parameter">
-        <field name="key">factory3d.genset.ats_src1_code</field>
+        <field name="key">td.genset.ats_src1_code</field>
         <field name="value">infra/ats/src1_ok</field>
     </record>
     <record id="param_ats_src2_code" model="ir.config_parameter">
-        <field name="key">factory3d.genset.ats_src2_code</field>
+        <field name="key">td.genset.ats_src2_code</field>
         <field name="value">infra/ats/src2_ok</field>
     </record>
     <record id="param_ats_position_i_value" model="ir.config_parameter">
-        <field name="key">factory3d.genset.ats_position_i_value</field>
+        <field name="key">td.genset.ats_position_i_value</field>
         <field name="value">2</field>
     </record>
     <record id="param_ats_position_ii_value" model="ir.config_parameter">
-        <field name="key">factory3d.genset.ats_position_ii_value</field>
+        <field name="key">td.genset.ats_position_ii_value</field>
         <field name="value">3</field>
     </record>
     <record id="param_critical_codes" model="ir.config_parameter">
-        <field name="key">factory3d.genset.critical_codes</field>
+        <field name="key">td.genset.critical_codes</field>
         <field name="value">energy/consumers/LP-1/p_now,energy/consumers/LP-2/p_now,energy/consumers/LP-3/p_now,energy/consumers/DUST-1/p_now,energy/consumers/COMPRESSOR/p_now,energy/consumers/BOILER/p_now,energy/consumers/OFFICE/p_now,energy/consumers/EF-ELEC/p_now,energy/consumers/EF-CHG/p_now,energy/lines/BW-1/p_now</field>
     </record>
     <record id="param_publish_period_s" model="ir.config_parameter">
-        <field name="key">factory3d.genset.publish_period_s</field>
+        <field name="key">td.genset.publish_period_s</field>
         <field name="value">60</field>
     </record>
     <record id="param_service_warn_h" model="ir.config_parameter">
-        <field name="key">factory3d.genset.service_warn_h</field>
+        <field name="key">td.genset.service_warn_h</field>
         <field name="value">50</field>
     </record>
     <record id="param_migration_report" model="ir.config_parameter">
-        <field name="key">factory3d.genset.migration_report</field>
+        <field name="key">td.genset.migration_report</field>
         <field name="value">{}</field>
     </record>
 </odoo>

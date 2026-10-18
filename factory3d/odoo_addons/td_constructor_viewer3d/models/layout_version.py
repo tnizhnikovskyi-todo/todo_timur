@@ -1,15 +1,15 @@
-"""Шина переглядача: створення/видалення версії планування → подія `f3d.layout.version` (клієнти беруть дельту)."""
+"""Шина переглядача: створення/видалення версії планування → подія `td.layout.version` (клієнти беруть дельту)."""
 from odoo import api, models
 
 
 class F3dLayoutVersion(models.Model):
-    _inherit = "f3d.layout.version"
+    _inherit = "td.layout.version"
 
     def _f3d_notify_viewer(self):
-        if "f3d.viewer.event" not in self.env:
+        if "td.viewer.event" not in self.env:
             return
         codes = {v.site_id.code or str(v.site_id.id) for v in self.sudo()}
-        self.env["f3d.viewer.event"]._notify("f3d.layout.version", codes, "state")
+        self.env["td.viewer.event"]._notify("td.layout.version", codes, "state")
 
     @api.model_create_multi
     def create(self, vals_list):

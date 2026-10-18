@@ -1,4 +1,4 @@
-"""Адаптер factory3d_telemetry: TEL-01…TEL-04 (SPEC §2.0.2, §2.0.3). Єдине місце імен telemetry у мості."""
+"""Адаптер td_telemetry: TEL-01…TEL-04 (SPEC §2.0.2, §2.0.3). Єдине місце імен telemetry у мості."""
 
 from odoo import fields
 
@@ -40,13 +40,13 @@ ALWAYS_LEAFS = [row[0] for row in SIGNALS if not row[4]]
 STALE_LEAFS = [row[0] for row in SIGNALS if row[4]]
 
 
-def prefix(f3d_code):
-    return "infra/genset/%s/" % f3d_code
+def prefix(td_code):
+    return "infra/genset/%s/" % td_code
 
 
 def signal_period_s(env):
     """T-6: period_s = max(60, offline_min·20)."""
-    raw = env["ir.config_parameter"].sudo().get_param("factory3d.genset.offline_min", "5")
+    raw = env["ir.config_parameter"].sudo().get_param("td.genset.offline_min", "5")
     try:
         offline_min = int(raw)
     except (TypeError, ValueError):
@@ -56,7 +56,7 @@ def signal_period_s(env):
 
 def ensure_source(env, link):
     """TEL-01: джерело GENSET-RELAY (локальний тип td_genset, без колектора)."""
-    Source = env["f3d.source"].sudo()
+    Source = env["td.source"].sudo()
     source = Source.search([("code", "=", SOURCE_CODE)], limit=1)
     if not source:
         source = Source.create(
@@ -78,9 +78,9 @@ def ensure_source(env, link):
 
 def ensure_signals(env, link):
     """TEL-02: 26 сигналів Додатка A; повертає {code: signal}. Наявні не змінює."""
-    Signal = env["f3d.signal"].sudo()
-    f3d_code = link.equipment_id.f3d_code
-    pfx = prefix(f3d_code)
+    Signal = env["td.signal"].sudo()
+    td_code = link.equipment_id.td_code
+    pfx = prefix(td_code)
     codes = [pfx + leaf for leaf in LEAFS]
     existing = {s.code: s for s in Signal.with_context(active_test=False).search([("code", "in", codes)])}
     period = signal_period_s(env)
@@ -91,7 +91,7 @@ def ensure_signals(env, link):
             continue
         vals = {
             "code": code,
-            "name": "Генератор %s: %s" % (f3d_code, title),
+            "name": "Генератор %s: %s" % (td_code, title),
             "equipment_id": link.equipment_id.id,
             "source_id": source.id,
             "module": SOURCE_MODULE,
@@ -122,19 +122,19 @@ def ingest(env, batch):
         }
         for item in batch
     ]
-    res = env["f3d.signal"].sudo()._f3d_ingest(readings, src="module")
+    res = env["td.signal"].sudo()._f3d_ingest(readings, src="module")
     return {"accepted": res["accepted"], "stored": res["stored"], "skipped": res["accepted"] - res["stored"]}
 
 
 def mark_stale(env, codes, reason):
     """T-3: сигнали без свіжих даних -> stale (ідемпотентно, чаттер раз на перехід)."""
-    env["f3d.signal"].sudo().search([("code", "in", list(codes))])._mark_stale(reason)
+    env["td.signal"].sudo().search([("code", "in", list(codes))])._mark_stale(reason)
 
 
 def read_values(env, codes):
     """TEL-04: {code: (value, ts, status)}; відсутній код — відсутній ключ."""
     rows = (
-        env["f3d.signal"].sudo().search_read([("code", "in", list(codes))], ["code", "last_value", "last_ts", "status"])
+        env["td.signal"].sudo().search_read([("code", "in", list(codes))], ["code", "last_value", "last_ts", "status"])
     )
     return {r["code"]: (r["last_value"], r["last_ts"] or None, r["status"]) for r in rows}
 
@@ -145,5 +145,5 @@ def now():
 
 def signal_periods(env, codes):
     """period_s сигналів {code: period_s} (для перевірки свіжості ATS, R-05)."""
-    rows = env["f3d.signal"].sudo().search_read([("code", "in", list(codes))], ["code", "period_s"])
+    rows = env["td.signal"].sudo().search_read([("code", "in", list(codes))], ["code", "period_s"])
     return {r["code"]: r["period_s"] for r in rows}

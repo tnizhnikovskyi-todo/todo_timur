@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_stock_picking_batch_form_f3d_yard" model="ir.ui.view">
-        <field name="name">stock.picking.batch.form.f3d.yard</field>
+    <record id="view_stock_picking_batch_form_td_yard" model="ir.ui.view">
+        <field name="name">stock.picking.batch.form.td.yard</field>
         <field name="model">stock.picking.batch</field>
         <field name="inherit_id" ref="stock_picking_batch.stock_picking_batch_form"/>
         <field name="arch" type="xml">
             <xpath expr="//header/field[@name='state']" position="before">
-                <button name="action_f3d_create_visit" type="object" string="Створити рейс" invisible="f3d_visit_id or picking_type_code not in ('incoming','outgoing')" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                <button name="action_f3d_create_visit" type="object" string="Створити рейс" invisible="td_visit_id or picking_type_code not in ('incoming','outgoing')" groups="td_yard.group_td_yard_dispatcher"/>
             </xpath>
             <xpath expr="//div[@name='button_box']" position="inside">
-                <button name="action_f3d_open_visits" type="object" class="oe_stat_button" icon="fa-truck" invisible="not f3d_visit_count">
-                    <field name="f3d_visit_count" widget="statinfo" string="Рейси"/>
+                <button name="action_f3d_open_visits" type="object" class="oe_stat_button" icon="fa-truck" invisible="not td_visit_count">
+                    <field name="td_visit_count" widget="statinfo" string="Рейси"/>
                 </button>
             </xpath>
             <xpath expr="//notebook" position="before">
-                <group name="f3d_yard" string="Двір" invisible="not f3d_visit_id">
-                    <field name="f3d_visit_id"/>
-                    <field name="f3d_visit_state" widget="badge"/>
-                    <field name="f3d_plate"/>
+                <group name="f3d_yard" string="Двір" invisible="not td_visit_id">
+                    <field name="td_visit_id"/>
+                    <field name="td_visit_state" widget="badge"/>
+                    <field name="td_plate"/>
                 </group>
             </xpath>
         </field>
     </record>
 
-    <record id="view_stock_picking_batch_list_f3d_yard" model="ir.ui.view">
-        <field name="name">stock.picking.batch.list.f3d.yard</field>
+    <record id="view_stock_picking_batch_list_td_yard" model="ir.ui.view">
+        <field name="name">stock.picking.batch.list.td.yard</field>
         <field name="model">stock.picking.batch</field>
         <field name="inherit_id" ref="stock_fleet.stock_picking_batch_tree"/>
         <field name="arch" type="xml">
             <field name="dock_id" position="after">
-                <field name="f3d_visit_state" widget="badge" optional="show"/>
-                <field name="f3d_plate" optional="hide"/>
+                <field name="td_visit_state" widget="badge" optional="show"/>
+                <field name="td_plate" optional="hide"/>
             </field>
         </field>
     </record>

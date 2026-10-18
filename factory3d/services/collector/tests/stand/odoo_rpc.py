@@ -49,7 +49,7 @@ class Odoo:
 
     def signal(self, code: str, fields=None) -> dict:
         rows = self.search_read(
-            "f3d.signal",
+            "td.signal",
             [("code", "=", code)],
             fields or ["code", "status", "last_value", "last_text", "last_ts", "last_quality"],
             limit=1,
@@ -57,8 +57,8 @@ class Odoo:
         return rows[0] if rows else {}
 
     def requests(self, code: str, only_open: bool = False) -> list[dict]:
-        """Заявки maintenance.request, створені сигналом `code` (f3d_signal_id)."""
-        dom = [("f3d_signal_id.code", "=", code)]
+        """Заявки maintenance.request, створені сигналом `code` (td_signal_id)."""
+        dom = [("td_signal_id.code", "=", code)]
         if only_open:
             dom.append(("stage_id.done", "=", False))
         return self.search_read(
@@ -70,9 +70,9 @@ class Odoo:
                 "maintenance_team_id",
                 "maintenance_type",
                 "priority",
-                "f3d_value",
-                "f3d_threshold",
-                "f3d_origin",
+                "td_value",
+                "td_threshold",
+                "td_origin",
                 "equipment_id",
             ],
             order="id",
@@ -88,11 +88,11 @@ class Odoo:
         return [m["body"] or "" for m in msgs]
 
     def signal_id(self, code: str) -> int:
-        return self.search_read("f3d.signal", [("code", "=", code)], ["id"], limit=1)[0]["id"]
+        return self.search_read("td.signal", [("code", "=", code)], ["id"], limit=1)[0]["id"]
 
     def new_token(self, collector: str = "COL-MAIN") -> str:
-        cid = self.search_read("f3d.collector", [("code", "=", collector)], ["id"], limit=1)[0]["id"]
-        act = self.call("f3d.collector", "action_generate_token", [cid])
+        cid = self.search_read("td.collector", [("code", "=", collector)], ["id"], limit=1)[0]["id"]
+        act = self.call("td.collector", "action_generate_token", [cid])
         return act["context"]["default_token"]
 
 

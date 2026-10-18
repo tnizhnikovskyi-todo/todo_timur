@@ -26,7 +26,7 @@ class SignalCase(F3DTelemetryCase):
 
     def new_signal(self, source=None, address=None, user=None, code=None, **kw):
         type(self)._counter += 1
-        Sig = self.env["f3d.signal"]
+        Sig = self.env["td.signal"]
         if user:
             Sig = Sig.with_user(user)
         vals = {"code": code or "equipment/NEW-T/s%s" % self._counter, "name": "Новий", "kind": "gauge", **kw}
@@ -40,7 +40,7 @@ class SignalCase(F3DTelemetryCase):
 @tagged(*TAGS)
 class TestOrigin(SignalCase):
     def test_origin_selection(self):
-        sel = self.env["f3d.signal"].fields_get(["origin"])["origin"]["selection"]
+        sel = self.env["td.signal"].fields_get(["origin"])["origin"]["selection"]
         self.assertEqual(
             sel,
             [
@@ -59,7 +59,7 @@ class TestOrigin(SignalCase):
 @tagged(*TAGS)
 class TestSicsSchema(SignalCase):
     def _sics(self, params):
-        return self.env["f3d.source"].create(
+        return self.env["td.source"].create(
             {"code": "SICS-T", "name": "SICS-T", "type": "sics", "collector_id": self.col.id, "params": params}
         )
 
@@ -76,7 +76,7 @@ class TestSicsSchema(SignalCase):
                 "reset_on_connect": True,
             }
         )
-        self.assertTrue(self.env["f3d.source"].search([("code", "=", "SICS-T")]))
+        self.assertTrue(self.env["td.source"].search([("code", "=", "SICS-T")]))
 
     def test_sics_minimal_valid(self):
         self.assertTrue(self._sics({"host": "iot-sim"}))
@@ -89,7 +89,7 @@ class TestSicsSchema(SignalCase):
             {"host": "x", "foo": 1},
         ):
             with self.subTest(params=params), self.assertRaises(ValidationError) as ctx:
-                self.env["f3d.source"].create(
+                self.env["td.source"].create(
                     {"code": "SICS-T", "name": "x", "type": "sics", "collector_id": self.col.id, "params": params}
                 )
             msg = _msg(ctx)
@@ -134,7 +134,7 @@ class TestCode(SignalCase):
                 self.assertTrue(self.new_signal(user=self.user_manager, code=code + ".new"))
 
     def test_invalid_codes(self):
-        self.cr.execute("SELECT count(*) FROM f3d_signal")
+        self.cr.execute("SELECT count(*) FROM td_signal")
         before = self.cr.fetchone()[0]
         for code in (
             "Equipment/FL-T/x",
@@ -142,14 +142,14 @@ class TestCode(SignalCase):
             "energy//x",
             "equipment/FL T/x",
             "equipment/FL-T/",
-            "equipment/FL-T/x;DROP TABLE f3d_signal",
+            "equipment/FL-T/x;DROP TABLE td_signal",
             "equipment/FL-T/x'--",
             "equipment/" + "a" * 119,
         ):
             with self.subTest(code=code), self.assertRaises(ValidationError) as ctx:
                 self.new_signal(user=self.user_manager, code=code)
             self.assertIn("Код сигналу", _msg(ctx))
-        self.cr.execute("SELECT count(*) FROM f3d_signal")
+        self.cr.execute("SELECT count(*) FROM td_signal")
         self.assertEqual(self.cr.fetchone()[0], before)
 
     def test_unique_code(self):
@@ -283,7 +283,7 @@ class TestThresholdConstraints(SignalCase):
                 self.new_signal(**kw)
 
     def test_store_period_default(self):
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.default_store_period_s", "120")
+        self.env["ir.config_parameter"].sudo().set_param("td.telemetry.default_store_period_s", "120")
         self.assertEqual(self.new_signal().store_period_s, 120)
 
 
@@ -313,18 +313,18 @@ class TestWrite(SignalCase):
 @tagged(*TAGS)
 class TestUnlink(SignalCase):
     def test_meter_signal_protected(self):
-        self.eq_comp.write({"f3d_meter_signal_id": self.sig_hours.id, "f3d_meter_interval": 2000.0})
+        self.eq_comp.write({"td_meter_signal_id": self.sig_hours.id, "td_meter_interval": 2000.0})
         with self.assertRaises(UserError) as ctx:
             self.sig_hours.unlink()
         self.assertIn("Сигнал використовується для ТО за лічильником на Компресорна станція.", _msg(ctx))
 
     def test_cascade_readings(self):
         sig = self.new_signal(self.src_mb, {"fc": 3, "addr": 9})
-        Reading = self.env["f3d.reading"]
+        Reading = self.env["td.reading"]
         for k in range(3):
             Reading.create({"signal_id": sig.id, "ts": datetime(2026, 10, 14, 6, k), "value": k})
-        self.env["f3d.reading.hour"].create({"signal_id": sig.id, "hour": datetime(2026, 10, 14, 6)})
+        self.env["td.reading.hour"].create({"signal_id": sig.id, "hour": datetime(2026, 10, 14, 6)})
         sig_id = sig.id
         sig.unlink()
         self.assertEqual(Reading.search_count([("signal_id", "=", sig_id)]), 0)
-        self.assertEqual(self.env["f3d.reading.hour"].search_count([("signal_id", "=", sig_id)]), 0)
+        self.assertEqual(self.env["td.reading.hour"].search_count([("signal_id", "=", sig_id)]), 0)

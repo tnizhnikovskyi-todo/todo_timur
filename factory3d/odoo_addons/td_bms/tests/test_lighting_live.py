@@ -103,10 +103,10 @@ class TestPanel(LiveCase):
         self.assertEqual(self.lp2.state, "fault")
         self.ingest(sig, text="ok")
         self.assertEqual(self.lp2.state, "ok")
-        src = self.env["f3d.source"].search([("code", "=", "HN-LP-2")], limit=1)  # джерело з даних модуля (W3)
+        src = self.env["td.source"].search([("code", "=", "HN-LP-2")], limit=1)  # джерело з даних модуля (W3)
         if not src:
-            col = self.env["f3d.collector"].create({"code": "COL-BMS", "name": "COL-BMS"})
-            src = self.env["f3d.source"].create(
+            col = self.env["td.collector"].create({"code": "COL-BMS", "name": "COL-BMS"})
+            src = self.env["td.source"].create(
                 {
                     "code": "HN-LP-2",
                     "name": "HN-LP-2",
@@ -116,7 +116,7 @@ class TestPanel(LiveCase):
                 }
             )
         self.lp2.source_id = src
-        self.cr.execute("UPDATE f3d_source SET state = 'error' WHERE id = %s", [src.id])
+        self.cr.execute("UPDATE td_source SET state = 'error' WHERE id = %s", [src.id])
         self.env.invalidate_all()
         self.assertEqual(self.lp2.state, "offline")
 
@@ -126,21 +126,21 @@ class TestContracts(LiveCase):
     def test_light_power(self):
         self.ingest(self.cut_sig["p_now"], 3.4)
         self.ingest(self.cut_sig["level"], 100)
-        res = self.env["f3d.bms.light.group"]._f3d_bms_light_power()
+        res = self.env["td.bms.light.group"]._f3d_bms_light_power()
         self.assertEqual(
             res["LT-CUT"], {"zone": "Z-CUT", "panel": "LP-2", "p_now_kw": 3.4, "p_inst_kw": 3.4, "level_pct": 100.0}
         )
 
     def test_kwh_from_hours(self):
-        Hour = self.env["f3d.reading.hour"]
+        Hour = self.env["td.reading.hour"]
         for i, v in enumerate((3.4, 3.4, 1.7)):
             Hour.create({"signal_id": self.cut_sig["p_now"].id, "hour": datetime(2026, 1, 1, i), "v_avg": v})
-        res = self.env["f3d.bms.light.group"]._f3d_bms_kwh(datetime(2026, 1, 1), datetime(2026, 1, 2))
+        res = self.env["td.bms.light.group"]._f3d_bms_kwh(datetime(2026, 1, 1), datetime(2026, 1, 2))
         self.assertEqual(res["LT-CUT"], 8.5)
         self.assertEqual(res["LT-EB"], 0.0)
 
     def test_search_deviation(self):
         self.ingest(self.cut_sig["check"], text="нижче норми")
-        Group = self.env["f3d.bms.light.group"]
+        Group = self.env["td.bms.light.group"]
         self.assertEqual(Group.search([("deviation", "in", ["off_in_work", "below_norm"])]), self.cut)
         self.assertNotIn(self.cut, Group.search([("deviation", "=", "none")]))

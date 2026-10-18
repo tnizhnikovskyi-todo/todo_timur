@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- SPEC §6. Підключати в манифест після data/f3d_signal_data.xml, коли з'являться f3d.fire.panel і f3d.fire.drill.
-         nextcall для cron_f3d_fire_compliance (найближче 03:10 Europe/Kyiv) ставить post_init_hook (pytz). -->
-    <record id="cron_f3d_fire_sync" model="ir.cron">
+    <!-- SPEC §6. Підключати в манифест після data/td_signal_data.xml, коли з'являться td.fire.panel і td.fire.drill.
+         nextcall для cron_td_fire_compliance (найближче 03:10 Europe/Kyiv) ставить post_init_hook (pytz). -->
+    <record id="cron_td_fire_sync" model="ir.cron">
         <field name="name">Пожежна безпека: звірка станів і зв'язку</field>
-        <field name="model_id" ref="model_f3d_fire_panel"/>
+        <field name="model_id" ref="model_td_fire_panel"/>
         <field name="state">code</field>
         <field name="code">model._cron_sync()</field>
         <field name="user_id" ref="base.user_root"/>
@@ -13,9 +13,9 @@
         <field name="priority">5</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_fire_drill_tick" model="ir.cron">
+    <record id="cron_td_fire_drill_tick" model="ir.cron">
         <field name="name">Пожежна безпека: хід навчальної тривоги</field>
-        <field name="model_id" ref="model_f3d_fire_drill"/>
+        <field name="model_id" ref="model_td_fire_drill"/>
         <field name="state">code</field>
         <field name="code">model._cron_tick()</field>
         <field name="user_id" ref="base.user_root"/>
@@ -24,9 +24,9 @@
         <field name="priority">5</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_fire_compliance" model="ir.cron">
+    <record id="cron_td_fire_compliance" model="ir.cron">
         <field name="name">Пожежна безпека: перерахунок відповідності нормам</field>
-        <field name="model_id" ref="model_f3d_fire_panel"/>
+        <field name="model_id" ref="model_td_fire_panel"/>
         <field name="state">code</field>
         <field name="code">model._cron_compliance()</field>
         <field name="user_id" ref="base.user_root"/>

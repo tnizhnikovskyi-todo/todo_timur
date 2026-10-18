@@ -17,8 +17,8 @@ class TestRegistryFix(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Device = cls.env['f3d.sim.device'].sudo()
-        cls.Signal = cls.env['f3d.sim.signal'].sudo()
+        cls.Device = cls.env['td.sim.device'].sudo()
+        cls.Signal = cls.env['td.sim.signal'].sudo()
 
     def dev(self, code):
         device = self.Device.search([('code', '=', code)])
@@ -97,7 +97,7 @@ class TestRegistryFix(TransactionCase):
 
     def _snapshot(self):
         return {model: {r.id: r.write_date for r in self.env[model].sudo().search([])}
-                for model in ('f3d.sim.device', 'f3d.sim.signal')}
+                for model in ('td.sim.device', 'td.sim.signal')}
 
     def test_post_migrate_repairs_old_registry(self):
         """Params порожні, T1/T2 unit 1/2, PV на батьку, FL-6 активний; ручні params лишаються; повтор без змін."""
@@ -120,4 +120,4 @@ class TestRegistryFix(TransactionCase):
         mod.migrate(self.env.cr, '19.0.2.0.0')  # повторно: без дублікатів і без записів
         self.assertEqual(self._snapshot(), snapshot)
         self.assertEqual({m: len(r) for m, r in self._snapshot().items()}, counts)
-        self.assertEqual(counts['f3d.sim.signal'], 1168)
+        self.assertEqual(counts['td.sim.signal'], 1168)

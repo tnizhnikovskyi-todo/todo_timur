@@ -3,29 +3,29 @@ from odoo import fields, models
 
 class MaintenanceEquipment(models.Model):
     _name = 'maintenance.equipment'
-    _inherit = ['maintenance.equipment', 'f3d.scene.mixin']
+    _inherit = ['maintenance.equipment', 'td.scene.mixin']
 
     _f3d_kind = 'equipment'
-    _rec_names_search = ['name', 'serial_no', 'f3d_code']
+    _rec_names_search = ['name', 'serial_no', 'td_code']
 
-    # f3d_zone_id оголошено в models/f3d_zone.py
-    f3d_passport_id = fields.Many2one(
-        'f3d.equipment.passport', string="Паспорт", ondelete='set null', index=True)
-    f3d_component_passport_ids = fields.Many2many(
-        'f3d.equipment.passport', relation='f3d_equipment_component_passport_rel',
+    # td_zone_id оголошено в models/td_zone.py
+    td_passport_id = fields.Many2one(
+        'td.equipment.passport', string="Паспорт", ondelete='set null', index=True)
+    td_component_passport_ids = fields.Many2many(
+        'td.equipment.passport', relation='td_equipment_component_passport_rel',
         column1='equipment_id', column2='passport_id', string="У складі")
-    f3d_role = fields.Char(related='f3d_passport_id.role', readonly=True)
-    f3d_manufacturer = fields.Char(related='f3d_passport_id.manufacturer', readonly=True)
-    f3d_model = fields.Char(related='f3d_passport_id.model', readonly=True)
-    f3d_reason = fields.Text(related='f3d_passport_id.reason', readonly=True)
-    f3d_power_kw = fields.Float(related='f3d_passport_id.power_kw', readonly=True)
-    f3d_connected_kw = fields.Float(related='f3d_passport_id.connected_kw', readonly=True)
-    f3d_dimensions = fields.Char(related='f3d_passport_id.dimensions', readonly=True)
-    f3d_spec_ids = fields.One2many(related='f3d_passport_id.spec_ids', readonly=True)
-    f3d_source_ids = fields.One2many(related='f3d_passport_id.source_ids', readonly=True)
-    f3d_units = fields.Integer(
-        related='f3d_passport_id.unit_count', string="Одиниць під паспортом", readonly=True)
+    td_role = fields.Char(related='td_passport_id.role', readonly=True)
+    td_manufacturer = fields.Char(related='td_passport_id.manufacturer', readonly=True)
+    td_model = fields.Char(related='td_passport_id.model', readonly=True)
+    td_reason = fields.Text(related='td_passport_id.reason', readonly=True)
+    td_power_kw = fields.Float(related='td_passport_id.power_kw', readonly=True)
+    td_connected_kw = fields.Float(related='td_passport_id.connected_kw', readonly=True)
+    td_dimensions = fields.Char(related='td_passport_id.dimensions', readonly=True)
+    td_spec_ids = fields.One2many(related='td_passport_id.spec_ids', readonly=True)
+    td_source_ids = fields.One2many(related='td_passport_id.source_ids', readonly=True)
+    td_units = fields.Integer(
+        related='td_passport_id.unit_count', string="Одиниць під паспортом", readonly=True)
 
     def f3d_get_num(self, key):
         self.ensure_one()
-        return self.f3d_passport_id.get_num(key) if self.f3d_passport_id else None
+        return self.td_passport_id.get_num(key) if self.td_passport_id else None

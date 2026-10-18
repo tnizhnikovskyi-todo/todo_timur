@@ -1,7 +1,7 @@
 from odoo.exceptions import AccessDenied
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.hooks import is_demo_db, uninstall
+from odoo.addons.td_viewer3d.hooks import is_demo_db, uninstall
 
 from .common import F3dViewerBase
 
@@ -10,10 +10,10 @@ from .common import F3dViewerBase
 class TestInstall(F3dViewerBase):
 
     def _param(self, key):
-        return self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer." + key)
+        return self.env["ir.config_parameter"].sudo().get_param("td.viewer." + key)
 
     def _menu(self, xmlid):
-        return self.env.ref("factory3d_viewer." + xmlid, raise_if_not_found=False)
+        return self.env.ref("td_viewer3d." + xmlid, raise_if_not_found=False)
 
     def _visible(self, user):
         return set(self.env["ir.ui.menu"].with_user(user)._visible_menu_ids())
@@ -36,9 +36,9 @@ class TestInstall(F3dViewerBase):
     def test_kiosk_user_cannot_login(self):  # AC-39
         user = self.user_kiosk
         self.assertFalse(user.share)
-        self.assertTrue(user.has_group("factory3d_viewer.group_f3d_kiosk"))
+        self.assertTrue(user.has_group("td_viewer3d.group_td_kiosk"))
         self.assertEqual(user.login, "f3d_kiosk")
-        self.assertEqual(user.action_id.id, self.env.ref("factory3d_viewer.action_f3d_viewer").id)
+        self.assertEqual(user.action_id.id, self.env.ref("td_viewer3d.action_td_viewer").id)
         with self.assertRaises(AccessDenied):
             user.sudo()._check_credentials({"type": "password", "password": "anything"},
                                            {"interactive": True})
@@ -46,27 +46,27 @@ class TestInstall(F3dViewerBase):
     def test_menus_by_group(self):  # AC-54
         nobody, f3d = self._visible(self.user_nobody), self._visible(self.user_f3d)
         manager, admin = self._visible(self.user_manager), self._visible(self.user_admin)
-        viewer, journal = self._menu("menu_f3d_viewer"), self._menu("menu_f3d_journal")
+        viewer, journal = self._menu("menu_td_viewer"), self._menu("menu_td_journal")
         self.assertIn(viewer.id, f3d)
         self.assertNotIn(viewer.id, nobody)
         # контейнер без дітей _visible_menu_ids відсікає, тож перевіряємо групи меню
-        self.assertEqual(journal.group_ids, self.env.ref("factory3d_base.group_f3d_manager"))
+        self.assertEqual(journal.group_ids, self.env.ref("td_factory3d.group_td_manager"))
         self.assertNotIn(journal.id, f3d)
         # пункти, що додаються разом із діями інших воркерів, — лише якщо вже є
-        cycle = self._menu("menu_f3d_cycle_check")
+        cycle = self._menu("menu_td_cycle_check")
         if cycle:
             self.assertNotIn(cycle.id, f3d)
             self.assertIn(cycle.id, manager)
-        for xmlid in ("menu_f3d_demo", "menu_f3d_settings"):
+        for xmlid in ("menu_td_demo", "menu_td_settings"):
             menu = self._menu(xmlid)
             if menu:
                 self.assertNotIn(menu.id, manager)
                 self.assertIn(menu.id, admin)
 
     def test_menu_sequences(self):  # AC-64
-        root = self.env.ref("factory3d_base.menu_f3d_root")
-        expected = {"menu_f3d_viewer": 10, "menu_f3d_journal": 12, "menu_f3d_cycle_check": 14,
-                    "menu_f3d_demo": 16}
+        root = self.env.ref("td_factory3d.menu_td_root")
+        expected = {"menu_td_viewer": 10, "menu_td_journal": 12, "menu_td_cycle_check": 14,
+                    "menu_td_demo": 16}
         for xmlid, seq in expected.items():
             menu = self._menu(xmlid)
             if not menu:
@@ -74,30 +74,30 @@ class TestInstall(F3dViewerBase):
             self.assertEqual(menu.parent_id, root, xmlid)
             self.assertEqual(menu.sequence, seq, xmlid)
         for menu in root.child_id:
-            if menu.get_external_id().get(menu.id, "").startswith("factory3d_viewer."):
+            if menu.get_external_id().get(menu.id, "").startswith("td_viewer3d."):
                 self.assertTrue(10 <= menu.sequence <= 19, menu.name)
-        settings = self._menu("menu_f3d_settings")
+        settings = self._menu("menu_td_settings")
         if settings:
-            self.assertEqual(settings.parent_id, self.env.ref("factory3d_base.menu_f3d_config"))
+            self.assertEqual(settings.parent_id, self.env.ref("td_factory3d.menu_td_config"))
             self.assertEqual(settings.sequence, 10)
         self.assertEqual(len(root.child_id.filtered(lambda m: m.name == "Налаштування")), 1)
 
     def test_kiosk_privilege(self):  # AC-67
-        group = self.env.ref("factory3d_viewer.group_f3d_kiosk")
-        privilege = self.env.ref("factory3d_viewer.privilege_f3d_viewer")
+        group = self.env.ref("td_viewer3d.group_td_kiosk")
+        privilege = self.env.ref("td_viewer3d.privilege_td_viewer")
         self.assertEqual(group.privilege_id, privilege)
-        self.assertEqual(privilege.category_id, self.env.ref("factory3d_base.module_category_factory3d"))
+        self.assertEqual(privilege.category_id, self.env.ref("td_factory3d.module_category_factory3d"))
         self.assertEqual(privilege.sequence, 10)
-        self.assertNotEqual(group.privilege_id, self.env.ref("factory3d_base.privilege_f3d"))
-        implied = {self.env.ref(x) for x in ("base.group_user", "factory3d_base.group_f3d_user",
+        self.assertNotEqual(group.privilege_id, self.env.ref("td_factory3d.privilege_td"))
+        implied = {self.env.ref(x) for x in ("base.group_user", "td_factory3d.group_td_user",
                                               "stock.group_stock_user", "mrp.group_mrp_user")}
         self.assertEqual(set(group.implied_ids), implied)
 
     def test_uninstall_archives_kiosk_user(self):  # ARCHITECTURE §2.8
-        user = self.env.ref("factory3d_viewer.user_kiosk")
+        user = self.env.ref("td_viewer3d.user_kiosk")
         uninstall(self.env)
         data = self.env["ir.model.data"].sudo().search(
-            [("module", "=", "factory3d_viewer"), ("name", "=", "user_kiosk")])
+            [("module", "=", "td_viewer3d"), ("name", "=", "user_kiosk")])
         self.assertFalse(data, "xmlid user_kiosk має бути видалений, щоб користувач пережив деінсталяцію")
         self.assertTrue(user.exists())
         self.assertFalse(user.active)

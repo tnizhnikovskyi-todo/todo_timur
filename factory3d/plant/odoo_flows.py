@@ -761,25 +761,25 @@ class FlowSteps:
         return specs
 
     def step_iot_module(self):
-        """Імпортувати data-модуль factory3d_iot_sim з odoo_addons/ (Застосунки → Імпортувати модуль)."""
+        """Імпортувати data-модуль td_iot_sim з odoo_addons/ (Застосунки → Імпортувати модуль)."""
         o = self.o
         root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "odoo_addons")
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            for base, _, files in os.walk(os.path.join(root, "factory3d_iot_sim")):
+            for base, _, files in os.walk(os.path.join(root, "td_iot_sim")):
                 for f in files:
                     full = os.path.join(base, f)
                     z.write(full, os.path.relpath(full, root))
         wid = o("base.import.module", "create", {"module_file": base64.b64encode(buf.getvalue()).decode(),
                                                  "force": True})
         o("base.import.module", "import_module", [wid])
-        print(f"iot_module: factory3d_iot_sim — {o.installed('factory3d_iot_sim').get('factory3d_iot_sim')}")
+        print(f"iot_module: td_iot_sim — {o.installed('td_iot_sim').get('td_iot_sim')}")
 
     def step_signals(self):
-        """Сигнали обладнання для модуля factory3d_iot_sim (імітація підключених датчиків)."""
+        """Сигнали обладнання для модуля td_iot_sim (імітація підключених датчиків)."""
         o = self.o
         if not o.has("x_f3d_signal"):
-            print("signals: модуль factory3d_iot_sim не встановлено — пропуск")
+            print("signals: модуль td_iot_sim не встановлено — пропуск")
             return
         specs = self.signal_specs()
         req = {}

@@ -19,7 +19,7 @@ WRITABLE = {"ack", "ack_user_id", "ack_ts", "note"}
 
 
 class F3dFireEvent(models.Model):
-    _name = "f3d.fire.event"
+    _name = "td.fire.event"
     _description = "Пожежна безпека: подія журналу"
     _order = "ts desc, id desc"
     _rec_name = "text"
@@ -32,13 +32,13 @@ class F3dFireEvent(models.Model):
         [("info", "Інформація"), ("warn", "Попередження"), ("alarm", "Тривога")], required=True, index=True)
     object_code = fields.Char(string="Об'єкт", size=32, required=True, index=True, default="FACP-1")
     scene_code = fields.Char(string="Код у 3D", size=32)
-    panel_id = fields.Many2one("f3d.fire.panel", ondelete="set null", index=True)
-    loop_id = fields.Many2one("f3d.fire.loop", ondelete="set null")
-    zone_id = fields.Many2one("f3d.fire.zone", ondelete="set null", index=True)
-    device_id = fields.Many2one("f3d.fire.device", ondelete="set null", index=True)
-    system_id = fields.Many2one("f3d.fire.system", ondelete="set null")
-    drill_id = fields.Many2one("f3d.fire.drill", ondelete="set null", index=True)
-    signal_id = fields.Many2one("f3d.signal", ondelete="set null")
+    panel_id = fields.Many2one("td.fire.panel", ondelete="set null", index=True)
+    loop_id = fields.Many2one("td.fire.loop", ondelete="set null")
+    zone_id = fields.Many2one("td.fire.zone", ondelete="set null", index=True)
+    device_id = fields.Many2one("td.fire.device", ondelete="set null", index=True)
+    system_id = fields.Many2one("td.fire.system", ondelete="set null")
+    drill_id = fields.Many2one("td.fire.drill", ondelete="set null", index=True)
+    signal_id = fields.Many2one("td.signal", ondelete="set null")
     request_id = fields.Many2one("maintenance.request", string="Заявка ТО", ondelete="set null")
     raw_from = fields.Char(string="Було", size=32)
     raw_to = fields.Char(string="Стало", size=32)
@@ -67,7 +67,7 @@ class F3dFireEvent(models.Model):
             rec.kind = ETYPE_TABLE[rec.etype][1] if rec.etype in ETYPE_TABLE else "info"
 
     def _compute_ack_required(self):
-        required = self.env["f3d.fire.panel"]._get_param("event_ack_required", True)
+        required = self.env["td.fire.panel"]._get_param("event_ack_required", True)
         for rec in self:
             rec.ack_required = rec.level == "alarm" and required
 
@@ -79,9 +79,9 @@ class F3dFireEvent(models.Model):
     @api.model
     def _scene_code(self, vals):
         env = self.env
-        device, zone, system = (env["f3d.fire.device"].browse(vals.get("device_id")),
-                                env["f3d.fire.zone"].browse(vals.get("zone_id")),
-                                env["f3d.fire.system"].browse(vals.get("system_id")))
+        device, zone, system = (env["td.fire.device"].browse(vals.get("device_id")),
+                                env["td.fire.zone"].browse(vals.get("zone_id")),
+                                env["td.fire.system"].browse(vals.get("system_id")))
         if device:
             if device.type in GROUP_SCENE:
                 return GROUP_SCENE[device.type]
@@ -91,11 +91,11 @@ class F3dFireEvent(models.Model):
         if system:
             return system.code
         if vals.get("drill_id"):
-            drill = env["f3d.fire.drill"].browse(vals["drill_id"])
+            drill = env["td.fire.drill"].browse(vals["drill_id"])
             zone = getattr(drill, "zone_id", False)
             return zone.code if zone and "code" in zone._fields else False
         if vals.get("loop_id") or vals.get("panel_id"):
-            panel = env["f3d.fire.panel"].browse(vals.get("panel_id")) or env["f3d.fire.loop"].browse(
+            panel = env["td.fire.panel"].browse(vals.get("panel_id")) or env["td.fire.loop"].browse(
                 vals["loop_id"]).panel_id
             return panel.code
         return False
@@ -127,7 +127,7 @@ class F3dFireEvent(models.Model):
                 existing.write(fill)
             return existing
         vals["in_drill"] = vals.get("in_drill") or (
-            "f3d.fire.drill" in self.env and bool(self.env["f3d.fire.drill"].search_count(
+            "td.fire.drill" in self.env and bool(self.env["td.fire.drill"].search_count(
                 [("state", "=", "running")])))
         vals["scene_code"] = vals.get("scene_code") or self._scene_code(vals)
         if vals.get("message_text"):
@@ -145,7 +145,7 @@ class F3dFireEvent(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.su:
-            if not self.env.user.has_group("factory3d_fire_safety.group_f3d_fire_drill"):
+            if not self.env.user.has_group("td_fire_safety.group_td_fire_drill"):
                 raise AccessError("Користувач може додати лише коментар до журналу (тип «Коментар»).")
             limit = fields.Datetime.now() + timedelta(seconds=60)
             for vals in vals_list:

@@ -1,7 +1,7 @@
 """HTTP/JSON API колектора (SPEC §7, API-01…API-07).
 
 Контролер лише автентифікує колектор, розбирає й перевіряє тіло; показання проходять через
-`f3d.signal._f3d_ingest` (X-02), події — через `f3d.push.event._f3d_receive` (R-22).
+`td.signal._f3d_ingest` (X-02), події — через `td.push.event._f3d_receive` (R-22).
 """
 
 import hashlib
@@ -15,7 +15,7 @@ from odoo.modules.module import Manifest
 
 from ..tools.ingest import parse_ts
 
-MODULE = "factory3d_telemetry"
+MODULE = "td_telemetry"
 BODY_MAX = 1024 * 1024
 STATUS_MAX = 256 * 1024
 RESULT_DATA_MAX = 65536
@@ -39,7 +39,7 @@ def _error(status, code, message, headers=None):
 
 
 def _param_flag(env, key):
-    return env["ir.config_parameter"].sudo().get_param("factory3d.telemetry." + key, "False") in ("True", "true", "1")
+    return env["ir.config_parameter"].sudo().get_param("td.telemetry." + key, "False") in ("True", "true", "1")
 
 
 class _Abort(Exception):
@@ -54,7 +54,7 @@ class F3dTelemetryController(http.Controller):
         """Колектор за Bearer-токеном; `_Abort` з 401/403."""
         header = request.httprequest.headers.get("Authorization", "")
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
-        Collector = request.env["f3d.collector"].sudo()
+        Collector = request.env["td.collector"].sudo()
         collector = Collector._authenticate(token)
         if not collector:
             if token and len(token) <= 256:
@@ -142,14 +142,14 @@ class F3dTelemetryController(http.Controller):
             readings = body.get("readings")
             if not isinstance(readings, list):
                 return _error(400, "bad_schema", "readings має бути списком")
-            limit = int(env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.push_max_readings", "2000"))
+            limit = int(env["ir.config_parameter"].sudo().get_param("td.telemetry.push_max_readings", "2000"))
             if len(readings) > limit:
                 return _error(413, "too_many_readings", "Забагато показань у пакеті")
             self._check_collector(body, collector)
             if not collector._rate_check():
                 return _error(429, "rate_limited", "Забагато пакетів за хвилину", NO_STORE + [("Retry-After", "10")])
             collector._touch(request.httprequest.remote_addr, pushed=True)
-            res = env["f3d.signal"].sudo()._f3d_ingest(readings, src="collector", collector=collector)
+            res = env["td.signal"].sudo()._f3d_ingest(readings, src="collector", collector=collector)
             return _json(
                 {
                     "accepted": res["accepted"],
@@ -217,10 +217,10 @@ class F3dTelemetryController(http.Controller):
             data["version"] = ""
         header = request.httprequest.headers.get("Authorization", "")
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
-        collector = env["f3d.collector"].sudo()._authenticate(token)
+        collector = env["td.collector"].sudo()._authenticate(token)
         if collector:
             su = env(user=SUPERUSER_ID)
-            Signal = su["f3d.signal"]
+            Signal = su["td.signal"]
             data["collector"] = {
                 "code": collector.code,
                 "state": collector.state,
@@ -230,7 +230,7 @@ class F3dTelemetryController(http.Controller):
                 "signals": Signal.search_count([]),
                 "alarms": Signal.search_count([("status", "=", "alarm")]),
                 "stale": Signal.search_count([("status", "=", "stale")]),
-                "sources_online": su["f3d.source"].search_count([("state", "=", "online")]),
+                "sources_online": su["td.source"].search_count([("state", "=", "online")]),
             }
         return _json(data)
 
@@ -254,7 +254,7 @@ class F3dTelemetryController(http.Controller):
                     return _error(400, "bad_schema", "Невалідна подія у пакеті")
                 clean.append(item)
             collector._touch(request.httprequest.remote_addr)
-            res = env["f3d.push.event"]._f3d_receive(clean, collector)
+            res = env["td.push.event"]._f3d_receive(clean, collector)
             return _json(res)
 
         return self._guard(run, "POST")
@@ -298,7 +298,7 @@ class F3dTelemetryController(http.Controller):
             except ValueError:
                 limit = 50
             now = fields.Datetime.now()
-            cmds = env["f3d.command"].search(
+            cmds = env["td.command"].search(
                 [
                     ("state", "=", "queued"),
                     ("collector_id", "=", collector.id),
@@ -347,7 +347,7 @@ class F3dTelemetryController(http.Controller):
                     not isinstance(data, dict) or len(json.dumps(data, ensure_ascii=False).encode()) > RESULT_DATA_MAX
                 ):
                     return _error(400, "bad_schema", "data має бути об'єктом ≤ 64 КБ")
-            Command = env["f3d.command"]
+            Command = env["td.command"]
             accepted, rejected = 0, []
             for item in results:
                 cmd = Command.browse(item["id"]).exists()

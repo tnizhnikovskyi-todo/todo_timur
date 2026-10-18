@@ -16,16 +16,16 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         env = cls.env
         # у Odoo 19 звичайний користувач бачить лише обладнання, яке «відстежує» (ir.rule maintenance)
         cls.user_maint = cls._make_user("f3d_maint", [
-            "base.group_user", "factory3d_base.group_f3d_user", "maintenance.group_equipment_manager"])
+            "base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"])
         cls.category = env["maintenance.equipment.category"].create({"name": "TST Навантажувачі"})
         cls.equipment = env["maintenance.equipment"].create({
-            "name": "TST forklift", "f3d_code": "TST-FL-1", "category_id": cls.category.id, "serial_no": "SN-123"})
+            "name": "TST forklift", "td_code": "TST-FL-1", "category_id": cls.category.id, "serial_no": "SN-123"})
         stage_new = env["maintenance.stage"].search([("done", "=", False)], limit=1)
         cls.request = env["maintenance.request"].create({
             "name": "TST гідравліка", "equipment_id": cls.equipment.id, "stage_id": stage_new.id,
             "maintenance_type": "corrective", "priority": "2"})
         cls.employee = env["hr.employee"].create({
-            "name": "TST оператор", "f3d_code": "OP-TST-9", "job_title": "Оператор"})
+            "name": "TST оператор", "td_code": "OP-TST-9", "job_title": "Оператор"})
 
     # --- M-01e
     def test_equipment_and_requests(self):

@@ -6,7 +6,7 @@ from ..tools.dates import local_day_start_utc
 
 
 class F3dAccessDevice(models.Model):
-    _name = 'f3d.access.device'
+    _name = 'td.access.device'
     _description = 'СКУД: пристрій BioStar'
     _order = 'server_id, code'
     _rec_names_search = ['code', 'name', 'biostar_id']
@@ -15,11 +15,11 @@ class F3dAccessDevice(models.Model):
     code = fields.Char(
         string='Код сцени', required=True, index=True, size=32,
         help='ACR-IN, ACR-ELEC… (plant/infra.py:DOOR_READERS)')
-    server_id = fields.Many2one('f3d.access.server', required=True, index=True, ondelete='cascade')
+    server_id = fields.Many2one('td.access.server', required=True, index=True, ondelete='cascade')
     company_id = fields.Many2one('res.company', related='server_id.company_id', store=True, index=True)
     biostar_id = fields.Char(string='ID у BioStar', size=64, index=True)
     device_type = fields.Char(string='Тип', size=64, readonly=True)
-    ip = fields.Char(string='IP', size=64, readonly=True, groups='factory3d_access.group_f3d_access_admin')
+    ip = fields.Char(string='IP', size=64, readonly=True, groups='td_access.group_td_access_admin')
     status = fields.Selection(
         [('online', 'У мережі'), ('offline', 'Не в мережі'), ('unknown', 'Невідомо')],
         default='unknown', readonly=True)
@@ -31,13 +31,13 @@ class F3dAccessDevice(models.Model):
         help='tna: вхід/вихід за tna_key події (1 — вхід, 2 — вихід)')
     equipment_id = fields.Many2one(
         'maintenance.equipment', string='Обладнання', ondelete='set null',
-        domain=[('f3d_code', '!=', False)])
+        domain=[('td_code', '!=', False)])
     x = fields.Float(string='X, м', digits=(8, 2))
     y = fields.Float(string='Y, м', digits=(8, 2))
     zone_id = fields.Many2one(
-        'f3d.zone', string='Зона', ondelete='set null',
+        'td.zone', string='Зона', ondelete='set null',
         help='Зона, звідки підходять до зчитувача (зона «з» дверей)')
-    door_ids = fields.One2many('f3d.access.door', 'entry_device_id', string='Двері (вхід)')
+    door_ids = fields.One2many('td.access.door', 'entry_device_id', string='Двері (вхід)')
     last_event_ts = fields.Datetime(readonly=True)
     last_event_code = fields.Integer(readonly=True)
     events_today = fields.Integer(compute='_compute_events_today')
@@ -58,17 +58,17 @@ class F3dAccessDevice(models.Model):
                 raise ValidationError("ID BioStar %s: 1–64 символи [0-9A-Za-z_-]." % rec.biostar_id)
 
     def _compute_events_today(self):
-        if 'f3d.access.event' not in self.env:
+        if 'td.access.event' not in self.env:
             self.events_today = 0
             return
         start = local_day_start_utc(fields.Datetime.now())
         for rec in self:
-            rec.events_today = self.env['f3d.access.event'].search_count(
+            rec.events_today = self.env['td.access.event'].search_count(
                 [('device_id', '=', rec.id), ('ts', '>=', start)])
 
     def action_f3d_show(self):
         self.ensure_one()
-        if self.equipment_id and self.equipment_id.f3d_code:
+        if self.equipment_id and self.equipment_id.td_code:
             return self.equipment_id.action_f3d_show()
         if self.zone_id:
             return self.zone_id.action_f3d_show()
@@ -76,5 +76,5 @@ class F3dAccessDevice(models.Model):
 
     def action_open_events(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'f3d.access.event',
+        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'td.access.event',
                 'view_mode': 'list,form', 'domain': [('device_id', '=', self.id)]}

@@ -13,13 +13,13 @@ from ..tools.dates import parse_bs_dt
 
 _logger = logging.getLogger(__name__)
 
-GROUP_ADMIN = 'factory3d_access.group_f3d_access_admin'
-GROUP_F3D_ADMIN = 'factory3d_base.group_f3d_admin'
-READ_DISABLED = "Опитування BioStar вимкнено стоп-краном factory3d.access.read_enabled."
+GROUP_ADMIN = 'td_access.group_td_access_admin'
+GROUP_F3D_ADMIN = 'td_factory3d.group_td_admin'
+READ_DISABLED = "Опитування BioStar вимкнено стоп-краном td.access.read_enabled."
 
 
 class F3dAccessServer(models.Model):
-    _name = 'f3d.access.server'
+    _name = 'td.access.server'
     _description = 'СКУД: сервер BioStar 2'
     _order = 'sequence, id'
 
@@ -55,8 +55,8 @@ class F3dAccessServer(models.Model):
     devices_total = fields.Integer(string='Пристроїв у BioStar', readonly=True)
     users_synced_at = fields.Datetime(readonly=True)
     devices_synced_at = fields.Datetime(readonly=True)
-    device_ids = fields.One2many('f3d.access.device', 'server_id', string='Пристрої')
-    door_ids = fields.One2many('f3d.access.door', 'server_id', string='Двері')
+    device_ids = fields.One2many('td.access.device', 'server_id', string='Пристрої')
+    door_ids = fields.One2many('td.access.door', 'server_id', string='Двері')
     link_count = fields.Integer(compute='_compute_counts')
     unlinked_count = fields.Integer(compute='_compute_counts')
     event_count = fields.Integer(compute='_compute_counts')
@@ -83,7 +83,7 @@ class F3dAccessServer(models.Model):
 
     @api.constrains('url', 'verify_ssl')
     def _check_url(self):
-        environment = self.env['ir.config_parameter'].sudo().get_param('factory3d.base.environment')
+        environment = self.env['ir.config_parameter'].sudo().get_param('td.base.environment')
         for rec in self:
             if not P.URL_RE.match(rec.url or ''):
                 raise ValidationError(
@@ -91,7 +91,7 @@ class F3dAccessServer(models.Model):
             if not rec.verify_ssl and environment != 'test':
                 raise ValidationError(
                     "Вимкнути перевірку сертифіката можна лише в тестовому середовищі "
-                    "(factory3d.base.environment = test).")
+                    "(td.base.environment = test).")
             if rec.url.startswith('http://') and environment != 'test':
                 raise ValidationError("HTTP без TLS дозволено лише в тестовому середовищі.")
 
@@ -104,20 +104,20 @@ class F3dAccessServer(models.Model):
             rec.stale = rec.state == 'online' and bool(rec.last_contact) and rec.last_contact < limit
 
     def _compute_counts(self):
-        has_event = 'f3d.access.event' in self.env
+        has_event = 'td.access.event' in self.env
         for rec in self:
-            link = self.env['f3d.access.user.link']
+            link = self.env['td.access.user.link']
             rec.link_count = link.search_count([('server_id', '=', rec.id)])
             rec.unlinked_count = link.search_count(
                 [('server_id', '=', rec.id), ('match', '=', 'none'), ('in_biostar', '=', True)])
             if has_event:
-                event = self.env['f3d.access.event']
+                event = self.env['td.access.event']
                 rec.event_count = event.search_count([('server_id', '=', rec.id)])
                 rec.error_event_count = event.search_count(
                     [('server_id', '=', rec.id), ('process_state', '=', 'error')])
             else:
                 rec.event_count = rec.error_event_count = 0
-            rec.doors_without_zone = self.env['f3d.access.door'].search_count(
+            rec.doors_without_zone = self.env['td.access.door'].search_count(
                 [('server_id', '=', rec.id), ('active', '=', True), ('zone_to_id', '=', False)])
 
     # ------------------------------------------------------------------ клієнт і стан
@@ -199,7 +199,7 @@ class F3dAccessServer(models.Model):
     def _poll_params(self):
         mode = P.get_str(self.env, 'paging_mode', 'offset')
         if mode not in ('offset', 'hint'):
-            _logger.warning("Параметр factory3d.access.paging_mode=%r поза межами, взято offset", mode)
+            _logger.warning("Параметр td.access.paging_mode=%r поза межами, взято offset", mode)
             mode = 'offset'
         return {
             'page_size': P.get_int(self.env, 'page_size', 500, 1, 2000),
@@ -235,7 +235,7 @@ class F3dAccessServer(models.Model):
             rows_all, more = self._fetch_pages(client, since, until, max_pages)
         finally:
             self._save_session(client)
-        event = self.env['f3d.access.event']
+        event = self.env['td.access.event']
         res = event._f3d_ingest_rows(self, rows_all)
         pending = event.search(
             [('server_id', '=', self.id), ('process_state', '=', 'new')], order='ts, id', limit=10000)
@@ -250,7 +250,7 @@ class F3dAccessServer(models.Model):
         try:
             with self.env.cr.savepoint(flush=False):
                 self.env.cr.execute(
-                    "SELECT id FROM f3d_access_server WHERE id = %s FOR UPDATE NOWAIT", [self.id])
+                    "SELECT id FROM td_access_server WHERE id = %s FOR UPDATE NOWAIT", [self.id])
         except pg_errors.LockNotAvailable:
             return {'skipped': True}
         now = fields.Datetime.now()
@@ -291,7 +291,7 @@ class F3dAccessServer(models.Model):
             return None
         try:
             with self.env.cr.savepoint():
-                result = self.env['f3d.access.telemetry']._f3d_publish(self, records)
+                result = self.env['td.access.telemetry']._f3d_publish(self, records)
             for item in (result or {}).get('rejected', ()):
                 _logger.debug("СКУД: сигнал телеметрії відхилено: %s", item)
             return result
@@ -361,26 +361,26 @@ class F3dAccessServer(models.Model):
 
     def action_open_events(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'f3d.access.event',
+        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'td.access.event',
                 'view_mode': 'list,form', 'domain': [('server_id', '=', self.id)]}
 
     def action_open_errors(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Помилки обробки', 'res_model': 'f3d.access.event',
+        return {'type': 'ir.actions.act_window', 'name': 'Помилки обробки', 'res_model': 'td.access.event',
                 'view_mode': 'list,form',
                 'domain': [('server_id', '=', self.id), ('process_state', '=', 'error')]}
 
     def action_open_links(self):
         self.ensure_one()
         return {'type': 'ir.actions.act_window', 'name': 'Користувачі BioStar',
-                'res_model': 'f3d.access.user.link', 'view_mode': 'list,form',
+                'res_model': 'td.access.user.link', 'view_mode': 'list,form',
                 'domain': [('server_id', '=', self.id)]}
 
     # ------------------------------------------------------------------ синхронізація довідників (R-19)
     def _sync_users(self):
         self.ensure_one()
         client = self._get_client()
-        Link = self.env['f3d.access.user.link'].sudo()
+        Link = self.env['td.access.user.link'].sudo()
         now = fields.Datetime.now()
         try:
             rows = list(client.list_users(limit=100))
@@ -443,8 +443,8 @@ class F3dAccessServer(models.Model):
     def _sync_devices(self):
         self.ensure_one()
         client = self._get_client()
-        Device = self.env['f3d.access.device'].sudo()
-        Door = self.env['f3d.access.door'].sudo()
+        Device = self.env['td.access.device'].sudo()
+        Door = self.env['td.access.door'].sudo()
         now = fields.Datetime.now()
         try:
             dev_rows = client.list_devices()

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <record id="view_f3d_sim_run_list" model="ir.ui.view">
-    <field name="name">f3d.sim.run.list</field>
-    <field name="model">f3d.sim.run</field>
+  <record id="view_td_sim_run_list" model="ir.ui.view">
+    <field name="name">td.sim.run.list</field>
+    <field name="model">td.sim.run</field>
     <field name="arch" type="xml">
       <list string="Запуски" create="false"
             decoration-info="state in ('queued', 'running')" decoration-danger="state == 'failed'"
@@ -20,9 +20,9 @@
     </field>
   </record>
 
-  <record id="view_f3d_sim_run_form" model="ir.ui.view">
-    <field name="name">f3d.sim.run.form</field>
-    <field name="model">f3d.sim.run</field>
+  <record id="view_td_sim_run_form" model="ir.ui.view">
+    <field name="name">td.sim.run.form</field>
+    <field name="model">td.sim.run</field>
     <field name="arch" type="xml">
       <form string="Запуск сценарію" create="false">
         <header>
@@ -64,9 +64,9 @@
     </field>
   </record>
 
-  <record id="view_f3d_sim_run_search" model="ir.ui.view">
-    <field name="name">f3d.sim.run.search</field>
-    <field name="model">f3d.sim.run</field>
+  <record id="view_td_sim_run_search" model="ir.ui.view">
+    <field name="name">td.sim.run.search</field>
+    <field name="model">td.sim.run</field>
     <field name="arch" type="xml">
       <search string="Запуски">
         <field name="name"/>
@@ -82,9 +82,9 @@
     </field>
   </record>
 
-  <record id="action_f3d_sim_run" model="ir.actions.act_window">
+  <record id="action_td_sim_run" model="ir.actions.act_window">
     <field name="name">Запуски сценаріїв</field>
-    <field name="res_model">f3d.sim.run</field>
+    <field name="res_model">td.sim.run</field>
     <field name="view_mode">list,form</field>
   </record>
 </odoo>

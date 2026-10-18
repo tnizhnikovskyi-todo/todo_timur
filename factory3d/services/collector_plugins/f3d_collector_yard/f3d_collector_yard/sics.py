@@ -1,4 +1,4 @@
-"""Плагін `sics`: автоваги за MT-SICS (SPEC factory3d_yard §8, R-13, R-14)."""
+"""Плагін `sics`: автоваги за MT-SICS (SPEC td_yard §8, R-13, R-14)."""
 
 from __future__ import annotations
 

@@ -37,17 +37,17 @@ QTY = 14
 def import_parts(o):
     bom = o.search_read("mrp.bom", [("product_tmpl_id.default_code", "=", "BR-K4")], ["id"])[0]["id"]
     wiz = o.create(
-        "f3d.cut.part.import.wizard",
+        "td.cut.part.import.wizard",
         {"bom_id": bom, "file": base64.b64encode(PARTS.read_bytes()).decode(), "filename": PARTS.name},
     )
-    o.call("f3d.cut.part.import.wizard", "action_import", [wiz])
+    o.call("td.cut.part.import.wizard", "action_import", [wiz])
     return bom
 
 
 def create_main_map(o, mo_id):
     o.call("mrp.production", "action_f3d_create_cut_maps", [mo_id])
     cm = o.search_read(
-        "f3d.cut.map", [("production_id", "=", mo_id), ("material_role", "=", "main")], ["id", "state", "mode"]
+        "td.cut.map", [("production_id", "=", mo_id), ("material_role", "=", "main")], ["id", "state", "mode"]
     )
     assert cm, "карту main не створено"
     return cm[0]["id"]
@@ -55,7 +55,7 @@ def create_main_map(o, mo_id):
 
 def map_read(o, mid):
     return o.read(
-        "f3d.cut.map",
+        "td.cut.map",
         mid,
         [
             "state",
@@ -79,11 +79,11 @@ def test_tk09_manual_map(fresh, sim):
     import_parts(o)
     mo = make_mo(o, "BR-K4", QTY)
     mid = create_main_map(o, mo["id"])
-    o.call("f3d.cut.map", "action_build_lines", [mid])
-    o.call("f3d.cut.map", "action_export", [mid])
+    o.call("td.cut.map", "action_build_lines", [mid])
+    o.call("td.cut.map", "action_export", [mid])
     m = map_read(o, mid)
     assert m["parts_count"] == 126 and m["csv_attachment_id"], m  # Σ qty × 14 = 9 × 14
-    assert o.count("f3d.cut.map.line", [("map_id", "=", mid)]) == 4
+    assert o.count("td.cut.map.line", [("map_id", "=", mid)]) == 4
     att = o.read("ir.attachment", m["csv_attachment_id"][0], ["datas", "name"])[0]
     raw = base64.b64decode(att["datas"])
     assert not raw.startswith(b"\xef\xbb\xbf"), "CSV без BOM"
@@ -113,16 +113,16 @@ def test_tk09_manual_map(fresh, sim):
         time.sleep(2)
     assert st == 200 and plan["total_sheets"] > 0, (st, plan)
     pw = o.create(
-        "f3d.cut.plan.import.wizard",
+        "td.cut.plan.import.wizard",
         {"map_id": mid, "file": base64.b64encode(json.dumps(plan).encode()).decode(), "filename": "plan.json"},
     )
-    o.call("f3d.cut.plan.import.wizard", "action_import", [pw])
+    o.call("td.cut.plan.import.wizard", "action_import", [pw])
     m = map_read(o, mid)
     assert m["state"] == "planned" and m["plan_sheets"] == plan["total_sheets"], (m, plan["total_sheets"])
-    o.call("f3d.cut.map", "action_release", [mid])
+    o.call("td.cut.map", "action_release", [mid])
     m = map_read(o, mid)
     assert m["state"] == "released", m
-    assert o.count("f3d.command", [("f3d_cut_map_id", "=", mid)]) == 0
+    assert o.count("td.command", [("td_cut_map_id", "=", mid)]) == 0
     assert m["plan_attachment_id"]
     print("ТК-09: аркушів", m["plan_sheets"], "відхід %", m["plan_waste_pct"])
 
@@ -139,7 +139,7 @@ def test_tk10_collector_map(fresh, sim):
     sim.post("/mode", {"mode": "scenario"})
     assert wait(
         lambda: all(
-            o.search_read("f3d.source", [("code", "=", code)], ["state"])[0]["state"] == "online"
+            o.search_read("td.source", [("code", "=", code)], ["state"])[0]["state"] == "online"
             for code in ("REST-CUTOPT", "REST-WOODSTORE")
         ),
         120,
@@ -148,8 +148,8 @@ def test_tk10_collector_map(fresh, sim):
     import_parts(o)
     mo = make_mo(o, "BR-K4", QTY)
     mid = create_main_map(o, mo["id"])
-    o.call("f3d.cut.map", "action_build_lines", [mid])
-    o.call("f3d.cut.map", "action_export", [mid])
+    o.call("td.cut.map", "action_build_lines", [mid])
+    o.call("td.cut.map", "action_export", [mid])
     cmd = wait(lambda: next((c for c in commands(o, "equipment/CUTOPT/cmd") if c["state"] == "done"), None), 120, 3)
     assert (
         cmd and cmd["payload"]["op"] == "upload" and cmd["payload"]["map"] == mid and len(cmd["payload"]["token"]) == 16
@@ -158,7 +158,7 @@ def test_tk10_collector_map(fresh, sim):
     assert m and m["plan_sheets"] > 0 and str(m["ext_job_id"]).startswith("cj-"), map_read(o, mid)
     assert cmd["result_data"]["job_id"] == m["ext_job_id"]
     wid = wo_of(o, mo, "SAW-1")
-    o.call("f3d.cut.map", "action_release", [mid])
+    o.call("td.cut.map", "action_release", [mid])
     m = map_read(o, mid)
     assert wait(lambda: map_read(o, mid)["job_order_id"], 60, 3), map_read(o, mid)
     jo = map_read(o, mid)["job_order_id"]
@@ -169,7 +169,7 @@ def test_tk10_collector_map(fresh, sim):
     try:
         redirect_source(o, "UA-SAW-1", fake.endpoint)
         assert wait(
-            lambda: o.search_read("f3d.source", [("code", "=", "UA-SAW-1")], ["state"])[0]["state"] == "online", 90, 3
+            lambda: o.search_read("td.source", [("code", "=", "UA-SAW-1")], ["state"])[0]["state"] == "online", 90, 3
         )
         fake.set_jobs([(jo, "Running")], "SAW-1")
         fake.set("CurrentState", 3, "SAW-1")
@@ -178,7 +178,7 @@ def test_tk10_collector_map(fresh, sim):
         )
         gj = wait(
             lambda: o.search_read(
-                "f3d.gantry.job", [("origin", "=", "machine"), ("external_ref", "=", mo["name"])], ["sheets", "state"]
+                "td.gantry.job", [("origin", "=", "machine"), ("external_ref", "=", mo["name"])], ["sheets", "state"]
             ),
             120,
             5,

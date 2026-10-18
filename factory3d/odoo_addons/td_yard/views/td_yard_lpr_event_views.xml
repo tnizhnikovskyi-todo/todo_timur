@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_lpr_event_list" model="ir.ui.view">
-        <field name="name">f3d.yard.lpr.event.list</field>
-        <field name="model">f3d.yard.lpr.event</field>
+    <record id="view_td_yard_lpr_event_list" model="ir.ui.view">
+        <field name="name">td.yard.lpr.event.list</field>
+        <field name="model">td.yard.lpr.event</field>
         <field name="arch" type="xml">
             <list string="Розпізнавання номерів" create="0" decoration-danger="kpp_alert" decoration-muted="match_state in ('ignored', 'expired')">
                 <field name="ts"/>
@@ -19,15 +19,15 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_lpr_event_form" model="ir.ui.view">
-        <field name="name">f3d.yard.lpr.event.form</field>
-        <field name="model">f3d.yard.lpr.event</field>
+    <record id="view_td_yard_lpr_event_form" model="ir.ui.view">
+        <field name="name">td.yard.lpr.event.form</field>
+        <field name="model">td.yard.lpr.event</field>
         <field name="arch" type="xml">
             <form string="Розпізнавання номера" create="0">
                 <header>
-                    <button name="action_walk_in" type="object" string="Рейс без броні" class="btn-primary" invisible="match_state not in ('unmatched', 'low_confidence') or direction == 'out'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_reject" type="object" string="Відхилити" invisible="match_state not in ('unmatched', 'low_confidence')" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_dismiss" type="object" string="Закрити сповіщення" invisible="not kpp_alert" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_walk_in" type="object" string="Рейс без броні" class="btn-primary" invisible="match_state not in ('unmatched', 'low_confidence') or direction == 'out'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_reject" type="object" string="Відхилити" invisible="match_state not in ('unmatched', 'low_confidence')" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_dismiss" type="object" string="Закрити сповіщення" invisible="not kpp_alert" groups="td_yard.group_td_yard_security"/>
                     <field name="match_state" widget="statusbar" statusbar_visible="matched,unmatched,low_confidence"/>
                 </header>
                 <sheet>
@@ -69,9 +69,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_lpr_event_search" model="ir.ui.view">
-        <field name="name">f3d.yard.lpr.event.search</field>
-        <field name="model">f3d.yard.lpr.event</field>
+    <record id="view_td_yard_lpr_event_search" model="ir.ui.view">
+        <field name="name">td.yard.lpr.event.search</field>
+        <field name="model">td.yard.lpr.event</field>
         <field name="arch" type="xml">
             <search string="Події LPR">
                 <field name="plate_norm"/>
@@ -89,15 +89,15 @@
         </field>
     </record>
 
-    <record id="action_f3d_yard_lpr_event" model="ir.actions.act_window">
+    <record id="action_td_yard_lpr_event" model="ir.actions.act_window">
         <field name="name">Розпізнавання номерів</field>
-        <field name="res_model">f3d.yard.lpr.event</field>
+        <field name="res_model">td.yard.lpr.event</field>
         <field name="view_mode">list,form</field>
     </record>
 
-    <record id="view_f3d_yard_walkin_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.yard.walkin.wizard.form</field>
-        <field name="model">f3d.yard.walkin.wizard</field>
+    <record id="view_td_yard_walkin_wizard_form" model="ir.ui.view">
+        <field name="name">td.yard.walkin.wizard.form</field>
+        <field name="model">td.yard.walkin.wizard</field>
         <field name="arch" type="xml">
             <form string="Рейс без броні">
                 <group>
@@ -126,5 +126,5 @@
         </field>
     </record>
 
-    <menuitem id="menu_f3d_yard_lpr" action="action_f3d_yard_lpr_event" name="Розпізнавання номерів" parent="menu_f3d_yard_journals" sequence="10" groups="group_f3d_yard_security"/>
+    <menuitem id="menu_td_yard_lpr" action="action_td_yard_lpr_event" name="Розпізнавання номерів" parent="menu_td_yard_journals" sequence="10" groups="group_td_yard_security"/>
 </odoo>

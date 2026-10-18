@@ -2,11 +2,11 @@
 
 from . import lighting
 
-LIGHT_GROUP = "f3d.bms.light.group"
-LIGHT_PANEL = "f3d.bms.light.panel"
-LIGHT_NORM = "f3d.bms.light.norm"
-HVAC_UNIT = "f3d.bms.hvac.unit"
-HEAT_BALANCE = "f3d.bms.heat.balance"
+LIGHT_GROUP = "td.bms.light.group"
+LIGHT_PANEL = "td.bms.light.panel"
+LIGHT_NORM = "td.bms.light.norm"
+HVAC_UNIT = "td.bms.hvac.unit"
+HEAT_BALANCE = "td.bms.heat.balance"
 REQUEST = "maintenance.request"
 
 
@@ -28,7 +28,7 @@ def _can_read(env, *models):
 
 def _param(env, key, default):
     try:
-        return float(env["ir.config_parameter"].sudo().get_param("factory3d.bms." + key, default))
+        return float(env["ir.config_parameter"].sudo().get_param("td.bms." + key, default))
     except (TypeError, ValueError):
         return float(default)
 
@@ -53,7 +53,7 @@ def build_lighting(env, ctx, static):
         rec = dict(static_groups.get(g.code) or {})
         rec.update(
             {
-                "zone": g.zone_id.f3d_code,
+                "zone": g.zone_id.td_code,
                 "zone_name": g.zone_id.name,
                 "task": g.norm_id.key,
                 "task_name": g.norm_id.name,
@@ -143,7 +143,7 @@ def build_ventilation(env, ctx, static):
                 {
                     "name": u.name,
                     "kind": u.kind,
-                    "zone": u.zone_id.f3d_code,
+                    "zone": u.zone_id.td_code,
                     "mode": v["mode_label"],
                     "mode_code": v["mode_code"] or "",
                     "airflow_m3h": _r(v["airflow_m3h"], st, "airflow_m3h"),

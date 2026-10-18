@@ -13,7 +13,7 @@ from ..tools import dates
 
 _logger = logging.getLogger(__name__)
 
-PREFIX = "factory3d.viewer."
+PREFIX = "td.viewer."
 WINDOW_RE = re.compile(r"^(\d\d):(\d\d)-(\d\d):(\d\d)$")
 EVENTS_CAP = 500
 ROTATE_BATCH = 1000
@@ -28,7 +28,7 @@ def _int(value, default):
 
 
 class F3dViewerSnapshot(models.Model):
-    _name = "f3d.viewer.snapshot"
+    _name = "td.viewer.snapshot"
     _description = "3D: знімок стану заводу"
     _order = "ts desc"
     _rec_name = "display_name"
@@ -118,13 +118,13 @@ class F3dViewerSnapshot(models.Model):
         prev = self.search([], limit=1)
         if kind == "periodic" and prev and prev.ts > now - timedelta(seconds=60):
             return prev
-        user = user or env.ref("factory3d_viewer.user_kiosk", raise_if_not_found=False) or env.user
+        user = user or env.ref("td_viewer3d.user_kiosk", raise_if_not_found=False) or env.user
         if isinstance(user, int):
             user = env["res.users"].browse(user)
         payload = PayloadBuilder(env(user=user.id, su=False), full=True).build()
         events = []
         if prev:
-            rows = env["f3d.viewer.event"].sudo().search_read(
+            rows = env["td.viewer.event"].sudo().search_read(
                 [("ts", ">", prev.ts)], ["ts", "model", "codes", "kind"], limit=EVENTS_CAP, order="ts desc, id desc")
             events = [{"ts": dates.iso_utc(r["ts"]), "model": r["model"], "codes": r["codes"], "kind": r["kind"]}
                       for r in rows]
@@ -171,7 +171,7 @@ class F3dViewerSnapshot(models.Model):
         snaps = self.sudo().search([("ts", "<", cutoff), ("kind", "!=", "install")])
         n_snaps = len(snaps)
         snaps.unlink()
-        events = self.env["f3d.viewer.event"].sudo()
+        events = self.env["td.viewer.event"].sudo()
         n_events = 0
         while time.monotonic() - started < ROTATE_SECONDS:
             batch = events.search([("ts", "<", cutoff)], limit=ROTATE_BATCH)
@@ -185,7 +185,7 @@ class F3dViewerSnapshot(models.Model):
 
     def action_open_viewer(self):
         self.ensure_one()
-        action = self.env["ir.actions.actions"]._for_xml_id("factory3d_viewer.action_f3d_viewer")
+        action = self.env["ir.actions.actions"]._for_xml_id("td_viewer3d.action_td_viewer")
         action["params"] = {"snapshot": self.id}
         return action
 

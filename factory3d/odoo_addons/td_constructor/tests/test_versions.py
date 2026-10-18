@@ -13,11 +13,11 @@ class TestVersions(F3DConstructorCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
 
     def publish(self, note=''):
         action = self.site.with_user(self.u_manager).action_publish_wizard()
-        wizard = self.env['f3d.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
+        wizard = self.env['td.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
         wizard.note = note
         wizard.action_confirm()
         return wizard.version_id
@@ -57,7 +57,7 @@ class TestVersions(F3DConstructorCase):
         slot_uid, extra_uid = slot.uid, extra.uid
         slot.unlink()  # у чернетці немає V-R1, у v1 вона є
         v1.with_user(self.u_manager).action_restore_draft()
-        slots = self.env['f3d.slot'].search([('site_id', '=', self.site.id)])
+        slots = self.env['td.slot'].search([('site_id', '=', self.site.id)])
         self.assertEqual(slots.mapped('code_prefix'), ['V-R1'])  # зайвий видалено, відсутній створено
         self.assertEqual(slots.x_m, 30.0)
         self.assertNotEqual(slots.uid, extra_uid)
@@ -70,20 +70,20 @@ class TestVersions(F3DConstructorCase):
         self.assertFalse(self.site.has_changes)
         self.assertEqual(self.site.draft_changes, 0)
         self.assertEqual(self.site.draft_base_version_id, v2)
-        self.assertEqual(len(self.env['f3d.slot'].search([('site_id', '=', self.site.id)])), 2)
+        self.assertEqual(len(self.env['td.slot'].search([('site_id', '=', self.site.id)])), 2)
 
     def test_ac60_no_changes(self):
         self.make_slot(prefix='V-R1', bays=2, levels=1)
         self.publish()
-        count = self.env['f3d.layout.version'].search_count([])
+        count = self.env['td.layout.version'].search_count([])
         plan = publish.build_plan(self.site)
         with self.assertRaises(publish.PublishError) as ctx:
             publish.apply_plan(self.site.with_user(self.u_manager), plan, (), '')
         self.assertEqual(ctx.exception.code, 'no_changes')
         self.assertIn("Немає змін для публікації", str(ctx.exception))
-        self.assertEqual(self.env['f3d.layout.version'].search_count([]), count)
+        self.assertEqual(self.env['td.layout.version'].search_count([]), count)
         wizard = (
-            self.env['f3d.publish.wizard']
+            self.env['td.publish.wizard']
             .with_user(self.u_manager)
             .browse(self.site.with_user(self.u_manager).action_publish_wizard()['res_id'])
         )

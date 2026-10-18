@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="report_f3d_fire_evac_compliance_document">
+    <template id="report_td_fire_evac_compliance_document">
         <t t-call="web.html_container">
             <t t-set="n1" t-value="lambda v: ('%.1f' % (v or 0.0)).replace('.', ',')"/>
             <t t-set="status" t-value="{'ok': 'відповідає', 'warn': 'зауваження', 'fail': 'не відповідає', 'na': 'не перевірено'}"/>
             <t t-foreach="docs" t-as="o">
                 <t t-call="web.external_layout">
-                    <t t-set="Norm" t-value="o.env['f3d.fire.norm']"/>
-                    <t t-set="routes" t-value="o.env['f3d.fire.route'].search([('active', '=', True)], order='zone_code')"/>
-                    <t t-set="exits" t-value="o.env['f3d.fire.exit'].search([('active', '=', True)], order='code')"/>
-                    <t t-set="szones" t-value="o.env['f3d.fire.smoke.zone'].search([('active', '=', True)], order='code')"/>
+                    <t t-set="Norm" t-value="o.env['td.fire.norm']"/>
+                    <t t-set="routes" t-value="o.env['td.fire.route'].search([('active', '=', True)], order='zone_code')"/>
+                    <t t-set="exits" t-value="o.env['td.fire.exit'].search([('active', '=', True)], order='code')"/>
+                    <t t-set="szones" t-value="o.env['td.fire.smoke.zone'].search([('active', '=', True)], order='code')"/>
                     <div class="page">
                         <h2>Перевірка евакуації та розстановки</h2>
                         <p>

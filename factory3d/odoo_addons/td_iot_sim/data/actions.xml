@@ -106,7 +106,7 @@ if now.minute == 0:
     <field name="name">Імітація IoT: щохвилини</field>
     <field name="model_id" ref="model_x_f3d_signal"/>
     <field name="state">code</field>
-    <field name="code">env.ref('factory3d_iot_sim.action_iot_tick').run()</field>
+    <field name="code">env.ref('td_iot_sim.action_iot_tick').run()</field>
     <field name="interval_number">1</field>
     <field name="interval_type">minutes</field>
     <field name="active" eval="True"/>
@@ -116,21 +116,21 @@ if now.minute == 0:
     <field name="name">Увімкнути імітацію</field>
     <field name="model_id" ref="model_x_f3d_signal"/>
     <field name="state">code</field>
-    <field name="code">env.ref('factory3d_iot_sim.cron_iot_sim').write({'active': True})
+    <field name="code">env.ref('td_iot_sim.cron_iot_sim').write({'active': True})
 action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
   </record>
   <record id="action_iot_stop" model="ir.actions.server">
     <field name="name">Зупинити імітацію</field>
     <field name="model_id" ref="model_x_f3d_signal"/>
     <field name="state">code</field>
-    <field name="code">env.ref('factory3d_iot_sim.cron_iot_sim').write({'active': False})
+    <field name="code">env.ref('td_iot_sim.cron_iot_sim').write({'active': False})
 action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
   </record>
   <record id="action_iot_tick_now" model="ir.actions.server">
     <field name="name">Оновити зараз</field>
     <field name="model_id" ref="model_x_f3d_signal"/>
     <field name="state">code</field>
-    <field name="code">env.ref('factory3d_iot_sim.action_iot_tick').run()
+    <field name="code">env.ref('td_iot_sim.action_iot_tick').run()
 action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
   </record>
 </odoo>

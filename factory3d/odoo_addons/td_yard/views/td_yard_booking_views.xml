@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_booking_form" model="ir.ui.view">
-        <field name="name">f3d.yard.booking.form</field>
-        <field name="model">f3d.yard.booking</field>
+    <record id="view_td_yard_booking_form" model="ir.ui.view">
+        <field name="name">td.yard.booking.form</field>
+        <field name="model">td.yard.booking</field>
         <field name="arch" type="xml">
             <form string="Бронювання воріт">
                 <header>
-                    <button name="action_confirm" type="object" string="Підтвердити" class="btn-primary" invisible="state != 'requested'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
-                    <button name="action_cancel" type="object" string="Скасувати" invisible="state == 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
-                    <button name="action_reset" type="object" string="Повернути в запит" invisible="state != 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                    <button name="action_confirm" type="object" string="Підтвердити" class="btn-primary" invisible="state != 'requested'" groups="td_yard.group_td_yard_dispatcher"/>
+                    <button name="action_cancel" type="object" string="Скасувати" invisible="state == 'cancelled'" groups="td_yard.group_td_yard_dispatcher"/>
+                    <button name="action_reset" type="object" string="Повернути в запит" invisible="state != 'cancelled'" groups="td_yard.group_td_yard_dispatcher"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
@@ -19,7 +19,7 @@
                         <group>
                             <field name="visit_id" context="{'default_visit_type': 'incoming'}"/>
                             <field name="side_hint" invisible="1"/>
-                            <field name="dock_id" domain="[('f3d_kind','=','dock')] + ([('f3d_side','=', side_hint)] if side_hint else [])"/>
+                            <field name="dock_id" domain="[('td_kind','=','dock')] + ([('td_side','=', side_hint)] if side_hint else [])"/>
                             <field name="slot_start"/>
                             <field name="slot_end"/>
                             <field name="duration_min"/>
@@ -41,9 +41,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_booking_list" model="ir.ui.view">
-        <field name="name">f3d.yard.booking.list</field>
-        <field name="model">f3d.yard.booking</field>
+    <record id="view_td_yard_booking_list" model="ir.ui.view">
+        <field name="name">td.yard.booking.list</field>
+        <field name="model">td.yard.booking</field>
         <field name="arch" type="xml">
             <list string="Бронювання воріт" decoration-muted="state == 'cancelled'" decoration-warning="state == 'requested'">
                 <field name="name"/>
@@ -60,9 +60,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_booking_calendar" model="ir.ui.view">
-        <field name="name">f3d.yard.booking.calendar</field>
-        <field name="model">f3d.yard.booking</field>
+    <record id="view_td_yard_booking_calendar" model="ir.ui.view">
+        <field name="name">td.yard.booking.calendar</field>
+        <field name="model">td.yard.booking</field>
         <field name="arch" type="xml">
             <calendar string="Бронювання воріт" date_start="slot_start" date_stop="slot_end" color="dock_id" mode="day" quick_create="0" event_open_popup="1">
                 <field name="visit_id"/>
@@ -72,9 +72,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_booking_search" model="ir.ui.view">
-        <field name="name">f3d.yard.booking.search</field>
-        <field name="model">f3d.yard.booking</field>
+    <record id="view_td_yard_booking_search" model="ir.ui.view">
+        <field name="name">td.yard.booking.search</field>
+        <field name="model">td.yard.booking</field>
         <field name="arch" type="xml">
             <search string="Бронювання воріт">
                 <field name="dock_id"/>
@@ -96,10 +96,10 @@
         </field>
     </record>
 
-    <!-- DEC-1: gantt-представлення додає міст factory3d_yard_gantt -->
-    <record id="action_f3d_yard_booking" model="ir.actions.act_window">
+    <!-- DEC-1: gantt-представлення додає міст td_yard_gantt -->
+    <record id="action_td_yard_booking" model="ir.actions.act_window">
         <field name="name">Бронювання воріт</field>
-        <field name="res_model">f3d.yard.booking</field>
+        <field name="res_model">td.yard.booking</field>
         <field name="view_mode">calendar,list,form</field>
         <field name="context">{'search_default_confirmed': 1, 'search_default_requested': 1}</field>
     </record>

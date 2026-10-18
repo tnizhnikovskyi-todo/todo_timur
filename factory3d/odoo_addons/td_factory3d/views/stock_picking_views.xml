@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-10 -->
-    <record id="view_picking_form_f3d" model="ir.ui.view">
+    <record id="view_picking_form_td" model="ir.ui.view">
         <field name="name">stock.picking.form.f3d</field>
         <field name="model">stock.picking</field>
         <field name="inherit_id" ref="stock.view_picking_form"/>
         <field name="arch" type="xml">
             <field name="origin" position="after">
-                <field name="f3d_dock_id" readonly="1" invisible="not f3d_dock_id"/>
-                <field name="f3d_truck" readonly="1" invisible="not f3d_truck"/>
-                <field name="f3d_vehicle_id" readonly="1" invisible="not f3d_vehicle_id"/>
+                <field name="td_dock_id" readonly="1" invisible="not td_dock_id"/>
+                <field name="td_truck" readonly="1" invisible="not td_truck"/>
+                <field name="td_vehicle_id" readonly="1" invisible="not td_vehicle_id"/>
             </field>
         </field>
     </record>
 
-    <record id="view_picking_list_f3d" model="ir.ui.view">
+    <record id="view_picking_list_td" model="ir.ui.view">
         <field name="name">stock.picking.list.f3d</field>
         <field name="model">stock.picking</field>
         <field name="inherit_id" ref="stock.vpicktree"/>
         <field name="arch" type="xml">
             <field name="origin" position="after">
-                <field name="f3d_dock_id" optional="show"/>
-                <field name="f3d_truck" optional="hide"/>
-                <field name="f3d_vehicle_id" optional="hide"/>
+                <field name="td_dock_id" optional="show"/>
+                <field name="td_truck" optional="hide"/>
+                <field name="td_vehicle_id" optional="hide"/>
             </field>
         </field>
     </record>

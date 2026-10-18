@@ -12,13 +12,13 @@ ROTATE_TIME_LIMIT_S = 60
 
 
 class F3dReading(models.Model):
-    _name = "f3d.reading"
+    _name = "td.reading"
     _description = "Телеметрія: показання"
     _order = "ts desc, id desc"
     _log_access = False
     _rec_name = "ts"
 
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
+    signal_id = fields.Many2one("td.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
     equipment_id = fields.Many2one(
         "maintenance.equipment", string="Обладнання", related="signal_id.equipment_id", store=True, index=True
     )
@@ -43,10 +43,10 @@ class F3dReading(models.Model):
     _f3d_reading_uniq = models.Constraint("UNIQUE(signal_id, ts)", "Показання для цього сигналу і часу вже є.")
 
     def init(self):
-        tools.sql.create_index(self.env.cr, "f3d_reading_ts_idx", self._table, ["ts"])
+        tools.sql.create_index(self.env.cr, "td_reading_ts_idx", self._table, ["ts"])
 
     def write(self, vals):
-        admin = self.env.su or self.env.user.has_group("factory3d_base.group_f3d_admin")
+        admin = self.env.su or self.env.user.has_group("td_factory3d.group_td_admin")
         if set(vals) != {"quality"} or not admin:
             raise UserError(_("Показання не редагуються."))
         return super().write(vals)
@@ -72,14 +72,14 @@ class F3dReading(models.Model):
         """R-10: ротація показань, годинних агрегатів і журналу push-подій."""
         icp = self.env["ir.config_parameter"].sudo()
         now = fields.Datetime.now()
-        keep_days = int(icp.get_param("factory3d.telemetry.keep_days", "30") or 30)
-        keep_hours_days = int(icp.get_param("factory3d.telemetry.keep_hours_days", "400") or 400)
+        keep_days = int(icp.get_param("td.telemetry.keep_days", "30") or 30)
+        keep_hours_days = int(icp.get_param("td.telemetry.keep_hours_days", "400") or 400)
         deadline = time.monotonic() + ROTATE_TIME_LIMIT_S
-        readings = self._delete_old("f3d_reading", "ts", now - timedelta(days=keep_days), deadline)
-        hours = self._delete_old("f3d_reading_hour", "hour", now - timedelta(days=keep_hours_days), deadline)
+        readings = self._delete_old("td_reading", "ts", now - timedelta(days=keep_days), deadline)
+        hours = self._delete_old("td_reading_hour", "hour", now - timedelta(days=keep_hours_days), deadline)
         events = 0
-        if "f3d.push.event" in self.env:
-            events = self._delete_old("f3d_push_event", "ts", now - timedelta(days=keep_days), deadline)
+        if "td.push.event" in self.env:
+            events = self._delete_old("td_push_event", "ts", now - timedelta(days=keep_days), deadline)
         self.env.invalidate_all()
         _logger.info("f3d_telemetry rotate: readings=%s hours=%s events=%s", readings, hours, events)
         return {"readings": readings, "hours": hours, "events": events}

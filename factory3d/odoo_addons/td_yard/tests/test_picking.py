@@ -9,8 +9,8 @@ class TestYardPicking(YardFlowCase):
         batch = self._batch()
         visit = self._visit(batch_id=batch.id)
         picking = batch.picking_ids
-        self.assertEqual(picking.f3d_expected_weight_kg, 11200.0)
-        self.assertEqual(picking.f3d_visit_id, visit)
+        self.assertEqual(picking.td_expected_weight_kg, 11200.0)
+        self.assertEqual(picking.td_visit_id, visit)
         self.assertEqual(visit.expected_kg, 11200.0)
         self.assertEqual(visit.weight_check, "none")
         moves = picking.move_ids
@@ -19,7 +19,7 @@ class TestYardPicking(YardFlowCase):
         moves.picked = True
         picking.with_context(cancel_backorder=True)._action_done()
         self.assertEqual(picking.state, "done")
-        self.assertEqual(picking.f3d_expected_weight_kg, 6720.0)
+        self.assertEqual(picking.td_expected_weight_kg, 6720.0)
 
     def test_net_distribution_and_deviation(self):  # AC-18, AC-19
         batch = self._batch()
@@ -27,17 +27,17 @@ class TestYardPicking(YardFlowCase):
         picking.user_id = self.env.user
         visit = self._visit(batch_id=batch.id)
         visit._f3d_yard_write_pickings(net=11520.0)
-        self.assertEqual((picking.f3d_weight_check, picking.f3d_weight_deviation_pct), ("deviation", 2.86))
+        self.assertEqual((picking.td_weight_check, picking.td_weight_deviation_pct), ("deviation", 2.86))
         visit._f3d_yard_write_pickings(net=11520.0)
         acts = picking.activity_ids.filtered(lambda a: a.summary == "Відхилення нетто")
         self.assertEqual(len(acts), 1)
         visit._f3d_yard_write_pickings(net=11300.0)
-        self.assertEqual((picking.f3d_weight_check, picking.f3d_weight_deviation_pct), ("ok", 0.89))
+        self.assertEqual((picking.td_weight_check, picking.td_weight_deviation_pct), ("ok", 0.89))
         small = self._batch(lines=((6600, None),), product=self._product("T Один", 1.0, self.categ_hdf))
         v_small = self._visit(batch_id=small.id)
         v_small._f3d_yard_write_pickings(net=6750.0)
         self.assertEqual(
-            (small.picking_ids.f3d_weight_check, small.picking_ids.f3d_weight_deviation_pct), ("deviation", 2.27)
+            (small.picking_ids.td_weight_check, small.picking_ids.td_weight_deviation_pct), ("deviation", 2.27)
         )
 
     def test_no_reference_and_shipping(self):  # AC-19
@@ -45,7 +45,7 @@ class TestYardPicking(YardFlowCase):
         visit = self._visit(visit_type="outgoing", batch_id=batch.id)
         visit._f3d_yard_write_pickings(net=7380.0)
         picking = batch.picking_ids
-        self.assertEqual(picking.f3d_weight_check, "no_reference")
+        self.assertEqual(picking.td_weight_check, "no_reference")
         self.assertEqual(picking.shipping_weight, 7380.0)
 
     def test_two_pickings_split(self):  # AC-19
@@ -55,7 +55,7 @@ class TestYardPicking(YardFlowCase):
         second.picking_ids.write({"batch_id": batch.id})
         visit = self._visit(batch_id=batch.id)
         visit._f3d_yard_write_pickings(net=12300.0)
-        self.assertEqual(sorted(batch.picking_ids.mapped("f3d_net_weight_kg")), [4100.0, 8200.0])
+        self.assertEqual(sorted(batch.picking_ids.mapped("td_net_weight_kg")), [4100.0, 8200.0])
 
     def test_auto_handling(self):  # AC-20
         batch = self._batch(lines=((10, None),))

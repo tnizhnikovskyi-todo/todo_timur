@@ -25,13 +25,13 @@ class TestGantryJob(F3DMachineCase):
         super().setUp()
         # telemetry `_f3d_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
         patcher = patch.object(
-            type(self.env["f3d.push.handler"]),
+            type(self.env["td.push.handler"]),
             "_f3d_handler_models",
-            lambda _self, route: ["f3d.push.handler.machine_connect"] if route.startswith("mc_") else [],
+            lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.Job = self.env["f3d.gantry.job"]
+        self.Job = self.env["td.gantry.job"]
         self.env["stock.quant"]._update_available_quantity(self.board, self.loc_t1, 45, lot_id=self.lot_l1)
         self.mo = self.make_mo(self.wc_saw, name="WH/MO/T0001", qty=4, comps=((self.board, 1),))
 
@@ -79,7 +79,7 @@ class TestGantryJob(F3DMachineCase):
         cmd = job.command_id
         self.assertEqual(cmd.payload, FEED_PAYLOAD)
         self.assertEqual(cmd.text, "feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001")
-        self.assertEqual((cmd.signal_id, cmd.origin, cmd.f3d_gantry_job_id), (self.sig_g_cmd, "machine_connect", job))
+        self.assertEqual((cmd.signal_id, cmd.origin, cmd.td_gantry_job_id), (self.sig_g_cmd, "machine_connect", job))
 
     def test_command_results(self):
         self.enable_write()

@@ -15,12 +15,12 @@ class TestBus(F3dViewerBase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        cls.Event = env["f3d.viewer.event"]
+        cls.Event = env["td.viewer.event"]
         cls.wh = env["stock.warehouse"].search([], limit=1)
         cls.loc_a = env["stock.location"].create(
-            {"name": "TST-A", "location_id": cls.wh.lot_stock_id.id, "f3d_code": "TST-LOC-A"})
+            {"name": "TST-A", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-A"})
         cls.loc_b = env["stock.location"].create(
-            {"name": "TST-B", "location_id": cls.wh.lot_stock_id.id, "f3d_code": "TST-LOC-B"})
+            {"name": "TST-B", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-B"})
         cls.product = env["product.product"].create({"name": "TST bus", "default_code": "TST-BUS", "is_storable": True})
         env["stock.quant"]._update_available_quantity(cls.product, cls.loc_a, 100)
 
@@ -67,7 +67,7 @@ class TestBus(F3dViewerBase):
         self.assertEqual(by_model["stock.move.line"].kind, "stock")
 
     def test_workorder_finish_codes(self):
-        wc = self.env["mrp.workcenter"].create({"name": "TST WC", "code": "TSTWC", "f3d_code": "TST-WC-BUS"})
+        wc = self.env["mrp.workcenter"].create({"name": "TST WC", "code": "TSTWC", "td_code": "TST-WC-BUS"})
         fin = self.env["product.product"].create({"name": "TST fin", "default_code": "TST-FIN-B", "is_storable": True})
         bom = self.env["mrp.bom"].create({
             "product_tmpl_id": fin.product_tmpl_id.id, "product_id": fin.id, "product_qty": 1, "code": "TB",
@@ -87,19 +87,19 @@ class TestBus(F3dViewerBase):
 
     def test_maintenance_event_snapshot(self):
         """AC-49."""
-        eq = self.env["maintenance.equipment"].create({"name": "TST CNC", "f3d_code": "TST-CNC-2"})
+        eq = self.env["maintenance.equipment"].create({"name": "TST CNC", "td_code": "TST-CNC-2"})
         stage_new = self.env.ref("maintenance.stage_0")
         stage_work = self.env.ref("maintenance.stage_1")
         req = self.env["maintenance.request"].create(
             {"name": "TST/MR/00031", "equipment_id": eq.id, "stage_id": stage_new.id})
         self._reset()
-        self.env["f3d.viewer.snapshot"].sudo().search([]).unlink()
+        self.env["td.viewer.snapshot"].sudo().search([]).unlink()
         req.write({"stage_id": stage_work.id})
         self._flush()
         ev = self._events().filtered(lambda e: e.model == "maintenance.request")
         self.assertEqual(ev.kind, "maintenance")
         self.assertTrue({"TST/MR/00031", "TST-CNC-2"} <= set(ev.codes))
-        snap = self.env["f3d.viewer.snapshot"].sudo().search([("kind", "=", "event")])
+        snap = self.env["td.viewer.snapshot"].sudo().search([("kind", "=", "event")])
         self.assertEqual(len(snap), 1)
         self.assertEqual(snap.note, "Зупинка TST-CNC-2 · TST/MR/00031")
 
@@ -143,7 +143,7 @@ class TestBus(F3dViewerBase):
     def test_signal_cron(self):
         """AC-20."""
         if "x_f3d_signal" not in self.env:
-            raise unittest.SkipTest("немає x_f3d_signal (factory3d_iot_sim)")
+            raise unittest.SkipTest("немає x_f3d_signal (td_iot_sim)")
         Signal = self.env["x_f3d_signal"].sudo()
         sigs = Signal.search([("x_active", "=", True), ("x_code", "!=", False)], limit=3)
         if len(sigs) < 3:

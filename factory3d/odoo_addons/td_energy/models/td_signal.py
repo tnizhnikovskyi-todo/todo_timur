@@ -6,9 +6,9 @@ from ..tools.dates import param_bool
 
 class F3dSignal(models.Model):
     """M-15: заборона запису уставок (A-15) і журнал подій після прийому показань (R-13).
-    Похідні й відключення АВР (R-14) додає W4 у `f3d.energy.event._f3d_on_ingest`."""
+    Похідні й відключення АВР (R-14) додає W4 у `td.energy.event._f3d_on_ingest`."""
 
-    _inherit = "f3d.signal"
+    _inherit = "td.signal"
 
     ENERGY_PREFIXES = ("energy/", "infra/pv/", "infra/bess/", "infra/chp/", "infra/ats/", "infra/totals/")
 
@@ -17,7 +17,7 @@ class F3dSignal(models.Model):
         for rec in self:
             if rec.module == "energy" and rec.write_enabled:
                 raise ValidationError(
-                    _("Запис уставок у пристрої енергетики заборонено у v1 (factory3d.energy.write_enabled).")
+                    _("Запис уставок у пристрої енергетики заборонено у v1 (td.energy.write_enabled).")
                 )
 
     @api.model
@@ -27,7 +27,7 @@ class F3dSignal(models.Model):
         before = self._f3d_energy_snapshot(readings)
         res = super()._f3d_ingest(readings, src=src, collector=collector)
         if before and param_bool(self.env, "read_enabled"):
-            self.env["f3d.energy.event"].sudo()._f3d_on_ingest(before, readings)  # R-13, R-14
+            self.env["td.energy.event"].sudo()._f3d_on_ingest(before, readings)  # R-13, R-14
         return res
 
     @api.model
@@ -53,5 +53,5 @@ class F3dSignal(models.Model):
         before = self._f3d_energy_snapshot(readings)
         res = self.with_context(f3d_energy_internal=True)._f3d_ingest(readings, src="module")
         if before:
-            self.env["f3d.energy.event"].sudo()._f3d_on_ingest(before, readings)
+            self.env["td.energy.event"].sudo()._f3d_on_ingest(before, readings)
         return res

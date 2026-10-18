@@ -1,43 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_maintenance_request_form_f3d" model="ir.ui.view">
+    <record id="view_maintenance_request_form_td" model="ir.ui.view">
         <field name="name">maintenance.request.form.f3d</field>
         <field name="model">maintenance.request</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='equipment_id']" position="after">
-                <group name="f3d_telemetry" string="Телеметрія" invisible="not f3d_signal_id">
-                    <field name="f3d_signal_id"/>
-                    <field name="f3d_signal_status"/>
-                    <field name="f3d_origin"/>
-                    <field name="f3d_value"/>
-                    <field name="f3d_threshold"/>
+                <group name="f3d_telemetry" string="Телеметрія" invisible="not td_signal_id">
+                    <field name="td_signal_id"/>
+                    <field name="td_signal_status"/>
+                    <field name="td_origin"/>
+                    <field name="td_value"/>
+                    <field name="td_threshold"/>
                 </group>
             </xpath>
         </field>
     </record>
 
-    <record id="view_maintenance_request_list_f3d" model="ir.ui.view">
+    <record id="view_maintenance_request_list_td" model="ir.ui.view">
         <field name="name">maintenance.request.list.f3d</field>
         <field name="model">maintenance.request</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
-                <field name="f3d_origin" optional="hide"/>
-                <field name="f3d_equipment_code" optional="hide"/>
+                <field name="td_origin" optional="hide"/>
+                <field name="td_equipment_code" optional="hide"/>
             </xpath>
         </field>
     </record>
 
-    <record id="view_maintenance_request_search_f3d" model="ir.ui.view">
+    <record id="view_maintenance_request_search_td" model="ir.ui.view">
         <field name="name">maintenance.request.search.f3d</field>
         <field name="model">maintenance.request</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_search"/>
         <field name="arch" type="xml">
             <xpath expr="//search" position="inside">
                 <separator/>
-                <filter string="З телеметрії" name="f3d_from_telemetry" domain="[('f3d_signal_id', '!=', False)]"/>
-                <filter string="Джерело заявки" name="f3d_group_origin" context="{'group_by': 'f3d_origin'}"/>
+                <filter string="З телеметрії" name="f3d_from_telemetry" domain="[('td_signal_id', '!=', False)]"/>
+                <filter string="Джерело заявки" name="f3d_group_origin" context="{'group_by': 'td_origin'}"/>
             </xpath>
         </field>
     </record>

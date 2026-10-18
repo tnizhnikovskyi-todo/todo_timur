@@ -1,7 +1,7 @@
 # iot_sim — емулятор обладнання factory3d
 
 Сервіс імітує протоколи обладнання (OPC UA, Modbus, BACnet, MQTT, REST) за каталогом сигналів
-(`catalog/signals.csv` = Додаток A SPEC `factory3d_iot_sim`). Повна специфікація — `docs/modules/factory3d_iot_sim/SPEC.md`.
+(`catalog/signals.csv` = Додаток A SPEC `td_iot_sim`). Повна специфікація — `docs/modules/td_iot_sim/SPEC.md`.
 Стан W0: каркас; працює лише `GET /sim/v1/health`.
 
 ## Запуск
@@ -15,7 +15,7 @@ Compose: `docker-compose.sim.yml` (профілі demo/dev), брокер mosqui
 
 ## Каталог
 
-    python tools/gen_catalog.py          # згенерувати catalog/signals.csv і data/f3d_sim_signal.csv Odoo-модуля
+    python tools/gen_catalog.py          # згенерувати catalog/signals.csv і data/td_sim_signal.csv Odoo-модуля
     python tools/gen_catalog.py --check  # звірити з Додатком A
 
 ## Тести

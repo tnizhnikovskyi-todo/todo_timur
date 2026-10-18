@@ -13,7 +13,7 @@ ALARM_FIELDS = frozenset({'alarm', 'alarm_reason'})
 
 
 class F3dAccessDoor(models.Model):
-    _name = 'f3d.access.door'
+    _name = 'td.access.door'
     _description = 'СКУД: двері або турнікет'
     _order = 'server_id, code'
     _rec_names_search = ['code', 'name', 'biostar_id']
@@ -22,13 +22,13 @@ class F3dAccessDoor(models.Model):
     code = fields.Char(string='Код', required=True, index=True, size=32)
     kind = fields.Selection(
         [('door', 'Двері'), ('turnstile', 'Турнікет')], required=True, default='door')
-    server_id = fields.Many2one('f3d.access.server', required=True, index=True, ondelete='cascade')
+    server_id = fields.Many2one('td.access.server', required=True, index=True, ondelete='cascade')
     company_id = fields.Many2one('res.company', related='server_id.company_id', store=True, index=True)
     biostar_id = fields.Char(string='ID у BioStar', size=64, index=True)
-    entry_device_id = fields.Many2one('f3d.access.device', string='Зчитувач входу', ondelete='set null')
-    exit_device_id = fields.Many2one('f3d.access.device', string='Зчитувач виходу', ondelete='set null')
-    zone_from_id = fields.Many2one('f3d.zone', string='Із зони', ondelete='set null')
-    zone_to_id = fields.Many2one('f3d.zone', string='У зону', ondelete='set null')
+    entry_device_id = fields.Many2one('td.access.device', string='Зчитувач входу', ondelete='set null')
+    exit_device_id = fields.Many2one('td.access.device', string='Зчитувач виходу', ondelete='set null')
+    zone_from_id = fields.Many2one('td.zone', string='Із зони', ondelete='set null')
+    zone_to_id = fields.Many2one('td.zone', string='У зону', ondelete='set null')
     is_perimeter = fields.Boolean(
         string='Периметр (відмітки)', default=False,
         help='Проходи через ці двері створюють і закривають відмітки Відвідування (A-04)')
@@ -70,24 +70,24 @@ class F3dAccessDoor(models.Model):
                     raise ValidationError("Зчитувач має належати тому самому серверу BioStar.")
 
     def _compute_is_access_admin(self):
-        is_admin = self.env.su or self.env.user.has_group('factory3d_access.group_f3d_access_admin')
+        is_admin = self.env.su or self.env.user.has_group('td_access.group_td_access_admin')
         for rec in self:
             rec.is_access_admin = is_admin
 
     def _compute_passes_today(self):
-        if 'f3d.access.event' not in self.env:
+        if 'td.access.event' not in self.env:
             self.passes_today = 0
             return
         start = local_day_start_utc(fields.Datetime.now())
         for rec in self:
-            rec.passes_today = self.env['f3d.access.event'].search_count(
+            rec.passes_today = self.env['td.access.event'].search_count(
                 [('door_id', '=', rec.id), ('event_type', '=', 'pass'), ('ts', '>=', start)])
 
     def write(self, vals):
         # SPEC §4.1/§13.3 (A-1): охорона має RW на двері лише заради підтвердження тривоги: вона змінює тільки
         # `alarm`/`alarm_reason` і лише знімає тривогу (не виставляє). Усе інше — адміністратор СКУД або sudo()
         # (обробка подій, `action_ack_alarm`).
-        if not self.env.su and not self.env.user.has_group('factory3d_access.group_f3d_access_admin'):
+        if not self.env.su and not self.env.user.has_group('td_access.group_td_access_admin'):
             if set(vals) - ALARM_FIELDS:
                 raise AccessError("Змінювати двері може лише адміністратор СКУД.")
             if any(vals.values()):
@@ -95,15 +95,15 @@ class F3dAccessDoor(models.Model):
         return super().write(vals)
 
     def _f3d_publish_change(self):
-        """Шина переглядача ('f3d.access.door', коди, 'state'), R-12 крок 6; у пакеті подій — через збирач."""
+        """Шина переглядача ('td.access.door', коди, 'state'), R-12 крок 6; у пакеті подій — через збирач."""
         codes = {c for c in self.sudo().mapped('code') if c}
         if not codes:
             return None
         collector = self.env.context.get('f3d_bus_collector')
         if collector is not None:
-            collector.setdefault('f3d.access.door', set()).update(codes)
+            collector.setdefault('td.access.door', set()).update(codes)
         else:
-            self.env['f3d.access.event']._f3d_bus('f3d.access.door', codes)
+            self.env['td.access.event']._f3d_bus('td.access.door', codes)
 
     def _f3d_set_state(self, state, ts, alarm=None, reason=None):
         """R-10: застосувати подію стану дверей; повертає двері, у яких щось змінилося."""
@@ -133,11 +133,11 @@ class F3dAccessDoor(models.Model):
 
     def action_open_events(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'f3d.access.event',
+        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'td.access.event',
                 'view_mode': 'list,form', 'domain': [('door_id', '=', self.id)]}
 
     def action_ack_alarm(self):
-        if not self.env.su and not self.env.user.has_group('factory3d_access.group_f3d_access_security'):
+        if not self.env.su and not self.env.user.has_group('td_access.group_td_access_security'):
             raise AccessError("Знімати тривогу може лише охорона.")
         self.sudo().write({'alarm': False, 'alarm_reason': False})
         self._f3d_publish_change()

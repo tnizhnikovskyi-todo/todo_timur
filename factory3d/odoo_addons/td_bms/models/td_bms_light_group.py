@@ -16,11 +16,11 @@ SIGNAL_FIELDS = (
 
 
 def _param(env, key, default):
-    return env["ir.config_parameter"].sudo().get_param("factory3d.bms." + key, default)
+    return env["ir.config_parameter"].sudo().get_param("td.bms." + key, default)
 
 
 class F3dBmsLightGroup(models.Model):
-    _name = "f3d.bms.light.group"
+    _name = "td.bms.light.group"
     _description = "Будівля: група освітлення"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -32,17 +32,17 @@ class F3dBmsLightGroup(models.Model):
     name = fields.Char(string="Назва", size=128, required=True)
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
-    zone_id = fields.Many2one("f3d.zone", string="Зона", required=True, ondelete="restrict", index=True)
-    zone_code = fields.Char(related="zone_id.f3d_code")
+    zone_id = fields.Many2one("td.zone", string="Зона", required=True, ondelete="restrict", index=True)
+    zone_code = fields.Char(related="zone_id.td_code")
     zone_name = fields.Char(related="zone_id.name")
     area_m2 = fields.Float(string="Площа, м²", related="zone_id.area_m2")
     norm_id = fields.Many2one(
-        "f3d.bms.light.norm", string="Вид робіт", required=True, ondelete="restrict", tracking=True
+        "td.bms.light.norm", string="Вид робіт", required=True, ondelete="restrict", tracking=True
     )
     e_norm = fields.Integer(string="Норма, лк", related="norm_id.lux")
-    panel_id = fields.Many2one("f3d.bms.light.panel", string="Щит", required=True, ondelete="restrict", index=True)
+    panel_id = fields.Many2one("td.bms.light.panel", string="Щит", required=True, ondelete="restrict", index=True)
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
-    passport_id = fields.Many2one("f3d.equipment.passport", string="Паспорт світильника", ondelete="set null")
+    passport_id = fields.Many2one("td.equipment.passport", string="Паспорт світильника", ondelete="set null")
     fixture_kind = fields.Selection(
         [("highbay", "Широка оптика (WB)"), ("highbay_rack", "Вузька оптика над проходами (NB)")],
         string="Тип світильника",
@@ -79,16 +79,16 @@ class F3dBmsLightGroup(models.Model):
     calendar_id = fields.Many2one(
         "resource.calendar",
         string="Робочий час",
-        help="Порожньо — параметр factory3d.bms.calendar_id або календар компанії",
+        help="Порожньо — параметр td.bms.calendar_id або календар компанії",
     )
     dali_group = fields.Integer(string="DALI-група (G)", required=True)
     dali_devices = fields.Char(string="Пристрої DALI", size=256, help="@c.r.s.d1-d2[;@c.r.s.d1-d2…]")
-    level_signal_id = fields.Many2one("f3d.signal", string="Сигнал: рівень", ondelete="set null")
-    power_signal_id = fields.Many2one("f3d.signal", string="Сигнал: потужність", ondelete="set null")
-    scene_signal_id = fields.Many2one("f3d.signal", string="Сигнал: сцена", ondelete="set null")
-    faults_signal_id = fields.Many2one("f3d.signal", string="Сигнал: несправних", ondelete="set null")
-    faulty_signal_id = fields.Many2one("f3d.signal", string="Сигнал: адреси несправних", ondelete="set null")
-    check_signal_id = fields.Many2one("f3d.signal", string="Сигнал: перевірка", ondelete="set null")
+    level_signal_id = fields.Many2one("td.signal", string="Сигнал: рівень", ondelete="set null")
+    power_signal_id = fields.Many2one("td.signal", string="Сигнал: потужність", ondelete="set null")
+    scene_signal_id = fields.Many2one("td.signal", string="Сигнал: сцена", ondelete="set null")
+    faults_signal_id = fields.Many2one("td.signal", string="Сигнал: несправних", ondelete="set null")
+    faulty_signal_id = fields.Many2one("td.signal", string="Сигнал: адреси несправних", ondelete="set null")
+    check_signal_id = fields.Many2one("td.signal", string="Сигнал: перевірка", ondelete="set null")
     # живі значення (R-05), без store
     level_pct = fields.Float(string="Рівень зараз, %", digits=(5, 1), compute="_compute_live")
     level_source = fields.Selection([("live", "З DALI"), ("design", "Проєктний")], compute="_compute_live")
@@ -129,7 +129,7 @@ class F3dBmsLightGroup(models.Model):
     request_count = fields.Integer(compute="_compute_requests")
     deviation_count = fields.Integer(compute="_compute_deviation_count")
     is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
-    f3d_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
+    td_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
     note = fields.Text()
 
     _f3d_bms_group_code_uniq = models.Constraint("UNIQUE(code)", "Код групи освітлення має бути унікальним.")
@@ -167,7 +167,7 @@ class F3dBmsLightGroup(models.Model):
     def _check_zone_area(self):
         for rec in self:
             if rec.zone_id.area_m2 <= 0:
-                raise ValidationError("Зона %s без контуру: площа 0 м², розрахунок неможливий." % rec.zone_id.f3d_code)
+                raise ValidationError("Зона %s без контуру: площа 0 м², розрахунок неможливий." % rec.zone_id.td_code)
 
     # --- обчислення -----------------------------------------------------------------------------------
     @api.depends("passport_id", "fixture_kind")
@@ -193,7 +193,7 @@ class F3dBmsLightGroup(models.Model):
             rec.n_required, rec.e_calc_raw, rec.e_calc, rec.design_ok, rec.p_inst_kw = n_req, raw, e_calc, ok, p_inst
 
     def _compute_is_f3d_manager(self):
-        manager = self.env.user.has_group("factory3d_base.group_f3d_manager")
+        manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
             rec.is_f3d_manager = manager
 
@@ -285,30 +285,30 @@ class F3dBmsLightGroup(models.Model):
         Request = self.env["maintenance.request"]
         for rec in self:
             sigs = [rec[n].id for n in SIGNAL_FIELDS if rec[n]]
-            reqs = Request.search([("f3d_signal_id", "in", sigs), ("stage_id.done", "=", False)]) if sigs else Request
+            reqs = Request.search([("td_signal_id", "in", sigs), ("stage_id.done", "=", False)]) if sigs else Request
             rec.request_ids = reqs
             rec.request_count = len(reqs)
 
     def _compute_deviation_count(self):
-        Dev = self.env.get("f3d.bms.deviation")
+        Dev = self.env.get("td.bms.deviation")
         for rec in self:
             rec.deviation_count = (
                 Dev.search_count([("object_code", "=", rec.code), ("state", "=", "open")]) if Dev is not None else 0
             )
 
     def _compute_write_enabled(self):
-        enabled = self.env["ir.config_parameter"].sudo().get_param("factory3d.bms.write_enabled") == "True"
+        enabled = self.env["ir.config_parameter"].sudo().get_param("td.bms.write_enabled") == "True"
         for rec in self:
-            rec.f3d_bms_write_enabled = enabled
+            rec.td_bms_write_enabled = enabled
 
     # --- дії ------------------------------------------------------------------------------------------
     def action_open_command(self):
         self.ensure_one()
-        self.env["f3d.bms.light.command.wizard"]._f3d_bms_check_operator()
+        self.env["td.bms.light.command.wizard"]._f3d_bms_check_operator()
         return {
             "type": "ir.actions.act_window",
             "name": "Керування освітленням",
-            "res_model": "f3d.bms.light.command.wizard",
+            "res_model": "td.bms.light.command.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_group_ids": [self.id]},
@@ -316,7 +316,7 @@ class F3dBmsLightGroup(models.Model):
 
     def action_f3d_show(self):
         self.ensure_one()
-        if self.equipment_id.f3d_code:
+        if self.equipment_id.td_code:
             return self.equipment_id.action_f3d_show()
         return self.zone_id.action_f3d_show()
 
@@ -325,7 +325,7 @@ class F3dBmsLightGroup(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Графік рівня",
-            "res_model": "f3d.reading",
+            "res_model": "td.reading",
             "view_mode": "graph,list",
             "domain": [("signal_id", "in", (self.level_signal_id | self.power_signal_id).ids)],
             "context": {"search_default_last_48h": 1},
@@ -336,7 +336,7 @@ class F3dBmsLightGroup(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Відхилення",
-            "res_model": "f3d.bms.deviation",
+            "res_model": "td.bms.deviation",
             "view_mode": "list,form",
             "domain": [("object_code", "=", self.code)],
         }
@@ -375,7 +375,7 @@ class F3dBmsLightGroup(models.Model):
         sums = {}
         if sig_ids:
             rows = (
-                self.env["f3d.reading.hour"]
+                self.env["td.reading.hour"]
                 .sudo()
                 ._read_group(
                     [("signal_id", "in", sig_ids), ("hour", ">=", date_from), ("hour", "<", date_to)],

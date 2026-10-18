@@ -7,7 +7,7 @@ from datetime import timedelta
 from odoo import fields
 from odoo.tests import HttpCase, tagged
 
-from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder, PayloadBuilder
+from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, PayloadBuilder
 
 from .common import F3dViewerCase
 
@@ -89,8 +89,8 @@ class TestPerf(HttpCase, F3dViewerCase):
 
     def test_delta_50_codes(self):
         codes = []
-        for loc in self.env["stock.location"].search([("f3d_code", "!=", False)], limit=50):
-            codes.append(loc.f3d_code)
+        for loc in self.env["stock.location"].search([("td_code", "!=", False)], limit=50):
+            codes.append(loc.td_code)
         self.assertEqual(len(codes), 50)
         since = fields.Datetime.now() - timedelta(minutes=5)
         DeltaBuilder(self.env(user=self.admin), since, codes=codes).build()  # прогрів
@@ -103,7 +103,7 @@ class TestPerf(HttpCase, F3dViewerCase):
 
     def test_delta_query_count(self):
         since = fields.Datetime.now() - timedelta(minutes=5)
-        codes = self.env["stock.location"].search([("f3d_code", "!=", False)], limit=50).mapped("f3d_code")
+        codes = self.env["stock.location"].search([("td_code", "!=", False)], limit=50).mapped("td_code")
         DeltaBuilder(self.env(user=self.admin), since, codes=codes).build()
         with self.assertQueryCount(admin=LIMIT_DELTA_SQL):
             DeltaBuilder(self.env(user=self.admin), since, codes=codes).build()

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
     <!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->
-    <record id="norm_woodworking_machine" model="f3d.bms.light.norm">
+    <record id="norm_woodworking_machine" model="td.bms.light.norm">
         <field name="key">woodworking_machine</field>
         <field name="name">верстатна обробка деревини</field>
         <field name="sequence" eval="10"/>
@@ -14,7 +14,7 @@
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_woodworking_bench" model="f3d.bms.light.norm">
+    <record id="norm_woodworking_bench" model="td.bms.light.norm">
         <field name="key">woodworking_bench</field>
         <field name="name">збирання, верстакові роботи</field>
         <field name="sequence" eval="20"/>
@@ -27,7 +27,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_spraying" model="f3d.bms.light.norm">
+    <record id="norm_spraying" model="td.bms.light.norm">
         <field name="key">spraying</field>
         <field name="name">фарбування, оздоблення</field>
         <field name="sequence" eval="30"/>
@@ -40,7 +40,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_sanding" model="f3d.bms.light.norm">
+    <record id="norm_sanding" model="td.bms.light.norm">
         <field name="key">sanding</field>
         <field name="name">шліфування, оздоблення фасадів</field>
         <field name="sequence" eval="40"/>
@@ -53,7 +53,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_quality_control" model="f3d.bms.light.norm">
+    <record id="norm_quality_control" model="td.bms.light.norm">
         <field name="key">quality_control</field>
         <field name="name">контроль якості</field>
         <field name="sequence" eval="50"/>
@@ -66,7 +66,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_storage_racks" model="f3d.bms.light.norm">
+    <record id="norm_storage_racks" model="td.bms.light.norm">
         <field name="key">storage_racks</field>
         <field name="name">стелажні проходи з персоналом</field>
         <field name="sequence" eval="60"/>
@@ -79,7 +79,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_storage_floor" model="f3d.bms.light.norm">
+    <record id="norm_storage_floor" model="td.bms.light.norm">
         <field name="key">storage_floor</field>
         <field name="name">складування</field>
         <field name="sequence" eval="70"/>
@@ -92,7 +92,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://dialux4.support-en.dial.de/support/solutions/articles/9000080302
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_packing_dispatch" model="f3d.bms.light.norm">
+    <record id="norm_packing_dispatch" model="td.bms.light.norm">
         <field name="key">packing_dispatch</field>
         <field name="name">пакування й відвантаження</field>
         <field name="sequence" eval="80"/>
@@ -104,7 +104,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
         <field name="sources">https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Lager_EN.pdf.png
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_loading_ramps" model="f3d.bms.light.norm">
+    <record id="norm_loading_ramps" model="td.bms.light.norm">
         <field name="key">loading_ramps</field>
         <field name="name">рампи завантаження</field>
         <field name="sequence" eval="90"/>
@@ -117,7 +117,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_switchgear_room" model="f3d.bms.light.norm">
+    <record id="norm_switchgear_room" model="td.bms.light.norm">
         <field name="key">switchgear_room</field>
         <field name="name">електрощитова</field>
         <field name="sequence" eval="100"/>
@@ -130,7 +130,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_compressor_room" model="f3d.bms.light.norm">
+    <record id="norm_compressor_room" model="td.bms.light.norm">
         <field name="key">compressor_room</field>
         <field name="name">компресорна</field>
         <field name="sequence" eval="110"/>
@@ -143,7 +143,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
 https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_battery_charging" model="f3d.bms.light.norm">
+    <record id="norm_battery_charging" model="td.bms.light.norm">
         <field name="key">battery_charging</field>
         <field name="name">заряджання акумуляторів</field>
         <field name="sequence" eval="120"/>
@@ -155,7 +155,7 @@ https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-
         <field name="sources">https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Kontroll_EN.pdf.png
 https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf</field>
     </record>
-    <record id="norm_corridors_traffic" model="f3d.bms.light.norm">
+    <record id="norm_corridors_traffic" model="td.bms.light.norm">
         <field name="key">corridors_traffic</field>
         <field name="name">проходи й проїзди</field>
         <field name="sequence" eval="130"/>

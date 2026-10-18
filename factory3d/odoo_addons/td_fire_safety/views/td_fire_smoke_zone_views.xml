@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_fire_smoke_zone_list" model="ir.ui.view">
-        <field name="name">f3d.fire.smoke.zone.list</field>
-        <field name="model">f3d.fire.smoke.zone</field>
+    <record id="view_td_fire_smoke_zone_list" model="ir.ui.view">
+        <field name="name">td.fire.smoke.zone.list</field>
+        <field name="model">td.fire.smoke.zone</field>
         <field name="arch" type="xml">
             <list>
                 <field name="code"/>
@@ -18,9 +18,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_fire_smoke_zone_form" model="ir.ui.view">
-        <field name="name">f3d.fire.smoke.zone.form</field>
-        <field name="model">f3d.fire.smoke.zone</field>
+    <record id="view_td_fire_smoke_zone_form" model="ir.ui.view">
+        <field name="name">td.fire.smoke.zone.form</field>
+        <field name="model">td.fire.smoke.zone</field>
         <field name="arch" type="xml">
             <form>
                 <sheet>
@@ -65,9 +65,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_smoke_zone" model="ir.actions.act_window">
+    <record id="action_td_fire_smoke_zone" model="ir.actions.act_window">
         <field name="name">Димові зони</field>
-        <field name="res_model">f3d.fire.smoke.zone</field>
+        <field name="res_model">td.fire.smoke.zone</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

@@ -28,7 +28,7 @@ def _dock_code(loc, outgoing):
     """Код воріт із локації: DOCK-Wk/Ek або UNLOAD-k -> DOCK-Wk."""
     if not loc:
         return None
-    for c in (loc.f3d_code, loc.f3d_alias, loc.barcode):
+    for c in (loc.td_code, loc.td_alias, loc.barcode):
         if not c:
             continue
         if DOCK_RE.match(c):
@@ -41,8 +41,8 @@ def _dock_code(loc, outgoing):
 
 class F3dViewerProviderLogistics(models.AbstractModel):
     """M-01c: переміщення, ворота, замовлення клієнтів і постачальників (R-05, R-09)."""
-    _name = "f3d.viewer.provider.logistics"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.logistics"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних logistics"
 
     _f3d_sequence = 40
@@ -95,7 +95,7 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         if recs:
             for mv in env["stock.move"].search_fetch([("picking_id", "in", recs.ids), ("state", "!=", "cancel")]):
                 moves_of.setdefault(mv.picking_id.id, []).append(mv)
-            (recs.move_line_ids.location_id | recs.move_line_ids.location_dest_id).mapped("f3d_code")
+            (recs.move_line_ids.location_id | recs.move_line_ids.location_dest_id).mapped("td_code")
         has_carrier = "carrier_id" in env["stock.picking"]._fields
         out = []
         for p in recs:
@@ -120,26 +120,26 @@ class F3dViewerProviderLogistics(models.AbstractModel):
             mls = p.move_line_ids
             batch = p.batch_id
             if typ in ("incoming", "outgoing"):
-                dock = batch.dock_id.f3d_code if batch.dock_id and batch.dock_id.f3d_code else None
+                dock = batch.dock_id.td_code if batch.dock_id and batch.dock_id.td_code else None
                 if not dock:
                     dock = self._dock_from_locations(p, mls, typ)
                 if dock:
                     rec["dock"] = dock
-                rec["truck"] = batch.f3d_code or None
-            if batch.f3d_vehicle_id.f3d_code:
-                rec["vehicle"] = batch.f3d_vehicle_id.f3d_code
+                rec["truck"] = batch.td_code or None
+            if batch.td_vehicle_id.td_code:
+                rec["vehicle"] = batch.td_vehicle_id.td_code
             if typ in SRC_TYPES:
                 src = []
                 for loc in mls.location_id:
                     # ворота (DOCK-*) — не комірка зберігання: резерв, зроблений на воротах, не є «звідки взято»
-                    if loc.f3d_code and not loc.f3d_code.startswith("DOCK-") and loc.f3d_code not in src:
-                        src.append(loc.f3d_code)
+                    if loc.td_code and not loc.td_code.startswith("DOCK-") and loc.td_code not in src:
+                        src.append(loc.td_code)
                 if src:
                     rec["source_locations"] = src
             if typ in DEST_CODE_TYPES:
                 dest = (mls.location_dest_id[:1] or p.location_dest_id)
-                if dest.f3d_code:
-                    rec["location_dest"] = dest.f3d_code
+                if dest.td_code:
+                    rec["location_dest"] = dest.td_code
             elif typ in ("incoming", "store_finished"):
                 name = p.location_dest_id.complete_name or ""
                 rec["location_dest"] = name.split("/", 1)[1] if "/" in name else name
@@ -258,7 +258,7 @@ class F3dViewerProviderLogistics(models.AbstractModel):
             locs = []
             if has_op:
                 for ln in lines:
-                    code = ln.orderpoint_id.location_id.f3d_code
+                    code = ln.orderpoint_id.location_id.td_code
                     if code and code not in locs:
                         locs.append(code)
             out.append({

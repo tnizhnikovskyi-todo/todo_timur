@@ -31,8 +31,8 @@ class TestViewerProvider(F3DBmsCase):
         super().setUpClass()
         cls.static = _load(os.path.join(HERE, "data", "static_bms.json"))
         cls.demo = _load(os.path.join(ROOT, "dist", "odoo_demo.json"))
-        cls.light = cls.env["f3d.viewer.provider.lighting"]
-        cls.vent = cls.env["f3d.viewer.provider.ventilation"]
+        cls.light = cls.env["td.viewer.provider.lighting"]
+        cls.vent = cls.env["td.viewer.provider.ventilation"]
 
     def _ctx(self, **kw):
         return {"static": self.static, **kw}
@@ -84,11 +84,11 @@ class TestViewerProvider(F3DBmsCase):
         self.assertEqual(hb["note"], demo["heat_balance"]["note"])
 
     def test_maintenance_request_key(self):
-        unit = self.env["f3d.bms.hvac.unit"].search([("code", "=", "RV-05")])
+        unit = self.env["td.bms.hvac.unit"].search([("code", "=", "RV-05")])
         self.assertNotIn("maintenance_request", self._vent()["units"]["RV-05"])
         stage = self.env["maintenance.stage"].search([("done", "=", False)], limit=1)
         req = self.env["maintenance.request"].create(
-            {"name": "Заявка RV-05 тест", "f3d_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
+            {"name": "Заявка RV-05 тест", "td_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
         )
         self.env.invalidate_all()
         rec = self._vent()["units"]["RV-05"]
@@ -97,12 +97,12 @@ class TestViewerProvider(F3DBmsCase):
     def _request(self, unit, name="Планове ТО"):
         stage = self.env["maintenance.stage"].search([("done", "=", False)], limit=1)
         return self.env["maintenance.request"].create(
-            {"name": name, "f3d_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
+            {"name": name, "td_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
         )
 
     def test_maintenance_request_id_same_name(self):
         """Viewer R-22: заявки з однаковою назвою на різних установках не змішуються, ключ — `maintenance_request_id`."""
-        units = self.env["f3d.bms.hvac.unit"].search([("state_signal_id", "!=", False)], order="sequence, code", limit=2)
+        units = self.env["td.bms.hvac.unit"].search([("state_signal_id", "!=", False)], order="sequence, code", limit=2)
         self.assertEqual(len(units), 2)
         first, second = (self._request(u) for u in units)
         self.assertEqual(first.name, second.name)
@@ -122,7 +122,7 @@ class TestViewerProvider(F3DBmsCase):
 
     def test_maintenance_request_id_cleared(self):
         """Повний payload без заявки не містить ключів; delta пише null, щоб клієнт скинув стару заявку."""
-        unit = self.env["f3d.bms.hvac.unit"].search([("code", "=", "RV-05")])
+        unit = self.env["td.bms.hvac.unit"].search([("code", "=", "RV-05")])
         self.assertNotIn("maintenance_request_id", self._vent()["units"]["RV-05"])
         req = self._request(unit)
         self.env.invalidate_all()
@@ -142,11 +142,11 @@ class TestViewerProvider(F3DBmsCase):
     def test_live_values(self):
         """AC-44."""
         env = self.env
-        group = env["f3d.bms.light.group"].search([("code", "=", "LT-CUT")])
+        group = env["td.bms.light.group"].search([("code", "=", "LT-CUT")])
         group.level_signal_id.sudo().write({"last_value": 60.0, "last_ts": fields.Datetime.now(), "status": "ok"})
         group.faults_signal_id.sudo().write({"last_value": 1.0, "last_ts": fields.Datetime.now(), "status": "ok"})
         group.faulty_signal_id.sudo().write({"last_text": "1.2.1.5", "last_ts": fields.Datetime.now(), "status": "ok"})
-        unit = env["f3d.bms.hvac.unit"].search([("code", "=", "RV-05")])
+        unit = env["td.bms.hvac.unit"].search([("code", "=", "RV-05")])
         now = fields.Datetime.now()
         for sig, vals in (
             (unit.mode_signal_id, {"last_text": "ST"}),
@@ -168,29 +168,29 @@ class TestViewerProvider(F3DBmsCase):
     def test_delta(self):
         """AC-45."""
         patch = {}
-        self.light._f3d_viewer_delta(patch, self._ctx(changes={"f3d.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
-        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"f3d.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
+        self.light._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
+        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
         self.assertEqual(patch, {})
-        ctx = self._ctx(changes={"f3d.signal": {"lighting/groups/LT-CUT/level"}})
+        ctx = self._ctx(changes={"td.signal": {"lighting/groups/LT-CUT/level"}})
         self.light._f3d_viewer_delta(patch, ctx)
         self.vent._f3d_viewer_delta(patch, ctx)
         self.assertEqual(list(patch), ["lighting"])
         self.assertEqual(len(patch["lighting"]["groups"]), 32)
         patch = {}
-        ctx = self._ctx(changes={"f3d.bms": {"RV-05"}})
+        ctx = self._ctx(changes={"td.bms": {"RV-05"}})
         self.light._f3d_viewer_delta(patch, ctx)
         self.vent._f3d_viewer_delta(patch, ctx)
         self.assertEqual(set(patch), {"lighting", "ventilation"})
         patch = {}
-        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"f3d.signal": {"equipment/BOILER/state"}}))
+        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/BOILER/state"}}))
         self.assertEqual(list(patch), ["ventilation"])
 
     def test_contract(self):
-        for name in ("f3d.viewer.provider.lighting", "f3d.viewer.provider.ventilation"):
+        for name in ("td.viewer.provider.lighting", "td.viewer.provider.ventilation"):
             model = self.env[name]
-            self.assertTrue(model._name.startswith("f3d.viewer.provider."))
-            self.assertNotIn("f3d.viewer.provider", model._inherit)
-            self.assertEqual(model._f3d_viewer_bus_models(), ["f3d.signal", "f3d.bms"])
+            self.assertTrue(model._name.startswith("td.viewer.provider."))
+            self.assertNotIn("td.viewer.provider", model._inherit)
+            self.assertEqual(model._f3d_viewer_bus_models(), ["td.signal", "td.bms"])
         self.assertEqual((self.light._f3d_sequence, self.vent._f3d_sequence), (110, 120))
 
     def test_no_access_keeps_static(self):

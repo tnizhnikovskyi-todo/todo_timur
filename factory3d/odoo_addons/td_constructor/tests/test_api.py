@@ -13,7 +13,7 @@ class TestApi(F3DConstructorHttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
 
     def login(self, user):
         self.authenticate(user.login, PASSWORD)
@@ -32,7 +32,7 @@ class TestApi(F3DConstructorHttpCase):
         self.login(self.u_manager)
         res = self.rpc('/f3d/constructor/site/create', name="Склад 2", code='S2')
         self.assertTrue(res['ok'], res)
-        site = self.env['f3d.site'].browse(res['site_id'])
+        site = self.env['td.site'].browse(res['site_id'])
         self.assertEqual((site.building_length_m, site.building_width_m, site.building_height_m), (60, 30, 8))
         self.assertEqual(site.layer_ids.sorted('sequence').mapped('elevation_m'), [0.0, 0.0, 0.0, 6.0, 0.0])
         self.assertEqual(len(site.check_config_ids), 7)
@@ -50,7 +50,7 @@ class TestApi(F3DConstructorHttpCase):
     def test_ac07_companies(self):
         company2 = self.env['res.company'].create({'name': "Друга компанія"})
         site2 = (
-            self.env['f3d.site']
+            self.env['td.site']
             .with_context(f3d_blank=True)
             .create({'name': "Чужа", 'code': 'OTH', 'company_id': company2.id})
         )
@@ -136,7 +136,7 @@ class TestApi(F3DConstructorHttpCase):
         # коди помилок
         self.assertEqual(self.rpc('/f3d/constructor/load', site_id=0)['code'], 'not_found')
         self.assertEqual(self.rpc('/f3d/constructor/save', site_id=self.site.id, ops="x")['code'], 'validation')
-        too_many = [{'model': 'f3d.slot', 'op': 'unlink', 'id': 1}] * 501
+        too_many = [{'model': 'td.slot', 'op': 'unlink', 'id': 1}] * 501
         self.assertEqual(self.rpc('/f3d/constructor/save', site_id=self.site.id, ops=too_many)['code'], 'too_many')
         self.assertEqual(self.rpc('/f3d/constructor/version/restore', version_id=0)['code'], 'not_found')
         self.assertEqual(
@@ -159,7 +159,7 @@ class TestApi(F3DConstructorHttpCase):
             site_id=self.site.id,
             ops=[
                 {
-                    'model': 'f3d.slot',
+                    'model': 'td.slot',
                     'op': 'create',
                     'tmp': 't1',
                     'vals': {
@@ -175,7 +175,7 @@ class TestApi(F3DConstructorHttpCase):
         )
         self.assertEqual((res['ok'], res['code']), (False, 'rights'))
         self.assertTrue(self.rpc('/f3d/constructor/load', site_id=self.site.id)['ok'])  # читання дозволене
-        self.assertFalse(self.env['f3d.slot'].search([('code_prefix', '=', 'PL-1')]))
+        self.assertFalse(self.env['td.slot'].search([('code_prefix', '=', 'PL-1')]))
 
     # --- AC-48 / AC-61: save, id_map, etag ----------------------------------------------------------
     def test_ac48_form_and_api_write_same_value(self):
@@ -184,7 +184,7 @@ class TestApi(F3DConstructorHttpCase):
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'f3d.slot', 'op': 'write', 'id': slot.id, 'etag': slot._f3d_etag(), 'vals': {'x_m': 12.5}}],
+            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': slot._f3d_etag(), 'vals': {'x_m': 12.5}}],
         )
         self.assertTrue(res['ok'], res)
         self.assertEqual(slot.x_m, 12.5)
@@ -202,7 +202,7 @@ class TestApi(F3DConstructorHttpCase):
             site_id=self.site.id,
             ops=[
                 {
-                    'model': 'f3d.slot',
+                    'model': 'td.slot',
                     'op': 'create',
                     'tmp': 't1',
                     'vals': {
@@ -215,7 +215,7 @@ class TestApi(F3DConstructorHttpCase):
                     },
                 },
                 {
-                    'model': 'f3d.placement',
+                    'model': 'td.placement',
                     'op': 'create',
                     'tmp': 't2',
                     'vals': {
@@ -231,18 +231,18 @@ class TestApi(F3DConstructorHttpCase):
             ],
         )
         self.assertTrue(res['ok'], res)
-        slot = self.env['f3d.slot'].browse(res['id_map']['t1'])
+        slot = self.env['td.slot'].browse(res['id_map']['t1'])
         self.assertEqual(slot.code_prefix, 'SV-R1')
         self.assertGreater(res['rev'], rev0)
         self.assertTrue(res['has_changes'])
-        self.assertIn('f3d.slot:%d' % slot.id, res['etags'])
+        self.assertIn('td.slot:%d' % slot.id, res['etags'])
         # «@tmp» у посиланнях на нові записи
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
             ops=[
                 {
-                    'model': 'f3d.slot',
+                    'model': 'td.slot',
                     'op': 'create',
                     'tmp': 'a',
                     'vals': {
@@ -255,7 +255,7 @@ class TestApi(F3DConstructorHttpCase):
                     },
                 },
                 {
-                    'model': 'f3d.placement',
+                    'model': 'td.placement',
                     'op': 'create',
                     'tmp': 'b',
                     'vals': {
@@ -271,14 +271,14 @@ class TestApi(F3DConstructorHttpCase):
             ],
         )
         self.assertTrue(res['ok'], res)
-        self.assertEqual(self.env['f3d.placement'].browse(res['id_map']['b']).slot_id.id, res['id_map']['a'])
+        self.assertEqual(self.env['td.placement'].browse(res['id_map']['b']).slot_id.id, res['id_map']['a'])
         # конфлікт: другий клієнт шле write зі старим etag
         old_etag = slot._f3d_etag()
-        self.bump_write_date('f3d.slot', slot.id)  # «перший клієнт уже зберіг»
+        self.bump_write_date('td.slot', slot.id)  # «перший клієнт уже зберіг»
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'f3d.slot', 'op': 'write', 'id': slot.id, 'etag': old_etag, 'vals': {'x_m': 55.0}}],
+            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': old_etag, 'vals': {'x_m': 55.0}}],
         )
         self.assertEqual((res['ok'], res['code']), (False, 'conflict'))
         self.assertEqual(res['current']['id'], slot.id)
@@ -288,9 +288,9 @@ class TestApi(F3DConstructorHttpCase):
             '/f3d/constructor/save',
             site_id=self.site.id,
             ops=[
-                {'model': 'f3d.slot', 'op': 'write', 'id': slot.id, 'vals': {'x_m': 44.0}},
+                {'model': 'td.slot', 'op': 'write', 'id': slot.id, 'vals': {'x_m': 44.0}},
                 {
-                    'model': 'f3d.slot',
+                    'model': 'td.slot',
                     'op': 'create',
                     'tmp': 'x',
                     'vals': {
@@ -307,11 +307,11 @@ class TestApi(F3DConstructorHttpCase):
         slot.invalidate_recordset()
         self.assertEqual(slot.x_m, 30.0)
         # правильний etag проходить
-        fresh = self.env['f3d.slot'].browse(slot.id)
+        fresh = self.env['td.slot'].browse(slot.id)
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'f3d.slot', 'op': 'write', 'id': slot.id, 'etag': fresh._f3d_etag(), 'vals': {'x_m': 31.0}}],
+            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': fresh._f3d_etag(), 'vals': {'x_m': 31.0}}],
         )
         self.assertTrue(res['ok'], res)
 
@@ -322,7 +322,7 @@ class TestApi(F3DConstructorHttpCase):
             site_id=self.site.id,
             ops=[
                 {
-                    'model': 'f3d.placement',
+                    'model': 'td.placement',
                     'op': 'create',
                     'vals': {
                         'layer_id': self.layers['production'].id,
@@ -338,13 +338,13 @@ class TestApi(F3DConstructorHttpCase):
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'f3d.slot', 'op': 'create', 'vals': {'equipment_id': 1}}],
+            ops=[{'model': 'td.slot', 'op': 'create', 'vals': {'equipment_id': 1}}],
         )
         self.assertEqual(res['code'], 'validation')
 
     # --- AC-30 / API-05/06/07 -----------------------------------------------------------------------
     def test_validate_preview_publish_flow(self):
-        generic = self.env.ref('factory3d_constructor.variant_generic_panel')
+        generic = self.env.ref('td_constructor.variant_generic_panel')
         self.make_placement(kind='production', code='PB-1', x=10.0, y=10.0, variant=generic)
         self.make_placement(kind='production', code='PB-2', x=10.3, y=10.0, variant=generic)
         self.login(self.u_manager)
@@ -359,7 +359,7 @@ class TestApi(F3DConstructorHttpCase):
         self.site.check_config_ids.filtered(lambda c: c.check_key == 'collide').mode = 'warn'
         preview = self.rpc('/f3d/constructor/publish/preview', site_id=self.site.id)
         self.assertTrue(preview['ok'], preview)
-        self.assertEqual(preview['action']['res_model'], 'f3d.publish.wizard')
+        self.assertEqual(preview['action']['res_model'], 'td.publish.wizard')
         self.assertGreaterEqual(preview['summary']['create'], 2)
         res = self.rpc('/f3d/constructor/publish', site_id=self.site.id, note="через API", confirm=True)
         self.assertTrue(res['ok'], res)
@@ -371,7 +371,7 @@ class TestApi(F3DConstructorHttpCase):
         self.assertEqual((res['ok'], res['code']), (False, 'no_changes'))
         self.assertEqual(self.rpc('/f3d/constructor/publish/preview', site_id=self.site.id)['code'], 'no_changes')
         # стоп-кран
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'False')
         self.assertEqual(self.rpc('/f3d/constructor/publish/preview', site_id=self.site.id)['code'], 'disabled')
         # права
         self.login(self.u_tech)
@@ -379,7 +379,7 @@ class TestApi(F3DConstructorHttpCase):
         self.assertEqual(self.rpc('/f3d/constructor/publish/preview', site_id=self.site.id)['code'], 'rights')
 
     def test_version_restore_api(self):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
+        self.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
         self.make_slot(prefix='RS-R1', bays=2, levels=1)
         self.login(self.u_manager)
         self.assertTrue(self.rpc('/f3d/constructor/publish', site_id=self.site.id, confirm=True)['ok'])
@@ -388,14 +388,14 @@ class TestApi(F3DConstructorHttpCase):
         res = self.rpc('/f3d/constructor/version/restore', version_id=version.id)
         self.assertTrue(res['ok'], res)
         self.assertEqual(res['draft_changes'], 0)
-        self.assertEqual(self.env['f3d.slot'].search_count([('site_id', '=', self.site.id)]), 1)
+        self.assertEqual(self.env['td.slot'].search_count([('site_id', '=', self.site.id)]), 1)
         self.login(self.u_tech)
         self.assertEqual(self.rpc('/f3d/constructor/version/restore', version_id=version.id)['code'], 'rights')
 
     def test_ac17_underlay_in_load(self):
         layer = self.layers['storage']
         att = self.env['ir.attachment'].create(
-            {'name': 'plan.dxf', 'raw': b'0\nEOF\n', 'res_model': 'f3d.layer', 'res_id': layer.id}
+            {'name': 'plan.dxf', 'raw': b'0\nEOF\n', 'res_model': 'td.layer', 'res_id': layer.id}
         )
         layer.underlay_attachment_id = att
         self.login(self.u_manager)
@@ -409,7 +409,7 @@ class TestApi(F3DConstructorHttpCase):
         """§13.4: API-03 для seed ≤ 1,5 с; API-05 ≤ 1 с."""
         import time
 
-        seed_site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
+        seed_site = self.env['td.site'].search([('seed_key', '=', 'main_demo')])
         if not seed_site:
             self.skipTest("seed-площадки немає")
         self.login(self.u_manager)

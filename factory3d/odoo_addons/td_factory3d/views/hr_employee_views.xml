@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_hr_employee_form_f3d" model="ir.ui.view">
+    <record id="view_hr_employee_form_td" model="ir.ui.view">
         <field name="name">hr.employee.form.f3d</field>
         <field name="model">hr.employee</field>
         <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
                 <button name="action_f3d_show" string="Показати в 3D" type="object"
-                        class="btn-primary" invisible="not f3d_code or not f3d_viewer_available"/>
+                        class="btn-primary" invisible="not td_code or not td_viewer_available"/>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page name="f3d" string="Завод 3D">
                     <group name="f3d_scene" string="Код сцени">
                         <field name="is_f3d_manager" invisible="1"/>
-                        <field name="f3d_viewer_available" invisible="1"/>
-                        <field name="f3d_code" readonly="not is_f3d_manager"/>
-                        <field name="f3d_alias" readonly="not is_f3d_manager"/>
-                        <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                        <field name="td_viewer_available" invisible="1"/>
+                        <field name="td_code" readonly="not is_f3d_manager"/>
+                        <field name="td_alias" readonly="not is_f3d_manager"/>
+                        <field name="td_kind" readonly="not is_f3d_manager"/>
                         
                     </group>
                     <button name="action_f3d_show" string="Показати в 3D" type="object"
-                            icon="fa-cube" class="btn-secondary" invisible="not f3d_code"/>
+                            icon="fa-cube" class="btn-secondary" invisible="not td_code"/>
                 </page>
             </xpath>
         </field>

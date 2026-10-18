@@ -24,9 +24,9 @@ def parse_iso_utc(value):
 
 
 class F3dSimPanel(models.Model):
-    _name = 'f3d.sim.panel'
+    _name = 'td.sim.panel'
     _description = 'Пульт емулятора обладнання'
-    _inherit = ['f3d.sim.client', 'mail.thread']
+    _inherit = ['td.sim.client', 'mail.thread']
     _order = 'id'
     _rec_name = 'name'
 
@@ -48,7 +48,7 @@ class F3dSimPanel(models.Model):
     uptime_s = fields.Integer(string='Аптайм, с', readonly=True)
     seed = fields.Integer(string='Зерно', readonly=True)
     active_run_ids = fields.One2many(
-        'f3d.sim.run', 'panel_id', string='Активні запуски',
+        'td.sim.run', 'panel_id', string='Активні запуски',
         domain=[('state', 'in', ACTIVE_RUN_STATES)])
     alarm_count = fields.Integer(string='Сигналів у тривозі', readonly=True)
     device_count = fields.Integer(string='Пристроїв', compute='_compute_counts')
@@ -60,15 +60,15 @@ class F3dSimPanel(models.Model):
          ('forced_on', 'Примусово увімкнено'), ('forced_off', 'Примусово вимкнено')],
         string='Рівень 0', default='auto_off', tracking=True)
     level0_signal_count = fields.Integer(string='Сигналів рівня 0', compute='_compute_counts')
-    scenario_ids = fields.Many2many('f3d.sim.scenario', string='Сценарії', compute='_compute_scenarios')
+    scenario_ids = fields.Many2many('td.sim.scenario', string='Сценарії', compute='_compute_scenarios')
     read_enabled = fields.Boolean(compute='_compute_flags')
     write_enabled = fields.Boolean(compute='_compute_flags')
 
     # --- compute / constraints ---
     @api.depends_context('uid')
     def _compute_counts(self):
-        devices = self.env['f3d.sim.device'].search_count([])
-        signals = self.env['f3d.sim.signal'].search_count([])
+        devices = self.env['td.sim.device'].search_count([])
+        signals = self.env['td.sim.signal'].search_count([])
         level0 = 0
         if 'x_f3d_signal' in self.env:
             level0 = self.env['x_f3d_signal'].sudo().search_count([])
@@ -78,7 +78,7 @@ class F3dSimPanel(models.Model):
             rec.level0_signal_count = level0
 
     def _compute_scenarios(self):
-        scenarios = self.env['f3d.sim.scenario'].search([])
+        scenarios = self.env['td.sim.scenario'].search([])
         for rec in self:
             rec.scenario_ids = scenarios
 
@@ -118,7 +118,7 @@ class F3dSimPanel(models.Model):
         self.ensure_one()
         if not (self._sim_param('url') or '').strip():
             self.sudo().write({'state': 'unconfigured', 'last_error': False})
-            return "Адресу сервісу емулятора не налаштовано (Налаштування → Factory3D → Емулятор)"
+            return "Адресу сервісу емулятора не налаштовано (Налаштування → Емулятор обладнання)"
         try:
             payload = self._sim_get('/status')
         except UserError as exc:
@@ -163,7 +163,7 @@ class F3dSimPanel(models.Model):
         self._sync_device_faults(payload.get('devices_fault') or [])
 
     def _sync_runs(self, runs):
-        Run = self.env['f3d.sim.run'].sudo()
+        Run = self.env['td.sim.run'].sudo()
         for item in runs:
             run = Run.search(['|', ('sim_run_id', '=', item.get('id')), ('name', '=', item.get('run_ref'))],
                              limit=1) if (item.get('id') or item.get('run_ref')) else Run
@@ -172,7 +172,7 @@ class F3dSimPanel(models.Model):
                 run.state = state
 
     def _sync_device_faults(self, codes):
-        Device = self.env['f3d.sim.device'].sudo()
+        Device = self.env['td.sim.device'].sudo()
         now = fields.Datetime.now()
         in_fault = Device.search([('code', 'in', codes)]) if codes else Device
         in_fault.filtered(lambda d: d.state != 'fault').write({'state': 'fault', 'last_update': now})
@@ -205,7 +205,7 @@ class F3dSimPanel(models.Model):
         self.ensure_one()
         self._sim_require_write()
         self._sim_post('/reset', json={'keep_time': True})
-        self.env['f3d.sim.run'].sudo().search([('state', 'in', ACTIVE_RUN_STATES)]).write(
+        self.env['td.sim.run'].sudo().search([('state', 'in', ACTIVE_RUN_STATES)]).write(
             {'state': 'stopped', 'stop_ts': fields.Datetime.now()})
         self.message_post(body="Стан емулятора скинуто")
         return self._notify("Стан емулятора скинуто")
@@ -233,7 +233,7 @@ class F3dSimPanel(models.Model):
 
     def _sync_level0(self):
         self.ensure_one()
-        cron = self.env.ref('factory3d_iot_sim.cron_iot_sim', raise_if_not_found=False)
+        cron = self.env.ref('td_iot_sim.cron_iot_sim', raise_if_not_found=False)
         if not cron:
             return
         cron = cron.sudo()
@@ -277,10 +277,10 @@ class F3dSimPanel(models.Model):
 
     # --- навігація ---
     def action_open_signals(self):
-        return self._open_model('f3d.sim.signal', "Каталог сигналів")
+        return self._open_model('td.sim.signal', "Каталог сигналів")
 
     def action_open_devices(self):
-        return self._open_model('f3d.sim.device', "Пристрої")
+        return self._open_model('td.sim.device', "Пристрої")
 
     def _open_model(self, model, name):
         return {'type': 'ir.actions.act_window', 'name': name, 'res_model': model,
@@ -289,12 +289,12 @@ class F3dSimPanel(models.Model):
     def action_refresh_signals(self):
         self.ensure_one()
         ICP = self.env['ir.config_parameter'].sudo()
-        last = parse_iso_utc(ICP.get_param('factory3d.iot_sim.last_signals_refresh'))
+        last = parse_iso_utc(ICP.get_param('td.iot_sim.last_signals_refresh'))
         now = fields.Datetime.now()
         if last and now - last < timedelta(seconds=60):
             raise UserError("Оновлення сигналів — не частіше ніж раз на хвилину")
-        ICP.set_param('factory3d.iot_sim.last_signals_refresh', now.isoformat())
-        Signal = self.env['f3d.sim.signal'].sudo()
+        ICP.set_param('td.iot_sim.last_signals_refresh', now.isoformat())
+        Signal = self.env['td.sim.signal'].sudo()
         offset, limit = 0, 1000
         while True:
             data = self._sim_get('/signals', params={'limit': limit, 'offset': offset})

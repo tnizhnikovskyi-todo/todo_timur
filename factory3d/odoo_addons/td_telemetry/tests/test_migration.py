@@ -2,7 +2,7 @@ import json
 from datetime import timedelta
 from unittest import mock
 
-from odoo.addons.factory3d_telemetry import hooks
+from odoo.addons.td_telemetry import hooks
 from odoo.tests import tagged
 
 from .common import F3DTelemetryCase
@@ -38,12 +38,12 @@ class Level0Mixin:
     def setUp(self):
         super().setUp()
         self.l0 = self.make_level0()
-        self.env["f3d.source"].create(
+        self.env["td.source"].create(
             {
                 "code": "MB-T-U70",
                 "name": "MB-T-U70",
                 "type": "modbus_tcp",
-                "collector_id": self.env["f3d.collector"].create({"code": "COL-T", "name": "T"}).id,
+                "collector_id": self.env["td.collector"].create({"code": "COL-T", "name": "T"}).id,
                 "params": {"host": "iot-sim", "port": 502, "unit": 70},
             }
         )
@@ -53,7 +53,7 @@ class Level0Mixin:
             return hooks.run_migration(self.env)
 
     def sig(self, code):
-        return self.env["f3d.signal"].with_context(active_test=False).search([("code", "=", code)])
+        return self.env["td.signal"].with_context(active_test=False).search([("code", "=", code)])
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
@@ -69,7 +69,7 @@ class TestLevel0(Level0Mixin, F3DTelemetryCase):
         self.assertEqual(report["state"], "done")
         self.assertEqual(report["by_module"], {"bms": 1, "fire_safety": 1, "telemetry": 3, "energy": 2})
         self.assertEqual(
-            json.loads(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.level0_migrated"))[
+            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))[
                 "state"
             ],
             "done",
@@ -94,23 +94,23 @@ class TestLevel0(Level0Mixin, F3DTelemetryCase):
         state = self.sig("equipment/FL-T/state")
         self.assertEqual((state.last_text, state.origin, state.source_id.code), ("charging", "catalog", "MB-T-U70"))
         self.assertEqual(state.equipment_id, self.eq_flc1)
-        self.assertEqual(self.env.ref("factory3d_telemetry.sig_ventilation_units_rv_05_t_filter_dp_pa"), rv)
-        readings = self.env["f3d.reading"].search(
+        self.assertEqual(self.env.ref("td_telemetry.sig_ventilation_units_rv_05_t_filter_dp_pa"), rv)
+        readings = self.env["td.reading"].search(
             [("signal_id", "in", self.sig("equipment/FL-T/battery").ids + rv.ids)]
         )
         for reading in readings:
             self.assertEqual((reading.src, reading.quality), ("sim_data", "good"))
         x_read = self.l0["readings"][0]
-        first = self.env["f3d.reading"].search([("signal_id", "=", rv.id), ("ts", "=", self.T0)])
+        first = self.env["td.reading"].search([("signal_id", "=", rv.id), ("ts", "=", self.T0)])
         self.assertEqual(first.received_at, x_read.create_date)
         for req in (self.l0["req_a"], self.l0["req_b"]):
-            self.assertEqual((req.f3d_origin, bool(req.f3d_signal_id)), ("threshold", True))
-        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.menu_iot_root").active)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.view_equipment_form_signals").active)
+            self.assertEqual((req.td_origin, bool(req.td_signal_id)), ("threshold", True))
+        self.assertFalse(self.env.ref("td_iot_sim.cron_iot_sim").active)
+        self.assertFalse(self.env.ref("td_iot_sim.menu_iot_root").active)
+        self.assertFalse(self.env.ref("td_iot_sim.view_equipment_form_signals").active)
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 0)
-        self.assertGreater(self.env["f3d.reading.hour"].search_count([("signal_id", "=", rv.id)]), 0)
+        self.assertGreater(self.env["td.reading.hour"].search_count([("signal_id", "=", rv.id)]), 0)
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
@@ -118,13 +118,13 @@ class TestRerunPartial(Level0Mixin, F3DTelemetryCase):
     def test_rerun_idempotent(self):
         """AC-54."""
         self.migrate()
-        signals = self.env["f3d.signal"].search_count([])
-        readings = self.env["f3d.reading"].search_count([])
+        signals = self.env["td.signal"].search_count([])
+        readings = self.env["td.reading"].search_count([])
         report = self.migrate()
         self.assertEqual(report["created"], 0)
         self.assertEqual(report["signals_catalog"]["created"], 0)
-        self.assertEqual(self.env["f3d.signal"].search_count([]), signals)
-        self.assertEqual(self.env["f3d.reading"].search_count([]), readings)
+        self.assertEqual(self.env["td.signal"].search_count([]), signals)
+        self.assertEqual(self.env["td.reading"].search_count([]), readings)
         self.assertEqual((report["mismatches"], report["state"]), ([], "done"))
 
     def test_partial_keeps_level0(self):
@@ -132,20 +132,20 @@ class TestRerunPartial(Level0Mixin, F3DTelemetryCase):
 
         def lossy(env):
             res = real(env)
-            env.cr.execute("DELETE FROM f3d_reading WHERE id = (SELECT min(id) FROM f3d_reading)")
-            env["f3d.reading"].invalidate_model()
+            env.cr.execute("DELETE FROM td_reading WHERE id = (SELECT min(id) FROM td_reading)")
+            env["td.reading"].invalidate_model()
             return res
 
         with mock.patch.object(hooks, "readings_level0", side_effect=lossy):
             report = self.migrate()
         self.assertEqual(report["state"], "partial")
         self.assertTrue(any(m.startswith("readings:") for m in report["mismatches"]), report["mismatches"])
-        self.assertTrue(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertTrue(self.env.ref("td_iot_sim.cron_iot_sim").active)
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 7)
         self.assertNotIn("requests_linked", report)
         self.assertEqual(
-            json.loads(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.level0_migrated"))[
+            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))[
                 "state"
             ],
             "partial",
@@ -167,7 +167,7 @@ class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
         self.assertIn("equipment/FL-T/battery", report["status_notes"][0])
         # кроки після звірки виконані
         self.assertEqual(report["requests_linked"], 2)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertFalse(self.env.ref("td_iot_sim.cron_iot_sim").active)
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 0)
 
@@ -177,7 +177,7 @@ class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
 
         def go_stale(env):
             res = real(env)
-            env["f3d.signal"].search([("origin", "=", "sim_data")]).with_context(mail_notrack=True).write(
+            env["td.signal"].search([("origin", "=", "sim_data")]).with_context(mail_notrack=True).write(
                 {"status": "stale"}
             )
             return res
@@ -188,7 +188,7 @@ class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
         self.assertGreaterEqual(report["status_notes_total"], 1)
         self.assertTrue(all("stale" in note for note in report["status_notes"]), report["status_notes"])
         self.assertEqual(report["requests_linked"], 2)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertFalse(self.env.ref("td_iot_sim.cron_iot_sim").active)
 
     def test_alarm_threshold_from_catalog_is_not_mismatch(self):
         self.l0["signals"]["bat"].x_value = 10.0  # нижче alarm 15: статус «тривога» лише за порогом каталогу
@@ -204,7 +204,7 @@ class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
         self.assertTrue(
             any(m.startswith("fire/groups/FA-T/dust: status") for m in report["mismatches"]), report["mismatches"]
         )
-        self.assertTrue(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertTrue(self.env.ref("td_iot_sim.cron_iot_sim").active)
         self.assertNotIn("requests_linked", report)
 
 
@@ -222,13 +222,13 @@ class TestRerunLiveLevel0(Level0Mixin, F3DTelemetryCase):
         new = self.env["x_f3d_reading"].create(
             {"x_name": "live", "x_signal_id": sigs["bat"].id, "x_value": 21.6, "x_unit": "%", "x_time": when}
         )
-        self.l0["readings"][0].unlink()  # ротація iot_sim: рядок є в f3d.reading, а в x_f3d_reading його вже нема
+        self.l0["readings"][0].unlink()  # ротація iot_sim: рядок є в td.reading, а в x_f3d_reading його вже нема
         return when, new
 
     def test_rerun_after_live_changes_completes(self):
         report = self.migrate([STATE_ROW, BATTERY_ROW])
         self.assertEqual(report["state"], "done")
-        readings = self.env["f3d.reading"].search_count([("src", "=", "sim_data")])
+        readings = self.env["td.reading"].search_count([("src", "=", "sim_data")])
         when, _new = self.live_tick()
         self.env.cr.execute("UPDATE x_f3d_signal SET x_active = true")  # як на живій базі: рівень 0 ще не вимкнено
         self.env["x_f3d_signal"].invalidate_model()
@@ -239,8 +239,8 @@ class TestRerunLiveLevel0(Level0Mixin, F3DTelemetryCase):
         battery = self.sig("equipment/FL-T/battery")
         self.assertEqual((battery.last_value, battery.last_ts, battery.status), (21.6, when, "warn"))
         self.assertEqual(self.sig("energy/consumers/SAW-T/p_now").last_value, 13.4)
-        self.assertEqual(self.env["f3d.reading"].search_count([("src", "=", "sim_data")]), readings + 1)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertEqual(self.env["td.reading"].search_count([("src", "=", "sim_data")]), readings + 1)
+        self.assertFalse(self.env.ref("td_iot_sim.cron_iot_sim").active)
 
     def test_rerun_does_not_roll_back_newer_telemetry(self):
         self.migrate([STATE_ROW, BATTERY_ROW])
@@ -254,8 +254,8 @@ class TestRerunLiveLevel0(Level0Mixin, F3DTelemetryCase):
 
     def test_missing_reading_still_reported_on_rerun(self):
         self.migrate([STATE_ROW, BATTERY_ROW])
-        self.env.cr.execute("DELETE FROM f3d_reading WHERE id = (SELECT min(id) FROM f3d_reading)")
-        self.env["f3d.reading"].invalidate_model()
+        self.env.cr.execute("DELETE FROM td_reading WHERE id = (SELECT min(id) FROM td_reading)")
+        self.env["td.reading"].invalidate_model()
         with mock.patch.object(hooks, "readings_level0", return_value={"max_id": 10**9}):
             report = self.migrate([STATE_ROW, BATTERY_ROW])
         self.assertEqual(report["state"], "partial")
@@ -265,7 +265,7 @@ class TestRerunLiveLevel0(Level0Mixin, F3DTelemetryCase):
 class DropMixin(Level0Mixin):
     def setUp(self):
         super().setUp()
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.drop_level0", "True")
+        self.env["ir.config_parameter"].sudo().set_param("td.telemetry.drop_level0", "True")
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
@@ -281,7 +281,7 @@ class TestDrop(DropMixin, F3DTelemetryCase):
             )
         )
         for name in hooks.LEVEL0_VIEWS:
-            self.assertFalse(self.env.ref("factory3d_iot_sim." + name, raise_if_not_found=False), name)
+            self.assertFalse(self.env.ref("td_iot_sim." + name, raise_if_not_found=False), name)
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
@@ -291,14 +291,14 @@ class TestNoDropOnMismatch(DropMixin, F3DTelemetryCase):
 
         def lossy(env):
             res = real(env)
-            env.cr.execute("DELETE FROM f3d_reading WHERE id = (SELECT min(id) FROM f3d_reading)")
+            env.cr.execute("DELETE FROM td_reading WHERE id = (SELECT min(id) FROM td_reading)")
             return res
 
         with mock.patch.object(hooks, "readings_level0", side_effect=lossy):
             report = self.migrate()
         self.assertEqual(report["state"], "partial")
         self.assertIn("x_f3d_signal", self.env)
-        self.assertTrue(self.env.ref("factory3d_iot_sim.view_signal_list", raise_if_not_found=False))
+        self.assertTrue(self.env.ref("td_iot_sim.view_signal_list", raise_if_not_found=False))
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
@@ -306,17 +306,17 @@ class TestCleanDb(F3DTelemetryCase):
     def test_clean_install_state(self):
         """AC-56: результат post_init_hook на чистій базі (без рівня 0 й обладнання макета)."""
         state = json.loads(
-            self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.level0_migrated") or "{}"
+            self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated") or "{}"
         )
         if state.get("state") != "skipped":
             self.skipTest("база не чиста: міграція рівня 0 виконувалась")
-        Signal = self.env["f3d.signal"].with_context(active_test=False)
+        Signal = self.env["td.signal"].with_context(active_test=False)
         self.assertEqual(Signal.search_count([("origin", "=", "catalog")]), 29)
         self.assertFalse(Signal.search([("origin", "=", "catalog"), ("equipment_id", "!=", False)]))
-        collector = self.env.ref("factory3d_telemetry.collector_main")
+        collector = self.env.ref("td_telemetry.collector_main")
         self.assertEqual(collector.code, "COL-MAIN")
         self.assertFalse(collector.sudo().token_hash)
-        sources = self.env["f3d.source"].search([("collector_id", "=", collector.id)])
+        sources = self.env["td.source"].search([("collector_id", "=", collector.id)])
         self.assertEqual(len(sources), 7)
         self.assertEqual(state["signals_catalog"], {"created": 29, "bound": 28, "bind_missing": 27, "no_equipment": 29})
         self.assertEqual(state["meters"], 0)
@@ -327,16 +327,16 @@ class TestUninstall(Level0Mixin, F3DTelemetryCase):
     def test_uninstall_restores_level0(self):
         """AC-57."""
         self.migrate()
-        self.env.cr.execute("SELECT to_regclass('f3d_collector_push')")
+        self.env.cr.execute("SELECT to_regclass('td_collector_push')")
         self.assertTrue(self.env.cr.fetchone()[0], "таблиця журналу пакетів колектора є до видалення")
-        with self.assertLogs("odoo.addons.factory3d_telemetry.hooks", "WARNING") as logs:
+        with self.assertLogs("odoo.addons.td_telemetry.hooks", "WARNING") as logs:
             hooks.uninstall_hook(self.env)
-        self.env.cr.execute("SELECT to_regclass('f3d_collector_push')")
-        self.assertFalse(self.env.cr.fetchone()[0], "uninstall_hook видаляє f3d_collector_push")
+        self.env.cr.execute("SELECT to_regclass('td_collector_push')")
+        self.assertFalse(self.env.cr.fetchone()[0], "uninstall_hook видаляє td_collector_push")
         self.assertTrue(any("рівень 0 вимкнено; увімкніть вручну або через пульт" in line for line in logs.output))
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE NOT x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 0)
-        self.assertTrue(self.env.ref("factory3d_iot_sim.menu_iot_root").active)
-        self.assertTrue(self.env.ref("factory3d_iot_sim.view_equipment_form_signals").active)
-        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
-        self.assertFalse(self.env["ir.config_parameter"].sudo().search([("key", "=like", "factory3d.telemetry.%")]))
+        self.assertTrue(self.env.ref("td_iot_sim.menu_iot_root").active)
+        self.assertTrue(self.env.ref("td_iot_sim.view_equipment_form_signals").active)
+        self.assertFalse(self.env.ref("td_iot_sim.cron_iot_sim").active)
+        self.assertFalse(self.env["ir.config_parameter"].sudo().search([("key", "=like", "td.telemetry.%")]))

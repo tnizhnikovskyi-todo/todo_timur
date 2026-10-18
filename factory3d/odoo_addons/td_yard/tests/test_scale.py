@@ -16,14 +16,14 @@ class TestYardScale(YardFlowCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        Signal = env["f3d.signal"]
+        Signal = env["td.signal"]
 
         def signal(code, name):
             return Signal.search([("code", "=", code)]) or Signal.create(
                 {"code": code, "name": name, "kind": "gauge", "module": "yard", "create_request": False}
             )
 
-        cls.scale = env.ref("factory3d_yard.scale_truck")
+        cls.scale = env.ref("td_yard.scale_truck")
         cls.scale.write(
             {"weight_signal_id": signal(WCODE, "Автоваги: вага").id, "stable_signal_id": signal(SCODE, "Стабільно").id}
         )
@@ -32,7 +32,7 @@ class TestYardScale(YardFlowCase):
 
     # ------------------------------------------------------------------ помічники
     def _weigh(self, visit, kind, kg, **vals):
-        return self.env["f3d.yard.weighing"].create(
+        return self.env["td.yard.weighing"].create(
             dict(
                 {"scale_id": self.scale.id, "visit_id": visit.id, "kind": kind, "weight_kg": kg, "source": "manual"},
                 **vals,
@@ -48,7 +48,7 @@ class TestYardScale(YardFlowCase):
         return self._force(visit, state)
 
     def _ingest(self, base, specs):
-        """specs: [(секунди від base, вага, 'S'|'D'|None, якість)] -> f3d.signal._f3d_ingest."""
+        """specs: [(секунди від base, вага, 'S'|'D'|None, якість)] -> td.signal._f3d_ingest."""
         readings = []
         for spec in specs:
             off, weight, status = spec[:3]
@@ -57,10 +57,10 @@ class TestYardScale(YardFlowCase):
             readings.append({"code": WCODE, "ts": iso, "value": weight, "q": quality})
             if status:
                 readings.append({"code": SCODE, "ts": iso, "value": 1.0 if status == "S" else 0.0})
-        return self.env["f3d.signal"]._f3d_ingest(readings, src="module")
+        return self.env["td.signal"]._f3d_ingest(readings, src="module")
 
     def _autos(self):
-        return self.env["f3d.yard.weighing"].search([("source", "=", "auto"), ("scale_id", "=", self.scale.id)])
+        return self.env["td.yard.weighing"].search([("source", "=", "auto"), ("scale_id", "=", self.scale.id)])
 
     def _queued(self):
         visit = self._visit()
@@ -76,7 +76,7 @@ class TestYardScale(YardFlowCase):
         self._weigh(visit, "out", 14000.0)
         self.assertEqual((visit.gross_kg, visit.tare_kg, visit.net_kg), (25200.0, 14000.0, 11200.0))
         self.assertEqual((visit.weight_check, visit.deviation_pct), ("ok", 0.0))
-        self.assertEqual((picking.f3d_net_weight_kg, picking.f3d_weight_check), (11200.0, "ok"))
+        self.assertEqual((picking.td_net_weight_kg, picking.td_weight_check), (11200.0, "ok"))
         self.assertEqual(visit.state, "weighed")
         self.assertTrue(visit.weighed_out_at and visit.handling_end_at)
         self.assertEqual(sorted(visit.weighing_ids.mapped("role")), ["gross", "tare"])
@@ -87,7 +87,7 @@ class TestYardScale(YardFlowCase):
         self._weigh(visit, "out", 14000.0)
         w_in = self._weigh(visit, "in", 25520.0)
         self.assertEqual((visit.weight_check, visit.deviation_pct), ("deviation", 2.86))
-        self.assertEqual(picking.f3d_weight_check, "deviation")
+        self.assertEqual(picking.td_weight_check, "deviation")
         summary = "Відхилення нетто"
         self.assertEqual(len(picking.activity_ids.filtered(lambda a: a.summary == summary)), 1)
         visit._f3d_yard_write_pickings()
@@ -119,11 +119,11 @@ class TestYardScale(YardFlowCase):
         two = self._on_site(first)
         self._weigh(two, "in", 26300.0)
         w_out = self._weigh(two, "out", 14000.0)
-        self.assertEqual(sorted(two.batch_id.picking_ids.mapped("f3d_net_weight_kg")), [4100.0, 8200.0])
+        self.assertEqual(sorted(two.batch_id.picking_ids.mapped("td_net_weight_kg")), [4100.0, 8200.0])
         w_out.action_void()
         self.assertEqual((two.net_kg, two.weight_check, two.state), (0.0, "none", "weighed"))
-        self.assertEqual(set(two.batch_id.picking_ids.mapped("f3d_net_weight_kg")), {0.0})
-        self.assertEqual(set(two.batch_id.picking_ids.mapped("f3d_weight_check")), {"none"})
+        self.assertEqual(set(two.batch_id.picking_ids.mapped("td_net_weight_kg")), {0.0})
+        self.assertEqual(set(two.batch_id.picking_ids.mapped("td_weight_check")), {"none"})
 
     # ------------------------------------------------------------------ перевірки (AC-41, AC-42)
     def test_manual_constraints(self):  # AC-41
@@ -159,7 +159,7 @@ class TestYardScale(YardFlowCase):
     def test_capture_button_and_manual_form(self):
         visit = self._on_site(state="queued")
         action = visit._f3d_yard_do_weigh()  # немає показань -> ручна форма
-        self.assertEqual((action["res_model"], action["context"]["default_kind"]), ("f3d.yard.weighing", "in"))
+        self.assertEqual((action["res_model"], action["context"]["default_kind"]), ("td.yard.weighing", "in"))
         now = fields.Datetime.now()
         self.scale.write({"last_weight_kg": 25200.0, "last_stable": True, "last_ts": now})
         weighing = self.scale.with_user(self.user_guard).action_capture(visit=visit)
@@ -170,7 +170,7 @@ class TestYardScale(YardFlowCase):
     def test_acl(self):
         visit = self._on_site()
         with self.assertRaises(AccessError):
-            self.env["f3d.yard.weighing"].with_user(self.user_reader).create(
+            self.env["td.yard.weighing"].with_user(self.user_reader).create(
                 {"scale_id": self.scale.id, "visit_id": visit.id, "kind": "in", "weight_kg": 25200.0}
             )
         weighing = self._weigh(visit, "in", 25200.0)
@@ -219,7 +219,7 @@ class TestYardScale(YardFlowCase):
         self._ingest(base, [(0, 25200.0, "S"), (1, 25200.0, "S")])
         weighing = self._autos()
         self.assertEqual(
-            (weighing.state, weighing.kind, weighing.visit_id), ("unassigned", "check", self.env["f3d.yard.visit"])
+            (weighing.state, weighing.kind, weighing.visit_id), ("unassigned", "check", self.env["td.yard.visit"])
         )
         self.assertEqual(weighing.note, "Кандидатів: 2")
         weighing.with_user(self.user_guard).action_assign(first.id)
@@ -243,7 +243,7 @@ class TestYardScale(YardFlowCase):
         self.assertEqual(self.scale.last_weight_kg, 0.0)
 
     def test_seed_scale(self):  # AC-46 (ваги)
-        scale = self.env.ref("factory3d_yard.scale_truck")
+        scale = self.env.ref("td_yard.scale_truck")
         self.assertEqual((scale.max_kg, scale.min_kg, scale.division_kg), (60000.0, 400.0, 20.0))
         self.assertEqual((scale.pos_x, scale.pos_y), (172.0, -14.0))
-        self.assertEqual(self.env.ref("factory3d_yard.gate_e").scale_id, scale)
+        self.assertEqual(self.env.ref("td_yard.gate_e").scale_id, scale)

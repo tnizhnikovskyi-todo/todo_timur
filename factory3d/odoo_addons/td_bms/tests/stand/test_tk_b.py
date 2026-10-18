@@ -90,18 +90,18 @@ def test_tk07_helvarnet_down(odoo, fresh_sim):
     src = source(odoo, "HN-LP-2")
     params = dict(src["params"])
     assert params["port"] == 50000
-    sid = odoo.search_read("f3d.source", [("code", "=", "HN-LP-2")], ["id"])[0]["id"]
+    sid = odoo.search_read("td.source", [("code", "=", "HN-LP-2")], ["id"])[0]["id"]
     try:
-        odoo.write("f3d.source", sid, {"params": {**params, "port": 50999}})
+        odoo.write("td.source", sid, {"params": {**params, "port": 50999}})
         t0 = time.time()
         assert sleep_until(lambda: source(odoo, "HN-LP-2")["state"] == "error", 180, 10), source(odoo, "HN-LP-2")
         print(f"TK07 HN-LP-2 error за {time.time() - t0:.0f} с: {source(odoo, 'HN-LP-2')['last_error']}")
         assert "onnection refused" in (source(odoo, "HN-LP-2")["last_error"] or "") or True
-        lp2 = odoo.search_read("f3d.bms.light.group", [("panel_id.code", "=", "LP-2")], ["code", "stale"])
+        lp2 = odoo.search_read("td.bms.light.group", [("panel_id.code", "=", "LP-2")], ["code", "stale"])
         assert len(lp2) == 5, lp2
         assert sleep_until(
             lambda: all(
-                g["stale"] for g in odoo.search_read("f3d.bms.light.group", [("panel_id.code", "=", "LP-2")], ["stale"])
+                g["stale"] for g in odoo.search_read("td.bms.light.group", [("panel_id.code", "=", "LP-2")], ["stale"])
             ),
             240,
             10,
@@ -111,12 +111,12 @@ def test_tk07_helvarnet_down(odoo, fresh_sim):
         time.sleep(60)
         assert len(bms_requests(odoo)) == n0, "при stale заявок бути не має"
     finally:
-        odoo.write("f3d.source", sid, {"params": params})
+        odoo.write("td.source", sid, {"params": params})
     assert sleep_until(lambda: source(odoo, "HN-LP-2")["state"] == "online", 180, 10)
     assert sleep_until(
         lambda: (
             not any(
-                g["stale"] for g in odoo.search_read("f3d.bms.light.group", [("panel_id.code", "=", "LP-2")], ["stale"])
+                g["stale"] for g in odoo.search_read("td.bms.light.group", [("panel_id.code", "=", "LP-2")], ["stale"])
             )
         ),
         180,
@@ -146,9 +146,9 @@ def test_tk08_bacnet_silent(odoo, fresh_sim):
     close_bms_requests(odoo)
     base = last_request_id(odoo)
     src = source(odoo, "BAC-107-RV-07")
-    sid = odoo.search_read("f3d.source", [("code", "=", "BAC-107-RV-07")], ["id"])[0]["id"]
+    sid = odoo.search_read("td.source", [("code", "=", "BAC-107-RV-07")], ["id"])[0]["id"]
     try:
-        odoo.write("f3d.source", sid, {"params": {**src["params"], "device": 999}})
+        odoo.write("td.source", sid, {"params": {**src["params"], "device": 999}})
         t0 = time.time()
         assert sleep_until(lambda: source(odoo, "BAC-107-RV-07")["state"] == "error", 240, 5), source(
             odoo, "BAC-107-RV-07"
@@ -164,7 +164,7 @@ def test_tk08_bacnet_silent(odoo, fresh_sim):
         new = [r["name"] for r in bms_requests(odoo, after_id=base) if "RV-07" in r["name"]]
         assert not new, new  # при stale/«немає даних» заявок не створюється
     finally:
-        odoo.write("f3d.source", sid, {"params": src["params"]})
+        odoo.write("td.source", sid, {"params": src["params"]})
     assert sleep_until(lambda: source(odoo, "BAC-107-RV-07")["state"] == "online", 240, 10)
     assert sleep_until(lambda: not unit(odoo, "RV-07")["stale"] and unit(odoo, "RV-07")["deviation"] == "none", 240, 10)
 
@@ -172,7 +172,7 @@ def test_tk08_bacnet_silent(odoo, fresh_sim):
 def _settings(odoo, write):
     """Дозволити/заборонити керування: параметри модуля й телеметрії через `res.config.settings` (set_values → прапори)."""
     rec = odoo.call(
-        "res.config.settings", "create", {"f3d_bms_write_enabled": write, "f3d_telemetry_write_enabled": write}
+        "res.config.settings", "create", {"td_bms_write_enabled": write, "td_telemetry_write_enabled": write}
     )
     odoo.call("res.config.settings", "execute", [rec])
 
@@ -182,44 +182,44 @@ def test_tk09_control(odoo, fresh_sim, col_write):
     _ = fresh_sim
     _settings(odoo, True)
     restart_collector({"F3D_WRITE_ENABLED": "1"})
-    assert sleep_until(lambda: group(odoo, "LT-MAINT")["f3d_bms_write_enabled"], 60, 5)
+    assert sleep_until(lambda: group(odoo, "LT-MAINT")["td_bms_write_enabled"], 60, 5)
     op = odoo  # RPC від admin; роль оператора перевіряє test_commands (UT)
-    gid = op.search_read("f3d.bms.light.group", [("code", "=", "LT-MAINT")], ["id"])[0]["id"]
-    scene = op.search_read("f3d.bms.light.scene", [("number", "=", 3)], ["id"], limit=1)[0]["id"]
+    gid = op.search_read("td.bms.light.group", [("code", "=", "LT-MAINT")], ["id"])[0]["id"]
+    scene = op.search_read("td.bms.light.scene", [("number", "=", 3)], ["id"], limit=1)[0]["id"]
     w = op.call(
-        "f3d.bms.light.command.wizard", "create", {"group_ids": [(6, 0, [gid])], "action": "scene", "scene_id": scene}
+        "td.bms.light.command.wizard", "create", {"group_ids": [(6, 0, [gid])], "action": "scene", "scene_id": scene}
     )
     t0 = time.time()
-    act = op.call("f3d.bms.light.command.wizard", "action_apply", [w])
+    act = op.call("td.bms.light.command.wizard", "action_apply", [w])
     cmd_ids = act["domain"][0][2]
     assert sleep_until(
-        lambda: op.search_read("f3d.command", [("id", "in", cmd_ids)], ["state", "result"])[0]["state"] == "done", 60, 3
-    ), op.search_read("f3d.command", [("id", "in", cmd_ids)], ["state", "result"])
-    c = op.search_read("f3d.command", [("id", "in", cmd_ids)], ["state", "result"])[0]
+        lambda: op.search_read("td.command", [("id", "in", cmd_ids)], ["state", "result"])[0]["state"] == "done", 60, 3
+    ), op.search_read("td.command", [("id", "in", cmd_ids)], ["state", "result"])
+    c = op.search_read("td.command", [("id", "in", cmd_ids)], ["state", "result"])[0]
     print(f"TK09 LT-MAINT команда done за {time.time() - t0:.0f} с, result={c['result']}")
     assert "ack" in (c["result"] or "") or "verified" in (c["result"] or ""), c
     assert sleep_until(lambda: group(odoo, "LT-MAINT")["scene"] == 3, 60, 3)
-    uid = op.search_read("f3d.bms.hvac.unit", [("code", "=", "RV-05")], ["id"])[0]["id"]
-    w = op.call("f3d.bms.hvac.command.wizard", "create", {"unit_ids": [(6, 0, [uid])], "action": "mode", "mode": "VEL"})
+    uid = op.search_read("td.bms.hvac.unit", [("code", "=", "RV-05")], ["id"])[0]["id"]
+    w = op.call("td.bms.hvac.command.wizard", "create", {"unit_ids": [(6, 0, [uid])], "action": "mode", "mode": "VEL"})
     t0 = time.time()
-    act = op.call("f3d.bms.hvac.command.wizard", "action_apply", [w])
+    act = op.call("td.bms.hvac.command.wizard", "action_apply", [w])
     cmd_ids = act["domain"][0][2]
     assert sleep_until(
-        lambda: op.search_read("f3d.command", [("id", "in", cmd_ids)], ["state"])[0]["state"] == "done", 90, 3
+        lambda: op.search_read("td.command", [("id", "in", cmd_ids)], ["state"])[0]["state"] == "done", 90, 3
     )
     assert sleep_until(lambda: unit(odoo, "RV-05")["mode_code"] == "VEL", 90, 5), unit(odoo, "RV-05")
     print(f"TK09 RV-05 VEL за {time.time() - t0:.0f} с")
     _settings(odoo, False)
     w = op.call(
-        "f3d.bms.light.command.wizard", "create", {"group_ids": [(6, 0, [gid])], "action": "scene", "scene_id": scene}
+        "td.bms.light.command.wizard", "create", {"group_ids": [(6, 0, [gid])], "action": "scene", "scene_id": scene}
     )
     import xmlrpc.client as xc
 
     with pytest.raises(xc.Fault) as ei:
-        op.call("f3d.bms.light.command.wizard", "action_apply", [w])
+        op.call("td.bms.light.command.wizard", "action_apply", [w])
     assert "Керування вимкнено" in str(ei.value)
-    assert not odoo.search_read("f3d.signal", [("module", "=", "bms"), ("write_enabled", "=", True)], ["id"])
-    assert not odoo.search_read("f3d.source", [("module", "=", "bms"), ("write_enabled", "=", True)], ["id"])
+    assert not odoo.search_read("td.signal", [("module", "=", "bms"), ("write_enabled", "=", True)], ["id"])
+    assert not odoo.search_read("td.source", [("module", "=", "bms"), ("write_enabled", "=", True)], ["id"])
     restart_collector({"F3D_WRITE_ENABLED": "0"})
 
 
@@ -251,7 +251,7 @@ def _jsonrpc(odoo, model, method, *args):
 
 def test_tk10_interface(odoo, sim):
     """ТК-10 (числова частина): дані огляду збігаються з формами груп/установок; переглядач і 3D — ⏭ (браузер)."""
-    data = _jsonrpc(odoo, "f3d.bms.overview", "get_overview_data")
+    data = _jsonrpc(odoo, "td.bms.overview", "get_overview_data")
     g = group(odoo, "LT-CUT")
     rows = {r["code"]: r for r in data["groups"]} if isinstance(data.get("groups"), list) else {}
     assert rows, list(data)[:10]
@@ -274,6 +274,6 @@ def test_tk10_interface(odoo, sim):
     )
 
 
-@pytest.mark.skip(reason="⏭ factory3d_fire_safety відсутній у дереві: сигнал fire/totals/system_state не поставляється")
+@pytest.mark.skip(reason="⏭ td_fire_safety відсутній у дереві: сигнал fire/totals/system_state не поставляється")
 def test_tk11_fire_drill():
-    """ТК-11: пожежне навчання (потребує factory3d_fire_safety)."""
+    """ТК-11: пожежне навчання (потребує td_fire_safety)."""

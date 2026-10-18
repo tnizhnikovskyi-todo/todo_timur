@@ -7,14 +7,14 @@ from . import command_common as common
 class F3dBmsLightCommandWizard(models.TransientModel):
     """M-09a: сцена або рівень для груп освітлення (FR-18, R-25)."""
 
-    _name = "f3d.bms.light.command.wizard"
+    _name = "td.bms.light.command.wizard"
     _description = "Будівля: команда освітленню"
 
-    group_ids = fields.Many2many("f3d.bms.light.group", string="Групи", required=True)
+    group_ids = fields.Many2many("td.bms.light.group", string="Групи", required=True)
     action = fields.Selection(
         [("scene", "Викликати сцену"), ("level", "Встановити рівень")], string="Дія", required=True, default="scene"
     )
-    scene_id = fields.Many2one("f3d.bms.light.scene", string="Сцена")
+    scene_id = fields.Many2one("td.bms.light.scene", string="Сцена")
     level_pct = fields.Integer(string="Рівень, %")
     fade_s = fields.Float(string="Час переходу, с", digits=(6, 1), default=2.0)
     expires_min = fields.Integer(string="Дійсна, хв", default=10)

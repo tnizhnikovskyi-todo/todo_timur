@@ -49,13 +49,13 @@ class TestCosting(CostingMixin, F3DEnergyCase):
         self.close(mo)
         self.assertEqual(mo.state, "done")
         self.assertAlmostEqual(mo.extra_cost, 27.8531, places=4)
-        self.assertAlmostEqual(mo.f3d_energy_applied_unit, 27.8531, places=4)
-        self.assertTrue(mo.f3d_energy_locked)
+        self.assertAlmostEqual(mo.td_energy_applied_unit, 27.8531, places=4)
+        self.assertTrue(mo.td_energy_locked)
         self.assertTrue(all(self.Alloc.sudo().search([("production_id", "=", mo.id)]).mapped("locked")))
         texts = " ".join(mo.message_ids.mapped("body"))
         self.assertIn("До Extra Unit Cost додано енергію: 27,8531 грн/од. (724,18 грн / 26 шт).", texts)
         # той самий МО без внесення енергії (на іншу добу)
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.costing_enabled", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.energy.costing_enabled", "False")
         base = self.make_231("average", day_shift=1)
         self.close(base)
         self.assertAlmostEqual(self.unit_price(mo) - self.unit_price(base), 27.8531, places=3)
@@ -64,18 +64,18 @@ class TestCosting(CostingMixin, F3DEnergyCase):
     def test_standard_no_change(self):  # AC-47
         mo = self.make_231("standard")
         self.close(mo)
-        self.assertEqual((mo.extra_cost, mo.f3d_energy_applied_unit), (0.0, 0.0))
+        self.assertEqual((mo.extra_cost, mo.td_energy_applied_unit), (0.0, 0.0))
         texts = " ".join(mo.message_ids.mapped("body"))
         self.assertIn("Енергію не внесено у вартість: метод «Стандартна ціна»", texts)
-        self.assertTrue(mo.f3d_energy_locked)
+        self.assertTrue(mo.td_energy_locked)
         self.assertTrue(all(self.Alloc.sudo().search([("production_id", "=", mo.id)]).mapped("locked")))
 
     def test_costing_disabled(self):  # AC-48
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.costing_enabled", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.energy.costing_enabled", "False")
         mo = self.make_231("average")
         self.close(mo)
-        self.assertEqual((mo.extra_cost, mo.f3d_energy_applied_unit), (0.0, 0.0))
-        self.assertTrue(mo.f3d_energy_locked)
+        self.assertEqual((mo.extra_cost, mo.td_energy_applied_unit), (0.0, 0.0))
+        self.assertTrue(mo.td_energy_locked)
         self.assertNotIn("Extra Unit Cost", " ".join(mo.message_ids.mapped("body")))
 
     def test_backorder(self):  # AC-49
@@ -91,8 +91,8 @@ class TestCosting(CostingMixin, F3DEnergyCase):
         self.assertEqual(len(backorder), 1)
         self.assertAlmostEqual(backorder.extra_cost, 3.0, places=4)
         self.assertEqual(mo.state, "done")
-        self.assertAlmostEqual(mo.f3d_energy_kwh, 86.213, places=3)
-        self.assertFalse(backorder.f3d_energy_locked)
+        self.assertAlmostEqual(mo.td_energy_kwh, 86.213, places=3)
+        self.assertFalse(backorder.td_energy_locked)
 
     def test_analytic_lines(self):  # AC-50
         plan = self.env["account.analytic.plan"].create({"name": "Plan-T"})

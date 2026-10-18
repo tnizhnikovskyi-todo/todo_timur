@@ -268,7 +268,7 @@ class LiveDemo(Demo):
                 m["schedule_date"] = local(r["schedule_date"])
 
     def sync_signals(self, data):
-        """Показники обладнання з модуля factory3d_iot_sim: x_code — шлях у даних переглядача
+        """Показники обладнання з модуля td_iot_sim: x_code — шлях у даних переглядача
         (energy/consumers/SAW-1/p_now, equipment/FL-1/battery…); відсотки в моделі — частки."""
         o = self.o
         if not o.has("x_f3d_signal"):
@@ -293,7 +293,7 @@ class LiveDemo(Demo):
                 last = r["x_updated"]
         t = data["infra"]["totals"]
         data["energy"]["totals"].update(pv_kw=t["pv_now"], chp_kw=t["chp_kw"])
-        data["meta"]["iot"] = {"source": "імітація датчиків (модуль factory3d_iot_sim)", "signals": len(rows),
+        data["meta"]["iot"] = {"source": "імітація датчиків (модуль td_iot_sim)", "signals": len(rows),
                                "alarms": sum(r["x_state"] == "тривога" for r in rows), "updated": local(last)}
 
     def build(self):

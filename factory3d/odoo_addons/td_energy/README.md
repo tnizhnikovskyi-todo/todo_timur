@@ -1,19 +1,19 @@
-# factory3d_energy — Завод 3D: енергетика
+# td_energy — Завод 3D: енергетика
 
 Схема електропостачання, лічильники PM5560, 15-хв профіль, баланс, кВт·год і вартість на завдання й МО, СЕС,
-накопичувач, КГУ, АВР, тарифи. Специфікація — `docs/modules/factory3d_energy/SPEC.md`, архітектура — `ARCHITECTURE.md`
+накопичувач, КГУ, АВР, тарифи. Специфікація — `docs/modules/td_energy/SPEC.md`, архітектура — `ARCHITECTURE.md`
 там само, покриття AC — `AC_COVERAGE.md`, результати стенда — `TEST_REPORT.md`.
 
 ## Встановлення
-- Залежності (`__manifest__.py`): `factory3d_telemetry`, `mrp_account`, `analytic`, `web_hierarchy`.
+- Залежності (`__manifest__.py`): `td_telemetry`, `mrp_account`, `analytic`, `web_hierarchy`.
   `mrp_workorder` (Enterprise) не вимагається — ENV-2 (`factory3d/build/ENV_DECISIONS.md`); поля й дії на робочих
   операціях додаються лише якщо модель `mrp.workorder` доступна.
-- Хук після встановлення прив'язує вузли до обладнання/РЦ демо-бази і пише звіт у `factory3d.energy.install_report`.
-- Дані `data/energy_*.csv` генеруються з макета (`python3 odoo_addons/factory3d_energy/tools/gen_energy_data.py --root .`
+- Хук після встановлення прив'язує вузли до обладнання/РЦ демо-бази і пише звіт у `td.energy.install_report`.
+- Дані `data/energy_*.csv` генеруються з макета (`python3 odoo_addons/td_energy/tools/gen_energy_data.py --root .`
   з каталогу `factory3d/`), Odoo їх напряму не вантажить — читає хук.
-- На проді одразу після встановлення `factory3d.energy.read_enabled = False`; вмикати після перевірки адрес джерел.
+- На проді одразу після встановлення `td.energy.read_enabled = False`; вмикати після перевірки адрес джерел.
 
-## Параметри `factory3d.energy.*` (`data/ir_config_parameter.xml`; Налаштування → Завод 3D → Енергетика)
+## Параметри `td.energy.*` (`data/ir_config_parameter.xml`; Налаштування → Завод 3D → Енергетика)
 | Параметр | Значення | Призначення |
 |---|---|---|
 | `read_enabled` | True (тест) / False (прод) | стоп-кран: опитування джерел і крони |
@@ -39,17 +39,17 @@
    незафіксованих МО.
 4. Баланс: Енергетика → Баланс; відхилення довше двох годин → заявка ТО «Небаланс обліку».
 5. Відключення мережі: Енергетика → Відключення (час переключення АВР, скинуте навантаження, FAIL START).
-Докладно — `docs/modules/factory3d_energy/ARCHITECTURE.md` §4.
+Докладно — `docs/modules/td_energy/ARCHITECTURE.md` §4.
 
 ## Стоп-крани і neutralize
 - `read_enabled = False` — джерела енергетики не опитуються, крони нічого не роблять.
 - `costing_enabled = False` — енергія не потрапляє в `extra_cost`.
 - `write_enabled` у v1 увімкнути неможливо.
 - `data/neutralize.sql` (копія проду): `read_enabled`/`write_enabled`/`costing_enabled` → False, крони модуля вимкнені,
-  джерела енергетики неактивні; застосовується разом із neutralize `factory3d_telemetry`.
+  джерела енергетики неактивні; застосовується разом із neutralize `td_telemetry`.
 
 ## Тести
-- Юніт: `F3D_TEST_INSTALL=factory3d_energy factory3d/tools/odoo/run_tests.sh <db> /factory3d_energy`.
-- Стенд (емулятор `factory3d_iot_sim` + колектор): `tests/stand/` (pytest, `pytest.ini`, `reset_stand.sh`),
-  сценарії ТК/ТБ/ТП — `docs/modules/factory3d_energy/DEPLOY_TEST.md`.
+- Юніт: `F3D_TEST_INSTALL=td_energy factory3d/tools/odoo/run_tests.sh <db> /td_energy`.
+- Стенд (емулятор `td_iot_sim` + колектор): `tests/stand/` (pytest, `pytest.ini`, `reset_stand.sh`),
+  сценарії ТК/ТБ/ТП — `docs/modules/td_energy/DEPLOY_TEST.md`.
 - Перф (ТП-01): `tests/stand/test_tp.py`; юніт-захист від N+1 — `test_interval.py::test_build_query_count`.

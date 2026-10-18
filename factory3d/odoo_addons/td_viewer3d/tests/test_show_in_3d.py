@@ -4,7 +4,7 @@ from odoo.tests import tagged
 
 from .common import F3dViewerBase
 
-CARRIER_MODELS = ("stock.location", "mrp.workcenter", "maintenance.equipment", "hr.employee", "f3d.zone",
+CARRIER_MODELS = ("stock.location", "mrp.workcenter", "maintenance.equipment", "hr.employee", "td.zone",
                   "stock.picking.batch")
 
 
@@ -17,7 +17,7 @@ class TestShowIn3D(F3dViewerBase):
         super().setUpClass()
         cls._extra_users()
         env = cls.env
-        cls.wc = env["mrp.workcenter"].create({"name": "TST WC", "code": "TSTWC", "f3d_code": "TST-SHOW-WC"})
+        cls.wc = env["mrp.workcenter"].create({"name": "TST WC", "code": "TSTWC", "td_code": "TST-SHOW-WC"})
         cls.finished = env["product.product"].create({"name": "TST fin", "default_code": "TST-F", "is_storable": True})
         cls.comp = env["product.product"].create({"name": "TST cmp", "default_code": "TST-C", "is_storable": True})
         cls.bom = env["mrp.bom"].create({
@@ -27,7 +27,7 @@ class TestShowIn3D(F3dViewerBase):
         cls.mo = env["mrp.production"].create({"product_id": cls.finished.id, "bom_id": cls.bom.id, "product_qty": 1})
         cls.mo.action_confirm()
         cls.loc = env["stock.location"].create({
-            "name": "TST-LOC", "usage": "internal", "f3d_code": "TST-SHOW-LOC",
+            "name": "TST-LOC", "usage": "internal", "td_code": "TST-SHOW-LOC",
             "location_id": env["stock.warehouse"].search([], limit=1).view_location_id.id})
         cls.plain_loc = env["stock.location"].create({
             "name": "TST-PLAIN", "usage": "internal",
@@ -36,7 +36,7 @@ class TestShowIn3D(F3dViewerBase):
     @classmethod
     def _extra_users(cls):
         cls.user_nogroup = cls._make_user("f3d_nogroup", [
-            "base.group_user", "sales_team.group_sale_salesman"])  # читає документи, але без group_f3d_user
+            "base.group_user", "sales_team.group_sale_salesman"])  # читає документи, але без group_td_user
 
     def _picking(self, src):
         ptype = self.env["stock.picking.type"].with_context(active_test=False).search(
@@ -65,13 +65,13 @@ class TestShowIn3D(F3dViewerBase):
         self.assertEqual(act["params"], {"picking": picking.name, "tab": "logistics"})
 
     def test_has_3d_compute(self):
-        self.assertTrue(self.mo.f3d_has_3d)
+        self.assertTrue(self.mo.td_has_3d)
         empty_mo = self.env["mrp.production"].create({"product_id": self.finished.id, "product_qty": 1,
                                                       "bom_id": False})
         self.assertFalse(empty_mo.workorder_ids)
-        self.assertFalse(empty_mo.f3d_has_3d)
-        self.assertTrue(self._picking(self.loc).f3d_has_3d)
-        self.assertFalse(self._picking(self.plain_loc).f3d_has_3d)
+        self.assertFalse(empty_mo.td_has_3d)
+        self.assertTrue(self._picking(self.loc).td_has_3d)
+        self.assertFalse(self._picking(self.plain_loc).td_has_3d)
 
     def test_base_action_opens_viewer(self):
         """X-08: дія base CB-02 для 6 моделей носіїв при встановленому viewer; viewer метод не перевизначає."""
@@ -86,37 +86,37 @@ class TestShowIn3D(F3dViewerBase):
         records = {
             "stock.location": self.loc,
             "mrp.workcenter": self.wc,
-            "maintenance.equipment": env["maintenance.equipment"].create({"name": "TST eq", "f3d_code": "TST-SHOW-EQ"}),
-            "hr.employee": env["hr.employee"].create({"name": "TST emp", "f3d_code": "TST-SHOW-EMP"}),
-            "f3d.zone": env["f3d.zone"].create({"name": "TST zone", "zone_type": "storage",
-                                                "f3d_code": "TST-SHOW-ZONE"}),
+            "maintenance.equipment": env["maintenance.equipment"].create({"name": "TST eq", "td_code": "TST-SHOW-EQ"}),
+            "hr.employee": env["hr.employee"].create({"name": "TST emp", "td_code": "TST-SHOW-EMP"}),
+            "td.zone": env["td.zone"].create({"name": "TST zone", "zone_type": "storage",
+                                                "td_code": "TST-SHOW-ZONE"}),
             "stock.picking.batch": env["stock.picking.batch"].create({
-                "picking_ids": [(6, 0, picking.ids)], "f3d_code": "TST-SHOW-BATCH"}),
+                "picking_ids": [(6, 0, picking.ids)], "td_code": "TST-SHOW-BATCH"}),
         }
         self.assertEqual(set(records), set(CARRIER_MODELS))
         for model, rec in records.items():
             act = rec.action_f3d_show()
             self.assertEqual(act["tag"], "f3d_viewer.action", model)
-            self.assertEqual(act["params"]["code"], rec.f3d_code, model)
+            self.assertEqual(act["params"]["code"], rec.td_code, model)
             self.assertEqual(act["params"]["model"], model)
             self.assertEqual(act["params"]["res_id"], rec.id)
-            self.assertNotIn("factory3d_viewer", type(rec).action_f3d_show.__module__, model)
+            self.assertNotIn("td_viewer3d", type(rec).action_f3d_show.__module__, model)
         self.assertEqual(wh.company_id, env.company)
 
     def _buttons(self, model, user):
         view = self.env[model].with_user(user).get_view(view_type="form")
         root = etree.fromstring(view["arch"])
-        return root.xpath("//header//button[@name='action_f3d_show']"), root.xpath("//field[@name='f3d_has_3d']")
+        return root.xpath("//header//button[@name='action_f3d_show']"), root.xpath("//field[@name='td_has_3d']")
 
     def test_button_in_views(self):
         """AC-22: кнопка viewer у формах документів (з групою); у модулі немає представлень носіїв домішки."""
         for model in ("mrp.production", "stock.picking"):
             buttons, fields_ = self._buttons(model, self.user_f3d)
             self.assertEqual(len(buttons), 1, model)
-            self.assertEqual(buttons[0].get("invisible"), "not f3d_has_3d", model)
+            self.assertEqual(buttons[0].get("invisible"), "not td_has_3d", model)
             self.assertTrue(fields_, model)
             none, _ = self._buttons(model, self.user_nogroup)
-            self.assertFalse(none, "без групи group_f3d_user кнопки немає: " + model)
-        views = self.env["ir.model.data"].search([("module", "=", "factory3d_viewer"), ("model", "=", "ir.ui.view")])
+            self.assertFalse(none, "без групи group_td_user кнопки немає: " + model)
+        views = self.env["ir.model.data"].search([("module", "=", "td_viewer3d"), ("model", "=", "ir.ui.view")])
         models_ = set(self.env["ir.ui.view"].browse(views.mapped("res_id")).mapped("model"))
         self.assertFalse(models_ & set(CARRIER_MODELS))

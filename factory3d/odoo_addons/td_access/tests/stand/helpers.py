@@ -36,7 +36,7 @@ class Odoo:
         return self.models.execute_kw(self.db, self.uid, self.password, model, method, list(args), kw)
 
     def param(self, key: str, value: str | None):
-        full = f"factory3d.access.{key}"
+        full = f"td.access.{key}"
         ids = self.k("ir.config_parameter", "search", [("key", "=", full)])
         if value is None:
             if ids:
@@ -50,7 +50,7 @@ class Odoo:
         return self.k("ir.config_parameter", "get_param", full_key) or None
 
     def server(self) -> dict:
-        rows = self.k("f3d.access.server", "search_read", [], ["name", "url", "state", "error_count", "last_error",
+        rows = self.k("td.access.server", "search_read", [], ["name", "url", "state", "error_count", "last_error",
                       "users_total", "devices_total", "next_try_at", "last_poll_new", "last_poll_rows",
                       "last_event_ts"], limit=1, order="id")
         return rows[0]
@@ -61,7 +61,7 @@ class Odoo:
         for _ in range(times):
             for attempt in range(12):       # одночасно з кроном «опитування подій» (lock) — повторити
                 try:
-                    res = self.k("f3d.access.server", "action_poll_now", [server_id])
+                    res = self.k("td.access.server", "action_poll_now", [server_id])
                     break
                 except xmlrpc.client.Fault as fault:
                     if "вже виконується" not in str(fault) or attempt == 11:
@@ -74,7 +74,7 @@ class Odoo:
         total = 0
         for _ in range(max_rounds):
             self.poll(server_id)
-            row = self.k("f3d.access.server", "read", [server_id], ["last_poll_new", "last_poll_more"])[0]
+            row = self.k("td.access.server", "read", [server_id], ["last_poll_new", "last_poll_more"])[0]
             total += row["last_poll_new"]
             if not row["last_poll_more"] and not row["last_poll_new"]:
                 break

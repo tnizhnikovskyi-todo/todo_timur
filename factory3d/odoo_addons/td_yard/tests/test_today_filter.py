@@ -24,7 +24,7 @@ CLOCKS = [
 @tagged("post_install", "-at_install", "f3d", "f3d_yard")
 class TestYardTodayFilter(YardFlowCase):
     def test_today_is_kyiv_day_at_any_hour(self):
-        Visit = self.env["f3d.yard.visit"]
+        Visit = self.env["td.yard.visit"]
         for now, expected_day in CLOCKS:
             self.assertEqual(now.replace(tzinfo=timezone.utc).astimezone(KYIV).date(), expected_day)
             with freeze(now):
@@ -40,7 +40,7 @@ class TestYardTodayFilter(YardFlowCase):
                 self.assertEqual([v.is_today for v in visits.values()], [False, True, False], now)
 
     def test_booking_today_is_kyiv_day(self):
-        Booking = self.env["f3d.yard.booking"]
+        Booking = self.env["td.yard.booking"]
         now = datetime(2026, 10, 14, 22, 30)  # 01:30 15.10 за Києвом, за UTC ще 14.10
         with freeze(now):
             today = self._booking(None, self.dock_t1, now + timedelta(hours=2), now + timedelta(hours=3))
@@ -51,7 +51,7 @@ class TestYardTodayFilter(YardFlowCase):
             self.assertEqual(Booking.search(domain + [("is_today", "!=", True)]), yesterday)
 
     def test_search_views_do_not_use_browser_date(self):
-        for name in ("view_f3d_yard_visit_search", "view_f3d_yard_booking_search"):
-            arch = self.env.ref("factory3d_yard." + name).arch_db
+        for name in ("view_td_yard_visit_search", "view_td_yard_booking_search"):
+            arch = self.env.ref("td_yard." + name).arch_db
             self.assertNotIn("context_today", arch, name)
             self.assertIn("is_today", arch, name)

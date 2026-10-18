@@ -5,10 +5,10 @@ import { queryAllTexts, queryOne } from "@odoo/hoot-dom";
 import { animationFrame, mockFetch } from "@odoo/hoot-mock";
 import { Component, useState, xml } from "@odoo/owl";
 import { allowTranslations, mountWithCleanup } from "@web/../tests/web_test_helpers";
-import { UPLOAD_CONFIG } from "@factory3d_constructor/model/upload";
-import { F3dModelPreview } from "@factory3d_constructor/widgets/model_preview";
-import { F3dModelUpload } from "@factory3d_constructor/widgets/model_upload";
-import { PREVIEW_CONFIG, createNullRenderer } from "@factory3d_constructor/widgets/preview_core";
+import { UPLOAD_CONFIG } from "@td_constructor/model/upload";
+import { F3dModelPreview } from "@td_constructor/widgets/model_preview";
+import { F3dModelUpload } from "@td_constructor/widgets/model_upload";
+import { PREVIEW_CONFIG, createNullRenderer } from "@td_constructor/widgets/preview_core";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { boxTris, stlAscii, stlBinary } from "./fixtures";
 import { blobBytes, file, glbBox, sizeOf, sphereTris, until } from "./helpers";
@@ -367,7 +367,7 @@ test("«Видалити модель»: підтвердження → action_c
     expect(Dialog).toBe(ConfirmationDialog);
     expect(props.title).toBe("Видалити модель");
     await props.confirm();
-    expect(rec.env.calls.orm).toEqual([["f3d.equipment.variant", "action_clear_model", [[1]]]]);
+    expect(rec.env.calls.orm).toEqual([["td.equipment.variant", "action_clear_model", [[1]]]]);
     expect(rec.loads).toBe(1);
 });
 
@@ -381,5 +381,5 @@ test("pending_conversion: «Повторити перетворення» вик
     expect(queryOne(".o_f3d_mu_msg").textContent.includes("перетворення на сервері очікує")).toBe(true);
     queryOne(".o_f3d_mu_retry").click();
     await until(() => rec.loads === 1);
-    expect(rec.env.calls.orm).toEqual([["f3d.equipment.variant", "action_retry_convert", [[1]]]]);
+    expect(rec.env.calls.orm).toEqual([["td.equipment.variant", "action_retry_convert", [[1]]]]);
 });

@@ -2,28 +2,28 @@
 <odoo>
     <!-- SPEC §3 (V-00). W0: корінь і контейнери; пункти з діями — нижче в коментарі, розкоментувати, коли з'являться
          відповідні ir.actions (action_f3d_fire_*) у views/*.xml. У фінальному манифесті menus.xml — останній. -->
-    <menuitem id="menu_f3d_fire_root" name="Пожежна безпека" parent="factory3d_base.menu_f3d_root" sequence="85"
-              groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_evac" name="Евакуація" parent="menu_f3d_fire_root" sequence="60"
-              groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_config" name="Налаштування" parent="menu_f3d_fire_root" sequence="90"
-              groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_td_fire_root" name="Пожежна безпека" parent="td_factory3d.menu_td_root" sequence="85"
+              groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_evac" name="Евакуація" parent="menu_td_fire_root" sequence="60"
+              groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_config" name="Налаштування" parent="menu_td_fire_root" sequence="90"
+              groups="td_factory3d.group_td_manager"/>
 
-    <menuitem id="menu_f3d_fire_exit" name="Виходи" parent="menu_f3d_fire_evac" sequence="10" action="action_f3d_fire_exit" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_route" name="Маршрути" parent="menu_f3d_fire_evac" sequence="20" action="action_f3d_fire_route" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_smoke_zone" name="Димові зони" parent="menu_f3d_fire_evac" sequence="30" action="action_f3d_fire_smoke_zone" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_evac_report" name="Звіт перевірки" parent="menu_f3d_fire_evac" sequence="40" action="action_f3d_fire_evac_report" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_td_fire_exit" name="Виходи" parent="menu_td_fire_evac" sequence="10" action="action_td_fire_exit" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_route" name="Маршрути" parent="menu_td_fire_evac" sequence="20" action="action_td_fire_route" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_smoke_zone" name="Димові зони" parent="menu_td_fire_evac" sequence="30" action="action_td_fire_smoke_zone" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_evac_report" name="Звіт перевірки" parent="menu_td_fire_evac" sequence="40" action="action_td_fire_evac_report" groups="td_factory3d.group_td_user"/>
 
-    <menuitem id="menu_f3d_fire_overview" name="Огляд" parent="menu_f3d_fire_root" sequence="10" action="action_f3d_fire_overview" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_zone" name="Зони сигналізації" parent="menu_f3d_fire_root" sequence="20" action="action_f3d_fire_zone" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_device" name="Пристрої" parent="menu_f3d_fire_root" sequence="30" action="action_f3d_fire_device" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_event" name="Журнал подій" parent="menu_f3d_fire_root" sequence="40" action="action_f3d_fire_event" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_system" name="Системи" parent="menu_f3d_fire_root" sequence="50" action="action_f3d_fire_system" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_norm" name="Норми" parent="menu_f3d_fire_root" sequence="80" action="action_f3d_fire_norm" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_settings" name="Налаштування пожежної безпеки" parent="factory3d_base.menu_f3d_config" sequence="85" action="action_f3d_fire_settings" groups="factory3d_base.group_f3d_manager"/>
-    <menuitem id="menu_f3d_fire_maint_requests" name="Заявки пожежної безпеки" parent="maintenance.menu_m_request" sequence="50" action="action_f3d_fire_maint_requests" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_loop" name="Шлейфи" parent="menu_f3d_fire_config" sequence="20" action="action_f3d_fire_loop" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_td_fire_overview" name="Огляд" parent="menu_td_fire_root" sequence="10" action="action_td_fire_overview" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_zone" name="Зони сигналізації" parent="menu_td_fire_root" sequence="20" action="action_td_fire_zone" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_device" name="Пристрої" parent="menu_td_fire_root" sequence="30" action="action_td_fire_device" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_event" name="Журнал подій" parent="menu_td_fire_root" sequence="40" action="action_td_fire_event" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_system" name="Системи" parent="menu_td_fire_root" sequence="50" action="action_td_fire_system" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_norm" name="Норми" parent="menu_td_fire_root" sequence="80" action="action_td_fire_norm" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_settings" name="Налаштування пожежної безпеки" parent="td_factory3d.menu_td_config" sequence="85" action="action_td_fire_settings" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_fire_maint_requests" name="Заявки пожежної безпеки" parent="maintenance.menu_m_request" sequence="50" action="action_td_fire_maint_requests" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_loop" name="Шлейфи" parent="menu_td_fire_config" sequence="20" action="action_td_fire_loop" groups="td_factory3d.group_td_manager"/>
 
-    <menuitem id="menu_f3d_fire_drill" name="Навчальні тривоги" parent="menu_f3d_fire_root" sequence="70" action="action_f3d_fire_drill" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_fire_template" name="Шаблони навчань" parent="menu_f3d_fire_config" sequence="10" action="action_f3d_fire_drill_template" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_td_fire_drill" name="Навчальні тривоги" parent="menu_td_fire_root" sequence="70" action="action_td_fire_drill" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_fire_template" name="Шаблони навчань" parent="menu_td_fire_config" sequence="10" action="action_td_fire_drill_template" groups="td_factory3d.group_td_manager"/>
 </odoo>

@@ -1,7 +1,7 @@
 """M-07: емітери шини — перевизначення стандартних моделей (FR-18).
 
 Спільний міксин перехоплює create / write / _write_multi (обчислювані збережені поля пишуться через `_write`) / unlink
-і публікує коди через `f3d.viewer.event._notify` (коалесценція — R-15).
+і публікує коди через `td.viewer.event._notify` (коалесценція — R-15).
 """
 from odoo import api, models
 
@@ -13,7 +13,7 @@ def _wo_code(wo):
 
 
 class F3dViewerBusMixin(models.AbstractModel):
-    _name = "f3d.viewer.bus.mixin"
+    _name = "td.viewer.bus.mixin"
     _description = "3D: міксин емітера шини"
 
     _f3d_bus_fields = ()
@@ -23,11 +23,11 @@ class F3dViewerBusMixin(models.AbstractModel):
         return set()
 
     def _f3d_bus_active(self):
-        return "f3d.viewer.event" in self.env and not self.env.context.get("f3d_viewer_no_bus")
+        return "td.viewer.event" in self.env and not self.env.context.get("f3d_viewer_no_bus")
 
     def _f3d_bus_publish(self, codes):
         if codes:
-            self.env["f3d.viewer.event"]._notify(self._name, codes, self._f3d_bus_kind)
+            self.env["td.viewer.event"]._notify(self._name, codes, self._f3d_bus_kind)
 
     def _f3d_bus_hit(self, vals):
         return bool(self._f3d_bus_fields) and bool(set(self._f3d_bus_fields) & set(vals)) and self._f3d_bus_active()
@@ -69,55 +69,55 @@ class F3dViewerBusMixin(models.AbstractModel):
 
 
 class StockQuant(models.Model):
-    _inherit = ["stock.quant", "f3d.viewer.bus.mixin"]
+    _inherit = ["stock.quant", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("quantity", "reserved_quantity", "lot_id", "package_id", "location_id")
     _f3d_bus_kind = "stock"
 
     def _f3d_bus_codes(self):
-        return set(self.location_id.mapped("f3d_code"))
+        return set(self.location_id.mapped("td_code"))
 
 
 class StockMoveLine(models.Model):
-    _inherit = ["stock.move.line", "f3d.viewer.bus.mixin"]
+    _inherit = ["stock.move.line", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("quantity", "picked", "state", "location_id", "location_dest_id")
     _f3d_bus_kind = "stock"
 
     def _f3d_bus_codes(self):
-        return (set(self.location_id.mapped("f3d_code")) | set(self.location_dest_id.mapped("f3d_code"))
+        return (set(self.location_id.mapped("td_code")) | set(self.location_dest_id.mapped("td_code"))
                 | set(self.picking_id.mapped("name")))
 
 
 class StockPicking(models.Model):
-    _inherit = ["stock.picking", "f3d.viewer.bus.mixin"]
+    _inherit = ["stock.picking", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("state", "scheduled_date", "date_done", "batch_id", "partner_id")
     _f3d_bus_kind = "doc"
 
     def _f3d_bus_codes(self):
-        return set(self.mapped("name")) | set(self.batch_id.dock_id.mapped("f3d_code"))
+        return set(self.mapped("name")) | set(self.batch_id.dock_id.mapped("td_code"))
 
 
 class StockPickingBatch(models.Model):
-    _inherit = ["stock.picking.batch", "f3d.viewer.bus.mixin"]
-    _f3d_bus_fields = ("state", "dock_id", "f3d_code", "f3d_vehicle_id", "picking_ids", "scheduled_date")
+    _inherit = ["stock.picking.batch", "td.viewer.bus.mixin"]
+    _f3d_bus_fields = ("state", "dock_id", "td_code", "td_vehicle_id", "picking_ids", "scheduled_date")
     _f3d_bus_kind = "doc"
 
     def _f3d_bus_codes(self):
-        return (set(self.picking_ids.mapped("name")) | set(self.dock_id.mapped("f3d_code"))
-                | set(self.mapped("f3d_code")) | set(self.f3d_vehicle_id.mapped("f3d_code")))
+        return (set(self.picking_ids.mapped("name")) | set(self.dock_id.mapped("td_code"))
+                | set(self.mapped("td_code")) | set(self.td_vehicle_id.mapped("td_code")))
 
 
 class MrpWorkorder(models.Model):
-    _inherit = ["mrp.workorder", "f3d.viewer.bus.mixin"]
+    _inherit = ["mrp.workorder", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("state", "date_start", "date_finished", "working_state", "workcenter_id", "duration")
     _f3d_bus_kind = "state"
 
     def _f3d_bus_codes(self):
         return ({_wo_code(wo) for wo in self} | set(self.production_id.mapped("name"))
-                | set(self.workcenter_id.mapped("f3d_code")))
+                | set(self.workcenter_id.mapped("td_code")))
 
 
 class MrpProduction(models.Model):
-    _inherit = ["mrp.production", "f3d.viewer.bus.mixin"]
+    _inherit = ["mrp.production", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("state", "reservation_state", "product_qty", "date_start", "date_deadline", "move_raw_ids")
     _f3d_bus_kind = "doc"
 
@@ -126,32 +126,32 @@ class MrpProduction(models.Model):
 
 
 class MrpWorkcenter(models.Model):
-    _inherit = ["mrp.workcenter", "f3d.viewer.bus.mixin"]
+    _inherit = ["mrp.workcenter", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("working_state", "active")
     _f3d_bus_kind = "state"
 
     def _f3d_bus_codes(self):
-        return set(self.mapped("f3d_code"))
+        return set(self.mapped("td_code"))
 
 
 class MrpWorkcenterProductivity(models.Model):
-    _inherit = ["mrp.workcenter.productivity", "f3d.viewer.bus.mixin"]
+    _inherit = ["mrp.workcenter.productivity", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("date_start", "date_end", "loss_id", "workcenter_id")
     _f3d_bus_kind = "state"
 
     def _f3d_bus_codes(self):
-        return set(self.workcenter_id.mapped("f3d_code")) | {_wo_code(wo) for wo in self.workorder_id}
+        return set(self.workcenter_id.mapped("td_code")) | {_wo_code(wo) for wo in self.workorder_id}
 
 
 class MaintenanceRequest(models.Model):
-    _inherit = ["maintenance.request", "f3d.viewer.bus.mixin"]
+    _inherit = ["maintenance.request", "td.viewer.bus.mixin"]
     _f3d_bus_fields = ("stage_id", "equipment_id", "schedule_date", "user_id", "priority")
     _f3d_bus_kind = "maintenance"
 
     def _f3d_bus_codes(self):
-        codes = set(self.mapped("name")) | set(self.equipment_id.mapped("f3d_code"))
+        codes = set(self.mapped("name")) | set(self.equipment_id.mapped("td_code"))
         if "workcenter_id" in self.equipment_id._fields:
-            codes |= set(self.equipment_id.workcenter_id.mapped("f3d_code"))
+            codes |= set(self.equipment_id.workcenter_id.mapped("td_code"))
         return codes
 
     def write(self, vals):
@@ -164,7 +164,7 @@ class MaintenanceRequest(models.Model):
         """AC-49: перехід у стадію «В роботі» для обладнання з кодом сцени — знімок kind=event."""
         stage = self.env.ref("maintenance.stage_1", raise_if_not_found=False)
         for req in self.sudo():
-            code = req.equipment_id.f3d_code
+            code = req.equipment_id.td_code
             name = (req.stage_id.name or "").strip().lower()
             if code and ((stage and req.stage_id == stage) or name in IN_PROGRESS_NAMES):
-                self.env["f3d.viewer.event"]._event_snapshot("Зупинка %s · %s" % (code, req.name))
+                self.env["td.viewer.event"]._event_snapshot("Зупинка %s · %s" % (code, req.name))

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_access_door_list" model="ir.ui.view">
-        <field name="name">f3d.access.door.list</field>
-        <field name="model">f3d.access.door</field>
+    <record id="view_td_access_door_list" model="ir.ui.view">
+        <field name="name">td.access.door.list</field>
+        <field name="model">td.access.door</field>
         <field name="arch" type="xml">
             <list string="Двері СКУД" decoration-danger="alarm">
                 <field name="code"/>
@@ -20,9 +20,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_door_kanban" model="ir.ui.view">
-        <field name="name">f3d.access.door.kanban</field>
-        <field name="model">f3d.access.door</field>
+    <record id="view_td_access_door_kanban" model="ir.ui.view">
+        <field name="name">td.access.door.kanban</field>
+        <field name="model">td.access.door</field>
         <field name="arch" type="xml">
             <kanban string="Двері СКУД">
                 <field name="state"/>
@@ -41,14 +41,14 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_door_form" model="ir.ui.view">
-        <field name="name">f3d.access.door.form</field>
-        <field name="model">f3d.access.door</field>
+    <record id="view_td_access_door_form" model="ir.ui.view">
+        <field name="name">td.access.door.form</field>
+        <field name="model">td.access.door</field>
         <field name="arch" type="xml">
             <form string="Двері СКУД">
                 <header>
                     <button name="action_ack_alarm" type="object" string="Зняти тривогу" class="btn-danger"
-                            invisible="not alarm" groups="factory3d_access.group_f3d_access_security"/>
+                            invisible="not alarm" groups="td_access.group_td_access_security"/>
                 </header>
                 <sheet>
                     <field name="is_access_admin" invisible="1"/>
@@ -90,9 +90,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_door_search" model="ir.ui.view">
-        <field name="name">f3d.access.door.search</field>
-        <field name="model">f3d.access.door</field>
+    <record id="view_td_access_door_search" model="ir.ui.view">
+        <field name="name">td.access.door.search</field>
+        <field name="model">td.access.door</field>
         <field name="arch" type="xml">
             <search string="Двері СКУД">
                 <field name="code"/>
@@ -105,9 +105,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_door" model="ir.actions.act_window">
+    <record id="action_td_access_door" model="ir.actions.act_window">
         <field name="name">Двері</field>
-        <field name="res_model">f3d.access.door</field>
+        <field name="res_model">td.access.door</field>
         <field name="view_mode">kanban,list,form</field>
     </record>
 </odoo>

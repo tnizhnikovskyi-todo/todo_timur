@@ -12,21 +12,21 @@
 
 | # | Модуль | Фаза | Зависит от (factory3d) | Статус | Сессия | Старт | Готов | Тесты | DEC |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `factory3d_base` | 1 | — | TODO | | | | | |
-| 2 | `factory3d_iot_sim` | 1 | base | TODO | | | | | |
-| 3 | `factory3d_telemetry` | 2 | base | TODO | | | | | |
-| 4 | `factory3d_viewer` | 1 | base | TODO | | | | | |
-| 5 | `factory3d_access` | 4 | base | TODO | | | | | |
-| 6 | `factory3d_machine_connect` | 2 | telemetry | TODO | | | | | |
-| 7 | `factory3d_energy` | 3 | telemetry | TODO | | | | | |
-| 8 | `factory3d_yard` | 4 | base, telemetry | TODO | | | | | |
-| 9 | `factory3d_bms` | 5 | telemetry | TODO | | | | | |
-| 10 | `factory3d_fire_safety` | 5 | telemetry | TODO | | | | | |
-| 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | TODO | | | | | |
+| 1 | `td_factory3d` | 1 | — | TODO | | | | | |
+| 2 | `td_iot_sim` | 1 | base | TODO | | | | | |
+| 3 | `td_telemetry` | 2 | base | TODO | | | | | |
+| 4 | `td_viewer3d` | 1 | base | TODO | | | | | |
+| 5 | `td_access` | 4 | base | TODO | | | | | |
+| 6 | `td_machine_connect` | 2 | telemetry | TODO | | | | | |
+| 7 | `td_energy` | 3 | telemetry | TODO | | | | | |
+| 8 | `td_yard` | 4 | base, telemetry | TODO | | | | | |
+| 9 | `td_bms` | 5 | telemetry | TODO | | | | | |
+| 10 | `td_fire_safety` | 5 | telemetry | TODO | | | | | |
+| 11 | `td_genset` + мост `td_genset_factory3d` | 3 | base, telemetry, energy | TODO | | | | | |
 
 Порядок строк — приоритет запуска. Эмулятор (`iot_sim`) и телеметрия идут раньше: от них зависят стендовые тесты.
-Мостики auto_install (`factory3d_viewer_sale`, `factory3d_telemetry_viewer`, `factory3d_fire_safety_viewer`,
-`factory3d_access_telemetry`) делают лидеры модулей, в чьих §6 они описаны.
+Мостики auto_install (`td_viewer3d_sale`, `td_telemetry_viewer3d`, `td_fire_safety_viewer3d`,
+`td_access_telemetry`) делают лидеры модулей, в чьих §6 они описаны.
 
 ## Среда
 

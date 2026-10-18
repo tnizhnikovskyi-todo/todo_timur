@@ -24,9 +24,9 @@ def _canonical(data):
 def build_snapshot(site):
     """Шаблони місць (не комірки): шари, місця, розміщення, налаштування перевірок. `active` лише для діючих записів."""
     env = site.env
-    layers = env['f3d.layer'].search([('site_id', '=', site.id)], order='sequence, id')
-    slots = env['f3d.slot'].search([('site_id', '=', site.id)], order='layer_id, code_prefix')
-    placements = env['f3d.placement'].search([('site_id', '=', site.id)], order='layer_id, code')
+    layers = env['td.layer'].search([('site_id', '=', site.id)], order='sequence, id')
+    slots = env['td.slot'].search([('site_id', '=', site.id)], order='layer_id, code_prefix')
+    placements = env['td.placement'].search([('site_id', '=', site.id)], order='layer_id, code')
     parent = site.default_parent_location_id
     snap = {
         'schema': SCHEMA,
@@ -125,7 +125,7 @@ def dump_snapshot(snap):
 def create_version(site, note='', report=None, is_seed=False, counts=None, baseline=None):
     """Нова версія: знімок, n = max+1, попередня `superseded`, сайт: active/base/published_rev/draft_changes."""
     env = site.env
-    Version = env['f3d.layout.version'].sudo()
+    Version = env['td.layout.version'].sudo()
     previous = Version.search([('site_id', '=', site.id)], order='n desc', limit=1)
     n = (previous.n if previous else 0) + 1
     snap = build_snapshot(site)
@@ -161,7 +161,7 @@ def create_version(site, note='', report=None, is_seed=False, counts=None, basel
                 'name': 'f3d_layout_%s_v%d.json' % (site.code, n),
                 'raw': raw,
                 'mimetype': 'application/json',
-                'res_model': 'f3d.layout.version',
+                'res_model': 'td.layout.version',
                 'res_id': version.id,
                 'type': 'binary',
             }
@@ -230,7 +230,7 @@ def count_differences(snap, base):
 
 
 def _resolve_variant(env, item):
-    Variant = env['f3d.equipment.variant'].with_context(active_test=False)
+    Variant = env['td.equipment.variant'].with_context(active_test=False)
     variant = Variant.browse(item['variant_id']).exists() if item.get('variant_id') else Variant
     if variant:
         return variant
@@ -244,7 +244,7 @@ def apply_snapshot(site, snap):
     """Відновити чернетку за знімком (за uid): оновити/створити, зайве видалити; Odoo-записи не чіпати."""
     site = site.sudo().with_context(f3d_no_touch=True, active_test=False)
     env = site.env
-    Layer, Slot, Placement = env['f3d.layer'], env['f3d.slot'], env['f3d.placement']
+    Layer, Slot, Placement = env['td.layer'], env['td.slot'], env['td.placement']
     # 1) варіанти розміщень мають існувати — інакше нічого не змінюємо
     variants, missing = {}, []
     for item in snap['placements']:
@@ -277,7 +277,7 @@ def apply_snapshot(site, snap):
     Slot.search([('site_id', '=', site.id), ('uid', 'not in', [s['uid'] for s in snap['slots']])]).unlink()
     Layer.search([('site_id', '=', site.id), ('uid', 'not in', [layer['uid'] for layer in snap['layers']])]).unlink()
     # 4) шари
-    terms = {t.key: t.id for t in env['f3d.term'].search([('term_type', '=', 'slot_type')])}
+    terms = {t.key: t.id for t in env['td.term'].search([('term_type', '=', 'slot_type')])}
     layers = {layer.uid: layer for layer in Layer.search([('site_id', '=', site.id)])}
     for item in snap['layers']:
         groups = []
@@ -366,7 +366,7 @@ def apply_snapshot(site, snap):
         if item['check'] in configs:
             configs[item['check']].write(vals)
         else:
-            env['f3d.check.config'].create(dict(vals, site_id=site.id, check_key=item['check']))
+            env['td.check.config'].create(dict(vals, site_id=site.id, check_key=item['check']))
 
 
 def restore_draft(version):

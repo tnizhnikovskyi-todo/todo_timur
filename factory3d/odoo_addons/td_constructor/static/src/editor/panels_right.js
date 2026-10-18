@@ -374,7 +374,7 @@ export function renderCellsBox() {
             h("h3", { class: "h3" }, `Комірки · ${fmtInt(cells.filter((c) => !c.disabled).length)}`),
             h("div", { class: "scroll" }, h("table", { class: "cells" }, h("thead", null, h("tr", null, h("th", null, "Код"), h("th", null, "Місць"), h("th", null, "Макс. кг"))), h("tbody", null, rows))),
             cells.length > lim ? h("button", { class: "fbtn sm", type: "button", style: { marginTop: "6px" }, onclick: () => { S.ui.cellsAll = true; renderCellsBox(); } }, `Показати всі (${cells.length})`) : null,
-            h("div", { class: "small muted", style: { marginTop: "4px" } }, "Це майбутні stock.location із f3d_code, barcode і місткістю (створюються при публікації). Позначені рядки — ручна правка комірки.")
+            h("div", { class: "small muted", style: { marginTop: "4px" } }, "Це майбутні stock.location із td_code, barcode і місткістю (створюються при публікації). Позначені рядки — ручна правка комірки.")
         )
     );
     const sc = S.selCell && cells.find((c) => c.code === S.selCell);

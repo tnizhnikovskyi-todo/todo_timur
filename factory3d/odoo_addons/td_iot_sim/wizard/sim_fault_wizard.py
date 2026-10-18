@@ -3,10 +3,10 @@ from odoo.exceptions import ValidationError
 
 
 class F3dSimFaultWizard(models.TransientModel):
-    _name = 'f3d.sim.fault.wizard'
+    _name = 'td.sim.fault.wizard'
     _description = 'Поставити збій пристрою'
 
-    device_id = fields.Many2one('f3d.sim.device', string='Пристрій', required=True)
+    device_id = fields.Many2one('td.sim.device', string='Пристрій', required=True)
     reason = fields.Selection(
         [('generic', 'Загальний збій'), ('spindle', 'Шпиндель/привід'), ('emergency', 'Аварійна кнопка'),
          ('power', 'Втрата живлення'), ('comm', "Втрата зв'язку"), ('sensor', 'Датчик'),

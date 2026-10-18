@@ -3,11 +3,11 @@ import unittest
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools.payload import BASE_KEYS, STATIC_SECTIONS, PayloadBuilder, get_providers
+from odoo.addons.td_viewer3d.tools.payload import BASE_KEYS, STATIC_SECTIONS, PayloadBuilder, get_providers
 
 from .common import F3dViewerBase
 
-ZZ = "f3d.viewer.provider.zz_"
+ZZ = "td.viewer.provider.zz_"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -17,7 +17,7 @@ class TestProviders(F3dViewerBase):
     def setUpClass(cls):
         super().setUpClass()
         if ZZ + "test" not in cls.env:
-            raise unittest.SkipTest("test_factory3d_viewer не встановлено")
+            raise unittest.SkipTest("test_td_viewer3d не встановлено")
 
     def _builder(self, user=None, ctx=None, **kw):
         env = self.env(user=user or self.user_f3d)
@@ -27,7 +27,7 @@ class TestProviders(F3dViewerBase):
 
     def _is_own(self, name):
         mod = self.env[name]._original_module
-        return name.startswith(ZZ) or mod in ("factory3d_viewer", "test_factory3d_viewer")
+        return name.startswith(ZZ) or mod in ("td_viewer3d", "test_td_viewer3d")
 
     def _covered_sections(self, exclude=()):
         """Розділи, які обслуговує хоч один зареєстрований провайдер (крім `exclude`): очікування
@@ -37,7 +37,7 @@ class TestProviders(F3dViewerBase):
 
     def _patch_zz_fail_section(self):
         """Переносить zz_fail на статичний розділ без «живого» провайдера й повертає його назву
-        (за замовчуванням zz_fail пише у `fire`, який перекриває провайдер factory3d_fire_safety_viewer)."""
+        (за замовчуванням zz_fail пише у `fire`, який перекриває провайдер td_fire_safety_viewer3d)."""
         covered = self._covered_sections(exclude=(ZZ + "fail",))
         free = [k for k in ("lighting", "passports", "evacuation") if k not in covered]
         self.assertTrue(free, "немає статичного розділу без провайдера для перевірки zz_fail")
@@ -78,7 +78,7 @@ class TestProviders(F3dViewerBase):
 
     def test_failed_provider_isolated(self):
         """AC-13."""
-        logger = "odoo.addons.factory3d_viewer.tools.payload"
+        logger = "odoo.addons.td_viewer3d.tools.payload"
         section = self._patch_zz_fail_section()
         with self.assertLogs(logger, level="ERROR"):
             data = self._builder(ctx={"zz_fail": True}).build()
@@ -91,15 +91,15 @@ class TestProviders(F3dViewerBase):
         self.assertNotIn("partial", data.get(section, {}))  # частковий запис відкотився
 
     def test_failed_provider_restores_static_full(self):
-        from odoo.addons.factory3d_viewer.tools import static_data
+        from odoo.addons.td_viewer3d.tools import static_data
         section = self._patch_zz_fail_section()
-        with self.assertLogs("odoo.addons.factory3d_viewer.tools.payload", level="ERROR"):
+        with self.assertLogs("odoo.addons.td_viewer3d.tools.payload", level="ERROR"):
             data = self._builder(ctx={"zz_fail": True}, full=True).build()
         self.assertEqual(data[section], static_data.load()[section])
 
     def test_group_denied(self):
         cls = type(self.env[ZZ + "duck"])
-        self.patch(cls, "_f3d_group", "factory3d_viewer.no_such_group")
+        self.patch(cls, "_f3d_group", "td_viewer3d.no_such_group")
         data = self._builder().build()
         self.assertEqual(data["meta"]["sections"]["zz_duck"], "denied")
         # інші провайдери «infra» (energy, genset…) виконуються після zz_duck і перекривають статус; перевіряємо
@@ -121,7 +121,7 @@ class TestProviders(F3dViewerBase):
     def test_provider_without_collect_skipped(self):
         cls = type(self.env[ZZ + "test"])
         self.patch(cls, "_f3d_viewer_collect", None)
-        with self.assertLogs("odoo.addons.factory3d_viewer.tools.payload", level="WARNING") as cm:
+        with self.assertLogs("odoo.addons.td_viewer3d.tools.payload", level="WARNING") as cm:
             data = self._builder().build()
         self.assertTrue(any("без _f3d_viewer_collect" in m for m in cm.output))
         self.assertNotIn("Z-TEST", data.get("zones", {}))  # розділ zones тепер живий (chains M-01g)
@@ -129,7 +129,7 @@ class TestProviders(F3dViewerBase):
     def test_duck_typed_provider_getattr(self):
         """AC-57."""
         duck = self.env[ZZ + "duck"]
-        self.assertNotIn("f3d.viewer.provider", type(duck)._inherit)
+        self.assertNotIn("td.viewer.provider", type(duck)._inherit)
         self.assertFalse(hasattr(duck, "_f3d_viewer_delta"))
         calls = self._record_calls()
         data = self._builder().build()
@@ -157,7 +157,7 @@ class TestProviders(F3dViewerBase):
             self.assertEqual(data["meta"]["sections"].get(k), "static")
 
     def test_abstract_defaults(self):
-        base = self.env["f3d.viewer.provider"]
+        base = self.env["td.viewer.provider"]
         self.assertEqual(base._f3d_sequence, 1000)
         self.assertEqual(base._f3d_sections, ())
         self.assertEqual(base._f3d_viewer_bus_models(), [])

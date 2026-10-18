@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Будує data/seed_site.json («Меблеве підприємство», SPEC §5.2) із вихідних даних макета factory3d.
 
-Джерела (у репозиторії): `factory3d_viewer/static/data/model_static.json` (layout, evacuation, passports),
+Джерела (у репозиторії): `td_viewer3d/static/data/model_static.json` (layout, evacuation, passports),
 `plant/layout.py` (габарити, точки аспірації), прикладна розкладка — порт прикладу прототипу
 (`build/constructor/PROTOTYPE.md`): стелажі ГП/сировини/фурнітури/крайки, місця під верстати, проходи, виходи, мережі.
 
-Запуск (із кореня репозиторію):  python3 factory3d/odoo_addons/factory3d_constructor/tools/extract_seed.py
+Запуск (із кореня репозиторію):  python3 factory3d/odoo_addons/td_constructor/tools/extract_seed.py
 Результат детермінований: `uid` — читабельні ключі, а не випадкові UUID (ідемпотентність seed).
 """
 
@@ -20,8 +20,8 @@ from pathlib import Path
 MODULE = Path(__file__).resolve().parents[1]
 FACTORY3D = MODULE.parents[1]
 OUT = MODULE / 'data' / 'seed_site.json'
-STATIC = FACTORY3D / 'odoo_addons' / 'factory3d_viewer' / 'static' / 'data' / 'model_static.json'
-LOCATIONS_CSV = FACTORY3D / 'odoo_addons' / 'factory3d_base' / 'data' / 'scene_locations.csv'
+STATIC = FACTORY3D / 'odoo_addons' / 'td_viewer3d' / 'static' / 'data' / 'model_static.json'
+LOCATIONS_CSV = FACTORY3D / 'odoo_addons' / 'td_factory3d' / 'data' / 'scene_locations.csv'
 
 sys.path.insert(0, str(FACTORY3D))
 from plant import layout as LY  # noqa: E402  (plant/layout.py: FOOTPRINT, DUCT_POINTS, …)
@@ -483,7 +483,7 @@ for i, x in enumerate([30.5, 33.7]):  # EB-Un: коди EB-U1-S1-L1 (1 розр�
         },
         EB_PARENT,
     )
-# каталог локацій factory3d_base (scene_locations.csv): код → вид локації Odoo (f3d_loc_kind)
+# каталог локацій td_factory3d (scene_locations.csv): код → вид локації Odoo (td_loc_kind)
 with LOCATIONS_CSV.open(encoding='utf-8', newline='') as handle:
     LOC_KIND = {row['code']: row['kind'] for row in csv.DictReader(handle)}
 # окремі місця на одну комірку (стоси плит, приймання, комплекти, зони видачі): код комірки = код об'єкта моделі.

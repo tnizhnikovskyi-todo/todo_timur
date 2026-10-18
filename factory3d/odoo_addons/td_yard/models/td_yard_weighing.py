@@ -3,13 +3,13 @@ from datetime import timedelta
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from .f3d_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _f3d_yard_require
 
 KIND_LABELS = {"in": "В'їзд", "out": "Виїзд", "check": "Контрольне"}
 
 
 class F3dYardWeighing(models.Model):
-    _name = "f3d.yard.weighing"
+    _name = "td.yard.weighing"
     _description = "Двір: зважування"
     _inherit = ["mail.thread"]
     _order = "ts desc, id desc"
@@ -20,7 +20,7 @@ class F3dYardWeighing(models.Model):
         "res.company", string="Компанія", required=True, default=lambda s: s.env.company, index=True
     )
     scale_id = fields.Many2one(
-        "f3d.yard.scale",
+        "td.yard.scale",
         string="Ваги",
         required=True,
         index=True,
@@ -48,7 +48,7 @@ class F3dYardWeighing(models.Model):
         tracking=True,
     )
     visit_id = fields.Many2one(
-        "f3d.yard.visit", string="Рейс", index=True, ondelete="set null", check_company=True, tracking=True
+        "td.yard.visit", string="Рейс", index=True, ondelete="set null", check_company=True, tracking=True
     )
     role = fields.Selection(
         [("gross", "Брутто"), ("tare", "Тара"), ("check", "Контроль")],
@@ -65,7 +65,7 @@ class F3dYardWeighing(models.Model):
 
     @api.model
     def _default_scale(self):
-        return self.env["f3d.yard.scale"].search([("company_id", "=", self.env.company.id)], limit=1)
+        return self.env["td.yard.scale"].search([("company_id", "=", self.env.company.id)], limit=1)
 
     @api.depends("kind", "visit_id.visit_type")
     def _compute_role(self):
@@ -114,10 +114,10 @@ class F3dYardWeighing(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         Seq = self.env["ir.sequence"].sudo()
-        visits = self.env["f3d.yard.visit"].sudo()
+        visits = self.env["td.yard.visit"].sudo()
         for vals in vals_list:
             if not vals.get("name") or vals["name"] == "/":
-                vals["name"] = Seq.next_by_code("f3d.yard.weighing") or "/"
+                vals["name"] = Seq.next_by_code("td.yard.weighing") or "/"
             visit = visits.browse(vals.get("visit_id"))
             if "state" not in vals:
                 vals["state"] = "assigned" if visit else "unassigned"
@@ -146,7 +146,7 @@ class F3dYardWeighing(models.Model):
     # ------------------------------------------------------------------ дії
     def action_assign(self, visit_id, kind=None):
         _f3d_yard_require(self.env, GRP_SEC)
-        visit = self.env["f3d.yard.visit"].browse(visit_id).exists()
+        visit = self.env["td.yard.visit"].browse(visit_id).exists()
         if not visit:
             raise UserError("Оберіть рейс.")
         for rec in self:

@@ -22,11 +22,11 @@ PARAMS = {
 @tagged("post_install", "-at_install")
 class TestInstall(TransactionCase):
     def test_module_installed(self):
-        mod = self.env["ir.module.module"].search([("name", "=", "factory3d_genset")])
+        mod = self.env["ir.module.module"].search([("name", "=", "td_genset_factory3d")])
         self.assertEqual(mod.state, "installed")
 
     def test_params(self):
         icp = self.env["ir.config_parameter"].sudo()
         for key in PARAMS:
-            self.assertTrue(icp.search_count([("key", "=", "factory3d.genset." + key)]), key)
-        self.assertEqual(icp.get_param("factory3d.genset.offline_min"), "5")
+            self.assertTrue(icp.search_count([("key", "=", "td.genset." + key)]), key)
+        self.assertEqual(icp.get_param("td.genset.offline_min"), "5")

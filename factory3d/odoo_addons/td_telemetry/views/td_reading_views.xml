@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_reading_graph" model="ir.ui.view">
-        <field name="name">f3d.reading.graph</field>
-        <field name="model">f3d.reading</field>
+    <record id="view_td_reading_graph" model="ir.ui.view">
+        <field name="name">td.reading.graph</field>
+        <field name="model">td.reading</field>
         <field name="arch" type="xml">
             <graph string="Показання" type="line" stacked="0">
                 <field name="ts" interval="hour"/>
@@ -12,9 +12,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_reading_list" model="ir.ui.view">
-        <field name="name">f3d.reading.list</field>
-        <field name="model">f3d.reading</field>
+    <record id="view_td_reading_list" model="ir.ui.view">
+        <field name="name">td.reading.list</field>
+        <field name="model">td.reading</field>
         <field name="arch" type="xml">
             <list string="Показання" create="false" edit="false" default_order="ts desc">
                 <field name="ts"/>
@@ -30,9 +30,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_reading_search" model="ir.ui.view">
-        <field name="name">f3d.reading.search</field>
-        <field name="model">f3d.reading</field>
+    <record id="view_td_reading_search" model="ir.ui.view">
+        <field name="name">td.reading.search</field>
+        <field name="model">td.reading</field>
         <field name="arch" type="xml">
             <search string="Показання">
                 <field name="signal_id"/>
@@ -54,9 +54,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_reading" model="ir.actions.act_window">
+    <record id="action_td_reading" model="ir.actions.act_window">
         <field name="name">Показання</field>
-        <field name="res_model">f3d.reading</field>
+        <field name="res_model">td.reading</field>
         <field name="view_mode">graph,list</field>
         <field name="domain">[]</field>
         <field name="context">{'search_default_last_48h': 1}</field>

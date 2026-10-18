@@ -4,15 +4,15 @@ from datetime import timedelta
 from odoo import fields
 from odoo.tests import BaseCase, tagged
 
-from odoo.addons.factory3d_viewer.hooks import is_demo_db
+from odoo.addons.td_viewer3d.hooks import is_demo_db
 
-from odoo.addons.factory3d_viewer.tools import payload as payload_tools
-from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder, deep_merge, default_delta
+from odoo.addons.td_viewer3d.tools import payload as payload_tools
+from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, deep_merge, default_delta
 
 from .common import F3dViewerBase
 
-ZZ = "f3d.viewer.provider.zz_"
-LOGGER = "odoo.addons.factory3d_viewer.tools.payload"
+ZZ = "td.viewer.provider.zz_"
+LOGGER = "odoo.addons.td_viewer3d.tools.payload"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -38,7 +38,7 @@ class TestDeepMerge(BaseCase):
             deep_merge({}, [])
 
     def test_import_path(self):
-        from odoo.addons.factory3d_viewer.tools.payload import deep_merge as imported
+        from odoo.addons.td_viewer3d.tools.payload import deep_merge as imported
         self.assertIs(imported, payload_tools.deep_merge)
 
 
@@ -49,7 +49,7 @@ class TestDelta(F3dViewerBase):
     def setUpClass(cls):
         super().setUpClass()
         if ZZ + "duck" not in cls.env:
-            raise unittest.SkipTest("test_factory3d_viewer не встановлено")
+            raise unittest.SkipTest("test_td_viewer3d не встановлено")
 
     def _delta(self, changes, **kw):
         env = self.env(user=self.user_f3d)
@@ -86,9 +86,9 @@ class TestDelta(F3dViewerBase):
         self.assertEqual(res["events"], 0)
 
     def test_full_when_old_since(self):
-        if "f3d.viewer.event" not in self.env:
-            self.skipTest("немає f3d.viewer.event")
-        self.patch(type(self.env["f3d.viewer.event"]), "_since", lambda *a, **k: None)
+        if "td.viewer.event" not in self.env:
+            self.skipTest("немає td.viewer.event")
+        self.patch(type(self.env["td.viewer.event"]), "_since", lambda *a, **k: None)
         res = DeltaBuilder(self.env(user=self.user_f3d), None).build()
         self.assertEqual(res["full"], True)
         self.assertNotIn("patch", res)
@@ -138,7 +138,7 @@ class TestDelta(F3dViewerBase):
         self.env.flush_all()
         self.env.cr.precommit.run()
         self.env.flush_all()
-        self.env["f3d.viewer.event"].sudo().search([]).unlink()
+        self.env["td.viewer.event"].sudo().search([]).unlink()
 
     def _delta_since(self, since):
         return DeltaBuilder(self.env(user=self.user_f3d), since).build()
@@ -151,7 +151,7 @@ class TestDelta(F3dViewerBase):
         """AC-16."""
         self._need_demo()
         self.demo_clock()
-        loc = self.env["stock.location"].search([("f3d_code", "=", "PLT-04C")], limit=1)
+        loc = self.env["stock.location"].search([("td_code", "=", "PLT-04C")], limit=1)
         quant = self.env["stock.quant"].search([("location_id", "=", loc.id), ("quantity", ">", 0)], limit=1)
         if not quant:
             self.skipTest("немає залишку в PLT-04C")
@@ -184,8 +184,8 @@ class TestDelta(F3dViewerBase):
         self.env.cr.precommit.run()
         patch_ = self._delta_since(since)["patch"]
         self.assertEqual(patch_["workorders"]["WO%05d" % wo.id]["state"], "done")
-        if wc.f3d_code:
-            self.assertIn(wc.f3d_code, patch_["workcenters"])
+        if wc.td_code:
+            self.assertIn(wc.td_code, patch_["workcenters"])
         self.assertIn(mo.name, [p["name"] for p in patch_["productions"]])
         self.assertIn("sheet_chain", patch_)
 

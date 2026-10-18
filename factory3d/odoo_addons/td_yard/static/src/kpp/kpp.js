@@ -5,7 +5,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { debounce } from "@web/core/utils/timing";
 
-const MODEL = "f3d.yard.visit";
+const MODEL = "td.yard.visit";
 const ACTION_LABELS = {
     admit: "Пропустити",
     reject: "Відхилити",

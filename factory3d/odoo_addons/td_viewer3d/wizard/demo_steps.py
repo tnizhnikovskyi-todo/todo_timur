@@ -2,7 +2,7 @@
 
 Між маркерами «порт» і «Runner» текст збігається з plant/*.py, крім кількох правок (docks, equipment);
 `test_demo_steps_diff` стежить, щоб відмінності не перевищували 80 рядків. Усе поза маркерами — обв'язка
-(`print` перенаправлено в лог майстра, `Runner` запускає один крок і викликає хуки factory3d_base).
+(`print` перенаправлено в лог майстра, `Runner` запускає один крок і викликає хуки td_factory3d).
 """
 import base64
 import io
@@ -458,7 +458,7 @@ class FlowSteps:
             model = " ".join(x for x in (pp.get("manufacturer"), pp.get("model")) if x) or False
             extra = f"Зона: {zone_of[code]}" if code in zone_of else ""
             vals = {"model": model,
-                    "note": f"<p>{escape(extra)}</p>" if extra else False}  # паспорт — f3d_passport_id (base)
+                    "note": f"<p>{escape(extra)}</p>" if extra else False}  # паспорт — td_passport_id (base)
             xid = key("eq", code)
             if self.ref(xid):
                 o("maintenance.equipment", "write", [self.ref(xid)], vals)
@@ -719,7 +719,7 @@ class FlowSteps:
             if not closed:
                 vals["picking_ids"] = [(6, 0, [pid])]
             if p.get("truck") == name:  # код фури в 3D і її назва з макета (base CB-06, X-15)
-                vals.update(f3d_code=p["truck"], f3d_truck=p["truck"])
+                vals.update(td_code=p["truck"], td_truck=p["truck"])
             src = o("stock.move", "search_read", [["picking_id", "=", pid]], fields=["location_id"])
             bid = self.ensure(key("batch", name), "stock.picking.batch", vals, update=not closed)
             for m in src if p["type"] == "outgoing" and not closed else []:  # stock_fleet кладе джерело на док
@@ -820,25 +820,25 @@ class FlowSteps:
         return specs
 
     def step_iot_module(self):
-        """Імпортувати data-модуль factory3d_iot_sim з odoo_addons/ (Застосунки → Імпортувати модуль)."""
+        """Імпортувати data-модуль td_iot_sim з odoo_addons/ (Застосунки → Імпортувати модуль)."""
         o = self.o
         root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "odoo_addons")
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-            for base, _, files in os.walk(os.path.join(root, "factory3d_iot_sim")):
+            for base, _, files in os.walk(os.path.join(root, "td_iot_sim")):
                 for f in files:
                     full = os.path.join(base, f)
                     z.write(full, os.path.relpath(full, root))
         wid = o("base.import.module", "create", {"module_file": base64.b64encode(buf.getvalue()).decode(),
                                                  "force": True})
         o("base.import.module", "import_module", [wid])
-        print(f"iot_module: factory3d_iot_sim — {o.installed('factory3d_iot_sim').get('factory3d_iot_sim')}")
+        print(f"iot_module: td_iot_sim — {o.installed('td_iot_sim').get('td_iot_sim')}")
 
     def step_signals(self):
-        """Сигнали обладнання для модуля factory3d_iot_sim (імітація підключених датчиків)."""
+        """Сигнали обладнання для модуля td_iot_sim (імітація підключених датчиків)."""
         o = self.o
         if not o.has("x_f3d_signal"):
-            print("signals: модуль factory3d_iot_sim не встановлено — пропуск")
+            print("signals: модуль td_iot_sim не встановлено — пропуск")
             return
         specs = self.signal_specs()
         req = {}
@@ -1572,7 +1572,7 @@ class Runner(Push):
 
     def run(self, step):
         """Один крок → ('done'|'skipped', повідомлення). Помилки підіймаються до виклику."""
-        from odoo.addons.factory3d_base import hooks as base_hooks
+        from odoo.addons.td_factory3d import hooks as base_hooks
         _LOG[0], self.msgs = self._say, []
         try:
             try:
@@ -1606,6 +1606,6 @@ class Runner(Push):
         raise Skip("поля x_* заборонені; ворота й фури — пакетні переміщення (крок docks)")
 
     def step_iot_module(self):
-        if self.o.installed("factory3d_iot_sim").get("factory3d_iot_sim") == "installed":
-            raise Skip("factory3d_iot_sim уже встановлено")
-        raise Skip("встановіть factory3d_iot_sim з Застосунків")
+        if self.o.installed("td_iot_sim").get("td_iot_sim") == "installed":
+            raise Skip("td_iot_sim уже встановлено")
+        raise Skip("встановіть td_iot_sim з Застосунків")

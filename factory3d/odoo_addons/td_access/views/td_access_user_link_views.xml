@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_access_user_link_list" model="ir.ui.view">
-        <field name="name">f3d.access.user.link.list</field>
-        <field name="model">f3d.access.user.link</field>
+    <record id="view_td_access_user_link_list" model="ir.ui.view">
+        <field name="name">td.access.user.link.list</field>
+        <field name="model">td.access.user.link</field>
         <field name="arch" type="xml">
             <list string="Користувачі BioStar" decoration-muted="not in_biostar">
                 <field name="biostar_user_id"/>
@@ -19,14 +19,14 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_user_link_form" model="ir.ui.view">
-        <field name="name">f3d.access.user.link.form</field>
-        <field name="model">f3d.access.user.link</field>
+    <record id="view_td_access_user_link_form" model="ir.ui.view">
+        <field name="name">td.access.user.link.form</field>
+        <field name="model">td.access.user.link</field>
         <field name="arch" type="xml">
             <form string="Користувач BioStar">
                 <header>
                     <button name="action_rematch" type="object" string="Підібрати працівника"
-                            groups="factory3d_access.group_f3d_access_admin"/>
+                            groups="td_access.group_td_access_admin"/>
                     <button name="action_open_events" type="object" string="Події"/>
                 </header>
                 <sheet>
@@ -56,9 +56,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_user_link_search" model="ir.ui.view">
-        <field name="name">f3d.access.user.link.search</field>
-        <field name="model">f3d.access.user.link</field>
+    <record id="view_td_access_user_link_search" model="ir.ui.view">
+        <field name="name">td.access.user.link.search</field>
+        <field name="model">td.access.user.link</field>
         <field name="arch" type="xml">
             <search string="Користувачі BioStar">
                 <field name="biostar_user_id"/>
@@ -74,9 +74,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_user_link" model="ir.actions.act_window">
+    <record id="action_td_access_user_link" model="ir.actions.act_window">
         <field name="name">Користувачі BioStar</field>
-        <field name="res_model">f3d.access.user.link</field>
+        <field name="res_model">td.access.user.link</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_unlinked': 1}</field>
     </record>

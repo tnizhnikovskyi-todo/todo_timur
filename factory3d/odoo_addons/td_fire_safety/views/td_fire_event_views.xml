@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-08 -->
-    <record id="view_f3d_fire_event_list" model="ir.ui.view">
-        <field name="name">f3d.fire.event.list</field>
-        <field name="model">f3d.fire.event</field>
+    <record id="view_td_fire_event_list" model="ir.ui.view">
+        <field name="name">td.fire.event.list</field>
+        <field name="model">td.fire.event</field>
         <field name="arch" type="xml">
             <list create="false" edit="false" delete="false" default_order="ts desc"
                   decoration-bf="level == 'alarm' and not ack">
@@ -25,9 +25,9 @@
             </list>
         </field>
     </record>
-    <record id="view_f3d_fire_event_search" model="ir.ui.view">
-        <field name="name">f3d.fire.event.search</field>
-        <field name="model">f3d.fire.event</field>
+    <record id="view_td_fire_event_search" model="ir.ui.view">
+        <field name="name">td.fire.event.search</field>
+        <field name="model">td.fire.event</field>
         <field name="arch" type="xml">
             <search>
                 <field name="text"/>
@@ -52,9 +52,9 @@
             </search>
         </field>
     </record>
-    <record id="view_f3d_fire_event_graph" model="ir.ui.view">
-        <field name="name">f3d.fire.event.graph</field>
-        <field name="model">f3d.fire.event</field>
+    <record id="view_td_fire_event_graph" model="ir.ui.view">
+        <field name="name">td.fire.event.graph</field>
+        <field name="model">td.fire.event</field>
         <field name="arch" type="xml">
             <graph type="bar">
                 <field name="ts" interval="day"/>
@@ -64,9 +64,9 @@
     </record>
 
     <!-- V-09 -->
-    <record id="view_f3d_fire_event_form" model="ir.ui.view">
-        <field name="name">f3d.fire.event.form</field>
-        <field name="model">f3d.fire.event</field>
+    <record id="view_td_fire_event_form" model="ir.ui.view">
+        <field name="name">td.fire.event.form</field>
+        <field name="model">td.fire.event</field>
         <field name="arch" type="xml">
             <form string="Подія журналу" create="false" delete="false">
                 <header>
@@ -111,9 +111,9 @@
             </form>
         </field>
     </record>
-    <record id="view_f3d_fire_event_form_manual" model="ir.ui.view">
-        <field name="name">f3d.fire.event.form.manual</field>
-        <field name="model">f3d.fire.event</field>
+    <record id="view_td_fire_event_form_manual" model="ir.ui.view">
+        <field name="name">td.fire.event.form.manual</field>
+        <field name="model">td.fire.event</field>
         <field name="arch" type="xml">
             <form string="Коментар у журнал">
                 <sheet>
@@ -132,9 +132,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_event" model="ir.actions.act_window">
+    <record id="action_td_fire_event" model="ir.actions.act_window">
         <field name="name">Журнал подій</field>
-        <field name="res_model">f3d.fire.event</field>
+        <field name="res_model">td.fire.event</field>
         <field name="view_mode">list,form,graph</field>
         <field name="context">{'search_default_filter_7d': 1}</field>
     </record>

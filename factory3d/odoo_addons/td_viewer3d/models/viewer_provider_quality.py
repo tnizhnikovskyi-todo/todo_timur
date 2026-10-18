@@ -11,8 +11,8 @@ QC_CODE = "QC-1"
 
 class F3dViewerProviderQuality(models.AbstractModel):
     """M-01d: перевірки якості (лише якщо є quality.check — Enterprise)."""
-    _name = "f3d.viewer.provider.quality"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.quality"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних quality"
 
     _f3d_sequence = 45
@@ -36,14 +36,14 @@ class F3dViewerProviderQuality(models.AbstractModel):
         # Odoo 19: у quality.check немає lot_id, лише lot_ids (m2m) — перевірка у карантині, якщо хоч одна її партія там
         if payload_tools.access_ok(env, "stock.quant") and checks.lot_ids:
             quarantine = {q.lot_id.id for q in env["stock.quant"].search_fetch([
-                ("lot_id", "in", checks.lot_ids.ids), ("quantity", "!=", 0), ("location_id.f3d_code", "=", QC_CODE)])}
+                ("lot_id", "in", checks.lot_ids.ids), ("quantity", "!=", 0), ("location_id.td_code", "=", QC_CODE)])}
         fields = env["quality.check"]._fields
         out = []
         for c in checks:
             title = (c.point_id.title if "point_id" in fields else "") or (
                 c.test_type_id.name if "test_type_id" in fields else "") or c.name
             location = QC_CODE if quarantine.intersection(c.lot_ids.ids) else (
-                c.picking_id.location_dest_id.f3d_code or "")
+                c.picking_id.location_dest_id.td_code or "")
             note = ""
             for f in ("additional_note", "note"):
                 if f in fields and c[f]:

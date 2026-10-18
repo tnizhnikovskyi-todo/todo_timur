@@ -20,16 +20,16 @@ _logger = logging.getLogger(__name__)
 
 MAX_OPS = 500
 MAX_BODY_BYTES = 1024 * 1024
-MANAGER = 'factory3d_constructor.group_f3d_constructor_manager'
+MANAGER = 'td_constructor.group_td_constructor_manager'
 ROLE_GROUPS = {
-    'technologist': 'factory3d_constructor.group_f3d_constructor_technologist',
-    'storekeeper': 'factory3d_constructor.group_f3d_constructor_storekeeper',
-    'engineer': 'factory3d_constructor.group_f3d_constructor_engineer',
+    'technologist': 'td_constructor.group_td_constructor_technologist',
+    'storekeeper': 'td_constructor.group_td_constructor_storekeeper',
+    'engineer': 'td_constructor.group_td_constructor_engineer',
     'manager': MANAGER,
 }
 # Дозволені поля для API-04 (все інше — validation); посилання на нові записи — "@<tmp>"
 SAVE_FIELDS = {
-    'f3d.layer': {
+    'td.layer': {
         'uid',
         'name',
         'kind',
@@ -53,7 +53,7 @@ SAVE_FIELDS = {
         'allowed_slot_types',
         'edit_group_ids',
     },
-    'f3d.slot': {
+    'td.slot': {
         'uid',
         'layer_id',
         'template',
@@ -67,7 +67,7 @@ SAVE_FIELDS = {
         'note',
         'active',
     },
-    'f3d.placement': {
+    'td.placement': {
         'uid',
         'layer_id',
         'variant_id',
@@ -82,10 +82,10 @@ SAVE_FIELDS = {
         'note',
         'active',
     },
-    'f3d.check.config': {'check_key', 'enabled', 'mode', 'params'},
+    'td.check.config': {'check_key', 'enabled', 'mode', 'params'},
 }
 REF_FIELDS = {'layer_id', 'slot_id', 'variant_id'}
-DICT_FUNCS = {'f3d.layer': st.layer_dict, 'f3d.slot': st.slot_dict, 'f3d.placement': st.placement_dict}
+DICT_FUNCS = {'td.layer': st.layer_dict, 'td.slot': st.slot_dict, 'td.placement': st.placement_dict}
 
 
 def fail(code, message, **extra):
@@ -97,7 +97,7 @@ def params(env):
 
     def num(key, default, cast=float):
         try:
-            return cast(get('factory3d.constructor.' + key, default))
+            return cast(get('td.constructor.' + key, default))
         except (TypeError, ValueError):
             return cast(default)
 
@@ -107,7 +107,7 @@ def params(env):
         'max_triangles': num('max_triangles', 50000, int),
         'eps_mm': num('eps_mm', 1),
         'reach_default_m': num('reach_default_m', 15),
-        'publish_enabled': get('factory3d.constructor.publish_enabled') == 'True',
+        'publish_enabled': get('td.constructor.publish_enabled') == 'True',
     }
 
 
@@ -117,7 +117,7 @@ def find_site(env, site_id):
         site_id = int(site_id)
     except (TypeError, ValueError):
         return None
-    return env['f3d.site'].search([('id', '=', site_id)], limit=1) or None
+    return env['td.site'].search([('id', '=', site_id)], limit=1) or None
 
 
 def is_manager(env):
@@ -139,9 +139,9 @@ class F3dConstructorController(http.Controller):
         env = request.env
         manager = is_manager(env)
         result = []
-        for site in env['f3d.site'].search([]):
+        for site in env['td.site'].search([]):
             version = site.active_version_id
-            can_edit = manager or any(env['f3d.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+            can_edit = manager or any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
             result.append(
                 {
                     'id': site.id,
@@ -180,14 +180,14 @@ class F3dConstructorController(http.Controller):
             except (KeyError, TypeError, ValueError):
                 return fail('validation', "Габарити будівлі: числа l, w, h.")
         if (
-            env['f3d.site']
+            env['td.site']
             .with_context(active_test=False)
             .search_count([('code', '=', code), ('company_id', '=', env.company.id)])
         ):
             return fail('validation', "Код площадки має бути унікальним у компанії.")
         try:
             with env.cr.savepoint():
-                site = env['f3d.site'].with_context(f3d_blank=True).create(vals)
+                site = env['td.site'].with_context(f3d_blank=True).create(vals)
         except (ValidationError, UserError, IntegrityError) as exc:
             env.invalidate_all()
             return fail(*error_from_exception(exc))
@@ -200,12 +200,12 @@ class F3dConstructorController(http.Controller):
         site = find_site(env, site_id)
         if not site:
             return fail('not_found', "Площадку не знайдено.")
-        Layer = env['f3d.layer']
+        Layer = env['td.layer']
         layers = site.layer_ids.filtered('active')
         xmlids = layers.sudo().edit_group_ids.get_external_id()
-        slots = env['f3d.slot'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
-        placements = env['f3d.placement'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
-        variants = env['f3d.equipment.variant'].search([('passport_id.active', '=', True)])
+        slots = env['td.slot'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
+        placements = env['td.placement'].search([('site_id', '=', site.id), ('layer_id', 'in', layers.ids)])
+        variants = env['td.equipment.variant'].search([('passport_id.active', '=', True)])
         catalog = {}
         for variant in variants:
             passport = variant.passport_id
@@ -217,7 +217,7 @@ class F3dConstructorController(http.Controller):
                     'role': passport.role,
                     'manufacturer': passport.manufacturer,
                     'model': passport.model,
-                    'category': passport.f3d_category,
+                    'category': passport.td_category,
                     'variants': [],
                 },
             )
@@ -345,20 +345,20 @@ class F3dConstructorController(http.Controller):
         vals = self._resolve(vals, id_map)
         if 'allowed_slot_types' in vals:
             keys = vals.pop('allowed_slot_types') or []
-            terms = env['f3d.term'].search([('term_type', '=', 'slot_type'), ('key', 'in', keys)])
+            terms = env['td.term'].search([('term_type', '=', 'slot_type'), ('key', 'in', keys)])
             vals['allowed_slot_type_ids'] = [Command.set(terms.ids)]
         if 'edit_group_ids' in vals:
             vals['edit_group_ids'] = [Command.set([int(i) for i in vals['edit_group_ids'] or []])]
-        if model in ('f3d.slot', 'f3d.placement') and 'layer_id' in vals:
-            layer = env['f3d.layer'].browse(vals['layer_id']).exists()
+        if model in ('td.slot', 'td.placement') and 'layer_id' in vals:
+            layer = env['td.layer'].browse(vals['layer_id']).exists()
             if not layer or layer.site_id != site:
                 raise _OpError('validation', "Шар не належить цій площадці.")
-        if model == 'f3d.placement' and vals.get('slot_id'):
-            slot = env['f3d.slot'].browse(vals['slot_id']).exists()
+        if model == 'td.placement' and vals.get('slot_id'):
+            slot = env['td.slot'].browse(vals['slot_id']).exists()
             if not slot or slot.site_id != site:
                 raise _OpError('validation', "Місце не належить цій площадці.")
         if creating:
-            if model in ('f3d.layer', 'f3d.check.config'):
+            if model in ('td.layer', 'td.check.config'):
                 vals['site_id'] = site.id
         return vals
 
@@ -413,11 +413,11 @@ class F3dConstructorController(http.Controller):
         if not is_manager(env):
             return fail('rights', "Публікувати розкладку може лише менеджер конструктора.")
         if not publish.publish_enabled(env):
-            return fail('disabled', "Публікацію вимкнено: стоп-кран factory3d.constructor.publish_enabled.")
+            return fail('disabled', "Публікацію вимкнено: стоп-кран td.constructor.publish_enabled.")
         plan = publish.build_plan(site)
         if not site.has_changes and not [line for line in plan['lines'] if line['kind'] in ('create', 'update')]:
             return fail('no_changes', "Немає змін для публікації")
-        wizard = env['f3d.publish.wizard'].create({'site_id': site.id})
+        wizard = env['td.publish.wizard'].create({'site_id': site.id})
         wizard._f3d_rebuild(plan)
         return {'ok': True, 'action': wizard._f3d_action(from_editor=True), 'summary': publish.summary(plan)}
 
@@ -455,7 +455,7 @@ class F3dConstructorController(http.Controller):
     def version_restore(self, version_id=None, **kw):
         env = request.env
         try:
-            version = env['f3d.layout.version'].search([('id', '=', int(version_id))], limit=1)
+            version = env['td.layout.version'].search([('id', '=', int(version_id))], limit=1)
         except (TypeError, ValueError):
             version = None
         if not version:

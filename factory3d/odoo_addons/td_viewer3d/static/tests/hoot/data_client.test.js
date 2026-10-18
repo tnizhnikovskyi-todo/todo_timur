@@ -2,7 +2,7 @@
 // HOOT-тести DataClient (SPEC §8.3): debounce, inflight, polling без шини, перезавантаження кіоска, ETag/304.
 import { describe, expect, test } from "@odoo/hoot";
 import { advanceTime, tick } from "@odoo/hoot-mock";
-import { DataClient } from "@factory3d_viewer/viewer/data_client";
+import { DataClient } from "@td_viewer3d/viewer/data_client";
 import { json, makeBus, mountViewer } from "./helpers";
 
 describe.current.tags("desktop");

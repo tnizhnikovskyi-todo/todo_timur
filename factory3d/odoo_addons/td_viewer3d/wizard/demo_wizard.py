@@ -11,7 +11,7 @@ from . import demo_steps
 
 _logger = logging.getLogger(__name__)
 
-PREFIX = "factory3d.viewer."
+PREFIX = "td.viewer."
 LOG_LINES = 500
 STALE_S = 2100  # крон ≤ 30 хв
 LABELS = OrderedDict([
@@ -34,16 +34,16 @@ LABELS = OrderedDict([
     ("attendance", "Відмітки 35 людей"), ("carriers", "Перевізники"),
     ("finish", "Резерви, зупинка CNC-2, зсув нумерації"),
 ])
-DISABLED_MSG = ("Заливка демо вимкнена на цій базі (factory3d.viewer.demo_enabled). Увімкніть у Завод 3D → "
+DISABLED_MSG = ("Заливка демо вимкнена на цій базі (td.viewer.demo_enabled). Увімкніть у Завод 3D → "
                 "Налаштування → Налаштування переглядача лише на тестовому сервері.")
 
 
 class F3dDemoWizardStep(models.TransientModel):
-    _name = "f3d.demo.wizard.step"
+    _name = "td.demo.wizard.step"
     _description = "3D: крок заливки демо"
     _order = "sequence, id"
 
-    wizard_id = fields.Many2one("f3d.demo.wizard", ondelete="cascade", required=True)
+    wizard_id = fields.Many2one("td.demo.wizard", ondelete="cascade", required=True)
     name = fields.Char("Ключ", readonly=True)
     label = fields.Char("Крок")
     sequence = fields.Integer(default=10)
@@ -67,10 +67,10 @@ class F3dDemoWizardStep(models.TransientModel):
 
 
 class F3dDemoWizard(models.TransientModel):
-    _name = "f3d.demo.wizard"
+    _name = "td.demo.wizard"
     _description = "3D: заливка демо-даних"
 
-    step_ids = fields.One2many("f3d.demo.wizard.step", "wizard_id", string="Кроки")
+    step_ids = fields.One2many("td.demo.wizard.step", "wizard_id", string="Кроки")
     state = fields.Selection([("draft", "Готово до запуску"), ("queued", "У черзі"), ("running", "Виконується"),
                               ("done", "Виконано"), ("error", "Помилка")], default="draft", readonly=True)
     enabled = fields.Boolean(compute="_compute_enabled")
@@ -91,7 +91,7 @@ class F3dDemoWizard(models.TransientModel):
         self.env["ir.config_parameter"].sudo().set_param(PREFIX + name, value)
 
     def _cron(self):
-        return self.env.ref("factory3d_viewer.cron_f3d_demo", raise_if_not_found=False)
+        return self.env.ref("td_viewer3d.cron_td_demo", raise_if_not_found=False)
 
     def _load_state(self):
         try:
@@ -234,7 +234,7 @@ class F3dDemoWizard(models.TransientModel):
         from ..tools.cycle_check import check
         from ..tools.payload import PayloadBuilder
         try:
-            user = self.env.ref("factory3d_viewer.user_kiosk")
+            user = self.env.ref("td_viewer3d.user_kiosk")
             issues = check(PayloadBuilder(self.env(user=user.id), full=True).build())
         except Exception as e:  # noqa: BLE001
             _logger.exception("cycle_check після заливки")

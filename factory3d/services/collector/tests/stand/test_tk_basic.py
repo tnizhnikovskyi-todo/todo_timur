@@ -59,9 +59,9 @@ def tolerance(code: str, unit: str | None, address: dict | None = None) -> float
 
 def test_tk01_install_state(odoo):
     """ТК-01 (частково): установка пройшла, джерела й сигнали з каталогу на місці; AC-58 — вне среды (немає копії демо)."""
-    assert odoo.count("f3d.source") == 7
-    assert odoo.count("f3d.signal", [("source_id", "!=", False)]) == 55  # каталог §C.2: 55 прив'язаних
-    assert odoo.param("factory3d.telemetry.read_enabled") in ("True", "true", "1")
+    assert odoo.count("td.source") == 7
+    assert odoo.count("td.signal", [("source_id", "!=", False)]) == 55  # каталог §C.2: 55 прив'язаних
+    assert odoo.param("td.telemetry.read_enabled") in ("True", "true", "1")
 
 
 def test_tk01_ac58_demo_copy():
@@ -73,15 +73,15 @@ def test_tk01_ac58_demo_copy():
 
 def test_tk02_ac84_first_exchange(odoo, metrics, token):
     """ТК-02 / AC-84: колектор online (0.1.0), 7 джерел online, жодного stale, 55 сигналів зі свіжим last_ts."""
-    col = odoo.search_read("f3d.collector", [("code", "=", "COL-MAIN")], ["state", "version", "last_seen"])[0]
+    col = odoo.search_read("td.collector", [("code", "=", "COL-MAIN")], ["state", "version", "last_seen"])[0]
     assert col["state"] == "online" and col["version"] == "0.1.0", col
-    states = {s["code"]: s["state"] for s in odoo.search_read("f3d.source", [], ["code", "state"])}
+    states = {s["code"]: s["state"] for s in odoo.search_read("td.source", [], ["code", "state"])}
     assert states == {c: "online" for c in SOURCES}, states
     st, body, _ = http("GET", f"{odoo.url}/f3d/telemetry/health", headers={"Authorization": "Bearer " + token})
     counts = json.loads(body)["counts"]
     assert st == 200 and counts["stale"] == 0 and counts["sources_online"] == 7, counts
     now = _utcnow()
-    for s in odoo.search_read("f3d.signal", [("source_id", "!=", False)], ["code", "last_ts", "period_s"]):
+    for s in odoo.search_read("td.signal", [("source_id", "!=", False)], ["code", "last_ts", "period_s"]):
         age = (now - _dt(s["last_ts"])).total_seconds() if s["last_ts"] else 1e9
         # last_ts оновлюється при записі в сховище / зміні; для повільних сигналів допуск store_period (300 с)
         assert age <= max(2 * s["period_s"], 330) + 60, (s["code"], age)
@@ -116,7 +116,7 @@ def _expected_text(code: str, value, address: dict) -> str | None:
 def test_tk03_values_match_sim(fresh_sim, odoo, metrics):
     """ТК-03 / AC-84: 55 сигналів — last_value/last_text збігаються з емулятором у допусках; жодного quality='bad'."""
     rows = odoo.search_read(
-        "f3d.signal",
+        "td.signal",
         [("source_id", "!=", False)],
         ["code", "kind", "last_value", "last_text", "last_quality", "unit", "address"],
     )
@@ -133,7 +133,7 @@ def test_tk03_values_match_sim(fresh_sim, odoo, metrics):
         bad.clear()
         diffs.clear()
         rows = odoo.search_read(
-            "f3d.signal",
+            "td.signal",
             [("source_id", "!=", False)],
             ["code", "kind", "last_value", "last_text", "last_quality", "unit", "address"],
         )
@@ -207,7 +207,7 @@ def test_tk10_water_meter(odoo, sim):
     avg = (v1 - v0) / ((t1 - t0).total_seconds() / 3600)
     assert 1.05 <= avg <= 3.15, f"середня витрата {avg:.2f} м³/год поза 2,1 ±50 %"
     rows = odoo.search_read(
-        "f3d.reading",
+        "td.reading",
         [("signal_id.code", "=", "infra/water/flow_m3h"), ("ts", ">", str(t0))],
         ["ts", "value"],
         order="ts",
@@ -219,39 +219,39 @@ def test_tk10_water_meter(odoo, sim):
 
 def test_tk11_test_source(odoo, sim, col, fresh_sim):
     """ТК-11: disabled → 4 сигнали stale; test-source друкує значення і нічого не пише в Odoo; повернення online ≤ 60 с."""
-    src = odoo.search_read("f3d.source", [("code", "=", "MB-U90-AI1")], ["id"])[0]["id"]
-    odoo.write("f3d.source", src, {"read_enabled": False})
+    src = odoo.search_read("td.source", [("code", "=", "MB-U90-AI1")], ["id"])[0]["id"]
+    odoo.write("td.source", src, {"read_enabled": False})
     try:
         ok = wait(
-            lambda: odoo.search_read("f3d.source", [("id", "=", src)], ["state"])[0]["state"] == "disabled", 130, 3
+            lambda: odoo.search_read("td.source", [("id", "=", src)], ["state"])[0]["state"] == "disabled", 130, 3
         )
         assert ok, "джерело не стало disabled"
-        sig_states = [s["status"] for s in odoo.search_read("f3d.signal", [("source_id", "=", src)], ["status"])]
+        sig_states = [s["status"] for s in odoo.search_read("td.signal", [("source_id", "=", src)], ["status"])]
         assert sig_states and all(s == "stale" for s in sig_states), sig_states
-        before = odoo.count("f3d.reading")
+        before = odoo.count("td.reading")
         out = col.cli("test-source", "MB-U90-AI1")
         assert out.count("equipment/") >= 4, out
         assert "Traceback" not in out
-        assert odoo.count("f3d.reading") - before < 5, "test-source не повинен писати в Odoo"
+        assert odoo.count("td.reading") - before < 5, "test-source не повинен писати в Odoo"
     finally:
-        odoo.write("f3d.source", src, {"read_enabled": True})
-    assert wait(lambda: odoo.search_read("f3d.source", [("id", "=", src)], ["state"])[0]["state"] == "online", 90, 3)
+        odoo.write("td.source", src, {"read_enabled": True})
+    assert wait(lambda: odoo.search_read("td.source", [("id", "=", src)], ["state"])[0]["state"] == "online", 90, 3)
     # крок 5: range [0, 5] для SPRINKLERS → quality bad, last_value не оновлюється; після повернення — good
     sprk = odoo.search_read(
-        "f3d.signal", [("code", "=", "equipment/SPRINKLERS/pressure_bar")], ["id", "address", "last_value"]
+        "td.signal", [("code", "=", "equipment/SPRINKLERS/pressure_bar")], ["id", "address", "last_value"]
     )[0]
     addr = dict(sprk["address"])
     try:
         addr["range"] = [0, 5]
-        odoo.write("f3d.signal", sprk["id"], {"address": addr})
+        odoo.write("td.signal", sprk["id"], {"address": addr})
         assert wait(
             lambda: (
-                odoo.call("f3d.reading", "search_count", [("signal_id", "=", sprk["id"]), ("quality", "=", "bad")]) > 0
+                odoo.call("td.reading", "search_count", [("signal_id", "=", sprk["id"]), ("quality", "=", "bad")]) > 0
             ),
             120,
             4,
         ), "немає bad-показань при range [0,5]"
     finally:
         addr["range"] = [0, 16]
-        odoo.write("f3d.signal", sprk["id"], {"address": addr})
+        odoo.write("td.signal", sprk["id"], {"address": addr})
     assert wait(lambda: odoo.signal("equipment/SPRINKLERS/pressure_bar")["last_quality"] == "good", 150, 4)

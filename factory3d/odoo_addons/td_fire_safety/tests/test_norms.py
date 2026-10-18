@@ -59,16 +59,16 @@ NORM_KEYS = {
 class NormCase(FireCase):
 
     def zone(self, code):
-        return self.env['f3d.fire.zone'].search([('code', '=', code)])
+        return self.env['td.fire.zone'].search([('code', '=', code)])
 
     def device(self, address):
-        return self.env['f3d.fire.device'].search([('address', '=', address)])
+        return self.env['td.fire.device'].search([('address', '=', address)])
 
     def norm(self, key):
-        return self.env['f3d.fire.norm'].search([('key', '=', key)])
+        return self.env['td.fire.norm'].search([('key', '=', key)])
 
     def set_param(self, key, value):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.fire_safety.' + key, value)
+        self.env['ir.config_parameter'].sudo().set_param('td.fire_safety.' + key, value)
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_fire')
@@ -76,7 +76,7 @@ class TestRequired(NormCase):
 
     def test_table(self):
         self.panel.action_recompute_compliance()
-        zones = self.env['f3d.fire.zone'].search([])
+        zones = self.env['td.fire.zone'].search([])
         self.assertEqual(len(zones), 35)
         for code, (n, _gap, _pt) in A1.items():
             zone = self.zone(code)
@@ -130,7 +130,7 @@ class TestCoverage(NormCase):
         fg = self.zone('FA-FG')
         self.assertFalse(fg.cover_ok)
         self.assertEqual(fg.compliance, 'warn')
-        others = self.env['f3d.fire.zone'].search([('code', '!=', 'FA-FG')])
+        others = self.env['td.fire.zone'].search([('code', '!=', 'FA-FG')])
         self.assertEqual(set(others.mapped('compliance')), {'ok'})
         office = self.zone('FA-OFFICE')
         self.assertAlmostEqual(office.cover_max_gap_m, 4.94, 2)
@@ -169,7 +169,7 @@ class TestMcpSounder(NormCase):
         self.panel.action_recompute_compliance()
         self.assertAlmostEqual(self.panel.compliance_sounder_max_m, 45.2, 1)
         self.assertTrue(self.panel.compliance_mcp_ok)
-        self.assertEqual(self.env['f3d.fire.zone'].search([('compliance', '!=', 'ok')]).mapped('code'), [])
+        self.assertEqual(self.env['td.fire.zone'].search([('compliance', '!=', 'ok')]).mapped('code'), [])
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_fire')
@@ -190,7 +190,7 @@ class TestMissingZones(NormCase):
 class TestNormModel(NormCase):
 
     def test_get(self):
-        Norm = self.env['f3d.fire.norm']
+        Norm = self.env['td.fire.norm']
         self.assertEqual(Norm.get('smoke_spacing_6_12m'), 8.8)
         self.assertIsNone(Norm.get('smoke_area_6_12m'))
         self.assertEqual(Norm.get('smoke_area_6_12m', 5.0), 5.0)
@@ -202,15 +202,15 @@ class TestNormModel(NormCase):
 
     def test_key_regex(self):
         with self.assertRaises(ValidationError):
-            self.env['f3d.fire.norm'].create({'key': 'Bad-Key', 'name': 'x', 'ref': 'y'})
+            self.env['td.fire.norm'].create({'key': 'Bad-Key', 'name': 'x', 'ref': 'y'})
 
     def test_json_keys_present(self):
-        keys = set(self.env['f3d.fire.norm'].with_context(active_test=False).search([]).mapped('key'))
+        keys = set(self.env['td.fire.norm'].with_context(active_test=False).search([]).mapped('key'))
         self.assertEqual(keys, NORM_KEYS)
         self.assertEqual(len(keys), 27)
 
     def test_cache_invalidation(self):
-        Norm = self.env['f3d.fire.norm']
+        Norm = self.env['td.fire.norm']
         self.assertEqual(Norm.get('mcp_spacing'), 30.0)
         self.norm('mcp_spacing').value = 25.0
         self.assertEqual(Norm.get('mcp_spacing'), 25.0)
@@ -220,14 +220,14 @@ class TestNormModel(NormCase):
 class TestAddresses(NormCase):
 
     def test_lsp_id(self):
-        Device = self.env['f3d.fire.device']
+        Device = self.env['td.fire.device']
         self.assertEqual(Device.lsp_id(2, 16, 7), 21607)
         self.assertEqual(Device.lsp_id(1, 90, 1), 19001)
         with self.assertRaises(ValueError):
             Device.lsp_id(9, 1, 1)
 
     def test_unique_lsp(self):
-        devices = self.env['f3d.fire.device'].with_context(active_test=False).search([])
+        devices = self.env['td.fire.device'].with_context(active_test=False).search([])
         with_lsp = devices.filtered(lambda d: d.lsp_instance > 0)
         self.assertEqual(len(with_lsp), 302)
         self.assertEqual(len(set(with_lsp.mapped('lsp_instance'))), 302)
@@ -238,6 +238,6 @@ class TestAddresses(NormCase):
 
     def test_address_loop_mismatch(self):
         with self.assertRaises(ValidationError):
-            self.env['f3d.fire.device'].create({
+            self.env['td.fire.device'].create({
                 'address': '3.FAC.01', 'type': 'smoke', 'panel_id': self.panel.id, 'loop_id': self.loop2.id,
                 'zone_id': self.z_fac.id, 'x': 50.0, 'y': 50.0, 'z': 8.85})

@@ -1,30 +1,30 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_energy_node_user,f3d.energy.node user,model_f3d_energy_node,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_node_manager,f3d.energy.node manager,model_f3d_energy_node,factory3d_energy.group_f3d_energy_manager,1,1,1,1
-access_f3d_energy_node_f3d_user,f3d.energy.node f3d user,model_f3d_energy_node,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_meter_user,f3d.energy.meter user,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_meter_manager,f3d.energy.meter manager,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_manager,1,1,1,1
-access_f3d_energy_meter_f3d_user,f3d.energy.meter f3d user,model_f3d_energy_meter,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_tariff_user,f3d.energy.tariff user,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_tariff_manager,f3d.energy.tariff manager,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_manager,1,1,1,1
-access_f3d_energy_tariff_zone_user,f3d.energy.tariff.zone user,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_tariff_zone_manager,f3d.energy.tariff.zone manager,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_manager,1,1,1,1
-access_f3d_energy_pool_user,f3d.energy.pool user,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_pool_manager,f3d.energy.pool manager,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_manager,1,1,1,1
-access_f3d_energy_interval_user,f3d.energy.interval user,model_f3d_energy_interval,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_interval_f3d_user,f3d.energy.interval f3d user,model_f3d_energy_interval,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_interval_admin,f3d.energy.interval admin,model_f3d_energy_interval,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_balance_user,f3d.energy.balance user,model_f3d_energy_balance,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_balance_admin,f3d.energy.balance admin,model_f3d_energy_balance,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_event_user,f3d.energy.event user,model_f3d_energy_event,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_event_f3d_user,f3d.energy.event f3d user,model_f3d_energy_event,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_event_manager,f3d.energy.event manager,model_f3d_energy_event,factory3d_energy.group_f3d_energy_manager,1,1,1,0
-access_f3d_energy_event_admin,f3d.energy.event admin,model_f3d_energy_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_outage_user,f3d.energy.outage user,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_outage_f3d_user,f3d.energy.outage f3d user,model_f3d_energy_outage,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_outage_manager,f3d.energy.outage manager,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_manager,1,1,0,0
-access_f3d_energy_outage_admin,f3d.energy.outage admin,model_f3d_energy_outage,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_alloc_user,f3d.energy.alloc user,model_f3d_energy_alloc,factory3d_energy.group_f3d_energy_user,1,0,0,0
-access_f3d_energy_alloc_mrp,f3d.energy.alloc mrp user,model_f3d_energy_alloc,mrp.group_mrp_user,1,0,0,0
-access_f3d_energy_alloc_admin,f3d.energy.alloc admin,model_f3d_energy_alloc,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,model_f3d_energy_recompute_wizard,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_td_energy_node_user,td.energy.node user,model_td_energy_node,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_node_manager,td.energy.node manager,model_td_energy_node,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_node_td_user,td.energy.node f3d user,model_td_energy_node,td_factory3d.group_td_user,1,0,0,0
+access_td_energy_meter_user,td.energy.meter user,model_td_energy_meter,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_meter_manager,td.energy.meter manager,model_td_energy_meter,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_meter_td_user,td.energy.meter f3d user,model_td_energy_meter,td_factory3d.group_td_user,1,0,0,0
+access_td_energy_tariff_user,td.energy.tariff user,model_td_energy_tariff,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_tariff_manager,td.energy.tariff manager,model_td_energy_tariff,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_tariff_zone_user,td.energy.tariff.zone user,model_td_energy_tariff_zone,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_tariff_zone_manager,td.energy.tariff.zone manager,model_td_energy_tariff_zone,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_pool_user,td.energy.pool user,model_td_energy_pool,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_pool_manager,td.energy.pool manager,model_td_energy_pool,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_interval_user,td.energy.interval user,model_td_energy_interval,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_interval_td_user,td.energy.interval f3d user,model_td_energy_interval,td_factory3d.group_td_user,1,0,0,0
+access_td_energy_interval_admin,td.energy.interval admin,model_td_energy_interval,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_balance_user,td.energy.balance user,model_td_energy_balance,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_balance_admin,td.energy.balance admin,model_td_energy_balance,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_event_user,td.energy.event user,model_td_energy_event,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_event_td_user,td.energy.event f3d user,model_td_energy_event,td_factory3d.group_td_user,1,0,0,0
+access_td_energy_event_manager,td.energy.event manager,model_td_energy_event,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_event_admin,td.energy.event admin,model_td_energy_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_outage_user,td.energy.outage user,model_td_energy_outage,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_outage_td_user,td.energy.outage f3d user,model_td_energy_outage,td_factory3d.group_td_user,1,0,0,0
+access_td_energy_outage_manager,td.energy.outage manager,model_td_energy_outage,td_energy.group_td_energy_manager,1,1,0,0
+access_td_energy_outage_admin,td.energy.outage admin,model_td_energy_outage,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_alloc_user,td.energy.alloc user,model_td_energy_alloc,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_alloc_mrp,td.energy.alloc mrp user,model_td_energy_alloc,mrp.group_mrp_user,1,0,0,0
+access_td_energy_alloc_admin,td.energy.alloc admin,model_td_energy_alloc,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_recompute_wizard_manager,td.energy.recompute.wizard manager,model_td_energy_recompute_wizard,td_energy.group_td_energy_manager,1,1,1,1

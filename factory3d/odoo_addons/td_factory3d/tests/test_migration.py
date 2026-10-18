@@ -1,6 +1,6 @@
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_base.hooks import batches, uninstall_hook, x_fields
+from odoo.addons.td_factory3d.hooks import batches, uninstall_hook, x_fields
 
 from .common import F3DCase
 
@@ -15,10 +15,10 @@ class MigrationCase(F3DCase):
         env = cls.env
         x_fields.restore_manual_fields(env, 'stock.picking', X_SPEC)
         cls.make_dock(cls, cls.dock_w1, 'west', 1, 0.0, 5.0)
-        cls.dock_w1.f3d_code = 'DOCK-T1'
+        cls.dock_w1.td_code = 'DOCK-T1'
         cls.make_dock(cls, cls.dock_e1, 'east', 1, 150.0, 5.0)
-        cls.dock_e1.f3d_code = 'DOCK-TE1'
-        cls.eq.f3d_code = 'FL-T'
+        cls.dock_e1.td_code = 'DOCK-TE1'
+        cls.eq.td_code = 'FL-T'
         Product = env['product.product'].create({'name': 'Товар-М'})
         in_type, out_type = cls.wh.in_type_id, cls.wh.out_type_id
         int_type = cls.wh.int_type_id
@@ -57,12 +57,12 @@ class TestBatchMigration(MigrationCase):
         self.assertEqual((res['pickings_attached'], res['pickings_total_in_batches']), (4, 4))
         check = batches.verify(self.env)
         self.assertEqual(check, {'mismatches': [], 'moves_changed': 0})
-        self.assertEqual(self.p3.batch_id.f3d_code, 'TRUCK-OUT-T1')
-        self.assertEqual(self.p3.batch_id.f3d_truck, 'TRUCK-OUT-T1')
+        self.assertEqual(self.p3.batch_id.td_code, 'TRUCK-OUT-T1')
+        self.assertEqual(self.p3.batch_id.td_truck, 'TRUCK-OUT-T1')
         self.assertEqual(self.p3.batch_id.dock_id, self.dock_e1)
         self.assertEqual(self.p1.batch_id.dock_id, self.dock_w1)
-        self.assertFalse(self.p1.batch_id.f3d_code)
-        self.assertEqual(self.p4.batch_id.f3d_vehicle_id, self.eq)
+        self.assertFalse(self.p1.batch_id.td_code)
+        self.assertEqual(self.p4.batch_id.td_vehicle_id, self.eq)
         self.assertFalse(self.p4.batch_id.dock_id)
         self.assertEqual(self.p1.batch_id.picking_type_id, self.p1.picking_type_id)
         dropped = x_fields.drop_demo(self.env, check['mismatches'])
@@ -90,7 +90,7 @@ class TestBatchMigration(MigrationCase):
         self.assertEqual(self.env['stock.picking.batch'].search_count([]), count)
 
     def test_keep_x_fields(self):  # AC-29
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.base.keep_x_fields', 'True')
+        self.env['ir.config_parameter'].sudo().set_param('td.base.keep_x_fields', 'True')
         batches.migrate(self.env)
         res = x_fields.drop_demo(self.env, [])
         self.assertEqual((res['views_dropped'], res['fields_dropped']), (0, 0))
@@ -125,4 +125,4 @@ class TestUninstall(MigrationCase):
                          {self.p1.id: 'DOCK-T1', self.p2.id: 'DOCK-T1', self.p3.id: 'DOCK-TE1'})
         self.assertEqual(read(self.env, 'stock.picking', 'x_truck'), {self.p3.id: 'TRUCK-OUT-T1'})
         self.assertEqual(read(self.env, 'stock.picking', 'x_vehicle'), {self.p4.id: 'FL-T'})
-        self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.base.%')]))
+        self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'td.base.%')]))

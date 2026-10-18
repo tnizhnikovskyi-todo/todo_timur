@@ -6,7 +6,7 @@ from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
 from ..tools import geometry
-from .f3d_fire_zone import BACK_TO_NORMAL, ENTER
+from .td_fire_zone import BACK_TO_NORMAL, ENTER
 
 _logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ DUST_ORDER = {"na": 0, "ok": 1, "warn": 2, "alarm": 3}
 
 
 class F3dFireDevice(models.Model):
-    _name = "f3d.fire.device"
+    _name = "td.fire.device"
     _description = "Пожежна сигналізація: пристрій"
     _order = "loop_id, zone_id, seq, address"
     _rec_name = "name"
@@ -37,14 +37,14 @@ class F3dFireDevice(models.Model):
     name = fields.Char(compute="_compute_name", store=True)
     type = fields.Selection(TYPES, required=True, index=True)
     is_detector = fields.Boolean(compute="_compute_is_detector", store=True)
-    panel_id = fields.Many2one("f3d.fire.panel", ondelete="cascade", index=True)
-    loop_id = fields.Many2one("f3d.fire.loop", ondelete="restrict")
-    zone_id = fields.Many2one("f3d.fire.zone", string="Зона виявлення", ondelete="restrict", index=True)
-    plant_zone_id = fields.Many2one("f3d.zone", string="Зона цеху", compute="_compute_plant_zone", store=True)
-    system_id = fields.Many2one("f3d.fire.system", ondelete="restrict")
-    smoke_zone_id = fields.Many2one("f3d.fire.smoke.zone", ondelete="set null")
+    panel_id = fields.Many2one("td.fire.panel", ondelete="cascade", index=True)
+    loop_id = fields.Many2one("td.fire.loop", ondelete="restrict")
+    zone_id = fields.Many2one("td.fire.zone", string="Зона виявлення", ondelete="restrict", index=True)
+    plant_zone_id = fields.Many2one("td.zone", string="Зона цеху", compute="_compute_plant_zone", store=True)
+    system_id = fields.Many2one("td.fire.system", ondelete="restrict")
+    smoke_zone_id = fields.Many2one("td.fire.smoke.zone", ondelete="set null")
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання групи", ondelete="set null")
-    model = fields.Char(related="equipment_id.f3d_model")
+    model = fields.Char(related="equipment_id.td_model")
     lsp_instance = fields.Integer(string="BACnet LSP instance", index=True)
     seq = fields.Integer(string="№ у групі")
     x = fields.Float(digits=(8, 2), required=True)
@@ -66,9 +66,9 @@ class F3dFireDevice(models.Model):
     dust_state = fields.Selection(
         [("na", "—"), ("ok", "Норма"), ("warn", "Попередження"), ("alarm", "Очистити")],
         compute="_compute_dust_state", store=True)
-    monitor = fields.Boolean(string="Окремі сигнали", default=False, groups="factory3d_base.group_f3d_manager")
-    state_signal_id = fields.Many2one("f3d.signal", string="Сигнал стану (LSP)", ondelete="set null")
-    dust_signal_id = fields.Many2one("f3d.signal", string="Сигнал запиленості (PIV)", ondelete="set null")
+    monitor = fields.Boolean(string="Окремі сигнали", default=False, groups="td_factory3d.group_td_manager")
+    state_signal_id = fields.Many2one("td.signal", string="Сигнал стану (LSP)", ondelete="set null")
+    dust_signal_id = fields.Many2one("td.signal", string="Сигнал запиленості (PIV)", ondelete="set null")
     maintenance_request_id = fields.Many2one("maintenance.request", compute="_compute_request")
     event_count = fields.Integer(compute="_compute_event_count")
     note = fields.Text()
@@ -91,7 +91,7 @@ class F3dFireDevice(models.Model):
 
     @api.depends("type", "zone_id.zone_id", "x", "y")
     def _compute_plant_zone(self):
-        Zone = self.env["f3d.zone"]
+        Zone = self.env["td.zone"]
         for rec in self:
             if rec.is_detector or rec.type in DETECTORS:
                 rec.plant_zone_id = rec.zone_id.zone_id
@@ -100,7 +100,7 @@ class F3dFireDevice(models.Model):
 
     @api.depends("dust_pct", "dust_ts")
     def _compute_dust_state(self):
-        panel = self.env["f3d.fire.panel"]
+        panel = self.env["td.fire.panel"]
         warn_pct = panel._get_param("dust_warn_pct", 80.0)
         alarm_pct = panel._get_param("dust_alarm_pct", 90.0)
         for rec in self:
@@ -115,15 +115,15 @@ class F3dFireDevice(models.Model):
 
     def _compute_request(self):
         Request = self.env["maintenance.request"]
-        has_device = "f3d_fire_device_id" in Request._fields
-        has_signal = "f3d_signal_id" in Request._fields
+        has_device = "td_fire_device_id" in Request._fields
+        has_signal = "td_signal_id" in Request._fields
         for rec in self:
             conds = []
             if has_device:
-                conds.append([("f3d_fire_device_id", "=", rec.id)])
+                conds.append([("td_fire_device_id", "=", rec.id)])
             signals = (rec.state_signal_id | rec.dust_signal_id).ids
             if has_signal and signals:
-                conds.append([("f3d_signal_id", "in", signals)])
+                conds.append([("td_signal_id", "in", signals)])
             request = Request.browse()
             if conds:
                 dom = [("stage_id.done", "=", False)] + ["|"] * (len(conds) - 1) + [c for cd in conds for c in cd]
@@ -131,7 +131,7 @@ class F3dFireDevice(models.Model):
             rec.maintenance_request_id = request
 
     def _compute_event_count(self):
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         for rec in self:
             rec.event_count = Event.search_count([("device_id", "=", rec.id)])
 
@@ -204,7 +204,7 @@ class F3dFireDevice(models.Model):
         text = template.format(z=z, raw=raw or "", dd=", сповіщувач %s" % self.address)
         if etype in ("fault", "fault_ok", "disabled", "enabled") or not zone:
             text = "%s: %s" % (self.name, text)
-        self.env["f3d.fire.event"]._log(
+        self.env["td.fire.event"]._log(
             etype, self.address, ts, text, device_id=self.id, zone_id=zone.id if zone else False,
             panel_id=self.panel_id.id if self.panel_id else False)
 
@@ -231,18 +231,18 @@ class F3dFireDevice(models.Model):
             loc = ", %s" % self.note if self.note else ""
             text = "Попередження про запиленість: сповіщувач %s (%s%s) — %d %%" % (self.address, zname, loc, floor)
         elif etype == "dust_alarm":
-            alarm_pct = int(self.env["f3d.fire.panel"]._get_param("dust_alarm_pct", 90.0))
+            alarm_pct = int(self.env["td.fire.panel"]._get_param("dust_alarm_pct", 90.0))
             text = "Запиленість сповіщувача %s (%s) %d %% понад %d %%" % (self.address, zname, floor, alarm_pct)
         else:
             text = "Сповіщувач %s: запиленість %d %% — у нормі" % (self.address, floor)
-        self.env["f3d.fire.event"]._log(
+        self.env["td.fire.event"]._log(
             etype, self.address, ts, text, device_id=self.id, zone_id=zone.id if zone else False,
             panel_id=self.panel_id.id if self.panel_id else False, signal_id=self.dust_signal_id.id)
 
     # --- сигнали (A-02) -----------------------------------------------------------------------------------
     def action_create_signals(self):
-        Signal = self.env["f3d.signal"].with_context(active_test=False)
-        panel_param = self.env["f3d.fire.panel"]
+        Signal = self.env["td.signal"].with_context(active_test=False)
+        panel_param = self.env["td.fire.panel"]
         warn_pct = panel_param._get_param("dust_warn_pct", 80.0)
         alarm_pct = panel_param._get_param("dust_alarm_pct", 90.0)
         created = 0

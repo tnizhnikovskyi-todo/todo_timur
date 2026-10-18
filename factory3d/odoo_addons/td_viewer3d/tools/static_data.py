@@ -8,7 +8,7 @@ import threading
 _BASE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 STATIC_PATH = os.path.join(_BASE, "data", "model_static.json")
 MANIFEST_PATH = os.path.join(_BASE, "model", "parts", "manifest.json")
-PARTS_URL = "/factory3d_viewer/static/model/parts/%s.glb?v=%s"
+PARTS_URL = "/td_viewer3d/static/model/parts/%s.glb?v=%s"
 
 _lock = threading.Lock()
 _cache = {}

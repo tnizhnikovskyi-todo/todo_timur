@@ -77,7 +77,7 @@ PLANT_KEYS = ("mains_abnormal_s", "start_delay_s", "safety_on_s", "warming_s")
 
 
 class F3dGensetProfile(models.Model):
-    _name = "f3d.genset.profile"
+    _name = "td.genset.profile"
     _description = "Генератор: профіль (паливо, потужність, таймери)"
     _order = "code"
     _rec_name = "name"
@@ -85,7 +85,7 @@ class F3dGensetProfile(models.Model):
     code = fields.Char(string="Код", size=32, required=True, index=True)
     name = fields.Char(string="Назва", required=True)
     passport_id = fields.Many2one(
-        "f3d.equipment.passport", string="Паспорт", domain="[('role', '=', 'genset')]", ondelete="set null"
+        "td.equipment.passport", string="Паспорт", domain="[('role', '=', 'genset')]", ondelete="set null"
     )
     kva_prp = fields.Float(string="PRP, кВА", digits=(8, 1), required=True, default=634)
     kw_prp = fields.Float(string="PRP, кВт", digits=(8, 1), required=True, default=507)
@@ -206,10 +206,10 @@ class F3dGensetProfile(models.Model):
 
     def action_apply_to_td(self):
         self.ensure_one()
-        if not self.env.user.has_group("factory3d_base.group_f3d_manager"):
+        if not self.env.user.has_group("td_factory3d.group_td_manager"):
             raise AccessError(_("Записувати в td_genset може лише менеджер «Завод 3D»."))
         done = skipped = 0
-        for link in self.env["f3d.genset.link"].search([("profile_id", "=", self.id)]):
+        for link in self.env["td.genset.link"].search([("profile_id", "=", self.id)]):
             if td.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75):
                 done += 1
             else:

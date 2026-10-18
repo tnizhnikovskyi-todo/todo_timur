@@ -16,11 +16,11 @@ def _hoot_hash(text):
 class TestViewerHoot(HttpCase):
     """Запуск HOOT-тестів клієнта (static/tests/hoot/*.test.js, бандл web.assets_unit_tests) у headless Chrome.
 
-    Пакет тестів відбирається за ім'ям модуля (`@factory3d_viewer`): будь-які інші suite Odoo не запускаються.
+    Пакет тестів відбирається за ім'ям модуля (`@td_viewer3d`): будь-які інші suite Odoo не запускаються.
     """
 
     def test_hoot_suite(self):
-        flt = f"&id={_hoot_hash('@factory3d_viewer')}"
+        flt = f"&id={_hoot_hash('@td_viewer3d')}"
         self.browser_js(
             f"/web/tests?headless&loglevel=2&preset=desktop&timeout=60000{flt}",
             "",

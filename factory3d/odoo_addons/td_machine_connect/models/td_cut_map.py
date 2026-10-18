@@ -11,8 +11,8 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import commands as cmd_tools
 from ..tools import cutcsv
-from .f3d_cut_part import GRAINS, MATERIAL_ROLES
-from .f3d_machine import param, param_bool
+from .td_cut_part import GRAINS, MATERIAL_ROLES
+from .td_machine import param, param_bool
 
 CUT_CODES = ("SAW-1", "SAW-2", "SAW-3", "NEST-1", "SLIDE-1", "VSAW-1")
 CUTOPT_CMD_CODE = "equipment/CUTOPT/cmd"
@@ -49,7 +49,7 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dCutMap(models.Model):
-    _name = "f3d.cut.map"
+    _name = "td.cut.map"
     _description = "Розкрій: карта розкрою"
     _inherit = ["mail.thread"]
     _order = "id desc"
@@ -58,7 +58,7 @@ class F3dCutMap(models.Model):
         string="Номер",
         required=True,
         copy=False,
-        default=lambda s: s.env["ir.sequence"].next_by_code("f3d.cut.map"),
+        default=lambda s: s.env["ir.sequence"].next_by_code("td.cut.map"),
     )
     production_id = fields.Many2one(
         "mrp.production", string="Виробниче замовлення", required=True, index=True, ondelete="restrict"
@@ -71,16 +71,16 @@ class F3dCutMap(models.Model):
         domain="[('production_id', '=', production_id)]",
     )
     workcenter_id = fields.Many2one("mrp.workcenter", related="workorder_id.workcenter_id", store=True)
-    machine_code = fields.Char(related="workcenter_id.f3d_code")
+    machine_code = fields.Char(related="workcenter_id.td_code")
     material_role = fields.Selection(MATERIAL_ROLES, required=True, default="main")
     material_product_id = fields.Many2one(
-        "product.product", string="Плита", required=True, domain="[('f3d_sheet_length_mm', '>', 0)]"
+        "product.product", string="Плита", required=True, domain="[('td_sheet_length_mm', '>', 0)]"
     )
     sheet_length_mm = fields.Integer(string="Лист: довжина, мм")
     sheet_width_mm = fields.Integer(string="Лист: ширина, мм")
     thickness_mm = fields.Integer(string="Лист: товщина, мм")
     qty = fields.Float(string="Виробів", required=True, digits=(12, 2))
-    line_ids = fields.One2many("f3d.cut.map.line", "map_id", string="Деталі")
+    line_ids = fields.One2many("td.cut.map.line", "map_id", string="Деталі")
     parts_count = fields.Integer(compute="_compute_parts", store=True, string="Деталей")
     mode = fields.Selection(
         [("collector", "Через колектор"), ("manual", "Вручну")],
@@ -117,16 +117,16 @@ class F3dCutMap(models.Model):
     plan_attachment_id = fields.Many2one("ir.attachment", string="План (JSON)", ondelete="set null", copy=False)
     mpr_attachment_ids = fields.Many2many(
         "ir.attachment",
-        relation="f3d_cut_map_mpr_rel",
+        relation="td_cut_map_mpr_rel",
         column1="map_id",
         column2="attachment_id",
         copy=False,
         string="Програми ЧПК",
     )
-    export_token_hash = fields.Char(size=64, copy=False, groups="factory3d_base.group_f3d_admin")
-    export_token_expires = fields.Datetime(copy=False, groups="factory3d_base.group_f3d_admin")
-    command_ids = fields.One2many("f3d.command", "f3d_cut_map_id", string="Команди")
-    gantry_job_id = fields.Many2one("f3d.gantry.job", ondelete="set null", copy=False)
+    export_token_hash = fields.Char(size=64, copy=False, groups="td_factory3d.group_td_admin")
+    export_token_expires = fields.Datetime(copy=False, groups="td_factory3d.group_td_admin")
+    command_ids = fields.One2many("td.command", "td_cut_map_id", string="Команди")
+    gantry_job_id = fields.Many2one("td.gantry.job", ondelete="set null", copy=False)
     error = fields.Char(size=512, readonly=True)
     released_at = fields.Datetime(readonly=True)
     done_at = fields.Datetime(readonly=True)
@@ -173,12 +173,12 @@ class F3dCutMap(models.Model):
     def _f3d_plate_move(self, production, role):
         """Сировинний рух плити МО для ролі `main` (≥ 8 мм) / `back` (< 8 мм); найбільша кількість."""
         moves = production.move_raw_ids.filtered(
-            lambda m: m.state not in ("done", "cancel") and m.product_id.f3d_sheet_length_mm > 0
+            lambda m: m.state not in ("done", "cancel") and m.product_id.td_sheet_length_mm > 0
         )
         if role == "main":
-            moves = moves.filtered(lambda m: m.product_id.f3d_thickness_mm >= THIN_MM)
+            moves = moves.filtered(lambda m: m.product_id.td_thickness_mm >= THIN_MM)
         else:
-            moves = moves.filtered(lambda m: m.product_id.f3d_thickness_mm < THIN_MM)
+            moves = moves.filtered(lambda m: m.product_id.td_thickness_mm < THIN_MM)
         return moves.sorted("product_uom_qty", reverse=True)[:1]
 
     @api.model
@@ -207,9 +207,9 @@ class F3dCutMap(models.Model):
         qty = production.product_qty - production.qty_produced
         if qty <= 0:
             qty = production.product_qty
-        codes = set(CUT_CODES) | set(self.env["f3d.gantry.stack"].GANTRY_TARGETS)
+        codes = set(CUT_CODES) | set(self.env["td.gantry.stack"].GANTRY_TARGETS)
         workorder = production.workorder_ids.filtered(
-            lambda w: w.state not in ("done", "cancel") and w.workcenter_id.f3d_code in codes
+            lambda w: w.state not in ("done", "cancel") and w.workcenter_id.td_code in codes
         )[:1]
         rec = self.create(
             {
@@ -217,9 +217,9 @@ class F3dCutMap(models.Model):
                 "workorder_id": workorder.id,
                 "material_role": material_role,
                 "material_product_id": plate.id,
-                "sheet_length_mm": plate.f3d_sheet_length_mm,
-                "sheet_width_mm": plate.f3d_sheet_width_mm,
-                "thickness_mm": plate.f3d_thickness_mm,
+                "sheet_length_mm": plate.td_sheet_length_mm,
+                "sheet_width_mm": plate.td_sheet_width_mm,
+                "thickness_mm": plate.td_thickness_mm,
                 "qty": qty,
             }
         )
@@ -228,7 +228,7 @@ class F3dCutMap(models.Model):
 
     @api.model
     def _f3d_parts_for(self, bom, role, plate):
-        parts = self.env["f3d.cut.part"].sudo().search([("bom_id", "=", bom.id), ("active", "=", True)])
+        parts = self.env["td.cut.part"].sudo().search([("bom_id", "=", bom.id), ("active", "=", True)])
         return parts.filtered(
             lambda p: p.material_role == role or (p.material_role == "product" and p.material_product_id == plate)
         )
@@ -337,7 +337,7 @@ class F3dCutMap(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Імпорт плану"),
-            "res_model": "f3d.cut.plan.import.wizard",
+            "res_model": "td.cut.plan.import.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_map_id": self.id},
@@ -375,20 +375,20 @@ class F3dCutMap(models.Model):
     def _f3d_export_collector(self):
         """API-01 п. 1 / AC-67: колектор, якому дозволено забирати список деталей, — власник джерела сигналу
         команд CMD-03 (`equipment/CUTOPT/cmd`): саме йому йде команда `upload` з токеном експорту."""
-        sig = self.env["f3d.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
+        sig = self.env["td.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
         return sig.collector_id
 
     @api.model
     def _f3d_cutopt_signal(self):
-        sig = self.env["f3d.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
+        sig = self.env["td.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
         if not sig:
             raise UserError(_("Не знайдено сигнал %s.", CUTOPT_CMD_CODE))
         return sig
 
     def _f3d_command(self, op, cmd_fields):
         self.ensure_one()
-        return self.env["f3d.command"]._f3d_mc_create_command(
-            self._f3d_cutopt_signal(), op, cmd_fields, {"f3d_cut_map_id": self.id}
+        return self.env["td.command"]._f3d_mc_create_command(
+            self._f3d_cutopt_signal(), op, cmd_fields, {"td_cut_map_id": self.id}
         )
 
     def action_send_optimizer(self):
@@ -540,7 +540,7 @@ class F3dCutMap(models.Model):
     def _f3d_request_mpr(self):
         """R-20 п. 3: для рядків із програмою на РЦ ЧПК (`NEST-1`) — CMD-03 `mpr`, по одному."""
         self.ensure_one()
-        if self.mode != "collector" or not self.ext_job_id or self.workcenter_id.f3d_code != "NEST-1":
+        if self.mode != "collector" or not self.ext_job_id or self.workcenter_id.td_code != "NEST-1":
             return
         for line in self.line_ids.filtered("program"):
             try:
@@ -608,7 +608,7 @@ class F3dCutMap(models.Model):
                 continue
             if not rec.ext_job_id:
                 raise UserError(_("Карта %s без номера в оптимізаторі.", rec.name))
-            machine = rec.workcenter_id.f3d_code
+            machine = rec.workcenter_id.td_code
             if not machine:
                 raise UserError(_("У карти %s не визначено верстат (завдання розкрою).", rec.name))
             rec._f3d_command("release", {"job": rec.ext_job_id, "machine": machine, "priority": 5})
@@ -684,13 +684,13 @@ class F3dCutMap(models.Model):
 
 
 class F3dCutMapLine(models.Model):
-    _name = "f3d.cut.map.line"
+    _name = "td.cut.map.line"
     _description = "Розкрій: деталь у карті"
     _order = "map_id, sequence, id"
 
-    map_id = fields.Many2one("f3d.cut.map", required=True, index=True, ondelete="cascade")
+    map_id = fields.Many2one("td.cut.map", required=True, index=True, ondelete="cascade")
     sequence = fields.Integer(default=10)
-    part_id = fields.Many2one("f3d.cut.part", ondelete="set null")
+    part_id = fields.Many2one("td.cut.part", ondelete="set null")
     part_code = fields.Char(size=16, required=True)
     name = fields.Char(size=64, required=True)
     length_mm = fields.Integer(required=True)

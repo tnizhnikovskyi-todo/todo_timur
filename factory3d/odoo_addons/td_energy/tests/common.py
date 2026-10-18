@@ -26,14 +26,14 @@ TAGS = ("post_install", "-at_install", "f3d", "f3d_energy")
 
 class F3DEnergyCase(TransactionCase):
     """SPEC §13.0. W0: параметри й користувачі (групи). Синтетичну мережу, сигнали, тариф, МО додають W1…W3
-    (моделі `f3d.energy.*` на момент W0 відсутні)."""
+    (моделі `td.energy.*` на момент W0 відсутні)."""
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         icp = cls.env["ir.config_parameter"].sudo()
         for key, val in PARAMS.items():
-            icp.set_param("factory3d.energy." + key, val)
+            icp.set_param("td.energy." + key, val)
         cls._setup_users()
 
     @classmethod
@@ -43,6 +43,6 @@ class F3DEnergyCase(TransactionCase):
 
         cls.u_master = user("en_master", ["base.group_user", "mrp.group_mrp_user"])
         cls.u_account = user("en_account", ["base.group_user", "account.group_account_readonly"])
-        cls.u_energy = user("en_energy", ["base.group_user", "factory3d_energy.group_f3d_energy_manager"])
-        cls.u_viewer = user("en_viewer", ["base.group_user", "factory3d_base.group_f3d_user"])
-        cls.u_admin = user("en_admin", ["base.group_user", "factory3d_base.group_f3d_admin"])
+        cls.u_energy = user("en_energy", ["base.group_user", "td_energy.group_td_energy_manager"])
+        cls.u_viewer = user("en_viewer", ["base.group_user", "td_factory3d.group_td_user"])
+        cls.u_admin = user("en_admin", ["base.group_user", "td_factory3d.group_td_admin"])

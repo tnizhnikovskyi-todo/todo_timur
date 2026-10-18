@@ -20,7 +20,7 @@ class TestRights(F3DConstructorCase):
         }
 
     def test_ac43_storekeeper_vs_technologist_layers(self):
-        Slot = self.env['f3d.slot'].with_user(self.u_store)
+        Slot = self.env['td.slot'].with_user(self.u_store)
         slot = Slot.create(self._slot_vals('storage', 'ST-1'))
         slot.write({'x_m': 31.0})
         with self.assertRaises(AccessError) as ctx:
@@ -31,7 +31,7 @@ class TestRights(F3DConstructorCase):
             placement.with_user(self.u_store).write({'x_m': 5.0})
 
     def test_ac44_technologist_and_engineer(self):
-        Placement = self.env['f3d.placement'].with_user(self.u_tech)
+        Placement = self.env['td.placement'].with_user(self.u_tech)
         placement = Placement.create(
             {
                 'layer_id': self.layers['production'].id,
@@ -57,7 +57,7 @@ class TestRights(F3DConstructorCase):
         with self.assertRaises(AccessError):
             layer.write({'edit_group_ids': [(5, 0, 0)]})
         with self.assertRaises(AccessError):
-            self.env['f3d.layer'].with_user(self.u_eng).create(
+            self.env['td.layer'].with_user(self.u_eng).create(
                 {'site_id': self.site.id, 'name': "Новий", 'kind': 'custom'}
             )
 
@@ -66,26 +66,26 @@ class TestRights(F3DConstructorCase):
         vals['params'] = {'polygon': [[0, 0], [5, 0], [5, 5]]}
         for user in (self.u_store, self.u_tech, self.u_eng):
             with self.subTest(user=user.login), self.assertRaises(AccessError) as ctx:
-                self.env['f3d.slot'].with_user(user).create(dict(vals))
+                self.env['td.slot'].with_user(user).create(dict(vals))
             self.assertIn("менеджер", str(ctx.exception))
-        slot = self.env['f3d.slot'].with_user(self.u_manager).create(vals)
+        slot = self.env['td.slot'].with_user(self.u_manager).create(vals)
         self.assertTrue(slot.exists())
 
     def test_ac46_move_between_layers_needs_both(self):
-        slot = self.env['f3d.slot'].with_user(self.u_store).create(self._slot_vals('storage', 'MV-1'))
+        slot = self.env['td.slot'].with_user(self.u_store).create(self._slot_vals('storage', 'MV-1'))
         with self.assertRaises(AccessError):
             slot.write({'layer_id': self.layers['production'].id})
 
     def test_ac47_plain_user_read_only(self):
         slot = self.make_slot()
         plain = self.u_plain
-        self.assertTrue(self.env['f3d.slot'].with_user(plain).search([('id', '=', slot.id)]))
+        self.assertTrue(self.env['td.slot'].with_user(plain).search([('id', '=', slot.id)]))
         with self.assertRaises(AccessError):
-            self.env['f3d.slot'].with_user(plain).create(self._slot_vals('storage', 'PL-1'))
+            self.env['td.slot'].with_user(plain).create(self._slot_vals('storage', 'PL-1'))
         with self.assertRaises(AccessError):
             slot.with_user(plain).write({'x_m': 1.0})
         with self.assertRaises(AccessError):
-            self.env['f3d.layer'].with_user(plain).create({'site_id': self.site.id, 'name': "X", 'kind': 'custom'})
+            self.env['td.layer'].with_user(plain).create({'site_id': self.site.id, 'name': "X", 'kind': 'custom'})
 
     def test_manager_only_actions(self):
         with self.assertRaises(AccessError):

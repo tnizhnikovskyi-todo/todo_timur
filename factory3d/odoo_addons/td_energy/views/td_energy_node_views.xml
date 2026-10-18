@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-01…V-04, дія «Схема мережі» -->
 <odoo>
-    <record id="view_f3d_energy_node_hierarchy" model="ir.ui.view">
-        <field name="name">f3d.energy.node.hierarchy</field>
-        <field name="model">f3d.energy.node</field>
+    <record id="view_td_energy_node_hierarchy" model="ir.ui.view">
+        <field name="name">td.energy.node.hierarchy</field>
+        <field name="model">td.energy.node</field>
         <field name="arch" type="xml">
             <hierarchy parent_field="parent_id" child_field="child_ids" draggable="0" icon="fa-bolt">
                 <field name="name"/>
@@ -44,9 +44,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_node_form" model="ir.ui.view">
-        <field name="name">f3d.energy.node.form</field>
-        <field name="model">f3d.energy.node</field>
+    <record id="view_td_energy_node_form" model="ir.ui.view">
+        <field name="name">td.energy.node.form</field>
+        <field name="model">td.energy.node</field>
         <field name="arch" type="xml">
             <form>
                 <header>
@@ -147,9 +147,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_node_list" model="ir.ui.view">
-        <field name="name">f3d.energy.node.list</field>
-        <field name="model">f3d.energy.node</field>
+    <record id="view_td_energy_node_list" model="ir.ui.view">
+        <field name="name">td.energy.node.list</field>
+        <field name="model">td.energy.node</field>
         <field name="arch" type="xml">
             <list>
                 <field name="code"/>
@@ -175,9 +175,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_node_search" model="ir.ui.view">
-        <field name="name">f3d.energy.node.search</field>
-        <field name="model">f3d.energy.node</field>
+    <record id="view_td_energy_node_search" model="ir.ui.view">
+        <field name="name">td.energy.node.search</field>
+        <field name="model">td.energy.node</field>
         <field name="arch" type="xml">
             <search>
                 <field name="code"/>
@@ -216,9 +216,9 @@
     </record>
 
     <!-- hierarchy_res_id (корінь GRID-10KV) не задається: вузли створює хук, id невідомий на момент встановлення -->
-    <record id="action_f3d_energy_node_tree" model="ir.actions.act_window">
+    <record id="action_td_energy_node_tree" model="ir.actions.act_window">
         <field name="name">Схема мережі</field>
-        <field name="res_model">f3d.energy.node</field>
+        <field name="res_model">td.energy.node</field>
         <field name="view_mode">hierarchy,list,form</field>
     </record>
 </odoo>

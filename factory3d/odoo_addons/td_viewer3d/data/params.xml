@@ -2,39 +2,39 @@
 <odoo noupdate="1">
     <!-- kiosk_token, demo_enabled, demo_clock задає post_init (hooks.py). -->
     <record id="param_snapshot_minutes" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.snapshot_minutes</field><field name="value">10</field>
+        <field name="key">td.viewer.snapshot_minutes</field><field name="value">10</field>
     </record>
     <record id="param_snapshot_hours" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.snapshot_hours</field><field name="value">06:30-16:00</field>
+        <field name="key">td.viewer.snapshot_hours</field><field name="value">06:30-16:00</field>
     </record>
     <record id="param_snapshot_keep_days" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.snapshot_keep_days</field><field name="value">14</field>
+        <field name="key">td.viewer.snapshot_keep_days</field><field name="value">14</field>
     </record>
     <record id="param_event_keep_hours" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.event_keep_hours</field><field name="value">48</field>
+        <field name="key">td.viewer.event_keep_hours</field><field name="value">48</field>
     </record>
     <record id="param_delta_debounce_ms" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.delta_debounce_ms</field><field name="value">1500</field>
+        <field name="key">td.viewer.delta_debounce_ms</field><field name="value">1500</field>
     </record>
     <record id="param_kiosk_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.kiosk_enabled</field><field name="value">True</field>
+        <field name="key">td.viewer.kiosk_enabled</field><field name="value">True</field>
     </record>
     <record id="param_kiosk_refresh_s" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.kiosk_refresh_s</field><field name="value">15</field>
+        <field name="key">td.viewer.kiosk_refresh_s</field><field name="value">15</field>
     </record>
     <record id="param_bus_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.bus_enabled</field><field name="value">True</field>
+        <field name="key">td.viewer.bus_enabled</field><field name="value">True</field>
     </record>
     <record id="param_lite_default" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.lite_default</field><field name="value">auto</field>
+        <field name="key">td.viewer.lite_default</field><field name="value">auto</field>
     </record>
     <record id="param_signal_bus_ts" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.signal_bus_ts</field><field name="value"></field>
+        <field name="key">td.viewer.signal_bus_ts</field><field name="value"></field>
     </record>
     <record id="param_demo_queue" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.demo_queue</field><field name="value"></field>
+        <field name="key">td.viewer.demo_queue</field><field name="value"></field>
     </record>
     <record id="param_demo_state" model="ir.config_parameter">
-        <field name="key">factory3d.viewer.demo_state</field><field name="value"></field>
+        <field name="key">td.viewer.demo_state</field><field name="value"></field>
     </record>
 </odoo>

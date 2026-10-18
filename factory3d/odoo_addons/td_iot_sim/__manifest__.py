@@ -1,12 +1,12 @@
 {
-    "name": "Factory3D: емулятор обладнання (пульт)",
+    "name": "Емулятор обладнання",
     "version": "19.0.2.0.1",
     "summary": "Пульт емулятора обладнання factory3d: реєстр пристроїв, каталог сигналів, сценарії, рівень 0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "license": "LGPL-3",
     "website": "https://todo.ltd",
-    "depends": ["factory3d_base"],
+    "depends": ["td_factory3d"],
     "external_dependencies": {"python": ["requests"]},
     "data": [
         # рівень 0 — успадковані файли data-модуля, ПЕРШИМИ і без змін (інакше Odoo видалить записи)
@@ -19,7 +19,7 @@
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/level0.xml",
-        "data/f3d_sim_scenario.xml",
+        "data/td_sim_scenario.xml",
         "data/ir_cron.xml",
         "views/sim_panel_views.xml",
         "views/sim_device_views.xml",

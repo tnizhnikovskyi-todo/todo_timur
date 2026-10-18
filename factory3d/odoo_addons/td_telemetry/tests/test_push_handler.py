@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 from freezegun import freeze_time
 
-from odoo.addons.factory3d_telemetry.models.push_handler import F3dPushHandler
+from odoo.addons.td_telemetry.models.push_handler import F3dPushHandler
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 
@@ -46,33 +46,33 @@ class TestDispatch(F3DTelemetryCase):
         frozen = freeze_time(FREEZE)
         frozen.start()
         self.addCleanup(frozen.stop)
-        self.Event = self.env["f3d.push.event"]
+        self.Event = self.env["td.push.event"]
 
     def receive(self, events, models=None, handle=None):
         handle = handle or Mock()
         with (
             patch.object(F3dPushHandler, "_f3d_handler_models", return_value=models or []),
             patch.object(F3dPushHandler, "_f3d_handle_push", handle),
-            mute_logger("odoo.addons.factory3d_telemetry.models.f3d_push_event"),
+            mute_logger("odoo.addons.td_telemetry.models.td_push_event"),
         ):
             res = self.Event._f3d_receive(events, self.col)
         return res, handle
 
     def test_handler_called(self):
-        res, handle = self.receive([event()], ["f3d.push.handler"])
+        res, handle = self.receive([event()], ["td.push.handler"])
         handle.assert_called_once()
         route, ev = handle.call_args.args
         self.assertEqual(route, "lpr")
         self.assertEqual(set(ev), {"event_id", "route", "ts", "remote", "headers", "payload"})
         self.assertEqual(ev["ts"], CAPTURE)
-        self.assertEqual(res["handled"], {"lpr": ["f3d.push.handler"]})
+        self.assertEqual(res["handled"], {"lpr": ["td.push.handler"]})
         rec = self.Event.search([("event_id", "=", event()["event_id"])])
-        self.assertEqual(rec.handled_by, "f3d.push.handler")
+        self.assertEqual(rec.handled_by, "td.push.handler")
 
     def test_signal_reading_from_event(self):
-        res, _h = self.receive([event()], ["f3d.push.handler"])
+        res, _h = self.receive([event()], ["td.push.handler"])
         self.assertEqual(res["accepted"], 1)
-        reading = self.env["f3d.reading"].search([("signal_id", "=", self.sig_plate.id)])
+        reading = self.env["td.reading"].search([("signal_id", "=", self.sig_plate.id)])
         self.assertEqual(
             (reading.text, reading.ts, reading.received_at), ("AA4512KT", CAPTURE, datetime(2026, 10, 14, 5, 15, 10))
         )
@@ -80,19 +80,19 @@ class TestDispatch(F3DTelemetryCase):
 
     def test_match_mismatch(self):
         self.receive([event(provider="CAM-06")])
-        self.assertFalse(self.env["f3d.reading"].search_count([("signal_id", "=", self.sig_plate.id)]))
+        self.assertFalse(self.env["td.reading"].search_count([("signal_id", "=", self.sig_plate.id)]))
         self.assertEqual(self.Event.search([]).signal_count, 0)
 
     def test_handler_exception_isolated(self):
         handle = Mock(side_effect=[ValueError("boom"), None])
-        _res, handle = self.receive([event()], ["f3d.push.handler", "f3d.push.handler"], handle)
+        _res, handle = self.receive([event()], ["td.push.handler", "td.push.handler"], handle)
         self.assertEqual(handle.call_count, 2)
         rec = self.Event.search([])
         self.assertIn("ValueError: boom", rec.error)
         self.assertEqual(self.sig_plate.last_text, "AA4512KT")
 
     def test_numeric_scale_address_and_signal(self):
-        sig = self.env["f3d.signal"].create(
+        sig = self.env["td.signal"].create(
             {
                 "code": "yard/lpr/CAM-T/conf",
                 "name": "conf",
@@ -121,6 +121,6 @@ class TestDispatch(F3DTelemetryCase):
 
     def test_received_at_and_ts_fallback(self):
         self.receive([event(capture=CAPTURE_MS + 120000)])
-        reading = self.env["f3d.reading"].search([("signal_id", "=", self.sig_plate.id)])
+        reading = self.env["td.reading"].search([("signal_id", "=", self.sig_plate.id)])
         received = datetime(2026, 10, 14, 5, 15, 10)
         self.assertEqual((reading.ts, reading.received_at, reading.quality), (received, received, "uncertain"))

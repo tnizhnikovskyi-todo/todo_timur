@@ -1,4 +1,4 @@
-"""Розширення f3d.yard.visit для КПП: ворота, події LPR, пошук за номером, хук пропуску (W2)."""
+"""Розширення td.yard.visit для КПП: ворота, події LPR, пошук за номером, хук пропуску (W2)."""
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
@@ -11,11 +11,11 @@ OUT_STATES = ("queued", "at_dock", "handling", "weighed")
 
 
 class F3dYardVisit(models.Model):
-    _inherit = "f3d.yard.visit"
+    _inherit = "td.yard.visit"
 
-    gate_in_id = fields.Many2one("f3d.yard.gate", string="КПП в'їзду", readonly=True, copy=False, ondelete="set null")
-    gate_out_id = fields.Many2one("f3d.yard.gate", string="КПП виїзду", readonly=True, copy=False, ondelete="set null")
-    lpr_event_ids = fields.One2many("f3d.yard.lpr.event", "visit_id", string="Події LPR")
+    gate_in_id = fields.Many2one("td.yard.gate", string="КПП в'їзду", readonly=True, copy=False, ondelete="set null")
+    gate_out_id = fields.Many2one("td.yard.gate", string="КПП виїзду", readonly=True, copy=False, ondelete="set null")
+    lpr_event_ids = fields.One2many("td.yard.lpr.event", "visit_id", string="Події LPR")
 
     # ------------------------------------------------------------------ R-08 п. 6–7
     @api.model
@@ -65,7 +65,7 @@ class F3dYardVisit(models.Model):
             return ("warning", "Команди на шлагбаум вимкнено — відкрийте шлагбаум з пульта CAME.")
         try:
             # ручна команда від імені користувача: права GRP_SEC перевіряє action_admit
-            self.env["f3d.yard.gate"].browse(gate.id).action_command("open", self, "manual")
+            self.env["td.yard.gate"].browse(gate.id).action_command("open", self, "manual")
         except UserError as e:
             return ("warning", str(e.args[0]))
         return ("success", "Фуру %s пропущено, команду на шлагбаум надіслано" % (self.plate or self.name))
@@ -76,6 +76,6 @@ class F3dYardVisit(models.Model):
         parent = getattr(super(), "_cron_queue", None)
         if parent:
             parent()
-        self.env["f3d.yard.gate"].sudo()._cron_gates()
-        self.env["f3d.yard.lpr.event"].sudo()._cron_expire()
+        self.env["td.yard.gate"].sudo()._cron_gates()
+        self.env["td.yard.lpr.event"].sudo()._cron_expire()
         return True

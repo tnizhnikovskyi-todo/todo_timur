@@ -1,18 +1,18 @@
-# factory3d_telemetry
+# td_telemetry
 
 Спільний хребет збору даних factory3d (Odoo 19): колектори, джерела, сигнали, показання, команди;
 API `/f3d/telemetry/*`; пороги → заявки ТО; ТО за лічильником. Клієнт — `factory3d/services/collector`.
-Специфікація: `factory3d/docs/modules/factory3d_telemetry/SPEC.md`.
+Специфікація: `factory3d/docs/modules/td_telemetry/SPEC.md`.
 
 ## Встановлення
 
-Залежності: `factory3d_base`, `maintenance`, `mail`, `bus`. Міст до переглядача — `factory3d_telemetry_viewer`
+Залежності: `td_factory3d`, `maintenance`, `mail`, `bus`. Міст до переглядача — `td_telemetry_viewer3d`
 (auto_install). Хук `post_init` виконує міграцію демо рівня 0 (звіт — у параметрі `level0_migrated`).
 
-    F3D_TEST_INSTALL=factory3d_telemetry,factory3d_telemetry_viewer \
-        factory3d/tools/odoo/run_tests.sh <db> /factory3d_telemetry,/factory3d_telemetry_viewer
+    F3D_TEST_INSTALL=td_telemetry,td_telemetry_viewer3d \
+        factory3d/tools/odoo/run_tests.sh <db> /td_telemetry,/td_telemetry_viewer3d
 
-## Параметри (`ir.config_parameter`, `factory3d.telemetry.*`, noupdate)
+## Параметри (`ir.config_parameter`, `td.telemetry.*`, noupdate)
 
 | Ключ | За замовчуванням | Призначення |
 |---|---|---|

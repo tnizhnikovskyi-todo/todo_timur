@@ -2,7 +2,7 @@
 // HOOT: точка розширення ядра (SPEC R-25): registerViewerExtension → applyLayout(api, D.layout, fresh) — після завантаження
 // моделі, на повній дельті й зміні розкладки, ДО stockLoad.sync; без розширень і без `D.layout` ядро працює як раніше.
 import { after, describe, expect, test } from "@odoo/hoot";
-import { registerViewerExtension } from "@factory3d_viewer/viewer/core";
+import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { mountViewer } from "./helpers";
 
 describe.current.tags("desktop");

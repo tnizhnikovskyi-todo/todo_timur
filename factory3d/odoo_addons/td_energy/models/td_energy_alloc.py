@@ -13,8 +13,8 @@ EPS = 5e-4  # половина одиниці останнього знака kw
 
 
 class F3dEnergyAlloc(models.Model):
-    _name = "f3d.energy.alloc"
-    _inherit = ["f3d.energy.day.mixin"]
+    _name = "td.energy.alloc"
+    _inherit = ["td.energy.day.mixin"]
     _description = "Енергетика: розподіл на виробництво"
     _order = "day desc, production_id, workorder_id, kind"
 
@@ -35,11 +35,11 @@ class F3dEnergyAlloc(models.Model):
         "mrp.production", related="workorder_id.production_id", store=True, index=True, string="МО"
     )
     workcenter_id = fields.Many2one("mrp.workcenter", string="Робочий центр", index=True)
-    node_id = fields.Many2one("f3d.energy.node", string="Вузол")
-    pool_id = fields.Many2one("f3d.energy.pool", string="Пул")
+    node_id = fields.Many2one("td.energy.node", string="Вузол")
+    pool_id = fields.Many2one("td.energy.pool", string="Пул")
     kwh = fields.Float(string="кВт·год", digits=(12, 3))
     minutes = fields.Float(string="Хвилин роботи", digits=(10, 1))
-    cost = fields.Float(string="Вартість, грн", digits=(12, 2), groups="factory3d_energy.group_f3d_energy_cost")
+    cost = fields.Float(string="Вартість, грн", digits=(12, 2), groups="td_energy.group_td_energy_cost")
     currency_id = fields.Many2one("res.currency", default=lambda self: self.env.company.currency_id)
     quality = fields.Selection(
         [
@@ -53,7 +53,7 @@ class F3dEnergyAlloc(models.Model):
     )
     locked = fields.Boolean(string="Зафіксовано", default=False, index=True)
     analytic_line_ids = fields.Many2many(
-        "account.analytic.line", "f3d_energy_alloc_analytic_rel", "alloc_id", "line_id", copy=False
+        "account.analytic.line", "td_energy_alloc_analytic_rel", "alloc_id", "line_id", copy=False
     )
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company)
 
@@ -84,11 +84,11 @@ class F3dEnergyAlloc(models.Model):
     # --- допоміжні -----------------------------------------------------------------------------------
     @api.model
     def _f3d_machine_intervals(self, workorders, d0, end):
-        """CM-03 (обгортка): `{wo_id: [(start, end, state), …]}` для завдань РЦ з активним `f3d.machine`;
-        без `factory3d_machine_connect` — порожній словник. Ключ є для кожного завдання такого РЦ."""
-        if "f3d.machine" not in self.env or not workorders:
+        """CM-03 (обгортка): `{wo_id: [(start, end, state), …]}` для завдань РЦ з активним `td.machine`;
+        без `td_machine_connect` — порожній словник. Ключ є для кожного завдання такого РЦ."""
+        if "td.machine" not in self.env or not workorders:
             return {}
-        Machine = self.env["f3d.machine"].sudo()
+        Machine = self.env["td.machine"].sudo()
         wcs = workorders.workcenter_id.filtered(
             lambda wc: Machine.search_count([("workcenter_id", "=", wc.id), ("active", "=", True)])
         )
@@ -170,11 +170,11 @@ class F3dEnergyAlloc(models.Model):
     def _f3d_price(self, prices, dt):
         a = alloc_tools.floor15(dt)
         if a not in prices:
-            prices[a] = self.env["f3d.energy.tariff"]._f3d_price_at(a)[1]
+            prices[a] = self.env["td.energy.tariff"]._f3d_price_at(a)[1]
         return prices[a]
 
     def _f3d_alloc_day(self, day, now, prices):
-        Node = self.env["f3d.energy.node"]
+        Node = self.env["td.energy.node"]
         d0, d1 = dates.local_day_bounds(day)
         end = min(d1, now)
         series_memo = {}
@@ -283,7 +283,7 @@ class F3dEnergyAlloc(models.Model):
         for wo_id, slot in minutes_slot:
             slot_wos[slot].append(wo_id)
         wc_with_node = set(node_by_wc)
-        for pool in self.env["f3d.energy.pool"].with_context(active_test=False).search([]):
+        for pool in self.env["td.energy.pool"].with_context(active_test=False).search([]):
             nodes = Node.search([("pool_id", "=", pool.id)])
             series_list = [s for s in (series_of(n) for n in nodes) if s]
             allowed = set(pool.workcenter_ids.ids) & wc_with_node if pool.workcenter_ids else wc_with_node

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-07 -->
-    <record id="view_f3d_layout_version_list" model="ir.ui.view">
-        <field name="name">f3d.layout.version.list</field>
-        <field name="model">f3d.layout.version</field>
+    <record id="view_td_layout_version_list" model="ir.ui.view">
+        <field name="name">td.layout.version.list</field>
+        <field name="model">td.layout.version</field>
         <field name="arch" type="xml">
             <list string="Версії планування" create="0">
                 <field name="site_id"/>
@@ -22,14 +22,14 @@
         </field>
     </record>
 
-    <record id="view_f3d_layout_version_form" model="ir.ui.view">
-        <field name="name">f3d.layout.version.form</field>
-        <field name="model">f3d.layout.version</field>
+    <record id="view_td_layout_version_form" model="ir.ui.view">
+        <field name="name">td.layout.version.form</field>
+        <field name="model">td.layout.version</field>
         <field name="arch" type="xml">
             <form string="Версія планування" create="0" delete="0">
                 <header>
                     <button name="action_restore_draft" type="object" string="Повернути чернетку до цієї версії"
-                            groups="factory3d_constructor.group_f3d_constructor_manager"
+                            groups="td_constructor.group_td_constructor_manager"
                             invisible="is_draft_base"
                             confirm="Чернетку площадки буде замінено знімком цієї версії. Записи Odoo не змінюються. Продовжити?"/>
                     <button name="action_download_snapshot" type="object" string="Завантажити знімок"
@@ -59,7 +59,7 @@
                         </group>
                     </group>
                     <group>
-                        <field name="note" groups="factory3d_constructor.group_f3d_constructor_manager"/>
+                        <field name="note" groups="td_constructor.group_td_constructor_manager"/>
                     </group>
                     <notebook>
                         <page name="report" string="Звіт">

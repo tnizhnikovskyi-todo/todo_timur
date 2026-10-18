@@ -11,28 +11,28 @@ CODE_RE = re.compile(r'^[A-Z0-9]+(-[A-Z0-9]+)*$')
 
 
 class F3dPlacement(models.Model):
-    _name = 'f3d.placement'
+    _name = 'td.placement'
     _description = "Розміщення обладнання"
-    _inherit = ['f3d.draft.mixin']
+    _inherit = ['td.draft.mixin']
     _order = 'layer_id, code'
     _rec_name = 'code'
 
     uid = fields.Char(string="UID", size=32, default=lambda self: uuid4().hex, copy=False, index=True, readonly=True)
-    layer_id = fields.Many2one('f3d.layer', string="Шар", required=True, ondelete='cascade', index=True)
-    site_id = fields.Many2one('f3d.site', related='layer_id.site_id', store=True, index=True)
+    layer_id = fields.Many2one('td.layer', string="Шар", required=True, ondelete='cascade', index=True)
+    site_id = fields.Many2one('td.site', related='layer_id.site_id', store=True, index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     variant_id = fields.Many2one(
-        'f3d.equipment.variant', string="Варіант", required=True, ondelete='restrict', index=True
+        'td.equipment.variant', string="Варіант", required=True, ondelete='restrict', index=True
     )
     slot_id = fields.Many2one(
-        'f3d.slot', string="Місце", ondelete='set null', help="Місце під верстат або стелаж, в який поставлено"
+        'td.slot', string="Місце", ondelete='set null', help="Місце під верстат або стелаж, в який поставлено"
     )
     cell_code = fields.Char(string="Комірка", size=32, help="Комірка стелажа місця (для перевірок fits і load)")
     code = fields.Char(
         string="Код",
         size=32,
         required=True,
-        help="Майбутній f3d_code обладнання: великі латинські літери, цифри, дефіси між групами",
+        help="Майбутній td_code обладнання: великі латинські літери, цифри, дефіси між групами",
     )
     name = fields.Char(string="Назва", required=True, help="Майбутня назва maintenance.equipment")
     x_m = fields.Float(string="X, м", digits=(10, 3))
@@ -82,13 +82,13 @@ class F3dPlacement(models.Model):
 
     @api.model
     def _f3d_check_create(self, vals_list):
-        layers = self.env['f3d.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
+        layers = self.env['td.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
         self._f3d_assert_layers(layers)
 
     def _f3d_check_write(self, vals):
         layers = self.mapped('layer_id')
         if vals.get('layer_id'):
-            layers |= self.env['f3d.layer'].browse(vals['layer_id'])
+            layers |= self.env['td.layer'].browse(vals['layer_id'])
         self._f3d_assert_layers(layers)
 
     def _f3d_check_unlink(self):

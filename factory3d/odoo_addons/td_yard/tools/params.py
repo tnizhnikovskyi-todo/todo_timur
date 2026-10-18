@@ -1,10 +1,10 @@
-"""Параметри factory3d.yard.* (SPEC §5.1): умовчання й типізоване читання."""
+"""Параметри td.yard.* (SPEC §5.1): умовчання й типізоване читання."""
 
 import logging
 
 _logger = logging.getLogger(__name__)
 
-PREFIX = "factory3d.yard."
+PREFIX = "td.yard."
 
 # name: (type, default); умовчання збігаються з data/ir_config_parameter.xml
 PARAMS = {

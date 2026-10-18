@@ -24,7 +24,7 @@ def _fmt_int(value):
 
 
 class F3dGensetLinkEvents(models.Model):
-    _inherit = "f3d.genset.link"
+    _inherit = "td.genset.link"
 
     # --- крони -----------------------------------------------------------------------------------------------
     @api.model
@@ -37,9 +37,9 @@ class F3dGensetLinkEvents(models.Model):
                 with self.env.cr.savepoint():
                     retry = link._process_events_one() or retry
             except Exception:  # MG-11: збій однієї зв'язки не валить крон
-                _logger.exception("factory3d_genset: події зв'язки %s не оброблено", link.id)
+                _logger.exception("td_genset_factory3d: події зв'язки %s не оброблено", link.id)
         if retry:  # повтор наступного прогону при 200
-            cron = self.env.ref("factory3d_genset.cron_f3d_genset_events", raise_if_not_found=False)
+            cron = self.env.ref("td_genset_factory3d.cron_td_genset_events", raise_if_not_found=False)
             if cron:
                 cron.sudo()._trigger()
 
@@ -52,7 +52,7 @@ class F3dGensetLinkEvents(models.Model):
                 with self.env.cr.savepoint():
                     link._service_one()
             except Exception:
-                _logger.exception("factory3d_genset: ТО за мотогодинами для зв'язки %s не оброблено", link.id)
+                _logger.exception("td_genset_factory3d: ТО за мотогодинами для зв'язки %s не оброблено", link.id)
 
     # --- події -----------------------------------------------------------------------------------------------
     def _process_events_one(self):
@@ -71,9 +71,9 @@ class F3dGensetLinkEvents(models.Model):
             ev["text"] = (ev.get("text") or "")[:2000]
             try:
                 with self.env.cr.savepoint():
-                    self._apply_event(ev, self.env["f3d.genset.event.map"]._match(ev))
+                    self._apply_event(ev, self.env["td.genset.event.map"]._match(ev))
             except Exception:  # одна «отруйна» подія не блокує потік
-                _logger.exception("factory3d_genset: подію %s зв'язки %s не оброблено", ev.get("id"), self.id)
+                _logger.exception("td_genset_factory3d: подію %s зв'язки %s не оброблено", ev.get("id"), self.id)
             last = ev
         if last:
             vals = {"last_event_id": last.get("id") or 0}
@@ -114,8 +114,8 @@ class F3dGensetLinkEvents(models.Model):
         return "alarm_level"
 
     def _notify_bus_state(self):
-        if "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("maintenance.equipment", [self.f3d_code], "state")
+        if "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("maintenance.equipment", [self.td_code], "state")
 
     def _open_request(self, row, ev, key, leaf, priority=None, schedule_date=None, notify_repeat=True):
         """R-07 крок 3 + R-08: одна відкрита заявка на ключ; повтор — коментар. Повертає заявку або False."""
@@ -126,7 +126,7 @@ class F3dGensetLinkEvents(models.Model):
         Request = self.env["maintenance.request"].sudo()  # R-07: заявка від імені OdooBot
         name, description = row._render(ev, self)
         open_req = Request.search(
-            [("equipment_id", "=", eq.id), ("f3d_genset_event_key", "=", key), ("stage_id.done", "=", False)], limit=1
+            [("equipment_id", "=", eq.id), ("td_genset_event_key", "=", key), ("stage_id.done", "=", False)], limit=1
         )
         if open_req:
             if notify_repeat:
@@ -141,7 +141,7 @@ class F3dGensetLinkEvents(models.Model):
         team = eq.maintenance_team_id or self.env["maintenance.team"].sudo().search(
             [("company_id", "in", (eq.company_id.id, False))], limit=1
         )
-        signal = self.env["f3d.signal"].sudo().search([("code", "=", telemetry.prefix(eq.f3d_code) + leaf)], limit=1)
+        signal = self.env["td.signal"].sudo().search([("code", "=", telemetry.prefix(eq.td_code) + leaf)], limit=1)
         vals = {
             "name": name,
             "description": description,
@@ -152,16 +152,16 @@ class F3dGensetLinkEvents(models.Model):
             "request_date": datetime.now(KYIV).date(),
             "schedule_date": schedule_date or (now if priority == "3" else now + timedelta(days=1)),
             "user_id": eq.technician_user_id.id or False,
-            "f3d_signal_id": signal.id or False,
-            "f3d_genset_event_key": key,
+            "td_signal_id": signal.id or False,
+            "td_genset_event_key": key,
             "company_id": eq.company_id.id or self.env.company.id,
         }
         if "maintenance_for" in Request._fields:  # Odoo 19 CE поля немає
             vals["maintenance_for"] = "equipment"
         if ev.get("value") is not None and row.severity not in ("comm", "service"):
-            vals["f3d_value"] = ev["value"]
+            vals["td_value"] = ev["value"]
         if ev.get("threshold") is not None:
-            vals["f3d_threshold"] = ev["threshold"]
+            vals["td_threshold"] = ev["threshold"]
         return Request.create(vals)
 
     # --- R-09: ТО за мотогодинами ------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ class F3dGensetLinkEvents(models.Model):
         eq = self.equipment_id
         Request = self.env["maintenance.request"].sudo()
         hours_signal = (
-            self.env["f3d.signal"].sudo().search([("code", "=", telemetry.prefix(eq.f3d_code) + "hours")], limit=1)
+            self.env["td.signal"].sudo().search([("code", "=", telemetry.prefix(eq.td_code) + "hours")], limit=1)
         )
         if td.SERVICE_REQUESTS_BY_TD:
             # крок 1: заявки створює td_genset — міст лише дописує сигнал `hours`
@@ -180,10 +180,10 @@ class F3dGensetLinkEvents(models.Model):
                         ("equipment_id", "=", eq.id),
                         ("maintenance_type", "=", "preventive"),
                         ("stage_id.done", "=", False),
-                        ("f3d_signal_id", "=", False),
-                        ("f3d_genset_event_key", "=", False),
+                        ("td_signal_id", "=", False),
+                        ("td_genset_event_key", "=", False),
                     ]
-                ).write({"f3d_signal_id": hours_signal.id})
+                ).write({"td_signal_id": hours_signal.id})
             return False
         info = td.service_info(self.td_genset_ref)
         left, hours_now, next_h = info.get("hours_left"), info.get("hours_now"), info.get("next_service_hours")
@@ -193,7 +193,7 @@ class F3dGensetLinkEvents(models.Model):
             warn_h = 50.0
         if left is None or next_h is None or not (info.get("due") or left <= warn_h):
             return False
-        row = self.env["f3d.genset.event.map"].search([("key", "=", "SERVICE_DUE")], limit=1)
+        row = self.env["td.genset.event.map"].search([("key", "=", "SERVICE_DUE")], limit=1)
         if not row:
             return False
         avg = self._avg_hours_per_day(hours_signal, hours_now)
@@ -241,7 +241,7 @@ class F3dGensetLinkEvents(models.Model):
             return 1.0
         since = fields.Datetime.now() - timedelta(days=30)
         first = (
-            self.env["f3d.reading"]
+            self.env["td.reading"]
             .sudo()
             .search([("signal_id", "=", hours_signal.id), ("ts", ">=", since)], order="ts, id", limit=1)
         )

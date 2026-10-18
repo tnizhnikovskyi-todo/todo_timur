@@ -13,7 +13,7 @@ class TestDevice(SimCase):
         self.lsz = self.make_device('FA-CUT-T', protocol='P-09', driver='passive', params={'lsz': 12})
 
     def _fault(self, device, reason):
-        wiz = self.env['f3d.sim.fault.wizard'].create({'device_id': device.id, 'reason': reason})
+        wiz = self.env['td.sim.fault.wizard'].create({'device_id': device.id, 'reason': reason})
         return wiz.action_confirm()
 
     def test_fault_wizard_calls_api(self):
@@ -21,7 +21,7 @@ class TestDevice(SimCase):
         self._fault(self.cnc, 'spindle')
         self.assertEqual(self.cnc.state, 'fault')
         self.assertEqual(self.calls[-1]['json'], {'reason': 'spindle'})
-        event = self.env['f3d.sim.event'].search([('kind', '=', 'command'), ('device_code', '=', 'CNC-T2')])
+        event = self.env['td.sim.event'].search([('kind', '=', 'command'), ('device_code', '=', 'CNC-T2')])
         self.assertTrue(event)
         self.assertNotIn('secret-sim-token', str(event.payload))
 
@@ -55,9 +55,9 @@ class TestDevice(SimCase):
         self.assertEqual(self.calls[-1]['json'], {'reason': 'loop'})
 
     def test_equipment_link_by_code(self):
-        eq = self.env['maintenance.equipment'].create({'name': 'Фреза-Т', 'f3d_code': 'CNC-T2'})
-        self.assertEqual(eq.f3d_sim_device_id, self.cnc)
+        eq = self.env['maintenance.equipment'].create({'name': 'Фреза-Т', 'td_code': 'CNC-T2'})
+        self.assertEqual(eq.td_sim_device_id, self.cnc)
         self.respond('POST', '/device/CNC-T2/fault', 200, {})
         self._fault(self.cnc, 'generic')
-        self.assertEqual(eq.f3d_sim_state, 'fault')
+        self.assertEqual(eq.td_sim_state, 'fault')
         self.assertEqual(self.cnc.display_name, 'CNC-T2 — CNC-T2')

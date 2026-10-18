@@ -16,12 +16,12 @@ CHECK_MODE_SELECTION = [('warn', "Попередження"), ('block', "Заб�
 
 
 class F3dCheckConfig(models.Model):
-    _name = 'f3d.check.config'
+    _name = 'td.check.config'
     _description = "Перевірка розкладки"
-    _inherit = ['f3d.draft.mixin']
+    _inherit = ['td.draft.mixin']
     _order = 'site_id, sequence'
 
-    site_id = fields.Many2one('f3d.site', string="Площадка", required=True, ondelete='cascade', index=True)
+    site_id = fields.Many2one('td.site', string="Площадка", required=True, ondelete='cascade', index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     check_key = fields.Selection(CHECK_KEY_SELECTION, string="Перевірка", required=True)
     sequence = fields.Integer(default=10)

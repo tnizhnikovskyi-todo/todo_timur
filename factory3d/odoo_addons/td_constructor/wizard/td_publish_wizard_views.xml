@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-08 -->
-    <record id="view_f3d_publish_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.publish.wizard.form</field>
-        <field name="model">f3d.publish.wizard</field>
+    <record id="view_td_publish_wizard_form" model="ir.ui.view">
+        <field name="name">td.publish.wizard.form</field>
+        <field name="model">td.publish.wizard</field>
         <field name="arch" type="xml">
             <form string="Публікація розкладки">
                 <field name="state" invisible="1"/>

@@ -5,7 +5,7 @@
 // Ідемпотентно: початкове положення вузла зберігається в userData.f3dBase, кожне застосування йде від бази.
 // Координати payload — Blender (X уздовж, Y впоперек, Z угору), three.js: (x, z, −y). УВАГА (rjsmin): без вкладених `...`.
 
-import { registerViewerExtension } from "@factory3d_viewer/viewer/core";
+import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { FRONT_ANGLE, buildGenericModel, disposeTree, fitModel } from "./generic_models";
 import { buildSlotObject } from "./slot_view";
 

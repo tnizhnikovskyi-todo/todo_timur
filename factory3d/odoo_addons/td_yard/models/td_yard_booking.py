@@ -5,7 +5,7 @@ from odoo.exceptions import UserError, ValidationError
 
 from ..tools import params as P
 from ..tools import tz
-from .f3d_yard_visit import GRP_DISP, _f3d_yard_require
+from .td_yard_visit import GRP_DISP, _f3d_yard_require
 
 
 def _hhmm(hours):
@@ -13,7 +13,7 @@ def _hhmm(hours):
 
 
 class F3dYardBooking(models.Model):
-    _name = "f3d.yard.booking"
+    _name = "td.yard.booking"
     _description = "Двір: бронювання воріт"
     _inherit = ["mail.thread"]
     _order = "slot_start, dock_id"
@@ -24,7 +24,7 @@ class F3dYardBooking(models.Model):
         "res.company", string="Компанія", required=True, index=True, default=lambda s: s.env.company
     )
     visit_id = fields.Many2one(
-        "f3d.yard.visit", string="Рейс", index=True, ondelete="cascade", check_company=True, tracking=True
+        "td.yard.visit", string="Рейс", index=True, ondelete="cascade", check_company=True, tracking=True
     )
     dock_id = fields.Many2one(
         "stock.location",
@@ -32,12 +32,12 @@ class F3dYardBooking(models.Model):
         required=True,
         index=True,
         check_company=True,
-        domain="[('f3d_kind','=','dock')]",
+        domain="[('td_kind','=','dock')]",
         tracking=True,
         ondelete="restrict",
     )
-    dock_code = fields.Char(string="Код воріт", related="dock_id.f3d_code")
-    side = fields.Selection(related="dock_id.f3d_side", store=True)
+    dock_code = fields.Char(string="Код воріт", related="dock_id.td_code")
+    side = fields.Selection(related="dock_id.td_side", store=True)
     slot_start = fields.Datetime(string="Початок", required=True, index=True, tracking=True)
     slot_end = fields.Datetime(string="Кінець", required=True, index=True, tracking=True)
     duration_min = fields.Integer(string="Тривалість, хв", compute="_compute_duration_min")
@@ -80,13 +80,13 @@ class F3dYardBooking(models.Model):
     )
 
     # ------------------------------------------------------------------ computes
-    @api.depends("dock_id.f3d_code", "dock_id.name", "slot_start", "slot_end")
+    @api.depends("dock_id.td_code", "dock_id.name", "slot_start", "slot_end")
     def _compute_name(self):
         for rec in self:
             if rec.dock_id and rec.slot_start and rec.slot_end:
                 start, end = tz.to_local(rec.slot_start), tz.to_local(rec.slot_end)
                 rec.name = "%s · %s–%s" % (
-                    rec.dock_id.f3d_code or rec.dock_id.name,
+                    rec.dock_id.td_code or rec.dock_id.name,
                     start.strftime("%d.%m %H:%M"),
                     end.strftime("%H:%M"),
                 )
@@ -200,7 +200,7 @@ class F3dYardBooking(models.Model):
                 raise ValidationError(
                     "Ворота %s уже заброньовані: %s (%s–%s)."
                     % (
-                        rec.dock_id.f3d_code or rec.dock_id.name,
+                        rec.dock_id.td_code or rec.dock_id.name,
                         clash.name,
                         tz.local_hm(clash.slot_start),
                         tz.local_hm(clash.slot_end),
@@ -209,15 +209,15 @@ class F3dYardBooking(models.Model):
 
     @api.constrains("dock_id", "visit_id")
     def _check_dock_side(self):
-        labels = dict(self.env["stock.location"]._fields["f3d_side"].selection)
+        labels = dict(self.env["stock.location"]._fields["td_side"].selection)
         for rec in self.filtered("visit_id"):
             expected = rec._f3d_yard_expected_side()
-            if rec.dock_id.f3d_side != expected:
+            if rec.dock_id.td_side != expected:
                 raise ValidationError(
                     "Ворота %s на стороні «%s», а рейс — «%s»."
                     % (
-                        rec.dock_id.f3d_code or rec.dock_id.name,
-                        labels.get(rec.dock_id.f3d_side, "—"),
+                        rec.dock_id.td_code or rec.dock_id.name,
+                        labels.get(rec.dock_id.td_side, "—"),
                         labels[expected],
                     )
                 )
@@ -225,7 +225,7 @@ class F3dYardBooking(models.Model):
             if ptype.dock_ids and rec.dock_id not in ptype.dock_ids:
                 raise ValidationError(
                     "Ворота %s не належать типу операцій %s."
-                    % (rec.dock_id.f3d_code or rec.dock_id.name, ptype.display_name)
+                    % (rec.dock_id.td_code or rec.dock_id.name, ptype.display_name)
                 )
 
     @api.constrains("slot_start", "slot_end")

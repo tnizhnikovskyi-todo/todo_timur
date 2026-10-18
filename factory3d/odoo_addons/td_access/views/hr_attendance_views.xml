@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_hr_attendance_form_f3d" model="ir.ui.view">
-        <field name="name">hr.attendance.form.f3d.access</field>
+    <record id="view_hr_attendance_form_td" model="ir.ui.view">
+        <field name="name">hr.attendance.form.td.access</field>
         <field name="model">hr.attendance</field>
         <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='check_out']" position="after">
                 <group string="СКУД" name="f3d_biostar"
-                       invisible="in_mode != 'biostar' and out_mode != 'biostar' and not f3d_closed_by_rule">
-                    <field name="f3d_in_event_id"/>
-                    <field name="f3d_in_device_id"/>
-                    <field name="f3d_out_event_id"/>
-                    <field name="f3d_out_device_id"/>
-                    <field name="f3d_closed_by_rule"/>
+                       invisible="in_mode != 'biostar' and out_mode != 'biostar' and not td_closed_by_rule">
+                    <field name="td_in_event_id"/>
+                    <field name="td_in_device_id"/>
+                    <field name="td_out_event_id"/>
+                    <field name="td_out_device_id"/>
+                    <field name="td_closed_by_rule"/>
                 </group>
             </xpath>
         </field>
     </record>
 
-    <record id="view_hr_attendance_list_f3d" model="ir.ui.view">
-        <field name="name">hr.attendance.list.f3d.access</field>
+    <record id="view_hr_attendance_list_td" model="ir.ui.view">
+        <field name="name">hr.attendance.list.td.access</field>
         <field name="model">hr.attendance</field>
         <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
         <field name="arch" type="xml">
             <field name="out_mode" position="after">
-                <field name="f3d_in_device_id" optional="hide"/>
-                <field name="f3d_closed_by_rule" optional="show"/>
+                <field name="td_in_device_id" optional="hide"/>
+                <field name="td_closed_by_rule" optional="show"/>
             </field>
         </field>
     </record>
 
-    <record id="view_hr_attendance_search_f3d" model="ir.ui.view">
-        <field name="name">hr.attendance.search.f3d.access</field>
+    <record id="view_hr_attendance_search_td" model="ir.ui.view">
+        <field name="name">hr.attendance.search.td.access</field>
         <field name="model">hr.attendance</field>
         <field name="inherit_id" ref="hr_attendance.hr_attendance_view_filter"/>
         <field name="arch" type="xml">
             <filter name="auto_check" position="after">
                 <filter string="СКУД BioStar 2" name="f3d_biostar" domain="[('in_mode', '=', 'biostar')]"/>
-                <filter string="Закриті за правилом" name="f3d_closed_by_rule"
-                        domain="[('f3d_closed_by_rule', '=', True)]"/>
+                <filter string="Закриті за правилом" name="td_closed_by_rule"
+                        domain="[('td_closed_by_rule', '=', True)]"/>
             </filter>
         </field>
     </record>

@@ -2,10 +2,10 @@
 // Спільні хелпери HOOT-тестів переглядача (файл без тестів): фікстури, мок fetch, монтування ядра.
 import { after, getFixture } from "@odoo/hoot";
 import { mockFetch } from "@odoo/hoot-mock";
-import { DataClient } from "@factory3d_viewer/viewer/data_client";
-import { F3dViewer } from "@factory3d_viewer/viewer/core";
+import { DataClient } from "@td_viewer3d/viewer/data_client";
+import { F3dViewer } from "@td_viewer3d/viewer/core";
 
-export const BASE = "/factory3d_viewer/static";
+export const BASE = "/td_viewer3d/static";
 export const PARTS_URL = `${BASE}/model/parts/manifest.json`;
 
 // Hoot підміняє window.fetch (дозволені лише blob:/data:), тож статику й GLB беремо рідним fetch із чистого iframe.
@@ -127,7 +127,7 @@ export async function mountViewer({
     mockFetch(async (input, init) => {
         const url = typeof input === "object" && input?.url ? input.url : String(input);
         urls.push(url);
-        if (url.includes("/factory3d_viewer/static/")) {
+        if (url.includes("/td_viewer3d/static/")) {
             return new Response(await nativeText(url), { headers: { "Content-Type": "application/json" } });
         }
         return fetchFn(url, init);

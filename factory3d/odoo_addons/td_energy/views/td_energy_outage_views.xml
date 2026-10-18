@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-14 -->
 <odoo>
-    <record id="view_f3d_energy_outage_list" model="ir.ui.view">
-        <field name="name">f3d.energy.outage.list</field>
-        <field name="model">f3d.energy.outage</field>
+    <record id="view_td_energy_outage_list" model="ir.ui.view">
+        <field name="name">td.energy.outage.list</field>
+        <field name="model">td.energy.outage</field>
         <field name="arch" type="xml">
             <list create="false" edit="false" delete="false">
                 <field name="name"/>
@@ -19,9 +19,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_outage_form" model="ir.ui.view">
-        <field name="name">f3d.energy.outage.form</field>
-        <field name="model">f3d.energy.outage</field>
+    <record id="view_td_energy_outage_form" model="ir.ui.view">
+        <field name="name">td.energy.outage.form</field>
+        <field name="model">td.energy.outage</field>
         <field name="arch" type="xml">
             <form create="false" delete="false">
                 <header>
@@ -72,9 +72,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_outage" model="ir.actions.act_window">
+    <record id="action_td_energy_outage" model="ir.actions.act_window">
         <field name="name">Відключення мережі</field>
-        <field name="res_model">f3d.energy.outage</field>
+        <field name="res_model">td.energy.outage</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

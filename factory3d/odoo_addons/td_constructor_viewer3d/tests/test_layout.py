@@ -6,10 +6,10 @@ from unittest.mock import patch
 from odoo import fields
 from odoo.tests import HttpCase, TransactionCase, tagged
 
-from odoo.addons.factory3d_constructor.services import snapshot
-from odoo.addons.factory3d_constructor.tests.common import make_glb
-from odoo.addons.factory3d_viewer.controllers import kiosk as kiosk_ctrl
-from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder, PayloadBuilder, get_providers
+from odoo.addons.td_constructor.services import snapshot
+from odoo.addons.td_constructor.tests.common import make_glb
+from odoo.addons.td_viewer3d.controllers import kiosk as kiosk_ctrl
+from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, PayloadBuilder, get_providers
 
 from ..tools import layout as layout_tools
 
@@ -21,16 +21,16 @@ class LayoutBase(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        cls.site = env["f3d.site"].search([("seed_key", "=", "main_demo")])
+        cls.site = env["td.site"].search([("seed_key", "=", "main_demo")])
         assert cls.site and cls.site.active_version_id.is_seed, "seed-площадка main_demo не завантажена"
         cls.base = cls.site.active_version_id
-        cls.Placement = env["f3d.placement"]
-        cls.Slot = env["f3d.slot"]
+        cls.Placement = env["td.placement"]
+        cls.Slot = env["td.slot"]
         cls.prod_layer = cls.site.layer_ids.filtered(lambda layer: layer.kind == "production")[:1]
-        cls.generic = env["f3d.equipment.variant"].search([("passport_id.role", "=", "generic_machine")], limit=1)
+        cls.generic = env["td.equipment.variant"].search([("passport_id.role", "=", "generic_machine")], limit=1)
         cls.user_f3d = env["res.users"].with_context(no_reset_password=True).create(
             {"name": "f3d_lv", "login": "f3d_lv", "group_ids": [(6, 0, [
-                env.ref("base.group_user").id, env.ref("factory3d_base.group_f3d_user").id])]})
+                env.ref("base.group_user").id, env.ref("td_factory3d.group_td_user").id])]})
         cls.user_nobody = env["res.users"].with_context(no_reset_password=True).create(
             {"name": "f3d_nolv", "login": "f3d_nolv", "group_ids": [(6, 0, [env.ref("base.group_user").id])]})
 
@@ -56,17 +56,17 @@ class LayoutBase(TransactionCase):
 class TestLayoutPayload(LayoutBase):
 
     def test_provider_registered(self):
-        provider = {p._name: p for p in get_providers(self.env)}["f3d.viewer.provider.layout"]
+        provider = {p._name: p for p in get_providers(self.env)}["td.viewer.provider.layout"]
         self.assertEqual((provider._f3d_sequence, provider._f3d_sections), (180, ("layout",)))
-        self.assertEqual(provider._f3d_group, "factory3d_base.group_f3d_user")
-        self.assertEqual(provider._f3d_viewer_bus_models(), ["f3d.layout.version", "f3d.site"])
+        self.assertEqual(provider._f3d_group, "td_factory3d.group_td_user")
+        self.assertEqual(provider._f3d_viewer_bus_models(), ["td.layout.version", "td.site"])
 
     def test_no_published_version_no_key(self):
         """Лише база (v1 seed) — ключа немає; площадка без версій — теж."""
         self.assertIsNone(self.layout())
         data = PayloadBuilder(self.env(user=self.user_f3d), sections=["layout"]).build()
         self.assertNotIn("layout", data)
-        blank = self.env["f3d.site"].with_context(f3d_blank=True).create({"name": "Порожня", "code": "BLK"})
+        blank = self.env["td.site"].with_context(f3d_blank=True).create({"name": "Порожня", "code": "BLK"})
         self.assertFalse(blank.active_version_id)
         self.assertIsNone(self.layout())
 
@@ -193,7 +193,7 @@ class TestLayoutPayload(LayoutBase):
         self.assertEqual(data["meta"]["sections"]["layout"], "live")
         self.assertIn("CNC-2", data["layout"]["moved"])
         # кіоск: той самий payload
-        kiosk = PayloadBuilder(self.env(user=self.env.ref("factory3d_viewer.user_kiosk")), kiosk=True,
+        kiosk = PayloadBuilder(self.env(user=self.env.ref("td_viewer3d.user_kiosk")), kiosk=True,
                                sections=["layout"]).build()
         self.assertEqual(kiosk["layout"], data["layout"])
 
@@ -201,8 +201,8 @@ class TestLayoutPayload(LayoutBase):
         """Немає права читати версії: ключа немає, без помилок і без «denied»."""
         self.placement("CNC-2").x_m += 1.0
         self.publish()
-        user = self.env.ref("factory3d_viewer.user_kiosk")
-        model = type(self.env["f3d.layout.version"])
+        user = self.env.ref("td_viewer3d.user_kiosk")
+        model = type(self.env["td.layout.version"])
         with patch.object(model, "has_access", return_value=False):
             data = PayloadBuilder(self.env(user=user), kiosk=True, sections=["layout"]).build()
         self.assertNotIn("layout", data)
@@ -211,17 +211,17 @@ class TestLayoutPayload(LayoutBase):
 
     def test_bus_event_and_delta(self):
         self.env.cr.precommit.data.pop("f3d_viewer.notify", None)
-        Event = self.env["f3d.viewer.event"].sudo()
-        before = Event.search([("model", "=", "f3d.layout.version")]).ids
+        Event = self.env["td.viewer.event"].sudo()
+        before = Event.search([("model", "=", "td.layout.version")]).ids
         since = fields.Datetime.now() - timedelta(seconds=1)
         self.placement("CNC-2").x_m += 3.0
         self.publish()
         self.env.flush_all()
         self.env.cr.precommit.run()
-        events = Event.search([("model", "=", "f3d.layout.version"), ("id", "not in", before)])
+        events = Event.search([("model", "=", "td.layout.version"), ("id", "not in", before)])
         self.assertEqual([(e.kind, e.codes) for e in events], [("state", [self.site.code])])
         user = self.env(user=self.user_f3d)
-        delta = DeltaBuilder(user, since=since, changes={"f3d.layout.version": {self.site.code}}).build()
+        delta = DeltaBuilder(user, since=since, changes={"td.layout.version": {self.site.code}}).build()
         self.assertEqual(delta["patch"]["layout"]["moved"]["CNC-2"]["dx"], 3.0)
         other = DeltaBuilder(user, since=since, changes={"stock.quant": {"LOC-1"}}).build()
         self.assertNotIn("layout", other["patch"])
@@ -230,7 +230,7 @@ class TestLayoutPayload(LayoutBase):
         """Версію видалено (адмін): дельта несе `layout = null`, клієнт скидає розкладку до бази."""
         since = fields.Datetime.now() - timedelta(seconds=1)
         delta = DeltaBuilder(self.env(user=self.user_f3d), since=since,
-                             changes={"f3d.layout.version": {self.site.code}}).build()
+                             changes={"td.layout.version": {self.site.code}}).build()
         self.assertIn("layout", delta["patch"])
         self.assertIsNone(delta["patch"]["layout"])
 
@@ -240,11 +240,11 @@ class TestLayoutPublishedEndToEnd(LayoutBase):
     """Повний шлях: чернетка → майстер публікації → версія → payload."""
 
     def test_publish_wizard_then_payload(self):
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.constructor.publish_enabled", "True")
+        self.env["ir.config_parameter"].sudo().set_param("td.constructor.publish_enabled", "True")
         self.placement("CNC-2").x_m += 3.0
         manager = self.env.ref("base.user_admin")
         action = self.site.with_user(manager).action_publish_wizard()
-        wizard = self.env["f3d.publish.wizard"].with_user(manager).browse(action["res_id"])
+        wizard = self.env["td.publish.wizard"].with_user(manager).browse(action["res_id"])
         if not wizard.can_publish:
             self.skipTest("seed-розкладка блокує публікацію: %s" % wizard.issue_ids.mapped("message")[:2])
         wizard.action_confirm()
@@ -261,8 +261,8 @@ class TestKioskModel(HttpCase, LayoutBase):
         kiosk_ctrl.reset_rate_limit()
         self.addCleanup(kiosk_ctrl.reset_rate_limit)
         params = self.env["ir.config_parameter"].sudo()
-        params.set_param("factory3d.viewer.kiosk_enabled", "True")
-        self.kiosk_url = "/f3d/kiosk/" + params.get_param("factory3d.viewer.kiosk_token")
+        params.set_param("td.viewer.kiosk_enabled", "True")
+        self.kiosk_url = "/f3d/kiosk/" + params.get_param("td.viewer.kiosk_token")
         self.generic._f3d_set_model(glb=("m.glb", make_glb()), status="ok")
         self.env.flush_all()
         self.env.cr.commit = lambda: None  # HttpCase: дані тесту видно серверу через спільний курсор
@@ -276,7 +276,7 @@ class TestKioskModel(HttpCase, LayoutBase):
     def test_bad_token_and_no_model(self):
         res = self.url_open("/f3d/kiosk/%s/layout/model/%d" % ("0" * 32, self.generic.id), allow_redirects=False)
         self.assertEqual(res.status_code, 404)
-        other = self.env["f3d.equipment.variant"].search([("model_glb_id", "=", False)], limit=1)
+        other = self.env["td.equipment.variant"].search([("model_glb_id", "=", False)], limit=1)
         res = self.url_open("%s/layout/model/%d" % (self.kiosk_url, other.id), allow_redirects=False)
         self.assertEqual(res.status_code, 404)
 

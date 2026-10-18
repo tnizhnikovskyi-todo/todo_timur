@@ -35,7 +35,7 @@ class TestStatic(TransactionCase):
             for no, line in enumerate(open(path, encoding="utf-8"), 1):
                 if (
                     "write_enabled" in line
-                    and "f3d_genset_write_enabled" not in line
+                    and "td_genset_write_enabled" not in line
                     and "config_parameter" not in line
                 ):
                     self.assertNotRegex(line, r"get_param|_param\(", "%s:%d" % (path, no))
@@ -45,7 +45,7 @@ class TestStatic(TransactionCase):
             read("views", "res_config_settings_views.xml")
             if os.path.exists(os.path.join(ROOT, "views", "res_config_settings_views.xml"))
             else "".join(open(p, encoding="utf-8").read() for p in files("views/*.xml")),
-            r'f3d_genset_write_enabled"[^>]*readonly="1"',
+            r'td_genset_write_enabled"[^>]*readonly="1"',
         )
 
     def test_ukrainian_strings(self):  # AC-41
@@ -91,12 +91,12 @@ class TestStatic(TransactionCase):
     def test_manifest_depends(self):  # AC-71
         manifest = ast.literal_eval(read("__manifest__.py"))
         self.assertEqual(
-            manifest["depends"], ["td_genset", "factory3d_base", "factory3d_telemetry", "factory3d_energy"]
+            manifest["depends"], ["td_genset", "td_factory3d", "td_telemetry", "td_energy"]
         )
         text = read("models", "viewer_provider.py")
         self.assertNotRegex(
             text,
-            r"^\s*(from|import)\s+odoo\.addons\.factory3d_viewer",
+            r"^\s*(from|import)\s+odoo\.addons\.td_viewer3d",
         )
         self.assertNotIn("_inherit", text.split("class F3dViewerProviderGenset", 1)[1].split("def ", 1)[0])
 

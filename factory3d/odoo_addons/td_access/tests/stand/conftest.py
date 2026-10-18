@@ -1,4 +1,4 @@
-"""Стенд factory3d_access (SPEC §13.2): pytest -m stand; XML-RPC до Odoo, /sim/v1 емулятора.
+"""Стенд td_access (SPEC §13.2): pytest -m stand; XML-RPC до Odoo, /sim/v1 емулятора.
 
 Змінні: F3D_ODOO_URL, F3D_ODOO_DB, F3D_ODOO_USER, F3D_ODOO_PASSWORD, SIM_API_URL, SIM_API_TOKEN (секрети — лише в
 середовищі, не в репозиторії). Додатково: F3D_SIM_BIOSTAR_URL (адреса емулятора для Odoo, за замовчуванням
@@ -64,9 +64,9 @@ def server_id(odoo, sim):
     """Підготовка стенду: 35 працівників, URL емулятора, пароль, read_enabled=True, write_enabled=False."""
     seed_employees(odoo)
     sid = odoo.server()["id"]
-    odoo.k("f3d.access.server", "write", [sid], {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443"),
+    odoo.k("td.access.server", "write", [sid], {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443"),
                                                   "verify_ssl": False})
-    assert odoo.get_param("factory3d.base.environment") == "test"
+    assert odoo.get_param("td.base.environment") == "test"
     odoo.param("biostar_password", env("SIM_BIOSTAR_PASS"))
     odoo.param("read_enabled", "True")
     odoo.param("write_enabled", "False")
@@ -79,7 +79,7 @@ def people_loaded(odoo, sim, server_id):
     from helpers import wait_for
 
     def total():
-        msg = odoo.k("f3d.access.server", "action_test_connection", [server_id])["params"]["message"]
+        msg = odoo.k("td.access.server", "action_test_connection", [server_id])["params"]["message"]
         return int(msg.split("користувачів ")[1].split(",")[0])
     assert wait_for(lambda: total() >= 36, 150, 5), "емулятор не підхопив працівників з Odoo"
     sim.post("/mode", {"mode": "scenario"})

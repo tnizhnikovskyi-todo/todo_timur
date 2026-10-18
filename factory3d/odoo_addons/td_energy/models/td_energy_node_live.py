@@ -13,15 +13,15 @@ BAD_STATUS = ("stale", "unknown")
 
 
 class F3dEnergyNodeLive(models.Model):
-    """R-06, R-12 п. 3: крон живих показників `cron_f3d_energy_live` (розширення `f3d.energy.node`)."""
+    """R-06, R-12 п. 3: крон живих показників `cron_td_energy_live` (розширення `td.energy.node`)."""
 
-    _inherit = "f3d.energy.node"
+    _inherit = "td.energy.node"
 
     @api.model
     def _f3d_fresh_values(self):
         """{код: (значення, текст)} свіжих сигналів енергетики й `infra/` (R-06: не stale/unknown, не bad)."""
         rows = (
-            self.env["f3d.signal"]
+            self.env["td.signal"]
             .sudo()
             .search_read(
                 ["|", ("code", "=like", "energy/%"), ("code", "=like", "infra/%")],
@@ -102,13 +102,13 @@ class F3dEnergyNodeLive(models.Model):
             {"code": "infra/totals/grid_kw", "ts": ts, "value": round(snap["grid_kw"], 2), "q": "good"},
             {"code": "infra/totals/export_kw", "ts": ts, "value": round(snap["export_kw"], 2), "q": "good"},
         ]
-        self.env["f3d.signal"].sudo()._f3d_energy_put(readings)
+        self.env["td.signal"].sudo()._f3d_energy_put(readings)
         for section, node in snap["pfc"].items():
             sec = totals["sections"].get(section)
             if sec is not None and node.pfc_q_now != sec["pfc_q_now"]:
                 old = node.pfc_q_now
                 node.write({"pfc_q_now": sec["pfc_q_now"]})
-                self.env["f3d.energy.event"]._f3d_pfc_event(node, old, sec["pfc_q_now"], sec["cos_after"], ts=now)
+                self.env["td.energy.event"]._f3d_pfc_event(node, old, sec["pfc_q_now"], sec["cos_after"], ts=now)
         return True
 
     @api.model
@@ -130,7 +130,7 @@ class F3dEnergyNodeLive(models.Model):
             pct = live.unbalance_pct(*phases, cell.rating_a)
             if pct is not None:
                 readings.append({"code": prefix + "/i_unbal_pct", "ts": ts, "value": round(pct, 2), "q": "good"})
-        self.env["f3d.signal"].sudo()._f3d_energy_put(readings)
+        self.env["td.signal"].sudo()._f3d_energy_put(readings)
         return readings
 
     @api.model
@@ -138,15 +138,15 @@ class F3dEnergyNodeLive(models.Model):
         if not param_bool(self.env, "read_enabled"):
             return False
         now = dates.now_utc(self.env)
-        source = self.env.ref("factory3d_energy.source_en_derived", raise_if_not_found=False)
+        source = self.env.ref("td_energy.source_en_derived", raise_if_not_found=False)
         try:
             with self.env.cr.savepoint():
                 fresh = self._f3d_fresh_values()
                 self._f3d_live_write(self._f3d_live_snapshot(fresh), now)
-                self.env["f3d.energy.outage"]._f3d_ats_tick(now)  # W4: R-14 п. 8
+                self.env["td.energy.outage"]._f3d_ats_tick(now)  # W4: R-14 п. 8
                 if now.minute % 5 == 0:
                     self._f3d_asymmetry(now, fresh)
-                self.env["f3d.energy.meter"].sudo().search([("active", "=", True)])._f3d_update_state()
+                self.env["td.energy.meter"].sudo().search([("active", "=", True)])._f3d_update_state()
             if source and source.state != "online":
                 source.sudo().write({"state": "online", "last_error": False})
         except Exception as exc:

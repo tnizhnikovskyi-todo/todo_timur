@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-05, V-06 -->
 <odoo>
-    <record id="view_f3d_energy_meter_list" model="ir.ui.view">
-        <field name="name">f3d.energy.meter.list</field>
-        <field name="model">f3d.energy.meter</field>
+    <record id="view_td_energy_meter_list" model="ir.ui.view">
+        <field name="name">td.energy.meter.list</field>
+        <field name="model">td.energy.meter</field>
         <field name="arch" type="xml">
             <list>
                 <field name="code"/>
@@ -25,9 +25,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_meter_form" model="ir.ui.view">
-        <field name="name">f3d.energy.meter.form</field>
-        <field name="model">f3d.energy.meter</field>
+    <record id="view_td_energy_meter_form" model="ir.ui.view">
+        <field name="name">td.energy.meter.form</field>
+        <field name="model">td.energy.meter</field>
         <field name="arch" type="xml">
             <form>
                 <header>
@@ -73,9 +73,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_meter_search" model="ir.ui.view">
-        <field name="name">f3d.energy.meter.search</field>
-        <field name="model">f3d.energy.meter</field>
+    <record id="view_td_energy_meter_search" model="ir.ui.view">
+        <field name="name">td.energy.meter.search</field>
+        <field name="model">td.energy.meter</field>
         <field name="arch" type="xml">
             <search>
                 <field name="code"/>
@@ -105,9 +105,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_meter_kanban" model="ir.ui.view">
-        <field name="name">f3d.energy.meter.kanban</field>
-        <field name="model">f3d.energy.meter</field>
+    <record id="view_td_energy_meter_kanban" model="ir.ui.view">
+        <field name="name">td.energy.meter.kanban</field>
+        <field name="model">td.energy.meter</field>
         <field name="arch" type="xml">
             <kanban default_group_by="role">
                 <field name="code"/>
@@ -134,9 +134,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_meter" model="ir.actions.act_window">
+    <record id="action_td_energy_meter" model="ir.actions.act_window">
         <field name="name">Лічильники</field>
-        <field name="res_model">f3d.energy.meter</field>
+        <field name="res_model">td.energy.meter</field>
         <field name="view_mode">list,kanban,form</field>
     </record>
 </odoo>

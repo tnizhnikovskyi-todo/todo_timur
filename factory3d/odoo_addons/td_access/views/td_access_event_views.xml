@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_access_event_list" model="ir.ui.view">
-        <field name="name">f3d.access.event.list</field>
-        <field name="model">f3d.access.event</field>
+    <record id="view_td_access_event_list" model="ir.ui.view">
+        <field name="name">td.access.event.list</field>
+        <field name="model">td.access.event</field>
         <field name="arch" type="xml">
             <list string="Журнал подій" create="0" edit="0" delete="0"
                   decoration-danger="event_type in ('denied', 'fail') or process_state == 'error'"
@@ -28,14 +28,14 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_event_form" model="ir.ui.view">
-        <field name="name">f3d.access.event.form</field>
-        <field name="model">f3d.access.event</field>
+    <record id="view_td_access_event_form" model="ir.ui.view">
+        <field name="name">td.access.event.form</field>
+        <field name="model">td.access.event</field>
         <field name="arch" type="xml">
             <form string="Подія СКУД" create="0" edit="0" delete="0">
                 <header>
                     <button name="action_reprocess" type="object" string="Обробити повторно"
-                            groups="factory3d_access.group_f3d_access_admin"/>
+                            groups="td_access.group_td_access_admin"/>
                 </header>
                 <sheet>
                     <group>
@@ -75,15 +75,15 @@
                             <field name="error_message"/>
                         </group>
                     </group>
-                    <field name="raw" groups="factory3d_base.group_f3d_admin" invisible="not raw"/>
+                    <field name="raw" groups="td_factory3d.group_td_admin" invisible="not raw"/>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <record id="view_f3d_access_event_search" model="ir.ui.view">
-        <field name="name">f3d.access.event.search</field>
-        <field name="model">f3d.access.event</field>
+    <record id="view_td_access_event_search" model="ir.ui.view">
+        <field name="name">td.access.event.search</field>
+        <field name="model">td.access.event</field>
         <field name="arch" type="xml">
             <search string="Події СКУД">
                 <field name="employee_id"/>
@@ -119,9 +119,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_event_pivot" model="ir.ui.view">
-        <field name="name">f3d.access.event.pivot</field>
-        <field name="model">f3d.access.event</field>
+    <record id="view_td_access_event_pivot" model="ir.ui.view">
+        <field name="name">td.access.event.pivot</field>
+        <field name="model">td.access.event</field>
         <field name="arch" type="xml">
             <pivot string="Події СКУД">
                 <field name="employee_id" type="row"/>
@@ -130,9 +130,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_event_graph" model="ir.ui.view">
-        <field name="name">f3d.access.event.graph</field>
-        <field name="model">f3d.access.event</field>
+    <record id="view_td_access_event_graph" model="ir.ui.view">
+        <field name="name">td.access.event.graph</field>
+        <field name="model">td.access.event</field>
         <field name="arch" type="xml">
             <graph string="Події СКУД" type="bar">
                 <field name="ts" interval="hour"/>
@@ -141,16 +141,16 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_event" model="ir.actions.act_window">
+    <record id="action_td_access_event" model="ir.actions.act_window">
         <field name="name">Журнал подій</field>
-        <field name="res_model">f3d.access.event</field>
+        <field name="res_model">td.access.event</field>
         <field name="view_mode">list,form,pivot,graph</field>
         <field name="context">{'search_default_today': 1}</field>
     </record>
 
-    <record id="action_f3d_access_event_report" model="ir.actions.act_window">
+    <record id="action_td_access_event_report" model="ir.actions.act_window">
         <field name="name">Проходи СКУД</field>
-        <field name="res_model">f3d.access.event</field>
+        <field name="res_model">td.access.event</field>
         <field name="view_mode">list,pivot,graph</field>
         <field name="domain">[('event_type', '=', 'pass'), ('is_perimeter', '=', True)]</field>
         <field name="context">{'search_default_today': 1, 'search_default_group_employee': 1}</field>

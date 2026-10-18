@@ -17,7 +17,7 @@ class TestAutostart(F3DMachineCase):
     def setUp(self):
         super().setUp()
         self.enable_autostart()
-        self.bot = self.env.ref("factory3d_machine_connect.user_f3d_machine")
+        self.bot = self.env.ref("td_machine_connect.user_td_machine")
 
     def wo_of(self, wc, **kw):
         return self.make_mo(wc, **kw).workorder_ids[:1]
@@ -40,8 +40,8 @@ class TestAutostart(F3DMachineCase):
         self.assertFalse(timers.date_end)
         self.assertEqual((timers.user_id, timers.create_uid), (self.bot, self.bot))
         self.assertEqual(timers.date_start, kt("09:55"))
-        self.assertEqual(wo.f3d_employee_id, self.emp_ua)
-        self.assertTrue(wo.f3d_auto_started)
+        self.assertEqual(wo.td_employee_id, self.emp_ua)
+        self.assertTrue(wo.td_auto_started)
         self.assertEqual(m.active_workorder_id, wo)
         self.assertEqual(m.current_log_id.workorder_id, wo)
         self.assertTrue(any("стартував верстат UA-T" in (msg.body or "") for msg in wo.production_id.message_ids))
@@ -99,7 +99,7 @@ class TestAutostart(F3DMachineCase):
     def test_idempotent(self):
         """AC-29: той самий пакет двічі й ще раз з новим `ts` → один таймер, один виклик старту."""
         m, wo = self.m_ua, self.wo_of(self.wc_ua)
-        model = type(self.env["f3d.machine"])
+        model = type(self.env["td.machine"])
         orig = model._f3d_start_wo
         with mock.patch.object(model, "_f3d_start_wo", autospec=True, side_effect=orig) as start:
             self.work(m, "09:55", job=job(wo))
@@ -156,11 +156,11 @@ class TestAutostart(F3DMachineCase):
                 }
             )
         )
-        wo.f3d_employee_id = saw
+        wo.td_employee_id = saw
         self.assertEqual(m._f3d_pick_employee(wo), saw)  # (б) працівник сьогоднішнього запису
         with mock.patch.object(model, "_f3d_wc_employees", return_value=ua | x):
             self.assertEqual(m._f3d_pick_employee(wo), ua)  # (б) недозволений → (в)
-        wo.f3d_employee_id = False
+        wo.td_employee_id = False
         record.unlink()
         m.employee_id = False
         with mock.patch.object(type(self.env["hr.employee"]), "search_f3d", return_value=self.env["hr.employee"]):
@@ -177,12 +177,12 @@ class TestAutostart(F3DMachineCase):
     def test_disabled(self):
         """AC-32: автостарт вимкнено — завдання не стартувало; `read_enabled=False` — стан не змінюється."""
         m, wo = self.m_ua, self.wo_of(self.wc_ua)
-        self._icp().set_param("factory3d.machine_connect.auto_start_enabled", "False")
+        self._icp().set_param("td.machine_connect.auto_start_enabled", "False")
         written = wo.write_date
         self.work(m, "09:55", job=job(wo))
         self.assertEqual(m.state, "working")
         self.assertEqual((wo.state, wo.write_date, len(wo.time_ids)), ("ready", written, 0))
-        self._icp().set_param("factory3d.machine_connect.read_enabled", "False")
+        self._icp().set_param("td.machine_connect.read_enabled", "False")
         with at("10:00:05"):
             self.feed(self.ua(m, "10:00:00", state="ERROR"))
         self.assertEqual(m.state, "working")
@@ -193,7 +193,7 @@ class TestAutostart(F3DMachineCase):
         mo = self.make_mo(self.wc_ua, qty=14, name="WH/MO/T0002")
         wo = mo.workorder_ids[:1]
         wo.with_user(self.user_mrp).action_f3d_send_to_machine()
-        cmd = self.env["f3d.command"].search([("f3d_machine_id", "=", self.m_ua.id)])
+        cmd = self.env["td.command"].search([("td_machine_id", "=", self.m_ua.id)])
         self.assertEqual(len(cmd), 1)
         self.assertEqual(cmd.signal_id, self.sig_ua_cmd)
         self.assertEqual(cmd.origin, "machine_connect")
@@ -218,6 +218,6 @@ class TestAutostart(F3DMachineCase):
             wo_io.with_user(self.user_mrp).action_f3d_send_to_machine()
         # запис вимкнено
         wo2 = self.wo_of(self.wc_ua)
-        self._icp().set_param("factory3d.machine_connect.write_enabled", "False")
+        self._icp().set_param("td.machine_connect.write_enabled", "False")
         with self.assertRaisesRegex(UserError, "write_enabled"):
             wo2.with_user(self.user_mrp).action_f3d_send_to_machine()

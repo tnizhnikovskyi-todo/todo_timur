@@ -5,7 +5,7 @@
 """
 from odoo import SUPERUSER_ID, api
 
-from odoo.addons.factory3d_machine_connect.hooks import migrate_store_period
+from odoo.addons.td_machine_connect.hooks import migrate_store_period
 
 
 def migrate(cr, version):

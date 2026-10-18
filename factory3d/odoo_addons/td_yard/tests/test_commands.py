@@ -20,7 +20,7 @@ class TestYardCommands(GateCase):
 
     def test_write_disabled(self):  # AC-34
         P.set_param(self.env, "write_enabled", "False")
-        with freeze(T), self.assertRaisesRegex(UserError, "factory3d.yard.write_enabled"):
+        with freeze(T), self.assertRaisesRegex(UserError, "td.yard.write_enabled"):
             self.gate_w.with_user(self.user_guard).action_command("open")
         self.assertFalse(self.cmds())
 
@@ -37,7 +37,7 @@ class TestYardCommands(GateCase):
         self.assertEqual((cmd.value, cmd.origin, cmd.state), (1.0, "yard", "queued"))
         self.assertEqual(cmd.expires_at, T + timedelta(seconds=30))
         self.assertEqual(cmd.requested_by, self.user_guard)
-        self.assertEqual((cmd.f3d_yard_gate_id, cmd.f3d_yard_kind, cmd.f3d_yard_reason), (gate, "open", "manual"))
+        self.assertEqual((cmd.td_yard_gate_id, cmd.td_yard_kind, cmd.td_yard_reason), (gate, "open", "manual"))
         self.assertEqual((gate.open_cmd_id, gate.admitted_today), (cmd, 1))
         with freeze(T + timedelta(seconds=60)):
             release = gate.with_user(self.user_guard).action_command("release")
@@ -53,13 +53,13 @@ class TestYardCommands(GateCase):
             with self.assertRaisesRegex(UserError, "Немає свіжих даних"):
                 gate.with_user(self.user_guard).action_command("open")
             self._ready(gate)
-            self.env["f3d.command"].sudo().create(
+            self.env["td.command"].sudo().create(
                 {
                     "signal_id": self.sig(gate, "cmd_open").id,
                     "value": 1.0,
                     "requested_at": T - timedelta(seconds=10),
-                    "f3d_yard_gate_id": gate.id,
-                    "f3d_yard_kind": "open",
+                    "td_yard_gate_id": gate.id,
+                    "td_yard_kind": "open",
                 }
             )
             with self.assertRaisesRegex(UserError, "ще виконується"):
@@ -106,7 +106,7 @@ class TestYardCommands(GateCase):
         self._event(2, "AA7311KT", T, now)
         cmd = self.cmds()
         self.assertEqual(len(cmd), 1)
-        self.assertEqual((cmd.f3d_yard_reason, cmd.f3d_yard_visit_id), ("auto_booking", visit2))
+        self.assertEqual((cmd.td_yard_reason, cmd.td_yard_visit_id), ("auto_booking", visit2))
         self.assertEqual(visit2.state, "queued")
         self.assertEqual(cmd.requested_by, self.env.ref("base.user_root"))
         # поза вікном слоту
@@ -131,10 +131,10 @@ class TestYardCommands(GateCase):
         ev = self._event(5, "AA4512KT", T, now, camera="CAM-06")
         self.assertEqual((ev.match_state, ev.direction, visit.gate_out_id), ("matched", "out", gate))
         cmd = self.cmds(gate)
-        self.assertEqual((cmd.f3d_yard_reason, gate.pending_visit_id), ("auto_exit", visit))
+        self.assertEqual((cmd.td_yard_reason, gate.pending_visit_id), ("auto_exit", visit))
 
     def test_signal_addresses(self):  # AC-88
-        path = Path(__file__).resolve().parents[1] / "data" / "f3d_yard_signals.csv"
+        path = Path(__file__).resolve().parents[1] / "data" / "td_yard_signals.csv"
         with open(path, newline="", encoding="utf-8") as f:
             rows = {r["code"]: r for r in csv.DictReader(f)}
 

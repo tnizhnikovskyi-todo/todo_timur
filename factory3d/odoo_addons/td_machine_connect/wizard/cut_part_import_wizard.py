@@ -13,7 +13,7 @@ MAX_ERRORS = 50
 class F3dCutPartImportWizard(models.TransientModel):
     """M-26: імпорт деталей (CSV, Додаток E)."""
 
-    _name = "f3d.cut.part.import.wizard"
+    _name = "td.cut.part.import.wizard"
     _description = "Розкрій: імпорт деталей"
 
     bom_id = fields.Many2one("mrp.bom", required=True)
@@ -28,8 +28,8 @@ class F3dCutPartImportWizard(models.TransientModel):
         if "bom_id" in fields_list and not res.get("bom_id") and ctx.get("active_id"):
             if ctx.get("active_model") == "mrp.bom":
                 res["bom_id"] = ctx["active_id"]
-            elif ctx.get("active_model") == "f3d.cut.part":
-                res["bom_id"] = self.env["f3d.cut.part"].browse(ctx["active_id"]).bom_id.id
+            elif ctx.get("active_model") == "td.cut.part":
+                res["bom_id"] = self.env["td.cut.part"].browse(ctx["active_id"]).bom_id.id
         return res
 
     def action_import(self):
@@ -44,7 +44,7 @@ class F3dCutPartImportWizard(models.TransientModel):
             code = row["material"]
             row["material_product_id"] = False
             if code:
-                plate = Product.search([("default_code", "=", code), ("f3d_sheet_length_mm", ">", 0)], limit=1)
+                plate = Product.search([("default_code", "=", code), ("td_sheet_length_mm", ">", 0)], limit=1)
                 if plate:
                     row["material_product_id"] = plate.id
                 else:
@@ -53,7 +53,7 @@ class F3dCutPartImportWizard(models.TransientModel):
             extra = len(errors) - MAX_ERRORS
             shown = errors[:MAX_ERRORS] + ([_("… і ще %d", extra)] if extra > 0 else [])
             raise UserError("\n".join(shown))
-        Part = self.env["f3d.cut.part"]
+        Part = self.env["td.cut.part"]
         if self.replace:
             Part.with_context(active_test=False).search([("bom_id", "=", self.bom_id.id)]).unlink()
         existing = {

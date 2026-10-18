@@ -4,15 +4,15 @@ import { rpc } from "@web/core/network/rpc";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { mountEditor, unmountEditor } from "@factory3d_constructor/editor/app";
-import { OdooStore } from "@factory3d_constructor/editor/store";
+import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
+import { OdooStore } from "@td_constructor/editor/store";
 
 /**
  * Клієнтська дія `f3d_constructor` (SPEC §8.2, DEC-08): 3D-редактор розкладки заводу — порт затвердженого прототипу.
  * `params.site_id` (необов'язково) вибирає площадку; інакше — остання з localStorage або перша з API-01.
  */
 export class F3dConstructorAction extends Component {
-    static template = "factory3d_constructor.ConstructorAction";
+    static template = "td_constructor.ConstructorAction";
     static props = { ...standardActionServiceProps };
 
     /** Тести вмикають нульовий рендерер через sessionStorage (параметри URL роутер відкидає). */

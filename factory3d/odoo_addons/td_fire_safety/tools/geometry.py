@@ -66,13 +66,13 @@ def plant_grid_gap(points, length, width, step=2.0):
 
 
 def site_bounds(env):
-    """Територія CB-12: (x0, y0, x1, y1) із параметрів factory3d.base.site_*."""
+    """Територія CB-12: (x0, y0, x1, y1) із параметрів td.base.site_*."""
     get = env["ir.config_parameter"].sudo().get_param
-    return (float(get("factory3d.base.site_x0_m", -32)), float(get("factory3d.base.site_y0_m", -30)),
-            float(get("factory3d.base.site_x1_m", 182)), float(get("factory3d.base.site_y1_m", 100)))
+    return (float(get("td.base.site_x0_m", -32)), float(get("td.base.site_y0_m", -30)),
+            float(get("td.base.site_x1_m", 182)), float(get("td.base.site_y1_m", 100)))
 
 
 def plant_size(env):
-    """Будівля CB-12: (довжина, ширина) з параметрів factory3d.base.plant_*."""
+    """Будівля CB-12: (довжина, ширина) з параметрів td.base.plant_*."""
     get = env["ir.config_parameter"].sudo().get_param
-    return float(get("factory3d.base.plant_length_m", 150)), float(get("factory3d.base.plant_width_m", 72))
+    return float(get("td.base.plant_length_m", 150)), float(get("td.base.plant_width_m", 72))

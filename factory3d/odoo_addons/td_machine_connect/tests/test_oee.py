@@ -12,13 +12,13 @@ from .common import D0, F3DMachineCase, kt
 class TestOee(F3DMachineCase):
     def loss(self, name, planned=False):
         return self.env["mrp.workcenter.productivity.loss"].create(
-            {"name": name, "loss_id": self.env.ref("mrp.category_availability").id, "f3d_planned": planned}
+            {"name": name, "loss_id": self.env.ref("mrp.category_availability").id, "td_planned": planned}
         )
 
     def scenario(self, m, work, pieces, cycle, downs, bad=0):
         """Зміна 07:00–10:30: `work` хв `working` із завданням, далі прості `downs=[(state, хв, причина)]`."""
         wo = self.make_mo(m.workcenter_id, qty=max(int(pieces), 1), cycle=cycle).workorder_ids[:1]
-        Log, Downtime = self.env["f3d.machine.state.log"].sudo(), self.env["f3d.downtime"].sudo()
+        Log, Downtime = self.env["td.machine.state.log"].sudo(), self.env["td.downtime"].sudo()
         t = kt("07:00")
         Log.create(
             {
@@ -133,7 +133,7 @@ class TestOee(F3DMachineCase):
         self.assertAlmostEqual(res["oee"], 0.488, delta=0.001)
 
     def test_period_two_shifts(self):
-        Shift = self.env["f3d.oee.shift"].sudo()
+        Shift = self.env["td.oee.shift"].sudo()
         base = {"machine_id": self.m_saw.id, "state": "closed", "source": "machine", "has_data": True, "ppt_min": 480}
         rows = Shift.create(
             [
@@ -146,7 +146,7 @@ class TestOee(F3DMachineCase):
         self.assertIn("SAW-T", msg)
 
     def test_nodata_coverage(self):
-        Log = self.env["f3d.machine.state.log"].sudo()
+        Log = self.env["td.machine.state.log"].sudo()
         Log.create({"machine_id": self.m_saw.id, "state": "nodata", "date_start": kt("07:00"), "date_end": kt("07:30")})
         Log.create(
             {"machine_id": self.m_saw.id, "state": "working", "date_start": kt("07:30"), "date_end": kt("11:30")}
@@ -158,9 +158,9 @@ class TestOee(F3DMachineCase):
         self.assertTrue(res["incomplete"])
 
     def test_planned_stop(self):
-        Log = self.env["f3d.machine.state.log"].sudo()
+        Log = self.env["td.machine.state.log"].sudo()
         Log.create({"machine_id": self.m_saw.id, "state": "idle", "date_start": kt("07:00"), "date_end": kt("07:20")})
-        self.env["f3d.downtime"].sudo().create(
+        self.env["td.downtime"].sudo().create(
             {
                 "machine_id": self.m_saw.id,
                 "state_kind": "idle",
@@ -223,8 +223,8 @@ class TestOee(F3DMachineCase):
         self.assertAlmostEqual(res["run_min"], 60, 3)
 
     def test_cron_open_close_rotate(self):
-        Shift = self.env["f3d.oee.shift"]
-        Log = self.env["f3d.machine.state.log"].sudo()
+        Shift = self.env["td.oee.shift"]
+        Log = self.env["td.machine.state.log"].sudo()
         Log.create(
             {"machine_id": self.m_saw.id, "state": "working", "date_start": kt("07:00"), "date_end": kt("10:00")}
         )
@@ -261,6 +261,6 @@ class TestOee(F3DMachineCase):
         old_shift = Shift.sudo().create(
             {"machine_id": self.m_saw.id, "date": D0 - timedelta(days=401), "source": "machine", "state": "closed"}
         )
-        self.env["f3d.machine.state.log"]._cron_rotate()
+        self.env["td.machine.state.log"]._cron_rotate()
         self.assertFalse(Log.search([("date_end", "=", old_end)]))
         self.assertTrue(old_shift.exists())

@@ -7,7 +7,7 @@ CODE_RE = re.compile(r"^[A-Z0-9][A-Z0-9\-]{0,31}$")
 
 
 class F3dEnergyPool(models.Model):
-    _name = "f3d.energy.pool"
+    _name = "td.energy.pool"
     _description = "Енергетика: пул спільних споживачів"
     _inherit = ["mail.thread"]
     _order = "sequence, code"
@@ -16,7 +16,7 @@ class F3dEnergyPool(models.Model):
     name = fields.Char(string="Назва", size=128, required=True)
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
-    node_ids = fields.One2many("f3d.energy.node", "pool_id", string="Споживачі пулу")
+    node_ids = fields.One2many("td.energy.node", "pool_id", string="Споживачі пулу")
     driver = fields.Selection(
         [("kwh", "Пропорційно прямим кВт·год"), ("time", "Пропорційно машинному часу")],
         required=True,
@@ -25,7 +25,7 @@ class F3dEnergyPool(models.Model):
     )
     workcenter_ids = fields.Many2many(
         "mrp.workcenter",
-        "f3d_energy_pool_workcenter_rel",
+        "td_energy_pool_workcenter_rel",
         "pool_id",
         "workcenter_id",
         string="Обслуговує робочі центри",

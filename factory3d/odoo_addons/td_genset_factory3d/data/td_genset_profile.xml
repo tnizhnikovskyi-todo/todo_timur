@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §5.2, Додаток C -->
 <odoo noupdate="0">
-    <record id="profile_d700" model="f3d.genset.profile">
+    <record id="profile_d700" model="td.genset.profile">
         <field name="code">D700</field>
         <field name="name">KOHLER-SDMO D700 · SmartGen HGM6120N</field>
         <field name="kva_prp">634</field>

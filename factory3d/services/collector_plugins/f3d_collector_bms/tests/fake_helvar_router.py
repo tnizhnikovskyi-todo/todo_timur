@@ -1,4 +1,4 @@
-"""Фейковий роутер HelvarNet (SPEC factory3d_bms §8.8): asyncio TCP-сервер на вільному порту."""
+"""Фейковий роутер HelvarNet (SPEC td_bms §8.8): asyncio TCP-сервер на вільному порту."""
 
 from __future__ import annotations
 

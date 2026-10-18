@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-15 -->
-    <record id="view_f3d_equipment_passport_form" model="ir.ui.view">
-        <field name="name">f3d.equipment.passport.form</field>
-        <field name="model">f3d.equipment.passport</field>
+    <record id="view_td_equipment_passport_form" model="ir.ui.view">
+        <field name="name">td.equipment.passport.form</field>
+        <field name="model">td.equipment.passport</field>
         <field name="arch" type="xml">
             <form string="Паспорт обладнання">
                 <sheet>
@@ -68,7 +68,7 @@
                         <page name="units" string="Одиниці">
                             <field name="equipment_ids" readonly="1">
                                 <list>
-                                    <field name="f3d_code"/>
+                                    <field name="td_code"/>
                                     <field name="name"/>
                                 </list>
                             </field>
@@ -76,7 +76,7 @@
                         <page name="components" string="У складі одиниць">
                             <field name="component_of_ids" readonly="1">
                                 <list>
-                                    <field name="f3d_code"/>
+                                    <field name="td_code"/>
                                     <field name="name"/>
                                 </list>
                             </field>
@@ -87,9 +87,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_passport_list" model="ir.ui.view">
-        <field name="name">f3d.equipment.passport.list</field>
-        <field name="model">f3d.equipment.passport</field>
+    <record id="view_td_equipment_passport_list" model="ir.ui.view">
+        <field name="name">td.equipment.passport.list</field>
+        <field name="model">td.equipment.passport</field>
         <field name="arch" type="xml">
             <list string="Паспорти обладнання">
                 <field name="manufacturer"/>
@@ -102,9 +102,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_passport_search" model="ir.ui.view">
-        <field name="name">f3d.equipment.passport.search</field>
-        <field name="model">f3d.equipment.passport</field>
+    <record id="view_td_equipment_passport_search" model="ir.ui.view">
+        <field name="name">td.equipment.passport.search</field>
+        <field name="model">td.equipment.passport</field>
         <field name="arch" type="xml">
             <search string="Паспорти обладнання">
                 <field name="name"/>
@@ -120,9 +120,9 @@
     </record>
 
     <!-- V-16 -->
-    <record id="view_f3d_equipment_spec_list" model="ir.ui.view">
-        <field name="name">f3d.equipment.spec.list</field>
-        <field name="model">f3d.equipment.spec</field>
+    <record id="view_td_equipment_spec_list" model="ir.ui.view">
+        <field name="name">td.equipment.spec.list</field>
+        <field name="model">td.equipment.spec</field>
         <field name="arch" type="xml">
             <list string="Параметри паспортів">
                 <field name="passport_id"/>
@@ -136,9 +136,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_source_list" model="ir.ui.view">
-        <field name="name">f3d.equipment.source.list</field>
-        <field name="model">f3d.equipment.source</field>
+    <record id="view_td_equipment_source_list" model="ir.ui.view">
+        <field name="name">td.equipment.source.list</field>
+        <field name="model">td.equipment.source</field>
         <field name="arch" type="xml">
             <list string="Джерела паспортів">
                 <field name="passport_id"/>
@@ -149,20 +149,20 @@
         </field>
     </record>
 
-    <!-- V-17: дії (пункти меню — у f3d_menus.xml) -->
-    <record id="action_f3d_equipment_passport" model="ir.actions.act_window">
+    <!-- V-17: дії (пункти меню — у td_menus.xml) -->
+    <record id="action_td_equipment_passport" model="ir.actions.act_window">
         <field name="name">Паспорти обладнання</field>
-        <field name="res_model">f3d.equipment.passport</field>
+        <field name="res_model">td.equipment.passport</field>
         <field name="view_mode">list,form</field>
     </record>
-    <record id="action_f3d_equipment_spec" model="ir.actions.act_window">
+    <record id="action_td_equipment_spec" model="ir.actions.act_window">
         <field name="name">Параметри паспортів</field>
-        <field name="res_model">f3d.equipment.spec</field>
+        <field name="res_model">td.equipment.spec</field>
         <field name="view_mode">list</field>
     </record>
-    <record id="action_f3d_equipment_source" model="ir.actions.act_window">
+    <record id="action_td_equipment_source" model="ir.actions.act_window">
         <field name="name">Джерела паспортів</field>
-        <field name="res_model">f3d.equipment.source</field>
+        <field name="res_model">td.equipment.source</field>
         <field name="view_mode">list</field>
     </record>
 </odoo>

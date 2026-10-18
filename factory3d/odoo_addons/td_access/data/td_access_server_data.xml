@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <record id="server_biostar_sim" model="f3d.access.server">
+    <record id="server_biostar_sim" model="td.access.server">
         <field name="name">BioStar 2 (емулятор)</field>
         <field name="url">https://iot-sim:8443</field>
         <field name="verify_ssl" eval="True"/>

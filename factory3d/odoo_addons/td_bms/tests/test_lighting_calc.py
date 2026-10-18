@@ -16,7 +16,7 @@ class TestNorms(F3DBmsLightCase):
         self.assertIn("ДБН", self.norms["spraying"].ref_dbn)
 
     def test_norm_constraints(self):
-        Norm = self.env["f3d.bms.light.norm"]
+        Norm = self.env["td.bms.light.norm"]
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"), self.cr.savepoint():
             Norm.create({"key": "spraying", "name": "dup", "lux": 100})
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"), self.cr.savepoint():
@@ -61,7 +61,7 @@ class TestGroupDesign(F3DBmsLightCase):
         self.assertFalse(g.design_ok)
 
     def test_min_one(self):
-        norm = self.env["f3d.bms.light.norm"].create({"key": "t_100", "name": "t", "lux": 10})
+        norm = self.env["td.bms.light.norm"].create({"key": "t_100", "name": "t", "lux": 10})
         g = self.mk_group("LT-T2", "Z-T1", "t_300", self.lp1, 1)
         g.norm_id = norm
         self.assertEqual(g.n_required, 1)
@@ -74,7 +74,7 @@ class TestGroupDesign(F3DBmsLightCase):
 
     def test_zone_without_polygon(self):
         with self.assertRaises(ValidationError):
-            self.env["f3d.bms.light.group"].create(
+            self.env["td.bms.light.group"].create(
                 {
                     "code": "LT-T0",
                     "name": "x",

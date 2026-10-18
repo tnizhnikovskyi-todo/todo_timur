@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_gate_list" model="ir.ui.view">
-        <field name="name">f3d.yard.gate.list</field>
-        <field name="model">f3d.yard.gate</field>
+    <record id="view_td_yard_gate_list" model="ir.ui.view">
+        <field name="name">td.yard.gate.list</field>
+        <field name="model">td.yard.gate</field>
         <field name="arch" type="xml">
             <list string="КПП і шлагбауми" decoration-danger="state == 'error'" decoration-muted="state == 'unknown'">
                 <field name="sequence" widget="handle"/>
-                <field name="f3d_code"/>
+                <field name="td_code"/>
                 <field name="name"/>
                 <field name="direction"/>
                 <field name="side"/>
@@ -20,18 +20,18 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_gate_form" model="ir.ui.view">
-        <field name="name">f3d.yard.gate.form</field>
-        <field name="model">f3d.yard.gate</field>
+    <record id="view_td_yard_gate_form" model="ir.ui.view">
+        <field name="name">td.yard.gate.form</field>
+        <field name="model">td.yard.gate</field>
         <field name="arch" type="xml">
             <form string="КПП / шлагбаум">
                 <header>
-                    <button name="action_open" type="object" string="Відкрити" class="btn-primary" invisible="not can_command" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_close" type="object" string="Закрити" invisible="not can_command" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_hold" type="object" string="Тримати відкритим" invisible="not can_command or state == 'held'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_release" type="object" string="Зняти утримання" invisible="state != 'held'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_opened_manually" type="object" string="Відкрито вручну" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_reset_error" type="object" string="Скинути помилку" invisible="state != 'error'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_open" type="object" string="Відкрити" class="btn-primary" invisible="not can_command" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_close" type="object" string="Закрити" invisible="not can_command" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_hold" type="object" string="Тримати відкритим" invisible="not can_command or state == 'held'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_release" type="object" string="Зняти утримання" invisible="state != 'held'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_opened_manually" type="object" string="Відкрито вручну" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_reset_error" type="object" string="Скинути помилку" invisible="state != 'error'" groups="td_yard.group_td_yard_security"/>
                     <field name="state" widget="statusbar" statusbar_visible="closed,open,held,error"/>
                 </header>
                 <sheet>
@@ -50,7 +50,7 @@
                     <field name="can_command" invisible="1"/>
                     <group>
                         <group string="Основне">
-                            <field name="f3d_code"/>
+                            <field name="td_code"/>
                             <field name="name"/>
                             <field name="direction"/>
                             <field name="side"/>
@@ -98,13 +98,13 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_gate_search" model="ir.ui.view">
-        <field name="name">f3d.yard.gate.search</field>
-        <field name="model">f3d.yard.gate</field>
+    <record id="view_td_yard_gate_search" model="ir.ui.view">
+        <field name="name">td.yard.gate.search</field>
+        <field name="model">td.yard.gate</field>
         <field name="arch" type="xml">
             <search string="КПП">
                 <field name="name"/>
-                <field name="f3d_code"/>
+                <field name="td_code"/>
                 <field name="camera_code"/>
                 <filter name="error" string="Помилка" domain="[('state', '=', 'error')]"/>
                 <filter name="auto" string="Авто" domain="[('mode', '=', 'auto')]"/>
@@ -113,11 +113,11 @@
         </field>
     </record>
 
-    <record id="action_f3d_yard_gate" model="ir.actions.act_window">
+    <record id="action_td_yard_gate" model="ir.actions.act_window">
         <field name="name">КПП і шлагбауми</field>
-        <field name="res_model">f3d.yard.gate</field>
+        <field name="res_model">td.yard.gate</field>
         <field name="view_mode">list,form</field>
     </record>
 
-    <menuitem id="menu_f3d_yard_config_gate" action="action_f3d_yard_gate" name="КПП і шлагбауми" parent="menu_f3d_yard_config" sequence="10" groups="group_f3d_yard_manager"/>
+    <menuitem id="menu_td_yard_config_gate" action="action_td_yard_gate" name="КПП і шлагбауми" parent="menu_td_yard_config" sequence="10" groups="group_td_yard_manager"/>
 </odoo>

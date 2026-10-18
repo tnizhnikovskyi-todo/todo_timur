@@ -15,10 +15,10 @@ class VisitorCase(AccessCase):
         if uid:
             vals['biostar_user_id'] = uid
         vals.update(kw)
-        return self.env['f3d.access.visitor'].create(vals)
+        return self.env['td.access.visitor'].create(vals)
 
     def _pool(self, number='555'):
-        return self.env['f3d.access.card'].create({
+        return self.env['td.access.card'].create({
             'number': number, 'server_id': self.server.id, 'holder_type': 'pool'})
 
     def _pass(self, base, at, user='V-T1', where='in', tna=''):
@@ -50,7 +50,7 @@ class TestVisitors(VisitorCase):
         self.assertEqual(ev.presence_changed, True)
         self._pass(2, '2026-10-12T12:40:00.00Z', tna='2')
         self.assertEqual((visitor.state, visitor.left_at, visitor.present, visitor.zone_id),
-                         ('left', datetime(2026, 10, 12, 12, 40), False, self.env['f3d.zone']))
+                         ('left', datetime(2026, 10, 12, 12, 40), False, self.env['td.zone']))
         visitor.action_close()
         self.assertEqual((visitor.state, pool.state, pool.holder_type), ('closed', 'returned', 'pool'))
         self.assertFalse(visitor.link_id.active)
@@ -130,12 +130,12 @@ class TestVisitors(VisitorCase):
         visitor = self._visitor(uid=False, state='expected', sync_state='error')
         fake.write_status = None
         with self.patch_client(fake):
-            self.env['f3d.access.visitor']._cron_user_sync()
+            self.env['td.access.visitor']._cron_user_sync()
         self.assertEqual(visitor.sync_state, 'synced')
         fake2 = self._fake(False)
         other = self._visitor(uid=False, state='expected', sync_state='error')
         with self.patch_client(fake2):
-            self.env['f3d.access.visitor']._cron_user_sync()
+            self.env['td.access.visitor']._cron_user_sync()
         self.assertEqual((other.sync_state, fake2.calls), ('error', []))
 
     def test_manual_user_conflict(self):  # AC-46
@@ -151,12 +151,12 @@ class TestVisitors(VisitorCase):
         self._pool('600')
         self._pool('555')
         vals = {'name': 'Водій', 'host_employee_id': self.emp_a.id, 'origin': 'yard', 'origin_ref': 'YV/2026/0012'}
-        visitor = self.env['f3d.access.visitor'].with_user(self.user_security).f3d_visitor_register(vals)
+        visitor = self.env['td.access.visitor'].with_user(self.user_security).f3d_visitor_register(vals)
         self.assertEqual((visitor.state, visitor.card_id.number, visitor.origin), ('expected', '555', 'yard'))
         self.assertEqual(visitor.card_id.state, 'active')
 
     def test_register_no_card(self):  # AC-47
-        visitor = self.env['f3d.access.visitor'].f3d_visitor_register(
+        visitor = self.env['td.access.visitor'].f3d_visitor_register(
             {'name': 'Водій', 'host_employee_id': self.emp_a.id})
         self.assertEqual(visitor.state, 'expected')
         self.assertFalse(visitor.card_id)
@@ -168,7 +168,7 @@ class TestVisitors(VisitorCase):
             self._visitor(date_to=base)
         with self.assertRaisesRegex(ValidationError, '7 діб'):
             self._visitor(date_to=base + timedelta(days=8))
-        visitor = self.env['f3d.access.visitor'].create({
+        visitor = self.env['td.access.visitor'].create({
             'name': 'Без кінця', 'host_employee_id': self.emp_a.id, 'date_from': base})
         self.assertEqual(visitor.date_to, base + timedelta(hours=8))
         expected = self._visitor(state='expected')
@@ -198,7 +198,7 @@ class TestVisitors(VisitorCase):
         with self.assertRaises(AccessError):
             self._visitor('V-X1').with_user(self.user_hr).action_expect()
         with self.assertRaises(AccessError):
-            self.env['f3d.access.visitor'].with_user(self.user_f3d).search([])
+            self.env['td.access.visitor'].with_user(self.user_f3d).search([])
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_access')
@@ -207,23 +207,23 @@ class TestVisitorPresence(VisitorCase):
     def _enter_cut(self):
         self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'),
                   self.prow(2, '2026-10-12T03:53:00.00Z', 4102, 'TSTB2', tna='1'))
-        self.emp_b._f3d_access_set({'f3d_access_zone_id': self.z['Z-CUT'].id})
-        self.emp_c.sudo().f3d_home_zone_id = self.z['Z-CUT']
+        self.emp_b._f3d_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
+        self.emp_c.sudo().td_home_zone_id = self.z['Z-CUT']
         return self._visitor(state='on_site', present=True, zone_id=self.z['Z-CUT'].id,
                              arrived_at=datetime(2026, 10, 12, 3, 55))
 
     def test_people_now(self):  # AC-29
         visitor = self._enter_cut()
         zone = self.z['Z-CUT']
-        self.assertEqual(zone.f3d_people_now, 3)
-        self.assertEqual(zone.f3d_people_employee_ids, self.emp_a | self.emp_b)
-        self.assertEqual(zone.f3d_people_visitor_ids, visitor)
+        self.assertEqual(zone.td_people_now, 3)
+        self.assertEqual(zone.td_people_employee_ids, self.emp_a | self.emp_b)
+        self.assertEqual(zone.td_people_visitor_ids, visitor)
         action = zone.action_view_people()
-        self.assertEqual((action['res_model'], action['domain']), ('f3d.access.presence', [('zone_id', '=', zone.id)]))
+        self.assertEqual((action['res_model'], action['domain']), ('td.access.presence', [('zone_id', '=', zone.id)]))
 
     def test_presence_view_rows(self):  # AC-30
         visitor = self._enter_cut()
-        Presence = self.env['f3d.access.presence']
+        Presence = self.env['td.access.presence']
         rows = Presence.with_user(self.user_security).search_read([('zone_id', '=', self.z['Z-CUT'].id)])
         self.assertEqual(len(rows), 3)
         self.assertEqual(sorted(r['id'] % 2 for r in rows), [0, 0, 1])
@@ -234,13 +234,13 @@ class TestVisitorPresence(VisitorCase):
         with self.assertRaises(AccessError):
             Presence.with_user(self.user_f3d).search_read([])
         self.assertEqual(Presence.browse(row['id']).with_user(self.user_security).action_open_person()['res_model'],
-                         'f3d.access.visitor')
+                         'td.access.visitor')
 
     def test_on_site_at(self):  # AC-35 (відвідувачі)
         visitor = self._visitor()
         self._pass(1, '2026-10-12T03:40:00.00Z', tna='1')
         self._pass(2, '2026-10-12T04:30:00.00Z', tna='2')
-        Event = self.env['f3d.access.event']
+        Event = self.env['td.access.event']
         self.assertEqual(Event.f3d_on_site_at(datetime(2026, 10, 12, 4, 0))['visitors'], visitor)
         self.assertFalse(Event.f3d_on_site_at(datetime(2026, 10, 12, 4, 40))['visitors'])
         manual = self._visitor('V-M1', state='on_site', present=True, arrived_at=datetime(2026, 10, 12, 3, 0))
@@ -252,10 +252,10 @@ class TestVisitorPresence(VisitorCase):
         self._pass(2, '2026-10-12T06:51:00.00Z', where='elec')
         self.assertEqual((visitor.zone_id, visitor.zone_door_id), (self.z['Z-ELEC'], self.door_elec))
         with freeze_time('2026-10-12 07:20:00'):
-            self.env['f3d.access.event']._cron_zone_dwell()
+            self.env['td.access.event']._cron_zone_dwell()
         self.assertEqual(visitor.zone_id, self.z['Z-ELEC'])
         with freeze_time('2026-10-12 07:25:00'):
-            self.env['f3d.access.event']._cron_zone_dwell()
+            self.env['td.access.event']._cron_zone_dwell()
         self.assertEqual(visitor.zone_id, self.door_elec.zone_from_id)
         self.assertFalse(visitor.zone_door_id)
 
@@ -266,21 +266,21 @@ class TestVisitorPresence(VisitorCase):
                   self.prow(2, '2026-07-15T03:52:00.00Z', 4102, 'TSTB2', tna='2'), at='2026-10-12 10:00:00')
         expiring = self._visitor('V-E1', state='expected', date_from=now - timedelta(hours=6),
                                  date_to=now - timedelta(hours=2))
-        card = self.env['f3d.access.card'].create({
+        card = self.env['td.access.card'].create({
             'number': '901', 'server_id': self.server.id, 'holder_type': 'visitor', 'visitor_id': expiring.id,
             'state': 'active'})
         expiring.card_id = card
         recent = self._visitor('V-R1', state='closed', date_from=now - timedelta(days=2),
                                date_to=now - timedelta(days=1))
-        old_card = self.env['f3d.access.card'].create({
+        old_card = self.env['td.access.card'].create({
             'number': '902', 'server_id': self.server.id, 'holder_type': 'pool', 'visitor_id': recent.id,
             'state': 'returned', 'returned_at': now - timedelta(days=91)})
         old = self._visitor('V-O1', state='closed', date_from=now - timedelta(days=92, hours=1),
                             date_to=now - timedelta(days=91))
         fake = FakeBioStar()
         with self.patch_client(fake), freeze_time(now):
-            self.env['f3d.access.event']._cron_housekeeping()
-        ids = self.env['f3d.access.event'].search([]).mapped('biostar_id')
+            self.env['td.access.event']._cron_housekeeping()
+        ids = self.env['td.access.event'].search([]).mapped('biostar_id')
         self.assertNotIn('1', ids)
         self.assertIn('2', ids)
         self.assertEqual((expiring.state, expiring.overdue, expiring.present), ('closed', True, False))
@@ -305,15 +305,15 @@ class TestVisitorToday(VisitorCase):
         visitors = inside | spanning | yesterday | tomorrow
         domain = [('id', 'in', visitors.ids)]
         with freeze_time(datetime(2026, 10, 12, 20, 30)):
-            today = self.env['f3d.access.visitor'].search(domain + [('is_today', '=', True)])
-            other = self.env['f3d.access.visitor'].search(domain + [('is_today', '!=', True)])
+            today = self.env['td.access.visitor'].search(domain + [('is_today', '=', True)])
+            other = self.env['td.access.visitor'].search(domain + [('is_today', '!=', True)])
             self.assertEqual(visitors.mapped('is_today'), [True, True, False, False])
         self.assertEqual(today, inside | spanning)
         self.assertEqual(other, yesterday | tomorrow)
         with freeze_time(datetime(2026, 10, 12, 21, 30)):  # вже 13.10 за Києвом
-            self.assertEqual(self.env['f3d.access.visitor'].search(domain + [('is_today', '=', True)]),
+            self.assertEqual(self.env['td.access.visitor'].search(domain + [('is_today', '=', True)]),
                              tomorrow)
-        arch = self.env.ref('factory3d_access.view_f3d_access_visitor_search').arch
+        arch = self.env.ref('td_access.view_td_access_visitor_search').arch
         self.assertIn("is_today", arch)
         self.assertNotIn("time.max", arch)
         self.assertNotIn("time.min", arch)

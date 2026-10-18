@@ -1,80 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-26 -->
-    <record id="res_config_settings_view_form_f3d_fire" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.f3d.fire</field>
+    <record id="res_config_settings_view_form_td_fire" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.fire</field>
         <field name="model">res.config.settings</field>
         <field name="priority" eval="46"/>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Пожежна безпека" string="Пожежна безпека" name="factory3d_fire_safety"
-                     groups="factory3d_base.group_f3d_manager">
+                <app data-string="Пожежна безпека" string="Пожежна безпека" name="td_fire_safety"
+                     groups="td_factory3d.group_td_manager">
                     <block title="Обробка сигналів" name="f3d_fire_signals">
                         <setting string="Обробляти сигнали пожежної сигналізації"
                                  help="Стоп-кран обробки (лише читання). Запис у прилад не налаштовується — рішення D-07."
-                                 groups="factory3d_base.group_f3d_admin">
-                            <field name="f3d_fire_read_enabled"/>
+                                 groups="td_factory3d.group_td_admin">
+                            <field name="td_fire_read_enabled"/>
                         </setting>
                         <setting string="Зв'язок із приладом">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_comm_stale_after_s"/>
-                                    <field name="f3d_fire_comm_stale_after_s"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_comm_lost_after_s"/>
-                                    <field name="f3d_fire_comm_lost_after_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_comm_stale_after_s"/>
+                                    <field name="td_fire_comm_stale_after_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_comm_lost_after_s"/>
+                                    <field name="td_fire_comm_lost_after_s"/></div>
                             </div>
                         </setting>
                     </block>
                     <block title="Запиленість сповіщувачів" name="f3d_fire_dust">
                         <setting string="Пороги запиленості камери">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_dust_warn_pct"/>
-                                    <field name="f3d_fire_dust_warn_pct"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_dust_alarm_pct"/>
-                                    <field name="f3d_fire_dust_alarm_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_dust_warn_pct"/>
+                                    <field name="td_fire_dust_warn_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_dust_alarm_pct"/>
+                                    <field name="td_fire_dust_alarm_pct"/></div>
                             </div>
                         </setting>
                     </block>
                     <block title="Норми" name="f3d_fire_norms">
                         <setting string="Полімерні стінові панелі"
                                  help="Стінові панелі з полімерним утеплювачем (п. 8.2.11): жорсткіші норми евакуації.">
-                            <field name="f3d_fire_polymer_panels"/>
+                            <field name="td_fire_polymer_panels"/>
                         </setting>
                         <setting string="Допуск покриття, м">
-                            <field name="f3d_fire_cover_tol_m"/>
+                            <field name="td_fire_cover_tol_m"/>
                         </setting>
                     </block>
                     <block title="Навчальні тривоги" name="f3d_fire_drills">
                         <setting string="Час і автоматика навчань">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_drill_time_limit_s"/>
-                                    <field name="f3d_fire_drill_time_limit_s"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_drill_match_window_min"/>
-                                    <field name="f3d_fire_drill_match_window_min"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_drill_auto_stop_s"/>
-                                    <field name="f3d_fire_drill_auto_stop_s"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_fire_drill_sim_duration_s"/>
-                                    <field name="f3d_fire_drill_sim_duration_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_drill_time_limit_s"/>
+                                    <field name="td_fire_drill_time_limit_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_drill_match_window_min"/>
+                                    <field name="td_fire_drill_match_window_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_drill_auto_stop_s"/>
+                                    <field name="td_fire_drill_auto_stop_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_fire_drill_sim_duration_s"/>
+                                    <field name="td_fire_drill_sim_duration_s"/></div>
                             </div>
                         </setting>
                         <setting string="Створювати навчання за тестом приладу">
-                            <field name="f3d_fire_drill_auto_create"/>
+                            <field name="td_fire_drill_auto_create"/>
                         </setting>
                     </block>
                     <block title="Сповіщення й заявки" name="f3d_fire_notify">
                         <setting string="Група сповіщення про тривогу">
-                            <field name="f3d_fire_alert_group_id"/>
+                            <field name="td_fire_alert_group_id"/>
                         </setting>
                         <setting string="Підтвердження подій">
-                            <field name="f3d_fire_event_ack_required"/>
+                            <field name="td_fire_event_ack_required"/>
                         </setting>
                         <setting string="Команда ТО">
-                            <field name="f3d_fire_team_id"/>
+                            <field name="td_fire_team_id"/>
                         </setting>
                     </block>
                     <block title="3D" name="f3d_fire_3d">
                         <setting string="Пристрої в 3D">
-                            <field name="f3d_fire_viewer_devices"/>
+                            <field name="td_fire_viewer_devices"/>
                         </setting>
                     </block>
                 </app>
@@ -82,10 +82,10 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_settings" model="ir.actions.act_window">
+    <record id="action_td_fire_settings" model="ir.actions.act_window">
         <field name="name">Налаштування пожежної безпеки</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
-        <field name="context">{'module': 'factory3d_fire_safety'}</field>
+        <field name="context">{'module': 'td_fire_safety'}</field>
     </record>
 </odoo>

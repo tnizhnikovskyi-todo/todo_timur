@@ -2,19 +2,19 @@ import logging
 
 from odoo import api, models
 
-from odoo.addons.factory3d_access.tools.params import CODE_RE
+from odoo.addons.td_access.tools.params import CODE_RE
 
 _logger = logging.getLogger(__name__)
 
 
 class F3dAccessTelemetry(models.AbstractModel):
-    _inherit = 'f3d.access.telemetry'
+    _inherit = 'td.access.telemetry'
 
     @api.model
     def _f3d_ensure_signals(self, devices=None):
         """M-17: створити відсутні сигнали СКУД; наявні (також архівні) не змінюються."""
-        Signal = self.env['f3d.signal'].sudo().with_context(active_test=False)
-        devices = devices or self.env['f3d.access.device'].sudo().search([])
+        Signal = self.env['td.signal'].sudo().with_context(active_test=False)
+        devices = devices or self.env['td.access.device'].sudo().search([])
         Equipment = self.env['maintenance.equipment'].sudo()
         rows = [
             ('access/readers/%s/last_event' % dev.code, 'СКУД: остання подія %s' % dev.code, 'event', False,
@@ -40,16 +40,16 @@ class F3dAccessTelemetry(models.AbstractModel):
 
 
 class F3dAccessDevice(models.Model):
-    _inherit = 'f3d.access.device'
+    _inherit = 'td.access.device'
 
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        self.env['f3d.access.telemetry']._f3d_ensure_signals(records)
+        self.env['td.access.telemetry']._f3d_ensure_signals(records)
         return records
 
     def write(self, vals):
         res = super().write(vals)
         if 'code' in vals:
-            self.env['f3d.access.telemetry']._f3d_ensure_signals(self)
+            self.env['td.access.telemetry']._f3d_ensure_signals(self)
         return res

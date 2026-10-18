@@ -1,9 +1,9 @@
 /** @odoo-module */
 // AC-37, AC-38, AC-35 (JS): конвеєр R-15/R-16 на згенерованих у тесті файлах (GLB, OBJ+MTL, STL, FBX, 3MF, DAE).
 import { describe, expect, test } from "@odoo/hoot";
-import { importModelFiles } from "@factory3d_constructor/model/import";
-import { countTriangles, normalizeObject, sizeToVariantDims } from "@factory3d_constructor/model/normalize";
-import { simplifyToTriangles } from "@factory3d_constructor/model/simplify";
+import { importModelFiles } from "@td_constructor/model/import";
+import { countTriangles, normalizeObject, sizeToVariantDims } from "@td_constructor/model/normalize";
+import { simplifyToTriangles } from "@td_constructor/model/simplify";
 import {
     boxTris, colladaText, fbxAscii, mtlText, objText, stlAscii, stlBinary, threeMf,
 } from "./fixtures";

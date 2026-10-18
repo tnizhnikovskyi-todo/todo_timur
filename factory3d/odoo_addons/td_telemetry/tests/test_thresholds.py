@@ -157,7 +157,7 @@ class TestStateEvent(ThresholdCase):
         self.assertEqual(res["accepted"], 1)
         self.assertEqual(res["rejected"], [{"i": 0, "code": self.sig_cstate.code, "reason": "unknown_state"}])
         self.assertEqual(self.sig_cstate.last_quality, "bad")
-        row = self.env["f3d.reading"].search([("signal_id", "=", self.sig_cstate.id)])
+        row = self.env["td.reading"].search([("signal_id", "=", self.sig_cstate.id)])
         self.assertEqual((row.value, row.quality, row.text), (-1.0, "bad", "boost"))
 
 
@@ -175,7 +175,7 @@ class TestStale(ThresholdCase):
     def test_cron_stale_windows(self):
         req = self._prepare()
         requests = self.env["maintenance.request"].search_count([])
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         for sig in (self.sig_press, self.sig_rv):
             self.assertEqual(sig.status, "stale")
         for sig in (self.sig_bat, self.sig_water, self.sig_free):
@@ -186,28 +186,28 @@ class TestStale(ThresholdCase):
 
     def test_no_source_never_stale(self):
         self.set_sql(self.sig_free, status="ok", last_ts=fields.Datetime.now() - timedelta(days=3))
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.assertEqual(self.sig_free.status, "ok")
 
     def test_request_kept(self):
         req = self._prepare()
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.assertEqual(self.sig_rv.maintenance_request_id, req)
 
     def test_recover(self):
         self._prepare()
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.push([self.rd(self.sig_press, 6.8, at=7200)])
         self.assertEqual(self.sig_press.status, "ok")
 
     def test_params(self):
         icp = self.env["ir.config_parameter"].sudo()
-        icp.set_param("factory3d.telemetry.stale_min_s", "30")
-        icp.set_param("factory3d.telemetry.stale_periods", "5")
+        icp.set_param("td.telemetry.stale_min_s", "30")
+        icp.set_param("td.telemetry.stale_periods", "5")
         now = fields.Datetime.now()
         self.set_sql(self.sig_press, status="ok", last_ts=now - timedelta(seconds=51))
         self.set_sql(self.sig_rv, status="ok", last_ts=now - timedelta(seconds=49))
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.assertEqual(self.sig_press.status, "stale")
         self.assertEqual(self.sig_rv.status, "ok")
         self.assertEqual(self.sig_press._f3d_stale_after(), 50)
@@ -216,7 +216,7 @@ class TestStale(ThresholdCase):
 @tagged(*TAGS)
 class TestStaleCov(ThresholdCase):
     def _mk(self, code, source, address, period=30):
-        return self.env["f3d.signal"].create(
+        return self.env["td.signal"].create(
             {
                 "code": code,
                 "name": code,
@@ -245,13 +245,13 @@ class TestStaleCov(ThresholdCase):
         now = fields.Datetime.now()
         for s in sigs:
             self.set_sql(s, status="ok", last_ts=now - timedelta(seconds=301))
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.assertEqual([s.status for s in sigs], ["ok", "ok", "stale", "stale"])
 
     def test_cron_cov_stale_901s(self):
         sigs = self._signals()
         self.set_sql(sigs[0], status="ok", last_ts=fields.Datetime.now() - timedelta(seconds=901))
-        self.env["f3d.signal"]._cron_stale()
+        self.env["td.signal"]._cron_stale()
         self.assertEqual(sigs[0].status, "stale")
 
     def test_cov_check_s(self):

@@ -21,16 +21,16 @@ CELLS_HTML_LIMIT = 50
 
 
 class F3dSlot(models.Model):
-    _name = 'f3d.slot'
+    _name = 'td.slot'
     _description = "Місце (шаблон)"
-    _inherit = ['f3d.draft.mixin']
+    _inherit = ['td.draft.mixin']
     _order = 'layer_id, code_prefix'
     _rec_name = 'code_prefix'
     _check_company_auto = True
 
     uid = fields.Char(string="UID", size=32, default=lambda self: uuid4().hex, copy=False, index=True, readonly=True)
-    layer_id = fields.Many2one('f3d.layer', string="Шар", required=True, ondelete='cascade', index=True)
-    site_id = fields.Many2one('f3d.site', related='layer_id.site_id', store=True, index=True)
+    layer_id = fields.Many2one('td.layer', string="Шар", required=True, ondelete='cascade', index=True)
+    site_id = fields.Many2one('td.site', related='layer_id.site_id', store=True, index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     template = fields.Selection(SLOT_TEMPLATE_SELECTION, string="Шаблон", required=True)
     code_prefix = fields.Char(
@@ -135,13 +135,13 @@ class F3dSlot(models.Model):
 
     @api.model
     def _f3d_check_create(self, vals_list):
-        layers = self.env['f3d.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
+        layers = self.env['td.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
         self._f3d_assert_layers(layers)
 
     def _f3d_check_write(self, vals):
         layers = self.mapped('layer_id')
         if vals.get('layer_id'):
-            layers |= self.env['f3d.layer'].browse(vals['layer_id'])
+            layers |= self.env['td.layer'].browse(vals['layer_id'])
         self._f3d_assert_layers(layers)
 
     def _f3d_check_unlink(self):

@@ -2,11 +2,11 @@ from unittest.mock import patch
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.models import viewer_provider_signals as sig
+from odoo.addons.td_viewer3d.models import viewer_provider_signals as sig
 
 from .common import F3dViewerBase, F3dViewerCase
 
-PROV = "f3d.viewer.provider.signals"
+PROV = "td.viewer.provider.signals"
 
 
 def _row(code, value, unit="", mode="noise", charging=False, updated=None, state="норма"):
@@ -25,7 +25,7 @@ def _payload():
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestSignalsMocked(F3dViewerBase):
-    """Алгоритм M-01h з підміненим читанням: працює і без factory3d_iot_sim."""
+    """Алгоритм M-01h з підміненим читанням: працює і без td_iot_sim."""
 
     def _run(self, rows, payload=None, user=None):
         payload = payload if payload is not None else _payload()
@@ -102,7 +102,7 @@ class TestSignalsMocked(F3dViewerBase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestSignals(F3dViewerCase):
-    """З демо-базою і `x_f3d_signal` (factory3d_iot_sim)."""
+    """З демо-базою і `x_f3d_signal` (td_iot_sim)."""
 
     def setUp(self):
         super().setUp()

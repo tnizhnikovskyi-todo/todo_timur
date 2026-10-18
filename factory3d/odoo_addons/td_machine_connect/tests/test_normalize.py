@@ -7,7 +7,7 @@ from odoo.tests import BaseCase, tagged
 from ..tools import states
 from .common import F3DMachineCase
 
-LOGGER = "odoo.addons.factory3d_machine_connect"
+LOGGER = "odoo.addons.td_machine_connect"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")

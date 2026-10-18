@@ -9,18 +9,18 @@ class F3DBmsCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user_reader = new_test_user(cls.env, "bms_reader", groups="base.group_user,factory3d_base.group_f3d_user")
+        cls.user_reader = new_test_user(cls.env, "bms_reader", groups="base.group_user,td_factory3d.group_td_user")
         cls.user_operator = new_test_user(
-            cls.env, "bms_oper", groups="base.group_user,factory3d_bms.group_f3d_bms_operator"
+            cls.env, "bms_oper", groups="base.group_user,td_bms.group_td_bms_operator"
         )
-        cls.user_manager = new_test_user(cls.env, "bms_mgr", groups="base.group_user,factory3d_base.group_f3d_manager")
-        cls.user_admin = new_test_user(cls.env, "bms_admin", groups="base.group_user,factory3d_base.group_f3d_admin")
+        cls.user_manager = new_test_user(cls.env, "bms_mgr", groups="base.group_user,td_factory3d.group_td_manager")
+        cls.user_admin = new_test_user(cls.env, "bms_admin", groups="base.group_user,td_factory3d.group_td_admin")
 
     @classmethod
     def fresh_signal(cls, vals):
         """Свіжий сигнал фікстури: сигнал з таким кодом із даних модуля (W3) видаляється — `UNIQUE(code)`."""
-        cls.env["f3d.signal"].with_context(active_test=False).search([("code", "=", vals["code"])]).unlink()
-        return cls.env["f3d.signal"].create(vals)
+        cls.env["td.signal"].with_context(active_test=False).search([("code", "=", vals["code"])]).unlink()
+        return cls.env["td.signal"].create(vals)
 
 
 class F3DBmsLightCase(F3DBmsCase):
@@ -49,31 +49,31 @@ class F3DBmsLightCase(F3DBmsCase):
         super().setUpClass()
         env = cls.env
         # дані модуля (W3) вже містять норми, щити й групи — фікстури створюють свої (UNIQUE за кодом)
-        for model in ("f3d.bms.light.group", "f3d.bms.light.panel", "f3d.bms.light.norm"):
+        for model in ("td.bms.light.group", "td.bms.light.panel", "td.bms.light.norm"):
             env[model].with_context(active_test=False).search([]).unlink()
         cls.zones = {}
         for code, area in cls.ZONES.items():
-            zone = env["f3d.zone"].search([("f3d_code", "=", code)], limit=1)  # зони base могли бути встановлені
+            zone = env["td.zone"].search([("td_code", "=", code)], limit=1)  # зони base могли бути встановлені
             if not zone:
-                zone = env["f3d.zone"].create(
+                zone = env["td.zone"].create(
                     {
-                        "f3d_code": code,
+                        "td_code": code,
                         "name": code,
                         "zone_type": "production",
                         "polygon": [[0, 0], [round(area / 10, 2), 0], [round(area / 10, 2), 10], [0, 10]],
                     }
                 )
             cls.zones[code] = zone
-        cls.zone_empty = env["f3d.zone"].create({"f3d_code": "Z-T0", "name": "Z-T0", "zone_type": "production"})
+        cls.zone_empty = env["td.zone"].create({"td_code": "Z-T0", "name": "Z-T0", "zone_type": "production"})
         cls.norms = {
-            key: env["f3d.bms.light.norm"].create({"key": key, "name": key, "lux": lux})
+            key: env["td.bms.light.norm"].create({"key": key, "name": key, "lux": lux})
             for key, lux in cls.NORMS.items()
         }
-        Panel = env["f3d.bms.light.panel"]
+        Panel = env["td.bms.light.panel"]
         cls.lp1 = Panel.create({"code": "LP-1", "name": "ЩО-1", "router": 1})
         cls.lp2 = Panel.create({"code": "LP-2", "name": "ЩО-2", "router": 2})
-        cls.pass_hb = env.ref("factory3d_base.passport_highbay")
-        cls.pass_rack = env.ref("factory3d_base.passport_highbay_rack")
+        cls.pass_hb = env.ref("td_factory3d.passport_highbay")
+        cls.pass_rack = env.ref("td_factory3d.passport_highbay_rack")
         cls.next_dali = 100
 
     @classmethod
@@ -93,7 +93,7 @@ class F3DBmsLightCase(F3DBmsCase):
             "dali_group": cls.next_dali,
             **kw,
         }
-        return cls.env["f3d.bms.light.group"].create(vals)
+        return cls.env["td.bms.light.group"].create(vals)
 
     @classmethod
     def mk_signal(cls, code, kind="gauge"):
@@ -108,7 +108,7 @@ class F3DBmsLightCase(F3DBmsCase):
         cls._ingest_n = getattr(cls, "_ingest_n", 0) + 1  # ts строго зростає: повтор тієї ж секунди відкидається
         ts = fields.Datetime.now() - timedelta(minutes=10) + timedelta(seconds=cls._ingest_n)
         item = {"code": sig.code, "ts": ts, "value": value, "text": text, "q": "good"}
-        res = cls.env["f3d.signal"].sudo()._f3d_ingest([{k: v for k, v in item.items() if v is not None}], src="module")
+        res = cls.env["td.signal"].sudo()._f3d_ingest([{k: v for k, v in item.items() if v is not None}], src="module")
         cls.env.invalidate_all()
         return res
 
@@ -118,11 +118,11 @@ class F3DBmsHvacMixin:
 
     @classmethod
     def _setup_hvac_fixtures(cls):
-        Unit = cls.env["f3d.bms.hvac.unit"]
+        Unit = cls.env["td.bms.hvac.unit"]
         Unit.with_context(active_test=False).search([]).unlink()
-        cls.env["f3d.bms.heat.balance"].sudo().search([]).unlink()
-        cls.zone_hvac = cls.env["f3d.zone"].create(
-            {"f3d_code": "Z-T-HVAC", "name": "Зона вентиляції (тест)", "zone_type": "production"}
+        cls.env["td.bms.heat.balance"].sudo().search([]).unlink()
+        cls.zone_hvac = cls.env["td.zone"].create(
+            {"td_code": "Z-T-HVAC", "name": "Зона вентиляції (тест)", "zone_type": "production"}
         )
         common = {"zone_id": cls.zone_hvac.id}
         cls.rv = {}
@@ -190,7 +190,7 @@ class F3DBmsHvacMixin:
                 "required_m3h": 158.4,
             }
         )
-        cls.balance = cls.env["f3d.bms.heat.balance"]._f3d_bms_get()
+        cls.balance = cls.env["td.bms.heat.balance"]._f3d_bms_get()
         cls.balance.action_recompute()
 
     @classmethod
@@ -208,9 +208,9 @@ class F3DBmsRulesMixin:
     @classmethod
     def _setup_rules(cls):
         env = cls.env
-        cls.derived = env["f3d.source"].search([("code", "=", "BMS-DERIVED")], limit=1)
+        cls.derived = env["td.source"].search([("code", "=", "BMS-DERIVED")], limit=1)
         if not cls.derived:
-            cls.derived = env["f3d.source"].create(
+            cls.derived = env["td.source"].create(
                 {"code": "BMS-DERIVED", "name": "Будівля: обчислені", "type": "f3d_bms", "module": "bms"}
             )
         cls.cal = env["resource.calendar"].create(
@@ -238,7 +238,7 @@ class F3DBmsRulesMixin:
             "heat_deficit_delay_min": "30",
             "check_heartbeat_min": "10",
         }.items():
-            icp.set_param("factory3d.bms." + key, value)
+            icp.set_param("td.bms." + key, value)
 
     @classmethod
     def eq(cls, code):
@@ -264,15 +264,15 @@ class F3DBmsRulesMixin:
             item["value"] = value
         if text is not None:
             item["text"] = text
-        res = cls.env["f3d.signal"].sudo()._f3d_ingest([item], src="module")
+        res = cls.env["td.signal"].sudo()._f3d_ingest([item], src="module")
         cls.env.invalidate_all()
         return res
 
     @classmethod
     def run_check(cls):
-        cls.env["f3d.bms.check"]._cron_check()
+        cls.env["td.bms.check"]._cron_check()
         cls.env.invalidate_all()
 
     @classmethod
     def requests(cls, sig):
-        return cls.env["maintenance.request"].search([("f3d_signal_id", "=", sig.id)])
+        return cls.env["maintenance.request"].search([("td_signal_id", "=", sig.id)])

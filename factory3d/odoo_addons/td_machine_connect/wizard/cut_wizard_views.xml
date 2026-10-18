@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- V-27, V-28: майстри імпорту плану (M-25) і деталей (M-26). -->
 <odoo>
-    <record id="view_f3d_cut_plan_import_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.cut.plan.import.wizard.form</field>
-        <field name="model">f3d.cut.plan.import.wizard</field>
+    <record id="view_td_cut_plan_import_wizard_form" model="ir.ui.view">
+        <field name="name">td.cut.plan.import.wizard.form</field>
+        <field name="model">td.cut.plan.import.wizard</field>
         <field name="arch" type="xml">
             <form string="Імпорт плану розкрою">
                 <group>
@@ -19,9 +19,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_part_import_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.cut.part.import.wizard.form</field>
-        <field name="model">f3d.cut.part.import.wizard</field>
+    <record id="view_td_cut_part_import_wizard_form" model="ir.ui.view">
+        <field name="name">td.cut.part.import.wizard.form</field>
+        <field name="model">td.cut.part.import.wizard</field>
         <field name="arch" type="xml">
             <form string="Імпорт деталей виробу">
                 <group>
@@ -43,12 +43,12 @@
         </field>
     </record>
 
-    <record id="action_f3d_cut_part_import" model="ir.actions.act_window">
+    <record id="action_td_cut_part_import" model="ir.actions.act_window">
         <field name="name">Імпорт CSV</field>
-        <field name="res_model">f3d.cut.part.import.wizard</field>
+        <field name="res_model">td.cut.part.import.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
-        <field name="binding_model_id" ref="model_f3d_cut_part"/>
+        <field name="binding_model_id" ref="model_td_cut_part"/>
         <field name="binding_view_types">list</field>
     </record>
 </odoo>

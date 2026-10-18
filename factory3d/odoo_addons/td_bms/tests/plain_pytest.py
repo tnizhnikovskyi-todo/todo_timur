@@ -1,5 +1,5 @@
 """Плагін pytest для тестів без Odoo (`test_data_sync.py`): файл завантажується як окремий модуль, без імпорту
-пакета `factory3d_bms` (його `__init__` потребує `odoo`). Підключається через `pytest.ini` (`-p plain_pytest`)."""
+пакета `td_bms` (його `__init__` потребує `odoo`). Підключається через `pytest.ini` (`-p plain_pytest`)."""
 
 import importlib.util
 

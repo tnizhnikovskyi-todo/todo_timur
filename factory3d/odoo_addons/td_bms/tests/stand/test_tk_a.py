@@ -12,33 +12,33 @@ from bms_lib import bms_requests, last_request_id, close_bms_requests, episodes,
 
 def test_tk01_connection(odoo, sim):
     """ТК-01: 32 джерела bms + BMS-DERIVED online; 32 групи live; 29 установок без stale; сигнали ok, окрім RV-05 filter."""
-    srcs = odoo.search_read("f3d.source", [("module", "=", "bms")], ["code", "state"])
+    srcs = odoo.search_read("td.source", [("module", "=", "bms")], ["code", "state"])
     assert sleep_until(
-        lambda: len(odoo.search_read("f3d.source", [("module", "=", "bms"), ("state", "=", "online")], ["id"])) == 33,
+        lambda: len(odoo.search_read("td.source", [("module", "=", "bms"), ("state", "=", "online")], ["id"])) == 33,
         180,
         10,
     ), [s for s in srcs if s["state"] != "online"]
     assert len(srcs) == 33 and any(s["code"] == "BMS-DERIVED" for s in srcs)
-    groups = odoo.search_read("f3d.bms.light.group", [], ["code", "level_source"])
+    groups = odoo.search_read("td.bms.light.group", [], ["code", "level_source"])
     assert len(groups) == 32
     assert sleep_until(
-        lambda: all(g["level_source"] == "live" for g in odoo.search_read("f3d.bms.light.group", [], ["level_source"])),
+        lambda: all(g["level_source"] == "live" for g in odoo.search_read("td.bms.light.group", [], ["level_source"])),
         120,
         10,
     )
-    units = odoo.search_read("f3d.bms.hvac.unit", [], ["code", "stale"])
+    units = odoo.search_read("td.bms.hvac.unit", [], ["code", "stale"])
     assert len(units) == 29 and not [u for u in units if u["stale"]], [u["code"] for u in units if u["stale"]]
 
     def alarms():
         r = odoo.search_read(
-            "f3d.signal", [("module", "=", "bms"), ("status", "in", ["alarm", "stale"])], ["code", "status"]
+            "td.signal", [("module", "=", "bms"), ("status", "in", ["alarm", "stale"])], ["code", "status"]
         )
         return sorted(x["code"] for x in r)
 
     def low_checks():
         """Групи, чия освітленість при рівні 80 % емулятора нижча за норму (D-1 у TEST_REPORT)."""
         r = odoo.search_read(
-            "f3d.signal",
+            "td.signal",
             [
                 ("module", "=", "bms"),
                 ("code", "like", "lighting/groups/%/check"),
@@ -156,7 +156,7 @@ def test_tk04_lamp_fault(odoo, fresh_sim):
     base = last_request_id(odoo)
     for code in ("lighting/groups/LT-CUT/faults", "lighting/groups/LT-CUT/faulty"):
         sid = odoo.signal_id(code)
-        odoo.write("f3d.signal", sid, {"period_s": 60})
+        odoo.write("td.signal", sid, {"period_s": 60})
     st, d = sim.post(
         "/scenario/lighting_scene/start",
         {

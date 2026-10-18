@@ -1,7 +1,7 @@
-"""Генератор data-файлів factory3d_base з макета (SPEC §5.2).
+"""Генератор data-файлів td_factory3d з макета (SPEC §5.2).
 
 Запуск з каталогу factory3d (корінь макета):
-    python3 odoo_addons/factory3d_base/tools/gen_data.py [--root .] [--out odoo_addons/factory3d_base/data]
+    python3 odoo_addons/td_factory3d/tools/gen_data.py [--root .] [--out odoo_addons/td_factory3d/data]
 
 Читає dist/odoo_demo.json, plant/equipment_specs.json, plant/odoo_flows.py:NAMES.
 Пише детерміновано (сортування, без часових міток). Файли зон, воріт і zone_links генеруються
@@ -179,7 +179,7 @@ def gen_sources(specs):
 
 def gen_employee_codes(demo):
     rows = [[code.replace('-', ''), code, emp['name']] for code, emp in sorted(demo['employees'].items())]
-    return _csv(['barcode', 'f3d_code', 'name'], rows)
+    return _csv(['barcode', 'td_code', 'name'], rows)
 
 
 def gen_locations(demo):
@@ -238,9 +238,9 @@ def build(root=None):
     finally:
         sys.path.remove(root)
     return {
-        'f3d.equipment.passport.csv': gen_passports(specs),
-        'f3d.equipment.spec.csv': gen_specs(specs),
-        'f3d.equipment.source.csv': gen_sources(specs),
+        'td.equipment.passport.csv': gen_passports(specs),
+        'td.equipment.spec.csv': gen_specs(specs),
+        'td.equipment.source.csv': gen_sources(specs),
         'scene_equipment_codes.csv': gen_equipment_codes(demo, NAMES),
         'scene_employee_codes.csv': gen_employee_codes(demo),
         'scene_locations.csv': gen_locations(demo),

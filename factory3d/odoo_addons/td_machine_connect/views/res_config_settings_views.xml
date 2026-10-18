@@ -1,101 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-31: налаштування верстатів (SPEC §3, M-23). Стоп-крани й служби — лише group_f3d_admin. -->
+<!-- V-31: налаштування верстатів (SPEC §3, M-23). Стоп-крани й служби — лише group_td_admin. -->
 <odoo>
-    <record id="res_config_settings_view_form_f3d_mc" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.f3d.mc</field>
+    <record id="res_config_settings_view_form_td_mc" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.mc</field>
         <field name="model">res.config.settings</field>
         <field name="priority" eval="46"/>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Верстати" string="Верстати" name="factory3d_machine_connect"
-                     groups="factory3d_base.group_f3d_manager">
-                    <block title="Стоп-крани" name="factory3d_mc_switches" groups="factory3d_base.group_f3d_admin">
+                <app data-string="Верстати" string="Верстати" name="td_machine_connect"
+                     groups="td_factory3d.group_td_manager">
+                    <block title="Стоп-крани" name="td_mc_switches" groups="td_factory3d.group_td_admin">
                         <setting string="Читати з верстатів" help="Прийом станів, лічильників і подій верстатів">
-                            <field name="f3d_mc_read_enabled"/>
+                            <field name="td_mc_read_enabled"/>
                         </setting>
                         <setting string="Автостарт завдань" help="Автоматичний старт, пауза й завершення робочих завдань">
-                            <field name="f3d_mc_auto_start_enabled"/>
+                            <field name="td_mc_auto_start_enabled"/>
                         </setting>
                         <setting string="Запис на пристрої" help="Команди на верстати й портал (одне з п'яти запобіжників)">
-                            <field name="f3d_mc_write_enabled"/>
+                            <field name="td_mc_write_enabled"/>
                         </setting>
                     </block>
-                    <block title="Пороги" name="factory3d_mc_thresholds">
+                    <block title="Пороги" name="td_mc_thresholds">
                         <setting string="Автоматика завдань">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_micro_stop_s"/>
-                                    <field name="f3d_mc_micro_stop_s"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_pause_after_min"/>
-                                    <field name="f3d_mc_pause_after_min"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_finish_idle_s"/>
-                                    <field name="f3d_mc_finish_idle_s"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_no_job_activity_min"/>
-                                    <field name="f3d_mc_no_job_activity_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_micro_stop_s"/>
+                                    <field name="td_mc_micro_stop_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_pause_after_min"/>
+                                    <field name="td_mc_pause_after_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_finish_idle_s"/>
+                                    <field name="td_mc_finish_idle_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_no_job_activity_min"/>
+                                    <field name="td_mc_no_job_activity_min"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="Лічильник" name="factory3d_mc_counter">
+                    <block title="Лічильник" name="td_mc_counter">
                         <setting string="Кількість із верстата в завдання">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_qty_sync_mode"/>
-                                    <field name="f3d_mc_qty_sync_mode"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_qty_sync_s"/>
-                                    <field name="f3d_mc_qty_sync_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_qty_sync_mode"/>
+                                    <field name="td_mc_qty_sync_mode"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_qty_sync_s"/>
+                                    <field name="td_mc_qty_sync_s"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="OEE" name="factory3d_mc_oee">
+                    <block title="OEE" name="td_mc_oee">
                         <setting string="Повнота даних і пороги кольору">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_coverage_min"/>
-                                    <field name="f3d_mc_coverage_min"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_oee_good"/>
-                                    <field name="f3d_mc_oee_good"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_oee_warn"/>
-                                    <field name="f3d_mc_oee_warn"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_coverage_min"/>
+                                    <field name="td_mc_coverage_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_oee_good"/>
+                                    <field name="td_mc_oee_good"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_oee_warn"/>
+                                    <field name="td_mc_oee_warn"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="Портал" name="factory3d_mc_gantry">
+                    <block title="Портал" name="td_mc_gantry">
                         <setting string="Розбіжність стосів і авто-дії">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_stack_diff_tolerance"/>
-                                    <field name="f3d_mc_stack_diff_tolerance"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_stack_diff_confirm_min"/>
-                                    <field name="f3d_mc_stack_diff_confirm_min"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_gantry_auto_replenish"/>
-                                    <field name="f3d_mc_gantry_auto_replenish"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_gantry_auto_feed"/>
-                                    <field name="f3d_mc_gantry_auto_feed"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_stack_diff_tolerance"/>
+                                    <field name="td_mc_stack_diff_tolerance"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_stack_diff_confirm_min"/>
+                                    <field name="td_mc_stack_diff_confirm_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_gantry_auto_replenish"/>
+                                    <field name="td_mc_gantry_auto_replenish"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_gantry_auto_feed"/>
+                                    <field name="td_mc_gantry_auto_feed"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="Карти розкрою" name="factory3d_mc_cutting" groups="factory3d_base.group_f3d_admin">
+                    <block title="Карти розкрою" name="td_mc_cutting" groups="td_factory3d.group_td_admin">
                         <setting string="Режим і токен експорту">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_cutting_mode"/>
-                                    <field name="f3d_mc_cutting_mode"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_export_token_ttl_s"/>
-                                    <field name="f3d_mc_export_token_ttl_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_cutting_mode"/>
+                                    <field name="td_mc_cutting_mode"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_export_token_ttl_s"/>
+                                    <field name="td_mc_export_token_ttl_s"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="Зберігання" name="factory3d_mc_storage" groups="factory3d_base.group_f3d_admin">
+                    <block title="Зберігання" name="td_mc_storage" groups="td_factory3d.group_td_admin">
                         <setting string="Терміни зберігання">
                             <div class="content-group">
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_keep_log_days"/>
-                                    <field name="f3d_mc_keep_log_days"/></div>
-                                <div class="row mt8"><label class="col-lg-5" for="f3d_mc_keep_event_days"/>
-                                    <field name="f3d_mc_keep_event_days"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_keep_log_days"/>
+                                    <field name="td_mc_keep_log_days"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_mc_keep_event_days"/>
+                                    <field name="td_mc_keep_event_days"/></div>
                             </div>
                         </setting>
                     </block>
-                    <block title="Міграція" name="factory3d_mc_migration" groups="factory3d_base.group_f3d_admin">
+                    <block title="Міграція" name="td_mc_migration" groups="td_factory3d.group_td_admin">
                         <setting string="Міграція демо-даних" help="Верстати, сигнали, стоси, журнал часу: повторний запуск безпечний">
                             <div class="content-group">
-                                <div class="mt8">Стан: <field name="f3d_mc_migration_state"/></div>
-                                <button name="action_f3d_mc_run_migration" type="object" class="btn-link"
+                                <div class="mt8">Стан: <field name="td_mc_migration_state"/></div>
+                                <button name="action_td_mc_run_migration" type="object" class="btn-link"
                                         string="Повторити міграцію демо-даних"/>
                             </div>
                         </setting>

@@ -30,7 +30,7 @@ WS_KEY = os.environ.get("SIM_WOODSTORE_APIKEY", "ws-key-stand-0123456789")
 JOBS_URL = os.environ.get("F3D_STAND_CUTOPT", "http://127.0.0.1:8083")
 JOBS_KEY = os.environ.get("SIM_JOBS_APIKEY", "jobs-key-stand-0123456789")
 NS_INST = "http://todo.ltd/f3d/iot_sim/instances/"
-P = "factory3d.machine_connect."
+P = "td.machine_connect."
 KYIV = timezone(timedelta(hours=3))  # EEST до 25.10.2026
 
 
@@ -250,14 +250,14 @@ def psql(sql: str, db: str = "f3d_mc_tk") -> list[list[str]]:
 
 def machine(o, code: str, fields=None) -> dict:
     return o.search_read(
-        "f3d.machine", [("code", "=", code)], fields or ["code", "state", "raw_state", "raw_job", "active_workorder_id"]
+        "td.machine", [("code", "=", code)], fields or ["code", "state", "raw_state", "raw_job", "active_workorder_id"]
     )[0]
 
 
 def downtimes(o, code: str, open_only: bool = False) -> list[dict]:
     dom = [("machine_id.code", "=", code)] + ([("date_end", "=", False)] if open_only else [])
     return o.search_read(
-        "f3d.downtime",
+        "td.downtime",
         dom,
         [
             "date_start",
@@ -275,21 +275,21 @@ def downtimes(o, code: str, open_only: bool = False) -> list[dict]:
 
 def state_log(o, code: str) -> list[dict]:
     return o.search_read(
-        "f3d.machine.state.log", [("machine_id.code", "=", code)], ["state", "date_start", "date_end"], order="id"
+        "td.machine.state.log", [("machine_id.code", "=", code)], ["state", "date_start", "date_end"], order="id"
     )
 
 
 def enable_write(o, sources: list[str], signals: list[str]) -> None:
     """Чотири запобіжники Odoo (п'ятий — `F3D_WRITE_ENABLED=1` у середовищі колектора, див. `fresh(env=…)`)."""
     o.param(P + "write_enabled", "True")
-    o.param("factory3d.telemetry.write_enabled", "True")
+    o.param("td.telemetry.write_enabled", "True")
     for code in sources:
         o.write(
-            "f3d.source", o.search_read("f3d.source", [("code", "=", code)], ["id"])[0]["id"], {"write_enabled": True}
+            "td.source", o.search_read("td.source", [("code", "=", code)], ["id"])[0]["id"], {"write_enabled": True}
         )
     for code in signals:
         o.write(
-            "f3d.signal", o.search_read("f3d.signal", [("code", "=", code)], ["id"])[0]["id"], {"write_enabled": True}
+            "td.signal", o.search_read("td.signal", [("code", "=", code)], ["id"])[0]["id"], {"write_enabled": True}
         )
 
 
@@ -312,7 +312,7 @@ def make_mo(o, product_code: str, qty: float) -> dict:
 
 
 def wo_of(o, mo: dict, code: str) -> int:
-    wcs = o.search_read("mrp.workcenter", [("f3d_code", "=", code)], ["name"])
+    wcs = o.search_read("mrp.workcenter", [("td_code", "=", code)], ["name"])
     return next(w["id"] for w in mo["wo"] if w["wc"] == wcs[0]["name"])
 
 
@@ -321,7 +321,7 @@ def commands(o, signal_code: str | None = None) -> list[dict]:
     if signal_code:
         dom = [("signal_id.code", "=", signal_code)]
     return o.search_read(
-        "f3d.command", dom, ["state", "text", "payload", "result_data", "signal_id", "error"], order="id"
+        "td.command", dom, ["state", "text", "payload", "result_data", "signal_id", "error"], order="id"
     )
 
 
@@ -460,8 +460,8 @@ class FakeUa:
 
 def redirect_source(o, code: str, endpoint: str) -> None:
     """Джерело UA-<код> → інший endpoint (фейковий сервер); колектор підхопить конфігурацію за ≤ 30 с."""
-    sid = o.search_read("f3d.source", [("code", "=", code)], ["id", "params"])[0]
-    o.write("f3d.source", sid["id"], {"params": dict(sid["params"], endpoint=endpoint)})
+    sid = o.search_read("td.source", [("code", "=", code)], ["id", "params"])[0]
+    o.write("td.source", sid["id"], {"params": dict(sid["params"], endpoint=endpoint)})
 
 
 def set_iot_sim_ip(ip: str) -> None:

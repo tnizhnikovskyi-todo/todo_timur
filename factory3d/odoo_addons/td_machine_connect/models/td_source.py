@@ -6,7 +6,7 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dSource(models.Model):
-    _inherit = "f3d.source"
+    _inherit = "td.source"
 
     type = fields.Selection(
         selection_add=[("f3d_machine", "Верстати: обчислені стани")], ondelete={"f3d_machine": "cascade"}

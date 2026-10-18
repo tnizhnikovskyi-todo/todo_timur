@@ -1,12 +1,12 @@
 {
-    "name": "Завод 3D: Пожежна безпека",
+    "name": "Пожежна безпека",
     "summary": "Пожежна сигналізація (лише читання), іскрогасіння, димовидалення, евакуація за нормами, навчальні тривоги",
     "version": "19.0.1.0.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",
     "website": "https://todo.ltd",
-    "depends": ["factory3d_telemetry", "hr_attendance"],
+    "depends": ["td_telemetry", "hr_attendance"],
     # W0-скелет (DEC-1): моделей модуля ще немає, тому активні лише файли без залежності від моделей.
     # Повний порядок SPEC §1 — у закоментованих рядках; лідер розкоментовує їх по мірі появи моделей W1…W4
     # (порядок істотний: норми → прилад/шлейфи → зони → системи → димові зони → пристрої → виходи → маршрути →
@@ -17,32 +17,32 @@
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/mail_activity_type.xml",
-        "data/f3d.fire.norm.csv",               # M-08
-        "data/f3d_fire_panel.xml",              # M-01, M-02
-        "data/f3d.fire.zone.csv",               # M-03
-        "data/f3d_fire_system.xml",             # M-06
-        "data/f3d.fire.smoke.zone.csv",         # M-07
-        "data/f3d.fire.device.csv",             # M-04
-        "data/f3d.fire.exit.csv",                 # M-09
-        "data/f3d_fire_route.xml",               # M-10
-        "data/f3d_fire_drill_template.xml",     # M-11c, M-11e
-        "data/f3d_source_data.xml",              # поле f3d_fire_readonly на f3d.source (M-15)
-        "data/f3d_signal_data.xml",              # M-01…M-06 (signal_*), M-15
+        "data/td.fire.norm.csv",               # M-08
+        "data/td_fire_panel.xml",              # M-01, M-02
+        "data/td.fire.zone.csv",               # M-03
+        "data/td_fire_system.xml",             # M-06
+        "data/td.fire.smoke.zone.csv",         # M-07
+        "data/td.fire.device.csv",             # M-04
+        "data/td.fire.exit.csv",                 # M-09
+        "data/td_fire_route.xml",               # M-10
+        "data/td_fire_drill_template.xml",     # M-11c, M-11e
+        "data/td_source_data.xml",              # поле td_fire_readonly на td.source (M-15)
+        "data/td_signal_data.xml",              # M-01…M-06 (signal_*), M-15
         "data/ir_cron.xml",                      # panel, drill
-        "views/f3d_fire_norm_views.xml",
-        "views/f3d_fire_panel_views.xml",
-        "views/f3d_fire_zone_views.xml",
-        "views/f3d_fire_device_views.xml",
-        "views/f3d_fire_event_views.xml",
-        "views/f3d_fire_system_views.xml",
-        "views/f3d_fire_exit_views.xml",
-        "views/f3d_fire_route_views.xml",
-        "views/f3d_fire_smoke_zone_views.xml",
-        "views/f3d_fire_drill_views.xml",
+        "views/td_fire_norm_views.xml",
+        "views/td_fire_panel_views.xml",
+        "views/td_fire_zone_views.xml",
+        "views/td_fire_device_views.xml",
+        "views/td_fire_event_views.xml",
+        "views/td_fire_system_views.xml",
+        "views/td_fire_exit_views.xml",
+        "views/td_fire_route_views.xml",
+        "views/td_fire_smoke_zone_views.xml",
+        "views/td_fire_drill_views.xml",
         "wizard/drill_rollcall_views.xml",
         "wizard/bacnet_device_views.xml",
-        "views/f3d_zone_views.xml",
-        "views/f3d_source_views.xml",
+        "views/td_zone_views.xml",
+        "views/td_source_views.xml",
         "views/maintenance_request_views.xml",
         "views/res_config_settings_views.xml",
         "report/report_evac_compliance.xml",

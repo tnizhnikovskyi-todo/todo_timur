@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="res_config_settings_view_form_f3d_viewer" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.f3d.viewer</field>
+    <record id="res_config_settings_view_form_td_viewer" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.viewer</field>
         <field name="model">res.config.settings</field>
         <field name="priority" eval="41"/>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Завод 3D" string="Завод 3D" name="factory3d_viewer"
-                     groups="factory3d_base.group_f3d_admin">
+                <app data-string="Завод 3D" string="Завод 3D" name="td_viewer3d"
+                     groups="td_factory3d.group_td_admin">
                     <block title="Журнал станів" name="f3d_viewer_journal">
                         <setting string="Період знімків" help="Хвилини між плановими знімками (5…60)">
-                            <field name="f3d_snapshot_minutes"/>
+                            <field name="td_snapshot_minutes"/>
                         </setting>
                         <setting string="Вікно знімків" help="HH:MM-HH:MM за Києвом; порожньо — цілодобово">
-                            <field name="f3d_snapshot_hours"/>
+                            <field name="td_snapshot_hours"/>
                         </setting>
                         <setting string="Зберігання знімків" help="Днів; знімок установки не видаляється">
-                            <field name="f3d_snapshot_keep_days"/>
+                            <field name="td_snapshot_keep_days"/>
                         </setting>
                         <setting string="Зберігання подій" help="Годин, за які дельта обчислюється з подій">
-                            <field name="f3d_event_keep_hours"/>
+                            <field name="td_event_keep_hours"/>
                         </setting>
                     </block>
                     <block title="Живі оновлення" name="f3d_viewer_bus">
                         <setting string="Шина оновлень" help="Повідомлення переглядачам про зміни стану">
-                            <field name="f3d_bus_enabled"/>
+                            <field name="td_bus_enabled"/>
                         </setting>
                         <setting string="Затримка оновлень, мс">
-                            <field name="f3d_delta_debounce_ms"/>
+                            <field name="td_delta_debounce_ms"/>
                         </setting>
                     </block>
                     <block title="Кіоск" name="f3d_viewer_kiosk">
                         <setting string="Кіоск" help="Екрани цеху за токеном">
-                            <field name="f3d_kiosk_enabled"/>
+                            <field name="td_kiosk_enabled"/>
                             <div class="content-group mt8">
-                                <label for="f3d_kiosk_refresh_s"/> <field name="f3d_kiosk_refresh_s"/>
+                                <label for="td_kiosk_refresh_s"/> <field name="td_kiosk_refresh_s"/>
                             </div>
                             <div class="content-group mt8">
-                                <field name="f3d_kiosk_url" widget="CopyClipboardChar" readonly="1"/>
+                                <field name="td_kiosk_url" widget="CopyClipboardChar" readonly="1"/>
                             </div>
                             <div class="mt8">
-                                <button name="action_f3d_new_kiosk_token" type="object" class="btn-link"
+                                <button name="action_td_new_kiosk_token" type="object" class="btn-link"
                                         string="Новий токен кіоска"
                                         confirm="Старі адреси кіосків перестануть працювати. Продовжити?"/>
                             </div>
@@ -49,14 +49,14 @@
                     </block>
                     <block title="Планшети" name="f3d_viewer_lite">
                         <setting string="Спрощений режим" help="Для слабких пристроїв">
-                            <field name="f3d_lite_default"/>
+                            <field name="td_lite_default"/>
                         </setting>
                     </block>
                     <block title="Демо" name="f3d_viewer_demo">
                         <setting string="Демо-режим" help="Лише для тестового сервера">
-                            <field name="f3d_demo_enabled"/>
+                            <field name="td_demo_enabled"/>
                             <div class="content-group mt8">
-                                <label for="f3d_demo_clock"/> <field name="f3d_demo_clock"/>
+                                <label for="td_demo_clock"/> <field name="td_demo_clock"/>
                             </div>
                         </setting>
                     </block>
@@ -65,11 +65,11 @@
         </field>
     </record>
 
-    <record id="action_f3d_config_settings" model="ir.actions.act_window">
+    <record id="action_td_config_settings" model="ir.actions.act_window">
         <field name="name">Налаштування переглядача</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
         <field name="target">current</field>
-        <field name="context">{"module": "factory3d_viewer"}</field>
+        <field name="context">{"module": "td_viewer3d"}</field>
     </record>
 </odoo>

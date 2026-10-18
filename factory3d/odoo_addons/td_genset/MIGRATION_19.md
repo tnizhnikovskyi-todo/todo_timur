@@ -34,7 +34,7 @@
 | MG-27 | `cat security/*` | CSV без змін | Групи — за MG-08; тести прав зелені. |
 | MG-28 | `grep noupdate data/` | 7 блоків `noupdate="1"` | Змін немає; `eval="(4, …)"` у groups.xml/menu.xml замінено на `Command.link`. |
 | MG-29 | `grep setUpClass\|freeze_time tests/` | | `cls.env`, freezegun, мок ретранслятора (локальний `RelayMock`) — без змін. Додано в `TdGensetCase.setUp`: патч `ir.cron._commit_progress` (поза cron 19 робить `cr.commit()`, у тесті це AssertionError; у cron-контексті метод коммітить прогрес партій — навмисна зміна 19). Тести, що перевіряють прогрес (`_commit_progress`), патчать його самі: сигнатура `notify(cron, processed=0, **kw)`. |
-| MG-30 | `cat data/neutralize.sql` | | Таблиці/колонки (`td_genset.relay_enabled/commands_allowed`, `ir_config_parameter`, `ir_cron.active`) є; тест `test_neutralize_copy_of_production` зелений. Узгодження з CB-10 (`factory3d.base.environment`) і preflight — окремого preflight-файла в модулі немає; лишено на менеджера/W5. |
+| MG-30 | `cat data/neutralize.sql` | | Таблиці/колонки (`td_genset.relay_enabled/commands_allowed`, `ir_config_parameter`, `ir_cron.active`) є; тест `test_neutralize_copy_of_production` зелений. Узгодження з CB-10 (`td.base.environment`) і preflight — окремого preflight-файла в модулі немає; лишено на менеджера/W5. |
 | MG-31 | — | — | За W4/W5 (docker-стенд). |
 | MG-32 | — | — | CHANGELOG 19.0.1.0.0 зроблено; `relay_api.md`, `DEPLOY_TEST.md` — за W4/W5. |
 

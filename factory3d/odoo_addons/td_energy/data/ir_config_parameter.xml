@@ -2,83 +2,83 @@
 <!-- SPEC §5.1 -->
 <odoo noupdate="1">
     <record id="param_read_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.energy.read_enabled</field>
+        <field name="key">td.energy.read_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_write_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.energy.write_enabled</field>
+        <field name="key">td.energy.write_enabled</field>
         <field name="value">False</field>
     </record>
     <record id="param_costing_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.energy.costing_enabled</field>
+        <field name="key">td.energy.costing_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_analytic_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.energy.analytic_enabled</field>
+        <field name="key">td.energy.analytic_enabled</field>
         <field name="value">True</field>
     </record>
     <record id="param_balance_tol_pct" model="ir.config_parameter">
-        <field name="key">factory3d.energy.balance_tol_pct</field>
+        <field name="key">td.energy.balance_tol_pct</field>
         <field name="value">3</field>
     </record>
     <record id="param_balance_tol_kwh" model="ir.config_parameter">
-        <field name="key">factory3d.energy.balance_tol_kwh</field>
+        <field name="key">td.energy.balance_tol_kwh</field>
         <field name="value">2.0</field>
     </record>
     <record id="param_gap_max_s" model="ir.config_parameter">
-        <field name="key">factory3d.energy.gap_max_s</field>
+        <field name="key">td.energy.gap_max_s</field>
         <field name="value">900</field>
     </record>
     <record id="param_gap_alarm_min" model="ir.config_parameter">
-        <field name="key">factory3d.energy.gap_alarm_min</field>
+        <field name="key">td.energy.gap_alarm_min</field>
         <field name="value">60</field>
     </record>
     <record id="param_max_wait_h" model="ir.config_parameter">
-        <field name="key">factory3d.energy.max_wait_h</field>
+        <field name="key">td.energy.max_wait_h</field>
         <field name="value">6</field>
     </record>
     <record id="param_settle_s" model="ir.config_parameter">
-        <field name="key">factory3d.energy.settle_s</field>
+        <field name="key">td.energy.settle_s</field>
         <field name="value">120</field>
     </record>
     <record id="param_reset_tol_kwh" model="ir.config_parameter">
-        <field name="key">factory3d.energy.reset_tol_kwh</field>
+        <field name="key">td.energy.reset_tol_kwh</field>
         <field name="value">1.0</field>
     </record>
     <record id="param_keep_interval_days" model="ir.config_parameter">
-        <field name="key">factory3d.energy.keep_interval_days</field>
+        <field name="key">td.energy.keep_interval_days</field>
         <field name="value">400</field>
     </record>
     <record id="param_keep_event_days" model="ir.config_parameter">
-        <field name="key">factory3d.energy.keep_event_days</field>
+        <field name="key">td.energy.keep_event_days</field>
         <field name="value">90</field>
     </record>
     <record id="param_shift_calendar" model="ir.config_parameter">
-        <field name="key">factory3d.energy.shift_calendar_id</field>
+        <field name="key">td.energy.shift_calendar_id</field>
         <field name="value"></field>
     </record>
     <record id="param_typical_days" model="ir.config_parameter">
-        <field name="key">factory3d.energy.typical_days</field>
+        <field name="key">td.energy.typical_days</field>
         <field name="value">20</field>
     </record>
     <record id="param_ats_fail_start_s" model="ir.config_parameter">
-        <field name="key">factory3d.energy.ats_fail_start_s</field>
+        <field name="key">td.energy.ats_fail_start_s</field>
         <field name="value">35</field>
     </record>
     <record id="param_ats_fresh_factor" model="ir.config_parameter">
-        <field name="key">factory3d.energy.ats_fresh_factor</field>
+        <field name="key">td.energy.ats_fresh_factor</field>
         <field name="value">3</field>
     </record>
     <record id="param_peak_shave_kw" model="ir.config_parameter">
-        <field name="key">factory3d.energy.peak_shave_kw</field>
+        <field name="key">td.energy.peak_shave_kw</field>
         <field name="value">600</field>
     </record>
     <record id="param_alloc_close_h" model="ir.config_parameter">
-        <field name="key">factory3d.energy.alloc_close_h</field>
+        <field name="key">td.energy.alloc_close_h</field>
         <field name="value">2</field>
     </record>
     <record id="param_install_report" model="ir.config_parameter">
-        <field name="key">factory3d.energy.install_report</field>
+        <field name="key">td.energy.install_report</field>
         <field name="value">{}</field>
     </record>
 </odoo>

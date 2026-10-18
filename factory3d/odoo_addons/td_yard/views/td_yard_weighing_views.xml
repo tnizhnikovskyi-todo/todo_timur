@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_yard_weighing_form" model="ir.ui.view">
-        <field name="name">f3d.yard.weighing.form</field>
-        <field name="model">f3d.yard.weighing</field>
+    <record id="view_td_yard_weighing_form" model="ir.ui.view">
+        <field name="name">td.yard.weighing.form</field>
+        <field name="model">td.yard.weighing</field>
         <field name="arch" type="xml">
             <form string="Зважування">
                 <header>
-                    <button name="action_assign_selected" type="object" string="Призначити рейсу" class="btn-primary" invisible="state != 'unassigned'" groups="factory3d_yard.group_f3d_yard_security"/>
-                    <button name="action_void" type="object" string="Анулювати" invisible="state == 'void' or not id" confirm="Анулювати зважування?" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_assign_selected" type="object" string="Призначити рейсу" class="btn-primary" invisible="state != 'unassigned'" groups="td_yard.group_td_yard_security"/>
+                    <button name="action_void" type="object" string="Анулювати" invisible="state == 'void' or not id" confirm="Анулювати зважування?" groups="td_yard.group_td_yard_security"/>
                     <field name="state" widget="statusbar" statusbar_visible="unassigned,assigned,void"/>
                 </header>
                 <sheet>
@@ -39,9 +39,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_weighing_list" model="ir.ui.view">
-        <field name="name">f3d.yard.weighing.list</field>
-        <field name="model">f3d.yard.weighing</field>
+    <record id="view_td_yard_weighing_list" model="ir.ui.view">
+        <field name="name">td.yard.weighing.list</field>
+        <field name="model">td.yard.weighing</field>
         <field name="arch" type="xml">
             <list string="Зважування" decoration-muted="state == 'void'" decoration-danger="state == 'unassigned'">
                 <field name="name"/>
@@ -58,9 +58,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_yard_weighing_search" model="ir.ui.view">
-        <field name="name">f3d.yard.weighing.search</field>
-        <field name="model">f3d.yard.weighing</field>
+    <record id="view_td_yard_weighing_search" model="ir.ui.view">
+        <field name="name">td.yard.weighing.search</field>
+        <field name="model">td.yard.weighing</field>
         <field name="arch" type="xml">
             <search string="Зважування">
                 <field name="name"/>
@@ -81,20 +81,20 @@
         </field>
     </record>
 
-    <record id="action_f3d_yard_weighing" model="ir.actions.act_window">
+    <record id="action_td_yard_weighing" model="ir.actions.act_window">
         <field name="name">Зважування</field>
-        <field name="res_model">f3d.yard.weighing</field>
+        <field name="res_model">td.yard.weighing</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_not_void': 1}</field>
     </record>
 
-    <menuitem id="menu_f3d_yard_weighing" action="action_f3d_yard_weighing" name="Зважування" parent="menu_f3d_yard_journals" sequence="20" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_td_yard_weighing" action="action_td_yard_weighing" name="Зважування" parent="menu_td_yard_journals" sequence="20" groups="td_factory3d.group_td_user"/>
 
     <!-- журнал зважувань на вкладці рейсу -->
-    <record id="view_f3d_yard_visit_form_weighing" model="ir.ui.view">
-        <field name="name">f3d.yard.visit.form.weighing</field>
-        <field name="model">f3d.yard.visit</field>
-        <field name="inherit_id" ref="view_f3d_yard_visit_form"/>
+    <record id="view_td_yard_visit_form_weighing" model="ir.ui.view">
+        <field name="name">td.yard.visit.form.weighing</field>
+        <field name="model">td.yard.visit</field>
+        <field name="inherit_id" ref="view_td_yard_visit_form"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='weighing']/group" position="after">
                 <field name="weighing_ids" readonly="1">

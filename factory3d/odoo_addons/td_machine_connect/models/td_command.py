@@ -7,7 +7,7 @@ from odoo.exceptions import UserError
 from odoo.fields import Datetime
 
 from ..tools import commands as cmd_tools
-from .f3d_machine import param_bool
+from .td_machine import param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -16,11 +16,11 @@ EXPIRES_MIN = 10
 
 
 class F3dCommand(models.Model):
-    _inherit = "f3d.command"
+    _inherit = "td.command"
 
-    f3d_machine_id = fields.Many2one("f3d.machine", ondelete="set null", index=True)
-    f3d_gantry_job_id = fields.Many2one("f3d.gantry.job", ondelete="set null", index=True)
-    f3d_cut_map_id = fields.Many2one("f3d.cut.map", ondelete="set null", index=True)
+    td_machine_id = fields.Many2one("td.machine", ondelete="set null", index=True)
+    td_gantry_job_id = fields.Many2one("td.gantry.job", ondelete="set null", index=True)
+    td_cut_map_id = fields.Many2one("td.cut.map", ondelete="set null", index=True)
 
     # --- створення команд модулем (X-93: не в tools/commands.py) -------------------------------------
     @api.model
@@ -32,7 +32,7 @@ class F3dCommand(models.Model):
     def _f3d_mc_create_command(self, signal, op, fields, links=None):
         """Створює команду на пристрій для сигналу `signal`: операція `op`, поля `fields` (R-21), зв'язки `links`."""
         if not param_bool(self.env, "write_enabled"):
-            raise UserError(_("Запис на пристрої вимкнено: factory3d.machine_connect.write_enabled."))
+            raise UserError(_("Запис на пристрої вимкнено: td.machine_connect.write_enabled."))
         address = signal.sudo().address or {}
         if address.get("call") == "job":
             kind = "job"
@@ -53,8 +53,8 @@ class F3dCommand(models.Model):
                 raise UserError(_("Команда «%s» не відповідає формату: %s", op, e)) from e
         # Запобіжники telemetry перевіряє R-18 у create(); тут — те саме з назвою запобіжника в тексті помилки.
         icp = self.env["ir.config_parameter"].sudo()
-        if icp.get_param("factory3d.telemetry.write_enabled", "False") not in ("True", "true", "1"):
-            raise UserError(_("Запис на пристрої вимкнено: factory3d.telemetry.write_enabled."))
+        if icp.get_param("td.telemetry.write_enabled", "False") not in ("True", "true", "1"):
+            raise UserError(_("Запис на пристрої вимкнено: td.telemetry.write_enabled."))
         source = signal.sudo().source_id
         if source and not source.write_enabled:
             raise UserError(_("Запис на пристрої вимкнено: джерело %s.", source.code))
@@ -89,12 +89,12 @@ class F3dCommand(models.Model):
     def _f3d_mc_on_result(self):
         """Команда завершилась (`done`/`failed`/`expired`/`cancelled`): повідомити власника (`_f3d_on_command`)."""
         for cmd in self:
-            if cmd.f3d_gantry_job_id and hasattr(cmd.f3d_gantry_job_id, "_f3d_on_command"):
-                cmd.f3d_gantry_job_id._f3d_on_command(cmd)  # R-16 п. 3
-            if cmd.f3d_cut_map_id and hasattr(cmd.f3d_cut_map_id, "_f3d_on_command"):
-                cmd.f3d_cut_map_id._f3d_on_command(cmd)  # R-20 п. 2
-            if cmd.f3d_machine_id:
-                cmd.f3d_machine_id.message_post(
+            if cmd.td_gantry_job_id and hasattr(cmd.td_gantry_job_id, "_f3d_on_command"):
+                cmd.td_gantry_job_id._f3d_on_command(cmd)  # R-16 п. 3
+            if cmd.td_cut_map_id and hasattr(cmd.td_cut_map_id, "_f3d_on_command"):
+                cmd.td_cut_map_id._f3d_on_command(cmd)  # R-20 п. 2
+            if cmd.td_machine_id:
+                cmd.td_machine_id.message_post(
                     body=_(
                         "Команда %s: %s %s",
                         cmd.text or "",

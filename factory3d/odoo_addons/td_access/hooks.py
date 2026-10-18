@@ -7,18 +7,18 @@ from odoo.tools import file_open
 
 from .tools import params as P
 
-_logger = logging.getLogger('odoo.addons.factory3d_access.hooks')
+_logger = logging.getLogger('odoo.addons.td_access.hooks')
 
-KEY_ENV = 'factory3d.base.environment'
-CSV_PATH = 'factory3d_access/data/scene_home_zones.csv'
+KEY_ENV = 'td.base.environment'
+CSV_PATH = 'td_access/data/scene_home_zones.csv'
 EQUIPMENT_CODES = {'device_acr_in': 'TURNSTILES', 'device_acr_elec': 'ACCESS', 'device_acr_chg': 'ACCESS',
                    'device_acr_paint': 'ACCESS', 'device_acr_srv': 'ACCESS'}
-XMLID = 'factory3d_access.%s'
+XMLID = 'td_access.%s'
 
 
 def _server(env):
     server = env.ref(XMLID % 'server_biostar_sim', raise_if_not_found=False)
-    return server or env['f3d.access.server'].search([('active', '=', True)], limit=1)
+    return server or env['td.access.server'].search([('active', '=', True)], limit=1)
 
 
 def _attendance_snapshot(env):
@@ -42,13 +42,13 @@ def _step_server(env):
     server = env.ref(XMLID % 'server_biostar_sim', raise_if_not_found=False)
     if server and env['ir.config_parameter'].sudo().get_param(KEY_ENV) == 'test' and server.verify_ssl:
         server.sudo().write({'verify_ssl': False})
-    return {'servers': env['f3d.access.server'].sudo().search_count([])}
+    return {'servers': env['td.access.server'].sudo().search_count([])}
 
 
 def _step_equipment(env):
     """Крок 3: пристрої -> обладнання (лише порожнє equipment_id)."""
     bound = 0
-    devices = env['f3d.access.device'].sudo()
+    devices = env['td.access.device'].sudo()
     for xmlid, code in EQUIPMENT_CODES.items():
         device = env.ref(XMLID % xmlid, raise_if_not_found=False)
         if not device or device.equipment_id:
@@ -59,7 +59,7 @@ def _step_equipment(env):
             continue
         device.sudo().write({'equipment_id': equipment.id})
         bound += 1
-    return {'devices': devices.search_count([]), 'doors': env['f3d.access.door'].sudo().search_count([]),
+    return {'devices': devices.search_count([]), 'doors': env['td.access.door'].sudo().search_count([]),
             'equipment_bound': bound}
 
 
@@ -68,7 +68,7 @@ def _step_links(env):
     server = _server(env)
     if not server:
         return {'links': 0}
-    Link = env['f3d.access.user.link'].sudo().with_context(active_test=False)
+    Link = env['td.access.user.link'].sudo().with_context(active_test=False)
     taken_users = set(Link.search([('server_id', '=', server.id)]).mapped('biostar_user_id'))
     taken_emps = set(Link.search([('server_id', '=', server.id), ('employee_id', '!=', False)]).employee_id.ids)
     created = 0
@@ -92,17 +92,17 @@ def _csv_zones():
 def _step_home_zones(env):
     """Крок 5: домашні зони (лише порожні)."""
     Workcenter = env['mrp.workcenter'].sudo()
-    Zone = env['f3d.zone'].sudo()
+    Zone = env['td.zone'].sudo()
     csv_zones = _csv_zones()
     res = {'home_zones': 0, 'from_workcenter': 0, 'from_csv': 0, 'home_zone_missing': 0}
-    for emp in env['hr.employee'].sudo().search([('active', '=', True), ('f3d_home_zone_id', '=', False)], order='id'):
+    for emp in env['hr.employee'].sudo().search([('active', '=', True), ('td_home_zone_id', '=', False)], order='id'):
         zone = Zone.browse()
-        code = emp.f3d_code or ''
+        code = emp.td_code or ''
         if code.startswith('OP-'):
-            zone = Workcenter.search_f3d(code[3:]).f3d_zone_id
+            zone = Workcenter.search_f3d(code[3:]).td_zone_id
         if not zone and 'employee_ids' in Workcenter._fields:
-            zone = Workcenter.search([('employee_ids', 'in', emp.id), ('f3d_zone_id', '!=', False)],
-                                     order='id', limit=1).f3d_zone_id
+            zone = Workcenter.search([('employee_ids', 'in', emp.id), ('td_zone_id', '!=', False)],
+                                     order='id', limit=1).td_zone_id
         if zone:
             res['from_workcenter'] += 1
         elif code in csv_zones:
@@ -110,7 +110,7 @@ def _step_home_zones(env):
             if zone:
                 res['from_csv'] += 1
         if zone:
-            emp.write({'f3d_home_zone_id': zone.id})
+            emp.write({'td_home_zone_id': zone.id})
             res['home_zones'] += 1
         else:
             res['home_zone_missing'] += 1
@@ -123,10 +123,10 @@ def _step_presence(env):
     open_atts = env['hr.attendance'].sudo().search([('check_out', '=', False)], order='check_in')
     for att in open_atts:
         emp = att.employee_id
-        if emp.f3d_access_present or not emp.active:
+        if emp.td_access_present or not emp.active:
             continue
-        emp.write({'f3d_access_present': True, 'f3d_access_zone_id': emp.f3d_home_zone_id.id,
-                   'f3d_access_zone_since': att.check_in, 'f3d_access_last_in': att.check_in})
+        emp.write({'td_access_present': True, 'td_access_zone_id': emp.td_home_zone_id.id,
+                   'td_access_zone_since': att.check_in, 'td_access_last_in': att.check_in})
         seeded += 1
     return {'presence_seeded': seeded}
 
@@ -151,7 +151,7 @@ def run_all(env):
     badges = env['hr.employee'].search_count([('active', '=', True), ('barcode', '!=', False)])
     if not badges:
         state = 'skipped'
-    elif env['f3d.access.device'].search_count([('equipment_id', '!=', False)]) < 5 or report['home_zone_missing'] > 0:
+    elif env['td.access.device'].search_count([('equipment_id', '!=', False)]) < 5 or report['home_zone_missing'] > 0:
         state = 'partial'
     else:
         state = 'done'
@@ -168,12 +168,12 @@ def post_init_hook(env):
 
 
 def uninstall_hook(env):
-    """SPEC §5.4: параметри factory3d.access.*; решту прибирає стандартна деінсталяція.
+    """SPEC §5.4: параметри td.access.*; решту прибирає стандартна деінсталяція.
 
     Візити і картки — першими: ``visitor.server_id`` (required) і ``card.server_id`` (``ondelete='restrict'``, SPEC:
     сервер із картками користувач не видалить) блокують ``DELETE`` сервера, тож стандартна деінсталяція, що знищує
     сервер із демо-даних, падала б на FK (ERROR у лозі). Хук виконується до ``module_uninstall``, моделі ще в реєстрі.
     """
-    env['f3d.access.visitor'].sudo().with_context(active_test=False, f3d_housekeeping=True).search([]).unlink()
-    env['f3d.access.card'].sudo().with_context(active_test=False).search([]).unlink()
-    env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.access.%')]).unlink()
+    env['td.access.visitor'].sudo().with_context(active_test=False, f3d_housekeeping=True).search([]).unlink()
+    env['td.access.card'].sudo().with_context(active_test=False).search([]).unlink()
+    env['ir.config_parameter'].sudo().search([('key', '=like', 'td.access.%')]).unlink()

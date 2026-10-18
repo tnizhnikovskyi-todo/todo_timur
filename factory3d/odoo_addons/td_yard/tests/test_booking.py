@@ -101,7 +101,7 @@ class TestYardBooking(YardFlowCase):
             self._booking(self._visit(), self.dock_t1, at(8), at(8, day=14))
 
     def test_category_warning(self):  # AC-10
-        self.dock_t1.f3d_accepts = [Command.set(self.categ_plates.ids)]
+        self.dock_t1.td_accepts = [Command.set(self.categ_plates.ids)]
         edge = self._visit(batch_id=self._batch(product=self._product("T Крайка", 1.0, self.categ_edge)).id)
         booking = self._booking(edge, self.dock_t1, at(8), at(9))
         self.assertIn("Ворота DOCK-T1 приймають: Плитні матеріали. У рейсі є: Крайка.", booking.warning)
@@ -127,7 +127,7 @@ class TestYardBooking(YardFlowCase):
 
     def test_queue_and_call(self):  # AC-11, AC-12, AC-13
         t, v1, v2, v3, v4 = self._queue_fixture()
-        Visit = self.env["f3d.yard.visit"]
+        Visit = self.env["td.yard.visit"]
         with freeze(t):
             self.assertEqual(Visit._f3d_yard_queue("west"), v4 + v2 + v1 + v3)
             self.assertEqual(Visit._f3d_yard_queue("west", self.dock_t2), v4 + v2 + v1)
@@ -137,7 +137,7 @@ class TestYardBooking(YardFlowCase):
             self.assertEqual(v2.dock_id, self.dock_t2)
             v1.action_call_to_dock()
             self.assertEqual(v1.state, "at_dock")
-            self.assertTrue(v1.dock_id.f3d_side == "west")
+            self.assertTrue(v1.dock_id.td_side == "west")
             booking = v1.booking_id
             self.assertEqual(
                 (booking.source, booking.state, booking.slot_start, booking.slot_end),
@@ -185,7 +185,7 @@ class TestYardBooking(YardFlowCase):
         batch = self._batch(partner=contact, dock=self.dock_t1, start=at(10), end=at(11))
         self.user_dispatcher.write({"group_ids": [Command.link(self.env.ref("stock.group_stock_manager").id)]})
         action = batch.with_user(self.user_dispatcher).action_f3d_create_visit()
-        visit = self.env["f3d.yard.visit"].browse(action["res_id"])
+        visit = self.env["td.yard.visit"].browse(action["res_id"])
         self.assertEqual((visit.visit_type, visit.partner_id, visit.batch_id), ("incoming", company, batch))
         self.assertEqual(
             (
@@ -197,7 +197,7 @@ class TestYardBooking(YardFlowCase):
             ("requested", self.dock_t1, at(10), at(11)),
         )
         self.assertEqual(batch.action_f3d_create_visit()["res_id"], visit.id)
-        rows = self.env["stock.picking.batch"].search_read([("id", "=", batch.id)], ["f3d_visit_id", "f3d_plate"])
-        self.assertEqual(rows[0]["f3d_visit_id"][0], visit.id)
+        rows = self.env["stock.picking.batch"].search_read([("id", "=", batch.id)], ["td_visit_id", "td_plate"])
+        self.assertEqual(rows[0]["td_visit_id"][0], visit.id)
         with self.assertRaises(UserError):
             self._batch(code="internal").action_f3d_create_visit()

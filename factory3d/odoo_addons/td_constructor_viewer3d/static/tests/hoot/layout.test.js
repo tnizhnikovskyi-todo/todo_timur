@@ -4,9 +4,9 @@
 // кліком (raycast, як pick ядра), «Відкрити в Odoo», порядок щодо stockLoad (вантаж лягає в уже зсунуті комірки).
 import { after, describe, expect, test } from "@odoo/hoot";
 import { tick } from "@odoo/hoot-mock";
-import { json, mountViewer } from "@factory3d_viewer/../tests/hoot/helpers";
+import { json, mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 
-const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
+const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 
 describe.current.tags("desktop");
 
@@ -224,7 +224,7 @@ test("added: «Відкрити в Odoo» нового об'єкта йде че
             "/resolve": (url) => {
                 calls.push(url);
                 return json(url.includes("code=NEWM-1")
-                    ? { model: "f3d.placement", res_id: 55, display_name: "NEWM-1", kind: "placement" }
+                    ? { model: "td.placement", res_id: 55, display_name: "NEWM-1", kind: "placement" }
                     : { model: null, res_id: null, reason: "not_found" });
             },
         },
@@ -239,7 +239,7 @@ test("added: «Відкрити в Odoo» нового об'єкта йде че
     q(r.el, ".o_f3d_c-open").click();
     await tick();
     await tick();
-    expect(r.opened).toEqual([["f3d.placement", 55]]);
+    expect(r.opened).toEqual([["td.placement", 55]]);
 });
 
 test("added: нове місце — каркас і комірки з кодами; вантаж за залишками лягає в них", async () => {

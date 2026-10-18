@@ -12,7 +12,7 @@ class StockPicking(models.Model):
 
     def _action_done(self):
         res = super()._action_done()
-        Stack = self.env["f3d.gantry.stack"].sudo()
+        Stack = self.env["td.gantry.stack"].sudo()
         for picking in self.filtered(lambda p: p.state == "done"):
             lines = picking.move_line_ids
             dest = Stack.search([("location_id", "in", lines.location_dest_id.ids)])

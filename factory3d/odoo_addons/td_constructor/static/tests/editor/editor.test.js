@@ -2,12 +2,12 @@
 // Редактор у зборі (нульовий рендерер, мок RPC): AC-10 (шари, сітка, видимість), AC-49 (роль → блокування), AC-63 (перетягування
 // у прохід), AC-64 (поворот), AC-65 (лінійка, Delete без нативних діалогів), групи шарів, dynamic у перевірках, code_style 'exact'.
 import { advanceTime, after, animationFrame, describe, expect, getFixture, queryAll, queryOne, test } from "@odoo/hoot";
-import { generateCells } from "@factory3d_constructor/editor/cells";
-import { runChecks } from "@factory3d_constructor/editor/checks";
-import { E, S, V } from "@factory3d_constructor/editor/state";
-import { mountEditor, unmountEditor } from "@factory3d_constructor/editor/app";
-import { OdooStore } from "@factory3d_constructor/editor/store";
-import { THREE } from "@factory3d_constructor/editor/three";
+import { generateCells } from "@td_constructor/editor/cells";
+import { runChecks } from "@td_constructor/editor/checks";
+import { E, S, V } from "@td_constructor/editor/state";
+import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
+import { OdooStore } from "@td_constructor/editor/store";
+import { THREE } from "@td_constructor/editor/three";
 import { golden, near } from "./helpers";
 import { makeLoad, mockRpc } from "./fixtures";
 
@@ -428,6 +428,6 @@ test("збереження: відкриття редактора нічого �
     expect(saves).toHaveLength(1);
     const ops = saves[0].params.ops;
     expect(ops).toHaveLength(1);
-    expect([ops[0].model, ops[0].op, ops[0].id]).toEqual(["f3d.placement", "write", 31]);
+    expect([ops[0].model, ops[0].op, ops[0].id]).toEqual(["td.placement", "write", 31]);
     expect(ops[0].vals).toEqual({ x_m: 22 });
 });

@@ -20,15 +20,15 @@ class TestGantryStack(F3DMachineCase):
         super().setUp()
         # telemetry `_f3d_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
         patcher = patch.object(
-            type(self.env["f3d.push.handler"]),
+            type(self.env["td.push.handler"]),
             "_f3d_handler_models",
-            lambda _self, route: ["f3d.push.handler.machine_connect"] if route.startswith("mc_") else [],
+            lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
         self.addCleanup(patcher.stop)
         self.env["stock.quant"]._update_available_quantity(self.board, self.loc_t1, 45, lot_id=self.lot_l1)
         self.mo = self.make_mo(self.wc_saw, name="WH/MO/T0001", qty=4, comps=((self.board, 1),))
-        self.job = self.env["f3d.gantry.job"].create(
+        self.job = self.env["td.gantry.job"].create(
             {
                 "type": "feed",
                 "state": "active",
@@ -120,7 +120,7 @@ class TestGantryStack(F3DMachineCase):
         self.assertEqual(len(msgs.filtered(lambda m: "Тривога порталу" in (m.body or ""))), 1)
 
         # стоси: 23 стоси з qty > 0
-        Stack = self.env["f3d.gantry.stack"]
+        Stack = self.env["td.gantry.stack"]
         Stack.search([]).write({"ws_qty": 0})
         items = [{"id": "PLT-T1", "qty": 38, "product": "BOARD-T", "lot": "L1", "reserved": 10}]
         items.append({"id": "PLT-T2", "qty": 5, "product": "BOARD-T", "lot": None, "reserved": 0})
@@ -129,15 +129,15 @@ class TestGantryStack(F3DMachineCase):
                 {
                     "name": "PLT-Z%02d" % i,
                     "location_id": self.loc_t1.location_id.id,
-                    "f3d_code": "PLT-Z%02d" % i,
-                    "f3d_loc_kind": "stack",
-                    "f3d_capacity": 60,
+                    "td_code": "PLT-Z%02d" % i,
+                    "td_loc_kind": "stack",
+                    "td_capacity": 60,
                 }
             )
             Stack.create({"location_id": loc.id})
             items.append({"id": "PLT-Z%02d" % i, "qty": 10, "product": "BOARD-T", "lot": None, "reserved": 0})
         items.append({"id": "PLT-NOPE", "qty": 1, "product": "X", "lot": None, "reserved": 0})
-        with self.assertLogs("odoo.addons.factory3d_machine_connect", "WARNING"):
+        with self.assertLogs("odoo.addons.td_machine_connect", "WARNING"):
             self.push_event("mc_woodstore", {"kind": "stacks", "source": SRC, "hash": "h", "items": items}, SRC)
         self.assertEqual(self.stack_t1.ws_qty, 38)
         self.assertEqual(self.stack_t1.ws_reserved, 10)
@@ -166,7 +166,7 @@ class TestGantryStack(F3DMachineCase):
             s.with_user(self.user_stock_manager).action_fix_portal()
         self.enable_write()
         s.with_user(self.user_stock_manager).action_fix_portal()
-        cmd = self.env["f3d.command"].search([("signal_id", "=", self.sig_g_cmd.id)])
+        cmd = self.env["td.command"].search([("signal_id", "=", self.sig_g_cmd.id)])
         self.assertEqual(len(cmd), 1)
         self.assertEqual(cmd.payload, {"op": "stack", "stack": "PLT-T1", "qty": 38, "product": "BOARD-T", "lot": "L1"})
         self.assertEqual(cmd.text, "stack;PLT-T1;38;BOARD-T;L1")
@@ -184,7 +184,7 @@ class TestGantryStack(F3DMachineCase):
             }
         )
         s = self.stack_t1
-        Stack = self.env["f3d.gantry.stack"]
+        Stack = self.env["td.gantry.stack"]
         below = [("id", "=", s.id), ("below_min", "=", True)]
         s.write({"ws_qty": 9})
         self.assertFalse(s.below_min, "без правила поповнення стос не «нижче мінімуму»")
@@ -196,7 +196,7 @@ class TestGantryStack(F3DMachineCase):
         self.assertFalse(Stack.search(below))
         op.product_min_qty = 11
         self.assertTrue(s.below_min)
-        arch = self.env.ref("factory3d_machine_connect.view_f3d_gantry_stack_search").arch
+        arch = self.env.ref("td_machine_connect.view_td_gantry_stack_search").arch
         self.assertIn("below_min", arch)
         self.assertNotIn("'min_qty'", arch)
 
@@ -271,12 +271,12 @@ class TestGantryStack(F3DMachineCase):
                 {
                     "name": "PLT-W%02d" % i,
                     "location_id": wh.lot_stock_id.id,
-                    "f3d_code": "PLT-W%02d" % i,
-                    "f3d_loc_kind": "stack",
-                    "f3d_capacity": 60,
+                    "td_code": "PLT-W%02d" % i,
+                    "td_loc_kind": "stack",
+                    "td_capacity": 60,
                 }
             )
-            stacks |= self.env["f3d.gantry.stack"].create({"location_id": loc.id})
+            stacks |= self.env["td.gantry.stack"].create({"location_id": loc.id})
         items = [
             {
                 "id": s.code,
@@ -295,7 +295,7 @@ class TestGantryStack(F3DMachineCase):
         self.assertEqual(len(items), 27)
         res = self.push_event("mc_woodstore", {"kind": "stacks", "source": SRC, "hash": "ab" * 32, "items": items}, SRC)
         self.assertEqual(res["accepted"], 1)
-        ev = self.env["f3d.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
+        ev = self.env["td.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
         self.assertFalse(ev.error)
         self.assertEqual(self.stack_t2.ws_qty, 21)
         self.assertEqual(self.stack_t1.ws_qty, 20)
@@ -306,13 +306,13 @@ class TestGantryStackHttp(HttpCase):
     def test_ev02_stacks_27_http(self):
         """ТП-04: POST /f3d/telemetry/event з EV-02 `stacks` (27 стосів) → 200, 27 стосів оновлено."""
         env = self.env
-        env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.read_enabled", "True")
+        env["ir.config_parameter"].sudo().set_param("td.telemetry.read_enabled", "True")
         token = "tp04-" + uuid.uuid4().hex
-        env["f3d.collector"].create(
+        env["td.collector"].create(
             {"code": "COL-TP04", "name": "ТП-04", "token_hash": hashlib.sha256(token.encode()).hexdigest()}
         )
         wh = env["stock.warehouse"].search([("company_id", "=", env.company.id)], limit=1)
-        stacks = env["f3d.gantry.stack"]
+        stacks = env["td.gantry.stack"]
         items = []
         for i in range(27):
             code = "PLT-H%02d" % i
@@ -320,12 +320,12 @@ class TestGantryStackHttp(HttpCase):
                 {
                     "name": code,
                     "location_id": wh.lot_stock_id.id,
-                    "f3d_code": code,
-                    "f3d_loc_kind": "stack",
-                    "f3d_capacity": 60,
+                    "td_code": code,
+                    "td_loc_kind": "stack",
+                    "td_capacity": 60,
                 }
             )
-            stacks |= env["f3d.gantry.stack"].create({"location_id": loc.id})
+            stacks |= env["td.gantry.stack"].create({"location_id": loc.id})
             items.append(
                 {
                     "id": code,
@@ -359,7 +359,7 @@ class TestGantryStackHttp(HttpCase):
         )
         self.assertEqual(resp.status_code, 200, resp.text[:300])
         self.assertEqual(resp.json()["accepted"], 1)
-        ev = env["f3d.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
+        ev = env["td.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
         self.assertFalse(ev.error)
         stacks.invalidate_recordset()
         self.assertEqual(sorted(stacks.mapped("ws_qty")), list(range(20, 47)))

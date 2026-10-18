@@ -1,7 +1,7 @@
-# factory3d_constructor — технічне рішення
+# td_constructor — технічне рішення
 
 Версія 0.1 · 17.10.2026 · автор: агент-архітектор модуля · статус: **чернетка на погодження**.
-Каркас проєкту: `docs/ARCHITECTURE.md` (контракти C-6.x, CB-xx базового модуля). Специфікація: `docs/modules/factory3d_constructor/SPEC.md` (моделі M-xx, представлення V-xx, API-xx, правила R-xx, AC-xx).
+Каркас проєкту: `docs/ARCHITECTURE.md` (контракти C-6.x, CB-xx базового модуля). Специфікація: `docs/modules/td_constructor/SPEC.md` (моделі M-xx, представлення V-xx, API-xx, правила R-xx, AC-xx).
 Вхід: рішення замовника CD-01…CD-24 (`build/constructor/DECISIONS.md`, анкета 17.10.2026) і прототип-артефакт (`build/constructor/PROTOTYPE.md`; модель даних прототипу — чернетка моделей Odoo). Рішення автора й менеджера, що уточнюють або відхиляються від CD, — **DEC-xx** (§5.2); відкриті питання — **Q-xx** (§5.1).
 
 ## Загальна інформація
@@ -10,12 +10,12 @@
 |---|---|---|
 | ТР | цей документ + SPEC.md | 14 |
 | Архітектура | погодження DEC/Q із менеджером і замовником (Q-01) | 6 |
-| Розробка | модуль `odoo_addons/factory3d_constructor` за SPEC: W1 бекенд 28, W2 клієнтська дія 24, W3 завантаження моделей і віджет 18 | 70 |
+| Розробка | модуль `odoo_addons/td_constructor` за SPEC: W1 бекенд 28, W2 клієнтська дія 24, W3 завантаження моделей і віджет 18 | 70 |
 | Тестування | юніт-тести на кожен AC, HOOT, ручні ТК-01…ТК-08 на тестовому сервері | 24 |
 | Інструкція | §4 + README модуля + CHANGELOG | 6 |
 | **Разом** | | **120** |
 
-Факти тестового сервера (з `factory3d_base` ARCH, 13.10.2026): Odoo `19.0+e`, база `odoo`, `stock.location` уже містять комірки макета (`FG-R1-B01-L4` та ін., 360 `FG-*`), 210 `maintenance.equipment` з `f3d_code`, 35 `mrp.workcenter`. Enterprise-модуль `mrp_maintenance` встановлений (`maintenance.equipment.workcenter_id`), у CE-середовищі розробки (`tools/odoo`) його немає (DEC-16). Пакетів Python на сервері встановлювати не можна (DEC-03).
+Факти тестового сервера (з `td_factory3d` ARCH, 13.10.2026): Odoo `19.0+e`, база `odoo`, `stock.location` уже містять комірки макета (`FG-R1-B01-L4` та ін., 360 `FG-*`), 210 `maintenance.equipment` з `td_code`, 35 `mrp.workcenter`. Enterprise-модуль `mrp_maintenance` встановлений (`maintenance.equipment.workcenter_id`), у CE-середовищі розробки (`tools/odoo`) його немає (DEC-16). Пакетів Python на сервері встановлювати не можна (DEC-03).
 
 ## 1. Опис процесу і функціональні вимоги
 
@@ -25,28 +25,28 @@
 
 | Що в прототипі / макеті | Де | Що стає в Odoo |
 |---|---|---|
-| Площадка: будівля, сітка колон, активна версія | `site` у `db` артефакта | `f3d.site` (M-01); габарит будівлі демо 150×72×9 (`plant/layout.py:W,D,H`, CB-12) |
-| Шар: відмітка, крок сітки, проходи, пожежні проходи, мережі, права за ролями, колір | `layers` | `f3d.layer` (M-02), `edit_group_ids` → `res.groups`, JSON-поля `aisles`, `fire_paths`, `utilities`, `bounds` |
-| Місце за шаблоном + ручні правки комірок; коди `FG-R1-B01-L4` | `slots`, `plant/layout.py`, `odoo_demo.json → locations` (689 локацій) | `f3d.slot` (M-03): `template`, `params`, `overrides`; комірки обчислюються (R-01), публікуються в `stock.location` з `f3d_code`, `f3d_loc_kind`, `f3d_capacity` (CB-05) |
-| Каталог: категорія → тип → варіанти (габарити, сервіс, підключення, модель) | `catalog`, `plant/equipment_specs.json` (93 паспорти), `passports` | `f3d.equipment.variant` (M-04) на `f3d.equipment.passport` (CB-07), категорія `f3d_category` (M-12) |
-| Розміщення: варіант на шарі з x, y, поворотом, кодом | `placements`, `plant/layout.py:MACHINES` | `f3d.placement` (M-05) → `maintenance.equipment` (+ `mrp.workcenter`) за `f3d_code` |
-| Перевірки: 7 видів, `warn`/`block` | `settings.checks` | `f3d.check.config` (M-06), клієнт наживо + сервер при публікації (DEC-10) |
-| Чернетка → публікація, історія версій | `versions` | `f3d.layout.version` (M-07), майстер публікації (M-08…M-10) |
+| Площадка: будівля, сітка колон, активна версія | `site` у `db` артефакта | `td.site` (M-01); габарит будівлі демо 150×72×9 (`plant/layout.py:W,D,H`, CB-12) |
+| Шар: відмітка, крок сітки, проходи, пожежні проходи, мережі, права за ролями, колір | `layers` | `td.layer` (M-02), `edit_group_ids` → `res.groups`, JSON-поля `aisles`, `fire_paths`, `utilities`, `bounds` |
+| Місце за шаблоном + ручні правки комірок; коди `FG-R1-B01-L4` | `slots`, `plant/layout.py`, `odoo_demo.json → locations` (689 локацій) | `td.slot` (M-03): `template`, `params`, `overrides`; комірки обчислюються (R-01), публікуються в `stock.location` з `td_code`, `td_loc_kind`, `td_capacity` (CB-05) |
+| Каталог: категорія → тип → варіанти (габарити, сервіс, підключення, модель) | `catalog`, `plant/equipment_specs.json` (93 паспорти), `passports` | `td.equipment.variant` (M-04) на `td.equipment.passport` (CB-07), категорія `td_category` (M-12) |
+| Розміщення: варіант на шарі з x, y, поворотом, кодом | `placements`, `plant/layout.py:MACHINES` | `td.placement` (M-05) → `maintenance.equipment` (+ `mrp.workcenter`) за `td_code` |
+| Перевірки: 7 видів, `warn`/`block` | `settings.checks` | `td.check.config` (M-06), клієнт наживо + сервер при публікації (DEC-10) |
+| Чернетка → публікація, історія версій | `versions` | `td.layout.version` (M-07), майстер публікації (M-08…M-10) |
 | Завантаження моделей GLB/OBJ/STL/FBX/3MF/DAE, STEP/IGES/IFC «буде на сервері» | IndexedDB, діалог варіанта | вкладення на варіанті, перетворення в браузері (DEC-03), `pending_conversion` (DEC-04) |
 | Підкладка DXF, DWG «на сервері» | діалог «Підкладка DXF» | вкладення шару; DXF — у браузері, DWG — фаза 2 (DEC-18) |
 | Приклад «Меблеве підприємство» і «Порожня площадка» | вбудований JSON; кнопка | `data/seed_site.json` + `post_init_hook` (DEC-13); `site/create` (R-23) |
-| 3D-бандл переглядача | `factory3d_viewer/static/lib/three/three-bundle.esm.js` (three r160: GLTFLoader, OrbitControls, CSS2D) | перевикористовується; бракуючі завантажувачі вендоряться (DEC-06) |
+| 3D-бандл переглядача | `td_viewer3d/static/lib/three/three-bundle.esm.js` (three r160: GLTFLoader, OrbitControls, CSS2D) | перевикористовується; бракуючі завантажувачі вендоряться (DEC-06) |
 
 ### 1.2 Ролі й сценарії використання
 
 | Роль | Група | Що робить (меню «Завод 3D → Конструктор» і «Планування») |
 |---|---|---|
-| Користувач | `factory3d_base.group_f3d_user` | відкриває конструктор у режимі перегляду, бачить усі шари й версії |
-| Технолог | `group_f3d_constructor_technologist` | ставить обладнання на шарах, де він у `edit_group_ids`; веде каталог варіантів і 3D-моделі |
-| Комірник | `group_f3d_constructor_storekeeper` | малює стелажі й комірки (шаблони) на «своїх» шарах |
-| Інженер | `group_f3d_constructor_engineer` | правит мережі: проходи, пожежні проходи, щити й магістралі, підкладку |
-| Менеджер | `group_f3d_constructor_manager` | усе: площадки, шари, права шарів, перевірки, публікація, версії |
-| Адміністратор | `factory3d_base.group_f3d_admin` | параметри, стоп-кран публікації |
+| Користувач | `td_factory3d.group_td_user` | відкриває конструктор у режимі перегляду, бачить усі шари й версії |
+| Технолог | `group_td_constructor_technologist` | ставить обладнання на шарах, де він у `edit_group_ids`; веде каталог варіантів і 3D-моделі |
+| Комірник | `group_td_constructor_storekeeper` | малює стелажі й комірки (шаблони) на «своїх» шарах |
+| Інженер | `group_td_constructor_engineer` | правит мережі: проходи, пожежні проходи, щити й магістралі, підкладку |
+| Менеджер | `group_td_constructor_manager` | усе: площадки, шари, права шарів, перевірки, публікація, версії |
+| Адміністратор | `td_factory3d.group_td_admin` | параметри, стоп-кран публікації |
 
 Сценарії: S1 нова площадка (порожня або за зразком) → S2 налаштувати шари → S3 розставити стелаж шаблоном → S4 додати варіант із 3D-моделлю → S5 перетягнути обладнання з живими перевірками → S6 опублікувати (майстер, перелік, підтвердження) → S7 повернути чернетку до версії.
 
@@ -80,7 +80,7 @@
 ### 1.4 Межі: що не входить
 
 - **Фаза 2:** малювання переглядачем розкладки з опублікованих шарів замість запечених GLB (Q-08); DWG-підкладка (серверне перетворення, Q-06); серверні бібліотеки STEP/IFC (Q-02); BIM-обмін.
-- Шаблон «зона-контур» лише малюється; публікація в `f3d.zone` — Q-03. Ворота/док як шаблон місця (CD-08 — не в першій черзі).
+- Шаблон «зона-контур» лише малюється; публікація в `td.zone` — Q-03. Ворота/док як шаблон місця (CD-08 — не в першій черзі).
 - Збереження залишків, переміщення товару, виробничі замовлення — стандартні модулі; конструктор лише створює довідкові записи (локації, обладнання, робочі центри).
 - Редагування `maintenance.equipment`/`stock.location` поза публікацією не блокується; конструктор їх не «заморожує».
 
@@ -88,26 +88,26 @@
 
 ### 2.1 Місце в системі
 
-`depends`: `factory3d_base`, `factory3d_viewer`, `stock`, `maintenance`, `mrp` (DEC-01). Необов'язково: `mrp_maintenance` (DEC-16).
+`depends`: `td_factory3d`, `td_viewer3d`, `stock`, `maintenance`, `mrp` (DEC-01). Необов'язково: `mrp_maintenance` (DEC-16).
 
 | Що бере | Звідки |
 |---|---|
-| Домішка коду сцени, `f3d_code` унікальний у моделі, регулярка коду | CB-01 (`f3d.scene.mixin`) |
-| Паспорти й їх габарити/потужність, `get_num` | CB-07, CB-08 (`f3d.equipment.passport`) |
-| Зона за координатою для `f3d_zone_id` обладнання | CB-03 (`f3d.zone.zone_at`) |
-| Вид і місткість комірок | CB-05 (`stock.location.f3d_loc_kind`, `f3d_capacity`) |
+| Домішка коду сцени, `td_code` унікальний у моделі, регулярка коду | CB-01 (`td.scene.mixin`) |
+| Паспорти й їх габарити/потужність, `get_num` | CB-07, CB-08 (`td.equipment.passport`) |
+| Зона за координатою для `td_zone_id` обладнання | CB-03 (`td.zone.zone_at`) |
+| Вид і місткість комірок | CB-05 (`stock.location.td_loc_kind`, `td_capacity`) |
 | Групи, категорія, кореневе меню, середовище | CB-09, CB-10 |
 | Габарит будівлі, система координат | CB-04, CB-12 |
-| three.js r160, патерн клієнтської дії, HOOT-запуск | `factory3d_viewer` (`static/lib/three`, `viewer_action.js`, `tests/test_hoot.py`) |
+| three.js r160, патерн клієнтської дії, HOOT-запуск | `td_viewer3d` (`static/lib/three`, `viewer_action.js`, `tests/test_hoot.py`) |
 
 Що віддає іншим:
 
 | ID | Контракт | Для кого |
 |---|---|---|
-| CC-01 | `stock.location`, `maintenance.equipment`, `mrp.workcenter` + поле `f3d_site_id` (Many2one `f3d.site`): запис керується конструктором; пропозиції архівації стосуються лише таких записів | усі, що читають локації/обладнання |
-| CC-02 | Геометрія розкладки: `f3d.slot` (шаблон + `params`, комірки — `_f3d_cells()`), `f3d.placement` (`x_m`, `y_m`, `rotation`, `variant_id.model_glb_id`); API-03 `load` | `factory3d_viewer` (фаза 2, Q-08) |
-| CC-03 | `f3d.equipment.passport.f3d_category`, `variant_ids`; `f3d.equipment.variant` (розміри, потужність, модель) | energy, bms (за потреби) |
-| CC-04 | Резерв `sequence` меню 12 («Конструктор») і 14 («Планування», «Довідники конструктора» під `menu_f3d_config`) у CB-09 — **запит до каркаса** (DEC-19) | base/каркас |
+| CC-01 | `stock.location`, `maintenance.equipment`, `mrp.workcenter` + поле `td_site_id` (Many2one `td.site`): запис керується конструктором; пропозиції архівації стосуються лише таких записів | усі, що читають локації/обладнання |
+| CC-02 | Геометрія розкладки: `td.slot` (шаблон + `params`, комірки — `_f3d_cells()`), `td.placement` (`x_m`, `y_m`, `rotation`, `variant_id.model_glb_id`); API-03 `load` | `td_viewer3d` (фаза 2, Q-08) |
+| CC-03 | `td.equipment.passport.td_category`, `variant_ids`; `td.equipment.variant` (розміри, потужність, модель) | energy, bms (за потреби) |
+| CC-04 | Резерв `sequence` меню 12 («Конструктор») і 14 («Планування», «Довідники конструктора» під `menu_td_config`) у CB-09 — **запит до каркаса** (DEC-19) | base/каркас |
 
 ### 2.2 Архітектурна схема
 
@@ -117,19 +117,19 @@
 │  scene/panels/checks (JS, живі перевірки)  widget f3d_model_upload ─► importModelFiles     │
 │  OdooStore ── JSON-RPC ──┐                 widget f3d_model_preview ◄─ GLB / generic model │
 │  dxf-parser (lazy)       │                 f3d-loaders.esm.js (lazy) → GLTFExporter → GLB  │
-│  three r160 ◄── /factory3d_viewer/static/lib/three/three-bundle.esm.js (спільний)          │
+│  three r160 ◄── /td_viewer3d/static/lib/three/three-bundle.esm.js (спільний)          │
 └──────────────────────────┼────────────────────────────────────┬──────────────────────────┘
         /f3d/constructor/{sites,site/create,load,save,validate,publish/preview,publish,version/restore}
                            │                          /f3d/constructor/model/upload (multipart) · model/<id>/<kind> (GET)
 ┌──────────────────────────▼────────────────────────────────────▼──────────────────────────┐
 │ controllers (W1) ──► services: geometry · cells · checks · publish · snapshot · glb_meta · convert (hook)│
-│ models: f3d.site ▸ layer ▸ slot / placement · variant · check.config · layout.version · term            │
-│ wizard f3d.publish.wizard (+line, +issue)                                                  │
+│ models: td.site ▸ layer ▸ slot / placement · variant · check.config · layout.version · term            │
+│ wizard td.publish.wizard (+line, +issue)                                                  │
 │ ir.rule (компанія, шар ↔ edit_group_ids) + серверна перевірка прав                          │
 └───────┬────────────────────────────┬──────────────────────────────┬──────────────────────┘
         │ publish (sudo, 1 транзакція)│ ir.attachment (GLB, оригінал, знімки JSON, DXF)         │ optional: cascadio / IfcConvert
         ▼                            ▼                              ▼
-  stock.location · maintenance.equipment · mrp.workcenter   (збіг за f3d_code / barcode, f3d_site_id)
+  stock.location · maintenance.equipment · mrp.workcenter   (збіг за td_code / barcode, td_site_id)
   post_init_hook: seed_site.json → площадка «Меблеве підприємство», v1, зв'язування за кодами
 ```
 
@@ -137,17 +137,17 @@
 
 | M | Модель | Призначення | Пише / читає |
 |---|---|---|---|
-| M-01 | `f3d.site` | площадка, чернетка (`draft_rev`), активна версія | менеджер / усі |
-| M-02 | `f3d.layer` | шар: відмітка, сітка, проходи, мережі, групи редагування, підкладка | менеджер (структура), ролі (вміст) / усі |
-| M-03 | `f3d.slot` | місце за шаблоном; комірки обчислюються | ролі за шаром / усі |
-| M-04 | `f3d.equipment.variant` | варіант обладнання, 3D-модель, мета | технолог, менеджер / усі |
-| M-05 | `f3d.placement` | екземпляр обладнання на шарі | ролі за шаром / усі |
-| M-06 | `f3d.check.config` | перевірка площадки: `enabled`, `mode`, `params` | менеджер / усі |
-| M-07 | `f3d.layout.version` | версія, знімок-вкладення, звіт | лише публікація; менеджер читає, `note` |
-| M-08…M-10 | `f3d.publish.wizard`, `.line`, `.issue` | майстер публікації (TransientModel) | менеджер |
-| M-11 | `f3d.term` | довідник видів шарів і типів місць (для `many2many_tags`) | менеджер |
-| M-12 | `f3d.equipment.passport` (розширення) | `f3d_category`, `variant_ids` | base-менеджер |
-| M-13…M-15 | `stock.location`, `maintenance.equipment`, `mrp.workcenter` (розширення) | `f3d_site_id` (+ `f3d_slot_uid`/`f3d_placement_uid`) | публікація |
+| M-01 | `td.site` | площадка, чернетка (`draft_rev`), активна версія | менеджер / усі |
+| M-02 | `td.layer` | шар: відмітка, сітка, проходи, мережі, групи редагування, підкладка | менеджер (структура), ролі (вміст) / усі |
+| M-03 | `td.slot` | місце за шаблоном; комірки обчислюються | ролі за шаром / усі |
+| M-04 | `td.equipment.variant` | варіант обладнання, 3D-модель, мета | технолог, менеджер / усі |
+| M-05 | `td.placement` | екземпляр обладнання на шарі | ролі за шаром / усі |
+| M-06 | `td.check.config` | перевірка площадки: `enabled`, `mode`, `params` | менеджер / усі |
+| M-07 | `td.layout.version` | версія, знімок-вкладення, звіт | лише публікація; менеджер читає, `note` |
+| M-08…M-10 | `td.publish.wizard`, `.line`, `.issue` | майстер публікації (TransientModel) | менеджер |
+| M-11 | `td.term` | довідник видів шарів і типів місць (для `many2many_tags`) | менеджер |
+| M-12 | `td.equipment.passport` (розширення) | `td_category`, `variant_ids` | base-менеджер |
+| M-13…M-15 | `stock.location`, `maintenance.equipment`, `mrp.workcenter` (розширення) | `td_site_id` (+ `td_slot_uid`/`td_placement_uid`) | публікація |
 
 ### 2.4 Інтеграції
 
@@ -160,11 +160,11 @@
 3. Автозбереження (`autosave_ms`): API-04 `save` — одна транзакція, права користувача (ir.rule + R-11), `etag`-конфлікти, `site._f3d_touch` (R-21).
 4. Модель варіанта: файли → браузер (R-15) → GLB → API-09: сервер перераховує метадані (R-19), пише вкладення, `model_status`; STEP/IFC → `_f3d_convert_model()` (R-20).
 5. «Опублікувати»: `flush` → API-06 → майстер: `build_plan` (R-12: перевірки, збіг за кодом, create/update/archive) → менеджер відмічає архівації → `action_confirm` → `apply_plan` у одній транзакції під `sudo()` → версія зі знімком (R-14).
-6. Результат: `stock.location` (`f3d_code`, `barcode`, `f3d_loc_kind`, `f3d_capacity`, `f3d_site_id`), `maintenance.equipment` (`f3d_code`, `f3d_passport_id`, `f3d_zone_id`), `mrp.workcenter`; viewer бачить їх штатно через `f3d_code` (CB-01).
+6. Результат: `stock.location` (`td_code`, `barcode`, `td_loc_kind`, `td_capacity`, `td_site_id`), `maintenance.equipment` (`td_code`, `td_passport_id`, `td_zone_id`), `mrp.workcenter`; viewer бачить їх штатно через `td_code` (CB-01).
 
 ### 2.6 Безпека
 
-- **Групи:** 4 ролі (§1.2) у привілеї `privilege_f3d_constructor`; менеджер імпліцитно містить три ролі й `factory3d_base.group_f3d_manager`; `group_f3d_admin` → менеджер.
+- **Групи:** 4 ролі (§1.2) у привілеї `privilege_td_constructor`; менеджер імпліцитно містить три ролі й `td_factory3d.group_td_manager`; `group_td_admin` → менеджер.
 - **Права на шар (CD-02):** `ir.model.access` дає ролям право на `slot/placement`, `ir.rule` звужує до шарів, де група користувача в `layer.edit_group_ids` (порожньо → лише менеджер); другий бар'єр — `_f3d_check_edit` із текстом «Шар «X» редагує …» (R-11). Структура шару, групи, перевірки, публікація, версії — лише менеджер.
 - **Публікація:** під `sudo()`, але лише після перевірки групи менеджера, стоп-крана `publish_enabled` (DEC-17), `draft_rev` майстра, блокування рядка площадки `NOWAIT`; ніколи не `unlink`; архівація — лише позначені рядки без `blocked`.
 - **Файли:** розмір ≤ `max_model_mb`, перелік розширень, `name` вкладення очищується, перевірка магічних байт GLB, `meta` клієнта не довіряється; API-09 — `csrf_token`; API-10 — доступ за читанням варіанта.
@@ -174,7 +174,7 @@
 
 ### 2.7 Продуктивність і обсяги
 
-Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіантів — API-03 ≈ 250 КБ. Комірки не зберігаються (обчислюються), тож `slot` — десятки рядків. Знімок версії ≈ 150 КБ (вкладення, не рядок БД); версій — одиниці на тиждень. Редактор: InstancedMesh, рендер на вимогу. Публікація 360 комірок — пачкові `create` (≤ 20 с). Індекси: `(site_id)` на всіх дочірніх, UNIQUE `(site_id, code_prefix)`, `(site_id, code)`, `(site_id, uid)`; `f3d_site_id` — індекс. Ротація не потрібна; знімки не видаляються.
+Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіантів — API-03 ≈ 250 КБ. Комірки не зберігаються (обчислюються), тож `slot` — десятки рядків. Знімок версії ≈ 150 КБ (вкладення, не рядок БД); версій — одиниці на тиждень. Редактор: InstancedMesh, рендер на вимогу. Публікація 360 комірок — пачкові `create` (≤ 20 с). Індекси: `(site_id)` на всіх дочірніх, UNIQUE `(site_id, code_prefix)`, `(site_id, code)`, `(site_id, uid)`; `td_site_id` — індекс. Ротація не потрібна; знімки не видаляються.
 
 ### 2.8 Міграція, seed і деінсталяція
 
@@ -184,17 +184,17 @@ Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіанті
 
 | Об'єкт | Параметр | Значення (як заповнювати) | Коментар |
 |---|---|---|---|
-| `ir.config_parameter` | `factory3d.constructor.max_model_mb` | `20` | CD-17 |
-| `ir.config_parameter` | `factory3d.constructor.max_triangles` | `50000` | CD-17, лише попередження |
-| `ir.config_parameter` | `factory3d.constructor.autosave_ms` | `1500` | затримка автозбереження |
-| `ir.config_parameter` | `factory3d.constructor.eps_mm` | `1` | допуск геометрії |
-| `ir.config_parameter` | `factory3d.constructor.reach_default_m` | `15` | ПРИПУЩЕННЯ (Q-10) |
-| `ir.config_parameter` | `factory3d.constructor.convert_server_enabled` | `True` | вимкнути, якщо конвертери ламають сервер |
-| `ir.config_parameter` | `factory3d.constructor.publish_enabled` | тест: `True`; прод: `False` до дозволу | стоп-кран (DEC-17); створює хук за `factory3d.base.environment` |
-| Групи | `group_f3d_constructor_*` | призначити технолога, комірника, інженера, менеджера | CD-02 |
-| `f3d.layer` | `edit_group_ids` | кожному шару — відповідальні ролі | порожньо = лише менеджер |
-| `f3d.site` | `default_parent_location_id` | `WH/Stock` (тест) | батько нових комірок за замовчуванням |
-| `f3d.check.config` | `mode` | `warn` або `block` на перевірку | за замовчуванням R-04 |
+| `ir.config_parameter` | `td.constructor.max_model_mb` | `20` | CD-17 |
+| `ir.config_parameter` | `td.constructor.max_triangles` | `50000` | CD-17, лише попередження |
+| `ir.config_parameter` | `td.constructor.autosave_ms` | `1500` | затримка автозбереження |
+| `ir.config_parameter` | `td.constructor.eps_mm` | `1` | допуск геометрії |
+| `ir.config_parameter` | `td.constructor.reach_default_m` | `15` | ПРИПУЩЕННЯ (Q-10) |
+| `ir.config_parameter` | `td.constructor.convert_server_enabled` | `True` | вимкнути, якщо конвертери ламають сервер |
+| `ir.config_parameter` | `td.constructor.publish_enabled` | тест: `True`; прод: `False` до дозволу | стоп-кран (DEC-17); створює хук за `td.base.environment` |
+| Групи | `group_td_constructor_*` | призначити технолога, комірника, інженера, менеджера | CD-02 |
+| `td.layer` | `edit_group_ids` | кожному шару — відповідальні ролі | порожньо = лише менеджер |
+| `td.site` | `default_parent_location_id` | `WH/Stock` (тест) | батько нових комірок за замовчуванням |
+| `td.check.config` | `mode` | `warn` або `block` на перевірку | за замовчуванням R-04 |
 | Системні | `web.base.url` і CSP | без змін | CDN не використовується |
 
 ## 4. Інструкція
@@ -215,25 +215,25 @@ Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіанті
 |---|---|---|---|---|
 | Q-01 | **Підтвердити відхилення від CD-16:** перетворення моделей у браузері, а не на сервері; STEP/IGES/IFC лише зберігаються | замовник | підтвердити: тестовий сервер без бібліотек, нічого встановити не можна; результат для користувача той самий (оригінал + легкий GLB + габарити + превью) | реалізуємо DEC-03/DEC-04; у README — «очікує підтвердження» |
 | Q-02 | Чи можна поставити на прод `cascadio` / `IfcConvert` для STEP/IFC і хто це робить | замовник, адмін | так, після релізу; хук уже готовий (R-20) | STEP/IFC лишаються `pending_conversion` |
-| Q-03 | Публікувати шаблон «зона-контур» у `f3d.zone` | менеджер | так, у фазі 2 (код, тип, полігон) | зона лише малюється |
+| Q-03 | Публікувати шаблон «зона-контур» у `td.zone` | менеджер | так, у фазі 2 (код, тип, полігон) | зона лише малюється |
 | Q-04 | Хто публікує: лише менеджер чи й роль для свого шару | замовник | лише менеджер (публікація зачіпає склад і ТО) | лише менеджер |
 | Q-05 | Архівація локації із залишками | замовник | заборонена (стандарт Odoo теж) — рядок `blocked` | `blocked` |
 | Q-06 | DWG-підкладка на сервері: який конвертер (LibreDWG, ODA, зовнішній сервіс) | замовник | експорт у DXF на стороні замовника; сервер — фаза 2 | DWG зберігається, `pending_conversion` |
-| Q-07 | Префікси кодів для другої площадки: `f3d_code` глобально унікальний у моделі (CB-01) | менеджер | префікс площадки в `code_prefix`/`code` (напр. `S2-FG-R1`) | при збігу — `conflict` на публікації |
+| Q-07 | Префікси кодів для другої площадки: `td_code` глобально унікальний у моделі (CB-01) | менеджер | префікс площадки в `code_prefix`/`code` (напр. `S2-FG-R1`) | при збігу — `conflict` на публікації |
 | Q-08 | Фаза 2: переглядач малює опубліковану розкладку замість запечених GLB — підхід (стелажі з шаблонів, обладнання з GLB варіантів) | менеджер, автор viewer | окремий документ після пілота | CC-02 дає дані |
 | Q-09 | Реальні ліміти навантаження на підлогу й яруси (кН/м², кг) по шарах | замовник | надати таблицю; поки `0` = не перевіряти | `max_floor_load_kn_m2=0` |
 | Q-10 | Максимальна відстань до точки підключення | технолог | 15 м (ПРИПУЩЕННЯ) | `reach_default_m=15` |
 | Q-11 | Типові габарити умовних варіантів (верстат, стелаж, навантажувач, шафа) | технолог | прийняти з §5.1 SPEC | ПРИПУЩЕННЯ з SPEC |
 | Q-12 | Коди й вид комірок консольних та підлогових шаблонів (`-A..-L`, `-{ряд}{літера}`; види `shelf`, `stack`) відповідають існуючим локаціям (`PLT-04C`, консольні — немає в макеті)? | комірник | перевірити на копії демо; за потреби змінити шаблон кодів | ПРИПУЩЕННЯ R-01 |
 | Q-13 | `mrp_maintenance` не в CE: додавати в `depends` для тестового сервера? | менеджер | ні, лишити необов'язковим (DEC-16) | перевірка `"workcenter_id" in _fields` |
-| Q-14 | Шлях Hoot-suite для `&id=` у `test_hoot_editor/model.py` (`@factory3d_constructor/editor`, `/model`) | W2, W3 | перевірити, що фільтр запускає >0 тестів | якщо ні — загальний `@factory3d_constructor` |
+| Q-14 | Шлях Hoot-suite для `&id=` у `test_hoot_editor/model.py` (`@td_constructor/editor`, `/model`) | W2, W3 | перевірити, що фільтр запускає >0 тестів | якщо ні — загальний `@td_constructor` |
 
 ### 5.2 Рішення автора й менеджера DEC-xx
 
 | ID | Рішення | Обґрунтування |
 |---|---|---|
-| DEC-01 | Модуль `factory3d_constructor`, `19.0.1.0.0`, `depends`: `factory3d_base`, `factory3d_viewer`, `stock`, `maintenance`, `mrp`; `application: False`. Меню під «Завод 3D»: «Конструктор» (client action, seq 12) і «Планування» (seq 14) із «Площадки», «Шари», «Каталог варіантів», «Версії планування»; «Довідники конструктора» — під `menu_f3d_config` | вимога менеджера; `viewer` — для three.js і патерну дії |
-| DEC-02 | Додаткова модель `f3d.term` (види шарів, типи місць) для `many2many_tags`; кожна сутність шару має `uid` (стабільний ключ знімка/клієнта); каталог варіантів **глобальний**, не прив'язаний до площадки | відбір «дозволені шари/типи» без JS-віджета; відновлення версій за `uid`; паспорти base глобальні й без `company_id`. Виняток із CD-22 «усе по площадці» — лише каталог |
+| DEC-01 | Модуль `td_constructor`, `19.0.1.0.0`, `depends`: `td_factory3d`, `td_viewer3d`, `stock`, `maintenance`, `mrp`; `application: False`. Меню під «Завод 3D»: «Конструктор» (client action, seq 12) і «Планування» (seq 14) із «Площадки», «Шари», «Каталог варіантів», «Версії планування»; «Довідники конструктора» — під `menu_td_config` | вимога менеджера; `viewer` — для three.js і патерну дії |
+| DEC-02 | Додаткова модель `td.term` (види шарів, типи місць) для `many2many_tags`; кожна сутність шару має `uid` (стабільний ключ знімка/клієнта); каталог варіантів **глобальний**, не прив'язаний до площадки | відбір «дозволені шари/типи» без JS-віджета; відновлення версій за `uid`; паспорти base глобальні й без `company_id`. Виняток із CD-22 «усе по площадці» — лише каталог |
 | DEC-03 | **ВІДХИЛЕННЯ ВІД CD-16 (потрібне підтвердження замовника, Q-01).** Для GLB/glTF/OBJ(+MTL)/FBX/STL/3MF/DAE перетворення відбувається **у браузері** при завантаженні у віджеті Odoo: завантажувачі three.js → `GLTFExporter` → GLB. Сервер зберігає оригінал і легкий GLB + мета (габарити, трикутники, одиниці, вісь) | на тестовому сервері немає бібліотек перетворення й нічого не можна встановити; результат для користувача збігається з CD-16 |
 | DEC-04 | STEP/IGES/IFC: зберігається оригінал, `model_status='pending_conversion'`. Підключуваний серверний хук `_f3d_convert_model()` перетворює, якщо імпортується необов'язкова бібліотека (`cascadio`; `IfcConvert` із IfcOpenShell); інакше лишається `pending_conversion`, картка пише про це | CD-15 (формати потрібні), але без серверних бібліотек; перехід на справжнє серверне перетворення — без зміни коду клієнта |
 | DEC-05 | Ліміти CD-17: 20 МБ — відмова (клієнт і сервер); > 50 тис. трикутників — **попередження** + пропозиція спростити (кластеризація вершин у браузері, R-16), файл усе одно можна зберегти | прототип: «предупреждение и предложение упростить» |
@@ -242,13 +242,13 @@ Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіанті
 | DEC-08 | Клієнтська дія `f3d_constructor` — **порт прототипу** (той самий JS), адаптер `store` замінено на `OdooStore` із JSON-RPC `/f3d/constructor/*`: завантаження площадки, збереження чернетки пакетом операцій з `etag`, перевірка, попередній перегляд публікації, публікація. Інтерфейс українською. Редагування варіанта — стандартна форма Odoo в діалозі | один код сцени для прототипу й модуля; форми Odoo — для точних чисел (CD-03) |
 | DEC-09 | Ролі: 4 групи «Конструктор: менеджер/технолог/комірник/інженер»; `layer.edit_group_ids` визначає, хто пише `slot/placement` (і вміст шару для інженерів); `ir.rule` + серверна перевірка `_f3d_check_edit` | CD-02; ORM-правило не дає зрозумілого повідомлення, друга перевірка дає |
 | DEC-10 | Перевірки: наживо в клієнті; при публікації сервер заново перевіряє **усі 7** (вимога — fits, collide, aisles_free, service_free, fire; `load` і `utility_reach` додано, щоб режим `block` мав силу). Геометрія: OBB + SAT (R-03) без бібліотек; `block` відмовляє публікацію. Паритет JS↔Python — спільні золоті фікстури | CD-13/14; клієнт неавторитетний |
-| DEC-11 | Публікація: майстер із переліком і підтвердженням; збіг за `f3d_code`, потім `barcode`; нічого не видаляє; зайве — «пропонуємо архівувати» (за замовчуванням не відмічене; лише записи із `f3d_site_id`; записи із залишками/відкритими заявками — `blocked`); батьківська локація — `slot.parent_location_id`, інакше `site.default_parent_location_id`; одна транзакція; знімок версії | CD-20/21; на сервері вже є `FG-R1-B01-L4` — дублікати неприпустимі |
-| DEC-12 | Усі сутності площадки мають `company_id` `related` stored; глобальні правила як у base (`'|', company_id = False, in company_ids`); унікальність `f3d_code` лишається глобальною (CB-01) | CD-22; конвенція base |
+| DEC-11 | Публікація: майстер із переліком і підтвердженням; збіг за `td_code`, потім `barcode`; нічого не видаляє; зайве — «пропонуємо архівувати» (за замовчуванням не відмічене; лише записи із `td_site_id`; записи із залишками/відкритими заявками — `blocked`); батьківська локація — `slot.parent_location_id`, інакше `site.default_parent_location_id`; одна транзакція; знімок версії | CD-20/21; на сервері вже є `FG-R1-B01-L4` — дублікати неприпустимі |
+| DEC-12 | Усі сутності площадки мають `company_id` `related` stored; глобальні правила як у base (`'|', company_id = False, in company_ids`); унікальність `td_code` лишається глобальною (CB-01) | CD-22; конвенція base |
 | DEC-13 | Seed: `post_init_hook` створює «Меблеве підприємство» з `data/seed_site.json`, зв'язує з наявними записами за кодами (нічого не створюючи в Odoo), ставить базову версію v1; ідемпотентний (`seed_key`) | CD-24; база вже містить комірки й обладнання |
 | DEC-14 | Знімок версії — JSON-вкладення (шаблони місць, не комірки); відновлення чернетки — за `uid`, не торкаючись записів Odoo | CD-21; 256 КіБ-ліміт артефакта не діє |
 | DEC-15 | Метри для шарів/місць/розміщень, мм для варіантів; система CB-04; кут — градуси проти годинникової; комірки — обчислювані, коди: `…-B{bb}-L{l}`, `…-A{aa}-L{l}`, `…-S{ss}-L{l}`, `…-{rr}{літера}` | зведення прототипу й CB-01 |
 | DEC-16 | `mrp_maintenance` не в `depends`: `maintenance.equipment.workcenter_id` ставиться, лише якщо поле існує | CE-середовище розробки без enterprise-модуля |
-| DEC-17 | Стоп-кран `factory3d.constructor.publish_enabled` (тест `True`, прод `False`) | конвенція §5: операції, що пишуть у стандартні моделі, під стоп-краном |
+| DEC-17 | Стоп-кран `td.constructor.publish_enabled` (тест `True`, прод `False`) | конвенція §5: операції, що пишуть у стандартні моделі, під стоп-краном |
 | DEC-18 | Підкладка: DXF парситься в браузері (LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC); DWG зберігається як `pending_conversion`, повідомлення «Конвертуйте в DXF» | CD-09; DWG у браузері не читається |
 | DEC-19 | Запит до каркаса: додати в CB-09 резерв `sequence` 12 (конструктор) і 14 (планування, налаштування конструктора); тег client action — `f3d_constructor` (на відміну від `f3d_viewer.action`) | вимога менеджера; модуль не змінює чужі документи |
 
@@ -267,28 +267,28 @@ Seed: ~600–1 000 комірок, ~250 розміщень, ~50 варіанті
 
 ## 6. План сборки агентами
 
-Три воркери з непересічними файлами (повний перелік із позначками `[W1]/[W2]/[W3]` — SPEC §0). Спільні файли (`__init__.py`, `__manifest__.py`, `security/*`, `data/*`, `views/f3d_menus.xml`, `tests/__init__.py`, `tests/common.py`) належать **W1**; W2/W3 потрібні зміни в них описують у звіті. Маніфест від початку містить glob-и assets усіх воркерів (SPEC §1), тож W2/W3 нічого в ньому не правлять. Нумерація AC/R/API — SPEC.
+Три воркери з непересічними файлами (повний перелік із позначками `[W1]/[W2]/[W3]` — SPEC §0). Спільні файли (`__init__.py`, `__manifest__.py`, `security/*`, `data/*`, `views/td_menus.xml`, `tests/__init__.py`, `tests/common.py`) належать **W1**; W2/W3 потрібні зміни в них описують у звіті. Маніфест від початку містить glob-и assets усіх воркерів (SPEC §1), тож W2/W3 нічого в ньому не правлять. Нумерація AC/R/API — SPEC.
 
 Підготовка (менеджер): злити гілку документів `claude/f3d-constructor` в інтеграційну; для кожного воркера — `git worktree add /home/user/f3d-c-wN -b claude/f3d-constructor-wN claude/factory3d-build`; `T=/home/user/f3d-c-wN/factory3d/tools/odoo`; `$T/pg.sh start`. Бази — `f3d_c_wN` (унікальне ім'я на воркера; порти виводяться з імені).
 
 | Воркер | Файли | Здає (SPEC) | Залежить від |
 |---|---|---|---|
-| **W1 бекенд** | `__init__.py`, `__manifest__.py`, `README.md`, `CHANGELOG.md`, `hooks/*`, `models/*`, `services/*`, `wizard/*`, `controllers/*`, `security/*`, `data/*` (включно з `seed_site.json`), `views/*` крім `f3d_equipment_variant_views.xml`, `tools/extract_seed.py`, `tests/*.py` крім `test_hoot_*`, `static/description/icon.png`, `static/tests/fixtures/*.json` | M-01…M-15, V-01…V-03, V-05…V-13, API-01…API-10, R-01…R-14, R-18…R-24, AC-01…09, 11…16, 17(UT), 18(UT), 19…32, 33…36, 40(UT), 43…48(UT), 50…62 | — |
+| **W1 бекенд** | `__init__.py`, `__manifest__.py`, `README.md`, `CHANGELOG.md`, `hooks/*`, `models/*`, `services/*`, `wizard/*`, `controllers/*`, `security/*`, `data/*` (включно з `seed_site.json`), `views/*` крім `td_equipment_variant_views.xml`, `tools/extract_seed.py`, `tests/*.py` крім `test_hoot_*`, `static/description/icon.png`, `static/tests/fixtures/*.json` | M-01…M-15, V-01…V-03, V-05…V-13, API-01…API-10, R-01…R-14, R-18…R-24, AC-01…09, 11…16, 17(UT), 18(UT), 19…32, 33…36, 40(UT), 43…48(UT), 50…62 | — |
 | **W2 клієнтська дія** | `static/src/action/*`, `static/src/editor/*`, `static/lib/dxf-parser/*`, `static/tests/editor/*`, `tests/test_hoot_editor.py` | клієнтська дія `f3d_constructor` (порт прототипу), `OdooStore`, живі перевірки (R-02…R-10 у JS), DXF, ролі в UI; AC-10, 12(JS), 14(JS), 17(JS), 18(JS), 22(JS), 31(JS), 48(JS), 49, 61(JS), 63…66; MAN 67, 68 | W1 skeleton (дія, меню, API-контракти), фікстури W1, `model/generic.js` W3 |
-| **W3 варіант: завантаження й віджет** | `static/src/model/*`, `static/src/widgets/*`, `static/lib/f3d-loaders/*`, `views/f3d_equipment_variant_views.xml`, `static/tests/model/*`, `tools/build_loaders.mjs`, `tests/test_hoot_model.py` | конвеєр R-15…R-17 у браузері, віджети `f3d_model_upload`/`f3d_model_preview`, V-04; AC-34(JS), 35(JS), 37…42 | W1 skeleton (поля варіанта, API-09/10) |
+| **W3 варіант: завантаження й віджет** | `static/src/model/*`, `static/src/widgets/*`, `static/lib/f3d-loaders/*`, `views/td_equipment_variant_views.xml`, `static/tests/model/*`, `tools/build_loaders.mjs`, `tests/test_hoot_model.py` | конвеєр R-15…R-17 у браузері, віджети `f3d_model_upload`/`f3d_model_preview`, V-04; AC-34(JS), 35(JS), 37…42 | W1 skeleton (поля варіанта, API-09/10) |
 
 **Порядок і час (вечір, ≈ 6 год на воркера, паралельно):**
-1. **W1 крок 0 (≤ 30 хв)** — скелет: маніфест, `__init__`, групи, ACL, правила, параметри, дані довідників, дії й меню, **усі моделі з полями** (без логіки), заглушки `tests/test_hoot_editor.py`, `tests/test_hoot_model.py` (порожні класи), `tests/__init__.py`. Модуль має ставитися на чисту базу: `F3D_TEST_INSTALL=factory3d_constructor $T/run_tests.sh f3d_c_w1 /factory3d_constructor`. Менеджер зливає скелет в інтеграційну; W2/W3 роблять `git rebase`.
+1. **W1 крок 0 (≤ 30 хв)** — скелет: маніфест, `__init__`, групи, ACL, правила, параметри, дані довідників, дії й меню, **усі моделі з полями** (без логіки), заглушки `tests/test_hoot_editor.py`, `tests/test_hoot_model.py` (порожні класи), `tests/__init__.py`. Модуль має ставитися на чисту базу: `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh f3d_c_w1 /td_constructor`. Менеджер зливає скелет в інтеграційну; W2/W3 роблять `git rebase`.
 2. **W1 далі:** `services/geometry|cells|checks` + золоті фікстури (≤ 60 хв від старту — їх чекає W2); логіка моделей і прав; контролери API-01…10; публікація, майстер, версії; хук seed; `tests`.
 3. **W3 крок 1 (≤ 60 хв):** `model/three.js`, `model/generic.js` (R-17) — їх чекає W2; далі `build_loaders.mjs` → `f3d-loaders.esm.js`, формати/імпорт/спрощення, віджети, V-04, HOOT.
 4. **W2:** клієнтська дія й `OdooStore` на моках API → порт сцени/панелей → дзеркала R-01…R-10 за фікстурами W1 → DXF → ролі → HOOT.
 5. **Злиття:** W1 (скелет → повністю) → W3 → W2. Після кожного злиття менеджер запускає повний набір. Конфлікти в чужих файлах заборонені — лише через звіт воркера.
-6. **Інтеграція (менеджер):** `F3D_TEST_INSTALL=factory3d_base,factory3d_viewer,factory3d_constructor $T/run_tests.sh f3d_c_full` (усе зелене, ≥ AC-01…AC-66 UT/JS); `$T/serve.sh f3d_c_full 8070` + Playwright — ТК-01…ТК-08 (MAN AC-67, 68), скриншоти; DEPLOY_TEST на копії демо-бази; рядок #12 у `build/BUILD_STATUS.md` (правит лише менеджер).
+6. **Інтеграція (менеджер):** `F3D_TEST_INSTALL=td_factory3d,td_viewer3d,td_constructor $T/run_tests.sh f3d_c_full` (усе зелене, ≥ AC-01…AC-66 UT/JS); `$T/serve.sh f3d_c_full 8070` + Playwright — ТК-01…ТК-08 (MAN AC-67, 68), скриншоти; DEPLOY_TEST на копії демо-бази; рядок #12 у `build/BUILD_STATUS.md` (правит лише менеджер).
 
 **Команди тестів воркерів** (кожен — у своєму worktree, `T` — його `tools/odoo`):
-- W1: `F3D_TEST_INSTALL=factory3d_constructor $T/run_tests.sh f3d_c_w1 /factory3d_constructor` (або клас: `/factory3d_constructor:TestChecks`, `…:TestPublish`, `…:TestRights`, `…:TestSeedHook`).
-- W2: `F3D_TEST_INSTALL=factory3d_constructor $T/run_tests.sh f3d_c_w2 /factory3d_constructor:TestEditorHoot`.
-- W3: `F3D_TEST_INSTALL=factory3d_constructor $T/run_tests.sh f3d_c_w3 /factory3d_constructor:TestModelHoot`.
+- W1: `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh f3d_c_w1 /td_constructor` (або клас: `/td_constructor:TestChecks`, `…:TestPublish`, `…:TestRights`, `…:TestSeedHook`).
+- W2: `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh f3d_c_w2 /td_constructor:TestEditorHoot`.
+- W3: `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh f3d_c_w3 /td_constructor:TestModelHoot`.
 
 **Звіт воркера** — ≤ 15 рядків: змінені файли, рядок результату тесту (кількість пройдених/впалих), потрібні зміни в чужих файлах, ризики. Без diff-ів і коду.
 

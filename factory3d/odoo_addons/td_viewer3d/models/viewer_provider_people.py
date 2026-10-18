@@ -10,8 +10,8 @@ OP_RE = re.compile(r"^OP-(.+)$")
 
 class F3dViewerProviderPeople(models.AbstractModel):
     """M-01f: співробітники (hr.employee.public, без sudo, X-09)."""
-    _name = "f3d.viewer.provider.people"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.people"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних people"
 
     _f3d_sequence = 60
@@ -28,14 +28,14 @@ class F3dViewerProviderPeople(models.AbstractModel):
         if not payload_tools.access_ok(env, "hr.employee.public"):
             return
         rows = env["hr.employee.public"].search_read(
-            [("f3d_code", "!=", False), ("active", "=", True)],
-            ["f3d_code", "name", "job_title", "job_id", "department_id", "resource_calendar_id"], order="id")
+            [("td_code", "!=", False), ("active", "=", True)],
+            ["td_code", "name", "job_title", "job_id", "department_id", "resource_calendar_id"], order="id")
         out = payload.setdefault("employees", {})
         op_wo, wo_by_wc = self._operators(env)
         known_wc = set(wo_by_wc) | set(((ctx.get("static") or {}).get("workcenters") or {}))
         present = self._present(env, [r["id"] for r in rows], ctx)
         for r in rows:
-            code = r["f3d_code"]
+            code = r["td_code"]
             rec = {
                 "name": r["name"],
                 "job": r["job_title"] or (r["job_id"] and r["job_id"][1]) or "",
@@ -63,7 +63,7 @@ class F3dViewerProviderPeople(models.AbstractModel):
         if not payload_tools.access_ok(env, "mrp.workorder"):
             return op_wo, wo_by_wc
         for wo in env["mrp.workorder"].search_fetch([("state", "=", "progress")], order="date_start, id"):
-            code = wo.workcenter_id.f3d_code
+            code = wo.workcenter_id.td_code
             if not code:
                 continue
             wid = f"WO{wo.id:05d}"

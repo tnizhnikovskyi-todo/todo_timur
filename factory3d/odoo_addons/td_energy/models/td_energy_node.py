@@ -14,7 +14,7 @@ def _today_start_utc():
 
 
 class F3dEnergyNode(models.Model):
-    _name = "f3d.energy.node"
+    _name = "td.energy.node"
     _description = "Енергетика: вузол мережі"
     _inherit = ["mail.thread"]
     _parent_name = "parent_id"
@@ -65,18 +65,18 @@ class F3dEnergyNode(models.Model):
         ],
         string="Тип генерації",
     )
-    parent_id = fields.Many2one("f3d.energy.node", string="Живиться від", ondelete="restrict", index=True)
+    parent_id = fields.Many2one("td.energy.node", string="Живиться від", ondelete="restrict", index=True)
     parent_path = fields.Char(index=True)
-    child_ids = fields.One2many("f3d.energy.node", "parent_id", string="Живить")
+    child_ids = fields.One2many("td.energy.node", "parent_id", string="Живить")
     cabinet_id = fields.Many2one(
-        "f3d.energy.node", string="Шафа (збірка)", domain="[('kind', '=', 'switchboard')]", ondelete="set null"
+        "td.energy.node", string="Шафа (збірка)", domain="[('kind', '=', 'switchboard')]", ondelete="set null"
     )
-    peer_id = fields.Many2one("f3d.energy.node", string="З'єднує з", ondelete="set null")
+    peer_id = fields.Many2one("td.energy.node", string="З'єднує з", ondelete="set null")
     section = fields.Integer(string="Секція шин", default=0)
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null", index=True)
-    equipment_code = fields.Char(related="equipment_id.f3d_code")
+    equipment_code = fields.Char(related="equipment_id.td_code")
     workcenter_id = fields.Many2one("mrp.workcenter", string="Робочий центр", ondelete="set null", index=True)
-    zone_id = fields.Many2one("f3d.zone", related="equipment_id.f3d_zone_id", string="Зона")
+    zone_id = fields.Many2one("td.zone", related="equipment_id.td_zone_id", string="Зона")
     rating_a = fields.Integer(string="Номінал, А")
     rating_kva = fields.Integer(string="Номінал, кВА")
     rating_kvar = fields.Integer(string="Номінал, квар")
@@ -101,10 +101,10 @@ class F3dEnergyNode(models.Model):
         default="none",
         required=True,
     )
-    pool_id = fields.Many2one("f3d.energy.pool", string="Пул", ondelete="set null")
-    meter_ids = fields.One2many("f3d.energy.meter", "node_id", string="Лічильники")
+    pool_id = fields.Many2one("td.energy.pool", string="Пул", ondelete="set null")
+    meter_ids = fields.One2many("td.energy.meter", "node_id", string="Лічильники")
     meter_count = fields.Integer(string="Лічильників", compute="_compute_meter_count")
-    meter_id = fields.Many2one("f3d.energy.meter", compute="_compute_meter_id", string="Лічильник")
+    meter_id = fields.Many2one("td.energy.meter", compute="_compute_meter_id", string="Лічильник")
     unit_id = fields.Integer(string="Modbus unit (стенд)")
     note = fields.Text(string="Примітка")
     group = fields.Selection([("light", "Освітлення"), ("vent", "Вентиляція")], string="Група")
@@ -186,9 +186,9 @@ class F3dEnergyNode(models.Model):
     def _compute_live(self):
         meters = self.meter_id.sudo()
         kwh = {}
-        if meters and "f3d.energy.interval" in self.env:
+        if meters and "td.energy.interval" in self.env:
             groups = (
-                self.env["f3d.energy.interval"]
+                self.env["td.energy.interval"]
                 .sudo()
                 ._read_group(
                     [("meter_id", "in", meters.ids), ("ts_start", ">=", _today_start_utc())],
@@ -226,7 +226,7 @@ class F3dEnergyNode(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Лічильники"),
-            "res_model": "f3d.energy.meter",
+            "res_model": "td.energy.meter",
             "view_mode": "list,form",
             "domain": [("node_id", "child_of", self.id)],
         }
@@ -236,7 +236,7 @@ class F3dEnergyNode(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Профіль"),
-            "res_model": "f3d.energy.interval",
+            "res_model": "td.energy.interval",
             "view_mode": "graph,pivot,list",
             "domain": [("node_id", "child_of", self.id), ("ts_start", ">=", _today_start_utc())],
         }
@@ -246,7 +246,7 @@ class F3dEnergyNode(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Баланс"),
-            "res_model": "f3d.energy.balance",
+            "res_model": "td.energy.balance",
             "view_mode": "list",
             "domain": [("node_id", "=", self.id)],
         }
@@ -258,9 +258,9 @@ class F3dEnergyNode(models.Model):
         return self.equipment_id.action_f3d_show()
 
     @api.model
-    def action_f3d_energy_rebind(self):
+    def action_td_energy_rebind(self):
         """§5.2: повтор прив'язки даних (лише адміністратор)."""
-        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError(_("Повтор прив'язки даних енергетики — лише адміністратор."))
         from .. import hooks  # відкладено: hooks імпортується пакетом після models
 

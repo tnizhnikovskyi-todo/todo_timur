@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 TZ = ZoneInfo("Europe/Kyiv")
 FMT = "%Y-%m-%d %H:%M"
 CLOCK_RE = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
-PARAM_CLOCK = "factory3d.viewer.demo_clock"
+PARAM_CLOCK = "td.viewer.demo_clock"
 
 
 def local(dt_utc):
@@ -36,7 +36,7 @@ def now(env):
                 return utc(clock)
             except ValueError:
                 pass
-        _logger.warning("factory3d.viewer.demo_clock невалідний (%r): ігнорується", clock)
+        _logger.warning("td.viewer.demo_clock невалідний (%r): ігнорується", clock)
     return real_now()
 
 

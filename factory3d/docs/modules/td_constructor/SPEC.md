@@ -1,11 +1,11 @@
-# factory3d_constructor — специфікація
+# td_constructor — специфікація
 
-Версія 0.1 · 17.10.2026 · технічне рішення: `docs/modules/factory3d_constructor/ARCHITECTURE.md` (далі ARCH; рішення DEC-xx, питання Q-xx — там).
+Версія 0.1 · 17.10.2026 · технічне рішення: `docs/modules/td_constructor/ARCHITECTURE.md` (далі ARCH; рішення DEC-xx, питання Q-xx — там).
 Вхідні документи: `build/constructor/DECISIONS.md` (рішення замовника CD-01…CD-24, 17.10.2026) і `build/constructor/PROTOTYPE.md`
 (прототип-артефакт: його модель даних — чернетка моделей нижче, імена полів збережено).
-Спирається на контракти каркаса: C-6.1 (код сцени), CB-01/CB-03/CB-05/CB-07 (`factory3d_base`: домішка, `f3d.zone.zone_at`, `stock.location`
-вид і місткість, паспорт `f3d.equipment.passport`), CB-09 (меню), CB-10 (групи), CB-12 (габарит будівлі), конвенції §5. Нових протоколів P-xx немає.
-Контракти, які модуль визначає сам: CC-01 (`f3d_site_id`), CC-02 (геометрія розкладки для переглядача, фаза 2) — ARCH §2.1.
+Спирається на контракти каркаса: C-6.1 (код сцени), CB-01/CB-03/CB-05/CB-07 (`td_factory3d`: домішка, `td.zone.zone_at`, `stock.location`
+вид і місткість, паспорт `td.equipment.passport`), CB-09 (меню), CB-10 (групи), CB-12 (габарит будівлі), конвенції §5. Нових протоколів P-xx немає.
+Контракти, які модуль визначає сам: CC-01 (`td_site_id`), CC-02 (геометрія розкладки для переглядача, фаза 2) — ARCH §2.1.
 
 Усі імена остаточні. Рядки інтерфейсу — українською в коді (`string="…"`), `.po` не ведемо. Odoo 19: SQL-обмеження — `models.Constraint`,
 хуки — `post_init_hook(env)` / `uninstall_hook(env)`, команди — `odoo.fields.Command`, списки — `<list>`, видимість — `invisible="expr"`,
@@ -19,7 +19,7 @@
 Позначка у квадратних дужках — воркер ARCH §6 (W1 бекенд, W2 клієнтська дія, W3 варіант: завантаження й віджет).
 
 ```
-odoo_addons/factory3d_constructor/
+odoo_addons/td_constructor/
 ├── __init__.py                          [W1] from . import models, wizard, controllers, hooks; from .hooks import post_init_hook, uninstall_hook
 ├── __manifest__.py                      [W1] §1
 ├── README.md, CHANGELOG.md              [W1] 19.0.1.0.0 — перший випуск
@@ -29,15 +29,15 @@ odoo_addons/factory3d_constructor/
 │   └── link.py                          [W1] link_existing(env, site) — зв'язування з наявними stock.location / maintenance.equipment за кодом
 ├── models/
 │   ├── __init__.py                      [W1]
-│   ├── f3d_term.py                      [W1] M-11 довідник видів шарів і типів місць
-│   ├── f3d_site.py                      [W1] M-01
-│   ├── f3d_layer.py                     [W1] M-02
-│   ├── f3d_slot.py                      [W1] M-03
-│   ├── f3d_equipment_variant.py         [W1] M-04 (поля, обмеження, _f3d_set_model, _f3d_convert_model)
-│   ├── f3d_placement.py                 [W1] M-05
-│   ├── f3d_check_config.py              [W1] M-06
-│   ├── f3d_layout_version.py            [W1] M-07
-│   ├── f3d_equipment_passport.py        [W1] M-12 розширення паспорта
+│   ├── td_term.py                      [W1] M-11 довідник видів шарів і типів місць
+│   ├── td_site.py                      [W1] M-01
+│   ├── td_layer.py                     [W1] M-02
+│   ├── td_slot.py                      [W1] M-03
+│   ├── td_equipment_variant.py         [W1] M-04 (поля, обмеження, _f3d_set_model, _f3d_convert_model)
+│   ├── td_placement.py                 [W1] M-05
+│   ├── td_check_config.py              [W1] M-06
+│   ├── td_layout_version.py            [W1] M-07
+│   ├── td_equipment_passport.py        [W1] M-12 розширення паспорта
 │   ├── stock_location.py                [W1] M-13
 │   ├── maintenance_equipment.py         [W1] M-14
 │   └── mrp_workcenter.py                [W1] M-15
@@ -52,32 +52,32 @@ odoo_addons/factory3d_constructor/
 │   └── publish.py                       R-12, R-13: build_plan(site), apply_plan(site, plan, ticked, note)
 ├── wizard/
 │   ├── __init__.py
-│   ├── f3d_publish_wizard.py            [W1] M-08, M-09, M-10
-│   └── f3d_publish_wizard_views.xml     [W1] V-08
+│   ├── td_publish_wizard.py            [W1] M-08, M-09, M-10
+│   └── td_publish_wizard_views.xml     [W1] V-08
 ├── controllers/
 │   ├── __init__.py
 │   ├── constructor.py                   [W1] API-01…API-08 (jsonrpc)
 │   └── model.py                         [W1] API-09 (multipart), API-10 (GET GLB)
 ├── security/
-│   ├── f3d_constructor_security.xml     [W1] привілей, 4 групи, record rules (§4)
+│   ├── td_constructor_security.xml     [W1] привілей, 4 групи, record rules (§4)
 │   └── ir.model.access.csv              [W1] §4.1
 ├── data/
 │   ├── params.xml                       [W1] ir.config_parameter (noupdate=1)
-│   ├── f3d_term_data.xml                [W1] 6 видів шарів + 6 типів місць (noupdate=0)
-│   ├── f3d_generic_catalog.xml          [W1] 4 типові паспорти + 4 типові варіанти (noupdate=1)
+│   ├── td_term_data.xml                [W1] 6 видів шарів + 6 типів місць (noupdate=0)
+│   ├── td_generic_catalog.xml          [W1] 4 типові паспорти + 4 типові варіанти (noupdate=1)
 │   ├── actions.xml                      [W1] ir.actions.client f3d_constructor + act_window довідників
 │   └── seed_site.json                   [W1] копія вбудованого JSON прототипу (§5.2)
 ├── views/
-│   ├── f3d_site_views.xml               [W1] V-01
-│   ├── f3d_layer_views.xml              [W1] V-02
-│   ├── f3d_slot_views.xml               [W1] V-03
-│   ├── f3d_placement_views.xml          [W1] V-05
-│   ├── f3d_check_config_views.xml       [W1] V-06
-│   ├── f3d_layout_version_views.xml     [W1] V-07
-│   ├── f3d_term_views.xml               [W1] V-09
-│   ├── f3d_inherit_views.xml            [W1] V-10 (паспорт), V-11 (stock.location), V-12 (maintenance.equipment)
-│   ├── f3d_equipment_variant_views.xml  [W3] V-04 (форма з віджетами f3d_model_upload / f3d_model_preview, список, канбан)
-│   └── f3d_menus.xml                    [W1] V-13
+│   ├── td_site_views.xml               [W1] V-01
+│   ├── td_layer_views.xml              [W1] V-02
+│   ├── td_slot_views.xml               [W1] V-03
+│   ├── td_placement_views.xml          [W1] V-05
+│   ├── td_check_config_views.xml       [W1] V-06
+│   ├── td_layout_version_views.xml     [W1] V-07
+│   ├── td_term_views.xml               [W1] V-09
+│   ├── td_inherit_views.xml            [W1] V-10 (паспорт), V-11 (stock.location), V-12 (maintenance.equipment)
+│   ├── td_equipment_variant_views.xml  [W3] V-04 (форма з віджетами f3d_model_upload / f3d_model_preview, список, канбан)
+│   └── td_menus.xml                    [W1] V-13
 ├── static/
 │   ├── description/icon.png             [W1]
 │   ├── lib/dxf-parser/dxf-parser.min.js [W2] dxf-parser@1.1.2 (UMD, глобал DxfParser), LICENSE
@@ -89,8 +89,8 @@ odoo_addons/factory3d_constructor/
 │   └── tests/
 │       ├── fixtures/cells_golden.json   [W1] еталон R-01 (Python → JS), створює W1 за годину від старту
 │       ├── fixtures/checks_golden.json  [W1] еталон R-03…R-10
-│       ├── editor/*.test.js             [W2] HOOT (suite @factory3d_constructor/editor)
-│       └── model/*.test.js              [W3] HOOT (suite @factory3d_constructor/model)
+│       ├── editor/*.test.js             [W2] HOOT (suite @td_constructor/editor)
+│       └── model/*.test.js              [W3] HOOT (suite @td_constructor/model)
 ├── tools/
 │   ├── extract_seed.py                  [W1] витягує seed з index.html прототипу → data/seed_site.json
 │   └── build_loaders.mjs                [W3] збірка f3d-loaders.esm.js (esbuild; запускається розробником, не сервером)
@@ -107,8 +107,8 @@ odoo_addons/factory3d_constructor/
     ├── test_publish.py                  [W1] AC-50…57
     ├── test_versions.py                 [W1] AC-58…60
     ├── test_seed_hook.py                [W1] AC-02, 03, 05, 06
-    ├── test_hoot_editor.py              [W2] TestEditorHoot — запуск @factory3d_constructor/editor
-    └── test_hoot_model.py               [W3] TestModelHoot — запуск @factory3d_constructor/model
+    ├── test_hoot_editor.py              [W2] TestEditorHoot — запуск @td_constructor/editor
+    └── test_hoot_model.py               [W3] TestModelHoot — запуск @td_constructor/model
 ```
 
 ## 1. Маніфест
@@ -124,37 +124,37 @@ odoo_addons/factory3d_constructor/
     "author": "ToDo",
     "website": "https://todo.ltd",
     "license": "LGPL-3",
-    "depends": ["factory3d_base", "factory3d_viewer", "stock", "maintenance", "mrp"],
+    "depends": ["td_factory3d", "td_viewer3d", "stock", "maintenance", "mrp"],
     "data": [
-        "security/f3d_constructor_security.xml",
+        "security/td_constructor_security.xml",
         "security/ir.model.access.csv",
         "data/params.xml",
-        "data/f3d_term_data.xml",
-        "data/f3d_generic_catalog.xml",
-        "views/f3d_site_views.xml",
-        "views/f3d_layer_views.xml",
-        "views/f3d_slot_views.xml",
-        "views/f3d_equipment_variant_views.xml",
-        "views/f3d_placement_views.xml",
-        "views/f3d_check_config_views.xml",
-        "views/f3d_layout_version_views.xml",
-        "views/f3d_term_views.xml",
-        "views/f3d_inherit_views.xml",
-        "wizard/f3d_publish_wizard_views.xml",
+        "data/td_term_data.xml",
+        "data/td_generic_catalog.xml",
+        "views/td_site_views.xml",
+        "views/td_layer_views.xml",
+        "views/td_slot_views.xml",
+        "views/td_equipment_variant_views.xml",
+        "views/td_placement_views.xml",
+        "views/td_check_config_views.xml",
+        "views/td_layout_version_views.xml",
+        "views/td_term_views.xml",
+        "views/td_inherit_views.xml",
+        "wizard/td_publish_wizard_views.xml",
         "data/actions.xml",
-        "views/f3d_menus.xml",
+        "views/td_menus.xml",
     ],
     "assets": {
         "web.assets_backend": [
-            "factory3d_constructor/static/src/action/**/*",
-            "factory3d_constructor/static/src/editor/**/*",
-            "factory3d_constructor/static/src/model/**/*",
-            "factory3d_constructor/static/src/widgets/**/*",
+            "td_constructor/static/src/action/**/*",
+            "td_constructor/static/src/editor/**/*",
+            "td_constructor/static/src/model/**/*",
+            "td_constructor/static/src/widgets/**/*",
         ],
         "web.assets_unit_tests": [
-            "factory3d_constructor/static/tests/editor/**/*",
-            "factory3d_constructor/static/tests/model/**/*",
-            "factory3d_constructor/static/tests/fixtures/*.json",
+            "td_constructor/static/tests/editor/**/*",
+            "td_constructor/static/tests/model/**/*",
+            "td_constructor/static/tests/fixtures/*.json",
         ],
     },
     "post_init_hook": "post_init_hook",
@@ -167,11 +167,11 @@ odoo_addons/factory3d_constructor/
 
 Порядок `data`: групи → доступи → параметри → довідник → типові паспорти → представлення (V-04 посилається на віджети з assets) → майстер →
 дії (`actions.xml` посилається на представлення й майстер) → меню. `static/lib/**` **не** входить у bundle: `dxf-parser.min.js` вантажиться ліниво
-`loadJS("/factory3d_constructor/static/lib/dxf-parser/dxf-parser.min.js")`, `f3d-loaders.esm.js` — динамічним `import()` (DEC-06); обидва — лише коли потрібні.
+`loadJS("/td_constructor/static/lib/dxf-parser/dxf-parser.min.js")`, `f3d-loaders.esm.js` — динамічним `import()` (DEC-06); обидва — лише коли потрібні.
 Тестові `*.json` фікстури лежать у `web.assets_unit_tests` як статика й читаються HOOT через `fetch` (мок із `@odoo/hoot-mock` дозволяє лише `blob:`/`data:`,
 тож читати нативним `fetch` з чистого iframe, як `static/tests/hoot/helpers.js` переглядача).
 `external_dependencies.python` порожні навмисно: `cascadio`, `ifcopenshell`, `IfcConvert` — **необов'язкові** (R-20, DEC-04), їх відсутність не блокує встановлення.
-`application: False` — пункти меню живуть під «Завод 3D» (`factory3d_base.menu_f3d_root`, DEC-01).
+`application: False` — пункти меню живуть під «Завод 3D» (`td_factory3d.menu_td_root`, DEC-01).
 
 ## 2. Моделі
 
@@ -181,9 +181,9 @@ odoo_addons/factory3d_constructor/
 Усі Float-метри — `digits=(10, 3)`, якщо не сказано інакше. `active` — Boolean `default=True`; архівація сутності не видаляє записи Odoo.
 Кожне `create/write/unlink` layer/slot/placement/check.config викликає `site._f3d_touch(n)` (R-21): `draft_rev += 1`, `draft_changes += n`.
 
-### M-01 `f3d.site` — площадка (CD-22)
+### M-01 `td.site` — площадка (CD-22)
 
-`_name='f3d.site'`, `_description='Площадка'`, `_order='sequence, name'`, `_rec_name='name'`, `_rec_names_search=['name','code']`.
+`_name='td.site'`, `_description='Площадка'`, `_order='sequence, name'`, `_rec_name='name'`, `_rec_names_search=['name','code']`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
@@ -194,11 +194,11 @@ odoo_addons/factory3d_constructor/
 | `building_length_m`, `building_width_m`, `building_height_m` | Float | `required`, `default=60/30/8`, `>0`; `string="Довжина будівлі, м"` … (CB-12: для демо 150/72/9) |
 | `column_step_x_m`, `column_step_y_m` | Float | `default=6.0`, `>0`; крок колон (`column_grid`) |
 | `default_parent_location_id` | Many2one `stock.location` | `domain=[('usage','in',('internal','view'))]`, `check_company`; куди публікуються комірки, у яких не задано `parent_location_id` |
-| `layer_ids` | One2many `f3d.layer` `site_id` | |
-| `check_config_ids` | One2many `f3d.check.config` `site_id` | |
-| `version_ids` | One2many `f3d.layout.version` `site_id` | |
-| `active_version_id` | Many2one `f3d.layout.version` | `readonly`, `copy=False`; остання опублікована версія |
-| `draft_base_version_id` | Many2one `f3d.layout.version` | `readonly`; версія, на якій ґрунтується чернетка (публікація → нова версія; відновлення → вибрана) |
+| `layer_ids` | One2many `td.layer` `site_id` | |
+| `check_config_ids` | One2many `td.check.config` `site_id` | |
+| `version_ids` | One2many `td.layout.version` `site_id` | |
+| `active_version_id` | Many2one `td.layout.version` | `readonly`, `copy=False`; остання опублікована версія |
+| `draft_base_version_id` | Many2one `td.layout.version` | `readonly`; версія, на якій ґрунтується чернетка (публікація → нова версія; відновлення → вибрана) |
 | `draft_rev` | Integer | `default=0`, `readonly`, `copy=False`; лічильник правок (R-21) |
 | `draft_changes` | Integer | `default=0`, `readonly`; «змінено N» від `active_version_id` (обнуляється публікацією) |
 | `published_rev` | Integer | `readonly`; `draft_rev` на момент останньої публікації; `has_changes = draft_rev != published_rev` |
@@ -211,19 +211,19 @@ SQL: `_f3d_site_code_uniq = models.Constraint("UNIQUE(company_id, code)", "Ко�
 `_f3d_site_seed_uniq = models.Constraint("UNIQUE(seed_key)", "Seed-площадка вже існує.")`.
 `@api.constrains` розмірів: `"Розміри будівлі мають бути додатними."`.
 
-Методи: `create` (після супер: `_f3d_init_checks()`; якщо `context.f3d_blank` — `_f3d_init_blank()`); `_f3d_init_checks()` — 7 рядків `f3d.check.config` за таблицею R-04
+Методи: `create` (після супер: `_f3d_init_checks()`; якщо `context.f3d_blank` — `_f3d_init_blank()`); `_f3d_init_checks()` — 7 рядків `td.check.config` за таблицею R-04
 (ідемпотентно); `_f3d_init_blank()` — R-23 (5 базових шарів); `action_open_constructor()` → `{'type':'ir.actions.client','tag':'f3d_constructor','params':{'site_id':id}}`;
-`action_publish_wizard()` → створює `f3d.publish.wizard` і повертає `act_window` (M-08; права — менеджер); `_f3d_touch(n=1)` (sudo, без `write_date` каскаду);
+`action_publish_wizard()` → створює `td.publish.wizard` і повертає `act_window` (M-08; права — менеджер); `_f3d_touch(n=1)` (sudo, без `write_date` каскаду);
 `_f3d_check_rights_manager()` → `AccessError("Лише менеджер конструктора…")`.
 
-### M-02 `f3d.layer` — шар (CD-04, CD-05, CD-06, CD-09)
+### M-02 `td.layer` — шар (CD-04, CD-05, CD-06, CD-09)
 
-`_name='f3d.layer'`, `_description='Шар розкладки'`, `_order='site_id, sequence, elevation_m, id'`, `_rec_name='name'`.
+`_name='td.layer'`, `_description='Шар розкладки'`, `_order='site_id, sequence, elevation_m, id'`, `_rec_name='name'`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
 | `uid` | Char(32) | див. вище |
-| `site_id` | Many2one `f3d.site` | `required`, `ondelete='cascade'`, `index` |
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
 | `name` | Char | `required` |
 | `kind` | Selection | `building`/`Будівля`, `storage`/`Склади`, `production`/`Виробництво`, `engineering`/`Інженерні мережі`, `yard`/`Двір`, `custom`/`Свій шар`; `required`, `default='custom'` |
 | `sequence` | Integer | `default=10` |
@@ -232,8 +232,8 @@ SQL: `_f3d_site_code_uniq = models.Constraint("UNIQUE(company_id, code)", "Ко�
 | `aisle_width_m` | Float | `digits=(6,3)`, `default=3.0`, `≥0`; типова ширина проходу (для малювання проходів і перевірки `aisles_free` — розмір з `aisles`) |
 | `max_floor_load_kn_m2` | Float | `digits=(8,2)`, `default=0`; `0` = перевірка `load` для шару вимкнена (Q-09) |
 | `bounds` | Json | `False` або `[[x,y],…]` (≥3 точки, метри, простий багатокутник); `False` = габарит будівлі |
-| `allowed_slot_type_ids` | Many2many `f3d.term` | `relation='f3d_layer_slot_type_rel'`, `domain=[('term_type','=','slot_type')]`; порожньо = усі типи |
-| `edit_group_ids` | Many2many `res.groups` | `relation='f3d_layer_edit_group_rel'`; хто пише місця/розміщення шару (R-11); порожньо = лише менеджер |
+| `allowed_slot_type_ids` | Many2many `td.term` | `relation='td_layer_slot_type_rel'`, `domain=[('term_type','=','slot_type')]`; порожньо = усі типи |
+| `edit_group_ids` | Many2many `res.groups` | `relation='td_layer_edit_group_rel'`; хто пише місця/розміщення шару (R-11); порожньо = лише менеджер |
 | `color` | Char(7) | `default='#8d99ae'`, `^#[0-9a-fA-F]{6}$` |
 | `opacity` | Float | `digits=(3,2)`, `default=1.0`, `0..1` |
 | `style` | Selection | `solid`/`Суцільний`, `wire`/`Каркас`, `dashed`/`Пунктир`; `default='solid'` |
@@ -252,19 +252,19 @@ SQL: `_f3d_site_code_uniq = models.Constraint("UNIQUE(company_id, code)", "Ко�
 
 `@api.constrains`: `grid_step_m > 0` («Крок сітки має бути додатним.»); `bounds` — валідний багатокутник («Контур шару: щонайменше 3 точки.»); кожен елемент
 `aisles`/`fire_paths`/`utilities` відповідає схемі (R-22: ключі, типи, `x0<x1`, `id` унікальні в межах поля; «Прохід N: некоректні координати.»);
-`opacity` у `[0,1]`; `edit_group_ids` — лише групи привілею «Конструктор» (`privilege_f3d_constructor`) і `base.group_user`-похідні не дозволені («Лише ролі конструктора.»).
+`opacity` у `[0,1]`; `edit_group_ids` — лише групи привілею «Конструктор» (`privilege_td_constructor`) і `base.group_user`-похідні не дозволені («Лише ролі конструктора.»).
 `write` (R-11): поля `layer_content = {aisles, fire_paths, utilities, underlay_attachment_id, underlay_params}` може писати користувач з `edit_group_ids` шару;
 решту полів і `create/unlink` — лише менеджер. Видалення шару з місцями/розміщеннями — `UserError("Шар не порожній: архівуйте його або перенесіть об'єкти.")`.
 
-### M-03 `f3d.slot` — місце за шаблоном (CD-07, CD-08)
+### M-03 `td.slot` — місце за шаблоном (CD-07, CD-08)
 
-`_name='f3d.slot'`, `_description='Місце (шаблон)'`, `_order='layer_id, code_prefix'`, `_rec_name='code_prefix'`.
+`_name='td.slot'`, `_description='Місце (шаблон)'`, `_order='layer_id, code_prefix'`, `_rec_name='code_prefix'`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
 | `uid` | Char(32) | |
-| `layer_id` | Many2one `f3d.layer` | `required`, `ondelete='cascade'`, `index` |
-| `site_id` | Many2one `f3d.site` | `related='layer_id.site_id'`, `store=True`, `index=True` |
+| `layer_id` | Many2one `td.layer` | `required`, `ondelete='cascade'`, `index` |
+| `site_id` | Many2one `td.site` | `related='layer_id.site_id'`, `store=True`, `index=True` |
 | `company_id` | Many2one | related site, stored |
 | `template` | Selection | `pallet_rack`/`Паллетний стелаж`, `cantilever`/`Консольний стелаж`, `shelf`/`Полицевий стелаж / комірки фурнітури`, `floor_stack`/`Підлогове штабелювання`, `machine_spot`/`Місце під верстат`, `zone`/`Зона-контур`; `required`. Ворота/док — не входять (CD-08) |
 | `code_prefix` | Char(22) | `required`, `^[A-Z0-9]+(-[A-Z0-9]+)*$` (`FG-R1`); ≤ 22, щоб код комірки (суфікс до 9 символів) вкладався у 32 (CB-01) |
@@ -284,24 +284,24 @@ SQL: `_f3d_slot_prefix_uniq = models.Constraint("UNIQUE(site_id, code_prefix)", 
 Метод `_f3d_cells(self)` → `list[dict]` — комірки на льоту (`services.cells.generate_cells`), **не зберігаються** (DEC-15); поля елемента — R-01. Метод
 `_f3d_footprint_obb()` → OBB (R-02) для checks.
 
-### M-04 `f3d.equipment.variant` — варіант обладнання (CD-10, CD-11, CD-12, CD-15…CD-19)
+### M-04 `td.equipment.variant` — варіант обладнання (CD-10, CD-11, CD-12, CD-15…CD-19)
 
-`_name='f3d.equipment.variant'`, `_description='Варіант обладнання'`, `_order='passport_id, sequence, id'`, `_rec_name='display_name'`; `display_name` = `"%s · %s" % (passport.name, name)`.
+`_name='td.equipment.variant'`, `_description='Варіант обладнання'`, `_order='passport_id, sequence, id'`, `_rec_name='display_name'`; `display_name` = `"%s · %s" % (passport.name, name)`.
 Каталог **глобальний** (спільний для площадок; DEC-02) — без `site_id`/`company_id`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `passport_id` | Many2one `f3d.equipment.passport` | `required`, `ondelete='cascade'`, `index`, `string="Тип (паспорт)"` |
+| `passport_id` | Many2one `td.equipment.passport` | `required`, `ondelete='cascade'`, `index`, `string="Тип (паспорт)"` |
 | `name` | Char | `required`, `string="Назва варіанта"` |
 | `sequence` | Integer | `default=10` |
-| `category` | Selection | `related='passport_id.f3d_category'`, `store=True`, `readonly=True` |
+| `category` | Selection | `related='passport_id.td_category'`, `store=True`, `readonly=True` |
 | `length_mm`, `width_mm`, `height_mm` | Integer | `string="Довжина/Ширина/Висота, мм"`; `>0` (constraint); у `create`, якщо не задані, беруться з `passport.dim_l_mm/dim_w_mm/dim_h_mm` |
 | `service_front_mm`, `service_back_mm`, `service_left_mm`, `service_right_mm` | Integer | `default=0`, `≥0`; зона обслуговування: фронт/зад/ліворуч/праворуч (R-02) |
 | `front_side` | Selection | `s`/`Південь (−Y)`, `n`/`Північ (+Y)`, `e`/`Схід (+X)`, `w`/`Захід (−X)`; `default='s'`; сторона фронту при повороті 0° |
 | `anchor` | Selection | `center`/`Центр`, `front`/`Центр фронту`, `back`/`Центр тилу`, `corner`/`Лівий передній кут`; `default='center'`; точка, якою виріб прив'язаний до `(x_m,y_m)` розміщення |
 | `rotation_mode` | Selection | `q`/`0/90/180/270°`, `h`/`0/180°`, `z`/`Лише 0°`, `any`/`Будь-який кут`; `default='q'` |
-| `allowed_layer_kind_ids` | Many2many `f3d.term` | `relation='f3d_variant_layer_kind_rel'`, `domain=[('term_type','=','layer_kind')]`; порожньо = будь-який шар; за замовчуванням за категорією (R-23) |
-| `allowed_slot_type_ids` | Many2many `f3d.term` | `relation='f3d_variant_slot_type_rel'`, `domain=[('term_type','=','slot_type')]`; порожньо = без обмежень |
+| `allowed_layer_kind_ids` | Many2many `td.term` | `relation='td_variant_layer_kind_rel'`, `domain=[('term_type','=','layer_kind')]`; порожньо = будь-який шар; за замовчуванням за категорією (R-23) |
+| `allowed_slot_type_ids` | Many2many `td.term` | `relation='td_variant_slot_type_rel'`, `domain=[('term_type','=','slot_type')]`; порожньо = без обмежень |
 | `utilities` | Json | `default=[]`; точки підключення `{kind: 'electric'|'air'|'dust', x_mm, y_mm, z_mm}` у локальній системі виробу (початок — центр габариту, X вздовж довжини, Y вздовж ширини; R-02) |
 | `power_kw` | Float | `digits=(8,2)`, `≥0`; у `create` береться з `passport.power_kw`, якщо не задано |
 | `panel` | Char(64) | щит живлення («ГРЩ-1», `string="Щит"`) |
@@ -324,19 +324,19 @@ SQL: `_f3d_slot_prefix_uniq = models.Constraint("UNIQUE(site_id, code_prefix)", 
 `_f3d_convert_model()` (R-20; нічого не кидає, повертає `{'ok': bool, 'status': str, 'message': str}`); `_f3d_effective_floor_load()`; `_f3d_local_geometry()` (R-02);
 `action_clear_model()` (скидає вкладення й мета, `model_status='none'`; право — технолог/менеджер); `action_retry_convert()` (повторює `_f3d_convert_model()`); `unlink` — `UserError`, якщо є розміщення (архівуйте варіант).
 
-### M-05 `f3d.placement` — розміщення обладнання (CD-10, CD-13)
+### M-05 `td.placement` — розміщення обладнання (CD-10, CD-13)
 
-`_name='f3d.placement'`, `_description='Розміщення обладнання'`, `_order='layer_id, code'`, `_rec_name='code'`.
+`_name='td.placement'`, `_description='Розміщення обладнання'`, `_order='layer_id, code'`, `_rec_name='code'`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
 | `uid` | Char(32) | |
-| `layer_id` | Many2one `f3d.layer` | `required`, `ondelete='cascade'`, `index` |
+| `layer_id` | Many2one `td.layer` | `required`, `ondelete='cascade'`, `index` |
 | `site_id`, `company_id` | Many2one | related, stored |
-| `variant_id` | Many2one `f3d.equipment.variant` | `required`, `ondelete='restrict'`, `index` |
-| `slot_id` | Many2one `f3d.slot` | `ondelete='set null'`, `domain=[('layer_id','=',layer_id)]`; місце під верстат / стелаж, в який поставлено |
+| `variant_id` | Many2one `td.equipment.variant` | `required`, `ondelete='restrict'`, `index` |
+| `slot_id` | Many2one `td.slot` | `ondelete='set null'`, `domain=[('layer_id','=',layer_id)]`; місце під верстат / стелаж, в який поставлено |
 | `cell_code` | Char(32) | необов'язково: комірка стелажа `slot_id` (R-04 fits/load); має бути серед `slot._f3d_cells()` |
-| `code` | Char(32) | `required`, `^[A-Z0-9]+(-[A-Z0-9]+)*$`; майбутній `f3d_code` обладнання (CB-01) |
+| `code` | Char(32) | `required`, `^[A-Z0-9]+(-[A-Z0-9]+)*$`; майбутній `td_code` обладнання (CB-01) |
 | `name` | Char | `required`; майбутня назва `maintenance.equipment` |
 | `x_m`, `y_m` | Float | точка прив'язки (R-02) |
 | `rotation` | Float | `digits=(6,2)`, `default=0`, `[0,360)`; нормалізується `%360`; допустимість — `variant.rotation_mode` (перевірка `fits`, не constraint, щоб редактор міг показати проблему) |
@@ -350,37 +350,37 @@ SQL: `_f3d_placement_code_uniq = models.Constraint("UNIQUE(site_id, code)", "К�
 `@api.constrains('variant_id','layer_id')`: `variant.length_mm>0`. Методи: `_f3d_obb()`, `_f3d_service_obb()` (R-02); `action_show_in_3d()` → `equipment_id.action_f3d_show()` або
 `UserError("Об'єкт ще не опубліковано в Odoo.")`.
 
-### M-06 `f3d.check.config` — налаштування перевірки (CD-13, CD-14)
+### M-06 `td.check.config` — налаштування перевірки (CD-13, CD-14)
 
-`_name='f3d.check.config'`, `_description='Перевірка розкладки'`, `_order='site_id, sequence'`.
+`_name='td.check.config'`, `_description='Перевірка розкладки'`, `_order='site_id, sequence'`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `site_id` | Many2one `f3d.site` | `required`, `ondelete='cascade'` |
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'` |
 | `company_id` | Many2one | related, stored |
 | `check_key` | Selection | `fits`/`Вміщується`, `collide`/`Перетини`, `service_free`/`Зона обслуговування вільна`, `aisles_free`/`Проходи вільні`, `load`/`Навантаження`, `utility_reach`/`Досяжність підключення`, `fire`/`Пожежні проходи й виходи`; `required` |
 | `sequence` | Integer | порядок за списком вище (10…70) |
 | `enabled` | Boolean | `default=True` |
 | `mode` | Selection | `warn`/`Попередження`, `block`/`Заборона`; `required`, `default` — R-04 |
-| `params` | Json | `default={}`; `utility_reach`: `{max_m: float}`; `collide`/`fits`/…: `{tolerance_mm: int}` (за замовчуванням `factory3d.constructor.eps_mm`) |
+| `params` | Json | `default={}`; `utility_reach`: `{max_m: float}`; `collide`/`fits`/…: `{tolerance_mm: int}` (за замовчуванням `td.constructor.eps_mm`) |
 
 SQL: `_f3d_check_uniq = models.Constraint("UNIQUE(site_id, check_key)", "Перевірка вже налаштована для площадки.")`.
 `@api.constrains('params')`: `utility_reach.max_m > 0`, `tolerance_mm ≥ 0`.
 
-### M-07 `f3d.layout.version` — версія планування (CD-21)
+### M-07 `td.layout.version` — версія планування (CD-21)
 
-`_name='f3d.layout.version'`, `_description='Версія планування'`, `_order='site_id, n desc'`, `_rec_name='display_name'` (`"v%d · %s" % (n, site.name)`).
+`_name='td.layout.version'`, `_description='Версія планування'`, `_order='site_id, n desc'`, `_rec_name='display_name'` (`"v%d · %s" % (n, site.name)`).
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `site_id` | Many2one `f3d.site` | `required`, `ondelete='cascade'`, `index` |
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
 | `company_id` | Many2one | related, stored |
 | `n` | Integer | `required`, `readonly`; номер за площадкою: `max(n)+1`, UNIQUE `(site_id, n)` |
 | `note` | Text | нотатка публікації |
 | `published_by_id` | Many2one `res.users` | `readonly` |
 | `published_at` | Datetime | `readonly`, `default=now` |
 | `state` | Selection | `active`/`Діюча`, `superseded`/`Замінена`; `default='active'` (§10) |
-| `snapshot_id` | Many2one `ir.attachment` | знімок (JSON, R-14), `res_model='f3d.layout.version'`, `res_id=id`, `type='binary'`, `mimetype='application/json'`; `ondelete='set null'` |
+| `snapshot_id` | Many2one `ir.attachment` | знімок (JSON, R-14), `res_model='td.layout.version'`, `res_id=id`, `type='binary'`, `mimetype='application/json'`; `ondelete='set null'` |
 | `snapshot_sha1` | Char(40) | `readonly` |
 | `draft_rev` | Integer | `site.draft_rev` на момент публікації |
 | `slot_count`, `cell_count`, `placement_count`, `layer_count` | Integer | `readonly` |
@@ -388,66 +388,66 @@ SQL: `_f3d_check_uniq = models.Constraint("UNIQUE(site_id, check_key)", "Пер�
 | `report` | Json | `{created: [{model, code, id}], updated: [...], archived: [...], warnings: [issue,…]}` |
 | `is_seed` | Boolean | `readonly`; v1 з seed (R-24) |
 
-Права: створює лише `services.publish.apply_plan` і хук seed (через `sudo`); `write` дозволений тільки для `note` менеджеру; `unlink` — лише `group_f3d_admin` (історію не стираємо).
+Права: створює лише `services.publish.apply_plan` і хук seed (через `sudo`); `write` дозволений тільки для `note` менеджеру; `unlink` — лише `group_td_admin` (історію не стираємо).
 Методи: `action_restore_draft()` (R-14; менеджер); `action_download_snapshot()` → `ir.actions.act_url` на `/web/content/<snapshot_id>?download=true`.
 
-### M-08 `f3d.publish.wizard` — майстер публікації (TransientModel; CD-20)
+### M-08 `td.publish.wizard` — майстер публікації (TransientModel; CD-20)
 
-`_name='f3d.publish.wizard'`, `_description='Публікація розкладки'`.
+`_name='td.publish.wizard'`, `_description='Публікація розкладки'`.
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `site_id` | Many2one `f3d.site` | `required`, `readonly` |
+| `site_id` | Many2one `td.site` | `required`, `readonly` |
 | `note` | Text | `string="Нотатка до версії"` |
 | `draft_rev` | Integer | `readonly`; `site.draft_rev` на момент побудови плану (захист від застарілого майстра) |
 | `state` | Selection | `preview`/`Попередній перегляд`, `done`/`Опубліковано`; `default='preview'` |
-| `line_ids` | One2many `f3d.publish.wizard.line` | `wizard_id` |
-| `issue_ids` | One2many `f3d.publish.wizard.issue` | `wizard_id` |
+| `line_ids` | One2many `td.publish.wizard.line` | `wizard_id` |
+| `issue_ids` | One2many `td.publish.wizard.issue` | `wizard_id` |
 | `n_create`, `n_update`, `n_archive`, `n_unchanged`, `n_warn`, `n_block` | Integer | `compute`; `n_archive` — лише відмічені |
 | `can_publish` | Boolean | `compute`: `n_block == 0` і `site.has_changes` і `publish_enabled` |
-| `version_id` | Many2one `f3d.layout.version` | після публікації |
+| `version_id` | Many2one `td.layout.version` | після публікації |
 
 Методи: `default_get` не використовується; майстер створює `site.action_publish_wizard()` → `services.publish.build_plan(site)` → рядки/зауваження (R-12). `action_confirm()`: перевірка
 `draft_rev == site.draft_rev` (інакше `UserError("Чернетка змінилась. Закрийте вікно й відкрийте майстер знову.")`), перерахунок плану, `services.publish.apply_plan(...)`,
 `state='done'`, `version_id`, повертає `act_window` версії. `action_cancel()` — закрити без змін.
 
-### M-09 `f3d.publish.wizard.line` — рядок плану
+### M-09 `td.publish.wizard.line` — рядок плану
 
-`_name='f3d.publish.wizard.line'`, `_order='kind, model, code'`. Поля: `wizard_id` (Many2one, cascade); `kind` (Selection `create`/«Буде створено», `update`/«Буде оновлено»,
+`_name='td.publish.wizard.line'`, `_order='kind, model, code'`. Поля: `wizard_id` (Many2one, cascade); `kind` (Selection `create`/«Буде створено», `update`/«Буде оновлено»,
 `archive`/«Пропонуємо архівувати»); `res_model` (Selection `stock.location`, `maintenance.equipment`, `mrp.workcenter`); `code` (Char); `name` (Char); `res_id` (Integer, 0 для create);
-`source_uid` (Char; `uid` місця/розміщення, `''` для archive); `changes` (Text: «f3d_capacity: 0 → 4; parent: WH/Stock → WH/Stock/FG»; для create — коротка картка «місткість 4, вид pallet_cell»);
+`source_uid` (Char; `uid` місця/розміщення, `''` для archive); `changes` (Text: «td_capacity: 0 → 4; parent: WH/Stock → WH/Stock/FG»; для create — коротка картка «місткість 4, вид pallet_cell»);
 `selected` (Boolean; `default=True` для create/update, **`False` для archive**; для `blocked=True` змінювати не можна); `blocked` (Boolean); `blocked_reason` (Char: «Є залишки: 12.0 од.», «Код зайнятий записом поза площадкою»).
 
-### M-10 `f3d.publish.wizard.issue` — зауваження перевірок
+### M-10 `td.publish.wizard.issue` — зауваження перевірок
 
-`_name='f3d.publish.wizard.issue'`, `_order='severity desc, check_key, id'`. Поля: `wizard_id`; `check_key` (Selection як у M-06 плюс `conflict`/«Конфлікт кодів», `data`/«Дані»); `severity` (`warn`/`block`);
-`layer_id` (Many2one `f3d.layer`); `codes` (Char, через кому); `message` (Char).
+`_name='td.publish.wizard.issue'`, `_order='severity desc, check_key, id'`. Поля: `wizard_id`; `check_key` (Selection як у M-06 плюс `conflict`/«Конфлікт кодів», `data`/«Дані»); `severity` (`warn`/`block`);
+`layer_id` (Many2one `td.layer`); `codes` (Char, через кому); `message` (Char).
 
-### M-11 `f3d.term` — довідник конструктора (DEC-02)
+### M-11 `td.term` — довідник конструктора (DEC-02)
 
-`_name='f3d.term'`, `_description='Довідник конструктора'`, `_order='term_type, sequence'`, `_rec_name='name'`. Поля: `term_type` (Selection `layer_kind`/«Вид шару», `slot_type`/«Тип місця»; `required`),
-`key` (Char(32), `required`; ключі — як значення `f3d.layer.kind` та `f3d.slot.template`), `name` (Char, `required`, `translate=False`), `sequence`, `active`.
-SQL: `UNIQUE(term_type, key)`. Дані — `data/f3d_term_data.xml` (12 записів, §5.1), `noupdate="0"`; створення/зміна — менеджер, видалення — лише `group_f3d_admin`.
+`_name='td.term'`, `_description='Довідник конструктора'`, `_order='term_type, sequence'`, `_rec_name='name'`. Поля: `term_type` (Selection `layer_kind`/«Вид шару», `slot_type`/«Тип місця»; `required`),
+`key` (Char(32), `required`; ключі — як значення `td.layer.kind` та `td.slot.template`), `name` (Char, `required`, `translate=False`), `sequence`, `active`.
+SQL: `UNIQUE(term_type, key)`. Дані — `data/td_term_data.xml` (12 записів, §5.1), `noupdate="0"`; створення/зміна — менеджер, видалення — лише `group_td_admin`.
 
-### M-12 `f3d.equipment.passport` — розширення (CB-07, CD-10)
+### M-12 `td.equipment.passport` — розширення (CB-07, CD-10)
 
-`_inherit='f3d.equipment.passport'`. Додані поля: `f3d_category` (Selection `machine`/«Верстат», `rack`/«Стелаж», `forklift`/«Навантажувач», `conveyor`/«Конвеєр»,
+`_inherit='td.equipment.passport'`. Додані поля: `td_category` (Selection `machine`/«Верстат», `rack`/«Стелаж», `forklift`/«Навантажувач», `conveyor`/«Конвеєр»,
 `panel`/«Шафа/щит», `robot`/«Робот», `other`/«Інше»; `default='other'`, `index`, `string="Категорія (конструктор)"`; від неї залежить умовна модель, CD-18);
-`variant_ids` (One2many `f3d.equipment.variant` `passport_id`); `variant_count` (Integer, `compute`). Метод `action_view_variants()` → `act_window` варіантів паспорта.
-Існуючі 93 паспорти base отримують `f3d_category` у `post_init_hook` за таблицею ролі→категорії (§5.3; решта — `other`).
+`variant_ids` (One2many `td.equipment.variant` `passport_id`); `variant_count` (Integer, `compute`). Метод `action_view_variants()` → `act_window` варіантів паспорта.
+Існуючі 93 паспорти base отримують `td_category` у `post_init_hook` за таблицею ролі→категорії (§5.3; решта — `other`).
 
 ### M-13 `stock.location` — розширення
 
-Поля: `f3d_site_id` (Many2one `f3d.site`, `index`, `copy=False`, `ondelete='set null'`, `readonly`, `string="Площадка конструктора"`) — запис керується конструктором (CC-01);
-`f3d_slot_uid` (Char(32), `copy=False`, `readonly`) — `uid` місця, з якого створено/оновлено. Інших змін немає. Права на ці поля — як у base R-04 (пише лише `publish` під `sudo`).
+Поля: `td_site_id` (Many2one `td.site`, `index`, `copy=False`, `ondelete='set null'`, `readonly`, `string="Площадка конструктора"`) — запис керується конструктором (CC-01);
+`td_slot_uid` (Char(32), `copy=False`, `readonly`) — `uid` місця, з якого створено/оновлено. Інших змін немає. Права на ці поля — як у base R-04 (пише лише `publish` під `sudo`).
 
 ### M-14 `maintenance.equipment` — розширення
 
-Поля: `f3d_site_id` (як у M-13), `f3d_placement_uid` (Char(32)). Метод `action_f3d_show()` — з base (CB-02), не міняється.
+Поля: `td_site_id` (як у M-13), `td_placement_uid` (Char(32)). Метод `action_f3d_show()` — з base (CB-02), не міняється.
 
 ### M-15 `mrp.workcenter` — розширення
 
-Поля: `f3d_site_id` (як у M-13). Зв'язок `maintenance.equipment.workcenter_id` ставиться, лише якщо поле існує в реєстрі (`"workcenter_id" in env["maintenance.equipment"]._fields`; його додає `mrp_maintenance`, DEC-16).
+Поля: `td_site_id` (як у M-13). Зв'язок `maintenance.equipment.workcenter_id` ставиться, лише якщо поле існує в реєстрі (`"workcenter_id" in env["maintenance.equipment"]._fields`; його додає `mrp_maintenance`, DEC-16).
 
 ## 3. Представлення й меню
 
@@ -455,31 +455,31 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/f3d_term_data.xml` (12 зап�
 
 | V | XML-id (суфікси `view_f3d_…`) | Тип / модель | Структура |
 |---|---|---|---|
-| V-01 | `site_form`, `site_list`, `site_search` | form/list/search `f3d.site` | Шапка: кнопки «Відкрити в конструкторі» (`action_open_constructor`), «Опублікувати…» (`action_publish_wizard`, `groups=group_f3d_constructor_manager`, `invisible="not has_changes"`). Поля: `name`, `code`, `company_id` (`groups=base.group_multi_company`), `building_*_m`, `column_step_*_m`, `default_parent_location_id`, `seed_key` (readonly). Кнопки-лічильники: шари, місця, розміщення, версії. Вкладки: «Шари» (list `layer_ids`: `name`, `kind`, `elevation_m`), «Перевірки» (editable list `check_config_ids`: `check_key` readonly, `enabled`, `mode`, `params`), «Версії» (readonly list). Рядок стану: «Чернетка · змінено N» (`draft_changes`), «Діюча: vN» |
-| V-02 | `layer_form`, `layer_list` | form/list `f3d.layer` | Групи: «Основне» (`name`, `kind`, `site_id`, `elevation_m`, `grid_step_m`, `aisle_width_m`, `max_floor_load_kn_m2`), «Вигляд» (`color` віджет `color`, `opacity`, `style`, `visible`), «Права» (`edit_group_ids` `many2many_tags`, `domain=[('privilege_id','=',%(privilege_f3d_constructor)d)]`), «Типи місць» (`allowed_slot_type_ids` tags), вкладки «Контур» (`bounds`), «Проходи» (`aisles`), «Пожежні проходи» (`fire_paths`), «Мережі» (`utilities`), «Підкладка» (`underlay_attachment_id`, `underlay_format`, `underlay_status`, `underlay_params`). Поля, окрім `layer_content`, — `readonly="not is_manager"` (`is_manager` — `compute`, `has_group` менеджера) |
-| V-03 | `slot_form`, `slot_list`, `slot_search` | `f3d.slot` | Форма: `template`, `code_prefix`, `layer_id`, `x_m`, `y_m`, `rotation`, `parent_location_id`, `params`, `overrides`, `cell_count`, вкладка «Комірки» (`cells_html`). Пошук: `code_prefix`, `layer_id`, групування за шаром/шаблоном. Редагування — рядок JSON (CD-03: точні числа; обидві правки пишуть ті самі записи) |
-| V-04 | `equipment_variant_form`, `_list`, `_kanban`, `_search` | `f3d.equipment.variant` | **W3.** Форма: ліворуч `name`, `passport_id`, `category`, блок «Габарити й обслуговування» (`length_mm`, `width_mm`, `height_mm`, 4 поля `service_*_mm`), «Орієнтація» (`front_side`, `anchor`, `rotation_mode`), «Де можна ставити» (`allowed_layer_kind_ids`, `allowed_slot_type_ids` tags), «Підключення» (`utilities`, `power_kw`, `panel`), «Маса» (`weight_kg`, `floor_load_kn_m2`), `create_workcenter`; праворуч — віджет `<field name="model_glb_id" widget="f3d_model_preview"/>` і `<widget name="f3d_model_upload"/>` (статус, одиниці, вісь, кнопка «Підставити габарити з моделі», «Спростити», «Видалити модель»), `model_warning` (`alert`), `model_status` (`statusbar`-бейдж). Список: `name`, `passport_id`, `category`, `L×W×H`, `power_kw`, `model_status` (декорація `danger` для `error`, `warning` для `pending_conversion`). Канбан: `image`, `name`, габарит, статус. Діалог із конструктора відкривається `act_window` `target='new'` |
-| V-05 | `placement_form`, `placement_list` | `f3d.placement` | `code`, `name`, `layer_id`, `variant_id`, `slot_id`, `cell_code`, `x_m`, `y_m`, `rotation`, `equipment_id` і `workcenter_id` (readonly), кнопка «Показати в 3D» (`action_show_in_3d`, `invisible="not equipment_id"`) |
-| V-06 | `check_config_list` | editable list `f3d.check.config` | `check_key` (readonly), `enabled`, `mode`, `params` |
-| V-07 | `layout_version_list`, `_form` | `f3d.layout.version` | Список: `n`, `published_at`, `published_by_id`, `note`, `state`, лічильники. Форма (readonly): шапка кнопки «Повернути чернетку до цієї версії» (`action_restore_draft`, `invisible="state == 'active' and site_id.draft_base_version_id == id"`, менеджер, з підтвердженням `confirm="…"`), «Завантажити знімок»; вкладка «Звіт» (`report`) |
-| V-08 | `publish_wizard_form` | form `f3d.publish.wizard` | Рядок підсумку «Буде створено: N · Буде оновлено: M · Пропонуємо архівувати: K · Без змін: U»; `alert` червоний при `n_block>0` («Публікацію заборонено: …»), жовтий при `n_warn>0`. Вкладки: «Буде створено / оновлено» (list `line_ids` з `kind != 'archive'`: `res_model`, `code`, `name`, `changes`, `selected`), «Пропонуємо архівувати (лише пропозиція, нічого не видаляється)» (`kind == 'archive'`: `selected` редагований, за замовчуванням не відмічений, `blocked_reason`), «Зауваження перевірок» (`issue_ids`). Поле `note`. Кнопки: «Підтвердити й опублікувати» (`action_confirm`, `class="btn-primary"`, `invisible="not can_publish"`), «Скасувати» (`special="cancel"`) |
-| V-09 | `term_list` | editable list `f3d.term` | `term_type`, `key`, `name`, `sequence` |
-| V-10 | `passport_form_inherit` | inherit `f3d.equipment.passport` (base `view_f3d_equipment_passport_form`) | `f3d_category` після `role`; вкладка «Варіанти» (list `variant_ids`: `name`, `L×W×H`, `model_status`), кнопка-лічильник `variant_count` |
-| V-11 | `stock_location_form_inherit` | inherit `stock.location` | readonly `f3d_site_id`, `f3d_slot_uid` у групі «Завод 3D» (після `f3d_code`) |
-| V-12 | `maintenance_equipment_form_inherit` | inherit `maintenance.equipment` | readonly `f3d_site_id`, `f3d_placement_uid` у вкладці «Завод 3D» |
-| V-13 | `f3d_menus.xml` | меню й дії | нижче |
+| V-01 | `site_form`, `site_list`, `site_search` | form/list/search `td.site` | Шапка: кнопки «Відкрити в конструкторі» (`action_open_constructor`), «Опублікувати…» (`action_publish_wizard`, `groups=group_td_constructor_manager`, `invisible="not has_changes"`). Поля: `name`, `code`, `company_id` (`groups=base.group_multi_company`), `building_*_m`, `column_step_*_m`, `default_parent_location_id`, `seed_key` (readonly). Кнопки-лічильники: шари, місця, розміщення, версії. Вкладки: «Шари» (list `layer_ids`: `name`, `kind`, `elevation_m`), «Перевірки» (editable list `check_config_ids`: `check_key` readonly, `enabled`, `mode`, `params`), «Версії» (readonly list). Рядок стану: «Чернетка · змінено N» (`draft_changes`), «Діюча: vN» |
+| V-02 | `layer_form`, `layer_list` | form/list `td.layer` | Групи: «Основне» (`name`, `kind`, `site_id`, `elevation_m`, `grid_step_m`, `aisle_width_m`, `max_floor_load_kn_m2`), «Вигляд» (`color` віджет `color`, `opacity`, `style`, `visible`), «Права» (`edit_group_ids` `many2many_tags`, `domain=[('privilege_id','=',%(privilege_td_constructor)d)]`), «Типи місць» (`allowed_slot_type_ids` tags), вкладки «Контур» (`bounds`), «Проходи» (`aisles`), «Пожежні проходи» (`fire_paths`), «Мережі» (`utilities`), «Підкладка» (`underlay_attachment_id`, `underlay_format`, `underlay_status`, `underlay_params`). Поля, окрім `layer_content`, — `readonly="not is_manager"` (`is_manager` — `compute`, `has_group` менеджера) |
+| V-03 | `slot_form`, `slot_list`, `slot_search` | `td.slot` | Форма: `template`, `code_prefix`, `layer_id`, `x_m`, `y_m`, `rotation`, `parent_location_id`, `params`, `overrides`, `cell_count`, вкладка «Комірки» (`cells_html`). Пошук: `code_prefix`, `layer_id`, групування за шаром/шаблоном. Редагування — рядок JSON (CD-03: точні числа; обидві правки пишуть ті самі записи) |
+| V-04 | `equipment_variant_form`, `_list`, `_kanban`, `_search` | `td.equipment.variant` | **W3.** Форма: ліворуч `name`, `passport_id`, `category`, блок «Габарити й обслуговування» (`length_mm`, `width_mm`, `height_mm`, 4 поля `service_*_mm`), «Орієнтація» (`front_side`, `anchor`, `rotation_mode`), «Де можна ставити» (`allowed_layer_kind_ids`, `allowed_slot_type_ids` tags), «Підключення» (`utilities`, `power_kw`, `panel`), «Маса» (`weight_kg`, `floor_load_kn_m2`), `create_workcenter`; праворуч — віджет `<field name="model_glb_id" widget="f3d_model_preview"/>` і `<widget name="f3d_model_upload"/>` (статус, одиниці, вісь, кнопка «Підставити габарити з моделі», «Спростити», «Видалити модель»), `model_warning` (`alert`), `model_status` (`statusbar`-бейдж). Список: `name`, `passport_id`, `category`, `L×W×H`, `power_kw`, `model_status` (декорація `danger` для `error`, `warning` для `pending_conversion`). Канбан: `image`, `name`, габарит, статус. Діалог із конструктора відкривається `act_window` `target='new'` |
+| V-05 | `placement_form`, `placement_list` | `td.placement` | `code`, `name`, `layer_id`, `variant_id`, `slot_id`, `cell_code`, `x_m`, `y_m`, `rotation`, `equipment_id` і `workcenter_id` (readonly), кнопка «Показати в 3D» (`action_show_in_3d`, `invisible="not equipment_id"`) |
+| V-06 | `check_config_list` | editable list `td.check.config` | `check_key` (readonly), `enabled`, `mode`, `params` |
+| V-07 | `layout_version_list`, `_form` | `td.layout.version` | Список: `n`, `published_at`, `published_by_id`, `note`, `state`, лічильники. Форма (readonly): шапка кнопки «Повернути чернетку до цієї версії» (`action_restore_draft`, `invisible="state == 'active' and site_id.draft_base_version_id == id"`, менеджер, з підтвердженням `confirm="…"`), «Завантажити знімок»; вкладка «Звіт» (`report`) |
+| V-08 | `publish_wizard_form` | form `td.publish.wizard` | Рядок підсумку «Буде створено: N · Буде оновлено: M · Пропонуємо архівувати: K · Без змін: U»; `alert` червоний при `n_block>0` («Публікацію заборонено: …»), жовтий при `n_warn>0`. Вкладки: «Буде створено / оновлено» (list `line_ids` з `kind != 'archive'`: `res_model`, `code`, `name`, `changes`, `selected`), «Пропонуємо архівувати (лише пропозиція, нічого не видаляється)» (`kind == 'archive'`: `selected` редагований, за замовчуванням не відмічений, `blocked_reason`), «Зауваження перевірок» (`issue_ids`). Поле `note`. Кнопки: «Підтвердити й опублікувати» (`action_confirm`, `class="btn-primary"`, `invisible="not can_publish"`), «Скасувати» (`special="cancel"`) |
+| V-09 | `term_list` | editable list `td.term` | `term_type`, `key`, `name`, `sequence` |
+| V-10 | `passport_form_inherit` | inherit `td.equipment.passport` (base `view_td_equipment_passport_form`) | `td_category` після `role`; вкладка «Варіанти» (list `variant_ids`: `name`, `L×W×H`, `model_status`), кнопка-лічильник `variant_count` |
+| V-11 | `stock_location_form_inherit` | inherit `stock.location` | readonly `td_site_id`, `td_slot_uid` у групі «Завод 3D» (після `td_code`) |
+| V-12 | `maintenance_equipment_form_inherit` | inherit `maintenance.equipment` | readonly `td_site_id`, `td_placement_uid` у вкладці «Завод 3D» |
+| V-13 | `td_menus.xml` | меню й дії | нижче |
 
-Дії й меню (DEC-01, DEC-19; `groups=factory3d_base.group_f3d_user`, якщо не сказано):
+Дії й меню (DEC-01, DEC-19; `groups=td_factory3d.group_td_user`, якщо не сказано):
 
 | XML-id | Назва | Батько | sequence | Дія |
 |---|---|---|---|---|
-| `menu_f3d_constructor` | Конструктор | `factory3d_base.menu_f3d_root` | 12 | `action_f3d_constructor` (`ir.actions.client`, `tag='f3d_constructor'`, `name='Конструктор'`, `target='current'`, `params={}`) |
-| `menu_f3d_constructor_plan` | Планування | `factory3d_base.menu_f3d_root` | 14 | — (папка) |
-| `menu_f3d_site` | Площадки | `menu_f3d_constructor_plan` | 10 | `action_f3d_site` (`list,form`) |
-| `menu_f3d_layer` | Шари | `menu_f3d_constructor_plan` | 20 | `action_f3d_layer` (`list,form`; контекст `search_default_group_site`) |
-| `menu_f3d_variant` | Каталог варіантів | `menu_f3d_constructor_plan` | 30 | `action_f3d_equipment_variant` (`kanban,list,form`) |
-| `menu_f3d_version` | Версії планування | `menu_f3d_constructor_plan` | 40 | `action_f3d_layout_version` (`list,form`) |
-| `menu_f3d_constructor_terms` | Довідники конструктора | `factory3d_base.menu_f3d_config` | 14 | `action_f3d_term` (`groups=group_f3d_constructor_manager`) |
+| `menu_td_constructor` | Конструктор | `td_factory3d.menu_td_root` | 12 | `action_td_constructor` (`ir.actions.client`, `tag='f3d_constructor'`, `name='Конструктор'`, `target='current'`, `params={}`) |
+| `menu_td_constructor_plan` | Планування | `td_factory3d.menu_td_root` | 14 | — (папка) |
+| `menu_td_site` | Площадки | `menu_td_constructor_plan` | 10 | `action_td_site` (`list,form`) |
+| `menu_td_layer` | Шари | `menu_td_constructor_plan` | 20 | `action_td_layer` (`list,form`; контекст `search_default_group_site`) |
+| `menu_td_variant` | Каталог варіантів | `menu_td_constructor_plan` | 30 | `action_td_equipment_variant` (`kanban,list,form`) |
+| `menu_td_version` | Версії планування | `menu_td_constructor_plan` | 40 | `action_td_layout_version` (`list,form`) |
+| `menu_td_constructor_terms` | Довідники конструктора | `td_factory3d.menu_td_config` | 14 | `action_td_term` (`groups=group_td_constructor_manager`) |
 
 Дія майстра `action_f3d_publish_wizard` — `target='new'`, створюється з `site.action_publish_wizard()`.
 
@@ -487,96 +487,96 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/f3d_term_data.xml` (12 зап�
 
 ### 4.1 `security/ir.model.access.csv` (повністю)
 
-Скорочення груп: `U`=`factory3d_base.group_f3d_user`, `M`=`group_f3d_constructor_manager`, `T`=`…_technologist`, `S`=`…_storekeeper`, `E`=`…_engineer`, `A`=`factory3d_base.group_f3d_admin` (у файлі — повні xml-id).
+Скорочення груп: `U`=`td_factory3d.group_td_user`, `M`=`group_td_constructor_manager`, `T`=`…_technologist`, `S`=`…_storekeeper`, `E`=`…_engineer`, `A`=`td_factory3d.group_td_admin` (у файлі — повні xml-id).
 
 ```
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_site_u,f3d.site user,model_f3d_site,U,1,0,0,0
-access_f3d_site_m,f3d.site manager,model_f3d_site,M,1,1,1,1
-access_f3d_layer_u,f3d.layer user,model_f3d_layer,U,1,0,0,0
-access_f3d_layer_t,f3d.layer technologist,model_f3d_layer,T,1,1,0,0
-access_f3d_layer_s,f3d.layer storekeeper,model_f3d_layer,S,1,1,0,0
-access_f3d_layer_e,f3d.layer engineer,model_f3d_layer,E,1,1,0,0
-access_f3d_layer_m,f3d.layer manager,model_f3d_layer,M,1,1,1,1
-access_f3d_slot_u,f3d.slot user,model_f3d_slot,U,1,0,0,0
-access_f3d_slot_t,f3d.slot technologist,model_f3d_slot,T,1,1,1,1
-access_f3d_slot_s,f3d.slot storekeeper,model_f3d_slot,S,1,1,1,1
-access_f3d_slot_e,f3d.slot engineer,model_f3d_slot,E,1,1,1,1
-access_f3d_slot_m,f3d.slot manager,model_f3d_slot,M,1,1,1,1
-access_f3d_placement_u,f3d.placement user,model_f3d_placement,U,1,0,0,0
-access_f3d_placement_t,f3d.placement technologist,model_f3d_placement,T,1,1,1,1
-access_f3d_placement_s,f3d.placement storekeeper,model_f3d_placement,S,1,1,1,1
-access_f3d_placement_e,f3d.placement engineer,model_f3d_placement,E,1,1,1,1
-access_f3d_placement_m,f3d.placement manager,model_f3d_placement,M,1,1,1,1
-access_f3d_variant_u,f3d.equipment.variant user,model_f3d_equipment_variant,U,1,0,0,0
-access_f3d_variant_t,f3d.equipment.variant technologist,model_f3d_equipment_variant,T,1,1,1,0
-access_f3d_variant_m,f3d.equipment.variant manager,model_f3d_equipment_variant,M,1,1,1,1
-access_f3d_check_config_u,f3d.check.config user,model_f3d_check_config,U,1,0,0,0
-access_f3d_check_config_m,f3d.check.config manager,model_f3d_check_config,M,1,1,1,1
-access_f3d_layout_version_u,f3d.layout.version user,model_f3d_layout_version,U,1,0,0,0
-access_f3d_layout_version_m,f3d.layout.version manager,model_f3d_layout_version,M,1,1,0,0
-access_f3d_layout_version_a,f3d.layout.version admin,model_f3d_layout_version,A,1,1,0,1
-access_f3d_term_u,f3d.term user,model_f3d_term,U,1,0,0,0
-access_f3d_term_m,f3d.term manager,model_f3d_term,M,1,1,1,0
-access_f3d_term_a,f3d.term admin,model_f3d_term,A,1,1,1,1
-access_f3d_publish_wizard_m,f3d.publish.wizard manager,model_f3d_publish_wizard,M,1,1,1,1
-access_f3d_publish_wizard_line_m,f3d.publish.wizard.line manager,model_f3d_publish_wizard_line,M,1,1,1,1
-access_f3d_publish_wizard_issue_m,f3d.publish.wizard.issue manager,model_f3d_publish_wizard_issue,M,1,1,1,1
+access_td_site_u,td.site user,model_td_site,U,1,0,0,0
+access_td_site_m,td.site manager,model_td_site,M,1,1,1,1
+access_td_layer_u,td.layer user,model_td_layer,U,1,0,0,0
+access_td_layer_t,td.layer technologist,model_td_layer,T,1,1,0,0
+access_td_layer_s,td.layer storekeeper,model_td_layer,S,1,1,0,0
+access_td_layer_e,td.layer engineer,model_td_layer,E,1,1,0,0
+access_td_layer_m,td.layer manager,model_td_layer,M,1,1,1,1
+access_td_slot_u,td.slot user,model_td_slot,U,1,0,0,0
+access_td_slot_t,td.slot technologist,model_td_slot,T,1,1,1,1
+access_td_slot_s,td.slot storekeeper,model_td_slot,S,1,1,1,1
+access_td_slot_e,td.slot engineer,model_td_slot,E,1,1,1,1
+access_td_slot_m,td.slot manager,model_td_slot,M,1,1,1,1
+access_td_placement_u,td.placement user,model_td_placement,U,1,0,0,0
+access_td_placement_t,td.placement technologist,model_td_placement,T,1,1,1,1
+access_td_placement_s,td.placement storekeeper,model_td_placement,S,1,1,1,1
+access_td_placement_e,td.placement engineer,model_td_placement,E,1,1,1,1
+access_td_placement_m,td.placement manager,model_td_placement,M,1,1,1,1
+access_td_variant_u,td.equipment.variant user,model_td_equipment_variant,U,1,0,0,0
+access_td_variant_t,td.equipment.variant technologist,model_td_equipment_variant,T,1,1,1,0
+access_td_variant_m,td.equipment.variant manager,model_td_equipment_variant,M,1,1,1,1
+access_td_check_config_u,td.check.config user,model_td_check_config,U,1,0,0,0
+access_td_check_config_m,td.check.config manager,model_td_check_config,M,1,1,1,1
+access_td_layout_version_u,td.layout.version user,model_td_layout_version,U,1,0,0,0
+access_td_layout_version_m,td.layout.version manager,model_td_layout_version,M,1,1,0,0
+access_td_layout_version_a,td.layout.version admin,model_td_layout_version,A,1,1,0,1
+access_td_term_u,td.term user,model_td_term,U,1,0,0,0
+access_td_term_m,td.term manager,model_td_term,M,1,1,1,0
+access_td_term_a,td.term admin,model_td_term,A,1,1,1,1
+access_td_publish_wizard_m,td.publish.wizard manager,model_td_publish_wizard,M,1,1,1,1
+access_td_publish_wizard_line_m,td.publish.wizard.line manager,model_td_publish_wizard_line,M,1,1,1,1
+access_td_publish_wizard_issue_m,td.publish.wizard.issue manager,model_td_publish_wizard_issue,M,1,1,1,1
 ```
 
-### 4.2 Групи (`security/f3d_constructor_security.xml`)
+### 4.2 Групи (`security/td_constructor_security.xml`)
 
-Привілей `privilege_f3d_constructor` («Конструктор», категорія `factory3d_base.module_category_factory3d`, `sequence=20`) і групи (CB-10, X-19):
+Привілей `privilege_td_constructor` («Конструктор», категорія `td_factory3d.module_category_factory3d`, `sequence=20`) і групи (CB-10, X-19):
 
 | XML-id | Назва | `implied_ids` | Призначення (CD-02) |
 |---|---|---|---|
-| `group_f3d_constructor_technologist` | Конструктор: технолог | `factory3d_base.group_f3d_user` | обладнання: розміщення на шарах, де він у `edit_group_ids`; варіанти каталогу |
-| `group_f3d_constructor_storekeeper` | Конструктор: комірник | `factory3d_base.group_f3d_user`, `stock.group_stock_user` | стелажі й комірки на «своїх» шарах |
-| `group_f3d_constructor_engineer` | Конструктор: інженер | `factory3d_base.group_f3d_user` | мережі: `aisles`, `fire_paths`, `utilities`, підкладка шару, розміщення щитів |
-| `group_f3d_constructor_manager` | Конструктор: менеджер | `technologist`, `storekeeper`, `engineer`, `factory3d_base.group_f3d_manager` | усі шари, налаштування, публікація, версії |
+| `group_td_constructor_technologist` | Конструктор: технолог | `td_factory3d.group_td_user` | обладнання: розміщення на шарах, де він у `edit_group_ids`; варіанти каталогу |
+| `group_td_constructor_storekeeper` | Конструктор: комірник | `td_factory3d.group_td_user`, `stock.group_stock_user` | стелажі й комірки на «своїх» шарах |
+| `group_td_constructor_engineer` | Конструктор: інженер | `td_factory3d.group_td_user` | мережі: `aisles`, `fire_paths`, `utilities`, підкладка шару, розміщення щитів |
+| `group_td_constructor_manager` | Конструктор: менеджер | `technologist`, `storekeeper`, `engineer`, `td_factory3d.group_td_manager` | усі шари, налаштування, публікація, версії |
 
-`factory3d_base.group_f3d_admin` отримує `implied_ids += group_f3d_constructor_manager` (запис `<record id="factory3d_base.group_f3d_admin">`). Користувач із групою `factory3d_base.group_f3d_user` без ролей конструктора лише читає.
+`td_factory3d.group_td_admin` отримує `implied_ids += group_td_constructor_manager` (запис `<record id="td_factory3d.group_td_admin">`). Користувач із групою `td_factory3d.group_td_user` без ролей конструктора лише читає.
 
 ### 4.3 Record rules
 
 | XML-id | Модель | Групи | Домен | perm |
 |---|---|---|---|---|
-| `rule_f3d_site_company`, `rule_f3d_layer_company`, `rule_f3d_slot_company`, `rule_f3d_placement_company`, `rule_f3d_check_config_company`, `rule_f3d_version_company` | `f3d.site`, `.layer`, `.slot`, `.placement`, `.check.config`, `.layout.version` | глобальне | `['|', ('company_id','=',False), ('company_id','in',company_ids)]` | усі |
-| `rule_f3d_slot_manager`, `rule_f3d_placement_manager`, `rule_f3d_layer_manager` | slot, placement, layer | `M` | `[(1,'=',1)]` | write, create, unlink (read=0) |
-| `rule_f3d_slot_role`, `rule_f3d_placement_role` | slot, placement | `T`, `S`, `E` | `[('layer_id.edit_group_ids','in',user.all_group_ids.ids)]` | write, create, unlink (read=0) |
-| `rule_f3d_layer_role` | layer | `T`, `S`, `E` | `[('edit_group_ids','in',user.all_group_ids.ids)]` | write (read=0, create=0, unlink=0) |
+| `rule_td_site_company`, `rule_td_layer_company`, `rule_td_slot_company`, `rule_td_placement_company`, `rule_td_check_config_company`, `rule_td_version_company` | `td.site`, `.layer`, `.slot`, `.placement`, `.check.config`, `.layout.version` | глобальне | `['|', ('company_id','=',False), ('company_id','in',company_ids)]` | усі |
+| `rule_td_slot_manager`, `rule_td_placement_manager`, `rule_td_layer_manager` | slot, placement, layer | `M` | `[(1,'=',1)]` | write, create, unlink (read=0) |
+| `rule_td_slot_role`, `rule_td_placement_role` | slot, placement | `T`, `S`, `E` | `[('layer_id.edit_group_ids','in',user.all_group_ids.ids)]` | write, create, unlink (read=0) |
+| `rule_td_layer_role` | layer | `T`, `S`, `E` | `[('edit_group_ids','in',user.all_group_ids.ids)]` | write (read=0, create=0, unlink=0) |
 
-Правило групи з `perm_read=0` не обмежує читання: читають усі з `group_f3d_user` (CD-02: чужі шари видно, не правляться). Менеджер імпліцитно входить у `T/S/E`, тож домен ролі для нього теж істинний, коли група в `edit_group_ids` є, а `rule_*_manager` покриває шари з порожнім `edit_group_ids` (R-11).
+Правило групи з `perm_read=0` не обмежує читання: читають усі з `group_td_user` (CD-02: чужі шари видно, не правляться). Менеджер імпліцитно входить у `T/S/E`, тож домен ролі для нього теж істинний, коли група в `edit_group_ids` є, а `rule_*_manager` покриває шари з порожнім `edit_group_ids` (R-11).
 
 ### 4.4 Серверна перевірка поверх правил (R-11)
 
-Правила ORM — перший бар'єр; другий — `_f3d_check_edit()` у `create/write/unlink` slot/placement/layer (пропускається при `env.su`; тексти уніфіковані): `AccessError("Шар «%s» редагує %s.")`. Публікація, відновлення версії, створення площадки, зміна `edit_group_ids`, `check.config` — лише `has_group('group_f3d_constructor_manager')`.
+Правила ORM — перший бар'єр; другий — `_f3d_check_edit()` у `create/write/unlink` slot/placement/layer (пропускається при `env.su`; тексти уніфіковані): `AccessError("Шар «%s» редагує %s.")`. Публікація, відновлення версії, створення площадки, зміна `edit_group_ids`, `check.config` — лише `has_group('group_td_constructor_manager')`.
 Сервіс публікації працює під `sudo()` + `with_company(site.company_id)` лише всередині `services.publish.apply_plan` **після** явної перевірки групи менеджера й стоп-крана `publish_enabled` (DEC-11, DEC-17); збереження чернетки (API-04) виконується від імені користувача **без** `sudo`.
 
 ## 5. Дані
 
 ### 5.1 XML-дані й параметри
 
-`data/f3d_term_data.xml` (`noupdate="0"`): 12 записів `f3d.term` з xml-id `term_layer_kind_<key>` (`building`, `storage`, `production`, `engineering`, `yard`, `custom`; назви — як у M-02) і `term_slot_type_<key>` (`pallet_rack`, `cantilever`, `shelf`, `floor_stack`, `machine_spot`, `zone`; назви — як у M-03).
+`data/td_term_data.xml` (`noupdate="0"`): 12 записів `td.term` з xml-id `term_layer_kind_<key>` (`building`, `storage`, `production`, `engineering`, `yard`, `custom`; назви — як у M-02) і `term_slot_type_<key>` (`pallet_rack`, `cantilever`, `shelf`, `floor_stack`, `machine_spot`, `zone`; назви — як у M-03).
 
-`data/params.xml` (`noupdate="1"`) створює 6 ключів `ir.config_parameter` (`max_model_mb` … `convert_server_enabled`); `publish_enabled` і `seed_report` створює `post_init_hook` (кроки 1 і 6, §5.2) — разом 8 ключів `factory3d.constructor.*`:
+`data/params.xml` (`noupdate="1"`) створює 6 ключів `ir.config_parameter` (`max_model_mb` … `convert_server_enabled`); `publish_enabled` і `seed_report` створює `post_init_hook` (кроки 1 і 6, §5.2) — разом 8 ключів `td.constructor.*`:
 
 | Ключ | Значення | Призначення |
 |---|---|---|
-| `factory3d.constructor.max_model_mb` | `20` | ліміт файла моделі (CD-17), R-18 |
-| `factory3d.constructor.max_triangles` | `50000` | поріг попередження (CD-17), R-18 |
-| `factory3d.constructor.autosave_ms` | `1500` | затримка автозбереження чернетки клієнтом |
-| `factory3d.constructor.eps_mm` | `1` | допуск геометрії, R-03 |
-| `factory3d.constructor.reach_default_m` | `15` | `utility_reach.max_m` за замовчуванням (Q-10) |
-| `factory3d.constructor.convert_server_enabled` | `True` | чи пробувати серверні конвертери (R-20) |
-| `factory3d.constructor.publish_enabled` | `True` на `test`, `False` на `prod` | стоп-кран публікації (DEC-17); значення за замовчуванням ставить хук з `factory3d.base.environment` (CB-10) |
-| `factory3d.constructor.seed_report` | JSON | звіт хука seed (R-24) |
+| `td.constructor.max_model_mb` | `20` | ліміт файла моделі (CD-17), R-18 |
+| `td.constructor.max_triangles` | `50000` | поріг попередження (CD-17), R-18 |
+| `td.constructor.autosave_ms` | `1500` | затримка автозбереження чернетки клієнтом |
+| `td.constructor.eps_mm` | `1` | допуск геометрії, R-03 |
+| `td.constructor.reach_default_m` | `15` | `utility_reach.max_m` за замовчуванням (Q-10) |
+| `td.constructor.convert_server_enabled` | `True` | чи пробувати серверні конвертери (R-20) |
+| `td.constructor.publish_enabled` | `True` на `test`, `False` на `prod` | стоп-кран публікації (DEC-17); значення за замовчуванням ставить хук з `td.base.environment` (CB-10) |
+| `td.constructor.seed_report` | JSON | звіт хука seed (R-24) |
 
-`data/f3d_generic_catalog.xml` (`noupdate="1"`; значення — **ПРИПУЩЕННЯ**: типові габарити, не з макета, Q-11): 4 паспорти base `role` ∈ {`generic_machine`, `generic_rack`, `generic_forklift`, `generic_panel`}, `manufacturer='Типовий'`, `model` = «Верстат (умовний)» / «Стелаж (умовний)» / «Навантажувач (умовний)» / «Шафа/щит (умовний)», `f3d_category` = `machine`/`rack`/`forklift`/`panel`, і по одному варіанту «Стандарт»: верстат 3000×1500×1800, сервіс 1000/500/500/500 (фронт/зад/ліво/право), 15 кВт, 3000 кг, `utilities=[{kind:'electric',x_mm:-1400,y_mm:0,z_mm:500}]`, `create_workcenter=True`; стелаж 2700×1100×6000, сервіс 0; навантажувач 2600×1200×2200, сервіс 1500/0/0/0, 4500 кг; шафа 800×400×2000, сервіс 1000/0/0/0. Ці паспорти потрібні порожній площадці (CD-24) і не належать 93 паспортам макета base.
+`data/td_generic_catalog.xml` (`noupdate="1"`; значення — **ПРИПУЩЕННЯ**: типові габарити, не з макета, Q-11): 4 паспорти base `role` ∈ {`generic_machine`, `generic_rack`, `generic_forklift`, `generic_panel`}, `manufacturer='Типовий'`, `model` = «Верстат (умовний)» / «Стелаж (умовний)» / «Навантажувач (умовний)» / «Шафа/щит (умовний)», `td_category` = `machine`/`rack`/`forklift`/`panel`, і по одному варіанту «Стандарт»: верстат 3000×1500×1800, сервіс 1000/500/500/500 (фронт/зад/ліво/право), 15 кВт, 3000 кг, `utilities=[{kind:'electric',x_mm:-1400,y_mm:0,z_mm:500}]`, `create_workcenter=True`; стелаж 2700×1100×6000, сервіс 0; навантажувач 2600×1200×2200, сервіс 1500/0/0/0, 4500 кг; шафа 800×400×2000, сервіс 1000/0/0/0. Ці паспорти потрібні порожній площадці (CD-24) і не належать 93 паспортам макета base.
 
 ### 5.2 Seed: `data/seed_site.json` і `post_init_hook` (DEC-13)
 
-`seed_site.json` — копія вбудованого JSON прототипу (`build/constructor/PROTOTYPE.md` §«Дані»: з `factory3d_viewer/static/data/model_static.json` ключ `layout` і з `plant/layout.py`, `plant/equipment_specs.json`). Цільова схема (якщо у прототипі інша — адаптер `hooks/seed.py:_normalize_seed`):
+`seed_site.json` — копія вбудованого JSON прототипу (`build/constructor/PROTOTYPE.md` §«Дані»: з `td_viewer3d/static/data/model_static.json` ключ `layout` і з `plant/layout.py`, `plant/equipment_specs.json`). Цільова схема (якщо у прототипі інша — адаптер `hooks/seed.py:_normalize_seed`):
 
 ```
 { "meta": {"name": "Меблеве підприємство", "seed_key": "main_demo", "schema": 1,
@@ -592,21 +592,21 @@ access_f3d_publish_wizard_issue_m,f3d.publish.wizard.issue manager,model_f3d_pub
 Відповідність полів прототипу: метри в `layers/slots/placements`, `variants.length/width/height` — мм (у прототипі «мм у формі, м у сцені» — хук ділить/множить, якщо значення у метрах: евристика `length < 50 → ×1000`). Очікувані кількості береться з `meta.counts`; відомі ключові факти макета: ряди FG-R1…FG-R5 по 72 комірки (18 пролітів × 4 яруси) = 360 локацій `FG-*` (base §1.1), 96 `RCK-*`, 144 `FUR-*` (`FUR-R1-S02-L3` → шаблон `shelf`), станки з `plant/layout.py:MACHINES` (кількість — з `meta.counts.placements`).
 
 `post_init_hook(env)` — порядок, кожен крок ідемпотентний, усе в транзакції установки (R-24):
-1. `params`: `publish_enabled` за `factory3d.base.environment`.
-2. `categories`: `f3d_category` у паспортів base за таблицею нижче (лише де `other`/порожньо — не перезаписуємо ручні значення).
-3. `seed`: якщо `f3d.site` з `seed_key='main_demo'` немає — створити площадку, шари, варіанти (паспорт за `passport_role`; немає → пропуск і запис у звіт), місця, розміщення, `check.config` за R-04.
-4. `link`: для кожної комірки місць seed знайти `stock.location` (R-12 збіг: `f3d_code`, потім `barcode`), виставити `f3d_site_id`/`f3d_slot_uid`; для кожного розміщення — `maintenance.equipment` за `f3d_code` → `equipment_id`, `f3d_site_id`, `f3d_placement_uid`; `mrp.workcenter` за `f3d_code`/`code`. **Нічого не створюється й не змінюється, крім цих службових полів.**
+1. `params`: `publish_enabled` за `td.base.environment`.
+2. `categories`: `td_category` у паспортів base за таблицею нижче (лише де `other`/порожньо — не перезаписуємо ручні значення).
+3. `seed`: якщо `td.site` з `seed_key='main_demo'` немає — створити площадку, шари, варіанти (паспорт за `passport_role`; немає → пропуск і запис у звіт), місця, розміщення, `check.config` за R-04.
+4. `link`: для кожної комірки місць seed знайти `stock.location` (R-12 збіг: `td_code`, потім `barcode`), виставити `td_site_id`/`td_slot_uid`; для кожного розміщення — `maintenance.equipment` за `td_code` → `equipment_id`, `td_site_id`, `td_placement_uid`; `mrp.workcenter` за `td_code`/`code`. **Нічого не створюється й не змінюється, крім цих службових полів.**
 5. `baseline`: версія v1 «Імпорт із макета» (`is_seed=True`, `published_by`=OdooBot) зі знімком; `site.active_version_id`, `published_rev=draft_rev`, `draft_changes=0`. Непов'язані комірки/обладнання створить перша публікація.
-6. `report`: JSON `{site_id, created: {layers, slots, cells, placements, variants}, linked: {locations, equipment, workcenters}, unlinked: {locations: [коди], equipment: [коди]}, skipped_variants: [role]}` у `factory3d.constructor.seed_report`.
+6. `report`: JSON `{site_id, created: {layers, slots, cells, placements, variants}, linked: {locations, equipment, workcenters}, unlinked: {locations: [коди], equipment: [коди]}, skipped_variants: [role]}` у `td.constructor.seed_report`.
 Повторний запуск: кроки 2, 4, 6 виконуються знову (звіряються зв'язки), кроки 3 і 5 пропускаються (`seed_key` існує) — дублікатів немає, правки користувача не перезаписуються.
 
-Таблиця «роль паспорта → категорія» (джерело ролей — `factory3d_base/data/f3d.equipment.passport.csv`, 93 ролі; решта → `other`):
+Таблиця «роль паспорта → категорія» (джерело ролей — `td_factory3d/data/td.equipment.passport.csv`, 93 ролі; решта → `other`):
 `machine`: beam_saw, beam_saw_book, sliding_table_saw, vertical_panel_saw, edgebander, edgebander_laser, nesting_cnc, ptp_cnc, throughfeed_drilling, dowel_inserting, hinge_insertion, wide_belt_sander, membrane_press, glue_spray_booth, manual_spray_booth, automatic_spraying, uv_line, uv_oven, drying, box_machine, case_clamp_auto, case_clamp_manual, shrink_line, strapping, stretch_wrapper, briquetting_press, compressor, dust_extraction;
 `rack`: board_rack, board_storage, highbay_rack, server_rack; `forklift`: forklift, board_forklift, tugger; `panel`: main_switchboard, busbar_main, busbar_dist, substation, acb, tapoff, pfc, ats, lighting_control; `robot`: robot_return, sorting_cell; `conveyor`: — (немає в макеті).
 
 ### 5.3 `uninstall_hook(env)`
 
-Видаляє лише власні `ir.config_parameter` `factory3d.constructor.*`. Записи `stock.location`/`maintenance.equipment`/`mrp.workcenter`, створені публікацією, **не видаляються** (стовпці `f3d_site_id` зникають разом із моделлю); знімки версій (`ir.attachment`) лишаються.
+Видаляє лише власні `ir.config_parameter` `td.constructor.*`. Записи `stock.location`/`maintenance.equipment`/`mrp.workcenter`, створені публікацією, **не видаляються** (стовпці `td_site_id` зникають разом із моделлю); знімки версій (`ir.attachment`) лишаються.
 
 ## 6. Крони й фонові процеси
 
@@ -623,7 +623,7 @@ access_f3d_publish_wizard_issue_m,f3d.publish.wizard.issue manager,model_f3d_pub
 | API-03 | POST `/f3d/constructor/load` | `{site_id}` | див. нижче | `not_found`, `rights` |
 | API-04 | POST `/f3d/constructor/save` | `{site_id, ops: [...]}` | `{rev, draft_changes, has_changes, id_map: {"<tmp>": id}, etags: {"<model>:<id>": "<write_date>"}}` | `conflict`, `rights`, `validation`, `not_found`, `too_many` |
 | API-05 | POST `/f3d/constructor/validate` | `{site_id, layer_id?}` | `{issues: [issue], summary: {block, warn}}`; `issue = {check, severity, layer_id, codes: [..], message}` | `not_found` |
-| API-06 | POST `/f3d/constructor/publish/preview` | `{site_id}` | `{action: <act_window майстра>, summary: {create, update, archive, unchanged, warn, block}}`; створює `f3d.publish.wizard` (нічого в Odoo не змінює) | `rights`, `no_changes`, `disabled` |
+| API-06 | POST `/f3d/constructor/publish/preview` | `{site_id}` | `{action: <act_window майстра>, summary: {create, update, archive, unchanged, warn, block}}`; створює `td.publish.wizard` (нічого в Odoo не змінює) | `rights`, `no_changes`, `disabled` |
 | API-07 | POST `/f3d/constructor/publish` | `{site_id, note?, archive_codes?: [..], confirm: true}` | `{version: {id, n}, created, updated, archived, warnings: [issue]}`; без `confirm: true` — `validation` | `rights`, `blocked` (з `issues`), `no_changes`, `disabled`, `conflict_codes`, `rollback` |
 | API-08 | POST `/f3d/constructor/version/restore` | `{version_id}` | `{site_id, rev, draft_changes}` | `rights`, `not_found` |
 | API-09 | POST (multipart) `/f3d/constructor/model/upload` | поля форми: `variant_id`, `csrf_token`, `original` (файл), `glb` (файл, необов'язково), `meta` (JSON-рядок) | `{status, meta, glb_url, original_url, message}` | `rights`, `too_large` (HTTP 413), `unsupported_format`, `bad_glb`, `not_found` |
@@ -638,32 +638,32 @@ catalog: [{passport_id,name,role,manufacturer,model,category,variants:[{id,name,
 checks: [{check,enabled,mode,params}], versions: [{id,n,published_at,by,note,state,counts}] (останні 50),
 rights: {is_manager, roles:[technologist|storekeeper|engineer|manager], editable_layer_ids:[id], can_publish, can_edit_catalog}}`. Одиниці: метри (шари/місця/розміщення), мм (варіанти). Розмір для seed ≈ 250 КБ JSON; ліміт відповіді — 2 МБ.
 
-**API-04 `save`** — `ops[i] = {model, op, id?, tmp?, etag?, vals}`; `model` ∈ {`f3d.layer`, `f3d.slot`, `f3d.placement`, `f3d.check.config`}; `op` ∈ {`create` (з `tmp`), `write` (`id`, `etag`), `unlink` (`id`, `etag`)}. У `vals` посилання на нові записи — `"@<tmp>"`. Ліміт — 500 операцій і 1 МБ на запит. Виконується атомарно у порядку списку: перша помилка скасовує всі (`{ok:false, code, message, op_index, current?}`; для `conflict` — `current` = актуальні значення запису). Конфлікт: `etag` ≠ `write_date` запису (R-21). `layer`: `create`/`unlink` лише менеджер (інакше `rights`). Приклад:
+**API-04 `save`** — `ops[i] = {model, op, id?, tmp?, etag?, vals}`; `model` ∈ {`td.layer`, `td.slot`, `td.placement`, `td.check.config`}; `op` ∈ {`create` (з `tmp`), `write` (`id`, `etag`), `unlink` (`id`, `etag`)}. У `vals` посилання на нові записи — `"@<tmp>"`. Ліміт — 500 операцій і 1 МБ на запит. Виконується атомарно у порядку списку: перша помилка скасовує всі (`{ok:false, code, message, op_index, current?}`; для `conflict` — `current` = актуальні значення запису). Конфлікт: `etag` ≠ `write_date` запису (R-21). `layer`: `create`/`unlink` лише менеджер (інакше `rights`). Приклад:
 
 ```json
 {"site_id": 1, "ops": [
- {"model": "f3d.slot", "op": "create", "tmp": "t1", "vals": {"uid": "a1f…", "layer_id": 5, "template": "pallet_rack", "code_prefix": "FG-R7",
+ {"model": "td.slot", "op": "create", "tmp": "t1", "vals": {"uid": "a1f…", "layer_id": 5, "template": "pallet_rack", "code_prefix": "FG-R7",
    "x_m": 40.0, "y_m": 10.0, "rotation": 0, "params": {"bays": 18, "levels": 4, "bay_width": 2.7, "depth": 1.1, "level_height": 1.5, "positions_per_bay": 3, "max_load_kg": 1000}}},
- {"model": "f3d.placement", "op": "write", "id": 88, "etag": "2026-10-17 18:03:11.123456", "vals": {"x_m": 12.5, "rotation": 90}}]}
+ {"model": "td.placement", "op": "write", "id": 88, "etag": "2026-10-17 18:03:11.123456", "vals": {"x_m": 12.5, "rotation": 90}}]}
 ```
-Відповідь: `{"ok": true, "rev": 14, "draft_changes": 3, "has_changes": true, "id_map": {"t1": 120}, "etags": {"f3d.slot:120": "…", "f3d.placement:88": "…"}}`.
+Відповідь: `{"ok": true, "rev": 14, "draft_changes": 3, "has_changes": true, "id_map": {"t1": 120}, "etags": {"td.slot:120": "…", "td.placement:88": "…"}}`.
 
 **API-07 `publish`** — програмний еквівалент `action_confirm` майстра (тести, автоматизація): будує план (R-12), валідує (R-04…R-10), застосовує вибрані `archive_codes` (R-13), створює версію (R-14). Ідемпотентність: повторний виклик без змін → `no_changes`, нічого не створює. Коди: `disabled` (`publish_enabled=False`), `blocked` (є `block`-зауваження), `conflict_codes` (код зайнятий записом, що не належить площадці), `rollback` (непередбачена помилка; транзакція скасована, версії немає).
 **API-09** — перевірки: розмір `original`/`glb` ≤ `max_model_mb` (R-18), розширення з переліку R-15 (`.skp` відхиляється), права `T`/`M`; `glb` проходить `glb_meta` (R-19); `meta` від клієнта — довідково, трикутники й bbox перераховуються сервером; запис — `variant._f3d_set_model(...)`; для `step/stp/iges/igs/ifc` — `status='pending_conversion'` і виклик `_f3d_convert_model()`. Ліміти: 1 завантаження на варіант за раз (блокування рядка варіанта `FOR UPDATE NOWAIT`).
 
 ## 8. Клієнтська й сервісна частини
 
-Колектора й емулятора немає. Нижче — склад клієнтського коду й контракти між воркерами (ARCH §6). Кожен файл — ES-модуль `/** @odoo-module */`, імпорти `@factory3d_constructor/<шлях>`; Odoo-сервіси: `orm`, `rpc`, `notification`, `action`, `dialog`.
+Колектора й емулятора немає. Нижче — склад клієнтського коду й контракти між воркерами (ARCH §6). Кожен файл — ES-модуль `/** @odoo-module */`, імпорти `@td_constructor/<шлях>`; Odoo-сервіси: `orm`, `rpc`, `notification`, `action`, `dialog`.
 
 ### 8.1 Бібліотеки (DEC-06)
 
-- **three.js — не вендориться ще раз.** Усе, що потребує `THREE`, імпортує `/factory3d_viewer/static/lib/three/three-bundle.esm.js` (r160; експорти `THREE`, `GLTFLoader`, `OrbitControls`, `CSS2DObject`, `CSS2DRenderer`, `RoomEnvironment`). Єдиний спосіб — `loadThree()` у `static/src/{editor,model}/three.js` (динамічний `import()` за URL, як `core.js` переглядача; по одному невеликому файлу на воркера, без спільного коду).
+- **three.js — не вендориться ще раз.** Усе, що потребує `THREE`, імпортує `/td_viewer3d/static/lib/three/three-bundle.esm.js` (r160; експорти `THREE`, `GLTFLoader`, `OrbitControls`, `CSS2DObject`, `CSS2DRenderer`, `RoomEnvironment`). Єдиний спосіб — `loadThree()` у `static/src/{editor,model}/three.js` (динамічний `import()` за URL, як `core.js` переглядача; по одному невеликому файлу на воркера, без спільного коду).
 - **Завантажувачі й експортер** (`OBJLoader`, `MTLLoader`, `STLLoader`, `FBXLoader`, `ColladaLoader`, `ThreeMFLoader`, `GLTFExporter`, `fflate`) відсутні в бандлі переглядача → W3 збирає `static/lib/f3d-loaders/f3d-loaders.esm.js` з `three@0.160.0/examples/jsm` скриптом `tools/build_loaders.mjs` (esbuild; `three` замінюється shim-модулем, що читає `globalThis.__F3D_THREE__`; `loadThree()` кладе туди `THREE` перед динамічним імпортом бандла). Файл комітиться, на сервері нічого не збирається. Заборонено: CDN, `<script src="http…">`, `fetch` на зовнішні адреси (DoD-перевірка — grep, AC-05).
 - **dxf-parser@1.1.2** (UMD, глобал `DxfParser`) — `static/lib/dxf-parser/dxf-parser.min.js`, лінивий `loadJS` (W2).
 
 ### 8.2 W2: клієнтська дія `f3d_constructor` (DEC-08)
 
-`static/src/action/constructor_action.js`: `registry.category("actions").add("f3d_constructor", F3dConstructorAction)`; `static template = "factory3d_constructor.ConstructorAction"`; `props = {...standardActionServiceProps}`; монтує редактор у `t-ref="root"` (патерн `factory3d_viewer/static/src/action/viewer_action.js`: `onMounted` → ініціалізація, `onWillUnmount` → `dispose()` всіх геометрій/матеріалів/рендерера, зупинка таймерів). `params.site_id` (необов'язково) вибирає площадку; інакше остання з `localStorage["f3d_constructor_site"]` або перша з API-01.
+`static/src/action/constructor_action.js`: `registry.category("actions").add("f3d_constructor", F3dConstructorAction)`; `static template = "td_constructor.ConstructorAction"`; `props = {...standardActionServiceProps}`; монтує редактор у `t-ref="root"` (патерн `td_viewer3d/static/src/action/viewer_action.js`: `onMounted` → ініціалізація, `onWillUnmount` → `dispose()` всіх геометрій/матеріалів/рендерера, зупинка таймерів). `params.site_id` (необов'язково) вибирає площадку; інакше остання з `localStorage["f3d_constructor_site"]` або перша з API-01.
 
 Редактор — **порт прототипу** (той самий JS: сцена, шари, шаблони, каталог, перетягування з прив'язкою до сітки, перевірки, підкладка, лінійка, діалоги), розрізаний на модулі `static/src/editor/`: `scene.js` (сцена, камера, рендер на вимогу, InstancedMesh для комірок), `cells.js` (дзеркало `services/cells.py`, R-01), `geometry.js` (дзеркало R-02/R-03), `checks.js` (R-04…R-10), `dxf.js`, `panels_layers.js`, `panels_slots.js`, `panels_catalog.js`, `panels_props.js`, `dialogs.js` (власні діалоги, **без** `alert/confirm/prompt`; публікація — майстер Odoo), `roles.js`, `store.js`. Правила порту: (1) UMD-глобали `THREE.*`, `DxfParser` замінюються імпортами з §8.1; (2) `window.claude.use("db"/"user")`, IndexedDB, localStorage-сховище і «пісочний» диспетчер ролей видаляються; (3) адаптер `store` — клас `OdooStore` нижче; (4) інтерфейс українською, ті ж тексти; (5) без CDN і Google Fonts (системні шрифти).
 
@@ -679,7 +679,7 @@ rights: {is_manager, roles:[technologist|storekeeper|engineer|manager], editable
 | `publishPreview(siteId)` | `flush()` → API-06 → `action.doAction(result.action, {onClose: reload})` (майстер V-08) |
 | `restoreVersion(versionId)` | API-08 → `loadSite` |
 
-Ролі (`roles.js`): права з `rights` (не з перемикача). Шар редагований, якщо `layer.id ∈ rights.editable_layer_ids`; інакше всі поля шару й об'єкти — `readonly`, підказка «редагує Комірник» (ім'я ролі з `edit_groups`). Менеджеру доступний режим «Переглянути як роль» (лише UI; сервер усе одно застосовує права). Каталог: кнопка «Змінити варіант» відкриває форму V-04 в діалозі `action.doAction({type:'ir.actions.act_window', res_model:'f3d.equipment.variant', res_id, views:[[false,'form']], target:'new'}, {onClose: reloadCatalog})`; нова модель/габарити з форми потрапляють у редактор після закриття діалогу. Підкладка: файл завантажується штатним `/web/binary/upload_attachment` (`model='f3d.layer'`, `id`), далі `queue({model:'f3d.layer', op:'write', vals:{underlay_attachment_id}})`; `.dwg` — повідомлення «Конвертуйте в DXF; DWG буде на сервері» (CD-09, DEC-18), статус `pending_conversion`.
+Ролі (`roles.js`): права з `rights` (не з перемикача). Шар редагований, якщо `layer.id ∈ rights.editable_layer_ids`; інакше всі поля шару й об'єкти — `readonly`, підказка «редагує Комірник» (ім'я ролі з `edit_groups`). Менеджеру доступний режим «Переглянути як роль» (лише UI; сервер усе одно застосовує права). Каталог: кнопка «Змінити варіант» відкриває форму V-04 в діалозі `action.doAction({type:'ir.actions.act_window', res_model:'td.equipment.variant', res_id, views:[[false,'form']], target:'new'}, {onClose: reloadCatalog})`; нова модель/габарити з форми потрапляють у редактор після закриття діалогу. Підкладка: файл завантажується штатним `/web/binary/upload_attachment` (`model='td.layer'`, `id`), далі `queue({model:'td.layer', op:'write', vals:{underlay_attachment_id}})`; `.dwg` — повідомлення «Конвертуйте в DXF; DWG буде на сервері» (CD-09, DEC-18), статус `pending_conversion`.
 Продуктивність: до ~600 комірок і ~250 об'єктів — спільні геометрії/InstancedMesh, рендер на вимогу (`requestRender()`), не безперервний цикл; один `WebGLRenderer`.
 
 ### 8.3 W3: віджети й конвеєр моделі (DEC-03…DEC-07)
@@ -695,13 +695,13 @@ rights: {is_manager, roles:[technologist|storekeeper|engineer|manager], editable
 
 ## 9. Алгоритми й правила
 
-Python-реалізація — `services/*.py` (без ORM, приймає прості dict), JS-дзеркало — `static/src/editor/*.js`; еталон для обох — `static/tests/fixtures/{cells,checks}_golden.json` (генерує W1 з Python, AC-31). Допуск геометрії `eps = factory3d.constructor.eps_mm / 1000` м (за замовчуванням 0,001 м).
+Python-реалізація — `services/*.py` (без ORM, приймає прості dict), JS-дзеркало — `static/src/editor/*.js`; еталон для обох — `static/tests/fixtures/{cells,checks}_golden.json` (генерує W1 з Python, AC-31). Допуск геометрії `eps = td.constructor.eps_mm / 1000` м (за замовчуванням 0,001 м).
 
 ### R-01 Генерація комірок (CD-07, CD-08)
 
 Локальна система місця: початок — центр габариту, X уздовж довжини `L`, Y уздовж ширини `W`; світові координати комірки: `P + Rot(θ)·(lx, ly)`, де `P=(x_m,y_m)`, `θ=rotation`. `z0` — від відмітки шару. Номери: пролети/секції/колонки — зліва направо (+X), яруси/полиці — знизу вгору, ряди — з −Y. Індекс — `{:02d}` (ширина `max(2, цифр(N))`), ярус — без нулів. Код комірки ≤ 32 символи (інакше `ValidationError`), тому `code_prefix` ≤ 22.
 
-| Шаблон | Параметри (діапазон; **ПРИПУЩЕННЯ** — умовчання для нового місця з UI, seed має власні значення) | `L × W` | Комірки: код, розмір, `z0` | Вид `f3d_loc_kind` / місткість |
+| Шаблон | Параметри (діапазон; **ПРИПУЩЕННЯ** — умовчання для нового місця з UI, seed має власні значення) | `L × W` | Комірки: код, розмір, `z0` | Вид `td_loc_kind` / місткість |
 |---|---|---|---|---|
 | `pallet_rack` | `bays` 1…200 (6), `levels` 1…12 (4), `bay_width` 0.3…6 м (2.7), `depth` 0.2…3 (1.1), `level_height` 0.1…3 (1.5), `positions_per_bay` 1…8 (3), `max_load_kg` ≥0 (1000) | `bays·bay_width × depth` | `{p}-B{bb}-L{l}`; `bay_width × depth × level_height`; `(l−1)·level_height`; `lx=−L/2+(b−½)·bay_width`, `ly=0` | `pallet_cell` / `positions_per_bay` |
 | `cantilever` | `arms` 1…100 (4; кількість секцій), `levels` 1…12 (3), `arm_length` 0.3…2 (1.0), `length` 0.5…60 (6), `level_height` (1.2), `max_load_kg` (500) | `length × arm_length` | `{p}-A{aa}-L{l}`; `length/arms × arm_length × level_height`; `(l−1)·level_height` | `shelf` (ПРИПУЩЕННЯ, Q-12) / не задається |
@@ -779,14 +779,14 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 `build_plan(site)` → `{lines, issues, unchanged, draft_rev}`; кроки (усі читання — з `with_context(active_test=False)`, компанія `site.company_id` або без компанії):
 1. `issues = run_checks(стан чернетки з БД)`; `block` — публікація недоступна.
 2. Бажані локації: `generate_cells` для всіх активних місць; батько = `slot.parent_location_id`, інакше `site.default_parent_location_id` (немає ні того, ні того → issue `data` `block`: «Для місця {prefix} не задано батьківську локацію»).
-3. Збіг локації з кодом: (а) `f3d_code == code`; (б) інакше `barcode == code`; кілька збігів → issue `conflict` `block` «Неоднозначний збіг для {code}»; збіг (б) при заповненому іншому `f3d_code` → `conflict`; знайдений запис з `f3d_site_id` іншої площадки → `conflict` «Код {code} зайнятий записом площадки {X}». Існуючі локації **не дублюються**.
-4. Немає збігу → рядок `create`: `name=code` (або `overrides.name`), `barcode=code`, `f3d_code=code`, `usage='internal'`, `location_id=батько`, `f3d_loc_kind`, `f3d_capacity`, `f3d_site_id`, `f3d_slot_uid`, `company_id`. Є збіг → `update` лише з полів, що відрізняються: `f3d_code` (якщо порожній), `barcode` (якщо порожній), `f3d_loc_kind` (шаблон дає вид, відмінний), `f3d_capacity` (шаблон або перевизначення дає значення `≠0` і `≠` поточного), `location_id` (**лише** коли `slot.parent_location_id` задано явно й відмінний), `f3d_site_id`, `f3d_slot_uid`. Ім'я існуючого запису не змінюється. Архівований збіг → issue `warn` «Запис {code} архівований; не відновлюється автоматично»; рядок не створюється.
-5. Обладнання: для кожного розміщення — `maintenance.equipment` за `f3d_code == code`, інакше за `serial_no == code` при порожньому `f3d_code`. `create`: `name`, `f3d_code`, `f3d_passport_id=variant.passport_id`, `f3d_zone_id=f3d.zone.zone_at(x,y,company)` (CB-03, якщо знайдено), `f3d_site_id`, `f3d_placement_uid`, `company_id`. `update` — `f3d_passport_id` (порожній → встановити; інакше розбіжність → рядок зі зміною), `f3d_zone_id`, `f3d_site_id`, `f3d_placement_uid`. Записи `mrp.workcenter` — коли `variant.create_workcenter`: збіг за `f3d_code`, інакше `code == code`; `create`: `name`, `code`, `f3d_code`, `f3d_site_id`, `company_id`; зв'язок `equipment.workcenter_id` (лише якщо поле існує, DEC-16) і `placement.workcenter_id`.
-6. `apply_plan(site, plan, ticked_archive_codes, note)`: умови (група менеджера, `publish_enabled`, `plan.draft_rev == site.draft_rev`, `has_changes`, нема `block`); `SELECT … FROM f3d_site WHERE id=%s FOR UPDATE NOWAIT`; під `sudo()+with_company` створює/оновлює пачками (`create([...])`), ставить `placement.equipment_id/workcenter_id/published_at`, архівує позначені (R-13), будує версію (R-14); будь-який виняток — відкат усього. Незмінені записи не чіпаються (`write_date` не змінюється).
+3. Збіг локації з кодом: (а) `td_code == code`; (б) інакше `barcode == code`; кілька збігів → issue `conflict` `block` «Неоднозначний збіг для {code}»; збіг (б) при заповненому іншому `td_code` → `conflict`; знайдений запис з `td_site_id` іншої площадки → `conflict` «Код {code} зайнятий записом площадки {X}». Існуючі локації **не дублюються**.
+4. Немає збігу → рядок `create`: `name=code` (або `overrides.name`), `barcode=code`, `td_code=code`, `usage='internal'`, `location_id=батько`, `td_loc_kind`, `td_capacity`, `td_site_id`, `td_slot_uid`, `company_id`. Є збіг → `update` лише з полів, що відрізняються: `td_code` (якщо порожній), `barcode` (якщо порожній), `td_loc_kind` (шаблон дає вид, відмінний), `td_capacity` (шаблон або перевизначення дає значення `≠0` і `≠` поточного), `location_id` (**лише** коли `slot.parent_location_id` задано явно й відмінний), `td_site_id`, `td_slot_uid`. Ім'я існуючого запису не змінюється. Архівований збіг → issue `warn` «Запис {code} архівований; не відновлюється автоматично»; рядок не створюється.
+5. Обладнання: для кожного розміщення — `maintenance.equipment` за `td_code == code`, інакше за `serial_no == code` при порожньому `td_code`. `create`: `name`, `td_code`, `td_passport_id=variant.passport_id`, `td_zone_id=td.zone.zone_at(x,y,company)` (CB-03, якщо знайдено), `td_site_id`, `td_placement_uid`, `company_id`. `update` — `td_passport_id` (порожній → встановити; інакше розбіжність → рядок зі зміною), `td_zone_id`, `td_site_id`, `td_placement_uid`. Записи `mrp.workcenter` — коли `variant.create_workcenter`: збіг за `td_code`, інакше `code == code`; `create`: `name`, `code`, `td_code`, `td_site_id`, `company_id`; зв'язок `equipment.workcenter_id` (лише якщо поле існує, DEC-16) і `placement.workcenter_id`.
+6. `apply_plan(site, plan, ticked_archive_codes, note)`: умови (група менеджера, `publish_enabled`, `plan.draft_rev == site.draft_rev`, `has_changes`, нема `block`); `SELECT … FROM td_site WHERE id=%s FOR UPDATE NOWAIT`; під `sudo()+with_company` створює/оновлює пачками (`create([...])`), ставить `placement.equipment_id/workcenter_id/published_at`, архівує позначені (R-13), будує версію (R-14); будь-який виняток — відкат усього. Незмінені записи не чіпаються (`write_date` не змінюється).
 
 ### R-13 Пропозиції архівації
 
-Кандидати — записи з `f3d_site_id == site`, `active=True`, **код яких відсутній** у бажаних (комірки з `disabled`, видалені/архівовані місця й розміщення): `stock.location` (за `f3d_code`), `maintenance.equipment`, `mrp.workcenter`. Усі рядки `kind='archive'`, `selected=False`. `blocked=True` (змінити не можна): `stock.location` із залишком (`stock.quant` `quantity>0` у самій локації) — «Є залишки: {q}»; `maintenance.equipment` із відкритими заявками ТО (`maintenance.request` `stage_id.done=False`) — «Є відкриті заявки ТО»; `mrp.workcenter` з незавершеними завданнями (`mrp.workorder` `state not in ('done','cancel')`) — «Є незавершені завдання». Записи без `f3d_site_id` (створені не конструктором) **ніколи** не пропонуються. Архівація = `write({'active': False})`; видалення (`unlink`) не виконується ніколи.
+Кандидати — записи з `td_site_id == site`, `active=True`, **код яких відсутній** у бажаних (комірки з `disabled`, видалені/архівовані місця й розміщення): `stock.location` (за `td_code`), `maintenance.equipment`, `mrp.workcenter`. Усі рядки `kind='archive'`, `selected=False`. `blocked=True` (змінити не можна): `stock.location` із залишком (`stock.quant` `quantity>0` у самій локації) — «Є залишки: {q}»; `maintenance.equipment` із відкритими заявками ТО (`maintenance.request` `stage_id.done=False`) — «Є відкриті заявки ТО»; `mrp.workcenter` з незавершеними завданнями (`mrp.workorder` `state not in ('done','cancel')`) — «Є незавершені завдання». Записи без `td_site_id` (створені не конструктором) **ніколи** не пропонуються. Архівація = `write({'active': False})`; видалення (`unlink`) не виконується ніколи.
 
 ### R-14 Знімок версії й відновлення чернетки (CD-21)
 
@@ -820,7 +820,7 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 ### R-21 Лічильник чернетки й `etag`
 
-`etag = write_date.strftime('%Y-%m-%d %H:%M:%S.%f')`. `_f3d_touch(n)`: SQL `UPDATE f3d_site SET draft_rev = draft_rev + 1, draft_changes = draft_changes + n WHERE id=%s` (без зміни `write_date` площадки). `has_changes = draft_rev != published_rev`. API-04: для `write/unlink` порівнюється `etag` запису з поточним `write_date`; розбіжність → `conflict` без змін. `draft_changes` = кількість змінених сутностей з моменту діючої версії (збільшується на число операцій; обнуляється публікацією/відновленням діючої).
+`etag = write_date.strftime('%Y-%m-%d %H:%M:%S.%f')`. `_f3d_touch(n)`: SQL `UPDATE td_site SET draft_rev = draft_rev + 1, draft_changes = draft_changes + n WHERE id=%s` (без зміни `write_date` площадки). `has_changes = draft_rev != published_rev`. API-04: для `write/unlink` порівнюється `etag` запису з поточним `write_date`; розбіжність → `conflict` без змін. `draft_changes` = кількість змінених сутностей з моменту діючої версії (збільшується на число операцій; обнуляється публікацією/відновленням діючої).
 
 ### R-22 Схеми JSON-полів
 
@@ -832,17 +832,17 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 ### R-24 Порядок хука й ідемпотентність
 
-Описано в §5.2 (кроки 1–6). Критерій ідемпотентності: два запуски `post_init_hook` поспіль → однакова кількість записів у всіх моделях конструктора, `seed_report` однаковий, жоден `stock.location`/`maintenance.equipment` не створений і не змінений, крім полів `f3d_site_id`, `f3d_slot_uid`, `f3d_placement_uid`, `equipment_id`, `workcenter_id`.
+Описано в §5.2 (кроки 1–6). Критерій ідемпотентності: два запуски `post_init_hook` поспіль → однакова кількість записів у всіх моделях конструктора, `seed_report` однаковий, жоден `stock.location`/`maintenance.equipment` не створений і не змінений, крім полів `td_site_id`, `td_slot_uid`, `td_placement_uid`, `equipment_id`, `workcenter_id`.
 
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи (хто/що) | Побічні ефекти |
 |---|---|---|---|
 | Чернетка площадки | `clean` (`draft_rev == published_rev`) ↔ `dirty` | будь-яка правка layer/slot/placement/check.config (UI, форма, API-04) → `dirty`; публікація або відновлення діючої версії → `clean` | `draft_changes` змінюється за R-21 |
-| `f3d.layout.version.state` | `active` → `superseded` | нова публікація робить попередню `superseded`; `active` — завжди рівно одна на площадку | `site.active_version_id`, `published_rev = draft_rev` |
-| `f3d.equipment.variant.model_status` | `none` → `ok` / `pending_conversion` / `error`; `pending_conversion` → `ok`/`error` (`_f3d_convert_model`, `action_retry_convert`); будь-який → `none` (`action_clear_model`); `ok`/`error` → `ok` (нове завантаження) | API-09, віджет W3 | вкладення замінюються, старі видаляються (`unlink` вкладення) |
-| `f3d.publish.wizard.state` | `preview` → `done` | `action_confirm` | створює версію; повторне натискання неможливе |
-| `f3d.layer.underlay_status` | `none` → `ready` (DXF) / `pending_conversion` (DWG) | завантаження файла (`write` `underlay_attachment_id`) | — |
+| `td.layout.version.state` | `active` → `superseded` | нова публікація робить попередню `superseded`; `active` — завжди рівно одна на площадку | `site.active_version_id`, `published_rev = draft_rev` |
+| `td.equipment.variant.model_status` | `none` → `ok` / `pending_conversion` / `error`; `pending_conversion` → `ok`/`error` (`_f3d_convert_model`, `action_retry_convert`); будь-який → `none` (`action_clear_model`); `ok`/`error` → `ok` (нове завантаження) | API-09, віджет W3 | вкладення замінюються, старі видаляються (`unlink` вкладення) |
+| `td.publish.wizard.state` | `preview` → `done` | `action_confirm` | створює версію; повторне натискання неможливе |
+| `td.layer.underlay_status` | `none` → `ready` (DXF) / `pending_conversion` (DWG) | завантаження файла (`write` `underlay_attachment_id`) | — |
 
 ## 11. Обробка помилок
 
@@ -853,12 +853,12 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 | Втрата прав під час сесії | API-04 `rights` («Шар «X» редагує …»); клієнт повертає об'єкт у попередній стан і показує повідомлення |
 | Публікація: код зайнятий чужим записом, неоднозначний збіг, немає батьківської локації | issue `conflict`/`data` `block`; кнопка публікації прихована |
 | Два одночасні публікатори | `FOR UPDATE NOWAIT` → «Публікація вже виконується іншим користувачем» |
-| Збій посеред публікації | відкат транзакції: нових записів, версії й змін `f3d_site_id` немає (`rollback`) |
+| Збій посеред публікації | відкат транзакції: нових записів, версії й змін `td_site_id` немає (`rollback`) |
 | Завантаження моделі: >ліміту, невідомий формат, пошкоджений GLB | відповідні коди API-09; нічого не зберігається (вкладення створюються в тій самій транзакції) |
 | WebGL недоступний | редактор і віджет показують «3D недоступне в цьому браузері»; форми Odoo працюють; HOOT-тести рендера використовують нульовий рендерер (патерн `testMode` переглядача) |
 | Помилка розбору DXF | повідомлення з кількістю пропущених сутностей; файл >5 МБ або >200 тис. сутностей — попередження, імпорт обмежується першими 200 тис. |
 | Часові пояси | усі `Datetime` — UTC у БД; клієнт показує в часовому поясі користувача; `etag` — UTC |
-| Дублікати кодів | `models.Constraint`/`_check` із текстом українською; глобальна унікальність `f3d_code` (base) перевіряється при публікації (R-12) |
+| Дублікати кодів | `models.Constraint`/`_check` із текстом українською; глобальна унікальність `td_code` (base) перевіряється при публікації (R-12) |
 | Деінсталяція | §5.3: бізнес-записи Odoo не видаляються |
 
 ## 12. Acceptance Criteria
@@ -867,9 +867,9 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 | AC | CD / FR | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-01 | FR-01 | Given чиста база з base+viewer; When встановлено модуль; Then є 4 групи й привілей, 12 `f3d.term`, 8 ключів `factory3d.constructor.*`, меню `menu_f3d_constructor` (sequence 12) і `menu_f3d_constructor_plan` (14) під `factory3d_base.menu_f3d_root`, дія `tag='f3d_constructor'` | UT |
-| AC-02 | CD-24, FR-02 | Given база без площадки; When виконано `post_init_hook`; Then є один `f3d.site` `seed_key='main_demo'` («Меблеве підприємство», 150×72×9) з кількостями `meta.counts` з `seed_site.json` (шарів, місць, комірок, розміщень, варіантів); повторний запуск не змінює кількостей ні в одній моделі | UT |
-| AC-03 | CD-24 | Given існують `stock.location` `FG-R1-B01-L4` (barcode) і `maintenance.equipment` `SAW-1` (`f3d_code`); When виконано `link`; Then в них `f3d_site_id=site`, у відповідного розміщення `equipment_id` заповнено; нових `stock.location`/`maintenance.equipment` не створено; незнайдені коди — у `seed_report.unlinked` | UT |
+| AC-01 | FR-01 | Given чиста база з base+viewer; When встановлено модуль; Then є 4 групи й привілей, 12 `td.term`, 8 ключів `td.constructor.*`, меню `menu_td_constructor` (sequence 12) і `menu_td_constructor_plan` (14) під `td_factory3d.menu_td_root`, дія `tag='f3d_constructor'` | UT |
+| AC-02 | CD-24, FR-02 | Given база без площадки; When виконано `post_init_hook`; Then є один `td.site` `seed_key='main_demo'` («Меблеве підприємство», 150×72×9) з кількостями `meta.counts` з `seed_site.json` (шарів, місць, комірок, розміщень, варіантів); повторний запуск не змінює кількостей ні в одній моделі | UT |
+| AC-03 | CD-24 | Given існують `stock.location` `FG-R1-B01-L4` (barcode) і `maintenance.equipment` `SAW-1` (`td_code`); When виконано `link`; Then в них `td_site_id=site`, у відповідного розміщення `equipment_id` заповнено; нових `stock.location`/`maintenance.equipment` не створено; незнайдені коди — у `seed_report.unlinked` | UT |
 | AC-04 | CD-24, CD-05 | Given менеджер; When API-02 `{name:'Склад 2', code:'S2'}`; Then площадка 60×30×8, 5 шарів із відмітками 0,0,0,+6.0,0, 7 `check.config` за R-04, 0 місць, 4 типові варіанти доступні; не-менеджер → `rights` | UT |
 | AC-05 | CD-01, FR-21 | Given вихідники модуля; When тест сканує `*.py/*.js/*.xml` (крім `data/seed_site.json`, tests); Then немає жорстко заданих меблевих кодів (`FG-R`, `SAW-`, `RCK-`, `CNC-`) і зовнішніх URL (`http://`, `https://`, окрім `todo.ltd`, `odoo.com` у маніфесті/ліцензіях) | UT |
 | AC-06 | CD-22 | Given дві площадки в одній компанії; When на обох створено місце `code_prefix='AA'`; Then створення дозволене (UNIQUE `(site_id, code_prefix)`), а публікація другої дає issue `conflict` `block` (код вже належить першій) | UT |
@@ -882,10 +882,10 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 | AC-13 | CD-07 | Given місце 18×4 з `overrides={'FG-R1-B02-L1': {'disabled': true}, 'FG-R1-B03-L1': {'max_load_kg': 1500}}`; When перераховано; Then `cell_count=71`, комірки B02-L1 немає, B03-L1 має `max_load_kg=1500`; неіснуюча комірка в `overrides` → `ValidationError` | UT |
 | AC-14 | CD-07 | Given місце 18×4; When `levels=5`; Then 90 комірок (UT: `cell_count`; JS: правка в панелі «Місця» перераховує комірки без перезавантаження) | UT+JS |
 | AC-15 | CD-06, CD-08 | Given шар з `allowed_slot_type_ids=[pallet_rack]`; When створено місце `machine_spot`; Then `ValidationError` «Шар … не допускає тип …» | UT |
-| AC-16 | CD-08 | Given модуль; When перелік шаблонів і `f3d.term` `slot_type`; Then немає ключів `gate`/`dock` | UT |
+| AC-16 | CD-08 | Given модуль; When перелік шаблонів і `td.term` `slot_type`; Then немає ключів `gate`/`dock` | UT |
 | AC-17 | CD-09, FR-04 | Given шар; When до шару прикріплено `plan.dxf`; Then `underlay_format='dxf'`, `underlay_status='ready'`, API-03 віддає `underlay.url`; JS: DXF з LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC → сегменти, масштаб мм→м, зсув і поворот з `underlay_params` застосовуються | UT+JS |
 | AC-18 | CD-09 | Given файл `plan.dwg`; When завантажено в шар; Then `underlay_format='dwg'`, `underlay_status='pending_conversion'`; клієнт показує «Конвертуйте в DXF; DWG буде на сервері» і нічого не малює | UT+JS |
-| AC-19 | CD-10, FR-06 | Given паспорт base; When створено варіант; Then `passport.variant_ids` містить його, `variant_count=1`, `f3d_category` за замовчуванням `other`; після хука `beam_saw.f3d_category='machine'`, `board_rack='rack'`, `forklift='forklift'` | UT |
+| AC-19 | CD-10, FR-06 | Given паспорт base; When створено варіант; Then `passport.variant_ids` містить його, `variant_count=1`, `td_category` за замовчуванням `other`; після хука `beam_saw.td_category='machine'`, `board_rack='rack'`, `forklift='forklift'` | UT |
 | AC-20 | CD-11, CD-12 | Given варіант; When задано габарити, 4 сервіс-зони, `front_side`, `anchor`, `rotation_mode`, дозволені види шарів і типи місць, 2 точки підключення, `power_kw`, `panel`, `weight_kg`; Then збережено; `length_mm=0`, від'ємний сервіс, `utilities` з `kind='steam'` → `ValidationError` | UT |
 | AC-21 | CD-11, CD-12 | Given паспорт `dim_l_mm=4000, dim_w_mm=1200, dim_h_mm=1600, power_kw=11`; When створено варіант без цих полів; Then вони наслідуються; `weight_kg=2400` при 4000×1200 → `floor_load_kn_m2 = 2400·9.80665/1000/4.8 = 4.90`; ручне значення зберігається | UT |
 | AC-22 | CD-13 | Given еталони R-03 (приклади 1 і 2); When `sat_penetration`; Then 0.5 (перетин), 0 (дотик не є перетином), 0.214 (45°) з точністю 1e-3 | UT+JS |
@@ -913,18 +913,18 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 | AC-44 | CD-02 | Given технолог, інженер; When технолог створює розміщення на «Виробництво», правку варіанта; інженер пише `utilities`/`aisles` шару «Інженерні мережі» і спробу змінити `elevation_m` / `edit_group_ids`; Then перше й друге успішні, зміна `elevation_m`/`edit_group_ids` — `AccessError` | UT |
 | AC-45 | CD-02 | Given шар з порожніми `edit_group_ids`; Then комірник/технолог/інженер — `AccessError`, менеджер — успіх | UT |
 | AC-46 | CD-02 | Given комірник з правами на «Склади» і місце на ньому; When переносить місце на «Виробництво» (`layer_id`); Then `AccessError` (права на обидва шари) | UT |
-| AC-47 | CD-02 | Given користувач лише з `group_f3d_user`; When API-04 `create` місця; Then `{ok:false, code:'rights'}`; прямий `write` через ORM — `AccessError` (ir.rule + ACL); читання API-03 дозволене | UT |
+| AC-47 | CD-02 | Given користувач лише з `group_td_user`; When API-04 `create` місця; Then `{ok:false, code:'rights'}`; прямий `write` через ORM — `AccessError` (ir.rule + ACL); читання API-03 дозволене | UT |
 | AC-48 | CD-03 | Given місце; When `x_m` змінено у формі Odoo і через API-04 (як після перетягування в 3D); Then `load` повертає однакове значення; JS: поле в панелі властивостей двигає об'єкт, перетягування оновлює поле | UT+JS |
 | AC-49 | CD-02 | Given `rights.editable_layer_ids=[1]`; When вибрано об'єкт шару 2; Then поля панелі readonly, перетягування вимкнено, підказка «редагує Комірник» | JS |
 | AC-50 | CD-20 | Given чернетка з 1 новим рядом, 1 зміненим розміщенням і 1 видаленим місцем; When API-06; Then майстер містить рядки `create`/`update`/`archive` і підсумки `n_*`; у БД Odoo жодних змін (кількості `stock.location`, `maintenance.equipment` незмінні) | UT |
-| AC-51 | CD-20 | Given порожня база локацій, місце 18×4 `FG-R1` з `parent_location_id=WH/Stock`; When `action_confirm`; Then створено 72 `stock.location`: `f3d_code=barcode=код`, `usage='internal'`, `f3d_loc_kind='pallet_cell'`, `f3d_capacity=positions_per_bay`, батько `WH/Stock`, `f3d_site_id=site`; рядок майстра `create` містить приклад коду | UT |
-| AC-52 | CD-20 | Given вже існує `stock.location` з `barcode='FG-R1-B01-L4'` (без `f3d_code`); When публікація; Then запис **не дублюється**: оновлено `f3d_code`, `f3d_site_id`; кількість локацій = попередня + 71; повторна публікація без змін → `no_changes`, створено/оновлено 0 | UT |
-| AC-53 | CD-20 | Given розміщення `SAW-9` варіантом із `create_workcenter=True`; When публікація; Then створено `maintenance.equipment` (`f3d_code`, `f3d_passport_id`, `f3d_zone_id` з `zone_at`) і `mrp.workcenter` (`code`, `f3d_code`); існуюче обладнання з тим самим `f3d_code` лише оновлюється; `placement.equipment_id/workcenter_id` заповнені | UT |
-| AC-54 | CD-20, FR-16 | Given опубліковане місце, що видалене з чернетки; When майстер; Then рядок `archive` з `selected=False`; публікація без галочки лишає `stock.location` активним; з галочкою — `active=False`, запис не видалено; локація із залишком має `blocked=True`, галочку не поставити; записи без `f3d_site_id` ніколи не пропонуються | UT |
-| AC-55 | CD-20, FR-22 | Given `factory3d.constructor.publish_enabled='False'`; When API-07 / `action_confirm`; Then `disabled`, `can_publish=False`, нічого не створено | UT |
+| AC-51 | CD-20 | Given порожня база локацій, місце 18×4 `FG-R1` з `parent_location_id=WH/Stock`; When `action_confirm`; Then створено 72 `stock.location`: `td_code=barcode=код`, `usage='internal'`, `td_loc_kind='pallet_cell'`, `td_capacity=positions_per_bay`, батько `WH/Stock`, `td_site_id=site`; рядок майстра `create` містить приклад коду | UT |
+| AC-52 | CD-20 | Given вже існує `stock.location` з `barcode='FG-R1-B01-L4'` (без `td_code`); When публікація; Then запис **не дублюється**: оновлено `td_code`, `td_site_id`; кількість локацій = попередня + 71; повторна публікація без змін → `no_changes`, створено/оновлено 0 | UT |
+| AC-53 | CD-20 | Given розміщення `SAW-9` варіантом із `create_workcenter=True`; When публікація; Then створено `maintenance.equipment` (`td_code`, `td_passport_id`, `td_zone_id` з `zone_at`) і `mrp.workcenter` (`code`, `td_code`); існуюче обладнання з тим самим `td_code` лише оновлюється; `placement.equipment_id/workcenter_id` заповнені | UT |
+| AC-54 | CD-20, FR-16 | Given опубліковане місце, що видалене з чернетки; When майстер; Then рядок `archive` з `selected=False`; публікація без галочки лишає `stock.location` активним; з галочкою — `active=False`, запис не видалено; локація із залишком має `blocked=True`, галочку не поставити; записи без `td_site_id` ніколи не пропонуються | UT |
+| AC-55 | CD-20, FR-22 | Given `td.constructor.publish_enabled='False'`; When API-07 / `action_confirm`; Then `disabled`, `can_publish=False`, нічого не створено | UT |
 | AC-56 | CD-20, CD-02 | Given технолог/комірник/інженер; When API-06/07 і `action_confirm`; Then `rights`/`AccessError`; менеджер — успіх | UT |
-| AC-57 | CD-20 | Given штучна помилка під час створення 40-ї локації (патч `create`); When API-07; Then `rollback`, жодної нової локації/версії, `f3d_site_id` не змінено | UT |
-| AC-58 | CD-21, FR-17 | Given публікація; Then `f3d.layout.version` `n` = попередній+1, `state='active'`, попередня `superseded`, `snapshot_id` — JSON за R-14 з шаблонами місць (кількість `slots` збігається, комірок у знімку немає), `snapshot_sha1` збігається, `site.active_version_id` оновлено | UT |
+| AC-57 | CD-20 | Given штучна помилка під час створення 40-ї локації (патч `create`); When API-07; Then `rollback`, жодної нової локації/версії, `td_site_id` не змінено | UT |
+| AC-58 | CD-21, FR-17 | Given публікація; Then `td.layout.version` `n` = попередній+1, `state='active'`, попередня `superseded`, `snapshot_id` — JSON за R-14 з шаблонами місць (кількість `slots` збігається, комірок у знімку немає), `snapshot_sha1` збігається, `site.active_version_id` оновлено | UT |
 | AC-59 | CD-21 | Given версії v1 і v2; When `action_restore_draft` на v1; Then чернетка = знімок v1 (за `uid`: зайві видалено, відсутні створено), `stock.location` не змінено, `draft_base_version_id=v1`, `has_changes=True`; відновлення діючої версії → `has_changes=False` | UT |
 | AC-60 | CD-21 | Given чернетка без змін після публікації; When API-06/API-07; Then `no_changes` («Немає змін для публікації»), версія не створена | UT |
 | AC-61 | CD-21, CD-03, FR-14 | Given два клієнти; When перший зберіг запис, другий шле `write` зі старим `etag`; Then `conflict` з `current`, нічого не застосовано; JS: `OdooStore.queue` зливає операції, автозбереження через `autosave_ms`, `id_map` підміняє `tmp`→`id`, при мережевій помилці — повтор | UT+JS |
@@ -954,8 +954,8 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 | `test_publish.py` `TestPublish` | 50…57 | R-12/R-13; відкат (`patch` `stock.location.create`); стоп-кран |
 | `test_versions.py` `TestVersions` | 58…60 | знімок, `sha1`, відновлення, `no_changes` |
 | `test_seed_hook.py` `TestSeedHook` | 02, 03, 05, 06 | запуск `post_init_hook(env)` двічі; лічильники; сканер джерел |
-| `test_hoot_editor.py` `TestEditorHoot` (W2) | 10, 12, 14, 17…18, 22, 31, 48, 49, 61, 63…66 | запуск suite `@factory3d_constructor/editor` (фільтр `&id=<hash>` як у `factory3d_viewer/tests/test_hoot.py`) |
-| `test_hoot_model.py` `TestModelHoot` (W3) | 34, 35, 37…42 | запуск suite `@factory3d_constructor/model` |
+| `test_hoot_editor.py` `TestEditorHoot` (W2) | 10, 12, 14, 17…18, 22, 31, 48, 49, 61, 63…66 | запуск suite `@td_constructor/editor` (фільтр `&id=<hash>` як у `td_viewer3d/tests/test_hoot.py`) |
+| `test_hoot_model.py` `TestModelHoot` (W3) | 34, 35, 37…42 | запуск suite `@td_constructor/model` |
 
 ### 13.2 Ручні сценарії на `serve.sh` (ТК-01…ТК-08, Playwright, `/opt/pw-browsers/chromium`)
 
@@ -980,7 +980,7 @@ Python-реалізація — `services/*.py` (без ORM, приймає пр
 
 API-03 для seed ≤ 1,5 с (≈ 250 КБ); API-04 зі 100 операціями ≤ 1 с; `run_checks` (Python) на 250 об'єктах ≤ 1 с, JS ≤ 300 мс; `build_plan` + `apply_plan` для 360 нових комірок ≤ 20 с; завантаження GLB 20 МБ (API-09) ≤ 10 с; рендер редактора на seed — одна відмальовка ≤ 50 мс (`requestRender`), пам'ять не росте після 10 перемикань площадки (перевірка `renderer.info.memory`).
 
-### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/factory3d_constructor/DEPLOY_TEST.md`, здає інтеграція)
+### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/td_constructor/DEPLOY_TEST.md`, здає інтеграція)
 
 1. Копія демо-бази тестового сервера → встановлення модуля; 2. `seed_report`: `linked.locations` дорівнює числу локацій `FG-*`/`RCK-*`/`FUR-*` у базі, `unlinked` — перелічені; 3. «Опублікувати» на seed: `created` лише для кодів, яких бракувало; існуючі `FG-R1-B01-L4` не продубльовані; 4. відкат: деінсталяція — записи `stock.location`/`maintenance.equipment` на місці; 5. повторна установка — seed не дублюється (`seed_key`).
 
@@ -996,4 +996,4 @@ API-03 для seed ≤ 1,5 с (≈ 250 КБ); API-04 зі 100 операціям
 
 ## 15. Відкриті питання
 
-Ті самі номери, що в ARCH §5.1: Q-01 (відхилення від CD-16), Q-02 (серверні конвертери), Q-03 (шаблон «зона» → `f3d.zone`), Q-04 (хто публікує), Q-05 (архівація при залишках), Q-06 (DWG на сервері), Q-07 (префікси кодів між площадками), Q-08 (фаза 2: переглядач з розкладки), Q-09 (ліміти навантаження), Q-10 (досяжність підключення), Q-11 (типові габарити), Q-12 (коди й види комірок консольних/підлогових шаблонів), Q-13 (`mrp_maintenance`), Q-14 (шлях Hoot-suite).
+Ті самі номери, що в ARCH §5.1: Q-01 (відхилення від CD-16), Q-02 (серверні конвертери), Q-03 (шаблон «зона» → `td.zone`), Q-04 (хто публікує), Q-05 (архівація при залишках), Q-06 (DWG на сервері), Q-07 (префікси кодів між площадками), Q-08 (фаза 2: переглядач з розкладки), Q-09 (ліміти навантаження), Q-10 (досяжність підключення), Q-11 (типові габарити), Q-12 (коди й види комірок консольних/підлогових шаблонів), Q-13 (`mrp_maintenance`), Q-14 (шлях Hoot-suite).

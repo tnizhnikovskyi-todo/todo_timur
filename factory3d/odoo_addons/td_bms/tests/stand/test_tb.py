@@ -38,52 +38,52 @@ def _user(odoo, login, groups_xmlids):
 
 
 def test_tb01_tb02_acl(odoo):
-    """ТБ-01: без group_f3d_user моделі модуля недоступні. ТБ-02: оператор не змінює налаштування, не видаляє журнал."""
+    """ТБ-01: без group_td_user моделі модуля недоступні. ТБ-02: оператор не змінює налаштування, не видаляє журнал."""
     plain = _user(odoo, "tb_plain", ["base.group_user"])
-    for model in ("f3d.bms.light.group", "f3d.bms.hvac.unit", "f3d.bms.heat.balance", "f3d.bms.deviation"):
+    for model in ("td.bms.light.group", "td.bms.hvac.unit", "td.bms.heat.balance", "td.bms.deviation"):
         with pytest.raises(xc.Fault) as ei:
             plain.search_read(model, [], ["id"], limit=1)
         assert "AccessError" in str(ei.value) or "доступ" in str(ei.value).lower() or "access" in str(ei.value).lower()
-    op = _user(odoo, "tb_oper", ["base.group_user", "factory3d_bms.group_f3d_bms_operator"])
-    assert op.count("f3d.bms.light.group") == 32
-    gid = op.search_read("f3d.bms.light.group", [], ["id"], limit=1)[0]["id"]
-    for model, vals in (("f3d.bms.light.group", {"e_norm": 1}),):
+    op = _user(odoo, "tb_oper", ["base.group_user", "td_bms.group_td_bms_operator"])
+    assert op.count("td.bms.light.group") == 32
+    gid = op.search_read("td.bms.light.group", [], ["id"], limit=1)[0]["id"]
+    for model, vals in (("td.bms.light.group", {"e_norm": 1}),):
         with pytest.raises(xc.Fault):
             op.write(model, gid, vals)
     with pytest.raises(xc.Fault):
-        op.call("f3d.bms.light.group", "unlink", [gid])
-    ep = op.search_read("f3d.bms.deviation", [], ["id"], limit=1)
+        op.call("td.bms.light.group", "unlink", [gid])
+    ep = op.search_read("td.bms.deviation", [], ["id"], limit=1)
     if ep:
         with pytest.raises(xc.Fault):
-            op.call("f3d.bms.deviation", "unlink", [ep[0]["id"]])
+            op.call("td.bms.deviation", "unlink", [ep[0]["id"]])
 
 
 def test_tb05_tb09_injection(odoo):
     """ТБ-05: dali_devices з ';DROP' → ValidationError; ТБ-09: action_open приймає лише 4 моделі."""
-    mgr = _user(odoo, "tb_mgr", ["base.group_user", "factory3d_base.group_f3d_manager"])
-    gid = mgr.search_read("f3d.bms.light.group", [], ["id", "dali_devices"], limit=1)[0]
+    mgr = _user(odoo, "tb_mgr", ["base.group_user", "td_factory3d.group_td_manager"])
+    gid = mgr.search_read("td.bms.light.group", [], ["id", "dali_devices"], limit=1)[0]
     for bad in ("@1.2.1.1-27;DROP", "@1.2.1.1#", ">V:2"):
         with pytest.raises(xc.Fault) as ei:
-            mgr.write("f3d.bms.light.group", gid["id"], {"dali_devices": bad})
+            mgr.write("td.bms.light.group", gid["id"], {"dali_devices": bad})
         assert "ValidationError" in str(ei.value) or "dali" in str(ei.value).lower() or "адрес" in str(ei.value).lower()
     with pytest.raises(xc.Fault):
-        mgr.call("f3d.bms.overview", "action_open", "res.partner", 1, "form")
+        mgr.call("td.bms.overview", "action_open", "res.partner", 1, "form")
     with pytest.raises(xc.Fault):
-        mgr.call("f3d.bms.overview", "action_open", "res.users", 1, "form")
+        mgr.call("td.bms.overview", "action_open", "res.users", 1, "form")
 
 
 def test_tb06_allowlist(odoo, fresh_sim):
     """ТБ-06: роутер поза allow-list колектора → джерело error, запитів до нього немає."""
     src = source(odoo, "HN-LP-3")
-    sid = odoo.search_read("f3d.source", [("code", "=", "HN-LP-3")], ["id"])[0]["id"]
+    sid = odoo.search_read("td.source", [("code", "=", "HN-LP-3")], ["id"])[0]["id"]
     try:
-        odoo.write("f3d.source", sid, {"params": {**src["params"], "host": "evil.example.com"}})
+        odoo.write("td.source", sid, {"params": {**src["params"], "host": "evil.example.com"}})
         assert sleep_until(lambda: source(odoo, "HN-LP-3")["state"] == "error", 180, 10), source(odoo, "HN-LP-3")
         err = source(odoo, "HN-LP-3")["last_error"] or ""
         print("TB06 last_error:", err)
         assert "allow" in err.lower() or "dozvol" in err.lower() or "denied" in err.lower() or "evil" in err
     finally:
-        odoo.write("f3d.source", sid, {"params": src["params"]})
+        odoo.write("td.source", sid, {"params": src["params"]})
     assert sleep_until(lambda: source(odoo, "HN-LP-3")["state"] == "online", 180, 10)
 
 
@@ -100,20 +100,20 @@ def test_tb03_write_off_expires(odoo, fresh_sim):
     _settings(odoo, True)
     try:
         restart_collector({"F3D_WRITE_ENABLED": "0"})
-        gid = odoo.search_read("f3d.bms.light.group", [("code", "=", "LT-MAINT")], ["id"])[0]["id"]
-        scene = odoo.search_read("f3d.bms.light.scene", [("number", "=", 3)], ["id"], limit=1)[0]["id"]
+        gid = odoo.search_read("td.bms.light.group", [("code", "=", "LT-MAINT")], ["id"])[0]["id"]
+        scene = odoo.search_read("td.bms.light.scene", [("number", "=", 3)], ["id"], limit=1)[0]["id"]
         w = odoo.call(
-            "f3d.bms.light.command.wizard",
+            "td.bms.light.command.wizard",
             "create",
             {"group_ids": [(6, 0, [gid])], "action": "scene", "scene_id": scene, "expires_min": 1},
         )
-        act = odoo.call("f3d.bms.light.command.wizard", "action_apply", [w])
+        act = odoo.call("td.bms.light.command.wizard", "action_apply", [w])
         ids = act["domain"][0][2]
         t0 = time.time()
         states = set()
 
         def done():
-            st = odoo.search_read("f3d.command", [("id", "in", ids)], ["state"])[0]["state"]
+            st = odoo.search_read("td.command", [("id", "in", ids)], ["state"])[0]["state"]
             states.add(st)
             return st == "expired"
 
@@ -137,15 +137,15 @@ def test_tb07_neutralize():
     env = {
         "PATH": "/usr/bin:/bin:/usr/local/bin",
         "HOME": str(Path.home()),
-        "F3D_TEST_INSTALL": "factory3d_base,factory3d_telemetry,factory3d_bms",
+        "F3D_TEST_INSTALL": "td_factory3d,td_telemetry,td_bms",
     }
     subprocess.run([str(t / "drop_db.sh"), db], capture_output=True, env=env)
     assert subprocess.run([str(t / "new_db.sh"), db], capture_output=True, env=env).returncode == 0
     assert subprocess.run([str(t / "update.sh"), db], capture_output=True, env=env, timeout=600).returncode == 0
-    sql = (ROOT / "odoo_addons" / "factory3d_bms" / "data" / "neutralize.sql").read_text()
+    sql = (ROOT / "odoo_addons" / "td_bms" / "data" / "neutralize.sql").read_text()
     q = (
-        "SELECT (SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'factory3d.bms.%%_enabled' AND value='True'),"
-        "(SELECT count(*) FROM f3d_source WHERE module='bms' AND (read_enabled OR write_enabled)),"
+        "SELECT (SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'td.bms.%%_enabled' AND value='True'),"
+        "(SELECT count(*) FROM td_source WHERE module='bms' AND (read_enabled OR write_enabled)),"
         "(SELECT count(*) FROM ir_cron WHERE cron_name LIKE 'Будівля%%' AND active)"
     )
     def pg(sql):

@@ -9,7 +9,7 @@ class F3dEnergyDayMixin(models.AbstractModel):
     """Пошукові фільтри за київською добою поля `day` (Y-2): рахує сервер, а не `context_today()` браузера
     (UTC на стенді: з 21:00 до 24:00 UTC київська доба вже інша)."""
 
-    _name = "f3d.energy.day.mixin"
+    _name = "td.energy.day.mixin"
     _description = "Енергетика: фільтри київської доби"
 
     is_today = fields.Boolean(string="Сьогодні", compute="_compute_day_flags", search="_search_is_today")

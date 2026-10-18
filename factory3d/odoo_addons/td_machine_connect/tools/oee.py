@@ -15,7 +15,7 @@ def compute_oee(inp, coverage_min=0.95):
 
     `inp`: `ppt`, `planned`, `nodata`, `run`, `run_wo`, `setup`, `fault`, `idle`, `off` — списки інтервалів;
     `pieces` `{wo_id: к-сть}`, `cycles` `{wo_id: хв/шт}`, `bad` (брак, шт), `losses` `[(loss_id, назва, інтервали)]`.
-    Повертає словник з іменами полів `f3d.oee.shift` (без `source`, дат і `computed_at`)."""
+    Повертає словник з іменами полів `td.oee.shift` (без `source`, дат і `computed_at`)."""
     ppt_iv = ppt.union(inp.get("ppt", []))
     planned_iv = _isect(inp.get("planned", []), ppt_iv)
     nodata_iv = ppt.minus(_isect(inp.get("nodata", []), ppt_iv), planned_iv)

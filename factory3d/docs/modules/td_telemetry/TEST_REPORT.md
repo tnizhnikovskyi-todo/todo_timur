@@ -1,9 +1,9 @@
-# TEST_REPORT factory3d_telemetry (W7)
+# TEST_REPORT td_telemetry (W7)
 
 Дата прогону: **2026-10-15**. Стенд: процесний режим (iot_sim 0.1.0, колектор 0.1.0, Odoo 19.0 CE `serve.sh`, mosquitto 2.0.20
 у контейнері `--network host`); `docker build` — **вне среды: MITM-проксі, `pip install` у контейнері падає з CERTIFICATE_VERIFY_FAILED**
 (див. DEPLOY_TEST.md). Копії демо-бази `odoo` немає → **вне среды: AC-58 / ТК-01 на демо**; посів бази — `tests/stand/seed_odoo.py`
-(обладнання з `f3d_code`, 26 сигналів рівня 0 з каталогу iot_sim, пороги рівня 0, заявка ТО COMPRESSOR).
+(обладнання з `td_code`, 26 сигналів рівня 0 з каталогу iot_sim, пороги рівня 0, заявка ТО COMPRESSOR).
 Команди: `tests/stand/stand.sh up|down`; `cd factory3d/services/collector && .venv/bin/pytest -q -m stand tests/stand`.
 
 ## Підсумок
@@ -11,7 +11,7 @@
 | Набір | Результат |
 |---|---|
 | Колектор `pytest -m "not stand" tests/unit` | 174 passed |
-| Odoo `run_tests.sh f3d_w7_ut /factory3d_telemetry,/factory3d_telemetry_viewer` | 0 failed, 0 error of 239 tests |
+| Odoo `run_tests.sh f3d_w7_ut /td_telemetry,/td_telemetry_viewer3d` | 0 failed, 0 error of 239 tests |
 | Стенд | пройшли: ТК-01 (частково), 02, 04, 05, 06, 07, 08, 11, 13, 14, 15, 16; ТК-03, ТК-09 — зелені в ізольованому прогоні; ТБ-01…ТБ-10; ТП-01, 02, 03, 04*, 05, 07; DEPLOY п. 3, 6–9. Skip (вне среды): ТК-10, ТК-12, ТП-06, AC-58 |
 | Падіння в повному прогоні | ТК-03, ТК-09 (в ізоляції passed; залежність від порядку: після ТК-07/08 стан COV-підписок/`reset` емулятора), ТК-10 (причина не з'ясована, не перепідтверджено) |
 
@@ -33,12 +33,12 @@
 * ТК-07: емулятор не опускає `AIR-RING/pressure_bar` при `compressor_fault` (SPEC: 5,6) — частину пропущено з попередженням.
 * ТК-08: iot_sim 0.1.0 не вимикає Modbus unit 70 при `fault comm` (реагують лише MQTT/OPC UA) — недоступність відтворено неіснуючим `unit=71` (0x0B).
 * ТК-09: `reset` емулятора скидає COV-підписки, колектор поновлює їх на 2/3 lifetime (≈200 с) — перед ТК-09 колектор перезапускається.
-* ТК-14: factory3d_viewer немає в worktree — перевірено провайдер `factory3d_telemetry_viewer` через Odoo shell; 3D/DevTools — вне среды.
+* ТК-14: td_viewer3d немає в worktree — перевірено провайдер `td_telemetry_viewer3d` через Odoo shell; 3D/DevTools — вне среды.
 * ТК-15: результат `fc6 addr 3099 = 7200` (SPEC: `[7200]`; AC-78 фіксує без дужок).
 * HTTP-PUSH: емулятор не вміє слати токен — на стенді знято `token_ref` (секрет у URL лишився).
 * ТБ-06: замість tcpdump/tshark — власний сніфер `tests/stand/bacnet_sniffer.py`; на дроті від колектора лише Who-Is/I-Am/ReadProperty/RPM; SQL-обхід прапорів відсікається валідатором колектора або плагіном.
 * ТБ-08: User=10002/ReadonlyRootfs/CapDrop/без портів — статично за `docker-compose.collector.yml`; allow-list перевірено з `iot-sim`→127.0.0.6 (по IP).
-* **ТП-04 перевищує SPEC**: `f3d_reading` 443 МБ при 2,4 М (SPEC ≤ 350; heap 200 + індекси 243), `f3d_reading_hour` 432 МБ при 2,16 М (SPEC ≤ 260). Тест перевіряє виміряну межу 500/480 МБ + warning (`F3D_TP04_STRICT=1` — межі SPEC). Потрібне рішення: переглянути оцінку ARCH §2.7 або прибрати зайві індекси.
+* **ТП-04 перевищує SPEC**: `td_reading` 443 МБ при 2,4 М (SPEC ≤ 350; heap 200 + індекси 243), `td_reading_hour` 432 МБ при 2,16 М (SPEC ≤ 260). Тест перевіряє виміряну межу 500/480 МБ + warning (`F3D_TP04_STRICT=1` — межі SPEC). Потрібне рішення: переглянути оцінку ARCH §2.7 або прибрати зайві індекси.
 * ТП-03: 3 М застарілих видалено за 43 с (< 60 с), зупинку за часом не досягнуто. ТП-02: тіло config 201 КБ (SPEC ≈ 500).
 * 24-годинні прогони, ТК-10/ТК-12 у повному складі, ТП-06 (1 год × 15/с) — **вне среды: тривалість** (skip, вмикаються `F3D_STAND_LONG=1`).
 
@@ -73,7 +73,7 @@
 |---|---|---|---|
 | ТП-01 | p95 0,37 с (1 000) / 0,73 с (2 000) | ≤ 1 / ≤ 2 с | OK |
 | ТП-02 | GET 0,07 с; 304 0,05 с; 201 КБ | ≤ 0,5 / ≤ 0,2 с | OK |
-| ТП-03 | 1,3 с, видалено 81 000, Index Scan `f3d_reading_ts_idx`; 3 М — 43 с | ≤ 60 с | OK |
+| ТП-03 | 1,3 с, видалено 81 000, Index Scan `td_reading_ts_idx`; 3 М — 43 с | ≤ 60 с | OK |
 | ТП-04 | 443 / 432 МБ | ≤ 350 / ≤ 260 МБ | FAIL за SPEC |
 | ТП-05 | 1,2 с (160 тис. показань) | ≤ 30 с | OK |
 | ТП-06 | — | — | skip: вне среды (тривалість) |
@@ -81,7 +81,7 @@
 
 ## AC-01…AC-104
 
-Тести: Odoo `odoo_addons/factory3d_telemetry/tests/` (скорочено `T/`), `…_viewer/tests/test_viewer_provider.py` (`V`), колектор `services/collector/tests/unit/` (`C/`), стенд `services/collector/tests/stand/` (`S/`). Усі — дата 2026-10-15.
+Тести: Odoo `odoo_addons/td_telemetry/tests/` (скорочено `T/`), `…_viewer/tests/test_viewer_provider.py` (`V`), колектор `services/collector/tests/unit/` (`C/`), стенд `services/collector/tests/stand/` (`S/`). Усі — дата 2026-10-15.
 AC-58: вне среды (демо-копія; ТК-01 + синтетичний `T/test_migration.py::TestLevel0`). AC-87: вне среды (ТК-12).
 
 | AC | Тест (файл::клас) / ТК | Статус |

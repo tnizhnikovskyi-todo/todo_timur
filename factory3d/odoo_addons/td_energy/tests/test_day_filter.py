@@ -15,19 +15,19 @@ CLOCKS = [
     (datetime(2026, 1, 14, 21, 59), date(2026, 1, 14)),
     (datetime(2026, 1, 14, 22, 0), date(2026, 1, 15)),
 ]
-VIEWS = ("view_f3d_energy_alloc_search", "view_f3d_energy_interval_search", "view_f3d_energy_balance_search")
+VIEWS = ("view_td_energy_alloc_search", "view_td_energy_interval_search", "view_td_energy_balance_search")
 
 
 @tagged(*TAGS)
 class TestEnergyDayFilter(F3DEnergyCase):
     def _rows(self, today):
         """Рядки балансу за днями today−8 … today+1 (унікальність — година)."""
-        node = self.env["f3d.energy.node"].search([], limit=1)
+        node = self.env["td.energy.node"].search([], limit=1)
         self.assertTrue(node)
         rows = {}
         for back in range(-1, 9):
             day = date.fromordinal(today.toordinal() - back)
-            rows[back] = self.env["f3d.energy.balance"].create(
+            rows[back] = self.env["td.energy.balance"].create(
                 {
                     "node_id": node.id,
                     "hour": datetime.combine(date(2000, 1, 1 + (back + 1)), time(12, 0)),
@@ -38,7 +38,7 @@ class TestEnergyDayFilter(F3DEnergyCase):
         return rows
 
     def test_filters_follow_kyiv_day_at_any_hour(self):
-        Balance = self.env["f3d.energy.balance"]
+        Balance = self.env["td.energy.balance"]
         for now, today in CLOCKS:
             rows = self._rows(today)  # rows[back] — доба today − back
             all_rows = Balance.browse([r.id for r in rows.values()])
@@ -57,6 +57,6 @@ class TestEnergyDayFilter(F3DEnergyCase):
 
     def test_search_views_do_not_use_browser_date(self):
         for name in VIEWS:
-            arch = self.env.ref("factory3d_energy." + name).arch_db
+            arch = self.env.ref("td_energy." + name).arch_db
             self.assertNotIn("context_today", arch, name)
             self.assertIn("is_today", arch, name)

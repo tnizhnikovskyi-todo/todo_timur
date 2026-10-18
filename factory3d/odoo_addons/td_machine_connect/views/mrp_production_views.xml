@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- V-25: МО — карти розкрою й завдання порталу. -->
 <odoo>
-    <record id="view_mrp_production_form_f3d" model="ir.ui.view">
+    <record id="view_mrp_production_form_td" model="ir.ui.view">
         <field name="name">mrp.production.form.f3d</field>
         <field name="model">mrp.production</field>
         <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button type="object" name="action_f3d_view_cut_maps" class="oe_stat_button" icon="fa-scissors"
-                        groups="factory3d_base.group_f3d_user" invisible="f3d_cut_map_count == 0">
-                    <field name="f3d_cut_map_count" widget="statinfo" string="Карти розкрою"/>
+                        groups="td_factory3d.group_td_user" invisible="td_cut_map_count == 0">
+                    <field name="td_cut_map_count" widget="statinfo" string="Карти розкрою"/>
                 </button>
                 <button type="object" name="action_f3d_view_gantry_jobs" class="oe_stat_button" icon="fa-truck"
-                        groups="factory3d_base.group_f3d_user" invisible="f3d_gantry_job_count == 0">
-                    <field name="f3d_gantry_job_count" widget="statinfo" string="Портал"/>
+                        groups="td_factory3d.group_td_user" invisible="td_gantry_job_count == 0">
+                    <field name="td_gantry_job_count" widget="statinfo" string="Портал"/>
                 </button>
             </xpath>
             <xpath expr="//header" position="inside">
                 <button name="action_f3d_create_cut_maps" type="object" string="Створити карту розкрою"
-                        groups="factory3d_base.group_f3d_manager"
+                        groups="td_factory3d.group_td_manager"
                         invisible="state in ('draft', 'done', 'cancel')"/>
                 <button name="action_f3d_feed_gantry" type="object" string="Подати плити порталом"
-                        groups="factory3d_base.group_f3d_user"
+                        groups="td_factory3d.group_td_user"
                         invisible="state in ('draft', 'done', 'cancel')"/>
             </xpath>
         </field>

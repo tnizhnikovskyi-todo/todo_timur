@@ -1,121 +1,121 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- §4.2: привілей і 4 групи конструктора (CD-02, CB-10) -->
-    <record id="privilege_f3d_constructor" model="res.groups.privilege">
+    <record id="privilege_td_constructor" model="res.groups.privilege">
         <field name="name">Конструктор</field>
-        <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+        <field name="category_id" ref="td_factory3d.module_category_factory3d"/>
         <field name="sequence">20</field>
     </record>
-    <record id="group_f3d_constructor_technologist" model="res.groups">
+    <record id="group_td_constructor_technologist" model="res.groups">
         <field name="name">Конструктор: технолог</field>
-        <field name="privilege_id" ref="privilege_f3d_constructor"/>
+        <field name="privilege_id" ref="privilege_td_constructor"/>
         <field name="sequence">10</field>
-        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+        <field name="implied_ids" eval="[Command.link(ref('td_factory3d.group_td_user'))]"/>
     </record>
-    <record id="group_f3d_constructor_storekeeper" model="res.groups">
+    <record id="group_td_constructor_storekeeper" model="res.groups">
         <field name="name">Конструктор: комірник</field>
-        <field name="privilege_id" ref="privilege_f3d_constructor"/>
+        <field name="privilege_id" ref="privilege_td_constructor"/>
         <field name="sequence">20</field>
-        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user')),
+        <field name="implied_ids" eval="[Command.link(ref('td_factory3d.group_td_user')),
                                          Command.link(ref('stock.group_stock_user'))]"/>
     </record>
-    <record id="group_f3d_constructor_engineer" model="res.groups">
+    <record id="group_td_constructor_engineer" model="res.groups">
         <field name="name">Конструктор: інженер</field>
-        <field name="privilege_id" ref="privilege_f3d_constructor"/>
+        <field name="privilege_id" ref="privilege_td_constructor"/>
         <field name="sequence">30</field>
-        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+        <field name="implied_ids" eval="[Command.link(ref('td_factory3d.group_td_user'))]"/>
     </record>
-    <record id="group_f3d_constructor_manager" model="res.groups">
+    <record id="group_td_constructor_manager" model="res.groups">
         <field name="name">Конструктор: менеджер</field>
-        <field name="privilege_id" ref="privilege_f3d_constructor"/>
+        <field name="privilege_id" ref="privilege_td_constructor"/>
         <field name="sequence">40</field>
-        <field name="implied_ids" eval="[Command.link(ref('group_f3d_constructor_technologist')),
-                                         Command.link(ref('group_f3d_constructor_storekeeper')),
-                                         Command.link(ref('group_f3d_constructor_engineer')),
-                                         Command.link(ref('factory3d_base.group_f3d_manager'))]"/>
+        <field name="implied_ids" eval="[Command.link(ref('group_td_constructor_technologist')),
+                                         Command.link(ref('group_td_constructor_storekeeper')),
+                                         Command.link(ref('group_td_constructor_engineer')),
+                                         Command.link(ref('td_factory3d.group_td_manager'))]"/>
     </record>
-    <record id="factory3d_base.group_f3d_admin" model="res.groups">
-        <field name="implied_ids" eval="[Command.link(ref('group_f3d_constructor_manager'))]"/>
+    <record id="td_factory3d.group_td_admin" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_td_constructor_manager'))]"/>
     </record>
 
     <!-- §4.3: глобальні правила мультикомпанії (DEC-12) -->
-    <record id="rule_f3d_site_company" model="ir.rule">
+    <record id="rule_td_site_company" model="ir.rule">
         <field name="name">Площадки: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_site"/>
+        <field name="model_id" ref="model_td_site"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="rule_f3d_layer_company" model="ir.rule">
+    <record id="rule_td_layer_company" model="ir.rule">
         <field name="name">Шари: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_layer"/>
+        <field name="model_id" ref="model_td_layer"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="rule_f3d_slot_company" model="ir.rule">
+    <record id="rule_td_slot_company" model="ir.rule">
         <field name="name">Місця: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_slot"/>
+        <field name="model_id" ref="model_td_slot"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="rule_f3d_placement_company" model="ir.rule">
+    <record id="rule_td_placement_company" model="ir.rule">
         <field name="name">Розміщення: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_placement"/>
+        <field name="model_id" ref="model_td_placement"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="rule_f3d_check_config_company" model="ir.rule">
+    <record id="rule_td_check_config_company" model="ir.rule">
         <field name="name">Перевірки: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_check_config"/>
+        <field name="model_id" ref="model_td_check_config"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
-    <record id="rule_f3d_version_company" model="ir.rule">
+    <record id="rule_td_version_company" model="ir.rule">
         <field name="name">Версії планування: мультикомпанія</field>
-        <field name="model_id" ref="model_f3d_layout_version"/>
+        <field name="model_id" ref="model_td_layout_version"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
 
     <!-- §4.3: правила записів за ролями (read=0: читання не обмежується, CD-02) -->
-    <record id="rule_f3d_layer_manager" model="ir.rule">
+    <record id="rule_td_layer_manager" model="ir.rule">
         <field name="name">Шари: менеджер редагує всі</field>
-        <field name="model_id" ref="model_f3d_layer"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_manager'))]"/>
+        <field name="model_id" ref="model_td_layer"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_manager'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="perm_read" eval="False"/>
     </record>
-    <record id="rule_f3d_slot_manager" model="ir.rule">
+    <record id="rule_td_slot_manager" model="ir.rule">
         <field name="name">Місця: менеджер редагує всі</field>
-        <field name="model_id" ref="model_f3d_slot"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_manager'))]"/>
+        <field name="model_id" ref="model_td_slot"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_manager'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="perm_read" eval="False"/>
     </record>
-    <record id="rule_f3d_placement_manager" model="ir.rule">
+    <record id="rule_td_placement_manager" model="ir.rule">
         <field name="name">Розміщення: менеджер редагує всі</field>
-        <field name="model_id" ref="model_f3d_placement"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_manager'))]"/>
+        <field name="model_id" ref="model_td_placement"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_manager'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="perm_read" eval="False"/>
     </record>
-    <record id="rule_f3d_slot_role" model="ir.rule">
+    <record id="rule_td_slot_role" model="ir.rule">
         <field name="name">Місця: ролі редагують шари зі своєю групою</field>
-        <field name="model_id" ref="model_f3d_slot"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_technologist')),
-                                    Command.link(ref('group_f3d_constructor_storekeeper')),
-                                    Command.link(ref('group_f3d_constructor_engineer'))]"/>
+        <field name="model_id" ref="model_td_slot"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_technologist')),
+                                    Command.link(ref('group_td_constructor_storekeeper')),
+                                    Command.link(ref('group_td_constructor_engineer'))]"/>
         <field name="domain_force">[('layer_id.edit_group_ids', 'in', user.all_group_ids.ids)]</field>
         <field name="perm_read" eval="False"/>
     </record>
-    <record id="rule_f3d_placement_role" model="ir.rule">
+    <record id="rule_td_placement_role" model="ir.rule">
         <field name="name">Розміщення: ролі редагують шари зі своєю групою</field>
-        <field name="model_id" ref="model_f3d_placement"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_technologist')),
-                                    Command.link(ref('group_f3d_constructor_storekeeper')),
-                                    Command.link(ref('group_f3d_constructor_engineer'))]"/>
+        <field name="model_id" ref="model_td_placement"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_technologist')),
+                                    Command.link(ref('group_td_constructor_storekeeper')),
+                                    Command.link(ref('group_td_constructor_engineer'))]"/>
         <field name="domain_force">[('layer_id.edit_group_ids', 'in', user.all_group_ids.ids)]</field>
         <field name="perm_read" eval="False"/>
     </record>
-    <record id="rule_f3d_layer_role" model="ir.rule">
+    <record id="rule_td_layer_role" model="ir.rule">
         <field name="name">Шари: ролі пишуть вміст шарів зі своєю групою</field>
-        <field name="model_id" ref="model_f3d_layer"/>
-        <field name="groups" eval="[Command.link(ref('group_f3d_constructor_technologist')),
-                                    Command.link(ref('group_f3d_constructor_storekeeper')),
-                                    Command.link(ref('group_f3d_constructor_engineer'))]"/>
+        <field name="model_id" ref="model_td_layer"/>
+        <field name="groups" eval="[Command.link(ref('group_td_constructor_technologist')),
+                                    Command.link(ref('group_td_constructor_storekeeper')),
+                                    Command.link(ref('group_td_constructor_engineer'))]"/>
         <field name="domain_force">[('edit_group_ids', 'in', user.all_group_ids.ids)]</field>
         <field name="perm_read" eval="False"/>
         <field name="perm_create" eval="False"/>

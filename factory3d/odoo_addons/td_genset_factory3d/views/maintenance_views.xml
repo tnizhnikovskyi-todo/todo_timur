@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-06, V-09; дія заявок ТО генератора -->
 <odoo>
-    <record id="view_maintenance_equipment_form_f3d_genset" model="ir.ui.view">
-        <field name="name">maintenance.equipment.form.f3d.genset</field>
+    <record id="view_maintenance_equipment_form_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.td.genset</field>
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
-                <field name="f3d_is_genset" invisible="1"/>
-                <field name="f3d_genset_link_id" invisible="1"/>
+                <field name="td_is_genset" invisible="1"/>
+                <field name="td_genset_link_id" invisible="1"/>
                 <button name="action_open_f3d_genset" type="object" class="oe_stat_button" icon="fa-bolt"
-                        string="Генератор" invisible="not f3d_is_genset"/>
+                        string="Генератор" invisible="not td_is_genset"/>
             </xpath>
         </field>
     </record>
 
-    <record id="view_maintenance_request_form_f3d_genset" model="ir.ui.view">
-        <field name="name">maintenance.request.form.f3d.genset</field>
+    <record id="view_maintenance_request_form_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.request.form.td.genset</field>
         <field name="model">maintenance.request</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
         <field name="arch" type="xml">
             <field name="equipment_id" position="after">
-                <field name="f3d_genset_event_key" readonly="1" invisible="not f3d_genset_event_key"
-                       groups="factory3d_base.group_f3d_user"/>
+                <field name="td_genset_event_key" readonly="1" invisible="not td_genset_event_key"
+                       groups="td_factory3d.group_td_user"/>
             </field>
         </field>
     </record>
 
-    <record id="action_f3d_genset_requests" model="ir.actions.act_window">
+    <record id="action_td_genset_requests" model="ir.actions.act_window">
         <field name="name">Заявки ТО генератора</field>
         <field name="res_model">maintenance.request</field>
         <field name="view_mode">kanban,list,form</field>
-        <field name="domain">[("f3d_genset_event_key", "!=", False)]</field>
+        <field name="domain">[("td_genset_event_key", "!=", False)]</field>
     </record>
 </odoo>

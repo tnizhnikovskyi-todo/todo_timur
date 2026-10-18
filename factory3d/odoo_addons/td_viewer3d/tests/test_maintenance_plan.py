@@ -4,12 +4,12 @@ from unittest.mock import patch
 from odoo.models import BaseModel
 from odoo.tests import HttpCase, tagged
 
-from odoo.addons.factory3d_viewer.tools import dates
-from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder
+from odoo.addons.td_viewer3d.tools import dates
+from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
 
 from .common import F3dViewerBase
 
-PROVIDER = "f3d.viewer.provider.maintenance"
+PROVIDER = "td.viewer.provider.maintenance"
 URL = "/f3d/viewer/maintenance/plan"
 
 
@@ -20,7 +20,7 @@ class MaintenanceFixtures:
     def _fixtures(cls):
         env = cls.env
         cls.user_maint = cls._make_user("f3d_mplan", [
-            "base.group_user", "factory3d_base.group_f3d_user", "maintenance.group_equipment_manager"])
+            "base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"])
         cls.user_tech = cls._make_user("f3d_mtech", ["base.group_user"])
         cls.stage_new = env["maintenance.stage"].create({"name": "TST Нова", "sequence": 1})
         cls.stage_done = env["maintenance.stage"].create({"name": "TST Виконано", "sequence": 90, "done": True})
@@ -29,7 +29,7 @@ class MaintenanceFixtures:
 
     @classmethod
     def _eq(cls, code, name, team=None, tech=None):
-        vals = {"name": name, "f3d_code": code}
+        vals = {"name": name, "td_code": code}
         if team:
             vals["maintenance_team_id"] = team.id
         if tech:
@@ -130,7 +130,7 @@ class TestMaintenanceProviderFields(MaintenanceFixtures, F3dViewerBase):
         self.assertNotIn("maintenance_request_id", eqs["TST-D1"])
 
     def test_workcenter_gets_request_id(self):
-        self.env["mrp.workcenter"].create({"name": "TST WC", "f3d_code": "TST-WC-9"})
+        self.env["mrp.workcenter"].create({"name": "TST WC", "td_code": "TST-WC-9"})
         req = self._req(self._eq("TST-WC-9", "TST Центр 9"), sched="2026-10-14 08:00")
         rec = self.payload(self.user_f3d)["workcenters"]["TST-WC-9"]
         self.assertEqual((rec["maintenance_request"], rec["maintenance_request_id"]), (req.name, req.id))

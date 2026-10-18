@@ -4,18 +4,18 @@
     <record id="view_maintenance_request_form_fire" model="ir.ui.view">
         <field name="name">maintenance.request.form.fire</field>
         <field name="model">maintenance.request</field>
-        <field name="inherit_id" ref="factory3d_telemetry.view_maintenance_request_form_f3d"/>
+        <field name="inherit_id" ref="td_telemetry.view_maintenance_request_form_td"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='f3d_signal_id']" position="after">
-                <field name="f3d_fire_zone_id"
-                       invisible="not f3d_fire_zone_id and not f3d_fire_device_id and not f3d_fire_event_id"/>
-                <field name="f3d_fire_device_id"
-                       invisible="not f3d_fire_zone_id and not f3d_fire_device_id and not f3d_fire_event_id"/>
-                <field name="f3d_fire_event_id"
-                       invisible="not f3d_fire_zone_id and not f3d_fire_device_id and not f3d_fire_event_id"/>
+            <xpath expr="//field[@name='td_signal_id']" position="after">
+                <field name="td_fire_zone_id"
+                       invisible="not td_fire_zone_id and not td_fire_device_id and not td_fire_event_id"/>
+                <field name="td_fire_device_id"
+                       invisible="not td_fire_zone_id and not td_fire_device_id and not td_fire_event_id"/>
+                <field name="td_fire_event_id"
+                       invisible="not td_fire_zone_id and not td_fire_device_id and not td_fire_event_id"/>
             </xpath>
-            <xpath expr="//field[@name='f3d_signal_id']/ancestor::group[1]" position="attributes">
-                <attribute name="invisible">not f3d_signal_id and not f3d_fire_zone_id</attribute>
+            <xpath expr="//field[@name='td_signal_id']/ancestor::group[1]" position="attributes">
+                <attribute name="invisible">not td_signal_id and not td_fire_zone_id</attribute>
             </xpath>
         </field>
     </record>
@@ -26,18 +26,18 @@
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="inside">
-                <div class="oe_button_box" name="button_box" invisible="not f3d_fire_zone_id">
+                <div class="oe_button_box" name="button_box" invisible="not td_fire_zone_id">
                     <button name="action_f3d_fire_open_zone" type="object" class="oe_stat_button" icon="fa-fire"
-                            string="Зона сигналізації" invisible="not f3d_fire_zone_id"/>
+                            string="Зона сигналізації" invisible="not td_fire_zone_id"/>
                 </div>
             </xpath>
         </field>
     </record>
 
-    <record id="action_f3d_fire_maint_requests" model="ir.actions.act_window">
+    <record id="action_td_fire_maint_requests" model="ir.actions.act_window">
         <field name="name">Заявки пожежної безпеки</field>
         <field name="res_model">maintenance.request</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">['|', ('f3d_fire_zone_id', '!=', False), ('f3d_signal_id.module', '=', 'fire_safety')]</field>
+        <field name="domain">['|', ('td_fire_zone_id', '!=', False), ('td_signal_id.module', '=', 'fire_safety')]</field>
     </record>
 </odoo>

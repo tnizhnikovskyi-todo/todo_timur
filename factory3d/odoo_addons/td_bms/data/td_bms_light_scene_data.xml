@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
     <!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->
-    <record id="scene_1" model="f3d.bms.light.scene">
+    <record id="scene_1" model="td.bms.light.scene">
         <field name="number">1</field>
         <field name="name">Зміна</field>
         <field name="level_pct" eval="100"/>
         <field name="block" eval="1"/>
         <field name="note">Припущення: сцени програмуються в Helvar Designer (Q-05); iot_sim R-24 / §8.10.4.</field>
     </record>
-    <record id="scene_2" model="f3d.bms.light.scene">
+    <record id="scene_2" model="td.bms.light.scene">
         <field name="number">2</field>
         <field name="name">Прибирання</field>
         <field name="level_pct" eval="75"/>
         <field name="block" eval="1"/>
         <field name="note">Припущення: сцени програмуються в Helvar Designer (Q-05); iot_sim R-24 / §8.10.4.</field>
     </record>
-    <record id="scene_3" model="f3d.bms.light.scene">
+    <record id="scene_3" model="td.bms.light.scene">
         <field name="number">3</field>
         <field name="name">Половина</field>
         <field name="level_pct" eval="50"/>
         <field name="block" eval="1"/>
         <field name="note">Припущення: сцени програмуються в Helvar Designer (Q-05); iot_sim R-24 / §8.10.4.</field>
     </record>
-    <record id="scene_4" model="f3d.bms.light.scene">
+    <record id="scene_4" model="td.bms.light.scene">
         <field name="number">4</field>
         <field name="name">Чергове освітлення</field>
         <field name="level_pct" eval="25"/>
         <field name="block" eval="1"/>
         <field name="note">Припущення: сцени програмуються в Helvar Designer (Q-05); iot_sim R-24 / §8.10.4.</field>
     </record>
-    <record id="scene_5" model="f3d.bms.light.scene">
+    <record id="scene_5" model="td.bms.light.scene">
         <field name="number">5</field>
         <field name="name">Ніч</field>
         <field name="level_pct" eval="10"/>
         <field name="block" eval="1"/>
         <field name="note">Припущення: сцени програмуються в Helvar Designer (Q-05); iot_sim R-24 / §8.10.4.</field>
     </record>
-    <record id="scene_6" model="f3d.bms.light.scene">
+    <record id="scene_6" model="td.bms.light.scene">
         <field name="number">6</field>
         <field name="name">Вимкнено</field>
         <field name="level_pct" eval="0"/>

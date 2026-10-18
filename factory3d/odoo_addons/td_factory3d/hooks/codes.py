@@ -4,7 +4,7 @@ import logging
 import os
 import re
 
-_logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
+_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 CODE_RE = re.compile(r'^[A-Z0-9]+(-[A-Z0-9]+)*$')  # R-01
@@ -18,7 +18,7 @@ def read_csv_rows(name):
 
 def read_rows(name):
     """Рядки data-файлу; тести підміняють hooks.read_data_file (common.with_data_file)."""
-    from odoo.addons.factory3d_base import hooks
+    from odoo.addons.td_factory3d import hooks
     reader = getattr(hooks, 'read_data_file', None) or read_csv_rows
     return reader(name)
 
@@ -29,7 +29,7 @@ def is_valid_code(code):
 
 def employee_table(env):
     """barcode -> код сцени за scene_employee_codes.csv (для hr.employee._f3d_code_from_barcode)."""
-    return {r['barcode']: r['f3d_code'] for r in read_rows('scene_employee_codes.csv')}
+    return {r['barcode']: r['td_code'] for r in read_rows('scene_employee_codes.csv')}
 
 
 def _assign(rec, code, what):
@@ -40,7 +40,7 @@ def _assign(rec, code, what):
     if rec.search_f3d(code):
         _logger.warning("%s %s: код %s уже зайнятий — пропуск", what, rec.display_name, code)
         return False
-    rec.write({'f3d_code': code})
+    rec.write({'td_code': code})
     return True
 
 
@@ -48,26 +48,26 @@ def locations(env):
     """R-05 (а) код із штрихкоду; R-21 (б) вид і місткість із scene_locations.csv."""
     Loc = env['stock.location']
     res = {'locations': 0, 'kinds': 0, 'capacities': 0}
-    if 'f3d_code' not in Loc._fields:
-        _logger.info("stock.location без f3d_code — коди локацій пропущено")
+    if 'td_code' not in Loc._fields:
+        _logger.info("stock.location без td_code — коди локацій пропущено")
         return res
     for wh in env['stock.warehouse'].search([]):
         candidates = Loc.search([
-            ('barcode', '!=', False), ('usage', '=', 'internal'), ('f3d_code', '=', False),
+            ('barcode', '!=', False), ('usage', '=', 'internal'), ('td_code', '=', False),
             ('id', 'child_of', wh.view_location_id.id), ('id', '!=', wh.lot_stock_id.id)])
         for loc in candidates:
             if _assign(loc, loc.barcode, "Локація"):
                 res['locations'] += 1
-    if 'f3d_loc_kind' not in Loc._fields:
-        _logger.warning("stock.location.f3d_loc_kind відсутнє — вид і місткість місць пропущено")
+    if 'td_loc_kind' not in Loc._fields:
+        _logger.warning("stock.location.td_loc_kind відсутнє — вид і місткість місць пропущено")
         return res
     for row in read_rows('scene_locations.csv'):
         loc = Loc.search_f3d(row['code'])
         if not loc:
             continue
         capacity = float(row['capacity']) if row.get('capacity') else 0
-        vals = {'f3d_loc_kind': row['kind'], 'f3d_capacity': capacity}
-        if loc.f3d_loc_kind != vals['f3d_loc_kind'] or loc.f3d_capacity != capacity:
+        vals = {'td_loc_kind': row['kind'], 'td_capacity': capacity}
+        if loc.td_loc_kind != vals['td_loc_kind'] or loc.td_capacity != capacity:
             loc.write(vals)
         res['kinds'] += 1
         if capacity > 0:
@@ -77,7 +77,7 @@ def locations(env):
 
 def workcenters(env):
     res = {'workcenters': 0}
-    for wc in env['mrp.workcenter'].search([('f3d_code', '=', False), ('code', '!=', False)]):
+    for wc in env['mrp.workcenter'].search([('td_code', '=', False), ('code', '!=', False)]):
         if _assign(wc, wc.code, "Робочий центр"):
             res['workcenters'] += 1
     return res
@@ -89,7 +89,7 @@ def employees(env):
     has_link = 'employee_ids' in WC._fields  # у CE поля немає (mrp_workorder)
     res = {'employees': 0}
     for emp in env['hr.employee'].with_context(active_test=False).search(
-            [('barcode', '!=', False), ('f3d_code', '=', False)]):
+            [('barcode', '!=', False), ('td_code', '=', False)]):
         wc = WC.search([('employee_ids', 'in', emp.id)], order='id', limit=1) if has_link else WC
         code = emp._f3d_code_from_barcode(emp.barcode, wc)
         if code and _assign(emp, code, "Працівник"):
@@ -108,7 +108,7 @@ def equipment(env):
         [('module', '=', 'factory3d'), ('model', '=', 'maintenance.equipment'),
          ('name', 'in', list(by_xmlid))], ['name', 'res_id'])}
     res = {'equipment': 0, 'by_serial': 0, 'by_xmlid_or_legacy': 0, 'unmatched': 0}
-    for eq in Eq.search([('f3d_code', '=', False)]):
+    for eq in Eq.search([('td_code', '=', False)]):
         if eq.serial_no in codes:
             code, how = eq.serial_no, 'by_serial'
         elif eq.id in xmlid_of:

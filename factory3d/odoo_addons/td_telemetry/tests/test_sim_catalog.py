@@ -183,11 +183,11 @@ class TestImportRows(F3DTelemetryCase):
         ]
         last_before = self.sig_press.last_value
         self.set_sql(self.sig_press, last_value=6.8)
-        res = self.env["f3d.signal"]._f3d_import_sim_rows(rows, {"u70": "MB-T-U70"}, {})
+        res = self.env["td.signal"]._f3d_import_sim_rows(rows, {"u70": "MB-T-U70"}, {})
         self.assertEqual(
             res, {"created": 1, "updated": 1, "unparsed": ["energy/consumers/SIGMA-T/p_now"], "skipped": ["Bad/Code"]}
         )
-        new = self.env["f3d.signal"].search([("code", "=", "equipment/COMPRESSOR-T/temp_c")])
+        new = self.env["td.signal"].search([("code", "=", "equipment/COMPRESSOR-T/temp_c")])
         self.assertEqual((new.origin, new.source_id, new.equipment_id), ("catalog", self.src_mb, self.eq_comp))
         self.assertEqual(
             {k: new.address[k] for k in ("unit", "fc", "addr", "type", "scale")},
@@ -200,9 +200,9 @@ class TestImportRows(F3DTelemetryCase):
         self.assertNotEqual(last_before, 6.8)
 
     def test_no_sim_model(self):
-        if "f3d.sim.signal" in self.env:
-            self.skipTest("встановлено factory3d_iot_sim: модель f3d.sim.signal є")
+        if "td.sim.signal" in self.env:
+            self.skipTest("встановлено td_iot_sim: модель td.sim.signal є")
         self.assertEqual(
-            self.env["f3d.signal"]._f3d_import_sim_catalog(),
+            self.env["td.signal"]._f3d_import_sim_catalog(),
             {"created": 0, "updated": 0, "unparsed": [], "skipped": [], "state": "skipped"},
         )

@@ -10,7 +10,7 @@ ONE_ZONE = {"BAC-108-RV-08", "BAC-109-RV-09", "HN-LP-2"}
 
 def _sources(odoo):
     return odoo.search_read(
-        "f3d.source", [("module", "=", "bms"), ("code", "!=", "BMS-DERIVED")], ["code", "state", "read_enabled"]
+        "td.source", [("module", "=", "bms"), ("code", "!=", "BMS-DERIVED")], ["code", "state", "read_enabled"]
     )
 
 
@@ -18,10 +18,10 @@ def test_deploy_one_zone_then_all(odoo, fresh_sim):
     close_bms_requests(odoo)
     base = last_request_id(odoo)
     srcs = _sources(odoo)
-    ids = {s["code"]: s["id"] for s in odoo.search_read("f3d.source", [("module", "=", "bms")], ["code"])}
+    ids = {s["code"]: s["id"] for s in odoo.search_read("td.source", [("module", "=", "bms")], ["code"])}
     try:
         for s in srcs:
-            odoo.write("f3d.source", ids[s["code"]], {"read_enabled": s["code"] in ONE_ZONE})
+            odoo.write("td.source", ids[s["code"]], {"read_enabled": s["code"] in ONE_ZONE})
         assert sleep_until(
             lambda: all(s["state"] == "disabled" for s in _sources(odoo) if s["code"] not in ONE_ZONE), 120, 10
         ), [s for s in _sources(odoo) if s["state"] != "disabled" and s["code"] not in ONE_ZONE][:5]
@@ -43,7 +43,7 @@ def test_deploy_one_zone_then_all(odoo, fresh_sim):
         assert not [r for r in new if any(x in r["name"] for x in ("RV-01", "RV-02", "RV-05", "RV-07", "BOILER"))], new
     finally:
         for s in srcs:
-            odoo.write("f3d.source", ids[s["code"]], {"read_enabled": True})
+            odoo.write("td.source", ids[s["code"]], {"read_enabled": True})
     assert sleep_until(lambda: all(s["state"] == "online" for s in _sources(odoo)), 240, 10), [
         s for s in _sources(odoo) if s["state"] != "online"
     ][:5]

@@ -1,28 +1,28 @@
 from odoo import Command, api, fields, models
 from odoo.exceptions import UserError
 
-from ..models.f3d_check_config import CHECK_KEY_SELECTION
+from ..models.td_check_config import CHECK_KEY_SELECTION
 from ..services import publish
 
 
 class F3dPublishWizard(models.TransientModel):
-    _name = 'f3d.publish.wizard'
+    _name = 'td.publish.wizard'
     _description = "Публікація розкладки"
 
-    site_id = fields.Many2one('f3d.site', string="Площадка", required=True, readonly=True, ondelete='cascade')
+    site_id = fields.Many2one('td.site', string="Площадка", required=True, readonly=True, ondelete='cascade')
     note = fields.Text(string="Нотатка до версії")
     draft_rev = fields.Integer(string="Лічильник чернетки", readonly=True)
     state = fields.Selection(
         [('preview', "Попередній перегляд"), ('done', "Опубліковано")], default='preview', required=True
     )
-    line_ids = fields.One2many('f3d.publish.wizard.line', 'wizard_id', string="План")
+    line_ids = fields.One2many('td.publish.wizard.line', 'wizard_id', string="План")
     change_line_ids = fields.One2many(
-        'f3d.publish.wizard.line', 'wizard_id', string="Буде створено / оновлено", domain=[('kind', '!=', 'archive')]
+        'td.publish.wizard.line', 'wizard_id', string="Буде створено / оновлено", domain=[('kind', '!=', 'archive')]
     )
     archive_line_ids = fields.One2many(
-        'f3d.publish.wizard.line', 'wizard_id', string="Пропозиції архівації", domain=[('kind', '=', 'archive')]
+        'td.publish.wizard.line', 'wizard_id', string="Пропозиції архівації", domain=[('kind', '=', 'archive')]
     )
-    issue_ids = fields.One2many('f3d.publish.wizard.issue', 'wizard_id', string="Зауваження перевірок")
+    issue_ids = fields.One2many('td.publish.wizard.issue', 'wizard_id', string="Зауваження перевірок")
     n_create = fields.Integer(string="Буде створено", compute='_compute_counts')
     n_update = fields.Integer(string="Буде оновлено", compute='_compute_counts')
     n_archive = fields.Integer(string="Буде архівовано", compute='_compute_counts')
@@ -31,11 +31,11 @@ class F3dPublishWizard(models.TransientModel):
     n_warn = fields.Integer(string="Попереджень", compute='_compute_counts')
     n_block = fields.Integer(string="Заборон", compute='_compute_counts')
     can_publish = fields.Boolean(compute='_compute_counts')
-    version_id = fields.Many2one('f3d.layout.version', string="Версія", readonly=True)
+    version_id = fields.Many2one('td.layout.version', string="Версія", readonly=True)
 
     @api.depends('line_ids.kind', 'line_ids.selected', 'issue_ids.severity', 'site_id.has_changes', 'state')
     def _compute_counts(self):
-        enabled = self.env['ir.config_parameter'].sudo().get_param('factory3d.constructor.publish_enabled') == 'True'
+        enabled = self.env['ir.config_parameter'].sudo().get_param('td.constructor.publish_enabled') == 'True'
         for wiz in self:
             lines, issues = wiz.line_ids, wiz.issue_ids
             wiz.n_create = len(lines.filtered(lambda r: r.kind == 'create'))
@@ -143,7 +143,7 @@ class F3dPublishWizard(models.TransientModel):
         return {
             'type': 'ir.actions.act_window',
             'name': "Версія планування",
-            'res_model': 'f3d.layout.version',
+            'res_model': 'td.layout.version',
             'res_id': result['version'].id,
             'view_mode': 'form',
             'target': 'current',
@@ -154,11 +154,11 @@ class F3dPublishWizard(models.TransientModel):
 
 
 class F3dPublishWizardLine(models.TransientModel):
-    _name = 'f3d.publish.wizard.line'
+    _name = 'td.publish.wizard.line'
     _description = "Рядок плану публікації"
     _order = 'kind, res_model, code'
 
-    wizard_id = fields.Many2one('f3d.publish.wizard', required=True, ondelete='cascade', index=True)
+    wizard_id = fields.Many2one('td.publish.wizard', required=True, ondelete='cascade', index=True)
     kind = fields.Selection(
         [('create', "Буде створено"), ('update', "Буде оновлено"), ('archive', "Пропонуємо архівувати")],
         string="Дія",
@@ -180,15 +180,15 @@ class F3dPublishWizardLine(models.TransientModel):
 
 
 class F3dPublishWizardIssue(models.TransientModel):
-    _name = 'f3d.publish.wizard.issue'
+    _name = 'td.publish.wizard.issue'
     _description = "Зауваження перевірок публікації"
     _order = 'severity desc, check_key, id'
 
-    wizard_id = fields.Many2one('f3d.publish.wizard', required=True, ondelete='cascade', index=True)
+    wizard_id = fields.Many2one('td.publish.wizard', required=True, ondelete='cascade', index=True)
     check_key = fields.Selection(
         CHECK_KEY_SELECTION + [('conflict', "Конфлікт кодів"), ('data', "Дані")], string="Перевірка"
     )
     severity = fields.Selection([('warn', "Попередження"), ('block', "Заборона")], string="Серйозність")
-    layer_id = fields.Many2one('f3d.layer', string="Шар", ondelete='set null')
+    layer_id = fields.Many2one('td.layer', string="Шар", ondelete='set null')
     codes = fields.Char(string="Коди")
     message = fields.Char(string="Повідомлення")

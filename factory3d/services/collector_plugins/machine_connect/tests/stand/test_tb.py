@@ -34,41 +34,41 @@ from .helpers import (
 )
 
 REPO = Path(__file__).resolve().parents[5]
-MODULE_DIR = REPO / "odoo_addons" / "factory3d_machine_connect"
+MODULE_DIR = REPO / "odoo_addons" / "td_machine_connect"
 PKG_DIR = REPO / "services" / "collector_plugins" / "machine_connect" / "f3d_collector_mc"
 SECRETS = ["opcua-pass-stand", "ws-key-stand-0123456789", "jobs-key-stand-0123456789"]
-SRC_ID = lambda o, code: o.search_read("f3d.source", [("code", "=", code)], ["id"])[0]["id"]  # noqa: E731
+SRC_ID = lambda o, code: o.search_read("td.source", [("code", "=", code)], ["id"])[0]["id"]  # noqa: E731
 
 
 def _src_state(o, code):
-    r = o.search_read("f3d.source", [("code", "=", code)], ["state", "last_error"])[0]
+    r = o.search_read("td.source", [("code", "=", code)], ["state", "last_error"])[0]
     return r["state"], r["last_error"] or ""
 
 
 # --- ТБ-01 ---------------------------------------------------------------------------------------------------------------
 MATRIX = {
-    "f3d.machine": ["", "R", "R", "R", "RWCD", "RWCD"],
-    "f3d.machine.state.log": ["", "R", "R", "R", "R", "RWCD"],
-    "f3d.downtime": ["", "R", "RW", "R", "R", "RWCD"],
-    "f3d.machine.event": ["", "R", "R", "R", "R", "RWCD"],
-    "f3d.oee.shift": ["", "R", "R", "R", "R", "RWCD"],
-    "f3d.machine.message": ["", "R", "R", "R", "RWCD", "RWCD"],
-    "f3d.gantry.stack": ["", "R", "R", "RW", "RWCD", "RWCD"],
-    "f3d.gantry.job": ["", "R", "RWC", "R", "RWCD", "RWCD"],
-    "f3d.cut.part": ["", "R", "R", "R", "RWCD", "RWCD"],
-    "f3d.cut.map": ["", "R", "R", "R", "RWCD", "RWCD"],
-    "f3d.cut.map.line": ["", "R", "R", "R", "RWCD", "RWCD"],
-    "f3d.downtime.reason.wizard": ["", "", "RWC", "", "", ""],
-    "f3d.cut.plan.import.wizard": ["", "", "", "", "RWC", "RWC"],
-    "f3d.cut.part.import.wizard": ["", "", "", "", "RWC", "RWC"],
+    "td.machine": ["", "R", "R", "R", "RWCD", "RWCD"],
+    "td.machine.state.log": ["", "R", "R", "R", "R", "RWCD"],
+    "td.downtime": ["", "R", "RW", "R", "R", "RWCD"],
+    "td.machine.event": ["", "R", "R", "R", "R", "RWCD"],
+    "td.oee.shift": ["", "R", "R", "R", "R", "RWCD"],
+    "td.machine.message": ["", "R", "R", "R", "RWCD", "RWCD"],
+    "td.gantry.stack": ["", "R", "R", "RW", "RWCD", "RWCD"],
+    "td.gantry.job": ["", "R", "RWC", "R", "RWCD", "RWCD"],
+    "td.cut.part": ["", "R", "R", "R", "RWCD", "RWCD"],
+    "td.cut.map": ["", "R", "R", "R", "RWCD", "RWCD"],
+    "td.cut.map.line": ["", "R", "R", "R", "RWCD", "RWCD"],
+    "td.downtime.reason.wizard": ["", "", "RWC", "", "", ""],
+    "td.cut.plan.import.wizard": ["", "", "", "", "RWC", "RWC"],
+    "td.cut.part.import.wizard": ["", "", "", "", "RWC", "RWC"],
 }
 USERS = {
     "plain": "base.group_user",
-    "f3d": "base.group_user,factory3d_base.group_f3d_user",
+    "f3d": "base.group_user,td_factory3d.group_td_user",
     "mrp": "base.group_user,mrp.group_mrp_user",
     "stock_manager": "base.group_user,stock.group_stock_manager",
-    "f3d_manager": "base.group_user,factory3d_base.group_f3d_manager",
-    "f3d_admin": "base.group_user,factory3d_base.group_f3d_admin",
+    "f3d_manager": "base.group_user,td_factory3d.group_td_manager",
+    "f3d_admin": "base.group_user,td_factory3d.group_td_admin",
 }
 OPS = {"R": "read", "W": "write", "C": "create", "D": "unlink"}
 
@@ -122,16 +122,16 @@ def test_tb03_export_api01(fresh, sim):
     csv_in = 'part_code;name;length_mm;width_mm;qty\nP001;=HYPERLINK("http://x");700;500;1\nP002;Верхня;800;560;2\n'
     parts = base64.b64encode(csv_in.encode()).decode()
     bom = o.search_read("mrp.bom", [("product_tmpl_id.default_code", "=", "BR-K4")], ["id"])[0]["id"]
-    wiz = o.create("f3d.cut.part.import.wizard", {"bom_id": bom, "file": parts, "filename": "p.csv"})
-    o.call("f3d.cut.part.import.wizard", "action_import", [wiz])
+    wiz = o.create("td.cut.part.import.wizard", {"bom_id": bom, "file": parts, "filename": "p.csv"})
+    o.call("td.cut.part.import.wizard", "action_import", [wiz])
     mo = make_mo(o, "BR-K4", 14)
     o.call("mrp.production", "action_f3d_create_cut_maps", [mo["id"]])
-    mid = o.search_read("f3d.cut.map", [("production_id", "=", mo["id"]), ("material_role", "=", "main")], ["id"])[0][
+    mid = o.search_read("td.cut.map", [("production_id", "=", mo["id"]), ("material_role", "=", "main")], ["id"])[0][
         "id"
     ]
-    o.call("f3d.cut.map", "action_build_lines", [mid])
-    o.call("f3d.cut.map", "action_export", [mid])
-    t = o.search_read("f3d.command", [("f3d_cut_map_id", "=", mid)], ["payload"])[0]["payload"]["token"]
+    o.call("td.cut.map", "action_build_lines", [mid])
+    o.call("td.cut.map", "action_export", [mid])
+    t = o.search_read("td.command", [("td_cut_map_id", "=", mid)], ["payload"])[0]["payload"]["token"]
     url = f"http://127.0.0.1:18070/f3d/machine/cutmap/{mid}/export"
     hdr = {"Authorization": "Bearer " + token}
     codes = {http("GET", url, headers={**hdr, "X-F3D-Token": secrets.token_hex(8)})[0] for _ in range(100)}
@@ -145,7 +145,7 @@ def test_tb03_export_api01(fresh, sim):
     )  # ТБ-06: формула нейтралізована
     assert http("GET", url, headers={**hdr, "X-F3D-Token": t})[0] == 403  # одноразовий
     leaks = {
-        "chatter": any(t in b for b in o.chatter("f3d.cut.map", mid)),
+        "chatter": any(t in b for b in o.chatter("td.cut.map", mid)),
         "result": any(t in json.dumps(c.get("result_data") or {}) + (c.get("error") or "") for c in commands(o)),
     }
     assert not any(leaks.values()), leaks
@@ -198,7 +198,7 @@ def test_tb05_secrets_in_logs(fresh, sim):
     hay = {"collector.log": collector_log(), "odoo.log": odoo_log(), "config": cfg}
     found = {name: [s for s in SECRETS + [token] if s in text] for name, text in hay.items()}
     assert not any(found.values()), {k: [s[:6] + "…" for s in v] for k, v in found.items()}
-    for src in o.search_read("f3d.source", [("module", "=", "machine_connect")], ["code", "params"]):
+    for src in o.search_read("td.source", [("module", "=", "machine_connect")], ["code", "params"]):
         for k in src["params"] or {}:
             if re.search(r"pass|key|token|secret|cert", k, re.I):
                 assert k.endswith("_ref"), (src["code"], k)
@@ -246,7 +246,7 @@ def test_tb06_injections(fresh, sim):
     ) + " ".join(
         o.chatter(
             "maintenance.equipment",
-            o.search_read("maintenance.equipment", [("f3d_code", "=", "CNC-2")], ["id"])[0]["id"],
+            o.search_read("maintenance.equipment", [("td_code", "=", "CNC-2")], ["id"])[0]["id"],
         )
     )
     assert "<img" not in bodies and "<img" not in notes, "XSS не екрановано"
@@ -254,10 +254,10 @@ def test_tb06_injections(fresh, sim):
     enable_write(o, ["REST-WOODSTORE"], ["equipment/GANTRY-1/cmd"])
     mo = make_mo(o, "BR-K4", 14)
     jid = o.call("mrp.production", "action_f3d_feed_gantry", [mo["id"]])["res_id"]
-    o.write("f3d.gantry.job", jid, {"external_ref": "a;b c"})
-    o.call("f3d.gantry.job", "action_send", [jid])
+    o.write("td.gantry.job", jid, {"external_ref": "a;b c"})
+    o.call("td.gantry.job", "action_send", [jid])
     cron_run(o, "Портал")  # UserError R-21 ловиться в `_f3d_send` (крон) → завдання `error`, команди немає
-    j = o.read("f3d.gantry.job", jid, ["state", "error"])[0]
+    j = o.read("td.gantry.job", jid, ["state", "error"])[0]
     assert j["state"] == "error" and j["error"], j
     assert not commands(o, "equipment/GANTRY-1/cmd")
     assert "HTTP 500" not in odoo_log()[-20000:]
@@ -276,10 +276,10 @@ def test_tb07_opcua_security(fresh, sim):
     extra = f"F3D_OPCUA_CERT={certs}/client.der F3D_OPCUA_KEY={certs}/client_key.pem"
     o = fresh(env={"F3D_EXTRA_ENV": extra + f" F3D_OPCUA_SERVER_CERT={certs}/server.der"}, ready=False)
     sid = SRC_ID(o, "UA-SAW-1")
-    base = o.search_read("f3d.source", [("id", "=", sid)], ["params"])[0]["params"]
+    base = o.search_read("td.source", [("id", "=", sid)], ["params"])[0]["params"]
     sec = dict(base, security_mode="SignAndEncrypt", security_policy="Basic256Sha256", cert_ref="F3D_OPCUA_CERT", key_ref="F3D_OPCUA_KEY",
                server_cert_ref="F3D_OPCUA_SERVER_CERT")  # fmt: skip
-    o.write("f3d.source", sid, {"params": sec})
+    o.write("td.source", sid, {"params": sec})
     ok = wait(lambda: _src_state(o, "UA-SAW-1")[0] == "online", 120, 5)
     state_a = _src_state(o, "UA-SAW-1")
     # б) інший сертифікат сервера
@@ -287,7 +287,7 @@ def test_tb07_opcua_security(fresh, sim):
     wait(lambda: _src_state(o, "UA-SAW-1")[0] == "error", 120, 5)
     state_b = _src_state(o, "UA-SAW-1")
     # в) без закріплення
-    o.write("f3d.source", sid, {"params": {k: v for k, v in sec.items() if k != "server_cert_ref"}})
+    o.write("td.source", sid, {"params": {k: v for k, v in sec.items() if k != "server_cert_ref"}})
     stand_sh("collector-restart", env={"F3D_EXTRA_ENV": extra})
     wait(lambda: "not pinned" in _src_state(o, "UA-SAW-1")[1], 120, 5)
     state_c = _src_state(o, "UA-SAW-1")
@@ -320,11 +320,11 @@ def test_tb08_rest_and_allowlist(fresh, sim):
     stand_sh("collector-restart", env={"F3D_EXTRA_ENV": "F3D_WOODSTORE_KEY=wrong-key-0123456789"})
     b = wait(err_has("401", "auth"), 120, 5) or _src_state(o, "REST-WOODSTORE")
     sid = SRC_ID(o, "REST-WOODSTORE")
-    base = o.search_read("f3d.source", [("id", "=", sid)], ["params"])[0]["params"]
+    base = o.search_read("td.source", [("id", "=", sid)], ["params"])[0]["params"]
     stand_sh("collector-restart")
-    o.write("f3d.source", sid, {"params": dict(base, base_url="https://iot-sim:8082", verify_tls=False)})
+    o.write("td.source", sid, {"params": dict(base, base_url="https://iot-sim:8082", verify_tls=False)})
     c = wait(err_has("verify_tls", "https"), 120, 5) or _src_state(o, "REST-WOODSTORE")
-    o.write("f3d.source", sid, {"params": base})
+    o.write("td.source", sid, {"params": base})
     set_iot_sim_ip("127.0.0.2")  # інакше iot-sim (127.0.0.1) збігається з хостом Odoo, який allow-list дозволяє завжди
     try:
         stand_sh("collector-restart", env={"F3D_ALLOW_HOSTS": "odoo19"})
@@ -347,11 +347,11 @@ def test_tb09_multicompany(fresh):
     o = fresh(ready=False)
     c2 = o.create("res.company", {"name": "C2 (стенд)"})
     cal2 = o.create("resource.calendar", {"name": "C2", "company_id": c2, "tz": "Europe/Kyiv"})
-    wc = o.create("mrp.workcenter", {"name": "M2", "f3d_code": "M2", "company_id": c2, "resource_calendar_id": cal2})
-    m2 = o.create("f3d.machine", {"workcenter_id": wc, "protocol": "manual"})
+    wc = o.create("mrp.workcenter", {"name": "M2", "td_code": "M2", "company_id": c2, "resource_calendar_id": cal2})
+    m2 = o.create("td.machine", {"workcenter_id": wc, "protocol": "manual"})
     gids = [
         o.call("ir.model.data", "check_object_reference", *x.split("."))[1]
-        for x in ("base.group_user", "factory3d_base.group_f3d_manager", "mrp.group_mrp_user")
+        for x in ("base.group_user", "td_factory3d.group_td_manager", "mrp.group_mrp_user")
     ]
     o.create(
         "res.users",
@@ -367,21 +367,21 @@ def test_tb09_multicompany(fresh):
     u = odoo_rpc.Odoo(login="c2user", password="c2user")
     seen = {}
     for model in (
-        "f3d.machine",
-        "f3d.machine.state.log",
-        "f3d.downtime",
-        "f3d.oee.shift",
-        "f3d.gantry.job",
-        "f3d.cut.map",
+        "td.machine",
+        "td.machine.state.log",
+        "td.downtime",
+        "td.oee.shift",
+        "td.gantry.job",
+        "td.cut.map",
     ):  # стоси порталу — склад (локації), правила компанії SPEC §4.3 на них не покладено
         seen[model] = u.count(model)
-    assert seen["f3d.machine"] == 1 and u.search_read("f3d.machine", [], ["code"])[0]["code"] == "M2", seen
-    assert all(v == 0 for k, v in seen.items() if k != "f3d.machine"), seen
+    assert seen["td.machine"] == 1 and u.search_read("td.machine", [], ["code"])[0]["code"] == "M2", seen
+    assert all(v == 0 for k, v in seen.items() if k != "td.machine"), seen
     from .helpers import cron_run
 
     cron_run(o, "такт")
     cron_run(o, "OEE змін")
-    assert o.read("f3d.machine", m2, ["id"])  # крони не впали на двох компаніях
+    assert o.read("td.machine", m2, ["id"])  # крони не впали на двох компаніях
     assert "Traceback" not in odoo_log()[-5000:] or True
 
 
@@ -404,16 +404,16 @@ def test_tb10_neutralize(fresh):
     stand_sh("odoo-start")
     o = odoo_rpc.Odoo()
     for k in ("read_enabled", "auto_start_enabled", "write_enabled", "gantry_auto_replenish", "gantry_auto_feed"):
-        assert o.param("factory3d.machine_connect." + k) in ("False", False, "false", "0"), k
+        assert o.param("td.machine_connect." + k) in ("False", False, "false", "0"), k
     cr = o.search_read("ir.cron", [("cron_name", "like", "Верстати"), ("active", "=", True)], ["cron_name"])
     assert not cr, cr
-    assert int(psql("select count(*) from f3d_cut_map where export_token_hash is not null", odoo_rpc.DB)[0][0]) == 0
-    o.call("f3d.gantry.job", "action_send", [jid])
+    assert int(psql("select count(*) from td_cut_map where export_token_hash is not null", odoo_rpc.DB)[0][0]) == 0
+    o.call("td.gantry.job", "action_send", [jid])
     cron_run(o, "Портал")  # `UserError` «Запис вимкнено» ловиться в `_f3d_send` (крон): команди немає
-    j = o.read("f3d.gantry.job", jid, ["state", "error"])[0]
+    j = o.read("td.gantry.job", jid, ["state", "error"])[0]
     assert j["state"] in ("to_send", "error") and "вимкнено" in (j["error"] or ""), j
     assert not [c for c in commands(o) if c["state"] != "failed"], commands(o)
-    mid = o.search_read("f3d.cut.map", [], ["id"])
+    mid = o.search_read("td.cut.map", [], ["id"])
     if mid:
         with pytest.raises(RuntimeError):
-            o.call("f3d.cut.map", "action_send_optimizer", [mid[0]["id"]])
+            o.call("td.cut.map", "action_send_optimizer", [mid[0]["id"]])

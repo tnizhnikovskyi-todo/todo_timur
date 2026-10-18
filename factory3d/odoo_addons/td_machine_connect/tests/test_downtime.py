@@ -13,10 +13,10 @@ class DowntimeMixin:
 
     def downtimes(self, m=None):
         m = m or self.m_ua
-        return self.env["f3d.downtime"].search([("machine_id", "=", m.id)], order="date_start, id")
+        return self.env["td.downtime"].search([("machine_id", "=", m.id)], order="date_start, id")
 
     def records(self, dt):
-        return self.env["mrp.workcenter.productivity"].search([("f3d_downtime_id", "=", dt.id)], order="date_start, id")
+        return self.env["mrp.workcenter.productivity"].search([("td_downtime_id", "=", dt.id)], order="date_start, id")
 
     def set_working(self, m, since="09:29"):
         log = self.make_log(m, "working", since)
@@ -30,12 +30,12 @@ class DowntimeMixin:
         )
 
     def start_wo(self, m, wc, t="09:29"):
-        """Завдання стартує оператором (DEC-1: `button_start` + `f3d_employee_id`; `start_employee` у CE немає)."""
+        """Завдання стартує оператором (DEC-1: `button_start` + `td_employee_id`; `start_employee` у CE немає)."""
         mo = self.make_mo(wc)
         wo = mo.workorder_ids[:1]
         with at(t):
             wo.with_user(self.user_mrp).button_start()
-        wo.f3d_employee_id = self.emp_ua
+        wo.td_employee_id = self.emp_ua
         self.set_sql(m, active_workorder_id=wo.id)
         return wo
 
@@ -60,9 +60,9 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         rec = self.records(dt)
         self.assertEqual(len(rec), 1)
         self.assertEqual(rec.loss_id, self.loss("mrp.block_reason1"))
-        self.assertTrue(rec.f3d_auto)
-        self.assertEqual((rec.f3d_source, rec.date_start), ("machine", kt("09:42")))
-        self.assertEqual(rec.create_uid, self.env.ref("factory3d_machine_connect.user_f3d_machine"))
+        self.assertTrue(rec.td_auto)
+        self.assertEqual((rec.td_source, rec.date_start), ("machine", kt("09:42")))
+        self.assertEqual(rec.create_uid, self.env.ref("td_machine_connect.user_td_machine"))
         self.assertEqual(self.wc_ua.working_state, "blocked")
         self.assertEqual(timer.date_end, kt("09:42"))  # R-10 п. 1 (W3)
 
@@ -84,8 +84,8 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         rec = self.records(dt)
         self.assertEqual(len(rec), 1)
         self.assertEqual(
-            (rec.loss_id, rec.date_start, rec.date_end, rec.f3d_auto),
-            (self.env.ref("factory3d_machine_connect.loss_unknown"), kt("10:05"), kt("10:21"), True),
+            (rec.loss_id, rec.date_start, rec.date_end, rec.td_auto),
+            (self.env.ref("td_machine_connect.loss_unknown"), kt("10:05"), kt("10:21"), True),
         )
 
     def test_idle_lunch_and_after_shift(self):
@@ -131,7 +131,7 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         self.assertEqual(m.state, "idle")
         d1 = D0 + timedelta(days=1)
         with at("07:00:30", day=d1):
-            self.env["f3d.machine"]._cron_tick()
+            self.env["td.machine"]._cron_tick()
         new = m.current_downtime_id
         self.assertTrue(new)
         self.assertEqual((new.state_kind, new.date_start), ("idle", kt("07:00", d1)))
@@ -180,7 +180,7 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         m = self.m_ua
         dt = self._fault(m)
         # «Поломка» вже підказана автоматично; повернути «Не вказано» для перевірки
-        dt._f3d_apply_reason(self.env.ref("factory3d_machine_connect.loss_unknown"), "auto")
+        dt._f3d_apply_reason(self.env.ref("td_machine_connect.loss_unknown"), "auto")
         with self.assertRaises(UserError):
             dt.with_user(self.user_mrp_manager).action_confirm()
         with self.assertRaises(AccessError):

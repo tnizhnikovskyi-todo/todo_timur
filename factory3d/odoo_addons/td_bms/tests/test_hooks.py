@@ -63,7 +63,7 @@ NORMS = {
 
 
 def _csv_rows():
-    with file_open("factory3d_bms/data/bms_signals.csv", "rb") as f:
+    with file_open("td_bms/data/bms_signals.csv", "rb") as f:
         return list(csv.DictReader(f.read().decode("utf-8").splitlines()))
 
 
@@ -72,19 +72,19 @@ class TestData(F3DBmsCase):
     """Дані з макета (A.0, A.1): норми, групи, адресація DALI."""
 
     def test_13_norms_effective_lux(self):
-        norms = self.env["f3d.bms.light.norm"].search([])
+        norms = self.env["td.bms.light.norm"].search([])
         self.assertEqual({n.key: n.lux for n in norms}, NORMS)
         racks = norms.filtered(lambda n: n.key == "storage_racks")
         self.assertTrue(racks.ref_en.startswith("EN 12464-1"))
 
     def test_6_scenes(self):
-        scenes = self.env["f3d.bms.light.scene"].search([])
+        scenes = self.env["td.bms.light.scene"].search([])
         self.assertEqual(
             [(s.number, s.level_pct) for s in scenes], [(1, 100), (2, 75), (3, 50), (4, 25), (5, 10), (6, 0)]
         )
 
     def test_32_groups_match_macro(self):
-        groups = self.env["f3d.bms.light.group"].search([])
+        groups = self.env["td.bms.light.group"].search([])
         self.assertEqual(len(groups), 32)
         self.assertEqual(sum(groups.mapped("n_fixtures")), 320)
         self.assertAlmostEqual(sum(groups.mapped("p_inst_kw")), 40.32, delta=0.1)
@@ -103,11 +103,11 @@ class TestData(F3DBmsCase):
                 self.assertEqual(g.name, "Освітлення: " + g.zone_id.name)
 
     def test_devices_match_appendix(self):
-        groups = self.env["f3d.bms.light.group"].search([], order="sequence")
+        groups = self.env["td.bms.light.group"].search([], order="sequence")
         self.assertEqual([g.dali_group for g in groups], list(range(1, 33)))
         for g in groups:
             self.assertEqual(g.dali_devices, A1[g.code][6], g.code)
-        panels = {p.code: p for p in self.env["f3d.bms.light.panel"].search([])}
+        panels = {p.code: p for p in self.env["td.bms.light.panel"].search([])}
         self.assertEqual(sorted(panels), ["LP-1", "LP-2", "LP-3"])
         self.assertEqual(
             (panels["LP-1"].n_fixtures, panels["LP-2"].n_fixtures, panels["LP-3"].n_fixtures), (50, 184, 86)
@@ -115,7 +115,7 @@ class TestData(F3DBmsCase):
         self.assertEqual([panels[c].source_id.code for c in sorted(panels)], ["HN-LP-1", "HN-LP-2", "HN-LP-3"])
 
     def test_units(self):
-        units = self.env["f3d.bms.hvac.unit"].search([])
+        units = self.env["td.bms.hvac.unit"].search([])
         self.assertEqual(len(units), 29)
         rv5 = units.filtered(lambda u: u.code == "RV-05")
         self.assertEqual((rv5.bacnet_device, rv5.source_id.code, rv5.mode_design), (105, "BAC-105-RV-05", "AQ"))
@@ -126,17 +126,17 @@ class TestData(F3DBmsCase):
         self.assertEqual(units.filtered(lambda u: u.code == "AHU-1").t_supply_design, 21.0)
 
     def test_balance_753(self):
-        bal = self.env["f3d.bms.heat.balance"].search([])
+        bal = self.env["td.bms.heat.balance"].search([])
         self.assertEqual(len(bal), 1)
         self.assertEqual(bal.total_kw, 753)
         self.assertEqual(len(bal.line_ids), 4)
 
     def test_sources(self):
-        sources = self.env["f3d.source"].search([("module", "=", "bms")])
+        sources = self.env["td.source"].search([("module", "=", "bms")])
         self.assertEqual(len(sources), 33)
         derived = sources.filtered(lambda s: s.code == "BMS-DERIVED")
         self.assertEqual((derived.type, derived.collector_id.id, derived.period_s_default), ("f3d_bms", False, 60))
-        self.assertEqual(self.env.ref("factory3d_bms.source_bms_derived"), derived)
+        self.assertEqual(self.env.ref("td_bms.source_bms_derived"), derived)
         self.assertEqual(len(sources.filtered(lambda s: s.type == "bacnet_ip")), 29)
         self.assertEqual(len(sources.filtered(lambda s: s.type == "helvarnet")), 3)
 
@@ -148,13 +148,13 @@ class TestInstall(F3DBmsCase):
     def setUp(self):
         super().setUp()
         self.icp = self.env["ir.config_parameter"].sudo()
-        self.Signal = self.env["f3d.signal"].with_context(active_test=False)
+        self.Signal = self.env["td.signal"].with_context(active_test=False)
 
     def _module_signals(self):
         return self.Signal.search([("module", "=", "bms")])
 
     def test_counts(self):
-        report = json.loads(self.icp.get_param("factory3d.bms.install_report"))
+        report = json.loads(self.icp.get_param("td.bms.install_report"))
         self.assertIn(report["state"], ("done", "partial"))
         self.assertEqual(len(self._module_signals()), 549)
         self.assertEqual(report["created"] + report["updated"], 549)
@@ -213,15 +213,15 @@ class TestInstall(F3DBmsCase):
             self.assertFalse(sig.write_enabled)
 
     def test_links(self):
-        unit = self.env["f3d.bms.hvac.unit"].search([("code", "=", "RV-05")])
+        unit = self.env["td.bms.hvac.unit"].search([("code", "=", "RV-05")])
         self.assertEqual(unit.filter_signal_id.code, "ventilation/units/RV-05/filter_dp_pa")
         self.assertEqual(unit.check_signal_id.code, "ventilation/units/RV-05/check")
-        group = self.env["f3d.bms.light.group"].search([("code", "=", "LT-CUT")])
+        group = self.env["td.bms.light.group"].search([("code", "=", "LT-CUT")])
         self.assertEqual(group.level_signal_id.code, "lighting/groups/LT-CUT/level")
         self.assertEqual(group.faulty_signal_id.code, "lighting/groups/LT-CUT/faulty")
-        panel = self.env["f3d.bms.light.panel"].search([("code", "=", "LP-2")])
+        panel = self.env["td.bms.light.panel"].search([("code", "=", "LP-2")])
         self.assertEqual(panel.state_signal_id.code, "lighting/panels/LP-2/state")
-        bal = self.env["f3d.bms.heat.balance"].search([], limit=1)
+        bal = self.env["td.bms.heat.balance"].search([], limit=1)
         self.assertEqual(bal.outdoor_signal_id.code, "ventilation/totals/outdoor_c")
         self.assertEqual(bal.boiler_state_signal_id.code, "equipment/BOILER/state")
         self.assertEqual(bal.check_signal_id.code, "ventilation/heat_plant/check")
@@ -231,7 +231,7 @@ class TestInstall(F3DBmsCase):
     def test_reinstall_idempotent(self):
         before = {
             m: self.env[m].with_context(active_test=False).search_count([])
-            for m in ("f3d.bms.light.norm", "f3d.bms.light.group", "f3d.bms.hvac.unit", "f3d.signal", "f3d.source")
+            for m in ("td.bms.light.norm", "td.bms.light.group", "td.bms.hvac.unit", "td.signal", "td.source")
         }
         report = hooks.run_install(self.env)
         self.assertEqual(report["created"], 0)
@@ -240,24 +240,24 @@ class TestInstall(F3DBmsCase):
         after = {m: self.env[m].with_context(active_test=False).search_count([]) for m in before}
         self.assertEqual(before, after)
         self.assertEqual(report["total_kw"], 753)
-        self.assertEqual(json.loads(self.icp.get_param("factory3d.bms.install_report"))["state"], report["state"])
+        self.assertEqual(json.loads(self.icp.get_param("td.bms.install_report"))["state"], report["state"])
 
     def test_params_environment(self):
-        keys = self.icp.search([("key", "=like", "factory3d.bms.%")]).mapped("key")
+        keys = self.icp.search([("key", "=like", "td.bms.%")]).mapped("key")
         self.assertGreaterEqual(len(keys), 15)
-        self.icp.set_param("factory3d.base.environment", "prod")
+        self.icp.set_param("td.base.environment", "prod")
         hooks.params(self.env)
         hooks.read_flags(self.env)
-        self.assertEqual(self.icp.get_param("factory3d.bms.read_enabled"), "False")
-        sources = self.env["f3d.source"].search([("module", "=", "bms")])
+        self.assertEqual(self.icp.get_param("td.bms.read_enabled"), "False")
+        sources = self.env["td.source"].search([("module", "=", "bms")])
         self.assertEqual(len(sources), 33)
         self.assertFalse(sources.filtered("read_enabled"))
         self.assertEqual(set(sources.mapped("state")), {"disabled"})
-        self.icp.set_param("factory3d.base.environment", "test")
+        self.icp.set_param("td.base.environment", "test")
         hooks.params(self.env)
         res = hooks.read_flags(self.env)
         self.assertEqual(res["sources_read"], 33)
-        self.assertEqual(self.icp.get_param("factory3d.bms.read_enabled"), "True")
+        self.assertEqual(self.icp.get_param("td.bms.read_enabled"), "True")
         self.assertEqual(len(sources.filtered("read_enabled")), 33)
 
     def test_write_flags(self):
@@ -266,7 +266,7 @@ class TestInstall(F3DBmsCase):
         sigs = self._module_signals().filtered("write_enabled")
         self.assertEqual(len(sigs), 142)
         self.assertEqual(len(sigs.filtered(lambda s: s.code.endswith(("/level", "/scene")))), 64)
-        srcs = self.env["f3d.source"].search([("module", "=", "bms"), ("write_enabled", "=", True)])
+        srcs = self.env["td.source"].search([("module", "=", "bms"), ("write_enabled", "=", True)])
         self.assertFalse(srcs.filtered(lambda s: s.code in ("BAC-131-EF-ELEC", "BAC-133-EF-CHG", DERIVED)))
         res = hooks.write_flags(self.env, enabled=False)
         self.assertEqual((res["sources_write"], res["signals_write"]), (0, 0))
@@ -289,7 +289,7 @@ class TestInstall(F3DBmsCase):
         sigs = self._module_signals()
         sim = sigs.filtered(lambda s: s.origin == "sim_data")
         hooks.uninstall_hook(self.env)
-        self.assertFalse(self.icp.search([("key", "=like", "factory3d.bms.%")]))
+        self.assertFalse(self.icp.search([("key", "=like", "td.bms.%")]))
         owned = self._module_signals().filtered(lambda s: s.origin in ("catalog", "module"))
         self.assertTrue(owned)
         self.assertFalse(owned.filtered("active"))
@@ -302,11 +302,11 @@ class TestInstall(F3DBmsCase):
     def test_neutralize(self):
         hooks.write_flags(self.env, enabled=True)
         self.env.flush_all()
-        with file_open("factory3d_bms/data/neutralize.sql", "r") as f:
+        with file_open("td_bms/data/neutralize.sql", "r") as f:
             self.env.cr.execute(f.read())
         self.env.invalidate_all()
         for key in ("read_enabled", "write_enabled"):
-            self.assertEqual(self.icp.get_param("factory3d.bms." + key), "False")
-        sources = self.env["f3d.source"].search([("module", "=", "bms")])
+            self.assertEqual(self.icp.get_param("td.bms." + key), "False")
+        sources = self.env["td.source"].search([("module", "=", "bms")])
         self.assertFalse(sources.filtered(lambda s: s.read_enabled or s.write_enabled or s.state != "disabled"))
         self.assertFalse(self._module_signals().filtered("write_enabled"))

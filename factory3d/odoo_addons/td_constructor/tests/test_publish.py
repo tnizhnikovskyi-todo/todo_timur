@@ -14,13 +14,13 @@ class TestPublish(F3DConstructorCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'True')
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
 
     # --- помічники ---------------------------------------------------------------------------------
     def wizard(self, site=None, user=None):
         site = (site or self.site).with_user(user or self.u_manager)
         action = site.action_publish_wizard()
-        return self.env['f3d.publish.wizard'].with_user(user or self.u_manager).browse(action['res_id'])
+        return self.env['td.publish.wizard'].with_user(user or self.u_manager).browse(action['res_id'])
 
     def publish(self, site=None, note='', tick=()):
         """Повний шлях користувача: майстер → відмітити архівацію → підтвердити."""
@@ -56,10 +56,10 @@ class TestPublish(F3DConstructorCase):
         slot_a = self.rack('AA-R1', bays=2, levels=1)
         placement = self.make_placement(code='TQM-1')
         self.publish()
-        passport2 = self.env['f3d.equipment.passport'].create(
+        passport2 = self.env['td.equipment.passport'].create(
             {'role': 'other_machine', 'manufacturer': "Т", 'model': "Інший"}
         )
-        variant2 = self.env['f3d.equipment.variant'].create(
+        variant2 = self.env['td.equipment.variant'].create(
             {'passport_id': passport2.id, 'name': "В2", 'length_mm': 2000, 'width_mm': 1000, 'height_mm': 1500}
         )
         placement.variant_id = variant2  # змінене розміщення
@@ -80,12 +80,12 @@ class TestPublish(F3DConstructorCase):
         before = self.count('stock.location')
         wizard = self.publish()
         self.assertEqual(self.count('stock.location'), before + 72)
-        loc = self.env['stock.location'].search([('f3d_code', '=', 'TQ-R1-B01-L1')])
+        loc = self.env['stock.location'].search([('td_code', '=', 'TQ-R1-B01-L1')])
         self.assertEqual(
-            (loc.barcode, loc.usage, loc.f3d_loc_kind, loc.f3d_capacity), ('TQ-R1-B01-L1', 'internal', 'pallet_cell', 3)
+            (loc.barcode, loc.usage, loc.td_loc_kind, loc.td_capacity), ('TQ-R1-B01-L1', 'internal', 'pallet_cell', 3)
         )
-        slot = self.env['f3d.slot'].search([('site_id', '=', self.site.id)])
-        self.assertEqual((loc.location_id, loc.f3d_site_id, loc.f3d_slot_uid), (self.wh_fg, self.site, slot.uid))
+        slot = self.env['td.slot'].search([('site_id', '=', self.site.id)])
+        self.assertEqual((loc.location_id, loc.td_site_id, loc.td_slot_uid), (self.wh_fg, self.site, slot.uid))
         self.assertEqual(wizard.state, 'done')
         self.assertEqual(wizard.version_id.n, 1)
         self.assertEqual(wizard.version_id.created_count, 72)
@@ -99,7 +99,7 @@ class TestPublish(F3DConstructorCase):
         self.publish()
         self.assertEqual(self.count('stock.location'), before + 71)
         self.assertEqual(
-            (existing.f3d_code, existing.f3d_site_id, existing.name), ('TQ-R1-B01-L4', self.site, 'TQ-R1-B01-L4')
+            (existing.td_code, existing.td_site_id, existing.name), ('TQ-R1-B01-L4', self.site, 'TQ-R1-B01-L4')
         )
         self.assertEqual(existing.location_id, self.wh_stock)  # батьківська локація існуючого запису не змінюється
         plan = publish.build_plan(self.site)
@@ -113,27 +113,27 @@ class TestPublish(F3DConstructorCase):
         placement = self.make_placement(code='TQM-9', x=20.0, y=10.0)
         existing_wc = self.env['mrp.workcenter'].create({'name': "Існуючий ЦП", 'code': 'TQM-9'})
         self.publish()
-        eq = self.env['maintenance.equipment'].search([('f3d_code', '=', 'TQM-9')])
+        eq = self.env['maintenance.equipment'].search([('td_code', '=', 'TQM-9')])
         self.assertEqual(len(eq), 1)
         self.assertEqual(
-            (eq.f3d_passport_id, eq.f3d_site_id, eq.f3d_placement_uid), (self.passport, self.site, placement.uid)
+            (eq.td_passport_id, eq.td_site_id, eq.td_placement_uid), (self.passport, self.site, placement.uid)
         )
-        zone = self.env['f3d.zone'].zone_at(20.0, 10.0, self.company)
-        self.assertEqual(eq.f3d_zone_id, zone)
+        zone = self.env['td.zone'].zone_at(20.0, 10.0, self.company)
+        self.assertEqual(eq.td_zone_id, zone)
         self.assertEqual(placement.equipment_id, eq)
         self.assertEqual(placement.workcenter_id, existing_wc)  # збіг за code — не дублюється
-        self.assertEqual(existing_wc.f3d_code, 'TQM-9')
+        self.assertEqual(existing_wc.td_code, 'TQM-9')
         self.assertTrue(placement.published_at)
         self.assertEqual(self.env['mrp.workcenter'].search_count([('code', '=', 'TQM-9')]), 1)
 
     def test_ac53_existing_equipment_only_updated(self):
-        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'f3d_code': 'TQM-8'})
+        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'td_code': 'TQM-8'})
         before = self.count('maintenance.equipment')
         self.make_placement(code='TQM-8')
         self.publish()
         self.assertEqual(self.count('maintenance.equipment'), before)
         self.assertEqual(
-            (existing.f3d_site_id, existing.f3d_passport_id, existing.name), (self.site, self.passport, "Старий")
+            (existing.td_site_id, existing.td_passport_id, existing.name), (self.site, self.passport, "Старий")
         )
 
     # --- AC-54 -------------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ class TestPublish(F3DConstructorCase):
         self.assertTrue(all(not r.selected for r in archive))
         self.assertNotIn(foreign.id, archive.mapped('res_id'))
         wizard.action_confirm()
-        locs = self.env['stock.location'].search([('f3d_code', 'like', 'AR-R1-%')])
+        locs = self.env['stock.location'].search([('td_code', 'like', 'AR-R1-%')])
         self.assertEqual(len(locs), 2)
         self.assertTrue(all(locs.mapped('active')))  # без галочки — лишається активним
         # повторно: відмітити одну пропозицію
@@ -159,21 +159,21 @@ class TestPublish(F3DConstructorCase):
         self.assertFalse(
             self.env['stock.location']
             .with_context(active_test=False)
-            .search([('f3d_code', '=', 'AR-R1-B01-L1')])
+            .search([('td_code', '=', 'AR-R1-B01-L1')])
             .active
         )
-        self.assertTrue(self.env['stock.location'].search([('f3d_code', '=', 'AR-R1-B02-L1')]).active)
+        self.assertTrue(self.env['stock.location'].search([('td_code', '=', 'AR-R1-B02-L1')]).active)
         self.assertTrue(
             self.env['stock.location']
             .with_context(active_test=False)
-            .search([('f3d_code', '=', 'AR-R1-B01-L1')])
+            .search([('td_code', '=', 'AR-R1-B01-L1')])
             .exists()
         )
 
     def test_ac54_stock_blocks_archive(self):
         slot = self.rack('BL-R1', bays=1, levels=1)
         self.publish()
-        loc = self.env['stock.location'].search([('f3d_code', '=', 'BL-R1-B01-L1')])
+        loc = self.env['stock.location'].search([('td_code', '=', 'BL-R1-B01-L1')])
         product = self.env['product.product'].create({'name': "Тестовий товар", 'is_storable': True})
         self.env['stock.quant']._update_available_quantity(product, loc, 12.0)
         slot.unlink()
@@ -188,7 +188,7 @@ class TestPublish(F3DConstructorCase):
     # --- AC-55, AC-56 ------------------------------------------------------------------------------
     def test_ac55_stop_valve(self):
         self.rack(bays=2, levels=1)
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.publish_enabled', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'False')
         wizard = self.wizard()
         self.assertFalse(wizard.can_publish)
         before = self.count('stock.location')
@@ -220,29 +220,29 @@ class TestPublish(F3DConstructorCase):
             original(self_, vals_list[:39])
             raise ValueError("штучна помилка на 40-й локації")
 
-        before = (self.count('stock.location'), self.count('f3d.layout.version'))
+        before = (self.count('stock.location'), self.count('td.layout.version'))
         plan = publish.build_plan(self.site)
         with (
             patch.object(StockLocation, 'create', failing_create),
-            mute_logger('odoo.addons.factory3d_constructor.services.publish'),
+            mute_logger('odoo.addons.td_constructor.services.publish'),
         ):
             with self.assertRaises(publish.PublishError) as ctx:
                 publish.apply_plan(self.site.with_user(self.u_manager), plan, (), '')
         self.assertEqual(ctx.exception.code, 'rollback')
-        self.assertEqual((self.count('stock.location'), self.count('f3d.layout.version')), before)
-        self.assertFalse(self.env['stock.location'].search([('f3d_site_id', '=', self.site.id)]))
+        self.assertEqual((self.count('stock.location'), self.count('td.layout.version')), before)
+        self.assertFalse(self.env['stock.location'].search([('td_site_id', '=', self.site.id)]))
         self.assertFalse(self.site.active_version_id)
 
     # --- AC-06 -------------------------------------------------------------------------------------
     def test_ac06_same_prefix_on_two_sites(self):
         site2 = (
-            self.env['f3d.site']
+            self.env['td.site']
             .with_context(f3d_blank=True)
             .create({'name': "Друга", 'code': 'TS2', 'default_parent_location_id': self.wh_stock.id})
         )
         layer2 = site2.layer_ids.filtered(lambda r: r.kind == 'storage')
         self.make_slot(prefix='AA', bays=2, levels=1)
-        self.env['f3d.slot'].create(
+        self.env['td.slot'].create(
             {
                 'layer_id': layer2.id,
                 'template': 'pallet_rack',
@@ -264,7 +264,7 @@ class TestPublish(F3DConstructorCase):
 
     # --- AC-30 -------------------------------------------------------------------------------------
     def test_ac30_modes_in_publication(self):
-        generic = self.env.ref('factory3d_constructor.variant_generic_panel')
+        generic = self.env.ref('td_constructor.variant_generic_panel')
         self.make_placement(kind='yard', code='AA-1', x=10.0, y=10.0, variant=generic)
         self.make_placement(kind='yard', code='AA-2', x=10.4, y=10.0, variant=generic)
         collide = self.site.check_config_ids.filtered(lambda c: c.check_key == 'collide')
@@ -293,7 +293,7 @@ class TestPublish(F3DConstructorCase):
         self.assertEqual(wizard.n_block, 0)
         wizard.action_confirm()
         self.assertLess(time.time() - started, 20)
-        self.assertEqual(self.env['stock.location'].search_count([('f3d_site_id', '=', self.site.id)]), 360)
+        self.assertEqual(self.env['stock.location'].search_count([('td_site_id', '=', self.site.id)]), 360)
 
     def test_unticked_create_line_is_skipped(self):
         self.rack('UT-R1', bays=2, levels=1)
@@ -301,7 +301,7 @@ class TestPublish(F3DConstructorCase):
         skipped = wizard.line_ids.filtered(lambda r: r.code == 'UT-R1-B02-L1')
         skipped.selected = False
         wizard.action_confirm()
-        codes = self.env['stock.location'].search([('f3d_site_id', '=', self.site.id)]).mapped('f3d_code')
+        codes = self.env['stock.location'].search([('td_site_id', '=', self.site.id)]).mapped('td_code')
         self.assertEqual(sorted(codes), ['UT-R1-B01-L1'])
 
     def test_publish_from_editor_stays_in_editor(self):

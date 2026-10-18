@@ -5,8 +5,8 @@
 """
 from odoo import http
 
-from odoo.addons.factory3d_constructor.controllers.model import F3dModelController
-from odoo.addons.factory3d_viewer.controllers.kiosk import F3dKioskController
+from odoo.addons.td_constructor.controllers.model import F3dModelController
+from odoo.addons.td_viewer3d.controllers.kiosk import F3dKioskController
 
 
 class F3dLayoutKioskController(http.Controller):

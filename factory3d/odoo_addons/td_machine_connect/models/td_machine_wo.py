@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-from .f3d_machine import local, param, param_bool
+from .td_machine import local, param, param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -20,17 +20,17 @@ NO_JOB_MARK = "працює без завдання"
 
 
 class F3dMachineWo(models.Model):
-    """M-01 (`_inherit = "f3d.machine"`): автостарт, пауза, лічильник, завершення (R-09…R-12). Власник — W3.
+    """M-01 (`_inherit = "td.machine"`): автостарт, пауза, лічильник, завершення (R-09…R-12). Власник — W3.
 
     Перевизначення гачків `_f3d_on_count`, `_f3d_on_job`, `_f3d_after_commit`, `_f3d_tick_extra`,
     `_f3d_apply_event` — через `super()` першим. Діяльності на верстаті потребують `mail.activity.mixin`.
 
     DEC-1: у CE немає `employee_ids`/`start_employee`/`stop_employee` (це Enterprise `mrp_workorder`); код користується
-    ними лише за наявності (duck typing), інакше `button_start()` + `mrp.workorder.f3d_employee_id`.
+    ними лише за наявності (duck typing), інакше `button_start()` + `mrp.workorder.td_employee_id`.
     """
 
-    _name = "f3d.machine"
-    _inherit = ["f3d.machine", "mail.activity.mixin"]
+    _name = "td.machine"
+    _inherit = ["td.machine", "mail.activity.mixin"]
 
     # --- службове -----------------------------------------------------------------------------------
     def _f3d_autostart_on(self):
@@ -71,12 +71,12 @@ class F3dMachineWo(models.Model):
         wo = wo.sudo()
         if "employee_ids" in wo._fields and wo.employee_ids:
             return True
-        return bool(wo.f3d_employee_id and self._f3d_open_timers(wo))
+        return bool(wo.td_employee_id and self._f3d_open_timers(wo))
 
     def _f3d_timer_employee(self, rec):
-        """Працівник запису журналу часу: `wo.f3d_employee_id`, інакше працівник користувача запису."""
-        bot = self.env.ref("factory3d_machine_connect.user_f3d_machine")
-        emp = rec.workorder_id.sudo().f3d_employee_id
+        """Працівник запису журналу часу: `wo.td_employee_id`, інакше працівник користувача запису."""
+        bot = self.env.ref("td_machine_connect.user_td_machine")
+        emp = rec.workorder_id.sudo().td_employee_id
         if not emp and rec.user_id and rec.user_id != bot:
             emp = rec.user_id.sudo().employee_id
         return emp or self.env["hr.employee"]
@@ -107,7 +107,7 @@ class F3dMachineWo(models.Model):
         if match:
             return wo.sudo().browse(int(match.group(1) or match.group(2))).exists()
         if CJ_RE.match(text):
-            cut_map = self.env["f3d.cut.map"].sudo().search([("ext_job_id", "=", text)], limit=1)
+            cut_map = self.env["td.cut.map"].sudo().search([("ext_job_id", "=", text)], limit=1)
             return cut_map.workorder_id
         return wo
 
@@ -122,7 +122,7 @@ class F3dMachineWo(models.Model):
         """Одне в черзі (лише `job_or_single`): `progress` рівно 1, або `progress` 0 і `ready` рівно 1."""
         self.ensure_one()
         WO = self.env["mrp.workorder"].sudo()
-        base = [("workcenter_id", "=", self.workcenter_id.id), ("f3d_partial_hold", "=", False)]
+        base = [("workcenter_id", "=", self.workcenter_id.id), ("td_partial_hold", "=", False)]
         progress = WO.search(base + [("state", "=", "progress")])
         if len(progress) == 1:
             return progress
@@ -162,7 +162,7 @@ class F3dMachineWo(models.Model):
             return
         tech_wo.button_start()
         if emp:
-            wo.sudo().write({"f3d_employee_id": emp.id})
+            wo.sudo().write({"td_employee_id": emp.id})
 
     def _f3d_unblock_wc(self, ts):
         """R-09 п. 5: верстат працює — закрити відкриті записи втрат РЦ (A-03)."""
@@ -206,11 +206,11 @@ class F3dMachineWo(models.Model):
         if not empty:
             wo = self._f3d_match_job(text)
             if not wo:
-                if not self._f3d_job_wo(text) or not self._f3d_job_wo(text).f3d_partial_hold:
+                if not self._f3d_job_wo(text) or not self._f3d_job_wo(text).td_partial_hold:
                     self._f3d_activity(self, _("Завдання верстата «%s» не знайдено в Odoo", text))
         elif self.auto_start_mode == "job_or_single":
             wo = self._f3d_candidate(ts)
-        if wo and wo.f3d_partial_hold:
+        if wo and wo.td_partial_hold:
             wo = self.env["mrp.workorder"]
         started = False
         if wo:
@@ -241,7 +241,7 @@ class F3dMachineWo(models.Model):
             self._f3d_activity(wo.production_id, text)
             self.message_post(body=text, subtype_xmlid="mail.mt_note")
             return False
-        wo.sudo().write({"f3d_auto_started": True})
+        wo.sudo().write({"td_auto_started": True})
         self._f3d_set_active(wo, emp=emp)
         self.with_context(tracking_disable=True).write({"last_autostart_key": key})
         self._f3d_stat("autostarts")
@@ -265,7 +265,7 @@ class F3dMachineWo(models.Model):
         log = self.current_log_id.sudo()
         if log and not log.date_end:
             vals = {"workorder_id": wo.id}
-            emp = emp or wo.sudo().f3d_employee_id
+            emp = emp or wo.sudo().td_employee_id
             if emp:
                 vals["employee_id"] = emp.id
             log.write(vals)
@@ -326,7 +326,7 @@ class F3dMachineWo(models.Model):
         self._f3d_close_timers(ts)
         if not self.wo_paused:
             self.with_context(tracking_disable=True).write({"wo_paused": True})
-        _logger.info("f3d.machine %s: автопауза %s (%s) о %s", self.code, wo.display_name, reason, ts)
+        _logger.info("td.machine %s: автопауза %s (%s) о %s", self.code, wo.display_name, reason, ts)
         return True
 
     def _f3d_resume(self, ts):
@@ -338,7 +338,7 @@ class F3dMachineWo(models.Model):
         if wo.state != "progress":
             self.with_context(tracking_disable=True).write({"wo_paused": False, "active_workorder_id": False})
             return self._f3d_autostart(ts)
-        if wo.f3d_partial_hold or self._f3d_open_timers(wo):
+        if wo.td_partial_hold or self._f3d_open_timers(wo):
             self.with_context(tracking_disable=True).write({"wo_paused": False})
             return False
         allowed = self._f3d_wc_employees(wo.workcenter_id)
@@ -375,10 +375,10 @@ class F3dMachineWo(models.Model):
         wo = self.active_workorder_id
         if not (self._f3d_autostart_on() and self.auto_finish and wo and wo.state == "progress"):
             return False
-        if wo.f3d_partial_hold:
+        if wo.td_partial_hold:
             return False
         plan = self._f3d_plan_qty(wo)
-        counted = wo.f3d_qty_counted
+        counted = wo.td_qty_counted
         if trigger == "idle":
             if self.sig_job_id:
                 return False
@@ -420,7 +420,7 @@ class F3dMachineWo(models.Model):
 
     def _f3d_partial(self, wo, ts, counted, plan):
         """R-12 п. 5: неповна партія — позначка, таймери закрито, діяльність майстру."""
-        wo.sudo().write({"f3d_partial_hold": True})
+        wo.sudo().write({"td_partial_hold": True})
         self._f3d_close_timers(ts)
         self.with_context(tracking_disable=True).write({"active_workorder_id": False, "wo_paused": False})
         text = _(
@@ -482,20 +482,20 @@ class F3dMachineWo(models.Model):
         self._f3d_autostart(ts)
 
     def _f3d_on_count(self, delta, ts):
-        """R-11 п. 4–5: приріст `f3d_qty_counted` активного завдання; режим `live` — синхронізація `qty_produced`."""
+        """R-11 п. 4–5: приріст `td_qty_counted` активного завдання; режим `live` — синхронізація `qty_produced`."""
         super()._f3d_on_count(delta, ts)
         for rec in self:
             wo = rec.active_workorder_id.sudo()
             if not delta or rec.state not in ("working", "setup") or not wo or wo.state != "progress":
                 continue
-            counted = wo.f3d_qty_counted + delta
-            wo.write({"f3d_qty_counted": counted})
+            counted = wo.td_qty_counted + delta
+            wo.write({"td_qty_counted": counted})
             now = fields.Datetime.now()
             if param(rec.env, "qty_sync_mode", "finish") == "live":
                 sync_s = int(param(rec.env, "qty_sync_s", "300"))
-                if not wo.f3d_qty_synced_at or now - wo.f3d_qty_synced_at >= timedelta(seconds=sync_s):
+                if not wo.td_qty_synced_at or now - wo.td_qty_synced_at >= timedelta(seconds=sync_s):
                     wo.with_env(rec._f3d_tech_env()).write({"qty_produced": min(counted, wo.qty_production)})
-                    wo.write({"f3d_qty_synced_at": now})
+                    wo.write({"td_qty_synced_at": now})
 
     def _f3d_on_job(self, text, ts):
         """R-09 п. 8, R-12 п. 1: зміна завдання на верстаті."""

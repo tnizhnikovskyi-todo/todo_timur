@@ -4,8 +4,8 @@
 // серверний id — `rid`); сюди ж належить відображення «API-03 → стан редактора» і назад (`toApi`).
 import { clone, rnd } from "./util";
 
-const MODEL_ORDER = { "f3d.check.config": 0, "f3d.layer": 1, "f3d.slot": 2, "f3d.placement": 3 };
-const REF_MODELS = { layer_id: "f3d.layer", slot_id: "f3d.slot" };
+const MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3 };
+const REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
 const BATCH = 400; // ліміт сервера — 500 операцій на запит
 
 /** 32-символьний hex-uid нової сутності (як `uuid4().hex` на сервері); працює й без secure context. */
@@ -458,7 +458,7 @@ export class OdooStore {
         this.siteId = siteId;
         const groupIds = {};
         for (const l of st.layers) {
-            this._bind("f3d.layer", l.id, l.rid, l.etag);
+            this._bind("td.layer", l.id, l.rid, l.etag);
             for (const g of l.edit_groups || []) {
                 if (g.role) {
                     groupIds[g.role] = g.id;
@@ -467,14 +467,14 @@ export class OdooStore {
         }
         this.groupIds = { ...this.groupIds, ...groupIds };
         for (const s of st.slots) {
-            this._bind("f3d.slot", s.id, s.rid, s.etag);
+            this._bind("td.slot", s.id, s.rid, s.etag);
         }
         for (const p of st.placements) {
-            this._bind("f3d.placement", p.id, p.rid, p.etag);
+            this._bind("td.placement", p.id, p.rid, p.etag);
         }
         for (const [check, c] of Object.entries(st.settings.checks)) {
             if (c.id != null) {
-                this._bind("f3d.check.config", check, c.id, null);
+                this._bind("td.check.config", check, c.id, null);
             }
         }
         this._snapshot(st);
@@ -502,13 +502,13 @@ export class OdooStore {
     _entities(st) {
         const out = [];
         for (const l of st.layers) {
-            out.push({ model: "f3d.layer", uid: l.id, key: "f3d.layer:" + l.id, vals: layerToApi(l, this.groupIds) });
+            out.push({ model: "td.layer", uid: l.id, key: "td.layer:" + l.id, vals: layerToApi(l, this.groupIds) });
         }
         for (const s of st.slots) {
-            out.push({ model: "f3d.slot", uid: s.id, key: "f3d.slot:" + s.id, vals: slotToApi(s) });
+            out.push({ model: "td.slot", uid: s.id, key: "td.slot:" + s.id, vals: slotToApi(s) });
         }
         for (const p of st.placements) {
-            out.push({ model: "f3d.placement", uid: p.id, key: "f3d.placement:" + p.id, vals: placementToApi(p) });
+            out.push({ model: "td.placement", uid: p.id, key: "td.placement:" + p.id, vals: placementToApi(p) });
         }
         return out;
     }
@@ -833,21 +833,21 @@ export class OdooStore {
         return res;
     }
 
-    /** Налаштування перевірки (API-04 для f3d.check.config; id записів — з API-03 або з ORM). */
+    /** Налаштування перевірки (API-04 для td.check.config; id записів — з API-03 або з ORM). */
     async saveCheck(check, vals) {
-        const key = `f3d.check.config:${check}`;
+        const key = `td.check.config:${check}`;
         if (!this.rids.has(key) && this.orm) {
-            const rows = await this.orm.searchRead("f3d.check.config", [["site_id", "=", this.siteId]], ["check_key"]);
+            const rows = await this.orm.searchRead("td.check.config", [["site_id", "=", this.siteId]], ["check_key"]);
             for (const r of rows) {
-                this._bind("f3d.check.config", r.check_key, r.id, null);
+                this._bind("td.check.config", r.check_key, r.id, null);
             }
         }
-        this.queue({ model: "f3d.check.config", op: "write", uid: check, id: this.rids.get(key), vals });
+        this.queue({ model: "td.check.config", op: "write", uid: check, id: this.rids.get(key), vals });
     }
 
     /** Поля площадки (назва, габарити будівлі, крок колон) — стандартний ORM: API-04 їх не охоплює. */
     async saveSite(vals) {
-        await this.orm.write("f3d.site", [this.siteId], vals);
+        await this.orm.write("td.site", [this.siteId], vals);
     }
 
     /** id груп ролей конструктора (для «Хто редагує» шару): з уже завантажених шарів або з res.groups. */
@@ -875,10 +875,10 @@ export class OdooStore {
             r.readAsDataURL(file);
         });
         const ids = await this.orm.create("ir.attachment", [
-            { name: file.name, datas: data, res_model: "f3d.layer", res_id: layer.rid },
+            { name: file.name, datas: data, res_model: "td.layer", res_id: layer.rid },
         ]);
         const id = Array.isArray(ids) ? ids[0] : ids;
-        this.queue({ model: "f3d.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: id } });
+        this.queue({ model: "td.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: id } });
         return { id, url: `/web/content/${id}` };
     }
 }

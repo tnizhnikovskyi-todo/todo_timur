@@ -8,15 +8,15 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dAccessTelemetry(models.AbstractModel):
-    _name = 'f3d.access.telemetry'
+    _name = 'td.access.telemetry'
     _description = 'СКУД: публікація сигналів телеметрії'
 
     @api.model
     def _f3d_signal_model(self):
         """Модель сигналів telemetry (sudo) або None; окремий метод — тести підставляють фейк."""
-        if 'f3d.signal' not in self.env:
+        if 'td.signal' not in self.env:
             return None
-        return self.env['f3d.signal'].sudo()
+        return self.env['td.signal'].sudo()
 
     @api.model
     def _f3d_publish(self, server, events):
@@ -37,7 +37,7 @@ class F3dAccessTelemetry(models.AbstractModel):
             readings.append({
                 'code': 'access/readers/%s/last_event' % device.code, 'ts': ev.ts, 'value': float(ev.code),
                 'text': ("%s %s" % (ev.code, ev.door_id.code or '')).strip()[:64], 'q': 'good'})
-        on_site = self.env['f3d.access.event'].f3d_on_site_at(now)
+        on_site = self.env['td.access.event'].f3d_on_site_at(now)
         total = len(on_site['employees']) + len(on_site['visitors'])
         counts = {kind: len(events.filtered(lambda e, k=kind: e.event_type == k))
                   for kind in ('pass', 'denied', 'door')}

@@ -1,6 +1,6 @@
 """Синхронізація станів моделей із сигналами (SPEC R-19; правила R-10…R-13, R-22).
 
-`FireSync(env).run(codes=None, full=False)` викликається з `f3d.signal._f3d_ingest` (коди змін) і крона (`full=True`).
+`FireSync(env).run(codes=None, full=False)` викликається з `td.signal._f3d_ingest` (коди змін) і крона (`full=True`).
 Усе читається з БД (`search_read`), стани пишуть методи моделей (`_set_state`, `_set_dust`) — вони ж ведуть журнал.
 """
 import logging
@@ -48,30 +48,30 @@ class FireSync:
         return any(s.id in self.affected for s in signals if s)
 
     def _prev_on(self, system, on_type, off_type):
-        ev = self.env["f3d.fire.event"].search(
+        ev = self.env["td.fire.event"].search(
             [("system_id", "=", system.id), ("etype", "in", (on_type, off_type))], order="ts desc, id desc", limit=1)
         return bool(ev) and ev.etype == on_type
 
     # --- запуск -------------------------------------------------------------------------------------------
     def run(self, codes=None, full=False):
         env = self.env
-        Panel = env["f3d.fire.panel"]
+        Panel = env["td.fire.panel"]
         panels = Panel.search([])
         now = fields.Datetime.now()
         if not Panel._get_param("read_enabled", True):
             for panel in panels:
                 panel._set_comm("off", now)
             return {"skipped": "read_disabled"}
-        env["f3d.signal"].invalidate_model(SIGNAL_FIELDS + ["status_since"])
-        Event = env["f3d.fire.event"]
+        env["td.signal"].invalidate_model(SIGNAL_FIELDS + ["status_since"])
+        Event = env["td.fire.event"]
         events0 = Event.search_count([])
 
         loops = panels.loop_ids
-        zones = env["f3d.fire.zone"].search([("panel_id", "in", panels.ids)])
-        devices = env["f3d.fire.device"].search(
+        zones = env["td.fire.zone"].search([("panel_id", "in", panels.ids)])
+        devices = env["td.fire.device"].search(
             [("panel_id", "in", panels.ids), "|", ("state_signal_id", "!=", False), ("dust_signal_id", "!=", False)])
-        systems = env["f3d.fire.system"].search([("panel_id", "in", panels.ids)])
-        signals = env["f3d.signal"]
+        systems = env["td.fire.system"].search([("panel_id", "in", panels.ids)])
+        signals = env["td.signal"]
         for panel in panels:
             signals |= panel.mapped(lambda p: p.signal_state_id | p.signal_system_id | p.signal_alarms_id
                                     | p.signal_faults_id | p.signal_disabled_id | p.signal_sounders_id
@@ -81,7 +81,7 @@ class FireSync:
             signals |= system.signal_state_id | system.signal_active_id | system.signal_fault_id \
                 | system.signal_water_id | system.signal_battery_id | system.signal_count_id \
                 | system.pressure_signal_id
-        rows = env["f3d.signal"].with_context(active_test=False).search_read(
+        rows = env["td.signal"].with_context(active_test=False).search_read(
             [("id", "in", signals.ids)], SIGNAL_FIELDS)
         self.rows = {r["id"]: r for r in rows}
         if codes:
@@ -103,7 +103,7 @@ class FireSync:
                 self._comm(panel, loops, zones, now)
         # заявку telemetry створює до звірки, тож подію журналу (R-22 п. 1) прив'язуємо тут
         env["maintenance.request"].search([
-            ("f3d_signal_id", "in", list(self.rows)), ("f3d_fire_event_id", "=", False),
+            ("td_signal_id", "in", list(self.rows)), ("td_fire_event_id", "=", False),
             ("stage_id.done", "=", False)])._f3d_fire_link_events()
         return {"signals": n_signals, "changed": self.changed, "events": Event.search_count([]) - events0}
 
@@ -167,7 +167,7 @@ class FireSync:
         sigs = [panel[field] for _role, field in PANEL_ROLES]
         if not self.hit(*sigs) or not any(self.fresh(r) for r in roles.values()):
             return
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         vals = {}
         for role, fname in (("alarms", "alarms_count"), ("faults", "faults_count"), ("disabled", "disabled_count")):
             r = roles[role]
@@ -187,7 +187,7 @@ class FireSync:
             if on != panel[fname]:
                 vals[fname] = on
                 if on_type == "sounders_on":
-                    n = self.env["f3d.fire.device"].search_count(
+                    n = self.env["td.fire.device"].search_count(
                         [("panel_id", "=", panel.id), ("type", "=", "sounder")])
                     text = "Оповіщувачі увімкнено (%d шт.)" % n if on else "Оповіщувачі вимкнено"
                 else:
@@ -237,7 +237,7 @@ class FireSync:
         present = [r for r in roles.values() if r]
         if not present:
             return
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         panel = system.panel_id
         source = system.source_id.code or panel.io_source_id.code or ""
         if all(r["status"] == "stale" for r in present):
@@ -328,7 +328,7 @@ class FireSync:
         if new == old:
             return
         p = _fmt(row["last_value"]) if row else ""
-        Event = self.env["f3d.fire.event"]
+        Event = self.env["td.fire.event"]
         if new == "low_pressure":
             Event._log("sprinkler_low", system.code, ts,
                        "Спринклерна система: тиск %s бар нижче норми %s бар" % (p, _fmt(sig.alarm_low)),
@@ -339,7 +339,7 @@ class FireSync:
 
     # --- зв'язок (R-12) -----------------------------------------------------------------------------------
     def _comm_signals(self, panel, loops, zones):
-        sigs = self.env["f3d.signal"]
+        sigs = self.env["td.signal"]
         for _role, field in PANEL_ROLES:
             sigs |= panel[field]
         return sigs | loops.filtered(lambda x: x.panel_id == panel).signal_id \

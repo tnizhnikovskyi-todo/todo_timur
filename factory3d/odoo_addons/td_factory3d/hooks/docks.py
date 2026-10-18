@@ -5,7 +5,7 @@ from odoo import Command
 
 from .codes import read_rows
 
-_logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
+_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
 
 DOCK_WIDTH_M = 3.4
 DOCK_HEIGHT_M = 4.5
@@ -35,16 +35,16 @@ def register(env):
             missing.append(row['barcode'])
             continue
         vals = {
-            'f3d_code': row['code'],
-            'f3d_alias': row.get('alias') or False,
-            'f3d_kind': 'dock',
-            'f3d_side': row['side'],
-            'f3d_dock_no': int(row['no']),
-            'f3d_x': float(row['x']),
-            'f3d_y': float(row['y']),
-            'f3d_dock_width_m': DOCK_WIDTH_M,
-            'f3d_dock_height_m': DOCK_HEIGHT_M,
-            'f3d_accepts': [Command.set(_categories(env, [n for n in (row.get('accepts') or '').split(';') if n]))],
+            'td_code': row['code'],
+            'td_alias': row.get('alias') or False,
+            'td_kind': 'dock',
+            'td_side': row['side'],
+            'td_dock_no': int(row['no']),
+            'td_x': float(row['x']),
+            'td_y': float(row['y']),
+            'td_dock_width_m': DOCK_WIDTH_M,
+            'td_dock_height_m': DOCK_HEIGHT_M,
+            'td_accepts': [Command.set(_categories(env, [n for n in (row.get('accepts') or '').split(';') if n]))],
         }
         loc.write(vals)
         loc.f3d_register_dock()
@@ -56,8 +56,8 @@ def register(env):
         _logger.info("Локацій воріт у базі немає (чиста база): воріт 0")
     for wh in docks.mapped('warehouse_id'):
         wh_docks = docks.filtered(lambda d, wh=wh: d.warehouse_id == wh)
-        west = wh_docks.filtered(lambda d: d.f3d_side == 'west')
-        east = wh_docks.filtered(lambda d: d.f3d_side == 'east')
+        west = wh_docks.filtered(lambda d: d.td_side == 'west')
+        east = wh_docks.filtered(lambda d: d.td_side == 'east')
         if west and wh.in_type_id:
             wh.in_type_id.sudo().dock_ids = [Command.set(west.ids)]
             res['in_type.dock_ids'] += len(west)

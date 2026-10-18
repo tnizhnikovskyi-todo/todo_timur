@@ -22,7 +22,7 @@ class TestVariantModelApi(F3DConstructorHttpCase):
         return self.url_open(UPLOAD, data=data, files={k: v for k, v in files.items()}, timeout=60)
 
     def attachments(self):
-        return self.env['ir.attachment'].search_count([('res_model', '=', 'f3d.equipment.variant')])
+        return self.env['ir.attachment'].search_count([('res_model', '=', 'td.equipment.variant')])
 
     # --- AC-33 -------------------------------------------------------------------------------------
     def test_ac33_upload_glb_server_values_win(self):
@@ -114,7 +114,7 @@ class TestVariantModelApi(F3DConstructorHttpCase):
         resp = self.upload(original=('building.ifc', b'ISO-10303-21;'))
         self.assertEqual(resp.json()['status'], 'pending_conversion')
         # вимкнений серверний конвертер
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.constructor.convert_server_enabled', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.constructor.convert_server_enabled', 'False')
         self.variant.invalidate_recordset()
         result = self.variant._f3d_convert_model()
         self.assertEqual((result['ok'], result['status']), (False, 'pending_conversion'))

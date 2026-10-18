@@ -8,7 +8,7 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..services import convert, glb_meta as glb_mod, schemas
 from ..services.schemas import SCENE_ROLE_PREFIX
-from .f3d_equipment_passport import F3D_CATEGORY_SELECTION
+from .td_equipment_passport import F3D_CATEGORY_SELECTION
 
 _logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ LAYER_KINDS_BY_CATEGORY = {
 MODEL_FIELDS = ('model_status', 'model_original_id', 'model_glb_id', 'model_meta')
 META_UNITS = ('mm', 'cm', 'm', 'in')
 META_AXES = ('y', 'z')
-ATTACHMENT_RES_MODEL = 'f3d.equipment.variant'
+ATTACHMENT_RES_MODEL = 'td.equipment.variant'
 
 
 class F3dModelError(UserError):
@@ -50,17 +50,17 @@ def model_extension(file_name):
 
 
 class F3dEquipmentVariant(models.Model):
-    _name = 'f3d.equipment.variant'
+    _name = 'td.equipment.variant'
     _description = "Варіант обладнання"
     _order = 'passport_id, sequence, id'
 
     passport_id = fields.Many2one(
-        'f3d.equipment.passport', string="Тип (паспорт)", required=True, ondelete='cascade', index=True
+        'td.equipment.passport', string="Тип (паспорт)", required=True, ondelete='cascade', index=True
     )
     name = fields.Char(string="Назва варіанта", required=True)
     sequence = fields.Integer(default=10)
     category = fields.Selection(
-        F3D_CATEGORY_SELECTION, string="Категорія", related='passport_id.f3d_category', store=True, readonly=True
+        F3D_CATEGORY_SELECTION, string="Категорія", related='passport_id.td_category', store=True, readonly=True
     )
     length_mm = fields.Integer(string="Довжина, мм")
     width_mm = fields.Integer(string="Ширина, мм")
@@ -90,8 +90,8 @@ class F3dEquipmentVariant(models.Model):
         required=True,
     )
     allowed_layer_kind_ids = fields.Many2many(
-        'f3d.term',
-        'f3d_variant_layer_kind_rel',
+        'td.term',
+        'td_variant_layer_kind_rel',
         'variant_id',
         'term_id',
         string="Дозволені види шарів",
@@ -99,8 +99,8 @@ class F3dEquipmentVariant(models.Model):
         help="Порожньо — будь-який шар",
     )
     allowed_slot_type_ids = fields.Many2many(
-        'f3d.term',
-        'f3d_variant_slot_type_rel',
+        'td.term',
+        'td_variant_slot_type_rel',
         'variant_id',
         'term_id',
         string="Дозволені типи місць",
@@ -157,7 +157,7 @@ class F3dEquipmentVariant(models.Model):
     @api.depends('model_meta', 'model_status')
     def _compute_model_warning(self):
         get = self.env['ir.config_parameter'].sudo().get_param
-        max_tri = int(get('factory3d.constructor.max_triangles', 50000) or 50000)
+        max_tri = int(get('td.constructor.max_triangles', 50000) or 50000)
         for rec in self:
             meta = rec.model_meta or {}
             parts = []
@@ -171,7 +171,7 @@ class F3dEquipmentVariant(models.Model):
 
     def _compute_placement_count(self):
         data = dict(
-            self.env['f3d.placement']
+            self.env['td.placement']
             .with_context(active_test=False)
             ._read_group([('variant_id', 'in', self.ids)], ['variant_id'], ['__count'])
         )
@@ -181,8 +181,8 @@ class F3dEquipmentVariant(models.Model):
     # --- create / write / unlink -----------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
-        Passport = self.env['f3d.equipment.passport']
-        Term = self.env['f3d.term']
+        Passport = self.env['td.equipment.passport']
+        Term = self.env['td.term']
         prepared = []
         for vals in vals_list:
             vals = dict(vals)
@@ -197,11 +197,11 @@ class F3dEquipmentVariant(models.Model):
                     if not vals.get(field):
                         vals[field] = passport[source]
                 if 'allowed_layer_kind_ids' not in vals:
-                    keys = LAYER_KINDS_BY_CATEGORY.get(passport.f3d_category or 'other', [])
+                    keys = LAYER_KINDS_BY_CATEGORY.get(passport.td_category or 'other', [])
                     if keys:
                         terms = Term.search([('term_type', '=', 'layer_kind'), ('key', 'in', keys)])
                         vals['allowed_layer_kind_ids'] = [fields.Command.set(terms.ids)]
-                if 'create_workcenter' not in vals and passport.f3d_category == 'machine':
+                if 'create_workcenter' not in vals and passport.td_category == 'machine':
                     vals['create_workcenter'] = True
                 if 'create_equipment' not in vals and (passport.role or '').startswith(SCENE_ROLE_PREFIX):
                     vals['create_equipment'] = False
@@ -219,7 +219,7 @@ class F3dEquipmentVariant(models.Model):
 
     def unlink(self):
         for rec in self:
-            if self.env['f3d.placement'].with_context(active_test=False).search_count([('variant_id', '=', rec.id)]):
+            if self.env['td.placement'].with_context(active_test=False).search_count([('variant_id', '=', rec.id)]):
                 raise UserError("Варіант «%s» використовується в розміщеннях: архівуйте його." % rec.display_name)
         attachments = self.mapped('model_original_id') | self.mapped('model_glb_id')
         res = super().unlink()
@@ -310,14 +310,14 @@ class F3dEquipmentVariant(models.Model):
     def _f3d_params(self):
         get = self.env['ir.config_parameter'].sudo().get_param
         try:
-            max_mb = float(get('factory3d.constructor.max_model_mb', 20) or 20)
+            max_mb = float(get('td.constructor.max_model_mb', 20) or 20)
         except ValueError:
             max_mb = 20.0
         try:
-            max_tri = int(get('factory3d.constructor.max_triangles', 50000) or 50000)
+            max_tri = int(get('td.constructor.max_triangles', 50000) or 50000)
         except ValueError:
             max_tri = 50000
-        return max_mb, max_tri, get('factory3d.constructor.convert_server_enabled', 'True') == 'True'
+        return max_mb, max_tri, get('td.constructor.convert_server_enabled', 'True') == 'True'
 
     def _f3d_new_attachment(self, file_name, raw, mimetype=None):
         file_name = os.path.basename(file_name or 'model')[:200] or 'model'
@@ -475,7 +475,7 @@ class F3dEquipmentVariant(models.Model):
         """Скидає вкладення й метадані; право — технолог/менеджер (ACL запису варіанта)."""
         for rec in self:
             if not self.env.su and not self.env.user.has_group(
-                'factory3d_constructor.group_f3d_constructor_technologist'
+                'td_constructor.group_td_constructor_technologist'
             ):
                 raise AccessError("Видаляти модель може технолог або менеджер конструктора.")
             old = rec.model_original_id | rec.model_glb_id

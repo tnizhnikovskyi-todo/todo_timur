@@ -3,10 +3,10 @@
 // Сценарії R1…R23 — по одному test() на рядок реєстру (AC-06), далі AC-02/03/05/07/08/09/30/31/37/38/47/51/58/61/62/63.
 import { after, describe, expect, test } from "@odoo/hoot";
 import { advanceTime, animationFrame, tick } from "@odoo/hoot-mock";
-import { FileClient, SchemaError, deepMerge, mergeData } from "@factory3d_viewer/viewer/data_client";
-import { detectLite } from "@factory3d_viewer/viewer/lite";
-import { F3dViewer } from "@factory3d_viewer/viewer/core";
-import { liveLine, palletCount } from "@factory3d_viewer/viewer/stock_load";
+import { FileClient, SchemaError, deepMerge, mergeData } from "@td_viewer3d/viewer/data_client";
+import { detectLite } from "@td_viewer3d/viewer/lite";
+import { F3dViewer } from "@td_viewer3d/viewer/core";
+import { liveLine, palletCount } from "@td_viewer3d/viewer/stock_load";
 import { BASE, json, loadFixtures, mountViewer } from "./helpers";
 
 const q = (el, sel) => el.querySelector(sel);
@@ -913,7 +913,7 @@ test("access_rows (AC-63): рядки СКУД у картках людини й
     viewer.applyPatch({ employees: { "OP-SAW-1": { last_event: { ts: "2026-10-12 09:00", door: "KPP-IN", direction: "in", type: "deny" } } } });
     viewer.select("OP-SAW-1");
     expect(kv(el)["Останній прохід"]).toBe("09:00 · KPP-IN · відмова");
-    // без factory3d_access рядків немає
+    // без td_access рядків немає
     const plain = await mountViewer({ model: "core" });
     plain.viewer.select("OP-SAW-1");
     expect("На території" in kv(plain.el)).toBe(false);
@@ -926,13 +926,13 @@ test("section_errors (§11): банер недоступного розділу 
         model: "none",
         mutate: (fx) => {
             fx.data.meta.sections = { energy: "error", products: "live" };
-            fx.data.meta.errors = [{ provider: "factory3d_energy", error: "KeyError" }];
+            fx.data.meta.errors = [{ provider: "td_energy", error: "KeyError" }];
         },
     });
     const b = q(el, ".o_f3d_sec-banner");
     expect(b).not.toBe(null);
     expect(b.textContent.includes("Розділ energy недоступний")).toBe(true);
-    expect(b.textContent.includes("factory3d_energy")).toBe(true);
+    expect(b.textContent.includes("td_energy")).toBe(true);
     viewer.applyPatch({ meta: { errors: [] } });
     expect(q(el, ".o_f3d_sec-banner")).not.toBe(null); // sections лишились
     viewer.D.meta.sections.energy = "live";

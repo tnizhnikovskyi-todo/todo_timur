@@ -8,7 +8,7 @@ from odoo.tests import HttpCase, tagged
 
 from .common import F3dViewerBase
 
-DATES_NOW = "odoo.addons.factory3d_viewer.tools.dates.now"
+DATES_NOW = "odoo.addons.td_viewer3d.tools.dates.now"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -18,7 +18,7 @@ class TestSnapshot(F3dViewerBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Snap = cls.env["f3d.viewer.snapshot"].sudo()
+        cls.Snap = cls.env["td.viewer.snapshot"].sudo()
 
     def setUp(self):
         super().setUp()
@@ -60,7 +60,7 @@ class TestSnapshot(F3dViewerBase):
 
     def test_events_in_snapshot(self):
         first = self.Snap._take("manual")
-        self.env["f3d.viewer.event"]._notify("stock.quant", ["TST-LOC-A"], "stock")
+        self.env["td.viewer.event"]._notify("stock.quant", ["TST-LOC-A"], "stock")
         self.env.flush_all()
         self.env.cr.precommit.run()
         first.ts = fields.Datetime.now() - timedelta(seconds=30)
@@ -73,7 +73,7 @@ class TestSnapshot(F3dViewerBase):
         old = self._make("periodic", 15)
         old_install = self._make("install", 15)
         fresh = self._make("periodic", 1)
-        Event = self.env["f3d.viewer.event"].sudo()
+        Event = self.env["td.viewer.event"].sudo()
         old_ev = Event.create({"ts": fields.Datetime.now() - timedelta(days=15), "model": "m", "codes": ["A"],
                                "kind": "state"})
         fresh_ev = Event.create({"model": "m", "codes": ["B"], "kind": "state"})
@@ -86,7 +86,7 @@ class TestSnapshot(F3dViewerBase):
     def test_company_rule(self):
         other = self.env["res.company"].create({"name": "TST other co"})
         mine, foreign = self._make(), self._make(company=other)
-        visible = self.env["f3d.viewer.snapshot"].with_user(self.user_f3d).search([])
+        visible = self.env["td.viewer.snapshot"].with_user(self.user_f3d).search([])
         self.assertIn(mine, visible)
         self.assertNotIn(foreign, visible)
 
@@ -110,7 +110,7 @@ class TestSnapshotHttp(HttpCase, F3dViewerBase):
         super().setUpClass()
         for user in (cls.user_f3d, cls.user_nobody):
             user.password = user.login
-        cls.Snap = cls.env["f3d.viewer.snapshot"].sudo()
+        cls.Snap = cls.env["td.viewer.snapshot"].sudo()
         cls.Snap.search([]).unlink()
 
     def _snap(self, hhmm):
@@ -151,9 +151,9 @@ class TestSnapshotDemoClock(F3dViewerBase):
     """R-17/R-21: «сьогодні» API-05 і shift_date знімка — в одній шкалі (demo_clock)."""
 
     def test_snapshots_found_under_demo_clock(self):
-        from odoo.addons.factory3d_viewer.tools import dates
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.viewer.demo_clock", "2020-01-12 10:30")
-        Snap = self.env["f3d.viewer.snapshot"].sudo()
+        from odoo.addons.td_viewer3d.tools import dates
+        self.env["ir.config_parameter"].sudo().set_param("td.viewer.demo_clock", "2020-01-12 10:30")
+        Snap = self.env["td.viewer.snapshot"].sudo()
         Snap.search([]).unlink()
         recs = [Snap._take("manual", note=str(i)) for i in range(1)]
         self.assertEqual(str(recs[0].shift_date), "2020-01-12")

@@ -4,21 +4,21 @@ from zoneinfo import ZoneInfo
 from odoo import models
 
 KYIV = ZoneInfo("Europe/Kyiv")
-SOURCE_LABEL = "телеметрія (factory3d_telemetry)"
+SOURCE_LABEL = "телеметрія (td_telemetry)"
 
 
 class F3dViewerProviderTelemetry(models.AbstractModel):
     # Контракт провайдера — duck typing (ARCHITECTURE §6.7): без `_inherit` моделей viewer.
-    _name = "f3d.viewer.provider.telemetry"
+    _name = "td.viewer.provider.telemetry"
     _description = "3D: значення сигналів телеметрії"
     _f3d_sequence = 95
     _f3d_sections = ()
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 
     # --- R-12 ----------------------------------------------------------------------------------------
     def _f3d_visible_signals(self):
         return (
-            self.env["f3d.signal"]
+            self.env["td.signal"]
             .sudo()
             .search([("active", "=", True), ("viewer_visible", "=", True), ("status", "!=", "unknown")])
         )
@@ -74,7 +74,7 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
         payload.setdefault("meta", {})["iot"] = self._f3d_meta_iot(signals)
 
     def _f3d_viewer_delta(self, patch, ctx):
-        codes = (ctx.get("changes") or {}).get("f3d.signal", set())
+        codes = (ctx.get("changes") or {}).get("td.signal", set())
         if not codes:
             return
         signals = self._f3d_visible_signals()
@@ -85,4 +85,4 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
         patch.setdefault("meta", {})["iot"] = self._f3d_meta_iot(signals)
 
     def _f3d_viewer_bus_models(self):
-        return ["f3d.signal"]
+        return ["td.signal"]

@@ -2,8 +2,8 @@
 <odoo noupdate="1">
     <!-- Ворота двору (SPEC §5.3). Обладнання, зону, джерело й сигнали ставить post_init_hook;
          автоваги (scale_id) додає модуль ваг. -->
-    <record id="gate_w" model="f3d.yard.gate">
-        <field name="f3d_code">GATE-W</field>
+    <record id="gate_w" model="td.yard.gate">
+        <field name="td_code">GATE-W</field>
         <field name="name">КПП приймання (в'їзд)</field>
         <field name="sequence">10</field>
         <field name="direction">in</field>
@@ -13,8 +13,8 @@
         <field name="camera_code">CAM-05</field>
         <field name="mode">manual</field>
     </record>
-    <record id="gate_e" model="f3d.yard.gate">
-        <field name="f3d_code">GATE-E</field>
+    <record id="gate_e" model="td.yard.gate">
+        <field name="td_code">GATE-E</field>
         <field name="name">КПП відвантаження (виїзд)</field>
         <field name="sequence">20</field>
         <field name="direction">out</field>

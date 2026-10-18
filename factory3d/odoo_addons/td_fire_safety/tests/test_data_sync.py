@@ -1,6 +1,6 @@
 """AC-71: data-файли з макета збігаються з генератором. Запуск: pytest, поза Odoo.
 
-    cd factory3d && python -m pytest odoo_addons/factory3d_fire_safety/tests/test_data_sync.py -q
+    cd factory3d && python -m pytest odoo_addons/td_fire_safety/tests/test_data_sync.py -q
 
 Не імпортує odoo; у tests/__init__.py не підключається.
 """
@@ -15,9 +15,9 @@ DATA_DIR = os.path.join(MODULE_DIR, 'data')
 
 # SPEC §5.2: записів у кожному згенерованому файлі
 EXPECTED_ROWS = {
-    'f3d.fire.norm.csv': 27, 'f3d_fire_panel.xml': 5, 'f3d.fire.zone.csv': 35, 'f3d_fire_system.xml': 3,
-    'f3d.fire.smoke.zone.csv': 8, 'f3d.fire.device.csv': 353, 'f3d.fire.exit.csv': 12, 'f3d_fire_route.xml': 32,
-    'f3d_fire_drill_template.xml': 9, 'f3d_source_data.xml': 2, 'f3d_signal_data.xml': 54,
+    'td.fire.norm.csv': 27, 'td_fire_panel.xml': 5, 'td.fire.zone.csv': 35, 'td_fire_system.xml': 3,
+    'td.fire.smoke.zone.csv': 8, 'td.fire.device.csv': 353, 'td.fire.exit.csv': 12, 'td_fire_route.xml': 32,
+    'td_fire_drill_template.xml': 9, 'td_source_data.xml': 2, 'td_signal_data.xml': 54,
 }
 
 

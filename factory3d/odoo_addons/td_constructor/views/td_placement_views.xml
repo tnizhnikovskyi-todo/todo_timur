@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-05 -->
-    <record id="view_f3d_placement_form" model="ir.ui.view">
-        <field name="name">f3d.placement.form</field>
-        <field name="model">f3d.placement</field>
+    <record id="view_td_placement_form" model="ir.ui.view">
+        <field name="name">td.placement.form</field>
+        <field name="model">td.placement</field>
         <field name="arch" type="xml">
             <form string="Розміщення обладнання">
                 <header>
@@ -39,9 +39,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_placement_list" model="ir.ui.view">
-        <field name="name">f3d.placement.list</field>
-        <field name="model">f3d.placement</field>
+    <record id="view_td_placement_list" model="ir.ui.view">
+        <field name="name">td.placement.list</field>
+        <field name="model">td.placement</field>
         <field name="arch" type="xml">
             <list string="Розміщення">
                 <field name="code"/>

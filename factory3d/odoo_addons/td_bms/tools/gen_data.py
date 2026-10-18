@@ -1,7 +1,7 @@
-"""Генератор data-файлів factory3d_bms з макета (SPEC §5.2, Додатки A…C).
+"""Генератор data-файлів td_bms з макета (SPEC §5.2, Додатки A…C).
 
 Запуск з каталогу factory3d (корінь макета):
-    python3 odoo_addons/factory3d_bms/tools/gen_data.py [--root .] [--out odoo_addons/factory3d_bms]
+    python3 odoo_addons/td_bms/tools/gen_data.py [--root .] [--out odoo_addons/td_bms]
 
 Імпортує plant.lighting, plant.ventilation, plant.layout, читає plant/lux_norms.json, plant/equipment_specs.json,
 dist/odoo_demo.json. Пише детерміновано (порядок макета, без часових міток) у `<out>/data/*` і
@@ -23,7 +23,7 @@ DEFAULT_ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 DEFAULT_OUT = os.path.abspath(os.path.join(HERE, ".."))
 
 BANNER = "<!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->"
-COLLECTOR_REF = "factory3d_telemetry.collector_main"
+COLLECTOR_REF = "td_telemetry.collector_main"
 PANEL_Y = 71.0  # біля північної стіни всередині зони (Додаток A.2)
 PANEL_ZONES = {"LP-1": "Z-PKS", "LP-2": "Z-FAC", "LP-3": "Z-ELEC"}
 NORM_NAME_OVERRIDES = {"sanding": "шліфування, оздоблення фасадів", "quality_control": "контроль якості"}
@@ -336,7 +336,7 @@ def gen_norms(P):
         recs.append(
             record(
                 "norm_" + key,
-                "f3d.bms.light.norm",
+                "td.bms.light.norm",
                 [
                     ftxt("key", key),
                     ftxt("name", name),
@@ -359,7 +359,7 @@ def gen_scenes():
     recs = [
         record(
             "scene_%d" % n,
-            "f3d.bms.light.scene",
+            "td.bms.light.scene",
             [ftxt("number", n), ftxt("name", name), fev("level_pct", lvl), fev("block", 1), ftxt("note", SCENE_NOTE)],
         )
         for n, name, lvl in SCENES
@@ -412,7 +412,7 @@ def gen_sources(units):
         recs.append(
             record(
                 rid,
-                "f3d.source",
+                "td.source",
                 [
                     ftxt("code", code),
                     ftxt("name", name),
@@ -430,7 +430,7 @@ def gen_sources(units):
 
 
 def zone_ref(code):
-    return "factory3d_base.zone_" + slug(code)
+    return "td_factory3d.zone_" + slug(code)
 
 
 def gen_light(panels, groups):
@@ -439,7 +439,7 @@ def gen_light(panels, groups):
         recs.append(
             record(
                 "panel_lp_%d" % p["router"],
-                "f3d.bms.light.panel",
+                "td.bms.light.panel",
                 [
                     ftxt("code", p["code"]),
                     ftxt("name", p["name"]),
@@ -456,7 +456,7 @@ def gen_light(panels, groups):
         recs.append(
             record(
                 "group_" + slug(g["code"]),
-                "f3d.bms.light.group",
+                "td.bms.light.group",
                 [
                     ftxt("code", g["code"]),
                     ftxt("name", "Освітлення: " + g["zone_name"]),
@@ -466,9 +466,9 @@ def gen_light(panels, groups):
                     fref("panel_id", "panel_lp_" + g["panel"].split("-")[1]),
                     fref(
                         "passport_id",
-                        "factory3d_base.passport_highbay_rack"
+                        "td_factory3d.passport_highbay_rack"
                         if g["kind"] == "highbay_rack"
-                        else "factory3d_base.passport_highbay",
+                        else "td_factory3d.passport_highbay",
                     ),
                     ftxt("fixture_kind", g["kind"]),
                     fev("n_fixtures", g["n"]),
@@ -493,7 +493,7 @@ def gen_hvac(units):
             fref("zone_id", zone_ref(u["zone"])),
             fev("x", u["x"]),
             fev("y", u["y"]),
-            fref("passport_id", "factory3d_base." + PASSPORT_BY_KIND[u["kind"]]),
+            fref("passport_id", "td_factory3d." + PASSPORT_BY_KIND[u["kind"]]),
             fref("source_id", "source_bac_%d" % u["device"]),
             fev("bacnet_device", u["device"]),
             fev("fan_count", u["fan_count"]),
@@ -509,11 +509,11 @@ def gen_hvac(units):
             fields.append(fev("required_m3h", u["required_m3h"]))
         if u["note"]:
             fields.append(ftxt("note", u["note"]))
-        recs.append(record("unit_" + slug(u["code"]), "f3d.bms.hvac.unit", fields))
+        recs.append(record("unit_" + slug(u["code"]), "td.bms.hvac.unit", fields))
     recs.append(
         record(
             "heat_balance_main",
-            "f3d.bms.heat.balance",
+            "td.bms.heat.balance",
             [ftxt("name", "Тепловий баланс цеху"), fref("company_id", "base.main_company")],
         )
     )
@@ -1244,11 +1244,11 @@ def generate(root=DEFAULT_ROOT):
     groups = build_groups(P)
     units = build_units(P)
     return {
-        "data/f3d_bms_light_norm_data.xml": gen_norms(P),
-        "data/f3d_bms_light_scene_data.xml": gen_scenes(),
-        "data/f3d_bms_source_data.xml": gen_sources(units),
-        "data/f3d_bms_light_data.xml": gen_light(P["panels"], groups),
-        "data/f3d_bms_hvac_data.xml": gen_hvac(units),
+        "data/td_bms_light_norm_data.xml": gen_norms(P),
+        "data/td_bms_light_scene_data.xml": gen_scenes(),
+        "data/td_bms_source_data.xml": gen_sources(units),
+        "data/td_bms_light_data.xml": gen_light(P["panels"], groups),
+        "data/td_bms_hvac_data.xml": gen_hvac(units),
         "data/bms_signals.csv": gen_signals(units, groups, P["panels"]),
         "tests/data/static_bms.json": gen_static(P),
     }

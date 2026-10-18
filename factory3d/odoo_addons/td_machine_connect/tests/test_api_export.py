@@ -18,7 +18,7 @@ class TestApiExport(F3DMachineHttpCase):
     def setUp(self):
         super().setUp()
         self.mo = self.make_mo(self.wc_saw, qty=14, comps=((self.board, 8 / 14),), name="WH/MO/T0233")
-        self.env["f3d.cut.part"].create(
+        self.env["td.cut.part"].create(
             {
                 "bom_id": self.mo.bom_id.id,
                 "part_code": "P001",
@@ -31,7 +31,7 @@ class TestApiExport(F3DMachineHttpCase):
                 "edge_left": "EB-T",
             }
         )
-        self.map = self.env["f3d.cut.map"]._f3d_create_for(self.mo, "main")
+        self.map = self.env["td.cut.map"]._f3d_create_for(self.mo, "main")
         self.map.mode = "manual"
         self.map.action_export()
         self.t = self.map.sudo()._f3d_new_export_token()
@@ -62,7 +62,7 @@ class TestApiExport(F3DMachineHttpCase):
 
     def test_other_collector_401(self):
         """AC-67: токен активного колектора, що не обслуговує оптимізатор розкрою → 401; токен експорту не витрачено."""
-        other = self.env["f3d.collector"].create({"code": "COL-T2", "name": "Інший колектор"})
+        other = self.env["td.collector"].create({"code": "COL-T2", "name": "Інший колектор"})
         other_token = self._gen_token(other)
         resp = self._get(token=other_token)
         self.assertEqual(resp.status_code, 401)
@@ -121,7 +121,7 @@ class TestApiExport(F3DMachineHttpCase):
             for i in range(6000)
         ]
         self.assertTrue(line)
-        self.env["f3d.cut.map.line"].sudo().create(vals)
+        self.env["td.cut.map.line"].sudo().create(vals)
         resp = self._get()
         self.assertEqual(resp.status_code, 413)
         self.assertEqual(resp.json()["error"]["code"], "too_large")

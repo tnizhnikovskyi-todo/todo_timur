@@ -2,9 +2,9 @@
 <odoo>
     <!-- V-04: варіант обладнання (W3). Форма: поля ліворуч, праворуч віджети f3d_model_preview / f3d_model_upload (DEC-07).
          Діалог із конструктора відкривається act_window target='new' (форма та сама). -->
-    <record id="view_f3d_equipment_variant_form" model="ir.ui.view">
-        <field name="name">f3d.equipment.variant.form</field>
-        <field name="model">f3d.equipment.variant</field>
+    <record id="view_td_equipment_variant_form" model="ir.ui.view">
+        <field name="name">td.equipment.variant.form</field>
+        <field name="model">td.equipment.variant</field>
         <field name="arch" type="xml">
             <form string="Варіант обладнання">
                 <sheet>
@@ -72,7 +72,7 @@
                             </div>
                             <field name="model_glb_id" widget="f3d_model_preview" nolabel="1"/>
                             <widget name="f3d_model_upload"
-                                    groups="factory3d_constructor.group_f3d_constructor_technologist"/>
+                                    groups="td_constructor.group_td_constructor_technologist"/>
                             <field name="model_meta" invisible="1"/>
                             <field name="model_original_id" invisible="1"/>
                             <field name="image" invisible="1"/>
@@ -83,9 +83,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_variant_list" model="ir.ui.view">
-        <field name="name">f3d.equipment.variant.list</field>
-        <field name="model">f3d.equipment.variant</field>
+    <record id="view_td_equipment_variant_list" model="ir.ui.view">
+        <field name="name">td.equipment.variant.list</field>
+        <field name="model">td.equipment.variant</field>
         <field name="arch" type="xml">
             <list string="Варіанти обладнання"
                   decoration-danger="model_status == 'error'"
@@ -105,9 +105,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_variant_kanban" model="ir.ui.view">
-        <field name="name">f3d.equipment.variant.kanban</field>
-        <field name="model">f3d.equipment.variant</field>
+    <record id="view_td_equipment_variant_kanban" model="ir.ui.view">
+        <field name="name">td.equipment.variant.kanban</field>
+        <field name="model">td.equipment.variant</field>
         <field name="arch" type="xml">
             <kanban records_draggable="0">
                 <field name="image"/>
@@ -136,9 +136,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_equipment_variant_search" model="ir.ui.view">
-        <field name="name">f3d.equipment.variant.search</field>
-        <field name="model">f3d.equipment.variant</field>
+    <record id="view_td_equipment_variant_search" model="ir.ui.view">
+        <field name="name">td.equipment.variant.search</field>
+        <field name="model">td.equipment.variant</field>
         <field name="arch" type="xml">
             <search string="Варіанти обладнання">
                 <field name="name"/>

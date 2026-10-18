@@ -7,15 +7,15 @@ import logging
 
 from odoo import SUPERUSER_ID, api
 
-from odoo.addons.factory3d_iot_sim.hooks import refresh_registry
+from odoo.addons.td_iot_sim.hooks import refresh_registry
 
 _logger = logging.getLogger(__name__)
 
 
 def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
-    Device = env['f3d.sim.device'].sudo()
+    Device = env['td.sim.device'].sudo()
     before = Device.search_count([('params', '!=', False)])
     refresh_registry(env)
-    _logger.info("factory3d_iot_sim: post-migrate з %s: пристроїв із params %d → %d",
+    _logger.info("td_iot_sim: post-migrate з %s: пристроїв із params %d → %d",
                  version, before, Device.search_count([('params', '!=', False)]))

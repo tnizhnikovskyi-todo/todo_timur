@@ -6,8 +6,8 @@ from odoo.tests import tagged
 from ..tools import states
 from .common import FireCase
 
-ACT_XMLID = 'factory3d_fire_safety.mail_act_fire_alarm'
-SYNC_RUN = 'odoo.addons.factory3d_fire_safety.tools.sync.FireSync.run'
+ACT_XMLID = 'td_fire_safety.mail_act_fire_alarm'
+SYNC_RUN = 'odoo.addons.td_fire_safety.tools.sync.FireSync.run'
 
 
 class SyncCase(FireCase):
@@ -15,15 +15,15 @@ class SyncCase(FireCase):
     def activities(self, summary_prefix=None):
         act_type = self.env.ref(ACT_XMLID)
         acts = self.env['mail.activity'].search([
-            ('activity_type_id', '=', act_type.id), ('res_model', '=', 'f3d.fire.panel'),
+            ('activity_type_id', '=', act_type.id), ('res_model', '=', 'td.fire.panel'),
             ('res_id', '=', self.panel.id)])
         if summary_prefix:
             acts = acts.filtered(lambda a: (a.summary or '').startswith(summary_prefix))
         return acts
 
     def requests_for(self, code):
-        sig = self.env['f3d.signal'].search([('code', '=', code)])
-        return self.env['maintenance.request'].search([('f3d_signal_id', '=', sig.id)])
+        sig = self.env['td.signal'].search([('code', '=', code)])
+        return self.env['maintenance.request'].search([('td_signal_id', '=', sig.id)])
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_fire')
@@ -81,7 +81,7 @@ class TestZones(SyncCase):
     def test_stale_keeps_state(self):
         self.push_text('fire/groups/FA-EB/state', 'pre-alarm', self.at(0))
         self.assertEqual(self.z_eb.state, 'prealarm')
-        sig = self.env['f3d.signal'].search([('code', '=', 'fire/groups/FA-EB/state')])
+        sig = self.env['td.signal'].search([('code', '=', 'fire/groups/FA-EB/state')])
         sig.write({'status': 'stale'})
         self.sync(30)
         self.assertTrue(self.z_eb.stale)
@@ -119,9 +119,9 @@ class TestPanel(SyncCase):
         self.push_text('fire/totals/state', 'quiet', self.at(0))
         self.assertEqual(self.panel.comm, 'online')
         self.assertEqual(self.panel.state_text, 'Норма')
-        devices = self.env['f3d.fire.device']
+        devices = self.env['td.fire.device']
         seen = set()
-        for dev in self.env['f3d.fire.device'].search([('type', 'in', ('smoke', 'multi', 'heat'))]):
+        for dev in self.env['td.fire.device'].search([('type', 'in', ('smoke', 'multi', 'heat'))]):
             if dev.zone_id.id not in seen and len(seen) < 5:
                 seen.add(dev.zone_id.id)
                 devices |= dev
@@ -133,7 +133,7 @@ class TestPanel(SyncCase):
         self.assertEqual(self.panel.state_text, "Зв'язок із приладом втрачено")
 
     def test_read_disabled(self):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.fire_safety.read_enabled', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.fire_safety.read_enabled', 'False')
         self.panel._cron_sync()
         self.assertEqual(self.panel.comm, 'off')
         self.assertEqual(self.panel.state_text, 'Обробка вимкнена')
@@ -159,8 +159,8 @@ class TestDust(SyncCase):
         self.assertTrue(self.ev('dust_alarm'))
         request = self.requests_for(self.CODE)
         self.assertEqual(len(request), 1)
-        self.assertEqual(request.f3d_fire_device_id, self.dev_fac07)
-        self.assertEqual(request.f3d_fire_zone_id, self.z_fac)
+        self.assertEqual(request.td_fire_device_id, self.dev_fac07)
+        self.assertEqual(request.td_fire_zone_id, self.z_fac)
         self.assertEqual(request.maintenance_team_id, self.team)
         self.push_value(self.CODE, 79, self.at(120))
         self.assertEqual(self.dev_fac07.dust_state, 'ok')
@@ -189,7 +189,7 @@ class TestComm(SyncCase):
         lost = self.ev('comm_lost')
         self.assertEqual(lost.text, "Зв'язок із приладом FACP-1 втрачено: немає даних з 10:00 (3 хв)")
         self.assertEqual(self.activities("Втрата зв'язку").mapped('user_id'), self.guard1 | self.guard2)
-        request = self.env['maintenance.request'].search([('f3d_origin', '=', 'fire_comm')])
+        request = self.env['maintenance.request'].search([('td_origin', '=', 'fire_comm')])
         self.assertEqual(len(request), 1)
         self.assertEqual(request.name, "Втрата зв'язку з приладом FACP-1: немає даних з 10:00 (3 хв)")
         self.assertEqual(lost.request_id, request)
@@ -200,7 +200,7 @@ class TestComm(SyncCase):
         self.assertFalse(self.activities("Втрата зв'язку"))
         self.sync(600)
         self.assertEqual(self.panel.comm, 'lost')
-        self.assertEqual(self.env['maintenance.request'].search_count([('f3d_origin', '=', 'fire_comm')]), 1)
+        self.assertEqual(self.env['maintenance.request'].search_count([('td_origin', '=', 'fire_comm')]), 1)
         self.assertFalse(request.stage_id.done)
 
 
@@ -227,13 +227,13 @@ class TestSystems(SyncCase):
         self.assertTrue(self.ev('spark_water_low'))
         self.assertTrue(self.ev('spark_fault_ok'))
         # усі сигнали stale → unknown, comm_lost (warn)
-        self.env['f3d.signal'].search([('code', 'like', 'fire/spark/SPARK-1/%')]).write({'status': 'stale'})
+        self.env['td.signal'].search([('code', 'like', 'fire/spark/SPARK-1/%')]).write({'status': 'stale'})
         self.sync(500)
         self.assertEqual(self.sys_spark.state, 'unknown')
         self.assertTrue(self.sys_spark.stale)
         lost = self.ev('comm_lost', object_code='SPARK-1')
         self.assertEqual(lost.level, 'warn')
-        self.assertFalse(self.env['maintenance.request'].search([('f3d_origin', '=', 'fire_comm')]))
+        self.assertFalse(self.env['maintenance.request'].search([('td_origin', '=', 'fire_comm')]))
 
     def test_smoke_sprinkler(self):
         self.push_text('fire/smoke/SMOKE-VENTS/state', 'open', self.at(0))
@@ -263,7 +263,7 @@ class TestIngestHook(SyncCase):
         self.assertTrue(self.ev('fault', object_code='FA-EB'))
 
     def test_non_fire_code_skipped(self):
-        self.env['f3d.signal'].create({
+        self.env['td.signal'].create({
             'code': 'equipment/COMPRESSOR/pressure_bar', 'name': 'Тиск компресора', 'kind': 'gauge',
             'module': 'telemetry'})
         with mock.patch(SYNC_RUN) as run:
@@ -275,7 +275,7 @@ class TestIngestHook(SyncCase):
 
     def test_sync_exception_isolated(self):
         with mock.patch(SYNC_RUN, side_effect=RuntimeError('boom')), self.assertLogs(
-                'odoo.addons.factory3d_fire_safety.models.f3d_signal', 'ERROR') as logs:
+                'odoo.addons.td_fire_safety.models.td_signal', 'ERROR') as logs:
             res = self.push_text('fire/groups/FA-EB/state', 'fault', self.at(0))
         self.assertIn('fire sync after ingest', logs.output[0])
         self.assertIn('changed_codes', res)
@@ -296,8 +296,8 @@ class TestAlarmActivity(SyncCase):
 
     def test_empty_alert_group_warns(self):  # F-1: порожня група оповіщення — активностей немає, але є WARNING
         self.env['ir.config_parameter'].sudo().set_param(
-            'factory3d.fire_safety.alert_group_xmlid', 'factory3d_fire_safety.group_f3d_fire_nobody')
-        with self.assertLogs('odoo.addons.factory3d_fire_safety.models.f3d_fire_panel', 'WARNING') as logs:
+            'td.fire_safety.alert_group_xmlid', 'td_fire_safety.group_td_fire_nobody')
+        with self.assertLogs('odoo.addons.td_fire_safety.models.td_fire_panel', 'WARNING') as logs:
             self.push_text('fire/groups/FA-CUT/state', 'alarm', self.at(0))
         self.assertIn('немає активних користувачів', logs.output[0])
         self.assertFalse(self.activities())

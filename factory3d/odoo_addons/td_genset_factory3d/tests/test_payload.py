@@ -19,16 +19,16 @@ class TestPayload(GensetCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        if "f3d.viewer.event" not in cls.env:
-            raise unittest.SkipTest("factory3d_viewer не встановлено")
+        if "td.viewer.event" not in cls.env:
+            raise unittest.SkipTest("td_viewer3d не встановлено")
 
     def payload(self, user=None, **kw):
-        from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+        from odoo.addons.td_viewer3d.tools.payload import PayloadBuilder
 
         return PayloadBuilder(self.env(user=user or self.user_reader), **kw).build()
 
     def provider(self):
-        return self.env["f3d.viewer.provider.genset"]
+        return self.env["td.viewer.provider.genset"]
 
     def collect(self):
         data = {}
@@ -72,7 +72,7 @@ class TestPayload(GensetCase):
         self.assertIs(with_link["island"], True)
         # запасний шлях R-04 п. 2
         self.link.active = True
-        self.env["f3d.energy.node"].search([("is_critical", "=", True)]).write({"is_critical": False})
+        self.env["td.energy.node"].search([("is_critical", "=", True)]).write({"is_critical": False})
         self.set_param("critical_codes", "energy/consumers/CR-B/p_now")
         self.assertEqual(self.link._critical_kw()[0], 10.0)
         again = self.payload(full=True)["infra"]["totals"]
@@ -90,7 +90,7 @@ class TestPayload(GensetCase):
         }
         for code in (PFX + "state", "infra/ats/position"):
             patch = {"infra": {"cards": dict(base["infra"]["cards"]), "totals": dict(base["infra"]["totals"])}}
-            prov._f3d_viewer_delta(patch, {"changes": {"f3d.signal": {code}}})
+            prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {code}}})
             infra = patch["infra"]
             self.assertIn("PV-INV", infra["cards"])
             self.assertIn("GENSET", infra["cards"])
@@ -100,7 +100,7 @@ class TestPayload(GensetCase):
             self.assertIn("island", t)
             self.assertIn("grid_ok", t)
         patch = {"infra": {"totals": {"pv_now": 468}}}
-        prov._f3d_viewer_delta(patch, {"changes": {"f3d.signal": {"energy/totals/p_now"}}})
+        prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {"energy/totals/p_now"}}})
         self.assertEqual(patch, {"infra": {"totals": {"pv_now": 468}}})
 
     def _queries(self, func):

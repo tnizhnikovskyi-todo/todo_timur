@@ -5,7 +5,7 @@ from ..tools import payload as payload_tools
 
 SIGNAL_MODEL = "x_f3d_signal"
 SIGNAL_FIELDS = ["x_code", "x_value", "x_unit", "x_mode", "x_charging", "x_updated", "x_state"]
-IOT_SOURCE = "імітація датчиків (модуль factory3d_iot_sim)"
+IOT_SOURCE = "імітація датчиків (модуль td_iot_sim)"
 
 
 def signal_value(row):
@@ -41,8 +41,8 @@ def iot_meta(rows):
 
 class F3dViewerProviderSignals(models.AbstractModel):
     """M-01h: значення сигналів імітації за шляхами (Додаток C)."""
-    _name = "f3d.viewer.provider.signals"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.signals"
+    _inherit = "td.viewer.provider"
     _description = "3D: постачальник — сигнали імітації"
 
     _f3d_sequence = 90

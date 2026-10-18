@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_hr_employee_form_f3d_access" model="ir.ui.view">
-        <field name="name">hr.employee.form.f3d.access</field>
+    <record id="view_hr_employee_form_td_access" model="ir.ui.view">
+        <field name="name">hr.employee.form.td.access</field>
         <field name="model">hr.employee</field>
         <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_f3d_access_events" type="object" class="oe_stat_button" icon="fa-id-card-o"
-                        string="Проходи" groups="factory3d_access.group_f3d_access_security"/>
+                        string="Проходи" groups="td_access.group_td_access_security"/>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page name="f3d_access" string="Доступ" groups="hr.group_hr_user">
                     <group>
                         <group string="Зараз">
-                            <field name="f3d_access_present"/>
-                            <field name="f3d_access_zone_id"/>
-                            <field name="f3d_access_zone_since"/>
-                            <field name="f3d_home_zone_id"/>
+                            <field name="td_access_present"/>
+                            <field name="td_access_zone_id"/>
+                            <field name="td_access_zone_since"/>
+                            <field name="td_home_zone_id"/>
                         </group>
                         <group string="Проходи">
-                            <field name="f3d_access_last_in"/>
-                            <field name="f3d_access_last_out"/>
-                            <field name="f3d_access_last_event_id"
-                                   groups="factory3d_access.group_f3d_access_security"/>
+                            <field name="td_access_last_in"/>
+                            <field name="td_access_last_out"/>
+                            <field name="td_access_last_event_id"
+                                   groups="td_access.group_td_access_security"/>
                         </group>
                     </group>
-                    <field name="f3d_access_link_ids" groups="factory3d_access.group_f3d_access_security"
+                    <field name="td_access_link_ids" groups="td_access.group_td_access_security"
                            readonly="1">
                         <list>
                             <field name="biostar_user_id"/>
@@ -39,33 +39,33 @@
         </field>
     </record>
 
-    <record id="view_hr_employee_list_f3d_access" model="ir.ui.view">
-        <field name="name">hr.employee.list.f3d.access</field>
+    <record id="view_hr_employee_list_td_access" model="ir.ui.view">
+        <field name="name">hr.employee.list.td.access</field>
         <field name="model">hr.employee</field>
         <field name="inherit_id" ref="hr.view_employee_tree"/>
         <field name="arch" type="xml">
             <field name="name" position="after">
-                <field name="f3d_access_present" widget="boolean" optional="hide"/>
-                <field name="f3d_access_zone_id" optional="hide"/>
+                <field name="td_access_present" widget="boolean" optional="hide"/>
+                <field name="td_access_zone_id" optional="hide"/>
             </field>
         </field>
     </record>
 
-    <record id="view_hr_employee_search_f3d_access" model="ir.ui.view">
-        <field name="name">hr.employee.search.f3d.access</field>
+    <record id="view_hr_employee_search_td_access" model="ir.ui.view">
+        <field name="name">hr.employee.search.td.access</field>
         <field name="model">hr.employee</field>
         <field name="inherit_id" ref="hr.view_employee_filter"/>
         <field name="arch" type="xml">
             <filter name="message_needaction" position="before">
-                <filter name="f3d_present" string="На території" domain="[('f3d_access_present', '=', True)]"/>
+                <filter name="f3d_present" string="На території" domain="[('td_access_present', '=', True)]"/>
                 <filter name="f3d_no_home_zone" string="Без домашньої зони"
-                        domain="[('f3d_home_zone_id', '=', False)]"/>
+                        domain="[('td_home_zone_id', '=', False)]"/>
                 <separator/>
             </filter>
             <xpath expr="//search" position="inside">
                 <group>
-                    <filter name="group_f3d_zone" string="Зона зараз"
-                            context="{'group_by': 'f3d_access_zone_id'}"/>
+                    <filter name="group_td_zone" string="Зона зараз"
+                            context="{'group_by': 'td_access_zone_id'}"/>
                 </group>
             </xpath>
         </field>

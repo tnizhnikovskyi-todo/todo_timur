@@ -3,11 +3,11 @@ from odoo.exceptions import AccessError, UserError
 
 
 class F3dLayoutVersion(models.Model):
-    _name = 'f3d.layout.version'
+    _name = 'td.layout.version'
     _description = "Версія планування"
     _order = 'site_id, n desc'
 
-    site_id = fields.Many2one('f3d.site', string="Площадка", required=True, ondelete='cascade', index=True)
+    site_id = fields.Many2one('td.site', string="Площадка", required=True, ondelete='cascade', index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     n = fields.Integer(string="№", required=True, readonly=True)
     note = fields.Text(string="Нотатка")
@@ -61,7 +61,7 @@ class F3dLayoutVersion(models.Model):
         snapshot.restore_draft(self)
         return {
             'type': 'ir.actions.act_window',
-            'res_model': 'f3d.site',
+            'res_model': 'td.site',
             'res_id': self.site_id.id,
             'view_mode': 'form',
             'target': 'current',

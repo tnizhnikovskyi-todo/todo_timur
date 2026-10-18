@@ -27,20 +27,20 @@ class TestMo231(AllocMixin, F3DEnergyCase):
         self.u_mrpm = new_test_user(self.env, login="en_mrpm", groups="base.group_user,mrp.group_mrp_manager")
         mo = self.make()
         as_master = mo.with_user(self.u_master)
-        self.assertAlmostEqual(as_master.read(["f3d_energy_kwh"])[0]["f3d_energy_kwh"], 86.213, places=3)
+        self.assertAlmostEqual(as_master.read(["td_energy_kwh"])[0]["td_energy_kwh"], 86.213, places=3)
         with self.assertRaises(AccessError):
-            as_master.read(["f3d_energy_cost"])
+            as_master.read(["td_energy_cost"])
         arch = self.env["mrp.production"].with_user(self.u_master).get_view(view_type="form")["arch"]
-        self.assertIn("f3d_energy_kwh", arch)
-        self.assertNotIn("f3d_energy_cost", arch)
+        self.assertIn("td_energy_kwh", arch)
+        self.assertNotIn("td_energy_cost", arch)
         arch = self.env["mrp.production"].with_user(self.u_mrpm).get_view(view_type="form")["arch"]
-        self.assertIn("f3d_energy_cost", arch)
+        self.assertIn("td_energy_cost", arch)
 
     def test_request_followers(self):  # M-17, AC-34 (підписка)
         signal = self.mk_signal("energy/consumers/SAW-T/p_now")
         equipment = self.env["maintenance.equipment"].create({"name": "SWB-T"})
         req = self.env["maintenance.request"].create(
-            {"name": "Перевищення потужності", "equipment_id": equipment.id, "f3d_signal_id": signal.id}
+            {"name": "Перевищення потужності", "equipment_id": equipment.id, "td_signal_id": signal.id}
         )
         self.assertIn(self.u_energy.partner_id, req.message_partner_ids)
         other = self.env["maintenance.request"].create({"name": "Інша", "equipment_id": equipment.id})

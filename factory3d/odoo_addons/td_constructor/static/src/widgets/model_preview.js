@@ -13,7 +13,7 @@ import { getStaged, sameRecord, stagingBus } from "./staging";
 export const MODEL_URL = (variantId, att) => `/f3d/constructor/model/${variantId}/glb?att=${att || 0}`;
 
 export class F3dModelPreview extends Component {
-    static template = "factory3d_constructor.ModelPreview";
+    static template = "td_constructor.ModelPreview";
     static props = { ...standardFieldProps };
 
     setup() {

@@ -24,7 +24,7 @@ class TestYardLpr(GateCase):
 
     def setUp(self):
         super().setUp()
-        self.Event = self.env["f3d.yard.lpr.event"]
+        self.Event = self.env["td.yard.lpr.event"]
 
     def _plain(self, n, plate, ts=None, **kw):
         ts = ts or at(12, 40)
@@ -96,7 +96,7 @@ class TestYardLpr(GateCase):
             other = self.recv(lpr_event(4, carID="888"))
             self.assertTrue(other.kpp_alert)
         with freeze(NOW + timedelta(minutes=31)):
-            self.env["f3d.yard.visit"]._cron_queue()
+            self.env["td.yard.visit"]._cron_queue()
         self.assertEqual((other.match_state, other.kpp_alert), ("expired", False))
 
     def test_images(self):  # AC-26
@@ -199,7 +199,7 @@ class TestYardLpr(GateCase):
     def test_walk_in(self):  # AC-32
         with freeze(NOW):
             ev = self.recv(lpr_event(1))
-            Wizard = self.env["f3d.yard.walkin.wizard"]
+            Wizard = self.env["td.yard.walkin.wizard"]
             guard = Wizard.with_user(self.user_guard).with_context(default_event_id=ev.id)
             for i in range(5):
                 visit = self._visit(plate="АА10%02dКТ" % i)
@@ -222,7 +222,7 @@ class TestYardLpr(GateCase):
         with freeze(NOW):
             ev = self.recv(lpr_event(1))
             wiz = (
-                self.env["f3d.yard.reject.wizard"]
+                self.env["td.yard.reject.wizard"]
                 .with_user(self.user_guard)
                 .with_context(default_event_id=ev.id)
                 .create({"reason": "Немає документів", "reason_code": "no_booking"})
@@ -232,7 +232,7 @@ class TestYardLpr(GateCase):
             self.assertEqual((visit.visit_type, visit.state, visit.is_walk_in), ("other", "rejected", True))
             self.assertEqual((ev.match_state, ev.kpp_alert), ("handled", False))
             planned = self._planned("АА7310КТ", NOW + timedelta(hours=2))
-            self.env["f3d.yard.reject.wizard"].with_user(self.user_guard).with_context(
+            self.env["td.yard.reject.wizard"].with_user(self.user_guard).with_context(
                 default_visit_id=planned.id
             ).create({"reason": "x"}).action_confirm()
             self.assertEqual(planned.state, "rejected")

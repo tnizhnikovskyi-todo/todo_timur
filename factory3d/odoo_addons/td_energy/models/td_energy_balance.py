@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from odoo import api, fields, models
 
-from odoo.addons.factory3d_telemetry.tools.titles import fmt_num
+from odoo.addons.td_telemetry.tools.titles import fmt_num
 
 from ..tools import balance as balance_tools
 from ..tools import dates
@@ -17,13 +17,13 @@ MAX_BACKLOG_H = 48
 class F3dEnergyBalance(models.Model):
     """M-08. Погодинна перевірка балансу обліку (R-07)."""
 
-    _name = "f3d.energy.balance"
-    _inherit = ["f3d.energy.day.mixin"]
+    _name = "td.energy.balance"
+    _inherit = ["td.energy.day.mixin"]
     _description = "Енергетика: баланс обліку"
     _order = "hour desc, node_id"
     _log_access = False
 
-    node_id = fields.Many2one("f3d.energy.node", string="Вузол", required=True, ondelete="cascade", index=True)
+    node_id = fields.Many2one("td.energy.node", string="Вузол", required=True, ondelete="cascade", index=True)
     hour = fields.Datetime(string="Година (UTC)", required=True, index=True)
     day = fields.Date(string="Дата (Київ)", required=True)
     measured_kwh = fields.Float(string="Виміряно, кВт·год", digits=(12, 3))
@@ -67,12 +67,12 @@ class F3dEnergyBalance(models.Model):
         env = self.env
         now = now or dates.now_utc(env)
         h_end = hour + HOUR
-        Meter = env["f3d.energy.meter"].sudo()
+        Meter = env["td.energy.meter"].sudo()
         tol_pct = param_float(env, "balance_tol_pct", 3.0)
         tol_kwh = param_float(env, "balance_tol_kwh", 2.0)
         by_meter = {}
         for r in (
-            env["f3d.energy.interval"]
+            env["td.energy.interval"]
             .sudo()
             .search_read(
                 [("ts_start", ">=", hour), ("ts_start", "<", h_end)], ["meter_id", "kwh", "kwh_export", "quality"]
@@ -80,15 +80,15 @@ class F3dEnergyBalance(models.Model):
         ):
             by_meter.setdefault(r["meter_id"][0], []).append(r)
         outage = False
-        if "f3d.energy.outage" in env:
+        if "td.energy.outage" in env:
             outage = bool(
-                env["f3d.energy.outage"]
+                env["td.energy.outage"]
                 .sudo()
                 .search_count([("ts_start", "<", h_end), "|", ("ts_end", "=", False), ("ts_end", ">", hour)])
             )
         meters = Meter.search([("active", "=", True), ("e_import_signal_id", "!=", False)])
         nodes = (
-            env["f3d.energy.node"]
+            env["td.energy.node"]
             .sudo()
             .search([("kind", "=", "cell"), ("cell_type", "in", ("incomer", "feeder", "cable"))])
         )
@@ -158,7 +158,7 @@ class F3dEnergyBalance(models.Model):
             readings.append({"code": "%s/%s/imbalance_pct" % (prefix, name), "ts": h_end, "value": round(pct, 2),
                              "q": "good"})  # fmt: skip
             if state == "deviation":
-                env["f3d.energy.event"]._f3d_log(
+                env["td.energy.event"]._f3d_log(
                     "warn",
                     "balance",
                     node.code,
@@ -175,7 +175,7 @@ class F3dEnergyBalance(models.Model):
                     node=node,
                     dedup_min=60,
                 )
-        env["f3d.signal"].sudo()._f3d_energy_put(readings)
+        env["td.signal"].sudo()._f3d_energy_put(readings)
         return result
 
     @api.model

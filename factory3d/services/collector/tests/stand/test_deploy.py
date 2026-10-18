@@ -52,9 +52,9 @@ def _shell(script: str, db: str = DEP_DB) -> dict:
 @pytest.fixture(scope="module")
 def dep_db():
     if DEP_DB not in _dbs():
-        env = {**os.environ, "F3D_TEST_INSTALL": "factory3d_iot_sim,factory3d_telemetry,factory3d_telemetry_viewer"}
+        env = {**os.environ, "F3D_TEST_INSTALL": "td_iot_sim,td_telemetry,td_telemetry_viewer3d"}
         subprocess.run(
-            [str(TOOLS / "run_tests.sh"), DEP_DB, "/factory3d_telemetry_viewer"],
+            [str(TOOLS / "run_tests.sh"), DEP_DB, "/td_telemetry_viewer3d"],
             env=env,
             capture_output=True,
             text=True,
@@ -62,10 +62,10 @@ def dep_db():
             check=False,
         )
     assert DEP_DB in _dbs()
-    if _psql(DEP_DB, "select state from ir_module_module where name = 'factory3d_telemetry'") != "installed":
+    if _psql(DEP_DB, "select state from ir_module_module where name = 'td_telemetry'") != "installed":
         env = {
             **os.environ,
-            "F3D_TEST_INSTALL": "factory3d_telemetry,factory3d_telemetry_viewer",
+            "F3D_TEST_INSTALL": "td_telemetry,td_telemetry_viewer3d",
         }  # після перерваного п. 7
         subprocess.run(
             [str(TOOLS / "update.sh"), DEP_DB], env=env, capture_output=True, text=True, timeout=1200, check=False
@@ -76,7 +76,7 @@ def dep_db():
 def test_dep03_install_report(dep_db):
     """П. 3 (на чистій базі): звіт `level0_migrated` існує, state = skipped (рівня 0 немає), помилок немає."""
     rep = json.loads(
-        _psql(dep_db, "select value from ir_config_parameter where key = 'factory3d.telemetry.level0_migrated'")
+        _psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'")
     )
     assert rep["state"] in ("skipped", "done"), rep
     assert rep["mismatches"] == []
@@ -86,19 +86,19 @@ def test_dep06_rerun_migration(dep_db):
     """П. 6: повтор міграції — без змін кількостей і без помилок (на демо: `created: 0`)."""
     before = _psql(
         dep_db,
-        "select (select count(*) from f3d_signal), (select count(*) from f3d_source), "
-        "(select count(*) from f3d_reading)",
+        "select (select count(*) from td_signal), (select count(*) from td_source), "
+        "(select count(*) from td_reading)",
     )
     res = _shell(
-        "import json\nfrom odoo.addons.factory3d_telemetry import hooks\n"
+        "import json\nfrom odoo.addons.td_telemetry import hooks\n"
         "r = hooks.run_level0_migration(env)\nenv.cr.commit()\n"
         "print('STAND ' + json.dumps({'state': r['state'], 'mismatches': r['mismatches'], "
         "'catalog': r['signals_catalog']}, default=str))\n"
     )
     after = _psql(
         dep_db,
-        "select (select count(*) from f3d_signal), (select count(*) from f3d_source), "
-        "(select count(*) from f3d_reading)",
+        "select (select count(*) from td_signal), (select count(*) from td_source), "
+        "(select count(*) from td_reading)",
     )
     assert res["mismatches"] == [] and res["catalog"]["created"] == 0, res
     assert before == after
@@ -106,12 +106,12 @@ def test_dep06_rerun_migration(dep_db):
 
 @pytest.mark.timeout(1500)
 def test_dep07_uninstall_reinstall(dep_db):
-    """П. 7 (чиста база): деінсталяція прибирає таблиці f3d_* і параметри; повторна установка — звіт без розбіжностей."""
+    """П. 7 (чиста база): деінсталяція прибирає таблиці td_* і параметри; повторна установка — звіт без розбіжностей."""
     res = _shell(
         "import json\n"
-        "m = env['ir.module.module'].search([('name', 'in', ['factory3d_telemetry_viewer', 'factory3d_telemetry'])])\n"
-        "m.filtered(lambda x: x.name == 'factory3d_telemetry_viewer').button_immediate_uninstall()\n"
-        "env['ir.module.module'].search([('name', '=', 'factory3d_telemetry')]).button_immediate_uninstall()\n"
+        "m = env['ir.module.module'].search([('name', 'in', ['td_telemetry_viewer3d', 'td_telemetry'])])\n"
+        "m.filtered(lambda x: x.name == 'td_telemetry_viewer3d').button_immediate_uninstall()\n"
+        "env['ir.module.module'].search([('name', '=', 'td_telemetry')]).button_immediate_uninstall()\n"
         "print('STAND ' + json.dumps({'ok': True}))\n"
     )
     assert res["ok"]
@@ -125,25 +125,25 @@ def test_dep07_uninstall_reinstall(dep_db):
     names = _psql(
         dep_db,
         "select string_agg(table_name, ',') from information_schema.tables where table_name in "
-        "('f3d_signal','f3d_source','f3d_collector','f3d_reading','f3d_reading_hour','f3d_command',"
-        "'f3d_push_event')",
+        "('td_signal','td_source','td_collector','td_reading','td_reading_hour','td_command',"
+        "'td_push_event')",
     )
     assert names in ("", None), f"лишились таблиці телеметрії: {names}"
-    assert int(_psql(dep_db, "select count(*) from ir_config_parameter where key like 'factory3d.telemetry.%'")) == 0
+    assert int(_psql(dep_db, "select count(*) from ir_config_parameter where key like 'td.telemetry.%'")) == 0
     del left
     out = subprocess.run(
         [str(TOOLS / "update.sh"), dep_db],
         capture_output=True,
         text=True,
         timeout=1200,
-        env={**os.environ, "F3D_TEST_INSTALL": "factory3d_telemetry,factory3d_telemetry_viewer"},
+        env={**os.environ, "F3D_TEST_INSTALL": "td_telemetry,td_telemetry_viewer3d"},
         check=False,
     )
     assert "Traceback" not in out.stdout[-2000:], out.stdout[-800:]
-    state = _psql(dep_db, "select state from ir_module_module where name = 'factory3d_telemetry'")
+    state = _psql(dep_db, "select state from ir_module_module where name = 'td_telemetry'")
     assert state == "installed", (state, out.stdout[-400:])
     rep = json.loads(
-        _psql(dep_db, "select value from ir_config_parameter where key = 'factory3d.telemetry.level0_migrated'")
+        _psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'")
     )
     assert rep["mismatches"] == [] and rep["state"] in ("skipped", "done")
 
@@ -160,21 +160,21 @@ def test_dep08_neutralize(dep_db):
     try:
         _psql(
             NEU_DB,
-            "update f3d_collector set token_hash = repeat('a', 64), token_hint = 'abcd', state = 'online'; "
-            "update f3d_source set state = 'online', read_enabled = true, write_enabled = true; "
+            "update td_collector set token_hash = repeat('a', 64), token_hint = 'abcd', state = 'online'; "
+            "update td_source set state = 'online', read_enabled = true, write_enabled = true; "
             "update ir_config_parameter set value = 'True' where key in "
-            "('factory3d.telemetry.read_enabled', 'factory3d.telemetry.write_enabled')",
+            "('td.telemetry.read_enabled', 'td.telemetry.write_enabled')",
         )
-        for mod in ("factory3d_base", "factory3d_iot_sim", "factory3d_telemetry", "factory3d_telemetry_viewer"):
+        for mod in ("td_factory3d", "td_iot_sim", "td_telemetry", "td_telemetry_viewer3d"):
             f = ADDONS / mod / "data" / "neutralize.sql"
             if f.exists():
                 _psql(NEU_DB, file=f)
-        assert _psql(NEU_DB, "select count(*) from f3d_collector where token_hash is not null") == "0"
+        assert _psql(NEU_DB, "select count(*) from td_collector where token_hash is not null") == "0"
         assert (
             _psql(
                 NEU_DB,
                 "select count(*) from ir_config_parameter where key in "
-                "('factory3d.telemetry.read_enabled', 'factory3d.telemetry.write_enabled') "
+                "('td.telemetry.read_enabled', 'td.telemetry.write_enabled') "
                 "and value <> 'False'",
             )
             == "0"
@@ -183,11 +183,11 @@ def test_dep08_neutralize(dep_db):
             _psql(
                 NEU_DB,
                 "select count(*) from ir_cron c join ir_model_data d on d.res_id = c.id and "
-                "d.model = 'ir.cron' where d.module = 'factory3d_telemetry' and c.active",
+                "d.model = 'ir.cron' where d.module = 'td_telemetry' and c.active",
             )
             == "0"
         )
-        assert _psql(NEU_DB, "select count(*) from f3d_source where state <> 'disabled' or read_enabled") == "0"
+        assert _psql(NEU_DB, "select count(*) from td_source where state <> 'disabled' or read_enabled") == "0"
     finally:
         subprocess.run(["dropdb", "-h", "127.0.0.1", "-U", "odoo", NEU_DB], check=False, capture_output=True)
 
@@ -195,4 +195,4 @@ def test_dep08_neutralize(dep_db):
 def test_dep09_rollback_leaves_live_db(dep_db):
     """П. 9: відкат = видалення копії; стенд-база `f3d_telemetry_w7` ("жива" для цього тесту) не змінювалась."""
     assert "f3d_telemetry_w7" in _dbs()
-    assert Path(ADDONS / "factory3d_telemetry" / "data" / "neutralize.sql").exists()
+    assert Path(ADDONS / "td_telemetry" / "data" / "neutralize.sql").exists()

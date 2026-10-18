@@ -78,11 +78,11 @@ def plant():
 def test_generated_files_match(generated):
     assert sorted(generated) == [
         "data/bms_signals.csv",
-        "data/f3d_bms_hvac_data.xml",
-        "data/f3d_bms_light_data.xml",
-        "data/f3d_bms_light_norm_data.xml",
-        "data/f3d_bms_light_scene_data.xml",
-        "data/f3d_bms_source_data.xml",
+        "data/td_bms_hvac_data.xml",
+        "data/td_bms_light_data.xml",
+        "data/td_bms_light_norm_data.xml",
+        "data/td_bms_light_scene_data.xml",
+        "data/td_bms_source_data.xml",
         "tests/data/static_bms.json",
     ]
     for rel, text in generated.items():

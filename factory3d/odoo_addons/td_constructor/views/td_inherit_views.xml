@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-10: паспорт обладнання -->
-    <record id="view_f3d_passport_form_inherit" model="ir.ui.view">
-        <field name="name">f3d.equipment.passport.form.constructor</field>
-        <field name="model">f3d.equipment.passport</field>
-        <field name="inherit_id" ref="factory3d_base.view_f3d_equipment_passport_form"/>
+    <record id="view_td_passport_form_inherit" model="ir.ui.view">
+        <field name="name">td.equipment.passport.form.constructor</field>
+        <field name="model">td.equipment.passport</field>
+        <field name="inherit_id" ref="td_factory3d.view_td_equipment_passport_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_variants" type="object" class="oe_stat_button" icon="fa-clone">
@@ -12,7 +12,7 @@
                 </button>
             </xpath>
             <xpath expr="//field[@name='role']" position="after">
-                <field name="f3d_category"/>
+                <field name="td_category"/>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page name="variants" string="Варіанти">
@@ -34,11 +34,11 @@
     <record id="view_stock_location_form_constructor" model="ir.ui.view">
         <field name="name">stock.location.form.constructor</field>
         <field name="model">stock.location</field>
-        <field name="inherit_id" ref="factory3d_base.view_stock_location_form_f3d"/>
+        <field name="inherit_id" ref="td_factory3d.view_stock_location_form_td"/>
         <field name="arch" type="xml">
-            <field name="f3d_code" position="after">
-                <field name="f3d_site_id" readonly="1" invisible="not f3d_site_id"/>
-                <field name="f3d_slot_uid" readonly="1" invisible="not f3d_slot_uid"/>
+            <field name="td_code" position="after">
+                <field name="td_site_id" readonly="1" invisible="not td_site_id"/>
+                <field name="td_slot_uid" readonly="1" invisible="not td_slot_uid"/>
             </field>
         </field>
     </record>
@@ -47,11 +47,11 @@
     <record id="view_maintenance_equipment_form_constructor" model="ir.ui.view">
         <field name="name">maintenance.equipment.form.constructor</field>
         <field name="model">maintenance.equipment</field>
-        <field name="inherit_id" ref="factory3d_base.view_maintenance_equipment_form_f3d"/>
+        <field name="inherit_id" ref="td_factory3d.view_maintenance_equipment_form_td"/>
         <field name="arch" type="xml">
-            <field name="f3d_zone_id" position="after">
-                <field name="f3d_site_id" readonly="1" invisible="not f3d_site_id"/>
-                <field name="f3d_placement_uid" readonly="1" invisible="not f3d_placement_uid"/>
+            <field name="td_zone_id" position="after">
+                <field name="td_site_id" readonly="1" invisible="not td_site_id"/>
+                <field name="td_placement_uid" readonly="1" invisible="not td_placement_uid"/>
             </field>
         </field>
     </record>

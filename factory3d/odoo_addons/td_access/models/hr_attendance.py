@@ -10,7 +10,7 @@ from ..tools.dates import local_date, schedule_end_utc
 
 _logger = logging.getLogger(__name__)
 
-SCOPE = 'factory3d_access.group_f3d_access_security,hr_attendance.group_hr_attendance_user'
+SCOPE = 'td_access.group_td_access_security,hr_attendance.group_hr_attendance_user'
 
 
 class HrAttendance(models.Model):
@@ -18,15 +18,15 @@ class HrAttendance(models.Model):
 
     in_mode = fields.Selection(selection_add=[('biostar', 'СКУД BioStar 2')], ondelete={'biostar': 'set default'})
     out_mode = fields.Selection(selection_add=[('biostar', 'СКУД BioStar 2')], ondelete={'biostar': 'set default'})
-    f3d_in_event_id = fields.Many2one('f3d.access.event', string='Подія входу', readonly=True,
+    td_in_event_id = fields.Many2one('td.access.event', string='Подія входу', readonly=True,
                                       ondelete='set null', groups=SCOPE)
-    f3d_out_event_id = fields.Many2one('f3d.access.event', string='Подія виходу', readonly=True,
+    td_out_event_id = fields.Many2one('td.access.event', string='Подія виходу', readonly=True,
                                        ondelete='set null', groups=SCOPE)
-    f3d_in_device_id = fields.Many2one('f3d.access.device', string='Пристрій входу', readonly=True,
+    td_in_device_id = fields.Many2one('td.access.device', string='Пристрій входу', readonly=True,
                                        ondelete='set null', groups=SCOPE)
-    f3d_out_device_id = fields.Many2one('f3d.access.device', string='Пристрій виходу', readonly=True,
+    td_out_device_id = fields.Many2one('td.access.device', string='Пристрій виходу', readonly=True,
                                         ondelete='set null', groups=SCOPE)
-    f3d_closed_by_rule = fields.Boolean(string='Закрито правилом (без виходу)', readonly=True, default=False,
+    td_closed_by_rule = fields.Boolean(string='Закрито правилом (без виходу)', readonly=True, default=False,
                                         index=True)
 
     def _f3d_rule_end(self):
@@ -57,12 +57,12 @@ class HrAttendance(models.Model):
             if att.check_out:
                 continue
             check_out, why = att._f3d_rule_end()
-            att.write({'check_out': check_out, 'out_mode': 'technical', 'f3d_closed_by_rule': True})
+            att.write({'check_out': check_out, 'out_mode': 'technical', 'td_closed_by_rule': True})
             att.message_post(body="Закрито правилом СКУД: немає проходу на вихід; вихід = %s." % why)
             emp = att.employee_id
-            if emp.f3d_access_present and (not emp.f3d_access_last_in or emp.f3d_access_last_in <= check_out):
-                emp._f3d_access_set({'f3d_access_present': False, 'f3d_access_zone_id': False,
-                                     'f3d_access_zone_since': False, 'f3d_access_zone_door_id': False})
+            if emp.td_access_present and (not emp.td_access_last_in or emp.td_access_last_in <= check_out):
+                emp._f3d_access_set({'td_access_present': False, 'td_access_zone_id': False,
+                                     'td_access_zone_since': False, 'td_access_zone_door_id': False})
         return True
 
 

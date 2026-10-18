@@ -4,8 +4,8 @@
 
 | # | Команда | Итог |
 |---|---|---|
-| A | `F3D_TEST_INSTALL=factory3d_genset run_tests.sh f3d_tdg_w5a /factory3d_genset` (без viewer, SPEC §13.0 прогон 2) | 0 failed, 0 error of 90 tests (классы с viewer — SkipTest) |
-| B | `F3D_TEST_INSTALL=factory3d_genset,factory3d_viewer run_tests.sh f3d_tdg_w5b /factory3d_genset,/td_genset` | 0 failed, 0 error of 276 tests: мост 100 + td_genset 176; 1 skip (DEFECT, ниже); 0 `DeprecationWarning` от td_genset |
+| A | `F3D_TEST_INSTALL=td_genset_factory3d run_tests.sh f3d_tdg_w5a /td_genset_factory3d` (без viewer, SPEC §13.0 прогон 2) | 0 failed, 0 error of 90 tests (классы с viewer — SkipTest) |
+| B | `F3D_TEST_INSTALL=td_genset_factory3d,td_viewer3d run_tests.sh f3d_tdg_w5b /td_genset_factory3d,/td_genset` | 0 failed, 0 error of 276 tests: мост 100 + td_genset 176; 1 skip (DEFECT, ниже); 0 `DeprecationWarning` от td_genset |
 | — | `python3 -m unittest discover -s tests` в `td_genset/relay` (ТК-F01…F07, in-process) | 20 тестов OK |
 
 Новые тесты моста (было 78 UT, стало 100): `test_access.py` (6: AC-33, AC-58, AC-59, AC-60, ТБ-01, ТБ-02), `test_static.py` (6 + 1 skip: AC-34, AC-41, AC-58, AC-71, ТБ-03, ТБ-07, ТБ-10), `test_payload.py` (5: AC-25, AC-30, AC-32, AC-66, AC-70, AC-72), `test_source.py` (3: AC-69), `test_hooks.py::test_signals_appendix_a_fields` (AC-62).
@@ -14,7 +14,7 @@
 
 | # | Где | Что | Тест |
 |---|---|---|---|
-| D-1 | `factory3d_genset/views/f3d_genset_link_views.xml:23` | `string="td_genset"` без кириллицы — нарушение AC-41 (FR-16), мелкое | `test_static.py:TestStatic.test_ukrainian_view_strings` (`@unittest.skip("DEFECT: …")`) |
+| D-1 | `td_genset_factory3d/views/td_genset_link_views.xml:23` | `string="td_genset"` без кириллицы — нарушение AC-41 (FR-16), мелкое | `test_static.py:TestStatic.test_ukrainian_view_strings` (`@unittest.skip("DEFECT: …")`) |
 
 ## ТК / ТБ / ТП
 
@@ -30,7 +30,7 @@
 | ТП-03, ТП-05 (UT-часть) | `test_events.py::test_batch_200`, `test_publish.py::test_adapter_not_verified_and_isolation` — зелёно |
 | ТП-04, ТП-05 (стенд), ТП-06 | ждут стенд; ТП-06: 176 UT td_genset за 89 с на 19.0, базовая линия 18.0 не измерялась |
 
-## ruff (`ruff check --line-length 120 factory3d/odoo_addons/factory3d_genset`)
+## ruff (`ruff check --line-length 120 factory3d/odoo_addons/td_genset_factory3d`)
 
 103 замечания (только отчёт, код не правился): UP031 ×40 (printf-форматирование), F401 ×34 (неиспользуемые импорты, в основном `__init__.py`), SIM115 ×9, I001 ×9, RUF046 ×3, по одному B023, RUF012, F811, FURB167, SIM905, RUF100, B018, RUF007. Из них 17 авто-исправимы (`--fix`). Приблизительно 14 замечаний — в моих новых тестах (UP031, SIM115 в `test_static.py`).
 

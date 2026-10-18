@@ -20,9 +20,9 @@ class TestEnrichment(RulesCase):
         self.assertEqual(
             req.name, "Освітлення LT-CUT (%s): вимкнено в робочий час — рівень 0 %% при нормі 500 лк" % zone
         )
-        self.assertEqual((req.f3d_value, req.f3d_threshold), (0.0, 500.0))
+        self.assertEqual((req.td_value, req.td_threshold), (0.0, 500.0))
         self.assertIn("Група DALI G:%d, щит LP-2; вимкнено з 14.10.2026 09:55." % self.cut.dali_group, req.description)
-        self.assertEqual((req.f3d_bms_rule, req.f3d_bms_enriched), ("light_off", True))
+        self.assertEqual((req.td_bms_rule, req.td_bms_enriched), ("light_off", True))
         self.assertEqual(req.maintenance_type, "corrective")
 
     def test_idempotent(self):
@@ -42,7 +42,7 @@ class TestEnrichment(RulesCase):
             req.name,
             "Освітлення LT-CUT (%s): ≈ 305 лк при нормі 500 лк (рівень 60 %%)" % self.cut.zone_id.name,
         )
-        self.assertEqual((req.f3d_value, req.f3d_threshold, req.f3d_bms_rule), (305.0, 500.0, "light_low"))
+        self.assertEqual((req.td_value, req.td_threshold, req.td_bms_rule), (305.0, 500.0, "light_low"))
 
     def test_faults_description(self):
         with freeze_time(at(7, 30)):
@@ -50,7 +50,7 @@ class TestEnrichment(RulesCase):
             self.push(self.faults.code, at(7, 2), 1)
         req = self.requests(self.faults)
         self.assertEqual(req.name, "Аварія світильників LT-CUT: несправних 1 шт. при нормі 0")
-        self.assertEqual(req.f3d_bms_rule, "light_fault")
+        self.assertEqual(req.td_bms_rule, "light_fault")
         with freeze_time(at(7, 31)):
             self.run_check()
         self.assertIn(
@@ -70,11 +70,11 @@ class TestEnrichmentHvac(HvacRulesCase):
         self.step(self.rv5, 7, 0)
         req = self.requests(self.rv5.check_signal_id)
         self.assertEqual(req.name, "Установка RV-05 (Склад плит): не працює в робочий час — режим «Очікування»")
-        self.assertEqual((req.f3d_bms_rule, req.f3d_threshold), ("unit_off", 0.0))
+        self.assertEqual((req.td_bms_rule, req.td_threshold), ("unit_off", 0.0))
         self.assertIn("Стан standby; з 14.10.2026 09:50.", req.description)
         req = self.requests(self.rv7.check_signal_id)
         self.assertIn("у зоні 15,5 °C при нормі від 16,0 °C", req.name)
-        self.assertEqual((req.f3d_bms_rule, req.f3d_value, req.f3d_threshold), ("cold", 15.5, 16.0))
+        self.assertEqual((req.td_bms_rule, req.td_value, req.td_threshold), ("cold", 15.5, 16.0))
 
     def test_cold_off_hours_title(self):
         self.put(self.rv5, 19, 0, state="running", mode="AQ", indoor=9.0, airflow=8000.0)
@@ -89,7 +89,7 @@ class TestEnrichmentHvac(HvacRulesCase):
                 self.run_check()
         req = self.requests(sig)
         self.assertEqual(req.name, "Котельня: дефіцит тепла 103 кВт (потреба 600 кВт, джерела 497 кВт)")
-        self.assertEqual(req.f3d_bms_rule, "heat_deficit")
+        self.assertEqual(req.td_bms_rule, "heat_deficit")
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_bms")
@@ -107,7 +107,7 @@ class TestJournal(HvacRulesCase):
             alarm_title="Заміна фільтрів: перепад тиску {value} Па при нормі до {threshold}",
         )
         self.rv5.filter_signal_id = self.sig
-        self.Dev = self.env["f3d.bms.deviation"]
+        self.Dev = self.env["td.bms.deviation"]
 
     def feed(self, minute, value):
         with freeze_time(hat(7, minute)):

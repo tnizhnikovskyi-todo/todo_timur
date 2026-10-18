@@ -7,25 +7,25 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from ..tools import params as P
 from ..tools.dates import local_day_bounds_utc
 from ..tools.biostar_client import BioStarError, BioStarWriteDisabled
-from .f3d_access_card import SYNC_STATES
+from .td_access_card import SYNC_STATES
 
 _logger = logging.getLogger(__name__)
 
-SECURITY = 'factory3d_access.group_f3d_access_security'
-ADMIN = 'factory3d_access.group_f3d_access_admin'
+SECURITY = 'td_access.group_td_access_security'
+ADMIN = 'td_access.group_td_access_admin'
 GRACE = timedelta(hours=1)  # R-14 крок 2 (expiry користувача) і крок 3 (повторний вхід), R-20 крок 3
 STATES = [('draft', 'Чернетка'), ('expected', 'Очікується'), ('on_site', 'На території'), ('left', 'Вийшов'),
           ('closed', 'Закрито'), ('cancelled', 'Скасовано')]
 
 
 class F3dAccessVisitor(models.Model):
-    _name = 'f3d.access.visitor'
+    _name = 'td.access.visitor'
     _description = 'СКУД: відвідувач'
     _inherit = ['mail.thread']
     _order = 'date_from desc, id desc'
 
     def _default_server_id(self):
-        Server = self.env['f3d.access.server'].sudo()
+        Server = self.env['td.access.server'].sudo()
         return (Server.search([('active', '=', True), ('company_id', '=', self.env.company.id)], limit=1)
                 or Server.search([('active', '=', True)], limit=1)).id
 
@@ -41,26 +41,26 @@ class F3dAccessVisitor(models.Model):
     date_to = fields.Datetime(
         string='До', required=True, tracking=True,
         default=lambda self: fields.Datetime.now() + timedelta(hours=self._default_hours()))
-    allowed_zone_ids = fields.Many2many('f3d.zone', 'f3d_access_visitor_zone_rel', 'visitor_id', 'zone_id',
+    allowed_zone_ids = fields.Many2many('td.zone', 'td_access_visitor_zone_rel', 'visitor_id', 'zone_id',
                                         string='Дозволені зони', help="Порожньо — без перевірки")
     card_id = fields.Many2one(
-        'f3d.access.card', ondelete='set null', tracking=True,
+        'td.access.card', ondelete='set null', tracking=True,
         domain="[('holder_type', 'in', ('pool', 'visitor')), ('state', 'in', ('draft', 'returned')), "
                "('server_id', '=', server_id)]")
-    server_id = fields.Many2one('f3d.access.server', required=True, default=lambda self: self._default_server_id())
+    server_id = fields.Many2one('td.access.server', required=True, default=lambda self: self._default_server_id())
     company_id = fields.Many2one('res.company', required=True, index=True, default=lambda self: self.env.company)
     biostar_user_id = fields.Char(
         string='Користувач BioStar', size=64, tracking=True,
         help="Під стоп-краном запису модуль створює V-<id> сам; інакше введіть user_id, створений у BioStar")
-    link_id = fields.Many2one('f3d.access.user.link', readonly=True, ondelete='set null')
+    link_id = fields.Many2one('td.access.user.link', readonly=True, ondelete='set null')
     state = fields.Selection(STATES, required=True, default='draft', tracking=True)
     arrived_at = fields.Datetime(string='Прийшов', readonly=True)
     left_at = fields.Datetime(string='Вийшов', readonly=True)
     present = fields.Boolean(readonly=True, index=True)
-    zone_id = fields.Many2one('f3d.zone', string='Зона', readonly=True, index=True, ondelete='set null')
+    zone_id = fields.Many2one('td.zone', string='Зона', readonly=True, index=True, ondelete='set null')
     zone_since = fields.Datetime(readonly=True)
-    zone_door_id = fields.Many2one('f3d.access.door', readonly=True, ondelete='set null')
-    last_event_id = fields.Many2one('f3d.access.event', readonly=True, ondelete='set null')
+    zone_door_id = fields.Many2one('td.access.door', readonly=True, ondelete='set null')
+    last_event_id = fields.Many2one('td.access.event', readonly=True, ondelete='set null')
     document_checked = fields.Boolean(string='Документ перевірено',
                                       help="Документ не зберігається: лише відмітка, що охорона його перевірила")
     overdue = fields.Boolean(string='Прострочено', readonly=True)
@@ -69,19 +69,19 @@ class F3dAccessVisitor(models.Model):
     origin_ref = fields.Char(string='Джерело (посилання)', size=64)
     sync_state = fields.Selection(SYNC_STATES, default='local', readonly=True)
     sync_error = fields.Char(size=255, readonly=True)
-    event_ids = fields.One2many('f3d.access.event', 'visitor_id', readonly=True)
+    event_ids = fields.One2many('td.access.event', 'visitor_id', readonly=True)
     violation_count = fields.Integer(compute='_compute_violation_count')
     is_today = fields.Boolean(string='Сьогодні', compute='_compute_is_today', search='_search_is_today')
 
     def init(self):
         # presence (SQL-представлення) створюється раніше за таблицю відвідувачів: перебудувати з UNION
-        self.env['f3d.access.presence'].init()
+        self.env['td.access.presence'].init()
 
     @api.depends('event_ids.zone_violation')
     def _compute_violation_count(self):
         counts = {}
         if self.ids:
-            groups = self.env['f3d.access.event'].sudo()._read_group(
+            groups = self.env['td.access.event'].sudo()._read_group(
                 [('visitor_id', 'in', self.ids), ('zone_violation', '=', True)], ['visitor_id'], ['__count'])
             counts = {visitor.id: count for visitor, count in groups}
         for rec in self:
@@ -142,14 +142,14 @@ class F3dAccessVisitor(models.Model):
     def _f3d_check_user_owner(self, user_id, server_id):
         if not user_id or not server_id:
             return
-        link = self.env['f3d.access.user.link'].sudo().with_context(active_test=False).search(
+        link = self.env['td.access.user.link'].sudo().with_context(active_test=False).search(
             [('server_id', '=', server_id), ('biostar_user_id', '=', user_id)], limit=1)
         if link.employee_id:
             raise ValidationError("Користувач BioStar %s належить працівнику %s." % (user_id, link.employee_id.name))
 
     def _f3d_sync_link(self):
         """R-14 крок 2: зв'язок (server, biostar_user_id) -> відвідувач, match='visitor'."""
-        Link = self.env['f3d.access.user.link'].sudo().with_context(active_test=False)
+        Link = self.env['td.access.user.link'].sudo().with_context(active_test=False)
         for rec in self.sudo():
             uid = rec.biostar_user_id
             stale = Link.search([('visitor_id', '=', rec.id), ('biostar_user_id', '!=', uid or '')])
@@ -192,7 +192,7 @@ class F3dAccessVisitor(models.Model):
     def _f3d_assign_card(self):
         """Картка з пулу (або обрана вручну) -> видана відвідувачу."""
         self.ensure_one()
-        Card = self.env['f3d.access.card'].sudo()
+        Card = self.env['td.access.card'].sudo()
         card = self.card_id.sudo()
         if not card:
             card = Card.search([('holder_type', '=', 'pool'), ('state', 'in', ('draft', 'returned')),
@@ -210,7 +210,7 @@ class F3dAccessVisitor(models.Model):
         for rec in self:
             if rec.state != 'expected':
                 raise UserError("Позначити прихід можна лише для очікуваного відвідувача.")
-            door = self.env['f3d.access.door'].sudo().search(
+            door = self.env['td.access.door'].sudo().search(
                 [('is_perimeter', '=', True), ('server_id', '=', rec.server_id.id)], limit=1)
             now = fields.Datetime.now()
             rec.write({'state': 'on_site', 'arrived_at': now, 'present': True, 'zone_id': door.zone_to_id.id,
@@ -328,9 +328,9 @@ class F3dAccessVisitor(models.Model):
 
 
 class F3dAccessUserLink(models.Model):
-    _inherit = 'f3d.access.user.link'
+    _inherit = 'td.access.user.link'
 
-    visitor_id = fields.Many2one('f3d.access.visitor', string='Відвідувач', index=True, ondelete='set null')
+    visitor_id = fields.Many2one('td.access.visitor', string='Відвідувач', index=True, ondelete='set null')
 
     _f3d_access_link_one_holder = models.Constraint(
         'CHECK(employee_id IS NULL OR visitor_id IS NULL)',
@@ -338,9 +338,9 @@ class F3dAccessUserLink(models.Model):
 
 
 class F3dAccessEvent(models.Model):
-    _inherit = 'f3d.access.event'
+    _inherit = 'td.access.event'
 
-    visitor_id = fields.Many2one('f3d.access.visitor', string='Відвідувач', index=True, ondelete='set null')
+    visitor_id = fields.Many2one('td.access.visitor', string='Відвідувач', index=True, ondelete='set null')
 
     _f3d_access_event_visitor_ts_idx = models.Index('(visitor_id, ts)')
 
@@ -386,7 +386,7 @@ class F3dAccessEvent(models.Model):
             upd = {'present': True, 'zone_id': door.zone_from_id.id, 'zone_since': ts, 'zone_door_id': False}
         if note:
             res['error_message'] = "Відвідувач у стані «%s»: прохід лише зафіксовано" % self.env[
-                'f3d.access.visitor']._state_label(visitor)
+                'td.access.visitor']._state_label(visitor)
         else:
             res['presence_changed'] = visitor._f3d_presence_set(upd)
             visitor.sudo().write({'last_event_id': self.id})
@@ -395,12 +395,12 @@ class F3dAccessEvent(models.Model):
     @api.model
     def _f3d_on_site_visitors(self, ts, cids, hours):
         self.flush_model()
-        self.env['f3d.access.visitor'].flush_model()
+        self.env['td.access.visitor'].flush_model()
         cr = self.env.cr
         cr.execute("""
             SELECT visitor_id FROM (
               SELECT DISTINCT ON (visitor_id) visitor_id, direction
-                FROM f3d_access_event
+                FROM td_access_event
                WHERE visitor_id IS NOT NULL AND is_perimeter AND event_type = 'pass'
                  AND direction IN ('in', 'out') AND ts <= %(ts)s
                  AND ts >= %(ts)s - make_interval(hours => %(h)s) AND company_id = ANY(%(cids)s)
@@ -408,17 +408,17 @@ class F3dAccessEvent(models.Model):
              WHERE direction = 'in'""", {'ts': ts, 'h': hours, 'cids': cids})
         ids = {r[0] for r in cr.fetchall()}
         cr.execute("""
-            SELECT v.id FROM f3d_access_visitor v
+            SELECT v.id FROM td_access_visitor v
              WHERE v.present AND v.state = 'on_site' AND v.arrived_at <= %(ts)s AND v.company_id = ANY(%(cids)s)
-               AND NOT EXISTS (SELECT 1 FROM f3d_access_event ev WHERE ev.visitor_id = v.id
+               AND NOT EXISTS (SELECT 1 FROM td_access_event ev WHERE ev.visitor_id = v.id
                                   AND ev.is_perimeter AND ev.event_type = 'pass')""", {'ts': ts, 'cids': cids})
         ids |= {r[0] for r in cr.fetchall()}
-        return self.env['f3d.access.visitor'].sudo().browse(sorted(ids))
+        return self.env['td.access.visitor'].sudo().browse(sorted(ids))
 
     @api.model
     def _f3d_dwell_visitors(self, now, collector):
         """R-17 для відвідувачів: повернення з технічного приміщення в зону `zone_from_id` дверей."""
-        visitors = self.env['f3d.access.visitor'].sudo().search(
+        visitors = self.env['td.access.visitor'].sudo().search(
             [('present', '=', True), ('zone_door_id', '!=', False)])
         for visitor in visitors:
             door = visitor.zone_door_id
@@ -429,7 +429,7 @@ class F3dAccessEvent(models.Model):
     @api.model
     def _f3d_housekeeping_visitors(self, now, keep_days):
         """R-20 кроки 3, 5, 6: закриття прострочених візитів, відв'язка карток, видалення старих візитів."""
-        Visitor = self.env['f3d.access.visitor'].sudo()
+        Visitor = self.env['td.access.visitor'].sudo()
         expired = Visitor.search([('state', 'in', ('expected', 'on_site', 'left')), ('date_to', '<', now - GRACE)])
         for visitor in expired:
             vals = {'state': 'closed'}
@@ -438,7 +438,7 @@ class F3dAccessEvent(models.Model):
             visitor._f3d_close(vals)
             visitor.message_post(body="Закрито автоматично: строк візиту минув")
         cutoff = now - timedelta(days=keep_days)
-        cards = self.env['f3d.access.card'].sudo().search([
+        cards = self.env['td.access.card'].sudo().search([
             ('state', 'in', ('returned', 'lost')), ('returned_at', '<', cutoff), ('visitor_id', '!=', False)])
         for card in cards:
             card.write({'visitor_id': False, 'holder_type': 'pool'} if card.holder_type == 'visitor'
@@ -448,13 +448,13 @@ class F3dAccessEvent(models.Model):
 
 
 class F3dZone(models.Model):
-    _inherit = 'f3d.zone'
+    _inherit = 'td.zone'
 
-    f3d_people_visitor_ids = fields.Many2many('f3d.access.visitor', compute='_compute_f3d_people')
+    td_people_visitor_ids = fields.Many2many('td.access.visitor', compute='_compute_f3d_people')
 
     def _f3d_people_visitors(self):
         by_zone = {}
-        for visitor in self.env['f3d.access.visitor'].sudo().search(
+        for visitor in self.env['td.access.visitor'].sudo().search(
                 [('present', '=', True), ('state', '=', 'on_site'), ('zone_id', 'in', self.ids)]):
             by_zone.setdefault(visitor.zone_id.id, []).append(visitor.id)
         return by_zone
@@ -463,16 +463,16 @@ class F3dZone(models.Model):
         super()._compute_f3d_people()
         visitors = self._f3d_people_visitors()
         for zone in self:
-            zone.f3d_people_visitor_ids = self.env['f3d.access.visitor'].sudo().browse(visitors.get(zone.id, []))
+            zone.td_people_visitor_ids = self.env['td.access.visitor'].sudo().browse(visitors.get(zone.id, []))
 
 
 class F3dAccessPresence(models.Model):
-    _inherit = 'f3d.access.presence'
+    _inherit = 'td.access.presence'
 
-    visitor_id = fields.Many2one('f3d.access.visitor', readonly=True)
+    visitor_id = fields.Many2one('td.access.visitor', readonly=True)
 
     def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
         # представлення читає таблиці працівників і відвідувачів: ORM не знає про них, тому скидаємо кеш запису
         self.env['hr.employee'].flush_model()
-        self.env['f3d.access.visitor'].flush_model()
+        self.env['td.access.visitor'].flush_model()
         return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)

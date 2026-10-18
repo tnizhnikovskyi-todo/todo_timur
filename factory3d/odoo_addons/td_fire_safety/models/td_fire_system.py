@@ -17,7 +17,7 @@ SHORT_LABEL = {
 
 
 class F3dFireSystem(models.Model):
-    _name = "f3d.fire.system"
+    _name = "td.fire.system"
     _inherit = ["mail.thread"]
     _description = "Пожежна безпека: система"
     _order = "sequence, code"
@@ -28,17 +28,17 @@ class F3dFireSystem(models.Model):
     sequence = fields.Integer(default=10)
     system_type = fields.Selection(
         [("spark", "Іскрогасіння"), ("smoke", "Димовидалення"), ("sprinkler", "Спринклери")], required=True)
-    panel_id = fields.Many2one("f3d.fire.panel", required=True, ondelete="cascade")
+    panel_id = fields.Many2one("td.fire.panel", required=True, ondelete="cascade")
     equipment_id = fields.Many2one("maintenance.equipment", ondelete="set null")
     vents_equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання люків", ondelete="set null")
-    source_id = fields.Many2one("f3d.source", ondelete="set null")
-    signal_state_id = fields.Many2one("f3d.signal", string="Сигнал: стан", ondelete="set null")
-    signal_active_id = fields.Many2one("f3d.signal", string="Сигнал: гасіння", ondelete="set null")
-    signal_fault_id = fields.Many2one("f3d.signal", string="Сигнал: несправність", ondelete="set null")
-    signal_water_id = fields.Many2one("f3d.signal", string="Сигнал: тиск води гасіння", ondelete="set null")
-    signal_battery_id = fields.Many2one("f3d.signal", string="Сигнал: живлення від АКБ", ondelete="set null")
-    signal_count_id = fields.Many2one("f3d.signal", string="Сигнал: іскор за добу", ondelete="set null")
-    pressure_signal_id = fields.Many2one("f3d.signal", string="Сигнал: тиск", ondelete="set null")
+    source_id = fields.Many2one("td.source", ondelete="set null")
+    signal_state_id = fields.Many2one("td.signal", string="Сигнал: стан", ondelete="set null")
+    signal_active_id = fields.Many2one("td.signal", string="Сигнал: гасіння", ondelete="set null")
+    signal_fault_id = fields.Many2one("td.signal", string="Сигнал: несправність", ondelete="set null")
+    signal_water_id = fields.Many2one("td.signal", string="Сигнал: тиск води гасіння", ondelete="set null")
+    signal_battery_id = fields.Many2one("td.signal", string="Сигнал: живлення від АКБ", ondelete="set null")
+    signal_count_id = fields.Many2one("td.signal", string="Сигнал: іскор за добу", ondelete="set null")
+    pressure_signal_id = fields.Many2one("td.signal", string="Сигнал: тиск", ondelete="set null")
     pressure_bar = fields.Float(related="pressure_signal_id.last_value", string="Тиск, бар")
     pressure_min_bar = fields.Float(related="pressure_signal_id.alarm_low", string="Мінімум, бар")
     state = fields.Selection(
@@ -50,11 +50,11 @@ class F3dFireSystem(models.Model):
     stale = fields.Boolean(readonly=True)
     count_today = fields.Integer(string="Іскор за добу", readonly=True)
     count_ts = fields.Datetime(readonly=True)
-    device_ids = fields.One2many("f3d.fire.device", "system_id")
+    device_ids = fields.One2many("td.fire.device", "system_id")
     detector_count = fields.Integer(compute="_compute_counts", store=True)
     nozzle_count = fields.Integer(compute="_compute_counts", store=True)
     vent_count = fields.Integer(compute="_compute_counts", store=True)
-    smoke_zone_ids = fields.One2many("f3d.fire.smoke.zone", "system_id")
+    smoke_zone_ids = fields.One2many("td.fire.smoke.zone", "system_id")
     drive_current_a = fields.Float(string="Струм приводу, А", default=7.5)
     panel_current_a = fields.Float(string="Струм щита, А", default=80.0)
     panels_needed = fields.Integer(compute="_compute_panels")
@@ -81,7 +81,7 @@ class F3dFireSystem(models.Model):
 
     @api.depends("vent_count", "drive_current_a", "panel_current_a")
     def _compute_panels(self):
-        aa = self.env["f3d.fire.norm"].get("smoke_vent_aa", 0.0)
+        aa = self.env["td.fire.norm"].get("smoke_vent_aa", 0.0)
         for rec in self:
             rec.panels_needed = (
                 math.ceil(rec.vent_count * rec.drive_current_a / rec.panel_current_a - 1e-9)
@@ -118,7 +118,7 @@ class F3dFireSystem(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        self.env.registry.clear_cache()  # f3d.signal._f3d_fire_extra_codes (M-15)
+        self.env.registry.clear_cache()  # td.signal._f3d_fire_extra_codes (M-15)
         return records
 
     def write(self, vals):
@@ -134,10 +134,10 @@ class F3dFireSystem(models.Model):
             vals["state"] = new
         self.write(vals)
         if etype:
-            self.env["f3d.fire.event"]._log(
+            self.env["td.fire.event"]._log(
                 etype, self.code, ts, text or self.state_text, system_id=self.id, panel_id=self.panel_id.id)
-        from .f3d_fire_panel import fire_notify
-        fire_notify(self.env, "f3d.fire.panel", [self.panel_id.code], "state")
+        from .td_fire_panel import fire_notify
+        fire_notify(self.env, "td.fire.panel", [self.panel_id.code], "state")
 
     def action_f3d_show(self):
         self.ensure_one()
@@ -148,12 +148,12 @@ class F3dFireSystem(models.Model):
 
     def action_view_devices(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": "Пристрої системи", "res_model": "f3d.fire.device",
+        return {"type": "ir.actions.act_window", "name": "Пристрої системи", "res_model": "td.fire.device",
                 "view_mode": "list,form", "domain": [("system_id", "=", self.id)]}
 
     def action_view_events(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": "Події системи", "res_model": "f3d.fire.event",
+        return {"type": "ir.actions.act_window", "name": "Події системи", "res_model": "td.fire.event",
                 "view_mode": "list,form,graph", "domain": [("system_id", "=", self.id)]}
 
 

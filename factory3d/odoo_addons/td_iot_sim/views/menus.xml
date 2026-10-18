@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <menuitem id="menu_f3d_sim_root" name="Емулятор" parent="factory3d_base.menu_f3d_root" sequence="90"
-            groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_panel" name="Пульт" parent="menu_f3d_sim_root" sequence="1"
-            action="action_f3d_sim_panel" groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_scenarios" name="Сценарії" parent="menu_f3d_sim_root" sequence="2"
-            action="action_f3d_sim_scenario" groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_runs" name="Запуски" parent="menu_f3d_sim_root" sequence="3"
-            action="action_f3d_sim_run" groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_devices" name="Пристрої" parent="menu_f3d_sim_root" sequence="4"
-            action="action_f3d_sim_device" groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_signals" name="Каталог сигналів" parent="menu_f3d_sim_root" sequence="5"
-            action="action_f3d_sim_signal" groups="factory3d_base.group_f3d_user"/>
-  <menuitem id="menu_f3d_sim_events" name="Події" parent="menu_f3d_sim_root" sequence="6"
-            action="action_f3d_sim_event" groups="factory3d_base.group_f3d_user"/>
+  <menuitem id="menu_td_sim_root" name="Емулятор" parent="td_factory3d.menu_td_root" sequence="90"
+            groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_panel" name="Пульт" parent="menu_td_sim_root" sequence="1"
+            action="action_td_sim_panel" groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_scenarios" name="Сценарії" parent="menu_td_sim_root" sequence="2"
+            action="action_td_sim_scenario" groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_runs" name="Запуски" parent="menu_td_sim_root" sequence="3"
+            action="action_td_sim_run" groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_devices" name="Пристрої" parent="menu_td_sim_root" sequence="4"
+            action="action_td_sim_device" groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_signals" name="Каталог сигналів" parent="menu_td_sim_root" sequence="5"
+            action="action_td_sim_signal" groups="td_factory3d.group_td_user"/>
+  <menuitem id="menu_td_sim_events" name="Події" parent="menu_td_sim_root" sequence="6"
+            action="action_td_sim_event" groups="td_factory3d.group_td_user"/>
 
   <!-- Рівень 0: успадковане меню переноситься під «Емулятор» (SPEC §3.14, level0.xml) -->
   <record id="menu_iot_root" model="ir.ui.menu">
     <field name="name">Рівень 0 (без сервісу)</field>
-    <field name="parent_id" ref="menu_f3d_sim_root"/>
+    <field name="parent_id" ref="menu_td_sim_root"/>
     <field name="sequence">9</field>
-    <field name="group_ids" eval="[(6, 0, [ref('factory3d_base.group_f3d_admin')])]"/>
+    <field name="group_ids" eval="[(6, 0, [ref('td_factory3d.group_td_admin')])]"/>
   </record>
 
-  <record id="action_f3d_sim_settings" model="ir.actions.act_window">
+  <record id="action_td_sim_settings" model="ir.actions.act_window">
     <field name="name">Налаштування емулятора</field>
     <field name="res_model">res.config.settings</field>
     <field name="view_mode">form</field>
-    <field name="context">{'module': 'factory3d_iot_sim', 'bin_size': False}</field>
+    <field name="context">{'module': 'td_iot_sim', 'bin_size': False}</field>
   </record>
-  <menuitem id="menu_f3d_sim_settings" name="Налаштування емулятора" parent="factory3d_base.menu_f3d_config"
-            sequence="90" action="action_f3d_sim_settings" groups="factory3d_base.group_f3d_admin"/>
+  <menuitem id="menu_td_sim_settings" name="Налаштування емулятора" parent="td_factory3d.menu_td_config"
+            sequence="90" action="action_td_sim_settings" groups="td_factory3d.group_td_admin"/>
 </odoo>

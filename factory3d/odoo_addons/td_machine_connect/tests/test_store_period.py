@@ -17,7 +17,7 @@ class TestStorePeriodMigration(F3DMachineCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Sig = cls.env["f3d.signal"].with_context(active_test=False)
+        cls.Sig = cls.env["td.signal"].with_context(active_test=False)
 
     def _targets(self):
         sigs = self.Sig.search([("module", "=", "machine_connect")])
@@ -43,7 +43,7 @@ class TestStorePeriodMigration(F3DMachineCase):
         stacks = self.Sig.search([("code", "=", "equipment/GANTRY-1/stacks")])
         self.assertTrue(manual and pieces and cmd and stacks)
         self.env.cr.execute(
-            "UPDATE f3d_signal SET store_period_s = 0 WHERE id IN %s", (tuple(targets.ids + pieces.ids),)
+            "UPDATE td_signal SET store_period_s = 0 WHERE id IN %s", (tuple(targets.ids + pieces.ids),)
         )
         manual.store_period_s = 120
         self.env.invalidate_all()
@@ -60,9 +60,9 @@ class TestStorePeriodMigration(F3DMachineCase):
     def test_post_migrate_script(self):
         """Скрипт `migrations/19.0.1.0.1/post-migrate.py` викликає міграцію на поточній базі."""
         targets = self._targets()
-        self.env.cr.execute("UPDATE f3d_signal SET store_period_s = 0 WHERE id IN %s", (tuple(targets.ids),))
+        self.env.cr.execute("UPDATE td_signal SET store_period_s = 0 WHERE id IN %s", (tuple(targets.ids),))
         self.env.invalidate_all()
-        path = get_module_path("factory3d_machine_connect") + "/migrations/19.0.1.0.1/post-migrate.py"
+        path = get_module_path("td_machine_connect") + "/migrations/19.0.1.0.1/post-migrate.py"
         spec = importlib.util.spec_from_file_location("f3d_mc_post_migrate_1_0_1", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

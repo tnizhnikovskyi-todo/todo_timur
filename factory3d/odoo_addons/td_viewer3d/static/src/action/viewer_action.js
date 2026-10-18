@@ -3,12 +3,12 @@ import { registry } from "@web/core/registry";
 import { Component, onMounted, onWillUnmount, useRef } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { F3dViewer } from "@factory3d_viewer/viewer/core";
-import { DataClient } from "@factory3d_viewer/viewer/data_client";
+import { F3dViewer } from "@td_viewer3d/viewer/core";
+import { DataClient } from "@td_viewer3d/viewer/data_client";
 
 /** Клієнтська дія `f3d_viewer.action` (SPEC §8.1): 3D-переглядач заводу на живих даних ORM. */
 export class F3dViewerAction extends Component {
-    static template = "factory3d_viewer.ViewerAction";
+    static template = "td_viewer3d.ViewerAction";
     static props = { ...standardActionServiceProps };
 
     /** Тури вмикають нульовий рендерер через sessionStorage (параметри URL роутер відкидає). */

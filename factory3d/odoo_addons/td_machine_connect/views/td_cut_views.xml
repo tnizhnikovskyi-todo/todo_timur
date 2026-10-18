@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- V-20…V-23: деталі виробів і карти розкрою. -->
 <odoo>
-    <record id="view_f3d_cut_part_list" model="ir.ui.view">
-        <field name="name">f3d.cut.part.list</field>
-        <field name="model">f3d.cut.part</field>
+    <record id="view_td_cut_part_list" model="ir.ui.view">
+        <field name="name">td.cut.part.list</field>
+        <field name="model">td.cut.part</field>
         <field name="arch" type="xml">
             <list string="Деталі виробів" editable="bottom">
                 <field name="sequence" widget="handle"/>
@@ -25,9 +25,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_part_form" model="ir.ui.view">
-        <field name="name">f3d.cut.part.form</field>
-        <field name="model">f3d.cut.part</field>
+    <record id="view_td_cut_part_form" model="ir.ui.view">
+        <field name="name">td.cut.part.form</field>
+        <field name="model">td.cut.part</field>
         <field name="arch" type="xml">
             <form string="Деталь виробу">
                 <sheet>
@@ -62,9 +62,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_part_search" model="ir.ui.view">
-        <field name="name">f3d.cut.part.search</field>
-        <field name="model">f3d.cut.part</field>
+    <record id="view_td_cut_part_search" model="ir.ui.view">
+        <field name="name">td.cut.part.search</field>
+        <field name="model">td.cut.part</field>
         <field name="arch" type="xml">
             <search string="Деталі виробів">
                 <field name="bom_id"/>
@@ -78,9 +78,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_map_list" model="ir.ui.view">
-        <field name="name">f3d.cut.map.list</field>
-        <field name="model">f3d.cut.map</field>
+    <record id="view_td_cut_map_list" model="ir.ui.view">
+        <field name="name">td.cut.map.list</field>
+        <field name="model">td.cut.map</field>
         <field name="arch" type="xml">
             <list string="Карти розкрою">
                 <field name="name"/>
@@ -102,9 +102,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_map_form" model="ir.ui.view">
-        <field name="name">f3d.cut.map.form</field>
-        <field name="model">f3d.cut.map</field>
+    <record id="view_td_cut_map_form" model="ir.ui.view">
+        <field name="name">td.cut.map.form</field>
+        <field name="model">td.cut.map</field>
         <field name="arch" type="xml">
             <form string="Карта розкрою">
                 <header>
@@ -206,9 +206,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_cut_map_search" model="ir.ui.view">
-        <field name="name">f3d.cut.map.search</field>
-        <field name="model">f3d.cut.map</field>
+    <record id="view_td_cut_map_search" model="ir.ui.view">
+        <field name="name">td.cut.map.search</field>
+        <field name="model">td.cut.map</field>
         <field name="arch" type="xml">
             <search string="Карти розкрою">
                 <field name="name"/>

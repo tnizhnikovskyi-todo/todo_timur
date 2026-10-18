@@ -1,7 +1,7 @@
-"""Генератор data-файлів factory3d_fire_safety з макета (SPEC §5.2, Додатки A-D).
+"""Генератор data-файлів td_fire_safety з макета (SPEC §5.2, Додатки A-D).
 
 Запуск з каталогу factory3d (корінь макета):
-    python3 odoo_addons/factory3d_fire_safety/tools/gen_data.py [--root .] [--out odoo_addons/factory3d_fire_safety/data]
+    python3 odoo_addons/td_fire_safety/tools/gen_data.py [--root .] [--out odoo_addons/td_fire_safety/data]
 
 Читає: plant/fire.py, plant/infra.py, plant/evacuation.py, plant/layout.py, plant/odoo_rpc.py (slug),
 plant/evac_routes.json, plant/fire_rules.json, plant/evac_rules.json, dist/odoo_demo.json (fire.groups, evacuation.drill_steps).
@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 DEFAULT_OUT = os.path.abspath(os.path.join(HERE, '..', 'data'))
 
-BASE = 'factory3d_base'
+BASE = 'td_factory3d'
 PANEL = 'panel_facp_1'
 SRC_B = 'source_bacnet_facp_1'
 SRC_M = 'source_mb_u85_io6'
@@ -362,13 +362,13 @@ def f_panel(m, root):
     fire = m['fire']
     x = Xml()
     wx, wy = ev['worst_point']
-    x.record(PANEL, 'f3d.fire.panel', [
+    x.record(PANEL, 'td.fire.panel', [
         ('name', 'v', 'Приймально-контрольний прилад'), ('code', 'v', 'FACP-1'),
         ('zone_id', 'ref', '%s.zone_z_office' % BASE), ('x', 'v', num(fire.FACP_POS[0])),
         ('y', 'v', num(fire.FACP_POS[1])), ('evac_max_distance_m', 'v', num(ev['max_distance'])),
         ('evac_worst_x', 'v', num(wx)), ('evac_worst_y', 'v', num(wy))])
     for n, a, b in fire.LOOPS:
-        x.record('loop_%d' % n, 'f3d.fire.loop', [
+        x.record('loop_%d' % n, 'td.fire.loop', [
             ('panel_id', 'ref', PANEL), ('number', 'v', n), ('from_x_m', 'v', num(a)), ('to_x_m', 'v', num(b)),
             ('modules_count', 'v', m['loops_demo'][str(n)]['modules'])])
     return x.text(), 1 + len(fire.LOOPS)
@@ -393,7 +393,7 @@ def f_system():
             (SYS_SMOKE, 'SMOKE-CTRL', 'Димовидалення (D+H CPS-M1, люки LAMILUX F100)', 20, 'smoke', '2026-09-30',
              [('drive_current_a', 'v', '7.5'), ('panel_current_a', 'v', '80')]),
             (SYS_SPR, 'SPRINKLERS', 'Спринклерна система', 30, 'sprinkler', '2026-09-30', [])):
-        x.record(rid, 'f3d.fire.system', [('code', 'v', code), ('name', 'v', name), ('sequence', 'v', seq),
+        x.record(rid, 'td.fire.system', [('code', 'v', code), ('name', 'v', name), ('sequence', 'v', seq),
                                           ('system_type', 'v', typ), ('panel_id', 'ref', PANEL),
                                           ('last_test_date', 'v', date)] + extra)
     return x.text(), 3
@@ -457,7 +457,7 @@ def f_route(m, routes):
     x = Xml()
     key = m['rpc'].key
     for zc, r in routes.items():
-        x.record('route_' + key(zc), 'f3d.fire.route', [
+        x.record('route_' + key(zc), 'td.fire.route', [
             ('code', 'v', 'EVAC-' + zc[2:]), ('name', 'v', r['name']), ('zone_id', 'ref', zone_ref(m, zc)),
             ('exit_id', 'ref', 'exit_' + key(r['exit'])), ('length_m', 'v', num(r['length'])),
             ('path', 'eval', py([[round(a, 2), round(b, 2)] for a, b in r['path']])), ('width_min_m', 'v', '1.2')])
@@ -469,12 +469,12 @@ def f_template(m):
     if len(steps) != len(TEMPLATE_STEPS):
         fail('кроків навчання %d' % len(steps))
     x = Xml()
-    x.record('drill_template_default', 'f3d.fire.drill.template', [
+    x.record('drill_template_default', 'td.fire.drill.template', [
         ('name', 'v', 'Евакуація цеху: сценарій макета'), ('sequence', 'v', 10), ('is_default', 'eval', 'True'),
         ('duration_s', 'v', 300), ('default_zone_id', 'ref', 'fire_zone_fa_cnc'),
         ('default_device_id', 'ref', 'dev_2_cnc_05')])
     for i, (st, (auto_key, text)) in enumerate(zip(steps, TEMPLATE_STEPS), 1):
-        x.record('drill_template_step_%02d' % i, 'f3d.fire.drill.template.step', [
+        x.record('drill_template_step_%02d' % i, 'td.fire.drill.template.step', [
             ('template_id', 'ref', 'drill_template_default'), ('sequence', 'v', 10 * i), ('t_plan_s', 'v', st['t']),
             ('who', 'v', st['who']), ('text', 'v', text), ('auto_key', 'v', auto_key)])
     return x.text(), 1 + len(steps)
@@ -483,11 +483,11 @@ def f_template(m):
 def f_source():
     x = Xml(noupdate=True)
     for rid, code, name, typ, params, period in SOURCES:
-        x.record(rid, 'f3d.source', [
+        x.record(rid, 'td.source', [
             ('code', 'v', code), ('name', 'v', name), ('type', 'v', typ), ('params', 'eval', py(params)),
-            ('collector_id', 'ref', 'factory3d_telemetry.collector_main'), ('module', 'v', 'fire_safety'),
+            ('collector_id', 'ref', 'td_telemetry.collector_main'), ('module', 'v', 'fire_safety'),
             ('read_enabled', 'eval', 'True'), ('write_enabled', 'eval', 'False'),
-            ('f3d_fire_readonly', 'eval', 'True'), ('period_s_default', 'v', period)])
+            ('td_fire_readonly', 'eval', 'True'), ('period_s_default', 'v', period)])
     return x.text(), len(SOURCES)
 
 
@@ -583,28 +583,28 @@ def f_signal(m):
         f += [('alarm_priority', 'v', '2'), ('decimals', 'v', 0), ('hysteresis', 'v', 0), ('min_duration_s', 'v', 0),
               ('create_request', 'eval', py(s['create'])), ('write_enabled', 'eval', 'False'),
               ('viewer_visible', 'eval', 'False'), ('module', 'v', 'fire_safety'), ('origin', 'v', 'module')]
-        x.record(sid[s['code']], 'f3d.signal', f)
+        x.record(sid[s['code']], 'td.signal', f)
     x.raw('    </data>')
     x.raw('    <!-- Прив\'язки signal_* моделей модуля (оновлюються при апгрейді) -->')
     x.raw('    <data>')
     def bind(rid, model, pairs):
         x.record(rid, model, [(n, 'ref', v) for n, v in pairs])
 
-    bind(PANEL, 'f3d.fire.panel', [
+    bind(PANEL, 'td.fire.panel', [
         ('source_id', SRC_B), ('io_source_id', SRC_M), ('signal_state_id', sid['fire/totals/state']),
         ('signal_system_id', sid['fire/totals/system_state']), ('signal_alarms_id', sid['fire/totals/alarms']),
         ('signal_faults_id', sid['fire/totals/faults']), ('signal_disabled_id', sid['fire/totals/disabled']),
         ('signal_sounders_id', sid['fire/totals/sounders_active']), ('signal_brigade_id', sid['fire/totals/brigade'])])
     for n in range(1, 5):
-        bind('loop_%d' % n, 'f3d.fire.loop', [('signal_id', sid['fire/loops/%d/state' % n])])
+        bind('loop_%d' % n, 'td.fire.loop', [('signal_id', sid['fire/loops/%d/state' % n])])
     for z in m['zones']:
-        bind('fire_zone_' + key(z['fa']), 'f3d.fire.zone', [('signal_id', sid['fire/groups/%s/state' % z['fa']])])
-    bind(SYS_SPARK, 'f3d.fire.system', [
+        bind('fire_zone_' + key(z['fa']), 'td.fire.zone', [('signal_id', sid['fire/groups/%s/state' % z['fa']])])
+    bind(SYS_SPARK, 'td.fire.system', [
         ('source_id', SRC_M), ('signal_state_id', sid['fire/spark/SPARK-1/state']),
         ('signal_active_id', sid['fire/spark/SPARK-1/extinguishing']),
         ('signal_fault_id', sid['fire/spark/SPARK-1/fault']), ('signal_water_id', sid['fire/spark/SPARK-1/water_ok']),
         ('signal_count_id', sid['fire/spark/SPARK-1/count_today'])])
-    bind(SYS_SMOKE, 'f3d.fire.system', [
+    bind(SYS_SMOKE, 'td.fire.system', [
         ('source_id', SRC_M), ('signal_state_id', sid['fire/smoke/SMOKE-VENTS/state']),
         ('signal_fault_id', sid['fire/smoke/SMOKE-CTRL/fault']),
         ('signal_battery_id', sid['fire/smoke/SMOKE-CTRL/battery'])])
@@ -628,17 +628,17 @@ def build(root, counts=None):
         if counts is not None:
             counts[name] = pair[1]
 
-    put('f3d.fire.norm.csv', (norm, n_norm))
-    put('f3d_fire_panel.xml', f_panel(m, root))
-    put('f3d.fire.zone.csv', f_zone(m))
-    put('f3d_fire_system.xml', f_system())
-    put('f3d.fire.smoke.zone.csv', f_smoke_zone(m))
-    put('f3d.fire.device.csv', f_device(m, devs))
-    put('f3d.fire.exit.csv', f_exit(m, exits))
-    put('f3d_fire_route.xml', f_route(m, routes))
-    put('f3d_fire_drill_template.xml', f_template(m))
-    put('f3d_source_data.xml', f_source())
-    put('f3d_signal_data.xml', f_signal(m))
+    put('td.fire.norm.csv', (norm, n_norm))
+    put('td_fire_panel.xml', f_panel(m, root))
+    put('td.fire.zone.csv', f_zone(m))
+    put('td_fire_system.xml', f_system())
+    put('td.fire.smoke.zone.csv', f_smoke_zone(m))
+    put('td.fire.device.csv', f_device(m, devs))
+    put('td.fire.exit.csv', f_exit(m, exits))
+    put('td_fire_route.xml', f_route(m, routes))
+    put('td_fire_drill_template.xml', f_template(m))
+    put('td_source_data.xml', f_source())
+    put('td_signal_data.xml', f_signal(m))
     return files
 
 

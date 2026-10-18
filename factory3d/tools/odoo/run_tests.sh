@@ -6,7 +6,7 @@
 #   Що ставити: змінна F3D_TEST_INSTALL (модулі через кому, для `-i`); за замовчуванням — усі модулі
 #   з factory3d/odoo_addons (каталоги з __manifest__.py).
 #   test-tags за замовчуванням — /<модуль> для кожного модуля з F3D_TEST_INSTALL, наприклад
-#   /factory3d_iot_sim; приклади: /factory3d_iot_sim:TestX, /factory3d_iot_sim:TestX.test_y,
+#   /td_iot_sim; приклади: /td_iot_sim:TestX, /td_iot_sim:TestX.test_y,
 #   my_tour_tag (за тегом), -at_install (виключити).
 #
 # Що робить: видаляє базу <dbname>, якщо є → createdb -T f3d_template (+ копія filestore) →

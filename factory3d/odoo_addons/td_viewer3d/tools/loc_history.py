@@ -73,7 +73,7 @@ def _place(loc):
         return None
     if loc.usage in VIRTUAL:
         return {"code": None, "name": VIRTUAL[loc.usage]}
-    return {"code": loc.f3d_code or None, "name": loc.complete_name or loc.name}
+    return {"code": loc.td_code or None, "name": loc.complete_name or loc.name}
 
 
 def _key(doc):
@@ -82,7 +82,7 @@ def _key(doc):
 
 def build(env, loc, code=None):
     """Історія комірки `loc` (stock.location, не порожня); `code` — запитаний код (код або аліас 3D-об'єкта)."""
-    out = {"code": code or loc.f3d_code, "complete_name": loc.complete_name, "products": [], "left": [],
+    out = {"code": code or loc.td_code, "complete_name": loc.complete_name, "products": [], "left": [],
            "left_days": LEFT_DAYS, "truncated": False}
     quants = env["stock.quant"].search_fetch(
         [("location_id", "=", loc.id), ("quantity", "!=", 0)],

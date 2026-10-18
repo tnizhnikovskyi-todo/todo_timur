@@ -17,8 +17,8 @@ class TestYardGate(GateCase):
         self.assertEqual((gw.pos_x, gw.pos_y), (-20.0, -30.0))
         self.assertEqual((ge.direction, ge.side, ge.camera_code), ("out", "east", "CAM-06"))
         with self.assertRaisesRegex(ValidationError, "CAM-05"):
-            self.env["f3d.yard.gate"].create(
-                {"f3d_code": "GATE-X", "name": "Дубль", "direction": "in", "side": "west", "camera_code": "CAM-05"}
+            self.env["td.yard.gate"].create(
+                {"td_code": "GATE-X", "name": "Дубль", "direction": "in", "side": "west", "camera_code": "CAM-05"}
             )
 
     def test_state_from_signals(self):  # AC-47
@@ -39,21 +39,21 @@ class TestYardGate(GateCase):
             gate._f3d_yard_refresh_state()
             self.assertEqual(gate.state, "error")
             gate.last_error = False
-            self.env["ir.config_parameter"].sudo().set_param("factory3d.yard.read_enabled", "False")
+            self.env["ir.config_parameter"].sudo().set_param("td.yard.read_enabled", "False")
             gate._f3d_yard_refresh_state()
             self.assertEqual(gate.state, "unknown")
 
     def _done_open_cmd(self, gate, done_at):
         cmd = (
-            self.env["f3d.command"]
+            self.env["td.command"]
             .sudo()
             .create(
                 {
                     "signal_id": self.sig(gate, "cmd_open").id,
                     "value": 1.0,
                     "requested_at": done_at,
-                    "f3d_yard_gate_id": gate.id,
-                    "f3d_yard_kind": "open",
+                    "td_yard_gate_id": gate.id,
+                    "td_yard_kind": "open",
                 }
             )
         )
@@ -104,17 +104,17 @@ class TestYardGate(GateCase):
             self.assertEqual(gate.state, "held")
         later = T + timedelta(minutes=31)
         with freeze(later):
-            self.env["f3d.yard.visit"]._cron_queue()
-        release = self.cmds(gate).filtered(lambda c: c.f3d_yard_kind == "release")
+            self.env["td.yard.visit"]._cron_queue()
+        release = self.cmds(gate).filtered(lambda c: c.td_yard_kind == "release")
         self.assertEqual(len(release), 1)
-        self.assertEqual(release.f3d_yard_reason, "auto_hold_max")
+        self.assertEqual(release.td_yard_reason, "auto_hold_max")
         self.assertFalse(gate.hold_until)
         # команди вимкнено: лише очищення й чаттер
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.yard.write_enabled", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.yard.write_enabled", "False")
         gate.hold_until = T
         before = len(self.cmds(gate))
         with freeze(later + timedelta(minutes=1)):
-            self.env["f3d.yard.visit"]._cron_queue()
+            self.env["td.yard.visit"]._cron_queue()
         self.assertEqual(len(self.cmds(gate)), before)
         self.assertFalse(gate.hold_until)
         self.assertTrue(any("Утримання знято" in (m.body or "") for m in gate.message_ids))
@@ -133,7 +133,7 @@ class TestYardGate(GateCase):
         self.assertEqual((gate.passes_today, gate.tailgate_today), (2, 1))
         self.assertTrue(any("Проїзд без дозволу" in (m.body or "") for m in gate.message_ids))
         # антипрохід вимкнено
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.yard.antipassback", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.yard.antipassback", "False")
         gate.write({"passes_day_start": 7, "admitted_today": 0, "passes_today": 0, "tailgate_today": 0})
         gate._f3d_yard_on_readings([("passes", T, 8, 1), ("passes", T, 9, 1)])
         self.assertEqual(gate.tailgate_today, 0)

@@ -2,8 +2,8 @@
 // Спільні хелпери HOOT-тестів моделі (файл без тестів).
 import { delay } from "@odoo/hoot-dom";
 import { animationFrame } from "@odoo/hoot-mock";
-import { loadLoaders, loadThree } from "@factory3d_constructor/model/three";
-import { exportGlb } from "@factory3d_constructor/model/import";
+import { loadLoaders, loadThree } from "@td_constructor/model/three";
+import { exportGlb } from "@td_constructor/model/import";
 import { boxTris } from "./fixtures";
 
 /** Читає Blob нативним FileReader (Hoot підміняє `Blob` на MockBlob, чий `arrayBuffer()` не віддає реальні байти). */

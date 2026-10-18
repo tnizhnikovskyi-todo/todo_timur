@@ -1,6 +1,6 @@
 # ruff: noqa: E501
-"""Фікстури стенда factory3d_bms (SPEC §13.2): ``tests/stand/stand.sh up``; прогін
-``/tmp/f3dvenv/collector/bin/pytest -q -m stand odoo_addons/factory3d_bms/tests/stand``. Без стенда тести пропускаються.
+"""Фікстури стенда td_bms (SPEC §13.2): ``tests/stand/stand.sh up``; прогін
+``/tmp/f3dvenv/collector/bin/pytest -q -m stand odoo_addons/td_bms/tests/stand``. Без стенда тести пропускаються.
 Допоміжні класи (Sim, Metrics, http, wait) і XML-RPC-клієнт беруться зі стенда колектора (services/collector/tests/stand)."""
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from helpers import METRICS_URL, SIM_TOKEN, SIM_URL, Metrics, Sim, http, wait  #
 
 def pytest_collection_modifyitems(items):
     for it in items:
-        if "/bms/tests/stand/" in str(it.fspath) or "factory3d_bms/tests/stand" in str(it.fspath):
+        if "/bms/tests/stand/" in str(it.fspath) or "td_bms/tests/stand" in str(it.fspath):
             it.add_marker(pytest.mark.stand)
             if not it.get_closest_marker("timeout"):
                 it.add_marker(pytest.mark.timeout(1800))

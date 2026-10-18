@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_viewer_snapshot_list" model="ir.ui.view">
-        <field name="name">f3d.viewer.snapshot.list</field>
-        <field name="model">f3d.viewer.snapshot</field>
+    <record id="view_td_viewer_snapshot_list" model="ir.ui.view">
+        <field name="name">td.viewer.snapshot.list</field>
+        <field name="model">td.viewer.snapshot</field>
         <field name="arch" type="xml">
             <list default_order="ts desc" create="0">
                 <field name="ts" widget="datetime"/>
@@ -17,9 +17,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_viewer_snapshot_form" model="ir.ui.view">
-        <field name="name">f3d.viewer.snapshot.form</field>
-        <field name="model">f3d.viewer.snapshot</field>
+    <record id="view_td_viewer_snapshot_form" model="ir.ui.view">
+        <field name="name">td.viewer.snapshot.form</field>
+        <field name="model">td.viewer.snapshot</field>
         <field name="arch" type="xml">
             <form create="0">
                 <header>
@@ -49,9 +49,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_viewer_snapshot_search" model="ir.ui.view">
-        <field name="name">f3d.viewer.snapshot.search</field>
-        <field name="model">f3d.viewer.snapshot</field>
+    <record id="view_td_viewer_snapshot_search" model="ir.ui.view">
+        <field name="name">td.viewer.snapshot.search</field>
+        <field name="model">td.viewer.snapshot</field>
         <field name="arch" type="xml">
             <search>
                 <field name="note"/>
@@ -65,9 +65,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_viewer_snapshot" model="ir.actions.act_window">
+    <record id="action_td_viewer_snapshot" model="ir.actions.act_window">
         <field name="name">Знімки стану</field>
-        <field name="res_model">f3d.viewer.snapshot</field>
+        <field name="res_model">td.viewer.snapshot</field>
         <field name="view_mode">list,form</field>
         <field name="context">{"search_default_today": 1}</field>
     </record>

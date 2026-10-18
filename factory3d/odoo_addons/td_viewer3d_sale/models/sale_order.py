@@ -5,7 +5,7 @@ from odoo.exceptions import UserError
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
-    f3d_has_3d = fields.Boolean(string="Є що показати в 3D", compute="_compute_f3d_has_3d")
+    td_has_3d = fields.Boolean(string="Є що показати в 3D", compute="_compute_f3d_has_3d")
 
     def _f3d_productions(self):
         """МО: origin = name або (якщо є sale_stock) група забезпечення замовлення."""
@@ -27,7 +27,7 @@ class SaleOrder(models.Model):
 
     def _compute_f3d_has_3d(self):
         for rec in self:
-            rec.f3d_has_3d = bool(rec.id and (rec._f3d_productions() or rec._f3d_pickings()))
+            rec.td_has_3d = bool(rec.id and (rec._f3d_productions() or rec._f3d_pickings()))
 
     def action_f3d_show(self):
         """M-08: МО замовлення (перше за date_start) -> params.mo; інакше відвантаження -> params.picking."""

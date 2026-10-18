@@ -1,5 +1,5 @@
 {
-    "name": "Завод 3D: верстати",
+    "name": "Верстати",
     "summary": "Стани верстатів → журнал часу, автостарт, простої з причинами, OEE; портал STORETEQ; карти розкрою",
     "description": "Підключення верстатів HOMAG (OPC UA, OPC 40550-1) і верстатів без інтерфейсу (I/O ADAM): "
     "нормалізовані "
@@ -12,7 +12,7 @@
     "website": "https://todo.ltd",
     "license": "LGPL-3",
     # DEC-1/ENV-3: mrp_workorder (Enterprise) у середовищі немає; mrp, hr, stock, maintenance — явно (CE).
-    "depends": ["factory3d_telemetry", "mrp", "hr", "stock", "maintenance"],
+    "depends": ["td_telemetry", "mrp", "hr", "stock", "maintenance"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -23,17 +23,17 @@
         "data/mc_sources.xml",
         "data/mc_machine_messages.xml",
         "data/ir_cron.xml",
-        "data/f3d_actions.xml",
+        "data/td_actions.xml",
         "wizard/downtime_reason_wizard_views.xml",
-        "views/f3d_machine_views.xml",
-        "views/f3d_machine_state_log_views.xml",
-        "views/f3d_downtime_views.xml",
-        "views/f3d_machine_event_views.xml",
-        "views/f3d_gantry_views.xml",
+        "views/td_machine_views.xml",
+        "views/td_machine_state_log_views.xml",
+        "views/td_downtime_views.xml",
+        "views/td_machine_event_views.xml",
+        "views/td_gantry_views.xml",
         "views/mrp_workcenter_views.xml",
-        "views/f3d_oee_views.xml",
+        "views/td_oee_views.xml",
         "wizard/cut_wizard_views.xml",
-        "views/f3d_cut_views.xml",
+        "views/td_cut_views.xml",
         "views/mrp_production_views.xml",
         "views/product_views.xml",
         "views/mrp_workorder_views.xml",

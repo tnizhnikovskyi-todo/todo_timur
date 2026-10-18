@@ -1,4 +1,4 @@
-"""Хуки установки/видалення factory3d_constructor (SPEC §5.2, §5.3, R-24)."""
+"""Хуки установки/видалення td_constructor (SPEC §5.2, §5.3, R-24)."""
 
 import json
 import logging
@@ -8,10 +8,10 @@ from odoo.tools import file_open
 from ..services import snapshot
 from . import link, seed
 
-_logger = logging.getLogger('odoo.addons.factory3d_constructor.hooks')
+_logger = logging.getLogger('odoo.addons.td_constructor.hooks')
 
-INVENTORY_FILE = 'factory3d_constructor/data/scene_inventory.json'
-PARAM_PREFIX = 'factory3d.constructor.'
+INVENTORY_FILE = 'td_constructor/data/scene_inventory.json'
+PARAM_PREFIX = 'td.constructor.'
 PARAM_PUBLISH = PARAM_PREFIX + 'publish_enabled'
 PARAM_REPORT = PARAM_PREFIX + 'seed_report'
 
@@ -33,23 +33,23 @@ for _category, _roles in {
 
 
 def step_params(env):
-    """Крок 1: publish_enabled за factory3d.base.environment (CB-10): True на test, False на prod."""
+    """Крок 1: publish_enabled за td.base.environment (CB-10): True на test, False на prod."""
     params = env['ir.config_parameter'].sudo()
     if not params.get_param(PARAM_PUBLISH):
-        environment = params.get_param('factory3d.base.environment') or 'test'
+        environment = params.get_param('td.base.environment') or 'test'
         params.set_param(PARAM_PUBLISH, 'True' if environment == 'test' else 'False')
         return environment
     return None
 
 
 def step_categories(env):
-    """Крок 2: f3d_category у паспортів base (лише де порожньо/other — ручні значення не перезаписуємо)."""
-    Passport = env['f3d.equipment.passport'].sudo().with_context(active_test=False)
+    """Крок 2: td_category у паспортів base (лише де порожньо/other — ручні значення не перезаписуємо)."""
+    Passport = env['td.equipment.passport'].sudo().with_context(active_test=False)
     changed = 0
-    for passport in Passport.search([('f3d_category', 'in', ('other', False))]):
+    for passport in Passport.search([('td_category', 'in', ('other', False))]):
         category = CATEGORY_BY_ROLE.get(passport.role)
-        if category and category != passport.f3d_category:
-            passport.f3d_category = category
+        if category and category != passport.td_category:
+            passport.td_category = category
             changed += 1
     return changed
 
@@ -108,14 +108,14 @@ def run_seed_hook(env, data=None):
     if created:
         step_baseline(env, site, created)
     linked = link.link_existing(env, site)
-    slots = env['f3d.slot'].search([('site_id', '=', site.id)])
+    slots = env['td.slot'].search([('site_id', '=', site.id)])
     report = {
         'site_id': site.id,
         'created': {
-            'layers': env['f3d.layer'].search_count([('site_id', '=', site.id)]),
+            'layers': env['td.layer'].search_count([('site_id', '=', site.id)]),
             'slots': len(slots),
             'cells': sum(slots.mapped('cell_count')),
-            'placements': env['f3d.placement'].search_count([('site_id', '=', site.id)]),
+            'placements': env['td.placement'].search_count([('site_id', '=', site.id)]),
             'variants': len(resolved),
         },
         'linked': linked['linked'],

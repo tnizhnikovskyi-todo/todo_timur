@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_reading_hour_pivot" model="ir.ui.view">
-        <field name="name">f3d.reading.hour.pivot</field>
-        <field name="model">f3d.reading.hour</field>
+    <record id="view_td_reading_hour_pivot" model="ir.ui.view">
+        <field name="name">td.reading.hour.pivot</field>
+        <field name="model">td.reading.hour</field>
         <field name="arch" type="xml">
             <pivot string="Годинні агрегати">
                 <field name="signal_id" type="row"/>
@@ -15,9 +15,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_reading_hour_graph" model="ir.ui.view">
-        <field name="name">f3d.reading.hour.graph</field>
-        <field name="model">f3d.reading.hour</field>
+    <record id="view_td_reading_hour_graph" model="ir.ui.view">
+        <field name="name">td.reading.hour.graph</field>
+        <field name="model">td.reading.hour</field>
         <field name="arch" type="xml">
             <graph string="Годинні агрегати" type="line">
                 <field name="hour" interval="hour"/>
@@ -27,9 +27,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_reading_hour_list" model="ir.ui.view">
-        <field name="name">f3d.reading.hour.list</field>
-        <field name="model">f3d.reading.hour</field>
+    <record id="view_td_reading_hour_list" model="ir.ui.view">
+        <field name="name">td.reading.hour.list</field>
+        <field name="model">td.reading.hour</field>
         <field name="arch" type="xml">
             <list string="Годинні агрегати" create="false" edit="false" delete="false">
                 <field name="hour"/>
@@ -45,9 +45,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_reading_hour" model="ir.actions.act_window">
+    <record id="action_td_reading_hour" model="ir.actions.act_window">
         <field name="name">Годинні агрегати</field>
-        <field name="res_model">f3d.reading.hour</field>
+        <field name="res_model">td.reading.hour</field>
         <field name="view_mode">pivot,graph,list</field>
     </record>
 </odoo>

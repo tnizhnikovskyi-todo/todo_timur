@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_fire_exit_list" model="ir.ui.view">
-        <field name="name">f3d.fire.exit.list</field>
-        <field name="model">f3d.fire.exit</field>
+    <record id="view_td_fire_exit_list" model="ir.ui.view">
+        <field name="name">td.fire.exit.list</field>
+        <field name="model">td.fire.exit</field>
         <field name="arch" type="xml">
             <list>
                 <field name="code"/>
@@ -20,9 +20,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_fire_exit_form" model="ir.ui.view">
-        <field name="name">f3d.fire.exit.form</field>
-        <field name="model">f3d.fire.exit</field>
+    <record id="view_td_fire_exit_form" model="ir.ui.view">
+        <field name="name">td.fire.exit.form</field>
+        <field name="model">td.fire.exit</field>
         <field name="arch" type="xml">
             <form>
                 <header>
@@ -69,9 +69,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_fire_exit_search" model="ir.ui.view">
-        <field name="name">f3d.fire.exit.search</field>
-        <field name="model">f3d.fire.exit</field>
+    <record id="view_td_fire_exit_search" model="ir.ui.view">
+        <field name="name">td.fire.exit.search</field>
+        <field name="model">td.fire.exit</field>
         <field name="arch" type="xml">
             <search>
                 <field name="code"/>
@@ -84,9 +84,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_exit" model="ir.actions.act_window">
+    <record id="action_td_fire_exit" model="ir.actions.act_window">
         <field name="name">Виходи</field>
-        <field name="res_model">f3d.fire.exit</field>
+        <field name="res_model">td.fire.exit</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

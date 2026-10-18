@@ -13,9 +13,9 @@ from . import dates, static_data
 
 _logger = logging.getLogger(__name__)
 
-PROVIDER_PREFIX = "f3d.viewer.provider."
-DEFAULT_GROUP = "factory3d_base.group_f3d_user"
-ENERGY_COST_GROUP = "factory3d_energy.group_f3d_energy_cost"
+PROVIDER_PREFIX = "td.viewer.provider."
+DEFAULT_GROUP = "td_factory3d.group_td_user"
+ENERGY_COST_GROUP = "td_energy.group_td_energy_cost"
 SCHEMA = "1.1"
 DELTA_MAX_BYTES = 200 * 1024
 
@@ -236,7 +236,7 @@ class PayloadBuilder(_Base):
             "user": env.user.name,
             "lite": self.lite,
             "kiosk": self.kiosk,
-            "bus": str(params.get_param("factory3d.viewer.bus_enabled") or "True").lower() in ("true", "1"),
+            "bus": str(params.get_param("td.viewer.bus_enabled") or "True").lower() in ("true", "1"),
             "sections": {},
             "errors": [],
         }
@@ -310,7 +310,7 @@ class PayloadBuilder(_Base):
 
 
 class DeltaBuilder(_Base):
-    """R-14. `changes` (для тестів) підміняє читання f3d.viewer.event."""
+    """R-14. `changes` (для тестів) підміняє читання td.viewer.event."""
 
     def __init__(self, env, since, codes=None, lite=False, kiosk=False, changes=None):
         super().__init__(env, lite=lite, kiosk=kiosk, codes=codes)
@@ -323,8 +323,8 @@ class DeltaBuilder(_Base):
         ts = dates.iso_utc(dates.real_now())
         if self.changes is not None:
             changes = self.changes
-        elif "f3d.viewer.event" in env:
-            changes = env["f3d.viewer.event"]._since(self.since)
+        elif "td.viewer.event" in env:
+            changes = env["td.viewer.event"]._since(self.since)
         else:
             changes = None
         if changes is None:
@@ -393,7 +393,7 @@ WO_RE = re.compile(r"^WO(\d{5})$")
 
 def _found(rec, kind=None):
     if kind is None:
-        kind = rec.f3d_kind if "f3d_kind" in rec._fields and rec.f3d_kind else "document"
+        kind = rec.td_kind if "td_kind" in rec._fields and rec.td_kind else "document"
     return {"model": rec._name, "res_id": rec.id, "display_name": rec.display_name, "kind": kind}
 
 
@@ -408,10 +408,10 @@ def _resolve_group(env, codes):
     """R-16 п. 5: об'єкт сцени без власного запису (стелаж, група) -> записи його дочірніх кодів (комірок): перша за
     порядком домішки модель, у якій знайшлось хоч щось. {model, res_id: None, res_ids, display_name, kind, count}."""
     codes = list(dict.fromkeys(codes))[:RESOLVE_GROUP_MAX]
-    for model in env["f3d.scene.mixin"]._f3d_resolve_order:
+    for model in env["td.scene.mixin"]._f3d_resolve_order:
         if not codes or model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
             continue
-        recs = env[model].search(["|", ("f3d_code", "in", codes), ("f3d_alias", "in", codes)],
+        recs = env[model].search(["|", ("td_code", "in", codes), ("td_alias", "in", codes)],
                                  limit=RESOLVE_GROUP_MAX)
         if recs:
             return {"model": model, "res_id": None, "res_ids": recs.ids, "display_name": None, "kind": "group",
@@ -441,7 +441,7 @@ def resolve(env, code=None, name=None, codes=None):
             wo = env["mrp.workorder"].search([("id", "=", int(m.group(1)))], limit=1)
             if wo:
                 return _found(wo, "document")
-        mixin = env["f3d.scene.mixin"]
+        mixin = env["td.scene.mixin"]
         for model in mixin._f3d_resolve_order:
             if model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
                 continue
@@ -476,5 +476,5 @@ def log_scene_codes(env):
             continue
         if res["model"]:
             by_model[res["model"]] = by_model.get(res["model"], 0) + 1
-    _logger.info("factory3d_viewer: знайдено записів %d з %d кодів сцени: %s",
+    _logger.info("td_viewer3d: знайдено записів %d з %d кодів сцени: %s",
                  sum(by_model.values()), len(codes), by_model)

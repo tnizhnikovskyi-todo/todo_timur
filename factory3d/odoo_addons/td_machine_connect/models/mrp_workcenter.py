@@ -3,7 +3,7 @@ import logging
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError
 
-from .f3d_machine import STATES
+from .td_machine import STATES
 
 _logger = logging.getLogger(__name__)
 
@@ -11,18 +11,18 @@ _logger = logging.getLogger(__name__)
 class MrpWorkcenter(models.Model):
     _inherit = "mrp.workcenter"
 
-    f3d_machine_ids = fields.One2many("f3d.machine", "workcenter_id", string="Верстати")
-    f3d_machine_id = fields.Many2one("f3d.machine", compute="_compute_f3d_machine", string="Верстат")
-    f3d_machine_state = fields.Selection(STATES, compute="_compute_f3d_machine", string="Стан верстата")
-    f3d_oee_today = fields.Float(compute="_compute_f3d_machine", string="OEE зміни")
+    td_machine_ids = fields.One2many("td.machine", "workcenter_id", string="Верстати")
+    td_machine_id = fields.Many2one("td.machine", compute="_compute_f3d_machine", string="Верстат")
+    td_machine_state = fields.Selection(STATES, compute="_compute_f3d_machine", string="Стан верстата")
+    td_oee_today = fields.Float(compute="_compute_f3d_machine", string="OEE зміни")
 
-    @api.depends("f3d_machine_ids", "f3d_machine_ids.state", "f3d_machine_ids.oee_today")
+    @api.depends("td_machine_ids", "td_machine_ids.state", "td_machine_ids.oee_today")
     def _compute_f3d_machine(self):
         for rec in self:
-            machine = rec.f3d_machine_ids[:1]
-            rec.f3d_machine_id = machine
-            rec.f3d_machine_state = machine.state if machine else False
-            rec.f3d_oee_today = machine.oee_today if machine else 0.0
+            machine = rec.td_machine_ids[:1]
+            rec.td_machine_id = machine
+            rec.td_machine_state = machine.state if machine else False
+            rec.td_oee_today = machine.oee_today if machine else 0.0
 
     def action_f3d_machine(self):
         """Форма верстата РЦ; створення з `default_workcenter_id`, якщо запису ще немає."""
@@ -30,14 +30,14 @@ class MrpWorkcenter(models.Model):
         action = {
             "type": "ir.actions.act_window",
             "name": _("Верстат"),
-            "res_model": "f3d.machine",
+            "res_model": "td.machine",
             "view_mode": "form",
             "target": "current",
         }
-        if self.f3d_machine_id:
-            action["res_id"] = self.f3d_machine_id.id
+        if self.td_machine_id:
+            action["res_id"] = self.td_machine_id.id
         else:
-            if not self.env.user.has_group("factory3d_base.group_f3d_manager"):
+            if not self.env.user.has_group("td_factory3d.group_td_manager"):
                 raise AccessError(_("Запис підключення верстата створює менеджер «Завод 3D»."))
             action["context"] = {"default_workcenter_id": self.id}
         return action

@@ -20,32 +20,32 @@ class TestSiteLayer(F3DConstructorCase):
         self.assertFalse(site.has_changes)
         self.assertEqual(
             self.layers['storage'].edit_group_ids,
-            self.env.ref('factory3d_constructor.group_f3d_constructor_storekeeper'),
+            self.env.ref('td_constructor.group_td_constructor_storekeeper'),
         )
-        self.assertTrue(self.env.ref('factory3d_constructor.variant_generic_machine').exists())
+        self.assertTrue(self.env.ref('td_constructor.variant_generic_machine').exists())
         modes = {c.check_key: c.mode for c in site.check_config_ids}
         self.assertEqual({k for k, m in modes.items() if m == 'block'}, {'fits', 'collide', 'aisles_free', 'fire'})
 
     def test_ac07_multicompany_rules(self):
         company2 = self.env['res.company'].create({'name': "Друга компанія"})
         site2 = (
-            self.env['f3d.site']
+            self.env['td.site']
             .with_context(f3d_blank=True)
             .create({'name': "Чужа", 'code': 'OTH', 'company_id': company2.id})
         )
         manager = self.u_manager.with_company(self.company)
         self.assertEqual(
-            self.env['f3d.site'].with_user(manager).search([('id', 'in', (self.site | site2).ids)]), self.site
+            self.env['td.site'].with_user(manager).search([('id', 'in', (self.site | site2).ids)]), self.site
         )
         with self.assertRaises(AccessError):
-            self.env['f3d.layer'].with_user(manager).create(
+            self.env['td.layer'].with_user(manager).create(
                 {'site_id': site2.id, 'name': "Підсаджений", 'kind': 'custom'}
             )
         with self.assertRaises(AccessError):
             site2.with_user(manager).name  # noqa: B018 - читання чужої площадки
 
     def test_ac08_layer_fields_and_validation(self):
-        layer = self.env['f3d.layer'].create(
+        layer = self.env['td.layer'].create(
             {
                 'site_id': self.site.id,
                 'name': "Антресоль",
@@ -57,9 +57,9 @@ class TestSiteLayer(F3DConstructorCase):
                 'opacity': 0.4,
                 'bounds': [[0, 0], [10, 0], [10, 10], [0, 10]],
                 'edit_group_ids': [
-                    Command.set([self.env.ref('factory3d_constructor.group_f3d_constructor_storekeeper').id])
+                    Command.set([self.env.ref('td_constructor.group_td_constructor_storekeeper').id])
                 ],
-                'allowed_slot_type_ids': [Command.set(self.env['f3d.term'].search([('key', '=', 'pallet_rack')]).ids)],
+                'allowed_slot_type_ids': [Command.set(self.env['td.term'].search([('key', '=', 'pallet_rack')]).ids)],
             }
         )
         self.assertEqual((layer.elevation_m, layer.grid_step_m, layer.color), (3.6, 0.25, '#112233'))
@@ -76,10 +76,10 @@ class TestSiteLayer(F3DConstructorCase):
                 layer.write(bad)
 
     def test_ac09_custom_layer_cells_z0(self):
-        layer = self.env['f3d.layer'].create(
+        layer = self.env['td.layer'].create(
             {'site_id': self.site.id, 'name': "Антресоль офісу", 'kind': 'custom', 'elevation_m': 3.6}
         )
-        slot = self.env['f3d.slot'].create(
+        slot = self.env['td.slot'].create(
             {
                 'layer_id': layer.id,
                 'template': 'shelf',
@@ -114,12 +114,12 @@ class TestSiteLayer(F3DConstructorCase):
     def test_ac17_ac18_underlay(self):
         layer = self.layers['storage']
         att = self.env['ir.attachment'].create(
-            {'name': 'plan.dxf', 'raw': b'0\nEOF\n', 'res_model': 'f3d.layer', 'res_id': layer.id}
+            {'name': 'plan.dxf', 'raw': b'0\nEOF\n', 'res_model': 'td.layer', 'res_id': layer.id}
         )
         layer.underlay_attachment_id = att
         self.assertEqual((layer.underlay_format, layer.underlay_status), ('dxf', 'ready'))
         att2 = self.env['ir.attachment'].create(
-            {'name': 'plan.dwg', 'raw': b'AC1015', 'res_model': 'f3d.layer', 'res_id': layer.id}
+            {'name': 'plan.dwg', 'raw': b'AC1015', 'res_model': 'td.layer', 'res_id': layer.id}
         )
         layer.underlay_attachment_id = att2
         self.assertEqual((layer.underlay_format, layer.underlay_status), ('dwg', 'pending_conversion'))

@@ -41,9 +41,9 @@ class TestDataSync(unittest.TestCase):
             self.skipTest("немає dist/odoo_demo.json")
         files = gen.build(gen.DEFAULT_ROOT)
         rows = {name: text.count('\n') - 1 for name, text in files.items()}
-        self.assertEqual(rows['f3d.equipment.passport.csv'], 93)
-        self.assertEqual(rows['f3d.equipment.spec.csv'], 999)
-        self.assertEqual(rows['f3d.equipment.source.csv'], 252)
+        self.assertEqual(rows['td.equipment.passport.csv'], 93)
+        self.assertEqual(rows['td.equipment.spec.csv'], 999)
+        self.assertEqual(rows['td.equipment.source.csv'], 252)
         self.assertEqual(rows['scene_equipment_codes.csv'], 210)
         self.assertEqual(rows['scene_employee_codes.csv'], 35)
         self.assertEqual(rows['scene_locations.csv'], 689)

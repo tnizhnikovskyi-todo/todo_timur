@@ -1,6 +1,6 @@
 """Ingester: валідація пакета показань, SQL-вставка, оновлення last_*, пороги, шина (R-17).
 
-Викликається лише з `f3d.signal._f3d_ingest` (CT-10): контролери й модулі напряму Ingester не використовують.
+Викликається лише з `td.signal._f3d_ingest` (CT-10): контролери й модулі напряму Ingester не використовують.
 «Зараз» — `fields.Datetime.now()` (не SQL `now()`), щоб працював `freezegun`.
 """
 
@@ -87,14 +87,14 @@ class Ingester:
     def __init__(self, env, src="module", collector=None):
         self.env = env
         self.cr = env.cr
-        self.Signal = env["f3d.signal"].sudo()
+        self.Signal = env["td.signal"].sudo()
         self.src = src
         self.collector = collector
         self.now = env.context.get("f3d_received_at") or fields.Datetime.now()
         icp = env["ir.config_parameter"].sudo()
-        self.keep_days = int(icp.get_param("factory3d.telemetry.keep_days", "30") or 30)
-        self.bus_min = int(icp.get_param("factory3d.telemetry.bus_min_interval_s", "10") or 10)
-        self.cooldown = int(icp.get_param("factory3d.telemetry.realarm_cooldown_s", "3600") or 3600)
+        self.keep_days = int(icp.get_param("td.telemetry.keep_days", "30") or 30)
+        self.bus_min = int(icp.get_param("td.telemetry.bus_min_interval_s", "10") or 10)
+        self.cooldown = int(icp.get_param("td.telemetry.realarm_cooldown_s", "3600") or 3600)
         self.states = {}  # signal_id -> рабочий стан
         self.rejected = []
         self.accepted = 0
@@ -175,19 +175,19 @@ class Ingester:
         if any(lo < t < hi for t in st["batch_stored"]):
             return True
         self.cr.execute(
-            "SELECT 1 FROM f3d_reading WHERE signal_id = %s AND ts > %s AND ts < %s AND quality <> 'bad' LIMIT 1",
+            "SELECT 1 FROM td_reading WHERE signal_id = %s AND ts > %s AND ts < %s AND quality <> 'bad' LIMIT 1",
             (st["id"], lo, hi),
         )
         return bool(self.cr.fetchone())
 
     def _last_bad(self, st):
         if st["last_bad"] is False:
-            self.cr.execute("SELECT max(ts) FROM f3d_reading WHERE signal_id = %s AND quality = 'bad'", (st["id"],))
+            self.cr.execute("SELECT max(ts) FROM td_reading WHERE signal_id = %s AND quality = 'bad'", (st["id"],))
             st["last_bad"] = self.cr.fetchone()[0]
         return st["last_bad"]
 
     def _apply(self, st, it):
-        """Повертає рядок для f3d_reading або None; змінює st у пам'яті."""
+        """Повертає рядок для td_reading або None; змінює st у пам'яті."""
         ts, v, text, q, kind = it["ts"], it["value"], it["text"], it["q"], st["kind"]
         force_last = False
         if kind == "state":
@@ -273,7 +273,7 @@ class Ingester:
                 rows.append(row)
         if rows:
             res = self.cr.execute_values(
-                "INSERT INTO f3d_reading (signal_id, equipment_id, ts, value, text, quality, src, received_at) "
+                "INSERT INTO td_reading (signal_id, equipment_id, ts, value, text, quality, src, received_at) "
                 "VALUES %s ON CONFLICT (signal_id, ts) DO NOTHING RETURNING signal_id, ts",
                 rows,
                 fetch=True,
@@ -319,7 +319,7 @@ class Ingester:
 
     def _prev_reading(self, sid, ts):
         lo, hi = ts - timedelta(seconds=DERIVE_WINDOW[0]), ts - timedelta(seconds=DERIVE_WINDOW[1])
-        base = "SELECT ts, value FROM f3d_reading WHERE signal_id = %s AND quality <> 'bad' AND value IS NOT NULL "
+        base = "SELECT ts, value FROM td_reading WHERE signal_id = %s AND quality <> 'bad' AND value IS NOT NULL "
         self.cr.execute(base + "AND ts >= %s AND ts <= %s ORDER BY ts LIMIT 1", (sid, lo, hi))
         row = self.cr.fetchone()
         if not row:
@@ -376,7 +376,7 @@ class Ingester:
         pairs = list({p for p in self.maybe_dup})
         for k in range(0, len(pairs), 500):
             self.cr.execute(
-                "SELECT count(*) FROM f3d_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k : k + 500]),)
+                "SELECT count(*) FROM td_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k : k + 500]),)
             )
             self.duplicates += self.cr.fetchone()[0]
 
@@ -390,7 +390,7 @@ class Ingester:
             for s in sts
         ]
         self.cr.execute_values(
-            "UPDATE f3d_signal AS s SET last_value = v.last_value, last_text = v.last_text, last_ts = v.last_ts, "
+            "UPDATE td_signal AS s SET last_value = v.last_value, last_text = v.last_text, last_ts = v.last_ts, "
             "last_quality = v.last_quality, last_stored_ts = v.last_stored_ts "
             "FROM (VALUES %s) AS v(id, last_value, last_text, last_ts, last_quality, last_stored_ts) "
             "WHERE s.id = v.id AND (s.last_ts IS NULL OR s.last_ts < v.last_ts)",
@@ -438,7 +438,7 @@ class Ingester:
             .sudo()
             .search_count(
                 [
-                    ("model", "=", "f3d.signal"),
+                    ("model", "=", "td.signal"),
                     ("res_id", "=", s["id"]),
                     ("body", "ilike", "Лічильник зменшився"),
                     ("date", ">=", since),
@@ -471,12 +471,12 @@ class Ingester:
 
     def _meter_checks(self, ids):
         Equipment = self.env["maintenance.equipment"].sudo()
-        if not hasattr(Equipment, "_f3d_meter_check") or "f3d_meter_signal_id" not in Equipment._fields:
+        if not hasattr(Equipment, "_f3d_meter_check") or "td_meter_signal_id" not in Equipment._fields:
             return
-        Equipment.search([("f3d_meter_signal_id", "in", ids)])._f3d_meter_check()
+        Equipment.search([("td_meter_signal_id", "in", ids)])._f3d_meter_check()
 
     def _bus(self, sts, changed_ids):
-        if "f3d.viewer.event" not in self.env:
+        if "td.viewer.event" not in self.env:
             return
         notify = []
         for s in sts:
@@ -494,7 +494,7 @@ class Ingester:
         if not notify:
             return
         self.cr.execute(
-            "UPDATE f3d_signal SET last_notified_ts = %s WHERE id IN %s", (self.now, tuple(s["id"] for s in notify))
+            "UPDATE td_signal SET last_notified_ts = %s WHERE id IN %s", (self.now, tuple(s["id"] for s in notify))
         )
         self.Signal.invalidate_model(["last_notified_ts"])
         self.Signal._notify_viewer([s["code"] for s in notify])

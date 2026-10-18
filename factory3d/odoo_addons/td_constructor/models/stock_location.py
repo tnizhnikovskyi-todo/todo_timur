@@ -4,8 +4,8 @@ from odoo import fields, models
 class StockLocation(models.Model):
     _inherit = 'stock.location'
 
-    f3d_site_id = fields.Many2one(
-        'f3d.site',
+    td_site_id = fields.Many2one(
+        'td.site',
         string="Площадка конструктора",
         index=True,
         copy=False,
@@ -13,4 +13,4 @@ class StockLocation(models.Model):
         ondelete='set null',
         help="Запис керується конструктором розкладки (CC-01)",
     )
-    f3d_slot_uid = fields.Char(string="UID місця", size=32, copy=False, readonly=True)
+    td_slot_uid = fields.Char(string="UID місця", size=32, copy=False, readonly=True)

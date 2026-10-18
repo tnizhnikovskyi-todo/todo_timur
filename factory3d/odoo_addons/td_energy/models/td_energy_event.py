@@ -5,8 +5,8 @@ from psycopg2 import OperationalError
 
 from odoo import api, fields, models
 
-from odoo.addons.factory3d_telemetry.tools import thresholds
-from odoo.addons.factory3d_telemetry.tools.titles import fmt_num, render_title
+from odoo.addons.td_telemetry.tools import thresholds
+from odoo.addons.td_telemetry.tools.titles import fmt_num, render_title
 
 from ..tools import dates
 
@@ -18,7 +18,7 @@ STATUS_LEVEL = {"warn": "warn", "alarm": "bad"}
 class F3dEnergyEvent(models.Model):
     """M-09. Журнал подій енергетики (R-13). Поле `outage_id` — W4 (R-14)."""
 
-    _name = "f3d.energy.event"
+    _name = "td.energy.event"
     _description = "Енергетика: подія"
     _order = "ts desc, id desc"
     _log_access = False
@@ -42,10 +42,10 @@ class F3dEnergyEvent(models.Model):
         required=True,
     )
     code = fields.Char(string="Код", size=32)
-    node_id = fields.Many2one("f3d.energy.node", string="Вузол", ondelete="set null")
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал", ondelete="set null")
+    node_id = fields.Many2one("td.energy.node", string="Вузол", ondelete="set null")
+    signal_id = fields.Many2one("td.signal", string="Сигнал", ondelete="set null")
     text = fields.Char(string="Текст", size=256, required=True)
-    outage_id = fields.Many2one("f3d.energy.outage", string="Відключення", ondelete="set null", index=True)  # W4
+    outage_id = fields.Many2one("td.energy.outage", string="Відключення", ondelete="set null", index=True)  # W4
 
     @api.model
     def _f3d_log(self, level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0):
@@ -69,8 +69,8 @@ class F3dEnergyEvent(models.Model):
         if outage:
             vals["outage_id"] = outage.id
         rec = self.sudo().create(vals)
-        if "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("f3d.energy", [code] if code else [], "signal")
+        if "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("td.energy", [code] if code else [], "signal")
         return rec
 
     # --- R-13 п. 1–2: події за зміною показань ---------------------------------------------------------
@@ -87,7 +87,7 @@ class F3dEnergyEvent(models.Model):
 
     @api.model
     def _f3d_on_ingest_inner(self, before):
-        Signal = self.env["f3d.signal"].sudo()
+        Signal = self.env["td.signal"].sudo()
         self._f3d_ats_hook(before)  # W4: R-14
         signals = Signal.search([("code", "in", list(before))])
         for sig in signals.sorted("code"):
@@ -103,12 +103,12 @@ class F3dEnergyEvent(models.Model):
         """W4, R-14 п. 1: похідні `src{1,2}_ok`; п. 2–10: автомат відключення (крок після кожного пакета АВР/вводів)."""
         if self.env.context.get("f3d_ats_busy"):
             return
-        from ..models.f3d_energy_outage import TRIGGER_CODES
+        from ..models.td_energy_outage import TRIGGER_CODES
 
         if not any(c in TRIGGER_CODES for c in before):
             return
         self = self.with_context(f3d_ats_busy=True)
-        Signal = self.env["f3d.signal"].sudo()
+        Signal = self.env["td.signal"].sudo()
         derived = []
         for n in (1, 2):
             sig = Signal.search([("code", "=", "infra/ats/src%d_state" % n)], limit=1)
@@ -123,7 +123,7 @@ class F3dEnergyEvent(models.Model):
                 )
         if derived:
             Signal._f3d_energy_put(derived)
-        self.env["f3d.energy.outage"]._f3d_ats_step()
+        self.env["td.energy.outage"]._f3d_ats_step()
 
     @api.model
     def _f3d_status_event(self, sig, old_status):
@@ -151,7 +151,7 @@ class F3dEnergyEvent(models.Model):
     def _f3d_machine_fault(self, sig):
         """R-13 п. 2: верстат став `fault` — аварійна зупинка зі споживанням вузла."""
         wc_code = sig.code.split("/")[1]
-        Node = self.env["f3d.energy.node"].sudo()
+        Node = self.env["td.energy.node"].sudo()
         node = Node.search([("code", "=", wc_code)], limit=1) or Node.search(
             [("workcenter_id.name", "=", wc_code)], limit=1
         )

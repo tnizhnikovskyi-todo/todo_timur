@@ -1,32 +1,32 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_machine_user,f3d.machine user,model_f3d_machine,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_machine_manager,f3d.machine manager,model_f3d_machine,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_machine_state_log_user,f3d.machine.state.log user,model_f3d_machine_state_log,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_machine_state_log_admin,f3d.machine.state.log admin,model_f3d_machine_state_log,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_downtime_user,f3d.downtime user,model_f3d_downtime,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_downtime_mrp_user,f3d.downtime mrp user,model_f3d_downtime,mrp.group_mrp_user,1,1,0,0
-access_f3d_downtime_mrp_manager,f3d.downtime mrp manager,model_f3d_downtime,mrp.group_mrp_manager,1,1,1,0
-access_f3d_downtime_admin,f3d.downtime admin,model_f3d_downtime,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_machine_event_user,f3d.machine.event user,model_f3d_machine_event,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_machine_event_admin,f3d.machine.event admin,model_f3d_machine_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_machine_message_user,f3d.machine.message user,model_f3d_machine_message,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_machine_message_manager,f3d.machine.message manager,model_f3d_machine_message,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_oee_shift_user,f3d.oee.shift user,model_f3d_oee_shift,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_oee_shift_admin,f3d.oee.shift admin,model_f3d_oee_shift,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_gantry_stack_user,f3d.gantry.stack user,model_f3d_gantry_stack,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_gantry_stack_stock_manager,f3d.gantry.stack stock manager,model_f3d_gantry_stack,stock.group_stock_manager,1,1,0,0
-access_f3d_gantry_stack_manager,f3d.gantry.stack manager,model_f3d_gantry_stack,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_gantry_job_user,f3d.gantry.job user,model_f3d_gantry_job,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_gantry_job_mrp_user,f3d.gantry.job mrp user,model_f3d_gantry_job,mrp.group_mrp_user,1,1,1,0
-access_f3d_gantry_job_manager,f3d.gantry.job manager,model_f3d_gantry_job,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_cut_part_user,f3d.cut.part user,model_f3d_cut_part,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_cut_part_manager,f3d.cut.part manager,model_f3d_cut_part,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_cut_map_user,f3d.cut.map user,model_f3d_cut_map,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_cut_map_manager,f3d.cut.map manager,model_f3d_cut_map,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_cut_map_line_user,f3d.cut.map.line user,model_f3d_cut_map_line,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_cut_map_line_manager,f3d.cut.map.line manager,model_f3d_cut_map_line,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_downtime_reason_wizard,f3d.downtime.reason.wizard,model_f3d_downtime_reason_wizard,mrp.group_mrp_user,1,1,1,0
-access_f3d_cut_plan_import_wizard,f3d.cut.plan.import.wizard,model_f3d_cut_plan_import_wizard,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_cut_part_import_wizard,f3d.cut.part.import.wizard,model_f3d_cut_part_import_wizard,factory3d_base.group_f3d_manager,1,1,1,0
-access_res_config_settings_f3d_manager,res.config.settings f3d manager,base.model_res_config_settings,factory3d_base.group_f3d_manager,1,1,1,0
-access_mrp_loss_f3d_user,mrp.workcenter.productivity.loss f3d user,mrp.model_mrp_workcenter_productivity_loss,factory3d_base.group_f3d_user,1,0,0,0
+access_td_machine_user,td.machine user,model_td_machine,td_factory3d.group_td_user,1,0,0,0
+access_td_machine_manager,td.machine manager,model_td_machine,td_factory3d.group_td_manager,1,1,1,1
+access_td_machine_state_log_user,td.machine.state.log user,model_td_machine_state_log,td_factory3d.group_td_user,1,0,0,0
+access_td_machine_state_log_admin,td.machine.state.log admin,model_td_machine_state_log,td_factory3d.group_td_admin,1,1,1,1
+access_td_downtime_user,td.downtime user,model_td_downtime,td_factory3d.group_td_user,1,0,0,0
+access_td_downtime_mrp_user,td.downtime mrp user,model_td_downtime,mrp.group_mrp_user,1,1,0,0
+access_td_downtime_mrp_manager,td.downtime mrp manager,model_td_downtime,mrp.group_mrp_manager,1,1,1,0
+access_td_downtime_admin,td.downtime admin,model_td_downtime,td_factory3d.group_td_admin,1,1,1,1
+access_td_machine_event_user,td.machine.event user,model_td_machine_event,td_factory3d.group_td_user,1,0,0,0
+access_td_machine_event_admin,td.machine.event admin,model_td_machine_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_machine_message_user,td.machine.message user,model_td_machine_message,td_factory3d.group_td_user,1,0,0,0
+access_td_machine_message_manager,td.machine.message manager,model_td_machine_message,td_factory3d.group_td_manager,1,1,1,1
+access_td_oee_shift_user,td.oee.shift user,model_td_oee_shift,td_factory3d.group_td_user,1,0,0,0
+access_td_oee_shift_admin,td.oee.shift admin,model_td_oee_shift,td_factory3d.group_td_admin,1,1,1,1
+access_td_gantry_stack_user,td.gantry.stack user,model_td_gantry_stack,td_factory3d.group_td_user,1,0,0,0
+access_td_gantry_stack_stock_manager,td.gantry.stack stock manager,model_td_gantry_stack,stock.group_stock_manager,1,1,0,0
+access_td_gantry_stack_manager,td.gantry.stack manager,model_td_gantry_stack,td_factory3d.group_td_manager,1,1,1,1
+access_td_gantry_job_user,td.gantry.job user,model_td_gantry_job,td_factory3d.group_td_user,1,0,0,0
+access_td_gantry_job_mrp_user,td.gantry.job mrp user,model_td_gantry_job,mrp.group_mrp_user,1,1,1,0
+access_td_gantry_job_manager,td.gantry.job manager,model_td_gantry_job,td_factory3d.group_td_manager,1,1,1,1
+access_td_cut_part_user,td.cut.part user,model_td_cut_part,td_factory3d.group_td_user,1,0,0,0
+access_td_cut_part_manager,td.cut.part manager,model_td_cut_part,td_factory3d.group_td_manager,1,1,1,1
+access_td_cut_map_user,td.cut.map user,model_td_cut_map,td_factory3d.group_td_user,1,0,0,0
+access_td_cut_map_manager,td.cut.map manager,model_td_cut_map,td_factory3d.group_td_manager,1,1,1,1
+access_td_cut_map_line_user,td.cut.map.line user,model_td_cut_map_line,td_factory3d.group_td_user,1,0,0,0
+access_td_cut_map_line_manager,td.cut.map.line manager,model_td_cut_map_line,td_factory3d.group_td_manager,1,1,1,1
+access_td_downtime_reason_wizard,td.downtime.reason.wizard,model_td_downtime_reason_wizard,mrp.group_mrp_user,1,1,1,0
+access_td_cut_plan_import_wizard,td.cut.plan.import.wizard,model_td_cut_plan_import_wizard,td_factory3d.group_td_manager,1,1,1,0
+access_td_cut_part_import_wizard,td.cut.part.import.wizard,model_td_cut_part_import_wizard,td_factory3d.group_td_manager,1,1,1,0
+access_res_config_settings_td_manager,res.config.settings f3d manager,base.model_res_config_settings,td_factory3d.group_td_manager,1,1,1,0
+access_mrp_loss_td_user,mrp.workcenter.productivity.loss f3d user,mrp.model_mrp_workcenter_productivity_loss,td_factory3d.group_td_user,1,0,0,0

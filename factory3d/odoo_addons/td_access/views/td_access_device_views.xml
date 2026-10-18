@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_access_device_list" model="ir.ui.view">
-        <field name="name">f3d.access.device.list</field>
-        <field name="model">f3d.access.device</field>
+    <record id="view_td_access_device_list" model="ir.ui.view">
+        <field name="name">td.access.device.list</field>
+        <field name="model">td.access.device</field>
         <field name="arch" type="xml">
             <list string="Пристрої СКУД" editable="bottom">
                 <field name="code"/>
@@ -21,9 +21,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_device_form" model="ir.ui.view">
-        <field name="name">f3d.access.device.form</field>
-        <field name="model">f3d.access.device</field>
+    <record id="view_td_access_device_form" model="ir.ui.view">
+        <field name="name">td.access.device.form</field>
+        <field name="model">td.access.device</field>
         <field name="arch" type="xml">
             <form string="Пристрій СКУД">
                 <sheet>
@@ -66,9 +66,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_device_search" model="ir.ui.view">
-        <field name="name">f3d.access.device.search</field>
-        <field name="model">f3d.access.device</field>
+    <record id="view_td_access_device_search" model="ir.ui.view">
+        <field name="name">td.access.device.search</field>
+        <field name="model">td.access.device</field>
         <field name="arch" type="xml">
             <search string="Пристрої СКУД">
                 <field name="code"/>
@@ -84,9 +84,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_device" model="ir.actions.act_window">
+    <record id="action_td_access_device" model="ir.actions.act_window">
         <field name="name">Пристрої</field>
-        <field name="res_model">f3d.access.device</field>
+        <field name="res_model">td.access.device</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

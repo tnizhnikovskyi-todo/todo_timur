@@ -94,7 +94,7 @@ class BioStarClient:
     def request(self, method, path, json=None, params=None, write=False, _retry=True):
         if write and not self.write_enabled:
             raise BioStarWriteDisabled(None, None,
-                                       "Запис у BioStar вимкнено стоп-краном factory3d.access.write_enabled")
+                                       "Запис у BioStar вимкнено стоп-краном td.access.write_enabled")
         if not self.session_id and path != '/api/login':
             self.login()
         resp = self._send(method, path, json=json, params=params)

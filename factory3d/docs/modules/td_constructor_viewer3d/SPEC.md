@@ -1,16 +1,16 @@
-# factory3d_constructor_viewer — специфікація
+# td_constructor_viewer3d — специфікація
 
 Міст «Конструктор» → «Переглядач» (етап 2, CD-25). Технічне рішення — [ARCHITECTURE.md](ARCHITECTURE.md). Суміжні
-контракти: `factory3d_viewer` R-01 п. 3 (провайдери), R-19 (злиття), R-25 (точка розширення ядра), Додаток A.15;
-`factory3d_constructor` (M-xx моделей `f3d.site`, `f3d.layout.version`, `f3d.placement`, `f3d.slot`, `f3d.equipment.variant`).
+контракти: `td_viewer3d` R-01 п. 3 (провайдери), R-19 (злиття), R-25 (точка розширення ядра), Додаток A.15;
+`td_constructor` (M-xx моделей `td.site`, `td.layout.version`, `td.placement`, `td.slot`, `td.equipment.variant`).
 
 ## 0. Дерево файлів
 
 ```
-factory3d_constructor_viewer/
-  __manifest__.py            depends factory3d_constructor, factory3d_viewer; auto_install; assets
-  models/viewer_provider.py  f3d.viewer.provider.layout (AbstractModel, sequence 180)
-  models/layout_version.py   _inherit f3d.layout.version: create/unlink → подія шини
+td_constructor_viewer3d/
+  __manifest__.py            depends td_constructor, td_viewer3d; auto_install; assets
+  models/viewer_provider.py  td.viewer.provider.layout (AbstractModel, sequence 180)
+  models/layout_version.py   _inherit td.layout.version: create/unlink → подія шини
   tools/layout.py            diff(base, active) → {moved, added, hidden, replaced, frames}; load_inventory
   controllers/kiosk_model.py GET /f3d/kiosk/<token>/layout/model/<variant_id>
   static/src/layout/layout.js          applyLayout, moveNode; реєстрація розширення
@@ -22,21 +22,21 @@ factory3d_constructor_viewer/
 
 ## 1. Маніфест
 
-`name` «Завод 3D: розкладка конструктора у переглядачі», `version 19.0.1.0.0`, `depends = [factory3d_constructor,
-factory3d_viewer]`, `auto_install = True`, `data = []`. Assets: `web.assets_backend` і `factory3d_viewer.assets_kiosk` —
+`name` «Завод 3D: розкладка конструктора у переглядачі», `version 19.0.1.0.0`, `depends = [td_constructor,
+td_viewer3d]`, `auto_install = True`, `data = []`. Assets: `web.assets_backend` і `td_viewer3d.assets_kiosk` —
 `static/src/layout/*.js`; `web.assets_unit_tests` — `static/tests/hoot/*`.
 
 ## 9. Алгоритми й правила
 
 **R-01 Payload `layout`.** `build_layout(env)` (`tools/layout.py`). Версії: перша площадка з діючою (`active_version_id`) версією,
-відмінною від бази (`is_seed`). Немає такої, немає права `read` на `f3d.site|layout.version|slot|placement|equipment.variant`
+відмінною від бази (`is_seed`). Немає такої, немає права `read` на `td.site|layout.version|slot|placement|equipment.variant`
 або знімка — `None`, ключ у payload не додається (кіоск — тихо, без `denied`/`error`). Формат (метри, градуси; координати
 заводу: x уздовж, y впоперек; `rot` — проти годинникової):
 
 | Ключ | Зміст |
 |---|---|
 | `site`, `version`, `base_version` | `{id, code, name}`; `{id, n, published_at}`; `{id, n}` |
-| `moved` | `{код: {dx, dy, drot, delev}}`: розміщення за `f3d_code`, місця за префіксом, кожна комірка за кодом; зсув центра відносно бази |
+| `moved` | `{код: {dx, dy, drot, delev}}`: розміщення за `td_code`, місця за префіксом, кожна комірка за кодом; зсув центра відносно бази |
 | `added` | `[{code, kind: placement\|slot, name, category, front, dims {L,W,H}, x, y, rot, elev, model_url\|null, variant_id, template, params, cells [{code, lx, ly, lz, w, d, h, kind}]}]`; `lx, ly` — від центра місця, `lz` — від відмітки шару |
 | `hidden` | `[код]`: прибрані розміщення й місця, а також старі комірки замінених місць |
 | `replaced` | `[префікс місця]`: змінено параметри шаблону — старий каркас і комірки ховаються, нове місце в `added` |
@@ -72,14 +72,14 @@ Blender (x, y, z) → three (x, z, −y). Підписи й підсвічува
 
 ## 4. Права
 
-Нових немає. Розділ `layout` — `_f3d_group = factory3d_base.group_f3d_user` (збирач закриває розділ для інших як `denied`);
+Нових немає. Розділ `layout` — `_f3d_group = td_factory3d.group_td_user` (збирач закриває розділ для інших як `denied`);
 додатково `has_access("read")` на моделі з R-01 — для кіоску й користувачів без прав «Конструктора» ключа немає.
 
 ## 7. API
 
 Нових маршрутів, крім кіоскового GLB (R-06), немає: `layout` їде в `/f3d/viewer/data` (повний payload, схема 1.x, адитивно — viewer
 Додаток A.15), у `/f3d/viewer/delta` (`patch.layout` — повна заміна, `null` — скинути) і в `/f3d/kiosk/<токен>/…`.
-Шина: `_f3d_viewer_bus_models = [f3d.layout.version, f3d.site]`, подія `kind=state` з кодом площадки.
+Шина: `_f3d_viewer_bus_models = [td.layout.version, td.site]`, подія `kind=state` з кодом площадки.
 
 ## 12. Acceptance Criteria
 
@@ -87,7 +87,7 @@ Blender (x, y, z) → three (x, z, −y). Підписи й підсвічува
 |---|---|---|
 | AC-01 | є діюча версія зі зсунутим CNC-2, новим розміщенням, прибраним UNLOAD-3 / збирається payload / `layout.moved["CNC-2"]`, `added`, `hidden` заповнені | `test_moved_added_hidden_replaced` |
 | AC-02 | немає опублікованої версії / payload / ключа `layout` немає | `test_no_published_version_no_key` |
-| AC-03 | користувач без `group_f3d_user` або кіоск без права читання версій / payload / ключа немає, без помилки | `test_rights`, `test_kiosk_silent_without_read_access` |
+| AC-03 | користувач без `group_td_user` або кіоск без права читання версій / payload / ключа немає, без помилки | `test_rights`, `test_kiosk_silent_without_read_access` |
 | AC-04 | публікація / шина й дельта / `patch.layout` повна, після видалення версії — `null` | `test_bus_event_and_delta`, `test_delta_after_version_removed_clears_layout` |
 | AC-05 | змінені параметри шаблону місця / payload / `replaced`, старі комірки в `hidden`, нове місце в `added` | `test_cell_disabled_is_replacement`, `test_variant_change_is_replacement` |
 | AC-06 | опис сцени містить положення коду / payload / `moved` від положення з опису | `test_inventory_pose_is_baseline` |
@@ -99,12 +99,12 @@ Blender (x, y, z) → three (x, z, −y). Підписи й підсвічува
 
 ## 13. План тестування
 
-Python: `F3D_TEST_INSTALL=factory3d_base,factory3d_viewer,factory3d_constructor,factory3d_constructor_viewer
-factory3d/tools/odoo/run_tests.sh <db> /factory3d_constructor_viewer`. HOOT (`tests/test_hoot.py`, фільтр
-`@factory3d_constructor_viewer`) і точка розширення (`factory3d_viewer`, `extension.test.js`, R-25). Огляд на демо-шаблоні:
+Python: `F3D_TEST_INSTALL=td_factory3d,td_viewer3d,td_constructor,td_constructor_viewer3d
+factory3d/tools/odoo/run_tests.sh <db> /td_constructor_viewer3d`. HOOT (`tests/test_hoot.py`, фільтр
+`@td_constructor_viewer3d`) і точка розширення (`td_viewer3d`, `extension.test.js`, R-25). Огляд на демо-шаблоні:
 CNC-2 на 3 м, нова машина з каталогу, FG-R5 з 5 ярусами, UNLOAD-3 прибрано.
 
 ## 14. Definition of Done
 
-Python- і HOOT-тести моста й `factory3d_viewer` зелені; демо-набір (`/factory3d_viewer,/test_factory3d_viewer`) зелений з
+Python- і HOOT-тести моста й `td_viewer3d` зелені; демо-набір (`/td_viewer3d,/test_td_viewer3d`) зелений з
 встановленим мостом; без опублікованої версії «Переглядач» відтворює поведінку до моста.

@@ -1,7 +1,7 @@
 """ТК-01 (follow_odoo, AC-07), ТК-10 (працівники з Odoo), ТК-15 (Odoo-пульт наскрізно), ТП-06 (частково).
 
-Потребує Odoo 19 з модулем factory3d_iot_sim 19.0.2.0.0 на ШАБЛОННІЙ базі (демо-бази немає):
-``F3D_TEST_INSTALL=factory3d_iot_sim tools/odoo/new_db.sh f3d_w6 && ... update.sh f3d_w6``;
+Потребує Odoo 19 з модулем td_iot_sim 19.0.2.0.0 на ШАБЛОННІЙ базі (демо-бази немає):
+``F3D_TEST_INSTALL=td_iot_sim tools/odoo/new_db.sh f3d_w6 && ... update.sh f3d_w6``;
 ``ODOO_HTTP_INTERFACE=0.0.0.0 tools/odoo/serve.sh f3d_w6 18069``. Змінні: STAND_ODOO_URL (з хоста), STAND_ODOO_DB.
 Дані (РЦ, наряди, працівники) сідуються тут же через XML-RPC. Без Odoo тести пропускаються.
 """
@@ -41,7 +41,7 @@ class Odoo:
                       fields=["res_id"])[0]["res_id"]
 
     def param(self, key, value):
-        self.k("ir.config_parameter", "set_param", "factory3d.iot_sim." + key, value)
+        self.k("ir.config_parameter", "set_param", "td.iot_sim." + key, value)
 
 
 @pytest.fixture(scope="module")
@@ -50,7 +50,7 @@ def odoo():
         httpx.get(ODOO + "/f3d/sim/health", timeout=3)
         return Odoo()
     except Exception:  # noqa: BLE001
-        pytest.skip("Odoo з factory3d_iot_sim недоступний (STAND_ODOO_URL)")
+        pytest.skip("Odoo з td_iot_sim недоступний (STAND_ODOO_URL)")
 
 
 def _seed(od: Odoo):
@@ -180,38 +180,38 @@ def test_tk10_biostar_people_from_odoo(follow, api, host, env_get):
 @pytest.mark.timeout(600)
 def test_tk15_odoo_panel_end_to_end(follow, odoo, api):
     """AC-25…29, 33, 58, 59: пульт Odoo: зв'язок, режим/прискорення, сценарій, збій, рівень 0 при зупинці сервісу."""
-    panel = odoo.k("f3d.sim.panel", "search", [], limit=1) or [odoo.k("f3d.sim.panel", "create", {})]
+    panel = odoo.k("td.sim.panel", "search", [], limit=1) or [odoo.k("td.sim.panel", "create", {})]
     pid = panel[0]
-    odoo.k("f3d.sim.panel", "action_check", [pid])
-    p = odoo.k("f3d.sim.panel", "read", [pid], fields=["state", "version", "mode", "level0_state"])[0]
+    odoo.k("td.sim.panel", "action_check", [pid])
+    p = odoo.k("td.sim.panel", "read", [pid], fields=["state", "version", "mode", "level0_state"])[0]
     assert p["state"] in ("online", "degraded") and p["version"]
-    cron_id = odoo.xid("factory3d_iot_sim", "cron_iot_sim")
+    cron_id = odoo.xid("td_iot_sim", "cron_iot_sim")
     cron0 = odoo.k("ir.cron", "read", [cron_id], fields=["active"])[0]
     assert cron0["active"] is False and p["level0_state"] == "auto_off"                   # AC-26
     # 2) режим scenario + прискорення 5
-    odoo.k("f3d.sim.panel", "write", [pid], {"mode_new": "scenario", "factor_new": 5})
-    odoo.k("f3d.sim.panel", "action_apply_mode", [pid])
-    odoo.k("f3d.sim.panel", "action_apply_factor", [pid])
+    odoo.k("td.sim.panel", "write", [pid], {"mode_new": "scenario", "factor_new": 5})
+    odoo.k("td.sim.panel", "action_apply_mode", [pid])
+    odoo.k("td.sim.panel", "action_apply_factor", [pid])
     st = api.get("/status").json()
     assert st["mode"] == "scenario" and st["factor"] == 5
     # 3) сценарій filter_clogged RV-05 value=285
-    scen = odoo.xid("factory3d_iot_sim", "scenario_filter_clogged")
-    dev = odoo.k("f3d.sim.device", "search", [("code", "=", "RV-05")], limit=1)
-    assert dev, "RV-05 немає у f3d.sim.device"
-    wiz = odoo.k("f3d.sim.run.wizard", "create", {"scenario_id": scen, "device_id": dev[0],
+    scen = odoo.xid("td_iot_sim", "scenario_filter_clogged")
+    dev = odoo.k("td.sim.device", "search", [("code", "=", "RV-05")], limit=1)
+    assert dev, "RV-05 немає у td.sim.device"
+    wiz = odoo.k("td.sim.run.wizard", "create", {"scenario_id": scen, "device_id": dev[0],
                                                   "params_text": '{"value": 285, "ramp_min": 1}'})
-    act = odoo.k("f3d.sim.run.wizard", "action_confirm", [wiz])
-    run = odoo.k("f3d.sim.run", "read", [act["res_id"]], fields=["state", "name", "sim_run_id"])[0]
+    act = odoo.k("td.sim.run.wizard", "action_confirm", [wiz])
+    run = odoo.k("td.sim.run", "read", [act["res_id"]], fields=["state", "name", "sim_run_id"])[0]
     assert run["state"] == "running" and run["sim_run_id"] and run["name"].startswith("RUN/")     # AC-27
     assert api.wait(lambda: api.sig("ventilation/units/RV-05/filter_dp_pa") > 250, timeout=60, step=1)
-    ev = odoo.k("f3d.sim.event", "search_count", [("kind", "=", "command")])
+    ev = odoo.k("td.sim.event", "search_count", [("kind", "=", "command")])
     assert ev >= 1
     # 4) збій CNC-2 і скидання
-    cnc = odoo.k("f3d.sim.device", "search", [("code", "=", "CNC-2")], limit=1)
-    fw = odoo.k("f3d.sim.fault.wizard", "create", {"device_id": cnc[0], "reason": "generic"})
-    odoo.k("f3d.sim.fault.wizard", "action_confirm", [fw])
+    cnc = odoo.k("td.sim.device", "search", [("code", "=", "CNC-2")], limit=1)
+    fw = odoo.k("td.sim.fault.wizard", "create", {"device_id": cnc[0], "reason": "generic"})
+    odoo.k("td.sim.fault.wizard", "action_confirm", [fw])
     assert api.get("/devices/CNC-2").json()["state"] == "fault"                            # AC-28
-    odoo.k("f3d.sim.device", "action_clear", cnc)
+    odoo.k("td.sim.device", "action_clear", cnc)
     assert api.get("/devices/CNC-2").json()["state"] != "fault"
     # 5) зупинка сервісу → через level0_after_min=1 хв крон рівня 0 вмикається; запуск → вимикається (AC-29/58)
     docker("stop", "iot_sim-iot_sim-1")
@@ -231,20 +231,20 @@ def test_tk15_odoo_panel_end_to_end(follow, odoo, api):
         if not odoo.k("ir.cron", "read", [cron_id], fields=["active"])[0]["active"]:
             break
     assert odoo.k("ir.cron", "read", [cron_id], fields=["active"])[0]["active"] is False
-    odoo.k("f3d.sim.panel", "write", [pid], {"mode_new": "follow_odoo"})
-    odoo.k("f3d.sim.panel", "action_apply_mode", [pid])
+    odoo.k("td.sim.panel", "write", [pid], {"mode_new": "follow_odoo"})
+    odoo.k("td.sim.panel", "action_apply_mode", [pid])
 
 
 @pytest.mark.timeout(300)
 def test_tp06_odoo_signal_refresh_and_events(follow, odoo):
-    """ТП-06 (частково, без 24 год): refresh f3d.sim.signal 1017 записів ≤ 5 с; 2 000 подій через API-03; ротація."""
-    panel = odoo.k("f3d.sim.panel", "search", [], limit=1)[0]
+    """ТП-06 (частково, без 24 год): refresh td.sim.signal 1017 записів ≤ 5 с; 2 000 подій через API-03; ротація."""
+    panel = odoo.k("td.sim.panel", "search", [], limit=1)[0]
     t0 = time.perf_counter()
-    odoo.k("f3d.sim.panel", "action_refresh_signals", [panel])
+    odoo.k("td.sim.panel", "action_refresh_signals", [panel])
     dt = time.perf_counter() - t0
-    n = odoo.k("f3d.sim.signal", "search_count", [("protocol", "!=", "none")])
+    n = odoo.k("td.sim.signal", "search_count", [("protocol", "!=", "none")])
     assert n >= 1000 and dt <= 5, (n, dt)
-    ev0 = odoo.k("f3d.sim.event", "search_count", [])
+    ev0 = odoo.k("td.sim.event", "search_count", [])
     stamp = int(time.time())
     batch = [{"ts": "2026-10-12T10:00:00+03:00", "kind": "info", "device": "SAW-1", "message": f"stand event {i}",
               "payload": {"event_id": f"stand-{stamp}-{i:05d}"}} for i in range(2000)]
@@ -254,6 +254,6 @@ def test_tp06_odoo_signal_refresh_and_events(follow, odoo):
         r = httpx.post(ODOO + "/f3d/sim/events", json={"events": batch[i:i + 100]}, headers=hdr, timeout=30)
         assert r.status_code == 200 and r.json()["accepted"] == 100, r.text
     assert time.perf_counter() - t0 < 60
-    assert odoo.k("f3d.sim.event", "search_count", []) >= ev0 + 2000
+    assert odoo.k("td.sim.event", "search_count", []) >= ev0 + 2000
     again = httpx.post(ODOO + "/f3d/sim/events", json={"events": batch[:50]}, headers=hdr).json()
     assert again["accepted"] == 0                                  # дедуплікація за event_id

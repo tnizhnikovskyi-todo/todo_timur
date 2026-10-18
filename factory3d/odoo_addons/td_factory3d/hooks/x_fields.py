@@ -2,7 +2,7 @@
 import logging
 import re
 
-_logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
+_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
 
 X_NAME_RE = re.compile(r'^x_[a-z0-9_]+$')
 STOCK_PICKING_X_FIELDS = [('x_dock', 'Ворота (док)'), ('x_truck', 'Фура'), ('x_vehicle', 'Техніка')]
@@ -53,7 +53,7 @@ def restore_manual_fields(env, model, spec):
 def drop_demo(env, mismatches=None):
     """Крок 10: прибрати демо-представлення й поля x_*, лише коли звірка чиста й keep_x_fields=False."""
     res = {'views_dropped': 0, 'fields_dropped': 0}
-    keep = env['ir.config_parameter'].sudo().get_param('factory3d.base.keep_x_fields') == 'True'
+    keep = env['ir.config_parameter'].sudo().get_param('td.base.keep_x_fields') == 'True'
     if mismatches or keep:
         return res
     for xmlid in DEMO_VIEWS:
@@ -77,19 +77,19 @@ def drop_demo(env, mismatches=None):
 def restore_on_uninstall(env):
     """§5.4 кроки 1–3: відновити x_dock/x_truck/x_vehicle і значення з пакетів; повертає лічильники."""
     res = {'fields_restored': 0, 'x_dock': 0, 'x_truck': 0, 'x_vehicle': 0}
-    param = env['ir.config_parameter'].sudo().get_param('factory3d.base.uninstall_restore_x_fields')
+    param = env['ir.config_parameter'].sudo().get_param('td.base.uninstall_restore_x_fields')
     if param != 'True':
         return res
     res['fields_restored'] = restore_manual_fields(env, 'stock.picking', STOCK_PICKING_X_FIELDS)
     cr = env.cr
-    cr.execute("UPDATE stock_picking p SET x_dock = l.f3d_code FROM stock_picking_batch b "
+    cr.execute("UPDATE stock_picking p SET x_dock = l.td_code FROM stock_picking_batch b "
                "JOIN stock_location l ON l.id = b.dock_id WHERE p.batch_id = b.id")
     res['x_dock'] = cr.rowcount
-    cr.execute("UPDATE stock_picking p SET x_truck = COALESCE(b.f3d_code, b.f3d_truck) "
+    cr.execute("UPDATE stock_picking p SET x_truck = COALESCE(b.td_code, b.td_truck) "
                "FROM stock_picking_batch b WHERE p.batch_id = b.id "
-               "AND (b.f3d_code IS NOT NULL OR b.f3d_truck IS NOT NULL)")
+               "AND (b.td_code IS NOT NULL OR b.td_truck IS NOT NULL)")
     res['x_truck'] = cr.rowcount
-    cr.execute("UPDATE stock_picking p SET x_vehicle = e.f3d_code FROM stock_picking_batch b "
-               "JOIN maintenance_equipment e ON e.id = b.f3d_vehicle_id WHERE p.batch_id = b.id")
+    cr.execute("UPDATE stock_picking p SET x_vehicle = e.td_code FROM stock_picking_batch b "
+               "JOIN maintenance_equipment e ON e.id = b.td_vehicle_id WHERE p.batch_id = b.id")
     res['x_vehicle'] = cr.rowcount
     return res

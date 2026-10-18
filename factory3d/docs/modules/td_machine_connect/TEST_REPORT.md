@@ -1,4 +1,4 @@
-# TEST_REPORT factory3d_machine_connect (W9)
+# TEST_REPORT td_machine_connect (W9)
 
 Дата: **2026-10-15**. Стенд — процесний режим без Docker (див. DEPLOY_TEST.md): iot_sim 0.1.0, колектор + пакет `f3d_collector_mc`,
 Odoo 19 CE (один процес), посів `tests/stand/seed_pre.py` (демо-копії `odoo` немає). Прогін: `pytest <пакет> -m stand`
@@ -9,7 +9,7 @@ Odoo 19 CE (один процес), посів `tests/stand/seed_pre.py` (дем
 
 | Набір | Результат |
 |---|---|
-| Odoo `/factory3d_machine_connect` (F3D_TEST_INSTALL) | 0 failed of 127 |
+| Odoo `/td_machine_connect` (F3D_TEST_INSTALL) | 0 failed of 127 |
 | Пакет `pytest -m "not stand"` | 53 passed |
 | ТК (16) | PASS 12 (04, 09, 11, 12 — частково на фейку); FAIL 2 (03, 15); НЕ ПРОГНАН 1 (14) ; ТК-04 Store з Odoo на iot_sim — xfail |
 | ТБ (10) | PASS 9 (ТБ-03 — крім критерію логу); FAIL-частина ТБ-03 |
@@ -19,15 +19,15 @@ Odoo 19 CE (один процес), посів `tests/stand/seed_pre.py` (дем
 
 | Файл | Суть |
 |---|---|
-| `f3d_collector_mc/ua_values.py`, `models/f3d_machine_downtime.py` | Подія без ActiveState (BaseEventType) йшла з `active=false` → запис «Події верстатів» архівувався й зникав зі списку. Тепер `active=true` для не-тривог (тести `test_plain_event_without_activestate_is_active`, `test_plain_event_is_not_archived`) |
+| `f3d_collector_mc/ua_values.py`, `models/td_machine_downtime.py` | Подія без ActiveState (BaseEventType) йшла з `active=false` → запис «Події верстатів» архівувався й зникав зі списку. Тепер `active=true` для не-тривог (тести `test_plain_event_without_activestate_is_active`, `test_plain_event_is_not_archived`) |
 | `models/maintenance_request.py` | Заявка з тривоги створюється до переходу в `fault` і чіплялась до відкритого простою «Очікування»; простій `fault` лишався без заявки (R-08). Тепер лише до простою `fault` (`test_request_before_fault_goes_to_fault_downtime`) |
 | `f3d_collector_mc/ua_session.py` | При SignAndEncrypt і чужому сертифікаті asyncua дає лише TimeoutError — додано підказку «server certificate» (ТБ-07; `test_secure_connect_failure_names_server_certificate`) |
 
 ## Не виправлено — потребує рішення
 
-* **ТП-01 дедлоки**: 72 `deadlock detected` і 278 `could not serialize` при 35 верстатах/с + крон `_cron_tick`/`_cron_oee`/оновлення `f3d_collector` (одночасні UPDATE рядків `f3d_machine`/`f3d_collector`); API-02: 281×200, p95 451 мс, p99 1819 мс, max 10,6 с, 0×5xx, перекриттів 0. Критерій «0 дедлоків» не виконано.
+* **ТП-01 дедлоки**: 72 `deadlock detected` і 278 `could not serialize` при 35 верстатах/с + крон `_cron_tick`/`_cron_oee`/оновлення `td_collector` (одночасні UPDATE рядків `td_machine`/`td_collector`); API-02: 281×200, p95 451 мс, p99 1819 мс, max 10,6 с, 0×5xx, перекриттів 0. Критерій «0 дедлоків» не виконано.
 * **ТБ-03**: одноразовий токен `t` потрапляє в access-log werkzeug (URL з query); SPEC вимагає 0 збігів. Решта ТБ-03 PASS (100×403, одноразовість, `no-store`, 401).
-* **ТП-04**: POST `/f3d/telemetry/event` з 27 стосами (EV-02) → HTTP 500. Аналіз: дефекту коду модуля не виявлено — юніт-тест `test_ev02_stacks_27_like_adapter` і HttpCase `TestGantryStackHttp` (POST /f3d/telemetry/event, 27 стосів, payload як у адаптері woodstore: kind/source/hash/items) дають 200 і оновлюють усі 27 стосів. Обробники в `f3d.push.event._f3d_receive` ізольовані savepoint-ом, тож 500 не з `_f3d_apply_ws`; причина на стенді не відтворена (потрібен лог Odoo стенда). Payload тесту стенда приведено до формату адаптера (додано `hash`).
+* **ТП-04**: POST `/f3d/telemetry/event` з 27 стосами (EV-02) → HTTP 500. Аналіз: дефекту коду модуля не виявлено — юніт-тест `test_ev02_stacks_27_like_adapter` і HttpCase `TestGantryStackHttp` (POST /f3d/telemetry/event, 27 стосів, payload як у адаптері woodstore: kind/source/hash/items) дають 200 і оновлюють усі 27 стосів. Обробники в `td.push.event._f3d_receive` ізольовані savepoint-ом, тож 500 не з `_f3d_apply_ws`; причина на стенді не відтворена (потрібен лог Odoo стенда). Payload тесту стенда приведено до формату адаптера (додано `hash`).
 * **ТК-03**: крок «події I0001/I0002» — подій у «Подіях верстатів» за прогін немає (див. обмеження iot_sim); решта перевірок (журнал без розривів, 0 записів `write_uid`=бот, 0 команд) пройшла до цього кроку.
 * **ТК-15**: крок 2 — автостарт I/O-верстата (SLIDE-1) після вмикання `auto_start_enabled` не спрацював за 120 с (не розібрано); п'ять запобіжників — не досягнуто у прогоні. Раніше ТК-05 (автостарт I/O) — PASS.
 
@@ -59,7 +59,7 @@ Odoo 19 CE (один процес), посів `tests/stand/seed_pre.py` (дем
 | 11 | iot_sim | PASS | кроки 1–3, 5, 6; крок 4 (злиття, Shop Floor) — MAN |
 | 12 | фейк | PASS | nodata ≤ 180 с, автодій 0, відновлення; на iot_sim — xfail (п. 5) |
 | 13 | iot_sim | PASS | інтервал idle [T1,T2) ±6 с, без дублікатів, буфер спорожнів |
-| 14 | — | НЕ ПРОГНАН | `factory3d_viewer` не встановлено (середовище) |
+| 14 | — | НЕ ПРОГНАН | `td_viewer3d` не встановлено (середовище) |
 | 15 | iot_sim | FAIL | див. вище |
 | 16 | iot_sim | PASS | простій закрито на межі зміни (календар «до now+9 хв»), OEE `closed`, повтор крону без змін, формули ±1e-4/±0,5 |
 

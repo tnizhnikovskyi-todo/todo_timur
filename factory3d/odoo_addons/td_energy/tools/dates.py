@@ -68,14 +68,14 @@ def shift_start(now_utc, hours_by_weekday):
 
 
 def param_bool(env, name, default=False):
-    val = env["ir.config_parameter"].sudo().get_param("factory3d.energy." + name)
+    val = env["ir.config_parameter"].sudo().get_param("td.energy." + name)
     if val is None or val is False or val == "":
         return default
     return str(val).strip().lower() in ("1", "true", "yes", "on")
 
 
 def param_float(env, name, default=0.0):
-    val = env["ir.config_parameter"].sudo().get_param("factory3d.energy." + name)
+    val = env["ir.config_parameter"].sudo().get_param("td.energy." + name)
     try:
         return float(val)
     except (TypeError, ValueError):

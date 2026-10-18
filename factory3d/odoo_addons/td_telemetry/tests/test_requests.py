@@ -25,7 +25,7 @@ class RequestCase(F3DTelemetryCase):
         self.addCleanup(frozen.stop)
 
     def requests(self, sig):
-        return self.env["maintenance.request"].search([("f3d_signal_id", "=", sig.id)])
+        return self.env["maintenance.request"].search([("td_signal_id", "=", sig.id)])
 
     def chatter(self, rec):
         return " | ".join(rec.message_ids.mapped("body"))
@@ -45,10 +45,10 @@ class TestOpenRequest(RequestCase):
         self.assertEqual(req.priority, "2")
         first = self.env["maintenance.stage"].search([("done", "=", False)], order="sequence, id", limit=1)
         self.assertEqual(req.stage_id, first)
-        self.assertEqual(req.f3d_equipment_code, "RV-05-T")
-        self.assertEqual(req.f3d_origin, "threshold")
-        self.assertAlmostEqual(req.f3d_value, 285.2)
-        self.assertEqual(req.f3d_threshold, 250)
+        self.assertEqual(req.td_equipment_code, "RV-05-T")
+        self.assertEqual(req.td_origin, "threshold")
+        self.assertAlmostEqual(req.td_value, 285.2)
+        self.assertEqual(req.td_threshold, 250)
         self.assertEqual(req.request_date, fields.Date.today())
         for part in ("ventilation/units/RV-05-T/filter_dp_pa", "BAC-T-105", "14.10.2026 09:00"):
             self.assertIn(part, req.description)

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <record id="seq_f3d_gantry_job" model="ir.sequence">
+    <record id="seq_td_gantry_job" model="ir.sequence">
         <field name="name">Портал: завдання</field>
-        <field name="code">f3d.gantry.job</field>
+        <field name="code">td.gantry.job</field>
         <field name="prefix">ПОРТ/</field>
         <field name="padding">5</field>
         <field name="company_id" eval="False"/>
     </record>
-    <record id="seq_f3d_cut_map" model="ir.sequence">
+    <record id="seq_td_cut_map" model="ir.sequence">
         <field name="name">Розкрій: карти розкрою</field>
-        <field name="code">f3d.cut.map</field>
+        <field name="code">td.cut.map</field>
         <field name="prefix">КР/</field>
         <field name="padding">5</field>
         <field name="company_id" eval="False"/>

@@ -5,15 +5,15 @@ from odoo.exceptions import AccessError, ValidationError
 
 
 class F3dAccessEventReprocessWizard(models.TransientModel):
-    _name = 'f3d.access.event.reprocess.wizard'
+    _name = 'td.access.event.reprocess.wizard'
     _description = 'СКУД: повторна обробка подій'
 
     mode = fields.Selection(
         [('reprocess', 'Обробити події повторно'), ('repoll', 'Опитати BioStar за період')],
         required=True, default='reprocess')
     server_id = fields.Many2one(
-        'f3d.access.server', required=True,
-        default=lambda self: self.env['f3d.access.server'].search([('active', '=', True)], limit=1))
+        'td.access.server', required=True,
+        default=lambda self: self.env['td.access.server'].search([('active', '=', True)], limit=1))
     date_from = fields.Datetime(required=True, default=lambda self: fields.Datetime.now() - timedelta(hours=24))
     date_to = fields.Datetime(required=True, default=fields.Datetime.now)
     only_errors = fields.Boolean(string='Лише нові й з помилками', default=True)
@@ -29,14 +29,14 @@ class F3dAccessEventReprocessWizard(models.TransientModel):
 
     def action_run(self):
         self.ensure_one()
-        if not self.env.su and not self.env.user.has_group('factory3d_access.group_f3d_access_admin'):
+        if not self.env.su and not self.env.user.has_group('td_access.group_td_access_admin'):
             raise AccessError("Виконувати повторну обробку може лише адміністратор СКУД.")
         server = self.server_id.sudo()
         if self.mode == 'reprocess':
             domain = [('server_id', '=', server.id), ('ts', '>=', self.date_from), ('ts', '<=', self.date_to)]
             if self.only_errors:
                 domain.append(('process_state', 'in', ('new', 'error')))
-            events = self.env['f3d.access.event'].sudo().search(domain)
+            events = self.env['td.access.event'].sudo().search(domain)
             events.action_reprocess()
             after = events.exists()
             self.result = "Оброблено подій: %d; з помилками: %d" % (

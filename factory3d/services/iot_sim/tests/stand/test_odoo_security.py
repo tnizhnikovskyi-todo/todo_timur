@@ -11,8 +11,8 @@ import pytest
 from .test_odoo_e2e import DB, EXPORT, ODOO, Odoo
 
 TOOLS = Path(__file__).resolve().parents[4] / "tools" / "odoo"
-MODELS = ["f3d.sim.panel", "f3d.sim.device", "f3d.sim.signal", "f3d.sim.scenario", "f3d.sim.run", "f3d.sim.event"]
-TOKEN_FIELDS = ("f3d_sim_token", "f3d_sim_export_token", "f3d_sim_url")
+MODELS = ["td.sim.panel", "td.sim.device", "td.sim.signal", "td.sim.scenario", "td.sim.run", "td.sim.event"]
+TOKEN_FIELDS = ("td_sim_token", "td_sim_export_token", "td_sim_url")
 
 
 @pytest.fixture(scope="module")
@@ -21,7 +21,7 @@ def odoo():
         httpx.get(ODOO + "/f3d/sim/health", timeout=3)
         return Odoo()
     except Exception:  # noqa: BLE001
-        pytest.skip("Odoo з factory3d_iot_sim недоступний (STAND_ODOO_URL)")
+        pytest.skip("Odoo з td_iot_sim недоступний (STAND_ODOO_URL)")
 
 
 def _user(od, login, group_xmlids):
@@ -43,7 +43,7 @@ def _as(login, pw):
 
 
 def test_tb08_group_user_cannot_write_and_manager_has_no_tokens(odoo):
-    _user(odoo, "f3d_sim_reader_t", ["base.group_user", "factory3d_base.group_f3d_user"])
+    _user(odoo, "f3d_sim_reader_t", ["base.group_user", "td_factory3d.group_td_user"])
     reader = _as("f3d_sim_reader_t", "Pw-f3d_sim_reader_t-1!")
     for m in MODELS:
         assert reader(m, "search_count", []) >= 0                      # читати можна
@@ -55,7 +55,7 @@ def test_tb08_group_user_cannot_write_and_manager_has_no_tokens(odoo):
                 reader(m, "write", ids, {"create_uid": 1})
             with pytest.raises(xmlrpc.Fault, match="AccessError|not allowed|доступ"):
                 reader(m, "unlink", ids)
-    _user(odoo, "f3d_sim_mgr_t", ["base.group_user", "factory3d_base.group_f3d_manager"])
+    _user(odoo, "f3d_sim_mgr_t", ["base.group_user", "td_factory3d.group_td_manager"])
     mgr = _as("f3d_sim_mgr_t", "Pw-f3d_sim_mgr_t-1!")
     f = mgr("res.config.settings", "fields_get")
     assert not any(n in f for n in TOKEN_FIELDS)
@@ -79,7 +79,7 @@ def test_tb09_tokens_not_interchangeable(odoo):
 @pytest.mark.timeout(400)
 def test_tb10_neutralize_sql_on_copy():
     """neutralize.sql на копії бази: крони неактивні, кнопки → UserError «не налаштовано»."""
-    env = {**os.environ, "F3D_TEST_INSTALL": "factory3d_iot_sim", "ODOO_HTTP_INTERFACE": "127.0.0.1"}
+    env = {**os.environ, "F3D_TEST_INSTALL": "td_iot_sim", "ODOO_HTTP_INTERFACE": "127.0.0.1"}
     db, port = "f3d_w6n", "18070"
     run = lambda *a, **kw: subprocess.run(a, env=env, check=True, capture_output=True, text=True, **kw)
     subprocess.run([str(TOOLS / "serve.sh"), "stop", db], env=env, check=False, capture_output=True)
@@ -87,11 +87,11 @@ def test_tb10_neutralize_sql_on_copy():
     run(str(TOOLS / "new_db.sh"), db)
     run(str(TOOLS / "update.sh"), db)
     psql = ["bash", "-c", f'source {TOOLS}/env.sh; "$PG_BINDIR/psql" -X -q -d {db} -v ON_ERROR_STOP=1 -c "$1"', "_"]
-    run(*psql, "UPDATE ir_config_parameter SET value='http://127.0.0.1:8090' WHERE key='factory3d.iot_sim.url'")
-    run(*psql, "UPDATE ir_config_parameter SET value='tok' WHERE key='factory3d.iot_sim.token'")
+    run(*psql, "UPDATE ir_config_parameter SET value='http://127.0.0.1:8090' WHERE key='td.iot_sim.url'")
+    run(*psql, "UPDATE ir_config_parameter SET value='tok' WHERE key='td.iot_sim.token'")
     run(*psql, "UPDATE ir_cron SET active=true WHERE id IN (SELECT res_id FROM ir_model_data WHERE module="
-               "'factory3d_iot_sim' AND model='ir.cron')")
-    sql = (Path(__file__).resolve().parents[4] / "odoo_addons" / "factory3d_iot_sim" / "neutralize.sql").read_text()
+               "'td_iot_sim' AND model='ir.cron')")
+    sql = (Path(__file__).resolve().parents[4] / "odoo_addons" / "td_iot_sim" / "neutralize.sql").read_text()
     subprocess.run(["bash", "-c", f'source {TOOLS}/env.sh; "$PG_BINDIR/psql" -X -q -d {db} -v ON_ERROR_STOP=1 -f -'],
                    input=sql, env=env, check=True, capture_output=True, text=True)
     run(str(TOOLS / "serve.sh"), db, port)
@@ -109,17 +109,17 @@ def test_tb10_neutralize_sql_on_copy():
 
         def k(model, method, *a, **kw):
             return o.execute_kw(db, uid, "admin", model, method, list(a), kw)
-        crons = k("ir.cron", "read", [k("ir.model.data", "search_read", [("module", "=", "factory3d_iot_sim"),
+        crons = k("ir.cron", "read", [k("ir.model.data", "search_read", [("module", "=", "td_iot_sim"),
                                                                   ("name", "=", n)], fields=["res_id"])[0]["res_id"]
-                                      for n in ("cron_iot_sim", "cron_f3d_sim_status")], fields=["active"])
+                                      for n in ("cron_iot_sim", "cron_td_sim_status")], fields=["active"])
         assert crons and not any(c["active"] for c in crons)
-        panel = k("f3d.sim.panel", "search", [], limit=1)[0]
-        assert k("f3d.sim.panel", "read", [panel], fields=["state"])[0]["state"] == "unconfigured"
-        res = k("f3d.sim.panel", "action_check", [panel])        # перевірка зв'язку — повідомлення danger, не виняток
+        panel = k("td.sim.panel", "search", [], limit=1)[0]
+        assert k("td.sim.panel", "read", [panel], fields=["state"])[0]["state"] == "unconfigured"
+        res = k("td.sim.panel", "action_check", [panel])        # перевірка зв'язку — повідомлення danger, не виняток
         assert res["params"]["type"] == "danger" and any(w in res["params"]["message"] for w in ("налаштовано", "вимкнено"))
         for method in ("action_stop_all", "action_reset", "action_apply_factor"):
             with pytest.raises(xmlrpc.Fault, match="налаштовано|configured|вимкнено|заборонен"):
-                k("f3d.sim.panel", method, [panel])
+                k("td.sim.panel", method, [panel])
     finally:
         subprocess.run([str(TOOLS / "serve.sh"), "stop", db], env=env, check=False, capture_output=True)
 

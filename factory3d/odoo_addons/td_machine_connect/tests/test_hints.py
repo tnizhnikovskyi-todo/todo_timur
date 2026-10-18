@@ -13,15 +13,15 @@ class TestHints(DowntimeMixin, F3DMachineCase):
     def ev(self, *args, **kw):
         """EV-01 як від плагіна. Обхід дефекту telemetry: `_f3d_handler_models` не знаходить обробників
         (`registry.descendants` повертає імена, а не класи) — підставляємо обробник модуля."""
-        handler = type(self.env["f3d.push.handler"])
-        with patch.object(handler, "_f3d_handler_models", lambda self, route: ["f3d.push.handler.machine_connect"]):
+        handler = type(self.env["td.push.handler"])
+        with patch.object(handler, "_f3d_handler_models", lambda self, route: ["td.push.handler.machine_connect"]):
             return self.ev_ua(*args, **kw)
 
     def _assert_e0421(self, m, dt):
         self.assertEqual(dt.loss_id, self.env.ref("mrp.block_reason1"))
         self.assertEqual((dt.reason_source, dt.reason_state), ("hint", "to_confirm"))
         self.assertEqual(dt.hint_text, "E0421 Помилка шпинделя осі Z")
-        event = self.env["f3d.machine.event"].search([("machine_id", "=", m.id)])
+        event = self.env["td.machine.event"].search([("machine_id", "=", m.id)])
         self.assertEqual(len(event), 1)
         self.assertEqual(dt.event_id, event)
         self.assertEqual(event.downtime_id, dt)
@@ -34,8 +34,8 @@ class TestHints(DowntimeMixin, F3DMachineCase):
         self.env.invalidate_all()
         self._assert_e0421(m, m.current_downtime_id)
         self.ev(m, "E0421", 5, "Помилка шпинделя осі Z", "09:42:01")
-        self.assertEqual(self.env["f3d.push.event"].sudo().search_count([("route", "=", "mc_opcua")]), 1)
-        self.assertEqual(self.env["f3d.machine.event"].search_count([("machine_id", "=", m.id)]), 1)
+        self.assertEqual(self.env["td.push.event"].sudo().search_count([("route", "=", "mc_opcua")]), 1)
+        self.assertEqual(self.env["td.machine.event"].search_count([("machine_id", "=", m.id)]), 1)
 
     def test_event_before_state(self):
         """AC-21 (зворотний порядок): подія раніше за стан на ≤ 120 с — те саме."""
@@ -70,7 +70,7 @@ class TestHints(DowntimeMixin, F3DMachineCase):
         self.assertEqual(dt.state_kind, "idle")
         self.assertEqual(dt.hint_loss_id, self.env.ref("mrp.block_reason0"))
         self.assertIn(mo.name, dt.hint_text)
-        self.assertEqual(dt.loss_id, self.env.ref("factory3d_machine_connect.loss_unknown"))
+        self.assertEqual(dt.loss_id, self.env.ref("td_machine_connect.loss_unknown"))
         self.assertEqual(dt.reason_state, "to_classify")
 
     def test_alarm_request_linked_once(self):
@@ -91,7 +91,7 @@ class TestHints(DowntimeMixin, F3DMachineCase):
         """Стенд ТК-02: звичайна подія (не тривога) з `active=false` не архівується, лишається у «Подіях верстатів»."""
         m = self.m_ua
         self.ev(m, "", 0, "CNC-2: Помилка шпинделя осі Z", "09:42:01", kind="event", active=False)
-        self.assertEqual(self.env["f3d.machine.event"].search_count([("machine_id", "=", m.id)]), 1)
+        self.assertEqual(self.env["td.machine.event"].search_count([("machine_id", "=", m.id)]), 1)
 
     def test_request_before_fault_goes_to_fault_downtime(self):
         """Стенд ТК-02: заявка з тривоги, створена до переходу в `fault`, не прив'язується до простою «Очікування»."""
@@ -103,7 +103,7 @@ class TestHints(DowntimeMixin, F3DMachineCase):
             {
                 "name": "Верстат: аварія",
                 "equipment_id": self.eq_ua.id,
-                "f3d_signal_id": m.sig_alarm_id.id,
+                "td_signal_id": m.sig_alarm_id.id,
                 "maintenance_team_id": self.team_mech.id,
             }
         )

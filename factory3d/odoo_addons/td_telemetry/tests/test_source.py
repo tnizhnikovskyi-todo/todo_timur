@@ -65,7 +65,7 @@ class SourceCase(F3DTelemetryCase):
         cls._setup_telemetry_fixtures()
 
     def new_source(self, code, typ="modbus_tcp", params=None, user=None, **kw):
-        Src = self.env["f3d.source"]
+        Src = self.env["td.source"]
         if user:
             Src = Src.with_user(user)
         vals = {
@@ -206,11 +206,11 @@ class TestApplyStatus(SourceCase):
 @tagged(*TAGS)
 class TestLocalSource(SourceCase):
     def _patch(self):
-        return patch.object(type(self.env["f3d.source"]), "_f3d_local_types", lambda self: ["rest_vendor"])
+        return patch.object(type(self.env["td.source"]), "_f3d_local_types", lambda self: ["rest_vendor"])
 
     def _local(self):
         return (
-            self.env["f3d.source"]
+            self.env["td.source"]
             .with_user(self.user_manager)
             .create(
                 {
@@ -225,7 +225,7 @@ class TestLocalSource(SourceCase):
         )
 
     def _local_signal(self, src, **kw):
-        return self.env["f3d.signal"].create(
+        return self.env["td.signal"].create(
             {
                 "code": "infra/genset/GENSET-T/fuel_pct",
                 "name": "Паливо",
@@ -237,9 +237,9 @@ class TestLocalSource(SourceCase):
         )
 
     def test_default_no_local_types(self):
-        # базова реалізація (telemetry) повертає []; модулі-розширення (td_genset, factory3d_energy…) дописують
+        # базова реалізація (telemetry) повертає []; модулі-розширення (td_genset, td_energy…) дописують
         # свої типи через super(), тому перевіряємо саме її, а не результат усього ланцюжка
-        Source = self.env["f3d.source"]
+        Source = self.env["td.source"]
         base_impl = next(vars(c)["_f3d_local_types"] for c in reversed(type(Source).__mro__)
                          if "_f3d_local_types" in vars(c))
         self.assertEqual(base_impl(Source), [])
@@ -263,7 +263,7 @@ class TestLocalSource(SourceCase):
         msg = _msg(ctx)
         self.assertTrue("вкажіть колектор" in msg or "base_url" in msg, msg)
         with self.assertRaises(ValidationError) as ctx:
-            self.env["f3d.source"].create(
+            self.env["td.source"].create(
                 {"code": "LOCAL-T", "name": "x", "type": "rest_vendor", "params": VALID_PARAMS["rest_vendor"]}
             )
         self.assertIn("Джерело LOCAL-T: вкажіть колектор.", _msg(ctx))
@@ -274,17 +274,17 @@ class TestLocalSource(SourceCase):
             sig = self._local_signal(src)
             now = fields.Datetime.now()
             self.set_sql(sig, status="ok", last_ts=now - timedelta(hours=2))
-            self.env["f3d.signal"]._cron_stale()
+            self.env["td.signal"]._cron_stale()
             self.assertEqual(sig.status, "ok")
             self.assertNotIn("LOCAL-T", [s["code"] for s in self.col._config_payload()["sources"]])
 
     def test_local_ingest_module_only(self):
         with self._patch(), freeze_time("2026-10-14 08:00:00"):
             sig = self._local_signal(self._local())
-            res = self.env["f3d.signal"]._f3d_ingest([self.rd(sig, 75)], src="module")
+            res = self.env["td.signal"]._f3d_ingest([self.rd(sig, 75)], src="module")
             self.assertEqual(res["accepted"], 1)
             self.assertEqual(sig.last_value, 75)
-            self.assertEqual(self.env["f3d.reading"].search([("signal_id", "=", sig.id)]).src, "module")
+            self.assertEqual(self.env["td.reading"].search([("signal_id", "=", sig.id)]).src, "module")
             res = self.push([self.rd(sig, 76, at=10)])
             self.assertEqual(res["rejected"][0]["reason"], "foreign_signal")
 
@@ -304,9 +304,9 @@ class TestLocalSource(SourceCase):
             sig = self._local_signal(src)
             self.set_sql(sig, write_enabled=True)
             self.set_sql(src, write_enabled=True)
-            self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.write_enabled", "True")
+            self.env["ir.config_parameter"].sudo().set_param("td.telemetry.write_enabled", "True")
             with self.assertRaises(UserError) as ctx:
-                self.env["f3d.command"].with_user(self.user_manager).create({"signal_id": sig.id, "value": 1})
+                self.env["td.command"].with_user(self.user_manager).create({"signal_id": sig.id, "value": 1})
             self.assertIn("Джерело LOCAL-T без колектора: запис у пристрій неможливий.", _msg(ctx))
 
     def test_local_read_disabled(self):

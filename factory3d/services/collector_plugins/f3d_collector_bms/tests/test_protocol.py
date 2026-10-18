@@ -106,7 +106,7 @@ def _errors(schema, instance):
 
 
 def _telemetry_validate():
-    path = Path(__file__).resolve().parents[3].parent / "odoo_addons/factory3d_telemetry/tools/address.py"
+    path = Path(__file__).resolve().parents[3].parent / "odoo_addons/td_telemetry/tools/address.py"
     if not path.exists():
         return None
     spec = importlib.util.spec_from_file_location("f3d_tel_address", path)

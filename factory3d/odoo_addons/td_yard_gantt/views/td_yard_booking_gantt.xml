@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-09: Gantt бронювання воріт (DEC-1: потрібен web_gantt, Enterprise; тут не встановлюється й не тестується) -->
-    <record id="view_f3d_yard_booking_gantt" model="ir.ui.view">
-        <field name="name">f3d.yard.booking.gantt</field>
-        <field name="model">f3d.yard.booking</field>
+    <record id="view_td_yard_booking_gantt" model="ir.ui.view">
+        <field name="name">td.yard.booking.gantt</field>
+        <field name="model">td.yard.booking</field>
         <field name="arch" type="xml">
             <gantt string="Бронювання воріт" date_start="slot_start" date_stop="slot_end" default_group_by="dock_id"
                    default_scale="day" scales="day,week" color="color" pill_label="True"
@@ -28,7 +28,7 @@
         </field>
     </record>
 
-    <record id="factory3d_yard.action_f3d_yard_booking" model="ir.actions.act_window">
+    <record id="td_yard.action_td_yard_booking" model="ir.actions.act_window">
         <field name="view_mode">gantt,calendar,list,form</field>
     </record>
 </odoo>

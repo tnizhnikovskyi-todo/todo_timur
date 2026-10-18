@@ -1,4 +1,4 @@
-"""f3d.yard.visit: екран КПП (API-01/02, R-18), сповіщення R-21, крон no_show і auto_call_next (W4)."""
+"""td.yard.visit: екран КПП (API-01/02, R-18), сповіщення R-21, крон no_show і auto_call_next (W4)."""
 
 import logging
 from datetime import timedelta
@@ -10,8 +10,8 @@ from odoo.tools import SQL
 
 from ..tools import params as P
 from ..tools import tz
-from .f3d_yard_notify import f3d_yard_bus_add
-from .f3d_yard_visit import GRP_DISP, GRP_SEC, _f3d_yard_require
+from .td_yard_notify import f3d_yard_bus_add
+from .td_yard_visit import GRP_DISP, GRP_SEC, _f3d_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -52,17 +52,17 @@ def _ymdhm(dt):
 
 
 class F3dYardVisitKpp(models.Model):
-    _inherit = "f3d.yard.visit"
+    _inherit = "td.yard.visit"
 
     # ------------------------------------------------------------------ R-21
     def _f3d_yard_notify(self):
         res = super()._f3d_yard_notify()
         visits = self.sudo()
-        f3d_yard_bus_add(self.env, "f3d.yard.visit", visits.ids)
+        f3d_yard_bus_add(self.env, "td.yard.visit", visits.ids)
         ev = self._f3d_yard_viewer_event()
         if ev:
             for visit in visits:
-                ev._notify("f3d.yard.visit", [visit.name, visit.scene_code, visit.dock_code], "doc")
+                ev._notify("td.yard.visit", [visit.name, visit.scene_code, visit.dock_code], "doc")
         return res
 
     # ------------------------------------------------------------------ R-19 п. 1, 3: середні без відсутніх міток
@@ -148,7 +148,7 @@ class F3dYardVisitKpp(models.Model):
             "id": event.id,
             "ts": _hm(event.ts),
             "camera": event.camera_code or "",
-            "gate": event.gate_id.f3d_code or "",
+            "gate": event.gate_id.td_code or "",
             "direction": event.direction or "",
             "plate": event.plate_norm or "",
             "confidence": event.confidence,
@@ -166,7 +166,7 @@ class F3dYardVisitKpp(models.Model):
         block = gate._f3d_yard_check("open", "manual", now)
         return {
             "id": gate.id,
-            "code": gate.f3d_code,
+            "code": gate.td_code,
             "name": gate.name,
             "direction": gate.direction,
             "mode": gate.mode,
@@ -185,13 +185,13 @@ class F3dYardVisitKpp(models.Model):
         }
 
     def _f3d_yard_scale_card(self, now):
-        scale = self.env["f3d.yard.scale"].search([("company_id", "=", self.env.company.id)], limit=1)
+        scale = self.env["td.yard.scale"].search([("company_id", "=", self.env.company.id)], limit=1)
         if not scale:
             return None
         last = scale.last_weighing_id
         return {
             "id": scale.id,
-            "code": scale.f3d_code,
+            "code": scale.td_code,
             "weight_kg": scale.last_weight_kg,
             "stable": bool(scale.last_stable),
             "state": scale.capture_state,
@@ -213,10 +213,10 @@ class F3dYardVisitKpp(models.Model):
     def kpp_data(self, gate_ids=None):
         _f3d_yard_require(self.env, GRP_SEC)
         env = self.sudo().env
-        Visit, Gate, Event = env["f3d.yard.visit"], env["f3d.yard.gate"], env["f3d.yard.lpr.event"]
+        Visit, Gate, Event = env["td.yard.visit"], env["td.yard.gate"], env["td.yard.lpr.event"]
         now = fields.Datetime.now()
         is_disp = self.env.user.has_group(GRP_DISP)
-        walk_in_left = max(P.get_int(env, "walk_in_limit_per_day") - env["f3d.yard.walkin.wizard"]._walk_in_today(), 0)
+        walk_in_left = max(P.get_int(env, "walk_in_limit_per_day") - env["td.yard.walkin.wizard"]._walk_in_today(), 0)
         write_enabled = P.get_bool(env, "write_enabled")
         gate_domain = [("company_id", "in", (self.env.company.id, False))]
         if gate_ids:
@@ -236,7 +236,7 @@ class F3dYardVisitKpp(models.Model):
         )
         events |= Event.search([("kpp_alert", "=", True)], order="ts desc, id desc", limit=LIST_LIMIT)
         events = events.sorted(key=lambda e: (e.ts, e.id), reverse=True)
-        unassigned = env["f3d.yard.weighing"].search([("state", "=", "unassigned")], order="ts desc, id desc", limit=20)
+        unassigned = env["td.yard.weighing"].search([("state", "=", "unassigned")], order="ts desc, id desc", limit=20)
         scale_label = {"in": "В'їзд", "out": "Виїзд", "check": "Контрольне"}
         return {
             "now": _ymdhm(now),
@@ -280,10 +280,10 @@ class F3dYardVisitKpp(models.Model):
     def kpp_action(self, action, visit_id=None, event_id=None, gate_id=None, values=None):
         _f3d_yard_require(self.env, GRP_SEC)
         values = values or {}
-        Event = self.env["f3d.yard.lpr.event"]
+        Event = self.env["td.yard.lpr.event"]
         visit = self.browse(visit_id).exists() if visit_id else self.browse()
         event = Event.browse(event_id).exists() if event_id else Event
-        gate = self.env["f3d.yard.gate"].browse(gate_id).exists() if gate_id else self.env["f3d.yard.gate"]
+        gate = self.env["td.yard.gate"].browse(gate_id).exists() if gate_id else self.env["td.yard.gate"]
         message, result_action = "Готово", None
         if action in ("admit", "call", "leave", "weigh", "reject") and not visit and not (action == "reject" and event):
             raise UserError("Оберіть рейс.")
@@ -308,7 +308,7 @@ class F3dYardVisitKpp(models.Model):
                 result_action = {
                     "type": "ir.actions.act_window",
                     "name": "Рейс без броні",
-                    "res_model": "f3d.yard.walkin.wizard",
+                    "res_model": "td.yard.walkin.wizard",
                     "view_mode": "form",
                     "target": "new",
                     "context": {"default_plate": plate, "default_gate_id": gate.id},
@@ -337,16 +337,16 @@ class F3dYardVisitKpp(models.Model):
             event.action_dismiss()
             message = "Вирішено"
         elif action == "assign_weighing":
-            weighing = self.env["f3d.yard.weighing"].browse(values.get("weighing_id") or 0).exists()
+            weighing = self.env["td.yard.weighing"].browse(values.get("weighing_id") or 0).exists()
             if not weighing or not visit:
                 raise UserError("Оберіть зважування й рейс.")
             weighing.action_assign(visit.id)
             message = "Зважування призначено рейсу"
         else:
             raise UserError("Невідома дія КПП: %s" % action)
-        f3d_yard_bus_add(self.env, "f3d.yard.visit", visit.ids)
-        f3d_yard_bus_add(self.env, "f3d.yard.gate", gate.ids)
-        f3d_yard_bus_add(self.env, "f3d.yard.lpr.event", event.ids)
+        f3d_yard_bus_add(self.env, "td.yard.visit", visit.ids)
+        f3d_yard_bus_add(self.env, "td.yard.gate", gate.ids)
+        f3d_yard_bus_add(self.env, "td.yard.lpr.event", event.ids)
         return {"ok": True, "message": message, "action": result_action}
 
     @staticmethod
@@ -371,10 +371,10 @@ class F3dYardVisitKpp(models.Model):
                 "source": "manual",
                 "ts": fields.Datetime.now(),
             }
-            scale = self.env["f3d.yard.scale"].search([("company_id", "=", visit.company_id.id)], limit=1)
+            scale = self.env["td.yard.scale"].search([("company_id", "=", visit.company_id.id)], limit=1)
             if scale:
                 vals["scale_id"] = scale.id
-            self.env["f3d.yard.weighing"].create(vals)
+            self.env["td.yard.weighing"].create(vals)
             return None, "Зважування записано: %s кг" % ("%.0f" % weight)
         act = visit.action_weigh()
         if isinstance(act, dict) and act.get("target") == "new":
@@ -404,15 +404,15 @@ class F3dYardVisitKpp(models.Model):
     @api.model
     def _f3d_yard_auto_call_next(self):
         """Вільні ворота з чергою: «наступний на ворота» (P.auto_call_next)."""
-        docks = self.env["stock.location"].sudo().search([("f3d_kind", "=", "dock")], order="f3d_dock_no, id")
+        docks = self.env["stock.location"].sudo().search([("td_kind", "=", "dock")], order="td_dock_no, id")
         called = 0
         for dock in docks:
-            if not self.sudo().search_count([("state", "=", "queued"), ("side", "=", dock.f3d_side)]):
+            if not self.sudo().search_count([("state", "=", "queued"), ("side", "=", dock.td_side)]):
                 continue
             try:
                 with self.env.cr.savepoint():
                     if self.sudo()._f3d_yard_call_next(dock):
                         called += 1
             except (UserError, ValidationError) as exc:
-                _logger.info("auto_call_next %s: %s", dock.f3d_code, exc)
+                _logger.info("auto_call_next %s: %s", dock.td_code, exc)
         return called

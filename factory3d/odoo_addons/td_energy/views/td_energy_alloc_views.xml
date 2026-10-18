@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W3: V-11 (розподіл енергії на виробництво). Грошові поля — лише для group_f3d_energy_cost. -->
+<!-- W3: V-11 (розподіл енергії на виробництво). Грошові поля — лише для group_td_energy_cost. -->
 <odoo>
-    <record id="view_f3d_energy_alloc_list" model="ir.ui.view">
-        <field name="name">f3d.energy.alloc.list</field>
-        <field name="model">f3d.energy.alloc</field>
+    <record id="view_td_energy_alloc_list" model="ir.ui.view">
+        <field name="name">td.energy.alloc.list</field>
+        <field name="model">td.energy.alloc</field>
         <field name="arch" type="xml">
             <list create="false" edit="false" delete="false">
                 <field name="day"/>
@@ -14,7 +14,7 @@
                 <field name="pool_id"/>
                 <field name="kwh" sum="Разом"/>
                 <field name="minutes"/>
-                <field name="cost" sum="Разом" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="cost" sum="Разом" groups="td_energy.group_td_energy_cost"/>
                 <field name="quality" widget="badge" decoration-success="quality == 'measured'"
                        decoration-warning="quality in ('interpolated', 'partial')"
                        decoration-muted="quality == 'estimate'"/>
@@ -23,22 +23,22 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_alloc_pivot" model="ir.ui.view">
-        <field name="name">f3d.energy.alloc.pivot</field>
-        <field name="model">f3d.energy.alloc</field>
+    <record id="view_td_energy_alloc_pivot" model="ir.ui.view">
+        <field name="name">td.energy.alloc.pivot</field>
+        <field name="model">td.energy.alloc</field>
         <field name="arch" type="xml">
             <pivot>
                 <field name="production_id" type="row"/>
                 <field name="kind" type="col"/>
                 <field name="kwh" type="measure"/>
-                <field name="cost" type="measure" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="cost" type="measure" groups="td_energy.group_td_energy_cost"/>
             </pivot>
         </field>
     </record>
 
-    <record id="view_f3d_energy_alloc_graph" model="ir.ui.view">
-        <field name="name">f3d.energy.alloc.graph</field>
-        <field name="model">f3d.energy.alloc</field>
+    <record id="view_td_energy_alloc_graph" model="ir.ui.view">
+        <field name="name">td.energy.alloc.graph</field>
+        <field name="model">td.energy.alloc</field>
         <field name="arch" type="xml">
             <graph type="bar" stacked="1">
                 <field name="day"/>
@@ -48,9 +48,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_energy_alloc_search" model="ir.ui.view">
-        <field name="name">f3d.energy.alloc.search</field>
-        <field name="model">f3d.energy.alloc</field>
+    <record id="view_td_energy_alloc_search" model="ir.ui.view">
+        <field name="name">td.energy.alloc.search</field>
+        <field name="model">td.energy.alloc</field>
         <field name="arch" type="xml">
             <search>
                 <field name="production_id"/>
@@ -76,9 +76,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_energy_alloc_pivot" model="ir.actions.act_window">
+    <record id="action_td_energy_alloc_pivot" model="ir.actions.act_window">
         <field name="name">Енергія на виробництво</field>
-        <field name="res_model">f3d.energy.alloc</field>
+        <field name="res_model">td.energy.alloc</field>
         <field name="view_mode">pivot,graph,list</field>
     </record>
 </odoo>

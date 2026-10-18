@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <!-- DEC-3: ваги — окремий файл; ворота (gate_w, gate_e) — у f3d_yard_gate_data.xml (W2) -->
-    <record id="scale_truck" model="f3d.yard.scale">
-        <field name="f3d_code">TRUCK-SCALE</field>
+    <!-- DEC-3: ваги — окремий файл; ворота (gate_w, gate_e) — у td_yard_gate_data.xml (W2) -->
+    <record id="scale_truck" model="td.yard.scale">
+        <field name="td_code">TRUCK-SCALE</field>
         <field name="name">Автомобільні ваги АКСІС 60 т</field>
         <field name="pos_x">172.0</field>
         <field name="pos_y">-14.0</field>
@@ -11,7 +11,7 @@
         <field name="division_kg">20</field>
         <field name="auto_capture" eval="True"/>
     </record>
-    <record id="gate_e" model="f3d.yard.gate">
+    <record id="gate_e" model="td.yard.gate">
         <field name="scale_id" ref="scale_truck"/>
     </record>
 </odoo>

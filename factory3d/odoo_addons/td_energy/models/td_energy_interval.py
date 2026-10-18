@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from odoo import api, fields, models, tools
 
-from odoo.addons.factory3d_telemetry.tools.titles import fmt_num
+from odoo.addons.td_telemetry.tools.titles import fmt_num
 
 from ..tools import dates, live
 from ..tools import tariff as tariff_tools
@@ -15,7 +15,7 @@ _logger = logging.getLogger(__name__)
 COST_ROLES = ("incomer", "feeder", "consumer")
 MAX_SLOTS = 192
 INSERT_SQL = """
-INSERT INTO f3d_energy_interval (meter_id, node_id, role, ts_start, ts_end, day, hour_local, e_start, e_end, kwh,
+INSERT INTO td_energy_interval (meter_id, node_id, role, ts_start, ts_end, day, hour_local, e_start, e_end, kwh,
     kwh_export, kw_avg, zone_id, price, cost, quality, built_at)
 VALUES %s
 ON CONFLICT (meter_id, ts_start) DO UPDATE SET e_start = EXCLUDED.e_start, e_end = EXCLUDED.e_end,
@@ -27,14 +27,14 @@ ON CONFLICT (meter_id, ts_start) DO UPDATE SET e_start = EXCLUDED.e_start, e_end
 class F3dEnergyInterval(models.Model):
     """M-03. 15-хвилинний профіль лічильника; запис — лише кроном і майстром (R-04)."""
 
-    _name = "f3d.energy.interval"
-    _inherit = ["f3d.energy.day.mixin"]
+    _name = "td.energy.interval"
+    _inherit = ["td.energy.day.mixin"]
     _description = "Енергетика: 15-хвилинний інтервал"
     _order = "ts_start desc, meter_id"
     _log_access = False
     _rec_name = "ts_start"
 
-    meter_id = fields.Many2one("f3d.energy.meter", string="Лічильник", required=True, ondelete="cascade", index=True)
+    meter_id = fields.Many2one("td.energy.meter", string="Лічильник", required=True, ondelete="cascade", index=True)
     node_id = fields.Many2one(related="meter_id.node_id", store=True, index=True)
     role = fields.Selection(related="meter_id.role", store=True)
     ts_start = fields.Datetime(string="Початок (UTC)", required=True, index=True)
@@ -46,9 +46,9 @@ class F3dEnergyInterval(models.Model):
     kwh = fields.Float(string="кВт·год", digits=(12, 3))
     kwh_export = fields.Float(string="Віддано, кВт·год", digits=(12, 3), default=0)
     kw_avg = fields.Float(string="Середня, кВт", digits=(10, 2))
-    zone_id = fields.Many2one("f3d.energy.tariff.zone", string="Зона тарифу", ondelete="set null")
-    price = fields.Float(string="Ціна, грн/кВт·год", digits=(10, 4), groups="factory3d_energy.group_f3d_energy_cost")
-    cost = fields.Float(string="Вартість, грн", digits=(12, 2), groups="factory3d_energy.group_f3d_energy_cost")
+    zone_id = fields.Many2one("td.energy.tariff.zone", string="Зона тарифу", ondelete="set null")
+    price = fields.Float(string="Ціна, грн/кВт·год", digits=(10, 4), groups="td_energy.group_td_energy_cost")
+    cost = fields.Float(string="Вартість, грн", digits=(12, 2), groups="td_energy.group_td_energy_cost")
     quality = fields.Selection(
         [
             ("measured", "Виміряно"),
@@ -66,7 +66,7 @@ class F3dEnergyInterval(models.Model):
     _f3d_energy_interval_uniq = models.Constraint("UNIQUE(meter_id, ts_start)", "Інтервал для лічильника вже є.")
 
     def init(self):
-        tools.sql.create_index(self.env.cr, "f3d_energy_interval_day_idx", self._table, ["day", "role"])
+        tools.sql.create_index(self.env.cr, "td_energy_interval_day_idx", self._table, ["day", "role"])
 
     # --- R-04: крон -----------------------------------------------------------------------------------
     @api.model
@@ -75,7 +75,7 @@ class F3dEnergyInterval(models.Model):
             return 0
         now = dates.now_utc(self.env)
         meters = (
-            self.env["f3d.energy.meter"].sudo().search([("active", "=", True), ("e_import_signal_id", "!=", False)])
+            self.env["td.energy.meter"].sudo().search([("active", "=", True), ("e_import_signal_id", "!=", False)])
         )
         total = 0
         for meter in meters:
@@ -121,7 +121,7 @@ class F3dEnergyInterval(models.Model):
                 s0 = last + SLOT
             else:
                 first = (
-                    env["f3d.reading"]
+                    env["td.reading"]
                     .sudo()
                     .search([("signal_id", "=", signal.id), ("quality", "!=", "bad")], order="ts", limit=1)
                 )
@@ -154,7 +154,7 @@ class F3dEnergyInterval(models.Model):
         prev = self.search([("meter_id", "=", meter.id), ("ts_start", "=", s0 - SLOT)], limit=1)
         c_prev = prev.e_end if prev else None
         t_last = series.ts[-1] if series else None
-        Tariff = env["f3d.energy.tariff"].sudo()
+        Tariff = env["td.energy.tariff"].sudo()
         company = meter.company_id
         built_at = fields.Datetime.now()
         rows, built_to, tariffs = [], None, {}
@@ -189,7 +189,7 @@ class F3dEnergyInterval(models.Model):
                 tariff = Tariff._f3d_tariff_at(a, company)
                 tariffs[ld] = (tariff, tariff.zone_ids.sorted("sequence") if tariff else None)
                 if not tariff:
-                    env["f3d.energy.event"]._f3d_log(
+                    env["td.energy.event"]._f3d_log(
                         "warn",
                         "meter",
                         meter.code,
@@ -198,7 +198,7 @@ class F3dEnergyInterval(models.Model):
                         dedup_min=1440,
                     )
             tariff, zones = tariffs[ld]
-            zone, price = env["f3d.energy.tariff.zone"], 0.0
+            zone, price = env["td.energy.tariff.zone"], 0.0
             if tariff:
                 zone = tariff_tools.zone_for(local, zones) or zone
                 price = zone.price if zone else 0.0
@@ -227,7 +227,7 @@ class F3dEnergyInterval(models.Model):
         for t, v_prev, v, c in series.resets:
             if after < t <= until:
                 vals["counter_offset"] = c - v
-                self.env["f3d.energy.event"]._f3d_log(
+                self.env["td.energy.event"]._f3d_log(
                     "warn",
                     "meter",
                     meter.code,
@@ -249,13 +249,13 @@ class F3dEnergyInterval(models.Model):
         self._f3d_shift_kwh(now)
         self._f3d_load_signals(now)
         self._f3d_peak_event(now)
-        if "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("f3d.energy", ["energy"], "signal")
+        if "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("td.energy", ["energy"], "signal")
 
     @api.model
     def _f3d_shift_hours(self):
         """Мінімальний `hour_from` атендансів календаря зміни за днями тижня."""
-        raw = self.env["ir.config_parameter"].sudo().get_param("factory3d.energy.shift_calendar_id")
+        raw = self.env["ir.config_parameter"].sudo().get_param("td.energy.shift_calendar_id")
         if not (raw and str(raw).isdigit()):
             return {}
         cal = self.env["resource.calendar"].sudo().browse(int(raw)).exists()
@@ -274,12 +274,12 @@ class F3dEnergyInterval(models.Model):
         Лічильник без показання на `shift_start` (звітує менше зміни): енергія від першого показання, якість `uncertain` (E-4)."""
         if not param_bool(self.env, "read_enabled"):
             return
-        Signal = self.env["f3d.signal"].sudo()
+        Signal = self.env["td.signal"].sudo()
         start = dates.shift_start(now, self._f3d_shift_hours())
         readings = []
         for sig in Signal.search([("code", "=like", "energy/consumers/%/kwh_shift"), ("derived_from_id", "!=", False)]):
             src = sig.derived_from_id
-            meter = self.env["f3d.energy.meter"].sudo().search([("e_import_signal_id", "=", src.id)], limit=1)
+            meter = self.env["td.energy.meter"].sudo().search([("e_import_signal_id", "=", src.id)], limit=1)
             if not meter or not src.last_ts or src.last_ts <= start:
                 continue
             series = meter._f3d_counter_series(start, src.last_ts)
@@ -323,12 +323,12 @@ class F3dEnergyInterval(models.Model):
                     "q": "good",
                 }
             )
-        self.env["f3d.signal"].sudo()._f3d_energy_put(readings)
+        self.env["td.signal"].sudo()._f3d_energy_put(readings)
 
     @api.model
     def _f3d_peak_event(self, now):
         """R-13 п. 3: перший прогін після місцевої півночі — подія про пік 15-хв потужності за вчора."""
-        Event = self.env["f3d.energy.event"].sudo()
+        Event = self.env["td.energy.event"].sudo()
         today = dates.local_day(now)
         today_start = dates.local_day_bounds(today)[0]
         if Event.search_count([("kind", "=", "peak"), ("ts", ">=", today_start)]):
@@ -350,7 +350,7 @@ class F3dEnergyInterval(models.Model):
             local.strftime("%H:%M"),
         )
         level = "info"
-        tariff = self.env["f3d.energy.tariff"].sudo()._f3d_tariff_at(now)
+        tariff = self.env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
         if tariff and tariff.contract_kw:
             contract = tariff.contract_kw
             warn = contract * tariff.peak_warn_pct / 100
@@ -364,7 +364,7 @@ class F3dEnergyInterval(models.Model):
                 text += "; ліміт договірної потужності (%s кВт) не перевищено." % fmt_num(contract, 0)
         else:
             text += "."
-        node = self.env["f3d.energy.node"].sudo().search([("code", "=", "SWB-1")], limit=1)
+        node = self.env["td.energy.node"].sudo().search([("code", "=", "SWB-1")], limit=1)
         Event._f3d_log(level, "peak", "SWB-1", text, ts=now, node=node or None)
         return True
 
@@ -382,10 +382,10 @@ class F3dEnergyInterval(models.Model):
         )
         partial = 0.0
         if now > cur:
-            for meter in self.env["f3d.energy.meter"].sudo().search([("role", "=", "feeder"), ("active", "=", True)]):
+            for meter in self.env["td.energy.meter"].sudo().search([("role", "=", "feeder"), ("active", "=", True)]):
                 delta, _q = meter._f3d_counter_series(cur, now).delta(cur, now)
                 partial += delta or 0.0
-        _zone, price = self.env["f3d.energy.tariff"].sudo()._f3d_price_at(cur)
+        _zone, price = self.env["td.energy.tariff"].sudo()._f3d_price_at(cur)
         profile = live.day_profile([(r["hour_local"], r["kwh"]) for r in rows], dates.to_local(now).hour, partial)
         per_slot = {}
         for r in rows:
@@ -408,7 +408,7 @@ class F3dEnergyInterval(models.Model):
         d0, d1 = dates.local_day_bounds(first)[0], dates.local_day_bounds(today)[0]
         self.env.cr.execute(
             """SELECT day, hour_local, sum(kwh), count(*), count(*) FILTER (WHERE quality = 'missing')
-                 FROM f3d_energy_interval WHERE role = 'feeder' AND ts_start >= %s AND ts_start < %s
+                 FROM td_energy_interval WHERE role = 'feeder' AND ts_start >= %s AND ts_start < %s
                 GROUP BY day, hour_local""",
             (d0, d1),
         )
@@ -440,8 +440,8 @@ class F3dEnergyInterval(models.Model):
         now = dates.now_utc(self.env)
         deadline = time.monotonic() + 60
         cutoff = now - timedelta(days=int(param_float(self.env, "keep_interval_days", 400)))
-        self._f3d_delete_old("f3d_energy_interval", "ts_start", cutoff, deadline)
-        self._f3d_delete_old("f3d_energy_balance", "hour", cutoff, deadline)
+        self._f3d_delete_old("td_energy_interval", "ts_start", cutoff, deadline)
+        self._f3d_delete_old("td_energy_balance", "hour", cutoff, deadline)
         event_cutoff = now - timedelta(days=int(param_float(self.env, "keep_event_days", 90)))
-        self._f3d_delete_old("f3d_energy_event", "ts", event_cutoff, deadline)
+        self._f3d_delete_old("td_energy_event", "ts", event_cutoff, deadline)
         self.env.invalidate_all()

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- SPEC §6. nextcall для gc і day_reset ставить post_init_hook (Київ 03:00 / 00:05) -->
-    <record id="cron_f3d_yard_queue" model="ir.cron">
+    <record id="cron_td_yard_queue" model="ir.cron">
         <field name="name">Двір: черга, ворота, «не приїхала»</field>
-        <field name="model_id" ref="model_f3d_yard_visit"/>
+        <field name="model_id" ref="model_td_yard_visit"/>
         <field name="state">code</field>
         <field name="code">model._cron_queue()</field>
         <field name="user_id" ref="base.user_root"/>
@@ -11,9 +11,9 @@
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_yard_gc" model="ir.cron">
+    <record id="cron_td_yard_gc" model="ir.cron">
         <field name="name">Двір: ротація й персональні дані</field>
-        <field name="model_id" ref="model_f3d_yard_visit"/>
+        <field name="model_id" ref="model_td_yard_visit"/>
         <field name="state">code</field>
         <field name="code">model._cron_gc()</field>
         <field name="user_id" ref="base.user_root"/>
@@ -21,9 +21,9 @@
         <field name="interval_type">days</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_yard_day_reset" model="ir.cron">
+    <record id="cron_td_yard_day_reset" model="ir.cron">
         <field name="name">Двір: добові лічильники воріт</field>
-        <field name="model_id" ref="model_f3d_yard_visit"/>
+        <field name="model_id" ref="model_td_yard_visit"/>
         <field name="state">code</field>
         <field name="code">model._cron_day_reset()</field>
         <field name="user_id" ref="base.user_root"/>

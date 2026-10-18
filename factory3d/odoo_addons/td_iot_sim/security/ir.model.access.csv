@@ -1,20 +1,20 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_sim_panel_user,f3d.sim.panel user,model_f3d_sim_panel,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_panel_manager,f3d.sim.panel manager,model_f3d_sim_panel,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_panel_admin,f3d.sim.panel admin,model_f3d_sim_panel,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_device_user,f3d.sim.device user,model_f3d_sim_device,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_device_manager,f3d.sim.device manager,model_f3d_sim_device,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_device_admin,f3d.sim.device admin,model_f3d_sim_device,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_signal_user,f3d.sim.signal user,model_f3d_sim_signal,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_signal_manager,f3d.sim.signal manager,model_f3d_sim_signal,factory3d_base.group_f3d_manager,1,1,0,0
-access_f3d_sim_signal_admin,f3d.sim.signal admin,model_f3d_sim_signal,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_scenario_user,f3d.sim.scenario user,model_f3d_sim_scenario,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_scenario_manager,f3d.sim.scenario manager,model_f3d_sim_scenario,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_sim_scenario_admin,f3d.sim.scenario admin,model_f3d_sim_scenario,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_run_user,f3d.sim.run user,model_f3d_sim_run,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_run_manager,f3d.sim.run manager,model_f3d_sim_run,factory3d_base.group_f3d_manager,1,1,1,0
-access_f3d_sim_run_admin,f3d.sim.run admin,model_f3d_sim_run,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_event_user,f3d.sim.event user,model_f3d_sim_event,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_sim_event_admin,f3d.sim.event admin,model_f3d_sim_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_sim_fault_wizard,f3d.sim.fault.wizard,model_f3d_sim_fault_wizard,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_sim_run_wizard,f3d.sim.run.wizard,model_f3d_sim_run_wizard,factory3d_base.group_f3d_manager,1,1,1,1
+access_td_sim_panel_user,td.sim.panel user,model_td_sim_panel,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_panel_manager,td.sim.panel manager,model_td_sim_panel,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_panel_admin,td.sim.panel admin,model_td_sim_panel,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_device_user,td.sim.device user,model_td_sim_device,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_device_manager,td.sim.device manager,model_td_sim_device,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_device_admin,td.sim.device admin,model_td_sim_device,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_signal_user,td.sim.signal user,model_td_sim_signal,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_signal_manager,td.sim.signal manager,model_td_sim_signal,td_factory3d.group_td_manager,1,1,0,0
+access_td_sim_signal_admin,td.sim.signal admin,model_td_sim_signal,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_scenario_user,td.sim.scenario user,model_td_sim_scenario,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_scenario_manager,td.sim.scenario manager,model_td_sim_scenario,td_factory3d.group_td_manager,1,1,1,0
+access_td_sim_scenario_admin,td.sim.scenario admin,model_td_sim_scenario,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_run_user,td.sim.run user,model_td_sim_run,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_run_manager,td.sim.run manager,model_td_sim_run,td_factory3d.group_td_manager,1,1,1,0
+access_td_sim_run_admin,td.sim.run admin,model_td_sim_run,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_event_user,td.sim.event user,model_td_sim_event,td_factory3d.group_td_user,1,0,0,0
+access_td_sim_event_admin,td.sim.event admin,model_td_sim_event,td_factory3d.group_td_admin,1,1,1,1
+access_td_sim_fault_wizard,td.sim.fault.wizard,model_td_sim_fault_wizard,td_factory3d.group_td_manager,1,1,1,1
+access_td_sim_run_wizard,td.sim.run.wizard,model_td_sim_run_wizard,td_factory3d.group_td_manager,1,1,1,1

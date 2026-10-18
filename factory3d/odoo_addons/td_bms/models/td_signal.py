@@ -11,7 +11,7 @@ WRITABLE_SUFFIXES = ("/level", "/scene", "/mode", "/setpoint_day_c", "/setpoint_
 class F3dSignal(models.Model):
     """M-13: розширення сигналу: обмеження запису (R-30) і хук після прийому показань (R-20)."""
 
-    _inherit = "f3d.signal"
+    _inherit = "td.signal"
 
     @api.constrains("write_enabled")
     def _check_f3d_bms_write_enabled(self):
@@ -40,11 +40,11 @@ class F3dSignal(models.Model):
         if not codes:
             return res
         icp = self.env["ir.config_parameter"].sudo()
-        if icp.get_param("factory3d.bms.read_enabled", "False") not in ("True", "true", "1"):
+        if icp.get_param("td.bms.read_enabled", "False") not in ("True", "true", "1"):
             return res
         try:
             with self.env.cr.savepoint():
-                self.env["f3d.bms.check"].sudo()._f3d_bms_on_ingest(codes)
+                self.env["td.bms.check"].sudo()._f3d_bms_on_ingest(codes)
         except Exception:
             _logger.exception("bms after ingest")
         return res

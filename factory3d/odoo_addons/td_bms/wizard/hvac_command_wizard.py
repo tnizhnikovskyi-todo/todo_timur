@@ -11,11 +11,11 @@ FIELDS = {"mode": "mode_signal_id", "setpoint_day": "sp_day_signal_id", "setpoin
 class F3dBmsHvacCommandWizard(models.TransientModel):
     """M-09b: режим або уставка дахових установок і AHU-1 (FR-18, R-25)."""
 
-    _name = "f3d.bms.hvac.command.wizard"
+    _name = "td.bms.hvac.command.wizard"
     _description = "Будівля: команда установкам"
 
     unit_ids = fields.Many2many(
-        "f3d.bms.hvac.unit", string="Установки", required=True, domain="[('kind', 'in', ('roofvent', 'ahu'))]"
+        "td.bms.hvac.unit", string="Установки", required=True, domain="[('kind', 'in', ('roofvent', 'ahu'))]"
     )
     action = fields.Selection(
         [("mode", "Режим"), ("setpoint_day", "Уставка день"), ("setpoint_night", "Уставка ніч")],

@@ -3,14 +3,14 @@ from odoo.exceptions import ValidationError
 
 from ..tools import tariff as tariff_tools
 
-COST_GROUP = "factory3d_energy.group_f3d_energy_cost"
+COST_GROUP = "td_energy.group_td_energy_cost"
 CONTRACT_FIELDS = {"contract_kw", "peak_warn_pct", "date_from", "date_to", "active", "company_id"}
 GRID15_CODE = "energy/totals/grid15_kw"
 GRID15_TITLE = "Перевищення договірної потужності: {value} кВт при ліміті {threshold} кВт"
 
 
 class F3dEnergyTariff(models.Model):
-    _name = "f3d.energy.tariff"
+    _name = "td.energy.tariff"
     _description = "Енергетика: тариф"
     _inherit = ["mail.thread"]
     _order = "date_from desc"
@@ -25,7 +25,7 @@ class F3dEnergyTariff(models.Model):
     )
     date_from = fields.Date(string="Діє з", required=True, tracking=True)
     date_to = fields.Date(string="Діє по", tracking=True, help="Порожньо — безстроково")
-    zone_ids = fields.One2many("f3d.energy.tariff.zone", "tariff_id", string="Зони", copy=True)
+    zone_ids = fields.One2many("td.energy.tariff.zone", "tariff_id", string="Зони", copy=True)
     export_price = fields.Float(
         string="Ціна віддачі в мережу, грн/кВт·год", digits=(10, 4), default=0, groups=COST_GROUP
     )
@@ -106,7 +106,7 @@ class F3dEnergyTariff(models.Model):
     @api.model
     def _f3d_price_at(self, dt_utc, company=None):
         """R-05: (зона, ціна) за початком слота; немає тарифу чи зони — (порожня зона, 0.0)."""
-        zone_model = self.env["f3d.energy.tariff.zone"]
+        zone_model = self.env["td.energy.tariff.zone"]
         tariff = self._f3d_tariff_at(dt_utc, company)
         if not tariff:
             return zone_model, 0.0
@@ -118,7 +118,7 @@ class F3dEnergyTariff(models.Model):
     def _f3d_apply_contract_thresholds(self):
         """R-12 п. 1: пороги сигналу `grid15_kw` з договірної потужності тарифу."""
         signal = (
-            self.env["f3d.signal"].sudo().with_context(active_test=False).search([("code", "=", GRID15_CODE)], limit=1)
+            self.env["td.signal"].sudo().with_context(active_test=False).search([("code", "=", GRID15_CODE)], limit=1)
         )
         for rec in self[:1]:
             if not signal:
@@ -138,11 +138,11 @@ class F3dEnergyTariff(models.Model):
 
 
 class F3dEnergyTariffZone(models.Model):
-    _name = "f3d.energy.tariff.zone"
+    _name = "td.energy.tariff.zone"
     _description = "Енергетика: зона тарифу"
     _order = "tariff_id, sequence, id"
 
-    tariff_id = fields.Many2one("f3d.energy.tariff", required=True, ondelete="cascade", index=True)
+    tariff_id = fields.Many2one("td.energy.tariff", required=True, ondelete="cascade", index=True)
     sequence = fields.Integer(default=10)
     name = fields.Char(string="Зона", required=True)
     code = fields.Selection(

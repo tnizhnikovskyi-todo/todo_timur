@@ -1,6 +1,6 @@
 """Розділи `fire` і `evacuation` payload переглядача (SPEC R-20, R-21, API-02, Додаток C).
 
-Без залежності від factory3d_viewer: функції викликає міст-модуль M-17 і тести основного модуля.
+Без залежності від td_viewer3d: функції викликає міст-модуль M-17 і тести основного модуля.
 Читання — від імені користувача запиту (без sudo); персональних даних навчань у payload немає (лише кількості).
 """
 from .dates import local
@@ -31,18 +31,18 @@ def _group_state(zone):
 
 def build_fire(env, ctx=None):
     """R-20: розділ `fire`; порядок ключів фіксований."""
-    Norm, Zone, Device = env["f3d.fire.norm"], env["f3d.fire.zone"], env["f3d.fire.device"]
-    panel = env["f3d.fire.panel"].search([], limit=1)
+    Norm, Zone, Device = env["td.fire.norm"], env["td.fire.zone"], env["td.fire.device"]
+    panel = env["td.fire.panel"].search([], limit=1)
     rules = {key: _num(Norm.get(key)) for key in RULE_KEYS}
     loops = {}
-    for loop in env["f3d.fire.loop"].search([], order="number"):
+    for loop in env["td.fire.loop"].search([], order="number"):
         loops[str(loop.number)] = {
             "detectors": loop.detectors_count, "mcp": loop.mcp_count, "sounders": loop.sounders_count,
             "flame": loop.flame_count, "modules": loop.modules_count,
             "state": "ok" if loop.state == "unknown" else loop.state}
     groups, detectors = {}, 0
     for zone in Zone.search([], order="lsz_instance, id"):
-        base_code = zone.zone_id.f3d_code or ""
+        base_code = zone.zone_id.td_code or ""
         item = {
             "zone": "BOILER" if zone.code == "FA-BOILER" else base_code,
             "zone_name": zone.name, "kind": zone.kind, "kind_name": zone.kind_name or "",
@@ -61,7 +61,7 @@ def build_fire(env, ctx=None):
         item.update({"alarm_state": zone.state, "compliance": zone.compliance, "stale": bool(zone.stale)})
         groups[zone.code] = item
         detectors += zone.detector_count
-    systems = {s.code: s for s in env["f3d.fire.system"].search([])}
+    systems = {s.code: s for s in env["td.fire.system"].search([])}
     sprinkler = systems.get("SPRINKLERS")
     totals = {
         "detectors": detectors, "mcp": Device.search_count([("type", "=", "mcp")]),
@@ -70,7 +70,7 @@ def build_fire(env, ctx=None):
         "spark_detectors": Device.search_count([("type", "=", "spark_detector")]),
         "mcp_max_m": panel.compliance_mcp_max_m, "state": panel.state_text or "",
         "sprinkler": sprinkler.state_text if sprinkler else ""}
-    events = [e._payload_item() for e in env["f3d.fire.event"].search([], order="ts desc, id desc", limit=20)]
+    events = [e._payload_item() for e in env["td.fire.event"].search([], order="ts desc, id desc", limit=20)]
     panel_item = {
         "code": panel.code, "state": panel.state, "state_text": panel.state_text or "", "comm": panel.comm,
         "last_seen": local(panel.last_seen) or None, "alarms": panel.alarms_count, "faults": panel.faults_count,
@@ -113,18 +113,18 @@ def _render_steps(steps, drill_ctx):
 
 def build_evacuation(env, ctx=None):
     """R-21: розділ `evacuation`; порядок ключів — viewer A.13 + `drill_active`, `compliance`."""
-    Norm = env["f3d.fire.norm"]
-    panel = env["f3d.fire.panel"].search([], limit=1)
+    Norm = env["td.fire.norm"]
+    panel = env["td.fire.panel"].search([], limit=1)
     exits = [{"code": e.code, "x": e.x, "y": e.y, "side": e.side, "width": e.width_m, "ok": e.compliance == "ok"}
-             for e in env["f3d.fire.exit"].search([], order="id")]
-    route_recs = env["f3d.fire.route"].search([])
+             for e in env["td.fire.exit"].search([], order="id")]
+    route_recs = env["td.fire.route"].search([])
     routes = {}
     for route in route_recs.sorted(lambda r: (r.zone_id.sequence, r.id)):
         routes[route.zone_code] = {
             "name": route.name, "exit": route.exit_id.code, "length": route.length_m, "path": route.path or [],
             "ok": route.compliance == "ok", "norm": _num(route.norm_m)}
-    active = env["f3d.fire.drill"].search([("state", "=", "running")], limit=1)
-    template = env["f3d.fire.drill.template"].search([("is_default", "=", True)], limit=1)
+    active = env["td.fire.drill"].search([("state", "=", "running")], limit=1)
+    template = env["td.fire.drill.template"].search([("is_default", "=", True)], limit=1)
     zone = active.zone_id if active else template.default_zone_id
     device = active.device_id if active else template.default_device_id
     if active:
@@ -135,7 +135,7 @@ def build_evacuation(env, ctx=None):
             "elapsed_s": active.elapsed_s, "steps_done": active.steps_done, "steps_total": active.steps_total,
             "on_site": active.on_site_count, "evacuated": active.evacuated_count}
     else:
-        sounders = env["f3d.fire.device"].search_count([("type", "=", "sounder")])
+        sounders = env["td.fire.device"].search_count([("type", "=", "sounder")])
         steps = _render_steps(template.step_ids.sorted("sequence"), _SafeDict(
             detector=device.address or "—", zone=zone.name or "", sounders=sounders))
         drill_active = None

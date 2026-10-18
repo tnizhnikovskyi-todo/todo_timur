@@ -16,8 +16,8 @@ class TestIsland(EnergyMixin, F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Signal = cls.env["f3d.signal"]
-        cls.Outage = cls.env["f3d.energy.outage"]
+        cls.Signal = cls.env["td.signal"]
+        cls.Outage = cls.env["td.energy.outage"]
         cls.Outage.search([]).unlink()
         cls.T = cls.base_day(cls).replace(hour=10, minute=5)
 
@@ -56,7 +56,7 @@ class TestIsland(EnergyMixin, F3DEnergyCase):
                 "state": "closed",
             }
         )
-        rows = self.env["f3d.energy.balance"]._f3d_balance_hour(hour, hour + timedelta(hours=2))
+        rows = self.env["td.energy.balance"]._f3d_balance_hour(hour, hour + timedelta(hours=2))
         first = rows.filtered(lambda r: r.hour == hour)
         self.assertTrue(first)
         self.assertEqual(set(first.mapped("state")), {"skipped"})

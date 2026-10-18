@@ -1,17 +1,17 @@
 """R-16, R-17, R-18: розділи `energy` і `infra` payload переглядача (A.12, A.13). Працює з ORM через `env`;
-`factory3d_viewer` не потрібен (провайдери викликаються лише ним)."""
+`td_viewer3d` не потрібен (провайдери викликаються лише ним)."""
 
 import math
 
 from . import dates, live
 
-COST_GROUP = "factory3d_energy.group_f3d_energy_cost"
+COST_GROUP = "td_energy.group_td_energy_cost"
 ENERGY_PREFIXES = ("energy/", "infra/pv/", "infra/bess/", "infra/chp/", "infra/ats/", "infra/totals/")
 BAD_STATUS = ("stale", "unknown")
 SQRT3_U = math.sqrt(3) * 380.0  # AC-64: 12,18 кВт / 0,84 → 22 А (макет рахує за 380 В)
 
 SOURCE = (
-    "Лічильники PowerLogic PM5560 на вводах, фідерах і споживачах → Modbus TCP → колектор → Odoo (factory3d_energy)"
+    "Лічильники PowerLogic PM5560 на вводах, фідерах і споживачах → Modbus TCP → колектор → Odoo (td_energy)"
 )
 NOTE_ADD = "Енергія на МО — за лічильниками; «оцінка» — за паспортом і журналом часу."
 COUPLER_NOTE = (
@@ -41,7 +41,7 @@ MACHINE = {"working": "work", "setup": "work", "fault": "stop"}
 
 # --- спільні дрібниці -----------------------------------------------------------------------------------------
 def deep_merge(dst, src):
-    """Рекурсивне злиття словників (списки й скаляри — заміна). Копія `factory3d_viewer.tools.payload.deep_merge`
+    """Рекурсивне злиття словників (списки й скаляри — заміна). Копія `td_viewer3d.tools.payload.deep_merge`
     на випадок, коли переглядач не встановлено (X-23)."""
     for key, value in src.items():
         if isinstance(value, dict) and isinstance(dst.get(key), dict):
@@ -53,7 +53,7 @@ def deep_merge(dst, src):
 
 def merge_into(dst, src):
     try:
-        from odoo.addons.factory3d_viewer.tools.payload import deep_merge as viewer_merge  # noqa: PLC0415
+        from odoo.addons.td_viewer3d.tools.payload import deep_merge as viewer_merge  # noqa: PLC0415
     except ImportError:
         viewer_merge = deep_merge
     viewer_merge(dst, src)
@@ -95,7 +95,7 @@ def _show_cost(env, ctx):
 
 
 def _fresh(env):
-    return env["f3d.energy.node"]._f3d_fresh_values()
+    return env["td.energy.node"]._f3d_fresh_values()
 
 
 def _val(fresh, code):
@@ -111,9 +111,9 @@ def _txt(fresh, code):
 def wants_delta(changes, with_mrp):
     """R-18 п. 2–3: чи зачіпають зміни шини розділи `energy`/`infra`."""
     changes = changes or {}
-    if "f3d.energy" in changes:
+    if "td.energy" in changes:
         return True
-    if any(str(c).startswith(ENERGY_PREFIXES) for c in changes.get("f3d.signal", ())):
+    if any(str(c).startswith(ENERGY_PREFIXES) for c in changes.get("td.signal", ())):
         return True
     return with_mrp and any(m in changes for m in ("mrp.production", "mrp.workorder"))
 
@@ -131,7 +131,7 @@ def _line_of(node, nodes):
 
 def _machine_states(env):
     rows = (
-        env["f3d.signal"]
+        env["td.signal"]
         .sudo()
         .search_read(
             [("code", "=like", "workcenters/%/machine_state")],
@@ -148,7 +148,7 @@ def _machine_states(env):
 def _consumer_status(node, p_now, machine, busy, wc):
     """`wc` — РЦ вузла або порожній набір (немає доступу до `mrp.workcenter`: статус лише за потужністю)."""
     if wc:
-        code = wc.f3d_code or wc.code
+        code = wc.td_code or wc.code
         if code in machine:
             return MACHINE.get(machine[code], "idle")
         if wc.working_state == "blocked":
@@ -161,7 +161,7 @@ def _consumer_status(node, p_now, machine, busy, wc):
 
 def build_energy(env, ctx, payload):
     """R-16: пише `payload["energy"]`, `workcenters[*].energy`, поля енергії в `productions`."""
-    Node = env["f3d.energy.node"]
+    Node = env["td.energy.node"]
     if not Node.has_access("read"):
         return payload
     now = _now(env, ctx)
@@ -177,8 +177,8 @@ def build_energy(env, ctx, payload):
     energy = payload.setdefault("energy", {})
 
     # meta
-    tariff = env["f3d.energy.tariff"].sudo()._f3d_tariff_at(now)
-    _zone, price = env["f3d.energy.tariff"].sudo()._f3d_price_at(now)
+    tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
+    _zone, price = env["td.energy.tariff"].sudo()._f3d_price_at(now)
     meta = energy.setdefault("meta", {})
     meta["source"] = SOURCE
     meta["u_kv"] = "10 / 0,4"
@@ -209,7 +209,7 @@ def build_energy(env, ctx, payload):
         totals["chp_kw"] = round(snap["chp_kw"], 1)
     if snap["bess_kw"] is not None:
         totals["bess_kw"] = round(snap["bess_kw"], 1)
-    day = env["f3d.energy.interval"]._f3d_day_profile(now) if env["f3d.energy.interval"].has_access("read") else None
+    day = env["td.energy.interval"]._f3d_day_profile(now) if env["td.energy.interval"].has_access("read") else None
     if day:
         totals["kwh_today"] = day["kwh_today"]
         totals["peak_kw"] = day["peak_kw"]
@@ -322,7 +322,7 @@ def build_energy(env, ctx, payload):
         if shift is not None:
             item["kwh_shift"] = round(shift, 2)
         if wc and p_now is not None:
-            wc_energy[wc.f3d_code or wc.code] = {
+            wc_energy[wc.td_code or wc.code] = {
                 "p_now": _r(p_now),
                 "line": ln.code if ln else None,
             }
@@ -365,8 +365,8 @@ def build_energy(env, ctx, payload):
                         item["i_now"] = int(round(vals["i"]))
 
     # events
-    if env["f3d.energy.event"].has_access("read"):
-        rows = env["f3d.energy.event"].search_read(
+    if env["td.energy.event"].has_access("read"):
+        rows = env["td.energy.event"].search_read(
             [], ["ts", "level", "code", "text"], order="ts desc, id desc", limit=6
         )
         energy["events"] = [
@@ -402,21 +402,21 @@ def fill_productions(env, ctx, productions):
     Production = env["mrp.production"]
     if not names or not Production.has_access("read"):
         return
-    fields_ = ["name", "f3d_energy_kwh", "f3d_energy_state"] + (["f3d_energy_cost"] if show_cost else [])
+    fields_ = ["name", "td_energy_kwh", "td_energy_state"] + (["td_energy_cost"] if show_cost else [])
     rows = {r["name"]: r for r in Production.search_read([("name", "in", names)], fields_)}
     for item in productions:
         row = rows.get(item.get("name")) if isinstance(item, dict) else None
         if not row:
             continue
-        item["energy_kwh"] = round(row["f3d_energy_kwh"], 1)
-        item["energy_quality"] = row["f3d_energy_state"]
+        item["energy_kwh"] = round(row["td_energy_kwh"], 1)
+        item["energy_quality"] = row["td_energy_state"]
         if show_cost:
-            item["energy_cost"] = int(round(row["f3d_energy_cost"]))
+            item["energy_cost"] = int(round(row["td_energy_cost"]))
 
 
 # --- infra ----------------------------------------------------------------------------------------------------
 def _node_num(env, code, key, default):
-    node = env["f3d.energy.node"].search([("code", "=", code)], limit=1)
+    node = env["td.energy.node"].search([("code", "=", code)], limit=1)
     if node and node.equipment_id:
         val = node.equipment_id.sudo().f3d_get_num(key)
         if val:
@@ -425,7 +425,7 @@ def _node_num(env, code, key, default):
 
 
 def _open_outage(env):
-    Outage = env["f3d.energy.outage"]
+    Outage = env["td.energy.outage"]
     if not Outage.has_access("read"):
         return Outage.browse(), Outage.browse()
     last = Outage.search([], order="ts_start desc", limit=1)
@@ -434,7 +434,7 @@ def _open_outage(env):
 
 def build_infra(env, ctx, payload):
     """R-17: оновлює п'ять карток і ключі CE-03 `infra.totals`; решта `infra` не чіпається."""
-    Node = env["f3d.energy.node"]
+    Node = env["td.energy.node"]
     if not Node.has_access("read"):
         return payload
     now = _now(env, ctx)

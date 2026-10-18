@@ -6,7 +6,7 @@ import { canEditLayer, lockHint } from "./roles";
 import { E, S, V, layerOf } from "./state";
 import { $, K, fmt, fmtInt, h, ic, rad, rnd, toast } from "./util";
 
-export const DXF_PARSER_URL = "/factory3d_constructor/static/lib/dxf-parser/dxf-parser.min.js";
+export const DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
 export const DXF_MAX_BYTES = 5 * 1024 * 1024;
 export const DXF_MAX_SEGMENTS = 200000;
 export const DWG_MESSAGE = "Конвертуйте в DXF; DWG буде на сервері.";
@@ -372,7 +372,7 @@ function removeBtn(ly, dis) {
             onclick: () => {
                 ly.underlay = null;
                 V.uldata.delete(ly.id);
-                E.store.queue({ model: "f3d.layer", op: "write", uid: ly.id, vals: { underlay_attachment_id: false } });
+                E.store.queue({ model: "td.layer", op: "write", uid: ly.id, vals: { underlay_attachment_id: false } });
                 E.liveEdit();
                 renderDxfPanel();
             },

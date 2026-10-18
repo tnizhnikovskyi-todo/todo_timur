@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-01: форма приладу -->
-    <record id="view_f3d_fire_panel_form" model="ir.ui.view">
-        <field name="name">f3d.fire.panel.form</field>
-        <field name="model">f3d.fire.panel</field>
+    <record id="view_td_fire_panel_form" model="ir.ui.view">
+        <field name="name">td.fire.panel.form</field>
+        <field name="model">td.fire.panel</field>
         <field name="arch" type="xml">
             <form string="Прилад пожежної сигналізації">
                 <header>
                     <button name="action_recompute_compliance" type="object" string="Перерахувати норми"
-                            groups="factory3d_base.group_f3d_manager"/>
+                            groups="td_factory3d.group_td_manager"/>
                     <button name="action_view_3d_alarm" type="object" string="Тривога в 3D" class="btn-danger"
                             invisible="state not in ('alarm','prealarm') or not viewer_available"/>
                     <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
                             invisible="not viewer_available"/>
                     <button name="action_set_bacnet_device" type="object" string="Змінити BACnet device"
-                            groups="factory3d_base.group_f3d_admin"/>
+                            groups="td_factory3d.group_td_admin"/>
                     <button name="action_add_comment" type="object" string="Коментар у журнал"
-                            groups="factory3d_fire_safety.group_f3d_fire_drill"/>
+                            groups="td_fire_safety.group_td_fire_drill"/>
                 </header>
                 <div class="alert alert-danger" role="alert" invisible="state != 'alarm'">
                     <field name="state_text" readonly="1"/>
@@ -157,7 +157,7 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Сигнали" name="signals" groups="factory3d_base.group_f3d_manager">
+                        <page string="Сигнали" name="signals" groups="td_factory3d.group_td_manager">
                             <group>
                                 <field name="source_id"/>
                                 <field name="io_source_id"/>
@@ -178,9 +178,9 @@
     </record>
 
     <!-- V-02: огляд (kanban) -->
-    <record id="view_f3d_fire_panel_kanban" model="ir.ui.view">
-        <field name="name">f3d.fire.panel.kanban</field>
-        <field name="model">f3d.fire.panel</field>
+    <record id="view_td_fire_panel_kanban" model="ir.ui.view">
+        <field name="name">td.fire.panel.kanban</field>
+        <field name="model">td.fire.panel</field>
         <field name="arch" type="xml">
             <kanban create="false">
                 <field name="state"/>
@@ -199,7 +199,7 @@
                             <button name="action_view_events" type="object" class="btn btn-sm btn-secondary">Журнал</button>
                             <button name="action_f3d_show" type="object" class="btn btn-sm btn-secondary">3D</button>
                             <button name="action_recompute_compliance" type="object" class="btn btn-sm btn-secondary"
-                                    groups="factory3d_base.group_f3d_manager">Перерахувати</button>
+                                    groups="td_factory3d.group_td_manager">Перерахувати</button>
                         </div>
                     </t>
                 </templates>
@@ -207,16 +207,16 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_overview" model="ir.actions.act_window">
+    <record id="action_td_fire_overview" model="ir.actions.act_window">
         <field name="name">Огляд пожежної сигналізації</field>
-        <field name="res_model">f3d.fire.panel</field>
+        <field name="res_model">td.fire.panel</field>
         <field name="view_mode">kanban,form</field>
     </record>
 
     <!-- V-01a: шлейфи -->
-    <record id="view_f3d_fire_loop_list" model="ir.ui.view">
-        <field name="name">f3d.fire.loop.list</field>
-        <field name="model">f3d.fire.loop</field>
+    <record id="view_td_fire_loop_list" model="ir.ui.view">
+        <field name="name">td.fire.loop.list</field>
+        <field name="model">td.fire.loop</field>
         <field name="arch" type="xml">
             <list>
                 <field name="panel_id"/>
@@ -237,9 +237,9 @@
             </list>
         </field>
     </record>
-    <record id="view_f3d_fire_loop_form" model="ir.ui.view">
-        <field name="name">f3d.fire.loop.form</field>
-        <field name="model">f3d.fire.loop</field>
+    <record id="view_td_fire_loop_form" model="ir.ui.view">
+        <field name="name">td.fire.loop.form</field>
+        <field name="model">td.fire.loop</field>
         <field name="arch" type="xml">
             <form string="Шлейф">
                 <sheet>
@@ -250,7 +250,7 @@
                             <field name="number"/>
                             <field name="from_x_m"/>
                             <field name="to_x_m"/>
-                            <field name="signal_id" groups="factory3d_base.group_f3d_manager"/>
+                            <field name="signal_id" groups="td_factory3d.group_td_manager"/>
                         </group>
                         <group string="Пристрої">
                             <field name="device_count"/>
@@ -283,9 +283,9 @@
             </form>
         </field>
     </record>
-    <record id="action_f3d_fire_loop" model="ir.actions.act_window">
+    <record id="action_td_fire_loop" model="ir.actions.act_window">
         <field name="name">Шлейфи</field>
-        <field name="res_model">f3d.fire.loop</field>
+        <field name="res_model">td.fire.loop</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

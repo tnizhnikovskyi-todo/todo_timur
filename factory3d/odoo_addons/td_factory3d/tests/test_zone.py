@@ -4,7 +4,7 @@ from unittest import mock
 from odoo.exceptions import ValidationError
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_base.hooks import zones as zone_hooks
+from odoo.addons.td_factory3d.hooks import zones as zone_hooks
 
 from .common import F3DCase
 
@@ -16,12 +16,12 @@ class TestZoneData(F3DCase):
 
     def setUp(self):
         super().setUp()
-        self.zones = self.env['f3d.zone'].with_context(active_test=False).search([])
+        self.zones = self.env['td.zone'].with_context(active_test=False).search([])
 
     def test_45_zones_loaded(self):
         data = self.zones.filtered(lambda z: z.get_external_id())
         self.assertEqual(len(data), 45)
-        self.assertEqual(self.env.ref('factory3d_base.zone_z_sheets').f3d_code, 'Z-SHEETS')
+        self.assertEqual(self.env.ref('td_factory3d.zone_z_sheets').td_code, 'Z-SHEETS')
 
     def test_types_distribution(self):
         counts = Counter(self.zones.mapped('zone_type'))
@@ -32,7 +32,7 @@ class TestZoneData(F3DCase):
 
     def test_polygons_inside_site(self):
         for zone in self.zones:
-            self.assertTrue(zone.polygon, zone.f3d_code)
+            self.assertTrue(zone.polygon, zone.td_code)
             self.assertGreaterEqual(zone.x_min, -32.0)
             self.assertLessEqual(zone.x_max, 182.0)
             self.assertGreaterEqual(zone.y_min, -30.0)
@@ -42,15 +42,15 @@ class TestZoneData(F3DCase):
         indoor = self.zones.filtered(lambda z: z.zone_type != 'outdoor')
         self.assertEqual(len(indoor), 34)
         for zone in indoor:
-            self.assertGreaterEqual(zone.x_min, 0.0, zone.f3d_code)
-            self.assertLessEqual(zone.x_max, 150.0, zone.f3d_code)
-            self.assertGreaterEqual(zone.y_min, 0.0, zone.f3d_code)
-            self.assertLessEqual(zone.y_max, 72.0, zone.f3d_code)
+            self.assertGreaterEqual(zone.x_min, 0.0, zone.td_code)
+            self.assertLessEqual(zone.x_max, 150.0, zone.td_code)
+            self.assertGreaterEqual(zone.y_min, 0.0, zone.td_code)
+            self.assertLessEqual(zone.y_max, 72.0, zone.td_code)
 
     def test_roof_flag(self):
-        self.assertEqual(self.zones.filtered('is_roof').mapped('f3d_code'), ['Z-ROOF'])
-        self.assertAlmostEqual(self.env.ref('factory3d_base.zone_z_roof').area_m2, 10800.0, 1)
-        self.assertAlmostEqual(self.env.ref('factory3d_base.zone_z_sheets').area_m2, 1200.6, 1)
+        self.assertEqual(self.zones.filtered('is_roof').mapped('td_code'), ['Z-ROOF'])
+        self.assertAlmostEqual(self.env.ref('td_factory3d.zone_z_roof').area_m2, 10800.0, 1)
+        self.assertAlmostEqual(self.env.ref('td_factory3d.zone_z_sheets').area_m2, 1200.6, 1)
         with self.assertRaises(ValidationError):
             self.make_zone('X-ROOF', zone_type='storage', is_roof=True)
 
@@ -82,18 +82,18 @@ class TestGeometry(F3DCase):
         self.assertEqual(zone.area_m2, 0.0)
 
     def test_zone_at(self):
-        Zone = self.env['f3d.zone']
+        Zone = self.env['td.zone']
         cases = [((45.5, 5.0), 'Z-CUT'), ((14.6, 0.6), 'Z-SHEETS'), ((140, 65), 'Z-OUT-7'),
                  ((-7.3, 5.0), 'Z-YARD-W'), ((172, -14), 'Z-GATE-E'),
                  ((128.5, 76.2), 'Z-ENERGY'), ((75, 36), 'Z-CNC')]
         for point, code in cases:
-            self.assertEqual(Zone.zone_at(*point).f3d_code, code, point)
+            self.assertEqual(Zone.zone_at(*point).td_code, code, point)
         self.assertFalse(Zone.zone_at(0.3, 5.0))
-        self.assertEqual(Zone.zone_at(75, 36, roof=True).f3d_code, 'Z-ROOF')
+        self.assertEqual(Zone.zone_at(75, 36, roof=True).td_code, 'Z-ROOF')
 
     def test_zone_at_concave(self):
         poly = [(0, 0), (10, 0), (10, 4), (4, 4), (4, 10), (0, 10)]
-        inside = self.env['f3d.zone']._point_in_polygon
+        inside = self.env['td.zone']._point_in_polygon
         self.assertTrue(inside(2, 8, poly))
         self.assertFalse(inside(8, 8, poly))
         self.assertTrue(inside(10, 2, poly))
@@ -104,11 +104,11 @@ class TestCounters(F3DCase):
 
     def test_counts_and_docks(self):
         zone = self.make_zone('X-CNT', zone_type='storage')
-        self.loc_in.f3d_zone_id = zone
+        self.loc_in.td_zone_id = zone
         self.make_dock(self.dock_w1, 'west', 1, 0.0, 5.0)
-        self.dock_w1.f3d_zone_id = zone
-        self.wc.f3d_zone_id = zone
-        self.eq.f3d_zone_id = zone
+        self.dock_w1.td_zone_id = zone
+        self.wc.td_zone_id = zone
+        self.eq.td_zone_id = zone
         self.assertEqual(zone.location_count, 2)
         self.assertEqual(zone.dock_count, 1)
         self.assertEqual(zone.dock_location_ids, self.dock_w1)
@@ -117,8 +117,8 @@ class TestCounters(F3DCase):
 
     def test_archived_not_counted(self):
         zone = self.make_zone('X-ARC', zone_type='storage')
-        self.loc_in.f3d_zone_id = zone
-        self.dock_e1.f3d_zone_id = zone
+        self.loc_in.td_zone_id = zone
+        self.dock_e1.td_zone_id = zone
         self.assertEqual(zone.location_count, 2)
         self.dock_e1.active = False
         zone.invalidate_recordset()
@@ -128,52 +128,52 @@ class TestCounters(F3DCase):
         zone = self.make_zone('X-ACT', zone_type='storage')
         action = zone.action_view_workcenters()
         self.assertEqual(action['res_model'], 'mrp.workcenter')
-        self.assertEqual(action['domain'], [('f3d_zone_id', '=', zone.id)])
-        self.assertEqual(action['context'], {'default_f3d_zone_id': zone.id})
+        self.assertEqual(action['domain'], [('td_zone_id', '=', zone.id)])
+        self.assertEqual(action['context'], {'default_td_zone_id': zone.id})
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')
 class TestZoneBind(F3DCase):
 
     def test_bind_workcenter_and_rerun(self):
-        zone = self.env.ref('factory3d_base.zone_z_cut')
-        self.wc.f3d_code = 'SAW-T'
+        zone = self.env.ref('td_factory3d.zone_z_cut')
+        self.wc.td_code = 'SAW-T'
         rows = [{'zone': 'Z-CUT', 'kind': 'workcenter', 'value': 'SAW-T'}]
         with self.with_data_file('scene_zone_links.csv', rows):
             res = zone_hooks.bind(self.env)
-            self.assertEqual(self.wc.f3d_zone_id, zone)
+            self.assertEqual(self.wc.td_zone_id, zone)
             self.assertEqual(res['workcenters'], 1)
             res2 = zone_hooks.bind(self.env)
         self.assertEqual(res2['workcenters'], 1)
-        self.assertEqual(self.wc.f3d_zone_id, zone)
+        self.assertEqual(self.wc.td_zone_id, zone)
         self.assertEqual(res['zones'], 45)
 
     def test_bind_root_and_prefix(self):
-        zone = self.env.ref('factory3d_base.zone_z_hw')
+        zone = self.env.ref('td_factory3d.zone_z_hw')
         rows = [{'zone': 'Z-HW', 'kind': 'root', 'value': self.loc_in.complete_name},
                 {'zone': 'Z-HW', 'kind': 'prefix', 'value': 'LOCT-'}]
-        if 'f3d_code' in self.env['stock.location']._fields:
-            self.loc_in.f3d_code = 'LOCT-1'
+        if 'td_code' in self.env['stock.location']._fields:
+            self.loc_in.td_code = 'LOCT-1'
         with self.with_data_file('scene_zone_links.csv', rows):
             res = zone_hooks.bind(self.env)
         self.assertEqual(zone.root_location_id, self.loc_in)
         self.assertEqual(res['roots'], 1)
-        if 'f3d_code' in self.env['stock.location']._fields:
-            self.assertEqual(self.loc_in.f3d_zone_id, zone)
+        if 'td_code' in self.env['stock.location']._fields:
+            self.assertEqual(self.loc_in.td_zone_id, zone)
 
     def test_equipment_from_workcenter(self):
-        zone = self.env.ref('factory3d_base.zone_z_cut')
-        self.wc.write({'f3d_code': 'SAW-T', 'f3d_zone_id': zone.id})
-        self.eq.f3d_code = 'SAW-T'
+        zone = self.env.ref('td_factory3d.zone_z_cut')
+        self.wc.write({'td_code': 'SAW-T', 'td_zone_id': zone.id})
+        self.eq.td_code = 'SAW-T'
         with self.with_data_file('scene_zone_links.csv', []):
             res = zone_hooks.bind(self.env)
-        self.assertEqual(self.eq.f3d_zone_id, zone)
+        self.assertEqual(self.eq.td_zone_id, zone)
         self.assertGreaterEqual(res['equipment'], 1)
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')
 class TestEquipmentZoneFromWorkcenter(F3DCase):
-    """B-2: поле workcenter_id існує (Enterprise), але порожнє — зв'язок за f3d_code (A-15)."""
+    """B-2: поле workcenter_id існує (Enterprise), але порожнє — зв'язок за td_code (A-15)."""
 
     def setUp(self):
         super().setUp()
@@ -185,16 +185,16 @@ class TestEquipmentZoneFromWorkcenter(F3DCase):
         patcher = mock.patch.object(zone_hooks, 'WC_LINK', 'x_workcenter_id')
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.zone = self.env.ref('factory3d_base.zone_z_cut')
-        self.wc.write({'f3d_code': 'SAW-T', 'f3d_zone_id': self.zone.id})
+        self.zone = self.env.ref('td_factory3d.zone_z_cut')
+        self.wc.write({'td_code': 'SAW-T', 'td_zone_id': self.zone.id})
 
     def test_empty_link_falls_back_to_code(self):
         self.assertIn('x_workcenter_id', self.env['maintenance.equipment']._fields)
-        self.eq.f3d_code = 'SAW-T'
+        self.eq.td_code = 'SAW-T'
         self.assertFalse(self.eq.x_workcenter_id)
         with self.with_data_file('scene_zone_links.csv', []):
             res = zone_hooks.bind(self.env)
-        self.assertEqual(self.eq.f3d_zone_id, self.zone)
+        self.assertEqual(self.eq.td_zone_id, self.zone)
         self.assertGreaterEqual(res['equipment'], 1)
 
     def test_filled_link_still_inherits(self):
@@ -202,11 +202,11 @@ class TestEquipmentZoneFromWorkcenter(F3DCase):
         eq2.x_workcenter_id = self.wc
         with self.with_data_file('scene_zone_links.csv', []):
             zone_hooks.bind(self.env)
-        self.assertEqual(eq2.f3d_zone_id, self.zone)
+        self.assertEqual(eq2.td_zone_id, self.zone)
 
     def test_link_to_other_workcenter_not_overridden_by_code(self):
         other = self.env['mrp.workcenter'].create({'name': 'Other WC'})
-        self.eq.write({'f3d_code': 'SAW-T', 'x_workcenter_id': other.id})
+        self.eq.write({'td_code': 'SAW-T', 'x_workcenter_id': other.id})
         with self.with_data_file('scene_zone_links.csv', []):
             zone_hooks.bind(self.env)
-        self.assertFalse(self.eq.f3d_zone_id)
+        self.assertFalse(self.eq.td_zone_id)

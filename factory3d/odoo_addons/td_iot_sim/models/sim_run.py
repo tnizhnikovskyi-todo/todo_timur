@@ -47,14 +47,14 @@ def validate_params(schema, params):
 
 
 class F3dSimRun(models.Model):
-    _name = 'f3d.sim.run'
+    _name = 'td.sim.run'
     _description = 'Запуск сценарію'
-    _inherit = ['f3d.sim.client', 'mail.thread']
+    _inherit = ['td.sim.client', 'mail.thread']
     _order = 'start_ts desc, id desc'
 
     name = fields.Char(string='Номер', readonly=True, copy=False, default='/')
-    panel_id = fields.Many2one('f3d.sim.panel', string='Пульт', default=lambda self: self.env['f3d.sim.panel'].get_panel())
-    scenario_id = fields.Many2one('f3d.sim.scenario', string='Сценарій', required=True, ondelete='restrict')
+    panel_id = fields.Many2one('td.sim.panel', string='Пульт', default=lambda self: self.env['td.sim.panel'].get_panel())
+    scenario_id = fields.Many2one('td.sim.scenario', string='Сценарій', required=True, ondelete='restrict')
     params = fields.Json(string='Параметри')
     user_id = fields.Many2one('res.users', string='Користувач', default=lambda self: self.env.user)
     start_ts = fields.Datetime(string='Початок', default=fields.Datetime.now)
@@ -65,7 +65,7 @@ class F3dSimRun(models.Model):
         string='Стан', default='queued', tracking=True)
     sim_run_id = fields.Char(string='Id запуску в сервісі')
     message = fields.Text(string='Результат')
-    event_ids = fields.One2many('f3d.sim.event', 'run_id', string='Події')
+    event_ids = fields.One2many('td.sim.event', 'run_id', string='Події')
     duration_s = fields.Integer(string='Тривалість, с', compute='_compute_duration')
 
     @api.depends('start_ts', 'stop_ts')
@@ -77,7 +77,7 @@ class F3dSimRun(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get('name') or vals['name'] == '/':
-                vals['name'] = self.env['ir.sequence'].sudo().next_by_code('f3d.sim.run') or '/'
+                vals['name'] = self.env['ir.sequence'].sudo().next_by_code('td.sim.run') or '/'
         return super().create(vals_list)
 
     @api.model
@@ -89,7 +89,7 @@ class F3dSimRun(models.Model):
         """Параметр device має вказувати на наявний пристрій емулятора (S-02/S-04/S-09/S-10)."""
         code = params.get('device')
         if code and 'device' in ((schema or {}).get('properties') or {}):
-            if not self.env['f3d.sim.device'].sudo().search_count([('code', '=', code)]):
+            if not self.env['td.sim.device'].sudo().search_count([('code', '=', code)]):
                 raise ValidationError("Невідомий пристрій «%s»: такого коду немає в каталозі емулятора" % code)
 
     @api.model

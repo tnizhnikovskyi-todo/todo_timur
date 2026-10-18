@@ -49,11 +49,11 @@ class GateCase(YardFlowCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        cls.gate_w = env.ref("factory3d_yard.gate_w")
-        cls.gate_e = env.ref("factory3d_yard.gate_e")
+        cls.gate_w = env.ref("td_yard.gate_w")
+        cls.gate_e = env.ref("td_yard.gate_e")
         cls.gate_w.responsible_id = cls.user_guard
-        col = env["f3d.collector"].create({"code": "COL-YT", "name": "Колектор двору (тест)"})
-        cls.src = env["f3d.source"].create(
+        col = env["td.collector"].create({"code": "COL-YT", "name": "Колектор двору (тест)"})
+        cls.src = env["td.source"].create(
             {
                 "code": "MB-U86-YT",
                 "name": "ADAM (тест)",
@@ -74,7 +74,7 @@ class GateCase(YardFlowCase):
                     address = {"fc": 3, "addr": base + i, "count": 2, "type": "u32", "wordorder": "little"}
                 if is_cmd:
                     address["write"] = {"fc": 5, "addr": base + i}
-                sig = env["f3d.signal"].create(
+                sig = env["td.signal"].create(
                     {
                         "code": "yard/gates/%s/%s" % (tag, role),
                         "name": "%s %s" % (tag, role),
@@ -87,28 +87,28 @@ class GateCase(YardFlowCase):
                         "write_enabled": is_cmd,
                     }
                 )
-                cls.sigs[(gate.f3d_code, role)] = sig
+                cls.sigs[(gate.td_code, role)] = sig
                 vals[SIGNAL_FIELD[role]] = sig.id
             gate.write(vals)
         icp = env["ir.config_parameter"].sudo()
-        icp.set_param("factory3d.telemetry.write_enabled", "True")
+        icp.set_param("td.telemetry.write_enabled", "True")
         for name, value in (("write_enabled", "True"), ("read_enabled", "True"), ("antipassback", "True")):
             P.set_param(env, name, value)
 
     def sig(self, gate, role):
-        return self.sigs[(gate.f3d_code, role)]
+        return self.sigs[(gate.td_code, role)]
 
     def put(self, gate, role, value, ts, status="ok"):
         """Показання сигналу воріт (як після telemetry _f3d_ingest)."""
         self.sig(gate, role).sudo().write({"last_value": float(value), "last_ts": ts, "status": status})
 
     def cmds(self, gate=None):
-        return self.env["f3d.command"].sudo().search([("f3d_yard_gate_id", "=", (gate or self.gate_w).id)])
+        return self.env["td.command"].sudo().search([("td_yard_gate_id", "=", (gate or self.gate_w).id)])
 
     def push(self, event):
         """Подія LPR через обробник маршруту (як у telemetry M-11)."""
-        return self.env["f3d.push.handler.yard"]._f3d_handle_push("lpr", event)
+        return self.env["td.push.handler.yard"]._f3d_handle_push("lpr", event)
 
     def recv(self, event):
         """Те саме, але повертає запис події."""
-        return self.env["f3d.yard.lpr.event"].sudo()._f3d_from_push(event)
+        return self.env["td.yard.lpr.event"].sudo()._f3d_from_push(event)

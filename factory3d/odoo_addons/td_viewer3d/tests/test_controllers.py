@@ -13,7 +13,7 @@ class TestControllers(HttpCase, F3dViewerBase):
         super().setUpClass()
         for user in (cls.user_f3d, cls.user_nobody, cls.user_manager, cls.user_mrp_only):
             user.password = user.login
-        cls.wc = cls.env["mrp.workcenter"].create({"name": "ZZ центр", "f3d_code": "ZZ-WC-1"})
+        cls.wc = cls.env["mrp.workcenter"].create({"name": "ZZ центр", "td_code": "ZZ-WC-1"})
 
     def _get(self, url, user="f3d_user", **kw):
         if user:
@@ -119,7 +119,7 @@ class TestControllers(HttpCase, F3dViewerBase):
         """R-16 п. 5: `codes` — дочірні коди об'єкта без власного запису."""
         stock = self.env.ref("stock.stock_location_stock")
         bins = self.env["stock.location"].create([
-            {"name": f"ZZ-GB{i}", "location_id": stock.id, "f3d_code": f"ZZ-GB{i}"} for i in (1, 2)])
+            {"name": f"ZZ-GB{i}", "location_id": stock.id, "td_code": f"ZZ-GB{i}"} for i in (1, 2)])
         res = self._get("/f3d/viewer/resolve?code=ZZ-RACK-G&codes=ZZ-GB1,ZZ-GB2,ZZ-NONE")
         self.assertEqual(res.status_code, 200)
         data = res.json()

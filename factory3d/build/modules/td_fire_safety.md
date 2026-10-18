@@ -1,6 +1,6 @@
-# factory3d_fire_safety
+# td_fire_safety
 Статус: DONE (юнит-DoD); вне среды: W6 (ТК-01…10, ТБ-01…06, ТП-01…04, DEPLOY_TEST) и тесты на копии демо (AC-02)
-Тесты: Odoo 134/134 /factory3d_fire_safety + /factory3d_fire_safety_viewer, 0 fail (2026-10-15); test_data_sync 2/2; ТК: ждут стенда (нет docker-демона)
+Тесты: Odoo 134/134 /td_fire_safety + /td_fire_safety_viewer3d, 0 fail (2026-10-15); test_data_sync 2/2; ТК: ждут стенда (нет docker-демона)
 Решений без заказчика: 13 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: ТК/ТБ/ТП и DEPLOY_TEST на стенде; копия демо (AC-02, signals_linked=54, счётчики 44/353/54); AC-77 «signal_count=45» против Додатка B (46+запиленість); §13.3 security-review и xmllint не проводились
@@ -21,21 +21,21 @@
   приёмки W1/W3/W2/W4 (порядок списка — как SPEC §1). — `__manifest__.py`
 - DEC-2 (ENV): pytest `tests/test_data_sync.py` (AC-71) запускается только с Odoo в PYTHONPATH
   (пакет tests импортирует odoo); фактически гоняется `python3 -m unittest discover -s tests -t tests -p test_data_sync.py`, 2/2 OK. — `tests/test_data_sync.py`
-- DEC-3: `f3d_fire_norm.csv` грузится CSV без noupdate (SPEC §0 помечает noupdate=1; CSV его не поддерживает) — оставлено как в
-  манифесте SPEC §1. Для 7 авторских норм ref/note из Додатка D, формулировка примечаний — W0. — `data/f3d_fire_norm.csv`
-- DEC-4: SPEC §1 называет CSV `f3d_fire_norm.csv` и т. п., но Odoo берёт модель из имени CSV — переименованы в
+- DEC-3: `td_fire_norm.csv` грузится CSV без noupdate (SPEC §0 помечает noupdate=1; CSV его не поддерживает) — оставлено как в
+  манифесте SPEC §1. Для 7 авторских норм ref/note из Додатка D, формулировка примечаний — W0. — `data/td_fire_norm.csv`
+- DEC-4: SPEC §1 называет CSV `td_fire_norm.csv` и т. п., но Odoo берёт модель из имени CSV — переименованы в
   `f3d.fire.<model>.csv` (norm, zone, smoke.zone, device, exit); манифест и gen_data.py поправлены. — `data/`
-- DEC-5: регэксп ключа нормы `^[A-Za-z0-9_]+$` вместо `[a-z0-9_]`: в данных макета есть `evac_distance_prod_B`. — `models/f3d_fire_norm.py`
-- DEC-6: скелет `f3d.fire.drill` (name, zone_id, state) до W4 — на него ссылается журнал событий W1. — `models/f3d_fire_drill.py`
-- DEC-7: `target="inline"` недопустим в Odoo 19 — у `action_f3d_fire_settings` target не задан. — `views/res_config_settings_views.xml`
+- DEC-5: регэксп ключа нормы `^[A-Za-z0-9_]+$` вместо `[a-z0-9_]`: в данных макета есть `evac_distance_prod_B`. — `models/td_fire_norm.py`
+- DEC-6: скелет `td.fire.drill` (name, zone_id, state) до W4 — на него ссылается журнал событий W1. — `models/td_fire_drill.py`
+- DEC-7: `target="inline"` недопустим в Odoo 19 — у `action_td_fire_settings` target не задан. — `views/res_config_settings_views.xml`
 - DEC-8: булевы настройки пишутся явно 'True'/'False' (стандарт удаляет параметр при False → умолчание True). — `models/res_config_settings.py`
 - DEC-9: команда ТО из `team_id` ставится на заявки telemetry (threshold/stale); явную команду других вызывающих не трогаем;
   событие журнала привязывается к заявке в конце FireSync.run. — `models/maintenance_request.py`, `tools/sync.py`
 - DEC-10: прошлое состояние DI2/3/4/6 систем — из последнего события системы; `sprinkler_low` пишется при любом входе в
   `low_pressure`. Строки access для моделей W4 — в `security/ir.model.access_w4_pending.csv` до W4. — `tools/sync.py`
 - DEC-11: `_cron_tick` в одном запуске крона делает 5 тиков с шагом 10 с (commit между ними), в тестах — 1 тик
-  (`odoo.modules.module.current_test`; `registry.in_test_mode()` в Odoo 19 нет). — `models/f3d_fire_drill.py`
+  (`odoo.modules.module.current_test`; `registry.in_test_mode()` в Odoo 19 нет). — `models/td_fire_drill.py`
 - DEC-12: при установленном access его источник (приоритет 10) перекрывает hr_attendance; R-18 пишет `device_id`, только
-  если сповіщувач в зоне навчання; тесты AC-49/access — skipUnless модулей. — `models/passage_source.py`, `models/f3d_fire_drill.py`
+  если сповіщувач в зоне навчання; тесты AC-49/access — skipUnless модулей. — `models/passage_source.py`, `models/td_fire_drill.py`
 - DEC-13: post_init_hook вызывает `run_all` (шаги 1–9 + migration_report; ошибки → state='partial'); шаг 1 только при
   пустом отчёте; при установке `_set_dust(log=False)` — без событий и заявок; тесты W0–W4 исключают demo-события/навчання. — `hooks.py`

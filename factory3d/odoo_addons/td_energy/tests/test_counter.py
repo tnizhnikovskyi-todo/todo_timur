@@ -20,17 +20,17 @@ class EnergyMixin:
     def mk_signal(self, code, kind="gauge", unit="кВт", **kw):
         vals = {"code": code, "name": code, "kind": kind, "unit": unit, "module": "energy"}
         vals.update(kw)
-        return self.env["f3d.signal"].create(vals)
+        return self.env["td.signal"].create(vals)
 
     def ensure_signal(self, code, kind="gauge", unit="кВт", **kw):
-        """Наявний сигнал або новий: `workcenters/<РЦ>/machine_state` створює й factory3d_machine_connect (R-05)."""
-        return self.env["f3d.signal"].search([("code", "=", code)], limit=1) or self.mk_signal(code, kind, unit, **kw)
+        """Наявний сигнал або новий: `workcenters/<РЦ>/machine_state` створює й td_machine_connect (R-05)."""
+        return self.env["td.signal"].search([("code", "=", code)], limit=1) or self.mk_signal(code, kind, unit, **kw)
 
     def mk_meter(self, code, role="consumer", export=False, max_kw=48.0, with_power=False):
         """Вузол-споживач `<code без PM->` під SEC-1 і лічильник `code` з сигналами енергії."""
         node_code = code[3:] if code.startswith("PM-") else code
-        parent = self.env["f3d.energy.node"].search([("code", "=", "SEC-1")])
-        node = self.env["f3d.energy.node"].create(
+        parent = self.env["td.energy.node"].search([("code", "=", "SEC-1")])
+        node = self.env["td.energy.node"].create(
             {"code": node_code, "name": node_code, "kind": "consumer", "parent_id": parent.id, "section": 1}
         )
         base = "energy/consumers/%s/" % node_code
@@ -46,20 +46,20 @@ class EnergyMixin:
             vals["e_export_signal_id"] = self.mk_signal(base + "kwh_export", "counter", "кВт·год", period_s=60).id
         if with_power:
             vals["p_signal_id"] = self.mk_signal(base + "p_now").id
-        return self.env["f3d.energy.meter"].create(vals)
+        return self.env["td.energy.meter"].create(vals)
 
     def bind_equipment(self, signal_code, equipment_code):
         """Обладнання сцени з кодом `equipment_code` (створюється, якщо немає) — на сигнал: потрібне для заявок."""
         Equipment = self.env["maintenance.equipment"]
-        equipment = Equipment.search([("f3d_code", "=", equipment_code)], limit=1) or Equipment.create(
-            {"name": equipment_code, "f3d_code": equipment_code}
+        equipment = Equipment.search([("td_code", "=", equipment_code)], limit=1) or Equipment.create(
+            {"name": equipment_code, "td_code": equipment_code}
         )
-        self.env["f3d.signal"].search([("code", "=", signal_code)]).write({"equipment_id": equipment.id})
+        self.env["td.signal"].search([("code", "=", signal_code)]).write({"equipment_id": equipment.id})
         return equipment
 
     def feed(self, signal, points, quality="good"):
-        """Показання `f3d.reading` + `last_*` сигналу (без телеметрійного інгесту)."""
-        self.env["f3d.reading"].create(
+        """Показання `td.reading` + `last_*` сигналу (без телеметрійного інгесту)."""
+        self.env["td.reading"].create(
             [{"signal_id": signal.id, "ts": t, "value": v, "quality": quality, "src": "module"} for t, v in points]
         )
         t, v = max(points)
@@ -67,7 +67,7 @@ class EnergyMixin:
 
     def mk_interval(self, meter, ts_start, kwh, kwh_export=0.0, quality="measured", e_start=0.0, price=8.4):
         local = to_local(ts_start)
-        return self.env["f3d.energy.interval"].create(
+        return self.env["td.energy.interval"].create(
             {
                 "meter_id": meter.id, "ts_start": ts_start, "ts_end": ts_start + timedelta(minutes=15),
                 "day": local.date(), "hour_local": local.hour, "e_start": e_start, "e_end": e_start + kwh,
@@ -148,8 +148,8 @@ class TestCounterMeter(EnergyMixin, F3DEnergyCase):
         self.feed(meter.e_import_signal_id, [(start + timedelta(seconds=60 * k), 999.89 + 0.22 * k) for k in range(80)])
         a, b = day + timedelta(hours=1, minutes=36), day + timedelta(hours=2, minutes=54)
         self.assertEqual(meter._f3d_kwh(a, b), (17.16, "measured"))
-        self.assertEqual(self.env["f3d.energy.node"]._f3d_kwh_by_code("NOPE", a, b), (0.0, "missing"))
-        self.assertEqual(self.env["f3d.energy.node"]._f3d_kwh_by_code("SAW-T", a, b), (17.16, "measured"))
+        self.assertEqual(self.env["td.energy.node"]._f3d_kwh_by_code("NOPE", a, b), (0.0, "missing"))
+        self.assertEqual(self.env["td.energy.node"]._f3d_kwh_by_code("SAW-T", a, b), (17.16, "measured"))
         with self.assertRaises(ValueError):
             meter._f3d_kwh(b, a)
         with self.assertRaises(ValueError):

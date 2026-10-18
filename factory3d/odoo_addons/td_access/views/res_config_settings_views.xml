@@ -1,115 +1,115 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="res_config_settings_view_form_f3d_access" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.f3d.access</field>
+    <record id="res_config_settings_view_form_td_access" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.access</field>
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="hr_attendance.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//app[@name='hr_attendance']" position="inside">
                 <block title="СКУД Suprema BioStar 2" name="f3d_access_block"
-                       groups="factory3d_base.group_f3d_admin">
+                       groups="td_factory3d.group_td_admin">
                     <setting string="Приймати події" help="Стоп-кран: опитування BioStar кронами й кнопками">
-                        <field name="f3d_access_read_enabled"/>
+                        <field name="td_access_read_enabled"/>
                     </setting>
                     <setting string="Запис у BioStar" help="Стоп-кран: картки й користувачі-відвідувачі">
-                        <field name="f3d_access_write_enabled"/>
+                        <field name="td_access_write_enabled"/>
                     </setting>
                     <setting string="Обліковий запис" help="Логін і пароль користувача BioStar 2 для опитування">
                         <div class="content-group">
                             <div class="row mt8">
-                                <label for="f3d_access_biostar_login" class="col-lg-4 o_light_label"/>
-                                <field name="f3d_access_biostar_login"/>
+                                <label for="td_access_biostar_login" class="col-lg-4 o_light_label"/>
+                                <field name="td_access_biostar_login"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_biostar_password" class="col-lg-4 o_light_label"/>
-                                <field name="f3d_access_biostar_password" password="True"/>
+                                <label for="td_access_biostar_password" class="col-lg-4 o_light_label"/>
+                                <field name="td_access_biostar_password" password="True"/>
                             </div>
                             <div class="mt8">
-                                <button name="action_f3d_access_server" type="object" string="Сервери BioStar"
+                                <button name="action_td_access_server" type="object" string="Сервери BioStar"
                                         icon="oi-arrow-right" class="btn-link"/>
                                 <button name="action_f3d_access_test" type="object" string="Перевірити з'єднання"
                                         icon="oi-arrow-right" class="btn-link"/>
                             </div>
-                            <div class="text-muted">Серверів: <field name="f3d_access_server_count"/></div>
+                            <div class="text-muted">Серверів: <field name="td_access_server_count"/></div>
                         </div>
                     </setting>
                     <setting string="Опитування" help="Сторінки, перекриття вікна, глибина першого опитування">
                         <div class="content-group">
                             <div class="row mt8">
-                                <label for="f3d_access_page_size" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_page_size"/>
+                                <label for="td_access_page_size" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_page_size"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_max_pages_per_run" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_max_pages_per_run"/>
+                                <label for="td_access_max_pages_per_run" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_max_pages_per_run"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_overlap_s" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_overlap_s"/>
+                                <label for="td_access_overlap_s" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_overlap_s"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_initial_lookback_h" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_initial_lookback_h"/>
+                                <label for="td_access_initial_lookback_h" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_initial_lookback_h"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_paging_mode" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_paging_mode"/>
+                                <label for="td_access_paging_mode" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_paging_mode"/>
                             </div>
                         </div>
                     </setting>
                     <setting string="Правила відміток" help="Дублікати, обід, максимальна зміна, закриття без виходу">
                         <div class="content-group">
                             <div class="row mt8">
-                                <label for="f3d_access_dup_window_min" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_dup_window_min"/>
+                                <label for="td_access_dup_window_min" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_dup_window_min"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_merge_gap_min" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_merge_gap_min"/>
+                                <label for="td_access_merge_gap_min" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_merge_gap_min"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_max_shift_h" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_max_shift_h"/>
+                                <label for="td_access_max_shift_h" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_max_shift_h"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_stale_close_enabled" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_stale_close_enabled"/>
+                                <label for="td_access_stale_close_enabled" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_stale_close_enabled"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_stale_close_fallback_min" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_stale_close_fallback_min"/>
+                                <label for="td_access_stale_close_fallback_min" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_stale_close_fallback_min"/>
                             </div>
                         </div>
                     </setting>
                     <setting string="Дані" help="Зберігання подій і публікація сигналів">
                         <div class="content-group">
                             <div class="row mt8">
-                                <label for="f3d_access_keep_days" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_keep_days"/>
+                                <label for="td_access_keep_days" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_keep_days"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_keep_raw" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_keep_raw"/>
+                                <label for="td_access_keep_raw" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_keep_raw"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_publish_signals" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_publish_signals"/>
+                                <label for="td_access_publish_signals" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_publish_signals"/>
                             </div>
                         </div>
                     </setting>
                     <setting string="Відвідувачі" help="Користувач BioStar відвідувача: префікс + id запису">
                         <div class="content-group">
                             <div class="row mt8">
-                                <label for="f3d_access_visitor_default_hours" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_visitor_default_hours"/>
+                                <label for="td_access_visitor_default_hours" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_visitor_default_hours"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_visitor_user_prefix" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_visitor_user_prefix"/>
+                                <label for="td_access_visitor_user_prefix" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_visitor_user_prefix"/>
                             </div>
                             <div class="row">
-                                <label for="f3d_access_visitor_user_group_id" class="col-lg-5 o_light_label"/>
-                                <field name="f3d_access_visitor_user_group_id"/>
+                                <label for="td_access_visitor_user_group_id" class="col-lg-5 o_light_label"/>
+                                <field name="td_access_visitor_user_group_id"/>
                             </div>
                         </div>
                     </setting>
@@ -118,7 +118,7 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_settings" model="ir.actions.act_window">
+    <record id="action_td_access_settings" model="ir.actions.act_window">
         <field name="name">Налаштування СКУД</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>

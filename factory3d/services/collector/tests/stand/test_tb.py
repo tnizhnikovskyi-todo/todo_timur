@@ -26,19 +26,19 @@ def _auth(token: str) -> dict:
 
 
 def _new_collector(odoo, code: str) -> tuple[int, str]:
-    cid = odoo.call("f3d.collector", "create", {"code": code, "name": code})
+    cid = odoo.call("td.collector", "create", {"code": code, "name": code})
     return cid, odoo.new_token(code)
 
 
 def _drop_collector(odoo, cid: int) -> None:
-    for s in odoo.search_read("f3d.source", [("collector_id", "=", cid)], ["id"]):
+    for s in odoo.search_read("td.source", [("collector_id", "=", cid)], ["id"]):
         odoo.call(
-            "f3d.signal",
+            "td.signal",
             "unlink",
-            [x["id"] for x in odoo.search_read("f3d.signal", [("source_id", "=", s["id"])], ["id"])],
+            [x["id"] for x in odoo.search_read("td.signal", [("source_id", "=", s["id"])], ["id"])],
         )
-        odoo.call("f3d.source", "unlink", [s["id"]])
-    odoo.call("f3d.collector", "unlink", [cid])
+        odoo.call("td.source", "unlink", [s["id"]])
+    odoo.call("td.collector", "unlink", [cid])
 
 
 def test_tb01_tokens(odoo, token):
@@ -61,15 +61,15 @@ def test_tb01_tokens(odoo, token):
     cid, tok = _new_collector(odoo, "COL-TB01")
     try:
         assert http("GET", odoo.url + "/f3d/telemetry/health", headers=_auth(tok))[0] == 200
-        odoo.call("f3d.collector", "action_revoke_token", [cid])
+        odoo.call("td.collector", "action_revoke_token", [cid])
         st, body, _ = http("GET", odoo.url + "/f3d/telemetry/config", headers=_auth(tok))
         assert st == 401 and tok not in body
         tok2 = odoo.new_token("COL-TB01")
-        odoo.write("f3d.collector", cid, {"active": False})
+        odoo.write("td.collector", cid, {"active": False})
         assert http("GET", odoo.url + "/f3d/telemetry/config", headers=_auth(tok2))[0] == 403
         assert http("GET", odoo.url + "/f3d/telemetry/health", headers=_auth(tok2))[0] == 200
     finally:
-        odoo.write("f3d.collector", cid, {"active": True})
+        odoo.write("td.collector", cid, {"active": True})
         _drop_collector(odoo, cid)
 
 
@@ -91,8 +91,8 @@ def test_tb02_secrets_do_not_leak(odoo, token, col):
             if k.endswith("_ref"):
                 assert v.startswith("F3D_"), (k, v)
             assert k not in ("password", "token", "secret"), k
-    left = odoo.search_read("f3d.collector.token.wizard", [("token", "!=", False)], ["id"])
-    assert not left, "токен лишився в f3d_collector_token_wizard"
+    left = odoo.search_read("td.collector.token.wizard", [("token", "!=", False)], ["id"])
+    assert not left, "токен лишився в td_collector_token_wizard"
 
 
 def _user(odoo, login: str, groups: list[str]) -> str:
@@ -112,14 +112,14 @@ def _user(odoo, login: str, groups: list[str]) -> str:
 
 
 MATRIX = {  # модель -> {користувач: операції}
-    "f3d.collector": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
-    "f3d.source": {"plain": "", "reader": "R", "manager": "RWCD", "admin": "RWCD"},
-    "f3d.signal": {"plain": "", "reader": "R", "manager": "RWCD", "admin": "RWCD"},
-    "f3d.reading": {"plain": "", "reader": "R", "manager": "RC", "admin": "RWCD"},  # W менеджера — UserError (нижче)
-    "f3d.reading.hour": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
-    "f3d.command": {"plain": "", "reader": "R", "manager": "RWC", "admin": "RWCD"},
-    "f3d.push.event": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
-    "f3d.collector.token.wizard": {"plain": "", "reader": "", "manager": "", "admin": "RWCD"},
+    "td.collector": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
+    "td.source": {"plain": "", "reader": "R", "manager": "RWCD", "admin": "RWCD"},
+    "td.signal": {"plain": "", "reader": "R", "manager": "RWCD", "admin": "RWCD"},
+    "td.reading": {"plain": "", "reader": "R", "manager": "RC", "admin": "RWCD"},  # W менеджера — UserError (нижче)
+    "td.reading.hour": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
+    "td.command": {"plain": "", "reader": "R", "manager": "RWC", "admin": "RWCD"},
+    "td.push.event": {"plain": "", "reader": "R", "manager": "R", "admin": "RWCD"},
+    "td.collector.token.wizard": {"plain": "", "reader": "", "manager": "", "admin": "RWCD"},
 }
 OPS = {"R": "read", "W": "write", "C": "create", "D": "unlink"}
 
@@ -130,9 +130,9 @@ def test_tb03_access_matrix(odoo):
 
     users = {
         "plain": _user(odoo, "f3dtb_plain", ["base.group_user"]),
-        "reader": _user(odoo, "f3dtb_reader", ["base.group_user", "factory3d_base.group_f3d_user"]),
-        "manager": _user(odoo, "f3dtb_manager", ["base.group_user", "factory3d_base.group_f3d_manager"]),
-        "admin": _user(odoo, "f3dtb_admin", ["base.group_user", "factory3d_base.group_f3d_admin"]),
+        "reader": _user(odoo, "f3dtb_reader", ["base.group_user", "td_factory3d.group_td_user"]),
+        "manager": _user(odoo, "f3dtb_manager", ["base.group_user", "td_factory3d.group_td_manager"]),
+        "admin": _user(odoo, "f3dtb_admin", ["base.group_user", "td_factory3d.group_td_admin"]),
     }
     bad = []
     for kind, login in users.items():
@@ -154,42 +154,42 @@ def test_tb03_access_matrix(odoo):
         else:
             assert menus, f"{kind} не бачить меню «Телеметрія»"
     assert not bad, bad
-    # f3d.reading: менеджер створює, але не змінює (UserError)
+    # td.reading: менеджер створює, але не змінює (UserError)
     mgr = Odoo(login=users["manager"], password="Tb-pass-12345")
-    rid = odoo.search_read("f3d.reading", [], ["id"], limit=1)[0]["id"]
+    rid = odoo.search_read("td.reading", [], ["id"], limit=1)[0]["id"]
     with pytest.raises(xmlrpc.client.Fault) as e:
-        mgr.write("f3d.reading", rid, {"value": 1.0})
+        mgr.write("td.reading", rid, {"value": 1.0})
     assert e.value.faultCode == 2 and "Показання не редагуються" in e.value.faultString  # 2 = UserError
     plain = Odoo(login=users["plain"], password="Tb-pass-12345")
     with pytest.raises(xmlrpc.client.Fault) as e:
-        plain.search_read("f3d.signal", [], ["code"])
+        plain.search_read("td.signal", [], ["code"])
     assert e.value.faultCode == 4 and "not allowed" in e.value.faultString  # 4 = AccessError
 
 
 def test_tb04_injections(odoo, token, col):
     """ТБ-04 / AC-08, AC-09, AC-39: ін'єкції в коди, адреси, MQTT-шляхи, маршрути; огляд коду на динамічний SQL."""
-    n_sig, n_rd = odoo.count("f3d.signal"), odoo.count("f3d.reading")
-    src = odoo.search_read("f3d.source", [("code", "=", "MB-U70-COMPRESSOR")], ["id"])[0]["id"]
-    mq = odoo.search_read("f3d.source", [("code", "=", "MQTT-MOBILE")], ["id"])[0]["id"]
+    n_sig, n_rd = odoo.count("td.signal"), odoo.count("td.reading")
+    src = odoo.search_read("td.source", [("code", "=", "MB-U70-COMPRESSOR")], ["id"])[0]["id"]
+    mq = odoo.search_read("td.source", [("code", "=", "MQTT-MOBILE")], ["id"])[0]["id"]
     bad_codes = [
-        "equipment/FL-T/x;DROP TABLE f3d_signal",
+        "equipment/FL-T/x;DROP TABLE td_signal",
         "equipment/FL-T/x'--",
         "Equipment/FL-T/x",
         "equipment/FL T/x",
     ]
     for code in bad_codes:
         with pytest.raises(xmlrpc.client.Fault) as e:
-            odoo.call("f3d.signal", "create", {"code": code, "name": "x", "kind": "gauge"})
+            odoo.call("td.signal", "create", {"code": code, "name": "x", "kind": "gauge"})
         assert "Код сигналу" in e.value.faultString, code
     body = {
         "collector": "COL-MAIN",
-        "readings": [{"code": "'; DELETE FROM f3d_reading; --", "ts": "2026-10-15T08:00:00Z", "value": 1}],
+        "readings": [{"code": "'; DELETE FROM td_reading; --", "ts": "2026-10-15T08:00:00Z", "value": 1}],
     }
     st, txt, _ = http("POST", odoo.url + "/f3d/telemetry/push", body, _auth(token))
     assert st == 200 and "bad_code_format" in txt, txt
     with pytest.raises(xmlrpc.client.Fault) as e:
         odoo.call(
-            "f3d.signal",
+            "td.signal",
             "create",
             {
                 "code": "equipment/TB/inj",
@@ -202,7 +202,7 @@ def test_tb04_injections(odoo, token, col):
     assert "Адреса сигналу" in e.value.faultString, e.value.faultString[-200:]
     with pytest.raises(xmlrpc.client.Fault) as e:
         odoo.call(
-            "f3d.signal",
+            "td.signal",
             "create",
             {
                 "code": "equipment/TB/mq",
@@ -213,7 +213,7 @@ def test_tb04_injections(odoo, token, col):
             },
         )
     assert "Адреса сигналу" in e.value.faultString, e.value.faultString[-200:]
-    assert odoo.count("f3d.signal") == n_sig and odoo.count("f3d.reading") >= n_rd
+    assert odoo.count("td.signal") == n_sig and odoo.count("td.reading") >= n_rd
     for path in ("/f3d/lpr/../admin", "/f3d/LPR", "/f3d/lpr/%2e%2e/admin"):
         c = http_client()
         c.putrequest("POST", path, skip_host=False)
@@ -223,7 +223,7 @@ def test_tb04_injections(odoo, token, col):
         assert c.getresponse().status == 404, path
     pat = re.compile(r'execute\(f"|execute\(.*%[^s]|execute\(.*\.format\(')
     hits = []
-    base = REPO / "odoo_addons" / "factory3d_telemetry"
+    base = REPO / "odoo_addons" / "td_telemetry"
     for sub in ("models", "tools", "controllers"):
         for f in (base / sub).rglob("*.py"):
             hits += [f"{f.name}:{i}" for i, ln in enumerate(f.read_text().splitlines(), 1) if pat.search(ln)]
@@ -237,7 +237,7 @@ def http_client() -> httpclient.HTTPConnection:
 
 def test_tb05_write_flags(odoo, token):
     """ТБ-05 / AC-44: параметр write_enabled=False → GET commands порожній із write_enabled:false; повний сценарій — ТК-15."""
-    odoo.param("factory3d.telemetry.write_enabled", "False")
+    odoo.param("td.telemetry.write_enabled", "False")
     st, body, _ = http("GET", odoo.url + "/f3d/telemetry/commands", headers=_auth(token))
     d = json.loads(body)
     assert st == 200 and d["commands"] == [] and d["write_enabled"] is False, d
@@ -246,10 +246,10 @@ def test_tb05_write_flags(odoo, token):
 def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
     """ТБ-06: пожежна панель dev 200 — read_only: лише Who-Is/I-Am/ReadProperty/RPM у мережі (власний сніфер замість
     tcpdump/tshark), команда в обхід перевірок (SQL) → failed «read-only device»; сигнали fire/* на read_only → ValidationError."""
-    colid = odoo.search_read("f3d.collector", [("code", "=", "COL-MAIN")], ["id"])[0]["id"]
-    boiler = odoo.search_read("f3d.source", [("code", "=", "BAC-140-BOILER")], ["id"])[0]["id"]
+    colid = odoo.search_read("td.collector", [("code", "=", "COL-MAIN")], ["id"])[0]["id"]
+    boiler = odoo.search_read("td.source", [("code", "=", "BAC-140-BOILER")], ["id"])[0]["id"]
     facp = odoo.call(
-        "f3d.source",
+        "td.source",
         "create",
         {
             "code": "BAC-200-FACP",
@@ -260,7 +260,7 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
         },
     )
     sig_state = odoo.call(
-        "f3d.signal",
+        "td.signal",
         "create",
         {
             "code": "fire/groups/FA-CUT/state",
@@ -274,7 +274,7 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
         },
     )
     sig_dust = odoo.call(
-        "f3d.signal",
+        "td.signal",
         "create",
         {
             "code": "fire/groups/FA-FAC/dust",
@@ -288,15 +288,15 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
     )
     try:
         with pytest.raises(xmlrpc.client.Fault) as e:
-            odoo.write("f3d.signal", sig_state, {"write_enabled": True})
+            odoo.write("td.signal", sig_state, {"write_enabled": True})
         assert "Запис у пожежну панель заборонено" in e.value.faultString
         with pytest.raises(xmlrpc.client.Fault) as e:
-            odoo.write("f3d.source", facp, {"write_enabled": True})
+            odoo.write("td.source", facp, {"write_enabled": True})
         assert "лише для читання" in e.value.faultString
-        odoo.write("f3d.source", boiler, {"read_enabled": False})  # у мережі лишається лише трафік до dev 200
+        odoo.write("td.source", boiler, {"read_enabled": False})  # у мережі лишається лише трафік до dev 200
         psql = ["psql", "-h", "127.0.0.1", "-U", "odoo", "f3d_telemetry_w7", "-Atc"]
         cmd_sql = (
-            "insert into f3d_command (signal_id, source_id, collector_id, value, state, requested_at, expires_at, "
+            "insert into td_command (signal_id, source_id, collector_id, value, state, requested_at, expires_at, "
             "requested_by, create_uid, write_uid, create_date, write_date) "
             f"select {sig_state}, {facp}, {colid}, 1, 'queued', now() at time zone 'utc', "
             "now() at time zone 'utc' + interval '10 minutes', 1, 1, 1, now(), now()"
@@ -307,21 +307,21 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
         subprocess.run(
             [
                 *psql,
-                f"update f3d_source set write_enabled = true where id = {facp}; "
-                f"update f3d_signal set write_enabled = true where id = {sig_state}",
+                f"update td_source set write_enabled = true where id = {facp}; "
+                f"update td_signal set write_enabled = true where id = {sig_state}",
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-        odoo.param("factory3d.telemetry.write_enabled", "True")
+        odoo.param("td.telemetry.write_enabled", "True")
         col.restart(env={"F3D_WRITE_ENABLED": "1"})
         time.sleep(40)
         subprocess.run([*psql, cmd_sql], check=True, capture_output=True, text=True)
         cmd = wait(
             lambda: [
                 c
-                for c in odoo.search_read("f3d.command", [("signal_id", "=", sig_state)], ["state", "error", "result"])
+                for c in odoo.search_read("td.command", [("signal_id", "=", sig_state)], ["state", "error", "result"])
                 if c["state"] != "queued"
             ],
             120,
@@ -333,18 +333,18 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
         subprocess.run(
             [
                 *psql,
-                f"update f3d_source set write_enabled = false where id = {facp}; "
-                f"update f3d_signal set write_enabled = false where id = {sig_state}; "
-                f"delete from f3d_command where source_id = {facp}",
+                f"update td_source set write_enabled = false where id = {facp}; "
+                f"update td_signal set write_enabled = false where id = {sig_state}; "
+                f"delete from td_command where source_id = {facp}",
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-        odoo.param("factory3d.telemetry.write_enabled", "False")
+        odoo.param("td.telemetry.write_enabled", "False")
         col.restart(env={"F3D_WRITE_ENABLED": "1"})
         assert wait(
-            lambda: odoo.search_read("f3d.source", [("id", "=", facp)], ["state"])[0]["state"] == "online", 150, 3
+            lambda: odoo.search_read("td.source", [("id", "=", facp)], ["state"])[0]["state"] == "online", 150, 3
         ), "BAC-200-FACP не стало online"
         with Sniffer(src="127.0.0.2") as sn:
             subprocess.run([*psql, cmd_sql], check=True, capture_output=True, text=True)
@@ -369,17 +369,17 @@ def test_tb06_fire_panel_read_only(fresh_sim, odoo, col, token):
                 "odoo",
                 "f3d_telemetry_w7",
                 "-Atc",
-                f"update f3d_signal set write_enabled = false where id in ({sig_state}, {sig_dust}); "
-                f"update f3d_source set write_enabled = false where id = {facp}; "
-                f"delete from f3d_command where source_id = {facp}",
+                f"update td_signal set write_enabled = false where id in ({sig_state}, {sig_dust}); "
+                f"update td_source set write_enabled = false where id = {facp}; "
+                f"delete from td_command where source_id = {facp}",
             ],
             check=False,
             capture_output=True,
         )
-        odoo.param("factory3d.telemetry.write_enabled", "False")
-        odoo.write("f3d.source", boiler, {"read_enabled": True})
-        odoo.call("f3d.signal", "unlink", [sig_state, sig_dust])
-        odoo.call("f3d.source", "unlink", [facp])
+        odoo.param("td.telemetry.write_enabled", "False")
+        odoo.write("td.source", boiler, {"read_enabled": True})
+        odoo.call("td.signal", "unlink", [sig_state, sig_dust])
+        odoo.call("td.source", "unlink", [facp])
         col.restart(env={"F3D_WRITE_ENABLED": "0"})
 
 
@@ -421,7 +421,7 @@ def test_tb07_http_push_receiver(odoo, metrics, col):
     assert metrics.health()["status"] in ("ok", "degraded")
     assert rss() - r0 < 50 * 1024, (r0, rss())
     time.sleep(15)
-    evs = odoo.search_read("f3d.push.event", [("route", "=", "lpr")], ["payload"], order="id desc", limit=50)
+    evs = odoo.search_read("td.push.event", [("route", "=", "lpr")], ["payload"], order="id desc", limit=50)
     mine = [
         e["payload"].get("plateText") for e in evs if str(e["payload"].get("plateText", "")).startswith("TB" + marker)
     ]
@@ -450,7 +450,7 @@ def test_tb08_container_and_allowlist(col, metrics, odoo, fresh_sim):
         states = {
             s["code"]: (s["state"], s["last_error"] or "")
             for s in odoo.search_read(
-                "f3d.source", [("type", "in", ("modbus_tcp", "bacnet_ip"))], ["code", "state", "last_error"]
+                "td.source", [("type", "in", ("modbus_tcp", "bacnet_ip"))], ["code", "state", "last_error"]
             )
         }
         assert states

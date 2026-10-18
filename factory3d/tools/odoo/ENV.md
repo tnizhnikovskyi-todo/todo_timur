@@ -4,7 +4,7 @@
 `factory3d/tools/odoo/setup.sh` (≈ 2 хв 40 с: клон Odoo + venv + Postgres ≈ 50 с, шаблонна база ≈ 110 с).
 Повторний запуск `setup.sh` ідемпотентний: те, що вже готове, пропускається (≈ 1 с).
 
-Скрипти — порт середовища `smartgen/tools/odoo/` (Odoo 18, `td_genset`) на Odoo 19 для модулів `factory3d_*`.
+Скрипти — порт середовища `smartgen/tools/odoo/` (Odoo 18, `td_genset`) на Odoo 19 для модулів `td_*`.
 
 ## Шпаргалка (один рядок — одна дія)
 
@@ -12,9 +12,9 @@
 T=<корінь worktree>/factory3d/tools/odoo
 $T/setup.sh                                      # свіжий контейнер: Postgres, Odoo 19, venv, конфіг, шаблонна база f3d_template
 $T/pg.sh start                                   # підняти Postgres (після рестарту контейнера сам не стартує)
-F3D_TEST_INSTALL=factory3d_x $T/run_tests.sh f3d_<ім'я>   # свіжа копія шаблона + -i factory3d_x + тести /factory3d_x
+F3D_TEST_INSTALL=td_x $T/run_tests.sh f3d_<ім'я>   # свіжа копія шаблона + -i td_x + тести /td_x
 $T/run_tests.sh f3d_<ім'я>                       # те саме, але ставляться й тестуються ВСІ модулі з odoo_addons
-$T/run_tests.sh f3d_<ім'я> /factory3d_x:TestY    # лише клас (або :TestY.test_z, або тег); теги — синтаксис Odoo --test-tags
+$T/run_tests.sh f3d_<ім'я> /td_x:TestY    # лише клас (або :TestY.test_z, або тег); теги — синтаксис Odoo --test-tags
 $T/new_db.sh f3d_<ім'я>                          # порожня копія шаблона (без модулів factory3d)
 $T/update.sh f3d_<ім'я>                          # -u/-i модулів factory3d у наявній базі
 $T/serve.sh f3d_<ім'я> [порт]                    # сервер у фоні (Playwright, ручна перевірка), admin / admin
@@ -60,9 +60,9 @@ run_tests.sh f3d_smoke`): модуль ставиться на копію шаб
 `stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet, fleet, web, bus, mail, mrp_workorder,
 mrp_account, analytic, web_hierarchy, delivery, stock_delivery, web_gantt, hr_attendance` (+ їхні залежності, 86 модулів).
 
-### Демо-шаблон `f3d_demo_tpl` (`make_demo_tpl.sh`)
+### Демо-шаблон `td_demo_tpl` (`make_demo_tpl.sh`)
 
-`make_demo_tpl.sh [--force]` (≈ 6,5 хв): копія `f3d_template` + uk_UA + purchase_stock/sale_stock/… → `plant.odoo_push` по XML-RPC (сервер без cron) → `-i factory3d_base,factory3d_iot_sim` (post_init_hook мігрує демо) → шаблон (`ALLOW_CONNECTIONS false`). Є: MO `WH/MO/00231`, 35 РЦ, 731 локація, `f3d_sim_signal` 1168. Тести на ній: `F3D_TEMPLATE_DB=f3d_demo_tpl F3D_TEST_INSTALL=… run_tests.sh f3d_<ім'я> …`.
+`make_demo_tpl.sh [--force]` (≈ 6,5 хв): копія `f3d_template` + uk_UA + purchase_stock/sale_stock/… → `plant.odoo_push` по XML-RPC (сервер без cron) → `-i td_factory3d,td_iot_sim` (post_init_hook мігрує демо) → шаблон (`ALLOW_CONNECTIONS false`). Є: MO `WH/MO/00231`, 35 РЦ, 731 локація, `td_sim_signal` 1168. Тести на ній: `F3D_TEMPLATE_DB=td_demo_tpl F3D_TEST_INSTALL=… run_tests.sh f3d_<ім'я> …`.
 Кроки push `modules` (iot — Enterprise), `iot_module`, `signals` пропускаються (`--skip`/`F3D_DEMO_SKIP`); у `plant/odoo_push.py` — правки для CE: без `employee_ids`/`start_employee` і з lot_name при підтвердженні приймань. Якщо база є — вихід без дій.
 
 ### Недоступні модулі (Odoo 19.0 Community)
@@ -77,7 +77,7 @@ mrp_account, analytic, web_hierarchy, delivery, stock_delivery, web_gantt, hr_at
 | `mrp_maintenance` | немає в 19.0 Community (є лише `maintenance`, `hr_maintenance`, `stock_maintenance`) |
 
 Усі інші 16 зі списку встановлюються й ставляться в шаблон без помилок (`web_hierarchy`, `stock_fleet`, `mrp_account`,
-`hr_attendance`, `delivery`, `stock_delivery` тощо — у Community 19.0 є). Модулі `factory3d_*` не повинні залежати
+`hr_attendance`, `delivery`, `stock_delivery` тощо — у Community 19.0 є). Модулі `td_*` не повинні залежати
 від трьох недоступних — інакше `-i` впаде на «module not found».
 
 ## Git worktree (паралельні потоки)
@@ -136,7 +136,7 @@ mrp_account, analytic, web_hierarchy, delivery, stock_delivery, web_gantt, hr_at
 - **at_install-тести і порядок завантаження.** У шаблоні вже стоять ~86 модулів. При `-i` модуль завантажується в
   порядку глибини графа залежностей, і його at_install-тести (дефолтний тег) виконуються, коли модулі *глибші* за
   нього ще не завантажені, хоча їхні колонки в БД уже є. Наслідок: тест низькорівневого модуля, що створює
-  `res.partner`, падає на `NOT NULL` для колонок `account` (`autopost_bills`). Модулі `factory3d_*`, що залежать від
+  `res.partner`, падає на `NOT NULL` для колонок `account` (`autopost_bills`). Модулі `td_*`, що залежать від
   `mrp`/`stock`/…, цього не чіпає (перевірено: заглушка з `depends = mrp, maintenance, stock` створює `res.partner` і
   `res.users` в at_install-тесті без помилок), але тести, що торкаються моделей з модулів поза `depends`, роблять
   `@tagged('post_install', '-at_install')`.

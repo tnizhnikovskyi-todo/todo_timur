@@ -112,7 +112,7 @@ def test_tk11_yard(api, host):
     assert lpr, "LPR POST не отримано (/lpr-sink)"
     p = lpr[0]["payload"]
     assert p["plateListMode"] == "allow" and p["GEOtarget"] == "GATE-W" and p["capture_timestamp"]
-    # AC-54: вихідна фура з номером з f3d_plate
+    # AC-54: вихідна фура з номером з td_plate
     api.post("/scenario/truck_arrival/stop")
     r = api.post("/scenario/truck_arrival/start", {"params": {"booking": "BATCH/OUT/00004"}})
     assert r.status_code == 201, r.text

@@ -23,7 +23,7 @@ class TestSync(AccessCase):
         self.assertEqual(self.device_acr_in.status, 'online')
         self.assertEqual(self.device_acr_in.device_type, 'BioEntry W3')
         self.assertEqual(self.device_acr_in.name, 'Вхід персоналу (прохідна)')
-        new = self.env['f3d.access.device'].search([('code', '=', 'BS-5390006')])
+        new = self.env['td.access.device'].search([('code', '=', 'BS-5390006')])
         self.assertEqual((new.direction, bool(new.zone_id), new.biostar_id), ('in', False, '5390006'))
         self.assertEqual(self.server.devices_total, 6)
         self.assertEqual(self.server.state, 'online')
@@ -50,7 +50,7 @@ class TestSync(AccessCase):
         self.assertEqual(self.door_turn_1.open_duration_s, 5)
         for door in self.server.door_ids.filtered(lambda d: d.code in zones):
             self.assertEqual((door.zone_from_id, door.zone_to_id), zones[door.code])
-        new = self.env['f3d.access.door'].search([('code', '=', 'BSD-6')])
+        new = self.env['td.access.door'].search([('code', '=', 'BSD-6')])
         self.assertEqual(new.entry_device_id.code, 'BS-5390006')
         self.assertFalse(new.zone_to_id)
         self.assertEqual(self.server.doors_without_zone, 1)
@@ -69,13 +69,13 @@ class TestSync(AccessCase):
 
     def _sync_users(self, users=None):
         self.link_b.unlink()  # TSTB2 не повертається — перевіряємо лише OLD9
-        old = self.env['f3d.access.user.link'].create({'server_id': self.server.id, 'biostar_user_id': 'OLD9'})
+        old = self.env['td.access.user.link'].create({'server_id': self.server.id, 'biostar_user_id': 'OLD9'})
         with self.patch_client(FakeBioStar(users=users or self._users())):
             return old, self.server._sync_users()
 
     def test_sync_users_matching(self):
         old, res = self._sync_users()
-        Link = self.env['f3d.access.user.link']
+        Link = self.env['td.access.user.link']
 
         def link(uid):
             return Link.search([('server_id', '=', self.server.id), ('biostar_user_id', '=', uid)])
@@ -95,12 +95,12 @@ class TestSync(AccessCase):
 
     def test_no_name_match(self):
         _old, _res = self._sync_users()
-        link = self.env['f3d.access.user.link'].search([('biostar_user_id', '=', 'ZZZ9')])
+        link = self.env['td.access.user.link'].search([('biostar_user_id', '=', 'ZZZ9')])
         self.assertEqual((link.match, bool(link.employee_id)), ('none', False))
 
     def test_biometrics_not_stored(self):
         self._sync_users()
-        for rec in self.env['f3d.access.user.link'].search([]):
+        for rec in self.env['td.access.user.link'].search([]):
             for name in rec._fields:
                 value = rec[name]
                 if isinstance(value, str):
@@ -109,14 +109,14 @@ class TestSync(AccessCase):
     def test_missing_users(self):
         _old, res = self._sync_users(users=self._users()[:1])
         self.assertEqual(res['missing'], 1)
-        self.assertFalse(self.env['f3d.access.user.link'].search([('biostar_user_id', '=', 'OLD9')]).in_biostar)
+        self.assertFalse(self.env['td.access.user.link'].search([('biostar_user_id', '=', 'OLD9')]).in_biostar)
         # користувач повернувся — прапорець знову піднімається
         with self.patch_client(FakeBioStar(users=self._users() + [{'user_id': 'OLD9', 'name': 'Повернувся'}])):
             self.server._sync_users()
-        self.assertTrue(self.env['f3d.access.user.link'].search([('biostar_user_id', '=', 'OLD9')]).in_biostar)
+        self.assertTrue(self.env['td.access.user.link'].search([('biostar_user_id', '=', 'OLD9')]).in_biostar)
 
     def test_manual_match_survives(self):
-        link = self.env['f3d.access.user.link'].create({'server_id': self.server.id, 'biostar_user_id': 'ZZZ9'})
+        link = self.env['td.access.user.link'].create({'server_id': self.server.id, 'biostar_user_id': 'ZZZ9'})
         link.write({'employee_id': self.emp_c.id})
         self.assertEqual(link.match, 'manual')
         with self.patch_client(FakeBioStar(users=self._users())):

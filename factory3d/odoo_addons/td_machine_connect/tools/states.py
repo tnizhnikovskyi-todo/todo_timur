@@ -35,7 +35,7 @@ def _warn_unknown(state, key, now):
 
 
 def normalize(protocol, raw, key=None, now=None):
-    """`raw = {"state", "mode", "alarm", "bad"}` → один зі станів `f3d.machine.state` (R-01).
+    """`raw = {"state", "mode", "alarm", "bad"}` → один зі станів `td.machine.state` (R-01).
 
     `key` — код верстата для обмеження WARNING «невідомий стан» (раз на годину); `now` — naive UTC.
     """

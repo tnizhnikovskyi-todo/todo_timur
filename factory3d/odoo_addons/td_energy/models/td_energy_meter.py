@@ -18,7 +18,7 @@ POWER_UNIT = "кВт"
 class F3dEnergyMeter(models.Model):
     """M-02. Методи `_f3d_counter_series`, `_f3d_kwh`, `_f3d_update_state` — R-03, R-21."""
 
-    _name = "f3d.energy.meter"
+    _name = "td.energy.meter"
     _description = "Енергетика: лічильник"
     _inherit = ["mail.thread"]
     _order = "node_id, code"
@@ -29,7 +29,7 @@ class F3dEnergyMeter(models.Model):
     code = fields.Char(string="Код", size=32, required=True, index=True, copy=False)
     name = fields.Char(string="Назва", size=128)
     active = fields.Boolean(default=True)
-    node_id = fields.Many2one("f3d.energy.node", string="Вузол", required=True, ondelete="restrict", index=True)
+    node_id = fields.Many2one("td.energy.node", string="Вузол", required=True, ondelete="restrict", index=True)
     model = fields.Selection(
         [
             ("pm5560", "Schneider PowerLogic PM5560"),
@@ -52,16 +52,16 @@ class F3dEnergyMeter(models.Model):
         string="Роль",
         required=True,
     )
-    source_id = fields.Many2one("f3d.source", string="Джерело", ondelete="set null")
-    p_signal_id = fields.Many2one("f3d.signal", string="Сигнал потужності, кВт", ondelete="set null")
+    source_id = fields.Many2one("td.source", string="Джерело", ondelete="set null")
+    p_signal_id = fields.Many2one("td.signal", string="Сигнал потужності, кВт", ondelete="set null")
     e_import_signal_id = fields.Many2one(
-        "f3d.signal",
+        "td.signal",
         string="Лічильник енергії (споживання / вироблення), кВт·год",
         domain="[('kind', '=', 'counter')]",
         ondelete="set null",
     )
     e_export_signal_id = fields.Many2one(
-        "f3d.signal",
+        "td.signal",
         string="Лічильник енергії (віддача), кВт·год",
         domain="[('kind', '=', 'counter')]",
         ondelete="set null",
@@ -133,14 +133,14 @@ class F3dEnergyMeter(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Профіль"),
-            "res_model": "f3d.energy.interval",
+            "res_model": "td.energy.interval",
             "view_mode": "graph,pivot,list",
             "domain": [("meter_id", "=", self.id), ("ts_start", ">=", since)],
         }
 
     # --- безперервний лічильник (R-03) ---------------------------------------------------------------
     def _f3d_counter_series(self, a, b, base=0.0, export=False):
-        """R-03 п. 5: ряд `Ec` на вікно `[a, b]` (UTC naive). Показання `f3d.reading` у `[a − 2 год, b + 2 год]`,
+        """R-03 п. 5: ряд `Ec` на вікно `[a, b]` (UTC naive). Показання `td.reading` у `[a − 2 год, b + 2 год]`,
         остання точка до вікна (якорь) і `last_value` сигналу; немає показань (вікно старше `keep_days`) —
         ряд з інтервалів лічильника (лише імпорт)."""
         self.ensure_one()
@@ -148,7 +148,7 @@ class F3dEnergyMeter(models.Model):
         if not signal:
             return Series([], [], [])
         lo, hi = a - timedelta(hours=2), b + timedelta(hours=2)
-        Reading = self.env["f3d.reading"].sudo()
+        Reading = self.env["td.reading"].sudo()
         base_dom = [("signal_id", "=", signal.id), ("quality", "!=", "bad")]
         points = {
             r["ts"]: r["value"]
@@ -162,7 +162,7 @@ class F3dEnergyMeter(models.Model):
             if lead and lead.value is not None:
                 points[lead.ts] = lead.value
         if not export:
-            keep_days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.keep_days", "30"))
+            keep_days = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.keep_days", "30"))
             old = a < dates.now_utc(self.env) - timedelta(days=keep_days)
             if not points or (old and min(points) > a):
                 series = self._f3d_series_from_intervals(a, b)
@@ -180,7 +180,7 @@ class F3dEnergyMeter(models.Model):
 
     def _f3d_series_from_intervals(self, a, b):
         ivs = (
-            self.env["f3d.energy.interval"]
+            self.env["td.energy.interval"]
             .sudo()
             .search_read(
                 [("meter_id", "=", self.id), ("ts_end", ">=", a), ("ts_start", "<=", b)],
@@ -218,8 +218,8 @@ class F3dEnergyMeter(models.Model):
     def _f3d_update_state(self):
         """R-21 п. 1–2: `data_state`, `data_state_since`; подія про відсутність даних довше `gap_alarm_min`."""
         now = dates.now_utc(self.env)
-        Interval = self.env["f3d.energy.interval"].sudo()
-        Event = self.env["f3d.energy.event"].sudo()
+        Interval = self.env["td.energy.interval"].sudo()
+        Event = self.env["td.energy.event"].sudo()
         gap_alarm = timedelta(minutes=param_float(self.env, "gap_alarm_min", 60))
         for rec in self.sudo():
             sig = rec.e_import_signal_id

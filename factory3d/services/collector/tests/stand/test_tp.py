@@ -64,10 +64,10 @@ def _p95(xs: list[float]) -> float:
 @pytest.fixture(scope="module")
 def perf_collector(odoo):
     """COL-PERF + джерело PERF-MB (read_enabled=False — живий колектор його не опитує) + 55 сигналів."""
-    cid = odoo.call("f3d.collector", "create", {"code": "COL-PERF", "name": "COL-PERF"})
+    cid = odoo.call("td.collector", "create", {"code": "COL-PERF", "name": "COL-PERF"})
     tok = odoo.new_token("COL-PERF")
     sid = odoo.call(
-        "f3d.source",
+        "td.source",
         "create",
         {
             "code": "PERF-MB",
@@ -80,7 +80,7 @@ def perf_collector(odoo):
     )
     codes = [f"perf/tp/s{i:04d}" for i in range(55)]
     ids = odoo.call(
-        "f3d.signal",
+        "td.signal",
         "create",
         [
             {
@@ -96,18 +96,18 @@ def perf_collector(odoo):
             for i, c in enumerate(codes)
         ],
     )
-    prev = odoo.param("factory3d.telemetry.push_rate_per_min")
-    odoo.param("factory3d.telemetry.push_rate_per_min", 100000)
+    prev = odoo.param("td.telemetry.push_rate_per_min")
+    odoo.param("td.telemetry.push_rate_per_min", 100000)
     yield {"cid": cid, "sid": sid, "token": tok, "codes": codes, "ids": ids}
-    odoo.param("factory3d.telemetry.push_rate_per_min", prev or 60)
+    odoo.param("td.telemetry.push_rate_per_min", prev or 60)
     _psql(
         "f3d_telemetry_w7",
-        f"delete from f3d_reading where signal_id in ({','.join(map(str, ids))}); "
-        f"delete from f3d_reading_hour where signal_id in ({','.join(map(str, ids))})",
+        f"delete from td_reading where signal_id in ({','.join(map(str, ids))}); "
+        f"delete from td_reading_hour where signal_id in ({','.join(map(str, ids))})",
     )
-    odoo.call("f3d.signal", "unlink", ids)
-    odoo.call("f3d.source", "unlink", [sid])
-    odoo.call("f3d.collector", "unlink", [cid])
+    odoo.call("td.signal", "unlink", ids)
+    odoo.call("td.source", "unlink", [sid])
+    odoo.call("td.collector", "unlink", [cid])
 
 
 def _packets(codes, n_packets, size, t_end):
@@ -169,8 +169,8 @@ def test_tp02_config_1000_signals(odoo, perf_collector):
         }
         for i in range(1000 - 55)
     ]
-    odoo.call("f3d.signal", "create", extra)
-    odoo.param("factory3d.telemetry.read_enabled", "True")
+    odoo.call("td.signal", "create", extra)
+    odoo.param("td.telemetry.read_enabled", "True")
     url, tok = odoo.url + "/f3d/telemetry/config", perf_collector["token"]
     http("GET", url, headers=_auth(tok))  # прогрів кешу
     times = []
@@ -199,8 +199,8 @@ def test_tp02_config_1000_signals(odoo, perf_collector):
     assert statistics.median(times) <= 0.5, times
     assert statistics.median(t304) <= 0.2, t304
     assert 200 <= len(body) // 1024 <= 1500, len(body)
-    ids = [s["id"] for s in odoo.search_read("f3d.signal", [("code", "like", "perf/tp/c")], ["id"])]
-    odoo.call("f3d.signal", "unlink", ids)
+    ids = [s["id"] for s in odoo.search_read("td.signal", [("code", "like", "perf/tp/c")], ["id"])]
+    odoo.call("td.signal", "unlink", ids)
 
 
 @pytest.fixture(scope="module")
@@ -210,9 +210,9 @@ def perf_db():
         ["psql", "-h", "127.0.0.1", "-U", "odoo", "-lqt"], capture_output=True, text=True, check=False
     ).stdout
     if PERF_DB not in exists:
-        env = {**os.environ, "F3D_TEST_INSTALL": "factory3d_iot_sim,factory3d_telemetry"}
+        env = {**os.environ, "F3D_TEST_INSTALL": "td_iot_sim,td_telemetry"}
         r = subprocess.run(
-            [str(TOOLS / "run_tests.sh"), PERF_DB, "/factory3d_telemetry:TestSecurity"],
+            [str(TOOLS / "run_tests.sh"), PERF_DB, "/td_telemetry:TestSecurity"],
             env=env,
             capture_output=True,
             text=True,
@@ -231,31 +231,31 @@ def perf_db():
 @pytest.fixture(scope="module")
 def perf_data(perf_db):
     """225 сигналів; ≈ 2,4 М показань за 30 діб + 81 000 старших; 2,16 М годинних агрегатів до now − 48 год."""
-    n = _psql(perf_db, "select count(*) from f3d_signal where code like 'perf/tp/p%'")
-    old = _psql(perf_db, "select count(*) from f3d_reading where ts < now() at time zone 'utc' - interval '30 days'")
+    n = _psql(perf_db, "select count(*) from td_signal where code like 'perf/tp/p%'")
+    old = _psql(perf_db, "select count(*) from td_reading where ts < now() at time zone 'utc' - interval '30 days'")
     if int(n) != N_SIG_PERF or int(old) != 81000:  # свіжий набір для кожного прогону ТП-03
         _shell(
-            "env['f3d.signal'].sudo().search([('code', 'like', 'perf/tp/p')]).unlink()\n"
-            f"env['f3d.signal'].sudo().create([{{'code': 'perf/tp/p%04d' % i, 'name': 'p%d' % i, 'kind': 'gauge', "
+            "env['td.signal'].sudo().search([('code', 'like', 'perf/tp/p')]).unlink()\n"
+            f"env['td.signal'].sudo().create([{{'code': 'perf/tp/p%04d' % i, 'name': 'p%d' % i, 'kind': 'gauge', "
             f"'origin': 'manual', 'period_s': 10}} for i in range({N_SIG_PERF})])\nenv.cr.commit()\nprint('STAND {{}}')\n"
         )
-        _psql(perf_db, "truncate f3d_reading, f3d_reading_hour restart identity")
+        _psql(perf_db, "truncate td_reading, td_reading_hour restart identity")
         t0 = time.time()
         _psql(
             perf_db,
             """
-insert into f3d_reading (signal_id, ts, value, quality, src, received_at)
+insert into td_reading (signal_id, ts, value, quality, src, received_at)
 select s.id, (now() at time zone 'utc') - (g * 243) * interval '1 second', 5 + (g % 17) * 0.1, 'good', 'collector',
        now() at time zone 'utc'
-  from f3d_signal s cross join generate_series(0, 10666) g where s.code like 'perf/tp/p%';
-insert into f3d_reading (signal_id, ts, value, quality, src, received_at)
+  from td_signal s cross join generate_series(0, 10666) g where s.code like 'perf/tp/p%';
+insert into td_reading (signal_id, ts, value, quality, src, received_at)
 select s.id, (now() at time zone 'utc') - interval '30 days' - (g * 7200) * interval '1 second', 5, 'good', 'collector',
        now() at time zone 'utc'
-  from f3d_signal s cross join generate_series(1, 360) g where s.code like 'perf/tp/p%';
-insert into f3d_reading_hour (signal_id, hour, v_min, v_avg, v_max, v_sum, v_count, v_first, v_last, delta)
+  from td_signal s cross join generate_series(1, 360) g where s.code like 'perf/tp/p%';
+insert into td_reading_hour (signal_id, hour, v_min, v_avg, v_max, v_sum, v_count, v_first, v_last, delta)
 select s.id, date_trunc('hour', now() at time zone 'utc') - g * interval '1 hour', 4, 5, 6, 5 * 15, 15, 5, 5, 0
-  from f3d_signal s cross join generate_series(49, 9648) g where s.code like 'perf/tp/p%';
-analyze f3d_reading; analyze f3d_reading_hour;
+  from td_signal s cross join generate_series(49, 9648) g where s.code like 'perf/tp/p%';
+analyze td_reading; analyze td_reading_hour;
 """,
         )
         (STAND_DIR / "tp_gen.json").write_text(json.dumps({"generate_s": round(time.time() - t0, 1)}))
@@ -268,10 +268,10 @@ def test_tp05_aggregate_48h(perf_data):
     res = _shell(
         "import json, time\n"
         "t0 = time.time()\n"
-        "env['f3d.reading.hour']._cron_aggregate()\n"
+        "env['td.reading.hour']._cron_aggregate()\n"
         "dt = time.time() - t0\n"
         "env.cr.commit()\n"
-        "env.cr.execute(\"select count(*) from f3d_reading where ts > now() at time zone 'utc' - interval '48 hours'\")\n"
+        "env.cr.execute(\"select count(*) from td_reading where ts > now() at time zone 'utc' - interval '48 hours'\")\n"
         "n = env.cr.fetchone()[0]\n"
         "print('STAND ' + json.dumps({'seconds': dt, 'readings_48h': n}))\n"
     )
@@ -287,12 +287,12 @@ def test_tp07_reading_graph(perf_data):
         "import json, time\n"
         "from datetime import timedelta\n"
         "from odoo import fields\n"
-        "sid = env['f3d.signal'].search([('code', '=', 'perf/tp/p0007')]).id\n"
+        "sid = env['td.signal'].search([('code', '=', 'perf/tp/p0007')]).id\n"
         "t0 = time.time()\n"
         "dom = [('signal_id', '=', sid), ('ts', '>=', fields.Datetime.now() - timedelta(hours=48))]\n"
-        "g = env['f3d.reading'].read_group(dom, ['value:avg'], ['ts:hour'])\n"
+        "g = env['td.reading'].read_group(dom, ['value:avg'], ['ts:hour'])\n"
         "dt = time.time() - t0\n"
-        "env.cr.execute('select count(*) from f3d_reading')\n"
+        "env.cr.execute('select count(*) from td_reading')\n"
         "print('STAND ' + json.dumps({'seconds': dt, 'groups': len(g), 'rows_total': env.cr.fetchone()[0]}))\n"
     )
     (STAND_DIR / "tp07.json").write_text(json.dumps(res))
@@ -303,18 +303,18 @@ def test_tp07_reading_graph(perf_data):
 @pytest.mark.timeout(1800)
 def test_tp03_tp04_rotation_and_size(perf_data):
     """ТП-03: ротація 2,4 М + 81 000 старших за keep_days — ≤ 60 с, видалено 81 000; з 3 М застарілих — зупинка за ≈60 с,
-    решта наступним прогоном; EXPLAIN підзапиту — Index Scan f3d_reading_ts_idx. ТП-04: розміри таблиць."""
+    решта наступним прогоном; EXPLAIN підзапиту — Index Scan td_reading_ts_idx. ТП-04: розміри таблиць."""
     res = _shell(
         "import json, time\n"
         "t0 = time.time()\n"
-        "r = env['f3d.reading']._cron_rotate()\n"
+        "r = env['td.reading']._cron_rotate()\n"
         "dt = time.time() - t0\n"
         "env.cr.commit()\n"
-        "env.cr.execute(\"explain select id from f3d_reading where ts < now() at time zone 'utc' - interval '30 days' "
+        "env.cr.execute(\"explain select id from td_reading where ts < now() at time zone 'utc' - interval '30 days' "
         'order by ts limit 50000")\n'
         "plan = ' '.join(x[0] for x in env.cr.fetchall())\n"
-        "env.cr.execute(\"select pg_total_relation_size('f3d_reading'), pg_total_relation_size('f3d_reading_hour'), "
-        '(select count(*) from f3d_reading_hour)")\n'
+        "env.cr.execute(\"select pg_total_relation_size('td_reading'), pg_total_relation_size('td_reading_hour'), "
+        '(select count(*) from td_reading_hour)")\n'
         "a, b, c = env.cr.fetchone()\n"
         "print('STAND ' + json.dumps({'seconds': dt, 'deleted': r, 'plan': plan, 'reading_mb': a / 1048576, "
         "'hour_mb': b / 1048576, 'hour_rows': c}))\n"
@@ -322,7 +322,7 @@ def test_tp03_tp04_rotation_and_size(perf_data):
     (STAND_DIR / "tp03_04.json").write_text(json.dumps(res))
     assert res["seconds"] <= 60, res
     assert res["deleted"]["readings"] == 81000, res
-    assert "f3d_reading_ts_idx" in res["plan"] and "Index Scan" in res["plan"], res["plan"]
+    assert "td_reading_ts_idx" in res["plan"] and "Index Scan" in res["plan"], res["plan"]
     assert res["hour_rows"] >= 2_100_000, res
     # ТП-04: межі SPEC (350 / 260 МБ) перевищені — фактично 443 / 432 МБ (оцінка ARCH §2.7 занижена; див. TEST_REPORT).
     # За умовчанням перевіряється виміряна межа 500 / 480 МБ + попередження; F3D_TP04_STRICT=1 — межі SPEC.
@@ -338,27 +338,27 @@ def test_tp03_tp04_rotation_and_size(perf_data):
     _psql(
         perf_data,
         """
-insert into f3d_reading (signal_id, ts, value, quality, src, received_at)
+insert into td_reading (signal_id, ts, value, quality, src, received_at)
 select s.id, (now() at time zone 'utc') - interval '31 days' - (g * 11) * interval '1 second', 5, 'good', 'collector',
        now() at time zone 'utc'
-  from f3d_signal s cross join generate_series(1, 13334) g where s.code like 'perf/tp/p%'; analyze f3d_reading;""",
+  from td_signal s cross join generate_series(1, 13334) g where s.code like 'perf/tp/p%'; analyze td_reading;""",
     )
     stale = int(
-        _psql(perf_data, "select count(*) from f3d_reading where ts < now() at time zone 'utc' - interval '30 days'")
+        _psql(perf_data, "select count(*) from td_reading where ts < now() at time zone 'utc' - interval '30 days'")
     )
     first = _shell(
-        "import json, time\nt0 = time.time()\nr = env['f3d.reading']._cron_rotate()\nenv.cr.commit()\n"
+        "import json, time\nt0 = time.time()\nr = env['td.reading']._cron_rotate()\nenv.cr.commit()\n"
         "print('STAND ' + json.dumps({'seconds': time.time() - t0, 'deleted': r}))\n"
     )
     left = int(
-        _psql(perf_data, "select count(*) from f3d_reading where ts < now() at time zone 'utc' - interval '30 days'")
+        _psql(perf_data, "select count(*) from td_reading where ts < now() at time zone 'utc' - interval '30 days'")
     )
     (STAND_DIR / "tp03_big.json").write_text(json.dumps({"stale": stale, "first": first, "left": left}))
     assert first["seconds"] <= 75, first  # ліміт 60 с + доводка поточного пакета 50 000
     if stale > 1_500_000:
         assert 0 < left < stale, "ротація мала зупинитись за часом і лишити решту"
     second = _shell(
-        "import json\nr = env['f3d.reading']._cron_rotate()\nenv.cr.commit()\n"
+        "import json\nr = env['td.reading']._cron_rotate()\nenv.cr.commit()\n"
         "print('STAND ' + json.dumps({'deleted': r}))\n"
     )
     assert second["deleted"]["readings"] > 0

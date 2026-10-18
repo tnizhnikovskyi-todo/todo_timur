@@ -14,10 +14,10 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Balance = cls.env["f3d.energy.balance"]
-        cls.Event = cls.env["f3d.energy.event"]
-        cls.Node = cls.env["f3d.energy.node"]
-        cls.meters = cls.env["f3d.energy.meter"].search([("active", "=", True), ("e_import_signal_id", "!=", False)])
+        cls.Balance = cls.env["td.energy.balance"]
+        cls.Event = cls.env["td.energy.event"]
+        cls.Node = cls.env["td.energy.node"]
+        cls.meters = cls.env["td.energy.meter"].search([("active", "=", True), ("e_import_signal_id", "!=", False)])
         cls.hour = (fields.Datetime.now() - timedelta(days=3)).replace(hour=8, minute=0, second=0, microsecond=0)
 
     def fill(self, hour, kwh=None, export=None, missing=()):
@@ -40,7 +40,7 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
                         "built_at": fields.Datetime.now(),
                     }
                 )
-        self.env["f3d.energy.interval"].create(vals)
+        self.env["td.energy.interval"].create(vals)
 
     def consumer(self, node_code):
         found = (
@@ -85,7 +85,7 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
         self.assertEqual(qfc1.state, "ok")
         self.assertAlmostEqual(qfc1.diff_kwh, 1.3, places=3)
         # сигнал небалансу лінії записано (годиною-кінцем)
-        sig = self.env["f3d.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
+        sig = self.env["td.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
         self.assertAlmostEqual(sig.last_value, 3.26, places=2)
         self.assertEqual(sig.last_ts, self.hour + timedelta(hours=1))
 
@@ -119,7 +119,7 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
         self.assertEqual(qf1.state, "skipped")
         self.assertIn(saw.code, qf1.reason)
         self.assertTrue(qf1.reason.startswith("немає даних"))
-        sig = self.env["f3d.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
+        sig = self.env["td.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
         self.assertFalse(sig.last_ts)
         self.assertFalse(self.Event.search([("kind", "=", "balance"), ("code", "=", "QF-1")]))
 
@@ -130,7 +130,7 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
         self.fill(self.hour, {"PM-QF-1": 110.5, saw.code: 106.9})
         self.fill(h2, {"PM-QF-1": 105.71, saw.code: 100.0})
         self.check(self.hour, "QF-1")
-        sig = self.env["f3d.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
+        sig = self.env["td.signal"].search([("code", "=", "energy/lines/BW-1/imbalance_pct")])
         self.assertEqual(sig.status, "ok")  # min_duration_s = 3600: утримання від першого показання
         self.assertFalse(self.env["maintenance.request"].search([("name", "=like", "Небаланс обліку QF-1:%")]))
         self.check(h2, "QF-1")
@@ -138,4 +138,4 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
         self.assertEqual(sig.status, "alarm")
         requests = self.env["maintenance.request"].search([("name", "=like", "Небаланс обліку QF-1: 5,4%")])
         self.assertEqual(len(requests), 1)
-        self.assertEqual(requests.equipment_id.f3d_code, "QF-1")
+        self.assertEqual(requests.equipment_id.td_code, "QF-1")

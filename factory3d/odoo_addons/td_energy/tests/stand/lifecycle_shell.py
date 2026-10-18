@@ -9,16 +9,16 @@ cr = env.cr  # noqa: F821
 
 
 def snap():
-    cr.execute("SELECT count(*) FROM f3d_signal WHERE code LIKE 'energy/%' OR code LIKE 'infra/%'")
+    cr.execute("SELECT count(*) FROM td_signal WHERE code LIKE 'energy/%' OR code LIKE 'infra/%'")
     sigs = cr.fetchone()[0]
-    cr.execute("""SELECT count(*), count(*) FILTER (WHERE active) FROM f3d_signal
+    cr.execute("""SELECT count(*), count(*) FILTER (WHERE active) FROM td_signal
                   WHERE (code LIKE 'energy/%' OR code LIKE 'infra/%') AND source_id IS NULL""")
     nosrc, nosrc_active = cr.fetchone()
-    cr.execute("SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'factory3d.energy.%'")
+    cr.execute("SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'td.energy.%'")
     params = cr.fetchone()[0]
-    cr.execute("SELECT count(*) FROM f3d_source WHERE code LIKE 'MB-U%'")
+    cr.execute("SELECT count(*) FROM td_source WHERE code LIKE 'MB-U%'")
     srcs = cr.fetchone()[0]
-    cr.execute("SELECT state FROM ir_module_module WHERE name='factory3d_energy'")
+    cr.execute("SELECT state FROM ir_module_module WHERE name='td_energy'")
     return {
         "signals": sigs,
         "signals_without_source": nosrc,
@@ -30,7 +30,7 @@ def snap():
 
 
 out = {"before": snap()}
-env["ir.module.module"].search([("name", "=", "factory3d_energy")]).button_immediate_uninstall()  # noqa: F821
+env["ir.module.module"].search([("name", "=", "td_energy")]).button_immediate_uninstall()  # noqa: F821
 cr.commit()
 out["after"] = snap()
 print("LIFE " + json.dumps(out))

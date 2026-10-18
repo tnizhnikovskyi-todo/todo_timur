@@ -49,14 +49,14 @@ class TestCutMap(F3DMachineCase):
     def setUp(self):
         super().setUp()
         patcher = patch.object(
-            type(self.env["f3d.push.handler"]),
+            type(self.env["td.push.handler"]),
             "_f3d_handler_models",
-            lambda _self, route: ["f3d.push.handler.machine_connect"] if route.startswith("mc_") else [],
+            lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.Part = self.env["f3d.cut.part"]
-        self.Map = self.env["f3d.cut.map"]
+        self.Part = self.env["td.cut.part"]
+        self.Map = self.env["td.cut.map"]
         self.mo = self.make_mo(self.wc_saw, qty=14, comps=((self.board, 8 / 14),), name="WH/MO/T0233")
         self.part1 = self._part(self.mo.bom_id, "P001", "Боковина", 720, 560, qty=2, grain="1", edge_top="EB-T",
                                 edge_left="EB-T")  # fmt: skip
@@ -67,7 +67,7 @@ class TestCutMap(F3DMachineCase):
         )
 
     def _import(self, text, replace=False):
-        wiz = self.env["f3d.cut.part.import.wizard"].create(
+        wiz = self.env["td.cut.part.import.wizard"].create(
             {"bom_id": self.mo.bom_id.id, "file": base64.b64encode(text.encode()), "replace": replace}
         )
         return wiz.action_import()
@@ -200,7 +200,7 @@ class TestCutMap(F3DMachineCase):
         boss = new_test_user(
             self.env,
             login="mc_cut_boss",
-            groups="base.group_user,factory3d_base.group_f3d_manager,mrp.group_mrp_manager",
+            groups="base.group_user,td_factory3d.group_td_manager,mrp.group_mrp_manager",
         )
         rec.with_user(boss).action_update_mo_need()
         self.assertEqual(sum(self.mo.move_raw_ids.filtered(lambda m: m.product_id == self.board).mapped(
@@ -229,7 +229,7 @@ class TestCutMap(F3DMachineCase):
         man = self._map(mode="manual")
         man.action_export()
         self.assertEqual(man.state, "exported")
-        wiz = self.env["f3d.cut.plan.import.wizard"].create(
+        wiz = self.env["td.cut.plan.import.wizard"].create(
             {"map_id": man.id, "file": base64.b64encode(json.dumps(plan_json()).encode())}
         )
         wiz.action_import()
@@ -238,7 +238,7 @@ class TestCutMap(F3DMachineCase):
         self.assertEqual(man.state, "released")
         self.assertFalse(man.command_ids)
         with self.assertRaises(UserError):
-            self.env["f3d.cut.plan.import.wizard"].create(
+            self.env["td.cut.plan.import.wizard"].create(
                 {"map_id": man.id, "file": base64.b64encode(b"{}")}
             ).action_import()
 

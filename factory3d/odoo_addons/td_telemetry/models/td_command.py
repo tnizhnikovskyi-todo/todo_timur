@@ -12,21 +12,21 @@ def _default_expires_at(self):
 
 
 class F3dCommand(models.Model):
-    _name = "f3d.command"
+    _name = "td.command"
     _description = "Телеметрія: команда на пристрій"
     _order = "requested_at desc"
     _inherit = ["mail.thread"]
 
     signal_id = fields.Many2one(
-        "f3d.signal",
+        "td.signal",
         string="Сигнал",
         required=True,
         ondelete="cascade",
         index=True,
         domain="[('write_enabled', '=', True)]",
     )
-    source_id = fields.Many2one("f3d.source", related="signal_id.source_id", store=True, index=True)
-    collector_id = fields.Many2one("f3d.collector", related="signal_id.collector_id", store=True, index=True)
+    source_id = fields.Many2one("td.source", related="signal_id.source_id", store=True, index=True)
+    collector_id = fields.Many2one("td.collector", related="signal_id.collector_id", store=True, index=True)
     signal_kind = fields.Selection(related="signal_id.kind")
     value = fields.Float(string="Значення")
     text = fields.Char(string="Текст/стан")
@@ -83,10 +83,10 @@ class F3dCommand(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         icp = self.env["ir.config_parameter"].sudo()
-        module_on = icp.get_param("factory3d.telemetry.write_enabled", "False") in ("True", "true", "1")
+        module_on = icp.get_param("td.telemetry.write_enabled", "False") in ("True", "true", "1")
         for vals in vals_list:
-            sig = self.env["f3d.signal"].sudo().browse(vals.get("signal_id"))
-            if not self.env.su and not self.env.user.has_group("factory3d_base.group_f3d_manager"):
+            sig = self.env["td.signal"].sudo().browse(vals.get("signal_id"))
+            if not self.env.su and not self.env.user.has_group("td_factory3d.group_td_manager"):
                 raise AccessError(_("Команди на пристрої створює лише менеджер телеметрії."))
             src = sig.source_id
             if not module_on:
@@ -97,7 +97,7 @@ class F3dCommand(models.Model):
                 raise UserError(_("Запис у пристрій вимкнено: сигнал %s.", sig.code))
             if src and isinstance(src.params, dict) and src.params.get("read_only"):
                 raise UserError(_("Джерело лише для читання."))
-            if src and src.type in self.env["f3d.source"]._f3d_local_types():
+            if src and src.type in self.env["td.source"]._f3d_local_types():
                 raise UserError(_("Джерело %s без колектора: запис у пристрій неможливий.", src.code))
             if sig.kind == "state" and vals.get("text") and "value" not in vals:
                 states = sig.states or []

@@ -2,14 +2,14 @@
 
 Этап 3, только документация: код не меняется. CD-27: наш конструктор — база, функции «Конструктора складу» переносятся в него.
 Рамки CD-29 (ядро без Odoo + адаптер, прототип и модуль — один код) и CD-30 (сначала модули Odoo, Community) применены с первой строки.
-Решения заказчика — `DECISIONS.md`; наш модуль — `docs/modules/factory3d_constructor/{SPEC,ARCHITECTURE}.md` (ссылки: M-xx модели, R-xx правила, API-xx).
+Решения заказчика — `DECISIONS.md`; наш модуль — `docs/modules/td_constructor/{SPEC,ARCHITECTURE}.md` (ссылки: M-xx модели, R-xx правила, API-xx).
 
 ## 0. Рамки, источники, допущения
 
 | Что | Состояние |
 |---|---|
 | Источник A | «Конструктор складу»: собранный Vite-бандл (минифицирован), прочитан только как текст, не запускался. Разобраны: `help-*.js` (36 разделов инструкции UK (72 ключа)), словарь интерфейса UK (1385 ключей), каталог 50 типов, `attr`/`capacity`/`putaway` (атрибуты, категории, правила), список адресов `/wh_constructor/api/*`, ключи туров, структура демо-данных |
-| Источник B | Ветка `claude/f3d-constructor` @ `622220e`: модуль `factory3d_constructor` 19.0.1.0.0 (бэкенд W1 и виджеты 3D-моделей W3 слиты), клиентский редактор W2 (порт прототипа) — в ветке `claude/f3d-constructor-w2`, не слит. Прототип — `scratchpad/constructor/proto/src/*.js` (вне репозитория) |
+| Источник B | Ветка `claude/f3d-constructor` @ `622220e`: модуль `td_constructor` 19.0.1.0.0 (бэкенд W1 и виджеты 3D-моделей W3 слиты), клиентский редактор W2 (порт прототипа) — в ветке `claude/f3d-constructor-w2`, не слит. Прототип — `scratchpad/constructor/proto/src/*.js` (вне репозитория) |
 | Odoo | Исходники 19.0 CE в `/home/user/odoo19` (путь из `tools/odoo/env.sh`); имена полей ниже проверены по `addons/stock`, `addons/product` |
 | Допущение «волна 0» | Определение «волны 0» не попало в мой контекст; из CD-29 выведено так: подготовительная волна до функций (ядро + адаптер + точки расширения + скелет бэкенда + документы). Состав — §5. **Менеджеру подтвердить или поправить** |
 
@@ -18,10 +18,10 @@
 | Термин | Значение | Откуда |
 |---|---|---|
 | Генератор (`template`) | Алгоритм ячеек: `pallet_rack`, `cantilever`, `shelf`, `floor_stack`, `machine_spot`, `zone` + новый `floor_spot` | наш, R-01 |
-| Тип места (`f3d.slot.type`) | Запись каталога: генератор + параметры по умолчанию + 3D-форма (50 штук + свои) | их «тип», каталог 50 |
-| Пресет (`f3d.slot.preset`) | Сохранённая настройка ряда/секции/зоны для вставки («шаблон і бібліотека» у них) | их «шаблон» |
-| Слот (`f3d.slot`) | Экземпляр на плане: тип + параметры + позиция. Ряд стеллажа, зона, место на полу | наш M-03 |
-| Площадка = склад | `f3d.site` + `warehouse_id` (`stock.warehouse`); «проєкт» как контейнер складов не переносим | см. O-13 |
+| Тип места (`td.slot.type`) | Запись каталога: генератор + параметры по умолчанию + 3D-форма (50 штук + свои) | их «тип», каталог 50 |
+| Пресет (`td.slot.preset`) | Сохранённая настройка ряда/секции/зоны для вставки («шаблон і бібліотека» у них) | их «шаблон» |
+| Слот (`td.slot`) | Экземпляр на плане: тип + параметры + позиция. Ряд стеллажа, зона, место на полу | наш M-03 |
+| Площадка = склад | `td.site` + `warehouse_id` (`stock.warehouse`); «проєкт» как контейнер складов не переносим | см. O-13 |
 
 Не переносим (причина): ветки Odoo 18 (`posx/posy/posz`, флаг «брак»: в 19 их нет); хранение проекта в localStorage вне Odoo (в Odoo — модели, в артефакте — `db` по CD-29); двухшаговые формы «Показати/Зберегти» (CD-03: форма правит запись сразу); «Поставити все одно» (CD-14: block остаётся запретом); отдельный 2D-рендерер (2D = ортокамера сверху в том же Three.js); подтверждения сохранения файла в окне Claude (особенность артефакта); перевод Odoo 18.
 
@@ -49,7 +49,7 @@
 | F01-02 | Параметры сегмента | Цифры или буквы (A…Z, AA), ширина 1–8 (ведущие нули), начальное значение; у зоны «Код зони замість номера» | ~ (`index_digits`, `bay_letter`) |
 | F01-03 | Область действия | Настройки склада; зона задаёт «Власні налаштування» (ближайшая зона выше побеждает). Предпросмотр: первые 10 кодов и последний, сколько кодов изменится, есть ли повторы | — |
 | F01-04 | Направления | Ряды от входа (вверх/вниз/влево/вправо); секции слева направо, справа налево или чёт/нечёт по сторонам прохода; «підряд»/«змійкою»; ярусы снизу/сверху; позиции слева направо (у повёрнутых 90°/270° — сверху вниз) | ~ (фиксировано: пролёты +X, ярусы вверх, ряды с −Y) |
-| F01-05 | Что уходит в Odoo | Имя уровня (последний сегмент), штрихкод (полный код), posx/posy/posz = номера ряда/секции/яруса | ~ (имя = штрихкод = `f3d_code`) |
+| F01-05 | Что уходит в Odoo | Имя уровня (последний сегмент), штрихкод (полный код), posx/posy/posz = номера ряда/секции/яруса | ~ (имя = штрихкод = `td_code`) |
 | F01-06 | Перенумерация | Склад или зона по шаблону; «Нумерувати тільки нові»; предупреждение про новые этикетки; результат — обычная правка с отменой | — |
 | F01-07 | Уникальность | Коды и штрихкоды уникальны в проекте, в Odoo, в других складах; список конфликтов с переходом, сохранить нельзя; новые места сами берут свободный код | ~ (UNIQUE `site,code_prefix`, `conflict_codes` в R-12) |
 | F01-08 | Места на полу | Ворота, тележки, зоны на полу нумеруются по шаблону зоны ({позиція} или первый доступный сегмент) | — |
@@ -81,12 +81,12 @@
 |---|---|---|---|
 | F03-01 | Габариты и вес места | Ш×Г×В и макс. вес из типа и категории; на месте можно свои («порожнє — як у типу»); показан источник веса | ~ (`overrides.max_load_kg`, размеры ячейки из генератора) |
 | F03-02 | Категории хранения | Список из Odoo + создание (имя, макс. вес, политика «лише порожнє / той самий товар / змішане», ёмкость по товару и упаковке); назначается месту/ряду/зоне, действует вниз, можно «без категорії»; удалить можно только новую | — |
-| F03-03 | Функция зоны | 10 функций (приймання, контроль якості, карантин, зберігання, комплектація, пакування, відвантаження, брак, повернення, буфер виробництва): цвет рамки и подпись; наследуется вниз | ~ (`f3d.zone.zone_type`, 9 значений) |
+| F03-03 | Функция зоны | 10 функций (приймання, контроль якості, карантин, зберігання, комплектація, пакування, відвантаження, брак, повернення, буфер виробництва): цвет рамки и подпись; наследуется вниз | ~ (`td.zone.zone_type`, 9 значений) |
 | F03-04 | Атрибуты зоны | Температурный режим с диапазоном, небезпечні вантажі, цінне, довгомір — в подсказках; только в проекте | — |
 | F03-05 | Флаги места | Тип локации internal/view, «місце поповнення» (`replenish_location`), «брак» (только Odoo 18); «як в Odoo»; место с остатком не станет view; вложенность replenish запрещена | — |
 | F03-06 | Стратегия списания | `removal_strategy_id` (FIFO/LIFO/FEFO…) на зоне/ряду/месте, действует вниз | — |
 | F03-07 | Min/Max | В карточке места: товар, min, max (только для места с остатком или с правилом); в плане — вид «Правила поповнення» | — |
-| F03-08 | Сводка ёмкости | Зона/склад: мест, палетомест, площадь, объём, занято/свободно (по остаткам), сумма макс. веса, с категорией, заполнение | ~ (`cell_count`, `f3d_capacity`) |
+| F03-08 | Сводка ёмкости | Зона/склад: мест, палетомест, площадь, объём, занято/свободно (по остаткам), сумма макс. веса, с категорией, заполнение | ~ (`cell_count`, `td_capacity`) |
 
 ### F04 Правила размещения (инструкция «Правила розміщення…»)
 
@@ -282,18 +282,18 @@
 
 | ID | Тема | У них | У нас | Единая концепция | Побеждает |
 |---|---|---|---|---|---|
-| O-01 | Типы мест ↔ шаблоны | 50 типов с параметрами и 9 формами, дерево склад›зона›ряд›стеллаж›ярус | 6 генераторов + `params`; слот = ряд, ячейки на лету | Генератор → тип (`f3d.slot.type`) → слот; +генератор `floor_spot`; зона = слот `zone` с атрибутами | Наш каркас, их данные: генераторы проверены R-01 и золотыми фикстурами, каталог — только данные |
+| O-01 | Типы мест ↔ шаблоны | 50 типов с параметрами и 9 формами, дерево склад›зона›ряд›стеллаж›ярус | 6 генераторов + `params`; слот = ряд, ячейки на лету | Генератор → тип (`td.slot.type`) → слот; +генератор `floor_spot`; зона = слот `zone` с атрибутами | Наш каркас, их данные: генераторы проверены R-01 и золотыми фикстурами, каталог — только данные |
 | O-02 | Адресация ↔ `code_style`/`index_digits` | Язык шаблона кода, сегменты, направления, перенумерация | Два параметра генератора, фиксированные направления | Json `addr` (склад → зона → слот), пресет `legacy` = текущие коды | Их выразительность, наш идентификатор `code_prefix` и лимит 32 символа |
 | O-03 | План изменений ↔ мастер публикации/API-07 | create/move/rename/attrs/archive, части, журнал, откат, расхождения | create/update/archive, подтверждение CD-20, `draft_rev`, версия | Один мастер: виды строк расширены, добавлены журнал `f3d.publish.op` и откат | Наш каркас (CD-20, блокировка строки, версия), их функции |
-| O-04 | Варианты ↔ `f3d.layout.version` | Параллельные варианты, сравнение, до 12 | Линейная история публикаций, черновик один | Вариант = снимок-ветка черновика (`f3d.layout.variant`), версия = история публикаций и контрольных точек | Гибрид: наша версия, их вариант поверх R-14 |
+| O-04 | Варианты ↔ `td.layout.version` | Параллельные варианты, сравнение, до 12 | Линейная история публикаций, черновик один | Вариант = снимок-ветка черновика (`f3d.layout.variant`), версия = история публикаций и контрольных точек | Гибрид: наша версия, их вариант поверх R-14 |
 | O-05 | Контур здания ↔ слои | Контур, колонны, стены, ворота, док, двери, офис, проходы-граф | Габарит+шаг колонн на площадке, `bounds`/`aisles`/`fire_paths` слоя | Слой `building`: контур в `bounds`, объекты в `items`, проходы — оси-прямоугольники | Наши слои (CD-04), их набор объектов |
-| O-06 | Каталог 50 ↔ 6 шаблонов | 50 типов, 5 групп, флаг «меблевая фабрика» | 6 шаблонов (CD-08) | 50 записей `f3d.slot.type` на 7 генераторах (таблица 2.3) | Гибрид |
-| O-07 | Роли | Перегляд / проєктування / застосування | 4 роли + `edit_group_ids` слоя (CD-02) | view = `group_f3d_user`; design = технолог/комірник/інженер на своём слое; apply = менеджер | Наши (тоньше) |
+| O-06 | Каталог 50 ↔ 6 шаблонов | 50 типов, 5 групп, флаг «меблевая фабрика» | 6 шаблонов (CD-08) | 50 записей `td.slot.type` на 7 генераторах (таблица 2.3) | Гибрид |
+| O-07 | Роли | Перегляд / проєктування / застосування | 4 роли + `edit_group_ids` слоя (CD-02) | view = `group_td_user`; design = технолог/комірник/інженер на своём слое; apply = менеджер | Наши (тоньше) |
 | O-08 | Проверки | 13 видов | 7 видов, режим warn/block (CD-14) | Объединение (таблица 2.4); «Поставити все одно» не переносим | Наши режимы, их виды |
 | O-09 | Хранение | Один JSON-проект (rev), версии, localStorage вне Odoo | Нормализованные модели, `etag`, `ir.rule`, мультикомпания | Адаптер (CD-29): Odoo — модели; артефакт — `db` | Наше |
 | O-10 | Блокировки ↔ `etag` | Аренда зоны на 5 минут | Оптимистичный `etag` (R-21), права слоя | `etag` остаётся, поверх — аренда зоны-слота, проверка на сервере в `save` | Гибрид |
 | O-11 | Правка | «Показати/Зберегти», бирюзовые несохранённые, отмена | Живая правка, автосохранение черновика | Живая правка + клиентский undo-стек обратных операций; «новое/змінене» = разница с активной версией | Наше (CD-03) |
-| O-12 | Зона | Группа с функцией, техникой, категорией, адресацией | Слот `zone` (контур) и `f3d.zone` в base | Слот `zone` получает атрибуты; `f3d.zone` не трогаем (Q-03 остаётся) | Наше |
+| O-12 | Зона | Группа с функцией, техникой, категорией, адресацией | Слот `zone` (контур) и `td.zone` в base | Слот `zone` получает атрибуты; `td.zone` не трогаем (Q-03 остаётся) | Наше |
 | O-13 | Склад / проект | Проект → склады, привязка к `stock.warehouse` по коду | Площадка (CD-22) | Площадка = склад + `warehouse_id`; контейнер «проєкт» отпадает | Наше |
 | O-14 | Направление импорта | Odoo → модель (разбор кодов) | Модель → Odoo (публикация) + seed | Оба: ядро разбирает ленту локаций (API-16) в слоты; публикация остаётся | Гибрид |
 | O-15 | Язык | UK/EN словарь в коде | UK в коде и `.po` | `.po` uk/en (Odoo i18n); в артефакте словарь ядра | Гибрид |
@@ -302,12 +302,12 @@
 
 ### 2.2 O-01 Типы мест и шаблоны слотов
 
-- Слои: **генератор** (код в Python и JS, R-01) → **тип** (данные: генератор, параметры по умолчанию, форма 3D, группа, «меблевая» важность 0–2, вид локации `f3d_loc_kind`) → **слот** (тип + свои `params` + позиция + `code_prefix`).
+- Слои: **генератор** (код в Python и JS, R-01) → **тип** (данные: генератор, параметры по умолчанию, форма 3D, группа, «меблевая» важность 0–2, вид локации `td_loc_kind`) → **слот** (тип + свои `params` + позиция + `code_prefix`).
 - Их «ряд» = наш слот; «стеллаж/секция» = пролёт (`bays`/`sections`); «ярус» = `levels`; «зона» = слот `zone` + функция, техника, категория хранения, `addr`, родительская локация Odoo.
 - Новые параметры генераторов из их типов: `deep` (глубина в палетах), `bottom_on_floor`, `double_sided`, `gap_x`/`gap_y`, `beam_th`, `level_heights[]`, `slope`, `cells_per_level` (1–12), `shape`. Старые слоты без них считаются по прежним формулам (фикстуры R-01 не меняются).
 - Разное число ярусов по пролётам (их «Додати ярус нагорі» на секции) = `overrides.disabled` лишних ячеек; отдельной сущности «стеллаж» нет.
 - Мезонин (R12) = слой с отметкой (CD-04) + `shelf`. Автоматические карусели/VLM (R14–R16) — типы-заглушки без параметров автоматики.
-- `layer.allowed_slot_type_ids` остаётся списком генераторов (`f3d.term`); тип наследует ограничение через свой генератор.
+- `layer.allowed_slot_type_ids` остаётся списком генераторов (`td.term`); тип наследует ограничение через свой генератор.
 - Терминология: пресет (их «шаблон») — сохранённая настройка; библиотека = пресеты + свои типы, общая на компанию.
 
 ### 2.3 O-06 Каталог 50 на семи генераторах
@@ -343,7 +343,7 @@
 - Сегмент `{prefix}` = `code_prefix` слота (идентификатор слота, ключ публикации, UNIQUE на площадке остаётся). Пресет `legacy` = `{prefix} B{bay} L{level}` с `index_digits` и `bay_letter` (→ `seg.bay.kind=alpha`): коды seed и золотые фикстуры не меняются.
 - Код ячейки ≤ 32 символов (CB-01) остаётся пределом; предпросмотр и конфликты (повторы, штрихкоды компании) — в диалоге, живая проверка `code_conflict`.
 - Имя локации: `loc_tree = flat` (имя = полный код, как сейчас), `row` или `section` (у ряда/секции своя виртуальная локация, имя — короткий сегмент, полный код в `barcode`). Для существующих площадок по умолчанию `flat` (Q1).
-- Целые `f3d_row`/`f3d_bay`/`f3d_level`/`f3d_pos` на `stock.location` заменяют `posx/posy/posz` их Odoo 18 (в 19 их нет).
+- Целые `td_row`/`td_bay`/`td_level`/`td_pos` на `stock.location` заменяют `posx/posy/posz` их Odoo 18 (в 19 их нет).
 - Перенумерация существующих локаций = строки плана `rename` + новые штрихкоды; только менеджер, отдельное предупреждение, фильтр «лише нові» по умолчанию (Q2).
 - Реализация: `services/addr.py` + зеркало в ядре, фикстуры расширяются; код и ячейки не хранятся.
 
@@ -360,7 +360,7 @@
 ### 2.7 O-04 Варианты и версии
 
 - Черновик остаётся «живыми» записями; вариант — снимок (`snapshot_id`, формат R-14) неактивной ветки. «Як є» = активный. Переключение: снимок текущей ветки → `apply_snapshot` выбранной (механизм R-14 уже есть). Лимит 12 (параметр).
-- Версия (`f3d.layout.version`) получает `kind`: `publish` (как сейчас) и `checkpoint` (контрольная точка без публикации: их «Зберегти», историю последних 50 храним); перед «Відновити» создаётся автокопия как вариант.
+- Версия (`td.layout.version`) получает `kind`: `publish` (как сейчас) и `checkpoint` (контрольная точка без публикации: их «Зберегти», историю последних 50 храним); перед «Відновити» создаётся автокопия как вариант.
 - Сравнение вариантов считает ядро по двум снимкам (места, палетоместа, площадь, объём, ёмкость, число операций плана относительно активной версии); без нового сервера.
 - «Навчальна копія» тура = вариант с `is_training`, удаляется по «Скасувати» (F19-04).
 - Применяется в Odoo всегда активная ветка; публикация пишет `variant_id` в версию.
@@ -368,7 +368,7 @@
 ### 2.8 O-05 Здание и слои
 
 - Слой `kind=building`: контур в `bounds` (многоугольник ≥ 3 точек, уже есть), объекты в Json `items`: `{id, kind: column|wall|gate|dock|door|office|charger, name, x, y, w, d, rot, th, location_uid}`; колонны сеткой — генерация ядром (`column_step_x/y` площадки остаются шагом по умолчанию).
-- Ворота и док связываются с локацией (`location_uid`; в Odoo — `stock.location` с `f3d_kind='dock'` из base) — это снимает ограничение CD-08 «ворота/док не в первой очереди» ровно в объёме объекта здания, не шаблона места.
+- Ворота и док связываются с локацией (`location_uid`; в Odoo — `stock.location` с `td_kind='dock'` из base) — это снимает ограничение CD-08 «ворота/док не в первой очереди» ровно в объёме объекта здания, не шаблона места.
 - Проходы остаются осевыми прямоугольниками (схема `aisles`, ширина = меньшая сторона); граф узлов — только производное в интерфейсе (шаг 2 клика → прямоугольник). Диагональные проходы не поддерживаем (Q10).
 - Высоты: `building_height_m` (есть) + `sprinkler_height_m`. Проверки `inside`, `aisle_width`, `height` (2.4). 3D: колонны инстансингом, стены/ворота/двери/офис/зарядка — боксами; оранжевая линия спринклеров.
 - Авторозкладка (F17) и мастер (F16) — алгоритмы ядра, пишут обычные операции `queue`.
@@ -396,56 +396,56 @@
 
 | Ф. | Стандарт Odoo | Расширяем (наше) | Новое |
 |---|---|---|---|
-| F01 | `stock.location` `name`/`barcode`/`location_id` | `f3d.site`, `f3d.slot`, `services/cells.py`, `f3d_code` (base) | `site.addr`, `slot.addr`, `loc_tree`, `depth_mode`; `stock.location.f3d_row/bay/level/pos`; `services/addr.py` |
+| F01 | `stock.location` `name`/`barcode`/`location_id` | `td.site`, `td.slot`, `services/cells.py`, `td_code` (base) | `site.addr`, `slot.addr`, `loc_tree`, `depth_mode`; `stock.location.td_row/bay/level/pos`; `services/addr.py` |
 | F02 | `stock.location` create/write/`active`; проверка пустоты `stock.quant`, `stock.move` | мастер публикации, R-12/R-13, API-06/07, `version.report` | `f3d.publish.op`; виды строк `move/rename/attrs`; API-18 |
-| F03 | `stock.storage.category`, `stock.location.storage_category_id/removal_strategy_id/replenish_location/usage`, `orderpoint` | `slot.overrides`, `f3d_capacity`, `f3d.term` | `slot.storage_category_id/removal_strategy_id/function_id/attr_ids/temp_*`; `f3d.replenish.rule`; API-12 |
-| F04 | `stock.putaway.rule`, `_get_putaway_strategy`, `_check_can_be_used`, `stock.package.type` | `f3d.check.config` | `f3d.putaway.rule`; проверка `putaway_fit`; API-15 |
+| F03 | `stock.storage.category`, `stock.location.storage_category_id/removal_strategy_id/replenish_location/usage`, `orderpoint` | `slot.overrides`, `td_capacity`, `td.term` | `slot.storage_category_id/removal_strategy_id/function_id/attr_ids/temp_*`; `f3d.replenish.rule`; API-12 |
+| F04 | `stock.putaway.rule`, `_get_putaway_strategy`, `_check_can_be_used`, `stock.package.type` | `td.check.config` | `f3d.putaway.rule`; проверка `putaway_fit`; API-15 |
 | F05 | — | — | ядро: спецификация этикетки, Code128/QR, ZPL; PDF — API-19 (`reportlab`, `qrcode`) |
-| F06 | `stock.quant`, `stock.lot`, `product.product` (`default_code`, `name`) | `f3d_code`, `action_f3d_show` | API-13, API-14 |
-| F07 | `stock.quant` (`quantity`, `in_date`), `orderpoint`, `stock.move.line` | `f3d_capacity` | API-13 (метрики по кодам); классы и цвета — ядро |
-| F08 | — | `f3d.term` (ключи генераторов) | `f3d.slot.type` + данные 50; API-11 |
-| F09 | — | `OdooStore.queue` (ops, `etag`) | `f3d.slot.preset`; API-11; undo — ядро |
+| F06 | `stock.quant`, `stock.lot`, `product.product` (`default_code`, `name`) | `td_code`, `action_f3d_show` | API-13, API-14 |
+| F07 | `stock.quant` (`quantity`, `in_date`), `orderpoint`, `stock.move.line` | `td_capacity` | API-13 (метрики по кодам); классы и цвета — ядро |
+| F08 | — | `td.term` (ключи генераторов) | `td.slot.type` + данные 50; API-11 |
+| F09 | — | `OdooStore.queue` (ops, `etag`) | `td.slot.preset`; API-11; undo — ядро |
 | F10 | `stock.location` (`complete_name`, `usage`, `parent_path`) | seed-хук `link.py` | API-16; `site.parse_rules`; разбор и лоток — ядро |
 | F11 | формат импорта `stock.location`; `openpyxl`/`xlrd`/`xlsxwriter` | снимок версии (скачивание) | API-19 `table_xlsx`, API-20 `/parse/table`; CSV — ядро |
-| F12 | — | `f3d.layout.version`, `apply_snapshot` (R-14) | `f3d.layout.variant`; API-21 |
+| F12 | — | `td.layout.version`, `apply_snapshot` (R-14) | `f3d.layout.variant`; API-21 |
 | F13 | — (`mail.activity` не берём: объекты черновика не имеют записей Odoo) | — | `f3d.comment`; API-22 |
-| F14 | — | `etag` R-21, права R-11 | `f3d.zone.lock`; API-23 |
+| F14 | — | `etag` R-21, права R-11 | `td.zone.lock`; API-23 |
 | F15 | `openpyxl`/`xlsxwriter`, `reportlab` | — | ядро считает таблицы и SVG плана; API-19 `spec_pdf`/`plan_pdf`/`table_xlsx` |
 | F16 | `stock.warehouse` (выбор склада; склад не создаём) | пустая площадка R-23, `f3d_blank` | `site.warehouse_id`, `site.wizard_state` |
 | F17 | — | — | ядро (алгоритм), в БД ничего |
 | F18 | `stock.location` вида «dock» (base) | `layer.bounds/aisles/fire_paths`, `site.building_*`, `column_step_*` | `layer.items`, `site.sprinkler_height_m`, `aisle_tech`; проверки `inside/aisle_width/height` |
 | F19 | `web_tour`, `.po` | — | `static/src/tours/*`, `i18n/uk.po`+`en.po`, страница инструкции (QWeb) |
-| N-03 | — | `f3d.layout.version` | поле `kind`, API-24 |
+| N-03 | — | `td.layout.version` | поле `kind`, API-24 |
 
 ### 3.3 Расширения существующих моделей (новые поля)
 
 | Модель | Поля | Зачем |
 |---|---|---|
-| `f3d.site` | `warehouse_id`, `addr`, `loc_tree`, `depth_mode`, `sprinkler_height_m`, `aisle_tech`, `parse_rules`, `active_variant_id`, `wizard_state`, `odoo_baseline_id`, `publish_copy_ack` | склад Odoo; адресация; иерархия и глубина локаций; здание; техника; правила разбора; ветка; мастер; база для расхождений; напоминание |
-| `f3d.layer` | `items` | объекты здания (+ `width` в схеме `aisles`) |
-| `f3d.slot` | `type_id`, `storage_category_id`, `removal_strategy_id`, `function_id`, `attr_ids`, `temp_min_c`, `temp_max_c`, `tech`, `addr`, `depth_mode` | тип; категория и стратегия (наследуются вниз); функция/атрибуты зоны; техника зоны; свои адресация и глубина |
-| `stock.location` | `f3d_row`, `f3d_bay`, `f3d_level`, `f3d_pos` | замена `posx/posy/posz`, сортировка, поиск |
-| `f3d.layout.version` | `kind`, `variant_id`, `rolled_back_at`, `rolled_back_by_id`, `op_ids`, `metrics` | контрольные точки, ветка, откат, цифры для сравнения |
-| `f3d.publish.wizard.line` | `depends_code`, `scope_uid`, `before` | зависимости, область, прежние значения (+ значения `kind`: move/rename/attrs; `res_model`: orderpoint, putaway rule) |
-| `f3d.term` | `color`, `value` | новые `term_type`: `zone_function`, `zone_attr` (цвет функции, значения) |
-| `f3d.check.config` | — | новые `check_key`: `inside`, `aisle_width`, `height`, `cell_load`, `putaway_fit`, `code_conflict`; `params` шире |
+| `td.site` | `warehouse_id`, `addr`, `loc_tree`, `depth_mode`, `sprinkler_height_m`, `aisle_tech`, `parse_rules`, `active_variant_id`, `wizard_state`, `odoo_baseline_id`, `publish_copy_ack` | склад Odoo; адресация; иерархия и глубина локаций; здание; техника; правила разбора; ветка; мастер; база для расхождений; напоминание |
+| `td.layer` | `items` | объекты здания (+ `width` в схеме `aisles`) |
+| `td.slot` | `type_id`, `storage_category_id`, `removal_strategy_id`, `function_id`, `attr_ids`, `temp_min_c`, `temp_max_c`, `tech`, `addr`, `depth_mode` | тип; категория и стратегия (наследуются вниз); функция/атрибуты зоны; техника зоны; свои адресация и глубина |
+| `stock.location` | `td_row`, `td_bay`, `td_level`, `td_pos` | замена `posx/posy/posz`, сортировка, поиск |
+| `td.layout.version` | `kind`, `variant_id`, `rolled_back_at`, `rolled_back_by_id`, `op_ids`, `metrics` | контрольные точки, ветка, откат, цифры для сравнения |
+| `td.publish.wizard.line` | `depends_code`, `scope_uid`, `before` | зависимости, область, прежние значения (+ значения `kind`: move/rename/attrs; `res_model`: orderpoint, putaway rule) |
+| `td.term` | `color`, `value` | новые `term_type`: `zone_function`, `zone_attr` (цвет функции, значения) |
+| `td.check.config` | — | новые `check_key`: `inside`, `aisle_width`, `height`, `cell_load`, `putaway_fit`, `code_conflict`; `params` шире |
 | JSON-схемы (R-22), снимок | — | `slot.params/overrides`, `layer.items`, `addr`, `parse_rules`; снимок `schema: 2` (читает и 1) |
 
 ### 3.4 Новые модели
 
 | Модель | Поля | Ф. |
 |---|---|---|
-| `f3d.slot.type` | `code`, `ref`, `name`, `description`, `group`, `template`, `shape`, `params`, `relevance`, `loc_kind`, `is_custom`, `company_id`, `sequence`, `active` | F08 |
-| `f3d.slot.preset` | `name`, `type_id`, `kind`, `data`, `company_id`, `active` | F09 |
+| `td.slot.type` | `code`, `ref`, `name`, `description`, `group`, `template`, `shape`, `params`, `relevance`, `loc_kind`, `is_custom`, `company_id`, `sequence`, `active` | F08 |
+| `td.slot.preset` | `name`, `type_id`, `kind`, `data`, `company_id`, `active` | F09 |
 | `f3d.putaway.rule` | `site_id`, `uid`, `product_id`, `category_id`, `package_type_ids`, `in_location_id`, `out_code`, `out_location_id`, `sublocation`, `storage_category_id`, `sequence`, `odoo_rule_id`, `deleted`, `company_id`, `active` | F04 |
 | `f3d.replenish.rule` | `site_id`, `uid`, `product_id`, `cell_code`, `location_id`, `min_qty`, `max_qty`, `odoo_orderpoint_id`, `deleted`, `company_id`, `active` | F03 |
 | `f3d.publish.op` | `version_id`, `seq`, `op`, `res_model`, `res_id`, `code`, `before`, `after`, `rolled_back` | F02 |
 | `f3d.layout.variant` | `site_id`, `name`, `sequence`, `snapshot_id`, `base_version_id`, `is_training`, `metrics`, `company_id`, `active` | F12 |
 | `f3d.comment` | `site_id`, `target_kind`, `target_uid`, `target_label`, `kind`, `state`, `text`, `author_id`, `resolved_by_id`, `resolved_at`, `company_id`, `active` | F13 |
-| `f3d.zone.lock` | `site_id`, `zone_uid`, `user_id`, `expires_at`, `company_id` | F14 |
+| `td.zone.lock` | `site_id`, `zone_uid`, `user_id`, `expires_at`, `company_id` | F14 |
 
 Моделей-мастеров для этикеток, документов и импорта нет: разбор и раскладку делает ядро, файлы рендерит API-19/20.
-`putaway.rule` и `replenish.rule` — черновики на модели `f3d_draft_mixin` (uid, `etag`, счётчик R-21); в Odoo попадают только публикацией.
+`putaway.rule` и `replenish.rule` — черновики на модели `td_draft_mixin` (uid, `etag`, счётчик R-21); в Odoo попадают только публикацией.
 
 ### 3.5 Контракт адаптера и API (префикс `/f3d/constructor`, правила как у API-01…10)
 
@@ -466,7 +466,7 @@
 | `variants` / `comments` / `locks` | API-21 / 22 / 23 | `db` (замки не эмулируются) | `variants`, `comments`, `locks` |
 | `versions` | API-24 `/version/view`, `/version/checkpoint` (+ API-08) | `db` | — |
 
-Права: чтение — `group_f3d_user`; правка слотов/правил/пресетов/комментариев — проектировщики в пределах слоя (R-11); публикация, откат, варианты, категории хранения, права библиотеки на удаление — менеджер; чужой комментарий решает проектировщик. Новые ACL и `ir.rule` по `company_id` — по образцу §4 SPEC.
+Права: чтение — `group_td_user`; правка слотов/правил/пресетов/комментариев — проектировщики в пределах слоя (R-11); публикация, откат, варианты, категории хранения, права библиотеки на удаление — менеджер; чужой комментарий решает проектировщик. Новые ACL и `ir.rule` по `company_id` — по образцу §4 SPEC.
 
 ### 3.6 Миграция и объёмы
 
@@ -485,7 +485,7 @@
 | Ядро | `factory3d/core/constructor/*.js` (ES-модули, Three.js через `loadThree()`, без `odoo`, `window.claude`, `fetch`) | Сцена, модель данных, генерация ячеек, геометрия, проверки, панели, диалоги, undo, всё из §1 без записи в Odoo |
 | Сборка | `tools/build_core.mjs` (esbuild, как `build_loaders.mjs`) | В модуль: `static/lib/f3d-core/constructor.esm.js` (коммитится, на сервере не собирается). В прототип: `proto/build.py` склеивает те же файлы в один HTML |
 | Адаптеры | `core/adapter.js` (контракт и `capabilities`, §3.5), `adapter_artifact.js` (из `20_store.js`: `db` + IndexedDB), `adapter_odoo.js` (из W2 `store.js` = `OdooStore`) | Единственное место, где знают об Odoo или `claude.use("db")` |
-| Хост | `static/src/action/constructor_action.js` (Owl) | Монтирует ядро с адаптером Odoo; «Переглядач» берёт из ядра геометрию и генерацию ячеек, мост `factory3d_constructor_viewer` перестаёт копировать `genCells`/`frameLines` |
+| Хост | `static/src/action/constructor_action.js` (Owl) | Монтирует ядро с адаптером Odoo; «Переглядач» берёт из ядра геометрию и генерацию ячеек, мост `td_constructor_viewer3d` перестаёт копировать `genCells`/`frameLines` |
 | Тесты | `tools/test_core.mjs` (Node, без Odoo) + HOOT в модуле; золотые фикстуры `cells_golden.json`/`checks_golden.json` для Python↔JS | |
 
 ### 4.2 Что меняется в `proto/src/*` (→ модуль ядра)
@@ -517,10 +517,10 @@
 
 ### 5.0 Правила
 
-- Слайсы не делят файлы. Общие файлы (`__manifest__.py`, `models/__init__.py`, `security/*`, `views/f3d_menus.xml`, `data/params.xml`, `tests/common.py`, `core/index.js`, `proto/build.py`) принадлежат волне 0: скелет заранее подключает все файлы волны заглушками, дальше слайс правит только свои.
+- Слайсы не делят файлы. Общие файлы (`__manifest__.py`, `models/__init__.py`, `security/*`, `views/td_menus.xml`, `data/params.xml`, `tests/common.py`, `core/index.js`, `proto/build.py`) принадлежат волне 0: скелет заранее подключает все файлы волны заглушками, дальше слайс правит только свои.
 - Реестры (волна 0): ядро — `panels`, `dialogs`, `checks`, `shapes`, `metrics`, `menu`, `hotkeys`, `capabilities`; Python — `CHECKS`, `PLAN_BUILDERS`, `SNAPSHOT_SECTIONS`, `RENDERERS`. Слайс регистрируется из своих файлов.
 - Нужное в чужом файле слайс описывает в отчёте (≤15 строк). Прототип публикует менеджер; агент пишет и проверяет сборку.
-- Тесты: ядро — `node tools/test_core.mjs`; модуль — `F3D_TEST_INSTALL=factory3d_constructor $T/run_tests.sh f3d_m_<слайс> /factory3d_constructor`.
+- Тесты: ядро — `node tools/test_core.mjs`; модуль — `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh f3d_m_<слайс> /td_constructor`.
 - Размеры как в ARCH §6: S ≈ 1–2 ч, M ≈ 4 ч, L ≈ 6–10 ч агента.
 
 ### 5.1 Волна 0 — основа (три задачи параллельно, слияние B → A → C)
@@ -528,15 +528,15 @@
 | Задача | Файлы | Содержание | Размер | Зависит |
 |---|---|---|---|---|
 | W0-A Ядро и адаптер | `factory3d/core/constructor/*`, `tools/build_core.mjs`, `tools/test_core.mjs`, `proto/*`, `static/src/action/*`, `static/src/editor/*` | Вынос ядра из прототипа и W2 (§4); контракт адаптера, `adapter_artifact`, `adapter_odoo`; реестры; прототип и модуль собираются из одних файлов; паритет с тестами W2 | L ≈ 8 ч | слияние W2 (CD-29 в его ветке уже есть) |
-| W0-B Скелет бэкенда | `__manifest__.py`, `__init__.py`, `models/*`, `controllers/*`, `services/__init__.py`, `security/*`, `views/f3d_menus.xml`, `data/params.xml`, `tests/*` | Модели и поля §3.3–3.4 без логики, реестры Python, заглушки API-11…24 (`not_implemented`), ACL, меню, параметры; модуль ставится, тесты W1 зелёные | M ≈ 4 ч | — |
-| W0-C Документы | `docs/modules/factory3d_constructor/{SPEC,ARCHITECTURE}.md`, `docs/README.md` | SPEC: M-16…M-31, R-25…R-41, API-11…API-24, AC-70+; ARCH: §2.3, схема «ядро + адаптер», §6 планы слайсов. Источник — этот документ | M ≈ 5 ч | — |
+| W0-B Скелет бэкенда | `__manifest__.py`, `__init__.py`, `models/*`, `controllers/*`, `services/__init__.py`, `security/*`, `views/td_menus.xml`, `data/params.xml`, `tests/*` | Модели и поля §3.3–3.4 без логики, реестры Python, заглушки API-11…24 (`not_implemented`), ACL, меню, параметры; модуль ставится, тесты W1 зелёные | M ≈ 4 ч | — |
+| W0-C Документы | `docs/modules/td_constructor/{SPEC,ARCHITECTURE}.md`, `docs/README.md` | SPEC: M-16…M-31, R-25…R-41, API-11…API-24, AC-70+; ARCH: §2.3, схема «ядро + адаптер», §6 планы слайсов. Источник — этот документ | M ≈ 5 ч | — |
 
 ### 5.2 Волна 1 — функции 1–9 (три слайса параллельно)
 
 | Слайс | Функции | Ядро и прототип | Odoo (файлы) | Размер |
 |---|---|---|---|---|
-| S1 Структура места | F01, F08, F09-06/07 | `addr.js`, `types_catalog.js`, `presets.js`, формы типов, панели «Адресація»/«Тип», диалог каталога | `services/addr.py`, `services/cells.py` (параметры, `floor_spot`), `models/f3d_slot_type.py`, `f3d_slot_preset.py`, `f3d_slot.py`, `f3d_site.py`, `stock_location.py`, `data/f3d_slot_type_data.xml`, `controllers/library.py`, фикстуры, тесты | L ≈ 8 ч |
-| S2 Связь с Odoo | F02 (без F02-09/12), F03, F04 | `capacity.js`, диалог плана (виды, журнал, откат), диалог правил, панели ёмкости, проверки `cell_load`/`putaway_fit`/`code_conflict` | `services/publish.py`, `putaway.py`, `capacity.py`, `models/f3d_publish_op.py`, `f3d_putaway_rule.py`, `f3d_replenish_rule.py`, `f3d_layout_version.py`, `wizard/*`, `controllers/plan.py`, `putaway.py`, `storage.py`, тесты (в т.ч. откат) | L ≈ 10 ч |
+| S1 Структура места | F01, F08, F09-06/07 | `addr.js`, `types_catalog.js`, `presets.js`, формы типов, панели «Адресація»/«Тип», диалог каталога | `services/addr.py`, `services/cells.py` (параметры, `floor_spot`), `models/f3d_slot_type.py`, `td_slot_preset.py`, `td_slot.py`, `td_site.py`, `stock_location.py`, `data/f3d_slot_type_data.xml`, `controllers/library.py`, фикстуры, тесты | L ≈ 8 ч |
+| S2 Связь с Odoo | F02 (без F02-09/12), F03, F04 | `capacity.js`, диалог плана (виды, журнал, откат), диалог правил, панели ёмкости, проверки `cell_load`/`putaway_fit`/`code_conflict` | `services/publish.py`, `putaway.py`, `capacity.py`, `models/f3d_publish_op.py`, `td_putaway_rule.py`, `td_replenish_rule.py`, `td_layout_version.py`, `wizard/*`, `controllers/plan.py`, `putaway.py`, `storage.py`, тесты (в т.ч. откат) | L ≈ 10 ч |
 | S3 Работа со складом | F05, F06, F07, F09-01…05/08…10, N-02, N-05, N-08 | `undo.js`, `selection.js`, `labels.js`, `barcode.js`, `heat.js`, `search.js`, `card.js`, мобильный режим; владелец `scene.js`/`state.js`/`app.js` в волне 1 | `services/metrics.py`, `labels.py`, `controllers/stock.py`, `render.py`, тесты | L ≈ 8 ч |
 
 Порядок слияния: S1 → S2 → S3. Интеграция менеджером: полный набор тестов, сценарии Playwright на `serve.sh`, публикация прототипа.
@@ -548,8 +548,8 @@
 | Слайс | Функции | Ядро и прототип | Odoo (файлы) | Размер |
 |---|---|---|---|---|
 | S4 Структура из Odoo, файлы | F10, F11, F17, F02-09, F02-12 | `parse_codes.js`, `tray.js`, `autolayout.js`, `tabular.js`, диалоги импорта/экспорта/разбора | `controllers/odoo_import.py` (API-16, 20), `services/odoo_sync.py`, `services/tabular.py`, тесты | L ≈ 8 ч |
-| S5 Здание, мастер, документы | F18, F16, F15, N-06, N-07 | `building.js`, `wizard.js`, `spec.js`, `plan_doc.js`, режим «Будівля», проверки здания | `models/f3d_layer.py` (`items`), `services/building.py`, `checks_building.py`, `rack_spec.py`, `render_docs.py`, тесты | L ≈ 10 ч |
-| S6 Совместная работа и обучение | F12, F13, F14, F19, N-01, N-03 | `variants.js`, `comments.js`, `locks.js`, `tours.js`, `minimap.js`, `levels.js`, `i18n.js` | `models/f3d_layout_variant.py`, `f3d_comment.py`, `f3d_zone_lock.py`, `f3d_draft_mixin.py` (аренда), `controllers/collab.py`, `static/src/tours/*`, `i18n/*.po`, `views/f3d_help.xml`, тесты | L ≈ 9 ч |
+| S5 Здание, мастер, документы | F18, F16, F15, N-06, N-07 | `building.js`, `wizard.js`, `spec.js`, `plan_doc.js`, режим «Будівля», проверки здания | `models/td_layer.py` (`items`), `services/building.py`, `checks_building.py`, `rack_spec.py`, `render_docs.py`, тесты | L ≈ 10 ч |
+| S6 Совместная работа и обучение | F12, F13, F14, F19, N-01, N-03 | `variants.js`, `comments.js`, `locks.js`, `tours.js`, `minimap.js`, `levels.js`, `i18n.js` | `models/f3d_layout_variant.py`, `td_comment.py`, `td_zone_lock.py`, `td_draft_mixin.py` (аренда), `controllers/collab.py`, `static/src/tours/*`, `i18n/*.po`, `views/f3d_help.xml`, тесты | L ≈ 9 ч |
 
 Порядок слияния: S4 → S5 → S6. После — `wh_constructor` выводится из обращения по Q3.
 

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-01 -->
-    <record id="view_f3d_zone_form" model="ir.ui.view">
-        <field name="name">f3d.zone.form</field>
-        <field name="model">f3d.zone</field>
+    <record id="view_td_zone_form" model="ir.ui.view">
+        <field name="name">td.zone.form</field>
+        <field name="model">td.zone</field>
         <field name="arch" type="xml">
             <form string="Зона цеху">
                 <header>
                     <button name="action_f3d_show" string="Показати в 3D" type="object"
-                            class="btn-primary" invisible="not f3d_code or not f3d_viewer_available"/>
+                            class="btn-primary" invisible="not td_code or not td_viewer_available"/>
                 </header>
                 <sheet>
                     <field name="is_f3d_manager" invisible="1"/>
-                    <field name="f3d_viewer_available" invisible="1"/>
+                    <field name="td_viewer_available" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_locations" type="object" class="oe_stat_button"
                                 icon="fa-map-marker">
@@ -36,7 +36,7 @@
                     </div>
                     <group>
                         <group string="Зона" name="zone_main">
-                            <field name="f3d_code" readonly="not is_f3d_manager"/>
+                            <field name="td_code" readonly="not is_f3d_manager"/>
                             <field name="zone_type"/>
                             <field name="is_roof" invisible="zone_type != 'outdoor'"/>
                             <field name="sequence"/>
@@ -57,8 +57,8 @@
                             </div>
                         </group>
                         <group string="Код сцени" name="f3d_scene">
-                            <field name="f3d_alias" readonly="not is_f3d_manager"/>
-                            <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                            <field name="td_alias" readonly="not is_f3d_manager"/>
+                            <field name="td_kind" readonly="not is_f3d_manager"/>
                         </group>
                     </group>
                     <notebook>
@@ -69,8 +69,8 @@
                             <field name="location_ids" readonly="1">
                                 <list>
                                     <field name="complete_name"/>
-                                    <field name="f3d_code"/>
-                                    <field name="f3d_kind"/>
+                                    <field name="td_code"/>
+                                    <field name="td_kind"/>
                                     <field name="barcode"/>
                                 </list>
                             </field>
@@ -80,14 +80,14 @@
                                 <list>
                                     <field name="code"/>
                                     <field name="name"/>
-                                    <field name="f3d_code"/>
+                                    <field name="td_code"/>
                                 </list>
                             </field>
                         </page>
                         <page name="equipment" string="Обладнання">
                             <field name="equipment_ids" readonly="1">
                                 <list>
-                                    <field name="f3d_code"/>
+                                    <field name="td_code"/>
                                     <field name="name"/>
                                     <field name="category_id"/>
                                 </list>
@@ -96,10 +96,10 @@
                         <page name="docks" string="Ворота">
                             <field name="dock_location_ids" readonly="1">
                                 <list>
-                                    <field name="f3d_code"/>
+                                    <field name="td_code"/>
                                     <field name="complete_name"/>
-                                    <field name="f3d_side"/>
-                                    <field name="f3d_dock_no"/>
+                                    <field name="td_side"/>
+                                    <field name="td_dock_no"/>
                                 </list>
                             </field>
                         </page>
@@ -110,14 +110,14 @@
     </record>
 
     <!-- V-02 -->
-    <record id="view_f3d_zone_list" model="ir.ui.view">
-        <field name="name">f3d.zone.list</field>
-        <field name="model">f3d.zone</field>
+    <record id="view_td_zone_list" model="ir.ui.view">
+        <field name="name">td.zone.list</field>
+        <field name="model">td.zone</field>
         <field name="arch" type="xml">
             <list string="Зони цеху" decoration-muted="not active">
                 <field name="active" column_invisible="1"/>
                 <field name="sequence" widget="handle"/>
-                <field name="f3d_code"/>
+                <field name="td_code"/>
                 <field name="name"/>
                 <field name="zone_type"/>
                 <field name="area_m2"/>
@@ -131,13 +131,13 @@
     </record>
 
     <!-- V-03 -->
-    <record id="view_f3d_zone_search" model="ir.ui.view">
-        <field name="name">f3d.zone.search</field>
-        <field name="model">f3d.zone</field>
+    <record id="view_td_zone_search" model="ir.ui.view">
+        <field name="name">td.zone.search</field>
+        <field name="model">td.zone</field>
         <field name="arch" type="xml">
             <search string="Зони цеху">
                 <field name="name"/>
-                <field name="f3d_code"/>
+                <field name="td_code"/>
                 <field name="root_location_id"/>
                 <filter name="type_receiving" string="Приймання" domain="[('zone_type', '=', 'receiving')]"/>
                 <filter name="type_storage" string="Склад" domain="[('zone_type', '=', 'storage')]"/>
@@ -158,9 +158,9 @@
     </record>
 
     <!-- V-04 -->
-    <record id="view_f3d_zone_kanban" model="ir.ui.view">
-        <field name="name">f3d.zone.kanban</field>
-        <field name="model">f3d.zone</field>
+    <record id="view_td_zone_kanban" model="ir.ui.view">
+        <field name="name">td.zone.kanban</field>
+        <field name="model">td.zone</field>
         <field name="arch" type="xml">
             <kanban string="Зони цеху">
                 <field name="color"/>
@@ -168,7 +168,7 @@
                     <t t-name="card">
                         <div t-attf-style="border-left: 6px solid #{record.color.raw_value or '#d5d8dc'}; padding-left: 8px;">
                             <field name="name" class="fw-bold fs-5"/>
-                            <div class="text-muted"><field name="f3d_code"/> · <field name="zone_type"/></div>
+                            <div class="text-muted"><field name="td_code"/> · <field name="zone_type"/></div>
                             <div><field name="area_m2"/> м²</div>
                             <div class="text-muted">
                                 <field name="location_count"/> міст ·
@@ -182,9 +182,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_zone" model="ir.actions.act_window">
+    <record id="action_td_zone" model="ir.actions.act_window">
         <field name="name">Зони</field>
-        <field name="res_model">f3d.zone</field>
+        <field name="res_model">td.zone</field>
         <field name="view_mode">kanban,list,form</field>
         <field name="context">{'search_default_group_zone_type': 1}</field>
     </record>

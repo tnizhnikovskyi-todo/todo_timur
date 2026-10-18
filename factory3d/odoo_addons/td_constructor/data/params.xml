@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <!-- §5.1: ключі factory3d.constructor.*; publish_enabled і seed_report створює post_init_hook -->
+    <!-- §5.1: ключі td.constructor.*; publish_enabled і seed_report створює post_init_hook -->
     <record id="param_max_model_mb" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.max_model_mb</field>
+        <field name="key">td.constructor.max_model_mb</field>
         <field name="value">20</field>
     </record>
     <record id="param_max_triangles" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.max_triangles</field>
+        <field name="key">td.constructor.max_triangles</field>
         <field name="value">50000</field>
     </record>
     <record id="param_autosave_ms" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.autosave_ms</field>
+        <field name="key">td.constructor.autosave_ms</field>
         <field name="value">1500</field>
     </record>
     <record id="param_eps_mm" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.eps_mm</field>
+        <field name="key">td.constructor.eps_mm</field>
         <field name="value">1</field>
     </record>
     <record id="param_reach_default_m" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.reach_default_m</field>
+        <field name="key">td.constructor.reach_default_m</field>
         <field name="value">15</field>
     </record>
     <record id="param_convert_server_enabled" model="ir.config_parameter">
-        <field name="key">factory3d.constructor.convert_server_enabled</field>
+        <field name="key">td.constructor.convert_server_enabled</field>
         <field name="value">True</field>
     </record>
 </odoo>

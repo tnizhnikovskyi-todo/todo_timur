@@ -10,7 +10,7 @@ from ..tools import payload as payload_tools
 
 STATIC_KEYS = ("state", "busy", "total", "boilers", "last_inspection", "leak_check")
 DUE_SOON_DAYS = 7  # R-22: «ТО незабаром» — до стількох днів до планової дати
-GROUP_KIOSK = "factory3d_viewer.group_f3d_kiosk"
+GROUP_KIOSK = "td_viewer3d.group_td_kiosk"
 PLAN_LOCK_NS = 7301  # advisory-lock: два швидкі кліки «Запланувати ТО» не створюють дві заявки
 
 
@@ -21,8 +21,8 @@ def plan_error(status, code, message):
 
 class F3dViewerProviderMaintenance(models.AbstractModel):
     """M-01e: обладнання й заявки на обслуговування."""
-    _name = "f3d.viewer.provider.maintenance"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.maintenance"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних maintenance"
 
     _f3d_sequence = 50
@@ -46,7 +46,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         open_by_eq, open_id_by_eq, open_prev, next_prev, recurring = {}, {}, set(), {}, {}
         if payload_tools.access_ok(env, "maintenance.request"):
             requests = env["maintenance.request"].search_fetch([
-                ("equipment_id.f3d_code", "!=", False), ("archive", "=", False),
+                ("equipment_id.td_code", "!=", False), ("archive", "=", False),
                 "|", ("stage_id.done", "=", False), ("close_date", ">=", since.date())], order="request_date, id")
             for r in requests.filtered(lambda r: not r.stage_id.done):
                 open_by_eq.setdefault(r.equipment_id.id, r.name)
@@ -60,22 +60,22 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
             recurring = self._f3d_recurring_next()
         today = fields.Date.to_date(ctx["today"])
 
-        passport_ok = payload_tools.access_ok(env, "f3d.equipment.passport")
+        passport_ok = payload_tools.access_ok(env, "td.equipment.passport")
         tasks = {}
         if payload_tools.access_ok(env, "stock.picking.batch"):
-            for b in env["stock.picking.batch"].search_fetch([("f3d_vehicle_id", "!=", False),
+            for b in env["stock.picking.batch"].search_fetch([("td_vehicle_id", "!=", False),
                                                         ("state", "in", ("in_progress", "draft"))], order="id"):
-                tasks.setdefault(b.f3d_vehicle_id.id, b.name)
+                tasks.setdefault(b.td_vehicle_id.id, b.name)
 
-        for eq in env["maintenance.equipment"].search_fetch([("f3d_code", "!=", False)], order="id"):
-            code = eq.f3d_code
+        for eq in env["maintenance.equipment"].search_fetch([("td_code", "!=", False)], order="id"):
+            code = eq.td_code
             rec = {"name": eq.name, "category": eq.category_id.name or ""}
             if eq.serial_no and eq.serial_no != code:
                 rec["serial"] = eq.serial_no
-            if passport_ok and eq.f3d_manufacturer:
-                rec["manufacturer"] = eq.f3d_manufacturer
-            if passport_ok and eq.f3d_model:
-                rec["model"] = eq.f3d_model
+            if passport_ok and eq.td_manufacturer:
+                rec["manufacturer"] = eq.td_manufacturer
+            if passport_ok and eq.td_model:
+                rec["model"] = eq.td_model
             nxt = eq.next_action_date if "next_action_date" in eq._fields else next_prev.get(eq.id)
             if not nxt and eq.id not in open_prev:
                 nxt = recurring.get(eq.id)
@@ -100,7 +100,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         """Запис `maintenance_requests[]` (A.9). `res_id`, `done`, `equipment_name`, `overdue_days` — R-22:
         назва заявки не унікальна («Планове ТО» у всіх), тож клієнт знаходить заявку за `res_id`."""
         done = bool(r.stage_id.done)
-        rec = {"id": r.name, "res_id": r.id, "name": r.name, "equipment": r.equipment_id.f3d_code,
+        rec = {"id": r.name, "res_id": r.id, "name": r.name, "equipment": r.equipment_id.td_code,
                "equipment_name": r.equipment_id.name, "maintenance_type": r.maintenance_type,
                "stage": r.stage_id.name, "done": done, "priority": r.priority or "0"}
         if r.request_date:
@@ -130,7 +130,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         out = {}
         if not payload_tools.access_ok(self.env, "maintenance.request"):
             return out
-        eq_domain = [("equipment_id", "in", equipment.ids)] if equipment else [("equipment_id.f3d_code", "!=", False)]
+        eq_domain = [("equipment_id", "in", equipment.ids)] if equipment else [("equipment_id.td_code", "!=", False)]
         done = self.env["maintenance.request"].search(eq_domain + [
             ("maintenance_type", "=", "preventive"), ("stage_id.done", "=", True),
             ("recurring_maintenance", "=", True), ("archive", "=", False)], order="schedule_date, request_date, id")
@@ -173,7 +173,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         if not Request.has_access("create"):
             return plan_error(403, "forbidden", "Немає прав на створення заявок на обслуговування.")
         eq = env["maintenance.equipment"].search(
-            [("id", "=", equipment_id) if equipment_id else ("f3d_code", "=", code), ("f3d_code", "!=", False)],
+            [("id", "=", equipment_id) if equipment_id else ("td_code", "=", code), ("td_code", "!=", False)],
             limit=1)
         if not eq:
             return plan_error(404, "not_found", "Обладнання не знайдено.")
@@ -205,4 +205,4 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         if req.schedule_date:
             eq_patch["next_maintenance"] = dates.local(req.schedule_date)[:10]
         return {"ok": True, "created": created, "request": self._f3d_request_rec(req, now, today),
-                "equipment": {eq.f3d_code: eq_patch}}
+                "equipment": {eq.td_code: eq_patch}}

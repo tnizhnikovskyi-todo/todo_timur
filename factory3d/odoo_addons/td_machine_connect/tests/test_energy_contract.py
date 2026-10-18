@@ -17,7 +17,7 @@ class TestEnergyContract(F3DMachineCase):
         self.make_log(self.m_ua, "idle", "10:25:48", "10:30")
 
     def test_wo_intervals_window(self):
-        Machine = self.env["f3d.machine"]
+        Machine = self.env["td.machine"]
         res = Machine._f3d_wo_intervals(self.wo)
         self.assertEqual(
             res, {self.wo.id: [(kt("09:40"), kt("09:55"), "setup"), (kt("09:55"), kt("10:25:48"), "working")]}
@@ -27,11 +27,11 @@ class TestEnergyContract(F3DMachineCase):
 
     def test_open_interval_until_now(self):
         self.make_log(self.m_io, "working", "10:20", None, wo=self.wo)
-        res = self.env["f3d.machine"]._f3d_wo_intervals(self.wo, kt("10:00"))
+        res = self.env["td.machine"]._f3d_wo_intervals(self.wo, kt("10:00"))
         self.assertEqual(res[self.wo.id][-1], (kt("10:20"), datetime.utcnow().replace(microsecond=0), "working"))
 
     def test_wc_intervals(self):
-        res = self.env["f3d.machine"]._f3d_wc_intervals(self.wc_ua, kt("09:00"), kt("11:00"))
+        res = self.env["td.machine"]._f3d_wc_intervals(self.wc_ua, kt("09:00"), kt("11:00"))
         self.assertEqual(
             res,
             [
@@ -49,5 +49,5 @@ class TestEnergyContract(F3DMachineCase):
         m._f3d_commit_state("setup", kt("09:40"))
         m._f3d_commit_state("working", kt("09:55"))
         m._f3d_commit_state("idle", kt("10:25:48"))
-        self.assertAlmostEqual(wo.f3d_run_min, 30.8, 1)
-        self.assertAlmostEqual(wo.f3d_setup_min, 15.0, 1)
+        self.assertAlmostEqual(wo.td_run_min, 30.8, 1)
+        self.assertAlmostEqual(wo.td_setup_min, 15.0, 1)

@@ -24,7 +24,7 @@ class TestNominals(F3DBmsHvacMixin, F3DBmsCase):
         res = hvac.nominals("exfan", 1, none)
         self.assertEqual((res["airflow_nom"], res["p_inst_kw"], res["required_m3h"]), (644, 0.18, 160))
         # без паспорта computed-номінали беруться з умовчань R-10 і перекриваються вручну
-        unit = self.env["f3d.bms.hvac.unit"].create(
+        unit = self.env["td.bms.hvac.unit"].create(
             {"code": "RV-90", "name": "Тест", "kind": "roofvent", "zone_id": self.zone_hvac.id, "mode_design": "VE"}
         )
         self.assertEqual((unit.airflow_nom, unit.heat_nom_kw, unit.p_inst_kw), (8000, 60.0, 4.0))
@@ -39,12 +39,12 @@ class TestNominals(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual((rv5.x, rv5.y), (21.5, 33.5))
 
     def test_constraints(self):
-        Unit = self.env["f3d.bms.hvac.unit"]
+        Unit = self.env["td.bms.hvac.unit"]
         base = {"name": "Тест", "kind": "roofvent", "zone_id": self.zone_hvac.id, "mode_design": "VE"}
         with self.assertRaises(ValidationError), self.cr.savepoint():
             Unit.create({**base, "code": "RV-5"})
-        col = self.env["f3d.collector"].create({"code": "COL-HV", "name": "Колектор (тест)"})
-        src = self.env["f3d.source"].create(
+        col = self.env["td.collector"].create({"code": "COL-HV", "name": "Колектор (тест)"})
+        src = self.env["td.source"].create(
             {
                 "code": "BAC-HV-105",
                 "name": "BAC 105",
@@ -130,13 +130,13 @@ class TestState(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual((rv5.heat_kw, rv5.heating_valve), (8.1, 0.12))
 
     def test_heat_now_contract(self):
-        res = self.env["f3d.bms.hvac.unit"]._f3d_bms_heat_now()
+        res = self.env["td.bms.hvac.unit"]._f3d_bms_heat_now()
         self.assertEqual(len(res), 26)
         self.assertNotIn("EF-ELEC", res)
         self.assertIn("AHU-1", res)
         static = {code: {"heat_kw": 322 / 26} for code in res}
         self.env.invalidate_all()
-        res = self.env["f3d.bms.hvac.unit"].with_context(f3d_bms_static_units=static)._f3d_bms_heat_now()
+        res = self.env["td.bms.hvac.unit"].with_context(f3d_bms_static_units=static)._f3d_bms_heat_now()
         self.assertAlmostEqual(sum(res.values()), 322, delta=0.5)
 
     def test_command_refused_for_fans(self):

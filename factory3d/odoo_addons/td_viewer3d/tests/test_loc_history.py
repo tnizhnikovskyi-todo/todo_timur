@@ -4,9 +4,9 @@ from unittest.mock import patch
 from odoo import Command
 from odoo.tests import HttpCase, tagged
 
-from odoo.addons.factory3d_viewer.tools import dates
-from odoo.addons.factory3d_viewer.tools import docs as docs_tools
-from odoo.addons.factory3d_viewer.tools import loc_history
+from odoo.addons.td_viewer3d.tools import dates
+from odoo.addons.td_viewer3d.tools import docs as docs_tools
+from odoo.addons.td_viewer3d.tools import loc_history
 
 from .common import F3dViewerBase
 
@@ -20,16 +20,16 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         super().setUpClass()
         for user in (cls.user_f3d, cls.user_nobody):
             user.password = user.login
-        cls.user_no_stock = cls._make_user("f3d_nostock", ["base.group_user", "factory3d_base.group_f3d_user"])
+        cls.user_no_stock = cls._make_user("f3d_nostock", ["base.group_user", "td_factory3d.group_td_user"])
         cls.user_no_stock.password = "f3d_nostock"
         env = cls.env
         cls.wh = env["stock.warehouse"].search([], limit=1)
         cls.supplier = env.ref("stock.stock_location_suppliers")
         cls.customer = env.ref("stock.stock_location_customers")
         cls.cell = env["stock.location"].create({
-            "name": "ZZ-H-CELL", "location_id": cls.wh.lot_stock_id.id, "f3d_code": "ZZ-H-CELL"})
+            "name": "ZZ-H-CELL", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-CELL"})
         cls.dest = env["stock.location"].create({
-            "name": "ZZ-H-DEST", "location_id": cls.wh.lot_stock_id.id, "f3d_code": "ZZ-H-DEST"})
+            "name": "ZZ-H-DEST", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-DEST"})
         make = env["product.product"].create
         cls.plate = make({"name": "ZZ Плита", "default_code": "ZZ-PLATE", "is_storable": True, "type": "consu",
                           "tracking": "lot"})
@@ -163,7 +163,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
 
     def test_virtual_places_ukrainian(self):
         """Віртуальні локації Odoo (англійські назви з даних) — українською за usage."""
-        from odoo.addons.factory3d_viewer.tools.loc_history import _place
+        from odoo.addons.td_viewer3d.tools.loc_history import _place
         Loc = self.env["stock.location"]
         self.assertEqual(_place(Loc.search([("usage", "=", "customer")], limit=1))["name"], "Клієнти")
         self.assertEqual(_place(Loc.search([("usage", "=", "supplier")], limit=1))["name"], "Постачальники")
@@ -258,7 +258,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
             "productions": [{"name": "WH/MO/00001", "supply": {"note": None, "steps": [
                 {"code": "A", "doc": known.name, "note": "у стелаж (%s), контроль QC/00001." % pick.name}]}}],
         }
-        self.env["f3d.viewer.provider.chains"]._f3d_doc_states(payload)
+        self.env["td.viewer.provider.chains"]._f3d_doc_states(payload)
         # known і QC/00001 є в payload — клієнт бере стан звідти; fallback лише для відсутніх
         self.assertEqual(payload["productions"][0]["supply"]["docs"],
                          {pick.name: {"kind": "picking", "state": "done"}})

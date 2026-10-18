@@ -4,7 +4,7 @@ from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import file_open
 
-from ..models.f3d_access_event import F3dAccessEvent
+from ..models.td_access_event import F3dAccessEvent
 from ..models.telemetry_bridge import F3dAccessTelemetry
 from ..tools import params as P
 from .common import AccessCase, FakeBioStar
@@ -18,65 +18,65 @@ class TestSettings(AccessCase):
         return self.env['res.config.settings'].with_user(self.env.ref('base.user_admin')).create(vals)
 
     def test_params_roundtrip(self):  # AC-54
-        self._settings(f3d_access_page_size=300, f3d_access_write_enabled=True,
-                       f3d_access_visitor_user_prefix='VV-').execute()
+        self._settings(td_access_page_size=300, td_access_write_enabled=True,
+                       td_access_visitor_user_prefix='VV-').execute()
         self.assertEqual(P.get_int(self.env, 'page_size', 500, 1, 2000), 300)
         self.assertTrue(P.get_flag(self.env, 'write_enabled'))
         self.assertEqual(P.get_str(self.env, 'visitor_user_prefix'), 'VV-')
-        self._settings(f3d_access_write_enabled=False, f3d_access_overlap_s=0).execute()
+        self._settings(td_access_write_enabled=False, td_access_overlap_s=0).execute()
         self.assertFalse(P.get_flag(self.env, 'write_enabled'))
         self.assertEqual(P.get_int(self.env, 'overlap_s', 120, 0, 3600), 0)
 
     def test_ranges(self):  # AC-54
-        for field, bad in (('f3d_access_page_size', 3000), ('f3d_access_page_size', 0), ('f3d_access_overlap_s', 4000),
-                           ('f3d_access_max_shift_h', 25), ('f3d_access_keep_days', 4000)):
+        for field, bad in (('td_access_page_size', 3000), ('td_access_page_size', 0), ('td_access_overlap_s', 4000),
+                           ('td_access_max_shift_h', 25), ('td_access_keep_days', 4000)):
             with self.subTest(field=field, bad=bad), self.assertRaisesRegex(ValidationError, 'допустимо'):
                 self._settings(**{field: bad}).execute()
-        for field, bad in (('f3d_access_visitor_user_prefix', 'TOO-LONG-PREFIX'),
-                           ('f3d_access_visitor_user_group_id', '12a')):
+        for field, bad in (('td_access_visitor_user_prefix', 'TOO-LONG-PREFIX'),
+                           ('td_access_visitor_user_group_id', '12a')):
             with self.subTest(field=field), self.assertRaises(ValidationError):
                 self._settings(**{field: bad}).execute()
 
     def test_password_groups(self):  # AC-54, ТБ-02
         fields_admin = self.env['res.config.settings'].with_user(self.user_admin).fields_get()
-        self.assertNotIn('f3d_access_biostar_password', fields_admin)
+        self.assertNotIn('td_access_biostar_password', fields_admin)
         fields_sys = self.env['res.config.settings'].with_user(self.env.ref('base.user_admin')).fields_get()
-        self.assertIn('f3d_access_biostar_password', fields_sys)
+        self.assertIn('td_access_biostar_password', fields_sys)
         self.assertEqual(self.env['res.config.settings'].with_user(self.user_f3d_admin).fields_get().keys()
-                         & {'f3d_access_biostar_password'}, {'f3d_access_biostar_password'})
+                         & {'td_access_biostar_password'}, {'td_access_biostar_password'})
 
     def test_read_disabled(self):  # AC-55
         P.set_param(self.env, 'read_enabled', 'False')
         fake = FakeBioStar()
-        Server = self.env['f3d.access.server']
+        Server = self.env['td.access.server']
         with self.patch_client(fake):
             Server._cron_poll()
             Server._cron_sync_users()
             Server._cron_sync_devices()
-            self.env['f3d.access.event']._cron_housekeeping()
+            self.env['td.access.event']._cron_housekeeping()
         self.assertEqual(fake.calls, [])
         server = self.server.with_user(self.user_admin)
         with self.patch_client(fake):
             for action in (server.action_poll_now, server.action_sync_users):
-                with self.assertRaisesRegex(UserError, 'вимкнено стоп-краном factory3d.access.read_enabled'):
+                with self.assertRaisesRegex(UserError, 'вимкнено стоп-краном td.access.read_enabled'):
                     action()
         self.assertEqual(fake.calls, [])
 
     def test_neutralize_sql(self):  # AC-57
         self.server.sudo().write({'session_id': 's1', 'state': 'online'})
-        card = self.env['f3d.access.card'].create({
+        card = self.env['td.access.card'].create({
             'number': '777', 'server_id': self.server.id, 'holder_type': 'employee', 'employee_id': self.emp_a.id})
         card.sudo().write({'sync_state': 'pending', 'pending_op': 'issue'})
         P.set_param(self.env, 'read_enabled', 'True')
         P.set_param(self.env, 'write_enabled', 'True')
         P.set_param(self.env, 'biostar_password', 'S3cr3t!')
         self.env.flush_all()
-        with file_open('factory3d_access/data/neutralize.sql') as fh:
+        with file_open('td_access/data/neutralize.sql') as fh:
             self.env.cr.execute(fh.read())
         self.env.invalidate_all()
         crons = self.env['ir.cron'].with_context(active_test=False).search([
             ('id', 'in', self.env['ir.model.data'].search([
-                ('module', '=', 'factory3d_access'), ('model', '=', 'ir.cron')]).mapped('res_id'))])
+                ('module', '=', 'td_access'), ('model', '=', 'ir.cron')]).mapped('res_id'))])
         self.assertEqual(len(crons), 6)
         self.assertFalse(any(crons.mapped('active')))
         self.assertEqual(P.get_str(self.env, 'read_enabled'), 'False')
@@ -87,7 +87,7 @@ class TestSettings(AccessCase):
         self.assertEqual(card.sudo().sync_state, 'local')
         fake = FakeBioStar()
         with self.patch_client(fake):
-            self.env['f3d.access.server']._cron_poll()
+            self.env['td.access.server']._cron_poll()
         self.assertEqual(fake.calls, [])
 
     def _three_events(self):
@@ -123,13 +123,13 @@ class TestSettings(AccessCase):
         with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=None):
             self.poll('2026-10-12 04:10:00', FakeBioStar(events=[self.prow(9, '2026-10-12T04:05:00.00Z', 4102,
                                                                            'TSTA1', tna='2')]))
-        self.assertIsNone(self.env['f3d.access.telemetry']._f3d_publish(self.server, self.env['f3d.access.event']))
+        self.assertIsNone(self.env['td.access.telemetry']._f3d_publish(self.server, self.env['td.access.event']))
 
     def test_telemetry_failure_isolated(self):  # R-18
         fake_signal = MagicMock()
         fake_signal._f3d_ingest.side_effect = RuntimeError('boom')
         with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal), \
-                self.assertLogs('odoo.addons.factory3d_access.models.f3d_access_server', 'WARNING'):
+                self.assertLogs('odoo.addons.td_access.models.td_access_server', 'WARNING'):
             res = self.poll('2026-10-12 04:00:00', FakeBioStar(events=self._three_events()))
         self.assertEqual(res['new'], 3)
         self.assertTrue(F3dAccessEvent)

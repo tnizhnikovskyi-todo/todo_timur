@@ -7,7 +7,7 @@ from ..services.checks import CHECK_DEFAULTS
 
 
 class F3dSite(models.Model):
-    _name = 'f3d.site'
+    _name = 'td.site'
     _description = "Площадка"
     _order = 'sequence, name'
     _rec_name = 'name'
@@ -38,14 +38,14 @@ class F3dSite(models.Model):
         domain=[('usage', 'in', ('internal', 'view'))],
         help="Куди публікуються комірки, у яких не задано батьківську локацію місця",
     )
-    layer_ids = fields.One2many('f3d.layer', 'site_id', string="Шари")
-    check_config_ids = fields.One2many('f3d.check.config', 'site_id', string="Перевірки")
-    version_ids = fields.One2many('f3d.layout.version', 'site_id', string="Версії")
+    layer_ids = fields.One2many('td.layer', 'site_id', string="Шари")
+    check_config_ids = fields.One2many('td.check.config', 'site_id', string="Перевірки")
+    version_ids = fields.One2many('td.layout.version', 'site_id', string="Версії")
     active_version_id = fields.Many2one(
-        'f3d.layout.version', string="Діюча версія", readonly=True, copy=False, ondelete='set null'
+        'td.layout.version', string="Діюча версія", readonly=True, copy=False, ondelete='set null'
     )
     draft_base_version_id = fields.Many2one(
-        'f3d.layout.version', string="База чернетки", readonly=True, copy=False, ondelete='set null'
+        'td.layout.version', string="База чернетки", readonly=True, copy=False, ondelete='set null'
     )
     draft_rev = fields.Integer(string="Лічильник правок", default=0, readonly=True, copy=False)
     draft_changes = fields.Integer(string="Змінено від діючої версії", default=0, readonly=True, copy=False)
@@ -72,7 +72,7 @@ class F3dSite(models.Model):
         if operator not in ('=', '!='):
             raise UserError("Непідтримуваний оператор пошуку.")
         want = bool(value) == (operator == '=')
-        self.env.cr.execute("SELECT id FROM f3d_site WHERE (draft_rev IS DISTINCT FROM published_rev) = %s", (want,))
+        self.env.cr.execute("SELECT id FROM td_site WHERE (draft_rev IS DISTINCT FROM published_rev) = %s", (want,))
         return [('id', 'in', [row[0] for row in self.env.cr.fetchall()])]
 
     def _compute_counts(self):
@@ -83,8 +83,8 @@ class F3dSite(models.Model):
                 ._read_group([('site_id', 'in', self.ids)], ['site_id'], ['__count'])
             )
 
-        slots, placements = counts('f3d.slot'), counts('f3d.placement')
-        layers, versions = counts('f3d.layer'), counts('f3d.layout.version')
+        slots, placements = counts('td.slot'), counts('td.placement')
+        layers, versions = counts('td.layer'), counts('td.layout.version')
         for site in self:
             site.slot_count = slots.get(site, 0)
             site.placement_count = placements.get(site, 0)
@@ -115,8 +115,8 @@ class F3dSite(models.Model):
         return sites
 
     def _f3d_init_checks(self):
-        """R-04: 7 рядків f3d.check.config (ідемпотентно)."""
-        Config = self.env['f3d.check.config'].sudo().with_context(f3d_no_touch=True)
+        """R-04: 7 рядків td.check.config (ідемпотентно)."""
+        Config = self.env['td.check.config'].sudo().with_context(f3d_no_touch=True)
         for site in self:
             have = set(Config.with_context(active_test=False).search([('site_id', '=', site.id)]).mapped('check_key'))
             vals = [
@@ -136,8 +136,8 @@ class F3dSite(models.Model):
 
     def _f3d_init_blank(self):
         """R-23: 5 базових шарів порожньої площадки (ідемпотентно: лише якщо шарів ще немає)."""
-        Layer = self.env['f3d.layer'].sudo().with_context(f3d_no_touch=True)
-        Term = self.env['f3d.term']
+        Layer = self.env['td.layer'].sudo().with_context(f3d_no_touch=True)
+        Term = self.env['td.term']
         group = self.env.ref
         spec = [
             ("Будівля", 'building', 10, 0.0, None, ['zone'], '#9aa5b1'),
@@ -171,7 +171,7 @@ class F3dSite(models.Model):
                         'color': color,
                         'allowed_slot_type_ids': [Command.set(terms.ids)],
                         'edit_group_ids': [
-                            Command.set([group('factory3d_constructor.group_f3d_constructor_%s' % role).id])
+                            Command.set([group('td_constructor.group_td_constructor_%s' % role).id])
                         ]
                         if role
                         else [],
@@ -184,13 +184,13 @@ class F3dSite(models.Model):
         if not ids:
             return
         self.env.cr.execute(
-            "UPDATE f3d_site SET draft_rev = draft_rev + 1, draft_changes = draft_changes + %s WHERE id IN %s",
+            "UPDATE td_site SET draft_rev = draft_rev + 1, draft_changes = draft_changes + %s WHERE id IN %s",
             (n, tuple(ids)),
         )
         self.invalidate_recordset(['draft_rev', 'draft_changes', 'has_changes'])
 
     def _f3d_check_rights_manager(self):
-        if not (self.env.su or self.env.user.has_group('factory3d_constructor.group_f3d_constructor_manager')):
+        if not (self.env.su or self.env.user.has_group('td_constructor.group_td_constructor_manager')):
             raise AccessError("Лише менеджер конструктора може виконати цю дію.")
 
     # --- дії -----------------------------------------------------------------------------------------
@@ -204,24 +204,24 @@ class F3dSite(models.Model):
         }
 
     def action_publish_wizard(self):
-        """Створює майстер публікації (M-08); план будується в `wizard.f3d_publish_wizard`."""
+        """Створює майстер публікації (M-08); план будується в `wizard.td_publish_wizard`."""
         self.ensure_one()
         self._f3d_check_rights_manager()
-        wizard = self.env['f3d.publish.wizard'].create({'site_id': self.id})
+        wizard = self.env['td.publish.wizard'].create({'site_id': self.id})
         wizard._f3d_rebuild()
         return wizard._f3d_action()
 
     def action_open_layers(self):
-        return self._f3d_action_list('f3d.layer', "Шари")
+        return self._f3d_action_list('td.layer', "Шари")
 
     def action_open_slots(self):
-        return self._f3d_action_list('f3d.slot', "Місця")
+        return self._f3d_action_list('td.slot', "Місця")
 
     def action_open_placements(self):
-        return self._f3d_action_list('f3d.placement', "Розміщення")
+        return self._f3d_action_list('td.placement', "Розміщення")
 
     def action_open_versions(self):
-        return self._f3d_action_list('f3d.layout.version', "Версії планування")
+        return self._f3d_action_list('td.layout.version', "Версії планування")
 
     def _f3d_action_list(self, model, name):
         self.ensure_one()

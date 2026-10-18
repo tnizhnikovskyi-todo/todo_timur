@@ -1,4 +1,4 @@
-"""Хуки модуля: міграція рівня 0 factory3d_iot_sim → f3d.* (SPEC §5.3–§5.5), деінсталяція (§5.4).
+"""Хуки модуля: міграція рівня 0 td_iot_sim → td.* (SPEC §5.3–§5.5), деінсталяція (§5.4).
 
 `run_migration(env) -> dict` — кроки 1…11; `post_init_hook` = `run_migration` + розклад ротації.
 Кроки 2, 5, 6, 9, 10 потребують моделей рівня 0 (`x_f3d_signal`, `x_f3d_reading`) і без них пропускаються.
@@ -17,17 +17,17 @@ from zoneinfo import ZoneInfo
 from odoo import fields
 from odoo.tools import file_open
 
-from .models.f3d_reading_hour import AGGREGATE_SQL
+from .models.td_reading_hour import AGGREGATE_SQL
 from .tools import sim_catalog as simcat
 
 _logger = logging.getLogger(__name__)
 
-P = "factory3d.telemetry."
+P = "td.telemetry."
 KYIV = ZoneInfo("Europe/Kyiv")
-IOT = "factory3d_iot_sim."
+IOT = "td_iot_sim."
 TEAM_NAME = "Служба головного механіка"
 READINGS_BATCH = 5000
-CATALOG_FILE = "factory3d_telemetry/data/signal_catalog.csv"
+CATALOG_FILE = "td_telemetry/data/signal_catalog.csv"
 
 # Додаток C.3: ключ джерела з адреси → код джерела
 SOURCE_MAP = {
@@ -46,7 +46,7 @@ MOBILE = ["FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2", "TUGGER-1"]
 METERS = [("COMPRESSOR", "equipment/COMPRESSOR/hours", 2000.0, 16000.0)] + [
     (c, "equipment/%s/hours" % c, 1000.0, None) for c in MOBILE
 ]
-# Представлення, меню й дії рівня 0 (xml-id `factory3d_iot_sim.*`)
+# Представлення, меню й дії рівня 0 (xml-id `td_iot_sim.*`)
 LEVEL0_VIEWS = [
     "view_signal_list",
     "view_signal_form",
@@ -106,7 +106,7 @@ def _slug(code):
 
 
 def _signals(env):
-    return env["f3d.signal"].sudo().with_context(**SIGNAL_CTX)
+    return env["td.signal"].sudo().with_context(**SIGNAL_CTX)
 
 
 def _changed(rec, vals):
@@ -175,7 +175,7 @@ def _catalog_rows(env):
 def params(env):
     """CB-10: `read_enabled` за середовищем; `default_team_id` — «Служба головного механіка» або перша команда."""
     icp = env["ir.config_parameter"].sudo()
-    read = "True" if icp.get_param("factory3d.base.environment") == "test" else "False"
+    read = "True" if icp.get_param("td.base.environment") == "test" else "False"
     icp.set_param(P + "read_enabled", read)
     current = icp.get_param(P + "default_team_id") or ""
     Team = env["maintenance.team"].sudo()
@@ -189,7 +189,7 @@ def params(env):
 
 # --- крок 2 --------------------------------------------------------------------------------------------
 def _level0_vals(x):
-    """R-15 + Додаток D: `vals` f3d.signal за записом `x_f3d_signal`."""
+    """R-15 + Додаток D: `vals` td.signal за записом `x_f3d_signal`."""
     get = lambda name: x[name] if name in x._fields else False  # noqa: E731
     mode, alarm, threshold = get("x_mode") or "", get("x_alarm") or "", get("x_threshold") or 0.0
     unit, quantity = get("x_unit") or "", get("x_kind") or ""
@@ -244,7 +244,7 @@ def _level0_snapshot(x, written):
 
 
 def signals_level0(env, snapshot=None):
-    """Крок 2: `x_f3d_signal` → `f3d.signal` (upsert за `code`), xml-id `sig_<slug>`, `derived_from_id`.
+    """Крок 2: `x_f3d_signal` → `td.signal` (upsert за `code`), xml-id `sig_<slug>`, `derived_from_id`.
 
     `snapshot` (dict, заповнюється тут) — знімок того, що перенесено; крок 8 звіряє саме його, а не живий
     рівень 0, який між кроками продовжує змінюватись (T-1). При повторному запуску сигнал `sim_data`, чиє
@@ -313,7 +313,7 @@ def signals_level0(env, snapshot=None):
             sig.write({"derived_from_id": by_code[source.x_code].id, "derive_rule": "none"})
     env["ir.model.data"]._update_xmlids(
         [
-            {"xml_id": "factory3d_telemetry.sig_" + _slug(code), "record": sig, "noupdate": True}
+            {"xml_id": "td_telemetry.sig_" + _slug(code), "record": sig, "noupdate": True}
             for code, sig in by_code.items()
         ]
     )
@@ -386,7 +386,7 @@ def _create_vals(row, derived):
 def signals_catalog(env):
     """Крок 3: `signal_catalog.csv` → створення нових і прив'язка наявних сигналів; джерелам — обладнання."""
     Signal = _signals(env)
-    sources = {s.code: s for s in env["f3d.source"].sudo().with_context(active_test=False).search([])}
+    sources = {s.code: s for s in env["td.source"].sudo().with_context(active_test=False).search([])}
     Equipment = env["maintenance.equipment"].sudo()
     stats = Counter(created=0, bound=0, bind_missing=0, no_equipment=0)
     for row in _catalog_rows(env):
@@ -439,7 +439,7 @@ def _fill_state_from_charging(env):
 
 # --- крок 3а -------------------------------------------------------------------------------------------
 def meters(env):
-    """Додаток C.4: ТО за лічильником на обладнанні з порожнім `f3d_meter_signal_id` + прив'язка заявок."""
+    """Додаток C.4: ТО за лічильником на обладнанні з порожнім `td_meter_signal_id` + прив'язка заявок."""
     Signal, Equipment = _signals(env), env["maintenance.equipment"].sudo()
     Request = env["maintenance.request"].sudo().with_context(mail_notrack=True, tracking_disable=True)
     lead = float(env["ir.config_parameter"].sudo().get_param(P + "meter_lead_pct", "5") or 5)
@@ -447,16 +447,16 @@ def meters(env):
     for equipment_code, signal_code, interval, last in METERS:
         equipment = Equipment.search_f3d(equipment_code)
         sig = Signal.search([("code", "=", signal_code)], limit=1)
-        if not equipment or not sig or equipment.f3d_meter_signal_id:
+        if not equipment or not sig or equipment.td_meter_signal_id:
             continue
         if last is None:
             last = math.floor(sig.last_value / interval) * interval
         equipment.with_context(mail_notrack=True).write(
             {
-                "f3d_meter_signal_id": sig.id,
-                "f3d_meter_interval": interval,
-                "f3d_meter_last_value": last,
-                "f3d_meter_lead_pct": lead,
+                "td_meter_signal_id": sig.id,
+                "td_meter_interval": interval,
+                "td_meter_last_value": last,
+                "td_meter_lead_pct": lead,
             }
         )
         done += 1
@@ -470,8 +470,8 @@ def meters(env):
             limit=1,
         )
         if request:
-            request.write({"f3d_signal_id": sig.id, "f3d_origin": "meter", "f3d_threshold": last + interval})
-            equipment.with_context(mail_notrack=True).write({"f3d_meter_request_id": request.id})
+            request.write({"td_signal_id": sig.id, "td_origin": "meter", "td_threshold": last + interval})
+            equipment.with_context(mail_notrack=True).write({"td_meter_request_id": request.id})
             linked += 1
     report = {"meters": done, "meter_requests_linked": linked}
     _logger.info("meters: %s", report)
@@ -480,12 +480,12 @@ def meters(env):
 
 # --- крок 4 --------------------------------------------------------------------------------------------
 def sim_catalog(env):
-    """Крок 4: CT-11 над каталогом `f3d.sim.signal` (якщо модель є); адреси, `sim_params`, `nominal`."""
-    if "f3d.sim.signal" not in env:
-        _logger.info("sim_catalog: f3d.sim.signal відсутня — пропуск")
+    """Крок 4: CT-11 над каталогом `td.sim.signal` (якщо модель є); адреси, `sim_params`, `nominal`."""
+    if "td.sim.signal" not in env:
+        _logger.info("sim_catalog: td.sim.signal відсутня — пропуск")
         return {"state": "skipped"}
     codes = _signals(env).search([("origin", "in", ("sim_data", "catalog"))]).mapped("code")
-    report = env["f3d.signal"].sudo()._f3d_import_sim_catalog(codes=codes, source_map=SOURCE_MAP, defaults={})
+    report = env["td.signal"].sudo()._f3d_import_sim_catalog(codes=codes, source_map=SOURCE_MAP, defaults={})
     report = {
         "created": report["created"],
         "updated": report["updated"],
@@ -498,18 +498,18 @@ def sim_catalog(env):
 
 # --- крок 5 --------------------------------------------------------------------------------------------
 READINGS_SQL = """
-INSERT INTO f3d_reading (signal_id, equipment_id, ts, value, quality, src, received_at)
+INSERT INTO td_reading (signal_id, equipment_id, ts, value, quality, src, received_at)
 SELECT s.id, s.equipment_id, r.x_time, r.x_value, 'good', 'sim_data', COALESCE(r.create_date, r.x_time)
   FROM x_f3d_reading r
   JOIN x_f3d_signal x ON x.id = r.x_signal_id
-  JOIN f3d_signal s ON s.code = x.x_code
+  JOIN td_signal s ON s.code = x.x_code
  WHERE r.id >= %s AND r.id < %s AND r.x_time IS NOT NULL
 ON CONFLICT (signal_id, ts) DO NOTHING
 """
 
 
 def readings_level0(env):
-    """Крок 5: `x_f3d_reading` → `f3d.reading` батчами по 5 000 (`ON CONFLICT DO NOTHING`)."""
+    """Крок 5: `x_f3d_reading` → `td.reading` батчами по 5 000 (`ON CONFLICT DO NOTHING`)."""
     if "x_f3d_reading" not in env:
         return {"skipped": True}
     cr = env.cr
@@ -524,7 +524,7 @@ def readings_level0(env):
         cr.execute(READINGS_SQL, (start, start + READINGS_BATCH))
         inserted += cr.rowcount
         start += READINGS_BATCH
-    env["f3d.reading"].invalidate_model()
+    env["td.reading"].invalidate_model()
     report = {"readings_migrated": total, "skipped_null_ts": null_ts, "readings_inserted": inserted, "max_id": high}
     _logger.info("readings_level0: %s", report)
     return report
@@ -545,10 +545,10 @@ def requests_level0(env):
         threshold = sig.alarm_high if sig.alarm_high_on else (sig.alarm_low if sig.alarm_low_on else 0.0)
         request.write(
             {
-                "f3d_signal_id": sig.id,
-                "f3d_origin": "threshold",
-                "f3d_value": sig.last_value,
-                "f3d_threshold": threshold,
+                "td_signal_id": sig.id,
+                "td_origin": "threshold",
+                "td_value": sig.last_value,
+                "td_threshold": threshold,
             }
         )
         if request.stage_id.done:
@@ -564,7 +564,7 @@ def requests_level0(env):
 def hours_rebuild(env):
     """Крок 7: годинні агрегати (R-09) за всіма закритими годинами, де є показання."""
     cr = env.cr
-    cr.execute("SELECT min(ts) FROM f3d_reading")
+    cr.execute("SELECT min(ts) FROM td_reading")
     first = cr.fetchone()[0]
     end = fields.Datetime.now().replace(minute=0, second=0, microsecond=0)
     hours = 0
@@ -583,8 +583,8 @@ READINGS_MISSING_SQL = """
 SELECT count(*)
   FROM x_f3d_reading r
   JOIN x_f3d_signal x ON x.id = r.x_signal_id
-  LEFT JOIN f3d_signal s ON s.code = x.x_code
-  LEFT JOIN f3d_reading fr ON fr.signal_id = s.id AND fr.ts = r.x_time
+  LEFT JOIN td_signal s ON s.code = x.x_code
+  LEFT JOIN td_reading fr ON fr.signal_id = s.id AND fr.ts = r.x_time
  WHERE r.x_time IS NOT NULL AND fr.id IS NULL{bound}
 """
 THRESHOLD_COLS = ("warn_low", "warn_high", "alarm_low", "alarm_high")
@@ -597,8 +597,8 @@ def _status_from_catalog(sig, snap):
     """Статус відрізняється від рівня 0 лише через пороги каталогу, яких на рівні 0 не було (T-1).
 
     Рівень 0 знає лише «норма»/«тривога» і один поріг `x_alarm`; каталог (Додаток C.2) додає «увагу» й нижні/верхні
-    пороги. Якщо рівень 0 вважав значення нормою, а f3d.signal — «увага»/«тривога» через додаткові пороги, це не
-    розбіжність міграції. Тривога рівня 0, якої немає в f3d.signal, лишається розбіжністю.
+    пороги. Якщо рівень 0 вважав значення нормою, а td.signal — «увага»/«тривога» через додаткові пороги, це не
+    розбіжність міграції. Тривога рівня 0, якої немає в td.signal, лишається розбіжністю.
     """
     if snap["state"] == "тривога" or sig.status not in ("warn", "alarm"):
         return False
@@ -608,13 +608,13 @@ def _status_from_catalog(sig, snap):
 
 
 def verify(env, snapshot=None, notes=None, max_reading_id=None):
-    """Крок 8: звірка рівня 0 з f3d.*; повертає список розбіжностей.
+    """Крок 8: звірка рівня 0 з td.*; повертає список розбіжностей.
 
     Порівнюється зі знімком, який зробив крок 2 (`snapshot`), а не з живим рівнем 0: значення й стан
     звіряються лише для сигналів, чиє `last_*` взято з цього знімка (записане цим запуском або з тим самим
     `last_ts`); новіші дані телеметрії не перевіряються. Різниця статусу через пороги каталогу або через час
     (`stale`/`offline`/`unknown` — немає свіжих даних) — не розбіжність, вона додається в `notes` (якщо передано список). Показання: кожне `x_f3d_reading` (до `max_reading_id`,
-    знятого кроком 5) має мати `f3d.reading`; зайві (рівень 0 чистить свої рядки) не заважають.
+    знятого кроком 5) має мати `td.reading`; зайві (рівень 0 чистить свої рядки) не заважають.
     """
     if not _level0(env):
         return []
@@ -626,7 +626,7 @@ def verify(env, snapshot=None, notes=None, max_reading_id=None):
     Signal = _signals(env)
     count = Signal.search_count([("origin", "=", "sim_data")])
     if count != len(snapshot):
-        mismatches.append("signals: f3d.signal(sim_data) %d != x_f3d_signal %d" % (count, len(snapshot)))
+        mismatches.append("signals: td.signal(sim_data) %d != x_f3d_signal %d" % (count, len(snapshot)))
     sigs = {s.code: s for s in Signal.search([("code", "in", list(snapshot))])}
     for code, snap in snapshot.items():
         sig = sigs.get(code)
@@ -653,7 +653,7 @@ def verify(env, snapshot=None, notes=None, max_reading_id=None):
         env.cr.execute(READINGS_MISSING_SQL.format(bound=bound), (max_reading_id,) if bound else ())
         missing = env.cr.fetchone()[0]
         if missing:
-            mismatches.append("readings: %d x_f3d_reading без відповідного f3d.reading(sim_data)" % missing)
+            mismatches.append("readings: %d x_f3d_reading без відповідного td.reading(sim_data)" % missing)
     return mismatches
 
 
@@ -672,7 +672,7 @@ def level0_off(env):
     view = _ref(env, "view_equipment_form_signals")
     if view:
         view.sudo().write({"active": False})
-    param = env["ir.config_parameter"].sudo().search([("key", "=", "factory3d.iot_sim.level0_enabled")])
+    param = env["ir.config_parameter"].sudo().search([("key", "=", "td.iot_sim.level0_enabled")])
     if param:
         param.write({"value": "False"})
     report = {
@@ -689,7 +689,7 @@ def level0_off(env):
 # --- крок 10 -------------------------------------------------------------------------------------------
 def drop_level0(env):
     """Крок 10: видалити представлення, меню, поле й моделі рівня 0 (лише `drop_level0=True`)."""
-    from odoo.addons.factory3d_base.hooks.x_fields import drop_manual_fields  # noqa: PLC0415
+    from odoo.addons.td_factory3d.hooks.x_fields import drop_manual_fields  # noqa: PLC0415
 
     views = env["ir.ui.view"]
     for name in LEVEL0_VIEWS:
@@ -764,7 +764,7 @@ def run_level0_migration(env):
 
 def schedule_rotate(env):
     """§6: перший запуск ротації — найближчі 02:40 за Києвом."""
-    cron = env.ref("factory3d_telemetry.cron_f3d_telemetry_rotate", raise_if_not_found=False)
+    cron = env.ref("td_telemetry.cron_td_telemetry_rotate", raise_if_not_found=False)
     if not cron:
         return
     now = datetime.now(timezone.utc).astimezone(KYIV)
@@ -792,5 +792,5 @@ def uninstall_hook(env):
             if rec:
                 rec.write({"active": True})
         _logger.warning("рівень 0 вимкнено; увімкніть вручну або через пульт")
-    env.cr.execute("DROP TABLE IF EXISTS f3d_collector_push")  # DEC-19: журнал пакетів колектора — не модель ORM
-    env["ir.config_parameter"].sudo().search([("key", "=like", "factory3d.telemetry.%")]).unlink()
+    env.cr.execute("DROP TABLE IF EXISTS td_collector_push")  # DEC-19: журнал пакетів колектора — не модель ORM
+    env["ir.config_parameter"].sudo().search([("key", "=like", "td.telemetry.%")]).unlink()

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from odoo.tests import tagged
 
-from ..models.f3d_access_event import F3dAccessEvent
+from ..models.td_access_event import F3dAccessEvent
 from .common import AccessCase, FakeBioStar
 
 CTX = {'now': datetime(2026, 10, 12, 7, 30), 'now_local': '2026-10-12 10:30', 'today': '2026-10-12'}
@@ -16,7 +16,7 @@ ACCESS_KEYS = {'updated', 'server', 'on_site', 'today', 'zones', 'people', 'visi
 
 
 def _deep_merge(dst, src):
-    """Запасний deep_merge (viewer M-01), коли factory3d_viewer немає в addons_path."""
+    """Запасний deep_merge (viewer M-01), коли td_viewer3d немає в addons_path."""
     for key, value in src.items():
         if isinstance(value, dict) and isinstance(dst.get(key), dict):
             _deep_merge(dst[key], value)
@@ -26,18 +26,18 @@ def _deep_merge(dst, src):
 
 
 def viewer_payload_stub():
-    """Підміна `odoo.addons.factory3d_viewer.tools.payload` лише якщо справжнього модуля немає."""
+    """Підміна `odoo.addons.td_viewer3d.tools.payload` лише якщо справжнього модуля немає."""
     try:
-        from odoo.addons.factory3d_viewer.tools import payload  # noqa: F401
+        from odoo.addons.td_viewer3d.tools import payload  # noqa: F401
         return patch.dict(sys.modules, {})
     except ImportError:
         mods = {}
-        for name in ('odoo.addons.factory3d_viewer', 'odoo.addons.factory3d_viewer.tools'):
+        for name in ('odoo.addons.td_viewer3d', 'odoo.addons.td_viewer3d.tools'):
             mods[name] = types.ModuleType(name)
             mods[name].__path__ = []
-        leaf = types.ModuleType('odoo.addons.factory3d_viewer.tools.payload')
+        leaf = types.ModuleType('odoo.addons.td_viewer3d.tools.payload')
         leaf.deep_merge = _deep_merge
-        mods['odoo.addons.factory3d_viewer.tools.payload'] = leaf
+        mods['odoo.addons.td_viewer3d.tools.payload'] = leaf
         return patch.dict(sys.modules, mods)
 
 
@@ -46,7 +46,7 @@ class TestProvider(AccessCase):
 
     def setUp(self):
         super().setUp()
-        self.provider = self.env['f3d.viewer.provider.access']
+        self.provider = self.env['td.viewer.provider.access']
         self.payload = {
             'employees': {'OP-TST-A': {'name': 'А', 'present': False}, 'OP-TST-B': {'name': 'Б', 'present': True}},
             'zones': {'Z-CUT': {'name': 'Розкрій'}}}
@@ -56,7 +56,7 @@ class TestProvider(AccessCase):
         self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'))
 
     def _visitor(self):
-        visitor = self.env['f3d.access.visitor'].create({
+        visitor = self.env['td.access.visitor'].create({
             'name': 'Іван Петренко', 'host_employee_id': self.emp_a.id,
             'date_from': datetime(2026, 10, 12, 5, 0), 'date_to': datetime(2026, 10, 12, 15, 0)})
         visitor.write({'state': 'on_site', 'present': True, 'zone_id': self.z['Z-OFFICE'].id,
@@ -155,13 +155,13 @@ class TestProvider(AccessCase):
     def test_delta_zones_and_employees(self):  # AC-51
         self._enter_a()
         patch_ = {}
-        ctx = self._delta_ctx(**{'hr.employee': {'OP-TST-A'}, 'f3d.access.door': {'TURN-1'}})
+        ctx = self._delta_ctx(**{'hr.employee': {'OP-TST-A'}, 'td.access.door': {'TURN-1'}})
         with viewer_payload_stub():
             self.provider.with_user(self.user_f3d)._f3d_viewer_delta(patch_, ctx)
         self.assertEqual(set(patch_), {'access', 'employees', 'zones', 'infra'})
         self.assertEqual(set(patch_['employees']), {'OP-TST-A'})
         self.assertEqual(set(patch_['employees']['OP-TST-A']), {'present', 'zone', 'zone_since', 'last_event'})
-        zones = self.env['f3d.zone'].search([]).mapped('f3d_code')
+        zones = self.env['td.zone'].search([]).mapped('td_code')
         self.assertEqual(set(patch_['zones']), set(zones))
         self.assertEqual(patch_['zones']['Z-CUT']['people_now'], 1)
         self.assertEqual(sum(v['people_now'] for k, v in patch_['zones'].items() if k != 'Z-CUT'), 0)
@@ -176,7 +176,7 @@ class TestProvider(AccessCase):
 
     def test_delta_keeps_foreign_keys(self):  # AC-67
         patch_ = {'zones': {'Z-CUT': {'name': 'Розкрій', 'wip': 3}}}
-        ctx = self._delta_ctx(**{'f3d.access.visitor': {'V-1'}})
+        ctx = self._delta_ctx(**{'td.access.visitor': {'V-1'}})
         with viewer_payload_stub():
             self.provider._f3d_viewer_delta(patch_, ctx)
         self.assertEqual((patch_['zones']['Z-CUT']['name'], patch_['zones']['Z-CUT']['wip']), ('Розкрій', 3))
@@ -190,7 +190,7 @@ class TestProvider(AccessCase):
             self.poll('2026-10-12 04:00:00', FakeBioStar(events=rows))
         calls = {call.args[0]: set(call.args[1]) for call in bus.call_args_list}
         self.assertEqual(calls['hr.employee'], {'OP-TST-A', 'OP-TST-B'})
-        self.assertEqual(calls['f3d.access.door'], {'TURN-1'})
+        self.assertEqual(calls['td.access.door'], {'TURN-1'})
         self.assertEqual(bus.call_count, len(calls))
 
     def test_visitor_bus(self):
@@ -198,23 +198,23 @@ class TestProvider(AccessCase):
         with patch.object(F3dAccessEvent, '_f3d_bus') as bus:
             self.assertTrue(visitor._f3d_presence_set({'zone_id': self.z['Z-ASM'].id}))
             self.assertFalse(visitor._f3d_presence_set({'zone_id': self.z['Z-ASM'].id}))
-        bus.assert_called_once_with('f3d.access.visitor', {'V-%d' % visitor.id})
+        bus.assert_called_once_with('td.access.visitor', {'V-%d' % visitor.id})
 
     def test_no_viewer_ok(self):  # AC-52
-        if 'f3d.viewer.event' in self.env:
-            self.skipTest('factory3d_viewer встановлено: перевірка лише для сценарію без viewer')
-        self.assertIsNone(self.env['f3d.access.event']._f3d_bus('hr.employee', {'OP-TST-A'}))
+        if 'td.viewer.event' in self.env:
+            self.skipTest('td_viewer3d встановлено: перевірка лише для сценарію без viewer')
+        self.assertIsNone(self.env['td.access.event']._f3d_bus('hr.employee', {'OP-TST-A'}))
         events = self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'))
         self.assertEqual(events.process_state, 'done')
 
     def test_registry_attrs(self):  # AC-52
-        provider = self.env['f3d.viewer.provider.access']
+        provider = self.env['td.viewer.provider.access']
         self.assertEqual((provider._f3d_sequence, provider._f3d_sections, provider._f3d_group),
-                         (170, ('access',), 'factory3d_base.group_f3d_user'))
-        self.assertEqual(provider._f3d_viewer_bus_models(), ['hr.employee', 'f3d.access.door', 'f3d.access.visitor'])
+                         (170, ('access',), 'td_factory3d.group_td_user'))
+        self.assertEqual(provider._f3d_viewer_bus_models(), ['hr.employee', 'td.access.door', 'td.access.visitor'])
 
     def test_sudo_only_in_public_presence(self):  # A-21
-        import odoo.addons.factory3d_access.models.viewer_provider as module
+        import odoo.addons.td_access.models.viewer_provider as module
         self.assertIsNone(re.search(r'\.sudo\(', inspect.getsource(module)))
         employee = inspect.getsource(type(self.env['hr.employee'])._f3d_access_public_presence)
         self.assertIn('.sudo()', employee)

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-16 -->
-    <record id="view_f3d_fire_drill_list" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.list</field>
-        <field name="model">f3d.fire.drill</field>
+    <record id="view_td_fire_drill_list" model="ir.ui.view">
+        <field name="name">td.fire.drill.list</field>
+        <field name="model">td.fire.drill</field>
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
@@ -23,9 +23,9 @@
             </list>
         </field>
     </record>
-    <record id="view_f3d_fire_drill_calendar" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.calendar</field>
-        <field name="model">f3d.fire.drill</field>
+    <record id="view_td_fire_drill_calendar" model="ir.ui.view">
+        <field name="name">td.fire.drill.calendar</field>
+        <field name="model">td.fire.drill</field>
         <field name="arch" type="xml">
             <calendar date_start="planned_ts" color="state" mode="month">
                 <field name="zone_id"/>
@@ -33,9 +33,9 @@
             </calendar>
         </field>
     </record>
-    <record id="view_f3d_fire_drill_search" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.search</field>
-        <field name="model">f3d.fire.drill</field>
+    <record id="view_td_fire_drill_search" model="ir.ui.view">
+        <field name="name">td.fire.drill.search</field>
+        <field name="model">td.fire.drill</field>
         <field name="arch" type="xml">
             <search>
                 <field name="name"/>
@@ -58,9 +58,9 @@
     </record>
 
     <!-- V-17 -->
-    <record id="view_f3d_fire_drill_form" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.form</field>
-        <field name="model">f3d.fire.drill</field>
+    <record id="view_td_fire_drill_form" model="ir.ui.view">
+        <field name="name">td.fire.drill.form</field>
+        <field name="model">td.fire.drill</field>
         <field name="arch" type="xml">
             <form>
                 <header>
@@ -150,7 +150,7 @@
                             </field>
                         </page>
                         <page string="Люди" name="people"
-                              groups="factory3d_fire_safety.group_f3d_fire_drill,hr.group_hr_user">
+                              groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user">
                             <field name="person_ids" readonly="1">
                                 <list>
                                     <field name="seq"/>
@@ -190,16 +190,16 @@
         </field>
     </record>
 
-    <record id="action_f3d_fire_drill" model="ir.actions.act_window">
+    <record id="action_td_fire_drill" model="ir.actions.act_window">
         <field name="name">Навчальні тривоги</field>
-        <field name="res_model">f3d.fire.drill</field>
+        <field name="res_model">td.fire.drill</field>
         <field name="view_mode">list,form,calendar</field>
     </record>
 
     <!-- V-19 -->
-    <record id="view_f3d_fire_drill_template_list" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.template.list</field>
-        <field name="model">f3d.fire.drill.template</field>
+    <record id="view_td_fire_drill_template_list" model="ir.ui.view">
+        <field name="name">td.fire.drill.template.list</field>
+        <field name="model">td.fire.drill.template</field>
         <field name="arch" type="xml">
             <list>
                 <field name="sequence" widget="handle"/>
@@ -210,9 +210,9 @@
             </list>
         </field>
     </record>
-    <record id="view_f3d_fire_drill_template_form" model="ir.ui.view">
-        <field name="name">f3d.fire.drill.template.form</field>
-        <field name="model">f3d.fire.drill.template</field>
+    <record id="view_td_fire_drill_template_form" model="ir.ui.view">
+        <field name="name">td.fire.drill.template.form</field>
+        <field name="model">td.fire.drill.template</field>
         <field name="arch" type="xml">
             <form>
                 <sheet>
@@ -243,9 +243,9 @@
             </form>
         </field>
     </record>
-    <record id="action_f3d_fire_drill_template" model="ir.actions.act_window">
+    <record id="action_td_fire_drill_template" model="ir.actions.act_window">
         <field name="name">Шаблони навчань</field>
-        <field name="res_model">f3d.fire.drill.template</field>
+        <field name="res_model">td.fire.drill.template</field>
         <field name="view_mode">list,form</field>
     </record>
 </odoo>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_access_presence_kanban" model="ir.ui.view">
-        <field name="name">f3d.access.presence.kanban</field>
-        <field name="model">f3d.access.presence</field>
+    <record id="view_td_access_presence_kanban" model="ir.ui.view">
+        <field name="name">td.access.presence.kanban</field>
+        <field name="model">td.access.presence</field>
         <field name="arch" type="xml">
             <kanban string="Люди по зонах" create="0" edit="0" delete="0" default_group_by="zone_id"
                     group_create="0" group_delete="0" group_edit="0" records_draggable="0">
@@ -32,9 +32,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_presence_list" model="ir.ui.view">
-        <field name="name">f3d.access.presence.list</field>
-        <field name="model">f3d.access.presence</field>
+    <record id="view_td_access_presence_list" model="ir.ui.view">
+        <field name="name">td.access.presence.list</field>
+        <field name="model">td.access.presence</field>
         <field name="arch" type="xml">
             <list string="Люди по зонах" create="0" edit="0" delete="0">
                 <field name="name"/>
@@ -49,9 +49,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_access_presence_search" model="ir.ui.view">
-        <field name="name">f3d.access.presence.search</field>
-        <field name="model">f3d.access.presence</field>
+    <record id="view_td_access_presence_search" model="ir.ui.view">
+        <field name="name">td.access.presence.search</field>
+        <field name="model">td.access.presence</field>
         <field name="arch" type="xml">
             <search string="Люди по зонах">
                 <field name="name"/>
@@ -69,9 +69,9 @@
         </field>
     </record>
 
-    <record id="action_f3d_access_presence" model="ir.actions.act_window">
+    <record id="action_td_access_presence" model="ir.actions.act_window">
         <field name="name">Люди по зонах</field>
-        <field name="res_model">f3d.access.presence</field>
+        <field name="res_model">td.access.presence</field>
         <field name="view_mode">kanban,list</field>
         <field name="context">{'search_default_group_zone': 1}</field>
     </record>

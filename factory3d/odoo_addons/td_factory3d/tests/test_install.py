@@ -7,19 +7,19 @@ from .common import F3DCase
 class TestInstall(F3DCase):
 
     def test_module_installed(self):
-        mod = self.env['ir.module.module'].search([('name', '=', 'factory3d_base')])
+        mod = self.env['ir.module.module'].search([('name', '=', 'td_factory3d')])
         self.assertEqual(mod.state, 'installed')
 
     def test_groups_and_menus(self):
-        user = self.env.ref('factory3d_base.group_f3d_user')
-        manager = self.env.ref('factory3d_base.group_f3d_manager')
-        admin = self.env.ref('factory3d_base.group_f3d_admin')
+        user = self.env.ref('td_factory3d.group_td_user')
+        manager = self.env.ref('td_factory3d.group_td_manager')
+        admin = self.env.ref('td_factory3d.group_td_admin')
         self.assertIn(user, manager.implied_ids)
         self.assertIn(manager, admin.implied_ids)
         self.assertIn(user, self.user_reader.group_ids)
         self.assertIn(manager, self.user_manager.group_ids)
-        for xmlid in ('menu_f3d_root', 'menu_f3d_plant', 'menu_f3d_config'):
-            self.assertTrue(self.env.ref('factory3d_base.' + xmlid))
-        self.assertEqual(self.env.ref('factory3d_base.menu_f3d_root').sequence, 75)
+        for xmlid in ('menu_td_root', 'menu_td_plant', 'menu_td_config'):
+            self.assertTrue(self.env.ref('td_factory3d.' + xmlid))
+        self.assertEqual(self.env.ref('td_factory3d.menu_td_root').sequence, 75)
         self.assertEqual(
-            self.env['ir.config_parameter'].sudo().get_param('factory3d.base.environment'), 'test')
+            self.env['ir.config_parameter'].sudo().get_param('td.base.environment'), 'test')

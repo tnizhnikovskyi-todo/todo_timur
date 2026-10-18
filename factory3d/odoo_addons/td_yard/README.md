@@ -1,40 +1,40 @@
-# factory3d_yard
+# td_yard
 
 Двір підприємства: рейси сторонніх фур, бронювання воріт, розпізнавання номерів (Axis LPV), шлагбауми CAME,
 автоваги (SICS, Mettler Toledo), диспетчерська й екран КПП. Версія 19.0.1.0.0.
-Документація — `factory3d/docs/modules/factory3d_yard/` (SPEC, ARCHITECTURE, DEPLOY_TEST).
+Документація — `factory3d/docs/modules/td_yard/` (SPEC, ARCHITECTURE, DEPLOY_TEST).
 
-Залежності: `factory3d_base`, `factory3d_telemetry`, `stock_picking_batch`, `stock_fleet`, `delivery`, `stock_delivery`,
-`mail`, `bus`. Gantt — окремий міст `factory3d_yard_gantt` (потрібен `web_gantt`, Enterprise; DEC-1).
+Залежності: `td_factory3d`, `td_telemetry`, `stock_picking_batch`, `stock_fleet`, `delivery`, `stock_delivery`,
+`mail`, `bus`. Gantt — окремий міст `td_yard_gantt` (потрібен `web_gantt`, Enterprise; DEC-1).
 Плагін колектора `sics` — `factory3d/services/collector_plugins/f3d_collector_yard`.
 
 ## Установка
 
-1. Модуль у `addons_path`; `odoo-bin -i factory3d_yard` (base і telemetry вже стоять).
-2. `post_init_hook` (SPEC §5.4): `read_enabled` за `factory3d.base.environment` (test → `True`, інакше `False`),
-   календар «Зміна 1», обладнання/зони/камери воріт, 2 джерела й 18 сигналів (`data/f3d_yard_signals.csv`),
+1. Модуль у `addons_path`; `odoo-bin -i td_yard` (base і telemetry вже стоять).
+2. `post_init_hook` (SPEC §5.4): `read_enabled` за `td.base.environment` (test → `True`, інакше `False`),
+   календар «Зміна 1», обладнання/зони/камери воріт, 2 джерела й 18 сигналів (`data/td_yard_signals.csv`),
    маси плит, перевізники, рейси й бронювання з пакетів `TRUCK-*`, зважування з картки ваг. Звіт — у параметрі
-   `factory3d.yard.migration_report`, стан — `factory3d.yard.migration_state` (`done`/`partial`/`skipped`).
+   `td.yard.migration_report`, стан — `td.yard.migration_state` (`done`/`partial`/`skipped`).
 3. Повтор міграції — Двір → Налаштування → «Повторити міграцію двору» (адміністратор «Завод 3D»); дублікатів не створює.
 4. Колектор: рядок `f3d-collector-yard @ file:///opt/plugins/f3d_collector_yard` у
    `factory3d/services/collector/requirements-extra.txt`.
 
 ## Стоп-крани й нейтралізація
 
-* `factory3d.yard.read_enabled` (умовчання на проді після установки — `False`): події LPR → `ignored`, показання воріт і
+* `td.yard.read_enabled` (умовчання на проді після установки — `False`): події LPR → `ignored`, показання воріт і
   ваг не змінюють двір. Налаштування → Двір → «Обробляти показання й події двору» (адміністратор).
-* `factory3d.yard.write_enabled` (`False`): команди на шлагбаум не створюються, кнопки неактивні з поясненням;
-  охоронець відкриває з пульта CAME і тисне «Відкрито вручну». Додатково потрібні `factory3d.telemetry.write_enabled`,
+* `td.yard.write_enabled` (`False`): команди на шлагбаум не створюються, кнопки неактивні з поясненням;
+  охоронець відкриває з пульта CAME і тисне «Відкрито вручну». Додатково потрібні `td.telemetry.write_enabled`,
   `write_enabled` джерела `MB-U86-IO7` і cmd-сигналів, `F3D_WRITE_ENABLED=1` колектора.
 * `data/neutralize.sql` (`odoo-bin neutralize`): обидва параметри → `False`, крони двору неактивні, ворота `manual`,
   джерела `module='yard'` без читання/запису.
-* У параметрах `factory3d.yard.*` немає секретів; токени маршруту `lpr` — у telemetry/env колектора.
+* У параметрах `td.yard.*` немає секретів; токени маршруту `lpr` — у telemetry/env колектора.
 
 ## Крони
 
-`cron_f3d_yard_queue` (1 хв: стан воріт, незбіги LPR, «не приїхала», авто-виклик), `cron_f3d_yard_gc` (щодоби 03:00
+`cron_td_yard_queue` (1 хв: стан воріт, незбіги LPR, «не приїхала», авто-виклик), `cron_td_yard_gc` (щодоби 03:00
 Київ: ротація LPR і знімків, очищення телефону/документа водіїв, непризначені зважування — R-22),
-`cron_f3d_yard_day_reset` (00:05 Київ: добові лічильники воріт — R-23). Час задає `post_init_hook`.
+`cron_td_yard_day_reset` (00:05 Київ: добові лічильники воріт — R-23). Час задає `post_init_hook`.
 
 ## Персональні дані
 
@@ -43,7 +43,7 @@
 
 ## Деінсталяція
 
-Видаляє параметри `factory3d.yard.%` і вкладення знімків; рейси, бронювання, події, зважування, ворота, ваги й крони
+Видаляє параметри `td.yard.%` і вкладення знімків; рейси, бронювання, події, зважування, ворота, ваги й крони
 видаляє стандартна деінсталяція. Не чіпаються: `dock_id/scheduled_date/end_date` пакетів, маси товарів, партнери,
 `delivery.carrier`, джерела й сигнали двору (лишаються з `module='yard'`).
 
@@ -85,5 +85,5 @@
 
 ## Тести
 
-`factory3d/tools/odoo/run_tests.sh <db> /factory3d_yard` (з `F3D_TEST_INSTALL=factory3d_base,factory3d_telemetry,factory3d_yard`);
+`factory3d/tools/odoo/run_tests.sh <db> /td_yard` (з `F3D_TEST_INSTALL=td_factory3d,td_telemetry,td_yard`);
 плагін колектора: `pytest` у `factory3d/services/collector_plugins/f3d_collector_yard`.

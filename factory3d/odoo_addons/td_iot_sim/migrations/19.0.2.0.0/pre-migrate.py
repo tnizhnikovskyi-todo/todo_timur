@@ -6,7 +6,7 @@ _logger = logging.getLogger(__name__)
 
 def migrate(cr, version):
     if version and version.endswith('1.0.0'):
-        _logger.info("factory3d_iot_sim: upgrade from data module %s", version)
+        _logger.info("td_iot_sim: upgrade from data module %s", version)
     cr.execute("SELECT 1 FROM ir_model WHERE model = 'x_f3d_signal'")
     if not cr.fetchone():
-        _logger.warning("factory3d_iot_sim: модель x_f3d_signal відсутня (свіжа база без рівня 0)")
+        _logger.warning("td_iot_sim: модель x_f3d_signal відсутня (свіжа база без рівня 0)")

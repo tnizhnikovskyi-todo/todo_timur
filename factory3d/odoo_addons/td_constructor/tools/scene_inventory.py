@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Інвентар 3D-моделі переглядача: усі шари та всі кодовані вузли (extras.code) з реальними габаритами й позиціями.
 
-Джерело: `factory3d_viewer/static/model/parts/{core,engineering,fire,it,site}.glb` + `manifest.json`.
+Джерело: `td_viewer3d/static/model/parts/{core,engineering,fire,it,site}.glb` + `manifest.json`.
 Результат: `data/scene_inventory.json` (компактний; `objects` — словник `{код: {x, y, z, L, W, H, yaw, kind, layer, …}}`) і підсумок (кількість за шарами/видами) у stdout.
 
 Алгоритм: розбираємо GLB (JSON- і BIN-чанки), обходимо ієрархію вузлів із TRS/matrix, для кожного вузла з
@@ -10,7 +10,7 @@
 з вершин у BIN-чанку. `x, y` — центр AABB, `z` — низ (основа), `l, w, h` — розміри; якщо вузол повернутий
 навколо вертикалі — `yaw` (град., проти годинникової у плані) і `l, w` вже у власній (повернутій) системі.
 
-Запуск:  python3 factory3d/odoo_addons/factory3d_constructor/tools/scene_inventory.py [--check]
+Запуск:  python3 factory3d/odoo_addons/td_constructor/tools/scene_inventory.py [--check]
 Лише stdlib. Результат детермінований.
 """
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 MODULE = Path(__file__).resolve().parents[1]
 FACTORY3D = MODULE.parents[1]
-PARTS = FACTORY3D / 'odoo_addons' / 'factory3d_viewer' / 'static' / 'model' / 'parts'
+PARTS = FACTORY3D / 'odoo_addons' / 'td_viewer3d' / 'static' / 'model' / 'parts'
 OUT = MODULE / 'data' / 'scene_inventory.json'
 PART_FILES = ('core', 'engineering', 'fire', 'it', 'site')
 EXTRA_KEYS = ('maker', 'model', 'status', 'state', 'rect', 'role')
@@ -265,7 +265,7 @@ def build():
     layers = sorted(({'key': k, **v} for k, v in all_layers.items()), key=lambda l: l['order'])
     data = {
         'version': 1,
-        'source': 'factory3d_viewer/static/model/parts/*.glb',
+        'source': 'td_viewer3d/static/model/parts/*.glb',
         'dims': manifest.get('dims'),
         'coords': 'plant: x вздовж, y впоперек, z вгору (м); x,y — ЦЕНТР світового AABB об\'єкта (не якір/початок вузла), '
         'z — низ; L,W,H — розміри (L вздовж власної осі X до повороту, W — вздовж Y, H — висота); '

@@ -1,22 +1,22 @@
-"""M-16 f3d.yard.walkin.wizard: рейс без броні (R-06)."""
+"""M-16 td.yard.walkin.wizard: рейс без броні (R-06)."""
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..models.f3d_yard_visit import GRP_DISP, GRP_SEC, _f3d_yard_require
+from ..models.td_yard_visit import GRP_DISP, GRP_SEC, _f3d_yard_require
 from ..tools import params as P
 from ..tools import tz
 
 
 class F3dYardWalkinWizard(models.TransientModel):
-    _name = "f3d.yard.walkin.wizard"
+    _name = "td.yard.walkin.wizard"
     _description = "Двір: рейс без бронювання"
 
-    event_id = fields.Many2one("f3d.yard.lpr.event", readonly=True)
-    gate_id = fields.Many2one("f3d.yard.gate", required=True, default=lambda self: self._default_gate())
+    event_id = fields.Many2one("td.yard.lpr.event", readonly=True)
+    gate_id = fields.Many2one("td.yard.gate", required=True, default=lambda self: self._default_gate())
     plate = fields.Char(string="Номер", size=16, required=True, default=lambda self: self._default_plate())
     visit_type = fields.Selection(
-        lambda self: self.env["f3d.yard.visit"]._fields["visit_type"].selection,
+        lambda self: self.env["td.yard.visit"]._fields["visit_type"].selection,
         string="Тип рейсу",
         required=True,
         default="incoming",
@@ -29,20 +29,20 @@ class F3dYardWalkinWizard(models.TransientModel):
     batch_id = fields.Many2one(
         "stock.picking.batch",
         string="Пакет (якщо відомий)",
-        domain="[('state','in',('draft','in_progress')),('f3d_visit_id','=',False),('picking_type_code','=',visit_type)]",
+        domain="[('state','in',('draft','in_progress')),('td_visit_id','=',False),('picking_type_code','=',visit_type)]",
     )
     walk_in_left = fields.Integer(string="Залишок рейсів без броні", compute="_compute_walk_in_left")
     note = fields.Text()
 
     def _event(self):
         event_id = self.env.context.get("default_event_id")
-        return self.env["f3d.yard.lpr.event"].browse(event_id) if event_id else self.env["f3d.yard.lpr.event"]
+        return self.env["td.yard.lpr.event"].browse(event_id) if event_id else self.env["td.yard.lpr.event"]
 
     def _default_gate(self):
         event = self._event()
         if event.gate_id:
             return event.gate_id
-        return self.env["f3d.yard.gate"].search([("direction", "in", ("in", "both"))], limit=1)
+        return self.env["td.yard.gate"].search([("direction", "in", ("in", "both"))], limit=1)
 
     def _default_plate(self):
         event = self._event()
@@ -52,7 +52,7 @@ class F3dYardWalkinWizard(models.TransientModel):
     def _walk_in_today(self):
         start, end = tz.day_bounds_utc(tz.local_day(fields.Datetime.now()))
         return (
-            self.env["f3d.yard.visit"]
+            self.env["td.yard.visit"]
             .sudo()
             .search_count(
                 [
@@ -82,7 +82,7 @@ class F3dYardWalkinWizard(models.TransientModel):
         event = self.event_id
         ts = (event.ts if event else None) or fields.Datetime.now()
         visit = (
-            self.env["f3d.yard.visit"]
+            self.env["td.yard.visit"]
             .sudo()
             .create(
                 {
@@ -115,7 +115,7 @@ class F3dYardWalkinWizard(models.TransientModel):
             return {"type": "ir.actions.act_window_close"}
         return {
             "type": "ir.actions.act_window",
-            "res_model": "f3d.yard.visit",
+            "res_model": "td.yard.visit",
             "res_id": visit.id,
             "view_mode": "form",
             "target": "current",

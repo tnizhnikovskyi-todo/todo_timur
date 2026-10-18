@@ -21,12 +21,12 @@ class TestCommandCreate(F3DTelemetryCase):
         self.icp = self.env["ir.config_parameter"].sudo()
 
     def flags(self, module=True, source=True, signal=True):
-        self.icp.set_param("factory3d.telemetry.write_enabled", "True" if module else "False")
+        self.icp.set_param("td.telemetry.write_enabled", "True" if module else "False")
         self.src_bac.write_enabled = source
         self.sig_valve.write_enabled = signal
 
     def create(self, user=None, sig=None, **kw):
-        Command = self.env["f3d.command"]
+        Command = self.env["td.command"]
         if user:
             Command = Command.with_user(user)
         return Command.create({"signal_id": (sig or self.sig_valve).id, "value": 80, **kw})
@@ -63,15 +63,15 @@ class TestCommandCreate(F3DTelemetryCase):
 
     def test_su_guards_still_apply(self):
         self.flags()
-        as_reader = self.env["f3d.command"].with_user(self.user_reader).sudo()
+        as_reader = self.env["td.command"].with_user(self.user_reader).sudo()
         cmd = as_reader.create({"signal_id": self.sig_valve.id, "value": 1})
         self.assertEqual((cmd.state, cmd.requested_by), ("queued", self.user_reader))
         self.assertEqual(
-            self.env["f3d.command"].with_user(SUPERUSER_ID).create({"signal_id": self.sig_valve.id, "value": 1}).state,
+            self.env["td.command"].with_user(SUPERUSER_ID).create({"signal_id": self.sig_valve.id, "value": 1}).state,
             "queued",
         )
         with self.assertRaises(AccessError):
-            self.env["f3d.command"].with_user(self.user_reader).create({"signal_id": self.sig_valve.id, "value": 1})
+            self.env["td.command"].with_user(self.user_reader).create({"signal_id": self.sig_valve.id, "value": 1})
         self.flags(source=False)
         with self.assertRaisesRegex(UserError, "джерело BAC-T-105"):
             as_reader.create({"signal_id": self.sig_valve.id, "value": 1})

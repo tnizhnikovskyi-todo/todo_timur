@@ -1,18 +1,18 @@
-# TEST_REPORT — factory3d_access 19.0.1.0.0 (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
+# TEST_REPORT — td_access 19.0.1.0.0 (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
 
-Воркер W5, 15.10.2026, гілка `claude/f3d-factory3d_access`. Код стенда — `factory3d/odoo_addons/factory3d_access/tests/stand/`
+Воркер W5, 15.10.2026, гілка `claude/f3d-td_access`. Код стенда — `factory3d/odoo_addons/td_access/tests/stand/`
 (`pytest -m stand`), чек-лист і відтворення — `DEPLOY_TEST.md`.
 
 ## Середовище
 
 | Параметр | Значення |
 |---|---|
-| Odoo | 19.0 CE, база з `f3d_template` (без демо) + `factory3d_base` + `factory3d_access`; `factory3d.base.environment='test'`; Postgres 16, 4 vCPU |
-| Емулятор | `factory3d_iot_sim` сервіс v0.1.0, локальний запуск без docker (Python 3.13), BioStar HTTPS 8443/HTTP 8081, `/sim/v1` 8090 |
+| Odoo | 19.0 CE, база з `f3d_template` (без демо) + `td_factory3d` + `td_access`; `td.base.environment='test'`; Postgres 16, 4 vCPU |
+| Емулятор | `td_iot_sim` сервіс v0.1.0, локальний запуск без docker (Python 3.13), BioStar HTTPS 8443/HTTP 8081, `/sim/v1` 8090 |
 | Мережа | Odoo → журналюючий TLS-проксі `https://127.0.0.1:18443` → емулятор (`verify_ssl=False`, лише `test`) |
 | Параметри модуля | `read_enabled=True`, `write_enabled=False` (крім ТК-08), `page_size=500`, `max_pages_per_run=20`, `keep_days=90` |
 | Дані | 35 працівників зі штрих-кодами сцени + 35 демо-відміток 12.10; **копії демо-бази немає** |
-| Підсумок | **21 passed, 1 skipped** за 660 с (`pytest -m stand -q test_tk.py test_tb.py test_tp.py`); юніт-тести `/factory3d_access` на чистій базі — **0 failed, 154 tests**; `ruff check` по `tests/stand` — чисто |
+| Підсумок | **21 passed, 1 skipped** за 660 с (`pytest -m stand -q test_tk.py test_tb.py test_tp.py`); юніт-тести `/td_access` на чистій базі — **0 failed, 154 tests**; `ruff check` по `tests/stand` — чисто |
 
 ## ТК — стендові сценарії (§13.2)
 
@@ -28,8 +28,8 @@
 | ТК-06 Недоступність | пройшов (варіанти «невірний пароль» і «недосяжний порт») | Зупинка контейнера емулятора неможлива без docker; `error_count` зростає, `next_try_at` виставлено, подій Odoo = BioStar = 311 |
 | ТК-07 Відвідувач | пройшов | Емулятор знає лише працівників Odoo: для `V-<id>` створюється технічний працівник-заглушка зі штрих-кодом `V-<id>` (режим `follow_odoo` на мить) — ТК-07 зі SPEC (`access_event` з `user: "V-<id>"`) без цього дає подію без користувача |
 | ТК-08 Блокування картки | пройшов з відхиленням | Крок 3: PUT `/api/users/{id}` емулятор відповідає **404**, а не 405 (D-2); 405-обробка модуля підтверджена через `POST /api/users` (запис відвідувача). Також: блокування картки, ніколи не записаної в BioStar (`biostar_card_id` порожній), дає `sync_error` про відсутній запис, а не запит до BioStar (R-13 крок 3) — для запиту `biostar_card_id` задається вручну |
-| ТК-09 Переглядач | **skip** | Немає `factory3d_viewer` (AC-49/66 — MAN) |
-| ТК-10 Пожежне навчання | пройшов (без `drill`) | 5 дверей `unlocked`, `alarm`, `fire`, 26368 є, «Зняти тривогу» → 0 тривог; `drill`-відмітки потребують `factory3d_fire_safety` — не перевірено |
+| ТК-09 Переглядач | **skip** | Немає `td_viewer3d` (AC-49/66 — MAN) |
+| ТК-10 Пожежне навчання | пройшов (без `drill`) | 5 дверей `unlocked`, `alarm`, `fire`, 26368 є, «Зняти тривогу» → 0 тривог; `drill`-відмітки потребують `td_fire_safety` — не перевірено |
 
 ## ТБ — безпека (§13.3)
 
@@ -43,7 +43,7 @@
 | ТБ-04 | пройшов | `biostar_user_id="'; DROP TABLE hr_employee; --"`, `code="ACR-IN'; --"`, `url="https://x/api?;rm"` → `ValidationError`; подія емулятора з таким `user_id` не ламає опитування, таблиці на місці. JSON `__proto__`/1 000 рівнів — лише юніт |
 | ТБ-05 | пройшов | При `environment='prod'` `verify_ssl=False` і `http://` неможливі (AC-01); `requests(verify=True)` за замовчуванням — юніт |
 | ТБ-06 | пройшов частково | `raw_user_id` невидимий `user_f3d` (немає ні доступу, ні поля), біометричних полів у зв'язку немає (AC-64); переглядач (AC-50) і телеметрія (AC-53) — немає модулів |
-| ТБ-07 | пройшов | Охорона без `hr_attendance_user` не читає `f3d_access_last_event_id`/`f3d_access_card_ids` через `hr.employee`, але читає M-14 (`f3d.access.presence`) |
+| ТБ-07 | пройшов | Охорона без `hr_attendance_user` не читає `td_access_last_event_id`/`td_access_card_ids` через `hr.employee`, але читає M-14 (`td.access.presence`) |
 | ТБ-08 | пройшов | За весь прогін до ТК-08 (ТК-01…07, 04, 10) у лозі проксі 0 записів `POST /api/cards`, `PUT/POST /api/users`; у ТК-08 записи з'являються лише після `write_enabled=True` (відповіді 404/405) |
 
 ## ТП — продуктивність (§13.4)
@@ -52,7 +52,7 @@
 |---|---|---|---|
 | ТП-01 лавина | **10 000 рядків** (20 сторінок × 500; у емуляторі 10 515), `action_poll_now` **25,4 с** (CPU Odoo 12,8 с), запитів до BioStar **20** | ≤ 60 с, 20 запитів | у межах. Курсор виставлено на добу до першої події (`initial_lookback_h` обмежено 168 год); «простій» ≈ 35 робочих діб sim; 150 працівників → 35 (стенд) |
 | ТП-02 добовий обсяг | 30 послідовних опитувань з 1–3 новими рядками: середнє **0,16 с**, p95 0,18 с, максимум **0,20 с** (вкл. RPC); CPU Odoo **0,078 с/опитування** → **0,13 %** при 1 опитуванні на хвилину | ≤ 2 с; CPU < 5 % | у межах (CPU — екстраполяція, не вимір 24 год; `pg_stat_statements` не вмикали) |
-| ТП-03 провайдер | 140 435 подій у таблиці: `_f3d_viewer_collect` (через `odoo shell`, заглушка `viewer.tools.payload`) — перший виклик **41 мс**, далі 11–15 мс; `f3d_people_now` для 45 зон — **5,5–7,0 мс** (RPC `search_read` 43 мс); `EXPLAIN` журналу «Сьогодні» — **Index Scan по `ts`** | ≤ 200 мс; ≤ 50 мс; Index Scan | у межах. Файлу `test_perf_provider` (юніт) у модулі немає — виміри `tests/stand/perf_shell.py` |
+| ТП-03 провайдер | 140 435 подій у таблиці: `_f3d_viewer_collect` (через `odoo shell`, заглушка `viewer.tools.payload`) — перший виклик **41 мс**, далі 11–15 мс; `td_people_now` для 45 зон — **5,5–7,0 мс** (RPC `search_read` 43 мс); `EXPLAIN` журналу «Сьогодні» — **Index Scan по `ts`** | ≤ 200 мс; ≤ 50 мс; Index Scan | у межах. Файлу `test_perf_provider` (юніт) у модулі немає — виміри `tests/stand/perf_shell.py` |
 | ТП-04 ротація | 130 000 подій старших за `keep_days`: `_cron_housekeeping` **8,1 с**, залишок старих 0 | ≤ 120 с, пакети 5 000 | у межах **лише з тимчасовою підміною** `Registry.in_test_mode` — без неї ротація не працює (D-1). Генерація даних SQL `generate_series` |
 
 Усі ТП виконані на стенді з 4 vCPU і fsync=off (дев-Postgres) — абсолютні числа будуть гіршими на проді.
@@ -61,7 +61,7 @@
 
 > **D-1 виправлено лідером модуля:** `registry.in_test_mode()` замінено на `odoo.modules.module.current_test`; регресійний тест `test_server.py::TestCommitGuard`. Повторний стендовий прогін ТП-04 без підміни — за менеджером.
 
-**D-1 (дефект модуля, високий).** `models/f3d_access_server.py:162` (`_may_commit`) і `models/f3d_access_event.py:520` (`_gc`) викликають
+**D-1 (дефект модуля, високий).** `models/td_access_server.py:162` (`_may_commit`) і `models/td_access_event.py:520` (`_gc`) викликають
 `self.env.registry.in_test_mode()`, якого в Odoo 19 немає → `AttributeError`. Наслідки на живому сервері: крони `_cron_poll`,
 `_cron_sync_users`, `_cron_sync_devices` завершуються помилкою (`ir_cron` ERROR у лозі, 11 разів за 10 хв), ротація подій (`_gc`) не виконується
 (крок «ротація подій» ловить виняток в savepoint; після прогону залишилось 130 000 старих подій). Кнопки «Опитати зараз»/синхронізації працюють
@@ -74,13 +74,13 @@
 («Метод не підтримується сервером BioStar (405)»), 404 показує сирим тілом відповіді. Також емулятор не логує запити (uvicorn
 `log_level=warning`), тому ТБ-08 вимагає проксі.
 
-**O-1 (спостереження).** Деінсталяція модуля, коли є картки (`f3d.access.card.server_id`, `ondelete='restrict'`), пише в лог ERROR
-«violates foreign key constraint f3d_access_card_server_id_fkey» при видаленні сервера з `noupdate`-даних; модуль усе одно переходить у
-`uninstalled`, відмітки збережено (70/70), `biostar` у `in_mode/out_mode` → `manual`, параметрів `factory3d.access.%` не лишається.
+**O-1 (спостереження).** Деінсталяція модуля, коли є картки (`td.access.card.server_id`, `ondelete='restrict'`), пише в лог ERROR
+«violates foreign key constraint td_access_card_server_id_fkey» при видаленні сервера з `noupdate`-даних; модуль усе одно переходить у
+`uninstalled`, відмітки збережено (70/70), `biostar` у `in_mode/out_mode` → `manual`, параметрів `td.access.%` не лишається.
 
 **O-2 (SPEC/сценарій).** `initial_lookback_h` обмежено 168 год (R-04): ТК-03/04 на «сьогодні» неможливі після 15:30 за реальним часом
 Odoo (події «з майбутнього»), стенд використовує «вчора». ТК-07: емулятор не підтримує довільного `user` — потрібна заглушка в `hr.employee`.
 
 **O-3 (покриття).** `test_perf_poll`, `test_perf_provider`, `test_perf_gc` з §13.4 у `tests/` відсутні (поза обсягом W5); стендові виміри
 їх замінюють. Не виконано: копія демо-бази (ТК-01 з 35/35/35, S1/S2, юніт на копії), ТК-09 (немає viewer), `drill` у ТК-10 (немає fire_safety),
-міст `factory3d_access_telemetry` (немає telemetry), 24-годинний профіль CPU (ТП-02), зупинка контейнера емулятора (ТК-06), `docker compose --profile demo`.
+міст `td_access_telemetry` (немає telemetry), 24-годинний профіль CPU (ТП-02), зупинка контейнера емулятора (ТК-06), `docker compose --profile demo`.

@@ -1,6 +1,6 @@
 """Генератор `data/energy_*.csv` (SPEC §5.2, Додатки B–D): детерміновано, без часових міток, Odoo не вантажить.
 
-Запуск (з кореня репозиторію): `python3 odoo_addons/factory3d_energy/tools/gen_energy_data.py --root .`
+Запуск (з кореня репозиторію): `python3 odoo_addons/td_energy/tools/gen_energy_data.py --root .`
 Читає `plant/energy.py` (`consumers`, `taps`, `PROFILE`, `IDLE_K`, `IDLE_DEFAULT`, `SWB_CELLS`, `SECTION`, `BUSWAYS`,
 `CABLE_FEEDERS`), `plant/layout.py:MACHINES`, `plant/infra.py:CRITICAL`, `plant/equipment_specs.json` (через
 `plant.equipment.load_specs`). Список unit id і адреси регістрів — зашиті таблиці Додатків A і D.

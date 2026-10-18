@@ -37,7 +37,7 @@ class TestClassify(AccessCase):
 class TestJournal(AccessCase):
 
     def _filter_domains(self):
-        arch = etree.fromstring(self.env.ref('factory3d_access.view_f3d_access_event_search').arch)
+        arch = etree.fromstring(self.env.ref('td_access.view_td_access_event_search').arch)
         ctx = {'datetime': safe_datetime, 'context_today': datetime.date.today}
         return {f.get('name'): safe_eval(f.get('domain'), ctx) for f in arch.iter('filter') if f.get('domain')}
 
@@ -49,13 +49,13 @@ class TestJournal(AccessCase):
         att = self.attendances(self.emp_a)
         self.assertEqual(len(att), 1)
         self.assertTrue(att.check_out)
-        self.assertFalse(self.emp_a.f3d_access_present)
+        self.assertFalse(self.emp_a.td_access_present)
 
     def test_future_then_processed(self):
         rows = [self.prow(1, '2026-10-12T03:53:00.00Z', 4102, 'TSTA1', tna='1')]
         fake = FakeBioStar(events=rows)
         self.poll('2026-10-12 03:50:00', fake)
-        ev = self.env['f3d.access.event'].search([('biostar_id', '=', '1')])
+        ev = self.env['td.access.event'].search([('biostar_id', '=', '1')])
         self.assertEqual((ev.attendance_action, ev.process_state), ('future', 'new'))
         self.assertFalse(self.attendances(self.emp_a))
         self.poll('2026-10-12 03:54:00', fake)
@@ -69,7 +69,7 @@ class TestJournal(AccessCase):
                   self.prow(4, '2026-10-12T04:01:00.00Z', 6401, 'TSTB2', tna='1'),
                   self.prow(5, '2026-10-12T04:02:00.00Z', 5120, 'TSTB2', tna='1'))
         doms = self._filter_domains()
-        Event = self.env['f3d.access.event']
+        Event = self.env['td.access.event']
         self.assertEqual(Event.search_count(doms['filter_denied']), 3)
         self.assertEqual(Event.search_count(doms['filter_apb']), 2)
         self.assertFalse(self.attendances(self.emp_b))
@@ -77,14 +77,14 @@ class TestJournal(AccessCase):
     def test_unknown_user(self):
         ev = self.feed(self.prow(1, '2026-10-12T08:05:00.00Z', 4102, '1', where='srv'))
         self.assertTrue(ev.unknown_user)
-        link = self.env['f3d.access.user.link'].search([('biostar_user_id', '=', '1')])
+        link = self.env['td.access.user.link'].search([('biostar_user_id', '=', '1')])
         self.assertEqual(link.match, 'none')
-        self.assertEqual(self.env['f3d.access.event'].search_count(self._filter_domains()['filter_unknown']), 1)
+        self.assertEqual(self.env['td.access.event'].search_count(self._filter_domains()['filter_unknown']), 1)
         self.assertEqual(self.env['hr.attendance'].search_count([('in_mode', '=', 'biostar')]), 0)
 
     def test_immediate_match(self):
         ev = self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'OPTSTC', tna='1'))
-        link = self.env['f3d.access.user.link'].search([('biostar_user_id', '=', 'OPTSTC')])
+        link = self.env['td.access.user.link'].search([('biostar_user_id', '=', 'OPTSTC')])
         self.assertEqual((link.match, link.employee_id), ('code', self.emp_c))
         self.assertEqual((ev.employee_id, ev.attendance_action), (self.emp_c, 'checked_in'))
         self.assertFalse(ev.unknown_user)
@@ -107,7 +107,7 @@ class TestJournal(AccessCase):
     def test_fire_alarm_all_doors(self):
         row = self.make_row(1, '2026-10-12T09:00:00.00Z', 26368, device='5390001', door=None)
         self.feed(row)
-        doors = self.env['f3d.access.door'].search([('server_id', '=', self.server.id)])
+        doors = self.env['td.access.door'].search([('server_id', '=', self.server.id)])
         self.assertEqual(len(doors), 5)
         self.assertTrue(all(d.alarm and d.alarm_reason == 'fire' for d in doors))
 
@@ -118,7 +118,7 @@ class TestJournal(AccessCase):
         with self.assertRaises(AccessError):
             self.door_turn_1.with_user(self.user_security).write({'name': 'X'})
 
-    @mute_logger('odoo.addons.factory3d_access.models.f3d_access_event')
+    @mute_logger('odoo.addons.td_access.models.td_access_event')
     def test_validation_error_isolated(self):
         self.env['hr.attendance'].sudo().create({
             'employee_id': self.emp_a.id, 'check_in': '2026-10-12 03:00:00', 'check_out': '2026-10-12 05:00:00'})
@@ -129,14 +129,14 @@ class TestJournal(AccessCase):
         self.assertIn('Cannot create new attendance record', ev_a.error_message)
         self.assertEqual(ev_b.process_state, 'done')
 
-    @mute_logger('odoo.addons.factory3d_access.models.f3d_access_event')
+    @mute_logger('odoo.addons.td_access.models.td_access_event')
     def test_reprocess_wizard(self):
         manual = self.env['hr.attendance'].sudo().create({
             'employee_id': self.emp_a.id, 'check_in': '2026-10-12 03:00:00', 'check_out': '2026-10-12 05:00:00'})
         ev = self.feed(self.prow(1, '2026-10-12T04:00:00.00Z', 4102, 'TSTA1', tna='1'))
         self.assertEqual(ev.process_state, 'error')
         manual.unlink()
-        wiz = self.env['f3d.access.event.reprocess.wizard'].create({
+        wiz = self.env['td.access.event.reprocess.wizard'].create({
             'mode': 'reprocess', 'server_id': self.server.id, 'only_errors': True,
             'date_from': '2026-10-12 00:00:00', 'date_to': '2026-10-12 23:00:00'})
         with freeze_time('2026-10-12 23:30:00'):
@@ -155,11 +155,11 @@ class TestJournal(AccessCase):
         from ..tools import params as P
         P.set_param(self.env, 'read_enabled', 'False')
         with self.patch_client(fake), self.assertRaises(UserError):
-            self.env['f3d.access.event.reprocess.wizard'].create(vals).action_run()
+            self.env['td.access.event.reprocess.wizard'].create(vals).action_run()
         P.set_param(self.env, 'read_enabled', 'True')
         with self.patch_client(fake), freeze_time('2026-10-12 23:30:00'):
-            wiz = self.env['f3d.access.event.reprocess.wizard'].create(vals)
+            wiz = self.env['td.access.event.reprocess.wizard'].create(vals)
             wiz.action_run()
         self.assertEqual(fake.search_calls[-1]['since'], wiz.date_from)
         self.assertEqual(fake.search_calls[-1]['until'], wiz.date_to)
-        self.assertEqual(self.env['f3d.access.event'].search_count([('biostar_id', '=', '1')]), 1)
+        self.assertEqual(self.env['td.access.event'].search_count([('biostar_id', '=', '1')]), 1)

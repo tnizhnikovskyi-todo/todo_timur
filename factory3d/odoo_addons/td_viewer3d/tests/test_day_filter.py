@@ -22,7 +22,7 @@ CLOCKS = [
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestSnapshotDayFilter(F3dViewerBase):
     def test_filters_follow_kyiv_day_at_any_hour(self):
-        Snap = self.env["f3d.viewer.snapshot"].sudo()
+        Snap = self.env["td.viewer.snapshot"].sudo()
         self.set_param("demo_clock", "")
         for now in CLOCKS:
             today = now.replace(tzinfo=timezone.utc).astimezone(KYIV).date()
@@ -46,14 +46,14 @@ class TestSnapshotDayFilter(F3dViewerBase):
 
     def test_today_follows_demo_clock(self):
         """R-21: під `demo_clock` «сьогодні» — доба годинника, як у shift_date знімка `_take`."""
-        Snap = self.env["f3d.viewer.snapshot"].sudo()
+        Snap = self.env["td.viewer.snapshot"].sudo()
         Snap.search([]).unlink()
         self.set_param("demo_clock", "2020-01-12 10:30")
         snap = Snap._take("manual")
         self.assertEqual(Snap.search([("is_today", "=", True)]), snap)
 
     def test_search_view_does_not_use_browser_date(self):
-        arch = self.env.ref("factory3d_viewer.view_f3d_viewer_snapshot_search").arch_db
+        arch = self.env.ref("td_viewer3d.view_td_viewer_snapshot_search").arch_db
         self.assertNotIn("context_today", arch)
         self.assertIn("is_today", arch)
         self.assertIn("is_this_week", arch)

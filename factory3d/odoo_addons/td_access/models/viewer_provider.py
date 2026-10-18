@@ -5,9 +5,9 @@ from odoo import fields, models
 from ..tools.dates import local_day_start_utc, to_local_str
 from ..tools.event_codes import classify
 
-SECURITY = 'factory3d_access.group_f3d_access_security'
+SECURITY = 'td_access.group_td_access_security'
 FMT = '%Y-%m-%d %H:%M'
-BUS_MODELS = ['hr.employee', 'f3d.access.door', 'f3d.access.visitor']
+BUS_MODELS = ['hr.employee', 'td.access.door', 'td.access.visitor']
 
 
 def _loc(value):
@@ -31,11 +31,11 @@ def _last_event(last):
 
 
 class F3dViewerProviderAccess(models.AbstractModel):
-    _name = 'f3d.viewer.provider.access'       # БЕЗ _inherit: factory3d_viewer не є залежністю (A-19)
+    _name = 'td.viewer.provider.access'       # БЕЗ _inherit: td_viewer3d не є залежністю (A-19)
     _description = '3D: СКУД — люди, двері, зчитувачі'
     _f3d_sequence = 170
     _f3d_sections = ('access',)
-    _f3d_group = 'factory3d_base.group_f3d_user'
+    _f3d_group = 'td_factory3d.group_td_user'
 
     def _f3d_viewer_bus_models(self):
         return list(BUS_MODELS)
@@ -62,7 +62,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
             rec['zone'] = info['zone']
             rec['zone_since'] = _loc(info['zone_since'])
             rec['last_event'] = _last_event(info['last_event'])
-        data = self.env['f3d.access.viewer.data']._f3d_viewer_data(self._f3d_day_start(ctx), with_names=is_sec)
+        data = self.env['td.access.viewer.data']._f3d_viewer_data(self._f3d_day_start(ctx), with_names=is_sec)
         zones = {code: n for code, n in data['zones'].items() if n}
         # крок 3
         for code, rec in (payload.get('zones') or {}).items():
@@ -145,10 +145,10 @@ class F3dViewerProviderAccess(models.AbstractModel):
         changes = ctx.get('changes') or {}
         if not set(changes) & set(BUS_MODELS):
             return patch
-        from odoo.addons.factory3d_viewer.tools.payload import deep_merge  # лише коли viewer установлено (A-19)
+        from odoo.addons.td_viewer3d.tools.payload import deep_merge  # лише коли viewer установлено (A-19)
         tmp = {
             'employees': {c: {} for c in changes.get('hr.employee', ())},
-            'zones': {z: {} for z in self.env['f3d.zone'].search([]).mapped('f3d_code')},
+            'zones': {z: {} for z in self.env['td.zone'].search([]).mapped('td_code')},
             'infra': {'cards': {'TURNSTILES': {}, 'ACCESS': {}}},
         }
         self._f3d_viewer_collect(tmp, ctx)
@@ -161,7 +161,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
 
 class F3dAccessVisitorBus(models.Model):
     """Зміни присутності відвідувача -> шина переглядача (R-12 крок 6)."""
-    _inherit = 'f3d.access.visitor'
+    _inherit = 'td.access.visitor'
 
     def _f3d_presence_set(self, vals):
         changed = super()._f3d_presence_set(vals)
@@ -169,9 +169,9 @@ class F3dAccessVisitorBus(models.Model):
             collector = self.env.context.get('f3d_bus_collector')
             codes = {'V-%d' % self.id}
             if collector is not None:
-                collector.setdefault('f3d.access.visitor', set()).update(codes)
+                collector.setdefault('td.access.visitor', set()).update(codes)
             else:
-                self.env['f3d.access.event']._f3d_bus('f3d.access.visitor', codes)
+                self.env['td.access.event']._f3d_bus('td.access.visitor', codes)
         return changed
 
 

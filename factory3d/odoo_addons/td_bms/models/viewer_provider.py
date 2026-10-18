@@ -1,13 +1,13 @@
 """M-11: провайдери 3D-переглядача `lighting` і `ventilation` (FR-20, A-06, R-26, R-27).
 
-Контракт провайдера — duck typing (ARCHITECTURE §6.7): без `_inherit` моделей `factory3d_viewer`, ім'я з префіксом
-`f3d.viewer.provider.`; без `factory3d_viewer` моделі не викликаються."""
+Контракт провайдера — duck typing (ARCHITECTURE §6.7): без `_inherit` моделей `td_viewer3d`, ім'я з префіксом
+`td.viewer.provider.`; без `td_viewer3d` моделі не викликаються."""
 
 from odoo import models
 
 from ..tools import payload as payload_tools
 
-BUS_MODELS = ["f3d.signal", "f3d.bms"]
+BUS_MODELS = ["td.signal", "td.bms"]
 LIGHTING_PREFIXES = ("lighting/", "energy/consumers/LP-")
 VENTILATION_PREFIXES = (
     "ventilation/",
@@ -21,17 +21,17 @@ VENTILATION_PREFIXES = (
 
 def _touched(ctx, prefixes):
     changes = ctx.get("changes") or {}
-    if changes.get("f3d.bms"):
+    if changes.get("td.bms"):
         return True
-    return any(str(code).startswith(prefixes) for code in changes.get("f3d.signal") or ())
+    return any(str(code).startswith(prefixes) for code in changes.get("td.signal") or ())
 
 
 class F3dViewerProviderLighting(models.AbstractModel):
-    _name = "f3d.viewer.provider.lighting"
+    _name = "td.viewer.provider.lighting"
     _description = "3D: освітлення"
     _f3d_sequence = 110
     _f3d_sections = ("lighting",)
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 
     def _f3d_viewer_collect(self, payload, ctx):
         static = (ctx.get("static") or {}).get("lighting") or {}
@@ -48,11 +48,11 @@ class F3dViewerProviderLighting(models.AbstractModel):
 
 
 class F3dViewerProviderVentilation(models.AbstractModel):
-    _name = "f3d.viewer.provider.ventilation"
+    _name = "td.viewer.provider.ventilation"
     _description = "3D: вентиляція й опалення"
     _f3d_sequence = 120
     _f3d_sections = ("ventilation",)
-    _f3d_group = "factory3d_base.group_f3d_user"
+    _f3d_group = "td_factory3d.group_td_user"
 
     def _f3d_viewer_collect(self, payload, ctx):
         static = (ctx.get("static") or {}).get("ventilation") or {}

@@ -10,7 +10,7 @@ from .common import F3DBmsCase
 @tagged("post_install", "-at_install", "f3d", "f3d_bms")
 class TestOverview(F3DBmsCase):
     def _data(self, user=None):
-        return self.env["f3d.bms.overview"].with_user(user or self.user_reader).get_overview_data()
+        return self.env["td.bms.overview"].with_user(user or self.user_reader).get_overview_data()
 
     def test_structure_counts(self):
         data = self._data()
@@ -36,9 +36,9 @@ class TestOverview(F3DBmsCase):
         self.assertEqual(zone_groups["Z-CUT"], "LT-CUT")
 
     def test_open_deviations(self):
-        sig = self.env["f3d.signal"].search([("module", "=", "bms")], limit=1)
+        sig = self.env["td.signal"].search([("module", "=", "bms")], limit=1)
         before = self._data()["kpi"]["open_deviations"]
-        self.env["f3d.bms.deviation"].create(
+        self.env["td.bms.deviation"].create(
             {
                 "name": "Тест огляду",
                 "signal_id": sig.id,
@@ -59,13 +59,13 @@ class TestOverview(F3DBmsCase):
         self.assertEqual(data["kpi"]["units_total"], 0)
 
     def test_action_open(self):
-        Overview = self.env["f3d.bms.overview"].with_user(self.user_reader)
-        group = self.env["f3d.bms.light.group"].search([("code", "=", "LT-CUT")])
-        act = Overview.action_open("f3d.bms.light.group", group.id, "form")
+        Overview = self.env["td.bms.overview"].with_user(self.user_reader)
+        group = self.env["td.bms.light.group"].search([("code", "=", "LT-CUT")])
+        act = Overview.action_open("td.bms.light.group", group.id, "form")
         self.assertEqual(
             (act["type"], act["res_model"], act["res_id"]), ("ir.actions.act_window", group._name, group.id)
         )
-        act = Overview.action_open("f3d.bms.light.group", group.id, "show3d")
+        act = Overview.action_open("td.bms.light.group", group.id, "show3d")
         self.assertEqual(act, group.action_f3d_show())
         for model in ("res.users", "res.partner"):
             with self.assertRaises(AccessError):
@@ -76,17 +76,17 @@ class TestOverview(F3DBmsCase):
 class TestCommandChatter(F3DBmsCase):
     def test_failed_command_posts_once(self):
         """§11 п. 11: чаттер групи отримує «Команда #id: стан — помилка» один раз."""
-        group = self.env["f3d.bms.light.group"].search([("code", "=", "LT-CUT")])
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.write_enabled", "True")
+        group = self.env["td.bms.light.group"].search([("code", "=", "LT-CUT")])
+        self.env["ir.config_parameter"].sudo().set_param("td.telemetry.write_enabled", "True")
         group.level_signal_id.sudo().write({"write_enabled": True})
         group.level_signal_id.source_id.sudo().write({"write_enabled": True})
         cmd = (
-            self.env["f3d.command"]
+            self.env["td.command"]
             .sudo()
             .create({"signal_id": group.level_signal_id.id, "value": 50.0, "origin": "bms"})
         )
         cmd.write({"state": "failed", "error": "роутер не відповідає"})
-        check = self.env["f3d.bms.check"]
+        check = self.env["td.bms.check"]
         now = fields.Datetime.now()
         check._notify_commands(now)
         check._notify_commands(now)
@@ -94,7 +94,7 @@ class TestCommandChatter(F3DBmsCase):
         msgs = group.message_ids.filtered(lambda m: marker in (m.body or ""))
         self.assertEqual(len(msgs), 1)
         self.assertIn("роутер не відповідає", msgs.body)
-        other = self.env["f3d.command"].sudo().create({"signal_id": group.level_signal_id.id, "origin": "x"})
+        other = self.env["td.command"].sudo().create({"signal_id": group.level_signal_id.id, "origin": "x"})
         other.write({"state": "failed", "error": "e"})
         check._notify_commands(now)
         self.assertFalse(group.message_ids.filtered(lambda m: "Команда #%d:" % other.id in (m.body or "")))

@@ -45,13 +45,13 @@ def test_tp01_ingest_35_machines(fresh, sim):
     minutes = float(os.environ.get("F3D_STAND_TP01_MIN", "5"))
     o = fresh(params={"micro_stop_s": "0"}, ready=False)
     stand_sh("collector-stop")
-    o.param("factory3d.telemetry.push_rate_per_min", "120")
-    ids = o.search_read("f3d.machine", [], ["id"])
-    o.write("f3d.machine", [m["id"] for m in ids], {"micro_stop_s": 0})
+    o.param("td.telemetry.push_rate_per_min", "120")
+    ids = o.search_read("td.machine", [], ["id"])
+    o.write("td.machine", [m["id"] for m in ids], {"micro_stop_s": 0})
     token = (STAND_DIR / "token").read_text().strip()
     log0 = len(odoo_log())
     pid, cpu0 = proc_ticks("-d f3d_mc_tk")
-    n0 = psql("select count(*) from f3d_machine_state_log")[0][0]
+    n0 = psql("select count(*) from td_machine_state_log")[0][0]
     tick_s: list[float] = []
     stop = threading.Event()
 
@@ -71,10 +71,10 @@ def test_tp01_ingest_35_machines(fresh, sim):
     th.join(5)
     _, cpu1 = proc_ticks("-d f3d_mc_tk")
     new_log = odoo_log()[log0:]
-    n1 = psql("select count(*) from f3d_machine_state_log")[0][0]
+    n1 = psql("select count(*) from td_machine_state_log")[0][0]
     overlaps = psql(
         "select count(*) from (select date_start, lag(date_end) over (partition by machine_id order by date_start, id) pe "
-        "from f3d_machine_state_log) x where pe is not null and pe > date_start"
+        "from td_machine_state_log) x where pe is not null and pe > date_start"
     )[0][0]
     deadlocks = new_log.count("deadlock detected")
     serial = new_log.count("could not serialize")
@@ -118,7 +118,7 @@ def test_tp02_chain_latency(fresh, sim):
         t_utc = ts.astimezone().replace(tzinfo=None) - (ts.astimezone().utcoffset() or timedelta(0)) + timedelta(0)
         t_utc = datetime.utcfromtimestamp(ts.timestamp())
         rows = o.search_read(
-            "f3d.machine.state.log",
+            "td.machine.state.log",
             [
                 ("machine_id.code", "=", dev),
                 ("state", "=", "fault"),
@@ -154,34 +154,34 @@ def test_tp03_year_volume(fresh):
     """ТП-03: обсяг року (840 000 інтервалів, 140 000 простоїв, 9 800 записів OEE); крони й звіти в межах SPEC."""
     o = fresh(ready=False)
     stand_sh("collector-stop")
-    o.param("factory3d.machine_connect.keep_log_days", "365")  # SPEC: 73 500 = 35 × 35 діб × 60 → ротація від 365 діб
+    o.param("td.machine_connect.keep_log_days", "365")  # SPEC: 73 500 = 35 × 35 діб × 60 → ротація від 365 діб
     psql(
-        "INSERT INTO f3d_machine_state_log (machine_id, state, source, date_start, date_end, create_date, write_date) "
+        "INSERT INTO td_machine_state_log (machine_id, state, source, date_start, date_end, create_date, write_date) "
         "SELECT m.id, (ARRAY['working','idle','working','setup','fault'])[1 + s % 5], 'machine', "
         "now() - interval '400 days' + s * interval '24 minutes', now() - interval '400 days' + (s + 1) * interval '24 minutes', now(), now() "
-        "FROM f3d_machine m CROSS JOIN generate_series(0, 60 * 399 - 1) s"
+        "FROM td_machine m CROSS JOIN generate_series(0, 60 * 399 - 1) s"
     )
     loss = psql("SELECT id FROM mrp_workcenter_productivity_loss ORDER BY id LIMIT 1")[0][0]
     psql(
-        "INSERT INTO f3d_downtime (machine_id, loss_id, state_kind, reason_source, reason_state, date_start, date_end, is_open, "
+        "INSERT INTO td_downtime (machine_id, loss_id, state_kind, reason_source, reason_state, date_start, date_end, is_open, "
         "duration_min, create_date, write_date) "
         f"SELECT m.id, {loss}, 'idle', 'auto', 'to_classify', now() - interval '399 days' + s * interval '2.39 hours', "
         "now() - interval '399 days' + s * interval '2.39 hours' + interval '20 minutes', false, 20, now(), now() "
-        "FROM f3d_machine m CROSS JOIN generate_series(0, 3999) s"
+        "FROM td_machine m CROSS JOIN generate_series(0, 3999) s"
     )
     psql(
-        "INSERT INTO f3d_oee_shift (machine_id, state, source, date, ppt_min, run_min, availability, performance, quality, oee, "
+        "INSERT INTO td_oee_shift (machine_id, state, source, date, ppt_min, run_min, availability, performance, quality, oee, "
         "create_date, write_date) SELECT m.id, 'closed', 'machine', current_date - s, 450, 300, 0.8, 0.9, 1, 0.72, now(), now() "
-        "FROM f3d_machine m CROSS JOIN generate_series(1, 280) s"
+        "FROM td_machine m CROSS JOIN generate_series(1, 280) s"
     )
-    psql("ANALYZE f3d_machine_state_log")
-    psql("ANALYZE f3d_downtime")
-    n_log = int(psql("select count(*) from f3d_machine_state_log")[0][0])
-    res = {"state_log_rows": n_log, "downtimes": int(psql("select count(*) from f3d_downtime")[0][0])}
+    psql("ANALYZE td_machine_state_log")
+    psql("ANALYZE td_downtime")
+    n_log = int(psql("select count(*) from td_machine_state_log")[0][0])
+    res = {"state_log_rows": n_log, "downtimes": int(psql("select count(*) from td_downtime")[0][0])}
     res["cron_oee_s"] = round(cron_run(o, "OEE змін"), 1)
     t = time.time()
     o.call(
-        "f3d.oee.shift",
+        "td.oee.shift",
         "read_group",
         [("date", ">=", (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"))],
         ["oee:avg", "run_min:sum"],
@@ -190,7 +190,7 @@ def test_tp03_year_volume(fresh):
     res["oee_year_report_s"] = round(time.time() - t, 1)
     t = time.time()
     o.call(
-        "f3d.downtime",
+        "td.downtime",
         "read_group",
         [("date_start", ">=", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"))],
         ["duration_min:sum"],
@@ -198,13 +198,13 @@ def test_tp03_year_volume(fresh):
         lazy=False,
     )
     res["downtime_pivot_month_s"] = round(time.time() - t, 1)
-    before = int(psql("select count(*) from f3d_machine_state_log")[0][0])
+    before = int(psql("select count(*) from td_machine_state_log")[0][0])
     res["cron_rotate_s"] = round(cron_run(o, "ротація"), 1)
-    res["rotated_rows"] = before - int(psql("select count(*) from f3d_machine_state_log")[0][0])
+    res["rotated_rows"] = before - int(psql("select count(*) from td_machine_state_log")[0][0])
     plan = "\n".join(
         r[0]
         for r in psql(
-            "EXPLAIN SELECT * FROM f3d_machine_state_log WHERE machine_id = 1 AND date_start >= now() - interval '10 days'"
+            "EXPLAIN SELECT * FROM td_machine_state_log WHERE machine_id = 1 AND date_start >= now() - interval '10 days'"
         )
     )
     res["explain_index"] = "Index" in plan
@@ -251,13 +251,13 @@ def test_tp04_gantry_and_maps(fresh, sim):
     bom = o.search_read("mrp.bom", [("product_tmpl_id.default_code", "=", "BR-K4")], ["id"])[0]["id"]
     mo = make_mo(o, "BR-K4", 14)
     o.call("mrp.production", "action_f3d_create_cut_maps", [mo["id"]])
-    mid = o.search_read("f3d.cut.map", [("production_id", "=", mo["id"]), ("material_role", "=", "main")], ["id"])[0][
+    mid = o.search_read("td.cut.map", [("production_id", "=", mo["id"]), ("material_role", "=", "main")], ["id"])[0][
         "id"
     ]
     del bom
     for chunk in range(5):
         o.call(
-            "f3d.cut.map.line",
+            "td.cut.map.line",
             "create",
             [
                 {
@@ -272,8 +272,8 @@ def test_tp04_gantry_and_maps(fresh, sim):
                 for i in range(1000)
             ],
         )
-    o.call("f3d.cut.map", "action_export", [mid])
-    cmd = o.search_read("f3d.command", [("f3d_cut_map_id", "=", mid)], ["payload"])[0]["payload"]
+    o.call("td.cut.map", "action_export", [mid])
+    cmd = o.search_read("td.command", [("td_cut_map_id", "=", mid)], ["payload"])[0]["payload"]
     t = time.time()
     stt, txt, hd = http(
         "GET",

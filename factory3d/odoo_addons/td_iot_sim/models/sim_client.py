@@ -8,9 +8,9 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-PARAM_PREFIX = 'factory3d.iot_sim.'
-WRITE_OFF_MSG = "Команди на емулятор вимкнено стоп-краном factory3d.iot_sim.write_enabled"
-READ_OFF_MSG = "Опитування емулятора вимкнено стоп-краном factory3d.iot_sim.read_enabled"
+PARAM_PREFIX = 'td.iot_sim.'
+WRITE_OFF_MSG = "Команди на емулятор вимкнено стоп-краном td.iot_sim.write_enabled"
+READ_OFF_MSG = "Опитування емулятора вимкнено стоп-краном td.iot_sim.read_enabled"
 
 
 def truthy(value):
@@ -19,7 +19,7 @@ def truthy(value):
 
 class F3dSimClient(models.AbstractModel):
     """Домішка: HTTP-клієнт сервісу емулятора /sim/v1 (SPEC §2.10)."""
-    _name = 'f3d.sim.client'
+    _name = 'td.sim.client'
     _description = 'Клієнт сервісу емулятора'
 
     # --- параметри ---
@@ -35,7 +35,7 @@ class F3dSimClient(models.AbstractModel):
     def _sim_url(self):
         base = (self._sim_param('url') or '').strip().rstrip('/')
         if not base:
-            raise UserError("Адресу сервісу емулятора не налаштовано (Налаштування → Factory3D → Емулятор)")
+            raise UserError("Адресу сервісу емулятора не налаштовано (Налаштування → Емулятор обладнання)")
         return base + '/sim/v1'
 
     @api.model
@@ -105,7 +105,7 @@ class F3dSimClient(models.AbstractModel):
     @api.model
     def _sim_log_command(self, path, body, status):
         match = re.match(r'^/device/([^/]+)/', path)
-        self.env['f3d.sim.event'].sudo().create({
+        self.env['td.sim.event'].sudo().create({
             'ts': fields.Datetime.now(),
             'kind': 'command',
             'device_code': match.group(1) if match else False,

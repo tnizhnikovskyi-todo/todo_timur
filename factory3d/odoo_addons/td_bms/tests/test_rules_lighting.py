@@ -133,7 +133,7 @@ class TestLightRules(RulesCase):
         self.assertEqual(self.step(7, 12), "норма")  # ≈ 484 ≥ 475
 
     def test_tolerance_zero(self):
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.bms.light_norm_tolerance_pct", "0")
+        self.env["ir.config_parameter"].sudo().set_param("td.bms.light_norm_tolerance_pct", "0")
         self.push(self.level.code, at(7, 0), 98)
         self.assertEqual(self.step(7, 10), "нижче норми")  # 498,6 < 500
 
@@ -166,7 +166,7 @@ class TestLightRules(RulesCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_bms")
 class TestIngestHook(RulesCase):
-    CHECK = "odoo.addons.factory3d_bms.models.f3d_bms_check.F3dBmsCheck._f3d_bms_on_ingest"
+    CHECK = "odoo.addons.td_bms.models.td_bms_check.F3dBmsCheck._f3d_bms_on_ingest"
 
     def test_since_from_reading_ts(self):
         with freeze_time(at(7, 30)):
@@ -180,7 +180,7 @@ class TestIngestHook(RulesCase):
 
     def test_internal_context_skips(self):
         with freeze_time(at(7, 30)), mock.patch(self.CHECK) as hook:
-            self.env["f3d.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(
+            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(
                 [{"code": self.level.code, "ts": at(7, 1), "value": 0.0}], src="module"
             )
             hook.assert_not_called()
@@ -190,7 +190,7 @@ class TestIngestHook(RulesCase):
     def test_exception_isolated(self):
         with (
             freeze_time(at(7, 30)),
-            mute_logger("odoo.addons.factory3d_bms.models.f3d_signal"),
+            mute_logger("odoo.addons.td_bms.models.td_signal"),
             mock.patch(self.CHECK, side_effect=RuntimeError("boom")),
         ):
             res = self.push(self.level.code, at(7, 1), 40)
@@ -198,7 +198,7 @@ class TestIngestHook(RulesCase):
         self.assertEqual(self.level.last_value, 40)
 
     def test_read_disabled_skips(self):
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.bms.read_enabled", "False")
+        self.env["ir.config_parameter"].sudo().set_param("td.bms.read_enabled", "False")
         with freeze_time(at(7, 30)), mock.patch(self.CHECK) as hook:
             self.push(self.level.code, at(7, 1), 40)
             hook.assert_not_called()
@@ -209,21 +209,21 @@ class TestDerivedSource(RulesCase):
     def test_local_source(self):
         self.assertEqual(self.derived.type, "f3d_bms")
         self.assertFalse(self.derived.collector_id)
-        self.assertIn("f3d_bms", self.env["f3d.source"]._f3d_local_types())
+        self.assertIn("f3d_bms", self.env["td.source"]._f3d_local_types())
 
     def test_not_stale_by_telemetry(self):
         self.push(self.level.code, at(7, 0), 100)
         self.step(7, 1)
         self.assertEqual(self.check_sig.status, "ok")
         with freeze_time(at(10, 0)):
-            self.env["f3d.signal"]._cron_stale()
+            self.env["td.signal"]._cron_stale()
         self.assertEqual(self.check_sig.status, "ok")
 
     def test_foreign_push_rejected(self):
-        col = self.env["f3d.collector"].create({"code": "COL-BMS-T", "name": "Колектор (тест)"})
+        col = self.env["td.collector"].create({"code": "COL-BMS-T", "name": "Колектор (тест)"})
         with freeze_time(at(7, 30)):
             res = (
-                self.env["f3d.signal"]
+                self.env["td.signal"]
                 .sudo()
                 ._f3d_ingest(
                     [{"code": self.check_sig.code, "ts": at(7, 1), "text": "норма"}], src="collector", collector=col

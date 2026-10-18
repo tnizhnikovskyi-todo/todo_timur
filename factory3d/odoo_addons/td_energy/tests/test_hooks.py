@@ -5,7 +5,7 @@ import csv
 import json
 import os
 
-from odoo.addons.factory3d_telemetry.tools import address as address_tools
+from odoo.addons.td_telemetry.tools import address as address_tools
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 
@@ -25,17 +25,17 @@ class TestHooks(F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Signal = cls.env["f3d.signal"].with_context(active_test=False)
-        cls.models = ("f3d.energy.node", "f3d.energy.meter", "f3d.energy.pool", "f3d.energy.tariff")
+        cls.Signal = cls.env["td.signal"].with_context(active_test=False)
+        cls.models = ("td.energy.node", "td.energy.meter", "td.energy.pool", "td.energy.tariff")
 
     def counts(self):
         return {m: self.env[m].with_context(active_test=False).search_count([]) for m in self.models} | {
-            "source": self.env["f3d.source"].with_context(active_test=False).search_count([]),
+            "source": self.env["td.source"].with_context(active_test=False).search_count([]),
             "signal": self.Signal.search_count([]),
         }
 
     def test_install_report(self):  # AC-12 (звіт установки; кількості, що не залежать від наявності обладнання)
-        report = json.loads(self.env["ir.config_parameter"].get_param("factory3d.energy.install_report"))
+        report = json.loads(self.env["ir.config_parameter"].get_param("td.energy.install_report"))
         for key, value in {"nodes": 123, "sources": 68, "meters": 67, "pools": 5}.items():
             self.assertEqual(report[key], value, key)
         self.assertEqual(report["equipment_linked"] + report["unmatched_equipment"], 80)
@@ -51,15 +51,15 @@ class TestHooks(F3DEnergyCase):
 
     def test_rebind_idempotent(self):  # AC-14
         before = self.counts()
-        node = self.env["f3d.energy.node"]
-        result = node.with_user(self.u_admin).action_f3d_energy_rebind()
+        node = self.env["td.energy.node"]
+        result = node.with_user(self.u_admin).action_td_energy_rebind()
         self.assertEqual(result["tag"], "display_notification")
-        report = json.loads(self.env["ir.config_parameter"].get_param("factory3d.energy.install_report"))
+        report = json.loads(self.env["ir.config_parameter"].get_param("td.energy.install_report"))
         self.assertEqual(report["signals"]["created"], 0)
         self.assertEqual(report["derived_source"]["created"], 0)
         self.assertEqual(self.counts(), before)
         with self.assertRaises(AccessError):
-            node.with_user(self.u_energy).action_f3d_energy_rebind()
+            node.with_user(self.u_energy).action_td_energy_rebind()
 
     def test_addresses(self):  # AC-70
         def sig(code):
@@ -85,10 +85,10 @@ class TestHooks(F3DEnergyCase):
             self.assertFalse(address_tools.validate_address("modbus_tcp", rec.address), row["code"])
 
     def test_derived_source(self):  # AC-71
-        derived = self.env.ref("factory3d_energy.source_en_derived")
+        derived = self.env.ref("td_energy.source_en_derived")
         self.assertEqual((derived.code, derived.type, derived.module), ("EN-DERIVED", "f3d_energy", "energy"))
         self.assertFalse(derived.collector_id)
-        self.assertIn("f3d_energy", self.env["f3d.source"]._f3d_local_types())
+        self.assertIn("f3d_energy", self.env["td.source"]._f3d_local_types())
         shifts = self.Signal.search([("code", "=like", "energy/consumers/%/kwh_shift")])
         self.assertEqual(len(shifts), 49)
         for s in shifts:
@@ -110,17 +110,17 @@ class TestHooks(F3DEnergyCase):
 
     def test_uninstall(self):  # AC-74
         migrated = self.Signal.search([("code", "=", "energy/consumers/SAW-1/p_now")])
-        self.env["ir.model.data"].search([("model", "=", "f3d.signal"), ("res_id", "=", migrated.id)]).unlink()
+        self.env["ir.model.data"].search([("model", "=", "td.signal"), ("res_id", "=", migrated.id)]).unlink()
         migrated.origin = "sim_data"
-        created = self.env["ir.model.data"].search([("model", "=", "f3d.signal"), ("name", "=like", "sig\\_%")])
+        created = self.env["ir.model.data"].search([("model", "=", "td.signal"), ("name", "=like", "sig\\_%")])
         created_ids = set(created.mapped("res_id"))
         self.assertTrue(created_ids)
         hooks.uninstall_hook(self.env)
-        self.assertFalse(self.env["ir.config_parameter"].search([("key", "=like", "factory3d.energy.%")]))
+        self.assertFalse(self.env["ir.config_parameter"].search([("key", "=like", "td.energy.%")]))
         codes = [r["code"] for r in csv_rows("energy_signals.csv")]
         signals = self.Signal.search([("code", "in", codes)])
         self.assertFalse(signals.filtered("source_id"))
         self.assertTrue(migrated.active)
         self.assertFalse(signals.filtered(lambda s: s.id in created_ids and s.active))
-        sources = self.env["f3d.source"].with_context(active_test=False).search([("code", "=like", "MB-U%-%")])
+        sources = self.env["td.source"].with_context(active_test=False).search([("code", "=like", "MB-U%-%")])
         self.assertFalse(sources.filtered(lambda s: s.module == "energy" and s.active))

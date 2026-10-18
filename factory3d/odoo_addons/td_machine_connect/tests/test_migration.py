@@ -10,8 +10,8 @@ from odoo.tests import tagged
 from .. import hooks
 from .common import F3DMachineCase
 
-CSV = "odoo.addons.factory3d_machine_connect.hooks._csv_rows"
-LOGGER = "odoo.addons.factory3d_machine_connect"
+CSV = "odoo.addons.td_machine_connect.hooks._csv_rows"
+LOGGER = "odoo.addons.td_machine_connect"
 REAL_CSV_ROWS = hooks._csv_rows
 
 
@@ -42,9 +42,9 @@ class TestMigrationClean(F3DMachineCase):
     def setUpClass(cls):
         super().setUpClass()
         WC = cls.env["mrp.workcenter"]
-        cls.wc_m1 = WC.create({"name": "Мігр. UA", "f3d_code": "MIG-1", "resource_calendar_id": cls.cal.id})
-        cls.wc_m2 = WC.create({"name": "Мігр. IO", "f3d_code": "MIG-2", "resource_calendar_id": cls.cal.id})
-        cls.eq_m1 = cls.env["maintenance.equipment"].create({"name": "Мігр. UA", "f3d_code": "MIG-1"})
+        cls.wc_m1 = WC.create({"name": "Мігр. UA", "td_code": "MIG-1", "resource_calendar_id": cls.cal.id})
+        cls.wc_m2 = WC.create({"name": "Мігр. IO", "td_code": "MIG-2", "resource_calendar_id": cls.cal.id})
+        cls.eq_m1 = cls.env["maintenance.equipment"].create({"name": "Мігр. UA", "td_code": "MIG-1"})
         cls.rows = [
             row("MIG-1", "opcua", "UA-SAW-T", operator="OP-SAW-T"),
             row("MIG-2", "io", "MB-U80-T", 80, 3),
@@ -57,7 +57,7 @@ class TestMigrationClean(F3DMachineCase):
 
     def test_clean_db_zero(self):
         """Чиста база: кроки 0–6 без демо-даних нічого не створюють, окрім сигналів; `done`."""
-        Machine = self.env["f3d.machine"].with_context(active_test=False)
+        Machine = self.env["td.machine"].with_context(active_test=False)
         before = Machine.search_count([])
         with machines_csv([]):
             rep = hooks.run_migration(self.env)
@@ -69,16 +69,16 @@ class TestMigrationClean(F3DMachineCase):
         self.assertEqual(rep["state"], "done")
         stored = json.loads(self._icp().get_param(hooks.REPORT_KEY))
         self.assertEqual(stored["state"], "done")
-        self.assertEqual(self.env["f3d.machine"]._f3d_run_migration()["params"]["type"], "info")
+        self.assertEqual(self.env["td.machine"]._f3d_run_migration()["params"]["type"], "info")
 
     def test_installed_signals(self):
         """Сигнали модуля (207), створені хуком установки: `origin='module'`, xml-id, `machine_state` не видно в 3D."""
-        Sig = self.env["f3d.signal"].with_context(active_test=False)
+        Sig = self.env["td.signal"].with_context(active_test=False)
         rows = hooks._signal_rows("SAW-1", "opcua", None, None)
         sig = Sig.search([("code", "=", "workcenters/SAW-1/state")])
         self.assertEqual(sig.origin, "module")
         self.assertEqual(sig.source_id.code, "UA-SAW-1")
-        self.assertTrue(self.env.ref("factory3d_machine_connect.sig_workcenters_saw_1_state"))
+        self.assertTrue(self.env.ref("td_machine_connect.sig_workcenters_saw_1_state"))
         self.assertFalse(Sig.search([("code", "=", "workcenters/SAW-1/machine_state")]).viewer_visible)
         self.assertEqual(Sig.search([("code", "=", "workcenters/SAW-1/machine_state")]).source_id.code, "MC-DERIVED")
         self.assertTrue(Sig.search([("code", "=", "equipment/CUTOPT/cmd")]))
@@ -92,8 +92,8 @@ class TestMigrationClean(F3DMachineCase):
         self.assertEqual((rep["machines"], rep["with_operator"], rep["with_equipment"]), (2, 1, 1))
         self.assertEqual(rep["signals_created"], 20)  # MIG-1: 7 + 1, MIG-2: 3 + 1, NOPE-1 (без РЦ): 7 + 1
         self.assertEqual(rep["machines_wired"], 2)
-        m1 = self.env["f3d.machine"].search([("workcenter_id", "=", self.wc_m1.id)])
-        m2 = self.env["f3d.machine"].search([("workcenter_id", "=", self.wc_m2.id)])
+        m1 = self.env["td.machine"].search([("workcenter_id", "=", self.wc_m1.id)])
+        m2 = self.env["td.machine"].search([("workcenter_id", "=", self.wc_m2.id)])
         self.assertEqual((m1.protocol, m2.protocol, m2.io_slot), ("opcua", "io", 3))
         self.assertEqual(m1.employee_id, self.emp_saw)
         self.assertEqual(m1.equipment_id, self.eq_m1)
@@ -120,12 +120,12 @@ class TestMigrationClean(F3DMachineCase):
         self.assertEqual(m2.sig_alarm_id.address["addr"], 7)
         self.assertEqual(m2.sig_pieces_id.address["addr"], 12)  # HR = 4·3
         self.assertEqual(m2.sig_state_id.source_id, self.src_io)
-        self.assertTrue(self.env.ref("factory3d_machine_connect.sig_workcenters_mig_1_state"))
-        self.assertEqual(self.env["f3d.machine"]._f3d_code_map().get("workcenters/MIG-1/state"), (m1.id, "state"))
+        self.assertTrue(self.env.ref("td_machine_connect.sig_workcenters_mig_1_state"))
+        self.assertEqual(self.env["td.machine"]._f3d_code_map().get("workcenters/MIG-1/state"), (m1.id, "state"))
 
     def test_bind_existing(self):
         """Наявний сигнал чужого модуля: лише `source_id`, `address`, `period_s`…; `module`/`origin` без змін."""
-        Sig = self.env["f3d.signal"]
+        Sig = self.env["td.signal"]
         sig = Sig.create(
             {
                 "code": "workcenters/MIG-1/pieces_out",
@@ -151,7 +151,7 @@ class TestMigrationClean(F3DMachineCase):
     def test_params(self):
         icp = self._icp()
         for env_name, read, mode in (("test", "True", "collector"), ("prod", "False", "manual")):
-            icp.set_param("factory3d.base.environment", env_name)
+            icp.set_param("td.base.environment", env_name)
             icp.search([("key", "in", [hooks.P + "read_enabled", hooks.P + "cutting_mode"])]).unlink()
             hooks.params(self.env)
             self.assertEqual(icp.get_param(hooks.P + "read_enabled"), read)
@@ -166,10 +166,10 @@ class TestMigrationClean(F3DMachineCase):
         self.env["ir.model.data"].create(
             {"module": "factory3d", "name": "loss_break", "model": brk._name, "res_id": brk.id}
         )
-        self.assertFalse(brk.f3d_planned)
+        self.assertFalse(brk.td_planned)
         res = hooks.losses(self.env)
         self.assertEqual(res["loss_planned"], 1)
-        self.assertTrue(brk.f3d_planned)
+        self.assertTrue(brk.td_planned)
         self.assertEqual(hooks.losses(self.env)["loss_planned"], 0)
         if not self.env["res.lang"]._lang_get("uk_UA"):
             self.assertEqual(res["loss_translated"], 0)
@@ -188,7 +188,7 @@ class TestMigrationClean(F3DMachineCase):
         with self.assertLogs(LOGGER, "WARNING"):
             res = hooks.sheets(self.env)
         self.assertEqual(res["sheets_sized"], 3)
-        dims = [(t.f3d_sheet_length_mm, t.f3d_sheet_width_mm, t.f3d_thickness_mm) for t in tmpls]
+        dims = [(t.td_sheet_length_mm, t.td_sheet_width_mm, t.td_thickness_mm) for t in tmpls]
         self.assertEqual(dims, [(2800, 2070, 16), (2750, 1830, 18), (2800, 2070, 3), (0, 0, 0)])
         with self.assertLogs(LOGGER, "WARNING"):
             self.assertEqual(hooks.sheets(self.env)["sheets_sized"], 0)
@@ -198,23 +198,23 @@ class TestMigrationClean(F3DMachineCase):
             {
                 "name": "PLT-M1",
                 "location_id": self.loc_t1.location_id.id,
-                "f3d_code": "PLT-M1",
-                "f3d_loc_kind": "stack",
-                "f3d_capacity": 60,
+                "td_code": "PLT-M1",
+                "td_loc_kind": "stack",
+                "td_capacity": 60,
             }
         )
         op = self.env["stock.warehouse.orderpoint"].create(
             {"product_id": self.board.id, "location_id": loc.id, "product_min_qty": 5, "product_max_qty": 20}
         )
         res = hooks.stacks(self.env)
-        stack = self.env["f3d.gantry.stack"].search([("location_id", "=", loc.id)])
+        stack = self.env["td.gantry.stack"].search([("location_id", "=", loc.id)])
         self.assertEqual(stack.orderpoint_id, op)
         self.assertEqual(stack.state, "unknown")
         self.assertGreaterEqual(res["stacks"], 3)
         self.assertGreaterEqual(res["orderpoints_linked"], 1)
-        count = self.env["f3d.gantry.stack"].search_count([])
+        count = self.env["td.gantry.stack"].search_count([])
         self.assertEqual(hooks.stacks(self.env)["stacks"], res["stacks"])
-        self.assertEqual(self.env["f3d.gantry.stack"].search_count([]), count)
+        self.assertEqual(self.env["td.gantry.stack"].search_count([]), count)
 
     def _demo_log(self, wc, loss_xmlid, start, end):
         rec = self.env["mrp.workcenter.productivity"].create(
@@ -228,7 +228,7 @@ class TestMigrationClean(F3DMachineCase):
         # Записи до установки модуля мали б умовчання колонки: ставимо його явно.
         self.env.flush_all()
         self.env.cr.execute(
-            "UPDATE mrp_workcenter_productivity SET f3d_source='operator', f3d_auto=false, f3d_downtime_id=NULL "
+            "UPDATE mrp_workcenter_productivity SET td_source='operator', td_auto=false, td_downtime_id=NULL "
             "WHERE id=%s",
             (rec.id,),
         )
@@ -255,13 +255,13 @@ class TestMigrationClean(F3DMachineCase):
         res = hooks.demo_journal(self.env, install_ts)
         self.assertEqual(res, {"timelog_marked": 5, "downtimes_created": 4, "downtimes_open": 1, "requests_linked": 1})
         self.assertEqual(Log.search_count([]), count)
-        self.assertEqual({r.f3d_source for r in logs}, {"demo"})
-        kinds = [r.f3d_downtime_id.state_kind for r in logs[:4]]
+        self.assertEqual({r.td_source for r in logs}, {"demo"})
+        kinds = [r.td_downtime_id.state_kind for r in logs[:4]]
         self.assertEqual(kinds, ["fault", "setup", "idle", "fault"])
-        closed = logs[0].f3d_downtime_id
+        closed = logs[0].td_downtime_id
         self.assertEqual((closed.reason_source, closed.reason_state, closed.ppt_min), ("demo", "confirmed", 30.0))
-        self.assertFalse(logs[4].f3d_downtime_id)
-        open_dt = logs[3].f3d_downtime_id
+        self.assertFalse(logs[4].td_downtime_id)
+        open_dt = logs[3].td_downtime_id
         self.assertTrue(open_dt.is_open)
         self.assertEqual(open_dt.maintenance_request_id, req)
         self.assertEqual((self.m_ua.state, self.m_ua.state_since), ("fault", self.kt("09:42")))
@@ -273,13 +273,13 @@ class TestMigrationClean(F3DMachineCase):
         # записи після моменту установки не стають demo
         late = self._demo_log(self.wc_cnc, "mrp.block_reason1", "10:00", "10:10")
         hooks.demo_journal(self.env, now - timedelta(hours=1))
-        self.assertEqual(late.f3d_source, "operator")
+        self.assertEqual(late.td_source, "operator")
 
     def test_idempotent(self):
         rep1 = self.run_mig()
         counts = {
             m: self.env[m].with_context(active_test=False).search_count([])
-            for m in ("f3d.signal", "f3d.machine", "f3d.downtime", "f3d.gantry.stack")
+            for m in ("td.signal", "td.machine", "td.downtime", "td.gantry.stack")
         }
         with self.assertLogs(LOGGER, "WARNING"):
             rep2 = self.run_mig()
@@ -293,33 +293,33 @@ class TestMigrationClean(F3DMachineCase):
         with self.assertRaises(AccessError):
             hooks.run_migration(self.env(user=self.user_f3d_manager))
         with self.assertRaises(AccessError):
-            self.env["f3d.machine"].with_user(self.user_f3d_manager)._f3d_run_migration()
+            self.env["td.machine"].with_user(self.user_f3d_manager)._f3d_run_migration()
         with machines_csv([]):
-            self.env["f3d.machine"].with_user(self.user_f3d_admin)._f3d_run_migration()
+            self.env["td.machine"].with_user(self.user_f3d_admin)._f3d_run_migration()
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")
 class TestMigrationDemo(F3DMachineCase):
-    """Лише на копії демо (`-u factory3d_machine_connect`): AC-81…85 за даними Додатка C."""
+    """Лише на копії демо (`-u td_machine_connect`): AC-81…85 за даними Додатка C."""
 
     def setUp(self):
         super().setUp()
         codes = [r["code"] for r in hooks._csv_rows(self.env, "mc_machines")]
-        found = self.env["mrp.workcenter"].search([("f3d_code", "in", codes)])
+        found = self.env["mrp.workcenter"].search([("td_code", "in", codes)])
         if len(found) < 35 or not self.env["maintenance.equipment"].search_f3d("CNC-2"):
             self.skipTest("потрібна копія демо-бази (35 РЦ з кодами Додатка A)")
 
     def test_demo(self):
-        Machine = self.env["f3d.machine"]
+        Machine = self.env["td.machine"]
         self.assertEqual(Machine.search_count([("protocol", "=", "opcua"), ("code", "!=", "")]) >= 15, True)
         self.assertEqual(Machine.search_count([("employee_id", "!=", False)]), 28)
-        self.assertEqual(self.env["f3d.gantry.stack"].search_count([]), 27)
-        self.assertEqual(self.env["f3d.gantry.stack"].search_count([("orderpoint_id", "!=", False)]), 23)
+        self.assertEqual(self.env["td.gantry.stack"].search_count([]), 27)
+        self.assertEqual(self.env["td.gantry.stack"].search_count([("orderpoint_id", "!=", False)]), 23)
         cnc2 = Machine.search([("code", "=", "CNC-2")])
         self.assertEqual(cnc2.state, "fault")
         self.assertEqual(cnc2.current_downtime_id.maintenance_request_id.name, "MR/00031")
-        self.assertEqual(self.env["f3d.downtime"].search_count([("reason_source", "=", "demo")]), 74)
-        self.assertEqual(self.env["mrp.workcenter.productivity"].search_count([("f3d_source", "=", "demo")]), 184)
+        self.assertEqual(self.env["td.downtime"].search_count([("reason_source", "=", "demo")]), 74)
+        self.assertEqual(self.env["mrp.workcenter.productivity"].search_count([("td_source", "=", "demo")]), 184)
         before = self.env["mrp.workcenter.productivity"].search_count([])
         rep = hooks.run_migration(self.env)
         self.assertEqual((rep["signals_created"], rep["downtimes_created"]), (0, 0))

@@ -14,8 +14,8 @@ def _num(value):
 
 class F3dViewerProviderStock(models.AbstractModel):
     """M-01a: товари й локації (R-03, R-04)."""
-    _name = "f3d.viewer.provider.stock"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.stock"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних stock"
 
     _f3d_sequence = 20
@@ -34,7 +34,7 @@ class F3dViewerProviderStock(models.AbstractModel):
                    ("product.product", "stock.location", "stock.quant", "stock.move.line")):
             return
         static_locs = ((ctx.get("static") or {}).get("layout") or {}).get("locations") or {}
-        locs = env["stock.location"].search_fetch([("f3d_code", "!=", False), ("usage", "in", ("internal", "transit"))])
+        locs = env["stock.location"].search_fetch([("td_code", "!=", False), ("usage", "in", ("internal", "transit"))])
         quants = []
         if locs:
             # records замість search_read: без зайвих читань display_name товару й локації
@@ -86,7 +86,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         for q in quants:
             by_loc.setdefault(q["location_id"][0], []).append(q)
         for loc in locs:
-            code = loc.f3d_code
+            code = loc.td_code
             st = static_locs.get(code) or {}
             rows = []
             for q in by_loc.get(loc.id, []):
@@ -114,7 +114,7 @@ class F3dViewerProviderStock(models.AbstractModel):
                     item["picking"] = pk
                 rows.append(item)
             rows.sort(key=lambda r: (r["product"], r.get("package") or "", r.get("lot") or ""))
-            kind = loc.f3d_loc_kind or st.get("kind")
+            kind = loc.td_loc_kind or st.get("kind")
             ops = orderpoints.get(loc.id)
             capacity = self._capacity(loc, st, ops)
             total = sum(r["qty"] for r in rows)
@@ -138,11 +138,11 @@ class F3dViewerProviderStock(models.AbstractModel):
 
     @api.model
     def _capacity(self, loc, st, ops):
-        """R-04: base f3d_capacity > 0, інакше статика, для bin — max правила."""
-        if loc.f3d_capacity and loc.f3d_capacity > 0:
-            return _num(loc.f3d_capacity)
+        """R-04: base td_capacity > 0, інакше статика, для bin — max правила."""
+        if loc.td_capacity and loc.td_capacity > 0:
+            return _num(loc.td_capacity)
         cap = st.get("capacity")
-        if cap is None and (loc.f3d_loc_kind or st.get("kind")) == "bin" and ops:
+        if cap is None and (loc.td_loc_kind or st.get("kind")) == "bin" and ops:
             cap = ops[0]["max"]
         return None if cap is None else _num(cap)
 
@@ -167,7 +167,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         """Приймання сьогодні в локаціях UNLOAD-* (за кодом, аліасом або штрихкодом)."""
         env = self.env
         unload = locs.filtered(lambda loc: any(
-            (c or "").startswith("UNLOAD-") for c in (loc.f3d_code, loc.f3d_alias, loc.barcode)))
+            (c or "").startswith("UNLOAD-") for c in (loc.td_code, loc.td_alias, loc.barcode)))
         if not unload:
             return {}
         start = dates.utc(ctx["today"] + " 00:00")
@@ -183,7 +183,7 @@ class F3dViewerProviderStock(models.AbstractModel):
     @api.model
     def _kit_links(self, locs):
         """R-04: візок `KIT-*` -> (комплектація, МО): остання комплектація з цим призначенням; МО = її `origin`."""
-        kits = locs.filtered(lambda loc: (loc.f3d_code or "").startswith("KIT-"))
+        kits = locs.filtered(lambda loc: (loc.td_code or "").startswith("KIT-"))
         if not kits:
             return {}
         res = {}
@@ -192,7 +192,7 @@ class F3dViewerProviderStock(models.AbstractModel):
             order="date, id")
         for mv in moves:
             pk = mv.picking_id
-            res[mv.location_dest_id.f3d_code] = (pk.name, pk.origin or None)
+            res[mv.location_dest_id.td_code] = (pk.name, pk.origin or None)
         return {c: v for c, v in res.items() if v[1]}
 
     @api.model

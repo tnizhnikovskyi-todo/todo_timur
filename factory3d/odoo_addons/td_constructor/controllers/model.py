@@ -9,11 +9,11 @@ from odoo import http
 from odoo.exceptions import AccessError
 from odoo.http import request
 
-from ..models.f3d_equipment_variant import F3dModelError, SERVER_CONVERT_FORMATS, model_extension
+from ..models.td_equipment_variant import F3dModelError, SERVER_CONVERT_FORMATS, model_extension
 
 _logger = logging.getLogger(__name__)
 
-TECHNOLOGIST = 'factory3d_constructor.group_f3d_constructor_technologist'
+TECHNOLOGIST = 'td_constructor.group_td_constructor_technologist'
 HTTP_CODES = {
     'rights': 403,
     'too_large': 413,
@@ -40,7 +40,7 @@ class F3dModelController(http.Controller):
         if not env.user.has_group(TECHNOLOGIST):
             return _error('rights', "Завантажувати моделі може технолог або менеджер конструктора.")
         try:
-            variant = env['f3d.equipment.variant'].browse(int(variant_id)).exists()
+            variant = env['td.equipment.variant'].browse(int(variant_id)).exists()
         except (TypeError, ValueError):
             variant = None
         if not variant:
@@ -67,7 +67,7 @@ class F3dModelController(http.Controller):
             client_meta = {}
         try:
             with env.cr.savepoint():
-                env.cr.execute("SELECT id FROM f3d_equipment_variant WHERE id = %s FOR UPDATE NOWAIT", (variant.id,))
+                env.cr.execute("SELECT id FROM td_equipment_variant WHERE id = %s FOR UPDATE NOWAIT", (variant.id,))
         except pg_errors.LockNotAvailable:
             return _error('busy', "Завантаження для цього варіанта вже виконується.")
         name, raw = files['original']
@@ -95,7 +95,7 @@ class F3dModelController(http.Controller):
         except F3dModelError as exc:
             env.invalidate_all()
             return _error(exc.code, str(exc))
-        variant = env['f3d.equipment.variant'].browse(variant.id)
+        variant = env['td.equipment.variant'].browse(variant.id)
         return _json(
             {
                 'ok': True,
@@ -113,7 +113,7 @@ class F3dModelController(http.Controller):
     def download(self, variant_id, kind, **kw):
         if kind not in ('glb', 'original'):
             raise request.not_found()
-        variant = request.env['f3d.equipment.variant'].browse(variant_id).exists()
+        variant = request.env['td.equipment.variant'].browse(variant_id).exists()
         if not variant:
             raise request.not_found()
         try:

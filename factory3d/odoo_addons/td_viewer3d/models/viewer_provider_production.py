@@ -29,8 +29,8 @@ def _num(value):
 
 class F3dViewerProviderProduction(models.AbstractModel):
     """M-01b: робочі центри, виробничі замовлення й завдання (R-06, R-07, R-08)."""
-    _name = "f3d.viewer.provider.production"
-    _inherit = "f3d.viewer.provider"
+    _name = "td.viewer.provider.production"
+    _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних production"
 
     _f3d_sequence = 30
@@ -56,9 +56,9 @@ class F3dViewerProviderProduction(models.AbstractModel):
             ("state", "!=", "cancel"), "|", ("state", "in", ("confirmed", "progress", "to_close")),
             ("date_finished", ">=", today_start)], order="id")
         wos_all = env["mrp.workorder"].search_fetch([("production_id", "in", mos.ids)], order="sequence, id")
-        wcs = env["mrp.workcenter"].search_fetch([("f3d_code", "!=", False)], order="id")
+        wcs = env["mrp.workcenter"].search_fetch([("td_code", "!=", False)], order="id")
         wcs.resource_calendar_id.attendance_ids.mapped("hour_from")  # прогрів змін для _shift
-        wos_all.workcenter_id.mapped("f3d_code")  # одне читання центрів замість одного на МО
+        wos_all.workcenter_id.mapped("td_code")  # одне читання центрів замість одного на МО
 
         # --- журнал продуктивності: по завданнях (будь-коли) і по центрах (сьогодні)
         # один запит на обидві вибірки журналу (AC-52); далі розділяємо в Python
@@ -106,7 +106,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 prev = st
                 mins = worked.get(wo.id, 0.0)
                 rec = {"id": wid, "name": wo.name, "production": mo.name,
-                       "workcenter": wo.workcenter_id.f3d_code or "", "state": st, "sequence": k + 1,
+                       "workcenter": wo.workcenter_id.td_code or "", "state": st, "sequence": k + 1,
                        "duration_expected": round(wo.duration_expected or 0)}
                 start = first.get(wo.id) or wo.date_start
                 if st == "done":
@@ -179,10 +179,10 @@ class F3dViewerProviderProduction(models.AbstractModel):
         # обладнання центрів і відкриті заявки
         eq_by_wc, req_by_eq = {}, {}
         if payload_tools.access_ok(env, "maintenance.equipment"):
-            eqs = env["maintenance.equipment"].search_fetch([("f3d_code", "!=", False)])
+            eqs = env["maintenance.equipment"].search_fetch([("td_code", "!=", False)])
             link = "workcenter_id" in env["maintenance.equipment"]._fields
             for eq in eqs:
-                wc_code = (eq.workcenter_id.f3d_code if link and eq.workcenter_id else None) or eq.f3d_code
+                wc_code = (eq.workcenter_id.td_code if link and eq.workcenter_id else None) or eq.td_code
                 eq_by_wc.setdefault(wc_code, eq)
             if payload_tools.access_ok(env, "maintenance.request"):
                 for r in env["maintenance.request"].search_fetch([("stage_id.done", "=", False),
@@ -190,7 +190,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                                                            order="request_date, id"):
                     req_by_eq.setdefault(r.equipment_id.id, r)
 
-        passport_ok = payload_tools.access_ok(env, "f3d.equipment.passport")
+        passport_ok = payload_tools.access_ok(env, "td.equipment.passport")
         prod_min, loss_min = {}, {}
         for lg in logs_today:
             wcid = lg.workcenter_id.id
@@ -207,7 +207,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
             by_wc.setdefault(wo.workcenter_id.id, []).append((wid, st, wo))
 
         for wc in wcs:
-            code = wc.f3d_code
+            code = wc.td_code
             items = by_wc.get(wc.id, [])
             cur = sorted((x for x in items if x[1] == "progress"), key=lambda x: x[2].date_start or now)
             queue = sorted((x for x in items if x[1] in ("ready", "waiting", "pending")),
@@ -229,8 +229,8 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 "losses": sorted(({"reason": r, "minutes": round(m)} for r, m in loss_min.get(wc.id, {}).items()),
                                  key=lambda x: -x["minutes"]),
                 "current_workorder": current, "queue": [x[0] for x in queue],
-                "manufacturer": (eq and passport_ok and eq.f3d_manufacturer) or passport.get("manufacturer") or "",
-                "model": (eq and passport_ok and eq.f3d_model) or passport.get("model") or "",
+                "manufacturer": (eq and passport_ok and eq.td_manufacturer) or passport.get("manufacturer") or "",
+                "model": (eq and passport_ok and eq.td_model) or passport.get("model") or "",
             }
             cons = consumers.get(code)
             if cons:
@@ -266,11 +266,11 @@ class F3dViewerProviderProduction(models.AbstractModel):
             return {}
         pids = mos.move_raw_ids.filtered(lambda m: m.state != "cancel").product_id.ids
         quants = env["stock.quant"].search_fetch([("product_id", "in", pids), ("quantity", "!=", 0),
-                                            ("location_id.f3d_code", "!=", False)])
+                                            ("location_id.td_code", "!=", False)])
         order = {c: i for i, c in enumerate(((static.get("layout") or {}).get("locations") or {}))}
         res = {}
         for q in quants:
-            res.setdefault(q.product_id.id, set()).add(q.location_id.f3d_code)
+            res.setdefault(q.product_id.id, set()).add(q.location_id.td_code)
         return {pid: sorted(codes, key=lambda c: (order.get(c, 1 << 30), c)) for pid, codes in res.items()}
 
     @api.model
@@ -302,7 +302,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 "mrp.workcenter", "mrp.production")):
             # жодного коду WO*, центру чи МО серед вибраних (напр. лише локації) — збирати нічого, 2 SQL замість ~9
             names = list(sel)
-            if not (env["mrp.workcenter"].search_count([("f3d_code", "in", names)], limit=1)
+            if not (env["mrp.workcenter"].search_count([("td_code", "in", names)], limit=1)
                     or env["mrp.production"].search_count([("name", "in", names)], limit=1)):
                 return
         tmp = {}

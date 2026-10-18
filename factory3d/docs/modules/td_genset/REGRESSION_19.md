@@ -1,6 +1,6 @@
 # REGRESSION_19 — td_genset 18.0 → 19.0 (ТР 1.2 AC-01…AC-69)
 
-Дата: 2026-10-15. Прогон: `F3D_TEST_INSTALL=factory3d_genset,factory3d_viewer run_tests.sh f3d_tdg_w5b /factory3d_genset,/td_genset` (R1: база из `f3d_template`, `--without-demo`, Odoo 19.0 Community). Подробности — TEST_REPORT.md.
+Дата: 2026-10-15. Прогон: `F3D_TEST_INSTALL=td_genset_factory3d,td_viewer3d run_tests.sh f3d_tdg_w5b /td_genset_factory3d,/td_genset` (R1: база из `f3d_template`, `--without-demo`, Odoo 19.0 Community). Подробности — TEST_REPORT.md.
 
 Легенда колонок: **R0** — базовая линия 18.0: стенд 18.0 в среде недоступен, берётся запись CHANGELOG `18.0.1.0.0` (176 UT и 45 ТК зелёные) — не перепрогонялась; **R1** — пустая база 19.0, `/td_genset`; **R2** — копия демо-базы timur-o19demo: не гонялась (нет базы); **R3 office / d700** — стенд с `fake_relay`: docker-стенд не поднят (rate limit реестра, см. TEST_REPORT), вместо него in-process эмулятор `tests/stand/*` (входит в прогон `/td_genset`) — результат указан как «эмулятор»; ТК на живом `fake_relay` — «ждёт стенд». Колонка MG — тесты, изменённые при переносе (MIGRATION_19.md).
 

@@ -5,7 +5,7 @@ from datetime import timedelta
 from odoo import fields
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_telemetry.tools.titles import fmt_num
+from odoo.addons.td_telemetry.tools.titles import fmt_num
 
 from ..tools import dates
 from .common import TAGS, F3DEnergyCase
@@ -17,8 +17,8 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Event = cls.env["f3d.energy.event"]
-        cls.Signal = cls.env["f3d.signal"]
+        cls.Event = cls.env["td.energy.event"]
+        cls.Signal = cls.env["td.signal"]
 
     def put(self, code, value=None, text=None, seconds_ago=0):
         ts = fields.Datetime.now() - timedelta(seconds=seconds_ago)
@@ -51,7 +51,7 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
 
     def test_contract_power_request(self):  # AC-34
         self.bind_equipment("energy/totals/grid15_kw", "SWB-1")
-        tariff = self.env.ref("factory3d_energy.tariff_demo")
+        tariff = self.env.ref("td_energy.tariff_demo")
         tariff._f3d_apply_contract_thresholds()
         sig = self.Signal.search([("code", "=", "energy/totals/grid15_kw")])
         self.assertEqual((sig.warn_high, sig.alarm_high), (720.0, 800.0))
@@ -61,11 +61,11 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             [("name", "=", "Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт")]
         )
         self.assertEqual(len(request), 1)
-        self.assertEqual(request.equipment_id.f3d_code, "SWB-1")
+        self.assertEqual(request.equipment_id.td_code, "SWB-1")
 
     def test_pfc_event(self):  # AC-36 (а)
-        parent = self.env["f3d.energy.node"].search([("code", "=", "SEC-1")])
-        node = self.env["f3d.energy.node"].create(
+        parent = self.env["td.energy.node"].search([("code", "=", "SEC-1")])
+        node = self.env["td.energy.node"].create(
             {"code": "PFC-T", "name": "PFC-T", "kind": "cell", "cell_type": "pfc", "parent_id": parent.id, "section": 1}
         )
         first = self.Event._f3d_pfc_event(node, 50, 100, 0.97)
@@ -104,7 +104,7 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             slot = y0 + timedelta(minutes=15 * k)
             for meter in (m1, m2):
                 self.mk_interval(meter, slot, 40.0 if slot == peak_slot else 10.0)
-        Interval = self.env["f3d.energy.interval"]
+        Interval = self.env["td.energy.interval"]
         self.assertTrue(Interval._f3d_peak_event(now))
         event = self.Event.search([("kind", "=", "peak")])
         yesterday = today - timedelta(days=1)
@@ -132,10 +132,10 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
 
         from psycopg2 import errors
 
-        Event = self.env["f3d.energy.event"]
+        Event = self.env["td.energy.event"]
         with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=errors.SerializationFailure("x")):
             with self.assertRaises(errors.SerializationFailure):
                 Event._f3d_on_ingest({}, [])
         with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=ValueError("x")):
-            with self.assertLogs("odoo.addons.factory3d_energy.models.f3d_energy_event", "ERROR"):
+            with self.assertLogs("odoo.addons.td_energy.models.td_energy_event", "ERROR"):
                 Event._f3d_on_ingest({}, [])

@@ -22,7 +22,7 @@ class TestHooks(AccessCase):
     def setUpClass(cls):
         super().setUpClass()
         # чиста база: прибираємо тестових працівників і зв'язки з AccessCase, щоб порахувати хук
-        cls.env['f3d.access.user.link'].sudo().search([]).unlink()
+        cls.env['td.access.user.link'].sudo().search([]).unlink()
         cls.env['hr.employee'].sudo().search([]).write({'active': False})
 
     def make_demo_like(self):
@@ -36,7 +36,7 @@ class TestHooks(AccessCase):
                 n += 1
                 code = 'T%d-%d' % (n, i)
                 wc_codes.append(code)
-                wc = Workcenter.create({'name': 'РЦ ' + code, 'f3d_code': code, 'f3d_zone_id': self.z_by_code(zone).id})
+                wc = Workcenter.create({'name': 'РЦ ' + code, 'td_code': code, 'td_zone_id': self.z_by_code(zone).id})
                 zone_of[code] = wc
         people = []
         for code, wc in zone_of.items():
@@ -45,18 +45,18 @@ class TestHooks(AccessCase):
             people.append((code, None))
         for i, (code, _wc) in enumerate(people):
             emp = Employee.create({
-                'name': 'Демо %s' % code, 'f3d_code': code, 'barcode': 'DM%03d' % i,
+                'name': 'Демо %s' % code, 'td_code': code, 'barcode': 'DM%03d' % i,
                 'resource_calendar_id': self.cal.id, 'tz': 'Europe/Kyiv'})
             self.env['hr.attendance'].sudo().create({
                 'employee_id': emp.id, 'check_in': datetime(2026, 10, 12, 3, 40 + i % 20), 'in_mode': 'manual'})
         Equipment = self.env['maintenance.equipment'].sudo()
         for code in ('ACCESS', 'TURNSTILES'):
             if not Equipment.search_f3d(code):
-                Equipment.create({'name': 'Обладнання ' + code, 'f3d_code': code})
+                Equipment.create({'name': 'Обладнання ' + code, 'td_code': code})
         return len(people)
 
     def z_by_code(self, code):
-        return self.env['f3d.zone'].search_f3d(code)
+        return self.env['td.zone'].search_f3d(code)
 
     def test_demo_like_counts(self):  # AC-59
         total = self.make_demo_like()
@@ -69,12 +69,12 @@ class TestHooks(AccessCase):
         saved = json.loads(P.get_str(self.env, 'migration_report'))
         self.assertEqual(saved['links'], 35)
         self.assertEqual(P.get_str(self.env, 'migration_state'), 'done')
-        w3 = self.env['hr.employee'].search([('f3d_code', '=', 'OP-W3')])
-        self.assertEqual(w3.f3d_home_zone_id, self.z_by_code('Z-RCV-2'))
-        self.assertTrue(w3.f3d_access_present)
-        self.assertEqual(w3.f3d_access_zone_id, w3.f3d_home_zone_id)
-        self.assertEqual(self.env.ref('factory3d_access.device_acr_in').equipment_id.f3d_code, 'TURNSTILES')
-        self.assertEqual(self.env.ref('factory3d_access.device_acr_srv').equipment_id.f3d_code, 'ACCESS')
+        w3 = self.env['hr.employee'].search([('td_code', '=', 'OP-W3')])
+        self.assertEqual(w3.td_home_zone_id, self.z_by_code('Z-RCV-2'))
+        self.assertTrue(w3.td_access_present)
+        self.assertEqual(w3.td_access_zone_id, w3.td_home_zone_id)
+        self.assertEqual(self.env.ref('td_access.device_acr_in').equipment_id.td_code, 'TURNSTILES')
+        self.assertEqual(self.env.ref('td_access.device_acr_srv').equipment_id.td_code, 'ACCESS')
         self.assertFalse(self.env['hr.attendance'].search_count([('in_mode', '=', 'biostar')]))
         self.assertEqual(self.env['hr.attendance'].search_count([]), 35)
 
@@ -82,7 +82,7 @@ class TestHooks(AccessCase):
         self.make_demo_like()
         hooks.run_all(self.env)
         counts = {m: self.env[m].with_context(active_test=False).search_count([])
-                  for m in ('f3d.access.user.link', 'hr.attendance', 'hr.employee', 'f3d.access.device')}
+                  for m in ('td.access.user.link', 'hr.attendance', 'hr.employee', 'td.access.device')}
         second = hooks.run_all(self.env)
         self.assertEqual((second['links'], second['home_zones'], second['presence_seeded'],
                           second['equipment_bound']), (0, 0, 0, 0))
@@ -97,24 +97,24 @@ class TestHooks(AccessCase):
 
     def test_read_enabled_default(self):  # AC-60
         icp = self.env['ir.config_parameter'].sudo()
-        icp.search([('key', '=', 'factory3d.access.read_enabled')]).unlink()
-        icp.set_param('factory3d.base.environment', 'test')
+        icp.search([('key', '=', 'td.access.read_enabled')]).unlink()
+        icp.set_param('td.base.environment', 'test')
         hooks.run_all(self.env)
         self.assertEqual(P.get_str(self.env, 'read_enabled'), 'True')
         P.set_param(self.env, 'read_enabled', 'False')
         hooks.run_all(self.env)
         self.assertEqual(P.get_str(self.env, 'read_enabled'), 'False')
-        icp.search([('key', '=', 'factory3d.access.read_enabled')]).unlink()
-        icp.set_param('factory3d.base.environment', 'prod')
+        icp.search([('key', '=', 'td.access.read_enabled')]).unlink()
+        icp.set_param('td.base.environment', 'prod')
         hooks.run_all(self.env)
         self.assertEqual(P.get_str(self.env, 'read_enabled'), 'False')
 
     def test_uninstall_hook_cards_before_server(self):  # O-1: деінсталяція з картками не падає на FK card.server_id
         server = self.server
-        cards = self.env['f3d.access.card'].create([
+        cards = self.env['td.access.card'].create([
             {'number': '88000001', 'server_id': server.id, 'holder_type': 'employee', 'employee_id': self.emp_a.id},
             {'number': '88000002', 'server_id': server.id, 'holder_type': 'pool'}])
-        visitor = self.env['f3d.access.visitor'].create(
+        visitor = self.env['td.access.visitor'].create(
             {'name': 'Гість', 'host_employee_id': self.emp_a.id, 'server_id': server.id, 'card_id': cards[1].id})
         visitor.write({'state': 'expected'})  # не чернетка: звичайний unlink заборонений, хук обходить через f3d_housekeeping
         # звичайна робота не змінилась: сервер із картками видалити не можна (SPEC: ondelete='restrict')
@@ -124,18 +124,18 @@ class TestHooks(AccessCase):
         hooks.uninstall_hook(self.env)
         self.assertFalse(cards.exists())
         self.assertFalse(visitor.exists())
-        self.assertFalse(self.env['f3d.access.card'].with_context(active_test=False).search([]))
+        self.assertFalse(self.env['td.access.card'].with_context(active_test=False).search([]))
         # те, що робить стандартна деінсталяція далі: сервер (з пристроями, дверима, подіями) видаляється без FK
         server.unlink()
         server.flush_recordset()
         self.assertFalse(server.exists())
 
     def test_uninstall_hook(self):  # AC-61
-        emp = self.env['hr.employee'].sudo().create({'name': 'Хук', 'f3d_code': 'OP-HOOK'})
+        emp = self.env['hr.employee'].sudo().create({'name': 'Хук', 'td_code': 'OP-HOOK'})
         atts = self.env['hr.attendance'].sudo().create([
             {'employee_id': emp.id, 'check_in': datetime(2026, 10, 12, 3, 0), 'check_out': datetime(2026, 10, 12, 4, 0),
              'in_mode': 'biostar', 'out_mode': 'biostar'},
             {'employee_id': emp.id, 'check_in': datetime(2026, 10, 13, 3, 0), 'in_mode': 'biostar'}])
         hooks.uninstall_hook(self.env)
-        self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.access.%')]))
+        self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'td.access.%')]))
         self.assertEqual(len(atts.exists()), 2)

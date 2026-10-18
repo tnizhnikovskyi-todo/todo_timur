@@ -35,22 +35,22 @@ def payload() -> dict:
 
 
 def energy_sources(od):
-    return od.k("f3d.source", "read", od.energy_source_ids(), ["code", "collector_id"])
+    return od.k("td.source", "read", od.energy_source_ids(), ["code", "collector_id"])
 
 
 # --------------------------------------------------------------------------------------------------- ТК-01
 def test_tk01_install(odoo, stand_ready):
     """AC-13 (демо-копія), AC-73: звіт хука, 68 джерел, 220 сигналів, API-01 з токеном COL-MAIN."""
-    report = json.loads(odoo.get_param("factory3d.energy.install_report") or "{}")
+    report = json.loads(odoo.get_param("td.energy.install_report") or "{}")
     assert report.get("state") in ("done", "partial"), report
     srcs = energy_sources(odoo)
     sigs = odoo.k(
-        "f3d.signal", "search_count", [("source_id", "in", [s["id"] for s in srcs]), ("address", "!=", False)]
+        "td.signal", "search_count", [("source_id", "in", [s["id"] for s in srcs]), ("address", "!=", False)]
     )
     tk_report("01", {"report": report, "sources": len(srcs), "signals": sigs})
     assert len(srcs) == 68
     assert sigs == 220
-    assert not odoo.k("f3d.source", "search_count", [("code", "=", "EN-DERIVED"), ("collector_id", "!=", False)])
+    assert not odoo.k("td.source", "search_count", [("code", "=", "EN-DERIVED"), ("collector_id", "!=", False)])
     token = os.environ.get("F3D_COLLECTOR_TOKEN")
     if token:  # AC-73: API-01 колектора COL-MAIN
         r = httpx.get(odoo.url + "/f3d/telemetry/config", headers={"Authorization": f"Bearer {token}"}, timeout=30)
@@ -66,7 +66,7 @@ def test_tk01_install(odoo, stand_ready):
 @need_demo
 def test_ac13_demo_report(odoo):
     """AC-13: копія демо 14.10 — equipment_linked 80, workcenter_linked 35, signals.created 210/updated 87."""
-    rep = json.loads(odoo.get_param("factory3d.energy.install_report"))
+    rep = json.loads(odoo.get_param("td.energy.install_report"))
     tk_report("01-AC13", rep)
     assert rep["state"] == "done"
     assert rep["equipment_linked"] == 80 and rep["workcenter_linked"] == 35
@@ -115,19 +115,19 @@ def test_tk02_readings_profile(odoo, sim, stand_ready):
     старту колектора — тому очікування інтервалів триває до WAIT_MIN + 25 хв."""
     sim.post("/mode", {"mode": "follow_odoo"})
     time.sleep(WAIT_MIN * 60)
-    meters = odoo.k("f3d.energy.meter", "search_read", [("model", "=", "pm5560")], ["code", "data_state"])
+    meters = odoo.k("td.energy.meter", "search_read", [("model", "=", "pm5560")], ["code", "data_state"])
 
     def meters_without_interval():
-        with_iv = {i["meter_id"][0] for i in odoo.k("f3d.energy.interval", "search_read", [], ["meter_id"])}
+        with_iv = {i["meter_id"][0] for i in odoo.k("td.energy.interval", "search_read", [], ["meter_id"])}
         return [m["code"] for m in meters if m["id"] not in with_iv]
 
     wait_for(lambda: not meters_without_interval(), 25 * 60, 20)
-    meters = odoo.k("f3d.energy.meter", "search_read", [("model", "=", "pm5560")], ["code", "data_state"])
+    meters = odoo.k("td.energy.meter", "search_read", [("model", "=", "pm5560")], ["code", "data_state"])
     states = {}
     for m in meters:
         states[m["data_state"]] = states.get(m["data_state"], 0) + 1
     no_iv = meters_without_interval()
-    bal = odoo.k("f3d.energy.balance", "read_group", [], ["diff_kwh:sum"], ["state"])
+    bal = odoo.k("td.energy.balance", "read_group", [], ["diff_kwh:sum"], ["state"])
     lines = [s["code"] for s in sim.get("/signals", prefix="energy/lines/")["items"] if s["code"].endswith("/p_now")]
     sim_sum = sum(sim.value(c) for c in lines)
     p_now = payload()["infra_totals"].get("load_kw")
@@ -173,12 +173,12 @@ def test_tk08_cloudy(odoo, sim, stand_ready):
     """pv_now падає ≈ втричі, bess_kw < 0 або grid_kw росте; події немає."""
     before = payload()["infra_totals"]
     dom = [("kind", "!=", "pfc")]  # ступені компенсації (cos φ) змінюються незалежно від хмарності
-    ev0 = odoo.k("f3d.energy.event", "search_count", dom)
+    ev0 = odoo.k("td.energy.event", "search_count", dom)
     sim.scenario("pv_cloudy", {"cf": 0.3, "duration_s": 900})
     try:
         time.sleep(5 * 60)
         after = payload()["infra_totals"]
-        ev1 = odoo.k("f3d.energy.event", "search_count", dom)
+        ev1 = odoo.k("td.energy.event", "search_count", dom)
     finally:  # сценарій групи energy блокує blackout (409) — зупиняємо завжди
         sim.post("/scenario/pv_cloudy/stop")
     tk_report("08", {"before": before, "after": after, "events": ev1 - ev0})
@@ -191,7 +191,7 @@ def test_tk08_cloudy(odoo, sim, stand_ready):
 @need_collector
 def test_tk05_blackout_variant_a(odoo, sim, stand_ready):
     """AC-56, AC-59, AC-89: блекаут, варіант A (amf_master=hgm)."""
-    odoo.param("amf_master", "hgm", prefix="factory3d.genset.")
+    odoo.param("amf_master", "hgm", prefix="td.genset.")
     sim.post("/time", {"set": "2026-10-12T10:00:00+03:00"})
     time.sleep(20)  # дати колектору й живому знімку прийняти нову добу
     before = payload()["infra_totals"]
@@ -199,7 +199,7 @@ def test_tk05_blackout_variant_a(odoo, sim, stand_ready):
     sim.scenario("blackout", {"duration_s": BLACKOUT_S, "genset": True, "restore_delay_s": 60})
     outage = wait_for(
         lambda: odoo.k(
-            "f3d.energy.outage", "search_read", [("state", "!=", "closed")], ["transfer_s", "state"], limit=1
+            "td.energy.outage", "search_read", [("state", "!=", "closed")], ["transfer_s", "state"], limit=1
         ),
         90,
         3,
@@ -213,7 +213,7 @@ def test_tk05_blackout_variant_a(odoo, sim, stand_ready):
         time.sleep(3)
     time.sleep(max(0, BLACKOUT_S + 60 + 30 - (time.time() - t0)))
     outage = odoo.k(
-        "f3d.energy.outage",
+        "td.energy.outage",
         "read",
         [outage[0]["id"]],
         ["state", "transfer_s", "return_s", "shed_kw", "amf_master", "fail_start"],
@@ -257,11 +257,11 @@ def test_tk05_blackout_variant_a(odoo, sim, stand_ready):
 @need_genset
 def test_tk06_fail_start_variant_b(odoo, sim, stand_ready):
     """AC-57: amf_master=ats, генератор не запускається → fail_start за 35 ± 5 с і заявка на ATS-1."""
-    odoo.param("amf_master", "ats", prefix="factory3d.genset.")
+    odoo.param("amf_master", "ats", prefix="td.genset.")
     sim.scenario("blackout", {"duration_s": 180, "amf_master": "ats"})
     sim.put("/signals/infra/ats/gen_start", {"value": 1, "hold_s": 120})
     sim.put("/signals/infra/ats/src2_state", {"value": 0, "hold_s": 120})
-    out = wait_for(lambda: odoo.k("f3d.energy.outage", "search_read", [("fail_start", "=", True)], ["id"]), 90, 3)
+    out = wait_for(lambda: odoo.k("td.energy.outage", "search_read", [("fail_start", "=", True)], ["id"]), 90, 3)
     assert out
     req = odoo.k("maintenance.request", "search_count", [("name", "ilike", "FAIL START")])
     assert req >= 1
@@ -271,7 +271,7 @@ def test_tk06_fail_start_variant_b(odoo, sim, stand_ready):
 @need_collector
 def test_tk09_contract_power(odoo, sim, stand_ready):
     """AC-34: contract_kw=300 → заявка «Перевищення договірної потужності»; повернення 800 → ok."""
-    tariffs = odoo.k("f3d.energy.tariff", "search_read", [], ["contract_kw"], limit=1, order="id desc")
+    tariffs = odoo.k("td.energy.tariff", "search_read", [], ["contract_kw"], limit=1, order="id desc")
     old = tariffs[0]["contract_kw"]
     try:
         # Емулятор: СЕС і когенерація (≈ 400 + 400 кВт) покривають навантаження — нетто-імпорт 0 (Q2 віддає в мережу).
@@ -280,7 +280,7 @@ def test_tk09_contract_power(odoo, sim, stand_ready):
         sim.post("/time", {"set": TK09_AT})
         sim.put("/signals/infra/chp/state", {"value": 0, "hold_s": 1500})
         sim.scenario("pv_cloudy", {"cf": 0.05, "duration_s": 1500})
-        odoo.k("f3d.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": 300})
+        odoo.k("td.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": 300})
         req = wait_for(
             lambda: odoo.k(
                 "maintenance.request", "search_read", [("name", "ilike", "Перевищення договірної потужності")], ["name"]
@@ -293,12 +293,12 @@ def test_tk09_contract_power(odoo, sim, stand_ready):
         assert req and "ліміті 300" in req[0]["name"]
         followers = odoo.k("maintenance.request", "read", [req[0]["id"]], ["message_partner_ids"])[0]
         assert followers["message_partner_ids"], "енергетик має бути підписником заявки"
-        odoo.k("f3d.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": 800})
+        odoo.k("td.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": 800})
         assert wait_for(lambda: odoo.signal("energy/totals/grid15_kw").get("status") == "ok", 20 * 60, 20)
     finally:
         sim.put("/signals/infra/chp/state", {"release": True})
         sim.post("/scenario/pv_cloudy/stop")
-        odoo.k("f3d.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": old or 800})
+        odoo.k("td.energy.tariff", "write", [tariffs[0]["id"]], {"contract_kw": old or 800})
 
 
 # --------------------------------------------------------------------------------------------------- ТК-10
@@ -308,12 +308,12 @@ def test_tk10_meter_unavailable(odoo, sim, stand_ready):
     """AC-22: PM-SAW-1 недоступний 70 хв → stale + подія; після clear — слоти interpolated, Σ kwh = різниця."""
     sim.post("/device/SAW-1-PM/fault", {"reason": "comm"})
     time.sleep(70 * 60)
-    meter = odoo.k("f3d.energy.meter", "search_read", [("code", "=", "PM-SAW-1")], ["data_state"])[0]
-    ev = odoo.k("f3d.energy.event", "search_count", [("text", "ilike", "немає даних")])
+    meter = odoo.k("td.energy.meter", "search_read", [("code", "=", "PM-SAW-1")], ["data_state"])[0]
+    ev = odoo.k("td.energy.event", "search_count", [("text", "ilike", "немає даних")])
     sim.post("/device/SAW-1-PM/clear")
     time.sleep(20 * 60)
     ivs = odoo.k(
-        "f3d.energy.interval",
+        "td.energy.interval",
         "search_read",
         [("meter_id.code", "=", "PM-SAW-1"), ("quality", "=", "interpolated")],
         ["kwh"],
@@ -326,7 +326,7 @@ def test_tk10_meter_unavailable(odoo, sim, stand_ready):
 @need_demo
 @need_collector
 def test_tk03_shift_to_mo(odoo, sim, stand_ready):
-    """AC-88: WO SAW-1/EDGE-1 f3d_energy_direct_kwh = ∫ p_now емулятора ± 3 %, quality measured; спільні > 0."""
+    """AC-88: WO SAW-1/EDGE-1 td_energy_direct_kwh = ∫ p_now емулятора ± 3 %, quality measured; спільні > 0."""
     sim.post("/mode", {"mode": "scenario"})
     bom = odoo.k("mrp.bom", "search_read", [("code", "ilike", "A")], ["product_tmpl_id"], limit=1)[0]
     prod = odoo.k("product.product", "search", [("product_tmpl_id", "=", bom["product_tmpl_id"][0])], limit=1)[0]
@@ -346,18 +346,18 @@ def test_tk03_shift_to_mo(odoo, sim, stand_ready):
         integral += sim.value("energy/consumers/SAW-1/p_now") * (now - last) / 3600
         last = now
     odoo.k("mrp.workorder", "button_finish", [saw])
-    wo = odoo.k("mrp.workorder", "read", [saw], ["f3d_energy_direct_kwh", "f3d_energy_quality"])[0]
-    kwh = wo["f3d_energy_direct_kwh"]
-    shared = odoo.k("f3d.energy.alloc", "read_group", [("production_id", "=", mo)], ["kwh:sum"], ["pool_id"])
+    wo = odoo.k("mrp.workorder", "read", [saw], ["td_energy_direct_kwh", "td_energy_quality"])[0]
+    kwh = wo["td_energy_direct_kwh"]
+    shared = odoo.k("td.energy.alloc", "read_group", [("production_id", "=", mo)], ["kwh:sum"], ["pool_id"])
     tk_report("03", {"mo": mo, "wo": wo, "integral": integral, "shared_by_pool": shared})
-    assert wo["f3d_energy_quality"] == "measured"
+    assert wo["td_energy_quality"] == "measured"
     assert any(g["pool_id"] and g["kwh"] > 0 for g in shared)
     assert abs(kwh - integral) <= 0.03 * integral
 
 
 @need_demo
 def test_tk04_costing_avco(odoo):
-    """AC-46: AVCO: extra_cost = f3d_energy_cost / qty, f3d_energy_locked (потребує копії бази)."""
+    """AC-46: AVCO: extra_cost = td_energy_cost / qty, td_energy_locked (потребує копії бази)."""
     pytest.skip("залежить від МО ТК-03 і зміни категорії на AVCO (лише копія демо)")
 
 
@@ -381,7 +381,7 @@ def test_tk11b_nonzero_counters(odoo, sim, stand_ready):
 @need_demo
 def test_ac53_mo231(odoo):
     """AC-53: крон розподілу 12.10 → WH/MO/00231: WO00001…4 прямі 17,160 / 46,069 / 13,567 / 4,350 (estimate)."""
-    cron = odoo.ref_id("factory3d_energy.cron_f3d_energy_alloc")
+    cron = odoo.ref_id("td_energy.cron_td_energy_alloc")
     odoo.k("ir.cron", "method_direct_trigger", [cron])
     mo = odoo.k("mrp.production", "search", [("name", "=", "WH/MO/00231")], limit=1)
     assert mo, "МО WH/MO/00231 відсутнє (потрібна копія демо 14.10)"
@@ -389,13 +389,13 @@ def test_ac53_mo231(odoo):
         "mrp.workorder",
         "search_read",
         [("production_id", "=", mo[0])],
-        ["name", "f3d_energy_direct_kwh", "f3d_energy_quality"],
+        ["name", "td_energy_direct_kwh", "td_energy_quality"],
         order="id",
     )
     tk_report("AC53", {"wos": wos})
     want = [17.160, 46.069, 13.567, 4.350]
-    assert [round(w["f3d_energy_direct_kwh"], 3) for w in wos[:4]] == want
-    assert all(w["f3d_energy_quality"] == "estimate" for w in wos[:4])
+    assert [round(w["td_energy_direct_kwh"], 3) for w in wos[:4]] == want
+    assert all(w["td_energy_quality"] == "estimate" for w in wos[:4])
 
 
 @need_collector
@@ -403,7 +403,7 @@ def test_ac92_balance_nodes(odoo, stand_ready):
     """AC-92 (етап 2 «весь ГРЩ»): за повний годину баланс вузлів `ok` (Q1 і три фідери — серед них) або `deviation`
     з причиною. Потрібна хоча б одна повна година даних колектора (крон балансу: щогодини о :07)."""
     rows = odoo.k(
-        "f3d.energy.balance",
+        "td.energy.balance",
         "search_read",
         [],
         ["node_id", "hour", "state", "diff_pct", "reason"],

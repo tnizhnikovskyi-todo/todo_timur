@@ -3,7 +3,7 @@
 // що імпортує бандл переглядача (r160) і виставляє `globalThis.__F3D_THREE__`. Odoo-завантажувач не підтримує «живі» експорти,
 // тому `THREE` — стабільний об'єкт-контейнер, який `loadThree()` наповнює (всі експорти three + OrbitControls + GLTFLoader).
 // Код редактора пишеться як у прототипі: `new THREE.Vector3()`.
-import { loadThree as loadBundle, webglAvailable } from "@factory3d_constructor/model/three";
+import { loadThree as loadBundle, webglAvailable } from "@td_constructor/model/three";
 
 export const THREE = {};
 export { webglAvailable };

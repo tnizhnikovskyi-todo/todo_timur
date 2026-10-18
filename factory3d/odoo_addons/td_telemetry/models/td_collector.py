@@ -8,15 +8,15 @@ from datetime import timedelta
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
-GROUP_ADMIN = "factory3d_base.group_f3d_admin"
-TOUCH_INTERVAL_PARAM = "factory3d.telemetry.touch_interval_s"
+GROUP_ADMIN = "td_factory3d.group_td_admin"
+TOUCH_INTERVAL_PARAM = "td.telemetry.touch_interval_s"
 TOUCH_INTERVAL_S = 30  # DEC-19: мінімальний інтервал запису last_seen/last_push_at
 RATE_WINDOW_S = 60  # R-17 п. 2: вікно ліміту частоти push
-RATE_KEEP_S = 600  # скільки секунд `_cron_offline` тримає журнал пакетів `f3d_collector_push`
+RATE_KEEP_S = 600  # скільки секунд `_cron_offline` тримає журнал пакетів `td_collector_push`
 
 
 class F3dCollector(models.Model):
-    _name = "f3d.collector"
+    _name = "td.collector"
     _description = "Телеметрія: колектор"
     _inherit = ["mail.thread"]
     _order = "code"
@@ -50,7 +50,7 @@ class F3dCollector(models.Model):
     buffer_dropped = fields.Integer(string="Втрачено з буфера", readonly=True)
     plugins = fields.Json(string="Плагіни", readonly=True)
     config_etag = fields.Char(string="ETag конфігурації", readonly=True)
-    source_ids = fields.One2many("f3d.source", "collector_id", string="Джерела")
+    source_ids = fields.One2many("td.source", "collector_id", string="Джерела")
     source_count = fields.Integer(string="Джерел", compute="_compute_counts")
     signal_count = fields.Integer(string="Сигналів", compute="_compute_counts")
     note = fields.Text(string="Примітка")
@@ -72,21 +72,21 @@ class F3dCollector(models.Model):
         """DEC-19: журнал пакетів для ліміту частоти (лише вставки, без FK) — окремо від рядка колектора."""
         super().init()
         self.env.cr.execute(
-            "CREATE TABLE IF NOT EXISTS f3d_collector_push (collector_id integer NOT NULL, ts timestamp NOT NULL)"
+            "CREATE TABLE IF NOT EXISTS td_collector_push (collector_id integer NOT NULL, ts timestamp NOT NULL)"
         )
         self.env.cr.execute(
-            "CREATE INDEX IF NOT EXISTS f3d_collector_push_collector_ts_idx ON f3d_collector_push (collector_id, ts)"
+            "CREATE INDEX IF NOT EXISTS td_collector_push_collector_ts_idx ON td_collector_push (collector_id, ts)"
         )
 
     def _compute_counts(self):
         sources = {}
         signals = {}
         if self.ids:
-            for collector, count in self.env["f3d.source"]._read_group(
+            for collector, count in self.env["td.source"]._read_group(
                 [("collector_id", "in", self.ids)], ["collector_id"], ["__count"]
             ):
                 sources[collector.id] = count
-            for collector, count in self.env["f3d.signal"]._read_group(
+            for collector, count in self.env["td.signal"]._read_group(
                 [("source_id.collector_id", "in", self.ids)], ["collector_id"], ["__count"]
             ):
                 signals[collector.id] = count
@@ -111,7 +111,7 @@ class F3dCollector(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Токен колектора"),
-            "res_model": "f3d.collector.token.wizard",
+            "res_model": "td.collector.token.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_collector_id": self.id, "default_token": token},
@@ -139,7 +139,7 @@ class F3dCollector(models.Model):
         """Контакт колектора: `last_seen`, `last_ip`, `version`, `state` → `online` (+ `last_push_at` при `pushed`).
 
         DEC-19: рядок колектора спільний для всіх запитів, тому запис — не частіше ніж раз на
-        `min(touch_interval_s, status_interval_s)` с (параметр `factory3d.telemetry.touch_interval_s`, 30 за
+        `min(touch_interval_s, status_interval_s)` с (параметр `td.telemetry.touch_interval_s`, 30 за
         замовчуванням; не більше `status_interval_s`, щоб `_cron_offline` — 3·status_interval_s — не спрацював хибно).
         Негайно пишеться зміна стану (не `online`) чи версії. IP не є причиною запису: за CDN/проксі (Cloudflare)
         він інший у кожного запиту й звів би тротлінг нанівець; `last_ip` оновлюється разом із тротлінговим
@@ -173,10 +173,10 @@ class F3dCollector(models.Model):
         icp = self.env["ir.config_parameter"].sudo()
 
         def flag(key):
-            return icp.get_param("factory3d.telemetry." + key, "False") in ("True", "true", "1")
+            return icp.get_param("td.telemetry." + key, "False") in ("True", "true", "1")
 
         read_enabled, write_enabled = flag("read_enabled"), flag("write_enabled")
-        local = self.env["f3d.source"]._f3d_local_types()
+        local = self.env["td.source"]._f3d_local_types()
         sources = []
         for src in self.sudo().source_ids.filtered(lambda s: s.active and s.type not in local).sorted("code"):
             signals = []
@@ -215,8 +215,8 @@ class F3dCollector(models.Model):
                 "config_poll_s": self.config_poll_s,
             },
             "params": {
-                "stale_periods": int(icp.get_param("factory3d.telemetry.stale_periods", "3") or 3),
-                "stale_min_s": int(icp.get_param("factory3d.telemetry.stale_min_s", "60") or 60),
+                "stale_periods": int(icp.get_param("td.telemetry.stale_periods", "3") or 3),
+                "stale_min_s": int(icp.get_param("td.telemetry.stale_min_s", "60") or 60),
             },
             "sources": sources,
         }
@@ -241,18 +241,18 @@ class F3dCollector(models.Model):
     def _rate_check(self):
         """R-17 п. 2: вікно 60 с, не більше `push_rate_per_min` пакетів (інакше `429`).
 
-        DEC-19: лічильник не лежить у рядку колектора. Кожен пакет — один `INSERT` у `f3d_collector_push`, далі
+        DEC-19: лічильник не лежить у рядку колектора. Кожен пакет — один `INSERT` у `td_collector_push`, далі
         `COUNT` за останні 60 с. Рядки лише додаються, тож паралельні push одного колектора не блокують один
         одного й не дають serialization failure (на відміну від `UPDATE` спільного рядка). Старі рядки
         прибирає `_cron_offline`. Відхилені пакети теж рахуються, як і раніше.
         """
         self.ensure_one()
         now = fields.Datetime.now()
-        limit = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.push_rate_per_min", "60"))
+        limit = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.push_rate_per_min", "60"))
         cr = self.env.cr
-        cr.execute("INSERT INTO f3d_collector_push (collector_id, ts) VALUES (%s, %s)", (self.id, now))
+        cr.execute("INSERT INTO td_collector_push (collector_id, ts) VALUES (%s, %s)", (self.id, now))
         cr.execute(
-            "SELECT COUNT(*) FROM f3d_collector_push WHERE collector_id = %s AND ts > %s",
+            "SELECT COUNT(*) FROM td_collector_push WHERE collector_id = %s AND ts > %s",
             (self.id, now - timedelta(seconds=RATE_WINDOW_S)),
         )
         return cr.fetchone()[0] <= limit
@@ -263,7 +263,7 @@ class F3dCollector(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Джерела"),
-            "res_model": "f3d.source",
+            "res_model": "td.source",
             "view_mode": "list,form",
             "domain": [("collector_id", "=", self.id)],
             "context": {"default_collector_id": self.id},
@@ -273,7 +273,7 @@ class F3dCollector(models.Model):
     def _cron_offline(self):
         """R-25: онлайн-колектор без контакту > 3·status_interval_s → offline, його джерела й сигнали."""
         now = fields.Datetime.now()
-        self.env.cr.execute("DELETE FROM f3d_collector_push WHERE ts < %s", (now - timedelta(seconds=RATE_KEEP_S),))
+        self.env.cr.execute("DELETE FROM td_collector_push WHERE ts < %s", (now - timedelta(seconds=RATE_KEEP_S),))
         for col in self.sudo().search([("state", "=", "online"), ("last_seen", "!=", False)]):
             if col.last_seen < now - timedelta(seconds=3 * col.status_interval_s):
                 col.write({"state": "offline"})

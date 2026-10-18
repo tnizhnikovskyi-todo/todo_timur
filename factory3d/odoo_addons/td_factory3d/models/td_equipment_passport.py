@@ -8,7 +8,7 @@ ROLE_RE = re.compile(r'^[a-z][a-z0-9_]*$')
 
 
 class F3dEquipmentPassport(models.Model):
-    _name = 'f3d.equipment.passport'
+    _name = 'td.equipment.passport'
     _description = "Паспорт обладнання"
     _order = 'manufacturer, model'
     _rec_name = 'name'
@@ -29,11 +29,11 @@ class F3dEquipmentPassport(models.Model):
     connected_kw = fields.Float(string="Потужність підключення, кВт", digits=(8, 2))
     connected_note = fields.Text(string="Про потужність підключення")
     note = fields.Text(string="Примітка")
-    spec_ids = fields.One2many('f3d.equipment.spec', 'passport_id', string="Параметри")
-    source_ids = fields.One2many('f3d.equipment.source', 'passport_id', string="Джерела")
-    equipment_ids = fields.One2many('maintenance.equipment', 'f3d_passport_id', string="Одиниці")
+    spec_ids = fields.One2many('td.equipment.spec', 'passport_id', string="Параметри")
+    source_ids = fields.One2many('td.equipment.source', 'passport_id', string="Джерела")
+    equipment_ids = fields.One2many('maintenance.equipment', 'td_passport_id', string="Одиниці")
     component_of_ids = fields.Many2many(
-        'maintenance.equipment', relation='f3d_equipment_component_passport_rel',
+        'maintenance.equipment', relation='td_equipment_component_passport_rel',
         column1='passport_id', column2='equipment_id', string="У складі одиниць")
     unit_count = fields.Integer(string="Одиниць під паспортом", compute='_compute_counts')
     component_count = fields.Integer(compute='_compute_counts')
@@ -89,18 +89,18 @@ class F3dEquipmentPassport(models.Model):
             'name': self.name,
             'res_model': 'maintenance.equipment',
             'view_mode': 'list,form',
-            'domain': [('f3d_passport_id', '=', self.id)],
+            'domain': [('td_passport_id', '=', self.id)],
         }
 
 
 class F3dEquipmentSpec(models.Model):
-    _name = 'f3d.equipment.spec'
+    _name = 'td.equipment.spec'
     _description = "Параметр паспорта обладнання"
     _order = 'passport_id, sequence, id'
     _rec_name = 'name'
 
     passport_id = fields.Many2one(
-        'f3d.equipment.passport', required=True, ondelete='cascade', index=True)
+        'td.equipment.passport', required=True, ondelete='cascade', index=True)
     sequence = fields.Integer(default=10)
     key = fields.Char(
         string="Ключ", size=64, index=True,
@@ -124,12 +124,12 @@ class F3dEquipmentSpec(models.Model):
 
 
 class F3dEquipmentSource(models.Model):
-    _name = 'f3d.equipment.source'
+    _name = 'td.equipment.source'
     _description = "Джерело паспорта обладнання"
     _order = 'passport_id, kind, sequence, id'
 
     passport_id = fields.Many2one(
-        'f3d.equipment.passport', required=True, ondelete='cascade', index=True)
+        'td.equipment.passport', required=True, ondelete='cascade', index=True)
     sequence = fields.Integer(default=10)
     url = fields.Char(string="Посилання", size=1024, required=True)
     name = fields.Char(string="Назва", size=128, compute='_compute_name', store=True,

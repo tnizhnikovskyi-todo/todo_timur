@@ -30,12 +30,12 @@ class TestYardMigration(YardFlowCase):
         b_in = self._batch("incoming", partner=partner, dock=self.dock_t1, start=at(9, 30), end=at(10, 30))
         b_out = self._batch("outgoing", partner=partner, dock=self.dock_t3, start=at(12, 0), end=at(13, 0))
         b_out.picking_ids.carrier_id = carrier
-        b_in.f3d_code, b_out.f3d_code = "TRUCK-T-1", "TRUCK-T-2"
+        b_in.td_code, b_out.td_code = "TRUCK-T-1", "TRUCK-T-2"
         return b_in | b_out, carrier
 
     # ------------------------------------------------------------------ AC-48
     def test_signals_loaded(self):  # AC-48
-        Signal = self.env["f3d.signal"].with_context(active_test=False)
+        Signal = self.env["td.signal"].with_context(active_test=False)
         rows = self._csv()
         self.assertEqual(len(rows), 18)
         sigs = Signal.search([("code", "in", [r["code"] for r in rows])])
@@ -45,30 +45,30 @@ class TestYardMigration(YardFlowCase):
             sig = sigs.filtered(lambda s, row=row: s.code == row["code"])
             self.assertEqual(sig.address, json.loads(row["address"]), row["code"])
         self.assertEqual(sigs.filtered(lambda s: s.code.endswith("TRUCK-SCALE/stable")).address["field"], "stable")
-        sources = self.env["f3d.source"].search([("code", "in", [s["code"] for s in migrate.SOURCES])])
+        sources = self.env["td.source"].search([("code", "in", [s["code"] for s in migrate.SOURCES])])
         self.assertEqual(len(sources), 2)
         self.assertEqual(set(sources.mapped("module")), {"yard"})
         for spec in migrate.SOURCES:  # валідація telemetry виконана constrains при записі
             self.assertEqual(sources.filtered(lambda s, spec=spec: s.code == spec["code"]).params, spec["params"])
         lpr = sigs.filtered(lambda s: s.code.startswith("yard/lpr/"))
-        push = self.env.ref("factory3d_telemetry.source_http_push", raise_if_not_found=False)
+        push = self.env.ref("td_telemetry.source_http_push", raise_if_not_found=False)
         if push:
             self.assertEqual(lpr.source_id, push)
         linked = 0
         for xmlid in ("gate_w", "gate_e", "scale_truck"):
-            rec = self.env.ref("factory3d_yard." + xmlid)
+            rec = self.env.ref("td_yard." + xmlid)
             linked += sum(1 for f in rec._fields if f.endswith("_signal_id") and rec[f])
         self.assertEqual(linked, 16)
 
     def test_signals_step_idempotent(self):  # AC-48
-        sig = self.env["f3d.signal"].search([("code", "=", "yard/scale/TRUCK-SCALE/weight_kg")])
+        sig = self.env["td.signal"].search([("code", "=", "yard/scale/TRUCK-SCALE/weight_kg")])
         sig.sudo().write({"last_value": 12345.0})
         res = migrate.signals_and_sources(self.env)
         self.assertEqual((res["signals_created"], res["signals_updated"], res["linked"]), (0, 18, 16))
         self.assertEqual(sig.last_value, 12345.0)
 
     def test_ingest_foreign_codes_skip_hook(self):  # AC-48
-        Signal = self.env["f3d.signal"]
+        Signal = self.env["td.signal"]
         sig = Signal.create({"code": "other/x/y", "name": "T", "kind": "gauge", "create_request": False})
         readings = [{"code": sig.code, "ts": "2026-10-12T10:00:00Z", "value": float(i)} for i in range(3)]
         with patch.object(type(Signal), "_f3d_yard_safe") as safe:
@@ -96,11 +96,11 @@ class TestYardMigration(YardFlowCase):
         self.assertEqual(rep["errors"], [])
         self.assertEqual(rep["visits_from_batches"]["visits"], 2)
         self.assertEqual(rep["bookings_from_batches"], {"bookings": 2, "conflicts": 0})
-        visits = batches.f3d_visit_ids
+        visits = batches.td_visit_ids
         self.assertEqual(set(visits.mapped("state")), {"handling"})
         self.assertEqual(set(visits.booking_ids.mapped("source")), {"migration"})
         self.assertEqual(set(visits.booking_ids.mapped("state")), {"confirmed"})
-        v_in, v_out = batches[0].f3d_visit_ids, batches[1].f3d_visit_ids
+        v_in, v_out = batches[0].td_visit_ids, batches[1].td_visit_ids
         self.assertEqual((v_in.visit_type, v_out.visit_type), ("incoming", "outgoing"))
         self.assertEqual(v_in.carrier_id, v_in.partner_id)
         self.assertEqual(v_out.carrier_id, self.env.company.partner_id)
@@ -109,11 +109,11 @@ class TestYardMigration(YardFlowCase):
         again = hooks.run_all(self.env)
         self.assertEqual(again["visits_from_batches"]["visits"], 0)
         self.assertEqual(again["bookings_from_batches"]["bookings"], 0)
-        self.assertEqual(len(batches.f3d_visit_ids), 2)
+        self.assertEqual(len(batches.td_visit_ids), 2)
         self.assertEqual(json.loads(P.get_str(self.env, "migration_report"))["visits_from_batches"]["visits"], 0)
 
     def test_run_all_empty_skipped(self):  # AC-76
-        self.env["stock.picking.batch"].search([("f3d_code", "=like", "TRUCK-%")]).write({"f3d_code": False})
+        self.env["stock.picking.batch"].search([("td_code", "=like", "TRUCK-%")]).write({"td_code": False})
         rep = hooks.run_all(self.env)
         self.assertTrue(rep["visits_from_batches"]["skipped"])
         self.assertEqual(P.get_str(self.env, "migration_state"), "skipped")
@@ -124,7 +124,7 @@ class TestYardMigration(YardFlowCase):
 
         with (
             patch.object(hooks, "STEPS", (carrier_partners, migrate.product_weights)),
-            self.assertLogs("odoo.addons.factory3d_yard.hooks", level="ERROR"),
+            self.assertLogs("odoo.addons.td_yard.hooks", level="ERROR"),
         ):
             rep = hooks.run_all(self.env)
         self.assertEqual(len(rep["errors"]), 1)
@@ -132,7 +132,7 @@ class TestYardMigration(YardFlowCase):
         self.assertEqual(P.get_str(self.env, "migration_state"), "partial")
 
     def test_run_migration_button(self):  # V-34
-        Visit = self.env["f3d.yard.visit"]
+        Visit = self.env["td.yard.visit"]
         with self.assertRaises(AccessError):
             Visit.with_user(self.user_manager).f3d_yard_run_migration()
         action = Visit.f3d_yard_run_migration()
@@ -162,9 +162,9 @@ class TestYardMigration(YardFlowCase):
         )
         res = migrate.carrier_partners(self.env)
         self.assertGreaterEqual(res["carriers_linked"], 2)
-        self.assertEqual(own.f3d_partner_id, self.env.company.partner_id)
-        self.assertEqual(other.f3d_partner_id, partner)
-        self.assertTrue(partner.f3d_is_carrier)
+        self.assertEqual(own.td_partner_id, self.env.company.partner_id)
+        self.assertEqual(other.td_partner_id, partner)
+        self.assertTrue(partner.td_is_carrier)
 
     # ------------------------------------------------------------------ AC-79
     def test_manual_cycle_without_signals(self):  # AC-79
@@ -173,19 +173,19 @@ class TestYardMigration(YardFlowCase):
         booking = self._booking(visit, self.dock_t1, at(9, 30), at(10, 30), confirm=True)
         self.assertTrue(booking)
         guard = self.env(user=self.user_guard)
-        v = guard["f3d.yard.visit"].browse(visit.id)
-        self.env["ir.config_parameter"].sudo().set_param("factory3d.yard.write_enabled", "False")
+        v = guard["td.yard.visit"].browse(visit.id)
+        self.env["ir.config_parameter"].sudo().set_param("td.yard.write_enabled", "False")
         v.action_arrive()
         res = v.action_admit()
         self.assertIn("пульта", res["params"]["message"])
-        gate = self.env.ref("factory3d_yard.gate_w")
+        gate = self.env.ref("td_yard.gate_w")
         self.assertEqual(gate.admitted_today, 1)
         self.assertEqual(gate.state, "unknown")
-        data = guard["f3d.yard.visit"].kpp_data()
+        data = guard["td.yard.visit"].kpp_data()
         self.assertFalse(data["can"]["command"])
         v.action_call_to_dock()
-        scale = self.env.ref("factory3d_yard.scale_truck")
-        W = self.env["f3d.yard.weighing"]
+        scale = self.env.ref("td_yard.scale_truck")
+        W = self.env["td.yard.weighing"]
         W.create({"scale_id": scale.id, "visit_id": visit.id, "kind": "in", "weight_kg": 25200, "source": "manual"})
         W.create({"scale_id": scale.id, "visit_id": visit.id, "kind": "out", "weight_kg": 14000, "source": "manual"})
         self.assertAlmostEqual(visit.net_kg, 11200.0)

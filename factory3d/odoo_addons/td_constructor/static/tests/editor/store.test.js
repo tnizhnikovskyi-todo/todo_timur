@@ -1,7 +1,7 @@
 /** @odoo-module */
 // AC-61 (черга, автозбереження, id_map, повтор), AC-48 (x_m з API ↔ x у редакторі), AC-66 (площадки), відображення API-03 ↔ стан редактора.
 import { advanceTime, describe, expect, test } from "@odoo/hoot";
-import { OdooStore, normalizeLoaded, placementToApi, polygonToRect, rectToPolygon, slotToApi } from "@factory3d_constructor/editor/store";
+import { OdooStore, normalizeLoaded, placementToApi, polygonToRect, rectToPolygon, slotToApi } from "@td_constructor/editor/store";
 import { makeLoad, makeSecondSite, mockRpc } from "./fixtures";
 
 describe.current.tags("desktop");
@@ -18,23 +18,23 @@ function newStore(routes, opts = {}) {
 
 test("AC-61 queue зливає операції над тим самим записом", async () => {
     const { store } = newStore({});
-    store.queue({ model: "f3d.slot", op: "create", uid: "t1", vals: { x_m: 1, y_m: 2 } });
-    store.queue({ model: "f3d.slot", op: "write", uid: "t1", vals: { x_m: 5 } });
+    store.queue({ model: "td.slot", op: "create", uid: "t1", vals: { x_m: 1, y_m: 2 } });
+    store.queue({ model: "td.slot", op: "write", uid: "t1", vals: { x_m: 5 } });
     expect(store.pendingCount).toBe(1);
-    const c = store.pending.get("f3d.slot:t1");
+    const c = store.pending.get("td.slot:t1");
     expect(c.kind).toBe("create");
     expect(c.vals).toEqual({ x_m: 5, y_m: 2 });
 
-    store.queue({ model: "f3d.placement", op: "write", id: 88, uid: "p88", etag: "e1", vals: { x_m: 1 } });
-    store.queue({ model: "f3d.placement", op: "write", id: 88, uid: "p88", etag: "e2", vals: { rotation: 90 } });
+    store.queue({ model: "td.placement", op: "write", id: 88, uid: "p88", etag: "e1", vals: { x_m: 1 } });
+    store.queue({ model: "td.placement", op: "write", id: 88, uid: "p88", etag: "e2", vals: { rotation: 90 } });
     expect(store.pendingCount).toBe(2);
-    expect(store.pending.get("f3d.placement:p88").vals).toEqual({ x_m: 1, rotation: 90 });
-    expect(store.pending.get("f3d.placement:p88").etag).toBe("e1"); // etag — від першої зміни
+    expect(store.pending.get("td.placement:p88").vals).toEqual({ x_m: 1, rotation: 90 });
+    expect(store.pending.get("td.placement:p88").etag).toBe("e1"); // etag — від першої зміни
 
-    store.queue({ model: "f3d.placement", op: "unlink", id: 88, uid: "p88" });
-    expect(store.pending.get("f3d.placement:p88").kind).toBe("unlink");
-    store.queue({ model: "f3d.slot", op: "unlink", uid: "t1" });
-    expect(store.pending.has("f3d.slot:t1")).toBe(false); // create + unlink = нічого
+    store.queue({ model: "td.placement", op: "unlink", id: 88, uid: "p88" });
+    expect(store.pending.get("td.placement:p88").kind).toBe("unlink");
+    store.queue({ model: "td.slot", op: "unlink", uid: "t1" });
+    expect(store.pending.has("td.slot:t1")).toBe(false); // create + unlink = нічого
     expect(store.pendingCount).toBe(1);
 });
 
@@ -44,31 +44,31 @@ test("AC-61 автозбереження через autosave_ms; id_map підм
         {
             [SAVE]: ({ ops }) => {
                 if (ops[0].op === "create") {
-                    return ok({ id_map: { t1: 120 }, etags: { "f3d.slot:120": "E1" } });
+                    return ok({ id_map: { t1: 120 }, etags: { "td.slot:120": "E1" } });
                 }
-                return ok({ etags: { "f3d.slot:120": "E2" } });
+                return ok({ etags: { "td.slot:120": "E2" } });
             },
         },
         { onSaved: (r) => saved.push(r) }
     );
-    store._bind("f3d.layer", "lyx", 5, "L1");
-    store.queue({ model: "f3d.slot", op: "create", uid: "t1", vals: { layer_id: "@lyx", template: "zone", x_m: 1 } });
+    store._bind("td.layer", "lyx", 5, "L1");
+    store.queue({ model: "td.slot", op: "create", uid: "t1", vals: { layer_id: "@lyx", template: "zone", x_m: 1 } });
     await advanceTime(1400);
     expect(rpc.calls.length).toBe(0);
     await advanceTime(200);
     await store.flushing;
     expect(rpc.calls.length).toBe(1);
     const op = rpc.calls[0].params.ops[0];
-    expect(op).toEqual({ model: "f3d.slot", op: "create", tmp: "t1", vals: { layer_id: 5, template: "zone", x_m: 1 } }); // "@lyx" → 5
-    expect(store.rids.get("f3d.slot:t1")).toBe(120);
+    expect(op).toEqual({ model: "td.slot", op: "create", tmp: "t1", vals: { layer_id: 5, template: "zone", x_m: 1 } }); // "@lyx" → 5
+    expect(store.rids.get("td.slot:t1")).toBe(120);
     expect(saved[0].id_map).toEqual({ t1: 120 });
     expect(saved[0].updates.find((u) => u.uid === "t1").etag).toBe("E1");
 
-    store.queue({ model: "f3d.slot", op: "write", uid: "t1", vals: { x_m: 7 } });
+    store.queue({ model: "td.slot", op: "write", uid: "t1", vals: { x_m: 7 } });
     await store.flush();
     const w = rpc.calls[1].params.ops[0];
-    expect(w).toEqual({ model: "f3d.slot", op: "write", id: 120, etag: "E1", vals: { x_m: 7 } });
-    expect(store.etags.get("f3d.slot:t1")).toBe("E2");
+    expect(w).toEqual({ model: "td.slot", op: "write", id: 120, etag: "E1", vals: { x_m: 7 } });
+    expect(store.etags.get("td.slot:t1")).toBe("E2");
     expect(store.status).toBe("saved");
 });
 
@@ -86,8 +86,8 @@ test("AC-61 мережева помилка: черга лишається, по
         },
         { onStatus: (s) => statuses.push(s) }
     );
-    store._bind("f3d.slot", "s1", 9, "E");
-    store.queue({ model: "f3d.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
+    store._bind("td.slot", "s1", 9, "E");
+    store.queue({ model: "td.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
     await advanceTime(1600);
     await store.flushing;
     expect(rpc.calls.length).toBe(1);
@@ -120,16 +120,16 @@ test("R-21 конфлікт: «залишити моє» повторює зап
         },
         { onConflict: () => "mine" }
     );
-    store._bind("f3d.slot", "s1", 9, "E1");
-    store.queue({ model: "f3d.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
+    store._bind("td.slot", "s1", 9, "E1");
+    store.queue({ model: "td.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
     const r = await store.flush();
     expect(r.ok).toBe(true);
     expect(rpc.calls.length).toBe(2);
     expect(rpc.calls[1].params.ops[0].etag).toBe("E9");
 
     const { store: s2 } = newStore({ [SAVE]: { ok: false, code: "conflict", message: "x", op_index: 0, current: { id: 9, etag: "E9" } } }, { onConflict: () => "theirs" });
-    s2._bind("f3d.slot", "s1", 9, "E1");
-    s2.queue({ model: "f3d.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
+    s2._bind("td.slot", "s1", 9, "E1");
+    s2.queue({ model: "td.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
     const r2 = await s2.flush();
     expect(r2.reload).toBe(true);
     expect(r2.rejected[0].code).toBe("conflict");
@@ -145,10 +145,10 @@ test("AC-49/R-11 відмова сервера (rights): операція від
         },
         { onReject: (r) => rejected.push(r) }
     );
-    store._bind("f3d.slot", "bad", 9, "E");
-    store._bind("f3d.slot", "good", 10, "E");
-    store.queue({ model: "f3d.slot", op: "write", uid: "bad", vals: { x_m: 1 } });
-    store.queue({ model: "f3d.slot", op: "write", uid: "good", vals: { x_m: 2 } });
+    store._bind("td.slot", "bad", 9, "E");
+    store._bind("td.slot", "good", 10, "E");
+    store.queue({ model: "td.slot", op: "write", uid: "bad", vals: { x_m: 1 } });
+    store.queue({ model: "td.slot", op: "write", uid: "good", vals: { x_m: 2 } });
     const r = await store.flush();
     expect(rejected.length).toBe(1);
     expect(rejected[0].message.includes("редагує")).toBe(true);
@@ -170,22 +170,22 @@ test("loadSite → стан редактора; sync() ставить лише �
 
     st.placements[0].x = 25.5;
     expect(store.sync(st)).toBe(1);
-    const w = store.pending.get("f3d.placement:plm1");
+    const w = store.pending.get("td.placement:plm1");
     expect(w.kind).toBe("write");
     expect(w.vals).toEqual({ x_m: 25.5 }); // лише змінене поле
 
     st.placements.push({ id: "newpl", rid: null, layer_id: "lyp", variant_id: "11", slot_id: null, x: 5, y: 5, rotation: 0, code: "M-2", name: "Верстат 2" });
     st.slots = st.slots.filter((s) => s.id !== "slrack");
     expect(store.sync(st)).toBe(2);
-    expect(store.pending.get("f3d.placement:newpl").vals.layer_id).toBe("@lyp");
-    expect(store.pending.get("f3d.slot:slrack").kind).toBe("unlink");
+    expect(store.pending.get("td.placement:newpl").vals.layer_id).toBe("@lyp");
+    expect(store.pending.get("td.slot:slrack").kind).toBe("unlink");
 
     await store.flush();
     const ops = rpc.of(SAVE)[0].params.ops;
-    expect(ops.map((o) => o.model + ":" + o.op)).toEqual(["f3d.placement:create", "f3d.placement:write", "f3d.slot:unlink"]);
+    expect(ops.map((o) => o.model + ":" + o.op)).toEqual(["td.placement:create", "td.placement:write", "td.slot:unlink"]);
     expect(ops[0].vals.layer_id).toBe(3); // "@lyp" → серверний id шару
     expect(ops[1].etag).toBe("2026-10-17 10:00:00.000004");
-    expect(store.rids.get("f3d.placement:newpl")).toBe(500);
+    expect(store.rids.get("td.placement:newpl")).toBe(500);
 });
 
 test("AC-48 x_m з API збігається з полем редактора; зона: полігон ↔ прямокутник", async () => {
@@ -226,7 +226,7 @@ test("AC-66 перемикач площадки: loadSite скидає відс�
     expect(store.siteId).toBe(2);
     expect(b.placements.length).toBe(0);
     expect(b.layers[0].id).toBe("elyb");
-    expect(store.rids.get("f3d.layer:elyb")).toBe(101);
+    expect(store.rids.get("td.layer:elyb")).toBe(101);
     expect(await store.listSites()).toHaveLength(2);
     const id = await store.createSite({ name: "Нова", code: "NEW", building: { l: 60, w: 30, h: 8 } });
     expect(id).toBe(2);
@@ -238,16 +238,16 @@ test("publishPreview: зберігає чергу, викликає API-06 і в
     const { rpc, store } = newStore(
         {
             [SAVE]: ok(),
-            "/f3d/constructor/publish/preview": { ok: true, action: { type: "ir.actions.act_window", res_model: "f3d.publish.wizard", view_mode: "form" }, summary: { create: 3 } },
+            "/f3d/constructor/publish/preview": { ok: true, action: { type: "ir.actions.act_window", res_model: "td.publish.wizard", view_mode: "form" }, summary: { create: 3 } },
         },
         { action: { doAction: async (a, o) => actions.push([a, o]) } }
     );
-    store._bind("f3d.slot", "s1", 9, "E");
-    store.queue({ model: "f3d.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
+    store._bind("td.slot", "s1", 9, "E");
+    store.queue({ model: "td.slot", op: "write", uid: "s1", vals: { x_m: 3 } });
     const res = await store.publishPreview({ onClose: () => {} });
     expect(res.summary.create).toBe(3);
     expect(rpc.calls.map((c) => c.route)).toEqual([SAVE, "/f3d/constructor/publish/preview"]); // спершу збереження
-    expect(actions[0][0].res_model).toBe("f3d.publish.wizard");
+    expect(actions[0][0].res_model).toBe("td.publish.wizard");
     expect(actions[0][0].views).toEqual([[false, "form"]]); // doAction вимагає views
     expect(typeof actions[0][1].onClose).toBe("function");
 });

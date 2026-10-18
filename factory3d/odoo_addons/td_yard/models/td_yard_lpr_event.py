@@ -1,4 +1,4 @@
-"""M-04 f3d.yard.lpr.event: подія розпізнавання номера (SPEC R-07, R-08)."""
+"""M-04 td.yard.lpr.event: подія розпізнавання номера (SPEC R-07, R-08)."""
 
 import base64
 import binascii
@@ -12,7 +12,7 @@ from odoo.exceptions import UserError
 from ..tools import params as P
 from ..tools import plate as plate_tools
 from ..tools import tz
-from .f3d_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _f3d_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def _str(value, size):
 
 
 class F3dYardLprEvent(models.Model):
-    _name = "f3d.yard.lpr.event"
+    _name = "td.yard.lpr.event"
     _description = "Двір: розпізнавання номера"
     _order = "ts desc, id desc"
     _log_access = False
@@ -49,7 +49,7 @@ class F3dYardLprEvent(models.Model):
     push_event_id = fields.Char(string="Подія телеметрії", size=64, index=True)
     dedup_key = fields.Char(string="Ключ дубліката", size=160, required=True)
     camera_code = fields.Char(string="Камера", size=32, required=True, index=True)
-    gate_id = fields.Many2one("f3d.yard.gate", string="КПП", index=True, ondelete="set null")
+    gate_id = fields.Many2one("td.yard.gate", string="КПП", index=True, ondelete="set null")
     direction = fields.Selection(
         [("in", "В'їзд"), ("out", "Виїзд"), ("unknown", "Невідомо")], required=True, default="unknown"
     )
@@ -74,7 +74,7 @@ class F3dYardLprEvent(models.Model):
     image_url = fields.Char(string="Посилання на знімок", size=512)
     image = fields.Binary(string="Знімок", related="image_attachment_id.datas")
     match_state = fields.Selection(MATCH, string="Результат", required=True, default="unmatched", index=True)
-    visit_id = fields.Many2one("f3d.yard.visit", string="Рейс", index=True, ondelete="set null")
+    visit_id = fields.Many2one("td.yard.visit", string="Рейс", index=True, ondelete="set null")
     kpp_alert = fields.Boolean(string="Потрібне рішення охорони", default=False, index=True)
     lost_at = fields.Datetime(string="Зникла з кадру")
     handled_by = fields.Many2one("res.users", ondelete="set null")
@@ -85,7 +85,7 @@ class F3dYardLprEvent(models.Model):
 
     def init(self):
         super().init()
-        tools.sql.create_index(self.env.cr, "f3d_yard_lpr_event_plate_ts_idx", self._table, ["plate_norm", "ts"])
+        tools.sql.create_index(self.env.cr, "td_yard_lpr_event_plate_ts_idx", self._table, ["plate_norm", "ts"])
 
     # ------------------------------------------------------------------ R-07
     @api.model
@@ -99,9 +99,9 @@ class F3dYardLprEvent(models.Model):
         camera_ok = bool(CAMERA_RE.match(camera))
         camera_code = camera if camera_ok else "?"
         gate = (
-            self.env["f3d.yard.gate"].sudo().search([("camera_code", "=", camera), ("active", "=", True)], limit=1)
+            self.env["td.yard.gate"].sudo().search([("camera_code", "=", camera), ("active", "=", True)], limit=1)
             if camera_ok
-            else self.env["f3d.yard.gate"]
+            else self.env["td.yard.gate"]
         )
         car_id = _str(payload.get("carID"), 32)
         packet = _str(payload.get("packetCounter"), 32)
@@ -121,8 +121,8 @@ class F3dYardLprEvent(models.Model):
             confidence = min(max(float(payload.get("plateConfidence")), 0.0), 1.0)
         except (TypeError, ValueError):
             confidence = 0.0
-        if gate and payload.get("GEOtarget") and _str(payload["GEOtarget"], 64) != gate.f3d_code:
-            notes.append("GEOtarget %s ≠ %s" % (_str(payload["GEOtarget"], 64), gate.f3d_code))
+        if gate and payload.get("GEOtarget") and _str(payload["GEOtarget"], 64) != gate.td_code:
+            notes.append("GEOtarget %s ≠ %s" % (_str(payload["GEOtarget"], 64), gate.td_code))
         move = payload.get("carMoveDirection")
         direction = (
             move if move in ("in", "out") else ("unknown" if not gate else "out" if gate.direction == "out" else "in")
@@ -196,7 +196,7 @@ class F3dYardLprEvent(models.Model):
             return None, "ts_invalid"
         if ts > now + timedelta(seconds=60):
             return None, "ts_future"
-        keep_days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.keep_days", "30") or 30)
+        keep_days = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.keep_days", "30") or 30)
         if ts < now - timedelta(days=keep_days):
             return None, "ts_too_old"
         return ts, None
@@ -302,7 +302,7 @@ class F3dYardLprEvent(models.Model):
                     "kpp_alert": True,
                 }
             )
-        Visit = self.env["f3d.yard.visit"].sudo()
+        Visit = self.env["td.yard.visit"].sudo()
         direction = self.direction if self.direction in ("in", "out") else "in"
         found = Visit._f3d_yard_find_by_plate(self.plate_norm, direction, self.ts)
         tokens = DOC_RE.findall(self.plate_list_description or "")
@@ -362,7 +362,7 @@ class F3dYardLprEvent(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Рейс без броні",
-            "res_model": "f3d.yard.walkin.wizard",
+            "res_model": "td.yard.walkin.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_event_id": self.id},
@@ -371,7 +371,7 @@ class F3dYardLprEvent(models.Model):
     def action_link_visit(self, visit_id):
         self.ensure_one()
         _f3d_yard_require(self.env, GRP_SEC)
-        Visit = self.env["f3d.yard.visit"]
+        Visit = self.env["td.yard.visit"]
         visit = visit_id if isinstance(visit_id, models.BaseModel) else Visit.browse(visit_id)
         outbound = self.direction == "out"
         allowed = (
@@ -412,7 +412,7 @@ class F3dYardLprEvent(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": "Відхилити",
-            "res_model": "f3d.yard.reject.wizard",
+            "res_model": "td.yard.reject.wizard",
             "view_mode": "form",
             "target": "new",
             "context": {"default_event_id": self.id},

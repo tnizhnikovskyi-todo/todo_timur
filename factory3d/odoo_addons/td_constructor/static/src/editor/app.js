@@ -211,8 +211,8 @@ function openForm(model, resId, context, onClose) {
         { onClose }
     );
 }
-const openVariantForm = (rid, pid) => openForm("f3d.equipment.variant", rid, { default_passport_id: pid }, () => reload());
-const openPassportForm = (pid) => openForm("f3d.equipment.passport", pid, {}, () => reload());
+const openVariantForm = (rid, pid) => openForm("td.equipment.variant", rid, { default_passport_id: pid }, () => reload());
+const openPassportForm = (pid) => openForm("td.equipment.passport", pid, {}, () => reload());
 const openRecord = (model, id) => openForm(model, id);
 
 /* --- моделі варіантів: GLB із вкладень (API-10) --- */
@@ -369,7 +369,7 @@ function wireStore(store) {
             return;
         }
         Object.assign(S.site, { draft_rev: r.rev, draft_changes: r.draft_changes, has_changes: r.has_changes });
-        const pools = { "f3d.layer": S.layers, "f3d.slot": S.slots, "f3d.placement": S.placements };
+        const pools = { "td.layer": S.layers, "td.slot": S.slots, "td.placement": S.placements };
         for (const u of r.updates) {
             const rec = (pools[u.model] || []).find((x) => x.id === u.uid);
             if (rec) {

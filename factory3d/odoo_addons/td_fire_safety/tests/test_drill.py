@@ -17,17 +17,17 @@ class TestDrill(FireCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.env['hr.attendance'].sudo().search([]).unlink()
-        cls.env['f3d.fire.drill'].sudo().search([('origin', '!=', 'demo')]).unlink()
+        cls.env['td.fire.drill'].sudo().search([('origin', '!=', 'demo')]).unlink()
 
     def setUp(self):
         super().setUp()
-        # без factory3d_access: інакше його джерело (пріоритет 10) перекриває hr_attendance (AC-53)
-        Base = type(self.env['f3d.fire.passage.source'])
+        # без td_access: інакше його джерело (пріоритет 10) перекриває hr_attendance (AC-53)
+        Base = type(self.env['td.fire.passage.source'])
         real = Base._f3d_source_names
-        self.real_source_names = lambda: real(self.env['f3d.fire.passage.source'])
+        self.real_source_names = lambda: real(self.env['td.fire.passage.source'])
         patcher = mock.patch.object(
             Base, '_f3d_source_names',
-            lambda model: [n for n in real(model) if n != 'f3d.fire.passage.source.access'])
+            lambda model: [n for n in real(model) if n != 'td.fire.passage.source.access'])
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -42,7 +42,7 @@ class TestDrill(FireCase):
         return drill
 
     def log(self, etype, s, code='FA-CNC', **kw):
-        return self.env['f3d.fire.event']._log(etype, code, self.at(s), 'Тест %s' % etype, **kw)
+        return self.env['td.fire.event']._log(etype, code, self.at(s), 'Тест %s' % etype, **kw)
 
     # --- AC-41 -------------------------------------------------------------------------------------------
     def test_name_and_steps(self):
@@ -51,7 +51,7 @@ class TestDrill(FireCase):
         self.assertEqual(len(d.step_ids), 8)
         steps = d.step_ids.sorted('sequence')
         self.assertEqual(steps[0].text, 'Сповіщувач 2.CNC.05 (%s): дим і тепло — тривога на приладі.' % self.z_cnc.name)
-        sounders = self.env['f3d.fire.device'].search_count([('type', '=', 'sounder'), ('active', '=', True)])
+        sounders = self.env['td.fire.device'].search_count([('type', '=', 'sounder'), ('active', '=', True)])
         self.assertEqual(steps[1].text, 'Увімкнено %d сирен-маяків по всьому цеху.' % sounders)
         self.assertEqual(sounders, 41)
 
@@ -117,7 +117,7 @@ class TestDrill(FireCase):
         with freeze_time(self.at(200)):
             d.action_stop()
         self.assertEqual((d.evac_time_s, d.missing_count, d.result_suggested), (140, 1, 'failed'))
-        wiz = self.env['f3d.fire.drill.rollcall.wizard'].with_user(self.d).with_context(
+        wiz = self.env['td.fire.drill.rollcall.wizard'].with_user(self.d).with_context(
             default_drill_id=d.id).create({'drill_id': d.id})
         self.assertEqual(len(wiz.line_ids), 1)
         wiz.line_ids.present = True
@@ -130,7 +130,7 @@ class TestDrill(FireCase):
 
     def test_rollcall_only_after_stop(self):
         d = self.start_at(self.drill())
-        wiz = self.env['f3d.fire.drill.rollcall.wizard'].create({'drill_id': d.id})
+        wiz = self.env['td.fire.drill.rollcall.wizard'].create({'drill_id': d.id})
         with self.assertRaisesRegex(UserError, 'Перекличка'):
             wiz.action_apply()
 
@@ -181,16 +181,16 @@ class TestDrill(FireCase):
     def test_auto_create(self):
         with freeze_time(self.at(0)):
             self.z_cnc._set_state('test', 'test-alarm', self.at(0), self.dev_cnc05)
-        d = self.env['f3d.fire.drill'].search([('origin', '!=', 'demo')])
+        d = self.env['td.fire.drill'].search([('origin', '!=', 'demo')])
         self.assertEqual(len(d), 1)
         self.assertEqual((d.origin, d.title, d.state), ('panel', 'Тест приладу: %s' % self.z_cnc.name, 'running'))
         self.assertTrue(self.ev('drill_auto', drill_id=d.id))
 
     def test_no_auto_create(self):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.fire_safety.drill_auto_create', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.fire_safety.drill_auto_create', 'False')
         with freeze_time(self.at(0)):
             self.z_cnc._set_state('test', 'test-alarm', self.at(0), self.dev_cnc05)
-        self.assertEqual(self.env['f3d.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
+        self.assertEqual(self.env['td.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
 
     # --- AC-47 -------------------------------------------------------------------------------------------
     def test_real_alarm(self):
@@ -204,7 +204,7 @@ class TestDrill(FireCase):
     def test_real_alarm_without_drill(self):
         with freeze_time(self.at(5)):
             self.z_cut._set_state('alarm', 'alarm', self.at(5), None)
-        self.assertEqual(self.env['f3d.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
+        self.assertEqual(self.env['td.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
 
     # --- AC-48 -------------------------------------------------------------------------------------------
     def test_auto_stop(self):
@@ -226,7 +226,7 @@ class TestDrill(FireCase):
 
     # --- AC-49 -------------------------------------------------------------------------------------------
     def test_sim_unavailable(self):
-        if 'f3d.sim.run' in self.env:
+        if 'td.sim.run' in self.env:
             self.skipTest('iot_sim встановлено')
         d = self.drill(mode='sim')
         self.assertFalse(d.sim_available)
@@ -234,10 +234,10 @@ class TestDrill(FireCase):
             d.action_start_sim()
 
     def test_sim_bridge(self):
-        if 'f3d.sim.run' not in self.env:
+        if 'td.sim.run' not in self.env:
             self.skipTest('iot_sim не встановлено')
         d = self.drill(mode='sim')
-        Drill = type(self.env['f3d.fire.drill'])
+        Drill = type(self.env['td.fire.drill'])
         run = SimpleNamespace(name='RUN/2026/0007', state='running', message='')
         with mock.patch.object(Drill, '_f3d_sim_create_run', return_value=run) as create:
             d.action_start_sim()
@@ -258,27 +258,27 @@ class TestDrill(FireCase):
         self.make_att(emp, self.at(-3600))
         d = self.start_at(self.drill())
         with self.assertRaises(AccessError):
-            self.env['f3d.fire.drill.person'].with_user(self.u).search([])
-        self.assertEqual(len(self.env['f3d.fire.drill.person'].with_user(self.hr).search([])), 1)
+            self.env['td.fire.drill.person'].with_user(self.u).search([])
+        self.assertEqual(len(self.env['td.fire.drill.person'].with_user(self.hr).search([])), 1)
         Report = self.env['ir.actions.report']
-        html = Report._render_qweb_html('factory3d_fire_safety.report_f3d_fire_drill', d.ids)[0].decode()
+        html = Report._render_qweb_html('td_fire_safety.report_td_fire_drill', d.ids)[0].decode()
         self.assertNotIn('Конфіденційний Тестович', html)
         d.print_names = True
-        html = Report._render_qweb_html('factory3d_fire_safety.report_f3d_fire_drill', d.ids)[0].decode()
+        html = Report._render_qweb_html('td_fire_safety.report_td_fire_drill', d.ids)[0].decode()
         self.assertIn('Конфіденційний Тестович', html)
 
     # --- AC-51 -------------------------------------------------------------------------------------------
     def test_report_drill(self):
         d = self.drill()
         html = self.env['ir.actions.report']._render_qweb_html(
-            'factory3d_fire_safety.report_f3d_fire_drill', d.ids)[0].decode()
+            'td_fire_safety.report_td_fire_drill', d.ids)[0].decode()
         self.assertIn(d.name, html)
         self.assertEqual(html.count('f3d-drill-step'), 8)
         self.assertIn('Персональний список не друкується', html)
 
     # --- AC-52 -------------------------------------------------------------------------------------------
     def test_cron_tick(self):
-        Drill = self.env['f3d.fire.drill']
+        Drill = self.env['td.fire.drill']
         Drill._cron_tick()  # без running — нічого
         d = self.start_at(self.drill())
         self.assertFalse(d.last_tick_ts)
@@ -290,7 +290,7 @@ class TestDrill(FireCase):
 
     def test_is_active_at(self):
         d = self.start_at(self.drill())
-        Drill = self.env['f3d.fire.drill']
+        Drill = self.env['td.fire.drill']
         self.assertTrue(Drill._f3d_is_active_at(self.at(100)))
         self.assertFalse(Drill._f3d_is_active_at(self.at(-1)))
         with freeze_time(self.at(330)):
@@ -304,9 +304,9 @@ class TestDrill(FireCase):
         zone = self.z_cnc.zone_id
         signals = {}
         for code, (text, s) in states.items():
-            wc = self.env['mrp.workcenter'].search([('f3d_code', '=', code)]) or self.env['mrp.workcenter'].create(
-                {'name': code, 'f3d_code': code, 'f3d_zone_id': zone.id})
-            sig = self.env['f3d.signal'].create({
+            wc = self.env['mrp.workcenter'].search([('td_code', '=', code)]) or self.env['mrp.workcenter'].create(
+                {'name': code, 'td_code': code, 'td_zone_id': zone.id})
+            sig = self.env['td.signal'].create({
                 'code': 'workcenters/%s/machine_state' % code, 'name': 'Стан %s' % code, 'kind': 'state',
                 'module': 'telemetry'})
             sig.sudo().write({'last_text': text, 'last_ts': self.at(s)})

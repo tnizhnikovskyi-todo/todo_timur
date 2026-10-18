@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_bms_light_command_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.bms.light.command.wizard.form</field>
-        <field name="model">f3d.bms.light.command.wizard</field>
+    <record id="view_td_bms_light_command_wizard_form" model="ir.ui.view">
+        <field name="name">td.bms.light.command.wizard.form</field>
+        <field name="model">td.bms.light.command.wizard</field>
         <field name="arch" type="xml">
             <form string="Керування освітленням">
                 <div class="alert alert-warning" role="alert">
@@ -26,9 +26,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_bms_hvac_command_wizard_form" model="ir.ui.view">
-        <field name="name">f3d.bms.hvac.command.wizard.form</field>
-        <field name="model">f3d.bms.hvac.command.wizard</field>
+    <record id="view_td_bms_hvac_command_wizard_form" model="ir.ui.view">
+        <field name="name">td.bms.hvac.command.wizard.form</field>
+        <field name="model">td.bms.hvac.command.wizard</field>
         <field name="arch" type="xml">
             <form string="Керування вентиляцією">
                 <div class="alert alert-warning" role="alert">

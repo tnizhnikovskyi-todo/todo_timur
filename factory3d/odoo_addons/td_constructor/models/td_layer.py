@@ -24,14 +24,14 @@ def _new_uid():
 
 
 class F3dLayer(models.Model):
-    _name = 'f3d.layer'
+    _name = 'td.layer'
     _description = "Шар розкладки"
-    _inherit = ['f3d.draft.mixin']
+    _inherit = ['td.draft.mixin']
     _order = 'site_id, sequence, elevation_m, id'
     _rec_name = 'name'
 
     uid = fields.Char(string="UID", size=32, default=lambda self: _new_uid(), copy=False, index=True, readonly=True)
-    site_id = fields.Many2one('f3d.site', string="Площадка", required=True, ondelete='cascade', index=True)
+    site_id = fields.Many2one('td.site', string="Площадка", required=True, ondelete='cascade', index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     name = fields.Char(string="Назва", required=True)
     kind = fields.Selection(LAYER_KIND_SELECTION, string="Вид", required=True, default='custom')
@@ -50,8 +50,8 @@ class F3dLayer(models.Model):
     )
     bounds = fields.Json(string="Контур", help="[[x, y], …] у метрах, ≥3 точки; порожньо — габарит будівлі")
     allowed_slot_type_ids = fields.Many2many(
-        'f3d.term',
-        'f3d_layer_slot_type_rel',
+        'td.term',
+        'td_layer_slot_type_rel',
         'layer_id',
         'term_id',
         string="Дозволені типи місць",
@@ -60,7 +60,7 @@ class F3dLayer(models.Model):
     )
     edit_group_ids = fields.Many2many(
         'res.groups',
-        'f3d_layer_edit_group_rel',
+        'td_layer_edit_group_rel',
         'layer_id',
         'group_id',
         string="Хто редагує",
@@ -114,7 +114,7 @@ class F3dLayer(models.Model):
                 ._read_group([('layer_id', 'in', self.ids)], ['layer_id'], ['__count'])
             )
 
-        slots, placements = counts('f3d.slot'), counts('f3d.placement')
+        slots, placements = counts('td.slot'), counts('td.placement')
         for layer in self:
             layer.slot_count = slots.get(layer, 0)
             layer.placement_count = placements.get(layer, 0)
@@ -153,7 +153,7 @@ class F3dLayer(models.Model):
 
     @api.constrains('edit_group_ids')
     def _check_edit_groups(self):
-        privilege = self.env.ref('factory3d_constructor.privilege_f3d_constructor')
+        privilege = self.env.ref('td_constructor.privilege_td_constructor')
         for layer in self:
             if any(group.privilege_id != privilege for group in layer.edit_group_ids):
                 raise ValidationError("Лише ролі конструктора.")
@@ -190,9 +190,9 @@ class F3dLayer(models.Model):
     def _f3d_check_unlink(self):
         self._f3d_assert_manager("Видаляти шари")
         for layer in self:
-            slots = self.env['f3d.slot'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
+            slots = self.env['td.slot'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
             placements = (
-                self.env['f3d.placement'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
+                self.env['td.placement'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
             )
             if slots or placements:
                 raise UserError("Шар не порожній: архівуйте його або перенесіть об'єкти.")

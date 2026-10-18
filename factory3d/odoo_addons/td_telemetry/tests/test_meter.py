@@ -19,14 +19,14 @@ class MeterCase(F3DTelemetryCase):
         cls._setup_telemetry_fixtures()
         cls.eq_comp.write(
             {
-                "f3d_meter_signal_id": cls.sig_hours.id,
-                "f3d_meter_interval": 2000.0,
-                "f3d_meter_last_value": 16000.0,
-                "f3d_meter_lead_pct": 5.0,
+                "td_meter_signal_id": cls.sig_hours.id,
+                "td_meter_interval": 2000.0,
+                "td_meter_last_value": 16000.0,
+                "td_meter_lead_pct": 5.0,
             }
         )
         cls.eq_fl2.write(
-            {"f3d_meter_signal_id": cls.sig_fl2_hours.id, "f3d_meter_interval": 1000.0, "f3d_meter_last_value": 3000.0}
+            {"td_meter_signal_id": cls.sig_fl2_hours.id, "td_meter_interval": 1000.0, "td_meter_last_value": 3000.0}
         )
 
     def setUp(self):
@@ -36,15 +36,15 @@ class MeterCase(F3DTelemetryCase):
         self.addCleanup(frozen.stop)
 
     def requests(self, eq):
-        return self.env["maintenance.request"].search([("equipment_id", "=", eq.id), ("f3d_origin", "=", "meter")])
+        return self.env["maintenance.request"].search([("equipment_id", "=", eq.id), ("td_origin", "=", "meter")])
 
 
 @tagged(*TAGS)
 class TestMeterCreate(MeterCase):
     def test_no_request_before_lead(self):
         self.push([self.rd(self.sig_hours, 17846.6)])
-        self.assertEqual(self.eq_comp.f3d_meter_next_value, 18000)
-        self.assertAlmostEqual(self.eq_comp.f3d_meter_remaining, 153.4, places=1)
+        self.assertEqual(self.eq_comp.td_meter_next_value, 18000)
+        self.assertAlmostEqual(self.eq_comp.td_meter_remaining, 153.4, places=1)
         self.assertFalse(self.requests(self.eq_comp))
 
     def test_request_at_lead(self):
@@ -54,12 +54,12 @@ class TestMeterCreate(MeterCase):
         self.assertEqual(req.name, "ТО за лічильником: COMPRESSOR-T — 18 000 год (зараз 17 900)")
         self.assertEqual(req.maintenance_type, "preventive")
         self.assertEqual(req.priority, "1")
-        self.assertEqual(req.f3d_origin, "meter")
-        self.assertEqual(req.f3d_signal_id, self.sig_hours)
-        self.assertAlmostEqual(req.f3d_value, 17900.2)
-        self.assertEqual(req.f3d_threshold, 18000)
+        self.assertEqual(req.td_origin, "meter")
+        self.assertEqual(req.td_signal_id, self.sig_hours)
+        self.assertAlmostEqual(req.td_value, 17900.2)
+        self.assertEqual(req.td_threshold, 18000)
         self.assertEqual(req.maintenance_team_id, self.team_mech)
-        self.assertEqual(self.eq_comp.f3d_meter_request_id, req)
+        self.assertEqual(self.eq_comp.td_meter_request_id, req)
 
     def test_no_duplicate(self):
         self.push([self.rd(self.sig_hours, 17900.2)])
@@ -79,10 +79,10 @@ class TestMeterClose(MeterCase):
         self.set_sql(self.sig_hours, last_value=17905.0)
         self.close(req)
         eq = self.eq_comp
-        self.assertEqual(eq.f3d_meter_last_value, 17905.0)
-        self.assertEqual(eq.f3d_meter_last_date, fields.Date.today())
-        self.assertFalse(eq.f3d_meter_request_id)
-        self.assertEqual(eq.f3d_meter_next_value, 19905.0)
+        self.assertEqual(eq.td_meter_last_value, 17905.0)
+        self.assertEqual(eq.td_meter_last_date, fields.Date.today())
+        self.assertFalse(eq.td_meter_request_id)
+        self.assertEqual(eq.td_meter_next_value, 19905.0)
         self.assertIn("ТО за лічильником виконано при 17 905", " ".join(eq.message_ids.mapped("body")))
 
 
@@ -90,15 +90,15 @@ class TestMeterClose(MeterCase):
 class TestMeterRules(MeterCase):
     def test_constraints(self):
         with self.assertRaisesRegex(ValidationError, "Задайте інтервал"):
-            self.eq_flc1.write({"f3d_meter_signal_id": self.sig_hours.id})
+            self.eq_flc1.write({"td_meter_signal_id": self.sig_hours.id})
         with self.assertRaisesRegex(ValidationError, "Задайте інтервал"):
-            self.eq_comp.write({"f3d_meter_interval": 0})
+            self.eq_comp.write({"td_meter_interval": 0})
         with self.assertRaisesRegex(ValidationError, "Лічильник належить іншому обладнанню"):
-            self.eq_other.write({"f3d_meter_signal_id": self.sig_fl2_hours.id, "f3d_meter_interval": 10})
+            self.eq_other.write({"td_meter_signal_id": self.sig_fl2_hours.id, "td_meter_interval": 10})
 
     def _hours(self, delta_total):
         now = fields.Datetime.now()
-        Hour = self.env["f3d.reading.hour"]
+        Hour = self.env["td.reading.hour"]
         for i in range(7):
             Hour.create(
                 {"signal_id": self.sig_hours.id, "hour": now - timedelta(days=i + 1), "delta": delta_total / 7.0}
@@ -118,4 +118,4 @@ class TestMeterRules(MeterCase):
 
     def test_remaining(self):
         self.push([self.rd(self.sig_fl2_hours, 3216.5)])
-        self.assertAlmostEqual(self.eq_fl2.f3d_meter_remaining, 783.5, places=1)
+        self.assertAlmostEqual(self.eq_fl2.td_meter_remaining, 783.5, places=1)

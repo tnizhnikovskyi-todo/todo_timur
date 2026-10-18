@@ -26,12 +26,12 @@
 
 ## Модель данных (черновик моделей Odoo)
 
-- **f3d.site.** Площадка: `id`, `name`, `building` {`length`, `width`, `height`}, `column_grid` {`step_x`, `step_y`}, `active_version`.
-- **f3d.layer.**
+- **td.site.** Площадка: `id`, `name`, `building` {`length`, `width`, `height`}, `column_grid` {`step_x`, `step_y`}, `active_version`.
+- **td.layer.**
   - Поля: `id`, `site_id`, `name`, `kind`, `elevation` (м), `grid_step` (м), `aisle_width` (м), `bounds` (контур, м), `slot_types` (допустимые), `edit_roles`, `color`, `opacity`, `visible`, `sequence`.
   - `kind`: building | storage | production | engineering | yard | custom.
   - Ещё у слоя `aisles` (прямоугольники проходов), `fire_paths` (пожарные проходы и выходы), `max_floor_load` (кН/м²), `utilities` (точки щитов и магистралей: тип, x, y).
-- **f3d.slot.** Место по шаблону: `id`, `layer_id`, `template`, `code_prefix`, `x`, `y`, `rotation`, `params`. Ячейки (`cells`) генерируются из `params`; ручная правка отдельной ячейки — в `overrides` по коду ячейки.
+- **td.slot.** Место по шаблону: `id`, `layer_id`, `template`, `code_prefix`, `x`, `y`, `rotation`, `params`. Ячейки (`cells`) генерируются из `params`; ручная правка отдельной ячейки — в `overrides` по коду ячейки.
   - `template` и его `params`:
     - `pallet_rack`: bays, levels, bay_width, depth, level_height, positions_per_bay, max_load_kg;
     - `cantilever`: arms, levels, arm_length, length, level_height, max_load_kg;
@@ -39,15 +39,15 @@
     - `floor_stack`: rows, cols, cell_l, cell_w, max_height;
     - `machine_spot`: length, width, service {front, back, left, right};
     - `zone`: контур.
-  - Коды ячеек как у нас: `FG-R1-B01-L4` = префикс-ряд-пролёт-ярус. Это будущие `stock.location` с `f3d_code`, `barcode` и вместимостью.
-- **f3d.equipment.passport.** Каталог, тип оборудования. Поля: `id`, `category`, `manufacturer`, `model`, `role`, `variants[]`.
+  - Коды ячеек как у нас: `FG-R1-B01-L4` = префикс-ряд-пролёт-ярус. Это будущие `stock.location` с `td_code`, `barcode` и вместимостью.
+- **td.equipment.passport.** Каталог, тип оборудования. Поля: `id`, `category`, `manufacturer`, `model`, `role`, `variants[]`.
   - Категории: станок, стеллаж, погрузчик, конвейер, шкаф/щит, робот, прочее. От категории зависит условная модель (CD-18).
-- **f3d.equipment.variant.** Вариант (CD-11, CD-12):
+- **td.equipment.variant.** Вариант (CD-11, CD-12):
   - `name`, `length`, `width`, `height` (мм в форме, м в сцене), `service`;
   - `rotations` (0/90/180/270 или any), `allowed_layer_kinds`, `allowed_slot_types`;
   - `utilities` [{`kind`: electric | air | dust, `x`, `y`, `z`}], `power_kw`, `panel`, `weight_kg`, `floor_load`, `anchor`, `front_side`, `model` (метаданные 3D).
-- **f3d.placement.** Экземпляр: `id`, `layer_id`, `variant_id`, `slot_id` (необязательно), `x`, `y`, `rotation`, `code`, `name`. Будущие `maintenance.equipment` и `mrp.workcenter`.
-- **f3d.check.config.** Проверки (CD-13, CD-14): по каждой `enabled` и `mode`: warn | block.
+- **td.placement.** Экземпляр: `id`, `layer_id`, `variant_id`, `slot_id` (необязательно), `x`, `y`, `rotation`, `code`, `name`. Будущие `maintenance.equipment` и `mrp.workcenter`.
+- **td.check.config.** Проверки (CD-13, CD-14): по каждой `enabled` и `mode`: warn | block.
   - fits — объект внутри места;
   - collide — пересечение footprint (OBB, SAT);
   - service_free — расширенный на зону обслуживания прямоугольник не задевает чужие footprint;
@@ -55,7 +55,7 @@
   - load — вес/площадь ≤ max_floor_load слоя, для ячейки стеллажа вес ≤ max_load_kg;
   - utility_reach — до ближайшей точки нужного вида ≤ N м, N в настройках;
   - fire — не перекрыты пожарные проходы и выходы.
-- **f3d.layout.version.** Версия (CD-21): черновик — рабочая копия площадки. «Опублікувати» создаёт версию {`n`, `at`, `by`, `note`, `snapshot`}. Снимок хранит шаблоны мест, а не ячейки; если не влезает в 256 КиБ, режь на части. История с возвратом черновика к выбранной версии.
+- **td.layout.version.** Версия (CD-21): черновик — рабочая копия площадки. «Опублікувати» создаёт версию {`n`, `at`, `by`, `note`, `snapshot`}. Снимок хранит шаблоны мест, а не ячейки; если не влезает в 256 КиБ, режь на части. История с возвратом черновика к выбранной версии.
 
 ## Интерфейс
 
@@ -89,7 +89,7 @@
 
 ## Данные
 
-- **«Меблеве підприємство (приклад)».** Из `factory3d/odoo_addons/factory3d_viewer/static/data/model_static.json` (ключ `layout`: dims 150×72×9, zones с rect, плюс то, что там есть о стеллажах, станках и проходах) и из `factory3d/plant/layout.py`.
+- **«Меблеве підприємство (приклад)».** Из `factory3d/odoo_addons/td_viewer3d/static/data/model_static.json` (ключ `layout`: dims 150×72×9, zones с rect, плюс то, что там есть о стеллажах, станках и проходах) и из `factory3d/plant/layout.py`.
   - Перенеси стеллажи склада ГП (FG-R1…, 4 яруса, 18 пролётов), стеллажи плит (RCK-…), станки с положением и поворотом, ворота, проходы и пожарные выходы (`evacuation.exits`).
   - Варианты каталога — из `passports` и `factory3d/plant/equipment_specs.json`: габариты, мощность, производитель, модель.
   - Встрой компактный JSON (только нужные поля) прямо в страницу как пример.

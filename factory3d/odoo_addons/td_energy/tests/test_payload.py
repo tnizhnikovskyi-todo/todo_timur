@@ -1,5 +1,5 @@
 """AC-52, AC-59, AC-61, AC-63…AC-69: провайдери переглядача `energy` і `infra` (R-16…R-18, A-04).
-Без `factory3d_viewer`: методи провайдера викликаються напряму."""
+Без `td_viewer3d`: методи провайдера викликаються напряму."""
 
 from datetime import timedelta
 
@@ -32,12 +32,12 @@ class TestPayload(AllocMixin, F3DEnergyCase):
     # --- фікстури -----------------------------------------------------------------------------------------
     def sig(self, code, value=None, text=None):
         self.env.cr.execute(
-            "UPDATE f3d_signal SET last_value=%s, last_text=%s, last_ts=%s, status='ok', last_quality='good'"
+            "UPDATE td_signal SET last_value=%s, last_text=%s, last_ts=%s, status='ok', last_quality='good'"
             " WHERE code=%s",
             (value, text, fields.Datetime.now(), code),
         )
         self.assertEqual(self.env.cr.rowcount, 1, code)
-        self.env["f3d.signal"].invalidate_model()
+        self.env["td.signal"].invalidate_model()
 
     def set_grid(self, lines=LINES, q1=334.7, q2=-376.7):
         for code, p, cos in lines:
@@ -66,14 +66,14 @@ class TestPayload(AllocMixin, F3DEnergyCase):
 
     def set_critical(self, total=347.8):
         """Критичні вузли дають Σ `total` (BW-1 — 106.9 з макета, решта поділена порівну)."""
-        nodes = self.env["f3d.energy.node"].search([("is_critical", "=", True), ("kind", "in", ("consumer", "line"))])
+        nodes = self.env["td.energy.node"].search([("is_critical", "=", True), ("kind", "in", ("consumer", "line"))])
         rest = nodes.filtered(lambda n: n.code != "BW-1")
         for n in rest:
             kind = "consumers" if n.kind == "consumer" else "lines"
             self.sig("energy/%s/%s/p_now" % (kind, n.code), round((total - 106.9) / len(rest), 6))
 
     def provider(self, name, user=None):
-        return self.env["f3d.viewer.provider.%s" % name].with_user(user or self.u_energy)
+        return self.env["td.viewer.provider.%s" % name].with_user(user or self.u_energy)
 
     def energy(self, ctx=None, user=None, payload=None):
         payload = (
@@ -125,7 +125,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.assertEqual(energy["cells"]["Q1"]["state"], "on")
         self.sig("energy/cells/Q1/state", 2, "tripped")
         self.assertEqual(self.energy()["energy"]["cells"]["Q1"]["state"], "tripped")
-        node = self.env["f3d.energy.node"].search([("code", "=", "SAW-1")])
+        node = self.env["td.energy.node"].search([("code", "=", "SAW-1")])
         node.workcenter_id = self.mk_wc("SAW-1")
         energy = self.energy(user=self.u_mrpm)["energy"]
         self.assertEqual(energy["consumers"]["SAW-1"].get("status"), "idle")
@@ -138,10 +138,10 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.sig("workcenters/SAW-1/machine_state", 1, "working")
         self.assertEqual(self.energy(user=self.u_mrpm)["energy"]["consumers"]["SAW-1"]["status"], "work")
         wc = self.mk_wc("CNC-T")
-        self.env["f3d.energy.node"].create(
+        self.env["td.energy.node"].create(
             {
                 "code": "CNC-T", "name": "CNC-T", "kind": "consumer", "workcenter_id": wc.id, "section": 1,
-                "parent_id": self.env["f3d.energy.node"].search([("code", "=", "SEC-1")]).id, "p_inst_kw": 22.0,
+                "parent_id": self.env["td.energy.node"].search([("code", "=", "SEC-1")]).id, "p_inst_kw": 22.0,
             }
         )  # fmt: skip
         self.ensure_signal("workcenters/CNC-T/machine_state", "state", "")
@@ -170,7 +170,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
 
     def test_workcenter_energy(self):  # AC-66
         self.set_grid()
-        self.env["f3d.energy.node"].search([("code", "=", "SAW-1")]).workcenter_id = self.mk_wc("SAW-1")
+        self.env["td.energy.node"].search([("code", "=", "SAW-1")]).workcenter_id = self.mk_wc("SAW-1")
         self.sig("energy/consumers/SAW-1/p_now", 12.18)
         payload = self.energy(user=self.u_mrpm, payload={"workcenters": {"SAW-1": {}, "NOPE": {}}})
         self.assertEqual(payload["workcenters"]["SAW-1"]["energy"], {"p_now": 12.18, "line": "BW-1"})
@@ -211,8 +211,8 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.set_infra(bess=-200.0)
         self.sig("infra/ats/position", 3, "pos_II")
         now = fields.Datetime.now()
-        self.env["f3d.energy.outage"].search([]).unlink()
-        self.env["f3d.energy.outage"].create(
+        self.env["td.energy.outage"].search([]).unlink()
+        self.env["td.energy.outage"].create(
             {"ts_start": now - timedelta(minutes=2), "source": "ats", "state": "open", "load_before_kw": 626.0}
         )
         totals = self.infra()["totals"]
@@ -225,24 +225,24 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.set_grid()
         self.set_infra()
         patch = {"infra": {"totals": {"genset_kw": 348}}}
-        ctx = {"changes": {"f3d.signal": {"infra/pv/PV-INV-1/p_kw"}}}
+        ctx = {"changes": {"td.signal": {"infra/pv/PV-INV-1/p_kw"}}}
         self.provider("infra")._f3d_viewer_delta(patch, ctx)
         self.assertEqual(patch["infra"]["totals"]["genset_kw"], 348)
         self.assertEqual(patch["infra"]["totals"]["export_kw"], 42)
         patch = {}
-        self.provider("infra")._f3d_viewer_delta(patch, {"changes": {"f3d.signal": {"infra/genset/x"}}})
+        self.provider("infra")._f3d_viewer_delta(patch, {"changes": {"td.signal": {"infra/genset/x"}}})
         self.assertEqual(patch, {})
         self.provider("energy")._f3d_viewer_delta(patch, {"changes": {"mrp.production": {1}}})
         self.assertIn("energy", patch)
 
     def test_providers_registered(self):  # AC-69
         for name, seq, sections in (("energy", 100, ("energy",)), ("infra", 150, ("infra",))):
-            model = "f3d.viewer.provider.%s" % name
+            model = "td.viewer.provider.%s" % name
             self.assertIn(model, self.env.registry)
             prov = self.env[model]
             self.assertEqual((prov._f3d_sequence, tuple(prov._f3d_sections)), (seq, sections))
             self.assertFalse(set(prov._inherit) - {"base"})
-            self.assertEqual(prov._f3d_group, "factory3d_base.group_f3d_user")
+            self.assertEqual(prov._f3d_group, "td_factory3d.group_td_user")
             prov._f3d_viewer_collect({}, {})
             prov._f3d_viewer_delta({}, {})
-        self.assertIn("mrp.production", self.env["f3d.viewer.provider.energy"]._f3d_viewer_bus_models())
+        self.assertIn("mrp.production", self.env["td.viewer.provider.energy"]._f3d_viewer_bus_models())

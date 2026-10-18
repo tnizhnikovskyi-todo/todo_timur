@@ -1,142 +1,142 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="res_config_settings_view_form_f3d_yard" model="ir.ui.view">
-        <field name="name">res.config.settings.view.form.f3d.yard</field>
+    <record id="res_config_settings_view_form_td_yard" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.yard</field>
         <field name="model">res.config.settings</field>
         <field name="priority" eval="46"/>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Двір" string="Двір" name="factory3d_yard" groups="factory3d_yard.group_f3d_yard_manager">
-                    <block title="Стоп-крани" name="factory3d_yard_stop">
+                <app data-string="Двір" string="Двір" name="td_yard" groups="td_yard.group_td_yard_manager">
+                    <block title="Стоп-крани" name="td_yard_stop">
                         <setting string="Обробляти показання й події двору">
-                            <field name="f3d_yard_read_enabled"/>
+                            <field name="td_yard_read_enabled"/>
                         </setting>
                         <setting string="Дозволяти команди на шлагбауми">
-                            <field name="f3d_yard_write_enabled"/>
+                            <field name="td_yard_write_enabled"/>
                         </setting>
                         <setting string="Контроль проїзду без дозволу">
-                            <field name="f3d_yard_antipassback"/>
+                            <field name="td_yard_antipassback"/>
                         </setting>
                     </block>
-                    <block title="КПП і розпізнавання" name="factory3d_yard_kpp">
+                    <block title="КПП і розпізнавання" name="td_yard_kpp">
                         <setting string="Охорона створює рейси без броні">
-                            <field name="f3d_yard_walk_in_allowed"/>
+                            <field name="td_yard_walk_in_allowed"/>
                         </setting>
                         <setting string="Ліміт рейсів без броні на добу">
-                            <field name="f3d_yard_walk_in_limit_per_day"/>
+                            <field name="td_yard_walk_in_limit_per_day"/>
                         </setting>
                         <setting string="Мінімальна довіра розпізнавання">
-                            <field name="f3d_yard_lpr_min_confidence"/>
+                            <field name="td_yard_lpr_min_confidence"/>
                         </setting>
                         <setting string="Вікно пошуку рейсу за номером, год">
-                            <field name="f3d_yard_lpr_match_window_h"/>
+                            <field name="td_yard_lpr_match_window_h"/>
                         </setting>
                         <setting string="Зберігати знімки номерів">
-                            <field name="f3d_yard_lpr_store_images"/>
+                            <field name="td_yard_lpr_store_images"/>
                         </setting>
                         <setting string="Макс. розмір знімка, КБ">
-                            <field name="f3d_yard_lpr_image_max_kb"/>
+                            <field name="td_yard_lpr_image_max_kb"/>
                         </setting>
                         <setting string="Оновлення екрана КПП, с">
-                            <field name="f3d_yard_kpp_refresh_s"/>
+                            <field name="td_yard_kpp_refresh_s"/>
                         </setting>
                     </block>
-                    <block title="Бронювання й черга" name="factory3d_yard_slots">
+                    <block title="Бронювання й черга" name="td_yard_slots">
                         <setting string="Тривалість слоту за замовчуванням, хв">
-                            <field name="f3d_yard_slot_default_min"/>
+                            <field name="td_yard_slot_default_min"/>
                         </setting>
                         <setting string="Буфер між слотами, хв">
-                            <field name="f3d_yard_dock_turnaround_min"/>
+                            <field name="td_yard_dock_turnaround_min"/>
                         </setting>
                         <setting string="Забороняти слоти поза зміною">
-                            <field name="f3d_yard_enforce_calendar"/>
+                            <field name="td_yard_enforce_calendar"/>
                         </setting>
                         <setting string="Календар роботи воріт">
-                            <field name="f3d_yard_calendar_id"/>
+                            <field name="td_yard_calendar_id"/>
                         </setting>
                         <setting string="Авто-пропуск: раніше за слот, хв">
-                            <field name="f3d_yard_early_min"/>
+                            <field name="td_yard_early_min"/>
                         </setting>
                         <setting string="Авто-пропуск: пізніше за початок слоту, хв">
-                            <field name="f3d_yard_late_min"/>
+                            <field name="td_yard_late_min"/>
                         </setting>
                         <setting string="Викликати наступну фуру автоматично">
-                            <field name="f3d_yard_auto_call_next"/>
+                            <field name="td_yard_auto_call_next"/>
                         </setting>
                         <setting string="Слот «починається» протягом, хв">
-                            <field name="f3d_yard_queue_slot_window_min"/>
+                            <field name="td_yard_queue_slot_window_min"/>
                         </setting>
                         <setting string="Незбіг LPR без рішення гасне через, хв">
-                            <field name="f3d_yard_arrival_timeout_min"/>
+                            <field name="td_yard_arrival_timeout_min"/>
                         </setting>
                         <setting string="«Не приїхала» через, хв після початку слоту">
-                            <field name="f3d_yard_no_show_min"/>
+                            <field name="td_yard_no_show_min"/>
                         </setting>
                         <setting string="Робочий час воріт на добу, хв">
-                            <field name="f3d_yard_dock_shift_min"/>
+                            <field name="td_yard_dock_shift_min"/>
                         </setting>
                     </block>
-                    <block title="Шлагбауми" name="factory3d_yard_gates">
+                    <block title="Шлагбауми" name="td_yard_gates">
                         <setting string="Таймаут підтвердження відкриття, с">
-                            <field name="f3d_yard_open_timeout_s"/>
+                            <field name="td_yard_open_timeout_s"/>
                         </setting>
                         <setting string="Інтервал між командами, с">
-                            <field name="f3d_yard_cmd_cooldown_s"/>
+                            <field name="td_yard_cmd_cooldown_s"/>
                         </setting>
                         <setting string="Строк дії команди, с">
-                            <field name="f3d_yard_cmd_expire_s"/>
+                            <field name="td_yard_cmd_expire_s"/>
                         </setting>
                         <setting string="Макс. утримання відкритим, хв">
-                            <field name="f3d_yard_hold_max_min"/>
+                            <field name="td_yard_hold_max_min"/>
                         </setting>
                         <setting string="Свіжість сигналів воріт, с">
-                            <field name="f3d_yard_signal_max_age_s"/>
+                            <field name="td_yard_signal_max_age_s"/>
                         </setting>
                         <setting string="Ворота й шлагбауми">
-                            <button name="action_f3d_yard_gate" type="object" string="Ворота й шлагбауми" class="btn-link"/>
+                            <button name="action_td_yard_gate" type="object" string="Ворота й шлагбауми" class="btn-link"/>
                         </setting>
                     </block>
-                    <block title="Зважування" name="factory3d_yard_weigh">
+                    <block title="Зважування" name="td_yard_weigh">
                         <setting string="Допуск нетто, %">
-                            <field name="f3d_yard_net_tolerance_pct"/>
+                            <field name="td_yard_net_tolerance_pct"/>
                         </setting>
                         <setting string="Допуск нетто, кг (мінімум)">
-                            <field name="f3d_yard_net_tolerance_kg"/>
+                            <field name="td_yard_net_tolerance_kg"/>
                         </setting>
                         <setting string="Свіжість показання ваг, с">
-                            <field name="f3d_yard_weigh_max_age_s"/>
+                            <field name="td_yard_weigh_max_age_s"/>
                         </setting>
                         <setting string="Автозахоплення зважування">
-                            <field name="f3d_yard_scale_auto_capture"/>
+                            <field name="td_yard_scale_auto_capture"/>
                         </setting>
                         <setting string="Фура «на вагах» у 3D після зважування, с">
-                            <field name="f3d_yard_scale_dwell_s"/>
+                            <field name="td_yard_scale_dwell_s"/>
                         </setting>
                         <setting string="Зважування рейсів приймання">
-                            <field name="f3d_yard_weighing_policy_west"/>
+                            <field name="td_yard_weighing_policy_west"/>
                         </setting>
                         <setting string="Зважування рейсів відвантаження">
-                            <field name="f3d_yard_weighing_policy_east"/>
+                            <field name="td_yard_weighing_policy_east"/>
                         </setting>
                     </block>
-                    <block title="Зберігання даних" name="factory3d_yard_keep">
+                    <block title="Зберігання даних" name="td_yard_keep">
                         <setting string="Зберігати події LPR, діб">
-                            <field name="f3d_yard_lpr_keep_days"/>
+                            <field name="td_yard_lpr_keep_days"/>
                         </setting>
                         <setting string="Зберігати персональні дані водіїв, діб">
-                            <field name="f3d_yard_visit_pii_keep_days"/>
+                            <field name="td_yard_visit_pii_keep_days"/>
                         </setting>
                         <setting string="Зберігати непризначені зважування, діб">
-                            <field name="f3d_yard_weighing_unassigned_keep_days"/>
+                            <field name="td_yard_weighing_unassigned_keep_days"/>
                         </setting>
                     </block>
-                    <block title="Міграція" name="factory3d_yard_migration">
+                    <block title="Міграція" name="td_yard_migration">
                         <setting string="Заповнити маси плит із моделі" help="Лише товари з нульовою вагою">
-                            <field name="f3d_yard_seed_product_weights"/>
+                            <field name="td_yard_seed_product_weights"/>
                         </setting>
-                        <setting string="Повторити міграцію двору" groups="factory3d_base.group_f3d_admin">
-                            <button name="action_f3d_yard_run_migration" type="object" string="Повторити міграцію двору" class="btn-link"/>
+                        <setting string="Повторити міграцію двору" groups="td_factory3d.group_td_admin">
+                            <button name="action_td_yard_run_migration" type="object" string="Повторити міграцію двору" class="btn-link"/>
                         </setting>
                     </block>
                 </app>
@@ -144,10 +144,10 @@
         </field>
     </record>
 
-    <record id="action_f3d_yard_settings" model="ir.actions.act_window">
+    <record id="action_td_yard_settings" model="ir.actions.act_window">
         <field name="name">Налаштування двору</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
-        <field name="context">{'module': 'factory3d_yard', 'bin_size': False}</field>
+        <field name="context">{'module': 'td_yard', 'bin_size': False}</field>
     </record>
 </odoo>

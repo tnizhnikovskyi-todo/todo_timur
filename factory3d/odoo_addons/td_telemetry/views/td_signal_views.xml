@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_f3d_signal_list" model="ir.ui.view">
-        <field name="name">f3d.signal.list</field>
-        <field name="model">f3d.signal</field>
+    <record id="view_td_signal_list" model="ir.ui.view">
+        <field name="name">td.signal.list</field>
+        <field name="model">td.signal</field>
         <field name="arch" type="xml">
             <list string="Сигнали" default_order="sequence, code" multi_edit="1"
                   decoration-danger="status == 'alarm'" decoration-warning="status == 'warn'"
@@ -27,9 +27,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_signal_form" model="ir.ui.view">
-        <field name="name">f3d.signal.form</field>
-        <field name="model">f3d.signal</field>
+    <record id="view_td_signal_form" model="ir.ui.view">
+        <field name="name">td.signal.form</field>
+        <field name="model">td.signal</field>
         <field name="arch" type="xml">
             <form string="Сигнал">
                 <header>
@@ -38,7 +38,7 @@
                     <button name="action_open_request" type="object" string="Заявка"
                             invisible="not maintenance_request_id"/>
                     <button name="action_request_write" type="object" string="Записати в пристрій"
-                            invisible="not write_enabled" groups="factory3d_base.group_f3d_manager"/>
+                            invisible="not write_enabled" groups="td_factory3d.group_td_manager"/>
                     <field name="status" widget="statusbar" statusbar_visible="ok,warn,alarm,stale"/>
                 </header>
                 <sheet>
@@ -149,9 +149,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_signal_graph" model="ir.ui.view">
-        <field name="name">f3d.signal.graph</field>
-        <field name="model">f3d.signal</field>
+    <record id="view_td_signal_graph" model="ir.ui.view">
+        <field name="name">td.signal.graph</field>
+        <field name="model">td.signal</field>
         <field name="arch" type="xml">
             <graph string="Сигнали" type="bar">
                 <field name="equipment_id"/>
@@ -160,9 +160,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_signal_pivot" model="ir.ui.view">
-        <field name="name">f3d.signal.pivot</field>
-        <field name="model">f3d.signal</field>
+    <record id="view_td_signal_pivot" model="ir.ui.view">
+        <field name="name">td.signal.pivot</field>
+        <field name="model">td.signal</field>
         <field name="arch" type="xml">
             <pivot string="Сигнали">
                 <field name="equipment_id" type="row"/>
@@ -171,9 +171,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_signal_search" model="ir.ui.view">
-        <field name="name">f3d.signal.search</field>
-        <field name="model">f3d.signal</field>
+    <record id="view_td_signal_search" model="ir.ui.view">
+        <field name="name">td.signal.search</field>
+        <field name="model">td.signal</field>
         <field name="arch" type="xml">
             <search string="Сигнали">
                 <field name="name" string="Сигнал" filter_domain="['|', ('name', 'ilike', self), ('code', 'ilike', self)]"/>
@@ -198,16 +198,16 @@
         </field>
     </record>
 
-    <record id="action_f3d_signal" model="ir.actions.act_window">
+    <record id="action_td_signal" model="ir.actions.act_window">
         <field name="name">Сигнали</field>
-        <field name="res_model">f3d.signal</field>
+        <field name="res_model">td.signal</field>
         <field name="view_mode">list,form,graph,pivot</field>
         <field name="context">{'search_default_active': 1, 'search_default_group_equipment': 1}</field>
     </record>
 
-    <record id="action_f3d_signal_alarm" model="ir.actions.act_window">
+    <record id="action_td_signal_alarm" model="ir.actions.act_window">
         <field name="name">Телеметрія</field>
-        <field name="res_model">f3d.signal</field>
+        <field name="res_model">td.signal</field>
         <field name="view_mode">list,form,graph,pivot</field>
         <field name="context">{'search_default_active': 1, 'search_default_alarm': 1}</field>
     </record>

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from odoo import api, models
 
 from ..tools import ppt
-from .f3d_machine import DOWN_STATES, KYIV
+from .td_machine import DOWN_STATES, KYIV
 
 _logger = logging.getLogger(__name__)
 
@@ -28,12 +28,12 @@ def _parse_event_time(value):
 
 
 class F3dMachineDowntime(models.Model):
-    """M-01 (`_inherit = "f3d.machine"`): простої, підказки, заявки ТО (R-05…R-08).
+    """M-01 (`_inherit = "td.machine"`): простої, підказки, заявки ТО (R-05…R-08).
 
     Гачки `_f3d_after_commit`, `_f3d_tick_extra`, `_f3d_apply_event` перевизначені через `super()` першим.
     """
 
-    _inherit = "f3d.machine"
+    _inherit = "td.machine"
 
     # --- гачки --------------------------------------------------------------------------------------
     def _f3d_after_commit(self, old, new, ts):
@@ -58,7 +58,7 @@ class F3dMachineDowntime(models.Model):
         """EV-01: журнал подій, показання `event`, підказка причини (R-07 п. 1), заявка ТО (R-08 п. 3)."""
         machine = super()._f3d_apply_event(payload)
         machine = machine.sudo()
-        Event = self.env["f3d.machine.event"].sudo()
+        Event = self.env["td.machine.event"].sudo()
         source = str(payload.get("source") or "")
         ext_id = (
             self.env.context.get("f3d_push_event_id")
@@ -98,7 +98,7 @@ class F3dMachineDowntime(models.Model):
         )
         if machine.sig_event_id:
             res = (
-                self.env["f3d.signal"]
+                self.env["td.signal"]
                 .sudo()
                 .with_context(f3d_mc_internal=True)
                 ._f3d_ingest(
@@ -115,7 +115,7 @@ class F3dMachineDowntime(models.Model):
                 )
             )
             if res and res.get("rejected"):
-                _logger.warning("f3d.machine %s: показання події відхилено: %s", machine.code, res["rejected"])
+                _logger.warning("td.machine %s: показання події відхилено: %s", machine.code, res["rejected"])
         if payload["kind"] == "alarm" and active is False:
             previous = Event.search(
                 [("machine_id", "=", machine.id), ("message_id", "=", message_id), ("id", "!=", event.id)]
@@ -163,7 +163,7 @@ class F3dMachineDowntime(models.Model):
         self.ensure_one()
         Loss = self.env["mrp.workcenter.productivity.loss"]
         events = (
-            self.env["f3d.machine.event"]
+            self.env["td.machine.event"]
             .sudo()
             .search(
                 [
@@ -180,10 +180,10 @@ class F3dMachineDowntime(models.Model):
             if loss:
                 return loss, text, ev
         if kind == "setup":
-            return self.env.ref("mrp.block_reason2"), "Режим верстата SETUP", self.env["f3d.machine.event"]
+            return self.env.ref("mrp.block_reason2"), "Режим верстата SETUP", self.env["td.machine.event"]
         if kind == "fault":
             text = "Вхід аварії" if self.protocol == "io" else "Стан верстата ERROR"
-            return self.env.ref("mrp.block_reason1"), text, self.env["f3d.machine.event"]
+            return self.env.ref("mrp.block_reason1"), text, self.env["td.machine.event"]
         if kind == "idle":
             wos = self.env["mrp.workorder"].sudo().search([("workcenter_id", "=", self.workcenter_id.id)])
             ready = wos.filtered(lambda w: w.state == "ready")
@@ -192,14 +192,14 @@ class F3dMachineDowntime(models.Model):
             target = (blocked[:1] if not ready else wos.browse()) or starved[:1]
             if target:
                 text = "%s: чекає компонентів/попередньої операції" % target.production_id.name
-                return self.env.ref("mrp.block_reason0"), text, self.env["f3d.machine.event"]
-        return Loss.browse(), "", self.env["f3d.machine.event"]
+                return self.env.ref("mrp.block_reason0"), text, self.env["td.machine.event"]
+        return Loss.browse(), "", self.env["td.machine.event"]
 
     # --- R-05: простій і записи журналу часу --------------------------------------------------------
     def _f3d_open_downtime(self, kind, ts):
         """R-05 п. 1–2, R-07, R-08 п. 2: відкрити простій (`kind` ∈ DOWN_STATES)."""
         self.ensure_one()
-        Downtime = self.env["f3d.downtime"].sudo()
+        Downtime = self.env["td.downtime"].sudo()
         if Downtime.search_count([("machine_id", "=", self.id), ("date_end", "=", False)]):
             self._f3d_close_downtime(ts)
         wo = self.active_workorder_id
@@ -209,7 +209,7 @@ class F3dMachineDowntime(models.Model):
                 "date_start": ts,
                 "state_kind": kind,
                 "workorder_id": wo.id if wo else False,
-                "loss_id": self.env.ref("factory3d_machine_connect.loss_unknown").id,
+                "loss_id": self.env.ref("td_machine_connect.loss_unknown").id,
                 "reason_source": "auto",
                 "reason_state": "to_classify",
             }
@@ -237,8 +237,8 @@ class F3dMachineDowntime(models.Model):
                 [
                     ("workcenter_id", "=", self.workcenter_id.id),
                     ("date_end", "=", False),
-                    ("f3d_auto", "=", False),
-                    ("f3d_downtime_id", "=", False),
+                    ("td_auto", "=", False),
+                    ("td_downtime_id", "=", False),
                     ("workorder_id", "=", False),
                     ("loss_id.loss_type", "in", ("availability", "quality")),
                 ],
@@ -247,8 +247,8 @@ class F3dMachineDowntime(models.Model):
         )
         if not rec:
             return rec
-        rec.write({"f3d_downtime_id": dt.id})
-        master = rec.f3d_source == "master"
+        rec.write({"td_downtime_id": dt.id})
+        master = rec.td_source == "master"
         dt._f3d_apply_reason(rec.loss_id, "master" if master else "operator", dt.employee_id)
         dt.sudo().with_context(f3d_mc_internal=True).write({"reason_state": "confirmed" if master else "to_confirm"})
         return rec
@@ -260,9 +260,9 @@ class F3dMachineDowntime(models.Model):
             "loss_id": (loss or dt.loss_id).id,
             "date_start": ts,
             "description": description,
-            "f3d_downtime_id": dt.id,
-            "f3d_source": "machine",
-            "f3d_auto": True,
+            "td_downtime_id": dt.id,
+            "td_source": "machine",
+            "td_auto": True,
         }
         if date_end:
             vals["date_end"] = date_end
@@ -275,7 +275,7 @@ class F3dMachineDowntime(models.Model):
     def _f3d_close_downtime(self, ts):
         """R-05 п. 4: закрити відкриті простої верстата переходом о `ts`."""
         self.ensure_one()
-        downtimes = self.env["f3d.downtime"].sudo().search([("machine_id", "=", self.id), ("date_end", "=", False)])
+        downtimes = self.env["td.downtime"].sudo().search([("machine_id", "=", self.id), ("date_end", "=", False)])
         for dt in downtimes:
             dt._f3d_close(ts)
         if self.current_downtime_id:
@@ -289,14 +289,14 @@ class F3dMachineDowntime(models.Model):
         Request = self.env["maintenance.request"].sudo()
         cands = Request.search(
             [
-                ("f3d_signal_id", "=", self.sig_alarm_id.id),
+                ("td_signal_id", "=", self.sig_alarm_id.id),
                 ("stage_id.done", "=", False),
                 ("create_date", ">=", ts - timedelta(minutes=REQUEST_WINDOW_MIN)),
             ],
             order="create_date desc",
         )
         taken = (
-            self.env["f3d.downtime"]
+            self.env["td.downtime"]
             .sudo()
             .search([("maintenance_request_id", "in", cands.ids)])
             .mapped("maintenance_request_id")
@@ -361,7 +361,7 @@ class F3dMachineDowntime(models.Model):
         self.ensure_one()
         if self.state not in ("idle", "setup", "off") or self.current_downtime_id:
             return
-        last = self.env["f3d.downtime"].sudo().search([("machine_id", "=", self.id)], order="date_end desc", limit=1)
+        last = self.env["td.downtime"].sudo().search([("machine_id", "=", self.id)], order="date_end desc", limit=1)
         if not last or not last.date_end or last.state_kind != self.state or last.date_end < self.state_since:
             return
         wc = self.workcenter_id.sudo()
@@ -383,8 +383,8 @@ class F3dMachineDowntime(models.Model):
                 [
                     ("workcenter_id", "=", self.workcenter_id.id),
                     ("date_end", "=", False),
-                    ("f3d_auto", "=", False),
-                    ("f3d_downtime_id", "=", False),
+                    ("td_auto", "=", False),
+                    ("td_downtime_id", "=", False),
                     ("workorder_id", "=", False),
                     ("loss_id.loss_type", "in", ("availability", "quality")),
                 ]

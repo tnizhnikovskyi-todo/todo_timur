@@ -1,18 +1,18 @@
-# TEST_REPORT — factory3d_energy 19.0.1.0.0 (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
+# TEST_REPORT — td_energy 19.0.1.0.0 (стенд, ТК/ТБ/ТП, SPEC §13.2–13.5)
 
-Воркер W6, 15.10.2026, гілка `claude/f3d-factory3d_energy`. Код стенда — `factory3d/odoo_addons/factory3d_energy/tests/stand/`
+Воркер W6, 15.10.2026, гілка `claude/f3d-td_energy`. Код стенда — `factory3d/odoo_addons/td_energy/tests/stand/`
 (`pytest -m stand`), чек-лист і відтворення — `DEPLOY_TEST.md`.
 
 ## Середовище
 
 | Параметр | Значення |
 |---|---|
-| Odoo | 19.0 CE, база з `f3d_template` (без демо) + `factory3d_energy` (+ `factory3d_base`, `factory3d_telemetry`, `mrp_account`, `analytic`, `web_hierarchy`); `factory3d.base.environment='test'`; Postgres 16 |
-| Емулятор | `factory3d_iot_sim` сервіс v0.1.0, локальний запуск без docker (Python 3.13), Modbus TCP :502 (`iot-sim` → 127.0.0.1), REST `/sim/v1` :8090, режим `scenario` |
-| Колектор | `services/collector` (`COL-MAIN`, плагін `modbus_tcp`), токен — SHA-256 у `f3d_collector.token_hash`; 68 джерел енергетики, реальний обмін по Modbus |
+| Odoo | 19.0 CE, база з `f3d_template` (без демо) + `td_energy` (+ `td_factory3d`, `td_telemetry`, `mrp_account`, `analytic`, `web_hierarchy`); `td.base.environment='test'`; Postgres 16 |
+| Емулятор | `td_iot_sim` сервіс v0.1.0, локальний запуск без docker (Python 3.13), Modbus TCP :502 (`iot-sim` → 127.0.0.1), REST `/sim/v1` :8090, режим `scenario` |
+| Колектор | `services/collector` (`COL-MAIN`, плагін `modbus_tcp`), токен — SHA-256 у `td_collector.token_hash`; 68 джерел енергетики, реальний обмін по Modbus |
 | Дані | чиста база **без копії демо**: `equipment_linked 0`, `workcenter_linked 0`, МО 00231 та BOM лінії A відсутні |
-| Не запускались | `factory3d_viewer`, `td_genset`/`factory3d_genset`, Enterprise `mrp_workorder` (відсутні в середовищі) |
-| Юніт-тести | `F3D_TEST_INSTALL=factory3d_energy run_tests.sh f3d_factory3d_energy_w6 /factory3d_energy` → **0 failed, 0 error of 109 tests** (147 у `odoo.tests.stats`); `ruff check` модуля — чисто |
+| Не запускались | `td_viewer3d`, `td_genset`/`td_genset_factory3d`, Enterprise `mrp_workorder` (відсутні в середовищі) |
+| Юніт-тести | `F3D_TEST_INSTALL=td_energy run_tests.sh f3d_factory3d_energy_w6 /td_energy` → **0 failed, 0 error of 109 tests** (147 у `odoo.tests.stats`); `ruff check` модуля — чисто |
 | Стенд (підсумок) | ТК: **3 зелені** (ТК-01, ТК-05, ТК-11) + AC-92 етап 2 зелений; ТК-02 FAIL (артефакт, O-4); **4 FAIL** (ТК-02, ТК-07, ТК-08, ТК-09); **6 skip** (ТК-03, 04, 06, 10, 12 + AC-13/AC-53 на демо-копії). ТБ: **6/6 зелених**. ТП: **5 зелених, 1 FAIL** (ТП-01) |
 
 ## ТК — стендові сценарії (§13.2)
@@ -26,13 +26,13 @@
 | ТК-03 Зміна → кВт·год на МО | AC-88 | **skip** | Потрібні копія демо (BOM лінії A, РЦ SAW-1/EDGE-1) і ≈ 50 хв реального часу; тест написаний (`F3D_STAND_DEMO=1`) |
 | ТК-04 Собівартість | AC-46 | **skip** | Копія бази + МО з ТК-03 + категорія AVCO |
 | ТК-05 Блекаут, варіант A | AC-56, AC-59, AC-89 | **зелений** (з відхиленням у `shed_kw`) | Відключення зафіксовано, `transfer_s 20,0` (10…35), `return_s 65,0` (≈ 60), `state=closed`; після переходу `infra.totals.grid_kw=0`, `export_kw=0`; `bess_mode='discharge'` на старті (≈ 15 с, потім `idle`); `island=true` з ≈ 29 с (крон живих показників раз на хвилину). **`shed_kw` = 204 (до: навантаження 408 кВт, в острові ≈ 206 кВт), а не 278 ± 30 зі SPEC** — SPEC розрахований на навантаження демо ≈ 485 кВт; узгодженість `shed = до − острів` виконана (± 30). Міст `island=true` (CE-05, td_genset) не перевірено: модуля немає |
-| ТК-06 FAIL START (варіант B) | AC-57 | **skip** | Немає `td_genset`/`factory3d_genset` (ТК-G04) |
+| ТК-06 FAIL START (варіант B) | AC-57 | **skip** | Немає `td_genset`/`td_genset_factory3d` (ТК-G04) |
 | ТК-07 Експорт СЕС у полудень | AC-90 | **FAIL** | `pv_now` 655,8 кВт = Σ інверторів 655,8 (± 1 кВт, > 600) — **ок**; `kwh_export` PM-Q2 росте — ок. **`export_kw = 0`, `grid_kw = 647,5`, `bess_mode='idle'` (SOC 100 %)** — очікувалось `export_kw > 0`, `grid_kw = 0`. Причина в **емуляторі**: Modbus unit 2, регістр 3059 (`p_now` PM-Q2) віддає **+309,6**, тоді як REST `energy/cells/Q2/p_now` = **−337,4** (експорт); регістри q/i unit 2 збігаються з REST. Модуль коректно рахує з того, що прочитав. Див. знахідку E-1 |
 | ТК-08 Хмарно | — | **FAIL (частково)** | `pv_now` 650,1 → 187,4 (≈ ÷ 3,5, ок); подій немає (поза ступенями компенсації `pfc`, що змінюються незалежно) — ок; але `bess_kw = +188` (заряд триває) і `grid_kw` не росте (398 vs 402): емулятор заряджає BESS з мережі до SOC 100 % незалежно від СЕС, тож очікування «розряд або ріст мережі» не виконується (емулятор) |
 | ТК-09 Договірна потужність | AC-34 | **FAIL (3 спроби)** | Заявка «Перевищення договірної потужності» не створена за 20 хв: `grid15_kw` ≤ 112 кВт (слот 15:15 → Q1 імпорт 52,7 кВт·год, Q2 імпорт 5,2 / експорт 29,8). Емулятор тримає нетто-імпорт ≈ 0 (СЕС + когенерація ≈ 800 кВт покривають навантаження; Q2 віддає в мережу); спроби: полудень, вечір + `chp_kw=0` (перезаписується моделлю), робочий день + `infra/chp/state=0` + `pv_cloudy cf 0,05` — імпорту > 300 кВт отримати не вдалося. Юніт AC-34 зелений (`test_events`) |
 | ТК-10 Лічильник недоступний | AC-22 | **skip** | 70 хв + 20 хв реального часу (`F3D_STAND_LONG=1`); тест написаний |
 | ТК-11 Звірка адрес | AC-91 | **зелений** | 5 лічильників PM5560: `kwh_total` Odoo (INT64 ×0,001, 3204–3207) = Float32 2700 емулятора — спочатку 0,0 = 0,0 (простій), далі посилений `test_tk11b`: лічильники примусово 12345,678 … 16345,678 → Odoo **точно збігається** (Δ = 0,000); SUN2000 `p_kw` PV-INV-1…3: 48,971 vs 49,003 (± 0,5 кВт); ATyS `infra/ats/position` = 2; TEDOM `chp_kw` 396,67 vs 397,0 (± 1). Додатково: `energy/cells/Q2/p_now` розходиться (див. ТК-07) |
-| ТК-12 Переглядач | AC-63, AC-65 (MAN) | **skip** | Немає `factory3d_viewer`; MAN |
+| ТК-12 Переглядач | AC-63, AC-65 (MAN) | **skip** | Немає `td_viewer3d`; MAN |
 
 ТК-02: 57 лічильників PM5560 мають інтервали, `energy/totals/p_now` (payload `load_kw` 430) = Σ фідерів емулятора (430,3) ± 2 % — ок. Баланс (AC-92, етап 2): за чисту годину 16:00 усі **8 вузлів `ok`** (|Δ| 0,26 кВт·год) — зелений `test_ac92_balance_nodes`; години з блекаутом ТК-05 — `skipped` «відключення мережі». FAIL тесту: `data_state` = `reset` у 43 із 57 лічильників (лише 14 `ok`) після примусового стрибка показників у ТК-11b (я змінював лічильники й відпускав) і через 1,5 год стан не повернувся в `ok` — нерозрізнено, артефакт тесту чи дефект відновлення зі стану `reset` (див. O-4). Чистий прогін ТК-02 (до ТК-11b) показав 57 `ok`.
 
@@ -44,11 +44,11 @@
 
 | ТБ | Результат | Що перевірено |
 |---|---|---|
-| ТБ-01 | зелений | `base.group_user` без груп: `search` на `f3d.energy.node` → відмова доступу; меню «Енергетика» мають групи, яких у користувача немає (`ir.ui.menu.search` не фільтрує за групами — це робить `load_menus`) |
-| ТБ-02 | зелений | Майстер (`mrp.group_mrp_user`): `read` `f3d_energy_cost` (МО), `cost`/`price` (інтервал), `cost` (alloc) → відмова (`Groups: allowed for groups … Енергетика: вартість`); `f3d_energy_kwh` читається; payload кіоску — без `cost_today`, без `energy_cost` у `productions` |
-| ТБ-03 | зелений | `write({'write_enabled': True})` на сигналі `module='energy'` → `ValidationError` «заборонено»; `f3d.command.create` на такий сигнал → відмова; сигнал іншого модуля — запис дозволено |
-| ТБ-04 | зелений | Код вузла `SAW-1'; DROP TABLE …;--` → `ValidationError`; `weekdays='0;1'` → `ValidationError`; адреса сигналу з ключем `_x` → відмова валідатора telemetry; таблиця `f3d_energy_node` на місці |
-| ТБ-05 | зелений | `neutralize.sql` у транзакції `psql` (ROLLBACK): `read_enabled`/`write_enabled`/`costing_enabled` ≠ `False` → 0, активних кронів `factory3d_energy` 0, джерел енергетики з `read_enabled` 0 (AC-82). Примітка: `analytic_enabled` **не** скидається (SPEC §13.3 каже «три параметри»: read/write/costing — так і є). `action_f3d_energy_rebind`: `group_f3d_energy_manager` → `AccessError`, `group_f3d_admin` → ок (AC-14) |
+| ТБ-01 | зелений | `base.group_user` без груп: `search` на `td.energy.node` → відмова доступу; меню «Енергетика» мають групи, яких у користувача немає (`ir.ui.menu.search` не фільтрує за групами — це робить `load_menus`) |
+| ТБ-02 | зелений | Майстер (`mrp.group_mrp_user`): `read` `td_energy_cost` (МО), `cost`/`price` (інтервал), `cost` (alloc) → відмова (`Groups: allowed for groups … Енергетика: вартість`); `td_energy_kwh` читається; payload кіоску — без `cost_today`, без `energy_cost` у `productions` |
+| ТБ-03 | зелений | `write({'write_enabled': True})` на сигналі `module='energy'` → `ValidationError` «заборонено»; `td.command.create` на такий сигнал → відмова; сигнал іншого модуля — запис дозволено |
+| ТБ-04 | зелений | Код вузла `SAW-1'; DROP TABLE …;--` → `ValidationError`; `weekdays='0;1'` → `ValidationError`; адреса сигналу з ключем `_x` → відмова валідатора telemetry; таблиця `td_energy_node` на місці |
+| ТБ-05 | зелений | `neutralize.sql` у транзакції `psql` (ROLLBACK): `read_enabled`/`write_enabled`/`costing_enabled` ≠ `False` → 0, активних кронів `td_energy` 0, джерел енергетики з `read_enabled` 0 (AC-82). Примітка: `analytic_enabled` **не** скидається (SPEC §13.3 каже «три параметри»: read/write/costing — так і є). `action_td_energy_rebind`: `group_td_energy_manager` → `AccessError`, `group_td_admin` → ок (AC-14) |
 | ТБ-06 | зелений (частково) | Провайдери без `sudo`: користувач без доступу до вузлів — `build_energy`/`build_infra` без винятку і без даних (`energy`/`infra.totals` порожні); адміністратор — дані є. Секцію `denied` формує viewer R-01 — модуля немає, не перевірено |
 
 ## ТП — продуктивність (§13.4)
@@ -61,12 +61,12 @@
 | ТП-02 `_f3d_alloc_days` | 35 РЦ, 35 завдань, 200 інтервалів, пулові лічильники ТП-01: **1,03 с**, 198 SQL, 454 рядки, 71,6 кВт·год | ≤ 5 с | зелений |
 | ТП-03 `build_energy` + `build_infra` | 299 «свіжих» сигналів: перший виклик 83 мс, **медіана 50 мс**, p95 60 мс, max 83 мс (30 викликів) | ≤ 200 мс | зелений |
 | ТП-04 `_f3d_ingest` 1 000 показань | 799 показань (299 енергетики + 500 інших; у чистій базі енергетичних сигналів лише 299): без перевизначення 232 мс, з M-15 267 мс → **+14,8 %** | ≤ 15 % | зелений (на межі; навантаження ТК у фоні) |
-| ТП-05 ротація | 2 566 435 рядків `f3d_energy_interval` старші за межу: **19,3…22,8 с** за прогін (один прогін видалив усе), Index Scan за `ts_start` на вибірковому предикаті | ≤ 60 с, Index Scan | зелений. Для предиката «усе старіше за межу» планувальник слушно обирає Seq Scan |
+| ТП-05 ротація | 2 566 435 рядків `td_energy_interval` старші за межу: **19,3…22,8 с** за прогін (один прогін видалив усе), Index Scan за `ts_start` на вибірковому предикаті | ≤ 60 с, Index Scan | зелений. Для предиката «усе старіше за межу» планувальник слушно обирає Seq Scan |
 | ТП-06 `read_group` профілю за рік | 2 566 435 рядків за 400 діб: `day:month × zone_id` 14 груп + `hour_local × zone_id` 24 групи — **0,79 … 0,80 с** | ≤ 3 с | зелений |
 
 ## Знахідки
 
-**D-1 (модуль, середній).** `models/f3d_energy_interval.py:184–185` (`_f3d_build_meter`, цикл по слотах) викликає `Tariff._f3d_tariff_at(a, company)` і
+**D-1 (модуль, середній).** `models/td_energy_interval.py:184–185` (`_f3d_build_meter`, цикл по слотах) викликає `Tariff._f3d_tariff_at(a, company)` і
 `Tariff._f3d_price_at(a, company)` **для кожного слота** — кожен виклик робить `search` тарифу (2 запити на слот: 382 із 402 запитів на
 один лічильник/191 слот). Для 2 діб × 67 лічильників (12 797 слотів) це 26 457 запитів проти межі ≤ 200 (ТП-01); час 27 с лише
 тому, що БД локальна. Виправлення: кешувати активний тариф/зони на дату (один раз на день і компанію) поза циклом по слотах.
@@ -77,22 +77,22 @@ Q2 як імпорт; AC-90 (`export_kw > 0`) на цьому емуляторі
 
 **E-2 (емулятор).** BESS заряджається з мережі до SOC 100 % незалежно від СЕС (ТК-08), `chp_kw` перезаписується моделлю (`PUT` не утримується; працює `infra/chp/state`).
 
-**O-1 (спостереження).** Сигнали `f3d.signal` не мають полів `quality`/`state` (є `last_quality`, `status`) — стенд використовує їх.
+**O-1 (спостереження).** Сигнали `td.signal` не мають полів `quality`/`state` (є `last_quality`, `status`) — стенд використовує їх.
 
-**O-2 (спостереження).** Єдиний ERROR у логу Odoo під час роботи колектора: `could not serialize access due to concurrent update` на `f3d_collector`
-(одночасний `push` двох екземплярів колектора при перезапуску) — `f3d_energy_event` лише логує «помилка журналу подій після прийому показань»
+**O-2 (спостереження).** Єдиний ERROR у логу Odoo під час роботи колектора: `could not serialize access due to concurrent update` на `td_collector`
+(одночасний `push` двох екземплярів колектора при перезапуску) — `td_energy_event` лише логує «помилка журналу подій після прийому показань»
 і далі працює у вже перерваній транзакції (`current transaction is aborted`) — відповідь 500, колектор повторює пакет. Місце:
-`models/f3d_energy_event.py` (`_f3d_on_ingest`, обробка винятку без `savepoint`). Одноразово, дані не втрачено (буфер колектора).
+`models/td_energy_event.py` (`_f3d_on_ingest`, обробка винятку без `savepoint`). Одноразово, дані не втрачено (буфер колектора).
 
 **O-3 (SPEC/сценарій).** ТК-02: перший інтервал будується не раніше ніж через ≈ 30 хв після старту колектора (слот `ceil15(перше показання)` + 15 хв +
 `settle_s` 120 с); баланс повної години — через ≥ 60 хв (крон о :07). 20-хвилинне очікування зі SPEC недостатнє для «≥ 1 інтервалу на кожен».
 Лічильники PM5560 переходять у `data_state='reset'` після стрибка показника (як у ТК-11b) і повертаються в `ok` лише через слот.
 
-**O-4 (потребує перевірки лідером).** `f3d.energy.meter.data_state` залишається `reset` (43 лічильники) понад 1,5 год після одноразового стрибка показника; вірогідне місце — обробка `reset` у `_f3d_build_meter` (`models/f3d_energy_interval.py` ~176–260) і оновлення `data_state`; не з'ясовано (ліміт часу).
+**O-4 (потребує перевірки лідером).** `td.energy.meter.data_state` залишається `reset` (43 лічильники) понад 1,5 год після одноразового стрибка показника; вірогідне місце — обробка `reset` у `_f3d_build_meter` (`models/td_energy_interval.py` ~176–260) і оновлення `data_state`; не з'ясовано (ліміт часу).
 
 ## Не виконано (потребує людини / середовища)
 
 * Копія демо-бази: AC-13, AC-53, ТК-03, ТК-04 (AVCO), AC-88, ТК-09 на демо-тарифі; `level0_migrated.state='done'`, «87 мігрованих активні».
-* `td_genset`/`factory3d_genset`: ТК-06 (AC-57), міст `island=true` (CE-05); `factory3d_viewer`: ТК-12 (AC-63/65 MAN), секція `denied` (ТБ-06).
+* `td_genset`/`td_genset_factory3d`: ТК-06 (AC-57), міст `island=true` (CE-05); `td_viewer3d`: ТК-12 (AC-63/65 MAN), секція `denied` (ТБ-06).
 * ТК-10 (90 хв), DEPLOY_TEST етап 1 «один ввід і три фідери» (2 год, AC-92 перша половина), docker-профіль `--profile dev`.
 * Виправлення емулятора (E-1, E-2) і модуля (D-1) — рішення лідера.

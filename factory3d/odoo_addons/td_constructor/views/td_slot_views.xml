@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-03 -->
-    <record id="view_f3d_slot_form" model="ir.ui.view">
-        <field name="name">f3d.slot.form</field>
-        <field name="model">f3d.slot</field>
+    <record id="view_td_slot_form" model="ir.ui.view">
+        <field name="name">td.slot.form</field>
+        <field name="model">td.slot</field>
         <field name="arch" type="xml">
             <form string="Місце (шаблон)">
                 <sheet>
@@ -46,9 +46,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_slot_list" model="ir.ui.view">
-        <field name="name">f3d.slot.list</field>
-        <field name="model">f3d.slot</field>
+    <record id="view_td_slot_list" model="ir.ui.view">
+        <field name="name">td.slot.list</field>
+        <field name="model">td.slot</field>
         <field name="arch" type="xml">
             <list string="Місця">
                 <field name="code_prefix"/>
@@ -62,9 +62,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_slot_search" model="ir.ui.view">
-        <field name="name">f3d.slot.search</field>
-        <field name="model">f3d.slot</field>
+    <record id="view_td_slot_search" model="ir.ui.view">
+        <field name="name">td.slot.search</field>
+        <field name="model">td.slot</field>
         <field name="arch" type="xml">
             <search string="Місця">
                 <field name="code_prefix"/>

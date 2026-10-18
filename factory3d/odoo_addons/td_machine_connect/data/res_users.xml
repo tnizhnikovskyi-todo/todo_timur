@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §4.2: технічний користувач автоматичних змін (вхід неможливий: немає пароля, active=False). -->
 <odoo noupdate="1">
-    <record id="user_f3d_machine" model="res.users" context="{'no_reset_password': True}">
+    <record id="user_td_machine" model="res.users" context="{'no_reset_password': True}">
         <field name="login">f3d_machine_bot</field>
         <field name="name">Верстати (автоматично)</field>
         <field name="active" eval="False"/>
@@ -14,7 +14,7 @@
             ref('mrp.group_mrp_user'),
             ref('stock.group_stock_user'),
             ref('maintenance.group_equipment_manager'),
-            ref('factory3d_base.group_f3d_user'),
+            ref('td_factory3d.group_td_user'),
         ])]"/>
     </record>
 </odoo>

@@ -1,10 +1,10 @@
-"""Параметри factory3d.access.* і регулярні вирази R-01 (SPEC §5.1)."""
+"""Параметри td.access.* і регулярні вирази R-01 (SPEC §5.1)."""
 import logging
 import re
 
 _logger = logging.getLogger(__name__)
 
-PREFIX = "factory3d.access."
+PREFIX = "td.access."
 
 CODE_RE = re.compile(r'^[A-Z0-9]+(-[A-Z0-9]+)*$')
 BSID_RE = re.compile(r'^[0-9A-Za-z_\-]{1,64}$')
@@ -27,7 +27,7 @@ def get_int(env, key, default, lo=None, hi=None):
     except (TypeError, ValueError):
         value = None
     if value is None or (lo is not None and value < lo) or (hi is not None and value > hi):
-        _logger.warning("Параметр factory3d.access.%s=%r поза межами, взято %s", key, raw, default)
+        _logger.warning("Параметр td.access.%s=%r поза межами, взято %s", key, raw, default)
         return default
     return value
 

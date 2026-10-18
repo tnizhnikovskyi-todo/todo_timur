@@ -19,9 +19,9 @@ class TestSceneSeed(F3DConstructorCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        with file_open('factory3d_constructor/data/scene_inventory.json', 'rb') as handle:
+        with file_open('td_constructor/data/scene_inventory.json', 'rb') as handle:
             cls.inventory = json.loads(handle.read().decode('utf-8'))
-        cls.site = cls.env['f3d.site'].search([('seed_key', '=', 'main_demo')], limit=1)
+        cls.site = cls.env['td.site'].search([('seed_key', '=', 'main_demo')], limit=1)
 
     def test_all_layers_with_groups(self):
         self.assertTrue(self.site, "Сід «Меблеве підприємство» не завантажено")
@@ -36,7 +36,7 @@ class TestSceneSeed(F3DConstructorCase):
 
     def test_layer_visibility_follows_seed(self):
         """Дах, інженерні мережі й територія вимкнені за замовчуванням: їхні зони на весь цех закривають верстати."""
-        with file_open('factory3d_constructor/data/seed_site.json', 'rb') as handle:
+        with file_open('td_constructor/data/seed_site.json', 'rb') as handle:
             seed = json.loads(handle.read().decode('utf-8'))
         want = {item['name']: bool(item.get('visible', True)) for item in seed['layers']}
         got = {layer.name: layer.visible for layer in self.site.layer_ids}
@@ -45,8 +45,8 @@ class TestSceneSeed(F3DConstructorCase):
         self.assertFalse(got['Пожежна сигналізація'])
 
     def test_every_inventory_code_is_in_the_seed(self):
-        slots = self.env['f3d.slot'].search([('site_id', '=', self.site.id)])
-        covered = set(self.env['f3d.placement'].search([('site_id', '=', self.site.id)]).mapped('code'))
+        slots = self.env['td.slot'].search([('site_id', '=', self.site.id)])
+        covered = set(self.env['td.placement'].search([('site_id', '=', self.site.id)]).mapped('code'))
         covered |= set(slots.mapped('code_prefix'))
         for slot in slots:
             covered |= {cell['code'] for cell in slot._f3d_cells()}
@@ -60,7 +60,7 @@ class TestSceneSeed(F3DConstructorCase):
         """Етап 2 рахує зсув від інвентаря: x, y — центр AABB, rotation — yaw; без правок зсувів немає."""
         poses = self.inventory['objects']
         checked = 0
-        for placement in self.env['f3d.placement'].search([('site_id', '=', self.site.id)]):
+        for placement in self.env['td.placement'].search([('site_id', '=', self.site.id)]):
             obj = poses.get(placement.code)
             self.assertTrue(obj, placement.code)
             self.assertAlmostEqual(placement.x_m, obj['x'], places=6, msg=placement.code)
@@ -68,7 +68,7 @@ class TestSceneSeed(F3DConstructorCase):
             self.assertAlmostEqual(placement.rotation, obj.get('yaw') or 0.0, places=6, msg=placement.code)
             checked += 1
         self.assertGreater(checked, 150)
-        for slot in self.env['f3d.slot'].search([('site_id', '=', self.site.id), ('params', '!=', False)]):
+        for slot in self.env['td.slot'].search([('site_id', '=', self.site.id), ('params', '!=', False)]):
             obj = poses.get(slot.code_prefix)
             if obj and slot.template != 'zone':
                 self.assertAlmostEqual(slot.x_m, obj['x'], places=6, msg=slot.code_prefix)
@@ -90,14 +90,14 @@ class TestSceneSeed(F3DConstructorCase):
         self.assertEqual(blocks, [], [i['message'] for i in blocks[:5]])
 
     def test_exact_cells_have_the_object_code(self):
-        slot = self.env['f3d.slot'].search([('site_id', '=', self.site.id), ('code_prefix', '=', 'UNLOAD-3')])
+        slot = self.env['td.slot'].search([('site_id', '=', self.site.id), ('code_prefix', '=', 'UNLOAD-3')])
         self.assertTrue(slot, "UNLOAD-3 має бути в сіді (етап 2 його ховає)")
         self.assertEqual([cell['code'] for cell in slot._f3d_cells()], ['UNLOAD-3'])
 
     def test_people_and_vehicles_are_dynamic(self):
         expected = {c for c, o in self.inventory['objects'].items() if o['kind'] in ('person', 'vehicle')}
         dynamic = set(
-            self.env['f3d.placement'].search([('site_id', '=', self.site.id), ('dynamic', '=', True)]).mapped('code')
+            self.env['td.placement'].search([('site_id', '=', self.site.id), ('dynamic', '=', True)]).mapped('code')
         )
         self.assertEqual(dynamic, expected)
         self.assertEqual(len(expected), 50)

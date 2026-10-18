@@ -3,11 +3,11 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 
 
 class F3dFireBacnetDeviceWizard(models.TransientModel):
-    _name = "f3d.fire.bacnet.device.wizard"
+    _name = "td.fire.bacnet.device.wizard"
     _description = "Пожежна безпека: зміна BACnet device instance"
 
-    panel_id = fields.Many2one("f3d.fire.panel", string="Прилад", required=True)
-    source_id = fields.Many2one("f3d.source", related="panel_id.source_id", string="Джерело", readonly=True)
+    panel_id = fields.Many2one("td.fire.panel", string="Прилад", required=True)
+    source_id = fields.Many2one("td.source", related="panel_id.source_id", string="Джерело", readonly=True)
     old_instance = fields.Integer(string="Поточний device instance", readonly=True)
     new_instance = fields.Integer(string="Новий device instance", required=True)
     signal_count = fields.Integer(string="Сигналів на новому device", compute="_compute_counts")
@@ -17,7 +17,7 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
         if "old_instance" in fields_list and "old_instance" not in res:
-            panel = self.env["f3d.fire.panel"].browse(res.get("panel_id") or 0).exists()
+            panel = self.env["td.fire.panel"].browse(res.get("panel_id") or 0).exists()
             if panel.source_id:
                 res["old_instance"] = int((panel.source_id.params or {}).get("device") or 0)
         return res
@@ -25,8 +25,8 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
     def _signals(self):
         self.ensure_one()
         if not self.source_id:
-            return self.env["f3d.signal"]
-        return self.env["f3d.signal"].sudo().with_context(active_test=False).search(
+            return self.env["td.signal"]
+        return self.env["td.signal"].sudo().with_context(active_test=False).search(
             [("source_id", "=", self.source_id.id)])
 
     @api.depends("panel_id", "panel_id.source_id")
@@ -44,7 +44,7 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
 
     def action_apply(self):
         self.ensure_one()
-        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError("Змінювати BACnet device instance може лише адміністратор Завод 3D.")
         panel = self.panel_id
         source = panel.source_id.sudo()

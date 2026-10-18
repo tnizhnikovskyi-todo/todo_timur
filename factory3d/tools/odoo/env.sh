@@ -3,7 +3,7 @@
 #
 # Підключається через `source` (сам нічого не запускає і не змінює опції shell).
 # Будь-яку змінну можна перевизначити оточенням перед викликом скрипта, наприклад:
-#   ODOO_CONF=/tmp/other.conf factory3d/tools/odoo/run_tests.sh f3d_x
+#   ODOO_CONF=/tmp/other.conf factory3d/tools/odoo/run_tests.sh td_x
 #
 # Пароль ролі Postgres тут НЕ зберігається: він лежить у ~/.pgpass (створює pg.sh init) і в
 # $ODOO_CONF (права 600, db_password); libpq-утиліти (createdb, psql…) беруть його з ~/.pgpass.
@@ -13,7 +13,7 @@ F3D_TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # Корінь worktree/клону визначається від розташування скриптів (factory3d/tools/odoo → ../../..),
 # тому все працює з будь-якого worktree чи клону, а не лише з /home/user/todo_timur.
 F3D_REPO_DIR="${F3D_REPO_DIR:-$(cd "$F3D_TOOLS_DIR/../../.." && pwd -P)}"
-F3D_ADDONS_DIR="${F3D_ADDONS_DIR:-$F3D_REPO_DIR/factory3d/odoo_addons}"   # наші модулі factory3d_*
+F3D_ADDONS_DIR="${F3D_ADDONS_DIR:-$F3D_REPO_DIR/factory3d/odoo_addons}"   # наші модулі td_*
 F3D_TEMPLATE_DB="${F3D_TEMPLATE_DB:-f3d_template}"
 # Стандартні залежності, які ставляться в шаблон (ті, що відсутні в Community, пропускаються
 # і перелічуються при збиранні — див. ENV.md, «Недоступні модулі»).

@@ -3,15 +3,15 @@ from datetime import timedelta
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessError
-from odoo.addons.factory3d_telemetry.tools import thresholds
+from odoo.addons.td_telemetry.tools import thresholds
 
 from ..tools import rules, schedule, titles
-from .f3d_bms_hvac_unit import SIGNAL_FIELDS as _UNIT_FIELDS
-from .f3d_bms_light_group import SIGNAL_FIELDS as GROUP_SIGNAL_FIELDS
+from .td_bms_hvac_unit import SIGNAL_FIELDS as _UNIT_FIELDS
+from .td_bms_light_group import SIGNAL_FIELDS as GROUP_SIGNAL_FIELDS
 
 _logger = logging.getLogger(__name__)
 
-P = "factory3d.bms."
+P = "td.bms."
 MAINS_CODE = "infra/ats/src1_ok"
 FIRE_CODE = "fire/totals/system_state"
 DERIVED_CODE = "BMS-DERIVED"
@@ -21,7 +21,7 @@ UNIT_SIGNAL_FIELDS = [f for f, _label in _UNIT_FIELDS]
 class F3dBmsCheck(models.AbstractModel):
     """Перевірки відхилень (R-18…R-24): крон кожну хвилину + хук після прийому показань (R-20)."""
 
-    _name = "f3d.bms.check"
+    _name = "td.bms.check"
     _description = "Будівля: перевірки відхилень"
 
     # --- параметри й контекст ----------------------------------------------------------------------
@@ -65,14 +65,14 @@ class F3dBmsCheck(models.AbstractModel):
     @api.model
     def _suppression(self, now):
         """R-21: `(mains_lost, fire_active)`."""
-        sigs = self.env["f3d.signal"].sudo().search([("code", "in", [MAINS_CODE, FIRE_CODE])])
+        sigs = self.env["td.signal"].sudo().search([("code", "in", [MAINS_CODE, FIRE_CODE])])
         by_code = {s.code: s for s in sigs}
         mains = by_code.get(MAINS_CODE)
         fire = by_code.get(FIRE_CODE)
         mains_lost = bool(mains and rules.is_live(mains.status) and mains.last_value == 0)
         fire_active = bool(fire and rules.is_live(fire.status) and fire.last_text in ("alarm", "test"))
-        if not fire_active and "f3d.fire.drill" in self.env:
-            fire_active = bool(self.env["f3d.fire.drill"].sudo()._f3d_is_active_at(now))
+        if not fire_active and "td.fire.drill" in self.env:
+            fire_active = bool(self.env["td.fire.drill"].sudo()._f3d_is_active_at(now))
         return mains_lost, fire_active
 
     # --- «з якого часу» (R-20) -----------------------------------------------------------------------
@@ -143,12 +143,12 @@ class F3dBmsCheck(models.AbstractModel):
         parts = [c.split("/") for c in codes]
         groups = {p[2] for p in parts if p[0] == "lighting" and p[-1] == "level"}
         if groups:
-            for group in self.env["f3d.bms.light.group"].sudo().search([("code", "in", sorted(groups))]):
+            for group in self.env["td.bms.light.group"].sudo().search([("code", "in", sorted(groups))]):
                 self._sync_group(group, group.level_signal_id.last_ts, params, mains_lost)
         units = {p[2] for p in parts if p[0] == "ventilation" and p[-1] in ("state", "mode", "indoor_c")}
         if units:
             for unit in (
-                self.env["f3d.bms.hvac.unit"]
+                self.env["td.bms.hvac.unit"]
                 .sudo()
                 .search([("code", "in", sorted(units)), ("kind", "in", ("roofvent", "ahu"))])
             ):
@@ -166,7 +166,7 @@ class F3dBmsCheck(models.AbstractModel):
         if not params["read_enabled"]:
             return False
         now = fields.Datetime.now()
-        source = env.env["f3d.source"].search([("code", "=", DERIVED_CODE)], limit=1)
+        source = env.env["td.source"].search([("code", "=", DERIVED_CODE)], limit=1)
         try:
             with env.env.cr.savepoint():
                 env._run_checks(now, params)
@@ -183,7 +183,7 @@ class F3dBmsCheck(models.AbstractModel):
 
     def _notify_commands(self, now):
         """§11 п. 11: чаттер групи/установки для команд `origin='bms'` у стані `failed`/`expired` (один раз)."""
-        Command = self.env["f3d.command"]
+        Command = self.env["td.command"]
         cmds = Command.search(
             [
                 ("origin", "=", "bms"),
@@ -194,10 +194,10 @@ class F3dBmsCheck(models.AbstractModel):
         labels = dict(Command._fields["state"]._description_selection(self.env))
         for cmd in cmds:
             sig = cmd.signal_id
-            group = self.env["f3d.bms.light.group"].search(
+            group = self.env["td.bms.light.group"].search(
                 ["|"] * (len(GROUP_SIGNAL_FIELDS) - 1) + [(f, "=", sig.id) for f in GROUP_SIGNAL_FIELDS], limit=1
             )
-            unit = self.env["f3d.bms.hvac.unit"].search(
+            unit = self.env["td.bms.hvac.unit"].search(
                 ["|"] * (len(UNIT_SIGNAL_FIELDS) - 1) + [(f, "=", sig.id) for f in UNIT_SIGNAL_FIELDS], limit=1
             )
             obj = group or unit
@@ -222,8 +222,8 @@ class F3dBmsCheck(models.AbstractModel):
         return {"code": sig.code, "ts": now, "text": text, "q": "good"}
 
     def _run_checks(self, now, params):
-        Group = self.env["f3d.bms.light.group"]
-        Unit = self.env["f3d.bms.hvac.unit"]
+        Group = self.env["td.bms.light.group"]
+        Unit = self.env["td.bms.hvac.unit"]
         cache = {}
         mains_lost, fire_active = self._suppression(now)
         readings = []
@@ -273,7 +273,7 @@ class F3dBmsCheck(models.AbstractModel):
             )
             readings.append(self._reading(unit.check_signal_id, text, now, params))
 
-        balance = self.env["f3d.bms.heat.balance"].search([], limit=1)
+        balance = self.env["td.bms.heat.balance"].search([], limit=1)
         if balance and balance.check_signal_id:
             n_live = len(units.filtered(lambda u: u.heat_signal_id and rules.is_live(u.heat_signal_id.status)))
             deficit = balance._f3d_bms_live()["deficit_kw"]
@@ -291,7 +291,7 @@ class F3dBmsCheck(models.AbstractModel):
 
         readings = [r for r in readings if r]
         if readings:
-            self.env["f3d.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(readings, src="module")
+            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(readings, src="module")
         self._enrich_requests(now, params, cache)
         self._journal(now)
 
@@ -300,17 +300,17 @@ class F3dBmsCheck(models.AbstractModel):
         Request = self.env["maintenance.request"].sudo()
         reqs = Request.search(
             [
-                ("f3d_bms_enriched", "=", False),
-                ("f3d_signal_id.module", "=", "bms"),
+                ("td_bms_enriched", "=", False),
+                ("td_signal_id.module", "=", "bms"),
                 "|",
-                ("f3d_signal_id.code", "=like", "%/check"),
-                ("f3d_signal_id.code", "=like", "lighting/groups/%/faults"),
+                ("td_signal_id.code", "=like", "%/check"),
+                ("td_signal_id.code", "=like", "lighting/groups/%/faults"),
             ]
         )
         for req in reqs:
-            sig = req.f3d_signal_id
+            sig = req.td_signal_id
             kind, obj_code = rules.object_of(sig.code)
-            vals = {"f3d_bms_enriched": True}
+            vals = {"td_bms_enriched": True}
             try:
                 info = self._request_texts(req, kind, obj_code, now, params, cache)
             except Exception:
@@ -318,15 +318,15 @@ class F3dBmsCheck(models.AbstractModel):
                 info = None
             if info:
                 if info.get("name"):
-                    vals.update(name=info["name"], f3d_value=info["value"], f3d_threshold=info["threshold"])
+                    vals.update(name=info["name"], td_value=info["value"], td_threshold=info["threshold"])
                 if info.get("line"):
                     vals["description"] = (req.description or "") + "\n" + _escape(info["line"])
             req.with_context(mail_notrack=True, tracking_disable=True).write(vals)
 
     def _request_texts(self, req, kind, obj_code, now, params, cache):
-        rule = req.f3d_bms_rule
+        rule = req.td_bms_rule
         if kind == "group":
-            g = self.env["f3d.bms.light.group"].search([("code", "=", obj_code)], limit=1)
+            g = self.env["td.bms.light.group"].search([("code", "=", obj_code)], limit=1)
             if not g:
                 return None
             zone, level = g.zone_id.name or "", g.level_pct
@@ -341,7 +341,7 @@ class F3dBmsCheck(models.AbstractModel):
             if rule == "light_fault":
                 return {"line": titles.faults_line(g.faulty, g.panel_id.code, g.dali_group)}
         elif kind == "unit":
-            u = self.env["f3d.bms.hvac.unit"].search([("code", "=", obj_code)], limit=1)
+            u = self.env["td.bms.hvac.unit"].search([("code", "=", obj_code)], limit=1)
             if not u:
                 return None
             zone = u.zone_id.name or ""
@@ -360,7 +360,7 @@ class F3dBmsCheck(models.AbstractModel):
                     u.cold_since if in_work else u.cold_off_since,
                 )
         elif kind == "boiler" and rule == "heat_deficit":
-            b = self.env["f3d.bms.heat.balance"].search([], limit=1)
+            b = self.env["td.bms.heat.balance"].search([], limit=1)
             if not b:
                 return None
             live = b._f3d_bms_live()
@@ -380,14 +380,14 @@ class F3dBmsCheck(models.AbstractModel):
     # --- журнал відхилень (R-22 п. 2) ----------------------------------------------------------------
     def _object_zones(self):
         zones = {}
-        for model in ("f3d.bms.light.group", "f3d.bms.hvac.unit", "f3d.bms.light.panel"):
+        for model in ("td.bms.light.group", "td.bms.hvac.unit", "td.bms.light.panel"):
             for rec in self.env[model].search([]):
                 zones[(model, rec.code)] = rec.zone_id.id
         return zones
 
     def _journal(self, now):
-        Dev = self.env["f3d.bms.deviation"]
-        Signal = self.env["f3d.signal"]
+        Dev = self.env["td.bms.deviation"]
+        Signal = self.env["td.signal"]
         open_eps = Dev.search([("state", "=", "open")])
         by_signal = {ep.signal_id.id: ep for ep in open_eps}
         alarmed = Signal.search([("module", "=", "bms"), ("status", "=", "alarm")])
@@ -411,11 +411,11 @@ class F3dBmsCheck(models.AbstractModel):
             if zones is None:
                 zones = self._object_zones()
             kind, obj_code = rules.object_of(sig.code)
-            model = {"group": "f3d.bms.light.group", "unit": "f3d.bms.hvac.unit", "panel": "f3d.bms.light.panel"}.get(
+            model = {"group": "td.bms.light.group", "unit": "td.bms.hvac.unit", "panel": "td.bms.light.panel"}.get(
                 kind
             )
             if sig.kind == "state":
-                value, threshold = (req.f3d_value, req.f3d_threshold) if req else (0.0, 0.0)
+                value, threshold = (req.td_value, req.td_threshold) if req else (0.0, 0.0)
             else:
                 value = sig.last_value
             Dev.create(
@@ -446,7 +446,7 @@ class F3dBmsCheck(models.AbstractModel):
     # --- повторна установка даних (§4.4) ---------------------------------------------------------------
     @api.model
     def f3d_bms_reinstall_data(self):
-        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError("Повторну установку даних будівлі виконує лише адміністратор «Завод 3D».")
         from .. import hooks  # noqa: PLC0415
 

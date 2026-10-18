@@ -26,26 +26,26 @@ class TestCounterFinish(F3DMachineCase):
         """AC-33: 0→1→5, скидання 5→0→2, стрибок 2→1500 ігнорується з WARNING."""
         for t, value in (("10:00", 1), ("10:05", 5), ("10:10", 0), ("10:15", 2)):
             self.pieces(t, value)
-        with self.assertLogs("odoo.addons.factory3d_machine_connect", "WARNING"):
+        with self.assertLogs("odoo.addons.td_machine_connect", "WARNING"):
             self.pieces("10:20", 1500)
-        self.assertEqual(self.wo.f3d_qty_counted, 7)
+        self.assertEqual(self.wo.td_qty_counted, 7)
         self.assertEqual(self.m.current_log_id.pieces, 7)
 
     def test_live_sync(self):
         """AC-34: режим `live`, `qty_sync_s=300`: синхронізація не частіше 5 хв; `finish` — 0 до завершення."""
-        self._icp().set_param("factory3d.machine_connect.qty_sync_mode", "live")
-        self._icp().set_param("factory3d.machine_connect.qty_sync_s", "300")
+        self._icp().set_param("td.machine_connect.qty_sync_mode", "live")
+        self._icp().set_param("td.machine_connect.qty_sync_s", "300")
         self.pieces("10:00", 3)
         self.assertEqual(self.wo.qty_produced, 3)
         self.pieces("10:01", 5)
         self.assertEqual(self.wo.qty_produced, 3)
         with at("10:05:06"):
             self.feed(self.ua(self.m, "10:05:01", pieces=6))
-        self.assertEqual((self.wo.qty_produced, self.wo.f3d_qty_counted), (6, 6))
+        self.assertEqual((self.wo.qty_produced, self.wo.td_qty_counted), (6, 6))
 
     def test_finish_mode_keeps_qty(self):
         self.pieces("10:00", 5)
-        self.assertEqual((self.wo.qty_produced, self.wo.f3d_qty_counted), (0, 5))
+        self.assertEqual((self.wo.qty_produced, self.wo.td_qty_counted), (0, 5))
 
     def test_finish_by_job_change(self):
         """AC-35: `counted=14`, `job → "-"` → `done`, `qty_produced=14`, активне завдання знято."""
@@ -66,7 +66,7 @@ class TestCounterFinish(F3DMachineCase):
         self.pieces("10:00", 12)
         with at("10:25:50"):
             self.feed(self.ua(self.m, "10:25:48", job="-"))
-        self.assertTrue(self.wo.f3d_partial_hold)
+        self.assertTrue(self.wo.td_partial_hold)
         self.assertEqual(self.wo.state, "progress")
         self.assertFalse(self.wo.time_ids.filtered(lambda t: not t.date_end))
         self.assertEqual(mo.product_qty, 14)
@@ -82,7 +82,7 @@ class TestCounterFinish(F3DMachineCase):
         self.assertEqual(wo.state, "progress")
         with at("10:35:05"):
             self.feed(self.io(m, "10:35:00", pieces=8))
-        self.assertEqual(wo.f3d_qty_counted, 8)
+        self.assertEqual(wo.td_qty_counted, 8)
         with at("10:40:00"):
             self.feed(self.io(m, "10:40:00", run=False))
         self.tick("10:40:59")
@@ -99,14 +99,14 @@ class TestCounterFinish(F3DMachineCase):
         with self.assertRaises(AccessError):
             wo.with_user(self.user_mrp).action_f3d_finish_partial()
         wo.with_user(self.user_mrp_manager).action_f3d_finish_partial()
-        self.assertEqual((wo.qty_produced, wo.state, wo.f3d_partial_hold), (12, "done", False))
+        self.assertEqual((wo.qty_produced, wo.state, wo.td_partial_hold), (12, "done", False))
 
     def test_clear_hold(self):
         self.pieces("10:00", 12)
         with at("10:25:50"):
             self.feed(self.ua(self.m, "10:25:48", job="-"))
         self.wo.with_user(self.user_mrp_manager).action_f3d_clear_hold()
-        self.assertFalse(self.wo.f3d_partial_hold)
+        self.assertFalse(self.wo.td_partial_hold)
 
     def test_autopause_resume(self):
         """AC-38: ERROR → таймер закрито одразу; WORKING → новий таймер; `idle` → пауза кроном; `setup` не зупиняє."""
@@ -124,7 +124,7 @@ class TestCounterFinish(F3DMachineCase):
         opened = wo.time_ids.filtered(lambda t: not t.date_end)
         self.assertEqual(len(opened), 1)
         self.assertEqual(opened.date_start, kt("10:30"))
-        self.assertEqual(wo.f3d_employee_id, self.emp_ua)
+        self.assertEqual(wo.td_employee_id, self.emp_ua)
         self.assertFalse(m.wo_paused)
         with at("10:40:02"):
             self.feed(self.ua(m, "10:40:00", state="READY", mode="AUTOMATIC"))

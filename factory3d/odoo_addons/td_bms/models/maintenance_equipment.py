@@ -2,9 +2,9 @@ from odoo import _, fields, models
 from odoo.exceptions import UserError
 
 BMS_MODELS = (
-    ("group", "f3d.bms.light.group"),
-    ("panel", "f3d.bms.light.panel"),
-    ("unit", "f3d.bms.hvac.unit"),
+    ("group", "td.bms.light.group"),
+    ("panel", "td.bms.light.panel"),
+    ("unit", "td.bms.hvac.unit"),
 )
 
 
@@ -13,7 +13,7 @@ class MaintenanceEquipment(models.Model):
 
     _inherit = "maintenance.equipment"
 
-    f3d_bms_object = fields.Char(string="Об'єкт «Будівля»", compute="_compute_f3d_bms_object")
+    td_bms_object = fields.Char(string="Об'єкт «Будівля»", compute="_compute_f3d_bms_object")
 
     def _compute_f3d_bms_object(self):
         for rec in self:
@@ -26,17 +26,17 @@ class MaintenanceEquipment(models.Model):
                         break
                 if not res:
                     bal = (
-                        self.env["f3d.bms.heat.balance"].sudo().search([("boiler_equipment_id", "=", rec.id)], limit=1)
+                        self.env["td.bms.heat.balance"].sudo().search([("boiler_equipment_id", "=", rec.id)], limit=1)
                     )
                     res = "balance:%d" % bal.id if bal else False
-            rec.f3d_bms_object = res
+            rec.td_bms_object = res
 
     def action_f3d_bms_open(self):
         self.ensure_one()
-        if not self.f3d_bms_object:
+        if not self.td_bms_object:
             raise UserError(_("Для обладнання немає об'єкта модуля «Будівля»."))
-        key, res_id = self.f3d_bms_object.split(":")
-        model = dict(BMS_MODELS, balance="f3d.bms.heat.balance")[key]
+        key, res_id = self.td_bms_object.split(":")
+        model = dict(BMS_MODELS, balance="td.bms.heat.balance")[key]
         return {
             "type": "ir.actions.act_window",
             "res_model": model,

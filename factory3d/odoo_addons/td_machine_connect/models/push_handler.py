@@ -13,19 +13,19 @@ EV_KINDS = {
 }
 # (маршрут, kind) -> (модель власника, метод); власники реалізують методи в W2/W3 (EV-01), W5 (EV-02), W6 (EV-03).
 ROUTES = {
-    ("mc_woodstore", "status"): ("f3d.gantry.job", "_f3d_apply_status"),
-    ("mc_woodstore", "stacks"): ("f3d.gantry.stack", "_f3d_apply_ws"),
-    ("mc_woodstore", "jobs"): ("f3d.gantry.job", "_f3d_apply_ws"),
-    ("mc_woodstore", "events"): ("f3d.gantry.job", "_f3d_apply_events"),
-    ("mc_cutopt", "job"): ("f3d.cut.map", "_f3d_apply_job"),
-    ("mc_cutopt", "plan"): ("f3d.cut.map", "_f3d_apply_plan"),
-    ("mc_cutopt", "mpr"): ("f3d.cut.map", "_f3d_apply_mpr"),
+    ("mc_woodstore", "status"): ("td.gantry.job", "_f3d_apply_status"),
+    ("mc_woodstore", "stacks"): ("td.gantry.stack", "_f3d_apply_ws"),
+    ("mc_woodstore", "jobs"): ("td.gantry.job", "_f3d_apply_ws"),
+    ("mc_woodstore", "events"): ("td.gantry.job", "_f3d_apply_events"),
+    ("mc_cutopt", "job"): ("td.cut.map", "_f3d_apply_job"),
+    ("mc_cutopt", "plan"): ("td.cut.map", "_f3d_apply_plan"),
+    ("mc_cutopt", "mpr"): ("td.cut.map", "_f3d_apply_mpr"),
 }
 
 
 class F3dPushHandlerMachineConnect(models.AbstractModel):
-    _name = "f3d.push.handler.machine_connect"
-    _inherit = "f3d.push.handler"
+    _name = "td.push.handler.machine_connect"
+    _inherit = "td.push.handler"
     _description = "Верстати: обробник подій колектора"
     _f3d_push_routes = ("mc_opcua", "mc_woodstore", "mc_cutopt")
 
@@ -44,7 +44,7 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
         # id події колектора читають власники (W2 `_f3d_apply_event`: ext_event_id)
         ctx = {"f3d_push_event_id": event.get("event_id")}
         if route == "mc_opcua":
-            return self.env["f3d.machine"].sudo().with_context(**ctx)._f3d_apply_event(payload)
+            return self.env["td.machine"].sudo().with_context(**ctx)._f3d_apply_event(payload)
         model, method = ROUTES[(route, kind)]
         owner = self.env[model].sudo().with_context(**ctx)
         func = getattr(owner, method, None)

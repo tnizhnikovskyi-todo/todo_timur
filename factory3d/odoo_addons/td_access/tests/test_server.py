@@ -17,10 +17,10 @@ class ServerCase(AccessCase):
 
     @classmethod
     def _set_env(cls, value):
-        cls.env['ir.config_parameter'].sudo().set_param('factory3d.base.environment', value)
+        cls.env['ir.config_parameter'].sudo().set_param('td.base.environment', value)
 
     def _new_server(self, **vals):
-        return self.env['f3d.access.server'].create(dict({'name': 'Т', 'url': 'https://iot-sim:8443'}, **vals))
+        return self.env['td.access.server'].create(dict({'name': 'Т', 'url': 'https://iot-sim:8443'}, **vals))
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_access')
@@ -59,7 +59,7 @@ class TestConnection(ServerCase):
                            devices=self.fixture_rows('devices', 'DeviceCollection'))
 
     def test_ok_separate_session(self):
-        self.env['ir.config_parameter'].sudo().set_param('factory3d.access.read_enabled', 'False')
+        self.env['ir.config_parameter'].sudo().set_param('td.access.read_enabled', 'False')
         fake = self._fake()
         server = self.server
         with self.patch_client(fake):
@@ -74,7 +74,7 @@ class TestConnection(ServerCase):
         fake = self._fake()
         fake.login_error = BioStarAuthError(401, '101', 'Failed to login for invalid username or password')
         server = self.server
-        with self.patch_client(fake), self.assertLogs('odoo.addons.factory3d_access', 'DEBUG') as logs:
+        with self.patch_client(fake), self.assertLogs('odoo.addons.td_access', 'DEBUG') as logs:
             res = server.with_user(self.user_f3d_admin).action_test_connection()
         self.assertEqual(res['params']['type'], 'danger')
         self.assertEqual((server.state, server.error_count), ('error', 1))
@@ -102,11 +102,11 @@ class TestConnection(ServerCase):
 class TestCodeValidation(ServerCase):
 
     def _device(self, **vals):
-        return self.env['f3d.access.device'].create(dict(
+        return self.env['td.access.device'].create(dict(
             {'name': 'Д', 'code': 'ACR-NEW', 'server_id': self.server.id}, **vals))
 
     def _door(self, **vals):
-        return self.env['f3d.access.door'].create(dict(
+        return self.env['td.access.door'].create(dict(
             {'name': 'Дв', 'code': 'DOOR-NEW', 'server_id': self.server.id}, **vals))
 
     def test_device_codes(self):
@@ -126,8 +126,8 @@ class TestCodeValidation(ServerCase):
             self._door(is_perimeter=True)
         with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'):
             self._door(dwell_min=2000)
-        other = self.env['f3d.access.server'].create({'name': 'Інший', 'url': 'https://other:8443'})
-        foreign = self.env['f3d.access.device'].create({'name': 'Ч', 'code': 'ACR-FOR', 'server_id': other.id})
+        other = self.env['td.access.server'].create({'name': 'Інший', 'url': 'https://other:8443'})
+        foreign = self.env['td.access.device'].create({'name': 'Ч', 'code': 'ACR-FOR', 'server_id': other.id})
         with self.assertRaises(ValidationError):
             self._door(entry_device_id=foreign.id)
         door = self._door(zone_from_id=self.z['Z-KPP'].id, zone_to_id=self.z['Z-ASM'].id, is_perimeter=True)
@@ -170,7 +170,7 @@ class TestPoll(ServerCase):
         return self._rows('06:58:20', '06:58:40', '06:59:00', '06:59:10')
 
     def _events(self):
-        return self.env['f3d.access.event'].search([('server_id', '=', self.server.id)])
+        return self.env['td.access.event'].search([('server_id', '=', self.server.id)])
 
     def test_window_first_and_next(self):
         fake = FakeBioStar(events=self._four())
@@ -195,10 +195,10 @@ class TestPoll(ServerCase):
         self.poll('2026-10-12 07:01:30', fake)
         self.assertEqual(len(self._events()), 4)
         self.assertEqual((self.server.last_poll_new, self.server.last_poll_rows), (0, 4))
-        res = self.env['f3d.access.event']._f3d_ingest_rows(self.server, fake.events)
+        res = self.env['td.access.event']._f3d_ingest_rows(self.server, fake.events)
         self.assertEqual((res['created'], res['duplicates'], res['invalid']), (0, 4, 0))
         with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.env.cr.savepoint():
-            self.env['f3d.access.event'].create({
+            self.env['td.access.event'].create({
                 'server_id': self.server.id, 'biostar_id': '1', 'ts': '2026-10-12 06:58:20', 'code': 20480,
                 'event_type': 'door'})
 
@@ -282,5 +282,5 @@ class TestCommitGuard(AccessCase):
         self.assertFalse(server._may_commit())
 
     def test_gc_without_no_commit(self):
-        Event = self.env['f3d.access.event'].with_context(f3d_no_commit=False)
+        Event = self.env['td.access.event'].with_context(f3d_no_commit=False)
         self.assertEqual(Event._gc(90), 0)

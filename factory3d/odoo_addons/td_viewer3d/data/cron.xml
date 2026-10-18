@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
-    <!-- SPEC §6. cron_f3d_demo додає майстер демо. Усі крони — від base.user_root; знімок бере _take від user_kiosk. -->
-    <record id="cron_f3d_snapshot" model="ir.cron">
+    <!-- SPEC §6. cron_td_demo додає майстер демо. Усі крони — від base.user_root; знімок бере _take від user_kiosk. -->
+    <record id="cron_td_snapshot" model="ir.cron">
         <field name="name">3D: знімок стану</field>
-        <field name="model_id" ref="model_f3d_viewer_snapshot"/>
+        <field name="model_id" ref="model_td_viewer_snapshot"/>
         <field name="state">code</field>
         <field name="code">model._cron_snapshot()</field>
         <field name="interval_number">10</field>
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_rotate" model="ir.cron">
+    <record id="cron_td_rotate" model="ir.cron">
         <field name="name">3D: ротація журналу станів</field>
-        <field name="model_id" ref="model_f3d_viewer_snapshot"/>
+        <field name="model_id" ref="model_td_viewer_snapshot"/>
         <field name="state">code</field>
         <field name="code">model._cron_rotate()</field>
         <field name="interval_number">1</field>
@@ -21,18 +21,18 @@
         <field name="nextcall">2026-10-16 23:30:00</field>
         <field name="active" eval="True"/>
     </record>
-    <record id="cron_f3d_signal_bus" model="ir.cron">
+    <record id="cron_td_signal_bus" model="ir.cron">
         <field name="name">3D: сигнали імітації в шину</field>
-        <field name="model_id" ref="model_f3d_viewer_event"/>
+        <field name="model_id" ref="model_td_viewer_event"/>
         <field name="state">code</field>
         <field name="code">model._cron_signal_bus()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
         <field name="active" eval="False"/>
     </record>
-    <record id="cron_f3d_demo" model="ir.cron">
+    <record id="cron_td_demo" model="ir.cron">
         <field name="name">3D: заливка демо</field>
-        <field name="model_id" ref="model_f3d_demo_wizard"/>
+        <field name="model_id" ref="model_td_demo_wizard"/>
         <field name="state">code</field>
         <field name="code">model._cron_run()</field>
         <field name="interval_number">1</field>

@@ -14,20 +14,20 @@ class TestSeedHook(F3DConstructorCase):
     """AC-02, AC-03, AC-05 (AC-06 — в test_publish): R-24, §5.2."""
 
     def _drop_seed_site(self):
-        site = self.env['f3d.site'].with_context(active_test=False).search([('seed_key', '=', 'main_demo')])
+        site = self.env['td.site'].with_context(active_test=False).search([('seed_key', '=', 'main_demo')])
         site.sudo().unlink()
 
     def _models_count(self):
         return {
             m: self.env[m].with_context(active_test=False).search_count([])
             for m in (
-                'f3d.site',
-                'f3d.layer',
-                'f3d.slot',
-                'f3d.placement',
-                'f3d.equipment.variant',
-                'f3d.layout.version',
-                'f3d.check.config',
+                'td.site',
+                'td.layer',
+                'td.slot',
+                'td.placement',
+                'td.equipment.variant',
+                'td.layout.version',
+                'td.check.config',
                 'stock.location',
                 'maintenance.equipment',
                 'mrp.workcenter',
@@ -38,18 +38,18 @@ class TestSeedHook(F3DConstructorCase):
         self._drop_seed_site()
         data = seed.normalize_seed(seed.read_seed())
         report1 = hooks.run_seed_hook(self.env)
-        site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
+        site = self.env['td.site'].search([('seed_key', '=', 'main_demo')])
         self.assertEqual(len(site), 1)
         self.assertEqual(
             (site.name, site.building_length_m, site.building_width_m, site.building_height_m),
             ("Меблеве підприємство", 150, 72, 9),
         )
         counts = data['meta']['counts']
-        slots = self.env['f3d.slot'].search([('site_id', '=', site.id)])
+        slots = self.env['td.slot'].search([('site_id', '=', site.id)])
         self.assertEqual(len(site.layer_ids), counts['layers'])
         self.assertEqual(len(slots), counts['slots'])
         self.assertEqual(sum(slots.mapped('cell_count')), counts['cells'])
-        self.assertEqual(self.env['f3d.placement'].search_count([('site_id', '=', site.id)]), counts['placements'])
+        self.assertEqual(self.env['td.placement'].search_count([('site_id', '=', site.id)]), counts['placements'])
         self.assertEqual(report1['created'], counts)
         self.assertEqual(report1['skipped_variants'], [])
         self.assertEqual(len(site.version_ids), 1)
@@ -62,38 +62,38 @@ class TestSeedHook(F3DConstructorCase):
         self.assertEqual(before, self._models_count())
         self.assertEqual(report1, report2)
         self.assertEqual(
-            self.env['ir.config_parameter'].sudo().get_param('factory3d.constructor.seed_report'),
+            self.env['ir.config_parameter'].sudo().get_param('td.constructor.seed_report'),
             json.dumps(report2, ensure_ascii=False, sort_keys=True),
         )
 
     def test_ac19_categories_after_hook(self):
         hooks.step_categories(self.env)
-        Passport = self.env['f3d.equipment.passport']
+        Passport = self.env['td.equipment.passport']
         for role, category in (('beam_saw', 'machine'), ('board_rack', 'rack'), ('forklift', 'forklift')):
             passport = Passport.search([('role', '=', role)])
             if passport:
-                self.assertEqual(passport.f3d_category, category, role)
+                self.assertEqual(passport.td_category, category, role)
 
     def test_ac03_link_existing_records(self):
-        """Наявні запис (barcode/f3d_code) зв'язуються, а не дублюються; незнайдені коди — у seed_report.unlinked."""
+        """Наявні запис (barcode/td_code) зв'язуються, а не дублюються; незнайдені коди — у seed_report.unlinked."""
         self._drop_seed_site()
         Loc, Equipment = self.env['stock.location'], self.env['maintenance.equipment']
-        loc = Loc.search([('f3d_code', '=', 'FG-R1-B01-L4')]) or Loc.create(
+        loc = Loc.search([('td_code', '=', 'FG-R1-B01-L4')]) or Loc.create(
             {'name': 'FG-R1-B01-L4', 'barcode': 'FG-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id}
         )
-        eq = Equipment.search([('f3d_code', '=', 'SAW-1')]) or Equipment.create(
-            {'name': "Розкрій 1", 'f3d_code': 'SAW-1'}
+        eq = Equipment.search([('td_code', '=', 'SAW-1')]) or Equipment.create(
+            {'name': "Розкрій 1", 'td_code': 'SAW-1'}
         )
-        demo = bool(Loc.search_count([('f3d_code', '=', 'FG-R1-B01-L1')]))  # копія демо-бази: усі коди макета вже є
+        demo = bool(Loc.search_count([('td_code', '=', 'FG-R1-B01-L1')]))  # копія демо-бази: усі коди макета вже є
         name, parent = loc.name, loc.location_id
         locations, equipment = Loc.search_count([]), Equipment.search_count([])
         workcenters = self.env['mrp.workcenter'].search_count([])
         report = hooks.run_seed_hook(self.env)
-        site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
-        self.assertEqual((loc.f3d_site_id, eq.f3d_site_id), (site, site))
-        placement = self.env['f3d.placement'].search([('site_id', '=', site.id), ('code', '=', 'SAW-1')])
+        site = self.env['td.site'].search([('seed_key', '=', 'main_demo')])
+        self.assertEqual((loc.td_site_id, eq.td_site_id), (site, site))
+        placement = self.env['td.placement'].search([('site_id', '=', site.id), ('code', '=', 'SAW-1')])
         self.assertEqual(placement.equipment_id, eq)
-        self.assertEqual(eq.f3d_placement_uid, placement.uid)
+        self.assertEqual(eq.td_placement_uid, placement.uid)
         self.assertEqual(
             (Loc.search_count([]), Equipment.search_count([]), self.env['mrp.workcenter'].search_count([])),
             (locations, equipment, workcenters),
@@ -105,7 +105,7 @@ class TestSeedHook(F3DConstructorCase):
             # демо-база має локації всіх комірок макета (майданчик відходів WASTE — контейнери, не склад: комірку
             # вимкнено) і обладнання верстатів; об'єкти сцени (будівлі, планшети, люди) окремого обладнання не мають
             scene = set(
-                self.env['f3d.placement']
+                self.env['td.placement']
                 .search([('site_id', '=', site.id), ('variant_id.passport_id.role', '=like', 'scene_%')])
                 .mapped('code')
             )

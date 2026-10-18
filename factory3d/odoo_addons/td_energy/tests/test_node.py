@@ -16,8 +16,8 @@ class TestNodes(F3DEnergyCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.Node = cls.env["f3d.energy.node"]
-        cls.Meter = cls.env["f3d.energy.meter"]
+        cls.Node = cls.env["td.energy.node"]
+        cls.Meter = cls.env["td.energy.meter"]
 
     def node(self, code):
         rec = self.Node.search([("code", "=", code)])
@@ -49,7 +49,7 @@ class TestNodes(F3DEnergyCase):
             vals.update(kw)
             return self.Node.create(vals)
 
-        pool = self.env["f3d.energy.pool"].create({"code": "POOL-TST", "name": "Тест"})
+        pool = self.env["td.energy.pool"].create({"code": "POOL-TST", "name": "Тест"})
         bad = [
             {"code": "saw-1"},
             {"alloc_role": "direct"},
@@ -121,7 +121,7 @@ class TestNodes(F3DEnergyCase):
 
     def test_meter_signal_checks(self):  # AC-06
         meter = self.Meter.search([("code", "=", "PM-SAW-1")])
-        Signal = self.env["f3d.signal"]
+        Signal = self.env["td.signal"]
         gauge = Signal.create({"code": "energy/test/gauge_kwh", "name": "Тест", "kind": "gauge", "unit": "кВт·год"})
         counter_kw = Signal.create({"code": "energy/test/counter_kw", "name": "Тест", "kind": "counter", "unit": "кВт"})
         with self.assertRaisesRegex(ValidationError, "накопичувальним"), self.env.cr.savepoint():

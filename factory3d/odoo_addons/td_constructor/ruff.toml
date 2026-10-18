@@ -1,4 +1,4 @@
-# Конфіг репозиторію (як factory3d_base/ruff.toml); маніфест — голий dict за конвенцією Odoo.
+# Конфіг репозиторію (як td_factory3d/ruff.toml); маніфест — голий dict за конвенцією Odoo.
 line-length = 120
 
 [format]

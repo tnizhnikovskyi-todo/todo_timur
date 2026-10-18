@@ -3,7 +3,7 @@ from odoo.exceptions import AccessError, ValidationError
 
 from ..services.schemas import SchemaError
 
-MANAGER_XMLID = 'factory3d_constructor.group_f3d_constructor_manager'
+MANAGER_XMLID = 'td_constructor.group_td_constructor_manager'
 ETAG_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 
@@ -12,7 +12,7 @@ class F3dDraftMixin(models.AbstractModel):
 
     Лічильник R-21, права R-11, нормалізація JSON R-22."""
 
-    _name = 'f3d.draft.mixin'
+    _name = 'td.draft.mixin'
     _description = "Чернетка площадки: лічильник правок і права"
 
     # --- права (R-11) ---------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class F3dDraftMixin(models.AbstractModel):
                 counts[rec.site_id.id] = counts.get(rec.site_id.id, 0) + 1
         for site_id, n in counts.items():
             if site_id:
-                self.env['f3d.site'].browse(site_id)._f3d_touch(n)
+                self.env['td.site'].browse(site_id)._f3d_touch(n)
 
     def _f3d_etag(self):
         self.ensure_one()

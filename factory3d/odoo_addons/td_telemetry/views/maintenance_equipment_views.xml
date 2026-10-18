@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_maintenance_equipment_form_f3d_signals" model="ir.ui.view">
-        <field name="name">maintenance.equipment.form.f3d.signals</field>
+    <record id="view_maintenance_equipment_form_td_signals" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.td.signals</field>
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_f3d_view_signals" type="object" class="oe_stat_button" icon="fa-rss"
-                        groups="factory3d_base.group_f3d_user">
-                    <field name="f3d_signal_count" widget="statinfo" string="Сигнали"/>
+                        groups="td_factory3d.group_td_user">
+                    <field name="td_signal_count" widget="statinfo" string="Сигнали"/>
                 </button>
                 <button name="action_f3d_view_signals" type="object" class="oe_stat_button text-danger"
-                        icon="fa-bell" invisible="not f3d_alarm_count" groups="factory3d_base.group_f3d_user">
-                    <field name="f3d_alarm_count" widget="statinfo" string="Тривоги"/>
+                        icon="fa-bell" invisible="not td_alarm_count" groups="td_factory3d.group_td_user">
+                    <field name="td_alarm_count" widget="statinfo" string="Тривоги"/>
                 </button>
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page name="f3d_signals" string="Сигнали"
-                      invisible="not f3d_signal_count and not f3d_meter_signal_id"
-                      groups="factory3d_base.group_f3d_user">
-                    <field name="f3d_signal_ids" readonly="1">
+                      invisible="not td_signal_count and not td_meter_signal_id"
+                      groups="td_factory3d.group_td_user">
+                    <field name="td_signal_ids" readonly="1">
                         <list decoration-danger="status == 'alarm'" decoration-warning="status == 'warn'"
                               decoration-muted="status in ('stale', 'unknown')">
                             <field name="quantity"/>
@@ -36,18 +36,18 @@
                             class="btn-link"/>
                     <group string="ТО за лічильником">
                         <group>
-                            <field name="f3d_meter_signal_id"/>
-                            <field name="f3d_meter_unit"/>
-                            <field name="f3d_meter_interval"/>
-                            <field name="f3d_meter_last_value"/>
-                            <field name="f3d_meter_last_date"/>
-                            <field name="f3d_meter_lead_pct"/>
+                            <field name="td_meter_signal_id"/>
+                            <field name="td_meter_unit"/>
+                            <field name="td_meter_interval"/>
+                            <field name="td_meter_last_value"/>
+                            <field name="td_meter_last_date"/>
+                            <field name="td_meter_lead_pct"/>
                         </group>
                         <group>
-                            <field name="f3d_meter_current"/>
-                            <field name="f3d_meter_next_value"/>
-                            <field name="f3d_meter_remaining" decoration-danger="f3d_meter_remaining &lt;= 0"/>
-                            <field name="f3d_meter_request_id"/>
+                            <field name="td_meter_current"/>
+                            <field name="td_meter_next_value"/>
+                            <field name="td_meter_remaining" decoration-danger="td_meter_remaining &lt;= 0"/>
+                            <field name="td_meter_request_id"/>
                         </group>
                     </group>
                 </page>
@@ -55,28 +55,28 @@
         </field>
     </record>
 
-    <record id="view_maintenance_equipment_list_f3d_signals" model="ir.ui.view">
-        <field name="name">maintenance.equipment.list.f3d.signals</field>
+    <record id="view_maintenance_equipment_list_td_signals" model="ir.ui.view">
+        <field name="name">maintenance.equipment.list.td.signals</field>
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='category_id']" position="after">
-                <field name="f3d_alarm_count" optional="show"/>
-                <field name="f3d_signal_count" optional="hide"/>
+                <field name="td_alarm_count" optional="show"/>
+                <field name="td_signal_count" optional="hide"/>
             </xpath>
         </field>
     </record>
 
-    <record id="view_maintenance_equipment_search_f3d_signals" model="ir.ui.view">
-        <field name="name">maintenance.equipment.search.f3d.signals</field>
+    <record id="view_maintenance_equipment_search_td_signals" model="ir.ui.view">
+        <field name="name">maintenance.equipment.search.td.signals</field>
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_search"/>
         <field name="arch" type="xml">
             <xpath expr="//search" position="inside">
                 <separator/>
-                <filter string="З тривогами" name="f3d_with_alarms" domain="[('f3d_signal_ids.status', '=', 'alarm')]"/>
-                <filter string="Є сигнали" name="f3d_with_signals" domain="[('f3d_signal_ids', '!=', False)]"/>
-                <filter string="ТО за лічильником" name="f3d_with_meter" domain="[('f3d_meter_signal_id', '!=', False)]"/>
+                <filter string="З тривогами" name="f3d_with_alarms" domain="[('td_signal_ids.status', '=', 'alarm')]"/>
+                <filter string="Є сигнали" name="f3d_with_signals" domain="[('td_signal_ids', '!=', False)]"/>
+                <filter string="ТО за лічильником" name="f3d_with_meter" domain="[('td_meter_signal_id', '!=', False)]"/>
             </xpath>
         </field>
     </record>

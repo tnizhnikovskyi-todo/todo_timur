@@ -36,7 +36,7 @@ def metrics() -> Metrics:
 
 
 def _ready(o, n: int = 35) -> bool:
-    return o.count("f3d.machine", [("raw_ts", "!=", False)]) >= n
+    return o.count("td.machine", [("raw_ts", "!=", False)]) >= n
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def fresh(sim):
     """Фабрика свіжої бази й процесів: ``fresh(env=None, scenario=None, params=None)`` → Odoo-клієнт.
 
     SPEC §13.2: reset емулятора з `keep_time`, час емулятора = реальний, база — свіжа копія `f3d_mc_t0`; чекає, поки колектор
-    прочитає всі 35 верстатів. `params` — параметри модуля (`factory3d.machine_connect.*`), що вмикаються ДО старту колектора.
+    прочитає всі 35 верстатів. `params` — параметри модуля (`td.machine_connect.*`), що вмикаються ДО старту колектора.
     """
 
     def make(env: dict | None = None, scenario: tuple | None = None, params: dict | None = None, ready: bool = True):
@@ -59,7 +59,7 @@ def fresh(sim):
         assert "http" in out or "serve.sh stop" in out, "Odoo не стартувала: " + out
         o = odoo_rpc.Odoo()
         for k, v in (params or {}).items():
-            o.param(k if k.startswith("factory3d.") else "factory3d.machine_connect." + k, v)
+            o.param(k if k.startswith("td.") else "td.machine_connect." + k, v)
         if scenario:
             sim.scenario(scenario[0], **scenario[1])
         stand_sh("collector-restart", env=env)

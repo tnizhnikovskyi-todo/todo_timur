@@ -1,9 +1,9 @@
-"""Стенд factory3d_energy (SPEC §13.2–13.4): pytest -m stand; XML-RPC до Odoo, /sim/v1 емулятора, колектор telemetry.
+"""Стенд td_energy (SPEC §13.2–13.4): pytest -m stand; XML-RPC до Odoo, /sim/v1 емулятора, колектор telemetry.
 
 Змінні: F3D_ODOO_URL, F3D_ODOO_DB, F3D_ODOO_USER, F3D_ODOO_PASSWORD, SIM_API_URL, SIM_API_TOKEN (секрети — лише в
 середовищі). Прапорці середовища: F3D_STAND_COLLECTOR=1 (колектор запущено і шле дані), F3D_STAND_DEMO=1 (база — копія
 демо 14.10: МО 00231, BOM лінії A, ККД-дані), F3D_STAND_LONG=1 (дозволити сценарії > 30 хв: ТК-02, ТК-10),
-F3D_STAND_TD_GENSET=1 (є td_genset/factory3d_genset), F3D_STAND_VIEWER=1 (є factory3d_viewer).
+F3D_STAND_TD_GENSET=1 (є td_genset/td_genset_factory3d), F3D_STAND_VIEWER=1 (є td_viewer3d).
 Без F3D_ODOO_URL усі стендові тести пропускаються.
 """
 
@@ -38,8 +38,8 @@ need_collector = pytest.mark.skipif(
 )
 need_demo = pytest.mark.skipif(not flag("F3D_STAND_DEMO"), reason="немає копії демо-бази 14.10 (F3D_STAND_DEMO=1)")
 need_long = pytest.mark.skipif(not flag("F3D_STAND_LONG"), reason="сценарій > 30 хв: F3D_STAND_LONG=1")
-need_genset = pytest.mark.skipif(not flag("F3D_STAND_TD_GENSET"), reason="немає td_genset/factory3d_genset")
-need_viewer = pytest.mark.skipif(not flag("F3D_STAND_VIEWER"), reason="немає factory3d_viewer (AC-63/65 — MAN)")
+need_genset = pytest.mark.skipif(not flag("F3D_STAND_TD_GENSET"), reason="немає td_genset/td_genset_factory3d")
+need_viewer = pytest.mark.skipif(not flag("F3D_STAND_VIEWER"), reason="немає td_viewer3d (AC-63/65 — MAN)")
 
 
 @pytest.fixture(scope="session")
@@ -55,7 +55,7 @@ def sim() -> Sim:
 @pytest.fixture(scope="session")
 def stand_ready(odoo):
     """Підготовка: середовище test, read_enabled=True, write_enabled=False (SPEC §3)."""
-    assert odoo.get_param("factory3d.base.environment") == "test"
+    assert odoo.get_param("td.base.environment") == "test"
     odoo.param("read_enabled", "True")
     odoo.param("write_enabled", "False")
     return True

@@ -16,15 +16,15 @@ STATE_DTYPES = ('state', 'enum', 'bit', 'bool', 'boolean', 'text')
 
 
 class F3dSimSignal(models.Model):
-    _name = 'f3d.sim.signal'
+    _name = 'td.sim.signal'
     _description = 'Сигнал емулятора (каталог)'
-    _inherit = ['f3d.sim.client']
+    _inherit = ['td.sim.client']
     _order = 'device_id, code'
     _rec_name = 'code'
 
     code = fields.Char(string='Код-шлях', required=True, index=True)
     name = fields.Char(string='Назва')
-    device_id = fields.Many2one('f3d.sim.device', string='Пристрій', required=True, ondelete='cascade', index=True)
+    device_id = fields.Many2one('td.sim.device', string='Пристрій', required=True, ondelete='cascade', index=True)
     protocol = fields.Selection(PROTOCOLS, string='Протокол', required=True)
     address = fields.Char(string='Адреса в джерелі', required=True)
     dtype = fields.Char(string='Тип')
@@ -109,7 +109,7 @@ class F3dSimSignal(models.Model):
     @api.model
     def _load_catalog(self, path):
         """Upsert каталогу з CSV за `code` (SPEC §2.3, §5.1). Ідемпотентно."""
-        Device = self.env['f3d.sim.device'].sudo()
+        Device = self.env['td.sim.device'].sudo()
         with open(path, encoding='utf-8', newline='') as fh:
             rows = list(csv.DictReader(fh))
         devices = {d.code: d for d in Device.search([])}

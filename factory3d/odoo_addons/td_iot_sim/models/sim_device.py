@@ -15,9 +15,9 @@ CODE_RE = re.compile(r'^[A-Z0-9][A-Z0-9\-\.]{0,31}$')
 
 
 class F3dSimDevice(models.Model):
-    _name = 'f3d.sim.device'
+    _name = 'td.sim.device'
     _description = 'Пристрій емулятора'
-    _inherit = ['f3d.sim.client']
+    _inherit = ['td.sim.client']
     _order = 'protocol, code'
     _rec_name = 'code'
 
@@ -25,7 +25,7 @@ class F3dSimDevice(models.Model):
     name = fields.Char(string='Назва', required=True)
     equipment_id = fields.Many2one('maintenance.equipment', string='Обладнання', ondelete='set null', index=True)
     workcenter_id = fields.Many2one('mrp.workcenter', string='Робочий центр', ondelete='set null')
-    zone_id = fields.Many2one('f3d.zone', string='Зона', ondelete='set null')
+    zone_id = fields.Many2one('td.zone', string='Зона', ondelete='set null')
     protocol = fields.Selection(PROTOCOLS, string='Протокол', required=True, default='none')
     driver = fields.Selection(DRIVERS, string='Драйвер', required=True, default='passive')
     unit_id = fields.Integer(string='Modbus unit id', help='0 = н/д')
@@ -38,11 +38,11 @@ class F3dSimDevice(models.Model):
          ('passive', 'Пасивний')], string='Стан', default='unknown', readonly=True)
     fault_reason = fields.Char(string='Причина збою', readonly=True)
     last_update = fields.Datetime(string='Оновлено', readonly=True)
-    signal_ids = fields.One2many('f3d.sim.signal', 'device_id', string='Сигнали')
+    signal_ids = fields.One2many('td.sim.signal', 'device_id', string='Сигнали')
     signal_count = fields.Integer(string='Сигналів', compute='_compute_signal_count')
     note = fields.Text(string='Примітка')
-    role = fields.Char(related='equipment_id.f3d_role', string='Роль', readonly=True)
-    model = fields.Char(related='equipment_id.f3d_model', string='Модель', readonly=True)
+    role = fields.Char(related='equipment_id.td_role', string='Роль', readonly=True)
+    model = fields.Char(related='equipment_id.td_model', string='Модель', readonly=True)
     write_enabled = fields.Boolean(compute='_compute_write_enabled')
 
     _device_code_uniq = models.Constraint('UNIQUE(code)', 'Код пристрою має бути унікальним')
@@ -50,7 +50,7 @@ class F3dSimDevice(models.Model):
     # --- compute ---
     @api.depends('signal_ids')
     def _compute_signal_count(self):
-        data = self.env['f3d.sim.signal']._read_group(
+        data = self.env['td.sim.signal']._read_group(
             [('device_id', 'in', self.ids)], ['device_id'], ['__count'])
         counts = {dev.id: cnt for dev, cnt in data}
         for rec in self:
@@ -97,14 +97,14 @@ class F3dSimDevice(models.Model):
                 raise ValidationError(
                     "BACnet device instance %s вже зайнятий пристроєм %s" % (rec.instance, clash.code))
 
-    # --- зв'язок з обладнанням: stored compute f3d_sim_device_id перераховується за кодом ---
+    # --- зв'язок з обладнанням: stored compute td_sim_device_id перераховується за кодом ---
     def _touch_equipment(self, codes):
         codes = [c for c in codes if c]
         if not codes:
             return
-        equipment = self.env['maintenance.equipment'].sudo().search([('f3d_code', 'in', codes)])
+        equipment = self.env['maintenance.equipment'].sudo().search([('td_code', 'in', codes)])
         if equipment:
-            self.env.add_to_compute(equipment._fields['f3d_sim_device_id'], equipment)
+            self.env.add_to_compute(equipment._fields['td_sim_device_id'], equipment)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -128,7 +128,7 @@ class F3dSimDevice(models.Model):
     # --- дії ---
     def action_fault(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Поставити збій', 'res_model': 'f3d.sim.fault.wizard',
+        return {'type': 'ir.actions.act_window', 'name': 'Поставити збій', 'res_model': 'td.sim.fault.wizard',
                 'view_mode': 'form', 'target': 'new', 'context': {'default_device_id': self.id}}
 
     def action_clear(self):
@@ -148,5 +148,5 @@ class F3dSimDevice(models.Model):
 
     def action_open_signals(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Сигнали %s' % self.code, 'res_model': 'f3d.sim.signal',
+        return {'type': 'ir.actions.act_window', 'name': 'Сигнали %s' % self.code, 'res_model': 'td.sim.signal',
                 'view_mode': 'list,form', 'domain': [('device_id', '=', self.id)]}

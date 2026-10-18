@@ -11,19 +11,19 @@ WITH agg AS (
            count(*) AS v_count,
            (array_agg(r.value ORDER BY r.ts))[1] AS v_first,
            (array_agg(r.value ORDER BY r.ts DESC))[1] AS v_last
-      FROM f3d_reading r
+      FROM td_reading r
      WHERE r.quality <> 'bad' AND r.ts >= %(start)s AND r.ts < %(end)s
      GROUP BY r.signal_id, date_trunc('hour', r.ts)
 ), ranked AS (
     SELECT a.*, s.kind,
            COALESCE(
                lag(a.v_last) OVER (PARTITION BY a.signal_id ORDER BY a.hour),
-               (SELECT p.v_last FROM f3d_reading_hour p
+               (SELECT p.v_last FROM td_reading_hour p
                  WHERE p.signal_id = a.signal_id AND p.hour < a.hour ORDER BY p.hour DESC LIMIT 1)
            ) AS v_prev
-      FROM agg a JOIN f3d_signal s ON s.id = a.signal_id
+      FROM agg a JOIN td_signal s ON s.id = a.signal_id
 )
-INSERT INTO f3d_reading_hour
+INSERT INTO td_reading_hour
        (signal_id, equipment_id, hour, v_min, v_avg, v_max, v_sum, v_count, v_first, v_last, delta)
 SELECT signal_id, equipment_id, hour, v_min, v_avg, v_max, v_sum, v_count, v_first, v_last,
        COALESCE(CASE WHEN kind <> 'counter' THEN 0
@@ -38,12 +38,12 @@ ON CONFLICT (signal_id, hour) DO UPDATE SET
 
 
 class F3dReadingHour(models.Model):
-    _name = "f3d.reading.hour"
+    _name = "td.reading.hour"
     _description = "Телеметрія: годинний агрегат"
     _order = "hour desc"
     _log_access = False
 
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
+    signal_id = fields.Many2one("td.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
     equipment_id = fields.Many2one(
         "maintenance.equipment", string="Обладнання", related="signal_id.equipment_id", store=True, index=True
     )
@@ -65,12 +65,12 @@ class F3dReadingHour(models.Model):
         cr = self.env.cr
         now = fields.Datetime.now()
         end = now.replace(minute=0, second=0, microsecond=0)
-        cr.execute("SELECT max(hour) FROM f3d_reading_hour")
+        cr.execute("SELECT max(hour) FROM td_reading_hour")
         last_hour = cr.fetchone()[0]
         if last_hour:
             start = last_hour - timedelta(hours=1)
         else:
-            cr.execute("SELECT min(ts) FROM f3d_reading")
+            cr.execute("SELECT min(ts) FROM td_reading")
             first = cr.fetchone()[0]
             if not first:
                 return 0

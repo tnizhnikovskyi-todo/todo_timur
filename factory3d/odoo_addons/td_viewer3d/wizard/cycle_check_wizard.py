@@ -7,7 +7,7 @@ from ..tools.payload import PayloadBuilder
 
 
 class F3dViewerCycleCheck(models.TransientModel):
-    _name = "f3d.viewer.cycle.check"
+    _name = "td.viewer.cycle.check"
     _description = "3D: перевірка циклу"
 
     result_html = fields.Html(readonly=True, sanitize=False)
@@ -25,7 +25,7 @@ class F3dViewerCycleCheck(models.TransientModel):
     def action_run(self):
         self.ensure_one()
         user = self.env.user
-        if self.payload_user_id and self.env.user.has_group("factory3d_base.group_f3d_admin"):
+        if self.payload_user_id and self.env.user.has_group("td_factory3d.group_td_admin"):
             user = self.payload_user_id
         payload = PayloadBuilder(self.env(user=user.id), full=True).build()
         issues = check(payload)
@@ -47,7 +47,7 @@ class F3dViewerCycleCheck(models.TransientModel):
     def action_show_first(self):
         """Відкрити переглядач на першому проблемному об'єкті."""
         self.ensure_one()
-        action = self.env["ir.actions.actions"]._for_xml_id("factory3d_viewer.action_f3d_viewer")
+        action = self.env["ir.actions.actions"]._for_xml_id("td_viewer3d.action_td_viewer")
         if self.first_ref:
             attr, value = self.first_ref.split(":", 1)
             action["params"] = {"open" if attr == "data-f3d-open" else "code": value}

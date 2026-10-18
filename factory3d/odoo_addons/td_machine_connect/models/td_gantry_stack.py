@@ -6,7 +6,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
 from ..tools.states import parse_ts
-from .f3d_machine import param, param_bool
+from .td_machine import param, param_bool
 
 _logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ GANTRY_STACKS_CODE = "equipment/GANTRY-1/stacks"
 
 def gantry_cmd_signal(env):
     """Сигнал команд порталу (CMD-02)."""
-    sig = env["f3d.signal"].sudo().search([("code", "=", GANTRY_CMD_CODE)], limit=1)
+    sig = env["td.signal"].sudo().search([("code", "=", GANTRY_CMD_CODE)], limit=1)
     if not sig:
         raise UserError(_("Не знайдено сигнал %s.", GANTRY_CMD_CODE))
     return sig
@@ -38,7 +38,7 @@ def check_stock_manager(env):
 
 
 class F3dGantryStack(models.Model):
-    _name = "f3d.gantry.stack"
+    _name = "td.gantry.stack"
     _description = "Портал: стос плит"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "code"
@@ -51,10 +51,10 @@ class F3dGantryStack(models.Model):
         required=True,
         index=True,
         ondelete="cascade",
-        domain="[('f3d_loc_kind', '=', 'stack')]",
+        domain="[('td_loc_kind', '=', 'stack')]",
     )
-    code = fields.Char(related="location_id.f3d_code", store=True, index=True, string="Стос")
-    capacity = fields.Float(related="location_id.f3d_capacity", string="Місткість, арк.")
+    code = fields.Char(related="location_id.td_code", store=True, index=True, string="Стос")
+    capacity = fields.Float(related="location_id.td_capacity", string="Місткість, арк.")
     row = fields.Integer(compute="_compute_rowcol", store=True, string="Ряд")
     col = fields.Char(compute="_compute_rowcol", store=True, size=1, string="Колонка")
     orderpoint_id = fields.Many2one("stock.warehouse.orderpoint", string="Правило поповнення", ondelete="set null")
@@ -92,7 +92,7 @@ class F3dGantryStack(models.Model):
         string="Нижче мінімуму",
         help="Є правило поповнення, і кількість у порталі менша за його мінімум (домен не вміє порівнювати поле з полем).",
     )
-    job_ids = fields.One2many("f3d.gantry.job", "stack_id", string="Завдання")
+    job_ids = fields.One2many("td.gantry.job", "stack_id", string="Завдання")
     note = fields.Text()
 
     _f3d_stack_loc_uniq = models.Constraint("UNIQUE(location_id)", "Для місця вже є стос.")
@@ -142,7 +142,7 @@ class F3dGantryStack(models.Model):
     def _f3d_fed_unconsumed(self):
         self.ensure_one()
         jobs = (
-            self.env["f3d.gantry.job"]
+            self.env["td.gantry.job"]
             .sudo()
             .search(
                 [
@@ -159,7 +159,7 @@ class F3dGantryStack(models.Model):
     def _f3d_activity_domain(self):
         self.ensure_one()
         return [
-            ("res_model", "=", "f3d.gantry.stack"),
+            ("res_model", "=", "td.gantry.stack"),
             ("res_id", "=", self.id),
             ("summary", "=like", "Стос %s:%%" % self.code),
         ]
@@ -258,13 +258,13 @@ class F3dGantryStack(models.Model):
             touched |= rec
         touched._f3d_refresh()
         count = len(stacks.filtered(lambda s: s.ws_qty > 0))
-        sig = self.env["f3d.signal"].sudo().search([("code", "=", GANTRY_STACKS_CODE)], limit=1)
+        sig = self.env["td.signal"].sudo().search([("code", "=", GANTRY_STACKS_CODE)], limit=1)
         if sig:
-            self.env["f3d.signal"].sudo().with_context(f3d_mc_internal=True)._f3d_ingest(
+            self.env["td.signal"].sudo().with_context(f3d_mc_internal=True)._f3d_ingest(
                 [{"code": sig.code, "ts": now, "value": count, "q": "good"}], src="module"
             )
-        if touched and "f3d.viewer.event" in self.env:
-            self.env["f3d.viewer.event"]._notify("stock.location", touched.mapped("code"), "stock")
+        if touched and "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("stock.location", touched.mapped("code"), "stock")
         return len(touched)
 
     # --- дії ------------------------------------------------------------------------------------------
@@ -332,7 +332,7 @@ class F3dGantryStack(models.Model):
             "product": product.default_code,
             "lot": self.odoo_lot_id.name or None,
         }
-        return self.env["f3d.command"]._f3d_mc_create_command(gantry_cmd_signal(self.env), "stack", fields_)
+        return self.env["td.command"]._f3d_mc_create_command(gantry_cmd_signal(self.env), "stack", fields_)
 
     def _f3d_replenish(self):
         """R-18 п. 2: стандартне поповнення за правилом."""
@@ -403,7 +403,7 @@ class F3dGantryStack(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Завдання порталу %s", self.code),
-            "res_model": "f3d.gantry.job",
+            "res_model": "td.gantry.job",
             "view_mode": "list,form",
             "domain": [("stack_id", "=", self.id)],
             "context": {"default_stack_id": self.id},

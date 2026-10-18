@@ -157,7 +157,7 @@ class TestSecretFilter(AccessCase):
 
     def test_logs_clean(self):
         client, _http = _client([_login('abcdef12-3456'), _resp(200, {'DeviceCollection': {'rows': []}})])
-        with self.assertLogs('odoo.addons.factory3d_access', 'DEBUG') as logs:
+        with self.assertLogs('odoo.addons.td_access', 'DEBUG') as logs:
             client.login()
             client.list_devices()
         text = '\n'.join(logs.output)

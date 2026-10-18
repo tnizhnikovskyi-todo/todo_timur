@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-02 -->
-    <record id="view_f3d_layer_form" model="ir.ui.view">
-        <field name="name">f3d.layer.form</field>
-        <field name="model">f3d.layer</field>
+    <record id="view_td_layer_form" model="ir.ui.view">
+        <field name="name">td.layer.form</field>
+        <field name="model">td.layer</field>
         <field name="arch" type="xml">
             <form string="Шар розкладки">
                 <sheet>
@@ -33,7 +33,7 @@
                     <group>
                         <group string="Права">
                             <field name="edit_group_ids" widget="many2many_tags" readonly="not is_manager"
-                                   domain="[('privilege_id', '=', %(privilege_f3d_constructor)d)]"/>
+                                   domain="[('privilege_id', '=', %(privilege_td_constructor)d)]"/>
                         </group>
                         <group string="Типи місць">
                             <field name="allowed_slot_type_ids" widget="many2many_tags" readonly="not is_manager"
@@ -67,9 +67,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_layer_list" model="ir.ui.view">
-        <field name="name">f3d.layer.list</field>
-        <field name="model">f3d.layer</field>
+    <record id="view_td_layer_list" model="ir.ui.view">
+        <field name="name">td.layer.list</field>
+        <field name="model">td.layer</field>
         <field name="arch" type="xml">
             <list string="Шари">
                 <field name="site_id"/>
@@ -84,9 +84,9 @@
         </field>
     </record>
 
-    <record id="view_f3d_layer_search" model="ir.ui.view">
-        <field name="name">f3d.layer.search</field>
-        <field name="model">f3d.layer</field>
+    <record id="view_td_layer_search" model="ir.ui.view">
+        <field name="name">td.layer.search</field>
+        <field name="model">td.layer</field>
         <field name="arch" type="xml">
             <search string="Шари">
                 <field name="name"/>

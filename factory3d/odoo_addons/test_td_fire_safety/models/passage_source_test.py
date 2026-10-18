@@ -3,7 +3,7 @@ from odoo import models
 
 
 class F3dFirePassageSourceZzTest(models.AbstractModel):
-    _name = "f3d.fire.passage.source.zz_test"
+    _name = "td.fire.passage.source.zz_test"
     _description = "Пожежна безпека: тестове джерело проходів zz_test"
 
     _f3d_priority = 5

@@ -14,12 +14,12 @@ COMPLIANCE = [
 def plant_size(env):
     """Розміри будівлі (CB-12): (довжина, ширина), м."""
     icp = env['ir.config_parameter'].sudo()
-    return (float(icp.get_param('factory3d.base.plant_length_m', 150) or 150),
-            float(icp.get_param('factory3d.base.plant_width_m', 72) or 72))
+    return (float(icp.get_param('td.base.plant_length_m', 150) or 150),
+            float(icp.get_param('td.base.plant_width_m', 72) or 72))
 
 
 class F3dFireSmokeZone(models.Model):
-    _name = "f3d.fire.smoke.zone"
+    _name = "td.fire.smoke.zone"
     _description = "Димовидалення: димова зона"
     _order = "code"
     _rec_name = "code"
@@ -27,7 +27,7 @@ class F3dFireSmokeZone(models.Model):
     code = fields.Char(string="Код", size=8, required=True, index=True)
     name = fields.Char(string="Назва", size=128, required=True)
     system_id = fields.Many2one(
-        'f3d.fire.system', string="Система", required=True, ondelete='cascade',
+        'td.fire.system', string="Система", required=True, ondelete='cascade',
         domain=[('system_type', '=', 'smoke')])
     x0 = fields.Float(digits=(8, 2), required=True)
     y0 = fields.Float(digits=(8, 2), required=True)
@@ -35,7 +35,7 @@ class F3dFireSmokeZone(models.Model):
     y1 = fields.Float(digits=(8, 2), required=True)
     area_m2 = fields.Float(
         string="Площа, м²", compute='_compute_area', store=True, digits=(12, 0))
-    vent_ids = fields.One2many('f3d.fire.device', 'smoke_zone_id', string="Люки")
+    vent_ids = fields.One2many('td.fire.device', 'smoke_zone_id', string="Люки")
     vent_count = fields.Integer(
         string="Люків", compute='_compute_vent_count', store=True)
     vent_area_m2 = fields.Float(
@@ -76,7 +76,7 @@ class F3dFireSmokeZone(models.Model):
 
     @api.depends('vent_count')
     def _compute_vent_area(self):
-        aa = self.env['f3d.fire.norm'].get('smoke_vent_aa') or 0.0
+        aa = self.env['td.fire.norm'].get('smoke_vent_aa') or 0.0
         for rec in self:
             rec.vent_area_m2 = rec.vent_count * aa
 
@@ -86,7 +86,7 @@ class F3dFireSmokeZone(models.Model):
 
     def _recompute(self):
         """R-09: площа, потрібна кількість люків, відповідність."""
-        norm = self.env['f3d.fire.norm']
+        norm = self.env['td.fire.norm']
         max_area = norm.get('smoke_zone_max_area')
         per400 = norm.get('smoke_vent_area')
         aa = norm.get('smoke_vent_aa')
