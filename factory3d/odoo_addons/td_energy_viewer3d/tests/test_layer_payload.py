@@ -1,11 +1,15 @@
 """W2-D: AC-282…AC-285 — payload `energy.layer` (R-57, M-41)."""
 
 import json
+import logging
+import time
 
 from odoo.tests import tagged
 
 from ..tools import layer as layer_tools
 from .common import TAGS, LayerCase
+
+_logger = logging.getLogger(__name__)
 
 
 @tagged(*TAGS)
@@ -148,3 +152,14 @@ class TestLayerPayload(LayerCase):
         icp.set_param("td.energy_viewer3d.marker_limit", "9999")
         prm = layer_tools.params(self.env)
         self.assertEqual((prm["layers"], prm["marker_limit"]), (["energy", "backup"], layer_tools.MAX_MARKER_LIMIT))
+
+    def test_build_perf(self):  # ТП-11: ≤ 12 КБ і ≤ 150 мс (кращий із трьох прогонів)
+        best = min(self._timed_build() for _ in range(3))
+        _logger.info("energy.layer: побудова %.0f мс", best * 1000)
+        self.assertLess(best, 0.15)
+        self.assertLess(len(json.dumps(self.layer())), 12 * 1024)
+
+    def _timed_build(self):
+        start = time.perf_counter()
+        self.layer()
+        return time.perf_counter() - start

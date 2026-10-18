@@ -8,7 +8,7 @@ from .common import TAGS, LayerCase
 
 
 @tagged(*TAGS)
-class TestDeeplink(LayerCase):
+class TestDeepLink(LayerCase):
     def open3d(self, code=None, user=None):
         env = self.env(user=(user or self.u_view).id)
         return env["td.energy.node"].action_td_open_3d(code)

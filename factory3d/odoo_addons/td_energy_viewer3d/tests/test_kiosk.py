@@ -6,7 +6,7 @@ from .common import TAGS, LayerCase
 
 
 @tagged(*TAGS)
-class TestLayerKiosk(LayerCase):
+class TestKiosk(LayerCase):
     def test_kiosk_layer(self):  # AC-287
         layer = self.layer(kiosk=True)
         self.assertTrue(layer["nodes"])

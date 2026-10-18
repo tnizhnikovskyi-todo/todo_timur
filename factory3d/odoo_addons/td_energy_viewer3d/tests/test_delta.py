@@ -6,7 +6,7 @@ from .common import TAGS, LayerCase
 
 
 @tagged(*TAGS)
-class TestLayerDelta(LayerCase):
+class TestDelta(LayerCase):
     def delta_layer(self, changes, user=None):
         patch = {}
         self.provider(user)._f3d_viewer_delta(patch, {"kiosk": False, "changes": changes})
