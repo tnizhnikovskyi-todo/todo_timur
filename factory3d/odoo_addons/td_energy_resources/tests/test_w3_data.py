@@ -107,7 +107,7 @@ class TestW3Data(TestW3Common):
                 self.point("T-P4", "gas", **vals)
         ok = self.point("T-P5", "air", estimate_method="load_share", node_id=node.id, rate_nominal=3.0)
         self.assertEqual(ok.estimate_method, "load_share")
-        self.assertEqual(self.Point._td_bind_extra(), {})
+        self.assertFalse(any(self.Point._td_bind_extra().values()))  # ядро: `{}`; міст — нічого нового не створює
         self.assertTrue(gas and air)
 
     def test_meter_default_el_migration(self):  # AC-05
@@ -116,10 +116,12 @@ class TestW3Data(TestW3Common):
         self.assertTrue(len(electric) >= 67)
         self.assertFalse(Meter.search([("resource_id", "=", False)]))
         self.assertEqual(set(electric.mapped("mode")), {"counter"})
-        non_el = Meter.search([("resource_id.code", "!=", "el")])
+        non_el = Meter.search(
+            [("resource_id.code", "not in", ("el", "heat"))]
+        )  # «Тепло» — з моста td_energy_resources_bms
         self.assertEqual(len(non_el), 16)
         self.assertEqual(set(non_el.mapped("role")), {"resource"})
-        self.assertEqual(self.Point.search_count([]), 16)
+        self.assertEqual(self.Point.search_count([("resource_id.code", "!=", "heat")]), 16)
         self.assertEqual(self.Price.search_count([]), 2)
         self.assertFalse(non_el.mapped("node_id"))
         before = self.env["td.energy.interval"].search_count([])

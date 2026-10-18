@@ -21,6 +21,10 @@ class TestW3Backfill(TestW3Common):
         cls.Interval = cls.env["td.energy.interval"]
         cls.Meter = cls.env["td.energy.meter"]
 
+    def n_meters(self):
+        """Лічильники backfill: 16 ресурсних + 2 реактивні вводи + теплові (їх створює міст td_energy_resources_bms)."""
+        return 18 + self.Meter.search_count([("resource_id.code", "=", "heat"), ("active", "=", True)])
+
     def electric(self, days, seed=1):
         return self.Interval._td_backfill(days=days, until=UNTIL, seed=seed, with_balance=False, with_events=False)
 
@@ -38,9 +42,10 @@ class TestW3Backfill(TestW3Common):
     def test_rows_and_quality(self):  # AC-46
         self.electric(2)
         stats = self.backfill(2)
-        self.assertEqual((stats["meters"], stats["slots"], stats["rows"], stats["skipped"]), (18, 192, 18 * 192, 0))
+        n = self.n_meters()
+        self.assertEqual((stats["meters"], stats["slots"], stats["rows"], stats["skipped"]), (n, 192, n * 192, 0))
         self.assertEqual(stats["since"], "2026-10-10 21:00:00")
-        self.assertEqual(self.ResInterval.search_count([]), 3456)
+        self.assertEqual(self.ResInterval.search_count([]), n * 192)
         self.assertEqual(self.ResInterval.search_count([("is_backfill", "=", False)]), 0)
         estimated = self.ResInterval.search([("quality", "=", "estimated")]).mapped("meter_id")
         self.assertTrue(estimated)
@@ -56,7 +61,7 @@ class TestW3Backfill(TestW3Common):
     def test_properties_and_determinism(self):  # AC-47
         self.electric(7)
         stats = self.backfill(7)
-        self.assertEqual(stats["rows"], 18 * 7 * 96)
+        self.assertEqual(stats["rows"], self.n_meters() * 7 * 96)
         cr = self.env.cr
 
         def total(code):
@@ -150,7 +155,7 @@ class TestW3Backfill(TestW3Common):
 
     def test_without_electric_data(self):  # попередження, оцінні слоти — missing; вимірювані генеруються
         stats = self.backfill(1)
-        self.assertEqual(stats["rows"], 18 * 96)
+        self.assertEqual(stats["rows"], self.n_meters() * 96)
         missing = self.ResInterval.search([("quality", "=", "missing")]).mapped("meter_id")
         self.assertIn("AM-EDGE1", missing.mapped("code"))
         self.assertIn("PM-Q1", missing.mapped("code"))
@@ -160,6 +165,6 @@ class TestW3Backfill(TestW3Common):
         started = time.monotonic()
         stats = self.backfill(90)
         self.assertLess(time.monotonic() - started, 60.0)
-        self.assertEqual(stats["rows"], 18 * 90 * 96)
+        self.assertEqual(stats["rows"], self.n_meters() * 90 * 96)
         self.assertIn("seconds", stats)
         self.assertEqual(stats["since"], (UNTIL - timedelta(days=90)).strftime("%Y-%m-%d %H:%M:%S"))

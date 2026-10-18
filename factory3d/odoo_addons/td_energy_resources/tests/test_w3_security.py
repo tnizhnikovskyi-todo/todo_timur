@@ -146,8 +146,12 @@ class TestW3Security(HttpCase, TestW3Common):
         self.env["td.energy.interval"]._td_backfill(days=90, until=until, seed=1, with_balance=False, with_events=False)
         stats = self.env["td.energy.res.interval"]._td_backfill(days=90, until=until, seed=1)
         _logger.info("W3E perf: backfill 90 діб за %.1f с, рядків ресурсів %s", time.perf_counter() - t0, stats["rows"])
-        flow = self.signal("test/hm_boiler_kw", unit="кВт")
-        self.meter("HM-BOILER", self.point("HEAT-BOILER", "heat", "source"), "flow_integrate", flow=[flow])
+        boiler = self.env["td.energy.meter"].search([("code", "=", "HM-BOILER")])
+        if boiler:  # з мостом td_energy_resources_bms теплову точку й лічильник уже створено з сигналу BMS
+            flow = boiler.flow_signal_ids[:1]
+        else:
+            flow = self.signal("test/hm_boiler_kw", unit="кВт")
+            self.meter("HM-BOILER", self.point("HEAT-BOILER", "heat", "source"), "flow_integrate", flow=[flow])
         self.fixture_grid()
         for code, value in (*SIGNALS, (flow.code, 390.0)):
             self.fresh(code, value)

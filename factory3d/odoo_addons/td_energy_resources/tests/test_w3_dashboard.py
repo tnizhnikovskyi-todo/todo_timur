@@ -87,6 +87,8 @@ class TestW3Dashboard(TestW3Common):
             flow = self.signal("test/hm_boiler_kw", unit="кВт")
             self.fresh(flow.code, 390.0)
             meter = self.meter("HM-BOILER", self.point("HEAT-BOILER", "heat", "source"), "flow_integrate", flow=[flow])
+        else:  # з мостом td_energy_resources_bms теплосчётчик уже створено з сигналу BMS
+            self.fresh(meter.flow_signal_ids[:1].code, 390.0)
         if rows:
             self.res_interval(meter, T0, 5085.5)
             self.res_interval(meter, T0 + 20 * SLOT, 97.5)
@@ -203,6 +205,7 @@ class TestW3Dashboard(TestW3Common):
         self.assertEqual(self.kpis(self.get("gas"))["limit"]["tone"], "bad")
 
     def test_gas_eff_without_heat_meter(self):  # R-09: немає теплосчётчика котельні — `null`
+        self.mcode("HM-BOILER").write({"active": False})  # з мостом його створює `_td_bind_extra`
         self.fx_gas()
         eff = self.kpis(self.get("gas"))["eff"]
         self.assertEqual((eff["value"], eff["tone"], eff["quality"]), (None, "neutral", "estimated"))
@@ -479,12 +482,13 @@ class TestW3Dashboard(TestW3Common):
             {"code": "DOCK", "name": "Втрати через ворота", "value": 46.0, "quality": "estimated"},
             {"code": "OFFICE", "name": "Офіс і побутові", "value": 42.0, "quality": "estimated"},
         ]
+        model = type(self.Dash)  # клас реєстру: хуки підмінюються й поверх перекриттів моста
         with (
-            patch(DASH + "._td_heat_kpis", lambda self, ctx: extra),
-            patch(DASH + "._td_heat_list", lambda self, ctx: items),
-            patch(DASH + "._td_heat_chart_note", lambda self, ctx: "520"),
-            patch(
-                DASH + "._td_resource_extra", lambda self, code, ctx: {"bridge": {"code": code, "rate": ctx["rate"]}}
+            patch.object(model, "_td_heat_kpis", lambda self, ctx: extra),
+            patch.object(model, "_td_heat_list", lambda self, ctx: items),
+            patch.object(model, "_td_heat_chart_note", lambda self, ctx: "520"),
+            patch.object(
+                model, "_td_resource_extra", lambda self, code, ctx: {"bridge": {"code": code, "rate": ctx["rate"]}}
             ),
         ):
             data = self.get("heat")
@@ -535,7 +539,8 @@ class TestW3Dashboard(TestW3Common):
         self.assertEqual(len(res["chart"]["series"]), 96)
         self.assertTrue(res["list"]["items"])
         self.assertIsInstance(res["notes"], list)
-        self.assertEqual(len(data["tabs"]), 4)
+        heat_tab = 1 if self.Meter.search_count([("resource_id.code", "=", "heat"), ("active", "=", True)]) else 0
+        self.assertEqual(len(data["tabs"]), 4 + heat_tab)  # «Тепло» з'являється, коли міст створив теплосчётчики
 
     # --- API-10 -----------------------------------------------------------------------------------------------
     def test_totals(self):  # API-10
