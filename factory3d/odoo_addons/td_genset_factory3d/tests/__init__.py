@@ -12,3 +12,4 @@ from . import test_access
 from . import test_static
 from . import test_payload
 from . import test_source
+from . import test_w1_section, test_w1_hooks  # noqa: F401  (W1-C)

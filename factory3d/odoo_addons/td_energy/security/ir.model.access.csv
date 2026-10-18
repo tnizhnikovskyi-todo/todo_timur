@@ -28,3 +28,11 @@ access_td_energy_alloc_user,td.energy.alloc user,model_td_energy_alloc,td_energy
 access_td_energy_alloc_mrp,td.energy.alloc mrp user,model_td_energy_alloc,mrp.group_mrp_user,1,0,0,0
 access_td_energy_alloc_admin,td.energy.alloc admin,model_td_energy_alloc,td_factory3d.group_td_admin,1,1,1,1
 access_td_energy_recompute_wizard_manager,td.energy.recompute.wizard manager,model_td_energy_recompute_wizard,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_outage_plan_user,td.energy.outage.plan user,model_td_energy_outage_plan,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_outage_plan_manager,td.energy.outage.plan manager,model_td_energy_outage_plan,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_outage_plan_mrp,td.energy.outage.plan mrp manager,model_td_energy_outage_plan,mrp.group_mrp_manager,1,0,0,0
+access_td_energy_outage_plan_admin,td.energy.outage.plan admin,model_td_energy_outage_plan,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_advice_user,td.energy.advice user,model_td_energy_advice,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_advice_manager,td.energy.advice manager,model_td_energy_advice,td_energy.group_td_energy_manager,1,1,0,0
+access_td_energy_advice_admin,td.energy.advice admin,model_td_energy_advice,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_ticket_wizard_manager,td.energy.ticket.wizard manager,model_td_energy_ticket_wizard,td_energy.group_td_energy_manager,1,1,1,1

@@ -271,7 +271,9 @@ class F3dEnergyInterval(models.Model):
     def _f3d_shift_kwh(self, now):
         """R-11: `energy/consumers/<код>/kwh_shift` = `delta(shift_start, last_ts)` лічильника вузла.
 
-        Лічильник без показання на `shift_start` (звітує менше зміни): енергія від першого показання, якість `uncertain` (E-4)."""
+        Лічильник без показання на `shift_start` (звітує менше зміни): енергія від першого показання,
+        якість `uncertain` (E-4).
+        """
         if not param_bool(self.env, "read_enabled"):
             return
         Signal = self.env["td.signal"].sudo()
@@ -286,8 +288,9 @@ class F3dEnergyInterval(models.Model):
             delta, _q = series.delta(start, src.last_ts)
             quality = "good"
             if delta is None and series and start < series.ts[0] < src.last_ts:
-                # E-4: лічильник почав звітувати посеред зміни (новий вузол, свіжа установка, стенд) — немає `Ec(shift_start)`,
-                # `delta` дає `missing`, і `kwh_shift` лишався порожнім до наступної зміни. Енергія від першого показання, `uncertain`.
+                # E-4: лічильник почав звітувати посеред зміни (новий вузол, свіжа установка, стенд) — немає
+                # `Ec(shift_start)`, `delta` дає `missing`, і `kwh_shift` лишався порожнім до наступної зміни.
+                # Енергія від першого показання, `uncertain`.
                 delta, _q = series.delta(series.ts[0], src.last_ts)
                 quality = "uncertain"
             if delta is not None:

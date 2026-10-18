@@ -8,3 +8,4 @@ from . import maintenance_request
 from . import genset_link_events
 from . import genset_link_view
 from . import viewer_provider
+from . import td_energy_dashboard  # noqa: F401  (W1: M-10; власник W1-C)

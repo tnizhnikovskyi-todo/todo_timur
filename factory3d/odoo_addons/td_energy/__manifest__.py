@@ -4,7 +4,7 @@
     "СЕС, накопичувач, КГУ, АВР, тарифи, ліміт потужності",
     "description": "Ієрархія ввід → трансформатор → ГРЩ → шинопровід → споживач; лічильники поверх td_telemetry; "
     "розподіл енергії на робочі завдання й собівартість МО; відключення мережі й АВР; провайдери 3D.",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -15,10 +15,11 @@
         "security/td_energy_security.xml",
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
-        "data/ir_cron.xml",  # W2: live/intervals/balance/rotate; крон alloc — W3
+        "data/ir_cron.xml",  # W2: live/intervals/balance/rotate; крон alloc — W3; W1: advice, outage_plan, verification
         "data/td_energy_tariff_data.xml",
         "data/td_energy_actions.xml",
         "wizard/recompute_wizard_views.xml",  # W3
+        "views/td_energy_ticket_wizard_views.xml",  # W1 (B): до node_views — кнопка вузла посилається на дію
         "views/td_energy_node_views.xml",
         "views/td_energy_meter_views.xml",
         "views/td_energy_interval_views.xml",
@@ -28,14 +29,28 @@
         "views/td_energy_pool_views.xml",
         "views/td_energy_alloc_views.xml",  # W3
         "views/td_energy_outage_views.xml",  # W4
+        "views/td_energy_outage_plan_views.xml",  # W1 (B)
+        "views/td_energy_advice_views.xml",  # W1 (B)
         "views/mrp_production_views.xml",  # W3
         "views/mrp_workorder_views.xml",  # W3
         "views/mrp_workcenter_views.xml",  # W3
-        # "views/mrp_workorder_views.xml", "views/mrp_workcenter_views.xml";
+        "views/td_energy_pult_views.xml",  # W1 (B): клієнтські дії Пульт, Картка вузла, Мобільний, Генерація
         "views/res_config_settings_views.xml",  # W5
         "views/dashboard_views.xml",  # W5
         "views/menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "td_energy/static/src/common/**/*",  # W1 (B): UI-10, UI-11
+            "td_energy/static/src/pult/**/*",
+            "td_energy/static/src/node_card/**/*",
+            "td_energy/static/src/generation/**/*",
+            "td_energy/static/src/mobile/**/*",
+        ],
+        "web.assets_unit_tests": [
+            "td_energy/static/tests/**/*.js",
+        ],
+    },
     "demo": [],
     "post_init_hook": "post_init_hook",
     "uninstall_hook": "uninstall_hook",

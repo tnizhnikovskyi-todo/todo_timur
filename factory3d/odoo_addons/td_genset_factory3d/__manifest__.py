@@ -1,13 +1,14 @@
 {
     "name": "Генератори — Завод 3D",
     "summary": "Зв'язка генератора td_genset з моделлю заводу: телеметрія, заявки ТО, картка в 3D, баланс при блекауті",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",
     "depends": ["td_genset", "td_factory3d", "td_telemetry", "td_energy"],
     "data": [
         "security/ir.model.access.csv",
+        "security/td_genset_factory3d_security.xml",  # W1 (C): implied_ids «Енергетик» → td_genset.group_user
         "data/ir_config_parameter.xml",
         "data/td_genset_profile.xml",
         "data/td_genset_event_map.xml",
@@ -17,6 +18,7 @@
         "views/td_genset_event_map_views.xml",
         "views/maintenance_views.xml",
         "views/res_config_settings_views.xml",
+        "data/menu_hide.xml",  # W1 (C): приховання td_genset.menu_root
         "views/menus.xml",
     ],
     "post_init_hook": "post_init_hook",
