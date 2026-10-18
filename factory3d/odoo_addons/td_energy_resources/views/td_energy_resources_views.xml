@@ -1,3 +1,531 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-01…V-07, V-10, V-11 (C). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-01…V-07, V-10, V-11 (W3-C): екран «Енергоресурси», довідники, точки/лічильники/інтервали ресурсів, зведення.
+     Грошові поля (price, cost) мають groups на полі моделі: без групи вартості вони зникають із видів. -->
+<odoo>
+    <!-- V-01: клієнтська дія екрана -->
+    <record id="action_td_energy_resources" model="ir.actions.client">
+        <field name="name">Енергоресурси заводу</field>
+        <field name="tag">td_energy_resources.resources</field>
+        <field name="context">{"td_energy_resource": "el"}</field>
+    </record>
+
+    <!-- V-03: ціни неелектричних ресурсів -->
+    <record id="view_td_energy_price_list" model="ir.ui.view">
+        <field name="name">td.energy.price.list</field>
+        <field name="model">td.energy.price</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="resource_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="price"/>
+                <field name="currency_id" optional="hide"/>
+                <field name="note" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_price_form" model="ir.ui.view">
+        <field name="name">td.energy.price.form</field>
+        <field name="model">td.energy.price</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="resource_id"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                        <group>
+                            <field name="price"/>
+                            <field name="currency_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_price_search" model="ir.ui.view">
+        <field name="name">td.energy.price.search</field>
+        <field name="model">td.energy.price</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="resource_id"/>
+                <filter name="current" string="Чинні" domain="[('date_to', '=', False)]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_price" model="ir.actions.act_window">
+        <field name="name">Ціни ресурсів</field>
+        <field name="res_model">td.energy.price</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{"search_default_group_resource": 1}</field>
+    </record>
+
+    <!-- V-04: точки обліку -->
+    <record id="view_td_energy_point_list" model="ir.ui.view">
+        <field name="name">td.energy.point.list</field>
+        <field name="model">td.energy.point</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="resource_id" column_invisible="1"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="parent_id" optional="show"/>
+                <field name="node_id" optional="show"/>
+                <field name="estimate_method" optional="show"/>
+                <field name="meter_ids" widget="many2many_tags" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_point_form" model="ir.ui.view">
+        <field name="name">td.energy.point.form</field>
+        <field name="model">td.energy.point</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва точки"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="resource_id"/>
+                            <field name="code"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="kind"/>
+                            <field name="sequence"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Облік" name="metering">
+                            <group>
+                                <field name="parent_id"/>
+                            </group>
+                            <field name="meter_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="mode"/>
+                                    <field name="data_state" widget="badge"
+                                           decoration-success="data_state == 'ok'"
+                                           decoration-warning="data_state in ('gap', 'reset')"
+                                           decoration-danger="data_state == 'stale'"
+                                           decoration-muted="data_state == 'no_data'"/>
+                                    <field name="res_last_interval_start"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Оцінка" name="estimate">
+                            <group>
+                                <group>
+                                    <field name="estimate_method"/>
+                                    <field name="rate_nominal"/>
+                                    <field name="min_pressure_bar"/>
+                                </group>
+                                <group>
+                                    <field name="state_signal_id"/>
+                                </group>
+                            </group>
+                            <field name="estimate_params" widget="json"/>
+                        </page>
+                        <page string="Зв'язки" name="links">
+                            <group>
+                                <group>
+                                    <field name="node_id"/>
+                                    <field name="cost_node_id"/>
+                                </group>
+                                <group>
+                                    <field name="equipment_id"/>
+                                    <field name="hvac_ref"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_point_search" model="ir.ui.view">
+        <field name="name">td.energy.point.search</field>
+        <field name="model">td.energy.point</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="resource_id"/>
+                <filter name="kind_source" string="Вводи" domain="[('kind', '=', 'source')]"/>
+                <filter name="kind_branch" string="Гілки" domain="[('kind', '=', 'branch')]"/>
+                <filter name="kind_consumer" string="Споживачі" domain="[('kind', '=', 'consumer')]"/>
+                <separator/>
+                <filter name="estimated" string="Оцінювані" domain="[('estimate_method', '!=', 'none')]"/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_td_energy_point_kanban" model="ir.ui.view">
+        <field name="name">td.energy.point.kanban</field>
+        <field name="model">td.energy.point</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="resource_id">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <strong><field name="code"/></strong>
+                            <field name="kind" widget="badge"/>
+                        </div>
+                        <div><field name="name"/></div>
+                        <div class="text-muted"><field name="estimate_method"/></div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_td_energy_point" model="ir.actions.act_window">
+        <field name="name">Точки обліку</field>
+        <field name="res_model">td.energy.point</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{"search_default_group_resource": 1, "search_default_group_kind": 1}</field>
+    </record>
+
+    <!-- V-05: лічильники ресурсів -->
+    <record id="view_td_energy_meter_form_resources" model="ir.ui.view">
+        <field name="name">td.energy.meter.form.resources</field>
+        <field name="model">td.energy.meter</field>
+        <field name="inherit_id" ref="td_energy.view_td_energy_meter_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='node_id']" position="attributes">
+                <attribute name="required">resource_id.code == 'el'</attribute>
+            </xpath>
+            <xpath expr="//sheet/group" position="after">
+                <group string="Ресурс" name="td_resource">
+                    <group>
+                        <field name="resource_id"/>
+                        <field name="point_id" invisible="resource_id.code == 'el'"/>
+                        <field name="mode" invisible="resource_id.code == 'el'"/>
+                    </group>
+                    <group>
+                        <field name="qty_signal_id" invisible="resource_id.code == 'el'"/>
+                        <field name="flow_signal_ids" widget="many2many_tags" invisible="resource_id.code == 'el'"/>
+                        <field name="max_rate" invisible="resource_id.code == 'el'"/>
+                        <field name="e_react_signal_id" invisible="role != 'incomer'"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_td_energy_meter_list_resources" model="ir.ui.view">
+        <field name="name">td.energy.meter.list.resources</field>
+        <field name="model">td.energy.meter</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="resource_id" optional="show"/>
+                <field name="point_id"/>
+                <field name="mode"/>
+                <field name="data_state" widget="badge"
+                       decoration-success="data_state == 'ok'"
+                       decoration-warning="data_state in ('gap', 'reset')"
+                       decoration-danger="data_state == 'stale'"
+                       decoration-muted="data_state == 'no_data'"/>
+                <field name="res_last_interval_start"/>
+                <field name="next_verification" optional="show"
+                       decoration-warning="next_verification and next_verification &lt; current_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_meter_search_resources" model="ir.ui.view">
+        <field name="name">td.energy.meter.search.resources</field>
+        <field name="model">td.energy.meter</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="resource_id"/>
+                <field name="point_id"/>
+                <filter name="mode_counter" string="Лічильник" domain="[('mode', '=', 'counter')]"/>
+                <filter name="mode_flow" string="Інтеграл витрати" domain="[('mode', '=', 'flow_integrate')]"/>
+                <filter name="mode_estimate" string="Оцінка" domain="[('mode', '=', 'estimate')]"/>
+                <separator/>
+                <filter name="state_stale" string="Немає даних" domain="[('data_state', '=', 'stale')]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                    <filter name="group_mode" string="Режим" context="{'group_by': 'mode'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_meter_resources" model="ir.actions.act_window">
+        <field name="name">Лічильники ресурсів</field>
+        <field name="res_model">td.energy.meter</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[("resource_id.code", "!=", "el")]</field>
+        <field name="search_view_id" ref="view_td_energy_meter_search_resources"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_td_energy_meter_list_resources')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('td_energy.view_td_energy_meter_form')})]"/>
+    </record>
+
+    <!-- V-06: 15-хвилинні інтервали ресурсів (лише читання) -->
+    <record id="view_td_energy_res_interval_list" model="ir.ui.view">
+        <field name="name">td.energy.res.interval.list</field>
+        <field name="model">td.energy.res.interval</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="ts_start"/>
+                <field name="meter_id"/>
+                <field name="resource_id" optional="show"/>
+                <field name="qty" sum="Разом"/>
+                <field name="rate_avg"/>
+                <field name="quality" widget="badge" decoration-success="quality == 'measured'"
+                       decoration-info="quality == 'estimated'"
+                       decoration-warning="quality == 'interpolated'" decoration-danger="quality == 'missing'"/>
+                <field name="cost" sum="Разом" groups="td_energy.group_td_energy_cost"/>
+                <field name="is_backfill" string="Синтетичні" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_res_interval_pivot" model="ir.ui.view">
+        <field name="name">td.energy.res.interval.pivot</field>
+        <field name="model">td.energy.res.interval</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="day" type="row"/>
+                <field name="resource_id" type="col"/>
+                <field name="qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_energy_res_interval_graph" model="ir.ui.view">
+        <field name="name">td.energy.res.interval.graph</field>
+        <field name="model">td.energy.res.interval</field>
+        <field name="arch" type="xml">
+            <graph type="bar" stacked="1">
+                <field name="day"/>
+                <field name="resource_id"/>
+                <field name="qty" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_energy_res_interval_search" model="ir.ui.view">
+        <field name="name">td.energy.res.interval.search</field>
+        <field name="model">td.energy.res.interval</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="meter_id"/>
+                <field name="point_id"/>
+                <field name="resource_id"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
+                <filter name="yesterday" string="Вчора" domain="[('is_yesterday', '=', True)]"/>
+                <separator/>
+                <filter name="backfill" string="Синтетичні" domain="[('is_backfill', '=', True)]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                    <filter name="group_point" string="Точка обліку" context="{'group_by': 'point_id'}"/>
+                    <filter name="group_quality" string="Якість" context="{'group_by': 'quality'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_res_interval" model="ir.actions.act_window">
+        <field name="name">Інтервали ресурсів</field>
+        <field name="res_model">td.energy.res.interval</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="context">{"search_default_today": 1}</field>
+    </record>
+
+    <!-- V-07: зведення використання (SQL-view, лише читання) -->
+    <record id="view_td_energy_usage_pivot" model="ir.ui.view">
+        <field name="name">td.energy.usage.pivot</field>
+        <field name="model">td.energy.usage</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="day" type="row"/>
+                <field name="flow" type="col"/>
+                <field name="qty" type="measure"/>
+                <field name="cost" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_energy_usage_graph" model="ir.ui.view">
+        <field name="name">td.energy.usage.graph</field>
+        <field name="model">td.energy.usage</field>
+        <field name="arch" type="xml">
+            <graph type="bar">
+                <field name="day"/>
+                <field name="qty" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_energy_usage_search" model="ir.ui.view">
+        <field name="name">td.energy.usage.search</field>
+        <field name="model">td.energy.usage</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="resource_id"/>
+                <field name="flow"/>
+                <filter name="backfill" string="Синтетичні" domain="[('is_backfill', '=', True)]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                    <filter name="group_flow" string="Потік" context="{'group_by': 'flow'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_usage" model="ir.actions.act_window">
+        <field name="name">Зведення використання</field>
+        <field name="res_model">td.energy.usage</field>
+        <field name="view_mode">pivot,graph</field>
+    </record>
+
+    <!-- V-02 стоїть після дій точок, лічильників і цін: smart-кнопки посилаються на них через %(…)d -->
+    <!-- V-02: ресурси -->
+    <record id="view_td_energy_resource_list" model="ir.ui.view">
+        <field name="name">td.energy.resource.list</field>
+        <field name="model">td.energy.resource</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="uom_label"/>
+                <field name="rate_label"/>
+                <field name="is_derived"/>
+                <field name="active" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_resource_form" model="ir.ui.view">
+        <field name="name">td.energy.resource.form</field>
+        <field name="model">td.energy.resource</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_td_energy_meter_resources)d" type="action" class="oe_stat_button"
+                                icon="fa-tachometer" invisible="code == 'el'"
+                                context="{'search_default_resource_id': id}">
+                            <field name="meter_count" widget="statinfo" string="Лічильники"/>
+                        </button>
+                        <button name="%(action_td_energy_point)d" type="action" class="oe_stat_button"
+                                icon="fa-sitemap" context="{'search_default_resource_id': id}">
+                            <field name="point_count" widget="statinfo" string="Точки"/>
+                        </button>
+                        <button name="%(action_td_energy_price)d" type="action" class="oe_stat_button"
+                                icon="fa-money" string="Ціни" groups="td_energy.group_td_energy_cost"
+                                invisible="price_source != 'price'"
+                                context="{'search_default_resource_id': id}"/>
+                    </div>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва ресурсу"/></h1>
+                        <h2><field name="code" placeholder="Код"/></h2>
+                    </div>
+                    <group>
+                        <group string="Одиниці">
+                            <field name="uom_label"/>
+                            <field name="rate_label"/>
+                            <field name="rate_hour_factor"/>
+                            <field name="kwh_per_unit"/>
+                            <field name="co2_kg_per_unit"/>
+                        </group>
+                        <group string="Вартість">
+                            <field name="price_source"/>
+                            <field name="is_derived"/>
+                            <field name="in_energy_cost"/>
+                            <field name="show_tab_cost"/>
+                            <field name="source_note"/>
+                        </group>
+                        <group string="Ліміти">
+                            <field name="limit_kind"/>
+                            <field name="rate_limit" invisible="limit_kind != 'fixed'"/>
+                            <field name="daily_limit"/>
+                        </group>
+                        <group string="Екран">
+                            <field name="color" widget="color"/>
+                            <field name="chart_title"/>
+                            <field name="chart_note"/>
+                            <field name="list_title"/>
+                            <field name="list_basis"/>
+                        </group>
+                    </group>
+                    <group string="Підпис під графіком"
+                           help="Шаблон з підстановками: {peak_kw}, {peak_time}, {night}, {day}, {top_name}, {top_share}…">
+                        <field name="foot_template" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_resource" model="ir.actions.act_window">
+        <field name="name">Ресурси</field>
+        <field name="res_model">td.energy.resource</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-10: реактивна енергія в тарифі -->
+    <record id="view_td_energy_tariff_form_resources" model="ir.ui.view">
+        <field name="name">td.energy.tariff.form.resources</field>
+        <field name="model">td.energy.tariff</field>
+        <field name="inherit_id" ref="td_energy.view_td_energy_tariff_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@string='Договір']" position="after">
+                <group string="Реактивна енергія" groups="td_energy.group_td_energy_cost">
+                    <field name="tg_phi_limit"/>
+                    <field name="react_rate"/>
+                    <div class="text-muted" colspan="2">
+                        0 — доплати немає; правило «Реактивна енергія секції» вимкнене.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-11: повтор прив'язки точок і лічильників ресурсів (метод моделі — у воркера A, див. звіт) -->
+    <record id="action_td_energy_resources_rebind" model="ir.actions.server">
+        <field name="name">Оновити прив'язку ресурсів</field>
+        <field name="model_id" ref="model_td_energy_resource"/>
+        <field name="state">code</field>
+        <field name="code">action = env['td.energy.resource'].action_td_energy_resources_rebind()</field>
+    </record>
+</odoo>

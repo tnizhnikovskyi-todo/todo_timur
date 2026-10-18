@@ -1,3 +1,229 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-08, V-09 (C). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-08, V-09 (W3-C): правила резервів і резерви економії. Зміна плану, «Відхилити», «Виконано» йдуть через методи
+     моделі (журнал у чаттері, плановий користувач і дата), тому прапорець «У плані» у списку лише показується. -->
+<odoo>
+    <!-- V-08: правила резервів -->
+    <record id="view_td_energy_opportunity_rule_list" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.rule.list</field>
+        <field name="model">td.energy.opportunity.rule</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="resource_id"/>
+                <field name="enabled" widget="boolean_toggle"/>
+                <field name="lookback_days"/>
+                <field name="min_saving_uah" groups="td_energy.group_td_energy_cost"/>
+                <field name="last_run"/>
+                <field name="last_count"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- «Запустити зараз» (API-05): метод повертає словник статистики, тому результат загортається в сповіщення -->
+    <record id="action_td_energy_opportunity_rule_run" model="ir.actions.server">
+        <field name="name">Запустити правило резервів</field>
+        <field name="model_id" ref="model_td_energy_opportunity_rule"/>
+        <field name="state">code</field>
+        <field name="code">stats = records.action_run()
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'type': 'success',
+        'title': 'Правило виконано',
+        'message': 'Знайдено: %s, нових: %s, закрито: %s (%s с).' % (stats['found'], stats['created'], stats['expired'], stats['seconds']),
+        'sticky': False,
+        'next': {'type': 'ir.actions.act_window_close'},
+    },
+}</field>
+    </record>
+
+    <record id="view_td_energy_opportunity_rule_form" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.rule.form</field>
+        <field name="model">td.energy.opportunity.rule</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="%(action_td_energy_opportunity_rule_run)d" type="action" string="Запустити зараз"
+                            class="btn-primary" icon="fa-play"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва правила"/></h1>
+                        <h2><field name="code" placeholder="Код"/></h2>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="enabled"/>
+                            <field name="resource_id"/>
+                            <field name="requires"/>
+                        </group>
+                        <group>
+                            <field name="lookback_days"/>
+                            <field name="min_saving_uah" groups="td_energy.group_td_energy_cost"/>
+                            <field name="cooldown_days"/>
+                            <field name="dismiss_days"/>
+                        </group>
+                    </group>
+                    <group string="Пороги" name="thresholds">
+                        <field name="params" widget="json" colspan="2"/>
+                        <field name="params_schema" widget="json" readonly="1" colspan="2"/>
+                    </group>
+                    <group string="Дії" name="actions">
+                        <field name="actions" widget="json" colspan="2"/>
+                        <field name="fallback_action" widget="json" colspan="2"/>
+                        <field name="control_intent"/>
+                        <field name="control_label"/>
+                    </group>
+                    <group string="Останній прогін" name="last_run">
+                        <field name="last_run"/>
+                        <field name="last_count"/>
+                        <field name="last_error"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_opportunity_rule" model="ir.actions.act_window">
+        <field name="name">Правила резервів</field>
+        <field name="res_model">td.energy.opportunity.rule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-09: резерви економії -->
+    <record id="view_td_energy_opportunity_list" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.list</field>
+        <field name="model">td.energy.opportunity</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="in_plan" widget="boolean_toggle" readonly="1"/>
+                <field name="title"/>
+                <field name="resource_id"/>
+                <field name="est_saving_month" sum="Разом"/>
+                <field name="state" widget="badge" decoration-warning="state == 'open'"
+                       decoration-success="state == 'done'" decoration-muted="state in ('dismissed', 'expired')"/>
+                <field name="request_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_opportunity_form" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.form</field>
+        <field name="model">td.energy.opportunity</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <header>
+                    <button name="action_plan_toggle" type="object" string="У план" class="btn-primary"
+                            invisible="in_plan or state != 'open'" groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_plan_toggle" type="object" string="З плану"
+                            invisible="not in_plan or state != 'open'" groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_done" type="object" string="Виконано"
+                            invisible="state != 'open'" groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_dismiss" type="object" string="Відхилити"
+                            invisible="state != 'open'" groups="td_energy.group_td_energy_manager"
+                            confirm="Відхилити резерв? Повторна знахідка пригнічується на заданий строк."/>
+                    <field name="state" widget="statusbar" statusbar_visible="open,done"/>
+                </header>
+                <sheet>
+                    <field name="in_plan" invisible="1"/>
+                    <widget name="web_ribbon" title="У плані" bg_color="text-bg-info" invisible="not in_plan"/>
+                    <div class="oe_title">
+                        <h1><field name="title" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="resource_id"/>
+                            <field name="rule_id"/>
+                            <field name="node_id"/>
+                            <field name="point_id"/>
+                            <field name="request_id"/>
+                        </group>
+                        <group>
+                            <field name="est_saving_month"/>
+                            <field name="est_qty_month"/>
+                            <field name="found_at"/>
+                            <field name="last_seen_at"/>
+                            <field name="plan_user_id" invisible="not in_plan"/>
+                            <field name="plan_date" invisible="not in_plan"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="text" readonly="1" colspan="2"/>
+                        <field name="result_note" invisible="state == 'expired'"
+                               readonly="state != 'open'"/>
+                    </group>
+                    <group invisible="state == 'open'" string="Закриття">
+                        <field name="resolved_at"/>
+                        <field name="resolved_by"/>
+                    </group>
+                    <notebook>
+                        <page string="Підстава" name="evidence">
+                            <field name="evidence" widget="json" readonly="1"/>
+                        </page>
+                        <page string="Дії" name="actions">
+                            <field name="actions" widget="json" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_opportunity_search" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.search</field>
+        <field name="model">td.energy.opportunity</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="title"/>
+                <field name="resource_id"/>
+                <field name="rule_id"/>
+                <filter name="open" string="Відкриті" domain="[('state', '=', 'open')]"/>
+                <filter name="in_plan" string="У плані" domain="[('in_plan', '=', True)]"/>
+                <separator/>
+                <filter name="closed" string="Закриті" domain="[('state', '!=', 'open')]"/>
+                <group>
+                    <filter name="group_resource" string="Ресурс" context="{'group_by': 'resource_id'}"/>
+                    <filter name="group_rule" string="Правило" context="{'group_by': 'rule_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_td_energy_opportunity_kanban" model="ir.ui.view">
+        <field name="name">td.energy.opportunity.kanban</field>
+        <field name="model">td.energy.opportunity</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="resource_id" create="false">
+                <field name="title"/>
+                <field name="in_plan"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between gap-2">
+                            <strong><field name="title"/></strong>
+                            <field name="state" widget="badge" decoration-warning="state == 'open'"
+                                   decoration-success="state == 'done'"
+                                   decoration-muted="state in ('dismissed', 'expired')"/>
+                        </div>
+                        <div class="text-muted"><field name="text"/></div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <span t-if="record.in_plan.raw_value" class="badge text-bg-info">У плані</span>
+                            <field name="est_saving_month"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_td_energy_opportunity" model="ir.actions.act_window">
+        <field name="name">Резерви економії</field>
+        <field name="res_model">td.energy.opportunity</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{"search_default_open": 1}</field>
+    </record>
+</odoo>

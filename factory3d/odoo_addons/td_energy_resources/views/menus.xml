@@ -1,3 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-13 (C). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-13 (W3-C, SPEC 3.3): меню «Енергоресурси» і розділ налаштувань. Корінь — td_energy.menu_td_energy (W1). -->
+<odoo>
+    <menuitem id="menu_td_energy_resources" name="Енергоресурси" parent="td_energy.menu_td_energy" sequence="10"
+              action="action_td_energy_resources" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_opportunity" name="Резерви економії" parent="td_energy.menu_td_energy" sequence="74"
+              action="action_td_energy_opportunity" groups="td_energy.group_td_energy_user"/>
+
+    <!-- Налаштування → Енергоресурси (енергетик) -->
+    <menuitem id="menu_td_energy_resources_config" name="Енергоресурси" parent="td_energy.menu_td_energy_config"
+              sequence="50" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_resource" name="Ресурси" parent="menu_td_energy_resources_config" sequence="10"
+              action="action_td_energy_resource" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_price" name="Ціни" parent="menu_td_energy_resources_config" sequence="20"
+              action="action_td_energy_price" groups="td_energy.group_td_energy_cost"/>
+    <menuitem id="menu_td_energy_point" name="Точки обліку" parent="menu_td_energy_resources_config" sequence="30"
+              action="action_td_energy_point" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_meter_resources" name="Лічильники ресурсів" parent="menu_td_energy_resources_config"
+              sequence="40" action="action_td_energy_meter_resources" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_res_interval" name="Інтервали ресурсів" parent="menu_td_energy_resources_config"
+              sequence="50" action="action_td_energy_res_interval" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_usage" name="Зведення використання" parent="menu_td_energy_resources_config"
+              sequence="60" action="action_td_energy_usage" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_opportunity_rule" name="Правила резервів" parent="menu_td_energy_resources_config"
+              sequence="70" action="action_td_energy_opportunity_rule" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_resources_rebind" name="Оновити прив'язку ресурсів"
+              parent="menu_td_energy_resources_config" sequence="80" action="action_td_energy_resources_rebind"
+              groups="td_energy.group_td_energy_manager"/>
+</odoo>

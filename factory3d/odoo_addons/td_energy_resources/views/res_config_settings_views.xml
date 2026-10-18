@@ -1,3 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-12 (C). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-12 (W3-C): параметри «Енергоресурсів» у налаштуваннях енергетики (лише group_td_admin, як у W1) -->
+<odoo>
+    <record id="res_config_settings_view_form_td_energy_resources" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.energy.resources</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="td_energy.res_config_settings_view_form_td_energy"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='td_energy']" position="inside">
+                <block title="Енергоресурси" name="td_energy_resources">
+                    <setting string="Ціни ресурсів"
+                             help="Ресурси з джерелом ціни «Таблиця цін» без чинної ціни не мають вартості на екрані">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_no_price_count"/>
+                                <field name="td_energy_resources_no_price_count"/></div>
+                            <button name="%(td_energy_resources.action_td_energy_price)d" type="action"
+                                    string="Відкрити ціни" class="btn-link"/>
+                        </div>
+                    </setting>
+                    <setting string="Котельня й нормативи"
+                             help="Норми для KPI «ККД котельні», «Питома потужність», «Нічна витрата води» і «Підживлення»">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_boiler_eff"/>
+                                <field name="td_energy_resources_boiler_eff"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_boiler_eff_norm"/>
+                                <field name="td_energy_resources_boiler_eff_norm"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_air_spec_norm"/>
+                                <field name="td_energy_resources_air_spec_norm"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_water_night_norm"/>
+                                <field name="td_energy_resources_water_night_norm"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_boiler_makeup_norm"/>
+                                <field name="td_energy_resources_boiler_makeup_norm"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_air_setpoint_bar"/>
+                                <field name="td_energy_resources_air_setpoint_bar"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Нічне вікно"
+                             help="За цим вікном рахуються нічні витрати (витоки повітря, вода) і резерви">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_night_from_h"/>
+                                <field name="td_energy_resources_night_from_h"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_night_to_h"/>
+                                <field name="td_energy_resources_night_to_h"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Побудова інтервалів, експорт і резерви">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_gap_max_s"/>
+                                <field name="td_energy_resources_gap_max_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_min_coverage"/>
+                                <field name="td_energy_resources_min_coverage"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_export_max_days"/>
+                                <field name="td_energy_resources_export_max_days"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_resources_weeks_per_month"/>
+                                <field name="td_energy_resources_weeks_per_month"/></div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
