@@ -15,27 +15,10 @@ from collector.core.live import LiveCache
 from collector.core.types import Reading
 
 from .config import Config
+from .derived import Derived, compute
+from .inputs_text import text_value
 
 MAX_AGE_DEFAULT = 60.0
-# стани з текстом (kind=state з `map`): ядро віддає `Reading(text=…)` без `value` — зводимо до числа
-TEXT_NUM: dict[str, dict[str, float]] = {
-    "remote": {"local": 0.0, "remote": 1.0},
-    "src1_ok": {"unavailable": 0.0, "lost": 0.0, "available": 1.0, "ok": 1.0},
-    "qs_state": {"open": 0.0, "closed": 1.0},
-    # kind=state з `map` у W1 (energy_signals.csv): число = індекс стану
-    "bess_state": {"offline": 0.0, "standby": 1.0, "running": 2.0, "fault": 3.0, "sleep": 4.0},
-    "chp_state": {"stop": 0.0, "starting": 1.0, "running": 2.0, "fault": 3.0, "cooling": 4.0},
-    "ats_pos": {"unknown": 0.0, "pos_0": 1.0, "pos_i": 2.0, "pos_ii": 3.0},
-}
-
-
-def text_value(name: str, reading: Reading | None) -> float | None:
-    """Число показання: `value`, а для станів з текстом (`Reading(text="running")`) — індекс за `TEXT_NUM`."""
-    if reading is None:
-        return None
-    if reading.value is not None:
-        return float(reading.value)
-    return TEXT_NUM.get(name, {}).get(str(reading.text or "").lower())
 
 
 class Inputs:
@@ -54,21 +37,37 @@ class Inputs:
             max_age_s if max_age_s is not None else cfg.interlock("data_fresh").params.get("max_age_s", MAX_AGE_DEFAULT)
         )
         self.periods = periods
+        self._derived: dict[str, Derived] = {}
 
     # --- доступ -------------------------------------------------------------------------------
     def code(self, name: str) -> str | None:
         return self.cfg.inp(name) or (name if "/" in name else None)
 
+    def _period(self, code: str) -> float | None:
+        return self.periods(code) if callable(self.periods) else (self.periods or {}).get(code)
+
+    def derived(self, code: str) -> Derived | None:
+        """Похідний вхід (D-47): `None`, якщо `code` не входить до `cfg.derived`."""
+        formula = self.cfg.derived.get(code)
+        if formula is None:
+            return None
+        if code not in self._derived:
+            self._derived[code] = compute(code, formula, self.live, self.now, self.max_age_s, self._period)
+        return self._derived[code]
+
     def reading(self, name: str) -> Reading | None:
-        """Свіже показання (`None`: немає, несвіже, погана якість)."""
+        """Свіже показання (`None`: немає, несвіже, погана якість); похідні входи рахуються з термів `derived`."""
         code = self.code(name)
         if code is None or self.live is None:
             return None
+        d = self.derived(code)
+        if d is not None:
+            return d.reading
         r = self.live.get(code)
         if r is None or r.q == "bad":
             return None
         age = self.live.age_s(code, self.now)
-        period = self.periods(code) if callable(self.periods) else (self.periods or {}).get(code)
+        period = self._period(code)
         if age is None or age > max(3.0 * float(period or 0.0), self.max_age_s):
             return None
         return r
@@ -86,11 +85,19 @@ class Inputs:
     def absent(self, name: str) -> bool:
         """Сигналу немає взагалі (не в конфігу або ще жодного показання): «не підключено»."""
         code = self.code(name)
-        return code is None or self.live is None or self.live.get(code) is None
+        if code is None or self.live is None:
+            return True
+        d = self.derived(code)
+        return not d.seen if d is not None else self.live.get(code) is None
 
     def age(self, name: str) -> float | None:
         code = self.code(name)
-        return None if code is None or self.live is None else self.live.age_s(code, self.now)
+        if code is None or self.live is None:
+            return None
+        d = self.derived(code)
+        if d is not None:  # вік похідного входу — вік найстарішого терма
+            return None if d.oldest is None else (self.now - d.oldest).total_seconds()
+        return self.live.age_s(code, self.now)
 
     def stale(self, names: Iterable[str]) -> list[str]:
         return [n for n in names if not self.known(n)]

@@ -17,6 +17,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from . import limits
+from .derived import validate as validate_derived
 from .timeutil import parse_hhmm
 
 SCENARIO_CODES = ("peak", "self", "pfc", "night", "backup", "chp")
@@ -182,6 +183,7 @@ class Config:
     bms: dict[str, Any] = field(default_factory=dict)
     signals: dict[str, str] = field(default_factory=dict)
     inputs: dict[str, str] = field(default_factory=dict)
+    derived: dict[str, Any] = field(default_factory=dict)  # D-47: формули похідних входів (рахує плагін)
     interlocks: dict[str, InterlockCfg] = field(default_factory=dict)
     limits: Limits = field(default_factory=Limits)
     raw: dict[str, Any] = field(default_factory=dict, compare=False)
@@ -336,6 +338,15 @@ def _interlocks(parsed: Parsed, raw: dict[str, Any]) -> dict[str, InterlockCfg]:
     return out
 
 
+def _derived(parsed: Parsed, raw: dict[str, Any]) -> dict[str, Any]:
+    """Формули `derived` (D-47) зберігаються як є; невідома операція чи некоректна формула — попередження."""
+    for code, formula in raw.items():
+        problem = validate_derived(code, formula)
+        if problem:
+            parsed.warnings.append(problem)
+    return copy.deepcopy(raw)
+
+
 def _engine(parsed: Parsed, raw: dict[str, Any]) -> EngineCfg:
     d = EngineCfg()
     e = {k: _num(raw.get(k), getattr(d, k)) for k in EngineCfg.__dataclass_fields__}
@@ -427,6 +438,7 @@ def parse(raw: Any) -> Parsed:
         bms=copy.deepcopy(raw.get("bms") or {}),
         signals=dict(raw.get("signals") or {}),
         inputs=dict(raw.get("inputs") or {}),
+        derived=_derived(parsed, raw.get("derived") or {}),
         interlocks=_interlocks(parsed, raw.get("interlocks") or {}),
         limits=lim,
         raw=raw,

@@ -60,6 +60,7 @@
   "bms": {"type": "object"},
   "signals": {"type": "object", "additionalProperties": {"type": "string"}},
   "inputs": {"type": "object", "additionalProperties": {"type": "string"}},
+  "derived": {"type": "object", "additionalProperties": {"type": "object"}},
   "interlocks": {
    "type": "object",
    "additionalProperties": {

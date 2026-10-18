@@ -155,6 +155,7 @@ def base_raw(**over: Any) -> dict[str, Any]:
     raw["slots"] = []
     raw["bms"] = copy.deepcopy(BMS)
     raw["interlocks"] = {}
+    raw["derived"] = {}  # тести подають «сирі» входи напряму; формули D-47 перевіряє test_derived (`with_derived`)
     for key, val in over.items():
         if key in ("peak", "self", "pfc", "night", "backup", "chp"):
             raw["scenarios"][key].update(val)
@@ -558,3 +559,68 @@ async def boot_ready(tmp_path: Path | None = None, raw: dict[str, Any] | None = 
     feed(h, **standard_inputs(**inputs))
     wire_device(h)
     return h
+
+
+DERIVED_RAW_CODES = {
+    "p_total",
+    "s1_p",
+    "s2_p",
+    "src1_ok",
+    "grid_kw",
+    "export_kw",
+    "pv_kw",
+}  # входи, що їх дає `derived`
+
+
+def derived_block() -> dict[str, Any]:
+    """Формули D-47 у формі, яку віддає `config_builder.derived` (лінії C1/C2, вводи Q1/Q2, два інвертори СЕС)."""
+    q = [{"code": f"energy/cells/Q{s}/p_now", "k": 1.0} for s in (1, 2)]
+    island = {"code": "infra/ats/position", "eq": 3}
+    c1, c2 = ({"code": f"energy/lines/{c}/p_now", "k": 1.0} for c in ("C1", "C2"))
+    return {
+        "energy/totals/p_now": {"op": "sum", "terms": [c1, c2]},
+        "energy/sections/S1/p_kw": {"op": "sum", "terms": [c1]},
+        "energy/sections/S2/p_kw": {"op": "sum", "terms": [c2]},
+        "infra/ats/src1_ok": {"op": "ge", "code": "infra/ats/src1_state", "value": 1},
+        "infra/totals/grid_kw": {"op": "sum", "terms": q, "clamp_min": 0.0, "zero_if": island},
+        "infra/totals/export_kw": {
+            "op": "sum",
+            "terms": [dict(t, k=-1.0) for t in q],
+            "clamp_min": 0.0,
+            "zero_if": island,
+        },
+        "infra/totals/pv_now": {
+            "op": "sum",
+            "terms": [{"code": f"infra/pv/PV-INV-{n}/p_kw", "k": 1.0, "min": 0.0} for n in (1, 2)],
+        },
+    }
+
+
+def raw_plant(**over: Any) -> dict[str, Any]:
+    """Сирі показання, які реально опитує збирач (без жодного похідного входу): лінії, вводи, інвертори, АВР, BESS…"""
+    vals: dict[str, Any] = {
+        "energy/lines/C1/p_now": 200.0,
+        "energy/lines/C2/p_now": 150.0,
+        "energy/cells/Q1/p_now": 120.0,
+        "energy/cells/Q2/p_now": 80.0,
+        "infra/pv/PV-INV-1/p_kw": 0.0,
+        "infra/pv/PV-INV-2/p_kw": 0.0,
+        "infra/ats/src1_state": "available",
+        "infra/ats/position": "pos_I",
+    }
+    vals.update(over)
+    return vals
+
+
+def feed_raw_plant(h: Harness, **over: Any) -> None:
+    """Подає `raw_plant` і решту сирих входів `standard_inputs` (стани — текстом, як віддає Modbus-плагін)."""
+    for code, val in raw_plant(**over).items():
+        v, t = (None, val) if isinstance(val, str) else (val, None)
+        h.device.regs[code] = (v, t)
+    text = {"remote": "remote", "bess_state": "standby", "chp_state": "stop", "qs_state": "open"}
+    for name, val in standard_inputs().items():
+        if name in DERIVED_RAW_CODES or name == "ats_pos":
+            continue
+        v, t = (None, text[name]) if name in text else (val, None)
+        h.device.regs[h.device._code(name)] = (v, t)
+    h.device.sync()
