@@ -1,1 +1,7 @@
-// Стилі шару «Енергетика в 3D». Власник: D
+// Шар «Енергетика в 3D»: блок картки вузла (UI-26). Колір не єдиний носій стану — поруч завжди текстовий чип.
+.o_f3d_viewer {
+    .o_td_en_node { margin-bottom: 10px; }
+    .o_td_en_gen { color: #b45309; }
+    .o_td_en_alarms { margin-top: 6px; font-size: 12px; }
+    .o_td_en_alarms li { padding: 2px 0; }
+}
