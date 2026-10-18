@@ -893,10 +893,11 @@ export class OdooAdapter extends BaseAdapter {
 
     /**
      * Залишки по кодах (API-13 `/stock/state`, S3): `{codes?, days?, detail?}` → {at, days, demo: false, truncated, codes: {код: {qty, reserved, fill,
-     * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки.
+     * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки;
+     * великий склад віддається пачками: `truncated` + `next` → наступний виклик з `offset: next`.
      */
-    async stock({ codes = null, days = null, detail = false } = {}) {
-        const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail });
+    async stock({ codes = null, days = null, detail = false, offset = 0 } = {}) {
+        const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail, ...(offset ? { offset } : {}) });
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
         }

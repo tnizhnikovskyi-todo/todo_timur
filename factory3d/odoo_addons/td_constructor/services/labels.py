@@ -204,6 +204,7 @@ def label_primitives(label, kind, w, h):
 # --- перевірка вхідних даних --------------------------------------------------------------------------------------
 MAX_LINES = 4
 MAX_TEXT = 80
+MAX_PNG_PAGES = 12  # аркуш PNG 300 dpi ≈ 26 МБ у пам'яті: більші замовлення — лише PDF
 
 
 def _num(value, name, lo, hi):
@@ -358,6 +359,10 @@ def render_png(spec, dpi=300):
 
     k = dpi / 25.4
     pages = paginate(spec)
+    if len(pages) > MAX_PNG_PAGES:
+        raise ValidationError(
+            "PNG: до %s аркушів (зараз %s); для більшого обсягу оберіть PDF." % (MAX_PNG_PAGES, len(pages))
+        )
     files = []
     for index, entries in enumerate(pages, 1):
         img = Image.new('RGB', (round(spec['page_w'] * k), round(spec['page_h'] * k)), 'white')

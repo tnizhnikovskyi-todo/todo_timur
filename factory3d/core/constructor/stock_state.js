@@ -49,8 +49,15 @@ export async function loadStock({ force = false, codes = null, quiet = false } =
         return S.stock;
     }
     try {
-        const res = await E.adapter.stock({ codes, days: S.stock?.days || null });
-        const st = applyStock(res, { merge: !!codes });
+        // великі склади віддаються пачками (API-13: truncated + next): дочитуємо, поки сервер каже, що є ще
+        let res = await E.adapter.stock({ codes, days: S.stock?.days || null });
+        const all = { ...res, codes: { ...res.codes } };
+        for (let i = 0; i < 50 && !codes && res.truncated && res.next; i++) {
+            res = await E.adapter.stock({ codes, days: all.days, offset: res.next });
+            Object.assign(all.codes, res.codes);
+            all.truncated = res.truncated;
+        }
+        const st = applyStock(all, { merge: !!codes });
         E.recolorCells?.();
         E.renderHeat?.();
         return st;

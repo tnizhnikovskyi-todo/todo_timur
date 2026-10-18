@@ -402,6 +402,23 @@ export function register(test) {
         assert.equal(demoFind(S, { q: "", baseMap: b.ad.baseMap }).hits.length, 0);
     });
 
+    test("S3 залишки: пачки API-13 (truncated + next) дочитуються, коди зливаються, подробиці кешуються", async () => {
+        const b = await boot();
+        const { S, E } = b;
+        const stock = await load("stock_state.js");
+        const calls = [];
+        const pages = { 0: { truncated: true, next: 2, codes: { A: { qty: 1 }, B: { qty: 2 } } }, 2: { truncated: true, next: 3, codes: { C: { qty: 3 } } }, 3: { truncated: false, next: 4, codes: { D: { qty: 4, moves: 9 } } } };
+        const orig = E.adapter;
+        E.adapter = { stock: async (o) => (calls.push(o), { at: "2026-10-18 10:00:00", days: 90, demo: false, ...pages[o.offset || 0] }) };
+        S.stock = null;
+        const st = await stock.loadStock({ force: true });
+        assert.deepEqual(calls.map((c) => c.offset ?? 0), [0, 2, 3], "пачки за next");
+        assert.deepEqual([...st.byCode.keys()], ["A", "B", "C", "D"]);
+        assert.equal(st.abc.get("D"), "A");
+        assert.equal(await stock.loadStock(), st, "без force — із кешу");
+        E.adapter = orig;
+    });
+
     test("S3 пошук: код без регістру й розділювачів, ранжування (точний → початок → вміст), перехід до місця", async () => {
         const b = await boot();
         const { S, E } = b;
@@ -423,6 +440,40 @@ export function register(test) {
         assert.ok(Math.abs(w.x - 40) < 6 && Math.abs(w.y - 10) < 2);
         assert.equal(s.gotoCode("нема-такого"), false);
         E.undoReset();
+    });
+
+    test("S3 адаптери: OdooAdapter stock/find/render → API-13/14/19 (мок rpc, помилки), capabilities stock і render; ArtifactAdapter: stock і find, render недоступний", async () => {
+        const { OdooAdapter } = await load("adapter_odoo.js");
+        const { StoreError } = await load("adapter.js");
+        const calls = [];
+        const answers = {
+            "/f3d/constructor/stock/state": { ok: true, at: "2026-10-18 12:00:00", days: 90, demo: false, codes: { "A-1": { qty: 2 } } },
+            "/f3d/constructor/stock/find": { ok: true, hits: [{ code: "A-1", items: [{ product: "ДСП", qty: 2 }] }] },
+            "/f3d/constructor/render/labels_pdf": { ok: true, filename: "labels.pdf", mimetype: "application/pdf", content: "JVBERi0=" },
+        };
+        const rpc = async (route, params) => {
+            calls.push([route, params]);
+            return route.endsWith("/bad") ? { ok: false, code: "rights", message: "Немає прав" } : answers[route] || { ok: false, code: "validation", message: "x" };
+        };
+        const ad = new OdooAdapter({ rpc });
+        ad.siteId = 7;
+        assert.equal(ad.capabilities.stock && ad.capabilities.render, true);
+        const st = await ad.stock({ codes: ["A-1"], detail: true });
+        assert.equal(st.codes["A-1"].qty, 2);
+        assert.deepEqual(calls[0], ["/f3d/constructor/stock/state", { site_id: 7, codes: ["A-1"], days: null, detail: true }]);
+        const f = await ad.find({ q: "дсп" });
+        assert.equal(f.hits[0].code, "A-1");
+        assert.deepEqual(calls[1], ["/f3d/constructor/stock/find", { site_id: 7, q: "дсп", mode: "any" }]);
+        const r = await ad.render("labels_pdf", { labels: [] });
+        assert.equal(r.filename, "labels.pdf");
+        assert.deepEqual(calls[2], ["/f3d/constructor/render/labels_pdf", { site_id: 7, labels: [] }]);
+        await assert.rejects(() => ad.render("bad", {}), (e) => e instanceof StoreError && e.code === "rights");
+        const art = (await boot()).ad;
+        assert.equal(art.capabilities.stock, true);
+        assert.equal(art.capabilities.render, undefined);
+        const demo = await art.stock({ codes: [] });
+        assert.equal(demo.demo, true);
+        await assert.rejects(() => art.render("labels_pdf", {}), /сервер/);
     });
 
     test("S3 рівні доступу й статуси: Перегляд / Проєктування / Застосування, «нове · лише в моделі», «не збережено», «з Odoo»", async () => {

@@ -13,7 +13,7 @@ import { sGeom } from "./live.js";
 import { can, registries } from "./registry.js";
 import { E, S, selRefs } from "./state.js";
 import { typeOf } from "./types_data.js";
-import { h, toast } from "./util.js";
+import { K, h, toast } from "./util.js";
 
 export const LABELS_MAX = 5000; // дзеркало параметра td.constructor.labels_max
 
@@ -271,7 +271,7 @@ export function labelSvg(item, spec, w, hh) {
         const fs = Math.min(hh * 0.26, (w - 2 * m) / (item.code.length * 0.6));
         const bh = Math.max(4, hh - top - fs * 1.25 - m);
         out += barsSvg(item.code, m, top, w - 2 * m, bh);
-        out += `<text x="${num(w / 2)}" y="${num(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num(fs)}">${esc(item.code)}</text>`;
+        out += `<text x="${num(w / 2)}" y="${num(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num(fs)}" textLength="${num(Math.min(item.code.length * fs * 0.62, w - 2 * m))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
     }
     if (item.arrow) {
         const s = Math.min(hh * 0.28, w * 0.14);
@@ -458,6 +458,7 @@ async function openLabels(adapter, args = {}) {
     const draw = () => {
         const custom = spec.layout === "custom";
         body.replaceChildren(
+            ...K([
             h(
                 "div",
                 { class: "grid2" },
@@ -497,6 +498,7 @@ async function openLabels(adapter, args = {}) {
             info,
             warn,
             prev
+            ])
         );
         recompute();
     };

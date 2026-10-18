@@ -1,9 +1,10 @@
 """Золоті фікстури слайса S3 (F05 штрихкоди): Python ↔ JS.
 
-    python3 factory3d/odoo_addons/td_constructor/tests/golden_s3.py --write   # перегенерувати fixtures/s3_barcode_golden.json
+    python3 factory3d/odoo_addons/td_constructor/tests/golden_s3.py --write   # перегенерувати fixtures/*.json
 
-`static/tests/fixtures/s3_barcode_golden.json` будує ЦЕЙ файл (потрібні лише `qrcode` і `reportlab`); `node tools/test_core_s3.mjs`
-звіряє з ним `core/constructor/barcode.js`, а `test_s3_labels` стежить, щоб фікстура збігалася з сервісом `services/labels.py`."""
+`static/tests/fixtures/s3_barcode_golden.json` будує ЦЕЙ файл (потрібні лише `qrcode` і `reportlab`);
+`node tools/test_core_s3.mjs` звіряє з ним `core/constructor/barcode.js`, а `test_s3_labels` стежить, щоб
+фікстура збігалася з сервісом `services/labels.py`."""
 
 import json
 import sys
@@ -13,8 +14,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'static' / 'tests' / 'fixtures'
 NAME = 's3_barcode_golden.json'
-TEXTS = ['PLT-01A', 'A', 'WH/Stock/Зона-1/R-01-B03-L2', '1234567890123', 'A-0001234567-B', 'https://example.com/f3d/PLT-01A?x=1', 'x' * 120]
-CODE128 = ['PLT-01A', 'FG-R1-B01-L1', '1234567890123', 'A-0001234567-B', 'AB1234', '12', 'R-12345678', '~ ^ {}', 'a b  c']
+TEXTS = [
+    'PLT-01A',
+    'A',
+    'WH/Stock/Зона-1/R-01-B03-L2',
+    '1234567890123',
+    'A-0001234567-B',
+    'https://example.com/f3d/PLT-01A?x=1',
+    'x' * 120,
+]
+CODE128 = [
+    'PLT-01A',
+    'FG-R1-B01-L1',
+    '1234567890123',
+    'A-0001234567-B',
+    'AB1234',
+    '12',
+    'R-12345678',
+    '~ ^ {}',
+    'a b  c',
+]
 
 
 def _labels():
@@ -37,7 +56,15 @@ def _labels():
         pkg.__path__ = [str(ROOT)]
         sub = types.ModuleType('td_constructor.services')
         sub.__path__ = [str(ROOT / 'services')]
-        sys.modules.update({'odoo': odoo, 'odoo.exceptions': exc, 'odoo.tools': tools, 'td_constructor': pkg, 'td_constructor.services': sub})
+        sys.modules.update(
+            {
+                'odoo': odoo,
+                'odoo.exceptions': exc,
+                'odoo.tools': tools,
+                'td_constructor': pkg,
+                'td_constructor.services': sub,
+            }
+        )
         from td_constructor.services import labels  # noqa: PLC0415
 
         return labels

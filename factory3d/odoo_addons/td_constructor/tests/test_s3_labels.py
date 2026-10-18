@@ -125,6 +125,11 @@ class TestS3Labels(F3DConstructorCase):
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             self.assertEqual(archive.namelist(), ['labels_1.png', 'labels_2.png'])
 
+    def test_png_page_limit(self):
+        spec = labels.parse_payload(make_payload(24 * (labels.MAX_PNG_PAGES + 1), fmt='png'), 5000)
+        with self.assertRaises(ValidationError):
+            labels.render_png(spec, dpi=20)
+
     def test_renderer_registered_and_rights(self):
         self.assertIs(RENDERERS.get('labels_pdf'), labels.render_labels)
         filename, mimetype, content = RENDERERS.get('labels_pdf')(self.env, make_payload(2))

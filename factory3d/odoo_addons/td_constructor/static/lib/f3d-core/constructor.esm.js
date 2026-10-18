@@ -8154,10 +8154,11 @@ var OdooAdapter = class extends BaseAdapter {
   }
   /**
    * Залишки по кодах (API-13 `/stock/state`, S3): `{codes?, days?, detail?}` → {at, days, demo: false, truncated, codes: {код: {qty, reserved, fill,
-   * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки.
+   * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки;
+   * великий склад віддається пачками: `truncated` + `next` → наступний виклик з `offset: next`.
    */
-  async stock({ codes = null, days = null, detail = false } = {}) {
-    const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail });
+  async stock({ codes = null, days = null, detail = false, offset = 0 } = {}) {
+    const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail, ...offset ? { offset } : {} });
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
@@ -11984,7 +11985,7 @@ function labelSvg(item, spec, w, hh) {
     const fs = Math.min(hh * 0.26, (w - 2 * m) / (item.code.length * 0.6));
     const bh = Math.max(4, hh - top - fs * 1.25 - m);
     out += barsSvg(item.code, m, top, w - 2 * m, bh);
-    out += `<text x="${num3(w / 2)}" y="${num3(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}">${esc(item.code)}</text>`;
+    out += `<text x="${num3(w / 2)}" y="${num3(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}" textLength="${num3(Math.min(item.code.length * fs * 0.62, w - 2 * m))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
   }
   if (item.arrow) {
     const s = Math.min(hh * 0.28, w * 0.14);
@@ -12162,50 +12163,52 @@ async function openLabels(adapter, args = {}) {
   const draw = () => {
     const custom = spec.layout === "custom";
     body.replaceChildren(
-      h(
-        "div",
-        { class: "grid2" },
-        fld("Що друкувати", selectEl(Object.entries(SCOPES), spec.scope, (v) => {
-          spec.scope = v;
+      ...K([
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Що друкувати", selectEl(Object.entries(SCOPES), spec.scope, (v) => {
+            spec.scope = v;
+            recompute();
+            draw();
+          }, false, "Що друкувати")),
+          spec.scope === "zone" ? fld("Зона", selectEl([["", "—"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], spec.zoneId, (v) => set("zoneId", v), false, "Зона")) : spec.scope === "row" ? fld("Ряд", selectEl([["", "—"], ...racks.map((z) => [z.id, z.code_prefix])], spec.rowId, (v) => set("rowId", v), false, "Ряд")) : spec.scope === "tier" ? numF("Ярус знизу", "tier", () => spec.tier, 1, 12) : h("div")
+        ),
+        h("div", { class: "frow wrap" }, check("Лише нові та перенумеровані", "onlyNew", () => spec.onlyNew), check("Лише застосовані в Odoo", "onlyApplied", () => spec.onlyApplied)),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Штрихкод", selectEl([["code128", "Code128"], ["qr", "QR"]], spec.kind, (v) => set("kind", v), false, "Штрихкод")),
+          fld("Шрифт", selectEl([["cyr", "З кирилицею"], ["latin", "Лише латиниця"]], spec.font, (v) => set("font", v), false, "Шрифт"))
+        ),
+        h("div", { class: "frow wrap" }, check("Зона", "show.zone", () => spec.show.zone), check("Ряд", "show.row", () => spec.show.row), check("Секція", "show.bay", () => spec.show.bay), check("Ярус", "show.level", () => spec.show.level), check("Тип", "show.type", () => spec.show.type)),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Стрілка ярусів", selectEl([["none", "Немає"], ["up", "Вгору (вище точки)"], ["updown", "Вгору й вниз"]], spec.arrows, (v) => set("arrows", v), false, "Стрілка")),
+          numF("Точка сканування: ярус", "scanLevel", () => spec.scanLevel, 1, 12)
+        ),
+        h("div", { class: "grid2" }, fld("Розкладка", selectEl(Object.entries(LAYOUTS).map(([k, v]) => [k, v.name]), spec.layout, (v) => {
+          spec.layout = v;
           recompute();
           draw();
-        }, false, "Що друкувати")),
-        spec.scope === "zone" ? fld("Зона", selectEl([["", "—"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], spec.zoneId, (v) => set("zoneId", v), false, "Зона")) : spec.scope === "row" ? fld("Ряд", selectEl([["", "—"], ...racks.map((z) => [z.id, z.code_prefix])], spec.rowId, (v) => set("rowId", v), false, "Ряд")) : spec.scope === "tier" ? numF("Ярус знизу", "tier", () => spec.tier, 1, 12) : h("div")
-      ),
-      h("div", { class: "frow wrap" }, check("Лише нові та перенумеровані", "onlyNew", () => spec.onlyNew), check("Лише застосовані в Odoo", "onlyApplied", () => spec.onlyApplied)),
-      h(
-        "div",
-        { class: "grid2" },
-        fld("Штрихкод", selectEl([["code128", "Code128"], ["qr", "QR"]], spec.kind, (v) => set("kind", v), false, "Штрихкод")),
-        fld("Шрифт", selectEl([["cyr", "З кирилицею"], ["latin", "Лише латиниця"]], spec.font, (v) => set("font", v), false, "Шрифт"))
-      ),
-      h("div", { class: "frow wrap" }, check("Зона", "show.zone", () => spec.show.zone), check("Ряд", "show.row", () => spec.show.row), check("Секція", "show.bay", () => spec.show.bay), check("Ярус", "show.level", () => spec.show.level), check("Тип", "show.type", () => spec.show.type)),
-      h(
-        "div",
-        { class: "grid2" },
-        fld("Стрілка ярусів", selectEl([["none", "Немає"], ["up", "Вгору (вище точки)"], ["updown", "Вгору й вниз"]], spec.arrows, (v) => set("arrows", v), false, "Стрілка")),
-        numF("Точка сканування: ярус", "scanLevel", () => spec.scanLevel, 1, 12)
-      ),
-      h("div", { class: "grid2" }, fld("Розкладка", selectEl(Object.entries(LAYOUTS).map(([k, v]) => [k, v.name]), spec.layout, (v) => {
-        spec.layout = v;
-        recompute();
-        draw();
-      }, false, "Розкладка")), numF("Пропустити перші", "skip", () => spec.skip, 0, 500)),
-      custom ? h("div", { class: "grid2" }, numF("Ширина, мм", "custom.w", () => spec.custom.w, 10, 300), numF("Висота, мм", "custom.h", () => spec.custom.h, 10, 300)) : null,
-      h(
-        "div",
-        { class: "grid3" },
-        numF("Проміжок X, мм", "gap.x", () => spec.gap.x, 0, 30, 0.5),
-        numF("Проміжок Y, мм", "gap.y", () => spec.gap.y, 0, 30, 0.5),
-        fld("Поля", selectEl([["auto", "По центру"], ["zero", "0 мм"], ["5", "5 мм"], ["10", "10 мм"]], spec.margin ? mg().l === 0 ? "zero" : String(mg().l) : "auto", (v) => {
-          spec.margin = v === "auto" ? null : { l: v === "zero" ? 0 : +v, t: v === "zero" ? 0 : +v, r: v === "zero" ? 0 : +v, b: v === "zero" ? 0 : +v };
-          recompute();
-        }, false, "Поля"))
-      ),
-      fld("ZPL: роздільна здатність", selectEl([["203", "203 dpi"], ["300", "300 dpi"]], String(spec.dpi), (v) => set("dpi", +v), false, "dpi")),
-      info,
-      warn,
-      prev
+        }, false, "Розкладка")), numF("Пропустити перші", "skip", () => spec.skip, 0, 500)),
+        custom ? h("div", { class: "grid2" }, numF("Ширина, мм", "custom.w", () => spec.custom.w, 10, 300), numF("Висота, мм", "custom.h", () => spec.custom.h, 10, 300)) : null,
+        h(
+          "div",
+          { class: "grid3" },
+          numF("Проміжок X, мм", "gap.x", () => spec.gap.x, 0, 30, 0.5),
+          numF("Проміжок Y, мм", "gap.y", () => spec.gap.y, 0, 30, 0.5),
+          fld("Поля", selectEl([["auto", "По центру"], ["zero", "0 мм"], ["5", "5 мм"], ["10", "10 мм"]], spec.margin ? mg().l === 0 ? "zero" : String(mg().l) : "auto", (v) => {
+            spec.margin = v === "auto" ? null : { l: v === "zero" ? 0 : +v, t: v === "zero" ? 0 : +v, r: v === "zero" ? 0 : +v, b: v === "zero" ? 0 : +v };
+            recompute();
+          }, false, "Поля"))
+        ),
+        fld("ZPL: роздільна здатність", selectEl([["203", "203 dpi"], ["300", "300 dpi"]], String(spec.dpi), (v) => set("dpi", +v), false, "dpi")),
+        info,
+        warn,
+        prev
+      ])
     );
     recompute();
   };
@@ -12305,8 +12308,14 @@ async function loadStock({ force = false, codes = null, quiet = false } = {}) {
     return S.stock;
   }
   try {
-    const res = await E.adapter.stock({ codes, days: S.stock?.days || null });
-    const st = applyStock(res, { merge: !!codes });
+    let res = await E.adapter.stock({ codes, days: S.stock?.days || null });
+    const all = { ...res, codes: { ...res.codes } };
+    for (let i = 0; i < 50 && !codes && res.truncated && res.next; i++) {
+      res = await E.adapter.stock({ codes, days: all.days, offset: res.next });
+      Object.assign(all.codes, res.codes);
+      all.truncated = res.truncated;
+    }
+    const st = applyStock(all, { merge: !!codes });
     E.recolorCells?.();
     E.renderHeat?.();
     return st;
@@ -12502,8 +12511,8 @@ async function refreshStock() {
   return st;
 }
 function renderHeat() {
-  const sel = document.getElementById("s3Metric");
-  const box = document.getElementById("s3Heat");
+  const sel = $("#s3Metric");
+  const box = $("#s3Heat");
   if (!sel || !box) {
     return;
   }
@@ -12512,7 +12521,7 @@ function renderHeat() {
   sel.value = S.ui.metric || "";
   sel.disabled = !avail;
   sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
-  const rf = document.getElementById("s3Refresh");
+  const rf = $("#s3Refresh");
   if (rf) {
     rf.disabled = !avail || !S.ui.metric;
   }

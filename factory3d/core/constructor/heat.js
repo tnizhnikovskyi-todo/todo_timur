@@ -5,7 +5,7 @@ import { cellsOf } from "./cells.js";
 import { can, registries } from "./registry.js";
 import { E, S } from "./state.js";
 import { fmtAt, loadStock, stockOf } from "./stock_state.js";
-import { h } from "./util.js";
+import { $, h } from "./util.js";
 
 /* ---------- класи показників ---------- */
 const GRAY = "#a9adb3";
@@ -167,8 +167,8 @@ export async function refreshStock() {
 
 /* ---------- розмітка: перемикач і легенда (контейнери створює s3_chrome.js) ---------- */
 export function renderHeat() {
-    const sel = document.getElementById("s3Metric");
-    const box = document.getElementById("s3Heat");
+    const sel = $("#s3Metric");
+    const box = $("#s3Heat");
     if (!sel || !box) {
         return;
     }
@@ -177,7 +177,7 @@ export function renderHeat() {
     sel.value = S.ui.metric || "";
     sel.disabled = !avail;
     sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
-    const rf = document.getElementById("s3Refresh");
+    const rf = $("#s3Refresh");
     if (rf) {
         rf.disabled = !avail || !S.ui.metric;
     }
