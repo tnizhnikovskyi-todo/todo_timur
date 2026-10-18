@@ -30,7 +30,7 @@ class TdEnergyOpportunityRule(models.Model):
     def _td_detect_preheat_early(self, now):
         """R-B4 `preheat_early` (газ): різниця між «цех досяг `t_ready`» і початком першої зміни проти `margin_min`."""
         self.ensure_one()
-        env = self.env.sudo()
+        env = self.sudo().env
         params = common.rule_params(self)
         balance = heat.balance(env)
         units = heat.required_units(env).filtered("indoor_signal_id")
@@ -101,7 +101,7 @@ class TdEnergyOpportunityRule(models.Model):
     def _td_detect_ahu_recuperation(self, now):
         """R-B4 `ahu_recuperation` (тепло): середня рекуперація AHU-1 у робочі години нижче норми або брудний фільтр."""
         self.ensure_one()
-        env = self.env.sudo()
+        env = self.sudo().env
         balance = heat.balance(env)
         unit = heat.ahu1(env)
         if not balance or not unit:
@@ -177,7 +177,7 @@ class TdEnergyOpportunityRule(models.Model):
     def _td_detect_dock_gates(self, now):
         """R-B4 `dock_gates` (тепло): довгі відкриття воріт відвантаження; потрібна точка `DOCK` (інакше пропуск)."""
         self.ensure_one()
-        env = self.env.sudo()
+        env = self.sudo().env
         params = common.rule_params(self)
         point = env["td.energy.point"].search([("resource_id.code", "=", "heat"), ("code", "=", "DOCK")], limit=1)
         if not point or not point.state_signal_id:

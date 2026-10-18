@@ -92,8 +92,8 @@ def recuperation(t_supply, q_heat_kw, airflow, airflow_nom, t_in, t_out, air_wh=
 
 
 def ahu_inputs(env, now, unit=None, balance_rec=None):
-    """Живі входи R-B3 для AHU-1: `(t_supply, q_heat, airflow, t_in, t_out, airflow_nom, air_wh)`; `T_in` — витяжка
-    (`extract_c`), якщо сигнал є, інакше `indoor_c`."""
+    """Живі входи R-B3 для AHU-1 у порядку аргументів `recuperation`: `(t_supply, q_heat, airflow, airflow_nom,
+    t_in, t_out, air_wh)`; `T_in` — витяжка (`extract_c`), якщо сигнал є, інакше `indoor_c`."""
     unit = unit or ahu1(env)
     balance_rec = balance_rec if balance_rec is not None else balance(env)
     extract = live(signal_by_code(env, EXTRACT_SIGNAL), now)
@@ -101,7 +101,7 @@ def ahu_inputs(env, now, unit=None, balance_rec=None):
     t_out = live(signal_by_code(env, OUTDOOR_SIGNAL), now)
     return (
         live(unit.supply_signal_id, now), live(unit.heat_signal_id, now), live(unit.airflow_signal_id, now),
-        t_in, t_out, unit.airflow_nom, (balance_rec.air_wh_m3k if balance_rec else 0.0) or AIR_WH_M3K,
+        unit.airflow_nom, t_in, t_out, (balance_rec.air_wh_m3k if balance_rec else 0.0) or AIR_WH_M3K,
     )  # fmt: skip
 
 

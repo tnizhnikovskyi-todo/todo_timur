@@ -16,7 +16,7 @@ class TdEnergyResDashboard(models.AbstractModel):
     @api.model
     def _td_heat_kpis(self, ctx):
         """R-B2 п. 1: `power.note` (подача/зворот), `indoor` (температура в цеху), `recovery` (AHU-1)."""
-        env, now = ctx["env"].sudo(), ctx["now"]
+        env, now = ctx["env"](su=True), ctx["now"]
         balance = heat.balance(env)
         if not balance:
             return []
@@ -63,7 +63,7 @@ class TdEnergyResDashboard(models.AbstractModel):
         note = "—" if eta is None and not dirty else norm_note + (" · фільтр брудний" if dirty else "")
         tone = "neutral" if eta is None else ("bad" if eta * 100.0 < norm_pct else "good")
         return {
-            "id": "recovery", "label": "Рекуперація AHU-1", "value": None if eta is None else round(eta * 100.0, 1),
+            "id": "recovery", "label": "Рекуперація AHU-1", "value": None if eta is None else int(round(eta * 100.0)),
             "unit": "%", "note": note, "tone": tone, "quality": "estimated",
         }  # fmt: skip
 
@@ -101,5 +101,5 @@ class TdEnergyResDashboard(models.AbstractModel):
     @api.model
     def _td_heat_chart_note(self, ctx):
         """R-B2: `{capacity}` у примітці графіка — `capacity_kw` активного балансу (рядком) або `None`."""
-        balance = heat.balance(ctx["env"].sudo())
+        balance = heat.balance(ctx["env"](su=True))
         return str(int(balance.capacity_kw)) if balance and balance.capacity_kw else None
