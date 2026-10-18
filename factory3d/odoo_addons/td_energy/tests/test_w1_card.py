@@ -159,6 +159,13 @@ class TestW1Card(TestW1Common):
         self.assertEqual([m["id"] for m in maint], [request.id])
         self.assertEqual(maint[0]["title"], "Перевірка")
 
+    def test_energy_without_counter_readings(self):  # R-30: демо-історія (R-36) без показань — сума інтервалів доби
+        self.fixture_grid()
+        for k in (1, 2):
+            self.interval("PM-QF-2", NOW - timedelta(hours=k), 10.0)
+        energy = self.card()["kpis"]["energy"]
+        self.assertEqual((energy["kwh"], energy["cost_uah"]), (20, 168))
+
     def test_blocks_by_kind(self):  # AC-128
         self.fixture_grid()
         t1 = self.card("T1")
