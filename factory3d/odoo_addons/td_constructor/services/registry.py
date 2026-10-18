@@ -18,11 +18,15 @@ JS, `core/constructor/registry.js`). Порядок обходу — за `seque
   codes, message}`; `key` збігається з `td.check.config.check_key`.
 * `PLAN_BUILDERS`: `key -> fn(site, env, lines, issues) -> int`: дописує рядки плану R-12 і зауваження в
   `lines`/`issues` на місці, повертає число рядків «без змін».
-* `SNAPSHOT_SECTIONS`: `key -> SnapshotSection(build, apply)`; `build(site) -> JSON-значення` розділу знімка,
-  `apply(site, data)` відновлює його в чернетці (R-14); якщо розділу в знімку `schema: 1` немає, `apply` не
-  викликається.
-* `RENDERERS`: `key -> fn(env, payload) -> (filename, mimetype, content: bytes)` для API-19; ключі: `labels_pdf`,
-  `table_xlsx`, `plan_pdf`, `spec_pdf`.
+* `SNAPSHOT_SECTIONS`: `key -> SnapshotSection(build, apply)`; `build(site) -> JSON-значення` розділу знімка (порожнє
+  значення — розділ у знімок не пишеться, `snap['sections'][key]`); `apply(site, data)` відновлює розділ у чернетці
+  (R-14) і викликається для КОЖНОГО зареєстрованого розділу: `data=None`, якщо в знімку його немає (порожній стан).
+  Розділи входять у `count_differences`.
+* `RENDERERS`: `key -> fn(env, payload) -> (filename, mimetype, content: bytes)` для API-19 (`controllers/render.py`
+  віддає `{ok, filename, mimetype, content: base64}`); ключі: `labels_pdf`, `table_xlsx`, `plan_pdf`, `spec_pdf`.
+  Помилки рендера — `UserError`/`ValidationError`/`AccessError` (код `validation`/`rights`).
+* Споживачі: `CHECKS` — `checks.run_checks`, `PLAN_BUILDERS` — `publish.build_plan`, `SNAPSHOT_SECTIONS` —
+  `snapshot.build_snapshot`/`apply_snapshot`/`count_differences`, `RENDERERS` — `controllers/render.py`.
 """
 
 from collections import namedtuple

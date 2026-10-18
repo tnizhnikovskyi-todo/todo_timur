@@ -3,9 +3,10 @@
 Вхід — словник стану у форматі API-03 `load` (метри для шарів/місць/розміщень, мм для варіантів):
 
     state = {
-      'site': {'building': {'length', 'width', 'height'}},
-      'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities}],
-      'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides}],
+      'site': {'building': {'length', 'width', 'height'}, 'sprinkler_height', 'aisle_tech'},
+      'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities, items}],
+      'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides, type_id, function_id, tech,
+                 addr, …}],
       'placements': [{id, layer_id, variant_id, slot_id, cell_code, code, name, x, y, rotation, dynamic}],
       'variants': [{id, length, width, height, service: {front, back, left, right}, rotations, layer_kinds,
                     slot_types, utilities, weight_kg, floor_load, anchor, front_side}],
@@ -14,12 +15,14 @@
 
 Результат — список `issue = {check, severity, layer_id, codes, message}` лише для увімкнених перевірок.
 Коди пар у `collide` відсортовані за алфавітом (пара не має напрямку).
+Перевірки слайсів (MERGE.md §5.0) реєструються в `registry.CHECKS` і запускаються після вбудованих.
 """
 
 import math
 
 from . import cells as cells_mod
 from . import geometry as geo
+from .registry import CHECKS
 
 CHECK_KEYS = ['fits', 'collide', 'service_free', 'aisles_free', 'load', 'utility_reach', 'fire']
 
@@ -445,6 +448,11 @@ def run_checks(state, configs, eps=DEFAULT_EPS_M):
         config = by_key.get(key)
         if config is not None:
             issues.extend(CHECKERS[key](scene, config, _eps(config, eps)))
+    # перевірки слайсів (services.registry.CHECKS) — після вбудованих; вбудовані ключі реєстром не перекриваються
+    for key, checker in CHECKS.items():
+        config = by_key.get(key)
+        if config is not None and key not in CHECKERS:
+            issues.extend(checker(scene, config, _eps(config, eps)))
     return issues
 
 

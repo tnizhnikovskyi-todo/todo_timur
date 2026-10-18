@@ -15,6 +15,7 @@ from odoo import fields
 from odoo.exceptions import UserError
 
 from . import snapshot, state as state_mod
+from .registry import PLAN_BUILDERS
 from .schemas import SCENE_ROLE_PREFIX
 
 _logger = logging.getLogger(__name__)
@@ -390,6 +391,9 @@ def build_plan(site):
     eq_codes, wc_codes, eq_unchanged = _plan_equipment(site, env, lines, issues)
     unchanged = loc_unchanged + eq_unchanged
     _plan_archive(site, env, lines, loc_codes, eq_codes, wc_codes)
+    # будівники плану слайсів (registry.PLAN_BUILDERS): дописують рядки й зауваження, повертають число «без змін»
+    for builder in PLAN_BUILDERS.values():
+        unchanged += builder(site, env, lines, issues) or 0
     return {'lines': lines, 'issues': issues, 'unchanged': unchanged, 'draft_rev': site.draft_rev}
 
 

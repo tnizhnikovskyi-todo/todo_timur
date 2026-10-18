@@ -8,8 +8,20 @@ import json
 from odoo import Command, fields
 from odoo.exceptions import UserError
 
+from .registry import SNAPSHOT_SECTIONS
 
-SCHEMA = 1
+# 2 — MERGE.md §3.3: розширення (поля нових версій модуля, `sections` реєстру); читаються знімки 1 і 2.
+# Розширення пишуться лише коли відрізняються від типових, тож знімок незміненої чернетки лишається таким, як був
+SCHEMA = 2
+SITE_EXT_DEFAULTS = {
+    'addr': {},
+    'loc_tree': 'flat',
+    'depth_mode': 'level',
+    'sprinkler_height_m': 0.0,
+    'aisle_tech': None,
+    'parse_rules': {},
+    'wizard_state': {},
+}
 
 
 def _xmlids(groups):
@@ -19,6 +31,38 @@ def _xmlids(groups):
 
 def _canonical(data):
     return json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+
+
+def _sparse(ext):
+    """Лише відмінне від типового: порожні значення (None, {}, [], False, 0) у знімок не потрапляють."""
+    return {key: value for key, value in ext.items() if value not in (None, False, 0, 0.0, '', [], {})}
+
+
+def _site_ext(site):
+    ext = {name: getattr(site, name) or default for name, default in SITE_EXT_DEFAULTS.items()}
+    ext = {name: value for name, value in ext.items() if value != SITE_EXT_DEFAULTS[name]}
+    warehouse = site.warehouse_id
+    if warehouse:
+        ext['warehouse'] = {'id': warehouse.id, 'code': warehouse.code}
+    return ext
+
+
+def _slot_ext(slot):
+    stype, category, strategy = slot.type_id, slot.storage_category_id, slot.removal_strategy_id
+    return _sparse(
+        {
+            'type': {'id': stype.id, 'code': stype.code} if stype else None,
+            'storage_category': {'id': category.id, 'name': category.name} if category else None,
+            'removal_strategy': {'id': strategy.id, 'method': strategy.method} if strategy else None,
+            'function': slot.function_id.key,
+            'attrs': sorted(slot.attr_ids.mapped('key')),
+            'temp_min_c': slot.temp_min_c,
+            'temp_max_c': slot.temp_max_c,
+            'tech': slot.tech,
+            'addr': slot.addr or {},
+            'depth_mode': slot.depth_mode,
+        }
+    )
 
 
 def build_snapshot(site):
@@ -41,6 +85,7 @@ def build_snapshot(site):
             'column_grid': {'step_x': site.column_step_x_m, 'step_y': site.column_step_y_m},
             'default_parent_location_id': parent.id or None,
             'default_parent_location': parent.complete_name or None,
+            **_site_ext(site),
         },
         'layers': [
             {
@@ -65,6 +110,7 @@ def build_snapshot(site):
                 'utilities': layer.utilities or [],
                 'underlay_params': layer.underlay_params or {},
                 'active': layer.active,
+                **_sparse({'items': layer.items or []}),
             }
             for layer in layers
         ],
@@ -81,6 +127,7 @@ def build_snapshot(site):
                 'overrides': slot.overrides or {},
                 'parent_location': slot.parent_location_id.complete_name or None,
                 'active': slot.active,
+                **_slot_ext(slot),
             }
             for slot in slots
         ],
@@ -107,6 +154,13 @@ def build_snapshot(site):
             for c in site.check_config_ids.sorted('sequence')
         ],
     }
+    sections = {}
+    for key, section in SNAPSHOT_SECTIONS.items():  # розділи слайсів: порожній розділ у знімок не пишеться
+        data = section.build(site)
+        if data not in (None, False, '', [], {}):
+            sections[key] = data
+    if sections:
+        snap['sections'] = sections
     live_slots = [s for s in slots if s.active and s.layer_id.active]
     snap['counts'] = {
         'layers': len([layer for layer in layers if layer.active]),
@@ -226,6 +280,8 @@ def count_differences(snap, base):
     new_c = {c['check']: _canonical(c) for c in snap['check_configs']}
     old_c = {c['check']: _canonical(c) for c in base['check_configs']}
     total += sum(1 for k in new_c if new_c[k] != old_c.get(k))
+    new_s, old_s = snap.get('sections') or {}, base.get('sections') or {}
+    total += sum(1 for k in set(new_s) | set(old_s) if _canonical(new_s.get(k)) != _canonical(old_s.get(k)))
     return total
 
 
@@ -238,6 +294,58 @@ def _resolve_variant(env, item):
     return Variant.search(
         [('passport_id.role', '=', ref.get('passport_role')), ('name', '=', ref.get('name'))], limit=1
     )
+
+
+def _term_ids(env):
+    return {(t.term_type, t.key): t.id for t in env['td.term'].search([])}
+
+
+def _by_ref(model, ref, key_field, company):
+    """Запис за посиланням `{id, <key_field>}` знімка: за id, якщо ключ збігається, інакше за ключем."""
+    if not ref:
+        return model
+    rec = model.browse(ref['id']).exists() if ref.get('id') else model
+    if rec and rec[key_field] == ref.get(key_field):
+        return rec
+    domain = [(key_field, '=', ref.get(key_field))]
+    if 'company_id' in model._fields:
+        domain.append(('company_id', 'in', [False, company.id]))
+    return model.search(domain, limit=1)
+
+
+def _slot_ext_vals(env, site, item, terms):
+    """Розширення місця: відсутній у знімку ключ означає типове значення (повна заміна, як для решти полів)."""
+    company = site.company_id
+    attrs = [terms[('zone_attr', key)] for key in item.get('attrs') or [] if ('zone_attr', key) in terms]
+    return {
+        'type_id': _by_ref(env['td.slot.type'], item.get('type'), 'code', company).id or False,
+        'storage_category_id': _by_ref(
+            env['stock.storage.category'], item.get('storage_category'), 'name', company
+        ).id
+        or False,
+        'removal_strategy_id': _by_ref(env['product.removal'], item.get('removal_strategy'), 'method', company).id
+        or False,
+        'function_id': terms.get(('zone_function', item.get('function'))) or False,
+        'attr_ids': [Command.set(attrs)],
+        'temp_min_c': item.get('temp_min_c') or 0.0,
+        'temp_max_c': item.get('temp_max_c') or 0.0,
+        'tech': item.get('tech') or False,
+        'addr': item.get('addr') or {},
+        'depth_mode': item.get('depth_mode') or False,
+    }
+
+
+def _site_ext_vals(env, site, info):
+    vals = {name: info.get(name) or default for name, default in SITE_EXT_DEFAULTS.items()}
+    vals['aisle_tech'] = vals['aisle_tech'] or False
+    ref = info.get('warehouse')
+    warehouse = env['stock.warehouse'].browse(ref.get('id') if ref else None).exists()
+    if ref and (not warehouse or warehouse.code != ref.get('code')):
+        warehouse = env['stock.warehouse'].search(
+            [('code', '=', ref.get('code')), ('company_id', '=', site.company_id.id)], limit=1
+        )
+    vals['warehouse_id'] = warehouse.id or False
+    return vals
 
 
 def apply_snapshot(site, snap):
@@ -271,13 +379,15 @@ def apply_snapshot(site, snap):
     if not parent and info.get('default_parent_location_id'):
         parent = env['stock.location'].browse(info['default_parent_location_id']).exists()
     site_vals['default_parent_location_id'] = parent.id or False
+    site_vals.update(_site_ext_vals(env, site, info))
     site.write(site_vals)
     # 3) видалити зайве: розміщення → місця → шари
     Placement.search([('site_id', '=', site.id), ('uid', 'not in', [p['uid'] for p in snap['placements']])]).unlink()
     Slot.search([('site_id', '=', site.id), ('uid', 'not in', [s['uid'] for s in snap['slots']])]).unlink()
     Layer.search([('site_id', '=', site.id), ('uid', 'not in', [layer['uid'] for layer in snap['layers']])]).unlink()
     # 4) шари
-    terms = {t.key: t.id for t in env['td.term'].search([('term_type', '=', 'slot_type')])}
+    all_terms = _term_ids(env)
+    terms = {key: tid for (term_type, key), tid in all_terms.items() if term_type == 'slot_type'}
     layers = {layer.uid: layer for layer in Layer.search([('site_id', '=', site.id)])}
     for item in snap['layers']:
         groups = []
@@ -307,6 +417,7 @@ def apply_snapshot(site, snap):
             'fire_paths': item['fire_paths'],
             'utilities': item['utilities'],
             'underlay_params': item.get('underlay_params') or {},
+            'items': item.get('items') or [],
             'active': item.get('active', True),
         }
         layer = layers.get(item['uid'])
@@ -331,6 +442,7 @@ def apply_snapshot(site, snap):
             'overrides': item['overrides'],
             'parent_location_id': location.id or False,
             'active': item.get('active', True),
+            **_slot_ext_vals(env, site, item, all_terms),
         }
         slot = slots.get(item['uid'])
         if slot:
@@ -367,6 +479,10 @@ def apply_snapshot(site, snap):
             configs[item['check']].write(vals)
         else:
             env['td.check.config'].create(dict(vals, site_id=site.id, check_key=item['check']))
+    # 8) розділи слайсів: відсутній у знімку розділ — порожній стан (`data=None`)
+    sections = snap.get('sections') or {}
+    for key, section in SNAPSHOT_SECTIONS.items():
+        section.apply(site, sections.get(key))
 
 
 def restore_draft(version):
