@@ -6,7 +6,7 @@
 
 Джерела: ``dist/odoo_demo.json`` (паспорти, обладнання, зони), ``plant/equipment_specs.json`` (ролі),
 ``plant/layout.py`` (полігони зон), ``plant/fire.py`` (сповіщувачі), ``catalog/signals.csv``
-(протоколи/unit id). Очікувано: 210 + 5 ACR + TURN-1 + 2 CAM + 8 PV-INV + 49 PM + CUTOPT = 276.
+(протоколи/unit id). Очікувано: 210 + 5 ACR + TURN-1 + 2 CAM + 8 PV-INV + SWB-CTRL + 49 PM + CUTOPT = 277.
 ``driver`` пишеться лише для драйверів цього воркера (machine, io_machine, gantry, mobile, facp,
 facp_zone, spark, smoke, access, yard); решту визначає ``registry.driver_for``.
 """
@@ -196,6 +196,10 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
     for k in range(1, 9):
         devs.append({"code": f"PV-INV-{k}", "name": f"Інвертор PV-INV-{k}", "driver": "passive",
                      "protocols": ["P-07"], "unit_id": 60 + k, "params": {"inverter": k}})
+    # W1 «Енергетика» (§8.1): контролер ГРЩ — паспорта в odoo_demo.json немає, пристрій похідний; unit/протокол — з каталогу
+    devs.append({"code": "SWB-CTRL", "name": "Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; "
+                 "карта регістрів — ПРИПУЩЕННЯ A-24)", "role": "switchboard_ctrl", "protocols": protocols("SWB-CTRL"),
+                 "unit_id": unit("SWB-CTRL"), "driver": "swb"})
     for code in sorted(cons):
         pm = {"code": f"{code}-PM", "name": f"PM5560 {code}", "driver": "passive", "protocols": ["P-05"],
               "params": {"consumer": code}}

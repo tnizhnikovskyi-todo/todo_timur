@@ -1,5 +1,5 @@
 # Реєстр пристроїв (генерує tools/gen_devices.py з dist/odoo_demo.json + plant/*; не правити вручну).
-# 276 пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.
+# 277 пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.
 devices:
 - code: SAW-1
   name: Розкрій 1
@@ -1978,13 +1978,6 @@ devices:
   protocols:
   - P-07
   unit_id: 69
-- code: SWB-CTRL
-  name: Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; карта регістрів — ПРИПУЩЕННЯ A-24)
-  role: switchboard_ctrl
-  protocols:
-  - P-07
-  unit_id: 73
-  driver: swb
 - code: PV-ROOF
   name: Hi-MO 6 Explorer LR5-72HTH-580M
   role: pv_module
@@ -2272,6 +2265,13 @@ devices:
   unit_id: 68
   params:
     inverter: 8
+- code: SWB-CTRL
+  name: Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; карта регістрів — ПРИПУЩЕННЯ A-24)
+  role: switchboard_ctrl
+  protocols:
+  - P-07
+  unit_id: 73
+  driver: swb
 - code: AHU-1-PM
   name: PM5560 AHU-1
   driver: passive

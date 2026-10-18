@@ -1,6 +1,6 @@
 # W1 «Енергетика»: специфікація (вставки до SPEC `td_energy` і `td_genset_factory3d`)
 
-Версія 0.1 · 18.10.2026 · стандарт `docs/DOC_STANDARD.md` · технічне рішення: `build/energy/W1_ARCH.md` (далі ARCH: FR-30…FR-45 і FR-18…FR-21, A-23…A-37 і A-19…A-22, Q-21…Q-25).
+Версія 0.1 · 18.10.2026 · стандарт `docs/DOC_STANDARD.md` · технічне рішення: `build/energy/W1_ARCH.md` (далі ARCH: FR-30…FR-45 і FR-18…FR-21, A-23…A-37 і A-19…A-23, Q-21…Q-25).
 Вхід: `build/energy/GAP.md` (рішення E-01…E-11, матриця PU/ND/MB), макет `Main.dc.html`, `Feeder.dc.html`, `Mobile.dc.html` (вкладки «Стан», «Тривоги», «Схема»).
 Спирається на: `docs/ARCHITECTURE.md` §5, §6.4–§6.8; `factory3d_energy` SPEC (R-04, R-06, R-07, R-13…R-16, M-01…M-20); `factory3d_genset` (у `docs/modules/td_genset/SPEC.md`: M-01, ADP-01…ADP-10, R-04…R-06); `factory3d_telemetry` CT-01, CT-05, CT-10; `factory3d_viewer` M-01.
 Після злиття `claude/td-rename` цей файл розкладається в розділи `docs/modules/td_energy/SPEC.md` і `docs/modules/td_genset_factory3d/SPEC.md` (зараз ті документи не змінюються).
@@ -20,7 +20,7 @@
 | R | R-23 | R-24…R-38 | R-13 | R-14…R-16 |
 | AC | AC-92 | AC-93…AC-158 | AC-73 | AC-74…AC-83 |
 | ТК/ТБ/ТП | ТК-12 / ТБ-06 / ТП-06 | ТК-13…ТК-18 / ТБ-07…ТБ-10 / ТП-07…ТП-09 | ТК-G13 / ТБ-10 / ТП-06 | ТК-G14…ТК-G15 / ТБ-11 / ТП-07 |
-| A (рішення автора) | A-22 | A-23…A-37 | A-18 | A-19…A-22 |
+| A (рішення автора) | A-22 | A-23…A-37 | A-18 | A-19…A-23 |
 | Q | Q-20 | Q-21…Q-24 | Q-24 | Q-25 |
 | ADP (адаптер td_genset) | — | — | ADP-10 | ADP-11 |
 | UI (клієнтські компоненти) | — | UI-01…UI-11 | — | — |
@@ -1118,7 +1118,7 @@ AC-74…AC-83 зелені; 101 існуючий тест моста й 223 те
 
 Q-25 (`td_genset_factory3d`): префікс моделей моста (`td.genset.link|profile|event.map`) займає простір імен `td.genset.*` модуля `td_genset` (колізій назв немає, 16 моделей td_genset: `td.genset`, `.command`, `.reading`, `.relay.client`, `.alarm`, `.event`, `.schedule`, `.schedule.exception`, `.storage.location`, `.canister`, `.fuel.move`, `.refuel`, `.fuel.calibration`, `.config`, `.notify.level`, `.controller.model`). Рекомендація: окремий префікс `td.genset3d.*` (`link`, `profile`, `event.map`) — вирішити до злиття `claude/td-rename`. Поки відповіді — міст лишається `td.genset.link|profile|event.map` (як у карті перейменування).
 
-### Рішення автора `td_genset_factory3d` (A-19…A-22)
+### Рішення автора `td_genset_factory3d` (A-19…A-23)
 
 | ID | Рішення | Обґрунтування |
 |---|---|---|
@@ -1126,3 +1126,4 @@ Q-25 (`td_genset_factory3d`): префікс моделей моста (`td.gens
 | A-20 | Корінь td_genset ховається `active=False` (V-11) і відновлюється в `uninstall_hook` | E-08; не змінює `td_genset` |
 | A-21 | `implied_ids` лише «Енергетик» → `td_genset.group_user` | Читачі енергетики не отримують прав на дані генератора |
 | A-22 | Розширення дашборда `td.energy.dashboard` через `_inherit` і 4 хуки | Один контракт з `td_energy` без імпорту моделей td_genset у `td_energy` |
+| A-23 | Відхилення від B.3.1: меню `menu_gf_requests` («Заявки ТО генератора») — група `td_factory3d.group_td_user` (не `td_genset.group_user`); AC-76 перевіряє саме її | R-16 п. 2: розділ показує «Зв'язку»/«Заявки» читачам за `group_td_user` (як було в меню «Генератор»); заявки — стандартні `maintenance.request`, а не дані td_genset |
