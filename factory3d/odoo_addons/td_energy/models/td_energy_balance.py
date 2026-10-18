@@ -175,7 +175,10 @@ class F3dEnergyBalance(models.Model):
                     node=node,
                     dedup_min=60,
                 )
-        env["td.signal"].sudo()._f3d_energy_put(readings)
+            elif state == "ok":  # W1 R-25: наступна година в нормі — відкриті події `balance` вузла вирішено
+                env["td.energy.event"]._td_auto_resolve("balance", node=node)
+        if not env.context.get("td_backfill_mute"):  # R-36: історія не пише показань імбалансу
+            env["td.signal"].sudo()._f3d_energy_put(readings)
         return result
 
     @api.model

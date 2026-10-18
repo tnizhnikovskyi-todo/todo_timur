@@ -121,7 +121,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         qs = energy["cells"]["QS"]
         self.assertEqual((qs["type"], qs["section"], qs["state"], qs["rating_a"]), ("coupler", None, "off", 1600))
         self.assertIn("Розімкнений", qs["note"])
-        self.assertEqual(energy["cells"]["PFC-2"]["q_now"], 50)
+        self.assertEqual(energy["cells"]["PFC-2"]["q_now"], 35)  # W1 D-09: крок 35 квар
         self.assertEqual(energy["cells"]["Q1"]["state"], "on")
         self.sig("energy/cells/Q1/state", 2, "tripped")
         self.assertEqual(self.energy()["energy"]["cells"]["Q1"]["state"], "tripped")

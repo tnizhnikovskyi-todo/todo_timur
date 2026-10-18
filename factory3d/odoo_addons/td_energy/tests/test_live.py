@@ -106,8 +106,8 @@ class TestLiveCron(F3DEnergyCase):
         self.assertAlmostEqual(self.sig("infra/totals/pv_now").last_value, 468.0, places=1)
         self.assertEqual(self.sig("infra/totals/grid_kw").last_value, 0.0)
         self.assertAlmostEqual(self.sig("infra/totals/export_kw").last_value, 42.0, places=1)
-        self.assertEqual(self.Node.search([("code", "=", "PFC-1")]).pfc_q_now, 100)
-        self.assertEqual(self.Node.search([("code", "=", "PFC-2")]).pfc_q_now, 50)
+        self.assertEqual(self.Node.search([("code", "=", "PFC-1")]).pfc_q_now, 70)  # W1 D-09: крок 35 квар
+        self.assertEqual(self.Node.search([("code", "=", "PFC-2")]).pfc_q_now, 35)
         self.assertTrue(self.env["td.energy.event"].search([("kind", "=", "pfc"), ("code", "=", "PFC-1")]))
         self.assertEqual(self.env.ref("td_energy.source_en_derived").state, "online")
 

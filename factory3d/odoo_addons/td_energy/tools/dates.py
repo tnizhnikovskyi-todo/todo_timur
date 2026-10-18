@@ -23,6 +23,12 @@ def ceil15(dt):
     return base if base == dt else base + SLOT
 
 
+def local_slot_index(dt_utc):
+    """Індекс 15-хв слота за локальним (Київ) часом: 0…95; добу 23/25 год рахують за локальними індексами (A-30)."""
+    local = to_local(dt_utc)
+    return local.hour * 4 + local.minute // 15
+
+
 def floor_minute(dt):
     return dt.replace(second=0, microsecond=0)
 

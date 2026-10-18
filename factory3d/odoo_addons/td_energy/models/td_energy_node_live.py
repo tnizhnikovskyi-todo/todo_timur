@@ -3,7 +3,7 @@ import re
 
 from odoo import api, models
 
-from ..tools import dates, live
+from ..tools import bus, dates, live
 from ..tools.dates import param_bool
 
 _logger = logging.getLogger(__name__)
@@ -61,7 +61,13 @@ class F3dEnergyNodeLive(models.Model):
             }
         pfc = {n.section: n for n in Node.search([("kind", "=", "cell"), ("cell_type", "=", "pfc")])}
         q_kvar = {s: val("energy/cells/Q%d/q_kvar" % s) for s in (1, 2)}
-        totals = live.site_totals(lines, q_kvar, {s: n.rating_kvar for s, n in pfc.items()})
+        totals = live.site_totals(
+            lines,
+            q_kvar,
+            {s: n.rating_kvar for s, n in pfc.items()},
+            pfc_meas={s: val("energy/cells/%s/q_kvar" % n.code) for s, n in pfc.items()},  # W1 R-35 п. 2
+            pfc_step={s: n.pfc_step_kvar for s, n in pfc.items()},
+        )
         p_q = [val("energy/cells/Q%d/p_now" % s) for s in (1, 2)]
         position = val("infra/ats/position")
         island = position is not None and position == 3
@@ -102,6 +108,14 @@ class F3dEnergyNodeLive(models.Model):
             {"code": "infra/totals/grid_kw", "ts": ts, "value": round(snap["grid_kw"], 2), "q": "good"},
             {"code": "infra/totals/export_kw", "ts": ts, "value": round(snap["export_kw"], 2), "q": "good"},
         ]
+        for section, sec in totals["sections"].items():  # W1 R-35 п. 1: секційні cos φ, P, Q після компенсації
+            for suffix, value in (
+                ("cos_phi", round(sec["cos_after"], 3)),
+                ("p_kw", round(sec["p"], 2)),
+                ("q_kvar", round(sec["q"] - sec["q_pfc"], 1)),
+            ):
+                code = "energy/sections/S%d/%s" % (section, suffix)
+                readings.append({"code": code, "ts": ts, "value": value, "q": "good"})
         self.env["td.signal"].sudo()._f3d_energy_put(readings)
         for section, node in snap["pfc"].items():
             sec = totals["sections"].get(section)
@@ -109,6 +123,7 @@ class F3dEnergyNodeLive(models.Model):
                 old = node.pfc_q_now
                 node.write({"pfc_q_now": sec["pfc_q_now"]})
                 self.env["td.energy.event"]._f3d_pfc_event(node, old, sec["pfc_q_now"], sec["cos_after"], ts=now)
+            self.env["td.energy.event"]._td_pfc_resolve(section)  # W1 R-25: `pfc` вирішується за fault_step і cos φ
         return True
 
     @api.model
@@ -143,6 +158,7 @@ class F3dEnergyNodeLive(models.Model):
             with self.env.cr.savepoint():
                 fresh = self._f3d_fresh_values()
                 self._f3d_live_write(self._f3d_live_snapshot(fresh), now)
+                bus.tick(self.env, "kpi")  # W1 R-33
                 self.env["td.energy.outage"]._f3d_ats_tick(now)  # W4: R-14 п. 8
                 if now.minute % 5 == 0:
                     self._f3d_asymmetry(now, fresh)
