@@ -1,7 +1,6 @@
-/** @odoo-module */
 // Конструктори полів форм (порт 50_ui.js «побудова полів»): числові/текстові поля, селект, група чекбоксів, поля параметрів шаблону.
-import { TPL } from "./data";
-import { h, getp, rnd, setp } from "./util";
+import { TPL } from "./data.js";
+import { h, getp, rnd, setp } from "./util.js";
 
 export function numInput(o) {
     const el = h("input", {

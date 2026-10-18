@@ -1,14 +1,13 @@
-/** @odoo-module */
 // Права панель: вибір, сеанс правки (live у формі, блокування — при завершенні), властивості, комірки, перевірки, дії над виділеним
 // (порт 50_ui.js). Поля керуються правами з API-03 (roles.js): на чужому шарі все readonly з підказкою «редагує …».
-import { cellCount, cellsOf } from "./cells";
-import { CATEGORIES, CHECKS, SOLID_SLOTS, TPL, rotationsList } from "./data";
-import { fld, numInput, paramFields, selectEl, textInput } from "./fields";
-import { newBlocks, pGeom, runLive, slotDims } from "./live";
-import { canEditLayer, canManage, lockHint, toastLock } from "./roles";
-import { E, S, V, layerOf, objKey, passportOf, recOfRef, reindex, snapStep, snapV, variantOf } from "./state";
-import { newUid } from "./store";
-import { $, $$, K, clone, fmt, fmtInt, getp, h, ic, normDeg, pad2, rnd, toast } from "./util";
+import { cellCount, cellsOf } from "./cells.js";
+import { CATEGORIES, CHECKS, SOLID_SLOTS, TPL, rotationsList } from "./data.js";
+import { fld, numInput, paramFields, selectEl, textInput } from "./fields.js";
+import { newBlocks, pGeom, runLive, slotDims } from "./live.js";
+import { canEditLayer, canManage, lockHint, toastLock } from "./roles.js";
+import { E, S, V, layerOf, objKey, passportOf, recOfRef, reindex, snapStep, snapV, variantOf } from "./state.js";
+import { newUid } from "./adapter.js";
+import { $, $$, K, clone, fmt, fmtInt, getp, h, ic, normDeg, pad2, rnd, toast } from "./util.js";
 
 /* ===== вибір ===== */
 export function selectObj(ref) {
@@ -492,7 +491,7 @@ function liveCfg(check) {
     E.renderChips();
     renderChecksBlock();
     const c = S.settings.checks[check];
-    E.store.saveCheck(check, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+    E.adapter.saveCheck(check, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
 }
 
 /* ===== дії над виділеним ===== */

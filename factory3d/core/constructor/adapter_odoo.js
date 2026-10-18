@@ -1,27 +1,15 @@
-/** @odoo-module */
-// OdooStore (SPEC §8.2, DEC-08): єдине місце виклику API-01…API-10. Odoo-записи — істина; чернетка пишеться пакетами операцій
-// API-04 (`save`), публікація — майстер Odoo (API-06). Редактор працює зі «своїм» станом (id = стабільний `uid` сутності,
-// серверний id — `rid`); сюди ж належить відображення «API-03 → стан редактора» і назад (`toApi`).
-import { clone, rnd } from "./util";
+// Адаптер Odoo (SPEC §8.2, DEC-08; контракт — adapter.js): єдине місце виклику API-01…API-10. Odoo-записи — істина; чернетка
+// пишеться пакетами операцій API-04 (`save`), публікація — майстер Odoo (API-06). Редактор працює зі «своїм» станом
+// (id = стабільний `uid` сутності, серверний id — `rid`); сюди ж належить відображення «API-03 → стан редактора» і назад
+// (`toApi`). Odoo-залежності не імпортуються: `rpc`, `orm`, `action` та завантажувач 3D-моделей передає хост.
+import { BaseAdapter, StoreError, newUid } from "./adapter.js";
+import { clone, rnd } from "./util.js";
+
+export { StoreError, newUid };
 
 const MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3 };
 const REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
 const BATCH = 400; // ліміт сервера — 500 операцій на запит
-
-/** 32-символьний hex-uid нової сутності (як `uuid4().hex` на сервері); працює й без secure context. */
-export function newUid() {
-    const b = new Uint8Array(16);
-    (globalThis.crypto || window.crypto).getRandomValues(b);
-    return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
-}
-
-export class StoreError extends Error {
-    constructor(code, message, extra = {}) {
-        super(message || code);
-        this.code = code;
-        Object.assign(this, extra);
-    }
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // API → стан редактора
@@ -357,15 +345,15 @@ export function placementToApi(p) {
 // OdooStore
 // ---------------------------------------------------------------------------------------------------------------
 
-const noop = () => {};
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-export class OdooStore {
+export class OdooAdapter extends BaseAdapter {
     /**
      * @param {object} o
      * @param {Function} o.rpc          `rpc(route, params)` — JSON-RPC Odoo
      * @param {object}   [o.orm]        сервіс orm (створення вкладень підкладки, запис полів площадки, id налаштувань перевірок)
      * @param {object}   [o.action]     сервіс action (майстер публікації)
+     * @param {Function} [o.uploadModel] завантаження 3D-моделі варіанта (API-09): `(variantId, {original, glb, meta}, opts) => Promise`
      * @param {number}   [o.autosaveMs] затримка автозбереження (settings.autosave_ms)
      * @param {number[]} [o.retryDelays] повтори при мережевій помилці: 2, 5, 15 с
      * @param {Function} [o.onStatus]   (status: 'saved'|'saving'|'error', info)
@@ -375,18 +363,16 @@ export class OdooStore {
      * @param {Function} [o.onReload]   () — автозбереження: сервер відхилив/змінив запис, стан слід перечитати (API-03)
      */
     constructor(o) {
+        super(o);
+        this.kind = "odoo";
+        // Усе, що спирається на API-11…24, стане true разом із відповідними функціями (хост може передати `o.capabilities`).
+        this.capabilities = { publish: true, ...(o.capabilities || {}) };
         this.rpc = o.rpc;
         this.orm = o.orm;
         this.action = o.action;
-        this.autosaveMs = o.autosaveMs ?? 1500;
+        this._uploadModel = o.uploadModel;
         this.retryDelays = o.retryDelays || [2000, 5000, 15000];
-        this.onStatus = o.onStatus || noop;
-        this.onSaved = o.onSaved || noop;
-        this.onConflict = o.onConflict || (() => "theirs");
-        this.onReject = o.onReject || noop;
-        this.onReload = o.onReload || noop;
         this.siteId = null;
-        this.status = "saved";
         this.groupIds = {};
         this._seq = 0;
         this._resetTracking();
@@ -410,11 +396,6 @@ export class OdooStore {
     /** Є незбережені зміни (черга або запит у польоті) — для `beforeunload`. */
     get dirty() {
         return this.pending.size > 0 || !!this.flushing;
-    }
-
-    _setStatus(status, info) {
-        this.status = status;
-        this.onStatus(status, info);
     }
 
     // --- читання -------------------------------------------------------------------------------------------
@@ -442,7 +423,7 @@ export class OdooStore {
     }
 
     /** API-03: завантажує площадку й скидає відстеження змін (чергу слід скинути на сервер перед цим: `flush()`). */
-    async loadSite(id) {
+    async load(id) {
         const res = await this._call("/f3d/constructor/load", { site_id: id });
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
@@ -548,6 +529,12 @@ export class OdooStore {
             this._setStatus("saving");
             this._schedule(this.autosaveMs);
         }
+    }
+
+    /** Контракт: порівнює стан із відомим серверу й ставить зміни в чергу; `now` — відправити негайно. */
+    save(st, { now = false } = {}) {
+        this.sync(st);
+        return now ? this.flush() : undefined;
     }
 
     /**
@@ -790,7 +777,7 @@ export class OdooStore {
     // --- інші виклики --------------------------------------------------------------------------------------
 
     /** API-05: перевірка на сервері (спершу зберігає чергу). */
-    async validate(layerId) {
+    async check(layerId) {
         await this.flush();
         const res = await this._call("/f3d/constructor/validate", { site_id: this.siteId, ...(layerId ? { layer_id: layerId } : {}) });
         if (!res.ok) {
@@ -803,7 +790,7 @@ export class OdooStore {
      * API-06: зберігає чергу, створює майстер публікації й відкриває його діалогом (попередній перегляд «буде створено /
      * оновлено / пропонуємо архівувати» і підтвердження). Повертає відповідь API; `onClose` — після закриття майстра.
      */
-    async publishPreview({ onClose } = {}) {
+    async publish({ onClose } = {}) {
         const fl = await this.flush();
         if (!fl.ok || this.pending.size) {
             throw new StoreError("save_failed", "Не вдалося зберегти чернетку перед публікацією.");
@@ -845,9 +832,23 @@ export class OdooStore {
         this.queue({ model: "td.check.config", op: "write", uid: check, id: this.rids.get(key), vals });
     }
 
-    /** Поля площадки (назва, габарити будівлі, крок колон) — стандартний ORM: API-04 їх не охоплює. */
+    /**
+     * Поля площадки (назва, габарити будівлі, крок колон) — стандартний ORM: API-04 їх не охоплює.
+     * Нейтральний вигляд контракту: {name, building: {length, width, height}, column_grid: {step_x, step_y}} (метри);
+     * поля Odoo (`building_length_m`…) проходять без змін.
+     */
     async saveSite(vals) {
-        await this.orm.write("td.site", [this.siteId], vals);
+        const out = { ...vals };
+        if (out.building) {
+            const { length, width, height } = out.building;
+            Object.assign(out, { building_length_m: length, building_width_m: width, building_height_m: height });
+            delete out.building;
+        }
+        if (out.column_grid) {
+            Object.assign(out, { column_step_x_m: out.column_grid.step_x, column_step_y_m: out.column_grid.step_y });
+            delete out.column_grid;
+        }
+        await this.orm.write("td.site", [this.siteId], out);
     }
 
     /** id груп ролей конструктора (для «Хто редагує» шару): з уже завантажених шарів або з res.groups. */
@@ -881,4 +882,42 @@ export class OdooStore {
         this.queue({ model: "td.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: id } });
         return { id, url: `/web/content/${id}` };
     }
+
+    /** Знімає підкладку з шару (операція write у чергу). */
+    async detachUnderlay(layer) {
+        this.queue({ model: "td.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: false } });
+    }
+
+    /** 3D-модель варіанта (API-09): завантаження виконує хост (`o.uploadModel` — multipart + csrf, model/upload.js). */
+    async uploadModel(variantId, payload, opts = {}) {
+        if (!this._uploadModel) {
+            throw new StoreError("not_supported", "Завантаження моделей у цьому хості не налаштоване.");
+        }
+        return await this._uploadModel(variantId, payload, opts);
+    }
+
+    /** URL GLB-моделі варіанта (API-10; `?v=` — etag для скидання кешу) або null. */
+    async modelUrl(variant) {
+        const m = variant?.model;
+        if (!m || m.status !== "ok" || !m.glb_url) {
+            return null;
+        }
+        return m.glb_url + "?v=" + encodeURIComponent(variant.etag || "");
+    }
+
+    // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---
+    loadSite(id) {
+        return this.load(id);
+    }
+
+    validate(layerId) {
+        return this.check(layerId);
+    }
+
+    publishPreview(o) {
+        return this.publish(o);
+    }
 }
+
+/** Старе ім'я класу (W2). */
+export const OdooStore = OdooAdapter;

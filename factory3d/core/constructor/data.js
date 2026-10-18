@@ -1,7 +1,6 @@
-/** @odoo-module */
 // Довідники редактора (порт 10_data.js): ролі, види шарів, категорії, UI-опис шаблонів місць, перевірки.
 // Значення — як у моделях W1: види шарів, категорії паспорта, напрямки фронту (s/e/n/w), режими поворотів (q/h/z/any).
-import { SLOT_TEMPLATES } from "./cells";
+import { SLOT_TEMPLATES } from "./cells.js";
 
 export const ROLES = [
     { id: "manager", name: "Менеджер" },

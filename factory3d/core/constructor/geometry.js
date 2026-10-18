@@ -1,4 +1,3 @@
-/** @odoo-module */
 // R-02, R-03: геометрія розкладки — дзеркало services/geometry.py (еталон — fixtures/checks_golden.json, AC-22, AC-31).
 // Одиниці — метри, кути — градуси проти годинникової стрілки при погляді зверху. OBB = {cx, cy, a, b, rot}.
 

@@ -1,9 +1,8 @@
-/** @odoo-module */
 // Геометрія об'єктів для сцени/панелей і «живі» перевірки редактора (обгортка над дзеркалом checks.js: стан редактора → формат API-03).
-import { footprint, normalizeParams } from "./cells";
-import { runChecks, summarize } from "./checks";
-import { slotHeight } from "./data";
-import { S } from "./state";
+import { footprint, normalizeParams } from "./cells.js";
+import { runChecks, summarize } from "./checks.js";
+import { slotHeight } from "./data.js";
+import { S } from "./state.js";
 import {
     makeObb,
     obbAabb,
@@ -11,7 +10,7 @@ import {
     placementObb,
     rotate,
     serviceObb,
-} from "./geometry";
+} from "./geometry.js";
 
 /** Габарит і висота місця: {L, W, H} (метри). Зона в редакторі — прямокутник length × width. */
 export function slotDims(s) {

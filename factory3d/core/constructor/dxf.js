@@ -1,10 +1,9 @@
-/** @odoo-module */
 // Підкладка DXF (CD-09, R-22): розбір DXF у відрізки (dxf-parser 1.1.2, ліниво, окремим script), панель підкладки, прив'язка масштабу.
 // Файл зберігається вкладенням шару (`underlay_attachment_id`), параметри — `underlay_params` {unit, dx, dy, rot_deg, scale, opacity}.
-import { fld, numInput } from "./fields";
-import { canEditLayer, lockHint } from "./roles";
-import { E, S, V, layerOf } from "./state";
-import { $, K, fmt, fmtInt, h, ic, rad, rnd, toast } from "./util";
+import { fld, numInput } from "./fields.js";
+import { canEditLayer, lockHint } from "./roles.js";
+import { E, S, V, layerOf } from "./state.js";
+import { $, K, fmt, fmtInt, h, ic, rad, rnd, toast } from "./util.js";
 
 export const DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
 export const DXF_MAX_BYTES = 5 * 1024 * 1024;
@@ -303,7 +302,7 @@ export function renderDxfPanel() {
         if (!f) {
             return;
         }
-        const ok = await importUnderlayFile(ly, f, E.store, msg);
+        const ok = await importUnderlayFile(ly, f, E.adapter, msg);
         if (ok) {
             renderDxfPanel();
         }
@@ -372,7 +371,7 @@ function removeBtn(ly, dis) {
             onclick: () => {
                 ly.underlay = null;
                 V.uldata.delete(ly.id);
-                E.store.queue({ model: "td.layer", op: "write", uid: ly.id, vals: { underlay_attachment_id: false } });
+                E.adapter.detachUnderlay(ly);
                 E.liveEdit();
                 renderDxfPanel();
             },

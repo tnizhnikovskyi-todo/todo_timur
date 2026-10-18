@@ -1,15 +1,14 @@
-/** @odoo-module */
 // 3D-сцена редактора (порт 40_scene.js; three r160 з бандла переглядача, рендер на вимогу, один WebGLRenderer).
 // Умовні моделі об'єктів без файла — `buildGenericModel` (W3, R-17); моделі варіантів — GLB із вкладень (API-10), завантажує app.js.
-import { buildGenericModel } from "@td_constructor/model/generic";
-import { cellsOf, normalizeParams } from "./cells";
-import { FRONT_ANGLE, TPL } from "./data";
-import { polygonContains } from "./geometry";
-import { newBlocks, pGeom, runLive, sGeom, slotDims } from "./live";
-import { canEditLayer, toastLock } from "./roles";
-import { E, S, V, elevOf, isLayerVisible, layerOf, objKey, passportOf, recOfRef, snapStep, snapV, variantOf } from "./state";
-import { THREE } from "./three";
-import { $, clamp, clone, fmt, h, rad, rnd, toast } from "./util";
+import { host } from "./host.js";
+import { cellsOf, normalizeParams } from "./cells.js";
+import { FRONT_ANGLE, TPL } from "./data.js";
+import { polygonContains } from "./geometry.js";
+import { newBlocks, pGeom, runLive, sGeom, slotDims } from "./live.js";
+import { canEditLayer, toastLock } from "./roles.js";
+import { E, S, V, elevOf, isLayerVisible, layerOf, objKey, passportOf, recOfRef, snapStep, snapV, variantOf } from "./state.js";
+import { THREE } from "./three.js";
+import { $, clamp, clone, fmt, h, rad, rnd, toast } from "./util.js";
 
 const BODY = { other: "#9ba6b1" };
 const UCOL = { electric: "#e0a030", air: "#3a8fd0", dust: "#6aa04a" };
@@ -133,8 +132,9 @@ export function initScene() {
     G.sph = new THREE.SphereGeometry(0.4, 12, 8);
     V.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 4000);
     // r155+: інтенсивності світла більше не множаться на π — компенсуємо, щоб вигляд збігався з прототипом (r147)
-    V.scene.add(new THREE.AmbientLight(0xffffff, 0.78 * Math.PI));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.55 * Math.PI);
+    const lk = Number(THREE.REVISION) >= 155 ? Math.PI : 1;
+    V.scene.add(new THREE.AmbientLight(0xffffff, 0.78 * lk));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.55 * lk);
     dl.position.set(40, 100, 60);
     V.scene.add(dl);
     V.world = new THREE.Group();
@@ -332,7 +332,9 @@ function makeLabel(text, h0, max, color, flatW) {
         ctx.fillStyle = col;
         ctx.fillText(text, 10, 27);
         const tex = new THREE.CanvasTexture(cv);
-        tex.colorSpace = THREE.SRGBColorSpace;
+        if (THREE.SRGBColorSpace) {
+            tex.colorSpace = THREE.SRGBColorSpace;
+        }
         tex.minFilter = THREE.LinearFilter;
         tex.generateMipmaps = false;
         c = { tex, aspect: w / 50 };
@@ -426,7 +428,7 @@ function variantBody(cat, v, norm, ghost) {
     const ang = FRONT_ANGLE[v.front_side || "s"];
     const swap = ang === 90 || ang === 270;
     const g = new THREE.Group();
-    const b = buildGenericModel(genericCategory(cat), { l: swap ? W : L, w: swap ? L : W, h: H }, THREE);
+    const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W : L, w: swap ? L : W, h: H }, THREE);
     if (ghost) {
         b.traverse((c) => {
             if (c.isMesh) {

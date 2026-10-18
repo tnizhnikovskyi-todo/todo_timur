@@ -1,10 +1,10 @@
-/** @odoo-module */
 // Діалоги редактора (власні, без alert/confirm/prompt — AC-65): підтвердження, нова площадка, історія версій, перевірка на сервері,
 // конфлікт запису. Публікація — майстер Odoo (OdooStore.publishPreview); картки варіантів/типів — штатні форми Odoo в діалозі.
-import { canManage } from "./roles";
-import { CHECKS } from "./data";
-import { E, S } from "./state";
-import { $, K, fmtDate, h, ic, toast } from "./util";
+import { registries } from "./registry.js";
+import { canManage } from "./roles.js";
+import { CHECKS } from "./data.js";
+import { E, S } from "./state.js";
+import { $, K, fmtDate, h, ic, toast } from "./util.js";
 
 export function openDialog(o) {
     const dlg = h("dialog", { class: o.cls || "" });
@@ -205,3 +205,10 @@ export function askConflict() {
 }
 
 Object.assign(E, { openDialog, confirmBox, openNewSite, openHistory, openServerIssues, askConflict });
+
+/* ===== реєстр dialogs: вбудовані діалоги ядра (діалоги хоста — variantForm, passportForm, record, publish — додає хост) ===== */
+registries.dialogs.add("confirm", (o) => confirmBox(o), { force: true });
+registries.dialogs.add("newSite", () => openNewSite(), { force: true });
+registries.dialogs.add("history", () => openHistory(), { force: true });
+registries.dialogs.add("serverIssues", ({ res }) => openServerIssues(res), { force: true });
+registries.dialogs.add("conflict", () => askConflict(), { force: true });

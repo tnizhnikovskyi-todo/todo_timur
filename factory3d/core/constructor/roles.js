@@ -1,9 +1,8 @@
-/** @odoo-module */
 // Ролі й блокування редагування (SPEC §8.2, R-11): права — з API-03 `rights`, а не з перемикача. Менеджеру доступний режим
 // «Переглянути як роль» (лише UI): сервер усе одно застосовує свої права.
-import { ROLES, roleName } from "./data";
-import { S } from "./state";
-import { toast } from "./util";
+import { ROLES, roleName } from "./data.js";
+import { S } from "./state.js";
+import { toast } from "./util.js";
 
 /** Ефективна роль перегляду (для менеджера в режимі «Переглянути як»), інакше null. */
 export const viewAs = () => (S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null);

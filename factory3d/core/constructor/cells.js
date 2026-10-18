@@ -1,8 +1,7 @@
-/** @odoo-module */
 // R-01: генерація комірок за шаблоном місця — дзеркало services/cells.py (еталон — fixtures/cells_golden.json, AC-12, AC-14).
 // Локальна система місця: початок — центр габариту, X — вздовж довжини L, Y — вздовж ширини W; світові координати комірки:
 // P + Rot(θ)·(lx, ly); z0 — від відмітки шару. Пролети/секції/колонки — зліва направо (+X), яруси/полиці — знизу вгору, ряди — з −Y.
-import { makeObb, rotate } from "./geometry";
+import { makeObb, rotate } from "./geometry.js";
 
 export const CODE_MAX_LEN = 32;
 export const PREFIX_MAX_LEN = 22;

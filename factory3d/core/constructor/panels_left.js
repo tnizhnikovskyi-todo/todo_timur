@@ -1,13 +1,13 @@
-/** @odoo-module */
 // Верхня панель, вкладки, ліва панель: шари, місця (шаблони), каталог (порт 50_ui.js), область 3D: інструменти, штамп, повідомлення.
-import { cellCount } from "./cells";
-import { CATEGORIES, LAYER_KINDS, LAYER_UTIL_KINDS, ROLES, SOLID_SLOTS, TPL, defaultParams, newLayerDefaults, roleName } from "./data";
-import { checkGroup, fld, numInput, paramFields, selectEl, textInput } from "./fields";
-import { canCatalog, canEditLayer, canManage, canPublish, lockHint, myRoleNames } from "./roles";
-import { runLive } from "./live";
-import { E, S, V, isLayerVisible, layerOf, reindex } from "./state";
-import { newUid } from "./store";
-import { $, $$, K, clone, fmt, fmtInt, h, ic, rnd, toast, uid } from "./util";
+import { cellCount } from "./cells.js";
+import { CATEGORIES, LAYER_KINDS, LAYER_UTIL_KINDS, ROLES, SOLID_SLOTS, TPL, defaultParams, newLayerDefaults, roleName } from "./data.js";
+import { checkGroup, fld, numInput, paramFields, selectEl, textInput } from "./fields.js";
+import { canCatalog, canEditLayer, canManage, canPublish, lockHint, myRoleNames } from "./roles.js";
+import { runLive } from "./live.js";
+import { E, S, V, isLayerVisible, layerOf, reindex } from "./state.js";
+import { newUid } from "./adapter.js";
+import { host } from "./host.js";
+import { $, $$, K, ROOT, clone, fmt, fmtInt, h, ic, rnd, toast, uid } from "./util.js";
 
 export const isNarrow = () => window.matchMedia("(max-width: 900px)").matches;
 
@@ -51,7 +51,14 @@ export function renderSaveState() {
     el.dataset.state = S.saveState;
     renderNotice();
 }
-export const curTheme = () => ($("#app") && $("#app").closest(".o_f3d_constructor")?.dataset.theme) || "light";
+/** Поточна тема: data-theme на `host.themeTarget` (або корені редактора); з `host.themeAuto` — за prefers-color-scheme. */
+export const curTheme = () => {
+    const t = (host.themeTarget || ROOT.el)?.dataset.theme;
+    if (t === "dark" || t === "light") {
+        return t;
+    }
+    return host.themeAuto && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
 export function renderChips() {
     const chip = $("#draftChip");
     if (!chip || !S.site) {
@@ -323,7 +330,7 @@ export function renderLayerForm() {
                     ly.edit_roles,
                     async (v) => {
                         const roles = v.includes("manager") ? v : ["manager", ...v];
-                        await E.store.ensureGroupIds(roles);
+                        await E.adapter.ensureGroupIds(roles);
                         layerEdit(() => { ly.edit_roles = roles; });
                     },
                     dis

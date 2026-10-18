@@ -1,15 +1,13 @@
 /** @odoo-module */
 // AC-17 (JS): DXF з LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC → відрізки; мм → м, зсув і поворот з underlay_params.
 // AC-18 (JS): DWG — повідомлення «Конвертуйте в DXF; DWG буде на сервері», нічого не малюється.
-import { after, animationFrame, describe, expect, getFixture, test } from "@odoo/hoot";
-import { DWG_MESSAGE, defaultUnderlayParams, importUnderlayFile, loadDxfParser, parseDxf } from "@td_constructor/editor/dxf";
-import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
-import { OdooStore } from "@td_constructor/editor/store";
-import { E, S, V } from "@td_constructor/editor/state";
+import { after, animationFrame, beforeEach, describe, expect, getFixture, test } from "@odoo/hoot";
+import { E, OdooStore, S, V, defaultUnderlayParams, getDwgMessage, importUnderlayFile, loadDxfParser, mountEditor, parseDxf, setupCore, unmountEditor } from "./core";
 import { near } from "./helpers";
 import { makeLoad, mockRpc } from "./fixtures";
 
 describe.current.tags("desktop");
+beforeEach(setupCore);
 
 const dxf = (...entities) => ["0", "SECTION", "2", "ENTITIES", ...entities.flat(), "0", "ENDSEC", "0", "EOF", ""].join("\n");
 const LINE = ["0", "LINE", "8", "0", "10", "0", "20", "0", "30", "0", "11", "1000", "21", "0", "31", "0"];
@@ -92,8 +90,8 @@ test("AC-18 DWG: повідомлення «Конвертуйте в DXF; DWG �
     root.append(msg);
     const ok = await importUnderlayFile(ly, new File(["AC1027"], "plan.dwg"), store, msg);
     expect(ok).toBe(true);
-    expect(msg.textContent.includes(DWG_MESSAGE)).toBe(true);
-    expect(DWG_MESSAGE.includes("Конвертуйте в DXF")).toBe(true);
+    expect(msg.textContent.includes(getDwgMessage())).toBe(true);
+    expect(getDwgMessage().includes("Конвертуйте в DXF")).toBe(true);
     expect(ly.underlay.format).toBe("dwg");
     expect(ly.underlay.status).toBe("pending_conversion");
     expect(V.uldata.has("lyp")).toBe(false);

@@ -1,23 +1,23 @@
-/** @odoo-module */
-// Ядро редактора: монтування в корінь дії, завантаження площадки через OdooStore, збереження (автозбереження пакетами API-04),
-// події верхньої панелі, клавіатура, життєвий цикл (порт 70_main.js; без localStorage/IndexedDB-сховища).
-import { BODY_HTML } from "./body";
-import { ROLES } from "./data";
-import "./dialogs";
-import "./dxf";
-import "./panels_left";
-import "./panels_right";
-import "./scene";
-import { runLive } from "./live";
-import { canEditLayer, canManage, lockHint } from "./roles";
-import { E, S, V, layerOf, reindex, resetState } from "./state";
-import { THREE, loadThree } from "./three";
-import { $, $$, ROOT, debounce, toast } from "./util";
+// Ядро редактора: монтування в корінь (дія Odoo або сторінка прототипу), завантаження площадки через адаптер даних (adapter.js),
+// збереження, події верхньої панелі, клавіатура (реєстр hotkeys), життєвий цикл (порт 70_main.js).
+// Ядро не знає Odoo: дані — тільки через впроваджений адаптер, 3D-бібліотека й форми — через `host` і реєстри.
+import { assertAdapter } from "./adapter.js";
+import { BODY_HTML } from "./body.js";
+import { ROLES } from "./data.js";
+import "./dialogs.js";
+import "./dxf.js";
+import { host, setHost } from "./host.js";
+import "./panels_left.js";
+import "./panels_right.js";
+import "./scene.js";
+import { runLive } from "./live.js";
+import { registries, setCapabilities } from "./registry.js";
+import { canEditLayer, canManage, lockHint } from "./roles.js";
+import { E, S, V, layerOf, reindex, resetState } from "./state.js";
+import { THREE, loadThree } from "./three.js";
+import { $, $$, ROOT, debounce, toast } from "./util.js";
 
-const LS_SITE = "f3d_constructor_site";
-const LS_THEME = "f3d_constructor_theme";
-
-let ctx = null; // {store, services, listeners}
+let ctx = null; // {adapter, listeners}
 
 const lsGet = (k) => {
     try {
@@ -39,7 +39,7 @@ const syncNow = () => {
     if (!ctx || !S.site) {
         return;
     }
-    ctx.store.sync(S);
+    ctx.adapter.save(S);
 };
 const scheduleSave = debounce(syncNow, 150);
 
@@ -50,7 +50,7 @@ async function flushNow() {
     }
     scheduleSave.cancel();
     syncNow();
-    const r = await ctx.store.flush();
+    const r = await ctx.adapter.flush();
     if (r.reload && r.ok !== false) {
         await reload();
     }
@@ -64,13 +64,10 @@ const saveSiteProps = debounce(async () => {
     const b = S.site.building;
     const cg = S.site.column_grid;
     try {
-        await ctx.store.saveSite({
+        await ctx.adapter.saveSite({
             name: S.site.name,
-            building_length_m: b.length,
-            building_width_m: b.width,
-            building_height_m: b.height,
-            column_step_x_m: cg.step_x,
-            column_step_y_m: cg.step_y,
+            building: { length: b.length, width: b.width, height: b.height },
+            column_grid: { step_x: cg.step_x, step_y: cg.step_y },
         });
     } catch (e) {
         toast("Не вдалося зберегти параметри площадки: " + (e.data?.message || e.message || e), "err");
@@ -101,7 +98,7 @@ function applyLoaded(st, keep) {
     if (entry) {
         entry.name = st.site.name;
     }
-    ctx.store.autosaveMs = st.site.settings.autosave_ms ?? 1500;
+    ctx.adapter.autosaveMs = st.site.settings?.autosave_ms ?? 1500;
     reindex();
     S.sel = keep?.sel && (keep.sel.kind === "slot" ? S.sIdx : S.pIdx).has(keep.sel.id) ? keep.sel : null;
     S.selCell = null;
@@ -126,12 +123,12 @@ async function afterSiteLoad(keep) {
 }
 
 async function openSite(id, keep) {
-    const st = await ctx.store.loadSite(id);
+    const st = await ctx.adapter.load(id);
     if (!ctx) {
         return;
     }
     applyLoaded(st, keep);
-    lsSet(LS_SITE, String(id));
+    lsSet(host.siteKey, String(id));
     await afterSiteLoad(keep);
 }
 
@@ -165,8 +162,8 @@ async function reload() {
 
 async function createSite(o) {
     try {
-        const id = await ctx.store.createSite(o);
-        S.app.sites = await ctx.store.listSites();
+        const id = await ctx.adapter.createSite(o);
+        S.app.sites = await ctx.adapter.listSites();
         await flushNow();
         await openSite(id);
         toast("Створено порожню площадку.");
@@ -179,7 +176,7 @@ async function createSite(o) {
 
 async function restoreVersion(versionId, n) {
     try {
-        const res = await ctx.store.restoreVersion(versionId);
+        const res = await ctx.adapter.restoreVersion(versionId);
         await openSite(res.site_id || S.site.id, { sel: null, layer: S.ui.layer });
         toast(`Чернетку повернуто до версії ${n}.`);
     } catch (e) {
@@ -189,7 +186,7 @@ async function restoreVersion(versionId, n) {
 
 async function publish() {
     try {
-        await ctx.store.publishPreview({ onClose: () => reload() });
+        await ctx.adapter.publish({ onClose: () => reload() });
     } catch (e) {
         toast(e.message || "Не вдалося підготувати публікацію.", "err");
     }
@@ -198,24 +195,27 @@ async function publish() {
 async function validateOnServer() {
     try {
         await flushNow();
-        E.openServerIssues(await ctx.store.validate());
+        E.openServerIssues(await ctx.adapter.check());
     } catch (e) {
         toast(e.message || "Не вдалося виконати перевірку.", "err");
     }
 }
 
-/* --- форми Odoo в діалозі (каталог: типи й варіанти) --- */
-function openForm(model, resId, context, onClose) {
-    return ctx.services.action.doAction(
-        { type: "ir.actions.act_window", res_model: model, res_id: resId || false, views: [[false, "form"]], target: "new", context: context || {} },
-        { onClose }
-    );
+/* --- форми запису (каталог: типи й варіанти): діалоги реєструє хост — Odoo відкриває свої форми, прототип — вбудовані --- */
+const dialogCtx = () => ({ E, S, V, adapter: ctx?.adapter, host, reload });
+/** Відкриває зареєстрований діалог за ім'ям; відсутній діалог — повідомлення, а не помилка. */
+async function runDialog(name, args) {
+    if (!registries.dialogs.has(name)) {
+        toast(`Діалог «${name}» недоступний у цьому хості.`, "warn");
+        return undefined;
+    }
+    return await registries.dialogs.get(name)(args || {}, dialogCtx());
 }
-const openVariantForm = (rid, pid) => openForm("td.equipment.variant", rid, { default_passport_id: pid }, () => reload());
-const openPassportForm = (pid) => openForm("td.equipment.passport", pid, {}, () => reload());
-const openRecord = (model, id) => openForm(model, id);
+const openVariantForm = (rid, pid) => runDialog("variantForm", { rid, pid });
+const openPassportForm = (pid) => runDialog("passportForm", { pid });
+const openRecord = (model, id) => runDialog("record", { model, id });
 
-/* --- моделі варіантів: GLB із вкладень (API-10) --- */
+/* --- моделі варіантів: GLB за адресою від адаптера (Odoo — вкладення API-10, артефакт — blob з IndexedDB) --- */
 function normalizeModel(obj) {
     const wrap = new THREE.Group();
     const inner = obj.clone(true);
@@ -236,12 +236,15 @@ async function loadVariantModels() {
     let any = false;
     for (const p of S.catalog) {
         for (const v of p.variants) {
-            const m = v.model;
-            if (!m || m.status !== "ok" || !m.glb_url || V.models.has(v.id)) {
+            if (!v.model || V.models.has(v.id)) {
                 continue;
             }
             try {
-                const gltf = await loader.loadAsync(m.glb_url + "?v=" + encodeURIComponent(v.etag || ""));
+                const url = await ctx.adapter.modelUrl(v);
+                if (!url) {
+                    continue;
+                }
+                const gltf = await loader.loadAsync(url);
                 if (!ctx) {
                     return;
                 }
@@ -258,9 +261,10 @@ async function loadVariantModels() {
 }
 
 /* --- тема --- */
+const themeEl = () => host.themeTarget || ROOT.el;
 function applyTheme(t) {
-    ROOT.el.dataset.theme = t;
-    lsSet(LS_THEME, t);
+    themeEl().dataset.theme = t;
+    lsSet(host.themeKey, t);
     V.theme = t;
     if (V.ok) {
         E.recolorMats();
@@ -276,7 +280,7 @@ function listen(target, type, fn) {
     ctx.listeners.push([target, type, fn]);
 }
 function bindEvents() {
-    listen($("#siteSel"), "change", (e) => switchSite(Number(e.target.value)));
+    listen($("#siteSel"), "change", (e) => switchSite(S.app.sites.find((s) => String(s.id) === e.target.value)?.id));
     listen($("#roleSel"), "change", (e) => {
         if (!S.rights.is_manager) {
             return;
@@ -305,13 +309,21 @@ function bindEvents() {
     $$("#ltabs button").forEach((b) => listen(b, "click", () => E.setLeftTab(b.dataset.tab)));
     $$("#mtabs button").forEach((b) => listen(b, "click", () => E.setMTab(b.dataset.mtab)));
     listen(document, "keydown", onKey);
+    if (host.themeAuto && window.matchMedia) {
+        listen(window.matchMedia("(prefers-color-scheme: dark)"), "change", () => {
+            if (!themeEl().dataset.theme) {
+                applyTheme(E.curTheme());
+            }
+        });
+    }
     listen(window, "beforeunload", (e) => {
-        if (ctx && (ctx.store.dirty || S.saveState === "error")) {
+        if (ctx && (ctx.adapter.dirty || S.saveState === "error")) {
             e.preventDefault();
             e.returnValue = "";
         }
     });
 }
+/** Гарячі клавіші — реєстр `hotkeys` (запис: {code|key|match(e), shift?, ctrl?, alt?, typing?, when?(e), run(e)}; run → false = не оброблено). */
 function onKey(e) {
     if (!ctx || !ROOT.el || !ROOT.el.isConnected) {
         return;
@@ -321,42 +333,92 @@ function onKey(e) {
     if ($("dialog[open]") || document.querySelector(".modal.show, .o_dialog")) {
         return;
     }
-    if (e.key === "Escape") {
-        if (V.placing || V.ruler.on || V.pickMode) {
-            E.cancelModes();
-        } else if (S.sel) {
-            E.selectObj(null);
+    for (const [key, hk] of registries.hotkeys.getEntries()) {
+        if (typing && !hk.typing) {
+            continue;
         }
-        return;
-    }
-    if (typing) {
-        return;
-    }
-    if (e.ctrlKey || e.metaKey || (e.altKey && e.code !== "KeyR")) {
-        return;
-    }
-    if (e.code === "KeyR") {
-        e.preventDefault();
-        E.rotateSel(e.shiftKey ? -1 : 1);
-    } else if (e.code === "Delete" || e.code === "Backspace") {
-        if (S.sel) {
-            e.preventDefault();
-            E.askDelete();
+        if ((e.ctrlKey || e.metaKey) && !hk.ctrl) {
+            continue;
         }
-    } else if (e.code === "KeyM") {
-        const on = !V.ruler.on;
-        E.cancelModes();
-        V.ruler.on = on;
-        E.renderVTools();
-    } else if (e.code.startsWith("Arrow") && S.sel) {
-        e.preventDefault();
-        const k = e.shiftKey ? 10 : 1;
-        E.nudge(e.code === "ArrowRight" ? k : e.code === "ArrowLeft" ? -k : 0, e.code === "ArrowUp" ? k : e.code === "ArrowDown" ? -k : 0);
+        if (e.altKey && !hk.alt) {
+            continue;
+        }
+        if (hk.ctrl && !(e.ctrlKey || e.metaKey)) {
+            continue;
+        }
+        const hit = hk.match ? hk.match(e) : (hk.code ? e.code === hk.code : e.key === hk.key) && (hk.shift == null || hk.shift === e.shiftKey);
+        if (!hit || (hk.when && !hk.when(e))) {
+            continue;
+        }
+        try {
+            if (hk.run(e) !== false) {
+                return;
+            }
+        } catch (err) {
+            console.error(`Гаряча клавіша «${key}»:`, err);
+        }
     }
 }
 
-/* --- колбеки OdooStore --- */
-function wireStore(store) {
+/** Вбудовані гарячі клавіші редактора (Esc, R, Del, M, стрілки); слайси додають свої в `registries.hotkeys`. */
+function registerBuiltinHotkeys() {
+    const add = (key, hk, sequence) => registries.hotkeys.add(key, hk, { sequence, force: true });
+    add(
+        "escape",
+        {
+            key: "Escape",
+            typing: true,
+            run() {
+                if (V.placing || V.ruler.on || V.pickMode) {
+                    E.cancelModes();
+                } else if (S.sel) {
+                    E.selectObj(null);
+                }
+            },
+        },
+        10
+    );
+    add("rotate", { code: "KeyR", alt: true, run: (e) => (e.preventDefault(), E.rotateSel(e.shiftKey ? -1 : 1)) }, 20);
+    add(
+        "delete",
+        {
+            match: (e) => e.code === "Delete" || e.code === "Backspace",
+            when: () => !!S.sel,
+            run: (e) => (e.preventDefault(), E.askDelete()),
+        },
+        30
+    );
+    add(
+        "ruler",
+        {
+            code: "KeyM",
+            run() {
+                const on = !V.ruler.on;
+                E.cancelModes();
+                V.ruler.on = on;
+                E.renderVTools();
+            },
+        },
+        40
+    );
+    add(
+        "nudge",
+        {
+            match: (e) => e.code.startsWith("Arrow"),
+            when: () => !!S.sel,
+            run(e) {
+                e.preventDefault();
+                const k = e.shiftKey ? 10 : 1;
+                E.nudge(e.code === "ArrowRight" ? k : e.code === "ArrowLeft" ? -k : 0, e.code === "ArrowUp" ? k : e.code === "ArrowDown" ? -k : 0);
+            },
+        },
+        50
+    );
+}
+registerBuiltinHotkeys();
+
+/* --- зворотні виклики адаптера --- */
+function wireAdapter(store) {
     store.onStatus = (status) => {
         if (!ctx) {
             return;
@@ -387,7 +449,7 @@ function wireStore(store) {
     store.onReload = () => {
         if (ctx && S.site) {
             syncNow();
-            ctx.store.flush().then(() => ctx && reload());
+            ctx.adapter.flush().then(() => ctx && reload());
         }
     };
 }
@@ -395,23 +457,32 @@ function wireStore(store) {
 /* --- життєвий цикл --- */
 /**
  * Монтує редактор у `rootEl`.
- * @param {HTMLElement} rootEl корінь `.o_f3d_constructor`
- * @param {{store: import("./store").OdooStore, services: {action: object}, siteId?: number, testMode?: boolean}} o
+ * @param {HTMLElement} rootEl корінь редактора (`.o_f3d_constructor` у Odoo, `#f3dRoot` у прототипі)
+ * @param {{adapter: object, host?: object, siteId?: (number|string), testMode?: boolean}} o
+ *   adapter — реалізація контракту adapter.js; host — сервіси хоста (host.js): loadThree, buildGenericModel, тема, ключі localStorage
  */
-export async function mountEditor(rootEl, { store, services, siteId, testMode }) {
+export async function mountEditor(rootEl, { adapter, store, host: hostSvc, services, siteId, testMode } = {}) {
+    adapter = assertAdapter(adapter || store);
     resetState();
+    setHost({ ...(hostSvc || {}), services: { ...(hostSvc?.services || {}), ...(services || {}) } });
+    setCapabilities(adapter.capabilities);
     ROOT.el = rootEl;
-    ctx = { store, services, listeners: [] };
-    E.store = store;
-    E.services = services;
+    ctx = { adapter, listeners: [] };
+    E.adapter = adapter;
+    E.store = adapter; // стара назва (W2)
+    E.host = host;
     rootEl.innerHTML = BODY_HTML;
-    const th = lsGet(LS_THEME);
-    rootEl.dataset.theme = th === "dark" ? "dark" : "light";
-    V.theme = rootEl.dataset.theme;
+    const th = lsGet(host.themeKey);
+    if (th === "dark" || th === "light") {
+        themeEl().dataset.theme = th;
+    } else if (!host.themeAuto) {
+        themeEl().dataset.theme = "light"; // з themeAuto атрибут не ставимо: тему веде prefers-color-scheme
+    }
+    V.theme = E.curTheme();
     V.testMode = !!testMode;
-    wireStore(store);
-    if (window.odoo?.debug) {
-        window.__f3dEditor = { S, V, E, THREE, store }; // лише для налагодження (?debug=…)
+    wireAdapter(adapter);
+    if (host.debug) {
+        window.__f3dEditor = { S, V, E, THREE, adapter, store: adapter };
     }
     try {
         await loadThree();
@@ -423,7 +494,7 @@ export async function mountEditor(rootEl, { store, services, siteId, testMode })
         return;
     }
     bindEvents();
-    S.app.sites = await store.listSites();
+    S.app.sites = await adapter.listSites();
     if (!ctx) {
         return;
     }
@@ -431,10 +502,11 @@ export async function mountEditor(rootEl, { store, services, siteId, testMode })
         $("#vp").append(Object.assign(document.createElement("div"), { className: "nogl", textContent: "Площадок немає. Створіть площадку в меню «Планування → Площадки»." }));
         return;
     }
-    const want = siteId ?? Number(lsGet(LS_SITE));
-    const id = S.app.sites.some((s) => s.id === want) ? want : S.app.sites[0].id;
+    const stored = lsGet(host.siteKey);
+    const want = siteId ?? stored;
+    const entry = S.app.sites.find((s) => String(s.id) === String(want)) || S.app.sites[0];
     E.initScene();
-    await openSite(id);
+    await openSite(entry.id);
     rootEl.dataset.ready = "1";
 }
 
@@ -448,9 +520,9 @@ export function unmountEditor() {
         scheduleSave.cancel();
         saveSiteProps.cancel();
         if (S.site) {
-            c.store.sync(S);
+            c.adapter.save(S);
         }
-        c.store.flush();
+        c.adapter.flush();
     } catch {
         /* ок */
     }
@@ -468,6 +540,6 @@ export function unmountEditor() {
     resetState();
 }
 
-Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, openVariantForm, openPassportForm, openRecord });
+Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord });
 
 export { ROLES, canManage };

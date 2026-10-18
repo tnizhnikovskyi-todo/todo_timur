@@ -1,10 +1,9 @@
-/** @odoo-module */
 // R-04…R-10: перевірки розкладки — дзеркало services/checks.py (еталон — fixtures/checks_golden.json, AC-31).
 // Вхід — стан у форматі API-03 `load` (метри для шарів/місць/розміщень, мм для варіантів):
 //   state = {site: {building}, layers, slots, placements, variants}; configs = [{check, enabled, mode, params}].
 // Результат — [{check, severity, layer_id, codes, message, keys, id}]; `keys` ('p:<id>' / 's:<id>') і `id` — службові поля редактора
 // (еталон порівнює лише (check, severity, codes)). Сервер — істина: клієнтські перевірки лише дають живий відгук.
-import { generateCells, slotObb } from "./cells";
+import { generateCells, slotObb } from "./cells.js";
 import {
     aabbOverlap,
     obbAabb,
@@ -17,7 +16,7 @@ import {
     serviceObb,
     utilityPoints,
     makeObb,
-} from "./geometry";
+} from "./geometry.js";
 
 export const CHECK_KEYS = ["fits", "collide", "service_free", "aisles_free", "load", "utility_reach", "fire"];
 export const DEFAULT_EPS_M = 0.001;
