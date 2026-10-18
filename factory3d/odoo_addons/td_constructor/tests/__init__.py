@@ -22,6 +22,8 @@ from . import test_registry_hooks
 from . import test_new_fields_api
 from . import test_s1_addr
 from . import test_s1_catalog
+from . import test_s1_checks
 from . import test_s1_golden
+from . import test_s1_migration
 from . import test_s1_core_node
 from . import test_s1_library

@@ -20,6 +20,7 @@
 
 import math
 
+from . import addr as addr_mod
 from . import cells as cells_mod
 from . import geometry as geo
 from .registry import CHECKS
@@ -64,6 +65,14 @@ def _rotation_ok(mode, rotation):
     return min(rem, period - rem) <= ROTATION_TOLERANCE_DEG
 
 
+def _has_addr(state):
+    """Чи є в стані адресація (площадки, зони чи місця) або глибина «комірка»: інакше контексти не потрібні."""
+    site = state.get('site') or {}
+    if site.get('addr') or site.get('depth_mode') == 'cell':
+        return True
+    return any(s.get('addr') or s.get('depth_mode') for s in state.get('slots') or [])
+
+
 class _Scene:
     """Індекси стану й кеш геометрії для перевірок."""
 
@@ -76,6 +85,8 @@ class _Scene:
         self.dynamic = {p['id'] for p in self.placements if p.get('dynamic')}
         self._slot_obb = {}
         self._slot_cells = {}
+        self._state = state
+        self._contexts = None
         self._body = {}
         self._service = {}
 
@@ -90,6 +101,12 @@ class _Scene:
                 slot.get('rotation') or 0.0,
             )
         return self._slot_obb[key]
+
+    def _slot_ctx(self, slot):
+        """Контекст адресації місця (F01): коди комірок як у розкладці; без адресації — None (legacy-коди)."""
+        if self._contexts is None:
+            self._contexts = addr_mod.state_contexts(self._state) if _has_addr(self._state) else {}
+        return addr_mod.usable_context(self._contexts.get(slot.get('uid') or slot['id']))
 
     def slot_cells(self, slot):
         key = slot['id']
@@ -106,6 +123,7 @@ class _Scene:
                     slot.get('params') or {},
                     slot.get('overrides') or {},
                     elevation,
+                    self._slot_ctx(slot),
                 )
             }
         return self._slot_cells[key]

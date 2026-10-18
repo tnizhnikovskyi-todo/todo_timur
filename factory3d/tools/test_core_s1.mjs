@@ -162,6 +162,43 @@ export function register(test) {
         assert.equal(exact[0].code, "PLT");
     });
 
+    test("S1 checks: перевірки за cell_code рахують комірки з контекстом адресації (дзеркало tests/test_s1_checks.py)", async () => {
+        const { runChecks } = await load("checks.js");
+        const base = golden("checks_golden").scenes.find((s) => s.name === "fits_cell_ok");
+        const configs = base.configs.map((c) => ({ ...c, enabled: c.check === "fits" || c.check === "load" }));
+        const rack = base.state.slots[0].params; // max_load_kg 1000, PAL-1 — 1200 кг
+        const run = (cellCode, { siteAddr = null, slotAddr = null, depthMode = null, params = rack } = {}) => {
+            const state = JSON.parse(JSON.stringify(base.state));
+            state.site.addr = siteAddr;
+            state.site.depth_mode = depthMode || "level";
+            state.slots[0].params = params;
+            if (slotAddr) {
+                state.slots[0].addr = slotAddr;
+            }
+            state.placements[0].cell_code = cellCode;
+            return runChecks(state, configs, 0.001).map((i) => i.check).sort();
+        };
+        const siteAddr = { tpl: "{row} {bay} {level}", sep: "." }; // 01.01.1, 01.01.2, 01.02.1, 01.02.2
+        // без адресації — як раніше
+        assert.deepEqual(run("RK-1-B01-L1"), ["load"]);
+        assert.deepEqual(run("01.01.1"), ["fits"]);
+        assert.deepEqual(run("RK-1-B01-L1", { siteAddr: {} }), ["load"]);
+        // з адресацією: код знайдено (без хибних «комірки немає»), застарілий і чужий код — ловляться
+        assert.deepEqual(run("01.01.1", { siteAddr }), ["load"]);
+        assert.deepEqual(run("01.01.2", { siteAddr }), ["load"]);
+        assert.deepEqual(run("RK-1-B01-L1", { siteAddr }), ["fits"]);
+        assert.deepEqual(run("01.03.1", { siteAddr }), ["fits"]);
+        // адресація місця й глибина «комірка»
+        const slotAddr = { tpl: "{prefix}/{bay}{level}", sep: "" };
+        assert.deepEqual(run("RK-1/011", { slotAddr }), ["load"]);
+        assert.deepEqual(run("RK-1-B01-L1", { slotAddr }), ["fits"]);
+        const withPos = { tpl: "{row} {bay} {level} {pos}", sep: "." };
+        const deep = { ...rack, cells_per_level: 2 };
+        // напівкомірка: код знайдено (є і «виходить за межі комірки», і ліміт 500 кг), а не «комірки немає»
+        assert.deepEqual(run("01.01.1.2", { siteAddr: withPos, depthMode: "cell", params: deep }), ["fits", "load"]);
+        assert.deepEqual(run("01.01.1", { siteAddr: withPos, depthMode: "cell", params: deep }), ["fits"]);
+    });
+
     test("S1 addr: попередній перегляд (перші 10 і останній, скільки зміниться, повтори) і конфлікти", async () => {
         const A = await load("addr_core.js");
         const codes = Array.from({ length: 25 }, (_v, i) => `C${i}`);

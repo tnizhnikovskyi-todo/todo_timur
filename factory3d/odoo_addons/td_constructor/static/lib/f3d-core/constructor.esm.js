@@ -941,6 +941,11 @@ function addressContext(slots, siteAddr = null, siteDepthMode = "level") {
   }
   return out;
 }
+var usableContext = (ctx2) => ctx2 && (ctx2.addr || ctx2.depth_mode === "cell") ? ctx2 : null;
+function stateContexts(state) {
+  const site = state.site || {};
+  return addressContext((state.slots || []).map((s) => ({ ...s, uid: s.uid || s.id })), site.addr, site.depth_mode || "level");
+}
 function bayForward(rot) {
   const r = (rot || 0) * Math.PI / 180;
   const cos = Math.cos(r);
@@ -2880,8 +2885,15 @@ function rotationOk(mode, rotation) {
   return Math.min(rem, period - rem) <= ROTATION_TOLERANCE_DEG;
 }
 var objKey2 = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
+function hasAddr(state) {
+  const site = state.site || {};
+  const filled = (a) => !!a && Object.keys(a).length > 0;
+  return filled(site.addr) || site.depth_mode === "cell" || (state.slots || []).some((s) => filled(s.addr) || !!s.depth_mode);
+}
 var Scene = class {
   constructor(state) {
+    this._state = state;
+    this._contexts = null;
     this.building = (state.site || {}).building || {};
     this.layers = new Map((state.layers || []).map((l) => [l.id, l]));
     this.variants = new Map((state.variants || []).map((v) => [v.id, v]));
@@ -2901,6 +2913,13 @@ var Scene = class {
     }
     return this._slotObb.get(slot.id);
   }
+  /** Контекст адресації місця (F01): коди комірок як у розкладці з адресацією; без адресації — null (legacy-коди). */
+  slotCtx(slot) {
+    if (this._contexts === null) {
+      this._contexts = hasAddr(this._state) ? stateContexts(this._state) : /* @__PURE__ */ new Map();
+    }
+    return usableContext(this._contexts.get(slot.uid || slot.id));
+  }
   slotCells(slot) {
     if (!this._slotCells.has(slot.id)) {
       const elevation = (this.layers.get(slot.layer_id) || {}).elevation || 0;
@@ -2912,7 +2931,8 @@ var Scene = class {
         slot.rotation || 0,
         slot.params || {},
         slot.overrides || {},
-        elevation
+        elevation,
+        this.slotCtx(slot)
       );
       this._slotCells.set(slot.id, new Map(cells.map((c) => [c.code, c])));
     }
@@ -3255,7 +3275,7 @@ function slotForChecks(s) {
 }
 function toCheckState() {
   return {
-    site: { building: S.site.building },
+    site: { building: S.site.building, addr: S.site.addr || null, depth_mode: S.site.depth_mode || "level" },
     layers: S.layers,
     slots: S.slots.map(slotForChecks),
     placements: S.placements,

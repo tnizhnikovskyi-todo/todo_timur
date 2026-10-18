@@ -3,6 +3,7 @@
 //   state = {site: {building}, layers, slots, placements, variants}; configs = [{check, enabled, mode, params}].
 // Результат — [{check, severity, layer_id, codes, message, keys, id}]; `keys` ('p:<id>' / 's:<id>') і `id` — службові поля редактора
 // (еталон порівнює лише (check, severity, codes)). Сервер — істина: клієнтські перевірки лише дають живий відгук.
+import { stateContexts, usableContext } from "./addr_core.js";
 import { generateCells, slotObb } from "./cells.js";
 import { registries } from "./registry.js";
 import {
@@ -40,8 +41,17 @@ function rotationOk(mode, rotation) {
 
 const objKey = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
 
+/** Чи є в стані адресація (площадки, зони чи місця) або глибина «комірка»: інакше контексти не потрібні. */
+function hasAddr(state) {
+    const site = state.site || {};
+    const filled = (a) => !!a && Object.keys(a).length > 0;
+    return filled(site.addr) || site.depth_mode === "cell" || (state.slots || []).some((s) => filled(s.addr) || !!s.depth_mode);
+}
+
 export class Scene {
     constructor(state) {
+        this._state = state;
+        this._contexts = null;
         this.building = (state.site || {}).building || {};
         this.layers = new Map((state.layers || []).map((l) => [l.id, l]));
         this.variants = new Map((state.variants || []).map((v) => [v.id, v]));
@@ -63,6 +73,14 @@ export class Scene {
         return this._slotObb.get(slot.id);
     }
 
+    /** Контекст адресації місця (F01): коди комірок як у розкладці з адресацією; без адресації — null (legacy-коди). */
+    slotCtx(slot) {
+        if (this._contexts === null) {
+            this._contexts = hasAddr(this._state) ? stateContexts(this._state) : new Map();
+        }
+        return usableContext(this._contexts.get(slot.uid || slot.id));
+    }
+
     slotCells(slot) {
         if (!this._slotCells.has(slot.id)) {
             const elevation = (this.layers.get(slot.layer_id) || {}).elevation || 0;
@@ -74,7 +92,8 @@ export class Scene {
                 slot.rotation || 0,
                 slot.params || {},
                 slot.overrides || {},
-                elevation
+                elevation,
+                this.slotCtx(slot)
             );
             this._slotCells.set(slot.id, new Map(cells.map((c) => [c.code, c])));
         }
