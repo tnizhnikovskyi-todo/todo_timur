@@ -65,7 +65,7 @@ const CSS = `
 }
 `;
 
-export const isMobile = () => !!window.matchMedia && window.matchMedia(MOBILE_QUERY).matches;
+export const isMobile = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(MOBILE_QUERY).matches;
 
 function ensureStyle() {
     const root = ROOT.el;

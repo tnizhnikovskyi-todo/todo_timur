@@ -396,6 +396,9 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
 /* ---------- 7. слайси волни 1: S1 «Структура місця» (tools/test_core_s1.mjs) ---------- */
 (await import("./test_core_s1.mjs")).register(test);
 
+/* ---------- 8. слайс S3 «Робота зі складом» (tools/test_core_s3.mjs) ---------- */
+(await import("./test_core_s3.mjs")).register(test);
+
 for (const [name, fn] of tests) {
     try {
         await fn();

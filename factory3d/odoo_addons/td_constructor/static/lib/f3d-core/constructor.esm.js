@@ -335,7 +335,7 @@ __export(geometry_exports, {
   utilityPoints: () => utilityPoints
 });
 var FRONT_VECTORS = { s: [0, -1], n: [0, 1], e: [1, 0], w: [-1, 0] };
-var makeObb = (cx, cy, a, b, rot = 0) => ({ cx: +cx, cy: +cy, a: +a, b: +b, rot: +rot });
+var makeObb = (cx, cy, a, b, rot2 = 0) => ({ cx: +cx, cy: +cy, a: +a, b: +b, rot: +rot2 });
 function rotate(x, y, deg) {
   if (!deg) {
     return [x, y];
@@ -805,9 +805,9 @@ function slotPolygon(slot) {
   if (!length || !width2) {
     return null;
   }
-  const rot = (slot.rotation || 0) * Math.PI / 180;
-  const cos = Math.cos(rot);
-  const sin = Math.sin(rot);
+  const rot2 = (slot.rotation || 0) * Math.PI / 180;
+  const cos = Math.cos(rot2);
+  const sin = Math.sin(rot2);
   const cx = slot.x || 0;
   const cy = slot.y || 0;
   return [
@@ -946,16 +946,16 @@ function stateContexts(state) {
   const site = state.site || {};
   return addressContext((state.slots || []).map((s) => ({ ...s, uid: s.uid || s.id })), site.addr, site.depth_mode || "level");
 }
-function bayForward(rot) {
-  const r = (rot || 0) * Math.PI / 180;
+function bayForward(rot2) {
+  const r = (rot2 || 0) * Math.PI / 180;
   const cos = Math.cos(r);
   const sin = Math.sin(r);
   return Math.abs(cos) >= Math.abs(sin) ? cos > 0 : sin < 0;
 }
-function cellVals(ctx2, prefix, rot, raw, sizes) {
+function cellVals(ctx2, prefix, rot2, raw, sizes) {
   const addr = ctx2.addr;
   const row = ctx2.row;
-  const leftRight = bayForward(rot);
+  const leftRight = bayForward(rot2);
   let forward = leftRight;
   if (addr.row_mode === "snake" && row && row % 2 === 0) {
     forward = !forward;
@@ -1217,7 +1217,7 @@ function footprint(template, params) {
     }
   }
 }
-function slotObb(template, params, x, y, rot) {
+function slotObb(template, params, x, y, rot2) {
   const { l, w } = footprint(template, params);
   if (template === "zone") {
     const poly = normalizeParams(template, params).polygon;
@@ -1225,7 +1225,7 @@ function slotObb(template, params, x, y, rot) {
     const ys = poly.map((q) => q[1]);
     return makeObb((Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...ys) + Math.min(...ys)) / 2, l / 2, w / 2, 0);
   }
-  return makeObb(x, y, l / 2, w / 2, rot);
+  return makeObb(x, y, l / 2, w / 2, rot2);
 }
 var width = (count, digits = 2) => Math.max(digits, String(count).length);
 var zpad = (n, w) => String(n).padStart(w, "0");
@@ -1408,7 +1408,7 @@ function splitCells(cells, n) {
   }
   return out;
 }
-function addressedCells(template, p, prefix, rot, ctx2) {
+function addressedCells(template, p, prefix, rot2, ctx2) {
   let cells = rawCells(template, p, prefix);
   if (!ctx2) {
     return cells;
@@ -1428,11 +1428,11 @@ function addressedCells(template, p, prefix, rot, ctx2) {
   }
   const sizes = { sides: sidesOf(p), levels: LEVEL_KEYS[template] ? p[LEVEL_KEYS[template][0]] : 1, bays: p[BAY_KEYS[template]] };
   for (const c of cells) {
-    c.code = renderCode(addr, cellVals(ctx2, prefix, rot, { ...c, level: LEVEL_KEYS[template] ? c.level : null }, sizes));
+    c.code = renderCode(addr, cellVals(ctx2, prefix, rot2, { ...c, level: LEVEL_KEYS[template] ? c.level : null }, sizes));
   }
   return cells;
 }
-function generateCells(template, prefix, x, y, rot, params, overrides, elevation = 0, ctx2 = null) {
+function generateCells(template, prefix, x, y, rot2, params, overrides, elevation = 0, ctx2 = null) {
   const spec = SLOT_TEMPLATES[template];
   if (!spec || !spec.cells) {
     return [];
@@ -1440,12 +1440,12 @@ function generateCells(template, prefix, x, y, rot, params, overrides, elevation
   const p = normalizeParams(template, params);
   const ovs = overrides || {};
   const out = [];
-  for (const raw of addressedCells(template, p, prefix, rot, ctx2)) {
+  for (const raw of addressedCells(template, p, prefix, rot2, ctx2)) {
     const ov = ovs[raw.code] || {};
     if (ov.disabled) {
       continue;
     }
-    const [wx, wy] = rotate(raw.lx, raw.ly, rot);
+    const [wx, wy] = rotate(raw.lx, raw.ly, rot2);
     out.push({
       code: raw.code,
       name: ov.name || raw.code,
@@ -1458,7 +1458,7 @@ function generateCells(template, prefix, x, y, rot, params, overrides, elevation
       l: raw.l,
       w: raw.w,
       h: raw.h,
-      rot: Number(rot),
+      rot: Number(rot2),
       capacity: ov.capacity ?? raw.capacity,
       max_load_kg: ov.max_load_kg ?? raw.max_load_kg,
       kind: raw.kind
@@ -1783,6 +1783,8 @@ __export(state_exports, {
   recOfRef: () => recOfRef,
   reindex: () => reindex,
   resetState: () => resetState,
+  selKeys: () => selKeys,
+  selRefs: () => selRefs,
   snapStep: () => snapStep,
   snapV: () => snapV,
   variantOf: () => variantOf
@@ -1916,7 +1918,7 @@ function toast(msg, kind) {
 }
 
 // core/constructor/state.js
-var E = {};
+var E = { lifecycle: { mount: /* @__PURE__ */ new Set(), unmount: /* @__PURE__ */ new Set() } };
 var initialS = () => ({
   app: { sites: [], active: null, mode: "edit", viewAs: null },
   site: null,
@@ -1928,6 +1930,8 @@ var initialS = () => ({
   versions: [],
   rights: { is_manager: false, roles: [], editable_layer_ids: [], can_publish: false, can_edit_catalog: false },
   sel: null,
+  multi: [],
+  // мультивиділення (S3, F09-02): [{kind, id}] з ≥ 2 об'єктів; S.sel — основний (останній) серед них
   selCell: null,
   edit: null,
   issues: { list: [], byKey: /* @__PURE__ */ new Map() },
@@ -1937,8 +1941,16 @@ var initialS = () => ({
   sIdx: /* @__PURE__ */ new Map(),
   pIdx: /* @__PURE__ */ new Map(),
   changed: 0,
-  saveState: "saved"
+  saveState: "saved",
   // saved | saving | error
+  hist: { stack: [], idx: -1, cur: "", label: null, busy: false },
+  // скасування/повтор (S3, undo.js)
+  unsaved: /* @__PURE__ */ new Set(),
+  // ключі об'єктів, змінених після останнього збереження (N-05, «не збережено»)
+  stock: null,
+  // залишки по кодах для карти й картки (S3, stock_state.js): {at, demo, days, byCode: Map}
+  hl: null
+  // підсвічені комірки пошуку (S3): {kind, codes: Set}
 });
 var S = initialS();
 var initialV = () => ({
@@ -2004,6 +2016,19 @@ function reindex() {
   for (const p of S.placements) {
     S.pIdx.set(p.id, p);
   }
+  if (S.multi.length) {
+    S.multi = S.multi.filter((r) => (r.kind === "placement" ? S.pIdx : S.sIdx).has(r.id));
+    if (S.multi.length < 2) {
+      if (S.multi.length === 1 && !S.sel) {
+        S.sel = { ...S.multi[0] };
+      }
+      S.multi = [];
+    } else if (!S.sel) {
+      S.sel = { ...S.multi[S.multi.length - 1] };
+    } else if (!S.multi.some((r) => r.kind === S.sel.kind && r.id === S.sel.id)) {
+      S.multi = [];
+    }
+  }
 }
 var layerOf = (id) => S.lIdx.get(id);
 var variantOf = (id) => (S.vIdx.get(id) || {}).v;
@@ -2014,6 +2039,8 @@ var recOfRef = (ref2) => ref2.kind === "placement" ? S.pIdx.get(ref2.id) : S.sId
 var snapStep = (rec) => (layerOf(rec.layer_id) || { grid_step: 0.5 }).grid_step || 0.5;
 var snapV = (v, st) => rnd(Math.round(v / st) * st, 4);
 var isLayerVisible = (ly) => !V.hidden.has(ly.id);
+var selRefs = () => S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : [];
+var selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
 
 // core/constructor/roles.js
 var viewAs = () => S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null;
@@ -2250,6 +2277,132 @@ registries.dialogs.add("newSite", () => openNewSite(), { force: true });
 registries.dialogs.add("history", () => openHistory(), { force: true });
 registries.dialogs.add("serverIssues", ({ res }) => openServerIssues(res), { force: true });
 registries.dialogs.add("conflict", () => askConflict(), { force: true });
+
+// core/constructor/draft.js
+var DESIGN_ROLES = ["technologist", "storekeeper", "engineer"];
+var ACCESS_NAMES = { view: "Перегляд", design: "Проєктування", apply: "Застосування" };
+function access() {
+  const va = viewAs();
+  const mobile2 = !!E.isMobile?.();
+  const edit = S.app.mode === "edit" && !mobile2;
+  const isDesigner = va ? DESIGN_ROLES.includes(va) : !!S.rights.is_manager || (S.rights.roles || []).some((r) => DESIGN_ROLES.includes(r));
+  const design = edit && isDesigner;
+  const apply = !mobile2 && canPublish();
+  return { view: true, design, apply, level: apply ? "apply" : design ? "design" : "view", name: ACCESS_NAMES[apply ? "apply" : design ? "design" : "view"] };
+}
+function accessHint(need) {
+  if (E.isMobile?.()) {
+    return "У мобільному режимі доступні перегляд і пошук; правка вимкнена.";
+  }
+  if (S.app.mode !== "edit") {
+    return "Режим перегляду: увімкніть «Редагування».";
+  }
+  if (need === "apply") {
+    return "Застосування в Odoo доступне менеджеру в режимі редагування (група «Застосування»).";
+  }
+  return "Потрібен рівень «Проєктування»: технолог, комірник, інженер або менеджер.";
+}
+var strip = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
+var recJson = (r) => JSON.stringify(r, strip);
+var keyed = () => [...S.layers.map((l) => ["l:" + l.id, l]), ...S.slots.map((s) => ["s:" + s.id, s]), ...S.placements.map((p) => ["p:" + p.id, p])];
+var saved = /* @__PURE__ */ new Map();
+function markSaved() {
+  saved = new Map(keyed().map(([k, r]) => [k, recJson(r)]));
+  if (S.unsaved.size) {
+    S.unsaved = /* @__PURE__ */ new Set();
+    E.updateVisual?.();
+  }
+  E.renderMenu?.();
+}
+function refreshUnsaved() {
+  const next = /* @__PURE__ */ new Set();
+  for (const [k, r] of keyed()) {
+    if (saved.get(k) !== recJson(r)) {
+      next.add(k);
+    }
+  }
+  const old = S.unsaved;
+  if (next.size !== old.size || [...next].some((k) => !old.has(k))) {
+    S.unsaved = next;
+    E.updateVisual?.();
+    E.renderMenu?.();
+  }
+}
+function objStatus(kind, rec) {
+  const key = objKey(kind, rec.id);
+  if (S.unsaved.has(key)) {
+    return "unsaved";
+  }
+  if (rec.rid != null || E.adapter?.baseMap?.has?.(key)) {
+    return "odoo";
+  }
+  return "new";
+}
+var STATUS_LABELS = { unsaved: "не збережено", new: "нове · лише в моделі", odoo: "з Odoo" };
+async function saveAll() {
+  const r = await E.flushNow();
+  toast(r && r.ok === false ? "Не вдалося зберегти зміни." : "Усе збережено.", r && r.ok === false ? "err" : void 0);
+  markSaved();
+}
+async function resetToOdoo() {
+  const av = S.site?.active_version;
+  const ver = av && S.versions.find((v) => v.n === av.n);
+  if (!ver) {
+    toast("Немає опублікованої версії: нічого скидати.", "warn");
+    return;
+  }
+  const ok = await E.confirmBox({ title: "Скинути до даних Odoo?", text: `Чернетку буде повернуто до опублікованої версії v${ver.n}; усі незастосовані зміни втрачено.`, ok: "Скинути", danger: true });
+  if (ok) {
+    E.undoReset();
+    await E.restoreVersion(ver.id, ver.n);
+  }
+}
+registries.menu.add(
+  "saveAll",
+  { area: "top", label: "Зберегти все", icon: "check", sequence: 5, run: saveAll, disabled: () => !S.unsaved.size && S.saveState === "saved" },
+  { sequence: 5, force: true }
+);
+registries.menu.add(
+  "resetToOdoo",
+  { area: "more", label: "Скинути до даних Odoo", icon: "hist", sequence: 20, run: resetToOdoo, disabled: () => !access().design || !S.site?.active_version },
+  { sequence: 20, force: true }
+);
+function renderStatusBlock(root, { rec }) {
+  if (!rec || !S.sel) {
+    return;
+  }
+  const st = objStatus(S.sel.kind, rec);
+  const acc = access();
+  const btn = h("button", { class: "fbtn sm", type: "button", id: "btnSaveObj", "data-title": "Записати чергу змін у чернетку негайно", onclick: saveAll }, "Зберегти");
+  btn.disabled = st !== "unsaved" || !acc.design;
+  btn.title = !acc.design ? accessHint("design") : st === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
+  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st }, STATUS_LABELS[st]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn)));
+}
+registries.panels.add("right:status", { area: "right", render: renderStatusBlock }, { sequence: 80, force: true });
+function openHotkeys() {
+  const rows = registries.hotkeys.getEntries().filter(([, hk2]) => hk2.label);
+  const base = [
+    ["Esc", "скасувати режим / зняти вибір"],
+    ["R", "поворот на 90° (Shift — у інший бік)"],
+    ["Del", "видалити виділене"],
+    ["←↑↓→", "зсунути на крок сітки (Shift — на 10)"],
+    ["M", "лінійка"],
+    ["Alt", "без прив’язки до сітки при перетягуванні"]
+  ];
+  const extra = rows.map(([, hk2]) => {
+    const [k, ...rest] = hk2.label.split(" — ");
+    return [k, rest.join(" — ")];
+  });
+  openDialog({
+    title: "Гарячі клавіші",
+    cls: "narrow",
+    body: h("table", { class: "tbl", id: "hotkeysTable" }, h("tbody", null, K([...base, ...extra].map(([k, d]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, d)))))),
+    actions: [{ label: "Закрити" }]
+  });
+}
+registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
+registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
+Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus });
 
 // core/constructor/dxf.js
 var dxf_exports = {};
@@ -2527,9 +2680,9 @@ function parseDxf(text, Parser = window.DxfParser) {
         }
         const sx = e.xScale == null ? 1 : e.xScale;
         const sy = e.yScale == null ? 1 : e.yScale;
-        const rot = rad(e.rotation || 0);
-        const c = Math.cos(rot);
-        const s = Math.sin(rot);
+        const rot2 = rad(e.rotation || 0);
+        const c = Math.cos(rot2);
+        const s = Math.sin(rot2);
         const bp = b.position || { x: 0, y: 0 };
         const p0 = e.position || { x: 0, y: 0 };
         const T2 = (x, y) => {
@@ -3237,14 +3390,14 @@ function slotDims(s) {
   return { L: f.l, W: f.w, H };
 }
 function pGeom(pl, v) {
-  const rot = pl.rotation || 0;
-  const body = placementObb(v, pl.x, pl.y, rot);
-  const svc = serviceObb(v, pl.x, pl.y, rot);
-  const g2 = { cx: body.cx, cy: body.cy, L: v.length / 1e3, W: v.width / 1e3, a: rot, body, svc: null };
+  const rot2 = pl.rotation || 0;
+  const body = placementObb(v, pl.x, pl.y, rot2);
+  const svc = serviceObb(v, pl.x, pl.y, rot2);
+  const g2 = { cx: body.cx, cy: body.cy, L: v.length / 1e3, W: v.width / 1e3, a: rot2, body, svc: null };
   g2.poly = obbCorners(body);
   g2.box = obbAabb(body);
   if (svc) {
-    const [ox, oy] = rotate(svc.cx - body.cx, svc.cy - body.cy, -rot);
+    const [ox, oy] = rotate(svc.cx - body.cx, svc.cy - body.cy, -rot2);
     Object.assign(g2, { shx: svc.a, shy: svc.b, sox: ox, soy: oy, svc: obbCorners(svc) });
   }
   return g2;
@@ -3594,7 +3747,7 @@ function renderLayerForm() {
   }
   const dis = !canManage();
   const disC = !canEditLayer(ly);
-  const num3 = (label, key, unit, o) => fld(label, numInput(Object.assign({ value: ly[key], dis, label, set: (v) => layerEdit(() => {
+  const num4 = (label, key, unit, o) => fld(label, numInput(Object.assign({ value: ly[key], dis, label, set: (v) => layerEdit(() => {
     ly[key] = v;
   }) }, o)), unit);
   const frag = [];
@@ -3616,9 +3769,9 @@ function renderLayerForm() {
         fld("Тип", selectEl(Object.entries(LAYER_KINDS), ly.kind, (v) => layerEdit(() => {
           ly.kind = v;
         }), dis, "Тип")),
-        num3("Відмітка", "elevation", "м", { step: 0.1 })
+        num4("Відмітка", "elevation", "м", { step: 0.1 })
       ),
-      h("div", { class: "grid3" }, num3("Крок сітки", "grid_step", "м", { step: 0.05, min: 0.05 }), num3("Ширина проходів", "aisle_width", "м", { step: 0.1, min: 0 }), num3("Навант. на підлогу", "max_floor_load", "кН/м²", { step: 1, min: 0 })),
+      h("div", { class: "grid3" }, num4("Крок сітки", "grid_step", "м", { step: 0.05, min: 0.05 }), num4("Ширина проходів", "aisle_width", "м", { step: 0.1, min: 0 }), num4("Навант. на підлогу", "max_floor_load", "кН/м²", { step: 1, min: 0 })),
       h(
         "div",
         { class: "frow" },
@@ -4856,7 +5009,9 @@ __export(scene_exports, {
   lineGeo: () => lineGeo,
   pickCandidates: () => pickCandidates,
   poseView: () => poseView,
+  recolorCells: () => recolorCells,
   recolorMats: () => recolorMats,
+  refsInRect: () => refsInRect,
   requestRender: () => requestRender,
   resizeScene: () => resizeScene,
   rulerClear: () => rulerClear,
@@ -4918,7 +5073,11 @@ function readColors() {
     accent: g2("--accent"),
     warn: g2("--warn"),
     block: g2("--block"),
-    ink: g2("--ink")
+    ink: g2("--ink"),
+    unsaved: "#12a5a0",
+    // бірюзовий «не збережено» (N-05)
+    hl: "#f2c200"
+    // підсвітка результатів пошуку (F06-02)
   };
 }
 function initMats() {
@@ -4932,7 +5091,7 @@ function initMats() {
   M.edge = th(new THREE.LineBasicMaterial({ color: C.stroke, transparent: true, opacity: 0.85 }), "stroke");
   M.edgeGhost = th(new THREE.LineBasicMaterial({ color: C.stroke, transparent: true, opacity: 0.22 }), "stroke");
   const dash = (k, o, ds, gs) => th(new THREE.LineDashedMaterial({ color: C[k], dashSize: ds || 0.4, gapSize: gs || 0.22, transparent: true, opacity: o || 0.95 }), k);
-  M.dash = { normal: dash("stroke", 0.85), sel: dash("accent"), warn: dash("warn"), block: dash("block") };
+  M.dash = { normal: dash("stroke", 0.85), sel: dash("accent"), warn: dash("warn"), block: dash("block"), unsaved: dash("unsaved") };
   M.dashGhost = dash("stroke", 0.28);
   M.svc = dash("accent", 0.7, 0.18, 0.16);
   M.sel = th(new THREE.LineBasicMaterial({ color: C.accent }), "accent");
@@ -5451,6 +5610,9 @@ function cellColor(c, s, ly, sel) {
   if (sel) {
     return new THREE.Color(V.col.accent);
   }
+  if (S.hl && S.hl.codes.has(c.code)) {
+    return new THREE.Color(V.col.hl);
+  }
   const metric = S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
   const mc = metric && metric.color ? metric.color(c, s, ly) : null;
   if (mc) {
@@ -5900,17 +6062,27 @@ function syncScene(force) {
   syncUnderlays();
   updateVisual();
 }
+var colorSig = () => `${S.ui.metric || ""}|${S.hl ? S.hl.rev || S.hl.codes.size : 0}|${S.stock ? S.stock.rev || 0 : 0}`;
+function recolorCells() {
+  V.colorSig = null;
+  updateVisual();
+}
 function updateVisual() {
   if (!V.ok) {
     return;
   }
+  const keys = selKeys();
   const selKey = S.sel ? objKey(S.sel.kind, S.sel.id) : null;
+  const sig = colorSig();
+  const recolor = V.colorSig !== sig;
+  V.colorSig = sig;
   for (const [key, v] of V.views) {
     const st = S.issues.byKey.get(key);
     const lvl = st ? st.level : "normal";
-    const isSel = key === selKey;
+    const isSel = keys.has(key);
+    const unsaved = S.unsaved.has(key);
     if (v.foot) {
-      v.foot.material = v.ghost ? V.mat.dashGhost : V.mat.dash[lvl] || V.mat.dash.normal;
+      v.foot.material = v.ghost ? V.mat.dashGhost : lvl === "normal" && unsaved ? V.mat.dash.unsaved : V.mat.dash[lvl] || V.mat.dash.normal;
     }
     if (v.fill) {
       v.fill.visible = !v.ghost && (lvl !== "normal" || isSel);
@@ -5920,8 +6092,8 @@ function updateVisual() {
       v.sel.visible = isSel;
     }
     if (v.cells) {
-      const want = isSel ? S.selCell || "" : "";
-      if ((v.selCode || "") !== want) {
+      const want = key === selKey ? S.selCell || "" : "";
+      if (recolor || (v.selCode || "") !== want) {
         colorCells(v, want || null);
       }
     }
@@ -6114,6 +6286,7 @@ function initPointer() {
     pointermove: onMove,
     pointerup: onUp,
     pointercancel: onUp,
+    pointerleave: () => E.hideTip?.(),
     contextmenu: (e) => e.preventDefault(),
     dragover: (e) => {
       if ([...e.dataTransfer.types].includes("text/f3d-variant")) {
@@ -6169,12 +6342,26 @@ function onDown(e) {
   }
   const hit = pickAt(e);
   V.bg = null;
+  const additive = e.ctrlKey || e.metaKey;
+  if (e.shiftKey && V.camMode === "plan" && e.pointerType !== "touch") {
+    startBox(e, hit, additive);
+    return;
+  }
   if (!hit) {
     V.bg = { x: e.clientX, y: e.clientY };
     return;
   }
-  E.selectObj(hit.ref);
-  if (hit.view.cells) {
+  if (additive) {
+    E.toggleMulti(hit.ref);
+    return;
+  }
+  const inMulti = S.multi.length > 1 && S.multi.some((r) => r.kind === hit.ref.kind && r.id === hit.ref.id);
+  if (inMulti) {
+    S.sel = { kind: hit.ref.kind, id: hit.ref.id };
+  } else {
+    E.selectObj(hit.ref);
+  }
+  if (hit.view.cells && !inMulti) {
     const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
     if (ci && ci.instanceId != null && hit.view.cellList[ci.instanceId]) {
       S.selCell = hit.view.cellList[ci.instanceId].code;
@@ -6184,6 +6371,7 @@ function onDown(e) {
       if (tr) {
         tr.scrollIntoView({ block: "nearest" });
       }
+      E.cellPicked?.(hit.ref.id, S.selCell, e);
     }
   }
   const rec = recOfRef(hit.ref);
@@ -6205,12 +6393,24 @@ function onDown(e) {
   if (!pt) {
     return;
   }
+  let group = null;
+  if (inMulti) {
+    group = [];
+    for (const r of S.multi) {
+      const rr = recOfRef(r);
+      if (!rr || !canEditLayer(layerOf(rr.layer_id)) || rr.locked) {
+        toast(rr && !canEditLayer(layerOf(rr.layer_id)) ? lockHint(layerOf(rr.layer_id)) : "Складний контур зони редагується у формі Odoo.", "warn");
+        return;
+      }
+      group.push({ ref: r, rec: rr, key: objKey(r.kind, r.id), start: { x: rr.x, y: rr.y } });
+    }
+  }
   V.controls.enabled = false;
   try {
     V.canvas.setPointerCapture(e.pointerId);
   } catch {
   }
-  V.drag = { ref: hit.ref, rec, key: objKey(hit.ref.kind, hit.ref.id), start: { x: rec.x, y: rec.y }, pt0: pt, moved: false, sx: e.clientX, sy: e.clientY, before: S.issues, elev: lyr.elevation };
+  V.drag = { ref: hit.ref, rec, key: objKey(hit.ref.kind, hit.ref.id), start: { x: rec.x, y: rec.y }, pt0: pt, moved: false, sx: e.clientX, sy: e.clientY, before: S.issues, elev: lyr.elevation, group };
 }
 function onMove(e) {
   const ly = layerOf(S.ui.layer);
@@ -6222,6 +6422,10 @@ function onMove(e) {
   }
   if (V.placing) {
     movePlacing(e);
+    return;
+  }
+  if (V.box) {
+    moveBox(e);
     return;
   }
   if (!V.drag && !V.hoverRaf) {
@@ -6249,23 +6453,49 @@ function onMove(e) {
   if (view) {
     poseView(view, d.rec);
   }
+  if (d.group) {
+    const ddx = d.rec.x - d.start.x;
+    const ddy = d.rec.y - d.start.y;
+    for (const it of d.group) {
+      if (it.rec === d.rec) {
+        continue;
+      }
+      it.rec.x = rnd(it.start.x + ddx, 4);
+      it.rec.y = rnd(it.start.y + ddy, 4);
+      const v2 = V.views.get(it.key);
+      if (v2) {
+        poseView(v2, it.rec);
+      }
+    }
+  }
   rafLive();
 }
 function hoverAt(e) {
-  if (!V.canvas || V.drag || V.placing || V.ruler.on || V.pickMode) {
+  if (!V.canvas || V.drag || V.box || V.placing || V.ruler.on || V.pickMode) {
     return;
   }
   const hit = pickAt(e);
+  let cell = null;
+  if (hit && hit.view.cells) {
+    const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
+    cell = ci && ci.instanceId != null ? hit.view.cellList[ci.instanceId] || null : null;
+  }
   const key = hit ? objKey(hit.ref.kind, hit.ref.id) : null;
-  if (key === V.hoverKey) {
+  const hk2 = key ? key + "|" + (cell ? cell.code : "") : null;
+  if (hk2 === V.hoverKey) {
     return;
   }
-  V.hoverKey = key;
+  V.hoverKey = hk2;
   const rec = hit && recOfRef(hit.ref);
   V.canvas.style.cursor = hit ? canEditLayer(layerOf(rec.layer_id)) ? "move" : "pointer" : "";
   const el = $("#hoverName");
   if (el) {
     el.textContent = rec ? (rec.code || rec.code_prefix) + (rec.name ? " · " + rec.name : rec.params && rec.params.title ? " · " + rec.params.title : "") : "—";
+  }
+  if (rec) {
+    E.showTip?.({ x: e.clientX, y: e.clientY, rec, kind: hit.ref.kind, cell });
+  } else {
+    E.hideTip?.();
   }
 }
 function onUp(e) {
@@ -6280,6 +6510,10 @@ function onUp(e) {
       movePlacing(e);
       placeClick(e.shiftKey);
     }
+    return;
+  }
+  if (V.box) {
+    finishBox(e);
     return;
   }
   const d = V.drag;
@@ -6305,36 +6539,110 @@ function liveCheck() {
   E.renderChecksBlock();
 }
 function finishMove(d) {
+  const items = d.group || [d];
   const after = runLive();
-  const nb = newBlocks(d.before, after, d.key);
+  const nb = items.flatMap((it) => newBlocks(d.before, after, it.key));
   if (nb.length) {
-    d.rec.x = d.start.x;
-    d.rec.y = d.start.y;
-    const view = V.views.get(d.key);
-    if (view) {
-      poseView(view, d.rec);
+    for (const it of items) {
+      it.rec.x = it.start.x;
+      it.rec.y = it.start.y;
+      const view = V.views.get(it.key);
+      if (view) {
+        poseView(view, it.rec);
+      }
     }
     S.issues = runLive();
     updateVisual();
     E.syncPropsValues();
     E.renderChecksBlock();
-    toast("Заблоковано: " + nb[0].msg + ". Об’єкт повернуто на місце.", "err");
+    toast("Заблоковано: " + nb[0].msg + (items.length > 1 ? ". Групу повернуто на місце." : ". Об’єкт повернуто на місце."), "err");
     return;
   }
-  if (d.ref.kind === "placement") {
-    assignSlot(d.rec);
+  for (const it of items) {
+    if (it.ref.kind === "placement") {
+      assignSlot(it.rec);
+    }
   }
-  const st0 = d.start;
-  if (st0.x !== d.rec.x || st0.y !== d.rec.y) {
+  if (items.some((it) => it.start.x !== it.rec.x || it.start.y !== it.rec.y)) {
     E.commit({});
   } else {
     S.issues = after;
     updateVisual();
   }
-  const first = S.issues.byKey.get(d.key);
-  if (first && first.level !== "block") {
+  const first = items.map((it) => S.issues.byKey.get(it.key)).find((st) => st && st.level !== "block");
+  if (first) {
     toast(first.items[0].msg, "warn");
   }
+}
+function startBox(e, hit, add) {
+  V.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, add, moved: false, hit };
+  V.controls.enabled = false;
+  try {
+    V.canvas.setPointerCapture(e.pointerId);
+  } catch {
+  }
+}
+function moveBox(e) {
+  const b = V.box;
+  b.x1 = e.clientX;
+  b.y1 = e.clientY;
+  if (!b.moved && Math.hypot(b.x1 - b.x0, b.y1 - b.y0) < 5) {
+    return;
+  }
+  b.moved = true;
+  if (!b.el) {
+    b.el = h("div", { class: "s3-box", style: { position: "absolute", pointerEvents: "none", border: "1px dashed var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)", zIndex: "3" } });
+    $("#vp").append(b.el);
+  }
+  const r = $("#vp").getBoundingClientRect();
+  Object.assign(b.el.style, { left: Math.min(b.x0, b.x1) - r.left + "px", top: Math.min(b.y0, b.y1) - r.top + "px", width: Math.abs(b.x1 - b.x0) + "px", height: Math.abs(b.y1 - b.y0) + "px" });
+}
+function refsInRect(rect2) {
+  const cv = V.canvas.getBoundingClientRect();
+  const out = [];
+  const q = new THREE.Vector3();
+  for (const v of V.views.values()) {
+    if (v.layerId !== S.ui.layer || !v.g || !v.g.poly) {
+      continue;
+    }
+    const ly = layerOf(v.layerId);
+    if (!ly || !isLayerVisible(ly) || OVERLAY_KINDS.includes(ly.kind) || v.tpl === "building") {
+      continue;
+    }
+    const el = ly.elevation || 0;
+    const inside = v.g.poly.every(([px, py]) => {
+      q.set(px, el, -py).project(V.camera);
+      const cx = cv.left + (q.x + 1) / 2 * cv.width;
+      const cy = cv.top + (1 - q.y) / 2 * cv.height;
+      return cx >= rect2.x0 && cx <= rect2.x1 && cy >= rect2.y0 && cy <= rect2.y1;
+    });
+    if (inside) {
+      out.push({ kind: v.kind, id: v.id });
+    }
+  }
+  return out;
+}
+function finishBox(e) {
+  const b = V.box;
+  V.box = null;
+  V.controls.enabled = true;
+  if (b.el) {
+    b.el.remove();
+  }
+  if (!b.moved) {
+    if (b.hit) {
+      if (b.add) {
+        E.toggleMulti(b.hit.ref);
+      } else {
+        E.selectObj(b.hit.ref);
+      }
+    } else if (!b.add) {
+      E.selectObj(null);
+    }
+    return;
+  }
+  const rect2 = { x0: Math.min(b.x0, b.x1), y0: Math.min(b.y0, b.y1), x1: Math.max(b.x0, b.x1), y1: Math.max(b.y0, b.y1) };
+  E.boxSelect(refsInRect(rect2), b.add);
 }
 function assignSlot(pl) {
   const v = variantOf(pl.variant_id);
@@ -6478,6 +6786,7 @@ Object.assign(E, {
   camTarget,
   syncScene,
   updateVisual,
+  recolorCells,
   rulerClear,
   rulerPoint,
   syncUnderlays,
@@ -6514,6 +6823,8 @@ var syncNow = () => {
   if (!ctx || !S.site) {
     return;
   }
+  E.undoRecord?.();
+  E.refreshUnsaved?.();
   ctx.adapter.save(S);
 };
 var scheduleSave = debounce(syncNow, 150);
@@ -6545,7 +6856,10 @@ var saveSiteProps = debounce(async () => {
     toast("Не вдалося зберегти параметри площадки: " + (e.data?.message || e.message || e), "err");
   }
 }, 700);
-function commit() {
+function commit(o) {
+  if (o && o.label) {
+    E.undoLabel?.(o.label);
+  }
   reindex();
   S.issues = runLive();
   E.syncScene();
@@ -6569,6 +6883,8 @@ function applyLoaded(st, keep) {
   ctx.adapter.autosaveMs = st.site.settings?.autosave_ms ?? 1500;
   reindex();
   S.sel = keep?.sel && (keep.sel.kind === "slot" ? S.sIdx : S.pIdx).has(keep.sel.id) ? keep.sel : null;
+  S.multi = [];
+  S.hl = null;
   S.selCell = null;
   S.edit = null;
   if (!keep) {
@@ -6579,6 +6895,15 @@ function applyLoaded(st, keep) {
   S.ui.dxfScale = null;
   V.models.clear();
   S.issues = runLive();
+  if (!keep) {
+    S.stock = null;
+  }
+  if (keep) {
+    E.undoRebase?.();
+  } else {
+    E.undoReset?.();
+  }
+  E.markSaved?.();
 }
 async function afterSiteLoad(keep) {
   E.renderAll();
@@ -6639,6 +6964,7 @@ async function restoreVersion(versionId, n) {
   try {
     const res = await ctx.adapter.restoreVersion(versionId);
     await openSite(res.site_id || S.site.id, { sel: null, layer: S.ui.layer });
+    E.undoReset?.();
     toast(`Чернетку повернуто до версії ${n}.`);
   } catch (e) {
     toast(e.message || "Не вдалося повернути чернетку.", "err");
@@ -6646,7 +6972,13 @@ async function restoreVersion(versionId, n) {
 }
 async function publish() {
   try {
-    await ctx.adapter.publish({ onClose: () => reload(), state: S });
+    await ctx.adapter.publish({
+      onClose: () => {
+        E.undoReset?.();
+        return reload();
+      },
+      state: S
+    });
   } catch (e) {
     toast(e.message || "Не вдалося підготувати публікацію.", "err");
   }
@@ -6781,25 +7113,25 @@ function onKey(e) {
   if ($("dialog[open]") || document.querySelector(".modal.show, .o_dialog")) {
     return;
   }
-  for (const [key, hk] of registries.hotkeys.getEntries()) {
-    if (typing && !hk.typing) {
+  for (const [key, hk2] of registries.hotkeys.getEntries()) {
+    if (typing && !hk2.typing) {
       continue;
     }
-    if ((e.ctrlKey || e.metaKey) && !hk.ctrl) {
+    if ((e.ctrlKey || e.metaKey) && !hk2.ctrl) {
       continue;
     }
-    if (e.altKey && !hk.alt) {
+    if (e.altKey && !hk2.alt) {
       continue;
     }
-    if (hk.ctrl && !(e.ctrlKey || e.metaKey)) {
+    if (hk2.ctrl && !(e.ctrlKey || e.metaKey)) {
       continue;
     }
-    const hit = hk.match ? hk.match(e) : (hk.code ? e.code === hk.code : e.key === hk.key) && (hk.shift == null || hk.shift === e.shiftKey);
-    if (!hit || hk.when && !hk.when(e)) {
+    const hit = hk2.match ? hk2.match(e) : (hk2.code ? e.code === hk2.code : e.key === hk2.key) && (hk2.shift == null || hk2.shift === e.shiftKey);
+    if (!hit || hk2.when && !hk2.when(e)) {
       continue;
     }
     try {
-      if (hk.run(e) !== false) {
+      if (hk2.run(e) !== false) {
         return;
       }
     } catch (err) {
@@ -6808,7 +7140,7 @@ function onKey(e) {
   }
 }
 function registerBuiltinHotkeys() {
-  const add = (key, hk, sequence) => registries.hotkeys.add(key, hk, { sequence, force: true });
+  const add = (key, hk2, sequence) => registries.hotkeys.add(key, hk2, { sequence, force: true });
   add(
     "escape",
     {
@@ -6868,6 +7200,9 @@ function wireAdapter(store) {
       return;
     }
     S.saveState = status;
+    if (status === "saved") {
+      E.markSaved?.();
+    }
     E.renderSaveState();
   };
   store.onSaved = (r) => {
@@ -6891,6 +7226,7 @@ function wireAdapter(store) {
   store.onReject = (r) => toast(r.message || "Сервер відхилив зміну.", "err");
   store.onReload = () => {
     if (ctx && S.site) {
+      E.undoReset?.();
       syncNow();
       ctx.adapter.flush().then(() => ctx && reload());
     }
@@ -6943,6 +7279,13 @@ async function mountEditor(rootEl, { adapter, store, host: hostSvc, services, si
   const entry = S.app.sites.find((s) => String(s.id) === String(want)) || S.app.sites[0];
   E.initScene();
   await openSite(entry.id);
+  for (const fn of E.lifecycle.mount) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("mount hook:", e);
+    }
+  }
   rootEl.dataset.ready = "1";
 }
 function unmountEditor() {
@@ -6963,6 +7306,13 @@ function unmountEditor() {
     target.removeEventListener(type, fn);
   }
   E.cancelModes?.();
+  for (const fn of E.lifecycle.unmount) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("unmount hook:", e);
+    }
+  }
   E.disposeScene?.();
   ctx = null;
   if (ROOT.el) {
@@ -7029,8 +7379,8 @@ function polygonToRect(poly) {
     rot: (Math.atan2(ey, ex) * 180 / Math.PI + 360) % 360
   };
 }
-function rectToPolygon(cx, cy, l, w, rot) {
-  const r = rot * Math.PI / 180;
+function rectToPolygon(cx, cy, l, w, rot2) {
+  const r = rot2 * Math.PI / 180;
   const c = Math.cos(r);
   const s = Math.sin(r);
   return [
@@ -7329,6 +7679,7 @@ var OdooAdapter = class extends BaseAdapter {
     super(o);
     this.kind = "odoo";
     this.capabilities = { publish: true, check: true, library: true, ...o.capabilities || {} };
+    Object.assign(this.capabilities, { stock: true, render: true, ...o.capabilities || {} });
     this.serverRenumber = true;
     this.rpc = o.rpc;
     this.orm = o.orm;
@@ -7624,7 +7975,7 @@ var OdooAdapter = class extends BaseAdapter {
   }
   async _flushLoop() {
     const result = { ok: true, rejected: [], reload: false };
-    for (let guard = 0; guard < 100 && this.pending.size; guard++) {
+    for (let guard2 = 0; guard2 < 100 && this.pending.size; guard2++) {
       const batch = this._takeBatch();
       if (!batch.length) {
         break;
@@ -7796,6 +8147,33 @@ var OdooAdapter = class extends BaseAdapter {
    */
   async library(req) {
     const res = await this._call("/f3d/constructor/library", req);
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /**
+   * Залишки по кодах (API-13 `/stock/state`, S3): `{codes?, days?, detail?}` → {at, days, demo: false, truncated, codes: {код: {qty, reserved, fill,
+   * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки.
+   */
+  async stock({ codes = null, days = null, detail = false } = {}) {
+    const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Пошук «де лежить» (API-14 `/stock/find`): `{q, mode}` → {hits: [{code, items: [{product, ref, qty, lot, package}]}]}. */
+  async find({ q, mode = "any" } = {}) {
+    const res = await this._call("/f3d/constructor/stock/find", { site_id: this.siteId, q, mode });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Файл від сервера (API-19): `kind` — labels_pdf | table_xlsx | plan_pdf | spec_pdf → {filename, mimetype, content (base64)}. */
+  async render(kind, payload) {
+    const res = await this._call(`/f3d/constructor/render/${kind}`, { site_id: this.siteId, ...payload });
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
@@ -8487,7 +8865,7 @@ function renderSlotBlock(root, { rec }) {
     }
   }
   const addressed = !!contextOf(rec);
-  const num3 = addressed && !zone2 ? rowNumberOf(rec) : null;
+  const num4 = addressed && !zone2 ? rowNumberOf(rec) : null;
   const codes = zone2 ? [] : cellsOf(rec).map((c) => c.code);
   root.append(
     ...K(
@@ -8495,7 +8873,7 @@ function renderSlotBlock(root, { rec }) {
         "div",
         { class: "sec", id: "addrSlot" },
         h("h3", null, "Адресація"),
-        num3 != null ? h("div", { class: "small muted", "data-role": "addr-row-no" }, `Номер ${rec.template === "floor_spot" ? "місця" : "ряду"}: ${num3}`) : null,
+        num4 != null ? h("div", { class: "small muted", "data-role": "addr-row-no" }, `Номер ${rec.template === "floor_spot" ? "місця" : "ряду"}: ${num4}`) : null,
         codes.length ? h("div", { class: "small", "data-role": "addr-slot-codes" }, `Коди: ${codes.slice(0, 3).join(", ")}${codes.length > 3 ? ` … ${codes[codes.length - 1]}` : ""}`) : null,
         h(
           "div",
@@ -9681,7 +10059,7 @@ async function openLibrary(adapter) {
     toast(e.message || "Не вдалося прочитати бібліотеку.", "warn");
   }
   const body = h("div", { class: "fcol", id: "libraryBody" });
-  const guard = async (fn) => {
+  const guard2 = async (fn) => {
     try {
       await fn();
     } catch (e) {
@@ -9703,7 +10081,7 @@ async function openLibrary(adapter) {
           if (!draft.name.trim()) {
             return false;
           }
-          await guard(() => saveRecord(adapter, "preset", { name: draft.name.trim() }, p.id));
+          await guard2(() => saveRecord(adapter, "preset", { name: draft.name.trim() }, p.id));
           return true;
         } }
       ]
@@ -9726,7 +10104,7 @@ async function openLibrary(adapter) {
             h("span", { class: "t" }, p.name),
             h("span", { class: "tag" }, PRESET_KINDS[p.kind] || p.kind),
             h("button", { class: "fbtn sm icon", type: "button", title: "Перейменувати", "aria-label": "Перейменувати шаблон", disabled: !canW, onclick: () => rename(p) }, "✎"),
-            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити шаблон", disabled: !canD, onclick: () => guard(() => deleteRecord(adapter, "preset", p.id)) }, ic("trash"))
+            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити шаблон", disabled: !canD, onclick: () => guard2(() => deleteRecord(adapter, "preset", p.id)) }, ic("trash"))
           ))
         ) : h("div", { class: "empty" }, "Шаблонів ще немає: збережіть ряд чи секцію («Зберегти як шаблон» у властивостях місця)."),
         h("h3", { class: "h3" }, `Власні типи · ${customTypes.length}`),
@@ -9739,7 +10117,7 @@ async function openLibrary(adapter) {
             h("span", { class: "t" }, t.name),
             h("span", { class: "tag" }, SLOT_TEMPLATES[t.template] ? SLOT_TEMPLATES[t.template].label.split(" ")[0] : "тип"),
             h("button", { class: "fbtn sm icon", type: "button", title: "Відкрити в каталозі", "aria-label": "Відкрити в каталозі", onclick: () => E.runDialog("catalog", { code: t.code }) }, ic("plus")),
-            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити тип", disabled: !canD, onclick: () => guard(() => deleteRecord(adapter, "type", t.id)) }, ic("trash"))
+            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити тип", disabled: !canD, onclick: () => guard2(() => deleteRecord(adapter, "type", t.id)) }, ic("trash"))
           ))
         ) : h("div", { class: "empty" }, "Власних типів немає: «У бібліотеку» в каталозі типів робить копію типу."),
         h("div", { class: "small muted" }, "Бібліотека спільна для всіх проєктів компанії; правка типу чи шаблону в проєкті бібліотеку не змінює.")
@@ -9777,6 +10155,2934 @@ function renderPresetBlock(root, { rec }) {
   );
 }
 registries.panels.add("slot:presets", { area: "slot", render: renderPresetBlock }, { sequence: 35, force: true });
+
+// core/constructor/undo.js
+var KINDS = ["layers", "slots", "placements"];
+var MAX_STEPS = 100;
+var MAX_CHARS = 3e7;
+var COALESCE_MS = 1200;
+var strip2 = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
+var siteVals = () => ({ addr: S.site?.addr ?? null, depth_mode: S.site?.depth_mode ?? null, loc_tree: S.site?.loc_tree ?? null });
+var snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, site: siteVals() }, strip2);
+var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function changedFields(a, b) {
+  const out = [];
+  for (const k of /* @__PURE__ */ new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (same2(a[k], b[k])) {
+      continue;
+    }
+    if ((k === "params" || k === "overrides") && a[k] && b[k] && typeof a[k] === "object" && typeof b[k] === "object") {
+      for (const kk of /* @__PURE__ */ new Set([...Object.keys(a[k]), ...Object.keys(b[k])])) {
+        if (!same2(a[k][kk], b[k][kk])) {
+          out.push(`${k}.${kk}`);
+        }
+      }
+    } else {
+      out.push(k);
+    }
+  }
+  return out;
+}
+function diffSnapshots(a, b) {
+  const out = { added: [], removed: [], changed: [], site: !same2(a.site, b.site) };
+  for (const kind of KINDS) {
+    const ma = new Map(a[kind].map((r) => [r.id, r]));
+    const mb = new Map(b[kind].map((r) => [r.id, r]));
+    for (const [id, r] of mb) {
+      if (!ma.has(id)) {
+        out.added.push({ kind, id, rec: r });
+      } else {
+        const fields = changedFields(ma.get(id), r);
+        if (fields.length) {
+          out.changed.push({ kind, id, rec: r, fields });
+        }
+      }
+    }
+    for (const [id, r] of ma) {
+      if (!mb.has(id)) {
+        out.removed.push({ kind, id, rec: r });
+      }
+    }
+  }
+  return out;
+}
+var nameOf = (e) => (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+var MOVE = ["x", "y"];
+function labelOf(d) {
+  const n = d.added.length + d.removed.length + d.changed.length;
+  if (!n && d.site) {
+    return "Адресація площадки";
+  }
+  if (d.added.length && !d.removed.length && !d.changed.length) {
+    return d.added.length === 1 ? `Додано: ${nameOf(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
+  }
+  if (d.removed.length && !d.added.length && !d.changed.length) {
+    return d.removed.length === 1 ? `Видалено: ${nameOf(d.removed[0])}` : `Видалено об’єктів: ${d.removed.length}`;
+  }
+  if (d.changed.length && !d.added.length && !d.removed.length) {
+    const all = (set) => d.changed.every((c) => c.fields.every((f) => set.includes(f)));
+    const one = d.changed.length === 1;
+    const nm = one ? nameOf(d.changed[0]) : "";
+    if (all(MOVE)) {
+      return one ? `Переміщено: ${nm}` : `Переміщено об’єктів: ${d.changed.length}`;
+    }
+    if (all(["rotation"]) || all(["x", "y", "rotation"])) {
+      return one ? `Повернуто: ${nm}` : `Повернуто об’єктів: ${d.changed.length}`;
+    }
+    if (one && d.changed[0].fields.every((f) => f.startsWith("params.") || f.startsWith("overrides."))) {
+      return `Параметри: ${nm}`;
+    }
+    if (one && d.changed[0].fields.every((f) => f === "addr" || f === "depth_mode")) {
+      return `Адресація: ${nm}`;
+    }
+    return one ? `Зміна: ${nm}` : `Зміна об’єктів: ${d.changed.length}`;
+  }
+  return `Зміна: ${n} дій`;
+}
+function undoLabel(text) {
+  S.hist.label = text || null;
+}
+var trim = (H) => {
+  let total = H.stack.reduce((s, e) => s + e.data.length, 0);
+  while (H.stack.length > 1 && (H.stack.length > MAX_STEPS || total > MAX_CHARS)) {
+    total -= H.stack.shift().data.length;
+    H.idx--;
+  }
+};
+var notify = () => E.renderUndoButtons?.();
+function undoReset() {
+  const H = S.hist;
+  const data = S.site ? snapshot() : "";
+  H.stack = [{ data, label: "", at: 0, key: null }];
+  H.idx = 0;
+  H.cur = data;
+  H.label = null;
+  H.busy = false;
+  notify();
+}
+function undoRebase() {
+  const H = S.hist;
+  if (!H.stack.length || !S.site) {
+    return undoReset();
+  }
+  const data = snapshot();
+  H.stack.length = H.idx + 1;
+  H.stack[H.idx] = { ...H.stack[H.idx], data };
+  H.cur = data;
+  H.label = null;
+  notify();
+}
+function undoRecord() {
+  const H = S.hist;
+  if (!S.site || H.busy) {
+    return false;
+  }
+  const data = snapshot();
+  if (!H.stack.length) {
+    undoReset();
+    return false;
+  }
+  if (data === H.cur) {
+    return false;
+  }
+  const diff = diffSnapshots(JSON.parse(H.cur), JSON.parse(data));
+  const label = H.label || labelOf(diff);
+  H.label = null;
+  const one = diff.changed.length === 1 && !diff.added.length && !diff.removed.length && !diff.site ? diff.changed[0] : null;
+  const key = one ? `${one.kind}:${one.id}:${one.fields.join(",")}` : null;
+  H.stack.length = H.idx + 1;
+  const top = H.stack[H.idx];
+  const now = Date.now();
+  if (key && top && top.key === key && now - top.at < COALESCE_MS && H.idx > 0) {
+    top.data = data;
+    top.at = now;
+  } else {
+    H.stack.push({ data, label, at: now, key });
+    H.idx = H.stack.length - 1;
+    trim(H);
+  }
+  H.cur = data;
+  notify();
+  return true;
+}
+function undoState() {
+  const H = S.hist;
+  const hasRedo = H.idx >= 0 && H.idx < H.stack.length - 1;
+  return {
+    canUndo: H.idx > 0,
+    canRedo: hasRedo,
+    undoLabel: H.idx > 0 ? H.stack[H.idx].label : "",
+    redoLabel: hasRedo ? H.stack[H.idx + 1].label : ""
+  };
+}
+function restore(data, prevData) {
+  const next = JSON.parse(data);
+  const prev = JSON.parse(prevData);
+  const d = diffSnapshots(prev, next);
+  for (const kind of KINDS) {
+    const cur = new Map(S[kind].map((r) => [r.id, r]));
+    S[kind] = next[kind].map((r) => {
+      const c = cur.get(r.id);
+      r.rid = c ? c.rid ?? null : null;
+      r.etag = c ? c.etag ?? null : null;
+      return r;
+    });
+  }
+  if (d.site && S.site) {
+    Object.assign(S.site, next.site);
+  }
+  S.multi = [];
+  S.selCell = null;
+  S.edit = null;
+  reindex();
+  const touched = [...d.changed, ...d.added].filter((e) => e.kind !== "layers");
+  const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
+  S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
+  return { changedSite: d.site, site: next.site };
+}
+async function goto(i, verb) {
+  const H = S.hist;
+  const from = H.stack[H.idx];
+  const to = H.stack[i];
+  const label = i < H.idx ? from.label : to.label;
+  H.busy = true;
+  try {
+    if (E.adapter?.dirty) {
+      await E.flushNow();
+    }
+    const { changedSite, site } = restore(to.data, from.data);
+    H.idx = i;
+    E.commit({});
+    to.data = H.cur = snapshot();
+    if (changedSite && E.adapter?.saveAddr) {
+      await E.adapter.saveAddr(site, { renumber: "new" });
+      if (E.adapter.serverRenumber) {
+        await E.flushNow();
+        await E.reload();
+      }
+    }
+    toast(`${verb}: ${label}`);
+  } catch (e) {
+    toast(e.message || "Не вдалося виконати дію.", "err");
+  } finally {
+    H.busy = false;
+    notify();
+  }
+}
+var guard = () => {
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  return true;
+};
+async function undo() {
+  undoRecord();
+  const H = S.hist;
+  if (H.idx <= 0) {
+    toast("Немає що скасувати.");
+    return false;
+  }
+  if (!guard()) {
+    return false;
+  }
+  await goto(H.idx - 1, "Скасовано");
+  return true;
+}
+async function redo() {
+  undoRecord();
+  const H = S.hist;
+  if (H.idx < 0 || H.idx >= H.stack.length - 1) {
+    toast("Немає що повторити.");
+    return false;
+  }
+  if (!guard()) {
+    return false;
+  }
+  await goto(H.idx + 1, "Повторено");
+  return true;
+}
+Object.assign(E, { undo, redo, undoLabel, undoRecord, undoReset, undoRebase, undoState });
+var isZ = (e) => e.code === "KeyZ";
+registries.hotkeys.add("undo", { ctrl: true, label: "Ctrl+Z — скасувати", match: (e) => isZ(e) && !e.shiftKey && !e.altKey, run: (e) => (e.preventDefault(), void undo()) }, { sequence: 5, force: true });
+registries.hotkeys.add(
+  "redo",
+  { ctrl: true, label: "Ctrl+Shift+Z / Ctrl+Y — повторити", match: (e) => isZ(e) && e.shiftKey || e.code === "KeyY", run: (e) => (e.preventDefault(), void redo()) },
+  { sequence: 6, force: true }
+);
+
+// core/constructor/edit_tools.js
+var PREFIX_MAX = 22;
+var kindOf = (ref2) => ref2.kind === "placement" ? "placement" : "slot";
+var arrOf = (kind) => kind === "placement" ? S.placements : S.slots;
+var idxOf = (kind) => kind === "placement" ? S.pIdx : S.sIdx;
+function selectedItems() {
+  return selRefs().map((ref2) => ({ ref: ref2, kind: kindOf(ref2), rec: recOfRef(ref2) })).filter((it) => it.rec);
+}
+function canEditAll(items) {
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  for (const it of items) {
+    const ly = layerOf(it.rec.layer_id);
+    if (!canEditLayer(ly)) {
+      toastLock(ly);
+      return false;
+    }
+    if (it.rec.locked) {
+      toast("Складний контур зони редагується у формі Odoo.", "warn");
+      return false;
+    }
+  }
+  return true;
+}
+function boxOf(it) {
+  if (it.kind === "placement") {
+    const v = variantOf(it.rec.variant_id);
+    return v ? pGeom(it.rec, v).box : [it.rec.x, it.rec.y, it.rec.x, it.rec.y];
+  }
+  return sGeom(it.rec).box;
+}
+function groupBox(items) {
+  const bs = items.map(boxOf);
+  return [Math.min(...bs.map((b) => b[0])), Math.min(...bs.map((b) => b[1])), Math.max(...bs.map((b) => b[2])), Math.max(...bs.map((b) => b[3]))];
+}
+function nextCodeLike(code, used, max = PREFIX_MAX) {
+  const m = /^(.*?)(\d+)(\D*)$/.exec(code || "");
+  const [stem, num4, tail] = m ? [m[1], m[2], m[3]] : [(code || "X") + "-", "1", ""];
+  for (let n = Number(num4) + 1; n < 1e5; n++) {
+    const cand = stem + String(n).padStart(num4.length, "0") + tail;
+    if (!used.has(cand) && cand.length <= max) {
+      used.add(cand);
+      return cand;
+    }
+  }
+  return code;
+}
+var cleanAddr = (addr) => {
+  if (!addr) {
+    return null;
+  }
+  const { row_no: _pin, ...rest } = addr;
+  return Object.keys(rest).length ? rest : null;
+};
+function copyRec(kind, rec, { dx = 0, dy = 0, layerId = null, used }) {
+  const c = clone(rec);
+  c.id = newUid();
+  c.rid = null;
+  c.etag = null;
+  c.x = rnd(rec.x + dx, 4);
+  c.y = rnd(rec.y + dy, 4);
+  if (layerId) {
+    c.layer_id = layerId;
+  }
+  if (kind === "slot") {
+    c.overrides = {};
+    c.parent_location_id = null;
+    c.code_prefix = nextCodeLike(rec.code_prefix, used.prefixes);
+    c.addr = cleanAddr(c.addr);
+    if (!c.addr) {
+      delete c.addr;
+    }
+    if (c.template === "zone") {
+      c.params = { ...c.params, title: `${rec.params?.title || rec.code_prefix} (копія)` };
+    }
+  } else {
+    c.code = nextCodeLike(rec.code || "EQ-00", used.codes, 32);
+    c.slot_id = null;
+    c.cell_code = null;
+    c.equipment = null;
+  }
+  return c;
+}
+var usedCodes = () => ({ prefixes: new Set(S.slots.map((s) => s.code_prefix)), codes: new Set(S.placements.map((p) => p.code)) });
+function attempt(copies) {
+  const before = S.issues;
+  for (const c of copies) {
+    arrOf(c.kind).push(c.rec);
+    idxOf(c.kind).set(c.rec.id, c.rec);
+  }
+  for (const c of copies) {
+    if (c.kind === "placement") {
+      E.assignSlot(c.rec);
+    }
+  }
+  const after = runLive();
+  const nb = copies.flatMap((c) => newBlocks(before, after, objKey(c.kind, c.rec.id)));
+  if (nb.length) {
+    for (const c of copies) {
+      const a = arrOf(c.kind);
+      a.splice(a.indexOf(c.rec), 1);
+      idxOf(c.kind).delete(c.rec.id);
+    }
+    return nb[0].msg;
+  }
+  return null;
+}
+var rot = (x, y, deg) => {
+  const a = deg * Math.PI / 180;
+  return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+};
+function offsetCandidates(items, { prefer = "length", gap = 0.5, aisle = 0 } = {}) {
+  const first = items[0].rec;
+  const b = groupBox(items);
+  const spanX = b[2] - b[0];
+  const spanY = b[3] - b[1];
+  const single = items.length === 1;
+  const g2 = single ? sGeomOrP(items[0]) : { L: spanX, W: spanY, a: 0 };
+  const along = [g2.L + gap, 0];
+  const across = [0, g2.W + gap + aisle];
+  const a = single ? first.rotation || 0 : 0;
+  const dirs = prefer === "across" ? [across, along] : [along, across];
+  const out = [];
+  for (const k of [1, 2, 3]) {
+    for (const [ux, uy] of dirs) {
+      for (const sgn of [1, -1]) {
+        out.push(rot(ux * k * sgn, uy * k * sgn, a));
+      }
+    }
+  }
+  return out.map(([dx, dy]) => [rnd(dx, 4), rnd(dy, 4)]);
+}
+var sGeomOrP = (it) => it.kind === "placement" ? pGeom(it.rec, variantOf(it.rec.variant_id) || { length: 1e3, width: 1e3 }) : sGeom(it.rec);
+function afterCopies(made, label) {
+  if (!made.length) {
+    return;
+  }
+  S.multi = [];
+  S.selCell = null;
+  S.sel = { kind: made[made.length - 1].kind, id: made[made.length - 1].rec.id };
+  if (made.length > 1) {
+    S.multi = made.map((c) => ({ kind: c.kind, id: c.rec.id }));
+  }
+  E.undoLabel?.(label);
+  E.commit({});
+  pinNumbers(made.filter((c) => c.kind === "slot" && contextOf(c.rec)).map((c) => c.rec));
+}
+function duplicateSel(mode = null) {
+  const items = selectedItems();
+  if (!items.length || !canEditAll(items)) {
+    return false;
+  }
+  const one = items.length === 1 ? items[0] : null;
+  if (one && one.kind === "slot" && (mode === "tier" || mode == null && S.selCell && LEVEL_KEYS[one.rec.template])) {
+    return addTier(one.rec);
+  }
+  if (one && one.kind === "slot" && mode === "bay") {
+    return addBay(one.rec);
+  }
+  const ly = layerOf(one ? one.rec.layer_id : items[0].rec.layer_id);
+  const rack3 = one && one.kind === "slot" && COUNT_KEY[one.rec.template] && one.rec.template !== "floor_stack";
+  const used = usedCodes();
+  for (const [dx, dy] of offsetCandidates(items, { prefer: rack3 ? "across" : "length", gap: one && one.kind === "slot" && one.rec.template === "floor_spot" ? 0.3 : 0.5, aisle: rack3 ? ly?.aisle_width || 3 : 0 })) {
+    const u = { prefixes: new Set(used.prefixes), codes: new Set(used.codes) };
+    const copies = items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, used: u }) }));
+    if (!attempt(copies)) {
+      afterCopies(copies, items.length > 1 ? `Дублювання: ${items.length} об’єктів` : `Дублювання: ${items[0].rec.code_prefix || items[0].rec.code}`);
+      return true;
+    }
+  }
+  toast("Немає вільного місця поруч для копії.", "warn");
+  return false;
+}
+function addTier(s) {
+  const [key] = LEVEL_KEYS[s.template] || [];
+  if (!key) {
+    toast("У цього місця немає ярусів.", "warn");
+    return false;
+  }
+  return bump(s, key, "Ярус зверху");
+}
+function addBay(s) {
+  const key = COUNT_KEY[s.template];
+  if (!key) {
+    toast("У цього місця немає секцій.", "warn");
+    return false;
+  }
+  return bump(s, key, "Секція в кінці ряду");
+}
+function bump(s, key, label) {
+  const max = (SLOT_TEMPLATES[s.template].params[key] || SLOT_TEMPLATES[s.template].opt[key] || [])[1] ?? 1e3;
+  const cur = Number(s.params[key] ?? ((SLOT_TEMPLATES[s.template].params[key] || [])[2] || 1));
+  if (cur + 1 > max) {
+    toast(`Досягнуто межу: ${max}.`, "warn");
+    return false;
+  }
+  const before = S.issues;
+  s.params[key] = cur + 1;
+  S.selCell = null;
+  const nb = newBlocks(before, runLive(), objKey("slot", s.id));
+  if (nb.length) {
+    s.params[key] = cur;
+    S.issues = runLive();
+    toast("Заблоковано: " + nb[0].msg, "err");
+    return false;
+  }
+  E.undoLabel?.(`${label}: ${s.code_prefix}`);
+  E.commit({});
+  return true;
+}
+var clip = null;
+function copySel() {
+  const items = selectedItems().filter((it) => !it.rec.locked);
+  if (!items.length) {
+    toast("Немає що копіювати: виділіть об’єкт.", "warn");
+    return false;
+  }
+  const b = groupBox(items);
+  clip = { items: items.map((it) => ({ kind: it.kind, rec: clone(it.rec) })), cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, layerId: items[0].rec.layer_id, w: b[2] - b[0], h: b[3] - b[1] };
+  toast(items.length > 1 ? `Скопійовано: ${items.length} об’єктів.` : `Скопійовано: ${items[0].rec.code_prefix || items[0].rec.code}.`);
+  return true;
+}
+function targetLayer() {
+  const accepts = (ly) => ly && canEditLayer(ly) && clip.items.every((it) => it.kind === "slot" ? ly.slot_types.includes(it.rec.template) : ly.kind !== "building");
+  const active = layerOf(S.ui.layer);
+  if (accepts(active)) {
+    return active;
+  }
+  const base = active ? active.elevation : 0;
+  return S.layers.filter(accepts).sort((a, b) => Math.abs(a.elevation - base) - Math.abs(b.elevation - base))[0] || null;
+}
+function pasteClip() {
+  if (!clip) {
+    toast("Буфер порожній: спершу скопіюйте (Ctrl+C).", "warn");
+    return false;
+  }
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  const sel = selectedItems();
+  const zone2 = sel.length === 1 && sel[0].kind === "slot" && sel[0].rec.template === "zone" && canEditLayer(layerOf(sel[0].rec.layer_id)) ? sel[0].rec : null;
+  const ly = zone2 ? layerOf(zone2.layer_id) : targetLayer();
+  if (!ly) {
+    toast("Немає шару, що допускає ці об’єкти й дозволяє правку.", "warn");
+    return false;
+  }
+  if (zone2 && !clip.items.every((it) => it.kind === "slot" ? ly.slot_types.includes(it.rec.template) : true)) {
+    toast("Зона не підходить: її шар не допускає ці типи місць.", "warn");
+    return false;
+  }
+  const sameLayer = ly.id === clip.layerId;
+  const c = E.camTarget ? E.camTarget() : { x: S.site.building.length / 2, y: S.site.building.width / 2 };
+  const home = zone2 ? { x: zone2.x, y: zone2.y } : sameLayer ? { x: clip.cx, y: clip.cy } : c;
+  const tries = [];
+  if (zone2) {
+    const zl = zone2.params.length;
+    const zw = zone2.params.width;
+    for (let k = 0; k < 40; k++) {
+      const u = -zl / 2 + 0.5 + clip.w / 2 + k % 6 * (clip.w + 0.5);
+      const v = -zw / 2 + 0.5 + clip.h / 2 + Math.floor(k / 6) * (clip.h + 0.5);
+      if (Math.abs(u) + clip.w / 2 <= zl / 2 && Math.abs(v) + clip.h / 2 <= zw / 2) {
+        const [wx, wy] = rot(u, v, zone2.rotation || 0);
+        tries.push([zone2.x + wx - clip.cx, zone2.y + wy - clip.cy]);
+      }
+    }
+  } else {
+    const step = Math.max(clip.w, clip.h) + 0.5;
+    const first = sameLayer ? [step, 0] : [0, 0];
+    tries.push([home.x - clip.cx + first[0], home.y - clip.cy + first[1]]);
+    for (const k of [1, 2, 3]) {
+      for (const [ux, uy] of [[1, 0], [0, -1], [-1, 0], [0, 1]]) {
+        tries.push([home.x - clip.cx + ux * step * k, home.y - clip.cy + uy * step * k]);
+      }
+    }
+  }
+  const used = usedCodes();
+  for (const [dx, dy] of tries) {
+    const u = { prefixes: new Set(used.prefixes), codes: new Set(used.codes) };
+    const copies = clip.items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, layerId: ly.id, used: u }) }));
+    if (!attempt(copies)) {
+      afterCopies(copies, `Вставлення: ${copies.length > 1 ? copies.length + " об’єктів" : copies[0].rec.code_prefix || copies[0].rec.code}`);
+      return true;
+    }
+  }
+  toast(zone2 ? "У зоні немає вільного місця для вставлення." : "Немає вільного місця для вставлення.", "warn");
+  return false;
+}
+function arrayCopies({ nx = 2, ny = 1, dx, dy }) {
+  const items = selectedItems();
+  if (!items.length || !canEditAll(items)) {
+    return 0;
+  }
+  const b = groupBox(items);
+  const stepX = dx ?? rnd(b[2] - b[0] + 0.3, 3);
+  const stepY = dy ?? rnd(b[3] - b[1] + 0.3, 3);
+  const used = usedCodes();
+  const made = [];
+  let skipped = 0;
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      if (!i && !j) {
+        continue;
+      }
+      const copies = items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx: i * stepX, dy: j * stepY, used }) }));
+      if (attempt(copies)) {
+        skipped++;
+        for (const c of copies) {
+          (c.kind === "slot" ? used.prefixes : used.codes).delete(c.kind === "slot" ? c.rec.code_prefix : c.rec.code);
+        }
+      } else {
+        made.push(...copies);
+      }
+    }
+  }
+  if (made.length) {
+    afterCopies(made, `Масив ${nx}×${ny}: ${made.length} копій`);
+  }
+  toast(made.length ? `Масив: створено ${made.length}${skipped ? `, не вмістилось або заблоковано: ${skipped}` : ""}.` : "Масив: жодної копії не вдалося розмістити.", made.length ? void 0 : "warn");
+  return made.length;
+}
+function applyMoves(items, mutate, label) {
+  const before = S.issues;
+  const snaps = items.map((it) => ({ it, x: it.rec.x, y: it.rec.y, rotation: it.rec.rotation }));
+  mutate();
+  const after = runLive();
+  const nb = items.flatMap((it) => newBlocks(before, after, objKey(it.ref.kind, it.ref.id)));
+  if (nb.length) {
+    for (const s of snaps) {
+      Object.assign(s.it.rec, { x: s.x, y: s.y, rotation: s.rotation });
+    }
+    S.issues = runLive();
+    toast("Заблоковано: " + nb[0].msg + ". Зміну скасовано.", "err");
+    return false;
+  }
+  for (const it of items) {
+    if (it.kind === "placement") {
+      E.assignSlot(it.rec);
+    }
+  }
+  E.undoLabel?.(label);
+  E.commit({});
+  return true;
+}
+var ALIGN = {
+  left: (b, g2) => [g2[0] - b[0], 0],
+  right: (b, g2) => [g2[2] - b[2], 0],
+  top: (b, g2) => [0, g2[3] - b[3]],
+  bottom: (b, g2) => [0, g2[1] - b[1]],
+  cx: (b, g2) => [(g2[0] + g2[2]) / 2 - (b[0] + b[2]) / 2, 0],
+  cy: (b, g2) => [0, (g2[1] + g2[3]) / 2 - (b[1] + b[3]) / 2]
+};
+var ALIGN_LABELS = { left: "Ліворуч", right: "Праворуч", top: "Угору", bottom: "Донизу", cx: "Центр X", cy: "Центр Y" };
+function alignSel(mode) {
+  const items = selectedItems();
+  if (items.length < 2 || !ALIGN[mode] || !canEditAll(items)) {
+    return false;
+  }
+  const g2 = groupBox(items);
+  return applyMoves(
+    items,
+    () => {
+      for (const it of items) {
+        const [dx, dy] = ALIGN[mode](boxOf(it), g2);
+        it.rec.x = rnd(it.rec.x + dx, 4);
+        it.rec.y = rnd(it.rec.y + dy, 4);
+      }
+    },
+    `Вирівнювання: ${ALIGN_LABELS[mode]}`
+  );
+}
+function distributeSel(axis) {
+  const items = selectedItems();
+  if (items.length < 3 || !canEditAll(items)) {
+    if (items.length < 3) {
+      toast("Розподіл потребує щонайменше трьох об’єктів.", "warn");
+    }
+    return false;
+  }
+  const lo = axis === "x" ? 0 : 1;
+  const hi = lo + 2;
+  const rows = items.map((it) => ({ it, b: boxOf(it) })).sort((a, b) => a.b[lo] + a.b[hi] - (b.b[lo] + b.b[hi]));
+  const span = rows[rows.length - 1].b[hi] - rows[0].b[lo];
+  const total = rows.reduce((s, r) => s + (r.b[hi] - r.b[lo]), 0);
+  const gap = (span - total) / (rows.length - 1);
+  return applyMoves(
+    items,
+    () => {
+      let pos = rows[0].b[hi] + gap;
+      for (let i = 1; i < rows.length - 1; i++) {
+        const d = pos - rows[i].b[lo];
+        rows[i].it.rec[axis] = rnd(rows[i].it.rec[axis] + d, 4);
+        pos += rows[i].b[hi] - rows[i].b[lo] + gap;
+      }
+    },
+    `Розподіл по ${axis === "x" ? "X" : "Y"}`
+  );
+}
+function rotateGroup(dir = 1) {
+  const items = selectedItems();
+  if (!items.length || !canEditAll(items)) {
+    return false;
+  }
+  const g2 = groupBox(items);
+  const cx = (g2[0] + g2[2]) / 2;
+  const cy = (g2[1] + g2[3]) / 2;
+  for (const it of items) {
+    if (it.kind === "placement") {
+      const al = rotationsList(variantOf(it.rec.variant_id));
+      if (al && !al.includes(normDeg((it.rec.rotation || 0) + 90 * dir))) {
+        toast(`Для «${it.rec.code}» поворот не дозволено.`, "warn");
+        return false;
+      }
+    }
+  }
+  return applyMoves(
+    items,
+    () => {
+      for (const it of items) {
+        const [dx, dy] = [it.rec.x - cx, it.rec.y - cy];
+        const [nx, ny] = dir > 0 ? [-dy, dx] : [dy, -dx];
+        it.rec.x = rnd(cx + nx, 4);
+        it.rec.y = rnd(cy + ny, 4);
+        it.rec.rotation = normDeg((it.rec.rotation || 0) + 90 * dir);
+      }
+    },
+    items.length > 1 ? "Поворот рядів" : `Поворот: ${items[0].rec.code_prefix || items[0].rec.code}`
+  );
+}
+async function removeAll() {
+  const items = selectedItems();
+  if (!items.length || !canEditAll(items)) {
+    return false;
+  }
+  const ok = await E.confirmBox({ title: "Прибрати виділене?", text: `Буде видалено ${items.length} об’єктів із чернетки.`, ok: "Прибрати", danger: true });
+  if (!ok) {
+    return false;
+  }
+  const ids = new Set(items.map((it) => it.ref.kind + ":" + it.ref.id));
+  S.slots = S.slots.filter((s) => !ids.has("slot:" + s.id));
+  S.placements = S.placements.filter((p) => !ids.has("placement:" + p.id));
+  for (const p of S.placements) {
+    if (p.slot_id && !S.slots.some((s) => s.id === p.slot_id)) {
+      p.slot_id = null;
+    }
+  }
+  S.sel = null;
+  S.multi = [];
+  S.selCell = null;
+  E.undoLabel?.(`Видалення: ${items.length} об’єктів`);
+  E.commit({});
+  return true;
+}
+function groupToZone() {
+  const items = selectedItems().filter((it) => it.rec.template !== "zone");
+  if (items.length < 2 || !canEditAll(items)) {
+    if (items.length < 2) {
+      toast("Для групування виділіть щонайменше два об’єкти (не зони).", "warn");
+    }
+    return false;
+  }
+  const lids = new Set(items.map((it) => it.rec.layer_id));
+  if (lids.size > 1) {
+    toast("Групувати можна об’єкти одного шару.", "warn");
+    return false;
+  }
+  const ly = layerOf([...lids][0]);
+  if (!ly.slot_types.includes("zone")) {
+    toast(`Шар «${ly.name}» не допускає зони.`, "warn");
+    return false;
+  }
+  const slots = items.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const zones = new Set(slots.map((s) => (contextOf(s) || {}).zone ?? null));
+  const prevZone = zones.size === 1 ? [...zones][0] : null;
+  pinNumbers(slots.filter((s) => contextOf(s)));
+  const g2 = groupBox(items);
+  const m = 1;
+  const prefix = nextPrefix({ ref: "ZN", code: "ZN" });
+  const zone2 = {
+    id: newUid(),
+    rid: null,
+    etag: null,
+    layer_id: ly.id,
+    template: "zone",
+    code_prefix: prefix,
+    x: rnd((g2[0] + g2[2]) / 2, 4),
+    y: rnd((g2[1] + g2[3]) / 2, 4),
+    rotation: 0,
+    params: { length: rnd(g2[2] - g2[0] + 2 * m, 3), width: rnd(g2[3] - g2[1] + 2 * m, 3), title: `Група ${prefix}`, color: ly.color },
+    overrides: {},
+    parent_location_id: null
+  };
+  if (prevZone != null) {
+    zone2.addr = { zone_code: String(prevZone) };
+  }
+  const copies = [{ kind: "slot", rec: zone2 }];
+  const why = attempt(copies);
+  if (why) {
+    toast("Заблоковано: " + why, "err");
+    return false;
+  }
+  S.multi = [];
+  S.sel = { kind: "slot", id: zone2.id };
+  E.undoLabel?.(`Групування в зону: ${items.length} об’єктів`);
+  E.commit({});
+  toast(`Створено зону «${zone2.params.title}».`);
+  return true;
+}
+async function ungroupZone() {
+  const items = selectedItems();
+  const zone2 = items.length === 1 && items[0].kind === "slot" && items[0].rec.template === "zone" ? items[0].rec : null;
+  if (!zone2) {
+    toast("Виділіть зону, яку треба розгрупувати.", "warn");
+    return false;
+  }
+  if (!canEditAll(items)) {
+    return false;
+  }
+  const inside = S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && (contextOf(s) || {}).zone != null);
+  const ok = await E.confirmBox({ title: "Розгрупувати зону?", text: `Зону «${zone2.params.title || zone2.code_prefix}» буде видалено; об’єкти всередині лишаться, їхні коди не змінюються.`, ok: "Розгрупувати" });
+  if (!ok) {
+    return false;
+  }
+  pinNumbers(inside);
+  S.slots = S.slots.filter((s) => s.id !== zone2.id);
+  S.sel = null;
+  S.multi = [];
+  E.undoLabel?.(`Розгрупування: ${zone2.params.title || zone2.code_prefix}`);
+  E.commit({});
+  return true;
+}
+function applyProps({ rotation, dx, dy }) {
+  const items = selectedItems();
+  if (!items.length || !canEditAll(items)) {
+    return false;
+  }
+  const hasRot = rotation != null && rotation !== "";
+  const mx = Number(dx) || 0;
+  const my = Number(dy) || 0;
+  if (!hasRot && !mx && !my) {
+    toast("Немає змін: вкажіть поворот чи зсув.", "warn");
+    return false;
+  }
+  return applyMoves(
+    items,
+    () => {
+      for (const it of items) {
+        if (hasRot) {
+          it.rec.rotation = Number(rotation);
+        }
+        it.rec.x = rnd(it.rec.x + mx, 4);
+        it.rec.y = rnd(it.rec.y + my, 4);
+      }
+    },
+    `Властивості: ${items.length} об’єктів`
+  );
+}
+var BULK_TEMPLATES = ["pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"];
+var SECT_KEY = { pallet_rack: "bays", shelf: "sections", cantilever: "arms", floor_stack: "cols", floor_spot: null };
+var LVL_KEY = { pallet_rack: "levels", shelf: "shelves", cantilever: "levels", floor_stack: null, floor_spot: null };
+function bulkLayout({ template, rows, sections, levels, aisle, vertical, zoneId }) {
+  const params = {};
+  if (SECT_KEY[template]) {
+    params[SECT_KEY[template]] = sections;
+  }
+  if (LVL_KEY[template]) {
+    params[LVL_KEY[template]] = levels;
+  }
+  const full = { ...Object.fromEntries(Object.entries(SLOT_TEMPLATES[template].params).map(([k, v]) => [k, v[2]])), ...params };
+  const fp = footprint(template, full);
+  const zone2 = zoneId ? S.sIdx.get(zoneId) : null;
+  const b = S.site.building;
+  const region = zone2 ? { cx: zone2.x, cy: zone2.y, l: zone2.params.length, w: zone2.params.width, rot: zone2.rotation || 0 } : { cx: b.length / 2, cy: b.width / 2, l: b.length, w: b.width, rot: 0 };
+  const step = (layerOf(S.ui.layer) || {}).grid_step || 0.5;
+  const [fl, fw] = vertical ? [fp.w, fp.l] : [fp.l, fp.w];
+  const out = [];
+  const cos = Math.cos(region.rot * Math.PI / 180);
+  const sin = Math.sin(region.rot * Math.PI / 180);
+  for (let i = 0; i < rows; i++) {
+    const u = -region.l / 2 + 0.5 + fl / 2;
+    const v = -region.w / 2 + 0.5 + fw / 2 + i * (fw + aisle);
+    if (u + fl / 2 > region.l / 2 - 0.5 + 1e-6 || v + fw / 2 > region.w / 2 - 0.5 + 1e-6) {
+      break;
+    }
+    out.push({ x: rnd(Math.round((region.cx + u * cos - v * sin) / step) * step, 4), y: rnd(Math.round((region.cy + u * sin + v * cos) / step) * step, 4), rotation: normDeg(region.rot + (vertical ? 90 : 0)), params: { ...full } });
+  }
+  return { rows: out, fp: { l: fl, w: fw }, region, cells: out.length * sections * (levels || 1) };
+}
+function bulkCreate(o) {
+  const ly = layerOf(S.ui.layer);
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає активного шару.", "warn");
+    return 0;
+  }
+  if (!ly.slot_types.includes(o.template)) {
+    toast(`Шар «${ly.name}» не допускає цей тип місця.`, "warn");
+    return 0;
+  }
+  const lay = bulkLayout(o);
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const list = lay.rows.map((r) => {
+    const prefix = nextPrefix({ ref: TPL[o.template].prefix, code: o.template }, used);
+    used.add(prefix);
+    return { ...r, template: o.template, prefix };
+  });
+  E.undoLabel?.(`Масове створення: ${list.length} рядів`);
+  const made = addSlots(list);
+  toast(made.length ? `Створено рядів: ${made.length}${made.length < o.rows ? `; не вмістилось або заблоковано: ${o.rows - made.length}` : ""}.` : "У зоні немає вільного місця.", made.length ? void 0 : "warn");
+  return made.length;
+}
+function previewSvg(lay) {
+  const r = lay.region;
+  const W = 320;
+  const k = W / Math.max(r.l, 1);
+  const Hh = Math.max(40, r.w * k);
+  const rects = lay.rows.map((row) => {
+    const u = ((row.x - r.cx) * Math.cos(-r.rot * Math.PI / 180) - (row.y - r.cy) * Math.sin(-r.rot * Math.PI / 180)) * k;
+    const v = ((row.x - r.cx) * Math.sin(-r.rot * Math.PI / 180) + (row.y - r.cy) * Math.cos(-r.rot * Math.PI / 180)) * k;
+    return `<rect x="${(W / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
+}
+function openBulk() {
+  const ly = layerOf(S.ui.layer);
+  const zones = S.slots.filter((s) => s.template === "zone" && s.layer_id === S.ui.layer);
+  const sel = selectedItems();
+  const st = { template: BULK_TEMPLATES.find((t) => ly && ly.slot_types.includes(t)) || "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: ly && ly.aisle_width || 3, orient: "h", zoneId: sel.length === 1 && sel[0].rec.template === "zone" ? sel[0].rec.id : zones[0]?.id || "" };
+  const prev = h("div", { id: "bulkPreview" });
+  const info = h("div", { class: "small muted", id: "bulkInfo" });
+  const draw = () => {
+    const lay = bulkLayout({ ...st, vertical: st.orient === "v" });
+    prev.innerHTML = previewSvg(lay);
+    info.textContent = `Рядів: ${lay.rows.length} із ${st.rows} · комірок: ${lay.cells} · габарит ряду ${fmt(lay.fp.l, 1)}×${fmt(lay.fp.w, 1)} м`;
+  };
+  const num4 = (key, label, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v) && v >= min && v <= max) {
+        st[key] = v;
+        draw();
+      }
+    });
+    return fld(label, el);
+  };
+  const body = h(
+    "div",
+    { class: "fcol", id: "bulkBody" },
+    h("div", { class: "grid2" }, fld("Тип місця", selectEl(BULK_TEMPLATES.filter((t) => ly && ly.slot_types.includes(t)).map((t) => [t, SLOT_TEMPLATES[t].label || t]), st.template, (v) => {
+      st.template = v;
+      draw();
+    }, false, "Тип місця")), fld("Зона", selectEl([["", "Вся будівля"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st.zoneId, (v) => {
+      st.zoneId = v;
+      draw();
+    }, false, "Зона"))),
+    h("div", { class: "grid3" }, num4("rows", "Рядів", 1, 60), num4("sections", "Секцій у ряду", 1, 60), num4("levels", "Ярусів", 1, 12)),
+    h("div", { class: "grid2" }, num4("aisle", "Прохід між рядами, м", 0, 12, 0.1), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], st.orient, (v) => {
+      st.orient = v;
+      draw();
+    }, false, "Орієнтація"))),
+    prev,
+    info
+  );
+  draw();
+  openDialog({
+    title: "Масове створення",
+    cls: "narrow",
+    body,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Створити",
+        cls: "primary",
+        id: "btnBulkGo",
+        onClick: () => {
+          const n = bulkCreate({ ...st, vertical: st.orient === "v" });
+          return n ? void 0 : false;
+        }
+      }
+    ]
+  });
+}
+function openArray() {
+  const items = selectedItems();
+  if (!items.length) {
+    toast("Виділіть об’єкт для масиву.", "warn");
+    return;
+  }
+  const b = groupBox(items);
+  const st = { nx: 3, ny: 2, dx: rnd(b[2] - b[0] + 0.3, 2), dy: rnd(b[3] - b[1] + 0.3, 2) };
+  const num4 = (key, label, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v)) {
+        st[key] = v;
+      }
+    });
+    return fld(label, el);
+  };
+  openDialog({
+    title: "Масив копій",
+    cls: "narrow",
+    body: h("div", { class: "fcol", id: "arrayBody" }, h("div", { class: "grid2" }, num4("nx", "Копій по X (N)", 1, 50), num4("ny", "Копій по Y (M)", 1, 50)), h("div", { class: "grid2" }, num4("dx", "Крок X, м", -500, 500, 0.05), num4("dy", "Крок Y, м", -500, 500, 0.05)), h("div", { class: "small muted" }, "Копії — того ж типу, з наступними кодами; заблоковані перевірками пропускаються.")),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      { label: "Створити", cls: "primary", id: "btnArrayGo", onClick: () => arrayCopies({ nx: Math.round(st.nx), ny: Math.round(st.ny), dx: st.dx, dy: st.dy }) ? void 0 : false }
+    ]
+  });
+}
+registries.dialogs.add("bulk", () => openBulk(), { force: true });
+registries.dialogs.add("array", () => openArray(), { force: true });
+var designOnly = () => !E.access?.().design;
+registries.menu.add("bulk", { area: "more", label: "Масове створення…", icon: "plus", sequence: 40, run: () => E.runDialog("bulk"), disabled: designOnly }, { sequence: 40, force: true });
+registries.menu.add("array", { area: "more", label: "Масив копій…", icon: "copy", sequence: 41, run: () => E.runDialog("array"), disabled: () => designOnly() || !selRefs().length }, { sequence: 41, force: true });
+var hk = (key, def, seq) => registries.hotkeys.add(key, { ctrl: true, ...def }, { sequence: seq, force: true });
+hk("duplicate", { label: "Ctrl+D — дублювати", match: (e) => e.code === "KeyD" && !e.shiftKey, when: () => selRefs().length > 0, run: (e) => (e.preventDefault(), void duplicateSel()) }, 12);
+hk("copy", { label: "Ctrl+C — копіювати", match: (e) => e.code === "KeyC" && !e.shiftKey, when: () => selRefs().length > 0, run: (e) => (e.preventDefault(), void copySel()) }, 13);
+hk("paste", { label: "Ctrl+V — вставити", match: (e) => e.code === "KeyV" && !e.shiftKey, when: () => !!clip, run: (e) => (e.preventDefault(), void pasteClip()) }, 14);
+registries.hotkeys.add("multi.rotate", { alt: true, label: "R — повернути виділені ряди", code: "KeyR", when: () => S.multi.length > 1, run: (e) => (e.preventDefault(), void rotateGroup(e.shiftKey ? -1 : 1)) }, { sequence: 15, force: true });
+registries.hotkeys.add(
+  "multi.delete",
+  { match: (e) => e.code === "Delete" || e.code === "Backspace", when: () => S.multi.length > 1, run: (e) => (e.preventDefault(), void removeAll()) },
+  { sequence: 25, force: true }
+);
+hk(
+  "selectAll",
+  {
+    label: "Ctrl+A — виділити все на шарі",
+    match: (e) => e.code === "KeyA" && !e.shiftKey,
+    run(e) {
+      e.preventDefault();
+      const refs = [
+        ...S.slots.filter((s) => s.layer_id === S.ui.layer && !(layerOf(s.layer_id) || {}).kind?.match(/building|engineering/)).map((s) => ({ kind: "slot", id: s.id })),
+        ...S.placements.filter((p) => p.layer_id === S.ui.layer).map((p) => ({ kind: "placement", id: p.id }))
+      ];
+      E.boxSelect(refs, false);
+    }
+  },
+  16
+);
+Object.assign(E, { duplicateSel, copySel, pasteClip, arrayCopies, alignSel, distributeSel, rotateGroup, removeAll, groupToZone, ungroupZone, applyProps, bulkCreate });
+
+// core/constructor/selection.js
+var same3 = (a, b) => a.kind === b.kind && a.id === b.id;
+function setMulti(refs, primary = null) {
+  const uniq = [];
+  for (const r of refs) {
+    if (!uniq.some((u) => same3(u, r))) {
+      uniq.push({ kind: r.kind, id: r.id });
+    }
+  }
+  S.selCell = null;
+  S.edit = null;
+  if (uniq.length >= 2) {
+    S.multi = uniq;
+    S.sel = primary && uniq.some((u) => same3(u, primary)) ? { kind: primary.kind, id: primary.id } : { ...uniq[uniq.length - 1] };
+  } else {
+    S.multi = [];
+    S.sel = uniq[0] || null;
+  }
+  E.renderRight();
+  E.updateVisual();
+  if (S.ui.leftTab === "slots") {
+    E.renderLeft();
+  }
+}
+function toggleMulti(ref2) {
+  const cur = selRefs();
+  const has = cur.some((r) => same3(r, ref2));
+  setMulti(has ? cur.filter((r) => !same3(r, ref2)) : [...cur, ref2], has ? null : ref2);
+}
+function boxSelect(refs, add = false) {
+  setMulti([...add ? selRefs() : [], ...refs]);
+  if (refs.length) {
+    toast(`Виділено: ${selRefs().length}.`);
+  }
+}
+var origSelect = E.selectObj;
+E.selectObj = function selectObjMulti(ref2, ...rest) {
+  S.multi = [];
+  return origSelect.call(this, ref2, ...rest);
+};
+var origRight = E.renderRight;
+E.renderRight = function renderRightMulti(...args) {
+  if (S.multi.length > 1) {
+    return renderMultiPanel();
+  }
+  return origRight.apply(this, args);
+};
+var nameOf2 = (it) => it.kind === "slot" ? it.rec.params?.title || it.rec.code_prefix : it.rec.code || it.rec.name;
+function renderMultiPanel() {
+  const root = $("#rightBody");
+  if (!root) {
+    return;
+  }
+  root.replaceChildren();
+  const items = selectedItems();
+  const acc = E.access();
+  const btn = (label, fn, o = {}) => {
+    const b = h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, "data-title": o.title || "", onclick: fn }, o.icon ? ic(o.icon) : null, label);
+    b.disabled = !acc.design || !!o.dis;
+    b.title = !acc.design ? E.accessHint("design") : o.title || "";
+    return b;
+  };
+  const list = h(
+    "div",
+    { class: "mlist", id: "multiList", style: { maxHeight: "180px", overflow: "auto", border: "1px solid var(--line)" } },
+    items.map(
+      (it) => h(
+        "div",
+        { class: "frow", "data-key": it.ref.kind + ":" + it.ref.id, style: { padding: "2px 6px", borderBottom: "1px solid var(--line2)" } },
+        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items.map((x) => x.ref), it.ref) }, nameOf2(it)),
+        h("span", { class: "small muted" }, it.kind === "slot" ? it.rec.template : "обладнання"),
+        h("button", { class: "xbtn", type: "button", "aria-label": "Прибрати з виділення", onclick: () => toggleMulti(it.ref) }, ic("x"))
+      )
+    )
+  );
+  const slots = items.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const props = { rotation: "", dx: 0, dy: 0 };
+  const num4 = (key, label) => {
+    const el = h("input", { type: "number", step: 0.5, value: props[key], "aria-label": label, "data-s3": key });
+    el.addEventListener("input", () => props[key] = parseFloat(el.value) || 0);
+    return fld(label, el);
+  };
+  root.append(
+    h("div", { class: "sec", id: "multiPanel" }, h("h3", null, `Виділено ${items.length}`), list),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Дії"),
+      h(
+        "div",
+        { class: "frow wrap" },
+        btn("Дублювати всі", () => duplicateSel(), { id: "btnMultiDup", icon: "copy", title: "Ctrl+D" }),
+        btn("Копіювати", () => copySel(), { id: "btnMultiCopy", title: "Ctrl+C" }),
+        btn("Повернути ряди", () => rotateGroup(1), { id: "btnMultiRot", icon: "rot", title: "R" }),
+        btn("Прибрати всі", () => removeAll(), { id: "btnMultiDel", icon: "trash", cls: "danger", title: "Del" }),
+        btn("Зберегти виділене", () => saveGroupPreset(slots), { id: "btnMultiPreset", dis: !slots.length || !canWriteLibrary(), title: canWriteLibrary() ? "Пресет «виділене» в бібліотеку" : "Бібліотеку пише проєктувальник" })
+      )
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Вирівнювання"),
+      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t]) => btn(t, () => alignSel(k), { id: "btnAlign-" + k }))),
+      h("div", { class: "frow wrap" }, btn("Розподілити по X", () => distributeSel("x"), { id: "btnDistX", dis: items.length < 3 }), btn("Розподілити по Y", () => distributeSel("y"), { id: "btnDistY", dis: items.length < 3 }))
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Групи"),
+      h("div", { class: "frow wrap" }, btn("Згрупувати в нову зону", () => groupToZone(), { id: "btnGroupZone" }), btn("Розгрупувати зону", () => ungroupZone(), { id: "btnUngroup", dis: !(items.length === 1 && items[0].rec.template === "zone") }))
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Властивості"),
+      h("div", { class: "grid3" }, fld("Поворот", selectEl([["", "—"], ["0", "0°"], ["90", "90°"], ["180", "180°"], ["270", "270°"]], "", (v) => props.rotation = v, !acc.design, "Поворот")), num4("dx", "Зсув X, м"), num4("dy", "Зсув Y, м")),
+      h("div", { class: "small muted" }, "Застосовуються лише змінені поля."),
+      btn("Застосувати", () => applyProps(props), { id: "btnMultiApply" })
+    )
+  );
+}
+async function saveGroupPreset(slots) {
+  const draft = { name: `Виділене (${slots.length})` };
+  openDialog({
+    title: "Зберегти виділене",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, fld("Назва шаблону", textInput({ value: draft.name, label: "Назва шаблону", f: "multi-preset-name", set: (v) => draft.name = v })), h("div", { class: "small muted" }, "Місця зберігаються з взаємним розташуванням; шаблон потрапляє в бібліотеку.")),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Зберегти",
+        cls: "primary",
+        id: "btnMultiPresetGo",
+        onClick: async () => {
+          try {
+            const rec = await saveRecord(E.adapter, "preset", presetFromSlots(slots, draft.name.trim() || "Виділене"));
+            toast(`Шаблон «${rec.name}» збережено в бібліотеці.`);
+            return true;
+          } catch (e) {
+            toast(e.message || "Не вдалося зберегти шаблон.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+}
+function renderToolsBlock(root, { rec }) {
+  if (!rec || !S.sel || S.multi.length > 1) {
+    return;
+  }
+  const acc = E.access();
+  const slot = S.sel.kind === "slot" ? rec : null;
+  const b = (label, fn, id, title) => {
+    const el = h("button", { class: "fbtn sm", type: "button", id, onclick: fn }, label);
+    el.disabled = !acc.design;
+    el.title = !acc.design ? E.accessHint("design") : title || "";
+    return el;
+  };
+  const tier = slot && LEVEL_KEYS[slot.template];
+  const bay = slot && COUNT_KEY[slot.template];
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "toolsBlock" },
+      h("h3", null, "Дублювання й копії"),
+      h(
+        "div",
+        { class: "frow wrap" },
+        b(slot && slot.template === "zone" ? "Копія зони" : slot && tier ? "Ряд із наступним номером" : "Дублювати", () => duplicateSel(slot && tier ? "row" : null), "btnDup", "Ctrl+D"),
+        tier ? b("Ярус зверху", () => duplicateSel("tier"), "btnDupTier", "Додати ярус над останнім") : null,
+        bay ? b("Секція в кінець ряду", () => duplicateSel("bay"), "btnDupBay", "Додати секцію в кінці ряду") : null,
+        b("Копіювати", () => copySel(), "btnCopy", "Ctrl+C; вставлення — Ctrl+V"),
+        slot && slot.template === "zone" ? b("Розгрупувати", () => ungroupZone(), "btnUngroup", "Прибрати зону; об’єкти всередині лишаються") : null,
+        b("Масив…", () => E.runDialog("array"), "btnArray", "N×M копій із кроком")
+      )
+    )
+  );
+}
+registries.panels.add("right:tools", { area: "right", render: renderToolsBlock }, { sequence: 60, force: true });
+Object.assign(E, { setMulti, toggleMulti, boxSelect });
+
+// core/constructor/barcode.js
+var C128 = "212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(
+  " "
+);
+var START_B = 104;
+var START_C = 105;
+var CODE_B = 100;
+var CODE_C = 99;
+var STOP = 106;
+var isPrintableAscii = (text) => /^[\x20-\x7e]*$/.test(text);
+var digitRun = (text, i) => {
+  let n = 0;
+  while (i + n < text.length && text.charCodeAt(i + n) >= 48 && text.charCodeAt(i + n) <= 57) {
+    n++;
+  }
+  return n;
+};
+function code128Values(text) {
+  const s = String(text);
+  if (!s.length) {
+    throw new Error("Code128: порожній рядок.");
+  }
+  if (!isPrintableAscii(s)) {
+    throw new Error("Code128: лише друкований ASCII (для інших символів — QR).");
+  }
+  const out = [];
+  let set = null;
+  let i = 0;
+  const run0 = digitRun(s, 0);
+  if (run0 >= 4 || run0 === s.length && run0 >= 2) {
+    out.push(START_C);
+    set = "C";
+  } else {
+    out.push(START_B);
+    set = "B";
+  }
+  while (i < s.length) {
+    const run = digitRun(s, i);
+    if (set === "B") {
+      if (run >= 6 || run >= 4 && i + run === s.length) {
+        if (run % 2) {
+          out.push(s.charCodeAt(i) - 32);
+          i++;
+        }
+        out.push(CODE_C);
+        set = "C";
+        continue;
+      }
+      out.push(s.charCodeAt(i) - 32);
+      i++;
+    } else {
+      if (run >= 2) {
+        out.push(Number(s.slice(i, i + 2)));
+        i += 2;
+      } else {
+        out.push(CODE_B);
+        set = "B";
+      }
+    }
+  }
+  let sum = out[0];
+  for (let k = 1; k < out.length; k++) {
+    sum += out[k] * k;
+  }
+  out.push(sum % 103, STOP);
+  return out;
+}
+function code128(text) {
+  const values = code128Values(text);
+  let bits = "";
+  for (const v of values) {
+    const pat = C128[v];
+    let bar = true;
+    for (const ch of pat) {
+      bits += (bar ? "1" : "0").repeat(Number(ch));
+      bar = !bar;
+    }
+  }
+  return { values, modules: bits, width: bits.length };
+}
+var RS = [
+  [[1, 26, 19], [1, 26, 16], [1, 26, 13], [1, 26, 9]],
+  [[1, 44, 34], [1, 44, 28], [1, 44, 22], [1, 44, 16]],
+  [[1, 70, 55], [1, 70, 44], [2, 35, 17], [2, 35, 13]],
+  [[1, 100, 80], [2, 50, 32], [2, 50, 24], [4, 25, 9]],
+  [[1, 134, 108], [2, 67, 43], [2, 33, 15, 2, 34, 16], [2, 33, 11, 2, 34, 12]],
+  [[2, 86, 68], [4, 43, 27], [4, 43, 19], [4, 43, 15]],
+  [[2, 98, 78], [4, 49, 31], [2, 32, 14, 4, 33, 15], [4, 39, 13, 1, 40, 14]],
+  [[2, 121, 97], [2, 60, 38, 2, 61, 39], [4, 40, 18, 2, 41, 19], [4, 40, 14, 2, 41, 15]],
+  [[2, 146, 116], [3, 58, 36, 2, 59, 37], [4, 36, 16, 4, 37, 17], [4, 36, 12, 4, 37, 13]],
+  [[2, 86, 68, 2, 87, 69], [4, 69, 43, 1, 70, 44], [6, 43, 19, 2, 44, 20], [6, 43, 15, 2, 44, 16]],
+  [[4, 101, 81], [1, 80, 50, 4, 81, 51], [4, 50, 22, 4, 51, 23], [3, 36, 12, 8, 37, 13]],
+  [[2, 116, 92, 2, 117, 93], [6, 58, 36, 2, 59, 37], [4, 46, 20, 6, 47, 21], [7, 42, 14, 4, 43, 15]],
+  [[4, 133, 107], [8, 59, 37, 1, 60, 38], [8, 44, 20, 4, 45, 21], [12, 33, 11, 4, 34, 12]],
+  [[3, 145, 115, 1, 146, 116], [4, 64, 40, 5, 65, 41], [11, 36, 16, 5, 37, 17], [11, 36, 12, 5, 37, 13]],
+  [[5, 109, 87, 1, 110, 88], [5, 65, 41, 5, 66, 42], [5, 54, 24, 7, 55, 25], [11, 36, 12, 7, 37, 13]]
+];
+var ALIGN2 = [[], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58], [6, 34, 62], [6, 26, 46, 66], [6, 26, 48, 70]];
+var ECC_INDEX = { L: 0, M: 1, Q: 2, H: 3 };
+var ECC_FORMAT = { L: 1, M: 0, Q: 3, H: 2 };
+var QR_MAX_VERSION = RS.length;
+var blocksOf = (version, ecc) => {
+  const e = RS[version - 1][ECC_INDEX[ecc]];
+  const out = [];
+  for (let i = 0; i < e.length; i += 3) {
+    for (let k = 0; k < e[i]; k++) {
+      out.push({ total: e[i + 1], data: e[i + 2] });
+    }
+  }
+  return out;
+};
+var dataCodewords = (version, ecc) => blocksOf(version, ecc).reduce((n, b) => n + b.data, 0);
+var EXP = new Array(512);
+var LOG = new Array(256);
+for (let i = 0, x = 1; i < 255; i++) {
+  EXP[i] = x;
+  LOG[x] = i;
+  x <<= 1;
+  if (x & 256) {
+    x ^= 285;
+  }
+}
+for (let i = 255; i < 512; i++) {
+  EXP[i] = EXP[i - 255];
+}
+var gmul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0;
+function rsGenerator(deg) {
+  let g2 = [1];
+  for (let i = 0; i < deg; i++) {
+    const next = new Array(g2.length + 1).fill(0);
+    for (let j = 0; j < g2.length; j++) {
+      next[j] ^= g2[j];
+      next[j + 1] ^= gmul(g2[j], EXP[i]);
+    }
+    g2 = next;
+  }
+  return g2;
+}
+function rsRemainder(data, deg) {
+  const gen = rsGenerator(deg);
+  const rem = new Array(deg).fill(0);
+  for (const b of data) {
+    const f = b ^ rem.shift();
+    rem.push(0);
+    if (f) {
+      for (let i = 0; i < deg; i++) {
+        rem[i] ^= gmul(gen[i + 1], f);
+      }
+    }
+  }
+  return rem;
+}
+var utf8 = (text) => Array.from(new TextEncoder().encode(text));
+function buildCodewords(bytes, version, ecc) {
+  const cap = dataCodewords(version, ecc) * 8;
+  const bits = [];
+  const put = (val, n) => {
+    for (let i = n - 1; i >= 0; i--) {
+      bits.push(val >>> i & 1);
+    }
+  };
+  put(4, 4);
+  put(bytes.length, version <= 9 ? 8 : 16);
+  for (const b of bytes) {
+    put(b, 8);
+  }
+  put(0, Math.min(4, cap - bits.length));
+  while (bits.length % 8) {
+    bits.push(0);
+  }
+  for (let pad = 236; bits.length < cap; pad ^= 236 ^ 17) {
+    put(pad, 8);
+  }
+  const data = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    data.push(parseInt(bits.slice(i, i + 8).join(""), 2));
+  }
+  const blocks = blocksOf(version, ecc);
+  let pos = 0;
+  const parts = blocks.map((b) => {
+    const d = data.slice(pos, pos + b.data);
+    pos += b.data;
+    return { d, e: rsRemainder(d, b.total - b.data) };
+  });
+  const out = [];
+  for (let i = 0; i < Math.max(...parts.map((p) => p.d.length)); i++) {
+    for (const p of parts) {
+      if (i < p.d.length) {
+        out.push(p.d[i]);
+      }
+    }
+  }
+  for (let i = 0; i < parts[0].e.length; i++) {
+    for (const p of parts) {
+      out.push(p.e[i]);
+    }
+  }
+  return out;
+}
+var MASKS = [
+  (x, y) => (x + y) % 2 === 0,
+  (x, y) => y % 2 === 0,
+  (x, y) => x % 3 === 0,
+  (x, y) => (x + y) % 3 === 0,
+  (x, y) => ((y / 2 | 0) + (x / 3 | 0)) % 2 === 0,
+  (x, y) => x * y % 2 + x * y % 3 === 0,
+  (x, y) => (x * y % 2 + x * y % 3) % 2 === 0,
+  (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0
+];
+var Matrix = class {
+  constructor(version) {
+    this.version = version;
+    this.size = 17 + 4 * version;
+    this.m = Array.from({ length: this.size }, () => new Array(this.size).fill(false));
+    this.fn = Array.from({ length: this.size }, () => new Array(this.size).fill(false));
+  }
+  set(x, y, dark, isFn = true) {
+    this.m[y][x] = dark;
+    if (isFn) {
+      this.fn[y][x] = true;
+    }
+  }
+  drawFunctionPatterns() {
+    const n = this.size;
+    for (let i = 0; i < n; i++) {
+      this.set(6, i, i % 2 === 0);
+      this.set(i, 6, i % 2 === 0);
+    }
+    for (const [cx, cy] of [[3, 3], [n - 4, 3], [3, n - 4]]) {
+      for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x >= 0 && x < n && y >= 0 && y < n) {
+            const d = Math.max(Math.abs(dx), Math.abs(dy));
+            this.set(x, y, d !== 2 && d !== 4);
+          }
+        }
+      }
+    }
+    const pos = ALIGN2[this.version - 1];
+    for (let a = 0; a < pos.length; a++) {
+      for (let b = 0; b < pos.length; b++) {
+        if (a === 0 && b === 0 || a === 0 && b === pos.length - 1 || a === pos.length - 1 && b === 0) {
+          continue;
+        }
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            this.set(pos[a] + dx, pos[b] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+          }
+        }
+      }
+    }
+    this.drawFormat("M", 0);
+    this.drawVersion();
+  }
+  drawFormat(ecc, mask) {
+    const n = this.size;
+    const data = ECC_FORMAT[ecc] << 3 | mask;
+    let rem = data;
+    for (let i = 0; i < 10; i++) {
+      rem = rem << 1 ^ (rem >>> 9) * 1335;
+    }
+    const bits = (data << 10 | rem) ^ 21522;
+    const bit = (i) => (bits >>> i & 1) !== 0;
+    for (let i = 0; i <= 5; i++) {
+      this.set(8, i, bit(i));
+    }
+    this.set(8, 7, bit(6));
+    this.set(8, 8, bit(7));
+    this.set(7, 8, bit(8));
+    for (let i = 9; i < 15; i++) {
+      this.set(14 - i, 8, bit(i));
+    }
+    for (let i = 0; i < 8; i++) {
+      this.set(n - 1 - i, 8, bit(i));
+    }
+    for (let i = 8; i < 15; i++) {
+      this.set(8, n - 15 + i, bit(i));
+    }
+    this.set(8, n - 8, true);
+  }
+  drawVersion() {
+    if (this.version < 7) {
+      return;
+    }
+    let rem = this.version;
+    for (let i = 0; i < 12; i++) {
+      rem = rem << 1 ^ (rem >>> 11) * 7973;
+    }
+    const bits = this.version << 12 | rem;
+    for (let i = 0; i < 18; i++) {
+      const dark = (bits >>> i & 1) !== 0;
+      const a = this.size - 11 + i % 3;
+      const b = Math.floor(i / 3);
+      this.set(a, b, dark);
+      this.set(b, a, dark);
+    }
+  }
+  drawCodewords(words) {
+    const n = this.size;
+    let i = 0;
+    for (let right = n - 1; right >= 1; right -= 2) {
+      if (right === 6) {
+        right = 5;
+      }
+      for (let vert = 0; vert < n; vert++) {
+        for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const upward = (right + 1 & 2) === 0;
+          const y = upward ? n - 1 - vert : vert;
+          if (!this.fn[y][x] && i < words.length * 8) {
+            this.m[y][x] = (words[i >>> 3] >>> 7 - (i & 7) & 1) !== 0;
+            i++;
+          }
+        }
+      }
+    }
+  }
+  applyMask(mask) {
+    const f = MASKS[mask];
+    for (let y = 0; y < this.size; y++) {
+      for (let x = 0; x < this.size; x++) {
+        if (!this.fn[y][x] && f(x, y)) {
+          this.m[y][x] = !this.m[y][x];
+        }
+      }
+    }
+  }
+  penalty() {
+    const n = this.size;
+    let result = 0;
+    const runs = (line) => {
+      let p = 0;
+      let run = 1;
+      for (let i = 1; i <= line.length; i++) {
+        if (i < line.length && line[i] === line[i - 1]) {
+          run++;
+        } else {
+          if (run >= 5) {
+            p += 3 + (run - 5);
+          }
+          run = 1;
+        }
+      }
+      return p;
+    };
+    const finder = (line) => {
+      const pat = [true, false, true, true, true, false, true];
+      let p = 0;
+      for (let i = 0; i + 7 <= line.length; i++) {
+        if (pat.every((v, k2) => line[i + k2] === v)) {
+          const before = i >= 4 && [1, 2, 3, 4].every((k2) => !line[i - k2]);
+          const after = i + 11 <= line.length && [7, 8, 9, 10].every((k2) => !line[i + k2]);
+          if (before || after) {
+            p += 40;
+          }
+        }
+      }
+      return p;
+    };
+    for (let y = 0; y < n; y++) {
+      result += runs(this.m[y]) + finder(this.m[y]);
+    }
+    for (let x = 0; x < n; x++) {
+      const col = this.m.map((r) => r[x]);
+      result += runs(col) + finder(col);
+    }
+    for (let y = 0; y < n - 1; y++) {
+      for (let x = 0; x < n - 1; x++) {
+        const c = this.m[y][x];
+        if (c === this.m[y][x + 1] && c === this.m[y + 1][x] && c === this.m[y + 1][x + 1]) {
+          result += 3;
+        }
+      }
+    }
+    const dark = this.m.reduce((s, r) => s + r.filter(Boolean).length, 0);
+    const k = Math.ceil(Math.abs(dark * 20 - n * n * 10) / (n * n)) - 1;
+    return result + Math.max(0, k) * 10;
+  }
+};
+function qr(text, { ecc = "M", mask = null, minVersion = 1 } = {}) {
+  if (!(ecc in ECC_INDEX)) {
+    throw new Error(`QR: невідомий рівень «${ecc}».`);
+  }
+  const bytes = utf8(String(text));
+  let version = minVersion;
+  for (; version <= QR_MAX_VERSION; version++) {
+    if (4 + (version <= 9 ? 8 : 16) + bytes.length * 8 <= dataCodewords(version, ecc) * 8) {
+      break;
+    }
+  }
+  if (version > QR_MAX_VERSION) {
+    throw new Error("QR: текст задовгий (до 400 байт).");
+  }
+  const mx = new Matrix(version);
+  mx.drawFunctionPatterns();
+  mx.drawCodewords(buildCodewords(bytes, version, ecc));
+  let best = mask;
+  if (best == null) {
+    let min = Infinity;
+    for (let m = 0; m < 8; m++) {
+      mx.applyMask(m);
+      mx.drawFormat(ecc, m);
+      const p = mx.penalty();
+      if (p < min) {
+        min = p;
+        best = m;
+      }
+      mx.applyMask(m);
+    }
+  }
+  mx.applyMask(best);
+  mx.drawFormat(ecc, best);
+  const rows = mx.m.map((r) => r.map((d) => d ? "1" : "0").join(""));
+  return { version, size: mx.size, ecc, mask: best, rows, get: (x, y) => rows[y][x] === "1" };
+}
+
+// core/constructor/labels.js
+var LABELS_MAX = 5e3;
+var LAYOUTS = {
+  "70x36": { name: "70×36 мм (3×8)", w: 70, h: 36, page: { w: 210, h: 297 } },
+  "105x48": { name: "105×48 мм (2×6)", w: 105, h: 48, page: { w: 210, h: 297 } },
+  "100x150": { name: "100×150 мм (рулон, 1 на аркуш)", w: 100, h: 150, page: { w: 100, h: 150 } },
+  custom: { name: "Свій розмір", w: 70, h: 36, page: { w: 210, h: 297 } }
+};
+var SCOPES = { selected: "Виділене (все всередині)", zone: "Зона", row: "Ряд", tier: "Ярус знизу", all: "Усі місця" };
+var defaultSpec = () => ({
+  scope: "selected",
+  zoneId: "",
+  rowId: "",
+  tier: 1,
+  onlyNew: false,
+  onlyApplied: false,
+  kind: "code128",
+  show: { zone: false, row: false, bay: false, level: false, type: false },
+  arrows: "none",
+  scanLevel: 2,
+  layout: "70x36",
+  custom: { w: 70, h: 36 },
+  pageSize: "A4",
+  margin: null,
+  // {l, t, r, b} мм; null — по центру
+  gap: { x: 0, y: 0 },
+  skip: 0,
+  font: "cyr",
+  dpi: 203
+});
+var slotsInside = (zone2) => {
+  const poly = sGeom(zone2).poly;
+  return S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && polygonContains(poly, [s.x, s.y]));
+};
+var isApplied = (s) => s.rid != null || !!E.adapter?.baseMap?.has?.("s:" + s.id);
+var isNewOrRenumbered = (s) => {
+  const st = E.objStatus ? E.objStatus("slot", s) : "new";
+  return st === "new" || st === "unsaved";
+};
+function scopeSlots(spec) {
+  const sel = selRefs().filter((r) => r.kind === "slot").map((r) => S.sIdx.get(r.id)).filter(Boolean);
+  const expand = (list) => list.flatMap((s) => s.template === "zone" ? slotsInside(s) : [s]);
+  switch (spec.scope) {
+    case "zone": {
+      const z = S.sIdx.get(spec.zoneId) || sel.find((s) => s.template === "zone");
+      return z ? slotsInside(z) : [];
+    }
+    case "row": {
+      const s = S.sIdx.get(spec.rowId) || sel.find((x) => x.template !== "zone");
+      return s ? [s] : [];
+    }
+    case "tier":
+      return sel.length ? expand(sel) : S.slots.filter((s) => s.template !== "zone");
+    case "all":
+      return S.slots.filter((s) => s.template !== "zone");
+    default:
+      return expand(sel);
+  }
+}
+function collectCells(spec) {
+  let slots = scopeSlots(spec);
+  if (spec.onlyNew) {
+    slots = slots.filter(isNewOrRenumbered);
+  }
+  if (spec.onlyApplied) {
+    slots = slots.filter(isApplied);
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const s of slots) {
+    for (const c of cellsOf(s)) {
+      if (c.disabled || seen.has(c.code)) {
+        continue;
+      }
+      if (spec.scope === "tier" && c.level !== Number(spec.tier)) {
+        continue;
+      }
+      seen.add(c.code);
+      out.push({ code: c.code, slot: s, cell: c });
+    }
+  }
+  return out;
+}
+var TR = { а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh", з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ь: "", ю: "iu", я: "ia", ы: "y", э: "e", ё: "io", ъ: "" };
+var translit = (t) => String(t).split("").map((ch) => {
+  const lo = ch.toLowerCase();
+  if (!(lo in TR)) {
+    return ch;
+  }
+  const r = TR[lo];
+  return ch === lo ? r : r.charAt(0).toUpperCase() + r.slice(1);
+}).join("");
+function buildItems(cells, spec) {
+  const fix2 = spec.font === "latin" ? translit : (x) => x;
+  return cells.map(({ code, slot, cell }) => {
+    const ctx2 = contextOf(slot) || {};
+    const lines = [];
+    const parts = [];
+    if (spec.show.zone && ctx2.zone != null) {
+      parts.push(`Зона ${ctx2.zone}`);
+    }
+    if (spec.show.row) {
+      const r = rowNumberOf(slot);
+      parts.push(`Ряд ${r ?? slot.code_prefix}`);
+    }
+    if (spec.show.bay && cell.index != null && slot.template !== "floor_spot") {
+      parts.push(`Секція ${cell.index}`);
+    }
+    if (spec.show.level && cell.level != null && slot.template !== "floor_spot") {
+      parts.push(`Ярус ${cell.level}`);
+    }
+    if (parts.length) {
+      lines.push(fix2(parts.join(" · ")));
+    }
+    if (spec.show.type) {
+      const t = typeOf(slot.type_id, libraryState());
+      lines.push(fix2(t ? t.name : slot.template));
+    }
+    let arrow = null;
+    if (spec.arrows !== "none" && cell.level != null) {
+      if (cell.level > Number(spec.scanLevel)) {
+        arrow = "up";
+      } else if (spec.arrows === "updown" && cell.level < Number(spec.scanLevel)) {
+        arrow = "down";
+      }
+    }
+    return { code, lines, arrow };
+  });
+}
+function pageGeometry(spec) {
+  const L2 = LAYOUTS[spec.layout] || LAYOUTS.custom;
+  const lab = spec.layout === "custom" ? { w: Number(spec.custom.w) || 70, h: Number(spec.custom.h) || 36 } : { w: L2.w, h: L2.h };
+  const page = spec.layout === "100x150" ? { w: 100, h: 150 } : { w: 210, h: 297 };
+  const gx = Number(spec.gap.x) || 0;
+  const gy = Number(spec.gap.y) || 0;
+  const m = spec.margin;
+  const avW = page.w - (m ? m.l + m.r : 0);
+  const avH = page.h - (m ? m.t + m.b : 0);
+  const cols = Math.max(1, Math.floor((avW + gx + 1e-6) / (lab.w + gx)));
+  const rows = Math.max(1, Math.floor((avH + gy + 1e-6) / (lab.h + gy)));
+  const usedW = cols * lab.w + (cols - 1) * gx;
+  const usedH = rows * lab.h + (rows - 1) * gy;
+  return { page, label: lab, cols, rows, perPage: cols * rows, x0: m ? m.l : (page.w - usedW) / 2, y0: m ? m.t : (page.h - usedH) / 2, gx, gy };
+}
+function paginate(items, spec) {
+  const g2 = pageGeometry(spec);
+  const skip = Math.max(0, Math.floor(Number(spec.skip) || 0)) % g2.perPage;
+  const pages = [];
+  let slot = skip;
+  for (const item of items) {
+    const pi = Math.floor(slot / g2.perPage);
+    const k = slot % g2.perPage;
+    (pages[pi] = pages[pi] || []).push({ item, x: g2.x0 + k % g2.cols * (g2.label.w + g2.gx), y: g2.y0 + Math.floor(k / g2.cols) * (g2.label.h + g2.gy) });
+    slot++;
+  }
+  return pages.map((p) => p || []);
+}
+var esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+var num3 = (v) => Number(v.toFixed(3));
+function barsSvg(code, x, y, w, hh) {
+  const c = code128(code);
+  const mod = w / (c.width + 20);
+  let d = "";
+  let i = 0;
+  while (i < c.width) {
+    if (c.modules[i] === "1") {
+      let j = i;
+      while (j < c.width && c.modules[j] === "1") {
+        j++;
+      }
+      d += `M${num3(x + (10 + i) * mod)} ${num3(y)}h${num3((j - i) * mod)}v${num3(hh)}h${num3(-(j - i) * mod)}z`;
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return `<path d="${d}" fill="#000"/>`;
+}
+function qrSvg(code, x, y, side2) {
+  const q = qr(code, { ecc: "M" });
+  const mod = side2 / (q.size + 8);
+  let d = "";
+  for (let r = 0; r < q.size; r++) {
+    let c = 0;
+    while (c < q.size) {
+      if (q.rows[r][c] === "1") {
+        let e = c;
+        while (e < q.size && q.rows[r][e] === "1") {
+          e++;
+        }
+        d += `M${num3(x + (4 + c) * mod)} ${num3(y + (4 + r) * mod)}h${num3((e - c) * mod)}v${num3(mod)}h${num3(-(e - c) * mod)}z`;
+        c = e;
+      } else {
+        c++;
+      }
+    }
+  }
+  return `<path d="${d}" fill="#000"/>`;
+}
+var arrowSvg = (dir, x, y, s) => `<path d="${dir === "up" ? `M${num3(x + s / 2)} ${num3(y)}L${num3(x + s)} ${num3(y + s * 0.6)}H${num3(x + s * 0.7)}V${num3(y + s)}H${num3(x + s * 0.3)}V${num3(y + s * 0.6)}H${num3(x)}z` : `M${num3(x + s / 2)} ${num3(y + s)}L${num3(x)} ${num3(y + s * 0.4)}H${num3(x + s * 0.3)}V${num3(y)}H${num3(x + s * 0.7)}V${num3(y + s * 0.4)}H${num3(x + s)}z`}" fill="#000"/>`;
+var kindFor = (code, spec) => spec.kind === "qr" || !isPrintableAscii(code) ? "qr" : "code128";
+function labelSvg(item, spec, w, hh) {
+  const m = Math.min(2.2, w * 0.04, hh * 0.06);
+  const kind = kindFor(item.code, spec);
+  const lineH = Math.min(3.6, hh * 0.1);
+  let out = "";
+  const extra = item.lines.length;
+  if (kind === "qr") {
+    const side2 = Math.min(hh - 2 * m, w * 0.46);
+    out += qrSvg(item.code, m, (hh - side2) / 2, side2);
+    const tx = m + side2 + m * 0.8;
+    const tw = w - tx - m;
+    const fs = Math.min(hh * 0.24, tw / (item.code.length * 0.56));
+    out += `<text x="${num3(tx)}" y="${num3(hh / 2 - (extra ? lineH * 0.2 : 0) + fs * 0.35)}" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}" textLength="${num3(Math.min(tw, item.code.length * fs * 0.62))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
+    item.lines.forEach((t, i) => {
+      out += `<text x="${num3(tx)}" y="${num3(hh / 2 + fs * 0.35 + lineH * (i + 1) * 0.95)}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t)}</text>`;
+    });
+  } else {
+    const top = m + extra * lineH;
+    item.lines.forEach((t, i) => {
+      out += `<text x="${num3(m)}" y="${num3(m + lineH * (i + 0.8))}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t)}</text>`;
+    });
+    const fs = Math.min(hh * 0.26, (w - 2 * m) / (item.code.length * 0.6));
+    const bh = Math.max(4, hh - top - fs * 1.25 - m);
+    out += barsSvg(item.code, m, top, w - 2 * m, bh);
+    out += `<text x="${num3(w / 2)}" y="${num3(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}">${esc(item.code)}</text>`;
+  }
+  if (item.arrow) {
+    const s = Math.min(hh * 0.28, w * 0.14);
+    out += arrowSvg(item.arrow, w - s - m, m, s);
+  }
+  return out;
+}
+function sheetSvg(pages, spec, index = 0, { frame = true } = {}) {
+  const g2 = pageGeometry(spec);
+  const inner = (pages[index] || []).map(({ item, x, y }) => `<g transform="translate(${num3(x)} ${num3(y)})">${frame ? `<rect width="${g2.label.w}" height="${g2.label.h}" fill="none" stroke="#c6c6c6" stroke-width="0.2"/>` : ""}${labelSvg(item, spec, g2.label.w, g2.label.h)}</g>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g2.page.w} ${g2.page.h}" width="${g2.page.w}mm" height="${g2.page.h}mm"><rect width="${g2.page.w}" height="${g2.page.h}" fill="#fff"/>${inner}</svg>`;
+}
+async function sheetPng(svg, spec, dpi = 200) {
+  const g2 = pageGeometry(spec);
+  const w = Math.round(g2.page.w / 25.4 * dpi);
+  const hh = Math.round(g2.page.h / 25.4 * dpi);
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, `width="${w}" height="${hh}"`));
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("Не вдалося намалювати етикетки."));
+  });
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = hh;
+  const ctx2 = cv.getContext("2d");
+  ctx2.fillStyle = "#fff";
+  ctx2.fillRect(0, 0, w, hh);
+  ctx2.drawImage(img, 0, 0, w, hh);
+  return await new Promise((res) => cv.toBlob(res, "image/png"));
+}
+var dots = (mm, dpi) => Math.round(mm * dpi / 25.4);
+function toZpl(items, spec) {
+  const dpi = Number(spec.dpi) === 300 ? 300 : 203;
+  const g2 = pageGeometry(spec);
+  const W = dots(g2.label.w, dpi);
+  const H = dots(g2.label.h, dpi);
+  const m = dots(Math.min(2.2, g2.label.w * 0.04), dpi);
+  const warnings = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const item of items) {
+    const kind = kindFor(item.code, spec);
+    if (kind === "qr" && spec.kind !== "qr") {
+      warnings.add(`Код «${item.code}» містить не-ASCII: Code128 не підходить, використано QR.`);
+    }
+    const lineDots = dots(3.2, dpi);
+    let z = `^XA^CI28^PW${W}^LL${H}^LH0,0
+`;
+    const textFs = Math.min(Math.round(H * 0.22), Math.round((W - 2 * m) / (item.code.length * 0.62)));
+    if (kind === "qr") {
+      const q = qr(item.code, { ecc: "M" });
+      const side2 = Math.min(H - 2 * m, Math.round(W * 0.46));
+      const mag = Math.max(1, Math.min(10, Math.floor(side2 / (q.size + 8))));
+      if (mag < 2) {
+        warnings.add(`Дрібний QR: модуль ${mag} точк. при ${dpi} dpi (треба ≥ 2) — збільшіть етикетку.`);
+      }
+      const qx = m;
+      z += `^FO${qx},${m}^BQN,2,${mag}^FDMA,${item.code}^FS
+`;
+      const tx = m + (q.size + 8) * mag;
+      z += `^FO${tx},${Math.round(H / 2 - textFs / 2)}^A0N,${textFs},${textFs}^FD${item.code}^FS
+`;
+      item.lines.forEach((t, i) => {
+        z += `^FO${tx},${Math.round(H / 2 + textFs / 2 + lineDots * i)}^A0N,${lineDots},${lineDots}^FD${t}^FS
+`;
+      });
+    } else {
+      const c = code128(item.code);
+      const modW = Math.max(1, Math.floor((W - 2 * m) / (c.width + 20)));
+      if (modW < 2) {
+        warnings.add(`Дрібний штрихкод «${item.code}»: модуль ${modW} точк. при ${dpi} dpi (треба ≥ 2) — збільште етикетку чи оберіть QR.`);
+      }
+      const top = m + item.lines.length * lineDots;
+      item.lines.forEach((t, i) => {
+        z += `^FO${m},${m + lineDots * i}^A0N,${lineDots},${lineDots}^FD${t}^FS
+`;
+      });
+      const bh = Math.max(20, H - top - textFs - 2 * m);
+      z += `^BY${modW},3,${bh}^FO${Math.round((W - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
+`;
+      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W - 2 * m},1,0,C^FD${item.code}^FS
+`;
+    }
+    if (item.arrow) {
+      const s = Math.round(H * 0.26);
+      const ax = W - m - s;
+      z += `^FO${ax + Math.round(s * 0.35)},${m + Math.round(s * 0.4)}^GB${Math.round(s * 0.3)},${Math.round(s * 0.6)},${Math.round(s * 0.3)}^FS
+`;
+      z += `^FO${ax},${m}^GD${s},${Math.round(s * 0.5)},3,B,${item.arrow === "up" ? "R" : "L"}^FS
+`;
+    }
+    out.push(z + "^PQ1^XZ");
+  }
+  return { zpl: out.join("\n"), warnings: [...warnings] };
+}
+function pdfPayload(items, spec, format = "pdf") {
+  const g2 = pageGeometry(spec);
+  return {
+    format,
+    font: spec.font,
+    kind: spec.kind,
+    page: g2.page,
+    grid: { cols: g2.cols, rows: g2.rows, x0: g2.x0, y0: g2.y0, w: g2.label.w, h: g2.label.h, gx: g2.gx, gy: g2.gy },
+    skip: Math.max(0, Math.floor(Number(spec.skip) || 0)),
+    labels: items.map((i) => ({ code: i.code, lines: i.lines, arrow: i.arrow }))
+  };
+}
+function download(name, mime, data, isB64 = false) {
+  const bin = isB64 ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : data;
+  const url = URL.createObjectURL(bin instanceof Blob ? bin : new Blob([bin], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function openLabels(adapter, args = {}) {
+  const spec = { ...defaultSpec(), ...args.spec || {} };
+  const zones = S.slots.filter((s) => s.template === "zone");
+  const racks = S.slots.filter((s) => s.template !== "zone");
+  if (!args.spec) {
+    const sel = selRefs().filter((r) => r.kind === "slot");
+    spec.scope = sel.length ? "selected" : "all";
+  }
+  const body = h("div", { class: "fcol", id: "labelsBody" });
+  const prev = h("div", { id: "labelsPreview", style: { background: "var(--surface2)", border: "1px solid var(--line)", padding: "6px", overflow: "auto", maxHeight: "50vh", textAlign: "center" } });
+  const info = h("div", { class: "small", id: "labelsInfo" });
+  const warn = h("div", { class: "note warn", id: "labelsWarn", hidden: true });
+  let model = { items: [], pages: [], cells: [] };
+  const recompute = () => {
+    model.cells = collectCells(spec);
+    model.items = buildItems(model.cells, spec);
+    model.pages = paginate(model.items, spec);
+    const over = model.items.length > LABELS_MAX;
+    info.textContent = `Етикеток: ${model.items.length}${over ? ` (ліміт ${LABELS_MAX})` : ""} · аркушів: ${model.pages.length}`;
+    prev.innerHTML = model.items.length ? sheetSvg(model.pages, spec, 0).replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%" style="max-width:360px;height:auto"') : "";
+    if (!model.items.length) {
+      prev.textContent = "Немає комірок за цим вибором.";
+    }
+    const z = model.items.length ? toZpl(model.items.slice(0, 50), spec).warnings : [];
+    warn.hidden = !z.length;
+    warn.textContent = z.join(" ");
+    for (const id of ["btnLabelsPdf", "btnLabelsPng", "btnLabelsZpl"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.disabled = !model.items.length || over || id === "btnLabelsPdf" && !can("render");
+      }
+    }
+  };
+  const set = (path, v) => {
+    const ks = path.split(".");
+    let o = spec;
+    while (ks.length > 1) {
+      o = o[ks.shift()];
+    }
+    o[ks[0]] = v;
+    recompute();
+  };
+  const check = (label, path, get) => {
+    const cb = h("input", { type: "checkbox", checked: !!get(), "data-s3": path });
+    cb.addEventListener("change", () => set(path, cb.checked));
+    return h("label", { class: "frow", style: { gap: "4px" } }, cb, label);
+  };
+  const numF = (label, path, get, min, max, step = 1) => {
+    const el = h("input", { type: "number", value: get(), min, max, step, "aria-label": label, "data-s3": path });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v)) {
+        set(path, v);
+      }
+    });
+    return fld(label, el);
+  };
+  const mg = () => spec.margin || { l: 0, t: 0, r: 0, b: 0 };
+  const draw = () => {
+    const custom = spec.layout === "custom";
+    body.replaceChildren(
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Що друкувати", selectEl(Object.entries(SCOPES), spec.scope, (v) => {
+          spec.scope = v;
+          recompute();
+          draw();
+        }, false, "Що друкувати")),
+        spec.scope === "zone" ? fld("Зона", selectEl([["", "—"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], spec.zoneId, (v) => set("zoneId", v), false, "Зона")) : spec.scope === "row" ? fld("Ряд", selectEl([["", "—"], ...racks.map((z) => [z.id, z.code_prefix])], spec.rowId, (v) => set("rowId", v), false, "Ряд")) : spec.scope === "tier" ? numF("Ярус знизу", "tier", () => spec.tier, 1, 12) : h("div")
+      ),
+      h("div", { class: "frow wrap" }, check("Лише нові та перенумеровані", "onlyNew", () => spec.onlyNew), check("Лише застосовані в Odoo", "onlyApplied", () => spec.onlyApplied)),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Штрихкод", selectEl([["code128", "Code128"], ["qr", "QR"]], spec.kind, (v) => set("kind", v), false, "Штрихкод")),
+        fld("Шрифт", selectEl([["cyr", "З кирилицею"], ["latin", "Лише латиниця"]], spec.font, (v) => set("font", v), false, "Шрифт"))
+      ),
+      h("div", { class: "frow wrap" }, check("Зона", "show.zone", () => spec.show.zone), check("Ряд", "show.row", () => spec.show.row), check("Секція", "show.bay", () => spec.show.bay), check("Ярус", "show.level", () => spec.show.level), check("Тип", "show.type", () => spec.show.type)),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Стрілка ярусів", selectEl([["none", "Немає"], ["up", "Вгору (вище точки)"], ["updown", "Вгору й вниз"]], spec.arrows, (v) => set("arrows", v), false, "Стрілка")),
+        numF("Точка сканування: ярус", "scanLevel", () => spec.scanLevel, 1, 12)
+      ),
+      h("div", { class: "grid2" }, fld("Розкладка", selectEl(Object.entries(LAYOUTS).map(([k, v]) => [k, v.name]), spec.layout, (v) => {
+        spec.layout = v;
+        recompute();
+        draw();
+      }, false, "Розкладка")), numF("Пропустити перші", "skip", () => spec.skip, 0, 500)),
+      custom ? h("div", { class: "grid2" }, numF("Ширина, мм", "custom.w", () => spec.custom.w, 10, 300), numF("Висота, мм", "custom.h", () => spec.custom.h, 10, 300)) : null,
+      h(
+        "div",
+        { class: "grid3" },
+        numF("Проміжок X, мм", "gap.x", () => spec.gap.x, 0, 30, 0.5),
+        numF("Проміжок Y, мм", "gap.y", () => spec.gap.y, 0, 30, 0.5),
+        fld("Поля", selectEl([["auto", "По центру"], ["zero", "0 мм"], ["5", "5 мм"], ["10", "10 мм"]], spec.margin ? mg().l === 0 ? "zero" : String(mg().l) : "auto", (v) => {
+          spec.margin = v === "auto" ? null : { l: v === "zero" ? 0 : +v, t: v === "zero" ? 0 : +v, r: v === "zero" ? 0 : +v, b: v === "zero" ? 0 : +v };
+          recompute();
+        }, false, "Поля"))
+      ),
+      fld("ZPL: роздільна здатність", selectEl([["203", "203 dpi"], ["300", "300 dpi"]], String(spec.dpi), (v) => set("dpi", +v), false, "dpi")),
+      info,
+      warn,
+      prev
+    );
+    recompute();
+  };
+  openDialog({
+    title: "Етикетки",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити", value: "close" },
+      {
+        label: "ZPL",
+        id: "btnLabelsZpl",
+        onClick: () => {
+          const { zpl, warnings } = toZpl(model.items, spec);
+          download(`labels_${spec.dpi}dpi.zpl`, "text/plain", zpl);
+          toast(warnings.length ? `ZPL збережено. Попередження: ${warnings[0]}` : "ZPL збережено.", warnings.length ? "warn" : void 0);
+          return false;
+        }
+      },
+      {
+        label: "PNG",
+        id: "btnLabelsPng",
+        onClick: async () => {
+          const blob = await sheetPng(sheetSvg(model.pages, spec, 0, { frame: false }), spec);
+          download("labels.png", "image/png", blob);
+          toast("PNG (аркуш 1) збережено.");
+          return false;
+        }
+      },
+      {
+        label: "PDF",
+        cls: "primary",
+        id: "btnLabelsPdf",
+        onClick: async () => {
+          try {
+            const res = await adapter.render("labels_pdf", pdfPayload(model.items, spec));
+            download(res.filename || "labels.pdf", res.mimetype || "application/pdf", res.content, true);
+            toast("PDF сформовано на сервері.");
+          } catch (e) {
+            toast(e.message || "Не вдалося сформувати PDF.", "err");
+          }
+          return false;
+        }
+      }
+    ]
+  });
+  draw();
+  const pdf = document.getElementById("btnLabelsPdf");
+  if (pdf && !can("render")) {
+    pdf.title = "PDF формує сервер Odoo («на сервері»); у цьому режимі доступні ZPL і PNG.";
+  }
+}
+registries.dialogs.add("labels", (a, { adapter }) => openLabels(adapter, a), { force: true });
+registries.menu.add("labels", { area: "more", label: "Етикетки…", icon: "tag", sequence: 32, run: () => E.runDialog("labels") }, { sequence: 32, force: true });
+function renderLabelsBlock(root, { rec }) {
+  if (!rec || !S.sel || S.sel.kind !== "slot" || rec.template !== "zone" && !cellsOf(rec).length) {
+    return;
+  }
+  root.append(
+    h("div", { class: "sec", id: "labelsBlock" }, h("h3", null, "Етикетки"), h("button", { class: "fbtn sm", type: "button", id: "btnLabels", onclick: () => E.runDialog("labels", rec.template === "zone" ? { spec: { scope: "zone", zoneId: rec.id } } : { spec: { scope: "row", rowId: rec.id } }) }, "Друк етикеток…"))
+  );
+}
+registries.panels.add("right:labels", { area: "right", render: renderLabelsBlock }, { sequence: 70, force: true });
+Object.assign(E, { openLabels: (a) => E.runDialog("labels", a) });
+
+// core/constructor/stock_state.js
+var revN = 0;
+function applyStock(res, { merge = false } = {}) {
+  const prev = merge && S.stock ? S.stock.byCode : /* @__PURE__ */ new Map();
+  const byCode = new Map(prev);
+  for (const [code, v] of Object.entries(res.codes || {})) {
+    byCode.set(code, { ...byCode.get(code) || {}, ...v });
+  }
+  S.stock = { at: res.at || (/* @__PURE__ */ new Date()).toISOString(), demo: !!res.demo, days: res.days || 90, rev: ++revN, byCode, abc: abcClasses(byCode), truncated: !!res.truncated };
+  return S.stock;
+}
+function abcClasses(byCode) {
+  const rows = [...byCode].map(([code, v]) => [code, Number(v.moves) || 0]).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  const out = /* @__PURE__ */ new Map();
+  let cum = 0;
+  for (const [code, m] of rows) {
+    if (!m) {
+      out.set(code, "0");
+      continue;
+    }
+    out.set(code, cum < total * 0.8 - 1e-9 ? "A" : cum < total * 0.95 - 1e-9 ? "B" : "C");
+    cum += m;
+  }
+  return out;
+}
+async function loadStock({ force = false, codes = null, quiet = false } = {}) {
+  if (!can("stock") || !E.adapter?.stock) {
+    return null;
+  }
+  if (S.stock && !force && !codes) {
+    return S.stock;
+  }
+  try {
+    const res = await E.adapter.stock({ codes, days: S.stock?.days || null });
+    const st = applyStock(res, { merge: !!codes });
+    E.recolorCells?.();
+    E.renderHeat?.();
+    return st;
+  } catch (e) {
+    if (!quiet) {
+      toast(e.message || "Не вдалося прочитати залишки.", "err");
+    }
+    return null;
+  }
+}
+async function loadDetail(code) {
+  const cur = S.stock?.byCode.get(code);
+  if (cur && cur.detail) {
+    return cur.detail;
+  }
+  if (!can("stock") || !E.adapter?.stock) {
+    return null;
+  }
+  try {
+    const res = await E.adapter.stock({ codes: [code], detail: true });
+    const v = (res.codes || {})[code];
+    if (!v) {
+      return null;
+    }
+    if (!S.stock) {
+      applyStock({ ...res, codes: {} });
+    }
+    const entry = S.stock.byCode.get(code) || {};
+    S.stock.byCode.set(code, { ...entry, ...v });
+    return v.detail || null;
+  } catch {
+    return null;
+  }
+}
+async function findStock(q, mode = "any") {
+  if (!can("stock") || !E.adapter?.find) {
+    return null;
+  }
+  const res = await E.adapter.find({ q, mode });
+  return { hits: res.hits || [], demo: !!res.demo };
+}
+var stockOf = (code) => S.stock ? S.stock.byCode.get(code) : void 0;
+var fmtAt = (at) => {
+  try {
+    const d = new Date(String(at).includes("T") ? at : String(at).replace(" ", "T") + "Z");
+    return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return String(at);
+  }
+};
+Object.assign(E, { loadStock, loadDetail, findStock, stockOf });
+
+// core/constructor/heat.js
+var GRAY = "#a9adb3";
+var FILL = [
+  ["empty", "Порожньо", "#d9e3e8"],
+  ["q1", "до 25 %", "#b5dcc3"],
+  ["q2", "25–50 %", "#7cc49a"],
+  ["q3", "50–75 %", "#3e9e6a"],
+  ["q4", "понад 75 %", "#1e6b47"],
+  ["nocap", "без ємності", GRAY]
+];
+var BELOW = [
+  ["none", "Запасу немає", "#c32d2d"],
+  ["below", "Нижче мінімуму", "#e08a00"],
+  ["ok", "Не нижче мінімуму", "#2c9a5b"],
+  ["norule", "Без правила", GRAY]
+];
+var EMPTY2 = [
+  ["empty", "Порожнє (можна класти)", "#2c9a5b"],
+  ["busy", "Зайняте", "#c9ccd1"]
+];
+var ABC = [
+  ["A", "A — 80 % руху", "#c32d2d"],
+  ["B", "B — наступні 15 %", "#e0a030"],
+  ["C", "C — останні 5 %", "#4f8fcf"],
+  ["0", "Без руху", GRAY]
+];
+var AGE = [
+  ["a30", "до 30 днів", "#2c9a5b"],
+  ["a90", "31–90 днів", "#8ac24a"],
+  ["a180", "91–180 днів", "#e0c030"],
+  ["a365", "181–365 днів", "#e08a00"],
+  ["a999", "понад 365 днів", "#c32d2d"],
+  ["none", "Порожньо", "#d9e3e8"]
+];
+var CLASSIFY = {
+  fill(e) {
+    if (e.fill == null) {
+      return "nocap";
+    }
+    return e.fill <= 0 ? "empty" : e.fill <= 0.25 ? "q1" : e.fill <= 0.5 ? "q2" : e.fill <= 0.75 ? "q3" : "q4";
+  },
+  below_min(e) {
+    if (e.min == null) {
+      return "norule";
+    }
+    return !e.qty ? "none" : e.qty < e.min ? "below" : "ok";
+  },
+  empty: (e) => e.qty ? "busy" : "empty",
+  abc: (e, code) => S.stock.abc.get(code) || "0",
+  age(e) {
+    if (!e.qty) {
+      return "none";
+    }
+    const d = e.age_days ?? 0;
+    return d <= 30 ? "a30" : d <= 90 ? "a90" : d <= 180 ? "a180" : d <= 365 ? "a365" : "a999";
+  }
+};
+var DEFS = { fill: FILL, below_min: BELOW, empty: EMPTY2, abc: ABC, age: AGE };
+var METRIC_LABELS = { fill: "Заповненість", below_min: "Нижче мінімуму", empty: "Порожні місця", abc: "Оборотність ABC", age: "Вік запасу" };
+var colorOf = (key, cls) => (DEFS[key].find((c) => c[0] === cls) || [])[2] || null;
+for (const key of Object.keys(DEFS)) {
+  registries.metrics.add(
+    key,
+    {
+      label: METRIC_LABELS[key],
+      color(cell) {
+        const e = stockOf(cell.code);
+        if (!e) {
+          return null;
+        }
+        return colorOf(key, CLASSIFY[key](e, cell.code));
+      }
+    },
+    { sequence: 10 + Object.keys(DEFS).indexOf(key), force: true }
+  );
+}
+function legendOf(key) {
+  const counts = new Map(DEFS[key].map((c) => [c[0], 0]));
+  let fresh = 0;
+  for (const s of S.slots) {
+    for (const c of cellsOf(s)) {
+      if (c.disabled) {
+        continue;
+      }
+      const e = stockOf(c.code);
+      if (!e) {
+        fresh++;
+        continue;
+      }
+      const k = CLASSIFY[key](e, c.code);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+  }
+  const rows = DEFS[key].map(([k, label, color]) => ({ key: k, label, color, count: counts.get(k) || 0 }));
+  if (fresh) {
+    rows.push({ key: "new", label: "Нові / без даних", color: "var(--ink3)", count: fresh });
+  }
+  return rows;
+}
+var LS_KEY = "f3d_constructor_metric";
+var lsGet2 = () => {
+  try {
+    return window.localStorage.getItem(LS_KEY);
+  } catch {
+    return null;
+  }
+};
+var lsSet2 = (v) => {
+  try {
+    window.localStorage.setItem(LS_KEY, v || "");
+  } catch {
+  }
+};
+async function setMetric(key) {
+  if (key && !registries.metrics.has(key)) {
+    return;
+  }
+  S.ui.metric = key || "";
+  lsSet2(S.ui.metric);
+  if (key && !S.stock) {
+    await loadStock({ quiet: false });
+  }
+  E.recolorCells?.();
+  renderHeat();
+}
+async function restoreMetric() {
+  const k = lsGet2();
+  if (k && registries.metrics.has(k) && can("stock")) {
+    S.ui.metric = k;
+    await loadStock({ quiet: true });
+    E.recolorCells?.();
+    renderHeat();
+  }
+}
+async function refreshStock() {
+  const st = await loadStock({ force: true });
+  if (st) {
+    E.recolorCells?.();
+    renderHeat();
+  }
+  return st;
+}
+function renderHeat() {
+  const sel = document.getElementById("s3Metric");
+  const box = document.getElementById("s3Heat");
+  if (!sel || !box) {
+    return;
+  }
+  const avail = can("stock");
+  sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t]) => h("option", { value: k, selected: S.ui.metric === k }, t)));
+  sel.value = S.ui.metric || "";
+  sel.disabled = !avail;
+  sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
+  const rf = document.getElementById("s3Refresh");
+  if (rf) {
+    rf.disabled = !avail || !S.ui.metric;
+  }
+  const key = S.ui.metric;
+  if (!key || !S.stock) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren(
+    h("div", { class: "s3-heat-h" }, h("b", null, METRIC_LABELS[key]), S.stock.demo ? h("span", { class: "tag s3-demo", title: "У демо-знімку немає рухів і дат: значення синтетичні" }, "демо") : null, h("span", { class: "small muted" }, "станом на " + fmtAt(S.stock.at))),
+    ...legendOf(key).map((r) => h("div", { class: "s3-heat-row", "data-class": r.key }, h("i", { class: "sq", style: { background: r.color } }), h("span", null, r.label), h("span", { class: "num" }, String(r.count))))
+  );
+}
+registries.menu.add(
+  "refreshStock",
+  { area: "more", label: "Оновити дані", icon: "hist", capability: "stock", sequence: 33, run: () => refreshStock() },
+  { sequence: 33, force: true }
+);
+Object.assign(E, { setMetric, restoreMetric, refreshStock, renderHeat, legendOf });
+
+// core/constructor/search.js
+var normCode = (s) => String(s ?? "").toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, "");
+function findCodes(q, limit = 40) {
+  const n = normCode(q);
+  if (!n) {
+    return { hits: [], total: 0 };
+  }
+  const hits = [];
+  const push = (kind, code, rec, extra) => {
+    const c = normCode(code);
+    const at = c.indexOf(n);
+    if (at >= 0) {
+      hits.push({ kind, code, rec, rank: c === n ? 0 : at === 0 ? 1 : 2, ...extra });
+    }
+  };
+  for (const s of S.slots) {
+    if (s.template === "zone") {
+      push("slot", s.params?.title || s.code_prefix, s, { slot: s, zoneName: true });
+      continue;
+    }
+    for (const c of cellsOf(s)) {
+      if (!c.disabled) {
+        push("cell", c.code, s, { slot: s, cell: c });
+      }
+    }
+  }
+  for (const p of S.placements) {
+    push("placement", p.code || p.name || "", p, {});
+  }
+  hits.sort((a, b) => a.rank - b.rank || a.code.length - b.code.length || (a.code < b.code ? -1 : 1));
+  return { hits: hits.slice(0, limit), total: hits.length };
+}
+function worldOf(slot, cell) {
+  const [wx, wy] = rotate(cell.lx, cell.ly, slot.rotation || 0);
+  return { x: slot.x + wx, y: slot.y + wy, z: (layerOf(slot.layer_id) || { elevation: 0 }).elevation + (cell.dz || 0) };
+}
+function gotoCode(code) {
+  const { hits } = findCodes(code, 5);
+  const hit = hits.find((x) => x.rank === 0) || hits[0];
+  if (!hit) {
+    toast(`Код «${code}» не знайдено.`, "warn");
+    return false;
+  }
+  return gotoHit(hit);
+}
+function gotoHit(hit) {
+  const rec = hit.rec;
+  const ly = layerOf(rec.layer_id);
+  if (ly && V.hidden.has(ly.id)) {
+    V.hidden.delete(ly.id);
+    E.syncScene();
+  }
+  E.selectObj({ kind: hit.kind === "placement" ? "placement" : "slot", id: rec.id });
+  let pos = { x: rec.x, y: rec.y };
+  if (hit.kind === "cell") {
+    S.selCell = hit.cell.code;
+    pos = worldOf(hit.slot, hit.cell);
+    E.updateVisual();
+    E.renderCellsBox?.();
+  }
+  E.focusOn?.(pos.x, pos.y, hit.kind === "cell" ? 14 : 24);
+  if (hit.kind === "cell") {
+    E.cellPicked?.(rec.id, hit.cell.code);
+  }
+  return true;
+}
+var hlN = 0;
+function setHighlight(codes, kind = "find") {
+  S.hl = codes && codes.size ? { kind, codes, rev: ++hlN } : null;
+  E.recolorCells?.();
+}
+var findState = { q: "", hits: null, demo: false };
+function itemText(it) {
+  const parts = [it.product || it.ref || "", it.qty != null ? `${it.qty}` : "", it.lot ? `партія ${it.lot}` : "", it.package ? `уп. ${it.package}` : ""];
+  return parts.filter(Boolean).join(" · ");
+}
+function renderSearchTab(root) {
+  const gotoIn = h("input", { type: "search", id: "s3Goto", placeholder: "Код або штрихкод, напр. PLT-01A", autocomplete: "off", "aria-label": "Перейти до місця", enterkeyhint: "go" });
+  const gotoList = h("div", { class: "s3-list", id: "s3GotoList", role: "listbox" });
+  const findIn = h("input", { type: "search", id: "s3Find", placeholder: "Товар, артикул, партія, упаковка", autocomplete: "off", "aria-label": "Де лежить", value: findState.q, enterkeyhint: "search" });
+  const findInfo = h("div", { class: "small", id: "s3FindInfo" });
+  const findList = h("div", { class: "s3-list", id: "s3FindList" });
+  const drawGoto = () => {
+    const { hits, total } = findCodes(gotoIn.value, 8);
+    gotoList.replaceChildren(
+      ...gotoIn.value && !hits.length ? [h("div", { class: "small muted" }, "Нічого не знайдено")] : [],
+      ...hits.map(
+        (x) => h("button", { class: "s3-item", type: "button", "data-code": x.code, role: "option", onclick: () => gotoHit(x) }, h("b", null, x.code), h("span", { class: "small muted" }, x.kind === "cell" ? "комірка" : x.kind === "placement" ? "обладнання" : x.slot?.template === "zone" ? "зона" : "місце"))
+      ),
+      ...total > hits.length ? [h("div", { class: "small muted" }, `…ще ${total - hits.length}: уточніть код`)] : []
+    );
+  };
+  gotoIn.addEventListener("input", drawGoto);
+  gotoIn.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") {
+      return;
+    }
+    e.preventDefault();
+    const { hits } = findCodes(gotoIn.value, 5);
+    const exact = hits.find((x) => x.rank === 0);
+    if (exact || hits.length === 1) {
+      gotoHit(exact || hits[0]);
+      gotoIn.select();
+    } else if (hits.length) {
+      drawGoto();
+      toast(`Збігів: ${hits.length}. Оберіть зі списку.`);
+    } else {
+      toast(`Код «${gotoIn.value}» не знайдено.`, "warn");
+    }
+  });
+  const drawFind = () => {
+    if (findState.hits == null) {
+      findInfo.textContent = can("stock") ? "" : "Пошук за товаром недоступний: адаптер не віддає залишки.";
+      findList.replaceChildren();
+      return;
+    }
+    const n = findState.hits.length;
+    findInfo.replaceChildren(`Знайдено місць: ${n}`, findState.demo ? h("span", { class: "tag s3-demo" }, "демо") : "", n ? h("button", { class: "fbtn sm", type: "button", id: "s3FindClear", onclick: () => {
+      findState = { q: "", hits: null, demo: false };
+      setHighlight(null);
+      renderSearchTab(root.replaceChildren() || root);
+    } }, "Скинути підсвітку") : "");
+    findList.replaceChildren(
+      ...findState.hits.slice(0, 100).map(
+        (x) => h("button", { class: "s3-item", type: "button", "data-code": x.code, onclick: () => gotoCode(x.code) }, h("b", null, x.code), h("span", { class: "small" }, (x.items || []).map(itemText).join("; ")))
+      )
+    );
+  };
+  const runFind = async () => {
+    const q = findIn.value.trim();
+    findState.q = q;
+    if (!q) {
+      return;
+    }
+    if (!can("stock")) {
+      toast("Пошук за товаром недоступний: адаптер не віддає залишки.", "warn");
+      return;
+    }
+    try {
+      const r = await findStock(q);
+      findState = { q, hits: r ? r.hits : [], demo: !!r?.demo };
+      setHighlight(new Set(findState.hits.map((x) => x.code)));
+      drawFind();
+      if (!findState.hits.length) {
+        toast("Нічого не знайдено.", "warn");
+      }
+    } catch (e) {
+      toast(e.message || "Не вдалося виконати пошук.", "err");
+    }
+  };
+  findIn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runFind();
+    }
+  });
+  root.append(
+    h("div", { class: "sec", id: "s3GotoBox" }, h("h3", null, "Перейти до місця"), gotoIn, gotoList, h("div", { class: "small muted" }, "Регістр і розділювачі не важливі: plt01a → PLT-01A. Сканер: код + Enter.")),
+    h("div", { class: "sec", id: "s3FindBox" }, h("h3", null, "Де лежить"), h("div", { class: "frow" }, findIn, h("button", { class: "fbtn sm", type: "button", id: "s3FindGo", onclick: runFind }, "Знайти")), findInfo, findList, h("div", { class: "small muted" }, "Кілька слів шукаються в одному залишку."))
+  );
+  drawGoto();
+  drawFind();
+}
+registries.panels.add("left:search", { area: "left", tab: "search", label: "Пошук", render: renderSearchTab }, { sequence: 15, force: true });
+function openSearch(mode = "goto") {
+  E.setLeftTab("search");
+  E.mobilePanel?.("left");
+  setTimeout(() => {
+    const el = $(mode === "find" ? "#s3Find" : "#s3Goto");
+    if (el) {
+      el.focus();
+      el.select?.();
+    }
+  }, 30);
+}
+registries.hotkeys.add("search.slash", { key: "/", label: "/ — перейти до місця", run: (e) => (e.preventDefault(), openSearch("goto")) }, { sequence: 8, force: true });
+registries.hotkeys.add("search.ctrlk", { ctrl: true, code: "KeyK", typing: true, label: "Ctrl+K — пошук", match: (e) => e.code === "KeyK" && !e.shiftKey, run: (e) => (e.preventDefault(), openSearch("goto")) }, { sequence: 9, force: true });
+registries.menu.add("search", { area: "top", label: "Пошук", icon: "fit", sequence: 4, run: () => openSearch("goto") }, { sequence: 4, force: true });
+Object.assign(E, { openSearch, gotoCode, gotoHit, gotoCell: gotoCode, findCodes, setHighlight });
+
+// core/constructor/s3_chrome.js
+var MOBILE_QUERY = "(max-width: 768px)";
+var STYLE_ID = "f3d-s3-style";
+var CSS = `
+.f3d-s3 .s3-burger,.f3d-s3 .s3-mbar,.f3d-s3 .s3-objbtn,.f3d-s3 .s3-card-ov{display:none}
+.f3d-s3 .s3-tools{position:absolute;right:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 16px);z-index:2;align-items:center}
+.f3d-s3 .s3-tools select{max-width:190px;min-height:30px}
+.f3d-s3 .s3-heat{position:absolute;right:8px;bottom:8px;z-index:2;background:var(--surface);border:1px solid var(--line);padding:6px 8px;font-size:12px;line-height:1.5;max-width:230px}
+.f3d-s3 .s3-heat-h{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+.f3d-s3 .s3-heat-row{display:flex;gap:6px;align-items:center}
+.f3d-s3 .s3-heat-row .num{margin-left:auto;color:var(--ink2)}
+.f3d-s3 .s3-heat .sq{display:inline-block;width:12px;height:12px;border:1px solid var(--line);flex:none}
+.f3d-s3 .s3-demo{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);padding:0 4px;font-size:11px}
+.f3d-s3 .s3-tip{position:absolute;z-index:6;pointer-events:none;background:var(--ink);color:var(--surface);padding:5px 8px;font-size:12px;line-height:1.4;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.f3d-s3 .s3-list{display:flex;flex-direction:column;max-height:260px;overflow:auto;border:1px solid var(--line2);margin-top:4px}
+.f3d-s3 .s3-list:empty{display:none}
+.f3d-s3 .s3-item{display:flex;gap:8px;align-items:baseline;justify-content:space-between;border:0;border-bottom:1px solid var(--line2);background:var(--surface);padding:6px 8px;text-align:left;cursor:pointer;min-height:34px}
+.f3d-s3 .s3-item:hover{background:var(--accent-soft)}
+.f3d-s3 .s3-card table{width:100%;border-collapse:collapse;font-size:12px}
+.f3d-s3 .s3-card td,.f3d-s3 .s3-card th{padding:2px 4px;border-bottom:1px solid var(--line2);text-align:left}
+.f3d-s3 .s3-card .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:4px 0}
+.f3d-s3 .s3-card .kv span:nth-child(odd){color:var(--ink2)}
+.f3d-s3 .s3-bar{height:8px;background:var(--surface3);border:1px solid var(--line);margin:2px 0 6px}
+.f3d-s3 .s3-bar i{display:block;height:100%;background:var(--accent)}
+.f3d-s3 .s3-status{background:var(--accent-soft)}
+.f3d-s3 .s3-status[data-status="unsaved"]{background:#bfeceb;color:#064e4c}
+.f3d-s3 .s3-status[data-status="new"]{background:var(--warn-soft)}
+@media (max-width: 768px){
+  .f3d-s3 .top{gap:4px 6px;padding:4px 6px}
+  .f3d-s3 .top .brand,.f3d-s3 .top .grow,.f3d-s3 .top .grp:not(#siteGrp),.f3d-s3 #modeSeg,.f3d-s3 #draftChip,.f3d-s3 #storeTag,.f3d-s3 #s3Access,.f3d-s3 #btnPublish,.f3d-s3 #btnHistory,.f3d-s3 #menuExtra,.f3d-s3 #btnNewSite,.f3d-s3 .s3-undo{display:none!important}
+  .f3d-s3 .s3-burger{display:inline-flex}
+  .f3d-s3 #siteGrp{flex:1 1 0;min-width:0}
+  .f3d-s3 #siteSel{max-width:none;width:100%}
+  .f3d-s3 .main{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+  .f3d-s3 .center{grid-column:1!important;grid-row:1!important;min-width:0}
+  .f3d-s3 .mtabs,.f3d-s3 .stamp,.f3d-s3 .legend,.f3d-s3 .vnotice{display:none!important}
+  .f3d-s3 .left,.f3d-s3 .right{display:none!important;position:absolute;top:0;bottom:0;z-index:30;width:min(88vw,360px);max-width:100%;grid-column:auto!important;grid-row:auto!important;background:var(--surface);box-shadow:0 0 24px rgba(0,0,0,.35);border:0}
+  .f3d-s3.m-left .left{display:flex!important;left:0}
+  .f3d-s3.m-right .right{display:flex!important;right:0}
+  .f3d-s3 .ltabs{display:flex!important;flex-wrap:wrap}
+  .f3d-s3 .s3-mbar{display:flex;position:absolute;left:6px;right:6px;top:6px;z-index:4;gap:4px}
+  .f3d-s3 .s3-mbar input{flex:1;min-width:0;min-height:36px;font-size:16px}
+  .f3d-s3 .s3-mlist{position:absolute;left:0;right:0;top:40px;background:var(--surface);border:1px solid var(--line);max-height:50vh;overflow:auto}
+  .f3d-s3 .vtools{top:50px!important;left:6px!important}
+  .f3d-s3 .vtools .fbtn{min-height:34px}
+  .f3d-s3 .s3-tools{top:auto;bottom:56px;right:6px;left:6px;justify-content:flex-start}
+  .f3d-s3 .s3-tools select{max-width:60vw}
+  .f3d-s3 .s3-heat{right:6px;bottom:96px;max-width:46vw;font-size:11px}
+  .f3d-s3 .s3-objbtn{display:inline-flex;position:absolute;right:6px;bottom:8px;z-index:40}
+  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) - 46px);top:6px;z-index:40}
+  .f3d-s3 .s3-card-ov{display:flex;flex-direction:column;position:fixed;inset:0;z-index:60;background:var(--surface)}
+  .f3d-s3 .s3-card-ov[hidden]{display:none}
+  .f3d-s3 .s3-card-ov .s3-card-h{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .f3d-s3 .s3-card-ov .s3-card-b{flex:1;overflow:auto;padding:10px}
+  .f3d-s3 dialog{max-width:100vw;width:100%}
+  .f3d-s3 .fbtn,.f3d-s3 .s3-item{min-height:36px}
+}
+`;
+var isMobile = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(MOBILE_QUERY).matches;
+function ensureStyle() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID)) {
+    return;
+  }
+  const st = document.createElement("style");
+  st.id = STYLE_ID;
+  st.textContent = CSS;
+  root.prepend(st);
+}
+function applyMobile() {
+  const app = $("#app");
+  if (!app) {
+    return;
+  }
+  const mob = isMobile();
+  app.classList.toggle("m", mob);
+  if (mob) {
+    if (S.app.mode !== "view") {
+      S.ui.modeBefore = S.app.mode;
+      S.app.mode = "view";
+      S.edit = null;
+      E.cancelModes?.();
+      E.renderAll?.();
+    }
+  } else {
+    app.classList.remove("m-left", "m-right");
+    hideCard();
+    if (S.ui.modeBefore) {
+      S.app.mode = S.ui.modeBefore;
+      S.ui.modeBefore = null;
+      E.renderAll?.();
+    }
+  }
+}
+function mobilePanel(side2, open = null) {
+  const app = $("#app");
+  if (!app || !isMobile()) {
+    return;
+  }
+  const cls = side2 === "left" ? "m-left" : "m-right";
+  const other = side2 === "left" ? "m-right" : "m-left";
+  const on = open == null ? !app.classList.contains(cls) : open;
+  app.classList.remove(other);
+  app.classList.toggle(cls, on);
+  decorate();
+}
+function tipHtml({ rec, kind, cell }) {
+  const code = cell ? cell.code : kind === "placement" ? rec.code : rec.params?.title || rec.code_prefix;
+  const lines = [h("b", null, code || "—")];
+  const e = cell && E.stockOf?.(cell.code);
+  if (cell) {
+    if (e) {
+      const top = e.top_product || e.detail && e.detail.rows && e.detail.rows[0] && e.detail.rows[0].product;
+      lines.push(h("div", null, top ? `Товар: ${top}` : e.qty ? `Кількість: ${e.qty}` : "Порожньо"));
+      lines.push(h("div", null, e.fill != null ? `Заповненість: ${Math.round(e.fill * 100)} %` : "Заповненість: —"));
+    } else if (can("stock")) {
+      lines.push(h("div", { style: { opacity: 0.8 } }, S.stock ? "нова комірка · без даних Odoo" : "залишки не завантажено"));
+    }
+  } else if (kind === "placement") {
+    lines.push(h("div", null, rec.name || ""));
+  }
+  return lines;
+}
+function showTip(info) {
+  const tip = $("#s3Tip");
+  const cv = $("#vp");
+  if (!tip || !cv || isMobile()) {
+    return;
+  }
+  const r = cv.getBoundingClientRect();
+  tip.replaceChildren(...tipHtml(info));
+  tip.hidden = false;
+  tip.style.left = Math.min(info.x - r.left + 14, r.width - 200) + "px";
+  tip.style.top = Math.max(4, info.y - r.top + 14) + "px";
+}
+function hideTip() {
+  const tip = $("#s3Tip");
+  if (tip) {
+    tip.hidden = true;
+  }
+}
+function showCard(node, title) {
+  const ov = $("#s3CardOv");
+  if (!ov) {
+    return;
+  }
+  $("#s3CardTitle").textContent = title || "";
+  $("#s3CardBody").replaceChildren(node);
+  ov.hidden = false;
+}
+function hideCard() {
+  const ov = $("#s3CardOv");
+  if (ov) {
+    ov.hidden = true;
+  }
+}
+function ensureDom() {
+  const app = $("#app");
+  if (!app) {
+    return false;
+  }
+  app.classList.add("f3d-s3");
+  const center2 = $(".center");
+  if (!$("#s3Tools")) {
+    const tools = h(
+      "div",
+      { class: "s3-tools", id: "s3Tools" },
+      h("button", { class: "fbtn icon s3-undo", type: "button", id: "s3Undo", "aria-label": "Скасувати", onclick: () => E.undo() }, ic("rot")),
+      h("button", { class: "fbtn icon s3-undo", type: "button", id: "s3Redo", "aria-label": "Повторити", style: { transform: "scaleX(-1)" }, onclick: () => E.redo() }, ic("rot")),
+      h("select", { id: "s3Metric", "aria-label": "Показник", onchange: (e) => E.setMetric(e.target.value) }),
+      h("button", { class: "fbtn icon", type: "button", id: "s3Refresh", "aria-label": "Оновити дані", title: "Оновити дані", onclick: () => E.refreshStock() }, ic("hist"))
+    );
+    center2.append(tools, h("div", { class: "s3-heat", id: "s3Heat", hidden: true }), h("div", { class: "s3-tip", id: "s3Tip", hidden: true }));
+  }
+  if (!$("#s3Burger")) {
+    $(".top").prepend(h("button", { class: "fbtn icon s3-burger", type: "button", id: "s3Burger", "aria-label": "Панель", onclick: () => mobilePanel("left") }, h("span", { "aria-hidden": "true" }, "☰")));
+  }
+  if (!$("#s3Access")) {
+    $("#storeTag").after(h("span", { class: "chip", id: "s3Access" }));
+  }
+  if (!$("#s3Mbar")) {
+    const inp = h("input", { type: "search", id: "s3mSearch", placeholder: "Код місця, напр. PLT-01A", "aria-label": "Пошук місця", autocomplete: "off", enterkeyhint: "go" });
+    const list = h("div", { class: "s3-mlist", id: "s3mList", hidden: true });
+    const draw = () => {
+      const { hits } = E.findCodes(inp.value, 8);
+      list.hidden = !inp.value;
+      list.replaceChildren(...hits.map((x) => h("button", { class: "s3-item", type: "button", onclick: () => (E.gotoHit(x), list.hidden = true, inp.blur()) }, h("b", null, x.code), h("span", { class: "small muted" }, x.kind === "cell" ? "комірка" : x.kind === "placement" ? "обладнання" : "місце"))));
+    };
+    inp.addEventListener("input", draw);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const { hits } = E.findCodes(inp.value, 5);
+        const hit = hits.find((x) => x.rank === 0) || (hits.length === 1 ? hits[0] : null);
+        if (hit) {
+          E.gotoHit(hit);
+          list.hidden = true;
+          inp.blur();
+        } else {
+          draw();
+        }
+      }
+    });
+    center2.append(h("div", { class: "s3-mbar", id: "s3Mbar" }, inp, h("button", { class: "fbtn", type: "button", id: "s3mFind", onclick: () => E.openSearch("find"), "aria-label": "Де лежить" }, "Де?"), list));
+    center2.append(h("button", { class: "fbtn primary s3-objbtn", type: "button", id: "s3ObjBtn", onclick: () => mobilePanel("right") }, "Панель об’єкта"));
+    app.append(
+      h(
+        "div",
+        { class: "s3-card-ov", id: "s3CardOv", hidden: true },
+        h("div", { class: "s3-card-h" }, h("b", { id: "s3CardTitle", style: { flex: "1" } }), h("button", { class: "fbtn", type: "button", id: "s3CardClose", onclick: hideCard }, "Закрити")),
+        h("div", { class: "s3-card-b", id: "s3CardBody" })
+      )
+    );
+  }
+  return true;
+}
+function decorate() {
+  ensureStyle();
+  if (!ensureDom()) {
+    return;
+  }
+  renderUndoButtons();
+  E.renderHeat?.();
+  const acc = E.access?.();
+  const tag = $("#s3Access");
+  if (tag && acc) {
+    tag.textContent = acc.name;
+    tag.title = "Рівень доступу: " + acc.name + (acc.design ? "" : ". " + E.accessHint("design"));
+  }
+  $("#modeSeg")?.querySelectorAll("button").forEach((b) => {
+    b.disabled = isMobile();
+    b.title = isMobile() ? "У мобільному режимі правка вимкнена" : "";
+  });
+  const br = $("#s3Burger");
+  if (br) {
+    const open = $("#app").classList.contains("m-left");
+    br.setAttribute("aria-expanded", String(open));
+    br.firstChild.textContent = open ? "✕" : "☰";
+  }
+  const ob = $("#s3ObjBtn");
+  if (ob) {
+    ob.textContent = $("#app").classList.contains("m-right") ? "Закрити панель" : "Панель об’єкта";
+  }
+}
+function renderUndoButtons() {
+  const u = $("#s3Undo");
+  if (!u) {
+    return;
+  }
+  const st = E.undoState();
+  const acc = E.access?.() || { design: true };
+  const r = $("#s3Redo");
+  u.disabled = !st.canUndo || !acc.design;
+  r.disabled = !st.canRedo || !acc.design;
+  u.title = !acc.design ? E.accessHint("design") : st.canUndo ? `Скасувати: ${st.undoLabel} (Ctrl+Z)` : "Немає що скасувати";
+  r.title = !acc.design ? E.accessHint("design") : st.canRedo ? `Повторити: ${st.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
+}
+var mql = null;
+var onMql = () => {
+  applyMobile();
+  decorate();
+};
+function onMount() {
+  decorate();
+  applyMobile();
+  mql = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
+  mql?.addEventListener("change", onMql);
+  E.restoreMetric?.();
+}
+function onUnmount() {
+  mql?.removeEventListener("change", onMql);
+  mql = null;
+}
+E.lifecycle.mount.add(onMount);
+E.lifecycle.unmount.add(onUnmount);
+var origRenderAll = E.renderAll;
+E.renderAll = function renderAllS3(...a) {
+  const r = origRenderAll.apply(this, a);
+  try {
+    decorate();
+    if (isMobile() && S.app.mode !== "view") {
+      applyMobile();
+    }
+  } catch (e) {
+    console.error("S3 chrome:", e);
+  }
+  return r;
+};
+Object.assign(E, { isMobile, mobilePanel, showTip, hideTip, showCard, hideCard, renderUndoButtons, decorateS3: decorate });
+
+// core/constructor/card.js
+var pct = (v) => v == null ? "—" : Math.round(v * 100) + " %";
+var day = (iso) => iso ? String(iso).slice(0, 10) : "—";
+function cardNode(slot, cell) {
+  const root = h("div", { class: "s3-card", id: "s3Card", "data-code": cell.code });
+  const draw = () => {
+    const e = stockOf(cell.code);
+    const d = e && e.detail || null;
+    const ly = layerOf(slot.layer_id);
+    const type = typeOf(slot.type_id, libraryState());
+    const fill = e ? e.fill : null;
+    root.replaceChildren(
+      ...K(
+        h("div", { class: "frow wrap" }, h("h3", { style: { margin: 0, flex: "1" } }, cell.code), h("span", { class: "tag" }, type ? type.name : (SLOT_TEMPLATES[slot.template] || {}).label || slot.template), ly ? h("span", { class: "tag" }, ly.name) : null),
+        h(
+          "div",
+          { class: "kv" },
+          h("span", null, "Місць"),
+          h("span", null, String(cell.capacity ?? "—")),
+          h("span", null, "Макс. навантаження"),
+          h("span", null, cell.max_load_kg ? `${fmt(cell.max_load_kg, 0)} кг` : "—"),
+          h("span", null, "Категорія"),
+          h("span", null, d && d.category || slot.storage_category_name || "—"),
+          e ? h("span", null, "Запас / резерв") : null,
+          e ? h("span", null, `${e.qty ?? 0} / ${e.reserved ?? 0}`) : null,
+          e && (e.min != null || e.max != null) ? h("span", null, "Min / max") : null,
+          e && (e.min != null || e.max != null) ? h("span", null, `${e.min ?? "—"} / ${e.max ?? "—"}`) : null,
+          e && e.age_days != null && e.qty ? h("span", null, "Вік запасу") : null,
+          e && e.age_days != null && e.qty ? h("span", null, `${e.age_days} дн.`) : null
+        ),
+        fill != null ? h("div", null, h("div", { class: "small" }, `Заповненість: ${pct(fill)}`), h("div", { class: "s3-bar" }, h("i", { style: { width: Math.min(100, Math.round(fill * 100)) + "%" } }))) : null,
+        !e && can("stock") ? h("div", { class: "small muted" }, S.stock ? "Нова комірка: даних Odoo ще немає." : "Залишки не завантажено (оберіть «Показник» чи «Оновити дані»).") : null,
+        e && S.stock && S.stock.demo ? h("div", { class: "small" }, h("span", { class: "tag s3-demo" }, "демо"), " значення синтетичні") : null,
+        d && d.rows && d.rows.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Залишки"), h("table", null, h("thead", null, h("tr", null, ["Товар", "К-сть", "Резерв", "Партія", "Вік"].map((t) => h("th", null, t)))), h("tbody", null, d.rows.map((r) => h("tr", null, h("td", null, r.product || r.ref || "—"), h("td", null, String(r.qty ?? "")), h("td", null, String(r.reserved ?? "")), h("td", null, r.lot || "—"), h("td", null, r.age_days != null ? r.age_days + " дн." : day(r.in_date))))))) : null,
+        d && d.rules && d.rules.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Правила розміщення"), h("ul", { class: "small", style: { margin: 0, paddingLeft: "16px" } }, d.rules.map((r) => h("li", null, typeof r === "string" ? r : r.label || r.name)))) : null,
+        d && d.moves && d.moves.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, `Рух за ${S.stock && S.stock.days || 90} днів`), h("table", null, h("tbody", null, d.moves.slice(0, 10).map((m) => h("tr", null, h("td", null, day(m.date)), h("td", null, m.product || ""), h("td", null, String(m.qty ?? "")), h("td", { class: "small muted" }, [m.from, m.to].filter(Boolean).join(" → "))))))) : null,
+        h(
+          "div",
+          { class: "frow wrap", style: { marginTop: "6px" } },
+          d && d.location_id && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord("stock.location", d.location_id) }, "Відкрити в Odoo") : null,
+          h("button", { class: "fbtn sm", type: "button", id: "btnCardLabel", onclick: () => E.runDialog("labels", { spec: { scope: "row", rowId: slot.id } }) }, "Етикетка…")
+        )
+      )
+    );
+  };
+  draw();
+  if (can("stock")) {
+    loadDetail(cell.code).then(() => {
+      if (root.isConnected || $("#s3CardOv:not([hidden])")) {
+        draw();
+      }
+    });
+  }
+  return root;
+}
+function renderCardBlock(root, { rec }) {
+  if (!rec || !S.sel || S.sel.kind !== "slot" || !S.selCell) {
+    return;
+  }
+  const cell = cellsOf(rec).find((c) => c.code === S.selCell);
+  if (!cell) {
+    return;
+  }
+  root.append(h("div", { class: "sec", id: "cardBlock" }, h("h3", null, "Картка місця"), cardNode(rec, cell)));
+}
+registries.panels.add("right:card", { area: "right", render: renderCardBlock }, { sequence: 20, force: true });
+function cellPicked(slotId, code) {
+  if (!E.isMobile?.()) {
+    E.renderRight?.();
+    return;
+  }
+  const slot = S.sIdx.get(slotId);
+  const cell = slot && cellsOf(slot).find((c) => c.code === code);
+  if (cell) {
+    E.showCard(cardNode(slot, cell), cell.code);
+  }
+}
+Object.assign(E, { cellPicked, cardNode });
 export {
   BaseAdapter,
   CAPABILITY_NAMES,
