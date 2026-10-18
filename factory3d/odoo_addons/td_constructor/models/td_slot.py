@@ -7,6 +7,7 @@ from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 from ..services import cells as cells_mod
+from .td_site import DEPTH_MODE_SELECTION
 
 SLOT_TEMPLATE_SELECTION = [
     ('pallet_rack', "Паллетний стелаж"),
@@ -50,6 +51,43 @@ class F3dSlot(models.Model):
         check_company=True,
         domain=[('usage', 'in', ('internal', 'view'))],
         help="Куди публікувати комірки місця",
+    )
+    # --- MERGE.md §3.3 (волни 1–2): поля без логіки; наповнюють слайси ---------------------------------
+    type_id = fields.Many2one('td.slot.type', string="Тип місця", index=True, ondelete='restrict')
+    storage_category_id = fields.Many2one(
+        'stock.storage.category',
+        string="Категорія зберігання",
+        ondelete='set null',
+        help="Діє на вкладені рівні, якщо там не задано своєї (F03-02)",
+    )
+    removal_strategy_id = fields.Many2one(
+        'product.removal',
+        string="Стратегія списання",
+        ondelete='set null',
+        help="Діє на вкладені рівні, якщо там не задано своєї (F03-06)",
+    )
+    function_id = fields.Many2one(
+        'td.term',
+        string="Функція зони",
+        domain=[('term_type', '=', 'zone_function')],
+        ondelete='set null',
+    )
+    attr_ids = fields.Many2many(
+        'td.term',
+        'td_slot_attr_rel',
+        'slot_id',
+        'term_id',
+        string="Атрибути зони",
+        domain=[('term_type', '=', 'zone_attr')],
+    )
+    temp_min_c = fields.Float(string="Температура від, °C", digits=(5, 1), help="Обидві межі 0 — режим не задано")
+    temp_max_c = fields.Float(string="Температура до, °C", digits=(5, 1))
+    tech = fields.Char(string="Техніка зони", size=32, help="Ключ техніки зони; порожньо — як у площадки")
+    addr = fields.Json(
+        string="Адресація місця", default=dict, help="R-22: порожньо — успадкувати від зони або площадки"
+    )
+    depth_mode = fields.Selection(
+        DEPTH_MODE_SELECTION, string="Глибина локацій", help="Порожньо — успадкувати від зони або площадки"
     )
     cell_count = fields.Integer(string="Комірок", compute='_compute_cells', store=True)
     footprint_l_m = fields.Float(string="Довжина габариту, м", digits=(10, 3), compute='_compute_cells', store=True)

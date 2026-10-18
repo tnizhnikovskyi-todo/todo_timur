@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- S2 (волна 1): правила розміщення й поповнення (чернетки), журнал публікацій; скелет W0-B -->
+    <record id="view_td_putaway_rule_list" model="ir.ui.view">
+        <field name="name">td.putaway.rule.list</field>
+        <field name="model">td.putaway.rule</field>
+        <field name="arch" type="xml">
+            <list string="Правила розміщення">
+                <field name="site_id"/>
+                <field name="sequence" widget="handle"/>
+                <field name="product_id"/>
+                <field name="category_id"/>
+                <field name="in_location_id"/>
+                <field name="out_code"/>
+                <field name="out_location_id"/>
+                <field name="storage_category_id" optional="hide"/>
+                <field name="deleted"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_putaway_rule_form" model="ir.ui.view">
+        <field name="name">td.putaway.rule.form</field>
+        <field name="model">td.putaway.rule</field>
+        <field name="arch" type="xml">
+            <form string="Правило розміщення">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="site_id"/>
+                            <field name="product_id"/>
+                            <field name="category_id"/>
+                            <field name="package_type_ids" widget="many2many_tags"/>
+                            <field name="storage_category_id"/>
+                        </group>
+                        <group>
+                            <field name="in_location_id"/>
+                            <field name="out_code"/>
+                            <field name="out_location_id"/>
+                            <field name="sublocation"/>
+                            <field name="sequence"/>
+                            <field name="deleted"/>
+                            <field name="odoo_rule_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_td_putaway_rule" model="ir.actions.act_window">
+        <field name="name">Правила розміщення</field>
+        <field name="res_model">td.putaway.rule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_td_replenish_rule_list" model="ir.ui.view">
+        <field name="name">td.replenish.rule.list</field>
+        <field name="model">td.replenish.rule</field>
+        <field name="arch" type="xml">
+            <list string="Правила поповнення">
+                <field name="site_id"/>
+                <field name="cell_code"/>
+                <field name="location_id"/>
+                <field name="product_id"/>
+                <field name="min_qty"/>
+                <field name="max_qty"/>
+                <field name="deleted"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_replenish_rule_form" model="ir.ui.view">
+        <field name="name">td.replenish.rule.form</field>
+        <field name="model">td.replenish.rule</field>
+        <field name="arch" type="xml">
+            <form string="Правило поповнення">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="site_id"/>
+                            <field name="product_id"/>
+                            <field name="cell_code"/>
+                            <field name="location_id"/>
+                        </group>
+                        <group>
+                            <field name="min_qty"/>
+                            <field name="max_qty"/>
+                            <field name="deleted"/>
+                            <field name="odoo_orderpoint_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_td_replenish_rule" model="ir.actions.act_window">
+        <field name="name">Правила поповнення</field>
+        <field name="res_model">td.replenish.rule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_td_publish_op_list" model="ir.ui.view">
+        <field name="name">td.publish.op.list</field>
+        <field name="model">td.publish.op</field>
+        <field name="arch" type="xml">
+            <list string="Журнал публікацій" create="0" edit="0" delete="0">
+                <field name="version_id"/>
+                <field name="seq"/>
+                <field name="op"/>
+                <field name="res_model"/>
+                <field name="code"/>
+                <field name="res_id"/>
+                <field name="rolled_back"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_publish_op_form" model="ir.ui.view">
+        <field name="name">td.publish.op.form</field>
+        <field name="model">td.publish.op</field>
+        <field name="arch" type="xml">
+            <form string="Операція публікації" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="version_id"/>
+                            <field name="seq"/>
+                            <field name="op"/>
+                        </group>
+                        <group>
+                            <field name="res_model"/>
+                            <field name="res_id"/>
+                            <field name="code"/>
+                            <field name="rolled_back"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_td_publish_op" model="ir.actions.act_window">
+        <field name="name">Журнал публікацій</field>
+        <field name="res_model">td.publish.op</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -16,4 +16,21 @@
     <menuitem id="menu_td_constructor_terms" name="Довідники конструктора"
               parent="td_factory3d.menu_td_config" sequence="14"
               action="action_td_term" groups="group_td_constructor_manager"/>
+    <!-- MERGE.md §3.5, волны 1–2: меню слайсів; дії лежать у views/td_slot_type_views, td_putaway_views, td_collab_views -->
+    <menuitem id="menu_td_slot_type" name="Типи місць" parent="menu_td_constructor_plan" sequence="50"
+              action="action_td_slot_type" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_slot_preset" name="Пресети місць" parent="menu_td_constructor_plan" sequence="55"
+              action="action_td_slot_preset" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_putaway_rule" name="Правила розміщення" parent="menu_td_constructor_plan" sequence="60"
+              action="action_td_putaway_rule" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_replenish_rule" name="Правила поповнення" parent="menu_td_constructor_plan" sequence="65"
+              action="action_td_replenish_rule" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_publish_op" name="Журнал публікацій" parent="menu_td_constructor_plan" sequence="70"
+              action="action_td_publish_op" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_layout_variant" name="Варіанти планування" parent="menu_td_constructor_plan" sequence="80"
+              action="action_td_layout_variant" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_comment" name="Коментарі" parent="menu_td_constructor_plan" sequence="85"
+              action="action_td_comment" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_zone_lock" name="Блокування зон" parent="td_factory3d.menu_td_config" sequence="15"
+              action="action_td_zone_lock" groups="group_td_constructor_manager"/>
 </odoo>

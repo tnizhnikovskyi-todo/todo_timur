@@ -33,6 +33,22 @@ class F3dLayoutVersion(models.Model):
         compute='_compute_is_draft_base',
         help="Діюча версія, на якій уже ґрунтується чернетка: відновлювати нічого",
     )
+    # --- MERGE.md §3.3 (волни 1–2): поля без логіки; наповнюють слайси ---------------------------------
+    kind = fields.Selection(
+        [('publish', "Публікація"), ('checkpoint', "Контрольна точка")],
+        string="Вид",
+        required=True,
+        default='publish',
+        index=True,
+        help="Контрольна точка — знімок чернетки без змін в Odoo (N-03)",
+    )
+    variant_id = fields.Many2one(
+        'td.layout.variant', string="Варіант", readonly=True, copy=False, ondelete='set null', index=True
+    )
+    rolled_back_at = fields.Datetime(string="Відкочено", readonly=True, copy=False)
+    rolled_back_by_id = fields.Many2one('res.users', string="Відкотив", readonly=True, copy=False)
+    op_ids = fields.One2many('td.publish.op', 'version_id', string="Операції публікації", readonly=True)
+    metrics = fields.Json(string="Цифри для порівняння", readonly=True, copy=False)
 
     _f3d_version_n_uniq = models.Constraint('UNIQUE(site_id, n)', "Номер версії має бути унікальним на площадці.")
 

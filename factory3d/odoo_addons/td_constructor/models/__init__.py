@@ -8,6 +8,14 @@ from . import td_equipment_variant
 from . import td_placement
 from . import td_check_config
 from . import td_layout_version
+from . import td_slot_type
+from . import td_slot_preset
+from . import td_putaway_rule
+from . import td_replenish_rule
+from . import td_publish_op
+from . import td_layout_variant
+from . import td_comment
+from . import td_zone_lock
 from . import stock_location
 from . import maintenance_equipment
 from . import mrp_workcenter

@@ -75,6 +75,11 @@ class F3dLayer(models.Model):
     aisles = fields.Json(string="Проходи", default=list)
     fire_paths = fields.Json(string="Пожежні проходи й виходи", default=list)
     utilities = fields.Json(string="Мережі", default=list)
+    items = fields.Json(
+        string="Об'єкти будівлі",
+        default=list,
+        help="MERGE.md §3.3, R-22: колони, стіни, ворота, док, двері, офіс, зарядка техніки (F18); наповнює слайс S5",
+    )
     underlay_attachment_id = fields.Many2one('ir.attachment', string="Підкладка", ondelete='set null', copy=False)
     underlay_format = fields.Selection(
         [('dxf', "DXF"), ('dwg', "DWG")], string="Формат підкладки", compute='_compute_underlay', store=True

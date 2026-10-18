@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- S1 (волна 1): типи місць і пресети; скелет W0-B — прості списки й форми -->
+    <record id="view_td_slot_type_list" model="ir.ui.view">
+        <field name="name">td.slot.type.list</field>
+        <field name="model">td.slot.type</field>
+        <field name="arch" type="xml">
+            <list string="Типи місць">
+                <field name="sequence" widget="handle"/>
+                <field name="ref"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="group"/>
+                <field name="template"/>
+                <field name="relevance"/>
+                <field name="loc_kind" optional="hide"/>
+                <field name="is_custom"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_slot_type_form" model="ir.ui.view">
+        <field name="name">td.slot.type.form</field>
+        <field name="model">td.slot.type</field>
+        <field name="arch" type="xml">
+            <form string="Тип місця">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="ref"/>
+                            <field name="group"/>
+                            <field name="template"/>
+                            <field name="shape"/>
+                        </group>
+                        <group>
+                            <field name="relevance"/>
+                            <field name="loc_kind"/>
+                            <field name="is_custom"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <field name="description" placeholder="Опис типу"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_slot_type_search" model="ir.ui.view">
+        <field name="name">td.slot.type.search</field>
+        <field name="model">td.slot.type</field>
+        <field name="arch" type="xml">
+            <search string="Типи місць">
+                <field name="name" string="Назва, ключ, позначення"
+                       filter_domain="['|', '|', ('name', 'ilike', self), ('code', 'ilike', self), ('ref', 'ilike', self)]"/>
+                <filter name="custom" string="Власні" domain="[('is_custom', '=', True)]"/>
+                <filter name="relevant" string="Є на фабриці" domain="[('relevance', '>=', 1)]"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_group" string="Група" context="{'group_by': 'group'}"/>
+                    <filter name="group_template" string="Генератор" context="{'group_by': 'template'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_td_slot_type" model="ir.actions.act_window">
+        <field name="name">Типи місць</field>
+        <field name="res_model">td.slot.type</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_td_slot_preset_list" model="ir.ui.view">
+        <field name="name">td.slot.preset.list</field>
+        <field name="model">td.slot.preset</field>
+        <field name="arch" type="xml">
+            <list string="Пресети місць">
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="type_id"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_slot_preset_form" model="ir.ui.view">
+        <field name="name">td.slot.preset.form</field>
+        <field name="model">td.slot.preset</field>
+        <field name="arch" type="xml">
+            <form string="Пресет місця">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="kind"/>
+                        <field name="type_id"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_td_slot_preset" model="ir.actions.act_window">
+        <field name="name">Пресети місць</field>
+        <field name="res_model">td.slot.preset</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

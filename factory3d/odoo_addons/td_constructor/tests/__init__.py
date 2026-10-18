@@ -14,3 +14,5 @@ from . import test_hoot_editor
 from . import test_hoot_model
 from . import test_seed_publish_idempotent
 from . import test_registries
+from . import test_skeleton_models
+from . import test_skeleton_rights
