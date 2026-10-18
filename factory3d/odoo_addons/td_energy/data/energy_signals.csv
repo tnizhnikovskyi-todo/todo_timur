@@ -295,4 +295,19 @@ infra/totals/export_kw,Мережа: віддача,Потужність,gauge,�
 energy/totals/p_now,Завод: споживання,Потужність,gauge,кВт,SWB-1,EN-DERIVED,,60,300,2,,,,,,,,,,1,,module,full
 energy/totals/load15_kw,Завод: 15-хвилинне навантаження,Потужність,gauge,кВт,SWB-1,EN-DERIVED,,900,0,2,,,,,,,,,,0,,module,full
 energy/totals/grid15_kw,Завод: 15-хвилинний пік з мережі,Потужність,gauge,кВт,SWB-1,EN-DERIVED,,900,0,2,,,,,,,Перевищення договірної потужності: {value} кВт при ліміті {threshold} кВт,0,0,0,,module,full
-energy/totals/cos_phi,Завод: cos φ на вводах,cos φ,gauge,,SWB-1,EN-DERIVED,,60,300,2,,0.95,,0.9,,,Низький cos φ на вводах: {value} при нормі від {threshold},0.01,900,0,,module,full
+energy/totals/cos_phi,Завод: cos φ на вводах,cos φ,gauge,,SWB-1,EN-DERIVED,,60,300,2,,0.92,,0.9,,,Низький cos φ на вводах: {value} при нормі від {threshold},0.01,900,0,,module,full
+energy/cells/QS/state,Секційний вимикач QS: стан,Стан,state,,QS,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":100,""type"":""u16"",""map"":{""0"":""open"",""1"":""closed""},""doc"":""Контролер ГРЩ SWB-CTRL 100 QS state (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,"[""open"",""closed""]",,,,,,,,,0,,sim_data,full
+energy/cells/PFC-1/q_kvar,PFC-1: підключена потужність,Реактивна потужність,gauge,квар,PFC-1,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":110,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 110 PFC-1 q_kvar (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-1/steps_on,PFC-1: увімкнено ступенів,Ступені,gauge,,PFC-1,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":111,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 111 PFC-1 steps_on (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-1/steps_total,PFC-1: ступенів усього,Ступені,gauge,,PFC-1,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":112,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 112 PFC-1 steps_total (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-1/fault_step,"PFC-1: ступінь, що не вмикається",Ступені,gauge,,PFC-1,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":113,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 113 PFC-1 fault_step (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,0.5,,PFC-1: ступінь {value} не вмикається,0,60,0,,sim_data,full
+energy/cells/PFC-2/q_kvar,PFC-2: підключена потужність,Реактивна потужність,gauge,квар,PFC-2,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":120,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 120 PFC-2 q_kvar (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-2/steps_on,PFC-2: увімкнено ступенів,Ступені,gauge,,PFC-2,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":121,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 121 PFC-2 steps_on (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-2/steps_total,PFC-2: ступенів усього,Ступені,gauge,,PFC-2,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":122,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 122 PFC-2 steps_total (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,,,,,,0,,sim_data,full
+energy/cells/PFC-2/fault_step,"PFC-2: ступінь, що не вмикається",Ступені,gauge,,PFC-2,MB-U73-SWB-CTRL,"{""fc"":3,""addr"":123,""type"":""u16"",""doc"":""Контролер ГРЩ SWB-CTRL 123 PFC-2 fault_step (ПРИПУЩЕННЯ iot_sim)""}",10,300,0,,,,,0.5,,PFC-2: ступінь {value} не вмикається,0,60,0,,sim_data,full
+energy/sections/S1/cos_phi,Секція 1: cos φ після компенсації,cos φ,gauge,,,EN-DERIVED,,60,300,2,,0.92,,0.9,,,,0.01,300,0,,module,full
+energy/sections/S1/p_kw,Секція 1: потужність,Потужність,gauge,кВт,,EN-DERIVED,,60,300,2,,,,,,,,,,0,,module,full
+energy/sections/S1/q_kvar,Секція 1: реактивна потужність після компенсації,Реактивна потужність,gauge,квар,,EN-DERIVED,,60,300,1,,,,,,,,,,0,,module,full
+energy/sections/S2/cos_phi,Секція 2: cos φ після компенсації,cos φ,gauge,,,EN-DERIVED,,60,300,2,,0.92,,0.9,,,,0.01,300,0,,module,full
+energy/sections/S2/p_kw,Секція 2: потужність,Потужність,gauge,кВт,,EN-DERIVED,,60,300,2,,,,,,,,,,0,,module,full
+energy/sections/S2/q_kvar,Секція 2: реактивна потужність після компенсації,Реактивна потужність,gauge,квар,,EN-DERIVED,,60,300,1,,,,,,,,,,0,,module,full

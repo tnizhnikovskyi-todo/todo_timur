@@ -42,6 +42,8 @@ POOL_COLS = ["code", "name", "sequence", "driver", "workcenters"]
 
 DERIVED = "EN-DERIVED"
 RTD_SOURCE = "MB-U96-RTD1"
+SWB_CTRL = "MB-U73-SWB-CTRL"  # W1 (A-24): контролер ГРЩ — стан QS і ступенів PFC
+SWB_VENDOR = "Контролер ГРЩ SWB-CTRL"
 RTD = {"fc": 3, "type": "u16", "scale": 0.0030518044, "offset": -50, "range": [-50, 150], "count": 3, "agg": "max"}
 
 # Карти станів (Додаток A.2): ім'я -> (map, states, alarm_states)
@@ -64,6 +66,7 @@ MAPS = {
         {"0": "unknown", "1": "pos_0", "2": "pos_I", "3": "pos_II"}, ["unknown", "pos_0", "pos_I", "pos_II"], []),
     "onoff": ({"0": "off", "1": "on"}, ["off", "on"], []),
     "ats_source": ({"0": "under", "1": "present", "2": "available"}, ["under", "present", "available"], []),
+    "qs_state": ({"0": "open", "1": "closed"}, ["open", "closed"], []),  # W1: QS (SWB-CTRL, HR 100)
 }  # fmt: skip
 
 PM = "Schneider PM5560"
@@ -274,6 +277,7 @@ def build_sources_meters(nodes):
                        e_export_signal="infra/bess/kwh_discharge_total"))  # fmt: skip
     src(71, "MB-U71-ATS-1", "ATS-1", "Socomec ATyS p")
     src(72, "MB-U72-CHP", "CHP", "TEDOM Quanto D800")
+    src(73, SWB_CTRL, "SWB-1", "Контролер ГРЩ SWB-CTRL (QS, PFC)")  # W1 A-24: карта регістрів — ПРИПУЩЕННЯ iot_sim
     meters.append(dict(code="TEDOM-1", name="TEDOM Quanto D800", node="CHP", model="tedom", role="generation",
                        source="MB-U72-CHP", p_signal="infra/totals/chp_kw", e_import_signal="infra/chp/kwh_total"))  # fmt: skip
     return sources, meters
@@ -489,9 +493,41 @@ def build_signals(nodes):
     sig("energy/totals/grid15_kw", "Завод: 15-хвилинний пік з мережі", "Потужність", "gauge", KW, "SWB-1", DERIVED,
         None, (900, 0), 2, "module", False, alarm_title=T_GRID, hysteresis=0, min_duration_s=0)  # fmt: skip
     sig("energy/totals/cos_phi", "Завод: cos φ на вводах", "cos φ", "gauge", None, "SWB-1", DERIVED, None, (60, 300),
-        2, "module", False, warn_low=0.95, alarm_low=0.90, alarm_title=T_COS, hysteresis=0.01,
+        2, "module", False, warn_low=0.92, alarm_low=0.90, alarm_title=T_COS, hysteresis=0.01,
         min_duration_s=900)  # fmt: skip
+    add_w1_signals(sig, state, rows)
     return rows
+
+
+def add_w1_signals(sig, state, rows):
+    """W1_SPEC 5.3: +15 сигналів — QS, ступені PFC (SWB-CTRL, HR 100…123) і секційні cos φ/P/Q (обчислювані)."""
+    sig("energy/cells/QS/state", "Секційний вимикач QS: стан", "Стан", "state", None, "QS", SWB_CTRL,
+        _reg(SWB_VENDOR, 100, "u16", 100, "QS state (ПРИПУЩЕННЯ iot_sim)", None, "qs_state"), (10, 300), 0, "sim_data",
+        False)  # fmt: skip
+    state("qs_state", rows[-1])
+    for s in (1, 2):
+        pfc, hr = "PFC-%d" % s, 100 + 10 * s
+        base = "energy/cells/%s/" % pfc
+        sig(base + "q_kvar", "%s: підключена потужність" % pfc, "Реактивна потужність", "gauge", "квар", pfc, SWB_CTRL,
+            _reg(SWB_VENDOR, hr, "u16", hr, "%s q_kvar (ПРИПУЩЕННЯ iot_sim)" % pfc), (10, 300), 0, "sim_data", False)  # fmt: skip
+        sig(base + "steps_on", "%s: увімкнено ступенів" % pfc, "Ступені", "gauge", None, pfc, SWB_CTRL,
+            _reg(SWB_VENDOR, hr + 1, "u16", hr + 1, "%s steps_on (ПРИПУЩЕННЯ iot_sim)" % pfc), (10, 300), 0,
+            "sim_data", False)  # fmt: skip
+        sig(base + "steps_total", "%s: ступенів усього" % pfc, "Ступені", "gauge", None, pfc, SWB_CTRL,
+            _reg(SWB_VENDOR, hr + 2, "u16", hr + 2, "%s steps_total (ПРИПУЩЕННЯ iot_sim)" % pfc), (10, 300), 0,
+            "sim_data", False)  # fmt: skip
+        sig(base + "fault_step", "%s: ступінь, що не вмикається" % pfc, "Ступені", "gauge", None, pfc, SWB_CTRL,
+            _reg(SWB_VENDOR, hr + 3, "u16", hr + 3, "%s fault_step (ПРИПУЩЕННЯ iot_sim)" % pfc), (10, 300), 0,
+            "sim_data", False, alarm_high=0.5, alarm_title=pfc + ": ступінь {value} не вмикається", hysteresis=0,
+            min_duration_s=60)  # fmt: skip
+    for s in (1, 2):
+        base = "energy/sections/S%d/" % s
+        sig(base + "cos_phi", "Секція %d: cos φ після компенсації" % s, "cos φ", "gauge", None, None, DERIVED, None,
+            (60, 300), 2, "module", False, warn_low=0.92, alarm_low=0.90, hysteresis=0.01, min_duration_s=300)  # fmt: skip
+        sig(base + "p_kw", "Секція %d: потужність" % s, "Потужність", "gauge", KW, None, DERIVED, None, (60, 300), 2,
+            "module", False)  # fmt: skip
+        sig(base + "q_kvar", "Секція %d: реактивна потужність після компенсації" % s, "Реактивна потужність", "gauge",
+            "квар", None, DERIVED, None, (60, 300), 1, "module", False)  # fmt: skip
 
 
 POOLS = [

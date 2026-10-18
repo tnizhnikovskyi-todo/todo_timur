@@ -206,37 +206,38 @@ def nodes(env, report):
     report.update(stats)
 
 
+def _source_vals(env, row, collector, read_enabled):
+    equipment = env["maintenance.equipment"].search_f3d(row["equipment"]) if row["equipment"] else None
+    return {
+        "name": row["name"],
+        "type": "modbus_tcp",
+        "collector_id": collector.id,
+        "params": {
+            "host": row["host"],
+            "port": int(row["port"]),
+            "unit": int(row["unit"]),
+            "timeout_s": int(row["timeout_s"]),
+            "retries": int(row["retries"]),
+            "max_block": int(row["max_block"]),
+            "gap_max": int(row["gap_max"]),
+        },
+        "module": "energy",
+        "equipment_id": equipment.id if equipment else False,
+        "read_enabled": read_enabled,
+        "write_enabled": False,
+    }
+
+
 def sources(env, report):
     _step("5 sources")
     collector = env.ref("td_telemetry.collector_main")
     read_enabled = _bool_param(env, "read_enabled")
     rows = _rows("energy_sources.csv")
     for row in rows:
-        equipment = env["maintenance.equipment"].search_f3d(row["equipment"]) if row["equipment"] else None
         _upsert(
-            env,
-            "td.source",
-            row["code"],
-            {
-                "name": row["name"],
-                "type": "modbus_tcp",
-                "collector_id": collector.id,
-                "params": {
-                    "host": row["host"],
-                    "port": int(row["port"]),
-                    "unit": int(row["unit"]),
-                    "timeout_s": int(row["timeout_s"]),
-                    "retries": int(row["retries"]),
-                    "max_block": int(row["max_block"]),
-                    "gap_max": int(row["gap_max"]),
-                },
-                "module": "energy",
-                "equipment_id": equipment.id if equipment else False,
-                "read_enabled": read_enabled,
-                "write_enabled": False,
-            },
+            env, "td.source", row["code"], _source_vals(env, row, collector, read_enabled),
             xmlid="source_" + _slug(row["code"]),
-        )
+        )  # fmt: skip
     report["sources"] = len(rows)
 
 
@@ -371,6 +372,85 @@ def contract(env, report):
         Tariff._f3d_tariff_at(fields.Datetime.now(), company)._f3d_apply_contract_thresholds()
 
 
+# --- W1 (A-24, A-27): схема Пульту, сигнали контролера ГРЩ, пороги cos φ ---------------------------------------
+W1_SIGNAL_PREFIXES = ("energy/cells/QS/", "energy/cells/PFC-", "energy/sections/")
+W1_SOURCE = "MB-U73-SWB-CTRL"
+
+
+def _ensure_w1_signals(env):
+    """W1_SPEC 5.3: ідемпотентно створює відсутні W1-сигнали й джерело `MB-U73-SWB-CTRL`; існуючі не змінює."""
+    env = env(su=True, context=dict(env.context, tracking_disable=True, f3d_energy_internal=True))
+    Source = env["td.source"].with_context(active_test=False)
+    Signal = env["td.signal"].with_context(active_test=False)
+    created = {"sources": 0, "signals": 0}
+    collector = env.ref("td_telemetry.collector_main", raise_if_not_found=False)
+    if collector:
+        read_enabled = _bool_param(env, "read_enabled")
+        for row in _rows("energy_sources.csv"):
+            if row["code"] == W1_SOURCE and not Source.search_count([("code", "=", W1_SOURCE)]):
+                _upsert(
+                    env, "td.source", row["code"], _source_vals(env, row, collector, read_enabled),
+                    xmlid="source_" + _slug(row["code"]),
+                )  # fmt: skip
+                created["sources"] += 1
+    sources_by_code = {s.code: s for s in Source.search([])}
+    rows = [r for r in _rows("energy_signals.csv") if r["code"].startswith(W1_SIGNAL_PREFIXES)]
+    have = set(Signal.search([("code", "in", [r["code"] for r in rows])]).mapped("code"))
+    for row in rows:
+        if row["code"] in have:
+            continue
+        vals = _signal_vals(env, row, sources_by_code)
+        vals.update(code=row["code"], name=row["name"], quantity=row["quantity"])
+        vals["origin"] = "catalog" if row["origin"] == "sim_data" else row["origin"]
+        _ensure_xmlid(env, "sig_" + _slug(row["code"]), Signal.create(vals))
+        created["signals"] += 1
+    return created
+
+
+def _load_sld_layout(env):
+    """W1_SPEC 5.2: геометрія схеми Пульту з `data/sld_layout.csv`; правки користувача не перезаписуються."""
+    env = env(su=True, context=dict(env.context, tracking_disable=True))
+    Node = env["td.energy.node"].with_context(active_test=False)
+    rows = _rows("sld_layout.csv")
+    wanted = {r["code"] for r in rows} | {r["anchor"] for r in rows if r["anchor"]}
+    by_code = {n.code: n for n in Node.search([("code", "in", sorted(wanted))])}
+    stats = {"loaded": 0, "kept": 0, "missing": 0}
+    for row in rows:
+        node = by_code.get(row["code"])
+        if not node:
+            _logger.warning("td_energy: схема Пульту: немає вузла %s", row["code"])
+            stats["missing"] += 1
+            continue
+        if node.sld_show or node.sld_x or node.sld_y:
+            stats["kept"] += 1
+            continue
+        anchor = by_code.get(row["anchor"]) if row["anchor"] else None
+        node.write(
+            {
+                "sld_show": True,
+                "sld_shape": row["shape"],
+                "sld_x": int(row["x"]),
+                "sld_y": int(row["y"]),
+                "sld_w": int(row["w"]),
+                "sld_h": int(row["h"]),
+                "sld_label": row["label"] or False,
+                "sld_anchor_id": anchor.id if anchor else False,
+            }
+        )
+        stats["loaded"] += 1
+    return stats
+
+
+def sld_layout(env, report):
+    _step("10 sld_layout")
+    report["sld"] = _load_sld_layout(env)
+
+
+def cos_thresholds(env, report):
+    _step("11 cos_thresholds")
+    env["res.config.settings"]._td_apply_cos_thresholds()
+
+
 def finish(env, report):
     _step("9 report")
     partial = report.get("unmatched_equipment", 0) > 0 or report.get("direct_without_wc", 0) > 0
@@ -383,7 +463,7 @@ def run_bind(env):
     """Кроки §5.3 в одній транзакції; повертає звіт (`state`, `ts`, лічильники)."""
     env = env(su=True, context=dict(env.context, tracking_disable=True, f3d_energy_internal=True))
     report = {}
-    for step in (params, derived_source, pools, nodes, sources, signals, meters, contract):
+    for step in (params, derived_source, pools, nodes, sources, signals, meters, contract, sld_layout, cos_thresholds):
         step(env, report)
     return finish(env, report)
 

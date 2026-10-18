@@ -81,4 +81,61 @@
         <field name="key">td.energy.install_report</field>
         <field name="value">{}</field>
     </record>
+    <!-- W1 (SPEC 5.1): Пульт, cos φ (E-10), прогноз, повірка -->
+    <record id="param_cos_phi_target" model="ir.config_parameter">
+        <field name="key">td.energy.cos_phi_target</field>
+        <field name="value">0.95</field>
+    </record>
+    <record id="param_cos_phi_warn" model="ir.config_parameter">
+        <field name="key">td.energy.cos_phi_warn</field>
+        <field name="value">0.92</field>
+    </record>
+    <record id="param_cos_phi_alarm" model="ir.config_parameter">
+        <field name="key">td.energy.cos_phi_alarm</field>
+        <field name="value">0.90</field>
+    </record>
+    <record id="param_pult_refresh_s" model="ir.config_parameter">
+        <field name="key">td.energy.pult_refresh_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_bus_throttle_s" model="ir.config_parameter">
+        <field name="key">td.energy.bus_throttle_s</field>
+        <field name="value">5</field>
+    </record>
+    <record id="param_alarm_list_limit" model="ir.config_parameter">
+        <field name="key">td.energy.alarm_list_limit</field>
+        <field name="value">8</field>
+    </record>
+    <record id="param_load_warn_pct" model="ir.config_parameter">
+        <field name="key">td.energy.load_warn_pct</field>
+        <field name="value">80</field>
+    </record>
+    <record id="param_load_alarm_pct" model="ir.config_parameter">
+        <field name="key">td.energy.load_alarm_pct</field>
+        <field name="value">100</field>
+    </record>
+    <record id="param_forecast_weeks" model="ir.config_parameter">
+        <field name="key">td.energy.forecast_weeks</field>
+        <field name="value">8</field>
+    </record>
+    <record id="param_forecast_min_days" model="ir.config_parameter">
+        <field name="key">td.energy.forecast_min_days</field>
+        <field name="value">3</field>
+    </record>
+    <record id="param_advice_snooze_min" model="ir.config_parameter">
+        <field name="key">td.energy.advice_snooze_min</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_bess_reserve_pct" model="ir.config_parameter">
+        <field name="key">td.energy.bess_reserve_pct</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_verify_warn_days" model="ir.config_parameter">
+        <field name="key">td.energy.verify_warn_days</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_pv_kwp" model="ir.config_parameter">
+        <field name="key">td.energy.pv_kwp</field>
+        <field name="value">920</field>
+    </record>
 </odoo>

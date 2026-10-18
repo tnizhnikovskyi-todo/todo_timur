@@ -68,17 +68,17 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
         node = self.env["td.energy.node"].create(
             {"code": "PFC-T", "name": "PFC-T", "kind": "cell", "cell_type": "pfc", "parent_id": parent.id, "section": 1}
         )
-        first = self.Event._f3d_pfc_event(node, 50, 100, 0.97)
-        self.assertEqual(first.text, "Компенсація секції 1: увімкнено ще один ступінь 50 квар, cos φ 0,97.")
+        first = self.Event._f3d_pfc_event(node, 35, 70, 0.97)  # W1 D-09: крок ступеня — 35 квар
+        self.assertEqual(first.text, "Компенсація секції 1: увімкнено ще один ступінь 35 квар, cos φ 0,97.")
         self.assertEqual((first.level, first.kind, first.code), ("info", "pfc", "PFC-T"))
-        self.assertFalse(self.Event._f3d_pfc_event(node, 50, 100, 0.97))
+        self.assertFalse(self.Event._f3d_pfc_event(node, 35, 70, 0.97))
         self.assertEqual(
-            self.Event._f3d_pfc_event(node, 100, 50, 0.97).text,
-            "Компенсація секції 1: вимкнено ступінь 50 квар, cos φ 0,97.",
+            self.Event._f3d_pfc_event(node, 70, 35, 0.97).text,
+            "Компенсація секції 1: вимкнено ступінь 35 квар, cos φ 0,97.",
         )
         self.assertEqual(
-            self.Event._f3d_pfc_event(node, 0, 100, 0.95).text,
-            "Компенсація секції 1: увімкнено 2 ступені (100 квар), cos φ 0,95.",
+            self.Event._f3d_pfc_event(node, 0, 70, 0.95).text,
+            "Компенсація секції 1: увімкнено 2 ступені (70 квар), cos φ 0,95.",
         )
 
     def test_machine_fault_event(self):  # AC-36 (б)

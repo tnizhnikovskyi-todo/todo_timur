@@ -36,13 +36,13 @@ class TestHooks(F3DEnergyCase):
 
     def test_install_report(self):  # AC-12 (звіт установки; кількості, що не залежать від наявності обладнання)
         report = json.loads(self.env["ir.config_parameter"].get_param("td.energy.install_report"))
-        for key, value in {"nodes": 123, "sources": 68, "meters": 67, "pools": 5}.items():
+        for key, value in {"nodes": 123, "sources": 69, "meters": 67, "pools": 5}.items():
             self.assertEqual(report[key], value, key)
         self.assertEqual(report["equipment_linked"] + report["unmatched_equipment"], 80)
         self.assertEqual(report["workcenter_linked"] + report["direct_without_wc"], 35)
         self.assertEqual(report["critical"], 10)
-        self.assertEqual(report["signals"]["created"] + report["signals"]["updated"], 297)
-        self.assertEqual(report["signals"]["module_energy"], 297)
+        self.assertEqual(report["signals"]["created"] + report["signals"]["updated"], 312)
+        self.assertEqual(report["signals"]["module_energy"], 312)
         partial = report["unmatched_equipment"] > 0 or report["direct_without_wc"] > 0
         self.assertEqual(report["state"], "partial" if partial else "done")
         t1 = self.Signal.search([("code", "=", "energy/transformers/T1/temp_c")])

@@ -2,11 +2,12 @@ import logging
 import time
 from datetime import timedelta
 
-from odoo import api, fields, models, tools
+from odoo import _, api, fields, models, tools
+from odoo.exceptions import AccessError
 
 from odoo.addons.td_telemetry.tools.titles import fmt_num
 
-from ..tools import dates, live
+from ..tools import backfill, bus, dates, live
 from ..tools import tariff as tariff_tools
 from ..tools.dates import SLOT, param_bool, param_float
 
@@ -62,6 +63,7 @@ class F3dEnergyInterval(models.Model):
         index=True,
     )
     built_at = fields.Datetime(string="Побудовано", required=True)
+    is_backfill = fields.Boolean(string="Синтетичні дані", default=False, index=True, readonly=True)  # W1 (M-24)
 
     _f3d_energy_interval_uniq = models.Constraint("UNIQUE(meter_id, ts_start)", "Інтервал для лічильника вже є.")
 
@@ -89,6 +91,7 @@ class F3dEnergyInterval(models.Model):
                 self._f3d_after_build(now)
         except Exception:
             _logger.exception("f3d_energy: kwh_shift / профіль доби / пік")
+        bus.tick(self.env, "profile")  # W1 R-33: один раз за прогін
         return total
 
     @api.model
@@ -425,6 +428,21 @@ class F3dEnergyInterval(models.Model):
             if d.weekday() < 5 and total.get(d) and bad.get(d, 0) <= 0.1 * total[d]
         ]  # fmt: skip
         return [[int(round(v)) for v in cells[d]] for d in days[:keep]]
+
+    # --- W1 (M-24, R-36): генератор історії для демо-стенда -----------------------------------------------
+    @api.model
+    def _td_backfill(
+        self, days=90, until=None, seed=20261018, purge=False, with_balance=True, with_events=True, with_advice=False,
+        meters=None,
+    ):  # fmt: skip
+        """API-15: заповнити БД синтетичними 15-хв інтервалами (R-36); дозволено адміністратору й суперкористувачу."""
+        if not (self.env.is_superuser() or self.env.user.has_group("td_factory3d.group_td_admin")):
+            raise AccessError(_("Генерувати історію може лише адміністратор."))
+        return backfill.run(
+            self.env(su=True, context=dict(self.env.context, tracking_disable=True)), days=days, until=until,
+            seed=seed, purge=purge, with_balance=with_balance, with_events=with_events, with_advice=with_advice,
+            meters=meters,
+        )  # fmt: skip
 
     # --- R-19: ротація --------------------------------------------------------------------------------
     @api.model
