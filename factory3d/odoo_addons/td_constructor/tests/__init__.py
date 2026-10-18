@@ -23,3 +23,4 @@ from . import test_new_fields_api
 from . import test_s2_plan
 from . import test_s2_capacity
 from . import test_s2_putaway
+from . import test_s2_core_node

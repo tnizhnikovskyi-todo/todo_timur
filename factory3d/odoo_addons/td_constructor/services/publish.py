@@ -854,20 +854,32 @@ def select_lines(plan, archive_keys=(), excluded=(), scope=None):
         for ln in plan['lines']
         if ln['kind'] == 'create' or (ln['kind'] == 'attrs' and ln['vals'].get('active'))
     }
-    have = {id(ln) for ln in chosen}
-    skipped = []
-    for line in list(chosen):
-        dep, guard = line['depends_code'], 0
-        while dep and guard < 20:
-            guard += 1
-            parent = creates.get((LOCATION, dep))
+
+    def blocked_parent(line):
+        """Код заблокованого батька в ланцюжку залежностей рядка (інакше None)."""
+        dep = line['depends_code']
+        for _guard in range(20):
+            parent = creates.get((LOCATION, dep)) if dep else None
             if parent is None:
-                break
+                return None
             if parent['blocked']:
-                if id(line) in have:
-                    chosen.remove(line)
-                    have.discard(id(line))
-                    skipped.append({'code': line['code'], 'reason': "Залежність %s заблокована" % dep})
+                return dep
+            dep = parent['depends_code']
+        return None
+
+    alive, skipped = [], []
+    for line in chosen:
+        bad = blocked_parent(line)
+        if bad:
+            skipped.append({'code': line['code'], 'reason': "Залежність %s заблокована" % bad})
+        else:
+            alive.append(line)
+    chosen, have = alive, {id(ln) for ln in alive}
+    for line in list(chosen):  # батьки додаються самі, навіть коли їх знято
+        dep = line['depends_code']
+        for _guard in range(20):
+            parent = creates.get((LOCATION, dep)) if dep else None
+            if parent is None:
                 break
             if id(parent) not in have:
                 chosen.append(parent)

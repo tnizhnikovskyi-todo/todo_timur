@@ -374,6 +374,25 @@ class TestS2Plan(F3DConstructorCase):
         )
         self.assertEqual(wizard.version_id.op_count, 2)
 
+    def test_wizard_first_application_reminds_about_database_copy(self):
+        self.rack(bays=1, levels=1)
+        action = self.site.with_user(self.u_manager).action_publish_wizard()
+        wizard = self.env['td.publish.wizard'].with_user(self.u_manager).browse(action['res_id'])
+        self.assertTrue(wizard.copy_reminder)  # журнал порожній, нагадування не вимкнено
+        wizard.copy_ack = True
+        wizard.action_confirm()
+        self.assertTrue(self.site.publish_copy_ack)
+        self.rack('SA-R2', bays=1, levels=1, x=30.0, y=15.0)
+        again = (
+            self.env['td.publish.wizard']
+            .with_user(self.u_manager)
+            .browse(self.site.with_user(self.u_manager).action_publish_wizard()['res_id'])
+        )
+        self.assertFalse(again.copy_reminder)
+        self.site.publish_copy_ack = False  # журнал уже не порожній — «перше застосування» минуло
+        again._compute_copy_reminder()
+        self.assertFalse(again.copy_reminder)
+
     def test_wizard_blocked_line_is_not_applicable(self):
         self.env['stock.location'].create({'name': 'Віртуальна', 'barcode': 'SA-R1-B01-L1', 'usage': 'view'})
         self.rack(bays=2, levels=1)

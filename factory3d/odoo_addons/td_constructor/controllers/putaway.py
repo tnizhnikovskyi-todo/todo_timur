@@ -10,6 +10,13 @@ from ..services import capacity, putaway
 from .constructor import fail, find_site
 
 MAX_CODES = 500
+MAX_ROWS = 40
+LOOKUP = {
+    'product': 'product.product',
+    'category': 'product.category',
+    'package_type': 'stock.package.type',
+    'location': 'stock.location',
+}
 
 
 def _num(value, default=0.0):
@@ -85,3 +92,44 @@ class TdPutawayController(http.Controller):
                     item, cells[code], limits.get(code) or cells[code]['max_load_kg'] or 0.0
                 )
         return {'ok': True, 'items': out}
+
+    # --- довідник для форм правил (товар, категорія, упаковка, локація) ---------------------------------------
+    @http.route('/f3d/constructor/putaway/lookup', type='jsonrpc', auth='user', methods=['POST'])
+    def putaway_lookup(self, site_id=None, kind=None, term='', ids=None, limit=None, **kw):
+        """Пошук записів Odoo для форм правил: `kind` ∈ product | category | package_type | location; `term` — підрядок
+        назви (код/штрихкод), `ids` — назви за id. Лише читання: `{rows: [{id, name}]}` (до 40); записи інших компаній
+        не віддаються."""
+        env = request.env
+        site = find_site(env, site_id)
+        if not site:
+            return fail('not_found', "Площадку не знайдено.")
+        if kind not in LOOKUP:
+            return fail('validation', "kind: очікується %s." % ", ".join(sorted(LOOKUP)))
+        if not isinstance(term, str) or (
+            ids is not None and not (isinstance(ids, list) and all(isinstance(i, int) for i in ids))
+        ):
+            return fail('validation', "term — рядок, ids — список чисел.")
+        Model = env[LOOKUP[kind]].sudo()
+        company = ('company_id', 'in', (False, site.company_id.id))
+        if ids is not None:
+            domain = [('id', 'in', ids[:MAX_ROWS])]
+        elif kind == 'product':
+            domain = [company] + (['|', ('name', 'ilike', term), ('default_code', 'ilike', term)] if term else [])
+        elif kind == 'category':
+            domain = [('complete_name', 'ilike', term)] if term else []
+        elif kind == 'package_type':
+            domain = [company] + ([('name', 'ilike', term)] if term else [])
+        else:
+            domain = [company, ('usage', 'in', ('internal', 'view'))] + (
+                ['|', ('complete_name', 'ilike', term), ('barcode', 'ilike', term)] if term else []
+            )
+        if ids is not None and kind in ('product', 'package_type', 'location'):
+            domain.append(company)
+        rows = Model.search(domain, limit=min(limit if isinstance(limit, int) and limit > 0 else MAX_ROWS, MAX_ROWS))
+        out = []
+        for rec in rows:
+            row = {'id': rec.id, 'name': rec.complete_name if kind == 'location' else rec.display_name}
+            if kind == 'location':
+                row['code'] = rec.td_code or rec.barcode or ''
+            out.append(row)
+        return {'ok': True, 'rows': out}

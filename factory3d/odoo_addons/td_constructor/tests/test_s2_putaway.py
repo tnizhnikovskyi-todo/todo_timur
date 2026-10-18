@@ -155,6 +155,18 @@ class TestS2Putaway(S2Mixin, F3DConstructorCase):
         long = {'packages': [{'name': 'Б', 'dims_m': [3.0, 1.0, 1.0], 'max_weight_kg': 1200}]}
         self.assertEqual(len(putaway.fit_problems(long, cell, 1000)), 2)
 
+    def test_fit_problems_match_shared_cases(self):
+        """Спільні з JS випадки (static/tests/fixtures/s2_fit_cases.json): ті самі причини й тексти."""
+        import json
+        from pathlib import Path
+
+        path = Path(__file__).resolve().parents[1] / 'static' / 'tests' / 'fixtures' / 's2_fit_cases.json'
+        cases = json.loads(path.read_text(encoding='utf-8'))['cases']
+        self.assertGreaterEqual(len(cases), 8)
+        for case in cases:
+            with self.subTest(case['name']):
+                self.assertEqual(putaway.fit_problems(case['item'], case['cell'], case['limit_kg']), case['expected'])
+
     def prepare_fit_rules(self):
         self.make_slot(prefix='PW-R1', bays=2, levels=1, max_load_kg=1000)
         heavy = self.product("Важкий", weight=1500, volume=9.0)
@@ -249,6 +261,40 @@ class TestS2Putaway(S2Mixin, F3DConstructorCase):
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor", "f3d_s2")
 class TestS2PutawayApi(S2Mixin, F3DConstructorHttpCase):
     """API-15: `where` і `fit`."""
+
+    def test_lookup_route(self):
+        product = self.product("Лукап-товар")
+        self.authenticate(self.u_store.login, PASSWORD)
+        rows = self.rpc('/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='product', term='лукап')['rows']
+        self.assertEqual([r['id'] for r in rows], [product.id])
+        byid = self.rpc(
+            '/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='product', ids=[product.id, 999999]
+        )
+        self.assertEqual([r['name'] for r in byid['rows']], ["Лукап-товар"])
+        cat = self.rpc('/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='category', term='All')
+        self.assertTrue(cat['ok'])
+        loc = self.rpc('/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='location', term='FG')
+        self.assertIn(self.wh_fg.id, [r['id'] for r in loc['rows']])
+        pt = self.env['stock.package.type'].create({'name': "Лукап-упаковка"})
+        self.assertEqual(
+            [
+                r['id']
+                for r in self.rpc(
+                    '/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='package_type', term='лукап-у'
+                )['rows']
+            ],
+            [pt.id],
+        )
+        self.assertEqual(
+            self.rpc('/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='nope')['code'], 'validation'
+        )
+        self.assertEqual(
+            self.rpc('/f3d/constructor/putaway/lookup', site_id=self.site.id, kind='product', ids='x')['code'],
+            'validation',
+        )
+        self.assertEqual(
+            self.rpc('/f3d/constructor/putaway/lookup', site_id=999999, kind='product')['code'], 'not_found'
+        )
 
     def test_where_and_fit_routes(self):
         self.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')

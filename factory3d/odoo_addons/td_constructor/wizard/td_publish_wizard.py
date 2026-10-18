@@ -55,6 +55,19 @@ class F3dPublishWizard(models.TransientModel):
     n_block = fields.Integer(string="Заборон", compute='_compute_counts')
     can_publish = fields.Boolean(compute='_compute_counts')
     version_id = fields.Many2one('td.layout.version', string="Версія", readonly=True)
+    copy_reminder = fields.Boolean(compute='_compute_copy_reminder')
+    copy_ack = fields.Boolean(string="Більше не нагадувати")
+
+    @api.depends('site_id.publish_copy_ack', 'state')
+    def _compute_copy_reminder(self):
+        """F02-10: перше застосування площадки (журнал порожній) — нагадати про прогін на копії бази."""
+        Op = self.env['td.publish.op'].sudo()
+        for wiz in self:
+            wiz.copy_reminder = (
+                wiz.state == 'preview'
+                and not wiz.site_id.publish_copy_ack
+                and not Op.search_count([('version_id.site_id', '=', wiz.site_id.id)], limit=1)
+            )
 
     @api.depends(
         'line_ids.kind', 'line_ids.selected', 'line_ids.blocked', 'issue_ids.severity', 'site_id.has_changes', 'state'
@@ -176,6 +189,8 @@ class F3dPublishWizard(models.TransientModel):
             if line.kind != 'archive' and not line.selected
         }
         result = publish.apply_plan(site, plan, keys, self.note or '', excluded)
+        if self.copy_ack:
+            site.sudo().write({'publish_copy_ack': True})
         self.write({'state': 'done', 'version_id': result['version'].id})
         if self.env.context.get('f3d_from_editor'):
             return {
