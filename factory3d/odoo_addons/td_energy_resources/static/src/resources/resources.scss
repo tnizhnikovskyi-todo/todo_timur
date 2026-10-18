@@ -183,6 +183,7 @@ $td-res-muted: #4b5563;
 @media (max-width: 575px) {
     .o_td_res {
         .o_td_res_tab { flex: 1 1 calc(50% - 4px); }
+        .o_td_res_kpi { flex: 1 1 calc(50% - 6px); padding: 12px; }
         .o_td_res_kpi_value { font-size: 24px; }
         .o_td_res_chart { padding: 4px 4px; }
         .o_td_res_note .o_td_en_btn { min-height: 40px; }
