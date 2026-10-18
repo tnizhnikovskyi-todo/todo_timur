@@ -148,6 +148,31 @@ export function lookupField({ kind, id, label, placeholder, onPick, dis }) {
 
 // ---- блок «Зберігання й ємність» у властивостях місця ----------------------------------------------------------------------------------------
 
+// F03-05: прапорці локацій комірок місця — `overrides[код].usage / replenish_location`; ключа немає — «як в Odoo»
+const USAGE_OPTS = [["", "— як в Odoo —"], ["internal", "Внутрішня (зберігання)"], ["view", "Віртуальна (група, без залишків)"]];
+const REPLENISH_OPTS = [["", "— як в Odoo —"], ["1", "Так"], ["0", "Ні"]];
+const flagText = (key, v) => (key === "replenish_location" ? (v ? "1" : "0") : String(v));
+/** Спільне значення прапорця для комірок місця: `""` — не задано, `"~"` — у комірок різне. */
+export function flagValue(rec, cells, key) {
+    const seen = new Set(cells.map((c) => { const v = ((rec.overrides || {})[c.code] || {})[key]; return v == null ? "" : flagText(key, v); }));
+    return seen.size > 1 ? "~" : [...seen][0] ?? "";
+}
+/** Записує прапорець усім коміркам місця (`value` null — прибрати ключ, порожні правки комірки видаляються). */
+export function setFlag(rec, cells, key, value) {
+    rec.overrides = rec.overrides || {};
+    for (const c of cells) {
+        const o = (rec.overrides[c.code] = rec.overrides[c.code] || {});
+        if (value == null) {
+            delete o[key];
+        } else {
+            o[key] = value;
+        }
+        if (!Object.keys(o).length) {
+            delete rec.overrides[c.code];
+        }
+    }
+}
+
 function renderSlotBlock(root, { rec }) {
     if (!rec || rec.template === "machine_spot") {
         return;
@@ -209,6 +234,8 @@ function renderSlotBlock(root, { rec }) {
                     fld("Категорія зберігання", selectEl(catOpts, rec.storage_category_id ?? "", edit((v) => { rec.storage_category_id = conv(v); }), dis || !can("storage"), "Категорія зберігання")),
                     cat.value ? h("div", { class: "small muted" }, categoryLine(categoryOf(cat.value))) : null,
                     fld("Стратегія списання", selectEl(stratOpts, rec.removal_strategy_id ?? "", edit((v) => { rec.removal_strategy_id = conv(v); }), dis || !can("storage"), "Стратегія списання")),
+                    isZone ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => { if (v !== "~") { setFlag(rec, cells, "usage", v || null); } }), dis, "usage"),
+                    isZone ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => { if (v !== "~") { setFlag(rec, cells, "replenish_location", v === "" ? null : v === "1"); } }), dis, "replenish_location"),
                     info
                         ? h("div", { class: "small", "data-role": "cell-limit" }, `Комірка ${first.code}: ${fmt(first.l, 2)}×${fmt(first.w, 2)}×${fmt(first.h, 2)} м · місткість ${fmtInt(first.capacity || 0)} · макс. вага ${info.kg ? fmtInt(info.kg) + " кг (" + info.source + ")" : "не задано"}`)
                         : null,
@@ -224,6 +251,11 @@ function renderSlotBlock(root, { rec }) {
         )
     );
 }
+const flagField = (label, opts, value, onChange, dis, key) => {
+    const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts] : opts, value, onChange, dis, label);
+    el.dataset.flag = key;
+    return fld(label, el);
+};
 const categoryLine = (c) => (c ? `${c.name}: макс. вага ${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без обмеження"}, ${POLICY_LABEL[c.allow_new_product] || c.allow_new_product}` : "");
 registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock }, { sequence: 35, force: true });
 

@@ -44,8 +44,8 @@ export const DEMO_STRATEGIES = [
 const empty = () => ({ v: VERSION, locations: {}, equipment: {}, workcenters: {}, putaway: {}, orderpoints: {}, journal: [], categories: [], foreign: {}, used: {} });
 
 // стиснення стану для сховища: location → [name, parent, kind, capacity, category, strategy, slotUid, active, partsKey]
-const packLoc = (r) => [r.name, r.parent, r.kind, r.capacity, r.category_id ?? null, r.strategy_id ?? null, r.slot_uid, r.active ? 1 : 0, r.parts];
-const unpackLoc = (code, a) => ({ code, name: a[0], parent: a[1], kind: a[2], capacity: a[3], category_id: a[4], strategy_id: a[5], slot_uid: a[6], active: !!a[7], parts: a[8] || null });
+const packLoc = (r) => [r.name, r.parent, r.kind, r.capacity, r.category_id ?? null, r.strategy_id ?? null, r.slot_uid, r.active ? 1 : 0, r.parts, r.usage ?? null, r.replenish_location ?? null];
+const unpackLoc = (code, a) => ({ code, name: a[0], parent: a[1], kind: a[2], capacity: a[3], category_id: a[4], strategy_id: a[5], slot_uid: a[6], active: !!a[7], parts: a[8] || null, usage: a[9] ?? null, replenish_location: a[10] ?? null });
 
 function pack(sim) {
     return { ...sim, locations: Object.fromEntries(Object.entries(sim.locations).map(([c, r]) => [c, packLoc(r)])) };
@@ -128,6 +128,8 @@ export function installOdooSim(adapter) {
                     slot_uid: slot.id,
                     zone_uid: zone ? zone.id : "",
                     explicitName: cell.name !== cell.code,
+                    usage: cell.usage ?? null, // F03-05: прапорці з overrides комірки; null — «як в Odoo»
+                    replenish_location: cell.replenish_location ?? null,
                     parts: { bay: cell.index || 0, level: cell.level || 0 },
                     slot,
                 });
@@ -141,6 +143,8 @@ export function installOdooSim(adapter) {
         return sim.journal.some((e) => e.rolled_back && e.ops.some((o) => o.op === "create" && o.res === res && o.code === code));
     }
 
+    const flagVals = (c) => ({ ...(c.usage != null ? { usage: c.usage } : {}), ...(c.replenish_location != null ? { replenish_location: c.replenish_location } : {}) });
+
     function planLocations(st, lines) {
         const want = desiredCells(st.slots, st.layers, st);
         const seen = new Set();
@@ -151,7 +155,7 @@ export function installOdooSim(adapter) {
             const base = { code: c.code, scope_uid: c.slot_uid, zone_uid: c.zone_uid };
             if (!rec) {
                 const card = `вид ${c.kind}` + (c.capacity ? `, місткість ${c.capacity}` : "");
-                lines.push(makeLine({ ...base, kind: "create", res: "location", name: c.name, changes: card, vals: { name: c.name, parent: c.parent, td_loc_kind: c.kind, td_capacity: c.capacity, storage_category_id: c.category_id, removal_strategy_id: c.strategy_id, td_slot_uid: c.slot_uid, ...c.parts } }));
+                lines.push(makeLine({ ...base, kind: "create", res: "location", name: c.name, changes: card, vals: { name: c.name, parent: c.parent, td_loc_kind: c.kind, td_capacity: c.capacity, storage_category_id: c.category_id, removal_strategy_id: c.strategy_id, td_slot_uid: c.slot_uid, ...c.parts, ...flagVals(c) } }));
                 continue;
             }
             let changed = false;
@@ -184,9 +188,19 @@ export function installOdooSim(adapter) {
             if (c.strategy_id && c.strategy_id !== rec.strategy_id) {
                 diff("removal_strategy_id", c.strategy_id, rec.strategy_id);
             }
+            if (c.usage != null && c.usage !== (rec.usage || "internal")) {
+                diff("usage", c.usage, rec.usage || "internal");
+            }
+            if (c.replenish_location != null && c.replenish_location !== !!rec.replenish_location) {
+                diff("replenish_location", c.replenish_location, !!rec.replenish_location);
+            }
             if (Object.keys(vals).length) {
                 const text = Object.keys(vals).map((k) => `${k}: ${before[k] ?? "—"} → ${vals[k]}`).join("; ");
-                lines.push(makeLine({ ...base, kind: "attrs", res: "location", name: rec.name, vals, before, changes: vals.active ? `відновити з архіву (після відкату); ${text}` : text }));
+                const attrs = makeLine({ ...base, kind: "attrs", res: "location", name: rec.name, vals, before, changes: vals.active ? `відновити з архіву (після відкату); ${text}` : text });
+                if (vals.usage === "view" && sim.used[c.code] === "stock") {
+                    Object.assign(attrs, { blocked: true, blocked_reason: "Є залишки: місце не може стати віртуальним", flags: ["stock"] });
+                }
+                lines.push(attrs);
                 changed = true;
             }
             unchanged += changed ? 0 : 1;
@@ -337,7 +351,7 @@ export function installOdooSim(adapter) {
         if (line.res === "location") {
             if (line.kind === "create") {
                 const v = line.vals;
-                sim.locations[line.code] = { code: line.code, name: v.name, parent: v.parent, kind: v.td_loc_kind, capacity: v.td_capacity, category_id: v.storage_category_id ?? null, strategy_id: v.removal_strategy_id ?? null, slot_uid: v.td_slot_uid, active: true, parts: { bay: v.bay, level: v.level } };
+                sim.locations[line.code] = { code: line.code, name: v.name, parent: v.parent, kind: v.td_loc_kind, capacity: v.td_capacity, category_id: v.storage_category_id ?? null, strategy_id: v.removal_strategy_id ?? null, slot_uid: v.td_slot_uid, active: true, parts: { bay: v.bay, level: v.level }, usage: v.usage ?? null, replenish_location: v.replenish_location ?? null };
                 ops.push({ op, res: "location", code: line.code, before: {}, after: { ...line.vals, active: true } });
             } else if (line.kind === "archive") {
                 sim.locations[line.code].active = false;

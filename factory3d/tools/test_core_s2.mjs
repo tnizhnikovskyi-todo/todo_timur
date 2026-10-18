@@ -356,6 +356,28 @@ export function register(test) {
         assert.equal(arch.find((l) => l.code === "BB-R1-B02-L1").blocked, false);
     });
 
+    test("S2 odoo_sim: прапорці usage / replenish_location (F03-05) — у створенні, змінах і блокуванні залишком", async () => {
+        const S = await makeState({ bays: 2, levels: 1 });
+        S.slots[0].overrides = { "AA-R1-B01-L1": { usage: "view" }, "AA-R1-B02-L1": { replenish_location: true } };
+        const adapter = await makeAdapter(S);
+        const plan = await adapter.planPreview();
+        const by = Object.fromEntries(plan.lines.filter((l) => l.res === "location").map((l) => [l.code, l.vals]));
+        assert.equal(by["AA-R1-B01-L1"].usage, "view");
+        assert.ok(!("replenish_location" in by["AA-R1-B01-L1"]));
+        assert.equal(by["AA-R1-B02-L1"].replenish_location, true);
+        await adapter.planApply({ lines: plan.lines });
+        assert.equal((await adapter.planPreview()).lines.length, 0); // ідемпотентно
+        S.slots[0].overrides = { "AA-R1-B01-L1": { usage: "internal" }, "AA-R1-B02-L1": { replenish_location: false } };
+        const lines = (await adapter.planPreview()).lines;
+        assert.deepEqual(lines.map((l) => [l.code, l.kind, l.vals]).sort(), [["AA-R1-B01-L1", "attrs", { usage: "internal" }], ["AA-R1-B02-L1", "attrs", { replenish_location: false }]]);
+        S.slots[0].overrides = { "AA-R1-B01-L1": { usage: "view" }, "AA-R1-B02-L1": { replenish_location: true } };
+        await adapter.simMarkUsed("AA-R1-B02-L1", "stock");
+        S.slots[0].overrides = { "AA-R1-B01-L1": { usage: "view" }, "AA-R1-B02-L1": { usage: "view", replenish_location: true } };
+        const blocked = (await adapter.planPreview()).lines.find((l) => l.code === "AA-R1-B02-L1");
+        assert.equal(blocked.blocked, true);
+        assert.deepEqual(blocked.flags, ["stock"]);
+    });
+
     test("S2 odoo_sim: правила поповнення й розміщення → рядки плану з залежністю, застосування, відкат, оцінка «куди покладе»", async () => {
         const C = await load("capacity_core.js");
         const S = await makeState({ bays: 2, levels: 1 });
@@ -522,6 +544,19 @@ export function register(test) {
         assert.equal(calls.at(-1)[0], "/f3d/constructor/storage/loads");
         await adapter.putawayWhere({ product_id: 3, quantity: 2, package_type_id: null });
         assert.deepEqual(calls.at(-1), ["/f3d/constructor/putaway/where", { site_id: 4, product_id: 3, quantity: 2, package_type_id: null }]);
+    });
+
+    test("F03-05: прапорці usage / replenish_location переходять із overrides у комірки й не змінюють решту", async () => {
+        const { generateCells, OVERRIDE_KEYS } = await load("cells.js");
+        assert.ok(OVERRIDE_KEYS.includes("usage") && OVERRIDE_KEYS.includes("replenish_location"));
+        const params = { bays: 2, levels: 1, bay_width: 2.7, depth: 1.1, level_height: 1.5, positions_per_bay: 3, max_load_kg: 1000 };
+        const plain = generateCells("pallet_rack", "AA-R1", 0, 0, 0, params, {}, 0);
+        const cells = generateCells("pallet_rack", "AA-R1", 0, 0, 0, params, { [plain[0].code]: { usage: "view" }, [plain[1].code]: { replenish_location: false } }, 0);
+        assert.equal(cells[0].usage, "view");
+        assert.ok(!("replenish_location" in cells[0]));
+        assert.equal(cells[1].replenish_location, false);
+        assert.ok(!("usage" in cells[1]));
+        assert.deepEqual(cells.map(({ usage, replenish_location, ...rest }) => rest), plain);
     });
 }
 

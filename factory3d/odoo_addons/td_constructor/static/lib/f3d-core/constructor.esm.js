@@ -1145,7 +1145,7 @@ var SLOT_TEMPLATES = {
   zone: { label: "Зона-контур", cells: false, params: {}, polygon: true }
 };
 var SERVICE_SIDES = ["front", "back", "left", "right"];
-var OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name"];
+var OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name", "usage", "replenish_location"];
 var LEVEL_KEYS = { pallet_rack: ["levels", "level_height"], cantilever: ["levels", "level_height"], shelf: ["shelves", "cell_h"] };
 var BAY_KEYS = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
 function normalizeParams(template, params) {
@@ -1446,7 +1446,7 @@ function generateCells(template, prefix, x, y, rot, params, overrides, elevation
       continue;
     }
     const [wx, wy] = rotate(raw.lx, raw.ly, rot);
-    out.push({
+    const cell = {
       code: raw.code,
       name: ov.name || raw.code,
       template,
@@ -1462,7 +1462,13 @@ function generateCells(template, prefix, x, y, rot, params, overrides, elevation
       capacity: ov.capacity ?? raw.capacity,
       max_load_kg: ov.max_load_kg ?? raw.max_load_kg,
       kind: raw.kind
-    });
+    };
+    for (const k of ["usage", "replenish_location"]) {
+      if (k in ov) {
+        cell[k] = ov[k];
+      }
+    }
+    out.push(cell);
   }
   return out;
 }
@@ -1502,6 +1508,11 @@ function cellsOf(s) {
         }
         if (ov.name) {
           r.name = ov.name;
+        }
+        for (const k of ["usage", "replenish_location"]) {
+          if (k in ov) {
+            r[k] = ov[k];
+          }
         }
       }
       return r;
@@ -10759,6 +10770,30 @@ function lookupField({ kind, id, label, placeholder, onPick, dis }) {
   input.addEventListener("focus", () => !input.value && search());
   return h("div", { class: "fcol" }, input, list);
 }
+var USAGE_OPTS = [["", "— як в Odoo —"], ["internal", "Внутрішня (зберігання)"], ["view", "Віртуальна (група, без залишків)"]];
+var REPLENISH_OPTS = [["", "— як в Odoo —"], ["1", "Так"], ["0", "Ні"]];
+var flagText = (key, v) => key === "replenish_location" ? v ? "1" : "0" : String(v);
+function flagValue(rec, cells, key) {
+  const seen = new Set(cells.map((c) => {
+    const v = ((rec.overrides || {})[c.code] || {})[key];
+    return v == null ? "" : flagText(key, v);
+  }));
+  return seen.size > 1 ? "~" : [...seen][0] ?? "";
+}
+function setFlag(rec, cells, key, value) {
+  rec.overrides = rec.overrides || {};
+  for (const c of cells) {
+    const o = rec.overrides[c.code] = rec.overrides[c.code] || {};
+    if (value == null) {
+      delete o[key];
+    } else {
+      o[key] = value;
+    }
+    if (!Object.keys(o).length) {
+      delete rec.overrides[c.code];
+    }
+  }
+}
 function renderSlotBlock2(root, { rec }) {
   if (!rec || rec.template === "machine_spot") {
     return;
@@ -10844,6 +10879,16 @@ function renderSlotBlock2(root, { rec }) {
           fld("Стратегія списання", selectEl(stratOpts, rec.removal_strategy_id ?? "", edit((v) => {
             rec.removal_strategy_id = conv(v);
           }), dis || !can("storage"), "Стратегія списання")),
+          isZone ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "usage", v || null);
+            }
+          }), dis, "usage"),
+          isZone ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "replenish_location", v === "" ? null : v === "1");
+            }
+          }), dis, "replenish_location"),
           info ? h("div", { class: "small", "data-role": "cell-limit" }, `Комірка ${first.code}: ${fmt(first.l, 2)}×${fmt(first.w, 2)}×${fmt(first.h, 2)} м · місткість ${fmtInt(first.capacity || 0)} · макс. вага ${info.kg ? fmtInt(info.kg) + " кг (" + info.source + ")" : "не задано"}`) : null,
           h(
             "div",
@@ -10856,6 +10901,11 @@ function renderSlotBlock2(root, { rec }) {
     )
   );
 }
+var flagField = (label, opts2, value, onChange, dis, key) => {
+  const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts2] : opts2, value, onChange, dis, label);
+  el.dataset.flag = key;
+  return fld(label, el);
+};
 var categoryLine = (c) => c ? `${c.name}: макс. вага ${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без обмеження"}, ${POLICY_LABEL[c.allow_new_product] || c.allow_new_product}` : "";
 registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock2 }, { sequence: 35, force: true });
 function renderSiteBlock2(root) {

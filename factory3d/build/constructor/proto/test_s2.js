@@ -136,6 +136,16 @@ async function t_capacity(page, errors) {
   await page.evaluate(() => { __f3d.S.slots.find((x) => x.id === 'sr1').params.max_load_kg = 1000; __f3d.E.commit({}); });
   const kinds = await page.evaluate(async () => { const p = await __f3d.adapter.planPreview(); return [...new Set(p.lines.filter((l) => l.code.startsWith('S2-')).map((l) => l.kind))]; });
   ok('план: нові комірки несуть категорію зберігання (create)', kinds.includes('create'), JSON.stringify(kinds));
+  // F03-05: прапорці локацій комірок — у overrides усіх комірок місця; «як в Odoo» прибирає ключ
+  await page.selectOption('#capacityBlock [data-flag="usage"]', 'view');
+  await page.selectOption('#capacityBlock [data-flag="replenish_location"]', '1');
+  const flags = await page.evaluate(() => { const s = __f3d.S.slots.find((x) => x.id === 'sr1'); const o = Object.values(s.overrides); return { n: o.length, u: o.every((x) => x.usage === 'view'), r: o.every((x) => x.replenish_location === true) }; });
+  ok('прапорці: usage і replenish_location записані в overrides усіх комірок місця', flags.n === 6 && flags.u && flags.r, JSON.stringify(flags));
+  const flagLines = await page.evaluate(async () => { const p = await __f3d.adapter.planPreview(); return p.lines.filter((l) => l.res === 'location' && l.code.startsWith('S2-R1') && l.kind === 'create').every((l) => l.vals.usage === 'view' && l.vals.replenish_location === true); });
+  ok('прапорці: рядки створення в плані несуть usage і replenish_location', flagLines);
+  await page.selectOption('#capacityBlock [data-flag="usage"]', '');
+  await page.selectOption('#capacityBlock [data-flag="replenish_location"]', '');
+  ok('прапорці: «як в Odoo» прибирає ключі й порожні правки комірок', await page.evaluate(() => Object.keys(__f3d.S.slots.find((x) => x.id === 'sr1').overrides).length === 0));
   ok('ємність: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
 }
 
