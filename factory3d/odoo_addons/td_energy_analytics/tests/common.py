@@ -170,6 +170,7 @@ class TestW4Common(TestW1Common):
         if name:
             sets.append("name = %s")
             params.append(name)
+        self.env.flush_all()
         self.env.cr.execute("UPDATE mrp_production SET %s WHERE id = %%s" % ", ".join(sets), params + [mo.id])
         mo.invalidate_recordset()
         return mo
@@ -221,6 +222,62 @@ class TestW4Common(TestW1Common):
                 "price": 0.0, "cost": cost, "quality": "measured", "built_at": self.now,
             }
         )  # fmt: skip
+
+    def _mo_value(self, mo, energy_cost, value):
+        """Енергія в собівартості: `td_energy_cost` МО й вартість готового руху `stock.move.value` (SQL)."""
+        move = mo.move_finished_ids.filtered(lambda m: m.product_id == mo.product_id)[:1]
+        if not move:
+            move = self.env["stock.move"].create(
+                {
+                    "product_id": mo.product_id.id, "product_uom_qty": mo.product_qty,
+                    "product_uom": mo.product_uom_id.id, "production_id": mo.id,
+                    "location_id": self.env.ref("stock.location_production").id,
+                    "location_dest_id": self.env.ref("stock.stock_location_stock").id,
+                }
+            )  # fmt: skip
+        self.env.flush_all()
+        self.env.cr.execute("UPDATE mrp_production SET td_energy_cost = %s WHERE id = %s", (energy_cost, mo.id))
+        self.env.cr.execute("UPDATE stock_move SET state = 'done', value = %s WHERE id = %s", (value, move.id))
+        mo.invalidate_recordset()
+        self.env["stock.move"].invalidate_model()
+
+    def _mockup_1710(self):
+        """«Макет 17.10» (30 діб 18.09–17.10 + база 01–30.11.2025) під числа AC-26…AC-32 (W4_SPEC 13.0)."""
+        today = self.today
+        window = self._days(today - timedelta(days=29), 30)
+        base_period = (date(2025, 11, 1), date(2025, 11, 30))
+        base_days = self._days(base_period[0], 30)
+        el = self._approved_baseline(base_period, {"plate_m2": 4.1}, 1820.0, r2=0.93)
+        gas = self._approved_baseline(base_period, {"hdd": 25.0}, 120.0, resource="gas", r2=0.9)
+        for day in window:
+            self._daily(
+                day, qty=186400 / 30, import_qty=152840 / 30, export_qty=7440 / 30, gen_pv_qty=41000 / 30,
+                cost=1569600 / 30, quality="ok",
+            )  # fmt: skip
+            self._daily(
+                day, scope="resource", resource="el", qty=152840 / 30, cost=1569600 / 30, co2_kg=152840 * 0.37 / 30
+            )
+            self._daily(
+                day, scope="resource", resource="gas", qty=18400 / 30, cost=368280 / 30, co2_kg=18400 * 1.96 / 30
+            )
+            self._driver_value("plate_m2", day, 38400 / 30)
+            self._driver_value("hdd", day, 9.1)
+            self.Enpi.create(
+                {"baseline_id": el.id, "day": day, "actual": 186400 / 30, "expected": 198298 / 30, "quality": "ok"}
+            )
+            self.Enpi.create(
+                {"baseline_id": gas.id, "day": day, "actual": 18400 / 30, "expected": 18039 / 30, "quality": "ok"}
+            )
+        for day in base_days:
+            self._daily(day, qty=5160.0, quality="ok")
+            self._driver_value("plate_m2", day, 1000.0)
+            self._driver_value("hdd", day, 7.9)
+        product = self._product("MOCK-1710", 1.0)
+        mo = self._mo(product, 100, finished=self._local(today - timedelta(days=5), 12))
+        self._mo_value(mo, 68000.0, 1000000.0)
+        base_mo = self._mo(product, 100, finished=self._local(date(2025, 11, 10), 12))
+        self._mo_value(base_mo, 73000.0, 1000000.0)
+        return el, gas
 
     # --- допоміжні перевірки --------------------------------------------------------------------------
     def _rows(self, table, where="TRUE", params=(), cols="*"):
