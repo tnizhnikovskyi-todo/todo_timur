@@ -25,6 +25,13 @@
         <field name="implied_ids"
                eval="[Command.link(ref('group_td_energy_cost')), Command.link(ref('td_factory3d.group_td_manager'))]"/>
     </record>
+    <!-- W1 (E-06): головний енергетик — усе, що «Енергетик», плюс закриття чужих тривог (action_release/resolve) -->
+    <record id="group_td_energy_chief" model="res.groups">
+        <field name="name">Енергетика: головний енергетик</field>
+        <field name="privilege_id" ref="privilege_td_energy"/>
+        <field name="sequence">40</field>
+        <field name="implied_ids" eval="[Command.link(ref('group_td_energy_manager'))]"/>
+    </record>
     <record id="mrp.group_mrp_user" model="res.groups">
         <field name="implied_ids" eval="[Command.link(ref('group_td_energy_user'))]"/>
     </record>
@@ -38,7 +45,8 @@
         <field name="implied_ids" eval="[Command.link(ref('group_td_energy_cost'))]"/>
     </record>
     <record id="td_factory3d.group_td_admin" model="res.groups">
-        <field name="implied_ids" eval="[Command.link(ref('group_td_energy_manager'))]"/>
+        <field name="implied_ids"
+               eval="[Command.link(ref('group_td_energy_manager')), Command.link(ref('group_td_energy_chief'))]"/>
     </record>
 
     <!-- §4.3: глобальні правила мультикомпанії. W3 додає td_energy_alloc_rule_company (td.energy.alloc). -->
@@ -55,6 +63,11 @@
     <record id="td_energy_alloc_rule_company" model="ir.rule">
         <field name="name">Енергетика: розподіл — компанія</field>
         <field name="model_id" ref="model_td_energy_alloc"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_outage_plan_rule_company" model="ir.rule">
+        <field name="name">Енергетика: планові відключення — компанія</field>
+        <field name="model_id" ref="model_td_energy_outage_plan"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
     <record id="td_energy_tariff_rule_company" model="ir.rule">

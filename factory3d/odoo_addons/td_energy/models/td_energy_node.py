@@ -1,9 +1,10 @@
 import re
-from datetime import timezone
+from datetime import timedelta, timezone
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+from ..tools import sld
 from ..tools.tariff import to_local
 
 
@@ -127,6 +128,32 @@ class F3dEnergyNode(models.Model):
         compute="_compute_live",
     )
 
+    # --- W1 (M-22): схема Пульту, захист, ступені PFC --------------------------------------------------
+    sld_show = fields.Boolean(string="На схемі Пульту", default=False)
+    sld_shape = fields.Selection(
+        [("box", "Блок"), ("bar", "Шина"), ("switch", "Вимикач"), ("label", "Підпис")],
+        string="Форма на схемі",
+        default="box",
+    )
+    sld_x = fields.Integer(string="X на схемі", default=0)
+    sld_y = fields.Integer(string="Y на схемі", default=0)
+    sld_w = fields.Integer(string="Ширина на схемі", default=0)
+    sld_h = fields.Integer(string="Висота на схемі", default=0)
+    sld_label = fields.Char(string="Підпис на схемі", size=32)
+    sld_anchor_id = fields.Many2one(
+        "td.energy.node", string="Вузол-батько на схемі", ondelete="set null", domain="[('id', '!=', id)]"
+    )
+    sld_state = fields.Selection(
+        [("ok", "Норма"), ("warn", "Увага"), ("alarm", "Тривога"), ("off", "Резерв / вимкнено"), ("gen", "Генерація")],
+        string="Стан на схемі",
+        compute="_compute_sld_state",
+    )
+    protection_trip_unit = fields.Char(string="Розчіплювач", size=64)
+    protection_ir_ratio = fields.Float(string="Уставка Ir, × In", digits=(4, 2))
+    trip_count_year = fields.Integer(string="Спрацювань за рік", compute="_compute_trip_count_year")
+    pfc_step_kvar = fields.Integer(string="Крок ступеня, квар", default=35)
+    pfc_steps_total = fields.Integer(string="Ступенів", default=10)
+
     _f3d_energy_node_code_uniq = models.Constraint("UNIQUE(code)", "Код вузла мережі має бути унікальним.")
     _f3d_energy_node_wc_uniq = models.Constraint(
         "UNIQUE(workcenter_id)", "Робочий центр уже прив'язаний до іншого вузла."
@@ -160,6 +187,24 @@ class F3dEnergyNode(models.Model):
                 raise ValidationError(_("Робочий центр прив'язується лише до споживача."))
             if rec.section not in (0, 1, 2):
                 raise ValidationError(_("Секція шин: 0, 1 або 2."))
+
+    @api.constrains("sld_show", "sld_shape", "sld_x", "sld_y", "sld_w", "sld_h", "sld_anchor_id")
+    def _check_sld(self):
+        for rec in self:
+            if min(rec.sld_x, rec.sld_y, rec.sld_w, rec.sld_h) < 0:
+                raise ValidationError(_("Координати й розміри на схемі мають бути невід'ємними (%s).", rec.code))
+            if rec.sld_show and rec.sld_shape in ("box", "bar", "switch") and not (rec.sld_w > 0 and rec.sld_h > 0):
+                raise ValidationError(_("Задайте розміри блоку на схемі для %s.", rec.code))
+            if rec.sld_anchor_id == rec:
+                raise ValidationError(_("Вузол %s не може бути батьком на схемі сам для себе.", rec.code))
+
+    @api.constrains("cell_type", "rating_kvar", "pfc_step_kvar", "pfc_steps_total")
+    def _check_pfc(self):
+        for rec in self:
+            if rec.cell_type != "pfc" or rec.rating_kvar <= 0:
+                continue
+            if rec.pfc_step_kvar * rec.pfc_steps_total != rec.rating_kvar:
+                raise ValidationError(_("Ступені PFC %s не відповідають номіналу %s квар.", rec.code, rec.rating_kvar))
 
     def write(self, vals):
         # цикл ловимо до `_parent_store_update` ORM («Recursion Detected»), щоб віддати повідомлення SPEC
@@ -202,6 +247,22 @@ class F3dEnergyNode(models.Model):
             rec.p_now = meter.p_signal_id.last_value if meter.p_signal_id else 0.0
             rec.kwh_today = kwh.get(meter.id, 0.0)
             rec.live_status = meter.data_state if meter else "none"
+
+    def _compute_sld_state(self):
+        states = sld.states(self.env, self)
+        for rec in self:
+            rec.sld_state = states.get(rec.id, "ok")
+
+    def _compute_trip_count_year(self):
+        counts = {}
+        if self.ids:
+            since = fields.Datetime.now() - timedelta(days=365)
+            groups = self.env["td.energy.event"].sudo()._read_group(
+                [("kind", "=", "trip"), ("node_id", "in", self.ids), ("ts", ">=", since)], ["node_id"], ["__count"]
+            )
+            counts = {node.id: n for node, n in groups}
+        for rec in self:
+            rec.trip_count_year = counts.get(rec.id, 0)
 
     def _compute_display_name(self):
         for rec in self:
@@ -256,6 +317,19 @@ class F3dEnergyNode(models.Model):
         if not self.equipment_id:
             raise UserError(_("Вузол %s не має об'єкта в 3D.", self.code))
         return self.equipment_id.action_f3d_show()
+
+    action_td_show = action_f3d_show  # ім'я з W1_SPEC (A-23, AC-147); існуючий метод — `action_f3d_show`
+
+    def action_open_card(self):
+        """V-23: відкрити клієнтську картку вузла (`td_energy.node_card`) для `self.code`."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.client",
+            "tag": "td_energy.node_card",
+            "name": self.name,
+            "params": {"code": self.code},
+            "context": {"active_code": self.code},
+        }
 
     @api.model
     def action_td_energy_rebind(self):

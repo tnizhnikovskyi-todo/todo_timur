@@ -36,7 +36,7 @@ class TestDataSync(BaseCase):
     def test_counts(self):
         self.assertEqual(
             (len(self.nodes), len(self.sources), len(self.signals), len(self.meters), len(self.pools)),
-            (123, 68, 297, 67, 5),
+            (123, 69, 312, 67, 5),
         )
 
     def test_codes_unique(self):
@@ -125,12 +125,12 @@ class TestDataSync(BaseCase):
             if r["equipment"]:
                 self.assertIn(r["equipment"], self.node, r["code"])
         by_src = Counter(r["source"] == "EN-DERIVED" for r in self.signals)
-        self.assertEqual(by_src[True], 75)
+        self.assertEqual(by_src[True], 81)  # W1: +6 секційних обчислюваних сигналів
         self.assertEqual(sum(1 for r in self.signals if r["binding"] == "thresholds"), 2)
         self.assertEqual(
-            dict(Counter(r["origin"] for r in self.signals)), {"sim_data": 87, "catalog": 63, "module": 147}
+            dict(Counter(r["origin"] for r in self.signals)), {"sim_data": 96, "catalog": 63, "module": 153}
         )
-        self.assertEqual(sum(1 for r in self.signals if r["source"] not in (extra | {"EN-DERIVED"})), 220 - 0)
+        self.assertEqual(sum(1 for r in self.signals if r["source"] not in (extra | {"EN-DERIVED"})), 229)
 
     def test_meters(self):
         sigs = {r["code"] for r in self.signals}
