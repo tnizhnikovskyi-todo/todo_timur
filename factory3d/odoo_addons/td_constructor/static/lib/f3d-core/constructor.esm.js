@@ -761,13 +761,13 @@ function normalizeAddr(value) {
     if (typeof raw !== "object" || Array.isArray(raw)) {
       throw new AddrError(`Сегмент «${key}»: очікується об'єкт.`);
     }
-    const base = DEFAULT_SEG[key];
+    const base2 = DEFAULT_SEG[key];
     const label = `Сегмент «${key}»`;
-    const kind = choice(raw.kind ?? base.kind, SEGMENT_KINDS, label + ": вид");
+    const kind = choice(raw.kind ?? base2.kind, SEGMENT_KINDS, label + ": вид");
     segOut[key] = {
       kind,
-      width: intIn(raw.width ?? base.width, 1, 8, label + ": ширина"),
-      start: intIn(raw.start ?? base.start, kind === "alpha" ? 1 : 0, 999, label + ": початок")
+      width: intIn(raw.width ?? base2.width, 1, 8, label + ": ширина"),
+      start: intIn(raw.start ?? base2.start, kind === "alpha" ? 1 : 0, 999, label + ": початок")
     };
   }
   return Object.assign(out, {
@@ -1145,7 +1145,7 @@ var SLOT_TEMPLATES = {
   zone: { label: "Зона-контур", cells: false, params: {}, polygon: true }
 };
 var SERVICE_SIDES = ["front", "back", "left", "right"];
-var OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name"];
+var OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name", "usage", "replenish_location"];
 var LEVEL_KEYS = { pallet_rack: ["levels", "level_height"], cantilever: ["levels", "level_height"], shelf: ["shelves", "cell_h"] };
 var BAY_KEYS = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
 function normalizeParams(template, params) {
@@ -1446,7 +1446,7 @@ function generateCells(template, prefix, x, y, rot2, params, overrides, elevatio
       continue;
     }
     const [wx, wy] = rotate(raw.lx, raw.ly, rot2);
-    out.push({
+    const cell = {
       code: raw.code,
       name: ov.name || raw.code,
       template,
@@ -1462,7 +1462,13 @@ function generateCells(template, prefix, x, y, rot2, params, overrides, elevatio
       capacity: ov.capacity ?? raw.capacity,
       max_load_kg: ov.max_load_kg ?? raw.max_load_kg,
       kind: raw.kind
-    });
+    };
+    for (const k of ["usage", "replenish_location"]) {
+      if (k in ov) {
+        cell[k] = ov[k];
+      }
+    }
+    out.push(cell);
   }
   return out;
 }
@@ -1502,6 +1508,11 @@ function cellsOf(s) {
         }
         if (ov.name) {
           r.name = ov.name;
+        }
+        for (const k of ["usage", "replenish_location"]) {
+          if (k in ov) {
+            r[k] = ov[k];
+          }
         }
       }
       return r;
@@ -2387,7 +2398,7 @@ function renderStatusBlock(root, { rec }) {
 registries.panels.add("right:status", { area: "right", render: renderStatusBlock }, { sequence: 80, force: true });
 function openHotkeys() {
   const rows = registries.hotkeys.getEntries().filter(([, hk2]) => hk2.label);
-  const base = [
+  const base2 = [
     ["Esc", "скасувати режим / зняти вибір"],
     ["R", "поворот на 90° (Shift — у інший бік)"],
     ["Del", "видалити виділене"],
@@ -2402,7 +2413,7 @@ function openHotkeys() {
   openDialog({
     title: "Гарячі клавіші",
     cls: "narrow",
-    body: h("table", { class: "tbl", id: "hotkeysTable" }, h("tbody", null, K([...base, ...extra].map(([k, d]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, d)))))),
+    body: h("table", { class: "tbl", id: "hotkeysTable" }, h("tbody", null, K([...base2, ...extra].map(([k, d]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, d)))))),
     actions: [{ label: "Закрити" }]
   });
 }
@@ -3399,38 +3410,38 @@ function pGeom(pl, v) {
   const rot2 = pl.rotation || 0;
   const body = placementObb(v, pl.x, pl.y, rot2);
   const svc = serviceObb(v, pl.x, pl.y, rot2);
-  const g2 = { cx: body.cx, cy: body.cy, L: v.length / 1e3, W: v.width / 1e3, a: rot2, body, svc: null };
-  g2.poly = obbCorners(body);
-  g2.box = obbAabb(body);
+  const g3 = { cx: body.cx, cy: body.cy, L: v.length / 1e3, W: v.width / 1e3, a: rot2, body, svc: null };
+  g3.poly = obbCorners(body);
+  g3.box = obbAabb(body);
   if (svc) {
     const [ox, oy] = rotate(svc.cx - body.cx, svc.cy - body.cy, -rot2);
-    Object.assign(g2, { shx: svc.a, shy: svc.b, sox: ox, soy: oy, svc: obbCorners(svc) });
+    Object.assign(g3, { shx: svc.a, shy: svc.b, sox: ox, soy: oy, svc: obbCorners(svc) });
   }
-  return g2;
+  return g3;
 }
 function sGeom(s) {
   const d = slotDims(s);
   const a = s.rotation || 0;
-  const g2 = { cx: s.x, cy: s.y, L: d.L, W: d.W, H: d.H, a };
-  g2.body = makeObb(s.x, s.y, d.L / 2, d.W / 2, a);
-  g2.poly = obbCorners(g2.body);
-  g2.box = obbAabb(g2.body);
+  const g3 = { cx: s.x, cy: s.y, L: d.L, W: d.W, H: d.H, a };
+  g3.body = makeObb(s.x, s.y, d.L / 2, d.W / 2, a);
+  g3.poly = obbCorners(g3.body);
+  g3.box = obbAabb(g3.body);
   if (s.template === "machine_spot") {
     const sv = (s.params || {}).service || {};
     const e = { yn: sv.front || 0, yp: sv.back || 0, xn: sv.left || 0, xp: sv.right || 0 };
-    g2.shx = d.L / 2 + (e.xn + e.xp) / 2;
-    g2.shy = d.W / 2 + (e.yn + e.yp) / 2;
-    g2.sox = (e.xp - e.xn) / 2;
-    g2.soy = (e.yp - e.yn) / 2;
+    g3.shx = d.L / 2 + (e.xn + e.xp) / 2;
+    g3.shy = d.W / 2 + (e.yn + e.yp) / 2;
+    g3.sox = (e.xp - e.xn) / 2;
+    g3.soy = (e.yp - e.yn) / 2;
   }
-  return g2;
+  return g3;
 }
 function slotForChecks(s) {
   if (s.template !== "zone") {
     return s;
   }
-  const g2 = sGeom(s);
-  return { ...s, x: 0, y: 0, rotation: 0, params: { polygon: g2.poly } };
+  const g3 = sGeom(s);
+  return { ...s, x: 0, y: 0, rotation: 0, params: { polygon: g3.poly } };
 }
 function toCheckState() {
   return {
@@ -3633,12 +3644,12 @@ function renderLayerList() {
   const groups = [];
   for (const ly of lys) {
     const name = ly.group || "";
-    let g2 = groups.find((x) => x.name === name);
-    if (!g2) {
-      g2 = { name, layers: [] };
-      groups.push(g2);
+    let g3 = groups.find((x) => x.name === name);
+    if (!g3) {
+      g3 = { name, layers: [] };
+      groups.push(g3);
     }
-    g2.layers.push(ly);
+    g3.layers.push(ly);
   }
   const collapsed = S.ui.collapsed = S.ui.collapsed || /* @__PURE__ */ new Set();
   const row = (ly) => {
@@ -3685,9 +3696,9 @@ function renderLayerList() {
     );
   };
   const items = [];
-  for (const g2 of groups) {
-    const closed = !!g2.name && collapsed.has(g2.name) && !g2.layers.some((l) => l.id === S.ui.layer);
-    if (g2.name) {
+  for (const g3 of groups) {
+    const closed = !!g3.name && collapsed.has(g3.name) && !g3.layers.some((l) => l.id === S.ui.layer);
+    if (g3.name) {
       items.push(
         h(
           "div",
@@ -3695,24 +3706,24 @@ function renderLayerList() {
             class: "lgroup" + (closed ? " closed" : ""),
             role: "button",
             tabindex: 0,
-            "data-group": g2.name,
+            "data-group": g3.name,
             onclick: () => {
-              if (collapsed.has(g2.name)) {
-                collapsed.delete(g2.name);
+              if (collapsed.has(g3.name)) {
+                collapsed.delete(g3.name);
               } else {
-                collapsed.add(g2.name);
+                collapsed.add(g3.name);
               }
               renderLayerList();
             }
           },
           ic(closed ? "down" : "up"),
-          h("span", { class: "nm" }, g2.name),
-          h("span", { class: "meta" }, String(g2.layers.length))
+          h("span", { class: "nm" }, g3.name),
+          h("span", { class: "meta" }, String(g3.layers.length))
         )
       );
     }
     if (!closed) {
-      items.push(...g2.layers.map(row));
+      items.push(...g3.layers.map(row));
     }
   }
   box.replaceChildren(...K(h("div", { class: "layers" }, items)));
@@ -4526,9 +4537,9 @@ function renderDerived() {
     if (!v) {
       return;
     }
-    const g2 = pGeom(rec, v);
+    const g3 = pGeom(rec, v);
     const host2 = rec.slot_id ? S.sIdx.get(rec.slot_id) : null;
-    const q = v.floor_load != null && v.floor_load !== "" ? Number(v.floor_load) : v.weight_kg * 9.81 / 1e3 / Math.max(g2.L * g2.W, 0.01);
+    const q = v.floor_load != null && v.floor_load !== "" ? Number(v.floor_load) : v.weight_kg * 9.81 / 1e3 / Math.max(g3.L * g3.W, 0.01);
     box.replaceChildren(
       ...K(
         h(
@@ -4539,11 +4550,11 @@ function renderDerived() {
           h("dt", null, "Виробник"),
           h("dd", null, p.manufacturer || "—"),
           h("dt", null, "Габарит"),
-          h("dd", null, `${fmt(g2.L, 2)} × ${fmt(g2.W, 2)} м · ${normDeg(Math.round(rec.rotation || 0))}°`),
+          h("dd", null, `${fmt(g3.L, 2)} × ${fmt(g3.W, 2)} м · ${normDeg(Math.round(rec.rotation || 0))}°`),
           h("dt", null, "Охоплення AABB"),
-          h("dd", null, `${fmt(g2.box[2] - g2.box[0], 2)} × ${fmt(g2.box[3] - g2.box[1], 2)} м`),
+          h("dd", null, `${fmt(g3.box[2] - g3.box[0], 2)} × ${fmt(g3.box[3] - g3.box[1], 2)} м`),
           h("dt", null, "Центр"),
-          h("dd", null, `${fmt(g2.cx, 2)} ; ${fmt(g2.cy, 2)}`),
+          h("dd", null, `${fmt(g3.cx, 2)} ; ${fmt(g3.cy, 2)}`),
           h("dt", null, "Потужність"),
           h("dd", null, v.power_kw ? fmt(v.power_kw, 1) + " кВт" : "—"),
           h("dt", null, "Маса · на підлогу"),
@@ -5069,17 +5080,17 @@ var BODY = { other: "#9ba6b1" };
 var UCOL = { electric: "#e0a030", air: "#3a8fd0", dust: "#6aa04a" };
 function readColors() {
   const cs = getComputedStyle($("#app") || document.documentElement);
-  const g2 = (n) => cs.getPropertyValue(n).trim() || "#888888";
+  const g3 = (n) => cs.getPropertyValue(n).trim() || "#888888";
   return {
-    scene: g2("--scene"),
-    grid: g2("--grid"),
-    grid2: g2("--grid2"),
-    floor: g2("--floor"),
-    stroke: g2("--stroke"),
-    accent: g2("--accent"),
-    warn: g2("--warn"),
-    block: g2("--block"),
-    ink: g2("--ink"),
+    scene: g3("--scene"),
+    grid: g3("--grid"),
+    grid2: g3("--grid2"),
+    floor: g3("--floor"),
+    stroke: g3("--stroke"),
+    accent: g3("--accent"),
+    warn: g3("--warn"),
+    block: g3("--block"),
+    ink: g3("--ink"),
     unsaved: "#12a5a0",
     // бірюзовий «не збережено» (N-05)
     hl: "#f2c200"
@@ -5240,8 +5251,8 @@ function disposeScene() {
   for (const m of V.bodyMats.values()) {
     m.dispose();
   }
-  for (const g2 of Object.values(V.geo)) {
-    g2.dispose?.();
+  for (const g3 of Object.values(V.geo)) {
+    g3.dispose?.();
   }
   for (const m of Object.values(V.mat)) {
     if (m && m.dispose) {
@@ -5432,13 +5443,13 @@ function boxEdge(w, hh, d, x, y, z, mat) {
   return e;
 }
 function lineGeo(pts) {
-  const g2 = new THREE.BufferGeometry();
-  g2.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
-  return g2;
+  const g3 = new THREE.BufferGeometry();
+  g3.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  return g3;
 }
 function dashRect(hx, hy, ox, oy, mat, y) {
-  const g2 = lineGeo([-hx + ox, y, -(-hy + oy), hx + ox, y, -(-hy + oy), hx + ox, y, -(hy + oy), -hx + ox, y, -(hy + oy)]);
-  const l = new THREE.LineLoop(g2, mat);
+  const g3 = lineGeo([-hx + ox, y, -(-hy + oy), hx + ox, y, -(-hy + oy), hx + ox, y, -(hy + oy), -hx + ox, y, -(hy + oy)]);
+  const l = new THREE.LineLoop(g3, mat);
   l.computeLineDistances();
   return l;
 }
@@ -5470,7 +5481,7 @@ function variantBody(cat, v, norm, ghost) {
   }
   const ang = FRONT_ANGLE[v.front_side || "s"];
   const swap = ang === 90 || ang === 270;
-  const g2 = new THREE.Group();
+  const g3 = new THREE.Group();
   const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W : L2, w: swap ? L2 : W, h: H }, THREE);
   if (ghost) {
     b.traverse((c) => {
@@ -5480,12 +5491,12 @@ function variantBody(cat, v, norm, ghost) {
     });
   }
   b.rotation.y = rad(ang);
-  g2.add(b);
-  g2.add(boxEdge(L2, H, W, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
-  return g2;
+  g3.add(b);
+  g3.add(boxEdge(L2, H, W, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
+  return g3;
 }
 function modelBody(m, L2, H, W, ghost) {
-  const g2 = new THREE.Group();
+  const g3 = new THREE.Group();
   const o = m.obj.clone(true);
   const sz = m.size;
   o.scale.set(L2 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W / Math.max(sz.z, 1e-6));
@@ -5496,8 +5507,8 @@ function modelBody(m, L2, H, W, ghost) {
       }
     });
   }
-  g2.add(o);
-  return g2;
+  g3.add(o);
+  return g3;
 }
 var isGhost = (ly) => ly.id !== S.ui.layer;
 function variantSig(v, p) {
@@ -5511,26 +5522,26 @@ function buildPlacementView(pl, opts2) {
     return null;
   }
   const p = passportOf(pl.variant_id);
-  const g2 = pGeom(pl, v);
+  const g3 = pGeom(pl, v);
   const ghost = opts2.ghost != null ? opts2.ghost : isGhost(ly);
   const H = v.height / 1e3;
   const root = new THREE.Group();
   root.userData.ref = { kind: "placement", id: pl.id };
   root.add(variantBody(p && p.category || "other", v, V.models.get(v.id), ghost));
-  const view = { key: "p:" + pl.id, root, kind: "placement", id: pl.id, g: g2, H, ghost, layerId: ly.id };
-  view.foot = dashRect(g2.L / 2 + 0.06, g2.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+  const view = { key: "p:" + pl.id, root, kind: "placement", id: pl.id, g: g3, H, ghost, layerId: ly.id };
+  view.foot = dashRect(g3.L / 2 + 0.06, g3.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
   root.add(view.foot);
-  if (g2.svc && !ghost) {
-    view.svc = dashRect(g2.shx, g2.shy, g2.sox, g2.soy, V.mat.svc, 0.025);
+  if (g3.svc && !ghost) {
+    view.svc = dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025);
     root.add(view.svc);
   }
-  view.fill = planeMesh(g2.L + 0.7, g2.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
+  view.fill = planeMesh(g3.L + 0.7, g3.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
   view.fill.visible = false;
   root.add(view.fill);
-  view.sel = boxEdge(g2.L * 1.03, H * 1.02, g2.W * 1.03, 0, H / 2, 0, V.mat.sel);
+  view.sel = boxEdge(g3.L * 1.03, H * 1.02, g3.W * 1.03, 0, H / 2, 0, V.mat.sel);
   view.sel.visible = false;
   root.add(view.sel);
-  const hit = boxMesh(g2.L, Math.max(H, 0.4), g2.W, 0, Math.max(H, 0.4) / 2, 0, V.mat.hit);
+  const hit = boxMesh(g3.L, Math.max(H, 0.4), g3.W, 0, Math.max(H, 0.4) / 2, 0, V.mat.hit);
   hit.userData.ref = root.userData.ref;
   hit.userData.view = view;
   root.add(hit);
@@ -5547,9 +5558,9 @@ function buildPlacementView(pl, opts2) {
 function poseView(view, rec, v) {
   if (view.kind === "placement") {
     v = v || variantOf(rec.variant_id);
-    const g2 = pGeom(rec, v);
-    view.g = g2;
-    view.root.position.set(g2.cx, elevOf(rec.layer_id), -g2.cy);
+    const g3 = pGeom(rec, v);
+    view.g = g3;
+    view.root.position.set(g3.cx, elevOf(rec.layer_id), -g3.cy);
   } else {
     view.root.position.set(rec.x, elevOf(rec.layer_id), -rec.y);
   }
@@ -5642,10 +5653,10 @@ function buildSlotView(s, opts2) {
   }
   const ghost = opts2.ghost != null ? opts2.ghost : isGhost(ly);
   const d = slotDims(s);
-  const g2 = sGeom(s);
+  const g3 = sGeom(s);
   const root = new THREE.Group();
   root.userData.ref = { kind: "slot", id: s.id };
-  const view = { key: "s:" + s.id, root, kind: "slot", id: s.id, g: g2, H: d.H, ghost, layerId: ly.id, tpl: s.template };
+  const view = { key: "s:" + s.id, root, kind: "slot", id: s.id, g: g3, H: d.H, ghost, layerId: ly.id, tpl: s.template };
   const edgeMat = ghost ? V.mat.edgeGhost : V.mat.edge;
   const mkHit = (hh) => {
     const hit = boxMesh(d.L, hh, d.W, 0, hh / 2, 0, V.mat.hit);
@@ -5690,8 +5701,8 @@ function buildSlotView(s, opts2) {
   } else if (s.template === "machine_spot") {
     view.foot = dashRect(d.L / 2, d.W / 2, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
     root.add(view.foot);
-    if (g2.shx != null && !ghost) {
-      root.add(dashRect(g2.shx, g2.shy, g2.sox, g2.soy, V.mat.svc, 0.025));
+    if (g3.shx != null && !ghost) {
+      root.add(dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025));
     }
     view.fill = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
     view.fill.visible = false;
@@ -5795,13 +5806,13 @@ function boundsBox(ly) {
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
 }
 function buildDecor(ly) {
-  const g2 = new THREE.Group();
+  const g3 = new THREE.Group();
   const own = [];
   const active = ly.id === S.ui.layer;
   const el = ly.elevation;
   const bp = boundsBox(ly);
   const add = (o, ownGeo) => {
-    g2.add(o);
+    g3.add(o);
     if (ownGeo) {
       o.userData.own = 1;
     }
@@ -5842,7 +5853,7 @@ function buildDecor(ly) {
   if (el > 0.01) {
     const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active ? 0.06 : 0.015, depthWrite: false, side: THREE.DoubleSide });
     own.push(vm);
-    g2.add(planeMesh(bp.x1 - bp.x0, bp.y1 - bp.y0, (bp.x0 + bp.x1) / 2, el, -(bp.y0 + bp.y1) / 2, vm));
+    g3.add(planeMesh(bp.x1 - bp.x0, bp.y1 - bp.y0, (bp.x0 + bp.x1) / 2, el, -(bp.y0 + bp.y1) / 2, vm));
     const lm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: active ? 0.9 : 0.45 });
     own.push(lm);
     add(new THREE.LineLoop(outline(el), lm), 1);
@@ -5866,7 +5877,7 @@ function buildDecor(ly) {
   const zone2 = (x0, y0, x1, y1, color, op, lab) => {
     const fm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: active ? op : op * 0.4, depthWrite: false, side: THREE.DoubleSide });
     own.push(fm);
-    g2.add(planeMesh(Math.abs(x1 - x0), Math.abs(y1 - y0), (x0 + x1) / 2, el + 0.018, -(y0 + y1) / 2, fm));
+    g3.add(planeMesh(Math.abs(x1 - x0), Math.abs(y1 - y0), (x0 + x1) / 2, el + 0.018, -(y0 + y1) / 2, fm));
     const lm = new THREE.LineDashedMaterial({ color, dashSize: 0.4, gapSize: 0.25, transparent: true, opacity: active ? 0.9 : 0.35 });
     own.push(lm);
     const ol = new THREE.LineLoop(lineGeo([x0, el + 0.02, -y0, x1, el + 0.02, -y0, x1, el + 0.02, -y1, x0, el + 0.02, -y1]), lm);
@@ -5875,7 +5886,7 @@ function buildDecor(ly) {
     if (lab && active) {
       const lb = makeLabel(lab, 0.7, 70, color);
       lb.position.set((x0 + x1) / 2, el + 0.4, -(y0 + y1) / 2);
-      g2.add(lb);
+      g3.add(lb);
     }
   };
   for (const a of ly.aisles || []) {
@@ -5890,7 +5901,7 @@ function buildDecor(ly) {
       const geo = u.kind === "electric" || u.kind === "panel" ? V.geo.octa : u.kind === "air" ? V.geo.sph : V.geo.cone;
       const m = new THREE.Mesh(geo, V.mat.pt[u.kind] || V.mat.pt.electric);
       m.position.set(u.x, el + 0.1, -u.y);
-      g2.add(m);
+      g3.add(m);
       if (el > 0.5) {
         stems.push(u.x, 0, -u.y, u.x, el, -u.y);
       }
@@ -5901,26 +5912,26 @@ function buildDecor(ly) {
       add(new THREE.LineSegments(lineGeo(stems), sm), 1);
     }
   }
-  g2.userData.ownMats = own;
-  return g2;
+  g3.userData.ownMats = own;
+  return g3;
 }
-function disposeDecor(g2) {
-  g2.traverse((o) => {
+function disposeDecor(g3) {
+  g3.traverse((o) => {
     if (o.userData.own && o.geometry) {
       o.geometry.dispose();
     }
   });
-  (g2.userData.ownMats || []).forEach((m) => m.dispose());
-  dropLabels(g2);
+  (g3.userData.ownMats || []).forEach((m) => m.dispose());
+  dropLabels(g3);
 }
 function buildBuilding() {
   const B2 = S.site.building;
-  const g2 = new THREE.Group();
-  g2.add(planeMesh(B2.length, B2.width, B2.length / 2, -0.01, -B2.width / 2, V.mat.floor));
+  const g3 = new THREE.Group();
+  g3.add(planeMesh(B2.length, B2.width, B2.length / 2, -0.01, -B2.width / 2, V.mat.floor));
   const e = new THREE.LineSegments(V.geo.boxEdges, V.mat.bld);
   e.scale.set(B2.length, B2.height, B2.width);
   e.position.set(B2.length / 2, B2.height / 2, -B2.width / 2);
-  g2.add(e);
+  g3.add(e);
   const sx = S.site.column_grid.step_x;
   const sy = S.site.column_grid.step_y;
   if (sx > 1 && sy > 1) {
@@ -5943,10 +5954,10 @@ function buildBuilding() {
           im.setMatrixAt(i++, m4);
         }
       }
-      g2.add(im);
+      g3.add(im);
     }
   }
-  return g2;
+  return g3;
 }
 function syncStatic() {
   const B2 = S.site.building;
@@ -5991,9 +6002,9 @@ function syncScene(force) {
       V.decor.delete(ly.id);
       continue;
     }
-    const g2 = buildDecor(ly);
-    V.world.add(g2);
-    V.decor.set(ly.id, { g: g2, sig });
+    const g3 = buildDecor(ly);
+    V.world.add(g3);
+    V.decor.set(ly.id, { g: g3, sig });
   }
   for (const [id, d] of V.decor) {
     if (!lseen.has(id)) {
@@ -6435,10 +6446,10 @@ function onMove(e) {
     return;
   }
   if (!V.drag && !V.hoverRaf) {
-    const ex = { clientX: e.clientX, clientY: e.clientY };
+    const ex2 = { clientX: e.clientX, clientY: e.clientY };
     V.hoverRaf = requestAnimationFrame(() => {
       V.hoverRaf = 0;
-      hoverAt(ex);
+      hoverAt(ex2);
     });
   }
   const d = V.drag;
@@ -6655,10 +6666,10 @@ function assignSlot(pl) {
   if (!v) {
     return;
   }
-  const g2 = pGeom(pl, v);
+  const g3 = pGeom(pl, v);
   let found = null;
   for (const s of S.slots) {
-    if (s.template === "machine_spot" && s.layer_id === pl.layer_id && polygonContains(sGeom(s).poly, [g2.cx, g2.cy], 1e-6)) {
+    if (s.template === "machine_spot" && s.layer_id === pl.layer_id && polygonContains(sGeom(s).poly, [g3.cx, g3.cy], 1e-6)) {
       found = s;
     }
   }
@@ -7337,6 +7348,7 @@ __export(adapter_odoo_exports, {
   OdooAdapter: () => OdooAdapter,
   OdooStore: () => OdooStore,
   StoreError: () => StoreError,
+  attachRules: () => attachRules,
   layerFromApi: () => layerFromApi,
   layerToApi: () => layerToApi,
   newUid: () => newUid,
@@ -7345,13 +7357,18 @@ __export(adapter_odoo_exports, {
   placementFromApi: () => placementFromApi,
   placementToApi: () => placementToApi,
   polygonToRect: () => polygonToRect,
+  putawayFromApi: () => putawayFromApi,
+  putawayToApi: () => putawayToApi,
   rectToPolygon: () => rectToPolygon,
+  replenishFromApi: () => replenishFromApi,
+  replenishToApi: () => replenishToApi,
   slotFromApi: () => slotFromApi,
   slotToApi: () => slotToApi,
   variantFromApi: () => variantFromApi
 });
-var MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3 };
+var MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3, "td.putaway.rule": 4, "td.replenish.rule": 5 };
 var REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
+var RES_OF_MODEL = { "stock.location": "location", "maintenance.equipment": "equipment", "mrp.workcenter": "workcenter", "stock.warehouse.orderpoint": "replenish", "stock.putaway.rule": "putaway" };
 var BATCH = 400;
 var rectOf = (a) => ({
   ...a,
@@ -7365,14 +7382,14 @@ function polygonToRect(poly) {
     return null;
   }
   const [p0, p1, p2, p3] = poly;
-  const ex = p1[0] - p0[0];
+  const ex2 = p1[0] - p0[0];
   const ey = p1[1] - p0[1];
   const fx = p2[0] - p1[0];
   const fy = p2[1] - p1[1];
-  const l = Math.hypot(ex, ey);
+  const l = Math.hypot(ex2, ey);
   const w = Math.hypot(fx, fy);
   const tol = 1e-6 * Math.max(1, l, w);
-  if (l < tol || w < tol || Math.abs(ex * fx + ey * fy) > tol * Math.max(l, w) * 1e3) {
+  if (l < tol || w < tol || Math.abs(ex2 * fx + ey * fy) > tol * Math.max(l, w) * 1e3) {
     return null;
   }
   if (Math.abs(p0[0] + fx - p3[0]) > tol * 1e3 || Math.abs(p0[1] + fy - p3[1]) > tol * 1e3) {
@@ -7383,7 +7400,7 @@ function polygonToRect(poly) {
     cy: (p0[1] + p2[1]) / 2,
     l,
     w,
-    rot: (Math.atan2(ey, ex) * 180 / Math.PI + 360) % 360
+    rot: (Math.atan2(ey, ex2) * 180 / Math.PI + 360) % 360
   };
 }
 function rectToPolygon(cx, cy, l, w, rot2) {
@@ -7434,7 +7451,7 @@ function layerFromApi(l) {
     slot_types: [...l.slot_types || []],
     group: l.group || "",
     edit_groups: clone(groups),
-    edit_roles: ["manager", ...groups.map((g2) => g2.role).filter((r) => r && r !== "manager")],
+    edit_roles: ["manager", ...groups.map((g3) => g3.role).filter((r) => r && r !== "manager")],
     color: l.color,
     opacity: l.opacity,
     style: l.style,
@@ -7444,6 +7461,67 @@ function layerFromApi(l) {
     utilities: clone(l.utilities || []),
     underlay: underlayFromApi(l.underlay)
   };
+}
+function putawayFromApi(r) {
+  return {
+    id: r.uid,
+    rid: r.id,
+    etag: r.etag,
+    product_id: r.product_id ?? null,
+    product: r.product || "",
+    category_id: r.category_id ?? null,
+    package_type_ids: [...r.package_type_ids || []],
+    in_location_id: r.in_location_id ?? null,
+    out_code: r.out_code || "",
+    out_location_id: r.out_location_id ?? null,
+    sublocation: r.sublocation || "no",
+    storage_category_id: r.storage_category_id ?? null,
+    sequence: r.sequence ?? 10,
+    odoo_rule_id: r.odoo_rule_id ?? null,
+    deleted: !!r.deleted
+  };
+}
+var putawayToApi = (r) => ({
+  uid: r.id,
+  product_id: r.product_id ?? null,
+  category_id: r.category_id ?? null,
+  package_type_ids: [...r.package_type_ids || []],
+  in_location_id: r.in_location_id ?? null,
+  out_code: r.out_code || null,
+  out_location_id: r.out_location_id ?? null,
+  sublocation: r.sublocation || "no",
+  storage_category_id: r.sublocation === "closest_location" ? r.storage_category_id ?? null : null,
+  sequence: r.sequence ?? 10,
+  deleted: !!r.deleted
+});
+function replenishFromApi(r) {
+  return {
+    id: r.uid,
+    rid: r.id,
+    etag: r.etag,
+    product_id: r.product_id ?? null,
+    product: r.product || "",
+    cell_code: r.cell_code || "",
+    location_id: r.location_id ?? null,
+    min_qty: r.min_qty || 0,
+    max_qty: r.max_qty || 0,
+    odoo_orderpoint_id: r.odoo_orderpoint_id ?? null,
+    deleted: !!r.deleted
+  };
+}
+var replenishToApi = (r) => ({
+  uid: r.id,
+  product_id: r.product_id ?? null,
+  cell_code: r.cell_code || null,
+  location_id: r.location_id ?? null,
+  min_qty: r.min_qty || 0,
+  max_qty: r.max_qty || 0,
+  deleted: !!r.deleted
+});
+function attachRules(st, rules) {
+  const r = rules || {};
+  Object.defineProperty(st.site, "rules", { value: { putaway: (r.putaway || []).map(putawayFromApi), replenish: (r.replenish || []).map(replenishFromApi) }, writable: true, configurable: true, enumerable: false });
+  return st;
 }
 function slotFromApi(s, layerUid) {
   const rec = {
@@ -7456,6 +7534,13 @@ function slotFromApi(s, layerUid) {
     x: s.x,
     y: s.y,
     rotation: s.rotation || 0,
+    // S2 (MERGE §3.3): категорія зберігання, стратегія списання, функція й атрибути зони, температурний режим (null — успадкувати)
+    storage_category_id: s.storage_category_id ?? null,
+    removal_strategy_id: s.removal_strategy_id ?? null,
+    function_id: s.function_id ?? null,
+    attr_ids: [...s.attr_ids || []],
+    temp_min_c: s.temp_min_c || 0,
+    temp_max_c: s.temp_max_c || 0,
     params: clone(s.params || {}),
     overrides: clone(s.overrides || {}),
     parent_location_id: s.parent_location_id || null,
@@ -7632,6 +7717,12 @@ function slotToApi(s) {
     x_m: rnd(s.x, 4),
     y_m: rnd(s.y, 4),
     rotation: rnd(s.rotation || 0, 4),
+    storage_category_id: s.storage_category_id ?? null,
+    removal_strategy_id: s.removal_strategy_id ?? null,
+    function_id: s.function_id ?? null,
+    attr_ids: [...s.attr_ids || []],
+    temp_min_c: s.temp_min_c || 0,
+    temp_max_c: s.temp_max_c || 0,
     params: clone(s.params),
     overrides: clone(s.overrides || {}),
     type_id: s.type_id ?? null,
@@ -7694,6 +7785,7 @@ var OdooAdapter = class extends BaseAdapter {
     this._uploadModel = o.uploadModel;
     this.retryDelays = o.retryDelays || [2e3, 5e3, 15e3];
     this.siteId = null;
+    Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true });
     this.groupIds = {};
     this._seq = 0;
     this._resetTracking();
@@ -7741,7 +7833,7 @@ var OdooAdapter = class extends BaseAdapter {
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
-    const st = normalizeLoaded(res);
+    const st = attachRules(normalizeLoaded(res), res.rules);
     this.reset(id, st);
     return st;
   }
@@ -7752,9 +7844,9 @@ var OdooAdapter = class extends BaseAdapter {
     const groupIds = {};
     for (const l of st.layers) {
       this._bind("td.layer", l.id, l.rid, l.etag);
-      for (const g2 of l.edit_groups || []) {
-        if (g2.role) {
-          groupIds[g2.role] = g2.id;
+      for (const g3 of l.edit_groups || []) {
+        if (g3.role) {
+          groupIds[g3.role] = g3.id;
         }
       }
     }
@@ -7769,6 +7861,12 @@ var OdooAdapter = class extends BaseAdapter {
       if (c.id != null) {
         this._bind("td.check.config", check, c.id, null);
       }
+    }
+    for (const r of st.site.rules?.putaway || []) {
+      this._bind("td.putaway.rule", r.id, r.rid, r.etag);
+    }
+    for (const r of st.site.rules?.replenish || []) {
+      this._bind("td.replenish.rule", r.id, r.rid, r.etag);
     }
     this._snapshot(st);
     this._setStatus("saved");
@@ -7799,6 +7897,12 @@ var OdooAdapter = class extends BaseAdapter {
     }
     for (const p of st.placements) {
       out.push({ model: "td.placement", uid: p.id, key: "td.placement:" + p.id, vals: placementToApi(p) });
+    }
+    for (const r of st.site?.rules?.putaway || []) {
+      out.push({ model: "td.putaway.rule", uid: r.id, key: "td.putaway.rule:" + r.id, vals: putawayToApi(r) });
+    }
+    for (const r of st.site?.rules?.replenish || []) {
+      out.push({ model: "td.replenish.rule", uid: r.id, key: "td.replenish.rule:" + r.id, vals: replenishToApi(r) });
     }
     return out;
   }
@@ -8246,6 +8350,80 @@ var OdooAdapter = class extends BaseAdapter {
     const r = await fetch(u.url, { credentials: "same-origin" });
     return r.ok ? { text: await r.text() } : null;
   }
+  // --- S2: категорії зберігання, залишки, правила розміщення, журнал публікацій і відкат (API-12, API-15, API-17, API-18) ---
+  /** API-12: `{op: "list"}` → {categories, strategies, functions, attrs}; `{op: "save", id?, vals, confirm}` → {category}; `{op: "delete", id, confirm}`. */
+  async categories(req = { op: "list" }) {
+    const res = await this._call("/f3d/constructor/storage_categories", req);
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Залишки й вага запасу за кодами комірок + макс. вага комірки: {loads: {код: {qty, weight_kg}}, limits}. */
+  async stockLoads(codes) {
+    const res = await this._call("/f3d/constructor/storage/loads", { site_id: this.siteId, ...codes ? { codes } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-17: зайнятість кодів у зовнішній системі → {codes: {код: {state: free|own|match|busy, reason}}}. */
+  async codesCheck(codes) {
+    const res = await this._call("/f3d/constructor/codes/check", { site_id: this.siteId, codes });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-15 `fit`: «чи вміститься» для правил розміщення чернетки → {rules: {uid: [{code, reason}]}}. */
+  async putawayFit() {
+    await this.flush();
+    const res = await this._call("/f3d/constructor/putaway/fit", { site_id: this.siteId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-15 `where`: куди Odoo покладе товар → {location: {id, code, name}, moved, estimate: false}. */
+  async putawayWhere(q) {
+    const res = await this._call("/f3d/constructor/putaway/where", { site_id: this.siteId, product_id: q.product_id, quantity: q.quantity, package_type_id: q.package_type_id || null, ...q.location_code ? { location_code: q.location_code } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Пошук записів для форм правил: kind ∈ product | category | package_type | location; `ids` — назви за id. */
+  async lookup(kind, term = "", ids = null) {
+    const res = await this._call("/f3d/constructor/putaway/lookup", { site_id: this.siteId, kind, term, ...ids ? { ids } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.rows;
+  }
+  /** API-18: журнал публікацій → {versions: [{id, n, counts, ops, rolled_back, can_rollback, reason}], can_rollback}. */
+  async planLog() {
+    const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-18: операції версії журналу. */
+  async planOps(versionId) {
+    const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId, version_id: versionId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.ops.map((o) => ({ ...o, res: RES_OF_MODEL[o.res_model] || o.res_model }));
+  }
+  /** API-18: відкат публікації (лише записи Odoo; чернетка не змінюється). */
+  async rollback(versionId) {
+    const res = await this._call("/f3d/constructor/publish/rollback", { site_id: this.siteId, version_id: versionId, confirm: true });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message, { issues: res.issues });
+    }
+    return res;
+  }
   // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---
   loadSite(id) {
     return this.load(id);
@@ -8417,12 +8595,12 @@ function cabinet(p, d, sg) {
 function mobile(p, d, sg) {
   const hx = d.L / 2;
   const hy = d.W / 2;
-  const base = Math.min(0.12, d.H * 0.2);
-  rect(sg, -hx, -hy, hx, hy, base);
+  const base2 = Math.min(0.12, d.H * 0.2);
+  rect(sg, -hx, -hy, hx, hy, base2);
   rect(sg, -hx, -hy, hx, hy, d.H);
   for (const [x, y] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) {
-    sg([x, y, base], [x, y, d.H]);
-    sg([x, y, 0], [x, y, base]);
+    sg([x, y, base2], [x, y, d.H]);
+    sg([x, y, 0], [x, y, base2]);
   }
   sg([-hx, 0, d.H * 0.5], [hx, 0, d.H * 0.5]);
 }
@@ -8448,17 +8626,17 @@ function runForm(form, tpl, p, d, out) {
   fn(p, d, (a, b) => out.push(a[0], a[2], -a[1], b[0], b[2], -b[1]), tpl);
   return true;
 }
-function frameFor(tpl, p, d, base) {
+function frameFor(tpl, p, d, base2) {
   const out = [];
   const form = p.shape || (NEW_PARAMS.some((k) => p[k] != null) ? DEFAULT_FORM[tpl] : "");
   if (form && runForm(form, tpl, p, d, out)) {
     return out;
   }
-  return base ? base.frame(p, d) : [];
+  return base2 ? base2.frame(p, d) : [];
 }
 for (const tpl of ["pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"]) {
-  const base = registries.shapes.get(tpl, null);
-  registries.shapes.add(tpl, { frame: (p, d) => frameFor(tpl, p, d, base) }, { force: true });
+  const base2 = registries.shapes.get(tpl, null);
+  registries.shapes.add(tpl, { frame: (p, d) => frameFor(tpl, p, d, base2) }, { force: true });
 }
 for (const key of FORM_KEYS) {
   registries.shapes.add("form:" + key, { frame: (p, d) => {
@@ -9047,26 +9225,26 @@ var upsert = (list, rec) => {
 };
 async function refreshLibrary(adapter) {
   const res = await call(adapter, { op: "list" });
-  const lib3 = libraryState();
+  const lib4 = libraryState();
   if (res) {
-    lib3.types = res.types || [];
-    lib3.presets = res.presets || [];
+    lib4.types = res.types || [];
+    lib4.presets = res.presets || [];
   }
-  return lib3;
+  return lib4;
 }
 async function saveRecord(adapter, kind, vals, id = null) {
-  const lib3 = libraryState();
+  const lib4 = libraryState();
   const key = kind === "type" ? "types" : "presets";
   const res = await call(adapter, { op: "save", kind, id, vals });
   const rec = res ? res.record : { ...vals, id: id ?? "l_" + Math.random().toString(36).slice(2, 10) };
-  upsert(lib3[key], rec);
+  upsert(lib4[key], rec);
   return rec;
 }
 async function deleteRecord(adapter, kind, id) {
-  const lib3 = libraryState();
+  const lib4 = libraryState();
   const key = kind === "type" ? "types" : "presets";
   await call(adapter, { op: "delete", kind, id });
-  lib3[key] = lib3[key].filter((x) => String(x.id) !== String(id));
+  lib4[key] = lib4[key].filter((x) => String(x.id) !== String(id));
 }
 
 // core/constructor/types_data.js
@@ -9152,16 +9330,16 @@ var CATALOG = ROWS.map(([ref2, name, group, template, shape, relevance, locKind,
   company_id: null,
   sequence: (i + 1) * 10
 }));
-function allTypes(lib3) {
-  const server = lib3 && lib3.types || [];
+function allTypes(lib4) {
+  const server = lib4 && lib4.types || [];
   const codes = new Set(server.map((t) => t.code));
   return [...server, ...CATALOG.filter((t) => !codes.has(t.code))];
 }
-function typeOf(typeId, lib3) {
+function typeOf(typeId, lib4) {
   if (typeId == null || typeId === "") {
     return null;
   }
-  return allTypes(lib3).find((t) => String(t.id) === String(typeId) || t.code === typeId) || null;
+  return allTypes(lib4).find((t) => String(t.id) === String(typeId) || t.code === typeId) || null;
 }
 function startParams(type) {
   const p = { ...type.params || {} };
@@ -9279,13 +9457,13 @@ function optFields(tpl, params, o) {
   return h("div", { class: "grid2", "data-role": "opt-fields" }, cells);
 }
 function nextPrefix(type, usedSet = null) {
-  const base = ((type.ref || type.code || "T").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "T").slice(0, 16);
+  const base2 = ((type.ref || type.code || "T").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "T").slice(0, 16);
   const used = usedSet || new Set(S.slots.map((s) => s.code_prefix));
   let n = 1;
-  while (used.has(`${base}-${n}`)) {
+  while (used.has(`${base2}-${n}`)) {
     n++;
   }
-  return `${base}-${n}`;
+  return `${base2}-${n}`;
 }
 var paramsForType = (type) => ({ ...defaultParams(type.template), ...clone(startParams(type)) });
 function placeTypeOnScene(type, params) {
@@ -9648,8 +9826,8 @@ function usedTypes() {
 function openResize(row) {
   const t = row.type;
   const keys = SIZE_KEYS[t.template] || [];
-  const base = row.slots[0] ? row.slots[0].params : paramsForType(t);
-  const vals = Object.fromEntries(keys.map((k) => [k, getp(base, k) ?? getp(defaultParams(t.template), k)]));
+  const base2 = row.slots[0] ? row.slots[0].params : paramsForType(t);
+  const vals = Object.fromEntries(keys.map((k) => [k, getp(base2, k) ?? getp(defaultParams(t.template), k)]));
   const body = h(
     "div",
     { class: "fcol" },
@@ -9800,9 +9978,9 @@ var PRESET_KINDS = { row: "Ряд", section: "Секція", group: "Виділ�
 var MAX_GROUP = 200;
 var PLACEABLE2 = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot", "machine_spot"];
 var COUNT_KEY = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
-function specOf(slot, origin = null, lib3 = libraryState()) {
+function specOf(slot, origin = null, lib4 = libraryState()) {
   const spec = { template: slot.template, params: clone(slot.params || {}), rotation: Math.round(slot.rotation || 0) };
-  const type = typeOf(slot.type_id, lib3);
+  const type = typeOf(slot.type_id, lib4);
   if (type) {
     spec.type_code = type.code;
   }
@@ -9859,8 +10037,8 @@ function normalizePresetData(kind, data) {
   }
   return { slot: spec };
 }
-function presetFromSlot(slot, kind, name, lib3 = libraryState()) {
-  const spec = specOf(slot, null, lib3);
+function presetFromSlot(slot, kind, name, lib4 = libraryState()) {
+  const spec = specOf(slot, null, lib4);
   if (kind === "section") {
     const key = COUNT_KEY[slot.template];
     if (!key) {
@@ -9868,18 +10046,18 @@ function presetFromSlot(slot, kind, name, lib3 = libraryState()) {
     }
     spec.params[key] = 1;
   }
-  const type = typeOf(slot.type_id, lib3);
+  const type = typeOf(slot.type_id, lib4);
   return { name, kind, type_id: type && typeof type.id === "number" ? type.id : null, data: normalizePresetData(kind, { slot: spec }) };
 }
-function presetFromSlots(slots, name, lib3 = libraryState()) {
+function presetFromSlots(slots, name, lib4 = libraryState()) {
   if (!slots.length) {
     throw new Error("Немає що зберігати.");
   }
   const origin = { x: slots[0].x, y: slots[0].y };
-  return { name, kind: "group", type_id: null, data: normalizePresetData("group", { slots: slots.map((s) => specOf(s, origin, lib3)) }) };
+  return { name, kind: "group", type_id: null, data: normalizePresetData("group", { slots: slots.map((s) => specOf(s, origin, lib4)) }) };
 }
-var typeIdOf = (spec, lib3) => {
-  const t = spec.type_code && allTypes(lib3).find((x) => x.code === spec.type_code);
+var typeIdOf = (spec, lib4) => {
+  const t = spec.type_code && allTypes(lib4).find((x) => x.code === spec.type_code);
   return t ? t.id : null;
 };
 function insertSection(preset, row, n = 1) {
@@ -9902,16 +10080,16 @@ function insertSection(preset, row, n = 1) {
   row.params[key] = next;
   return next;
 }
-function plansFromPreset(preset, { zoneId = "", count = 1, lib: lib3 = libraryState(), at = null } = {}) {
+function plansFromPreset(preset, { zoneId = "", count = 1, lib: lib4 = libraryState(), at = null } = {}) {
   const ly = layerOf(S.ui.layer);
   const used = new Set(S.slots.map((s) => s.code_prefix));
   const makePrefix = (spec2) => {
-    const type = spec2.type_code && allTypes(lib3).find((t) => t.code === spec2.type_code);
-    const base = spec2.prefix && !used.has(spec2.prefix) ? spec2.prefix : nextPrefix(type || { ref: spec2.template === "pallet_rack" ? "R" : spec2.template.slice(0, 3) }, used);
-    used.add(base);
-    return base;
+    const type = spec2.type_code && allTypes(lib4).find((t) => t.code === spec2.type_code);
+    const base2 = spec2.prefix && !used.has(spec2.prefix) ? spec2.prefix : nextPrefix(type || { ref: spec2.template === "pallet_rack" ? "R" : spec2.template.slice(0, 3) }, used);
+    used.add(base2);
+    return base2;
   };
-  const common = (spec2) => ({ template: spec2.template, params: clone(spec2.params), rotation: spec2.rotation, prefix: makePrefix(spec2), type_id: typeIdOf(spec2, lib3), addr: spec2.addr });
+  const common = (spec2) => ({ template: spec2.template, params: clone(spec2.params), rotation: spec2.rotation, prefix: makePrefix(spec2), type_id: typeIdOf(spec2, lib4), addr: spec2.addr });
   if (preset.kind === "group") {
     const region = regionOf(zoneId);
     const origin = at || { x: region.cx, y: region.cy };
@@ -10164,6 +10342,1596 @@ function renderPresetBlock(root, { rec }) {
 }
 registries.panels.add("slot:presets", { area: "slot", render: renderPresetBlock }, { sequence: 35, force: true });
 
+// core/constructor/capacity_core.js
+var ZONE_FUNCTIONS = [
+  { key: "receiving", name: "Приймання", color: "#3b82f6" },
+  { key: "quality", name: "Контроль якості", color: "#8b5cf6" },
+  { key: "quarantine", name: "Карантин", color: "#f59e0b" },
+  { key: "storage", name: "Зберігання", color: "#10b981" },
+  { key: "picking", name: "Комплектація", color: "#06b6d4" },
+  { key: "packing", name: "Пакування", color: "#ec4899" },
+  { key: "shipping", name: "Відвантаження", color: "#ef4444" },
+  { key: "scrap", name: "Брак", color: "#6b7280" },
+  { key: "returns", name: "Повернення", color: "#a855f7" },
+  { key: "wip", name: "Буфер виробництва", color: "#84cc16" }
+];
+var ZONE_ATTRS = [
+  { key: "temp", name: "Температурний режим" },
+  { key: "hazmat", name: "Небезпечні вантажі" },
+  { key: "valuable", name: "Цінне" },
+  { key: "long", name: "Довгомірне" }
+];
+var ALLOW_NEW = [
+  ["mixed", "Змішане зберігання"],
+  ["same", "Лише той самий товар"],
+  ["empty", "Лише порожнє місце"]
+];
+var SUBLOCATION = [
+  ["no", "Ні"],
+  ["closest_location", "Місце з категорією зберігання"],
+  ["last_used", "Остання використана"]
+];
+var SUBLOCATION_LABEL = Object.fromEntries(SUBLOCATION);
+var POLICY_LABEL = Object.fromEntries(ALLOW_NEW);
+var cache2 = { loads: {}, limits: {}, fit: {}, codes: {}, demo: false };
+var nameCache = /* @__PURE__ */ new Map();
+var rememberName = (kind, id, name) => id != null && name && nameCache.set(`${kind}:${id}`, name);
+function nameOf(kind, id) {
+  const hit = nameCache.get(`${kind}:${id}`);
+  if (hit) {
+    return hit;
+  }
+  if (kind === "product" && S.site && S.site.rules) {
+    const r = [...S.site.rules.putaway || [], ...S.site.rules.replenish || []].find((x) => x.product_id === id && x.product);
+    if (r) {
+      return r.product;
+    }
+  }
+  return id != null ? `#${id}` : "—";
+}
+function rulesState() {
+  if (!S.site) {
+    return { putaway: [], replenish: [] };
+  }
+  if (!S.site.rules) {
+    S.site.rules = { putaway: [], replenish: [] };
+  }
+  S.site.rules.putaway ||= [];
+  S.site.rules.replenish ||= [];
+  return S.site.rules;
+}
+var newPutawayRule = (o = {}) => ({
+  id: newUid(),
+  product_id: null,
+  category_id: null,
+  package_type_ids: [],
+  in_location_id: null,
+  out_code: "",
+  out_location_id: null,
+  sublocation: "no",
+  storage_category_id: null,
+  sequence: 10,
+  odoo_rule_id: null,
+  deleted: false,
+  ...o
+});
+var newReplenishRule = (o = {}) => ({
+  id: newUid(),
+  product_id: null,
+  cell_code: "",
+  location_id: null,
+  min_qty: 0,
+  max_qty: 0,
+  odoo_orderpoint_id: null,
+  deleted: false,
+  ...o
+});
+function ruleStatus(rule, base2, linkKey) {
+  if (rule.deleted) {
+    return "deleted";
+  }
+  if (!rule[linkKey]) {
+    return "new";
+  }
+  const was = base2 && base2.get(rule.id);
+  return was && was !== ruleSig(rule) ? "changed" : "";
+}
+var STATUS_LABEL = { new: "нове", changed: "змінене", deleted: "буде видалено" };
+var SIG_FIELDS = ["product_id", "category_id", "package_type_ids", "in_location_id", "out_code", "out_location_id", "sublocation", "storage_category_id", "sequence", "cell_code", "location_id", "min_qty", "max_qty"];
+var ruleSig = (r) => JSON.stringify(SIG_FIELDS.map((k) => r[k] === void 0 ? null : r[k]));
+var rulesBase = (list) => new Map(list.map((r) => [r.id, ruleSig(r)]));
+function zonePoly(z) {
+  const l = z.params.length || 1;
+  const w = z.params.width || 1;
+  const a = (z.rotation || 0) * Math.PI / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [[-l / 2, -w / 2], [l / 2, -w / 2], [l / 2, w / 2], [-l / 2, w / 2]].map(([x, y]) => [z.x + x * c - y * s, z.y + x * s + y * c]);
+}
+function zonesOf(slots = S.slots) {
+  return slots.filter((s) => s.template === "zone").map((zone2) => ({ zone: zone2, poly: zone2.params.polygon || zonePoly(zone2) }));
+}
+var polyArea2 = (poly) => Math.abs(poly.reduce((a, [x1, y1], i) => a + (x1 * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * y1), 0)) / 2;
+function zoneChainAt(zones, x, y) {
+  return zones.filter(({ poly }) => polygonContains(poly, [x, y])).sort((a, b) => polyArea2(a.poly) - polyArea2(b.poly)).map(({ zone: zone2 }) => zone2);
+}
+function inheritedField(slot, field, zone2) {
+  const has = (v) => v != null && v !== "" && !(Array.isArray(v) && !v.length);
+  if (has(slot[field])) {
+    return { value: slot[field], from: "own" };
+  }
+  for (const z of Array.isArray(zone2) ? zone2 : zone2 ? [zone2] : []) {
+    if (has(z[field])) {
+      return { value: z[field], from: "zone" };
+    }
+  }
+  return { value: null, from: null };
+}
+function cellsAbs(slot, elevation = 0) {
+  if (!SLOT_TEMPLATES[slot.template] || !SLOT_TEMPLATES[slot.template].cells) {
+    return [];
+  }
+  return generateCells(slot.template, slot.code_prefix || "", slot.x, slot.y, slot.rotation || 0, slot.params, slot.overrides || {}, elevation);
+}
+function cellLimit(slot, cell, category) {
+  const ov = (slot.overrides || {})[cell.code] || {};
+  if (ov.max_load_kg != null && ov.max_load_kg > 0) {
+    return { kg: ov.max_load_kg, source: "місце" };
+  }
+  if (cell.max_load_kg > 0) {
+    return { kg: cell.max_load_kg, source: "тип місця" };
+  }
+  if (category && category.max_weight > 0) {
+    return { kg: category.max_weight, source: "категорія" };
+  }
+  return { kg: 0, source: "" };
+}
+function capacitySummary(slots, { loads = null, categories = [], zone: zone2 = null, allSlots = S.slots } = {}) {
+  const zones = zonesOf(allSlots);
+  const cats = new Map(categories.map((c) => [c.id, c]));
+  const out = { cells: 0, places: 0, area: 0, volume: 0, maxWeight: 0, withCategory: 0, occupied: 0, free: 0, fill: null };
+  for (const slot of slots) {
+    for (const cell of cellsAbs(slot)) {
+      const home = zoneChainAt(zones, cell.x, cell.y);
+      if (zone2 && !home.includes(zone2)) {
+        continue;
+      }
+      const cat = cats.get(inheritedField(slot, "storage_category_id", home).value);
+      out.cells++;
+      out.places += cell.capacity || 0;
+      if ((cell.level || 1) === 1) {
+        out.area += cell.l * cell.w;
+      }
+      out.volume += cell.l * cell.w * cell.h;
+      out.maxWeight += cellLimit(slot, cell, cat).kg;
+      out.withCategory += inheritedField(slot, "storage_category_id", home).value ? 1 : 0;
+      if (loads) {
+        if ((loads[cell.code] || {}).qty > 0) {
+          out.occupied++;
+        } else {
+          out.free++;
+        }
+      }
+    }
+  }
+  if (loads && out.cells) {
+    out.fill = out.occupied / out.cells;
+  }
+  return out;
+}
+var g2 = (v) => String(parseFloat(Number(v).toPrecision(6)));
+var issue2 = (check, severity, layerId, codes, message, slotId) => ({ check, severity, layer_id: layerId, codes, message, keys: slotId ? [`s:${slotId}`] : [], id: `${check}|${codes.join(",")}|${message}` });
+function cellLoadIssues(scene, config, eps = 1e-3, data = cache2) {
+  const out = [];
+  for (const slot of scene.slots.values()) {
+    for (const [code, cell] of scene.slotCells(slot)) {
+      const load = data.loads[code];
+      const limit = data.limits[code] || cell.max_load_kg || 0;
+      if (load && limit > 0 && load.weight_kg > limit + eps) {
+        out.push(issue2("cell_load", config.mode, slot.layer_id, [code], `${code}: вага запасу ${g2(Math.round(load.weight_kg * 100) / 100)} кг перевищує допустимі ${g2(limit)} кг`, slot.id));
+      }
+    }
+  }
+  return out;
+}
+function putawayFitIssues(scene, config, eps = 1e-3, data = cache2, rules = rulesState().putaway) {
+  const out = [];
+  const bySlot = /* @__PURE__ */ new Map();
+  for (const slot of scene.slots.values()) {
+    for (const [code] of scene.slotCells(slot)) {
+      bySlot.set(code, slot);
+    }
+  }
+  for (const rule of rules) {
+    if (rule.deleted) {
+      continue;
+    }
+    for (const { code, reason } of data.fit[rule.id] || []) {
+      const slot = bySlot.get(code);
+      if (slot) {
+        out.push(issue2("putaway_fit", config.mode, slot.layer_id, [code], `Правило «${ruleLabel(rule)}»: не вміститься в ${code} — ${reason}`, slot.id));
+      }
+    }
+  }
+  return out;
+}
+function codeConflictIssues(scene, config, eps = 1e-3, data = cache2) {
+  const out = [];
+  const owner = /* @__PURE__ */ new Map();
+  for (const slot of scene.slots.values()) {
+    for (const [code] of scene.slotCells(slot)) {
+      const st = data.codes[code];
+      if (st && st.state === "busy") {
+        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `${code}: ${st.reason}`, slot.id));
+      }
+      if (owner.has(code) && owner.get(code) !== slot.id) {
+        const first = scene.slots.get(owner.get(code));
+        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `Код ${code} дублюється в місцях ${first.code_prefix} і ${slot.code_prefix}`, slot.id));
+      }
+      owner.set(code, slot.id);
+    }
+  }
+  return out;
+}
+var ruleLabel = (rule) => rule.product_id ? rule.product || nameOf("product", rule.product_id) : rule.category_id ? rule.category || nameOf("category", rule.category_id) : "усі товари";
+function rulesInto(code, slot, rules = rulesState().putaway, zone2 = null) {
+  const cat = inheritedField(slot, "storage_category_id", zone2).value;
+  return rules.filter((r) => !r.deleted && (r.out_code === code || r.sublocation === "closest_location" && r.storage_category_id && r.storage_category_id === cat));
+}
+function rulesIntoSlot(slot, rules = rulesState().putaway, zone2 = null) {
+  const out = [];
+  for (const rule of rules) {
+    if (rule.deleted) {
+      continue;
+    }
+    const codes = cellsAbs(slot).map((c) => c.code).filter((code) => rulesInto(code, slot, [rule], zone2).length);
+    if (codes.length) {
+      out.push({ rule, codes });
+    }
+  }
+  return out;
+}
+registries.checks.add("cell_load", { run: (scene, config, eps) => cellLoadIssues(scene, config, eps), label: "Вага запасу в комірці" }, { sequence: 80, force: true });
+registries.checks.add("putaway_fit", { run: (scene, config, eps) => putawayFitIssues(scene, config, eps), label: "Правило розміщення: вміститься" }, { sequence: 90, force: true });
+registries.checks.add("code_conflict", { run: (scene, config, eps) => codeConflictIssues(scene, config, eps), label: "Конфлікт кодів і штрихкодів" }, { sequence: 95, force: true });
+var EXTRA_CHECKS = [
+  { id: "cell_load", name: "Вага запасу в комірці", hint: "Вага залишків із зовнішньої системи проти макс. ваги комірки чи категорії зберігання", mode: "warn" },
+  { id: "putaway_fit", name: "Правило розміщення: вміститься", hint: "Вага/об'єм товару й габарити упаковки проти габаритів і макс. ваги комірки-цілі", mode: "warn" },
+  { id: "code_conflict", name: "Конфлікт кодів і штрихкодів", hint: "Код зайнятий у зовнішній системі (інший склад, архів, інша компанія) або дублюється в чернетці", mode: "warn" }
+];
+var HIGHLIGHT = { target: "#2563eb", match: "#f59e0b" };
+function highlightCodes(rule) {
+  const targets = /* @__PURE__ */ new Set();
+  const matches = /* @__PURE__ */ new Set();
+  if (!rule) {
+    return { targets, matches };
+  }
+  if (rule.out_code) {
+    targets.add(rule.out_code);
+  }
+  for (const slot of S.slots) {
+    for (const cell of cellsAbs(slot)) {
+      if (rule.sublocation === "closest_location" && rule.storage_category_id && inheritedField(slot, "storage_category_id", null).value === rule.storage_category_id) {
+        targets.add(cell.code);
+      }
+      const stock = cache2.loads[cell.code];
+      if (rule.product_id && stock && (stock.product_ids || []).includes(rule.product_id)) {
+        matches.add(cell.code);
+      }
+    }
+  }
+  return { targets, matches };
+}
+registries.metrics.add(
+  "rule_target",
+  {
+    label: "Правило розміщення",
+    color(cell) {
+      const rule = rulesState().putaway.find((r) => r.id === S.ui.ruleHighlight);
+      const { targets, matches } = highlightCodes(rule);
+      return targets.has(cell.code) ? HIGHLIGHT.target : matches.has(cell.code) ? HIGHLIGHT.match : null;
+    },
+    legend: [["Куди веде правило", HIGHLIGHT.target], ["Є відповідний товар", HIGHLIGHT.match]]
+  },
+  { sequence: 80, force: true }
+);
+
+// core/constructor/plan_core.js
+var KIND_LABEL = {
+  create: "Створити",
+  move: "Перенести",
+  rename: "Перейменувати",
+  attrs: "Атрибути",
+  update: "Оновити",
+  archive: "Архівувати"
+};
+var RES_LABEL = {
+  location: "Місце зберігання",
+  equipment: "Обладнання",
+  workcenter: "Робочий центр",
+  replenish: "Правило поповнення",
+  putaway: "Правило розміщення"
+};
+var FLAG_LABEL = {
+  stock: "є залишок",
+  barcode_busy: "штрихкод уже зайнятий",
+  moves: "є незавершені переміщення",
+  requests: "є відкриті заявки",
+  workorders: "є незавершені завдання",
+  target: "ціль не знайдено",
+  warehouse: "поза складом"
+};
+var OP_LABEL = { create: "створено", move: "переміщено", rename: "перейменовано", attrs: "змінено атрибути", archive: "архівовано" };
+var VIEWS = [
+  { id: "all", label: "Усе", test: () => true },
+  { id: "create", label: "Створити", test: (l) => l.kind === "create" && !isRule(l) },
+  { id: "move", label: "Перенести", test: (l) => l.kind === "move" },
+  { id: "rename", label: "Перейменувати", test: (l) => l.kind === "rename" },
+  { id: "attrs", label: "Атрибути", test: (l) => (l.kind === "attrs" || l.kind === "update") && !isRule(l) },
+  { id: "archive", label: "Архів", test: (l) => l.kind === "archive" && !isRule(l) },
+  { id: "rules", label: "Правила", test: (l) => isRule(l) },
+  { id: "blocked", label: "Застосувати не можна", test: (l) => !!l.blocked }
+];
+var isRule = (l) => l.res === "replenish" || l.res === "putaway";
+function viewCounts(lines) {
+  return Object.fromEntries(VIEWS.map((v) => [v.id, lines.filter((l) => v.test(l)).length]));
+}
+function filterLines(lines, viewId, scopeUid = "") {
+  const view = VIEWS.find((v) => v.id === viewId) || VIEWS[0];
+  return lines.filter((l) => view.test(l) && (!scopeUid || inScope(l, scopeUid)));
+}
+var inScope = (l, uid2) => l.scope_uid === uid2 || l.zone_uid === uid2;
+function selectAll(lines, on) {
+  for (const l of lines) {
+    if (l.kind !== "archive" || l.explicit) {
+      l.selected = on && !l.blocked;
+    }
+  }
+}
+function selectScope(lines, uid2) {
+  for (const l of lines) {
+    if (l.kind !== "archive" || l.explicit) {
+      l.selected = !l.blocked && inScope(l, uid2);
+    }
+  }
+}
+function closure(lines) {
+  const parents = new Map(lines.filter((l) => l.kind === "create" || l.kind === "attrs" && l.vals && l.vals.active).map((l) => [`${l.res}|${l.code}`, l]));
+  const skipped = [];
+  const dead = (line) => {
+    let dep = line.depends_code;
+    for (let guard2 = 0; dep && guard2 < 20; guard2++) {
+      const parent = parents.get(`location|${dep}`);
+      if (!parent) {
+        return null;
+      }
+      if (parent.blocked) {
+        return dep;
+      }
+      dep = parent.depends_code;
+    }
+    return null;
+  };
+  const chosen = [];
+  for (const l of lines) {
+    if (!l.selected || l.blocked) {
+      continue;
+    }
+    const bad = dead(l);
+    if (bad) {
+      skipped.push({ code: l.code, reason: `Залежність ${bad} заблокована` });
+    } else {
+      chosen.push(l);
+    }
+  }
+  const have = new Set(chosen);
+  const added = [];
+  for (const line of [...chosen]) {
+    let dep = line.depends_code;
+    for (let guard2 = 0; dep && guard2 < 20; guard2++) {
+      const parent = parents.get(`location|${dep}`);
+      if (!parent) {
+        break;
+      }
+      if (!have.has(parent)) {
+        have.add(parent);
+        chosen.push(parent);
+        added.push(parent);
+      }
+      dep = parent.depends_code;
+    }
+  }
+  return { chosen, added, skipped };
+}
+function planSummary(lines) {
+  const { chosen } = closure(lines);
+  const n = (test) => chosen.filter(test).length;
+  return {
+    create: n((l) => l.kind === "create" && !isRule(l)),
+    move: n((l) => l.kind === "move"),
+    rename: n((l) => l.kind === "rename"),
+    attrs: n((l) => (l.kind === "attrs" || l.kind === "update") && !isRule(l)),
+    archive: n((l) => l.kind === "archive" && !isRule(l)),
+    rules: n(isRule),
+    blocked: lines.filter((l) => l.blocked).length,
+    selected: chosen.length
+  };
+}
+var IMPORT_HEADER = ["Назва", "Батьківська локація", "Штрихкод", "Код сцени", "Вид", "Місткість", "Категорія зберігання"];
+function planTable(lines, { onlyChanged = false } = {}) {
+  const rows = lines.filter((l) => l.res === "location" && ["create", "rename", "attrs"].includes(l.kind) && (!onlyChanged || l.selected) && !l.blocked).map((l) => [l.vals.name ?? l.name ?? l.code, l.vals.parent_name ?? "", l.vals.barcode ?? l.code, l.vals.td_code ?? l.code, l.vals.td_loc_kind ?? "", l.vals.td_capacity ?? "", l.vals.storage_category_name ?? ""]);
+  return { header: IMPORT_HEADER, rows };
+}
+var csvCell = (v) => {
+  const s = v == null ? "" : String(v);
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+var toCsv = ({ header, rows }) => [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n");
+var flagLabels = (l) => (l.flags || []).map((f) => FLAG_LABEL[f] || f);
+function lineText(l) {
+  if (l.changes) {
+    return l.changes;
+  }
+  return Object.entries(l.vals || {}).map(([k, v]) => `${k}: ${l.before && k in l.before ? l.before[k] : "—"} → ${v}`).join("; ");
+}
+
+// core/constructor/plan_dialog.js
+var MAX_ROWS = 300;
+var ex = (list, f) => list.length ? list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? " … " + f(list[list.length - 1]) : "") : "—";
+var KIND_CLS = { create: "ok", move: "w", rename: "w", attrs: "w", update: "w", archive: "b" };
+function download(name, text, mime) {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1e3);
+}
+async function openPlanDialog({ adapter, onClose } = {}) {
+  adapter ||= E.adapter;
+  let plan;
+  try {
+    plan = await adapter.planPreview();
+  } catch (e) {
+    toast(e.message || "Не вдалося побудувати план публікації.", "err");
+    return void 0;
+  }
+  const { lines } = plan;
+  const st = { view: "all", scope: "" };
+  const first = plan.first;
+  const blocks = plan.issues.filter((i) => i.severity === "block");
+  const warns = plan.issues.filter((i) => i.severity === "warn");
+  const note = h("textarea", { placeholder: "Що змінено в цій версії (необов’язково)", "aria-label": "Нотатка" });
+  const copyAck = h("input", { type: "checkbox", "aria-label": "Більше не нагадувати" });
+  const chips = h("div", { class: "frow", style: { flexWrap: "wrap", gap: "6px" } });
+  const table = h("div", { class: "plan-lines", style: { maxHeight: "42vh", overflow: "auto", border: "1px solid var(--line, #ccd)", borderRadius: "6px" } });
+  const sum = h("div", { class: "small muted", "data-role": "plan-sum" });
+  const summaryBox = h("div", { class: "fcol" });
+  let confirmBtn = null;
+  const countOf = (test) => lines.filter(test);
+  const renderSummary = () => {
+    const created = countOf((l) => l.kind === "create" && l.res === "location");
+    const eq = countOf((l) => l.kind === "create" && (l.res === "equipment" || l.res === "workcenter"));
+    const changed = countOf((l) => ["move", "rename", "attrs", "update"].includes(l.kind) && l.res !== "replenish" && l.res !== "putaway");
+    const removed = countOf((l) => l.kind === "archive" && l.res !== "replenish" && l.res !== "putaway");
+    const rules = countOf((l) => l.res === "replenish" || l.res === "putaway");
+    const row = (n, t, x) => h("div", { class: "sumrow" }, h("div", { class: "n" }, fmtInt(n)), h("div", null, h("div", null, t), h("div", { class: "x" }, x)));
+    summaryBox.replaceChildren(
+      ...K(
+        h("div", { class: "lbl" }, "Буде створено в Odoo" + (first ? " (перша публікація площадки)" : "")),
+        row(created.length, "місць зберігання (td_code, штрихкод, місткість, категорія)", ex(created, (l) => l.code)),
+        row(eq.length, "одиниць обладнання / робочих центрів", ex(eq, (l) => l.code || l.name)),
+        row(changed.length, "змінено", `перенесень ${countOf((l) => l.kind === "move").length} · перейменувань ${countOf((l) => l.kind === "rename").length} · атрибутів і обладнання ${countOf((l) => l.kind === "attrs" || l.kind === "update" && l.res !== "putaway" && l.res !== "replenish").length}`),
+        row(removed.length, "видалено в чернетці (пропозиції архівації; нічого не видаляється)", `місць ${removed.filter((l) => l.res === "location").length} · обладнання ${removed.filter((l) => l.res !== "location").length}`),
+        rules.length ? row(rules.length, "правил поповнення й розміщення", ex(rules, (l) => l.name)) : null
+      )
+    );
+  };
+  const renderChips2 = () => {
+    const counts = viewCounts(lines);
+    chips.replaceChildren(
+      ...VIEWS.filter((v) => v.id === "all" || counts[v.id]).map(
+        (v) => h("button", { class: "fbtn sm" + (st.view === v.id ? " primary" : ""), type: "button", "data-view": v.id, "aria-pressed": String(st.view === v.id), onclick: () => {
+          st.view = v.id;
+          refresh();
+        } }, `${v.label} · ${fmtInt(counts[v.id])}`)
+      )
+    );
+  };
+  const lineRow = (l) => h(
+    "div",
+    { class: "plan-row", "data-code": l.code, style: { display: "grid", gridTemplateColumns: "28px 110px 150px 1fr 1.4fr", gap: "8px", padding: "3px 8px", alignItems: "center", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: l.blocked ? 0.65 : 1 } },
+    h("input", {
+      type: "checkbox",
+      checked: !!l.selected && !l.blocked,
+      disabled: !!l.blocked,
+      "aria-label": `Застосувати ${l.code}`,
+      onchange: (e) => {
+        l.selected = e.target.checked;
+        refreshSummary();
+      }
+    }),
+    h("span", { class: "fbadge " + (KIND_CLS[l.kind] || "") }, KIND_LABEL[l.kind] || l.kind),
+    h("span", { class: "small" }, RES_LABEL[l.res] || l.res),
+    h("span", { style: { fontFamily: "monospace", overflowWrap: "anywhere" } }, l.code, l.depends_code ? h("span", { class: "small muted" }, ` ← ${l.depends_code}`) : null),
+    h("span", { class: "small" }, lineText(l), l.blocked ? h("span", { class: "fbadge b", style: { marginLeft: "6px" } }, l.blocked_reason || "застосувати не можна") : flagLabels(l).map((f) => h("span", { class: "fbadge w", style: { marginLeft: "6px" } }, f)))
+  );
+  const renderTable = () => {
+    const shown = filterLines(lines, st.view, st.scope);
+    table.replaceChildren(
+      ...K(
+        shown.length ? shown.slice(0, MAX_ROWS).map(lineRow) : h("div", { class: "note", style: { margin: "8px" } }, "У цьому виді немає рядків."),
+        shown.length > MAX_ROWS ? h("div", { class: "small muted", style: { padding: "6px 8px" } }, `… ще ${shown.length - MAX_ROWS} (фільтр за зоною чи видом звузить список)`) : null
+      )
+    );
+  };
+  const refreshSummary = () => {
+    const s = planSummary(lines);
+    const { added, skipped } = closure(lines);
+    sum.textContent = `Буде застосовано: ${fmtInt(s.selected)} (створити ${fmtInt(s.create)}, перенести ${fmtInt(s.move)}, перейменувати ${fmtInt(s.rename)}, атрибути ${fmtInt(s.attrs)}, архів ${fmtInt(s.archive)}, правила ${fmtInt(s.rules)})` + (added.length ? ` · батьки додано автоматично: ${added.map((l) => l.code).join(", ")}` : "") + (skipped.length ? ` · пропущено через заблоковану залежність: ${skipped.map((x) => x.code).join(", ")}` : "") + (s.blocked ? ` · застосувати не можна: ${s.blocked}` : "");
+    if (confirmBtn) {
+      confirmBtn.disabled = !!blocks.length || !s.selected && !(plan.draftChanges > 0);
+    }
+  };
+  const refresh = () => {
+    renderChips2();
+    renderTable();
+    refreshSummary();
+  };
+  const scopeSel = plan.scopes && plan.scopes.length ? selectEl([["", "Усі зони й ряди"], ...plan.scopes.map((s) => [s.uid, `${s.name} (${s.n})`])], st.scope, (v) => {
+    st.scope = v;
+    refresh();
+  }, false, "Зона або ряд") : null;
+  const toolbar = h(
+    "div",
+    { class: "frow", style: { gap: "6px", flexWrap: "wrap", alignItems: "center" } },
+    scopeSel ? fld("Зона або ряд", scopeSel) : null,
+    scopeSel ? h("button", { class: "fbtn sm", type: "button", id: "planScopeOnly", onclick: () => {
+      if (st.scope) {
+        selectScope(lines, st.scope);
+        refresh();
+      }
+    } }, "Лише обране") : null,
+    h("button", { class: "fbtn sm", type: "button", id: "planSelectAll", onclick: () => {
+      selectAll(lines, true);
+      refresh();
+    } }, "Вибрати все"),
+    h("button", { class: "fbtn sm", type: "button", id: "planSelectNone", onclick: () => {
+      selectAll(lines, false);
+      refresh();
+    } }, "Зняти все")
+  );
+  renderSummary();
+  refresh();
+  const nextN = S.versions.reduce((a, v) => Math.max(a, v.n), 0) + 1;
+  const imitation = adapter.kind !== "odoo";
+  return await new Promise((resolve) => {
+    const dlg = openDialog({
+      title: "Публікація версії " + nextN,
+      cls: "wide",
+      body: h(
+        "div",
+        { class: "fcol" },
+        imitation ? h("div", { class: "note" }, "Це імітація: записи в Odoo не створюються. Підтвердження зберігає нову версію макета й оновлює «стан Odoo» прототипу (журнал і відкат — «Журнал публікацій»).") : null,
+        summaryBox,
+        blocks.length ? h("div", { class: "note lock", "data-role": "plan-blocks" }, `Публікацію заборонено: зауваження зі статусом «Заборона» (${blocks.length}): ${blocks.slice(0, 3).map((i) => i.message).join("; ")}${blocks.length > 3 ? " …" : ""}`) : null,
+        warns.length ? h("div", { class: "small muted" }, `Попередження перевірок: ${warns.length}. Публікацію дозволено.`) : null,
+        plan.copyReminder ? h("label", { class: "note", style: { display: "flex", gap: "8px", alignItems: "center" } }, copyAck, "Перше застосування: спершу виконайте його на копії бази Odoo. Більше не нагадувати.") : null,
+        chips,
+        toolbar,
+        table,
+        sum,
+        total0(plan) ? h("div", { class: "note lock" }, "З моменту останньої версії змін немає.") : null,
+        fld("Нотатка до версії", note)
+      ),
+      actions: [
+        { label: "Файл для імпорту (CSV)", id: "planCsv", onClick: () => {
+          download("plan_import.csv", toCsv(planTable(lines, { onlyChanged: true })), "text/csv;charset=utf-8");
+          return false;
+        } },
+        { label: "Скасувати" },
+        {
+          label: "Підтвердити й опублікувати",
+          cls: "primary",
+          id: "planConfirm",
+          onClick: async () => {
+            try {
+              const res = await adapter.planApply({ lines, note: note.value.trim(), copyAck: copyAck.checked });
+              toast(`Версію ${res.version.n} опубліковано` + (imitation ? " (імітація: записи Odoo не створено)." : "."));
+              if (res.skipped && res.skipped.length) {
+                toast(`Пропущено рядків із заблокованою залежністю: ${res.skipped.length}`, "warn");
+              }
+            } catch (e) {
+              toast(e.message || "Публікація не вдалася.", "err");
+              return false;
+            }
+            return void 0;
+          }
+        }
+      ],
+      onClose: async () => {
+        if (onClose) {
+          await onClose();
+        }
+        resolve();
+      }
+    });
+    confirmBtn = dlg.querySelector("#planConfirm");
+    refreshSummary();
+  });
+}
+var total0 = (plan) => !plan.first && !plan.lines.length && !(plan.draftChanges > 0);
+var countText = (c) => ["create", "move", "rename", "attrs", "archive"].filter((k) => c[k]).map((k) => `${OP_LABEL[k]} ${c[k]}`).join(" · ") || "без змін";
+function fmtVal(v) {
+  if (v == null) {
+    return "—";
+  }
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+async function openJournal({ adapter } = {}) {
+  adapter ||= E.adapter;
+  const box = h("div", { class: "fcol", "data-role": "journal" });
+  const opened = /* @__PURE__ */ new Set();
+  const load = async () => {
+    let res;
+    try {
+      res = await adapter.planLog();
+    } catch (e) {
+      box.replaceChildren(h("div", { class: "note lock" }, e.message || "Журнал недоступний."));
+      return;
+    }
+    const rows = [];
+    for (const v of res.versions) {
+      const ops = opened.has(v.n) ? await adapter.planOps(v.id) : null;
+      rows.push(
+        h(
+          "div",
+          { class: "jrow", "data-version": v.n, style: { padding: "8px 0", borderBottom: "1px solid var(--line, #e3e6ee)" } },
+          h(
+            "div",
+            { class: "frow", style: { gap: "8px", alignItems: "center", flexWrap: "wrap" } },
+            h("b", null, "v" + v.n),
+            h("span", { class: "small muted" }, `${fmtDate(v.published_at)} · ${v.by || "—"}`),
+            v.rolled_back ? h("span", { class: "fbadge b" }, "відкочено") : v.ops ? h("span", { class: "fbadge ok" }, `${v.ops} операцій`) : h("span", { class: "fbadge" }, "без операцій в Odoo"),
+            h("span", { style: { flex: 1 } }),
+            v.ops ? h("button", { class: "fbtn sm", type: "button", "data-act": "ops", onclick: async () => {
+              opened.has(v.n) ? opened.delete(v.n) : opened.add(v.n);
+              await load();
+            } }, opened.has(v.n) ? "Сховати операції" : "Операції") : null,
+            canManage() && can("rollback") && !v.rolled_back && v.ops ? h("button", { class: "fbtn sm", type: "button", "data-act": "rollback", disabled: !v.can_rollback, title: v.can_rollback ? "Повернути Odoo до стану перед цією публікацією" : v.reason, onclick: () => rollbackAsk(v) }, "Відкотити") : null
+          ),
+          v.note ? h("div", { class: "small" }, v.note) : null,
+          h("div", { class: "small muted" }, countText(v.counts)),
+          !v.can_rollback && !v.rolled_back && v.ops && v.reason ? h("div", { class: "small", style: { color: "var(--warn, #b45309)" } }, "Відкат недоступний: " + v.reason) : null,
+          v.rolled_back ? h("div", { class: "small muted" }, `Відкотив ${v.rolled_back_by || "—"} · ${fmtDate(v.rolled_back_at)}`) : null,
+          ops ? h(
+            "div",
+            { class: "small", style: { maxHeight: "28vh", overflow: "auto", marginTop: "6px", fontFamily: "monospace" } },
+            ops.slice(0, 300).map((o) => h("div", { style: { opacity: o.rolled_back ? 0.55 : 1 } }, `${o.seq}. ${OP_LABEL[o.op] || o.op} · ${RES_LABEL[o.res] || o.res} · ${o.code}`, o.op !== "create" ? h("span", { class: "muted" }, `  ${fmtVal(o.before)} → ${fmtVal(o.after)}`) : null)),
+            ops.length > 300 ? h("div", { class: "muted" }, `… ще ${ops.length - 300}`) : null
+          ) : null
+        )
+      );
+    }
+    box.replaceChildren(...K(rows.length ? rows : h("div", { class: "note" }, "Публікацій ще не було.")));
+  };
+  const rollbackAsk = async (v) => {
+    const ok = await E.confirmBox({
+      title: "Відкотити публікацію v" + v.n + "?",
+      text: "В Odoo буде повернуто стан до цієї публікації: створене піде в архів, значення полів повернуться, архівне відновиться. Чернетка не змінюється — наступний план знову запропонує зміни.",
+      ok: "Відкотити"
+    });
+    if (!ok) {
+      return;
+    }
+    try {
+      const res = await adapter.rollback(v.id);
+      toast(`Відкочено операцій: ${res.reverted}. Чернетка не змінена.`);
+      await load();
+      if (E.reload) {
+        await E.reload();
+      }
+    } catch (e) {
+      toast(e.message || "Відкат не вдався.", "err");
+    }
+  };
+  await load();
+  return await new Promise(
+    (resolve) => openDialog({ title: "Журнал публікацій", cls: "wide", body: box, actions: [{ label: "Закрити" }], onClose: resolve })
+  );
+}
+registries.dialogs.add("plan", (args, ctx2) => openPlanDialog({ adapter: ctx2?.adapter, ...args || {} }), { force: true });
+registries.dialogs.add("planLog", (args, ctx2) => openJournal({ adapter: ctx2?.adapter }), { force: true });
+registries.menu.add("planLog", { area: "more", label: "Журнал публікацій", icon: "hist", capability: "rollback", sequence: 60, run: () => E.runDialog("planLog") }, { sequence: 60, force: true });
+
+// core/constructor/capacity_ui.js
+var MODE_OPTS2 = [["warn", "Попередження"], ["block", "Заборона"]];
+var lib3 = { loaded: false, loading: null, categories: [], strategies: [], functions: ZONE_FUNCTIONS.map((f) => ({ id: f.key, ...f })), attrs: ZONE_ATTRS.map((a) => ({ id: a.key, ...a })) };
+async function loadLib(force = false) {
+  const adapter = E.adapter;
+  if (!adapter || typeof adapter.categories !== "function" || !can("storage")) {
+    lib3.loaded = true;
+    return lib3;
+  }
+  if (lib3.loaded && !force) {
+    return lib3;
+  }
+  lib3.loading ||= adapter.categories({ op: "list" }).then((res) => {
+    Object.assign(lib3, { categories: res.categories || [], strategies: res.strategies || [], functions: (res.functions || lib3.functions).map((f) => ({ ...f })), attrs: (res.attrs || lib3.attrs).map((a) => ({ ...a })) });
+  }).catch((e) => console.warn("Категорії зберігання недоступні:", e.message || e)).finally(() => {
+    lib3.loaded = true;
+    lib3.loading = null;
+  });
+  await lib3.loading;
+  return lib3;
+}
+function ensureLib() {
+  if (!lib3.loaded && !lib3.loading) {
+    loadLib().then(() => E.renderRight && E.renderRight());
+  }
+}
+var categoryOf = (id) => lib3.categories.find((c) => String(c.id) === String(id)) || null;
+var strategyName = (id) => (lib3.strategies.find((s) => String(s.id) === String(id)) || {}).name || "";
+var functionOf = (id) => lib3.functions.find((f) => String(f.id) === String(id)) || null;
+function rerunLive() {
+  if (!S.site) {
+    return;
+  }
+  S.issues = runLive();
+  E.renderChips && E.renderChips();
+  E.updateVisual && E.updateVisual();
+  E.renderChecksBlock && E.renderChecksBlock();
+}
+var allCodes = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => c.code));
+var sigCodes = "";
+async function refreshCaches(what = ["loads", "fit", "codes"]) {
+  const a = E.adapter;
+  if (!a || !S.site) {
+    return;
+  }
+  try {
+    if (what.includes("loads") && typeof a.stockLoads === "function" && can("storage")) {
+      const r = await a.stockLoads();
+      cache2.loads = r.loads || {};
+      cache2.limits = r.limits || {};
+      cache2.demo = !!r.demo;
+    }
+    if (what.includes("fit") && typeof a.putawayFit === "function" && can("putaway")) {
+      cache2.fit = rulesState().putaway.length ? (await a.putawayFit()).rules || {} : {};
+    }
+    if (what.includes("codes") && typeof a.codesCheck === "function") {
+      const codes = allCodes();
+      const sig = codes.length + ":" + codes.slice(0, 50).join(",") + ":" + codes.slice(-50).join(",");
+      if (sig !== sigCodes) {
+        sigCodes = sig;
+        cache2.codes = {};
+        for (let i = 0; i < codes.length; i += 4e3) {
+          Object.assign(cache2.codes, (await a.codesCheck(codes.slice(i, i + 4e3))).codes || {});
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Кеш перевірок ємності:", e);
+    return;
+  }
+  rerunLive();
+}
+var scheduleCaches = debounce((what) => refreshCaches(what), 900);
+function lazyRefresh() {
+  const on = (k) => !!(S.settings.checks[k] && S.settings.checks[k].enabled);
+  const what = [on("cell_load") ? "loads" : null, on("putaway_fit") ? "fit" : null, on("code_conflict") ? "codes" : null].filter(Boolean);
+  if (S.site && what.length) {
+    scheduleCaches(what);
+  }
+}
+function lookupField({ kind, id, label, placeholder, onPick, dis }) {
+  const adapter = E.adapter;
+  const input = h("input", { type: "text", value: id != null ? nameOf(kind, id) : "", placeholder: placeholder || "Почніть вводити назву", "aria-label": label, disabled: dis, "data-lookup": kind, autocomplete: "off" });
+  const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "160px", overflow: "auto" } });
+  const search = async () => {
+    if (typeof adapter.lookup !== "function") {
+      return;
+    }
+    const rows = await adapter.lookup(kind, input.value);
+    list.replaceChildren(
+      ...rows.map(
+        (r) => h("button", { class: "fbtn sm", type: "button", style: { textAlign: "left" }, onclick: () => {
+          rememberName(kind, r.id, r.name);
+          input.value = r.name;
+          list.replaceChildren();
+          onPick(r);
+        } }, r.name)
+      )
+    );
+  };
+  const delayed = debounce(search, 250);
+  input.addEventListener("input", () => {
+    if (!input.value.trim()) {
+      list.replaceChildren();
+      onPick(null);
+      return;
+    }
+    delayed();
+  });
+  input.addEventListener("focus", () => !input.value && search());
+  return h("div", { class: "fcol" }, input, list);
+}
+var USAGE_OPTS = [["", "— як в Odoo —"], ["internal", "Внутрішня (зберігання)"], ["view", "Віртуальна (група, без залишків)"]];
+var REPLENISH_OPTS = [["", "— як в Odoo —"], ["1", "Так"], ["0", "Ні"]];
+var flagText = (key, v) => key === "replenish_location" ? v ? "1" : "0" : String(v);
+function flagValue(rec, cells, key) {
+  const seen = new Set(cells.map((c) => {
+    const v = ((rec.overrides || {})[c.code] || {})[key];
+    return v == null ? "" : flagText(key, v);
+  }));
+  return seen.size > 1 ? "~" : [...seen][0] ?? "";
+}
+function setFlag(rec, cells, key, value) {
+  rec.overrides = rec.overrides || {};
+  for (const c of cells) {
+    const o = rec.overrides[c.code] = rec.overrides[c.code] || {};
+    if (value == null) {
+      delete o[key];
+    } else {
+      o[key] = value;
+    }
+    if (!Object.keys(o).length) {
+      delete rec.overrides[c.code];
+    }
+  }
+}
+function renderSlotBlock2(root, { rec }) {
+  if (!rec || rec.template === "machine_spot") {
+    return;
+  }
+  const isZone = rec.template === "zone";
+  const cells = isZone ? [] : cellsAbs(rec, (layerOf(rec.layer_id) || {}).elevation || 0);
+  if (!isZone && !cells.length) {
+    return;
+  }
+  ensureLib();
+  lazyRefresh();
+  const ly = layerOf(rec.layer_id);
+  const dis = !canEditLayer(ly) || !!rec.locked;
+  const zones = zonesOf();
+  const home = isZone ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
+  const cat = inheritedField(rec, "storage_category_id", home);
+  const strat = inheritedField(rec, "removal_strategy_id", home);
+  const edit = (fn2) => (v) => {
+    E.beginEdit("slot", rec);
+    fn2(v);
+    E.liveEdit();
+    E.endEdit();
+  };
+  const catOpts = [["", cat.from === "zone" ? `— як у зони: ${(categoryOf(cat.value) || {}).name || "…"} —` : "— без категорії —"], ...lib3.categories.map((c) => [c.id, c.name])];
+  const stratOpts = [["", strat.from === "zone" ? `— як у зони: ${strategyName(strat.value) || "…"} —` : "— як в Odoo —"], ...lib3.strategies.map((s) => [s.id, s.name])];
+  const conv = (v) => v === "" ? null : isNaN(Number(v)) ? v : Number(v);
+  const fn = functionOf(rec.function_id);
+  const first = cells[0];
+  const info = first ? cellLimit(rec, first, categoryOf(cat.value)) : null;
+  const sumScope = isZone ? capacitySummary(S.slots.filter((s) => s !== rec), { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories, zone: rec }) : capacitySummary([rec], { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories });
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "capacityBlock" },
+        h("h3", null, "Зберігання й ємність"),
+        h(
+          "div",
+          { class: "fcol" },
+          isZone ? [
+            fld("Функція зони", selectEl([["", "— не задано —"], ...lib3.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", (v) => {
+              edit((x) => {
+                rec.function_id = conv(x);
+                const f = functionOf(rec.function_id);
+                if (f && f.color) {
+                  rec.params.color = f.color;
+                }
+              })(v);
+              E.renderRight();
+            }, dis, "Функція зони")),
+            // колір рамки зони — колір функції
+            fn && fn.color ? h("div", { class: "small", style: { display: "flex", alignItems: "center", gap: "6px" } }, h("span", { style: { width: "14px", height: "14px", background: fn.color, display: "inline-block", borderRadius: "3px" } }), "Колір рамки й підпису зони: " + fn.name) : null,
+            h("div", { class: "lbl" }, "Атрибути зони (лише в проєкті)"),
+            h("div", { class: "checks" }, lib3.attrs.map((a) => {
+              const on = (rec.attr_ids || []).some((x) => String(x) === String(a.id));
+              const cb = h("input", { type: "checkbox", checked: on, disabled: dis, "aria-label": a.name, "data-attr": a.key || a.id });
+              cb.addEventListener("change", () => {
+                edit(() => {
+                  const cur = new Set(rec.attr_ids || []);
+                  cb.checked ? cur.add(a.id) : cur.delete(a.id);
+                  rec.attr_ids = [...cur];
+                })();
+                E.renderRight();
+              });
+              return h("label", null, cb, a.name);
+            })),
+            (rec.attr_ids || []).some((x) => (lib3.attrs.find((a) => String(a.id) === String(x)) || {}).key === "temp" || x === "temp") ? h("div", { class: "grid2" }, fld("Температура від", numInput({ value: rec.temp_min_c ?? 0, dis, step: 1, label: "Температура від", set: (v) => {
+              E.beginEdit("slot", rec);
+              rec.temp_min_c = v;
+              E.liveEdit();
+              E.endEdit();
+            } }), "°C"), fld("до", numInput({ value: rec.temp_max_c ?? 0, dis, step: 1, label: "Температура до", set: (v) => {
+              E.beginEdit("slot", rec);
+              rec.temp_max_c = v;
+              E.liveEdit();
+              E.endEdit();
+            } }), "°C")) : null
+          ] : null,
+          fld("Категорія зберігання", selectEl(catOpts, rec.storage_category_id ?? "", edit((v) => {
+            rec.storage_category_id = conv(v);
+          }), dis || !can("storage"), "Категорія зберігання")),
+          cat.value ? h("div", { class: "small muted" }, categoryLine(categoryOf(cat.value))) : null,
+          fld("Стратегія списання", selectEl(stratOpts, rec.removal_strategy_id ?? "", edit((v) => {
+            rec.removal_strategy_id = conv(v);
+          }), dis || !can("storage"), "Стратегія списання")),
+          isZone ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "usage", v || null);
+            }
+          }), dis, "usage"),
+          isZone ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "replenish_location", v === "" ? null : v === "1");
+            }
+          }), dis, "replenish_location"),
+          info ? h("div", { class: "small", "data-role": "cell-limit" }, `Комірка ${first.code}: ${fmt(first.l, 2)}×${fmt(first.w, 2)}×${fmt(first.h, 2)} м · місткість ${fmtInt(first.capacity || 0)} · макс. вага ${info.kg ? fmtInt(info.kg) + " кг (" + info.source + ")" : "не задано"}`) : null,
+          h(
+            "div",
+            { class: "small muted", "data-role": "slot-summary" },
+            `${isZone ? "Усередині зони" : "У місці"}: комірок ${fmtInt(sumScope.cells)} · палетомісць ${fmtInt(sumScope.places)} · площа ${fmt(sumScope.area, 1)} м² · об'єм ${fmt(sumScope.volume, 1)} м³ · сума макс. ваги ${fmtInt(sumScope.maxWeight)} кг · з категорією ${fmtInt(sumScope.withCategory)}` + (sumScope.fill != null ? ` · зайнято ${fmtInt(sumScope.occupied)} / вільно ${fmtInt(sumScope.free)} (${fmt(sumScope.fill * 100, 0)}%)${cache2.demo ? " · демо" : ""}` : "")
+          ),
+          !can("storage") ? h("div", { class: "small muted" }, "Категорії й стратегії в цьому хості недоступні.") : null
+        )
+      )
+    )
+  );
+}
+var flagField = (label, opts2, value, onChange, dis, key) => {
+  const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts2] : opts2, value, onChange, dis, label);
+  el.dataset.flag = key;
+  return fld(label, el);
+};
+var categoryLine = (c) => c ? `${c.name}: макс. вага ${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без обмеження"}, ${POLICY_LABEL[c.allow_new_product] || c.allow_new_product}` : "";
+registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock2 }, { sequence: 35, force: true });
+function renderSiteBlock2(root) {
+  ensureLib();
+  lazyRefresh();
+  const loads = Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null;
+  const sum = capacitySummary(S.slots, { loads, categories: lib3.categories });
+  const rules = rulesState();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "siteCapacity" },
+        h("h3", null, "Ємність площадки"),
+        h(
+          "div",
+          { class: "small", "data-role": "site-summary" },
+          `Комірок ${fmtInt(sum.cells)} · палетомісць ${fmtInt(sum.places)} · площа ${fmt(sum.area, 1)} м² · об'єм ${fmt(sum.volume, 1)} м³ · сума макс. ваги ${fmtInt(sum.maxWeight)} кг · з категорією ${fmtInt(sum.withCategory)}` + (sum.fill != null ? ` · зайнято ${fmtInt(sum.occupied)}, вільно ${fmtInt(sum.free)} · заповнення ${fmt(sum.fill * 100, 0)}%${cache2.demo ? " (демо)" : ""}` : "")
+        ),
+        h(
+          "div",
+          { class: "frow", style: { flexWrap: "wrap", gap: "6px", marginTop: "6px" } },
+          can("storage") ? h("button", { class: "fbtn sm", type: "button", id: "btnCategories", onclick: () => E.runDialog("categories") }, "Категорії зберігання…") : null,
+          can("putaway") ? h("button", { class: "fbtn sm", type: "button", id: "btnRules", onclick: () => E.runDialog("rules") }, `Правила розміщення й поповнення (${rules.putaway.filter((r) => !r.deleted).length}/${rules.replenish.filter((r) => !r.deleted).length})…`) : null,
+          E.adapter && E.adapter.kind === "artifact" && typeof E.adapter.stockLoads === "function" ? h("button", { class: "fbtn sm", type: "button", id: "btnDemoStock", onclick: async () => {
+            E.adapter.demoStock = !E.adapter.demoStock;
+            await refreshCaches(["loads"]);
+            E.renderRight();
+          } }, E.adapter.demoStock ? "Сховати демо-залишки" : "Показати демо-залишки") : null,
+          typeof (E.adapter || {}).codesCheck === "function" ? h("button", { class: "fbtn sm", type: "button", id: "btnCheckCodes", title: "Перевірити зайнятість кодів у зовнішній системі", onclick: async () => {
+            sigCodes = "";
+            await refreshCaches(["codes"]);
+            toast("Зайнятість кодів перевірено.");
+          } }, "Перевірити коди") : null
+        )
+      )
+    )
+  );
+}
+registries.panels.add("site:capacity", { area: "site", render: renderSiteBlock2 }, { sequence: 50, force: true });
+function renderChecksConfig(root) {
+  const dis = !canManage();
+  const cfg = S.settings.checks;
+  const save2 = (id) => {
+    const c = cfg[id];
+    const a = E.adapter;
+    if (a.kind === "odoo" && c.id == null && typeof a.queue === "function") {
+      a.queue({ model: "td.check.config", op: "create", uid: id, vals: { check_key: id, enabled: c.enabled, mode: c.mode, params: c.params || {} } });
+      c.id = -1;
+    } else {
+      a.saveCheck(id, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+    }
+    rerunLive();
+    if (c.enabled) {
+      refreshCaches([{ cell_load: "loads", putaway_fit: "fit", code_conflict: "codes" }[id]]);
+    }
+  };
+  const items = EXTRA_CHECKS.filter((c) => c.id !== "cell_load" || can("storage")).filter((c) => c.id !== "putaway_fit" || can("putaway"));
+  if (!items.length) {
+    return;
+  }
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "capChecks" },
+      h("div", { class: "lbl", style: { margin: "6px 0" } }, "Перевірки ємності й правил"),
+      dis ? h("div", { class: "note lock" }, "Налаштування змінює Менеджер.") : null,
+      items.map((c) => {
+        const cur = cfg[c.id] || { enabled: false, mode: c.mode, params: {}, id: null };
+        return h(
+          "div",
+          { class: "frow", style: { margin: "5px 0" }, title: c.hint },
+          h("input", { type: "checkbox", checked: !!cur.enabled && !!cfg[c.id], disabled: dis, "aria-label": c.name, "data-check": c.id, onchange: (e) => {
+            cfg[c.id] ||= { enabled: false, mode: c.mode, params: {}, id: null };
+            cfg[c.id].enabled = e.target.checked;
+            save2(c.id);
+          } }),
+          h("span", { style: { flex: 1, minWidth: 0 } }, c.name),
+          selectEl(MODE_OPTS2, cur.mode, (v) => {
+            cfg[c.id] ||= { enabled: false, mode: c.mode, params: {}, id: null };
+            cfg[c.id].mode = v;
+            save2(c.id);
+          }, dis, c.name)
+        );
+      })
+    )
+  );
+}
+registries.panels.add("right:capchecks", { area: "right", render: renderChecksConfig }, { sequence: 92, force: true });
+async function openCategories() {
+  const adapter = E.adapter;
+  await loadLib(true);
+  const dis = !canManage();
+  const body = h("div", { class: "fcol", "data-role": "categories" });
+  const draft = { id: null, name: "", max_weight: 0, allow_new_product: "mixed", capacity: [] };
+  const form = h("div", { class: "fcol", style: { borderTop: "1px solid var(--line, #e3e6ee)", paddingTop: "8px", marginTop: "8px" } });
+  const refresh = async () => {
+    await loadLib(true);
+    render2();
+  };
+  const edit = (c) => {
+    Object.assign(draft, c ? { id: c.id, name: c.name, max_weight: c.max_weight, allow_new_product: c.allow_new_product, capacity: (c.capacity || []).map((x) => ({ ...x })) } : { id: null, name: "", max_weight: 0, allow_new_product: "mixed", capacity: [] });
+    renderForm();
+  };
+  const save2 = async () => {
+    try {
+      await adapter.categories({ op: "save", id: draft.id, confirm: true, vals: { name: draft.name, max_weight: draft.max_weight, allow_new_product: draft.allow_new_product, capacity: draft.capacity.map((r) => ({ product_id: r.product_id || null, package_type_id: r.package_type_id || null, quantity: r.quantity })) } });
+      toast("Категорію збережено.");
+      edit(null);
+      await refresh();
+      E.renderRight();
+    } catch (e) {
+      toast(e.message || "Не вдалося зберегти категорію.", "err");
+    }
+  };
+  const del = async (c) => {
+    try {
+      await adapter.categories({ op: "delete", id: c.id, confirm: true });
+      toast("Категорію видалено.");
+      await refresh();
+    } catch (e) {
+      toast(e.message || "Не вдалося видалити.", "err");
+    }
+  };
+  function render2() {
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "note" }, "Категорії зберігання (в Odoo — `stock.storage.category`) змінюються одразу, поза планом публікації. Призначення місцям, рядам і зонам — у блоці «Зберігання й ємність»; діє вниз."),
+        lib3.categories.length ? lib3.categories.map(
+          (c) => h(
+            "div",
+            { class: "frow", "data-cat": c.id, style: { gap: "8px", padding: "4px 0", borderBottom: "1px solid var(--line, #e3e6ee)", alignItems: "center" } },
+            h("b", { style: { flex: 1 } }, c.name),
+            h("span", { class: "small muted" }, `${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без ліміту"} · ${POLICY_LABEL[c.allow_new_product]} · ємність: ${c.capacity.length} · місць: ${c.locations}`),
+            h("button", { class: "fbtn sm", type: "button", disabled: dis, "data-act": "edit", onclick: () => edit(c) }, "Змінити"),
+            h("button", { class: "fbtn sm", type: "button", disabled: dis || c.in_use, title: c.in_use ? "Категорію вже використано" : "", "data-act": "delete", onclick: () => del(c) }, "Видалити")
+          )
+        ) : h("div", { class: "note" }, "Категорій ще немає."),
+        dis ? h("div", { class: "note lock" }, "Категорії зберігання змінює Менеджер.") : h("button", { class: "fbtn sm", type: "button", id: "btnNewCategory", onclick: () => edit(null) }, "Нова категорія"),
+        form
+      )
+    );
+    renderForm();
+  }
+  function renderForm() {
+    if (dis) {
+      form.replaceChildren();
+      return;
+    }
+    form.replaceChildren(
+      h("div", { class: "lbl" }, draft.id ? "Зміна категорії" : "Нова категорія"),
+      fld("Назва", textInput({ value: draft.name, label: "Назва категорії", set: (v) => {
+        draft.name = v;
+      } })),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Макс. вага", numInput({ value: draft.max_weight, min: 0, step: 10, label: "Макс. вага", set: (v) => {
+          draft.max_weight = v;
+        } }), "кг"),
+        fld("Політика", selectEl(ALLOW_NEW, draft.allow_new_product, (v) => {
+          draft.allow_new_product = v;
+        }, false, "Політика"))
+      ),
+      h("div", { class: "lbl" }, "Ємність за товаром або упаковкою"),
+      draft.capacity.map(
+        (r, i) => h(
+          "div",
+          { class: "frow", style: { gap: "6px", alignItems: "flex-start" } },
+          r.package_type_id != null || r.kind === "package" ? lookupField({ kind: "package_type", id: r.package_type_id, label: "Упаковка", onPick: (x) => {
+            r.package_type_id = x ? x.id : null;
+          } }) : lookupField({ kind: "product", id: r.product_id, label: "Товар", onPick: (x) => {
+            r.product_id = x ? x.id : null;
+          } }),
+          numInput({ value: r.quantity, min: 0, step: 1, label: "Кількість", set: (v) => {
+            r.quantity = v;
+          } }),
+          h("button", { class: "fbtn sm", type: "button", "aria-label": "Прибрати рядок ємності", onclick: () => {
+            draft.capacity.splice(i, 1);
+            renderForm();
+          } }, "×")
+        )
+      ),
+      h(
+        "div",
+        { class: "frow", style: { gap: "6px" } },
+        h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          draft.capacity.push({ product_id: null, package_type_id: null, quantity: 1 });
+          renderForm();
+        } }, "+ Товар"),
+        h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          draft.capacity.push({ product_id: null, package_type_id: -1, kind: "package", quantity: 1 });
+          renderForm();
+        } }, "+ Упаковка")
+      ),
+      h("div", { class: "frow", style: { gap: "6px" } }, h("button", { class: "fbtn primary", type: "button", id: "btnSaveCategory", onclick: save2 }, "Зберегти категорію"), draft.id ? h("button", { class: "fbtn", type: "button", onclick: () => edit(null) }, "Скасувати правку") : null)
+    );
+  }
+  render2();
+  return await new Promise((resolve) => openDialog({ title: "Категорії зберігання", cls: "wide", body, actions: [{ label: "Закрити" }], onClose: resolve }));
+}
+registries.dialogs.add("categories", () => openCategories(), { force: true });
+registries.menu.add("categories", { area: "more", label: "Категорії зберігання", icon: "tag", capability: "storage", sequence: 55, run: () => E.runDialog("categories") }, { sequence: 55, force: true });
+
+// core/constructor/rules_dialog.js
+var canEditRules = () => S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length > 0);
+var base = { site: null, putaway: /* @__PURE__ */ new Map(), replenish: /* @__PURE__ */ new Map() };
+function ensureBase() {
+  const r = rulesState();
+  if (base.site !== (S.site && S.site.id)) {
+    base = { site: S.site && S.site.id, putaway: rulesBase(r.putaway), replenish: rulesBase(r.replenish) };
+  }
+  return base;
+}
+var save = () => {
+  rerunLive();
+  E.scheduleSave && E.scheduleSave();
+  refreshCaches(["fit"]);
+};
+function highlightRule(rule) {
+  S.ui.metric = "rule_target";
+  S.ui.ruleHighlight = rule ? rule.id : null;
+  S.ui.whereCode = null;
+  E.syncScene && E.syncScene(true);
+  E.requestRender && E.requestRender();
+  const codes = rule && rule.out_code ? [rule.out_code] : [];
+  const slot = S.slots.find((s) => cellsAbs(s).some((c) => codes.includes(c.code)));
+  if (slot && E.focusOn) {
+    E.focusOn(slot.x, slot.y);
+  }
+}
+function clearHighlight() {
+  if (S.ui.metric === "rule_target") {
+    S.ui.metric = null;
+  }
+  S.ui.ruleHighlight = null;
+  S.ui.whereCode = null;
+  E.syncScene && E.syncScene(true);
+  E.requestRender && E.requestRender();
+}
+var allCells = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => ({ code: c.code, slot: s })));
+function codeField({ value, label, onPick, dis }) {
+  const input = h("input", { type: "text", value: value || "", "aria-label": label, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
+  const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "140px", overflow: "auto" } });
+  const find = () => {
+    const t = input.value.trim().toLowerCase();
+    const rows = t ? allCells().filter((c) => c.code.toLowerCase().includes(t)).slice(0, 30) : [];
+    list.replaceChildren(...rows.map((c) => h("button", { class: "fbtn sm", type: "button", style: { textAlign: "left" }, onclick: () => {
+      input.value = c.code;
+      list.replaceChildren();
+      onPick(c.code);
+    } }, c.code)));
+    onPick(input.value.trim());
+  };
+  input.addEventListener("input", find);
+  return h("div", { class: "fcol" }, input, list);
+}
+async function openPutawayForm(rule, isNew) {
+  const adapter = E.adapter;
+  await loadLib();
+  const d = { ...rule, package_type_ids: [...rule.package_type_ids] };
+  const mode = { by: d.category_id && !d.product_id ? "category" : "product" };
+  const body = h("div", { class: "fcol", "data-role": "putaway-form" });
+  const render2 = () => {
+    body.replaceChildren(
+      ...K(
+        h(
+          "div",
+          { class: "frow", style: { gap: "10px" } },
+          ["product", "category"].map((m) => h("label", null, h("input", { type: "radio", name: "pwby", checked: mode.by === m, onchange: () => {
+            mode.by = m;
+            if (m === "product") {
+              d.category_id = null;
+            } else {
+              d.product_id = null;
+            }
+            render2();
+          } }), m === "product" ? " Товар" : " Категорія товару"))
+        ),
+        mode.by === "product" ? fld("Товар", lookupField({ kind: "product", id: d.product_id, label: "Товар", onPick: (r) => {
+          d.product_id = r ? r.id : null;
+          d.product = r ? r.name : "";
+        } })) : fld("Категорія товару", lookupField({ kind: "category", id: d.category_id, label: "Категорія товару", onPick: (r) => {
+          d.category_id = r ? r.id : null;
+          d.category = r ? r.name : "";
+        } })),
+        fld("Типи упаковки (необов'язково)", h("div", { class: "fcol" }, d.package_type_ids.length ? h("div", { class: "small" }, d.package_type_ids.map((id) => nameOf("package_type", id)).join(", ")) : null, lookupField({ kind: "package_type", id: null, label: "Тип упаковки", placeholder: "Додати тип упаковки", onPick: (r) => {
+          if (r && !d.package_type_ids.includes(r.id)) {
+            d.package_type_ids.push(r.id);
+            render2();
+          }
+        } }), d.package_type_ids.length ? h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          d.package_type_ids = [];
+          render2();
+        } }, "Прибрати упаковки") : null)),
+        fld("Коли надходить у (необов'язково)", lookupField({ kind: "location", id: d.in_location_id, label: "Коли надходить у", placeholder: "За замовчуванням — склад площадки", onPick: (r) => {
+          d.in_location_id = r ? r.id : null;
+        } })),
+        fld("Покласти в комірку", codeField({ value: d.out_code, label: "Куди покласти", onPick: (code) => {
+          d.out_code = code;
+        } })),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Шукати всередині", selectEl(SUBLOCATION, d.sublocation, (v) => {
+            d.sublocation = v;
+            render2();
+          }, false, "Шукати всередині")),
+          fld("Пріоритет", numInput({ value: d.sequence, step: 1, int: true, label: "Пріоритет", set: (v) => {
+            d.sequence = v;
+          } }))
+        ),
+        d.sublocation === "closest_location" ? fld("Категорія зберігання місця", selectEl([["", "— оберіть —"], ...lib3.categories.map((c) => [c.id, c.name])], d.storage_category_id ?? "", (v) => {
+          d.storage_category_id = v === "" ? null : isNaN(Number(v)) ? v : Number(v);
+        }, false, "Категорія зберігання")) : null
+      )
+    );
+  };
+  render2();
+  return await new Promise(
+    (resolve) => openDialog({
+      title: isNew ? "Нове правило розміщення" : "Правило розміщення",
+      body,
+      actions: [
+        { label: "Скасувати" },
+        {
+          label: "Зберегти",
+          cls: "primary",
+          id: "btnSaveRule",
+          onClick: () => {
+            if (!d.product_id && !d.category_id) {
+              toast("Вкажіть товар або категорію товару.", "warn");
+              return false;
+            }
+            if (!d.out_code) {
+              toast("Вкажіть комірку призначення.", "warn");
+              return false;
+            }
+            if (d.sublocation === "closest_location" && !d.storage_category_id) {
+              toast("Для «місце з категорією зберігання» оберіть категорію.", "warn");
+              return false;
+            }
+            if (d.sublocation !== "closest_location") {
+              d.storage_category_id = null;
+            }
+            Object.assign(rule, d);
+            if (isNew) {
+              rulesState().putaway.push(rule);
+            }
+            save();
+            resolve(true);
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => resolve(false)
+    })
+  );
+}
+async function openReplenishForm(rule, isNew) {
+  const d = { ...rule };
+  const body = h(
+    "div",
+    { class: "fcol", "data-role": "replenish-form" },
+    fld("Товар", lookupField({ kind: "product", id: d.product_id, label: "Товар", onPick: (r) => {
+      d.product_id = r ? r.id : null;
+      d.product = r ? r.name : "";
+    } })),
+    fld("Комірка", codeField({ value: d.cell_code, label: "Комірка", onPick: (code) => {
+      d.cell_code = code;
+    } })),
+    h("div", { class: "grid2" }, fld("Мінімум", numInput({ value: d.min_qty, min: 0, step: 1, label: "Мінімум", set: (v) => {
+      d.min_qty = v;
+    } })), fld("Максимум", numInput({ value: d.max_qty, min: 0, step: 1, label: "Максимум", set: (v) => {
+      d.max_qty = v;
+    } }))),
+    h("div", { class: "small muted" }, "Правило можливе для комірки із залишком або з уже наявним правилом; у Odoo воно потрапить публікацією.")
+  );
+  return await new Promise(
+    (resolve) => openDialog({
+      title: isNew ? "Нове правило поповнення" : "Правило поповнення",
+      body,
+      actions: [
+        { label: "Скасувати" },
+        {
+          label: "Зберегти",
+          cls: "primary",
+          id: "btnSaveRule",
+          onClick: () => {
+            if (!d.product_id || !d.cell_code) {
+              toast("Вкажіть товар і комірку.", "warn");
+              return false;
+            }
+            if (d.max_qty < d.min_qty) {
+              toast("Максимум не може бути меншим за мінімум.", "warn");
+              return false;
+            }
+            Object.assign(rule, d);
+            if (isNew) {
+              rulesState().replenish.push(rule);
+            }
+            save();
+            resolve(true);
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => resolve(false)
+    })
+  );
+}
+async function prefetchNames(adapter) {
+  const rules = rulesState();
+  const need = { category: /* @__PURE__ */ new Set(), package_type: /* @__PURE__ */ new Set(), location: /* @__PURE__ */ new Set(), product: /* @__PURE__ */ new Set() };
+  for (const r of rules.putaway) {
+    r.category_id != null && need.category.add(r.category_id);
+    r.package_type_ids.forEach((id) => need.package_type.add(id));
+    [r.in_location_id, r.out_location_id].forEach((id) => id != null && need.location.add(id));
+  }
+  for (const r of rules.replenish) {
+    r.location_id != null && need.location.add(r.location_id);
+  }
+  if (typeof adapter.lookup !== "function") {
+    return;
+  }
+  for (const [kind, ids] of Object.entries(need)) {
+    const missing = [...ids].filter((id) => nameOf(kind, id).startsWith("#"));
+    if (missing.length) {
+      try {
+        (await adapter.lookup(kind, "", missing)).forEach((r) => rememberName(kind, r.id, r.name));
+      } catch (e) {
+        console.warn("Назви правил недоступні:", e.message || e);
+      }
+    }
+  }
+}
+async function openRules({ tab = "putaway" } = {}) {
+  const adapter = E.adapter;
+  await loadLib();
+  await prefetchNames(adapter);
+  await refreshCaches(["fit"]);
+  const st = { tab };
+  const body = h("div", { class: "fcol", "data-role": "rules" });
+  const dis = !canEditRules();
+  const rules = rulesState();
+  const bs = ensureBase();
+  const chip = (status) => status ? h("span", { class: "fbadge " + (status === "deleted" ? "b" : status === "changed" ? "w" : "ok"), "data-status": status }, STATUS_LABEL[status]) : null;
+  const remove = (list, rule) => {
+    if (rule[list === rules.putaway ? "odoo_rule_id" : "odoo_orderpoint_id"]) {
+      rule.deleted = true;
+    } else {
+      list.splice(list.indexOf(rule), 1);
+    }
+    save();
+    render2();
+  };
+  const restore2 = (rule) => {
+    rule.deleted = false;
+    save();
+    render2();
+  };
+  const putawayRows = () => {
+    const sorted = [...rules.putaway].sort((a, b) => a.sequence - b.sequence);
+    if (!sorted.length) {
+      return h("div", { class: "note" }, "Правил розміщення ще немає.");
+    }
+    return sorted.map((r) => {
+      const status = ruleStatus(r, bs.putaway, "odoo_rule_id");
+      const fit = cache2.fit[r.id] || [];
+      return h(
+        "div",
+        { class: "rule-row", "data-rule": r.id, style: { display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", padding: "6px 0", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: r.deleted ? 0.6 : 1, alignItems: "center" } },
+        h("div", null, h("b", null, ruleLabel(r)), " ", chip(status), r.package_type_ids.length ? h("div", { class: "small muted" }, "упаковка: " + r.package_type_ids.map((id) => nameOf("package_type", id)).join(", ")) : null, h("div", { class: "small muted" }, `пріоритет ${r.sequence} · коли надходить у: ${r.in_location_id ? nameOf("location", r.in_location_id) : "склад площадки"}`)),
+        h("div", { class: "small" }, "→ ", h("b", null, r.out_code || "—"), r.sublocation !== "no" ? h("span", { class: "muted" }, ` · шукати: ${SUBLOCATION_LABEL[r.sublocation]}${r.storage_category_id ? " (" + ((categoryOf(r.storage_category_id) || {}).name || "категорія") + ")" : ""}`) : null, fit.length ? h("div", { class: "small", style: { color: "var(--warn, #b45309)" }, "data-role": "fit-warn" }, "Правило: не вміститься — " + fit.map((f) => f.reason).join("; ")) : null),
+        h(
+          "div",
+          { class: "frow", style: { gap: "4px" } },
+          h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => {
+            highlightRule(r);
+            toast("Ціль правила підсвічено.");
+            render2();
+          }, disabled: !r.out_code }, "Підсвітити"),
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore2(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+            if (await openPutawayForm(r, false)) {
+              render2();
+            }
+          } }, "Змінити"), h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: dis, onclick: () => remove(rules.putaway, r) }, "Видалити")]
+        )
+      );
+    });
+  };
+  const replenishRows = () => {
+    if (!rules.replenish.length) {
+      return h("div", { class: "note" }, "Правил поповнення ще немає.");
+    }
+    return rules.replenish.map((r) => {
+      const status = ruleStatus(r, bs.replenish, "odoo_orderpoint_id");
+      return h(
+        "div",
+        { class: "rule-row", "data-rule": r.id, style: { display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", padding: "6px 0", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: r.deleted ? 0.6 : 1, alignItems: "center" } },
+        h("div", null, h("b", null, r.product || nameOf("product", r.product_id)), " ", chip(status)),
+        h("div", { class: "small" }, `${r.cell_code || "—"} · мін ${fmt(r.min_qty, 0)} / макс ${fmt(r.max_qty, 0)}`),
+        h(
+          "div",
+          { class: "frow", style: { gap: "4px" } },
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore2(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+            if (await openReplenishForm(r, false)) {
+              render2();
+            }
+          } }, "Змінити"), h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: dis, onclick: () => remove(rules.replenish, r) }, "Видалити")]
+        )
+      );
+    });
+  };
+  function render2() {
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "note" }, "Правила змінюються в чернетці й потрапляють у зовнішню систему лише публікацією (вид «Правила» у плані); видалення — архів, відкат повертає."),
+        h(
+          "div",
+          { class: "frow", style: { gap: "6px" } },
+          h("button", { class: "fbtn sm" + (st.tab === "putaway" ? " primary" : ""), type: "button", "data-tab": "putaway", onclick: () => {
+            st.tab = "putaway";
+            render2();
+          } }, `Розміщення · ${rules.putaway.filter((r) => !r.deleted).length}`),
+          h("button", { class: "fbtn sm" + (st.tab === "replenish" ? " primary" : ""), type: "button", "data-tab": "replenish", onclick: () => {
+            st.tab = "replenish";
+            render2();
+          } }, `Поповнення min/max · ${rules.replenish.filter((r) => !r.deleted).length}`),
+          h("span", { style: { flex: 1 } }),
+          S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", id: "btnClearHighlight", onclick: () => {
+            clearHighlight();
+            render2();
+          } }, "Зняти підсвітку") : null
+        ),
+        st.tab === "putaway" ? putawayRows() : replenishRows(),
+        dis ? h("div", { class: "note lock" }, "Правила пише проєктувальник або менеджер у режимі редагування.") : h("button", { class: "fbtn sm", type: "button", id: "btnNewRule", onclick: async () => {
+          const ok = st.tab === "putaway" ? await openPutawayForm(newPutawayRule(), true) : await openReplenishForm(newReplenishRule(), true);
+          if (ok) {
+            render2();
+          }
+        } }, st.tab === "putaway" ? "Нове правило розміщення" : "Нове правило поповнення"),
+        st.tab === "putaway" && can("putaway") ? whereBox() : null
+      )
+    );
+  }
+  function whereBox() {
+    const q = { product_id: null, package_type_id: null, quantity: 1 };
+    const out = h("div", { class: "small", "data-role": "where-result" });
+    return h(
+      "div",
+      { class: "fcol", style: { borderTop: "1px solid var(--line, #e3e6ee)", paddingTop: "8px", marginTop: "8px" } },
+      h("div", { class: "lbl" }, "Куди покладе Odoo?"),
+      h("div", { class: "grid2" }, fld("Товар", lookupField({ kind: "product", id: null, label: "Товар для підбору місця", onPick: (r) => {
+        q.product_id = r ? r.id : null;
+      } })), fld("Кількість", numInput({ value: 1, min: 0, step: 1, label: "Кількість", set: (v) => {
+        q.quantity = v;
+      } }))),
+      fld("Упаковка (необов'язково)", lookupField({ kind: "package_type", id: null, label: "Упаковка", onPick: (r) => {
+        q.package_type_id = r ? r.id : null;
+      } })),
+      h("button", { class: "fbtn sm", type: "button", id: "btnWhere", onclick: async () => {
+        if (!q.product_id) {
+          toast("Оберіть товар.", "warn");
+          return;
+        }
+        try {
+          const res = await adapter.putawayWhere({ ...q });
+          const code = res.location && res.location.code || "";
+          out.textContent = res.moved ? `Odoo покладе в ${code || res.location.name}${res.estimate ? " (оцінка за застосованими правилами)" : ""}.` : `Застосованих правил немає: товар лишається на місці приймання${res.estimate ? " (оцінка)" : ""}.`;
+          if (code) {
+            S.ui.metric = "rule_target";
+            S.ui.ruleHighlight = null;
+            S.ui.whereCode = code;
+            E.syncScene && E.syncScene(true);
+          }
+        } catch (e) {
+          toast(e.message || "Не вдалося визначити місце.", "err");
+        }
+      } }, "Показати місце"),
+      out
+    );
+  }
+  render2();
+  return await new Promise((resolve) => openDialog({ title: "Правила розміщення й поповнення", cls: "wide", body, actions: [{ label: "Закрити" }], onClose: resolve }));
+}
+registries.dialogs.add("rules", (args) => openRules(args || {}), { force: true });
+registries.menu.add("rules", { area: "more", label: "Правила розміщення", icon: "tag", capability: "putaway", sequence: 54, run: () => E.runDialog("rules") }, { sequence: 54, force: true });
+function renderRulesInto(root, { rec }) {
+  if (!rec || rec.template === "machine_spot" || !can("putaway")) {
+    return;
+  }
+  const rules = rulesState();
+  const zones = zonesOf();
+  let hits;
+  let own;
+  if (rec.template === "zone") {
+    const poly = (zones.find((z) => z.zone === rec) || {}).poly;
+    const inside = new Set(poly ? S.slots.flatMap((s) => cellsAbs(s)).filter((c) => polygonContains(poly, [c.x, c.y])).map((c) => c.code) : []);
+    hits = rules.putaway.filter((r) => !r.deleted && inside.has(r.out_code)).map((rule) => ({ rule, codes: [rule.out_code] }));
+    own = [...inside];
+  } else {
+    hits = rulesIntoSlot(rec, rules.putaway, zoneChainAt(zones, rec.x, rec.y));
+    own = cellsAbs(rec).map((c) => c.code);
+  }
+  const replenish = rec.template === "zone" ? [] : rules.replenish.filter((r) => !r.deleted && own.includes(r.cell_code));
+  if (!hits.length && !replenish.length && !(rec.template !== "zone" && own.length && canEditRules())) {
+    return;
+  }
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "rulesInto" },
+        h("h3", null, "Правила розміщення сюди"),
+        hits.length ? null : h("div", { class: "small muted" }, "Правил, що ведуть сюди, немає."),
+        hits.map(
+          ({ rule, codes }) => h("div", { class: "frow", "data-rule": rule.id, style: { gap: "6px", alignItems: "center" } }, h("span", { style: { flex: 1 }, class: "small" }, `${ruleLabel(rule)} → ${codes.length > 3 ? codes.slice(0, 3).join(", ") + " …" : codes.join(", ")}`), h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => highlightRule(rule) }, "Підсвітити"))
+        ),
+        replenish.length ? h("div", { class: "lbl", style: { margin: "6px 0 2px" } }, "Поповнення (min/max)") : null,
+        replenish.map((r) => h("div", { class: "small", "data-replenish": r.id }, `${r.product || nameOf("product", r.product_id)} · ${r.cell_code}: мін ${fmt(r.min_qty, 0)} / макс ${fmt(r.max_qty, 0)}`)),
+        h(
+          "div",
+          { class: "frow", style: { gap: "6px", marginTop: "4px", flexWrap: "wrap" } },
+          S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", onclick: () => {
+            clearHighlight();
+            E.renderRight();
+          } }, "Зняти підсвітку") : null,
+          rec.template !== "zone" && own.length && canEditRules() ? h("button", { class: "fbtn sm", type: "button", id: "btnNewMinMax", onclick: async () => {
+            if (await openReplenishForm(newReplenishRule({ cell_code: own[0] }), true)) {
+              E.renderRight();
+            }
+          } }, "Нове правило min/max…") : null
+        )
+      )
+    )
+  );
+}
+registries.panels.add("slot:rules", { area: "slot", render: renderRulesInto }, { sequence: 36, force: true });
+
 // core/constructor/undo.js
 var KINDS = ["layers", "slots", "placements"];
 var MAX_STEPS = 100;
@@ -10214,7 +11982,7 @@ function diffSnapshots(a, b) {
   }
   return out;
 }
-var nameOf = (e) => (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+var nameOf2 = (e) => (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
 var MOVE = ["x", "y"];
 function labelOf(d) {
   const n = d.added.length + d.removed.length + d.changed.length;
@@ -10222,15 +11990,15 @@ function labelOf(d) {
     return "Адресація площадки";
   }
   if (d.added.length && !d.removed.length && !d.changed.length) {
-    return d.added.length === 1 ? `Додано: ${nameOf(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
+    return d.added.length === 1 ? `Додано: ${nameOf2(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
   }
   if (d.removed.length && !d.added.length && !d.changed.length) {
-    return d.removed.length === 1 ? `Видалено: ${nameOf(d.removed[0])}` : `Видалено об’єктів: ${d.removed.length}`;
+    return d.removed.length === 1 ? `Видалено: ${nameOf2(d.removed[0])}` : `Видалено об’єктів: ${d.removed.length}`;
   }
   if (d.changed.length && !d.added.length && !d.removed.length) {
     const all = (set) => d.changed.every((c) => c.fields.every((f) => set.includes(f)));
     const one = d.changed.length === 1;
-    const nm = one ? nameOf(d.changed[0]) : "";
+    const nm = one ? nameOf2(d.changed[0]) : "";
     if (all(MOVE)) {
       return one ? `Переміщено: ${nm}` : `Переміщено об’єктів: ${d.changed.length}`;
     }
@@ -10540,9 +12308,9 @@ function offsetCandidates(items, { prefer = "length", gap = 0.5, aisle = 0 } = {
   const spanX = b[2] - b[0];
   const spanY = b[3] - b[1];
   const single = items.length === 1;
-  const g2 = single ? sGeomOrP(items[0]) : { L: spanX, W: spanY, a: 0 };
-  const along = [g2.L + gap, 0];
-  const across = [0, g2.W + gap + aisle];
+  const g3 = single ? sGeomOrP(items[0]) : { L: spanX, W: spanY, a: 0 };
+  const along = [g3.L + gap, 0];
+  const across = [0, g3.W + gap + aisle];
   const a = single ? first.rotation || 0 : 0;
   const dirs = prefer === "across" ? [across, along] : [along, across];
   const out = [];
@@ -10651,8 +12419,8 @@ function targetLayer() {
   if (accepts(active)) {
     return active;
   }
-  const base = active ? active.elevation : 0;
-  return S.layers.filter(accepts).sort((a, b) => Math.abs(a.elevation - base) - Math.abs(b.elevation - base))[0] || null;
+  const base2 = active ? active.elevation : 0;
+  return S.layers.filter(accepts).sort((a, b) => Math.abs(a.elevation - base2) - Math.abs(b.elevation - base2))[0] || null;
 }
 function pasteClip() {
   if (!clip) {
@@ -10769,12 +12537,12 @@ function applyMoves(items, mutate, label) {
   return true;
 }
 var ALIGN = {
-  left: (b, g2) => [g2[0] - b[0], 0],
-  right: (b, g2) => [g2[2] - b[2], 0],
-  top: (b, g2) => [0, g2[3] - b[3]],
-  bottom: (b, g2) => [0, g2[1] - b[1]],
-  cx: (b, g2) => [(g2[0] + g2[2]) / 2 - (b[0] + b[2]) / 2, 0],
-  cy: (b, g2) => [0, (g2[1] + g2[3]) / 2 - (b[1] + b[3]) / 2]
+  left: (b, g3) => [g3[0] - b[0], 0],
+  right: (b, g3) => [g3[2] - b[2], 0],
+  top: (b, g3) => [0, g3[3] - b[3]],
+  bottom: (b, g3) => [0, g3[1] - b[1]],
+  cx: (b, g3) => [(g3[0] + g3[2]) / 2 - (b[0] + b[2]) / 2, 0],
+  cy: (b, g3) => [0, (g3[1] + g3[3]) / 2 - (b[1] + b[3]) / 2]
 };
 var ALIGN_LABELS = { left: "Ліворуч", right: "Праворуч", top: "Угору", bottom: "Донизу", cx: "Центр X", cy: "Центр Y" };
 function alignSel(mode) {
@@ -10782,12 +12550,12 @@ function alignSel(mode) {
   if (items.length < 2 || !ALIGN[mode] || !canEditAll(items)) {
     return false;
   }
-  const g2 = groupBox(items);
+  const g3 = groupBox(items);
   return applyMoves(
     items,
     () => {
       for (const it of items) {
-        const [dx, dy] = ALIGN[mode](boxOf(it), g2);
+        const [dx, dy] = ALIGN[mode](boxOf(it), g3);
         it.rec.x = rnd(it.rec.x + dx, 4);
         it.rec.y = rnd(it.rec.y + dy, 4);
       }
@@ -10827,9 +12595,9 @@ function rotateGroup(dir = 1) {
   if (!items.length || !canEditAll(items)) {
     return false;
   }
-  const g2 = groupBox(items);
-  const cx = (g2[0] + g2[2]) / 2;
-  const cy = (g2[1] + g2[3]) / 2;
+  const g3 = groupBox(items);
+  const cx = (g3[0] + g3[2]) / 2;
+  const cy = (g3[1] + g3[3]) / 2;
   for (const it of items) {
     if (it.kind === "placement") {
       const al = rotationsList(variantOf(it.rec.variant_id));
@@ -10899,7 +12667,7 @@ function groupToZone() {
   const zones = new Set(slots.map((s) => (contextOf(s) || {}).zone ?? null));
   const prevZone = zones.size === 1 ? [...zones][0] : null;
   pinNumbers(slots.filter((s) => contextOf(s)));
-  const g2 = groupBox(items);
+  const g3 = groupBox(items);
   const m = 1;
   const prefix = nextPrefix({ ref: "ZN", code: "ZN" });
   const zone2 = {
@@ -10909,10 +12677,10 @@ function groupToZone() {
     layer_id: ly.id,
     template: "zone",
     code_prefix: prefix,
-    x: rnd((g2[0] + g2[2]) / 2, 4),
-    y: rnd((g2[1] + g2[3]) / 2, 4),
+    x: rnd((g3[0] + g3[2]) / 2, 4),
+    y: rnd((g3[1] + g3[3]) / 2, 4),
     rotation: 0,
-    params: { length: rnd(g2[2] - g2[0] + 2 * m, 3), width: rnd(g2[3] - g2[1] + 2 * m, 3), title: `Група ${prefix}`, color: ly.color },
+    params: { length: rnd(g3[2] - g3[0] + 2 * m, 3), width: rnd(g3[3] - g3[1] + 2 * m, 3), title: `Група ${prefix}`, color: ly.color },
     overrides: {},
     parent_location_id: null
   };
@@ -11214,7 +12982,7 @@ E.renderRight = function renderRightMulti(...args) {
   }
   return origRight.apply(this, args);
 };
-var nameOf2 = (it) => it.kind === "slot" ? it.rec.params?.title || it.rec.code_prefix : it.rec.code || it.rec.name;
+var nameOf3 = (it) => it.kind === "slot" ? it.rec.params?.title || it.rec.code_prefix : it.rec.code || it.rec.name;
 function renderMultiPanel() {
   const root = $("#rightBody");
   if (!root) {
@@ -11236,7 +13004,7 @@ function renderMultiPanel() {
       (it) => h(
         "div",
         { class: "frow", "data-key": it.ref.kind + ":" + it.ref.id, style: { padding: "2px 6px", borderBottom: "1px solid var(--line2)" } },
-        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items.map((x) => x.ref), it.ref) }, nameOf2(it)),
+        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items.map((x) => x.ref), it.ref) }, nameOf3(it)),
         h("span", { class: "small muted" }, it.kind === "slot" ? it.rec.template : "обладнання"),
         h("button", { class: "xbtn", type: "button", "aria-label": "Прибрати з виділення", onclick: () => toggleMulti(it.ref) }, ic("x"))
       )
@@ -11476,16 +13244,16 @@ for (let i = 255; i < 512; i++) {
 }
 var gmul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0;
 function rsGenerator(deg) {
-  let g2 = [1];
+  let g3 = [1];
   for (let i = 0; i < deg; i++) {
-    const next = new Array(g2.length + 1).fill(0);
-    for (let j = 0; j < g2.length; j++) {
-      next[j] ^= g2[j];
-      next[j + 1] ^= gmul(g2[j], EXP[i]);
+    const next = new Array(g3.length + 1).fill(0);
+    for (let j = 0; j < g3.length; j++) {
+      next[j] ^= g3[j];
+      next[j + 1] ^= gmul(g3[j], EXP[i]);
     }
-    g2 = next;
+    g3 = next;
   }
-  return g2;
+  return g3;
 }
 function rsRemainder(data, deg) {
   const gen = rsGenerator(deg);
@@ -11912,14 +13680,14 @@ function pageGeometry(spec) {
   return { page, label: lab, cols, rows, perPage: cols * rows, x0: m ? m.l : (page.w - usedW) / 2, y0: m ? m.t : (page.h - usedH) / 2, gx, gy };
 }
 function paginate(items, spec) {
-  const g2 = pageGeometry(spec);
-  const skip = Math.max(0, Math.floor(Number(spec.skip) || 0)) % g2.perPage;
+  const g3 = pageGeometry(spec);
+  const skip = Math.max(0, Math.floor(Number(spec.skip) || 0)) % g3.perPage;
   const pages = [];
   let slot = skip;
   for (const item of items) {
-    const pi = Math.floor(slot / g2.perPage);
-    const k = slot % g2.perPage;
-    (pages[pi] = pages[pi] || []).push({ item, x: g2.x0 + k % g2.cols * (g2.label.w + g2.gx), y: g2.y0 + Math.floor(k / g2.cols) * (g2.label.h + g2.gy) });
+    const pi = Math.floor(slot / g3.perPage);
+    const k = slot % g3.perPage;
+    (pages[pi] = pages[pi] || []).push({ item, x: g3.x0 + k % g3.cols * (g3.label.w + g3.gx), y: g3.y0 + Math.floor(k / g3.cols) * (g3.label.h + g3.gy) });
     slot++;
   }
   return pages.map((p) => p || []);
@@ -12001,14 +13769,14 @@ function labelSvg(item, spec, w, hh) {
   return out;
 }
 function sheetSvg(pages, spec, index = 0, { frame = true } = {}) {
-  const g2 = pageGeometry(spec);
-  const inner = (pages[index] || []).map(({ item, x, y }) => `<g transform="translate(${num3(x)} ${num3(y)})">${frame ? `<rect width="${g2.label.w}" height="${g2.label.h}" fill="none" stroke="#c6c6c6" stroke-width="0.2"/>` : ""}${labelSvg(item, spec, g2.label.w, g2.label.h)}</g>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g2.page.w} ${g2.page.h}" width="${g2.page.w}mm" height="${g2.page.h}mm"><rect width="${g2.page.w}" height="${g2.page.h}" fill="#fff"/>${inner}</svg>`;
+  const g3 = pageGeometry(spec);
+  const inner = (pages[index] || []).map(({ item, x, y }) => `<g transform="translate(${num3(x)} ${num3(y)})">${frame ? `<rect width="${g3.label.w}" height="${g3.label.h}" fill="none" stroke="#c6c6c6" stroke-width="0.2"/>` : ""}${labelSvg(item, spec, g3.label.w, g3.label.h)}</g>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g3.page.w} ${g3.page.h}" width="${g3.page.w}mm" height="${g3.page.h}mm"><rect width="${g3.page.w}" height="${g3.page.h}" fill="#fff"/>${inner}</svg>`;
 }
 async function sheetPng(svg, spec, dpi = 200) {
-  const g2 = pageGeometry(spec);
-  const w = Math.round(g2.page.w / 25.4 * dpi);
-  const hh = Math.round(g2.page.h / 25.4 * dpi);
+  const g3 = pageGeometry(spec);
+  const w = Math.round(g3.page.w / 25.4 * dpi);
+  const hh = Math.round(g3.page.h / 25.4 * dpi);
   const img = new Image();
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, `width="${w}" height="${hh}"`));
   await new Promise((res, rej) => {
@@ -12027,10 +13795,10 @@ async function sheetPng(svg, spec, dpi = 200) {
 var dots = (mm, dpi) => Math.round(mm * dpi / 25.4);
 function toZpl(items, spec) {
   const dpi = Number(spec.dpi) === 300 ? 300 : 203;
-  const g2 = pageGeometry(spec);
-  const W = dots(g2.label.w, dpi);
-  const H = dots(g2.label.h, dpi);
-  const m = dots(Math.min(2.2, g2.label.w * 0.04), dpi);
+  const g3 = pageGeometry(spec);
+  const W = dots(g3.label.w, dpi);
+  const H = dots(g3.label.h, dpi);
+  const m = dots(Math.min(2.2, g3.label.w * 0.04), dpi);
   const warnings = /* @__PURE__ */ new Set();
   const out = [];
   for (const item of items) {
@@ -12089,18 +13857,18 @@ function toZpl(items, spec) {
   return { zpl: out.join("\n"), warnings: [...warnings] };
 }
 function pdfPayload(items, spec, format = "pdf") {
-  const g2 = pageGeometry(spec);
+  const g3 = pageGeometry(spec);
   return {
     format,
     font: spec.font,
     kind: spec.kind,
-    page: g2.page,
-    grid: { cols: g2.cols, rows: g2.rows, x0: g2.x0, y0: g2.y0, w: g2.label.w, h: g2.label.h, gx: g2.gx, gy: g2.gy },
+    page: g3.page,
+    grid: { cols: g3.cols, rows: g3.rows, x0: g3.x0, y0: g3.y0, w: g3.label.w, h: g3.label.h, gx: g3.gx, gy: g3.gy },
     skip: Math.max(0, Math.floor(Number(spec.skip) || 0)),
     labels: items.map((i) => ({ code: i.code, lines: i.lines, arrow: i.arrow }))
   };
 }
-function download(name, mime, data, isB64 = false) {
+function download2(name, mime, data, isB64 = false) {
   const bin = isB64 ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : data;
   const url = URL.createObjectURL(bin instanceof Blob ? bin : new Blob([bin], { type: mime }));
   const a = h("a", { href: url, download: name });
@@ -12230,7 +13998,7 @@ async function openLabels(adapter, args = {}) {
         id: "btnLabelsZpl",
         onClick: () => {
           const { zpl, warnings } = toZpl(model.items, spec);
-          download(`labels_${spec.dpi}dpi.zpl`, "text/plain", zpl);
+          download2(`labels_${spec.dpi}dpi.zpl`, "text/plain", zpl);
           toast(warnings.length ? `ZPL збережено. Попередження: ${warnings[0]}` : "ZPL збережено.", warnings.length ? "warn" : void 0);
           return false;
         }
@@ -12240,7 +14008,7 @@ async function openLabels(adapter, args = {}) {
         id: "btnLabelsPng",
         onClick: async () => {
           const blob = await sheetPng(sheetSvg(model.pages, spec, 0, { frame: false }), spec);
-          download("labels.png", "image/png", blob);
+          download2("labels.png", "image/png", blob);
           toast("PNG (аркуш 1) збережено.");
           return false;
         }
@@ -12252,7 +14020,7 @@ async function openLabels(adapter, args = {}) {
         onClick: async () => {
           try {
             const res = await adapter.render("labels_pdf", pdfPayload(model.items, spec));
-            download(res.filename || "labels.pdf", res.mimetype || "application/pdf", res.content, true);
+            download2(res.filename || "labels.pdf", res.mimetype || "application/pdf", res.content, true);
             toast("PDF сформовано на сервері.");
           } catch (e) {
             toast(e.message || "Не вдалося сформувати PDF.", "err");

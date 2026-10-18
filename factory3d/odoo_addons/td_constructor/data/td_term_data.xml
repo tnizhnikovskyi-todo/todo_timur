@@ -73,4 +73,102 @@
         <field name="name">Зона-контур</field>
         <field name="sequence">60</field>
     </record>
+    <!-- S2 (F03-03, F03-04): довідники зони — 10 функцій (колір рамки й підпису) і 4 атрибути. noupdate: назви й кольори,
+         змінені користувачем, оновлення модуля не перезаписує; наявні бази прив'язує міграція 19.0.1.3.0. -->
+    <data noupdate="1">
+        <record id="term_zone_function_receiving" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">receiving</field>
+            <field name="name">Приймання</field>
+            <field name="color">#3b82f6</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="term_zone_function_quality" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">quality</field>
+            <field name="name">Контроль якості</field>
+            <field name="color">#8b5cf6</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="term_zone_function_quarantine" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">quarantine</field>
+            <field name="name">Карантин</field>
+            <field name="color">#f59e0b</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="term_zone_function_storage" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">storage</field>
+            <field name="name">Зберігання</field>
+            <field name="color">#10b981</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="term_zone_function_picking" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">picking</field>
+            <field name="name">Комплектація</field>
+            <field name="color">#06b6d4</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="term_zone_function_packing" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">packing</field>
+            <field name="name">Пакування</field>
+            <field name="color">#ec4899</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="term_zone_function_shipping" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">shipping</field>
+            <field name="name">Відвантаження</field>
+            <field name="color">#ef4444</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="term_zone_function_scrap" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">scrap</field>
+            <field name="name">Брак</field>
+            <field name="color">#6b7280</field>
+            <field name="sequence">80</field>
+        </record>
+        <record id="term_zone_function_returns" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">returns</field>
+            <field name="name">Повернення</field>
+            <field name="color">#a855f7</field>
+            <field name="sequence">90</field>
+        </record>
+        <record id="term_zone_function_wip" model="td.term">
+            <field name="term_type">zone_function</field>
+            <field name="key">wip</field>
+            <field name="name">Буфер виробництва</field>
+            <field name="color">#84cc16</field>
+            <field name="sequence">100</field>
+        </record>
+        <record id="term_zone_attr_temp" model="td.term">
+            <field name="term_type">zone_attr</field>
+            <field name="key">temp</field>
+            <field name="name">Температурний режим</field>
+            <field name="sequence">110</field>
+        </record>
+        <record id="term_zone_attr_hazmat" model="td.term">
+            <field name="term_type">zone_attr</field>
+            <field name="key">hazmat</field>
+            <field name="name">Небезпечні вантажі</field>
+            <field name="sequence">120</field>
+        </record>
+        <record id="term_zone_attr_valuable" model="td.term">
+            <field name="term_type">zone_attr</field>
+            <field name="key">valuable</field>
+            <field name="name">Цінне</field>
+            <field name="sequence">130</field>
+        </record>
+        <record id="term_zone_attr_long" model="td.term">
+            <field name="term_type">zone_attr</field>
+            <field name="key">long</field>
+            <field name="name">Довгомірне</field>
+            <field name="sequence">140</field>
+        </record>
+    </data>
 </odoo>

@@ -121,7 +121,8 @@ export const SLOT_TEMPLATES = {
 };
 
 export const SERVICE_SIDES = ["front", "back", "left", "right"];
-export const OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name"];
+// F03-05: `usage` (internal | view) і `replenish_location` — прапорці локації, що їх записує публікація
+export const OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name", "usage", "replenish_location"];
 /** Ключ параметра «кількість ярусів» і «базова висота ярусу» генераторів із ярусами. */
 export const LEVEL_KEYS = { pallet_rack: ["levels", "level_height"], cantilever: ["levels", "level_height"], shelf: ["shelves", "cell_h"] };
 const BAY_KEYS = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
@@ -443,7 +444,7 @@ export function generateCells(template, prefix, x, y, rot, params, overrides, el
             continue;
         }
         const [wx, wy] = rotate(raw.lx, raw.ly, rot);
-        out.push({
+        const cell = {
             code: raw.code,
             name: ov.name || raw.code,
             template,
@@ -459,7 +460,13 @@ export function generateCells(template, prefix, x, y, rot, params, overrides, el
             capacity: ov.capacity ?? raw.capacity,
             max_load_kg: ov.max_load_kg ?? raw.max_load_kg,
             kind: raw.kind,
-        });
+        };
+        for (const k of ["usage", "replenish_location"]) {
+            if (k in ov) {
+                cell[k] = ov[k];
+            }
+        }
+        out.push(cell);
     }
     return out;
 }
@@ -513,6 +520,11 @@ export function cellsOf(s) {
                 }
                 if (ov.name) {
                     r.name = ov.name;
+                }
+                for (const k of ["usage", "replenish_location"]) {
+                    if (k in ov) {
+                        r[k] = ov[k];
+                    }
                 }
             }
             return r;

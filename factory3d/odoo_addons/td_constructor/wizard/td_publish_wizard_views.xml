@@ -9,6 +9,7 @@
                 <field name="state" invisible="1"/>
                 <field name="site_id" invisible="1"/>
                 <field name="can_publish" invisible="1"/>
+                <field name="copy_reminder" invisible="1"/>
                 <sheet>
                     <div class="alert alert-danger" role="alert" invisible="n_block == 0">
                         Публікацію заборонено: є зауваження зі статусом «Заборона» (<field name="n_block" readonly="1" class="oe_inline"/>).
@@ -16,22 +17,79 @@
                     <div class="alert alert-warning" role="alert" invisible="n_warn == 0 or n_block != 0">
                         Є попередження перевірок: <field name="n_warn" readonly="1" class="oe_inline"/>. Публікацію дозволено.
                     </div>
+                    <div class="alert alert-warning" role="alert" invisible="not copy_reminder">
+                        Перше застосування площадки: спершу виконайте його на копії бази Odoo.
+                        <field name="copy_ack" class="ms-3"/>
+                    </div>
                     <div class="alert alert-info" role="alert">
                         Буде створено: <field name="n_create" readonly="1" class="oe_inline"/> ·
-                        Буде оновлено: <field name="n_update" readonly="1" class="oe_inline"/> ·
+                        Перенесено: <field name="n_move" readonly="1" class="oe_inline"/> ·
+                        Перейменовано: <field name="n_rename" readonly="1" class="oe_inline"/> ·
+                        Атрибути й обладнання: <field name="n_attrs" readonly="1" class="oe_inline"/> ·
                         Пропонуємо архівувати: <field name="n_archive_offer" readonly="1" class="oe_inline"/> ·
-                        Без змін: <field name="n_unchanged" readonly="1" class="oe_inline"/>
+                        Без змін: <field name="n_unchanged" readonly="1" class="oe_inline"/> ·
+                        Застосувати не можна: <field name="n_blocked" readonly="1" class="oe_inline"/>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2" invisible="state == 'done'">
+                        <span class="fw-bold">Зона або ряд:</span>
+                        <field name="scope_slot_id" options="{'no_create': True, 'no_open': True}" class="oe_inline"/>
+                        <field name="scope_slot_ids" invisible="1"/>
+                        <button name="action_select_scope" type="object" string="Лише обране" class="btn-secondary"
+                                invisible="not scope_slot_id"/>
+                        <button name="action_select_all" type="object" string="Вибрати все" class="btn-secondary"/>
+                        <button name="action_select_none" type="object" string="Зняти все" class="btn-secondary"/>
                     </div>
                     <notebook>
-                        <page name="changes" string="Буде створено / оновлено">
-                            <field name="change_line_ids" readonly="state == 'done'">
-                                <list create="0" delete="0" editable="bottom">
+                        <page name="create" string="Створення">
+                            <field name="create_line_ids" readonly="state == 'done'">
+                                <list create="0" delete="0" editable="bottom" decoration-danger="blocked">
                                     <field name="kind" column_invisible="1"/>
+                                    <field name="blocked" column_invisible="1"/>
                                     <field name="res_model" readonly="1"/>
                                     <field name="code" readonly="1"/>
                                     <field name="name" readonly="1"/>
                                     <field name="changes" readonly="1"/>
-                                    <field name="selected"/>
+                                    <field name="depends_code" readonly="1" optional="hide"/>
+                                    <field name="blocked_reason" readonly="1"/>
+                                    <field name="selected" readonly="blocked"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="move" string="Перенесення">
+                            <field name="move_line_ids" readonly="state == 'done'">
+                                <list create="0" delete="0" editable="bottom" decoration-danger="blocked" decoration-warning="flags">
+                                    <field name="kind" column_invisible="1"/>
+                                    <field name="blocked" column_invisible="1"/>
+                                    <field name="code" readonly="1"/>
+                                    <field name="changes" readonly="1"/>
+                                    <field name="flags" readonly="1"/>
+                                    <field name="blocked_reason" readonly="1"/>
+                                    <field name="selected" readonly="blocked"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="rename" string="Перейменування">
+                            <field name="rename_line_ids" readonly="state == 'done'">
+                                <list create="0" delete="0" editable="bottom" decoration-danger="blocked">
+                                    <field name="kind" column_invisible="1"/>
+                                    <field name="blocked" column_invisible="1"/>
+                                    <field name="code" readonly="1"/>
+                                    <field name="changes" readonly="1"/>
+                                    <field name="blocked_reason" readonly="1"/>
+                                    <field name="selected" readonly="blocked"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="attrs" string="Атрибути, правила, обладнання">
+                            <field name="attrs_line_ids" readonly="state == 'done'">
+                                <list create="0" delete="0" editable="bottom" decoration-danger="blocked">
+                                    <field name="kind" column_invisible="1"/>
+                                    <field name="blocked" column_invisible="1"/>
+                                    <field name="res_model" readonly="1"/>
+                                    <field name="code" readonly="1"/>
+                                    <field name="changes" readonly="1"/>
+                                    <field name="blocked_reason" readonly="1"/>
+                                    <field name="selected" readonly="blocked"/>
                                 </list>
                             </field>
                         </page>
@@ -68,9 +126,50 @@
                 <footer>
                     <button name="action_confirm" type="object" string="Підтвердити й опублікувати"
                             class="btn-primary" invisible="not can_publish"/>
+                    <button name="action_open_log" type="object" string="Журнал публікацій" class="btn-secondary"/>
                     <button string="Скасувати" special="cancel"/>
                 </footer>
             </form>
+        </field>
+    </record>
+
+    <!-- F02-08: журнал операцій і відкат на формі версії -->
+    <record id="view_td_layout_version_form_ops" model="ir.ui.view">
+        <field name="name">td.layout.version.form.ops</field>
+        <field name="model">td.layout.version</field>
+        <field name="inherit_id" ref="view_td_layout_version_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_download_snapshot']" position="before">
+                <button name="action_rollback" type="object" string="Відкотити публікацію"
+                        groups="td_constructor.group_td_constructor_manager"
+                        invisible="not can_rollback"
+                        confirm="В Odoo буде повернуто стан до цієї публікації (створене піде в архів, значення повернуться). Чернетка не змінюється. Продовжити?"/>
+                <field name="can_rollback" invisible="1"/>
+            </xpath>
+            <xpath expr="//notebook" position="before">
+                <div class="alert alert-warning" role="alert" invisible="not rolled_back_at">
+                    Публікацію відкочено: <field name="rolled_back_at" readonly="1" class="oe_inline"/>
+                    (<field name="rolled_back_by_id" readonly="1" class="oe_inline"/>).
+                </div>
+                <div class="text-muted" invisible="can_rollback or rolled_back_at or not op_count">
+                    Відкат недоступний: <field name="rollback_reason" readonly="1" class="oe_inline"/>
+                </div>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="ops" string="Операції в Odoo">
+                    <field name="op_ids">
+                        <list create="0" delete="0" edit="0" decoration-muted="rolled_back">
+                            <field name="seq"/>
+                            <field name="op"/>
+                            <field name="res_model"/>
+                            <field name="code"/>
+                            <field name="before"/>
+                            <field name="after"/>
+                            <field name="rolled_back"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
         </field>
     </record>
 </odoo>

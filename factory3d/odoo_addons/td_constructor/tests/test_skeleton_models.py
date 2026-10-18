@@ -117,7 +117,7 @@ class TestSkeletonModels(F3DConstructorCase):
 
     def test_term_new_types_and_fields(self):
         Term = self.env['td.term']
-        func = Term.create({'term_type': 'zone_function', 'key': 'receiving', 'name': "Приймання", 'color': '#3366cc'})
+        func = Term.create({'term_type': 'zone_function', 'key': 'dock', 'name': "Док", 'color': '#3366cc'})
         attr = Term.create({'term_type': 'zone_attr', 'key': 'cold', 'name': "Холод", 'value': '+2…+8'})
         self.assertEqual((func.color, attr.value), ('#3366cc', '+2…+8'))
         slot = self.make_slot(prefix='TQ-Z1')

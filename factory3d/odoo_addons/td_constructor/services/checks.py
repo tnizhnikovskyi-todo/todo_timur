@@ -86,9 +86,23 @@ class _Scene:
         self._slot_obb = {}
         self._slot_cells = {}
         self._state = state
+        self._extra = None
         self._contexts = None
         self._body = {}
         self._service = {}
+
+    @property
+    def extra(self):
+        """Дані БД для перевірок слайсів (залишки, правила розміщення, зайнятість кодів): `state['extra']` — словник
+        або функція `fn(scene)` (обчислюється один раз, лише коли потрібна ввімкненим перевіркам)."""
+        if self._extra is None:
+            raw = self._state.get('extra')
+            self._extra = raw(self) if callable(raw) else (raw or {})
+        return self._extra
+
+    @extra.setter
+    def extra(self, value):
+        self._extra = value
 
     def slot_obb(self, slot):
         key = slot['id']

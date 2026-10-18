@@ -10,7 +10,9 @@ import { canCatalog } from "../roles.js";
 import { E, S, V } from "../state.js";
 import { THREE } from "../three.js";
 import { $$, clone, fmt, fmtInt, fmtSize, h, ic, rnd, toast, uid } from "../util.js";
+import { openPlanDialog } from "../plan_dialog.js";
 import { createVariantPreview } from "./preview.js";
+import { installOdooSim } from "./odoo_sim.js";
 
 const MODEL_EXT = /\.(glb|gltf|obj|fbx|stl|3mf|dae|step|stp|iges|igs|ifc)$/i;
 const MAX_MODEL_MB = 20;
@@ -533,51 +535,9 @@ export function computeDiff(St, base) {
     return { cellsNew: created, cellsChanged: changed, cellsRemoved: removed, plNew: pc, plChanged: pch, plRemoved: prm, variantsChanged: vch };
 }
 
-export function openPublish({ adapter, S: St, onClose }) {
-    const d = computeDiff(St, adapter.base);
-    const first = !St.site.active_version;
-    const ex = (arr, f) => (arr.length ? arr.slice(0, 3).map(f).join(", ") + (arr.length > 3 ? " … " + f(arr[arr.length - 1]) : "") : "—");
-    const K = d.cellsChanged.length + d.plChanged.length + d.variantsChanged;
-    const L = d.cellsRemoved.length + d.plRemoved.length;
-    const total = d.cellsNew.length + d.plNew.length + K + L;
-    const note = h("textarea", { placeholder: "Що змінено в цій версії (необов’язково)", "aria-label": "Нотатка" });
-    const row = (n, t, x) => h("div", { class: "sumrow" }, h("div", { class: "n" }, fmtInt(n)), h("div", null, h("div", null, t), h("div", { class: "x" }, x)));
-    return new Promise((resolve) => {
-        openDialog({
-            title: "Публікація версії " + (St.versions.reduce((a, v) => Math.max(a, v.n), 0) + 1),
-            cls: "narrow",
-            body: h(
-                "div",
-                { class: "fcol" },
-                h("div", { class: "note" }, "Це імітація: записи в Odoo не створюються. Підтвердження зберігає нову версію макета в історії."),
-                h("div", { class: "lbl" }, "Буде створено в Odoo" + (first ? " (перша публікація площадки)" : "")),
-                row(d.cellsNew.length, "місць зберігання (stock.location з td_code, barcode, місткістю)", ex(d.cellsNew, (x) => x)),
-                row(d.plNew.length, "одиниць обладнання / робочих центрів (maintenance.equipment, mrp.workcenter)", ex(d.plNew, (p) => p.code || p.name)),
-                row(K, "змінено", `комірок ${d.cellsChanged.length} · обладнання ${d.plChanged.length} · варіантів ${d.variantsChanged}`),
-                row(L, "видалено", `комірок ${d.cellsRemoved.length} · обладнання ${d.plRemoved.length}`),
-                total === 0 && !first ? h("div", { class: "note lock" }, "З моменту останньої версії змін немає.") : null,
-                fld("Нотатка до версії", note)
-            ),
-            actions: [
-                { label: "Скасувати" },
-                {
-                    label: "Підтвердити й опублікувати",
-                    cls: "primary",
-                    disabled: total === 0 && !first,
-                    onClick: async () => {
-                        const meta = await adapter.createVersion(St, note.value.trim(), d);
-                        toast(`Версію ${meta.n} опубліковано (імітація: записи Odoo не створено).`);
-                    },
-                },
-            ],
-            onClose: async () => {
-                if (onClose) {
-                    await onClose();
-                }
-                resolve();
-            },
-        });
-    });
+/** Публікація (імітація): діалог плану ядра (`plan_dialog.js`) — види рядків, область, залежності, журнал і відкат (F02). */
+export function openPublish({ adapter, onClose }) {
+    return openPlanDialog({ adapter, onClose });
 }
 
 /** Підключає діалоги артефакта (замість форм Odoo): викликає хост прототипу перед монтуванням. */
@@ -588,5 +548,6 @@ export function registerArtifactDialogs(adapter) {
     reg.add("variantForm", (args) => openVariantCard(args, { adapter }), { force: true });
     reg.add("record", () => toast("Записів Odoo в прототипі немає.", "warn"), { force: true });
     adapter.openPublish = openPublish;
+    installOdooSim(adapter); // стан «Odoo» прототипа: план, журнал, відкат, категорії, правила (artifact/odoo_sim.js)
 }
 

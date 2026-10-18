@@ -1,6 +1,7 @@
 from uuid import uuid4
 
-from odoo import fields, models
+from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class TdReplenishRule(models.Model):
@@ -31,3 +32,11 @@ class TdReplenishRule(models.Model):
     active = fields.Boolean(default=True)
 
     _td_replenish_uid_uniq = models.Constraint('UNIQUE(site_id, uid)', "UID правила має бути унікальним на площадці.")
+
+    @api.constrains('min_qty', 'max_qty')
+    def _check_min_max(self):
+        for rule in self:
+            if rule.min_qty < 0 or rule.max_qty < 0:
+                raise ValidationError("Мінімум і максимум правила поповнення не можуть бути від'ємними.")
+            if rule.max_qty < rule.min_qty:
+                raise ValidationError("Максимум правила поповнення не може бути меншим за мінімум.")

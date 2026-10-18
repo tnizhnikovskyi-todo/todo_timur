@@ -7,8 +7,10 @@ import { clone, rnd } from "./util.js";
 
 export { StoreError, newUid };
 
-const MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3 };
+const MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3, "td.putaway.rule": 4, "td.replenish.rule": 5 };
 const REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
+// модель Odoo → нейтральний вид ресурсу плану/журналу (ядро імен `stock.*` не знає, CD-30)
+const RES_OF_MODEL = { "stock.location": "location", "maintenance.equipment": "equipment", "mrp.workcenter": "workcenter", "stock.warehouse.orderpoint": "replenish", "stock.putaway.rule": "putaway" };
 const BATCH = 400; // ліміт сервера — 500 операцій на запит
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -115,6 +117,71 @@ export function layerFromApi(l) {
     };
 }
 
+// S2: правила розміщення й поповнення (чернетки; API-03 `rules`, API-04 `td.putaway.rule` / `td.replenish.rule`). Стан правила —
+// {id (uid), rid, etag, …поля API}; у зовнішню систему вони потрапляють лише публікацією.
+export function putawayFromApi(r) {
+    return {
+        id: r.uid,
+        rid: r.id,
+        etag: r.etag,
+        product_id: r.product_id ?? null,
+        product: r.product || "",
+        category_id: r.category_id ?? null,
+        package_type_ids: [...(r.package_type_ids || [])],
+        in_location_id: r.in_location_id ?? null,
+        out_code: r.out_code || "",
+        out_location_id: r.out_location_id ?? null,
+        sublocation: r.sublocation || "no",
+        storage_category_id: r.storage_category_id ?? null,
+        sequence: r.sequence ?? 10,
+        odoo_rule_id: r.odoo_rule_id ?? null,
+        deleted: !!r.deleted,
+    };
+}
+export const putawayToApi = (r) => ({
+    uid: r.id,
+    product_id: r.product_id ?? null,
+    category_id: r.category_id ?? null,
+    package_type_ids: [...(r.package_type_ids || [])],
+    in_location_id: r.in_location_id ?? null,
+    out_code: r.out_code || null,
+    out_location_id: r.out_location_id ?? null,
+    sublocation: r.sublocation || "no",
+    storage_category_id: r.sublocation === "closest_location" ? r.storage_category_id ?? null : null,
+    sequence: r.sequence ?? 10,
+    deleted: !!r.deleted,
+});
+export function replenishFromApi(r) {
+    return {
+        id: r.uid,
+        rid: r.id,
+        etag: r.etag,
+        product_id: r.product_id ?? null,
+        product: r.product || "",
+        cell_code: r.cell_code || "",
+        location_id: r.location_id ?? null,
+        min_qty: r.min_qty || 0,
+        max_qty: r.max_qty || 0,
+        odoo_orderpoint_id: r.odoo_orderpoint_id ?? null,
+        deleted: !!r.deleted,
+    };
+}
+export const replenishToApi = (r) => ({
+    uid: r.id,
+    product_id: r.product_id ?? null,
+    cell_code: r.cell_code || null,
+    location_id: r.location_id ?? null,
+    min_qty: r.min_qty || 0,
+    max_qty: r.max_qty || 0,
+    deleted: !!r.deleted,
+});
+/** Чернетки правил з відповіді API-03 у `st.site.rules` (не перелічувана властивість, як `library`). */
+export function attachRules(st, rules) {
+    const r = rules || {};
+    Object.defineProperty(st.site, "rules", { value: { putaway: (r.putaway || []).map(putawayFromApi), replenish: (r.replenish || []).map(replenishFromApi) }, writable: true, configurable: true, enumerable: false });
+    return st;
+}
+
 export function slotFromApi(s, layerUid) {
     const rec = {
         id: s.uid,
@@ -126,6 +193,13 @@ export function slotFromApi(s, layerUid) {
         x: s.x,
         y: s.y,
         rotation: s.rotation || 0,
+        // S2 (MERGE §3.3): категорія зберігання, стратегія списання, функція й атрибути зони, температурний режим (null — успадкувати)
+        storage_category_id: s.storage_category_id ?? null,
+        removal_strategy_id: s.removal_strategy_id ?? null,
+        function_id: s.function_id ?? null,
+        attr_ids: [...(s.attr_ids || [])],
+        temp_min_c: s.temp_min_c || 0,
+        temp_max_c: s.temp_max_c || 0,
         params: clone(s.params || {}),
         overrides: clone(s.overrides || {}),
         parent_location_id: s.parent_location_id || null,
@@ -317,6 +391,12 @@ export function slotToApi(s) {
         x_m: rnd(s.x, 4),
         y_m: rnd(s.y, 4),
         rotation: rnd(s.rotation || 0, 4),
+        storage_category_id: s.storage_category_id ?? null,
+        removal_strategy_id: s.removal_strategy_id ?? null,
+        function_id: s.function_id ?? null,
+        attr_ids: [...(s.attr_ids || [])],
+        temp_min_c: s.temp_min_c || 0,
+        temp_max_c: s.temp_max_c || 0,
         params: clone(s.params),
         overrides: clone(s.overrides || {}),
         type_id: s.type_id ?? null,
@@ -389,6 +469,7 @@ export class OdooAdapter extends BaseAdapter {
         this._uploadModel = o.uploadModel;
         this.retryDelays = o.retryDelays || [2000, 5000, 15000];
         this.siteId = null;
+        Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true }); // S2: API-12, API-15, API-18
         this.groupIds = {};
         this._seq = 0;
         this._resetTracking();
@@ -444,7 +525,7 @@ export class OdooAdapter extends BaseAdapter {
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
         }
-        const st = normalizeLoaded(res);
+        const st = attachRules(normalizeLoaded(res), res.rules);
         this.reset(id, st);
         return st;
     }
@@ -473,6 +554,12 @@ export class OdooAdapter extends BaseAdapter {
             if (c.id != null) {
                 this._bind("td.check.config", check, c.id, null);
             }
+        }
+        for (const r of st.site.rules?.putaway || []) {
+            this._bind("td.putaway.rule", r.id, r.rid, r.etag);
+        }
+        for (const r of st.site.rules?.replenish || []) {
+            this._bind("td.replenish.rule", r.id, r.rid, r.etag);
         }
         this._snapshot(st);
         this._setStatus("saved");
@@ -506,6 +593,12 @@ export class OdooAdapter extends BaseAdapter {
         }
         for (const p of st.placements) {
             out.push({ model: "td.placement", uid: p.id, key: "td.placement:" + p.id, vals: placementToApi(p) });
+        }
+        for (const r of st.site?.rules?.putaway || []) {
+            out.push({ model: "td.putaway.rule", uid: r.id, key: "td.putaway.rule:" + r.id, vals: putawayToApi(r) });
+        }
+        for (const r of st.site?.rules?.replenish || []) {
+            out.push({ model: "td.replenish.rule", uid: r.id, key: "td.replenish.rule:" + r.id, vals: replenishToApi(r) });
         }
         return out;
     }
@@ -985,6 +1078,90 @@ export class OdooAdapter extends BaseAdapter {
         }
         const r = await fetch(u.url, { credentials: "same-origin" });
         return r.ok ? { text: await r.text() } : null;
+    }
+
+    // --- S2: категорії зберігання, залишки, правила розміщення, журнал публікацій і відкат (API-12, API-15, API-17, API-18) ---
+
+    /** API-12: `{op: "list"}` → {categories, strategies, functions, attrs}; `{op: "save", id?, vals, confirm}` → {category}; `{op: "delete", id, confirm}`. */
+    async categories(req = { op: "list" }) {
+        const res = await this._call("/f3d/constructor/storage_categories", req);
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Залишки й вага запасу за кодами комірок + макс. вага комірки: {loads: {код: {qty, weight_kg}}, limits}. */
+    async stockLoads(codes) {
+        const res = await this._call("/f3d/constructor/storage/loads", { site_id: this.siteId, ...(codes ? { codes } : {}) });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** API-17: зайнятість кодів у зовнішній системі → {codes: {код: {state: free|own|match|busy, reason}}}. */
+    async codesCheck(codes) {
+        const res = await this._call("/f3d/constructor/codes/check", { site_id: this.siteId, codes });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** API-15 `fit`: «чи вміститься» для правил розміщення чернетки → {rules: {uid: [{code, reason}]}}. */
+    async putawayFit() {
+        await this.flush();
+        const res = await this._call("/f3d/constructor/putaway/fit", { site_id: this.siteId });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** API-15 `where`: куди Odoo покладе товар → {location: {id, code, name}, moved, estimate: false}. */
+    async putawayWhere(q) {
+        const res = await this._call("/f3d/constructor/putaway/where", { site_id: this.siteId, product_id: q.product_id, quantity: q.quantity, package_type_id: q.package_type_id || null, ...(q.location_code ? { location_code: q.location_code } : {}) });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Пошук записів для форм правил: kind ∈ product | category | package_type | location; `ids` — назви за id. */
+    async lookup(kind, term = "", ids = null) {
+        const res = await this._call("/f3d/constructor/putaway/lookup", { site_id: this.siteId, kind, term, ...(ids ? { ids } : {}) });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res.rows;
+    }
+
+    /** API-18: журнал публікацій → {versions: [{id, n, counts, ops, rolled_back, can_rollback, reason}], can_rollback}. */
+    async planLog() {
+        const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** API-18: операції версії журналу. */
+    async planOps(versionId) {
+        const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId, version_id: versionId });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res.ops.map((o) => ({ ...o, res: RES_OF_MODEL[o.res_model] || o.res_model }));
+    }
+
+    /** API-18: відкат публікації (лише записи Odoo; чернетка не змінюється). */
+    async rollback(versionId) {
+        const res = await this._call("/f3d/constructor/publish/rollback", { site_id: this.siteId, version_id: versionId, confirm: true });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message, { issues: res.issues });
+        }
+        return res;
     }
 
     // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---
