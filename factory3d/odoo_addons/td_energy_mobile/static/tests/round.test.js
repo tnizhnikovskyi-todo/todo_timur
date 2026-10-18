@@ -258,12 +258,23 @@ function mockMobileApis() {
 }
 
 test("AC-H18: без модуля (код вкладки не зареєстровано) — три вкладки, три колонки (регресія W1)", async () => {
-    mockMobileApis();
-    expect(tabIds()).toEqual([["state", 10], ["alarms", 20], ["scheme", 30]]);
-    await mountWithCleanup(Mobile, { props: { action: {} } });
-    await animationFrame();
-    expect(queryAll(".o_td_en_m_tab").length).toBe(3);
-    expect(queryAll(".o_td_en_m_tabs")[0].style.gridTemplateColumns).toMatch("repeat(3");
+    // модуль реєструє вкладку при імпорті; «без модуля» імітуємо, знявши її на час тесту
+    const round = mobileTabs.contains("round") ? mobileTabs.get("round") : null;
+    if (round) {
+        mobileTabs.remove("round");
+    }
+    try {
+        mockMobileApis();
+        expect(tabIds()).toEqual([["state", 10], ["alarms", 20], ["scheme", 30]]);
+        await mountWithCleanup(Mobile, { props: { action: {} } });
+        await animationFrame();
+        expect(queryAll(".o_td_en_m_tab").length).toBe(3);
+        expect(queryAll(".o_td_en_m_tabs")[0].style.gridTemplateColumns).toMatch("repeat(3");
+    } finally {
+        if (round) {
+            mobileTabs.add("round", round, { force: true });
+        }
+    }
 });
 
 test("AC-H18: реєстр td_energy.mobile_tabs — state, alarms, scheme, round (10…40); чотири колонки", async () => {

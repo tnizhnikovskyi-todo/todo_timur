@@ -1,6 +1,6 @@
 /** @odoo-module */
 // UI-09 / AC-146 (клієнтська частина): вкладки, лічильник тривог, «Беру в роботу», реєстр вкладок (C-33).
-import { describe, expect, test } from "@odoo/hoot";
+import { afterEach, beforeEach, describe, expect, test } from "@odoo/hoot";
 import { animationFrame } from "@odoo/hoot-mock";
 import { click, queryAll, queryAllTexts, queryText } from "@odoo/hoot-dom";
 import { Component, xml } from "@odoo/owl";
@@ -10,6 +10,22 @@ import { Mobile, mobileTabs } from "@td_energy/mobile/mobile";
 import { CONTRACTS } from "./fixtures/contracts";
 
 // усі hoot-тести W1 запускає один набір (preset=desktop); верстку 390 px перевіряє Playwright
+
+// Сторінка /web/tests збирає код усіх модулів: якщо встановлено td_energy_mobile, його вкладка «Обхід» уже в реєстрі.
+// Тести W1 перевіряють три власні вкладки, тому чужу вкладку на час тесту знімаємо й повертаємо після.
+let foreignRound = null;
+beforeEach(() => {
+    if (mobileTabs.contains("round")) {
+        foreignRound = mobileTabs.get("round");
+        mobileTabs.remove("round");
+    }
+});
+afterEach(() => {
+    if (foreignRound) {
+        mobileTabs.add("round", foreignRound, { force: true });
+        foreignRound = null;
+    }
+});
 describe.current.tags("desktop");
 
 defineMailModels();

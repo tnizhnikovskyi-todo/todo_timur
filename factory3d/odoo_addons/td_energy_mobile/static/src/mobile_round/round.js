@@ -195,12 +195,4 @@ export function registerRoundTab() {
     mobileTabs.add("round", ROUND_TAB, { force: true });
 }
 
-/** Сторінка hoot (`/web/tests`) збирає код усіх модулів: вкладку там додають самі тести, тож W1 лишається з трьома.
- * Використовується глобальний `location` (реальна адреса сторінки), а не `browser.location`, який hoot підміняє. */
-export function isUnitTestPage() {
-    return globalThis.location.pathname.startsWith("/web/tests");
-}
-
-if (!isUnitTestPage()) {
-    registerRoundTab();
-}
+registerRoundTab();
