@@ -214,7 +214,7 @@ export class ConfirmDialog extends Component {
     detach() {
         const { orm, notification } = this.env.services;
         const title = this.titleText.replace(/\?$/, "");
-        const timeoutMs = ((this.props.verifyTimeoutS || DEFAULT_VERIFY_S) + 30) * 1000;
+        const timeoutMs = ((this.props.verifyTimeoutS || this.props.prepared?.verify_timeout_s || DEFAULT_VERIFY_S) + 30) * 1000;
         notification.add(`Надіслано: ${title}`, { type: "info" });
         pollAction(orm, this.actionId, { onUpdate() {}, isStopped: () => false, timeoutMs })
             .then((action) => {
@@ -283,7 +283,7 @@ export class ConfirmDialog extends Component {
     async track(initial) {
         this.state.tracked = true;
         this.state.step = stepOf(initial.state);
-        const timeoutMs = ((this.props.verifyTimeoutS || DEFAULT_VERIFY_S) + 30) * 1000;
+        const timeoutMs = ((this.props.verifyTimeoutS || this.props.prepared?.verify_timeout_s || DEFAULT_VERIFY_S) + 30) * 1000;
         let action;
         try {
             action = await pollAction(this.orm, this.actionId, {

@@ -31,6 +31,15 @@
         <field name="arch" type="xml">
             <form create="0" edit="0" delete="0" duplicate="0">
                 <header>
+                    <field name="undo_available" invisible="1"/>
+                    <button name="action_confirm_second" type="object" string="Підтвердити (2/2)" class="btn-primary"
+                            invisible="state != 'awaiting_second'" groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state not in ('prepared', 'awaiting_second', 'queued')"
+                            groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_undo" type="object" string="Скасувати дію"
+                            invisible="state != 'done' or not undo_available"
+                            confirm="Виконати зворотну дію?" groups="td_energy.group_td_energy_manager"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="prepared,awaiting_second,queued,executing,done"/>
                 </header>
