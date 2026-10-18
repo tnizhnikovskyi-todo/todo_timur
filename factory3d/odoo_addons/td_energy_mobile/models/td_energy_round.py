@@ -298,15 +298,16 @@ class TdEnergyRound(models.Model):
         self.env.cr.execute("SELECT id FROM td_energy_round WHERE id = %s FOR UPDATE", (self.id,))
         self.invalidate_recordset(["state", "performer_id", "started_at"])
 
-    def _td_claim(self, user, now):
-        """Виконавець блокується за першим, хто відмітив; чужий (не chief) — `UserError` (D-76)."""
+    def _td_claim(self, user, now, chief):
+        """Виконавець блокується за першим, хто відмітив; чужий (не chief) — `UserError` (D-76).
+        `chief` обчислює метод API в середовищі користувача (запис обходу тут — під `sudo`)."""
         self.ensure_one()
         if self.state not in OPEN:
             raise UserError(_("Обхід уже закрито."))
         performer = self.performer_id
         if not performer:
             self.write({"performer_id": user.id, "state": "in_progress", "started_at": now})
-        elif performer != user and not self._td_is_chief():
+        elif performer != user and not chief:
             raise UserError(_("Обхід виконує %s.", performer.name))
 
     @api.model
@@ -320,7 +321,7 @@ class TdEnergyRound(models.Model):
         self.browse(rnd.id).check_access("read")  # правила компанії для користувача (sudo їх обходить)
         rnd._td_lock()
         user, now = self.env.user, dates.now_utc(self.env)
-        rnd._td_claim(user, now)
+        rnd._td_claim(user, now, self._td_is_chief())
         values = rnd._td_item_values(rnd.item_ids, now)
         vals = {}
         if comment is not None:
@@ -355,7 +356,7 @@ class TdEnergyRound(models.Model):
         self.browse(rnd.id).check_access("read")
         rnd._td_lock()
         user, now = self.env.user, dates.now_utc(self.env)
-        rnd._td_claim(user, now)
+        rnd._td_claim(user, now, self._td_is_chief())
         left = len(rnd.item_ids.filtered(lambda i: i.required and not i.done))
         if left:
             raise UserError(_("Позначте всі пункти обходу: залишилось %s.", left))
