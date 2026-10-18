@@ -226,6 +226,7 @@ var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden
     <div class="grow"></div>
     <span class="chip" id="draftChip">Чернетка · без змін</span>
     <span class="store" id="storeTag"></span>
+    <div class="grp" id="menuExtra" hidden></div>
     <button class="fbtn primary" id="btnPublish" type="button">Опублікувати</button>
     <button class="fbtn" id="btnHistory" type="button">Історія<span class="lg"> версій</span></button>
     <button class="fbtn icon" id="btnTheme" type="button" aria-label="Тема"></button>
@@ -2593,13 +2594,33 @@ function renderTop() {
   }
   $$("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.app.mode)));
   const pub = $("#btnPublish");
+  pub.hidden = !can("publish");
   pub.disabled = !canPublish();
   pub.title = pub.disabled ? S.rights.is_manager && !S.rights.can_publish ? "Публікацію вимкнено (параметр td.constructor.publish_enabled)" : "Публікує Менеджер у режимі редагування" : "";
   $("#btnNewSite").disabled = !canManage();
+  renderMenu();
   renderChips();
   const tt = $("#btnTheme");
   tt.replaceChildren(ic(curTheme() === "dark" ? "sun" : "moon"));
   renderSaveState();
+}
+function renderMenu() {
+  const box = $("#menuExtra");
+  if (!box) {
+    return;
+  }
+  const ctx2 = { E, S, V };
+  const top = [];
+  const more = [];
+  forEachEntry(registries.menu, (key, m) => (m.area === "more" ? more : top).push([key, m]), ctx2);
+  const btn = ([key, m], cls) => h("button", { class: cls + (m.cls ? " " + m.cls : ""), type: "button", id: "menu-" + key, disabled: m.disabled ? m.disabled(ctx2) : false, onclick: () => m.run(ctx2) }, m.icon ? ic(m.icon) : null, m.label);
+  box.replaceChildren(
+    ...K(
+      top.map((e) => btn(e, "fbtn")),
+      more.length ? h("details", { class: "more", id: "menuMore" }, h("summary", { class: "fbtn" }, "Ще ▾"), h("div", { class: "morelist" }, more.map((e) => btn(e, "fbtn")))) : null
+    )
+  );
+  box.hidden = !top.length && !more.length;
 }
 var SAVE_LABELS = { saved: "Збережено", saving: "Зберігаємо…", error: "Помилка збереження" };
 function renderSaveState() {
@@ -2649,18 +2670,30 @@ function setMTab(t) {
     setLeftTab(t);
   }
 }
+var leftPanels = () => registries.panels.getEntries().filter(([, p]) => p.area === "left");
 function renderLeft() {
   const root = $("#leftBody");
   root.replaceChildren();
-  if (S.ui.leftTab === "layers") {
-    renderLayersTab(root);
-  } else if (S.ui.leftTab === "slots") {
-    renderSlotsTab(root);
-  } else {
-    renderCatalogTab(root);
+  const found = leftPanels().find(([, p]) => p.tab === S.ui.leftTab) || leftPanels()[0];
+  if (found) {
+    found[1].render(root);
+  }
+}
+function ensureTabs() {
+  for (const [, p] of leftPanels()) {
+    if (!p.tab || $(`#ltabs button[data-tab="${p.tab}"]`)) {
+      continue;
+    }
+    const mk = (mobile) => h("button", { type: "button", role: "tab", [mobile ? "data-mtab" : "data-tab"]: p.tab, onclick: () => mobile ? E.setMTab(p.tab) : E.setLeftTab(p.tab) }, p.label || p.tab);
+    $("#ltabs").append(mk(false));
+    const props = $('#mtabs button[data-mtab="props"]');
+    if (props) {
+      props.before(mk(true));
+    }
   }
 }
 function renderAll() {
+  ensureTabs();
   renderTop();
   renderLeft();
   E.renderRight();
@@ -3270,6 +3303,7 @@ function renderNotice() {
 }
 Object.assign(E, {
   renderTop,
+  renderMenu,
   renderSaveState,
   renderChips,
   renderLeft,
@@ -3287,6 +3321,9 @@ Object.assign(E, {
   isNarrow,
   curTheme
 });
+registries.panels.add("left:layers", { area: "left", tab: "layers", label: "Шари", render: renderLayersTab }, { sequence: 10, force: true });
+registries.panels.add("left:slots", { area: "left", tab: "slots", label: "Місця", render: renderSlotsTab }, { sequence: 20, force: true });
+registries.panels.add("left:catalog", { area: "left", tab: "catalog", label: "Каталог", render: renderCatalogTab }, { sequence: 30, force: true });
 
 // core/constructor/panels_right.js
 function selectObj(ref2) {
@@ -3399,9 +3436,22 @@ function renderRight() {
   } else {
     renderSlotProps(root, rec);
   }
-  root.append(h("div", { class: "sec", id: "checksBlock" }));
-  renderChecksBlock();
+  renderPanelBlocks("right", root, { rec });
 }
+function renderPanelBlocks(area, root, ctx2) {
+  forEachEntry(registries.panels, (_key, p) => p.area === area && p.render(root, ctx2), ctx2);
+}
+registries.panels.add(
+  "right:checks",
+  {
+    area: "right",
+    render(root) {
+      root.append(h("div", { class: "sec", id: "checksBlock" }));
+      renderChecksBlock();
+    }
+  },
+  { sequence: 90, force: true }
+);
 function renderSiteProps(root) {
   const dis = !canManage();
   const b = S.site.building;
@@ -3467,6 +3517,7 @@ function renderSiteProps(root) {
       )
     )
   );
+  renderPanelBlocks("site", root, { rec: null });
 }
 var lockNote = (ly) => canEditLayer(ly) ? null : h("div", { class: "note lock", style: { marginBottom: "8px" } }, ic("lock"), " ", lockHint(ly));
 function renderPlacementProps(root, pl) {
@@ -3559,6 +3610,7 @@ function renderPlacementProps(root, pl) {
       )
     )
   );
+  renderPanelBlocks("placement", root, { rec: pl });
   renderDerived();
 }
 function renderDerived() {
@@ -3680,6 +3732,7 @@ function renderSlotProps(root, s) {
   if (SOLID_SLOTS.includes(s.template)) {
     root.append(h("div", { class: "sec", id: "cellsBox" }));
   }
+  renderPanelBlocks("slot", root, { rec: s });
   renderDerived();
   renderCellsBox();
 }
@@ -4062,6 +4115,7 @@ __export(scene_exports, {
   focusOn: () => focusOn,
   initScene: () => initScene,
   lineGeo: () => lineGeo,
+  pickCandidates: () => pickCandidates,
   poseView: () => poseView,
   recolorMats: () => recolorMats,
   requestRender: () => requestRender,
@@ -4597,11 +4651,8 @@ function poseView(view, rec, v) {
   }
   view.root.rotation.y = rad(rec.rotation || 0);
 }
-function frameLines(s, d) {
-  const p = normalizeParams(s.template, s.params);
-  const pts = [];
-  const sg = (a, b) => pts.push(a[0], a[2], -a[1], b[0], b[2], -b[1]);
-  if (s.template === "pallet_rack") {
+var frameOf = {
+  pallet_rack(p, d, sg) {
     for (let b = 0; b <= p.bays; b++) {
       const x = -d.L / 2 + b * p.bay_width;
       for (const sy of [-d.W / 2, d.W / 2]) {
@@ -4614,7 +4665,8 @@ function frameLines(s, d) {
         sg([-d.L / 2, sy, l * p.level_height], [d.L / 2, sy, l * p.level_height]);
       }
     }
-  } else if (s.template === "shelf") {
+  },
+  shelf(p, d, sg) {
     for (let b = 0; b <= p.sections; b++) {
       const x = -d.L / 2 + b * p.cell_w;
       for (const sy of [-d.W / 2, d.W / 2]) {
@@ -4627,7 +4679,8 @@ function frameLines(s, d) {
         sg([-d.L / 2, sy, z], [d.L / 2, sy, z]);
       }
     }
-  } else if (s.template === "cantilever") {
+  },
+  cantilever(p, d, sg) {
     const y0 = -d.W / 2 + 0.075;
     for (let b = 0; b <= p.arms; b++) {
       const x = -d.L / 2 + b * d.L / p.arms;
@@ -4637,11 +4690,32 @@ function frameLines(s, d) {
       }
     }
   }
-  return pts;
+};
+for (const [tpl, fn] of Object.entries(frameOf)) {
+  registries.shapes.add(
+    tpl,
+    {
+      frame(p, d) {
+        const pts = [];
+        fn(p, d, (a, b) => pts.push(a[0], a[2], -a[1], b[0], b[2], -b[1]));
+        return pts;
+      }
+    },
+    { force: true }
+  );
+}
+function frameLines(s, d) {
+  const shape = registries.shapes.get(s.template, null);
+  return shape && shape.frame ? shape.frame(normalizeParams(s.template, s.params), d) : [];
 }
 function cellColor(c, s, ly, sel) {
   if (sel) {
     return new THREE.Color(V.col.accent);
+  }
+  const metric = S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
+  const mc = metric && metric.color ? metric.color(c, s, ly) : null;
+  if (mc) {
+    return new THREE.Color(mc);
   }
   if (c.disabled) {
     return new THREE.Color("#8b8b8b");
@@ -5252,6 +5326,7 @@ function floorPoint(e, elev) {
 }
 var OVERLAY_KINDS = ["building", "engineering"];
 function pickCandidates(e) {
+  V.world.updateMatrixWorld(true);
   V.raycaster.setFromCamera(ndc(e), V.camera);
   const hits = V.raycaster.intersectObjects(V.pick, false);
   const seen = /* @__PURE__ */ new Set();

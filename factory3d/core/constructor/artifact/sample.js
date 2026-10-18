@@ -4,7 +4,7 @@
 import { LAYER_KINDS, TPL } from "../data.js";
 import { pGeom, sGeom } from "../live.js";
 import { clone, fmt, rnd, uid } from "../util.js";
-import SEED from "./seed/sample.json";
+import SEED from "./seed/sample.json" with { type: "json" };
 
 /* ===== налаштування перевірок (режими як у прототипі) ===== */
 export const CHECK_DEFAULTS = {

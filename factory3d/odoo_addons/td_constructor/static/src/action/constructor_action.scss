@@ -283,3 +283,13 @@ textarea{width:100%;min-height:64px;resize:vertical}
   .meta { font-family: var(--mono); font-size: 11px; }
   &:hover { background: var(--surface3); }
 }
+
+/* Меню розширень (реєстр menu): кнопки шапки й «Ще ▾»; без записів контейнер прихований. */
+.o_f3d_constructor #menuExtra { display: flex; gap: 6px; align-items: center; }
+.o_f3d_constructor #menuExtra[hidden] { display: none; }
+.o_f3d_constructor .more { position: relative; }
+.o_f3d_constructor .more > summary { list-style: none; cursor: pointer; }
+.o_f3d_constructor .more .morelist {
+  position: absolute; right: 0; top: 100%; z-index: 30; display: flex; flex-direction: column; gap: 2px;
+  min-width: 180px; padding: 4px; background: var(--surface); border: 1px solid var(--line);
+}

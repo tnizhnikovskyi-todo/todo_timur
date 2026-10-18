@@ -262,6 +262,8 @@ export class ArtifactAdapter extends BaseAdapter {
         }
         this._pending = true;
         this._setStatus("saving");
+        const n = this._countChanges(S); // чип «Чернетка · змінено N» оновлюється відразу, запис у сховище — з затримкою
+        this.onSaved({ rev: this._rev, draft_changes: n, has_changes: n > 0, id_map: {}, updates: [] });
         if (now) {
             return this.flush();
         }

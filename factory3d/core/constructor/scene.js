@@ -1,6 +1,7 @@
 // 3D-сцена редактора (порт 40_scene.js; three r160 з бандла переглядача, рендер на вимогу, один WebGLRenderer).
 // Умовні моделі об'єктів без файла — `buildGenericModel` (W3, R-17); моделі варіантів — GLB із вкладень (API-10), завантажує app.js.
 import { host } from "./host.js";
+import { registries } from "./registry.js";
 import { cellsOf, normalizeParams } from "./cells.js";
 import { FRONT_ANGLE, TPL } from "./data.js";
 import { polygonContains } from "./geometry.js";
@@ -517,11 +518,9 @@ export function poseView(view, rec, v) {
 }
 
 /* ===== вигляди місць-шаблонів ===== */
-function frameLines(s, d) {
-    const p = normalizeParams(s.template, s.params);
-    const pts = [];
-    const sg = (a, b) => pts.push(a[0], a[2], -a[1], b[0], b[2], -b[1]);
-    if (s.template === "pallet_rack") {
+/** Каркас стелажа: відрізки [x1, y1, z1, x2, y2, z2…] у локальних осях місця (x вздовж довжини, y — глибина, z — висота). */
+const frameOf = {
+    pallet_rack(p, d, sg) {
         for (let b = 0; b <= p.bays; b++) {
             const x = -d.L / 2 + b * p.bay_width;
             for (const sy of [-d.W / 2, d.W / 2]) {
@@ -534,7 +533,8 @@ function frameLines(s, d) {
                 sg([-d.L / 2, sy, l * p.level_height], [d.L / 2, sy, l * p.level_height]);
             }
         }
-    } else if (s.template === "shelf") {
+    },
+    shelf(p, d, sg) {
         for (let b = 0; b <= p.sections; b++) {
             const x = -d.L / 2 + b * p.cell_w;
             for (const sy of [-d.W / 2, d.W / 2]) {
@@ -547,7 +547,8 @@ function frameLines(s, d) {
                 sg([-d.L / 2, sy, z], [d.L / 2, sy, z]);
             }
         }
-    } else if (s.template === "cantilever") {
+    },
+    cantilever(p, d, sg) {
         const y0 = -d.W / 2 + 0.075;
         for (let b = 0; b <= p.arms; b++) {
             const x = -d.L / 2 + (b * d.L) / p.arms;
@@ -556,12 +557,36 @@ function frameLines(s, d) {
                 sg([x, y0, l * p.level_height], [x, d.W / 2, l * p.level_height]);
             }
         }
-    }
-    return pts;
+    },
+};
+// Реєстр shapes (registry.js): ключ шаблону/типу місця → {frame(params, dims) → відрізки каркаса}. Нові форми типів місць (каталог
+// типів, MERGE.md §4.2) додаються тут же; шаблон без запису в реєстрі малюється лише коробками комірок.
+for (const [tpl, fn] of Object.entries(frameOf)) {
+    registries.shapes.add(
+        tpl,
+        {
+            frame(p, d) {
+                const pts = [];
+                fn(p, d, (a, b) => pts.push(a[0], a[2], -a[1], b[0], b[2], -b[1]));
+                return pts;
+            },
+        },
+        { force: true }
+    );
+}
+function frameLines(s, d) {
+    const shape = registries.shapes.get(s.template, null);
+    return shape && shape.frame ? shape.frame(normalizeParams(s.template, s.params), d) : [];
 }
 function cellColor(c, s, ly, sel) {
     if (sel) {
         return new THREE.Color(V.col.accent);
+    }
+    // Реєстр metrics: обраний показник (S.ui.metric) може дати колір комірки (теплові карти); немає значення — звичайний колір
+    const metric = S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
+    const mc = metric && metric.color ? metric.color(c, s, ly) : null;
+    if (mc) {
+        return new THREE.Color(mc);
     }
     if (c.disabled) {
         return new THREE.Color("#8b8b8b");
@@ -1201,7 +1226,8 @@ const OVERLAY_KINDS = ["building", "engineering"];
  * 2) активний шар → шар, який можна редагувати → решта;
  * 3) менший габарит (верстат перемагає зону чи штабель, що його містить) → розміщення перед місцем → ближче до камери.
  */
-function pickCandidates(e) {
+export function pickCandidates(e) {
+    V.world.updateMatrixWorld(true); // матриці нових/переміщених видів оновлюються при рендері; клік може прийти раніше за кадр
     V.raycaster.setFromCamera(ndc(e), V.camera);
     const hits = V.raycaster.intersectObjects(V.pick, false);
     const seen = new Set();

@@ -33,6 +33,7 @@ export const BODY_HTML = `<svg width="0" height="0" style="position:absolute" ar
     <div class="grow"></div>
     <span class="chip" id="draftChip">Чернетка · без змін</span>
     <span class="store" id="storeTag"></span>
+    <div class="grp" id="menuExtra" hidden></div>
     <button class="fbtn primary" id="btnPublish" type="button">Опублікувати</button>
     <button class="fbtn" id="btnHistory" type="button">Історія<span class="lg"> версій</span></button>
     <button class="fbtn icon" id="btnTheme" type="button" aria-label="Тема"></button>

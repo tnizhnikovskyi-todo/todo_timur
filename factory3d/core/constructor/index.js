@@ -22,3 +22,37 @@ export * as roles from "./roles.js";
 export * as scene from "./scene.js";
 export * as state from "./state.js";
 export * as util from "./util.js";
+
+// ---- Розширення волн 1–2: заглушки підключено заздалегідь (MERGE.md §5.0); слайс правит лише свій файл ----
+// Волна 1, S1 «Структура місця»
+import "./types_catalog.js";
+import "./addr.js";
+import "./presets.js";
+// Волна 1, S2 «Зв'язок з Odoo»
+import "./capacity.js";
+// Волна 1, S3 «Робота зі складом»
+import "./undo.js";
+import "./selection.js";
+import "./labels.js";
+import "./barcode.js";
+import "./heat.js";
+import "./search.js";
+import "./card.js";
+// Волна 2, S4 «Структура з Odoo, файли»
+import "./parse_codes.js";
+import "./tray.js";
+import "./autolayout.js";
+import "./tabular.js";
+// Волна 2, S5 «Будівля, майстер, документи»
+import "./building.js";
+import "./wizard.js";
+import "./spec.js";
+import "./plan_doc.js";
+// Волна 2, S6 «Спільна робота й навчання»
+import "./variants.js";
+import "./comments.js";
+import "./locks.js";
+import "./tours.js";
+import "./minimap.js";
+import "./levels.js";
+import "./i18n.js";

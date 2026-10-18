@@ -3,6 +3,15 @@
 Цель: одностраничный прототип конструктора, который заказчик щупает руками до SPEC и кода Odoo. Решения CD-01…CD-24 —
 в `DECISIONS.md` рядом. Модель данных прототипа — черновик будущих моделей Odoo, поэтому имена полей держим как в Odoo.
 
+## Сборка (CD-29, волна 0): прототип и модуль — один код
+
+С волны 0 прототип **не имеет собственной копии логики**: `proto/build.py` вызывает `tools/build_core.mjs proto` (esbuild), который собирает
+ядро `factory3d/core/constructor/*` (то же, что в модуле Odoo) вместе с адаптером артефакта (`core/constructor/artifact/*`: `db` →
+localStorage → память, IndexedDB, пример, диалоги каталога и публикации-имитации) и хостом `proto/src/main.js` в один IIFE; стили — те же
+`constructor_action.scss` модуля (CSS с вложенностью) + `proto/src/page.css`. Адаптер и реестры ядра — `core/constructor/README.md`.
+Модель данных артефакта теперь та же, что у модуля (поля как в API-03); документы старого вида в `db` переводит `fromProto` при чтении.
+Тесты Playwright — `proto/test_*.js` (`vendor/` и `fixtures/` вне репозитория). Ниже — исходные рамки прототипа (хранение, CSP, данные).
+
 ## Технические рамки
 
 - **Файл.** `/tmp/claude-0/-home-user-todo-timur/c00ab7e6-c2ea-5355-9cae-b7d9087feae4/scratchpad/constructor/proto/index.html`.

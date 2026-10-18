@@ -7,6 +7,7 @@ import { runLive } from "./live.js";
 import { E, S, V, isLayerVisible, layerOf, reindex } from "./state.js";
 import { newUid } from "./adapter.js";
 import { host } from "./host.js";
+import { forEachEntry, registries, can } from "./registry.js";
 import { $, $$, K, ROOT, clone, fmt, fmtInt, h, ic, rnd, toast, uid } from "./util.js";
 
 export const isNarrow = () => window.matchMedia("(max-width: 900px)").matches;
@@ -29,6 +30,7 @@ export function renderTop() {
     }
     $$("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.app.mode)));
     const pub = $("#btnPublish");
+    pub.hidden = !can("publish");
     pub.disabled = !canPublish();
     pub.title = pub.disabled
         ? S.rights.is_manager && !S.rights.can_publish
@@ -36,10 +38,31 @@ export function renderTop() {
             : "Публікує Менеджер у режимі редагування"
         : "";
     $("#btnNewSite").disabled = !canManage();
+    renderMenu();
     renderChips();
     const tt = $("#btnTheme");
     tt.replaceChildren(ic(curTheme() === "dark" ? "sun" : "moon"));
     renderSaveState();
+}
+/** Реєстр `menu` (запис {area: "top"|"more", label, icon?, cls?, capability?, run(ctx), disabled?(ctx)}): кнопки шапки й меню «Ще ▾». */
+export function renderMenu() {
+    const box = $("#menuExtra");
+    if (!box) {
+        return;
+    }
+    const ctx = { E, S, V };
+    const top = [];
+    const more = [];
+    forEachEntry(registries.menu, (key, m) => (m.area === "more" ? more : top).push([key, m]), ctx);
+    const btn = ([key, m], cls) =>
+        h("button", { class: cls + (m.cls ? " " + m.cls : ""), type: "button", id: "menu-" + key, disabled: m.disabled ? m.disabled(ctx) : false, onclick: () => m.run(ctx) }, m.icon ? ic(m.icon) : null, m.label);
+    box.replaceChildren(
+        ...K(
+            top.map((e) => btn(e, "fbtn")),
+            more.length ? h("details", { class: "more", id: "menuMore" }, h("summary", { class: "fbtn" }, "Ще ▾"), h("div", { class: "morelist" }, more.map((e) => btn(e, "fbtn")))) : null
+        )
+    );
+    box.hidden = !top.length && !more.length;
 }
 export const SAVE_LABELS = { saved: "Збережено", saving: "Зберігаємо…", error: "Помилка збереження" };
 export function renderSaveState() {
@@ -92,18 +115,33 @@ export function setMTab(t) {
         setLeftTab(t);
     }
 }
+/** Вкладки лівої панелі — реєстр `panels` (area "left", tab, label, render(root)); слайси додають свої. */
+const leftPanels = () => registries.panels.getEntries().filter(([, p]) => p.area === "left");
 export function renderLeft() {
     const root = $("#leftBody");
     root.replaceChildren();
-    if (S.ui.leftTab === "layers") {
-        renderLayersTab(root);
-    } else if (S.ui.leftTab === "slots") {
-        renderSlotsTab(root);
-    } else {
-        renderCatalogTab(root);
+    const found = leftPanels().find(([, p]) => p.tab === S.ui.leftTab) || leftPanels()[0];
+    if (found) {
+        found[1].render(root);
+    }
+}
+/** Кнопки вкладок для панелей реєстру, яких немає в розмітці (три вбудовані там уже є). */
+function ensureTabs() {
+    for (const [, p] of leftPanels()) {
+        if (!p.tab || $(`#ltabs button[data-tab="${p.tab}"]`)) {
+            continue;
+        }
+        const mk = (mobile) =>
+            h("button", { type: "button", role: "tab", [mobile ? "data-mtab" : "data-tab"]: p.tab, onclick: () => (mobile ? E.setMTab(p.tab) : E.setLeftTab(p.tab)) }, p.label || p.tab);
+        $("#ltabs").append(mk(false));
+        const props = $('#mtabs button[data-mtab="props"]');
+        if (props) {
+            props.before(mk(true));
+        }
     }
 }
 export function renderAll() {
+    ensureTabs();
     renderTop();
     renderLeft();
     E.renderRight();
@@ -667,6 +705,7 @@ export function renderNotice() {
 
 Object.assign(E, {
     renderTop,
+    renderMenu,
     renderSaveState,
     renderChips,
     renderLeft,
@@ -686,3 +725,8 @@ Object.assign(E, {
 });
 
 export { roleName };
+
+// вбудовані вкладки лівої панелі (Шари → Місця → Каталог)
+registries.panels.add("left:layers", { area: "left", tab: "layers", label: "Шари", render: renderLayersTab }, { sequence: 10, force: true });
+registries.panels.add("left:slots", { area: "left", tab: "slots", label: "Місця", render: renderSlotsTab }, { sequence: 20, force: true });
+registries.panels.add("left:catalog", { area: "left", tab: "catalog", label: "Каталог", render: renderCatalogTab }, { sequence: 30, force: true });

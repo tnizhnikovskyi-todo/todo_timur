@@ -7,7 +7,7 @@ import { newBlocks, pGeom, runLive, slotDims } from "./live.js";
 import { canEditLayer, canManage, lockHint, toastLock } from "./roles.js";
 import { E, S, V, layerOf, objKey, passportOf, recOfRef, reindex, snapStep, snapV, variantOf } from "./state.js";
 import { newUid } from "./adapter.js";
-import { can } from "./registry.js";
+import { can, forEachEntry, registries } from "./registry.js";
 import { $, $$, K, clone, fmt, fmtInt, getp, h, ic, normDeg, pad2, rnd, toast } from "./util.js";
 
 /* ===== вибір ===== */
@@ -126,9 +126,28 @@ export function renderRight() {
     } else {
         renderSlotProps(root, rec);
     }
-    root.append(h("div", { class: "sec", id: "checksBlock" }));
-    renderChecksBlock();
+    renderPanelBlocks("right", root, { rec });
 }
+
+/**
+ * Блоки правої панелі з реєстру `panels` (запис {area, sequence, render(root, ctx), when?(ctx), capability?}): area "right" — під
+ * властивостями вибраного, "site" / "slot" / "placement" — у кінці форми відповідного вибору. ctx = {rec} (вибраний запис або null).
+ */
+export function renderPanelBlocks(area, root, ctx) {
+    forEachEntry(registries.panels, (_key, p) => p.area === area && p.render(root, ctx), ctx);
+}
+// блок «Перевірки» (вбудований; слайси додають свої з іншим sequence)
+registries.panels.add(
+    "right:checks",
+    {
+        area: "right",
+        render(root) {
+            root.append(h("div", { class: "sec", id: "checksBlock" }));
+            renderChecksBlock();
+        },
+    },
+    { sequence: 90, force: true }
+);
 function renderSiteProps(root) {
     const dis = !canManage();
     const b = S.site.building;
@@ -170,6 +189,7 @@ function renderSiteProps(root) {
             )
         )
     );
+    renderPanelBlocks("site", root, { rec: null });
 }
 const lockNote = (ly) => (canEditLayer(ly) ? null : h("div", { class: "note lock", style: { marginBottom: "8px" } }, ic("lock"), " ", lockHint(ly)));
 
@@ -236,6 +256,7 @@ function renderPlacementProps(root, pl) {
             )
         )
     );
+    renderPanelBlocks("placement", root, { rec: pl });
     renderDerived();
 }
 export function renderDerived() {
@@ -339,6 +360,7 @@ function renderSlotProps(root, s) {
     if (SOLID_SLOTS.includes(s.template)) {
         root.append(h("div", { class: "sec", id: "cellsBox" }));
     }
+    renderPanelBlocks("slot", root, { rec: s });
     renderDerived();
     renderCellsBox();
 }
