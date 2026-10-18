@@ -1,0 +1,2 @@
+-- W3-A (SPEC 5.6): вимкнути крони cron_td_energy_res_build, _res_rotate, _opportunity, _opportunity_links;
+-- джерела MB-U74-GAS-MAIN, MB-U75-AIR-MAIN — read_enabled = false. Каркас.

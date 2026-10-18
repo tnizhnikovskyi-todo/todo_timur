@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_energy_resource_user,td.energy.resource user,model_td_energy_resource,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_resource_manager,td.energy.resource manager,model_td_energy_resource,td_energy.group_td_energy_manager,1,1,0,0
+access_td_energy_resource_admin,td.energy.resource admin,model_td_energy_resource,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_price_user,td.energy.price user,model_td_energy_price,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_price_manager,td.energy.price manager,model_td_energy_price,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_price_admin,td.energy.price admin,model_td_energy_price,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_point_user,td.energy.point user,model_td_energy_point,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_point_manager,td.energy.point manager,model_td_energy_point,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_point_admin,td.energy.point admin,model_td_energy_point,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_res_interval_user,td.energy.res.interval user,model_td_energy_res_interval,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_res_interval_admin,td.energy.res.interval admin,model_td_energy_res_interval,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_usage_user,td.energy.usage user,model_td_energy_usage,td_energy.group_td_energy_user,1,0,0,0
