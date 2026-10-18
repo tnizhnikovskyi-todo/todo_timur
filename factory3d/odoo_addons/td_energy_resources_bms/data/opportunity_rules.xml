@@ -1,3 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 3 правила моста (SPEC B.3) (B). Каркас: наповнює воркер B. -->
-<odoo noupdate="1"/>
+<!-- 3 правила моста (SPEC B.3, R-B4) і параметри моста (R-B2 п. 2) (B). noupdate: пороги редагує енергетик (V-08).
+     preheat_early: control_intent порожній — W2 не підтримує heat_schedule_shift, дія — посилання на налаштування BMS.
+     dock_gates: дія «Показати у «Дворі»» додається детектором лише коли встановлено td_yard. -->
+<odoo noupdate="1">
+    <record id="param_recovery_norm_pct" model="ir.config_parameter">
+        <field name="key">td.energy_resources_bms.recovery_norm_pct</field>
+        <field name="value">70</field>
+    </record>
+    <record id="param_filter_dp_limit_pa" model="ir.config_parameter">
+        <field name="key">td.energy_resources_bms.filter_dp_limit_pa</field>
+        <field name="value">250</field>
+    </record>
+
+    <record id="rule_preheat_early" model="td.energy.opportunity.rule">
+        <field name="code">preheat_early</field>
+        <field name="name">Розігрів перед зміною починається зарано</field>
+        <field name="sequence">70</field>
+        <field name="resource_id" ref="td_energy_resources.resource_gas"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">1000</field>
+        <field name="params" eval="{'margin_min': 30}"/>
+        <field name="params_schema" eval="[
+            {'key': 'margin_min', 'label': 'Мінімальний запас до початку зміни', 'type': 'int', 'min': 0, 'max': 240, 'unit': 'хв', 'default': 30}]"/>
+        <field name="actions" eval="[{'code': 'heat_settings', 'label': 'Відкрити налаштування опалення BMS', 'kind': 'link', 'class': None, 'params': {'xmlid': 'td_bms.action_td_bms_heat_balance_open'}}]"/>
+        <field name="requires">td_bms</field>
+    </record>
+    <record id="rule_ahu_recuperation" model="td.energy.opportunity.rule">
+        <field name="code">ahu_recuperation</field>
+        <field name="name">Рекуперація AHU-1 нижче норми</field>
+        <field name="sequence">80</field>
+        <field name="resource_id" ref="td_energy_resources.resource_heat"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">500</field>
+        <field name="params" eval="{}"/>
+        <field name="params_schema" eval="[]"/>
+        <field name="actions" eval="[{'code': 'ticket', 'label': 'Створити заявку', 'kind': 'ticket', 'class': None, 'params': {'node_code': 'AHU-1', 'title': 'AHU-1: заміна фільтра', 'description': 'AHU-1: заміна фільтра [OPP-{id}]'}}]"/>
+        <field name="requires">td_bms</field>
+    </record>
+    <record id="rule_dock_gates" model="td.energy.opportunity.rule">
+        <field name="code">dock_gates</field>
+        <field name="name">Ворота відвантаження відкриті довго</field>
+        <field name="sequence">90</field>
+        <field name="resource_id" ref="td_energy_resources.resource_heat"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">500</field>
+        <field name="params" eval="{'long_open_min': 10, 'min_events_day': 3.0, 'open_norm_min_day': 20.0}"/>
+        <field name="params_schema" eval="[
+            {'key': 'long_open_min', 'label': 'Довге відкриття воріт від', 'type': 'int', 'min': 1, 'max': 120, 'unit': 'хв', 'default': 10},
+            {'key': 'min_events_day', 'label': 'Мінімум довгих відкриттів на добу', 'type': 'float', 'min': 0.0, 'max': 100.0, 'unit': 'шт', 'default': 3.0},
+            {'key': 'open_norm_min_day', 'label': 'Норма відкриття воріт', 'type': 'float', 'min': 0.0, 'max': 1440.0, 'unit': 'хв/добу', 'default': 20.0}]"/>
+        <field name="actions" eval="[]"/>
+        <field name="requires">td_bms, td_yard</field>
+    </record>
+</odoo>

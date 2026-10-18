@@ -1,3 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-B1: бейдж «оцінка» у KPI «Рекуперація» (t-inherit td_energy_resources.ResKpis) (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<!-- UI-B1: підпис «оцінка» у KPI «Рекуперація AHU-1» і інших оцінних KPI (B).
+     Контракт з `td_energy_resources.ResKpis` (UI-03, воркер C): контейнер точки якості `.o_td_res_quality`
+     рендериться лише для `quality === 'estimated'`; ядро показує в ньому тільки точку, міст додає підпис.
+     Розширення (`t-inherit-mode="extension"`) без батьківського шаблона ігнорується — ядро працює й без моста. -->
+<templates xml:space="preserve">
+    <t t-inherit="td_energy_resources.ResKpis" t-inherit-mode="extension">
+        <xpath expr="//*[hasclass('o_td_res_quality')]" position="inside">
+            <span class="o_td_res_estimate ms-1 small text-muted" title="Розрахунок за тепловим балансом установки">оцінка</span>
+        </xpath>
+    </t>
+</templates>
