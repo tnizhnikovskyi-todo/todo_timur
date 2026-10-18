@@ -14,7 +14,9 @@ SELECT d.day, a.code, SUM(d.qty) FROM td_energy_daily d LEFT JOIN td_energy_area
 
 
 def build_stack(ctx):
-    """`stack` (R-08): серії за участками, стовпці за кошиками R-01, шкала `y_max = round(1,08·max)`."""
+    """`stack` (R-08): серії за участками, стовпці за кошиками R-01, шкала `y_max = round(1,08·max)`.
+
+    Немає жодних даних по вузлах у вікні — `bars = []` (порожній стан екрана «Немає даних»)."""
     cr = ctx.cr
     cr.execute(AREAS_SQL)
     areas = [{"code": code, "name": name, "color": color} for code, name, color in cr.fetchall()]
@@ -28,12 +30,13 @@ def build_stack(ctx):
             continue
         key = code or NONE_CODE
         sums[slot][key] = sums[slot].get(key, 0.0) + float(qty or 0.0)
+    has_data = any(sums)
     none_total = sum(s.get(NONE_CODE, 0.0) for s in sums)
     if none_total > 0:
         areas.append({"code": NONE_CODE, "name": NONE_NAME, "color": NONE_COLOR})
     codes = [a["code"] for a in areas]
     bars = []
-    for bucket, values in zip(buckets, sums, strict=True):
+    for bucket, values in zip(buckets if has_data else [], sums, strict=False):
         shown = {code: r_int(values.get(code, 0.0)) for code in codes}
         bars.append({"key": bucket["key"], "label": bucket["label"], "total": sum(shown.values()), "values": shown})
     peak = max((bar["total"] for bar in bars), default=0)

@@ -99,3 +99,39 @@ class TestW4Enpi(TestW4Common):
         self.Enpi.recompute(day, day, baseline=area_base)
         actual, expected, _enpi, _q = self._enpi_sql(area_base, day)
         self.assertEqual((actual, expected), (500.0, 500.0))
+
+    def test_ac20_weekly_enpi(self):
+        base = self._base()
+        days = [TODAY - timedelta(days=k) for k in range(84)]
+        for day in days:
+            self._daily(day, qty=6800.0, import_qty=100.0, cost=840.0)
+            self.Enpi.create(
+                {"baseline_id": base.id, "day": day, "actual": 6800.0, "expected": 7100.0, "quality": "ok"}
+            )
+        data = self.Api.with_user(self.u_cost).get_enpi()
+        weeks = data["weeks"]
+        self.assertEqual(len(weeks), 12)
+        self.assertEqual([w["key"] for w in weeks], sorted(w["key"] for w in weeks), "за зростанням дат")
+        self.assertEqual(weeks[-1]["key"], TODAY.isoformat())
+        self.assertEqual(weeks[-2]["key"], (TODAY - timedelta(days=7)).isoformat())
+        self.assertEqual((weeks[0]["label"], weeks[-1]["label"]), ("12 тижнів тому", "цей тиждень"))
+        self.assertEqual({w["label"] for w in weeks[1:-1]}, {""})
+        self.assertAlmostEqual(weeks[3]["expected_mwh"], 49.7)
+        self.assertAlmostEqual(weeks[3]["actual_mwh"], 47.6)
+        self.assertEqual((data["y_min"], data["y_max"]), (45, 55))  # floor5(0,95·47,6), ceil5(1,05·49,7)
+        self.assertAlmostEqual(data["enpi"], 6800 / 7100, places=4)
+        self.assertAlmostEqual(data["saving_pct"], 4.2)
+        self.assertAlmostEqual(data["saving_kwh"], 84 * 300.0)
+        self.assertEqual(data["saving_uah"], round(84 * 300.0 * 8.4))
+        view = self.Api.with_user(self.u_view).get_enpi()
+        self.assertNotIn("saving_uah", view)
+        self.assertAlmostEqual(view["enpi"], data["enpi"])
+
+    def test_ac20_without_baseline(self):
+        self._daily(TODAY - timedelta(days=2), qty=6800.0)
+        data = self.Api.get_enpi()
+        self.assertEqual(len(data["weeks"]), 12)
+        self.assertIsNone(data["enpi"])
+        self.assertIsNone(data["saving_pct"])
+        self.assertIsNone(data["weeks"][-1]["expected_mwh"])
+        self.assertAlmostEqual(data["weeks"][-1]["actual_mwh"], 6.8)

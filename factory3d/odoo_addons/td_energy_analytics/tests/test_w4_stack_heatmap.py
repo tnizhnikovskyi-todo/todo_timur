@@ -65,8 +65,8 @@ class TestW4StackHeatmap(TestW4Common):
 
     def test_ac33_empty(self):
         stack = self.Api.get_stack("m")
-        self.assertEqual((len(stack["bars"]), stack["y_max"]), (30, 3))
-        self.assertTrue(all(b["total"] == 0 for b in stack["bars"]))
+        self.assertEqual((stack["bars"], stack["y_max"], stack["ticks"]), ([], 3, [1, 2, 3]))
+        self.assertEqual(len(stack["areas"]), 8)
 
     def test_ac34_heatmap(self):
         mondays = [TODAY - timedelta(days=k) for k in (26, 19, 12, 5)]  # 21.09, 28.09, 05.10, 12.10

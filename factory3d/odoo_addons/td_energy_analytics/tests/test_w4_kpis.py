@@ -1,9 +1,12 @@
 """W4-A: періоди (R-01) і KPI екрана (AC-25…AC-32)."""
 
+import json
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from odoo.exceptions import AccessError, UserError
 
+from odoo.addons.td_energy_analytics.tools import heatmap as heatmap_tools
 from odoo.addons.td_energy_analytics.tools import periods
 from odoo.tests import tagged
 
@@ -133,3 +136,42 @@ class TestW4Kpis(TestW4Common):
         self.assertEqual(list(self._kpis()), ["el", "gas", "cost", "spec", "cogs", "selfgen", "co2"])
         week = self._kpis("w")["el"]["value"]
         self.assertEqual(week, round(186400 / 30 * 7))
+
+    # --- API-01 ------------------------------------------------------------------------------------------
+    def test_dashboard_parts_meta_and_errors(self):
+        el, _gas = self._mockup_1710()
+        full = self.Api.with_user(self.u_cost).get_dashboard("m", "area", None)
+        self.assertEqual(list(full), ["meta", "kpis", "stack", "heatmap", "enpi", "budget", "cut", "opps"])
+        meta = full["meta"]
+        self.assertEqual(
+            (meta["period"], meta["period_label"], meta["date_from"], meta["date_to"]),
+            ("m", "30 днів", "2026-09-18", "2026-10-17"),
+        )
+        self.assertEqual(meta["now_local"], "14:20")
+        self.assertEqual(meta["baseline"]["id"], el.id)
+        self.assertEqual(meta["baseline"]["coefs"], [{"driver": "plate_m2", "coef": 4.1}])
+        self.assertEqual((meta["baseline"]["label"], meta["baseline"]["state"]), ("2025", "approved"))
+        self.assertTrue(meta["subtitle"].endswith("база для порівняння — 2025"))
+        self.assertEqual(meta["capabilities"], {"cost": True, "plan": False, "report": True})
+        self.assertEqual((meta["refresh_s"], meta["data_quality"]), (300, {"days": 30, "partial_days": 0}))
+        self.assertIsNone(full["budget"])
+        part = self.Api.get_dashboard("w", "eq", ["kpis", "nope"])
+        self.assertEqual(set(part), {"meta", "kpis"})
+        self.assertTrue(self.Api.with_user(self.u_eng).get_dashboard("m", "area", [])["meta"]["capabilities"]["plan"])
+        self.assertLess(len(json.dumps(self.Api.get_dashboard("y", "area", None))), 61440)
+
+    def test_dashboard_part_error_is_isolated(self):
+        self._daily(TODAY, qty=100.0)
+        with patch.object(heatmap_tools, "build_heatmap", side_effect=RuntimeError("boom")):
+            data = self.Api.get_dashboard("m", "area", ["kpis", "heatmap", "stack"])
+        self.assertEqual(data["heatmap"], {"error": "boom"})
+        self.assertEqual(len(data["kpis"]), 7)
+        self.assertEqual(len(data["stack"]["bars"]), 30)
+
+    def test_dashboard_all_dims_and_periods(self):
+        self._mockup_1710()
+        for period in ("w", "m", "q", "y"):
+            for dim in ("area", "eq", "mo", "prod", "shift"):
+                data = self.Api.with_user(self.u_cost).get_dashboard(period, dim, ["cut", "kpis"])
+                self.assertEqual(data["cut"]["dim"], dim, (period, dim))
+                self.assertNotIn("error", data["cut"], (period, dim))

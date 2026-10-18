@@ -13,6 +13,7 @@ from odoo.exceptions import AccessError, UserError
 from odoo.addons.td_energy.tools import dates
 
 from ..tools import cuts, heatmap, kpis, periods, stack
+from ..tools import seed as seed_tools
 from ..tools import enpi as enpi_tools
 from ..tools.fmt import r_int
 
@@ -169,6 +170,7 @@ class TdEnergyAnalytics(models.AbstractModel):
         y_min, y_max = enpi_tools.week_axis([r["expected_mwh"] for r in rows] + [r["actual_mwh"] for r in rows])
         out = {
             "weeks": rows, "y_min": y_min, "y_max": y_max, "enpi": None, "saving_pct": None, "saving_kwh": None,
+            "saving_uah": None,
         }  # fmt: skip
         if base:
             tot = self.env["td.energy.enpi"].sudo().period_totals(base, first, ctx.today)
@@ -232,3 +234,12 @@ class TdEnergyAnalytics(models.AbstractModel):
     def get_opportunities(self):
         self._td_check_access()
         return self._td_opps()
+
+    # --- API-14 ---------------------------------------------------------------------------------------
+    @api.model
+    def _td_seed_demo(self, days=400, seed=20261018, purge=False, with_mo=True, with_baseline=True, with_budget=True):
+        """API-14 (R-20): демо-дані для екрана; лише адміністратор. `purge=True` — видалити лише сидоване."""
+        return seed_tools.run(
+            self.env, days=days, seed=seed, purge_only=purge, with_mo=with_mo, with_baseline=with_baseline,
+            with_budget=with_budget,
+        )  # fmt: skip
