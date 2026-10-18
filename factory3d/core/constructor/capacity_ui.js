@@ -7,7 +7,7 @@ import { runLive } from "./live.js";
 import { can, registries } from "./registry.js";
 import { canEditLayer, canManage } from "./roles.js";
 import { E, S, layerOf } from "./state.js";
-import { ALLOW_NEW, EXTRA_CHECKS, POLICY_LABEL, ZONE_ATTRS, ZONE_FUNCTIONS, cache, capacitySummary, cellLimit, cellsAbs, inheritedField, nameOf, rememberName, rulesState, zoneAt, zonesOf } from "./capacity_core.js";
+import { ALLOW_NEW, EXTRA_CHECKS, POLICY_LABEL, ZONE_ATTRS, ZONE_FUNCTIONS, cache, capacitySummary, cellLimit, cellsAbs, inheritedField, nameOf, rememberName, rulesState, zoneChainAt, zonesOf } from "./capacity_core.js";
 import { K, debounce, fmt, fmtInt, h, toast } from "./util.js";
 
 const MODE_OPTS = [["warn", "Попередження"], ["block", "Заборона"]];
@@ -29,14 +29,22 @@ export async function loadLib(force = false) {
     lib.loading ||= adapter
         .categories({ op: "list" })
         .then((res) => {
-            Object.assign(lib, { categories: res.categories || [], strategies: res.strategies || [], functions: (res.functions || lib.functions).map((f) => ({ ...f })), attrs: (res.attrs || lib.attrs).map((a) => ({ ...a })), loaded: true });
+            Object.assign(lib, { categories: res.categories || [], strategies: res.strategies || [], functions: (res.functions || lib.functions).map((f) => ({ ...f })), attrs: (res.attrs || lib.attrs).map((a) => ({ ...a })) });
         })
-        .catch((e) => toast(e.message || "Не вдалося прочитати категорії зберігання.", "err"))
+        .catch((e) => console.warn("Категорії зберігання недоступні:", e.message || e)) // не ламаємо панель: лишаються довідники за замовчуванням
         .finally(() => {
+            lib.loaded = true; // і після помилки: блоки панелей не повторюють запит при кожній перемальовці
             lib.loading = null;
         });
     await lib.loading;
     return lib;
+}
+
+/** Перший показ блоку: довідники ще не читали — читаємо й один раз перемальовуємо праву панель. */
+function ensureLib() {
+    if (!lib.loaded && !lib.loading) {
+        loadLib().then(() => E.renderRight && E.renderRight());
+    }
 }
 export const resetLib = () => Object.assign(lib, { loaded: false, loading: null });
 
@@ -99,12 +107,12 @@ export const scheduleCaches = debounce((what) => refreshCaches(what), 900);
 
 /** Виклик із блоків панелей (вони перемальовуються після правок): ліниво оновлює кеш, не частіше ніж раз на 900 мс. */
 function lazyRefresh() {
-    if (S.site && !cache.__started) {
-        cache.__started = true;
-        refreshCaches();
-        return;
+    // дані потрібні лише ввімкненим перевіркам (cell_load → залишки, putaway_fit → «чи вміститься», code_conflict → коди)
+    const on = (k) => !!(S.settings.checks[k] && S.settings.checks[k].enabled);
+    const what = [on("cell_load") ? "loads" : null, on("putaway_fit") ? "fit" : null, on("code_conflict") ? "codes" : null].filter(Boolean);
+    if (S.site && what.length) {
+        scheduleCaches(what);
     }
-    scheduleCaches(["codes", "fit"]);
 }
 
 // ---- вибір запису зовнішньої системи (товар, категорія, упаковка, локація) ------------------------------------------------------------------
@@ -149,12 +157,12 @@ function renderSlotBlock(root, { rec }) {
     if (!isZone && !cells.length) {
         return;
     }
-    loadLib().then(() => lib.categories.length || lib.functions.length ? null : null);
+    ensureLib();
     lazyRefresh();
     const ly = layerOf(rec.layer_id);
     const dis = !canEditLayer(ly) || !!rec.locked;
     const zones = zonesOf();
-    const home = isZone ? null : zoneAt(zones, rec.x, rec.y);
+    const home = isZone ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
     const cat = inheritedField(rec, "storage_category_id", home);
     const strat = inheritedField(rec, "removal_strategy_id", home);
     const edit = (fn) => (v) => {
@@ -187,7 +195,10 @@ function renderSlotBlock(root, { rec }) {
                               h("div", { class: "checks" }, lib.attrs.map((a) => {
                                   const on = (rec.attr_ids || []).some((x) => String(x) === String(a.id));
                                   const cb = h("input", { type: "checkbox", checked: on, disabled: dis, "aria-label": a.name, "data-attr": a.key || a.id });
-                                  cb.addEventListener("change", () => edit(() => { const cur = new Set(rec.attr_ids || []); cb.checked ? cur.add(a.id) : cur.delete(a.id); rec.attr_ids = [...cur]; })());
+                                  cb.addEventListener("change", () => {
+                                      edit(() => { const cur = new Set(rec.attr_ids || []); cb.checked ? cur.add(a.id) : cur.delete(a.id); rec.attr_ids = [...cur]; })();
+                                      E.renderRight(); // температурний режим з'являється разом з атрибутом
+                                  });
                                   return h("label", null, cb, a.name);
                               })),
                               (rec.attr_ids || []).some((x) => (lib.attrs.find((a) => String(a.id) === String(x)) || {}).key === "temp" || x === "temp")
@@ -219,7 +230,7 @@ registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock }
 // ---- блок «Ємність площадки» -------------------------------------------------------------------------------------------------------------------
 
 function renderSiteBlock(root) {
-    loadLib();
+    ensureLib();
     lazyRefresh();
     const loads = Object.keys(cache.loads).length || cache.demo ? cache.loads : null;
     const sum = capacitySummary(S.slots, { loads, categories: lib.categories });
@@ -267,6 +278,9 @@ function renderChecksConfig(root) {
             a.saveCheck(id, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
         }
         rerunLive();
+        if (c.enabled) {
+            refreshCaches([{ cell_load: "loads", putaway_fit: "fit", code_conflict: "codes" }[id]]); // дані для щойно ввімкненої перевірки
+        }
     };
     const items = EXTRA_CHECKS.filter((c) => c.id !== "cell_load" || can("storage")).filter((c) => c.id !== "putaway_fit" || can("putaway"));
     if (!items.length) {

@@ -179,16 +179,31 @@ def _zones(site):
     return zones
 
 
+def _area(poly):
+    """Площа многокутника (формула шнурівки), м²."""
+    return abs(sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1], strict=True))) / 2.0
+
+
+def zone_chain(zones, x, y):
+    """Зони, що містять точку, від найменшої до найбільшої (вкладені зони: ближча зона перекриває далеку)."""
+    hit = [(zone, poly) for zone, poly in zones if geo.polygon_contains(poly, (x, y))]
+    return [zone for zone, _poly in sorted(hit, key=lambda zp: _area(zp[1]))]
+
+
 def zone_of(zones, x, y):
-    for zone, poly in zones:
-        if geo.polygon_contains(poly, (x, y)):
-            return zone
-    return None
+    chain = zone_chain(zones, x, y)
+    return chain[0] if chain else None
 
 
-def inherited(field, slot, zone):
-    """Категорія зберігання / стратегія: своя в місця, інакше з вмісної зони (F03-02, F03-06: діє вниз)."""
-    return slot[field] or (zone[field] if zone else slot[field])
+def inherited(field, slot, chain):
+    """Категорія зберігання / стратегія: своя в місця, інакше найближчої зони ланцюжка з заданим значенням (вниз)."""
+    if slot[field]:
+        return slot[field]
+    zones = chain if isinstance(chain, list | tuple) else ([chain] if chain else [])
+    for zone in zones:
+        if zone[field]:
+            return zone[field]
+    return slot[field]
 
 
 # --- локації ---------------------------------------------------------------------------------------------
@@ -321,11 +336,13 @@ def _desired_cells(site, slots, zones, issues):
                     )
                 )
                 continue
+            chain = zone_chain(zones, cell['x'], cell['y'])
             desired[cell['code']] = {
                 'cell': cell,
                 'slot': slot,
                 'parent': parent,
-                'zone': zone_of(zones, cell['x'], cell['y']),
+                'zone': chain[0] if chain else None,
+                'chain': chain,
             }
     return desired
 
@@ -380,7 +397,7 @@ def _plan_locations(site, env, lines, issues):
     taken = set()
     mode = _code_mode(site)
     for code, item in desired.items():
-        cell, slot, parent, zone = item['cell'], item['slot'], item['parent'], item['zone']
+        cell, slot, parent, zone, chain = item['cell'], item['slot'], item['parent'], item['zone'], item['chain']
         rec, skip = _match(code, by_f3d, by_barcode, site, issues, "локація", by_alias, restorable)
         if skip:
             continue
@@ -395,17 +412,17 @@ def _plan_locations(site, env, lines, issues):
                 kept.add(old.td_code)
                 _plan_rename(lines, issues, old, code, cell, slot, zone_uid, mode)
                 continue
-            lines.append(_plan_create(site, code, cell, slot, parent, zone, zone_uid, rows, by_f3d))
+            lines.append(_plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d))
             continue
         parent_rec = (
             by_f3d.get(_row_parent_code(site, slot)) if _row_parent_code(site, slot) else slot.parent_location_id
         )
-        if not _plan_existing(lines, issues, rec, code, cell, slot, zone, zone_uid, site, mode, parent_rec):
+        if not _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, mode, parent_rec):
             unchanged += 1
     return kept, unchanged
 
 
-def _plan_create(site, code, cell, slot, parent, zone, zone_uid, rows, by_f3d):
+def _plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d):
     row_code = _row_parent_code(site, slot)
     name = cell['name']
     if row_code and name == code:
@@ -429,8 +446,8 @@ def _plan_create(site, code, cell, slot, parent, zone, zone_uid, rows, by_f3d):
         depends, extra['parent_code'] = row_code, row_code
     elif row_code and row_code in by_f3d:
         vals['location_id'] = by_f3d[row_code].id
-    category = inherited('storage_category_id', slot, zone)
-    strategy = inherited('removal_strategy_id', slot, zone)
+    category = inherited('storage_category_id', slot, chain)
+    strategy = inherited('removal_strategy_id', slot, chain)
     if category:
         vals['storage_category_id'] = category.id
     if strategy:
@@ -471,7 +488,7 @@ def _plan_rename(lines, issues, rec, code, cell, slot, zone_uid, mode='warn'):
     lines.append(line)
 
 
-def _plan_existing(lines, issues, rec, code, cell, slot, zone, zone_uid, site, mode='warn', parent_rec=None):
+def _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, mode='warn', parent_rec=None):
     """Рядки для наявної локації: перенесення, перейменування, атрибути. Повертає, чи є зміни."""
     mine = []
     # F02-11: штрихкод зайнятий не внутрішньою локацією або іншого складу — застосувати не можна
@@ -516,8 +533,8 @@ def _plan_existing(lines, issues, rec, code, cell, slot, zone, zone_uid, site, m
         vals['td_site_id'] = site.id
     if rec.td_slot_uid != slot.uid:
         vals['td_slot_uid'] = slot.uid
-    category = inherited('storage_category_id', slot, zone)
-    strategy = inherited('removal_strategy_id', slot, zone)
+    category = inherited('storage_category_id', slot, chain)
+    strategy = inherited('removal_strategy_id', slot, chain)
     if category and rec.storage_category_id != category:
         vals['storage_category_id'] = category.id
     if strategy and rec.removal_strategy_id != strategy:

@@ -220,7 +220,7 @@ def site_cell_limits(site):
         for cell in slot._f3d_cells():
             limit = cell['max_load_kg'] or 0.0
             if not limit:
-                cat = pub.inherited('storage_category_id', slot, pub.zone_of(zones, cell['x'], cell['y']))
+                cat = pub.inherited('storage_category_id', slot, pub.zone_chain(zones, cell['x'], cell['y']))
                 limit = cat.max_weight if cat else 0.0
             out[cell['code']] = limit
     return out

@@ -157,6 +157,15 @@ export function register(test) {
         const zones = C.zonesOf();
         const home = C.zoneAt(zones, rack.x, rack.y);
         assert.equal(home.id, "sl_z");
+        // вкладені зони: ближча (менша) перекриває далеку, а що не задано — береться з далекої
+        const inner = { id: "sl_in", layer_id: "ly_storage", template: "zone", code_prefix: "ZN-IN", x: 30, y: 10, rotation: 0, params: { length: 10, width: 6 }, overrides: {} };
+        S.slots.push(inner);
+        inner.storage_category_id = 11;
+        const chain = C.zoneChainAt(C.zonesOf(), rack.x, rack.y);
+        assert.deepEqual(chain.map((z) => z.id), ["sl_in", "sl_z"]);
+        assert.deepEqual(C.inheritedField(rack, "storage_category_id", chain), { value: 11, from: "zone" });
+        assert.deepEqual(C.inheritedField(rack, "removal_strategy_id", chain), { value: 3, from: "zone" }); // з далекої зони
+        S.slots.pop();
         assert.deepEqual(C.inheritedField(rack, "storage_category_id", home), { value: 7, from: "zone" });
         rack.storage_category_id = 9;
         assert.deepEqual(C.inheritedField(rack, "storage_category_id", home), { value: 9, from: "own" });

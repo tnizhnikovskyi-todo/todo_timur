@@ -96,6 +96,23 @@ class TestS2Plan(F3DConstructorCase):
         attrs = self.lines(self.plan(), 'attrs')
         self.assertEqual(attrs[0]['vals'], {'storage_category_id': own.id})
 
+    def test_nested_zones_inherit_from_the_nearest_zone(self):
+        outer_cat = self.env['stock.storage.category'].create({'name': "Зовнішня", 'max_weight': 900})
+        inner_cat = self.env['stock.storage.category'].create({'name': "Внутрішня", 'max_weight': 300})
+        strategy = self.env['product.removal'].search([], limit=1)
+        self.make_slot(
+            kind='yard', prefix='SA-ZO', template='zone', polygon=[[0, 0], [60, 0], [60, 30], [0, 30]]
+        ).write({'storage_category_id': outer_cat.id, 'removal_strategy_id': strategy.id})
+        self.make_slot(
+            kind='yard', prefix='SA-ZI', template='zone', polygon=[[25, 5], [40, 5], [40, 15], [25, 15]]
+        ).write({'storage_category_id': inner_cat.id})
+        self.rack(bays=1, levels=1)  # стелаж (30; 10) — у внутрішній зоні
+        line = self.lines(self.plan(), 'create')[0]
+        self.assertEqual(line['vals']['storage_category_id'], inner_cat.id)  # ближча зона перекриває далеку
+        self.assertEqual(line['vals']['removal_strategy_id'], strategy.id)  # що не задано — береться з далекої
+        zone_uid = self.env['td.slot'].search([('code_prefix', '=', 'SA-ZI')]).uid
+        self.assertEqual(line['extra']['zone_uid'], zone_uid)  # область — найближча зона
+
     # --- зайнятий штрихкод, залишки, переміщення ----------------------------------------------------------
     def test_barcode_held_by_non_internal_location_is_blocked(self):
         self.env['stock.location'].create({'name': 'Віртуальна', 'barcode': 'SA-R1-B01-L1', 'usage': 'view'})

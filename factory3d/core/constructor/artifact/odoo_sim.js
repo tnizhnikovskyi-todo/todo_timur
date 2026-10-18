@@ -5,7 +5,7 @@
 // `installOdooSim(adapter)` додає на екземпляр `ArtifactAdapter` методи нейтрального контракту (план, журнал, відкат, категорії,
 // залишки, правила, пошук) і вмикає можливості `storage`, `putaway`, `rollback`. Стан імітації зберігається у сховищі артефакта:
 // колекція `versions`, ключ `<площадка>.odoo` (компактні масиви, щоб документ лишався малим).
-import { cellsAbs, fitProblems, inheritedField, putawayEstimate, rememberName, rulesState, siteLimits, zoneAt, zonesOf, ZONE_ATTRS, ZONE_FUNCTIONS } from "../capacity_core.js";
+import { cellsAbs, fitProblems, inheritedField, putawayEstimate, rememberName, rulesState, siteLimits, zoneChainAt, zonesOf, ZONE_ATTRS, ZONE_FUNCTIONS } from "../capacity_core.js";
 import { closure, isRule, makeLine, OP_OF_KIND, orderLines, rollbackCheck, scopesOf } from "../plan_core.js";
 import { E, S } from "../state.js";
 import { clone, uid } from "../util.js";
@@ -115,15 +115,16 @@ export function installOdooSim(adapter) {
             }
             const ly = layers.find((l) => l.id === slot.layer_id);
             for (const cell of cellsAbs(slot, (ly && ly.elevation) || 0)) {
-                const zone = zoneAt(zones, cell.x, cell.y);
+                const chain = zoneChainAt(zones, cell.x, cell.y);
+                const zone = chain[0] || null;
                 out.push({
                     code: cell.code,
                     name: cell.name,
                     kind: cell.kind,
                     capacity: cell.capacity || 0,
                     parent: slot.parent_location_id || DEFAULT_PARENT,
-                    category_id: inheritedField(slot, "storage_category_id", zone).value,
-                    strategy_id: inheritedField(slot, "removal_strategy_id", zone).value,
+                    category_id: inheritedField(slot, "storage_category_id", chain).value,
+                    strategy_id: inheritedField(slot, "removal_strategy_id", chain).value,
                     slot_uid: slot.id,
                     zone_uid: zone ? zone.id : "",
                     explicitName: cell.name !== cell.code,

@@ -6,7 +6,7 @@ import { openDialog } from "./dialogs.js";
 import { fld, numInput, selectEl } from "./fields.js";
 import { can, registries } from "./registry.js";
 import { E, S } from "./state.js";
-import { SUBLOCATION, SUBLOCATION_LABEL, STATUS_LABEL, cache, cellsAbs, nameOf, newPutawayRule, newReplenishRule, putawayEstimate, rememberName, ruleLabel, rulesBase, rulesInto, rulesIntoSlot, rulesState, ruleStatus, zoneAt, zonesOf } from "./capacity_core.js";
+import { SUBLOCATION, SUBLOCATION_LABEL, STATUS_LABEL, cache, cellsAbs, nameOf, newPutawayRule, newReplenishRule, putawayEstimate, rememberName, ruleLabel, rulesBase, rulesInto, rulesIntoSlot, rulesState, ruleStatus, zoneChainAt, zonesOf } from "./capacity_core.js";
 import { categoryOf, lib, loadLib, lookupField, refreshCaches, rerunLive } from "./capacity_ui.js";
 import { K, fmt, h, toast } from "./util.js";
 
@@ -231,7 +231,7 @@ export async function openRules({ tab = "putaway" } = {}) {
                 h("div", null, h("b", null, ruleLabel(r)), " ", chip(status), r.package_type_ids.length ? h("div", { class: "small muted" }, "упаковка: " + r.package_type_ids.map((id) => nameOf("package_type", id)).join(", ")) : null, h("div", { class: "small muted" }, `пріоритет ${r.sequence} · коли надходить у: ${r.in_location_id ? nameOf("location", r.in_location_id) : "склад площадки"}`)),
                 h("div", { class: "small" }, "→ ", h("b", null, r.out_code || "—"), r.sublocation !== "no" ? h("span", { class: "muted" }, ` · шукати: ${SUBLOCATION_LABEL[r.sublocation]}${r.storage_category_id ? " (" + ((categoryOf(r.storage_category_id) || {}).name || "категорія") + ")" : ""}`) : null, fit.length ? h("div", { class: "small", style: { color: "var(--warn, #b45309)" }, "data-role": "fit-warn" }, "Правило: не вміститься — " + fit.map((f) => f.reason).join("; ")) : null),
                 h("div", { class: "frow", style: { gap: "4px" } },
-                    h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => { highlightRule(r); toast("Ціль правила підсвічено."); }, disabled: !r.out_code }, "Підсвітити"),
+                    h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => { highlightRule(r); toast("Ціль правила підсвічено."); render(); }, disabled: !r.out_code }, "Підсвітити"),
                     r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => { if (await openPutawayForm(r, false)) { render(); } } }, "Змінити"), h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: dis, onclick: () => remove(rules.putaway, r) }, "Видалити")]
                 )
             );
@@ -323,7 +323,7 @@ function renderRulesInto(root, { rec }) {
     if (!putaway.length) {
         return;
     }
-    const zone = zoneAt(zonesOf(), rec.x, rec.y);
+    const zone = zoneChainAt(zonesOf(), rec.x, rec.y);
     const hits = rulesIntoSlot(rec, putaway, zone);
     if (!hits.length) {
         return;

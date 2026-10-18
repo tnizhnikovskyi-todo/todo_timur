@@ -134,20 +134,31 @@ export function zonesOf(slots = S.slots) {
     return slots.filter((s) => s.template === "zone").map((zone) => ({ zone, poly: zone.params.polygon || zonePoly(zone) }));
 }
 
-export function zoneAt(zones, x, y) {
-    const hit = zones.find(({ poly }) => polygonContains(poly, [x, y]));
-    return hit ? hit.zone : null;
+const polyArea = (poly) => Math.abs(poly.reduce((a, [x1, y1], i) => a + (x1 * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * y1), 0)) / 2;
+
+/** Зони, що містять точку, від найменшої до найбільшої (вкладена зона перекриває далеку; діє вниз). */
+export function zoneChainAt(zones, x, y) {
+    return zones
+        .filter(({ poly }) => polygonContains(poly, [x, y]))
+        .sort((a, b) => polyArea(a.poly) - polyArea(b.poly))
+        .map(({ zone }) => zone);
 }
 
-/** Значення поля місця або вмісної зони: своє, інакше зони (діє вниз; F03-02, F03-06). Повертає `{value, from: "own"|"zone"|null}`. */
+/** Найближча (найменша) зона, що містить точку, або null. */
+export function zoneAt(zones, x, y) {
+    return zoneChainAt(zones, x, y)[0] || null;
+}
+
+/** Значення поля місця або найближчої зони ланцюжка: своє, інакше зони (діє вниз; F03-02, F03-06). `zone` — зона або ланцюжок зон. */
 export function inheritedField(slot, field, zone) {
-    const own = slot[field];
-    if (own != null && own !== "" && !(Array.isArray(own) && !own.length)) {
-        return { value: own, from: "own" };
+    const has = (v) => v != null && v !== "" && !(Array.isArray(v) && !v.length);
+    if (has(slot[field])) {
+        return { value: slot[field], from: "own" };
     }
-    const zv = zone && zone[field];
-    if (zv != null && zv !== "" && !(Array.isArray(zv) && !zv.length)) {
-        return { value: zv, from: "zone" };
+    for (const z of Array.isArray(zone) ? zone : zone ? [zone] : []) {
+        if (has(z[field])) {
+            return { value: z[field], from: "zone" };
+        }
     }
     return { value: null, from: null };
 }
@@ -182,8 +193,8 @@ export function siteLimits(slots = S.slots, categories = []) {
     const out = {};
     for (const slot of slots) {
         for (const cell of cellsAbs(slot)) {
-            const zone = zoneAt(zones, cell.x, cell.y);
-            const cat = cats.get(inheritedField(slot, "storage_category_id", zone).value);
+            const chain = zoneChainAt(zones, cell.x, cell.y);
+            const cat = cats.get(inheritedField(slot, "storage_category_id", chain).value);
             out[cell.code] = cellLimit(slot, cell, cat).kg;
         }
     }
@@ -202,8 +213,8 @@ export function capacitySummary(slots, { loads = null, categories = [], zone = n
     const out = { cells: 0, places: 0, area: 0, volume: 0, maxWeight: 0, withCategory: 0, occupied: 0, free: 0, fill: null };
     for (const slot of slots) {
         for (const cell of cellsAbs(slot)) {
-            const home = zoneAt(zones, cell.x, cell.y);
-            if (zone && home !== zone) {
+            const home = zoneChainAt(zones, cell.x, cell.y);
+            if (zone && !home.includes(zone)) {
                 continue;
             }
             const cat = cats.get(inheritedField(slot, "storage_category_id", home).value);
