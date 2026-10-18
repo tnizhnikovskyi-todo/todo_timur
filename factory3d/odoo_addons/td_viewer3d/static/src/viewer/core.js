@@ -22,7 +22,9 @@ const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 // після завантаження моделі, на кожній повній дельті й зміні розкладки — ДО `stockLoad.sync`, щоб вантаж за залишками
 // ліг у вже зсунуті комірки. Без зареєстрованих розширень і без `D.layout` ядро працює як раніше.
 const EXTENSIONS = new Set();
-/** `ext = { applyLayout(api, layout, fresh) }`; `layout` — `D.layout` або null; повертає функцію зняття. */
+/** `ext = { id, applyLayout(api, layout, fresh), colorModes, modeColor, applyData, cardBlocks, onAction }`; усе, крім `id`
+ * (потрібен для `data-ext`), необов'язкове (R-26, VX-01…VX-05, див. блок «розширення ядра» нижче); `layout` — `D.layout`
+ * або null; повертає функцію зняття. */
 export function registerViewerExtension(ext) {
     EXTENSIONS.add(ext);
     return () => EXTENSIONS.delete(ext);
@@ -512,6 +514,7 @@ function onPart(gltf) {
   stockLoad.sync(fresh.map((o) => o.userData.code));
   fresh.forEach(paint);
   syncLayerGroups();
+  if (D) {extData("load");} // нова частина моделі: розширення бачить свої об'єкти (маркери тощо)
 }
 function loadPart(key) {
   if (!key) {return Promise.resolve();}
@@ -779,14 +782,75 @@ function refreshSelection() {
 }
 const extApi = {
   THREE, GLTFLoader, scene, items, labels, stockLoad, opts, kiosk, client, notify, buildLabels, dropLabels, relabel,
-  refreshSelection, codeRoot, isShown, paint, select, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows,
-  get D() { return D; }, get selected() { return selected; },
+  refreshSelection, isShown, paint, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows,
+  codeRoot: (x) => (typeof x === "string" ? items.get(x) ?? null : codeRoot(x)),
+  select: (o, a) => { const r = typeof o === "string" ? items.get(o) : o; if (r !== undefined) {select(r, a);} },
+  focusOn: (o) => { const r = typeof o === "string" ? items.get(o) : o; if (r) {focusOn(r);} },
+  get D() { return D; }, get selected() { return selected; }, get labelsRoot() { return $(".o_f3d_labels"); },
+  get canOpenAction() { return !!opts.onOpenAction; },
+  openAction(act) { if (!opts.onOpenAction) {return false;} opts.onOpenAction(act); return true; },
 };
 function applyLayout(fresh) {
   for (const ext of EXTENSIONS) {
     if (typeof ext.applyLayout !== "function") {continue;}
     try { ext.applyLayout(extApi, D?.layout ?? null, fresh || null); } catch (err) { console.error(err); }
   }
+}
+// ---------------------------------------------------------------- розширення ядра (R-26: VX-01…VX-05)
+// Збій розширення лише логуємо: ядро й інші розширення працюють далі. Без розширень цей блок нічого не робить.
+function extTry(fn, fallback) {
+  try { return fn(); } catch (err) { console.error(err); return fallback; }
+}
+function extModeOf(key) {
+  for (const ext of EXTENSIONS) {
+    const m = extTry(() => (ext.colorModes || []).find((x) => x.key === key));
+    if (m) {return { ext, m };}
+  }
+  return null;
+}
+// VX-01: радіо розширень у групі «Розфарбування»; `m.hidden` ховає пункт (розширення без даних неактивне)
+function syncExtModes() {
+  const box = $(".o_f3d_radio");
+  for (const ext of EXTENSIONS) {
+    for (const m of extTry(() => ext.colorModes || [], [])) {
+      let inp = [...box.querySelectorAll('input[name="cmode"]')].find((i) => i.value === m.key);
+      if (!inp) {
+        const lab = document.createElement("label"), sp = document.createElement("span");
+        lab.className = "o_f3d_layer";
+        inp = document.createElement("input");
+        inp.type = "radio"; inp.name = "cmode"; inp.value = m.key;
+        sp.textContent = m.label;
+        lab.append(inp, sp);
+        box.append(lab);
+        bindCmode(inp);
+      }
+      inp.closest("label").hidden = !!m.hidden;
+    }
+  }
+}
+// VX-03: після setData / applyPatch / знімка / «Зараз»; для режиму розширення — repaintAll після виклику
+function extData(reason, keys, repaint = true) {
+  syncExtModes();
+  const info = { reason, keys: keys || new Set(Object.keys(D || {})) };
+  for (const ext of EXTENSIONS) {
+    if (typeof ext.applyData === "function") {extTry(() => ext.applyData(extApi, D, info));}
+  }
+  syncExtModes();
+  if (repaint && extModeOf(colorMode)) {repaintAll();}
+}
+// VX-04: HTML-блоки в кінці картки об'єкта; VX-05: `data-ext="<id>:<action>:<arg>"` → ext.onAction
+function extCards(code) {
+  let h = "";
+  for (const ext of EXTENSIONS) {
+    if (typeof ext.cardBlocks !== "function") {continue;}
+    for (const b of [].concat(extTry(() => ext.cardBlocks(code, D, extApi), []) || [])) {h += b;}
+  }
+  return h;
+}
+function extAction(el) {
+  const [id, act, ...rest] = el.dataset.ext.split(":");
+  const ext = [...EXTENSIONS].find((x) => x.id === id);
+  if (ext && typeof ext.onAction === "function") {extTry(() => ext.onAction(extApi, act, rest.join(":"), el));}
 }
 $(".o_f3d_opt-labels").onchange = syncLabels;
 $(".o_f3d_opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
@@ -829,7 +893,8 @@ function modeColor(root) {
     const l = e.lines[u.code] || e.transformers[u.code];
     if (l) {return l.load >= 0.8 ? C_BAD : l.load >= 0.6 ? C_WARN : C_OK;}
   }
-  return null;
+  const xm = extModeOf(colorMode); // VX-02
+  return xm && typeof xm.ext.modeColor === "function" ? extTry(() => xm.ext.modeColor(colorMode, root, D) || null, null) : null;
 }
 function paint(root) {
   if (!root) {return;}
@@ -846,9 +911,9 @@ function paint(root) {
   stockLoad.tint(root, color, k);
 }
 function repaintAll() { for (const r of items.values()) {paint(r);} }
-root.querySelectorAll('input[name="cmode"]').forEach((el) => {
-  el.onchange = () => { colorMode = el.value; repaintAll(); renderPanel(); };
-});
+function bindCmode(el) { el.onchange = () => { colorMode = el.value; repaintAll(); renderPanel(); }; }
+root.querySelectorAll('input[name="cmode"]').forEach(bindCmode);
+syncExtModes();
 
 function clearHighlight() {
   const old = [...hl.roots];
@@ -1237,7 +1302,7 @@ function pick(ev) {
   ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ptr, camera);
   for (const hit of ray.intersectObjects(scene.children, true)) {
-    if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) {continue;}
+    if ((!hit.object.isMesh && !hit.object.userData.extPick) || !isShown(hit.object) || hit.object.userData.isPulse) {continue;}
     const root = codeRoot(hit.object);
     if (root) {return root;}
   }
@@ -1350,6 +1415,7 @@ function setData(d, first) {
   items.forEach(paint);
   drillSync();
   syncSectionErrors();
+  extData("load");
 }
 function loadFailed(err) {
   // після destroy() DOM знесено, а відхилений fetch — наслідок виходу зі сторінки, а не збій: мовчки виходимо
@@ -1475,6 +1541,7 @@ function applyPatch(patch) {
     const o = items.get(c);
     if (o) {paint(o);}
   }
+  if (lists.size) {extData("patch", lists, false);} // VX-03: нижче repaintAll, якщо режим не «none»
   if (colorMode !== "none") {repaintAll();}
   if ([...changed].some((c) => D.workcenters?.[c])) {syncMachineLabels();}
   if (prodOv.on && (lists.has("productions") || lists.has("workorders") || lists.has("pickings"))) {drawProdOverlay();}
@@ -1624,13 +1691,14 @@ function applySnapshot(payload) {
   applyLayout();
   stockLoad.sync();
   items.forEach(paint);
+  extData("snapshot");
   if (prodOv.on) {drawProdOverlay();}
   flow.built = false;
   renderPanel(true);
 }
 let snapShown = null;
 function snapshotTime(min) {
-  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); applyLayout(); stockLoad.sync(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
+  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); applyLayout(); stockLoad.sync(); items.forEach(paint); extData("now"); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
   const day = (Dlive || D).meta.now.slice(0, 10);
   const t = Date.parse(`${day}T00:00`) + min * 60000;
   let pick_ = null;
@@ -1777,6 +1845,8 @@ function recA(doc) {
 const backBtn = () => `<button class="o_f3d_back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
+  const xe = e.target.closest("[data-ext]");
+  if (xe) { extAction(xe); return; }
   const back = e.target.closest("[data-back]");
   if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) {prodFocus(null);} openTab(panel.tab || "overview"); return; }
   const op = e.target.closest("[data-open]");
@@ -1874,6 +1944,8 @@ function fleetHtml() {
   }).join("")}</ul>`;
 }
 function legendHtml() {
+  const xm = extModeOf(colorMode);
+  if (xm) {return "<div class=\"o_f3d_sub\">" + esc(xm.m.label) + "</div><div class=\"o_f3d_legend\">" + extTry(() => (typeof xm.m.legend === "function" ? xm.m.legend(D) : xm.m.legend) || "", "") + "</div>";}
   if (colorMode === "fill") {return `<div class="o_f3d_sub">Заповненість складу</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>30 % і більше</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>менше 30 %</span>
@@ -2233,6 +2305,7 @@ function renderObject(code) {
     if (u.kind === "zone" && lightGroupOfZone(code)) {extra += `<div class="o_f3d_sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;}
     extra += lightingHtml(code) + ventHtml(code) + fireHtml(code) + infraHtml(code);
     if (D.energy) {extra += energyHtml(code);}
+    extra += extCards(code);
     if (D.fire?.devices?.[code]) {extra += deviceHtml(code);}
     if (D.passports?.[code]) {extra += passportHtml(D.passports[code]);}
   }
@@ -3232,6 +3305,7 @@ renderer.setAnimationLoop(() => {
 
 // ---------------------------------------------------------------- публічне API ядра
 function setMode(mode) {
+  syncExtModes();
   const r = root.querySelector(`input[name="cmode"][value="${mode}"]`);
   if (!r) {return;}
   r.checked = true;
