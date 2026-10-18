@@ -1,1 +1,190 @@
-/* UI-01…UI-08 (W3-C). Каркас. */
+// UI-08: екран «Енергоресурси» (W3-C). Токени кольорів ресурсів; решта стилів — `td_energy.scss` (W1 UI-11, `.o_td_en`).
+// Адаптив ≥ 360 px: колонки зґортаються (flex-wrap), графік займає 100 % ширини, горизонтальної прокрутки немає.
+$td-res-el: #714B67;
+$td-res-gas: #b45309;
+$td-res-heat: #c2410c;
+$td-res-air: #0369a1;
+$td-res-water: #0f766e;
+$td-res-line: #e5e7eb;
+$td-res-muted: #4b5563;
+
+.o_td_res {
+    --td-res-el: #{$td-res-el};
+    --td-res-gas: #{$td-res-gas};
+    --td-res-heat: #{$td-res-heat};
+    --td-res-air: #{$td-res-air};
+    --td-res-water: #{$td-res-water};
+    --td-res-color: #{$td-res-el};
+
+    overflow-x: hidden;
+
+    .o_td_en_head_title { flex: 1 1 320px; }
+    .o_td_res_total { overflow-wrap: anywhere; }
+
+    .o_td_res_body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+        &.o_td_res_loading { opacity: .55; transition: opacity .15s; }
+    }
+
+    // ---- вкладки (UI-02) ----
+    .o_td_res_tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .o_td_res_tab {
+        min-height: 56px;
+        min-width: 0;
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #374151;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        &:hover { background: #f9fafb; }
+        &:focus-visible { outline: 2px solid var(--td-res-el); outline-offset: 2px; }
+        &[aria-selected="true"] {
+            // вибір — рамка 2 px (компенсуємо падінгом, щоб вкладка не «стрибала») і жирний підпис, не лише колір
+            padding: 7px 15px;
+            border: 2px solid #714B67;
+            color: #111827;
+            .o_td_res_tab_name { text-decoration: underline; text-underline-offset: 3px; }
+        }
+        .o_td_res_tab_name { font-weight: 600; }
+        .o_td_res_tab_sub { font-size: 12.5px; overflow-wrap: anywhere; }
+    }
+
+    // ---- KPI (UI-03) ----
+    .o_td_res_kpis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .o_td_res_kpi {
+        flex: 1 1 220px;
+        min-width: 0;
+        background: #fff;
+        border: 1px solid $td-res-line;
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .o_td_res_kpi_label { font-size: 13px; color: $td-res-muted; }
+    .o_td_res_kpi_value {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: 4px;
+        font-size: 26px;
+        line-height: 30px;
+        font-weight: 600;
+        .o_td_res_unit { font-size: 14px; font-weight: 500; color: $td-res-muted; }
+    }
+    .o_td_res_kpi_note {
+        font-size: 13px;
+        color: #374151;
+        min-height: 20px;
+        overflow-wrap: anywhere;
+        &.o_td_res_kpi_note--good { color: #065f46; }
+        &.o_td_res_kpi_note--bad { color: #9a3412; font-weight: 500; &::before { content: "▲ "; font-size: 11px; } }
+    }
+
+    // ---- точка якості «оцінка» (пунктир): ядро — тільки точка, підпис додає міст (UI-B1) ----
+    .o_td_res_quality {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 6px;
+        font-size: 12px;
+        font-weight: 400;
+        white-space: nowrap;
+    }
+    .o_td_res_dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1.5px dashed #6b7280;
+        background: transparent;
+    }
+
+    // ---- графік + список (UI-04, UI-05) ----
+    .o_td_res_row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    .o_td_res_chart_card, .o_td_res_col_chart { flex: 2 1 620px; min-width: 0; }
+    .o_td_res_list_card, .o_td_res_col_list { flex: 1 1 380px; min-width: 0; }
+    .o_td_res_chart_note { font-size: 13px; color: $td-res-muted; }
+    .o_td_res_chart {
+        position: relative;
+        padding: 8px 12px;
+        svg { display: block; width: 100%; height: auto; }
+    }
+    .o_td_res_nodata {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $td-res-muted;
+        font-size: 14px;
+        pointer-events: none;
+    }
+    .o_td_res_foot { padding: 0 16px 14px; border-top: 0; }
+    .o_td_res_list {
+        padding: 12px 16px 14px;
+        gap: 10px;
+    }
+    .o_td_res_item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .o_td_res_item_name { min-width: 0; overflow-wrap: anywhere; }
+    .o_td_res_item_value { white-space: nowrap; }
+    .o_td_res_unaccounted {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+        padding: 0 16px 14px;
+        font-size: 13px;
+        color: $td-res-muted;
+    }
+
+    // ---- резерви (UI-06) ----
+    .o_td_res_notes_list { list-style: none; margin: 0; padding: 0; }
+    .o_td_res_note {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        &:last-child { border-bottom: 0; }
+    }
+    .o_td_res_note_body { flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; }
+    .o_td_res_note_title { font-weight: 600; }
+    .o_td_res_note_text { font-size: 13px; color: $td-res-muted; }
+    .o_td_res_note_save { flex: 0 0 auto; font-weight: 600; color: #065f46; }
+    .o_td_res_note .o_td_en_btn { flex: 0 0 auto; }
+}
+
+@media (max-width: 575px) {
+    .o_td_res {
+        .o_td_res_tab { flex: 1 1 calc(50% - 4px); }
+        .o_td_res_kpi_value { font-size: 24px; }
+        .o_td_res_chart { padding: 4px 4px; }
+        .o_td_res_note .o_td_en_btn { min-height: 40px; }
+    }
+}

@@ -1,3 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01…UI-08 (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_resources.ResChart">
+        <section class="o_td_en_card o_td_res_chart_card" aria-labelledby="o_td_res_chart_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_res_chart_h" class="o_td_res_chart_title" t-esc="chart.title"/>
+                <span class="o_td_res_chart_note" t-esc="chart.note"/>
+            </div>
+            <div class="o_td_en_chart o_td_res_chart">
+                <svg viewBox="0 0 880 262" role="img" t-att-aria-label="ariaLabel">
+                    <g class="o_td_en_grid">
+                        <path t-foreach="gridLines" t-as="line" t-key="line_index" t-att-d="'M 40 ' + line.y + ' L 860 ' + line.y"/>
+                    </g>
+                    <g class="o_td_en_axis">
+                        <text t-foreach="gridLines" t-as="line" t-key="line_index" x="34" t-att-y="line.y + 4"
+                              text-anchor="end" t-esc="line.label"/>
+                        <text t-foreach="hourTicks" t-as="tick" t-key="tick_index" t-att-x="tick.x" y="252"
+                              text-anchor="middle" t-esc="tick.label"/>
+                    </g>
+                    <path t-if="paths.area" t-att-d="paths.area" class="o_td_res_area" t-att-fill="color"
+                          fill-opacity="0.22" stroke="none"/>
+                    <path t-if="limit" t-att-d="limit.d" class="o_td_res_limit" fill="none" t-att-stroke="limitColor"
+                          stroke-width="1.5" stroke-dasharray="6 5"/>
+                    <text t-if="limit" t-att-x="box.right" t-att-y="limit.y - 5" text-anchor="end"
+                          class="o_td_en_chart_text o_td_res_limit_label" t-esc="limit.label"/>
+                    <path t-if="paths.line" t-att-d="paths.line" class="o_td_res_line" fill="none" t-att-stroke="color"
+                          stroke-width="2" stroke-linejoin="round"/>
+                    <path t-att-d="'M ' + nowX + ' 20 L ' + nowX + ' 230'" class="o_td_res_now" stroke="#111827"
+                          stroke-width="1" stroke-dasharray="2 3"/>
+                    <text t-att-x="nowX + 6" y="34" class="o_td_en_chart_text">зараз <t t-esc="nowLabel"/></text>
+                </svg>
+                <div t-if="!hasData" class="o_td_res_nodata" role="status">Немає даних за добу</div>
+            </div>
+            <div class="o_td_en_foot o_td_res_foot" t-if="chart.foot" t-esc="chart.foot"/>
+        </section>
+    </t>
+</templates>

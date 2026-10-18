@@ -1,3 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01…UI-08 (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_resources.ResList">
+        <section class="o_td_en_card o_td_res_list_card" aria-labelledby="o_td_res_list_h">
+            <div class="o_td_en_card_head"><h2 id="o_td_res_list_h" class="o_td_res_list_title" t-esc="props.list.title"/></div>
+            <div t-if="!items.length" class="o_td_en_empty">Немає споживачів з даними.</div>
+            <ul t-else="" class="o_td_en_top o_td_res_list">
+                <li t-foreach="items" t-as="item" t-key="item.code" class="o_td_res_item" t-att-data-code="item.code">
+                    <div class="o_td_en_top_row">
+                        <span class="o_td_res_item_name">
+                            <b t-esc="item.code"/> · <t t-esc="item.name"/>
+                            <span t-if="item.quality === 'estimated'" class="o_td_res_quality">
+                                <span class="o_td_res_dot" role="img" aria-label="оцінка" title="Оцінка, а не пряме вимірювання"/>
+                            </span>
+                        </span>
+                        <b class="o_td_res_item_value" t-esc="valueText(item)"/>
+                    </div>
+                    <div class="o_td_en_top_bar" aria-hidden="true">
+                        <div t-att-style="barStyle(item)"/>
+                    </div>
+                </li>
+            </ul>
+            <div t-if="unaccounted" class="o_td_res_unaccounted">
+                Невраховано: <b t-esc="unaccounted.text"/>
+                <span t-if="unaccounted.inconsistent" class="o_td_en_pill o_td_en_pill--warn o_td_res_inconsistent">Оцінка перевищує облік</span>
+            </div>
+        </section>
+    </t>
+</templates>

@@ -1,3 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01…UI-08 (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_resources.Resources">
+        <div class="o_td_en o_td_res o_action overflow-auto">
+            <header class="o_td_en_head">
+                <div class="o_td_en_head_title">
+                    <div class="o_td_en_crumbs">Енергетика / Енергоресурси</div>
+                    <h1 class="o_td_en_h1">Енергоресурси заводу</h1>
+                    <div t-if="totalText" class="o_td_en_sub o_td_res_total" t-esc="totalText"/>
+                </div>
+                <div class="o_td_en_head_tools">
+                    <span t-if="state.data" t-attf-class="o_td_en_pill o_td_en_pill--{{dataChip.cls}} o_td_en_data_chip">
+                        <span class="o_td_en_pill_dot" aria-hidden="true"/>
+                        <t t-esc="dataChip.text"/>
+                    </span>
+                    <button t-if="state.data and capabilities.export !== false" type="button"
+                            class="o_td_en_btn o_td_res_export" aria-label="Вивантажити в Excel"
+                            t-att-data-href="day.exportUrl" t-on-click="exportXlsx">Вивантажити в Excel</button>
+                </div>
+            </header>
+
+            <main class="o_td_en_main" t-att-aria-busy="state.loading ? 'true' : 'false'">
+                <div t-if="state.failed and !state.data" class="o_td_en_card o_td_en_error o_td_res_failed" role="alert"
+                     t-esc="'Не вдалося завантажити екран: ' + state.failed"/>
+                <t t-if="state.data">
+                    <ResTabs t-if="tabs.length" tabs="tabs" selected="state.code" onSelect="(code) => this.selectTab(code)"/>
+                    <div t-if="!resource" class="o_td_en_card o_td_en_empty o_td_res_nores">
+                        Немає активних ресурсів із лічильниками. Додайте лічильники в «Налаштування → Енергоресурси».
+                    </div>
+                    <t t-else="">
+                        <div t-attf-class="o_td_res_body {{state.loading ? 'o_td_res_loading' : ''}}"
+                             t-att-data-resource="resource.code" t-att-style="'--td-res-color: ' + color">
+                            <div t-if="kpis.error" class="o_td_en_error" t-esc="'Показники недоступні: ' + kpis.error"/>
+                            <ResKpis t-else="" kpis="kpis.items"/>
+
+                            <div class="o_td_res_row">
+                                <div t-if="chart.error" class="o_td_en_card o_td_en_error o_td_res_col_chart"
+                                     t-esc="'Графік недоступний: ' + chart.error"/>
+                                <ResChart t-elif="chart.value" chart="chart.value" color="color" nowLocal="meta.now_local"/>
+                                <div t-if="list.error" class="o_td_en_card o_td_en_error o_td_res_col_list"
+                                     t-esc="'Список недоступний: ' + list.error"/>
+                                <ResList t-elif="list.value" list="list.value" color="color"/>
+                            </div>
+
+                            <div t-if="notes.error" class="o_td_en_card o_td_en_error" t-esc="'Резерви недоступні: ' + notes.error"/>
+                            <ResNotes t-else="" notes="notes.items" capabilities="capabilities" actions="actions"
+                                      onChanged="() => this.load()"/>
+                        </div>
+                    </t>
+                </t>
+                <div t-elif="!state.failed" class="o_td_en_card o_td_en_empty" role="status">Завантаження…</div>
+            </main>
+        </div>
+    </t>
+</templates>

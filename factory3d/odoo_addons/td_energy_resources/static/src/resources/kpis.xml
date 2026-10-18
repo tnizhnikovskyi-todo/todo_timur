@@ -1,3 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01…UI-08 (шаблон ResKpis — контракт для моста, UI-03) (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_resources.ResKpis">
+        <section class="o_td_res_kpis" aria-label="Показники ресурсу">
+            <div t-foreach="props.kpis" t-as="kpi" t-key="kpi.id"
+                 t-attf-class="o_td_res_kpi o_td_res_kpi--{{kpi.id}}">
+                <div class="o_td_res_kpi_label" t-esc="kpi.label"/>
+                <div class="o_td_res_kpi_value">
+                    <span class="o_td_res_kpi_text" t-esc="value(kpi)"/>
+                    <span t-if="kpi.unit and hasValue(kpi)" class="o_td_res_unit"> <t t-esc="kpi.unit"/></span>
+                    <span t-if="kpi.quality === 'estimated'" class="o_td_res_quality">
+                        <span class="o_td_res_dot" role="img" aria-label="оцінка" title="Оцінка, а не пряме вимірювання"/>
+                    </span>
+                </div>
+                <div t-attf-class="o_td_res_kpi_note o_td_res_kpi_note--{{kpi.tone || 'neutral'}}"
+                     t-att-data-tone="kpi.tone || 'neutral'" t-esc="kpi.note"/>
+            </div>
+        </section>
+    </t>
+</templates>

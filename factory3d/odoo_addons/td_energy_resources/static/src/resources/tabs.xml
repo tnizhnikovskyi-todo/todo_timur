@@ -1,3 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01…UI-08 (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_resources.ResTabs">
+        <div class="o_td_res_tabs" role="tablist" aria-label="Ресурс" t-on-keydown="onKeydown">
+            <button t-foreach="props.tabs" t-as="tab" t-key="tab.code" type="button" role="tab"
+                    t-attf-class="o_td_res_tab o_td_res_tab_{{tab.code}}"
+                    t-att-aria-selected="props.selected === tab.code ? 'true' : 'false'"
+                    t-att-tabindex="props.selected === tab.code ? 0 : -1"
+                    t-att-aria-label="tab.sub ? tab.name + ': ' + tab.sub : tab.name"
+                    t-att-data-code="tab.code"
+                    t-on-click="() => props.onSelect(tab.code)">
+                <span class="o_td_res_tab_name" t-esc="tab.name"/>
+                <span class="o_td_res_tab_sub" t-esc="tab.sub"/>
+            </button>
+        </div>
+    </t>
+</templates>
