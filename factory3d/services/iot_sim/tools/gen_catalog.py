@@ -23,8 +23,11 @@ ODOO_CSV = FACTORY3D / "odoo_addons/td_iot_sim/data/td_sim_signal.csv"
 
 COLUMNS = ["n", "code", "device", "protocol", "address", "dtype", "unit", "scale",
            "nominal", "thresholds", "model", "status"]
-EXPECTED_ROWS = 1168
+EXPECTED_ROWS = 1177
 ROW_RE = re.compile(r"^\| (\d+) \|")
+# Додаток A: сигнали `infra/pv/PV-INV-n/*` прив'язані до похідних пристроїв PV-INV-n (§5.3 п. 3), а в signals.csv
+# колонка `device` для них лишається `PV-INV` (див. примітку до Додатка A).
+PV_DEVICE_RE = re.compile(r"^PV-INV-\d+$")
 
 
 def _cell(s: str) -> str:
@@ -47,6 +50,8 @@ def parse_spec(path: Path = SPEC) -> list[list[str]]:
         cells = [_cell(c) for c in ln.strip().strip("|").split(" | ")]
         if len(cells) != len(COLUMNS):
             raise SystemExit(f"Додаток A: очікувалось {len(COLUMNS)} колонок, отримано {len(cells)}: {ln[:80]}")
+        if PV_DEVICE_RE.match(cells[2]):
+            cells[2] = "PV-INV"
         rows.append(cells)
     return rows
 

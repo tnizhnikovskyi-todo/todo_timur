@@ -1,3 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W1-C: V-11 (приховання td_genset.menu_root, noupdate=0). Каркас: порожній файл, наповнює W1-C. -->
-<odoo/>
+<!-- W1-C: V-11. Корінь td_genset ховається, поки встановлено міст (E-08, A-20); uninstall_hook повертає active=True.
+     noupdate="0": `-u td_genset` перезаписує menu_root (menuitem active=True), але `-u` td_genset оновлює й залежний
+     міст (button_upgrade), тож приховування застосовується знову. -->
+<odoo noupdate="0">
+    <record id="td_genset.menu_root" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

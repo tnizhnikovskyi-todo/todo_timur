@@ -1,4 +1,4 @@
-"""Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію»).
+"""Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію») і S-16 ``pfc_step_fault`` (W1 §8.1).
 
 ``ScenarioRunner(world).start(name, params, run_ref)`` (потрібен запущений asyncio-цикл):
 валідація pydantic (``ScenarioParamsError`` -> 422), режим і конфлікти (``ScenarioConflict`` -> 409),
@@ -8,7 +8,7 @@
 Ефекти, яким потрібні ще не написані моделі, виражені через ``World`` (моделі читають їх самі):
 
 * ``world.flags[<name>]`` — стан: ``shift``, ``blackout``, ``pv_cf`` (float), ``compressor_fault``,
-  ``boiler_force_on`` (int), ``fire_drill``, ``genset_test``; словники за ключем пристрою/групи:
+  ``boiler_force_on`` (int), ``fire_drill``, ``genset_test``, ``swb`` (S-16); словники за ключем пристрою/групи:
   ``filter_clogged[dev]``, ``lighting_scene[group]``, ``battery_low[dev]``.
 * ``world.fault(device, reason)`` / ``clear`` — S-02 (R-15).
 * ``world.post(topic, payload)`` — одноразові команди: ``yard`` (truck_no_booking/truck_arrival),
@@ -314,6 +314,14 @@ class GensetTestParams(BaseParams):
     test_on_load: bool = False
 
 
+class PfcStepFaultParams(BaseParams):
+    """W1 §8.1: ``step = 0`` — без збою ступеня (лише ``qs_closed``); ``duration_s = 0`` — до зупинки."""
+
+    section: Literal[1, 2] = 2
+    step: int = Field(3, ge=0, le=10)
+    qs_closed: bool = False
+
+
 class LightingSceneParams(BaseParams):
     duration_s: int = Field(600, ge=0)
     group: str = "all"
@@ -617,9 +625,26 @@ class LightingScene(Scenario):
         await ctx.wait_or_stop(p.duration_s)
 
 
+class PfcStepFault(Scenario):
+    """W1 §8.1 (S-16): ступінь PFC секції не вмикається; модель — ``iot_sim.models.swb`` (прапор ``swb``)."""
+
+    name, title_uk, group, Params = "pfc_step_fault", "Збій ступеня PFC", "energy", PfcStepFaultParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"dev:SWB-CTRL"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("swb", {"section": p.section, "step": p.step, "qs_closed": p.qs_closed})
+        if p.step:
+            ctx.step("pfc_fault", f"PFC-{p.section}: ступінь {p.step} не вмикається", section=p.section, pfc_step=p.step)
+        else:
+            ctx.step("swb", "Контролер ГРЩ: параметри сценарію", qs_closed=p.qs_closed)
+
+
 SCENARIOS: list[type[Scenario]] = [
     Shift, MachineFault, Blackout, FilterClogged, TruckNoBooking, TruckArrival, FireDrill, Spark,
-    AccessEvent, BatteryLow, CompressorFault, PvCloudy, BoilerRefill, GensetTest, LightingScene]
+    AccessEvent, BatteryLow, CompressorFault, PvCloudy, BoilerRefill, GensetTest, LightingScene,
+    PfcStepFault]
 
 
 def _tags_conflict(a: set[str], b: set[str]) -> str | None:

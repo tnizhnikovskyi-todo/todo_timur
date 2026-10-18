@@ -53,7 +53,7 @@ def test_tb05_catalog_sets_equal(api):
     odoo = ODOO_CSV.read_text(encoding="utf-8")
     rest = api.get("/catalog/signals.csv").text
     a, b, c = _pairs(svc), _pairs(odoo), _pairs(rest)
-    assert len(a) == 1168
+    assert len(a) == 1177
     assert a == b == c
     assert hashlib.sha256(svc.encode()).hexdigest() == hashlib.sha256(rest.encode()).hexdigest()
     # множина сигналів з GET /sim/v1/signals ⊂ каталог (без protocol=none)

@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W1-C: B.4 (implied_ids: td_energy.group_td_energy_manager → td_genset.group_user). Каркас: порожній файл, наповнює W1-C. -->
-<odoo/>
+<!-- W1-C: B.4, M-11, A-21. «Енергетик» бачить екрани td_genset (як «Співробітник»). Перегляд енергетики
+     (group_td_energy_user) прав td_genset не отримує: факти ДГУ читаються лише через адаптер (sudo у ньому). -->
+<odoo>
+    <record id="td_energy.group_td_energy_manager" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('td_genset.group_user'))]"/>
+    </record>
+</odoo>

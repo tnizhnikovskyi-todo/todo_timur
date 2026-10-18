@@ -1,4 +1,4 @@
-"""Адаптер td_genset: ADP-01…ADP-10 (SPEC §2.0.1). Єдине місце імен td_genset.
+"""Адаптер td_genset: ADP-01…ADP-11 (SPEC §2.0.1; ADP-11 — W1). Єдине місце імен td_genset.
 
 Імена звірені з моделями td_genset 19 (``td.genset``, ``td.genset.reading``, ``td.genset.event``,
 ``td.genset.alarm``, ``td.genset.schedule``, ``td.genset.command``); таблиця — docs/modules/td_genset/ADAPTER_MAP.md.
@@ -60,6 +60,9 @@ SCHEDULE_MODEL = "td.genset.schedule"  # dayofweek '0'..'6', time_start/time_end
 FIELD_SCHEDULE_LINES = "schedule_line_ids"
 FIELD_TIMER_VS_SCHEDULE = "next_event_text"  # текст «Наступна подія» (розклад/таймер/тест)
 LAST_TEST_MODEL = "td.genset.command"  # source='test', command in ('test','start'), state done/done_late
+
+# ADP-11 (W1): текст найближчої події генератора (розклад/таймер/тест)
+FIELD_NEXT_EVENT = "next_event_text"  # ЗВІРИТИ: computed Char td.genset (genset_scheduler.py), test_adapter_contract
 
 # ADP-09: сталої витрати в td_genset немає (є лише обчислювані fuel_rate_lph_7d/30d) -> запису немає
 FIELD_FUEL_RATE_LPH = None
@@ -273,6 +276,11 @@ def last_test(gen):
         "duration_min": round(run.duration * 60.0, 1) if run and not run.is_open else None,
         "result": "норма",
     }
+
+
+def next_event(gen) -> str | None:
+    """ADP-11: текст найближчої події генератора (розклад/таймер/тест) або None, якщо порожній."""
+    return gen.sudo()[FIELD_NEXT_EVENT] or None
 
 
 def open_action(gen) -> dict:

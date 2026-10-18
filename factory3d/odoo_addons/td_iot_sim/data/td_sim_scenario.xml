@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="0">
-  <!-- 15 сценаріїв S-01…S-15 (SPEC §9.3); схеми можуть оновлюватись. -->
+  <!-- 16 сценаріїв: S-01…S-15 (SPEC §9.3) і S-16 pfc_step_fault (W1 «Енергетика», §8.1); схеми можуть оновлюватись. -->
   <record id="scenario_shift" model="td.sim.scenario">
     <field name="code">shift</field>
     <field name="name">Робоча зміна</field>
@@ -150,5 +150,15 @@
     <field name="description"><![CDATA[<p>Явна сцена або рівень групи DALI.</p>]]></field>
     <field name="params_schema" eval="{'type': 'object', 'properties': {'group': {'type': 'string'}, 'scene': {'type': 'integer', 'minimum': 1, 'maximum': 16}, 'level': {'type': 'integer', 'minimum': 0, 'maximum': 100}, 'fault_device': {'type': 'string'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'group': 'all'}"/>
+  </record>
+  <record id="scenario_pfc_step_fault" model="td.sim.scenario">
+    <field name="code">pfc_step_fault</field>
+    <field name="name">Збій ступеня PFC</field>
+    <field name="group">energy</field>
+    <field name="sequence">160</field>
+    <field name="duration_s">0</field>
+    <field name="description"><![CDATA[<p>Ступінь конденсаторної установки PFC секції не вмикається: контролер ГРЩ лишає step−1 ступенів і віддає fault_step=step (тримається до зупинки сценарію; після зупинки 0). Параметр qs_closed=true замикає QS. step=0 — без збою.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'section': {'type': 'integer', 'enum': [1, 2]}, 'step': {'type': 'integer', 'minimum': 0, 'maximum': 10}, 'qs_closed': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'section': 2, 'step': 3}"/>
   </record>
 </odoo>

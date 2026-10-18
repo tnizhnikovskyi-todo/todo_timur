@@ -81,7 +81,7 @@ class TestAccess(GensetCase):
     def test_nobody(self):  # AC-59
         with self.assertRaises(AccessError):
             self.env["td.genset3d.link"].with_user(self.user_nobody).search([])
-        menu = self.env.ref("td_genset_factory3d.menu_td_genset")
+        menu = self.env.ref("td_genset_factory3d.menu_gf_link")
         self.assertNotIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_nobody)._visible_menu_ids())
         self.assertIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_reader)._visible_menu_ids())
         # reader читає зв'язку й профіль
