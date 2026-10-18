@@ -19,7 +19,7 @@ class TestHook(GensetCase):
     def setUp(self):
         super().setUp()
         self.link.unlink()  # хук сам створює зв'язку
-        self.Link = self.env["td.genset.link"]
+        self.Link = self.env["td.genset3d.link"]
 
     def run_hook(self):
         hooks.post_init_hook(self.env)
@@ -40,7 +40,7 @@ class TestHook(GensetCase):
         self.assertEqual(link.source_id.type, "td_genset")
         self.assertEqual(report["link"]["created"], 1)
         self.assertEqual(self.env["td.signal"].search_count([("code", "=like", "infra/genset/GENSET/%")]), 26)
-        self.assertEqual(self.env["td.genset.event.map"].with_context(active_test=False).search_count([]), 48)
+        self.assertEqual(self.env["td.genset3d.event.map"].with_context(active_test=False).search_count([]), 48)
         for xml_id in CRONS:
             self.assertTrue(self.cron(xml_id))
 
@@ -73,7 +73,7 @@ class TestHook(GensetCase):
 
     def test_hook_idempotent(self):  # AC-50
         self.run_hook()
-        row = self.env["td.genset.event.map"].search([("key", "=", "LOW_OIL_PRESSURE_SD")])
+        row = self.env["td.genset3d.event.map"].search([("key", "=", "LOW_OIL_PRESSURE_SD")])
         row.td_code = "LOP_SD"
 
         def counts():
@@ -81,7 +81,7 @@ class TestHook(GensetCase):
                 self.Link.search_count([("equipment_id", "=", self.genset_eq.id)]),
                 self.env["td.source"].search_count([("code", "=", "GENSET-RELAY")]),
                 self.env["td.signal"].search_count([("code", "=like", "infra/genset/GENSET/%")]),
-                self.env["td.genset.event.map"].with_context(active_test=False).search_count([]),
+                self.env["td.genset3d.event.map"].with_context(active_test=False).search_count([]),
             )
 
         first = counts()

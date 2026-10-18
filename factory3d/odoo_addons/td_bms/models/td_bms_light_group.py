@@ -128,7 +128,7 @@ class F3dBmsLightGroup(models.Model):
     request_ids = fields.Many2many("maintenance.request", compute="_compute_requests")
     request_count = fields.Integer(compute="_compute_requests")
     deviation_count = fields.Integer(compute="_compute_deviation_count")
-    is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
+    td_is_manager = fields.Boolean(compute="_compute_is_f3d_manager")
     td_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
     note = fields.Text()
 
@@ -195,7 +195,7 @@ class F3dBmsLightGroup(models.Model):
     def _compute_is_f3d_manager(self):
         manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
-            rec.is_f3d_manager = manager
+            rec.td_is_manager = manager
 
     def _f3d_design_p_now(self):
         """Проєктна потужність зараз: n · W · level_design (R-05 п. 6)."""

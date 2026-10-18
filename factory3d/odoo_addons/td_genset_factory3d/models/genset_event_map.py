@@ -31,7 +31,7 @@ def _num(value):
 
 
 class F3dGensetEventMap(models.Model):
-    _name = "td.genset.event.map"
+    _name = "td.genset3d.event.map"
     _description = "Генератор: мапа подій → заявки ТО"
     _order = "sequence, key"
 

@@ -8,7 +8,7 @@ from odoo.tests import tagged
 from ..adapters import td_genset as td
 from .test_rules import GensetCase
 
-MODELS = ("td.genset.link", "td.genset.profile", "td.genset.event.map")
+MODELS = ("td.genset3d.link", "td.genset3d.profile", "td.genset3d.event.map")
 
 
 @tagged("post_install", "-at_install")
@@ -80,7 +80,7 @@ class TestAccess(GensetCase):
 
     def test_nobody(self):  # AC-59
         with self.assertRaises(AccessError):
-            self.env["td.genset.link"].with_user(self.user_nobody).search([])
+            self.env["td.genset3d.link"].with_user(self.user_nobody).search([])
         menu = self.env.ref("td_genset_factory3d.menu_td_genset")
         self.assertNotIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_nobody)._visible_menu_ids())
         self.assertIn(menu.id, self.env["ir.ui.menu"].with_user(self.user_reader)._visible_menu_ids())
@@ -111,7 +111,7 @@ class TestAccess(GensetCase):
     def test_private_methods_rpc(self):  # ТБ-02
         link = self.link.with_user(self.user_reader)
         for name in ("_publish_one", "_cron_publish", "_apply_event", "_compute_values"):
-            if not hasattr(self.env["td.genset.link"], name):
+            if not hasattr(self.env["td.genset3d.link"], name):
                 continue
             with self.assertRaises(AccessError, msg=name):
                 call_kw(link, name, [link.ids], {})

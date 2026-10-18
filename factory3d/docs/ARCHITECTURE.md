@@ -108,8 +108,8 @@ td_access_telemetry       ← td_access, td_telemetry        (7 сигналів
 
 ## 5. Конвенції (обов'язкові для всіх SPEC)
 
-- **Імена.** Нові моделі `f3d.<name>` (`td.zone`, `td.signal`, `td.reading`); поля, додані до
-  стандартних моделей, з префіксом `f3d_` (`td_code`, `td_zone_id`); XML-id
+- **Імена.** Нові моделі `td.<name>` (`td.zone`, `td.signal`, `td.reading`); поля, додані до
+  стандартних моделей, з префіксом `td_` (`td_code`, `td_zone_id`); XML-id
   `<module>.<model>_<what>` (`td_factory3d.view_td_zone_form`); групи
   `td_factory3d.group_td_user` / `group_td_manager` / `group_td_admin`; параметри
   `ir.config_parameter` з ключем `td.<module>.<param>`.

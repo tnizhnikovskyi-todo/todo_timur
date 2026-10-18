@@ -2,8 +2,8 @@
 <!-- SPEC §3 V-05 -->
 <odoo>
     <record id="view_td_genset_event_map_list" model="ir.ui.view">
-        <field name="name">td.genset.event.map.list</field>
-        <field name="model">td.genset.event.map</field>
+        <field name="name">td.genset3d.event.map.list</field>
+        <field name="model">td.genset3d.event.map</field>
         <field name="arch" type="xml">
             <list string="Події → ТО" editable="bottom">
                 <field name="sequence" widget="handle"/>
@@ -20,8 +20,8 @@
     </record>
 
     <record id="view_td_genset_event_map_form" model="ir.ui.view">
-        <field name="name">td.genset.event.map.form</field>
-        <field name="model">td.genset.event.map</field>
+        <field name="name">td.genset3d.event.map.form</field>
+        <field name="model">td.genset3d.event.map</field>
         <field name="arch" type="xml">
             <form string="Подія → ТО">
                 <sheet>
@@ -51,8 +51,8 @@
     </record>
 
     <record id="view_td_genset_event_map_search" model="ir.ui.view">
-        <field name="name">td.genset.event.map.search</field>
-        <field name="model">td.genset.event.map</field>
+        <field name="name">td.genset3d.event.map.search</field>
+        <field name="model">td.genset3d.event.map</field>
         <field name="arch" type="xml">
             <search string="Події → ТО">
                 <field name="key"/>
@@ -70,7 +70,7 @@
 
     <record id="action_td_genset_event_map" model="ir.actions.act_window">
         <field name="name">Події → ТО</field>
-        <field name="res_model">td.genset.event.map</field>
+        <field name="res_model">td.genset3d.event.map</field>
         <field name="view_mode">list,form</field>
         <field name="context">{"search_default_group_severity": 1}</field>
     </record>

@@ -36,7 +36,7 @@ class F3dSceneMixin(models.AbstractModel):
         F3D_KIND_SELECTION, string='Вид у сцені', required=True, index=True,
         default=lambda self: self._f3d_kind)
     td_viewer_available = fields.Boolean(compute='_compute_f3d_viewer_available')
-    is_f3d_manager = fields.Boolean(compute='_compute_is_f3d_manager')
+    td_is_manager = fields.Boolean(compute='_compute_is_f3d_manager')
 
     _f3d_code_uniq = models.Constraint(
         'UNIQUE(td_code)', 'Код сцени має бути унікальним у межах моделі.')
@@ -52,7 +52,7 @@ class F3dSceneMixin(models.AbstractModel):
     def _compute_is_f3d_manager(self):
         is_manager = self.env.user.has_group('td_factory3d.group_td_manager')
         for rec in self:
-            rec.is_f3d_manager = is_manager
+            rec.td_is_manager = is_manager
 
     # --- constraints ---
     @api.constrains('td_code', 'td_alias')

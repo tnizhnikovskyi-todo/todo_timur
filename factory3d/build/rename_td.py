@@ -62,7 +62,8 @@ VIRTUAL_MODEL_KEYS = ("energy", "bms")
 
 # Файли, які не чіпаємо: артефакти, сторонні бібліотеки, окремі проєкти, макет-прототип
 SKIP_PREFIXES = ("luxsite/", "odoo_graph/", "factory3d/dist/", "factory3d/viewer/index.html",
-                 "factory3d/build/constructor/proto/", "factory3d/build/rename_td.py", "factory3d/build/RENAME.md")
+                 "factory3d/build/constructor/proto/", "factory3d/build/rename_td.py", "factory3d/build/RENAME.md",
+                 "CLAUDE.md", "factory3d/docs/README.md")   # у двох останніх старі імена названо навмисно
 SKIP_PARTS = ("/static/lib/", "/static/src/lib/", "/static/data/", ".min.js")
 TEXT_EXT = {".py", ".xml", ".csv", ".js", ".mjs", ".scss", ".css", ".md", ".sh", ".toml", ".yml", ".yaml", ".txt",
             ".ini", ".sql", ".html", ".json", ".cfg", ".example", ".gitignore"}
@@ -180,6 +181,8 @@ def build_rules(inv: dict) -> list[tuple[str, re.Pattern, object]]:
         # 6. поля: точний токен f3d_<field>, default_f3d_<field> (контекст)
         ("field", re.compile(L + r"f3d_(" + alt(fields) + ")" + R), lambda m: "td_" + m.group(1)),
         ("field_default", re.compile(r"(?<![A-Za-z0-9])default_f3d_(" + alt(fields) + ")" + R), lambda m: "default_td_" + m.group(1)),
+        # 6б. єдине поле з f3d не на початку імені: is_f3d_manager -> td_is_manager (стандарт: поля td_*)
+        ("field_infix", re.compile(L + "is_f3d_manager" + R), lambda m: "td_is_manager"),
         # 7. таблиці моделей у сирому SQL (f3d_access_server -> td_access_server) і стеми файлів
         ("table", re.compile(L + r"f3d_(" + alt(tables) + ")" + R), lambda m: "td_" + m.group(1)),
         ("file_stem", re.compile(L + r"f3d_(" + alt(stems) + ")" + R), lambda m: "td_" + m.group(1)) if stems else None,
@@ -192,6 +195,14 @@ def build_rules(inv: dict) -> list[tuple[str, re.Pattern, object]]:
          lambda m: "td_" + m.group(1)),
         # 9. імена блоків налаштувань: <block name="factory3d_<area>_<x>"> (після правила модулів)
         ("settings_block", re.compile(r"(?<=name=\")factory3d_([a-z0-9]+_[a-z0-9_]+)(?=\")|(?<=@name=')factory3d_([a-z0-9]+_[a-z0-9_]+)(?=')"), lambda m: "td_" + (m.group(1) or m.group(2))),
+        # 11. особливий випадок: моделі мосту td_genset_factory3d живуть у просторі td.genset3d.*, бо td.genset.* належить
+        #     окремому продукту td_genset: link/profile/event.map (+ їхні model_*/access_* xml-id і таблиці в SQL)
+        ("genset3d_model", re.compile(r"(?:(?<![A-Za-z0-9_./-])|(?<=data/))td\.genset\.(link|profile|event\.map)" + R),
+         lambda m: "td.genset3d." + m.group(1)),
+        ("genset3d_xmlid", re.compile(L + r"(model|field|access)_td_genset_(link|profile|event_map)(?![A-Za-z0-9])"),
+         lambda m: m.group(1) + "_td_genset3d_" + m.group(2)),
+        ("genset3d_table", re.compile(r"(?<![A-Za-z0-9_.])td_genset_(link|profile|event_map)(?![A-Za-z0-9_]|\.(?:xml|py|csv))"),
+         lambda m: "td_genset3d_" + m.group(1)),
         # 10. назви успадкованих представлень у <field name="name">: <model>.form.f3d.<x> (лише XML)
         ("view_name", re.compile(r"(?<=[a-z]\.)f3d(?=\.[a-z])"), lambda m: "td"),
     ]
@@ -202,6 +213,9 @@ DOC_EXTRA_EXACT = ("f3d_row", "f3d_bay", "f3d_level", "f3d_pos", "f3d_kind_loc",
                    "view_f3d_energy_dashboard", "report_f3d_fire_events", "report_f3d_fire_events_document",
                    "f3d_access_card_server_id_fkey", "stock_location_f3d_code_index", "f3d_slot_preset",
                    "f3d_putaway_rule", "f3d_replenish_rule", "f3d_comment", "f3d_zone_lock")
+# у документації також моделі, яких у коді немає (заплановані: f3d.putaway.rule, f3d.publish.op, …), маски f3d.sim.{…};
+# ключі localStorage/JS-налагодження (f3d.ui, f3d.lite, odoo.f3d.select, …) не чіпаємо
+DOC_MODEL = re.compile(r"(?<![A-Za-z0-9_./-])f3d\.(?!(?:ui|lite|layers|static|tab|kiosk|level0|S|select|getState)\b)(?=[a-z{<*])")
 DOC_EXTRA_PREFIX = ("f3d_sheet_", "f3d_meter_", "f3d_fire_consent_")
 DOC_EXTRA = re.compile(L + "(?:" + "|".join(re.escape(t) for t in DOC_EXTRA_EXACT) + ")" + R + "|"
                        + L + "(?:" + "|".join(re.escape(t) for t in DOC_EXTRA_PREFIX) + ")")
@@ -233,6 +247,8 @@ def apply_rules(text: str, rules, counts: collections.Counter, rel: str = "") ->
     if rel.endswith(".md"):
         text, n = DOC_EXTRA.subn(lambda m: re.sub(r"f3d", "td", m.group(0), count=1), text)
         counts["doc_extra"] += n
+        text, n = DOC_MODEL.subn("td.", text)
+        counts["doc_model"] += n
     return re.sub(r"\x00(\d+)\x00", lambda m: shields[int(m.group(1))], text)
 
 

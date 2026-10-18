@@ -6,7 +6,7 @@ from ..adapters import telemetry
 class F3dGensetLinkView(models.Model):
     """R-05 (з уже прочитаних значень) і R-13 (коди критичних споживачів) для провайдера переглядача."""
 
-    _inherit = "td.genset.link"
+    _inherit = "td.genset3d.link"
 
     def _island_state_from_signals(self, vals=None, pos=None, s1=None):
         """R-05 без нового читання знімка. `vals` — {leaf: значення} щойно прочитаних сигналів генератора;

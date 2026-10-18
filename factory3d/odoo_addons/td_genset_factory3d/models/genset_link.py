@@ -54,7 +54,7 @@ def _to_utc_naive(ts):
 
 
 class F3dGensetLink(models.Model):
-    _name = "td.genset.link"
+    _name = "td.genset3d.link"
     _description = "Генератор: зв'язка з моделлю заводу"
     _inherit = ["mail.thread"]
     _order = "equipment_id"
@@ -73,7 +73,7 @@ class F3dGensetLink(models.Model):
     td_code = fields.Char(related="equipment_id.td_code", string="Код сцени")
     td_genset_ref = fields.Reference(selection="_td_models", string="Генератор td_genset", required=True)
     profile_id = fields.Many2one(
-        "td.genset.profile",
+        "td.genset3d.profile",
         string="Профіль",
         required=True,
         ondelete="restrict",
@@ -468,7 +468,7 @@ class F3dGensetLink(models.Model):
         if (
             not self._flag("requests_enabled", "True")
             or not hasattr(self, "_apply_event")
-            or "td.genset.event.map" not in self.env
+            or "td.genset3d.event.map" not in self.env
         ):
             return
         ev = {
@@ -482,7 +482,7 @@ class F3dGensetLink(models.Model):
             "threshold": None,
             "text": "",
         }
-        row = self.env["td.genset.event.map"]._match(ev)
+        row = self.env["td.genset3d.event.map"]._match(ev)
         self._apply_event(ev, row)
 
     def _on_comm_restored(self):

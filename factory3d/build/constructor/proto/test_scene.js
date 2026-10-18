@@ -1,7 +1,7 @@
 // Повнота сцени: усі 31 шар і усі кодовані об'єкти 3D-моделі (scene_inventory.json) є в прикладі прототипу
 const fs = require('fs');
 const { launch, open } = require('./harness');
-const INV = process.env.SCENE_INVENTORY || require('path').join(__dirname, '../../../odoo_addons/factory3d_constructor/data/scene_inventory.json');
+const INV = process.env.SCENE_INVENTORY || require('path').join(__dirname, '../../../odoo_addons/td_constructor/data/scene_inventory.json');
 let pass = 0, fail = 0;
 const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefined ? ':: ' + d : ''); } else { fail++; console.log('FAIL', n, d !== undefined ? ':: ' + d : ''); } };
 (async () => {

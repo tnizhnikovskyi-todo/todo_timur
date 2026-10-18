@@ -77,7 +77,7 @@ PLANT_KEYS = ("mains_abnormal_s", "start_delay_s", "safety_on_s", "warming_s")
 
 
 class F3dGensetProfile(models.Model):
-    _name = "td.genset.profile"
+    _name = "td.genset3d.profile"
     _description = "Генератор: профіль (паливо, потужність, таймери)"
     _order = "code"
     _rec_name = "name"
@@ -209,7 +209,7 @@ class F3dGensetProfile(models.Model):
         if not self.env.user.has_group("td_factory3d.group_td_manager"):
             raise AccessError(_("Записувати в td_genset може лише менеджер «Завод 3D»."))
         done = skipped = 0
-        for link in self.env["td.genset.link"].search([("profile_id", "=", self.id)]):
+        for link in self.env["td.genset3d.link"].search([("profile_id", "=", self.id)]):
             if td.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75):
                 done += 1
             else:

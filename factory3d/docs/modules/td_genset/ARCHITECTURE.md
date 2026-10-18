@@ -161,10 +161,10 @@ Generator relay State** (0/1), 20485 Priority, **20486 Source 1 State** (0 Under
 
 | ID | Вимога |
 |---|---|
-| FR-01 | Один запис зв'язки `td.genset.link` пов'язує генератор `td_genset` з `maintenance.equipment` `td_code='GENSET'` (роль паспорта `genset`); зв'язка створюється `post_init_hook`, якщо в `td_genset` рівно один генератор. |
-| FR-02 | Профіль `td.genset.profile` «D700» із паспорта: бак 610 л, PRP 634 кВА / 507 кВт, ESP 697 / 558, витрата 38,6 / 71,2 / 103,8 / 136,4 л/год при 25 / 50 / 75 / 100 % PRP, 149,5 при 100 % ESP; інтерполяція витрати за навантаженням (R-01) і автономність (R-02). |
+| FR-01 | Один запис зв'язки `td.genset3d.link` пов'язує генератор `td_genset` з `maintenance.equipment` `td_code='GENSET'` (роль паспорта `genset`); зв'язка створюється `post_init_hook`, якщо в `td_genset` рівно один генератор. |
+| FR-02 | Профіль `td.genset3d.profile` «D700» із паспорта: бак 610 л, PRP 634 кВА / 507 кВт, ESP 697 / 558, витрата 38,6 / 71,2 / 103,8 / 136,4 л/год при 25 / 50 / 75 / 100 % PRP, 149,5 при 100 % ESP; інтерполяція витрати за навантаженням (R-01) і автономність (R-02). |
 | FR-03 | Міст публікує 26 сигналів генератора в `td.signal` за кодами `infra/genset/GENSET/<leaf>` (SPEC Додаток A) через джерело `td.source` типу `td_genset` — локально, без колектора (тип оголошено локальним хуком telemetry `_f3d_local_types()`, CT-12/R-26; X-01), кроном раз на хвилину (або швидше за подією адаптера). |
-| FR-04 | Міст не дублює тривог: пороги в `td.signal` генератора порожні; джерело тривог — контролер через `td_genset`; заявки ТО створює лише мапа подій `td.genset.event.map` (R-07) з дедуплікацією (R-08). |
+| FR-04 | Міст не дублює тривог: пороги в `td.signal` генератора порожні; джерело тривог — контролер через `td_genset`; заявки ТО створює лише мапа подій `td.genset3d.event.map` (R-07) з дедуплікацією (R-08). |
 | FR-05 | Аварійна зупинка (shutdown alarm) → `maintenance.request` `corrective`, пріоритет High, команда обладнання, текст з показником і порогом українською; попередження — за мапою (заявка або лише подія шини). |
 | FR-06 | ТО за мотогодинами лишається в `td_genset` (єдине джерело правди); міст створює планову заявку `preventive` на дату «ТО через» за даними `td_genset` (R-09) і **не** заповнює `maintenance.equipment.td_meter_signal_id` (telemetry M-07 вимагає інтервал, а інтервал запустив би друге джерело ТО — SPEC §2.0.3 T-7). |
 | FR-07 | Провайдер `td.viewer.provider.genset` (sequence 155; за префіксом, без `_inherit` — FR-17) віддає `infra.cards.GENSET` (рядки як у `plant/infra.py` + «Режим», «Мотогодини / до ТО», «Напруга · частота», «Зв'язок»), `infra.genset.GENSET` (значення сигналів) і `infra.totals.genset_kw/genset_state/genset_fuel_pct/genset_autonomy_h/island/grid_ok`; `td_energy` картку GENSET не пише (CE-01), міст не пише `infra.totals.critical_kw` (CE-03, X-11); дельта `infra` — глибоким злиттям, без затирання ключів energy (SPEC R-13, X-23). |
@@ -247,10 +247,10 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 │          │ ORM-читання через adapters/td_genset.py (ADP-01…10)                   │   │ модель ATyS  │
 │          ▼                                                                       │   │ (R-22) ──────┼─► Modbus P-07
 │  td_genset_factory3d (міст)                                                         │   └──────────────┘        │
-│   ├─ td.genset.link ── maintenance.equipment GENSET (td_code, паспорт genset)  │                          ▼
-│   ├─ td.genset.profile D700 (бак, крива витрати) ── R-01 витрата, R-02 автоном. │   collector ─► td_energy
+│   ├─ td.genset3d.link ── maintenance.equipment GENSET (td_code, паспорт genset)  │                          ▼
+│   ├─ td.genset3d.profile D700 (бак, крива витрати) ── R-01 витрата, R-02 автоном. │   collector ─► td_energy
 │   ├─ крон publish (60 с) ─► td.source[td_genset] / td.signal infra/genset/*    │        (сигнали infra/ats/*,
-│   ├─ крон events ─► td.genset.event.map ─► maintenance.request (R-07, R-08)     │         баланс infra.totals)
+│   ├─ крон events ─► td.genset3d.event.map ─► maintenance.request (R-07, R-08)     │         баланс infra.totals)
 │   ├─ крон service ─► планова заявка ТО за мотогодинами td_genset (R-09)          │               │
 │   ├─ td.viewer.provider.genset (155) ─► infra.cards.GENSET, infra.genset,       │ ◄── читає td.signal
 │   │        infra.totals.genset_*/island/grid_ok (R-05, R-06, R-10)               │
@@ -264,9 +264,9 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 
 | Модель | Тип | Призначення | Хто пише | Хто читає |
 |---|---|---|---|---|
-| `td.genset.link` | нова | зв'язка генератор `td_genset` ↔ `maintenance.equipment` GENSET; профіль; джерело телеметрії; стан публікації | `post_init_hook`, менеджер, крони | провайдер, крони |
-| `td.genset.profile` | нова | профіль генератора (D700): потужності, бак, 5 точок витрати, таймери | data-файл, менеджер | R-01, R-02, `fake_relay` (експорт JSON) |
-| `td.genset.event.map` | нова | мапа подій/тривог контролера → дія (заявка/подія шини/нічого), пріоритет, текст | data-файл (HGM6120N таблиці 4/5), менеджер | крон events |
+| `td.genset3d.link` | нова | зв'язка генератор `td_genset` ↔ `maintenance.equipment` GENSET; профіль; джерело телеметрії; стан публікації | `post_init_hook`, менеджер, крони | провайдер, крони |
+| `td.genset3d.profile` | нова | профіль генератора (D700): потужності, бак, 5 точок витрати, таймери | data-файл, менеджер | R-01, R-02, `fake_relay` (експорт JSON) |
+| `td.genset3d.event.map` | нова | мапа подій/тривог контролера → дія (заявка/подія шини/нічого), пріоритет, текст | data-файл (HGM6120N таблиці 4/5), менеджер | крон events |
 | `td.source` | розширення | `type` += `td_genset` («td_genset (ретранслятор SmartGen)»), `_f3d_local_types()` += `td_genset` (CT-12, X-01) | міст | telemetry |
 | `td.signal` | без полів | 26 сигналів GENSET (дані) | `post_init_hook` | telemetry, провайдер |
 | `maintenance.equipment` | розширення | `td_genset_link_id` (one2one через one2many), кнопка «Генератор (td_genset)» | міст | форми |
@@ -291,7 +291,7 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 
 1. Контролер HGM6120N → CMM366B-4G → ретранслятор → `td_genset` (клієнт, період `td_genset`): знімок показань
    і журнал подій у моделях `td_genset` (ролі «показання», «подія» — ЗВІРИТИ імена, ADP-03/ADP-04).
-2. Крон `cron_td_genset_publish` (60 с): для кожного `td.genset.link` з `publish_enabled` і стоп-краном
+2. Крон `cron_td_genset_publish` (60 с): для кожного `td.genset3d.link` з `publish_enabled` і стоп-краном
    `read_enabled=True` → `adapters.td_genset.snapshot(link.td_genset_ref)` → dict ADP-03.
 3. Обчислення: `load_pct = p_kw / profile.kw_prp · 100` (R-03), `fuel_l = fuel_pct/100 · tank_l` (якщо `td_genset`
    дає лише %), `fuel_lph = profile.fuel_lph(load_pct)` (R-01), `autonomy_h = fuel_l / fuel_lph` (R-02),
@@ -315,7 +315,7 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 1. `td_genset` фіксує подію контролера (попередження/аварійна зупинка/зв'язок) і веде власну ескалацію (як є).
 2. Крон `cron_td_genset_events` (120 с): `adapters.td_genset.events_since(link, link.last_event_ts)` → список
    ADP-04 `{id, ts, code, severity, name, value, text}`.
-3. Для кожної події — рядок `td.genset.event.map` за `td_code` (точно) або `hgm_name` (регістронезалежно),
+3. Для кожної події — рядок `td.genset3d.event.map` за `td_code` (точно) або `hgm_name` (регістронезалежно),
    інакше рядок `DEFAULT_<severity>`; дія `request_corrective` / `request_preventive` / `bus_only` / `ignore`.
 4. Дедуплікація (R-08): ключ `f"GENSET:{map.key}"`; якщо є відкрита заявка з `td_genset_event_key` = ключ —
    нову не створюємо, лише `message_post` у наявну («Повтор: … о HH:MM»); інакше `maintenance.request`
@@ -390,7 +390,7 @@ AMF» і пріоритетом джерел `grid_ok`/`island` (R-05). В ем�
   агрегати `td.reading.hour` — telemetry. Крон publish: ≤ 2 запити до `td_genset`, один `ingest` пакетом.
 - Події: ≤ 50 на добу; крон events читає лише `ts > last_event_ts`, ліміт 200 за прогін.
 - Провайдер: 26 читань `td.signal` одним `search_read` (індекс `code`), ≤ 5 мс; картка ≤ 2 КБ.
-- Індекси: `maintenance.request.td_genset_event_key` (btree), `td.genset.link.equipment_id` unique.
+- Індекси: `maintenance.request.td_genset_event_key` (btree), `td.genset3d.link.equipment_id` unique.
 
 ### 2.8 Міграція з демо-бази й деінсталяція
 
@@ -426,9 +426,9 @@ AMF» і пріоритетом джерел `grid_ok`/`island` (R-05). В ем�
 | `ir.config_parameter` | `td.genset.critical_codes` | `energy/consumers/LP-1/p_now,energy/consumers/LP-2/p_now,energy/consumers/LP-3/p_now,energy/consumers/DUST-1/p_now,energy/consumers/COMPRESSOR/p_now,energy/consumers/BOILER/p_now,energy/consumers/OFFICE/p_now,energy/consumers/EF-ELEC/p_now,energy/consumers/EF-CHG/p_now,energy/lines/BW-1/p_now` | **запасний** список (X-11): основний — вузли energy `td.energy.node.is_critical` (CE-04); параметр діє, лише якщо критичних вузлів немає; склад — `plant/infra.py:CRITICAL` + лінія BW-1; відсутні пропускаються |
 | `ir.config_parameter` | `td.genset.publish_period_s` | `60` | інтервал крона publish (крон перечитує при старті) |
 | `ir.config_parameter` | `td.genset.migration_report` | `{}` | звіт `post_init_hook` |
-| `td.genset.profile` | `D700` | бак 610 л; PRP 634/507; ESP 697/558; 38,6/71,2/103,8/136,4/149,5 л/год; `start_to_load_s=15`; таймери HGM умовчання + пресет `plant` | data-файл; числа паспорта |
-| `td.genset.link` | GENSET ↔ генератор `td_genset` | 1 запис | `post_init_hook` або вручну менеджером |
-| `td.genset.event.map` | 48 рядків (SPEC Додаток B): 17 warnings + 24 shutdown HGM6120N + `COMM_LOST`, `SERVICE_DUE`, `DEFAULT_WARNING`, `DEFAULT_SHUTDOWN`, `DEFAULT_COMM`, `DEFAULT_SERVICE`, `DEFAULT_INFO` | data-файл | колонка `td_code` заповнюється після звірки (Q-13) |
+| `td.genset3d.profile` | `D700` | бак 610 л; PRP 634/507; ESP 697/558; 38,6/71,2/103,8/136,4/149,5 л/год; `start_to_load_s=15`; таймери HGM умовчання + пресет `plant` | data-файл; числа паспорта |
+| `td.genset3d.link` | GENSET ↔ генератор `td_genset` | 1 запис | `post_init_hook` або вручну менеджером |
+| `td.genset3d.event.map` | 48 рядків (SPEC Додаток B): 17 warnings + 24 shutdown HGM6120N + `COMM_LOST`, `SERVICE_DUE`, `DEFAULT_WARNING`, `DEFAULT_SHUTDOWN`, `DEFAULT_COMM`, `DEFAULT_SERVICE`, `DEFAULT_INFO` | data-файл | колонка `td_code` заповнюється після звірки (Q-13) |
 | `ir.cron` | `cron_td_genset_publish` / `_events` / `_service` | 1 хв / 2 хв / 1 день 06:00 Київ | `active` за `read_enabled`; `neutralize.sql` вимикає |
 | `td_genset` | адреса ретранслятора, токен | `http://genset_relay:8000`, токен стенда | назви параметрів — як у ТР 1.2 (ЗВІРИТИ) |
 | `td_genset` | розклад роботи | дві зміни за `plant/energy.py:day_profile` (ЗВІРИТИ формат) — Q-03 | дані, не код |
@@ -558,7 +558,7 @@ environment=prod`; 4) `td.genset.read_enabled=True` лише після звір
 | A-11 | Коди сигналів `infra/genset/GENSET/<leaf>` (не `equipment/GENSET/<leaf>`) | P-12 iot_sim уже посилається на `infra/genset/GENSET/state`; картка GENSET живе в `infra` | §5 конвенція шляхів (новий префікс `infra/genset/`) |
 | A-12 | Дедуплікація заявок — за ключем події (`td_genset_event_key`), а не лише за сигналом | усі тривоги прив'язані до одного сигналу `alarm_level`; §6.8 «одна відкрита заявка на сигнал» дала б одну заявку на всі тривоги | уточнення §6.8 |
 | A-13 | Витрата палива нижче 25 % = 38,6 л/год (константа), вище 100 % PRP — лінійно до 149,5 при 110 % (ESP) | даних нижче 25 % у датасіті немає; ESP 558 кВт = 110 % PRP | — |
-| A-14 | `fake_relay` отримує REST керування `/sim/v1/*` (той самий префікс, що в емуляторі) і профіль JSON | один стиль з iot_sim; профіль експортується з `td.genset.profile` | P-12 |
+| A-14 | `fake_relay` отримує REST керування `/sim/v1/*` (той самий префікс, що в емуляторі) і профіль JSON | один стиль з iot_sim; профіль експортується з `td.genset3d.profile` | P-12 |
 | A-15 | Звірка з SPEC `td_telemetry` v0.1 (SPEC §2.0.3 T-1…T-10): джерело `GENSET-RELAY` без колектора — **лише** через хук telemetry `td.source._f3d_local_types()` (CT-12, R-26; M-04 додає `td_genset` через `super()`, `collector_id` і constraint на колектор не перевизначає — X-01), `_f3d_ingest(src='module')` з `q='good'`, `stale` ставить сам міст через `_mark_stale` (крон stale telemetry локальних джерел не бачить — X-13), `create_request=False` і поріг лише на `alarm_level`, `kind='gauge'` для кодів, `period_s=max(60, offline_min·20)` (довідковий), `store_period_s=0`, `td_meter_signal_id` не заповнюється | telemetry з'явився пізніше за SPEC моста; без цього — дублі заявок і хибний ТО | A-04, A-05, A-10 уточнено; Q-04 і Q-20 закрито |
 | A-16 | Мапа подій — 48 рядків (17 Table 4 + 24 Table 5 + 7 службових), збіг за `hgm_name` **разом з** `severity` (8 назв є в обох таблицях); `DEFAULT_COMM`/`DEFAULT_SERVICE` — лише подія шини (заявки дають R-12 `COMM_LOST` і R-09); стан 7 — також за `p_kw ≥ 5 % PRP` (варіант B AMF) | без цього — неоднозначний збіг і дубль заявок ТО/зв'язку; у варіанті B реле HGM не задіяне | SPEC M-03, R-03, Додаток B, Додаток D.3 |
 | A-17 | Стендові сценарії моста нумеруються ТК-G01…, сценарії `fake_relay` — ТК-F01…; AC `td_genset` у тексті — «ТР 1.2 AC-xx» | ТК-01…ТК-14 і AC-01…AC-69 уже зайняті ТР 1.2, ТК-01…ТК-16 — iot_sim | SPEC §12, §13 |

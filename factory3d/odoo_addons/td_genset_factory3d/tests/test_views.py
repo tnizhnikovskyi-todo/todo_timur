@@ -29,7 +29,7 @@ class TestViews(GensetCase):
         for name in VIEWS:
             view = self.env.ref("td_genset_factory3d." + name)
             self.env[view.model].get_views([(view.id, view.type)])
-        self.env["td.genset.link"].get_views([(False, "form"), (False, "list")])
+        self.env["td.genset3d.link"].get_views([(False, "form"), (False, "list")])
 
     def test_menus(self):  # AC-33
         def menu(name):

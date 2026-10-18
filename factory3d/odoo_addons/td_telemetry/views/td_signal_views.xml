@@ -42,7 +42,7 @@
                     <field name="status" widget="statusbar" statusbar_visible="ok,warn,alarm,stale"/>
                 </header>
                 <sheet>
-                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="td_is_manager" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_readings" type="object" class="oe_stat_button" icon="fa-line-chart">
                             <field name="reading_count" widget="statinfo" string="Показань за 2 доби"/>
@@ -62,10 +62,10 @@
                             <field name="maintenance_request_id" readonly="1"/>
                         </group>
                         <group string="Звідки">
-                            <field name="code" readonly="not is_f3d_manager"/>
+                            <field name="code" readonly="not td_is_manager"/>
                             <field name="equipment_id"/>
                             <field name="workcenter_id"/>
-                            <field name="source_id" readonly="not is_f3d_manager"/>
+                            <field name="source_id" readonly="not td_is_manager"/>
                             <field name="source_type" readonly="1"/>
                             <field name="collector_id" readonly="1"/>
                             <field name="kind"/>
@@ -83,32 +83,32 @@
                             <field name="scale"/>
                             <field name="decimals"/>
                             <field name="nominal"/>
-                            <field name="write_enabled" readonly="not is_f3d_manager"/>
+                            <field name="write_enabled" readonly="not td_is_manager"/>
                         </group>
                         <group string="Пороги">
                             <label for="warn_low_on" string="Увага, нижче"/>
                             <div class="o_row">
-                                <field name="warn_low_on" readonly="not is_f3d_manager"/>
-                                <field name="warn_low" invisible="not warn_low_on" readonly="not is_f3d_manager"/>
+                                <field name="warn_low_on" readonly="not td_is_manager"/>
+                                <field name="warn_low" invisible="not warn_low_on" readonly="not td_is_manager"/>
                             </div>
                             <label for="warn_high_on" string="Увага, вище"/>
                             <div class="o_row">
-                                <field name="warn_high_on" readonly="not is_f3d_manager"/>
-                                <field name="warn_high" invisible="not warn_high_on" readonly="not is_f3d_manager"/>
+                                <field name="warn_high_on" readonly="not td_is_manager"/>
+                                <field name="warn_high" invisible="not warn_high_on" readonly="not td_is_manager"/>
                             </div>
                             <label for="alarm_low_on" string="Тривога, нижче"/>
                             <div class="o_row">
-                                <field name="alarm_low_on" readonly="not is_f3d_manager"/>
-                                <field name="alarm_low" invisible="not alarm_low_on" readonly="not is_f3d_manager"/>
+                                <field name="alarm_low_on" readonly="not td_is_manager"/>
+                                <field name="alarm_low" invisible="not alarm_low_on" readonly="not td_is_manager"/>
                             </div>
                             <label for="alarm_high_on" string="Тривога, вище"/>
                             <div class="o_row">
-                                <field name="alarm_high_on" readonly="not is_f3d_manager"/>
-                                <field name="alarm_high" invisible="not alarm_high_on" readonly="not is_f3d_manager"/>
+                                <field name="alarm_high_on" readonly="not td_is_manager"/>
+                                <field name="alarm_high" invisible="not alarm_high_on" readonly="not td_is_manager"/>
                             </div>
-                            <field name="hysteresis" readonly="not is_f3d_manager"/>
-                            <field name="min_duration_s" readonly="not is_f3d_manager"/>
-                            <field name="alarm_states_text" invisible="kind != 'state'" readonly="not is_f3d_manager"/>
+                            <field name="hysteresis" readonly="not td_is_manager"/>
+                            <field name="min_duration_s" readonly="not td_is_manager"/>
+                            <field name="alarm_states_text" invisible="kind != 'state'" readonly="not td_is_manager"/>
                             <field name="alarm_title"/>
                             <field name="alarm_priority"/>
                             <field name="create_request"/>
@@ -117,7 +117,7 @@
                     <notebook>
                         <page string="Адреса" name="address">
                             <field name="address_text" widget="ace" options="{'mode': 'javascript'}"
-                                   readonly="not is_f3d_manager"/>
+                                   readonly="not td_is_manager"/>
                             <div class="text-muted">Схема адреси залежить від типу джерела (modbus_tcp: fc, addr, type; mqtt: topic, path; bacnet_ip: object, instance; http_push: route, path, match).</div>
                         </page>
                         <page string="Похідна" name="derived">

@@ -130,9 +130,9 @@ odoo_addons/td_genset_factory3d/
 ├── models/
 │   ├── __init__.py                  порядок: genset_profile, genset_event_map, genset_link, td_source,
 │   │                                maintenance_equipment, maintenance_request, res_config_settings, viewer_provider
-│   ├── genset_profile.py            M-02 td.genset.profile (+ R-01, R-02, експорт профілю для fake_relay)
-│   ├── genset_event_map.py          M-03 td.genset.event.map (+ R-07 match/render)
-│   ├── genset_link.py               M-01 td.genset.link (+ publish, events, service, island — R-03…R-05, R-08, R-09, R-12)
+│   ├── genset_profile.py            M-02 td.genset3d.profile (+ R-01, R-02, експорт профілю для fake_relay)
+│   ├── genset_event_map.py          M-03 td.genset3d.event.map (+ R-07 match/render)
+│   ├── genset_link.py               M-01 td.genset3d.link (+ publish, events, service, island — R-03…R-05, R-08, R-09, R-12)
 │   ├── td_source.py                M-04 selection_add td_genset + хук _f3d_local_types() (X-01)
 │   ├── maintenance_equipment.py     M-05
 │   ├── maintenance_request.py       M-06 (+ закриття заявки → статус сигналу, R-08 крок 4)
@@ -281,11 +281,11 @@ R-12 у частині, що тут названа). Q-20 закрито: teleme
 td_genset as td` → `td.snapshot(...)`, `td.GENSET_MODEL`), а не `from ..adapters.td_genset import snapshot`, — інакше
 `unittest.mock.patch` фікстури §13.0 не діє; `_td_models()` читає `td.GENSET_MODEL` у момент виклику.
 
-### M-01 `td.genset.link` — зв'язка генератора з моделлю заводу (FR-01, FR-03, FR-08, FR-09, FR-11, FR-15)
+### M-01 `td.genset3d.link` — зв'язка генератора з моделлю заводу (FR-01, FR-03, FR-08, FR-09, FR-11, FR-15)
 
 ```python
 class F3dGensetLink(models.Model):
-    _name = "td.genset.link"
+    _name = "td.genset3d.link"
     _description = "Генератор: зв'язка з моделлю заводу"
     _inherit = ["mail.thread"]
     _order = "equipment_id"
@@ -298,7 +298,7 @@ class F3dGensetLink(models.Model):
 | `equipment_id` | Many2one `maintenance.equipment` | `string="Обладнання"`, `required=True`, `ondelete="restrict"`, `index=True`, `domain="[('td_passport_id.role','=','genset')]"`, `tracking=True` |
 | `td_code` | Char | `related="equipment_id.td_code"`, `string="Код сцени"` |
 | `td_genset_ref` | Reference | `selection="_td_models"`, `string="Генератор td_genset"`, `required=True`; `_td_models` → `[(adapters.td_genset.GENSET_MODEL, "Генератор td_genset")]` якщо константа задана й модель є в реєстрі, інакше `[]` |
-| `profile_id` | Many2one `td.genset.profile` | `string="Профіль"`, `required=True`, `default=lambda self: self.env.ref("td_genset_factory3d.profile_d700", raise_if_not_found=False)`, `ondelete="restrict"` |
+| `profile_id` | Many2one `td.genset3d.profile` | `string="Профіль"`, `required=True`, `default=lambda self: self.env.ref("td_genset_factory3d.profile_d700", raise_if_not_found=False)`, `ondelete="restrict"` |
 | `source_id` | Many2one `td.source` | `string="Джерело телеметрії"`, `readonly=True`, `ondelete="set null"` |
 | `publish_enabled` | Boolean | `string="Публікувати в телеметрію"`, `default=True`, `tracking=True` |
 | `amf_master` | Selection | `[("hgm","HGM6120N веде AMF"),("ats","ATyS p головний")]`, `compute="_compute_amf_master"` (з параметра `td.genset.amf_master`), не зберігається, `string="Логіка AMF"` |
@@ -339,7 +339,7 @@ class F3dGensetLink(models.Model):
 | `_critical_kw(self) -> tuple[float, list[str], list[str]]` | R-04 → `(sum, missing_codes, item_names)`: список критичних — `td.energy.node.is_critical` (energy CE-04), запасний — параметр `critical_codes` (X-11); у `infra.totals` не пише |
 | `_notify_state_change(self, new_state)` | якщо `"td.viewer.event" in self.env` (viewer встановлено; X-20) — `self.env["td.viewer.event"]._notify("maintenance.equipment", [self.td_code], "state")` (C-03), інакше подію шини пропустити без помилки; `message_post` з текстом «Стан: <label>, режим: <label>, тривога: <рівень>, острів: так/ні» лише коли змінились `state`/`alarm_level`/`island` (не `online` окремо, щоб не засмічувати чаттер) |
 | `_cron_events(self)` (`@api.model`) | якщо не `_param("requests_enabled","True")` → `return`; для кожної активної зв'язки у savepoint: `_process_events_one()`; винятки — лог, без підняття |
-| `_process_events_one(self)` | `events = adapters.td_genset.events_since(self.td_genset_ref, self.last_event_ts, 200)`; для кожної: `row = env["td.genset.event.map"]._match(ev)`; `self._apply_event(ev, row)` (R-07, R-08); після циклу `write({"last_event_ts": max ts, "last_event_id": max id})`; якщо `len(events)==200` → крон продовжить наступного разу |
+| `_process_events_one(self)` | `events = adapters.td_genset.events_since(self.td_genset_ref, self.last_event_ts, 200)`; для кожної: `row = env["td.genset3d.event.map"]._match(ev)`; `self._apply_event(ev, row)` (R-07, R-08); після циклу `write({"last_event_ts": max ts, "last_event_id": max id})`; якщо `len(events)==200` → крон продовжить наступного разу |
 | `_apply_event(self, ev, row)` | за `row.action`: `ignore` → нічого; `bus_only` → `_notify_state_change`-подібна подія `kind="state"`; `request_*` → R-08: `key = "GENSET:%s" % row.key`; `open = env["maintenance.request"].search([("equipment_id","=",eq.id),("td_genset_event_key","=",key),("stage_id.done","=",False)], limit=1)`; якщо є → `open.message_post(body="Повтор: %s о %s" % (name, local_ts))`; інакше `create(R-07 vals)` |
 | `_cron_service(self)` (`@api.model`) | R-09 для кожної зв'язки |
 | `action_check(self)` | `ensure_one()`; якщо `not self.env.user.has_group("td_factory3d.group_td_manager")` → `AccessError("Перевірку зв'язки може виконати лише менеджер «Завод 3D».")` (метод публічний — кнопка `groups` не захищає RPC, AC-60); `_publish_one()` незалежно від стоп-крана? — **ні**: якщо `_read_enabled()` False → `UserError("Публікацію вимкнено стоп-краном td.genset.read_enabled")`; інакше виконати й повернути `display_notification` «Знімок: стан <label>, <p_kw> кВт, паливо <fuel_pct> % (<fuel_l> л), мотогодини <hours>; записано <accepted> показань» |
@@ -348,11 +348,11 @@ class F3dGensetLink(models.Model):
 | `action_open_requests(self)` | `act_window` `maintenance.request`, `domain=[("equipment_id","=",eq.id),("td_genset_event_key","!=",False)]` |
 | `action_show_3d(self)` | `self.equipment_id.action_f3d_show()` (CB-02) |
 
-### M-02 `td.genset.profile` — профіль генератора (FR-02)
+### M-02 `td.genset3d.profile` — профіль генератора (FR-02)
 
 ```python
 class F3dGensetProfile(models.Model):
-    _name = "td.genset.profile"
+    _name = "td.genset3d.profile"
     _description = "Генератор: профіль (паливо, потужність, таймери)"
     _order = "code"
     _rec_name = "name"
@@ -396,13 +396,13 @@ class F3dGensetProfile(models.Model):
 | `autonomy_h(self, fuel_l: float, load_pct: float) -> float \| None` | R-02 |
 | `to_relay_profile(self) -> dict` | §8.2 JSON (ключі й вкладеність — **точно** як у §8.2, бо файл читає `fake_relay`): `{"profile": code, "rated": {"kva_prp", "kw_prp", "kva_esp", "kw_esp"}, "tank_l", "fuel_lph": {"25": …, "50": …, "75": …, "100": …, "esp": …}, "timers": timers_json, "timers_plant": {4 ключі пресету plant}, "sensors": {...}, "alarms": {...}, "start": {...}}`; значення `sensors`/`alarms`/`start` — константа модуля `RELAY_DEFAULTS` = словники §8.2 з коментарем «макет: картка GENSET; пороги — ПРИПУЩЕННЯ Q-06/Q-13» |
 | `action_export_relay_profile(self)` | `ir.actions.act_url` на `/web/content?...` — ні: простіше повернути `ir.actions.act_window` з `TransientModel`? Ні. Рішення: кнопка створює `ir.attachment` `d700.json` (`res_model=self._name, res_id=self.id`, `mimetype="application/json"`) і повертає `{"type":"ir.actions.act_url","url":"/web/content/%d?download=true" % att.id,"target":"self"}` |
-| `action_apply_to_td(self)` | не менеджер (`has_group("td_factory3d.group_td_manager")`) → `AccessError("Записувати в td_genset може лише менеджер «Завод 3D».")` (AC-60); для кожної `td.genset.link` з цим профілем: `adapters.td_genset.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75)` (ADP-09); повідомлення «Записано в td_genset: N генераторів; пропущено (крива/поля немає): M» |
+| `action_apply_to_td(self)` | не менеджер (`has_group("td_factory3d.group_td_manager")`) → `AccessError("Записувати в td_genset може лише менеджер «Завод 3D».")` (AC-60); для кожної `td.genset3d.link` з цим профілем: `adapters.td_genset.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75)` (ADP-09); повідомлення «Записано в td_genset: N генераторів; пропущено (крива/поля немає): M» |
 
-### M-03 `td.genset.event.map` — мапа подій контролера → дії (FR-04, FR-05)
+### M-03 `td.genset3d.event.map` — мапа подій контролера → дії (FR-04, FR-05)
 
 ```python
 class F3dGensetEventMap(models.Model):
-    _name = "td.genset.event.map"
+    _name = "td.genset3d.event.map"
     _description = "Генератор: мапа подій → заявки ТО"
     _order = "sequence, key"
 ```
@@ -461,8 +461,8 @@ AC-50, AC-69). Поля адреси на `td.source` немає; адреси �
 
 | Поле / метод | Визначення |
 |---|---|
-| `td_genset_link_ids` | One2many `td.genset.link` `equipment_id`, `string="Зв'язка генератора"` |
-| `td_genset_link_id` | Many2one `td.genset.link`, `compute="_compute_f3d_genset_link"` = `td_genset_link_ids[:1]` |
+| `td_genset_link_ids` | One2many `td.genset3d.link` `equipment_id`, `string="Зв'язка генератора"` |
+| `td_genset_link_id` | Many2one `td.genset3d.link`, `compute="_compute_f3d_genset_link"` = `td_genset_link_ids[:1]` |
 | `td_is_genset` | Boolean, `compute="_compute_f3d_genset_link"` = `td_passport_id.role == "genset"` |
 | `action_open_f3d_genset(self)` | якщо `td_genset_link_id` → `act_window` форма зв'язки; інакше — `act_window` створення з `context={"default_equipment_id": self.id}` |
 
@@ -475,7 +475,7 @@ AC-50, AC-69). Поля адреси на `td.source` немає; адреси �
 |---|---|
 | `td_genset_event_key` | Char(80), `index=True`, `string="Ключ події генератора"`, `readonly=True`, `copy=False` |
 | `write(self, vals)` | `res = super().write(vals)`; якщо `"stage_id" in vals`: для `self.filtered(lambda r: r.td_genset_event_key and r.stage_id.done)` → `r._f3d_genset_on_closed()`; `return res` |
-| `_f3d_genset_on_closed(self)` | R-08 крок 4: `link = env["td.genset.link"].search([("equipment_id","=",self.equipment_id.id)], limit=1)`; `link.message_post(body="Заявку %s закрито" % self.name)`. Статус сигналу **не** пише — його перераховує telemetry M-08 → R-06 `_on_request_closed` (§2.0.3 T-9) |
+| `_f3d_genset_on_closed(self)` | R-08 крок 4: `link = env["td.genset3d.link"].search([("equipment_id","=",self.equipment_id.id)], limit=1)`; `link.message_post(body="Заявку %s закрито" % self.name)`. Статус сигналу **не** пише — його перераховує telemetry M-08 → R-06 `_on_request_closed` (§2.0.3 T-9) |
 
 Поля `td_signal_id`, `td_equipment_code` — з telemetry (§6.8); міст їх заповнює, не оголошує.
 
@@ -515,7 +515,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
 
 | Метод | Алгоритм |
 |---|---|
-| `_f3d_viewer_collect(self, payload, ctx)` | для кожної `td.genset.link` (`active`, `search_read` полів `equipment_id`, `td_code`, `profile_id`, `last_state_json`, `last_publish_ts`): 1) `vals = adapters.telemetry.read_values(env, [26 кодів])`; 2) `node = payload.setdefault("infra", {}).setdefault("genset", {}).setdefault(code, {})`; `node[leaf] = R-11(value)` для наявних; `node["updated"] = local(max last_ts)`; `node["state_label"]`, `node["mode_label"]`, `node["breaker_label"]`, `node["alarm_label"]` (R-03 тексти); 3) `isl = link._island_state_from_signals(vals)` (R-05 з уже прочитаних значень + TEL-04 для кодів ATS); 4) `payload["infra"].setdefault("totals", {}).update({"genset_kw": node.get("p_kw", 0.0), "genset_state": node["state_label"], "genset_fuel_pct": node.get("fuel_pct"), "genset_autonomy_h": node.get("autonomy_h"), "island": isl["island"], "grid_ok": isl["grid_ok"], "genset_kva": int(round(profile.kva_prp))})` — лише ключі CG-02 моста; `infra.totals.critical_kw` міст **не** пише й не перезаписує (власність energy CE-03/CE-04, X-11); рядок картки «Критичні споживачі зараз» і `items` — з R-04 (`link._critical_kw()`); 5) `payload["infra"].setdefault("cards", {})[code] = R-10`; 6) якщо є `infra.cards["ATS-1"]` і `isl["island"]` — **не** чіпати (картка ATS — energy; CV-01 — viewer) |
+| `_f3d_viewer_collect(self, payload, ctx)` | для кожної `td.genset3d.link` (`active`, `search_read` полів `equipment_id`, `td_code`, `profile_id`, `last_state_json`, `last_publish_ts`): 1) `vals = adapters.telemetry.read_values(env, [26 кодів])`; 2) `node = payload.setdefault("infra", {}).setdefault("genset", {}).setdefault(code, {})`; `node[leaf] = R-11(value)` для наявних; `node["updated"] = local(max last_ts)`; `node["state_label"]`, `node["mode_label"]`, `node["breaker_label"]`, `node["alarm_label"]` (R-03 тексти); 3) `isl = link._island_state_from_signals(vals)` (R-05 з уже прочитаних значень + TEL-04 для кодів ATS); 4) `payload["infra"].setdefault("totals", {}).update({"genset_kw": node.get("p_kw", 0.0), "genset_state": node["state_label"], "genset_fuel_pct": node.get("fuel_pct"), "genset_autonomy_h": node.get("autonomy_h"), "island": isl["island"], "grid_ok": isl["grid_ok"], "genset_kva": int(round(profile.kva_prp))})` — лише ключі CG-02 моста; `infra.totals.critical_kw` міст **не** пише й не перезаписує (власність energy CE-03/CE-04, X-11); рядок картки «Критичні споживачі зараз» і `items` — з R-04 (`link._critical_kw()`); 5) `payload["infra"].setdefault("cards", {})[code] = R-10`; 6) якщо є `infra.cards["ATS-1"]` і `isl["island"]` — **не** чіпати (картка ATS — energy; CV-01 — viewer) |
 | `_f3d_viewer_delta(self, patch, ctx)` | R-13 (X-23): власна дельта; лише якщо `ctx["changes"]` зачіпає генератор (умова R-13 п. 1) → `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `deep_merge(patch.setdefault("infra", {}), tmp.get("infra", {}))` — доповнює `patch["infra"]`, ніколи не присвоює `patch["infra"] = …` (ключі energy/yard/access у `patch["infra"]` лишаються) |
 | `_f3d_viewer_bus_models(self)` | `["maintenance.equipment", "td.signal"]` |
 
@@ -533,11 +533,11 @@ class F3dViewerProviderGenset(models.AbstractModel):
 
 | ID | XML-id | Тип | Модель | Структура |
 |---|---|---|---|---|
-| V-01 | `td_genset_factory3d.view_td_genset_link_form` | form | `td.genset.link` | `header`: кнопки «Перевірити» (`action_check`, `btn-primary`, `groups="td_factory3d.group_td_manager"`), «Показати в 3D» (`action_show_3d`); `sheet`: `button_box` — stat-кнопки «Сигнали» (`action_open_signals`, `signal_count`, `fa-signal`), «Заявки ТО» (`action_open_requests`, `request_open_count`, `fa-wrench`), «td_genset» (`action_open_td`, `fa-external-link`); `widget="badge"` поля `state_label` з `decoration-success="state_code == 7"`, `decoration-warning="state_code in (3,4,5,6,8,9)"`, `decoration-danger="state_code in (0,10)"`; група «Зв'язка»: `equipment_id`, `td_code` (readonly), `td_genset_ref`, `profile_id`, `publish_enabled`, `amf_master` (readonly); група «Стан»: `online` (`widget="boolean_toggle"`, readonly), `island`, `last_publish_ts`, `last_publish_error` (`invisible="not last_publish_error"`, `decoration-danger`), `last_event_ts`, `source_id`; `notebook`: «Знімок» (`last_state_json` widget `json`? — у 19 немає стандартного; показати як `Text` через compute `last_state_text` — додати поле `last_state_text` Char compute = `json.dumps(ensure_ascii=False, indent=1)` readonly), «Примітки» (`mail.thread` чаттер — `chatter` тег). Поля `equipment_id`, `td_genset_ref`, `profile_id` — `readonly="not is_f3d_manager"`? — ні: права на запис дає ACL (§4), форма без додаткових умов |
-| V-02 | `td_genset_factory3d.view_td_genset_link_list` | list | `td.genset.link` | `name`, `td_code`, `td_genset_ref`, `profile_id`, `state_label` (badge), `online`, `island`, `last_publish_ts`, `publish_enabled` (`boolean_toggle`); `decoration-danger="not online"`; без `editable` |
-| V-03 | `td_genset_factory3d.view_td_genset_profile_form` | form | `td.genset.profile` | `header`: «Експорт профілю для fake_relay» (`action_export_relay_profile`), «Застосувати витрату до td_genset» (`action_apply_to_td`, `groups=group_td_manager`, confirm «Записати 75 %-витрату в td_genset для всіх зв'язок з цим профілем?»); група «Паспорт»: `code`, `name`, `passport_id`; група «Потужність»: `kva_prp`, `kw_prp`, `kva_esp`, `kw_esp`; група «Паливо»: `tank_l`, `fuel_lph_25`, `fuel_lph_50`, `fuel_lph_75`, `fuel_lph_100`, `fuel_lph_esp`, `autonomy_warn_h`; група «Двигун»: `oil_l`, `oil_pressure_min_bar`, `start_to_load_s`; група «Таймери HGM6120N»: `timer_preset`, `timers_text` (Char compute, readonly — JSON у рядок); `note` |
-| V-04 | `td_genset_factory3d.view_td_genset_profile_list` | list | `td.genset.profile` | `code`, `name`, `kw_prp`, `tank_l`, `fuel_lph_75`, `timer_preset` |
-| V-05 | `td_genset_factory3d.view_td_genset_event_map_list` / `_form` | list (`editable="bottom"`), form | `td.genset.event.map` | list: `sequence` (handle), `key`, `hgm_name`, `hgm_table`, `severity`, `td_code`, `action`, `priority`, `active` (`boolean_toggle`); form: ті самі + `name_tpl`, `description_tpl`, `match_regex`; search: фільтри «Заявка ТО» (`action like 'request_%'`), «Аварійні» (`severity='shutdown'`), групування за `severity`, `action` |
+| V-01 | `td_genset_factory3d.view_td_genset_link_form` | form | `td.genset3d.link` | `header`: кнопки «Перевірити» (`action_check`, `btn-primary`, `groups="td_factory3d.group_td_manager"`), «Показати в 3D» (`action_show_3d`); `sheet`: `button_box` — stat-кнопки «Сигнали» (`action_open_signals`, `signal_count`, `fa-signal`), «Заявки ТО» (`action_open_requests`, `request_open_count`, `fa-wrench`), «td_genset» (`action_open_td`, `fa-external-link`); `widget="badge"` поля `state_label` з `decoration-success="state_code == 7"`, `decoration-warning="state_code in (3,4,5,6,8,9)"`, `decoration-danger="state_code in (0,10)"`; група «Зв'язка»: `equipment_id`, `td_code` (readonly), `td_genset_ref`, `profile_id`, `publish_enabled`, `amf_master` (readonly); група «Стан»: `online` (`widget="boolean_toggle"`, readonly), `island`, `last_publish_ts`, `last_publish_error` (`invisible="not last_publish_error"`, `decoration-danger`), `last_event_ts`, `source_id`; `notebook`: «Знімок» (`last_state_json` widget `json`? — у 19 немає стандартного; показати як `Text` через compute `last_state_text` — додати поле `last_state_text` Char compute = `json.dumps(ensure_ascii=False, indent=1)` readonly), «Примітки» (`mail.thread` чаттер — `chatter` тег). Поля `equipment_id`, `td_genset_ref`, `profile_id` — `readonly="not td_is_manager"`? — ні: права на запис дає ACL (§4), форма без додаткових умов |
+| V-02 | `td_genset_factory3d.view_td_genset_link_list` | list | `td.genset3d.link` | `name`, `td_code`, `td_genset_ref`, `profile_id`, `state_label` (badge), `online`, `island`, `last_publish_ts`, `publish_enabled` (`boolean_toggle`); `decoration-danger="not online"`; без `editable` |
+| V-03 | `td_genset_factory3d.view_td_genset_profile_form` | form | `td.genset3d.profile` | `header`: «Експорт профілю для fake_relay» (`action_export_relay_profile`), «Застосувати витрату до td_genset» (`action_apply_to_td`, `groups=group_td_manager`, confirm «Записати 75 %-витрату в td_genset для всіх зв'язок з цим профілем?»); група «Паспорт»: `code`, `name`, `passport_id`; група «Потужність»: `kva_prp`, `kw_prp`, `kva_esp`, `kw_esp`; група «Паливо»: `tank_l`, `fuel_lph_25`, `fuel_lph_50`, `fuel_lph_75`, `fuel_lph_100`, `fuel_lph_esp`, `autonomy_warn_h`; група «Двигун»: `oil_l`, `oil_pressure_min_bar`, `start_to_load_s`; група «Таймери HGM6120N»: `timer_preset`, `timers_text` (Char compute, readonly — JSON у рядок); `note` |
+| V-04 | `td_genset_factory3d.view_td_genset_profile_list` | list | `td.genset3d.profile` | `code`, `name`, `kw_prp`, `tank_l`, `fuel_lph_75`, `timer_preset` |
+| V-05 | `td_genset_factory3d.view_td_genset_event_map_list` / `_form` | list (`editable="bottom"`), form | `td.genset3d.event.map` | list: `sequence` (handle), `key`, `hgm_name`, `hgm_table`, `severity`, `td_code`, `action`, `priority`, `active` (`boolean_toggle`); form: ті самі + `name_tpl`, `description_tpl`, `match_regex`; search: фільтри «Заявка ТО» (`action like 'request_%'`), «Аварійні» (`severity='shutdown'`), групування за `severity`, `action` |
 | V-06 | `td_genset_factory3d.view_maintenance_equipment_form_td_genset` | form inherit `maintenance.view_equipment_form` | `maintenance.equipment` | у `div[@name='button_box']` — stat-кнопка «Генератор» (`action_open_f3d_genset`, `fa-bolt`, `invisible="not td_is_genset"`); поля `td_is_genset`, `td_genset_link_id` — `invisible="1"` |
 | V-07 | `td_genset_factory3d.res_config_settings_view_form` | form inherit `base.res_config_settings_view_form` | `res.config.settings` | блок `app_settings_block` `data-string="Завод 3D: генератор"` `data-key="td_genset_factory3d"` (у 19 — `<app data-string=… string=… name="td_genset_factory3d">` / `<block>` / `<setting>`): setting «Публікувати показання в телеметрію» (`td_genset_read_enabled`), «Створювати заявки ТО» (`td_genset_requests_enabled`), «Команди на генератор (зарезервовано)» (`td_genset_write_enabled`, readonly), «Логіка AMF» (`td_genset_amf_master`), «Офлайн через, хв» (`td_genset_offline_min`), «Період публікації, с» (`td_genset_publish_period_s`), «Сигнали АВР» (три коди і значення положень I/II — `td_genset_ats_position_i_value`, `td_genset_ats_position_ii_value`, X-69), «Критичні споживачі — запасний список (коди сигналів через кому)» (`td_genset_critical_codes`, widget `char` з `placeholder`; `help` «Використовується, лише якщо в energy немає жодного вузла з ознакою «Критичний» (`td.energy.node.is_critical`)»; X-11) |
 | V-08 | `views/menus.xml` | menu | — | таблиця нижче |
@@ -548,7 +548,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
 | `menu_td_genset` | Генератор | `td_factory3d.menu_td_root` | 55 | `group_td_user` | — |
-| `menu_td_genset_link` | Зв'язка | `menu_td_genset` | 10 | `group_td_user` | `action_td_genset_link` (`td.genset.link`, list,form) |
+| `menu_td_genset_link` | Зв'язка | `menu_td_genset` | 10 | `group_td_user` | `action_td_genset_link` (`td.genset3d.link`, list,form) |
 | `menu_td_genset_profile` | Профілі | `menu_td_genset` | 20 | `group_td_manager` | `action_td_genset_profile` (list,form) |
 | `menu_td_genset_event_map` | Події → ТО | `menu_td_genset` | 30 | `group_td_manager` | `action_td_genset_event_map` (list,form; `context={"search_default_group_severity": 1}`) |
 | `menu_td_genset_requests` | Заявки ТО генератора | `menu_td_genset` | 40 | `group_td_user` | `action_td_genset_requests` (`maintenance.request`, kanban,list,form; `domain=[("td_genset_event_key","!=",False)]`) |
@@ -562,12 +562,12 @@ class F3dViewerProviderGenset(models.AbstractModel):
 
 ```
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_td_genset_link_user,td.genset.link user,model_td_genset_link,td_factory3d.group_td_user,1,0,0,0
-access_td_genset_link_manager,td.genset.link manager,model_td_genset_link,td_factory3d.group_td_manager,1,1,1,1
-access_td_genset_profile_user,td.genset.profile user,model_td_genset_profile,td_factory3d.group_td_user,1,0,0,0
-access_td_genset_profile_manager,td.genset.profile manager,model_td_genset_profile,td_factory3d.group_td_manager,1,1,1,1
-access_td_genset_event_map_user,td.genset.event.map user,model_td_genset_event_map,td_factory3d.group_td_user,1,0,0,0
-access_td_genset_event_map_manager,td.genset.event.map manager,model_td_genset_event_map,td_factory3d.group_td_manager,1,1,1,1
+access_td_genset3d_link_user,td.genset3d.link user,model_td_genset3d_link,td_factory3d.group_td_user,1,0,0,0
+access_td_genset3d_link_manager,td.genset3d.link manager,model_td_genset3d_link,td_factory3d.group_td_manager,1,1,1,1
+access_td_genset3d_profile_user,td.genset3d.profile user,model_td_genset3d_profile,td_factory3d.group_td_user,1,0,0,0
+access_td_genset3d_profile_manager,td.genset3d.profile manager,model_td_genset3d_profile,td_factory3d.group_td_manager,1,1,1,1
+access_td_genset3d_event_map_user,td.genset3d.event.map user,model_td_genset3d_event_map,td_factory3d.group_td_user,1,0,0,0
+access_td_genset3d_event_map_manager,td.genset3d.event.map manager,model_td_genset3d_event_map,td_factory3d.group_td_manager,1,1,1,1
 ```
 
 Абстрактна `td.viewer.provider.genset` доступів не потребує. `td.source`/`td.signal`/`td.reading` — права telemetry;
@@ -658,7 +658,7 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
 4. **Джерело:** TEL-01 → 1 запис `td.source` типу `td_genset`.
 5. **Сигнали:** TEL-02 → 26 `td.signal` (Додаток A) для `eq`; очікувано `created=26` при першій установці, `existing=26` при повторній.
 6. **Зв'язка:** `gens = adapters.td_genset.generators(env)` (якщо `GENSET_MODEL` не звірений → `NotImplementedError` ловиться:
-   `report["link"]="skipped: ADP-01 не звірено"`); якщо `len(gens)==1` → `create td.genset.link {equipment_id, td_genset_ref:
+   `report["link"]="skipped: ADP-01 не звірено"`); якщо `len(gens)==1` → `create td.genset3d.link {equipment_id, td_genset_ref:
    "%s,%d", profile_id: profile_d700, source_id}`; якщо `>1` → `skipped: кілька генераторів — зв'яжіть вручну`; `0` → `skipped: у
    td_genset немає генераторів`.
 7. **Лічильник ТО:** не виконується (§2.0.3 T-7) — `eq.td_meter_signal_id` і `td_meter_interval` не змінюються; у звіт `"meter": "skipped: A-04"`.
@@ -675,7 +675,7 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
 2. `ir.config_parameter` з ключами `td.genset.%` — `unlink()`.
 3. `td.source` типу `td_genset` → `active=False` (хук виконується до видалення значення селекції; після нього Odoo видаляє джерело за
    `ondelete="cascade"` M-04, сигнали лишаються з `source_id=False`).
-4. `td.signal`, `td.reading`, `maintenance.request`, `td.genset.profile` (таблиця видаляється з модулем — профілі не
+4. `td.signal`, `td.reading`, `maintenance.request`, `td.genset3d.profile` (таблиця видаляється з модулем — профілі не
    бізнес-дані; експортований `d700.json` лишається у вкладеннях) — не чіпати.
 5. `maintenance.equipment.td_meter_signal_id` — не чіпати (сигнал лишається).
 
@@ -686,7 +686,7 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
 UPDATE ir_cron SET active = false WHERE id IN (
   SELECT res_id FROM ir_model_data WHERE module = 'td_genset_factory3d' AND model = 'ir.cron');
 UPDATE ir_config_parameter SET value = 'False' WHERE key IN ('td.genset.read_enabled', 'td.genset.requests_enabled');
-UPDATE td_genset_link SET last_publish_ts = NULL, last_publish_error = NULL, last_event_ts = NULL, last_event_id = 0;
+UPDATE td_genset3d_link SET last_publish_ts = NULL, last_publish_error = NULL, last_event_ts = NULL, last_event_id = 0;
 ```
 
 Після `neutralize.sql` `td_genset` (ЗВІРИТИ зміст, Q-16) і base (`environment='test'`) адміністратор вручну вмикає
@@ -696,9 +696,9 @@ UPDATE td_genset_link SET last_publish_ts = NULL, last_publish_error = NULL, las
 
 | XML-id | Назва | Інтервал | `model_id` / `code` | Що робить за прогін | Ліміти |
 |---|---|---|---|---|---|
-| `cron_td_genset_publish` | Генератор: публікація показань у телеметрію | 1 хв (`interval_number=1`, `interval_type=minutes`; змінюється з налаштувань M-07) | `td.genset.link` / `model._cron_publish()` | R-03, R-01, R-02, R-12 для кожної зв'язки; 1 пакет TEL-03 на зв'язку (≤ 26 показань); подія шини при зміні стану | ≤ 2 с на зв'язку; винятки — у `last_publish_error`, крон не падає (MG-11) |
-| `cron_td_genset_events` | Генератор: події контролера → заявки ТО | 2 хв | `td.genset.link` / `model._cron_events()` | ADP-04 з `last_event_ts`, ≤ 200 подій, R-07/R-08 | повтор наступного прогону при 200 |
-| `cron_td_genset_service` | Генератор: ТО за мотогодинами | 1 день, `nextcall` = наступне 06:00 Europe/Kyiv (хук ставить `nextcall` у UTC) | `td.genset.link` / `model._cron_service()` | R-09 | 1 заявка на `next_service_hours` |
+| `cron_td_genset_publish` | Генератор: публікація показань у телеметрію | 1 хв (`interval_number=1`, `interval_type=minutes`; змінюється з налаштувань M-07) | `td.genset3d.link` / `model._cron_publish()` | R-03, R-01, R-02, R-12 для кожної зв'язки; 1 пакет TEL-03 на зв'язку (≤ 26 показань); подія шини при зміні стану | ≤ 2 с на зв'язку; винятки — у `last_publish_error`, крон не падає (MG-11) |
+| `cron_td_genset_events` | Генератор: події контролера → заявки ТО | 2 хв | `td.genset3d.link` / `model._cron_events()` | ADP-04 з `last_event_ts`, ≤ 200 подій, R-07/R-08 | повтор наступного прогону при 200 |
+| `cron_td_genset_service` | Генератор: ТО за мотогодинами | 1 день, `nextcall` = наступне 06:00 Europe/Kyiv (хук ставить `nextcall` у UTC) | `td.genset3d.link` / `model._cron_service()` | R-09 | 1 заявка на `next_service_hours` |
 
 Усі крони: `user_id = base.user_root`, `priority = 5`, `active` за §5.3 крок 8. Жоден крон не викликає команд `td_genset`.
 
@@ -958,7 +958,7 @@ PE/I, паралель з ДГУ) — питання до замовника (Q-
 
 ### R-07 Подія контролера → заявка ТО (FR-05, §6.8 каркаса)
 
-1. `row = td.genset.event.map._match(ev)` (M-03): `td_code` → `hgm_name`+`severity` → `match_regex` → `DEFAULT_<severity>`; немає збігу → кінець.
+1. `row = td.genset3d.event.map._match(ev)` (M-03): `td_code` → `hgm_name`+`severity` → `match_regex` → `DEFAULT_<severity>`; немає збігу → кінець.
    Поля заявки в кроці 3 уточнено §2.0.3 T-8 (без `td_equipment_code`; з `td_value`, `td_threshold`).
 2. `row.action == "ignore"` → кінець; `"bus_only"` → подія шини `state` для GENSET; інакше крок 3.
 3. `name, description = row._render(ev, link)`; `vals = {"name": name, "description": description, "maintenance_for": "equipment",
@@ -1083,7 +1083,7 @@ PE/I, паралель з ДГУ) — питання до замовника (Q-
 | 10 аварійна зупинка | скидання на контролері/пульті | 1 | заявка лишається відкритою до закриття людиною |
 | будь-який | дані застаріли (R-12) | 0 | `online=0`, `stale`, `COMM_LOST` |
 
-### 10.2 Зв'язка `td.genset.link`
+### 10.2 Зв'язка `td.genset3d.link`
 
 `online` ∈ {True, False}; `publish_enabled` ∈ {True, False}; `last_publish_error` ∈ {False, текст}. Переходи — крон publish. Архівація
 (`active=False`) зупиняє публікацію і події; сигнали лишаються (стають `stale` природно).
@@ -1134,7 +1134,7 @@ PE/I, паралель з ДГУ) — питання до замовника (Q-
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-01 | FR-01 | Given обладнання `GENSET` з паспортом `genset` і один генератор у `td_genset` (мок ADP-02); When `post_init_hook`; Then 1 `td.genset.link` з `equipment_id=GENSET`, `profile_id=profile_d700`, `source_id.type='td_genset'`; `migration_report.link.created=1` | UT |
+| AC-01 | FR-01 | Given обладнання `GENSET` з паспортом `genset` і один генератор у `td_genset` (мок ADP-02); When `post_init_hook`; Then 1 `td.genset3d.link` з `equipment_id=GENSET`, `profile_id=profile_d700`, `source_id.type='td_genset'`; `migration_report.link.created=1` | UT |
 | AC-02 | FR-01 | Given два генератори (мок); When хук; Then 0 зв'язок, `report.link="skipped: кілька генераторів — зв'яжіть вручну"`; When менеджер створює зв'язку вручну; Then ок; When другу на те саме обладнання; Then `ValidationError` «Для цього обладнання зв'язка вже існує.» | UT |
 | AC-03 | FR-01 | Given обладнання без `td_code` або з паспортом ролі `compressor`; When `create` зв'язки; Then `ValidationError` з текстами M-01 | UT |
 | AC-04 | FR-02 | When `profile_d700.fuel_lph(x)` для x ∈ {0, 25, 50, 68.6, 75, 100, 105, 110, 150}; Then 38,6; 38,6; 71,2; 95,5; 103,8; 136,4; 143,0; 149,5; 149,5 | UT |
@@ -1192,11 +1192,11 @@ PE/I, паралель з ДГУ) — питання до замовника (Q-
 | AC-56 | FR-09 | Given сценарій `blackout` `amf_master=hgm`, `td_energy` з CE-02/CE-03; When генератор під навантаженням; Then payload: `infra.totals.island=true`, `grid_ok=false`, `genset_kw=348.0`, `genset_state="під навантаженням"`, `genset_autonomy_h` = 5,2 ± 0,1; `grid_kw=0`, `export_kw=0`, `pv_now=0`; `chp_kw` дорівнює `last_value` сигналу `infra/totals/chp_kw` у момент знімка (виміряне, мостом і energy не обнуляється — X-10, energy R-14 п. 9; значення залежить від моделі КГУ iot_sim R-12 і Q-02, тест його не фіксує); картка: «Мережа: відсутня · острів: генератор живить критичних», «Критичні споживачі зараз: 348 кВт з 507 кВт» (емулятор R-22: P_genset = Σ критичних) | TC |
 | AC-57 | FR-10 | Given `blackout` `amf_master=ats` в острові; When мережа повертається; Then `infra/ats/position` = II ще 180 ± 5 с (1RT; `island=true`), далі I; генератор 180 ± 5 с (2CT) у `running` з `p_kw=0` (`state=6`, `island=false`), далі 8 → 9 → 1; у `td.reading` сигналу `state` послідовність 7 → 6 → 8/9 → 1 (з точністю до періоду публікації); заявок 0 | TC |
 | AC-58 | FR-12 | Given `td.genset.write_enabled='True'` (вручну) і шпигун (`MagicMock(wraps=…)`) на кожній функції адаптера; When `_cron_publish`, `_cron_events`, `_cron_service`, `action_check`, `PayloadBuilder.build()`; Then викликались лише ADP-02…ADP-08, ADP-09 — 0 разів; у V-07 поле `td_genset_write_enabled` має `readonly="1"`; `grep -rn "write_enabled" models/ adapters/` не знаходить читання параметра (лише M-07 поле налаштувань) | UT |
-| AC-59 | FR-12 | Given `user_nobody` (лише `base.group_user`); When `env["td.genset.link"].with_user(user_nobody).search([])`; Then `AccessError`; `menu_td_genset` відсутній у `env["ir.ui.menu"].with_user(user_nobody)._visible_menu_ids()`; `PayloadBuilder` від його імені не містить `infra.genset`; Given `user_reader`; Then читання зв'язки й профілю ок, payload має `infra.cards.GENSET` з 14 рядками | UT |
+| AC-59 | FR-12 | Given `user_nobody` (лише `base.group_user`); When `env["td.genset3d.link"].with_user(user_nobody).search([])`; Then `AccessError`; `menu_td_genset` відсутній у `env["ir.ui.menu"].with_user(user_nobody)._visible_menu_ids()`; `PayloadBuilder` від його імені не містить `infra.genset`; Given `user_reader`; Then читання зв'язки й профілю ок, payload має `infra.cards.GENSET` з 14 рядками | UT |
 | AC-60 | FR-12 | Given `user_reader`; When `link.with_user(user_reader).action_check()`, `profile.with_user(user_reader).action_apply_to_td()`, `profile.with_user(user_reader).action_export_relay_profile()`; Then `AccessError` (тексти M-01, M-02; третій — права `ir.attachment` на запис профілю); Given `user_manager`; Then усі три успішні | UT |
 | AC-61 | FR-05, FR-16 | When менеджер зберігає `name_tpl` = `"{name.__class__}"`, `"{value[0]}"`, `"{foo}"`; Then `ValidationError` «Шаблон: дозволені лише поля …» для кожного; Given подія `{"code": "../x; DROP TABLE", "name": "<script>alert(1)</script>", "severity": "shutdown", "text": "a"·10 240}`; When крон events; Then `code` нормалізовано в `""`, рядок `DEFAULT_SHUTDOWN`, `description` містить `&lt;script&gt;`, `len(name) ≤ 120`, винятку немає | UT |
 | AC-62 | FR-03 | Then для кожного з 26 кодів Додатка A: `name`, `unit`, `kind` — як у таблиці; `equipment_id=GENSET`, `source_id.code='GENSET-RELAY'`, `module='genset'`, `period_s=100` (при `offline_min=5`), `store_period_s=0`, `viewer_visible=True`; When `offline_min=10` через `res.config.settings`; Then `period_s=200` у всіх 26; повторний хук наявні сигнали не змінює | UT |
-| AC-63 | FR-04, FR-05 | Then `td.genset.event.map` має 48 рядків з ключами Додатка B: `hgm_table='warning'` — 17, `'shutdown'` — 24, `'other'` — 7; усі 24 аварійні — `request_corrective`, `priority='3'`; When `_match({"name": "Low Oil Pressure", "severity": "warning", "code": ""})`; Then `LOW_OIL_PRESSURE_W`; з `severity="shutdown"` — `LOW_OIL_PRESSURE_SD`; `_match({"name": "Remote start", "severity": "command", "code": ""})` — порожньо, `_apply_event` — 0 заявок і 0 подій шини | UT |
+| AC-63 | FR-04, FR-05 | Then `td.genset3d.event.map` має 48 рядків з ключами Додатка B: `hgm_table='warning'` — 17, `'shutdown'` — 24, `'other'` — 7; усі 24 аварійні — `request_corrective`, `priority='3'`; When `_match({"name": "Low Oil Pressure", "severity": "warning", "code": ""})`; Then `LOW_OIL_PRESSURE_W`; з `severity="shutdown"` — `LOW_OIL_PRESSURE_SD`; `_match({"name": "Remote start", "severity": "command", "code": ""})` — порожньо, `_apply_event` — 0 заявок і 0 подій шини | UT |
 | AC-64 | FR-06 | Given ADP-05 як в AC-18 і дві події `{"name": "Maintenance Due Warning", "severity": "warning"}` (різні `id`); When `_cron_events`; Then заявок з ключем `GENSET:MAINTENANCE_DUE_W` — 0, з `GENSET:SERVICE:1250` — рівно 1 (R-09 крок 7), подія шини `state` є | UT |
 | AC-65 | R-03 | Given знімок `state_raw="running"`, `breaker_raw="mains"`, `p_kw=348.0`; Then `state=7`; `p_kw=20.0` → `6`; `breaker_raw="generator"`, `p_kw=0.0` → `7`; `state_raw="невідомо"` → `0` і `last_publish_error` містить «невідомий стан» | UT |
 | AC-66 | FR-07 | Given 1 зв'язка, 26 сигналів, 10 критичних, 3 сигнали ATS; When `PayloadBuilder.build()` від `user_reader`; Then провайдер genset додає ≤ 8 SQL (різниця `assertQueryCount` зі зв'язкою і без) і ≤ 50 мс (медіана 5 прогонів); `link._publish_one()` з моками адаптера — ≤ 40 SQL і ≤ 0,5 с | UT |
@@ -1265,7 +1265,7 @@ A15; FR-A06 — AC-A06, AC-47…49, 68; FR-A07 — AC-A07, A15, A16; FR-A08 — 
 | `self.snap(**over)` | `self.snap_value = {**SNAP_LOADED, **over}`; `SNAP_LOADED = {"ts": now, "online": True, "state_raw": "running", "mode_raw": "auto", "mains_ok": False, "breaker_raw": "generator", "p_kw": 348.0, "u_v": 400.2, "f_hz": 50.0, "i_a": 628.0, "pf": 0.8, "kwh": 61255.3, "fuel_pct": 82.0, "fuel_l": None, "hours": 1213.0, "starts": 185, "coolant_c": 84.1, "oil_bar": 4.4, "batt_v": 25.3, "charger_v": 27.6, "rpm": 1502, "alarms": [], "mains_u_v": 0.0, "mains_f_hz": 0.0}`; `SNAP_STANDBY` = те саме з `state_raw="standby"`, `breaker_raw="mains"`, `mains_ok=True`, `p_kw=0.0`, `rpm=0`, `oil_bar=0.0` | значення API-F-01 |
 | `self.ev(id, name, severity, code="", value=None, unit=None, threshold=None, text="", ts=None)` | додає подію в список, який повертає мок `events_since` (лише `ts > since`, сортування `ts, id`, ліміт) | ADP-04 |
 | `SERVICE_DEFAULT` | `{"hours_now": 1213.0, "interval_h": 250.0, "next_service_hours": 1250.0, "last_service_hours": 1000.0, "last_service_date": date(2026,3,2), "due": False, "hours_left": 37.0}` | AC-18 |
-| `self.link` | `td.genset.link` `{"equipment_id": eq, "td_genset_ref": "res.partner,%d", "profile_id": profile}` + `adapters.telemetry.ensure_source/ensure_signals` (через хук або напряму) | 26 сигналів |
+| `self.link` | `td.genset3d.link` `{"equipment_id": eq, "td_genset_ref": "res.partner,%d", "profile_id": profile}` + `adapters.telemetry.ensure_source/ensure_signals` (через хук або напряму) | 26 сигналів |
 | `self.make_critical(drop=None, override=None)` | 10 сигналів критичних споживачів R-04: для кожного з 10 вузлів energy `is_critical` (energy AC-04; коди `energy/consumers/<code>/p_now`, `energy/lines/BW-1/p_now`) — наявний `td.signal` energy за кодом, інакше створити (`kind="gauge"`, `unit="кВт"`, без джерела); `last_value` через `set_sql` = `CRITICAL_VALUES` = LP-1 12, LP-2 10, LP-3 8, DUST-1 75, COMPRESSOR 37, BOILER 6, OFFICE 25, EF-ELEC 15, EF-CHG 60, BW-1 100 (Σ 348, синтетично); `drop` — код, сигнал якого архівувати (`active=False`); `override` — заміна значень; обладнання вузла LP-1 — «Щит освітлення LP-1» | AC-22, AC-32: `drop="energy/lines/BW-1/p_now", override={"EF-CHG": 160.0}`; AC-70 — те саме + `is_critical=False` на всіх вузлах |
 | `self.make_ats(position, src1, age_s=0, period_s=10)` | 3 сигнали `infra/ats/position`, `src1_ok`, `src2_ok` (обладнання `ATS-1`) і показання через `_f3d_ingest` з `ts = now − age_s` | R-05 |
 | `self.payload(user, **kw)` | `PayloadBuilder(self.env(user=user), **kw).build()` (`odoo.addons.td_viewer3d.tools.payload`; імпорт усередині хелпера — лише прогони з viewer) | viewer §13.0 |
@@ -1469,7 +1469,7 @@ R3 office | R3 d700 | MG-xx (якщо змінено) | коментар`. До�
 Перенос `td_genset` (W1, W4, W5):
 - AC-A01…AC-A16 зелені; `REGRESSION_19.md` — 69 рядків за критерієм §13.2.5; 176/176 UT на R1 і R2; 45/45 ТК з `office` і `d700`.
 - `docs/MIGRATION_19.md`: кожен MG-01…MG-32 закрито з командою перевірки й результатом; пункти зі джерелом «С» — «підтверджено/спростовано».
-- `relay/tests/test_sim_api.py` (ТК-F01…ТК-F07) зелений; `relay/profiles/d700.json` = експорт `td.genset.profile` D700 (побайтово
+- `relay/tests/test_sim_api.py` (ТК-F01…ТК-F07) зелений; `relay/profiles/d700.json` = експорт `td.genset3d.profile` D700 (побайтово
   після `json.dumps(sort_keys=True)`); `relay_api.md` має розділ «Емуляція» (API-F-01…API-F-09).
 - `CHANGELOG.md` `19.0.1.0.0` з переліком MG-xx; `DEPLOY_TEST.md` для 19.0; `neutralize.sql` і preflight перевірені на копії проду (AC-A16).
 - `docs/ADAPTER_MAP.md`: таблиця імен для ADP-01…ADP-10 (Q-10…Q-19 закриті або з рішенням менеджера).

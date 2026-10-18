@@ -5,7 +5,7 @@
 #   make_demo_tpl.sh [--force] [--only <кроки push через кому>] [--skip <кроки через кому>]
 #
 # Ідемпотентний: якщо td_demo_tpl уже є — вихід (--force перезбирає). Далі тести беруть її як шаблон:
-#   F3D_TEST_INSTALL=td_x F3D_TEMPLATE_DB=td_demo_tpl run_tests.sh f3d_<ім'я> /td_x:TestY
+#   F3D_TEST_INSTALL=td_x F3D_TEMPLATE_DB=td_demo_tpl run_tests.sh td_<ім'я> /td_x:TestY
 # Вихідна база — F3D_DEMO_SRC_DB (за замовчуванням f3d_template), результат — F3D_DEMO_TPL_DB.
 # Повні логи: $ODOO_LOG_DIR/demo-push.log, update-<db>.log, serve-<db>.log.
 set -euo pipefail

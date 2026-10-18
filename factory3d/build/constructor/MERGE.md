@@ -284,8 +284,8 @@
 |---|---|---|---|---|---|
 | O-01 | Типы мест ↔ шаблоны | 50 типов с параметрами и 9 формами, дерево склад›зона›ряд›стеллаж›ярус | 6 генераторов + `params`; слот = ряд, ячейки на лету | Генератор → тип (`td.slot.type`) → слот; +генератор `floor_spot`; зона = слот `zone` с атрибутами | Наш каркас, их данные: генераторы проверены R-01 и золотыми фикстурами, каталог — только данные |
 | O-02 | Адресация ↔ `code_style`/`index_digits` | Язык шаблона кода, сегменты, направления, перенумерация | Два параметра генератора, фиксированные направления | Json `addr` (склад → зона → слот), пресет `legacy` = текущие коды | Их выразительность, наш идентификатор `code_prefix` и лимит 32 символа |
-| O-03 | План изменений ↔ мастер публикации/API-07 | create/move/rename/attrs/archive, части, журнал, откат, расхождения | create/update/archive, подтверждение CD-20, `draft_rev`, версия | Один мастер: виды строк расширены, добавлены журнал `f3d.publish.op` и откат | Наш каркас (CD-20, блокировка строки, версия), их функции |
-| O-04 | Варианты ↔ `td.layout.version` | Параллельные варианты, сравнение, до 12 | Линейная история публикаций, черновик один | Вариант = снимок-ветка черновика (`f3d.layout.variant`), версия = история публикаций и контрольных точек | Гибрид: наша версия, их вариант поверх R-14 |
+| O-03 | План изменений ↔ мастер публикации/API-07 | create/move/rename/attrs/archive, части, журнал, откат, расхождения | create/update/archive, подтверждение CD-20, `draft_rev`, версия | Один мастер: виды строк расширены, добавлены журнал `td.publish.op` и откат | Наш каркас (CD-20, блокировка строки, версия), их функции |
+| O-04 | Варианты ↔ `td.layout.version` | Параллельные варианты, сравнение, до 12 | Линейная история публикаций, черновик один | Вариант = снимок-ветка черновика (`td.layout.variant`), версия = история публикаций и контрольных точек | Гибрид: наша версия, их вариант поверх R-14 |
 | O-05 | Контур здания ↔ слои | Контур, колонны, стены, ворота, док, двери, офис, проходы-граф | Габарит+шаг колонн на площадке, `bounds`/`aisles`/`fire_paths` слоя | Слой `building`: контур в `bounds`, объекты в `items`, проходы — оси-прямоугольники | Наши слои (CD-04), их набор объектов |
 | O-06 | Каталог 50 ↔ 6 шаблонов | 50 типов, 5 групп, флаг «меблевая фабрика» | 6 шаблонов (CD-08) | 50 записей `td.slot.type` на 7 генераторах (таблица 2.3) | Гибрид |
 | O-07 | Роли | Перегляд / проєктування / застосування | 4 роли + `edit_group_ids` слоя (CD-02) | view = `group_td_user`; design = технолог/комірник/інженер на своём слое; apply = менеджер | Наши (тоньше) |
@@ -352,7 +352,7 @@
 - Каркас наш: `build_plan` (R-12), мастер M-08…M-10, API-06/07, `draft_rev`, `FOR UPDATE NOWAIT`, версия + снимок, архив только отмеченного и без остатков (R-13).
 - Добавляем: виды строк `create`/`move`/`rename`/`attrs`/`archive` (текущий `update` делится по смыслу изменения), `res_model` + `stock.warehouse.orderpoint`, `stock.putaway.rule`; зависимости строк (`depends_code`, родители добавляются сами); область применения (`scope_uid` — слот/зона); порядок применения: создание (родители раньше) → перенос → переименование → атрибуты → архив → пополнение → размещение. Категории хранения в план не входят: создаются отдельным подтверждаемым вызовом API-12 до публикации.
 - Блокировки строк: остатки (`stock.quant`), незавершённые перемещения (`stock.move`), штрихкод занят в компании (включая архивные и другие склады).
-- Журнал и откат: `f3d.publish.op` хранит `before`/`after` каждой операции; откат — обратные операции, разрешён, пока созданное не использовано и нет более поздней публикации по тем же кодам (по порядку). Откат касается только записей Odoo; черновик не меняется, следующий план снова предложит изменения.
+- Журнал и откат: `td.publish.op` хранит `before`/`after` каждой операции; откат — обратные операции, разрешён, пока созданное не использовано и нет более поздней публикации по тем же кодам (по порядку). Откат касается только записей Odoo; черновик не меняется, следующий план снова предложит изменения.
 - «Файл для імпорту»: ядро собирает таблицу строк плана, формат XLSX/CSV отдаёт адаптер (API-19); перенос и архив в файл не попадают (как у них).
 - Расхождения с Odoo (F02-09, волна 2): ядро сравнивает ленту локаций (API-16) с `odoo_baseline_id` (вложение на площадке, пишется при публикации и «Оновити з Odoo»); «з'явилося» → разбор кодов и лоток, «зникло» → `overrides.disabled` или повторная публикация. Перенос и переименование в Odoo показываем информативно, по умолчанию «Залишити моє» (публикация вернёт).
 - Напоминание о копии БД — флаг площадки `publish_copy_ack`.
@@ -397,9 +397,9 @@
 | Ф. | Стандарт Odoo | Расширяем (наше) | Новое |
 |---|---|---|---|
 | F01 | `stock.location` `name`/`barcode`/`location_id` | `td.site`, `td.slot`, `services/cells.py`, `td_code` (base) | `site.addr`, `slot.addr`, `loc_tree`, `depth_mode`; `stock.location.td_row/bay/level/pos`; `services/addr.py` |
-| F02 | `stock.location` create/write/`active`; проверка пустоты `stock.quant`, `stock.move` | мастер публикации, R-12/R-13, API-06/07, `version.report` | `f3d.publish.op`; виды строк `move/rename/attrs`; API-18 |
-| F03 | `stock.storage.category`, `stock.location.storage_category_id/removal_strategy_id/replenish_location/usage`, `orderpoint` | `slot.overrides`, `td_capacity`, `td.term` | `slot.storage_category_id/removal_strategy_id/function_id/attr_ids/temp_*`; `f3d.replenish.rule`; API-12 |
-| F04 | `stock.putaway.rule`, `_get_putaway_strategy`, `_check_can_be_used`, `stock.package.type` | `td.check.config` | `f3d.putaway.rule`; проверка `putaway_fit`; API-15 |
+| F02 | `stock.location` create/write/`active`; проверка пустоты `stock.quant`, `stock.move` | мастер публикации, R-12/R-13, API-06/07, `version.report` | `td.publish.op`; виды строк `move/rename/attrs`; API-18 |
+| F03 | `stock.storage.category`, `stock.location.storage_category_id/removal_strategy_id/replenish_location/usage`, `orderpoint` | `slot.overrides`, `td_capacity`, `td.term` | `slot.storage_category_id/removal_strategy_id/function_id/attr_ids/temp_*`; `td.replenish.rule`; API-12 |
+| F04 | `stock.putaway.rule`, `_get_putaway_strategy`, `_check_can_be_used`, `stock.package.type` | `td.check.config` | `td.putaway.rule`; проверка `putaway_fit`; API-15 |
 | F05 | — | — | ядро: спецификация этикетки, Code128/QR, ZPL; PDF — API-19 (`reportlab`, `qrcode`) |
 | F06 | `stock.quant`, `stock.lot`, `product.product` (`default_code`, `name`) | `td_code`, `action_f3d_show` | API-13, API-14 |
 | F07 | `stock.quant` (`quantity`, `in_date`), `orderpoint`, `stock.move.line` | `td_capacity` | API-13 (метрики по кодам); классы и цвета — ядро |
@@ -407,8 +407,8 @@
 | F09 | — | `OdooStore.queue` (ops, `etag`) | `td.slot.preset`; API-11; undo — ядро |
 | F10 | `stock.location` (`complete_name`, `usage`, `parent_path`) | seed-хук `link.py` | API-16; `site.parse_rules`; разбор и лоток — ядро |
 | F11 | формат импорта `stock.location`; `openpyxl`/`xlrd`/`xlsxwriter` | снимок версии (скачивание) | API-19 `table_xlsx`, API-20 `/parse/table`; CSV — ядро |
-| F12 | — | `td.layout.version`, `apply_snapshot` (R-14) | `f3d.layout.variant`; API-21 |
-| F13 | — (`mail.activity` не берём: объекты черновика не имеют записей Odoo) | — | `f3d.comment`; API-22 |
+| F12 | — | `td.layout.version`, `apply_snapshot` (R-14) | `td.layout.variant`; API-21 |
+| F13 | — (`mail.activity` не берём: объекты черновика не имеют записей Odoo) | — | `td.comment`; API-22 |
 | F14 | — | `etag` R-21, права R-11 | `td.zone.lock`; API-23 |
 | F15 | `openpyxl`/`xlsxwriter`, `reportlab` | — | ядро считает таблицы и SVG плана; API-19 `spec_pdf`/`plan_pdf`/`table_xlsx` |
 | F16 | `stock.warehouse` (выбор склада; склад не создаём) | пустая площадка R-23, `f3d_blank` | `site.warehouse_id`, `site.wizard_state` |
@@ -437,11 +437,11 @@
 |---|---|---|
 | `td.slot.type` | `code`, `ref`, `name`, `description`, `group`, `template`, `shape`, `params`, `relevance`, `loc_kind`, `is_custom`, `company_id`, `sequence`, `active` | F08 |
 | `td.slot.preset` | `name`, `type_id`, `kind`, `data`, `company_id`, `active` | F09 |
-| `f3d.putaway.rule` | `site_id`, `uid`, `product_id`, `category_id`, `package_type_ids`, `in_location_id`, `out_code`, `out_location_id`, `sublocation`, `storage_category_id`, `sequence`, `odoo_rule_id`, `deleted`, `company_id`, `active` | F04 |
-| `f3d.replenish.rule` | `site_id`, `uid`, `product_id`, `cell_code`, `location_id`, `min_qty`, `max_qty`, `odoo_orderpoint_id`, `deleted`, `company_id`, `active` | F03 |
-| `f3d.publish.op` | `version_id`, `seq`, `op`, `res_model`, `res_id`, `code`, `before`, `after`, `rolled_back` | F02 |
-| `f3d.layout.variant` | `site_id`, `name`, `sequence`, `snapshot_id`, `base_version_id`, `is_training`, `metrics`, `company_id`, `active` | F12 |
-| `f3d.comment` | `site_id`, `target_kind`, `target_uid`, `target_label`, `kind`, `state`, `text`, `author_id`, `resolved_by_id`, `resolved_at`, `company_id`, `active` | F13 |
+| `td.putaway.rule` | `site_id`, `uid`, `product_id`, `category_id`, `package_type_ids`, `in_location_id`, `out_code`, `out_location_id`, `sublocation`, `storage_category_id`, `sequence`, `odoo_rule_id`, `deleted`, `company_id`, `active` | F04 |
+| `td.replenish.rule` | `site_id`, `uid`, `product_id`, `cell_code`, `location_id`, `min_qty`, `max_qty`, `odoo_orderpoint_id`, `deleted`, `company_id`, `active` | F03 |
+| `td.publish.op` | `version_id`, `seq`, `op`, `res_model`, `res_id`, `code`, `before`, `after`, `rolled_back` | F02 |
+| `td.layout.variant` | `site_id`, `name`, `sequence`, `snapshot_id`, `base_version_id`, `is_training`, `metrics`, `company_id`, `active` | F12 |
+| `td.comment` | `site_id`, `target_kind`, `target_uid`, `target_label`, `kind`, `state`, `text`, `author_id`, `resolved_by_id`, `resolved_at`, `company_id`, `active` | F13 |
 | `td.zone.lock` | `site_id`, `zone_uid`, `user_id`, `expires_at`, `company_id` | F14 |
 
 Моделей-мастеров для этикеток, документов и импорта нет: разбор и раскладку делает ядро, файлы рендерит API-19/20.

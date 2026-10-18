@@ -30,7 +30,7 @@
                             class="btn-secondary"/>
                 </header>
                 <sheet>
-                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="td_is_manager" invisible="1"/>
                     <field name="active" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_groups" type="object" class="oe_stat_button" icon="fa-lightbulb-o">
@@ -39,20 +39,20 @@
                     </div>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="Назва"/></h1>
-                        <h3><field name="code" placeholder="LP-1" readonly="not is_f3d_manager"/></h3>
+                        <h3><field name="code" placeholder="LP-1" readonly="not td_is_manager"/></h3>
                     </div>
                     <group>
                         <group string="Роутер Helvar Imagine 950">
-                            <field name="source_id" readonly="not is_f3d_manager"/>
-                            <field name="cluster" readonly="not is_f3d_manager"/>
-                            <field name="router" readonly="not is_f3d_manager"/>
-                            <field name="equipment_id" readonly="not is_f3d_manager"/>
-                            <field name="state_signal_id" readonly="not is_f3d_manager"/>
+                            <field name="source_id" readonly="not td_is_manager"/>
+                            <field name="cluster" readonly="not td_is_manager"/>
+                            <field name="router" readonly="not td_is_manager"/>
+                            <field name="equipment_id" readonly="not td_is_manager"/>
+                            <field name="state_signal_id" readonly="not td_is_manager"/>
                         </group>
                         <group string="Розташування">
-                            <field name="zone_id" readonly="not is_f3d_manager"/>
-                            <field name="x" readonly="not is_f3d_manager"/>
-                            <field name="y" readonly="not is_f3d_manager"/>
+                            <field name="zone_id" readonly="not td_is_manager"/>
+                            <field name="x" readonly="not td_is_manager"/>
+                            <field name="y" readonly="not td_is_manager"/>
                         </group>
                     </group>
                     <group string="Зараз">

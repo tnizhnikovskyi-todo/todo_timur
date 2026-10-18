@@ -2,7 +2,9 @@
 
 ## Репозиторий
 
-- `factory3d/` — 3D-модель мебельного предприятия и 11 модулей Odoo 19 (`factory3d/odoo_addons/`).
+- `factory3d/` — 3D-модель мебельного предприятия и модули Odoo 19 `td_*` (`factory3d/odoo_addons/`: 11 основных
+  модулей и мосты). Имена по стандарту компании: модули `td_<область>`, модели `td.*`, поля `td_*`,
+  параметры `td.<область>.<параметр>`; карта старых имён (`factory3d_*`, `f3d.*`) — `factory3d/build/RENAME.md`.
   Документация: `factory3d/docs/` (индекс — `docs/README.md`). Сборка модулей: `factory3d/build/`.
 - `luxsite/`, `odoo_graph/` — отдельные проекты, к factory3d не относятся.
 
@@ -25,6 +27,7 @@
 **Никогда не читать их целиком.** `docs/CONSISTENCY.md` целиком не читать: решения уже внесены в модульные документы.
 
 - Оглавление с номерами строк: `grep -nE '^#{2,3} ' factory3d/docs/modules/<m>/SPEC.md`
+  (`<m>` — каталог модуля: `td_factory3d`, `td_viewer3d`, `td_telemetry`, … `td_genset`).
 - Раздел или модель: Read с `offset`/`limit` по номерам строк из оглавления
   (модели — `### M-05 …`, представления — `V-xx`, API — `API-xx`, правила — `R-xx`).
 - Критерии приёмки: `grep -nE '^\| AC-(1[0-9]|2[0-4]) ' factory3d/docs/modules/<m>/SPEC.md`

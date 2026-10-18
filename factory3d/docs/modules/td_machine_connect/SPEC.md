@@ -1278,7 +1278,7 @@ AbstractModel `td.push.handler.machine_connect` і `td.viewer.provider.machines`
 3. Сигнали й джерела, створені хуком/data, **не** видаляються (дані telemetry, історія показань); джерела
    `td_machine` видаляються каскадом `selection_add` (`MC-DERIVED`), їхні сигнали лишаються з `source_id=False`.
 4. Записи `mrp.workcenter.productivity` лишаються (стандартний журнал); поля `td_*` зникають; моделі `td.machine*`,
-   `td.downtime`, `td.oee.shift`, `f3d.gantry.*`, `f3d.cut.*` видаляє Odoo разом із модулем (у README —
+   `td.downtime`, `td.oee.shift`, `td.gantry.*`, `td.cut.*` видаляє Odoo разом із модулем (у README —
    попередження: «перед деінсталяцією вивантажте простої й OEE»).
 
 ### 5.5 Повторна установка

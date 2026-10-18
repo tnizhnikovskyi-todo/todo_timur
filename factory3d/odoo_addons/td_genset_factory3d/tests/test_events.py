@@ -25,7 +25,7 @@ class TestEvents(GensetCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.Request = self.env["maintenance.request"]
-        self.Map = self.env["td.genset.event.map"]
+        self.Map = self.env["td.genset3d.event.map"]
 
     def ev(self, id_, name, severity, code="", value=None, unit=None, threshold=None, text=""):
         event = {
@@ -49,7 +49,7 @@ class TestEvents(GensetCase):
         return self.Request.search(domain)
 
     def run_events(self):
-        self.env["td.genset.link"]._cron_events()
+        self.env["td.genset3d.link"]._cron_events()
 
     def done_stage(self):
         return self.env["maintenance.stage"].search([("done", "=", True)], limit=1)

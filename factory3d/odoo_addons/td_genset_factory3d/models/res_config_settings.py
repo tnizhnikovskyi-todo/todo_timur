@@ -62,7 +62,7 @@ class ResConfigSettings(models.TransientModel):
         offline = icp.get_param(P + "offline_min")
         if offline != old_offline:
             offline_min = int(offline or 5)
-            for link in self.env["td.genset.link"].sudo().search([]):
+            for link in self.env["td.genset3d.link"].sudo().search([]):
                 signals = (
                     self.env["td.signal"].sudo().search([("code", "=like", "infra/genset/%s/%%" % link.td_code)])
                 )

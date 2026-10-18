@@ -24,7 +24,7 @@
 - DEC-3: `td_fire_norm.csv` грузится CSV без noupdate (SPEC §0 помечает noupdate=1; CSV его не поддерживает) — оставлено как в
   манифесте SPEC §1. Для 7 авторских норм ref/note из Додатка D, формулировка примечаний — W0. — `data/td_fire_norm.csv`
 - DEC-4: SPEC §1 называет CSV `td_fire_norm.csv` и т. п., но Odoo берёт модель из имени CSV — переименованы в
-  `f3d.fire.<model>.csv` (norm, zone, smoke.zone, device, exit); манифест и gen_data.py поправлены. — `data/`
+  `td.fire.<model>.csv` (norm, zone, smoke.zone, device, exit); манифест и gen_data.py поправлены. — `data/`
 - DEC-5: регэксп ключа нормы `^[A-Za-z0-9_]+$` вместо `[a-z0-9_]`: в данных макета есть `evac_distance_prod_B`. — `models/td_fire_norm.py`
 - DEC-6: скелет `td.fire.drill` (name, zone_id, state) до W4 — на него ссылается журнал событий W1. — `models/td_fire_drill.py`
 - DEC-7: `target="inline"` недопустим в Odoo 19 — у `action_td_fire_settings` target не задан. — `views/res_config_settings_views.xml`

@@ -84,8 +84,8 @@ class GensetCase(F3DCase):
                 "td_passport_id": cls.passport.id,
             }
         )
-        env["td.genset.link"].search([]).write({"publish_enabled": False})
-        env["td.genset.link"].search([("equipment_id", "=", cls.genset_eq.id)]).unlink()
+        env["td.genset3d.link"].search([]).write({"publish_enabled": False})
+        env["td.genset3d.link"].search([("equipment_id", "=", cls.genset_eq.id)]).unlink()
         cls.profile = env.ref("td_genset_factory3d.profile_d700")
         cls.td_gen = env["res.partner"].create({"name": "Генератор td_genset (тест)"})
 
@@ -110,7 +110,7 @@ class GensetCase(F3DCase):
         self.set_param("read_enabled", "True")
         self.set_param("requests_enabled", "True")
         self.set_param("offline_min", "5")
-        self.link = self.env["td.genset.link"].create(
+        self.link = self.env["td.genset3d.link"].create(
             {
                 "equipment_id": self.genset_eq.id,
                 "td_genset_ref": "res.partner,%d" % self.td_gen.id,
@@ -159,7 +159,7 @@ class TestLinkConstraints(GensetCase):
     def test_unique_equipment(self):  # AC-02
         other = self.env["res.partner"].create({"name": "Інший генератор"})
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"), self.cr.savepoint():
-            self.env["td.genset.link"].create(
+            self.env["td.genset3d.link"].create(
                 {
                     "equipment_id": self.genset_eq.id,
                     "td_genset_ref": "res.partner,%d" % other.id,
@@ -174,9 +174,9 @@ class TestLinkConstraints(GensetCase):
         comp = Equipment.create({"name": "Компресор", "td_code": "COMP-T", "td_passport_id": self.passport_comp.id})
         vals = {"td_genset_ref": "res.partner,%d" % other.id, "profile_id": self.profile.id}
         with self.assertRaisesRegex(ValidationError, "не має коду сцени"), self.cr.savepoint():
-            self.env["td.genset.link"].create({**vals, "equipment_id": nocode.id})
+            self.env["td.genset3d.link"].create({**vals, "equipment_id": nocode.id})
         with self.assertRaisesRegex(ValidationError, "має роль «compressor», потрібна «genset»"), self.cr.savepoint():
-            self.env["td.genset.link"].create({**vals, "equipment_id": comp.id})
+            self.env["td.genset3d.link"].create({**vals, "equipment_id": comp.id})
 
 
 @tagged("post_install", "-at_install")
@@ -315,7 +315,7 @@ class TestProfileExport(GensetCase):
         profile = self.profile.with_user(self.user_manager)
         action = profile.action_export_relay_profile()
         att = self.env["ir.attachment"].search(
-            [("res_model", "=", "td.genset.profile"), ("res_id", "=", self.profile.id)], order="id desc", limit=1
+            [("res_model", "=", "td.genset3d.profile"), ("res_id", "=", self.profile.id)], order="id desc", limit=1
         )
         self.assertEqual(att.mimetype, "application/json")
         self.assertIn(str(att.id), action["url"])

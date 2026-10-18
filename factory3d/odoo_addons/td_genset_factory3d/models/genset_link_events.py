@@ -24,7 +24,7 @@ def _fmt_int(value):
 
 
 class F3dGensetLinkEvents(models.Model):
-    _inherit = "td.genset.link"
+    _inherit = "td.genset3d.link"
 
     # --- крони -----------------------------------------------------------------------------------------------
     @api.model
@@ -71,7 +71,7 @@ class F3dGensetLinkEvents(models.Model):
             ev["text"] = (ev.get("text") or "")[:2000]
             try:
                 with self.env.cr.savepoint():
-                    self._apply_event(ev, self.env["td.genset.event.map"]._match(ev))
+                    self._apply_event(ev, self.env["td.genset3d.event.map"]._match(ev))
             except Exception:  # одна «отруйна» подія не блокує потік
                 _logger.exception("td_genset_factory3d: подію %s зв'язки %s не оброблено", ev.get("id"), self.id)
             last = ev
@@ -193,7 +193,7 @@ class F3dGensetLinkEvents(models.Model):
             warn_h = 50.0
         if left is None or next_h is None or not (info.get("due") or left <= warn_h):
             return False
-        row = self.env["td.genset.event.map"].search([("key", "=", "SERVICE_DUE")], limit=1)
+        row = self.env["td.genset3d.event.map"].search([("key", "=", "SERVICE_DUE")], limit=1)
         if not row:
             return False
         avg = self._avg_hours_per_day(hours_signal, hours_now)

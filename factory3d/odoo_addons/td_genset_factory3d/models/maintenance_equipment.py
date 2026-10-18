@@ -4,9 +4,9 @@ from odoo import api, fields, models
 class MaintenanceEquipment(models.Model):
     _inherit = "maintenance.equipment"
 
-    td_genset_link_ids = fields.One2many("td.genset.link", "equipment_id", string="Зв'язка генератора")
+    td_genset_link_ids = fields.One2many("td.genset3d.link", "equipment_id", string="Зв'язка генератора")
     td_genset_link_id = fields.Many2one(
-        "td.genset.link", compute="_compute_f3d_genset_link", string="Зв'язка генератора (перша)"
+        "td.genset3d.link", compute="_compute_f3d_genset_link", string="Зв'язка генератора (перша)"
     )
     td_is_genset = fields.Boolean(compute="_compute_f3d_genset_link", string="Генератор")
 
@@ -21,7 +21,7 @@ class MaintenanceEquipment(models.Model):
         action = {
             "type": "ir.actions.act_window",
             "name": "Генератор",
-            "res_model": "td.genset.link",
+            "res_model": "td.genset3d.link",
             "view_mode": "form",
             "target": "current",
         }

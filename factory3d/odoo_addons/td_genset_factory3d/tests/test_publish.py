@@ -137,7 +137,7 @@ class TestPublish(GensetCase):
             {"name": "Генератор 2", "td_code": "GENSET-2", "td_passport_id": self.passport.id}
         )
         gen2 = self.env["res.partner"].create({"name": "Генератор td_genset 2"})
-        link2 = self.env["td.genset.link"].create(
+        link2 = self.env["td.genset3d.link"].create(
             {"equipment_id": eq2.id, "td_genset_ref": "res.partner,%d" % gen2.id, "profile_id": self.profile.id}
         )
         good = self.snap()
@@ -148,7 +148,7 @@ class TestPublish(GensetCase):
             return good
 
         with mock.patch(TD + ".snapshot", side_effect=snapshot), mute_logger(LINK_LOGGER):
-            self.env["td.genset.link"]._cron_publish()
+            self.env["td.genset3d.link"]._cron_publish()
         self.assertEqual(self.link.last_publish_error, "NotImplementedError: ADP-03: звірити з td_genset")
         self.assertTrue(link2.last_publish_ts)
         self.assertFalse(link2.last_publish_error)

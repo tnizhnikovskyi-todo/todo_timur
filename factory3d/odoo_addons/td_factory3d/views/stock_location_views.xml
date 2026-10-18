@@ -13,13 +13,13 @@
             <xpath expr="//sheet" position="inside">
                 <notebook>
                     <page name="f3d" string="Завод 3D">
-                        <field name="is_f3d_manager" invisible="1"/>
+                        <field name="td_is_manager" invisible="1"/>
                         <field name="td_viewer_available" invisible="1"/>
                         <group>
                             <group name="f3d_scene" string="Код сцени">
-                                <field name="td_code" readonly="not is_f3d_manager"/>
-                                <field name="td_alias" readonly="not is_f3d_manager"/>
-                                <field name="td_kind" readonly="not is_f3d_manager"/>
+                                <field name="td_code" readonly="not td_is_manager"/>
+                                <field name="td_alias" readonly="not td_is_manager"/>
+                                <field name="td_kind" readonly="not td_is_manager"/>
                                 <field name="td_zone_id"/>
                                 <field name="td_loc_kind"/>
                                 <field name="td_capacity"/>

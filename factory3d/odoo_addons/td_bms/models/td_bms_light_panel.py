@@ -45,7 +45,7 @@ class F3dBmsLightPanel(models.Model):
         ],
         compute="_compute_live",
     )
-    is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
+    td_is_manager = fields.Boolean(compute="_compute_is_f3d_manager")
     active = fields.Boolean(default=True)
     note = fields.Text()
 
@@ -79,7 +79,7 @@ class F3dBmsLightPanel(models.Model):
     def _compute_is_f3d_manager(self):
         manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
-            rec.is_f3d_manager = manager
+            rec.td_is_manager = manager
 
     @api.depends_context("uid")
     @api.depends(

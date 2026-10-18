@@ -758,7 +758,7 @@ telemetry); провайдери модуля замінюють розділи 
 (`ok`/`on`/`none`), `decoration-warning` (`low`/`below_norm`/`standby`/`cold`), `decoration-danger`
 (`alarm`/`fault`/`off_in_work`/`not_running`/`deficit`), `decoration-muted` (`nodata`/`no_data`/`off_hours`/`off`).
 Живі поля — `readonly="1"`. Поля налаштувань (`zone_id`, `norm_id`, `n_fixtures`, `uf`, `mf`, `dali_*`, сигнали,
-номінали) — `readonly="not is_f3d_manager"` (поле `is_f3d_manager` — `compute` `user.has_group('td_factory3d.group_td_manager')`
+номінали) — `readonly="not td_is_manager"` (поле `td_is_manager` — `compute` `user.has_group('td_factory3d.group_td_manager')`
 на M-02, M-03, M-05, M-06; присутнє у формах невидимим).
 
 | ID | XML-id (`td_bms.`) | Тип / модель | Структура |

@@ -12,14 +12,14 @@
 T=<корінь worktree>/factory3d/tools/odoo
 $T/setup.sh                                      # свіжий контейнер: Postgres, Odoo 19, venv, конфіг, шаблонна база f3d_template
 $T/pg.sh start                                   # підняти Postgres (після рестарту контейнера сам не стартує)
-F3D_TEST_INSTALL=td_x $T/run_tests.sh f3d_<ім'я>   # свіжа копія шаблона + -i td_x + тести /td_x
-$T/run_tests.sh f3d_<ім'я>                       # те саме, але ставляться й тестуються ВСІ модулі з odoo_addons
-$T/run_tests.sh f3d_<ім'я> /td_x:TestY    # лише клас (або :TestY.test_z, або тег); теги — синтаксис Odoo --test-tags
-$T/new_db.sh f3d_<ім'я>                          # порожня копія шаблона (без модулів factory3d)
-$T/update.sh f3d_<ім'я>                          # -u/-i модулів factory3d у наявній базі
-$T/serve.sh f3d_<ім'я> [порт]                    # сервер у фоні (Playwright, ручна перевірка), admin / admin
-$T/serve.sh stop f3d_<ім'я>                      # зупинити (serve.sh status — що запущено)
-$T/drop_db.sh f3d_<ім'я>                         # видалити базу і filestore (--pattern 'f3d_w1_%'; зайняті пропускає)
+F3D_TEST_INSTALL=td_x $T/run_tests.sh td_<ім'я>   # свіжа копія шаблона + -i td_x + тести /td_x
+$T/run_tests.sh td_<ім'я>                       # те саме, але ставляться й тестуються ВСІ модулі з odoo_addons
+$T/run_tests.sh td_<ім'я> /td_x:TestY    # лише клас (або :TestY.test_z, або тег); теги — синтаксис Odoo --test-tags
+$T/new_db.sh td_<ім'я>                          # порожня копія шаблона (без модулів factory3d)
+$T/update.sh td_<ім'я>                          # -u/-i модулів factory3d у наявній базі
+$T/serve.sh td_<ім'я> [порт]                    # сервер у фоні (Playwright, ручна перевірка), admin / admin
+$T/serve.sh stop td_<ім'я>                      # зупинити (serve.sh status — що запущено)
+$T/drop_db.sh td_<ім'я>                         # видалити базу і filestore (--pattern 'f3d_w1_%'; зайняті пропускає)
 $T/setup.sh template                             # перезібрати шаблон f3d_template (≈ 105 с)
 $T/setup.sh check                                # перевірка інфраструктури: post_install-тести /maintenance з туром у Chrome (≈ 55 с)
 ```
@@ -62,7 +62,7 @@ mrp_account, analytic, web_hierarchy, delivery, stock_delivery, web_gantt, hr_at
 
 ### Демо-шаблон `td_demo_tpl` (`make_demo_tpl.sh`)
 
-`make_demo_tpl.sh [--force]` (≈ 6,5 хв): копія `f3d_template` + uk_UA + purchase_stock/sale_stock/… → `plant.odoo_push` по XML-RPC (сервер без cron) → `-i td_factory3d,td_iot_sim` (post_init_hook мігрує демо) → шаблон (`ALLOW_CONNECTIONS false`). Є: MO `WH/MO/00231`, 35 РЦ, 731 локація, `td_sim_signal` 1168. Тести на ній: `F3D_TEMPLATE_DB=td_demo_tpl F3D_TEST_INSTALL=… run_tests.sh f3d_<ім'я> …`.
+`make_demo_tpl.sh [--force]` (≈ 6,5 хв): копія `f3d_template` + uk_UA + purchase_stock/sale_stock/… → `plant.odoo_push` по XML-RPC (сервер без cron) → `-i td_factory3d,td_iot_sim` (post_init_hook мігрує демо) → шаблон (`ALLOW_CONNECTIONS false`). Є: MO `WH/MO/00231`, 35 РЦ, 731 локація, `td_sim_signal` 1168. Тести на ній: `F3D_TEMPLATE_DB=td_demo_tpl F3D_TEST_INSTALL=… run_tests.sh td_<ім'я> …`.
 Кроки push `modules` (iot — Enterprise), `iot_module`, `signals` пропускаються (`--skip`/`F3D_DEMO_SKIP`); у `plant/odoo_push.py` — правки для CE: без `employee_ids`/`start_employee` і з lot_name при підтвердженні приймань. Якщо база є — вихід без дій.
 
 ### Недоступні модулі (Odoo 19.0 Community)

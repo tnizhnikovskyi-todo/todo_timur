@@ -51,7 +51,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
     _f3d_group = "td_factory3d.group_td_user"
 
     def _f3d_viewer_collect(self, payload, ctx):
-        for link in self.env["td.genset.link"].sudo().search([("active", "=", True)]):
+        for link in self.env["td.genset3d.link"].sudo().search([("active", "=", True)]):
             self._collect_link(link, payload)
 
     def _collect_link(self, link, payload):
@@ -193,7 +193,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
         deep_merge(patch.setdefault("infra", {}), tmp.get("infra", {}))
 
     def _wants_delta(self, changes):
-        Link = self.env["td.genset.link"].sudo()
+        Link = self.env["td.genset3d.link"].sudo()
         if changes.get("maintenance.equipment"):
             codes = set(Link.search([("active", "=", True)]).mapped("td_code"))
             if codes & set(changes["maintenance.equipment"]):

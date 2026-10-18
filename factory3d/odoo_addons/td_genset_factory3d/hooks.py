@@ -27,12 +27,12 @@ def post_init_hook(env):
     icp = env["ir.config_parameter"].sudo()
     report = {}
     # 0. td_code рядків мапи подій: зберегти поточні, відновити збережені в порожні (ключ → код)
-    if "td.genset.event.map" in env:
+    if "td.genset3d.event.map" in env:
         try:
             saved = json.loads(icp.get_param(P + "migration_report") or "{}").get("td_codes", {})
         except ValueError:
             saved = {}
-        rows = env["td.genset.event.map"].sudo().with_context(active_test=False)
+        rows = env["td.genset3d.event.map"].sudo().with_context(active_test=False)
         current = {row.key: row.td_code for row in rows.search([("td_code", "!=", False)])}
         report["td_codes"] = {**saved, **current}
         for key, code in saved.items():
@@ -61,7 +61,7 @@ def post_init_hook(env):
     if not eq:
         report["link"] = "skipped: немає обладнання з td_code=GENSET"
     else:
-        Link = env["td.genset.link"].sudo().with_context(active_test=False)
+        Link = env["td.genset3d.link"].sudo().with_context(active_test=False)
         link = Link.search([("equipment_id", "=", eq.id)], limit=1)
         pseudo = link or Link.new({"equipment_id": eq.id})
         had_source = bool(env["td.source"].sudo().search_count([("code", "=", telemetry.SOURCE_CODE)]))

@@ -574,7 +574,7 @@ UPDATE td_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 
 Повторний запуск hook (reinstall/upgrade) не створює дублікатів (ключі `code`).
 
-`uninstall_hook`: `ir.cron` модуля → `active=False` (рівень 0 теж), `ir.config_parameter td.iot_sim.*` → видалити, `td.sim.run`/`td.sim.event` — видалити (A-11). Моделі `f3d.sim.*` видаляються Odoo разом із модулем; `x_*` лишаються (їх data-файли належать модулю, тож Odoo **видалить** і їх при повній деінсталяції — це задокументоване застереження: деінсталяцію до міграції телеметрією робити лише на копії; `uninstall_hook` пише WARNING у лог і в чаттер пульта перед видаленням).
+`uninstall_hook`: `ir.cron` модуля → `active=False` (рівень 0 теж), `ir.config_parameter td.iot_sim.*` → видалити, `td.sim.run`/`td.sim.event` — видалити (A-11). Моделі `td.sim.*` видаляються Odoo разом із модулем; `x_*` лишаються (їх data-файли належать модулю, тож Odoo **видалить** і їх при повній деінсталяції — це задокументоване застереження: деінсталяцію до міграції телеметрією робити лише на копії; `uninstall_hook` пише WARNING у лог і в чаттер пульта перед видаленням).
 
 ---
 

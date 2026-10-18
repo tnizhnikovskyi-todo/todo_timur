@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC Додаток B: мапа подій HGM6120N → дії (48 рядків, A-16). td_code — ADAPTER_MAP Q-13 (td.genset.alarm.code). -->
 <odoo noupdate="1">
-    <record id="evmap_loss_of_speed_signal_w" model="td.genset.event.map">
+    <record id="evmap_loss_of_speed_signal_w" model="td.genset3d.event.map">
         <field name="key">LOSS_OF_SPEED_SIGNAL_W</field>
         <field name="sequence">101</field>
         <field name="hgm_name">Loss of Speed Signal</field>
@@ -17,7 +17,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_genset_over_current_w" model="td.genset.event.map">
+    <record id="evmap_genset_over_current_w" model="td.genset3d.event.map">
         <field name="key">GENSET_OVER_CURRENT_W</field>
         <field name="sequence">102</field>
         <field name="hgm_name">Genset Over Current</field>
@@ -33,7 +33,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_fail_to_stop_w" model="td.genset.event.map">
+    <record id="evmap_fail_to_stop_w" model="td.genset3d.event.map">
         <field name="key">FAIL_TO_STOP_W</field>
         <field name="sequence">103</field>
         <field name="hgm_name">Fail to Stop</field>
@@ -49,7 +49,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_fuel_level_w" model="td.genset.event.map">
+    <record id="evmap_low_fuel_level_w" model="td.genset3d.event.map">
         <field name="key">LOW_FUEL_LEVEL_W</field>
         <field name="sequence">104</field>
         <field name="hgm_name">Low Fuel Level</field>
@@ -65,7 +65,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_fail_to_charge_w" model="td.genset.event.map">
+    <record id="evmap_fail_to_charge_w" model="td.genset3d.event.map">
         <field name="key">FAIL_TO_CHARGE_W</field>
         <field name="sequence">105</field>
         <field name="hgm_name">Fail to Charge</field>
@@ -81,7 +81,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_battery_under_voltage_w" model="td.genset.event.map">
+    <record id="evmap_battery_under_voltage_w" model="td.genset3d.event.map">
         <field name="key">BATTERY_UNDER_VOLTAGE_W</field>
         <field name="sequence">106</field>
         <field name="hgm_name">Battery Under Voltage</field>
@@ -97,7 +97,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_battery_over_voltage_w" model="td.genset.event.map">
+    <record id="evmap_battery_over_voltage_w" model="td.genset3d.event.map">
         <field name="key">BATTERY_OVER_VOLTAGE_W</field>
         <field name="sequence">107</field>
         <field name="hgm_name">Battery Over Voltage</field>
@@ -113,7 +113,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_coolant_level_w" model="td.genset.event.map">
+    <record id="evmap_low_coolant_level_w" model="td.genset3d.event.map">
         <field name="key">LOW_COOLANT_LEVEL_W</field>
         <field name="sequence">108</field>
         <field name="hgm_name">Low Coolant Level</field>
@@ -129,7 +129,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_temp_sensor_open_w" model="td.genset.event.map">
+    <record id="evmap_temp_sensor_open_w" model="td.genset3d.event.map">
         <field name="key">TEMP_SENSOR_OPEN_W</field>
         <field name="sequence">109</field>
         <field name="hgm_name">Temp. Sensor Open</field>
@@ -145,7 +145,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_oil_pressure_sensor_open_w" model="td.genset.event.map">
+    <record id="evmap_oil_pressure_sensor_open_w" model="td.genset3d.event.map">
         <field name="key">OIL_PRESSURE_SENSOR_OPEN_W</field>
         <field name="sequence">110</field>
         <field name="hgm_name">Oil Pressure Sensor Open</field>
@@ -161,7 +161,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_maintenance_due_w" model="td.genset.event.map">
+    <record id="evmap_maintenance_due_w" model="td.genset3d.event.map">
         <field name="key">MAINTENANCE_DUE_W</field>
         <field name="sequence">111</field>
         <field name="hgm_name">Maintenance Due Warning</field>
@@ -177,7 +177,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_high_temp_w" model="td.genset.event.map">
+    <record id="evmap_high_temp_w" model="td.genset3d.event.map">
         <field name="key">HIGH_TEMP_W</field>
         <field name="sequence">112</field>
         <field name="hgm_name">High Temp.</field>
@@ -193,7 +193,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_oil_pressure_w" model="td.genset.event.map">
+    <record id="evmap_low_oil_pressure_w" model="td.genset3d.event.map">
         <field name="key">LOW_OIL_PRESSURE_W</field>
         <field name="sequence">113</field>
         <field name="hgm_name">Low Oil Pressure</field>
@@ -209,7 +209,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_input_warn_w" model="td.genset.event.map">
+    <record id="evmap_input_warn_w" model="td.genset3d.event.map">
         <field name="key">INPUT_WARN_W</field>
         <field name="sequence">114</field>
         <field name="hgm_name">Input Warn</field>
@@ -225,7 +225,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_failed_to_charge_input_w" model="td.genset.event.map">
+    <record id="evmap_failed_to_charge_input_w" model="td.genset3d.event.map">
         <field name="key">FAILED_TO_CHARGE_INPUT_W</field>
         <field name="sequence">115</field>
         <field name="hgm_name">Failed to Charge</field>
@@ -241,7 +241,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_over_power_w" model="td.genset.event.map">
+    <record id="evmap_over_power_w" model="td.genset3d.event.map">
         <field name="key">OVER_POWER_W</field>
         <field name="sequence">116</field>
         <field name="hgm_name">Over Power</field>
@@ -257,7 +257,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_ecu_warn_w" model="td.genset.event.map">
+    <record id="evmap_ecu_warn_w" model="td.genset3d.event.map">
         <field name="key">ECU_WARN_W</field>
         <field name="sequence">117</field>
         <field name="hgm_name">ECU Warn</field>
@@ -272,7 +272,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_emergency_stop_sd" model="td.genset.event.map">
+    <record id="evmap_emergency_stop_sd" model="td.genset3d.event.map">
         <field name="key">EMERGENCY_STOP_SD</field>
         <field name="sequence">201</field>
         <field name="hgm_name">Emergency Stop</field>
@@ -287,7 +287,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_high_temp_sd" model="td.genset.event.map">
+    <record id="evmap_high_temp_sd" model="td.genset3d.event.map">
         <field name="key">HIGH_TEMP_SD</field>
         <field name="sequence">202</field>
         <field name="hgm_name">High Temp.</field>
@@ -303,7 +303,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_oil_pressure_sd" model="td.genset.event.map">
+    <record id="evmap_low_oil_pressure_sd" model="td.genset3d.event.map">
         <field name="key">LOW_OIL_PRESSURE_SD</field>
         <field name="sequence">203</field>
         <field name="hgm_name">Low Oil Pressure</field>
@@ -319,7 +319,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_over_speed_sd" model="td.genset.event.map">
+    <record id="evmap_over_speed_sd" model="td.genset3d.event.map">
         <field name="key">OVER_SPEED_SD</field>
         <field name="sequence">204</field>
         <field name="hgm_name">Over Speed</field>
@@ -335,7 +335,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_under_speed_sd" model="td.genset.event.map">
+    <record id="evmap_under_speed_sd" model="td.genset3d.event.map">
         <field name="key">UNDER_SPEED_SD</field>
         <field name="sequence">205</field>
         <field name="hgm_name">Under Speed</field>
@@ -351,7 +351,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_loss_of_speed_signal_sd" model="td.genset.event.map">
+    <record id="evmap_loss_of_speed_signal_sd" model="td.genset3d.event.map">
         <field name="key">LOSS_OF_SPEED_SIGNAL_SD</field>
         <field name="sequence">206</field>
         <field name="hgm_name">Loss of Speed Signal</field>
@@ -367,7 +367,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_gen_over_voltage_sd" model="td.genset.event.map">
+    <record id="evmap_gen_over_voltage_sd" model="td.genset3d.event.map">
         <field name="key">GEN_OVER_VOLTAGE_SD</field>
         <field name="sequence">207</field>
         <field name="hgm_name">Gen Over Voltage</field>
@@ -383,7 +383,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_gen_under_voltage_sd" model="td.genset.event.map">
+    <record id="evmap_gen_under_voltage_sd" model="td.genset3d.event.map">
         <field name="key">GEN_UNDER_VOLTAGE_SD</field>
         <field name="sequence">208</field>
         <field name="hgm_name">Gen Under Voltage</field>
@@ -399,7 +399,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_gen_over_current_sd" model="td.genset.event.map">
+    <record id="evmap_gen_over_current_sd" model="td.genset3d.event.map">
         <field name="key">GEN_OVER_CURRENT_SD</field>
         <field name="sequence">209</field>
         <field name="hgm_name">Gen Over Current</field>
@@ -415,7 +415,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_fail_to_start_sd" model="td.genset.event.map">
+    <record id="evmap_fail_to_start_sd" model="td.genset3d.event.map">
         <field name="key">FAIL_TO_START_SD</field>
         <field name="sequence">210</field>
         <field name="hgm_name">Fail to Start</field>
@@ -431,7 +431,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_gen_over_frequency_sd" model="td.genset.event.map">
+    <record id="evmap_gen_over_frequency_sd" model="td.genset3d.event.map">
         <field name="key">GEN_OVER_FREQUENCY_SD</field>
         <field name="sequence">211</field>
         <field name="hgm_name">Gen Over Frequency</field>
@@ -447,7 +447,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_gen_under_frequency_sd" model="td.genset.event.map">
+    <record id="evmap_gen_under_frequency_sd" model="td.genset3d.event.map">
         <field name="key">GEN_UNDER_FREQUENCY_SD</field>
         <field name="sequence">212</field>
         <field name="hgm_name">Gen Under Frequency</field>
@@ -463,7 +463,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_genset_failed_sd" model="td.genset.event.map">
+    <record id="evmap_genset_failed_sd" model="td.genset3d.event.map">
         <field name="key">GENSET_FAILED_SD</field>
         <field name="sequence">213</field>
         <field name="hgm_name">Genset Failed</field>
@@ -478,7 +478,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_fuel_level_sd" model="td.genset.event.map">
+    <record id="evmap_low_fuel_level_sd" model="td.genset3d.event.map">
         <field name="key">LOW_FUEL_LEVEL_SD</field>
         <field name="sequence">214</field>
         <field name="hgm_name">Low Fuel Level</field>
@@ -494,7 +494,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_low_coolant_level_sd" model="td.genset.event.map">
+    <record id="evmap_low_coolant_level_sd" model="td.genset3d.event.map">
         <field name="key">LOW_COOLANT_LEVEL_SD</field>
         <field name="sequence">215</field>
         <field name="hgm_name">Low Coolant Level</field>
@@ -510,7 +510,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_temp_sensor_open_sd" model="td.genset.event.map">
+    <record id="evmap_temp_sensor_open_sd" model="td.genset3d.event.map">
         <field name="key">TEMP_SENSOR_OPEN_SD</field>
         <field name="sequence">216</field>
         <field name="hgm_name">Temp. Sensor Open</field>
@@ -526,7 +526,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_oil_pressure_sensor_open_sd" model="td.genset.event.map">
+    <record id="evmap_oil_pressure_sensor_open_sd" model="td.genset3d.event.map">
         <field name="key">OIL_PRESSURE_SENSOR_OPEN_SD</field>
         <field name="sequence">217</field>
         <field name="hgm_name">Oil Pressure Sensor Open</field>
@@ -542,7 +542,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_maintenance_due_sd" model="td.genset.event.map">
+    <record id="evmap_maintenance_due_sd" model="td.genset3d.event.map">
         <field name="key">MAINTENANCE_DUE_SD</field>
         <field name="sequence">218</field>
         <field name="hgm_name">Maintenance Due</field>
@@ -558,7 +558,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_input_shutdown_sd" model="td.genset.event.map">
+    <record id="evmap_input_shutdown_sd" model="td.genset3d.event.map">
         <field name="key">INPUT_SHUTDOWN_SD</field>
         <field name="sequence">219</field>
         <field name="hgm_name">Input Shutdown</field>
@@ -574,7 +574,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_over_power_sd" model="td.genset.event.map">
+    <record id="evmap_over_power_sd" model="td.genset3d.event.map">
         <field name="key">OVER_POWER_SD</field>
         <field name="sequence">220</field>
         <field name="hgm_name">Over Power</field>
@@ -590,7 +590,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_ecu_shutdown_sd" model="td.genset.event.map">
+    <record id="evmap_ecu_shutdown_sd" model="td.genset3d.event.map">
         <field name="key">ECU_SHUTDOWN_SD</field>
         <field name="sequence">221</field>
         <field name="hgm_name">ECU Shutdown</field>
@@ -605,7 +605,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_ecu_comm_failure_sd" model="td.genset.event.map">
+    <record id="evmap_ecu_comm_failure_sd" model="td.genset3d.event.map">
         <field name="key">ECU_COMM_FAILURE_SD</field>
         <field name="sequence">222</field>
         <field name="hgm_name">ECU Comm. Failure</field>
@@ -620,7 +620,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_over_current_fault_sd" model="td.genset.event.map">
+    <record id="evmap_over_current_fault_sd" model="td.genset3d.event.map">
         <field name="key">OVER_CURRENT_FAULT_SD</field>
         <field name="sequence">223</field>
         <field name="hgm_name">Over Current Fault</field>
@@ -635,7 +635,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_over_speed_input_sd" model="td.genset.event.map">
+    <record id="evmap_over_speed_input_sd" model="td.genset3d.event.map">
         <field name="key">OVER_SPEED_INPUT_SD</field>
         <field name="sequence">224</field>
         <field name="hgm_name">Over Speed Shutdown Input Alarm</field>
@@ -650,7 +650,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_comm_lost" model="td.genset.event.map">
+    <record id="evmap_comm_lost" model="td.genset3d.event.map">
         <field name="key">COMM_LOST</field>
         <field name="sequence">300</field>
         <field name="hgm_table">other</field>
@@ -665,7 +665,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_service_due" model="td.genset.event.map">
+    <record id="evmap_service_due" model="td.genset3d.event.map">
         <field name="key">SERVICE_DUE</field>
         <field name="sequence">310</field>
         <field name="hgm_table">other</field>
@@ -679,7 +679,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_default_warning" model="td.genset.event.map">
+    <record id="evmap_default_warning" model="td.genset3d.event.map">
         <field name="key">DEFAULT_WARNING</field>
         <field name="sequence">900</field>
         <field name="hgm_table">other</field>
@@ -693,7 +693,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_default_shutdown" model="td.genset.event.map">
+    <record id="evmap_default_shutdown" model="td.genset3d.event.map">
         <field name="key">DEFAULT_SHUTDOWN</field>
         <field name="sequence">910</field>
         <field name="hgm_table">other</field>
@@ -707,7 +707,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_default_comm" model="td.genset.event.map">
+    <record id="evmap_default_comm" model="td.genset3d.event.map">
         <field name="key">DEFAULT_COMM</field>
         <field name="sequence">920</field>
         <field name="hgm_table">other</field>
@@ -721,7 +721,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_default_service" model="td.genset.event.map">
+    <record id="evmap_default_service" model="td.genset3d.event.map">
         <field name="key">DEFAULT_SERVICE</field>
         <field name="sequence">930</field>
         <field name="hgm_table">other</field>
@@ -735,7 +735,7 @@
 Текст td_genset: {text}
 Запис td_genset: {td_link}</field>
     </record>
-    <record id="evmap_default_info" model="td.genset.event.map">
+    <record id="evmap_default_info" model="td.genset3d.event.map">
         <field name="key">DEFAULT_INFO</field>
         <field name="sequence">940</field>
         <field name="hgm_table">other</field>

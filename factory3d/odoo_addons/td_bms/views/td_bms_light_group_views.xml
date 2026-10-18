@@ -43,7 +43,7 @@
                 </header>
                 <sheet>
                     <field name="td_bms_write_enabled" invisible="1"/>
-                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="td_is_manager" invisible="1"/>
                     <field name="active" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-wrench">
@@ -58,36 +58,36 @@
                     </div>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="Назва"/></h1>
-                        <h3><field name="code" placeholder="LT-..." readonly="not is_f3d_manager"/></h3>
+                        <h3><field name="code" placeholder="LT-..." readonly="not td_is_manager"/></h3>
                     </div>
                     <group>
                         <group string="Зона й норма">
-                            <field name="zone_id" readonly="not is_f3d_manager"/>
+                            <field name="zone_id" readonly="not td_is_manager"/>
                             <field name="area_m2"/>
-                            <field name="norm_id" readonly="not is_f3d_manager"/>
+                            <field name="norm_id" readonly="not td_is_manager"/>
                             <field name="e_norm"/>
-                            <field name="control_mode" readonly="not is_f3d_manager"/>
-                            <field name="level_design" readonly="not is_f3d_manager"/>
-                            <field name="check_off" readonly="not is_f3d_manager"/>
-                            <field name="check_norm" readonly="not is_f3d_manager"/>
-                            <field name="calendar_id" readonly="not is_f3d_manager"/>
+                            <field name="control_mode" readonly="not td_is_manager"/>
+                            <field name="level_design" readonly="not td_is_manager"/>
+                            <field name="check_off" readonly="not td_is_manager"/>
+                            <field name="check_norm" readonly="not td_is_manager"/>
+                            <field name="calendar_id" readonly="not td_is_manager"/>
                         </group>
                         <group string="Світильники">
-                            <field name="passport_id" readonly="not is_f3d_manager"/>
-                            <field name="fixture_kind" readonly="not is_f3d_manager"/>
-                            <field name="lumen" readonly="not is_f3d_manager"/>
-                            <field name="watt" readonly="not is_f3d_manager"/>
-                            <field name="n_fixtures" readonly="not is_f3d_manager"/>
-                            <field name="panel_id" readonly="not is_f3d_manager"/>
-                            <field name="equipment_id" readonly="not is_f3d_manager"/>
+                            <field name="passport_id" readonly="not td_is_manager"/>
+                            <field name="fixture_kind" readonly="not td_is_manager"/>
+                            <field name="lumen" readonly="not td_is_manager"/>
+                            <field name="watt" readonly="not td_is_manager"/>
+                            <field name="n_fixtures" readonly="not td_is_manager"/>
+                            <field name="panel_id" readonly="not td_is_manager"/>
+                            <field name="equipment_id" readonly="not td_is_manager"/>
                         </group>
                     </group>
                     <notebook>
                         <page string="Розрахунок" name="design">
                             <group>
                                 <group>
-                                    <field name="uf" readonly="not is_f3d_manager"/>
-                                    <field name="mf" readonly="not is_f3d_manager"/>
+                                    <field name="uf" readonly="not td_is_manager"/>
+                                    <field name="mf" readonly="not td_is_manager"/>
                                     <field name="n_required"/>
                                     <field name="e_calc"/>
                                     <field name="design_ok" widget="badge" decoration-success="design_ok"
@@ -124,16 +124,16 @@
                         <page string="DALI" name="dali">
                             <group>
                                 <group>
-                                    <field name="dali_group" readonly="not is_f3d_manager"/>
-                                    <field name="dali_devices" readonly="not is_f3d_manager"/>
+                                    <field name="dali_group" readonly="not td_is_manager"/>
+                                    <field name="dali_devices" readonly="not td_is_manager"/>
                                 </group>
                                 <group>
-                                    <field name="level_signal_id" readonly="not is_f3d_manager"/>
-                                    <field name="power_signal_id" readonly="not is_f3d_manager"/>
-                                    <field name="scene_signal_id" readonly="not is_f3d_manager"/>
-                                    <field name="faults_signal_id" readonly="not is_f3d_manager"/>
-                                    <field name="faulty_signal_id" readonly="not is_f3d_manager"/>
-                                    <field name="check_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="level_signal_id" readonly="not td_is_manager"/>
+                                    <field name="power_signal_id" readonly="not td_is_manager"/>
+                                    <field name="scene_signal_id" readonly="not td_is_manager"/>
+                                    <field name="faults_signal_id" readonly="not td_is_manager"/>
+                                    <field name="faulty_signal_id" readonly="not td_is_manager"/>
+                                    <field name="check_signal_id" readonly="not td_is_manager"/>
                                 </group>
                             </group>
                         </page>

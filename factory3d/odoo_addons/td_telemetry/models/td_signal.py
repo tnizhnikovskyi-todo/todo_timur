@@ -167,7 +167,7 @@ class F3dSignal(models.Model):
     note = fields.Text(string="Примітка")
     reading_count = fields.Integer(string="Показань за 2 доби", compute="_compute_reading_count")
     meter_equipment_ids = fields.One2many("maintenance.equipment", "td_meter_signal_id", string="ТО за лічильником")
-    is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
+    td_is_manager = fields.Boolean(compute="_compute_is_f3d_manager")
     states_text = fields.Char(
         string="Допустимі стани (через кому)", compute="_compute_states_text", inverse="_inverse_states_text"
     )
@@ -222,7 +222,7 @@ class F3dSignal(models.Model):
     def _compute_is_f3d_manager(self):
         is_manager = self.env.user.has_group("td_factory3d.group_td_manager")
         for rec in self:
-            rec.is_f3d_manager = is_manager
+            rec.td_is_manager = is_manager
 
     def _compute_reading_count(self):
         counts = {}

@@ -170,7 +170,7 @@ R-14 (дельти); «документацію вендора» `td_iot_sim` SP
 ┌─ Odoo 19 ──────────────────────────────────────────────────────────────────────────────────────────────┐
 │  td_access                                                                                      │
 │  ┌───────────────┐  cron 1 хв   ┌──────────────────────┐   R-01…R-10   ┌─────────────────────────────┐ │
-│  │ f3d.access.   │ ───────────► │ tools/biostar_client │ ────────────► │ td.access.event (журнал)   │ │
+│  │ td.access.   │ ───────────► │ tools/biostar_client │ ────────────► │ td.access.event (журнал)   │ │
 │  │ server        │  login/      │ (requests, TLS,      │  нові рядки   │  ├─ hr.attendance (R-04…07) │ │
 │  │ (сесія, стан, │  events/     │  bs-session-id,      │               │  ├─ hr.employee.present/zone│ │
 │  │ last_event)   │  users/      │  пагінація, 401→re-  │               │  ├─ td.access.door.state   │ │

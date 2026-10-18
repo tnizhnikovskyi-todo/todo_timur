@@ -17,12 +17,12 @@
             </xpath>
             <xpath expr="//page[@name='page_transfers']" position="after">
                 <page name="f3d" string="Завод 3D">
-                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="td_is_manager" invisible="1"/>
                     <field name="td_viewer_available" invisible="1"/>
                     <group name="f3d_scene" string="Код сцени">
-                        <field name="td_code" string="Код фури в 3D" readonly="not is_f3d_manager"/>
-                        <field name="td_alias" readonly="not is_f3d_manager"/>
-                        <field name="td_kind" readonly="not is_f3d_manager"/>
+                        <field name="td_code" string="Код фури в 3D" readonly="not td_is_manager"/>
+                        <field name="td_alias" readonly="not td_is_manager"/>
+                        <field name="td_kind" readonly="not td_is_manager"/>
                         <field name="td_dock_code"/>
                     </group>
                     <button name="action_f3d_show" string="Показати в 3D" type="object"

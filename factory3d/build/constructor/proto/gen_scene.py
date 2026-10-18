@@ -1,12 +1,12 @@
 # Дописує в src/seed.json шари й об'єкти сцени з інвентаря 3D-моделі (scene_inventory.json).
-# Класифікація — спільна з сідом модуля: factory3d_constructor/tools/scene_classify.py.
-# Запуск: python3 gen_scene.py [<корінь factory3d_constructor>]; ідемпотентний (ключі layers/scene перезаписуються).
+# Класифікація — спільна з сідом модуля: td_constructor/tools/scene_classify.py.
+# Запуск: python3 gen_scene.py [<корінь td_constructor>]; ідемпотентний (ключі layers/scene перезаписуються).
 import json
 import os
 import sys
 
 D = os.path.dirname(os.path.abspath(__file__))
-MOD = sys.argv[1] if len(sys.argv) > 1 else os.path.normpath(os.path.join(D, '../../../odoo_addons/factory3d_constructor'))
+MOD = sys.argv[1] if len(sys.argv) > 1 else os.path.normpath(os.path.join(D, '../../../odoo_addons/td_constructor'))
 sys.path.insert(0, os.path.join(MOD, 'tools'))
 import scene_classify as sc  # noqa: E402
 

@@ -160,7 +160,7 @@ class F3dSceneMixin(models.AbstractModel):
 | `td_alias` | Char(32) | `string="Другий код сцени"`, `idx`, `copy=False`, `help="Ще один код того самого запису в 3D, якщо модель малює його двома об'єктами (ворота DOCK-W1 і майданчик UNLOAD-1)"` |
 | `td_kind` | Selection | `[('location','Місце зберігання'),('workcenter','Робочий центр'),('equipment','Обладнання'),('employee','Працівник'),('dock','Ворота'),('zone','Зона'),('vehicle','Транспорт'),('other','Інше')]` — константа модуля `F3D_KIND_SELECTION` у `models/td_scene_mixin.py` (її ж бере дзеркало M-10a), `string="Вид у сцені"`, `req`, `idx`, `default=lambda self: self._f3d_kind` |
 | `td_viewer_available` | Boolean | `compute="_compute_f3d_viewer_available"`, не зберігається: `True`, якщо `_f3d_viewer_installed()` |
-| `is_f3d_manager` | Boolean | `compute="_compute_is_f3d_manager"`, не зберігається: `self.env.user.has_group('td_factory3d.group_td_manager')` — для `readonly` полів домішки у формах (§3) |
+| `td_is_manager` | Boolean | `compute="_compute_is_f3d_manager"`, не зберігається: `self.env.user.has_group('td_factory3d.group_td_manager')` — для `readonly` полів домішки у формах (§3) |
 
 SQL-обмеження (застосовуються до кожного носія окремо — Odoo копіює обмеження домішки в
 конкретну модель):
@@ -492,7 +492,7 @@ class HrEmployeePublic(models.Model):
 стандарт будує його з колонок `hr_employee` за збереженими полями моделі (`hr/models/hr_employee_public.py:_get_fields`,
 `init`: `FROM hr_employee e JOIN hr_version v ON v.id = e.current_version_id`; колонки, яких немає в `hr.version`,
 беруться з `e.`). Домішку `td.scene.mixin` дзеркало **не** успадковує: її `UNIQUE`-обмеження, `_check_f3d_codes` і R-04
-`write`/`create` до представлення не застосовні. Не дзеркаляться не збережені `td_viewer_available`, `is_f3d_manager`
+`write`/`create` до представлення не застосовні. Не дзеркаляться не збережені `td_viewer_available`, `td_is_manager`
 і кнопка `action_f3d_show` (вона лише у формі `hr.employee`, V-14).
 
 Навіщо (Odoo 19, `hr/models/hr_employee.py`): для користувача без `hr.group_hr_user` `hr.employee.fetch()` і
@@ -511,11 +511,11 @@ class HrEmployeePublic(models.Model):
 
 Усі вкладки домішки називаються **«Завод 3D»** і містять групу `group_td_scene`: `td_code`,
 `td_alias`, `td_kind` (поля з `groups="td_factory3d.group_td_manager"` на редагування — для
-решти `readonly="1"` через `attrs`: `readonly="not is_f3d_manager"`, де `is_f3d_manager` —
+решти `readonly="1"` через `attrs`: `readonly="not td_is_manager"`, де `td_is_manager` —
 не збережене `Boolean compute` на домішці = `user.has_group(...)`; додати до M-01), і кнопка
 `action_f3d_show` (`string="Показати в 3D"`, `type="object"`, `icon="fa-cube"`,
 `invisible="not td_code"`, клас `btn-secondary`). У заголовку (`<header>`) форм кнопка дублюється
-як `btn-primary` з `invisible="not td_code or not td_viewer_available"`. Поля `is_f3d_manager` і
+як `btn-primary` з `invisible="not td_code or not td_viewer_available"`. Поля `td_is_manager` і
 `td_viewer_available` присутні у формі невидимими (`invisible="1"`), бо на них посилаються атрибути.
 
 | ID | XML-id | Тип / модель | Структура |

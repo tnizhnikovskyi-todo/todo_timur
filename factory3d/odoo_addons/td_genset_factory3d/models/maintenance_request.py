@@ -18,6 +18,6 @@ class MaintenanceRequest(models.Model):
     def _f3d_genset_on_closed(self):
         """R-08 крок 4: запис у чаттер зв'язки. Статус сигналу перераховує telemetry (_on_request_closed)."""
         self.ensure_one()
-        link = self.env["td.genset.link"].sudo().search([("equipment_id", "=", self.equipment_id.id)], limit=1)
+        link = self.env["td.genset3d.link"].sudo().search([("equipment_id", "=", self.equipment_id.id)], limit=1)
         if link:
             link.message_post(body=_("Заявку %s закрито", self.name))
