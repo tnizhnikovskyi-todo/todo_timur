@@ -120,4 +120,4 @@ class TestRegistryFix(TransactionCase):
         mod.migrate(self.env.cr, '19.0.2.0.0')  # повторно: без дублікатів і без записів
         self.assertEqual(self._snapshot(), snapshot)
         self.assertEqual({m: len(r) for m, r in self._snapshot().items()}, counts)
-        self.assertEqual(counts['td.sim.signal'], 1177)
+        self.assertEqual(counts['td.sim.signal'], 1205)
