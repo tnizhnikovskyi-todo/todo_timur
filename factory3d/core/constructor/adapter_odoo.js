@@ -302,6 +302,7 @@ export function normalizeLoaded(data) {
             addr: clone(site.addr || {}),
             loc_tree: site.loc_tree || "flat",
             depth_mode: site.depth_mode || "level",
+            parse_rules: clone(site.parse_rules || {}), // S4: правила розбору кодів і лоток «Не розміщено» (F10)
         },
         layers,
         slots,
@@ -470,6 +471,7 @@ export class OdooAdapter extends BaseAdapter {
         this.retryDelays = o.retryDelays || [2000, 5000, 15000];
         this.siteId = null;
         Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true }); // S2: API-12, API-15, API-18
+        Object.assign(this.capabilities, { odoo_import: true, files: true }); // S4: API-16 (стрічка локацій), API-20 (розбір XLSX/CSV на сервері)
         this.groupIds = {};
         this._seq = 0;
         this._resetTracking();
@@ -1160,6 +1162,43 @@ export class OdooAdapter extends BaseAdapter {
         const res = await this._call("/f3d/constructor/publish/rollback", { site_id: this.siteId, version_id: versionId, confirm: true });
         if (!res.ok) {
             throw new StoreError(res.code, res.message, { issues: res.issues });
+        }
+        return res;
+    }
+
+    // --- S4: структура з Odoo й файли (API-16, API-20; F10, F11, F02-09/12) ---
+
+    /**
+     * Стрічка локацій складу (API-16 `/odoo/locations`): `{op: "feed"}` (за замовчуванням) → {feed: {root, warehouse, locations: [{id, code, name,
+     * parent, parent_id, usage, barcode, qty, active}], truncated, next}}; `{op: "sync"}` → те саме + {diff: {appeared, disappeared, renamed, moved},
+     * baseline: "created"|"existing"}; `{op: "baseline"}` — база порівняння (`site.odoo_baseline_id`) стає нинішньою стрічкою.
+     */
+    async locations({ op = "feed", ...rest } = {}) {
+        const res = await this._call("/f3d/constructor/odoo/locations", { site_id: this.siteId, op, ...rest });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Правила розбору кодів і лоток «Не розміщено» площадки (`site.parse_rules`): окремий маршрут, бо ORM площадку проєктувальнику не пише. */
+    async saveParseRules(rules) {
+        const res = await this._call("/f3d/constructor/odoo/rules", { site_id: this.siteId, parse_rules: rules });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Розбір таблиці на сервері (API-20 `/parse/table`): `{filename, bytes (Uint8Array), sheet?}` → {format, sheets?, rows}. */
+    async parseTable({ filename, bytes, sheet = 0 }) {
+        let bin = "";
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+            bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        }
+        const res = await this._call("/f3d/constructor/parse/table", { site_id: this.siteId, filename, content: btoa(bin), sheet });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
         }
         return res;
     }
