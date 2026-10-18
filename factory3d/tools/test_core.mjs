@@ -77,7 +77,7 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
 test("AC-12: комірки ядра збігаються з еталоном Python для всіх шаблонів", async () => {
     const { SLOT_TEMPLATES, footprint, generateCells } = await load("cells.js");
     const g = golden("cells_golden");
-    assert.equal(Object.keys(SLOT_TEMPLATES).length, 6);
+    assert.equal(Object.keys(SLOT_TEMPLATES).length, 7); // S1: + floor_spot
     assert.ok(g.cases.length >= 10);
     const keys = ["x", "y", "z0", "l", "w", "h", "rot", "capacity", "max_load_kg", "level", "index"];
     for (const c of g.cases) {

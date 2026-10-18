@@ -1,6 +1,6 @@
 // Довідники редактора (порт 10_data.js): ролі, види шарів, категорії, UI-опис шаблонів місць, перевірки.
 // Значення — як у моделях W1: види шарів, категорії паспорта, напрямки фронту (s/e/n/w), режими поворотів (q/h/z/any).
-import { SLOT_TEMPLATES } from "./cells.js";
+import { LOC_KINDS, SHAPE_KEYS, SLOT_TEMPLATES } from "./cells.js";
 
 export const ROLES = [
     { id: "manager", name: "Менеджер" },
@@ -34,10 +34,32 @@ export const FRONT_ANGLE = { s: 0, e: 90, n: 180, w: 270 };
 
 /** UI-опис шаблонів: діапазони й умовчання — за R-01 (SLOT_TEMPLATES), підписи — як у PARAM_LABELS сервера. */
 const range = (tpl, k) => {
-    const [min, max, def, type] = SLOT_TEMPLATES[tpl].params[k];
+    const [min, max, def, type] = SLOT_TEMPLATES[tpl].params[k] || SLOT_TEMPLATES[tpl].opt[k];
     return { min, max: max ?? 100000, def, int: type === "int" ? 1 : 0 };
 };
 const num = (tpl, k, l, u, step) => ({ k, l, u, step, ...range(tpl, k) });
+
+/** Підписи видів локацій Odoo (td_loc_kind) і форм 3D (F08-04). */
+export const LOC_KIND_LABELS = {
+    stack: "Стос",
+    area: "Майданчик",
+    kit: "Візок / етажерка",
+    bin: "Комірка (bin)",
+    shelf: "Полиця",
+    pallet_cell: "Комірка палети",
+};
+export const SHAPE_LABELS = {
+    "": "За генератором",
+    rack: "Стійка",
+    roll_rack: "Рулонний стелаж",
+    stack: "Штабель",
+    zone: "Зона",
+    fence: "Огорожа / камера",
+    cylinder: "Циліндр / бункер",
+    cabinet: "Шафа-машина",
+    mobile: "Мобільний носій",
+    gate: "Ворота / док",
+};
 
 export const TPL = {
     pallet_rack: {
@@ -98,6 +120,20 @@ export const TPL = {
             { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "PREFIX-01A"], ["exact", "Один код = префікс"]], def: "default" },
         ],
     },
+    floor_spot: {
+        name: "Місце на підлозі",
+        prefix: "FS1",
+        info: "Прямокутник на підлозі = одна локація (буферна чи спеціальна зона, візок, ворота-зона)",
+        params: [
+            num("floor_spot", "length", "Довжина", "м", 0.1),
+            num("floor_spot", "width", "Ширина", "м", 0.1),
+            num("floor_spot", "height", "Висота", "м", 0.1),
+            num("floor_spot", "max_load_kg", "Макс. навантаження", "кг", 50),
+            num("floor_spot", "capacity", "Місткість", "місць", 1),
+            { k: "loc_kind", l: "Вид локації", type: "select", options: LOC_KINDS.map((v) => [v, LOC_KIND_LABELS[v]]), def: "area" },
+            { k: "shape", l: "Форма 3D", type: "select", options: SHAPE_KEYS.filter(Boolean).map((v) => [v, SHAPE_LABELS[v]]), def: "zone" },
+        ],
+    },
     machine_spot: {
         name: "Місце під верстат",
         prefix: "MS1",
@@ -137,7 +173,7 @@ export function defaultParams(template) {
     }
     return out;
 }
-export const SOLID_SLOTS = ["pallet_rack", "cantilever", "shelf", "floor_stack"]; // займають місце на підлозі
+export const SOLID_SLOTS = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"]; // займають місце на підлозі
 
 export const CHECKS = [
     { id: "fits", name: "Вміщується в місце", hint: "У межах місця, будівлі чи контуру шару; дозволені шар і поворот" },
@@ -152,14 +188,17 @@ export const CHECKS = [
 /** Висота місця в 3D (м) за шаблоном. */
 export function slotHeight(s) {
     const p = s.params || {};
+    const lift = p.bottom_on_floor === false ? 0.15 : 0;
     switch (s.template) {
         case "pallet_rack":
         case "cantilever":
-            return (p.levels || 1) * (p.level_height || 1.5) + 0.25;
+            return (p.level_heights ? p.level_heights.reduce((a, x) => a + x, 0) : (p.levels || 1) * (p.level_height || 1.5)) + lift + 0.25;
         case "shelf":
-            return (p.shelves || 1) * (p.cell_h || 0.4) + 0.1;
+            return (p.level_heights ? p.level_heights.reduce((a, x) => a + x, 0) : (p.shelves || 1) * (p.cell_h || 0.4)) + lift + 0.1;
         case "floor_stack":
             return p.max_height || 1.5;
+        case "floor_spot":
+            return p.height ?? 1.5;
         case "machine_spot":
             return 0.05;
         default:
