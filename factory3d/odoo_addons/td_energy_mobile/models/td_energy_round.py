@@ -15,6 +15,8 @@ class TdEnergyRound(models.Model):
     template_id = fields.Many2one(
         "td.energy.round.template", string="Шаблон", required=True, index=True, ondelete="restrict"
     )
+    slot_id = fields.Many2one("td.energy.round.slot", string="Слот", ondelete="set null")
+    slot_name = fields.Char(string="Назва слота")
     date = fields.Date(string="Дата (Київ)", required=True, index=True)
     starts_at = fields.Datetime(string="Початок слота", required=True)
     due_at = fields.Datetime(string="Кінець слота", required=True)
@@ -31,7 +33,14 @@ class TdEnergyRound(models.Model):
         index=True,
         tracking=True,
     )
+    performer_id = fields.Many2one("res.users", string="Виконавець", readonly=True)
+    started_at = fields.Datetime(string="Розпочато", readonly=True)
+    finished_at = fields.Datetime(string="Завершено", readonly=True)
     item_ids = fields.One2many("td.energy.round.item", "round_id", string="Пункти")
+    total_count = fields.Integer(string="Пунктів")
+    done_count = fields.Integer(string="Виконано")
+    progress_pct = fields.Integer(string="Прогрес, %")
+    deviation_count = fields.Integer(string="Відхилень")
     company_id = fields.Many2one("res.company", string="Компанія", required=True, default=lambda self: self.env.company)
 
 

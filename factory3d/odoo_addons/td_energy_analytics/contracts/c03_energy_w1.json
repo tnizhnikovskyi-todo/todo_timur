@@ -1,0 +1,22 @@
+{
+ "id": "C-03",
+ "direction": "td_energy_analytics ← td_energy (W1–W3)",
+ "source": "W4_ARCH 2.1; W4_SPEC R-02, R-10…R-16",
+ "models": {
+  "td.energy.interval": ["meter_id", "node_id", "role", "ts_start", "ts_end", "day", "hour_local", "kwh", "kwh_export", "cost", "quality", "is_backfill", "is_today", "is_yesterday", "is_last_7d"],
+  "td.energy.meter": ["code", "node_id", "model", "role"],
+  "td.energy.alloc": ["day", "kind", "workorder_id", "production_id", "workcenter_id", "node_id", "kwh", "minutes", "cost", "quality", "company_id"],
+  "td.energy.node": ["code", "name", "kind", "parent_id", "alloc_role", "equipment_id", "workcenter_id", "company_id", "active", "p_inst_kw"],
+  "td.energy.tariff": ["date_from", "date_to", "zone_ids", "company_id"],
+  "td.energy.tariff.zone": ["code", "price", "weekdays", "hour_from", "hour_to"],
+  "td.energy.event": ["ts", "level", "kind", "code", "node_id", "signal_id", "text", "title", "state"],
+  "td.energy.outage.plan": ["name", "node_id", "start", "end", "state", "company_id"],
+  "mrp.production": ["td_energy_cost", "td_energy_kwh"],
+  "td.energy.day.mixin": ["is_today", "is_yesterday", "is_last_7d"]
+ },
+ "methods": ["td.energy.event._td_log", "td.energy.interval._td_backfill"],
+ "tools": {
+  "td_energy.tools.dates": ["local_day", "local_day_bounds", "to_local", "to_utc", "now_utc", "day_window_domain", "param_float", "param_bool"]
+ },
+ "params": ["td.energy.read_enabled", "td.energy.keep_interval_days", "td.energy.shift_calendar_id"]
+}

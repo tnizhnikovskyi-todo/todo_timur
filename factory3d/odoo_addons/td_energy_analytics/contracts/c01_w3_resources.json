@@ -1,0 +1,24 @@
+{
+ "id": "C-01",
+ "direction": "td_energy_resources (W3) → td_energy_analytics",
+ "source": "W3_SPEC R-07, API-02, API-06, API-08, API-09, R-21; W4_ARCH 2.1",
+ "models": {
+  "td.energy.usage": ["resource_id", "flow", "ts_start", "day", "hour_local", "node_id", "point_id", "meter_id", "qty", "kwh_eq", "cost", "co2_kg", "quality", "is_backfill"],
+  "td.energy.resource": ["code", "name", "in_energy_cost", "is_derived", "co2_kg_per_unit", "kwh_per_unit"],
+  "td.energy.opportunity": []
+ },
+ "usage_flows": {
+  "import": "td.energy.interval role=incomer (kwh)",
+  "export": "kwh_export > 0",
+  "generation": "role=generation",
+  "load": "role=feeder",
+  "supply": "res.interval metric=main, point.kind=source",
+  "branch": "інші точки res.interval"
+ },
+ "methods": ["td.energy.price._td_price_at(resource, dt_local=None, company=None) -> float", "td.energy.res.interval._td_backfill(days=90, until=None, seed=20261018, purge=False, resources=None) -> dict", "td.energy.opportunity.get_list(resource_code=None, states=('open',)) -> {items, plan_sum, all_sum}", "td.energy.opportunity.get_plan_summary() -> {plan_sum, all_sum, plan_count, open_count}", "td.energy.opportunity.action_plan_toggle(plan=None)"],
+ "tools": {
+  "td_energy_resources.tools.shifts": ["load_windows", "ShiftWindows"]
+ },
+ "shift_windows_methods": ["shift_of", "is_shift", "windows_for", "night_window", "first_start"],
+ "params": ["td.energy_resources.weeks_per_month", "td.energy.shift_calendar_id"]
+}

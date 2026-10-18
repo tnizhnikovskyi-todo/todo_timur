@@ -1,0 +1,23 @@
+{
+ "id": "C-02",
+ "direction": "td_energy_analytics → td_energy (W1): правка W1 менеджером",
+ "source": "W4_SPEC M-14, W4_ARCH 2.1, 6.0 п. 4",
+ "hook": "td.energy.dashboard._td_report_action() -> str|None",
+ "base_value": null,
+ "analytics_value": "td_energy_analytics.action_td_energy_shift_report",
+ "action_owner": "W4-B (V-13, report/report_shift.xml): ir.actions.server → env['td.energy.report.wizard'].create_and_print('shift')",
+ "pult_meta": {
+  "report_action": "str|null",
+  "capabilities.report": "bool(report_action)"
+ },
+ "client": {
+  "file": "td_energy/static/src/pult/pult.js",
+  "getter": "reportAction",
+  "button_class": "o_td_en_report",
+  "opens": "meta.report_action"
+ },
+ "extensions_owned_by_analytics": {
+  "td.energy.node": ["area_id"],
+  "td.energy.alloc": ["product_id"]
+ }
+}

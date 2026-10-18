@@ -1,0 +1,15 @@
+{
+ "id": "C-08",
+ "direction": "td_energy_mobile → td_energy_analytics (опційно)",
+ "source": "W4_ARCH 2.1; W4_SPEC R-19 («Звіт за зміну»)",
+ "reader": "td_energy_analytics report/report_data.py: env.get('td.energy.round'); без td_energy_mobile блок «Обходи» пропускається",
+ "models": {
+  "td.energy.round": ["name", "template_id", "slot_id", "slot_name", "date", "starts_at", "due_at", "state", "performer_id", "started_at", "finished_at", "total_count", "done_count", "progress_pct", "deviation_count", "company_id"]
+ },
+ "states": ["open", "in_progress", "done", "missed", "cancelled"],
+ "event_kind": {
+  "model": "td.energy.event",
+  "field": "kind",
+  "value": "round"
+ }
+}

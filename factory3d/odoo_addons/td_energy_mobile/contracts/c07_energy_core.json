@@ -1,0 +1,21 @@
+{
+ "id": "C-07",
+ "direction": "td_energy_mobile ← td_energy",
+ "source": "W4_ARCH 2.1; W4_SPEC H.9 R-H4, R-H5",
+ "models": {
+  "td.energy.event": ["ts", "level", "kind", "code", "node_id", "signal_id", "text", "title", "detail", "state"],
+  "td.energy.node": ["code", "name", "kind", "active", "company_id"],
+  "td.signal": ["code", "kind", "unit", "period_s", "last_value", "last_text", "last_ts"]
+ },
+ "methods": ["td.energy.event._td_log", "td.energy.dashboard.get_pult"],
+ "get_pult": {
+  "signature": "td.energy.dashboard.get_pult(period='now', parts=None)",
+  "path_used": "kpis.generation.genset.fuel_pct"
+ },
+ "tools": {
+  "td_energy.tools.dates": ["local_day", "local_day_bounds", "to_local", "to_utc", "now_utc"]
+ },
+ "groups": ["td_energy.group_td_energy_user", "td_energy.group_td_energy_manager", "td_energy.group_td_energy_chief"],
+ "params": ["td.energy.read_enabled"],
+ "sources_used": ["energy/transformers/T1/temp_c", "energy/transformers/T2/temp_c"]
+}

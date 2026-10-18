@@ -1,0 +1,44 @@
+{
+ "id": "C-06",
+ "direction": "td_energy_mobile → td_energy (W1 C-33)",
+ "source": "W4_SPEC H.3.4 UI-H1; W1_SPEC C-33; td_energy/static/src/mobile/mobile.js",
+ "registry": "td_energy.mobile_tabs",
+ "entry": {
+  "id": "str",
+  "label": "str",
+  "sequence": "int",
+  "component": "Component",
+  "title": "str?",
+  "badge": "(mobile) => str|null?",
+  "icon": "svg path?"
+ },
+ "entry_example": {
+  "id": "round",
+  "label": "Обхід",
+  "title": "Обхід",
+  "sequence": 40,
+  "icon": "M9 4h6M9 4a2 2 0 0 0-2 2H5v15h14V6h-2a2 2 0 0 0-2-2M9 12l2 2 4-4"
+ },
+ "w1_tabs": {
+  "state": 10,
+  "alarms": 20,
+  "scheme": 30
+ },
+ "tab_props": ["mobile", "meta", "capabilities", "reload", "goTab"],
+ "bus": {
+  "kinds": ["state"],
+  "helper": "useEnergyBus(cb, ['state'])",
+  "module": "td_energy/static/src/common/bus.js"
+ },
+ "actions_helper": {
+  "name": "useEnergyActions",
+  "module": "td_energy/static/src/common/actions.js",
+  "methods": ["notify", "fail", "show3d"]
+ },
+ "td_energy_files_must_contain": {
+  "td_energy/static/src/mobile/mobile.js": ["td_energy.mobile_tabs", "useEnergyActions", "useEnergyBus", "goTab"],
+  "td_energy/static/src/common/actions.js": ["notify", "fail", "show3d"],
+  "td_energy/static/src/common/bus.js": ["useEnergyBus"]
+ },
+ "no_badge": "badge не задаётся (D-78)"
+}

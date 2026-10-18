@@ -1,0 +1,29 @@
+{
+ "signature": "td.energy.round.get_mobile(round_id=None)",
+ "top_keys": ["meta", "round", "next", "history"],
+ "round_null_when": "немає обходу open/in_progress → round = null, next = {slot, starts_local}|null",
+ "next_shape": {
+  "slot": "Зміна 2",
+  "starts_local": "16:00"
+ },
+ "states": ["open", "in_progress", "done", "missed", "cancelled"],
+ "results": ["pending", "ok", "deviation"],
+ "can_finish": "finish_blocked is null",
+ "history": "≤ history_limit закритих (done/missed), нові першими",
+ "no_cost_keys": true,
+ "limits": {
+  "max_bytes": 10240,
+  "ms": 250
+ },
+ "errors": {
+  "AccessError": "Немає доступу до Енергетики."
+ },
+ "other_api": {
+  "API-H2": "td.energy.round.action_toggle_item(item_id, done, comment=None) -> {'round': <як get_mobile.round>}",
+  "API-H3": "td.energy.round.action_finish(round_id, note=None) -> {'finished_at_local', 'deviation_count'}",
+  "API-H4": "td.energy.round.action_start(template_id, slot_id=None) -> round_id",
+  "API-H5": "td.energy.round.get_journal(limit=20, offset=0) -> {'items': [...], 'total': n}",
+  "API-H6": "td.energy.round.action_cancel() (на записі, chief) -> True"
+ },
+ "note": "Значения — пример (макет); значимы ключи, их типы и набор. Списки — по первому элементу."
+}

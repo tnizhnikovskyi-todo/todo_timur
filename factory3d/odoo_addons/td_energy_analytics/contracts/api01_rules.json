@@ -1,0 +1,35 @@
+{
+ "signature": "td.energy.analytics.get_dashboard(period='m', dim='area', parts=None)",
+ "periods": ["w", "m", "q", "y"],
+ "dims": ["area", "eq", "mo", "prod", "shift"],
+ "parts": ["kpis", "stack", "heatmap", "enpi", "budget", "cut", "opps"],
+ "always": ["meta"],
+ "kpi_ids": ["el", "gas", "cost", "spec", "cogs", "selfgen", "co2"],
+ "kpi_keys": ["id", "label", "value", "unit", "delta_pct", "note", "tone"],
+ "tones": ["good", "bad", "neutral"],
+ "heatmap_shape": {
+  "rows": 7,
+  "cols": 24
+ },
+ "nullable": ["meta.baseline", "budget", "kpis[].delta_pct", "kpis[].value", "heatmap.cells[][]"],
+ "cost_keys_removed_without_group": {
+  "group": "td_energy.group_td_energy_cost",
+  "keys": ["cost_uah", "save_uah_month", "plan_sum", "all_sum", "saving_uah", "plan_uah", "fact_uah", "forecast_uah"],
+  "kpi_excluded": ["cost"],
+  "capabilities": "capabilities.cost отсутствует"
+ },
+ "part_error": {
+  "error": "текст ошибки"
+ },
+ "errors": {
+  "UserError": ["Невідомий період: %s.", "Невідомий розріз: %s."],
+  "AccessError": "Немає доступу до Енергетики."
+ },
+ "limits": {
+  "max_bytes": 61440,
+  "ms_period_m": 600,
+  "ms_period_y": 1500,
+  "max_sql": 60
+ },
+ "note": "Значения — пример (макет, 17.10.2026); значимы ключи, их типы и набор. Списки — по первому элементу."
+}

@@ -1,0 +1,11 @@
+{
+ "id": "C-05",
+ "direction": "td_energy_analytics ← td_telemetry",
+ "source": "W4_ARCH 2.1; W4_SPEC R-03 (hdd)",
+ "models": {
+  "td.reading.hour": ["signal_id", "hour", "v_avg", "v_min", "v_max", "v_count"],
+  "td.signal": ["code", "kind", "unit", "period_s"]
+ },
+ "driver_signal": "ventilation/totals/outdoor_c",
+ "note": "Температура для градусо-діб (HDD): `td.reading.hour.v_avg` сигналу `temp_signal_code`, година UTC."
+}

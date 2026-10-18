@@ -1,0 +1,16 @@
+{
+ "id": "C-04",
+ "direction": "td_energy_analytics ← MRP / склад (Odoo 19 CE)",
+ "source": "W4_ARCH 2.1; W4_SPEC R-03, R-13, R-14",
+ "models": {
+  "stock.move": ["production_id", "quantity", "value", "date", "product_id", "state"],
+  "mrp.production": ["product_id", "product_qty", "state", "date_start", "date_finished", "move_finished_ids", "workorder_ids"],
+  "mrp.workorder": ["production_id", "workcenter_id", "state", "date_start", "date_finished", "duration"],
+  "mrp.workcenter.productivity": ["workorder_id", "workcenter_id", "date_start", "date_end", "duration", "loss_id"],
+  "product.template": ["td_plate_area_m2"]
+ },
+ "own_fields": {
+  "product.template": ["td_plate_area_m2"]
+ },
+ "note": "stock.move.value = 0 без оцінки складу → KPI «Енергія в собівартості» «—» (ARCH R6)."
+}

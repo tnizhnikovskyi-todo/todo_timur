@@ -1,0 +1,64 @@
+{
+ "meta": {
+  "now_local": "14:20",
+  "refresh_s": 30,
+  "can_edit": true
+ },
+ "round": {
+  "id": 412,
+  "title": "Обхід ТП і ГРЩ · зміна 2",
+  "state": "in_progress",
+  "slot": "Зміна 2",
+  "due_local": "23:00",
+  "performer": {
+   "id": 7,
+   "name": "Іваненко О.",
+   "is_me": true
+  },
+  "done_count": 2,
+  "total_count": 6,
+  "progress_pct": 33,
+  "can_edit": true,
+  "can_finish": false,
+  "finish_blocked": "залишилось 4",
+  "items": [
+   {
+    "id": 3011,
+    "code": "t1",
+    "title": "T1: огляд, температура масла",
+    "hint": "норма до 85 °C · зараз 58 °C",
+    "done": true,
+    "result": "ok",
+    "value_text": "58 °C",
+    "comment": "",
+    "node_code": "T1",
+    "can_3d": true
+   },
+   {
+    "id": 3013,
+    "code": "swb",
+    "title": "ГРЩ SWB-1: нагрів з'єднань",
+    "hint": "тепловізор, точки Q1, Q2, QS",
+    "done": false,
+    "result": "pending",
+    "value_text": "",
+    "comment": "",
+    "node_code": "SWB-1",
+    "can_3d": true
+   }
+  ]
+ },
+ "next": null,
+ "history": [
+  {
+   "id": 398,
+   "title": "Обхід ТП і ГРЩ · зміна 1",
+   "state": "done",
+   "finished_at_local": "15:52",
+   "done_count": 6,
+   "total_count": 6,
+   "deviation_count": 0,
+   "performer": "Іваненко О."
+  }
+ ]
+}
