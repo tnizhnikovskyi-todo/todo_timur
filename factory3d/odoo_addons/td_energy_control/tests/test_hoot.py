@@ -10,6 +10,8 @@ from odoo.tests import HttpCase, tagged
 
 from odoo.addons.web.tests.test_js import unit_test_error_checker
 
+from .common import TAGS
+
 
 def _hoot_hash(text):
     """Той самий хеш, що в odoo.addons.web.tests.test_js.HOOTCommon._generate_hash (id-фільтр Hoot)."""
@@ -20,7 +22,7 @@ def _hoot_hash(text):
     return f"{h:08x}"
 
 
-@tagged("post_install", "-at_install", "td", "td_energy_control")
+@tagged(*TAGS)
 class TestControlHoot(HttpCase):
     def test_hoot_suite(self):
         flt = f"&id={_hoot_hash('@td_energy_control')}"

@@ -13,7 +13,7 @@
                                 <li t-foreach="props.prepared.checks" t-as="chk" t-key="chk.code"
                                     class="o_td_en_cd_check" t-att-data-check-code="chk.code" t-att-data-check-state="chk.state">
                                     <t t-esc="chk.label"/> — <b t-attf-class="o_td_en_cd_st o_td_en_cd_st--{{chk.state}}" t-esc="checkText[chk.state] || chk.state"/>
-                                    <span t-if="chk.state !== 'ok' and chk.detail" class="o_td_en_cd_detail" t-esc="'(' + chk.detail + ')'"/>
+                                    <span t-if="chk.state !== 'ok' and chk.detail" class="o_td_en_cd_detail" t-esc="' (' + chk.detail + ')'"/>
                                     <span t-if="chk.state !== 'ok' and chk.hard" class="o_td_en_cd_hard"> · жорстка перевірка</span>
                                 </li>
                             </ul>
@@ -24,7 +24,8 @@
                         <div t-if="blockedReason" class="o_td_en_cd_alert o_td_en_cd_blocked" role="alert">
                             <b>Заблоковано:</b> <t t-esc="blockedReason"/>
                         </div>
-                        <div t-if="props.prepared.disabled_reason" class="o_td_en_cd_alert o_td_en_cd_disabled" role="alert"
+                        <div t-if="props.prepared.disabled_reason and props.prepared.disabled_reason !== blockedReason"
+                             class="o_td_en_cd_alert o_td_en_cd_disabled" role="alert"
                              t-esc="props.prepared.disabled_reason"/>
                         <div t-if="state.expired" class="o_td_en_cd_alert o_td_en_cd_expired" role="alert">
                             Час підтвердження минув, відкрийте діалог знову

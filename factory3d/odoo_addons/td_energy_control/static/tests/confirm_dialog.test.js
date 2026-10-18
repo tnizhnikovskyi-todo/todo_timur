@@ -92,7 +92,9 @@ test("AC-298: blocked → «Виконати» disabled з причиною; con
         data.checks = [{ code: "q", label: "Дані свіжі", state: "unknown", hard: true, detail: "" }];
         data.blocked = true;
         data.blocked_reason = "Дані застаріли: немає сигналу контролера";
+        data.disabled_reason = data.blocked_reason; // бекенд дублює причину — у діалозі вона одна
     });
+    expect(queryAll(".o_td_en_cd_alert").length).toBe(1);
     expect(queryOne(".o_td_en_cd_ok").disabled).toBe(true);
     expect(queryText(".o_td_en_cd_blocked")).toMatch(/Заблоковано: Дані застаріли: немає сигналу контролера/);
     await click(".o_td_en_cd_ok");

@@ -9,6 +9,8 @@ from datetime import timedelta
 from odoo import Command, fields
 from odoo.tests import HttpCase, tagged
 
+from .common import TAGS
+
 JS_HELPERS = """
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const waitFor = async (check, label, ms = 30000) => {
@@ -27,14 +29,54 @@ const run = (body) => body().then(() => console.log("test successful")).catch((e
 
 MENUS = {
     # xml-id: (батько, seq, група, дія)
-    "menu_td_energy_control": ("td_energy.menu_td_energy", 8, "td_energy.group_td_energy_user", "action_td_energy_control"),
-    "menu_td_energy_action": ("td_energy.menu_td_energy", 9, "td_energy.group_td_energy_user", "action_td_energy_action"),
-    "menu_td_energy_scenario": ("td_energy.menu_td_energy_config", 50, "td_energy.group_td_energy_manager", "action_td_energy_scenario"),
-    "menu_td_energy_shed_item": ("td_energy.menu_td_energy_config", 51, "td_energy.group_td_energy_manager", "action_td_energy_shed_item"),
-    "menu_td_energy_schedule_slot": ("td_energy.menu_td_energy_config", 52, "td_energy.group_td_energy_manager", "action_td_energy_schedule_slot"),
-    "menu_td_energy_interlock": ("td_energy.menu_td_energy_config", 53, "td_energy.group_td_energy_manager", "action_td_energy_interlock"),
-    "menu_td_energy_command_kind": ("td_energy.menu_td_energy_config", 54, "td_factory3d.group_td_admin", "action_td_energy_command_kind"),
-    "menu_td_energy_control_state": ("td_energy.menu_td_energy_config", 55, "td_factory3d.group_td_admin", "action_td_energy_control_state"),
+    "menu_td_energy_control": (
+        "td_energy.menu_td_energy",
+        8,
+        "td_energy.group_td_energy_user",
+        "action_td_energy_control",
+    ),
+    "menu_td_energy_action": (
+        "td_energy.menu_td_energy",
+        9,
+        "td_energy.group_td_energy_user",
+        "action_td_energy_action",
+    ),
+    "menu_td_energy_scenario": (
+        "td_energy.menu_td_energy_config",
+        50,
+        "td_energy.group_td_energy_manager",
+        "action_td_energy_scenario",
+    ),
+    "menu_td_energy_shed_item": (
+        "td_energy.menu_td_energy_config",
+        51,
+        "td_energy.group_td_energy_manager",
+        "action_td_energy_shed_item",
+    ),
+    "menu_td_energy_schedule_slot": (
+        "td_energy.menu_td_energy_config",
+        52,
+        "td_energy.group_td_energy_manager",
+        "action_td_energy_schedule_slot",
+    ),
+    "menu_td_energy_interlock": (
+        "td_energy.menu_td_energy_config",
+        53,
+        "td_energy.group_td_energy_manager",
+        "action_td_energy_interlock",
+    ),
+    "menu_td_energy_command_kind": (
+        "td_energy.menu_td_energy_config",
+        54,
+        "td_factory3d.group_td_admin",
+        "action_td_energy_command_kind",
+    ),
+    "menu_td_energy_control_state": (
+        "td_energy.menu_td_energy_config",
+        55,
+        "td_factory3d.group_td_admin",
+        "action_td_energy_control_state",
+    ),
 }
 
 VIEWS = [
@@ -60,7 +102,7 @@ VIEWS = [
 ]
 
 
-@tagged("post_install", "-at_install", "td", "td_energy_control")
+@tagged(*TAGS)
 class TestControlUi(HttpCase):
     @classmethod
     def setUpClass(cls):
@@ -127,7 +169,9 @@ class TestControlUi(HttpCase):
         state.sudo().with_context(td_energy_control_internal=True).write(
             {
                 "engine_mode": mode,
-                "heartbeat_at": fields.Datetime.now() + timedelta(hours=1) if connected else fields.Datetime.now() - timedelta(days=1),
+                "heartbeat_at": fields.Datetime.now() + timedelta(hours=1)
+                if connected
+                else fields.Datetime.now() - timedelta(days=1),
             }
         )
 
