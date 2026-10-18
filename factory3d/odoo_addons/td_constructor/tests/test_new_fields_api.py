@@ -12,9 +12,9 @@ class NewFieldsMixin:
     def _new_fields_setup(cls):
         env = cls.env
         cls.stype = env['td.slot.type'].create({'code': 'R01', 'name': "Фронтальний", 'template': 'pallet_rack'})
-        cls.func = env['td.term'].create({'term_type': 'zone_function', 'key': 'receiving', 'name': "Приймання"})
+        cls.func = env.ref('td_constructor.term_zone_function_receiving')  # довідники зони — дані модуля (S2)
         cls.attr_cold = env['td.term'].create({'term_type': 'zone_attr', 'key': 'cold', 'name': "Холод"})
-        cls.attr_long = env['td.term'].create({'term_type': 'zone_attr', 'key': 'long', 'name': "Довгомір"})
+        cls.attr_long = env.ref('td_constructor.term_zone_attr_long')
         cls.category = env['stock.storage.category'].create({'name': "Паллети", 'max_weight': 1000})
         cls.removal = env['product.removal'].search([('method', '=', 'fifo')], limit=1) or env[
             'product.removal'

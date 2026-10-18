@@ -24,7 +24,7 @@ class TdStorageController(http.Controller):
         env = request.env
         company = env.company
         if op == 'list':
-            functions, attrs = capacity.ensure_zone_terms(env)
+            functions, attrs = capacity.zone_terms(env)
             return {
                 'ok': True,
                 'categories': capacity.list_categories(env, company),

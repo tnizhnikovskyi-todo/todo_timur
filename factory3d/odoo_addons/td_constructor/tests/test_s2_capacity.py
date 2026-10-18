@@ -43,14 +43,36 @@ class TestS2Capacity(S2Mixin, F3DConstructorCase):
         cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
 
     # --- довідники зони ---------------------------------------------------------------------------------
-    def test_zone_terms_are_seeded_once(self):
-        functions, attrs = capacity.ensure_zone_terms(self.env)
+    def test_zone_terms_come_from_module_data(self):
+        functions, attrs = capacity.zone_terms(self.env)
         self.assertEqual(len(functions), 10)
         self.assertEqual({a['key'] for a in attrs}, {'temp', 'hazmat', 'valuable', 'long'})
         self.assertTrue(all(f['color'].startswith('#') for f in functions))
-        again, _attrs = capacity.ensure_zone_terms(self.env)
-        self.assertEqual([f['id'] for f in again], [f['id'] for f in functions])  # повторно нічого не створює
+        self.assertEqual(self.env.ref('td_constructor.term_zone_function_receiving').name, "Приймання")  # xmlid із data
+        self.assertEqual(self.env.ref('td_constructor.term_zone_attr_long').term_type, 'zone_attr')
         self.assertEqual(self.env['td.term'].search_count([('term_type', '=', 'zone_function')]), 10)
+
+    def test_pre_migrate_binds_existing_zone_terms_to_xmlids(self):
+        """Бази до 19.0.1.3.0 мають терміни зони без xmlid: міграція прив'язує їх, а не створює дублі."""
+        import importlib.util
+        import os
+
+        path = os.path.join(os.path.dirname(__file__), '..', 'migrations', '19.0.1.3.0', 'pre-migrate.py')
+        spec = importlib.util.spec_from_file_location('td_constructor_pre_migrate_1_3_0', path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        term = self.env.ref('td_constructor.term_zone_function_receiving')
+        term.name = "Мій дозвіл"  # користувацька правка не губиться
+        self.env['ir.model.data'].search(
+            [('module', '=', 'td_constructor'), ('name', 'in', ['term_zone_function_receiving', 'term_zone_attr_long'])]
+        ).unlink()
+        self.env.invalidate_all()
+        migration.migrate(self.env.cr, '19.0.1.2.0')
+        migration.migrate(self.env.cr, '19.0.1.2.0')  # ідемпотентно
+        self.env.invalidate_all()
+        self.assertEqual(self.env.ref('td_constructor.term_zone_function_receiving'), term)
+        self.assertEqual(term.name, "Мій дозвіл")
+        self.assertEqual(self.env['td.term'].search_count([('term_type', '=', 'zone_attr'), ('key', '=', 'long')]), 1)
 
     # --- категорії зберігання -----------------------------------------------------------------------------
     def test_category_crud_and_validation(self):
@@ -232,11 +254,15 @@ class TestS2Capacity(S2Mixin, F3DConstructorCase):
         self.assertFalse([i for i in self.plan()['issues'] if i['check'] == 'cell_load'])  # 120 < 150
         self.env['stock.quant']._update_available_quantity(heavy, loc, 1.0)  # 160 кг > 150 кг
         self.assertTrue([i for i in self.plan()['issues'] if i['check'] == 'cell_load'])
-        # без даних (живий API-05) перевірка нічого не знаходить
-        state_issues = checks.run_checks(
+        # живий API-05 бачить ті самі зауваження: дані БД приходять із `scene.extra` (`state.checks_state`)
+        live = checks.run_checks(
             state_mod.checks_state(self.site), [{'check': 'cell_load', 'enabled': True, 'mode': 'warn', 'params': {}}]
         )
-        self.assertEqual(state_issues, [])
+        self.assertEqual([(i['check'], i['codes']) for i in live], [('cell_load', ['CP-R1-B01-L1'])])
+        no_data = checks.run_checks(
+            state_mod.checks_state(self.site), [{'check': 'cell_load', 'enabled': False, 'mode': 'warn', 'params': {}}]
+        )
+        self.assertEqual(no_data, [])
         self.assertIn('cell_load', CHECKS)
 
     # --- знімок -----------------------------------------------------------------------------------------

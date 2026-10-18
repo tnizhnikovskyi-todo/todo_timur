@@ -2,8 +2,7 @@
 
 * категорії зберігання (`stock.storage.category` + ємності) — прямий виклик API-12 із підтвердженням (CD-20), у план
   не входять;
-* довідники «Функція зони» (10) і «Атрибути зони» (4): `td.term`, створюються при першому зверненні
-  (`ensure_zone_terms`);
+* довідники «Функція зони» (10) і «Атрибути зони» (4): `td.term` із `data/td_term_data.xml` (читає `zone_terms`);
 * правила поповнення min/max (`td.replenish.rule` → `stock.warehouse.orderpoint`): будівник плану і застосовувач;
 * залишки за кодами комірок (`stock_loads`) і перевірка `cell_load` (вага запасу з `stock.quant` проти `max_load_kg`
   комірки або `max_weight` категорії); перевірка чиста: працює з даними, що їх кладе в `scene.extra` будівник плану;
@@ -15,24 +14,6 @@
 from . import checks as checks_mod, publish as pub, state as state_mod
 from .registry import CHECKS, PLAN_BUILDERS, SNAPSHOT_SECTIONS, SnapshotSection
 
-ZONE_FUNCTIONS = [
-    ('receiving', "Приймання", '#3b82f6'),
-    ('quality', "Контроль якості", '#8b5cf6'),
-    ('quarantine', "Карантин", '#f59e0b'),
-    ('storage', "Зберігання", '#10b981'),
-    ('picking', "Комплектація", '#06b6d4'),
-    ('packing', "Пакування", '#ec4899'),
-    ('shipping', "Відвантаження", '#ef4444'),
-    ('scrap', "Брак", '#6b7280'),
-    ('returns', "Повернення", '#a855f7'),
-    ('wip', "Буфер виробництва", '#84cc16'),
-]
-ZONE_ATTRS = [
-    ('temp', "Температурний режим", ''),
-    ('hazmat', "Небезпечні вантажі", ''),
-    ('valuable', "Цінне", ''),
-    ('long', "Довгомірне", ''),
-]
 ALLOW_NEW_PRODUCT = ('empty', 'same', 'mixed')
 MAX_CAPACITY_ROWS = 200
 CATEGORY = 'stock.storage.category'
@@ -41,27 +22,14 @@ CATEGORY = 'stock.storage.category'
 # --- довідники зони (F03-03, F03-04) --------------------------------------------------------------------------
 
 
-def ensure_zone_terms(env):
-    """Створює відсутні терміни `zone_function`/`zone_attr`; повертає `(functions, attrs)`."""
-    Term = env['td.term'].sudo().with_context(active_test=False)
-    have = {(t.term_type, t.key): t for t in Term.search([('term_type', 'in', ('zone_function', 'zone_attr'))])}
-    wanted = [('zone_function', k, n, c, '') for k, n, c in ZONE_FUNCTIONS] + [
-        ('zone_attr', k, n, '', v) for k, n, v in ZONE_ATTRS
-    ]
-    vals = [
-        {'term_type': t, 'key': k, 'name': n, 'color': c or False, 'value': v or False, 'sequence': 10 * (i + 1)}
-        for i, (t, k, n, c, v) in enumerate(wanted)
-        if (t, k) not in have
-    ]
-    if vals:
-        for rec in Term.create(vals):
-            have[(rec.term_type, rec.key)] = rec
+def zone_terms(env):
+    """Довідники зони з БД (`data/td_term_data.xml`): `(functions, attrs)` — активні терміни за порядком."""
+    Term = env['td.term'].sudo()
     out = {'zone_function': [], 'zone_attr': []}
-    for (ttype, _key), rec in sorted(have.items(), key=lambda kv: (kv[1].sequence, kv[1].id)):
-        if rec.active:
-            out[ttype].append(
-                {'id': rec.id, 'key': rec.key, 'name': rec.name, 'color': rec.color or '', 'value': rec.value or ''}
-            )
+    for rec in Term.search([('term_type', 'in', tuple(out))], order='sequence, id'):
+        out[rec.term_type].append(
+            {'id': rec.id, 'key': rec.key, 'name': rec.name, 'color': rec.color or '', 'value': rec.value or ''}
+        )
     return out['zone_function'], out['zone_attr']
 
 
@@ -253,7 +221,7 @@ CHECKS.register('cell_load', check_cell_load, sequence=80)
 
 
 def plan_check_scene(site, extra):
-    """Сцена перевірок із даними БД в `scene.extra` (для будівників плану; живий API-05 цих даних не має)."""
+    """Сцена перевірок із заданими даними в `scene.extra` (тести, API-15 `fit`); `{}` — без даних."""
     scene = checks_mod._Scene(state_mod.checks_state(site))
     scene.extra = dict(extra)
     return scene
@@ -272,14 +240,27 @@ def add_new_issues(issues, found):
     issues.extend(i for i in found if (i['check'], i['message']) not in have)
 
 
-def _plan_cell_load(site, env, issues):
-    config = check_config(site, 'cell_load')
-    if not config:
-        return
-    scene = plan_check_scene(site, {})
+def check_extra(site, scene):
+    """Дані БД для перевірок `cell_load`, `putaway_fit`, `code_conflict` (`scene.extra`): лише для ввімкнених, коди — із
+    комірок сцени (з урахуванням адресації). Читання під sudo; викликається ледачо з `_Scene.extra` — тож живий
+    API-05 і план публікації бачать ті самі зауваження."""
+    on = {c.check_key for c in site.check_config_ids if c.enabled} & {'cell_load', 'putaway_fit', 'code_conflict'}
+    if not on:
+        return {}
+    site = site.sudo()
     codes = [code for slot in scene.slots.values() for code in scene.slot_cells(slot)]
-    scene.extra = {'loads': stock_loads(env, codes), 'limits': site_cell_limits(site)}
-    add_new_issues(issues, check_cell_load(scene, config, state_mod.eps_m(env)))
+    extra = {}
+    if on & {'cell_load', 'putaway_fit'}:
+        extra['limits'] = site_cell_limits(site)
+    if 'cell_load' in on:
+        extra['loads'] = stock_loads(site.env, codes)
+    if 'putaway_fit' in on:
+        from . import putaway
+
+        extra['putaway'] = putaway.rule_fit_inputs(site)
+    if 'code_conflict' in on:
+        extra['code_states'] = pub.code_states(site.env, site, codes)
+    return extra
 
 
 # --- правила поповнення min/max (F03-07) ------------------------------------------------------------------------
@@ -432,9 +413,8 @@ def apply_orderpoints(site, lines, records, ops):
 
 
 def _plan_capacity(site, env, lines, issues):
-    unchanged = plan_orderpoints(site, env, lines, issues)
-    _plan_cell_load(site, env, issues)
-    return unchanged
+    # cell_load входить у зауваження плану через `run_site_checks` (`scene.extra`), тут лише правила поповнення
+    return plan_orderpoints(site, env, lines, issues)
 
 
 PLAN_BUILDERS.register('capacity', _plan_capacity, sequence=60)
