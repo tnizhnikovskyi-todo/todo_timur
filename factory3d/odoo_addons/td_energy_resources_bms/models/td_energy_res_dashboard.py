@@ -4,6 +4,8 @@ screen`); хуки не пишуть у БД й читають BMS через `s
 
 from odoo import api, models
 
+from odoo.addons.td_energy.tools import dates
+
 from ..tools import heat
 
 LIST_CODES = ("RV-ALL", "AHU-1", "DOCK", "OFFICE")
@@ -14,34 +16,46 @@ class TdEnergyResDashboard(models.AbstractModel):
     _inherit = "td.energy.res.dashboard"
 
     @api.model
+    def _td_snapshot(self, ctx):
+        """Читання BMS один раз на відповідь: кешується в `ctx` (хуки KPI й примітки графіка ділять його)."""
+        snap = ctx.get("_bms_snapshot")
+        if snap is None:
+            env = ctx["env"](su=True)
+            snap = ctx["_bms_snapshot"] = heat.Snapshot(env, ctx.get("now") or dates.now_utc(env))
+        return snap
+
+    @api.model
     def _td_heat_kpis(self, ctx):
-        """R-B2 п. 1: `power.note` (подача/зворот), `indoor` (температура в цеху), `recovery` (AHU-1)."""
-        env, now = ctx["env"](su=True), ctx["now"]
-        balance = heat.balance(env)
-        if not balance:
+        """R-B2 п. 1: `power.note` (подача/зворот), `indoor` (температура в цеху), `recovery` (AHU-1, оцінка)."""
+        snap = self._td_snapshot(ctx)
+        if not snap.balance:
             return []
         out = []
-        supply, back = heat.live(balance.boiler_supply_signal_id, now), heat.live(balance.boiler_return_signal_id, now)
+        supply, back = (
+            snap.value(snap.balance["boiler_supply_signal_id"]),
+            snap.value(snap.balance["boiler_return_signal_id"]),
+        )
         if supply is not None and back is not None:
             out.append(
                 {"id": "power", "note": "подача %s °C · зворот %s °C" % (heat.fmt_temp(supply), heat.fmt_temp(back))}
             )
-        out.append(self._td_kpi_indoor(env, now, balance))
-        out.append(self._td_kpi_recovery(env, now, balance))
+        out.append(self._td_kpi_indoor(snap))
+        out.append(self._td_kpi_recovery(snap))
         return out
 
     @api.model
-    def _td_kpi_indoor(self, env, now, balance):
-        values = [heat.live(u.indoor_signal_id, now) for u in heat.required_units(env)]
+    def _td_kpi_indoor(self, snap):
+        t_set = snap.balance["t_in_set"]
+        values = [snap.value(u["indoor_signal_id"]) for u in snap.required()]
         values = [v for v in values if v is not None]
-        outdoor = heat.live(heat.signal_by_code(env, heat.OUTDOOR_SIGNAL), now)
-        note = "уставка %s °C" % heat.fmt_temp(balance.t_in_set)
+        outdoor = snap.value_code(heat.OUTDOOR_SIGNAL)
+        note = "уставка %s °C" % heat.fmt_temp(t_set)
         if outdoor is not None:
             note += " · зовні %s °C" % heat.fmt_temp(outdoor)
         value, tone = None, "neutral"
         if values:
             value = round(sum(values) / len(values), 1)
-            tone = "good" if abs(value - balance.t_in_set) <= 1.0 else "bad"
+            tone = "good" if abs(value - t_set) <= 1.0 else "bad"
         else:
             note = "—"
         return {
@@ -50,18 +64,14 @@ class TdEnergyResDashboard(models.AbstractModel):
         }  # fmt: skip
 
     @api.model
-    def _td_kpi_recovery(self, env, now, balance):
-        unit = heat.ahu1(env)
-        norm_pct = heat.param(env, heat.PARAM_NORM, heat.DEFAULT_NORM_PCT)
-        eta = None
-        dirty = False
-        if unit:
-            eta = heat.recuperation(*heat.ahu_inputs(env, now, unit, balance))
-            dp = heat.live(unit.filter_signal_id, now)
-            dirty = dp is not None and dp > heat.dp_limit(env)
-        norm_note = "норма ≥ %s %%" % heat.fmt_temp(norm_pct)
+    def _td_kpi_recovery(self, snap):
+        unit = snap.ahu()
+        eta = snap.eta()
+        dp = snap.value(unit["filter_signal_id"]) if unit else None
+        dirty = dp is not None and dp > snap.dp_limit
+        norm_note = "норма ≥ %s %%" % heat.fmt_temp(snap.norm_pct)
         note = "—" if eta is None and not dirty else norm_note + (" · фільтр брудний" if dirty else "")
-        tone = "neutral" if eta is None else ("bad" if eta * 100.0 < norm_pct else "good")
+        tone = "neutral" if eta is None else ("bad" if eta * 100.0 < snap.norm_pct else "good")
         return {
             "id": "recovery", "label": "Рекуперація AHU-1", "value": None if eta is None else int(round(eta * 100.0)),
             "unit": "%", "note": note, "tone": tone, "quality": "estimated",
@@ -101,5 +111,5 @@ class TdEnergyResDashboard(models.AbstractModel):
     @api.model
     def _td_heat_chart_note(self, ctx):
         """R-B2: `{capacity}` у примітці графіка — `capacity_kw` активного балансу (рядком) або `None`."""
-        balance = heat.balance(ctx["env"](su=True))
-        return str(int(balance.capacity_kw)) if balance and balance.capacity_kw else None
+        balance = self._td_snapshot(ctx).balance
+        return str(int(balance["capacity_kw"])) if balance and balance["capacity_kw"] else None

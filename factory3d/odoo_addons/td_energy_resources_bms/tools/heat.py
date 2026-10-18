@@ -105,6 +105,84 @@ def ahu_inputs(env, now, unit=None, balance_rec=None):
     )  # fmt: skip
 
 
+def live_row(row, now):
+    """Те саме, що `live`, для рядка `read` сигналу (`last_value`, `last_ts`, `last_quality`, `period_s`)."""
+    if not row or not row["last_ts"] or row["last_quality"] == "bad":
+        return None
+    if (now - row["last_ts"]).total_seconds() > max(3 * (row["period_s"] or 60), 120):
+        return None
+    return row["last_value"]
+
+
+class Snapshot:
+    """Читання BMS для хуків екрана «Тепло» (R-B2) за 4 SQL: баланс, установки (RV + AHU-1), сигнали, параметри моста.
+    Усе через `read(load=False)` без відображуваних імен; хуки ділять один екземпляр через `ctx`."""
+
+    BALANCE = ("t_in_set", "capacity_kw", "air_wh_m3k", "boiler_supply_signal_id", "boiler_return_signal_id")
+    UNIT = (
+        "code", "kind", "required_in_work", "airflow_nom", "indoor_signal_id", "supply_signal_id", "heat_signal_id",
+        "airflow_signal_id", "filter_signal_id",
+    )  # fmt: skip
+    SIGNAL = ("code", "last_value", "last_ts", "last_quality", "period_s")
+
+    def __init__(self, env, now):
+        self.now = now
+        self.balance, self.units, self.rows, self.by_code = None, [], {}, {}
+        self.norm_pct, self.dp_limit = DEFAULT_NORM_PCT, DEFAULT_DP_LIMIT_PA
+        balance = env["td.bms.heat.balance"].sudo().search([("company_id", "=", env.company.id)], limit=1)
+        if not balance:
+            return
+        self.balance = balance.read(self.BALANCE, load=False)[0]
+        self.units = (
+            env["td.bms.hvac.unit"].sudo().search(["|", ("required_in_work", "=", True), ("code", "=", "AHU-1")])
+            .read(self.UNIT, load=False)
+        )  # fmt: skip
+        ids = {self.balance[k] for k in ("boiler_supply_signal_id", "boiler_return_signal_id")}
+        for unit in self.units:
+            ids.update(unit[k] for k in self.UNIT if k.endswith("_signal_id"))
+        ids.discard(False)
+        signals = env["td.signal"].sudo().with_context(active_test=False)
+        rows = signals.search(["|", ("id", "in", sorted(ids)), ("code", "in", [OUTDOOR_SIGNAL, EXTRACT_SIGNAL])])
+        for row in rows.read(self.SIGNAL, load=False):
+            self.rows[row["id"]] = row
+            self.by_code[row["code"]] = row
+        params = env["ir.config_parameter"].sudo().search([("key", "in", [PARAM_NORM, PARAM_DP])])
+        for rec in params:
+            try:
+                value = float(rec.value)
+            except (TypeError, ValueError):
+                continue
+            if rec.key == PARAM_NORM:
+                self.norm_pct = value
+            else:
+                self.dp_limit = value
+
+    def value(self, signal_id):
+        return live_row(self.rows.get(signal_id), self.now)
+
+    def value_code(self, code):
+        return live_row(self.by_code.get(code), self.now)
+
+    def required(self):
+        return [u for u in self.units if u["required_in_work"] and u["kind"] in ("roofvent", "ahu")]
+
+    def ahu(self):
+        return next((u for u in self.units if u["code"] == "AHU-1"), None)
+
+    def eta(self):
+        """R-B3 для AHU-1 за живими значеннями; немає установки чи сигналів — `None`."""
+        unit = self.ahu()
+        if not unit or not self.balance:
+            return None
+        extract = self.value_code(EXTRACT_SIGNAL)
+        t_in = extract if extract is not None else self.value(unit["indoor_signal_id"])
+        return recuperation(
+            self.value(unit["supply_signal_id"]), self.value(unit["heat_signal_id"]),
+            self.value(unit["airflow_signal_id"]), unit["airflow_nom"], t_in, self.value_code(OUTDOOR_SIGNAL),
+            self.balance["air_wh_m3k"] or AIR_WH_M3K,
+        )  # fmt: skip
+
+
 # --- ряди для детекторів (R-B4) --------------------------------------------------------------------------------
 def aligned(points, grid, hold_s=HOLD_S):
     """Значення ступінчастого ряду `points` (`[(ts, v)]` за часом) на вузлах `grid` (за часом): останнє `≤ ts`, не

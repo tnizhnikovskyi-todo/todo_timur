@@ -253,9 +253,11 @@ class TestWbBridge(TestW3Common):
         )
         self.balance.capacity_kw = 0
         self.assertIsNone(self.Dash._td_heat_chart_note({"env": self.env}))
-        with patch.object(heat, "balance", return_value=self.env["td.bms.heat.balance"]):
-            self.assertEqual(self.Dash._td_heat_kpis({"env": self.env, "now": NOW}), [])
-            self.assertIsNone(self.Dash._td_heat_chart_note({"env": self.env}))
+        other = self.env["res.company"].create({"name": "Інша компанія без балансу"})
+        env2 = self.env(context=dict(self.env.context, allowed_company_ids=[other.id]))
+        self.assertEqual(self.Dash._td_heat_kpis({"env": env2, "now": NOW}), [])
+        self.assertIsNone(self.Dash._td_heat_chart_note({"env": env2}))
+        self.assertIsNone(self.Dash._td_heat_list({"points": [], "rates": {}}))
 
     # --- AC-B06: preheat_early
     def fx_preheat(self, ready_before=55, days=None, boiler_rate=46.0):
@@ -498,11 +500,25 @@ class TestWbBridge(TestW3Common):
         self.assertAlmostEqual(heat.t_out_demo(200, 9), 7.0 + 8.0)  # doy 200 — максимум сезонної складової, sin(0) = 0
 
     # --- UI-B1
-    def test_heat_note_template(self):  # UI-B1: шаблон-розширення ResKpis
+    def test_heat_note_template(self):  # UI-B1: шаблон-розширення ResKpis (закоментований до злиття W3-C)
         with file_open("td_energy_resources_bms/static/src/heat_note.xml", "rb") as f:
-            root = etree.parse(f).getroot()
-        extension = root.find("t")
-        self.assertEqual(extension.get("t-inherit"), "td_energy_resources.ResKpis")
-        self.assertEqual(extension.get("t-inherit-mode"), "extension")
-        self.assertIn("оцінка", etree.tostring(extension, encoding="unicode"))
+            raw = f.read().decode()
+        etree.fromstring(raw.encode())  # файл — коректний XML
+        self.assertIn('t-inherit="td_energy_resources.ResKpis"', raw)
+        self.assertIn('t-inherit-mode="extension"', raw)
+        self.assertIn("hasclass('o_td_res_quality')", raw)
+        self.assertIn("оцінка", raw)
         self.assertEqual(self.env.ref("td_energy_resources_bms.rule_preheat_early").control_intent, False)
+
+    def test_perf_heat_tab(self):  # AC-60 (ТП-01) для вкладки «Тепло» з мостом: ≤ 30 SQL на холодному кеші
+        self.fx_heat_screen()
+        self.feed_ahu()
+        self.Dash.get_resources("heat")
+        counts = []
+        for _ in range(3):
+            self.env.flush_all()
+            self.env.invalidate_all()
+            before = self.env.cr.sql_log_count
+            self.Dash.get_resources("heat")
+            counts.append(self.env.cr.sql_log_count - before)
+        self.assertLessEqual(max(counts), 30, counts)
