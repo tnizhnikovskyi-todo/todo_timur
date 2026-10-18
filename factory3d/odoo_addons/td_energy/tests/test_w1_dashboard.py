@@ -2,11 +2,13 @@
 
 import json
 from datetime import date, datetime, timedelta
+from unittest.mock import patch
 
 from odoo import Command
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import tagged
 
+from ..models.td_energy_dashboard import TdEnergyDashboard
 from .common import NOW, TAGS, TestW1Common
 
 COST_KEYS = {"cost_uah", "price_uah", "tariff_uah"}
@@ -40,6 +42,21 @@ class TestW1Dashboard(TestW1Common):
         self.interval("PM-Q1", TS_A, 75.0)
         self.interval("PM-Q2", TS_A + timedelta(minutes=15), 0.0, 10.0)
         self.interval("PM-Q1", TS_A + timedelta(minutes=30), 25.0)
+
+    # --- C-02 (W4): хук кнопки «Звіт за зміну» ------------------------------------------------------------
+    def test_report_hook(self):  # AC-121 (серверна частина), D-01: кнопка Пульту з'являється лише з дією від хука
+        self.fixture_grid()
+        self.assertIsNone(TdEnergyDashboard._td_report_action(self.Dash))  # у td_energy хук порожній
+        model = type(self.Dash)
+        with patch.object(model, "_td_report_action", return_value=None):
+            meta = self.pult(parts=["kpis"])["meta"]
+        self.assertIsNone(meta["report_action"])
+        self.assertIs(meta["capabilities"]["report"], False)
+        with patch.object(model, "_td_report_action", return_value="td_energy.action_td_energy_event"):
+            meta = self.pult(parts=["kpis"])["meta"]
+        self.assertEqual(meta["report_action"], "td_energy.action_td_energy_event")
+        self.assertIs(meta["capabilities"]["report"], True)
+        self.assertNotIn("report_action", self.Dash.with_user(self.u_view).get_mobile(None)["meta"])
 
     # --- AC-107, AC-153 ---------------------------------------------------------------------------------
     def test_cost_keys_removed(self):  # AC-107

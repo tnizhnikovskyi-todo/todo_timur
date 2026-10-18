@@ -1,5 +1,6 @@
 /** @odoo-module */
-// AC-121: Пульт — перемикач періоду, вибір вузла, права на «Підтвердити», кнопки control, «Немає даних», шина.
+// AC-121: Пульт — перемикач періоду, вибір вузла, права на «Підтвердити», кнопки control, «Немає даних», шина,
+// «Звіт за зміну» за хуком `meta.report_action` (C-02).
 import { describe, expect, test } from "@odoo/hoot";
 import { advanceTime, animationFrame } from "@odoo/hoot-mock";
 import { click, queryAll, queryAllTexts, queryOne, queryText } from "@odoo/hoot-dom";
@@ -52,6 +53,28 @@ test("рендер: 6 KPI, схема, профіль, тривоги, «Від�
     // D-01: «Звіт за зміну» прихований без capabilities.report
     expect(queryAll(".o_td_en_report").length).toBe(0);
     expect(queryText(".o_td_en_h1")).toBe("Пульт енергетика");
+});
+
+test("«Звіт за зміну»: кнопка лише з meta.report_action, відкриває саме цю дію (C-02, D-01)", async () => {
+    mockPult((data) => {
+        data.meta.capabilities.report = true;
+        data.meta.report_action = "td_energy_analytics.action_td_energy_shift_report";
+    });
+    const actions = [];
+    mockService("action", { doAction: (action) => actions.push(action) });
+    await mountPult();
+    expect(queryAll(".o_td_en_report").length).toBe(1);
+    await click(".o_td_en_report");
+    expect(actions.at(-1)).toBe("td_energy_analytics.action_td_energy_shift_report");
+});
+
+test("«Звіт за зміну»: без meta.report_action кнопки немає навіть при capabilities.report", async () => {
+    mockPult((data) => {
+        data.meta.capabilities.report = true;
+        data.meta.report_action = null;
+    });
+    await mountPult();
+    expect(queryAll(".o_td_en_report").length).toBe(0);
 });
 
 test("перемикач періоду змінює підписи KPI й викликає get_pult з періодом", async () => {

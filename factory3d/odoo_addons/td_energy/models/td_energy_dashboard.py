@@ -2,7 +2,8 @@
 
 Контроль доступу — у методах (ACL моделі немає): `group_td_energy_user`; ключі вартості без групи вартості
 видаляються з відповіді (не ховаються). Хуки `_td_genset_summary`, `_td_generation_cards`, `_td_node_facts_extra`,
-`_td_node_card_extra` перевизначає міст `td_genset_factory3d` (C-31).
+`_td_node_card_extra` перевизначає міст `td_genset_factory3d` (C-31); `_td_report_action` (C-02) — модуль
+`td_energy_analytics`.
 """
 
 from odoo import _, api, fields, models
@@ -65,6 +66,12 @@ class TdEnergyDashboard(models.AbstractModel):
     # --- хуки розширення (C-31); у базі — лише СЕС, КГУ, BESS, АВР -----------------------------------------
     @api.model
     def _td_genset_summary(self):
+        return None
+
+    @api.model
+    def _td_report_action(self):
+        """C-02 (W4): xml-id дії «Звіт за зміну» для кнопки Пульту; `None` — кнопки немає.
+        Перевизначає `td_energy_analytics` (`_inherit`)."""
         return None
 
     @api.model

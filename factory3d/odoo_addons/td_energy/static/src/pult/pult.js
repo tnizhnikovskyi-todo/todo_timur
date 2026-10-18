@@ -347,8 +347,14 @@ export class Pult extends Component {
         return this.actions.openXml("maintenance.hr_equipment_request_action");
     }
 
+    /** C-02: дію «Звіт за зміну» задає модуль аналітики (`meta.report_action`); без неї кнопки немає. */
+    get reportAction() {
+        return this.capabilities.report ? this.meta.report_action || null : null;
+    }
+
     openReport() {
-        return this.actions.openXml("td_energy.action_td_energy_report");
+        const xmlid = this.reportAction;
+        return xmlid ? this.actions.openXml(xmlid) : undefined;
     }
 }
 

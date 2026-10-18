@@ -203,6 +203,7 @@ class Pult:
         snap = self.snap
         ts = snap.ts("energy/totals/p_now")
         tf = snap.by_code.get("T1")
+        report_action = self.hooks._td_report_action() if self.hooks is not None else None  # C-02 (W4)
         meta = {
             "now": iso(self.now),
             "now_local": dates.to_local(self.now).strftime("%H:%M"),
@@ -213,7 +214,13 @@ class Pult:
             "contract_kw": rnd(self.contract_kw),
             "refresh_s": int(param_float(self.env, "pult_refresh_s", 30)),
             "control_available": self.sudo["td.energy.advice"]._td_control_available(),
-            "capabilities": {"ack": self.manager, "take": self.manager, "outage_plan": self.manager, "report": False},
+            "report_action": report_action or None,
+            "capabilities": {
+                "ack": self.manager,
+                "take": self.manager,
+                "outage_plan": self.manager,
+                "report": bool(report_action),
+            },
         }
         if self.cost:
             meta["tariff_uah"] = round(self.price_now, 2)

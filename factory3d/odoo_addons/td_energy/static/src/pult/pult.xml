@@ -21,7 +21,7 @@
                             <t t-esc="dataChip.text"/>
                         </span>
                         <button type="button" class="o_td_en_btn o_td_en_open3d" t-on-click="() => this.actions.openViewer()">Відкрити в 3D</button>
-                        <button t-if="capabilities.report" type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_report"
+                        <button t-if="reportAction" type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_report"
                                 t-on-click="openReport">Звіт за зміну</button>
                     </div>
                 </header>

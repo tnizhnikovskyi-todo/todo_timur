@@ -13,6 +13,9 @@
 - Існуючі `_f3d_*`-методи не перейменовано (RENAME.md §6); SPEC-імена `_td_log`, `action_td_show` — аліаси.
 
 ## Unreleased
+- W4 (C-02): хук `td.energy.dashboard._td_report_action()` (у базі `None`; значення задає `td_energy_analytics`); `get_pult`:
+  `meta.report_action` і `capabilities.report = bool(хук)`; кнопка «Звіт за зміну» Пульту відкриває `meta.report_action`
+  (раніше — `capabilities.report=False` і жорсткий xml-id `td_energy.action_td_energy_report`). Без модуля аналітики кнопки немає.
 - E-4: `kwh_shift` (R-11) для лічильника, що звітує менше за зміну (новий вузол, свіжа установка, стенд): раніше без показання
   на `shift_start` `delta` повертав `missing` і сигнал лишався порожнім до наступної зміни. Тепер — енергія від першого показання
   зміни з якістю `uncertain`; з показанням на початок зміни — як і раніше (`good`, AC-83).

@@ -14,6 +14,7 @@ export const CONTRACTS = {
             "tariff_uah": 8.4,
             "refresh_s": 30,
             "control_available": false,
+            "report_action": null,
             "capabilities": {
                 "ack": true,
                 "take": true,
