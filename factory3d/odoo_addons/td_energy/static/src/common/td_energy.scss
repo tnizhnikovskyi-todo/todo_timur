@@ -371,10 +371,11 @@ $td-muted: #4b5563;
         align-items: center;
         justify-content: center;
         text-align: center;
-        font-size: 12.5px;
-        line-height: 17px;
+        font-size: 12px;
+        line-height: 15px;
         border-radius: 8px;
         cursor: pointer;
+        overflow: hidden;
         &.o_td_en_node--ok { background: #fff; border: 2px solid $td-ok; color: $td-text; }
         &.o_td_en_node--warn { background: #fff7ed; border: 2px solid $td-warn; color: #7c2d12; }
         &.o_td_en_node--alarm { background: #fef2f2; border: 2px dashed $td-alarm; color: #7f1d1d; }

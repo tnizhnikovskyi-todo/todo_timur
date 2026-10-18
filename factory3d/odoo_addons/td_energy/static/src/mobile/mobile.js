@@ -16,9 +16,9 @@ import {
     STATE_LABELS,
     alarmLevel,
     errorMessage,
-    fmtAge,
     fmtDec,
     fmtInt,
+    staleText,
 } from "../common/format";
 
 export const mobileTabs = registry.category("td_energy.mobile_tabs");
@@ -317,7 +317,7 @@ export class Mobile extends Component {
     get chip() {
         const meta = this.meta;
         if (meta.data_state === "stale") {
-            return { cls: "stale", text: `Немає даних · ${fmtAge(meta.age_s)}` };
+            return { cls: "stale", text: staleText(meta.age_s) };
         }
         return { cls: meta.data_state === "partial" ? "partial" : "live", text: meta.now_local || "" };
     }

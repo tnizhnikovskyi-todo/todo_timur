@@ -21,7 +21,7 @@ import {
     xTicks,
     yTicks,
 } from "../common/chart";
-import { DASH, errorMessage, fmtAuto, fmtDate, fmtDec, fmtInt, hourToHm, kyivNowHour } from "../common/format";
+import { DASH, errorMessage, fmtAuto, fmtDate, fmtDec, fmtInt, hourToHm, joinList, kyivNowHour } from "../common/format";
 import { OutageDialog, openTicketWizard, plural } from "./dialogs";
 
 const REFRESH_S = 30;
@@ -231,7 +231,7 @@ export class NodeCard extends Component {
                 label: "Простій під напругою",
                 text: fmtDec(k.idle.kw, 1),
                 unit: k.idle.kw === null || k.idle.kw === undefined ? "" : "кВт",
-                note: names.length ? `${names.join(" і ")} ${names.length > 1 ? "не працюють" : "не працює"}` : "Простоїв немає",
+                note: names.length ? `${joinList(names)} ${names.length > 1 ? "не працюють" : "не працює"}` : "Простоїв немає",
             });
         }
         return cards;

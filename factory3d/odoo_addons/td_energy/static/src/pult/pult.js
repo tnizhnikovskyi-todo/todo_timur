@@ -9,7 +9,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useEnergyActions } from "../common/actions";
 import { partsForKinds, useEnergyBus } from "../common/bus";
-import { DASH, PERIODS, chpText, errorMessage, fmtAge, fmtDec, fmtInt } from "../common/format";
+import { DASH, PERIODS, chpText, errorMessage, fmtDec, fmtInt, staleText } from "../common/format";
 import { runAdviceAction, snoozeAdvice, visibleAdviceActions } from "../common/advice";
 import { OutageDialog, openTicketWizard } from "../node_card/dialogs";
 import { AlarmList } from "./alarms";
@@ -138,7 +138,7 @@ export class Pult extends Component {
     get dataChip() {
         const meta = this.meta;
         if (meta.data_state === "stale") {
-            return { cls: "stale", text: `Немає даних · ${fmtAge(meta.age_s)}` };
+            return { cls: "stale", text: staleText(meta.age_s) };
         }
         if (meta.data_state === "partial") {
             return { cls: "partial", text: `Частково · ${meta.now_local || ""}` };
@@ -192,7 +192,12 @@ export class Pult extends Component {
             note:
                 energy.cost_uah === undefined
                     ? ""
-                    : `${fmtInt(energy.cost_uah)} ₴ · тариф ${fmtDec(energy.price_uah, 2)} ₴/кВт·год`,
+                    : [
+                          energy.cost_uah === null ? null : `${fmtInt(energy.cost_uah)} ₴`,
+                          energy.price_uah === null || energy.price_uah === undefined ? null : `тариф ${fmtDec(energy.price_uah, 2)} ₴/кВт·год`,
+                      ]
+                          .filter(Boolean)
+                          .join(" · "),
         });
 
         const peak = k.peak || {};

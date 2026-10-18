@@ -94,6 +94,7 @@ class TestW1Ui(HttpCase):
             ("td.energy.advice", "list"),
             ("td.energy.advice", "form"),
             ("td.energy.ticket.wizard", "form"),
+            ("res.config.settings", "form"),
         ]
         for model, view_type in cases:
             result = self.env[model].get_view(view_type=view_type)

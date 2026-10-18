@@ -51,6 +51,19 @@ export function fmtAge(seconds) {
     return `${Math.round(s / 3600)} год`;
 }
 
+/** Чип «Немає даних · {вік}» (без віку — просто «Немає даних»). */
+export function staleText(seconds) {
+    return isEmpty(seconds) ? "Немає даних" : `Немає даних · ${fmtAge(seconds)}`;
+}
+
+/** Перелік через кому з «і» перед останнім: «A, B і C». */
+export function joinList(items) {
+    if (items.length < 2) {
+        return items.join("");
+    }
+    return items.slice(0, -1).join(", ") + " і " + items[items.length - 1];
+}
+
 /** Годину доби (дробову) → «HH:MM». */
 export function hourToHm(hour) {
     const total = Math.round(hour * 60);
