@@ -260,6 +260,7 @@ class TdEnergyControl(models.AbstractModel):
             "action_id": action.id,
             "token": token,
             "ttl_s": tools.cparam_int(self.env, "confirm_ttl_s", 60),
+            "verify_timeout_s": tools.cparam_int(self.env, "verify_timeout_s", 30),
             "kind": action.kind_code,
             "cls": action.cls,
             "title": rendered["title"],

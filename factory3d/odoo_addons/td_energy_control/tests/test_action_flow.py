@@ -18,6 +18,7 @@ class TestActionFlow(TestControlCommon):
                     "blocked_reason", "needs_second", "confirm_label", "disabled_reason"):  # fmt: skip
             self.assertIn(key, prep)
         self.assertEqual((prep["ttl_s"], prep["kind"], prep["cls"]), (60, "qs_close", "B"))
+        self.assertEqual(prep["verify_timeout_s"], 30)
         self.assertEqual(prep["title"], "Увімкнути секційний вимикач QS?")
         self.assertEqual([c["code"] for c in prep["checks"]][:2], ["controller_remote", "data_fresh"])
         self.assertTrue(prep["needs_second"])

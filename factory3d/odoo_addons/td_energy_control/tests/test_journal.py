@@ -69,3 +69,18 @@ class TestJournal(TestControlCommon):
         bodies = " ".join(act.message_ids.mapped("body"))
         for word in ("Підготовлено", "Підтверджено", "Результат"):
             self.assertIn(word, bodies)
+
+    def test_auto_event_without_scenario(self):  # події рушія без сценарію не підписуються «Зрізання піку»
+        ev = {"event_id": "cd" * 16, "kind": "mode", "text": "Рушій: auto → hold (контролер у місцевому режимі)"}
+        self.assertTrue(self.Action._td_log_auto(ev))
+        rec = self.Action.search([("idem", "=", ev["event_id"])])
+        self.assertEqual((rec.actor_text, rec.kind_code, rec.summary), ("автоматика", "auto_mode", "Режим рушія"))
+        self.assertFalse(rec.scenario_id)
+        self.assertNotIn("Пік", rec.actor_text + rec.summary)
+        row = next(r for r in self.ctl(self.u_view).get_journal()["items"] if r["id"] == rec.id)
+        self.assertEqual((row["who"], row["what"]), ("автоматика", "Режим рушія"))
+        event = self.env["td.energy.event"].search([("kind", "=", "control"), ("text", "=", ev["text"])])
+        self.assertEqual(event.code, "mode")
+        scoped = dict(ev, event_id="ef" * 16, scenario="pfc", text="PFC: збій", kind="interlock")
+        self.assertTrue(self.Action._td_log_auto(scoped))
+        self.assertEqual(self.Action.search([("idem", "=", scoped["event_id"])]).actor_text, "сценарій «PFC»")

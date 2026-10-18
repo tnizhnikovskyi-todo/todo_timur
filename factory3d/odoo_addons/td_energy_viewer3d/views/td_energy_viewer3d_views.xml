@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- V-46, V-47 (SPEC 3.1). Власник: D -->
+    <!-- V-46: налаштування шару «Енергетика в 3D» (блок у розділі «Енергетика», лише group_td_admin) -->
+    <record id="res_config_settings_view_form_td_energy_viewer3d" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.energy.viewer3d</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="td_energy.res_config_settings_view_form_td_energy"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='td_energy']" position="inside">
+                <block title="Енергетика в 3D" name="td_energy_viewer3d">
+                    <setting string="Шари моделі для «Відкрити в 3D»"
+                             help="JSON-список ключів шарів GLB, що вмикаються при переході з Пульту">
+                        <field name="td_energy_viewer3d_layers"/>
+                    </setting>
+                    <setting string="Маркери тривог" help="Маркери «!» над вузлами з відкритими тривогами">
+                        <div class="content-group">
+                            <div class="mt8"><field name="td_energy_viewer3d_show_markers"/>
+                                <label for="td_energy_viewer3d_show_markers"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_viewer3d_marker_limit"/>
+                                <field name="td_energy_viewer3d_marker_limit"/></div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-47: меню «Енергетика в 3D» → переглядач із шаром «Енергетика» (R-58) -->
+    <record id="action_td_energy_3d" model="ir.actions.server">
+        <field name="name">Енергетика в 3D</field>
+        <field name="model_id" ref="td_energy.model_td_energy_node"/>
+        <field name="state">code</field>
+        <field name="code">action = env["td.energy.node"].action_td_open_3d()</field>
+        <!-- без групи Odoo вимагає право запису на td.energy.node, якого в читача енергетики немає -->
+        <field name="group_ids" eval="[Command.link(ref('td_energy.group_td_energy_user'))]"/>
+    </record>
+    <menuitem id="menu_td_energy_3d" name="Енергетика в 3D" parent="td_energy.menu_td_energy" sequence="90"
+              action="action_td_energy_3d" groups="td_energy.group_td_energy_user"/>
 </odoo>
