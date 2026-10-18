@@ -143,7 +143,7 @@ async function t_mobile() {
   ok('моб.: выбор объекта открывает «Об’єкт»', tab === 'props', tab);
   await page.screenshot({ path: SH + '_mobile_props.png' });
   ok('моб.: правка вимкнена, публікація прихована (режим перегляду)', await page.evaluate(() => __f3d.S.app.mode === 'view' && getComputedStyle(document.getElementById('btnPublish')).display === 'none'));
-  await page.evaluate(() => __f3d.E.publish()); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(300);
+  await page.evaluate(() => { __f3d.E.publish(); }); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(300);
   await page.screenshot({ path: SH + '_mobile_publish.png' });
   const w2 = await page.evaluate(() => { const d = document.querySelector('dialog'); const r = d.getBoundingClientRect(); return { l: r.left, r: r.right, sw: document.documentElement.scrollWidth }; });
   ok('моб.: диалог публикации в пределах экрана', w2.l >= 0 && w2.r <= 400 && w2.sw <= 400, JSON.stringify(w2));
