@@ -93,11 +93,9 @@ def stock_state(env, site, codes=None, days=None, detail=False, offset=0, limit=
     for q in quants:
         by_loc[q['location_id'][0]].append(q)
     product_ids = {q['product_id'][0] for q in quants}
-    weights = (
-        {p['id']: p['weight'] for p in env['product.product'].sudo().browse(product_ids).read(['weight'])}
-        if product_ids
-        else {}
-    )
+    products = env['product.product'].sudo().browse(product_ids).read(['name', 'weight']) if product_ids else []
+    weights = {p['id']: p['weight'] for p in products}
+    names = {p['id']: p['name'] for p in products}
     by_product, max_weight = _capacity_maps(locations)
     moves = defaultdict(int)
     if ids:
@@ -142,11 +140,11 @@ def stock_state(env, site, codes=None, days=None, detail=False, offset=0, limit=
             'moves': moves.get(loc.id, 0),
             'min': round(points[loc.id][0], 4) if loc.id in points else None,
             'max': round(points[loc.id][1], 4) if loc.id in points else None,
-            'top_product': rows and max(rows, key=lambda q: q['quantity'])['product_id'][1] or None,
+            'top_product': names.get(max(rows, key=lambda q: q['quantity'])['product_id'][0]) if rows else None,
             'location_id': loc.id,
         }
         if detail:
-            entry['detail'] = _detail(env, loc, rows, now, since)
+            entry['detail'] = _detail(env, loc, rows, now, since, names)
         size += len(json.dumps(entry)) + len(loc.td_code) + 6
         if size > MAX_BYTES and out:
             truncated = True
@@ -163,7 +161,7 @@ def stock_state(env, site, codes=None, days=None, detail=False, offset=0, limit=
     }
 
 
-def _detail(env, loc, rows, now, since):
+def _detail(env, loc, rows, now, since, names):
     """Подробиці для картки: рядки залишків, рух за період, правила розміщення, категорія."""
     products = env['product.product'].sudo().browse([q['product_id'][0] for q in rows])
     refs = {p.id: p.default_code or '' for p in products}
@@ -171,7 +169,7 @@ def _detail(env, loc, rows, now, since):
     for q in rows[:DETAIL_ROWS]:
         items.append(
             {
-                'product': q['product_id'][1],
+                'product': names.get(q['product_id'][0], q['product_id'][1]),
                 'ref': refs.get(q['product_id'][0], ''),
                 'qty': q['quantity'],
                 'reserved': q['reserved_quantity'],
@@ -199,7 +197,7 @@ def _detail(env, loc, rows, now, since):
     moves = [
         {
             'date': fields.Datetime.to_string(ml.date),
-            'product': ml.product_id.display_name,
+            'product': ml.product_id.name,
             'qty': ml.quantity,
             'from': ml.location_id.td_code or ml.location_id.complete_name,
             'to': ml.location_dest_id.td_code or ml.location_dest_id.complete_name,
@@ -236,7 +234,7 @@ def stock_find(env, site, q, mode='any', limit=FIND_LIMIT):
     refs = {p.id: p.default_code or '' for p in quants.product_id}
     for q_ in quants:
         item = {
-            'product': q_.product_id.display_name,
+            'product': q_.product_id.name,
             'ref': refs.get(q_.product_id.id, ''),
             'qty': q_.quantity,
             'lot': q_.lot_id.name or '',

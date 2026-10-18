@@ -27,3 +27,6 @@ from . import test_s1_golden
 from . import test_s1_migration
 from . import test_s1_core_node
 from . import test_s1_library
+from . import test_s3_labels
+from . import test_s3_stock
+from . import test_s3_core_node
