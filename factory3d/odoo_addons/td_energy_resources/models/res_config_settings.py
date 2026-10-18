@@ -32,7 +32,9 @@ class ResConfigSettings(models.TransientModel):
         string="Норма підживлення котельні, м³/добу", digits=(5, 2), config_parameter=P + "boiler_makeup_norm"
     )
     td_energy_resources_air_setpoint_bar = fields.Float(
-        string="Уставка тиску повітря, бар", digits=(4, 2), config_parameter=P + "air_setpoint_bar"
+        string="Уставка тиску повітря (запасна, без сигналу energy_control/air/setpoint_bar), бар",
+        digits=(4, 2),
+        config_parameter=P + "air_setpoint_bar",
     )
     td_energy_resources_gap_max_s = fields.Integer(
         string="Макс. розрив показань для інтерполяції, с", config_parameter=P + "gap_max_s"

@@ -68,12 +68,13 @@ class ResPlan:
         self.env = env
         Meter = env["td.energy.meter"].sudo()
         wanted = set(resources) if resources else None
+        self.wanted = wanted  # коди ресурсів, запитані викликом (`None` — усі); хук моста застосовує той самий фільтр
         meters = Meter.search([("active", "=", True), ("resource_id.active", "=", True)], order="code")
         self.items = []  # [(meter, metric)]
         for meter in meters:
             code = meter.resource_id.code
-            if wanted and code not in wanted:
-                continue
+            if code == "heat" or (wanted and code not in wanted):
+                continue  # тепло генерує хук `_td_backfill_extra` моста (R-B5)
             if code == "el":
                 if meter.role == "incomer" and meter.e_react_signal_id:
                     self.items.append((meter, "react"))
@@ -163,7 +164,7 @@ class ResPlan:
             )  # fmt: skip
         if method == "schedule":
             return estimate.schedule(st.local, point.estimate_params or {})
-        return None  # residual — окремо; gate_loss — без сирих показань
+        return None
 
     def spray_active(self, st):
         """`active(SPRAY-1)` — частка роботи фарбувальної камери за навантаженням вузла (R-22, вода)."""
@@ -178,7 +179,13 @@ class ResPlan:
 
 def _simulate(plan, seed, since, until):
     """`(state, {meter_code: rate | None})` по слотах; швидкості — у одиницях `rate_label` ресурсу."""
-    estimates = [m for m, metric in plan.items if metric == "main" and m.mode == "estimate"]
+    estimates = [
+        m
+        for m, metric in plan.items
+        if metric == "main"
+        and m.mode == "estimate"
+        and m.point_id.estimate_method in ("load_share", "schedule", "residual")
+    ]
     simple = [m for m in estimates if m.point_id.estimate_method != "residual"]
     residuals = [m for m in estimates if m.point_id.estimate_method == "residual"]
     measured = {m.code for m, metric in plan.items if metric == "main" and m.mode != "estimate"}
@@ -336,4 +343,5 @@ def run(env, days=90, until=None, seed=20261018, purge=False, resources=None):
     if last_slot is not None and written:
         _touch_meters(env, written, last_slot, until)
     stats["seconds"] = round(time.monotonic() - started, 2)
+    _logger.info("td_energy_resources: backfill: %s", stats)
     return stats
