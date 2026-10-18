@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from collector.core.buffer import Buffer
+from collector.core.live import LiveCache
 from collector.core.types import Health, PushEvent, Reading, SignalCfg, SourceCfg
 from collector.plugins.base import SourcePlugin
 from collector.util.timeutil import Clock, SystemClock
@@ -54,12 +55,14 @@ class Scheduler:
         metrics: Any = None,
         clock: Clock | None = None,
         rand: Callable[[], float] = random.random,
+        live: LiveCache | None = None,
     ) -> None:
         self.buffer = buffer
         self.registry = registry
         self.metrics = metrics
         self.clock: Clock = clock or SystemClock()
         self.rand = rand
+        self.live = live
         self._state: dict[str, _SourceState] = {}
         self._tasks: dict[str, list[asyncio.Task]] = {}
         self._plugins: dict[str, SourcePlugin] = {}
@@ -151,6 +154,8 @@ class Scheduler:
             try:
                 readings = await plugin.poll(signals)
                 readings = apply_signal_scale(readings, by_code)
+                if self.live is not None:
+                    self.live.update(readings)
                 await self.buffer.put_many(readings)
             except asyncio.CancelledError:
                 raise
@@ -199,10 +204,12 @@ class Emitter:
         buffer: Buffer,
         signals: Callable[[], Mapping[str, SignalCfg]] | Mapping[str, SignalCfg],
         metrics: Any = None,
+        live: LiveCache | None = None,
     ) -> None:
         self.buffer = buffer
         self._signals = signals
         self.metrics = metrics
+        self.live = live
         self._readings: list[Reading] = []
         self._events: list[PushEvent] = []
 
@@ -210,7 +217,10 @@ class Emitter:
         return self._signals() if callable(self._signals) else self._signals
 
     def emit(self, reading: Reading) -> None:
-        self._readings.extend(apply_signal_scale([reading], self._lookup()))
+        scaled = apply_signal_scale([reading], self._lookup())
+        if self.live is not None:
+            self.live.update(scaled)
+        self._readings.extend(scaled)
 
     def emit_event(self, event: PushEvent) -> None:
         self._events.append(event)
