@@ -19,3 +19,4 @@ from . import test_skeleton_rights
 from . import test_skeleton_api
 from . import test_core_node
 from . import test_registry_hooks
+from . import test_new_fields_api

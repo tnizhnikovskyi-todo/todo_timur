@@ -15,7 +15,9 @@ LAYER_KIND_SELECTION = [
     ('custom', "Свій шар"),
 ]
 # R-11: вміст шару, який можуть писати ролі зі списку edit_group_ids; решту полів — лише менеджер
-LAYER_CONTENT_FIELDS = frozenset({'aisles', 'fire_paths', 'utilities', 'underlay_attachment_id', 'underlay_params'})
+LAYER_CONTENT_FIELDS = frozenset(
+    {'aisles', 'fire_paths', 'utilities', 'items', 'underlay_attachment_id', 'underlay_params'}
+)
 COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 

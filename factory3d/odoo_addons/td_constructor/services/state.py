@@ -46,6 +46,7 @@ def layer_dict(layer, env_xmlids=None):
         'aisles': layer.aisles or [],
         'fire_paths': layer.fire_paths or [],
         'utilities': layer.utilities or [],
+        'items': layer.items or [],
         'underlay': underlay,
         'etag': etag_of(layer),
     }
@@ -64,6 +65,17 @@ def slot_dict(slot):
         'params': slot.params or {},
         'overrides': slot.overrides or {},
         'parent_location_id': slot.parent_location_id.id or None,
+        # MERGE.md §3.3: ті самі імена, що в vals API-04 (посилання — id; null — не задано)
+        'type_id': slot.type_id.id or None,
+        'storage_category_id': slot.storage_category_id.id or None,
+        'removal_strategy_id': slot.removal_strategy_id.id or None,
+        'function_id': slot.function_id.id or None,
+        'attr_ids': slot.attr_ids.ids,
+        'temp_min_c': slot.temp_min_c,
+        'temp_max_c': slot.temp_max_c,
+        'tech': slot.tech or None,
+        'addr': slot.addr or {},
+        'depth_mode': slot.depth_mode or None,
         'cell_count': slot.cell_count,
         'etag': etag_of(slot),
     }
@@ -86,6 +98,108 @@ def placement_dict(placement):
         'name': placement.name,
         'equipment': {'id': equipment.id, 'name': equipment.name} if equipment else None,
         'etag': etag_of(placement),
+    }
+
+
+def site_ext_dict(site):
+    """Поля площадки MERGE.md §3.3 для `load` (`site.*`) і перевірок; порожні значення — типові (R-22)."""
+    warehouse = site.warehouse_id
+    variant = site.active_variant_id
+    return {
+        'warehouse': {'id': warehouse.id, 'name': warehouse.name, 'code': warehouse.code} if warehouse else None,
+        'addr': site.addr or {},
+        'loc_tree': site.loc_tree,
+        'depth_mode': site.depth_mode,
+        'sprinkler_height': site.sprinkler_height_m,
+        'aisle_tech': site.aisle_tech or None,
+        'parse_rules': site.parse_rules or {},
+        'wizard_state': site.wizard_state or {},
+        'active_variant': {'id': variant.id, 'name': variant.name} if variant else None,
+        'odoo_baseline_id': site.odoo_baseline_id.id or None,
+        'publish_copy_ack': site.publish_copy_ack,
+    }
+
+
+def type_dict(stype):
+    return {
+        'id': stype.id,
+        'code': stype.code,
+        'ref': stype.ref or None,
+        'name': stype.name,
+        'description': stype.description or '',
+        'group': stype.group,
+        'template': stype.template or None,
+        'shape': stype.shape or None,
+        'params': stype.params or {},
+        'relevance': stype.relevance,
+        'loc_kind': stype.loc_kind or None,
+        'is_custom': stype.is_custom,
+        'company_id': stype.company_id.id or None,
+        'sequence': stype.sequence,
+    }
+
+
+def preset_dict(preset):
+    return {
+        'id': preset.id,
+        'name': preset.name,
+        'type_id': preset.type_id.id or None,
+        'kind': preset.kind,
+        'data': preset.data or {},
+        'company_id': preset.company_id.id or None,
+    }
+
+
+def putaway_rule_dict(rule):
+    return {
+        'id': rule.id,
+        'uid': rule.uid,
+        'product_id': rule.product_id.id or None,
+        'product': rule.product_id.display_name or None,
+        'category_id': rule.category_id.id or None,
+        'package_type_ids': rule.package_type_ids.ids,
+        'in_location_id': rule.in_location_id.id or None,
+        'out_code': rule.out_code or None,
+        'out_location_id': rule.out_location_id.id or None,
+        'sublocation': rule.sublocation,
+        'storage_category_id': rule.storage_category_id.id or None,
+        'sequence': rule.sequence,
+        'odoo_rule_id': rule.odoo_rule_id.id or None,
+        'deleted': rule.deleted,
+        'etag': etag_of(rule),
+    }
+
+
+def replenish_rule_dict(rule):
+    return {
+        'id': rule.id,
+        'uid': rule.uid,
+        'product_id': rule.product_id.id or None,
+        'product': rule.product_id.display_name or None,
+        'cell_code': rule.cell_code or None,
+        'location_id': rule.location_id.id or None,
+        'min_qty': rule.min_qty,
+        'max_qty': rule.max_qty,
+        'odoo_orderpoint_id': rule.odoo_orderpoint_id.id or None,
+        'deleted': rule.deleted,
+        'etag': etag_of(rule),
+    }
+
+
+def library_state(env):
+    """`types` і `presets` для `load`: активні записи, доступні користувачеві (ir.rule по компанії)."""
+    return {
+        'types': [type_dict(t) for t in env['td.slot.type'].search([])],
+        'presets': [preset_dict(p) for p in env['td.slot.preset'].search([])],
+    }
+
+
+def rules_state(site):
+    """`rules` для `load`: чернетки правил розміщення й поповнення площадки (разом із позначеними `deleted`)."""
+    env = site.env
+    return {
+        'putaway': [putaway_rule_dict(r) for r in env['td.putaway.rule'].search([('site_id', '=', site.id)])],
+        'replenish': [replenish_rule_dict(r) for r in env['td.replenish.rule'].search([('site_id', '=', site.id)])],
     }
 
 
@@ -120,7 +234,9 @@ def checks_state(site):
                 'length': site.building_length_m,
                 'width': site.building_width_m,
                 'height': site.building_height_m,
-            }
+            },
+            'sprinkler_height': site.sprinkler_height_m,
+            'aisle_tech': site.aisle_tech or None,
         },
         'layers': layer_data,
         'slots': [slot_dict(s) for s in slots],
