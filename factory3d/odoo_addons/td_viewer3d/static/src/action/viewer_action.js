@@ -55,6 +55,8 @@ export class F3dViewerAction extends Component {
                         target: "current",
                     }),
                 onNotify: (msg, type) => this.notification.add(msg, { type }),
+                // R-26 VX-05: розширення (напр. «Енергетика в 3D») відкривають клієнтські дії Odoo; у кіоску не задано
+                onOpenAction: (act) => this.action.doAction(act),
                 onSetLite: (on) =>
                     this.action.doAction(
                         { type: "ir.actions.client", tag: "f3d_viewer.action", params: { ...p, lite: on ? 1 : 0 } },
@@ -70,6 +72,13 @@ export class F3dViewerAction extends Component {
                 return;
             }
             await this.viewer.applyParams(p); // code | mo | picking | so | tab | mode | layers | snapshot
+            if (p.td_energy_node && !p.code && !this._gone) {
+                // R-58: вузол без об'єкта в 3D — шар відкрито без вибору
+                this.notification.add(
+                    `Для вузла ${p.td_energy_node} немає об'єкта в 3D; відкрито шар «Енергетика»`,
+                    { type: "warning" }
+                );
+            }
         });
         onWillUnmount(() => {
             this._gone = true;
