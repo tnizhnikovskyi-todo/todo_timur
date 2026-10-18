@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-B1: підпис «оцінка» у KPI «Рекуперація AHU-1» та інших оцінних KPI (B).
-     Контракт з `td_energy_resources.ResKpis` (UI-03, воркер C): контейнер точки якості `.o_td_res_quality` рендериться
-     лише для `quality === 'estimated'`; ядро показує в ньому тільки точку, міст додає підпис.
-
-     УВАГА: блок розширення нижче закоментовано. Бандл `web.assets_backend` перевіряє наявність батьківського шаблона
-     (`assetsbundle.generate_xml_bundle`: «Missing (extension) parent templates» → console.error → падають усі
-     браузерні тести, у т. ч. td_energy hoot/UI). Поки `td_energy_resources.ResKpis` (W3-C) не злито, розширення
-     активувати не можна. Після злиття W3-C: прибрати рядки-коментарі навколо блоку (і звірити клас
-     `.o_td_res_quality` з розміткою карточки). -->
+<!-- UI-B1: підпис «оцінка» у KPI «Рекуперація AHU-1» та інших оцінних KPI.
+     Контракт з `td_energy_resources.ResKpis` (UI-03, W3-C): контейнер точки якості `.o_td_res_quality` рендериться
+     лише для `quality === 'estimated'`; ядро показує в ньому тільки точку (пунктир), міст додає підпис. -->
 <templates xml:space="preserve">
-    <!--
     <t t-inherit="td_energy_resources.ResKpis" t-inherit-mode="extension">
         <xpath expr="//*[hasclass('o_td_res_quality')]" position="inside">
             <span class="o_td_res_estimate ms-1 small text-muted" title="Розрахунок за тепловим балансом установки">оцінка</span>
         </xpath>
     </t>
-    -->
 </templates>

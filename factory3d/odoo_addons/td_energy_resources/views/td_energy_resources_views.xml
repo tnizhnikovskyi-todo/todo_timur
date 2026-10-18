@@ -509,7 +509,7 @@
         <field name="model">td.energy.tariff</field>
         <field name="inherit_id" ref="td_energy.view_td_energy_tariff_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//group[@string='Договір']" position="after">
+            <xpath expr="//notebook" position="before">
                 <group string="Реактивна енергія" groups="td_energy.group_td_energy_cost">
                     <field name="tg_phi_limit"/>
                     <field name="react_rate"/>

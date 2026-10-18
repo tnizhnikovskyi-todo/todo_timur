@@ -63,7 +63,7 @@ test("рендер: шапка з підсумком D-31, 5 вкладок із
     expect(queryOne("[role=tablist]").getAttribute("aria-label")).toBe("Ресурс");
     expect(queryAll(".o_td_res_kpi").length).toBe(4);
     expect(queryText(".o_td_res_kpi--grid_now .o_td_res_kpi_text")).toBe("358");
-    expect(queryText(".o_td_res_kpi--today .o_td_res_kpi_text")).toBe("6 284");
+    expect(queryText(".o_td_res_kpi--today .o_td_res_kpi_text")).toMatch(/^6\s284$/);
     expect(queryText(".o_td_res_kpi--today .o_td_res_unit")).toBe("кВт·год");
     expect(queryAll(".o_td_res_chart svg").length).toBe(1);
     expect(queryText(".o_td_res_chart_title")).toBe("Імпорт з мережі, кВт");
@@ -153,7 +153,7 @@ test("KPI: tone нейтральний/good/bad за класом примітк
 });
 
 test("форматування: дробові значення без зайвих нулів, 0,05 лишається 0,05, null → «—»", async () => {
-    expect(fmtNum(6284)).toBe("6 284");
+    expect(fmtNum(6284)).toMatch(/^6\s284$/);
     expect(fmtNum(91.4)).toBe("91,4");
     expect(fmtNum(0.05)).toBe("0,05");
     expect(fmtNum(9.8)).toBe("9,8");
@@ -228,8 +228,6 @@ test("графік: слоти після now_slot не малюються; бе
     await mountScreen({ td_energy_resource: "gas" });
     expect(queryAll(".o_td_res_line").length).toBe(0);
     expect(queryText(".o_td_res_nodata")).toBe("Немає даних за добу");
-    // нормальна відповідь: слоти 0…57 і поточний момент
-    mockScreen();
 });
 
 test("список: смуга шириною share·100 %, значення з одиницею, «Невраховано»", async () => {
@@ -237,7 +235,7 @@ test("список: смуга шириною share·100 %, значення з 
     await mountScreen({ td_energy_resource: "air" });
     const rows = queryAll(".o_td_res_item");
     expect(rows.length).toBe(3);
-    expect(queryText(".o_td_res_item_value")).toMatch(/^2,4\s*м³\/хв$/);
+    expect(queryAllTexts(".o_td_res_item_value")[0]).toMatch(/^2,4\s*м³\/хв$/);
     const bar = queryOne(".o_td_res_item .o_td_en_top_bar > div");
     expect(bar.style.width).toBe("100%");
     expect(queryText(".o_td_res_unaccounted")).toMatch(/Невраховано:\s*4,1\s*м³\/хв · 41,8 %/);
@@ -395,7 +393,7 @@ test("помилка частини (kpis/chart/list/notes): решта част
     });
     await mountScreen();
     expect(queryAll(".o_td_res_kpi").length).toBe(0);
-    expect(queryText(".o_td_en_error")).toMatch(/Показники недоступні: збій KPI/);
+    expect(queryAllTexts(".o_td_en_error").join("|")).toMatch(/Показники недоступні: збій KPI/);
     expect(queryAll(".o_td_res_chart svg").length).toBe(1);
     expect(queryAll(".o_td_res_note").length).toBe(2);
     expect(queryAllTexts(".o_td_en_error").join("|")).toMatch(/Список недоступний: збій списку/);
