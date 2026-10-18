@@ -188,3 +188,20 @@ def test_reset_restores_defaults(world, um):
         if addr != 290:
             assert hr(um, addr) == expected, addr
     assert not world.flags.get("chp_run") and not world.flags.get("qs_closed")
+
+
+def test_register_table_equals_frozen_contract_c47():
+    """`contracts/c47_registers.json` (C-47) — єдине джерело таблиці регістрів для плагіна, Odoo-даних і емулятора."""
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[4] / "odoo_addons" / "td_energy_control" / "contracts" / "c47_registers.json"
+    if not path.is_file():  # образ сервісу без Odoo-аддонів
+        pytest.skip("contracts/c47_registers.json недоступний")
+    ref = json.loads(path.read_text("utf-8"))
+    assert ref["source"]["unit"] == 73 and ref["source"]["fc_read"] == 3 and ref["source"]["fc_write"] == 6
+    table = {(r["hr"], r["code"].removeprefix("energy_control/"), r["rw"]) for r in ref["registers"]}
+    assert table == set(REGISTERS) and len(table) == 28
+    scaled = {r["code"].removeprefix("energy_control/"): r["scale"] for r in ref["registers"] if r["scale"]}
+    assert scaled == {"pfc/cos_target": 0.01, "bess/temp_c": 0.1, "chp/gas_bar": 0.01, "air/setpoint_bar": 0.01,
+                      "air/min_consumer_bar": 0.01}
