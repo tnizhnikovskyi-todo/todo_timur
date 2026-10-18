@@ -221,8 +221,16 @@ class NodeCard:
         cost = 0.0
         if meter_row:
             meter = self.sudo["td.energy.meter"].browse(meter_row["id"])
-            value, _q = meter._f3d_kwh(self.day0, self.now) if self.now > self.day0 else (0.0, "missing")
+            value, quality = meter._f3d_kwh(self.day0, self.now) if self.now > self.day0 else (0.0, "missing")
             kwh = value
+            if quality == "missing":  # без показань лічильника (демо-історія R-36) — сума інтервалів доби
+                self.env.cr.execute(
+                    "SELECT SUM(kwh) FROM td_energy_interval WHERE meter_id = %s AND ts_start >= %s AND ts_start < %s"
+                    " AND quality <> 'missing'",
+                    (meter.id, self.day0, self.now),
+                )
+                total = self.env.cr.fetchone()[0]
+                kwh = float(total) if total is not None else kwh
             self.env.cr.execute(
                 "SELECT COALESCE(SUM(cost), 0) FROM td_energy_interval WHERE meter_id = %s AND ts_start >= %s",
                 (meter.id, self.day0),

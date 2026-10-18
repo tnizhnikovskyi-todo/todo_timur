@@ -282,6 +282,8 @@ def _events(env, plan, seed, since, until, stats):
         if peak is None:
             continue
         ts = dates.to_utc(datetime(day.year, day.month, day.day, 23, 55))
+        if ts >= until:
+            continue  # доба ще не завершилась: події «з майбутнього» не пишемо
         text = "Пік доби %d кВт. %d %% договірної потужності %d кВт." % (
             round(peak), round(peak / contract * 100), round(contract)
         )  # fmt: skip
@@ -289,6 +291,8 @@ def _events(env, plan, seed, since, until, stats):
                      "node_id": swb.id, "state": "na", "is_backfill": True})  # fmt: skip
         if day.weekday() < 5:
             ts = dates.to_utc(datetime(day.year, day.month, day.day, 7, 2))
+            if ts >= until:
+                continue
             vals.append({"ts": ts, "level": "info", "kind": "ats", "code": "ATS-1", "text": ATS_TEXT,
                          "node_id": ats.id, "state": "na", "is_backfill": True})  # fmt: skip
     first = dates.to_local(since).date()

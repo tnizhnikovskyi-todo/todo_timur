@@ -694,7 +694,7 @@ def _kpi(label, value, unit=""):
 
 
 def generation_cards(pult):
-    """Базові картки СЕС, КГУ, BESS, АВР (без `td_genset`); міст додає «ДГУ» перевизначенням хука."""
+    """Базові картки СЕС, КГУ, BESS, АВР (без ДГУ); міст додає «ДГУ» перевизначенням хука."""
     snap = pult.snap
     v, t = snap.v, snap.t
 

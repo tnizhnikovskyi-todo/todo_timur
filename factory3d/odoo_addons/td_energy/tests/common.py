@@ -67,6 +67,9 @@ class TestW1Common(F3DEnergyCase):
         cls.Node = cls.env["td.energy.node"]
         cls.Meter = cls.env["td.energy.meter"]
         cls.Event = cls.env["td.energy.event"]
+        # демо-шаблон: хук прив'язує вузли до обладнання/РЦ демо-бази — W1-тести задають прив'язки самі
+        cls.env.cr.execute("UPDATE td_energy_node SET workcenter_id = NULL, equipment_id = NULL")
+        cls.Node.invalidate_model(["workcenter_id", "equipment_id"])
         cls.u_view = cls._mk_user("w1_view", ["td_energy.group_td_energy_user"])
         cls.u_cost = cls._mk_user("w1_cost", ["td_energy.group_td_energy_cost"])
         cls.u_eng = cls._mk_user("w1_eng", ["td_energy.group_td_energy_manager"])
