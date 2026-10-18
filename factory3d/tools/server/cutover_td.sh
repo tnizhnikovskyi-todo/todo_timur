@@ -60,6 +60,8 @@ log "filestore:        $FILESTORE"
 log "код:              $ADDONS_REPO → origin/$BRANCH ($TARGET)"
 log "бази:             $OLD_DB → $KEEP_DB, нова $OLD_DB"
 log "таймер:           $TIMER (увімкнеться, коли origin/$DEPLOY_BRANCH = $TARGET)"
+DBF="$(conf dbfilter || true)"; DBN="$(conf db_name || true)"
+log "dbfilter/db_name: ${DBF:-—} / ${DBN:-—} $([[ -z "$DBF$DBN" ]] && echo "(буде додано dbfilter = ^$OLD_DB\$: після переходу баз дві)")"
 if [[ $CHECK -eq 1 ]]; then log "перевірка пройдена, нічого не змінено"; exit 0; fi
 
 log "1/6 зупиняю таймер і Odoo, знімаю дамп"
@@ -88,6 +90,11 @@ if [[ -n "$BASE_URL" ]]; then
     psql_ -d "$OLD_DB" -v u="$BASE_URL" -c "update ir_config_parameter set value = :'u' where key = 'web.base.url'"
 fi
 
+if [[ -z "$DBF$DBN" ]]; then
+    cp -a "$ODOO_CONF" "$ODOO_CONF.before_td"
+    printf '\ndbfilter = ^%s$\n' "$OLD_DB" >>"$ODOO_CONF"
+    log "    додано dbfilter = ^$OLD_DB\$ (копія конфігу: $ODOO_CONF.before_td)"
+fi
 log "5/6 запускаю Odoo"
 systemctl start "$ODOO_SERVICE"
 log "    нова база працює. Повідомте менеджеру: «база готова». Далі він ставить модулі td_* і демо-дані."
