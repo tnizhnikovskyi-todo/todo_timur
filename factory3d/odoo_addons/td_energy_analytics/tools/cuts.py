@@ -196,7 +196,7 @@ def _unit_label(env, uom_ids, default):
 
 
 def _mo_cut(ctx, top):
-    env = ctx.env.sudo()
+    env = ctx.env(su=True)
     now = _alloc_data(env, ctx.f, ctx.t)
     window = ctx.baseline_window("el")
     base = _product_spec(_alloc_data(env, *window)) if window else {}
@@ -218,7 +218,7 @@ def _mo_cut(ctx, top):
 
 
 def _prod_cut(ctx):
-    env = ctx.env.sudo()
+    env = ctx.env(su=True)
     now = _alloc_data(env, ctx.f, ctx.t)
     window = ctx.baseline_window("el")
     base = _product_spec(_alloc_data(env, *window)) if window else {}
