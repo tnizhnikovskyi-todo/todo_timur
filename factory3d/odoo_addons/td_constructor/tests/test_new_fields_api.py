@@ -3,7 +3,7 @@ import json
 from odoo import Command
 from odoo.tests import tagged
 
-from ..services import snapshot
+from ..services import addr as addr_mod, snapshot
 from .common import PASSWORD, F3DConstructorCase, F3DConstructorHttpCase
 
 
@@ -55,7 +55,9 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
         self.assertTrue(data['ok'], data)
         self.assertEqual(data['rules'], {'putaway': [], 'replenish': []})
         self.assertEqual(data['presets'], [])
-        self.assertEqual([t['code'] for t in data['types']], ['R01'])  # лише тип із фікстури
+        codes = [t['code'] for t in data['types']]
+        self.assertIn('R01', codes)  # тип із фікстури
+        self.assertEqual(len(codes), 51)  # + 50 типів каталогу S1
         self.assertEqual((data['site']['loc_tree'], data['site']['depth_mode']), ('flat', 'level'))
         self.assertEqual(
             (data['site']['addr'], data['site']['warehouse'], data['site']['sprinkler_height']), ({}, None, 0.0)
@@ -133,7 +135,11 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
         loaded_layer = next(item for item in data['layers'] if item['id'] == layer.id)
         self.assertEqual(loaded_layer['items'], self.items)
         slot = next(item for item in data['slots'] if item['id'] == res['id_map']['s1'])
-        expected = dict(self.slot_vals, attr_ids=sorted(self.slot_vals['attr_ids']))
+        expected = dict(
+            self.slot_vals,
+            attr_ids=sorted(self.slot_vals['attr_ids']),
+            addr=addr_mod.normalize_addr(self.slot_vals['addr']),  # R-22 (S1): addr нормалізується
+        )
         self.assertEqual({key: (sorted(slot[key]) if key == 'attr_ids' else slot[key]) for key in expected}, expected)
         putaway = data['rules']['putaway']
         self.assertEqual(len(putaway), 1)
@@ -148,7 +154,9 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
         )
         self.assertEqual(data['site']['loc_tree'], 'row')
         self.assertEqual(data['site']['warehouse']['id'], self.warehouse.id)
-        self.assertEqual((data['site']['addr'], data['site']['sprinkler_height']), ({'tpl': '{row}'}, 6.0))
+        self.assertEqual(
+            (data['site']['addr'], data['site']['sprinkler_height']), (addr_mod.normalize_addr({'tpl': '{row}'}), 6.0)
+        )
         # правило: write з etag, конфлікт, видалення
         rule = self.env['td.putaway.rule'].browse(res['id_map']['p1'])
         ok = self.rpc(
@@ -372,7 +380,7 @@ class TestNewFieldsSnapshot(NewFieldsMixin, F3DConstructorCase):
         self.assertEqual(slot.attr_ids, self.attr_cold | self.attr_long)
         self.assertEqual(
             (slot.temp_min_c, slot.temp_max_c, slot.tech, slot.depth_mode, slot.addr),
-            (2.0, 8.0, 'reach_truck', 'cell', {'tpl': '{row}-{bay}'}),
+            (2.0, 8.0, 'reach_truck', 'cell', addr_mod.normalize_addr({'tpl': '{row}-{bay}'})),
         )
         self.assertEqual(self.layers['storage'].items, self.items)
         site = self.site
@@ -382,7 +390,7 @@ class TestNewFieldsSnapshot(NewFieldsMixin, F3DConstructorCase):
         )
         self.assertEqual(
             (site.addr, site.parse_rules, site.wizard_state, site.warehouse_id),
-            ({'tpl': '{row}'}, {'sep': '-'}, {'step': 3}, self.warehouse),
+            (addr_mod.normalize_addr({'tpl': '{row}'}), {'sep': '-'}, {'step': 3}, self.warehouse),
         )
         self.assertEqual(snapshot.count_differences(snapshot.build_snapshot(site), snap), 0)
         self.assertEqual(site.draft_changes, 0)

@@ -393,6 +393,9 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
     assert.equal(r.status, 0, r.stdout + r.stderr);
 });
 
+/* ---------- 7. слайси волни 1: S1 «Структура місця» (tools/test_core_s1.mjs) ---------- */
+(await import("./test_core_s1.mjs")).register(test);
+
 for (const [name, fn] of tests) {
     try {
         await fn();

@@ -112,7 +112,7 @@ class TestSkeletonModels(F3DConstructorCase):
         )
         self.site.invalidate_recordset()
         self.assertEqual((self.site.warehouse_id, self.site.loc_tree, self.site.depth_mode), (warehouse, 'row', 'cell'))
-        self.assertEqual(self.site.addr, {'tpl': '{row}-{bay}'})
+        self.assertEqual(self.site.addr['tpl'], '{row}-{bay}')  # R-22 (S1): нормалізовано з умовчаннями
         self.assertEqual(self.site.sprinkler_height_m, 6.5)
 
     def test_term_new_types_and_fields(self):
@@ -150,7 +150,13 @@ class TestSkeletonModels(F3DConstructorCase):
         slot = self.make_slot(prefix='TQ-T1')
         slot.type_id = stype
         self.assertEqual(slot.type_id.code, 'R01')
-        preset = env['td.slot.preset'].create({'name': "Ряд 4 яруси", 'type_id': stype.id, 'data': {'levels': 4}})
+        preset = env['td.slot.preset'].create(
+            {
+                'name': "Ряд 4 яруси",
+                'type_id': stype.id,
+                'data': {'slot': {'template': 'pallet_rack', 'params': {'levels': 4}}},
+            }
+        )
         self.assertEqual((preset.kind, preset.company_id), ('row', self.company))
 
         product = env['product.product'].create({'name': "Тестовий товар"})

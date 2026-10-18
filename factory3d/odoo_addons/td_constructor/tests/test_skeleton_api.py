@@ -3,8 +3,9 @@ from odoo.tests import tagged
 from .common import PASSWORD, F3DConstructorHttpCase
 
 # MERGE.md §3.5: API-11…API-24 -> маршрути; тіло порожнє, відповідь — заглушка W0-B
+# API-11 реалізовано слайсом S1 (controllers/library.py, тести test_s1_library.py): маршрут зареєстровано один раз
+IMPLEMENTED_ROUTES = [('API-11', '/f3d/constructor/library')]
 STUB_ROUTES = [
-    ('API-11', '/f3d/constructor/library'),
     ('API-12', '/f3d/constructor/storage_categories'),
     ('API-12', '/f3d/constructor/removal_strategies'),
     ('API-13', '/f3d/constructor/stock/state'),
@@ -43,12 +44,12 @@ class TestSkeletonApi(F3DConstructorHttpCase):
     def test_stub_routes_accept_empty_body_and_any_role(self):
         for user in (self.u_manager, self.u_tech, self.u_store, self.u_eng):
             self.authenticate(user.login, PASSWORD)
-            res = self.rpc('/f3d/constructor/library')
+            res = self.rpc(STUB_ROUTES[0][1])
             self.assertEqual((res['ok'], res['code']), (False, 'not_implemented'), user.login)
 
     def test_stub_routes_are_registered_once(self):
         """Кожен маршрут API-11…24 належить рівно одному методу контролера (дублі ламають слайси)."""
         mapping = self.env['ir.http'].routing_map()
-        for _api, route in STUB_ROUTES:
+        for _api, route in IMPLEMENTED_ROUTES + STUB_ROUTES:
             rules = [rule for rule in mapping.iter_rules() if rule.rule == route]
             self.assertEqual(len(rules), 1, route)
