@@ -1,3 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 5 ресурсів (SPEC 5.2) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- SPEC 5.2: 5 ресурсів (el першим: констрейнт «єдиний el» перевіряється при створенні кожного запису) -->
+<odoo noupdate="1">
+    <record id="resource_el" model="td.energy.resource">
+        <field name="code">el</field>
+        <field name="name">Електрика</field>
+        <field name="sequence">10</field>
+        <field name="uom_label">кВт·год</field>
+        <field name="rate_label">кВт</field>
+        <field name="rate_hour_factor">1</field>
+        <field name="kwh_per_unit">0</field>
+        <field name="co2_kg_per_unit">0.37</field>
+        <field name="price_source">tariff</field>
+        <field name="limit_kind">tariff_contract</field>
+        <field name="rate_limit">0</field>
+        <field name="daily_limit">0</field>
+        <field name="list_basis">rate</field>
+        <field name="color">#714B67</field>
+        <field name="chart_title">Імпорт з мережі, кВт</field>
+        <field name="chart_note">ліміт — договірна {contract} кВт</field>
+        <field name="list_title">Найбільші споживачі зараз</field>
+        <field name="foot_template">Пік доби {peak_kw} кВт о {peak_time}.{export_sentence}</field>
+        <field name="is_derived" eval="False"/>
+        <field name="in_energy_cost" eval="True"/>
+        <field name="show_tab_cost" eval="True"/>
+    </record>
+    <record id="resource_gas" model="td.energy.resource">
+        <field name="code">gas</field>
+        <field name="name">Газ</field>
+        <field name="sequence">20</field>
+        <field name="uom_label">м³</field>
+        <field name="rate_label">м³/год</field>
+        <field name="rate_hour_factor">1</field>
+        <field name="kwh_per_unit">10.5</field>
+        <field name="co2_kg_per_unit">1.96</field>
+        <field name="price_source">price</field>
+        <field name="limit_kind">fixed</field>
+        <field name="rate_limit">80</field>
+        <field name="daily_limit">1200</field>
+        <field name="list_basis">rate</field>
+        <field name="color">#b45309</field>
+        <field name="chart_title">Витрата газу, м³/год</field>
+        <field name="chart_note">ліміт години — {limit} м³/год</field>
+        <field name="list_title">Споживачі газу</field>
+        <field name="foot_template">Нічна витрата {night} м³/год, у зміну {day} м³/год. Пік {peak} м³/год о {peak_time}.</field>
+        <field name="is_derived" eval="False"/>
+        <field name="in_energy_cost" eval="True"/>
+        <field name="show_tab_cost" eval="True"/>
+    </record>
+    <record id="resource_heat" model="td.energy.resource">
+        <field name="code">heat</field>
+        <field name="name">Тепло</field>
+        <field name="sequence">30</field>
+        <field name="uom_label">кВт·год</field>
+        <field name="rate_label">кВт</field>
+        <field name="rate_hour_factor">1</field>
+        <field name="kwh_per_unit">0</field>
+        <field name="co2_kg_per_unit">0</field>
+        <field name="price_source">derived_gas</field>
+        <field name="limit_kind">none</field>
+        <field name="rate_limit">0</field>
+        <field name="daily_limit">0</field>
+        <field name="list_basis">rate</field>
+        <field name="color">#c2410c</field>
+        <field name="chart_title">Теплова потужність, кВт</field>
+        <field name="chart_note">теплобаланс цеху з BMS · котли {capacity} кВт</field>
+        <field name="list_title">Куди йде тепло</field>
+        <field name="foot_template">Найбільша частка тепла — {top_name} ({top_share} %).</field>
+        <field name="is_derived" eval="True"/>
+        <field name="in_energy_cost" eval="False"/>
+        <field name="show_tab_cost" eval="False"/>
+        <field name="source_note">з BMS</field>
+    </record>
+    <record id="resource_air" model="td.energy.resource">
+        <field name="code">air</field>
+        <field name="name">Стиснене повітря</field>
+        <field name="sequence">40</field>
+        <field name="uom_label">норм. м³</field>
+        <field name="rate_label">м³/хв</field>
+        <field name="rate_hour_factor">60</field>
+        <field name="kwh_per_unit">0</field>
+        <field name="co2_kg_per_unit">0</field>
+        <field name="price_source">derived_el</field>
+        <field name="limit_kind">none</field>
+        <field name="rate_limit">0</field>
+        <field name="daily_limit">0</field>
+        <field name="list_basis">rate</field>
+        <field name="color">#0369a1</field>
+        <field name="chart_title">Витрата стисненого повітря, м³/хв</field>
+        <field name="chart_note">2 × Atlas Copco GA 37 VSD+</field>
+        <field name="list_title">Споживачі повітря зараз</field>
+        <field name="foot_template">{leak_sentence}</field>
+        <field name="is_derived" eval="True"/>
+        <field name="in_energy_cost" eval="False"/>
+        <field name="show_tab_cost" eval="True"/>
+    </record>
+    <record id="resource_water" model="td.energy.resource">
+        <field name="code">water</field>
+        <field name="name">Вода</field>
+        <field name="sequence">50</field>
+        <field name="uom_label">м³</field>
+        <field name="rate_label">м³/год</field>
+        <field name="rate_hour_factor">1</field>
+        <field name="kwh_per_unit">0</field>
+        <field name="co2_kg_per_unit">0</field>
+        <field name="price_source">price</field>
+        <field name="limit_kind">none</field>
+        <field name="rate_limit">0</field>
+        <field name="daily_limit">0</field>
+        <field name="list_basis">qty_day</field>
+        <field name="color">#0f766e</field>
+        <field name="chart_title">Витрата води, м³/год</field>
+        <field name="chart_note">ввід і підживлення котельні</field>
+        <field name="list_title">Споживачі води</field>
+        <field name="foot_template">Нічна витрата {night} м³/год {norm_sentence}.</field>
+        <field name="is_derived" eval="False"/>
+        <field name="in_energy_cost" eval="False"/>
+        <field name="show_tab_cost" eval="True"/>
+    </record>
+</odoo>

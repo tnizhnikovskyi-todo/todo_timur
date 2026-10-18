@@ -1,1 +1,17 @@
 resource,code,name,kind,parent,node,cost_node,sequence,rate_nominal,min_pressure_bar,estimate_method,estimate_params
+gas,GAS-MAIN,Головний газовий лічильник,source,,,,10,,,none,
+gas,BOILER,Котельня цеху,consumer,,BOILER,,20,,,none,
+gas,DRY-1,Сушильна камера (газовий пальник),consumer,,DRY-1,,30,6.0,,load_share,
+gas,CHP,КГУ TEDOM (резерв),consumer,,CHP,,40,,,none,
+gas,CANTEEN,Їдальня,consumer,,,,50,,,schedule,"{""from_h"":8,""to_h"":16,""weekdays"":[0,1,2,3,4],""rate"":1.0}"
+air,AIR-MAIN,Магістраль стисненого повітря,source,,,COMPRESSOR,10,,,none,
+air,EDGE-1,Крайкооблицювання A,consumer,,EDGE-1,,20,3.0,6.0,load_share,
+air,NEST-1,Нестинг ЧПК,consumer,,NEST-1,,30,2.25,6.0,load_share,
+air,PRESS-1,Мембранний прес,consumer,,PRESS-1,,40,1.9,6.2,load_share,
+air,SPRAY-1,Фарбувальна камера,consumer,,SPRAY-1,,50,1.6,5.5,load_share,
+air,CNC-1,Присадка ЧПК A,consumer,,CNC-1,,60,1.1,5.5,load_share,
+water,WATER-MAIN,Основний ввід води,source,,,,10,,,none,
+water,SOCIAL,Побутові приміщення,consumer,,,,20,,,residual,"{""from"":[""WATER-MAIN""]}"
+water,CANTEEN,Їдальня,consumer,,,,30,,,schedule,"{""from_h"":10,""to_h"":15,""weekdays"":[0,1,2,3,4],""rate"":0.22}"
+water,BOILER,Підживлення котельні,consumer,,BOILER,,40,,,none,
+water,SPRAY-1,Фарбувальна камера,consumer,,SPRAY-1,,50,1.5,,load_share,

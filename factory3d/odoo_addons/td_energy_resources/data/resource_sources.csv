@@ -1,1 +1,3 @@
 code,name,unit,equipment,host,port,timeout_s,retries,max_block,gap_max
+MB-U74-GAS-MAIN,Корректор газу GAS-MAIN (u74),74,GAS-MAIN,iot-sim,502,3,2,125,8
+MB-U75-AIR-MAIN,Витратомір повітря AIR-MAIN (u75),75,AIR-MAIN,iot-sim,502,3,2,125,8

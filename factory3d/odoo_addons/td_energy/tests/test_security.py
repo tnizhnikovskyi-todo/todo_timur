@@ -110,7 +110,10 @@ class TestSecurity(EnergyMixin, F3DEnergyCase):
     def test_read_disabled_crons(self):  # AC-80
         Source = self.env["td.source"].sudo()
         self.set_read(False)
-        sources = Source.search([("module", "=", "energy")])
+        foreign = self.env["ir.model.data"].search(
+            [("module", "=", "td_energy_resources"), ("model", "=", "td.source")]
+        )
+        sources = Source.search([("module", "=", "energy"), ("id", "not in", foreign.mapped("res_id"))])
         self.assertEqual(len(sources.filtered(lambda s: s.type == "modbus_tcp")), 69)
         self.assertFalse(any(sources.mapped("read_enabled")))
         before = {

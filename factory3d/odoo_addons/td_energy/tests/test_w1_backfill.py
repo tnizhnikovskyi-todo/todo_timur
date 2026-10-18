@@ -50,7 +50,7 @@ class TestW1Backfill(TestW1Common):
             else:
                 self.assertEqual(set(costs), {0.0}, role)
         last = UNTIL - timedelta(minutes=15)
-        starts = set(self.Meter.search([]).mapped("last_interval_start"))
+        starts = set(self.Meter.search([("e_import_signal_id", "!=", False)]).mapped("last_interval_start"))
         self.assertEqual(starts, {last})
 
     def test_security(self):  # ТБ-10

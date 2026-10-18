@@ -1,3 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Параметри td.energy_resources.* (SPEC 5.1) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- SPEC 5.1: параметри td.energy_resources.* (air_setpoint_bar — запасна уставка, поки немає сигналу energy_control/air/setpoint_bar) -->
+<odoo noupdate="1">
+    <record id="param_boiler_eff" model="ir.config_parameter">
+        <field name="key">td.energy_resources.boiler_eff</field>
+        <field name="value">0.91</field>
+    </record>
+    <record id="param_boiler_eff_norm" model="ir.config_parameter">
+        <field name="key">td.energy_resources.boiler_eff_norm</field>
+        <field name="value">90</field>
+    </record>
+    <record id="param_night_from_h" model="ir.config_parameter">
+        <field name="key">td.energy_resources.night_from_h</field>
+        <field name="value">23.0</field>
+    </record>
+    <record id="param_night_to_h" model="ir.config_parameter">
+        <field name="key">td.energy_resources.night_to_h</field>
+        <field name="value">6.5</field>
+    </record>
+    <record id="param_air_spec_norm" model="ir.config_parameter">
+        <field name="key">td.energy_resources.air_spec_norm</field>
+        <field name="value">6.0</field>
+    </record>
+    <record id="param_water_night_norm" model="ir.config_parameter">
+        <field name="key">td.energy_resources.water_night_norm</field>
+        <field name="value">0.05</field>
+    </record>
+    <record id="param_boiler_makeup_norm" model="ir.config_parameter">
+        <field name="key">td.energy_resources.boiler_makeup_norm</field>
+        <field name="value">0.5</field>
+    </record>
+    <record id="param_air_setpoint_bar" model="ir.config_parameter">
+        <field name="key">td.energy_resources.air_setpoint_bar</field>
+        <field name="value">7.0</field>
+    </record>
+    <record id="param_gap_max_s" model="ir.config_parameter">
+        <field name="key">td.energy_resources.gap_max_s</field>
+        <field name="value">900</field>
+    </record>
+    <record id="param_min_coverage" model="ir.config_parameter">
+        <field name="key">td.energy_resources.min_coverage</field>
+        <field name="value">0.3</field>
+    </record>
+    <record id="param_export_max_days" model="ir.config_parameter">
+        <field name="key">td.energy_resources.export_max_days</field>
+        <field name="value">31</field>
+    </record>
+    <record id="param_weeks_per_month" model="ir.config_parameter">
+        <field name="key">td.energy_resources.weeks_per_month</field>
+        <field name="value">4.33</field>
+    </record>
+</odoo>

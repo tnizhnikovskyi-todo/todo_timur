@@ -95,7 +95,10 @@ class Snap:
         rows = (
             self.env["td.energy.meter"]
             .sudo()
-            .search_read([("active", "=", True)], ["code", "node_id", "role", "data_state", "source_id", "model"])
+            .search_read(
+                [("active", "=", True), ("node_id", "!=", False)],  # td_energy_resources: лічильники ресурсів без вузла
+                ["code", "node_id", "role", "data_state", "source_id", "model"],
+            )
         )
         self.meters = {}
         for r in sorted(rows, key=lambda r: r["code"]):

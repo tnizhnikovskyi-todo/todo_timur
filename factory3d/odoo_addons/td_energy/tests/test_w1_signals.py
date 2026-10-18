@@ -50,7 +50,12 @@ class TestW1Signals(TestW1Common):
         self.assertTrue(all(s.module == "energy" for s in signals))
         source = self.env["td.source"].search([("code", "=", "MB-U73-SWB-CTRL")])
         self.assertEqual((source.params["unit"], source.params["host"], source.params["port"]), (73, "iot-sim", 502))
-        self.assertEqual(self.Signal.search_count([("module", "=", "energy")]), 312)
+        foreign = self.env["ir.model.data"].search(
+            [("module", "=", "td_energy_resources"), ("model", "=", "td.signal")]
+        )
+        self.assertEqual(  # сигнали td_energy_resources (+10) рахуються окремо
+            self.Signal.search_count([("module", "=", "energy"), ("id", "not in", foreign.mapped("res_id"))]), 312
+        )
         self.assertEqual(hooks._ensure_w1_signals(self.env), {"sources": 0, "signals": 0})
         qs = self.Signal.search([("code", "=", "energy/cells/QS/state")])
         self.assertEqual(qs.states, ["open", "closed"])

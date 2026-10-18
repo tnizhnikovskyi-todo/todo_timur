@@ -1,1 +1,17 @@
 code,name,point_resource,point,mode,qty_signal,flow_signals,max_rate,model
+GM-MAIN,Газ: головний лічильник,gas,GAS-MAIN,counter,infra/gas/m3_total,,200,other
+GM-BOILER,Газ: котельня,gas,BOILER,flow_integrate,,equipment/BOILER/gas_m3h,,other
+GM-CHP,Газ: КГУ,gas,CHP,flow_integrate,,infra/chp/gas_m3h,,other
+GM-DRY1,Газ: сушильна камера (оцінка),gas,DRY-1,estimate,,,,other
+GM-CANTEEN,Газ: їдальня (оцінка),gas,CANTEEN,estimate,,,,other
+AM-MAIN,Повітря: магістраль,air,AIR-MAIN,flow_integrate,,air/flow_m3min,,other
+AM-EDGE1,Повітря: крайкооблицювання A (оцінка),air,EDGE-1,estimate,,,,other
+AM-NEST1,Повітря: нестинг ЧПК (оцінка),air,NEST-1,estimate,,,,other
+AM-PRESS1,Повітря: мембранний прес (оцінка),air,PRESS-1,estimate,,,,other
+AM-SPRAY1,Повітря: фарбувальна камера (оцінка),air,SPRAY-1,estimate,,,,other
+AM-CNC1,Повітря: присадка ЧПК A (оцінка),air,CNC-1,estimate,,,,other
+WM-MAIN,Вода: основний ввід,water,WATER-MAIN,counter,infra/water/m3_total,,20,other
+WM-BOILER,Вода: підживлення котельні,water,BOILER,counter,infra/water/boiler_m3_total,,5,other
+WM-CANTEEN,Вода: їдальня (оцінка),water,CANTEEN,estimate,,,,other
+WM-SOCIAL,Вода: побутові приміщення (оцінка),water,SOCIAL,estimate,,,,other
+WM-SPRAY,Вода: фарбувальна камера (оцінка),water,SPRAY-1,estimate,,,,other

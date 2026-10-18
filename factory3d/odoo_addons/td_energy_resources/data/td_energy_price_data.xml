@@ -1,3 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Демо-ціни газу й води (SPEC 5.2) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- SPEC 5.2: демо-ціни (Q-05, до таблиці бухгалтерії): газ 19,80 ₴/м³, вода 60,00 ₴/м³ -->
+<odoo noupdate="1">
+    <record id="price_gas_demo" model="td.energy.price">
+        <field name="resource_id" ref="resource_gas"/>
+        <field name="date_from">2025-01-01</field>
+        <field name="price">19.80</field>
+        <field name="note">Демо-ціна газу</field>
+    </record>
+    <record id="price_water_demo" model="td.energy.price">
+        <field name="resource_id" ref="resource_water"/>
+        <field name="date_from">2025-01-01</field>
+        <field name="price">60.00</field>
+        <field name="note">Демо-ціна води</field>
+    </record>
+</odoo>

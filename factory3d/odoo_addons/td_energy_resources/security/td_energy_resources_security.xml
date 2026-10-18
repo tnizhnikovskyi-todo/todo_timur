@@ -1,3 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Record rules (SPEC 4.3) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- SPEC 4.3: глобальні правила мультикомпанії. td.energy.res.interval і td.energy.usage — без company (ізоляція через лічильник/точку) -->
+<odoo noupdate="1">
+    <record id="td_energy_price_rule_company" model="ir.rule">
+        <field name="name">Енергетика: ціни ресурсів — компанія</field>
+        <field name="model_id" ref="model_td_energy_price"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_point_rule_company" model="ir.rule">
+        <field name="name">Енергетика: точки обліку — компанія</field>
+        <field name="model_id" ref="model_td_energy_point"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_opportunity_rule_company" model="ir.rule">
+        <field name="name">Енергетика: правила резервів — компанія</field>
+        <field name="model_id" ref="model_td_energy_opportunity_rule"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_opportunity_company" model="ir.rule">
+        <field name="name">Енергетика: резерви економії — компанія</field>
+        <field name="model_id" ref="model_td_energy_opportunity"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

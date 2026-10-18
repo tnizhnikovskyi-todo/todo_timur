@@ -1,3 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Крони res_build, res_rotate (SPEC 6) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- SPEC 6: крони ядра (res_build, res_rotate); крони резервів — data/ir_cron_opportunity.xml (B). `nextcall` ротації — орієнтовно 03:10 Київ = 00:10 UTC -->
+<odoo noupdate="1">
+    <record id="cron_td_energy_res_build" model="ir.cron">
+        <field name="name">Енергетика: інтервали ресурсів</field>
+        <field name="model_id" ref="model_td_energy_res_interval"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_build()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_td_energy_res_rotate" model="ir.cron">
+        <field name="name">Енергетика: ротація інтервалів ресурсів</field>
+        <field name="model_id" ref="model_td_energy_res_interval"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_rotate()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(datetime.now() + relativedelta(days=1)).replace(hour=0, minute=10, second=0, microsecond=0)"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

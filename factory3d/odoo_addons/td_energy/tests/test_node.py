@@ -103,7 +103,7 @@ class TestNodes(F3DEnergyCase):
         )
 
     def test_67_meters(self):  # AC-05
-        meters = self.Meter.search([])
+        meters = self.Meter.search([("e_import_signal_id", "!=", False)])  # без лічильників ресурсів
         self.assertEqual(len(meters), 67)
         self.assertEqual(dict(Counter(meters.mapped("model"))),
                          {"pm5560": 57, "sun2000": 8, "luna2000": 1, "tedom": 1})  # fmt: skip
