@@ -38,12 +38,14 @@ class Engine:
         get_cfg: Any,
         write_enabled: Any = None,
         config_error: Any = None,
+        busy: Any = None,
         log: logging.Logger | None = None,
     ) -> None:
         self.store, self.reporter, self.writer, self.actuator = store, reporter, writer, actuator
         self.live, self.clock, self.get_cfg = live, clock, get_cfg
         self.write_enabled = write_enabled  # () -> bool: F3D_WRITE_ENABLED збирача
         self.config_error = config_error  # () -> str | None: «config invalid: …» (R-53 №12)
+        self.busy = busy  # () -> set[str]: ресурси, на яких зараз виконується інтент оператора
         self.log = log or logging.getLogger("collector.plugin.energy_ctl")
         eng = store.data["engine"]
         self.shared: dict[str, Any] = eng.setdefault("shared", {})
@@ -161,6 +163,8 @@ class Engine:
     async def _run(self, cfg: Config, inp: Inputs, now_dt: Any, events: list[Event]) -> None:
         now = now_dt.timestamp()
         blocked = {r for r, until in (self.shared.get("blocked_until") or {}).items() if until > now}
+        if self.busy is not None:  # інтент оператора виконується на ресурсі: автоматика його не чіпає (R-52)
+            blocked |= set(self.busy())
         if inp.t("fire_state") == "alarm":  # R-44 п.8: пожежна тривога — запис vent/light припиняється
             blocked |= {"vent", "light"}
         env = Env(inp, cfg, now_dt, self.shared, self.scen, self.active_overrides(now), blocked)

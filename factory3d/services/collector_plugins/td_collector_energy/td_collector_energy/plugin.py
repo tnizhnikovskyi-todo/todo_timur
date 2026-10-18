@@ -118,6 +118,7 @@ class EnergyCtlPlugin(SourcePlugin):
             get_cfg=get_cfg,
             write_enabled=self._write_enabled,
             config_error=lambda: self.config_error,
+            busy=lambda: set(self.executor.running) if self.executor else set(),
             log=self.log,
         )
         self.executor = Executor(

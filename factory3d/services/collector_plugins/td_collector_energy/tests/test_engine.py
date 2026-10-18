@@ -397,3 +397,21 @@ async def test_engine_keeps_acting_on_cached_config_while_odoo_is_down_10_minute
     assert h.reporter.pending() == (0, 0)
     sent = h.odoo.states[-1]
     assert [a["id"] for a in sent["actions"]] == [90] and sent["actions"][0]["state"] in ("done", "failed", "blocked")
+
+
+async def test_engine_does_not_touch_resource_while_operator_intent_runs():  # R-52
+    from helpers import INTENT_SIGNAL, intent
+
+    h = await boot(grid_kw=800, bess_soc=82)
+    h.device.hooks["energy_control/bess/mode"] = lambda v, t: (
+        None
+    )  # пристрій нічого не змінює: інтент чекає верифікації
+    h.device.regs["energy_control/bess/mode"] = (0.0, None)
+    res = await h.plugin.call(
+        INTENT_SIGNAL, intent("bess_charge", {"power_kw": 40, "until": "16:00", "soc_limit_pct": 95}, now=h.clock.now())
+    )
+    assert res["accepted"] and "bess" in h.executor.running
+    await h.tick()  # інтент ще виконується (задача не стартувала)
+    assert not any("/bess/" in c_ for c_, _v, _t in h.device.writes)
+    assert h.events("override")  # peak повідомляє, що BESS не під його керуванням
+    await asyncio.gather(*h.executor.running.values())
