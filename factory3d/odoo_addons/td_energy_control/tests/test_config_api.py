@@ -87,3 +87,94 @@ class TestConfigApi(TestControlCommon, HttpCase):
         icp.set_param("td.energy_control.remote_switching_enabled", "False")
         self.assertFalse(self.get().json()["flags"]["remote_switching_enabled"])
         self.assertEqual(NOW.year, 2026)
+
+    # --- D-47: блок `derived` ------------------------------------------------------------------------------------
+    @staticmethod
+    def evaluate(formula, get):
+        """Семантика плагіна: будь-який терм відсутній → None (fail-closed)."""
+        if formula["op"] == "ge":
+            val = get(formula["code"])
+            return None if val is None else (1.0 if val >= formula["value"] else 0.0)
+        total = 0.0
+        for term in formula["terms"]:
+            val = get(term["code"])
+            if val is None:
+                return None
+            total += term["k"] * (max(term["min"], val) if "min" in term else val)
+        zero = formula.get("zero_if")
+        if zero and get(zero["code"]) == zero["eq"]:
+            return 0.0
+        return max(formula["clamp_min"], total) if "clamp_min" in formula else total
+
+    def test_derived_block(self):  # D-47
+        derived = config_builder.build(self.env)["derived"]
+        self.assertEqual(
+            set(derived),
+            {"energy/totals/p_now", "energy/sections/S1/p_kw", "energy/sections/S2/p_kw", "infra/ats/src1_ok",
+             "infra/totals/grid_kw", "infra/totals/export_kw", "infra/totals/pv_now"},
+        )  # fmt: skip
+        lines = self.env["td.energy.node"].sudo().search([("kind", "=", "line")])
+        self.assertEqual(
+            {t["code"] for t in derived["energy/totals/p_now"]["terms"]},
+            {"energy/lines/%s/p_now" % n.code for n in lines},
+        )
+        self.assertEqual(derived["infra/ats/src1_ok"], {"op": "ge", "code": "infra/ats/src1_state", "value": 1})
+        self.assertEqual(
+            [t["code"] for t in derived["infra/totals/grid_kw"]["terms"]],
+            ["energy/cells/Q1/p_now", "energy/cells/Q2/p_now"],
+        )
+        self.assertEqual([t["k"] for t in derived["infra/totals/export_kw"]["terms"]], [-1.0, -1.0])
+        self.assertTrue(all(t["min"] == 0.0 for t in derived["infra/totals/pv_now"]["terms"]))
+        # блок входить до ETag: зміна формул (нова лінія) змінює ETag
+        e0 = config_builder.etag(config_builder.build(self.env))
+        line = self.env["td.energy.node"].sudo().search([("kind", "=", "line"), ("section", "=", 1)], limit=1)
+        self.assertTrue(line)
+        line.write({"section": 2})
+        self.assertNotEqual(config_builder.etag(config_builder.build(self.env)), e0)
+
+    def test_derived_matches_td_energy(self):  # D-47: формули дають ті самі значення, що td_energy (R-06, R-14)
+        derived = config_builder.build(self.env)["derived"]
+        Signal = self.env["td.signal"].sudo()
+        codes = {t["code"] for f in derived.values() for t in f.get("terms", [])}
+        codes |= {"infra/ats/src1_state", "infra/ats/position"}
+        missing = [c for c in codes if not Signal.search_count([("code", "=", c)])]
+        self.assertFalse(missing, missing)
+        values = {}
+        for i, code in enumerate(sorted(codes)):
+            values[code] = float(i % 7) * 11.5 - (3.0 if code.startswith("infra/pv/") and i % 2 else 0.0)
+        values.update(
+            {
+                "infra/ats/src1_state": 2.0,
+                "infra/ats/position": 2.0,
+                "energy/cells/Q1/p_now": 140.0,
+                "energy/cells/Q2/p_now": -26.0,
+            }
+        )
+        for code, val in values.items():
+            self._fresh(code, val)
+        Live = self.env["td.energy.node"]
+        snap = Live._f3d_live_snapshot()
+        get = values.get
+        ev = self.evaluate
+        self.assertEqual(snap["stale_feeders"], 0)
+        self.assertAlmostEqual(ev(derived["energy/totals/p_now"], get), snap["totals"]["p_now"], places=6)
+        for section in (1, 2):
+            self.assertAlmostEqual(
+                ev(derived["energy/sections/S%d/p_kw" % section], get),
+                snap["totals"]["sections"][section]["p"],
+                places=6,
+            )
+        self.assertAlmostEqual(ev(derived["infra/totals/pv_now"], get), snap["pv_now"], places=6)
+        self.assertAlmostEqual(ev(derived["infra/totals/grid_kw"], get), snap["grid_kw"], places=6)
+        self.assertAlmostEqual(ev(derived["infra/totals/export_kw"], get), snap["export_kw"], places=6)
+        self.assertEqual(ev(derived["infra/ats/src1_ok"], get), 1.0)
+        values["infra/ats/src1_state"] = 0.0
+        self.assertEqual(ev(derived["infra/ats/src1_ok"], get), 0.0)
+        values["infra/ats/position"] = 3.0  # острів: мережа 0, експорт 0
+        self.assertEqual(
+            (ev(derived["infra/totals/grid_kw"], get), ev(derived["infra/totals/export_kw"], get)), (0.0, 0.0)
+        )
+        del values["energy/cells/Q2/p_now"]  # відсутній терм → вхід відсутній
+        self.assertIsNone(ev(derived["infra/totals/grid_kw"], get))
+        values["infra/ats/position"] = 2.0
+        self.assertEqual(ev(derived["infra/totals/export_kw"], get), None)

@@ -54,6 +54,13 @@ CHIPS = {
     "cancelled": ("скасовано", "muted"),
     "prepared": ("підготовлено", "muted"),
 }
+AUTO_KIND_TITLES = {
+    "mode": "Режим рушія",
+    "interlock": "Блокування",
+    "failsafe": "Захисне повернення режиму",
+    "config": "Конфігурація рушія",
+    "override": "Ручне перекриття",
+}
 TOKEN_NOT_FOUND = "Підтвердження не знайдено. Відкрийте діалог знову."
 WRITE_OFF = "Керування вимкнено: td.energy_control.write_enabled. Зверніться до адміністратора."
 
@@ -397,16 +404,24 @@ class TdEnergyAction(models.Model):
         """API-20 (R-40 п.11): `prepared`/`awaiting_second` → `cancelled`; повтор ідемпотентний."""
         rec = self._td_by_token(token)
         rec._td_lock()
+        rec._td_cancel_record()
+        return {"action_id": rec.id, "state": "cancelled"}
+
+    def _td_cancel_record(self):
+        """Скасування запису без токена: `prepared`/`awaiting_second`/`queued`; `cancelled` — без змін."""
+        self.ensure_one()
+        rec = self.sudo()
         if rec.state == "cancelled":
-            return {"action_id": rec.id, "state": "cancelled"}
+            return True
         if rec.state in ("prepared", "awaiting_second"):
             rec._me()._td_close("cancelled", "скасовано")
         elif rec.state == "queued" and rec.command_id:
-            rec.command_id.sudo().action_cancel()
-            rec._me()._td_close("cancelled", "скасовано")
+            rec.command_id.sudo().action_cancel()  # хук td.command вже закриває дію як `cancelled`
+            if rec.state != "cancelled":
+                rec._me()._td_close("cancelled", "скасовано")
         else:
             raise UserError(_("Скасувати можна лише підготовлену або таку, що очікує, дію."))
-        return {"action_id": rec.id, "state": "cancelled"}
+        return True
 
     # --- перевірки перед виконанням --------------------------------------------------------------------------
     def _td_write_blocked_reason(self):
@@ -691,9 +706,9 @@ class TdEnergyAction(models.Model):
         event_id = str(ev["event_id"])[:40]
         if self.sudo().search_count([("idem", "=", event_id)]):
             return "duplicate"
-        scenario = ev.get("scenario") or "peak"
+        scenario = ev.get("scenario") or ""  # порожній — подія рушія без сценарію (нейтральний підпис)
         kind = str(ev.get("kind") or "auto_step")
-        code = ("auto_%s_%s" % (scenario, kind))[:48]
+        code = (("auto_%s_%s" % (scenario, kind)) if scenario else ("auto_%s" % kind.removeprefix("auto_")))[:48]
         text = str(ev["text"])[:256]
         now = dates.now_utc(self.env)
         if self.sudo().search_count(
@@ -705,8 +720,8 @@ class TdEnergyAction(models.Model):
             ]
         ):
             return None
-        sc = self.env["td.energy.scenario"].sudo().search([("code", "=", scenario)], limit=1)
-        actor = "сценарій «%s»" % kinds.SCENARIO_SHORT.get(scenario, scenario)
+        sc = self.env["td.energy.scenario"].sudo().search([("code", "=", scenario)], limit=1) if scenario else None
+        actor = "сценарій «%s»" % kinds.SCENARIO_SHORT.get(scenario, scenario) if scenario else "автоматика"
         rec = (
             self.sudo()
             .with_context(td_energy_control_internal=True, tracking_disable=True, mail_create_nolog=True)
@@ -720,7 +735,7 @@ class TdEnergyAction(models.Model):
                     "detail": text,
                     "actor_text": actor[:96],
                     "result_text": str(ev.get("result") or "виконано")[:96],
-                    "scenario_id": sc.id,
+                    "scenario_id": sc.id if sc else False,
                     "started_at": now,
                     "finished_at": now,
                 }
@@ -728,7 +743,7 @@ class TdEnergyAction(models.Model):
         )
         if kind in ("interlock", "failsafe", "mode", "config", "hold", "override"):
             self.env["td.energy.event"]._td_log(
-                "warn", "control", ("%s-%s" % (scenario, kind))[:32], text, dedup_min=60
+                "warn", "control", (("%s-%s" % (scenario, kind)) if scenario else kind)[:32], text, dedup_min=60
             )
         bus.tick(self.env, "action")
         return True if rec else None
@@ -745,7 +760,8 @@ class TdEnergyAction(models.Model):
             return "Скидання · %s" % node
         if ev.get("scenario") == "night":
             return "Вентиляція · %s режим" % ("нічний" if kind != "auto_release" else "денний")
-        return "Автоматика · %s" % kind
+        title = AUTO_KIND_TITLES.get(kind.removeprefix("auto_"))
+        return title or "Автоматика · %s" % kind
 
     # --- журнал конфігурації (shed_edit, schedule_edit, interlock_param, switch_flag) ----------------------------
     @api.model
@@ -851,6 +867,61 @@ class TdEnergyAction(models.Model):
             "awaiting_second": self.state == "awaiting_second",
             "ref": ref,
         }
+
+    # --- кнопки форми журналу V-41 (type=object): тонкі обгортки над потоком, ті самі права й перевірки ---------
+    @api.model
+    def _td_notify(self, title, message, kind="success"):
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "type": kind,
+                "sticky": False,
+                "next": {"type": "ir.actions.client", "tag": "soft_reload"},
+            },
+        }
+
+    def _td_result_notification(self, title, res):
+        blocked = res.get("state") in ("blocked", "failed", "expired")
+        message = res.get("blocked_reason") or res.get("message") or res.get("state_label") or ""
+        if not blocked and res.get("state_label") and res.get("message") in (None, ""):
+            message = res["state_label"]
+        return self._td_notify(title, message, "warning" if blocked else "success")
+
+    def action_confirm_second(self):
+        """Кнопка «Підтвердити (2/2)»: `td.energy.control.confirm_second` (права, інша особа, інтерлоки, D-46)."""
+        self.ensure_one()
+        res = self.env["td.energy.control"].confirm_second(self.id)
+        return self._td_result_notification(_("Друге підтвердження"), res)
+
+    def action_cancel(self):
+        """Кнопка «Скасувати» (`prepared`/`awaiting_second`/`queued`): готував, підтвердив, chief або адмін."""
+        self.ensure_one()
+        user = self.env.user
+        self.env["td.energy.control"]._td_require_manager()
+        rec = self.sudo()
+        allowed = (
+            user in (rec.prepared_by, rec.confirmed_by)
+            or user.has_group("td_energy.group_td_energy_chief")
+            or user.has_group("td_factory3d.group_td_admin")
+        )
+        if not allowed:
+            raise AccessError(_("Скасувати дію може той, хто її готував, або головний енергетик."))
+        rec._td_lock()
+        rec._td_cancel_record()
+        return self._td_notify(_("Скасовано"), rec.summary or rec.name or "")
+
+    def action_undo(self):
+        """Кнопка «Скасувати дію»: зворотна дія тим самим потоком (`undo` → `prepare` з D-46 і перевірками → `confirm`).
+
+        Клік по кнопці — і є підтвердження оператора; клас B без головного енергетика піде на друге підтвердження."""
+        self.ensure_one()
+        ctl = self.env["td.energy.control"]
+        prep = ctl.undo(self.id)
+        res = ctl.confirm(prep["token"])
+        return self._td_result_notification(_("Скасування дії"), res)
 
     def _td_get_dict(self):
         """API-22."""

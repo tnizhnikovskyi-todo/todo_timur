@@ -63,3 +63,70 @@ class TestActionSecond(TestControlCommon):
             .sudo()
             .search_count([("res_model", "=", "td.energy.action"), ("res_id", "=", act.id)])
         )
+
+    # --- кнопки форми журналу V-41 (type=object) -------------------------------------------------------------------
+    def test_button_confirm_second(self):
+        act = self.run_action("chp_start", user=self.u_en1)
+        self.assertEqual(act.state, "awaiting_second")
+        with self.assertRaisesRegex(UserError, "інший енергетик"):
+            act.with_user(self.u_en1).action_confirm_second()
+        with self.assertRaises(AccessError):
+            act.with_user(self.u_view).action_confirm_second()
+        self._enable_control(write=True, remote=False)  # D-46: гейт діє й для кнопки
+        with self.assertRaisesRegex(UserError, "Дистанційне перемикання вимкнено"):
+            act.with_user(self.u_en2).action_confirm_second()
+        self._enable_control(write=True, remote=True)
+        res = act.with_user(self.u_en2).action_confirm_second()
+        self.assertEqual((res["type"], res["tag"]), ("ir.actions.client", "display_notification"))
+        self.assertEqual(res["params"]["type"], "success")
+        self.assertEqual((act.state, act.second_by), ("queued", self.u_en2))
+        qs = self.run_action("qs_close", user=self.u_en1)
+        self.assertEqual(qs.state, "awaiting_second")
+        self._fresh("energy_control/ats/parallel_lock", 0)  # інтерлок: блокування АВР на момент другого підтвердження
+        res = qs.with_user(self.u_chief2).action_confirm_second()
+        self.assertEqual((qs.state, res["params"]["type"]), ("blocked", "warning"))
+        self.assertIn("АВР", res["params"]["message"])
+
+    def test_button_cancel(self):
+        act = self.run_action("qs_close", user=self.u_en1)
+        with self.assertRaises(AccessError):
+            act.with_user(self.u_en2).action_cancel()  # не готував і не chief
+        with self.assertRaises(AccessError):
+            act.with_user(self.u_view).action_cancel()
+        res = act.with_user(self.u_en1).action_cancel()
+        self.assertEqual(res["params"]["type"], "success")
+        self.assertEqual(act.state, "cancelled")
+        act.with_user(self.u_en1).action_cancel()  # повтор ідемпотентний
+        other = self.run_action("chp_start", user=self.u_en1)
+        other.with_user(self.u_chief).action_cancel()
+        self.assertEqual(other.state, "cancelled")
+        queued = self.run_action("bess_charge", user=self.u_en1)
+        self.assertEqual(queued.state, "queued")
+        queued.with_user(self.u_en1).action_cancel()
+        self.assertEqual((queued.state, queued.command_id.state), ("cancelled", "cancelled"))
+        running = self.run_action("light_break", user=self.u_en1)
+        self.finish(running, "executing")
+        with self.assertRaises(UserError):
+            running.with_user(self.u_en1).action_cancel()
+
+    def test_button_undo(self):
+        act = self.run_action("bess_charge", user=self.u_en1)
+        self.finish(act, "done")
+        with self.assertRaises(AccessError):
+            act.with_user(self.u_view).action_undo()
+        res = act.with_user(self.u_en1).action_undo()
+        self.assertEqual(res["tag"], "display_notification")
+        back = self.Action.search([("undo_of_id", "=", act.id)])
+        self.assertEqual((back.kind_code, back.origin, back.state), ("bess_stop", "undo", "queued"))
+        with self.assertRaisesRegex(UserError, "Скасування недоступне"):
+            act.with_user(self.u_en1).action_undo()  # вже є зворотна дія / ресурс зайнятий
+        qs = self.run_action("qs_close", user=self.u_chief)
+        self.finish(qs, "done")
+        self._enable_control(write=True, remote=False)  # зворотна дія qs_open — під D-46
+        with self.assertRaisesRegex(UserError, "Дистанційне перемикання вимкнено"):
+            qs.with_user(self.u_chief).action_undo()
+        self._enable_control(write=True, remote=True)
+        res = qs.with_user(self.u_en1).action_undo()  # клас B без chief → друге підтвердження
+        undo_qs = self.Action.search([("undo_of_id", "=", qs.id)])
+        self.assertEqual(undo_qs.state, "awaiting_second")
+        self.assertEqual(res["params"]["type"], "success")

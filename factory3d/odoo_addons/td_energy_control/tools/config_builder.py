@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import re
 
 from odoo.addons.td_energy.tools import dates
 
@@ -71,6 +72,48 @@ def bms_targets(env):
         "night": {"vent": vent, "light": light},
         "vent_eco": {"vent": vent_eco},
         "light_break": {"light": [g for g in light if not g["aisle"]]},
+    }
+
+
+PV_P_RE = re.compile(r"^infra/pv/PV-INV-\d+/p_kw$")  # як у td_energy.models.td_energy_node_live
+
+
+def derived(env):
+    """D-47: формули для входів `inputs`, які в Odoo обчислює EN-DERIVED (`td_energy` R-06/R-14); збирач не отримує
+    їх із пристроїв. Терми — ті самі сирі сигнали й знаки, за якими `td_energy` рахує значення зараз.
+
+    Операції: `sum` (терми `{"code","k"[,"min"]}`: Σ k·max(min, x); необов'язкові `clamp_min` — нижня межа
+    результату, `zero_if {"code","eq"}` — результат 0, коли сигнал дорівнює `eq`); `ge` (1.0, якщо значення `code` ≥
+    `value`, інакше 0.0). Будь-який терм відсутній або старший за `max_age_s` — похідний вхід відсутній (fail-closed).
+    """
+    Node = env["td.energy.node"].sudo()
+    lines = Node.search([("kind", "=", "line")], order="code")
+    terms = {"all": [], 1: [], 2: []}
+    for ln in lines:
+        term = {"code": "energy/lines/%s/p_now" % ln.code, "k": 1.0}
+        terms["all"].append(term)
+        section = ln.section or ln.parent_id.section
+        if section in (1, 2):
+            terms[section].append(dict(term))
+    pv = env["td.signal"].sudo().search([("code", "=like", "infra/pv/PV-INV-%/p_kw")], order="code")
+    q_terms = [{"code": "energy/cells/Q%d/p_now" % s, "k": 1.0} for s in (1, 2)]
+    island = {"code": "infra/ats/position", "eq": 3}
+    return {
+        "energy/totals/p_now": {"op": "sum", "terms": terms["all"]},
+        "energy/sections/S1/p_kw": {"op": "sum", "terms": terms[1]},
+        "energy/sections/S2/p_kw": {"op": "sum", "terms": terms[2]},
+        "infra/ats/src1_ok": {"op": "ge", "code": "infra/ats/src1_state", "value": 1},
+        "infra/totals/grid_kw": {"op": "sum", "terms": q_terms, "clamp_min": 0.0, "zero_if": island},
+        "infra/totals/export_kw": {
+            "op": "sum",
+            "terms": [dict(t, k=-1.0) for t in q_terms],
+            "clamp_min": 0.0,
+            "zero_if": island,
+        },
+        "infra/totals/pv_now": {
+            "op": "sum",
+            "terms": [{"code": s.code, "k": 1.0, "min": 0.0} for s in pv if PV_P_RE.match(s.code)],
+        },
     }
 
 
@@ -161,6 +204,7 @@ def build(env):
         "bms": bms_targets(env),
         "signals": dict(kinds.SIGNALS),
         "inputs": dict(kinds.INPUTS),
+        "derived": derived(env),
         "interlocks": interlocks,
         "limits": dict(LIMITS),
     }

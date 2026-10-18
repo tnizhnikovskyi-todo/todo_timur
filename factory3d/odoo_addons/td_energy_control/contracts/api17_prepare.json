@@ -2,6 +2,7 @@
  "action_id": 55,
  "token": "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZg",
  "ttl_s": 60,
+ "verify_timeout_s": 30,
  "kind": "qs_close",
  "cls": "B",
  "title": "Увімкнути секційний вимикач QS?",

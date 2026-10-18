@@ -215,6 +215,90 @@
   "pfc2_fault": "energy/cells/PFC-2/fault_step",
   "fire_state": "fire/panel/state"
  },
+ "derived": {
+  "energy/totals/p_now": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C1/p_now",
+     "k": 1.0
+    },
+    {
+     "code": "energy/lines/C2/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "energy/sections/S1/p_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C1/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "energy/sections/S2/p_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C2/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "infra/ats/src1_ok": {
+   "op": "ge",
+   "code": "infra/ats/src1_state",
+   "value": 1
+  },
+  "infra/totals/grid_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/cells/Q1/p_now",
+     "k": 1.0
+    },
+    {
+     "code": "energy/cells/Q2/p_now",
+     "k": 1.0
+    }
+   ],
+   "clamp_min": 0.0,
+   "zero_if": {
+    "code": "infra/ats/position",
+    "eq": 3
+   }
+  },
+  "infra/totals/export_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/cells/Q1/p_now",
+     "k": -1.0
+    },
+    {
+     "code": "energy/cells/Q2/p_now",
+     "k": -1.0
+    }
+   ],
+   "clamp_min": 0.0,
+   "zero_if": {
+    "code": "infra/ats/position",
+    "eq": 3
+   }
+  },
+  "infra/totals/pv_now": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "infra/pv/PV-INV-1/p_kw",
+     "k": 1.0,
+     "min": 0.0
+    }
+   ]
+  }
+ },
  "interlocks": {
   "qs_current_ok": {
    "hard": true,
