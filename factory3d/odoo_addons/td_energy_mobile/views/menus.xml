@@ -1,3 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-H6 меню (C; останнім у data). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-H6: меню (SPEC H.3.3); останнім у data. -->
+<odoo>
+    <menuitem id="menu_td_energy_round" name="Журнал обходів" parent="td_energy.menu_td_energy" sequence="76"
+              action="action_td_energy_round" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_round_template" name="Шаблони обходів" parent="td_energy.menu_td_energy_config"
+              sequence="70" action="action_td_energy_round_template" groups="td_energy.group_td_energy_chief"/>
+    <menuitem id="menu_td_energy_round_open" name="Запустити обхід зараз" parent="td_energy.menu_td_energy_config"
+              sequence="71" action="action_td_energy_round_open" groups="td_energy.group_td_energy_manager"/>
+</odoo>

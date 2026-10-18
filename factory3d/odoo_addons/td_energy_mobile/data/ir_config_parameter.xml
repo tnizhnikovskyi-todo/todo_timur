@@ -1,3 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Параметри td.energy_mobile.* (SPEC H.5.1) (C). Каркас: наповнює воркер C. -->
-<odoo noupdate="1"/>
+<!-- Параметри td.energy_mobile.* (SPEC H.5.1). noupdate: значення, змінені в налаштуваннях, не перезаписуються. -->
+<odoo noupdate="1">
+    <record id="param_round_keep_days" model="ir.config_parameter">
+        <field name="key">td.energy_mobile.keep_days</field>
+        <field name="value">730</field>
+    </record>
+    <record id="param_round_value_fresh_s" model="ir.config_parameter">
+        <field name="key">td.energy_mobile.value_fresh_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_round_missed_event" model="ir.config_parameter">
+        <field name="key">td.energy_mobile.missed_event</field>
+        <field name="value">1</field>
+    </record>
+    <record id="param_round_history_limit" model="ir.config_parameter">
+        <field name="key">td.energy_mobile.history_limit</field>
+        <field name="value">3</field>
+    </record>
+</odoo>

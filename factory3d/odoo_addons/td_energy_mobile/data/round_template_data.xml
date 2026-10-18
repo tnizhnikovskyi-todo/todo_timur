@@ -1,3 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Шаблон «Обхід ТП і ГРЩ» (SPEC H.5.2) (C). Каркас: наповнює воркер C. -->
-<odoo noupdate="1"/>
+<!-- Шаблон «Обхід ТП і ГРЩ» (SPEC H.5.2, макет Mobile.dc.html `roundItems`). ПРИПУЩЕННЯ щодо складу пунктів, норм і змін —
+     до узгодження з електриками (Q-H1). noupdate: правки шаблона користувачем не перезаписуються. Вузли, яких немає, дають порожній node_id. -->
+<odoo noupdate="1">
+    <record id="round_tpl_tp_grsh" model="td.energy.round.template">
+        <field name="name">Обхід ТП і ГРЩ</field>
+        <field name="code">TP-GRSH</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="round_slot_tp_grsh_1" model="td.energy.round.slot">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="name">Зміна 1</field>
+        <field name="time_from">7.0</field>
+        <field name="time_to">16.0</field>
+        <field name="weekdays">0,1,2,3,4</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="round_slot_tp_grsh_2" model="td.energy.round.slot">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="name">Зміна 2</field>
+        <field name="time_from">16.0</field>
+        <field name="time_to">23.0</field>
+        <field name="weekdays">0,1,2,3,4</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="round_item_tp_grsh_t1" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">10</field>
+        <field name="code">t1</field>
+        <field name="title">T1: огляд, температура масла</field>
+        <field name="source">signal:energy/transformers/T1/temp_c</field>
+        <field name="norm_kind">max</field>
+        <field name="norm_max">85</field>
+        <field name="unit">°C</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'T1')]"/>
+    </record>
+    <record id="round_item_tp_grsh_t2" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">20</field>
+        <field name="code">t2</field>
+        <field name="title">T2: огляд, температура масла</field>
+        <field name="source">signal:energy/transformers/T2/temp_c</field>
+        <field name="norm_kind">max</field>
+        <field name="norm_max">85</field>
+        <field name="unit">°C</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'T2')]"/>
+    </record>
+    <record id="round_item_tp_grsh_swb" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">30</field>
+        <field name="code">swb</field>
+        <field name="title">ГРЩ SWB-1: нагрів з'єднань</field>
+        <field name="hint">тепловізор, точки Q1, Q2, QS</field>
+        <field name="norm_kind">none</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'SWB-1')]"/>
+    </record>
+    <record id="round_item_tp_grsh_pfc" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">40</field>
+        <field name="code">pfc</field>
+        <field name="title">Компенсація PFC-1 і PFC-2</field>
+        <field name="hint">ступені, контактори, запобіжники</field>
+        <field name="norm_kind">none</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'PFC-1')]"/>
+    </record>
+    <record id="round_item_tp_grsh_dgu" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">50</field>
+        <field name="code">dgu</field>
+        <field name="title">ДГУ: паливо, підігрів, акумулятор</field>
+        <field name="source">pult:kpis.generation.genset.fuel_pct</field>
+        <field name="norm_kind">min</field>
+        <field name="norm_min">60</field>
+        <field name="unit">%</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'ATS-1')]"/>
+    </record>
+    <record id="round_item_tp_grsh_bess" model="td.energy.round.template.item">
+        <field name="template_id" ref="round_tpl_tp_grsh"/>
+        <field name="sequence">60</field>
+        <field name="code">bess</field>
+        <field name="title">BESS: стан, вентиляція шафи</field>
+        <field name="hint">журнал помилок інвертора</field>
+        <field name="norm_kind">none</field>
+        <field name="node_id" model="td.energy.node" search="[('code', '=', 'BESS')]"/>
+    </record>
+</odoo>

@@ -1,3 +1,270 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-H1…V-H5 (C). Каркас: наповнює воркер C. -->
-<odoo/>
+<!-- V-H1…V-H5 (SPEC H.3.2): журнал обходів, шаблони, пункти, «Запустити обхід зараз», налаштування. -->
+<odoo>
+    <!-- V-H1: журнал обходів (лише читання; запис — методами API-H2…H6) -->
+    <record id="view_td_energy_round_list" model="ir.ui.view">
+        <field name="name">td.energy.round.list</field>
+        <field name="model">td.energy.round</field>
+        <field name="arch" type="xml">
+            <list string="Журнал обходів" create="0" edit="0" delete="0" default_order="date desc, starts_at desc">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="slot_name"/>
+                <field name="state" widget="badge" decoration-info="state == 'open'"
+                       decoration-warning="state == 'in_progress'" decoration-success="state == 'done'"
+                       decoration-danger="state == 'missed'" decoration-muted="state == 'cancelled'"/>
+                <field name="performer_id"/>
+                <field name="finished_at"/>
+                <field name="done_count" string="Виконано" widget="progressbar" options="{'max_value': 'total_count'}"/>
+                <field name="total_count" column_invisible="1"/>
+                <field name="deviation_count" decoration-danger="deviation_count &gt; 0"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_round_form" model="ir.ui.view">
+        <field name="name">td.energy.round.form</field>
+        <field name="model">td.energy.round</field>
+        <field name="arch" type="xml">
+            <form string="Обхід" create="0" edit="0" delete="0">
+                <header>
+                    <button name="action_finish_form" type="object" string="Завершити" class="btn-primary"
+                            invisible="state not in ('open', 'in_progress')"
+                            groups="td_energy.group_td_energy_chief"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state not in ('open', 'in_progress')"
+                            groups="td_energy.group_td_energy_chief"
+                            confirm="Скасувати обхід?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="open,in_progress,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="template_id"/>
+                            <field name="slot_name"/>
+                            <field name="date"/>
+                            <field name="performer_id"/>
+                        </group>
+                        <group>
+                            <field name="starts_at"/>
+                            <field name="due_at"/>
+                            <field name="started_at"/>
+                            <field name="finished_at"/>
+                            <field name="done_count"/>
+                            <field name="total_count"/>
+                            <field name="deviation_count"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Пункти" name="items">
+                            <field name="item_ids" readonly="1">
+                                <list string="Пункти обходу">
+                                    <field name="sequence" column_invisible="1"/>
+                                    <field name="title"/>
+                                    <field name="done"/>
+                                    <field name="value_text"/>
+                                    <field name="result" widget="badge" decoration-success="result == 'ok'"
+                                           decoration-danger="result == 'deviation'" decoration-muted="result == 'pending'"/>
+                                    <field name="comment"/>
+                                    <field name="event_id"/>
+                                    <field name="request_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_round_search" model="ir.ui.view">
+        <field name="name">td.energy.round.search</field>
+        <field name="model">td.energy.round</field>
+        <field name="arch" type="xml">
+            <search string="Журнал обходів">
+                <field name="name"/>
+                <field name="performer_id"/>
+                <field name="template_id"/>
+                <filter name="today" string="Сьогодні" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="mine" string="Мої" domain="[('performer_id', '=', uid)]"/>
+                <filter name="missed" string="Не виконані" domain="[('state', '=', 'missed')]"/>
+                <filter name="deviation" string="З відхиленнями" domain="[('deviation_count', '&gt;', 0)]"/>
+                <group>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="group_template" string="Шаблон" context="{'group_by': 'template_id'}"/>
+                    <filter name="group_performer" string="Виконавець" context="{'group_by': 'performer_id'}"/>
+                    <filter name="group_month" string="Місяць" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_td_energy_round_pivot" model="ir.ui.view">
+        <field name="name">td.energy.round.pivot</field>
+        <field name="model">td.energy.round</field>
+        <field name="arch" type="xml">
+            <pivot string="Обходи за тижнями">
+                <field name="date" interval="week" type="row"/>
+                <field name="state" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_td_energy_round" model="ir.actions.act_window">
+        <field name="name">Журнал обходів</field>
+        <field name="res_model">td.energy.round</field>
+        <field name="view_mode">list,form,pivot</field>
+        <field name="search_view_id" ref="view_td_energy_round_search"/>
+    </record>
+
+    <!-- V-H2: шаблони обходів (правка — chief і admin, ACL) -->
+    <record id="view_td_energy_round_template_list" model="ir.ui.view">
+        <field name="name">td.energy.round.template.list</field>
+        <field name="model">td.energy.round.template</field>
+        <field name="arch" type="xml">
+            <list string="Шаблони обходів">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_round_template_form" model="ir.ui.view">
+        <field name="name">td.energy.round.template.form</field>
+        <field name="model">td.energy.round.template</field>
+        <field name="arch" type="xml">
+            <form string="Шаблон обходу">
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Слоти" name="slots">
+                            <field name="slot_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="time_from" widget="float_time"/>
+                                    <field name="time_to" widget="float_time"/>
+                                    <field name="weekdays"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Пункти" name="items">
+                            <field name="item_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="code"/>
+                                    <field name="title"/>
+                                    <field name="hint"/>
+                                    <field name="source"/>
+                                    <field name="norm_kind"/>
+                                    <field name="norm_min"/>
+                                    <field name="norm_max"/>
+                                    <field name="unit"/>
+                                    <field name="precision"/>
+                                    <field name="node_id"/>
+                                    <field name="required"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_round_template" model="ir.actions.act_window">
+        <field name="name">Шаблони обходів</field>
+        <field name="res_model">td.energy.round.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-H3: пункти обходів для звітів (лише читання) -->
+    <record id="view_td_energy_round_item_list" model="ir.ui.view">
+        <field name="name">td.energy.round.item.list</field>
+        <field name="model">td.energy.round.item</field>
+        <field name="arch" type="xml">
+            <list string="Пункти обходів" create="0" edit="0" delete="0">
+                <field name="round_id"/>
+                <field name="title"/>
+                <field name="value_text"/>
+                <field name="result" widget="badge" decoration-success="result == 'ok'"
+                       decoration-danger="result == 'deviation'" decoration-muted="result == 'pending'"/>
+                <field name="comment"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_round_item_search" model="ir.ui.view">
+        <field name="name">td.energy.round.item.search</field>
+        <field name="model">td.energy.round.item</field>
+        <field name="arch" type="xml">
+            <search string="Пункти обходів">
+                <field name="title"/>
+                <field name="round_id"/>
+                <filter name="deviation" string="Відхилення" domain="[('result', '=', 'deviation')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_round_item" model="ir.actions.act_window">
+        <field name="name">Пункти обходів</field>
+        <field name="res_model">td.energy.round.item</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_td_energy_round_item_search"/>
+    </record>
+
+    <!-- V-H4: «Запустити обхід зараз» (енергетик; чергового без автослота) -->
+    <record id="action_td_energy_round_open" model="ir.actions.server">
+        <field name="name">Запустити обхід зараз</field>
+        <field name="model_id" ref="model_td_energy_round"/>
+        <field name="state">code</field>
+        <field name="code">action = env['td.energy.round'].action_start_now()</field>
+    </record>
+
+    <!-- V-H5: налаштування (блок «Чергування» у розділі td_energy) -->
+    <record id="res_config_settings_view_form_td_energy_mobile" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.energy.mobile</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="td_energy.res_config_settings_view_form_td_energy"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='td_energy']" position="inside">
+                <block title="Чергування" name="td_energy_mobile">
+                    <setting string="Обходи" help="Зберігання журналу, свіжість значень сигналів і події">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_mobile_keep_days"/>
+                                <field name="td_energy_mobile_keep_days"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_mobile_value_fresh_s"/>
+                                <field name="td_energy_mobile_value_fresh_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_mobile_history_limit"/>
+                                <field name="td_energy_mobile_history_limit"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_mobile_missed_event"/>
+                                <field name="td_energy_mobile_missed_event"/></div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
