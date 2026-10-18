@@ -1,3 +1,88 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-H1…UI-H4 (C). Каркас: наповнює воркер C. -->
-<templates xml:space="preserve"/>
+<!-- UI-H1…UI-H4: вкладка «Обхід» (макет Mobile.dc.html, блок `tabRound`). -->
+<templates xml:space="preserve">
+    <t t-name="td_energy_mobile.RoundItem">
+        <div t-attf-class="o_td_wh_item {{props.item.result === 'deviation' ? 'o_td_wh_item--dev' : ''}}"
+             t-att-data-item-code="props.item.code">
+            <div class="o_td_wh_item_row">
+                <label class="o_td_wh_item_label">
+                    <input type="checkbox" class="o_td_wh_check" t-att-checked="props.item.done"
+                           t-att-disabled="!props.canEdit" t-on-change="onChange"/>
+                    <span class="o_td_wh_item_text">
+                        <span class="o_td_wh_item_title" t-esc="props.item.title"/>
+                        <span class="o_td_wh_item_hint" t-esc="props.item.hint"/>
+                        <span t-if="props.item.result === 'deviation'" class="o_td_wh_chip">поза нормою</span>
+                    </span>
+                </label>
+                <button t-if="props.item.can_3d" type="button" class="o_td_wh_where3d" t-on-click="show3d">Де це в 3D</button>
+            </div>
+            <input t-if="props.item.done and props.item.result === 'deviation'" type="text" class="o_td_wh_comment"
+                   maxlength="256" placeholder="Коментар (необов'язково)" t-att-value="props.item.comment"
+                   t-att-disabled="!props.canEdit" t-on-change="onComment"/>
+        </div>
+    </t>
+
+    <t t-name="td_energy_mobile.RoundFinish">
+        <button type="button" class="o_td_wh_finish" t-att-aria-disabled="blocked ? 'true' : 'false'"
+                t-on-click="props.onFinish">Завершити обхід</button>
+    </t>
+
+    <t t-name="td_energy_mobile.RoundHistoryRows">
+        <div t-foreach="props.history" t-as="row" t-key="row.id" class="o_td_en_m_card o_td_wh_hist_row"
+             t-att-data-round-id="row.id">
+            <div class="o_td_wh_hist_head">
+                <span class="o_td_wh_hist_title" t-esc="row.title"/>
+                <span t-attf-class="o_td_wh_state o_td_wh_state--{{row.state}}" t-esc="stateLabels[row.state] || row.state"/>
+            </div>
+            <div class="o_td_en_m_text">
+                <t t-if="row.finished_at_local"><span t-esc="row.finished_at_local"/> · </t>
+                <span class="o_td_wh_hist_count"><t t-esc="row.done_count"/>/<t t-esc="row.total_count"/></span>
+                <t t-if="row.deviation_count"> · <span class="o_td_wh_hist_dev">відхилень <t t-esc="row.deviation_count"/></span></t>
+                <t t-if="row.performer"> · <t t-esc="row.performer"/></t>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="td_energy_mobile.RoundHistory">
+        <section t-if="props.history.length" class="o_td_en_m_section o_td_wh_history" aria-label="Останні обходи">
+            <details t-if="props.collapsed" class="o_td_wh_fold">
+                <summary class="o_td_wh_fold_sum">Останні обходи · <t t-esc="props.history.length"/></summary>
+                <div class="o_td_en_m_section"><t t-call="td_energy_mobile.RoundHistoryRows"/></div>
+            </details>
+            <t t-else="">
+                <h2 class="o_td_en_m_h2">Останні обходи</h2>
+                <t t-call="td_energy_mobile.RoundHistoryRows"/>
+            </t>
+        </section>
+    </t>
+
+    <t t-name="td_energy_mobile.MobileRound">
+        <div t-if="state.failed" class="o_td_en_card o_td_en_error o_td_wh_error" role="alert">
+            Не вдалося завантажити: <t t-esc="state.failed"/>
+            <button type="button" class="o_td_en_m_btn o_td_wh_retry" t-on-click="retry">Повторити</button>
+        </div>
+        <div t-elif="!state.data" class="o_td_en_m_card o_td_en_m_empty o_td_wh_loading">Завантаження…</div>
+        <t t-elif="round">
+            <section class="o_td_en_m_section o_td_wh_round" aria-labelledby="o_td_wh_round_h" t-att-data-round-id="round.id">
+                <div class="o_td_wh_head">
+                    <h2 id="o_td_wh_round_h" class="o_td_wh_title" t-esc="round.title"/>
+                    <span class="o_td_wh_count"><t t-esc="round.done_count"/> / <t t-esc="round.total_count"/></span>
+                </div>
+                <div class="o_td_wh_bar" aria-hidden="true"><div t-att-style="'width: ' + round.progress_pct + '%'"/></div>
+                <div t-if="banner" class="o_td_wh_banner" role="status" t-esc="banner"/>
+                <RoundItem t-foreach="round.items" t-as="item" t-key="item.id" item="item" canEdit="round.can_edit"
+                           onToggle="toggle" onShow3d="show3d"/>
+                <RoundFinish t-if="round.can_edit" round="round" onFinish="finish"/>
+            </section>
+            <RoundHistory history="history" collapsed="true"/>
+        </t>
+        <t t-else="">
+            <div class="o_td_en_m_card o_td_wh_none">
+                <div class="o_td_wh_none_title">Зараз обходу немає.</div>
+                <div t-if="next" class="o_td_en_m_text o_td_wh_next">Наступний: <t t-esc="next.slot"/> о <t t-esc="next.starts_local"/></div>
+                <div t-else="" class="o_td_en_m_text o_td_wh_next">Наступного обходу сьогодні немає.</div>
+            </div>
+            <RoundHistory history="history"/>
+        </t>
+    </t>
+</templates>

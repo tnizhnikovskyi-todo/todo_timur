@@ -1,1 +1,110 @@
-// UI-H1…UI-H4 стилі вкладки «Обхід» (C). Каркас: наповнює воркер C.
+// UI-H1…UI-H4: вкладка «Обхід» (макет Mobile.dc.html, 390 px). Кнопки ≥ 48 px, без горизонтальної прокрутки.
+$td-accent: #714B67;
+
+.o_td_en_mobile {
+    .o_td_wh_round { min-width: 0; }
+    .o_td_wh_head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .o_td_wh_title { margin: 0; font-size: 15px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+    .o_td_wh_count { font-size: 13px; color: #4b5563; white-space: nowrap; }
+    .o_td_wh_bar {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        overflow: hidden;
+        > div { height: 6px; background: $td-accent; }
+    }
+    .o_td_wh_banner {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .o_td_wh_item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        &.o_td_wh_item--dev { border-color: #fecaca; }
+    }
+    .o_td_wh_item_row { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+    .o_td_wh_item_label {
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 44px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 14px;
+        margin: 0;
+        cursor: pointer;
+    }
+    .o_td_wh_check { width: 22px; height: 22px; margin: 0; accent-color: $td-accent; flex: 0 0 auto; }
+    .o_td_wh_item_text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+    .o_td_wh_item_title { font-weight: 500; overflow-wrap: anywhere; }
+    .o_td_wh_item_hint { font-size: 12.5px; color: #4b5563; overflow-wrap: anywhere; }
+    .o_td_wh_chip {
+        margin-top: 2px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #991b1b;
+        background: #fef2f2;
+        border-radius: 999px;
+        padding: 1px 8px;
+    }
+    .o_td_wh_where3d {
+        flex: 0 0 auto;
+        align-self: center;
+        width: 68px;
+        min-height: 48px;
+        margin: 0 8px 0 0;
+        padding: 2px 4px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #111827;
+        font-size: 12px;
+        line-height: 15px;
+        cursor: pointer;
+    }
+    .o_td_wh_comment {
+        margin: 0 14px 10px;
+        min-height: 40px;
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+
+    .o_td_wh_finish {
+        min-height: 48px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid $td-accent;
+        background: $td-accent;
+        color: #fff;
+        &[aria-disabled="true"] { border-color: #d1d5db; background: #f9fafb; color: #6b7280; }
+    }
+
+    .o_td_wh_none_title { font-weight: 600; }
+    .o_td_wh_fold_sum { min-height: 48px; display: flex; align-items: center; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .o_td_wh_hist_row { min-width: 0; }
+    .o_td_wh_hist_head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .o_td_wh_hist_title { font-weight: 500; font-size: 13px; overflow-wrap: anywhere; }
+    .o_td_wh_state {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 600;
+        &.o_td_wh_state--done { color: #065f46; }
+        &.o_td_wh_state--missed { color: #991b1b; }
+        &.o_td_wh_state--cancelled { color: #6b7280; }
+    }
+    .o_td_wh_hist_dev { color: #991b1b; }
+    .o_td_wh_error .o_td_wh_retry { margin-top: 8px; }
+}
