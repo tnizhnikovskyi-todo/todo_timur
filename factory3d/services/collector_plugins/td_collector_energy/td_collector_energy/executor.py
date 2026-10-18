@@ -248,7 +248,7 @@ class Executor:
                 self.live.update([out[n]])
             r = out[n]
             if r is not None and r.value is None and (num := text_value(n, r)) is not None:
-                out[n] = dataclasses.replace(r, value=num)  # стан-текст → індекс, щоб предикати верифікації бачили число
+                out[n] = dataclasses.replace(r, value=num)  # стан-текст → індекс (для предикатів)
         return out
 
     async def _verify(self, v: intents.Verify, cfg: Config, deadline: float) -> tuple[bool, str | None]:

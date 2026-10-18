@@ -388,7 +388,7 @@ async def test_engine_keeps_acting_on_cached_config_while_odoo_is_down_10_minute
         await h.plugin._load_config()
         await h.reporter.flush()
     assert h.cfg.version == 17 and h.engine.mode == "auto"
-    assert len(h.written("energy_control/bess/valid_s")) > refreshes + 20  # автоматика діє: сторожовий таймер BESS оновлюється
+    assert len(h.written("energy_control/bess/valid_s")) > refreshes + 20  # автоматика діє: valid_s BESS оновлюється
     assert h.reporter.pending()[0] == 1 and h.reporter.pending()[1] >= 1  # дія й події чекають у буфері
     assert h.odoo.states == []
     h.odoo.down = False
