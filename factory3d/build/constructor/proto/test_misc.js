@@ -126,9 +126,11 @@ async function t_features() {
 async function t_mobile() {
   const { browser, page, errors } = await launch({ viewport: { width: 400, height: 860 } });
   await open(page);
-  await page.click('#mtabs button[data-mtab="catalog"]'); await page.waitForTimeout(300);
+  // S3 (F06-04): ≤ 768 px — режим перегляду, панелі висувні (☰); каталог відкривається з лівої панелі, діалоги лишаються в межах екрана
+  await page.click('#s3Burger'); await page.click('#ltabs button[data-tab="catalog"]'); await page.waitForTimeout(300);
   await page.screenshot({ path: SH + '_mobile_catalog.png' });
-  await page.click('.var >> nth=0 >> text=Змінити'); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(500);
+  await page.click('#s3Burger'); await page.waitForTimeout(100);
+  await page.evaluate(() => { const p = __f3d.S.catalog[0]; __f3d.E.openVariantForm(p.variants[0], p); }); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(500);
   await page.screenshot({ path: SH + '_mobile_variant.png' });
   const w = await page.evaluate(() => { const d = document.querySelector('dialog'); const r = d.getBoundingClientRect(); return { l: r.left, r: r.right, sw: document.documentElement.scrollWidth }; });
   ok('моб.: диалог карточки в пределах экрана', w.l >= 0 && w.r <= 400 && w.sw <= 400, JSON.stringify(w));
@@ -140,7 +142,8 @@ async function t_mobile() {
   const tab = await page.evaluate(() => document.querySelector('#app').dataset.mtab);
   ok('моб.: выбор объекта открывает «Об’єкт»', tab === 'props', tab);
   await page.screenshot({ path: SH + '_mobile_props.png' });
-  await page.click('#btnPublish'); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(300);
+  ok('моб.: правка вимкнена, публікація прихована (режим перегляду)', await page.evaluate(() => __f3d.S.app.mode === 'view' && getComputedStyle(document.getElementById('btnPublish')).display === 'none'));
+  await page.evaluate(() => __f3d.E.publish()); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(300);
   await page.screenshot({ path: SH + '_mobile_publish.png' });
   const w2 = await page.evaluate(() => { const d = document.querySelector('dialog'); const r = d.getBoundingClientRect(); return { l: r.left, r: r.right, sw: document.documentElement.scrollWidth }; });
   ok('моб.: диалог публикации в пределах экрана', w2.l >= 0 && w2.r <= 400 && w2.sw <= 400, JSON.stringify(w2));

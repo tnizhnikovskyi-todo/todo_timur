@@ -55,7 +55,8 @@ const CSS = `
   .f3d-s3 .s3-tools select{max-width:60vw}
   .f3d-s3 .s3-heat{right:6px;bottom:96px;max-width:46vw;font-size:11px}
   .f3d-s3 .s3-objbtn{display:inline-flex;position:absolute;right:6px;bottom:8px;z-index:40}
-  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) - 46px);top:6px;z-index:40}
+  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) + 4px);top:6px;z-index:40}
+  .f3d-s3.m-left .s3-objbtn{display:none}
   .f3d-s3 .s3-card-ov{display:flex;flex-direction:column;position:fixed;inset:0;z-index:60;background:var(--surface)}
   .f3d-s3 .s3-card-ov[hidden]{display:none}
   .f3d-s3 .s3-card-ov .s3-card-h{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
@@ -195,6 +196,11 @@ function ensureDom() {
     if (!$("#s3Burger")) {
         $(".top").prepend(h("button", { class: "fbtn icon s3-burger", type: "button", id: "s3Burger", "aria-label": "Панель", onclick: () => mobilePanel("left") }, h("span", { "aria-hidden": "true" }, "☰")));
     }
+    const legend = $("#legend");
+    if (legend && !$("#s3Keys")) {
+        const k = (t) => h("kbd", null, t);
+        legend.prepend(h("div", { id: "s3Keys" }, k("Ctrl+Z"), "/", k("Y"), " скасувати · ", k("Ctrl+D"), " дублювати · ", k("Ctrl+C"), "/", k("V"), " копіювати · ", k("Ctrl+клік"), " виділення · ", k("Shift+рамка"), " у «Плані» · ", k("/"), " пошук"));
+    }
     if (!$("#s3Access")) {
         $("#storeTag").after(h("span", { class: "chip", id: "s3Access" }));
     }
@@ -278,6 +284,13 @@ export function renderUndoButtons() {
     r.title = !acc.design ? E.accessHint("design") : st.canRedo ? `Повторити: ${st.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
 }
 
+/** Меню «Ще ▾»: закривається після вибору пункта й кліку поза ним (інакше воно лишалося б поверх вкладок). */
+const onRootClick = (e) => {
+    const more = $("#menuMore");
+    if (more && more.open && (!more.contains(e.target) || e.target.closest(".morelist button"))) {
+        more.open = false;
+    }
+};
 let mql = null;
 const onMql = () => {
     applyMobile();
@@ -288,11 +301,16 @@ function onMount() {
     applyMobile();
     mql = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
     mql?.addEventListener("change", onMql);
+    ROOT.el?.addEventListener("click", onRootClick, true);
+    rootWithClick = ROOT.el;
     E.restoreMetric?.();
 }
+let rootWithClick = null;
 function onUnmount() {
     mql?.removeEventListener("change", onMql);
     mql = null;
+    rootWithClick?.removeEventListener("click", onRootClick, true);
+    rootWithClick = null;
 }
 E.lifecycle.mount.add(onMount);
 E.lifecycle.unmount.add(onUnmount);

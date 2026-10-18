@@ -4,7 +4,7 @@ import { openDialog } from "./dialogs.js";
 import { registries } from "./registry.js";
 import { canPublish, viewAs } from "./roles.js";
 import { E, S, objKey } from "./state.js";
-import { K, h, toast } from "./util.js";
+import { $, K, h, toast } from "./util.js";
 
 /* ---------- N-02: рівні доступу ---------- */
 const DESIGN_ROLES = ["technologist", "storekeeper", "engineer"];
@@ -49,6 +49,14 @@ const recJson = (r) => JSON.stringify(r, strip);
 const keyed = () => [...S.layers.map((l) => ["l:" + l.id, l]), ...S.slots.map((s) => ["s:" + s.id, s]), ...S.placements.map((p) => ["p:" + p.id, p])];
 let saved = new Map();
 
+/** Стан кнопки «Зберегти все» без перемальовування меню (воно закрило б відкрите «Ще ▾»). */
+export function syncSaveAll() {
+    const b = $("#menu-saveAll");
+    if (b) {
+        b.disabled = !S.unsaved.size && S.saveState === "saved";
+    }
+}
+
 /** Запам'ятовує поточний стан як збережений (після завантаження й успішного запису). */
 export function markSaved() {
     saved = new Map(keyed().map(([k, r]) => [k, recJson(r)]));
@@ -56,7 +64,7 @@ export function markSaved() {
         S.unsaved = new Set();
         E.updateVisual?.();
     }
-    E.renderMenu?.();
+    syncSaveAll();
 }
 
 /** Перераховує `S.unsaved`: об'єкти, що відрізняються від збереженого. */
@@ -71,7 +79,7 @@ export function refreshUnsaved() {
     if (next.size !== old.size || [...next].some((k) => !old.has(k))) {
         S.unsaved = next;
         E.updateVisual?.();
-        E.renderMenu?.();
+        syncSaveAll();
     }
 }
 
@@ -158,4 +166,4 @@ function openHotkeys() {
 registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
 registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
 
-Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus });
+Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus, syncSaveAll });

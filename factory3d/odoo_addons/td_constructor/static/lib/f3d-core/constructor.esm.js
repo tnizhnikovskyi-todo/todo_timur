@@ -2306,13 +2306,19 @@ var strip = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
 var recJson = (r) => JSON.stringify(r, strip);
 var keyed = () => [...S.layers.map((l) => ["l:" + l.id, l]), ...S.slots.map((s) => ["s:" + s.id, s]), ...S.placements.map((p) => ["p:" + p.id, p])];
 var saved = /* @__PURE__ */ new Map();
+function syncSaveAll() {
+  const b = $("#menu-saveAll");
+  if (b) {
+    b.disabled = !S.unsaved.size && S.saveState === "saved";
+  }
+}
 function markSaved() {
   saved = new Map(keyed().map(([k, r]) => [k, recJson(r)]));
   if (S.unsaved.size) {
     S.unsaved = /* @__PURE__ */ new Set();
     E.updateVisual?.();
   }
-  E.renderMenu?.();
+  syncSaveAll();
 }
 function refreshUnsaved() {
   const next = /* @__PURE__ */ new Set();
@@ -2325,7 +2331,7 @@ function refreshUnsaved() {
   if (next.size !== old.size || [...next].some((k) => !old.has(k))) {
     S.unsaved = next;
     E.updateVisual?.();
-    E.renderMenu?.();
+    syncSaveAll();
   }
 }
 function objStatus(kind, rec) {
@@ -2402,7 +2408,7 @@ function openHotkeys() {
 }
 registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
 registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
-Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus });
+Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus, syncSaveAll });
 
 // core/constructor/dxf.js
 var dxf_exports = {};
@@ -7204,6 +7210,7 @@ function wireAdapter(store) {
       E.markSaved?.();
     }
     E.renderSaveState();
+    E.syncSaveAll?.();
   };
   store.onSaved = (r) => {
     if (!ctx || !S.site) {
@@ -12901,6 +12908,11 @@ function ensureDom() {
   if (!$("#s3Burger")) {
     $(".top").prepend(h("button", { class: "fbtn icon s3-burger", type: "button", id: "s3Burger", "aria-label": "Панель", onclick: () => mobilePanel("left") }, h("span", { "aria-hidden": "true" }, "☰")));
   }
+  const legend = $("#legend");
+  if (legend && !$("#s3Keys")) {
+    const k = (t) => h("kbd", null, t);
+    legend.prepend(h("div", { id: "s3Keys" }, k("Ctrl+Z"), "/", k("Y"), " скасувати · ", k("Ctrl+D"), " дублювати · ", k("Ctrl+C"), "/", k("V"), " копіювати · ", k("Ctrl+клік"), " виділення · ", k("Shift+рамка"), " у «Плані» · ", k("/"), " пошук"));
+  }
   if (!$("#s3Access")) {
     $("#storeTag").after(h("span", { class: "chip", id: "s3Access" }));
   }
@@ -12981,6 +12993,12 @@ function renderUndoButtons() {
   u.title = !acc.design ? E.accessHint("design") : st.canUndo ? `Скасувати: ${st.undoLabel} (Ctrl+Z)` : "Немає що скасувати";
   r.title = !acc.design ? E.accessHint("design") : st.canRedo ? `Повторити: ${st.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
 }
+var onRootClick = (e) => {
+  const more = $("#menuMore");
+  if (more && more.open && (!more.contains(e.target) || e.target.closest(".morelist button"))) {
+    more.open = false;
+  }
+};
 var mql = null;
 var onMql = () => {
   applyMobile();
@@ -12991,11 +13009,16 @@ function onMount() {
   applyMobile();
   mql = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
   mql?.addEventListener("change", onMql);
+  ROOT.el?.addEventListener("click", onRootClick, true);
+  rootWithClick = ROOT.el;
   E.restoreMetric?.();
 }
+var rootWithClick = null;
 function onUnmount() {
   mql?.removeEventListener("change", onMql);
   mql = null;
+  rootWithClick?.removeEventListener("click", onRootClick, true);
+  rootWithClick = null;
 }
 E.lifecycle.mount.add(onMount);
 E.lifecycle.unmount.add(onUnmount);
@@ -13053,7 +13076,7 @@ function cardNode(slot, cell) {
         h(
           "div",
           { class: "frow wrap", style: { marginTop: "6px" } },
-          d && d.location_id && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord("stock.location", d.location_id) }, "Відкрити в Odoo") : null,
+          d && d.record && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord(d.record.model, d.record.id) }, "Відкрити в Odoo") : null,
           h("button", { class: "fbtn sm", type: "button", id: "btnCardLabel", onclick: () => E.runDialog("labels", { spec: { scope: "row", rowId: slot.id } }) }, "Етикетка…")
         )
       )

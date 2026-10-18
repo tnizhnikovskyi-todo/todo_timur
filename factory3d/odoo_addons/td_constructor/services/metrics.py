@@ -208,7 +208,13 @@ def _detail(env, loc, rows, now, since, names):
         '%s → %s' % (r.product_id.display_name or r.category_id.display_name or '—', r.location_in_id.display_name)
         for r in env['stock.putaway.rule'].sudo().search([('location_out_id', '=', loc.id)], limit=10)
     ]
-    return {'rows': items, 'moves': moves, 'rules': rules, 'category': loc.storage_category_id.name or None}
+    return {
+        'rows': items,
+        'moves': moves,
+        'rules': rules,
+        'category': loc.storage_category_id.name or None,
+        'record': {'model': loc._name, 'id': loc.id},  # ядро відкриває запис, не знаючи імені моделі (CD-30)
+    }
 
 
 FIND_MODES = {

@@ -52,7 +52,7 @@ export function cardNode(slot, cell) {
             h(
                 "div",
                 { class: "frow wrap", style: { marginTop: "6px" } },
-                d && d.location_id && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord("stock.location", d.location_id) }, "Відкрити в Odoo") : null,
+                d && d.record && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord(d.record.model, d.record.id) }, "Відкрити в Odoo") : null,
                 h("button", { class: "fbtn sm", type: "button", id: "btnCardLabel", onclick: () => E.runDialog("labels", { spec: { scope: "row", rowId: slot.id } }) }, "Етикетка…")
             )
             )

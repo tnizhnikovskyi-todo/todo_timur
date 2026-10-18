@@ -9,7 +9,7 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefine
   const { browser, page, errors } = await launch();
   await open(page);
   const size = fs.statSync(__dirname + '/index.html').size;
-  ok('розмір сторінки < 600 КБ', size < 600 * 1024, Math.round(size / 1024) + ' КБ');
+  ok('розмір сторінки < 900 КБ (волна 1: ядро виросло на ~150–250 КБ, MERGE §4.3)', size < 900 * 1024, Math.round(size / 1024) + ' КБ');
   const st = await page.evaluate((codes) => {
     const S = __f3d.S, covered = new Set();
     for (const p of S.placements) covered.add(p.code);

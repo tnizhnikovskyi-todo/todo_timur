@@ -167,6 +167,7 @@ class TestS3StockState(StockFixture, F3DConstructorCase):
         self.assertEqual(max(r['reserved'] for r in detail['rows']), 3.0)
         self.assertGreaterEqual(max(r['age_days'] for r in detail['rows']), 199)
         self.assertEqual(detail['category'], "ДСП 20")
+        self.assertEqual(detail['record'], {'model': 'stock.location', 'id': self.l1.id})
         moves = self.state(codes=['TST-R1-B02-L1'], detail=True)['codes']['TST-R1-B02-L1']['detail']['moves']
         self.assertEqual(len(moves), 2)
         self.assertEqual(moves[0]['to'], 'TST-R1-B02-L1')

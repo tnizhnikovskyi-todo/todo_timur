@@ -278,7 +278,7 @@ async function t_align(page, errors) {
   await page.click('#btnUngroup');
   await page.waitForSelector('#dlgYes');
   await page.click('#dlgYes');
-  await page.waitForTimeout(200);
+  await page.waitForFunction(() => __f3d.S.slots.filter((s) => s.layer_id === __f3d.S.ui.layer).length === 5 && !__f3d.S.sel);
   ok('розгрупування: зону прибрано, ряди лишились', await page.evaluate(() => __f3d.S.slots.filter((s) => s.layer_id === __f3d.S.ui.layer).length === 5));
   // властивості: лише змінені поля
   await page.evaluate(() => __f3d.E.setMulti([{ kind: 'slot', id: 'ra' }, { kind: 'slot', id: 'rb' }]));
@@ -289,7 +289,7 @@ async function t_align(page, errors) {
   await page.click('#btnMultiDel');
   await page.waitForSelector('#dlgYes');
   await page.click('#dlgYes');
-  await page.waitForTimeout(150);
+  await page.waitForFunction(() => !__f3d.S.sIdx.has('ra') && !__f3d.S.sIdx.has('rb'));
   ok('«Прибрати всі» видаляє виділені', await page.evaluate(() => !__f3d.S.sIdx.has('ra') && !__f3d.S.sIdx.has('rb') && __f3d.S.multi.length === 0));
   await page.evaluate(() => __f3d.E.undo());
   ok('скасування «Прибрати всі» повертає обох', await page.evaluate(() => __f3d.S.sIdx.has('ra') && __f3d.S.sIdx.has('rb')));
@@ -471,12 +471,12 @@ async function t_card(page, errors) {
   const c0 = await page.evaluate(() => __f3d.S.selCell);
   ok('картка: код вибраної комірки, ємність і категорія', /^RA-B0\d-L\d$/.test(c0) && card.includes(c0) && card.includes('Місць') && card.includes('Категорія'), card.slice(0, 100));
   await page.evaluate(() => __f3d.E.setMetric('fill'));
-  await page.evaluate((c) => __f3d.S.stock.byCode.set(c, { qty: 12, reserved: 2, fill: 0.5, age_days: 40, moves: 4, min: 5, max: 30, detail: { rows: [{ product: 'Плита ДСП', qty: 12, reserved: 2, lot: 'L-1', age_days: 40 }], moves: [{ date: '2026-09-01', product: 'Плита ДСП', qty: 3, from: 'WH/Stock', to: c }], rules: ['Плити → склад плит'], location_id: 77 } }), c0);
+  await page.evaluate((c) => __f3d.S.stock.byCode.set(c, { qty: 12, reserved: 2, fill: 0.5, age_days: 40, moves: 4, min: 5, max: 30, detail: { rows: [{ product: 'Плита ДСП', qty: 12, reserved: 2, lot: 'L-1', age_days: 40 }], moves: [{ date: '2026-09-01', product: 'Плита ДСП', qty: 3, from: 'WH/Stock', to: c }], rules: ['Плити → склад плит'], record: { model: 'stock.location', id: 77 } } }), c0);
   await page.evaluate(() => __f3d.E.renderRight());
   const card2 = await page.textContent('#cardBlock');
   ok('картка: залишки (товар, к-сть, резерв, партія, вік), min/max, правила, рух', ['Плита ДСП', '12 / 2', '5 / 30', 'L-1', '40 дн.', 'Плити → склад плит', '2026-09-01'].every((t) => card2.includes(t)), card2.slice(0, 300));
   ok('картка: заповненість 50 %', card2.includes('Заповненість: 50 %'));
-  ok('картка: «Відкрити в Odoo» є, коли сервер віддав location_id і хост вміє відкривати записи', await page.evaluate(() => !!document.getElementById('btnOpenOdoo') === __f3d.core.registries.dialogs.has('record')));
+  ok('картка: «Відкрити в Odoo» є, коли сервер віддав record і хост вміє відкривати записи', await page.evaluate(() => !!document.getElementById('btnOpenOdoo') === __f3d.core.registries.dialogs.has('record')));
   ok('card: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
 }
 

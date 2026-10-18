@@ -451,6 +451,7 @@ function wireAdapter(store) {
             E.markSaved?.();
         }
         E.renderSaveState();
+        E.syncSaveAll?.();
     };
     store.onSaved = (r) => {
         if (!ctx || !S.site) {
