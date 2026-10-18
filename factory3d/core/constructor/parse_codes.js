@@ -175,7 +175,7 @@ export function matchRule(cr, code) {
         if (v === undefined) {
             return null;
         }
-        parts[key] = v;
+        parts[key] = key === "zone" ? text : v; // зона — позначка (A, Z1), а не номер
         raw[key] = text;
     }
     return Object.keys(parts).length ? { parts, raw } : null;
@@ -329,7 +329,8 @@ export function maskCandidates(code) {
     };
     const out = [];
     if (toks[0].t === "alpha") {
-        out.push(build(names, "{префікс}"), build(names, "{зона:a}"));
+        const lead = [build(names, "{префікс}"), build(names, "{зона:a}")];
+        out.push(...(toks[0].text.length === 1 ? lead.reverse() : lead)); // одна літера на початку — швидше зона, довший текст — префікс
         if (nums.length >= 3) {
             out.push(build(NUM_ORDER[nums.length - 1], "{префікс}"));
         }
@@ -348,11 +349,11 @@ export function guessMasks(codes, { limit = 5, sample = 40 } = {}) {
     for (const mask of cands) {
         const cr = compileRule({ mask });
         if (cr.ok) {
-            rows.push({ mask, matched: codes.reduce((n, c) => n + (matchRule(cr, c) ? 1 : 0), 0), total: codes.length });
+            rows.push({ mask, matched: codes.reduce((n, c) => n + (matchRule(cr, c) ? 1 : 0), 0), total: codes.length, parts: cr.tokens.filter((t) => t.t === "part").length, order: rows.length });
         }
     }
-    rows.sort((a, b) => b.matched - a.matched || a.mask.length - b.mask.length);
-    return rows.filter((r) => r.matched > 0).slice(0, limit);
+    rows.sort((a, b) => b.matched - a.matched || b.parts - a.parts || a.order - b.order);
+    return rows.filter((r) => r.matched > 0).slice(0, limit).map(({ mask, matched, total }) => ({ mask, matched, total }));
 }
 
 /* ---------- правила в site.parse_rules ---------- */

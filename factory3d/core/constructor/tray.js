@@ -240,6 +240,9 @@ registries.panels.add("left:tray", { area: "left", tab: "tray", label: "Лото
 
 /** Підпис вкладки з числом записів (не змінюючи чужих файлів: кнопку створює ensureTabs). */
 function updateTabLabel() {
+    if (typeof document === "undefined") {
+        return;
+    }
     const n = trayItems().length;
     for (const b of document.querySelectorAll('#ltabs button[data-tab="tray"], #mtabs button[data-mtab="tray"]')) {
         b.textContent = n ? `Лоток (${n > 999 ? "999+" : n})` : "Лоток";

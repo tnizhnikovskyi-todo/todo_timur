@@ -12,7 +12,8 @@ import { canManage } from "./roles.js";
 import { REASONS, fullName, planStructure, projectCodes } from "./structure.js";
 import { E, S } from "./state.js";
 import { FIELDS, autoMap, fileName, locationsToRows, readTable, rowsToLocations, toCsv, withParents, writeXlsx } from "./tabular_core.js";
-import { safeNormalize } from "./addr_core.js";
+import { safeNormalize, slotPolygon } from "./addr_core.js";
+import { polygonContains } from "./geometry.js";
 import { fmtInt, h, toast } from "./util.js";
 
 const isXlsx = (b) => b.length > 3 && b[0] === 0x50 && b[1] === 0x4b;
@@ -248,20 +249,28 @@ export function openImport({ file = null } = {}) {
 }
 
 /* ---------- експорт ---------- */
-/** Комірки проєкту → локації формату імпорту Odoo (ім'я = код або перевизначена назва; батько — корінь площадки). */
-export function projectLocations() {
-    const root = S.site.default_parent_location?.name || E.adapter?.defaultParent || "Склад";
+/**
+ * Комірки проєкту → локації формату імпорту Odoo (ім'я = код або перевизначена назва; батько — корінь площадки). `zones: true` —
+ * батьком стає зона, у якій лежить місце («Склад/Зона A»): так структуру можна перенести в інший проєкт без втрати зон (недостаючі батьки
+ * додає `withParents`).
+ */
+export const projectRoot = () => S.site.default_parent_location?.name || E.adapter?.defaultParent || "Склад";
+
+export function projectLocations({ zones = false } = {}) {
+    const root = projectRoot();
     const parser = makeParser({ rules: siteRules().rules, addr: S.site.addr || null });
+    const zs = zones ? S.slots.filter((s) => s.template === "zone" && slotPolygon(s)).map((z) => ({ title: z.params.title || z.code_prefix, poly: slotPolygon(z), area: (z.params.length || 1) * (z.params.width || 1), layer: z.layer_id })) : [];
     const out = [];
     for (const s of S.slots) {
+        const host = zs.filter((z) => z.layer === s.layer_id && polygonContains(z.poly, [s.x, s.y])).sort((a, b) => a.area - b.area)[0];
         for (const c of cellsOf(s)) {
             if (c.disabled) {
                 continue;
             }
             const r = parser.parse(c.code);
-            const loc = { code: c.code, name: c.name || c.code, parent: root, usage: c.usage && c.usage !== "internal" ? c.usage : "internal", barcode: c.code };
+            const loc = { code: c.code, name: c.name || c.code, parent: host ? `${root}/${host.title}` : root, usage: c.usage && c.usage !== "internal" ? c.usage : "internal", barcode: c.code };
             if (r) {
-                Object.assign(loc, r.parts.row != null && typeof r.parts.row === "number" ? { posx: r.parts.row } : {}, r.parts.bay != null ? { posy: r.parts.bay } : {}, r.parts.level != null ? { posz: r.parts.level } : {});
+                Object.assign(loc, typeof r.parts.row === "number" ? { posx: r.parts.row } : {}, r.parts.bay != null ? { posy: r.parts.bay } : {}, r.parts.level != null ? { posz: r.parts.level } : {});
             }
             out.push(loc);
         }
@@ -283,15 +292,15 @@ export function openExport() {
     if (!S.site) {
         return undefined;
     }
-    const st = { scope: "all", format: "xlsx" };
+    const st = { scope: "all", format: "xlsx", zones: false };
     const info = h("div", { class: "small muted", id: "expInfo" });
-    const all = projectLocations();
-    info.textContent = `Місць у проєкті: ${fmtInt(all.length)}.`;
+    info.textContent = `Місць у проєкті: ${fmtInt(S.slots.reduce((n, sl) => n + cellsOf(sl).filter((c) => !c.disabled).length, 0))}.`;
     const body = h(
         "div",
         { class: "fcol", id: "expBody" },
         fld("Що експортувати", selectEl([["all", "Усі місця"], ...(can("odoo_import") ? [["changed", "Нові й змінені відносно Odoo (з недостаючими батьками)"]] : [])], st.scope, (v) => { st.scope = v; }, false, "Що експортувати")),
         fld("Формат", selectEl([["xlsx", "XLSX"], ["csv", "CSV (UTF-8, кома)"]], st.format, (v) => { st.format = v; }, false, "Формат")),
+        h("label", { class: "frow" }, h("input", { type: "checkbox", id: "expZones", onchange: (e) => { st.zones = e.target.checked; } }), "Зони як батьківські локації (для перенесення структури в інший проєкт)"),
         info,
         h("div", { class: "small muted" }, "Формат імпорту Odoo: name, location_id (повне ім'я батька), usage, barcode, posx/posy/posz. Файл створюється в браузері й нікуди не надсилається.")
     );
@@ -307,10 +316,12 @@ export function openExport() {
                 id: "expGo",
                 onClick: async () => {
                     try {
-                        let locs = all;
+                        let locs = projectLocations({ zones: st.zones });
                         if (st.scope === "changed") {
                             const r = await E.adapter.locations({ op: "feed" });
-                            locs = changedLocations(all, r.feed.locations.map(feedLoc));
+                            locs = changedLocations(locs, r.feed.locations.map(feedLoc));
+                        } else if (st.zones) {
+                            locs = withParents(locs, new Set([projectRoot()])); // корінь у Odoo вже є
                         }
                         const rows = locationsToRows(locs);
                         const base = S.site.code || S.site.name;

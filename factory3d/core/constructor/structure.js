@@ -8,7 +8,7 @@ import { addressContext, effectiveAddr, normalizeAddr, parseTpl, safeNormalize, 
 import { addressedCells, cellsOf, footprint, normalizeParams } from "./cells.js";
 import { layerObstacles, layoutPlan, regionOf } from "./autolayout.js";
 import { sGeom } from "./live.js";
-import { levelKind, makeParser, siteRules } from "./parse_codes.js";
+import { levelKind, makeParser, normalizeRules, siteRules } from "./parse_codes.js";
 import { canEditLayer, canManage, lockHint } from "./roles.js";
 import { E, S, layerOf } from "./state.js";
 import { clone, fmtInt } from "./util.js";
@@ -56,6 +56,19 @@ export function commonRoot(locs) {
         }
     }
     return root || [];
+}
+
+/**
+ * Корінь складу — спільний початок шляхів батьків КОМІРОК. Якщо всі комірки лежать в одному контейнері, що сам є локацією-виглядом у файлі,
+ * цей контейнер — зона (корінь на сегмент вище).
+ */
+export function deriveRoot(usable, cells) {
+    const root = commonRoot(cells);
+    const same = cells.length && cells.every((c) => c.parent === cells[0].parent);
+    if (same && root.length >= 2 && usable.some((l) => l.usage === "view" && fullName(l) === root.join("/"))) {
+        return root.slice(0, -1);
+    }
+    return root;
 }
 
 const tailNumber = (name) => {
@@ -156,7 +169,6 @@ export function planStructure(locs, o = {}) {
     });
     const parents = new Set(usable.map((l) => l.parent).filter(Boolean));
     stats.warehouses = [...new Set(usable.map((l) => segs(fullName(l))[0]).filter(Boolean))];
-    const rootSegs = o.root || commonRoot(usable);
     const cells = usable.filter((l) => {
         const isCell = l.usage !== "view" && !parents.has(fullName(l));
         if (!isCell) {
@@ -164,6 +176,7 @@ export function planStructure(locs, o = {}) {
         }
         return isCell;
     });
+    const rootSegs = o.root || deriveRoot(usable, cells);
     stats.cells = cells.length;
     const zones = new Map();
     const groups = new Map();
@@ -210,7 +223,7 @@ export function planStructure(locs, o = {}) {
         let zone = null;
         let zoneFromPath = false;
         if (parts.zone != null) {
-            const raw = String(parts.zone);
+            const raw = r.raw.zone ?? String(parts.zone);
             zone = zoneRef(`z:${raw.toUpperCase()}`, `Зона ${raw}`, /^[A-Za-z0-9._/#:-]{1,8}$/.test(raw) ? raw : null);
         } else if (ch.length >= 2 || (ch.length === 1 && parts.row != null)) {
             zone = zoneRef(`p:${ch[0]}`, ch[0]);
@@ -524,7 +537,15 @@ export function commitStructure(plan, { label = "Імпорт структури
 export function importLocations(locs, { label, layout = true, growBuilding = false, parseRules = null } = {}) {
     const parser = makeParser({ rules: parseRules || siteRules().rules, addr: S.site?.addr || null });
     const plan = planStructure(locs, { parser, siteAddr: safeNormalize(S.site?.addr), depthMode: S.site?.depth_mode || "level", existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((s) => s.code_prefix)) });
-    return { ...commitStructure(plan, { label, layout, growBuilding }), plan };
+    const keep = S.site.parse_rules;
+    if (parseRules) {
+        S.site.parse_rules = normalizeRules({ ...(keep || {}), rules: parseRules }); // правила, за якими розібрано, лишаються в площадці (і для експорту, і для «Оновити з Odoo»)
+    }
+    const res = commitStructure(plan, { label, layout, growBuilding });
+    if (!res.ok) {
+        S.site.parse_rules = keep;
+    }
+    return { ...res, plan };
 }
 
 Object.assign(E, { importLocations, planStructure, commitStructure });
