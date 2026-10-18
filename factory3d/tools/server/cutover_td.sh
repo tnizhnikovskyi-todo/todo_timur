@@ -13,6 +13,7 @@
 #   6. чекає, поки менеджер запушить ту саму ревізію в claude/factory3d-build, і лише тоді вмикає таймер
 #      (інакше таймер повернув би старий код). Чекання — до 3 год; таймер можна ввімкнути й вручну.
 #
+# Odoo як служба systemd (deb). Для Odoo в Docker є окрема версія на самому сервері (cutover_td_docker.sh).
 # Змінні (за замовчуванням — як на timur-o19demo): ADDONS_REPO, BRANCH, DEPLOY_BRANCH, OLD_DB, KEEP_DB,
 #   ODOO_CONF, ODOO_SERVICE, ODOO_OS_USER, ODOO_BIN, TIMER.
 set -euo pipefail
@@ -84,7 +85,8 @@ if [[ -d "$FILESTORE/$OLD_DB" ]]; then mv "$FILESTORE/$OLD_DB" "$FILESTORE/$KEEP
 log "4/6 нова база $OLD_DB: base + uk_UA"
 sudo -u "$ODOO_OS_USER" "$ODOO_BIN" -c "$ODOO_CONF" -d "$OLD_DB" -i base --load-language=uk_UA \
     --stop-after-init --no-http --log-level=warn
-psql_ -d "$OLD_DB" -v h="$ADMIN_HASH" -c "update res_users set password = :'h', lang = 'uk_UA' where id = 2"
+psql_ -d "$OLD_DB" -v h="$ADMIN_HASH" -c "update res_users set password = :'h' where id = 2"
+psql_ -d "$OLD_DB" -c "update res_partner set lang = 'uk_UA' where id = (select partner_id from res_users where id = 2)"
 BASE_URL="$(psql_ -d "$KEEP_DB" -c "select value from ir_config_parameter where key = 'web.base.url'")"
 if [[ -n "$BASE_URL" ]]; then
     psql_ -d "$OLD_DB" -v u="$BASE_URL" -c "update ir_config_parameter set value = :'u' where key = 'web.base.url'"
