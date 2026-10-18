@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- D-46: demo-дані вмикають дистанційне перемикання -->
 <odoo>
-    <!-- D-46: demo-дані вмикають дистанційне перемикання. Власник: A -->
+    <function model="ir.config_parameter" name="set_param"
+              eval="('td.energy_control.remote_switching_enabled', 'True')"/>
 </odoo>

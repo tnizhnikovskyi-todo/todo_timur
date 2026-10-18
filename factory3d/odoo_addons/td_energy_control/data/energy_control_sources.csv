@@ -1,1 +1,3 @@
-code,name,unit,equipment,host,port,timeout_s,retries,max_block,gap_max
+code,name,type,equipment,params
+MB-U73-SWB-CMD,Контролер ГРЩ: вікно керування (unit 73),modbus_tcp,SWB-1,"{""host"": ""iot-sim"", ""port"": 502, ""unit"": 73, ""timeout_s"": 3, ""retries"": 2, ""max_block"": 125, ""gap_max"": 8}"
+ENERGY-CTL,Керування енергетикою: рушій і інтенти (збирач),energy_ctl,,"{""engine"": {""tick_s"": 2, ""config_poll_s"": 10}}"
