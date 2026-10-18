@@ -1,3 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W1-B: W1_SPEC розд. 3.1 (V-22…V-31). Каркас: порожній файл, наповнює W1-B. -->
-<odoo/>
+<!-- W1_SPEC 3.1 V-22…V-25: клієнтські дії OWL (Пульт, Картка вузла, Мобільний, Генерація й резерв). -->
+<odoo>
+    <record id="action_td_energy_pult" model="ir.actions.client">
+        <field name="name">Пульт енергетика</field>
+        <field name="tag">td_energy.pult</field>
+        <field name="context">{"td_energy_period": "now"}</field>
+    </record>
+
+    <!-- Параметри картки: params.code або context.active_code (відкривають Пульт, форма вузла) -->
+    <record id="action_td_energy_node_card" model="ir.actions.client">
+        <field name="name">Картка вузла</field>
+        <field name="tag">td_energy.node_card</field>
+    </record>
+
+    <record id="action_td_energy_mobile" model="ir.actions.client">
+        <field name="name">Чергування (телефон)</field>
+        <field name="tag">td_energy.mobile</field>
+    </record>
+
+    <record id="action_td_energy_generation" model="ir.actions.client">
+        <field name="name">Генерація й резерв</field>
+        <field name="tag">td_energy.generation</field>
+    </record>
+</odoo>

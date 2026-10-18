@@ -1,3 +1,156 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-01 Pult. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.Pult">
+        <div class="o_td_en o_td_en_pult o_action overflow-auto">
+            <t t-if="state.data">
+                <header class="o_td_en_head">
+                    <div class="o_td_en_head_title">
+                        <div class="o_td_en_crumbs">Енергетика / АРМ енергетика</div>
+                        <h1 class="o_td_en_h1">Пульт енергетика</h1>
+                        <div class="o_td_en_sub" t-esc="meta.subtitle"/>
+                    </div>
+                    <div class="o_td_en_head_tools">
+                        <div class="o_td_en_seg o_td_en_period" role="group" aria-label="Період">
+                            <button t-foreach="periods" t-as="p" t-key="p[0]" type="button"
+                                    t-att-class="'o_td_en_period_' + p[0]"
+                                    t-att-aria-pressed="state.period === p[0] ? 'true' : 'false'"
+                                    t-on-click="() => this.setPeriod(p[0])" t-esc="p[1]"/>
+                        </div>
+                        <span t-attf-class="o_td_en_pill o_td_en_pill--{{dataChip.cls}} o_td_en_data_chip">
+                            <span class="o_td_en_pill_dot" aria-hidden="true"/>
+                            <t t-esc="dataChip.text"/>
+                        </span>
+                        <button type="button" class="o_td_en_btn o_td_en_open3d" t-on-click="() => this.actions.openViewer()">Відкрити в 3D</button>
+                        <button t-if="capabilities.report" type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_report"
+                                t-on-click="openReport">Звіт за зміну</button>
+                    </div>
+                </header>
+
+                <main class="o_td_en_main">
+                    <section aria-label="Ключові показники" class="o_td_en_kpis">
+                        <div t-if="state.errors.kpis" class="o_td_en_error" t-esc="'Показники недоступні: ' + state.errors.kpis"/>
+                        <div t-foreach="kpiCards" t-as="card" t-key="card.id" t-attf-class="o_td_en_kpi o_td_en_kpi--{{card.id}}">
+                            <div class="o_td_en_kpi_label" t-esc="card.label"/>
+                            <div class="o_td_en_kpi_value">
+                                <span class="o_td_en_kpi_text" t-esc="card.text"/>
+                                <span t-if="card.unit" class="o_td_en_unit"> <t t-esc="card.unit"/></span>
+                            </div>
+                            <div t-if="card.bar" class="o_td_en_bar" aria-hidden="true">
+                                <div t-attf-class="o_td_en_bar--{{card.bar.cls}}" t-att-style="'width: ' + card.bar.pct + '%'"/>
+                            </div>
+                            <div t-attf-class="o_td_en_kpi_note {{card.noteCls ? 'o_td_en_kpi_note--' + card.noteCls : ''}}" t-esc="card.note"/>
+                        </div>
+                    </section>
+
+                    <section t-if="state.data.advice" class="o_td_en_advice" aria-label="Рекомендація">
+                        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>
+                        </svg>
+                        <div class="o_td_en_advice_text">
+                            <b t-esc="state.data.advice.title"/> <t t-esc="state.data.advice.text"/>
+                        </div>
+                        <div class="o_td_en_advice_actions">
+                            <button t-foreach="adviceActions" t-as="act" t-key="act.code" type="button"
+                                    t-attf-class="o_td_en_btn {{act_index === 0 ? 'o_td_en_btn--teal' : 'o_td_en_btn--teal_outline'}} o_td_en_advice_act"
+                                    t-att-data-action-code="act.code" t-on-click="() => this.runAdvice(act)" t-esc="act.label"/>
+                            <button type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_en_advice_later" t-on-click="snooze">Пізніше</button>
+                        </div>
+                    </section>
+
+                    <div t-if="state.errors.sld" class="o_td_en_card o_td_en_error" t-esc="'Схема недоступна: ' + state.errors.sld"/>
+                    <SldCanvas t-if="state.data.sld" sld="state.data.sld" selected="state.selNode" onSelect="(code) => this.selectNode(code)"/>
+
+                    <div class="o_td_en_row">
+                        <div t-if="state.errors.profile" class="o_td_en_card o_td_en_error" style="flex: 2 1 640px" t-esc="'Профіль недоступний: ' + state.errors.profile"/>
+                        <ProfileChart t-if="state.data.profile" profile="state.data.profile" foot="state.data.foot" nowLocal="meta.now_local"/>
+                        <div t-if="state.errors.alarms" class="o_td_en_card o_td_en_error" style="flex: 1 1 360px" t-esc="'Тривоги недоступні: ' + state.errors.alarms"/>
+                        <AlarmList t-if="state.data.alarms" alarms="state.data.alarms" capabilities="capabilities"
+                                   onChanged="() => this.load(['alarms'])"/>
+                    </div>
+
+                    <div class="o_td_en_row">
+                        <div t-if="state.errors.side" class="o_td_en_card o_td_en_error" style="flex: 1 1 100%" t-esc="'Блоки недоступні: ' + state.errors.side"/>
+                        <section t-if="state.data.top" class="o_td_en_card o_td_en_top_card" aria-labelledby="o_td_en_top_h" style="flex: 1 1 360px">
+                            <div class="o_td_en_card_head"><h2 id="o_td_en_top_h">Найбільші споживачі зараз</h2></div>
+                            <div t-if="!state.data.top.length" class="o_td_en_empty">Немає даних про споживачів.</div>
+                            <ul class="o_td_en_top">
+                                <li t-foreach="state.data.top" t-as="row" t-key="row.code">
+                                    <div class="o_td_en_top_row">
+                                        <span><b t-esc="row.code"/> · <t t-esc="row.name"/></span>
+                                        <b><t t-esc="fmtInt(row.kw)"/> кВт</b>
+                                    </div>
+                                    <div class="o_td_en_top_bar" aria-hidden="true"><div t-att-style="'width: ' + topWidth(row) + '%'"/></div>
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section t-if="state.data.mo" class="o_td_en_card o_td_en_mo_card" aria-labelledby="o_td_en_mo_h" style="flex: 1 1 360px">
+                            <div class="o_td_en_card_head">
+                                <h2 id="o_td_en_mo_h">Енергія на виробництво · сьогодні</h2>
+                                <button type="button" class="o_td_en_btn o_td_en_btn--inline" t-on-click="openAlloc">Усі →</button>
+                            </div>
+                            <div style="overflow-x: auto">
+                                <table class="o_td_en_table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Замовлення</th>
+                                            <th scope="col" class="o_td_en_num">кВт·год</th>
+                                            <th scope="col" class="o_td_en_num"><t t-if="state.data.mo.rows.length and state.data.mo.rows[0].cost_uah !== undefined">₴ · </t>частка</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="state.data.mo.rows" t-as="row" t-key="row.name">
+                                            <td>
+                                                <button type="button" class="o_td_en_btn o_td_en_btn--inline" style="text-decoration: none"
+                                                        t-on-click="() => this.openProduction(row.name)" t-esc="row.name"/><br/>
+                                                <span class="o_td_en_sub" t-esc="row.product"/>
+                                            </td>
+                                            <td class="o_td_en_num" t-esc="fmtInt(row.kwh)"/>
+                                            <td class="o_td_en_num">
+                                                <t t-if="row.cost_uah !== undefined"><t t-esc="fmtInt(row.cost_uah)"/> · </t><t t-esc="fmtDec(row.share_pct, 1)"/> %
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><b>Спільні пули</b><br/><span class="o_td_en_sub">аспірація, компресори, вентиляція</span></td>
+                                            <td class="o_td_en_num" t-esc="fmtInt(state.data.mo.pools_kwh)"/>
+                                            <td class="o_td_en_num">за машино-год</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section t-if="state.data.maint" class="o_td_en_card o_td_en_maint_card" aria-labelledby="o_td_en_mt_h" style="flex: 1 1 360px">
+                            <div class="o_td_en_card_head">
+                                <h2 id="o_td_en_mt_h">ТО й відключення</h2>
+                                <button type="button" class="o_td_en_btn o_td_en_btn--inline" t-on-click="openMaintenance">Планові ТО →</button>
+                            </div>
+                            <div t-if="!state.data.maint.length" class="o_td_en_empty">Немає запланованих робіт.</div>
+                            <ul class="o_td_en_list">
+                                <li t-foreach="state.data.maint" t-as="item" t-key="item.kind + item.id">
+                                    <span>
+                                        <button type="button" class="o_td_en_list_open" t-on-click="() => this.openMaint(item)"><b t-esc="item.title"/></button><br/>
+                                        <span class="o_td_en_sub" t-esc="item.sub"/>
+                                    </span>
+                                    <span t-attf-class="o_td_en_tag o_td_en_tag--{{maintTag(item.state)}}" t-esc="item.state"/>
+                                </li>
+                            </ul>
+                            <div class="o_td_en_actions_row">
+                                <button t-if="capabilities.outage_plan" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_plan_outage"
+                                        t-on-click="planOutage">Запланувати відключення</button>
+                                <button type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_create_ticket"
+                                        t-on-click="createTicket">Створити заявку ТО</button>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+            </t>
+            <div t-elif="state.failed" class="o_td_en_main">
+                <div class="o_td_en_error o_td_en_card" role="alert">
+                    Не вдалося завантажити Пульт: <t t-esc="state.failed"/>
+                    <button type="button" class="o_td_en_btn o_td_en_btn--sm ms-3" t-on-click="() => this.load()">Повторити</button>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

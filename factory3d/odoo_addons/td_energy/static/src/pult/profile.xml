@@ -1,3 +1,54 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-03 ProfileChart. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.ProfileChart">
+        <section class="o_td_en_card o_td_en_profile" aria-labelledby="o_td_en_prof_h" style="flex: 2 1 640px">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_en_prof_h">Профіль доби · 15 хв</h2>
+                <div class="o_td_en_legend" role="group" aria-label="Серії графіка">
+                    <button type="button" t-att-aria-pressed="isOn('cons') ? 'true' : 'false'" t-on-click="() => this.toggle('cons')">
+                        <span class="o_td_en_sw o_td_en_sw--line" aria-hidden="true"/>споживання</button>
+                    <button type="button" t-att-aria-pressed="isOn('grid') ? 'true' : 'false'" t-on-click="() => this.toggle('grid')">
+                        <span class="o_td_en_sw o_td_en_sw--area_grid" aria-hidden="true"/>з мережі</button>
+                    <button type="button" t-att-aria-pressed="isOn('pv') ? 'true' : 'false'" t-on-click="() => this.toggle('pv')">
+                        <span class="o_td_en_sw o_td_en_sw--area_pv" aria-hidden="true"/>СЕС</button>
+                    <button type="button" t-att-aria-pressed="isOn('contract') ? 'true' : 'false'" t-on-click="() => this.toggle('contract')">
+                        <span class="o_td_en_sw o_td_en_sw--dash" aria-hidden="true"/>договірна <t t-esc="fmtInt(contract)"/> кВт</button>
+                    <button type="button" t-att-aria-pressed="isOn('forecast') ? 'true' : 'false'" t-on-click="() => this.toggle('forecast')">
+                        <span class="o_td_en_sw o_td_en_sw--dash_gray" aria-hidden="true"/>прогноз</button>
+                </div>
+            </div>
+            <div class="o_td_en_chart">
+                <svg viewBox="0 0 880 262" role="img"
+                     aria-label="Графік потужності за добу: споживання, СЕС, імпорт з мережі й прогноз до кінця доби">
+                    <g class="o_td_en_grid">
+                        <path t-foreach="gridLines" t-as="line" t-key="line_index" t-att-d="'M 40 ' + line.y + ' L 860 ' + line.y"/>
+                    </g>
+                    <g class="o_td_en_axis">
+                        <text t-foreach="gridLines" t-as="line" t-key="line_index" x="34" t-att-y="line.y + 4" text-anchor="end" t-esc="line.label"/>
+                        <text t-foreach="hourTicks" t-as="tick" t-key="tick_index" t-att-x="tick.x" y="252" text-anchor="middle" t-esc="tick.label"/>
+                    </g>
+                    <path t-if="isOn('pv') and paths.pv" t-att-d="paths.pv" class="o_td_en_p_pv" fill="#fcd34d" fill-opacity="0.75" stroke="none"/>
+                    <path t-if="isOn('pv') and isOn('forecast') and paths.pvFc" t-att-d="paths.pvFc" class="o_td_en_p_pv_fc" fill="#fcd34d" fill-opacity="0.35" stroke="none"/>
+                    <path t-if="isOn('grid') and paths.grid" t-att-d="paths.grid" class="o_td_en_p_grid" fill="#c9b6c5" fill-opacity="0.85" stroke="none"/>
+                    <path t-if="isOn('contract') and contract" t-att-d="'M 40 ' + contractY + ' L 860 ' + contractY" class="o_td_en_p_contract"
+                          fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="6 5"/>
+                    <path t-if="isOn('cons') and paths.cons" t-att-d="paths.cons" class="o_td_en_p_cons" fill="none" stroke="#111827" stroke-width="2" stroke-linejoin="round"/>
+                    <path t-if="isOn('forecast') and isOn('cons') and paths.consFc" t-att-d="paths.consFc" class="o_td_en_p_cons_fc"
+                          fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>
+                    <path t-if="isOn('forecast') and isOn('grid') and paths.gridFc" t-att-d="paths.gridFc" class="o_td_en_p_grid_fc"
+                          fill="none" stroke="#714B67" stroke-width="1.5" stroke-dasharray="5 4" stroke-linejoin="round"/>
+                    <path t-att-d="'M ' + nowX + ' 20 L ' + nowX + ' 230'" stroke="#111827" stroke-width="1" stroke-dasharray="2 3"/>
+                    <circle t-if="peak" t-att-cx="peak.x" t-att-cy="peak.y" r="4" fill="#714B67" stroke="#ffffff" stroke-width="2"/>
+                    <text t-if="peak" t-att-x="peak.tx" t-att-y="peak.ty" t-att-text-anchor="peak.anchor" class="o_td_en_chart_text">пік <t t-esc="fmtInt(peak.kw)"/> кВт</text>
+                    <text t-att-x="nowX + 6" y="34" class="o_td_en_chart_text" style="fill: #111827">зараз <t t-esc="nowLabel"/></text>
+                </svg>
+            </div>
+            <div class="o_td_en_foot">
+                <span t-if="footForecast" class="o_td_en_foot_forecast">Прогноз до кінця доби: <b t-esc="footForecast"/> з мережі</span>
+                <span t-else="" class="o_td_en_foot_forecast">Прогноз недоступний: замало історії</span>
+                <span t-if="props.foot and props.foot.export_kwh !== undefined and props.foot.export_kwh !== null">Експорт сьогодні: <b><t t-esc="fmtInt(props.foot.export_kwh)"/> кВт·год</b></span>
+                <span t-if="imbalance">Небаланс обліку за <t t-esc="imbalance.hour"/>: <b><t t-esc="imbalance.pct"/> %</b> (норма ≤ <t t-esc="imbalance.tol"/> %)</span>
+            </div>
+        </section>
+    </t>
+</templates>

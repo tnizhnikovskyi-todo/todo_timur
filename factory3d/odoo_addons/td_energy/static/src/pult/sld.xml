@@ -1,3 +1,70 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-02 SldCanvas. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.SldCanvas">
+        <section class="o_td_en_card o_td_en_sld" aria-labelledby="o_td_en_sld_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_en_sld_h">Однолінійна схема · зараз</h2>
+                    <span class="o_td_en_note">Клацніть вузол, щоб побачити деталі й дії</span>
+                </div>
+                <div class="o_td_en_legend">
+                    <span><span class="o_td_en_sw" aria-hidden="true"/>під напругою</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--warn" aria-hidden="true"/>увага</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--alarm" aria-hidden="true"/>тривога</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--off" aria-hidden="true"/>резерв / вимкнено</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--gen" aria-hidden="true"/>генерація</span>
+                </div>
+            </div>
+            <div class="o_td_en_sld_scroll">
+                <div class="o_td_en_sld_canvas" t-att-style="canvasStyle">
+                    <svg class="o_td_en_sld_edges" t-att-width="canvas.width" t-att-height="canvas.height" aria-hidden="true">
+                        <path t-foreach="edges" t-as="edge" t-key="edge.key" t-att-d="edge.d"
+                              t-attf-class="o_td_en_edge o_td_en_edge--{{edge.state}}"/>
+                    </svg>
+                    <div t-if="qs and qs.bridge" class="o_td_en_sld_bar o_td_en_sld_bar--ok o_td_en_qs_bridge"
+                         t-att-style="qs.bridge"/>
+                    <t t-foreach="shapes" t-as="shape" t-key="shape.node.code">
+                        <t t-set="node" t-value="shape.node"/>
+                        <t t-if="node.shape === 'bar'">
+                            <div t-attf-class="o_td_en_sld_bar o_td_en_sld_bar--{{node.state}}" t-att-style="shape.style"
+                                 role="img" t-att-aria-label="nodeLabel(node)" t-att-data-node-code="node.code"/>
+                            <div class="o_td_en_sld_label" t-att-style="'left: ' + node.x + 'px; top: ' + (node.y - 26) + 'px'"
+                                 t-esc="node.lines[0]"/>
+                        </t>
+                        <div t-elif="node.shape === 'label'" class="o_td_en_sld_label" t-att-style="shape.style"
+                             t-att-data-node-code="node.code" t-esc="node.lines[0]"/>
+                        <button t-else="" type="button"
+                                t-attf-class="o_td_en_node o_td_en_node--{{node.state}} {{node.shape === 'switch' ? 'o_td_en_node--switch' : ''}} {{props.selected === node.code ? 'is-selected' : ''}}"
+                                t-att-style="shape.style" t-att-data-node-code="node.code"
+                                t-att-aria-label="nodeLabel(node)" t-att-aria-pressed="props.selected === node.code ? 'true' : 'false'"
+                                t-on-click="() => this.toggle(node.code)">
+                            <span t-if="node.shape === 'switch'" t-esc="node.lines[0]"/>
+                            <span t-else="">
+                                <b t-esc="node.lines[0]"/>
+                                <t t-foreach="node.lines.slice(1)" t-as="line" t-key="line_index"><br/><t t-esc="line"/></t>
+                            </span>
+                        </button>
+                    </t>
+                    <div t-if="qs" class="o_td_en_sld_label o_td_en_sld_label--center o_td_en_qs_label" t-att-style="qs.labelStyle"
+                         t-esc="qs.text"/>
+                </div>
+            </div>
+            <div t-if="selNode" class="o_td_en_sel" role="region" aria-label="Деталі вузла">
+                <div class="o_td_en_sel_body">
+                    <div class="o_td_en_sel_title" t-esc="selNode.title"/>
+                    <ul>
+                        <li t-foreach="selNode.facts" t-as="fact" t-key="fact_index" t-esc="fact"/>
+                    </ul>
+                </div>
+                <div class="o_td_en_sel_actions">
+                    <button t-if="selNode.card" type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_sel_card"
+                            t-on-click="() => this.actions.openCard(selNode.code)">Відкрити картку вузла</button>
+                    <button type="button" class="o_td_en_btn o_td_en_sel_3d"
+                            t-on-click="() => this.actions.show3d(selNode.code)">Показати в 3D</button>
+                    <button type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_en_sel_close" aria-label="Закрити деталі"
+                            t-on-click="() => this.props.onSelect(null)">×</button>
+                </div>
+            </div>
+        </section>
+    </t>
+</templates>

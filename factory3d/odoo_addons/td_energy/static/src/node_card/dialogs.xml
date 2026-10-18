@@ -1,3 +1,33 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-07 діалоги. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.OutageDialog">
+        <Dialog title="title" size="'md'" contentClass="'o_td_en_dialog'">
+            <div class="o_td_en_dialog_grid">
+                <label>Дата
+                    <input type="date" class="form-control o_td_en_out_date" t-model="state.date"/>
+                </label>
+                <label>Причина
+                    <select class="form-select o_td_en_out_reason" t-model="state.reason">
+                        <option t-foreach="reasons" t-as="reason" t-key="reason[0]" t-att-value="reason[0]" t-esc="reason[1]"/>
+                    </select>
+                </label>
+                <label>Початок
+                    <input type="time" class="form-control o_td_en_out_start" t-model="state.start"/>
+                </label>
+                <label>Кінець
+                    <input type="time" class="form-control o_td_en_out_end" t-model="state.end"/>
+                </label>
+                <label t-if="state.reason === 'other'" class="o_td_en_dialog_wide">Уточнення причини
+                    <input type="text" maxlength="128" class="form-control o_td_en_out_reason_text" t-model="state.reasonText"/>
+                </label>
+                <div t-if="previewText" class="o_td_en_dialog_wide o_td_en_dialog_preview" t-esc="previewText"/>
+                <div t-if="state.error" class="o_td_en_dialog_wide o_td_en_dialog_error" role="alert" t-esc="state.error"/>
+            </div>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-primary o_td_en_out_submit" t-att-disabled="state.busy"
+                        t-on-click="submit">Надіслати на узгодження</button>
+                <button type="button" class="btn btn-secondary" t-on-click="() => props.close()">Скасувати</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

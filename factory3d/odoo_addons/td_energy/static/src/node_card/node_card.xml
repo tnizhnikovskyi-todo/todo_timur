@@ -1,3 +1,198 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-05, UI-06 NodeCard. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.CurrentChart">
+        <section class="o_td_en_card o_td_en_current" aria-labelledby="o_td_en_cur_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_en_cur_h">Струм за добу · 15 хв</h2>
+                <div class="o_td_en_legend">
+                    <span><span class="o_td_en_sw o_td_en_sw--teal" aria-hidden="true"/>струм, А</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--dash_warn" aria-hidden="true"/>увага <t t-esc="warnPct"/> %</span>
+                    <span><span class="o_td_en_sw o_td_en_sw--dash" aria-hidden="true"/>номінал <t t-esc="fmtInt(rating)"/> А</span>
+                </div>
+            </div>
+            <div class="o_td_en_chart">
+                <svg viewBox="0 0 880 262" role="img" aria-label="Графік струму вузла за добу з порогами уваги й номіналу">
+                    <g class="o_td_en_grid">
+                        <path t-foreach="gridLines" t-as="line" t-key="line_index" t-att-d="'M 40 ' + line.y + ' L 860 ' + line.y"/>
+                    </g>
+                    <g class="o_td_en_axis">
+                        <text t-foreach="gridLines" t-as="line" t-key="line_index" x="34" t-att-y="line.y + 4" text-anchor="end" t-esc="line.label"/>
+                        <text t-foreach="hourTicks" t-as="tick" t-key="tick_index" t-att-x="tick.x" y="252" text-anchor="middle" t-esc="tick.label"/>
+                    </g>
+                    <path t-if="rating" t-att-d="'M 40 ' + lineY(rating) + ' L 860 ' + lineY(rating)" class="o_td_en_c_rating"
+                          fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="6 5"/>
+                    <path t-if="chart.warn_a" t-att-d="'M 40 ' + lineY(chart.warn_a) + ' L 860 ' + lineY(chart.warn_a)" class="o_td_en_c_warn"
+                          fill="none" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="6 5"/>
+                    <path t-if="paths.area" t-att-d="paths.area" fill="#017E84" fill-opacity="0.12" stroke="none"/>
+                    <path t-if="paths.line" t-att-d="paths.line" class="o_td_en_c_curve" fill="none" stroke="#017E84" stroke-width="2" stroke-linejoin="round"/>
+                    <path t-att-d="'M ' + nowX + ' 20 L ' + nowX + ' 230'" stroke="#111827" stroke-width="1" stroke-dasharray="2 3"/>
+                    <circle t-if="peak" t-att-cx="peak.x" t-att-cy="peak.y" r="4" fill="#017E84" stroke="#ffffff" stroke-width="2"/>
+                    <text t-if="peak" t-att-x="peak.tx" t-att-y="peak.ty" t-att-text-anchor="peak.anchor" class="o_td_en_chart_text">макс. <t t-esc="fmtInt(peak.a)"/> А</text>
+                </svg>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="td_energy.NodeCard">
+        <div class="o_td_en o_td_en_node_card o_action overflow-auto">
+            <t t-if="state.data">
+                <header class="o_td_en_head">
+                    <div class="o_td_en_head_title">
+                        <div class="o_td_en_crumbs">
+                            <button type="button" class="o_td_en_back" t-on-click="openPult">← АРМ енергетика</button>
+                            <t t-foreach="path" t-as="item" t-key="item.code">
+                                / <button t-if="!item_last" type="button" class="o_td_en_crumb_btn"
+                                          t-on-click="() => this.openNode(item.code)" t-esc="item.name"/><t t-else="" t-esc="item.name"/>
+                            </t>
+                        </div>
+                        <h1 class="o_td_en_h1" t-esc="node.name"/>
+                        <div class="o_td_en_chips">
+                            <span t-foreach="node.chips || []" t-as="chip" t-key="chip_index"
+                                  t-attf-class="o_td_en_pill o_td_en_pill--{{chipClass(chip, chip_index)}}" t-esc="chip.text"/>
+                        </div>
+                    </div>
+                    <div class="o_td_en_head_tools">
+                        <button t-if="node.can_3d" type="button" class="o_td_en_btn o_td_en_show3d"
+                                t-on-click="() => this.actions.show3d(node.code)">Показати в 3D</button>
+                        <button type="button" class="o_td_en_btn o_td_en_plan_outage" t-on-click="planOutage">Запланувати відключення</button>
+                        <button type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_create_ticket" t-on-click="createTicket">Створити заявку ТО</button>
+                    </div>
+                </header>
+
+                <main class="o_td_en_main">
+                    <section aria-label="Показники вузла" class="o_td_en_kpis">
+                        <div t-foreach="kpiCards" t-as="card" t-key="card.id" t-attf-class="o_td_en_kpi o_td_en_kpi--{{card.id}}">
+                            <div class="o_td_en_kpi_label" t-esc="card.label"/>
+                            <div class="o_td_en_kpi_value">
+                                <span class="o_td_en_kpi_text" t-esc="card.text"/>
+                                <span t-if="card.unit" class="o_td_en_unit"> <t t-esc="card.unit"/></span>
+                            </div>
+                            <div t-if="card.bar" class="o_td_en_bar" aria-hidden="true">
+                                <div t-attf-class="o_td_en_bar--{{card.bar.cls}}" t-att-style="'width: ' + card.bar.pct + '%'"/>
+                            </div>
+                            <div class="o_td_en_kpi_note" t-esc="card.note"/>
+                        </div>
+                    </section>
+
+                    <div class="o_td_en_card_layout">
+                        <div class="o_td_en_card_left">
+                            <CurrentChart t-if="data.chart" chart="data.chart" ratingA="data.kpis and data.kpis.current ? data.kpis.current.rating_a : undefined"/>
+
+                            <section t-if="taps" class="o_td_en_card o_td_en_taps" aria-labelledby="o_td_en_tap_h">
+                                <div class="o_td_en_card_head">
+                                    <div class="o_td_en_card_title">
+                                        <h2 id="o_td_en_tap_h">Відгалуження · <span class="o_td_en_tap_count" t-esc="tapRows.length"/></h2>
+                                        <span class="o_td_en_note">сума зараз <t t-esc="fmtDec(taps.sum_kw, 1)"/> кВт · втрати й допоміжні <t t-esc="fmtDec(taps.aux_kw, 1)"/> кВт</span>
+                                    </div>
+                                    <div class="o_td_en_filter" role="group" aria-label="Фільтр відгалужень">
+                                        <button type="button" class="o_td_en_filter_all" t-att-aria-pressed="state.filter === 'all' ? 'true' : 'false'" t-on-click="() => this.setFilter('all')">Усі</button>
+                                        <button type="button" class="o_td_en_filter_run" t-att-aria-pressed="state.filter === 'run' ? 'true' : 'false'" t-on-click="() => this.setFilter('run')">Працюють</button>
+                                        <button type="button" class="o_td_en_filter_stop" t-att-aria-pressed="state.filter === 'stop' ? 'true' : 'false'" t-on-click="() => this.setFilter('stop')">Не працюють</button>
+                                    </div>
+                                </div>
+                                <div class="o_td_en_table_scroll">
+                                    <table class="o_td_en_table">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Відгалуження</th>
+                                                <th scope="col">Обладнання</th>
+                                                <th scope="col" class="o_td_en_num">Встан., кВт</th>
+                                                <th scope="col" class="o_td_en_num">Зараз, кВт</th>
+                                                <th scope="col">Стан</th>
+                                                <th scope="col">Завдання</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="tapRows" t-as="row" t-key="row.tap" class="o_td_en_tap_row">
+                                                <td style="white-space: nowrap; color: #374151" t-esc="row.tap"/>
+                                                <td>
+                                                    <button type="button" class="o_td_en_btn o_td_en_btn--inline" t-on-click="() => this.openNode(row.node_code)" t-esc="row.code"/>
+                                                    · <t t-esc="row.name"/>
+                                                </td>
+                                                <td class="o_td_en_num" t-esc="fmtAuto(row.inst_kw)"/>
+                                                <td class="o_td_en_num"><b t-esc="fmtAuto(row.now_kw)"/></td>
+                                                <td><span t-attf-class="o_td_en_tag o_td_en_tag--{{row.state}}" t-esc="tapStates[row.state] || row.state"/></td>
+                                                <td style="color: #374151" t-esc="row.job"/>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+
+                        <aside class="o_td_en_card_right" aria-label="Облік, захист і обслуговування">
+                            <section t-if="meter" class="o_td_en_card o_td_en_meter" aria-labelledby="o_td_en_m_h">
+                                <div class="o_td_en_card_head"><h2 id="o_td_en_m_h">Облік</h2></div>
+                                <dl class="o_td_en_dl">
+                                    <t t-foreach="meter" t-as="row" t-key="row_index">
+                                        <dt t-esc="row[0]"/><dd t-esc="row[1]"/>
+                                    </t>
+                                </dl>
+                            </section>
+
+                            <section t-if="protection" class="o_td_en_card o_td_en_protection" aria-labelledby="o_td_en_p_h">
+                                <div class="o_td_en_card_head"><h2 id="o_td_en_p_h" t-esc="protection.title"/></div>
+                                <dl class="o_td_en_dl">
+                                    <t t-foreach="protection.rows" t-as="row" t-key="row_index">
+                                        <dt t-esc="row[0]"/><dd t-esc="row[1]"/>
+                                    </t>
+                                </dl>
+                            </section>
+
+                            <section t-if="data.events" class="o_td_en_card o_td_en_events" aria-labelledby="o_td_en_e_h">
+                                <div class="o_td_en_card_head">
+                                    <h2 id="o_td_en_e_h">Події фідера</h2>
+                                    <button type="button" class="o_td_en_btn o_td_en_btn--inline" t-on-click="() => this.actions.openXml('td_energy.action_td_energy_event')">Усі →</button>
+                                </div>
+                                <div t-if="!data.events.length" class="o_td_en_empty">Подій за останню добу немає.</div>
+                                <ul class="o_td_en_list">
+                                    <li t-foreach="data.events" t-as="ev" t-key="ev_index">
+                                        <span><span style="color: #4b5563" t-esc="ev.time"/> · <t t-esc="ev.text"/></span>
+                                    </li>
+                                </ul>
+                            </section>
+
+                            <section t-if="data.maintenance" class="o_td_en_card o_td_en_maint" aria-labelledby="o_td_en_w_h">
+                                <div class="o_td_en_card_head"><h2 id="o_td_en_w_h">Обслуговування</h2></div>
+                                <div t-if="!data.maintenance.length" class="o_td_en_empty">Відкритих заявок немає.</div>
+                                <ul class="o_td_en_list">
+                                    <li t-foreach="data.maintenance" t-as="item" t-key="item.id" t-attf-class="{{item.state === 'Нова' ? 'is-new' : ''}}">
+                                        <span>
+                                            <button type="button" class="o_td_en_list_open" t-on-click="() => this.openMaint(item)"><b t-esc="item.title"/></button><br/>
+                                            <span class="o_td_en_sub" t-esc="item.when"/>
+                                        </span>
+                                        <span t-attf-class="o_td_en_tag o_td_en_tag--{{maintTag(item.state)}}" t-esc="item.state"/>
+                                    </li>
+                                </ul>
+                            </section>
+
+                            <section t-if="outage" class="o_td_en_card o_td_en_card--outage o_td_en_outage" aria-labelledby="o_td_en_o_h">
+                                <div class="o_td_en_card_head"><h2 id="o_td_en_o_h">Планове відключення</h2></div>
+                                <div style="padding: 10px 16px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 4px">
+                                    <div>
+                                        <button type="button" class="o_td_en_btn o_td_en_btn--inline" style="text-decoration: none" t-on-click="openOutagePlan"><b t-esc="outage.when"/></button>
+                                        · <t t-esc="outage.reason"/>
+                                    </div>
+                                    <div style="color: #4b5563" t-esc="outage.affects"/>
+                                </div>
+                            </section>
+
+                            <section t-if="genset" class="o_td_en_card o_td_en_genset" aria-labelledby="o_td_en_g_h">
+                                <div class="o_td_en_card_head"><h2 id="o_td_en_g_h">Генератор</h2></div>
+                                <div class="o_td_en_actions_row">
+                                    <button type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_open_genset" t-on-click="openGenset">Відкрити пульт генератора</button>
+                                </div>
+                            </section>
+                        </aside>
+                    </div>
+                </main>
+            </t>
+            <div t-elif="state.failed" class="o_td_en_main">
+                <div class="o_td_en_error o_td_en_card" role="alert">
+                    Не вдалося завантажити картку вузла: <t t-esc="state.failed"/>
+                    <button type="button" class="o_td_en_btn o_td_en_btn--sm ms-3" t-on-click="openPult">← АРМ енергетика</button>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

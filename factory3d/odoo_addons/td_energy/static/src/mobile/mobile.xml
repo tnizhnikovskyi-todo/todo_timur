@@ -1,3 +1,124 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-09 Mobile. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.MobileAlarmCard">
+        <article t-attf-class="o_td_en_m_card o_td_en_m_alarm o_td_en_m_alarm--{{level}} {{item.taken_by_me ? 'is-mine' : ''}}" t-att-data-event-id="item.id">
+            <div class="o_td_en_m_meta">
+                <span t-attf-class="o_td_en_m_tag o_td_en_m_tag--{{tag.cls}}" t-esc="tag.text"/>
+                <span class="o_td_en_m_time" t-esc="item.time"/>
+            </div>
+            <div class="o_td_en_m_title" t-esc="item.title"/>
+            <div class="o_td_en_m_text" t-esc="item.detail"/>
+            <div t-if="assignedElse" class="o_td_en_m_text o_td_en_m_assigned" t-esc="assignedElse"/>
+            <div class="o_td_en_m_buttons">
+                <button t-if="canTake" type="button" class="o_td_en_m_btn o_td_en_m_btn--primary o_td_en_m_take"
+                        t-att-disabled="state.busy" t-on-click="take">Беру в роботу</button>
+                <button t-if="canResolve" type="button" class="o_td_en_m_btn o_td_en_m_btn--primary o_td_en_m_resolve"
+                        t-att-disabled="state.busy" t-on-click="resolve">Закрити</button>
+                <button t-if="item.node_code" type="button" class="o_td_en_m_btn o_td_en_m_where3d" t-on-click="where3d">Де це в 3D</button>
+                <button t-if="canAssignRequest" type="button" class="o_td_en_m_btn o_td_en_m_assign"
+                        t-att-disabled="state.busy" t-on-click="assignRequest">Призначити на себе</button>
+            </div>
+        </article>
+    </t>
+
+    <t t-name="td_energy.MobileAdvice">
+        <article class="o_td_en_m_card o_td_en_m_alarm o_td_en_m_alarm--warn o_td_en_m_advice">
+            <div class="o_td_en_m_meta">
+                <span class="o_td_en_m_tag o_td_en_m_tag--warn" t-esc="props.advice.level === 'info' ? 'Інфо' : 'Увага'"/>
+            </div>
+            <div class="o_td_en_m_title" t-esc="props.advice.title"/>
+            <div class="o_td_en_m_text" t-esc="props.advice.text"/>
+            <div class="o_td_en_m_buttons">
+                <button t-foreach="acts" t-as="act" t-key="act.code" type="button" class="o_td_en_m_btn o_td_en_m_btn--teal o_td_en_m_advice_act"
+                        t-on-click="() => this.run(act)" t-esc="act.label"/>
+                <button type="button" class="o_td_en_m_btn o_td_en_m_advice_later" t-on-click="snooze">Відкласти</button>
+            </div>
+        </article>
+    </t>
+
+    <t t-name="td_energy.MobileActive">
+        <section class="o_td_en_m_section" aria-labelledby="o_td_en_m_active_h">
+            <div class="o_td_en_m_section_head">
+                <h2 id="o_td_en_m_active_h">Активні · <span class="o_td_en_m_active_count" t-esc="alarms.active_count"/></h2>
+                <button t-if="props.goTab" type="button" class="o_td_en_m_link" t-on-click="() => props.goTab('alarms')">Усі тривоги</button>
+            </div>
+            <MobileAdvice t-if="alarms.advice" advice="alarms.advice" onChanged="props.reload"/>
+            <MobileAlarmCard t-foreach="alarms.active" t-as="item" t-key="item.id" item="item"
+                             capabilities="props.capabilities" onChanged="props.reload"/>
+            <div t-if="!alarms.active.length" class="o_td_en_m_card o_td_en_m_empty">Активних тривог немає.</div>
+        </section>
+    </t>
+
+    <t t-name="td_energy.MobileState">
+        <section class="o_td_en_m_card o_td_en_m_grid_card" aria-label="Стан мережі">
+            <div class="o_td_en_m_grid_head">
+                <span>З мережі</span>
+                <span t-if="state.contract_kw">договірна <t t-esc="fmt(state.contract_kw)"/> кВт</span>
+                <span t-else="">% договірної</span>
+            </div>
+            <div class="o_td_en_m_big"><span class="o_td_en_m_grid_kw" t-esc="fmt(state.grid_kw)"/> <span class="o_td_en_m_big_unit">кВт · <t t-esc="fmt(state.pct)"/> %</span></div>
+            <div class="o_td_en_bar o_td_en_m_bar" aria-hidden="true"><div t-att-style="'width: ' + gridBar + '%'"/></div>
+            <div class="o_td_en_m_tiles">
+                <div t-foreach="tiles" t-as="tile" t-key="tile.id" t-attf-class="o_td_en_m_tile {{tile.cls ? 'o_td_en_m_tile--' + tile.cls : ''}}">
+                    <div t-esc="tile.label"/>
+                    <b t-esc="tile.value"/>
+                </div>
+            </div>
+        </section>
+        <MobileActive mobile="props.mobile" capabilities="props.capabilities" reload="props.reload" goTab="props.goTab"/>
+    </t>
+
+    <t t-name="td_energy.MobileAlarms">
+        <MobileActive mobile="props.mobile" capabilities="props.capabilities" reload="props.reload"/>
+        <section class="o_td_en_m_section" aria-label="Інформаційні події">
+            <h2 class="o_td_en_m_h2">Інфо за сьогодні</h2>
+            <div t-foreach="info" t-as="row" t-key="row_index" class="o_td_en_m_card o_td_en_m_info">
+                <span class="o_td_en_m_time" t-esc="row.time"/> · <t t-esc="row.text"/>
+            </div>
+            <div t-if="!info.length" class="o_td_en_m_card o_td_en_m_empty">Інформаційних подій сьогодні немає.</div>
+        </section>
+    </t>
+
+    <t t-name="td_energy.MobileScheme">
+        <section class="o_td_en_m_section" aria-label="Схема">
+            <div t-foreach="nodes" t-as="node" t-key="node.code" class="o_td_en_m_node" t-att-data-node-code="node.code">
+                <div class="o_td_en_m_node_text">
+                    <span class="o_td_en_m_node_name" t-esc="node.name"/>
+                    <span class="o_td_en_m_node_value" t-esc="node.value"/>
+                </div>
+                <span t-attf-class="o_td_en_pill o_td_en_pill--{{node.state}} o_td_en_m_node_state" t-esc="stateLabels[node.state] || node.state"/>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="td_energy.Mobile">
+        <div class="o_td_en o_td_en_mobile o_action">
+            <t t-if="state.data">
+                <header class="o_td_en_m_head">
+                    <div class="o_td_en_m_head_text">
+                        <div class="o_td_en_m_crumb">Енергетика · чергування</div>
+                        <h1 class="o_td_en_m_h1" t-esc="current.title || current.label"/>
+                    </div>
+                    <span t-attf-class="o_td_en_pill o_td_en_pill--{{chip.cls}} o_td_en_m_chip">
+                        <span class="o_td_en_pill_dot" aria-hidden="true"/><t t-esc="chip.text"/>
+                    </span>
+                </header>
+                <div class="o_td_en_m_body">
+                    <t t-component="current.component" t-props="tabProps"/>
+                </div>
+                <nav class="o_td_en_m_tabs" aria-label="Розділи" t-attf-style="grid-template-columns: repeat({{tabs.length}}, minmax(0, 1fr))">
+                    <button t-foreach="tabs" t-as="tab" t-key="tab.id" type="button"
+                            t-attf-class="o_td_en_m_tab o_td_en_m_tab_{{tab.id}}"
+                            t-att-aria-pressed="tab.id === current.id ? 'true' : 'false'"
+                            t-on-click="() => this.goTab(tab.id)">
+                        <svg t-if="tab.icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path t-att-d="tab.icon"/></svg>
+                        <t t-esc="tabLabel(tab)"/>
+                    </button>
+                </nav>
+            </t>
+            <div t-elif="state.failed" class="o_td_en_m_body">
+                <div class="o_td_en_error o_td_en_card" role="alert">Не вдалося завантажити дані: <t t-esc="state.failed"/></div>
+            </div>
+        </div>
+    </t>
+</templates>

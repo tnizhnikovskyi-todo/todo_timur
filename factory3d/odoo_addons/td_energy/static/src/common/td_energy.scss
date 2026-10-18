@@ -1,1 +1,581 @@
-/* UI-11: токени кольорів станів. Каркас W1: наповнює W1-B. */
+// UI-11: токени кольорів станів і спільні стилі екранів «Енергетика» (Пульт, Картка вузла, Генерація).
+// Стан не передається лише кольором: пунктирна рамка (тривога, резерв) і текстові чипи, як у макеті.
+$td-ok: #017E84;
+$td-warn: #c2410c;
+$td-alarm: #b91c1c;
+$td-off: #9ca3af;
+$td-gen: #b45309;
+$td-accent: #714B67;
+$td-line: #e5e7eb;
+$td-text: #111827;
+$td-muted: #4b5563;
+
+.o_td_en {
+    --td-ok: #{$td-ok};
+    --td-warn: #{$td-warn};
+    --td-alarm: #{$td-alarm};
+    --td-off: #{$td-off};
+    --td-gen: #{$td-gen};
+    --td-accent: #{$td-accent};
+
+    min-height: 100%;
+    background: #f3f4f6;
+    color: $td-text;
+    font-family: system-ui, -apple-system, "Segoe UI", Ubuntu, "Noto Sans", sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+
+    a, .o_td_en_link {
+        color: $td-accent;
+    }
+
+    h1, h2 {
+        margin: 0;
+        color: $td-text;
+    }
+
+    button {
+        font: inherit;
+    }
+
+    // ---- шапка ----
+    .o_td_en_head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 24px;
+        padding: 14px 24px;
+        background: #fff;
+        border-bottom: 1px solid $td-line;
+    }
+    .o_td_en_head_title {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+    .o_td_en_crumbs {
+        font-size: 13px;
+        color: $td-muted;
+    }
+    .o_td_en_h1 {
+        font-size: 22px;
+        line-height: 28px;
+        font-weight: 600;
+    }
+    .o_td_en_sub {
+        font-size: 13px;
+        color: $td-muted;
+    }
+    .o_td_en_head_tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+    .o_td_en_chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 2px;
+    }
+
+    // ---- кнопки ----
+    .o_td_en_btn {
+        min-height: 36px;
+        padding: 0 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #fff;
+        color: $td-text;
+        cursor: pointer;
+        &:hover { background: #f9fafb; }
+        &:disabled { opacity: .55; cursor: default; }
+    }
+    .o_td_en_btn--primary {
+        border-color: $td-accent;
+        background: $td-accent;
+        color: #fff;
+        font-weight: 600;
+        &:hover { background: darken($td-accent, 6%); }
+    }
+    .o_td_en_btn--teal {
+        border-color: #0f766e;
+        background: #0f766e;
+        color: #fff;
+        font-weight: 600;
+        &:hover { background: darken(#0f766e, 5%); }
+    }
+    .o_td_en_btn--teal_outline {
+        border-color: #0f766e;
+        color: #0f766e;
+    }
+    .o_td_en_btn--quiet {
+        border: 0;
+        background: transparent;
+        &:hover { background: transparent; text-decoration: underline; }
+    }
+    .o_td_en_btn--sm {
+        min-height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+    }
+    .o_td_en_btn--lg {
+        min-height: 40px;
+        padding: 0 16px;
+    }
+    .o_td_en_btn--inline {
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: $td-accent;
+        font-weight: 500;
+        text-decoration: underline;
+        &:hover { background: transparent; }
+    }
+
+    // ---- сегмент (період) і фільтр-чипи ----
+    .o_td_en_seg {
+        display: flex;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        overflow: hidden;
+        button {
+            min-height: 36px;
+            padding: 0 14px;
+            border: 0;
+            border-left: 1px solid #d1d5db;
+            background: #fff;
+            color: $td-text;
+            cursor: pointer;
+            &:first-child { border-left: 0; }
+            &[aria-pressed="true"] { background: $td-text; color: #fff; }
+        }
+    }
+    .o_td_en_filter {
+        display: flex;
+        gap: 6px;
+        button {
+            min-height: 32px;
+            padding: 0 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            background: #fff;
+            color: $td-text;
+            font-size: 13px;
+            cursor: pointer;
+            &[aria-pressed="true"] { border-color: $td-text; background: $td-text; color: #fff; }
+        }
+    }
+
+    // ---- чипи стану ----
+    .o_td_en_pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        border: 1px solid transparent;
+        white-space: nowrap;
+        &.o_td_en_pill--live { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        &.o_td_en_pill--partial { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+        &.o_td_en_pill--stale { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        &.o_td_en_pill--teal { background: #ecfeff; color: #155e75; border-color: #a5f3fc; }
+        &.o_td_en_pill--ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        &.o_td_en_pill--warn { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+        &.o_td_en_pill--alarm { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        &.o_td_en_pill--gen { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+        &.o_td_en_pill--off, &.o_td_en_pill--muted { background: #f3f4f6; color: #374151; border-color: $td-line; }
+        &.o_td_en_pill--work { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+    }
+    .o_td_en_pill_dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    .o_td_en_tag {
+        flex: 0 0 auto;
+        align-self: flex-start;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        &.o_td_en_tag--new { background: #fff7ed; color: #9a3412; }
+        &.o_td_en_tag--plan { background: #eff6ff; color: #1e40af; }
+        &.o_td_en_tag--ok { background: #ecfdf5; color: #065f46; }
+        &.o_td_en_tag--muted { background: #f3f4f6; color: #374151; }
+        &.o_td_en_tag--run { background: #ecfdf5; color: #065f46; }
+        &.o_td_en_tag--idle { background: #fffbeb; color: #92400e; }
+        &.o_td_en_tag--mnt { background: #eff6ff; color: #1e40af; }
+    }
+
+    // ---- основа сторінки ----
+    .o_td_en_main {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 16px 24px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .o_td_en_row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .o_td_en_card {
+        min-width: 0;
+        background: #fff;
+        border: 1px solid $td-line;
+        border-radius: 8px;
+    }
+    .o_td_en_card_head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid $td-line;
+        h2 { font-size: 16px; font-weight: 600; }
+        a, .o_td_en_link { font-size: 13px; font-weight: 500; }
+    }
+    .o_td_en_card_title {
+        display: flex;
+        flex-direction: column;
+        .o_td_en_note { font-size: 12.5px; color: $td-muted; }
+    }
+    .o_td_en_legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        font-size: 13px;
+        color: #374151;
+        > span, > button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        > button {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            &[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+        }
+    }
+    .o_td_en_sw {
+        display: inline-block;
+        width: 14px;
+        height: 10px;
+        border: 2px solid $td-ok;
+        border-radius: 3px;
+        &.o_td_en_sw--warn { border-color: $td-warn; background: #fff7ed; }
+        &.o_td_en_sw--alarm { border: 2px dashed $td-alarm; background: #fef2f2; }
+        &.o_td_en_sw--off { border: 2px dashed $td-off; }
+        &.o_td_en_sw--gen { border-color: $td-gen; background: #fffbeb; }
+        &.o_td_en_sw--line { height: 3px; width: 16px; border: 0; border-radius: 0; background: $td-text; }
+        &.o_td_en_sw--area_grid { width: 14px; height: 10px; border: 0; border-radius: 0; background: #c9b6c5; }
+        &.o_td_en_sw--area_pv { width: 14px; height: 10px; border: 0; border-radius: 0; background: #fcd34d; }
+        &.o_td_en_sw--dash { height: 0; width: 16px; border: 0; border-radius: 0; border-top: 2px dashed $td-alarm; background: transparent; }
+        &.o_td_en_sw--dash_gray { height: 0; width: 16px; border: 0; border-radius: 0; border-top: 2px dashed #6b7280; background: transparent; }
+        &.o_td_en_sw--dash_warn { height: 0; width: 16px; border: 0; border-radius: 0; border-top: 2px dashed $td-warn; background: transparent; }
+        &.o_td_en_sw--teal { height: 3px; width: 16px; border: 0; border-radius: 0; background: $td-ok; }
+    }
+
+    // ---- KPI ----
+    .o_td_en_kpis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .o_td_en_kpi {
+        flex: 1 1 200px;
+        background: #fff;
+        border: 1px solid $td-line;
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .o_td_en_kpi_label { font-size: 13px; color: $td-muted; }
+    .o_td_en_kpi_value {
+        font-size: 28px;
+        line-height: 32px;
+        font-weight: 600;
+        .o_td_en_unit { font-size: 15px; font-weight: 500; color: $td-muted; }
+    }
+    .o_td_en_kpi_note {
+        font-size: 13px;
+        color: #374151;
+        min-height: 20px;
+        &.o_td_en_kpi_note--warn { color: #9a3412; font-weight: 500; }
+        &.o_td_en_kpi_note--alarm { color: #991b1b; font-weight: 500; }
+    }
+    .o_td_en_bar {
+        height: 6px;
+        border-radius: 3px;
+        background: $td-line;
+        overflow: hidden;
+        > div { height: 6px; background: $td-ok; &.o_td_en_bar--warn { background: $td-warn; } &.o_td_en_bar--alarm { background: $td-alarm; } }
+    }
+
+    // ---- рекомендація ----
+    .o_td_en_advice {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 20px;
+        background: #f0fdfa;
+        border: 1px solid #99f6e4;
+        border-radius: 8px;
+        padding: 14px 16px;
+        svg { flex: 0 0 auto; fill: none; stroke: #0f766e; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .o_td_en_advice_text { flex: 999 1 420px; min-width: 0; color: #134e4a; }
+        .o_td_en_advice_actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .o_td_en_btn { min-height: 40px; padding: 0 16px; }
+        .o_td_en_btn--quiet { padding: 0 12px; color: #134e4a; }
+    }
+
+    // ---- однолінійна схема ----
+    .o_td_en_sld_scroll { overflow-x: auto; padding: 8px 0; }
+    .o_td_en_sld_canvas { position: relative; margin: 0 auto; }
+    .o_td_en_sld_edges {
+        position: absolute;
+        left: 0;
+        top: 0;
+        overflow: visible;
+        pointer-events: none;
+        path { fill: none; stroke-width: 3; stroke-linecap: round; }
+        .o_td_en_edge--ok { stroke: $td-ok; }
+        .o_td_en_edge--gen { stroke: $td-gen; }
+        .o_td_en_edge--off { stroke: $td-off; stroke-dasharray: 5 5; }
+        .o_td_en_edge--warn { stroke: $td-warn; }
+        .o_td_en_edge--alarm { stroke: $td-alarm; stroke-dasharray: 5 5; }
+    }
+    .o_td_en_node {
+        position: absolute;
+        box-sizing: border-box;
+        padding: 6px 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 12.5px;
+        line-height: 17px;
+        border-radius: 8px;
+        cursor: pointer;
+        &.o_td_en_node--ok { background: #fff; border: 2px solid $td-ok; color: $td-text; }
+        &.o_td_en_node--warn { background: #fff7ed; border: 2px solid $td-warn; color: #7c2d12; }
+        &.o_td_en_node--alarm { background: #fef2f2; border: 2px dashed $td-alarm; color: #7f1d1d; }
+        &.o_td_en_node--off { background: #f9fafb; border: 2px dashed $td-off; color: $td-text; }
+        &.o_td_en_node--gen { background: #fffbeb; border: 2px solid $td-gen; color: $td-text; }
+        &.o_td_en_node--switch { padding: 0; font-size: 12px; font-weight: 600; border-radius: 6px; }
+        &.is-selected { box-shadow: 0 0 0 3px $td-accent; }
+        &:focus-visible { outline: 2px solid $td-accent; outline-offset: 2px; }
+    }
+    .o_td_en_sld_bar {
+        position: absolute;
+        border-radius: 3px;
+        &.o_td_en_sld_bar--ok { background: $td-ok; }
+        &.o_td_en_sld_bar--warn { background: $td-warn; }
+        &.o_td_en_sld_bar--alarm { background: $td-alarm; }
+        &.o_td_en_sld_bar--off { background: $td-off; }
+        &.o_td_en_sld_bar--gen { background: $td-gen; }
+    }
+    .o_td_en_sld_label {
+        position: absolute;
+        font-size: 12px;
+        line-height: 16px;
+        color: #374151;
+        white-space: nowrap;
+        &.o_td_en_sld_label--center { width: 128px; text-align: center; color: $td-muted; }
+    }
+    .o_td_en_sel {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 12px 24px;
+        margin: 0 16px 16px;
+        padding: 14px 16px;
+        background: #f9fafb;
+        border: 1px solid $td-line;
+        border-radius: 8px;
+        .o_td_en_sel_body { flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+        .o_td_en_sel_title { font-size: 15px; font-weight: 600; }
+        ul { margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #374151; }
+        .o_td_en_sel_actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .o_td_en_btn { min-height: 38px; }
+    }
+
+    // ---- графіки ----
+    .o_td_en_chart {
+        padding: 8px 12px 4px;
+        svg { display: block; width: 100%; height: auto; }
+        .o_td_en_grid { stroke: $td-line; stroke-width: 1; }
+        .o_td_en_axis { fill: #6b7280; font-size: 11px; }
+        .o_td_en_chart_text { fill: #374151; font-size: 11px; }
+    }
+    .o_td_en_foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 24px;
+        padding: 8px 16px 14px;
+        font-size: 13px;
+        color: #374151;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    // ---- тривоги й події ----
+    .o_td_en_alarms { list-style: none; margin: 0; padding: 0; }
+    .o_td_en_alarm {
+        display: flex;
+        gap: 10px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        &.is-acked { background: #f9fafb; }
+        .o_td_en_dot {
+            flex: 0 0 auto;
+            width: 10px;
+            height: 10px;
+            margin-top: 5px;
+            border-radius: 50%;
+            &.o_td_en_dot--alarm { background: $td-alarm; }
+            &.o_td_en_dot--warn { background: $td-warn; }
+            &.o_td_en_dot--info { background: #6b7280; }
+            &.o_td_en_dot--resolved { background: #059669; }
+        }
+        .o_td_en_alarm_body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .o_td_en_alarm_meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: $td-muted; }
+        .o_td_en_alarm_level { font-weight: 600; }
+        .o_td_en_alarm_level--alarm { color: #991b1b; }
+        .o_td_en_alarm_level--warn { color: #9a3412; }
+        .o_td_en_alarm_level--info { color: #374151; }
+        .o_td_en_alarm_level--resolved { color: #065f46; }
+        .o_td_en_alarm_title { font-size: 13.5px; line-height: 19px; font-weight: 500; }
+        .o_td_en_alarm_detail { font-size: 12.5px; line-height: 17px; color: $td-muted; }
+        .o_td_en_alarm_diag {
+            margin-top: 4px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: #f9fafb;
+            border: 1px solid $td-line;
+            font-size: 12.5px;
+            line-height: 18px;
+            color: #374151;
+        }
+        .o_td_en_alarm_actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+        .o_td_en_alarm_status { font-size: 12.5px; color: #065f46; }
+        .o_td_en_alarm_status--work { color: #1e40af; }
+    }
+    .o_td_en_empty { padding: 14px 16px; font-size: 13px; color: $td-muted; }
+    .o_td_en_error { padding: 14px 16px; font-size: 13px; color: #991b1b; background: #fef2f2; }
+
+    // ---- побічні блоки ----
+    .o_td_en_top {
+        list-style: none;
+        margin: 0;
+        padding: 8px 16px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        li { display: flex; flex-direction: column; gap: 4px; }
+        .o_td_en_top_row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+        .o_td_en_top_bar { height: 6px; border-radius: 3px; background: #f3f4f6; > div { height: 6px; border-radius: 3px; background: $td-accent; } }
+    }
+    .o_td_en_table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        th { color: $td-muted; text-align: left; font-weight: 500; padding: 8px; }
+        th:first-child, td:first-child { padding-left: 16px; }
+        th:last-child, td:last-child { padding-right: 16px; }
+        td { padding: 8px; border-top: 1px solid #f3f4f6; vertical-align: top; }
+        .o_td_en_num { text-align: right; }
+        .o_td_en_sub { color: $td-muted; font-size: 13px; }
+    }
+    .o_td_en_list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 13px;
+        > li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            &:last-child { border-bottom: 0; }
+            &.is-new { background: #f0fdfa; }
+        }
+        .o_td_en_sub { color: $td-muted; }
+        .o_td_en_list_open { text-align: left; padding: 0; border: 0; background: transparent; color: inherit; }
+    }
+    .o_td_en_actions_row { padding: 10px 16px 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .o_td_en_dl {
+        margin: 0;
+        padding: 10px 16px 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 16px;
+        font-size: 13px;
+        dt { color: $td-muted; font-weight: 400; }
+        dd { margin: 0; }
+    }
+
+    // ---- картка вузла ----
+    .o_td_en_card_layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+        > .o_td_en_card_left { flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+        > .o_td_en_card_right { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+    }
+    .o_td_en_table_scroll { overflow-x: auto; .o_td_en_table { min-width: 760px; } }
+    .o_td_en_card--outage { border-color: #a7f3d0; }
+    .o_td_en_back { font-weight: 500; text-decoration: none; background: transparent; border: 0; padding: 0; color: $td-accent; cursor: pointer; }
+    .o_td_en_crumb_btn { background: transparent; border: 0; padding: 0; color: inherit; cursor: pointer; &:hover { text-decoration: underline; } }
+
+    // ---- Генерація й резерв ----
+    .o_td_en_gen_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+    }
+    .o_td_en_gen_card {
+        display: flex;
+        flex-direction: column;
+        &.o_td_en_gen_card--alarm { border: 2px dashed $td-alarm; }
+        &.o_td_en_gen_card--off { border-style: dashed; }
+        .o_td_en_gen_kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; padding: 12px 16px; margin: 0; }
+        .o_td_en_gen_kpi dt { font-size: 12.5px; color: $td-muted; font-weight: 400; }
+        .o_td_en_gen_kpi dd { margin: 0; font-size: 20px; line-height: 26px; font-weight: 600; .o_td_en_unit { font-size: 13px; font-weight: 500; color: $td-muted; } }
+        .o_td_en_gen_facts { margin: 0; padding: 0 16px 12px 34px; font-size: 13px; color: #374151; }
+        .o_td_en_gen_links { margin-top: auto; padding: 10px 16px 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+    }
+
+    // ---- вузькі екрани ----
+    @media (max-width: 720px) {
+        .o_td_en_head { padding: 12px 16px; }
+        .o_td_en_main { padding: 12px 12px 32px; }
+        .o_td_en_dl { grid-template-columns: minmax(0, 1fr); }
+    }
+}
+
+// Діалог відключення (рендериться поза .o_td_en)
+.o_td_en_dialog {
+    .o_td_en_dialog_grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+    .o_td_en_dialog_wide { grid-column: 1 / -1; }
+    .o_td_en_dialog_preview { padding: 10px 12px; border-radius: 6px; background: #fff7ed; color: #7c2d12; line-height: 18px; font-size: 13px; }
+    .o_td_en_dialog_error { padding: 8px 12px; border-radius: 6px; background: #fef2f2; color: #991b1b; font-size: 13px; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+}
