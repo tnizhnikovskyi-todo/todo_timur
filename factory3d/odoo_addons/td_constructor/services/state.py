@@ -237,6 +237,8 @@ def checks_state(site):
             },
             'sprinkler_height': site.sprinkler_height_m,
             'aisle_tech': site.aisle_tech or None,
+            'addr': site.addr or None,
+            'depth_mode': site.depth_mode or 'level',
         },
         'layers': layer_data,
         'slots': [slot_dict(s) for s in slots],

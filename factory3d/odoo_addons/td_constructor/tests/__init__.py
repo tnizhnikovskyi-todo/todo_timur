@@ -24,3 +24,10 @@ from . import test_s2_plan
 from . import test_s2_capacity
 from . import test_s2_putaway
 from . import test_s2_core_node
+from . import test_s1_addr
+from . import test_s1_catalog
+from . import test_s1_checks
+from . import test_s1_golden
+from . import test_s1_migration
+from . import test_s1_core_node
+from . import test_s1_library

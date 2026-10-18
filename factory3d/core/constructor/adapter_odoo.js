@@ -204,6 +204,10 @@ export function slotFromApi(s, layerUid) {
         overrides: clone(s.overrides || {}),
         parent_location_id: s.parent_location_id || null,
         note: s.note || "",
+        // S1 (MERGE §3.3): тип місця, власна адресація й глибина локацій; порожні значення — «успадкувати» (null)
+        type_id: s.type_id ?? null,
+        addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : null,
+        depth_mode: s.depth_mode || null,
     };
     if (s.template === "zone") {
         // зона на сервері — полігон у світових координатах (x=y=0); редактор показує прямокутник
@@ -280,7 +284,7 @@ export function normalizeLoaded(data) {
     }
     const reach = checks.utility_reach?.params?.max_m ?? settings.reach_default_m ?? 15;
     const site = data.site;
-    return {
+    const out = {
         site: {
             id: site.id,
             name: site.name,
@@ -294,6 +298,10 @@ export function normalizeLoaded(data) {
             draft_changes: site.draft_changes,
             has_changes: site.has_changes,
             settings,
+            // S1: адресація площадки (R-22), ієрархія й глибина локацій; бібліотека типів і пресетів (API-03 `types`, `presets`)
+            addr: clone(site.addr || {}),
+            loc_tree: site.loc_tree || "flat",
+            depth_mode: site.depth_mode || "level",
         },
         layers,
         slots,
@@ -309,6 +317,9 @@ export function normalizeLoaded(data) {
             can_edit_catalog: !!data.rights?.can_edit_catalog,
         },
     };
+    // бібліотека типів і пресетів (S1): не перелічувана, щоб не потрапляла в клони й знімки площадки
+    Object.defineProperty(out.site, "library", { value: { types: clone(data.types || []), presets: clone(data.presets || []) }, writable: true, configurable: true, enumerable: false });
+    return out;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -388,6 +399,9 @@ export function slotToApi(s) {
         temp_max_c: s.temp_max_c || 0,
         params: clone(s.params),
         overrides: clone(s.overrides || {}),
+        type_id: s.type_id ?? null,
+        addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : {},
+        depth_mode: s.depth_mode || null,
     };
     if (s.template === "zone") {
         const title = s.params.title;
@@ -446,7 +460,8 @@ export class OdooAdapter extends BaseAdapter {
         super(o);
         this.kind = "odoo";
         // Усе, що спирається на API-11…24, стане true разом із відповідними функціями (хост може передати `o.capabilities`).
-        this.capabilities = { publish: true, check: true, ...(o.capabilities || {}) };
+        this.capabilities = { publish: true, check: true, library: true, ...(o.capabilities || {}) };
+        this.serverRenumber = true; // зміна адресації на сервері переносить правки комірок і розміщення на нові коди (S1)
         this.rpc = o.rpc;
         this.orm = o.orm;
         this.action = o.action;
@@ -942,6 +957,30 @@ export class OdooAdapter extends BaseAdapter {
             delete out.column_grid;
         }
         await this.orm.write("td.site", [this.siteId], out);
+    }
+
+    /**
+     * Адресація площадки (S1): addr, depth_mode, loc_tree — свій маршрут `/site/addr` (API-04 і ORM площадку не пишуть для проєктувальника);
+     * `opts.renumber`: "new" — закріпити номери вже опублікованих, "all" — перенумерувати все (лише менеджер).
+     */
+    async saveAddr(vals, { renumber = "new" } = {}) {
+        const res = await this._call("/f3d/constructor/site/addr", { site_id: this.siteId, renumber, ...vals });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return { pinned: res.pinned, reload: true };
+    }
+
+    /**
+     * Бібліотека типів і пресетів (API-11): `{op: "list"}` → {types, presets}; `{op: "save", kind, id?, vals}` → {record};
+     * `{op: "delete", kind, id}` → {id}.
+     */
+    async library(req) {
+        const res = await this._call("/f3d/constructor/library", req);
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
     }
 
     /** id груп ролей конструктора (для «Хто редагує» шару): з уже завантажених шарів або з res.groups. */

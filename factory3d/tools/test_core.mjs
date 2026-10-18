@@ -77,7 +77,7 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
 test("AC-12: комірки ядра збігаються з еталоном Python для всіх шаблонів", async () => {
     const { SLOT_TEMPLATES, footprint, generateCells } = await load("cells.js");
     const g = golden("cells_golden");
-    assert.equal(Object.keys(SLOT_TEMPLATES).length, 6);
+    assert.equal(Object.keys(SLOT_TEMPLATES).length, 7); // S1: + floor_spot
     assert.ok(g.cases.length >= 10);
     const keys = ["x", "y", "z0", "l", "w", "h", "rot", "capacity", "max_load_kg", "level", "index"];
     for (const c of g.cases) {
@@ -392,6 +392,12 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
     const r = spawnSync("node", [join(here, "build_core.mjs"), "module", "--check"], { encoding: "utf8" });
     assert.equal(r.status, 0, r.stdout + r.stderr);
 });
+
+/* ---------- 7. слайси волни 1: S1 «Структура місця» (tools/test_core_s1.mjs) ---------- */
+(await import("./test_core_s1.mjs")).register(test);
+
+/* ---------- 8. слайси волни 1: S2 «Зв'язок з Odoo» (tools/test_core_s2.mjs) ---------- */
+(await import("./test_core_s2.mjs")).register(test);
 
 for (const [name, fn] of tests) {
     try {

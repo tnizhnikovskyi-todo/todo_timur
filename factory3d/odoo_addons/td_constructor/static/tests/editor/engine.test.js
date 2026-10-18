@@ -26,7 +26,7 @@ const CELL_KEYS = ["x", "y", "z0", "l", "w", "h", "rot", "capacity", "max_load_k
 
 test("AC-12 комірки JS збігаються з еталоном Python для всіх шаблонів", async () => {
     const g = await golden("cells_golden");
-    expect(Object.keys(SLOT_TEMPLATES).length).toBe(6);
+    expect(Object.keys(SLOT_TEMPLATES).length).toBe(7); // S1: + floor_spot
     expect(g.cases.length >= 10).toBe(true);
     for (const c of g.cases) {
         const cells = generateCells(c.template, c.prefix, c.x, c.y, c.rot, c.params, c.overrides, c.elevation);

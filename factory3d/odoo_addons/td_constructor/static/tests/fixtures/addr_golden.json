@@ -1,0 +1,1936 @@
+{
+ "meta": {
+  "about": "S1: адресація (F01); еталон — services/addr.py"
+ },
+ "format": [
+  {
+   "spec": {
+    "kind": "num",
+    "width": 3,
+    "start": 0
+   },
+   "n": 1,
+   "expected": "000"
+  },
+  {
+   "spec": {
+    "kind": "num",
+    "width": 3,
+    "start": 0
+   },
+   "n": 12,
+   "expected": "011"
+  },
+  {
+   "spec": {
+    "kind": "alpha",
+    "width": 1,
+    "start": 1
+   },
+   "n": 1,
+   "expected": "A"
+  },
+  {
+   "spec": {
+    "kind": "alpha",
+    "width": 1,
+    "start": 1
+   },
+   "n": 26,
+   "expected": "Z"
+  },
+  {
+   "spec": {
+    "kind": "alpha",
+    "width": 1,
+    "start": 1
+   },
+   "n": 27,
+   "expected": "AA"
+  },
+  {
+   "spec": {
+    "kind": "alpha",
+    "width": 1,
+    "start": 1
+   },
+   "n": 702,
+   "expected": "ZZ"
+  },
+  {
+   "spec": {
+    "kind": "alpha",
+    "width": 1,
+    "start": 1
+   },
+   "n": 703,
+   "expected": "AAA"
+  },
+  {
+   "spec": {
+    "kind": "num",
+    "width": 2,
+    "start": 5
+   },
+   "n": 3,
+   "expected": "07"
+  }
+ ],
+ "normalize": [
+  {
+   "input": null,
+   "expected": {}
+  },
+  {
+   "input": {},
+   "expected": {}
+  },
+  {
+   "input": "legacy",
+   "expected": {}
+  },
+  {
+   "input": {
+    "tpl": ""
+   },
+   "expected": {}
+  },
+  {
+   "input": {
+    "row_no": 3
+   },
+   "expected": {
+    "row_no": 3
+   }
+  },
+  {
+   "input": {
+    "zone_code": "A-1"
+   },
+   "expected": {
+    "zone_code": "A-1"
+   }
+  },
+  {
+   "input": {
+    "tpl": "{prefix} B{bay} L{level}"
+   },
+   "expected": {
+    "tpl": "{prefix} B{bay} L{level}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   }
+  },
+  {
+   "input": {
+    "tpl": "{ряд} {секція} {ярус}",
+    "sep": ".",
+    "seg": {
+     "bay": {
+      "kind": "alpha",
+      "width": 3,
+      "start": 2
+     }
+    },
+    "bay_dir": "odd_even"
+   },
+   "expected": {
+    "tpl": "{ряд} {секція} {ярус}",
+    "sep": ".",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "alpha",
+      "width": 3,
+      "start": 2
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "odd_even",
+    "level_dir": "up"
+   }
+  },
+  {
+   "input": {
+    "tpl": "{aisle} {section} {tier} {position}",
+    "row_from": "left",
+    "row_mode": "snake",
+    "level_dir": "down"
+   },
+   "expected": {
+    "tpl": "{aisle} {section} {tier} {position}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "left",
+    "row_mode": "snake",
+    "bay_dir": "ltr",
+    "level_dir": "down"
+   }
+  },
+  {
+   "input": {
+    "tpl": "abc"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{foo}"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay} {bay}"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay}",
+    "sep": "abcd"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay}",
+    "sep": " "
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay}",
+    "row_from": "sideways"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay}",
+    "seg": {
+     "bay": {
+      "width": 9
+     }
+    }
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "{bay}",
+    "seg": {
+     "bay": {
+      "kind": "alpha",
+      "start": 0
+     }
+    }
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "tpl": "ря{bay}"
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "row_no": 0
+   },
+   "error": true
+  },
+  {
+   "input": {
+    "zone_code": "TOOLONGCODE"
+   },
+   "error": true
+  },
+  {
+   "input": "x",
+   "error": true
+  }
+ ],
+ "render": [
+  {
+   "addr": {
+    "tpl": "{prefix} B{bay} L{level} {pos} {zone}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "vals": {
+    "prefix": "AB-R1",
+    "bay": 3,
+    "level": 2
+   },
+   "expected": "AB-R1-B03-L2"
+  },
+  {
+   "addr": {
+    "tpl": "{prefix} B{bay} L{level} {pos} {zone}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "vals": {
+    "prefix": "AB-R1",
+    "bay": 3,
+    "level": 2,
+    "pos": 4,
+    "zone": "Z"
+   },
+   "expected": "AB-R1-B03-L2-4-Z"
+  },
+  {
+   "addr": {
+    "tpl": "{prefix} B{bay} L{level} {pos} {zone}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "vals": {
+    "prefix": "AB-R1",
+    "bay": 3
+   },
+   "expected": "AB-R1-B03"
+  },
+  {
+   "addr": {
+    "tpl": "{zone}{row}.{bay}",
+    "sep": "",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "vals": {
+    "zone": 2,
+    "row": 7,
+    "bay": 12
+   },
+   "expected": "B07.12"
+  }
+ ],
+ "parse": [
+  {
+   "addr": {
+    "tpl": "{prefix} B{bay} L{level}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "code": "AB-R1-B03-L2",
+   "prefix": "AB-R1",
+   "expected": {
+    "prefix": "AB-R1",
+    "zone": null,
+    "row": null,
+    "bay": 3,
+    "level": 2,
+    "pos": null
+   }
+  },
+  {
+   "addr": {
+    "tpl": "{prefix} B{bay} L{level}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "code": "AB-R1-B03-L2",
+   "prefix": null,
+   "expected": {
+    "prefix": "AB-R1",
+    "zone": null,
+    "row": null,
+    "bay": 3,
+    "level": 2,
+    "pos": null
+   }
+  },
+  {
+   "addr": {
+    "tpl": "{zone} {row} {bay} {level}",
+    "sep": ".",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "code": "B.07.12.3",
+   "prefix": null,
+   "expected": {
+    "prefix": null,
+    "zone": 2,
+    "row": 7,
+    "bay": 12,
+    "level": 3,
+    "pos": null
+   }
+  },
+  {
+   "addr": {
+    "tpl": "{zone} {row} {bay} {level}",
+    "sep": ".",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "code": "07.12.3",
+   "prefix": null,
+   "expected": {
+    "prefix": null,
+    "zone": null,
+    "row": 7,
+    "bay": 12,
+    "level": 3,
+    "pos": null
+   }
+  },
+  {
+   "addr": {
+    "tpl": "{row} {bay} {level}",
+    "sep": "-",
+    "seg": {
+     "zone": {
+      "kind": "alpha",
+      "width": 1,
+      "start": 1
+     },
+     "row": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "bay": {
+      "kind": "num",
+      "width": 2,
+      "start": 1
+     },
+     "level": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     },
+     "pos": {
+      "kind": "num",
+      "width": 1,
+      "start": 1
+     }
+    },
+    "row_from": "up",
+    "row_mode": "seq",
+    "bay_dir": "ltr",
+    "level_dir": "up"
+   },
+   "code": "xx",
+   "prefix": null,
+   "expected": null
+  }
+ ],
+ "scenes": [
+  {
+   "name": "без адресації: legacy",
+   "site_addr": {},
+   "slots": [
+    {
+     "uid": "s1",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "AB-R1",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "s2",
+     "layer_id": 1,
+     "template": "floor_spot",
+     "code_prefix": "DOCK",
+     "x": 9,
+     "y": 9,
+     "rotation": 0,
+     "params": {},
+     "addr": {}
+    }
+   ],
+   "context": {
+    "s1": {
+     "addr": null,
+     "zone": null,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "s2": {
+     "addr": null,
+     "zone": null,
+     "row": null,
+     "spot": 1,
+     "depth_mode": "level"
+    }
+   },
+   "codes": {
+    "s1": [
+     "AB-R1-B01-L1",
+     "AB-R1-B01-L2",
+     "AB-R1-B02-L1",
+     "AB-R1-B02-L2"
+    ],
+    "s2": [
+     "DOCK"
+    ]
+   }
+  },
+  {
+   "name": "площадка: ряди за Y, дві зони, закріплений номер",
+   "site_addr": {
+    "tpl": "{zone} {row} {bay} {level}",
+    "row_from": "up"
+   },
+   "slots": [
+    {
+     "uid": "zA",
+     "layer_id": 1,
+     "template": "zone",
+     "code_prefix": "zA",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "length": 20,
+      "width": 20
+     },
+     "addr": {}
+    },
+    {
+     "uid": "zB",
+     "layer_id": 1,
+     "template": "zone",
+     "code_prefix": "zB",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "polygon": [
+       [
+        30,
+        0
+       ],
+       [
+        50,
+        0
+       ],
+       [
+        50,
+        20
+       ],
+       [
+        30,
+        20
+       ]
+      ]
+     },
+     "addr": {
+      "zone_code": "X1"
+     }
+    },
+    {
+     "uid": "r1",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "P1",
+     "x": 5,
+     "y": 12,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "r2",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "P2",
+     "x": 5,
+     "y": 3,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "r3",
+     "layer_id": 1,
+     "template": "shelf",
+     "code_prefix": "P3",
+     "x": 5,
+     "y": 7,
+     "rotation": 0,
+     "params": {
+      "sections": 2,
+      "shelves": 2
+     },
+     "addr": {
+      "row_no": 5
+     }
+    },
+    {
+     "uid": "r4",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "P4",
+     "x": 40,
+     "y": 10,
+     "rotation": 90,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "f1",
+     "layer_id": 1,
+     "template": "floor_spot",
+     "code_prefix": "FS1",
+     "x": 38,
+     "y": 15,
+     "rotation": 0,
+     "params": {},
+     "addr": {}
+    },
+    {
+     "uid": "f2",
+     "layer_id": 1,
+     "template": "floor_spot",
+     "code_prefix": "FS2",
+     "x": 38,
+     "y": 5,
+     "rotation": 0,
+     "params": {},
+     "addr": {}
+    },
+    {
+     "uid": "r5",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "P5",
+     "x": 100,
+     "y": 100,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    }
+   ],
+   "context": {
+    "r1": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "r5": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 2,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "r2": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": 1,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "r3": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": 1,
+     "row": 5,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "r4": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": "X1",
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "f1": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": "X1",
+     "row": null,
+     "spot": 2,
+     "depth_mode": "level"
+    },
+    "f2": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": "X1",
+     "row": null,
+     "spot": 1,
+     "depth_mode": "level"
+    },
+    "zA": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": null,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "zB": {
+     "addr": {
+      "tpl": "{zone} {row} {bay} {level}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": null,
+     "spot": null,
+     "depth_mode": "level"
+    }
+   },
+   "codes": {
+    "r1": [
+     "01-01-1",
+     "01-01-2",
+     "01-02-1",
+     "01-02-2"
+    ],
+    "r2": [
+     "A-01-01-1",
+     "A-01-01-2",
+     "A-01-02-1",
+     "A-01-02-2"
+    ],
+    "r3": [
+     "A-05-01-1",
+     "A-05-01-2",
+     "A-05-02-1",
+     "A-05-02-2"
+    ],
+    "r4": [
+     "X1-01-02-1",
+     "X1-01-02-2",
+     "X1-01-01-1",
+     "X1-01-01-2"
+    ],
+    "f1": [
+     "X1-02"
+    ],
+    "f2": [
+     "X1-01"
+    ],
+    "r5": [
+     "02-01-1",
+     "02-01-2",
+     "02-02-1",
+     "02-02-2"
+    ]
+   }
+  },
+  {
+   "name": "власні налаштування зони, вкладена зона, глибина «комірка»",
+   "site_addr": {
+    "tpl": "{row} {bay} {level}",
+    "sep": "/"
+   },
+   "site_depth_mode": "level",
+   "slots": [
+    {
+     "uid": "zOuter",
+     "layer_id": 1,
+     "template": "zone",
+     "code_prefix": "zOuter",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "length": 40,
+      "width": 40
+     },
+     "addr": {}
+    },
+    {
+     "uid": "zInner",
+     "layer_id": 1,
+     "template": "zone",
+     "code_prefix": "zInner",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "length": 10,
+      "width": 10
+     },
+     "addr": {
+      "tpl": "{prefix} {bay}{level} {pos}",
+      "seg": {
+       "level": {
+        "kind": "alpha"
+       }
+      }
+     },
+     "depth_mode": "cell"
+    },
+    {
+     "uid": "a",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "IN1",
+     "x": 1,
+     "y": 1,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2,
+      "cells_per_level": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "b",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "OUT1",
+     "x": 15,
+     "y": 15,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "c",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "OWN",
+     "x": 1,
+     "y": 2,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {
+      "tpl": "{level} {bay}",
+      "sep": "",
+      "bay_dir": "rtl"
+     }
+    }
+   ],
+   "context": {
+    "a": {
+     "addr": {
+      "tpl": "{prefix} {bay}{level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": 1,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "cell"
+    },
+    "c": {
+     "addr": {
+      "tpl": "{level} {bay}",
+      "sep": "",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "rtl",
+      "level_dir": "up"
+     },
+     "zone": 1,
+     "row": 2,
+     "spot": null,
+     "depth_mode": "cell"
+    },
+    "b": {
+     "addr": {
+      "tpl": "{row} {bay} {level}",
+      "sep": "/",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": 2,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "zOuter": {
+     "addr": {
+      "tpl": "{row} {bay} {level}",
+      "sep": "/",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": null,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "zInner": {
+     "addr": {
+      "tpl": "{prefix} {bay}{level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "up",
+      "row_mode": "seq",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": null,
+     "spot": null,
+     "depth_mode": "cell"
+    }
+   },
+   "codes": {
+    "a": [
+     "IN1-01A-1",
+     "IN1-01A-2",
+     "IN1-01B-1",
+     "IN1-01B-2",
+     "IN1-02A-1",
+     "IN1-02A-2",
+     "IN1-02B-1",
+     "IN1-02B-2"
+    ],
+    "b": [
+     "01/01/1",
+     "01/01/2",
+     "01/02/1",
+     "01/02/2"
+    ],
+    "c": [
+     "102",
+     "202",
+     "101",
+     "201"
+    ]
+   }
+  },
+  {
+   "name": "напрями рядів: right, повернуті місця",
+   "site_addr": {
+    "tpl": "{row} {bay} {level} {pos}",
+    "row_from": "right",
+    "row_mode": "snake"
+   },
+   "slots": [
+    {
+     "uid": "p1",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "Q1",
+     "x": 10,
+     "y": 0,
+     "rotation": 0,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "p2",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "Q2",
+     "x": 5,
+     "y": 0,
+     "rotation": 270,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "p3",
+     "layer_id": 1,
+     "template": "pallet_rack",
+     "code_prefix": "Q3",
+     "x": 0,
+     "y": 0,
+     "rotation": 180,
+     "params": {
+      "bays": 2,
+      "levels": 2
+     },
+     "addr": {}
+    },
+    {
+     "uid": "p4",
+     "layer_id": 1,
+     "template": "floor_stack",
+     "code_prefix": "Q4",
+     "x": -5,
+     "y": 0,
+     "rotation": 90,
+     "params": {
+      "rows": 2,
+      "cols": 2
+     },
+     "addr": {}
+    }
+   ],
+   "context": {
+    "p1": {
+     "addr": {
+      "tpl": "{row} {bay} {level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "right",
+      "row_mode": "snake",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 4,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "p2": {
+     "addr": {
+      "tpl": "{row} {bay} {level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "right",
+      "row_mode": "snake",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 3,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "p3": {
+     "addr": {
+      "tpl": "{row} {bay} {level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "right",
+      "row_mode": "snake",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 2,
+     "spot": null,
+     "depth_mode": "level"
+    },
+    "p4": {
+     "addr": {
+      "tpl": "{row} {bay} {level} {pos}",
+      "sep": "-",
+      "seg": {
+       "zone": {
+        "kind": "alpha",
+        "width": 1,
+        "start": 1
+       },
+       "row": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "bay": {
+        "kind": "num",
+        "width": 2,
+        "start": 1
+       },
+       "level": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       },
+       "pos": {
+        "kind": "num",
+        "width": 1,
+        "start": 1
+       }
+      },
+      "row_from": "right",
+      "row_mode": "snake",
+      "bay_dir": "ltr",
+      "level_dir": "up"
+     },
+     "zone": null,
+     "row": 1,
+     "spot": null,
+     "depth_mode": "level"
+    }
+   },
+   "codes": {
+    "p1": [
+     "04-02-1",
+     "04-02-2",
+     "04-01-1",
+     "04-01-2"
+    ],
+    "p2": [
+     "03-01-1",
+     "03-01-2",
+     "03-02-1",
+     "03-02-2"
+    ],
+    "p3": [
+     "02-01-1",
+     "02-01-2",
+     "02-02-1",
+     "02-02-2"
+    ],
+    "p4": [
+     "01-02-1",
+     "01-01-1",
+     "01-02-2",
+     "01-01-2"
+    ]
+   }
+  }
+ ]
+}

@@ -4,7 +4,7 @@
 // всередині — стан ядра (site.schema = 2); документи прототипу старого вигляду переводить `fromProto` під час читання.
 // Публікація — імітація: записів Odoo немає, підтвердження зберігає знімок версії (CD-20, CD-21). Права: користувач — менеджер,
 // ролі перевіряються режимом «Переглянути як» (S.app.viewAs).
-import { BaseAdapter, StoreError } from "../adapter.js";
+import { BaseAdapter, StoreError, newUid } from "../adapter.js";
 import { clone } from "../util.js";
 import { SEED_REV, buildEmptySite, buildSample, fromProto, makeSnapshot, versionFromProto } from "./sample.js";
 import { createFiles, createStorage } from "./storage.js";
@@ -15,7 +15,7 @@ const RIGHTS = { is_manager: true, roles: ["manager"], editable_layer_ids: [], c
 
 /** Знімок документа площадки без службових полів, що обчислюються (змінюються без правки даних). */
 const siteDoc = (site) => {
-    const { draft_rev: _r, draft_changes: _c, has_changes: _h, ...rest } = site;
+    const { draft_rev: _r, draft_changes: _c, has_changes: _h, library: _l, ...rest } = site; // library — спільна для проєктів (S1)
     return rest;
 };
 const settingsDoc = (s) => ({ checks: s.checks, reach_n: s.reach_n, labels: s.labels });
@@ -62,7 +62,7 @@ export class ArtifactAdapter extends BaseAdapter {
     constructor(o = {}) {
         super({ autosaveMs: 700, ...o });
         this.kind = "artifact";
-        this.capabilities = { publish: true, check: false, files: false };
+        this.capabilities = { publish: true, check: false, files: false, library: true };
         this.env = o.env || globalThis;
         this.storage = o.storage || createStorage(this.env);
         this.files = o.files || createFiles(this.env);
@@ -183,6 +183,7 @@ export class ArtifactAdapter extends BaseAdapter {
         }
         const { base: _b, snaps: _s, ...state } = st;
         state.rights = { ...RIGHTS };
+        Object.defineProperty(state.site, "library", { value: await this._readLibrary(), writable: true, configurable: true, enumerable: false }); // не потрапляє в клони й знімки
         state.site.draft_changes = this._countChanges(state);
         state.site.has_changes = state.site.draft_changes > 0;
         this._st = state;
@@ -334,6 +335,42 @@ export class ArtifactAdapter extends BaseAdapter {
 
     async saveSite() {
         this.save(this.getState());
+    }
+
+    /** Адресація площадки (S1): поля лежать у S.site і записуються разом із документом площадки; перенумерацію виконує ядро. */
+    async saveAddr() {
+        this.save(this.getState(), { now: true });
+        return { reload: false };
+    }
+
+    /* ===== бібліотека типів і пресетів (S1, F09-07): спільна для проєктів — settings/library ===== */
+    async _readLibrary() {
+        const lib = await this.storage.get("settings", "library");
+        return { types: [...((lib && lib.types) || [])], presets: [...((lib && lib.presets) || [])] };
+    }
+
+    /** `{op: "list"}` → {types, presets}; `{op: "save", kind, id?, vals}` → {record}; `{op: "delete", kind, id}` → {id}. */
+    async library(req) {
+        await this._boot();
+        const lib = await this._readLibrary();
+        const key = req.kind === "preset" ? "presets" : "types";
+        if (req.op === "list") {
+            return lib;
+        }
+        if (req.op === "delete") {
+            lib[key] = lib[key].filter((r) => String(r.id) !== String(req.id));
+            await this.storage.set("settings", "library", lib);
+            return { id: req.id };
+        }
+        const i = lib[key].findIndex((r) => String(r.id) === String(req.id));
+        const rec = i >= 0 ? { ...lib[key][i], ...req.vals, id: lib[key][i].id } : { ...req.vals, id: newUid(), is_custom: key === "types" ? true : undefined };
+        if (i >= 0) {
+            lib[key][i] = rec;
+        } else {
+            lib[key].push(rec);
+        }
+        await this.storage.set("settings", "library", lib);
+        return { record: rec };
     }
 
     async saveCheck() {

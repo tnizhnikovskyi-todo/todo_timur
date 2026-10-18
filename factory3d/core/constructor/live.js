@@ -68,7 +68,7 @@ function slotForChecks(s) {
 /** Стан редактора → формат API-03 для `runChecks` (id — uid сутностей, варіанти — з каталогу). */
 export function toCheckState() {
     return {
-        site: { building: S.site.building },
+        site: { building: S.site.building, addr: S.site.addr || null, depth_mode: S.site.depth_mode || "level" },
         layers: S.layers,
         slots: S.slots.map(slotForChecks),
         placements: S.placements,

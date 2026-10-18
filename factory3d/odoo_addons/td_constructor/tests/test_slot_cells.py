@@ -48,7 +48,8 @@ class TestSlotCells(TransactionCase):
 
     def test_ac12_templates(self):
         self.assertEqual(
-            set(cells.SLOT_TEMPLATES), {'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'machine_spot', 'zone'}
+            set(cells.SLOT_TEMPLATES),
+            {'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'floor_spot', 'machine_spot', 'zone'},  # + S1
         )
 
     def test_ac13_overrides(self):
