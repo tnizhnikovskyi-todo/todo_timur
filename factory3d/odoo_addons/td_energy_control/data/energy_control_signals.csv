@@ -1,0 +1,1 @@
+code,name,quantity,kind,unit,equipment,source,address,period_s,store_period_s,decimals,states,warn_low,warn_high,alarm_low,alarm_high,alarm_states,alarm_title,hysteresis,min_duration_s,viewer_visible,derived_from,origin,binding

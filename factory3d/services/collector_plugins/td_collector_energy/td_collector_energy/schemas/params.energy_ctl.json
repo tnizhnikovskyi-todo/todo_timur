@@ -1,0 +1,9 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "additionalProperties": true,
+ "properties": {
+  "engine": {"type": "object", "properties": {
+   "tick_s": {"type": "number", "minimum": 1, "maximum": 10},
+   "config_poll_s": {"type": "number", "minimum": 5, "maximum": 60}}}}
+}

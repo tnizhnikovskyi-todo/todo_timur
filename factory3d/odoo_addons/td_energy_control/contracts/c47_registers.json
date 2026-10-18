@@ -1,0 +1,286 @@
+{
+ "assumption": "A-45 (Q-26): карта регістрів — допущення для емулятора; на об'єкті — документ контролера",
+ "source": {
+  "code": "MB-U73-SWB-CMD",
+  "type": "modbus_tcp",
+  "unit": 73,
+  "host": "iot-sim",
+  "port": 502,
+  "window": "HR 200…291",
+  "fc_read": 3,
+  "fc_write": 6,
+  "type_raw": "u16"
+ },
+ "registers": [
+  {
+   "code": "energy_control/ctl/heartbeat",
+   "hr": 290,
+   "rw": "R",
+   "kind": "counter",
+   "unit": "",
+   "scale": null,
+   "semantic": "контролер жив (0…65535, +1 за секунду)"
+  },
+  {
+   "code": "energy_control/ctl/remote",
+   "hr": 291,
+   "rw": "R",
+   "kind": "state",
+   "unit": "",
+   "scale": null,
+   "semantic": "1 — дистанційне керування дозволено",
+   "states": {
+    "0": "local",
+    "1": "remote"
+   }
+  },
+  {
+   "code": "energy_control/qs/cmd",
+   "hr": 200,
+   "rw": "W",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 нічого, 1 розімкнути, 2 замкнути; скидається в 0"
+  },
+  {
+   "code": "energy_control/qs/ack",
+   "hr": 201,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 немає, 1 виконано, 2 відмовлено блокуванням, 3 збій"
+  },
+  {
+   "code": "energy_control/ats/parallel_lock",
+   "hr": 202,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "блокування паралельної роботи T1/T2 від АВР"
+  },
+  {
+   "code": "energy_control/pfc/mode",
+   "hr": 210,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 ручний, 1 авто"
+  },
+  {
+   "code": "energy_control/pfc/cos_target",
+   "hr": 211,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "",
+   "scale": 0.01,
+   "semantic": "95 = 0,95"
+  },
+  {
+   "code": "energy_control/bess/mode",
+   "hr": 220,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 авто, 1 заряд, 2 розряд, 3 утримання"
+  },
+  {
+   "code": "energy_control/bess/setpoint_kw",
+   "hr": 221,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "кВт",
+   "scale": null,
+   "semantic": "0…200"
+  },
+  {
+   "code": "energy_control/bess/until_soc",
+   "hr": 222,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "0…100 (0 — без межі)"
+  },
+  {
+   "code": "energy_control/bess/valid_s",
+   "hr": 223,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "с",
+   "scale": null,
+   "semantic": "сторожовий таймер: по закінченню режим 0 (авто)"
+  },
+  {
+   "code": "energy_control/bess/remaining_s",
+   "hr": 224,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "с",
+   "scale": null,
+   "semantic": "залишок valid_s"
+  },
+  {
+   "code": "energy_control/bess/reserve_pct",
+   "hr": 225,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "підлога розряду контролера (30)"
+  },
+  {
+   "code": "energy_control/bess/ack",
+   "hr": 226,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 прийнято, 2 відмовлено (підлога SOC/температура), 3 збій"
+  },
+  {
+   "code": "energy_control/bess/temp_c",
+   "hr": 227,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "°C",
+   "scale": 0.1,
+   "semantic": "температура шафи"
+  },
+  {
+   "code": "energy_control/chp/cmd",
+   "hr": 230,
+   "rw": "W",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 нічого, 1 пуск, 2 зупинка"
+  },
+  {
+   "code": "energy_control/chp/ack",
+   "hr": 231,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "0 немає, 1 виконано, 2 відмовлено, 3 збій"
+  },
+  {
+   "code": "energy_control/chp/permit",
+   "hr": 232,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "",
+   "scale": null,
+   "semantic": "дозвіл оператора КГУ 0/1"
+  },
+  {
+   "code": "energy_control/chp/gas_bar",
+   "hr": 233,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "бар",
+   "scale": 0.01,
+   "semantic": "тиск газу (210 = 2,10)"
+  },
+  {
+   "code": "energy_control/air/setpoint_bar",
+   "hr": 240,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "бар",
+   "scale": 0.01,
+   "semantic": "уставка тиску (700 = 7,00)"
+  },
+  {
+   "code": "energy_control/air/min_consumer_bar",
+   "hr": 241,
+   "rw": "R",
+   "kind": "gauge",
+   "unit": "бар",
+   "scale": 0.01,
+   "semantic": "мінімальний тиск споживачів (620)"
+  },
+  {
+   "code": "energy_control/pv/limit_pct",
+   "hr": 250,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "обмеження потужності інверторів СЕС 0…100"
+  },
+  {
+   "code": "energy_control/shed/CHARGING/limit_pct",
+   "hr": 260,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "ліміт навантаження 0…100"
+  },
+  {
+   "code": "energy_control/shed/RV-ALL/limit_pct",
+   "hr": 261,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "ліміт навантаження 0…100"
+  },
+  {
+   "code": "energy_control/shed/DRY-1/limit_pct",
+   "hr": 262,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "ліміт навантаження 0…100"
+  },
+  {
+   "code": "energy_control/shed/COMPRESSOR/limit_pct",
+   "hr": 263,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "ліміт навантаження 0…100"
+  },
+  {
+   "code": "energy_control/shed/LP-1/limit_pct",
+   "hr": 264,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "%",
+   "scale": null,
+   "semantic": "ліміт навантаження 0…100"
+  },
+  {
+   "code": "energy_control/shed/valid_s",
+   "hr": 270,
+   "rw": "RW",
+   "kind": "gauge",
+   "unit": "с",
+   "scale": null,
+   "semantic": "сторожовий таймер лімітів скидання й pv/limit_pct: по закінченню усе 100 %"
+  }
+ ],
+ "virtual_signals": {
+  "source": "ENERGY-CTL",
+  "type": "energy_ctl",
+  "codes": [
+   "energy_control/intent",
+   "energy_control/auto/heartbeat",
+   "energy_control/auto/peak/state",
+   "energy_control/auto/self/state",
+   "energy_control/auto/pfc/state",
+   "energy_control/auto/night/state",
+   "energy_control/auto/backup/state",
+   "energy_control/auto/chp/state"
+  ]
+ }
+}

@@ -1,0 +1,31 @@
+{
+ "action_id": 55,
+ "token": "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZg",
+ "ttl_s": 60,
+ "kind": "qs_close",
+ "cls": "B",
+ "title": "Увімкнути секційний вимикач QS?",
+ "text": "Секції 1 і 2 працюватимуть разом. Генерація СЕС піде на навантаження секції 1, експорт через T2 припиниться.",
+ "sub": "секції 1 і 2 разом",
+ "checks": [
+  {
+   "code": "ats_parallel_lock",
+   "label": "Блокування паралельної роботи T1 і T2 від АВР — увімкнено",
+   "state": "ok",
+   "hard": true,
+   "detail": ""
+  },
+  {
+   "code": "qs_current_ok",
+   "label": "Струм через QS після вмикання ≈ 40 А з 1600 А",
+   "state": "ok",
+   "hard": true,
+   "detail": "40 А ≤ 1280 А"
+  }
+ ],
+ "blocked": false,
+ "blocked_reason": null,
+ "needs_second": true,
+ "confirm_label": "Підтвердити (1/2)",
+ "disabled_reason": null
+}

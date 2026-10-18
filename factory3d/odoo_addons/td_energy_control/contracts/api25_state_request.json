@@ -1,0 +1,69 @@
+{
+ "collector": "COL-1",
+ "config_version_applied": 17,
+ "sent_at": "2026-10-18T11:20:03Z",
+ "engine": {
+  "mode": "auto",
+  "reason": null,
+  "started_at": "2026-10-18T06:00:00Z",
+  "ticks": 19401,
+  "tick_ms_p95": 14,
+  "writes_last_min": 2,
+  "controller_remote": true
+ },
+ "scenarios": {
+  "peak": {
+   "state": "armed",
+   "ts": "2026-10-18T11:20:03Z",
+   "facts": {
+    "margin_kw": 402,
+    "proj_kw": 358,
+    "grid_kw": 356
+   }
+  },
+  "self": {
+   "state": "off",
+   "ts": "2026-10-18T11:20:03Z",
+   "facts": {}
+  },
+  "pfc": {
+   "state": "warn",
+   "ts": "2026-10-18T11:20:03Z",
+   "facts": {
+    "fault": "PFC-2 ступінь 3"
+   }
+  }
+ },
+ "actions": [
+  {
+   "id": 55,
+   "idem": "3f9a7c0e1d2b4a5f6e7d8c9b0a1f2e3d4c5b6a79",
+   "state": "done",
+   "step": 4,
+   "steps_total": 4,
+   "ts": "2026-10-18T11:20:03Z",
+   "result": "BESS: заряд 50 кВт до 16:00 (valid_s 5700)",
+   "error": null,
+   "checks": [
+    {
+     "code": "bess_soc_lt_limit",
+     "state": "ok",
+     "hard": true,
+     "detail": "82 % < 95 %"
+    }
+   ]
+  }
+ ],
+ "events": [
+  {
+   "event_id": "b9e1c3a57d2f4086a1b3c5d7e9f02468",
+   "ts": "2026-10-18T11:20:03Z",
+   "scenario": "peak",
+   "kind": "auto_step",
+   "text": "BESS · розряд 62 кВт",
+   "signal": "energy_control/bess/mode",
+   "value": 2,
+   "result": "виконано"
+  }
+ ]
+}

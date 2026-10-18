@@ -1,0 +1,12 @@
+{
+ "accepted": true,
+ "run_id": "r-3f9a",
+ "state": "executing",
+ "checks": [
+  {
+   "code": "controller_remote",
+   "state": "ok",
+   "detail": "remote=1"
+  }
+ ]
+}

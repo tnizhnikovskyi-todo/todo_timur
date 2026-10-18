@@ -1,0 +1,8 @@
+{
+ "action_id": 55,
+ "state": "awaiting_second",
+ "state_label": "Очікує другого підтвердження",
+ "needs_second": true,
+ "message": "Очікуємо друге підтвердження іншим енергетиком.",
+ "blocked_reason": null
+}

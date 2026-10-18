@@ -1,0 +1,17 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_energy_scenario_user,td.energy.scenario user,model_td_energy_scenario,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_scenario_admin,td.energy.scenario admin,model_td_energy_scenario,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_shed_item_user,td.energy.shed.item user,model_td_energy_shed_item,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_shed_item_chief,td.energy.shed.item chief,model_td_energy_shed_item,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_shed_item_admin,td.energy.shed.item admin,model_td_energy_shed_item,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_command_kind_user,td.energy.command.kind user,model_td_energy_command_kind,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_command_kind_admin,td.energy.command.kind admin,model_td_energy_command_kind,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_interlock_user,td.energy.interlock user,model_td_energy_interlock,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_interlock_admin,td.energy.interlock admin,model_td_energy_interlock,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_action_user,td.energy.action user,model_td_energy_action,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_action_admin,td.energy.action admin,model_td_energy_action,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_schedule_slot_user,td.energy.schedule.slot user,model_td_energy_schedule_slot,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_schedule_slot_chief,td.energy.schedule.slot chief,model_td_energy_schedule_slot,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_schedule_slot_admin,td.energy.schedule.slot admin,model_td_energy_schedule_slot,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_control_state_user,td.energy.control.state user,model_td_energy_control_state,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_control_state_admin,td.energy.control.state admin,model_td_energy_control_state,td_factory3d.group_td_admin,1,1,1,1

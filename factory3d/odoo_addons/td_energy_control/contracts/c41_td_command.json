@@ -1,0 +1,19 @@
+{
+ "signal": "energy_control/intent",
+ "source_type": "energy_ctl",
+ "module": "energy_control",
+ "origin": "energy",
+ "value": 0,
+ "payload_ref": "api26_intent.json",
+ "fields": [
+  "energy_action_id"
+ ],
+ "states": [
+  "queued",
+  "sent",
+  "done",
+  "failed",
+  "expired",
+  "cancelled"
+ ]
+}

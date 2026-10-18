@@ -1,0 +1,5 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "API-26 intent (C-39); еталон — odoo_addons/td_energy_control/contracts/api26_intent.json",
+ "type": "object"
+}

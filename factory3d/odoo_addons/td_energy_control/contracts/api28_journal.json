@@ -1,0 +1,21 @@
+{
+ "items": [
+  {
+   "id": 812,
+   "time": "14:06",
+   "what": "Заявка ТО",
+   "detail": "PFC-2: ступінь 3 не вмикається",
+   "who": "автоматика",
+   "result": "створено",
+   "result_kind": "info",
+   "state": "done",
+   "undo_available": false,
+   "awaiting_second": false,
+   "ref": {
+    "model": "maintenance.request",
+    "id": 48
+   }
+  }
+ ],
+ "more": false
+}

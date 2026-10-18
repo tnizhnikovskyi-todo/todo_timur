@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Нових груп немає (E-06): td_energy.group_td_energy_{user,manager,chief}, td_factory3d.group_td_admin. Власник: A -->
+</odoo>

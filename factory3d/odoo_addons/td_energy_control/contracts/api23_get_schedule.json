@@ -1,0 +1,19 @@
+{
+ "day": "2026-10-18",
+ "now": 14.333,
+ "rows": [
+  {
+   "resource": "bess",
+   "name": "BESS",
+   "bars": [
+    {
+     "from": 7.5,
+     "to": 11.0,
+     "label": "розряд · пік",
+     "cls": "d",
+     "source": "plan"
+    }
+   ]
+  }
+ ]
+}

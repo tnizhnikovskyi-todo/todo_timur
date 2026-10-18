@@ -1,0 +1,35 @@
+{
+ "td_energy.viewer_links": {
+  "key": "default",
+  "entry": {
+   "open": "({code}) => Promise"
+  },
+  "owner": "td_energy_viewer3d (D); читає B у common/actions.js"
+ },
+ "td_energy.node_actions": {
+  "key": "td_energy_control",
+  "entry": {
+   "match": "(node) => bool",
+   "actions": "(node, ctx) => Promise<[{code, label, cls, onClick}]>"
+  },
+  "owner": "td_energy_control (B); читає B у pult/sld.js"
+ },
+ "td_energy.advice_handlers": {
+  "key": "control",
+  "entry": "({action, advice, component}) => Promise<bool>"
+ },
+ "bus": {
+  "channel": "td_energy_control",
+  "message": "td_energy_control/update",
+  "payload": {
+   "kinds": [
+    "action",
+    "scenario",
+    "engine",
+    "schedule",
+    "shed"
+   ],
+   "ts": "2026-10-18T11:20:03Z"
+  }
+ }
+}

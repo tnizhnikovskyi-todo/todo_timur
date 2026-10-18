@@ -1,0 +1,58 @@
+{
+ "layer": {
+  "schema": 1,
+  "thresholds": {
+   "warn_pct": 80,
+   "alarm_pct": 100
+  },
+  "nodes": [
+   {
+    "code": "BW-2",
+    "scene": "BW-2",
+    "kind": "line",
+    "name": "ШР-2",
+    "state": "ok",
+    "load": 0.3,
+    "i_a": 192,
+    "p_kw": 124.0,
+    "rating_a": 630,
+    "card": true,
+    "alarms": 0,
+    "worst": null,
+    "title": null
+   },
+   {
+    "code": "C2",
+    "scene": "CABLES",
+    "kind": "line",
+    "name": "C2",
+    "state": "alarm",
+    "load": null,
+    "i_a": null,
+    "p_kw": 128.0,
+    "rating_a": null,
+    "card": true,
+    "alarms": 1,
+    "worst": "bad",
+    "title": "Лічильник PM-QF-C2 не на зв'язку"
+   }
+  ],
+  "alarms": [
+   {
+    "id": 212,
+    "node": "C2",
+    "scene": "CABLES",
+    "level": "bad",
+    "title": "Лічильник PM-QF-C2 не на зв'язку",
+    "time": "13:47",
+    "state": "active"
+   }
+  ],
+  "summary": {
+   "alarm": 1,
+   "warn": 2,
+   "gen": 1,
+   "off": 3
+  }
+ }
+}
