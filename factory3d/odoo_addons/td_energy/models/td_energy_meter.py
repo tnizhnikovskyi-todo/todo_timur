@@ -2,12 +2,15 @@ import logging
 import re
 from datetime import timedelta
 
+from dateutil.relativedelta import relativedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 from ..tools import dates
 from ..tools.counter import Series
-from ..tools.dates import param_float
+from ..tools.dates import param_bool, param_float
+from .td_energy_event import split_text
 
 _logger = logging.getLogger(__name__)
 
@@ -97,6 +100,12 @@ class F3dEnergyMeter(models.Model):
         help="Правдоподібність показань після скидання лічильника (R-03 п. 2).",
     )
     ct_ratio = fields.Char(string="Трансформатори струму", size=16)
+    # --- W1 (M-23): повірка ---------------------------------------------------------------------------
+    last_verification = fields.Date(string="Остання повірка")
+    verification_months = fields.Integer(string="Міжповірочний інтервал, міс.", default=12)
+    next_verification = fields.Date(
+        string="Наступна повірка", compute="_compute_next_verification", store=True, readonly=False
+    )
     unit_id = fields.Integer(related="node_id.unit_id", string="Modbus unit")
     company_id = fields.Many2one(related="node_id.company_id", store=True)
     note = fields.Text(string="Примітка")
@@ -125,6 +134,20 @@ class F3dEnergyMeter(models.Model):
                     raise ValidationError(_("Лічильник %s: сигнал енергії має бути в кВт·год.", rec.code))
             if rec.p_signal_id and rec.p_signal_id.unit != POWER_UNIT:
                 raise ValidationError(_("Лічильник %s: потужність має бути в кВт.", rec.code))
+
+    @api.depends("last_verification", "verification_months")
+    def _compute_next_verification(self):
+        for rec in self:
+            if rec.last_verification and rec.verification_months > 0:
+                rec.next_verification = rec.last_verification + relativedelta(months=rec.verification_months)
+            else:  # задана вручну (R-34) або порожньо
+                rec.next_verification = rec.next_verification or False
+
+    @api.constrains("verification_months")
+    def _check_verification_months(self):
+        for rec in self:
+            if rec.verification_months <= 0:
+                raise ValidationError(_("Міжповірочний інтервал лічильника %s має бути більшим за нуль.", rec.code))
 
     def action_view_intervals(self):
         """Графік 15-хв профілю за останні 2 доби (M-03)."""
@@ -249,6 +272,8 @@ class F3dEnergyMeter(models.Model):
                     state = "ok"
             if state != rec.data_state:
                 rec.write({"data_state": state, "data_state_since": now})
+                if state == "ok":  # W1 R-25: лічильник знову на зв'язку — подія `meter` вирішена
+                    Event._td_auto_resolve("meter", code=rec.code)
             if state == "stale" and sig.last_ts and now - sig.last_ts > gap_alarm:
                 minutes = int((now - sig.last_ts).total_seconds() // 60)
                 last_local = dates.to_local(sig.last_ts).strftime("%H:%M")
@@ -261,3 +286,48 @@ class F3dEnergyMeter(models.Model):
                         ts=now,
                         node=rec.node_id,
                     )
+
+    # --- W1 (R-34): повірка лічильників -----------------------------------------------------------------
+    @api.model
+    def _cron_verification(self):
+        """R-34: нагадування про повірку подією `VERIFY-<код>`; після оновлення дати — авто-вирішення;
+        `trip` старіші за 24 год — вирішені (R-25)."""
+        if not param_bool(self.env, "read_enabled"):
+            return False
+        try:
+            with self.env.cr.savepoint():
+                self._td_verification_events()
+        except Exception:
+            _logger.exception("td_energy: крон повірки лічильників")
+            return False
+        return True
+
+    @api.model
+    def _td_verification_events(self):
+        now = dates.now_utc(self.env)
+        today = dates.local_day(now)
+        warn_days = int(param_float(self.env, "verify_warn_days", 30))
+        Event = self.env["td.energy.event"].sudo()
+        for rec in self.sudo().search([("active", "=", True), ("next_verification", "!=", False)]):
+            code = "VERIFY-%s" % rec.code
+            left = (rec.next_verification - today).days
+            if left > warn_days:
+                Event._td_auto_resolve("meter", code=code)
+                continue
+            overdue = left < 0
+            date_txt = rec.next_verification.strftime("%d.%m.%Y")
+            if overdue:
+                text = "Повірка лічильника %s: прострочена з %s. Заплануйте повірку." % (rec.code, date_txt)
+            else:
+                text = "Повірка лічильника %s: до %s. Заплануйте повірку." % (rec.code, date_txt)
+            opened = Event.search([("kind", "=", "meter"), ("code", "=", code), ("state", "in", ("active", "acked"))])
+            if opened:
+                if overdue and opened[:1].level == "warn":
+                    title, detail = split_text(text)
+                    opened.write({"level": "bad", "text": text, "title": title, "detail": detail})
+                continue
+            Event._f3d_log("bad" if overdue else "warn", "meter", code, text, ts=now, node=rec.node_id, dedup_min=1440)
+        old_trips = Event.search([("kind", "=", "trip"), ("state", "in", ("active", "acked")),
+                                  ("ts", "<", now - timedelta(hours=24))])  # fmt: skip
+        if old_trips:
+            old_trips.write({"state": "resolved", "resolved_at": now})

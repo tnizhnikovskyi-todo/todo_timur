@@ -108,7 +108,7 @@ class TestSecurity(EnergyMixin, F3DEnergyCase):
         Source = self.env["td.source"].sudo()
         self.set_read(False)
         sources = Source.search([("module", "=", "energy")])
-        self.assertEqual(len(sources.filtered(lambda s: s.type == "modbus_tcp")), 68)
+        self.assertEqual(len(sources.filtered(lambda s: s.type == "modbus_tcp")), 69)
         self.assertFalse(any(sources.mapped("read_enabled")))
         before = {
             m: self.env[m].search_count([]) for m in ("td.energy.interval", "td.energy.alloc", "td.energy.balance")
