@@ -4,7 +4,7 @@
         <section class="o_td_en_card o_td_res_notes" aria-labelledby="o_td_res_notes_h">
             <div class="o_td_en_card_head">
                 <h2 id="o_td_res_notes_h">Що помітила система</h2>
-                <button type="button" class="o_td_en_btn o_td_en_btn--inline o_td_res_all_notes" aria-label="Усі резерви економії"
+                <button type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_res_all_notes" aria-label="Усі резерви економії"
                         t-on-click="openAll">Усі резерви</button>
             </div>
             <ul class="o_td_res_notes_list" t-if="props.notes.length">
@@ -14,7 +14,7 @@
                         <span class="o_td_res_note_text" t-esc="note.text"/>
                     </div>
                     <span t-if="saving(note)" class="o_td_res_note_save" t-esc="saving(note)"/>
-                    <button type="button" class="o_td_en_btn o_td_en_btn--sm o_td_res_note_act"
+                    <button type="button" class="o_td_en_btn o_td_res_note_act"
                             t-att-data-action-code="action(note).code"
                             t-att-aria-label="action(note).label + ': ' + note.title"
                             t-on-click="() => this.run(note)" t-esc="action(note).label"/>
@@ -25,7 +25,7 @@
                     <span class="o_td_res_note_title">Відхилень немає</span>
                     <span class="o_td_res_note_text">Споживання в межах норм і бази.</span>
                 </div>
-                <button t-if="canManage" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_res_thresholds"
+                <button t-if="canManage" type="button" class="o_td_en_btn o_td_res_thresholds"
                         aria-label="Налаштувати пороги резервів" t-on-click="openSettings">Налаштувати пороги</button>
             </div>
         </section>

@@ -28,7 +28,9 @@ const waitFor = async (check, label, ms = 30000) => {
 };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-const run = (body) => body().then(() => console.log("test successful")).catch((error) => console.error("UI test failed: " + error));
+const run = (body) => body()
+    .then(() => console.log("test successful"))
+    .catch((error) => console.error("UI test failed: " + error));
 """
 
 
@@ -221,8 +223,9 @@ class TestW3Ui(HttpCase):
             }
             for (const code of codes) {
                 $('.o_td_res_tab_' + code).click();
-                await waitFor(() => $('.o_td_res_tab_' + code).getAttribute('aria-selected') === 'true', "вибір " + code);
-                await waitFor(() => $('.o_td_res_body') && $('.o_td_res_body').dataset.resource === code, "дані " + code);
+                const tab = $('.o_td_res_tab_' + code);
+                await waitFor(() => tab.getAttribute('aria-selected') === 'true', "вибір " + code);
+                await waitFor(() => $('.o_td_res_body')?.dataset.resource === code, "дані " + code);
                 await waitFor(() => $$('.o_td_res_kpi').length >= 3, "KPI " + code);
                 await waitFor(() => $('.o_td_res_chart svg'), "графік " + code);
                 await waitFor(() => $('.o_td_res_list_card'), "список " + code);
@@ -240,7 +243,8 @@ class TestW3Ui(HttpCase):
             "document.querySelector('.o_td_res .o_td_res_export')",
             """
             const href = $('.o_td_res_export').dataset.href;
-            if (!/^\\/td\\/energy\\/resources\\/export\\?day=\\d{4}-\\d{2}-\\d{2}$/.test(href)) { throw new Error("адреса експорту: " + href); }
+            const pattern = /^\\/td\\/energy\\/resources\\/export\\?day=\\d{4}-\\d{2}-\\d{2}$/;
+            if (!pattern.test(href)) { throw new Error("адреса експорту: " + href); }
             const all = await waitFor(() => $('.o_td_res_all_notes'), "«Усі резерви»");
             all.click();
             await waitFor(() => $('.o_list_view, .o_kanban_view, .o_form_view'), "відкрились резерви економії");

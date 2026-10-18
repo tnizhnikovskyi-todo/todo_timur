@@ -176,7 +176,8 @@ $td-res-muted: #4b5563;
     .o_td_res_note_title { font-weight: 600; }
     .o_td_res_note_text { font-size: 13px; color: $td-res-muted; }
     .o_td_res_note_save { flex: 0 0 auto; font-weight: 600; color: #065f46; }
-    .o_td_res_note .o_td_en_btn { flex: 0 0 auto; }
+    .o_td_res_note .o_td_en_btn { flex: 0 0 auto; font-size: 13px; }
+    .o_td_res_all_notes { color: #714B67; font-weight: 500; }
 }
 
 @media (max-width: 575px) {

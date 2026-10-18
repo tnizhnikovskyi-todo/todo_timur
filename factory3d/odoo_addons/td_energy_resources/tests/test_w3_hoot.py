@@ -2,7 +2,7 @@
 
 Запускає `/web/tests` у headless Chrome за зразком `td_energy/tests/test_w1_hoot.py`: набір відбирається за ім'ям модуля
 (`@td_energy_resources`), тож інші suite Odoo не виконуються. Тести — `static/tests/*.test.js`
-(бандл `web.assets_unit_tests`): `resources.test.js`; відповіді API беруться з `fixtures/contracts.js` (контракти C-01/C-02).
+(бандл `web.assets_unit_tests`): `resources.test.js`; відповіді API — `fixtures/contracts.js` (контракти C-01/C-02).
 """
 
 from odoo.tests import HttpCase, tagged
