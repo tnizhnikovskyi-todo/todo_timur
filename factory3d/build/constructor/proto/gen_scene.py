@@ -1,4 +1,4 @@
-# Дописує в src/seed.json шари й об'єкти сцени з інвентаря 3D-моделі (scene_inventory.json).
+# Дописує в core/constructor/artifact/seed/sample.json шари й об'єкти сцени з інвентаря 3D-моделі (scene_inventory.json).
 # Класифікація — спільна з сідом модуля: td_constructor/tools/scene_classify.py.
 # Запуск: python3 gen_scene.py [<корінь td_constructor>]; ідемпотентний (ключі layers/scene перезаписуються).
 import json
@@ -10,7 +10,7 @@ MOD = sys.argv[1] if len(sys.argv) > 1 else os.path.normpath(os.path.join(D, '..
 sys.path.insert(0, os.path.join(MOD, 'tools'))
 import scene_classify as sc  # noqa: E402
 
-SEED = os.path.join(D, 'src', 'seed.json')
+SEED = os.path.join(D, '..', '..', '..', 'core', 'constructor', 'artifact', 'seed', 'sample.json')
 inv = json.load(open(os.path.join(MOD, 'data', 'scene_inventory.json'), encoding='utf-8'))
 seed = json.load(open(SEED, encoding='utf-8'))
 for k in ('layers', 'scene'):

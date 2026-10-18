@@ -76,6 +76,7 @@ var REGISTRY_NAMES = ["panels", "dialogs", "checks", "shapes", "metrics", "menu"
 var registries = Object.fromEntries(REGISTRY_NAMES.map((n) => [n, new Registry(n)]));
 var CAPABILITY_NAMES = [
   "publish",
+  "check",
   "library",
   "storage",
   "stock",
@@ -124,9 +125,10 @@ var REQUIRED_METHODS = [
   "publish",
   "restoreVersion",
   "uploadModel",
-  "modelUrl",
+  "loadModel",
   "attachUnderlay",
   "detachUnderlay",
+  "loadUnderlay",
   "ensureGroupIds"
 ];
 var StoreError = class extends Error {
@@ -181,7 +183,10 @@ var BaseAdapter = class {
   async ensureGroupIds() {
     return {};
   }
-  async modelUrl() {
+  async loadModel() {
+    return null;
+  }
+  async loadUnderlay() {
     return null;
   }
 };
@@ -1657,6 +1662,36 @@ function paramFields(tpl, params, o) {
   );
 }
 
+// core/constructor/host.js
+var host = {
+  loadThree: null,
+  buildGenericModel: null,
+  loadLoaders: null,
+  themeTarget: null,
+  themeKey: "f3d_constructor_theme",
+  themeAuto: false,
+  onTheme: null,
+  siteKey: "f3d_constructor_site",
+  dxfParserUrl: null,
+  services: {}
+};
+function setHost(h2 = {}) {
+  Object.assign(host, {
+    loadThree: null,
+    buildGenericModel: null,
+    loadLoaders: null,
+    themeTarget: null,
+    themeKey: "f3d_constructor_theme",
+    themeAuto: false,
+    onTheme: null,
+    siteKey: "f3d_constructor_site",
+    dxfParserUrl: null,
+    services: {}
+  });
+  Object.assign(host, h2);
+  return host;
+}
+
 // core/constructor/dxf.js
 var DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
 var DXF_MAX_BYTES = 5 * 1024 * 1024;
@@ -1670,7 +1705,7 @@ function loadDxfParser() {
   if (!parserPromise) {
     parserPromise = new Promise((resolve, reject) => {
       const el = document.createElement("script");
-      el.src = DXF_PARSER_URL;
+      el.src = host.dxfParserUrl || DXF_PARSER_URL;
       el.onload = () => resolve(window.DxfParser);
       el.onerror = () => {
         parserPromise = null;
@@ -1825,16 +1860,20 @@ async function loadUnderlays() {
   let Parser = null;
   for (const ly of S.layers) {
     const u = ly.underlay;
-    if (!u || u.format !== "dxf" || u.status !== "ready" || !u.url) {
+    if (!u || u.format !== "dxf" || u.status !== "ready") {
       continue;
     }
     try {
-      const r = await fetch(u.url, { credentials: "same-origin" });
-      if (!r.ok) {
+      const src = await E.adapter.loadUnderlay(ly);
+      if (!src) {
+        continue;
+      }
+      if (src.segs) {
+        V.uldata.set(ly.id, { segs: src.segs, n: src.segs.length / 4 });
         continue;
       }
       Parser = Parser || await loadDxfParser();
-      const res = parseDxf(await r.text(), Parser);
+      const res = parseDxf(src.text, Parser);
       u.bbox = res.bbox;
       V.uldata.set(ly.id, { segs: res.segs, n: res.n });
     } catch (e) {
@@ -2081,32 +2120,6 @@ function pickModeClick(pt) {
 }
 Object.assign(E, { openDxfPanel, renderDxfPanel, pickModeClick, loadUnderlays });
 
-// core/constructor/host.js
-var host = {
-  loadThree: null,
-  buildGenericModel: null,
-  loadLoaders: null,
-  themeTarget: null,
-  themeKey: "f3d_constructor_theme",
-  themeAuto: false,
-  siteKey: "f3d_constructor_site",
-  services: {}
-};
-function setHost(h2 = {}) {
-  Object.assign(host, {
-    loadThree: null,
-    buildGenericModel: null,
-    loadLoaders: null,
-    themeTarget: null,
-    themeKey: "f3d_constructor_theme",
-    themeAuto: false,
-    siteKey: "f3d_constructor_site",
-    services: {}
-  });
-  Object.assign(host, h2);
-  return host;
-}
-
 // core/constructor/live.js
 var live_exports = {};
 __export(live_exports, {
@@ -2125,6 +2138,8 @@ __export(checks_exports, {
   CHECK_KEYS: () => CHECK_KEYS,
   DEFAULT_EPS_M: () => DEFAULT_EPS_M,
   DEFAULT_REACH_M: () => DEFAULT_REACH_M,
+  Scene: () => Scene,
+  issue: () => issue,
   runChecks: () => runChecks,
   signature: () => signature,
   summarize: () => summarize
@@ -2453,14 +2468,15 @@ var CHECKERS = {
   utility_reach: checkUtilityReach,
   fire: checkFire
 };
+CHECK_KEYS.forEach((key, i) => registries.checks.add(key, { run: CHECKERS[key] }, { sequence: (i + 1) * 10, force: true }));
 function runChecks(state, configs, eps = DEFAULT_EPS_M) {
   const scene = new Scene(state);
   const byKey = new Map((configs || []).filter((c) => c.enabled).map((c) => [c.check, c]));
   const issues = [];
-  for (const key of CHECK_KEYS) {
-    const config = byKey.get(key);
+  for (const [key, chk] of registries.checks.getEntries()) {
+    const config = byKey.get(chk.config || key);
     if (config) {
-      issues.push(...CHECKERS[key](scene, config, epsOf(config, eps)));
+      issues.push(...chk.run(scene, config, epsOf(config, eps)));
     }
   }
   return issues;
@@ -2658,6 +2674,7 @@ function setActiveLayer(id) {
   if (S.ui.layer === id) {
     return;
   }
+  V.hidden.delete(id);
   S.ui.layer = id;
   S.issues = runLive();
   E.syncScene();
@@ -3142,7 +3159,7 @@ function renderCatalogTab(root) {
             (p) => h(
               "div",
               { class: "pp" },
-              h("div", { class: "ph" }, h("b", null, p.name), h("button", { class: "fbtn sm", type: "button", title: "Тип: виробник, модель, категорія", onclick: () => E.openPassportForm(p.pid) }, "Тип")),
+              h("div", { class: "ph" }, h("b", null, p.name), h("button", { class: "fbtn sm", type: "button", title: "Тип: виробник, модель, категорія", onclick: () => E.openPassportForm(p) }, "Тип")),
               h("div", { class: "mf" }, [p.manufacturer, p.model].filter((x) => x && x !== "—").join(" · ") || "без виробника"),
               p.variants.map(
                 (v) => h(
@@ -3161,10 +3178,10 @@ function renderCatalogTab(root) {
                   h("span", { class: "vn" }, v.name),
                   h("span", { class: "vm" }, `${fmt(v.length / 1e3, 1)}×${fmt(v.width / 1e3, 1)}×${fmt(v.height / 1e3, 1)} м`, v.model && v.model.status === "ok" ? h("span", { class: "tag", title: "Є 3D-модель" }, "3D") : v.model && v.model.status === "pending_conversion" ? h("span", { class: "tag", title: "Очікує перетворення на сервері" }, "3D…") : null),
                   h("button", { class: "fbtn sm icon", type: "button", title: "Поставити на сцену", "aria-label": "Поставити на сцену", onclick: () => E.startPlacing({ kind: "placement", variantId: v.id }) }, ic("plus")),
-                  h("button", { class: "fbtn sm", type: "button", title: "Форма варіанта в Odoo: габарити, сервіс, 3D-модель", onclick: () => E.openVariantForm(v.rid, p.pid) }, "Змінити")
+                  h("button", { class: "fbtn sm", type: "button", title: "Картка варіанта: габарити, сервіс, 3D-модель", onclick: () => E.openVariantForm(v, p) }, "Змінити")
                 )
               ),
-              h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openVariantForm(null, p.pid) }, ic("plus"), "Варіант")
+              h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openVariantForm(null, p) }, ic("plus"), "Варіант")
             )
           )
         )
@@ -3532,7 +3549,7 @@ function renderPlacementProps(root, pl) {
             h("button", { class: "fbtn sm", type: "button", onclick: () => {
               const x = variantOf(pl.variant_id);
               if (x) {
-                E.openVariantForm(x.rid, passportOf(x.id).pid);
+                E.openVariantForm(x, passportOf(x.id));
               }
             } }, "Картка варіанта"),
             h("span", { class: "grow" }),
@@ -3797,7 +3814,9 @@ function renderChecksBlock() {
   if (layerList.length > 40) {
     frag.push(h("div", { class: "small muted" }, `… ще ${layerList.length - 40}`));
   }
-  frag.push(h("button", { class: "fbtn sm", type: "button", id: "btnValidate", style: { marginTop: "8px" }, onclick: () => E.validateOnServer() }, ic("check"), "Перевірити на сервері"));
+  if (can("check")) {
+    frag.push(h("button", { class: "fbtn sm", type: "button", id: "btnValidate", style: { marginTop: "8px" }, onclick: () => E.validateOnServer() }, ic("check"), "Перевірити на сервері"));
+  }
   const dis = !canManage();
   const cfg = S.settings.checks;
   frag.push(
@@ -4037,10 +4056,12 @@ __export(scene_exports, {
   buildSlotView: () => buildSlotView,
   camTarget: () => camTarget,
   cancelModes: () => cancelModes,
+  dashRect: () => dashRect,
   disposeScene: () => disposeScene,
   floorPoint: () => floorPoint,
   focusOn: () => focusOn,
   initScene: () => initScene,
+  lineGeo: () => lineGeo,
   poseView: () => poseView,
   recolorMats: () => recolorMats,
   requestRender: () => requestRender,
@@ -4052,7 +4073,8 @@ __export(scene_exports, {
   syncScene: () => syncScene,
   syncUnderlays: () => syncUnderlays,
   underlayVertex: () => underlayVertex,
-  updateVisual: () => updateVisual
+  updateVisual: () => updateVisual,
+  variantBody: () => variantBody
 });
 
 // core/constructor/three.js
@@ -5810,7 +5832,7 @@ async function restoreVersion(versionId, n) {
 }
 async function publish() {
   try {
-    await ctx.adapter.publish({ onClose: () => reload() });
+    await ctx.adapter.publish({ onClose: () => reload(), state: S });
   } catch (e) {
     toast(e.message || "Не вдалося підготувати публікацію.", "err");
   }
@@ -5831,8 +5853,8 @@ async function runDialog(name, args) {
   }
   return await registries.dialogs.get(name)(args || {}, dialogCtx());
 }
-var openVariantForm = (rid, pid) => runDialog("variantForm", { rid, pid });
-var openPassportForm = (pid) => runDialog("passportForm", { pid });
+var openVariantForm = (variant, passport) => runDialog("variantForm", { variant: variant || null, passport });
+var openPassportForm = (passport) => runDialog("passportForm", { passport: passport || null });
 var openRecord = (model, id) => runDialog("record", { model, id });
 function normalizeModel(obj) {
   const wrap = new THREE.Group();
@@ -5847,10 +5869,9 @@ function normalizeModel(obj) {
   return { obj: wrap, size };
 }
 async function loadVariantModels() {
-  if (V.testMode || !THREE.GLTFLoader) {
+  if (V.testMode) {
     return;
   }
-  const loader = new THREE.GLTFLoader();
   let any = false;
   for (const p of S.catalog) {
     for (const v of p.variants) {
@@ -5858,15 +5879,14 @@ async function loadVariantModels() {
         continue;
       }
       try {
-        const url = await ctx.adapter.modelUrl(v);
-        if (!url) {
+        const obj = await ctx.adapter.loadModel(v, THREE);
+        if (!obj) {
           continue;
         }
-        const gltf = await loader.loadAsync(url);
         if (!ctx) {
           return;
         }
-        V.models.set(v.id, normalizeModel(gltf.scene));
+        V.models.set(v.id, normalizeModel(obj));
         any = true;
       } catch (e) {
         console.warn("model", v.id, e);
@@ -5881,6 +5901,7 @@ var themeEl = () => host.themeTarget || ROOT.el;
 function applyTheme(t) {
   themeEl().dataset.theme = t;
   lsSet(host.themeKey, t);
+  host.onTheme?.(t);
   V.theme = t;
   if (V.ok) {
     E.recolorMats();
@@ -5916,7 +5937,7 @@ function bindEvents() {
       E.renderAll();
     })
   );
-  listen($("#btnNewSite"), "click", () => E.openNewSite());
+  listen($("#btnNewSite"), "click", () => runDialog("newSite"));
   listen($("#btnPublish"), "click", publish);
   listen($("#btnHistory"), "click", () => E.openHistory());
   listen($("#btnTheme"), "click", () => applyTheme(E.curTheme() === "dark" ? "light" : "dark"));
@@ -6075,6 +6096,7 @@ async function mountEditor(rootEl, { adapter, store, host: hostSvc, services, si
   const th = lsGet(host.themeKey);
   if (th === "dark" || th === "light") {
     themeEl().dataset.theme = th;
+    host.onTheme?.(th);
   } else if (!host.themeAuto) {
     themeEl().dataset.theme = "light";
   }
@@ -6136,7 +6158,7 @@ function unmountEditor() {
   ROOT.el = null;
   resetState();
 }
-Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord });
+Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord, normalizeModel, loadVariantModels });
 
 // core/constructor/adapter_odoo.js
 var adapter_odoo_exports = {};
@@ -6479,7 +6501,7 @@ var OdooAdapter = class extends BaseAdapter {
   constructor(o) {
     super(o);
     this.kind = "odoo";
-    this.capabilities = { publish: true, ...o.capabilities || {} };
+    this.capabilities = { publish: true, check: true, ...o.capabilities || {} };
     this.rpc = o.rpc;
     this.orm = o.orm;
     this.action = o.action;
@@ -6970,13 +6992,23 @@ var OdooAdapter = class extends BaseAdapter {
     }
     return await this._uploadModel(variantId, payload, opts);
   }
-  /** URL GLB-моделі варіанта (API-10; `?v=` — etag для скидання кешу) або null. */
-  async modelUrl(variant) {
+  /** Модель варіанта: GLB із вкладення (API-10; `?v=` — etag для скидання кешу) → Object3D або null. */
+  async loadModel(variant, T) {
     const m = variant?.model;
-    if (!m || m.status !== "ok" || !m.glb_url) {
+    if (!m || m.status !== "ok" || !m.glb_url || !T?.GLTFLoader) {
       return null;
     }
-    return m.glb_url + "?v=" + encodeURIComponent(variant.etag || "");
+    const gltf = await new T.GLTFLoader().loadAsync(m.glb_url + "?v=" + encodeURIComponent(variant.etag || ""));
+    return gltf.scene;
+  }
+  /** Підкладка DXF: текст файла з вкладення шару (`underlay.url`) або null. */
+  async loadUnderlay(layer) {
+    const u = layer?.underlay;
+    if (!u || u.format !== "dxf" || u.status !== "ready" || !u.url) {
+      return null;
+    }
+    const r = await fetch(u.url, { credentials: "same-origin" });
+    return r.ok ? { text: await r.text() } : null;
   }
   // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---
   loadSite(id) {

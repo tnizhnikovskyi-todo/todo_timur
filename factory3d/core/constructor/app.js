@@ -186,7 +186,7 @@ async function restoreVersion(versionId, n) {
 
 async function publish() {
     try {
-        await ctx.adapter.publish({ onClose: () => reload() });
+        await ctx.adapter.publish({ onClose: () => reload(), state: S });
     } catch (e) {
         toast(e.message || "Не вдалося підготувати публікацію.", "err");
     }
@@ -211,8 +211,8 @@ async function runDialog(name, args) {
     }
     return await registries.dialogs.get(name)(args || {}, dialogCtx());
 }
-const openVariantForm = (rid, pid) => runDialog("variantForm", { rid, pid });
-const openPassportForm = (pid) => runDialog("passportForm", { pid });
+const openVariantForm = (variant, passport) => runDialog("variantForm", { variant: variant || null, passport });
+const openPassportForm = (passport) => runDialog("passportForm", { passport: passport || null });
 const openRecord = (model, id) => runDialog("record", { model, id });
 
 /* --- моделі варіантів: GLB за адресою від адаптера (Odoo — вкладення API-10, артефакт — blob з IndexedDB) --- */
@@ -229,10 +229,9 @@ function normalizeModel(obj) {
     return { obj: wrap, size };
 }
 async function loadVariantModels() {
-    if (V.testMode || !THREE.GLTFLoader) {
+    if (V.testMode) {
         return;
     }
-    const loader = new THREE.GLTFLoader();
     let any = false;
     for (const p of S.catalog) {
         for (const v of p.variants) {
@@ -240,15 +239,14 @@ async function loadVariantModels() {
                 continue;
             }
             try {
-                const url = await ctx.adapter.modelUrl(v);
-                if (!url) {
+                const obj = await ctx.adapter.loadModel(v, THREE);
+                if (!obj) {
                     continue;
                 }
-                const gltf = await loader.loadAsync(url);
                 if (!ctx) {
                     return;
                 }
-                V.models.set(v.id, normalizeModel(gltf.scene));
+                V.models.set(v.id, normalizeModel(obj));
                 any = true;
             } catch (e) {
                 console.warn("model", v.id, e);
@@ -265,6 +263,7 @@ const themeEl = () => host.themeTarget || ROOT.el;
 function applyTheme(t) {
     themeEl().dataset.theme = t;
     lsSet(host.themeKey, t);
+    host.onTheme?.(t);
     V.theme = t;
     if (V.ok) {
         E.recolorMats();
@@ -302,7 +301,7 @@ function bindEvents() {
             E.renderAll();
         })
     );
-    listen($("#btnNewSite"), "click", () => E.openNewSite());
+    listen($("#btnNewSite"), "click", () => runDialog("newSite"));
     listen($("#btnPublish"), "click", publish);
     listen($("#btnHistory"), "click", () => E.openHistory());
     listen($("#btnTheme"), "click", () => applyTheme(E.curTheme() === "dark" ? "light" : "dark"));
@@ -475,6 +474,7 @@ export async function mountEditor(rootEl, { adapter, store, host: hostSvc, servi
     const th = lsGet(host.themeKey);
     if (th === "dark" || th === "light") {
         themeEl().dataset.theme = th;
+        host.onTheme?.(th);
     } else if (!host.themeAuto) {
         themeEl().dataset.theme = "light"; // з themeAuto атрибут не ставимо: тему веде prefers-color-scheme
     }
@@ -540,6 +540,6 @@ export function unmountEditor() {
     resetState();
 }
 
-Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord });
+Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord, normalizeModel, loadVariantModels });
 
 export { ROLES, canManage };

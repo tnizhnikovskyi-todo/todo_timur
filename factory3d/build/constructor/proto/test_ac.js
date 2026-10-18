@@ -6,7 +6,7 @@ const ok = (name, cond, extra) => { res.push([cond ? 'PASS' : 'FAIL', name, extr
 const proj = (page, x, y, z = 0) => page.evaluate(([x, y, z]) => { const V = __f3d.V, v = new THREE.Vector3(x, z, -y).project(V.camera), r = V.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, [x, y, z]);
 async function drag(page, a, b, steps = 10) { await page.mouse.move(a.x, a.y); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(a.x + (b.x - a.x) * i / steps, a.y + (b.y - a.y) * i / steps); await page.mouse.up(); await page.waitForTimeout(250); }
 const ev = (page, fn, arg) => page.evaluate(fn, arg);
-const toasts = (page) => page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent));
+const toasts = (page) => page.evaluate(() => [...document.querySelectorAll('.ftoast')].map((t) => t.textContent));
 const pl = (page, code) => page.evaluate((c) => { const p = __f3d.S.placements.find((x) => x.code === c); return p && { x: p.x, y: p.y, rotation: p.rotation, slot: p.slot_id }; }, code);
 
 async function t1_load() {
@@ -33,7 +33,7 @@ async function t3_rack() {
   const { browser, page, errors } = await launch();
   await open(page);
   // слой «Склади»
-  await page.click('.layer[data-layer="fg"]');
+  await page.click('.layer[data-layer="ly_fg"]');
   await page.click('#ltabs button[data-tab="slots"]');
   await page.waitForTimeout(200);
   // параметры шаблона: 18 x 4
@@ -83,7 +83,7 @@ async function t4_aisle_collide() {
   const { browser, page, errors } = await launch();
   await open(page);
   // станок: CNC-1 → в проход (Головний проїзд 42..92 x 44.2..47.8)
-  await page.click('.layer[data-layer="line"]');
+  await page.click('.layer[data-layer="ly_line"]');
   const p0 = await pl(page, 'CNC-1');
   const from = await proj(page, p0.x, p0.y, 0.8), to = await proj(page, 70, 46, 0.8);
   await drag(page, from, to);
@@ -91,7 +91,8 @@ async function t4_aisle_collide() {
   let iss = await page.evaluate(() => __f3d.S.issues.list.filter((i) => i.check === 'aisles_free').map((i) => i.msg));
   ok('AC4 (warn) станок в проходе → «Прохід перекрито»', iss.length > 0 && iss[0].includes('Прохід перекрито') && p1.y > 40, JSON.stringify(iss) + ' pos=' + JSON.stringify(p1));
   const tt = await toasts(page);
-  ok('AC4 (warn) тост с замечанием', tt.some((t) => t.includes('Прохід перекрито')), tt.join('|'));
+  const firstMsg = await page.evaluate(() => { const p = __f3d.S.placements.find((q) => q.code === 'CNC-1'); return __f3d.S.issues.byKey.get('p:' + p.id).items[0].msg; });
+  ok('AC4 (warn) тост с замечанием (першим показано перше зауваження об’єкта)', tt.some((t) => t.includes(firstMsg)), firstMsg + ' :: ' + tt.join('|'));
   await page.evaluate(() => { const V = __f3d.V; V.controls.target.set(66, 0, -44); V.camera.position.set(52, 30, -20); V.controls.update(); });
   await page.waitForTimeout(500);
   await page.screenshot({ path: SH + 'checks.png' });
@@ -141,7 +142,7 @@ async function t6_models() {
   ok('GLB сгенерирован GLTFExporter', fs.statSync(DIR + '/fixtures/box_m.glb').size > 500);
   await page.click('#ltabs button[data-tab="catalog"]');
   await page.waitForTimeout(200);
-  await page.click('.var >> nth=0 >> text=Картка');
+  await page.click('.var >> nth=0 >> text=Змінити');
   await page.waitForSelector('dialog[open]');
   const files = [['box_m.glb', 'GLB'], ['box_mm.obj', 'OBJ'], ['pyramid_mm.stl', 'STL']];
   for (const [f, fmtName] of files) {
@@ -181,7 +182,7 @@ async function t6_models() {
   await page.waitForTimeout(700);
   await page.click('dialog button:has-text("Зберегти")');
   await page.waitForTimeout(800);
-  const hasModel = await page.evaluate(() => { const v = __f3d.S.catalog.flatMap((p) => p.variants).find((x) => x.model); return v && { name: v.model.name, tris: v.model.tris, fmt: v.model.format, inMem: __f3d.V.models.has(v.id) }; });
+  const hasModel = await page.evaluate(() => { const v = __f3d.S.catalog.flatMap((p) => p.variants).find((x) => x.model); return v && { name: v.model.file_name, tris: v.model.triangles, fmt: v.model.format, inMem: __f3d.V.models.has(v.id) }; });
   ok('Модель сохранена в варианте (метаданные в db, файл в IndexedDB)', hasModel && hasModel.fmt === 'stl' && hasModel.tris === 6 && hasModel.inMem, JSON.stringify(hasModel));
   const idb = await page.evaluate(async () => { const v = __f3d.S.catalog.flatMap((p) => p.variants).find((x) => x.model); const r = await __f3d.files.get('model:' + v.id); return !!r && r.files.length; });
   ok('Файл модели в IndexedDB', idb === 1, String(idb));
@@ -198,10 +199,10 @@ async function t7_dxf() {
   await page.setInputFiles('#dxfFile', DIR + '/fixtures/plan.dwg');
   await page.waitForTimeout(300);
   const dwg = await page.evaluate(() => document.querySelector('#dxfPanel').textContent);
-  ok('DWG → «конвертуйте в DXF; DWG буде на сервері»', /конвертуйте в DXF/.test(dwg) && /на сервері/.test(dwg));
+  ok('DWG → «конвертуйте в DXF; DWG буде на сервері»', /конвертуйте в DXF/i.test(dwg) && /на сервері/.test(dwg));
   await page.setInputFiles('#dxfFile', DIR + '/fixtures/plan_mm.dxf');
   await page.waitForTimeout(700);
-  let st = await page.evaluate(() => { const S = __f3d.S, V = __f3d.V, id = S.ui.layer; const m = S.settings.underlays[id]; return m && { n: m.n, units: m.units, drawn: V.underlays.has(id) }; });
+  let st = await page.evaluate(() => { const S = __f3d.S, V = __f3d.V, id = S.ui.layer; const u = S.layers.find((l) => l.id === id).underlay; return u && { n: V.uldata.get(id).n, units: u.params.unit, drawn: V.underlays.has(id) }; });
   // ожидаем: 4 LINE + 4 (LWPOLYLINE замкн.) + 48 (CIRCLE) + ARC + 2 (POLYLINE)
   ok('AC7 DXF разобран и нарисован на полу', st && st.drawn && st.n > 60 && st.units === 'mm', JSON.stringify(st));
   await page.click('#dxfPanel button:has-text("До центру будівлі")');
@@ -220,7 +221,7 @@ async function t7_dxf() {
   await page.fill('#dxfPanel input[data-f="ulreal"]', '30');
   await page.click('#dxfPanel button:has-text("Застосувати")');
   await page.waitForTimeout(300);
-  const sc = await page.evaluate(() => __f3d.S.settings.underlays[__f3d.S.ui.layer].scale);
+  const sc = await page.evaluate(() => __f3d.S.layers.find((l) => l.id === __f3d.S.ui.layer).underlay.params.scale);
   ok('Масштаб применён (~0.5)', sc > 0.45 && sc < 0.55, String(sc));
   ok('AC7 консоль без ошибок', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();
@@ -233,7 +234,7 @@ async function t8_publish() {
   // изменить: переместить станок и добавить стеллаж
   await page.evaluate(() => { const p = __f3d.S.placements.find((q) => q.code === 'CNC-2'); p.x += 2; __f3d.commit({ dirty: ['placements'] }); });
   await page.evaluate(() => { __f3d.S.ui.layer = 'ly_fg'; __f3d.commit({}); const spec = { template: 'pallet_rack', prefix: 'NEW-R1', params: { bays: 6, levels: 4, bay_width: 2.7, depth: 1.1, level_height: 1.9, positions_per_bay: 2, max_load_kg: 2000 } }; });
-  await page.click('.layer[data-layer="fg"]');
+  await page.click('.layer[data-layer="ly_fg"]');
   await page.evaluate(() => { const S = __f3d.S; S.slots.push({ id: 'sl_new', layer_id: 'ly_fg', template: 'pallet_rack', code_prefix: 'NEW-R1', x: 60, y: 60, rotation: 0, params: { bays: 6, levels: 4, bay_width: 2.7, depth: 1.1, level_height: 1.9, positions_per_bay: 2, max_load_kg: 2000 }, overrides: {} }); __f3d.commit({ dirty: ['slots'] }); });
   await page.waitForTimeout(300);
   const chip = await page.textContent('#draftChip');
@@ -247,7 +248,7 @@ async function t8_publish() {
   await page.click('dialog button:has-text("Підтвердити й опублікувати")');
   await page.waitForTimeout(900);
   const v = await page.evaluate(() => ({ vs: __f3d.S.versions.map((x) => x.n + ':' + x.note), av: __f3d.S.site.active_version }));
-  ok('AC8 публикация создала версию 2', v.av === 2 && v.vs.length === 2, JSON.stringify(v));
+  ok('AC8 публикация создала версию 2', v.av && v.av.n === 2 && v.vs.length === 2, JSON.stringify(v));
   const chip2 = await page.textContent('#draftChip');
   ok('После публикации чернетка без змін', /без змін/.test(chip2), chip2);
   // версия лежит в хранилище
@@ -277,7 +278,7 @@ async function t9_roles() {
   await open(page);
   await page.selectOption('#roleSel', 'technologist');
   await page.waitForTimeout(300);
-  await page.click('.layer[data-layer="fg"]');
+  await page.click('.layer[data-layer="ly_fg"]');
   await page.waitForTimeout(300);
   const rack = await page.evaluate(() => { const s = __f3d.S.slots.find((x) => x.code_prefix === 'FG-R1'); return { x: s.x, y: s.y }; });
   const from = await proj(page, rack.x, rack.y - 5, 1);
@@ -307,10 +308,11 @@ async function t9_roles() {
 async function t10_sites() {
   const { browser, page, errors } = await launch();
   await open(page);
-  ok('AC10 переключатель содержит пункт «Порожня площадка»', await page.evaluate(() => [...document.querySelectorAll('#siteSel option')].some((o) => o.value === '__new:empty')));
-  await page.selectOption('#siteSel', '__new:empty');
+  ok('AC10 кнопка «+ площадка» відкриває діалог з пунктом «Порожня площадка»', await page.click('#btnNewSite').then(() => page.waitForSelector('dialog[open]')).then(() => page.evaluate(() => /Порожня площадка/.test(document.querySelector('dialog').textContent))));
+  await page.fill('dialog input[type=text]', 'Порожня площадка');
+  await page.click('dialog button:has-text("Створити")');
   await page.waitForTimeout(1800);
-  let st = await page.evaluate(() => ({ n: __f3d.S.app.sites.length, name: __f3d.S.site.name, b: __f3d.S.site.building, layers: __f3d.S.layers.map((l) => l.name + ':' + l.elevation), cat: __f3d.S.catalog.flatMap((p) => p.variants).length, changed: __f3d.S.changed }));
+  let st = await page.evaluate(() => ({ n: __f3d.S.app.sites.length, name: __f3d.S.site.name, b: __f3d.S.site.building, layers: __f3d.S.layers.map((l) => l.name + ':' + l.elevation), cat: __f3d.S.catalog.flatMap((p) => p.variants).length, changed: __f3d.S.site.draft_changes }));
   ok('AC10 новая порожня площадка', st.n === 2 && st.name === 'Порожня площадка' && st.b.length === 60 && st.b.width === 30 && st.b.height === 8 && st.layers.length === 5 && st.cat === 4 && st.changed === 0, JSON.stringify(st));
   await page.screenshot({ path: SH + '_empty.png' });
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('f3d1:')).length);

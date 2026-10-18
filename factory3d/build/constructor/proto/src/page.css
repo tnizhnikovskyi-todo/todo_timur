@@ -1,0 +1,18 @@
+/* Сторінка прототипу: шрифти, тло, автоматична темна тема. Стилі самого редактора — ті самі, що в модулі Odoo:
+   build.py підключає odoo_addons/td_constructor/static/src/action/constructor_action.scss (CSS із вкладеністю). */
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#e4e2d9}
+:root[data-theme="dark"],:root[data-theme="dark"] body{background:#0b131c;color-scheme:dark}
+html .o_f3d_constructor{--font:"Barlow Semi Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+#f3dRoot{position:fixed;inset:0}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]),:root:not([data-theme="light"]) body{background:#0b131c}
+  html .o_f3d_constructor:not([data-theme]){
+    color-scheme:dark;
+    --bg:#0b131c; --surface:#101b27; --surface2:#162434; --surface3:#1d2f43;
+    --ink:#dbe7f1; --ink2:#92a5b8; --ink3:#64788c; --line:#2a3d51; --line2:#1c2c3c;
+    --accent:#52c2e8; --accent-ink:#04202c; --accent-soft:#123548;
+    --warn:#ffa33a; --warn-soft:#3b2a12; --block:#ff6b6b; --block-soft:#3d1c1f; --ok:#5fd08d;
+    --scene:#09111a; --grid:#1a2a3a; --grid2:#2a3d52; --floor:#0e1822; --stroke:#a8bfd4;
+  }
+}

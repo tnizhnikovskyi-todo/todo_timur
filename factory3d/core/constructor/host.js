@@ -5,8 +5,10 @@
 //   host.buildGenericModel(category, {l, w, h}, THREE) → Object3D (умовна модель без файла; R-17)
 //   host.themeTarget            елемент, на якому стоїть data-theme (за замовчуванням корінь редактора)
 //   host.themeKey               ключ localStorage для теми; host.themeAuto — стежити за prefers-color-scheme, поки тему не вибрано
+//   host.onTheme(t)             колбек після явного вибору теми (прототип дзеркалить її на <html>)
 //   host.siteKey                ключ localStorage для останньої площадки
 //   host.loadLoaders()          → Promise<{OBJLoader, MTLLoader, STLLoader, FBXLoader, ColladaLoader, ThreeMFLoader, GLTFExporter}>
+//   host.dxfParserUrl           URL dxf-parser (за замовчуванням — каталог модуля td_constructor); у прототипі parser вже на сторінці
 //   host.services               довільні сервіси хоста для реєстраційних діалогів (action, notification, orm…)
 export const host = {
     loadThree: null,
@@ -15,7 +17,9 @@ export const host = {
     themeTarget: null,
     themeKey: "f3d_constructor_theme",
     themeAuto: false,
+    onTheme: null,
     siteKey: "f3d_constructor_site",
+    dxfParserUrl: null,
     services: {},
 };
 
@@ -28,7 +32,9 @@ export function setHost(h = {}) {
         themeTarget: null,
         themeKey: "f3d_constructor_theme",
         themeAuto: false,
+        onTheme: null,
         siteKey: "f3d_constructor_site",
+        dxfParserUrl: null,
         services: {},
     });
     Object.assign(host, h);

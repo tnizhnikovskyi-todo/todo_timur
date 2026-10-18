@@ -366,7 +366,7 @@ export class OdooAdapter extends BaseAdapter {
         super(o);
         this.kind = "odoo";
         // Усе, що спирається на API-11…24, стане true разом із відповідними функціями (хост може передати `o.capabilities`).
-        this.capabilities = { publish: true, ...(o.capabilities || {}) };
+        this.capabilities = { publish: true, check: true, ...(o.capabilities || {}) };
         this.rpc = o.rpc;
         this.orm = o.orm;
         this.action = o.action;
@@ -896,13 +896,24 @@ export class OdooAdapter extends BaseAdapter {
         return await this._uploadModel(variantId, payload, opts);
     }
 
-    /** URL GLB-моделі варіанта (API-10; `?v=` — etag для скидання кешу) або null. */
-    async modelUrl(variant) {
+    /** Модель варіанта: GLB із вкладення (API-10; `?v=` — etag для скидання кешу) → Object3D або null. */
+    async loadModel(variant, T) {
         const m = variant?.model;
-        if (!m || m.status !== "ok" || !m.glb_url) {
+        if (!m || m.status !== "ok" || !m.glb_url || !T?.GLTFLoader) {
             return null;
         }
-        return m.glb_url + "?v=" + encodeURIComponent(variant.etag || "");
+        const gltf = await new T.GLTFLoader().loadAsync(m.glb_url + "?v=" + encodeURIComponent(variant.etag || ""));
+        return gltf.scene;
+    }
+
+    /** Підкладка DXF: текст файла з вкладення шару (`underlay.url`) або null. */
+    async loadUnderlay(layer) {
+        const u = layer?.underlay;
+        if (!u || u.format !== "dxf" || u.status !== "ready" || !u.url) {
+            return null;
+        }
+        const r = await fetch(u.url, { credentials: "same-origin" });
+        return r.ok ? { text: await r.text() } : null;
     }
 
     // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---

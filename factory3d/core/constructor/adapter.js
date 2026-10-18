@@ -31,8 +31,10 @@
 //   publish({onClose})     публікація: адаптер показує свій підтверджувальний інтерфейс (майстер Odoo / діалог артефакта)
 //   restoreVersion(id)     повернути чернетку до знімка версії → {site_id}
 //   uploadModel(variantId, {original, glb, meta}, opts)  3D-модель варіанта (GLB + оригінал + метадані)
-//   modelUrl(variant)      → URL GLB-моделі варіанта (http: або blob:) або null
+//   loadModel(variant, THREE) → Object3D моделі варіанта в метрах, Y вгору, або null (Odoo: GLB із вкладення API-10;
+//                          артефакт: файли з IndexedDB); `THREE` — контейнер ядра із завантажувачами
 //   attachUnderlay(layer, file) → {id, url}; detachUnderlay(layer)   підкладка DXF шару
+//   loadUnderlay(layer)    → {text} (DXF) або {segs: Float32Array} (готові відрізки) або null
 //   ensureGroupIds(roles)  id груп «Хто редагує» (лише Odoo; в артефакті — порожньо)
 //   dirty                  чи є незбережені зміни (для beforeunload); status: "saved"|"saving"|"error"; autosaveMs
 // Зворотні виклики (виставляє ядро): onStatus(status, info), onSaved({rev, draft_changes, has_changes, updates}),
@@ -55,9 +57,10 @@ export const REQUIRED_METHODS = [
     "publish",
     "restoreVersion",
     "uploadModel",
-    "modelUrl",
+    "loadModel",
     "attachUnderlay",
     "detachUnderlay",
+    "loadUnderlay",
     "ensureGroupIds",
 ];
 
@@ -124,7 +127,11 @@ export class BaseAdapter {
         return {};
     }
 
-    async modelUrl() {
+    async loadModel() {
+        return null;
+    }
+
+    async loadUnderlay() {
         return null;
     }
 }

@@ -1,6 +1,7 @@
 // Підкладка DXF (CD-09, R-22): розбір DXF у відрізки (dxf-parser 1.1.2, ліниво, окремим script), панель підкладки, прив'язка масштабу.
 // Файл зберігається вкладенням шару (`underlay_attachment_id`), параметри — `underlay_params` {unit, dx, dy, rot_deg, scale, opacity}.
 import { fld, numInput } from "./fields.js";
+import { host } from "./host.js";
 import { canEditLayer, lockHint } from "./roles.js";
 import { E, S, V, layerOf } from "./state.js";
 import { $, K, fmt, fmtInt, h, ic, rad, rnd, toast } from "./util.js";
@@ -19,7 +20,7 @@ export function loadDxfParser() {
     if (!parserPromise) {
         parserPromise = new Promise((resolve, reject) => {
             const el = document.createElement("script");
-            el.src = DXF_PARSER_URL;
+            el.src = host.dxfParserUrl || DXF_PARSER_URL;
             el.onload = () => resolve(window.DxfParser);
             el.onerror = () => {
                 parserPromise = null;
@@ -185,16 +186,20 @@ export async function loadUnderlays() {
     let Parser = null;
     for (const ly of S.layers) {
         const u = ly.underlay;
-        if (!u || u.format !== "dxf" || u.status !== "ready" || !u.url) {
+        if (!u || u.format !== "dxf" || u.status !== "ready") {
             continue;
         }
         try {
-            const r = await fetch(u.url, { credentials: "same-origin" });
-            if (!r.ok) {
+            const src = await E.adapter.loadUnderlay(ly);
+            if (!src) {
+                continue;
+            }
+            if (src.segs) {
+                V.uldata.set(ly.id, { segs: src.segs, n: src.segs.length / 4 });
                 continue;
             }
             Parser = Parser || (await loadDxfParser());
-            const res = parseDxf(await r.text(), Parser);
+            const res = parseDxf(src.text, Parser);
             u.bbox = res.bbox;
             V.uldata.set(ly.id, { segs: res.segs, n: res.n });
         } catch (e) {

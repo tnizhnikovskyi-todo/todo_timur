@@ -4,6 +4,7 @@
 // Результат — [{check, severity, layer_id, codes, message, keys, id}]; `keys` ('p:<id>' / 's:<id>') і `id` — службові поля редактора
 // (еталон порівнює лише (check, severity, codes)). Сервер — істина: клієнтські перевірки лише дають живий відгук.
 import { generateCells, slotObb } from "./cells.js";
+import { registries } from "./registry.js";
 import {
     aabbOverlap,
     obbAabb,
@@ -39,7 +40,7 @@ function rotationOk(mode, rotation) {
 
 const objKey = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
 
-class Scene {
+export class Scene {
     constructor(state) {
         this.building = (state.site || {}).building || {};
         this.layers = new Map((state.layers || []).map((l) => [l.id, l]));
@@ -120,7 +121,7 @@ class Scene {
     }
 }
 
-const issue = (check, severity, layer_id, codes, message, keys, sub) => ({
+export const issue = (check, severity, layer_id, codes, message, keys, sub) => ({
     check,
     severity,
     layer_id,
@@ -366,15 +367,20 @@ const CHECKERS = {
     fire: checkFire,
 };
 
-/** R-04: усі увімкнені перевірки; severity = config.mode; порядок — за CHECK_KEYS. */
+// Реєстр `checks` (registry.js): ключ → {run(scene, config, eps) → [issue], config?}. `config` — ключ налаштування, чий
+// перемикач і режим використовує перевірка (за замовчуванням — власний ключ). Вбудовані R-04…R-10 — у порядку CHECK_KEYS;
+// слайси й хости додають свої (наприклад, `cell_load`) з потрібним `sequence`.
+CHECK_KEYS.forEach((key, i) => registries.checks.add(key, { run: CHECKERS[key] }, { sequence: (i + 1) * 10, force: true }));
+
+/** R-04: усі увімкнені перевірки з реєстру; severity = config.mode; порядок — за sequence (вбудовані — як CHECK_KEYS). */
 export function runChecks(state, configs, eps = DEFAULT_EPS_M) {
     const scene = new Scene(state);
     const byKey = new Map((configs || []).filter((c) => c.enabled).map((c) => [c.check, c]));
     const issues = [];
-    for (const key of CHECK_KEYS) {
-        const config = byKey.get(key);
+    for (const [key, chk] of registries.checks.getEntries()) {
+        const config = byKey.get(chk.config || key);
         if (config) {
-            issues.push(...CHECKERS[key](scene, config, epsOf(config, eps)));
+            issues.push(...chk.run(scene, config, epsOf(config, eps)));
         }
     }
     return issues;

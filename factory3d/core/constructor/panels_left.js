@@ -119,6 +119,7 @@ export function setActiveLayer(id) {
     if (S.ui.layer === id) {
         return;
     }
+    V.hidden.delete(id); // активний шар завжди видимий
     S.ui.layer = id;
     S.issues = runLive();
     E.syncScene();
@@ -555,7 +556,7 @@ function renderCatalogTab(root) {
                         h(
                             "div",
                             { class: "pp" },
-                            h("div", { class: "ph" }, h("b", null, p.name), h("button", { class: "fbtn sm", type: "button", title: "Тип: виробник, модель, категорія", onclick: () => E.openPassportForm(p.pid) }, "Тип")),
+                            h("div", { class: "ph" }, h("b", null, p.name), h("button", { class: "fbtn sm", type: "button", title: "Тип: виробник, модель, категорія", onclick: () => E.openPassportForm(p) }, "Тип")),
                             h("div", { class: "mf" }, [p.manufacturer, p.model].filter((x) => x && x !== "—").join(" · ") || "без виробника"),
                             p.variants.map((v) =>
                                 h(
@@ -574,10 +575,10 @@ function renderCatalogTab(root) {
                                     h("span", { class: "vn" }, v.name),
                                     h("span", { class: "vm" }, `${fmt(v.length / 1000, 1)}×${fmt(v.width / 1000, 1)}×${fmt(v.height / 1000, 1)} м`, v.model && v.model.status === "ok" ? h("span", { class: "tag", title: "Є 3D-модель" }, "3D") : v.model && v.model.status === "pending_conversion" ? h("span", { class: "tag", title: "Очікує перетворення на сервері" }, "3D…") : null),
                                     h("button", { class: "fbtn sm icon", type: "button", title: "Поставити на сцену", "aria-label": "Поставити на сцену", onclick: () => E.startPlacing({ kind: "placement", variantId: v.id }) }, ic("plus")),
-                                    h("button", { class: "fbtn sm", type: "button", title: "Форма варіанта в Odoo: габарити, сервіс, 3D-модель", onclick: () => E.openVariantForm(v.rid, p.pid) }, "Змінити")
+                                    h("button", { class: "fbtn sm", type: "button", title: "Картка варіанта: габарити, сервіс, 3D-модель", onclick: () => E.openVariantForm(v, p) }, "Змінити")
                                 )
                             ),
-                            h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openVariantForm(null, p.pid) }, ic("plus"), "Варіант")
+                            h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openVariantForm(null, p) }, ic("plus"), "Варіант")
                         )
                     )
                 )

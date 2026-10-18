@@ -80,10 +80,10 @@ async function t_features() {
   await page.fill('#layerForm input[aria-label="Назва"]', 'Антресоль цеху'); await page.waitForTimeout(200);
   ok('имя слоя обновляется в списке', await page.evaluate(() => [...document.querySelectorAll('#layerList .nm')].some((e) => e.textContent === 'Антресоль цеху')));
   await page.click('#layerForm button:has-text("Видалити шар")'); await page.waitForSelector('dialog[open]');
-  await page.click('dialog button:has-text("Видалити")'); await page.waitForTimeout(300);
+  await page.click('dialog button:has-text("Видалити")'); await page.waitForTimeout(800);
   ok('удаление слоя через диалог на странице', await page.evaluate(() => __f3d.S.layers.length === 31));
   // правка проходов в слое «Склади»
-  await page.click('.layer[data-layer="fg"]'); await page.waitForTimeout(200);
+  await page.click('.layer[data-layer="ly_fg"]'); await page.waitForTimeout(200);
   const ai0 = await page.evaluate(() => __f3d.S.layers.find((l) => l.id === 'ly_fg').aisles.length);
   await page.click('#layerForm button:has-text("Прохід") >> nth=0'); await page.waitForTimeout(200);
   ok('«+ Прохід» добавляет проход', await page.evaluate((n) => __f3d.S.layers.find((l) => l.id === 'ly_fg').aisles.length === n + 1, ai0));
@@ -101,7 +101,7 @@ async function t_features() {
   const nPl = await page.evaluate(() => __f3d.S.placements.length);
   await page.keyboard.press('Delete'); await page.waitForSelector('dialog[open]');
   ok('Delete открывает подтверждение на странице', await page.evaluate(() => /Видалити об’єкт/.test(document.querySelector('dialog').textContent)));
-  await page.click('dialog button:has-text("Видалити")'); await page.waitForTimeout(300);
+  await page.click('dialog button:has-text("Видалити")'); await page.waitForTimeout(800);
   ok('удаление объекта', await page.evaluate((n) => __f3d.S.placements.length === n - 1, nPl));
   // пустая площадка: размещение варианта из каталога и первая публикация
   await page.click('#btnNewSite'); await page.waitForSelector('dialog[open]'); await page.fill('dialog input[type=text]', 'Цех 2'); await page.click('dialog button:has-text("Створити")'); await page.waitForTimeout(1500);
@@ -115,7 +115,7 @@ async function t_features() {
   const ptxt = await page.textContent('dialog');
   ok('первая публикация: сводка', /перша публікація/.test(ptxt) && /Буде створено в Odoo/.test(ptxt));
   await page.click('dialog button:has-text("Підтвердити й опублікувати")'); await page.waitForTimeout(800);
-  ok('первая публикация → v1', await page.evaluate(() => __f3d.S.site.active_version === 1));
+  ok('первая публикация → v1', await page.evaluate(() => __f3d.S.site.active_version.n === 1));
   // роль инженер редактирует сети
   await page.selectOption('#roleSel', 'engineer'); await page.click('#ltabs button[data-tab="layers"]'); await page.click('.layer[data-layer="ly_eng"]');
   ok('инженер: слой сетей редактируемый (нет замка)', await page.evaluate(() => !document.querySelector('.layer.active .ic[title]')));
@@ -128,7 +128,7 @@ async function t_mobile() {
   await open(page);
   await page.click('#mtabs button[data-mtab="catalog"]'); await page.waitForTimeout(300);
   await page.screenshot({ path: SH + '_mobile_catalog.png' });
-  await page.click('.var >> nth=0 >> text=Картка'); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(500);
+  await page.click('.var >> nth=0 >> text=Змінити'); await page.waitForSelector('dialog[open]'); await page.waitForTimeout(500);
   await page.screenshot({ path: SH + '_mobile_variant.png' });
   const w = await page.evaluate(() => { const d = document.querySelector('dialog'); const r = d.getBoundingClientRect(); return { l: r.left, r: r.right, sw: document.documentElement.scrollWidth }; });
   ok('моб.: диалог карточки в пределах экрана', w.l >= 0 && w.r <= 400 && w.sw <= 400, JSON.stringify(w));
@@ -153,7 +153,7 @@ async function t_formats() {
   const { browser, page, errors } = await launch();
   await open(page);
   await page.click('#ltabs button[data-tab="catalog"]'); await page.waitForTimeout(200);
-  await page.click('.var >> nth=0 >> text=Картка'); await page.waitForSelector('dialog[open]');
+  await page.click('.var >> nth=0 >> text=Змінити'); await page.waitForSelector('dialog[open]');
   const info = async () => (await page.evaluate(() => [...document.querySelectorAll('dialog .kv dd')].map((d) => d.textContent).join('|'))).replace(/[  ]/g, '');
   for (const [f, exp] of [['cube_m.dae', '2000×1000×1000'], ['pyramid.3mf', '1000×600×900']]) {
     await page.setInputFiles('#modelFile', DIR + '/fixtures/' + f); await page.waitForTimeout(900);
@@ -197,20 +197,21 @@ async function t_ui() {
   await open(page);
   const click = async (sel) => { await page.click(sel); await page.waitForTimeout(120); };
   // слой: контур, пожарный проход, выход, точка сети, порядок, тип
-  await click('.layer[data-layer="territory"]');
-  await click('#layerForm label:has-text("Задати контур") input');
-  ok('слой: контур задан', await page.evaluate(() => !!__f3d.S.layers.find((l) => l.id === 'ly_territory').bounds));
+  await click('.layer[data-layer="ly_territory"]');
+  // у прикладі двір уже має контур (будівля ∪ об’єкти, як у сіді модуля): вмикаємо контур лише якщо його ще немає
+  if (!(await page.evaluate(() => !!__f3d.S.layers.find((l) => l.id === 'ly_territory').bounds))) await click('#layerForm label:has-text("Задати контур") input');
+  ok('слой: контур задан', await page.evaluate(() => Array.isArray(__f3d.S.layers.find((l) => l.id === 'ly_territory').bounds)));
   await page.fill('#layerForm .grid4 input >> nth=0', '-10'); await page.waitForTimeout(100);
   await click('#layerForm button:has-text("Прохід") >> nth=1');
   await click('#layerForm button:has-text("Вихід")');
   await click('#layerForm button:has-text("Точка")');
-  const yd = await page.evaluate(() => { const l = __f3d.S.layers.find((x) => x.id === 'ly_territory'); return { fp: l.fire_paths.map((f) => f.kind).join(','), ut: l.utilities.length, b: l.bounds.x0 }; });
+  const yd = await page.evaluate(() => { const l = __f3d.S.layers.find((x) => x.id === 'ly_territory'); return { fp: l.fire_paths.map((f) => f.kind).join(','), ut: l.utilities.length, b: l.bounds[0][0] }; });
   ok('слой: пожарный проход, выход и точка сети добавлены', yd.fp === 'path,exit' && yd.ut === 1 && yd.b === -10, JSON.stringify(yd));
   await click('#layerForm button[aria-label="Вище"]');
   ok('слой: порядок меняется', await page.evaluate(() => { const s = [...__f3d.S.layers].sort((a, b) => a.sequence - b.sequence).map((l) => l.id); return s.indexOf('ly_territory') === 26; }));
   await page.selectOption('#layerForm select[aria-label="Тип"]', 'storage');
   await click('#layerList .layer >> nth=0 >> button.eye');
-  ok('слой: видимость переключается', await page.evaluate(() => __f3d.S.layers.find((l) => l.id === 'ly_building').visible === false));
+  ok('слой: видимость переключается', await page.evaluate(() => __f3d.V.hidden.has('ly_building'))); // видимість — стан сеансу (V.hidden)
   await click('#layerList .layer >> nth=0 >> button.eye');
   // каталог: новый тип, новый вариант, размещение
   await click('#ltabs button[data-tab="catalog"]');
@@ -229,14 +230,14 @@ async function t_ui() {
   const nv = await page.evaluate(() => { const v = __f3d.S.catalog.flatMap((p) => p.variants).find((x) => x.name === 'Робот-тест'); return v && { l: v.length, w: v.width, u: v.utilities.length }; });
   ok('каталог: новый вариант с габаритами и точкой подключения', nv && nv.l === 1800 && nv.w === 1800 && nv.u === 1, JSON.stringify(nv));
   // редактирование варианта и отмена
-  await click('.var:has-text("Робот-тест") >> text=Картка');
+  await click('.var:has-text("Робот-тест") >> text=Змінити');
   await page.waitForSelector('dialog[open]');
   await page.fill('dialog input[data-f="height"]', '2750');
   await click('dialog button:has-text("Скасувати")');
   ok('отмена карточки не меняет вариант', await page.evaluate(() => __f3d.S.catalog.flatMap((p) => p.variants).find((x) => x.name === 'Робот-тест').height !== 2750));
   // размещение через кнопку «+»
   await click('.layer >> nth=0').catch(() => {});
-  await click('#ltabs button[data-tab="layers"]'); await click('.layer[data-layer="line"]');
+  await click('#ltabs button[data-tab="layers"]'); await click('.layer[data-layer="ly_line"]');
   await click('#ltabs button[data-tab="catalog"]');
   await click('.var:has-text("Робот-тест") >> button[aria-label="Поставити на сцену"]');
   const t = await proj(page, 100, 40, 0); await page.mouse.move(t.x, t.y); await page.mouse.move(t.x + 2, t.y + 1); await page.mouse.click(t.x + 2, t.y + 1); await page.waitForTimeout(400);

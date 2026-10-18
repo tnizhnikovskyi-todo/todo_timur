@@ -43,9 +43,9 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefine
   const pp = await page.evaluate(() => __f3d.S.catalog.filter((p) => p.role.startsWith('scene_')).map((p) => p.name + ':' + p.variants.length));
   ok('автопаспорти «Об’єкти сцени» на вид', pp.length >= 10 && pp.every((x) => x.startsWith('Об’єкти сцени')), pp.join(' | '));
   // активація інженерного шару показує його об'єкти
-  await page.click('.layer[data-layer="lighting"]'); await page.waitForTimeout(400);
+  await page.click('.layer[data-layer="ly_lighting"]'); await page.waitForTimeout(400);
   const act = await page.evaluate(() => ({ ly: __f3d.S.ui.layer, el: __f3d.S.layers.find((l) => l.key === 'lighting').elevation }));
-  const vis = await page.evaluate(() => __f3d.S.layers.find((l) => l.key === 'lighting').visible);
+  const vis = await page.evaluate(() => !__f3d.V.hidden.has('ly_lighting')); // видимість шару — стан сеансу (V.hidden), а не поле запису
   ok('активація інженерного шару «Освітлення» робить його видимим', act.ly === 'ly_lighting' && act.el > 7 && vis === true, JSON.stringify(act));
   ok('консоль без помилок', errors.length === 0, errors.slice(0, 4).join(' | '));
   await browser.close();

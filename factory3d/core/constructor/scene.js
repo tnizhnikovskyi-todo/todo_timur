@@ -386,12 +386,12 @@ function boxEdge(w, hh, d, x, y, z, mat) {
     e.position.set(x, y, z);
     return e;
 }
-function lineGeo(pts) {
+export function lineGeo(pts) {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
     return g;
 }
-function dashRect(hx, hy, ox, oy, mat, y) {
+export function dashRect(hx, hy, ox, oy, mat, y) {
     const g = lineGeo([-hx + ox, y, -(-hy + oy), hx + ox, y, -(-hy + oy), hx + ox, y, -(hy + oy), -hx + ox, y, -(hy + oy)]);
     const l = new THREE.LineLoop(g, mat);
     l.computeLineDistances();
@@ -418,7 +418,7 @@ function dispose(root) {
 
 /* ===== тіло розміщення: модель варіанта (GLB) або умовна модель категорії (R-17) ===== */
 const genericCategory = (cat) => (cat === "cabinet" ? "panel" : cat || "other");
-function variantBody(cat, v, norm, ghost) {
+export function variantBody(cat, v, norm, ghost) {
     const L = v.length / 1000;
     const W = v.width / 1000;
     const H = v.height / 1000;

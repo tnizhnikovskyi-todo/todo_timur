@@ -11,7 +11,7 @@
 //   registries.metrics       ключ показника → {label, color(cell, slot, layer) => "#rrggbb"|null, legend?}; обирається S.ui.metric
 //   registries.menu          ключ → {area: "top"|"more", label, icon?, capability?, run(ctx), disabled?(ctx), sequence}
 //   registries.hotkeys       ключ → {code?, key?, match?(e), run(e), sequence, typing?}: гарячі клавіші поза полями вводу
-//   registries.capabilities  ім'я можливості → true/false (виставляє адаптер: publish, library, storage, stock, putaway, odoo_import,
+//   registries.capabilities  ім'я можливості → true/false (виставляє адаптер: publish, check, library, storage, stock, putaway, odoo_import,
 //                            rollback, render, files, variants, comments, locks); `can(name)` ховає функції, яких адаптер не вміє
 
 export class Registry {
@@ -98,6 +98,7 @@ export const registries = Object.fromEntries(REGISTRY_NAMES.map((n) => [n, new R
 /** Можливості, які адаптер може оголосити (MERGE.md §3.5). */
 export const CAPABILITY_NAMES = [
     "publish",
+    "check",
     "library",
     "storage",
     "stock",

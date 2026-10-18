@@ -7,6 +7,7 @@ import { newBlocks, pGeom, runLive, slotDims } from "./live.js";
 import { canEditLayer, canManage, lockHint, toastLock } from "./roles.js";
 import { E, S, V, layerOf, objKey, passportOf, recOfRef, reindex, snapStep, snapV, variantOf } from "./state.js";
 import { newUid } from "./adapter.js";
+import { can } from "./registry.js";
 import { $, $$, K, clone, fmt, fmtInt, getp, h, ic, normDeg, pad2, rnd, toast } from "./util.js";
 
 /* ===== вибір ===== */
@@ -227,7 +228,7 @@ function renderPlacementProps(root, pl) {
                         "div",
                         { class: "frow wrap" },
                         h("button", { class: "fbtn sm", type: "button", id: "btnRotate", disabled: dis, onclick: () => rotateSel(1) }, ic("rot"), "Повернути 90°"),
-                        h("button", { class: "fbtn sm", type: "button", onclick: () => { const x = variantOf(pl.variant_id); if (x) { E.openVariantForm(x.rid, passportOf(x.id).pid); } } }, "Картка варіанта"),
+                        h("button", { class: "fbtn sm", type: "button", onclick: () => { const x = variantOf(pl.variant_id); if (x) { E.openVariantForm(x, passportOf(x.id)); } } }, "Картка варіанта"),
                         h("span", { class: "grow" }),
                         h("button", { class: "fbtn sm danger", type: "button", id: "btnDelete", disabled: dis, onclick: askDelete }, ic("trash"), "Видалити")
                     )
@@ -460,7 +461,9 @@ export function renderChecksBlock() {
     if (layerList.length > 40) {
         frag.push(h("div", { class: "small muted" }, `… ще ${layerList.length - 40}`));
     }
-    frag.push(h("button", { class: "fbtn sm", type: "button", id: "btnValidate", style: { marginTop: "8px" }, onclick: () => E.validateOnServer() }, ic("check"), "Перевірити на сервері"));
+    if (can("check")) {
+        frag.push(h("button", { class: "fbtn sm", type: "button", id: "btnValidate", style: { marginTop: "8px" }, onclick: () => E.validateOnServer() }, ic("check"), "Перевірити на сервері"));
+    }
     const dis = !canManage();
     const cfg = S.settings.checks;
     frag.push(

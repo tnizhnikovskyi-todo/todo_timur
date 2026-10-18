@@ -12,7 +12,7 @@ const { launch, open, DIR } = require('./harness');
   await page.waitForTimeout(1500);
   await page.click('#btnPublish'); await page.waitForSelector('dialog[open]'); await page.click('dialog button:has-text("Підтвердити й опублікувати")'); await page.waitForTimeout(800);
   console.log('versions', await page.evaluate(() => __f3d.S.versions.length));
-  await page.click('#ltabs button[data-tab="catalog"]'); await page.click('.var >> nth=0 >> text=Картка'); await page.waitForSelector('dialog[open]');
+  await page.click('#ltabs button[data-tab="catalog"]'); await page.click('.var >> nth=0 >> text=Змінити'); await page.waitForSelector('dialog[open]');
   await page.setInputFiles('#modelFile', DIR + '/fixtures/pyramid_mm.stl'); await page.waitForTimeout(700);
   await page.click('dialog button:has-text("Зберегти")'); await page.waitForTimeout(700);
   console.log('models', await page.evaluate(() => __f3d.V.models.size));

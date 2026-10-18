@@ -1,163 +1,26 @@
-/* ===== довідники й модель даних (чернетка моделей Odoo td.*) ===== */
-const ROLES = [
-  { id: 'manager', name: 'Менеджер' },
-  { id: 'technologist', name: 'Технолог' },
-  { id: 'storekeeper', name: 'Комірник' },
-  { id: 'engineer', name: 'Інженер' },
-];
-const roleName = (id) => (ROLES.find((r) => r.id === id) || { name: id }).name;
-const LAYER_KINDS = { building: 'Будівля', storage: 'Склад', production: 'Виробництво', engineering: 'Інженерні мережі', yard: 'Двір', custom: 'Свій шар' };
-const CATEGORIES = { machine: 'Верстат', rack: 'Стелаж', forklift: 'Навантажувач', conveyor: 'Конвеєр', cabinet: 'Шафа / щит', robot: 'Робот', other: 'Інше' };
-const UTIL_KINDS = { electric: 'Електрика', air: 'Стиснене повітря', dust: 'Аспірація' };
-const FRONT_SIDES = { S: 'Низ креслення (−Y)', E: 'Праворуч (+X)', N: 'Верх креслення (+Y)', W: 'Ліворуч (−X)' };
-const FRONT_ANGLE = { S: 0, E: 90, N: 180, W: 270 };
+// Приклад і порожня площадка для артефакта (прототип): будівники в «старому» (прототипному) вигляді даних + перехід у стан ядра
+// (`fromProto`): той самий перехід застосовується до збережених раніше документів (див. adapter_artifact.js). Приклад —
+// «Меблеве підприємство»: 31 шар і 1078 об'єктів 3D-моделі factory3d (seed/sample.json, генерує build/constructor/proto/gen_scene.py).
+import { LAYER_KINDS, TPL } from "../data.js";
+import { pGeom, sGeom } from "../live.js";
+import { clone, fmt, rnd, uid } from "../util.js";
+import SEED from "./seed/sample.json";
 
-const TPL = {
-  pallet_rack: {
-    name: 'Палетний стелаж', prefix: 'R1', info: 'Прольоти × яруси → комірки ПРЕФІКС-B01-L1',
-    params: [
-      { k: 'bays', l: 'Прольотів', min: 1, max: 60, step: 1, int: 1 },
-      { k: 'levels', l: 'Ярусів', min: 1, max: 8, step: 1, int: 1 },
-      { k: 'bay_width', l: 'Ширина прольоту', u: 'м', min: 0.5, max: 6, step: 0.05 },
-      { k: 'depth', l: 'Глибина', u: 'м', min: 0.3, max: 3, step: 0.05 },
-      { k: 'level_height', l: 'Висота ярусу', u: 'м', min: 0.3, max: 3, step: 0.05 },
-      { k: 'positions_per_bay', l: 'Місць у прольоті', min: 1, max: 8, step: 1, int: 1 },
-      { k: 'max_load_kg', l: 'Макс. навантаження на ярус', u: 'кг', min: 50, max: 20000, step: 50, int: 1 },
-    ],
-    def: { bays: 6, levels: 4, bay_width: 2.7, depth: 1.1, level_height: 1.9, positions_per_bay: 2, max_load_kg: 2000 },
-  },
-  cantilever: {
-    name: 'Консольний стелаж', prefix: 'CL1', info: 'Секції × яруси консолей',
-    params: [
-      { k: 'arms', l: 'Секцій консолей', min: 1, max: 40, step: 1, int: 1 },
-      { k: 'levels', l: 'Ярусів', min: 1, max: 8, step: 1, int: 1 },
-      { k: 'arm_length', l: 'Виліт консолі', u: 'м', min: 0.3, max: 3, step: 0.05 },
-      { k: 'length', l: 'Довжина', u: 'м', min: 1, max: 40, step: 0.1 },
-      { k: 'level_height', l: 'Висота ярусу', u: 'м', min: 0.3, max: 3, step: 0.05 },
-      { k: 'max_load_kg', l: 'Макс. навантаження на ярус', u: 'кг', min: 50, max: 20000, step: 50, int: 1 },
-    ],
-    def: { arms: 4, levels: 3, arm_length: 1.0, length: 6, level_height: 1.2, max_load_kg: 1500 },
-  },
-  shelf: {
-    name: 'Полицевий стелаж / комірки', prefix: 'SH1', info: 'Секції × полиці → комірки PREFIX-S01-L1',
-    params: [
-      { k: 'sections', l: 'Секцій', min: 1, max: 60, step: 1, int: 1 },
-      { k: 'shelves', l: 'Полиць', min: 1, max: 10, step: 1, int: 1 },
-      { k: 'cell_w', l: 'Ширина комірки', u: 'м', min: 0.1, max: 8, step: 0.05 },
-      { k: 'cell_d', l: 'Глибина комірки', u: 'м', min: 0.1, max: 3, step: 0.05 },
-      { k: 'cell_h', l: 'Висота комірки', u: 'м', min: 0.1, max: 2, step: 0.05 },
-    ],
-    def: { sections: 6, shelves: 4, cell_w: 1.0, cell_d: 0.5, cell_h: 0.5 },
-  },
-  floor_stack: {
-    name: 'Напільне штабелювання', prefix: 'ST1', info: 'Рядки × колонки → місця під стос',
-    params: [
-      { k: 'rows', l: 'Рядів', min: 1, max: 30, step: 1, int: 1 },
-      { k: 'cols', l: 'Колонок', min: 1, max: 30, step: 1, int: 1 },
-      { k: 'cell_l', l: 'Довжина місця', u: 'м', min: 0.3, max: 8, step: 0.05 },
-      { k: 'cell_w', l: 'Ширина місця', u: 'м', min: 0.3, max: 8, step: 0.05 },
-      { k: 'max_height', l: 'Макс. висота стосу', u: 'м', min: 0.2, max: 6, step: 0.1 },
-    ],
-    def: { rows: 2, cols: 3, cell_l: 2.8, cell_w: 2.1, max_height: 1.6 },
-  },
-  machine_spot: {
-    name: 'Місце під верстат', prefix: 'MS1', info: 'Габарит місця й зона обслуговування',
-    params: [
-      { k: 'length', l: 'Довжина', u: 'м', min: 0.5, max: 40, step: 0.1 },
-      { k: 'width', l: 'Ширина', u: 'м', min: 0.5, max: 40, step: 0.1 },
-      { k: 'service.front', l: 'Обслуговування спереду', u: 'м', min: 0, max: 8, step: 0.1 },
-      { k: 'service.back', l: 'Ззаду', u: 'м', min: 0, max: 8, step: 0.1 },
-      { k: 'service.left', l: 'Зліва', u: 'м', min: 0, max: 8, step: 0.1 },
-      { k: 'service.right', l: 'Справа', u: 'м', min: 0, max: 8, step: 0.1 },
-    ],
-    def: { length: 6, width: 4, service: { front: 1.5, back: 0.5, left: 0.5, right: 0.5 } },
-  },
-  zone: {
-    name: 'Зона-контур', prefix: 'Z1', info: 'Прямокутний контур-розмітка зони',
-    params: [
-      { k: 'length', l: 'Довжина', u: 'м', min: 0.5, max: 150, step: 0.1 },
-      { k: 'width', l: 'Ширина', u: 'м', min: 0.5, max: 150, step: 0.1 },
-      { k: 'title', l: 'Назва зони', type: 'text' },
-      { k: 'color', l: 'Колір', type: 'color' },
-    ],
-    def: { length: 10, width: 8, title: 'Нова зона', color: '#9fb7c9' },
-  },
+/* ===== налаштування перевірок (режими як у прототипі) ===== */
+export const CHECK_DEFAULTS = {
+    fits: ["block"],
+    collide: ["warn"],
+    service_free: ["warn"],
+    aisles_free: ["warn"],
+    load: ["warn"],
+    utility_reach: ["warn", { max_m: 15 }],
+    fire: ["block"],
 };
-const SOLID_SLOTS = ['pallet_rack', 'cantilever', 'shelf', 'floor_stack']; // займають місце на підлозі
+export const defaultChecks = () =>
+    Object.fromEntries(Object.entries(CHECK_DEFAULTS).map(([k, [mode, params]]) => [k, { enabled: true, mode, params: { ...(params || {}) }, id: null }]));
+export const defaultSettings = () => ({ checks: defaultChecks(), reach_n: 15, labels: true });
 
-const CHECKS = [
-  { id: 'fits', name: 'Вміщується в місце', hint: 'У межах місця, будівлі чи контуру шару; дозволені шар і поворот' },
-  { id: 'collide', name: 'Немає перетинів', hint: 'Footprint не перетинає інші об’єкти (OBB, SAT)' },
-  { id: 'service_free', name: 'Зона обслуговування вільна', hint: 'Розширений зоною обслуговування прямокутник не зачіпає чужі footprint' },
-  { id: 'aisles_free', name: 'Проходи не перекриті', hint: 'Footprint не перетинає проходи шару' },
-  { id: 'load', name: 'Навантаження в нормі', hint: 'Вага на площу ≤ ліміту шару; для комірки стелажа ≤ max_load_kg' },
-  { id: 'utility_reach', name: 'Підключення досяжне', hint: 'До найближчої точки потрібного виду не далі N м' },
-  { id: 'fire', name: 'Пожежні проходи й виходи', hint: 'Не перекриті пожежні проходи та зони перед виходами' },
-];
-const defaultChecks = () => ({
-  fits: { enabled: true, mode: 'block' }, collide: { enabled: true, mode: 'warn' }, service_free: { enabled: true, mode: 'warn' },
-  aisles_free: { enabled: true, mode: 'warn' }, load: { enabled: true, mode: 'warn' }, utility_reach: { enabled: true, mode: 'warn' },
-  fire: { enabled: true, mode: 'block' },
-});
-const defaultSettings = () => ({ checks: defaultChecks(), reach_n: 15, labels: true, underlays: {} });
-
-/* ===== геометрія місць і комірки ===== */
-function slotDims(s) {
-  const p = s.params;
-  switch (s.template) {
-    case 'pallet_rack': return { L: p.bays * p.bay_width, W: p.depth, H: p.levels * p.level_height + 0.25 };
-    case 'cantilever': return { L: p.length, W: p.arm_length + 0.15, H: p.levels * p.level_height + 0.25 };
-    case 'shelf': return { L: p.sections * p.cell_w, W: p.cell_d, H: p.shelves * p.cell_h + 0.1 };
-    case 'floor_stack': return { L: p.cols * p.cell_l, W: p.rows * p.cell_w, H: p.max_height };
-    case 'machine_spot': return { L: p.length, W: p.width, H: 0.05 };
-    default: return { L: p.length || 1, W: p.width || 1, H: 0.02 };
-  }
-}
-const _cellCache = new Map();
-const letterOf = (l) => String.fromCharCode(64 + l);
-const padN = (n, w) => String(n).padStart(w, '0');
-function genCells(s) {
-  const p = s.params, pre = s.code_prefix, out = [];
-  const add = (c) => out.push(c);
-  const dg = p.index_digits || 2;
-  if (s.template === 'floor_stack' && p.code_style === 'exact') { // одне місце, код комірки = код місця
-    add({ code: pre, lx: 0, ly: 0, lz: 0, w: p.cols * p.cell_l, d: p.rows * p.cell_w, h: p.max_height, capacity: 1, max_load_kg: null, b: 1, l: 1 });
-  } else if (s.template === 'pallet_rack') {
-    const L = p.bays * p.bay_width, wn = Math.max(dg, String(p.bays).length);
-    for (let b = 1; b <= p.bays; b++) for (let l = 1; l <= p.levels; l++)
-      add({ code: p.code_style === 'bay_letter' ? `${pre}-${padN(b, wn)}${letterOf(l)}` : `${pre}-B${padN(b, wn)}-L${l}`, lx: -L / 2 + (b - 0.5) * p.bay_width, ly: 0, lz: (l - 1) * p.level_height, w: p.bay_width, d: p.depth, h: p.level_height, capacity: p.positions_per_bay, max_load_kg: p.max_load_kg, b, l });
-  } else if (s.template === 'cantilever') {
-    const cw = p.length / p.arms, wn = Math.max(dg, String(p.arms).length);
-    for (let a = 1; a <= p.arms; a++) for (let l = 1; l <= p.levels; l++)
-      add({ code: `${pre}-A${padN(a, wn)}-L${l}`, lx: -p.length / 2 + (a - 0.5) * cw, ly: 0.075, lz: (l - 1) * p.level_height, w: cw, d: p.arm_length, h: p.level_height, capacity: 1, max_load_kg: p.max_load_kg, b: a, l });
-  } else if (s.template === 'shelf') {
-    const L = p.sections * p.cell_w, wn = Math.max(dg, String(p.sections).length);
-    for (let b = 1; b <= p.sections; b++) for (let l = 1; l <= p.shelves; l++)
-      add({ code: `${pre}-S${padN(b, wn)}-L${l}`, lx: -L / 2 + (b - 0.5) * p.cell_w, ly: 0, lz: (l - 1) * p.cell_h + 0.05, w: p.cell_w, d: p.cell_d, h: p.cell_h, capacity: 1, max_load_kg: null, b, l });
-  } else if (s.template === 'floor_stack') {
-    const L = p.cols * p.cell_l, W = p.rows * p.cell_w;
-    for (let r = 1; r <= p.rows; r++) for (let c = 1; c <= p.cols; c++)
-      add({ code: `${pre}-R${r}-C${c}`, lx: -L / 2 + (c - 0.5) * p.cell_l, ly: -W / 2 + (r - 0.5) * p.cell_w, lz: 0, w: p.cell_l, d: p.cell_w, h: p.max_height, capacity: 1, max_load_kg: null, b: c, l: r });
-  }
-  const ov = s.overrides || {};
-  for (const c of out) { const o = ov[c.code]; if (o) { c.ov = true; if (o.capacity != null) c.capacity = o.capacity; if (o.max_load_kg != null) c.max_load_kg = o.max_load_kg; c.blocked = !!o.blocked; c.note = o.note || ''; } }
-  return out;
-}
-function cellsOf(s) {
-  const sig = s.template + '|' + s.code_prefix + '|' + JSON.stringify(s.params) + '|' + JSON.stringify(s.overrides || {});
-  const c = _cellCache.get(s.id);
-  if (c && c.sig === sig) return c.cells;
-  const cells = genCells(s);
-  _cellCache.set(s.id, { sig, cells });
-  return cells;
-}
-const cellCount = (s) => (SOLID_SLOTS.includes(s.template) ? cellsOf(s).length : 0);
-function cellWorld(s, c) { // центр комірки в координатах площадки
-  const a = rad(s.rotation || 0), co = Math.cos(a), si = Math.sin(a);
-  return { x: s.x + c.lx * co - c.ly * si, y: s.y + c.lx * si + c.ly * co };
-}
-
-/* ===== побудова площадок ===== */
+/* ===== будівники в прототипному вигляді ===== */
 const mkLayer = (siteId, o) => Object.assign({
   id: uid('ly_'), site_id: siteId, name: 'Шар', kind: 'custom', elevation: 0, grid_step: 0.5, aisle_width: 2.5, bounds: null,
   slot_types: Object.keys(TPL), edit_roles: ['manager'], color: '#7d8fa0', opacity: 0.6, visible: true, sequence: 10, key: '', group: '', overlay: false,
@@ -191,11 +54,11 @@ function genericCatalog() {
       mkVariant({ id: 'v_gen_cabinet', name: 'Шафа 800 × 400', length: 800, width: 400, height: 2000, weight_kg: 120, power_kw: 0, allowed_layer_kinds: ['production', 'storage', 'engineering'], allowed_slot_types: [], service: { front: 800, back: 0, left: 100, right: 100 } })] },
   ];
 }
-function buildEmptySite(name, id) {
+function buildEmptyRaw(name, id) {
   const sid = id || uid('site_');
   return {
     site: { id: sid, name: name || 'Порожня площадка', building: { length: 60, width: 30, height: 8 }, column_grid: { step_x: 6, step_y: 6 }, active_version: 0 },
-    layers: baseLayers(sid), slots: [], placements: [], catalog: genericCatalog(), settings: defaultSettings(), versions: [],
+    layers: baseLayers(sid), slots: [], placements: [], catalog: genericCatalog(), settings: defaultSettings(),
   };
 }
 
@@ -233,7 +96,7 @@ function sceneCatalog(rows) { // rows: [code, layer, kind, x, y, z, L, W, H, yaw
 
 // версія прикладу: 2 — усі 31 шар і 1078 об'єктів 3D-моделі; старіший збережений приклад не перезаписуємо
 const SEED_REV = 2;
-function buildSample(sidArg) {
+function buildSampleRaw(sidArg) {
   const S0 = SEED, sid = sidArg || 'sample', SC = S0.scene;
   const layers = S0.layers.map((r, i) => {
     const gd = GROUP_DEF[r[2]];
@@ -286,27 +149,233 @@ function buildSample(sidArg) {
   for (const y of [26.5, 34.5]) put('dust', 75, y);
   LY.energy.utilities = u.electric; LY.utilities.utilities = u.air; LY.dust.utilities = u.dust;
   const site = { id: sid, name: S0.name, sample: true, seed_rev: SEED_REV, building: { length: S0.W, width: S0.D, height: S0.H }, column_grid: { step_x: 12, step_y: 12 }, active_version: 1 };
-  const st = { site, layers, slots, placements, catalog, settings: defaultSettings(), versions: [] };
-  autoBounds(st);
-  const snap = makeSnapshot(st);
-  st.versions = [{ n: 1, at: new Date().toISOString(), by: 'Імпорт прикладу', note: 'Початковий стан прикладу (з 3D-моделі factory3d: усі шари й об’єкти)', size: JSON.stringify(snap).length }];
-  st.base = snap;
-  return st;
-}
-/* контур шару: якщо об'єкти виходять за будівлю (док-ворота, дах, мережі) — контур = будівля ∪ об'єкти, щоб «Вміщується» не давало хибних блокувань */
-function autoBounds(st) {
-  const B = st.site.building;
-  const vmap = new Map(); for (const p of st.catalog) for (const v of p.variants) vmap.set(v.id, v);
-  for (const ly of st.layers) {
-    if (ly.kind === 'yard') continue;
-    let x0 = 0, y0 = 0, x1 = B.length, y1 = B.width, out = false;
-    const eat = (box) => { if (box[0] < -1e-3 || box[1] < -1e-3 || box[2] > B.length + 1e-3 || box[3] > B.width + 1e-3) out = true; x0 = Math.min(x0, box[0]); y0 = Math.min(y0, box[1]); x1 = Math.max(x1, box[2]); y1 = Math.max(y1, box[3]); };
-    for (const s of st.slots) if (s.layer_id === ly.id) eat(sGeom(s).box);
-    for (const p of st.placements) if (p.layer_id === ly.id && vmap.get(p.variant_id)) eat(pGeom(p, vmap.get(p.variant_id)).box);
-    if (out) ly.bounds = { x0: Math.floor(x0 * 2) / 2, y0: Math.floor(y0 * 2) / 2, x1: Math.ceil(x1 * 2) / 2, y1: Math.ceil(y1 * 2) / 2 };
-  }
+  return { site, layers, slots, placements, catalog };
 }
 
-function makeSnapshot(st) {
-  return clone({ site: st.site, layers: st.layers, slots: st.slots, placements: st.placements, catalog: st.catalog, settings: { checks: st.settings.checks, reach_n: st.settings.reach_n } });
+// версія прикладу: 2 — усі 31 шар і 1078 об'єктів 3D-моделі; старіший збережений приклад не перезаписуємо
+export { SEED_REV };
+
+/** Знімок для версій і для порівняння «чернетка ↔ активна версія». */
+export function makeSnapshot(st) {
+    return clone({ site: st.site, layers: st.layers, slots: st.slots, placements: st.placements, catalog: st.catalog, settings: { checks: st.settings.checks, reach_n: st.settings.reach_n } });
+}
+
+/* ===== прототипний вигляд → стан ядра ===== */
+const rectPoly = (b) => [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]];
+/** Зона перед виходом усередині будівлі (як exitRect прототипу). */
+function exitRect(fp, b) {
+    const w = fp.w / 2;
+    const d = fp.d;
+    const side = String(fp.side || "S").toUpperCase();
+    if (side === "S") {
+        return { x0: fp.x - w, y0: 0, x1: fp.x + w, y1: d };
+    }
+    if (side === "N") {
+        return { x0: fp.x - w, y0: b.width - d, x1: fp.x + w, y1: b.width };
+    }
+    if (side === "W") {
+        return { x0: 0, y0: fp.y - w, x1: d, y1: fp.y + w };
+    }
+    return { x0: b.length - d, y0: fp.y - w, x1: b.length, y1: fp.y + w };
+}
+const modeOfRotations = (r) => {
+    if (typeof r === "string") {
+        return r;
+    }
+    const a = (r || [0, 90, 180, 270]).map(String);
+    if (a.includes("any")) {
+        return "any";
+    }
+    if (a.length === 1 && a[0] === "0") {
+        return "z";
+    }
+    if (a.every((x) => x === "0" || x === "180")) {
+        return "h";
+    }
+    return "q";
+};
+/** Варіант: масиви кутів → режим, `allowed_*` → `layer_kinds`/`slot_types`, точки підключення в мм, сторона фронту малими літерами. */
+export function variantFromProto(v) {
+    if (v.layer_kinds && typeof v.rotations === "string") {
+        return clone(v); // уже у вигляді ядра
+    }
+    const o = clone(v);
+    o.rotations = modeOfRotations(v.rotations);
+    o.layer_kinds = o.allowed_layer_kinds || o.layer_kinds || [];
+    o.slot_types = o.allowed_slot_types || o.slot_types || [];
+    delete o.allowed_layer_kinds;
+    delete o.allowed_slot_types;
+    o.front_side = String(o.front_side || "s").toLowerCase();
+    o.utilities = (o.utilities || []).map((u) => ("x_mm" in u ? u : { kind: u.kind, x_mm: u.x || 0, y_mm: u.y || 0, z_mm: u.z || 0 }));
+    o.service = o.service || { front: 0, back: 0, left: 0, right: 0 };
+    o.model = o.model ? modelFromProto(o.model) : null;
+    return o;
+}
+function modelFromProto(m) {
+    if (m.status) {
+        return m;
+    }
+    const bb = m.bbox || [0, 0, 0];
+    return {
+        status: "ok",
+        format: m.format,
+        file_name: m.name,
+        size_bytes: m.size || 0,
+        triangles: m.tris || 0,
+        units: m.units || "mm",
+        up_axis: m.up === "Z" ? "z" : "y",
+        size_mm: bb,
+        converted_by: "browser",
+    };
+}
+
+/**
+ * Стан у прототипному вигляді ({site, layers, slots, placements, catalog, settings, versions}) → стан ядра (adapter.js).
+ * Уже конвертований документ (site.schema ≥ 2) повертається як є.
+ */
+export function fromProto(st) {
+    if (st.site.schema >= 2) {
+        return st;
+    }
+    const s = st.site;
+    const B = s.building;
+    const underlays = (st.settings && st.settings.underlays) || {};
+    const act = typeof s.active_version === "number" ? (s.active_version > 0 ? { n: s.active_version } : null) : s.active_version || null;
+    const site = {
+        ...s,
+        schema: 2,
+        code: s.code || "",
+        default_parent_location: null,
+        active_version: act,
+        draft_base_version: act,
+        draft_rev: s.draft_rev || 0,
+        draft_changes: 0,
+        has_changes: false,
+        settings: { autosave_ms: 700, max_model_mb: 20, max_triangles: 50000, eps_mm: 1, reach_default_m: 15, publish_enabled: true, ...(s.settings || {}) },
+    };
+    const layers = st.layers.map((l) => {
+        const fp = (l.fire_paths || []).map((f) => {
+            if ("x0" in f) {
+                return { ...f };
+            }
+            const r = exitRect(f, B);
+            return { id: f.id, kind: f.kind || "exit", code: f.code, name: f.name, ...r };
+        });
+        const ul = underlays[l.id];
+        const { site_id: _s, ...rest } = l;
+        return {
+            ...rest,
+            bounds: l.bounds && !Array.isArray(l.bounds) ? rectPoly(l.bounds) : l.bounds || null,
+            edit_groups: l.edit_groups || [],
+            style: l.style || "solid",
+            aisles: (l.aisles || []).map((a) => ({ ...a })),
+            fire_paths: fp,
+            utilities: (l.utilities || []).map((u) => ({ ...u })),
+            underlay: l.underlay || (ul ? underlayFromProto(ul) : null),
+        };
+    });
+    const settings = { ...defaultSettings(), ...(st.settings || {}) };
+    delete settings.underlays;
+    const oldChecks = (st.settings && st.settings.checks) || {};
+    settings.checks = defaultChecks();
+    for (const [k, c] of Object.entries(oldChecks)) {
+        if (settings.checks[k]) {
+            Object.assign(settings.checks[k], { enabled: c.enabled !== false, mode: c.mode || settings.checks[k].mode, params: { ...settings.checks[k].params, ...(c.params || {}) } });
+        }
+    }
+    settings.reach_n = (st.settings && st.settings.reach_n) ?? settings.checks.utility_reach.params.max_m ?? 15;
+    settings.checks.utility_reach.params.max_m = settings.reach_n;
+    const out = {
+        site,
+        layers,
+        slots: st.slots.map((x) => ({ parent_location_id: null, note: "", ...x })),
+        placements: st.placements.map((p) => ({ cell_code: null, equipment: null, ...p })),
+        catalog: st.catalog.map((p) => ({ ...p, category: p.category === "cabinet" ? "panel" : p.category, variants: p.variants.map(variantFromProto) })),
+        settings,
+        versions: (st.versions || []).map(versionFromProto),
+    };
+    // у прототипі двір не мав контуру й не перевірявся на вихід за будівлю; тепер перевірка спільна з модулем — контур = будівля ∪ об'єкти
+    autoBounds(out, (ly) => ly.kind === "yard" && !ly.bounds);
+    return out;
+}
+function underlayFromProto(u) {
+    return {
+        url: null,
+        name: u.name,
+        format: "dxf",
+        status: "ready",
+        legacy: true,
+        params: { unit: u.units || "mm", dx: u.ox || 0, dy: u.oy || 0, rot_deg: u.rot || 0, scale: u.scale || 1, opacity: u.opacity ?? 0.75 },
+        bbox: u.bbox || null,
+    };
+}
+export function versionFromProto(v) {
+    return { id: v.id ?? v.n, n: v.n, published_at: v.published_at || v.at, by: v.by, note: v.note || "", state: "published", counts: v.counts || null, size: v.size };
+}
+
+/* ===== контур шару: якщо об'єкти виходять за будівлю (док-ворота, дах, мережі) — контур = будівля ∪ об'єкти ===== */
+export function autoBounds(st, only = () => true) {
+    const B = st.site.building;
+    const vmap = new Map();
+    for (const p of st.catalog) {
+        for (const v of p.variants) {
+            vmap.set(v.id, v);
+        }
+    }
+    for (const ly of st.layers) {
+        if (!only(ly)) {
+            continue;
+        }
+        let x0 = 0;
+        let y0 = 0;
+        let x1 = B.length;
+        let y1 = B.width;
+        let out = false;
+        const eat = (box) => {
+            if (box[0] < -1e-3 || box[1] < -1e-3 || box[2] > B.length + 1e-3 || box[3] > B.width + 1e-3) {
+                out = true;
+            }
+            x0 = Math.min(x0, box[0]);
+            y0 = Math.min(y0, box[1]);
+            x1 = Math.max(x1, box[2]);
+            y1 = Math.max(y1, box[3]);
+        };
+        for (const s of st.slots) {
+            if (s.layer_id === ly.id) {
+                eat(sGeom(s).box);
+            }
+        }
+        for (const p of st.placements) {
+            if (p.layer_id === ly.id && vmap.get(p.variant_id)) {
+                eat(pGeom(p, vmap.get(p.variant_id)).box);
+            }
+        }
+        if (out) {
+            ly.bounds = rectPoly({ x0: Math.floor(x0 * 2) / 2, y0: Math.floor(y0 * 2) / 2, x1: Math.ceil(x1 * 2) / 2, y1: Math.ceil(y1 * 2) / 2 });
+        }
+    }
+}
+
+/** Порожня площадка: будівля 60×30×8 м, п'ять базових шарів, каталог типових варіантів. */
+export function buildEmptySite(name, id) {
+    const raw = buildEmptyRaw(name, id);
+    const st = fromProto({ ...raw, versions: [] });
+    st.base = makeSnapshot(st);
+    st.snaps = { 0: st.base };
+    return st;
+}
+
+/** Приклад «Меблеве підприємство» з історією з однієї версії (початковий стан). */
+export function buildSample(sid) {
+    const st = fromProto({ ...buildSampleRaw(sid), settings: defaultSettings(), versions: [] });
+    st.site.active_version = { n: 1 };
+    st.site.draft_base_version = { n: 1 };
+    autoBounds(st);
+    const snap = makeSnapshot(st);
+    st.versions = [
+        { id: 1, n: 1, published_at: new Date().toISOString(), by: "Імпорт прикладу", note: "Початковий стан прикладу (з 3D-моделі factory3d: усі шари й об’єкти)", state: "published", counts: null, size: JSON.stringify(snap).length },
+    ];
+    st.base = snap;
+    st.snaps = { 1: snap };
+    return st;
 }
