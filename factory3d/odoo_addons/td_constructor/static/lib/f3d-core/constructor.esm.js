@@ -12780,7 +12780,8 @@ var CSS = `
   .f3d-s3 .s3-tools select{max-width:60vw}
   .f3d-s3 .s3-heat{right:6px;bottom:96px;max-width:46vw;font-size:11px}
   .f3d-s3 .s3-objbtn{display:inline-flex;position:absolute;right:6px;bottom:8px;z-index:40}
-  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) - 46px);top:6px;z-index:40}
+  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) + 4px);top:6px;z-index:40}
+  .f3d-s3.m-left .s3-objbtn{display:none}
   .f3d-s3 .s3-card-ov{display:flex;flex-direction:column;position:fixed;inset:0;z-index:60;background:var(--surface)}
   .f3d-s3 .s3-card-ov[hidden]{display:none}
   .f3d-s3 .s3-card-ov .s3-card-h{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
