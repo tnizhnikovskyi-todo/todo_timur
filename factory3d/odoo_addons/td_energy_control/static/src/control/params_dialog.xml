@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <!-- UI-18 ParamsDialog (SPEC 3.2): параметры сценария по schema -->
+    <t t-name="td_energy_control.ParamsDialog">
+        <Dialog title="title" size="'md'" contentClass="'o_td_en_cd o_td_en_pd'">
+            <div class="o_td_en_pd_grid">
+                <p t-if="!schema.length" class="o_td_en_cd_text">У цього сценарію немає налаштовуваних параметрів.</p>
+                <t t-foreach="schema" t-as="spec" t-key="spec.name">
+                    <div class="o_td_en_pd_field" t-att-data-param="spec.name">
+                        <t t-if="spec.type === 'days'">
+                            <span class="o_td_en_pd_label" t-esc="spec.label"/>
+                            <div class="o_td_en_pd_days" role="group" t-att-aria-label="spec.label">
+                                <button t-foreach="weekdays" t-as="wd" t-key="wd_index" type="button"
+                                        class="o_td_en_btn o_td_en_pd_day" t-att-aria-pressed="isDayOn(spec.name, wd_index + 1) ? 'true' : 'false'"
+                                        t-att-aria-label="wd" t-on-click="() => this.toggleDay(spec.name, wd_index + 1)" t-esc="wd"/>
+                            </div>
+                        </t>
+                        <t t-elif="spec.type === 'bool'">
+                            <label class="o_td_en_pd_check">
+                                <input type="checkbox" class="o_td_en_pd_input" t-model="state.values[spec.name]"/>
+                                <span t-esc="spec.label"/>
+                            </label>
+                        </t>
+                        <t t-else="">
+                            <label class="o_td_en_pd_label" t-att-for="'o_td_en_pd_' + spec.name" t-esc="spec.label"/>
+                            <select t-if="spec.type === 'enum'" class="form-select o_td_en_pd_input" t-att-id="'o_td_en_pd_' + spec.name"
+                                    t-model="state.values[spec.name]">
+                                <option t-foreach="spec.choices || []" t-as="choice" t-key="choice" t-att-value="choice" t-esc="choice"/>
+                            </select>
+                            <input t-elif="spec.type === 'time'" type="time" class="form-control o_td_en_pd_input"
+                                   t-att-id="'o_td_en_pd_' + spec.name" t-model="state.values[spec.name]"/>
+                            <input t-else="" type="number" class="form-control o_td_en_pd_input" t-att-id="'o_td_en_pd_' + spec.name"
+                                   t-att-step="spec.type === 'int' ? 1 : 'any'" t-att-min="spec.min" t-att-max="spec.max"
+                                   t-model.number="state.values[spec.name]"/>
+                        </t>
+                        <span t-if="hint(spec) and spec.type !== 'bool'" class="o_td_en_pd_hint" t-esc="hint(spec)"/>
+                        <span t-if="state.errors[spec.name]" class="o_td_en_pd_error" role="alert" t-esc="state.errors[spec.name]"/>
+                    </div>
+                </t>
+            </div>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-primary o_td_en_pd_save" t-on-click="save">Зберегти</button>
+                <button type="button" class="btn btn-secondary o_td_en_pd_cancel" t-on-click="() => props.close()">Скасувати</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

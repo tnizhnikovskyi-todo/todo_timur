@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC 5.1: параметри td.energy_control.* (noupdate); D-46: remote_switching_enabled — False -->
+<odoo noupdate="1">
+    <record id="param_write_enabled" model="ir.config_parameter">
+        <field name="key">td.energy_control.write_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_automation_enabled" model="ir.config_parameter">
+        <field name="key">td.energy_control.automation_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_remote_switching_enabled" model="ir.config_parameter">
+        <field name="key">td.energy_control.remote_switching_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_confirm_ttl_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.confirm_ttl_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_second_ttl_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.second_ttl_s</field>
+        <field name="value">600</field>
+    </record>
+    <record id="param_command_ttl_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.command_ttl_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_exec_timeout_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.exec_timeout_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_step_timeout_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.step_timeout_s</field>
+        <field name="value">8</field>
+    </record>
+    <record id="param_verify_timeout_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.verify_timeout_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_apply_timeout_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.apply_timeout_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_undo_window_min" model="ir.config_parameter">
+        <field name="key">td.energy_control.undo_window_min</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_heartbeat_stale_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.heartbeat_stale_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_engine_tick_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.engine_tick_s</field>
+        <field name="value">2</field>
+    </record>
+    <record id="param_config_poll_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.config_poll_s</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_stale_hold_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.stale_hold_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_min_write_interval_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.min_write_interval_s</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_max_writes_per_min" model="ir.config_parameter">
+        <field name="key">td.energy_control.max_writes_per_min</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_shed_restore_step_s" model="ir.config_parameter">
+        <field name="key">td.energy_control.shed_restore_step_s</field>
+        <field name="value">20</field>
+    </record>
+    <record id="param_plan_horizon_days" model="ir.config_parameter">
+        <field name="key">td.energy_control.plan_horizon_days</field>
+        <field name="value">2</field>
+    </record>
+    <record id="param_export_advice_min" model="ir.config_parameter">
+        <field name="key">td.energy_control.export_advice_min</field>
+        <field name="value">5</field>
+    </record>
+    <record id="param_journal_limit" model="ir.config_parameter">
+        <field name="key">td.energy_control.journal_limit</field>
+        <field name="value">50</field>
+    </record>
+    <record id="seq_action" model="ir.sequence">
+        <field name="name">Керування: дії</field>
+        <field name="code">td.energy.action</field>
+        <field name="prefix">ACT/%(y)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-38 пріоритети скидання навантажень (M-30): редагує «Головний енергетик» (ACL), решта — лише перегляд. Власник: B -->
+<odoo>
+    <record id="view_td_energy_shed_item_list" model="ir.ui.view">
+        <field name="name">td.energy.shed.item.list</field>
+        <field name="model">td.energy.shed.item</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="node_id"/>
+                <field name="action"/>
+                <field name="param_value"/>
+                <field name="condition"/>
+                <field name="condition_value"/>
+                <field name="kw_reducible"/>
+                <field name="p_now_kw" readonly="1"/>
+                <field name="signal_id"/>
+                <field name="active"/>
+                <field name="how" readonly="1" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_shed_item_form" model="ir.ui.view">
+        <field name="name">td.energy.shed.item.form</field>
+        <field name="model">td.energy.shed.item</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                            <field name="node_id"/>
+                            <field name="critical" readonly="1"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="action"/>
+                            <field name="param_value"/>
+                            <field name="condition"/>
+                            <field name="condition_value"/>
+                            <field name="kw_reducible"/>
+                            <field name="p_now_kw" readonly="1"/>
+                            <field name="signal_id"/>
+                        </group>
+                    </group>
+                    <group string="Як виконується">
+                        <field name="how" readonly="1" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_shed_item" model="ir.actions.act_window">
+        <field name="name">Пріоритети скидання</field>
+        <field name="res_model">td.energy.shed.item</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

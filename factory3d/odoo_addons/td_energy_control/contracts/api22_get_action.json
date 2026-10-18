@@ -1,0 +1,30 @@
+{
+ "id": 55,
+ "name": "Увімкнути секційний вимикач QS",
+ "state": "executing",
+ "state_label": "Виконується",
+ "summary": "Увімкнути секційний вимикач QS",
+ "detail": "секції 1 і 2 разом",
+ "result_text": null,
+ "error": null,
+ "finished_at": null,
+ "needs_second": false,
+ "checks": [
+  {
+   "code": "ats_parallel_lock",
+   "label": "Блокування паралельної роботи T1 і T2 від АВР — увімкнено",
+   "state": "ok",
+   "hard": true,
+   "detail": ""
+  }
+ ],
+ "collector_checks": [
+  {
+   "code": "controller_remote",
+   "state": "ok",
+   "hard": true,
+   "detail": "remote=1"
+  }
+ ],
+ "undo_available": false
+}

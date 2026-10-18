@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC 5.4: реєстр блокувань (20 рядків) -->
+<odoo>
+    <record id="interlock_controller_remote" model="td.energy.interlock">
+        <field name="code">controller_remote</field>
+        <field name="name">Контролер у дистанційному режимі</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/ctl/remote']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="interlock_data_fresh" model="td.energy.interlock">
+        <field name="code">data_fresh</field>
+        <field name="name">Дані свіжі</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="[]"/>
+        <field name="params" eval="{'max_age_s': 60}"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="interlock_no_island" model="td.energy.interlock">
+        <field name="code">no_island</field>
+        <field name="name">Мережа є, острівного режиму немає</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['infra/ats/position', 'infra/ats/src1_ok']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">30</field>
+    </record>
+    <record id="interlock_ats_parallel_lock" model="td.energy.interlock">
+        <field name="code">ats_parallel_lock</field>
+        <field name="name">Блокування паралельної роботи T1 і T2 від АВР — увімкнено</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/ats/parallel_lock']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">40</field>
+    </record>
+    <record id="interlock_qs_current_ok" model="td.energy.interlock">
+        <field name="code">qs_current_ok</field>
+        <field name="name">Струм через QS після вмикання ≈ {i_a} А з {rating_a} А</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy/sections/S1/p_kw', 'energy/sections/S2/p_kw', 'energy/cells/QS/state']"/>
+        <field name="params" eval="{'rating_a': 1600, 'max_ratio': 0.8, 'cos_phi': 0.95}"/>
+        <field name="sequence">50</field>
+    </record>
+    <record id="interlock_bess_ok" model="td.energy.interlock">
+        <field name="code">bess_ok</field>
+        <field name="name">BESS на зв'язку, без аварії</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['infra/bess/state']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">60</field>
+    </record>
+    <record id="interlock_bess_soc_lt_limit" model="td.energy.interlock">
+        <field name="code">bess_soc_lt_limit</field>
+        <field name="name">Заряд {soc} % &lt; {limit} %</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['infra/totals/bess_soc']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">70</field>
+    </record>
+    <record id="interlock_bess_reserve_kept" model="td.energy.interlock">
+        <field name="code">bess_reserve_kept</field>
+        <field name="name">Резерв на відключення мережі {reserve} % збережено</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['infra/totals/bess_soc', 'energy_control/bess/reserve_pct']"/>
+        <field name="params" eval="{'capacity_kwh': 387}"/>
+        <field name="sequence">80</field>
+    </record>
+    <record id="interlock_bess_temp_ok" model="td.energy.interlock">
+        <field name="code">bess_temp_ok</field>
+        <field name="name">Температура шафи {t} °C</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/bess/temp_c']"/>
+        <field name="params" eval="{'max_c': 40}"/>
+        <field name="sequence">90</field>
+    </record>
+    <record id="interlock_chp_ready" model="td.energy.interlock">
+        <field name="code">chp_ready</field>
+        <field name="name">КГУ зупинена й готова до пуску</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['infra/chp/state']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">100</field>
+    </record>
+    <record id="interlock_chp_gas_pressure" model="td.energy.interlock">
+        <field name="code">chp_gas_pressure</field>
+        <field name="name">Тиск газу {bar} бар</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/chp/gas_bar']"/>
+        <field name="params" eval="{'min_bar': 1.5}"/>
+        <field name="sequence">110</field>
+    </record>
+    <record id="interlock_chp_permit" model="td.energy.interlock">
+        <field name="code">chp_permit</field>
+        <field name="name">Дозвіл оператора КГУ</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/chp/permit']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">120</field>
+    </record>
+    <record id="interlock_chp_min_run" model="td.energy.interlock">
+        <field name="code">chp_min_run</field>
+        <field name="name">Мінімальний час роботи КГУ {h} год відпрацьовано</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">collector</field>
+        <field name="inputs" eval="['infra/chp/state', 'infra/chp/hours']"/>
+        <field name="params" eval="{'min_run_h': 2}"/>
+        <field name="sequence">130</field>
+    </record>
+    <record id="interlock_no_fire_alarm" model="td.energy.interlock">
+        <field name="code">no_fire_alarm</field>
+        <field name="name">Пожежної тривоги немає</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['fire/panel/state']"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">140</field>
+    </record>
+    <record id="interlock_genset_fuel" model="td.energy.interlock">
+        <field name="code">genset_fuel</field>
+        <field name="name">Паливо ДГУ {pct} %</field>
+        <field name="hard" eval="False"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">odoo</field>
+        <field name="inputs" eval="[]"/>
+        <field name="params" eval="{'min_pct': 30}"/>
+        <field name="sequence">150</field>
+    </record>
+    <record id="interlock_genset_heater" model="td.energy.interlock">
+        <field name="code">genset_heater</field>
+        <field name="name">Підігрів двигуна увімкнено</field>
+        <field name="hard" eval="False"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">odoo</field>
+        <field name="inputs" eval="[]"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">160</field>
+    </record>
+    <record id="interlock_genset_idle" model="td.energy.interlock">
+        <field name="code">genset_idle</field>
+        <field name="name">ДГУ не в роботі й тест не йде</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">odoo</field>
+        <field name="inputs" eval="[]"/>
+        <field name="params" eval="{}"/>
+        <field name="sequence">170</field>
+    </record>
+    <record id="interlock_aisle_lux_ge" model="td.energy.interlock">
+        <field name="code">aisle_lux_ge</field>
+        <field name="name">Освітленість проходів ≥ {lux} лк</field>
+        <field name="hard" eval="False"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['lighting/groups/*/e_now']"/>
+        <field name="params" eval="{'min_lux': 75}"/>
+        <field name="sequence">180</field>
+    </record>
+    <record id="interlock_co2_lt" model="td.energy.interlock">
+        <field name="code">co2_lt</field>
+        <field name="name">CO₂ у цеху {ppm} ppm &lt; {limit} ppm</field>
+        <field name="hard" eval="False"/>
+        <field name="fail_closed" eval="False"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['ventilation/totals/co2_ppm']"/>
+        <field name="params" eval="{'max_ppm': 1000}"/>
+        <field name="sequence">190</field>
+    </record>
+    <record id="interlock_air_setpoint_min" model="td.energy.interlock">
+        <field name="code">air_setpoint_min</field>
+        <field name="name">Мінімальний тиск споживачів {min} бар</field>
+        <field name="hard" eval="True"/>
+        <field name="fail_closed" eval="True"/>
+        <field name="where">both</field>
+        <field name="inputs" eval="['energy_control/air/min_consumer_bar']"/>
+        <field name="params" eval="{'margin_bar': 0.2, 'max_bar': 8.5}"/>
+        <field name="sequence">200</field>
+    </record>
+</odoo>

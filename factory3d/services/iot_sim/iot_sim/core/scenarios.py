@@ -1,4 +1,5 @@
-"""Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію») і S-16 ``pfc_step_fault`` (W1 §8.1).
+"""Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію»), S-16 ``pfc_step_fault`` (W1 §8.1) і S-17…S-20
+(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``).
 
 ``ScenarioRunner(world).start(name, params, run_ref)`` (потрібен запущений asyncio-цикл):
 валідація pydantic (``ScenarioParamsError`` -> 422), режим і конфлікти (``ScenarioConflict`` -> 409),
@@ -8,7 +9,8 @@
 Ефекти, яким потрібні ще не написані моделі, виражені через ``World`` (моделі читають їх самі):
 
 * ``world.flags[<name>]`` — стан: ``shift``, ``blackout``, ``pv_cf`` (float), ``compressor_fault``,
-  ``boiler_force_on`` (int), ``fire_drill``, ``genset_test``, ``swb`` (S-16); словники за ключем пристрою/групи:
+  ``boiler_force_on`` (int), ``fire_drill``, ``genset_test``, ``swb`` (S-16), ``extra_load_kw``/``bess_auto_idle``/
+  ``export_target_kw``/``ctl_remote``/``gas_bar`` (S-17…S-20, ``models.meter.CTL_DEFAULTS``); словники за ключем пристрою/групи:
   ``filter_clogged[dev]``, ``lighting_scene[group]``, ``battery_low[dev]``.
 * ``world.fault(device, reason)`` / ``clear`` — S-02 (R-15).
 * ``world.post(topic, payload)`` — одноразові команди: ``yard`` (truck_no_booking/truck_arrival),
@@ -320,6 +322,33 @@ class PfcStepFaultParams(BaseParams):
     section: Literal[1, 2] = 2
     step: int = Field(3, ge=0, le=10)
     qs_closed: bool = False
+
+
+class PeakLoadParams(BaseParams):
+    """W2 §8.2 (S-17): додаткове навантаження ``extra_kw`` кВт (від'ємне — зменшення, але не нижче нуля)."""
+
+    duration_s: int = Field(900, ge=0)
+    extra_kw: float = Field(250.0, ge=-1000, le=2000)
+
+
+class ExportDemoParams(BaseParams):
+    """W2 §8.2 (S-18): експорт рівно ``export_kw`` (BESS «авто» в утриманні 0 кВт, навантаження підганяється)."""
+
+    duration_s: int = Field(900, ge=0)
+    export_kw: float = Field(26.0, ge=0, le=500)
+
+
+class CtlLocalParams(BaseParams):
+    """W2 §8.2 (S-19): контролер ГРЩ у місцевому режимі (``ctl_remote = 0``)."""
+
+    duration_s: int = Field(600, ge=0)
+
+
+class ChpNoGasParams(BaseParams):
+    """W2 §8.2 (S-20): тиск газу КГУ нижче мінімуму (``gas_bar``, за замовчуванням 0,80 бар)."""
+
+    duration_s: int = Field(600, ge=0)
+    gas_bar: float = Field(0.80, ge=0, le=1.4)
 
 
 class LightingSceneParams(BaseParams):
@@ -641,10 +670,63 @@ class PfcStepFault(Scenario):
             ctx.step("swb", "Контролер ГРЩ: параметри сценарію", qs_closed=p.qs_closed)
 
 
+class PeakLoad(Scenario):
+    """W2 §8.2 (S-17): ``extra_load_kw`` — модель ``meter`` додає його до навантаження (імпорт росте до піку)."""
+
+    name, title_uk, group, Params = "peak_load", "Пік навантаження", "energy", PeakLoadParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"load"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("extra_load_kw", p.extra_kw)
+        ctx.step("peak_load", f"Додаткове навантаження {p.extra_kw:g} кВт", extra_kw=p.extra_kw)
+
+
+class ExportDemo(Scenario):
+    """W2 §8.2 (S-18): ``bess_auto_idle`` + ``export_target_kw`` — експорт рівно ``export_kw`` (``load = gen − export``)."""
+
+    name, title_uk, group, Params = "export_demo", "Демо експорту СЕС", "energy", ExportDemoParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"load", "dev:BESS"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("bess_auto_idle", True)
+        ctx.flag("export_target_kw", p.export_kw)
+        ctx.step("export_demo", f"Експорт {p.export_kw:g} кВт", export_kw=p.export_kw)
+
+
+class CtlLocal(Scenario):
+    """W2 §8.2 (S-19): ``ctl_remote = 0`` — контролер у місцевому режимі, команди дають ``ack = 2``."""
+
+    name, title_uk, group, Params = "ctl_local", "Контролер ГРЩ у місцевому режимі", "energy", CtlLocalParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"ctl"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("ctl_remote", 0)
+        ctx.step("ctl_local", "Контролер ГРЩ: місцевий режим")
+
+
+class ChpNoGas(Scenario):
+    """W2 §8.2 (S-20): ``gas_bar`` нижче 1,5 бар — пуск КГУ відхиляється (``chp/ack = 2``)."""
+
+    name, title_uk, group, Params = "chp_no_gas", "КГУ: немає газу", "energy", ChpNoGasParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"dev:CHP"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("gas_bar", p.gas_bar)
+        ctx.step("chp_no_gas", f"Тиск газу КГУ {p.gas_bar:g} бар", gas_bar=p.gas_bar)
+
+
 SCENARIOS: list[type[Scenario]] = [
     Shift, MachineFault, Blackout, FilterClogged, TruckNoBooking, TruckArrival, FireDrill, Spark,
     AccessEvent, BatteryLow, CompressorFault, PvCloudy, BoilerRefill, GensetTest, LightingScene,
-    PfcStepFault]
+    PfcStepFault, PeakLoad, ExportDemo, CtlLocal, ChpNoGas]
 
 
 def _tags_conflict(a: set[str], b: set[str]) -> str | None:

@@ -1,0 +1,12 @@
+{
+ "accepted": false,
+ "state": "blocked",
+ "reason": "Блокування: ats_parallel_lock — не виконано (lock=0)",
+ "checks": [
+  {
+   "code": "ats_parallel_lock",
+   "state": "fail",
+   "detail": "lock=0"
+  }
+ ]
+}

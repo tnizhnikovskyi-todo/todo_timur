@@ -1,0 +1,10 @@
+[
+ {
+  "code": "qs_close",
+  "label": "Увімкнути QS…",
+  "kind": "qs_close",
+  "cls": "B",
+  "enabled": true,
+  "disabled_reason": null
+ }
+]

@@ -42,8 +42,13 @@
                         </div>
                     </section>
 
-                    <section t-if="state.data.advice" class="o_td_en_advice" aria-label="Рекомендація">
-                        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                    <section t-if="state.data.advice" t-attf-class="o_td_en_advice {{adviceDone ? 'o_td_en_advice--done' : ''}}"
+                             aria-label="Рекомендація" t-att-role="adviceDone ? 'status' : undefined">
+                        <svg t-if="adviceDone" class="o_td_en_advice_icon_done" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M8 12.5l3 3 5-6"/>
+                        </svg>
+                        <svg t-else="" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>
                         </svg>
                         <div class="o_td_en_advice_text">
@@ -51,14 +56,15 @@
                         </div>
                         <div class="o_td_en_advice_actions">
                             <button t-foreach="adviceActions" t-as="act" t-key="act.code" type="button"
-                                    t-attf-class="o_td_en_btn {{act_index === 0 ? 'o_td_en_btn--teal' : 'o_td_en_btn--teal_outline'}} o_td_en_advice_act"
+                                    t-attf-class="o_td_en_btn {{act_index === 0 and !adviceDone ? 'o_td_en_btn--teal' : 'o_td_en_btn--teal_outline'}} o_td_en_advice_act"
                                     t-att-data-action-code="act.code" t-on-click="() => this.runAdvice(act)" t-esc="act.label"/>
-                            <button type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_en_advice_later" t-on-click="snooze">Пізніше</button>
+                            <button t-if="!adviceDone" type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_en_advice_later" t-on-click="snooze">Пізніше</button>
                         </div>
                     </section>
 
                     <div t-if="state.errors.sld" class="o_td_en_card o_td_en_error" t-esc="'Схема недоступна: ' + state.errors.sld"/>
-                    <SldCanvas t-if="state.data.sld" sld="state.data.sld" selected="state.selNode" onSelect="(code) => this.selectNode(code)"/>
+                    <SldCanvas t-if="state.data.sld" sld="state.data.sld" selected="state.selNode" onSelect="(code) => this.selectNode(code)"
+                               onChanged="() => this.load(['sld', 'alarms', 'advice'])"/>
 
                     <div class="o_td_en_row">
                         <div t-if="state.errors.profile" class="o_td_en_card o_td_en_error" style="flex: 2 1 640px" t-esc="'Профіль недоступний: ' + state.errors.profile"/>

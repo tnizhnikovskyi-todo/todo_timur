@@ -1,0 +1,31 @@
+{
+ "start_test": {
+  "args": [
+   "gen",
+   "mode",
+   "user"
+  ],
+  "mode": "idle",
+  "result": {
+   "accepted": true,
+   "minutes": 10,
+   "test_end": "2026-10-18T11:30:03Z",
+   "ref": {
+    "model": "td.genset",
+    "id": 1
+   }
+  }
+ },
+ "test_facts": {
+  "args": [
+   "gen"
+  ],
+  "result": {
+   "fuel_pct": 78.0,
+   "running": false,
+   "test_running": false,
+   "island": false,
+   "coolant_c": 42.0
+  }
+ }
+}

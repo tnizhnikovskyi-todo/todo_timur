@@ -1,0 +1,19 @@
+{
+ "v": 1,
+ "action_id": 55,
+ "idem": "3f9a7c0e1d2b4a5f6e7d8c9b0a1f2e3d4c5b6a79",
+ "kind": "bess_charge",
+ "cls": "A",
+ "params": {
+  "power_kw": 50,
+  "until": "16:00",
+  "soc_limit_pct": 95
+ },
+ "requested_by": "ivanenko",
+ "requested_at": "2026-10-18T11:20:30Z",
+ "expires_at": "2026-10-18T11:22:30Z",
+ "tz": "Europe/Kyiv",
+ "limits": {
+  "bess_kw_max": 200
+ }
+}

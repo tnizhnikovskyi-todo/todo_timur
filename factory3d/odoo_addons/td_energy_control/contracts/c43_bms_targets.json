@@ -1,0 +1,33 @@
+{
+ "vent": {
+  "model": "td.bms.hvac.unit",
+  "domain": [
+   [
+    "kind",
+    "=",
+    "roofvent"
+   ]
+  ],
+  "fields": [
+   "code",
+   "mode_signal_id",
+   "sp_night_signal_id"
+  ]
+ },
+ "light_group": {
+  "model": "td.bms.light.group",
+  "fields": [
+   "code",
+   "scene_signal_id",
+   "fixture_kind"
+  ]
+ },
+ "light_scene": {
+  "model": "td.bms.light.scene",
+  "fields": [
+   "number",
+   "name"
+  ]
+ },
+ "aisle_rule": "fixture_kind == 'highbay_rack'"
+}

@@ -385,6 +385,8 @@ self._f3d_local_types()` → `ValidationError("Джерело %s: вкажіть
 | `_default_address(self)` → dict | заготовка адреси для нового сигналу за типом (Додаток A.1, поле «приклад») |
 | `@api.model _f3d_local_types(self) -> list[str]` | CT-12, R-26: типи локальних джерел (без колектора); базово `[]`; модуль, що додає тип через `selection_add` поля `type`, розширює: `return super()._f3d_local_types() + ['td_genset']` |
 
+**Примітка (енергетика W2, Q-30).** Типи джерел, яких немає в `td_telemetry` (наприклад `energy_ctl` модуля `td_energy_control`), реєструють свої валідатори **під час імпорту модуля**: `tools/address.py` `PARAMS_VALIDATORS[<тип>]` і `ADDRESS_VALIDATORS[<тип>]` — звичайні словники модуля, `td_telemetry` не змінюється. Офіційний хук розширення (`_f3d_param_validators`) — окремою дрібною зміною пізніше. Ключі додаються лише поряд із `selection_add` поля `type` (`ondelete={"<тип>": "cascade"}`) і не перезаписують чужі.
+
 ### M-03 `td.signal` — сигнал (CT-01, §6.4 каркаса)
 
 ```python

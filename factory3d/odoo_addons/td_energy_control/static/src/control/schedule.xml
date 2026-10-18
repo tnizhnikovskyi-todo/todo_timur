@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <!-- UI-19 ScheduleTimeline (SPEC 3.2) -->
+    <t t-name="td_energy_control.ScheduleTimeline">
+        <section class="o_td_en_card o_td_en_schedule" aria-labelledby="o_td_en_tl_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_en_tl_h">Розклад на сьогодні</h2>
+                <span class="o_td_en_note o_td_en_tl_now_text">зараз <t t-esc="nowText"/> · план складено з прогнозу навантаження й СЕС</span>
+            </div>
+            <div class="o_td_en_tl_scroll">
+                <div class="o_td_en_tl" aria-hidden="true">
+                    <div class="o_td_en_tl_scale">
+                        <span/>
+                        <div><span t-foreach="scale" t-as="mark" t-key="mark_index" t-esc="mark"/></div>
+                    </div>
+                    <div t-foreach="rows" t-as="row" t-key="row.resource" class="o_td_en_tl_row" t-att-data-resource="row.resource">
+                        <span class="o_td_en_tl_name" t-esc="row.name"/>
+                        <div class="o_td_en_tl_track">
+                            <div t-foreach="row.bars" t-as="bar" t-key="bar_index" t-attf-class="o_td_en_tl_bar o_td_en_tl_bar--{{bar.cls}}"
+                                 t-att-title="bar.text" t-att-style="bar.style" t-esc="bar.label"/>
+                            <div class="o_td_en_tl_now" t-att-style="nowStyle"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <table class="visually-hidden o_td_en_tl_table">
+                <caption>Розклад на сьогодні: ресурс, режим і час</caption>
+                <thead><tr><th scope="col">Ресурс</th><th scope="col">Режим</th><th scope="col">З</th><th scope="col">До</th></tr></thead>
+                <tbody>
+                    <t t-foreach="rows" t-as="row" t-key="row.resource">
+                        <tr t-foreach="row.bars" t-as="bar" t-key="bar_index">
+                            <td t-esc="row.name"/><td t-esc="bar.label"/><td t-esc="hm(bar.from)"/><td t-esc="hm(bar.to)"/>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+        </section>
+    </t>
+</templates>

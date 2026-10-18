@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-43 td.command: посилання на дію керування енергетикою (M-37). Власник: B -->
+<odoo>
+    <record id="view_td_command_form_td_energy_control" model="ir.ui.view">
+        <field name="name">td.command.form.td_energy_control</field>
+        <field name="model">td.command</field>
+        <field name="inherit_id" ref="td_telemetry.view_td_command_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group" position="after">
+                <group string="Керування" invisible="not energy_action_id">
+                    <field name="energy_action_id" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

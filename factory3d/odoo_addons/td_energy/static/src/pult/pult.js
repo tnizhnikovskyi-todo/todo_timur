@@ -254,6 +254,12 @@ export class Pult extends Component {
         return visibleAdviceActions(this.state.data.advice);
     }
 
+    /** UI-28: баннер «Виконано» (`advice.state === 'done'`): зелений, без «Пізніше», кнопка «Скасувати». */
+    get adviceDone() {
+        const advice = this.state.data.advice;
+        return !!advice && advice.state === "done";
+    }
+
     async runAdvice(act) {
         const changed = await runAdviceAction(this.actions, this.state.data.advice, act, this);
         if (changed) {

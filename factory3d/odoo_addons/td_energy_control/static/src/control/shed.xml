@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <!-- UI-15 ShedList (SPEC 3.2) -->
+    <t t-name="td_energy_control.ShedList">
+        <section class="o_td_en_card o_td_en_shed" aria-labelledby="o_td_en_shed_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_en_shed_h">Пріоритети відключення навантажень</h2>
+                    <span class="o_td_en_note">Що зменшувати першим, коли не вистачає BESS і КГУ, щоб утримати <t t-esc="fmtInt(props.shed.limit_kw)"/> кВт</span>
+                </div>
+            </div>
+            <ol class="o_td_en_shed_list">
+                <li t-foreach="rows" t-as="row" t-key="row.id" class="o_td_en_shed_row" t-att-data-shed-id="row.id">
+                    <span class="o_td_en_shed_n" t-esc="row.n"/>
+                    <div class="o_td_en_shed_name">
+                        <span class="o_td_en_shed_title" t-esc="row.name"/>
+                        <span class="o_td_en_sub">
+                            <t t-esc="row.how"/>
+                            <t t-if="row.p_now_kw !== null and row.p_now_kw !== undefined"> · зараз <t t-esc="fmtDec(row.p_now_kw, 1)"/> кВт</t>
+                        </span>
+                    </div>
+                    <span class="o_td_en_shed_kw">−<t t-esc="fmtInt(row.kw)"/> кВт</span>
+                    <t t-if="editing">
+                        <button type="button" class="o_td_en_sq o_td_en_shed_up" aria-label="Вище"
+                                t-att-disabled="row_index === 0" t-on-click="() => this.props.onMove(row_index, -1)">↑</button>
+                        <button type="button" class="o_td_en_sq o_td_en_shed_down" aria-label="Нижче"
+                                t-att-disabled="row_index === rows.length - 1" t-on-click="() => this.props.onMove(row_index, 1)">↓</button>
+                    </t>
+                </li>
+            </ol>
+            <div class="o_td_en_shed_foot">
+                Разом можна зняти <b class="o_td_en_shed_sum"><t t-esc="fmtInt(props.shed.sum_kw)"/> кВт</b>.
+                Не відключаються ніколи: <span class="o_td_en_shed_never" t-esc="neverText"/>.
+            </div>
+            <div t-if="props.shed.can_reorder" class="o_td_en_shed_actions">
+                <button t-if="!editing" type="button" class="o_td_en_btn o_td_en_shed_start" t-att-disabled="props.busy"
+                        t-on-click="props.onStart">Змінити порядок</button>
+                <t t-else="">
+                    <button type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_shed_save" t-att-disabled="props.busy"
+                            t-on-click="props.onSave">Зберегти порядок</button>
+                    <button type="button" class="o_td_en_btn o_td_en_shed_cancel" t-on-click="props.onCancel">Скасувати</button>
+                </t>
+            </div>
+        </section>
+    </t>
+</templates>

@@ -6,8 +6,9 @@ DI теж видно через fc01 — SPEC §8.4.2) і ``d`` (discrete inputs
 з ``World`` (``getter() -> list[int]`` слів або ``list[bool]``), і необов'язковим ``setter(offset, value)``.
 Невизначена адреса -> 0x02; запис у RO -> 0x02; ``ModbusError(code)`` у setter -> інший код (0x04).
 
-Порядок побудови: специфічні карти пристроїв (``pm5560`` …) -> ``bind_catalog`` (усі інші Modbus-сигнали
-каталогу за ``SignalSpec.modbus``/dtype/scale; «перший зайняв — той і має», тож специфічні мають пріоритет).
+Порядок побудови: специфічні карти пристроїв (``pm5560`` …, ``swbctl`` — вікно керування ГРЩ HR 200…291, W2) ->
+``bind_catalog`` (усі інші Modbus-сигнали каталогу за ``SignalSpec.modbus``/dtype/scale; «перший зайняв — той і має»,
+тож специфічні мають пріоритет; HR 100…123 контролера ГРЩ лишаються за ``bind_catalog``).
 Команди запису не змінюють фізику самі: ``world.force`` (лише командний сигнал), ``world.post`` (тема
 для моделі), подія ``command`` — як у SPEC §8.13.1 і ARCHITECTURE «Права».
 """
@@ -303,11 +304,12 @@ def build_all(world: Any) -> dict[int, UnitMap]:
         luna2000,
         pm5560,
         sun2000,
+        swbctl,
         tedom,
     )
     ctx = Ctx(world)
     for mod in (pm5560, sun2000, luna2000, elektronikon, atys, tedom,
-                adam6050, adam6060, adam6017, adam6015):
+                adam6050, adam6060, adam6017, adam6015, swbctl):
         mod.build(ctx)
     bind_catalog(ctx)
     return ctx.maps

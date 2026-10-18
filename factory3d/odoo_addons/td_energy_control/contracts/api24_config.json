@@ -1,0 +1,319 @@
+{
+ "schema": 1,
+ "config_version": 17,
+ "etag": "9f2c4e1ab07d3c58e6a1d90b2f7c3e84a5b6d7c8e9f0a1b2c3d4e5f60718293a",
+ "server_time": "2026-10-18T11:20:03Z",
+ "tz": "Europe/Kyiv",
+ "flags": {
+  "automation_enabled": true,
+  "write_enabled": true,
+  "remote_switching_enabled": true
+ },
+ "engine": {
+  "tick_s": 2,
+  "config_poll_s": 10,
+  "stale_hold_s": 30,
+  "min_write_interval_s": 10,
+  "max_writes_per_min": 30,
+  "exec_timeout_s": 60,
+  "step_timeout_s": 8,
+  "verify_timeout_s": 30,
+  "shed_restore_step_s": 20
+ },
+ "plant": {
+  "contract_kw": 800,
+  "pv_kwp": 920,
+  "bess_kwh": 387,
+  "bess_max_kw": 200,
+  "bess_reserve_pct": 30,
+  "cos_phi_target": 0.95,
+  "genset_kw": 507,
+  "chp_kw": 800,
+  "qs_rating_a": 1600
+ },
+ "scenarios": {
+  "peak": {
+   "enabled": true,
+   "params": {
+    "limit_kw": 760,
+    "margin_kw": 20
+   }
+  },
+  "self": {
+   "enabled": false,
+   "params": {}
+  },
+  "pfc": {
+   "enabled": true,
+   "params": {
+    "cos_target": 0.95
+   }
+  },
+  "night": {
+   "enabled": true,
+   "params": {
+    "from": "23:00",
+    "to": "06:30",
+    "days": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "vent_mode": "VEL",
+    "day_vent_mode": "VE",
+    "vent_pct": 30,
+    "light_scene_number": 1,
+    "light_scene_day_number": 2,
+    "heat_setpoint_c": 16.0
+   }
+  },
+  "backup": {
+   "enabled": true,
+   "params": {}
+  },
+  "chp": {
+   "enabled": false,
+   "params": {}
+  }
+ },
+ "shed": [
+  {
+   "id": 1,
+   "seq": 1,
+   "node": "CHARGING",
+   "action": "defer",
+   "param": 30,
+   "kw": 48,
+   "critical": false,
+   "signal": "energy_control/shed/CHARGING/limit_pct",
+   "condition": "none",
+   "condition_value": null
+  }
+ ],
+ "never_shed": [
+  "DUST-1",
+  "LP-2",
+  "LP-3",
+  "OFFICE",
+  "BOILER",
+  "EF-ELEC",
+  "EF-CHG"
+ ],
+ "slots": [
+  {
+   "id": 9,
+   "resource": "chp",
+   "date": null,
+   "weekdays": "1111100",
+   "from": 16.0,
+   "to": 19.0,
+   "mode": "run",
+   "setpoint_kw": null
+  }
+ ],
+ "tariff": {
+  "zones": [
+   {
+    "from": 0.0,
+    "to": 7.0,
+    "price": 3.4
+   },
+   {
+    "from": 7.0,
+    "to": 23.0,
+    "price": 8.4
+   },
+   {
+    "from": 23.0,
+    "to": 24.0,
+    "price": 3.4
+   }
+  ],
+  "currency": "UAH"
+ },
+ "bms": {
+  "night": {
+   "vent": [
+    {
+     "unit": "RV-01",
+     "mode_signal": "ventilation/units/RV-01/mode",
+     "sp_night_signal": "ventilation/units/RV-01/setpoint_night_c"
+    }
+   ],
+   "light": [
+    {
+     "group": "LT-01",
+     "scene_signal": "lighting/groups/LT-01/scene",
+     "aisle": false
+    }
+   ]
+  },
+  "vent_eco": {
+   "vent": [
+    {
+     "unit": "RV-01",
+     "mode_signal": "ventilation/units/RV-01/mode"
+    }
+   ]
+  },
+  "light_break": {
+   "light": [
+    {
+     "group": "LT-01",
+     "scene_signal": "lighting/groups/LT-01/scene",
+     "aisle": false
+    }
+   ]
+  }
+ },
+ "signals": {
+  "qs_cmd": "energy_control/qs/cmd",
+  "qs_ack": "energy_control/qs/ack",
+  "qs_state": "energy/cells/QS/state",
+  "ats_lock": "energy_control/ats/parallel_lock",
+  "pfc_mode": "energy_control/pfc/mode",
+  "pfc_cos": "energy_control/pfc/cos_target",
+  "bess_mode": "energy_control/bess/mode",
+  "bess_sp": "energy_control/bess/setpoint_kw",
+  "bess_until": "energy_control/bess/until_soc",
+  "bess_valid": "energy_control/bess/valid_s",
+  "bess_ack": "energy_control/bess/ack",
+  "bess_temp": "energy_control/bess/temp_c",
+  "chp_cmd": "energy_control/chp/cmd",
+  "chp_ack": "energy_control/chp/ack",
+  "chp_permit": "energy_control/chp/permit",
+  "chp_gas": "energy_control/chp/gas_bar",
+  "air_sp": "energy_control/air/setpoint_bar",
+  "air_min": "energy_control/air/min_consumer_bar",
+  "pv_limit": "energy_control/pv/limit_pct",
+  "shed_valid": "energy_control/shed/valid_s",
+  "remote": "energy_control/ctl/remote",
+  "ctl_hb": "energy_control/ctl/heartbeat",
+  "auto_hb": "energy_control/auto/heartbeat"
+ },
+ "inputs": {
+  "p_total": "energy/totals/p_now",
+  "air_bar": "equipment/COMPRESSOR/pressure_bar",
+  "grid_kw": "infra/totals/grid_kw",
+  "export_kw": "infra/totals/export_kw",
+  "pv_kw": "infra/totals/pv_now",
+  "bess_kw": "infra/totals/bess_kw",
+  "bess_soc": "infra/totals/bess_soc",
+  "bess_state": "infra/bess/state",
+  "chp_state": "infra/chp/state",
+  "chp_kw": "infra/totals/chp_kw",
+  "chp_hours": "infra/chp/hours",
+  "ats_pos": "infra/ats/position",
+  "src1_ok": "infra/ats/src1_ok",
+  "s1_p": "energy/sections/S1/p_kw",
+  "s2_p": "energy/sections/S2/p_kw",
+  "pfc1_fault": "energy/cells/PFC-1/fault_step",
+  "pfc2_fault": "energy/cells/PFC-2/fault_step",
+  "fire_state": "fire/panel/state"
+ },
+ "derived": {
+  "energy/totals/p_now": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C1/p_now",
+     "k": 1.0
+    },
+    {
+     "code": "energy/lines/C2/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "energy/sections/S1/p_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C1/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "energy/sections/S2/p_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/lines/C2/p_now",
+     "k": 1.0
+    }
+   ]
+  },
+  "infra/ats/src1_ok": {
+   "op": "ge",
+   "code": "infra/ats/src1_state",
+   "value": 1
+  },
+  "infra/totals/grid_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/cells/Q1/p_now",
+     "k": 1.0
+    },
+    {
+     "code": "energy/cells/Q2/p_now",
+     "k": 1.0
+    }
+   ],
+   "clamp_min": 0.0,
+   "zero_if": {
+    "code": "infra/ats/position",
+    "eq": 3
+   }
+  },
+  "infra/totals/export_kw": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "energy/cells/Q1/p_now",
+     "k": -1.0
+    },
+    {
+     "code": "energy/cells/Q2/p_now",
+     "k": -1.0
+    }
+   ],
+   "clamp_min": 0.0,
+   "zero_if": {
+    "code": "infra/ats/position",
+    "eq": 3
+   }
+  },
+  "infra/totals/pv_now": {
+   "op": "sum",
+   "terms": [
+    {
+     "code": "infra/pv/PV-INV-1/p_kw",
+     "k": 1.0,
+     "min": 0.0
+    }
+   ]
+  }
+ },
+ "interlocks": {
+  "qs_current_ok": {
+   "hard": true,
+   "fail_closed": true,
+   "params": {
+    "rating_a": 1600,
+    "max_ratio": 0.8,
+    "cos_phi": 0.95
+   }
+  }
+ },
+ "limits": {
+  "bess_kw_max": 200,
+  "pv_limit_min_pct": 10,
+  "air_bar_min": 5.0,
+  "air_bar_max": 8.5
+ }
+}

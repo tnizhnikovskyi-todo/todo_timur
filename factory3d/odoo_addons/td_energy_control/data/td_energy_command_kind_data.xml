@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC 5.3: 16 видів команд -->
+<odoo>
+    <record id="kind_qs_close" model="td.energy.command.kind">
+        <field name="code">qs_close</field>
+        <field name="name">Увімкнути секційний вимикач QS</field>
+        <field name="sub_template">секції 1 і 2 разом</field>
+        <field name="sequence">10</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">qs</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}, {'code': 'no_island', 'soft': False}, {'code': 'ats_parallel_lock', 'soft': False}, {'code': 'qs_current_ok', 'soft': False}]"/>
+        <field name="confirm_title">Увімкнути секційний вимикач QS?</field>
+        <field name="confirm_text">Секції 1 і 2 працюватимуть разом. Генерація СЕС піде на навантаження секції 1, експорт через T2 припиниться.</field>
+        <field name="remote_gated" eval="True"/>
+    </record>
+    <record id="kind_qs_open" model="td.energy.command.kind">
+        <field name="code">qs_open</field>
+        <field name="name">Вимкнути секційний вимикач QS</field>
+        <field name="sub_template">секції окремо</field>
+        <field name="sequence">15</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">qs</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}]"/>
+        <field name="confirm_title">Вимкнути секційний вимикач QS?</field>
+        <field name="confirm_text">Секції 1 і 2 працюватимуть окремо.</field>
+        <field name="remote_gated" eval="True"/>
+    </record>
+    <record id="kind_bess_charge" model="td.energy.command.kind">
+        <field name="code">bess_charge</field>
+        <field name="name">Заряд BESS {power_kw} кВт</field>
+        <field name="sub_template">до {until} або {soc_limit_pct} %</field>
+        <field name="sequence">20</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">bess</field>
+        <field name="params_schema" eval="[{'name': 'power_kw', 'label': 'Потужність', 'type': 'float', 'min': 1, 'max': 'bess_max_kw', 'default': 50, 'unit': 'кВт', 'choices': None}, {'name': 'until', 'label': 'До', 'type': 'time', 'min': None, 'max': None, 'default': '16:00', 'unit': '', 'choices': None}, {'name': 'soc_limit_pct', 'label': 'Межа заряду', 'type': 'float', 'min': 50, 'max': 100, 'default': 95, 'unit': '%', 'choices': None}]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}, {'code': 'no_island', 'soft': False}, {'code': 'bess_ok', 'soft': False}, {'code': 'bess_soc_lt_limit', 'soft': False}, {'code': 'bess_temp_ok', 'soft': False}]"/>
+        <field name="confirm_title">Заряд BESS {power_kw} кВт?</field>
+        <field name="confirm_text">BESS заряджатиметься від надлишку СЕС і мережі до {until}.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_bess_stop" model="td.energy.command.kind">
+        <field name="code">bess_stop</field>
+        <field name="name">Зупинити BESS</field>
+        <field name="sub_template">повернути автоматичний режим</field>
+        <field name="sequence">25</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">bess</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}]"/>
+        <field name="confirm_title">Зупинити BESS?</field>
+        <field name="confirm_text">BESS повернеться в автоматичний режим.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_bess_discharge" model="td.energy.command.kind">
+        <field name="code">bess_discharge</field>
+        <field name="name">Розряд BESS {power_kw} кВт</field>
+        <field name="sub_template">на {duration_min} хв</field>
+        <field name="sequence">30</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">bess</field>
+        <field name="params_schema" eval="[{'name': 'power_kw', 'label': 'Потужність', 'type': 'float', 'min': 1, 'max': 'bess_max_kw', 'default': 100, 'unit': 'кВт', 'choices': None}, {'name': 'duration_min', 'label': 'Тривалість', 'type': 'int', 'min': 1, 'max': 240, 'default': 60, 'unit': 'хв', 'choices': None}]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}, {'code': 'bess_ok', 'soft': False}, {'code': 'bess_reserve_kept', 'soft': False}, {'code': 'bess_temp_ok', 'soft': False}]"/>
+        <field name="confirm_title">Розряд BESS {power_kw} кВт?</field>
+        <field name="confirm_text">BESS віддаватиме {power_kw} кВт у секцію 2 протягом {duration_min} хв.</field>
+        <field name="remote_gated" eval="True"/>
+    </record>
+    <record id="kind_chp_start" model="td.energy.command.kind">
+        <field name="code">chp_start</field>
+        <field name="name">Пуск КГУ</field>
+        <field name="sub_template">TEDOM Quanto D800</field>
+        <field name="sequence">40</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}, {'code': 'no_island', 'soft': False}, {'code': 'chp_ready', 'soft': False}, {'code': 'chp_gas_pressure', 'soft': False}, {'code': 'chp_permit', 'soft': False}]"/>
+        <field name="confirm_title">Пуск КГУ?</field>
+        <field name="confirm_text">КГУ запуститься й вийде на {chp_kw} кВт за {ramp_min} хв. Мінімальний час роботи — {min_run_h} год.</field>
+        <field name="remote_gated" eval="True"/>
+    </record>
+    <record id="kind_chp_stop" model="td.energy.command.kind">
+        <field name="code">chp_stop</field>
+        <field name="name">Зупинка КГУ</field>
+        <field name="sub_template">з охолодженням</field>
+        <field name="sequence">45</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'chp_min_run', 'soft': False}]"/>
+        <field name="confirm_title">Зупинка КГУ?</field>
+        <field name="confirm_text">КГУ зупиниться з охолодженням.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_genset_test" model="td.energy.command.kind">
+        <field name="code">genset_test</field>
+        <field name="name">Тест ДГУ без навантаження</field>
+        <field name="sub_template">{test_minutes} хв</field>
+        <field name="sequence">50</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">B</field>
+        <field name="executor">genset</field>
+        <field name="resource">genset</field>
+        <field name="params_schema" eval="[{'name': 'mode', 'label': 'Варіант тесту', 'type': 'enum', 'min': None, 'max': None, 'default': 'idle', 'unit': '', 'choices': ['idle']}]"/>
+        <field name="checks" eval="[{'code': 'genset_fuel', 'soft': True}, {'code': 'genset_heater', 'soft': True}, {'code': 'no_island', 'soft': False}, {'code': 'genset_idle', 'soft': False}]"/>
+        <field name="confirm_title">Тест ДГУ без навантаження?</field>
+        <field name="confirm_text">ДГУ запуститься на холостому ходу на {test_minutes} хв, АВР лишається на мережі.</field>
+        <field name="remote_gated" eval="True"/>
+    </record>
+    <record id="kind_light_break" model="td.energy.command.kind">
+        <field name="code">light_break</field>
+        <field name="name">Освітлення цеху · сценарій «Перерва»</field>
+        <field name="sub_template">{level_pct} % на {duration_min} хв</field>
+        <field name="sequence">60</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">light</field>
+        <field name="params_schema" eval="[{'name': 'level_pct', 'label': 'Рівень', 'type': 'int', 'min': 10, 'max': 100, 'default': 50, 'unit': '%', 'choices': None}, {'name': 'duration_min', 'label': 'Тривалість', 'type': 'int', 'min': 1, 'max': 120, 'default': 30, 'unit': 'хв', 'choices': None}, {'name': 'scene_number', 'label': 'Номер сцени', 'type': 'int', 'min': 1, 'max': 16, 'default': 3, 'unit': '', 'choices': None}]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'no_fire_alarm', 'soft': False}, {'code': 'aisle_lux_ge', 'soft': True}]"/>
+        <field name="confirm_title">Сценарій «Перерва» для освітлення цеху?</field>
+        <field name="confirm_text">Освітлення ліній знизиться до {level_pct} % на {duration_min} хв, проходи лишаються на 100 %.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_light_restore" model="td.energy.command.kind">
+        <field name="code">light_restore</field>
+        <field name="name">Освітлення цеху · повернути режим</field>
+        <field name="sub_template">за розкладом</field>
+        <field name="sequence">65</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">light</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'no_fire_alarm', 'soft': False}]"/>
+        <field name="confirm_title">Повернути режим освітлення?</field>
+        <field name="confirm_text">Освітлення цеху повернеться до режиму за розкладом.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_vent_eco" model="td.energy.command.kind">
+        <field name="code">vent_eco</field>
+        <field name="name">Вентиляція · режим «Економ»</field>
+        <field name="sub_template">RoofVent {vent_pct} %</field>
+        <field name="sequence">70</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">vent</field>
+        <field name="params_schema" eval="[{'name': 'vent_pct', 'label': 'Продуктивність', 'type': 'int', 'min': 30, 'max': 100, 'default': 70, 'unit': '%', 'choices': None}, {'name': 'duration_min', 'label': 'Тривалість', 'type': 'int', 'min': 1, 'max': 480, 'default': 120, 'unit': 'хв', 'choices': None}]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'no_fire_alarm', 'soft': False}, {'code': 'co2_lt', 'soft': True}]"/>
+        <field name="confirm_title">Режим «Економ» для вентиляції?</field>
+        <field name="confirm_text">Дахові установки знизять продуктивність до {vent_pct} %, CO₂ контролюється.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_vent_restore" model="td.energy.command.kind">
+        <field name="code">vent_restore</field>
+        <field name="name">Вентиляція · повернути режим</field>
+        <field name="sub_template">за розкладом</field>
+        <field name="sequence">75</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">intent</field>
+        <field name="resource">vent</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[{'code': 'no_fire_alarm', 'soft': False}]"/>
+        <field name="confirm_title">Повернути режим вентиляції?</field>
+        <field name="confirm_text">Вентиляція повернеться до режиму за розкладом.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_air_setpoint" model="td.energy.command.kind">
+        <field name="code">air_setpoint</field>
+        <field name="name">Компресорна · тиск {setpoint_bar} бар</field>
+        <field name="sub_template">змінити уставку з {current_bar} до {setpoint_bar} бар</field>
+        <field name="sequence">80</field>
+        <field name="tile" eval="True"/>
+        <field name="cls">B</field>
+        <field name="executor">intent</field>
+        <field name="resource">air</field>
+        <field name="params_schema" eval="[{'name': 'setpoint_bar', 'label': 'Уставка тиску', 'type': 'float', 'min': 5.0, 'max': 8.5, 'default': 6.5, 'unit': 'бар', 'choices': None}]"/>
+        <field name="checks" eval="[{'code': 'controller_remote', 'soft': False}, {'code': 'data_fresh', 'soft': False}, {'code': 'air_setpoint_min', 'soft': False}]"/>
+        <field name="confirm_title">Змінити уставку тиску в компресорній?</field>
+        <field name="confirm_text">Уставка тиску мережі стисненого повітря зміниться з {current_bar} до {setpoint_bar} бар.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_scenario_toggle" model="td.energy.command.kind">
+        <field name="code">scenario_toggle</field>
+        <field name="name">Сценарій «{scenario}»: {on_off}</field>
+        <field name="sub_template"></field>
+        <field name="sequence">100</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">B</field>
+        <field name="executor">config</field>
+        <field name="resource">config</field>
+        <field name="params_schema" eval="[{'name': 'scenario', 'label': 'Сценарій', 'type': 'enum', 'min': None, 'max': None, 'default': None, 'unit': '', 'choices': ['peak', 'self', 'pfc', 'night', 'backup', 'chp']}, {'name': 'enabled', 'label': 'Увімкнено', 'type': 'bool', 'min': None, 'max': None, 'default': None, 'unit': '', 'choices': None}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Сценарій «{scenario}»: {on_off}?</field>
+        <field name="confirm_text">Змінити стан сценарію автоматики.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_scenario_params" model="td.energy.command.kind">
+        <field name="code">scenario_params</field>
+        <field name="name">Параметри сценарію «{scenario}»</field>
+        <field name="sub_template"></field>
+        <field name="sequence">110</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">B</field>
+        <field name="executor">config</field>
+        <field name="resource">config</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Зберегти параметри сценарію «{scenario}»?</field>
+        <field name="confirm_text">Зберегти нові параметри сценарію автоматики.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_shed_reorder" model="td.energy.command.kind">
+        <field name="code">shed_reorder</field>
+        <field name="name">Порядок скидання навантажень</field>
+        <field name="sub_template"></field>
+        <field name="sequence">120</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">B</field>
+        <field name="executor">config</field>
+        <field name="resource">config</field>
+        <field name="params_schema" eval="[{'name': 'order', 'label': 'Порядок', 'type': 'list_int', 'min': None, 'max': None, 'default': None, 'unit': '', 'choices': None}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Зберегти порядок скидання навантажень?</field>
+        <field name="confirm_text">Нові пріоритети скидання діятимуть при зрізанні піку.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <!-- зворотні види (після створення всіх записів) -->
+    <record id="kind_qs_close" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_qs_open"/>
+    </record>
+    <record id="kind_qs_open" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_qs_close"/>
+    </record>
+    <record id="kind_bess_charge" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_bess_stop"/>
+    </record>
+    <record id="kind_bess_discharge" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_bess_stop"/>
+    </record>
+    <record id="kind_chp_start" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_chp_stop"/>
+    </record>
+    <record id="kind_chp_stop" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_chp_start"/>
+    </record>
+    <record id="kind_light_break" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_light_restore"/>
+    </record>
+    <record id="kind_vent_eco" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_vent_restore"/>
+    </record>
+    <record id="kind_air_setpoint" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_air_setpoint"/>
+    </record>
+    <record id="kind_scenario_toggle" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_scenario_toggle"/>
+    </record>
+    <record id="kind_scenario_params" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_scenario_params"/>
+    </record>
+    <record id="kind_shed_reorder" model="td.energy.command.kind">
+        <field name="undo_kind_id" ref="kind_shed_reorder"/>
+    </record>
+</odoo>

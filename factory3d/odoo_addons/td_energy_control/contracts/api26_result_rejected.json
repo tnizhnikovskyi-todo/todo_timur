@@ -1,0 +1,6 @@
+{
+ "accepted": false,
+ "state": "rejected",
+ "reason": "bad params: power_kw > 200",
+ "checks": []
+}

@@ -8,7 +8,8 @@
 from datetime import timedelta
 import re
 
-from odoo import fields
+from odoo import _, fields
+from odoo.exceptions import UserError
 
 # ADP-01
 GENSET_MODEL = "td.genset"
@@ -300,3 +301,36 @@ def set_fuel_rate(gen, lph: float) -> bool:
         return False
     gen.sudo().write({FIELD_FUEL_RATE_LPH: lph})
     return True
+
+
+def start_test(gen, mode, user) -> dict:
+    """ADP-12 (W2, R-67): тест ДГУ без навантаження через `td_genset` (`_test_start('idle', user)` під sudo).
+
+    Права «Енергетика» перевіряє `td_energy_control`; `td_genset._td_check_group` пропускає `env.su` (A-63).
+    `UserError` td_genset («Тест уже йде.») пробрасується без змін.
+    """
+    if mode != "idle":
+        raise UserError(_("Лише тест без навантаження."))
+    gen = gen.sudo()
+    gen._test_start("idle", user)
+    minutes = gen.env["td.genset.config"].sudo().get().test_minutes or 3
+    return {
+        "accepted": True,
+        "minutes": minutes,
+        "test_end": gen.test_end.strftime("%Y-%m-%dT%H:%M:%SZ") if gen.test_end else None,
+        "ref": {"model": GENSET_MODEL, "id": gen.id},
+    }
+
+
+def test_facts(gen) -> dict:
+    """ADP-12: факти для перевірок діалогу `genset_fuel`, `genset_heater`, `genset_idle` (немає знімка — None)."""
+    snap = snapshot(gen)
+    raw = snap.get("state_raw")
+    state = int(raw) if raw not in (None, False, "") else None
+    return {
+        "fuel_pct": snap.get("fuel_pct"),
+        "running": state is not None and 2 <= state <= 9,
+        "test_running": bool(gen.sudo().test_end),
+        "island": snap.get("mains_ok") is False,
+        "coolant_c": snap.get("coolant_c"),
+    }

@@ -1,0 +1,54 @@
+{
+ "actions": [
+  {
+   "code": "charge_bess",
+   "label": "Зарядити BESS 50 кВт",
+   "kind": "control",
+   "class": "A",
+   "params": {
+    "command_kind": "bess_charge",
+    "power_kw": 50
+   }
+  },
+  {
+   "code": "qs_on",
+   "label": "Увімкнути QS…",
+   "kind": "control",
+   "class": "B",
+   "params": {
+    "command_kind": "qs_close"
+   }
+  },
+  {
+   "code": "night_vent",
+   "label": "Нічний режим вентиляції",
+   "kind": "control",
+   "class": "A",
+   "params": {
+    "intent": "vent_night_mode"
+   }
+  }
+ ],
+ "intent_aliases": {
+  "vent_night_mode": "vent_eco",
+  "air_pressure_setpoint": "air_setpoint",
+  "pv_self_consumption": "scenario_toggle:self",
+  "heat_schedule_shift": null
+ },
+ "done_banner": {
+  "id": 7,
+  "code": "EXPORT-T2",
+  "state": "done",
+  "title": "Виконано: BESS заряджається 50 кВт",
+  "text": "Команда виконана.",
+  "actions": [
+   {
+    "code": "undo",
+    "label": "Скасувати",
+    "kind": "control",
+    "class": "A",
+    "enabled": true
+   }
+  ]
+ }
+}

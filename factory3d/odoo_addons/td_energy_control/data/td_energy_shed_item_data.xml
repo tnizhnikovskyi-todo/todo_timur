@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC 5.5: 5 пріоритетів скидання; сигнали limit_pct прив'язує post_init_hook -->
+<odoo noupdate="1">
+    <record id="shed_charging" model="td.energy.shed.item">
+        <field name="sequence">10</field>
+        <field name="name">Зарядна станція навантажувачів</field>
+        <field name="node_id" search="[('code', '=', 'CHARGING')]"/>
+        <field name="action">defer</field>
+        <field name="param_value">30</field>
+        <field name="kw_reducible">48</field>
+        <field name="condition">none</field>
+        <field name="condition_value">0</field>
+    </record>
+    <record id="shed_rv_all" model="td.energy.shed.item">
+        <field name="sequence">20</field>
+        <field name="name">Дахова вентиляція RoofVent</field>
+        <field name="node_id" search="[('code', '=', 'RV-ALL')]"/>
+        <field name="action">reduce</field>
+        <field name="param_value">70</field>
+        <field name="kw_reducible">60</field>
+        <field name="condition">none</field>
+        <field name="condition_value">0</field>
+    </record>
+    <record id="shed_dry_1" model="td.energy.shed.item">
+        <field name="sequence">30</field>
+        <field name="name">Сушильна камера DRY-1</field>
+        <field name="node_id" search="[('code', '=', 'DRY-1')]"/>
+        <field name="action">pause</field>
+        <field name="param_value">20</field>
+        <field name="kw_reducible">17</field>
+        <field name="condition">no_active_cycle</field>
+        <field name="condition_value">0</field>
+    </record>
+    <record id="shed_compressor" model="td.energy.shed.item">
+        <field name="sequence">40</field>
+        <field name="name">Компресор 2 (резервний)</field>
+        <field name="node_id" search="[('code', '=', 'COMPRESSOR')]"/>
+        <field name="action">off</field>
+        <field name="param_value">0</field>
+        <field name="kw_reducible">37</field>
+        <field name="condition">air_pressure_min</field>
+        <field name="condition_value">6.5</field>
+    </record>
+    <record id="shed_lp_1" model="td.energy.shed.item">
+        <field name="sequence">50</field>
+        <field name="name">Освітлення складів</field>
+        <field name="node_id" search="[('code', '=', 'LP-1')]"/>
+        <field name="action">reduce</field>
+        <field name="param_value">50</field>
+        <field name="kw_reducible">12</field>
+        <field name="condition">none</field>
+        <field name="condition_value">0</field>
+    </record>
+</odoo>

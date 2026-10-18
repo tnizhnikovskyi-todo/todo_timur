@@ -7,6 +7,9 @@
 ``cf`` — прапор ``pv_cf`` (S-12), ``P_k = min(115, P_total/8)``. Статус 32089: ніч ``0xA000``,
 ``P < 1 кВт`` ``0x0001``, інакше ``0x0200``; ``blackout`` — ``0x0303`` і ``P = 0``; після повернення мережі
 інвертори стартують 60 с (``0x0001``).
+
+W2 (SPEC §8.2): потужність кожного інвертора множиться на ``pv_limit_pct / 100`` (прапор, за замовчуванням 100; обмеження
+контролера ГРЩ із сторожовим таймером ``shed_valid_s``); статус рахується за вільною (необмеженою) потужністю.
 """
 from __future__ import annotations
 
@@ -19,7 +22,7 @@ from astral.sun import elevation, noon
 
 from iot_sim.models import register_model
 from iot_sim.models.base import Model
-from iot_sim.models.meter import island
+from iot_sim.models.meter import ctl, island
 
 P_PEAK = 900.0 * 0.85
 INV_MAX_KW = 115.0
@@ -97,14 +100,15 @@ class Pv(Model):
         p_total = P_PEAK * sun * season_factor(self.world) * self._cf() * (0.92 + 0.08 * self.r("pv_now"))
         if isl or failed or self.restart_left > 0:
             p_total = 0.0
-        p_k = min(INV_MAX_KW, p_total / INV_COUNT)
+        p_free = min(INV_MAX_KW, p_total / INV_COUNT)
+        p_k = p_free * max(0.0, min(100.0, float(ctl(self.world, "pv_limit_pct")))) / 100.0
         if isl:
             status = ST_BLACKOUT
         elif failed:
             status = ST_FAULT
         elif sun <= 0:
             status = ST_NIGHT
-        elif p_k * INV_COUNT < 1.0 or self.restart_left > 0:
+        elif p_free * INV_COUNT < 1.0 or self.restart_left > 0:
             status = ST_START
         else:
             status = ST_ON

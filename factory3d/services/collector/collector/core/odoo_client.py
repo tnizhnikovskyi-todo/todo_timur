@@ -82,9 +82,17 @@ class OdooClient:
             log.warning("clock skew with Odoo is %.0f s (limit %s s)", skew, self.skew_warn_s)
 
     async def request(
-        self, method: str, path: str, body: Any = None, headers: dict[str, str] | None = None
+        self,
+        method: str,
+        path: str,
+        body: Any = None,
+        headers: dict[str, str] | None = None,
+        resp_headers: dict[str, str] | None = None,
     ) -> tuple[int, Any]:
-        """Запит з ретраями (мережа, 502/503/504: 3 спроби, пауза 1/2 с). Статус >= 400 -> OdooError."""
+        """Запит з ретраями (мережа, 502/503/504: 3 спроби, пауза 1/2 с). Статус >= 400 -> OdooError.
+
+        `resp_headers` (необов'язковий) заповнюється заголовками успішної відповіді (імена — у нижньому регістрі).
+        """
         session = await self._get_session()
         hdrs = {"Authorization": f"Bearer {self.token}", **(headers or {})}
         url = f"{self.base_url}{path}"
@@ -93,6 +101,9 @@ class OdooClient:
             try:
                 async with session.request(method, url, json=body, headers=hdrs) as resp:
                     status = resp.status
+                    if resp_headers is not None:
+                        resp_headers.clear()
+                        resp_headers.update({k.lower(): v for k, v in resp.headers.items()})
                     if status == 304:
                         self._ok()
                         return 304, None
@@ -195,6 +206,24 @@ class OdooClient:
                 )
             )
         return out, bool(data.get("write_enabled", False))
+
+    async def automation_config(self, etag: str | None = None) -> tuple[dict | None, int | None]:
+        """API-24 `GET /td/energy/automation/config` (C-39): `(конфиг | None при 304, X-Config-Version | None)`."""
+        headers = {"If-None-Match": f'"{etag}"'} if etag else None
+        got: dict[str, str] = {}
+        status, data = await self.request("GET", "/td/energy/automation/config", headers=headers, resp_headers=got)
+        raw = got.get("x-config-version", "")
+        version = int(raw) if raw.isdigit() else None
+        if status == 304:
+            return None, version
+        if not isinstance(data, dict):
+            raise OdooError(status, "automation config is not an object")
+        return data, version
+
+    async def automation_state(self, body: dict) -> dict:
+        """API-25 `POST /td/energy/automation/state` (C-39)."""
+        _, data = await self.request("POST", "/td/energy/automation/state", body)
+        return data if isinstance(data, dict) else {}
 
     async def commands_result(self, results: Iterable[CommandResult]) -> dict:
         """API-07."""

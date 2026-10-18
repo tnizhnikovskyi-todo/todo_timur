@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-39 види команд (M-31): редагування — адміністратор (ACL). Власник: B -->
+<odoo>
+    <record id="view_td_energy_command_kind_list" model="ir.ui.view">
+        <field name="name">td.energy.command.kind.list</field>
+        <field name="model">td.energy.command.kind</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="cls" widget="badge" decoration-info="cls == 'A'" decoration-warning="cls == 'B'"/>
+                <field name="executor"/>
+                <field name="resource"/>
+                <field name="tile"/>
+                <field name="available" widget="boolean"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_command_kind_form" model="ir.ui.view">
+        <field name="name">td.energy.command.kind.form</field>
+        <field name="model">td.energy.command.kind</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва виду команди"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="sequence"/>
+                            <field name="cls"/>
+                            <field name="executor"/>
+                            <field name="resource"/>
+                            <field name="remote_gated"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="tile"/>
+                            <field name="sub_template"/>
+                            <field name="undo_kind_id"/>
+                            <field name="valid_s"/>
+                            <field name="available" readonly="1"/>
+                            <field name="unavailable_reason" readonly="1" invisible="available"/>
+                        </group>
+                    </group>
+                    <group string="Діалог підтвердження">
+                        <field name="confirm_title"/>
+                        <field name="confirm_text"/>
+                    </group>
+                    <group string="Схема параметрів (JSON)">
+                        <field name="params_schema" widget="json" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Перевірки (JSON)">
+                        <field name="checks" widget="json" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_command_kind" model="ir.actions.act_window">
+        <field name="name">Види команд</field>
+        <field name="res_model">td.energy.command.kind</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

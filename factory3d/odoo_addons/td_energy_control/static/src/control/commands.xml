@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <!-- UI-16 CommandTiles (SPEC 3.2) -->
+    <t t-name="td_energy_control.CommandTiles">
+        <section class="o_td_en_card o_td_en_cmds" aria-labelledby="o_td_en_cmd_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_en_cmd_h">Ручні команди</h2>
+                    <span class="o_td_en_note">Права: енергетик і головний енергетик · кожна команда з підтвердженням</span>
+                </div>
+            </div>
+            <div t-foreach="notices" t-as="notice" t-key="notice_index" class="o_td_en_cmd_notice" role="note" t-esc="notice"/>
+            <div class="o_td_en_cmd_grid">
+                <button t-foreach="props.commands" t-as="cmd" t-key="cmd.code" type="button" class="o_td_en_cmd"
+                        t-att-data-cmd="cmd.code" t-att-disabled="!!reason(cmd) or props.busy"
+                        t-att-title="reason(cmd) || (cmd.cls === 'B' ? classBHint : undefined)"
+                        t-on-click="() => this.props.onRun(cmd)">
+                    <span class="o_td_en_cmd_label">
+                        <span t-esc="cmd.label"/>
+                        <span t-if="cmd.cls === 'B'" class="o_td_en_cls" t-att-title="classBHint" aria-label="Клас B: потрібне підтвердження">B</span>
+                    </span>
+                    <span class="o_td_en_cmd_sub" t-esc="cmd.sub"/>
+                    <span t-if="reason(cmd)" class="o_td_en_cmd_why" t-esc="reason(cmd)"/>
+                </button>
+            </div>
+        </section>
+    </t>
+</templates>

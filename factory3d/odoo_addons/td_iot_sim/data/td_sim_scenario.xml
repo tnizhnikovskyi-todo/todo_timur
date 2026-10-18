@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="0">
-  <!-- 16 сценаріїв: S-01…S-15 (SPEC §9.3) і S-16 pfc_step_fault (W1 «Енергетика», §8.1); схеми можуть оновлюватись. -->
+  <!-- 20 сценаріїв: S-01…S-15 (SPEC §9.3), S-16 pfc_step_fault (W1 «Енергетика», §8.1) і S-17…S-20 (W2 «Керування», §8.2: peak_load, export_demo, ctl_local, chp_no_gas); схеми можуть оновлюватись. -->
   <record id="scenario_shift" model="td.sim.scenario">
     <field name="code">shift</field>
     <field name="name">Робоча зміна</field>
@@ -160,5 +160,45 @@
     <field name="description"><![CDATA[<p>Ступінь конденсаторної установки PFC секції не вмикається: контролер ГРЩ лишає step−1 ступенів і віддає fault_step=step (тримається до зупинки сценарію; після зупинки 0). Параметр qs_closed=true замикає QS. step=0 — без збою.</p>]]></field>
     <field name="params_schema" eval="{'type': 'object', 'properties': {'section': {'type': 'integer', 'enum': [1, 2]}, 'step': {'type': 'integer', 'minimum': 0, 'maximum': 10}, 'qs_closed': {'type': 'boolean'}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'section': 2, 'step': 3}"/>
+  </record>
+  <record id="scenario_peak_load" model="td.sim.scenario">
+    <field name="code">peak_load</field>
+    <field name="name">Пік навантаження</field>
+    <field name="group">energy</field>
+    <field name="sequence">170</field>
+    <field name="duration_s">900</field>
+    <field name="description"><![CDATA[<p>Додаткове навантаження extra_kw (кВт) на вводах: імпорт росте до піку (для сценарію «Зрізання піку»). Від'ємне значення зменшує навантаження, але не нижче нуля. Після зупинки навантаження повертається.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'extra_kw': {'type': 'number', 'minimum': -1000, 'maximum': 2000}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'extra_kw': 250, 'duration_s': 900}"/>
+  </record>
+  <record id="scenario_export_demo" model="td.sim.scenario">
+    <field name="code">export_demo</field>
+    <field name="name">Демо експорту СЕС</field>
+    <field name="group">energy</field>
+    <field name="sequence">180</field>
+    <field name="duration_s">900</field>
+    <field name="description"><![CDATA[<p>Експорт СЕС рівно export_kw (кВт): BESS у режимі «авто» тримає 0 кВт, навантаження підганяється (load = gen − export_kw, якщо генерація перевищує export_kw). Для сценарію «Самоспоживання СЕС».</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'export_kw': {'type': 'number', 'minimum': 0, 'maximum': 500}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'export_kw': 26, 'duration_s': 900}"/>
+  </record>
+  <record id="scenario_ctl_local" model="td.sim.scenario">
+    <field name="code">ctl_local</field>
+    <field name="name">Контролер ГРЩ у місцевому режимі</field>
+    <field name="group">energy</field>
+    <field name="sequence">190</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Перемикач «Місцеве/Дистанційне» контролера ГРЩ у положенні «Місцеве» (ctl_remote=0): команди QS, КГУ й BESS ігноруються з ack=2, записи параметрів не приймаються. Після зупинки — дистанційний режим.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_no_gas" model="td.sim.scenario">
+    <field name="code">chp_no_gas</field>
+    <field name="name">КГУ: немає газу</field>
+    <field name="group">energy</field>
+    <field name="sequence">200</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Тиск газу КГУ нижче мінімуму (gas_bar, за замовчуванням 0,80 бар): команда пуску відхиляється контролером (chp/ack=2). Після зупинки тиск 2,10 бар.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'gas_bar': {'type': 'number', 'minimum': 0, 'maximum': 1.4}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'gas_bar': 0.8, 'duration_s': 600}"/>
   </record>
 </odoo>

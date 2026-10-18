@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <!-- UI-20 Journal (SPEC 3.2) -->
+    <t t-name="td_energy_control.Journal">
+        <section class="o_td_en_card o_td_en_journal" aria-labelledby="o_td_en_j_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_en_j_h">Журнал команд і перемикань</h2>
+                <button type="button" class="o_td_en_btn o_td_en_btn--inline o_td_en_j_all" t-on-click="props.onAll">Усі записи →</button>
+            </div>
+            <div t-if="!props.items.length" class="o_td_en_empty">Записів поки немає.</div>
+            <ul class="o_td_en_j_list">
+                <li t-foreach="props.items" t-as="item" t-key="item.id" class="o_td_en_j_row" t-att-data-journal-id="item.id">
+                    <span class="o_td_en_j_time" t-esc="item.time"/>
+                    <span class="o_td_en_j_what"><b t-esc="item.what"/> · <t t-esc="item.detail"/>
+                        <button t-if="item.ref" type="button" class="o_td_en_btn o_td_en_btn--inline o_td_en_j_ref"
+                                t-on-click="() => this.props.onRef(item.ref)">відкрити</button>
+                    </span>
+                    <span class="o_td_en_j_who" t-esc="item.who"/>
+                    <span t-att-class="chipClass(item)" t-esc="item.result"/>
+                    <button t-if="item.undo_available" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_j_undo"
+                            t-att-disabled="props.busy" t-att-aria-label="'Скасувати дію: ' + item.what"
+                            t-on-click="() => this.props.onUndo(item)">Скасувати дію</button>
+                    <button t-if="item.awaiting_second and props.canSecond(item)" type="button"
+                            class="o_td_en_btn o_td_en_btn--sm o_td_en_btn--primary o_td_en_j_second" t-att-disabled="props.busy"
+                            t-att-aria-label="'Підтвердити (2/2): ' + item.what"
+                            t-on-click="() => this.props.onSecond(item)">Підтвердити (2/2)</button>
+                </li>
+            </ul>
+            <div t-if="props.more" class="o_td_en_j_more">
+                <button type="button" class="o_td_en_btn o_td_en_j_more_btn" t-att-disabled="props.loading"
+                        t-on-click="props.onMore">Показати більше</button>
+            </div>
+        </section>
+    </t>
+</templates>

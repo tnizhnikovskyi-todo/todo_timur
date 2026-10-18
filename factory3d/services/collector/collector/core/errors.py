@@ -25,3 +25,11 @@ class NotSupported(CollectorError):
 
 class AllowlistDenied(CollectorError):
     """Хост поза F3D_ALLOW_HOSTS."""
+
+
+class WriteRefused(WriteError):
+    """Пряму `CommandLoop.write_direct` відхилено до звернення до пристрою; `reason` — причина (C-40)."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason

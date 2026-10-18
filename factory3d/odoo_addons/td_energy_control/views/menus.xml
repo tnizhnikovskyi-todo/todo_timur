@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-45 меню «Керування» (SPEC 3.3): після W1 меню td_energy; «Налаштування» — td_energy.menu_td_energy_config. Власник: B -->
+<odoo>
+    <menuitem id="menu_td_energy_control" name="Керування" parent="td_energy.menu_td_energy" sequence="8"
+              action="action_td_energy_control" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_action" name="Журнал команд" parent="td_energy.menu_td_energy" sequence="9"
+              action="action_td_energy_action" groups="td_energy.group_td_energy_user"/>
+
+    <menuitem id="menu_td_energy_scenario" name="Сценарії автоматики" parent="td_energy.menu_td_energy_config" sequence="50"
+              action="action_td_energy_scenario" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_shed_item" name="Пріоритети скидання" parent="td_energy.menu_td_energy_config" sequence="51"
+              action="action_td_energy_shed_item" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_schedule_slot" name="Розклад (слоти)" parent="td_energy.menu_td_energy_config" sequence="52"
+              action="action_td_energy_schedule_slot" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_interlock" name="Блокування" parent="td_energy.menu_td_energy_config" sequence="53"
+              action="action_td_energy_interlock" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_command_kind" name="Види команд" parent="td_energy.menu_td_energy_config" sequence="54"
+              action="action_td_energy_command_kind" groups="td_factory3d.group_td_admin"/>
+    <menuitem id="menu_td_energy_control_state" name="Стан керування" parent="td_energy.menu_td_energy_config" sequence="55"
+              action="action_td_energy_control_state" groups="td_factory3d.group_td_admin"/>
+</odoo>
