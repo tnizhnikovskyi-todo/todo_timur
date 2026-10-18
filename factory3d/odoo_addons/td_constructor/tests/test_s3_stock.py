@@ -136,6 +136,29 @@ class TestS3StockState(StockFixture, F3DConstructorCase):
         self.assertEqual(res['TST-R1-B02-L2']['qty'], 0)
         self.assertIsNone(res['TST-R1-B02-L1']['fill'], "ємність не задано")
 
+    def test_fill_uses_s2_capacity_service(self):
+        """Вага й ліміт комірки — від сервісу ємності S2: max_load_kg комірки місця (а не лише категорія локації)."""
+        slot = self.make_slot(prefix='TQ-R1', max_load_kg=500)
+        code = slot._f3d_cells()[0]['code']
+        loc = self.env['stock.location'].create(
+            {
+                'name': code,
+                'usage': 'internal',
+                'location_id': self.wh_stock.id,
+                'td_code': code,
+                'td_site_id': self.site.id,
+            }
+        )
+        self.env['stock.quant']._update_available_quantity(self.product_a, loc, 10.0)  # 10 × 10 кг = 100 кг із 500
+        res = self.state(codes=[code])['codes'][code]
+        self.assertEqual(
+            (res['fill'], res['capacity']), (0.2, 500.0), "ліміт — max_load_kg комірки від site_cell_limits"
+        )
+        self.assertEqual(metrics.cell_limits(self.site)[code], 500.0)
+        self.env['ir.config_parameter'].sudo().set_param('product.weight_in_lbs', '1')
+        res = self.state(codes=[code])['codes'][code]
+        self.assertAlmostEqual(res['fill'], 0.2 * 0.45359237, places=3, msg="одиниці ваги Odoo (фунти) — як у S2")
+
     def test_codes_filter_and_unknown_code(self):
         res = self.state(codes=['TST-R1-B01-L2', 'OTHER-1', 'NOPE-1'])
         self.assertEqual(

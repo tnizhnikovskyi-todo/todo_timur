@@ -17,7 +17,32 @@ JS + Three.js **без Odoo**: жодних імпортів `@web`, `@odoo`, `@
 | `artifact/` | лише прототип: `ArtifactAdapter` (db → localStorage → пам'ять, IndexedDB), `sample.js` (+`seed/sample.json`, `fromProto`), діалоги каталогу й публікації, перевірки навантаження прототипу |
 | `registry.js` | реєстри точок розширення |
 | `host.js` · `three.js` | сервіси хоста й контейнер `THREE` |
-| `types_catalog.js` … `i18n.js` | заглушки слайсів S1…S6 (див. «Волни») |
+| `types_catalog.js` … `i18n.js` | слайси S1…S6 (див. «Волни» і розділ S3 нижче); незаповнені — заглушки |
+
+## Слайс S3 «Робота зі складом» (F05, F06, F07, F09-01…05/08…10, N-02, N-05, N-08)
+
+| Файл | Що |
+|---|---|
+| `undo.js` | скасування/повтор (F09-01): знімок після кожної зміни (шари, місця, розміщення, правила S2 `S.site.rules`, адресація площадки); підпис кроку — `E.undoLabel(текст)`, `E.commit({label})` чи виведений із різниці; `E.undo/redo/undoReset/undoRebase`; відновлення — звичайний `E.commit`, тож адаптер сам ставить create/write/unlink; зміну `saveAddr` відновлює виклик адаптера |
+| `selection.js` · `edit_tools.js` | мультивиділення `S.multi` (Ctrl+клік, рамка Shift у «Плані», групове перетягування, панель «Виділено N»), дублювання Ctrl+D, копіювати/вставити Ctrl+C/V, масив N×M, масове створення в зоні, вирівнювання/розподіл, групи в зону, властивості кількох |
+| `labels.js` · `barcode.js` | етикетки (F05): вибір комірок, вміст, розкладка аркуша, SVG/PNG, ZPL, тіло запиту PDF; Code128 і QR без залежностей (еталон Python — `tests/golden_s3.py`) |
+| `stock_state.js` · `heat.js` | залишки в `S.stock` (пачки API-13), теплові карти (F07): показники в реєстрі `metrics`, легенда з числом місць у класах, вибір запам'ятовується |
+| `search.js` · `card.js` · `s3_chrome.js` | «Перейти до місця» й «Де лежить» (F06-01/02), картка місця й підказка при наведенні (F06-03/05), мобільний режим ≤ 768 px (F06-04; стилі вбудовано в `s3_chrome.js`), кнопки ↶ ↷, перемикач «Показник» |
+| `draft.js` | рівні доступу `E.access()` (Перегляд / Проєктування / Застосування, N-02), статуси «не збережено» / «нове · лише в моделі» / «з Odoo» (N-05, N-08), «Зберегти все», «Скинути до даних Odoo», довідка гарячих клавіш |
+| `artifact/demo_stock.js` | лише прототип: синтетичні залишки з позначкою «демо» (F07-08) |
+
+Хуки: `E.lifecycle.mount/unmount` (множини функцій на монтування), `E.access()/accessHint(need)`, `E.objStatus(kind, rec)`, `E.recolorCells()`.
+Ключ `S.ui.metric` ділиться з підсвіткою правил S2 (`rule_target`): чужий ключ у перемикачі «Показник» показується як «звичайний».
+
+**Адаптер** (`capabilities.stock`, `capabilities.render`): `stock({codes?, days?, detail?, offset?})` → API-13 `/stock/state`
+`{at, days, demo, truncated, next, codes: {код: {qty, reserved, fill, in_date, age_days, moves, min, max, capacity, top_product, location_id, detail?}}}`;
+великий склад віддається пачками (≤ 2 МБ, 2000 локацій): поки `truncated`, ядро повторює виклик з `offset: next`. `detail` (до 20 кодів, для картки) —
+`{rows, moves, rules, category, record: {model, id}}`; `record` ядро передає в `E.openRecord` («Відкрити в Odoo»), не знаючи імені моделі (CD-30).
+`find({q, mode})` → API-14 `/stock/find` → `{hits: [{code, items: [{product, ref, qty, lot, package}]}]}` (усі слова — в одному залишку).
+`render(kind, payload)` → API-19 `/render/<kind>` → `{filename, mimetype, content (base64)}`; `labels_pdf`: `payload.format` — `pdf` (за замовчуванням)
+або `png` (один аркуш — PNG, кілька — ZIP; **не більше 12 аркушів**, ліміт PDF — параметр `td.constructor.labels_max`). Прототип: `stock/find` — демо,
+`render` недоступний («PDF формує сервер»), ZPL і PNG будуються локально. `fill` на сервері: заповнення за ємністю товару категорії зберігання, інакше вага
+запасу проти ліміту комірки від сервісу ємності S2 (`capacity.stock_loads`, `capacity.site_cell_limits`).
 
 ## Контракт адаптера (`adapter.js`)
 

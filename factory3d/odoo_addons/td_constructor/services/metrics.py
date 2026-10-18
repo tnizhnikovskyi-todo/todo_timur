@@ -2,9 +2,11 @@
 
 Код комірки — `stock.location.td_code`, площадка — `td_site_id`. Читання йде від імені сервера (`sudo`) і лише по
 локаціях площадки: доступ до площадки перевіряє контролер (record rules + група «Перегляд»). Агрегати за локацією:
-`qty`, `reserved`, `fill` (частка ємності категорії зберігання: за кількістю товару або за вагою; `None` — ємність
-не задано), `in_date` / `age_days` (найстаріша партія із залишком), `moves` (рядки руху `stock.move.line` за N днів зі
-`stock_days`), `min` / `max` (правила поповнення `stock.warehouse.orderpoint` локації). Відповідь ріжеться пачками
+`qty`, `reserved`, `fill` (частка ємності: за кількістю товару з категорії зберігання, інакше за вагою запасу проти
+ліміту комірки — вага й ліміт від сервісу ємності S2: `capacity.stock_loads`, `capacity.site_cell_limits`; `None` —
+ємність не задано), `in_date` / `age_days` (найстаріша партія із залишком), `moves` (рядки руху `stock.move.line` за
+N днів зі `stock_days`), `min` / `max` (правила поповнення `stock.warehouse.orderpoint` локації).
+Відповідь ріжеться пачками
 (≤ 2 МБ, `limit` локацій).
 """
 
@@ -13,6 +15,8 @@ from collections import defaultdict
 from datetime import timedelta
 
 from odoo import fields
+
+from . import capacity
 
 LOCATION_BATCH = 2000
 MAX_BYTES = 2 * 1024 * 1024
@@ -42,7 +46,7 @@ def _age_days(in_date, now):
 
 
 def _capacity_maps(locations):
-    """Ємність категорій: {(категорія, товар): кількість}, {категорія: макс. вага}."""
+    """Ємність товарів у категоріях зберігання: {(категорія, товар): кількість} і {категорія: макс. вага}."""
     by_product = {}
     max_weight = {}
     for cat in locations.storage_category_id:
@@ -52,11 +56,34 @@ def _capacity_maps(locations):
     return by_product, max_weight
 
 
-def _fill(category_id, by_product, max_weight, per_product, weights):
-    """Заповнення: сума qty/ємність товару; без ємностей товарів — вага / макс. вага; нічого не задано — None."""
-    if not category_id:
-        return None, None
-    caps = [cap for (cat, _prod), cap in by_product.items() if cat == category_id and cap]
+_LIMITS = {}  # (база, площадка) -> (підпис даних, {код: ліміт, кг}); site_cell_limits обходить усі комірки площадки
+
+
+def cell_limits(site):
+    """Ліміти ваги комірок площадки від сервісу ємності S2 (`capacity.site_cell_limits`) з кешем за підписом даних."""
+    env = site.env
+    sig = [
+        tuple(env[model].sudo()._read_group(domain, aggregates=['write_date:max', '__count'])[0])
+        for model, domain in (
+            ('td.slot', [('site_id', '=', site.id)]),
+            ('td.layer', [('site_id', '=', site.id)]),
+            ('stock.storage.category', []),
+        )
+    ]
+    sig.append(site.write_date)
+    key = (env.cr.dbname, site.id)
+    cached = _LIMITS.get(key)
+    if cached and cached[0] == sig:
+        return cached[1]
+    limits = capacity.site_cell_limits(site.sudo())
+    _LIMITS[key] = (sig, limits)
+    return limits
+
+
+def _fill(code, category_id, by_product, max_weight, per_product, weight_kg, limits):
+    """Заповнення: сума qty/ємність товару в категорії; інакше вага запасу / ліміт комірки (S2: max_load_kg чи
+    категорія, інакше `max_weight` категорії локації); нічого не задано — None. Повертає (заповнення, ємність)."""
+    caps = [cap for (cat, _prod), cap in by_product.items() if cat == category_id and cap] if category_id else []
     ratios = [
         qty / by_product[(category_id, prod)]
         for prod, qty in per_product.items()
@@ -64,9 +91,9 @@ def _fill(category_id, by_product, max_weight, per_product, weights):
     ]
     if ratios:
         return round(min(1.0, sum(ratios)), 3), max(caps)
-    if max_weight.get(category_id):
-        weight = sum(qty * weights.get(prod, 0.0) for prod, qty in per_product.items())
-        return round(min(1.0, weight / max_weight[category_id]), 3), max_weight[category_id]
+    limit = limits.get(code) or max_weight.get(category_id) or 0.0
+    if limit:
+        return round(min(1.0, weight_kg / limit), 3), limit
     if caps and not per_product:
         return 0.0, max(caps)
     return None, None
@@ -93,9 +120,12 @@ def stock_state(env, site, codes=None, days=None, detail=False, offset=0, limit=
     for q in quants:
         by_loc[q['location_id'][0]].append(q)
     product_ids = {q['product_id'][0] for q in quants}
-    products = env['product.product'].sudo().browse(product_ids).read(['name', 'weight']) if product_ids else []
-    weights = {p['id']: p['weight'] for p in products}
+    products = env['product.product'].sudo().browse(product_ids).read(['name']) if product_ids else []
     names = {p['id']: p['name'] for p in products}
+    loads = capacity.stock_loads(
+        env, locations.mapped('td_code')
+    )  # вага запасу в кг (з одиницями Odoo) — сервіс ємності S2
+    limits = cell_limits(site) if ids else {}
     by_product, max_weight = _capacity_maps(locations)
     moves = defaultdict(int)
     if ids:
@@ -129,12 +159,20 @@ def stock_state(env, site, codes=None, days=None, detail=False, offset=0, limit=
             per_product[q['product_id'][0]] += q['quantity']
         dates = [q['in_date'] for q in rows if q['in_date']]
         oldest = min(dates) if dates else None
-        fill, capacity = _fill(loc.storage_category_id.id, by_product, max_weight, per_product, weights)
+        fill, cap = _fill(
+            loc.td_code,
+            loc.storage_category_id.id,
+            by_product,
+            max_weight,
+            per_product,
+            loads.get(loc.td_code, {}).get('weight_kg', 0.0),
+            limits,
+        )
         entry = {
             'qty': round(sum(q['quantity'] for q in rows), 4),
             'reserved': round(sum(q['reserved_quantity'] for q in rows), 4),
             'fill': fill,
-            'capacity': capacity,
+            'capacity': cap,
             'in_date': fields.Datetime.to_string(oldest) if oldest else None,
             'age_days': _age_days(oldest, now),
             'moves': moves.get(loc.id, 0),

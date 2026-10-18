@@ -174,14 +174,14 @@ export function renderHeat() {
     }
     const avail = can("stock");
     sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t]) => h("option", { value: k, selected: S.ui.metric === k }, t)));
-    sel.value = S.ui.metric || "";
+    const key = DEFS[S.ui.metric] ? S.ui.metric : ""; // S.ui.metric делять з S2 (підсвітка правил): чужий ключ — «звичайний»
+    sel.value = key;
     sel.disabled = !avail;
     sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
     const rf = $("#s3Refresh");
     if (rf) {
-        rf.disabled = !avail || !S.ui.metric;
+        rf.disabled = !avail || !key;
     }
-    const key = S.ui.metric;
     if (!key || !S.stock) {
         box.hidden = true;
         box.replaceChildren();

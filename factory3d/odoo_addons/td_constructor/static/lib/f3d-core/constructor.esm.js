@@ -11933,13 +11933,14 @@ function renderRulesInto(root, { rec }) {
 registries.panels.add("slot:rules", { area: "slot", render: renderRulesInto }, { sequence: 36, force: true });
 
 // core/constructor/undo.js
-var KINDS = ["layers", "slots", "placements"];
+var KINDS = ["layers", "slots", "placements", "putaway", "replenish"];
 var MAX_STEPS = 100;
 var MAX_CHARS = 3e7;
 var COALESCE_MS = 1200;
 var strip2 = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
 var siteVals = () => ({ addr: S.site?.addr ?? null, depth_mode: S.site?.depth_mode ?? null, loc_tree: S.site?.loc_tree ?? null });
-var snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, site: siteVals() }, strip2);
+var rulesOf = () => S.site && S.site.rules || {};
+var snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, putaway: rulesOf().putaway || [], replenish: rulesOf().replenish || [], site: siteVals() }, strip2);
 var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function changedFields(a, b) {
   const out = [];
@@ -11962,8 +11963,8 @@ function changedFields(a, b) {
 function diffSnapshots(a, b) {
   const out = { added: [], removed: [], changed: [], site: !same2(a.site, b.site) };
   for (const kind of KINDS) {
-    const ma = new Map(a[kind].map((r) => [r.id, r]));
-    const mb = new Map(b[kind].map((r) => [r.id, r]));
+    const ma = new Map((a[kind] || []).map((r) => [r.id, r]));
+    const mb = new Map((b[kind] || []).map((r) => [r.id, r]));
     for (const [id, r] of mb) {
       if (!ma.has(id)) {
         out.added.push({ kind, id, rec: r });
@@ -11982,7 +11983,12 @@ function diffSnapshots(a, b) {
   }
   return out;
 }
-var nameOf2 = (e) => (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+var nameOf2 = (e) => {
+  if (e.kind === "putaway" || e.kind === "replenish") {
+    return `${e.kind === "putaway" ? "правило розміщення" : "правило поповнення"} ${e.rec.product?.name || e.rec.out_code || e.rec.cell_code || ""}`.trim();
+  }
+  return (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+};
 var MOVE = ["x", "y"];
 function labelOf(d) {
   const n = d.added.length + d.removed.length + d.changed.length;
@@ -12010,6 +12016,9 @@ function labelOf(d) {
     }
     if (one && d.changed[0].fields.every((f) => f === "addr" || f === "depth_mode")) {
       return `Адресація: ${nm}`;
+    }
+    if (one && (d.changed[0].kind === "putaway" || d.changed[0].kind === "replenish")) {
+      return `Правило: ${nm}`;
     }
     return one ? `Зміна: ${nm}` : `Зміна об’єктів: ${d.changed.length}`;
   }
@@ -12095,14 +12104,21 @@ function restore(data, prevData) {
   const next = JSON.parse(data);
   const prev = JSON.parse(prevData);
   const d = diffSnapshots(prev, next);
-  for (const kind of KINDS) {
-    const cur = new Map(S[kind].map((r) => [r.id, r]));
-    S[kind] = next[kind].map((r) => {
+  const carry = (list, fresh) => {
+    const cur = new Map(list.map((r) => [r.id, r]));
+    return fresh.map((r) => {
       const c = cur.get(r.id);
       r.rid = c ? c.rid ?? null : null;
       r.etag = c ? c.etag ?? null : null;
       return r;
     });
+  };
+  for (const kind of ["layers", "slots", "placements"]) {
+    S[kind] = carry(S[kind], next[kind] || []);
+  }
+  if (S.site && (S.site.rules || (next.putaway || []).length || (next.replenish || []).length)) {
+    const rules = S.site.rules || { putaway: [], replenish: [] };
+    S.site.rules = { ...rules, putaway: carry(rules.putaway || [], next.putaway || []), replenish: carry(rules.replenish || [], next.replenish || []) };
   }
   if (d.site && S.site) {
     Object.assign(S.site, next.site);
@@ -12111,7 +12127,7 @@ function restore(data, prevData) {
   S.selCell = null;
   S.edit = null;
   reindex();
-  const touched = [...d.changed, ...d.added].filter((e) => e.kind !== "layers");
+  const touched = [...d.changed, ...d.added].filter((e) => e.kind === "slots" || e.kind === "placements");
   const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
   S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
   return { changedSite: d.site, site: next.site };
@@ -14293,14 +14309,14 @@ function renderHeat() {
   }
   const avail = can("stock");
   sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t]) => h("option", { value: k, selected: S.ui.metric === k }, t)));
-  sel.value = S.ui.metric || "";
+  const key = DEFS[S.ui.metric] ? S.ui.metric : "";
+  sel.value = key;
   sel.disabled = !avail;
   sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
   const rf = $("#s3Refresh");
   if (rf) {
-    rf.disabled = !avail || !S.ui.metric;
+    rf.disabled = !avail || !key;
   }
-  const key = S.ui.metric;
   if (!key || !S.stock) {
     box.hidden = true;
     box.replaceChildren();

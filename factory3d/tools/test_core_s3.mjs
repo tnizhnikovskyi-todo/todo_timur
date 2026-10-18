@@ -158,6 +158,32 @@ export function register(test) {
         assert.equal(labelOf(diffSnapshots(a, c)), "Параметри: об’єкт", "лише params.*");
     });
 
+    test("S3 undo: правила розміщення й поповнення S2 (S.site.rules) входять у спільну історію, rid/etag переносяться", async () => {
+        const b = await boot();
+        const { S, E } = b;
+        scene(b, [rack("ra", "RA", 40, 10)]);
+        const keep = S.site.rules;
+        S.site.rules = { putaway: [{ id: "pw1", rid: 5, etag: "e", product_id: 3, product: { name: "ДСП" }, out_code: "RA-B01-L1", sequence: 10, deleted: false }], replenish: [] };
+        E.undoReset();
+        S.site.rules.putaway[0].sequence = 20;
+        E.scheduleSave?.();
+        E.undoRecord();
+        assert.equal(E.undoState().undoLabel, "Правило: правило розміщення ДСП");
+        S.site.rules.replenish.push({ id: "rp1", rid: null, product_id: 3, cell_code: "RA-B01-L2", min_qty: 2, max_qty: 9, deleted: false });
+        E.undoRecord();
+        assert.match(E.undoState().undoLabel, /^Додано: правило поповнення/);
+        await E.undo();
+        assert.equal(S.site.rules.replenish.length, 0, "додане правило поповнення скасовано");
+        assert.equal(S.site.rules.putaway[0].sequence, 20);
+        await E.undo();
+        assert.equal(S.site.rules.putaway[0].sequence, 10, "правка правила скасована");
+        assert.equal(S.site.rules.putaway[0].rid, 5, "rid збережено");
+        await E.redo();
+        await E.redo();
+        assert.equal(S.site.rules.replenish[0].min_qty, 2);
+        S.site.rules = keep;
+    });
+
     test("S3 undo: адресація площадки (saveAddr) входить в історію; адаптер із серверною перенумерацією викликається", async () => {
         const b = await boot();
         const { S, E, ad } = b;

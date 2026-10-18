@@ -1,6 +1,6 @@
 // Скасування й повтор (F09-01; MERGE.md §4.2 «Undo/redo над чергою змін») — слайс S3.
 // Спільний механізм стану: після кожної зміни (commit, жива правка, scheduleSave → syncNow) `undoRecord()` порівнює знімок стану
-// (шари, місця, розміщення + адресація площадки) з попереднім; змінилося — у стек іде новий крок із підписом дії (явний `E.undoLabel()`
+// (шари, місця, розміщення, правила розміщення й поповнення S2 + адресація площадки) з попереднім; змінилося — у стек іде новий крок із підписом дії (явний `E.undoLabel()`
 // чи виведений з різниці). Відновлення знімка — це звичайна зміна стану (`E.commit`): адаптер сам порівнює стан зі своїм і ставить у
 // чергу create / write / unlink, тож скасовуються лише ще не застосовані в Odoo зміни (публікація й перезавантаження стеку не зберігають).
 // Правки S1 (адресація площадки `saveAddr`) входять у знімок як `site` і відновлюються викликом адаптера.
@@ -8,7 +8,7 @@ import { registries } from "./registry.js";
 import { E, S, reindex } from "./state.js";
 import { toast } from "./util.js";
 
-const KINDS = ["layers", "slots", "placements"];
+const KINDS = ["layers", "slots", "placements", "putaway", "replenish"];
 const MAX_STEPS = 100;
 const MAX_CHARS = 30e6;
 const COALESCE_MS = 1200;
@@ -16,8 +16,11 @@ const COALESCE_MS = 1200;
 const strip = (k, v) => (k === "rid" || k === "etag" ? undefined : v);
 const siteVals = () => ({ addr: S.site?.addr ?? null, depth_mode: S.site?.depth_mode ?? null, loc_tree: S.site?.loc_tree ?? null });
 
-/** Знімок відстежуваного стану (рядок JSON без серверних rid/etag). */
-export const snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, site: siteVals() }, strip);
+const rulesOf = () => (S.site && S.site.rules) || {};
+
+/** Знімок відстежуваного стану (рядок JSON без серверних rid/etag): шари, місця, розміщення, правила S2 (S.site.rules), адресація площадки. */
+export const snapshot = () =>
+    JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, putaway: rulesOf().putaway || [], replenish: rulesOf().replenish || [], site: siteVals() }, strip);
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function changedFields(a, b) {
@@ -43,8 +46,8 @@ function changedFields(a, b) {
 export function diffSnapshots(a, b) {
     const out = { added: [], removed: [], changed: [], site: !same(a.site, b.site) };
     for (const kind of KINDS) {
-        const ma = new Map(a[kind].map((r) => [r.id, r]));
-        const mb = new Map(b[kind].map((r) => [r.id, r]));
+        const ma = new Map((a[kind] || []).map((r) => [r.id, r]));
+        const mb = new Map((b[kind] || []).map((r) => [r.id, r]));
         for (const [id, r] of mb) {
             if (!ma.has(id)) {
                 out.added.push({ kind, id, rec: r });
@@ -64,7 +67,12 @@ export function diffSnapshots(a, b) {
     return out;
 }
 
-const nameOf = (e) => (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+const nameOf = (e) => {
+    if (e.kind === "putaway" || e.kind === "replenish") {
+        return `${e.kind === "putaway" ? "правило розміщення" : "правило поповнення"} ${e.rec.product?.name || e.rec.out_code || e.rec.cell_code || ""}`.trim();
+    }
+    return (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+};
 const MOVE = ["x", "y"];
 
 /** Підпис дії за різницею знімків («Переміщено: R1», «Видалено об’єктів: 3», …). */
@@ -94,6 +102,9 @@ export function labelOf(d) {
         }
         if (one && d.changed[0].fields.every((f) => f === "addr" || f === "depth_mode")) {
             return `Адресація: ${nm}`;
+        }
+        if (one && (d.changed[0].kind === "putaway" || d.changed[0].kind === "replenish")) {
+            return `Правило: ${nm}`;
         }
         return one ? `Зміна: ${nm}` : `Зміна об’єктів: ${d.changed.length}`;
     }
@@ -192,14 +203,21 @@ function restore(data, prevData) {
     const next = JSON.parse(data);
     const prev = JSON.parse(prevData);
     const d = diffSnapshots(prev, next);
-    for (const kind of KINDS) {
-        const cur = new Map(S[kind].map((r) => [r.id, r]));
-        S[kind] = next[kind].map((r) => {
+    const carry = (list, fresh) => {
+        const cur = new Map(list.map((r) => [r.id, r]));
+        return fresh.map((r) => {
             const c = cur.get(r.id);
             r.rid = c ? (c.rid ?? null) : null;
             r.etag = c ? (c.etag ?? null) : null;
             return r;
         });
+    };
+    for (const kind of ["layers", "slots", "placements"]) {
+        S[kind] = carry(S[kind], next[kind] || []);
+    }
+    if (S.site && (S.site.rules || (next.putaway || []).length || (next.replenish || []).length)) {
+        const rules = S.site.rules || { putaway: [], replenish: [] };
+        S.site.rules = { ...rules, putaway: carry(rules.putaway || [], next.putaway || []), replenish: carry(rules.replenish || [], next.replenish || []) };
     }
     if (d.site && S.site) {
         Object.assign(S.site, next.site);
@@ -208,7 +226,7 @@ function restore(data, prevData) {
     S.selCell = null;
     S.edit = null;
     reindex();
-    const touched = [...d.changed, ...d.added].filter((e) => e.kind !== "layers");
+    const touched = [...d.changed, ...d.added].filter((e) => e.kind === "slots" || e.kind === "placements");
     const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
     S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
     return { changedSite: d.site, site: next.site };
