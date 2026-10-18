@@ -3,7 +3,7 @@
 // кожен модуль наприкінці робить `Object.assign(E, {...})`, а виклики «чужих» функцій пишуться `E.name()`.
 import { rnd } from "./util.js";
 
-export const E = {};
+export const E = { lifecycle: { mount: new Set(), unmount: new Set() } }; // lifecycle: хуки монтування слайсів (S3: розмітка, мобільний режим)
 
 const initialS = () => ({
     app: { sites: [], active: null, mode: "edit", viewAs: null },

@@ -119,6 +119,9 @@ function applyLoaded(st, keep) {
     S.ui.dxfScale = null;
     V.models.clear();
     S.issues = runLive();
+    if (!keep) {
+        S.stock = null; // залишки іншої площадки не показуються
+    }
     if (keep) {
         E.undoRebase?.(); // перезавантаження з сервера: історія лишається (адресація, відхилення), поточний крок — свіжий знімок
     } else {
@@ -532,6 +535,13 @@ export async function mountEditor(rootEl, { adapter, store, host: hostSvc, servi
     const entry = S.app.sites.find((s) => String(s.id) === String(want)) || S.app.sites[0];
     E.initScene();
     await openSite(entry.id);
+    for (const fn of E.lifecycle.mount) {
+        try {
+            fn();
+        } catch (e) {
+            console.error("mount hook:", e);
+        }
+    }
     rootEl.dataset.ready = "1";
 }
 
@@ -555,6 +565,13 @@ export function unmountEditor() {
         target.removeEventListener(type, fn);
     }
     E.cancelModes?.();
+    for (const fn of E.lifecycle.unmount) {
+        try {
+            fn();
+        } catch (e) {
+            console.error("unmount hook:", e);
+        }
+    }
     E.disposeScene?.();
     ctx = null;
     if (ROOT.el) {

@@ -7,6 +7,7 @@
 import { BaseAdapter, StoreError, newUid } from "../adapter.js";
 import { clone } from "../util.js";
 import { SEED_REV, buildEmptySite, buildSample, fromProto, makeSnapshot, versionFromProto } from "./sample.js";
+import { demoFind, demoStockState } from "./demo_stock.js";
 import { createFiles, createStorage } from "./storage.js";
 
 const FULL = "sample_full";
@@ -76,6 +77,7 @@ export class ArtifactAdapter extends BaseAdapter {
         this._booted = null;
         this.base = null;
         this.baseMap = null;
+        Object.assign(this.capabilities, { stock: true }); // S3: демо-залишки з позначкою «демо» (F07-08)
     }
 
     get userName() {
@@ -373,6 +375,20 @@ export class ArtifactAdapter extends BaseAdapter {
 
     async saveCheck() {
         this.save(this.getState());
+    }
+
+    /* ===== залишки й пошук (S3, F06/F07): синтетичні демо-значення ===== */
+    async stock(opts = {}) {
+        return demoStockState(this.getState() || this._st, { ...opts, baseMap: this.baseMap });
+    }
+
+    async find(opts = {}) {
+        return demoFind(this.getState() || this._st, { ...opts, baseMap: this.baseMap });
+    }
+
+    /** PDF формує сервер Odoo; у прототипі («на сервері») його немає. */
+    async render() {
+        throw new StoreError("not_available", "PDF формує сервер Odoo; у прототипі доступні ZPL і PNG.");
     }
 
     async createSite({ name, code, building, kind } = {}) {

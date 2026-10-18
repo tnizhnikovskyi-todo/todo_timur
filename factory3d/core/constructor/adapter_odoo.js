@@ -381,6 +381,7 @@ export class OdooAdapter extends BaseAdapter {
         this.kind = "odoo";
         // Усе, що спирається на API-11…24, стане true разом із відповідними функціями (хост може передати `o.capabilities`).
         this.capabilities = { publish: true, check: true, library: true, ...(o.capabilities || {}) };
+        Object.assign(this.capabilities, { stock: true, render: true, ...(o.capabilities || {}) }); // S3: API-13/14 (залишки, пошук) і API-19 (файли)
         this.serverRenumber = true; // зміна адресації на сервері переносить правки комірок і розміщення на нові коди (S1)
         this.rpc = o.rpc;
         this.orm = o.orm;
@@ -884,6 +885,36 @@ export class OdooAdapter extends BaseAdapter {
      */
     async library(req) {
         const res = await this._call("/f3d/constructor/library", req);
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /**
+     * Залишки по кодах (API-13 `/stock/state`, S3): `{codes?, days?, detail?}` → {at, days, demo: false, truncated, codes: {код: {qty, reserved, fill,
+     * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки.
+     */
+    async stock({ codes = null, days = null, detail = false } = {}) {
+        const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Пошук «де лежить» (API-14 `/stock/find`): `{q, mode}` → {hits: [{code, items: [{product, ref, qty, lot, package}]}]}. */
+    async find({ q, mode = "any" } = {}) {
+        const res = await this._call("/f3d/constructor/stock/find", { site_id: this.siteId, q, mode });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return res;
+    }
+
+    /** Файл від сервера (API-19): `kind` — labels_pdf | table_xlsx | plan_pdf | spec_pdf → {filename, mimetype, content (base64)}. */
+    async render(kind, payload) {
+        const res = await this._call(`/f3d/constructor/render/${kind}`, { site_id: this.siteId, ...payload });
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
         }

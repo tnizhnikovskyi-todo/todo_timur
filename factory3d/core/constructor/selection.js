@@ -198,6 +198,7 @@ function renderToolsBlock(root, { rec }) {
                 tier ? b("Ярус зверху", () => duplicateSel("tier"), "btnDupTier", "Додати ярус над останнім") : null,
                 bay ? b("Секція в кінець ряду", () => duplicateSel("bay"), "btnDupBay", "Додати секцію в кінці ряду") : null,
                 b("Копіювати", () => copySel(), "btnCopy", "Ctrl+C; вставлення — Ctrl+V"),
+                slot && slot.template === "zone" ? b("Розгрупувати", () => ungroupZone(), "btnUngroup", "Прибрати зону; об’єкти всередині лишаються") : null,
                 b("Масив…", () => E.runDialog("array"), "btnArray", "N×M копій із кроком")
             )
         )
