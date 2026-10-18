@@ -197,6 +197,9 @@ class TestW3Opportunity(TestW3Common):
         self.assertEqual(opp.actions[-1]["code"], "control")
         self.assertEqual(opp.actions[-1]["params"], {"intent": "vent_night_mode"})
         item = self.Opp.get_list("el")["items"][0]
+        if "td.energy.control" in self.env:  # W2 встановлено: керування доступне, запасне «Відкрити» не додається
+            self.assertEqual([(a["kind"], a["enabled"]) for a in item["actions"]], [("control", True)])
+            return
         control, fallback = item["actions"]
         self.assertEqual((control["kind"], control["enabled"]), ("control", False))  # немає td_energy_control
         self.assertEqual((fallback["code"], fallback["kind"], fallback["enabled"]), ("open", "link", True))
