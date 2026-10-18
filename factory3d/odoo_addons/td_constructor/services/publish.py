@@ -848,7 +848,12 @@ def select_lines(plan, archive_keys=(), excluded=(), scope=None):
     if scope is not None:
         uids = set(scope)
         chosen = [ln for ln in chosen if ln['scope_uid'] in uids or ln['extra'].get('zone_uid') in uids]
-    creates = {(ln['res_model'], ln['code']): ln for ln in plan['lines'] if ln['kind'] == 'create'}
+    # залежність — рядок, що створює локацію або відновлює її з архіву (після відкату)
+    creates = {
+        (ln['res_model'], ln['code']): ln
+        for ln in plan['lines']
+        if ln['kind'] == 'create' or (ln['kind'] == 'attrs' and ln['vals'].get('active'))
+    }
     have = {id(ln) for ln in chosen}
     skipped = []
     for line in list(chosen):

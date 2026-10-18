@@ -298,13 +298,19 @@ def resolve_target(site, env, lines, code='', location=None):
         return out
     if not code:
         return out
-    found = Loc.search([('td_code', '=', code), ('td_site_id', '=', site.id), ('active', '=', True)], limit=1)
-    if found:
+    found = Loc.search([('td_code', '=', code), ('td_site_id', '=', site.id)], order='active desc', limit=1)
+    if found and found.active:
         out.update(location=found, scope_uid=found.td_slot_uid or '')
         return out
     for line in lines:
-        if line['kind'] == 'create' and line['res_model'] == pub.LOCATION and line['code'] == code:
-            out.update(depends=code, scope_uid=line['source_uid'], zone_uid=line['extra'].get('zone_uid', ''))
+        restoring = line['kind'] == 'attrs' and line['vals'].get('active') and line['res_id'] == found.id
+        if line['res_model'] == pub.LOCATION and line['code'] == code and (line['kind'] == 'create' or restoring):
+            out.update(
+                location=found if restoring else Loc,
+                depends=code,
+                scope_uid=line['source_uid'],
+                zone_uid=line['extra'].get('zone_uid', ''),
+            )
             return out
     return out
 

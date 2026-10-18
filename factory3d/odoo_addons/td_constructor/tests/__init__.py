@@ -21,3 +21,5 @@ from . import test_core_node
 from . import test_registry_hooks
 from . import test_new_fields_api
 from . import test_s2_plan
+from . import test_s2_capacity
+from . import test_s2_putaway
