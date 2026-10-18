@@ -280,7 +280,7 @@ export class NodeCard extends Component {
         return {
             title: `Захист ${p.breaker || ""}`.trim(),
             rows: [
-                ["Автомат", `${fmtInt(p.rating_a)} А${p.trip_unit ? ` · розчіплювач ${p.trip_unit}` : ""}`],
+                ["Автомат", [`${fmtInt(p.rating_a)} А`, p.trip_unit ? `розчіплювач ${p.trip_unit}` : null].filter(Boolean).join(" · ")],
                 ["Уставка Ir", ir],
                 ["Спрацювань за рік", fmtInt(p.trips_year)],
                 ["Тепловізійний огляд", thermo],

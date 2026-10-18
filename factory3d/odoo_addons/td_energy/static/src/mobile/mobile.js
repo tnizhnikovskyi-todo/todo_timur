@@ -194,6 +194,7 @@ export class MobileState extends Component {
         const ats = ((s.genset_ats && s.genset_ats.text) || "").replace(/^ДГУ · АВР:\s*/, "");
         const cos = s.cos_phi || {};
         const low = (cos.low_sections || []).map((n) => `с${n}`);
+        const cosText = low.length ? fmtDec(cos.plant, 2) + " · " + low.join(", ") + " нижче норми" : fmtDec(cos.plant, 2);
         return [
             { id: "pv", label: "СЕС", value: `${fmtInt(s.pv_kw)} кВт`, cls: "gen" },
             { id: "bess", label: "BESS", value: `${fmtInt(bess.soc_pct)} % · ${bessKw}`, cls: "" },
@@ -201,7 +202,7 @@ export class MobileState extends Component {
             {
                 id: "cos",
                 label: "cos φ",
-                value: `${fmtDec(cos.plant, 2)}${low.length ? ` · ${low.join(", ")} нижче норми` : ""}`,
+                value: cosText,
                 cls: low.length ? "warn" : "",
             },
         ];

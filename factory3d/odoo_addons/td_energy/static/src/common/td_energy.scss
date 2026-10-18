@@ -216,6 +216,8 @@ $td-muted: #4b5563;
 
     // ---- основа сторінки ----
     .o_td_en_main {
+        width: 100%;
+        box-sizing: border-box;
         max-width: 1440px;
         margin: 0 auto;
         padding: 16px 24px 40px;

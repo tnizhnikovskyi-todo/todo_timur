@@ -32,7 +32,7 @@ export function yTicks(vmax) {
     });
 }
 
-/** Масштаб осі: max(поріг, піки) × 1,125 (договірна 800 → 900). */
+/** Масштаб осі: max(поріг, піки) × 1,125, округлений вгору до кратного 30 (договірна 800 → 900; ділиться на 3 для сітки). */
 export function scaleMax(threshold, ...series) {
     let top = threshold || 0;
     for (const values of series) {
@@ -42,7 +42,7 @@ export function scaleMax(threshold, ...series) {
             }
         }
     }
-    return Math.max(top, 1) * 1.125;
+    return Math.ceil((Math.max(top, 1) * 1.125) / 30) * 30;
 }
 
 /**
