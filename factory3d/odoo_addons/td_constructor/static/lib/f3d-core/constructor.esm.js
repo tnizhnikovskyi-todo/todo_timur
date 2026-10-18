@@ -7299,7 +7299,19 @@ var POLICY_LABEL = Object.fromEntries(ALLOW_NEW);
 var cache2 = { loads: {}, limits: {}, fit: {}, codes: {}, demo: false };
 var nameCache = /* @__PURE__ */ new Map();
 var rememberName = (kind, id, name) => id != null && name && nameCache.set(`${kind}:${id}`, name);
-var nameOf = (kind, id) => nameCache.get(`${kind}:${id}`) || (id != null ? `#${id}` : "—");
+function nameOf(kind, id) {
+  const hit = nameCache.get(`${kind}:${id}`);
+  if (hit) {
+    return hit;
+  }
+  if (kind === "product" && S.site && S.site.rules) {
+    const r = [...S.site.rules.putaway || [], ...S.site.rules.replenish || []].find((x) => x.product_id === id && x.product);
+    if (r) {
+      return r.product;
+    }
+  }
+  return id != null ? `#${id}` : "—";
+}
 function rulesState() {
   if (!S.site) {
     return { putaway: [], replenish: [] };
@@ -8107,9 +8119,17 @@ function renderSlotBlock(root, { rec }) {
           "div",
           { class: "fcol" },
           isZone ? [
-            fld("Функція зони", selectEl([["", "— не задано —"], ...lib.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", edit((v) => {
-              rec.function_id = conv(v);
-            }), dis, "Функція зони")),
+            fld("Функція зони", selectEl([["", "— не задано —"], ...lib.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", (v) => {
+              edit((x) => {
+                rec.function_id = conv(x);
+                const f = functionOf(rec.function_id);
+                if (f && f.color) {
+                  rec.params.color = f.color;
+                }
+              })(v);
+              E.renderRight();
+            }, dis, "Функція зони")),
+            // колір рамки зони — колір функції
             fn && fn.color ? h("div", { class: "small", style: { display: "flex", alignItems: "center", gap: "6px" } }, h("span", { style: { width: "14px", height: "14px", background: fn.color, display: "inline-block", borderRadius: "3px" } }), "Колір рамки й підпису зони: " + fn.name) : null,
             h("div", { class: "lbl" }, "Атрибути зони (лише в проєкті)"),
             h("div", { class: "checks" }, lib.attrs.map((a) => {
@@ -8398,7 +8418,7 @@ function clearHighlight() {
 }
 var allCells = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => ({ code: c.code, slot: s })));
 function codeField({ value, label, onPick, dis }) {
-  const input = h("input", { type: "text", value: value || "", "aria-label": label, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. FG-R1-B01-L1" });
+  const input = h("input", { type: "text", value: value || "", "aria-label": label, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
   const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "140px", overflow: "auto" } });
   const find = () => {
     const t = input.value.trim().toLowerCase();
@@ -8567,9 +8587,35 @@ async function openReplenishForm(rule, isNew) {
     })
   );
 }
+async function prefetchNames(adapter) {
+  const rules = rulesState();
+  const need = { category: /* @__PURE__ */ new Set(), package_type: /* @__PURE__ */ new Set(), location: /* @__PURE__ */ new Set(), product: /* @__PURE__ */ new Set() };
+  for (const r of rules.putaway) {
+    r.category_id != null && need.category.add(r.category_id);
+    r.package_type_ids.forEach((id) => need.package_type.add(id));
+    [r.in_location_id, r.out_location_id].forEach((id) => id != null && need.location.add(id));
+  }
+  for (const r of rules.replenish) {
+    r.location_id != null && need.location.add(r.location_id);
+  }
+  if (typeof adapter.lookup !== "function") {
+    return;
+  }
+  for (const [kind, ids] of Object.entries(need)) {
+    const missing = [...ids].filter((id) => nameOf(kind, id).startsWith("#"));
+    if (missing.length) {
+      try {
+        (await adapter.lookup(kind, "", missing)).forEach((r) => rememberName(kind, r.id, r.name));
+      } catch (e) {
+        console.warn("Назви правил недоступні:", e.message || e);
+      }
+    }
+  }
+}
 async function openRules({ tab = "putaway" } = {}) {
   const adapter = E.adapter;
   await loadLib();
+  await prefetchNames(adapter);
   await refreshCaches(["fit"]);
   const st = { tab };
   const body = h("div", { class: "fcol", "data-role": "rules" });
@@ -8719,16 +8765,24 @@ async function openRules({ tab = "putaway" } = {}) {
 registries.dialogs.add("rules", (args) => openRules(args || {}), { force: true });
 registries.menu.add("rules", { area: "more", label: "Правила розміщення", icon: "tag", capability: "putaway", sequence: 54, run: () => E.runDialog("rules") }, { sequence: 54, force: true });
 function renderRulesInto(root, { rec }) {
-  if (!rec || rec.template === "machine_spot" || rec.template === "zone" || !can("putaway")) {
+  if (!rec || rec.template === "machine_spot" || !can("putaway")) {
     return;
   }
-  const { putaway } = rulesState();
-  if (!putaway.length) {
-    return;
+  const rules = rulesState();
+  const zones = zonesOf();
+  let hits;
+  let own;
+  if (rec.template === "zone") {
+    const poly = (zones.find((z) => z.zone === rec) || {}).poly;
+    const inside = new Set(poly ? S.slots.flatMap((s) => cellsAbs(s)).filter((c) => polygonContains(poly, [c.x, c.y])).map((c) => c.code) : []);
+    hits = rules.putaway.filter((r) => !r.deleted && inside.has(r.out_code)).map((rule) => ({ rule, codes: [rule.out_code] }));
+    own = [...inside];
+  } else {
+    hits = rulesIntoSlot(rec, rules.putaway, zoneChainAt(zones, rec.x, rec.y));
+    own = cellsAbs(rec).map((c) => c.code);
   }
-  const zone = zoneChainAt(zonesOf(), rec.x, rec.y);
-  const hits = rulesIntoSlot(rec, putaway, zone);
-  if (!hits.length) {
+  const replenish = rec.template === "zone" ? [] : rules.replenish.filter((r) => !r.deleted && own.includes(r.cell_code));
+  if (!hits.length && !replenish.length && !(rec.template !== "zone" && own.length && canEditRules())) {
     return;
   }
   root.append(
@@ -8737,13 +8791,25 @@ function renderRulesInto(root, { rec }) {
         "div",
         { class: "sec", id: "rulesInto" },
         h("h3", null, "Правила розміщення сюди"),
+        hits.length ? null : h("div", { class: "small muted" }, "Правил, що ведуть сюди, немає."),
         hits.map(
           ({ rule, codes }) => h("div", { class: "frow", "data-rule": rule.id, style: { gap: "6px", alignItems: "center" } }, h("span", { style: { flex: 1 }, class: "small" }, `${ruleLabel(rule)} → ${codes.length > 3 ? codes.slice(0, 3).join(", ") + " …" : codes.join(", ")}`), h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => highlightRule(rule) }, "Підсвітити"))
         ),
-        S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", style: { marginTop: "4px" }, onclick: () => {
-          clearHighlight();
-          E.renderRight();
-        } }, "Зняти підсвітку") : null
+        replenish.length ? h("div", { class: "lbl", style: { margin: "6px 0 2px" } }, "Поповнення (min/max)") : null,
+        replenish.map((r) => h("div", { class: "small", "data-replenish": r.id }, `${r.product || nameOf("product", r.product_id)} · ${r.cell_code}: мін ${fmt(r.min_qty, 0)} / макс ${fmt(r.max_qty, 0)}`)),
+        h(
+          "div",
+          { class: "frow", style: { gap: "6px", marginTop: "4px", flexWrap: "wrap" } },
+          S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", onclick: () => {
+            clearHighlight();
+            E.renderRight();
+          } }, "Зняти підсвітку") : null,
+          rec.template !== "zone" && own.length && canEditRules() ? h("button", { class: "fbtn sm", type: "button", id: "btnNewMinMax", onclick: async () => {
+            if (await openReplenishForm(newReplenishRule({ cell_code: own[0] }), true)) {
+              E.renderRight();
+            }
+          } }, "Нове правило min/max…") : null
+        )
       )
     )
   );

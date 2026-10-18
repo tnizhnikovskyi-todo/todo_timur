@@ -2,7 +2,7 @@
 // Підключення ядра конструктора (CD-29): Odoo-free збірка `static/lib/f3d-core/constructor.esm.js` (tools/build_core.mjs з
 // factory3d/core/constructor/*) вантажиться динамічним import() за URL відносно сторінки — як three-bundle і f3d-loaders: у бандл
 // Odoo вона не входить. `CORE_BUILD` оновлює збірка (скидання кешу браузера).
-export const CORE_BUILD = "4c4747adf7";
+export const CORE_BUILD = "f295e86750";
 export const CORE_URL = "/td_constructor/static/lib/f3d-core/constructor.esm.js";
 
 let promise = null;

@@ -189,7 +189,7 @@ function renderSlotBlock(root, { rec }) {
                     { class: "fcol" },
                     isZone
                         ? [
-                              fld("Функція зони", selectEl([["", "— не задано —"], ...lib.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", edit((v) => { rec.function_id = conv(v); }), dis, "Функція зони")),
+                              fld("Функція зони", selectEl([["", "— не задано —"], ...lib.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", (v) => { edit((x) => { rec.function_id = conv(x); const f = functionOf(rec.function_id); if (f && f.color) { rec.params.color = f.color; } })(v); E.renderRight(); }, dis, "Функція зони")), // колір рамки зони — колір функції
                               fn && fn.color ? h("div", { class: "small", style: { display: "flex", alignItems: "center", gap: "6px" } }, h("span", { style: { width: "14px", height: "14px", background: fn.color, display: "inline-block", borderRadius: "3px" } }), "Колір рамки й підпису зони: " + fn.name) : null,
                               h("div", { class: "lbl" }, "Атрибути зони (лише в проєкті)"),
                               h("div", { class: "checks" }, lib.attrs.map((a) => {

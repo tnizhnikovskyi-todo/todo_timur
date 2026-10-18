@@ -45,6 +45,8 @@ export function mapOf(src) {
     }
     m.set("site", JSON.stringify([src.site.name, src.site.building, src.site.column_grid]));
     m.set("cfg", JSON.stringify([src.settings.checks, src.settings.reach_n]));
+    const rules = src.site.rules; // S2: правила розміщення й поповнення — частина чернетки (порожній набір = немає)
+    m.set("rules", JSON.stringify(rules && ((rules.putaway || []).length || (rules.replenish || []).length) ? rules : null));
     return m;
 }
 

@@ -168,14 +168,16 @@ def _block(line, reason, flag):
 
 
 def _zones(site):
-    """Зони площадки (місця-полігони) для успадкування категорії зберігання й стратегії списання вниз."""
+    """Зони площадки (місця-полігони) для успадкування категорії зберігання й стратегії списання вниз:
+    `[(зона, многокутник, рамка, площа)]`."""
     zones = []
     for zone in site.env['td.slot'].search(
         [('site_id', '=', site.id), ('template', '=', 'zone'), ('layer_id.active', '=', True)]
     ):
         poly = (zone.params or {}).get('polygon')
         if poly:
-            zones.append((zone, poly))
+            xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+            zones.append((zone, poly, (min(xs), min(ys), max(xs), max(ys)), _area(poly)))
     return zones
 
 
@@ -185,9 +187,13 @@ def _area(poly):
 
 
 def zone_chain(zones, x, y):
-    """Зони, що містять точку, від найменшої до найбільшої (вкладені зони: ближча зона перекриває далеку)."""
-    hit = [(zone, poly) for zone, poly in zones if geo.polygon_contains(poly, (x, y))]
-    return [zone for zone, _poly in sorted(hit, key=lambda zp: _area(zp[1]))]
+    """Зони, що містять точку, від найменшої до найбільшої (вкладена зона перекриває далеку)."""
+    hit = [
+        (area, zone)
+        for zone, poly, (x0, y0, x1, y1), area in zones
+        if x0 - 0.001 <= x <= x1 + 0.001 and y0 - 0.001 <= y <= y1 + 0.001 and geo.polygon_contains(poly, (x, y))
+    ]
+    return [zone for _area_, zone in sorted(hit, key=lambda item: item[0])]
 
 
 def zone_of(zones, x, y):
@@ -847,9 +853,12 @@ def _in_set(line, keys):
 
 
 def select_lines(plan, archive_keys=(), excluded=(), scope=None):
-    """Рядки, що застосовуються: позначені (create/…: усі, крім `excluded`; архів: лише `archive_keys`), без
-    заблокованих,
-    у межах `scope` (uid місць/зон), доповнені залежностями (батьки додаються самі). Повертає `(lines, skipped)`."""
+    """Рядки, що застосовуються, і пропущені: `(lines, skipped)`.
+
+    Позначені: створення/зміни — усі, крім `excluded`; архів — лише `archive_keys` (явне видалення правила — як зміна);
+    заблоковані не беруть участі; `scope` (uid місць/зон) обмежує область. Батьки додаються самі, навіть знявши їх;
+    рядок із заблокованим батьком пропускається (`skipped`).
+    """
     keys = {k if isinstance(k, tuple) else (None, k) for k in archive_keys}
     skip = {k if isinstance(k, tuple) else (None, k) for k in excluded}
     chosen = []

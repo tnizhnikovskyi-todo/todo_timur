@@ -55,7 +55,19 @@ export const resetCache = () => Object.assign(cache, { loads: {}, limits: {}, fi
 /** Імена записів зовнішньої системи за id (для підписів у списках): `product:12` → "Назва". */
 const nameCache = new Map();
 export const rememberName = (kind, id, name) => id != null && name && nameCache.set(`${kind}:${id}`, name);
-export const nameOf = (kind, id) => nameCache.get(`${kind}:${id}`) || (id != null ? `#${id}` : "—");
+export function nameOf(kind, id) {
+    const hit = nameCache.get(`${kind}:${id}`);
+    if (hit) {
+        return hit;
+    }
+    if (kind === "product" && S.site && S.site.rules) {
+        const r = [...(S.site.rules.putaway || []), ...(S.site.rules.replenish || [])].find((x) => x.product_id === id && x.product);
+        if (r) {
+            return r.product;
+        }
+    }
+    return id != null ? `#${id}` : "—";
+}
 
 // ---- правила: стан у S.site.rules ------------------------------------------------------------------------------------------------------
 
