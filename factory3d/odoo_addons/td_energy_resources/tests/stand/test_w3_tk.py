@@ -345,7 +345,9 @@ def test_tk05_gas_overuse(odoo, sim, stand_ready):
     before = screen(odoo, "gas")
     today_before = kpi(before, "today")["value"]
     pct_before = pct_of(kpi(before, "limit")["note"])
-    sim.scenario("gas_overuse", {})
+    # за замовчуванням +45 м³/год (котельня ≈ 41 → 86); якщо котельня тихша (ніч, тепло), добираємо запас над лімітом
+    extra = max(45.0, LIMIT_H + 10.0 - sim.value("infra/gas/flow_m3h"))
+    sim.scenario("gas_overuse", {"extra_m3h": round(extra, 1)})
     try:
         exceeded = wait_until(lambda: last_value(odoo, "infra/gas/flow_m3h") > LIMIT_H, minutes=8)
         assert exceeded, f"витрата газу не перевищила {LIMIT_H} м³/год (емулятор: {sim.value('infra/gas/flow_m3h')})"
