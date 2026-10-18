@@ -1,5 +1,7 @@
 """Контракт адаптера td_genset (SPEC §2.0.1): імена існують у td_genset 19, ADP-02…ADP-08 працюють."""
 
+from datetime import timedelta
+
 from odoo import fields
 from odoo.tests import TransactionCase, tagged
 
@@ -71,6 +73,7 @@ GENSET_FIELDS = [
     "FIELD_SERVICE_DUE",
     "FIELD_SCHEDULE_LINES",
     "FIELD_TIMER_VS_SCHEDULE",
+    "FIELD_NEXT_EVENT",
 ]
 
 
@@ -207,6 +210,13 @@ class TestAdapterContract(TransactionCase):
         action = td.open_action(self.genset)
         self.assertEqual(action["res_model"], td.GENSET_MODEL)
         self.assertEqual(action["res_id"], self.genset.id)
+
+    def test_adp11_next_event(self):  # W1: ADP-11
+        self.assertEqual(td.next_event(self.genset), self.genset.next_event_text)
+        self.assertTrue(td.next_event(self.genset))
+        self.genset.timer_end = fields.Datetime.now() + timedelta(hours=1)
+        self.assertIn("кінець таймера", td.next_event(self.genset))
+        self.assertIsNone(td.next_event(self.env["td.genset"].new({})))  # порожнє значення -> None
 
     def test_adp09_no_fuel_rate_field(self):
         self.assertFalse(td.set_fuel_rate(self.genset, 103.8))

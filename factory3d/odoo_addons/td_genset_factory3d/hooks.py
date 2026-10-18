@@ -119,7 +119,15 @@ def post_init_hook(env):
     _logger.info("td_genset_factory3d: міграцію виконано: %s", report)
 
 
+def _restore_td_genset_root(env):
+    """B.5: повернути плитку td_genset (`td_genset.menu_root`), прихований мостом (V-11). Без td_genset не падає."""
+    root = env.ref("td_genset.menu_root", raise_if_not_found=False)
+    if root:
+        root.sudo().with_context(active_test=False).active = True
+
+
 def uninstall_hook(env):
+    _restore_td_genset_root(env)
     icp = env["ir.config_parameter"].sudo()
     icp.search([("key", "=like", "td.genset.%")]).unlink()
     sources = env["td.source"].sudo().with_context(active_test=False).search([("type", "=", "td_genset")])

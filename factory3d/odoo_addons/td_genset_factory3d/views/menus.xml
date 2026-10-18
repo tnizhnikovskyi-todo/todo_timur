@@ -1,16 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPEC §3 V-08 (CB-09, A-06; X-32, X-69) -->
+<!-- W1-C: V-10 (B.3.1). Верхнє меню «Генератор» у корені td_factory3d прибрано: екрани td_genset і мосту хостяться
+     в розділі «Генерація й резерв» застосунку «Енергетика» (td_energy.menu_td_energy_generation — власник W1-B).
+     Меню td_genset не перепідпорядковуються (A-19): це власні записи мосту, `-u td_genset` повертає їхнього батька.
+     Групи — td_genset.group_user, якщо не вказано інше. 25 пунктів, з них 3 розділи (fuel, analytics, config). -->
 <odoo>
-    <menuitem id="menu_td_genset" name="Генератор" parent="td_factory3d.menu_td_root" sequence="55"
-              groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_genset_link" name="Зв'язка" parent="menu_td_genset" sequence="10"
+    <menuitem id="menu_gf_genset" name="Генератор" parent="td_energy.menu_td_energy_generation" sequence="20"
+              action="td_genset.action_td_genset_main" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_reading" name="Показання" parent="td_energy.menu_td_energy_generation" sequence="30"
+              action="td_genset.action_td_genset_reading" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_event" name="Події генератора" parent="td_energy.menu_td_energy_generation" sequence="40"
+              action="td_genset.action_td_genset_event" groups="td_genset.group_user"/>
+
+    <menuitem id="menu_gf_fuel" name="Заправка" parent="td_energy.menu_td_energy_generation" sequence="50"
+              groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_fuel_canister" name="Каністри" parent="menu_gf_fuel" sequence="10"
+              action="td_genset.action_td_genset_canister" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_fuel_refuel" name="Заправки" parent="menu_gf_fuel" sequence="20"
+              action="td_genset.action_td_genset_refuel" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_fuel_move" name="Рух запасу" parent="menu_gf_fuel" sequence="30"
+              action="td_genset.action_td_genset_fuel_move" groups="td_genset.group_user"/>
+
+    <menuitem id="menu_gf_analytics" name="Аналітика генератора" parent="td_energy.menu_td_energy_generation"
+              sequence="60" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_run_outage" name="Робота і відключення по днях" parent="menu_gf_analytics"
+              sequence="10" action="td_genset.action_td_genset_analytics_run_outage" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_energy" name="Вироблено по днях" parent="menu_gf_analytics" sequence="20"
+              action="td_genset.action_td_genset_analytics_energy" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_cranks" name="Пуски і АКБ при прокрутці" parent="menu_gf_analytics" sequence="30"
+              action="td_genset.action_td_genset_analytics_cranks" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_fuel_used" name="Витрата по днях" parent="menu_gf_analytics" sequence="40"
+              action="td_genset.action_td_genset_analytics_fuel_used" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_fuel_level" name="Рівень палива" parent="menu_gf_analytics" sequence="50"
+              action="td_genset.action_td_genset_analytics_fuel_level" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_battery" name="Напруга АКБ" parent="menu_gf_analytics" sequence="60"
+              action="td_genset.action_td_genset_analytics_battery" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_analytics_load" name="Навантаження під час роботи" parent="menu_gf_analytics" sequence="70"
+              action="td_genset.action_td_genset_analytics_last_run" groups="td_genset.group_user"/>
+
+    <menuitem id="menu_gf_link" name="Зв'язка з заводом" parent="td_energy.menu_td_energy_generation" sequence="70"
               action="action_td_genset_link" groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_genset_profile" name="Профілі" parent="menu_td_genset" sequence="20"
+    <!-- B.3.1 не вказує групу для «Заявок»; R-16 п.2 — td_factory3d.group_td_user (як було в меню «Генератор») -->
+    <menuitem id="menu_gf_requests" name="Заявки ТО генератора" parent="td_energy.menu_td_energy_generation"
+              sequence="80" action="action_td_genset_requests" groups="td_factory3d.group_td_user"/>
+
+    <menuitem id="menu_gf_config" name="Налаштування" parent="td_energy.menu_td_energy_generation" sequence="90"
+              groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_gf_config_profile" name="Профілі генераторів" parent="menu_gf_config" sequence="10"
               action="action_td_genset_profile" groups="td_factory3d.group_td_manager"/>
-    <menuitem id="menu_td_genset_event_map" name="Події → ТО" parent="menu_td_genset" sequence="30"
+    <menuitem id="menu_gf_config_event_map" name="Події → ТО" parent="menu_gf_config" sequence="20"
               action="action_td_genset_event_map" groups="td_factory3d.group_td_manager"/>
-    <menuitem id="menu_td_genset_requests" name="Заявки ТО генератора" parent="menu_td_genset" sequence="40"
-              action="action_td_genset_requests" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_gf_config_td" name="Налаштування генератора" parent="menu_gf_config" sequence="30"
+              action="td_genset.action_td_genset_config" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_config_gensets" name="Генератори" parent="menu_gf_config" sequence="40"
+              action="td_genset.action_td_genset" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_config_levels" name="Ланцюжок ескалації" parent="menu_gf_config" sequence="50"
+              action="td_genset.action_td_genset_notify_level" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_config_locations" name="Місця зберігання" parent="menu_gf_config" sequence="60"
+              action="td_genset.action_td_genset_storage_location" groups="td_genset.group_user"/>
+    <menuitem id="menu_gf_config_controllers" name="Моделі контролерів" parent="menu_gf_config" sequence="70"
+              action="td_genset.action_td_genset_controller_model" groups="td_genset.group_tech"/>
+
+    <!-- «Налаштування генератора» (адмін) лишається під td_factory3d.menu_td_config -->
     <menuitem id="menu_td_genset_settings" name="Налаштування генератора" parent="td_factory3d.menu_td_config"
               sequence="55" action="action_td_genset_settings" groups="td_factory3d.group_td_admin"/>
 </odoo>
