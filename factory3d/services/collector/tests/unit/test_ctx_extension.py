@@ -53,3 +53,67 @@ def test_builtin_plugins_unchanged(mod, make_ctx):
     cls = next(v for v in vars(module).values() if isinstance(v, type) and getattr(v, "type", None) == mod)
     plugin = cls(mk_source("X", mod), make_ctx().ctx)
     assert plugin.type == mod and plugin.ctx.live is None
+
+
+# --- тонкі методи клієнта Odoo для API-24/API-25 (C-40, SPEC 8.1.2) ------------------------------------------------
+@pytest.fixture
+async def energy_odoo():
+    from aiohttp import web
+    from aiohttp.test_utils import TestServer
+
+    state = {"etag": "abc", "version": 17, "posts": [], "status": 200}
+
+    async def config(request):
+        hdr = {"ETag": f'"{state["etag"]}"', "X-Config-Version": str(state["version"])}
+        if request.headers.get("If-None-Match", "").strip('"') == state["etag"]:
+            return web.Response(status=304, headers=hdr)
+        return web.json_response({"schema": 1, "config_version": state["version"], "etag": state["etag"]}, headers=hdr)
+
+    async def report(request):
+        state["posts"].append((request.headers.get("Authorization"), await request.json()))
+        if state["status"] != 200:
+            return web.json_response({"error": "rate_limited"}, status=state["status"], headers={"Retry-After": "10"})
+        return web.json_response({"accepted_actions": 1, "accepted_events": 0, "rejected": [], "config_version": 17})
+
+    app = web.Application()
+    app.router.add_get("/td/energy/automation/config", config)
+    app.router.add_post("/td/energy/automation/state", report)
+    server = TestServer(app)
+    await server.start_server()
+    state["url"] = str(server.make_url("")).rstrip("/")
+    yield state
+    await server.close()
+
+
+async def test_automation_config_200_304_and_version_header(energy_odoo, vclock):
+    from collector.core.odoo_client import OdooClient
+
+    client = OdooClient(energy_odoo["url"], "t" * 43, collector="COL-T", clock=vclock)
+    try:
+        cfg, version = await client.automation_config(None)
+        assert cfg["etag"] == "abc" and cfg["config_version"] == 17 and version == 17
+        energy_odoo["version"] = 18  # config_version змінився без зміни змісту: 304 несе лише заголовок (A-64)
+        cfg, version = await client.automation_config("abc")
+        assert cfg is None and version == 18
+        energy_odoo["etag"] = "def"
+        cfg, version = await client.automation_config("abc")
+        assert cfg["etag"] == "def" and version == 18
+    finally:
+        await client.close()
+
+
+async def test_automation_state_posts_body_with_bearer_and_maps_429(energy_odoo, vclock):
+    from collector.core.odoo_client import OdooClient, OdooError
+
+    client = OdooClient(energy_odoo["url"], "t" * 43, collector="COL-T", clock=vclock)
+    try:
+        resp = await client.automation_state({"collector": "COL-T", "actions": [], "events": []})
+        assert resp["accepted_actions"] == 1
+        auth, body = energy_odoo["posts"][0]
+        assert auth == f"Bearer {'t' * 43}" and body["collector"] == "COL-T"
+        energy_odoo["status"] = 429
+        with pytest.raises(OdooError) as e:
+            await client.automation_state({"collector": "COL-T"})
+        assert e.value.status == 429 and e.value.retry_after == 10.0
+    finally:
+        await client.close()

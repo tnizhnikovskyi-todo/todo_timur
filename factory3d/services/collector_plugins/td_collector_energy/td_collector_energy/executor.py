@@ -103,6 +103,8 @@ class Executor:
             plan = intents.build_plan(kind, params, cfg, now, {})  # перевірка меж (until > now тощо) до черги
         except intents.ParamError as exc:
             return self._reject(idem, f"bad params: {exc}")
+        if not plan.steps:  # light_*/vent_*: немає цілей BMS у конфігу (R-42 п.2 `available`)
+            return self._reject(idem, "немає цілей BMS")
         refuse = self._safety(cfg, kind)
         if refuse:
             return self._block(idem, refuse, [], payload["action_id"])

@@ -260,3 +260,13 @@ async def test_stop_cancels_running_intent_tasks_cleanly():
     await h.executor.stop()
     assert not h.executor.running
     assert copy.deepcopy(h.reporter.actions) is not None
+
+
+async def test_bms_kinds_without_targets_are_rejected():  # R-42 п.2
+    raw = base_raw()
+    raw["bms"] = {"night": {"vent": [], "light": []}, "vent_eco": {"vent": []}, "light_break": {"light": []}}
+    h = await boot_ready(raw=raw)
+    for kind in ("light_break", "light_restore", "vent_eco", "vent_restore"):
+        res = await h.plugin.call(INTENT_SIGNAL, intent(kind, {}, now=h.clock.now(), idem=f"n-{kind}"))
+        assert (res["state"], res["reason"]) == ("rejected", "немає цілей BMS"), kind
+    assert h.device.writes == []
