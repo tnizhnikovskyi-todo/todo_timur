@@ -58,6 +58,15 @@ class TestW4Common(TestW1Common):
         self.env["ir.config_parameter"].sudo().set_param("td.energy_analytics." + name, str(value))
 
     # --- інтервали ------------------------------------------------------------------------------------
+    def _direct(self, code):
+        """Вузол-споживач як «прямий» (потрібен робочий центр)."""
+        node = self.env["td.energy.node"].search([("code", "=", code)], limit=1)
+        wc = self.env["mrp.workcenter"].search([("name", "=", "WC-%s" % code)], limit=1) or self.env[
+            "mrp.workcenter"
+        ].create({"name": "WC-%s" % code})
+        node.write({"workcenter_id": wc.id, "alloc_role": "direct"})
+        return node
+
     def _day0(self, day):
         """Початок київської доби `day` (UTC naive)."""
         return dates.local_day_bounds(day)[0]
@@ -166,11 +175,12 @@ class TestW4Common(TestW1Common):
         return mo
 
     def _alloc(self, production, node, day, kwh, minutes=0.0, kind="direct", cost=None):
-        """Рядок розподілу для МО (наряд створюється, якщо його немає)."""
-        wo = production.workorder_ids[:1]
-        if not wo:
-            wc = node.workcenter_id or self.env["mrp.workcenter"].create({"name": "WC-%s" % node.code})
-            wo = self.env["mrp.workorder"].create(
+        """Рядок розподілу; для МО (`production`) створюється наряд, для `None` (простій) — без наряду."""
+        wo = self.env["mrp.workorder"]
+        wc = node.workcenter_id or self.env["mrp.workcenter"].search([("name", "=", "WC-%s" % node.code)], limit=1)
+        wc = wc or self.env["mrp.workcenter"].create({"name": "WC-%s" % node.code})
+        if production:
+            wo = production.workorder_ids.filtered(lambda w: w.workcenter_id == wc)[:1] or wo.create(
                 {
                     "name": "WO", "production_id": production.id, "workcenter_id": wc.id,
                     "product_uom_id": production.product_uom_id.id,
@@ -178,9 +188,37 @@ class TestW4Common(TestW1Common):
             )  # fmt: skip
         return self.env["td.energy.alloc"].create(
             {
-                "day": day, "kind": kind, "workorder_id": wo.id, "workcenter_id": wo.workcenter_id.id,
+                "day": day, "kind": kind, "workorder_id": wo.id or False, "workcenter_id": wc.id,
                 "node_id": node.id, "kwh": kwh, "minutes": minutes, "cost": kwh * 8.4 if cost is None else cost,
                 "quality": "measured",
+            }
+        )  # fmt: skip
+
+    def _res_interval(self, resource_code, ts_start, qty, cost=0.0, kind="source"):
+        """Ресурсний інтервал (W3) точки `W4-<РЕСУРС>-<вид>`; точка й лічильник створюються за потреби."""
+        resource = self.env["td.energy.resource"].get_by_code(resource_code)
+        code = "W4-%s-%s" % (resource_code.upper(), kind.upper())
+        point = self.env["td.energy.point"].search([("code", "=", code)], limit=1) or self.env[
+            "td.energy.point"
+        ].create({"resource_id": resource.id, "code": code, "name": code, "kind": kind})
+        meter = self.env["td.energy.meter"].search([("code", "=", code)], limit=1)
+        if not meter:
+            signal = self.env["td.signal"].create(
+                {"code": "energy/w4/%s" % code, "name": code, "kind": "counter", "unit": "м³",
+                 "period_s": 60, "module": "energy"}
+            )  # fmt: skip
+            meter = self.env["td.energy.meter"].create(
+                {
+                    "code": code, "name": code, "resource_id": resource.id, "point_id": point.id, "mode": "counter",
+                    "role": "resource", "model": "other", "qty_signal_id": signal.id,
+                }
+            )  # fmt: skip
+        local = dates.to_local(ts_start)
+        return self.env["td.energy.res.interval"].create(
+            {
+                "meter_id": meter.id, "metric": "main", "ts_start": ts_start, "ts_end": ts_start + SLOT,
+                "day": local.date(), "hour_local": local.hour, "qty": qty, "rate_avg": qty * 4.0, "kwh_eq": 0.0,
+                "price": 0.0, "cost": cost, "quality": "measured", "built_at": self.now,
             }
         )  # fmt: skip
 

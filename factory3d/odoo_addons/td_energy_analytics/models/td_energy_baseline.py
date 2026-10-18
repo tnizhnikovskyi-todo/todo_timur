@@ -23,7 +23,9 @@ class TdEnergyBaseline(models.Model):
     _inherit = ["mail.thread"]
     _order = "state, period_to desc, id desc"
 
-    name = fields.Char(string="Назва", compute="_compute_name", store=True, required=True, readonly=True)
+    name = fields.Char(
+        string="Назва", compute="_compute_name", store=True, required=True, readonly=True, precompute=True
+    )
     resource_id = fields.Many2one(
         "td.energy.resource", string="Ресурс", required=True, default=lambda self: self._default_resource()
     )
@@ -173,7 +175,9 @@ class TdEnergyBaseline(models.Model):
         k = len(driver_ids)
         n_min = max(periods.param_int(self.env, "baseline_min_days", 30), 10 * (k + 1))
         if len(rows) < n_min:
-            raise UserError(_("Замало даних для моделі бази: потрібно ≥ %(need)s діб, є %(have)s.", need=n_min, have=len(rows)))
+            raise UserError(
+                _("Замало даних для моделі бази: потрібно ≥ %(need)s діб, є %(have)s.", need=n_min, have=len(rows))
+            )
         try:
             const, coefs, r2, rmse = ols.fit([r[1] for r in rows], [r[2] for r in rows])
         except ols.SingularError as exc:

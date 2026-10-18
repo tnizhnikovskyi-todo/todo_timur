@@ -37,8 +37,8 @@ class TdEnergyBudget(models.Model):
 
     def init(self):
         self.env.cr.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS td_energy_budget_uniq ON %s (company_id, month, COALESCE(resource_id, 0))"
-            % self._table
+            "CREATE UNIQUE INDEX IF NOT EXISTS td_energy_budget_uniq"
+            " ON %s (company_id, month, COALESCE(resource_id, 0))" % self._table
         )
         tools.sql.create_index(self.env.cr, "td_energy_budget_month_idx", self._table, ["month"])
 
@@ -97,7 +97,7 @@ class TdEnergyBudget(models.Model):
         today = dates.local_day(dates.now_utc(self.env))
         first = periods.parse_month(month, today)
         env = self.sudo().env
-        resource = False
+        resource = env["td.energy.resource"]
         if resource_code:
             resource = env["td.energy.resource"].search([("code", "=", resource_code)], limit=1)
             if not resource:

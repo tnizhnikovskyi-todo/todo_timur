@@ -126,7 +126,8 @@ class TdEnergyEnpi(models.Model):
         cr = self.env.cr
         if resource_code == "gas":
             cr.execute(
-                """SELECT SUM(d.cost), SUM(d.qty) FROM td_energy_daily d JOIN td_energy_resource r ON r.id = d.resource_id
+                """SELECT SUM(d.cost), SUM(d.qty)
+                     FROM td_energy_daily d JOIN td_energy_resource r ON r.id = d.resource_id
                     WHERE d.scope = 'resource' AND r.code = 'gas' AND d.day BETWEEN %s AND %s""",
                 (day_from, day_to),
             )

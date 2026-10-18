@@ -108,7 +108,7 @@ class TdEnergyDaily(models.Model):
     # --- крони ----------------------------------------------------------------------------------------
     @api.model
     def _cron_daily(self):
-        """R-02: сьогодні — завжди; вчора — доки місцевий час `< daily_close_h` або немає `plant`; догон `catchup_days`."""
+        """R-02: сьогодні — завжди; вчора — до `daily_close_h` (місцевий час) або без `plant`; догон `catchup_days`."""
         if not dates.param_bool(self.env, "read_enabled"):
             return {}
         started = time.monotonic()
