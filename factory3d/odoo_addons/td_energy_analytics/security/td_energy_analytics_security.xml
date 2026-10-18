@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Record rules (W4_SPEC 4.3) (A). Групп нет: новых групп W4 не вводит (4.2). -->
+<odoo noupdate="1">
+    <record id="td_energy_baseline_rule_company" model="ir.rule">
+        <field name="name">Енергетика: моделі бази — компанія</field>
+        <field name="model_id" ref="model_td_energy_baseline"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_budget_rule_company" model="ir.rule">
+        <field name="name">Енергетика: бюджети — компанія</field>
+        <field name="model_id" ref="model_td_energy_budget"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Record rules (W4_SPEC H.4.2) (C). Новых групп нет. -->
+<odoo noupdate="1">
+    <record id="td_energy_round_rule_company" model="ir.rule">
+        <field name="name">Енергетика: обходи — компанія</field>
+        <field name="model_id" ref="model_td_energy_round"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="td_energy_round_template_rule_company" model="ir.rule">
+        <field name="name">Енергетика: шаблони обходів — компанія</field>
+        <field name="model_id" ref="model_td_energy_round_template"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

@@ -1,0 +1,1 @@
+-- W4-C (SPEC H.6): вимкнути крони cron_td_energy_round_open, _round_close, _round_rotate. Каркас.

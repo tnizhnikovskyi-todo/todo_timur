@@ -1,0 +1,13 @@
+# Порядок (W4_SPEC розд. 0): ділянки → драйвери → продукт → факти → база/EnPI/бюджет → розширення td_energy →
+# API → налаштування. Воркери цей файл не правлять.
+from . import td_energy_area  # noqa: F401  (A: M-01, M-11 `node.area_id`)
+from . import td_energy_driver  # noqa: F401  (A: M-02, M-03)
+from . import product_template  # noqa: F401  (A: M-10)
+from . import td_energy_daily  # noqa: F401  (A: M-08)
+from . import td_energy_baseline  # noqa: F401  (A: M-04, M-05)
+from . import td_energy_enpi  # noqa: F401  (A: M-06)
+from . import td_energy_budget  # noqa: F401  (A: M-07)
+from . import td_energy_alloc  # noqa: F401  (A: M-09 `alloc.product_id`)
+from . import td_energy_analytics  # noqa: F401  (A: M-12, AbstractModel API-01…API-09)
+from . import td_energy_dashboard  # noqa: F401  (A: M-14, хук `_td_report_action`)
+from . import res_config_settings  # noqa: F401  (A: M-15)

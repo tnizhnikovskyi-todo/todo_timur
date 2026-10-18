@@ -1,0 +1,21 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_energy_area_user,td.energy.area user,model_td_energy_area,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_area_manager,td.energy.area manager,model_td_energy_area,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_area_admin,td.energy.area admin,model_td_energy_area,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_driver_user,td.energy.driver user,model_td_energy_driver,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_driver_manager,td.energy.driver manager,model_td_energy_driver,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_driver_admin,td.energy.driver admin,model_td_energy_driver,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_driver_value_user,td.energy.driver.value user,model_td_energy_driver_value,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_driver_value_manager,td.energy.driver.value manager,model_td_energy_driver_value,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_daily_user,td.energy.daily user,model_td_energy_daily,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_daily_admin,td.energy.daily admin,model_td_energy_daily,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_baseline_user,td.energy.baseline user,model_td_energy_baseline,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_baseline_manager,td.energy.baseline manager,model_td_energy_baseline,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_baseline_chief,td.energy.baseline chief,model_td_energy_baseline,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_baseline_line_user,td.energy.baseline.line user,model_td_energy_baseline_line,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_baseline_line_manager,td.energy.baseline.line manager,model_td_energy_baseline_line,td_energy.group_td_energy_manager,1,1,1,1
+access_td_energy_enpi_user,td.energy.enpi user,model_td_energy_enpi,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_enpi_admin,td.energy.enpi admin,model_td_energy_enpi,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_budget_cost,td.energy.budget cost,model_td_energy_budget,td_energy.group_td_energy_cost,1,0,0,0
+access_td_energy_budget_manager,td.energy.budget manager,model_td_energy_budget,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_energy.group_td_energy_chief,1,1,1,1

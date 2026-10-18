@@ -1,0 +1,1 @@
+-- W4-A (SPEC 5.5): вимкнути крони cron_td_energy_daily, _drivers, _enpi, _analytics_rotate. Каркас.

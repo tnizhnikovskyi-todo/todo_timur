@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_energy_report_wizard_user,td.energy.report.wizard user,model_td_energy_report_wizard,td_energy.group_td_energy_user,1,1,1,1
+access_td_energy_daily_rebuild_wizard_manager,td.energy.daily.rebuild.wizard manager,model_td_energy_daily_rebuild_wizard,td_energy.group_td_energy_manager,1,1,1,1

@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_energy_round_template_user,td.energy.round.template user,model_td_energy_round_template,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_round_template_chief,td.energy.round.template chief,model_td_energy_round_template,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_round_slot_user,td.energy.round.slot user,model_td_energy_round_slot,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_round_slot_chief,td.energy.round.slot chief,model_td_energy_round_slot,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_round_template_item_user,td.energy.round.template.item user,model_td_energy_round_template_item,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_round_template_item_chief,td.energy.round.template.item chief,model_td_energy_round_template_item,td_energy.group_td_energy_chief,1,1,1,1
+access_td_energy_round_user,td.energy.round user,model_td_energy_round,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_round_manager,td.energy.round manager,model_td_energy_round,td_energy.group_td_energy_manager,1,1,1,0
+access_td_energy_round_admin,td.energy.round admin,model_td_energy_round,td_factory3d.group_td_admin,1,1,1,1
+access_td_energy_round_item_user,td.energy.round.item user,model_td_energy_round_item,td_energy.group_td_energy_user,1,0,0,0
+access_td_energy_round_item_manager,td.energy.round.item manager,model_td_energy_round_item,td_energy.group_td_energy_manager,1,1,0,0
+access_td_energy_round_item_admin,td.energy.round.item admin,model_td_energy_round_item,td_factory3d.group_td_admin,1,1,1,1
