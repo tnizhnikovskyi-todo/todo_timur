@@ -14,12 +14,14 @@ from odoo.addons.td_energy.tools.dates import to_local
 from odoo.addons.td_energy_resources.tests.common import NOW, SLOT, TAGS, TestW3Common
 from odoo.addons.td_energy_resources.tools import shifts
 
+from ..models.td_energy_point import find_dock_signal
 from ..tools import heat
 
 POINT_MODULE = "odoo.addons.td_energy_resources_bms.models.td_energy_point"
 LO = datetime(2026, 10, 9, 21, 0)  # 00:00 Київ 10.10: початок вікна L = 7 для NOW
 OUTDOOR = "ventilation/totals/outdoor_c"
 HEAT_CODES = {"HM-BOILER", "HM-CHP", "HM-RV", "HM-AHU1", "HM-DOCK", "HM-OFFICE"}
+BASE_POINTS = {"HEAT-BOILER", "HEAT-CHP", "RV-ALL", "AHU-1", "OFFICE"}  # без DOCK: він — лише з сигналом воріт
 
 
 @tagged(*TAGS)
@@ -34,6 +36,19 @@ class TestWbBridge(TestW3Common):
         cls.units = cls.env["td.bms.hvac.unit"].search([])
         cls.ahu = cls.units.filtered(lambda u: u.code == "AHU-1")
         cls.rv = cls.units.filtered(lambda u: u.code.startswith("RV-"))
+        cls.heat_after_install = set(cls.Point.search([("resource_id.code", "=", "heat")]).mapped("code"))
+        cls.drop_installed_dock()
+
+    @classmethod
+    def drop_installed_dock(cls):
+        """Відтворюваний початковий стан для будь-якої конфігурації: з td_yard міст уже створив DOCK і HM-DOCK із
+        сигналу реальних воріт (GATE-E), а фікстури тестів створюють той самий код. Прибираємо їх у транзакції класу;
+        `bind()` підставляє `find_dock_signal` патчем, тож реальні ворота не втручаються (повна конфігурація —
+        `test_yard_*`)."""
+        cls.env["td.energy.meter"].with_context(active_test=False).search([("code", "=", "HM-DOCK")]).unlink()
+        cls.env["td.energy.point"].with_context(active_test=False).search(
+            [("resource_id.code", "=", "heat"), ("code", "=", "DOCK")]
+        ).unlink()
 
     # --- допоміжне
     def heat_points(self):
@@ -57,10 +72,10 @@ class TestWbBridge(TestW3Common):
         return record[field]
 
     def bind(self, with_dock=False):
+        """`_td_bind_extra` з підміною пошуку воріт: фікстура `test/yard/gate_open` або порожній набір (воріт немає)."""
         self.env.flush_all()
-        if not with_dock:
-            return self.Point._td_bind_extra()
-        with patch(POINT_MODULE + ".find_dock_signal", return_value=self.dock_signal()):
+        gate_signal = self.dock_signal() if with_dock else self.Signal
+        with patch(POINT_MODULE + ".find_dock_signal", return_value=gate_signal):
             return self.Point._td_bind_extra()
 
     def feed_signal(self, signal, value):
@@ -83,9 +98,7 @@ class TestWbBridge(TestW3Common):
     # --- AC-B01, AC-B02: привʼязка
     def test_bind_points_and_meters(self):  # AC-B01
         codes = set(self.heat_points().mapped("code"))
-        self.assertEqual(
-            codes, {"HEAT-BOILER", "HEAT-CHP", "RV-ALL", "AHU-1", "OFFICE"}
-        )  # DOCK — лише з сигналом воріт
+        self.assertEqual(codes, BASE_POINTS)  # DOCK — лише з сигналом воріт (setUpClass прибрав той, що з td_yard)
         self.assertEqual({m.code for m in self.heat_meters()}, {"HM-BOILER", "HM-RV", "HM-AHU1", "HM-OFFICE"})
         self.assertEqual(len(self.units), 29)
         points = {p.code: p for p in self.heat_points()}
@@ -135,14 +148,67 @@ class TestWbBridge(TestW3Common):
     def test_bind_without_balance_or_yard(self):  # AC-B01
         with patch.object(heat, "balance", return_value=self.env["td.bms.heat.balance"]):
             self.assertEqual(self.Point._td_bind_extra(), {})
-        self.assertFalse(self.heat_points().filtered(lambda p: p.code == "DOCK"))  # td_yard не встановлено
+        self.assertEqual(self.bind(), {"points": 0, "meters": 0})  # воріт немає (патч) — DOCK не створюється
+        self.assertFalse(self.heat_points().filtered(lambda p: p.code == "DOCK"))
+        self.assertFalse(self.Meter.search([("code", "=", "HM-DOCK")]))
+        self.assertFalse(find_dock_signal({"td.signal": self.Signal}))  # середовище без td.yard.gate (td_yard немає)
 
     def test_install_order_state(self):  # AC-B02: auto_install, залежності, результат після установки
         module = self.env["ir.module.module"].search([("name", "=", "td_energy_resources_bms")])
         self.assertEqual(module.state, "installed")
         self.assertTrue(module.auto_install)
         self.assertEqual(set(module.dependencies_id.mapped("name")), {"td_energy_resources", "td_bms"})
-        self.assertEqual(len(self.heat_points()), 5)  # post_init_hook моста відпрацював
+        self.assertLessEqual(BASE_POINTS, self.heat_after_install)  # post_init_hook моста відпрацював
+        if "td.yard.gate" in self.env:  # DOCK — лише якщо td_yard встановлено до моста; решта збігається
+            self.assertLessEqual(self.heat_after_install - BASE_POINTS, {"DOCK"})
+        else:
+            self.assertEqual(self.heat_after_install, BASE_POINTS)
+
+    # --- AC-B01, AC-B02, Q-08: повна конфігурація (td_yard)
+    def yard_gate_model(self):
+        if "td.yard.gate" not in self.env:
+            self.skipTest("td_yard не встановлено — повну конфігурацію не перевірити")
+        return self.env["td.yard.gate"]
+
+    def test_yard_real_gate_binds_dock(self):  # AC-B01: DOCK — за сигналом воріт відвантаження td_yard (схід, out/both)
+        gate = self.yard_gate_model().search(
+            [("state_signal_id", "!=", False), ("side", "=", "east"), ("direction", "in", ("out", "both"))],
+            order="sequence, id",
+            limit=1,
+        )
+        self.assertEqual(gate, self.env.ref("td_yard.gate_e"))  # КПП відвантаження (виїзд)
+        self.assertEqual(find_dock_signal(self.env), gate.state_signal_id)
+        self.assertEqual(self.Point._td_bind_extra()["points"], 1)  # без підміни: ворота td_yard (DOCK прибрано)
+        dock = self.Point.search([("code", "=", "DOCK"), ("resource_id.code", "=", "heat")])
+        self.assertEqual((dock.estimate_method, dock.kind), ("gate_loss", "consumer"))
+        self.assertEqual(dock.state_signal_id, gate.state_signal_id)
+        meter = self.Meter.search([("code", "=", "HM-DOCK")])
+        self.assertEqual((meter.mode, meter.point_id), ("estimate", dock))
+        self.assertEqual(self.Point._td_bind_extra(), {"points": 0, "meters": 0})  # ідемпотентно
+        self.fx_gates()  # детектор dock_gates працює з сигналом реальних воріт; дія — у «Двір»
+        item = self.rule("dock_gates")._td_detect_dock_gates(NOW)[0]
+        self.assertEqual((item["dedup_key"], item["point_code"]), ("dock_gates:*", "DOCK"))
+        self.assertEqual([a["code"] for a in item["actions"]], ["yard_gates"])
+        self.assertEqual(item["actions"][0]["params"], {"xmlid": "td_yard.action_td_yard_gate"})
+
+    def test_yard_gate_selection(self):  # Q-08: лише схід, out/both, активні, зі стан-сигналом; порядок sequence, id
+        Gate = self.yard_gate_model()
+        real = self.env.ref("td_yard.gate_e").state_signal_id
+        signals = {k: self.signal("test/yard/gate_%s" % k, unit="") for k in "abcd"}
+
+        def make(code, side, direction, key=None, **kw):
+            return Gate.create(
+                dict(td_code=code, name=code, side=side, direction=direction, sequence=1, **kw,
+                     state_signal_id=key and signals[key].id)
+            )  # fmt: skip
+
+        make("T-W", "west", "out", "a")  # захід
+        make("T-E-IN", "east", "in", "b")  # в'їзд
+        make("T-E-NOSIG", "east", "out")  # без сигналу
+        make("T-E-OFF", "east", "out", "c", active=False)  # архівні
+        self.assertEqual(find_dock_signal(self.env), real)  # лишається GATE-E (sequence 20)
+        make("T-E-BOTH", "east", "both", "d")
+        self.assertEqual(find_dock_signal(self.env), signals["d"])  # sequence 1 < 20
 
     # --- AC-B03, AC-B05: KPI й список «Тепло»
     def fx_heat_screen(self):
@@ -402,11 +468,15 @@ class TestWbBridge(TestW3Common):
         ev = item["evidence"]
         self.assertEqual((ev["long_per_day"], ev["open_min_day"], ev["dt"], ev["loss_kw"]), (4.0, 52.0, 11.0, 38.5))
         self.assertAlmostEqual(ev["excess_h_day"], 0.5333, places=3)
-        self.assertEqual(item["actions"], [])  # td_yard не встановлено — запасна дія
+        yard = bool(self.env.ref("td_yard.action_td_yard_gate", raise_if_not_found=False))
+        self.assertEqual(
+            [a["code"] for a in item["actions"]], ["yard_gates"] if yard else []
+        )  # без td_yard — запасна дія
         self.rule("dock_gates").action_run()
         opp = self.env["td.energy.opportunity"].search([("dedup_key", "=", "dock_gates:*")])
         self.assertEqual(opp.resource_id.code, "heat")
-        self.assertEqual(self.env["td.energy.opportunity"].get_list("heat")["items"][0]["actions"][0]["code"], "open")
+        first = self.env["td.energy.opportunity"].get_list("heat")["items"][0]["actions"][0]
+        self.assertEqual(first["code"], "yard_gates" if yard else "open")
 
     def test_dock_gates_negative(self):  # AC-B08: довгих відкриттів < 3 на добу
         self.make_dock()
