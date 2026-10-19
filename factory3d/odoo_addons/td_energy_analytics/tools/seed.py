@@ -33,6 +33,7 @@ ORIGIN = "td_energy_seed"
 NOTE = "демо-сид"
 BASE_KW_DAY = 5040.0  # 210 кВт × 24 год
 PLATE_PEAK = 1290.0
+COGS_BASE_SHARE = 0.073  # частка енергії в собівартості у період бази (макет: «база 7,3 %»)
 EFF_GROWTH = 0.28  # приріст випуску при тій самій енергії (R-20 п. 3: 0,06 → EnPI ≈ 0,98, а не 0,94; D-69)
 RAMP_DAYS = 84
 BASE_SHARE = 0.6
@@ -128,7 +129,7 @@ def _baseline_days(env, total):
 
 
 def _plate_series(env, first, until, baseline_end):
-    """R-20 п. 3: `{day: (plate, act)}`; `act = max(0, E_D − 5040)/E_ref`, `E_ref` — медіана за буднями.
+    """R-20 п. 3: `{day: (plate, act, eff)}`; `act = max(0, E_D − 5040)/E_ref`, `E_ref` — медіана за буднями.
 
     Зростання випуску `eff = 1 + EFF_GROWTH·r` — після бази, на останніх ≤ 12 тижнях (`r` від 0 до 1)."""
     env.cr.execute(FEEDER_SQL, (first, until))
@@ -143,7 +144,8 @@ def _plate_series(env, first, until, baseline_end):
     for day, kwh in energy.items():
         act = max(0.0, kwh - BASE_KW_DAY) / e_ref
         r = min(1.0, max(0.0, (day - start).days / length))
-        out[day] = (PLATE_PEAK * act * (1.0 + EFF_GROWTH * r), act)
+        eff = 1.0 + EFF_GROWTH * r
+        out[day] = (PLATE_PEAK * act * eff, act, eff)
     return out
 
 
@@ -244,7 +246,8 @@ VALUES %s
 def _seed_alloc(env, day, jobs, direct, overhead):
     """Розподіл енергії доби `day` для сидованих МО одним SQL-пакетом (R-08: прямі рядки за журналом часу, простій РЦ,
     накладні). Штатний рушій W1 (`td.energy.alloc._f3d_alloc_days`) на 400 діб не вкладається в 15 хв: вікна старіші за
-    30 діб він читає з інтервалів повним скануванням (≈ 2,5–4 с на добу). Повертає кількість рядків."""
+    30 діб він читає з інтервалів повним скануванням (≈ 2,5–4 с на добу).
+    Повертає `(кількість рядків, {МО: вартість енергії})`."""
     cr = env.cr
     now = fields.Datetime.now()
     company, currency = env.company.id, env.company.currency_id.id
@@ -265,11 +268,12 @@ def _seed_alloc(env, day, jobs, direct, overhead):
         "SELECT node_id, SUM(kwh) FROM td_energy_alloc WHERE day = %s AND kind = 'direct' GROUP BY node_id", (day,)
     )
     used = {node_id: float(kwh or 0.0) for node_id, kwh in cr.fetchall()}  # прямі рядки чужих МО
-    out = []
+    out, mo_cost = [], {}
     for j in jobs:
         kwh, cost = measured.get(j["wo"], (0.0, 0.0))
         minutes = (j["e"] - j["s"]).total_seconds() / 60.0
         used[j["node"]] = used.get(j["node"], 0.0) + kwh
+        mo_cost[j["mo"]] = mo_cost.get(j["mo"], 0.0) + cost
         out.append(
             (day, "direct", j["wo"], j["mo"], j["product"], j["wc"], j["node"], kwh, minutes, cost, "measured", False,
              company, currency, env.uid, env.uid, now, now)
@@ -294,7 +298,37 @@ def _seed_alloc(env, day, jobs, direct, overhead):
             )  # fmt: skip
     if out:
         cr.execute_values(ALLOC_INSERT_SQL, out, page_size=2000)
-    return len(out)
+    return len(out), mo_cost
+
+
+MOVE_INSERT_SQL = """
+INSERT INTO stock_move (company_id, product_id, product_uom, location_id, location_dest_id, procure_method,
+    product_uom_qty, product_qty, quantity, picked, state, date, production_id, value, create_uid, write_uid,
+    create_date, write_date)
+VALUES %s
+"""
+
+
+def _seed_finished_moves(env, day, orders, mo_cost, eff):
+    """Оцінкова вартість випуску для KPI «Енергія в собівартості» (D-68: `stock.move.value` готових проводок МО).
+
+    Склад не чіпається: проводки без рядків руху й залишків (як і завершення МО, A-17). Вартість випуску моделює
+    частку енергії в собівартості: `value = вартість енергії МО / (7,3 % / eff)` — база 7,3 % (макет), далі частка
+    знижується разом зі зростанням випуску на ту саму енергію (`eff`). Проводки видаляє `purge`."""
+    company = env.company.id
+    now = fields.Datetime.now()
+    share = COGS_BASE_SHARE / eff
+    rows = []
+    for mo in orders:
+        qty = float(mo.product_qty)
+        value = round(mo_cost.get(mo.id, 0.0) / share, 2)
+        rows.append(
+            (company, mo.product_id.id, mo.product_uom_id.id, mo.production_location_id.id, mo.location_dest_id.id,
+             "make_to_stock", qty, qty, qty, True,
+             "done", mo.date_finished or now, mo.id, value, env.uid, env.uid, now, now)
+        )  # fmt: skip
+    if rows:
+        env.cr.execute_values(MOVE_INSERT_SQL, rows, page_size=500)
 
 
 def _recompute_energy(env, workorders, orders):
@@ -328,7 +362,7 @@ def _seed_orders(env, plates, seed, first, until, alloc=True):
     all_orders, all_workorders = env["mrp.production"], env["mrp.workorder"]
     day = first
     while day <= until:
-        plate = plates.get(day, (0.0, 0.0))[0]
+        plate, _act, eff = plates.get(day, (0.0, 0.0, 1.0))
         if plate >= 1.0:
             n = 3 + int(3 * rnd(seed, day, "n"))
             weights = [0.5 + rnd(seed, day, "w", i) for i in range(n)]
@@ -379,8 +413,11 @@ def _seed_orders(env, plates, seed, first, until, alloc=True):
             # завершення — SQL; складських проводок немає (допущення демо, A-17)
             cr.execute("UPDATE mrp_production SET state = 'done' WHERE id = ANY(%s)", (orders.ids,))
             cr.execute("UPDATE mrp_workorder SET state = 'done' WHERE id = ANY(%s)", (workorders.ids,))
+            mo_cost = {}
             if alloc:
-                stats["alloc_rows"] += _seed_alloc(env, day, jobs, direct, overhead)
+                rows, mo_cost = _seed_alloc(env, day, jobs, direct, overhead)
+                stats["alloc_rows"] += rows
+            _seed_finished_moves(env, day, orders, mo_cost, eff)
             stats["mos"] += len(orders)
             stats["workorders"] += len(workorders)
             all_orders |= orders
@@ -407,23 +444,32 @@ def _seed_baselines(env, first, until):
     if env.cr.fetchone()[0] >= max(min_days, 20):
         specs.append(("gas", "hdd", False))
     made = 0
+    period = (first, min(until, first + timedelta(days=length - 1)))
     for resource, driver, required in specs:
         driver_rec = env["td.energy.driver"].search([("code", "=", driver)], limit=1)
-        base = env["td.energy.baseline"].create(
-            {
-                "resource_id": env["td.energy.resource"].get_by_code(resource).id, "scope": "plant",
-                "period_from": first, "period_to": min(until, first + timedelta(days=length - 1)), "note": NOTE,
-                "line_ids": [(0, 0, {"driver_id": driver_rec.id})],
-            }
-        )  # fmt: skip
+        res_id = env["td.energy.resource"].get_by_code(resource).id
+        vals = {"resource_id": res_id, "scope": "plant", "period_from": period[0], "period_to": period[1], "note": NOTE}
+        base = env["td.energy.baseline"].create(dict(vals, line_ids=[(0, 0, {"driver_id": driver_rec.id})]))
         try:
             base.action_fit()
             base.action_approve()
             made += 1
-        except UserError:
+            continue
+        except UserError as exc:
             base.unlink()
             if required:
                 raise
+            _logger.warning("сид: база %s з драйвером %s не підігналась (%s)", resource, driver, exc)
+        # газ: HDD у періоді бази сталий (літо) або модель слабка — стала модель без драйвера (середнє за період)
+        base = env["td.energy.baseline"].create(vals)
+        try:
+            base.action_fit()
+            base.write({"method": "manual"})
+            base.action_approve()
+            made += 1
+        except UserError as exc:
+            base.unlink()
+            _logger.warning("сид: база %s без драйвера не створена (%s)", resource, exc)
     return made
 
 

@@ -20,6 +20,7 @@ class TestW4Seed(TestW4Common):
         cls.admin = cls._mk_user("w4_seed_admin", ["td_factory3d.group_td_admin"])
         cls.Interval = cls.env["td.energy.interval"]
         cls.Interval._td_backfill(days=DAYS, with_balance=False, with_events=False)
+        cls.env["td.energy.res.interval"]._td_backfill(days=DAYS)  # ресурси W3: газ для бази й KPI «Газ»
 
     def _seed(self, days=DAYS, **kw):
         return self.Api.with_user(self.admin)._td_seed_demo(days=days, **kw)
@@ -35,7 +36,7 @@ class TestW4Seed(TestW4Common):
         self.assertEqual(
             set(stats), {"days", "products", "mos", "workorders", "alloc_rows", "baselines", "budgets", "seconds"}
         )
-        self.assertEqual((stats["days"], stats["products"], stats["baselines"]), (DAYS, 5, 1))
+        self.assertEqual((stats["days"], stats["products"], stats["baselines"]), (DAYS, 5, 2))
         self.assertLessEqual(stats["seconds"], 240.0, "ТП-04: 90 діб ≤ 4 хв")
         yesterday = TODAY - timedelta(days=1)
         first = yesterday - timedelta(days=DAYS - 1)
@@ -58,6 +59,8 @@ class TestW4Seed(TestW4Common):
         base = self.Baseline.search([("state", "=", "approved"), ("resource_id", "=", self.res_el.id)])
         self.assertEqual(len(base), 1)
         self.assertGreaterEqual(base.r2, 0.9)
+        gas = self.Baseline.search([("state", "=", "approved"), ("resource_id", "=", self.res_gas.id)])
+        self.assertEqual(len(gas), 1, "база газу (за періодом бази; без драйвера, якщо HDD у періоді сталий)")
         enpi = self.Api.with_user(self.admin).get_enpi()
         self.assertTrue(0.92 <= enpi["enpi"] <= 0.96, enpi["enpi"])
         # бюджети: поточний і 3 попередні
@@ -76,7 +79,11 @@ class TestW4Seed(TestW4Common):
             self.assertLessEqual(alloc, plant)
         # екран працює на сидованих даних
         data = self.Api.with_user(self.admin).get_dashboard("m", "area", None)
-        self.assertEqual(len(data["kpis"]), 7)
+        self.assertEqual([k["id"] for k in data["kpis"]], ["el", "gas", "cost", "spec", "cogs", "selfgen", "co2"])
+        for kpi in data["kpis"]:  # AC-50: усі 7 KPI зі значеннями
+            self.assertIsInstance(kpi["value"], int | float, kpi["id"])
+            self.assertNotEqual(kpi["note"], "База не задана", kpi["id"])
+        self.assertTrue(0.0 < data["kpis"][4]["value"] < 15.0, "енергія в собівартості, %")
         self.assertEqual(len(data["stack"]["bars"]), 30)
         self.assertTrue(data["cut"]["rows"])
 
@@ -90,8 +97,13 @@ class TestW4Seed(TestW4Common):
         self._seed(days=30)
         self.assertEqual(self.env["mrp.production"].search_count([("origin", "=", "td_energy_seed")]), mos)
         self.assertEqual(self._digest(), digest, "той самий seed — той самий набір значень драйверів")
-        self.assertEqual(self.Baseline.search_count([("note", "=", "демо-сид")]), 1)
+        self.assertEqual(self.Baseline.search_count([("note", "=", "демо-сид")]), 2)
+        moves = self.env["stock.move"].search_count(
+            [("production_id.origin", "=", "td_energy_seed"), ("state", "=", "done")]
+        )
+        self.assertEqual(moves, mos, "оцінкова вартість випуску: по одній готовій проводці на МО")
         stats = self._seed(purge=True)
+        self.assertFalse(self.env["stock.move"].search_count([("production_id.origin", "=", "td_energy_seed")]))
         self.assertEqual(stats["mos"], mos)
         self.assertFalse(self.env["mrp.production"].search_count([("origin", "=", "td_energy_seed")]))
         self.assertEqual(self._digest()[1], 0)

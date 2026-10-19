@@ -231,8 +231,8 @@ class TestW4Common(TestW1Common):
                 {
                     "product_id": mo.product_id.id, "product_uom_qty": mo.product_qty,
                     "product_uom": mo.product_uom_id.id, "production_id": mo.id,
-                    "location_id": self.env.ref("stock.location_production").id,
-                    "location_dest_id": self.env.ref("stock.stock_location_stock").id,
+                    "location_id": mo.production_location_id.id,
+                    "location_dest_id": mo.location_dest_id.id,
                 }
             )  # fmt: skip
         self.env.flush_all()
