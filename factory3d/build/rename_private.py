@@ -160,6 +160,11 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--group", action="append", help="обмежити заміну групою: модуль, docs, build, services, tools…")
     ap.add_argument("--map", help="записати карту імен у JSON")
+    ap.add_argument(
+        "--skip-check",
+        action="store_true",
+        help="не перевіряти колізії (для другої й далі груп: після першої групи `_td_x` уже є — це перевизначення)",
+    )
     args = ap.parse_args()
 
     files = tracked()
@@ -173,7 +178,7 @@ def main() -> int:
                 if m.group(0) not in sql_names:
                     names[m.group(0)] += 1
                     per_group[group_of(rel)] += 1
-    bad = collisions(defs, parents, sql_names)
+    bad = [] if args.skip_check else collisions(defs, parents, sql_names)
     print(f"імен: {len(names)} (+{len(sql_names)} SQL-об'єктів лишаються), входжень: {sum(names.values())}")
     print("за групами:", dict(per_group.most_common()))
     if bad:
