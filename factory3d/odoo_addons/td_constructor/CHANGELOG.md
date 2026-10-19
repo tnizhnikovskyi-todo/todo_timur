@@ -1,5 +1,21 @@
 # Журнал змін
 
+## 19.0.1.4.0 — S6: спільна робота й навчання, тури в `web.assets_tests`
+
+Оновлення: `-u td_constructor` (нові колонки `td.comment.assignee_id`, `td.layout.variant.origin_id`; міграційних скриптів немає, наявні дані не змінюються).
+
+- **Варіанти планування (F12, API-21 `/variants`):** «Як є», «Створити з поточного», активація (знімок поточної гілки → `apply_snapshot` вибраної, чернетка не втрачається), перейменування, видалення, до `td.constructor.variants_max` (12) робочих на площадку; навчальна копія (`is_training`, `origin_id`) для турів, яка не публікується.
+  Публікація пише `td.layout.version.variant_id`. Керує менеджер.
+- **Коментарі й задачі (F13, API-22 `/comments`):** `td.comment` тепер `mail.thread` + `mail.activity.mixin`; задача з виконавцем (`assignee_id`) створює завдання `mail.activity`, вирішення його закриває; змінює/вирішує/видаляє автор або «Проєктування». Подання: форма з чатером, фільтри «Відкриті / Вирішені / Задачі / Мої задачі».
+- **Блокування зон (F14, API-23 `/locks`):** оренда на `lock_ttl_s` (300 с) із продовженням `lock_heartbeat_s` (60 с); перевірка при записі `td.slot`/`td.placement` у `td.draft.mixin` (чужа діюча оренда → `AccessError` «Зону … редагує … до HH:MM»); прострочені оренди чистяться при зверненні, **крону немає**.
+- **Версії (N-03, API-24 `/version/view`, `/version/checkpoint`):** контрольні точки (`kind='checkpoint'`) без змін в Odoo, не більше `versions_keep` (50), публікації не видаляються; перегляд знімка лише читання; нотатка версії.
+- **Інструкція й мови (F19):** сторінка `GET /f3d/constructor/help?lang=uk|en` (QWeb `td_constructor.td_help_page`, 36 тем UK/EN; пункт меню «Інструкція конструктора»); `i18n/uk.po`, `en.po`, `td_constructor.pot` (574 терміни).
+- **Тури Odoo:** `td_constructor_guide_tour`, `td_constructor_variants_tour`, `td_constructor_collab_tour` (`static/src/tours/*`) підключено в bundle **`web.assets_tests`** — у `web.assets_backend` `start_tour` у тестах не виконувалися (саме з цієї причини версія піднята до 1.4.0).
+- **Ядро:** `variants.js`, `comments.js`, `locks.js`, `versions_ui.js`, `levels.js`, `minimap.js`, `tours.js` (13 + 11 турів), `i18n.js` (DOM-перекладач; `t()` лише в файлах S6 — решта ядра, Q-15), `collab_ui.js`; бандл `static/lib/f3d-core/constructor.esm.js` перезібрано (`CORE_BUILD`).
+  Прототип: блокування зон не емулюються, коментарі без виконавців і завдань Odoo.
+- **Тести:** `test_s6_collab.py` (23), `test_s6_help.py` (5), `test_s6_tours.py` (3), HOOT `s6.test.js` (7), `tools/test_core_s6.mjs`, Playwright `test_s6.js`.
+- **Не зроблено / відкрито:** англійська через `t()` у ≈ 20 файлах ядра, `.whproj.json` (F11-05) і одноразовий імпорт проєктів (CD-31 Q3), «Місця в Excel» (F15-03), нестабільність `test_s3` під навантаженням, `inside` не бачить колон `column_grid` — див. `docs/modules/td_constructor/ARCHITECTURE.md` §5.1 (Q-15…Q-22).
+
 ## Хвиля 2 — злиття «Конструктор» + «Конструктор складу» (версія модуля 19.0.1.3.0)
 
 Слайси S3–S5 нових полів не вимагають: моделі й поля — з W0-B, версія лишається 19.0.1.3.0.
