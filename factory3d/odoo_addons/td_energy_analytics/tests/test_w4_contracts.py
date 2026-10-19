@@ -24,9 +24,21 @@ def load(name):
     return json.loads((CONTRACTS / name).read_text(encoding="utf-8"))
 
 
+# Словники-мапи (ключі — коди ділянок у `stack.bars[].values`): набір ключів довільний, перевіряються значення.
+MAP_KEYS = {"values"}
+
+
 def check_shape(case, want, got, path="$"):
     """Набір ключів `got` = `want` (рекурсивно); списки — за першим елементом; `null` не порівнюється."""
     if want is None or got is None:
+        return
+    if isinstance(want, dict) and path.rsplit(".", 1)[-1] in MAP_KEYS:
+        case.assertIsInstance(got, dict, path)
+        sample = next(iter(want.values()), None)
+        for key, value in got.items():
+            if isinstance(sample, (int, float)):
+                case.assertIsInstance(value, (int, float), "%s.%s" % (path, key))
+            check_shape(case, sample, value, "%s.%s" % (path, key))
         return
     if isinstance(want, dict):
         case.assertIsInstance(got, dict, path)
