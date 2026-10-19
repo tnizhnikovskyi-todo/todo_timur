@@ -117,6 +117,7 @@ export function createBatcher(env) {
         geom.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
         geom.setAttribute("color", new THREE.BufferAttribute(col, 3));
         geom.setIndex(new THREE.BufferAttribute(idx, 1));
+        geom.setDrawRange(0, ni);
         geom.computeBoundingBox();
         geom.computeBoundingSphere();
         const mat = rep.material.clone();
