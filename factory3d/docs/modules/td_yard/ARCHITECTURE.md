@@ -116,7 +116,7 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `td_viewer3d` M-01
 | FR-20 | Журнали: події LPR (список/форма зі знімком), зважування (список/форма), команди на ворота (список `td.command` з фільтром двору, поля `td_yard_gate_id`, `td_yard_visit_id`). |
 | FR-21 | Звіти: pivot/graph рейсів (очікування, час біля воріт, загальний час, запізнення; за перевізником, партнером, воротами, днем) і SQL-вид простоїв воріт `td.yard.dock.report` (зайнятість/простій воріт за день). |
 | FR-22 | Меню «Завод 3D → Двір» (sequence 60, CB-09) з підпунктами (SPEC §3), пункт параметрів модуля — під «Завод 3D → Налаштування» (`menu_td_config`, sequence 60, X-32); права: читання — `group_td_user` (без персональних даних водія), дії — охорона/диспетчер, налаштування — менеджер двору, стоп-крани — адміністратор. |
-| FR-23 | Провайдер переглядача `td.viewer.provider.yard` (`_f3d_sequence=160`, розділ `yard`): фури з координатами (біля воріт, у черзі, на КПП, на вагах — зони base C.2), стан воріт/шлагбаумів, ваги, черга, підсумки; дельти — через шину viewer M-03 (повідомлення при кожному переході рейсу/воріт). |
+| FR-23 | Провайдер переглядача `td.viewer.provider.yard` (`_td_sequence=160`, розділ `yard`): фури з координатами (біля воріт, у черзі, на КПП, на вагах — зони base C.2), стан воріт/шлагбаумів, ваги, черга, підсумки; дельти — через шину viewer M-03 (повідомлення при кожному переході рейсу/воріт). |
 | FR-24 | Персональні дані водія мінімальні (ПІБ, телефон, номер документа); документ і телефон видно лише охороні/диспетчеру; крон очищає документ/телефон у рейсах старших `visit_pii_keep_days` (90) і видаляє події LPR зі знімками старші `lpr_keep_days` (30). |
 | FR-25 | Стоп-крани `td.yard.read_enabled` (умовчання за `td.base.environment`, CB-10), `td.yard.write_enabled` (`False`), `neutralize.sql` (крони, режим воріт → `manual`, `write_enabled` → `False`); жоден токен у модулі не зберігається (токени колектора/маршрутів — у telemetry). |
 | FR-26 | Міграція (`post_init_hook`): 6 пакетів-фур демо → 6 рейсів у стані `handling` з бронюваннями (слоти з `scheduled_date…end_date`), партнерами з документів, перевізниками з `carrier_id`, держномер `АА4512КТ` для `TRUCK-OUT-1` (картка ваг макета), одне контрольне зважування 21 380 кг; ідемпотентно; очікувані кількості — §2.8. |
@@ -159,10 +159,10 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `td_viewer3d` M-01
 | telemetry CT-01 | `td.source`, `td.signal` (`code`, `address`, `last_value`, `last_ts`, `status`, `module`), `td.command` (`queued→sent→done/failed/expired`) | сигнали двору, команди на ворота |
 | telemetry CT-02, CT-03 | інтерфейс `SourcePlugin`, entry point `factory3d_collector.plugins`, JSON-схеми адрес (Modbus `addr` — PDU 0-based) | плагін `sics`, адреси ADAM |
 | telemetry CT-05 | пороги/заявки ТО — лише поля на сигналі | «шлагбаум відкритий > 10 хв» (warn без заявки), «ваги офлайн» |
-| telemetry CT-08 | хук `td.push.handler`: `_f3d_push_routes=('lpr',)`, `_f3d_handle_push(route, event)` | приймання подій Axis LPV |
+| telemetry CT-08 | хук `td.push.handler`: `_td_push_routes=('lpr',)`, `_td_handle_push(route, event)` | приймання подій Axis LPV |
 | telemetry CT-09 | `module='yard'` за префіксом `yard/*` | власність сигналів |
 | telemetry FR-21/A-08 | команди на пристрої лише через `td.command` + колектор; 4 запобіжники `write` | команди шлагбаума |
-| viewer M-01, M-03 | `td.viewer.provider` (`_f3d_sequence`, `_f3d_sections`, `_f3d_viewer_collect`), `td.viewer.event._notify(model, codes, kind)` | розділ `yard`, живі оновлення |
+| viewer M-01, M-03 | `td.viewer.provider` (`_td_sequence`, `_td_sections`, `_td_viewer_collect`), `td.viewer.event._notify(model, codes, kind)` | розділ `yard`, живі оновлення |
 | viewer C-05 | `ir.actions.client` `f3d_viewer.action` з `params.code`/`picking` | «Показати в 3D» на рейсі |
 | iot_sim P-11 §8.13 | адреси ADAM-6060 unit 86, формат Axis LPV, діалект SICS, S-05/S-06, API-01 `bookings[]` | data сигналів, плагін, ТК |
 
@@ -204,7 +204,7 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `td_viewer3d` M-01
 ┌───────────────────────────────────────── td_yard ───────────────────────────────────────────────┐
 │ td.yard.lpr.event ──R-08 зіставлення──► td.yard.visit (стани §10) ◄── td.yard.booking (слоти, R-03)  │
 │        │ незбіг → екран КПП (walk-in R-06)        │ admit → td.yard.gate.action_command('open') R-15  │
-│ td.signal._f3d_ingest (M-13) ──► td.yard.scale ──R-11──► td.yard.weighing ──R-12──► stock.picking     │
+│ td.signal._td_ingest (M-13) ──► td.yard.scale ──R-11──► td.yard.weighing ──R-12──► stock.picking     │
 │ stock.picking.batch (dock_id/scheduled_date/end_date ⇐ booking) · res.partner (перевізник, водій)      │
 │ td.viewer.provider.yard (160) → payload.yard · td.viewer.event._notify → bus f3d_viewer              │
 │ Екран КПП (OWL client action, RPC kpp_data/kpp_action) · Диспетчерська (kanban/gantt/calendar)         │
@@ -230,7 +230,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | `res.partner` (M-09), `delivery.carrier` (M-10) | розширення | перевізник/водій, документ водія, контакт перевізника | диспетчер | рейс |
 | `res.config.settings` (M-11) | розширення | стоп-крани, допуски, ліміти, строки зберігання | адміністратор/менеджер | модуль |
 | `td.push.handler.yard` (M-12) | реалізація хука CT-08 | маршрут `lpr` → `td.yard.lpr.event` | telemetry API-05 | — |
-| `td.signal` (M-13) | перевизначення `_f3d_ingest()` (SPEC A-17) | `yard/gates/*`, `yard/scale/*` → ворота й ваги | telemetry push | — |
+| `td.signal` (M-13) | перевизначення `_td_ingest()` (SPEC A-17) | `yard/gates/*`, `yard/scale/*` → ворота й ваги | telemetry push | — |
 | `td.viewer.provider.yard` (M-14) | провайдер (160) | розділ `yard` | — | viewer |
 | `td.yard.dock.report` (M-15) | SQL-вид | зайнятість/простій воріт за день | — | звіти |
 | `td.yard.walkin.wizard` (M-16), `td.yard.reject.wizard` (M-17) | transient | створення рейсу без броні з події LPR; причина відхилення | охорона/диспетчер | — |
@@ -256,7 +256,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 2. 09:10 камера `CAM-05` надсилає POST (`carState=new`, `plateText="AA4512KT"`, `plateUnicode="АА4512КТ"`,
    `plateConfidence="0.912340"`, `GEOtarget="GATE-W"`, `capture_timestamp="1791785400000"`); колектор →
    `POST /f3d/telemetry/event {events:[{event_id, route:'lpr', ts, remote, headers, payload:{…}}]}` → telemetry викликає
-   `env['td.push.handler.yard']._f3d_handle_push('lpr', event)`.
+   `env['td.push.handler.yard']._td_handle_push('lpr', event)`.
 3. M-12 створює `td.yard.lpr.event` (`plate_norm="AA4512KT"`, `gate_id=GATE-W`, `direction='in'`,
    `confidence=0.912`), R-08 знаходить рейс за `plate_norm` (або за `plateListDescription="BATCH/IN/00001 …"`)
    → `event.visit_id`, `match_state='matched'`; рейс `planned → arrived` (`arrived_at` = час камери).
@@ -273,7 +273,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 6. Петля DI1 → лічильник `passes_today` 7→8; R-17: `passes_today − passes_day_start (7) = 1 ≤ admitted_today (1)`
    — норма.
 7. На вагах: `SIR` потік → `yard/scale/TRUCK-SCALE/weight_kg` 0 → 25 200 (`S D` 3 с, далі `S S`);
-   M-13 (`_f3d_ingest`) передає показання ваг у `td.yard.scale._f3d_yard_on_readings`; R-11: два стабільні показання ≥ 400 кг
+   M-13 (`_td_ingest`) передає показання ваг у `td.yard.scale._td_yard_on_readings`; R-11: два стабільні показання ≥ 400 кг
    із різницею ≤ 40 кг → `td.yard.weighing` (`kind='in'`, `gross_kg=25200`, `source='auto'`) → єдиний рейс
    у `queued` з політикою `in_out` і без зважування `in` → `visit.gross_kg=25200`, `weighed_in_at`.
 8. Диспетчер/авторежим: ворота `DOCK-W1` вільні → «На ворота» → `at_dock` (`at_dock_at`); комірник
@@ -340,7 +340,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 - Індекси: `td_yard_visit (state, planned_start)`, `(plate_norm)`, `(batch_id)`; `td_yard_booking
   (dock_id, slot_start, slot_end)` + `(state)`; `td_yard_lpr_event (ts)`, `(plate_norm, ts)`,
   `(dedup_key)` unique; `td_yard_weighing (scale_id, ts)`, `(visit_id)`.
-- Гарячий шлях: `td.signal._f3d_ingest()` (M-13) виконується на кожному push телеметрії (18 сигналів, 5 с) —
+- Гарячий шлях: `td.signal._td_ingest()` (M-13) виконується на кожному push телеметрії (18 сигналів, 5 с) —
   перевірка префікса в Python без запитів, ORM-читання ваг лише для `yard/scale/*` (2 сигнали).
 - Екран КПП: RPC `kpp_data` ≤ 50 мс (сьогоднішні рейси ≤ 50, події ≤ 20); оновлення 10 с → ≤ 0,1 запиту/с
   на планшет. Провайдер `yard` ≤ 20 КБ, ≤ 30 мс.
@@ -464,7 +464,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | A-04 | Перевізник і водій — `res.partner` (водій — контакт-особа з `td_is_driver`, перевізник — компанія з `td_is_carrier`); `delivery.carrier` отримує `td_partner_id` | `delivery.carrier` — спосіб доставки, не контрагент; стандартний `stock.picking.batch.driver_id` теж `res.partner` — узгоджено |
 | A-05 | `fleet.vehicle` для сторонніх фур не створюється; держномер — Char `plate` на рейсі | `fleet` веде власний парк; сторонніх машин сотні, їх облік — PII й сміття в Fleet |
 | A-06 | Команди на ворота — тільки через `td.command` telemetry; власної черги/контролера немає | telemetry A-08 (Odoo не ходить у мережу цеху); журнал команд єдиний (CY-08) |
-| A-07 | Автозахоплення зважування — через перевизначення `td.signal._f3d_ingest()` (CT-10) для `yard/gates/*`, `yard/scale/*`, а не крон (виправлено 0.2: telemetry R-17 оновлює `last_value` сирим SQL, `write()` не викликається — SPEC A-17) | показання приходять пакетом раз на 5 с, фура стоїть на вагах 60 с; крон раз на хвилину пропускав би; `td.reading` зберігається лише раз на `store_period_s` (telemetry A-04), тому гачок потрібен на вхідних показаннях |
+| A-07 | Автозахоплення зважування — через перевизначення `td.signal._td_ingest()` (CT-10) для `yard/gates/*`, `yard/scale/*`, а не крон (виправлено 0.2: telemetry R-17 оновлює `last_value` сирим SQL, `write()` не викликається — SPEC A-17) | показання приходять пакетом раз на 5 с, фура стоїть на вагах 60 с; крон раз на хвилину пропускав би; `td.reading` зберігається лише раз на `store_period_s` (telemetry A-04), тому гачок потрібен на вхідних показаннях |
 | A-08 | Сигнал каталогу 654/656 об'єднує DI0 і DI1 в одному рядку; модуль розділяє: `state` ← DI0, нові `loop` ← DI1, `photocell` ← DI4, команди `cmd_open/close/hold` ← DO0/DO2/DO4 для W, DO1/DO3/DO5 для E (PDU 0/1/4/16/18/20 для W; 2/3/5/17/19/21 для E — X-47) | один сигнал = одна адреса (telemetry CT-03); розбіжність — у звіті менеджеру |
 | A-09 | Ваги — окрема модель `td.yard.scale`, не поле воріт | одні ваги обслуговують обидва напрямки (Q-12); у воріт лише посилання `scale_id` |
 | A-10 | Екран КПП — OWL client action з двома RPC (`kpp_data`, `kpp_action`), без власних HTTP-маршрутів | планшет під логіном `f3d_yard_kpp`; стандартна сесія і права; тестується `HttpCase` без контролерів |

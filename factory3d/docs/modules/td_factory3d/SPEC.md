@@ -148,8 +148,8 @@ odoo_addons/td_factory3d/
 class F3dSceneMixin(models.AbstractModel):
     _name = "td.scene.mixin"
     _description = "Код сцени 3D"
-    _f3d_kind = "other"                       # носій перевизначає
-    _f3d_resolve_order = ["td.zone", "stock.location", "mrp.workcenter",
+    _td_kind = "other"                       # носій перевизначає
+    _td_resolve_order = ["td.zone", "stock.location", "mrp.workcenter",
                           "maintenance.equipment", "hr.employee", "stock.picking.batch"]
     F3D_CODE_RE = re.compile(r"^[A-Z0-9]+(-[A-Z0-9]+)*$")
 ```
@@ -158,8 +158,8 @@ class F3dSceneMixin(models.AbstractModel):
 |---|---|---|
 | `td_code` | Char(32) | `string="Код сцени"`, `idx`, `copy=False`, `help="Код об'єкта в 3D-моделі (glTF extras code), напр. SAW-1, FG-R1-B01-L1, DOCK-W1"` |
 | `td_alias` | Char(32) | `string="Другий код сцени"`, `idx`, `copy=False`, `help="Ще один код того самого запису в 3D, якщо модель малює його двома об'єктами (ворота DOCK-W1 і майданчик UNLOAD-1)"` |
-| `td_kind` | Selection | `[('location','Місце зберігання'),('workcenter','Робочий центр'),('equipment','Обладнання'),('employee','Працівник'),('dock','Ворота'),('zone','Зона'),('vehicle','Транспорт'),('other','Інше')]` — константа модуля `F3D_KIND_SELECTION` у `models/td_scene_mixin.py` (її ж бере дзеркало M-10a), `string="Вид у сцені"`, `req`, `idx`, `default=lambda self: self._f3d_kind` |
-| `td_viewer_available` | Boolean | `compute="_compute_f3d_viewer_available"`, не зберігається: `True`, якщо `_f3d_viewer_installed()` |
+| `td_kind` | Selection | `[('location','Місце зберігання'),('workcenter','Робочий центр'),('equipment','Обладнання'),('employee','Працівник'),('dock','Ворота'),('zone','Зона'),('vehicle','Транспорт'),('other','Інше')]` — константа модуля `F3D_KIND_SELECTION` у `models/td_scene_mixin.py` (її ж бере дзеркало M-10a), `string="Вид у сцені"`, `req`, `idx`, `default=lambda self: self._td_kind` |
+| `td_viewer_available` | Boolean | `compute="_compute_f3d_viewer_available"`, не зберігається: `True`, якщо `_td_viewer_installed()` |
 | `td_is_manager` | Boolean | `compute="_compute_is_f3d_manager"`, не зберігається: `self.env.user.has_group('td_factory3d.group_td_manager')` — для `readonly` полів домішки у формах (§3) |
 
 SQL-обмеження (застосовуються до кожного носія окремо — Odoo копіює обмеження домішки в
@@ -184,16 +184,16 @@ SQL-обмеження (застосовуються до кожного нос�
 | Сигнатура | Вхід → вихід | Алгоритм |
 |---|---|---|
 | `@api.model search_f3d(self, code)` | `code: str` → recordset цієї моделі (0 або 1 запис) | порожній/`None` → порожній recordset; `self.with_context(active_test=False).search(['|', ('td_code','=',code), ('td_alias','=',code)], limit=1)` |
-| `@api.model f3d_resolve(self, code)` | → recordset першої моделі з `_f3d_resolve_order`, де знайдено, інакше `None` | для `m in _f3d_resolve_order`: `if m in self.env` (модель є в реєстрі) і `self.env[m].search_f3d(code)` → повернути |
+| `@api.model f3d_resolve(self, code)` | → recordset першої моделі з `_td_resolve_order`, де знайдено, інакше `None` | для `m in _td_resolve_order`: `if m in self.env` (модель є в реєстрі) і `self.env[m].search_f3d(code)` → повернути |
 | `@api.model f3d_resolve_all(self, code)` | → `dict[str, recordset]` лише непорожні | те саме для всіх моделей реєстру, що успадковують домішку: `self.env.registry.descendants(['td.scene.mixin'], '_inherit')` мінус абстрактні |
 | `f3d_codes(self)` | → `list[str]` | `[c for c in (self.td_code, self.td_alias) if c]` (ensure_one) |
-| `@api.model _f3d_viewer_installed(self)` | → `bool` | `self.env['ir.module.module'].sudo().search_count([('name','=','td_viewer3d'),('state','=','installed')]) > 0` (рішення менеджера: перевірка стану модуля; окремий метод — щоб тести патчили його через `unittest.mock.patch.object`) |
-| `action_f3d_show(self)` | → dict дії (CB-02) | `ensure_one()`; без `td_code` → `UserError("Запис не має коду сцени. Заповніть «Код сцени» на вкладці «Завод 3D».")`; якщо `self._f3d_viewer_installed()`: `{'type':'ir.actions.client','tag':'f3d_viewer.action','name':'Завод 3D','target':'current','params':{'code':self.td_code,'alias':self.td_alias or False,'model':self._name,'res_id':self.id,'kind':self.td_kind}}` (тег і ключ `code` — контракт менеджера; решта ключів — довідкові, A-18); інакше `{'type':'ir.actions.client','tag':'display_notification','params':{'title':'Модуль 3D-переглядача не встановлено','message':'Установіть td_viewer3d, щоб показати %s у 3D.' % self.td_code,'type':'warning','sticky':False}}` |
+| `@api.model _td_viewer_installed(self)` | → `bool` | `self.env['ir.module.module'].sudo().search_count([('name','=','td_viewer3d'),('state','=','installed')]) > 0` (рішення менеджера: перевірка стану модуля; окремий метод — щоб тести патчили його через `unittest.mock.patch.object`) |
+| `action_f3d_show(self)` | → dict дії (CB-02) | `ensure_one()`; без `td_code` → `UserError("Запис не має коду сцени. Заповніть «Код сцени» на вкладці «Завод 3D».")`; якщо `self._td_viewer_installed()`: `{'type':'ir.actions.client','tag':'f3d_viewer.action','name':'Завод 3D','target':'current','params':{'code':self.td_code,'alias':self.td_alias or False,'model':self._name,'res_id':self.id,'kind':self.td_kind}}` (тег і ключ `code` — контракт менеджера; решта ключів — довідкові, A-18); інакше `{'type':'ir.actions.client','tag':'display_notification','params':{'title':'Модуль 3D-переглядача не встановлено','message':'Установіть td_viewer3d, щоб показати %s у 3D.' % self.td_code,'type':'warning','sticky':False}}` |
 | `@api.model f3d_run_migration(self)` | → dict `display_notification` зі звітом | `if not self.env.user.has_group('td_factory3d.group_td_admin'): raise AccessError(...)`; `report = hooks.run_all(self.env)`; повідомлення `"Міграцію виконано: %s" % json.dumps(report, ensure_ascii=False)`, `type='success'`, `sticky=True` |
 | `write(self, vals)` / `create(self, vals_list)` | — | R-04: якщо у `vals` є `td_code`/`td_alias`/`td_kind` і `not self.env.su` і користувач без `group_td_manager` → `AccessError("Змінювати код сцени може лише менеджер «Завод 3D».")`; далі `super()` |
 
 Домішку одержують (через `_inherit = [<model>, "td.scene.mixin"]`): `stock.location`
-(`_f3d_kind="location"`), `mrp.workcenter` (`"workcenter"`), `maintenance.equipment`
+(`_td_kind="location"`), `mrp.workcenter` (`"workcenter"`), `maintenance.equipment`
 (`"equipment"`), `hr.employee` (`"employee"`), `td.zone` (`"zone"`), `stock.picking.batch`
 (`"vehicle"`). Кожен носій розширює `_rec_names_search` своєю `td_code` (див. M-03, M-08…).
 
@@ -207,7 +207,7 @@ class F3dZone(models.Model):
     _order = "sequence, td_code"
     _rec_name = "name"
     _rec_names_search = ["name", "td_code"]
-    _f3d_kind = "zone"
+    _td_kind = "zone"
 ```
 
 | Поле | Тип | Параметри |
@@ -263,7 +263,7 @@ class F3dZone(models.Model):
 class StockLocation(models.Model):
     _name = "stock.location"
     _inherit = ["stock.location", "td.scene.mixin"]
-    _f3d_kind = "location"
+    _td_kind = "location"
     _rec_names_search = ["complete_name", "barcode", "td_code", "td_alias"]
 ```
 
@@ -302,7 +302,7 @@ class StockLocation(models.Model):
 class StockPickingBatch(models.Model):
     _name = "stock.picking.batch"
     _inherit = ["stock.picking.batch", "td.scene.mixin"]
-    _f3d_kind = "vehicle"
+    _td_kind = "vehicle"
     _rec_names_search = ["name", "td_code", "td_truck"]
 ```
 
@@ -427,7 +427,7 @@ class F3dEquipmentSpec(models.Model):
 class MaintenanceEquipment(models.Model):
     _name = "maintenance.equipment"
     _inherit = ["maintenance.equipment", "td.scene.mixin"]
-    _f3d_kind = "equipment"
+    _td_kind = "equipment"
     _rec_names_search = ["name", "serial_no", "td_code"]
 ```
 
@@ -453,16 +453,16 @@ class MaintenanceEquipment(models.Model):
 
 ### M-09 `mrp.workcenter` — розширення
 
-`_inherit = ["mrp.workcenter", "td.scene.mixin"]`, `_f3d_kind = "workcenter"`,
+`_inherit = ["mrp.workcenter", "td.scene.mixin"]`, `_td_kind = "workcenter"`,
 `_rec_names_search = ["name", "code", "td_code"]`; поле `td_zone_id` Many2one `td.zone`
 (`ondelete="set null"`, `idx`, у `models/td_zone.py`). Інших полів немає.
 
 ### M-10 `hr.employee` — розширення
 
-`_inherit = ["hr.employee", "td.scene.mixin"]`, `_f3d_kind = "employee"`,
+`_inherit = ["hr.employee", "td.scene.mixin"]`, `_td_kind = "employee"`,
 `_rec_names_search = ["name", "td_code"]`.
 
-Метод `@api.model _f3d_code_from_barcode(self, barcode, workcenter=None)` → `str | False` (R-06):
+Метод `@api.model _td_code_from_barcode(self, barcode, workcenter=None)` → `str | False` (R-06):
 1. `barcode` порожній → `False`;
 2. рядок у таблиці `scene_employee_codes.csv` (`hooks.codes.employee_table(env)`: dict barcode→code) → код;
 3. `workcenter` (запис `mrp.workcenter` з `td_code`) → `"OP-" + workcenter.td_code`;
@@ -772,7 +772,7 @@ access_td_equipment_source_manager,td.equipment.source manager,model_td_equipmen
 | 1 | `docks.register(env)` | `scene_docks.csv`, `stock.location.barcode` | для кожного рядка: `loc = search([('barcode','=',barcode)], limit=1)`; немає → пропуск із WARNING; `loc.write({td_code, td_alias, td_kind:'dock', td_side, td_dock_no, td_x, td_y, td_dock_width_m, td_dock_height_m, td_accepts: [Command.set(ids категорій за назвою)]})`; `loc.f3d_register_dock()`; після циклу: `in_type.dock_ids = Command.set(west)`, `out_type.dock_ids = Command.set(east)` (A-10) | повторний `write` тими ж значеннями | `docks: 14`, `in_type.dock_ids: 7`, `out_type.dock_ids: 7` | `docks: 0` (WARNING) |
 | 2 | `codes.locations(env)` | `stock.location` з `barcode`, `usage='internal'`, під `warehouse_id.view_location_id`, крім `warehouse.lot_stock_id`; `scene_locations.csv` | (а) `td_code = barcode` якщо `td_code` порожній і `barcode` відповідає R-01 і не зайнятий; ворота з кроку 1 уже мають код — пропуск; (б) для кожного рядка `scene_locations.csv`: `loc = env['stock.location'].search_f3d(code)` (для `UNLOAD-k` знаходить ворота за псевдонімом); `loc.write({'td_loc_kind': kind, 'td_capacity': capacity or 0})` (R-21) | (а) лише порожні `td_code`; (б) перезапис тими ж значеннями | `locations: 682` нових (696 усього з 14 воріт), `kinds: 689`, `capacities: 654` | 0 |
 | 3 | `codes.workcenters(env)` | `mrp.workcenter.code` | `td_code = code` якщо порожній і валідний | так само | `workcenters: 35` | 0 |
-| 4 | `codes.employees(env)` | `hr.employee.barcode`, `scene_employee_codes.csv`, `mrp.workcenter.employee_ids` | `td_code = _f3d_code_from_barcode(barcode, wc)` для працівників без коду; `wc` = перший РЦ, де `employee in wc.employee_ids` | так само | `employees: 35` | 0 |
+| 4 | `codes.employees(env)` | `hr.employee.barcode`, `scene_employee_codes.csv`, `mrp.workcenter.employee_ids` | `td_code = _td_code_from_barcode(barcode, wc)` для працівників без коду; `wc` = перший РЦ, де `employee in wc.employee_ids` | так само | `employees: 35` | 0 |
 | 5 | `codes.equipment(env)` | `maintenance.equipment.serial_no`, `scene_equipment_codes.csv`, `ir.model.data` (`module='factory3d'`) | R-07: код за `serial_no` ∈ `code` (203) → за `xmlid` (`ir.model.data` `module='factory3d', name=xmlid, model='maintenance.equipment'`) → за `legacy_serial` (7); пишеться лише порожнім | так само | `equipment: 210`, `by_serial: 203`, `by_xmlid_or_legacy: 7`, `unmatched: 0` | 0 |
 | 6 | `passports.link(env)` | `scene_equipment_codes.csv`, паспорти з data | для рядків із `role`: `eq = env['maintenance.equipment'].search_f3d(code)`; `eq.td_passport_id = ref('td_factory3d.passport_'+role)`; `eq.td_component_passport_ids = Command.set([...])` | перезапис тими ж значеннями | `linked: 207`, `components: 63`, `no_passport: 3` | 0 |
 | 7 | `zones.bind(env)` | `scene_zone_links.csv` | `root` → `root_location_id = search([('complete_name','=',value)])`; `prefix` → `stock.location.search([('td_code','=like', value+'%')]).td_zone_id = zone`; `code` → `search_f3d(value)`; `workcenter` → `mrp.workcenter.search_f3d`; `equipment` → `maintenance.equipment.search_f3d`; потім для обладнання з `workcenter_id` і без зони: `td_zone_id = workcenter_id.td_zone_id` | перезапис | `roots: 21`, `locations: 695`, `workcenters: 35`, `equipment: 170` | `zones: 45` (з data), прив'язок 0 |
@@ -824,10 +824,10 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'td.base.environment';
 |---|---|
 | R-01 | **Формат коду сцени**: `^[A-Z0-9]+(-[A-Z0-9]+)*$`, ≤ 32 символів. Таксономія з макета (додаток A): локації `PLT-01A`, `RCK-R2-1C`, `FUR-R1-S02-L3`, `EB-U1-S1-L1`, `FG-R1-B01-L1`, `KIT-01`, `FRONTS-1`, `UNLOAD-1`, `QC-PLT-1`, `QC-1`, `PAL-1`, `PACK-STORE`, `PAINT-STORE`, `POST-STAGE`, `OUT-STAGE`; РЦ `SAW-1`…`PACKLINE-1`; обладнання `FL-1`, `COMPRESSOR`, `RV-05`, `QF-C1`, `LT-RCV-1`, `FA-FAC`; люди `OP-SAW-1`, `OP-W1`; ворота `DOCK-W1`…`DOCK-E7`; зони `Z-RCV-1`, `Z-SHEETS`; фури `TRUCK-IN-1`, `TRUCK-OUT-3`. Невалідні: `saw-1`, `SAW_1`, `SAW-`, `-SAW`, `SAW--1`, `Ворота 1` |
 | R-02 | **Унікальність**: `td_code` і `td_alias` унікальні в межах моделі (SQL); псевдонім не збігається з жодним кодом/псевдонімом тієї ж моделі (Python). Між моделями збіги дозволені (A-15): РЦ `SAW-1` і обладнання `SAW-1` |
-| R-03 | **Резолвер**: `f3d_resolve(code)` перебирає `_f3d_resolve_order` = зона → локація → РЦ → обладнання → працівник → пакет; повертає перший знайдений. `SAW-1` → `mrp.workcenter`; `UNLOAD-1` → `stock.location` (за псевдонімом); `Z-CUT` → `td.zone`; `XYZ-9` → `None` |
+| R-03 | **Резолвер**: `f3d_resolve(code)` перебирає `_td_resolve_order` = зона → локація → РЦ → обладнання → працівник → пакет; повертає перший знайдений. `SAW-1` → `mrp.workcenter`; `UNLOAD-1` → `stock.location` (за псевдонімом); `Z-CUT` → `td.zone`; `XYZ-9` → `None` |
 | R-04 | **Права на коди**: див. §4.4 |
 | R-05 | **Код локації з штрихкоду**: кандидати — внутрішні локації під `view_location_id` складу з `barcode`, крім `lot_stock_id`; `barcode` валідний за R-01 → `td_code`. На демо `WHSTOCK` виключається як `lot_stock_id`. `td_kind` лишається `location` (ворота обробляє крок 1 раніше й мають `dock`) |
-| R-06 | **Код працівника** — M-10 `_f3d_code_from_barcode`; застосовується лише до порожнього `td_code`; зміна бейджа код не змінює |
+| R-06 | **Код працівника** — M-10 `_td_code_from_barcode`; застосовується лише до порожнього `td_code`; зміна бейджа код не змінює |
 | R-07 | **Код обладнання**: `serial_no ∈ scene_equipment_codes.code` → код; інакше `ir.model.data(module='factory3d', model='maintenance.equipment', res_id=id).name ∈ xmlid` → код; інакше `serial_no ∈ legacy_serial` → код; інакше без коду + WARNING. 7 навантажувачів: `FL-4369→FL-1`, `FL-4912→FL-2`, `FL-4731→FL-3`, `FL-4374→FL-4`, `FL-4193→FL-5`, `FL-4606→FL-C1`, `FL-4787→FL-C2` |
 | R-08 | **Зона локації/РЦ/обладнання** — за `scene_zone_links.csv` (§5.2): `prefix` через `=like`, `code` точно, обладнання РЦ — зона РЦ. Нові локації користувача зони не отримують автоматично (ставить технолог або `zone_at` у майбутніх модулях) |
 | R-09 | **Контур зони**: ≥ 3 точок, числа, у межах території `[site_x0_m, site_x1_m] × [site_y0_m, site_y1_m]` = `[−32, 182] × [−30, 100]` (`plant/infra.py:SITE`), площа > 0 (M-02). Площа — формула Гаусса. Приклади: `Z-SHEETS` (14.6,0.6)–(41.4,45.4) → 1200.6 м²; `Z-FAC` → 1235.0; `Z-RCV-7` (0.6,60.15)–(13.4,71.4) → 144.0; `Z-YARD-W` (−32,0)–(0,72) → 2304.0; `Z-ROOF` (0,0)–(150,72) → 10800.0. Надвірні контури виведено за A-19 (габарит об'єктів моделі + 1 м) |
@@ -885,7 +885,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'td.base.environment';
 | AC-05 | FR-02 | Given локація з кодом `D-1`, псевдонім `U-1`; When `search_f3d('D-1')`, `search_f3d('U-1')`; Then той самий запис; `search_f3d('')` → порожньо; архівований запис теж знаходиться | UT |
 | AC-06 | FR-02 | Given зона `X-1`, локація `X-1`, РЦ `X-1`; When `f3d_resolve('X-1')`; Then зона. When зону архівовано/видалено; Then локація. When `f3d_resolve('NOPE-0')`; Then `None` | UT |
 | AC-07 | FR-02 | When `f3d_resolve_all('X-1')`; Then dict із ключами `td.zone`, `stock.location`, `mrp.workcenter`, без порожніх | UT |
-| AC-08 | FR-03 | Given `_f3d_viewer_installed()` повертає `True` (патч `unittest.mock.patch.object`); When `action_f3d_show()` на РЦ `SAW-1`; Then результат дорівнює `{'type':'ir.actions.client','tag':'f3d_viewer.action','name':'Завод 3D','target':'current','params':{'code':'SAW-1','alias':False,'model':'mrp.workcenter','res_id':<id>,'kind':'workcenter'}}`; `td_viewer_available` = True. Окремо без патча на базі без `td_viewer3d`: `_f3d_viewer_installed()` = False | UT |
+| AC-08 | FR-03 | Given `_td_viewer_installed()` повертає `True` (патч `unittest.mock.patch.object`); When `action_f3d_show()` на РЦ `SAW-1`; Then результат дорівнює `{'type':'ir.actions.client','tag':'f3d_viewer.action','name':'Завод 3D','target':'current','params':{'code':'SAW-1','alias':False,'model':'mrp.workcenter','res_id':<id>,'kind':'workcenter'}}`; `td_viewer_available` = True. Окремо без патча на базі без `td_viewer3d`: `_td_viewer_installed()` = False | UT |
 | AC-09 | FR-03 | Given модуль `td_viewer3d` не встановлений; When `action_f3d_show()`; Then `tag=='display_notification'`, `params.title=='Модуль 3D-переглядача не встановлено'`, `params.type=='warning'`, `params.message` містить код; без коду — `UserError`; `td_viewer_available` = False | UT |
 | AC-10 | FR-04 | Given чиста база з локаціями `WH/Stock/A` (`barcode='A-1'`), `WH/Stock/B` (`barcode='b-1'`), `WH/Stock` (`barcode='WHSTOCK'`); When `codes.locations(env)`; Then `A-1` отримав код, `b-1` ні (невалідний), `WH/Stock` ні; повтор — без змін. TC: на копії демо 696 локацій із кодом | UT + TC |
 | AC-11 | FR-04/06 | Given копія демо; When установка; Then 14 локацій `td_kind='dock'`: `DOCK-W1…W7` з `td_alias='UNLOAD-1…7'`, `barcode` незмінний `UNLOAD-k`, `td_side='west'`, `td_x=0`, `td_y ∈ {5,15,…,65}`; `DOCK-E1…E7` `east`, `td_x=150`, без псевдоніма. UT: `docks.register` на синтетичних локаціях з барком `UNLOAD-1`/`DOCK-E1` | UT + TC |
@@ -917,7 +917,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'td.base.environment';
 | AC-37 | FR-08 | When `passport_highbay.get_num('lumen')` → 20500.0; `get_num('watt')` → 126.0; `passport_beam_saw.get_num('connected_kw')` → `None`; `get_num('power_kw')` → 11.0; `get_num('nope')` → `None`; `SAW-1.f3d_get_num('power_kw')` → 11.0 | UT |
 | AC-38 | FR-08 | Given копія демо; Then `maintenance.equipment.note` усіх 210 записів побайтово дорівнює знімку до установки | TC |
 | AC-39 | FR-09 | Given копія демо; Then `hr.employee.td_code` для 35 бейджів = додаток B (повна перевірка таблицею) | TC |
-| AC-40 | FR-09 | When `_f3d_code_from_barcode` з прикладами M-10; Then очікувані значення | UT |
+| AC-40 | FR-09 | When `_td_code_from_barcode` з прикладами M-10; Then очікувані значення | UT |
 | AC-41 | FR-10 | Then групи `group_td_user/manager/admin` існують, `manager.implied_ids ∋ user`, `admin ∋ manager`, `base.group_system.implied_ids ∋ admin`, `stock.group_stock_user ∋ user`, `mrp.group_mrp_user ∋ user`; привілей «Завод 3D» | UT |
 | AC-42 | FR-10 | Given користувач лише з `group_td_user`; Then читає `td.zone`/паспорти, `write`/`create`/`unlink` → `AccessError`; з `group_td_manager` — усе дозволено | UT |
 | AC-43 | FR-10 | Given користувач `stock.group_stock_manager` без `group_td_manager`; When `location.write({'td_code':'X-1'})`; Then `AccessError`; `write({'name':'Нова'})` — ок; з `group_td_manager` — ок | UT |
@@ -948,14 +948,14 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'td.base.environment';
 - `cls.categ_boards = product.category «Плитні матеріали»`, `cls.categ_hdf` (дочірня «ХДФ»), `cls.categ_edge` («Крайка»);
 - `cls.loc_in = stock.location` `WH/Вхід-Т` (internal, під `wh.view_location_id`), `cls.dock_w1` (`barcode='UNLOAD-T1'`), `cls.dock_e1` (`barcode='DOCK-TE1'`) — не ворота до виклику хелперів;
 - `cls.wc = mrp.workcenter` `code='SAW-T'`; `cls.eq = maintenance.equipment` `serial_no='SAW-T'`; `cls.emp = hr.employee` `barcode='OPSAWT'`;
-- хелпери: `make_zone(code, polygon=None, **vals)`, `make_dock(loc, side, no, x, y)`, `make_batch(pickings, dock=None, **vals)`, `make_picking(ptype, products, state)`, `viewer_installed(flag)` (контекстний менеджер: `unittest.mock.patch.object(F3dSceneMixin, '_f3d_viewer_installed', return_value=flag)`), `with_data_file(name, rows)` (контекстний менеджер, що підміняє читання `data/scene_*.csv` у `hooks` на задані рядки), `snapshot_moves(pickings)`.
+- хелпери: `make_zone(code, polygon=None, **vals)`, `make_dock(loc, side, no, x, y)`, `make_batch(pickings, dock=None, **vals)`, `make_picking(ptype, products, state)`, `viewer_installed(flag)` (контекстний менеджер: `unittest.mock.patch.object(F3dSceneMixin, '_td_viewer_installed', return_value=flag)`), `with_data_file(name, rows)` (контекстний менеджер, що підміняє читання `data/scene_*.csv` у `hooks` на задані рядки), `snapshot_moves(pickings)`.
 
 | Файл / клас | Тест | AC | Фікстури | Що саме assert |
 |---|---|---|---|---|
 | `test_scene_mixin.py::TestCodeFormat` | `test_valid_codes`, `test_invalid_codes` | AC-01 | `make_zone` | `ValidationError` для кожного невалідного; збережений `td_code` для валідних |
 | `::TestUniqueness` | `test_unique_in_model`, `test_cross_model_allowed`, `test_alias_rules` | AC-02…04 | зона, локація, РЦ, обладнання | `IntegrityError` в `mute_logger` + `cr.savepoint`; успішне створення крос-модельне; 4 випадки псевдоніма |
 | `::TestSearch` | `test_search_f3d_code_alias`, `test_search_empty`, `test_search_archived`, `test_resolve_order`, `test_resolve_all` | AC-05…07 | зона `X-1`, локація `X-1`, РЦ `X-1` | рівність recordset; `None`; порядок |
-| `::TestShow` | `test_show_with_viewer`, `test_show_without_viewer`, `test_show_no_code`, `test_viewer_detection_real` | AC-08, AC-09 | `viewer_installed(True/False)` | точна рівність усього dict дії (`assertEqual`); `tag`, `params.title`; `UserError`; без патча `_f3d_viewer_installed()` дорівнює `ir.module.module` `td_viewer3d` `state=='installed'` |
+| `::TestShow` | `test_show_with_viewer`, `test_show_without_viewer`, `test_show_no_code`, `test_viewer_detection_real` | AC-08, AC-09 | `viewer_installed(True/False)` | точна рівність усього dict дії (`assertEqual`); `tag`, `params.title`; `UserError`; без патча `_td_viewer_installed()` дорівнює `ir.module.module` `td_viewer3d` `state=='installed'` |
 | `test_employee.py::TestEmployeeCode` | `test_from_table`, `test_from_workcenter`, `test_opw_rule`, `test_unknown`, `test_hook_employees` | AC-13, AC-40 | працівники 4 шт., РЦ `NEW-7` з `employee_ids` | значення M-10; після `codes.employees(env)` коди на місці; повтор не змінює |
 | `::TestEmployeePublic` | `test_public_mirror_read`, `test_private_read_without_hr_rights`, `test_search_by_code_without_hr_rights`, `test_mirror_readonly_no_constraint` | AC-55 | `cls.emp` з `td_code='OP-SAW-T'` (через `sudo()`), користувач `base.group_user` без `hr.group_hr_user` (`new_test_user(..., groups='base.group_user')`) | значення `search_read` з `hr.employee.public`; `with_user(u)` читання `name`/`td_code` на `hr.employee` без `AccessError`; `search`/`name_search` за кодом; `_fields['td_code'].readonly`; `'_f3d_code_uniq'` відсутнє серед обмежень `hr.employee.public` |
 | `test_zone.py::TestZoneData` | `test_45_zones_loaded`, `test_types_distribution`, `test_polygons_inside_site`, `test_indoor_inside_building`, `test_roof_flag` | AC-15 | data | кількості; усі зони в межах `[−32,182]×[−30,100]`; 34 цехових у межах `[0,150]×[0,72]`; `is_roof` лише `Z-ROOF`; `is_roof` на зоні типу `storage` → `ValidationError` |

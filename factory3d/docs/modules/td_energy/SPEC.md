@@ -3,7 +3,7 @@
 Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · технічне рішення: `docs/modules/td_energy/ARCHITECTURE.md` (далі ARCH: FR-01…FR-29,
 CE-01…CE-09, A-01…A-22, Q-01…Q-20). Спирається на: каркас §5, §6.4–§6.8, D-04, D-06, D-11; `td_factory3d` CB-01,
 CB-07…CB-10; `td_telemetry` CT-01 (M-01…M-06), CT-03 (Додаток A.1 `modbus_tcp`), CT-05 (R-04…R-06), CT-10
-(`_f3d_ingest`, R-17), CT-12 (R-26 локальні джерела), R-03 (зберігання), R-07 (stale), R-13 (шина); `td_iot_sim`
+(`_td_ingest`, R-17), CT-12 (R-26 локальні джерела), R-03 (зберігання), R-07 (stale), R-13 (шина); `td_iot_sim`
 §8.4.1, §8.7 (P-05), §8.9.1–§8.9.5 (P-07), Додаток A № 1–80, 190–196, 366–428, S-01, S-03, S-12, API-16;
 `td_viewer3d` M-01, M-03, R-01, R-07, R-14, A.5, A.12, A.13; `td_machine_connect` CM-02, CM-03 (R-28);
 `td_genset`/`td_genset_factory3d` R-04…R-06, AC-23, AC-30, AC-56, ТК-G04.
@@ -39,7 +39,7 @@ odoo_addons/td_energy/
 │   │                                td_energy_outage, td_energy_alloc, mrp_workorder, mrp_production, mrp_workcenter,
 │   │                                maintenance_equipment, maintenance_request, res_config_settings, viewer_provider
 │   ├── td_energy_node.py           M-01
-│   ├── td_energy_meter.py          M-02 (+ _f3d_kwh CE-06)
+│   ├── td_energy_meter.py          M-02 (+ _td_kwh CE-06)
 │   ├── td_energy_interval.py       M-03 (+ _cron_build R-04)
 │   ├── td_energy_tariff.py         M-04, M-05 (R-05)
 │   ├── td_energy_pool.py           M-06
@@ -51,8 +51,8 @@ odoo_addons/td_energy/
 │   ├── mrp_production.py           M-12 (_cal_price, _get_backorder_mo_vals — R-10)
 │   ├── mrp_workcenter.py            M-13
 │   ├── maintenance_equipment.py     M-14
-│   ├── td_signal.py                M-15 (_f3d_ingest, обмеження A-15)
-│   ├── td_source.py                M-16 (type += f3d_energy, _f3d_local_types)
+│   ├── td_signal.py                M-15 (_td_ingest, обмеження A-15)
+│   ├── td_source.py                M-16 (type += f3d_energy, _td_local_types)
 │   ├── maintenance_request.py       M-17
 │   ├── res_config_settings.py       M-18
 │   └── viewer_provider.py           M-20 (AbstractModel без _inherit, A-04)
@@ -261,8 +261,8 @@ class F3dEnergyNode(models.Model):
 |---|---|
 | `_compute_meter_id(self)` | `self.meter_id = self.meter_ids.filtered('active').sorted('code')[:1]` |
 | `_compute_live(self)` | один `search_read` сигналів `meter_ids.p_signal_id`; один `read_group` `td.energy.interval` (`meter_id in`, `ts_start >= day_bounds_utc(today)[0]`) з `sum(kwh)` за `meter_id` |
-| `@api.model _f3d_kwh_by_code(self, code, date_from, date_to) -> tuple[float, str]` | CE-06: `node = search([('code','=',code)], limit=1)`; немає або без лічильника → `(0.0, 'missing')`; інакше `node.meter_id._f3d_kwh(date_from, date_to)` |
-| `_f3d_descendant_meters(self) -> td.energy.meter` | лічильники вузлів `child_of self` (без самого `self`), активні |
+| `@api.model _td_kwh_by_code(self, code, date_from, date_to) -> tuple[float, str]` | CE-06: `node = search([('code','=',code)], limit=1)`; немає або без лічильника → `(0.0, 'missing')`; інакше `node.meter_id._td_kwh(date_from, date_to)` |
+| `_td_descendant_meters(self) -> td.energy.meter` | лічильники вузлів `child_of self` (без самого `self`), активні |
 | `action_view_meters(self)` / `action_view_intervals(self)` / `action_view_balance(self)` | `act_window` на M-02 / M-03 (`domain=[('node_id','child_of',id)]`, графік за сьогодні) / M-08 |
 | `action_f3d_show(self)` | `equipment_id.action_f3d_show()`, якщо є; інакше `UserError("Вузол %s не має об'єкта в 3D.")` |
 | `_compute_display_name(self)` | `"%s · %s" % (code, name)` |
@@ -317,9 +317,9 @@ class F3dEnergyMeter(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `_f3d_counter_series(self, date_from, date_to, export=False) -> tools.counter.CounterSeries` | `ensure_one()`; R-03: показання `td.reading` сигналу (`quality != 'bad'`, `ts` між `date_from − 2 год` і `date_to + 2 год`, `ORDER BY ts`) + точка (`last_ts`, `last_value`) сигналу, якщо `last_ts > max(ts)`; якщо перших точок немає раніше `date_from` (ротація) — точки `(ts_start, e_start)` і `(ts_end, e_end)` з `td.energy.interval` за те саме вікно (запасний ряд, якість не краща за `interpolated`); повертає `CounterSeries(points, offset0=counter_offset)` |
-| `_f3d_kwh(self, date_from, date_to) -> tuple[float, str]` | CE-06: `s = _f3d_counter_series(...)`; `s.delta(date_from, date_to)` (R-03) → `(round(kwh, 3), quality)`; немає сигналу енергії → `(0.0, 'missing')` |
-| `_f3d_update_state(self, now)` | R-21 |
+| `_td_counter_series(self, date_from, date_to, export=False) -> tools.counter.CounterSeries` | `ensure_one()`; R-03: показання `td.reading` сигналу (`quality != 'bad'`, `ts` між `date_from − 2 год` і `date_to + 2 год`, `ORDER BY ts`) + точка (`last_ts`, `last_value`) сигналу, якщо `last_ts > max(ts)`; якщо перших точок немає раніше `date_from` (ротація) — точки `(ts_start, e_start)` і `(ts_end, e_end)` з `td.energy.interval` за те саме вікно (запасний ряд, якість не краща за `interpolated`); повертає `CounterSeries(points, offset0=counter_offset)` |
+| `_td_kwh(self, date_from, date_to) -> tuple[float, str]` | CE-06: `s = _td_counter_series(...)`; `s.delta(date_from, date_to)` (R-03) → `(round(kwh, 3), quality)`; немає сигналу енергії → `(0.0, 'missing')` |
+| `_td_update_state(self, now)` | R-21 |
 | `action_view_intervals(self)` | графік M-03 за останні 2 доби |
 
 ### M-03 `td.energy.interval` — 15-хв профіль лічильника (A-01, FR-04)
@@ -351,7 +351,7 @@ class F3dEnergyMeter(models.Model):
 ```
 `init()`: `create_index(self.env.cr, "td_energy_interval_day_idx", self._table, ["day", "role"])`. Запис — лише
 кроном/майстром (`INSERT … ON CONFLICT (meter_id, ts_start) DO UPDATE`, R-04); у формах `create="false" edit="false"`.
-Методи: `@api.model _cron_build(self)` — R-04; `@api.model _f3d_rebuild(self, meters, date_from, date_to)` — R-04 для
+Методи: `@api.model _cron_build(self)` — R-04; `@api.model _td_rebuild(self, meters, date_from, date_to)` — R-04 для
 вікна (майстер M-19, повтор `missing`).
 
 ### M-04 `td.energy.tariff` — тариф і договір (FR-05, A-17)
@@ -376,15 +376,15 @@ class F3dEnergyMeter(models.Model):
 перетин періодів з іншим активним тарифом компанії (`date_to` порожня = +∞) → `"Період тарифу перетинається з «%s»."`.
 `@api.constrains("zone_ids")` `_check_coverage` (R-05 п. 3): кожна 15-хв чверть тижня (7 × 96) покрита рівно однією
 зоною → інакше `"Зони тарифу «%s»: %s о %s не покрито"` або `"… покрито двічі (%s, %s)"` (день — «пн»…«нд»).
-`write`/`create` зі зміною `contract_kw`, `peak_warn_pct`, `date_*`, `active` → `_f3d_apply_contract_thresholds()` (R-12 п. 1).
+`write`/`create` зі зміною `contract_kw`, `peak_warn_pct`, `date_*`, `active` → `_td_apply_contract_thresholds()` (R-12 п. 1).
 
 Методи (`tools/tariff.py` — чисті функції; модель — обгортки):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `@api.model _f3d_tariff_at(self, dt_utc, company=None)` | активний тариф компанії, де `date_from ≤ local_date(dt_utc) ≤ date_to` (або `date_to` порожня); немає → порожньо |
-| `@api.model _f3d_price_at(self, dt_utc, company=None) -> tuple[zone, float]` | R-05 |
-| `_f3d_apply_contract_thresholds(self)` | R-12 п. 1 для чинного сьогодні тарифу |
+| `@api.model _td_tariff_at(self, dt_utc, company=None)` | активний тариф компанії, де `date_from ≤ local_date(dt_utc) ≤ date_to` (або `date_to` порожня); немає → порожньо |
+| `@api.model _td_price_at(self, dt_utc, company=None) -> tuple[zone, float]` | R-05 |
+| `_td_apply_contract_thresholds(self)` | R-12 п. 1 для чинного сьогодні тарифу |
 
 ### M-05 `td.energy.tariff.zone` — зона тарифу
 
@@ -448,7 +448,7 @@ class F3dEnergyMeter(models.Model):
 | `company_id` | Many2one `res.company` | `req`, `default=lambda self: self.env.company` |
 
 Ключ запису (перевіряється кодом, не SQL — `NULL` у ключі): `(day, kind, workorder_id, workcenter_id, node_id, pool_id)`.
-Методи: `@api.model _cron_alloc(self)` — R-08, R-09; `@api.model _f3d_alloc_days(self, days, now=None)` — повний
+Методи: `@api.model _cron_alloc(self)` — R-08, R-09; `@api.model _td_alloc_days(self, days, now=None)` — повний
 перерахунок діб; `_prepare_analytic_line_values(self, account_field_values, amount, unit_amount)` — A-11:
 `{"name": "[EN] %s" % workorder_id.display_name, "amount": amount, **account_field_values, "unit_amount": unit_amount,
 "product_id": workorder_id.product_id.id, "product_uom_id": env.ref("uom.product_uom_kwh").id, "company_id":
@@ -487,7 +487,7 @@ company_id.id, "ref": production_id.name, "category": "manufacturing_order"}`.
 | `outage_id` | Many2one `td.energy.outage` | `ondelete="set null"` |
 | `text` | Char(256) | `req` (українською, з числами: «CNC-2: аварійна зупинка, споживання впало до 0,7 кВт.») |
 
-Метод `@api.model _f3d_log(self, level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0)`:
+Метод `@api.model _td_log(self, level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0)`:
 `dedup_min > 0` і є подія з тими самими `kind`, `code`, `text` за останні `dedup_min` хв → не створювати; інакше
 `create(...)`; потім `_notify_viewer('td.energy', [code])` (R-18).
 
@@ -561,11 +561,11 @@ company_id.id, "ref": production_id.name, "category": "manufacturing_order"}`.
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `_cal_price(self, consumed_moves)` | перевизначення: **до** `super()`: якщо не `self.env.context.get('f3d_energy_skip')`: `self._f3d_energy_finalize()`; далі `self._f3d_energy_apply_extra_cost()`; потім `return super()._cal_price(consumed_moves)` |
-| `_f3d_energy_finalize(self)` | `ensure_one()`; якщо `td_energy_locked` — нічого; `days` = місцеві дати з першої до останньої хвилини інтервалів завдань МО (R-08 п. 1) обмежені `now`; `env['td.energy.alloc']._f3d_alloc_days(days, now=now)` (перерахунок діб включно з поточною до `now`); `self.td_energy_alloc_ids.write({'locked': True})`; `td_energy_locked=True`; аналітика R-10 п. 5; чаттер «Енергію зафіксовано: N кВт·год (прямі X, спільні Y), вартість Z грн, якість <мітка>» (сума пишеться завжди — чаттер МО бачать користувачі з правами на МО; бухгалтерський зміст — у полях з `groups`) |
-| `_f3d_energy_apply_extra_cost(self)` | R-10 п. 3–4 |
+| `_cal_price(self, consumed_moves)` | перевизначення: **до** `super()`: якщо не `self.env.context.get('f3d_energy_skip')`: `self._td_energy_finalize()`; далі `self._td_energy_apply_extra_cost()`; потім `return super()._cal_price(consumed_moves)` |
+| `_td_energy_finalize(self)` | `ensure_one()`; якщо `td_energy_locked` — нічого; `days` = місцеві дати з першої до останньої хвилини інтервалів завдань МО (R-08 п. 1) обмежені `now`; `env['td.energy.alloc']._td_alloc_days(days, now=now)` (перерахунок діб включно з поточною до `now`); `self.td_energy_alloc_ids.write({'locked': True})`; `td_energy_locked=True`; аналітика R-10 п. 5; чаттер «Енергію зафіксовано: N кВт·год (прямі X, спільні Y), вартість Z грн, якість <мітка>» (сума пишеться завжди — чаттер МО бачать користувачі з правами на МО; бухгалтерський зміст — у полях з `groups`) |
+| `_td_energy_apply_extra_cost(self)` | R-10 п. 3–4 |
 | `_get_backorder_mo_vals(self)` | `res = super()._get_backorder_mo_vals()`; `res['extra_cost'] = max(0.0, self.extra_cost - self.td_energy_applied_unit)`; `return res` (енергія не переходить у дозамовлення) |
-| `action_f3d_energy_recompute(self)` | лише `group_td_energy_manager` (`AccessError`), лише незафіксовані: `_f3d_alloc_days(days)`; `display_notification` «Перераховано: N кВт·год» |
+| `action_f3d_energy_recompute(self)` | лише `group_td_energy_manager` (`AccessError`), лише незафіксовані: `_td_alloc_days(days)`; `display_notification` «Перераховано: N кВт·год» |
 | `action_f3d_view_alloc(self)` | `act_window` `td.energy.alloc` (`domain=[('production_id','=',id)]`, вид list/pivot) |
 
 ### M-13 `mrp.workcenter` — розширення
@@ -599,9 +599,9 @@ Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів
     ENERGY_PREFIXES = ("energy/", "infra/pv/", "infra/bess/", "infra/chp/", "infra/ats/", "infra/totals/")
 
     @api.model
-    def _f3d_ingest(self, readings, src="module", collector=None):
+    def _td_ingest(self, readings, src="module", collector=None):
         if self.env.context.get("f3d_energy_internal"):
-            return super()._f3d_ingest(readings, src=src, collector=collector)
+            return super()._td_ingest(readings, src=src, collector=collector)
         codes = {r.get("code") for r in readings
                  if str(r.get("code", "")).startswith(self.ENERGY_PREFIXES)
                  or (str(r.get("code", "")).startswith("workcenters/") and str(r.get("code")).endswith("/machine_state"))}
@@ -609,21 +609,21 @@ Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів
         if codes:
             before = {s["code"]: (s["status"], s["last_text"], s["last_value"])
                       for s in self.sudo().search_read([("code", "in", list(codes))], ["code", "status", "last_text", "last_value"])}
-        res = super()._f3d_ingest(readings, src=src, collector=collector)
+        res = super()._td_ingest(readings, src=src, collector=collector)
         if before and param_bool(self.env, "td.energy.read_enabled"):
-            self.env["td.energy.event"].sudo()._f3d_on_ingest(before, readings)   # R-13, R-14
+            self.env["td.energy.event"].sudo()._td_on_ingest(before, readings)   # R-13, R-14
         return res
 ```
 
-`td.energy.event._f3d_on_ingest(before, readings)` (метод M-09): `after = search_read` тих самих кодів; для кожного коду
+`td.energy.event._td_on_ingest(before, readings)` (метод M-09): `after = search_read` тих самих кодів; для кожного коду
 зі зміненим `status` (R-13 п. 1) — подія; для `infra/ats/*` — R-14 (похідні `src1_ok/src2_ok`, відкриття/закриття
-відключення, переключення, FAIL START). Виклики `_f3d_ingest` всередині — з контекстом `f3d_energy_internal=True`.
+відключення, переключення, FAIL START). Виклики `_td_ingest` всередині — з контекстом `f3d_energy_internal=True`.
 Винятки всередині обробника ловляться (`_logger.exception`) і не відкочують пакет (`with self.env.cr.savepoint()`).
 
 ### M-16 `td.source` — розширення: локальний тип `f3d_energy` (CT-12, A-08)
 
 `_inherit = "td.source"`; `type` — `selection_add=[('f3d_energy', 'Енергетика (обчислені)')]`,
-`ondelete={'f3d_energy': 'cascade'}`; `@api.model _f3d_local_types(self)` → `super()._f3d_local_types() + ['f3d_energy']`.
+`ondelete={'f3d_energy': 'cascade'}`; `@api.model _td_local_types(self)` → `super()._td_local_types() + ['f3d_energy']`.
 Джерело `EN-DERIVED` (xml-id `td_energy.source_en_derived`, створює хук): `name="Енергетика: обчислені показники"`,
 `collector_id` порожній, `params={}`, `module='energy'`, `read_enabled` = параметр `read_enabled`, `state` веде модуль
 (`online`, поки крон `cron_td_energy_live` працює; R-21 п. 4).
@@ -669,7 +669,7 @@ Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів
 
 `action_run(self)`: користувач без `group_td_energy_manager` → `AccessError("Перерахунок енергії доступний енергетику.")`;
 `date_to − date_from > 31 доба` → `UserError("Перерахунок — не більше 31 доби за раз.")`; `intervals` →
-`td.energy.interval._f3d_rebuild(meters, d0, d1)`; `alloc` → `_f3d_alloc_days(days)` (зафіксовані рядки не змінюються,
+`td.energy.interval._td_rebuild(meters, d0, d1)`; `alloc` → `_td_alloc_days(days)` (зафіксовані рядки не змінюються,
 R-23); `result` = «Інтервалів: N (нових M), діб розподілу: K, зафіксованих рядків пропущено: L».
 
 ### M-20 Провайдери переглядача — `AbstractModel` без `_inherit` (A-04, CE-08)
@@ -678,23 +678,23 @@ R-23); `result` = «Інтервалів: N (нових M), діб розпод�
 class F3dViewerProviderEnergy(models.AbstractModel):
     _name = "td.viewer.provider.energy"
     _description = "3D: енергетика"
-    _f3d_sequence = 100
-    _f3d_sections = ("energy",)
-    _f3d_group = "td_factory3d.group_td_user"      # кіоск і переглядач; гроші ховає R-16 п. 2, п. 8
+    _td_sequence = 100
+    _td_sections = ("energy",)
+    _td_group = "td_factory3d.group_td_user"      # кіоск і переглядач; гроші ховає R-16 п. 2, п. 8
 
 class F3dViewerProviderInfra(models.AbstractModel):
     _name = "td.viewer.provider.infra"
     _description = "3D: власна генерація й резерв"
-    _f3d_sequence = 150
-    _f3d_sections = ("infra",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 150
+    _td_sections = ("infra",)
+    _td_group = "td_factory3d.group_td_user"
 ```
 
 | Метод | `td.viewer.provider.energy` | `td.viewer.provider.infra` |
 |---|---|---|
-| `_f3d_viewer_collect(self, payload, ctx)` | `tools.payload.build_energy(self.env, ctx, payload)` (R-16): пише `payload["energy"]` (заміна вмісту ключів A.12, решта ключів статики лишається), `payload["workcenters"][wc]["energy"]` для наявних РЦ, `energy_kwh/energy_cost/energy_quality` у `payload["productions"]` | `tools.payload.build_infra(self.env, ctx, payload)` (R-17): `payload.setdefault("infra", {})`; оновлює `cards` лише `PV-ROOF`, `PV-INV`, `CHP`, `ATS-1`, `BESS`; `totals.update(<ключі CE-03>)` |
-| `_f3d_viewer_delta(self, patch, ctx)` | R-18: якщо `ctx["changes"]` має `td.energy` або коди `td.signal` з префіксами `energy/`, `infra/` (крім `infra/genset/`, `infra/water/`) → `tmp = {}`; `build_energy(env, ctx, tmp)`; `patch["energy"] = tmp["energy"]`; для записів `patch.get("productions", [])` — ключі МО (R-16 п. 8) | те саме для `infra`, але **глибоке злиття** `deep_merge(patch.setdefault("infra", {}), tmp["infra"])` (A-22; хелпер — спільний viewer M-01 `td_viewer3d/tools/payload.py`, імпорт усередині методу — R-18 п. 3, X-23) |
-| `_f3d_viewer_bus_models(self)` | `["td.signal", "td.energy", "mrp.production", "mrp.workorder"]` | `["td.signal", "td.energy"]` |
+| `_td_viewer_collect(self, payload, ctx)` | `tools.payload.build_energy(self.env, ctx, payload)` (R-16): пише `payload["energy"]` (заміна вмісту ключів A.12, решта ключів статики лишається), `payload["workcenters"][wc]["energy"]` для наявних РЦ, `energy_kwh/energy_cost/energy_quality` у `payload["productions"]` | `tools.payload.build_infra(self.env, ctx, payload)` (R-17): `payload.setdefault("infra", {})`; оновлює `cards` лише `PV-ROOF`, `PV-INV`, `CHP`, `ATS-1`, `BESS`; `totals.update(<ключі CE-03>)` |
+| `_td_viewer_delta(self, patch, ctx)` | R-18: якщо `ctx["changes"]` має `td.energy` або коди `td.signal` з префіксами `energy/`, `infra/` (крім `infra/genset/`, `infra/water/`) → `tmp = {}`; `build_energy(env, ctx, tmp)`; `patch["energy"] = tmp["energy"]`; для записів `patch.get("productions", [])` — ключі МО (R-16 п. 8) | те саме для `infra`, але **глибоке злиття** `deep_merge(patch.setdefault("infra", {}), tmp["infra"])` (A-22; хелпер — спільний viewer M-01 `td_viewer3d/tools/payload.py`, імпорт усередині методу — R-18 п. 3, X-23) |
+| `_td_viewer_bus_models(self)` | `["td.signal", "td.energy", "mrp.production", "mrp.workorder"]` | `["td.signal", "td.energy"]` |
 
 Виклики ORM — від імені користувача запиту (без `sudo`), крім читання параметрів. Відсутність прав на модель
 (`has_access('read')` = False) → провайдер нічого не пише. Без `td_viewer3d` моделі просто не викликаються.
@@ -847,7 +847,7 @@ access_td_energy_recompute_wizard_manager,td.energy.recompute.wizard manager,mod
   `AccessError` для явного запиту поля).
 - `td.energy.alloc`, `td.energy.interval`, `td.energy.balance` — запис лише кроном/майстром (`sudo`), у формах
   `create/edit="false"`; ручне виправлення — адміністратор.
-- `mrp.production.td_energy_locked`, `td_energy_applied_unit` — `readonly`, змінює лише `_f3d_energy_finalize`.
+- `mrp.production.td_energy_locked`, `td_energy_applied_unit` — `readonly`, змінює лише `_td_energy_finalize`.
 - Повтор хука (`action_td_energy_rebind`) і стоп-крани — `group_td_admin` (`AccessError` у методі).
 
 ## 5. Дані
@@ -931,7 +931,7 @@ action_td_energy_rebind(self)` M-01: без `group_td_admin` → `AccessError("�
 | 5 | `sources(env)` | `energy_sources.csv` | `td.source` `type='modbus_tcp'`, `collector_id = env.ref('td_telemetry.collector_main')`, `params={host, port, unit, timeout_s, retries, max_block, gap_max}`, `module='energy'`, `equipment_id`, `read_enabled` = п. 1, `write_enabled=False`; xml-id `td_energy.source_<slug>` (`slug` = код у нижньому регістрі з `-`→`_`) | upsert за `code` | `sources: 68` | `sources: 68` |
 | 6 | `signals(env)` | `energy_signals.csv` | за `binding` (§5.2): `search([('code','=',code)], active_test=False)`; існує → `write` визначення (`kind`, `unit`, `equipment_id`, `source_id`, `address`, `period_s`, `store_period_s`, `decimals`, `states`, пороги з `*_on`, `alarm_states`, `alarm_title`, `hysteresis`, `min_duration_s`, `viewer_visible`, `module='energy'`, `active=True`; `last_*`, `status`, `origin` — не чіпаються); не існує → `create` з `origin` з CSV; другий прохід — `derived_from_id`; `energy/consumers/*/kwh_shift` → `source_id=EN-DERIVED`, `derived_from_id=…/kwh_total`, `derive_rule='none'` | upsert за `code` | `created: 210`, `updated: 87` (з них `thresholds: 2`), `module_energy: 297` | `created: 297`, `updated: 0` |
 | 7 | `meters(env)` | `energy_meters.csv` | `td.energy.meter` за `code`: `node_id`, `source_id`, сигнали за кодами | upsert | `meters: 67` | `meters: 67` |
-| 8 | `contract(env)` | тариф | `env['td.energy.tariff']._f3d_tariff_at(now)._f3d_apply_contract_thresholds()` (R-12 п. 1) | перезапис порогів | `grid15_kw`: `warn_high=720`, `alarm_high=800` | те саме |
+| 8 | `contract(env)` | тариф | `env['td.energy.tariff']._td_tariff_at(now)._td_apply_contract_thresholds()` (R-12 п. 1) | перезапис порогів | `grid15_kw`: `warn_high=720`, `alarm_high=800` | те саме |
 | 9 | `report(env, report)` | — | `install_report = json.dumps({state, ts, …лічильники})`; `state='partial'`, якщо `unmatched_equipment > 0` або `direct_without_wc > 0`, інакше `done` | перезапис | `done` | `partial` |
 
 Повторний запуск (`action_td_energy_rebind`) на тій самій базі: усі `created: 0`, кількості записів незмінні; інтервали,
@@ -987,9 +987,9 @@ HTTP-ендпоінтів модуль не має (усі показання �
 
 | ID | Сигнатура | Вхід → вихід | Помилки |
 |---|---|---|---|
-| API-01 | `env['td.energy.meter']._f3d_kwh(meter, date_from, date_to)` (метод запису: `meter._f3d_kwh(date_from, date_to)`) | `date_from < date_to` (UTC naive) → `(kwh: float, quality: str)` | `date_from ≥ date_to` → `ValueError("Порожній інтервал")`; без даних → `(0.0, 'missing')` |
-| API-02 | `env['td.energy.node']._f3d_kwh_by_code(code, date_from, date_to)` | код вузла → те саме | невідомий код → `(0.0, 'missing')` |
-| API-03 | `env['td.energy.event']._f3d_log(level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0)` | → запис або порожньо | `level`/`kind` поза селекцією → `ValueError` |
+| API-01 | `env['td.energy.meter']._td_kwh(meter, date_from, date_to)` (метод запису: `meter._td_kwh(date_from, date_to)`) | `date_from < date_to` (UTC naive) → `(kwh: float, quality: str)` | `date_from ≥ date_to` → `ValueError("Порожній інтервал")`; без даних → `(0.0, 'missing')` |
+| API-02 | `env['td.energy.node']._td_kwh_by_code(code, date_from, date_to)` | код вузла → те саме | невідомий код → `(0.0, 'missing')` |
+| API-03 | `env['td.energy.event']._td_log(level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0)` | → запис або порожньо | `level`/`kind` поза селекцією → `ValueError` |
 | API-04 | Провайдери `td.viewer.provider.energy`/`.infra` | контракт viewer M-01 | — |
 
 ## 8. Сервісна частина
@@ -1052,7 +1052,7 @@ TEDOM → 900); `gap_max_s` (900).
    сегмент `reset` → `reset`; `t_i − t_{i−1} > gap_max_s` → `interpolated`; інакше `measured`.
 4. `delta(a, b) = Ec(b) − Ec(a)` (≥ 0 за побудовою) з найгіршою якістю сегментів між `a` і `b` (порядок:
    `missing` > `reset` > `interpolated` > `measured`); будь-який `None` → `(None, 'missing')`.
-5. Вибір ряду (M-02 `_f3d_counter_series`): показання `td.reading` у вікні `[a − 2 год, b + 2 год]` + (`last_ts`,
+5. Вибір ряду (M-02 `_td_counter_series`): показання `td.reading` у вікні `[a − 2 год, b + 2 год]` + (`last_ts`,
    `last_value`) сигналу; якщо перша точка пізніше `a` і вікно старше `keep_days` telemetry — ряд з інтервалів
    (`(ts_start, e_start)`, `(ts_end, e_end)`) лічильника (якість не краща за `interpolated`, якщо 15-хв межі не збігаються
    з `a`, `b`).
@@ -1077,7 +1077,7 @@ TEDOM → 900); `gap_max_s` (900).
    - `e_b` невизначений і `now − b < max_wait_h` → зупинитися (чекати даних), `last_interval_start` = попередній слот;
    - `e_b` невизначений і `now − b ≥ max_wait_h` → `kwh = 0`, `e_start = e_end = останнє відоме c`, `quality='missing'`.
 4. Експорт: якщо `e_export_signal_id` — те саме з поправкою `counter_offset_export` → `kwh_export`.
-5. `zone, price = tariff._f3d_price_at(a)` (R-05); `cost = round(kwh × price, 2)` для ролей `incomer` (лише імпорт),
+5. `zone, price = tariff._td_price_at(a)` (R-05); `cost = round(kwh × price, 2)` для ролей `incomer` (лише імпорт),
    `feeder`, `consumer`; інші ролі — `cost = 0`; `kw_avg = round(kwh × 4, 2)`; `day`, `hour_local` — Київ (R-20).
 6. Запис — `INSERT … ON CONFLICT (meter_id, ts_start) DO UPDATE SET e_start, e_end, kwh, kwh_export, kw_avg, zone_id,
    price, cost, quality, built_at`; `last_interval_start = a` останнього збудованого.
@@ -1173,7 +1173,7 @@ TEDOM → 900); `gap_max_s` (900).
 1. Кандидати: `mrp.workorder` з `time_ids` (журнал часу), що перетинають `[d0, end)`, або `state='progress'`, або
    `date_finished ≥ d0`.
 2. Інтервали роботи: для РЦ з активним `td.machine` (`'td.machine' in env` і `search_count([('workcenter_id','=',wc),
-   ('active','=',True)])`) — `env['td.machine']._f3d_wo_intervals(wos_rc, d0, end)` (CM-03: стани `working`, `setup`,
+   ('active','=',True)])`) — `env['td.machine']._td_wo_intervals(wos_rc, d0, end)` (CM-03: стани `working`, `setup`,
    UTC naive, відкритий — до `now`); для решти РЦ — `mrp.workcenter.productivity` з `workorder_id`, `[date_start,
    date_end or now] ∩ [d0, end)`, стан `working` для `loss_type in ('productive','performance')`, інакше `setup`.
 3. Для кожного РЦ — елементарні сегменти між усіма межами інтервалів його завдань; у сегменті `[x, y)` з множиною
@@ -1208,7 +1208,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 6. Нерозподілене: `unallocated(p, D) = Σ_w pool_kwh(p, w) − Σ shared(p, D)` (усі рядки пулу, включно зі
    зафіксованими) — рядок `unallocated`; архівований пул — уся його енергія в `unallocated`.
 7. Накладні: вузли `alloc_role='overhead'` — рядок `overhead` з `delta(d0, end)` лічильника вузла за добу.
-8. Перерахунок доби (`_f3d_alloc_days`): обчислити всі рядки доби в пам'яті; для кожного ключа (M-07): є незафіксований
+8. Перерахунок доби (`_td_alloc_days`): обчислити всі рядки доби в пам'яті; для кожного ключа (M-07): є незафіксований
    рядок → `write`, немає → `create`; незафіксовані рядки доби, яких немає в новому наборі, → `unlink`; зафіксовані
    (`locked`) — не змінюються й не видаляються, але їхні завдання беруть участь у знаменнику п. 4.
 
@@ -1221,10 +1221,10 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 
 ### R-10 Енергія в собівартість МО (`mrp.production`, FR-10, A-10, A-11)
 
-1. Поля МО/завдань (M-11, M-12) оновлюються з рядків розподілу (кроном R-09 і `_f3d_energy_finalize`).
-2. **Фіксація** (`_cal_price` → `_f3d_energy_finalize`): перерахунок діб від першої хвилини інтервалів завдань МО до
+1. Поля МО/завдань (M-11, M-12) оновлюються з рядків розподілу (кроном R-09 і `_td_energy_finalize`).
+2. **Фіксація** (`_cal_price` → `_td_energy_finalize`): перерахунок діб від першої хвилини інтервалів завдань МО до
    `now` (R-09 п. 8) → усі рядки `direct`/`shared` завдань МО `locked=True`, `td_energy_locked=True`, чаттер МО.
-3. `_f3d_energy_apply_extra_cost`: якщо `costing_enabled` і `product_id.cost_method in ('fifo', 'average')` і
+3. `_td_energy_apply_extra_cost`: якщо `costing_enabled` і `product_id.cost_method in ('fifo', 'average')` і
    `qty > 0` (кількість у одиниці товару: `product_uom_id._compute_quantity(qty_producing, product_id.uom_id)`) і
    `td_energy_applied_unit == 0`: `unit = round(td_energy_cost / qty, 4)`; `extra_cost += unit`;
    `td_energy_applied_unit = unit`; чаттер «До Extra Unit Cost додано енергію: 27,8531 грн/од. (724,18 грн / 26 шт).»
@@ -1291,7 +1291,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 
 Свіжість сигналу АВР: `status ≠ stale` і `now − last_ts ≤ ats_fresh_factor × period_s` (3 × 5 = 15 с).
 
-1. Похідні (у M-15 після `super()`): у пакеті є `infra/ats/src1_state` → `_f3d_ingest([{code: infra/ats/src1_ok, ts: ts
+1. Похідні (у M-15 після `super()`): у пакеті є `infra/ats/src1_state` → `_td_ingest([{code: infra/ats/src1_ok, ts: ts
    пакета, value: 1 якщо text == 'available' інакше 0}])`; те саме для `src2`.
 2. `grid_ok`: `src1_state` свіжий → `== 'available'`; інакше `position` свіжий → `== 2`; інакше за вводами: обидва
    `energy/cells/Q*/p_now` і `i_now` свіжі й `|P| < 1 кВт`, `I < 1 А` → `False`; інакше `True`.
@@ -1435,7 +1435,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 
 1. Рядки `locked` не змінюються ні кроном, ні майстром; МО з `td_energy_locked` не перераховується (кнопка
    прихована).
-2. Майстер M-19 — до 31 доби; інтервали — `_f3d_rebuild` (upsert), розподіл — R-09 п. 8.
+2. Майстер M-19 — до 31 доби; інтервали — `_td_rebuild` (upsert), розподіл — R-09 п. 8.
 3. Зміна тарифу заднім числом → перерахунок інтервалів і незафіксованого розподілу майстром (не автоматично).
 
 ## 10. Стани й переходи
@@ -1487,7 +1487,7 @@ CT-10, і telemetry рахує статус і заявки.
 7. **machine_connect встановлено, але РЦ не підключено** — журнал часу (R-08 п. 2).
 8. **Виняток у кроні** — `_logger.exception`, прогін завершується, наступний повторює (ідемпотентні upsert); джерело
    `EN-DERIVED` → `state='error'`, `last_error` (R-21 п. 4).
-9. **Виняток в обробнику `_f3d_ingest`** — `savepoint`, лог, пакет telemetry не відкочується (M-15).
+9. **Виняток в обробнику `_td_ingest`** — `savepoint`, лог, пакет telemetry не відкочується (M-15).
 10. **МО закривають до побудови останнього слоту** — розподіл фіксується з даними до `now` (лічильники РЦ — з показань,
     не зі слотів); залишок слоту — іншим завданням або `unallocated` (R-09 п. 6).
 11. **Часові пояси** — R-20; `ts` з колектора — UTC; DST.
@@ -1506,13 +1506,13 @@ CT-10, і telemetry рахує статус і заявки.
 |---|---|---|---|
 | AC-01 | FR-01 | Given установка на чисту базу; Then 123 `td.energy.node`: `input` 1, `substation` 1, `transformer` 2, `switchboard` 1, `section` 2, `cell` 11, `line` 6, `tapoff` 36, `consumer` 49, `generator` 12, `storage` 1, `ats` 1; `QF-1.parent_id=SEC-2`, `BW-1.parent_id=QF-1`, `SAW-1.parent_id=TAP-SAW-1`, `TAP-SAW-1.parent_id=BW-1`, `COMPRESSOR.parent_id=C1`, `QS.peer_id=SEC-2`, усі 11 шаф `cabinet_id=SWB-1`; `section` SAW-1 = 2, SAND-1 = 1 | UT |
 | AC-02 | FR-01 | Given вузол; When `code='saw-1'` / `parent_id` = власний нащадок / `alloc_role='direct'` без РЦ / `alloc_role='shared'` без пулу / пул при ролі `direct` / `cell` без `cell_type` / `section=3`; Then `ValidationError` з текстом §2 M-01; другий вузол з тим самим РЦ → `IntegrityError` | UT |
-| AC-03 | FR-01 | Given мережа з даних; Then `search([('id','child_of',QF-1)])` містить BW-1, 7 відгалужень, 7 споживачів (SAW-1, SAW-2, EDGE-1, EDGE-2, CNC-1, CNC-2, SORT-1); Σ `p_inst_kw` споживачів = 1 201,0 ± 0,1; `QF-3._f3d_descendant_meters()` — рівно 8 лічильників споживачів BW-3 (SAND-1, AUTOSPRAY-1, UV-1, HINGE-1, GLUE-1, PRESS-1, SPRAY-1, DRY-1); власний PM-QF-3 не входить | UT |
+| AC-03 | FR-01 | Given мережа з даних; Then `search([('id','child_of',QF-1)])` містить BW-1, 7 відгалужень, 7 споживачів (SAW-1, SAW-2, EDGE-1, EDGE-2, CNC-1, CNC-2, SORT-1); Σ `p_inst_kw` споживачів = 1 201,0 ± 0,1; `QF-3._td_descendant_meters()` — рівно 8 лічильників споживачів BW-3 (SAND-1, AUTOSPRAY-1, UV-1, HINGE-1, GLUE-1, PRESS-1, SPRAY-1, DRY-1); власний PM-QF-3 не входить | UT |
 | AC-04 | FR-01, CE-04 | Then `is_critical=True` рівно в 10 вузлах: LP-1, LP-2, LP-3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG, BW-1 | UT |
 | AC-05 | FR-02 | Then 67 `td.energy.meter`: `pm5560` 57 (`incomer` 2, `feeder` 6, `consumer` 49), `sun2000` 8, `luna2000` 1, `tedom` 1; `PM-Q1.e_export_signal_id.code='energy/cells/Q1/kwh_export'`; `PM-SAW-1.e_import_signal_id.code='energy/consumers/SAW-1/kwh_total'`, `p_signal_id.code='energy/consumers/SAW-1/p_now'`, `max_kw=48`; `LUNA-1.e_export_signal_id.code='infra/bess/kwh_discharge_total'` | UT |
 | AC-06 | FR-02 | When лічильнику ставлять `e_import_signal_id` з `kind='gauge'` або одиницею `кВт`; Then `ValidationError` «…має бути накопичувальним (counter)» / «…в кВт·год» | UT |
-| AC-07 | FR-05 | Given тариф «День» 07–23 9,60 / «Ніч» 23–07 4,80 (усі дні); When `_f3d_price_at` для місцевих 22:45, 23:00, 06:45, 07:00 (12.10.2026); Then 9,60 / 4,80 / 4,80 / 9,60, зони відповідні; демо-тариф → 8,40 «Цілодобова» для будь-якого часу | UT |
+| AC-07 | FR-05 | Given тариф «День» 07–23 9,60 / «Ніч» 23–07 4,80 (усі дні); When `_td_price_at` для місцевих 22:45, 23:00, 06:45, 07:00 (12.10.2026); Then 9,60 / 4,80 / 4,80 / 9,60, зони відповідні; демо-тариф → 8,40 «Цілодобова» для будь-якого часу | UT |
 | AC-08 | FR-05 | When зберегти тариф із зонами без неділі; Then `ValidationError` «Зони тарифу «…»: нд о 00:00 не покрито»; дві зони на ту саму годину → «…покрито двічі (День, Пік)»; `hour_from=hour_to` → «…нульову тривалість»; `weekdays='0089'` → помилка формату | UT |
-| AC-09 | FR-05 | Given активний тариф 2026-01-01…∞; When другий активний з 2026-06-01; Then `ValidationError` «Період тарифу перетинається…»; з `date_to=2026-05-31` у першого — дозволено, `_f3d_tariff_at(2026-07-01)` → другий | UT |
+| AC-09 | FR-05 | Given активний тариф 2026-01-01…∞; When другий активний з 2026-06-01; Then `ValidationError` «Період тарифу перетинається…»; з `date_to=2026-05-31` у першого — дозволено, `_td_tariff_at(2026-07-01)` → другий | UT |
 | AC-10 | FR-05, FR-12 | Given демо-тариф; When `contract_kw=900`, `peak_warn_pct=90`; Then сигнал `energy/totals/grid15_kw`: `warn_high=810`, `alarm_high=900`, обидва `*_on=True`, `alarm_title` за R-12 п. 1 | UT |
 | AC-11 | FR-05 | Given тарифів немає; When R-04 будує слот; Then `price=0`, `cost=0`, `zone_id=False`, одна подія `warn` «Немає чинного тарифу на 12.10.2026» за добу (другий слот подій не додає) | UT |
 | AC-12 | FR-24 | Given чиста база (telemetry встановлено, рівня 0 немає); When `post_init_hook`; Then звіт: `nodes: 123`, `sources: 68`, `meters: 67`, `pools: 5`, `signals.created: 297`, `signals.updated: 0`, `unmatched_equipment: 80`, `direct_without_wc: 35`, `state='partial'`; сигнали `energy/transformers/T1/temp_c` з джерелом `MB-U96-RTD1` і адресою telemetry | UT |
@@ -1522,7 +1522,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-16 | FR-04, FR-27 | R-03 рядок 2: (10:00, 500), (10:40, 520); Then `Ec(10:15)=507,5`, якість `interpolated`; з `gap_max_s=3600` — `measured` | UT |
 | AC-17 | FR-27 | R-03 рядки 3–4: скидання з нуля → `c=12 346,190`, `reset`; заміна (2 000) → `c=12 345,678`; рядок 5 (−0,4) → без скидання | UT |
 | AC-18 | FR-04 | Then `delta(a, b)` з будь-яким `None` → `(None, 'missing')`; порядок якостей `missing > reset > interpolated > measured` | UT |
-| AC-19 | FR-04 | Given показань у `td.reading` за вікно немає, але є інтервали лічильника з `e_start/e_end`; When `_f3d_counter_series`; Then ряд з інтервалів, `delta` на межах 15 хв точний, усередині — `interpolated` | UT |
+| AC-19 | FR-04 | Given показань у `td.reading` за вікно немає, але є інтервали лічильника з `e_start/e_end`; When `_td_counter_series`; Then ряд з інтервалів, `delta` на межах 15 хв точний, усередині — `interpolated` | UT |
 | AC-20 | FR-27 | Given профіль будується зі скиданням; Then `counter_offset` лічильника = `c − v` після скидання, одна подія `meter` `warn` «Лічильник PM-SAW-T: скидання показника 12 345,678 → 0,512 кВт·год» | UT |
 | AC-21 | FR-04 | Given PM-SAW-T з рядом `Ec(01:30)=998,808`, `Ec(01:45)=1001,980` і демо-тариф; When `_cron_build`; Then інтервал `ts_start=01:30`: `kwh=3,172`, `kw_avg=12,69`, `price=8,40`, `cost=26,64`, `quality='measured'`, `day=2026-10-12`, `hour_local=4`; повторний прогін — той самий рядок (`ON CONFLICT`), кількість рядків незмінна | UT |
 | AC-22 | FR-04 | Given остання точка 10:00, `now=10:30`; When прогін; Then слоти після 10:00 не будуються; `now=16:30` (`max_wait_h=6`) → слоти 10:00…16:00 `missing`, `kwh=0`; потім точка (16:40, +20 кВт·год) і прогін → ці слоти перебудовано `interpolated`, Σ `kwh` = 20,000 ± 0,001 | UT |
@@ -1536,15 +1536,15 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-30 | FR-07 | Given інтервали за годину за таблицею R-07; When `_cron_balance`; Then Q1 `ok` (diff 0), Q2 `ok` (expected −376,7), BW-1 110,5/106,9 → `deviation`, `diff_pct=3,26`; 109,0 → `ok` 1,93; C1 1,5/0,2 → `ok`; подія «Небаланс обліку BW-1: 3,26 % …» | UT |
 | AC-31 | FR-07 | Given слот споживача лінії `missing` → `skipped`, `reason` містить код лічильника; година з відключенням → `skipped` «відключення мережі»; `imbalance_pct` для `skipped` не пишеться | UT |
 | AC-32 | FR-07, FR-12 | Given BW-1 `deviation` 3,26 % і 5,4 % у дві години поспіль; Then сигнал `energy/lines/BW-1/imbalance_pct` `ok` після першої (утримання `min_duration_s=3600` рахується від першого показання, `warn` ще немає, заявки немає), `alarm` після другої (за логікою telemetry), одна заявка з назвою, що починається з «Небаланс обліку QF-1: 5,4» (шаблон R-07 п. 3, `decimals=2`), на обладнанні QF-1 | UT |
-| AC-33 | FR-12, FR-13 | Given сигнал `energy/transformers/T1/s_kva` (`warn_high=900`, `alarm_high=1000`); When показання 950, 1 020, 880 через `_f3d_ingest`; Then події `warn`, `bad`, `info` з текстами R-13 п. 1; заявка «Перевантаження трансформатора T1: 1020 кВА при номіналі 1000» (telemetry R-05) | UT |
+| AC-33 | FR-12, FR-13 | Given сигнал `energy/transformers/T1/s_kva` (`warn_high=900`, `alarm_high=1000`); When показання 950, 1 020, 880 через `_td_ingest`; Then події `warn`, `bad`, `info` з текстами R-13 п. 1; заявка «Перевантаження трансформатора T1: 1020 кВА при номіналі 1000» (telemetry R-05) | UT |
 | AC-34 | FR-12 | Given демо-тариф 800 кВт; When `grid15_kw` = 812,4; Then заявка «Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт» на SWB-1, енергетики (`group_td_energy_manager`) — підписники заявки (M-17) | UT |
 | AC-35 | FR-12 | Given фазні струми 171/180/168 і 140/180/150 на QF-T; When `_cron_live` о хвилині, кратній 5; Then `i_unbal_pct` = 4,05 і 14,89 (`warn`); `I_avg=3` А → не пишеться | UT |
 | AC-36 | FR-13 | Then: (а) `pfc_q_now` PFC-T 50 → 100 → подія «Компенсація секції 1: увімкнено ще один ступінь 50 квар, cos φ 0,97.»; повтор за 10 хв — без нової; (б) `workcenters/CNC-T/machine_state` → `fault`, `p_now` 0,7 → «CNC-T: аварійна зупинка, споживання впало до 0,7 кВт.»; (в) перший прогін після півночі → «Пік 15-хвилинної потужності за 12.10: 654 кВт о 09:15; ліміт договірної потужності (800 кВт) не перевищено.» | UT |
-| AC-37 | FR-08 | Given WO SAW-T з журналом часу 01:36–02:54 і ряд AC-15; When `_f3d_alloc_days([12.10])`; Then рядок `direct` `kwh=17,160`, `minutes=78,0`, `cost=144,14`, `quality='measured'`; `wo.td_energy_direct_kwh=17,160` | UT |
+| AC-37 | FR-08 | Given WO SAW-T з журналом часу 01:36–02:54 і ряд AC-15; When `_td_alloc_days([12.10])`; Then рядок `direct` `kwh=17,160`, `minutes=78,0`, `cost=144,14`, `quality='measured'`; `wo.td_energy_direct_kwh=17,160` | UT |
 | AC-38 | FR-08 | Given 5 WO МО-231-Т (SAW-T 78 хв, EDGE-T 63, CNC-T 74, SORT-T 29, ASMLINE-T 95; `p_inst`/`load_factor` = макет) без лічильників; Then прямі 17,160 / 46,069 / 13,567 / 4,350 / 5,067, `quality='estimate'`; МО `td_energy_kwh=86,213`, `td_energy_cost=724,18`, `td_energy_state='estimate'` | UT |
 | AC-39 | FR-08 | Given два WO на одному РЦ 10:00–10:20, лічильник +4,0; Then по 2,000 кВт·год і 20,0 хв | UT |
 | AC-40 | FR-08 | Given лічильник SAW-T за добу +30,0, прямі 17,160; Then рядок `idle` SAW-T 12,840 | UT |
-| AC-41 | FR-08, A-05 | Given патч `_f3d_machine_intervals` повертає для WO `[(06:55:00, 07:25:48, 'working')]` і лічильник 12,18 кВт; Then `direct` 6,253 ± 0,005 кВт·год, `minutes=30,8`; журнал часу WO (інший) ігнорується для підключеного РЦ | UT |
+| AC-41 | FR-08, A-05 | Given патч `_td_machine_intervals` повертає для WO `[(06:55:00, 07:25:48, 'working')]` і лічильник 12,18 кВт; Then `direct` 6,253 ± 0,005 кВт·год, `minutes=30,8`; журнал часу WO (інший) ігнорується для підключеного РЦ | UT |
 | AC-42 | FR-09 | R-09 рядок 1 (слот 02:45–03:00, POOL-DUST-T `kwh`); Then `shared` SAW-T 5,868 / 49,29 грн, EDGE-T 26,007 / 218,46 | UT |
 | AC-43 | FR-09 | R-09 рядок 2 (POOL-LIGHT-T `time`); Then 2,486 / 3,314 | UT |
 | AC-44 | FR-09 | Given нічний слот без завдань (DUST 2,0) і BOILER-T за добу 240,0; Then `unallocated` POOL-DUST-T 2,0 (+ інші слоти), `overhead` BOILER-T 240,0; Σ `shared` + `unallocated` = Σ `delta` DUST-T за добу (± 0,003) | UT |
@@ -1558,7 +1558,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-52 | FR-10, FR-16 | Given AC-38; When провайдер `energy` на payload з `productions=[{"name": МО-231-Т…}]` для користувача з `group_td_energy_cost`; Then `energy_kwh=86.2`, `energy_cost=724`, `energy_quality='estimate'` | UT |
 | AC-53 | FR-08 | Given копія демо; When крон розподілу за 12.10; Then `WH/MO/00231`: WO00001…WO00004 прямі 17,160 / 46,069 / 13,567 / 4,350 (`estimate`), WO00005 = 8 × 0,4 × хв/60 до `now` | TC |
 | AC-54 | FR-22 | Given майстер (`mrp.group_mrp_user`, без `group_td_energy_cost`); When `read` МО полів `td_energy_kwh`, `td_energy_cost`; Then kWh повертається, `td_energy_cost` → `AccessError`; у формі вкладка «Енергія» без групи «Вартість» | UT |
-| AC-55 | FR-14, CE-02 | When `_f3d_ingest([{infra/ats/src1_state, ts=T, text='available'}])`; Then `infra/ats/src1_ok` `last_value=1`, `last_ts=T`; `text='under'` → 0; `position` `pos_II` → `last_value=3`, `last_text='pos_II'` | UT |
+| AC-55 | FR-14, CE-02 | When `_td_ingest([{infra/ats/src1_state, ts=T, text='available'}])`; Then `infra/ats/src1_ok` `last_value=1`, `last_ts=T`; `text='under'` → 0; `position` `pos_II` → `last_value=3`, `last_text='pos_II'` | UT |
 | AC-56 | FR-14 | Given мережа, `mode='remote'`; When послідовно `src1_state=under` (T), `position=pos_II` (T+14 с), `src1_state=available` (T+600), `position=pos_I` (T+660); Then одне відключення: `amf_master='hgm'`, `transfer_s=14`, `return_s=60`, `duration_min=11,0`, `state='closed'`; події «Зникла напруга мережі…», «АВР: переключено на генератор за 14 с.», «Мережу відновлено… через 60 с; відключення тривало 11 хв.» | UT |
 | AC-57 | FR-14 | Given `mode='auto'`, відключення відкрите, `gen_start=on` о T, `src2_state=under` до T+40 с, `ats_fail_start_s=35`; Then `infra/ats/fail_start=1` (заявка «АВР: генератор не запустився (FAIL START)» на ATS-1), `outage.fail_start=True`, подія `bad`; `src2_state=available` → `fail_start=0` | UT |
 | AC-58 | FR-14 | Given `mode='remote'` (варіант A), `gen_start` не змінюється 60 с; Then `fail_start` не встановлюється; `amf_master='hgm'` | UT |
@@ -1571,10 +1571,10 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-65 | FR-16, FR-22 | Given `ctx.kiosk=True` або користувач без `group_td_energy_cost`; Then `totals.cost_today` і `productions[].energy_cost` відсутні, `energy_kwh` присутній | UT |
 | AC-66 | FR-16 | Then `workcenters['SAW-1'].energy == {"p_now": 12.18, "line": "BW-1"}` | UT |
 | AC-67 | FR-17 | Given макетні сигнали (pv 468 = 8 × 58,5, chp 400, bess +200, soc 76,1 %, Q1 334,7, Q2 −376,7); When `build_infra`; Then `totals.export_kw=42`, `grid_kw=0`, `bess_mode='charge'`, `critical_kw=348`, `n_modules=1552`; `cards['BESS'].rows` містить `["Зараз", "заряджається 200 кВт (надлишок СЕС і КГУ)"]` і `["Тримає критичні", "≈ 51 хв"]`; `cards['PV-INV'].rows` `["Стан", "усі в мережі"]`; картки `WATER`, `SERVER` незмінні | UT |
-| AC-68 | FR-18, A-22 | Given `patch['infra']={'totals': {'genset_kw': 348}}` від іншого провайдера; When `_f3d_viewer_delta` провайдера `infra`; Then `patch['infra']['totals']` має і `genset_kw`, і `export_kw` | UT |
-| AC-69 | FR-16, A-04 | Then моделі `td.viewer.provider.energy` (`_f3d_sequence=100`, `_f3d_sections=('energy',)`) і `.infra` (150, `('infra',)`) є в реєстрі без `td_viewer3d`; `_inherit` порожній; виклик `_f3d_viewer_collect({}, ctx)` без viewer не падає | UT |
+| AC-68 | FR-18, A-22 | Given `patch['infra']={'totals': {'genset_kw': 348}}` від іншого провайдера; When `_td_viewer_delta` провайдера `infra`; Then `patch['infra']['totals']` має і `genset_kw`, і `export_kw` | UT |
+| AC-69 | FR-16, A-04 | Then моделі `td.viewer.provider.energy` (`_td_sequence=100`, `_td_sections=('energy',)`) і `.infra` (150, `('infra',)`) є в реєстрі без `td_viewer3d`; `_inherit` порожній; виклик `_td_viewer_collect({}, ctx)` без viewer не падає | UT |
 | AC-70 | FR-03, A-06 | Then адреси: `energy/consumers/SAW-1/p_now` = `{"fc":3,"addr":3059,"type":"f32",…}` на джерелі `MB-U11-PM-SAW-1` (`params.unit=11`); `…/kwh_total` = `addr 3203`, `i64`, `scale 0.001`; `infra/pv/PV-INV-3/p_kw` = `addr 32080`, `i32`, `0.001` на `MB-U63-SUN-3`; `infra/ats/position` = `addr 20483`, `kind='state'`, `states` 4; `infra/chp/state` `addr 40000`; усі 220 адрес проходять `tools.address.validate_address('modbus_tcp', …)` telemetry без помилок | UT |
-| AC-71 | FR-03, FR-11 | Then 49 сигналів `…/kwh_shift`: `source_id=EN-DERIVED`, `derived_from_id` = `…/kwh_total` того самого споживача; `EN-DERIVED.type='f3d_energy'`, `collector_id` порожній, тип у `_f3d_local_types()` | UT |
+| AC-71 | FR-03, FR-11 | Then 49 сигналів `…/kwh_shift`: `source_id=EN-DERIVED`, `derived_from_id` = `…/kwh_total` того самого споживача; `EN-DERIVED.type='f3d_energy'`, `collector_id` порожній, тип у `_td_local_types()` | UT |
 | AC-72 | FR-03 | Given сигнал `energy/transformers/T1/temp_c` існує з адресою telemetry; When хук; Then адреса й джерело незмінні, `warn_high=130`, `alarm_high=140`, `hysteresis=2`, `min_duration_s=60` (відповідь № 24) | UT |
 | AC-73 | FR-03 | When telemetry API-01 `GET /f3d/telemetry/config` колектора `COL-MAIN`; Then у `sources` 68 джерел `MB-U*` енергетики з 220 сигналами, `EN-DERIVED` відсутнє | TC |
 | AC-74 | FR-24 | When `uninstall_hook(env)`; Then параметрів `td.energy.*` немає; сигнали з CSV без `source_id`; створені модулем — `active=False`; 87 мігрованих — активні; джерела `MB-U*` — `active=False` | UT |
@@ -1590,7 +1590,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-84 | FR-25 | Given інтервали 401 доби тому і події 91 доби тому; When ротація; Then видалені; `td.energy.alloc` і відключення — ні | UT |
 | AC-85 | FR-26 | Given майстер за 32 доби → `UserError`; майстер (енергетик) за 1 добу `both` → інтервали перебудовано, `result` містить кількості; користувач без групи → `AccessError` | UT |
 | AC-86 | FR-28 | Given інтервали фідерів за 12.10 до 10:30; Then `profile` 24 елементи, години 11…23 — `None`, поточна година часткова; `peak_kw`/`peak_time` = максимум `load15` і його місцевий початок; < 3 робочих днів історії → `typical` статики | UT |
-| AC-87 | FR-29 | Then `meter._f3d_kwh(01:36, 02:54)` = `(17.16, 'measured')`; `_f3d_kwh_by_code('NOPE', …)` = `(0.0, 'missing')`; `date_from ≥ date_to` → `ValueError` | UT |
+| AC-87 | FR-29 | Then `meter._td_kwh(01:36, 02:54)` = `(17.16, 'measured')`; `_td_kwh_by_code('NOPE', …)` = `(0.0, 'missing')`; `date_from ≥ date_to` → `ValueError` | UT |
 | AC-88 | FR-08, FR-09 | ТК-03 `shift`: МО на SAW-1, NEST-1, EDGE-1 — після закриття `td_energy_direct_kwh` кожного WO = ∫ потужності емулятора за інтервалом ± 3 %, `quality='measured'`; спільні > 0 для `POOL-DUST`, `POOL-AIR`, `POOL-LIGHT` | TC |
 | AC-89 | FR-14, FR-15 | ТК-05 `blackout` (варіант A): відключення з `transfer_s` 10…35 с, `shed_kw` 278 ± 30, `bess_mode='discharge'` під час пуску, у payload `infra.totals.grid_kw=0`, міст — `island=true` | TC |
 | AC-90 | FR-06, FR-17 | ТК-07 експорт СЕС у полудень: `infra.totals.export_kw > 0`, `grid_kw=0`, `bess_kw ≤ 200`, `pv_now = Σ інверторів ± 1 кВт`, `kwh_export` PM-Q2 росте | TC |
@@ -1622,10 +1622,10 @@ CT-10, і telemetry рахує статус і заявки.
   `action_confirm()`; журнал часу — `env['mrp.workcenter.productivity'].create({'workcenter_id', 'workorder_id',
   'loss_id': env.ref('mrp.block_reason7').id, 'date_start', 'date_end'})` (продуктивна втрата демо — `block_reason7`;
   тест знаходить її як `search([('loss_type','=','productive')], limit=1)`);
-- хелпери: `ingest(code, points)` → `env['td.signal']._f3d_ingest([{"code", "ts": t, "value": v} …], src='module')`;
+- хелпери: `ingest(code, points)` → `env['td.signal']._td_ingest([{"code", "ts": t, "value": v} …], src='module')`;
   `ramp(code, t0, t1, kw, start=1000.0, step_s=60)` — точки накопичувального лічильника з постійною потужністю;
   `states(code, [(t, text)])`; `log(wo, start, end)`; `patch_machine(intervals)` — `unittest.mock.patch.object(
-  type(env['td.energy.alloc']), '_f3d_machine_intervals', return_value=intervals)` (метод M-07, обгортка над CM-03);
+  type(env['td.energy.alloc']), '_td_machine_intervals', return_value=intervals)` (метод M-07, обгортка над CM-03);
   `patch_viewer()` — фейкова модель шини не потрібна: `_notify` викликається лише за наявності моделі;
   `users`: `u_master` (`mrp.group_mrp_user`), `u_account` (`account.group_account_readonly`), `u_energy`
   (`group_td_energy_manager`), `u_viewer` (`group_td_user`), `u_admin` (`group_td_admin`).
@@ -1702,9 +1702,9 @@ genset_relay` + колектор telemetry (`COL-MAIN`, токен) + копія
 | ТП | Обсяг | Межа |
 |---|---|---|
 | ТП-01 | `_cron_build`: 67 лічильників × 2 доби (`td.reading` 57 × 2 880 + 10 × 576 точок) | ≤ 30 с, ≤ 200 SQL-запитів |
-| ТП-02 | `_f3d_alloc_days` доби: 35 РЦ, 200 інтервалів завдань, 8 лічильників пулів | ≤ 5 с |
+| ТП-02 | `_td_alloc_days` доби: 35 РЦ, 200 інтервалів завдань, 8 лічильників пулів | ≤ 5 с |
 | ТП-03 | `build_energy` + `build_infra` на повних даних | ≤ 200 мс (UT, `time.perf_counter`) |
-| ТП-04 | `_f3d_ingest` пакет 1 000 показань (500 енергетики) з перевизначенням M-15 vs без | приріст ≤ 15 % |
+| ТП-04 | `_td_ingest` пакет 1 000 показань (500 енергетики) з перевизначенням M-15 vs без | приріст ≤ 15 % |
 | ТП-05 | ротація 2,6 М рядків `td_energy_interval` (`generate_series`) | ≤ 60 с за прогін, `EXPLAIN` — Index Scan за `ts_start` |
 | ТП-06 | `read_group` профілю за рік (pivot «Пік і вартість», 400 діб) | ≤ 3 с |
 

@@ -8,7 +8,7 @@ X-27 (`machine_state` — `viewer_visible=False`, CM-02), X-32 (пункт «Н�
 Налаштування», sequence 40: §1.2, FR-31), X-57 (тіла запуску сценаріїв у ТК SPEC), X-76 (`equipment/CUTOPT/cmd` і
 `equipment/GANTRY-1/stacks` у каталозі iot_sim — `protocol=none`, §2.4); §5.1 — закрито Q-09 (X-03), Q-16 (X-52; CM-06 —
 повний перелік ключів-розширень), Q-17 (X-38), Q-15 (X-34, X-38, X-43; A-19, A-28 — узгоджено; X-92 — менеджер).
-X-93: створення команд — `td.command._f3d_mc_create_command` (SPEC M-20), `tools/commands.py` = `cmdtext.py` без
+X-93: створення команд — `td.command._td_mc_create_command` (SPEC M-20), `tools/commands.py` = `cmdtext.py` без
 імпортів Odoo (§6 W0).
 Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §1 принцип, §3 `td_machine_connect ← td_telemetry,
 mrp_workorder`, §4 топологія, §5 конвенції й стоп-крани, §6.4 телеметрія, §6.5 плагіни `opcua` і `woodstore`,
@@ -18,7 +18,7 @@ D-11, §9 питання 2). Специфікація: `docs/modules/td_machine_
 `td_capacity` — стоси `PLT-*`), CB-07/CB-08 (паспорти, `get_num`), CB-09 (меню, sequence 40; пункт налаштувань під
 `menu_td_config` — X-32), CB-10 (групи,
 `td.base.environment`), Додаток B base (коди операторів `OP-<РЦ>`); `td_telemetry` CT-01…CT-12
-(моделі, інтерфейс плагіна CT-02, схеми адрес CT-03 / Додаток A, API-01…07, правило заявок CT-05, `_f3d_ingest`
+(моделі, інтерфейс плагіна CT-02, схеми адрес CT-03 / Додаток A, API-01…07, правило заявок CT-05, `_td_ingest`
 CT-10, імпорт каталогу CT-11, локальні джерела CT-12, хук `td.push.handler` CT-08); `td_viewer3d` M-01
 (провайдер), M-03 (шина), API-03 (дельта), Додаток A.4/A.5/A.10/A.14; telemetry 19.0.1.1.0 — M-06 `td.command.payload`,
 `SourcePlugin.call` (CR-01, X-03); «документацію вендора» `td_iot_sim`
@@ -135,8 +135,8 @@ Failure» на CNC-2 з 09:42 (опис «MR/00031»). Причин втрат 9
 | FR-30 | Міграція демо: 73 закриті простої й відкрита аварія CNC-2 стають простоями `td.downtime` без створення нових записів журналу часу; виправлення категорії двох демо-причин; прив'язка MR/00031; повторний запуск нічого не дублює. |
 | FR-31 | Меню «Завод 3D → Верстати» (`sequence=40`): Огляд, Простої, OEE, Журнал станів, Портал (стоси, завдання), Карти розкрою, Деталі виробів, Налаштування (довідники); пункт параметрів модуля «Налаштування верстатів» (`res.config.settings`) — під «Завод 3D → Налаштування» (`td_factory3d.menu_td_config`, `sequence=40`, X-32). |
 | FR-32 | Права: читання — `group_td_user`; причини — `mrp.group_mrp_user`; підтвердження, неповні партії — `mrp.group_mrp_manager`; налаштування верстатів, карти розкрою, деталі — `group_td_manager`; стоп-крани — `group_td_admin`; розбіжності стосів — `stock.group_stock_manager`. |
-| FR-33 | Провайдер переглядача `td.viewer.provider.machines` (`_f3d_sequence=75`) доповнює `workcenters[код]` живим станом, OEE (A×P×Q), поточним простоєм і лічильником, `equipment["GANTRY-1"]` — станом порталу, `locations["PLT-*"]` — залишком порталу, `productions[]` — картою розкрою й завданням порталу, `sheet_chain` — завданнями порталу; не дублює полів вбудованих провайдерів. |
-| FR-34 | Контракт для energy: інтервали роботи й налагодження кожного завдання (`_f3d_wo_intervals`) і хвилини роботи/налагодження на `mrp.workorder`. |
+| FR-33 | Провайдер переглядача `td.viewer.provider.machines` (`_td_sequence=75`) доповнює `workcenters[код]` живим станом, OEE (A×P×Q), поточним простоєм і лічильником, `equipment["GANTRY-1"]` — станом порталу, `locations["PLT-*"]` — залишком порталу, `productions[]` — картою розкрою й завданням порталу, `sheet_chain` — завданнями порталу; не дублює полів вбудованих провайдерів. |
+| FR-34 | Контракт для energy: інтервали роботи й налагодження кожного завдання (`_td_wo_intervals`) і хвилини роботи/налагодження на `mrp.workorder`. |
 | FR-35 | API-01 `GET /f3d/machine/cutmap/<id>/export` віддає колектору CSV карти розкрою лише з токеном колектора й одноразовим токеном карти (TTL 10 хв). |
 | FR-36 | Крони: такт верстатів (1 хв: мікрозупинки, автопауза, автозавершення, межі зміни, «працює без завдання»), OEE (5 хв), портал (1 хв: звірка, відправка, поповнення), карти розкрою (1 хв: статус оптимізації), ротація (щодня). |
 
@@ -175,7 +175,7 @@ Failure» на CNC-2 з 09:42 (опис «MR/00031»). Причин втрат 9
 (групи, `td.base.environment` для умовчань стоп-кранів), Додаток B base (оператор `OP-<код>`);
 telemetry CT-01 (моделі), CT-02 (інтерфейс плагіна, entry points, `call()` — CR-01), CT-03/Додаток A (`opcua`: `nodeid`, `mode`,
 `sampling_ms`, `map`; `rest_vendor`: `method`, `path`, `json_path`, `query`, `map`; `modbus_tcp` для ADAM), CT-04
-(API-01…07 — колектор), CT-05 (заявки з тривог), CT-08 (`td.push.handler`), CT-10 (`_f3d_ingest`), CT-12
+(API-01…07 — колектор), CT-05 (заявки з тривог), CT-08 (`td.push.handler`), CT-10 (`_td_ingest`), CT-12
 (локальний тип джерела для обчислених станів), M-06 (`td.command` — канал команд; з 19.0.1.1.0 — `payload`/`result_data`,
 CR-01, X-03), M-11 (маршрути подій);
 viewer M-01 (контракт провайдера), M-03 (`_notify`), Додаток A.4, A.5, A.10, A.14; iot_sim P-01…P-04 (адреси,
@@ -187,9 +187,9 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 |---|---|---|
 | CM-01 | Моделі `td.machine` (M-01), `td.machine.state.log` (M-02), `td.downtime` (M-03), `td.machine.event` (M-04), `td.machine.message` (M-05), `td.oee.shift` (M-06), `td.gantry.stack` (M-07), `td.gantry.job` (M-08), `td.cut.part` (M-09), `td.cut.map` (M-10), `td.cut.map.line` (M-11) з іменами полів SPEC §2 | energy, viewer, звіти |
 | CM-02 | Нормалізовані стани верстата `working\|setup\|idle\|fault\|off\|nodata` (R-01) і часовий ряд у телеметрії — сигнал `workcenters/<код>/machine_state` (`kind='state'`, `states` = 6 значень, джерело `MC-DERIVED` локального типу `td_machine`, CT-12; `viewer_visible=False` — у payload переглядача `machine_state` ставить провайдер CM-05, X-27) | energy, viewer, звіти, bms (освітлення за роботою верстатів — за потреби) |
-| CM-03 | Енергія на завдання: `env['td.machine']._f3d_wo_intervals(workorders, date_from=None, date_to=None) -> dict[int, list[tuple[datetime, datetime, str]]]` (UTC naive, стани `working` і `setup`, обрізані вікном) і збережені `mrp.workorder.td_run_min`, `td_setup_min`; інтервали без завдання — `_f3d_wc_intervals(workcenter, date_from, date_to)` | `td_energy` (кВт·год і вартість на завдання/МО = ∫ `energy/consumers/<код>/p_now` по інтервалах) |
-| CM-04 | OEE: `td.oee.shift` (поля `availability`, `performance`, `quality`, `oee`, хвилини за категоріями, `coverage`) і метод `td.machine._f3d_oee(date_from, date_to) -> dict` (R-13) | viewer, energy (питома енергія на придатну деталь — за потреби), звіти |
-| CM-05 | Провайдер переглядача `td.viewer.provider.machines` (`_f3d_sequence=75`, `_f3d_sections=()`): додаткові ключі `workcenters[код].machine_state/state_since/availability/performance/quality/downtime/pieces_shift/link/online`, перекриття `oee` і `status` (R-25); `equipment["GANTRY-1"].gantry`; `locations["PLT-*"].gantry`; `productions[].cut_map`, `productions[].supply.gantry`; `sheet_chain.steps[4].stock` | viewer |
+| CM-03 | Енергія на завдання: `env['td.machine']._td_wo_intervals(workorders, date_from=None, date_to=None) -> dict[int, list[tuple[datetime, datetime, str]]]` (UTC naive, стани `working` і `setup`, обрізані вікном) і збережені `mrp.workorder.td_run_min`, `td_setup_min`; інтервали без завдання — `_td_wc_intervals(workcenter, date_from, date_to)` | `td_energy` (кВт·год і вартість на завдання/МО = ∫ `energy/consumers/<код>/p_now` по інтервалах) |
+| CM-04 | OEE: `td.oee.shift` (поля `availability`, `performance`, `quality`, `oee`, хвилини за категоріями, `coverage`) і метод `td.machine._td_oee(date_from, date_to) -> dict` (R-13) | viewer, energy (питома енергія на придатну деталь — за потреби), звіти |
+| CM-05 | Провайдер переглядача `td.viewer.provider.machines` (`_td_sequence=75`, `_td_sections=()`): додаткові ключі `workcenters[код].machine_state/state_since/availability/performance/quality/downtime/pieces_shift/link/online`, перекриття `oee` і `status` (R-25); `equipment["GANTRY-1"].gantry`; `locations["PLT-*"].gantry`; `productions[].cut_map`, `productions[].supply.gantry`; `sheet_chain.steps[4].stock` | viewer |
 | CM-06 | Пакет плагінів колектора `f3d_collector_mc` (`services/collector_plugins/machine_connect`), entry points `factory3d_collector.plugins`: `opcua = f3d_collector_mc.opcua:OpcUaPlugin`, `rest_vendor = f3d_collector_mc.rest_vendor:RestVendorPlugin` (адаптери `woodstore`, `cutopt`, `generic`); ключі-розширення адрес/параметрів (CT-03 дозволяє; довідково в telemetry Додатку A — X-52): `opcua.address.ns_uri`, `events`, `io`, `call`, `job_select`; `opcua.params.ns_uri`, `app_uri`, `heartbeat_s`; `rest_vendor.params.vendor`, `events_period_s`, `stacks_period_s`, `jobs_period_s`; `rest_vendor.address.cmd`, `default`, `io`; команди плагіни виконують методом `call(signal, payload) -> dict` (CR-01, X-03), `write()` — запасна текстова граматика CM-08 | telemetry (колектор), access (може вживати `generic` адаптер) |
 | CM-07 | Маршрути подій колектора → Odoo (telemetry API-05): `mc_opcua` (EV-01 — подія/тривога OPC UA), `mc_woodstore` (EV-02 — події, стоси, завдання порталу), `mc_cutopt` (EV-03 — стан, план, MPR оптимізатора); обробник `td.push.handler.machine_connect` | telemetry |
 | CM-08 | Команди Odoo → пристрої — корисне навантаження `td.command.payload` (telemetry M-06, CR-01, 19.0.1.1.0, X-03): схеми CMD-01 `JobOrderControl` верстата (`{"method", "job", "qty", "ref", "priority"}`), CMD-02 портал (`{"op": "feed"\|"cancel"\|"stack", …}`), CMD-03 оптимізатор (`{"op": "upload"\|"status"\|"release"\|"mpr", …}`) і об'єкти результату `call()` → `td.command.result_data` (SPEC R-21); текстова граматика `td.command.text` (≤ 64 символи, роздільник `;`) — запасна: `write()` плагінів її приймає, Odoo створює текстову команду лише без поля `payload` | telemetry (колектор) |
@@ -212,7 +212,7 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
                       push (API-02) · status (API-03) · event (API-05: mc_*) · commands (API-06/07) │    │ GET API-01 cutmap export
                                                                      ▼                                     │ (Bearer + t=…)
 ┌───────────────────────────────── Odoo 19 + td_machine_connect ─────────────────────────────────────┴──────────────────┐
-│ td.signal._f3d_ingest (override, super() перше) ─► td.machine._f3d_dispatch(readings)                                     │
+│ td.signal._td_ingest (override, super() перше) ─► td.machine._td_dispatch(readings)                                     │
 │    R-01 нормалізація ─► R-02 мікрозупинки ─► td.machine.state.log (інтервали) + workcenters/<код>/machine_state (CT-10)   │
 │    ├─► R-05 простій td.downtime ─► mrp.workcenter.productivity (втрата; аварія — відкрита й блокує РЦ)                    │
 │    ├─► R-09…R-12 автостарт/пауза/завершення mrp.workorder (start_employee / end_all / button_finish) як «Верстати (авто)» │
@@ -252,7 +252,7 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 | `mrp.workcenter.productivity` (+M-15) | `td_downtime_id`, `td_source`, `td_auto`; `create` — злиття R-06 | стандарт + диспетчер | OEE, viewer |
 | `mrp.workcenter.productivity.loss` (+M-16) | `td_planned` | дані | OEE |
 | `product.template` (+M-17) | `td_sheet_length_mm`, `td_sheet_width_mm`, `td_thickness_mm` | хук (7 товарів), технолог | карта розкрою |
-| `td.signal` (+M-18) | перевизначення `_f3d_ingest` і `_mark_stale` (super() перше) | — | диспетчер |
+| `td.signal` (+M-18) | перевизначення `_td_ingest` і `_mark_stale` (super() перше) | — | диспетчер |
 | `td.source` (+M-19) | `selection_add` типу `td_machine` (локальний, CT-12) | дані | — |
 | `td.command` (+M-20) | `td_machine_id`, `td_gantry_job_id`, `td_cut_map_id`; реакція на `done/failed` | модуль | колектор |
 | `td.push.handler.machine_connect` (M-21) | маршрути `mc_opcua`, `mc_woodstore`, `mc_cutopt` | — | telemetry API-05 |
@@ -281,15 +281,15 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 14, `OrderNumbers=["WH/MO/00233"]`) і переводить `CurrentState` 2 → 3 (WORKING), `CurrentMode=1` (AUTOMATIC).
 2) Плагін `opcua` отримує DataChange і дає `Reading(code="workcenters/SAW-1/job", text="WO00013")`,
 `Reading("workcenters/SAW-1/state", value=3, text="WORKING")` з `ts=06:55:00Z`. 3) За ≤ 5 с колектор шле
-`POST /f3d/telemetry/push`; telemetry `_f3d_ingest` пише `last_*`, зберігає показання стану (зміна тексту), повертає
-`changed_codes`. 4) Перевизначення `_f3d_ingest` цього модуля після `super()` групує показання з префіксом
-`workcenters/` за верстатом → `td.machine(SAW-1)._f3d_dispatch`: сирий стан WORKING/AUTOMATIC → `working` (R-01);
+`POST /f3d/telemetry/push`; telemetry `_td_ingest` пише `last_*`, зберігає показання стану (зміна тексту), повертає
+`changed_codes`. 4) Перевизначення `_td_ingest` цього модуля після `super()` групує показання з префіксом
+`workcenters/` за верстатом → `td.machine(SAW-1)._td_dispatch`: сирий стан WORKING/AUTOMATIC → `working` (R-01);
 перехід у `working` фіксується одразу (R-02): інтервал `idle` закривається о 09:55:00, відкривається `working` з
 `pieces_start=0`; простій очікування (якщо був ≥ 120 с) закривається й пише закриту втрату. 5) Автостарт (R-09):
 `WO00013` → `mrp.workorder(13)`, РЦ збігається, стан `ready`; працівник — Олег Мельник (`OP-SAW-1`, дозволений на РЦ);
 `wo.with_user(user_td_machine).start_employee(2)` → стандарт створює продуктивний запис журналу часу, завдання
 `progress`; ключ `wo:13@2026-10-12T06:55:00` зберігається на верстаті. 6) Сигнал `workcenters/SAW-1/machine_state =
-"working"` пишеться через `_f3d_ingest(src='module')`; `td.viewer.event._notify('mrp.workcenter', ['SAW-1'],
+"working"` пишеться через `_td_ingest(src='module')`; `td.viewer.event._notify('mrp.workcenter', ['SAW-1'],
 'state')`. 7) Переглядач запитує дельту: провайдер production (30) дає `workcenters["SAW-1"]` (`status=work`,
 `current_workorder=WO00013`), провайдер machines (75) додає `machine_state="working"`, `state_since="… 09:55"`,
 `pieces_shift`, `oee` зміни. 8) Лічильник `RelativePiecesOut` росте кожні 2,2 хв → `td_qty_counted` 1…14; о 10:25:48
@@ -355,7 +355,7 @@ DSP16-ANT-2613-130, 4 арк., `picked=True` (R-17); стос: портал 21 �
 | Потік | Обсяг | Оцінка |
 |---|---|---|
 | Показання верстатів у telemetry | P-01: зміни станів ≈ 60/верстат/зміну, лічильник ≈ 220/верстат/зміну (кожна деталь); P-02: опитування 1 с → 40 показань/с на вході (зберігаються лише зміни) | ≈ 50 показань/с у пікові секунди на вході API-02 (35 × 1 с, D-11), ≈ 12 000 збережених/добу |
-| Диспетчер (`_f3d_dispatch`) | один `search_read` верстатів за кодами (кеш `ormcache` мапи код → верстат, скидається при зміні сигналів верстата), порівняння з сирими значеннями в пам'яті, запис лише при переході | ≤ 150 мс додатково на пакет 1 000 показань; ≤ 60 мс на перехід стану (з автостартом ≤ 400 мс) |
+| Диспетчер (`_td_dispatch`) | один `search_read` верстатів за кодами (кеш `ormcache` мапи код → верстат, скидається при зміні сигналів верстата), порівняння з сирими значеннями в пам'яті, запис лише при переході | ≤ 150 мс додатково на пакет 1 000 показань; ≤ 60 мс на перехід стану (з автостартом ≤ 400 мс) |
 | `td.machine.state.log` | ≈ 40 інтервалів/верстат/зміну → 1 400/добу → 350 тис/рік | ротація `keep_log_days=400`; індекси `(machine_id, date_start)`, частковий унікальний `WHERE date_end IS NULL` |
 | `td.downtime` | ≈ 10/верстат/зміну → 350/добу | без ротації (бізнес-дані) |
 | `mrp.workcenter.productivity` | +≈ 15 записів/верстат/зміну | стандарт |
@@ -510,18 +510,18 @@ Odoo 45, «подано не списано» 7, портал 36 → розбі�
 `data/neutralize.sql`, `tools/commands.py`, `models/td_command.py`, `models/push_handler.py`, `tests/common.py`,
 `pyproject.toml` і `requirements.txt` пакета плагінів. W0 створює **усі файли моделей §2 SPEC з полями, SQL-обмеженнями
 й порожніми гачками**; воркер-власник файлу далі дописує в нього методи (злиття послідовне — конфліктів немає).
-Межі між W1 і W2/W3 — гачки M-01 SPEC (`_f3d_after_commit`, `_f3d_tick_extra`, `_f3d_on_count`, `_f3d_on_job`,
-`_f3d_apply_event`): W1 викликає, W2 і W3 перевизначають у власних файлах через `super()`.
+Межі між W1 і W2/W3 — гачки M-01 SPEC (`_td_after_commit`, `_td_tick_extra`, `_td_on_count`, `_td_on_job`,
+`_td_apply_event`): W1 викликає, W2 і W3 перевизначають у власних файлах через `super()`.
 
 | Воркер | Файли | Здає | Залежить від |
 |---|---|---|---|
-| W0 каркас | Odoo: `__manifest__.py`, `__init__.py`, `models/__init__.py`, усі `models/*.py` (поля §2, обмеження, гачки M-01 порожні), `security/*`, `views/menus.xml`, `data/ir_config_parameter.xml`, `ir_sequence.xml`, `res_users.xml`, `mrp_loss_data.xml`, `mc_sources.xml`, `ir_cron.xml`, `td_actions.xml`, `mc_signals.csv`, `neutralize.sql`, `hooks.py` (`_csv_rows`, `_signal_rows`, порожні хуки), `tools/commands.py` (R-21: чисті функції без імпортів Odoo, X-93), `models/td_command.py` (M-20: поля, `_f3d_mc_create_command`, `_f3d_mc_payload_supported`, `_f3d_mc_on_result` викликає `_f3d_on_command` власника), `models/push_handler.py` (M-21: маршрутизація на методи власників), `tests/__init__.py`, `tests/common.py` (SPEC §13.0.1), `tests/test_commands.py`, `static/description/icon.png`, `README.md`, `CHANGELOG.md`; пакет: `pyproject.toml`, `requirements.txt`, `README.md`, `f3d_collector_mc/__init__.py` | модуль встановлюється на чисту базу й копію демо (хук — звіт `skipped`), меню й дії відкриваються, `setUpClass` фікстур проходить; AC-57, AC-58, AC-102 | SPEC §0, §1, §2 (поля), §3 (V-30), §4, §5.1, §5.2, §13.0.1, Додатки C |
-| W1 верстати й стани | `models/td_machine.py` (методи M-01: R-01…R-04, диспетчер, `_f3d_count`, `_f3d_tech_env`, виклики гачків), `models/td_machine_state_log.py`, `models/td_signal.py` (M-18), `models/td_source.py` (M-19), `tools/states.py`, `tools/ppt.py`, `views/td_machine_views.xml` (V-01…V-04, огляд-kanban), `views/td_machine_state_log_views.xml`, `tests/test_normalize.py`, `tests/test_state_log.py`, `tests/test_ppt.py` | M-01 (база), M-02, M-18, M-19; R-01…R-04, R-26; AC-01…AC-10 | W0 |
+| W0 каркас | Odoo: `__manifest__.py`, `__init__.py`, `models/__init__.py`, усі `models/*.py` (поля §2, обмеження, гачки M-01 порожні), `security/*`, `views/menus.xml`, `data/ir_config_parameter.xml`, `ir_sequence.xml`, `res_users.xml`, `mrp_loss_data.xml`, `mc_sources.xml`, `ir_cron.xml`, `td_actions.xml`, `mc_signals.csv`, `neutralize.sql`, `hooks.py` (`_csv_rows`, `_signal_rows`, порожні хуки), `tools/commands.py` (R-21: чисті функції без імпортів Odoo, X-93), `models/td_command.py` (M-20: поля, `_td_mc_create_command`, `_td_mc_payload_supported`, `_td_mc_on_result` викликає `_td_on_command` власника), `models/push_handler.py` (M-21: маршрутизація на методи власників), `tests/__init__.py`, `tests/common.py` (SPEC §13.0.1), `tests/test_commands.py`, `static/description/icon.png`, `README.md`, `CHANGELOG.md`; пакет: `pyproject.toml`, `requirements.txt`, `README.md`, `f3d_collector_mc/__init__.py` | модуль встановлюється на чисту базу й копію демо (хук — звіт `skipped`), меню й дії відкриваються, `setUpClass` фікстур проходить; AC-57, AC-58, AC-102 | SPEC §0, §1, §2 (поля), §3 (V-30), §4, §5.1, §5.2, §13.0.1, Додатки C |
+| W1 верстати й стани | `models/td_machine.py` (методи M-01: R-01…R-04, диспетчер, `_td_count`, `_td_tech_env`, виклики гачків), `models/td_machine_state_log.py`, `models/td_signal.py` (M-18), `models/td_source.py` (M-19), `tools/states.py`, `tools/ppt.py`, `views/td_machine_views.xml` (V-01…V-04, огляд-kanban), `views/td_machine_state_log_views.xml`, `tests/test_normalize.py`, `tests/test_state_log.py`, `tests/test_ppt.py` | M-01 (база), M-02, M-18, M-19; R-01…R-04, R-26; AC-01…AC-10 | W0 |
 | W2 простої | `models/td_machine_downtime.py` (R-05…R-08 через гачки), `models/td_downtime.py`, `models/td_machine_event.py`, `models/td_machine_message.py`, `models/mrp_workcenter_productivity.py` (M-15, M-16), `models/maintenance_request.py`, `wizard/downtime_reason_wizard.py`, `wizard/downtime_reason_wizard_views.xml`, `data/mc_machine_messages.xml`, `views/td_downtime_views.xml`, `views/td_machine_event_views.xml` (V-10, V-11, V-24), `views/mrp_workcenter_views.xml` (V-29: РЦ, журнал часу, причини), `tests/test_downtime.py`, `tests/test_merge_operator.py`, `tests/test_hints.py` | M-03…M-05, M-15, M-16, M-24, M-28; R-05…R-08; AC-11…AC-24 | W1 |
 | W3 автостарт | `models/td_machine_wo.py` (R-09…R-12 через гачки), `models/mrp_workorder.py` (M-13, у т. ч. «Надіслати на верстат»), `models/mrp_workcenter.py` (M-12), `views/mrp_workorder_views.xml` (V-26), `tests/test_autostart.py`, `tests/test_counter_finish.py` | M-12, M-13; R-09…R-12; AC-25…AC-38, AC-101 | W2 |
 | W4 OEE | `models/td_oee_shift.py`, `tools/oee.py`, `views/td_oee_views.xml`, `tests/test_oee.py`, `tests/test_energy_contract.py` | M-06; R-13, R-14, R-28; AC-39…AC-46 | W1 (паралельно з W2/W3) |
-| W5 портал | `models/td_gantry_stack.py`, `models/td_gantry_job.py` (у т. ч. `_f3d_on_command`), `models/stock_picking.py`, `views/td_gantry_views.xml`, `tests/test_gantry_stack.py`, `tests/test_gantry_job.py` | M-07, M-08, M-27; R-15…R-18, R-23 (сторона Odoo); AC-47…AC-56 | W1 |
-| W6 карти розкрою | `models/td_cut_part.py`, `models/td_cut_map.py` (M-10, M-11, `_f3d_on_command`), `models/mrp_production.py`, `models/product_template.py`, `controllers/cutmap.py` (API-01), `tools/cutcsv.py`, `wizard/cut_plan_import_wizard.py`, `wizard/cut_part_import_wizard.py`, `wizard/cut_wizard_views.xml`, `views/td_cut_views.xml`, `views/mrp_production_views.xml` (V-25), `views/product_views.xml` (V-29 товар), `tests/test_cutmap.py`, `tests/test_api_export.py` | M-09…M-11, M-14, M-17, M-25, M-26; API-01; R-19, R-20; AC-59…AC-68 | W1, W5 (дзеркало завдань порталу) |
+| W5 портал | `models/td_gantry_stack.py`, `models/td_gantry_job.py` (у т. ч. `_td_on_command`), `models/stock_picking.py`, `views/td_gantry_views.xml`, `tests/test_gantry_stack.py`, `tests/test_gantry_job.py` | M-07, M-08, M-27; R-15…R-18, R-23 (сторона Odoo); AC-47…AC-56 | W1 |
+| W6 карти розкрою | `models/td_cut_part.py`, `models/td_cut_map.py` (M-10, M-11, `_td_on_command`), `models/mrp_production.py`, `models/product_template.py`, `controllers/cutmap.py` (API-01), `tools/cutcsv.py`, `wizard/cut_plan_import_wizard.py`, `wizard/cut_part_import_wizard.py`, `wizard/cut_wizard_views.xml`, `views/td_cut_views.xml`, `views/mrp_production_views.xml` (V-25), `views/product_views.xml` (V-29 товар), `tests/test_cutmap.py`, `tests/test_api_export.py` | M-09…M-11, M-14, M-17, M-25, M-26; API-01; R-19, R-20; AC-59…AC-68 | W1, W5 (дзеркало завдань порталу) |
 | W7 плагіни колектора | `f3d_collector_mc/{opcua,ua_session,nodeids,ua_values,rest_vendor,generic,woodstore,cutopt,cmdtext,events}.py`, `schemas/*.ext.json`, `tests/conftest.py`, `tests/fakes/{opcua_server,woodstore_app,cutopt_app}.py`, `tests/unit/test_{nodeids,opcua_subscribe,opcua_events,opcua_reconnect,opcua_call,woodstore,cutopt,cmdtext}.py` | CM-06…CM-08; R-21…R-24 (сторона колектора); AC-69…AC-80, AC-103 | W0 (`tools/commands.py` для `cmdtext.py`); паралельно з W1–W6 |
 | W8 дані, міграція, провайдер | `data/mc_machines.csv`, `tools/gen_mc_data.py`, `hooks.py` (кроки 0–7, `uninstall_hook`), `models/viewer_provider.py` (M-22), `tools/payload.py`, `models/res_config_settings.py`, `views/res_config_settings_views.xml`, `tests/test_migration.py`, `tests/test_viewer_provider.py`, `tests/test_security.py`, `tests/test_hooks.py` | M-22, M-23; §5 SPEC; R-25, R-27; AC-81…AC-92 | W2…W6 |
 | W9 стенд | `tests/stand/*` (pytest `-m stand`: iot_sim + колектор з пакетом + Odoo; `load_machines.py`, `data/parts_BR-K4.csv`), `docs/modules/td_machine_connect/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-16, ТБ-01…ТБ-10, ТП-01…ТП-04; AC-93…AC-100 | W7, W8 |
@@ -556,7 +556,7 @@ services/collector_plugins/machine_connect -m "not stand"`) і не чіпає �
 | A-19 | Заявку ТО дає лише сигнал `workcenters/<код>/alarm` (`alarm_states=["on"]`, `create_request=True`); сигнал `state` — `create_request=False` | каталог iot_sim позначає «ERROR → заявка» і «True → заявка» — дві заявки на одну аварію | узгоджено з iot_sim: заявки ТО лише з `alarm` (X-38) |
 | A-20 | Клієнт OPC UA — `asyncua==1.1.6` (та сама версія, що в емуляторі), Python 3.12 | версія 2.x змінює API; однакова версія клієнта й сервера на стенді | — |
 | A-21 | Технічний користувач «Верстати (автоматично)» (`active=False`) для автодій | видно в журналі часу й чатері, хто стартував; не займає ліцензію | — |
-| A-22 | Вхід показань — перевизначення `td.signal._f3d_ingest` (після `super()`), стани `nodata` — перевизначення `_mark_stale` | telemetry R-17 пише `last_*` сирим SQL — `write()` не викликається (вказівка координатора) | — |
+| A-22 | Вхід показань — перевизначення `td.signal._td_ingest` (після `super()`), стани `nodata` — перевизначення `_mark_stale` | telemetry R-17 пише `last_*` сирим SQL — `write()` не викликається (вказівка координатора) | — |
 | A-23 | Плановий час = календар РЦ мінус відпустки ресурсу (`time_type='leave'`) мінус простої з причиною `td_planned` | слоти завдань (`time_type='other'`) не є плановим простоєм | — |
 | A-24 | Міграція не будує історії станів і OEE з демо-журналу; демо-простої стають `td.downtime` без нових записів журналу часу | журнал демо синтетичний (перекриття, записи до зміни) — OEE вийшов би > 1 | — |
 | A-25 | Розміри листа — поля `td_sheet_*` на `product.template` (власник — цей модуль); заповнюються з назви товару | у демо розмір лише в назві («2800×2070», «16 мм») | — |

@@ -24,8 +24,8 @@
 
 ## 2. Технічна реалізація
 
-1. **Сервер.** Провайдер `td.viewer.provider.layout` (`_f3d_sequence = 180`, група `group_td_user`) за duck-typing контрактом
-   viewer R-01 п. 3. `_f3d_viewer_collect` кладе в `/f3d/viewer/data` ключ `layout`; `_f3d_viewer_delta` — повну заміну `layout`
+1. **Сервер.** Провайдер `td.viewer.provider.layout` (`_td_sequence = 180`, група `group_td_user`) за duck-typing контрактом
+   viewer R-01 п. 3. `_td_viewer_collect` кладе в `/f3d/viewer/data` ключ `layout`; `_td_viewer_delta` — повну заміну `layout`
    (або `null`) при події `td.layout.version`. `td.layout.version` (create/unlink) шле подію шини (`kind=state`).
 2. **Різниця.** `tools/layout.py`: знімок бази (версія-імпорт seed, `is_seed`) проти діючої версії площадки; ключ — код розміщення,
    префікс місця й коди комірок. Положення бази — з опису сцени `td_constructor/data/scene_inventory.json`

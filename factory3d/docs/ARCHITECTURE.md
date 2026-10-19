@@ -262,8 +262,8 @@ td_access_telemetry       ← td_access, td_telemetry        (7 сигналів
   `plant/odoo_pull.py` (`LiveDemo`); статична частина (розкладка, маршрути, норми) — з моделі.
 - Хук постачальника даних: модель з префіксом імені `td.viewer.provider.<key>` (`AbstractModel`
   без `_inherit` моделей viewer) або містком auto_install з `_inherit` (D-18). Контракт — за
-  атрибутами (duck typing, viewer M-01): `_f3d_sequence`, `_f3d_sections`, `_f3d_group`,
-  `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None`, `_f3d_viewer_delta(self, patch, ctx)`;
+  атрибутами (duck typing, viewer M-01): `_td_sequence`, `_td_sections`, `_td_group`,
+  `_td_viewer_collect(self, payload: dict, ctx: dict) -> None`, `_td_viewer_delta(self, patch, ctx)`;
   viewer читає їх через `getattr` з умовчаннями. Порядок: вбудовані 20…70, machine_connect 75, вбудований `signals` 90,
   telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150,
   genset 155, yard 160, access 170. Без модуля — розділ лишається з моделі (статика) або порожній.
@@ -271,7 +271,7 @@ td_access_telemetry       ← td_access, td_telemetry        (7 сигналів
   через спільний `deep_merge`; клієнт зливає дельту глибоко (viewer R-14, X-23).
 - Схема даних `meta.schema = "1.1"`: 26 базових ключів у фіксованому порядку + додаткові ключі
   модулів (перелік — viewer Додаток A); нові ключі верхнього рівня (`yard`, `access`) — після
-  базових за `_f3d_sequence` (X-24). `zones` = усі активні `td.zone` base (45, з надвірними).
+  базових за `_td_sequence` (X-24). `zones` = усі активні `td.zone` base (45, з надвірними).
 - Живі оновлення: канал шини `f3d_viewer` (`bus.bus`), повідомлення `{model, codes, kind}`;
   переглядач дозапитує лише змінені об'єкти (`/f3d/viewer/delta`).
 - «Показати в 3D» — `action_f3d_show()` домішки (§6.1); кнопка на формах `stock.location`,
@@ -317,9 +317,9 @@ td_access_telemetry       ← td_access, td_telemetry        (7 сигналів
 | D-14 | Рядки UI українською прямо в коді, без `.po` у v1 (усі модулі) | один мовний ринок замовника |
 | D-15 | `plant/odoo_pull.py` і `cycle_check` макета правлять окремим завданням; до того `keep_x_fields=True` | не ламати живий переглядач під час міграції |
 | D-16 | Плагін `bacnet_ip` — у telemetry (ним користуються bms і fire_safety) | спільне ядро протоколу |
-| D-17 | Локальні джерела без колектора — хук `td.source._f3d_local_types()` (telemetry CT-12); модулі додають свої типи (`td_genset`, `f3d_energy`, `td_machine`, `f3d_bms`) | дані, що вже є в Odoo, не ходять через колектор |
+| D-17 | Локальні джерела без колектора — хук `td.source._td_local_types()` (telemetry CT-12); модулі додають свої типи (`td_genset`, `f3d_energy`, `td_machine`, `f3d_bms`) | дані, що вже є в Odoo, не ходять через колектор |
 | D-18 | Необов'язкові зв'язки між модулями — за префіксом імені моделі без `_inherit`, `env.get` або місток auto_install; жорсткі `depends` лише за §3 | модулі ставляться в будь-якому порядку фаз |
-| D-19 | Вхід показань у модулі — перевизначення `td.signal._f3d_ingest` з `super()` першим; API колектора викликає саме його | telemetry пише `last_value` SQL-ом, `write()` не бачить показань |
+| D-19 | Вхід показань у модулі — перевизначення `td.signal._td_ingest` з `super()` першим; API колектора викликає саме його | telemetry пише `last_value` SQL-ом, `write()` не бачить показань |
 | D-20 | Адреси Modbus — PDU за документом вендора, без загального «номер − 1»; ADAM — молодше слово першим | інакше емулятор і споживачі розійдуться на регістр |
 | D-21 | ATyS p — за Socomec Annexe III (положення 20483, коди 1/2/3) | опублікована карта вендора |
 | D-22 | Odoo лише ставить завдання в чергу верстата; пуск — тільки з пульта верстата | безпека людей біля верстатів |

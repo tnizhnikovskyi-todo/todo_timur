@@ -20,9 +20,9 @@ A-01…A-27, Q-01…Q-14). Каркас: `docs/ARCHITECTURE.md` §5 (конве�
 | Модуль | Ідентифікатори |
 |---|---|
 | `td_factory3d` | CB-01 `td.scene.mixin` (`td_code`, `td_alias`, `search_f3d`, `action_f3d_show`), M-10 `hr.employee` + Додаток B (35 кодів `OP-*`, бейдж = код без дефісів), CB-03 `td.zone` (`zone_at`, xml-id `td_factory3d.zone_<slug>`), Додаток C/C.2 (`Z-KPP`, `Z-ASM`, `Z-FG`, `Z-ELEC`, `Z-POST`, `Z-CHG`, `Z-FAC`, `Z-MAINT`…), Додаток F (`TURNSTILES → Z-KPP`, `ACCESS` без зони), CB-09 (меню `td_factory3d.menu_td_root`, sequence 70 зарезервовано), CB-10 (групи `group_td_user/manager/admin`, параметр `td.base.environment`), §5.1 (читання булевих параметрів) |
-| `td_viewer3d` | M-01 (хук `td.viewer.provider`: `_f3d_sequence`, `_f3d_sections`, `_f3d_group`, `_f3d_viewer_collect`, `_f3d_viewer_delta`; виклик за префіксом імені `td.viewer.provider.`), M-01f (провайдер `people` пише `employees[code].present` з `hr.attendance`), M-03 (`td.viewer.event._notify(model, codes, kind)`), R-02 (час «YYYY-MM-DD HH:MM» за Києвом), R-14 (дельта: власний розділ — цілком, спільні `infra`/`employees`/`zones` — лише через `deep_merge`, хелпер `td_viewer3d/tools/payload.py`; X-23, X-82), Додаток A.11 (`employees[code]`, `zones[code]`) |
+| `td_viewer3d` | M-01 (хук `td.viewer.provider`: `_td_sequence`, `_td_sections`, `_td_group`, `_td_viewer_collect`, `_td_viewer_delta`; виклик за префіксом імені `td.viewer.provider.`), M-01f (провайдер `people` пише `employees[code].present` з `hr.attendance`), M-03 (`td.viewer.event._notify(model, codes, kind)`), R-02 (час «YYYY-MM-DD HH:MM» за Києвом), R-14 (дельта: власний розділ — цілком, спільні `infra`/`employees`/`zones` — лише через `deep_merge`, хелпер `td_viewer3d/tools/payload.py`; X-23, X-82), Додаток A.11 (`employees[code]`, `zones[code]`) |
 | `td_iot_sim` | «документація вендора» P-10 §8.12: API-40 `POST /api/login`, API-41 `POST /api/logout`, API-42 `GET /api/users`, API-43 `GET /api/devices`, API-44 `GET /api/doors`, API-45 `POST /api/events/search`, API-46 `GET /api/event_types`; коди подій, `tna_key`; R-28 (розклад проходів), S-09 `access_event`, API-13 (запуск сценарію), API-14 (`POST /time`), Додаток A рядки 647–653 (7 сигналів `access/*`), §8.1.3 (порти 8443/8081) |
-| `td_telemetry` | CT-09 (`access/*` → `module='access'`, SPEC R-15), CT-10 / SPEC M-03 `td.signal._f3d_ingest(readings, src='module')`, M-03 `origin='module'` (X-16), R-07 (сигнали без джерела не стають `stale`); сигнали створює міст `td_access_telemetry` (M-17, X-33) |
+| `td_telemetry` | CT-09 (`access/*` → `module='access'`, SPEC R-15), CT-10 / SPEC M-03 `td.signal._td_ingest(readings, src='module')`, M-03 `origin='module'` (X-16), R-07 (сигнали без джерела не стають `stale`); сигнали створює міст `td_access_telemetry` (M-17, X-33) |
 | `td_fire_safety` | ARCH CF-02 (джерело проходів для навчальної тривоги), Q-10, Q-15 (прапор «навчання триває») — відповідь цього модуля: CA-03, CA-09 |
 
 Odoo 19: SQL-обмеження — `models.Constraint`, індекси — `models.Index`, хуки — `post_init_hook(env)` /
@@ -133,10 +133,10 @@ odoo_addons/td_access/
 odoo_addons/td_access_telemetry/
 ├── __init__.py                       from . import models; from .hooks import post_init_hook
 ├── __manifest__.py                   §1 (міст)
-├── hooks.py                          post_init_hook(env) → env['td.access.telemetry']._f3d_ensure_signals() (§5.3)
+├── hooks.py                          post_init_hook(env) → env['td.access.telemetry']._td_ensure_signals() (§5.3)
 ├── models/
 │   ├── __init__.py                   td_access_telemetry
-│   └── td_access_telemetry.py       M-17: td.access.telemetry (+ _f3d_ensure_signals), td.access.device (create/write)
+│   └── td_access_telemetry.py       M-17: td.access.telemetry (+ _td_ensure_signals), td.access.device (create/write)
 └── tests/
     ├── __init__.py
     └── test_signals.py               AC-68
@@ -396,7 +396,7 @@ class F3dAccessDoor(models.Model):
 `is_perimeter` без `zone_to_id` → `ValidationError("Двері периметра потребують зони «У зону».")`;
 пристрій іншого сервера → `ValidationError("Зчитувач має належати тому самому серверу BioStar.")`.
 
-Методи: `_f3d_set_state(self, state, ts, alarm=None, reason=None)` — R-10; `action_f3d_show(self)` —
+Методи: `_td_set_state(self, state, ts, alarm=None, reason=None)` — R-10; `action_f3d_show(self)` —
 `entry_device_id.action_f3d_show()`; `action_open_events(self)`; `action_ack_alarm(self)` (`groups=S`) —
 `alarm=False`, `alarm_reason=False`, шина (R-10 крок 4).
 
@@ -445,7 +445,7 @@ class F3dAccessUserLink(models.Model):
 `visitor_id.name` або `biostar_name` або «не зв'язано».
 
 `write(vals)`: якщо у `vals` є `employee_id` або `visitor_id` і немає `match` → `vals['match'] = 'manual'` (працівник)
-/ `'visitor'` (відвідувач) / `'none'` (обидва порожні). Методи: `@api.model _f3d_match_employee(self, biostar_user_id)` —
+/ `'visitor'` (відвідувач) / `'none'` (обидва порожні). Методи: `@api.model _td_match_employee(self, biostar_user_id)` —
 R-03; `action_rematch(self)` (`groups=A`) — R-03 для записів з `match in ('none','barcode','alias','code')`;
 `action_open_events(self)`.
 
@@ -508,16 +508,16 @@ class F3dAccessEvent(models.Model):
 
 | Сигнатура | Вхід → вихід | Алгоритм |
 |---|---|---|
-| `@api.model _f3d_ingest_rows(self, server, rows)` | `rows: list[dict]` (API-06) → `dict(created, duplicates, invalid)` | R-11 крок 5: для кожного рядка `_f3d_parse_row(server, row)`; невалідний (немає `id`/`datetime`/`event_type_id.code`, `BSID_RE` не пройшов, `int(code)` → `ValueError`) → `invalid += 1`, WARNING з `id`; дублікати в межах пакета й у БД (`search_read([('server_id','=',server.id),('biostar_id','in',ids)], ['biostar_id'])`) → `duplicates`; решта — `create(vals_list)` пакетами по 500 (sudo); повертає лічильники і `recordset` створених у ключі `records` |
-| `@api.model _f3d_parse_row(self, server, row) -> dict` | рядок API-06 → `vals` | `biostar_id=str(row['id'])`; `ts=parse_bs_dt(row['datetime'])`; `server_ts=parse_bs_dt(row.get('server_datetime'))` або `False`; `code=int(row['event_type_id']['code'])`; `cls=classify(code)` → `event_type`, `credential`, `deny_reason`; `tna_key=str(row.get('tna_key') or '')`; `raw_device_id=str((row.get('device_id') or {}).get('id') or '')`; `door = row.get('door_id')`: якщо `list` → перший елемент, якщо `dict` → він; `raw_door_id=str(door.get('id') or '')`; `raw_user_id=str((row.get('user_id') or {}).get('user_id') or '')` (порожній для подій дверей/системи); `device_id` = пристрій сервера з `biostar_id=raw_device_id`; `door_id` = двері з `biostar_id=raw_door_id`, а якщо немає — перші двері з `entry_device_id` або `exit_device_id` = `device_id`; `raw` — лише якщо `keep_raw`: `deepcopy(row)` без `user_id.name`, `user_id.photo_exists`, `hint` |
-| `_f3d_process(self, force=False)` | recordset → `None` | сортує `self` за `(ts, id)`; для кожної події з `process_state='new'` (або будь-якої при `force=True`): `with self.env.cr.savepoint():` R-02…R-10 (порядок — R-04 «Конвеєр обробки»); виняток → `process_state='error'`, `error_message=str(e)[:255]`, ERROR у лог; успіх → `process_state='done'` (крім `future`); після циклу — шина й телеметрія (R-12 крок 6, R-18) |
-| `action_reprocess(self)` | кнопка (`groups=A`) | `self.sudo()._f3d_process(force=True)` для подій з `process_state in ('new','error')`; для `done` — лише крок класифікації й зв'язку (R-03), без повторних дій з відміткою, якщо `attendance_id` уже задано (ідемпотентність) |
+| `@api.model _td_ingest_rows(self, server, rows)` | `rows: list[dict]` (API-06) → `dict(created, duplicates, invalid)` | R-11 крок 5: для кожного рядка `_td_parse_row(server, row)`; невалідний (немає `id`/`datetime`/`event_type_id.code`, `BSID_RE` не пройшов, `int(code)` → `ValueError`) → `invalid += 1`, WARNING з `id`; дублікати в межах пакета й у БД (`search_read([('server_id','=',server.id),('biostar_id','in',ids)], ['biostar_id'])`) → `duplicates`; решта — `create(vals_list)` пакетами по 500 (sudo); повертає лічильники і `recordset` створених у ключі `records` |
+| `@api.model _td_parse_row(self, server, row) -> dict` | рядок API-06 → `vals` | `biostar_id=str(row['id'])`; `ts=parse_bs_dt(row['datetime'])`; `server_ts=parse_bs_dt(row.get('server_datetime'))` або `False`; `code=int(row['event_type_id']['code'])`; `cls=classify(code)` → `event_type`, `credential`, `deny_reason`; `tna_key=str(row.get('tna_key') or '')`; `raw_device_id=str((row.get('device_id') or {}).get('id') or '')`; `door = row.get('door_id')`: якщо `list` → перший елемент, якщо `dict` → він; `raw_door_id=str(door.get('id') or '')`; `raw_user_id=str((row.get('user_id') or {}).get('user_id') or '')` (порожній для подій дверей/системи); `device_id` = пристрій сервера з `biostar_id=raw_device_id`; `door_id` = двері з `biostar_id=raw_door_id`, а якщо немає — перші двері з `entry_device_id` або `exit_device_id` = `device_id`; `raw` — лише якщо `keep_raw`: `deepcopy(row)` без `user_id.name`, `user_id.photo_exists`, `hint` |
+| `_td_process(self, force=False)` | recordset → `None` | сортує `self` за `(ts, id)`; для кожної події з `process_state='new'` (або будь-якої при `force=True`): `with self.env.cr.savepoint():` R-02…R-10 (порядок — R-04 «Конвеєр обробки»); виняток → `process_state='error'`, `error_message=str(e)[:255]`, ERROR у лог; успіх → `process_state='done'` (крім `future`); після циклу — шина й телеметрія (R-12 крок 6, R-18) |
+| `action_reprocess(self)` | кнопка (`groups=A`) | `self.sudo()._td_process(force=True)` для подій з `process_state in ('new','error')`; для `done` — лише крок класифікації й зв'язку (R-03), без повторних дій з відміткою, якщо `attendance_id` уже задано (ідемпотентність) |
 | `@api.model f3d_on_site_at(self, ts, company=None) -> dict` | CA-03 | R-21 |
 | `@api.model f3d_passes_between(self, t0, t1, door_codes=None, direction=None) -> recordset` | CA-03 | R-21 |
-| `@api.model _f3d_drill_active(self, ts) -> bool` | CA-09 | R-21 крок 3 |
+| `@api.model _td_drill_active(self, ts) -> bool` | CA-09 | R-21 крок 3 |
 | `@api.model _gc(self, keep_days)` | → кількість видалених | R-20 крок 1 |
-| `@api.model _f3d_last_events(self, limit=20) -> list[dict]` | для провайдера (R-12) | останні `limit` подій `event_type in ('pass','denied','fail','door','alarm')` за спаданням `ts` |
-| `@api.model _f3d_bus(self, model, codes)` | `model: str`, `codes: set[str]` → `None` | R-12 крок 6: порожні `codes` або `'td.viewer.event' not in self.env` → вихід; інакше `self.env['td.viewer.event'].sudo()._notify(model, codes, 'state')`. Окремий метод — тести патчать його |
+| `@api.model _td_last_events(self, limit=20) -> list[dict]` | для провайдера (R-12) | останні `limit` подій `event_type in ('pass','denied','fail','door','alarm')` за спаданням `ts` |
+| `@api.model _td_bus(self, model, codes)` | `model: str`, `codes: set[str]` → `None` | R-12 крок 6: порожні `codes` або `'td.viewer.event' not in self.env` → вихід; інакше `self.env['td.viewer.event'].sudo()._notify(model, codes, 'state')`. Окремий метод — тести патчать його |
 | `@api.model _cron_zone_dwell(self)` | крон (§6) | R-17 |
 | `@api.model _cron_housekeeping(self)` | крон (§6) | R-20 кроки 1–6; кожен крок у `savepoint`, помилка кроку → ERROR у лог, решта кроків виконується |
 
@@ -574,16 +574,16 @@ class F3dAccessCard(models.Model):
 
 | Сигнатура | Групи | Алгоритм |
 |---|---|---|
-| `action_issue(self)` | S (лише `holder_type in ('visitor','pool')`), A | `state in ('draft','returned')` інакше `UserError("Видати можна лише чернетку або повернуту картку.")`; `holder_type='pool'` → `UserError("Спершу оберіть, кому видається картка.")`; `write({'state':'active','issued_at':now,'returned_at':False})`; `_f3d_queue('issue')` |
-| `action_block(self)` | A | `state='active'` інакше `UserError`; без `block_reason` → `UserError("Вкажіть причину блокування.")`; `write({'state':'blocked','blocked_at':now})`; `_f3d_queue('block')` |
-| `action_unblock(self)` | A | `state='blocked'` → `active`, `block_reason=False`; `_f3d_queue('unblock')` |
-| `action_return(self)` | S, A | `state in ('active','blocked')` → `returned`, `returned_at=now`; картка відвідувача → `holder_type='pool'`, `visitor_id` лишається до R-20 крок 5 (історія); `_f3d_queue('return')` |
-| `action_mark_lost(self)` | A | `state='lost'`, `block_reason='Втрачена'`; `_f3d_queue('block')` |
-| `_f3d_queue(self, op)` | — | якщо `get_flag('write_enabled')`: `write({'pending_op': op, 'sync_state': 'pending', 'sync_attempts': 0, 'sync_error': False})` і одразу `_f3d_push()`; інакше `write({'pending_op': op, 'sync_state': 'local'})` і `message_post` «Запис у BioStar вимкнено стоп-краном. Виконайте операцію «%s» у BioStar вручну і натисніть «Позначити синхронізованим».» |
-| `_f3d_push(self)` | — | R-13 крок 2–5 (sudo) |
-| `action_retry_sync(self)` | A | `sync_state in ('error','local')` і `write_enabled` → `sync_state='pending'`, `_f3d_push()`; без `write_enabled` → `UserError("Запис у BioStar вимкнено стоп-краном td.access.write_enabled.")` |
+| `action_issue(self)` | S (лише `holder_type in ('visitor','pool')`), A | `state in ('draft','returned')` інакше `UserError("Видати можна лише чернетку або повернуту картку.")`; `holder_type='pool'` → `UserError("Спершу оберіть, кому видається картка.")`; `write({'state':'active','issued_at':now,'returned_at':False})`; `_td_queue('issue')` |
+| `action_block(self)` | A | `state='active'` інакше `UserError`; без `block_reason` → `UserError("Вкажіть причину блокування.")`; `write({'state':'blocked','blocked_at':now})`; `_td_queue('block')` |
+| `action_unblock(self)` | A | `state='blocked'` → `active`, `block_reason=False`; `_td_queue('unblock')` |
+| `action_return(self)` | S, A | `state in ('active','blocked')` → `returned`, `returned_at=now`; картка відвідувача → `holder_type='pool'`, `visitor_id` лишається до R-20 крок 5 (історія); `_td_queue('return')` |
+| `action_mark_lost(self)` | A | `state='lost'`, `block_reason='Втрачена'`; `_td_queue('block')` |
+| `_td_queue(self, op)` | — | якщо `get_flag('write_enabled')`: `write({'pending_op': op, 'sync_state': 'pending', 'sync_attempts': 0, 'sync_error': False})` і одразу `_td_push()`; інакше `write({'pending_op': op, 'sync_state': 'local'})` і `message_post` «Запис у BioStar вимкнено стоп-краном. Виконайте операцію «%s» у BioStar вручну і натисніть «Позначити синхронізованим».» |
+| `_td_push(self)` | — | R-13 крок 2–5 (sudo) |
+| `action_retry_sync(self)` | A | `sync_state in ('error','local')` і `write_enabled` → `sync_state='pending'`, `_td_push()`; без `write_enabled` → `UserError("Запис у BioStar вимкнено стоп-краном td.access.write_enabled.")` |
 | `action_mark_synced(self)` | A | `sync_state in ('local','error')` → `write({'sync_state':'synced','sync_ts':now,'pending_op':False,'sync_error':False})`, `message_post` «Позначено синхронізованим вручну» |
-| `@api.model _cron_card_sync(self)` | — | якщо `not write_enabled` → вихід; `search([('sync_state','in',('pending','error')),('sync_attempts','<',card_sync_max_attempts)], limit=100)._f3d_push()` |
+| `@api.model _cron_card_sync(self)` | — | якщо `not write_enabled` → вихід; `search([('sync_state','in',('pending','error')),('sync_attempts','<',card_sync_max_attempts)], limit=100)._td_push()` |
 
 ### M-07 `td.access.visitor` — відвідувач (FR-11, CA-07)
 
@@ -640,8 +640,8 @@ class F3dAccessVisitor(models.Model):
 | `action_cancel(self)` | S | `draft`/`expected` → `cancelled`; картка повертається |
 | `unlink(self)` | — | лише `state in ('draft','cancelled')`, інакше `UserError("Видалити можна лише чернетку або скасований візит.")` |
 | `@api.model f3d_visitor_register(self, vals) -> record` | CA-07, sudo-безпечний для викликів з інших модулів | `vals` (`name`, `host_employee_id`, `date_from`, `date_to`, `visitor_company`, `purpose`, `origin`, `origin_ref`, `allowed_zone_ids`) → `create(vals)` → `action_expect()` → запис |
-| `_f3d_push_user(self)` | — | R-14 крок 2 |
-| `@api.model _cron_user_sync(self)` | — | якщо `write_enabled`: відвідувачі `sync_state in ('pending','error')`, `state in ('expected','on_site')`, `limit=100` → `_f3d_push_user()` |
+| `_td_push_user(self)` | — | R-14 крок 2 |
+| `@api.model _cron_user_sync(self)` | — | якщо `write_enabled`: відвідувачі `sync_state in ('pending','error')`, `state in ('expected','on_site')`, `limit=100` → `_td_push_user()` |
 | `_compute_display_name` | — | `"%s (%s)" % (name, visitor_company)` або `name` |
 
 ### M-08 `hr.employee` — розширення (CA-01, FR-08)
@@ -667,8 +667,8 @@ class F3dAccessVisitor(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `_f3d_access_set(self, vals, event=None)` | sudo `write(vals)`; якщо змінилися `td_access_present`/`td_access_zone_id` → `_f3d_bus('hr.employee', self.mapped('td_code'))` (R-12 крок 6) |
-| `@api.model _f3d_access_public_presence(self, codes=None) -> dict` | для провайдера (A-21): `self.sudo().search_read([('td_code','!=',False),('active','=',True)] + ([('td_code','in',list(codes))] if codes else []), ['td_code','td_access_present','td_access_zone_id','td_access_zone_since','td_access_last_event_id'])` і `sudo().read` подій → `{code: {'present': bool, 'zone': 'Z-CUT'\|None, 'zone_since': datetime\|None, 'last_event': {'ts', 'door', 'direction', 'type'}\|None}}` (без `raw_user_id`, імен і карток) |
+| `_td_access_set(self, vals, event=None)` | sudo `write(vals)`; якщо змінилися `td_access_present`/`td_access_zone_id` → `_td_bus('hr.employee', self.mapped('td_code'))` (R-12 крок 6) |
+| `@api.model _td_access_public_presence(self, codes=None) -> dict` | для провайдера (A-21): `self.sudo().search_read([('td_code','!=',False),('active','=',True)] + ([('td_code','in',list(codes))] if codes else []), ['td_code','td_access_present','td_access_zone_id','td_access_zone_since','td_access_last_event_id'])` і `sudo().read` подій → `{code: {'present': bool, 'zone': 'Z-CUT'\|None, 'zone_since': datetime\|None, 'last_event': {'ts', 'door', 'direction', 'type'}\|None}}` (без `raw_user_id`, імен і карток) |
 | `action_f3d_access_events(self)` | `groups=S`: журнал подій працівника |
 
 Вкладка «Доступ» (V-10) — лише для тих, хто читає `hr.employee` (`hr.group_hr_user`); охорона бачить людей у
@@ -755,9 +755,9 @@ class HrAttendance(models.Model):
 class F3dViewerProviderAccess(models.AbstractModel):
     _name = "td.viewer.provider.access"       # БЕЗ _inherit: td_viewer3d не є залежністю (A-19)
     _description = "3D: СКУД — люди, двері, зчитувачі"
-    _f3d_sequence = 170
-    _f3d_sections = ("access",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 170
+    _td_sections = ("access",)
+    _td_group = "td_factory3d.group_td_user"
 ```
 
 Переглядач (viewer R-01 крок 3) знаходить провайдери за префіксом імені в реєстрі й викликає атрибути й методи
@@ -765,9 +765,9 @@ class F3dViewerProviderAccess(models.AbstractModel):
 
 | Метод | Алгоритм |
 |---|---|
-| `_f3d_viewer_collect(self, payload, ctx)` | R-12 кроки 1–5 |
-| `_f3d_viewer_delta(self, patch, ctx)` | R-12 п. 7 (X-23, X-87): немає змін моделей `_f3d_viewer_bus_models()` у `ctx["changes"]` → нічого; інакше `tmp` із заготовками ключів CA-05 (змінені коди `hr.employee`, усі активні зони, картки `infra.cards.TURNSTILES`/`ACCESS`) → `self._f3d_viewer_collect(tmp, ctx)`; `patch["access"] = tmp["access"]` (власний розділ — цілком); `employees`, `zones`, `infra` — лише `deep_merge(patch.setdefault(k, {}), tmp[k])` (хелпер viewer M-01, імпорт усередині методу); присвоєння `patch["infra"]`/`patch["employees"]`/`patch["zones"] = …` заборонене |
-| `_f3d_viewer_bus_models(self)` | `["hr.employee", "td.access.door", "td.access.visitor"]` |
+| `_td_viewer_collect(self, payload, ctx)` | R-12 кроки 1–5 |
+| `_td_viewer_delta(self, patch, ctx)` | R-12 п. 7 (X-23, X-87): немає змін моделей `_td_viewer_bus_models()` у `ctx["changes"]` → нічого; інакше `tmp` із заготовками ключів CA-05 (змінені коди `hr.employee`, усі активні зони, картки `infra.cards.TURNSTILES`/`ACCESS`) → `self._td_viewer_collect(tmp, ctx)`; `patch["access"] = tmp["access"]` (власний розділ — цілком); `employees`, `zones`, `infra` — лише `deep_merge(patch.setdefault(k, {}), tmp[k])` (хелпер viewer M-01, імпорт усередині методу); присвоєння `patch["infra"]`/`patch["employees"]`/`patch["zones"] = …` заборонене |
+| `_td_viewer_bus_models(self)` | `["hr.employee", "td.access.door", "td.access.visitor"]` |
 
 ### M-13 `td.access.event.reprocess.wizard` — повторна обробка й опитування періоду (FR-19)
 
@@ -836,9 +836,9 @@ CREATE OR REPLACE VIEW td_access_presence AS (
 ### M-15 `td.access.telemetry` — міст до `td_telemetry` (FR-15)
 
 `AbstractModel`, `_description = "СКУД: публікація сигналів телеметрії"`. Методи:
-`@api.model _f3d_signal_model(self)` → `self.env['td.signal'].sudo()`, якщо `'td.signal' in self.env`, інакше `None`
-(окремий метод — тести підставляють фейкову модель); `@api.model _f3d_publish(self, server, events) -> dict | None` —
-R-18; `_f3d_signal_model()` повертає `None` → `None`. Сигнали, у які пише R-18, створює міст `td_access_telemetry`
+`@api.model _td_signal_model(self)` → `self.env['td.signal'].sudo()`, якщо `'td.signal' in self.env`, інакше `None`
+(окремий метод — тести підставляють фейкову модель); `@api.model _td_publish(self, server, events) -> dict | None` —
+R-18; `_td_signal_model()` повертає `None` → `None`. Сигнали, у які пише R-18, створює міст `td_access_telemetry`
 (M-17, X-33); сам `td_access` від telemetry не залежить.
 
 ### M-16 `td.fire.passage.source.access` — джерело проходів для навчальної тривоги (CA-09, A-24)
@@ -847,16 +847,16 @@ R-18; `_f3d_signal_model()` повертає `None` → `None`. Сигнали, 
 class F3dFirePassageSourceAccess(models.AbstractModel):
     _name = "td.fire.passage.source.access"   # БЕЗ _inherit: td_fire_safety не є залежністю
     _description = "СКУД: проходи для навчальної тривоги"
-    _f3d_priority = 10
+    _td_priority = 10
 ```
 
 | Метод | Вихід | Алгоритм |
 |---|---|---|
-| `_f3d_on_site(self, at)` | `list[dict(employee_id: int, since: datetime, point: str)]` | `res = env['td.access.event'].f3d_on_site_at(at)`; для кожного працівника: `since` = його останній вхід периметра ≤ `at`, `point` = `door_id.code` цього входу |
-| `_f3d_passages(self, start, end)` | `list[dict(employee_id, ts, point, direction)]` | `f3d_passes_between(start, end, door_codes=None)` з `is_perimeter=True`, лише `employee_id`; `point = door_id.code` |
-| `_f3d_drill_active(self, ts)` | `bool` | делегує `td.access.event._f3d_drill_active(ts)` |
+| `_td_on_site(self, at)` | `list[dict(employee_id: int, since: datetime, point: str)]` | `res = env['td.access.event'].f3d_on_site_at(at)`; для кожного працівника: `since` = його останній вхід периметра ≤ `at`, `point` = `door_id.code` цього входу |
+| `_td_passages(self, start, end)` | `list[dict(employee_id, ts, point, direction)]` | `f3d_passes_between(start, end, door_codes=None)` з `is_perimeter=True`, лише `employee_id`; `point = door_id.code` |
+| `_td_drill_active(self, ts)` | `bool` | делегує `td.access.event._td_drill_active(ts)` |
 
-`td_fire_safety` (CF-02) обирає джерело з найменшим `_f3d_priority` серед моделей реєстру з префіксом
+`td_fire_safety` (CF-02) обирає джерело з найменшим `_td_priority` серед моделей реєстру з префіксом
 `td.fire.passage.source.` (Q-13).
 
 ### M-17 Міст `td_access_telemetry` — 7 сигналів СКУД (FR-15, X-33)
@@ -882,7 +882,7 @@ class F3dAccessDevice(models.Model):
 
 Спільні значення всіх сигналів моста: `module='access'` (telemetry CT-09), `origin='module'` (сигнал модуля з власних
 даних, не імпорт каталогу — telemetry M-03, X-16), `source_id=False` і `address={}` (без джерела: не потрапляє в
-API-01 колектора, крон `stale` telemetry R-07 його не чіпає — показання лише через CT-10 `_f3d_ingest(src='module')`),
+API-01 колектора, крон `stale` telemetry R-07 його не чіпає — показання лише через CT-10 `_td_ingest(src='module')`),
 `period_s=60` (крон опитування), `store_period_s=0` (кожне показання; ≤ 1 на опитування), `create_request=False`
 (порогів немає), `viewer_visible=False` (розділ `access` переглядача — власний розділ провайдера M-12, провайдер
 telemetry R-12 його не дублює), `active=True`.
@@ -891,9 +891,9 @@ telemetry R-12 його не дублює), `active=True`.
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `@api.model _f3d_ensure_signals(self, devices=None) -> dict` | `S = env['td.signal'].sudo().with_context(active_test=False)`; `devices = devices or env['td.access.device'].sudo().search([])`; рядки = по пристрою з кодом, що проходить `CODE_RE` (R-01), + 2 фіксовані (таблиця вище); для кожного: `S.search([('code','=',code)], limit=1)` знайдено → пропуск (наявний сигнал — архівний або створений інакше, напр. імпортом каталогу telemetry CT-11 — не змінюється); інакше `S.create(vals)`; INFO «Сигнали СКУД: створено %d, наявних %d»; повертає `{'created': n, 'existing': m}` |
-| `td.access.device.create(self, vals_list)` (`@api.model_create_multi`) | `records = super().create(vals_list)`; `env['td.access.telemetry']._f3d_ensure_signals(records)` (новий пристрій із R-19 `BS-<id>` отримує свій сигнал); повертає `records` |
-| `td.access.device.write(self, vals)` | `res = super().write(vals)`; `'code' in vals` → `_f3d_ensure_signals(self)` (сигнал старого коду лишається з історією показань); повертає `res` |
+| `@api.model _td_ensure_signals(self, devices=None) -> dict` | `S = env['td.signal'].sudo().with_context(active_test=False)`; `devices = devices or env['td.access.device'].sudo().search([])`; рядки = по пристрою з кодом, що проходить `CODE_RE` (R-01), + 2 фіксовані (таблиця вище); для кожного: `S.search([('code','=',code)], limit=1)` знайдено → пропуск (наявний сигнал — архівний або створений інакше, напр. імпортом каталогу telemetry CT-11 — не змінюється); інакше `S.create(vals)`; INFO «Сигнали СКУД: створено %d, наявних %d»; повертає `{'created': n, 'existing': m}` |
+| `td.access.device.create(self, vals_list)` (`@api.model_create_multi`) | `records = super().create(vals_list)`; `env['td.access.telemetry']._td_ensure_signals(records)` (новий пристрій із R-19 `BS-<id>` отримує свій сигнал); повертає `records` |
+| `td.access.device.write(self, vals)` | `res = super().write(vals)`; `'code' in vals` → `_td_ensure_signals(self)` (сигнал старого коду лишається з історією показань); повертає `res` |
 
 Деінсталяція моста: `uninstall_hook` немає — сигнали й показання лишаються як історія telemetry (вони не дані
 модуля, стандартна деінсталяція їх не видаляє); R-18 без моста продовжує публікувати в наявні сигнали.
@@ -1164,7 +1164,7 @@ OP-W7,Z-OUT-3
 відкриті відмітки минулих днів закриває R-07 (крон господарства, §6).
 
 **Міст `td_access_telemetry` (X-33, M-17).** Його `post_init_hook(env)` =
-`env['td.access.telemetry']._f3d_ensure_signals()` (усе `sudo`, без зовнішніх викликів). Ставиться автоматично після
+`env['td.access.telemetry']._td_ensure_signals()` (усе `sudo`, без зовнішніх викликів). Ставиться автоматично після
 `td_access`, коли встановлено `td_telemetry` (або навпаки). Очікувано — на копії демо й на чистій базі
 однаково (5 пристроїв — data access, §5.2): `created: 7` (5 `access/readers/<ACR-*>/last_event`,
 `access/turnstiles/TURNSTILES/on_site`, `access/events`), `existing: 0`; повторний виклик — `created: 0`,
@@ -1344,7 +1344,7 @@ OP-W2 → ACR-PAINT 10:20, ACR-SRV — Administrator (`user_id "1"`).
 
 ### R-03 Зв'язок користувача BioStar з людиною
 
-`_f3d_match_employee(u)` для `u = raw_user_id`/`row.user_id` у межах компанії сервера (`active=True`):
+`_td_match_employee(u)` для `u = raw_user_id`/`row.user_id` у межах компанії сервера (`active=True`):
 1. зв'язок `(server, u)` уже має `match in ('manual','visitor')` → не змінюється;
 2. `hr.employee.search([('barcode','=',u)])` — рівно один → `match='barcode'`;
 3. інакше `search([('td_alias','=',u)])` — рівно один → `'alias'`;
@@ -1360,7 +1360,7 @@ OP-W2 → ACR-PAINT 10:20, ACR-SRV — Administrator (`user_id "1"`).
 
 ### R-04 Конвеєр обробки події і вхід через периметр
 
-**Конвеєр** `_f3d_process` для однієї події `ev` (`now = fields.Datetime.now()`):
+**Конвеєр** `_td_process` для однієї події `ev` (`now = fields.Datetime.now()`):
 1. R-03: `link` → `employee_id`/`visitor_id`; `unknown_user = bool(raw_user_id) and not (employee or visitor)`;
 2. копії з дверей: `is_perimeter`, `zone_from_id`, `zone_to_id`; R-02 `direction`;
 3. `device_id.last_event_ts/code` — якщо `ev.ts ≥ last_event_ts`;
@@ -1379,7 +1379,7 @@ OP-W2 → ACR-PAINT 10:20, ACR-SRV — Administrator (`user_id "1"`).
 12. `process_state='done'`.
 
 **Вхід** (периметр, `direction='in'`), `dup = dup_window_min`:
-- `_f3d_drill_active(ev.ts)` → `attendance_action='drill'` (відмітка не змінюється; людина повертається після
+- `_td_drill_active(ev.ts)` → `attendance_action='drill'` (відмітка не змінюється; людина повертається після
   евакуації — CA-09, fire Q-15);
 - 3а: є `open` і `open.td_in_event_id` порожнє і `|ev.ts − open.check_in| ≤ dup` хв → `open.write({'td_in_event_id': ev, 'td_in_device_id': device})`
   (`check_in`, `in_mode` не змінюються), `attendance_action='attached'`;
@@ -1400,7 +1400,7 @@ ACR-IN `tna_key "1"` о 03:52:10Z → 3а (`|10 с| ≤ 20 хв`) → `attached`
 ### R-05 Вихід через периметр
 
 (`direction='out'`, після кроків 1–9 конвеєра):
-1. `_f3d_drill_active(ev.ts)` → `attendance_action='drill'`, відмітка не закривається;
+1. `_td_drill_active(ev.ts)` → `attendance_action='drill'`, відмітка не закривається;
 2. `open` немає → `attendance_action='no_open'`;
 3. `ev.ts ≤ open.check_in` → `attendance_action='no_open'`, `error_message="Вихід раніше за вхід відмітки"`;
 4. інакше `open.write({'check_out': ev.ts, 'out_mode': 'biostar', 'td_out_event_id': ev, 'td_out_device_id': device})`
@@ -1522,9 +1522,9 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 4. сторінки: `rows_all = []`; `page = 0`; цикл: `rows, total = client.search_events(since, until, limit=page_size, offset=len(rows_all))`
    (`paging_mode='hint'`: `offset=None`, `hint=rows_all[-1]['hint']` для сторінок ≥ 2); `rows_all += rows`; `page += 1`;
    вихід, якщо `len(rows) < page_size` або `page == max_pages_per_run`; `more = (page == max_pages_per_run and len(rows) == page_size)`;
-5. `res = env['td.access.event']._f3d_ingest_rows(server, rows_all)` (лише після всіх сторінок: помилка мережі на
+5. `res = env['td.access.event']._td_ingest_rows(server, rows_all)` (лише після всіх сторінок: помилка мережі на
    будь-якій сторінці → нічого не збережено, курсор не рухається, R-16);
-6. обробка: `env['td.access.event'].search([('server_id','=',id),('process_state','=','new'),('ts','<=',now)], order='ts, id', limit=10000)._f3d_process()`
+6. обробка: `env['td.access.event'].search([('server_id','=',id),('process_state','=','new'),('ts','<=',now)], order='ts, id', limit=10000)._td_process()`
    (включно з раніше відкладеними `future`);
 7. курсор: `max_ts = max(parse_bs_dt(r['datetime']) for r in rows_all)`; `new = min(max_ts, now)`; якщо
    `not last_event_ts or new > last_event_ts` → `last_event_ts = new`, `last_event_biostar_id` = `id` рядка з `max_ts`;
@@ -1539,9 +1539,9 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 
 ### R-12 Схема даних переглядача (CA-05)
 
-`_f3d_viewer_collect(payload, ctx)`; `is_sec = env.user.has_group('td_access.group_td_access_security')`;
+`_td_viewer_collect(payload, ctx)`; `is_sec = env.user.has_group('td_access.group_td_access_security')`;
 усі часи — `to_local_str` (viewer R-02), «сьогодні» — доба `ctx['today']` за Києвом:
-1. `pres = env['hr.employee']._f3d_access_public_presence()` (sudo, лише непублічно-нечутливі поля, A-21);
+1. `pres = env['hr.employee']._td_access_public_presence()` (sudo, лише непублічно-нечутливі поля, A-21);
 2. для кожного `code` у `payload.get('employees', {})`, що є в `pres` (інші записи не змінюються): `rec['present'] = bool(pres[code].present)` (перекриває
    значення провайдера `people` з `hr.attendance`), `rec['zone']` = код зони або `None`, `rec['zone_since']` або
    `None`, `rec['last_event'] = {"ts", "door", "direction", "type"}` або `None` (двері — код, без осіб);
@@ -1577,15 +1577,15 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 5. якщо `payload.get('infra', {}).get('cards')` має ключі `TURNSTILES`/`ACCESS` (повний payload зі статикою) →
    їхні `rows` замінюються рядками з `access.cards` (A-14: живі лічильники замість «146 працівників · 3 відвідувачі»,
    «312»);
-6. (обробка подій, не провайдер) після `_f3d_process` пакета: `'td.viewer.event' in env` → по одному виклику
+6. (обробка подій, не провайдер) після `_td_process` пакета: `'td.viewer.event' in env` → по одному виклику
    `_notify('hr.employee', коди працівників з presence_changed, 'state')`, `_notify('td.access.door', коди дверей зі
    зміною R-10, 'state')`, `_notify('td.access.visitor', ['V-<id>', …], 'state')`; без viewer — нічого.
-7. `_f3d_viewer_delta(patch, ctx)` (X-23, X-87; viewer R-14 п. 5, 7):
+7. `_td_viewer_delta(patch, ctx)` (X-23, X-87; viewer R-14 п. 5, 7):
    1) умова: `set(ctx.get('changes') or {}) & {'hr.employee', 'td.access.door', 'td.access.visitor'}` порожня →
       `patch` не змінюється;
    2) `tmp = {'employees': {c: {} for c in ctx['changes'].get('hr.employee', ())}, 'zones': {z: {} for z in
       env['td.zone'].search([]).mapped('td_code')}, 'infra': {'cards': {'TURNSTILES': {}, 'ACCESS': {}}}}`;
-      `self._f3d_viewer_collect(tmp, ctx)` — кроки 1–5 заповнюють `employees[code]` (`present`, `zone`, `zone_since`,
+      `self._td_viewer_collect(tmp, ctx)` — кроки 1–5 заповнюють `employees[code]` (`present`, `zone`, `zone_since`,
       `last_event`), `zones[code].people_now` (0 для зон без людей — так клієнт обнуляє зону, яку покинули), розділ
       `access` і `infra.cards.TURNSTILES/ACCESS.rows`;
    3) `from odoo.addons.td_viewer3d.tools.payload import deep_merge` (імпорт усередині методу: метод викликає лише
@@ -1601,12 +1601,12 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
    {'OP-SAW-1'}, 'td.access.door': {'TURN-1'}}` → `patch.infra.cards` — `PV-INV`, `TURNSTILES`, `ACCESS`;
    `patch.employees['OP-SAW-1']` — `name`, `workcenter`, `present: true`, `zone: 'Z-CUT'`, `zone_since`, `last_event`;
    `patch.zones['Z-CUT'].people_now = 4`, зони без людей — 0; `patch.access` — повний розділ (AC-51, AC-67).
-Без групи `group_td_user` провайдер не викликається (viewer `_f3d_group`).
+Без групи `group_td_user` провайдер не викликається (viewer `_td_group`).
 
 ### R-13 Картки: запис у BioStar (FR-10)
 
-1. `_f3d_queue(op)` — M-06; без `write_enabled` жодного мережевого виклику (AC-40, AC-56).
-2. `_f3d_push()` (sudo) для карток `sync_state='pending'`: `user = ` зв'язок `(server, employee)` → `biostar_user_id`
+1. `_td_queue(op)` — M-06; без `write_enabled` жодного мережевого виклику (AC-40, AC-56).
+2. `_td_push()` (sudo) для карток `sync_state='pending'`: `user = ` зв'язок `(server, employee)` → `biostar_user_id`
    (працівник) або `visitor.biostar_user_id`; немає → `error`, `"У власника картки немає користувача BioStar."`;
 3. `issue`: якщо `biostar_card_id` порожній → API-07 (`card_id=number`, `card_type.id` за M-06) → одразу записати
    `biostar_card_id`; далі API-08 з повним списком карток власника на сервері, що мають `biostar_card_id` і
@@ -1669,7 +1669,7 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 (без `user_id` — персональні дані в телеметрію не йдуть, A-28);
 `{"code": "access/turnstiles/TURNSTILES/on_site", "ts": now, "value": float(on_site.total)}`;
 `{"code": "access/events", "ts": now, "value": float(created), "text": "pass:%d denied:%d door:%d" % (…)}`.
-`env['td.signal'].sudo()._f3d_ingest(readings, src='module')` у `savepoint`; виняток → WARNING, опитування не падає.
+`env['td.signal'].sudo()._td_ingest(readings, src='module')` у `savepoint`; виняток → WARNING, опитування не падає.
 Сигнали створює міст `td_access_telemetry` (M-17, X-33): 7 записів `td.signal` = iot_sim Додаток A 647–653
 (`module='access'`, `origin='module'`, без джерела; по одному `…/last_event` на кожен пристрій). Міст ставиться
 автоматично разом із telemetry, тож `rejected` (`unknown_code`) буває лише для архівного чи видаленого сигналу → DEBUG.
@@ -1716,8 +1716,8 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
    OP-EDGE-2, OP-CNC-1, OP-ASM-2 — 06:43; OP-ASMLINE-1, OP-ASM-3 — 06:44; OP-SAND-1, OP-ASM-4 — 06:45) — 15.
 2. `f3d_passes_between(t0, t1, door_codes=None, direction=None)` → `search([('event_type','=','pass'),('ts','>=',t0),('ts','<=',t1)] + ([('door_id.code','in',door_codes)] if door_codes else []) + ([('direction','=',direction)] if direction else []), order='ts, id')`.
    Для навчальної тривоги fire_safety: `f3d_passes_between(start, end, ['TURN-1'], 'out')` — хто й коли вийшов.
-3. `_f3d_drill_active(ts)`: `'td.fire.drill' in env` і модель має метод `_f3d_is_active_at` →
-   `bool(env['td.fire.drill'].sudo()._f3d_is_active_at(ts))`; інакше `False` (контракт CA-09 до `td_fire_safety`, Q-13).
+3. `_td_drill_active(ts)`: `'td.fire.drill' in env` і модель має метод `_td_is_active_at` →
+   `bool(env['td.fire.drill'].sudo()._td_is_active_at(ts))`; інакше `False` (контракт CA-09 до `td_fire_safety`, Q-13).
 
 ## 10. Стани й переходи
 
@@ -1793,7 +1793,7 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 11. **Запис у BioStar** (картки, відвідувачі): помилка → `sync_state='error'` з текстом відповіді, локальний стан
     лишається, крон повторює до `card_sync_max_attempts`; емулятор → 405 (AC-41, ТК-08).
 12. **Немає опційних модулів**: без `td_viewer3d` — немає шини й виклику провайдера; без `td_telemetry`
-    — немає сигналів; без `td_fire_safety` — `_f3d_drill_active` = False. Жодного винятку (AC-52, AC-53).
+    — немає сигналів; без `td_fire_safety` — `_td_drill_active` = False. Жодного винятку (AC-52, AC-53).
 13. **Невідомий користувач, пристрій, двері**: подія зберігається з `raw_*`; `unknown_user=True`; без дверей —
     напрямок `none`; адміністратор бачить фільтр «Нерозпізнані» і `unlinked_count` на сервері.
 14. **Двері без зон** (нові з синхронізації): проходи лише в журналі; `doors_without_zone` на сервері.
@@ -1813,7 +1813,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | AC-04 | FR-05 | Given `BioStarClient` з мок-`http` (`requests.Session`): `login` → 200 + `bs-session-id: s1`; When `list_devices()`; Then запит має заголовок `bs-session-id: s1`. Given відповідь `401 {"Response":{"code":"10"}}`, далі `login` → `s2`, далі 200; Then рівно 2 `POST /api/login`, повторний запит із `s2`, результат повернуто. Given дві 401 поспіль після повторного входу; Then `BioStarAuthError`, рівно 2 входи (без циклу) | UT |
 | AC-05 | FR-05 | When `client.search_events(since=2026-10-12 06:57:10, until=07:05:30, limit=500, offset=0)`; Then тіло `POST /api/events/search` дорівнює JSON §7.2 (`assertEqual` dict). `hint="H1"`, `offset=None` → у `Query` є `"hint": "H1"`, немає `offset`. Given `page_size=2`, fake з 5 рядками; When `server._poll()`; Then `fake.search_calls` має `offset` 0, 2, 4, створено 5 подій | UT |
 | AC-06 | FR-05 | Given `freeze_time('2026-10-12 07:00:30')`, курсор порожній, fake з рядками до 06:59:10Z; When `_poll()`; Then перший виклик `since=2026-10-11 07:00:30`, `until=2026-10-12 07:05:30`; `last_event_ts=06:59:10`; наступний `_poll()` (07:01:30) — `since=06:57:10`. Given рядок `datetime=07:03:00Z` (майбутній); Then подія збережена з `attendance_action='future'`, `process_state='new'`, `last_event_ts=07:00:30` (не 07:03) | UT |
-| AC-07 | FR-05 | Given ті самі 4 рядки у fake; When `_poll()` двічі; Then 4 події `td.access.event`; другий прогін `last_poll_new=0`, `last_poll_rows=4`; `_f3d_ingest_rows` повертає `duplicates=4`; ручне `create` з тим самим `(server_id, biostar_id)` → `IntegrityError` | UT |
+| AC-07 | FR-05 | Given ті самі 4 рядки у fake; When `_poll()` двічі; Then 4 події `td.access.event`; другий прогін `last_poll_new=0`, `last_poll_rows=4`; `_td_ingest_rows` повертає `duplicates=4`; ручне `create` з тим самим `(server_id, biostar_id)` → `IntegrityError` | UT |
 | AC-08 | FR-05, FR-16 | Given `fake.fail_always = BioStarError(None,None,'ConnectionError: refused')`, `freeze_time` T; When `_cron_poll()` у T, потім щоразу в `next_try_at + 1 с`; Then `error_count` 1…6, паузи `next_try_at − час прогону` = 60, 120, 240, 480, 600, 600 с; виклик `_cron_poll()` до `next_try_at` не звертається до fake; `last_event_ts` незмінний. When помилку знято і 12 рядків за час простою; Then `state='online'`, `error_count=0`, створено 12 подій, `since` = курсор − 120 с | UT + TC (ТК-06) |
 | AC-09 | FR-05 | Given `page_size=2`, `max_pages_per_run=2`, 7 рядків; When `_poll()`; Then створено 4, `last_poll_more=True`, `last_event_ts` = `datetime` 4-го рядка; When `_poll()` ще раз; Then подій 7 (дублікати перекриття відсіяно) | UT |
 | AC-10 | FR-06 | When `classify(c)` для c ∈ {4102, 4100, 4867, 4865, 4096, 5120, 4352, 6400, 6401, 6402, 6403, 6404, 6405, 6406, 6407, 20480, 20736, 20992, 21248, 21504, 21760, 26368, 12544, 15104, 0, 99999}; Then відповідно R-09 (`pass/card`, `pass/id_face`, `pass/face`, `pass/finger`, `pass/other`, `fail`, `fail`, `denied/other`, `access_group`, `disabled`, `expired`, `blacklist`, `apb`, `timed_apb`, `scheduled_lock`, `door/unlocked`, `locked`, `open`, `closed`, `forced`, `held`, `alarm/fire`, `system`, `system`, `other`, `other`) | UT |
@@ -1843,7 +1843,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | AC-34 | FR-19 | Given `emp_a` з закритою ручною відміткою 03:00–05:00Z; When вхід о 04:00Z і в тому ж опитуванні вхід `emp_b`; Then подія `emp_a` `process_state='error'`, `error_message` містить `Cannot create new attendance record`, подія `emp_b` `done`. When ручну відмітку видалено і майстер `reprocess`, `only_errors=True`; Then подія `done`, `checked_in`. When майстер `repoll` при `read_enabled=False` → `UserError`; при `True` → `fake.search_calls[-1]` має `since=date_from`, `until=date_to` | UT |
 | AC-35 | FR-20 | Given A вхід 03:40Z; B вхід 03:45Z; C вхід 03:50Z, вихід 04:30Z; D вхід 2026-10-09 03:40Z без виходу; When `f3d_on_site_at(ts)` для `ts` = 03:45Z, 04:00Z, 04:40Z; Then `{A,B}`, `{A,B,C}`, `{A,B}`; D — ніколи (старіше `max_shift_h`); повернуто ключі `employees`, `visitors`, `ts` | UT |
 | AC-36 | FR-20 | Given проходи TURN-1 in/out і DOOR-ELEC in між t0 і t1; When `f3d_passes_between(t0, t1, ['TURN-1'], 'out')`; Then лише виходи TURN-1 за зростанням `ts`; без фільтрів — усі `pass` у вікні, включно з DOOR-ELEC | UT |
-| AC-37 | FR-20 | Given `patch.object(F3dAccessEvent, '_f3d_drill_active', return_value=True)`, `emp_a` з відкритою відміткою і `present`; When вихід TURN-1; Then `attendance_action='drill'`, відмітка відкрита, `present=False`; When вхід; Then `drill`, відміток 1 відкрита, `present=True`. `env['td.fire.passage.source.access']._f3d_on_site(ts)` → `[{'employee_id': emp_a.id, 'since': …, 'point': 'TURN-1'}]`; `_f3d_passages(t0, t1)` — словники з ключами `employee_id, ts, point, direction` | UT |
+| AC-37 | FR-20 | Given `patch.object(F3dAccessEvent, '_td_drill_active', return_value=True)`, `emp_a` з відкритою відміткою і `present`; When вихід TURN-1; Then `attendance_action='drill'`, відмітка відкрита, `present=False`; When вхід; Then `drill`, відміток 1 відкрита, `present=True`. `env['td.fire.passage.source.access']._td_on_site(ts)` → `[{'employee_id': emp_a.id, 'since': …, 'point': 'TURN-1'}]`; `_td_passages(t0, t1)` — словники з ключами `employee_id, ts, point, direction` | UT |
 | AC-38 | FR-18 | Given `keep_days=90`, події з `ts` = now − 91 і now − 89 діб; відвідувач `expected` з `date_to` = now − 2 год і карткою; картка `returned` з `returned_at` = now − 91 діб і `visitor_id`; відвідувач `closed` з `date_to` = now − 91 діб; `read_enabled=True`; When `_cron_housekeeping()`; Then перша подія видалена, друга є; відвідувач `closed`, `overdue=True`, картка `returned` у пулі; `fake.search_calls[-1].since` = now − 24 год; картка `visitor_id=False`; старий відвідувач видалений | UT |
 | AC-39 | FR-10 | When картка `number='AB12'` → `ValidationError`; дубль номера на сервері → `IntegrityError`; `holder_type='employee'` без працівника, `pool` з відвідувачем, `blocked` без причини → `ValidationError` з текстами M-06 | UT |
 | AC-40 | FR-10, FR-16 | Given `write_enabled=False`, картка `emp_a` `draft`; When `action_issue()`; Then `state='active'`, `sync_state='local'`, `pending_op='issue'`, у чаттері текст про стоп-кран, `fake.calls == []`. When `action_mark_synced()`; Then `synced`, `pending_op=False` | UT + TC (ТК-08) |
@@ -1855,11 +1855,11 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | AC-46 | FR-11 | Given `write_enabled=True`; When `action_expect()`; Then `biostar_user_id='V-%d' % id`, `fake.calls` містить `('create_user', 'V-%d', name, date_from, date_to + 1 год, '1')`, зв'язок `visitor`, `sync_state='synced'`. Given `fake.write_status=405`; Then `sync_state='error'`. Given `write_enabled=False`; Then `local`, викликів немає. When `biostar_user_id='TSTA1'` (зв'язок працівника) → `ValidationError` | UT + TC (ТК-07) |
 | AC-47 | FR-11 | Given пул карток `600`, `555`; When `user_security` → `f3d_visitor_register({'name':'Водій','host_employee_id':…,'origin':'yard','origin_ref':'YV/2026/0012'})`; Then `expected`, `card_id.number='555'`, `origin='yard'`. Given пул порожній; Then `expected`, без картки, у чаттері «Вільних карток у пулі немає» | UT |
 | AC-48 | FR-11 | When `date_to ≤ date_from` або тривалість 8 діб → `ValidationError`; новий відвідувач без `date_to` → `date_to = date_from + 8 год`; `unlink()` у стані `expected` → `UserError`, у `draft` — видалено | UT |
-| AC-49 | FR-14 | Given `payload={'employees': {'OP-TST-A': {'name':'А','present':False}, 'OP-TST-B': {'name':'Б','present':True}}, 'zones': {'Z-CUT': {'name':'Розкрій'}}}`, `emp_a` у `Z-CUT` з 06:52, `emp_b` поза; When `env['td.viewer.provider.access']._f3d_viewer_collect(payload, ctx)` (`ctx` з `now`, `today`); Then `employees['OP-TST-A']` = `present=True`, `zone='Z-CUT'`, `zone_since='2026-10-12 06:52'`, `last_event` з ключами `ts, door, direction, type`; `OP-TST-B` → `present=False`, `zone=None`; `zones['Z-CUT']['people_now']=1`; нових ключів у `employees` немає | UT + TC (ТК-09) |
+| AC-49 | FR-14 | Given `payload={'employees': {'OP-TST-A': {'name':'А','present':False}, 'OP-TST-B': {'name':'Б','present':True}}, 'zones': {'Z-CUT': {'name':'Розкрій'}}}`, `emp_a` у `Z-CUT` з 06:52, `emp_b` поза; When `env['td.viewer.provider.access']._td_viewer_collect(payload, ctx)` (`ctx` з `now`, `today`); Then `employees['OP-TST-A']` = `present=True`, `zone='Z-CUT'`, `zone_since='2026-10-12 06:52'`, `last_event` з ключами `ts, door, direction, type`; `OP-TST-B` → `present=False`, `zone=None`; `zones['Z-CUT']['people_now']=1`; нових ключів у `employees` немає | UT + TC (ТК-09) |
 | AC-50 | FR-14, FR-13 | Given AC-49 + відвідувач на території + подія ACR-PAINT; When як `user_f3d`; Then `access` має ключі R-12 (`updated, server, on_site, today, zones, people, visitors, readers, doors, cards, last_events`), `last_events == []`, у `visitors[0]` немає `name`, рядок «Останній доступ» без « — »; When як `user_security`; Then `last_events` непорожній з `person`, «Останній доступ» = «склад ЛФМ, HH:MM — <ім'я>». Given `payload['infra']['cards']['TURNSTILES']` зі статикою «146 працівників · 3 відвідувачі»; Then замінено на живі рядки | UT |
-| AC-51 | FR-14 | Given AC-49 (`emp_a` у `Z-CUT`, `emp_b` поза), `patch={}`, `ctx.changes={'hr.employee': {'OP-TST-A'}, 'td.access.door': {'TURN-1'}}`; When `_f3d_viewer_delta(patch, ctx)` (R-12 п. 7, X-87); Then `set(patch) == {'access', 'employees', 'zones', 'infra'}`, `patch['access']` — повний розділ R-12, `patch['employees'] == {'OP-TST-A': {'present': True, 'zone': 'Z-CUT', 'zone_since': …, 'last_event': …}}`, `patch['zones']` має всі активні зони (`Z-CUT.people_now=1`, решта 0), `set(patch['infra']['cards']) == {'TURNSTILES', 'ACCESS'}` з `rows` = `access.cards`; When `ctx.changes={'mrp.production': {'WH/MO/00231'}}`; Then `patch == {}`. Given `patch.object(F3dAccessEvent, '_f3d_bus')`; When опитування з 2 проходами TURN-1 (`emp_a`, `emp_b`); Then `_f3d_bus` викликано по разу з `('hr.employee', {'OP-TST-A','OP-TST-B'})` і `('td.access.door', {'TURN-1'})` | UT |
-| AC-52 | FR-14 | Given база без `td_viewer3d` (`'td.viewer.event' not in env`); When обробка подій; Then без винятків, `_f3d_bus` повертає `None`; модель `td.viewer.provider.access` у реєстрі з `_f3d_sequence=170`, `_f3d_sections=('access',)`, `_f3d_group='td_factory3d.group_td_user'` | UT |
-| AC-53 | FR-15 | Given `patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal)`; When опитування з 3 новими подіями на ACR-IN і ACR-ELEC; Then `fake_signal.readings` коди = {`access/readers/ACR-IN/last_event`, `access/readers/ACR-ELEC/last_event`, `access/turnstiles/TURNSTILES/on_site`, `access/events`}, `src='module'`, жоден `text` не містить `TSTA1`. Given `publish_signals=False` або 0 нових подій або `_f3d_signal_model()` → `None`; Then не викликано. Реальні сигнали моста й прийом показань — AC-68 (X-33) | UT |
+| AC-51 | FR-14 | Given AC-49 (`emp_a` у `Z-CUT`, `emp_b` поза), `patch={}`, `ctx.changes={'hr.employee': {'OP-TST-A'}, 'td.access.door': {'TURN-1'}}`; When `_td_viewer_delta(patch, ctx)` (R-12 п. 7, X-87); Then `set(patch) == {'access', 'employees', 'zones', 'infra'}`, `patch['access']` — повний розділ R-12, `patch['employees'] == {'OP-TST-A': {'present': True, 'zone': 'Z-CUT', 'zone_since': …, 'last_event': …}}`, `patch['zones']` має всі активні зони (`Z-CUT.people_now=1`, решта 0), `set(patch['infra']['cards']) == {'TURNSTILES', 'ACCESS'}` з `rows` = `access.cards`; When `ctx.changes={'mrp.production': {'WH/MO/00231'}}`; Then `patch == {}`. Given `patch.object(F3dAccessEvent, '_td_bus')`; When опитування з 2 проходами TURN-1 (`emp_a`, `emp_b`); Then `_td_bus` викликано по разу з `('hr.employee', {'OP-TST-A','OP-TST-B'})` і `('td.access.door', {'TURN-1'})` | UT |
+| AC-52 | FR-14 | Given база без `td_viewer3d` (`'td.viewer.event' not in env`); When обробка подій; Then без винятків, `_td_bus` повертає `None`; модель `td.viewer.provider.access` у реєстрі з `_td_sequence=170`, `_td_sections=('access',)`, `_td_group='td_factory3d.group_td_user'` | UT |
+| AC-53 | FR-15 | Given `patch.object(F3dAccessTelemetry, '_td_signal_model', return_value=fake_signal)`; When опитування з 3 новими подіями на ACR-IN і ACR-ELEC; Then `fake_signal.readings` коди = {`access/readers/ACR-IN/last_event`, `access/readers/ACR-ELEC/last_event`, `access/turnstiles/TURNSTILES/on_site`, `access/events`}, `src='module'`, жоден `text` не містить `TSTA1`. Given `publish_signals=False` або 0 нових подій або `_td_signal_model()` → `None`; Then не викликано. Реальні сигнали моста й прийом показань — AC-68 (X-33) | UT |
 | AC-54 | FR-16 | Given `user_f3d_admin`; When `res.config.settings` з `td_access_page_size=300`, `td_access_write_enabled=True` → `execute()`; Then параметри `300`, `True`. `page_size=3000` → `ValidationError`. `fields_get` для `user_admin` (без F) не містить `td_access_biostar_password` | UT |
 | AC-55 | FR-16 | Given `read_enabled=False`; When `_cron_poll()`, `_cron_sync_users()`, `_cron_sync_devices()`, `_cron_housekeeping()`; Then `fake.calls == []` (господарство без мережевого кроку 4 відпрацьовує). `action_poll_now()`, `action_sync_users()` → `UserError("Опитування BioStar вимкнено стоп-краном td.access.read_enabled.")` | UT |
 | AC-56 | FR-16 | Given `BioStarClient(write_enabled=False, http=mock)`; When `create_card`, `update_user_cards`, `create_user`; Then `BioStarWriteDisabled`, `mock.request.call_count == 0` | UT |
@@ -1873,8 +1873,8 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | AC-64 | FR-13 | Поля моделей модуля (`fields_get`) не мають імен із `photo`, `image`, `template`, `document`, `fingerprint_data`; `keep_raw=False` → `raw=False`; `keep_raw=True` → `raw` без `user_id.name`, `user_id.photo_exists`, `hint` | UT |
 | AC-65 | FR-12 | Меню з xml-id §3 існують з указаними батьками, `sequence` і групами; `menu_td_access.sequence=70`, батько `td_factory3d.menu_td_root`; `menu_td_access_att_report` під `hr_attendance.menu_hr_attendance_reporting` | UT |
 | AC-66 | FR-12 | `get_view` (адміністратор): форма `hr.employee` містить `page[@name='f3d_access']`; форма `hr.attendance` — `td_in_event_id`; налаштування — `block[@name='f3d_access_block']`; форма `td.zone` — кнопку `action_view_people`; kanban `td.access.presence` має `default_group_by="zone_id"`. MAN: ТК-09 крок 1–3 у браузері | UT + MAN |
-| AC-67 | FR-14 | Given `patch={'infra': {'cards': {'PV-INV': {'rows': [['Зараз', '468 кВт']]}}, 'totals': {'pv_now': 468}}, 'employees': {'OP-TST-A': {'name': 'А', 'workcenter': 'SAW-1'}}}` (як після energy 150 і `people`), `inf = patch['infra']`, `ctx.changes={'hr.employee': {'OP-TST-A'}}`; When `_f3d_viewer_delta(patch, ctx)` (X-23, X-87); Then `patch['infra'] is inf` (не присвоєно), `patch['infra']['cards']` має `PV-INV` (незмінна), `TURNSTILES`, `ACCESS`; `patch['infra']['totals'] == {'pv_now': 468}`; `patch['employees']['OP-TST-A']` має `name='А'`, `workcenter='SAW-1'` і `present`, `zone`, `zone_since`, `last_event`; `deep_merge` — з `td_viewer3d.tools.payload` | UT |
-| AC-68 | FR-15 | Given установлені `td_access` і `td_telemetry` (міст `td_access_telemetry` установлено автоматично: `ir.module.module` `state='installed'`), 5 пристроїв data; Then є рівно 7 сигналів `access/%` (M-17): 5 `access/readers/<ACR-*>/last_event` (`kind='event'`), `access/turnstiles/TURNSTILES/on_site` (`gauge`, `unit='осіб'`), `access/events` (`event`); у всіх `module='access'`, `origin='module'`, `source_id=False`, `viewer_visible=False`, `create_request=False`, `period_s=60`. When `_f3d_ensure_signals()` удруге; Then `{'created': 0, 'existing': 7}`. When створено `td.access.device` з `code='ACR-T9'`; Then з'явився `access/readers/ACR-T9/last_event`. When `env['td.signal'].sudo()._f3d_ingest([{'code': 'access/turnstiles/TURNSTILES/on_site', 'ts': now, 'value': 35.0, 'q': 'good'}], src='module')`; Then `accepted=1`, `rejected=[]`, `last_value=35`. When `freeze_time(now + 1 доба)` і `env['td.signal']._cron_stale()`; Then статус сигналу не `stale` (без джерела, telemetry R-07) (X-33) | UT |
+| AC-67 | FR-14 | Given `patch={'infra': {'cards': {'PV-INV': {'rows': [['Зараз', '468 кВт']]}}, 'totals': {'pv_now': 468}}, 'employees': {'OP-TST-A': {'name': 'А', 'workcenter': 'SAW-1'}}}` (як після energy 150 і `people`), `inf = patch['infra']`, `ctx.changes={'hr.employee': {'OP-TST-A'}}`; When `_td_viewer_delta(patch, ctx)` (X-23, X-87); Then `patch['infra'] is inf` (не присвоєно), `patch['infra']['cards']` має `PV-INV` (незмінна), `TURNSTILES`, `ACCESS`; `patch['infra']['totals'] == {'pv_now': 468}`; `patch['employees']['OP-TST-A']` має `name='А'`, `workcenter='SAW-1'` і `present`, `zone`, `zone_since`, `last_event`; `deep_merge` — з `td_viewer3d.tools.payload` | UT |
+| AC-68 | FR-15 | Given установлені `td_access` і `td_telemetry` (міст `td_access_telemetry` установлено автоматично: `ir.module.module` `state='installed'`), 5 пристроїв data; Then є рівно 7 сигналів `access/%` (M-17): 5 `access/readers/<ACR-*>/last_event` (`kind='event'`), `access/turnstiles/TURNSTILES/on_site` (`gauge`, `unit='осіб'`), `access/events` (`event`); у всіх `module='access'`, `origin='module'`, `source_id=False`, `viewer_visible=False`, `create_request=False`, `period_s=60`. When `_td_ensure_signals()` удруге; Then `{'created': 0, 'existing': 7}`. When створено `td.access.device` з `code='ACR-T9'`; Then з'явився `access/readers/ACR-T9/last_event`. When `env['td.signal'].sudo()._td_ingest([{'code': 'access/turnstiles/TURNSTILES/on_site', 'ts': now, 'value': 35.0, 'q': 'good'}], src='module')`; Then `accepted=1`, `rejected=[]`, `last_value=35`. When `freeze_time(now + 1 доба)` і `env['td.signal']._cron_stale()`; Then статус сигналу не `stale` (без джерела, telemetry R-07) (X-33) | UT |
 | AC-69 | FR-12, FR-16 | Given модуль установлено; Then `td_access.menu_td_access_settings`: `parent_id` = `td_factory3d.menu_td_config`, `sequence=70`, `group_ids` = `td_factory3d.group_td_admin`, дія `action_td_access_settings` (`res_model='res.config.settings'`, `view_mode='form'`, `target='current'`, `context` з `module='hr_attendance'`); `get_views` форми `res.config.settings` для адміністратора містить `block[@name='f3d_access_block']`; користувач `user_security` (без `group_td_admin`) пункту не бачить (`ir.ui.menu` `_visible_menu_ids`) (X-89) | UT |
 
 ## 13. План тестування (для Opus)
@@ -1932,12 +1932,12 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | `test_events.py::TestClassify` | `test_table` (параметризований `subTest`) | AC-10 | — | словник `classify` |
 | `::TestJournal` | `test_late_event`, `test_future_then_processed`, `test_filters_denied_apb`, `test_unknown_user`, `test_immediate_match`, `test_door_states`, `test_fire_alarm_all_doors`, `test_ack_alarm_rights`, `test_validation_error_isolated`, `test_reprocess_wizard`, `test_repoll_wizard` | AC-24, AC-25, AC-31…AC-34 | `emp_a`, `emp_b`, двері data | `attendance_action`, `process_state`, стан дверей, `search_count` за доменами фільтрів (`safe_eval` домену з `env.ref('…view_td_access_event_search')` arch через `etree`) |
 | `test_attendance.py::TestAttendance` | `test_check_in`, `test_attach_demo`, `test_duplicate_apb`, `test_check_out`, `test_lunch_merge_off_on`, `test_stale_close_table`, `test_stale_close_disabled`, `test_out_without_open`, `test_out_before_in`, `test_internal_door_no_attendance`, `test_night_and_long`, `test_dates_helpers` | AC-15…AC-23, AC-26 | `freeze_time`, `cls.cal` | поля `hr.attendance` (точні `datetime`), кількість відміток, `message_ids` (текст R-07) |
-| `test_presence.py::TestPresence` | `test_home_zone_and_fallback`, `test_exit_clears`, `test_internal_zone_and_dwell`, `test_dwell_zero`, `test_internal_without_entry`, `test_people_now`, `test_presence_view_rows`, `test_on_site_at`, `test_passes_between`, `test_drill`, `test_fire_source_dicts`, `test_housekeeping` | AC-27…AC-30, AC-35…AC-38 | `emp_a…d`, відвідувач, `patch.object(F3dAccessEvent, '_f3d_drill_active')` | поля працівника, представлення, словники CA-03/CA-09 |
+| `test_presence.py::TestPresence` | `test_home_zone_and_fallback`, `test_exit_clears`, `test_internal_zone_and_dwell`, `test_dwell_zero`, `test_internal_without_entry`, `test_people_now`, `test_presence_view_rows`, `test_on_site_at`, `test_passes_between`, `test_drill`, `test_fire_source_dicts`, `test_housekeeping` | AC-27…AC-30, AC-35…AC-38 | `emp_a…d`, відвідувач, `patch.object(F3dAccessEvent, '_td_drill_active')` | поля працівника, представлення, словники CA-03/CA-09 |
 | `test_cards.py::TestCards` | `test_constraints`, `test_issue_local`, `test_mark_synced`, `test_block_synced`, `test_block_405`, `test_issue_creates_card_once`, `test_cron_retry_limits`, `test_cron_write_disabled` | AC-39…AC-43 | `FakeBioStar` (`write_enabled`), картки | `sync_state`, `fake.calls`, `biostar_card_id`, чаттер |
 | `test_visitors.py::TestVisitors` | `test_lifecycle`, `test_no_attendance_and_violation`, `test_closed_pass_logged`, `test_biostar_user_create`, `test_biostar_user_405`, `test_manual_user_conflict`, `test_register_from_yard`, `test_register_no_card`, `test_dates_and_unlink` | AC-44…AC-48 | відвідувач, пул карток `555`, `600` | стани, `zone_violation`, `hr.attendance` кількість, `fake.calls` |
 | `test_viewer_provider.py::TestProvider` | `test_employee_keys`, `test_zone_people_now`, `test_access_schema_user`, `test_access_schema_security`, `test_infra_cards_replaced`, `test_delta_deep_merge`, `test_delta_no_changes`, `test_delta_keeps_foreign_keys`, `test_bus_calls`, `test_no_viewer_ok`, `test_registry_attrs` | AC-49…AC-52, AC-67 | `payload` dict, `ctx={'now': datetime(2026,10,12,7,30), 'now_local': '2026-10-12 10:30', 'today': '2026-10-12', 'user': …}` (для дельти — ще `changes`), `with_user`; для AC-51, AC-67 — код `td_viewer3d` в `addons_path` (імпорт хелпера `deep_merge` без установки модуля, як yard AC-87) | ключі й значення JSON R-12; для дельти — склад `patch`, збереження чужих ключів, `patch['infra'] is inf` |
-| `test_settings.py::TestSettings` | `test_params_roundtrip`, `test_ranges`, `test_password_groups`, `test_read_disabled`, `test_neutralize_sql`, `test_telemetry_publish`, `test_telemetry_off` | AC-53…AC-55, AC-57 | `res.config.settings`, `patch.object(F3dAccessTelemetry, '_f3d_signal_model')` | параметри, `UserError` тексти, `fake.calls == []`, записи після SQL |
-| `td_access_telemetry/tests/test_signals.py::TestAccessSignals` (теги `post_install`, `-at_install`, `f3d`, `f3d_access`) | `test_bridge_installed_signals`, `test_ensure_idempotent`, `test_new_device_signal`, `test_ingest_accepted`, `test_no_stale_without_source` | AC-68 | 5 пристроїв data, `freeze_time`; потребує встановленого `td_telemetry` | кількість і поля сигналів, лічильники `_f3d_ensure_signals`, результат `_f3d_ingest`, `status` |
+| `test_settings.py::TestSettings` | `test_params_roundtrip`, `test_ranges`, `test_password_groups`, `test_read_disabled`, `test_neutralize_sql`, `test_telemetry_publish`, `test_telemetry_off` | AC-53…AC-55, AC-57 | `res.config.settings`, `patch.object(F3dAccessTelemetry, '_td_signal_model')` | параметри, `UserError` тексти, `fake.calls == []`, записи після SQL |
+| `td_access_telemetry/tests/test_signals.py::TestAccessSignals` (теги `post_install`, `-at_install`, `f3d`, `f3d_access`) | `test_bridge_installed_signals`, `test_ensure_idempotent`, `test_new_device_signal`, `test_ingest_accepted`, `test_no_stale_without_source` | AC-68 | 5 пристроїв data, `freeze_time`; потребує встановленого `td_telemetry` | кількість і поля сигналів, лічильники `_td_ensure_signals`, результат `_td_ingest`, `status` |
 | `test_hooks.py::TestHooks` | `test_demo_like_counts`, `test_idempotent`, `test_clean_db_skipped`, `test_read_enabled_default`, `test_uninstall_hook` | AC-59…AC-61 | `make_demo_like()` | звіт `json.loads(migration_report)`, поля |
 | `test_security.py::TestSecurity` | `test_acl_matrix`, `test_public_presence_fields`, `test_card_rules`, `test_company_rules`, `test_no_biometric_fields`, `test_keep_raw`, `test_menus`, `test_views_arch`, `test_settings_menu` | AC-62…AC-66, AC-69 | користувачі `common.py` | `AccessError` через `with_user()`; `env.ref(menu).sequence/parent_id/group_ids`; `etree` arch |
 
@@ -1962,7 +1962,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | ТК-07 Відвідувач | Відвідувачі → створити («Іван Петренко», «ТОВ Постачальник», приймає OP-W1, зони `Z-OFFICE`), картка пулу, «Очікується»; `biostar_user_id='V-<id>'` вручну (Q-12); `access_event {"device": "ACR-IN", "user": "V-<id>", "code": 4102, "tna_key": "1"}`; потім `{"device": "ACR-ELEC", "user": "V-<id>", "code": 4102, "tna_key": ""}`; потім `tna_key "2"` на ACR-IN | `on_site` → порушення зон (ACR-ELEC) → `left`; відміток відвідувача немає; «Люди по зонах» показує бейдж «Відвідувач» | Відвідувачі; Журнал (фільтр «Порушення зон») | AC-44, AC-45 |
 | ТК-08 Блокування картки | Картка `12345678` працівнику OP-SAW-1 → «Видати» (`write_enabled=False`) → `local`, підказка; «Позначити синхронізованим». Увімкнути `write_enabled=True` → «Заблокувати» (причина «Тест») | 1) `local` і текст про стоп-кран; 2) `synced` вручну; 3) емулятор → 405: `sync_state='error'`, «Метод не підтримується сервером BioStar (405)», `state='blocked'`; у лозі емулятора WARNING 405. Повернути `write_enabled=False` | Картки | AC-40, AC-41 |
 | ТК-09 Переглядач | (з `td_viewer3d`) Завод 3D → Переглядач під час ТК-03; клік по людині й зоні `Z-CUT`; Люди по зонах → «Показати в 3D» | картка людини: «На території з», «Зона», «Останній прохід» (CA-05; рядки картки — автор viewer); зона: «Людей зараз: 4»; картка `TURNSTILES`: «35 працівників · 0 відвідувачів»; після проходу — оновлення без перезавантаження (шина) | 3D | AC-49, AC-66 (MAN) |
-| ТК-10 Пожежне навчання | `POST /sim/v1/scenario/fire_drill/start {"params": {"zone": "FA-CNC"}}` | за ≤ 12 с sim: 20480 на дверях 1–5 і 26368 → двері `unlocked`, `alarm=True`, `alarm_reason='fire'` (червоні в канбані «Двері»); «Зняти тривогу» охороною; (з `td_fire_safety` і `_f3d_is_active_at`) виходи TURN-1 під час навчання — `drill`, відмітки відкриті | Двері; Журнал | AC-33, AC-37 |
+| ТК-10 Пожежне навчання | `POST /sim/v1/scenario/fire_drill/start {"params": {"zone": "FA-CNC"}}` | за ≤ 12 с sim: 20480 на дверях 1–5 і 26368 → двері `unlocked`, `alarm=True`, `alarm_reason='fire'` (червоні в канбані «Двері»); «Зняти тривогу» охороною; (з `td_fire_safety` і `_td_is_active_at`) виходи TURN-1 під час навчання — `drill`, відмітки відкриті | Двері; Журнал | AC-33, AC-37 |
 
 ### 13.3 Тести безпеки ТБ-01…ТБ-08
 
@@ -1996,7 +1996,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 |---|---|---|---|
 | ТП-01 опитування з лавиною | 10 000 рядків (20 сторінок × 500) після «простою», 150 працівників | `_poll()` ≤ 60 с (створення + обробка), запитів до fake = 20 | `test_perf_poll` (тег `f3d_access_perf`, не в DoD-прогоні за замовчуванням), `time.perf_counter()` |
 | ТП-02 добовий обсяг | 1 400 подій/добу (прод, ARCH §2.7) по 1 хв | одне опитування ≤ 2 с; 1 440 прогонів/добу; на стенді CPU Odoo-воркера < 5 % | ТК-03/04 з `factor=10`, лог тривалості крону (`ir.cron` `lastcall`), `pg_stat_statements` |
-| ТП-03 провайдер і «люди зараз» | 150 працівників, 5 дверей, 130 000 подій у таблиці | `_f3d_viewer_collect` ≤ 200 мс; `td_people_now` для 45 зон ≤ 50 мс; `EXPLAIN` журналу «Сьогодні» — Index Scan по `ts` | `test_perf_provider` |
+| ТП-03 провайдер і «люди зараз» | 150 працівників, 5 дверей, 130 000 подій у таблиці | `_td_viewer_collect` ≤ 200 мс; `td_people_now` для 45 зон ≤ 50 мс; `EXPLAIN` журналу «Сьогодні» — Index Scan по `ts` | `test_perf_provider` |
 | ТП-04 ротація | 130 000 подій старших за `keep_days` | `_cron_housekeeping` ≤ 120 с, пакети по 5 000 | `test_perf_gc` (генерація `execute_values` у тесті) |
 
 ### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/td_access/DEPLOY_TEST.md`, здає W5)
@@ -2024,7 +2024,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 - `ruff check` (конфіг проєкту; без нього — умовчання, довжина рядка 120) без помилок; `xmllint --noout` для `views/`,
   `data/`, `security/`.
 - `grep -rnE "\bx_[a-z]" models/ views/ data/ hooks.py tools/` порожній (жодного `x_`-поля); жодного `print(`;
-  жодного `sudo()` у `controllers/` (їх немає) і в провайдері — лише в `_f3d_access_public_presence` (A-21).
+  жодного `sudo()` у `controllers/` (їх немає) і в провайдері — лише в `_td_access_public_presence` (A-21).
 - `neutralize.sql` виконується без помилки (AC-57) і перелічений у README.
 - Секрети: пароль і `bs-session-id` не трапляються в логах тестового прогону (`grep -c "test-pass" odoo.log` = 0).
 - Контракти CA-01…CA-09 реалізовані з точними іменами; зміна імен — лише через оновлення SPEC і повідомлення авторів
@@ -2049,9 +2049,9 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | Q-08 | **Закрито 14.10 (відповідь № 22, CONSISTENCY):** `keep_days=90`; для розслідувань — експорт охороною. строк зберігання журналу | 90 днів | `keep_days=90`; відвідувачі видаляються через 90 днів після візиту (R-20 крок 6) |
 | Q-09 | **Закрито 14.10 (рішення менеджера):** нові зони не створюємо; `zone_to` — зона-контейнер. побутовий блок між входом і цехом; зони комор | не створювати | граф ARCH §2.3, `zone_to` = зона-контейнер, `dwell_min=30` для DOOR-PAINT/DOOR-SRV |
 | Q-10 | «людей зараз» у `zones[code]` чи лише в `access` | **закрито X-87 (X-23)**: обидва в повному payload і в дельті | R-12 п. 7: дельта — `access` цілком, `employees`/`zones`/`infra.cards` через `deep_merge`; рядки карток людини/зони — автор viewer за CA-05 |
-| Q-11 | сигнатура `_f3d_ingest` і `module='access'` | закрито SPEC telemetry: M-03 `_f3d_ingest(readings, src='module', collector=None)`, R-15 `access/*` → `access`; хто створює сигнали — **закрито X-33**: міст `td_access_telemetry` (M-17) | R-18 з `src='module'`; 7 сигналів створює міст; архівний/видалений сигнал — DEBUG |
+| Q-11 | сигнатура `_td_ingest` і `module='access'` | закрито SPEC telemetry: M-03 `_td_ingest(readings, src='module', collector=None)`, R-15 `access/*` → `access`; хто створює сигнали — **закрито X-33**: міст `td_access_telemetry` (M-17) | R-18 з `src='module'`; 7 сигналів створює міст; архівний/видалений сигнал — DEBUG |
 | Q-12 | **Закрито 14.10 (рішення менеджера):** невідомий `user` → подія без `name`; `POST /api/users` — v1.1. емулятор: невідомий `user` у `access_event`, `POST /api/users` | невідомий → подія без `name`; `POST /api/users` у v1.1 | ТК-07 — ручне `biostar_user_id`; ТК-08 очікує 405 |
-| Q-13 | **Закрито 14.10 (рішення менеджера):** так: fire_safety надає CF-02 (префікс `td.fire.passage.source.`) і CF-06 `_f3d_is_active_at`. **нове.** `td_fire_safety`: знаходити джерела CF-02 за префіксом `td.fire.passage.source.` (не через `_inherit`, бо access не залежить від fire) і надати `td.fire.drill._f3d_is_active_at(ts) -> bool` (fire Q-15) | так (A-24); автор fire_safety — M-12/M-12a SPEC fire | M-16 і `_f3d_drill_active` готові; без методу у fire — `False` (виходи під час навчань закривають відмітки, як сьогодні) |
+| Q-13 | **Закрито 14.10 (рішення менеджера):** так: fire_safety надає CF-02 (префікс `td.fire.passage.source.`) і CF-06 `_td_is_active_at`. **нове.** `td_fire_safety`: знаходити джерела CF-02 за префіксом `td.fire.passage.source.` (не через `_inherit`, бо access не залежить від fire) і надати `td.fire.drill._td_is_active_at(ts) -> bool` (fire Q-15) | так (A-24); автор fire_safety — M-12/M-12a SPEC fire | M-16 і `_td_drill_active` готові; без методу у fire — `False` (виходи під час навчань закривають відмітки, як сьогодні) |
 | Q-14 | **Закрито 14.10 (відповідь № 18, CONSISTENCY):** у v1 блокування лише в Odoo; запис у BioStar — після перевірки на тестовому сервері замовника. **нове.** Формат блокування картки в BioStar 2 (`PUT /api/users/{id}` з `cards[].is_blocked` чи окремий ендпоінт блокування/чорного списку) | перевірити на тестовому BioStar замовника до вмикання `write_enabled` (Suprema, замовник) | API-08 за ПРИПУЩЕННЯМ; ручний шлях «Позначити синхронізованим»; на стенді — 405 |
 
 ## Додаток A. Рішення автора, ухвалені в SPEC (продовження ARCH §7)
@@ -2062,10 +2062,10 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | A-18 | «Перевірити з'єднання» (лише F) працює і при `read_enabled=False`, з окремою сесією | адміністратор має перевірити доступ до вмикання опитування на проді |
 | A-19 | Провайдер переглядача — `AbstractModel` без `_inherit` (duck typing інтерфейсу viewer M-01) | `td_viewer3d` не є залежністю (каркас §3); `_inherit` на відсутню модель зламав би установку |
 | A-20 | `max_shift_h=16`: вихід протягом 16 год після входу закриває відмітку навіть через північ; довше — R-07 | нічна робота без втрати відмітки; 16 год — поріг «Errors» стандартного фільтра `hr_attendance` |
-| A-21 | Провайдер читає присутність через `sudo()` лише нечутливих полів (`_f3d_access_public_presence`), особи — тільки для охорони | `td_access_last_event_id` (група охорони) не входить у `hr.employee.public`; `td_code`, `td_alias`, `td_kind` там є з base M-10a (X-09), поля присутності — з M-08a; присутність/зона за ARCH §2.6 доступні всім внутрішнім |
+| A-21 | Провайдер читає присутність через `sudo()` лише нечутливих полів (`_td_access_public_presence`), особи — тільки для охорони | `td_access_last_event_id` (група охорони) не входить у `hr.employee.public`; `td_code`, `td_alias`, `td_kind` там є з base M-10a (X-09), поля присутності — з M-08a; присутність/зона за ARCH §2.6 доступні всім внутрішнім |
 | A-22 | Хук засіває присутність із відкритих відміток (35 на демо), відмітки не змінює | інакше після установки провайдер (170) перекрив би `present` провайдера `people` на `False` і 3D-картина демо зникла б |
 | A-23 | Зона пристрою — з data (зона «з» дверей), не `zone_at` | 3 з 5 зчитувачів стоять на стінах у зазорах між зонами (`ACR-IN y=0.12`, `ACR-ELEC y=62.25`, `ACR-CHG y=59.88`) — `zone_at` повертає порожньо |
-| A-24 | Джерело проходів для fire_safety — `AbstractModel` `td.fire.passage.source.access` (`_f3d_priority=10`) і прапор навчання через `_f3d_is_active_at` (CA-09) | обидва модулі не залежать один від одного; fire Q-10, Q-15 |
+| A-24 | Джерело проходів для fire_safety — `AbstractModel` `td.fire.passage.source.access` (`_td_priority=10`) і прапор навчання через `_td_is_active_at` (CA-09) | обидва модулі не залежать один від одного; fire Q-10, Q-15 |
 | A-25 | `dwell_min=30` для всіх внутрішніх дверей (і DOOR-PAINT/DOOR-SRV, де `zone_to` = контейнер) | з `dwell_min=0` комірник після складу ЛФМ лишався б у `Z-FAC` до кінця зміни |
 | A-26 | Події, старші за останню оброблену подію людини, — `late`: ні відмітки, ні зони | порядок доставки не гарантований (офлайн-пристрої, Q-02); стандарт `_check_validity` відхилив би перетин інтервалів; виправлення — майстер M-13 |
 | A-27 | Класифікація за `code >> 8` | iot_sim ARCH Q-13 і Додаток A кажуть «4096/4864», SPEC iot_sim §8.12 — «4102/4867»; обидва варіанти дають правильний тип |

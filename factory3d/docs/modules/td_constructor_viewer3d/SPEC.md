@@ -72,14 +72,14 @@ Blender (x, y, z) → three (x, z, −y). Підписи й підсвічува
 
 ## 4. Права
 
-Нових немає. Розділ `layout` — `_f3d_group = td_factory3d.group_td_user` (збирач закриває розділ для інших як `denied`);
+Нових немає. Розділ `layout` — `_td_group = td_factory3d.group_td_user` (збирач закриває розділ для інших як `denied`);
 додатково `has_access("read")` на моделі з R-01 — для кіоску й користувачів без прав «Конструктора» ключа немає.
 
 ## 7. API
 
 Нових маршрутів, крім кіоскового GLB (R-06), немає: `layout` їде в `/f3d/viewer/data` (повний payload, схема 1.x, адитивно — viewer
 Додаток A.15), у `/f3d/viewer/delta` (`patch.layout` — повна заміна, `null` — скинути) і в `/f3d/kiosk/<токен>/…`.
-Шина: `_f3d_viewer_bus_models = [td.layout.version, td.site]`, подія `kind=state` з кодом площадки.
+Шина: `_td_viewer_bus_models = [td.layout.version, td.site]`, подія `kind=state` з кодом площадки.
 
 ## 12. Acceptance Criteria
 

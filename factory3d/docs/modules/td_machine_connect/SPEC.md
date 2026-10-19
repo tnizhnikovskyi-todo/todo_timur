@@ -6,7 +6,7 @@ FR-01…FR-36, CM-01…CM-09, A-01…A-30, Q-01…Q-17). Спирається н
 працівників); `td_telemetry` 19.0.1.1.0: CT-01 (M-01…M-06, M-11, M-13; M-06 `td.command.payload`/`result_data` —
 CR-01, X-03), CT-02 (§8.3 інтерфейс плагіна, у т. ч. `SourcePlugin.call`), CT-03 (Додаток A:
 `opcua`, `rest_vendor`, `modbus_tcp`), CT-04 (API-01…API-07; API-06 `payload`, API-07 `data`), CT-05 (R-05/R-06 заявки), CT-08 (`td.push.handler`),
-CT-10 (`_f3d_ingest`), CT-12 (R-26 локальні типи), R-17 (Ingester), R-18 (команди); `td_viewer3d` M-01, M-03,
+CT-10 (`_td_ingest`), CT-12 (R-26 локальні типи), R-17 (Ingester), R-18 (команди); `td_viewer3d` M-01, M-03,
 API-03, Додаток A.4/A.5/A.10/A.14; `td_iot_sim` §7.2 API-13 (тіло запуску `{"params": {…}}`), §8.3 (P-01), §8.4.2 (P-02), §8.5 (P-03, API-20…27), §8.6
 (P-04, API-30…34), §9.1 R-14…R-18, §9.3 S-01, S-02, Додаток A (рядки 97, 98, 197–334).
 
@@ -19,8 +19,8 @@ X-16 (сигнали модуля — `origin='module'`, Додаток C.2, AC-
 `td_factory3d.menu_td_config`, sequence 40; AC-89), X-57 (ТК-02, ТК-08, ТК-12, ТК-14 — тіло запуску сценарію
 `{"params": {…}}`), X-63 (плагін `opcua` не множить на `signal.scale` — R-22 п. 3), X-76 (`equipment/CUTOPT/cmd` і
 `equipment/GANTRY-1/stacks` — у каталозі iot_sim `protocol=none`, Додаток C.2); §15 — закрито Q-09 (X-03), Q-16 (X-52),
-Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: створення команд (`_f3d_mc_create_command`,
-`_f3d_mc_payload_supported`) винесено з `tools/commands.py` у `models/td_command.py` (M-20) — `tools/commands.py`
+Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: створення команд (`_td_mc_create_command`,
+`_td_mc_payload_supported`) винесено з `tools/commands.py` у `models/td_command.py` (M-20) — `tools/commands.py`
 без імпортів Odoo, побайтово = `cmdtext.py` (§0, M-13, M-20, §7.2, §13.0.1 п. 9, AC-58, AC-80, AC-102, AC-103, §13.1, DoD).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-12, Q-14.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-04…Q-08, Q-10, Q-11, Q-13.
@@ -53,8 +53,8 @@ odoo_addons/td_machine_connect/
 │   │                                td_cut_part, td_cut_map, mrp_workcenter, mrp_workorder, mrp_production,
 │   │                                mrp_workcenter_productivity, product_template, td_signal, td_source, td_command,
 │   │                                push_handler, viewer_provider, res_config_settings, stock_picking, maintenance_request
-│   ├── td_machine.py               M-01: поля, R-01…R-04 (нормалізація, фіксація стану, журнал), диспетчер _f3d_dispatch
-│   ├── td_machine_downtime.py      M-01 (_inherit = "td.machine"): R-05…R-08 простої, підказки, заявки (гачки _f3d_after_commit, _f3d_tick_extra)
+│   ├── td_machine.py               M-01: поля, R-01…R-04 (нормалізація, фіксація стану, журнал), диспетчер _td_dispatch
+│   ├── td_machine_downtime.py      M-01 (_inherit = "td.machine"): R-05…R-08 простої, підказки, заявки (гачки _td_after_commit, _td_tick_extra)
 │   ├── td_machine_wo.py            M-01 (_inherit = "td.machine"): R-09…R-12 автостарт/пауза/лічильник/завершення (ті самі гачки)
 │   ├── td_machine_state_log.py     M-02
 │   ├── td_downtime.py              M-03
@@ -70,9 +70,9 @@ odoo_addons/td_machine_connect/
 │   ├── mrp_production.py            M-14
 │   ├── mrp_workcenter_productivity.py  M-15, M-16 (R-06 злиття)
 │   ├── product_template.py          M-17
-│   ├── td_signal.py                M-18 (_f3d_ingest, _mark_stale)
-│   ├── td_source.py                M-19 (selection_add td_machine, _f3d_local_types)
-│   ├── td_command.py               M-20: _f3d_mc_create_command, _f3d_mc_payload_supported (X-93), реакція на done/failed
+│   ├── td_signal.py                M-18 (_td_ingest, _mark_stale)
+│   ├── td_source.py                M-19 (selection_add td_machine, _td_local_types)
+│   ├── td_command.py               M-20: _td_mc_create_command, _td_mc_payload_supported (X-93), реакція на done/failed
 │   ├── push_handler.py              M-21 td.push.handler.machine_connect (EV-01…EV-03)
 │   ├── viewer_provider.py           M-22 td.viewer.provider.machines (R-25)
 │   ├── res_config_settings.py       M-23
@@ -259,7 +259,7 @@ services/collector_plugins/machine_connect/
 інше (через нього `td_factory3d`, `maintenance`, `mail`, `mrp`, `stock`, `hr`).
 Модуль розрахований на `td_telemetry` 19.0.1.1.0 (CR-01, X-03: `td.command.payload`/`result_data`, API-06
 `payload`, API-07 `data`, `SourcePlugin.call`); з telemetry без поля `payload` команди йдуть запасною текстовою
-граматикою R-21 (M-20 `_f3d_mc_payload_supported`). Власна версія модуля — `19.0.1.0.0` (перший випуск).
+граматикою R-21 (M-20 `_td_mc_payload_supported`). Власна версія модуля — `19.0.1.0.0` (перший випуск).
 
 ## 2. Моделі
 
@@ -363,49 +363,49 @@ class F3dMachine(models.Model):
 4. `auto_start_mode == 'job'` і (`protocol != 'opcua'` або немає `sig_job_id`) → `"Режим «Лише за завданням» потребує сигналу завдання (OPC UA)."`;
 5. `protocol == 'io'` і `io_slot` поза 0…4 → `"Позиція в модулі I/O: 0…4."`.
 
-`create`/`write`/`unlink`: після `super()` — `self.env.registry.clear_cache()` (скидає `_f3d_code_map`), якщо в `vals`
+`create`/`write`/`unlink`: після `super()` — `self.env.registry.clear_cache()` (скидає `_td_code_map`), якщо в `vals`
 є будь-яке `sig_*`, `active`, `read_enabled`; зміна `auto_start_mode`/`read_enabled` — повідомлення в чатер (tracking).
 
 Методи (алгоритми — §9):
 
 | Сигнатура | Призначення |
 |---|---|
-| `@api.model @tools.ormcache() _f3d_code_map(self) -> dict` | `{signal_code: (machine_id, role)}` для активних верстатів: ролі `state`, `mode`, `alarm`, `pieces`, `job`, `event` з полів `sig_*` (один `search_read`) |
-| `@api.model _f3d_dispatch(self, readings: list[dict], src: str) -> dict` | вхід із M-18 після `super()._f3d_ingest`: R-04 п. 0; повертає `{"machines": n, "transitions": n, "autostarts": n, "finished": n, "errors": [..]}` |
-| `_f3d_lock(self)` | `self.env.cr.execute("SELECT id FROM td_machine WHERE id IN %s FOR UPDATE", (tuple(self.ids),))` — до будь-якої зміни стану (R-09 п. 7) |
-| `_f3d_apply(self, items: list[dict])` | `ensure_one()`; R-01, R-02, R-11 для показань одного верстата (відсортовані за `ts`) |
-| `_f3d_on_raw_state(self, new: str, ts: datetime)` | R-02 (мікрозупинка, відкладений перехід) |
-| `_f3d_commit_state(self, new: str, ts: datetime, cause: str = "machine")` | R-04: закрити інтервал, відкрити новий, R-05 (простій), R-10 (пауза/відновлення), R-09 (автостарт), сигнал `machine_state`, шина |
-| `_f3d_mark_nodata(self, ts: datetime, reason: str)` | R-03 |
-| `_f3d_emit_state(self, ts: datetime)` | `self.env["td.signal"].with_context(f3d_mc_internal=True)._f3d_ingest([{"code": sig_machine_state_id.code, "ts": ts, "text": state, "q": "good"}], src="module")` (CT-10) |
-| `_f3d_notify(self, kinds=("state",))` | якщо `'td.viewer.event' in self.env`: `self.env['td.viewer.event']._notify('mrp.workcenter', self.mapped('code'), 'state')` |
-| `@api.model _cron_tick(self)` | тут — R-02 п. 4 (відкладені переходи), R-03 п. 3, стан `MC-DERIVED`; далі для кожного верстата `_f3d_tick_extra(now)`: R-10 п. 2 (пауза за часом), R-12 п. 3 (завершення I/O), R-05 п. 6 (межа планового часу), R-06 п. 3/5, R-09 п. 9 (без завдання); ≤ 35 верстатів, ≤ 10 с |
-| `@api.model _f3d_wo_intervals(self, workorders, date_from=None, date_to=None) -> dict` | CM-03, R-28 |
-| `@api.model _f3d_wc_intervals(self, workcenter, date_from, date_to) -> list` | CM-03, R-28 |
-| `_f3d_oee(self, date_from, date_to) -> dict` | CM-04, R-13 |
+| `@api.model @tools.ormcache() _td_code_map(self) -> dict` | `{signal_code: (machine_id, role)}` для активних верстатів: ролі `state`, `mode`, `alarm`, `pieces`, `job`, `event` з полів `sig_*` (один `search_read`) |
+| `@api.model _td_dispatch(self, readings: list[dict], src: str) -> dict` | вхід із M-18 після `super()._td_ingest`: R-04 п. 0; повертає `{"machines": n, "transitions": n, "autostarts": n, "finished": n, "errors": [..]}` |
+| `_td_lock(self)` | `self.env.cr.execute("SELECT id FROM td_machine WHERE id IN %s FOR UPDATE", (tuple(self.ids),))` — до будь-якої зміни стану (R-09 п. 7) |
+| `_td_apply(self, items: list[dict])` | `ensure_one()`; R-01, R-02, R-11 для показань одного верстата (відсортовані за `ts`) |
+| `_td_on_raw_state(self, new: str, ts: datetime)` | R-02 (мікрозупинка, відкладений перехід) |
+| `_td_commit_state(self, new: str, ts: datetime, cause: str = "machine")` | R-04: закрити інтервал, відкрити новий, R-05 (простій), R-10 (пауза/відновлення), R-09 (автостарт), сигнал `machine_state`, шина |
+| `_td_mark_nodata(self, ts: datetime, reason: str)` | R-03 |
+| `_td_emit_state(self, ts: datetime)` | `self.env["td.signal"].with_context(f3d_mc_internal=True)._td_ingest([{"code": sig_machine_state_id.code, "ts": ts, "text": state, "q": "good"}], src="module")` (CT-10) |
+| `_td_notify(self, kinds=("state",))` | якщо `'td.viewer.event' in self.env`: `self.env['td.viewer.event']._notify('mrp.workcenter', self.mapped('code'), 'state')` |
+| `@api.model _cron_tick(self)` | тут — R-02 п. 4 (відкладені переходи), R-03 п. 3, стан `MC-DERIVED`; далі для кожного верстата `_td_tick_extra(now)`: R-10 п. 2 (пауза за часом), R-12 п. 3 (завершення I/O), R-05 п. 6 (межа планового часу), R-06 п. 3/5, R-09 п. 9 (без завдання); ≤ 35 верстатів, ≤ 10 с |
+| `@api.model _td_wo_intervals(self, workorders, date_from=None, date_to=None) -> dict` | CM-03, R-28 |
+| `@api.model _td_wc_intervals(self, workcenter, date_from, date_to) -> list` | CM-03, R-28 |
+| `_td_oee(self, date_from, date_to) -> dict` | CM-04, R-13 |
 | `action_test_connection(self)` | `display_notification`: «Джерело <код>: <стан>; стан <raw_state>/<raw_mode>, тривога <так/ні>, лічильник <n>, завдання <raw_job>; останнє показання <час Київ>» |
 | `action_view_logs(self)` / `action_view_downtimes(self)` / `action_view_oee(self)` | `act_window` на M-02 / M-03 / M-06 з `domain=[('machine_id','=',id)]` |
 | `action_open_workcenter(self)` | форма `mrp.workcenter` |
 | `action_f3d_show(self)` | `self.workcenter_id.action_f3d_show()` (CB-02) |
-| `action_reset_state(self)` | лише `group_td_admin` (`AccessError`): `_f3d_lock()`, закрити `current_log_id`/`current_downtime_id` о `now`, `state='nodata'`, чатер «Стан скинуто адміністратором» |
+| `action_reset_state(self)` | лише `group_td_admin` (`AccessError`): `_td_lock()`, закрити `current_log_id`/`current_downtime_id` о `now`, `state='nodata'`, чатер «Стан скинуто адміністратором» |
 
-Гачки між файлами (кожне перевизначення викликає `super()` першим): `_f3d_after_commit(self, old: str, new: str, ts:
-datetime)` — після фіксації переходу (R-04 п. 4; у `td_machine.py` порожній); `_f3d_tick_extra(self, now: datetime)` —
-частина `_cron_tick` для кожного верстата з `read_enabled`; `_f3d_on_count(self, delta: float, ts: datetime)` — після
-R-11 п. 1–3; `_f3d_on_job(self, text: str, ts: datetime)` — зміна `raw_job`; `_f3d_apply_event(self, payload: dict)`
-(`@api.model`, EV-01 з M-21). Базові реалізації в `models/td_machine.py`: `_f3d_count(value, ts)` — R-11 п. 1–3, потім
-`_f3d_on_count(delta, ts)`; `_f3d_on_job` — пише `raw_job`; `_f3d_apply_event` — знаходить верстат за `machine`
+Гачки між файлами (кожне перевизначення викликає `super()` першим): `_td_after_commit(self, old: str, new: str, ts:
+datetime)` — після фіксації переходу (R-04 п. 4; у `td_machine.py` порожній); `_td_tick_extra(self, now: datetime)` —
+частина `_cron_tick` для кожного верстата з `read_enabled`; `_td_on_count(self, delta: float, ts: datetime)` — після
+R-11 п. 1–3; `_td_on_job(self, text: str, ts: datetime)` — зміна `raw_job`; `_td_apply_event(self, payload: dict)`
+(`@api.model`, EV-01 з M-21). Базові реалізації в `models/td_machine.py`: `_td_count(value, ts)` — R-11 п. 1–3, потім
+`_td_on_count(delta, ts)`; `_td_on_job` — пише `raw_job`; `_td_apply_event` — знаходить верстат за `machine`
 (немає → `ValueError`), решта — у файлах нижче.
 
-У `models/td_machine_downtime.py` (`_inherit = "td.machine"`): `_f3d_open_downtime(kind, ts)`, `_f3d_close_downtime(ts)`
-(R-05), `_f3d_hint(kind, ts) -> tuple[loss, str, event]` (R-07), `_f3d_apply_event` (R-07 п. 1, R-08 п. 3); гачки:
-`_f3d_after_commit` — R-05 п. 1–4, R-08 п. 2; `_f3d_tick_extra` — R-05 п. 6, R-06 п. 3 і 5.
-У `models/td_machine_wo.py` (`_inherit = "td.machine"`): `_f3d_match_job(text) -> mrp.workorder` (R-09 п. 1),
-`_f3d_candidate(ts) -> mrp.workorder` (R-09 п. 2), `_f3d_pick_employee(wo) -> hr.employee` (R-09 п. 4),
-`_f3d_autostart(ts)` (R-09), `_f3d_autopause(ts, reason)`, `_f3d_resume(ts)` (R-10), `_f3d_try_finish(ts, trigger)`
-(R-12); гачки: `_f3d_on_count` — R-11 п. 4–5; `_f3d_on_job` — R-09 п. 8, R-12 п. 1;
-`_f3d_after_commit` — R-10, R-09, R-12 п. 2; `_f3d_tick_extra` — R-10 п. 2, R-12 п. 3, R-09 п. 9; `_f3d_apply_event` —
-R-12 п. 1 (`I0002`). У `models/td_machine.py`: `_f3d_tech_env()` →
+У `models/td_machine_downtime.py` (`_inherit = "td.machine"`): `_td_open_downtime(kind, ts)`, `_td_close_downtime(ts)`
+(R-05), `_td_hint(kind, ts) -> tuple[loss, str, event]` (R-07), `_td_apply_event` (R-07 п. 1, R-08 п. 3); гачки:
+`_td_after_commit` — R-05 п. 1–4, R-08 п. 2; `_td_tick_extra` — R-05 п. 6, R-06 п. 3 і 5.
+У `models/td_machine_wo.py` (`_inherit = "td.machine"`): `_td_match_job(text) -> mrp.workorder` (R-09 п. 1),
+`_td_candidate(ts) -> mrp.workorder` (R-09 п. 2), `_td_pick_employee(wo) -> hr.employee` (R-09 п. 4),
+`_td_autostart(ts)` (R-09), `_td_autopause(ts, reason)`, `_td_resume(ts)` (R-10), `_td_try_finish(ts, trigger)`
+(R-12); гачки: `_td_on_count` — R-11 п. 4–5; `_td_on_job` — R-09 п. 8, R-12 п. 1;
+`_td_after_commit` — R-10, R-09, R-12 п. 2; `_td_tick_extra` — R-10 п. 2, R-12 п. 3, R-09 п. 9; `_td_apply_event` —
+R-12 п. 1 (`I0002`). У `models/td_machine.py`: `_td_tech_env()` →
 `self.env(user=self.env.ref("td_machine_connect.user_td_machine").id, su=False)` з `context={"tz": "Europe/Kyiv",
 "f3d_mc_auto": True}`.
 
@@ -446,7 +446,7 @@ class F3dMachineStateLog(models.Model):
                             "ON td_machine_state_log (machine_id) WHERE date_end IS NULL")
 ```
 
-Методи: `_f3d_close(self, ts)` — `date_end = max(ts, date_start)`, `in_ppt_min` (R-04 п. 3), повторний виклик на закритому —
+Методи: `_td_close(self, ts)` — `date_end = max(ts, date_start)`, `in_ppt_min` (R-04 п. 3), повторний виклик на закритому —
 нічого; `_compute_display_name` — `"%s · %s · %s–%s" % (code, label(state), local(date_start, '%H:%M'), local(date_end,
 '%H:%M') або '…')`; `unlink` — лише `group_td_admin` (`AccessError("Журнал станів видаляє лише адміністратор.")`);
 `write` полів `state`, `date_start`, `machine_id` — лише `env.su` або адміністратор (`AccessError`). Форми — лише читання.
@@ -506,11 +506,11 @@ class F3dDowntime(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `action_set_reason(self, loss_id: int, employee_id: int = None, source: str = None)` | права: `mrp.group_mrp_user` (`AccessError`); `confirmed` і користувач без `mrp.group_mrp_manager` → `UserError("Простій підтверджено — змінити причину може майстер.")`; `loss` не availability/quality → `UserError("Причина має бути втратою доступності або якості.")`; `src = source or ('master' if has_group('mrp.group_mrp_manager') else 'operator')`; `_f3d_apply_reason(loss, src, employee)`; `reason_state = 'confirmed' if src == 'master' else 'to_confirm'` |
+| `action_set_reason(self, loss_id: int, employee_id: int = None, source: str = None)` | права: `mrp.group_mrp_user` (`AccessError`); `confirmed` і користувач без `mrp.group_mrp_manager` → `UserError("Простій підтверджено — змінити причину може майстер.")`; `loss` не availability/quality → `UserError("Причина має бути втратою доступності або якості.")`; `src = source or ('master' if has_group('mrp.group_mrp_manager') else 'operator')`; `_td_apply_reason(loss, src, employee)`; `reason_state = 'confirmed' if src == 'master' else 'to_confirm'` |
 | `action_confirm(self)` | права `mrp.group_mrp_manager`; для кожного: `loss_id == loss_unknown` → `UserError("Спершу вкажіть причину простою %s.")`; `reason_state='confirmed'`, `confirmed_by`, `confirmed_at=now`; повертає `True` (серверна дія «Підтвердити простої» викликає для виділених) |
 | `action_open_reason_wizard(self)` | `act_window` M-24 `target='new'`, `context={'default_downtime_id': id}` |
-| `_f3d_apply_reason(self, loss, source, employee=None)` | `write({'loss_id': loss.id, 'reason_source': source, 'employee_id': employee.id or False, 'reason_user_id': env.uid, 'reason_at': now})`; усім `productivity_ids` із `td_auto=True` → `loss_id = loss.id` (через `sudo()`; записи оператора не змінюються); чатер «Причина: <назва> (<хто>)» |
-| `_f3d_close(self, ts)` | R-05 п. 4 |
+| `_td_apply_reason(self, loss, source, employee=None)` | `write({'loss_id': loss.id, 'reason_source': source, 'employee_id': employee.id or False, 'reason_user_id': env.uid, 'reason_at': now})`; усім `productivity_ids` із `td_auto=True` → `loss_id = loss.id` (через `sudo()`; записи оператора не змінюються); чатер «Причина: <назва> (<хто>)» |
+| `_td_close(self, ts)` | R-05 п. 4 |
 | `write(self, vals)` | `loss_id` у `vals` без контексту `f3d_mc_internal` → перевірки `action_set_reason` (права, `confirmed`); далі `super()` |
 | `unlink(self)` | лише `group_td_admin` (`AccessError("Простій видаляє лише адміністратор.")`) |
 
@@ -534,7 +534,7 @@ class F3dDowntime(models.Model):
 | `acked` | Boolean | `string="Квитовано"` |
 | `ext_event_id` | Char(64) | `req`, `idx`, `string="Ідентифікатор події"` (= `event_id` telemetry M-13) |
 | `payload` | Json | `string="Дані"` (EV-01 цілком) |
-| `message_rec_id` | Many2one `td.machine.message` | `compute="_compute_message_rec"`, `store=True` — `td.machine.message._f3d_match(message_id)` |
+| `message_rec_id` | Many2one `td.machine.message` | `compute="_compute_message_rec"`, `store=True` — `td.machine.message._td_match(message_id)` |
 | `downtime_id` | Many2one `td.downtime` | `ondelete="set null"` |
 
 `_f3d_machine_event_uniq = models.Constraint("UNIQUE(ext_event_id)", "Подія вже записана.")`. Ротація — крон R-14 п. 6
@@ -555,7 +555,7 @@ class F3dDowntime(models.Model):
 | `active` | Boolean | `default=True` |
 
 `_f3d_message_uniq = models.Constraint("UNIQUE(message_id)", "Код повідомлення повторюється.")`; `@api.constrains("message_id")`
-— регекс → `"Код повідомлення: латиниця й цифри, ≤ 15, необов'язкова * у кінці."`. Метод `@api.model _f3d_match(self,
+— регекс → `"Код повідомлення: латиниця й цифри, ≤ 15, необов'язкова * у кінці."`. Метод `@api.model _td_match(self,
 message_id) -> record`: порожній → порожньо; точний збіг активного; інакше записи з `*`, для яких `message_id.startswith(
 pattern[:-1])`, — найдовший префікс; інакше порожньо. Дані — Додаток B.
 
@@ -588,7 +588,7 @@ pattern[:-1])`, — найдовший префікс; інакше порожн
 | `oee_color` | Selection | `compute` (не зберігається): `good` (≥ `oee_good`), `warn` (≥ `oee_warn`), `bad` |
 
 `_f3d_oee_uniq = models.Constraint("UNIQUE(machine_id, date)", "OEE за цю зміну вже є.")`. Методи:
-`@api.model _f3d_compute(self, machine, day: date, close: bool = False) -> record` (R-14), `@api.model _cron_oee(self)`
+`@api.model _td_compute(self, machine, day: date, close: bool = False) -> record` (R-14), `@api.model _cron_oee(self)`
 (R-14), `action_recompute(self)` (кнопка; права `group_td_manager`). Записи змінює лише крон/кнопка (`sudo`); форми
 — лише читання.
 
@@ -621,7 +621,7 @@ class F3dGantryStack(models.Model):
 | `ws_locked` | Boolean | `string="Заблоковано в порталі"` |
 | `ws_updated` | Datetime | `string="Оновлено в порталі"` (`updated` API-21) |
 | `ws_seen` | Datetime | `string="Отримано"` (час обробки EV-02) |
-| `odoo_qty` | Float | `digits=(12,1)`, `string="Odoo, арк."` — Σ `stock.quant.quantity` у `location_id` (пише `_f3d_refresh`) |
+| `odoo_qty` | Float | `digits=(12,1)`, `string="Odoo, арк."` — Σ `stock.quant.quantity` у `location_id` (пише `_td_refresh`) |
 | `odoo_product_id` | Many2one `product.product` | `string="Товар в Odoo"` (кванти з найбільшою к-стю) |
 | `odoo_lot_id` | Many2one `stock.lot` | `string="Партія в Odoo"` |
 | `fed_unconsumed` | Float | `digits=(12,1)`, `string="Подано, не списано"` (R-15 п. 2) |
@@ -636,7 +636,7 @@ class F3dGantryStack(models.Model):
 `_f3d_stack_loc_uniq = models.Constraint("UNIQUE(location_id)", "Для місця вже є стос.")`; `CHECK(ws_qty >= 0)`
 (`"Кількість у порталі не може бути від'ємною."`).
 
-Методи: `_f3d_refresh(self)` — R-15 п. 1–5 (без `write`, якщо нічого не змінилось); `@api.model _f3d_apply_ws(self,
+Методи: `_td_refresh(self)` — R-15 п. 1–5 (без `write`, якщо нічого не змінилось); `@api.model _td_apply_ws(self,
 items: list[dict], ts)` — EV-02 `stacks` (R-23 п. 3); `action_accept_portal(self)` — R-15 п. 6а (права
 `stock.group_stock_manager`); `action_fix_portal(self)` — R-15 п. 6б (CMD-02 `stack`); `action_replenish(self)` — R-18
 п. 2; `action_view_quants(self)`, `action_view_jobs(self)`; `action_f3d_show(self)` → `location_id.action_f3d_show()`.
@@ -691,9 +691,9 @@ class F3dGantryJob(models.Model):
 
 Методи: `action_send(self)` — `draft/error` → `to_send` (права `mrp.group_mrp_user`); `action_cancel(self)` — R-16 п. 6
 (права `mrp.group_mrp_manager` для `queued/active`, інакше `mrp.group_mrp_user`); `action_retry(self)` — `error` →
-`to_send`; `@api.model _f3d_from_production(self, production, workorder=None, cut_map=None, sheets=None) -> record` —
-R-16 п. 1; `_f3d_send(self)` — R-16 п. 2; `@api.model _f3d_apply_ws(self, items: list[dict], ts)` — EV-02 `jobs`;
-`@api.model _f3d_apply_events(self, items: list[dict])` — EV-02 `events` (R-23 п. 4); `_f3d_consume(self)` — R-17;
+`to_send`; `@api.model _td_from_production(self, production, workorder=None, cut_map=None, sheets=None) -> record` —
+R-16 п. 1; `_td_send(self)` — R-16 п. 2; `@api.model _td_apply_ws(self, items: list[dict], ts)` — EV-02 `jobs`;
+`@api.model _td_apply_events(self, items: list[dict])` — EV-02 `events` (R-23 п. 4); `_td_consume(self)` — R-17;
 `@api.model _cron_gantry(self)` — R-15, R-16, R-18 (§6).
 
 ### M-09 `td.cut.part` — деталь виробу для розкрою (CM-01, A-13)
@@ -778,7 +778,7 @@ class F3dCutMap(models.Model):
 
 | Сигнатура | Дія |
 |---|---|
-| `@api.model _f3d_create_for(self, production, material_role='main') -> record` | R-19 п. 1–3 (кнопка МО «Створити карту розкрою» викликає для `main` і, якщо є, `back`) |
+| `@api.model _td_create_for(self, production, material_role='main') -> record` | R-19 п. 1–3 (кнопка МО «Створити карту розкрою» викликає для `main` і, якщо є, `back`) |
 | `action_build_lines(self)` | R-19 п. 3 (у `draft`, перебудова) |
 | `action_export(self)` | `draft` → `exported`: CSV R-19 п. 5 → `ir.attachment` (`res_model='td.cut.map'`, `name="<номер>_parts.csv"`, `mimetype='text/csv'`); режим `collector` → `action_send_optimizer()` |
 | `action_send_optimizer(self)` | R-20 п. 1 (CMD-03 `upload`) |
@@ -787,9 +787,9 @@ class F3dCutMap(models.Model):
 | `action_update_mo_need(self)` | R-20 п. 4 (права `mrp.group_mrp_manager`) |
 | `action_release(self)` | R-20 п. 5 |
 | `action_cancel(self)` / `action_reset_draft(self)` | `cancel` з будь-якого, крім `done`; `draft` з `error`/`cancel` (очищає `ext_job_id`, план, команди не чіпає) |
-| `_f3d_new_export_token(self) -> str` | `t = secrets.token_hex(8)`; `export_token_hash = sha256(t)`, `export_token_expires = now + export_token_ttl_s`; повертає `t` |
-| `@api.model _f3d_check_export_token(self, map_id, t) -> record` | API-01 п. 3 |
-| `_f3d_apply_job(self, job: dict)` / `_f3d_apply_plan(self, plan: dict)` / `_f3d_apply_mpr(self, part: str, text: str)` | R-20 п. 2–3 (з EV-03) |
+| `_td_new_export_token(self) -> str` | `t = secrets.token_hex(8)`; `export_token_hash = sha256(t)`, `export_token_expires = now + export_token_ttl_s`; повертає `t` |
+| `@api.model _td_check_export_token(self, map_id, t) -> record` | API-01 п. 3 |
+| `_td_apply_job(self, job: dict)` / `_td_apply_plan(self, plan: dict)` / `_td_apply_mpr(self, part: str, text: str)` | R-20 п. 2–3 (з EV-03) |
 | `@api.model _cron_cutmap(self)` | R-20 п. 6 |
 
 ### M-11 `td.cut.map.line` — деталь у карті розкрою
@@ -846,7 +846,7 @@ backorder — рішення МО при закритті); чатер МО «З
 `action_f3d_send_to_machine(self)` (FR-27, CMD-01 `Store`; права `mrp.group_mrp_user`): `ensure_one()`; немає
 `td_can_send` → `UserError("Робочий центр %s не приймає завдань з Odoo (немає OPC UA JobManagement).")`; стан ∉
 {`ready`, `blocked`} → `UserError("Завдання %s уже в роботі або завершене.")`; команда CMD-01 `Store`:
-`env["td.command"]._f3d_mc_create_command(machine.sig_job_cmd_id, "Store", {"job": f"WO{id:05d}", "qty": max(1,
+`env["td.command"]._td_mc_create_command(machine.sig_job_cmd_id, "Store", {"job": f"WO{id:05d}", "qty": max(1,
 ceil(qty_remaining)), "ref": production_id.name, "priority": 5}, {"td_machine_id": machine.id})` (payload R-21, X-03; поле не за R-21 →
 `UserError` з M-20; п'ять запобіжників, M-20); чатер МО «Завдання <назва> поставлено в чергу верстата <код>: <`text`
 команди>». Старт — з пульта верстата, далі R-09.
@@ -857,9 +857,9 @@ ceil(qty_remaining)), "ref": production_id.name, "priority": 5}, {"td_machine_id
 `_inherit = "mrp.production"`. Поля: `td_cut_map_ids` One2many `td.cut.map` `production_id`, `td_cut_map_count`
 Integer `compute`, `td_gantry_job_ids` One2many `td.gantry.job` `production_id`, `td_gantry_job_count` Integer
 `compute`. Методи: `action_f3d_create_cut_maps(self)` — права `group_td_manager`; для ролей `main` і `back` (якщо
-у МО є сировинний рух плити відповідної товщини, R-19 п. 1) — `td.cut.map._f3d_create_for(self, role)`; повертає
+у МО є сировинний рух плити відповідної товщини, R-19 п. 1) — `td.cut.map._td_create_for(self, role)`; повертає
 дію на створені карти; МО у стані `done`/`cancel` → `UserError("МО %s завершено або скасовано.")`.
-`action_f3d_view_cut_maps(self)`, `action_f3d_feed_gantry(self)` — `td.gantry.job._f3d_from_production(self)`
+`action_f3d_view_cut_maps(self)`, `action_f3d_feed_gantry(self)` — `td.gantry.job._td_from_production(self)`
 (R-16 п. 1), повертає форму завдання; `action_f3d_view_gantry_jobs(self)`.
 
 ### M-15 `mrp.workcenter.productivity` — розширення (CM-09, R-06)
@@ -895,27 +895,27 @@ AND td_thickness_mm >= 0)`; `@api.constrains`: довжина > 0 ⇔ ширин
 
 ```python
     @api.model
-    def _f3d_ingest(self, readings, src="module", collector=None):
-        res = super()._f3d_ingest(readings, src=src, collector=collector)
+    def _td_ingest(self, readings, src="module", collector=None):
+        res = super()._td_ingest(readings, src=src, collector=collector)
         if self.env.context.get("f3d_mc_internal") or not param_bool(self.env, "read_enabled", _env_default(self.env)):
             return res
         # unknown_state telemetry приймає (q='bad') і лише повідомляє — такі показання модуль обробляє сам (R-01)
         rejected = {r["i"] for r in res.get("rejected", ()) if r.get("reason") != "unknown_state"}
-        code_map = self.env["td.machine"]._f3d_code_map()
+        code_map = self.env["td.machine"]._td_code_map()
         mine = [dict(r, i=i) for i, r in enumerate(readings) if i not in rejected and r.get("code") in code_map]
         if mine:
-            self.env["td.machine"].sudo()._f3d_dispatch(mine, src)
+            self.env["td.machine"].sudo()._td_dispatch(mine, src)
         return res
 
     def _mark_stale(self, reason):
         res = super()._mark_stale(reason)
-        code_map = self.env["td.machine"]._f3d_code_map()
+        code_map = self.env["td.machine"]._td_code_map()
         for sig in self.filtered(lambda s: code_map.get(s.code, (0, ""))[1] == "state"):
-            self.env["td.machine"].sudo().browse(code_map[sig.code][0])._f3d_mark_nodata(fields.Datetime.now(), reason)
+            self.env["td.machine"].sudo().browse(code_map[sig.code][0])._td_mark_nodata(fields.Datetime.now(), reason)
         return res
 ```
 
-`_f3d_dispatch` ловить винятки на рівні верстата (`savepoint` на верстат, `logger.exception`, лічильник
+`_td_dispatch` ловить винятки на рівні верстата (`savepoint` на верстат, `logger.exception`, лічильник
 `errors`), тож помилка диспетчера не відкочує показань telemetry і не дає `5xx` колектору.
 
 ### M-19 `td.source` — локальний тип (A-17, CT-12)
@@ -926,8 +926,8 @@ class F3dSource(models.Model):
     type = fields.Selection(selection_add=[("f3d_machine", "Верстати: обчислені стани")], ondelete={"f3d_machine": "cascade"})
 
     @api.model
-    def _f3d_local_types(self):
-        return super()._f3d_local_types() + ["f3d_machine"]
+    def _td_local_types(self):
+        return super()._td_local_types() + ["f3d_machine"]
 ```
 
 Джерело `MC-DERIVED` (`type='f3d_machine'`, без колектора, `params={}`, `module='machine_connect'`); його `state`
@@ -939,21 +939,21 @@ class F3dSource(models.Model):
 `td_machine_id` Many2one `td.machine`, `td_gantry_job_id` Many2one
 `td.gantry.job`, `td_cut_map_id` Many2one `td.cut.map` — усі `ondelete="set null"`, `idx`. `write(self, vals)`:
 `super()`; якщо `'state' in vals` і новий стан ∈ {`done`, `failed`, `expired`, `cancelled`} і `origin ==
-'machine_connect'` → `self._f3d_mc_on_result()`: для `td_gantry_job_id` — R-16 п. 3; для `td_cut_map_id` — R-20 п. 2;
+'machine_connect'` → `self._td_mc_on_result()`: для `td_gantry_job_id` — R-16 п. 3; для `td_cut_map_id` — R-20 п. 2;
 для `td_machine_id` — чатер верстата «Команда <текст>: <стан> <result/error>». Результат команди модуль бере з
 `result_data` (об'єкт, який повернув `call()` плагіна, колонка «Результат» R-21); у запасному режимі (`result_data`
 порожнє) — з рядка `result` (колонка «Запасний `result`» R-21). Те саме виконують крони R-16/R-20
 для команд, стан яких змінено не через ORM (A-14).
 
 Створення команд модулем — лише методом цього розширення (X-93: не в `tools/commands.py`, бо той модуль копіюється в
-пакет колектора й не імпортує Odoo) `@api.model _f3d_mc_create_command(self, signal, op, fields: dict, links: dict | None
-= None) -> td.command` (виклик — `env["td.command"]._f3d_mc_create_command(...)`; чисті функції R-21 — з
+пакет колектора й не імпортує Odoo) `@api.model _td_mc_create_command(self, signal, op, fields: dict, links: dict | None
+= None) -> td.command` (виклик — `env["td.command"]._td_mc_create_command(...)`; чисті функції R-21 — з
 `..tools.commands`):
 1. `param_bool("write_enabled")` — інакше `UserError("Запис на пристрої вимкнено: td.machine_connect.write_enabled.")`.
 2. Вид команди — з адреси сигналу: `address.call == "job"` → `job`; `address.cmd` ∈ {`gantry`, `cutopt`} → той самий;
    інакше `UserError("Сигнал %s не є сигналом команд верстатів.")`.
 3. `payload = build_payload(kind, op, **fields)` (R-21); `ValueError` → `UserError("Команда «%s» не відповідає формату: %s")`.
-4. `self._f3d_mc_payload_supported()` (`@api.model`, = `'payload' in self._fields`, telemetry 19.0.1.1.0) → `vals = {'payload':
+4. `self._td_mc_payload_supported()` (`@api.model`, = `'payload' in self._fields`, telemetry 19.0.1.1.0) → `vals = {'payload':
    payload, 'text': cmd_label(kind, payload)}` (`text` довідковий — для списку команд telemetry V-17 і чатера; плагін
    для команди з `payload` його не читає, telemetry M-06); інакше — запасний режим: `vals = {'text': build_cmd(kind, op,
    **fields)}` (> 64 символи → той самий `UserError`, що в п. 3).
@@ -968,14 +968,14 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
     _name = "td.push.handler.machine_connect"
     _inherit = "td.push.handler"
     _description = "Верстати: обробник подій колектора"
-    _f3d_push_routes = ("mc_opcua", "mc_woodstore", "mc_cutopt")
+    _td_push_routes = ("mc_opcua", "mc_woodstore", "mc_cutopt")
 ```
 
-`_f3d_handle_push(self, route, event)`: `payload = event["payload"]`; невідомий `payload["kind"]` або відсутнє
+`_td_handle_push(self, route, event)`: `payload = event["payload"]`; невідомий `payload["kind"]` або відсутнє
 обов'язкове поле → `ValueError("<route>: <поле>")` (telemetry пише в `td.push.event.error`). Маршрути:
-`mc_opcua` → `td.machine._f3d_apply_event(payload)` (R-07 п. 1, R-12 п. 1; EV-01); `mc_woodstore` → `kind='status'` R-23 п. 2, `'stacks'` → `td.gantry.stack._f3d_apply_ws`,
-`'jobs'` → `td.gantry.job._f3d_apply_ws`, `'events'` → `_f3d_apply_events` (EV-02); `mc_cutopt` → `kind='job'`
-`_f3d_apply_job`, `'plan'` `_f3d_apply_plan`, `'mpr'` `_f3d_apply_mpr` (EV-03). Обробник працює `sudo()`.
+`mc_opcua` → `td.machine._td_apply_event(payload)` (R-07 п. 1, R-12 п. 1; EV-01); `mc_woodstore` → `kind='status'` R-23 п. 2, `'stacks'` → `td.gantry.stack._td_apply_ws`,
+`'jobs'` → `td.gantry.job._td_apply_ws`, `'events'` → `_td_apply_events` (EV-02); `mc_cutopt` → `kind='job'`
+`_td_apply_job`, `'plan'` `_td_apply_plan`, `'mpr'` `_td_apply_mpr` (EV-03). Обробник працює `sudo()`.
 
 ### M-22 `td.viewer.provider.machines` — провайдер переглядача (CM-05, A-18)
 
@@ -983,14 +983,14 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
 class F3dViewerProviderMachines(models.AbstractModel):
     _name = "td.viewer.provider.machines"
     _description = "3D: живі стани верстатів, OEE, портал, карти розкрою"
-    _f3d_sequence = 75
-    _f3d_sections = ()
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 75
+    _td_sections = ()
+    _td_group = "td_factory3d.group_td_user"
 ```
 
 Без `_inherit`: viewer M-01 R-01 п. 3 збирає моделі з префіксом `td.viewer.provider.` і читає атрибути
-`_f3d_sequence`, `_f3d_sections`, `_f3d_group`. Методи: `_f3d_viewer_collect(self, payload, ctx)` — R-25;
-`_f3d_viewer_delta(self, patch, ctx)` — R-25 п. 7; `_f3d_viewer_bus_models(self)` → `["mrp.workcenter",
+`_td_sequence`, `_td_sections`, `_td_group`. Методи: `_td_viewer_collect(self, payload, ctx)` — R-25;
+`_td_viewer_delta(self, patch, ctx)` — R-25 п. 7; `_td_viewer_bus_models(self)` → `["mrp.workcenter",
 "stock.location", "maintenance.equipment", "mrp.production"]`. Побудова — функції `tools/payload.py` цього модуля
 (`build_machines(env, ctx)`), щоб юніт-тести перевіряли без встановленого viewer.
 
@@ -1043,7 +1043,7 @@ class F3dViewerProviderMachines(models.AbstractModel):
 
 Поля: `map_id` (req, ro), `file` Binary (req), `filename` Char. `action_import(self)`: `base64` → UTF-8 → `json.loads`
 (помилка → `UserError("Файл плану: невалідний JSON (%s).")`) → `tools.cutcsv.parse_plan(data)` (схема API-32; помилки →
-`UserError("Файл плану: %s")`) → `map_id._f3d_apply_plan(plan)`; карта має бути в `exported`/`optimizing`/`planned`
+`UserError("Файл плану: %s")`) → `map_id._td_apply_plan(plan)`; карта має бути в `exported`/`optimizing`/`planned`
 (`UserError("Карта %s не очікує плану (стан «%s»).")`).
 
 ### M-26 `td.cut.part.import.wizard` — імпорт деталей
@@ -1058,12 +1058,12 @@ class F3dViewerProviderMachines(models.AbstractModel):
 
 `_inherit = "stock.picking"`; `_action_done(self)`: `res = super()._action_done()`; `stacks =
 td.gantry.stack.search([('location_id','in', move_line_ids.location_dest_id.ids + move_line_ids.location_id.ids)])`
-для виконаних документів; якщо є — `stacks._f3d_refresh()` і R-18 п. 3 для стосів, у які **прийшли** листи; повертає `res`.
+для виконаних документів; якщо є — `stacks._td_refresh()` і R-18 п. 3 для стосів, у які **прийшли** листи; повертає `res`.
 
 ### M-28 `maintenance.request` — заявка з тривоги верстата (R-08)
 
 `_inherit = "maintenance.request"`; `create(self, vals_list)`: `records = super().create(vals_list)`; для записів з
-`td_signal_id`, код якого є в `td.machine._f3d_code_map()` з роллю `alarm` — R-08 п. 1; повертає `records`.
+`td_signal_id`, код якого є в `td.machine._td_code_map()` з роллю `alarm` — R-08 п. 1; повертає `records`.
 
 ## 3. Представлення й меню
 
@@ -1247,7 +1247,7 @@ AbstractModel `td.push.handler.machine_connect` і `td.viewer.provider.machines`
 | `mc_sources.xml` | 22 | Додаток C.1: 15 `opcua`, 4 `modbus_tcp`, 2 `rest_vendor`, 1 `td_machine`; `module='machine_connect'`, `collector_id=td_telemetry.collector_main` (крім `MC-DERIVED`), `read_enabled=True`, `write_enabled=False`; `equipment_id` не в XML (хук крок 3) |
 | `mc_machine_messages.xml` | 10 | Додаток B.1 (`message_E0421` …), `loss_id` — `ref` на `mrp.block_reason*`/`loss_unknown` |
 | `ir_cron.xml` | 5 | §6 |
-| `td_actions.xml` | 3 | `action_td_mc_run_migration` (`td.machine`, `code`: `action = env['td.machine']._f3d_run_migration()`, `group_td_admin`), `action_td_downtime_confirm` (`td.downtime`, `binding_model_id`, `code`: `records.action_confirm()`, `mrp.group_mrp_manager`), `action_td_oee_period` (`td.oee.shift`, `binding_model_id`, R-13 п. 8) |
+| `td_actions.xml` | 3 | `action_td_mc_run_migration` (`td.machine`, `code`: `action = env['td.machine']._td_run_migration()`, `group_td_admin`), `action_td_downtime_confirm` (`td.downtime`, `binding_model_id`, `code`: `records.action_confirm()`, `mrp.group_mrp_manager`), `action_td_oee_period` (`td.oee.shift`, `binding_model_id`, R-13 п. 8) |
 | `mc_machines.csv` | 35 | Додаток A: `code,protocol,source,io_unit,io_slot,auto_start_mode,operator_code` |
 | `mc_signals.csv` | 18 шаблонів → 207 сигналів | Додаток C.2 (колонки `template,protocol,code,name,kind,…`); розгортає `hooks._signal_rows` для кодів Додатка A і GANTRY-1 |
 
@@ -1264,11 +1264,11 @@ AbstractModel `td.push.handler.machine_connect` і `td.viewer.provider.machines`
 | 2 | `sheets(env)` | `product.template` категорії «Плитні матеріали» з нульовими `td_sheet_*` | R-27 п. 2: регекс назви | лише нульові | `sheets_sized: 7` | 0 |
 | 3 | `machines(env)` | `mc_machines.csv`, `mrp.workcenter.search_f3d(code)`, `maintenance.equipment.search_f3d(code)`, `hr.employee.search_f3d('OP-'+code)`, джерела з кроку data | upsert `td.machine` за `workcenter_id`; `source_id`, `protocol`, `io_slot`, `auto_start_mode` з CSV; `equipment_id`, `employee_id` (оператор, якщо є); `td.source.equipment_id` джерел `UA-<C>` = обладнання | upsert, `sig_*` — у кроці 4 | `machines: 35`, `with_operator: 28`, `with_equipment: 35` | `machines: 0` (РЦ без кодів — WARNING з кодами) |
 | 4 | `signals(env)` | `mc_signals.csv`, наявні `td.signal` за `code` | R-27 п. 3: upsert 207 сигналів; наявним (2 — `equipment/GANTRY-1/cycles_today`, `vacuum_kpa`) — лише `source_id`, `address`, `period_s`, `store_period_s`, `module` не змінюється; `sig_*` верстатів | upsert за `code` | `signals_created: 205`, `signals_bound: 2`, `machines_wired: 35` | `signals_created: 207`, `machines_wired: 0` |
-| 5 | `stacks(env)` | `stock.location` з `td_loc_kind='stack'` і `td_code =like 'PLT-%'`; `stock.warehouse.orderpoint` цих локацій | upsert `td.gantry.stack` за `location_id`, `orderpoint_id`; `_f3d_refresh()` (Odoo-частина) | upsert | `stacks: 27`, `orderpoints_linked: 23` | 0 |
+| 5 | `stacks(env)` | `stock.location` з `td_loc_kind='stack'` і `td_code =like 'PLT-%'`; `stock.warehouse.orderpoint` цих локацій | upsert `td.gantry.stack` за `location_id`, `orderpoint_id`; `_td_refresh()` (Odoo-частина) | upsert | `stacks: 27`, `orderpoints_linked: 23` | 0 |
 | 6 | `demo_journal(env)` | `mrp.workcenter.productivity` (усі), `maintenance.request` | R-27 п. 4: `td_source='demo'` усім, де `td_source` = умовчання і `create_date` < установки модуля; 73 закритих простої без завдання → 73 `td.downtime` (`closed`), 1 відкритий → 1 `td.downtime` (`is_open`, CNC-2, `maintenance_request_id`=MR/00031), верстат CNC-2 `state='fault'`, `current_downtime_id`; **нових записів журналу часу — 0** | за `td_downtime_id` (повторно — пропуск) | `timelog_marked: 184`, `downtimes_created: 74`, `downtimes_open: 1`, `requests_linked: 1`, `timelog_created: 0` | `skipped` |
 | 7 | `report(env, rep)` | — | `migration_report` = JSON усіх лічильників + `ts` + `state` (`done` / `partial` / `skipped`) | перезапис | `done` | `done` (кроки 3–6 нульові) |
 
-`hooks._f3d_run_migration` (серверна дія) — лише `group_td_admin` (`AccessError`), повторює кроки 0–7, повертає
+`hooks._td_run_migration` (серверна дія) — лише `group_td_admin` (`AccessError`), повторює кроки 0–7, повертає
 `display_notification` зі звітом.
 
 ### 5.4 `uninstall_hook(env)`
@@ -1322,10 +1322,10 @@ UPDATE ir_cron SET active = false
 ### API-01 `GET /f3d/machine/cutmap/<int:map_id>/export` (FR-35)
 
 `controllers/cutmap.py`, `type="http"`, `auth="public"`, `csrf=False`, `methods=["GET"]`. Порядок перевірок:
-1. `Authorization: Bearer <токен колектора>` → `request.env['td.collector'].sudo()._authenticate(token)` (telemetry M-01), далі колектор має бути власником джерела сигналу команд оптимізатора `equipment/CUTOPT/cmd` (CMD-03, `cut_cmd`, джерело `REST-CUTOPT`; `td.cut.map._f3d_export_collector()`, M-1, AC-67);
+1. `Authorization: Bearer <токен колектора>` → `request.env['td.collector'].sudo()._authenticate(token)` (telemetry M-01), далі колектор має бути власником джерела сигналу команд оптимізатора `equipment/CUTOPT/cmd` (CMD-03, `cut_cmd`, джерело `REST-CUTOPT`; `td.cut.map._td_export_collector()`, M-1, AC-67);
    порожньо/невірний/токен іншого колектора → `401 {"error": {"code": "unauthorized", "message": "Невірний токен колектора"}}`.
 2. Заголовок `X-F3D-Token` (16 hex, `^[0-9a-f]{16}$`; query-параметр `t` не приймається — URL потрапляє в access-log) → інакше `400 bad_token`.
-3. `td.cut.map._f3d_check_export_token(map_id, t)`: карти немає → `404 not_found`; `sha256(t) != export_token_hash` →
+3. `td.cut.map._td_check_export_token(map_id, t)`: карти немає → `404 not_found`; `sha256(t) != export_token_hash` →
    `403 forbidden`; `export_token_expires < now` → `410 expired`; стан ≠ `exported` → `409 bad_state`.
 4. Відповідь `200`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`:
 
@@ -1368,7 +1368,7 @@ UPDATE ir_cron SET active = false
 
 ### 7.2 Команди Odoo → пристрої (telemetry M-06/API-06/07, CR-01, CM-08)
 
-Створюються лише `td.command._f3d_mc_create_command` (M-20, X-93). Основний канал (X-03): `td.command.payload` — об'єкт R-21
+Створюються лише `td.command._td_mc_create_command` (M-20, X-93). Основний канал (X-03): `td.command.payload` — об'єкт R-21
 (telemetry 19.0.1.1.0), колектор виконує `call(signal, payload)` плагіна, повернений об'єкт → API-07 `data` →
 `td.command.result_data`; `text` команди — довідковий підпис `cmd_label` (R-21). Запасний канал — текст граматики
 R-21 без `payload` (`write()` плагіна; запасний `result` — R-21). Сигнали-адресати:
@@ -1606,26 +1606,26 @@ UTC; naive — як є); `now` — `fields.Datetime.now()`; «хв» — хви�
 `("io", stop)` → `idle`; `bad=True` → `nodata`. Стан емулятора (iot_sim R-14) демо 10:30: 29 РЦ `WORKING` → `working`,
 SAW-3/VSAW-1/EDGE-3/UV-1/ASM-5 `READY` → `idle`, CNC-2 `ERROR` → `fault`.
 
-### R-02 Мікрозупинки й момент фіксації стану (`_f3d_on_raw_state`, FR-02, A-05)
+### R-02 Мікрозупинки й момент фіксації стану (`_td_on_raw_state`, FR-02, A-05)
 
 1. Показання з `ts < state_since` (пізнє, з буфера після новішого переходу) стан не змінює — лише `raw_*` не
    оновлюються, лічильник обробляється (R-11); лог DEBUG `late`.
 2. `new == state`: якщо є `pending_state` — скасувати (`pending_state=False`, `pending_since=False`): мікрозупинка
    поглинута інтервалом `working`. Інакше нічого.
-3. `new in ("working", "fault", "off", "nodata")` → `_f3d_commit_state(new, ts)` одразу, `pending_*` очищено.
+3. `new in ("working", "fault", "off", "nodata")` → `_td_commit_state(new, ts)` одразу, `pending_*` очищено.
 4. `new in ("idle", "setup")`: якщо `state == "working"` і `micro_stop_s > 0` → якщо `pending_state` порожнє —
    `pending_since = ts`; `pending_state = new` (початок мікрозупинки — найраніший неробочий `ts`); фіксація — коли
    показання з `ts' ≥ pending_since + micro_stop_s` або крон (`now ≥ pending_since + micro_stop_s + 30 с`, 30 с — запас
-   на доставку з буфера) → `_f3d_commit_state(pending_state, pending_since)` (заднім числом). Інакше (`state` не
-   `working` або поріг 0) → `_f3d_commit_state(new, ts)` одразу.
+   на доставку з буфера) → `_td_commit_state(pending_state, pending_since)` (заднім числом). Інакше (`state` не
+   `working` або поріг 0) → `_td_commit_state(new, ts)` одразу.
 
 Приклад (SAW-1, поріг 120 с): `working`; `READY` 10:02:00, `WORKING` 10:03:10 (70 с) → переходу немає, 70 с — у роботі;
 `READY` 10:05:00 і далі без змін → крон о 10:07:30 фіксує `idle` з 10:05:00 (інтервал `working` закрито о 10:05:00).
 `ERROR` 10:20:00 → `fault` одразу о 10:20:00.
 
-### R-03 Немає даних (`_f3d_mark_nodata`, A-02)
+### R-03 Немає даних (`_td_mark_nodata`, A-02)
 
-1. telemetry позначила сигнал стану `stale` (M-18 `_mark_stale`) → `_f3d_commit_state("nodata", now, cause="system")`.
+1. telemetry позначила сигнал стану `stale` (M-18 `_mark_stale`) → `_td_commit_state("nodata", now, cause="system")`.
 2. Показання стану з `q='bad'` (OPC UA `Bad_*`, плагін R-22 п. 2; Modbus — `quality` плагіна telemetry) →
    `normalize` дає `nodata` → R-02 п. 3.
 3. На `nodata`: поточний простій закривається о `ts` (R-05 п. 4); автостарт/пауза/завершення не виконуються; таймери
@@ -1633,17 +1633,17 @@ SAW-3/VSAW-1/EDGE-3/UV-1/ASM-5 `READY` → `idle`, CNC-2 `ERROR` → `fault`.
 4. Для P-01 плагін повторює останні значення кожні `heartbeat_s` (60 с, R-22 п. 4), `period_s` сигналів P-01 = 60 →
    `stale` через `max(3·60, 60) = 180 с` після обриву; P-02 опитується кожну 1 с → `stale` через 60 с (telemetry R-07).
 
-### R-04 Фіксація стану й журнал (`_f3d_dispatch`, `_f3d_apply`, `_f3d_commit_state`, FR-03)
+### R-04 Фіксація стану й журнал (`_td_dispatch`, `_td_apply`, `_td_commit_state`, FR-03)
 
-0. `_f3d_dispatch(readings, src)`: `code_map` (M-01); групування за верстатом; верстати з `active=False` або
-   `read_enabled=False` пропускаються; для кожного (за `code`) у `savepoint`: `_f3d_lock()`, `_f3d_apply(items)`; виняток →
+0. `_td_dispatch(readings, src)`: `code_map` (M-01); групування за верстатом; верстати з `active=False` або
+   `read_enabled=False` пропускаються; для кожного (за `code`) у `savepoint`: `_td_lock()`, `_td_apply(items)`; виняток →
    `logger.exception`, `errors.append(code)`, наступний верстат.
-1. `_f3d_apply(items)`: сортування за `(ts, порядок ролей state < mode < alarm < job < pieces)`; для ролі `state` —
+1. `_td_apply(items)`: сортування за `(ts, порядок ролей state < mode < alarm < job < pieces)`; для ролі `state` —
    `raw_state = text` (або `None` при `q='bad'`, `raw["bad"]=True`), `mode` — `raw_mode`, `alarm` — `raw_alarm = (text ==
-   "on" or value == 1)`; після кожного з цих трьох — `new = normalize(...)`, `_f3d_on_raw_state(new, ts)`; `job` —
-   `_f3d_on_job(text, ts)` (R-09 п. 8, R-12); `pieces` — `_f3d_count(value, ts)` (R-11); `event` — ігнорується (A-27).
+   "on" or value == 1)`; після кожного з цих трьох — `new = normalize(...)`, `_td_on_raw_state(new, ts)`; `job` —
+   `_td_on_job(text, ts)` (R-09 п. 8, R-12); `pieces` — `_td_count(value, ts)` (R-11); `event` — ігнорується (A-27).
    Після циклу — один `write` полів `raw_*`, `raw_ts = max(ts)`.
-2. `_f3d_commit_state(new, ts, cause)`: `new == state` → нічого; інакше закрити `current_log_id._f3d_close(ts)`;
+2. `_td_commit_state(new, ts, cause)`: `new == state` → нічого; інакше закрити `current_log_id._td_close(ts)`;
    створити інтервал `{machine_id, state: new, date_start: ts, workorder_id: active_workorder_id, employee_id: останній
    працівник активного завдання, source: cause, raw: "<raw_state>/<raw_mode або alarm=0|1>", pieces_start: pieces_last}`;
    `state = new`, `state_since = ts`, `current_log_id`, `pending_*` очищено.
@@ -1651,28 +1651,28 @@ SAW-3/VSAW-1/EDGE-3/UV-1/ASM-5 `READY` → `idle`, CNC-2 `ERROR` → `fault`.
    `working`/`setup` із завданням — `workorder_id.td_run_min` / `td_setup_min += duration_min` (R-28: усі хвилини
    інтервалу, не лише планові).
 4. Простій: R-05 (закрити поточний; відкрити новий, якщо `new in DOWN_STATES`).
-5. Завдання: `new == "working"` → `_f3d_resume(ts)` або `_f3d_autostart(ts)` (R-09, R-10); `new == "fault"` →
-   `_f3d_autopause(ts, "fault")` (R-10 п. 1); `new == "nodata"` → нічого.
-6. `_f3d_emit_state(ts)`, `_f3d_notify()`.
+5. Завдання: `new == "working"` → `_td_resume(ts)` або `_td_autostart(ts)` (R-09, R-10); `new == "fault"` →
+   `_td_autopause(ts, "fault")` (R-10 п. 1); `new == "nodata"` → нічого.
+6. `_td_emit_state(ts)`, `_td_notify()`.
 
 Приклад: SAW-1 `idle` з 09:50 → `WORKING` о 09:55:00 → інтервал `idle` 09:50–09:55 (5 хв ≥ 120 с —
 простій лишається), новий `working` з 09:55, сигнал `workcenters/SAW-1/machine_state = "working"` (`ts` 06:55:00Z).
 
-### R-05 Простій і записи журналу часу (`_f3d_open_downtime`, `_f3d_close_downtime`, FR-04, FR-05, A-04)
+### R-05 Простій і записи журналу часу (`_td_open_downtime`, `_td_close_downtime`, FR-04, FR-05, A-04)
 
 1. Відкриття (`new in DOWN_STATES`): `td.downtime {machine_id, date_start: ts, state_kind: new, workorder_id:
    active_workorder_id, loss_id: loss_unknown, reason_source: 'auto', reason_state: 'to_classify'}`; підказка R-07;
    якщо на РЦ уже є **відкритий** запис втрати оператора (`td_auto=False`, `loss_type in (availability, quality)`,
    без завдання) — він прив'язується (`td_downtime_id`) і його причина стає причиною простою (`reason_source='operator'`,
    `reason_state='to_confirm'`); `current_downtime_id`; R-08 п. 2.
-2. Аварія (`fault`): одразу — `_f3d_close_timers(ts)` (R-10 п. 1, якщо дозволено автопаузу) і відкритий запис
+2. Аварія (`fault`): одразу — `_td_close_timers(ts)` (R-10 п. 1, якщо дозволено автопаузу) і відкритий запис
    `mrp.workcenter.productivity {workcenter_id, loss_id: причина простою (за R-07 — «Поломка» `mrp.block_reason1`, якщо
    підказки немає), date_start: ts, description: hint_text або "Аварія верстата", td_downtime_id, td_source: 'machine',
    td_auto: True}` у технічному середовищі з контекстом `f3d_mc_auto` → РЦ `working_state='blocked'` (стандартне
    обчислення з відкритого запису втрати). `button_block()` не викликається (він закриває таймери часом `now`, а не `ts`).
 3. Очікування / налагодження / вимкнення: поки простій триває, записів журналу часу немає (РЦ не блокується, оператор
    може стартувати завдання).
-4. Закриття (`_f3d_close_downtime(ts)` на переході зі стану простою): `date_end = ts`; `ppt_min = |[start, ts) ∩ PPT|`;
+4. Закриття (`_td_close_downtime(ts)` на переході зі стану простою): `date_end = ts`; `ppt_min = |[start, ts) ∩ PPT|`;
    якщо `state_kind != 'fault'` і `ppt_min·60 < micro_stop_s` → простій видаляється (`unlink` `sudo`), записів не пишеться;
    інакше: відкриті записи втрат, прив'язані до простою (машинні й операторські), закриваються `date_end = ts`; для
    `idle/setup/off` — закриті машинні записи `{loss_id: причина, date_start, date_end, workorder_id: (лише setup) завдання
@@ -1696,7 +1696,7 @@ SAW-3/VSAW-1/EDGE-3/UV-1/ASM-5 `READY` → `idle`, CNC-2 `ERROR` → `fault`.
 quality)` і без завдання (стандартне «Заблокувати» в «Цеху»/на формі РЦ).
 1. Верстат РЦ (`td_machine_id`, `read_enabled`); немає → стандарт без змін.
 2. Є відкритий простій: запис `td_downtime_id = простій`, `td_source = 'operator'` (`'master'` для
-   `mrp.group_mrp_manager`); `простій._f3d_apply_reason(loss, source, employee)`; `reason_state = 'confirmed'` для
+   `mrp.group_mrp_manager`); `простій._td_apply_reason(loss, source, employee)`; `reason_state = 'confirmed'` для
    майстра, інакше `'to_confirm'`; відкриті машинні записи простою (аварія) закриваються `date_end = запис.date_start`
    і отримують ту саму причину — записи не перекриваються.
 3. Простою немає, верстат `working`: запис лишається (оператор знає наперед); коли верстат зупиниться — R-05 п. 1
@@ -1714,7 +1714,7 @@ quality)` і без завдання (стандартне «Заблокува�
    `active=False` → знайти активну подію того самого `message_id` верстата → `active=False`. Якщо відкритий простій
    почався не раніше `ts − 120 с` і категорія ≥ 3 і `reason_source in ('auto', 'hint')`: `event_id`, `hint_loss_id =
    message.loss_id` (немає повідомлення і категорія ≥ 4 → `mrp.block_reason1`), `hint_text = f"{message_id} {text}"`;
-   `auto_apply` (або немає повідомлення і категорія ≥ 4) і `reason_source == 'auto'` → `_f3d_apply_reason(hint, 'hint')`,
+   `auto_apply` (або немає повідомлення і категорія ≥ 4) і `reason_source == 'auto'` → `_td_apply_reason(hint, 'hint')`,
    `reason_state='to_confirm'`; R-08 п. 3.
 2. Відкриття простою (R-05 п. 1) шукає події верстата з `ts ≥ start − 120 с`, категорія ≥ 3 — найвища категорія,
    потім найпізніша → як п. 1.
@@ -1741,24 +1741,24 @@ quality)` і без завдання (стандартне «Заблокува�
 3. Подія після прив'язки (R-07 п. 1) → той самий `message_post` у заявку.
 4. Закриття/підтвердження простою заявку не змінює; закриття заявки простій не змінює.
 
-### R-09 Автостарт завдання (`_f3d_autostart`, `_f3d_match_job`, `_f3d_candidate`, FR-09…FR-11, A-09)
+### R-09 Автостарт завдання (`_td_autostart`, `_td_match_job`, `_td_candidate`, FR-09…FR-11, A-09)
 
 Передумови: `auto_start_enabled` (параметр) ∧ `auto_start_mode != 'off'` ∧ стан щойно став `working` (або змінилось
 завдання верстата при `working`) ∧ контекст без `f3d_mc_internal`.
-1. **Збіг завдання** (`_f3d_match_job(raw_job)`): `"-"`/порожньо → немає; `^WO0*(\d{1,9})$` або `^(\d{1,9})$` → `mrp.workorder`
+1. **Збіг завдання** (`_td_match_job(raw_job)`): `"-"`/порожньо → немає; `^WO0*(\d{1,9})$` або `^(\d{1,9})$` → `mrp.workorder`
    з цим id; `^cj-\d+$` → `td.cut.map` з `ext_job_id` → `workorder_id`; інше → немає. Придатне: існує,
    `workcenter_id == верстат.workcenter_id`, стан ∈ {`ready`, `progress`, `blocked`}. Текст непорожній, але не
    придатний → автостарту немає, діяльність майстру «Завдання верстата «<текст>» не знайдено в Odoo» (раз на текст).
-2. **Одне в черзі** (`_f3d_candidate`, лише `job_or_single` і порожній текст завдання): завдань РЦ `progress` рівно 1 →
+2. **Одне в черзі** (`_td_candidate`, лише `job_or_single` і порожній текст завдання): завдань РЦ `progress` рівно 1 →
    воно; `progress` 0 і `ready` рівно 1 → воно; інакше немає.
 3. Завдання вже активне (`active_workorder_id == wo`) і має відкритий таймер (будь-якого користувача) → нічого.
-4. **Працівник** (`_f3d_pick_employee(wo)`), «дозволений» = `wc.employee_ids` порожні або містять його: (а) якщо
+4. **Працівник** (`_td_pick_employee(wo)`), «дозволений» = `wc.employee_ids` порожні або містять його: (а) якщо
    `wo.employee_ids` непорожні — старт не потрібен (оператор уже працює), лише `active_workorder_id = wo`; (б) працівник
    останнього продуктивного запису цього РЦ від початку першого інтервалу планового часу сьогодні; (в)
    `hr.employee.search_f3d("OP-" + code)` (Додаток B base); (г) `верстат.employee_id`; (ґ) перший з `wc.employee_ids`;
    (д) без працівника.
 5. Якщо РЦ `working_state == 'blocked'` — закрити його відкриті записи втрат `date_end = ts` (верстат працює — A-03).
-6. Старт у технічному середовищі (`_f3d_tech_env()`): з працівником — `wo.start_employee(emp.id)`, без — `wo.button_start()`;
+6. Старт у технічному середовищі (`_td_tech_env()`): з працівником — `wo.start_employee(emp.id)`, без — `wo.button_start()`;
    новий відкритий запис журналу часу цього завдання → `date_start = ts`, якщо `ts < now`; `wo.td_auto_started = True`;
    `active_workorder_id = wo`, `wo_paused = False`, `no_job_since = False`; поточний інтервал стану `workorder_id = wo`,
    `employee_id`; `last_autostart_key = f"wo:{wo.id}@{ts.isoformat()}"`; чатер МО «Завдання <назва> стартував верстат
@@ -1766,7 +1766,7 @@ quality)` і без завдання (стандартне «Заблокува�
 7. **Ідемпотентність**: рядок верстата заблоковано (`FOR UPDATE`, R-04 п. 0); той самий ключ → пропуск; відкритий таймер
    завдання → п. 3; Odoo-обмеження «cannot be started twice» не досягається. `UserError`/`ValidationError` від стандарту
    ловиться: діяльність на МО «Автостарт <код> не вдався: <текст>», чатер верстата, стан верстата не змінюється.
-8. **Зміна завдання при роботі** (`_f3d_on_job`): `raw_job` змінився → для попереднього активного — R-12 (тригер
+8. **Зміна завдання при роботі** (`_td_on_job`): `raw_job` змінився → для попереднього активного — R-12 (тригер
    `job_changed`); якщо стан `working` — п. 1…6 для нового тексту з `ts` показання.
 9. **Робота без завдання**: після спроби немає активного → `no_job_since = ts` (якщо порожнє); крон: `now − no_job_since ≥
    no_job_activity_min` і не `no_job_notified` → діяльність `mail.mail_activity_data_todo` на верстаті для
@@ -1778,10 +1778,10 @@ quality)` і без завдання (стандартне «Заблокува�
 `job_or_single`): `ready` лише WO00101 → старт; EDGE-1 з двома `ready` (WO00014, WO00020) → автостарту немає, «працює без
 завдання»; `JobOrderID="cj-00077"` → карта КР/00012 → WO розкрою.
 
-### R-10 Автопауза й відновлення (`_f3d_autopause`, `_f3d_resume`, `_f3d_close_timers`, FR-12)
+### R-10 Автопауза й відновлення (`_td_autopause`, `_td_resume`, `_td_close_timers`, FR-12)
 
 Передумови: `auto_start_enabled` ∧ `auto_pause` ∧ `active_workorder_id` у стані `progress`.
-1. `fault` → одразу `_f3d_close_timers(ts)`: відкриті продуктивні записи (`loss_type in (productive, performance)`) завдань
+1. `fault` → одразу `_td_close_timers(ts)`: відкриті продуктивні записи (`loss_type in (productive, performance)`) завдань
    цього РЦ закриваються стандартним `_close()` у технічному середовищі, потім запис з найпізнішим `date_end` цього
    завдання отримує `date_end = max(ts, date_start)`, якщо `now − ts > 5 с`; `wo_paused = True`.
 2. `idle`/`off` тривалістю ≥ `pause_after_min` (крон або показання) → те саме з `ts = state_since` (таймер закривається
@@ -1794,7 +1794,7 @@ quality)` і без завдання (стандартне «Заблокува�
 Приклад: CNC-2 WO00051 працює з 09:29; `ERROR` о 09:42 → таймер 09:29–09:42 (13 хв), простій «Поломка»; `clear`, `WORKING`
 о 10:30 → простій закрито о 10:30 (48 хв), таймер WO00051 з 10:30.
 
-### R-11 Лічильник деталей (`_f3d_count`, FR-13)
+### R-11 Лічильник деталей (`_td_count`, FR-13)
 
 1. Перше значення (`pieces_last` порожнє) → `pieces_last = value`, приросту немає.
 2. `delta = value − pieces_last`; `delta < 0` → скидання лічильника (початок зміни для `Relative*`, `Clear counter` ADAM):
@@ -1809,7 +1809,7 @@ quality)` і без завдання (стандартне «Заблокува�
 Приклад: SAW-1 `RelativePiecesOut` 0 (09:55) … 14 (10:25:48) → `td_qty_counted = 14`; о 07:00 наступної зміни
 `Relative*` = 0 → `delta = 0`; ADAM SLIDE-1 `40001` 1 846 → 1 851 → `+5`.
 
-### R-12 Автозавершення й неповна партія (`_f3d_try_finish`, FR-14, A-10)
+### R-12 Автозавершення й неповна партія (`_td_try_finish`, FR-14, A-10)
 
 Передумови: `auto_start_enabled` ∧ `auto_finish` ∧ `active_workorder_id` у `progress`; `remaining = wo.qty_remaining`,
 `counted = wo.td_qty_counted`.
@@ -1830,7 +1830,7 @@ quality)` і без завдання (стандартне «Заблокува�
 Приклади: SAW-1 WO00013 `qty 14`, `counted 14`, `JobOrderList` порожній о 10:25:48 → завершено; SLIDE-1 WO00101 `qty 8`,
 `counted 8`, `stop` з 10:40:00 → о 10:41:00 завершено; SAW-2 `counted 12` з 14, завдання зняте → неповна партія.
 
-### R-13 OEE за фактом (`tools/oee.compute_oee`, `td.machine._f3d_oee`, FR-16, A-07)
+### R-13 OEE за фактом (`tools/oee.compute_oee`, `td.machine._td_oee`, FR-16, A-07)
 
 Вхід для верстата й вікна `[t0, t1)`: інтервали планового часу (R-26), інтервали станів (M-02, відкритий — до `t1`),
 прості з `td_planned`, кількості й цикли завдань, брак.
@@ -1863,20 +1863,20 @@ quality)` і без завдання (стандартне «Заблокува�
 | SAW-3 (макет `oee=0.49`, 103 хв) | `working` 103 (114 шт × 0,9 = 102,6); прості 14 «Налагодження», 81 «Очікування матеріалу», 12 «Не вказано» | **0,490** | **0,996** | 1,00 | **0,488** | червоний |
 | SAW-1, дві зміни (період) | зміна 1: PPT 480, run 400, ideal 396, 180 шт, брак 2; зміна 2: PPT 480, run 360, ideal 350, 159 шт, брак 0 | 760/960 = **0,792** | 746/760 = **0,982** | 337/339 = **0,994** | **0,773** | зелений |
 
-### R-14 Записи OEE за зміну й крон (`_f3d_compute`, `_cron_oee`, FR-17, A-08)
+### R-14 Записи OEE за зміну й крон (`_td_compute`, `_cron_oee`, FR-17, A-08)
 
 1. Дата зміни `d` — дата за Києвом; вікно — від початку першого до кінця останнього інтервалу планового часу РЦ на `d`;
    інтервалів немає (вихідний) → запису немає.
 2. `_cron_oee` (5 хв): для кожного активного верстата з `read_enabled`: запис за сьогодні (upsert за `(machine_id, date)`):
    `t1 = min(now, кінець вікна)`, стан `open`; якщо `now ≥ кінець вікна` → `closed`; запис за вчора у стані `open` →
    перерахунок на повне вікно і `closed`; `machine.oee_shift_id` = сьогоднішній.
-3. Перерахунок: `machine._f3d_oee(t0, t1)` → усі поля M-06, `source`, `computed_at = now`.
+3. Перерахунок: `machine._td_oee(t0, t1)` → усі поля M-06, `source`, `computed_at = now`.
 4. Закритий запис крон не змінює; кнопка «Перерахувати» (`group_td_manager`) — так.
 5. Без верстата (`td.machine` немає) OEE не рахується (вбудований провайдер переглядача лишає своє значення).
 6. Ротація (`cron_td_mc_rotate`): журнал станів `date_end < now − keep_log_days`, події `ts < now − keep_event_days`;
    `td.oee.shift` і `td.downtime` не ротуються.
 
-### R-15 Звірка стосу порталу (`td.gantry.stack._f3d_refresh`, FR-18, A-11)
+### R-15 Звірка стосу порталу (`td.gantry.stack._td_refresh`, FR-18, A-11)
 
 1. `odoo_qty = Σ stock.quant.quantity` у `location_id`; `odoo_product_id` — товар з найбільшою к-стю; `odoo_lot_id` — його
    партія з найбільшою к-стю.
@@ -1903,7 +1903,7 @@ quality)` і без завдання (стандартне «Заблокува�
 
 ### R-16 Завдання порталу (`td.gantry.job`, FR-19)
 
-1. `_f3d_from_production(mo, workorder=None, cut_map=None, sheets=None)`: завдання розкрою = `workorder` або перше
+1. `_td_from_production(mo, workorder=None, cut_map=None, sheets=None)`: завдання розкрою = `workorder` або перше
    завдання МО не в `done/cancel` на РЦ з кодом ∈ `GANTRY_TARGETS` (немає → `UserError("У МО %s немає завдання розкрою на
    SAW-1…3 або NEST-1.")`); плита = `cut_map.material_product_id` або товар сировинного руху МО з
    `td_thickness_mm ≥ 8` і найбільшою к-стю; к-сть = `sheets` або `cut_map.plan_sheets` або `product_uom_qty` руху −
@@ -1912,7 +1912,7 @@ quality)` і без завдання (стандартне «Заблокува�
    партія — з того рядка. Наявне завдання цього МО й товару у стані `draft…active` → повертається воно (без дубля).
    Автоподача (`gantry_auto_feed`): крон для кожного РЦ з `GANTRY_TARGETS` бере перше завдання черги (`progress`, інакше
    `ready` з найменшим `production_id.name`) МО без завдання порталу → створює в стані `to_send`.
-2. `_f3d_send` (крон, `to_send`): CMD-02 `feed` (R-21: `stack` — код стосу або `null`, `target`, `sheets`, `product` —
+2. `_td_send` (крон, `to_send`): CMD-02 `feed` (R-21: `stack` — код стосу або `null`, `target`, `sheets`, `product` —
    `default_code`, `priority`, `ref` — назва МО) — команда на `equipment/GANTRY-1/cmd` (M-20) → `sent`, `command_id`. Запис вимкнено → лишається `to_send`, `error =
    "Запис вимкнено: <що>"` (оновлюється лише при зміні тексту).
 3. Результат команди: `done` → `ws_id = result_data["id"]` (запасний режим — `result`), стан `queued` (якщо події ще не
@@ -1921,7 +1921,7 @@ quality)` і без завдання (стандартне «Заблокува�
 4. Події EV-02 (`jobs`, `events`): за `ws_id`; невідомий `ws_id` → нове завдання `origin='machine'`: `external_ref` = назва
    МО → `production_id`; `product`/`stack`/`target` за кодами; стани woodStore → Odoo: `queued`→`queued`, `active`→`active`,
    `done`→`done`, `cancelled`→`cancelled`, `error`→`error`; `done` = поле `done`; `sheet_placed` → `sheet_log` (дублікат
-   за id події пропускається), `done = max(done, len(sheet_log))`; `job_finished` → `done`; `stack_empty` → `stack._f3d_refresh()`,
+   за id події пропускається), `done = max(done, len(sheet_log))`; `job_finished` → `done`; `stack_empty` → `stack._td_refresh()`,
    чатер; `alarm` → чатер обладнання GANTRY-1. Карта розкрою у стані `released` з тим самим МО → `gantry_job_id`.
 5. Таймаути (крон): `active` без змін > 30 хв → чатер «Завдання порталу без руху 30 хв».
 6. Скасування: `draft/to_send` → `cancelled` локально; `sent/queued/active` → CMD-02 `cancel` (`id` = `ws_id`; потребує запису,
@@ -1933,7 +1933,7 @@ quality)` і без завдання (стандартне «Заблокува�
 "WH/MO/00233"}` (`text` — `feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233`) → `result_data.id = wj-00412` → `queued` →
 `active` → 4 × `sheet_placed` → `done`.
 
-### R-17 Списання плити в МО (`_f3d_consume`, FR-20, A-12)
+### R-17 Списання плити в МО (`_td_consume`, FR-20, A-12)
 
 1. Лише `type='feed'` з МО у `confirmed/progress/to_close` і товаром; `n = done − consumed_qty` ≤ 0 → нічого.
 2. Рух — перший сировинний рух МО з цим товаром не в `done/cancel`.
@@ -1953,7 +1953,7 @@ quality)` і без завдання (стандартне «Заблокува�
    переміщення з `location_dest_id = стос`; `gantry_auto_replenish` → `orderpoint_id.action_replenish()` (стандарт —
    WH/INT за правилом «Стелажі → портал»), не частіше 1 разу на годину на стос; інакше нічого (кнопка).
 2. Кнопка «Поповнити» → те саме без умови параметра; немає правила → `UserError("Для стосу %s немає правила поповнення.")`.
-3. Виконане переміщення в стос (M-27) → `_f3d_refresh()`; CMD-02 `stack` (`qty` — `int(expected_qty)`, `product` —
+3. Виконане переміщення в стос (M-27) → `_td_refresh()`; CMD-02 `stack` (`qty` — `int(expected_qty)`, `product` —
    `default_code`, `lot` — партія або `null`; якщо дозволено), інакше діяльність для відповідального переміщення «Оновіть стос <код> у woodStore:
    <n> арк. <товар>».
 
@@ -1961,7 +1961,7 @@ quality)` і без завдання (стандартне «Заблокува�
 `{"op": "stack", "stack": "PLT-08A", "qty": 54, "product": "DSP16-WHT", "lot": null}` (якщо партія не відстежується в
 стосі; `text` — `stack;PLT-08A;54;DSP16-WHT;-`).
 
-### R-19 Карта розкрою з МО (`_f3d_create_for`, `action_build_lines`, CSV, FR-23, FR-24)
+### R-19 Карта розкрою з МО (`_td_create_for`, `action_build_lines`, CSV, FR-23, FR-24)
 
 1. Плити МО — сировинні рухи (не `done/cancel`) з `td_sheet_length_mm > 0`; роль `main` — товщина ≥ 8 (найбільша к-сть),
    `back` — < 8; немає → `UserError("У МО %s немає плити для ролі «%s».")`.
@@ -1984,14 +1984,14 @@ quality)` і без завдання (стандартне «Заблокува�
 
 ### R-20 Оптимізація, план, випуск (FR-25, FR-26)
 
-1. «На оптимізацію» (`collector`, стан `exported`/`error`): `t = _f3d_new_export_token()`; CMD-03 `upload` (`map` — `map.id`,
+1. «На оптимізацію» (`collector`, стан `exported`/`error`): `t = _td_new_export_token()`; CMD-03 `upload` (`map` — `map.id`,
    `token` — `t`; M-20, `td_cut_map_id`); стан `optimizing`. Запис вимкнено → `UserError` з текстом M-20.
 2. Результат `upload`: `done` → `ext_job_id = result_data["job_id"]` (`cj-00077`; запасний режим — перше слово
    `result`); `failed/expired` → `error`, стан `error`.
-   EV-03 `job` → `_f3d_apply_job` (карта за `job.job_id` = `ext_job_id`, інакше за `map`): `optimizing` → `optimizing`;
+   EV-03 `job` → `_td_apply_job` (карта за `job.job_id` = `ext_job_id`, інакше за `map`): `optimizing` → `optimizing`;
    `planned` → підсумок плану з `job.plan` (`sheets`, `waste_pct`, `cut_length_m`, `est_min`); `released` → `released`,
    `job_order_id = job.job_id`; `running` → `running`; `done` → `done`; `error` → `error`, `error = job.error`.
-3. EV-03 `plan` → `_f3d_apply_plan(plan)` (`cutcsv.parse_plan`: `total_sheets` ціле ≥ 1, `waste_pct` 0…100, `sheets` —
+3. EV-03 `plan` → `_td_apply_plan(plan)` (`cutcsv.parse_plan`: `total_sheets` ціле ≥ 1, `waste_pct` 0…100, `sheets` —
    список з `no`, `parts[]`); `plan_json`, `plan_sheets = total_sheets`, `plan_waste_pct`; вкладення `<номер>_plan.json`;
    стан `planned`; для рядків із `program` і РЦ ЧПК (`NEST-1`) — CMD-03 `mpr` (`job` — `ext_job_id`, `part` —
    `part_code`; по одному); EV-03 `mpr` →
@@ -2097,10 +2097,10 @@ ref="WH/MO/T0001")` → `ValueError("length: 66 > 64")`, а `build_payload` з �
 2. Подія `status` → параметр `td.machine_connect.gantry_status` = `{"state", "position", "vacuum_kpa", "cycles_today",
    "current_job", "aisles_open": [номери з gate_open], "alarms": [...], "ts"}` (лише при зміні); нова тривога → чатер
    обладнання GANTRY-1 «Тривога порталу: <текст>»; шина `('maintenance.equipment', ['GANTRY-1'], 'state')`.
-3. Подія `stacks` → `_f3d_apply_ws(items, ts)`: за `id` = код стосу (невідомий → WARNING, пропуск); оновити `ws_*` лише при
-   зміні, `ws_seen = now`; `_f3d_refresh()`; сигнал `equipment/GANTRY-1/stacks` = кількість стосів з `ws_qty > 0` (CT-10,
+3. Подія `stacks` → `_td_apply_ws(items, ts)`: за `id` = код стосу (невідомий → WARNING, пропуск); оновити `ws_*` лише при
+   зміні, `ws_seen = now`; `_td_refresh()`; сигнал `equipment/GANTRY-1/stacks` = кількість стосів з `ws_qty > 0` (CT-10,
    джерело `MC-DERIVED`); шина `('stock.location', [коди], 'stock')`.
-4. Подія `events` → `td.gantry.job._f3d_apply_events` (R-16 п. 4); `aisle_opened`/`aisle_closed` → `gantry_status.aisles_open`.
+4. Подія `events` → `td.gantry.job._td_apply_events` (R-16 п. 4); `aisle_opened`/`aisle_closed` → `gantry_status.aisles_open`.
 5. Команди CMD-02 (`payload` R-21, X-03) → HTTP: `feed` → `POST /api/v1/jobs {"type": "feed", "source": stack (null —
    портал обирає), "target", "sheets", "product", "lot": null, "priority", "external_ref": ref}` → `201` → результат
    `{"id", "state"}` з відповіді; `409` → `WriteError("CONFLICT: <message>")`; `cancel` → `DELETE /api/v1/jobs/{id}` →
@@ -2124,7 +2124,7 @@ EV-03 `job` (`state="released"`) → результат `{"job_id", "state", "jo
 
 ### R-25 Провайдер переглядача (`td.viewer.provider.machines`, FR-33, CM-05)
 
-`_f3d_viewer_collect(payload, ctx)` (читання від користувача запиту; вузли, яких немає, пропускаються без помилок):
+`_td_viewer_collect(payload, ctx)` (читання від користувача запиту; вузли, яких немає, пропускаються без помилок):
 1. `workcenters[код]` для верстатів з кодом у `payload["workcenters"]`: `machine_state` (str), `state_since` (`"YYYY-MM-DD
    HH:MM"` Київ), `link` (`opcua`|`io`|`manual`), `online` (`state != 'nodata'`); якщо є запис OEE поточної зміни з
    `has_data` — `oee` (перекриття), `availability`, `performance`, `quality` (round 2); `downtime` (якщо відкритий):
@@ -2142,7 +2142,7 @@ EV-03 `job` (`state="released"`) → результат `{"job_id", "state", "jo
    `stock = "портал: <n> завд. · <Σ(sheets − done)> арк."`.
 6. Нічого з вбудованих полів, крім `oee` і `status` п. 1, не перезаписується (`losses`, `productive_minutes`, `queue`,
    `current_workorder` — провайдера production).
-7. `_f3d_viewer_delta(patch, ctx)`: ті самі п. 1–5 лише для вузлів, що є в `patch` (провайдери `production`, `stock`,
+7. `_td_viewer_delta(patch, ctx)`: ті самі п. 1–5 лише для вузлів, що є в `patch` (провайдери `production`, `stock`,
    `maintenance`, `chains` уже поклали повні записи змінених кодів; модуль шле `_notify` саме за моделями, які вони
    обробляють: `mrp.workcenter` (`state`), `stock.location` (`stock`), `maintenance.equipment` (`state`), `mrp.production`
    (`doc`)).
@@ -2188,12 +2188,12 @@ EV-03 `job` (`state="released"`) → результат `{"job_id", "state", "jo
    "with_operator", "signals_created", "signals_bound", "machines_wired", "stacks", "orderpoints_linked", "timelog_marked",
    "downtimes_created", "downtimes_open", "requests_linked", "timelog_created": 0, "ts", "state"}`.
 
-### R-28 Інтервали для енергії (`_f3d_wo_intervals`, `_f3d_wc_intervals`, CM-03, FR-34)
+### R-28 Інтервали для енергії (`_td_wo_intervals`, `_td_wc_intervals`, CM-03, FR-34)
 
-1. `_f3d_wo_intervals(workorders, date_from=None, date_to=None)`: інтервали M-02 зі станом ∈ {`working`, `setup`} і
+1. `_td_wo_intervals(workorders, date_from=None, date_to=None)`: інтервали M-02 зі станом ∈ {`working`, `setup`} і
    `workorder_id in workorders.ids`, що перетинають вікно (відкритий — до `now`), обрізані вікном → `{wo_id: [(start, end,
    state), …]}` за часом, UTC naive.
-2. `_f3d_wc_intervals(workcenter, date_from, date_to)` → `[(start, end, state, wo_id | False), …]` усіх станів.
+2. `_td_wc_intervals(workcenter, date_from, date_to)` → `[(start, end, state, wo_id | False), …]` усіх станів.
 3. `mrp.workorder.td_run_min` / `td_setup_min` += `duration_min` інтервалу при його закритті (R-04 п. 3).
 4. Energy (`td_energy`) рахує кВт·год завдання як ∫ `energy/consumers/<код>/p_now` (або різниці лічильника PM5560)
    по інтервалах п. 1, а `idle/off/fault` — як непрямі витрати РЦ.
@@ -2284,12 +2284,12 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 |---|---|---|---|
 | AC-01 | FR-01 | Given `tools.states.normalize`; Then кожен рядок таблиці прикладів R-01 дає вказаний стан (11 випадків) | UT |
 | AC-02 | FR-01 | When `normalize("opcua", {"state": "FOO", …})`; Then `nodata` і WARNING один раз за годину для того самого верстата (`assertLogs`) | UT |
-| AC-03 | FR-01 | Given верстат `io` `M-IO`; When `_f3d_ingest` показань `workcenters/IO-T/state` `text="run"` і `/alarm` `text="on"` з однаковим `ts`; Then `state='fault'` (тривога важливіша) | UT |
-| AC-04 | FR-03 | Given `M-UA` (`idle` з 09:50); When `_f3d_ingest([state WORKING @09:55:00, mode AUTOMATIC])`; Then інтервал `idle` закрито `09:55:00`, відкрито `working` з `09:55:00`, `machine.state='working'`, `state_since=09:55:00`; один відкритий інтервал (`search_count(date_end=False)==1`) | UT |
+| AC-03 | FR-01 | Given верстат `io` `M-IO`; When `_td_ingest` показань `workcenters/IO-T/state` `text="run"` і `/alarm` `text="on"` з однаковим `ts`; Then `state='fault'` (тривога важливіша) | UT |
+| AC-04 | FR-03 | Given `M-UA` (`idle` з 09:50); When `_td_ingest([state WORKING @09:55:00, mode AUTOMATIC])`; Then інтервал `idle` закрито `09:55:00`, відкрито `working` з `09:55:00`, `machine.state='working'`, `state_since=09:55:00`; один відкритий інтервал (`search_count(date_end=False)==1`) | UT |
 | AC-05 | FR-02 | Given `working`, `micro_stop_s=120`; When READY @10:02:00, WORKING @10:03:10; Then переходів немає, `pending_state=False`, кількість інтервалів не змінилась | UT |
 | AC-06 | FR-02, FR-36 | Given `working`; When READY @10:05:00 і `_cron_tick()` з `freeze_time(10:07:31)`; Then `idle` зафіксовано з `10:05:00`, інтервал `working` закрито `10:05:00`; крон о `10:06:50` — ще ні | UT |
 | AC-07 | FR-03 | Given `working` з 10:00:00; When показання стану `READY @09:59:00` (пізнє); Then стан не змінився; лічильник у тому самому пакеті оброблено | UT |
-| AC-08 | FR-03, CM-02 | When перехід у `working`; Then `td.signal` `workcenters/UA-T/machine_state` має `last_text='working'`, показання в `td.reading` з `src='module'`; `_f3d_ingest` від колектора на цей код → `rejected: foreign_signal` (CT-12) | UT |
+| AC-08 | FR-03, CM-02 | When перехід у `working`; Then `td.signal` `workcenters/UA-T/machine_state` має `last_text='working'`, показання в `td.reading` з `src='module'`; `_td_ingest` від колектора на цей код → `rejected: foreign_signal` (CT-12) | UT |
 | AC-09 | FR-16 | Given РЦ з календарем «Зміна 1»; Then `ppt_intervals(12.10.2026 00:00–24:00 Київ)` = `[04:00–08:30, 09:00–12:30]` UTC, 480 хв; `26.10.2026` = `[05:00–09:30, 10:00–13:30]`; `17.10.2026` (субота) = `[]`; відсутність ресурсу `time_type='leave'` 10:00–11:00 віднімається, слот завдання `time_type='other'` — ні | UT |
 | AC-10 | FR-01 | Given `working`; When `sig_state._mark_stale('timeout')`; Then `state='nodata'`, відкритий простій закрито, таймери завдання не змінено; When показання стану `q='bad'` → `nodata` | UT |
 | AC-11 | FR-04 | Given `working` з WO у `progress` (таймер оператора відкритий), `auto_start_enabled=True`; When ERROR @09:42:00 (`now` 09:42:03); Then простій `fault`, відкритий запис журналу часу `loss_id=mrp.block_reason1`, `td_auto=True`, `date_start=09:42:00`; таймер завдання закритий `date_end=09:42:00`; `workcenter.working_state='blocked'` | UT |
@@ -2320,15 +2320,15 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-36 | FR-14 | Given `M-IO`, `counted ≥ remaining`, `stop` з `t`; When `_cron_tick` о `t+59` → ще ні; о `t+61` → `done` | UT |
 | AC-37 | FR-14 | Given `td_partial_hold`; When `user_mrp_manager` `action_f3d_finish_partial()`; Then `qty_produced=counted`, `done`; `user_mrp` → `AccessError` | UT |
 | AC-38 | FR-12 | Given `working` з таймером; When ERROR → таймер закритий одразу, `wo_paused=True`; When WORKING → новий таймер того самого працівника з `ts`; Given `idle` → таймер закривається кроном через `pause_after_min` з `date_end = state_since`; `setup` — не закривається | UT |
-| AC-39 | FR-16 | Given синтетичний журнал SAW-1 R-13 (176 `working`, прості 16/10/8, 80 шт × 2,2, без браку); When `_f3d_oee(07:00, 10:30)`; Then `ppt=210`, `run=176`, `A=0.8381±0.0005`, `P=1.0`, `Q=1.0`, `oee=0.838`, `losses` у порядку 16, 10, 8 | UT |
+| AC-39 | FR-16 | Given синтетичний журнал SAW-1 R-13 (176 `working`, прості 16/10/8, 80 шт × 2,2, без браку); When `_td_oee(07:00, 10:30)`; Then `ppt=210`, `run=176`, `A=0.8381±0.0005`, `P=1.0`, `Q=1.0`, `oee=0.838`, `losses` у порядку 16, 10, 8 | UT |
 | AC-40 | FR-16 | Same з 76 шт і `stock.scrap` 1 шт (`done`, `workorder_id`) → `P=0.95`, `Q=0.9868`, `oee=0.7857±0.0005`; CNC-2 R-13 → `oee=0.305±0.001`; SAW-3 → `0.488±0.001` | UT |
 | AC-41 | FR-16 | Given дві закриті зміни R-13 (480/400/396/180/2 і 480/360/350/159/0); When дія «OEE за період»; Then повідомлення містить `A 0,79 · P 0,98 · Q 0,99 · OEE 0,77` | UT |
 | AC-42 | FR-16 | Given 30 хв `nodata` у зміні; Then `ppt` зменшено на 30, `coverage=1−30/480=0.9375`, `incomplete=True` (`coverage_min=0.95`) | UT |
 | AC-43 | FR-16 | Given РЦ без інтервалів станів, лише записи журналу часу (продуктивний 07:00–09:00, втрата «Поломка» 09:00–09:30); Then `source='timelog'`, `run=120`, `fault_min=30`, `unexplained = PPT − 150` | UT |
 | AC-44 | FR-17, FR-36 | When `_cron_oee` о 10:30 → запис `open`, `machine.oee_shift_id`; о 15:35 → `closed`; повторний крон закритого не змінює; `_cron_rotate` видаляє інтервали старші `keep_log_days` і події старші `keep_event_days`, `td.oee.shift` — ні | UT |
-| AC-45 | FR-34 | Given інтервали `setup` 09:40–09:55 і `working` 09:55–10:25:48 з WO, `idle` 10:25:48–10:30 без WO; Then `_f3d_wo_intervals(wo)` = два інтервали (setup, working); з вікном 10:00–10:10 — один обрізаний `working`; `_f3d_wc_intervals` — три | UT |
+| AC-45 | FR-34 | Given інтервали `setup` 09:40–09:55 і `working` 09:55–10:25:48 з WO, `idle` 10:25:48–10:30 без WO; Then `_td_wo_intervals(wo)` = два інтервали (setup, working); з вікном 10:00–10:10 — один обрізаний `working`; `_td_wc_intervals` — три | UT |
 | AC-46 | FR-34 | Then після закриття інтервалів `wo.td_run_min=30.8`, `td_setup_min=15.0` | UT |
-| AC-47 | FR-18 | Given стос `PLT-T1` (квант 45), завдання порталу `done=7` для МО в роботі, `ws_qty=38`; When `_f3d_refresh()`; Then `fed_unconsumed=7`, `expected=38`, `diff=0`, `state='ok'` | UT |
+| AC-47 | FR-18 | Given стос `PLT-T1` (квант 45), завдання порталу `done=7` для МО в роботі, `ws_qty=38`; When `_td_refresh()`; Then `fed_unconsumed=7`, `expected=38`, `diff=0`, `state='ok'` | UT |
 | AC-48 | FR-18 | When `ws_qty=36` → `pending`, `diff_since`; через 10 хв (`freeze_time`) → `diff`, одна діяльність для користувача `stock.group_stock_manager`; Given `ws_product='DSP16-SON'`, Odoo `DSP16-WNG` → `diff` одразу | UT |
 | AC-49 | FR-22 | When подія `mc_woodstore` `status` з `gantry_status` новим (`aisles[2].gate_open=true`, `alarms=["Вакуум"]`); Then параметр `gantry_status.aisles_open=[2]`, чатер GANTRY-1 «Тривога порталу: Вакуум»; When `stacks` з 23 стосами `qty>0` → сигнал `equipment/GANTRY-1/stacks.last_value=23` | UT |
 | AC-50 | FR-18 | Given `diff=−2` (AC-48); When `user_stock_manager` «Прийняти з порталу»; Then квант = 43, стан `ok`; `user_f3d` → `AccessError`; «Виправити портал» при `write_enabled=False` → `UserError`, при п'яти запобіжниках → команда з `payload` `{"op": "stack", "stack": "PLT-T1", "qty": 38, …}` (`text` `stack;PLT-T1;38;…`, X-03) | UT |
@@ -2337,11 +2337,11 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-53 | FR-19 | Given `to_send`, запобіжники ввімкнено; When `_cron_gantry`; Then `td.command` на `equipment/GANTRY-1/cmd` з `payload == {"op": "feed", "stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "BOARD-T", "priority": 5, "ref": "WH/MO/T0001"}` і `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"` (X-03), стан `sent`; запис вимкнено → лишається `to_send`, `error` «Запис вимкнено…» | UT |
 | AC-54 | FR-19 | When команда `done` з `result_data={"id": "wj-00412", "state": "queued"}` → `ws_id="wj-00412"`, `queued` (X-03); `failed` → `error` з текстом; `expired` → «Колектор не забрав команду» | UT |
 | AC-55 | FR-19 | When EV-02 `jobs` з невідомим `wj-00500`, `external_ref="WH/MO/T0001"`; Then нове завдання `origin='machine'` з `production_id`; EV-02 `events` 3 × `sheet_placed` (одна повторно) → `done=2`... `len(sheet_log)=2`, `done=max(done, 2)` | UT |
-| AC-56 | FR-20 | Given завдання `done=4` з `PLT-T2` (резерв руху був у `PLT-T1`); When `_f3d_consume()`; Then рядок руху `PLT-T2` 4 `picked=True`, незібраний рядок `PLT-T1` зменшено на 4, `consumed_qty=4`; повторний виклик — без змін | UT |
+| AC-56 | FR-20 | Given завдання `done=4` з `PLT-T2` (резерв руху був у `PLT-T1`); When `_td_consume()`; Then рядок руху `PLT-T2` 4 `picked=True`, незібраний рядок `PLT-T1` зменшено на 4, `consumed_qty=4`; повторний виклик — без змін | UT |
 | AC-57 | CM-08 | Then приклади R-21 (`build_payload`, `check_payload`, `build_cmd`, `parse_cmd`, `cmd_label`, `result_text`) — рівно наведені об'єкти, тексти й помилки; для кожного рядка таблиці R-21 `parse_cmd(k, build_cmd(k, op, **f)) == build_payload(k, op, **f)` і `result_text` дає колонку «Запасний `result`» | UT, CT |
-| AC-58 | FR-15 | Given будь-який із п'яти запобіжників вимкнено (`machine_connect.write_enabled`, `telemetry.write_enabled`, джерело, сигнал); When `env['td.command']._f3d_mc_create_command(...)` (M-20); Then `UserError` з назвою запобіжника, команди немає; поле не за R-21 (`product="DSP16 ANT"`) → `UserError` «… не відповідає формату …»; сигнал без `address.call`/`address.cmd` → `UserError` «… не є сигналом команд верстатів» | UT |
+| AC-58 | FR-15 | Given будь-який із п'яти запобіжників вимкнено (`machine_connect.write_enabled`, `telemetry.write_enabled`, джерело, сигнал); When `env['td.command']._td_mc_create_command(...)` (M-20); Then `UserError` з назвою запобіжника, команди немає; поле не за R-21 (`product="DSP16 ANT"`) → `UserError` «… не відповідає формату …»; сигнал без `address.call`/`address.cmd` → `UserError` «… не є сигналом команд верстатів» | UT |
 | AC-59 | FR-23 | Then `td.cut.part` з `length_mm=0` або `qty=0` → помилка БД; `material_role='product'` без плити → `ValidationError`; M-26 з CSV Додатка E (3 рядки, 1 з помилкою) → `UserError` з «рядок 3: width_mm…», деталей не додано; без помилок → 3 деталі, повторний імпорт без `replace` — upsert (3) | UT |
-| AC-60 | FR-24 | Given МО ×14, деталь `P001` 2 шт/виріб 720×560 текстура 1; When `_f3d_create_for(mo, 'main')`; Then рядок `qty=28`; деталь 2100×1500 текстура 1 на листі 2800×2070 → вміщується; 2100×2100 текстура 0 → `ValidationError` «не вміщується»; без деталей → `UserError` | UT |
+| AC-60 | FR-24 | Given МО ×14, деталь `P001` 2 шт/виріб 720×560 текстура 1; When `_td_create_for(mo, 'main')`; Then рядок `qty=28`; деталь 2100×1500 текстура 1 на листі 2800×2070 → вміщується; 2100×2100 текстура 0 → `ValidationError` «не вміщується»; без деталей → `UserError` | UT |
 | AC-61 | FR-24 | When `action_export()`; Then вкладення `КР/…_parts.csv`, перший рядок — заголовок R-19 п. 5, рядок `P001;Боковина;BOARD-T;720;560;28;1;EB-T;;EB-T;;`, CRLF, без BOM; `;` у назві → `,` | UT |
 | AC-62 | FR-25 | Given `collector`, запобіжники ввімкнено; When `action_send_optimizer()`; Then команда з `payload == {"op": "upload", "map": <id карти>, "token": t}` (`t` — 16 hex), `export_token_hash = sha256(t)`, `expires = now + 600`, стан `optimizing` | UT |
 | AC-63 | FR-25 | When команда `done` (`result_data={"job_id": "cj-00077", "state": "optimizing", "eta_s": 5}`), EV-03 `plan` (`total_sheets=7`, `waste_pct=11.4`), EV-03 `mpr` для `P001`; Then `ext_job_id="cj-00077"`, `plan_sheets=7`, вкладення плану й `P001.mpr`, стан `planned`; невалідний план (`total_sheets=0`) → `ValueError` у журналі подій, стан не змінився; карта `optimizing` > 30 хв (крон) → `error` | UT |
@@ -2367,9 +2367,9 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-83 | FR-29 | Then 35 `td.machine` (15 `opcua`, 20 `io`), 28 з `employee_id`; 22 джерела; сигналів модуля 207 (`signals_created` 205 + `signals_bound` 2 на копії демо); кожен верстат має `sig_state_id`, `sig_machine_state_id`; створені сигнали — `origin='module'` (X-16), прив'язані 2 — `origin` без змін; `workcenters/<C>/machine_state` — `viewer_visible=False` (X-27); сигнал команд оптимізатора — `equipment/CUTOPT/cmd` (X-18), коду `mc/cutopt/cmd` немає | TC (копія демо), UT (фікстури) |
 | AC-84 | FR-29 | Then 27 `td.gantry.stack`, 23 з `orderpoint_id` | TC, UT |
 | AC-85 | FR-30 | Then `downtimes_created=74`, `downtimes_open=1` (CNC-2, `maintenance_request_id`=MR/00031), `timelog_marked=184`, кількість `mrp.workcenter.productivity` після хука = до хука (184); CNC-2 `state='fault'`; повторний хук — 0 нових | TC, UT |
-| AC-86 | FR-33 | Given payload з `workcenters` (SAW-T, CNC-T), `equipment["GANTRY-1"]`, `locations["PLT-T1"]`, `productions`, `sheet_chain`; When `_f3d_viewer_collect`; Then ключі R-25 п. 1–5 з очікуваними значеннями, `losses`/`queue`/`current_workorder` не змінені | UT |
+| AC-86 | FR-33 | Given payload з `workcenters` (SAW-T, CNC-T), `equipment["GANTRY-1"]`, `locations["PLT-T1"]`, `productions`, `sheet_chain`; When `_td_viewer_collect`; Then ключі R-25 п. 1–5 з очікуваними значеннями, `losses`/`queue`/`current_workorder` не змінені | UT |
 | AC-87 | FR-33 | Given немає запису OEE поточної зміни; Then `oee` лишився вхідним; `status` для `fault` → `"stop"`; вузол відсутній — без винятку | UT |
-| AC-88 | FR-33 | When перехід стану; Then `td.viewer.event` (якщо модель є) з `model='mrp.workcenter'`, `codes=['SAW-T']`; `_f3d_viewer_delta` доповнює лише вузли `patch` | UT (умовно `skipUnless('td.viewer.event' in env)`) |
+| AC-88 | FR-33 | When перехід стану; Then `td.viewer.event` (якщо модель є) з `model='mrp.workcenter'`, `codes=['SAW-T']`; `_td_viewer_delta` доповнює лише вузли `patch` | UT (умовно `skipUnless('td.viewer.event' in env)`) |
 | AC-89 | FR-31, FR-32 | Then меню `menu_td_mc_root` під `td_factory3d.menu_td_root` з `sequence=40`; `menu_td_mc_settings` — батько `td_factory3d.menu_td_config`, `sequence=40`, група `group_td_manager`, дія `action_td_mc_settings` (`res.config.settings`, `context.module='td_machine_connect'`) (X-32); `user_f3d` читає всі моделі, не пише `td.machine`; `user_f3d_manager` створює верстат; `user_stock` не бачить дій розбіжності; record rule компанії приховує верстат іншої компанії | UT |
 | AC-90 | FR-15, FR-32 | When `user_f3d_manager` вмикає `td_mc_write_enabled` у налаштуваннях → `AccessError`; `user_f3d_admin` — так; межі M-23 → `ValidationError` | UT |
 | AC-91 | FR-32 | Then `user_td_machine.active=False`, пароля немає, вхід `/web/login` неможливий; має групи §4.2 | UT, HT |
@@ -2383,7 +2383,7 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-99 | FR-27, FR-01 | Given ТП-01 (35 верстатів, показання щосекунди, 30 хв) і ТП-02 (ланцюг емулятор → колектор → Odoo); Then API-02 p95 ≤ 1,2 с без `5xx` і блокувань БД; «подія емулятора → простій в Odoo» p95 ≤ 10 с; буфер колектора не росте | TC |
 | AC-100 | FR-15 | Given ТК-03 і DEPLOY_TEST п. 6 «перший тиждень лише читання» (`auto_start_enabled=False`, `write_enabled=False`); Then за зміну журнал станів і прості є, `mrp.workorder`/`mrp.workcenter.productivity` автоматикою не змінені (`write_uid != user_td_machine`), команд модуля 0 | TC |
 | AC-101 | FR-27, FR-15 | Given `enable_write()`, `make_mo(wc_ua, qty=14, name='WH/MO/T0002')` (WO id N `ready`); When `user_mrp` `action_f3d_send_to_machine()`; Then `td.command` на `sig_ua_cmd` з `payload == {"method": "Store", "job": "WO%05d" % N, "qty": 14, "ref": "WH/MO/T0002", "priority": 5}` і `text == "Store;WO%05d;14;WH/MO/T0002;5" % N` (X-03), `td_machine_id = m_ua`, `origin='machine_connect'`, чатер МО; `cmd_done(cmd, data={"ReturnStatus": 0})` → чатер верстата «Команда …: done {"ReturnStatus": 0}»; WO у `progress` → `UserError`; WO на `wc_io` → `UserError` «не приймає завдань з Odoo»; `write_enabled=False` → `UserError` з назвою запобіжника | UT |
-| AC-102 | FR-15, FR-19, CM-08 | Given `enable_write()`; When `env['td.command']._f3d_mc_create_command(sig_g_cmd, "feed", {"stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "B" * 32, "priority": 5, "ref": "WH/MO/T0001"})`; Then команда з `payload` (усі поля без змін), `text` — перші 63 символи тексту R-21 + «…» (`len(text) == 64`). Given `td.command._f3d_mc_payload_supported` підмінено на `False` (telemetry без CR-01, X-93); When той самий виклик; Then `UserError` «… length: 66 > 64», команди немає; When завдання AC-53 → `_cron_gantry`; Then команда без `payload`, `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"`; `cmd_done(cmd, "wj-00412")` (без `result_data`) → `ws_id="wj-00412"`, `queued` (X-03, запасна граматика) | UT |
+| AC-102 | FR-15, FR-19, CM-08 | Given `enable_write()`; When `env['td.command']._td_mc_create_command(sig_g_cmd, "feed", {"stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "B" * 32, "priority": 5, "ref": "WH/MO/T0001"})`; Then команда з `payload` (усі поля без змін), `text` — перші 63 символи тексту R-21 + «…» (`len(text) == 64`). Given `td.command._td_mc_payload_supported` підмінено на `False` (telemetry без CR-01, X-93); When той самий виклик; Then `UserError` «… length: 66 > 64», команди немає; When завдання AC-53 → `_cron_gantry`; Then команда без `payload`, `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"`; `cmd_done(cmd, "wj-00412")` (без `result_data`) → `ws_id="wj-00412"`, `queued` (X-03, запасна граматика) | UT |
 | AC-103 | FR-27, FR-28, CM-08 | Given `settings.write_enabled=True`; When `write(job_cmd, None, "Stop;WO00013")`; Then фейковий метод `Stop("WO00013", [])` — той самий виклик, що `call(job_cmd, {"method": "Stop", "job": "WO00013"})`, — і `result="ok ReturnStatus=0"`; `write(g_cmd, None, "feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233")` → те саме тіло `POST /api/v1/jobs`, що в AC-77, `result="wj-…"`; `call(g_cmd, {"op": "feed", "sheets": 4})` → `WriteError("bad_command: stack: відсутнє")`, HTTP-запитів 0; `call` на сигналі без `address.call`/`address.cmd` → `NotSupported`; плагіни беруть граматику лише з `cmdtext` (без Odoo, X-93) (X-03, запасна граматика) | CT |
 
 Покриття FR: FR-01 AC-01…03, 10, 93, 98, 99; FR-02 AC-05, 06; FR-03 AC-04, 07, 08, 93; FR-04 AC-11, 94; FR-05 AC-12…14;
@@ -2410,7 +2410,7 @@ FR-33 AC-86…88; FR-34 AC-45, 46, 95; FR-35 AC-66…68; FR-36 AC-06, 44, 51, 63
 
 Вимоги до коду модуля (обов'язкові, інакше тест не написати без читання коду):
 1. «Зараз» — лише `fields.Datetime.now()` / `datetime.now(UTC)`; SQL `now()` і `CURRENT_TIMESTAMP` заборонені (`freezegun`).
-2. `_f3d_dispatch` синхронний: після повернення `_f3d_ingest` стан, журнал, простої, таймери вже змінено (жодних черг,
+2. `_td_dispatch` синхронний: після повернення `_td_ingest` стан, журнал, простої, таймери вже змінено (жодних черг,
    `ir.cron._trigger`, `postcommit`).
 3. `GANTRY_TARGETS` читається лише як `self.env["td.gantry.stack"].GANTRY_TARGETS` (не імпортованою константою).
 4. Хук читає CSV лише через `hooks._csv_rows(env, name: str) -> list[dict]` (`name` ∈ {`mc_machines`, `mc_signals`});
@@ -2418,7 +2418,7 @@ FR-33 AC-86…88; FR-34 AC-45, 46, 95; FR-35 AC-66…68; FR-36 AC-06, 44, 51, 63
    -> list[dict]` (значення для `td.signal.create` без `source_id`, `equipment_id`) — та сама функція створює сигнали
    фікстур.
 5. Логер — `logging.getLogger(__name__)` у кожному файлі (`assertLogs('odoo.addons.td_machine_connect', 'WARNING')`).
-6. Автоматичні зміни стандартних моделей — лише через `_f3d_tech_env()`; їхні `create_uid`/`write_uid` =
+6. Автоматичні зміни стандартних моделей — лише через `_td_tech_env()`; їхні `create_uid`/`write_uid` =
    `user_td_machine`.
 7. Діяльності модуля: тип `mail.mail_activity_data_todo`, `summary` = перші 64 символи тексту, `note` = повний текст
    (тести шукають за `res_model`, `res_id`, `summary`).
@@ -2451,9 +2451,9 @@ HttpCase)`. Від батьківського класу використову�
 | `rk(sig, text=None, value=None, t='10:00:00', q='good')` | показання `{"code": sig.code, "ts": kt(t), …}` (ключі `None` не передаються) |
 | `ua(m, t, state=None, mode=None, alarm=None, pieces=None, job=None, q='good')` | показання OPC UA-верстата з одним `ts`: `state`/`mode` — текст (`"WORKING"` → `value=3`, `text="WORKING"` за картою P-01), `alarm` — `True/False` → `1/"on"`, `0/"off"`; `pieces` — число; `job` — текст |
 | `io(m, t, run=None, alarm=None, pieces=None, q='good')` | те саме для I/O: `run` → `1/"run"`, `0/"stop"` |
-| `feed(readings, src='collector')` | `push(readings, src=src)` + `env.invalidate_all()`; повертає результат `_f3d_ingest` |
+| `feed(readings, src='collector')` | `push(readings, src=src)` + `env.invalidate_all()`; повертає результат `_td_ingest` |
 | `tick(t)`, `oee_tick(t)`, `gantry_tick(t)`, `cutmap_tick(t)` | `with at(t):` відповідний крон (`_cron_tick`, `_cron_oee`, `_cron_gantry`, `_cron_cutmap`) |
-| `push_event(route, payload, source)` | подія як від плагіна: `event_id = sha256(route + "\n" + source + "\n" + json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False))`, `ts = now`, `remote = source` → `env['td.push.event'].sudo()._f3d_receive([ev], col)` |
+| `push_event(route, payload, source)` | подія як від плагіна: `event_id = sha256(route + "\n" + source + "\n" + json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False))`, `ts = now`, `remote = source` → `env['td.push.event'].sudo()._td_receive([ev], col)` |
 | `ev_ua(m, message_id, category, text, t, kind='alarm', active=True)` | EV-01 для `m` (`source = m.source_id.code`, `machine = m.code`, `time = kt(t)` ISO `Z`) → `push_event('mc_opcua', …)` |
 | `make_log(m, state, start, end=None, wo=None, pieces=0)` | `td.machine.state.log` через `sudo().create` (для OEE і R-28; минає диспетчер) |
 | `cmd_done(cmd, result=None, data=None)` / `cmd_fail(cmd, error)` / `cmd_expire(cmd)` | `cmd.sudo().write({'state': 'done', 'result': result або json.dumps(data, ensure_ascii=False, sort_keys=True)[:256], 'result_data': data, 'done_at': now})` (команда з `payload` — `data` = об'єкт результату R-21; запасний режим — лише `result`) / `'failed'`, `error` / `'expired'` — як telemetry API-07 (CR-01, X-03) |
@@ -2499,15 +2499,15 @@ HttpCase)`. Від батьківського класу використову�
 | `test_hints.py::TestHints` | `test_event_after_state`, `test_event_before_state`, `test_setup_hint`, `test_idle_blocked_hint_not_applied`, `test_alarm_request_linked_once` | AC-21…24 | повідомлення `E0421` з Додатка B (data); `make_mo(wc_ua)` з другою операцією `blocked` для AC-23 | AC-21: `td.machine.event` один (повтор `ev_ua` з тим самим вмістом — дублікат, `td.push.event` один); AC-24: `maintenance.request.search_count([('equipment_id','=',eq_ua.id)]) == 1` |
 | `test_autostart.py::TestAutostart` | `test_start_by_job`, `test_single_ready_io`, `test_two_ready_no_start_activity`, `test_job_mode_requires_job`, `test_unknown_job_activity`, `test_idempotent`, `test_blocked_wc_unblocked`, `test_employee_order`, `test_stop_crane`, `test_send_to_machine` | AC-25…32, AC-101 | `enable_autostart()`; WO id → текст `f"WO{wo.id:05d}"`; AC-31: `wc_ua.employee_ids = emp_saw + emp_x`, записи журналу часу сьогодні від `emp_saw` | AC-25: `create_uid` таймера = `user_td_machine`, чатер МО містить «стартував верстат UA-T»; AC-29: `mock.patch.object(type(env['mrp.workorder']), 'start_employee', autospec=True, side_effect=…wraps)` — `call_count == 1`; AC-32: `write_date` WO не змінився |
 | `test_counter_finish.py::TestCounterFinish` | `test_counter_reset_and_jump`, `test_live_sync`, `test_finish_by_job_change`, `test_partial_hold`, `test_io_finish_after_idle`, `test_finish_partial_rights`, `test_autopause_resume` | AC-33…38 | `enable_autostart()`; `make_mo(wc_ua, qty=14)` стартоване автостартом о 09:55 | AC-33: WARNING `assertLogs`; AC-35: `production.qty_producing` не змінився автоматикою до завершення; AC-38: тривалості таймерів у хвилинах (`duration`) збігаються з інтервалами ±0,05 |
-| `test_oee.py::TestOee` | `test_saw1_macket`, `test_saw1_real`, `test_cnc2`, `test_saw3`, `test_period_two_shifts`, `test_nodata_coverage`, `test_timelog_source`, `test_cron_open_close_rotate` | AC-39…44 | журнали — `make_log` (сума хвилин за таблицею R-13; прості — `td.downtime` з `loss_id`); брак — `stock.scrap` (`workorder_id`, `state='done'`, `date_done=kt('10:00')`); AC-41 — два записи `td.oee.shift` `closed` через `sudo().create` | `compute_oee` викликається напряму для AC-39/40 з вхідним словником (чиста функція) і через `_f3d_oee` — результати рівні; AC-44: ротація видаляє лише інтервали з `date_end < now − 400 діб` |
+| `test_oee.py::TestOee` | `test_saw1_macket`, `test_saw1_real`, `test_cnc2`, `test_saw3`, `test_period_two_shifts`, `test_nodata_coverage`, `test_timelog_source`, `test_cron_open_close_rotate` | AC-39…44 | журнали — `make_log` (сума хвилин за таблицею R-13; прості — `td.downtime` з `loss_id`); брак — `stock.scrap` (`workorder_id`, `state='done'`, `date_done=kt('10:00')`); AC-41 — два записи `td.oee.shift` `closed` через `sudo().create` | `compute_oee` викликається напряму для AC-39/40 з вхідним словником (чиста функція) і через `_td_oee` — результати рівні; AC-44: ротація видаляє лише інтервали з `date_end < now − 400 діб` |
 | `test_energy_contract.py::TestEnergyContract` | `test_wo_intervals_window`, `test_wc_intervals`, `test_run_setup_minutes` | AC-45, AC-46 | `make_log` з `wo`; закриття — через диспетчер (`ua(...)`) для AC-46 | повернення — `dict[int, list[tuple[datetime, datetime, str]]]`, naive UTC, відсортовано; відкритий інтервал обрізано `now` |
 | `test_gantry_stack.py::TestGantryStack` | `test_fed_unconsumed`, `test_pending_then_diff`, `test_product_mismatch`, `test_status_event`, `test_accept_portal`, `test_fix_portal_needs_write`, `test_replenish_once_per_hour` | AC-47…51 | `put_stock(board, loc_t1, 45, lot_l1)`; завдання порталу `done=7` з МО `make_mo(wc_saw)` у `progress`; EV-02 через `push_event('mc_woodstore', {"kind": "stacks", …}, 'REST-WOODSTORE-T')`; правило поповнення `stock.warehouse.orderpoint` на `loc_t1` (min 10, max 60) | AC-48: діяльність одна навіть після 3 кронів; AC-50: `stock.quant` `quantity` 43, `stock.move` інвентаризації `done` |
 | `test_gantry_job.py::TestGantryJob` | `test_from_production_no_dup`, `test_send_payload`, `test_command_results`, `test_mirror_and_sheets`, `test_consume_move_lines` | AC-52…56 | `make_mo(wc_saw, name='WH/MO/T0001', comps=((board, 4/14),))` (рух 4 арк., резерв у `PLT-T1`); `enable_write()` для AC-53/54 | AC-53: `td.command.payload` і `text`, `signal_id=sig_g_cmd`, `origin='machine_connect'`, `td_gantry_job_id`; AC-55: `sheet_log` без дубля за id події; AC-56: `stock.move.line` `PLT-T1` зменшено на 4, `PLT-T2` 4 `picked` |
-| `test_commands.py::TestCommands` | `test_build_parse_examples`, `test_five_fuses`, `test_payload_and_label`, `test_fallback_text_mode` | AC-57, AC-58, AC-102 | `enable_write()`, потім вимикати по одному; AC-102 — `patch.object(type(env['td.command']), '_f3d_mc_payload_supported', return_value=False)` (X-93) | текст `UserError` містить ключ запобіжника (`td.machine_connect.write_enabled`, `td.telemetry.write_enabled`, код джерела, код сигналу) |
+| `test_commands.py::TestCommands` | `test_build_parse_examples`, `test_five_fuses`, `test_payload_and_label`, `test_fallback_text_mode` | AC-57, AC-58, AC-102 | `enable_write()`, потім вимикати по одному; AC-102 — `patch.object(type(env['td.command']), '_td_mc_payload_supported', return_value=False)` (X-93) | текст `UserError` містить ключ запобіжника (`td.machine_connect.write_enabled`, `td.telemetry.write_enabled`, код джерела, код сигналу) |
 | `test_cutmap.py::TestCutMap` | `test_part_constraints_and_import`, `test_create_lines_and_fit`, `test_export_csv`, `test_send_optimizer_token`, `test_apply_job_plan_mpr`, `test_sheets_warning_and_update_need`, `test_release_and_manual_plan`, `test_csv_formula_prefix_stripped` | AC-59…65 | BOM з `td.cut.part` `P001` (720×560, 2 шт, текстура 1, `edge_top=edge_left='EB-T'`); МО `make_mo(wc_saw, qty=14, comps=((board, 8/14),))`; `enable_write()` | AC-61: байти вкладення `== expected.encode()` (CRLF, без BOM); AC-62: `export_token_hash` недоступний `user_f3d_manager` (`AccessError` на `read`); `test_csv_formula_prefix_stripped`: назва `=SUM(A1)` → `Description` `SUM(A1)` (R-19 п. 5) |
-| `test_api_export.py::TestApiExport` (HttpCase) | `test_export_ok_once`, `test_errors`, `test_too_large` | AC-66…68 | карта в `exported` з токеном (`_f3d_new_export_token()` від `sudo`); 6 000 рядків — через `sudo().create` | порядок перевірок API-01 (без Bearer — `401` навіть з невірним `t`); тіло помилки `{"error": {"code", "message"}}` |
+| `test_api_export.py::TestApiExport` (HttpCase) | `test_export_ok_once`, `test_errors`, `test_too_large` | AC-66…68 | карта в `exported` з токеном (`_td_new_export_token()` від `sudo`); 6 000 рядків — через `sudo().create` | порядок перевірок API-01 (без Bearer — `401` навіть з невірним `t`); тіло помилки `{"error": {"code", "message"}}` |
 | `test_migration.py::TestMigrationClean`, `::TestMigrationDemo` | `test_clean_db_zero`, `test_losses`, `test_sheets`, `test_machines_signals`, `test_stacks`, `test_demo_journal`, `test_idempotent` | AC-81…85 | `TestMigrationDemo` — лише на копії демо (`skipUnless`); `TestMigrationClean` — `with patch('odoo.addons.td_machine_connect.hooks._csv_rows', side_effect=…)` на 2 РЦ фікстур | повтор `run_migration(env)` → `signals_created: 0`, `downtimes_created: 0`, кількості моделей незмінні; `migration_report.state == 'done'` |
-| `test_viewer_provider.py::TestViewerProvider` | `test_collect_payload`, `test_no_oee_keeps_input`, `test_bus_and_delta` | AC-86…88 | payload-вхід — словник у тесті (без viewer); `td.oee.shift` для `m_saw` за `D0` | `tools.payload.build_machines` повертає ті самі ключі, що й `_f3d_viewer_collect` дописує; провайдер не кидає винятків для `m_cnc` (`manual`, без сигналів) |
+| `test_viewer_provider.py::TestViewerProvider` | `test_collect_payload`, `test_no_oee_keeps_input`, `test_bus_and_delta` | AC-86…88 | payload-вхід — словник у тесті (без viewer); `td.oee.shift` для `m_saw` за `D0` | `tools.payload.build_machines` повертає ті самі ключі, що й `_td_viewer_collect` дописує; провайдер не кидає винятків для `m_cnc` (`manual`, без сигналів) |
 | `test_security.py::TestSecurity` | `test_menu_and_access_matrix`, `test_settings_admin_only`, `test_tech_user` | AC-89…91 | користувачі фікстур; матриця §13.3 | `ir.ui.menu` `menu_td_mc_root` видиме `user_f3d` і невидиме `user_plain` (`_visible_menu_ids`); `menu_td_mc_settings` (під `td_factory3d.menu_td_config`, X-32) видиме `user_f3d_manager` і невидиме `user_f3d` |
 | `test_hooks.py::TestHooks` | `test_uninstall_hook_params_crons`, `test_neutralize_sql` | AC-92 | `uninstall_hook(env)` у транзакції тесту (відкочується); SQL з `data/neutralize.sql` через `cr.execute` | після SQL: три стоп-крани `False`, `cutting_mode='manual'`, крони модуля `active=False`, `td.machine.read_enabled=False` усім |
 
@@ -2560,7 +2560,7 @@ HttpCase)`. Від батьківського класу використову�
 | ТК-01 | Установка, міграція й читання 35 верстатів | копія після DEPLOY_TEST п. 1–2 (модуль ще не встановлено); емулятор `follow_odoo` на цю копію | 1) знімки S0–S5 (§13.5 п. 2); 2) `odoo-bin -d <копія> -i td_machine_connect --stop-after-init --log-level=info`; 3) звіт міграції; 4) `docker compose restart collector`; 5) 3 хв | AC-83…85; AC-93: 29 `working`, 5 `idle` (SAW-3, VSAW-1, EDGE-3, UV-1, ASM-5), CNC-2 `fault` (стан міграції, інтервалу немає), 34 відкриті інтервали; джерела `UA-*` (15), `MB-*` (4), `REST-*` (2) — `online`, `MC-DERIVED` — `online`; `mrp.workorder` і `mrp.workcenter.productivity` не змінювались (макс. `write_date` = S4); команд 0 | «Огляд верстатів», «Журнал станів», Телеметрія → Джерела |
 | ТК-02 | Аварія CNC-2 (`machine_fault CNC-2`) | ТК-01 (та сама копія); `POST /mode {"mode": "scenario"}`, без `shift` | 1) 3 хв; 2) `POST /scenario/machine_fault/start {"params": {"device": "CNC-2", "reason": "spindle"}}` (тіло iot_sim API-13, X-57); 3) 10 с; 4) MAN: «Простої без причини» → картка CNC-2 → «Поломка» (оператор), «Підтвердити» (майстер); 5) `POST /scenario/machine_fault/stop`; 6) 2 хв | крок 1: CNC-2 `fault` → `idle` (READY без завдання): простій міграції закрито `ts` переходу, запис «Equipment Failure» закрито тим самим `ts`, РЦ CNC-2 `working_state != 'blocked'`, MR/00031 без змін (R-08 п. 4); AC-94: крок 3 — `fault`, новий простій `hint` «Поломка», `hint_text` «E0421 Помилка шпинделя осі Z», подія `E0421` у «Події верстатів», відкритий запис «Поломка» (`td_auto`), РЦ `blocked`, одна нова заявка «CNC-2: аварія верстата» з `td_signal_id` = `workcenters/CNC-2/alarm` і повідомленням «Подія верстата: E0421 …», `downtime.maintenance_request_id` = вона; крок 4 — `reason_state='confirmed'`; крок 6 — `idle`, простій `fault` закрито, запис закрито, РЦ розблоковано, заявка відкрита | Огляд, Простої, Обслуговування → Заявки, 3D (якщо є viewer) |
 | ТК-03 | Зміна `shift` — лише читання | ТК-01; `scenario`; `auto_start_enabled=False`, `write_enabled=False` | 1) `POST /scenario/shift/start {"params": {"speed": 1, "trucks": false, "people": false}}`; 2) 60 хв; 3) `_cron_oee` (або 5 хв); 4) звіти | для кожного з 35: інтервали журналу без розривів і перекриттів (`date_start` наступного = `date_end` попереднього), сума тривалостей від першого переходу = минулому часу ±1 хв; інтервалів < 120 с у станах простою немає; прості < 120 с не записані; записів `mrp.workorder`/`mrp.workcenter.productivity` з `write_uid = user_td_machine` — 0; команд 0; `td.oee.shift` за сьогодні `open` для 35, `coverage ≥ 0,95`; події I0001/I0002 OPC UA-верстатів у «Подіях»; діяльностей «не знайдено в Odoo» — 0 (автостарт вимкнено) (AC-100 частково) | Журнал станів (pivot за `code`, `state`), OEE |
-| ТК-04 | Автостарт і автозавершення за завданням верстата (SAW-1, OPC UA) | ТК-01; `scenario` без `shift`; `auto_start_enabled=True`; запис для `workcenters/SAW-1/job_cmd` (параметри модуля й telemetry, джерело `UA-SAW-1`, сигнал, `F3D_WRITE_ENABLED=1`); WO00013 завершено вручну (MAN, майстер у «Цеху»); нове МО «Комод 4 шухляди» × 2 підтверджено (WO «Розкрій» на SAW-1 `ready`, позначимо N) | 1) WO N → «Надіслати на верстат» (`action_f3d_send_to_machine`); 2) 30 с; 3) `ua_call("SAW-1", "Start", "WO%05d" % N, [])` (оператор на пульті); 4) чекати завершення завдання емулятором (≈ 15 + 2,2 × 2 хв); 5) повтор `Start` того ж `JobOrderID` | AC-101: команда CMD-01 `Store` (`payload` `{"method": "Store", "job": "WO000NN", "qty": 2, "ref": "WH/MO/…", "priority": 5}`) `done`, `result_data={"ReturnStatus": 0}`, `ua_jobs("SAW-1")` містить WO N `AllowedToStart`; AC-95: ≤ 15 с після `WORKING` — WO `progress`, таймер `employee_id` = Олег Мельник (OP-SAW-1), `create_uid = user_td_machine`, `td_auto_started`; `td_qty_counted` росте з `RelativePiecesOut`; після `Completed` — `qty_produced = 2`, `state='done'`, чатер МО «…завершив верстат SAW-1: 2 шт»; Σ хвилин таймерів WO = Σ інтервалів `working` з WO ±1 хв; `_f3d_wo_intervals(WO)` = ці інтервали, `td_run_min` = їх сума (контракт energy, AC-45/46 на стенді); крок 5 — другого таймера немає | WO (вкладка «Верстат»), МО (чатер), Журнал станів |
+| ТК-04 | Автостарт і автозавершення за завданням верстата (SAW-1, OPC UA) | ТК-01; `scenario` без `shift`; `auto_start_enabled=True`; запис для `workcenters/SAW-1/job_cmd` (параметри модуля й telemetry, джерело `UA-SAW-1`, сигнал, `F3D_WRITE_ENABLED=1`); WO00013 завершено вручну (MAN, майстер у «Цеху»); нове МО «Комод 4 шухляди» × 2 підтверджено (WO «Розкрій» на SAW-1 `ready`, позначимо N) | 1) WO N → «Надіслати на верстат» (`action_f3d_send_to_machine`); 2) 30 с; 3) `ua_call("SAW-1", "Start", "WO%05d" % N, [])` (оператор на пульті); 4) чекати завершення завдання емулятором (≈ 15 + 2,2 × 2 хв); 5) повтор `Start` того ж `JobOrderID` | AC-101: команда CMD-01 `Store` (`payload` `{"method": "Store", "job": "WO000NN", "qty": 2, "ref": "WH/MO/…", "priority": 5}`) `done`, `result_data={"ReturnStatus": 0}`, `ua_jobs("SAW-1")` містить WO N `AllowedToStart`; AC-95: ≤ 15 с після `WORKING` — WO `progress`, таймер `employee_id` = Олег Мельник (OP-SAW-1), `create_uid = user_td_machine`, `td_auto_started`; `td_qty_counted` росте з `RelativePiecesOut`; після `Completed` — `qty_produced = 2`, `state='done'`, чатер МО «…завершив верстат SAW-1: 2 шт»; Σ хвилин таймерів WO = Σ інтервалів `working` з WO ±1 хв; `_td_wo_intervals(WO)` = ці інтервали, `td_run_min` = їх сума (контракт energy, AC-45/46 на стенді); крок 5 — другого таймера немає | WO (вкладка «Верстат»), МО (чатер), Журнал станів |
 | ТК-05 | Автостарт «одне в черзі» й лічильник ADAM (SLIDE-1, I/O) | ТК-01; `scenario`; `auto_start_enabled=True`; SLIDE-1 має одне завдання `progress` WO00101 з таймером оператора (демо); `qty_remaining` = R | 1) `PUT /signals/workcenters/SLIDE-1/state {"value": 1, "hold_s": 1800}`; 2) `PUT …/pieces_out {"value": 65534}`, потім `65535`, `65537` (перехід через межу слова), далі +1 кожні 20 с до `65537 + R − 3`; 3) `PUT …/state {"value": 0, "hold_s": 600}`; 4) 70 с; 5) `PUT …/alarm {"value": 1, "hold_s": 120}` | крок 1: ≤ 5 с `working`, `active_workorder_id` = WO00101, другого таймера немає (R-09 п. 4а); крок 2: прирости 1, 2, 1, … — `td_qty_counted = R` (порядок слів `little`, A-28; при хибному порядку — WARNING «стрибок», тест падає); крок 4: WO00101 `done`, `qty_produced = qty_production`; крок 5: `fault`, простій «Поломка» з `hint_text` «Вхід аварії», заявка одна (`workcenters/SLIDE-1/alarm`) | WO00101, Журнал станів |
 | ТК-06 | Портал: подача плити за МО і списання | ТК-01; `scenario`; запис для `equipment/GANTRY-1/cmd` (5 запобіжників) | 1) МО WH/MO/00233 → «Подати порталом»; 2) «Надіслати»; 3) 5 хв; 4) звірка `PLT-03C`; 5) MAN: закрити МО (майстер) і знову звірка | AC-96: ПОРТ/… `feed`, `PLT-03C`, SAW-1, 4 арк. DSP16-ANT, партія DSP16-ANT-2613-130; команда CMD-02 `feed` (`text` `feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233`) `done` → `ws_id = result_data.id = wj-…` → `queued` → `active` → `done`, `done=4`, `sheet_log` 4; рядок руху МО `PLT-03C` 4 `picked`, `consumed_qty=4`; стос `PLT-03C`: `ws_qty` −4, `fed_unconsumed=4`, `state='ok'`; після закриття МО квант −4, `fed_unconsumed=0`, `ok` | Портал → Завдання, Стоси; МО → Компоненти |
 | ТК-07 | Розбіжність стосу, виправлення, поповнення | ТК-01; `scenario`; запис для `equipment/GANTRY-1/cmd`; користувач з `stock.group_stock_manager` | 1) `ws("PATCH", "/api/v1/stacks/PLT-01B", {"qty": q − 2, "reason": "test"})`; 2) 60 с; 3) 10 хв; 4) MAN «Прийняти з порталу»; 5) `PATCH … {"qty": q' + 3}`, через 10 хв «Виправити портал»; 6) `PATCH /stacks/PLT-08A {"qty": 9}`, `gantry_auto_replenish=True`; 7) 2 хв; 8) MAN: виконати WH/INT | крок 2: `pending`; крок 3: `diff`, одна діяльність начальнику складу «Стос PLT-01B: портал …, має бути …»; крок 4: квант = `ws_qty + fed`, `ok`, діяльність закрита «Збігається»; крок 5: команда CMD-02 `stack` (`stack` PLT-01B, `qty` = `<expected>`, `product` DSP16-WNG, `lot` — партія) `done`, портал = `expected`, `ok`; крок 7: WH/INT у `PLT-08A` за правилом «Поповнення під портал» (одне); крок 8: команда CMD-02 `stack` для `PLT-08A` (`qty` = `<n>`) (AC-47, 48, 50, 51 на стенді) | Стоси (kanban), Склад → Переміщення |
@@ -2613,7 +2613,7 @@ HttpCase)`. Від батьківського класу використову�
 |---|---|---|---|
 | ТП-01 | Вхід показань 35 верстатів щосекунди (AC-99) | колектор зупинено; генератор `tests/stand/load_machines.py` з токеном `COL-MAIN` (перегенерованим на копії) шле API-02 щосекунди: 35 верстатів × 3…5 показань (стан, режим, тривога, лічильник, завдання); кожен верстат перемикає `WORKING`↔`READY` раз на 10 с (зсув фаз), `micro_stop_s=0` на копії → ≈ 3,5 переходи/с; 30 хв | API-02 p95 ≤ 1,2 с, p99 ≤ 2 с; 0 відповідей `5xx`; у лозі Odoo 0 `deadlock detected`/`could not serialize`; CPU воркера Odoo ≤ 70 % ядра в середньому; `_cron_tick` ≤ 10 с; інтервалів ≈ 6 300 без перекриттів (SQL-перевірка `lag(date_end) = date_start`) |
 | ТП-02 | Затримка ланцюга емулятор → колектор → Odoo | `scenario` + `shift`; щопів хвилини `machine_fault` start/stop по колу на CNC-1, CNC-3, EDGE-1, SAW-2, BORE-1; 30 хв (60 переходів) | `td.downtime.create_date − ts` події емулятора (`/sim/v1/events`) p95 ≤ 10 с; `collector_buffer_rows` ≤ 100 весь час; процес колектора CPU ≤ 15 % ядра, RSS ≤ 150 МБ; 1 сесія OPC UA на 15 джерел |
-| ТП-03 | Звіти й крони на обсязі року | `generate_series`: 840 000 інтервалів (35 × 400 діб × 60), 140 000 простоїв, 9 800 записів OEE, 20 000 WO | `_cron_oee` ≤ 20 с; «OEE за період» за рік ≤ 5 с; pivot «Простої» за місяць ≤ 3 с; `_cron_rotate` видаляє 73 500 (35 × 35 діб × 60) ≤ 60 с; `_f3d_wo_intervals` для 100 WO ≤ 0,5 с (контракт energy); `EXPLAIN` — Index Scan за `(machine_id, date_start)` |
+| ТП-03 | Звіти й крони на обсязі року | `generate_series`: 840 000 інтервалів (35 × 400 діб × 60), 140 000 простоїв, 9 800 записів OEE, 20 000 WO | `_cron_oee` ≤ 20 с; «OEE за період» за рік ≤ 5 с; pivot «Простої» за місяць ≤ 3 с; `_cron_rotate` видаляє 73 500 (35 × 35 діб × 60) ≤ 60 с; `_td_wo_intervals` для 100 WO ≤ 0,5 с (контракт energy); `EXPLAIN` — Index Scan за `(machine_id, date_start)` |
 | ТП-04 | Портал і карти | 27 стосів, події woodStore кожні 2 с, `stacks` кожні 30 с, 20 активних завдань; карта на 5 000 деталей | `_cron_gantry` ≤ 10 с; обробка EV-02 `stacks` (27 елементів) ≤ 0,5 с; API-01 на 5 000 деталей ≤ 2 с, тіло ≤ 1 МБ |
 
 ### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/td_machine_connect/DEPLOY_TEST.md`, здає W9) — «по одному верстату, перший тиждень лише читання»
@@ -2665,14 +2665,14 @@ HttpCase)`. Від батьківського класу використову�
 - Рядки інтерфейсу українською в коді (D-14): `string=`, `help=`, назви меню/дій/кронів, тексти `UserError`/
   `ValidationError`/`AccessError`, чатера й діяльностей — українською; англійською лише технічні коди (`WORKING`,
   `E0421`, коди сигналів).
-- Стандартні методи Odoo перевизначено лише ті, що названо в §2 (M-15 `create`, M-18 `_f3d_ingest`/`_mark_stale`,
-  M-19 `_f3d_local_types`, M-20 `write`, M-27 `_action_done`, M-28 `create`):
+- Стандартні методи Odoo перевизначено лише ті, що названо в §2 (M-15 `create`, M-18 `_td_ingest`/`_mark_stale`,
+  M-19 `_td_local_types`, M-20 `write`, M-27 `_action_done`, M-28 `create`):
   `grep -rnE "def (button_start|button_finish|button_pending|start_employee|stop_employee|_close|unblock|button_block)\("
   odoo_addons/td_machine_connect` → 0.
 - `tools/commands.py` і `f3d_collector_mc/cmdtext.py` побайтово однакові й без імпортів Odoo (AC-80, X-93); `asyncua==1.1.6` закріплено; команди
   модуля — `td.command.payload` (telemetry 19.0.1.1.0, X-03), запасна текстова граматика R-21 перевірена (AC-102, AC-103).
 - `data/neutralize.sql` виконується без помилки (AC-92); `uninstall_hook` і повторна установка перевірені (§13.5 п. 11).
-- Перегляд безпеки §13.3 пройдено: запис на пристрої — лише через `td.command._f3d_mc_create_command` і п'ять запобіжників, плагін не
+- Перегляд безпеки §13.3 пройдено: запис на пристрої — лише через `td.command._td_mc_create_command` і п'ять запобіжників, плагін не
   пише змінних OPC UA, секрети — лише `*_ref`, токен API-01 одноразовий і хешований, SQL лише параметризований.
 - Жива база `odoo` на timur-o19demo під час розробки й тестів не змінювалась (усі записи — на копіях).
 - Документація: `README.md` модуля (установка, параметри §5.1, інструкції ARCH §4), `README.md` пакета (env §8.2,

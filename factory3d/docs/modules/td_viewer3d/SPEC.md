@@ -141,7 +141,7 @@ odoo_addons/test_td_viewer3d/
 ├── __init__.py, models/__init__.py
 └── models/providers.py              td.viewer.provider.zz_test (seq 5, пише zones["Z-TEST"]), td.viewer.provider.zz_fail (seq 6, ValueError("boom"), sections fire),
                                      td.viewer.provider.zz_duck (AbstractModel за префіксом без _inherit, seq 152, sections ("infra", "zz_duck"),
-                                     без _f3d_viewer_delta і _f3d_viewer_bus_models, пише infra.cards["ZZ-DUCK"] і zz_duck = {"ok": true};
+                                     без _td_viewer_delta і _td_viewer_bus_models, пише infra.cards["ZZ-DUCK"] і zz_duck = {"ok": true};
                                      AC-57…AC-59)
 
 Поза модулем (репозиторій):
@@ -233,19 +233,19 @@ viewer/index.html                    статична сторінка: післ
 провайдери нижче й містки auto_install, що залежать від viewer (`td_telemetry_viewer3d` — telemetry A-20,
 `td_fire_safety_viewer3d` — fire_safety A-35); (б) `AbstractModel` за префіксом імені **без** `_inherit` моделей viewer — модулі, для
 яких viewer необов'язковий (energy, machine_connect, bms, yard, access, міст `td_genset_factory3d`). Провайдер способу (б)
-**обов'язково** визначає сам: `_f3d_sequence`, `_f3d_sections`, `_f3d_group`, `_f3d_viewer_collect`, `_f3d_viewer_delta`;
-`_f3d_viewer_bus_models` — необов'язковий. Збирач (R-01) і дельта (R-14) читають кожен атрибут через
+**обов'язково** визначає сам: `_td_sequence`, `_td_sections`, `_td_group`, `_td_viewer_collect`, `_td_viewer_delta`;
+`_td_viewer_bus_models` — необов'язковий. Збирач (R-01) і дельта (R-14) читають кожен атрибут через
 `getattr(provider, name, <умовчання з таблиці>)`, тож відсутній атрибут не ламає збирання; для способу (а) умовчання дає
 успадкування від цієї моделі. Атрибути класу й методи:
 
 | Атрибут/метод | Тип | Обов'язковий для (б) | Умовчання (`getattr` / успадкування) | Призначення |
 |---|---|---|---|---|
-| `_f3d_sequence` | int | так | `1000` | порядок виклику (менше — раніше): вбудовані 20…70 (`stock` 20, `production` 30, `logistics` 40, `quality` 45, `maintenance` 50, `people` 60, `chains` 70), machine_connect `machines` 75, вбудований `signals` 90, telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150, genset 155, yard 160, access 170 (X-27; 75 — після `chains` 70, бо доповнює `supply`/`sheet_chain`) |
-| `_f3d_sections` | tuple[str] | так | `()` | ключі верхнього рівня payload, які провайдер записує; для `meta.sections` і для дельти за замовчуванням |
-| `_f3d_group` | str | так | `"td_factory3d.group_td_user"` | xml-id групи; якщо користувач не в групі або групи немає в базі — провайдер пропускається, розділи `denied` |
-| `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None` | метод | так | нічого не робить; відсутній у (б) → провайдер пропускається з WARNING у лог | заповнює/доповнює `payload` на місці; чужі й спільні розділи (`infra`, `workcenters`, `employees`, `zones`) лише доповнює (`setdefault`/`deep_merge`), не присвоює цілком |
-| `_f3d_viewer_delta(self, patch: dict, ctx: dict) -> None` | метод | так | `tools.payload.default_delta(provider, patch, ctx)`: `tmp = {}`; `provider._f3d_viewer_collect(tmp, ctx)`; `deep_merge(patch, {k: tmp[k] for k in _f3d_sections if k in tmp})` (R-14 крок 5) | заповнює `patch` лише для `ctx["changes"]`; спільні розділи — лише через `deep_merge` (X-23), присвоєння `patch["infra"] = …` заборонене |
-| `_f3d_viewer_bus_models(self) -> list[str]` | метод | ні | `[]` | моделі, зміни яких провайдер хоче бачити в `ctx["changes"]` (інформативно для тестів) |
+| `_td_sequence` | int | так | `1000` | порядок виклику (менше — раніше): вбудовані 20…70 (`stock` 20, `production` 30, `logistics` 40, `quality` 45, `maintenance` 50, `people` 60, `chains` 70), machine_connect `machines` 75, вбудований `signals` 90, telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150, genset 155, yard 160, access 170 (X-27; 75 — після `chains` 70, бо доповнює `supply`/`sheet_chain`) |
+| `_td_sections` | tuple[str] | так | `()` | ключі верхнього рівня payload, які провайдер записує; для `meta.sections` і для дельти за замовчуванням |
+| `_td_group` | str | так | `"td_factory3d.group_td_user"` | xml-id групи; якщо користувач не в групі або групи немає в базі — провайдер пропускається, розділи `denied` |
+| `_td_viewer_collect(self, payload: dict, ctx: dict) -> None` | метод | так | нічого не робить; відсутній у (б) → провайдер пропускається з WARNING у лог | заповнює/доповнює `payload` на місці; чужі й спільні розділи (`infra`, `workcenters`, `employees`, `zones`) лише доповнює (`setdefault`/`deep_merge`), не присвоює цілком |
+| `_td_viewer_delta(self, patch: dict, ctx: dict) -> None` | метод | так | `tools.payload.default_delta(provider, patch, ctx)`: `tmp = {}`; `provider._td_viewer_collect(tmp, ctx)`; `deep_merge(patch, {k: tmp[k] for k in _td_sections if k in tmp})` (R-14 крок 5) | заповнює `patch` лише для `ctx["changes"]`; спільні розділи — лише через `deep_merge` (X-23), присвоєння `patch["infra"] = …` заборонене |
+| `_td_viewer_bus_models(self) -> list[str]` | метод | ні | `[]` | моделі, зміни яких провайдер хоче бачити в `ctx["changes"]` (інформативно для тестів) |
 
 **Хелпер `deep_merge` (X-23, X-82).** Розміщення — рівно `td_viewer3d/tools/payload.py`; інші модулі імпортують
 його всередині свого методу дельти: `from odoo.addons.td_viewer3d.tools.payload import deep_merge` (yard R-20 п. 7,
@@ -599,8 +599,8 @@ full=True).build()`; `issues = tools.cycle_check.check(payload)`; `result_html` 
 
 `create` публікує завжди (ті самі коди), `unlink` — коди до видалення. Якщо `td_code` порожній у всіх
 пов'язаних записах — не публікувати. Реалізація через спільний міксин `td.viewer.bus.mixin`
-(AbstractModel у тому ж файлі) з атрибутами `_f3d_bus_fields: tuple`, `_f3d_bus_kind: str` і методом
-`_f3d_bus_codes(self) -> set[str]`, який кожна модель перевизначає.
+(AbstractModel у тому ж файлі) з атрибутами `_td_bus_fields: tuple`, `_td_bus_kind: str` і методом
+`_td_bus_codes(self) -> set[str]`, який кожна модель перевизначає.
 
 ### M-08 `action_f3d_show()` для документів (FR-22, A-11)
 
@@ -792,7 +792,7 @@ access_td_viewer_cycle_check_manager,td.viewer.cycle.check manager,model_td_view
 |---|---|---|---|---|
 | `td_viewer3d.group_td_kiosk` | Завод 3D: кіоск | `td_viewer3d.privilege_td_viewer` (категорія `td_factory3d.module_category_factory3d`, sequence 10; X-19 — власний привілей модуля, не категорія `base.module_category_manufacturing_manufacturing` і не привілей base `privilege_td`) | `base.group_user`, `td_factory3d.group_td_user`, `stock.group_stock_user`, `mrp.group_mrp_user` | технічний користувач екранів; **не** входить у `sales_team.*`, `purchase.*`, `hr.group_hr_user`, `td_energy.group_td_energy_cost`; драбину base `group_td_user ⊂ manager ⊂ admin` (CB-10) не змінює |
 
-### 4.4 Розділи payload за групами (перевіряє `tools/payload.access_ok` і `_f3d_group`)
+### 4.4 Розділи payload за групами (перевіряє `tools/payload.access_ok` і `_td_group`)
 
 | Розділ(и) | Модель ORM | Умова включення (користувач запиту) | Якщо ні |
 |---|---|---|---|
@@ -1255,10 +1255,10 @@ F3dViewer(document.getElementById("app"), {client: new FileClient("odoo_demo.jso
    `fire.groups`, `infra.totals` (щоб провайдер сигналів мав куди писати) — клієнт зливає глибоко.
 3. Провайдери — duck-typing (M-01, X-22): усі моделі реєстру з префіксом імені, незалежно від `_inherit`:
    `providers = sorted([env[n] for n in env.registry if n.startswith("td.viewer.provider.")],
-   key=lambda m: (getattr(m, "_f3d_sequence", 1000), m._name))`. Атрибути читаються лише через `getattr` з
-   умовчаннями M-01: `seq = getattr(p, "_f3d_sequence", 1000)`, `secs = tuple(getattr(p, "_f3d_sections", ()))`,
-   `grp = getattr(p, "_f3d_group", "td_factory3d.group_td_user")`, `collect = getattr(p, "_f3d_viewer_collect", None)`;
-   `collect is None` → WARNING «провайдер <name> без _f3d_viewer_collect» і пропуск (розділи не позначаються).
+   key=lambda m: (getattr(m, "_td_sequence", 1000), m._name))`. Атрибути читаються лише через `getattr` з
+   умовчаннями M-01: `seq = getattr(p, "_td_sequence", 1000)`, `secs = tuple(getattr(p, "_td_sections", ()))`,
+   `grp = getattr(p, "_td_group", "td_factory3d.group_td_user")`, `collect = getattr(p, "_td_viewer_collect", None)`;
+   `collect is None` → WARNING «провайдер <name> без _td_viewer_collect» і пропуск (розділи не позначаються).
 4. Для кожного `p`: якщо `sections` задано і `set(secs) ∩ sections == ∅` — пропустити; якщо група `grp`
    відсутня в базі (`env.ref(grp, raise_if_not_found=False)` — `None`) або `not env.user.has_group(grp)` —
    `meta.sections[k]="denied"` для його розділів, пропустити;
@@ -1273,7 +1273,7 @@ F3dViewer(document.getElementById("app"), {client: new FileClient("odoo_demo.jso
    `bus = bus_enabled`, `sections`, `errors`, `note` (як у `LiveDemo.build`: кількості переміщень, МО,
    залишків, демо-годинник, сигнали), `iot` (з M-01h).
 6. Порядок ключів верхнього рівня (X-24, Додаток A.0): збирач перебудовує `payload` — спершу 26 базових ключів у
-   порядку A.0 (ті, що є), далі ключі модулів (`yard`, `access`, A.15) у порядку першої появи, тобто за `_f3d_sequence`
+   порядку A.0 (ті, що є), далі ключі модулів (`yard`, `access`, A.15) у порядку першої появи, тобто за `_td_sequence`
    провайдера, що їх додав (`yard` 160, потім `access` 170); порядок вкладених ключів контрактом не фіксується.
 7. Повернути `payload`. Гарантія: будь-який провайдер, що впав, не змінює інші розділи.
 
@@ -1474,7 +1474,7 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
 2. `codes = ∪ changes.values() ∪ codes_param`; якщо `codes` порожні і подій немає → `{"ts": now, "patch": {}, "removed": {}, "events": 0}`.
 3. `ctx.changes = changes`, `ctx.codes = codes`; `patch = {}`, `removed = {}`.
 4. Провайдери — у тому самому порядку й з тими самими перевірками (`getattr`, група, `sections`, `savepoint`,
-   `meta.errors`), що R-01 п. 3–4 (X-22); для кожного `delta = getattr(p, "_f3d_viewer_delta", None)`, `None` →
+   `meta.errors`), що R-01 п. 3–4 (X-22); для кожного `delta = getattr(p, "_td_viewer_delta", None)`, `None` →
    п. 5. Вбудовані провайдери: `stock` — локації з кодів + локації з подій
    `stock.quant`/`stock.move.line` (повні записи за R-03/R-04); `production` — завдання `WO*` з кодів, їхні МО,
    МО з кодів, робочі центри з кодів **і** центри цих завдань (повні записи); `logistics` — переміщення з назв
@@ -1486,7 +1486,7 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
    повний запис власника; opt-ключ власника (Додаток A.3–A.11, напр. `blocked`, `reservation_state`, `idle_reason`,
    `maintenance_request`, `current_task`, `reserved_for`), якого в новому записі немає, DeltaBuilder дописує зі значенням
    `null` — так клієнт його прибирає (п. 7).
-5. Провайдер без `_f3d_viewer_delta` (`getattr` → `None`; для способу (а) — успадкована реалізація M-01) — дельта за
+5. Провайдер без `_td_viewer_delta` (`getattr` → `None`; для способу (а) — успадкована реалізація M-01) — дельта за
    замовчуванням `tools.payload.default_delta(p, patch, ctx)`: `tmp = {}`; `collect(tmp, ctx)`;
    `deep_merge(patch, {k: tmp[k] for k in secs if k in tmp})` (M-01, X-23). Розділ понад 200 КБ пропускається з
    `meta.errors` (`"error": "DeltaTooLarge"`).
@@ -1515,7 +1515,7 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
 
 ### R-16 Резолвер (`tools/payload.resolve(env, code=None, name=None)`)
 
-За `code`: по черзі моделі з `td.scene.mixin._f3d_resolve_order` base (M-01, R-03; X-85): `td.zone`,
+За `code`: по черзі моделі з `td.scene.mixin._td_resolve_order` base (M-01, R-03; X-85): `td.zone`,
 `stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `stock.picking.batch` — список береться з
 домішки, а не дублюється у viewer; `env[m].search_f3d(code)` домішки base (M-01: `td_code` або `td_alias`, 0 або 1 запис; без
 `sudo`; модель пропускається, якщо `has_access('read')` хибне); код фури `TRUCK-*` знаходиться тим самим шляхом —
@@ -1703,8 +1703,8 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 | Провайдер кинув виняток | savepoint відкочується, розділ лишається попереднім, `meta.sections[k]="error"`, `meta.errors[]`, лог `td_viewer3d` рівня ERROR з traceback | у «Огляд → Дані» банер «Розділ … недоступний (помилка модуля …)»; решта працює |
 | Моделі `sale.order`/`purchase.order`/`quality.check`/`x_f3d_signal` немає | розділ порожній, `sections[k]="missing"` | вкладки працюють без цих даних (макет уже перевіряє наявність) |
 | Немає прав на модель | `sections[k]="denied"` | те саме + підказка «Немає доступу до …» у картці |
-| Провайдер за префіксом без `_f3d_viewer_collect` / без інших атрибутів (X-22) | `getattr` з умовчаннями M-01; без `collect` — пропуск і WARNING у лог; без `_f3d_viewer_delta` — дельта за замовчуванням R-14 п. 5 | — |
-| `_f3d_group` провайдера — xml-id групи, якої немає в базі (модуль-власник групи не встановлено) | провайдер пропускається, розділи `denied` (R-01 п. 4) | як «немає прав» |
+| Провайдер за префіксом без `_td_viewer_collect` / без інших атрибутів (X-22) | `getattr` з умовчаннями M-01; без `collect` — пропуск і WARNING у лог; без `_td_viewer_delta` — дельта за замовчуванням R-14 п. 5 | — |
+| `_td_group` провайдера — xml-id групи, якої немає в базі (модуль-власник групи не встановлено) | провайдер пропускається, розділи `denied` (R-01 п. 4) | як «немає прав» |
 | `since` застарів / >2 000 подій | `{"full": true}` | повне перечитування `/data` |
 | Шина недоступна (websocket) | — | `polling` кожні 30 с, індикатор червоний «немає зв'язку», після відновлення — негайний delta |
 | `/delta` 5×× | лог | експоненційний відкат 2…60 с; у кіоску після 5 помилок — `location.reload()` |
@@ -1740,7 +1740,7 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 | AC-09 | FR-09 | `document.documentElement.dataset.theme="dark"` | `applyTheme` | `scene.background` = значення `--f3d-scene` темної теми; при ширині 360 px `#side` прихований, `#card` внизу | JT |
 | AC-10 | FR-10 | користувач `group_td_user` | `GET /f3d/viewer/static` двічі з `If-None-Match` | 200 з `ETag`, тіло має ключі `passports`, `energy`, `layout`, `path_templates`, `meta.schema="1.1"`; друга — 304 | HT |
 | AC-11 | FR-11 | демо-база | `GET /f3d/viewer/data?full=1` | перші 26 ключів — базові ключі Додатка A.0 у тому ж порядку (без модулів-провайдерів інших ключів верхнього рівня немає), `meta.schema="1.1"`; `tools.cycle_check.check(payload) == []`; кожен запис відповідає типам Додатка A (валідатор у тесті) | HT |
-| AC-12 | FR-12 | тестовий провайдер `td.viewer.provider.zz_test` з `_f3d_sequence=5` і `_f3d_sections=("zones",)` у тестовому модулі | `PayloadBuilder.build()` | порядок виклику: `zz_test` першим, далі `stock`(20)…`signals`(90); `meta.sections.zones="live"` | UT |
+| AC-12 | FR-12 | тестовий провайдер `td.viewer.provider.zz_test` з `_td_sequence=5` і `_td_sections=("zones",)` у тестовому модулі | `PayloadBuilder.build()` | порядок виклику: `zz_test` першим, далі `stock`(20)…`signals`(90); `meta.sections.zones="live"` | UT |
 | AC-13 | FR-13 | тестовий провайдер, що кидає `ValueError` | `build()` | відповідь є, `meta.sections.<k>="error"`, `meta.errors[0].provider` = його `_name`, `error="ValueError"`, інші розділи заповнені; текст винятку в `meta` відсутній | UT |
 | AC-14 | FR-14 | користувач без `mrp.group_mrp_user` | `/data` | `productions=[]`, `workorders={}`, `workcenters={}`, `sections.productions="denied"`; grep `sudo(` у `tools/` і `controllers/` дає лише `ir.config_parameter.sudo()` і `with_user` у `kiosk.py` | UT |
 | AC-15 | FR-15 | `demo_clock="2026-10-12 10:30"`, завдання `progress` з відкритим рядком продуктивності від 09:58 | `/data` | `meta.now="2026-10-12 10:30"`, `workorders[...].duration=32`; з порожнім `demo_clock` — `meta.now` = зараз ±1 хв | UT |
@@ -1784,7 +1784,7 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 | AC-54 | V-01 | користувач без `group_td_manager` | меню | «Журнал станів», «Перевірка циклу» відсутні; без `group_td_admin` — «Демо-дані», «Налаштування переглядача» відсутні | UT |
 | AC-55 | A-17 | `sale` встановлено | список модулів | `td_viewer3d_sale` `installed` автоматично; кнопка на `S00087` відкриває дію з `params.mo` | UT, HT |
 | AC-56 | FR-42, M-01, R-14 (X-82) | `from odoo.addons.td_viewer3d.tools.payload import deep_merge` | (1) `deep_merge({"cards": {"PV-INV": {"rows": [1]}}, "totals": {"pv_now": 468}}, {"cards": {"GENSET": {"rows": [2]}}, "totals": {"island": False}})`; (2) `deep_merge({"a": [1, 2]}, {"a": [3]})`; (3) `deep_merge({"a": {"x": 1}}, {"a": 5})`; (4) `deep_merge({"a": 1}, {"a": None})`; (5) `d = deep_merge({}, src)`, потім змінити `src["k"]["n"]`; (6) `deep_merge([], {})` | (1) результат має обидві картки й обидва ключі `totals`, повернуто той самий об'єкт `dst`; (2) `{"a": [3]}` (список замінено, не доповнено); (3) `{"a": 5}`; (4) `{"a": None}`; (5) `d` не змінився; (6) `TypeError` | UT |
-| AC-57 | FR-43, M-01, R-01 (X-22, X-27) | тестовий модуль: `td.viewer.provider.zz_duck` — `AbstractModel` за префіксом **без** `_inherit`, `_f3d_sequence=152`, без `_f3d_viewer_delta` і `_f3d_viewer_bus_models` | `PayloadBuilder.build()` | `zz_duck` викликано: `infra.cards["ZZ-DUCK"]` і ключ `zz_duck` у payload, `meta.sections.infra="live"`; порядок виклику — `stock` 20, `production` 30, `logistics` 40, `quality` 45, `maintenance` 50, `people` 60, `chains` 70, `signals` 90, `zz_duck` 152; `"td.viewer.provider" not in type(env["td.viewer.provider.zz_duck"])._inherit`; провайдер з `_f3d_group` неіснуючої групи — пропущено, розділи `denied` | UT |
+| AC-57 | FR-43, M-01, R-01 (X-22, X-27) | тестовий модуль: `td.viewer.provider.zz_duck` — `AbstractModel` за префіксом **без** `_inherit`, `_td_sequence=152`, без `_td_viewer_delta` і `_td_viewer_bus_models` | `PayloadBuilder.build()` | `zz_duck` викликано: `infra.cards["ZZ-DUCK"]` і ключ `zz_duck` у payload, `meta.sections.infra="live"`; порядок виклику — `stock` 20, `production` 30, `logistics` 40, `quality` 45, `maintenance` 50, `people` 60, `chains` 70, `signals` 90, `zz_duck` 152; `"td.viewer.provider" not in type(env["td.viewer.provider.zz_duck"])._inherit`; провайдер з `_td_group` неіснуючої групи — пропущено, розділи `denied` | UT |
 | AC-58 | FR-42, R-14 п. 5–7 (X-23) | `patch = {"infra": {"cards": {"PV-INV": {"rows": [["Зараз", "468 кВт"]]}}, "totals": {"pv_now": 468}}}` (як після energy 150); `ctx.changes` з будь-якою подією | `DeltaBuilder` викликає `zz_duck` (дельта за замовчуванням) | `patch.infra.cards` має `PV-INV` і `ZZ-DUCK`, `patch.infra.totals.pv_now=468` (не затерто). JT: `D.infra.cards` зі статичними `WIFI`, `SERVER`; `applyPatch` з цим `patch` → `WIFI`, `SERVER`, `PV-INV`, `ZZ-DUCK`; `D.workcenters["SAW-1"].machine_state="work"` лишається після патча `workcenters["SAW-1"]` без цього ключа; патч `{"workorders": {"WO00051": {"blocked": null}}}` прибирає `blocked`; патч `productions` з одним МО зливається за `name`, решта МО на місці | UT, JT |
 | AC-59 | FR-11, FR-37, R-01 п. 6, Додаток A (X-24) | тестовий модуль `zz_duck` (додає ключ верхнього рівня `zz_duck`) | `/data?full=1` | `list(payload)[:26]` = порядок A.0, `list(payload)[26:] == ["zz_duck"]`; `meta.schema="1.1"`; `assertPayloadSchema` приймає payload з доданими ключами A.15 (`workcenters["SAW-1"].machine_state`, `infra.totals.island`, `fire.panel`) і відхиляє payload, де `zz_duck` стоїть перед `passports` | UT |
 | AC-60 | FR-44, §4.4, R-07 (X-25) | `user_f3d` (stock + mrp), `td_energy` не встановлено | `/data` | у `productions[*]` є `energy_kwh` (`WH/MO/00231` → 86.2), ключа `energy_cost` немає; мок: група `td_energy.group_td_energy_cost` існує й користувач у ній → `energy_cost=724`; та сама група + `kiosk=True` → ключа немає | UT |
@@ -1818,8 +1818,8 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 Тестові провайдери для AC-12/13 не можна оголосити у файлі тесту (моделі реєструються лише при
 завантаженні модуля), тому вони живуть у допоміжному модулі `odoo_addons/test_td_viewer3d/` (§0;
 `depends: td_viewer3d`, `installable: True`, не для проду) з трьома провайдерами: `zz_test` (sequence 5,
-пише `zones["Z-TEST"]`), `zz_fail` (sequence 6, кидає `ValueError("boom")`, `_f3d_sections=("fire",)`) і `zz_duck`
-(sequence 152, спосіб (б) M-01 — за префіксом без `_inherit`, без `_f3d_viewer_delta`/`_f3d_viewer_bus_models`; пише
+пише `zones["Z-TEST"]`), `zz_fail` (sequence 6, кидає `ValueError("boom")`, `_td_sections=("fire",)`) і `zz_duck`
+(sequence 152, спосіб (б) M-01 — за префіксом без `_inherit`, без `_td_viewer_delta`/`_td_viewer_bus_models`; пише
 `infra.cards["ZZ-DUCK"] = {"rows": [["Тест", "так"]]}` через `deep_merge` і ключ верхнього рівня `zz_duck = {"ok": true}`).
 Модуль встановлюється лише в CI і на тестовому сервері; тести, що його потребують, роблять `skipTest`,
 якщо `td.viewer.provider.zz_test` немає в реєстрі.
@@ -1835,12 +1835,12 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 | `test_payload_logistics.py` | `TestLogistics` | `test_dock_from_batch` і `test_dock_from_location` (AC-41), `test_types_mapping` (6 типів, лічильники 13/12/8/4/3/2), `test_progress_lines`, `test_docks_dict_14`, `test_sale_purchase_optional` (мок `env` без `sale.order` → `[]`, `sections.sale_orders="missing"`), `test_note_waiting` | демо | — |
 | `test_payload_chains.py` | `TestChains` | `test_supply_mo231` (AC-44), `test_components_paths_kinds` (200 компонентів, усі з `door`, `path[0]=GATE-W`), `test_delivery_fronts_via`, `test_full_cycle_mo` (AC-45), `test_sheet_chain_ship_chain_material_paths`, `test_cycle_check_ok` (AC-11), `test_zones_45_outdoor_polygon_roof` (AC-61) | демо | `tools.cycle_check.check(payload)==[]` |
 | `test_payload_signals.py` | `TestSignals` | `test_paths_applied` (AC-17), `test_percent_to_fraction`, `test_drain_state`, `test_meta_iot`, `test_missing_model` | демо + `x_f3d_signal` | — |
-| `test_providers.py` | `TestProviders` | `test_order_and_sections` (AC-12), `test_failed_provider_isolated` (AC-13), `test_group_denied` (`_f3d_group` невідомий xml-id → провайдер пропущено з `denied`), `test_sections_filter`, `test_duck_typed_provider_getattr` (AC-57: `zz_duck` без `_inherit` викликано, порядок 20…70, 90, 152), `test_top_level_order_schema_11` (AC-59) | `test_td_viewer3d` | `meta.sections`, `meta.errors`, `list(payload)` |
+| `test_providers.py` | `TestProviders` | `test_order_and_sections` (AC-12), `test_failed_provider_isolated` (AC-13), `test_group_denied` (`_td_group` невідомий xml-id → провайдер пропущено з `denied`), `test_sections_filter`, `test_duck_typed_provider_getattr` (AC-57: `zz_duck` без `_inherit` викликано, порядок 20…70, 90, 152), `test_top_level_order_schema_11` (AC-59) | `test_td_viewer3d` | `meta.sections`, `meta.errors`, `list(payload)` |
 | `test_access.py` | `TestAccess` | `test_mrp_denied` (AC-14), `test_stock_denied`, `test_nobody_gets_static_only`, `test_kiosk_user_sections` (AC-29 через `PayloadBuilder` з `kiosk=True`), `test_no_sudo_lint` (grep файлів `tools/*.py`, `controllers/*.py`, `models/viewer_provider.py`: кожне входження `.sudo(` має бути в рядку з `ir.config_parameter`), `test_amount_requires_all_leads`, `test_people_reads_public_without_sudo` (AC-66) | користувачі | — |
 | `test_resolver.py` | `TestResolver` | `test_codes` (AC-24, параметризовано 8 кодів), `test_names` (4), `test_not_found`, `test_respects_access`, `test_bad_code_regex` | демо | `model`, `res_id` = `env.ref`/пошук |
 | `test_bus.py` | `TestBus` | `test_coalesce_action_assign` (AC-18), `test_workorder_finish_codes`, `test_maintenance_event_snapshot` (AC-49), `test_bus_disabled_param` (події є, повідомлень немає), `test_signal_cron` (AC-20), `test_codes_cap_500` | `patch.object(BusBus, "_sendone")` | кількість і вміст |
 | `test_snapshot.py` | `TestSnapshot` | `test_cron_window` (AC-25, `freezegun` недоступний → `patch("...dates.now")`), `test_idempotent_60s`, `test_rotate_keeps_install` (AC-27), `test_list_mode` (AC-26), `test_company_rule`, `test_read_payload_gzip` | — | — |
-| `test_delta.py` | `TestDelta` | `test_quant_change_patch` (AC-16), `test_full_when_old_since`, `test_workorder_done_patch` (AC-46), `test_removed_cancelled_mo`, `test_default_delta_deep_merge` (AC-58: `zz_duck` без `_f3d_viewer_delta` → дельта за замовчуванням зливає `infra` через `deep_merge`, ключі energy в `patch.infra` не затерто), `test_opt_key_null` (зниклий `blocked` → `null` у патчі), `test_empty_delta` | демо | ключі `patch`, `removed`, `events` |
+| `test_delta.py` | `TestDelta` | `test_quant_change_patch` (AC-16), `test_full_when_old_since`, `test_workorder_done_patch` (AC-46), `test_removed_cancelled_mo`, `test_default_delta_deep_merge` (AC-58: `zz_duck` без `_td_viewer_delta` → дельта за замовчуванням зливає `infra` через `deep_merge`, ключі energy в `patch.infra` не затерто), `test_opt_key_null` (зниклий `blocked` → `null` у патчі), `test_empty_delta` | демо | ключі `patch`, `removed`, `events` |
 | `test_delta.py` | `TestDeepMerge` (`odoo.tests.BaseCase`, без бази) | `test_semantics` (AC-56: 6 випадків), `test_import_path` (`from odoo.addons.td_viewer3d.tools.payload import deep_merge` — той самий об'єкт, що `tools.payload.deep_merge`) | — | результат і `id(dst)` |
 | `test_show_in_3d.py` | `TestShowIn3D` | `test_base_action_opens_viewer` (дія base CB-02 для 6 моделей домішки при встановленому viewer → `tag="f3d_viewer.action"`, `params.code`; viewer метод не перевизначає, X-08), `test_mo_action`, `test_picking_action`, `test_has_3d_compute`, `test_button_in_views` (AC-22: парсинг `arch` — 2 форми документів мають кнопку viewer з `groups`; серед представлень модуля `td_viewer3d` немає жодного для 6 моделей носіїв) | демо | — |
 | `test_kiosk.py` | `TestKiosk` | `test_token_generated_32hex`, `test_new_token_admin_only` (AC-50), `test_kiosk_disabled_param`, `test_kiosk_ctx_hides_costs` | — | — |
@@ -1945,7 +1945,7 @@ Q-01…Q-08 — у ARCHITECTURE §5 (ті самі номери). Додатко
 модулів, перелічені в A.15. Правила версії 1.x — адитивні: (1) додаткові ключі всередині базових розділів (у записах
 `workcenters`, `productions`, `locations`, `equipment`, `employees`, `zones`, у `infra.cards.*`, `infra.totals`,
 `fire`, `evacuation`, `lighting`, `ventilation`) дозволені й не змінюють тип і зміст базових ключів; (2) нові ключі
-верхнього рівня (`yard`, `access`, `layout`) стоять **лише після** 26 базових, у порядку `_f3d_sequence` провайдера (R-01 п. 6);
+верхнього рівня (`yard`, `access`, `layout`) стоять **лише після** 26 базових, у порядку `_td_sequence` провайдера (R-01 п. 6);
 (3) базові ключі не прибираються й не перейменовуються; (4) клієнт ігнорує ключі, яких не знає. Мажорна версія `2.x` —
 лише з новим клієнтом (FR-37).
 
@@ -2239,7 +2239,7 @@ num|null req; `sources` list[str] req; `units` list[dict тієї ж форми]
 
 Перелік того, що модулі додають до базових розділів (адитивно, правила A.0) і які нові ключі верхнього рівня
 приймає схема 1.1. Типи й значення — у SPEC модуля-власника за вказаним контрактом; viewer їх лише передає (клієнт
-читає ті, що описані в §8.2). Порядок рядків — `_f3d_sequence` провайдера.
+читає ті, що описані в §8.2). Порядок рядків — `_td_sequence` провайдера.
 
 | Модуль, провайдер (sequence), контракт | Куди | Ключі |
 |---|---|---|

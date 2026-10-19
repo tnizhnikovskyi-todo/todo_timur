@@ -7,7 +7,7 @@ td_genset R-04 і X-11 замість Q-13), X-23 (A-22 закрито: спіл
 Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §3 `td_energy ← td_telemetry, mrp_account`, §5 конвенції,
 §6.4–§6.5 телеметрія й колектор, §6.6 P-05/P-07, §6.7 контракт переглядача, §6.8 заявки ТО, D-04, D-06, D-11, §9 п. 1, 6,
 8). Специфікація: `docs/modules/td_energy/SPEC.md`. Спирається на: `td_factory3d` CB-01, CB-03, CB-07…CB-10;
-`td_telemetry` CT-01…CT-12 (прийнята SPEC 2 219 рядків: моделі, `_f3d_ingest`, локальні джерела R-26, схеми
+`td_telemetry` CT-01…CT-12 (прийнята SPEC 2 219 рядків: моделі, `_td_ingest`, локальні джерела R-26, схеми
 `address` Додаток A); `td_iot_sim` §8.4.1 (unit id), §8.7 (P-05 PM5560), §8.9.1–§8.9.5 (Huawei, LUNA2000, ATyS p,
 TEDOM), Додаток A (№ 1–80, 190–196, 366–428), S-01 `shift`, S-03 `blackout`, S-12 `pv_cloudy`, API-16; `td_viewer3d`
 M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Додаток A.12/A.13; `td_machine_connect` CM-02…CM-04
@@ -103,7 +103,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 | FR-26 | Майстер перерахунку (енергетик): перебудувати інтервали за період і розподіл за дні, крім зафіксованих МО. |
 | FR-27 | Стан лічильника (`ok/stale/gap/reset/no_data`) і правила пропусків: лінійна інтерполяція накопичувального лічильника, позначка якості, подія при пропуску > 60 хв. |
 | FR-28 | Профіль доби (кВт·год по годинах сьогодні), типовий день (середнє за 20 робочих днів), пік 15-хв потужності доби з часом. |
-| FR-29 | Службовий метод `td.energy.meter._f3d_kwh(meter, date_from, date_to) -> (kwh, quality)` для інших модулів (CE-06). |
+| FR-29 | Службовий метод `td.energy.meter._td_kwh(meter, date_from, date_to) -> (kwh, quality)` для інших модулів (CE-06). |
 
 ### 1.4 Межі: що не входить
 
@@ -120,7 +120,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 
 ### 2.1 Місце в системі
 
-`depends`: `td_telemetry` (CT-01 моделі, CT-05 заявки, CT-10 `_f3d_ingest`, CT-12 локальні джерела; через неї —
+`depends`: `td_telemetry` (CT-01 моделі, CT-05 заявки, CT-10 `_td_ingest`, CT-12 локальні джерела; через неї —
 `td_factory3d`, `maintenance`, `mail`), `mrp_account` (`extra_cost`, `_cal_price`, аналітика РЦ), `mrp_workorder`
 (журнал часу завдань), `analytic`, `web_hierarchy` (вид «Схема мережі»). Необов'язкові: `td_viewer3d` (провайдери —
 моделі `td.viewer.provider.*` без `_inherit`, A-04; шина — `if 'td.viewer.event' in env`), `td_machine_connect`
@@ -136,7 +136,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 | CE-03 | `infra.totals` (без ключів CE-01): `pv_now`, `pv_today`, `pv_kwp`, `chp_kw`, `chp_rated`, `chp_heat`, `chp_load`, `bess_kw` (+ заряд / − розряд), `bess_soc` (частка), `bess_kwh`, `load_kw`, `grid_kw`, `export_kw`, `critical_kw`, `n_modules`, `shed_kw`, `bess_mode` (`charge/discharge/idle`); в острові `grid_kw=0`, `export_kw=0`, `shed_kw = load_before − load_kw` | міст, viewer `backupSummary()` |
 | CE-04 | Критичні споживачі: `td.energy.node.is_critical` (LP-1…3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG і лінія BW-1 — `plant/infra.py:CRITICAL`); `infra.totals.critical_kw` = Σ `p_now` цих вузлів (макет 347,8 → 348); сигнали `energy/consumers/<код>/p_now` і `energy/lines/BW-1/p_now` існують для всіх 10 | міст: читає `is_critical` вузлів, параметр `critical_codes` — лише запасний (td_genset R-04, X-11, X-68) |
 | CE-05 | Моделі `td.energy.node`, `meter`, `interval`, `tariff`, `pool`, `alloc`, `balance`, `event`, `outage` з іменами полів SPEC §2 — лише читання для інших модулів | viewer, звіти, міст, bms (за потреби) |
-| CE-06 | Метод `env['td.energy.meter']._f3d_kwh(meter, date_from, date_to) -> tuple[float, str]` (кВт·год і найгірша якість) і `env['td.energy.node']._f3d_kwh_by_code(code, date_from, date_to)` | machine_connect (питома енергія CM-04 — за потреби), bms |
+| CE-06 | Метод `env['td.energy.meter']._td_kwh(meter, date_from, date_to) -> tuple[float, str]` (кВт·год і найгірша якість) і `env['td.energy.node']._td_kwh_by_code(code, date_from, date_to)` | machine_connect (питома енергія CM-04 — за потреби), bms |
 | CE-07 | Поля `mrp.production.td_energy_kwh`, `td_energy_direct_kwh`, `td_energy_shared_kwh`, `td_energy_cost`, `td_energy_state`, `td_energy_locked`; `mrp.workorder.td_energy_kwh`, `td_energy_cost`; `mrp.workcenter.td_energy_node_id`, `td_kwh_today` | viewer, звіти |
 | CE-08 | Провайдери `td.viewer.provider.energy` (100, розділ `energy` за A.12, `workcenters[*].energy`, `productions[].energy_kwh/energy_cost/energy_quality`) і `td.viewer.provider.infra` (150); події шини `_notify('td.energy', codes, 'signal')` і `_notify('mrp.production', names, 'doc')` | viewer |
 | CE-09 | Коди обчислених сигналів (`energy/totals/*`, `energy/*/imbalance_pct`, `i_unbal_pct`, `kwh_shift`, `infra/totals/pv_now|grid_kw|export_kw`, `infra/ats/src1_ok|src2_ok|fail_start`) на джерелі `EN-DERIVED` типу `f3d_energy` (локальний, CT-12) | telemetry, міст, bms |
@@ -145,9 +145,9 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 'heat_kw'|'heat_kw_50'|'gas_m3h'|'gas_m3h_50'|'eta_el'|'eta_th')`), CB-09 (меню 50), CB-10 (групи, `environment`); telemetry
 CT-01 (`td.collector` `COL-MAIN` — xml-id `td_telemetry.collector_main`, `td.source`, `td.signal`, `td.reading`),
 CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, `scale`, `map`, `doc`), CT-05 (пороги →
-заявки), CT-10/M-03 (`_f3d_ingest` — перевизначається, як machine_connect M-18), CT-12 (`_f3d_local_types`); iot_sim §8.7,
-§8.9, Додаток A; viewer M-01, M-03, R-01, R-14, A.12, A.13; machine_connect CM-03 (`_f3d_wo_intervals`,
-`_f3d_wc_intervals`), CM-02 (стан верстата `workcenters/<код>/machine_state` — для `status` споживача); td_genset R-05/R-06.
+заявки), CT-10/M-03 (`_td_ingest` — перевизначається, як machine_connect M-18), CT-12 (`_td_local_types`); iot_sim §8.7,
+§8.9, Додаток A; viewer M-01, M-03, R-01, R-14, A.12, A.13; machine_connect CM-03 (`_td_wo_intervals`,
+`_td_wc_intervals`), CM-02 (стан верстата `workcenters/<код>/machine_state` — для `status` споживача); td_genset R-05/R-06.
 
 ### 2.2 Архітектурна схема
 
@@ -162,14 +162,14 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 └───────────────────────────┘                                 ▼
 ┌──────────────────────────────── Odoo 19: td_telemetry ─────────────────────────────────────────────────┐
 │ td.source (68 MB-U*) ─ td.signal (297 зони energy) ─ td.reading (60–300 с) ─ пороги R-04 ─► maintenance.request│
-│                           ▲ _f3d_ingest(...) ── перевизначення M-15 energy: ATS-похідні, події, відключення   │
+│                           ▲ _td_ingest(...) ── перевизначення M-15 energy: ATS-похідні, події, відключення   │
 └───────────────────────────┼────────────────────────────────────────────────────────────────────────────────────┘
 ┌───────────────────────────┴──────────── td_energy ──────────────────────────────────────────────────────┐
 │ td.energy.node (123, ієрархія) ── td.energy.meter (67) ──► сигнали p_now / kwh_total / kwh_export             │
 │   крон 5 хв: лічильник Ec(t) (R-03) ─► td.energy.interval (15 хв, тариф R-05) ─► kwh_shift, load15, grid15     │
-│   крон 1 хв: тотали R-06 ─► EN-DERIVED: energy/totals/*, infra/totals/*, i_unbal_pct (CT-10 _f3d_ingest)          │
+│   крон 1 хв: тотали R-06 ─► EN-DERIVED: energy/totals/*, infra/totals/*, i_unbal_pct (CT-10 _td_ingest)          │
 │   крон год: баланс R-07 ─► td.energy.balance, imbalance_pct                                                    │
-│   крон 15 хв: розподіл R-08/R-09 ◄── machine_connect CM-03 _f3d_wo_intervals | mrp.workcenter.productivity      │
+│   крон 15 хв: розподіл R-08/R-09 ◄── machine_connect CM-03 _td_wo_intervals | mrp.workcenter.productivity      │
 │        ─► td.energy.alloc (завдання × пул × доба) ─► mrp.workorder / mrp.production td_energy_*                │
 │   mrp.production._cal_price ─► R-10: фіксація, extra_cost (FIFO/AVCO), аналітика (_perform_analytic_distribution)│
 │   АВР/блекаут R-14 ─► td.energy.outage, td.energy.event, infra/ats/src*_ok, fail_start                        │
@@ -180,7 +180,7 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 ```
 
 Потоки: (1) колектор опитує пристрої за адресами з Odoo (API-01 telemetry) і шле показання; (2) перевизначений
-`_f3d_ingest` після `super()` ловить зміни стану сигналів енергетики й АВР (події, відключення, похідні АВР); (3) крони
+`_td_ingest` після `super()` ловить зміни стану сигналів енергетики й АВР (події, відключення, похідні АВР); (3) крони
 будують профіль, тотали, баланс, розподіл; (4) закриття МО фіксує енергію й вартість; (5) провайдери віддають payload,
 шина повідомляє переглядач.
 
@@ -195,11 +195,11 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 | `td.energy.pool` (M-06) | пул спільних споживачів: вузли-члени, драйвер (`kwh/time`), обслуговувані РЦ | хук, енергетик | R-09 |
 | `td.energy.alloc` (M-07) | розподіл енергії за добу: завдання/МО/РЦ × вид (`direct/shared/idle/unallocated/overhead`) × пул, кВт·год, хв, вартість, якість, `locked`, аналітичні рядки | крон R-08/R-09, `_cal_price` | МО, завдання, дашборд |
 | `td.energy.balance` (M-08) | погодинна звірка вузла: виміряно, очікувано, різниця, %, стан | крон R-07 | енергетик, сигнал `imbalance_pct` |
-| `td.energy.event` (M-09) | журнал подій енергетики | хук `_f3d_ingest`, крони | `energy.events`, дашборд |
+| `td.energy.event` (M-09) | журнал подій енергетики | хук `_td_ingest`, крони | `energy.events`, дашборд |
 | `td.energy.outage` (M-10) | журнал відключень мережі | R-14 | картка ATS-1, міст, звіт |
 | `td.energy.recompute.wizard` (M-19, Transient) | перерахунок інтервалів/розподілу | енергетик | — |
 | `mrp.workorder` (+M-11), `mrp.production` (+M-12), `mrp.workcenter` (+M-13), `maintenance.equipment` (+M-14) | поля енергії, `_cal_price`, `_get_backorder_mo_vals`, статбокси | R-08…R-10 | форми, провайдер |
-| `td.signal` (+M-15) | перевизначення `_f3d_ingest` (після `super()`), обмеження «запис енергетики заборонено» | — | — |
+| `td.signal` (+M-15) | перевизначення `_td_ingest` (після `super()`), обмеження «запис енергетики заборонено» | — | — |
 | `td.source` (+M-16) | `type` += `f3d_energy` (локальний, CT-12) | — | — |
 | `maintenance.request` (+M-17) | підписка енергетиків на заявки з сигналів `module='energy'` | — | — |
 | `res.config.settings` (+M-18) | стоп-крани й параметри | адміністратор | — |
@@ -215,8 +215,8 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 | P-07 КГУ | TEDOM Quanto D800 (u72) | 40000 стан, 40001 P ел., 40002 тепло, 40003 газ `×0,1`, 40010 мотогодини `u32`, 40014 енергія `u32` — PDU = номер (ПРИПУЩЕННЯ iot_sim §8.9.5; нотація — X-42) | опитування | 10–300/300 | як вище |
 | P-07 АВР | Socomec ATyS p (u71) | Annexe III: 20482 режим, 20483 положення, 20484 реле пуску ДГУ, 20486/20487 стан джерел — PDU = номер (A-06, CE-02) | опитування | 5/300 (зміни стану — завжди) | без свіжих даних АВР острів визначається за вводами (R-14 п. 3) |
 | P-07 температура T1/T2 | ADAM-6015 u96 | прив'язує telemetry (Додаток C.2); energy лише ставить пороги (CT-05) | — | 30/300 | — |
-| CT-10 | 75 обчислених сигналів | `_f3d_ingest(src='module')` на джерелі `EN-DERIVED` (`type='f3d_energy'`, локальне) | з Odoo | 10 с…1 год | крони неактивні → енергія сама ставить `stale` (R-21) |
-| CM-03 | 35 РЦ | `env['td.machine']._f3d_wo_intervals(wos, d0, d1)` | читання | крон 15 хв, `_cal_price` | модуля немає → журнал часу `mrp.workcenter.productivity` (R-08 п. 2) |
+| CT-10 | 75 обчислених сигналів | `_td_ingest(src='module')` на джерелі `EN-DERIVED` (`type='f3d_energy'`, локальне) | з Odoo | 10 с…1 год | крони неактивні → енергія сама ставить `stale` (R-21) |
+| CM-03 | 35 РЦ | `env['td.machine']._td_wo_intervals(wos, d0, d1)` | читання | крон 15 хв, `_cal_price` | модуля немає → журнал часу `mrp.workcenter.productivity` (R-08 п. 2) |
 | viewer | — | `td.viewer.event._notify` (C-03) | Odoo → переглядач | ≤ 1 раз / 10 с на код (дебаунс telemetry R-13) + крони | без viewer — нічого |
 
 ### 2.5 Потік даних від пристрою до екрана
@@ -235,7 +235,7 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 
 Приклад 2 — блекаут (варіант A, сценарій `blackout`): емулятор ставить `src1_ok=0`, PM5560 вводів `P=0`, СЕС `0x0303`;
 ATyS p (Remote control) за наказом HGM6120N переходить у II; колектор привозить `infra/ats/src1_state=under` (0) і через
-≈ 14–30 с `position=pos_II` (3); перевизначений `_f3d_ingest` (R-14) ставить `src1_ok=0`, відкриває `td.energy.outage`
+≈ 14–30 с `position=pos_II` (3); перевизначений `_td_ingest` (R-14) ставить `src1_ok=0`, відкриває `td.energy.outage`
 («Зникла напруга мережі»), подію `bad`, при `position=3` фіксує `transfer_s`; провайдер `infra` (150) пише
 `grid_kw=0`, `export_kw=0`, `load_kw=348` (Σ фідерів), `shed_kw = 626 − 348 = 278`, `bess_mode='discharge'` поки накопичувач
 тримає критичних; міст (155) додає `island=true`, `genset_kw=348`, картку GENSET. Повернення мережі: `position=2` →
@@ -289,7 +289,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 `td_energy_interval (meter_id, ts_start)` унікальний, `(ts_start)`; `td_energy_alloc (day, workorder_id)`,
 `(production_id)`; `td_energy_balance (node_id, hour)` унікальний. Крон інтервалів: 67 лічильників × ≤ 2 доби
 (`execute` одного вибору показань за вікно) ≤ 10 с; крон розподілу за добу: 96 слотів × 35 РЦ × 8 пулових лічильників у
-пам'яті ≤ 5 с; провайдер `energy` ≤ 200 мс (один `search_read` сигналів зони, один агрегат інтервалів доби); `_f3d_ingest`
+пам'яті ≤ 5 с; провайдер `energy` ≤ 200 мс (один `search_read` сигналів зони, один агрегат інтервалів доби); `_td_ingest`
 — додатково один `search_read` кодів енергетики з пакета (≤ 5 мс на 1 000 показань). TimescaleDB — не у v1 (Q-02).
 
 ### 2.8 Міграція з демо-бази і деінсталяція
@@ -414,7 +414,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | Стандартна оцінка (`standard`) — енергія не доходить до вартості складу | очікування замовника «енергія в собівартості» не виконане | Q-06; поля МО, звіт «Розподіл», аналітика працюють незалежно від методу |
 | Обсяг `td_reading` (лічильники 60 с) | гальмування графіків | `store_period_s` у даних; ротація telemetry; Q-02 поріг |
 | Небаланс через відсутні лічильники (OFFICE, RV-ALL — групові) | постійні попередження балансу C2 | допуск, `imbalance_pct` з `min_duration` 2 год; лічильники груп — у даних iot_sim u51/u55 |
-| Перевизначення `_f3d_ingest` кількома модулями (machine_connect, energy) | порядок, рекурсія | `super()` першим, контекст `f3d_energy_internal` для власних вкладень, результат `super()` не змінюється |
+| Перевизначення `_td_ingest` кількома модулями (machine_connect, energy) | порядок, рекурсія | `super()` першим, контекст `f3d_energy_internal` для власних вкладень, результат `super()` не змінюється |
 
 ## 6. План сборки агентами
 
@@ -425,7 +425,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 |---|---|---|---|
 | W0 каркас і дані | маніфест, `__init__.py`, `models/__init__.py`, `security/*`, `data/ir_config_parameter.xml`, `data/ir_cron.xml`, `data/neutralize.sql`, `views/menus.xml`, `tools/__init__.py`, `tools/gen_energy_data.py`, `data/energy_*.csv` (згенеровані), `tests/__init__.py`, `tests/common.py`, `tests/test_data_sync.py`, README, CHANGELOG | модуль ставиться порожнім, меню 50, групи, CSV детерміновані з макета | SPEC §0, §1, §3 (меню), §4, §5.1–§5.2, Додатки B–D |
 | W1 мережа, лічильники, тарифи, хук | `models/td_energy_node.py`, `td_energy_meter.py`, `td_energy_tariff.py`, `td_energy_pool.py`, `td_source.py`, `td_signal.py` (лише обмеження A-15), `hooks.py`, `views/td_energy_node_views.xml`, `…meter…`, `…tariff…`, `…pool…`, `tools/tariff.py`, `tests/test_node.py`, `test_tariff.py`, `test_hooks.py` | M-01, M-02, M-04…M-06, M-16; R-01, R-05, R-22; AC-01…AC-14, AC-70…AC-74 | W0 |
-| W2 профіль, баланс, тотали, події | `tools/counter.py`, `tools/balance.py`, `tools/live.py`, `models/td_energy_interval.py`, `td_energy_balance.py`, `td_energy_event.py`, `models/td_signal.py` (`_f3d_ingest`, разом із W1 через W0), `views/…interval…`, `…balance…`, `…event…`, `tests/test_counter.py`, `test_interval.py`, `test_balance.py`, `test_live.py`, `test_events.py` | M-03, M-08, M-09, M-15; R-02…R-04, R-06, R-07, R-11…R-13, R-15, R-19, R-21; AC-15…AC-36, AC-83, AC-84, AC-86, AC-87 | W1 |
+| W2 профіль, баланс, тотали, події | `tools/counter.py`, `tools/balance.py`, `tools/live.py`, `models/td_energy_interval.py`, `td_energy_balance.py`, `td_energy_event.py`, `models/td_signal.py` (`_td_ingest`, разом із W1 через W0), `views/…interval…`, `…balance…`, `…event…`, `tests/test_counter.py`, `test_interval.py`, `test_balance.py`, `test_live.py`, `test_events.py` | M-03, M-08, M-09, M-15; R-02…R-04, R-06, R-07, R-11…R-13, R-15, R-19, R-21; AC-15…AC-36, AC-83, AC-84, AC-86, AC-87 | W1 |
 | W3 розподіл і собівартість | `tools/alloc.py`, `models/td_energy_alloc.py`, `mrp_workorder.py`, `mrp_production.py`, `mrp_workcenter.py`, `maintenance_equipment.py`, `maintenance_request.py`, `wizard/recompute_wizard.py`, `views/mrp_*_views.xml`, `…alloc…`, `wizard/…xml`, `tests/test_alloc.py`, `test_costing.py`, `test_mo231.py` | M-07, M-11…M-14, M-17, M-19; R-08…R-10, R-23; AC-37…AC-54, AC-85 | W2 |
 | W4 АВР, відключення, генерація | `models/td_energy_outage.py`, `tools/ats.py`, `views/…outage…`, `tests/test_ats.py`, `test_island.py` | M-10; R-14; CE-01…CE-04; AC-55…AC-62 | W2 (паралельно з W3) |
 | W5 переглядач і налаштування | `models/viewer_provider.py`, `tools/payload.py`, `models/res_config_settings.py`, `views/res_config_settings_views.xml`, `views/dashboard_views.xml`, `tests/test_payload.py`, `test_security.py` | M-18, M-20; R-16…R-18; AC-63…AC-69, AC-75…AC-82 | W3, W4 |
@@ -442,7 +442,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | A-01 | `td.energy.interval` — розрахунковий 15-хв профіль (кВт·год, грн, якість) на лічильник, не журнал показань | D-04 забороняє власні журнали показань; профіль — бізнес-дані комерційного обліку, потрібні 400 діб (сирі — 30), і без нього неможливі ціни за зонами та пік 15 хв | уточнює D-04 |
 | A-02 | Джерело істини для кВт·год — накопичувальний лічильник PM5560 (3204 INT64), а не інтеграл `p_now` | клас 0,2S; пропуски зв'язку не губять енергію; відповідь на telemetry Q-09 | — |
 | A-03 | Сітка 15 хв за UTC (`date_trunc` на чверть години); доба, профіль і розподіл — за Києвом | зсув Києва — цілі години, тож чверті збігаються; DST лише змінює кількість годин доби (23/25) | — |
-| A-04 | Провайдери переглядача — `AbstractModel` з `_name='td.viewer.provider.energy'`/`'.infra'` **без** `_inherit`, з власними `_f3d_sequence/_f3d_sections/_f3d_group` і трьома методами | рішення менеджера 14.10 (viewer збирає провайдерів за префіксом імені); без моста-модуля | — |
+| A-04 | Провайдери переглядача — `AbstractModel` з `_name='td.viewer.provider.energy'`/`'.infra'` **без** `_inherit`, з власними `_td_sequence/_td_sections/_td_group` і трьома методами | рішення менеджера 14.10 (viewer збирає провайдерів за префіксом імені); без моста-модуля | — |
 | A-05 | machine_connect — необов'язковий: `if 'td.machine' in self.env` → CM-03; інакше журнал часу | рішення менеджера; ті самі інтервали (machine_connect веде таймери завдань) | — |
 | A-06 | Modbus-адреси за документом вендора: PM5560 — `N − 1`; Huawei, ATyS p (Annexe III), TEDOM — `N` (вже PDU) | модулі для проду не знають про емулятор (каркас §1); telemetry A-01 вимагає PDU | розходиться з iot_sim §8.4.1 (Q-08) |
 | A-07 | Сигнали АВР — `kind='state'` зі списком `states`, де індекс = код Annexe III (`unknown, pos_0, pos_I, pos_II`) | `last_value` (індекс) дорівнює коду положення, як чекає міст (R-05 td_genset); зміна стану зберігається одразу (telemetry R-03 п. в) | — |
@@ -460,7 +460,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | A-19 | 9 споживачів без сигналів у каталозі iot_sim (OFFICE, LP-1…3, RV-ALL, AHU-1, EF-*) отримують `p_now`, `kwh_total`, `kwh_shift` (u51–u59 у iot_sim §8.4.1 існують) | баланс лінії C2 і пули без них неможливі | доповнює каталог iot_sim |
 | A-20 | `kwh_shift` — обчислений сигнал (різниця лічильника з початку зміни), а не адреса PM5560 | регістр 3204 — накопичувальний; «різниця за зміну» з каталогу iot_sim у пристрої немає | змінює прив'язку 40 сигналів рівня 0 |
 | A-21 | Схема мережі — вид `hierarchy` (`web_hierarchy`, встановлений) на `td.energy.node` | стандартний Odoo 19, дерево ГРЩ без власного JS | — |
-| A-22 | Власний `_f3d_viewer_delta` з глибоким злиттям `infra` (не копіювання розділу) | базова дельта viewer R-14 п. 5 копіювала розділ цілком — затерла б частину моста (155) або навпаки | закрито X-23: viewer R-14 зливає дельту глибоко, міст — власна дельта; хелпер `deep_merge` — спільний viewer (`td_viewer3d/tools/payload.py`, X-82) |
+| A-22 | Власний `_td_viewer_delta` з глибоким злиттям `infra` (не копіювання розділу) | базова дельта viewer R-14 п. 5 копіювала розділ цілком — затерла б частину моста (155) або навпаки | закрито X-23: viewer R-14 зливає дельту глибоко, міст — власна дельта; хелпер `deep_merge` — спільний viewer (`td_viewer3d/tools/payload.py`, X-82) |
 
 
 ---

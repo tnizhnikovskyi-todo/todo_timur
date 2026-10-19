@@ -27,10 +27,10 @@ iot_sim 689–698 (X-34).
   CB-09 (меню, sequence 60), CB-10 (групи,
   `td.base.environment`), CB-12 (межі території), R-10/R-19 base, Додаток C.2 (надвірні зони), Додаток D (ворота),
   AC-25/AC-26 base (6 пакетів фур + 18 нових пакетів після міграції base);
-- `td_viewer3d`: M-01 (`td.viewer.provider`, `_f3d_sequence=160` для yard), R-01 п. 3 (провайдери
+- `td_viewer3d`: M-01 (`td.viewer.provider`, `_td_sequence=160` для yard), R-01 п. 3 (провайдери
   знаходяться за префіксом імені `td.viewer.provider.`), M-03 (`td.viewer.event._notify`), C-05 (дія
   `f3d_viewer.action`), Додаток A.0, A.8 (`pickings[].dock/truck`), A.11 (`docks`), A.13 (`infra.cards`), A.14 (`ship_chain`);
-- `td_telemetry` SPEC: M-02 `td.source`, M-03 `td.signal` (`_f3d_ingest`), M-06 `td.command`,
+- `td_telemetry` SPEC: M-02 `td.source`, M-03 `td.signal` (`_td_ingest`), M-06 `td.command`,
   M-11 `td.push.handler`, M-13 `td.push.event`, API-05…API-07, R-17 (Ingester: `last_value` оновлюється SQL),
   R-18 (життєвий цикл команди), R-20 (Modbus: PDU, `wordorder`), R-22 (маршрутизація http_push), §8.3 (інтерфейс
   плагіна CT-02), §8.5 (`modbus_tcp`), §8.7 (`http_push`: `POST /f3d/{route}`); ARCH telemetry CT-01…CT-11, Q-13;
@@ -76,7 +76,7 @@ odoo_addons/td_yard/
 │   ├── td_yard_visit.py             M-01 + kpp_data/kpp_action (API-01, API-02)
 │   ├── td_yard_booking.py           M-02
 │   ├── td_yard_gate.py              M-03
-│   ├── td_yard_lpr_event.py         M-04 + _f3d_from_push (R-07, R-08)
+│   ├── td_yard_lpr_event.py         M-04 + _td_from_push (R-07, R-08)
 │   ├── td_yard_weighing.py          M-05
 │   ├── td_yard_scale.py             M-06
 │   ├── stock_picking_batch.py        M-07
@@ -245,7 +245,7 @@ services/collector_plugins/f3d_collector_yard/
 Хелпер прав (у `models/td_yard_visit.py`, використовують усі моделі модуля):
 
 ```python
-def _f3d_yard_require(env, *xmlids):
+def _td_yard_require(env, *xmlids):
     """Пропускає суперкористувача (env.su) і членів будь-якої з груп; інакше AccessError."""
     if env.su or any(env.user.has_group(x) for x in xmlids):
         return
@@ -368,18 +368,18 @@ SQL-обмеження:
 
 | Сигнатура | Права | Алгоритм |
 |---|---|---|
-| `create(vals_list)` | ACL | R-01: `name` з послідовності; `weighing_policy` (якщо не задано) = `P.weighing_policy_west` / `P.weighing_policy_east` за `side`, обчисленим з `visit_type` (`other` → west); `plate` → `strip().upper()`; після `super()` — `_f3d_yard_notify()` |
-| `write(vals)` | ACL | `plate` → `strip().upper()`; заборонено змінювати `visit_type`, `batch_id` у станах ∉ {`draft`,`planned`,`arrived`} → `UserError("Тип і пакет змінюються лише до пропуску фури.")`; після `super()`: якщо змінено `plate`, `batch_id`, `priority` → `_f3d_yard_notify()` |
+| `create(vals_list)` | ACL | R-01: `name` з послідовності; `weighing_policy` (якщо не задано) = `P.weighing_policy_west` / `P.weighing_policy_east` за `side`, обчисленим з `visit_type` (`other` → west); `plate` → `strip().upper()`; після `super()` — `_td_yard_notify()` |
+| `write(vals)` | ACL | `plate` → `strip().upper()`; заборонено змінювати `visit_type`, `batch_id` у станах ∉ {`draft`,`planned`,`arrived`} → `UserError("Тип і пакет змінюються лише до пропуску фури.")`; після `super()`: якщо змінено `plate`, `batch_id`, `priority` → `_td_yard_notify()` |
 | `unlink()` | ACL | лише стани {`draft`,`planned`,`cancelled`}; інакше `UserError("Рейс у стані «%s» видаляти не можна — скасуйте або відхиліть його.")`; бронювання видаляються каскадно |
-| `_set_state(new, ts=None, gate=None, note=None)` | — (внутрішній) | 0) `SELECT state FROM td_yard_visit WHERE id=%s FOR UPDATE` і `invalidate_recordset(['state'])` (§11.8); 1) `new ∈ TRANSITIONS[state]` інакше `UserError("Перехід «%s» → «%s» неможливий.")` (підписи станів); 2) `vals = {'state': new}`; `ts = ts or now`; якщо `TS_FIELD[new]` і поле порожнє — `vals[field] = ts` (повторний перехід не перезаписує); 3) `queued→handling`: також `at_dock_at = ts`, якщо порожній; 4) `new='arrived'` і `gate` → `gate_in_id`; 5) `self.sudo().write(vals)` (права перевірено викликачем); 6) чаттер `"Стан: %s → %s (%s)%s" % (old_label, new_label, local_hm(ts), note and " · " + note or "")`; 7) `_f3d_yard_notify()`; повертає `True` |
+| `_set_state(new, ts=None, gate=None, note=None)` | — (внутрішній) | 0) `SELECT state FROM td_yard_visit WHERE id=%s FOR UPDATE` і `invalidate_recordset(['state'])` (§11.8); 1) `new ∈ TRANSITIONS[state]` інакше `UserError("Перехід «%s» → «%s» неможливий.")` (підписи станів); 2) `vals = {'state': new}`; `ts = ts or now`; якщо `TS_FIELD[new]` і поле порожнє — `vals[field] = ts` (повторний перехід не перезаписує); 3) `queued→handling`: також `at_dock_at = ts`, якщо порожній; 4) `new='arrived'` і `gate` → `gate_in_id`; 5) `self.sudo().write(vals)` (права перевірено викликачем); 6) чаттер `"Стан: %s → %s (%s)%s" % (old_label, new_label, local_hm(ts), note and " · " + note or "")`; 7) `_td_yard_notify()`; повертає `True` |
 | `action_plan()` | `GRP_DISP` | `draft → planned`; потрібне `booking_id` (підтверджене) інакше `UserError("Спершу підтвердіть бронювання воріт.")` |
 | `action_arrive(ts=None, gate=None, event=None)` | `GRP_SEC` | `draft\|planned → arrived`; `gate` = переданий або `td.yard.gate` з `direction in ('in','both')` і `side` рейсу (за замовчуванням `GATE-W`, iot_sim R-29: в'їзд через GATE-W); `event` → `event.visit_id = self`, `match_state='matched'`; повертає `True` |
-| `action_admit(open_gate=True)` | `GRP_SEC` | `arrived → queued` (перехід виконується завжди, FR-28). Якщо `open_gate` і `gate_in_id`: якщо `P.write_enabled` і ворота мають сигнал `cmd_open` → `gate_in_id.action_command('open', visit=self, reason='manual')` у `try`; `UserError` R-15 (несвіжі дані, перешкода, попередня команда) → команда не створюється, `gate_in_id._f3d_yard_count_permit(self)`, чаттер «Команду не надіслано: <текст>. Відкрийте шлагбаум з пульта CAME»; без `write_enabled` — `_f3d_yard_count_permit(self)` і чаттер «Шлагбаум відкрийте з пульта CAME (команди вимкнено)». Повертає `display_notification`: `type='success'`, «Фуру %s пропущено» (команда надіслана) або `type='warning'` з текстом причини |
-| `action_call_to_dock(dock=None)` | `GRP_SEC` | R-05 «виклик»: лише з `queued` (`UserError("Викликати на ворота можна лише фуру в черзі.")`); ворота: є `booking_id` → `booking_id.dock_id` (переданий `dock` інший → `UserError("Рейс заброньовано на %s.")`); немає → `dock` або `_f3d_yard_pick_dock()`; `None` → `UserError("Немає вільних воріт на стороні «%s».")`; ворота зайняті іншим рейсом (`_f3d_yard_dock_busy`) → `UserError("Ворота %s зайняті рейсом %s.")`; без броні — створити бронювання `source='walk_in'`, `[now, now + P.slot_default_min]` і `action_confirm()` (A-23; `ValidationError` конфлікту → `UserError("Ворота %s зайняті: %s")`); `_set_state('at_dock')` |
+| `action_admit(open_gate=True)` | `GRP_SEC` | `arrived → queued` (перехід виконується завжди, FR-28). Якщо `open_gate` і `gate_in_id`: якщо `P.write_enabled` і ворота мають сигнал `cmd_open` → `gate_in_id.action_command('open', visit=self, reason='manual')` у `try`; `UserError` R-15 (несвіжі дані, перешкода, попередня команда) → команда не створюється, `gate_in_id._td_yard_count_permit(self)`, чаттер «Команду не надіслано: <текст>. Відкрийте шлагбаум з пульта CAME»; без `write_enabled` — `_td_yard_count_permit(self)` і чаттер «Шлагбаум відкрийте з пульта CAME (команди вимкнено)». Повертає `display_notification`: `type='success'`, «Фуру %s пропущено» (команда надіслана) або `type='warning'` з текстом причини |
+| `action_call_to_dock(dock=None)` | `GRP_SEC` | R-05 «виклик»: лише з `queued` (`UserError("Викликати на ворота можна лише фуру в черзі.")`); ворота: є `booking_id` → `booking_id.dock_id` (переданий `dock` інший → `UserError("Рейс заброньовано на %s.")`); немає → `dock` або `_td_yard_pick_dock()`; `None` → `UserError("Немає вільних воріт на стороні «%s».")`; ворота зайняті іншим рейсом (`_td_yard_dock_busy`) → `UserError("Ворота %s зайняті рейсом %s.")`; без броні — створити бронювання `source='walk_in'`, `[now, now + P.slot_default_min]` і `action_confirm()` (A-23; `ValidationError` конфлікту → `UserError("Ворота %s зайняті: %s")`); `_set_state('at_dock')` |
 | `action_start_handling(auto=False)` | `GRP_SEC` або `stock.group_stock_user` | `queued\|at_dock → handling`; `auto=True` (R-09) — без перевірки прав, нотатка «автоматично: почато приймання/відвантаження в документі» |
-| `action_end_handling(auto=False)` | `GRP_SEC` або `stock.group_stock_user` | лише стан `handling`; `handling_end_at = now`, якщо порожній; стан не змінюється; чаттер; якщо `P.auto_call_next` → `_f3d_yard_call_next(dock_id)` (R-05) |
+| `action_end_handling(auto=False)` | `GRP_SEC` або `stock.group_stock_user` | лише стан `handling`; `handling_end_at = now`, якщо порожній; стан не змінюється; чаттер; якщо `P.auto_call_next` → `_td_yard_call_next(dock_id)` (R-05) |
 | `action_weigh()` | `GRP_SEC` або `stock.group_stock_user` | лише стани {`queued`,`at_dock`,`handling`}; якщо ваги `TRUCK-SCALE` (`gate_out_id.scale_id` або перша `td.yard.scale`) мають свіже стабільне показання (R-10) → `scale.action_capture(visit=self)` і сповіщення «Записано %s кг»; інакше — дія `td.yard.weighing` форма `target='new'` з `context={'default_visit_id': id, 'default_scale_id': scale.id, 'default_kind': 'in' if not weighed_in_at else 'out', 'default_source': 'manual'}` |
-| `action_leave(ts=None, note=None)` | `GRP_SEC` | `queued\|at_dock\|handling\|weighed → left`; `left_at = ts or now`; якщо `weighing_policy='in_out'` і немає зважування `out` → чаттер «Виїзд без зважування на виїзді»; якщо документи пакета не в `done/cancel` → чаттер «Документи не завершені: WH/IN/00128»; якщо `P.auto_call_next` і був `dock_id` → `_f3d_yard_call_next(dock_id)` |
+| `action_leave(ts=None, note=None)` | `GRP_SEC` | `queued\|at_dock\|handling\|weighed → left`; `left_at = ts or now`; якщо `weighing_policy='in_out'` і немає зважування `out` → чаттер «Виїзд без зважування на виїзді»; якщо документи пакета не в `done/cancel` → чаттер «Документи не завершені: WH/IN/00128»; якщо `P.auto_call_next` і був `dock_id` → `_td_yard_call_next(dock_id)` |
 | `action_reject_wizard()` | `GRP_SEC` | дія `td.yard.reject.wizard` (`target='new'`, `default_visit_id`) |
 | `_do_reject(reason)` | — | з M-17: `draft\|planned\|arrived → rejected`, `reject_reason = reason`, `rejected_at`; бронювання `confirmed/requested` → `action_cancel()`; події LPR рейсу з `kpp_alert` → `kpp_alert=False`, `match_state='handled'` |
 | `action_cancel()` | `GRP_DISP` | `draft\|planned → cancelled`; бронювання → `cancelled` |
@@ -387,13 +387,13 @@ SQL-обмеження:
 | `action_show_3d()` | read | `batch_id.action_f3d_show()` якщо `scene_code`; інакше `dock_id.action_f3d_show()` якщо `dock_id.td_code`; інакше `gate_in_id.action_f3d_show()`; інакше `UserError("Рейс не має об'єкта в 3D.")` (C-05 через CB-01) |
 | `action_open_batch()` / `action_open_pickings()` | read | `act_window` на пакет / список документів (`domain=[('id','in',picking_ids.ids)]`) |
 | `@api.model _find_by_plate(plate_norm, ts, direction='in')` | — | R-08 крок 6: повертає recordset кандидатів, упорядкований |
-| `@api.model _f3d_yard_queue(side, dock=None)` | — | R-05: упорядкований recordset |
-| `@api.model _f3d_yard_call_next(dock)` | — | R-05: перший з `_f3d_yard_queue(dock.td_side, dock)` → `action_call_to_dock(dock)` під `sudo()`; нікого → `False` |
-| `_f3d_yard_pick_dock()` | — | R-05 вибір вільних воріт |
-| `@api.model _f3d_yard_dock_busy(dock, start, end, exclude=None)` | — | R-05 → `self`-recordset рейсу-зайняття або порожній |
-| `_compute_weights()`, `_f3d_yard_write_pickings()` | — | R-12 |
-| `_f3d_yard_notify()` | — | R-21 |
-| `@api.model _f3d_yard_viewer_event()` | — | `self.env['td.viewer.event'].sudo()` якщо `'td.viewer.event' in self.env`, інакше `None` (тести патчать, AC-64; так само на M-03, M-06) |
+| `@api.model _td_yard_queue(side, dock=None)` | — | R-05: упорядкований recordset |
+| `@api.model _td_yard_call_next(dock)` | — | R-05: перший з `_td_yard_queue(dock.td_side, dock)` → `action_call_to_dock(dock)` під `sudo()`; нікого → `False` |
+| `_td_yard_pick_dock()` | — | R-05 вибір вільних воріт |
+| `@api.model _td_yard_dock_busy(dock, start, end, exclude=None)` | — | R-05 → `self`-recordset рейсу-зайняття або порожній |
+| `_compute_weights()`, `_td_yard_write_pickings()` | — | R-12 |
+| `_td_yard_notify()` | — | R-21 |
+| `@api.model _td_yard_viewer_event()` | — | `self.env['td.viewer.event'].sudo()` якщо `'td.viewer.event' in self.env`, інакше `None` (тести патчать, AC-64; так само на M-03, M-06) |
 | `@api.model f3d_yard_run_migration()` | `td_factory3d.group_td_admin` | серверна дія V-34: `hooks.run_all(env)` → `display_notification` зі звітом |
 | `@api.model kpp_data(gate_ids=None)` | `GRP_SEC` | API-01 (R-18) |
 | `@api.model kpp_action(action, visit_id=None, event_id=None, gate_id=None, values=None)` | `GRP_SEC` | API-02 (R-18) |
@@ -450,9 +450,9 @@ class F3dYardBooking(models.Model):
 | `action_confirm()` | `GRP_DISP` (або `sudo` з R-05/R-24) | для кожного `requested`: `SELECT id FROM stock_location WHERE id=%s FOR UPDATE` (серіалізація підтверджень одних воріт); `state='confirmed'` (обмеження перевіряють конфлікт); `_sync_batch()` (R-02); `visit_id.state == 'draft'` → `visit_id._set_state('planned')`; чаттер рейсу «Заброньовано %s» |
 | `action_cancel()` | `GRP_DISP` (з M-01 — `sudo`) | `requested\|confirmed → cancelled`; якщо рейс `planned` і в нього не лишилось `confirmed` → `visit._set_state('draft')` |
 | `action_reset()` | `GRP_DISP` | `cancelled → requested` |
-| `write(vals)` | ACL | після `super()`: для `confirmed`, якщо змінено `dock_id`/`slot_start`/`slot_end` і немає `context['f3d_yard_sync']` → `_sync_batch()`; `visit_id._f3d_yard_notify()` |
+| `write(vals)` | ACL | після `super()`: для `confirmed`, якщо змінено `dock_id`/`slot_start`/`slot_end` і немає `context['f3d_yard_sync']` → `_sync_batch()`; `visit_id._td_yard_notify()` |
 | `_sync_batch()` | — | R-02 (у `sudo()` і `with_context(f3d_yard_sync=True)`) |
-| `@api.model _f3d_yard_overlaps(dock, start, end, exclude_ids=())` | — | `search([('dock_id','=',dock.id), ('state','=','confirmed'), ('slot_start','<',end), ('slot_end','>',start), ('id','not in',exclude_ids)])` |
+| `@api.model _td_yard_overlaps(dock, start, end, exclude_ids=())` | — | `search([('dock_id','=',dock.id), ('state','=','confirmed'), ('slot_start','<',end), ('slot_end','>',start), ('id','not in',exclude_ids)])` |
 
 ### M-03 `td.yard.gate` — КПП / шлагбаум (FR-15, CY-03)
 
@@ -464,7 +464,7 @@ class F3dYardGate(models.Model):
     _order = "sequence, td_code"
     _rec_name = "name"
     _rec_names_search = ["name", "td_code", "camera_code"]
-    _f3d_kind = "other"
+    _td_kind = "other"
     STATES = [("closed", "Закритий"), ("open", "Відкритий"), ("held", "Утримується відкритим"),
               ("error", "Помилка"), ("unknown", "Невідомо")]
 ```
@@ -518,12 +518,12 @@ class F3dYardGate(models.Model):
 |---|---|---|
 | `action_command(kind, visit=None, reason='manual')` | `GRP_SEC` при `reason='manual'` | R-15 → `td.command` |
 | `action_open()`, `action_close()`, `action_hold()`, `action_release()` | `GRP_SEC` | `action_command('open'\|'close'\|'hold'\|'release')`; повертають `display_notification` «Команду надіслано» |
-| `action_opened_manually()` | `GRP_SEC` | «Відкрито вручну»: `_f3d_yard_count_permit(pending_visit_id or None)`; `last_error=False`; `state` перераховується (R-16); чаттер «Відкрито з пульта CAME (%s)» з ім'ям користувача |
-| `action_reset_error()` | `GRP_SEC` | `last_error=False`, `open_cmd_id=False`, `_f3d_yard_refresh_state()` |
-| `_f3d_yard_count_permit(visit=None)` | — | `admitted_today += 1`; `visit` → `pending_visit_id = visit` |
-| `_f3d_yard_on_readings(items)` | — | з M-13: `items = [(role, ts, value, q)]` за `ts` → R-17 (петля, лічильник) → `_f3d_yard_refresh_state()` |
-| `_f3d_yard_refresh_state(now=None)` | — | R-16 |
-| `_f3d_yard_auto_open(visit, event=None)` | — (внутрішній) | R-15 п. «авто»: перевірки умов авто-відкриття; виклик `action_command('open', visit, reason='auto_booking'\|'auto_exit')` у `try/except UserError` → у разі відмови `event.note = текст`, `event.kpp_alert = True` |
+| `action_opened_manually()` | `GRP_SEC` | «Відкрито вручну»: `_td_yard_count_permit(pending_visit_id or None)`; `last_error=False`; `state` перераховується (R-16); чаттер «Відкрито з пульта CAME (%s)» з ім'ям користувача |
+| `action_reset_error()` | `GRP_SEC` | `last_error=False`, `open_cmd_id=False`, `_td_yard_refresh_state()` |
+| `_td_yard_count_permit(visit=None)` | — | `admitted_today += 1`; `visit` → `pending_visit_id = visit` |
+| `_td_yard_on_readings(items)` | — | з M-13: `items = [(role, ts, value, q)]` за `ts` → R-17 (петля, лічильник) → `_td_yard_refresh_state()` |
+| `_td_yard_refresh_state(now=None)` | — | R-16 |
+| `_td_yard_auto_open(visit, event=None)` | — (внутрішній) | R-15 п. «авто»: перевірки умов авто-відкриття; виклик `action_command('open', visit, reason='auto_booking'\|'auto_exit')` у `try/except UserError` → у разі відмови `event.note = текст`, `event.kpp_alert = True` |
 | `action_view_commands()` | read | `act_window` `td.command` `domain=[('td_yard_gate_id','=',id)]` |
 
 ### M-04 `td.yard.lpr.event` — подія розпізнавання номера (FR-07, FR-08)
@@ -580,8 +580,8 @@ class F3dYardLprEvent(models.Model):
 
 | Сигнатура | Права | Алгоритм |
 |---|---|---|
-| `@api.model _f3d_from_push(event)` | — (з M-12, `sudo`) | R-07 → R-08 → дії після зіставлення; повертає запис або `False` |
-| `_f3d_match()` | — | R-08 кроки 5–9 |
+| `@api.model _td_from_push(event)` | — (з M-12, `sudo`) | R-07 → R-08 → дії після зіставлення; повертає запис або `False` |
+| `_td_match()` | — | R-08 кроки 5–9 |
 | `action_walk_in()` | `GRP_SEC` | дія `td.yard.walkin.wizard` (`target='new'`, `default_event_id`); лише для `match_state in ('unmatched','low_confidence')` і `direction != 'out'` |
 | `action_link_visit(visit_id)` | `GRP_SEC` | ручна прив'язка: `visit_id` (у станах R-08 п. 6 за напрямком) → `visit_id`, `match_state='handled'`, `kpp_alert=False`, `handled_by/at`; порожній номер рейсу ← `plate_unicode or plate_raw`; для `in` і рейсу `planned\|draft` → `visit.action_arrive(ts, gate_id, self)` |
 | `action_dismiss()` | `GRP_SEC` | `kpp_alert=False`, `match_state='handled'` (якщо було `unmatched/low_confidence`), `handled_by/at` |
@@ -627,11 +627,11 @@ scale_id.max_kg` інакше `ValidationError("Вага %s кг поза меж
 
 | Сигнатура | Права | Алгоритм |
 |---|---|---|
-| `create(vals_list)` | ACL (`GRP_SEC`; `stock.group_stock_user` — через `visit.action_weigh` форму) | `name`; `state = 'assigned' if visit_id else 'unassigned'`; `plate` з рейсу; після `super()`: `_f3d_yard_apply()` |
-| `_f3d_yard_apply()` | — | для `assigned` з рейсом: `kind='in'` → `visit.weighed_in_at = ts` (якщо порожній); `kind='out'` → якщо стан рейсу ∈ {`at_dock`,`handling`} і `weighing_policy='in_out'` → `visit._set_state('weighed', ts)`; `handling_end_at` порожній → `= ts`; далі `visit._f3d_yard_write_pickings()` (R-12) і `scale_id._f3d_yard_notify()` |
-| `action_assign(visit_id, kind=None)` | `GRP_SEC` | лише `unassigned`: `visit_id`, `kind` (якщо задано), `state='assigned'`, `plate`; `_f3d_yard_apply()` |
+| `create(vals_list)` | ACL (`GRP_SEC`; `stock.group_stock_user` — через `visit.action_weigh` форму) | `name`; `state = 'assigned' if visit_id else 'unassigned'`; `plate` з рейсу; після `super()`: `_td_yard_apply()` |
+| `_td_yard_apply()` | — | для `assigned` з рейсом: `kind='in'` → `visit.weighed_in_at = ts` (якщо порожній); `kind='out'` → якщо стан рейсу ∈ {`at_dock`,`handling`} і `weighing_policy='in_out'` → `visit._set_state('weighed', ts)`; `handling_end_at` порожній → `= ts`; далі `visit._td_yard_write_pickings()` (R-12) і `scale_id._td_yard_notify()` |
+| `action_assign(visit_id, kind=None)` | `GRP_SEC` | лише `unassigned`: `visit_id`, `kind` (якщо задано), `state='assigned'`, `plate`; `_td_yard_apply()` |
 | `action_assign_selected()` | `GRP_SEC` | кнопка форми: `action_assign(self.visit_id.id, self.kind)`; порожній `visit_id` → `UserError("Оберіть рейс.")` |
-| `action_void()` | `GRP_SEC` | `state='void'`; рейс перераховує ваги (`_compute_weights`), `_f3d_yard_write_pickings()`; стан рейсу не відкочується (чаттер «Анульовано зважування %s») |
+| `action_void()` | `GRP_SEC` | `state='void'`; рейс перераховує ваги (`_compute_weights`), `_td_yard_write_pickings()`; стан рейсу не відкочується (чаттер «Анульовано зважування %s») |
 
 ### M-06 `td.yard.scale` — автоваги (FR-15, A-09)
 
@@ -642,7 +642,7 @@ class F3dYardScale(models.Model):
     _description = "Двір: автоваги"
     _order = "td_code"
     _rec_name = "name"
-    _f3d_kind = "equipment"
+    _td_kind = "equipment"
 ```
 
 | Поле | Тип | Параметри |
@@ -675,9 +675,9 @@ class F3dYardScale(models.Model):
 
 | Сигнатура | Права | Алгоритм |
 |---|---|---|
-| `_f3d_yard_on_readings(items)` | — | з M-13: `items = [(role, ts, value, q)]` → R-10, R-11 |
+| `_td_yard_on_readings(items)` | — | з M-13: `items = [(role, ts, value, q)]` → R-10, R-11 |
 | `action_capture(visit=None)` | `GRP_SEC` або `stock.group_stock_user` | R-10 придатність поточного показання (`last_stable`, `now − last_ts ≤ P.weigh_max_age_s`, межі) інакше `UserError("Ваги не дають свіжого стабільного показання — введіть вагу вручну.")`; створює `td.yard.weighing` (`source='auto'`, `weight_kg = last_weight_kg`, `visit_id = visit` або R-11 п. 5) |
-| `_f3d_yard_notify()` | — | R-21 |
+| `_td_yard_notify()` | — | R-21 |
 
 ### M-07 `stock.picking.batch` — розширення (FR-14, CY-02)
 
@@ -713,7 +713,7 @@ class F3dYardScale(models.Model):
 | Сигнатура | Алгоритм |
 |---|---|
 | `_compute_f3d_expected()` | R-12 п. 2 для одного документа (`@api.depends("move_ids.product_qty", "move_ids.quantity", "move_ids.product_id.weight", "state")`) |
-| `_f3d_expected_kg()` → `(float, bool)` | маса й ознака «є еталон» (усі рухи мають `product.weight > 0`) — R-12 п. 2 |
+| `_td_expected_kg()` → `(float, bool)` | маса й ознака «є еталон» (усі рухи мають `product.weight > 0`) — R-12 п. 2 |
 | `action_f3d_open_visit()` | форма `td_visit_id` |
 | `_action_done()` | після `super()` (без `context['f3d_yard_no_auto']`): R-09 п. 2 для пакетів документів |
 
@@ -756,18 +756,18 @@ class F3dPushHandlerYard(models.AbstractModel):
     _name = "td.push.handler.yard"
     _inherit = "td.push.handler"
     _description = "Двір: обробник подій LPR"
-    _f3d_push_routes = ("lpr",)
+    _td_push_routes = ("lpr",)
 
-    def _f3d_handle_push(self, route, event):
+    def _td_handle_push(self, route, event):
         if route != "lpr":
             return
-        self.env["td.yard.lpr.event"].sudo()._f3d_from_push(event)
+        self.env["td.yard.lpr.event"].sudo()._td_from_push(event)
 ```
 
 `event` — словник telemetry M-11: `{"event_id", "route", "ts" (datetime UTC), "remote", "headers", "payload"}`.
 Виняток усередині — логується й записується telemetry у `td.push.event.error` (обробник працює в savepoint, M-11).
 
-### M-13 `td.signal` — перевизначення `_f3d_ingest` (FR-13, A-17)
+### M-13 `td.signal` — перевизначення `_td_ingest` (FR-13, A-17)
 
 Telemetry R-17 оновлює `last_value` сирим SQL (`executemany UPDATE`) — перевизначення `write()` такі зміни не
 бачить; тому гачок — на вхідному методі CT-10:
@@ -777,8 +777,8 @@ class F3dSignal(models.Model):
     _inherit = "td.signal"
 
     @api.model
-    def _f3d_ingest(self, readings, src="module", collector=None):
-        res = super()._f3d_ingest(readings, src=src, collector=collector)
+    def _td_ingest(self, readings, src="module", collector=None):
+        res = super()._td_ingest(readings, src=src, collector=collector)
         bad = {x.get("i") for x in (res or {}).get("rejected", [])}
         yard = [r for i, r in enumerate(readings)
                 if i not in bad and str(r.get("code") or "").startswith(("yard/gates/", "yard/scale/"))]
@@ -786,16 +786,16 @@ class F3dSignal(models.Model):
             return res
         try:
             with self.env.cr.savepoint():
-                self.env["td.yard.gate"].sudo()._f3d_yard_dispatch(yard)
+                self.env["td.yard.gate"].sudo()._td_yard_dispatch(yard)
         except Exception:
             _logger.exception("td_yard: обробка показань двору")
         return res
 ```
 
-`td.yard.gate._f3d_yard_dispatch(readings)` (`@api.model`): 1) мапа `code → (model, record_id, role)` з
+`td.yard.gate._td_yard_dispatch(readings)` (`@api.model`): 1) мапа `code → (model, record_id, role)` з
 `search_read` активних воріт (7 полів-сигналів) і ваг (2 поля) — 2 запити; 2) перетворення `ts` (рядок ISO з
 зоною або `datetime`) → naive UTC; `value` → `float` або `None`; 3) групування за записом, сортування за `ts`;
-4) `gate._f3d_yard_on_readings(items)` / `scale._f3d_yard_on_readings(items)`. Ролі воріт: `state`, `loop`,
+4) `gate._td_yard_on_readings(items)` / `scale._td_yard_on_readings(items)`. Ролі воріт: `state`, `loop`,
 `photocell`, `passes`, `cmd_open`, `cmd_close`, `cmd_hold`; ваг: `weight`, `stable`. Показання без ролі —
 пропускаються. Нуль запитів, якщо в пакеті немає кодів `yard/gates/*` і `yard/scale/*` (AC-48).
 
@@ -805,13 +805,13 @@ class F3dSignal(models.Model):
 class F3dViewerProviderYard(models.AbstractModel):
     _name = "td.viewer.provider.yard"          # без _inherit: viewer R-01 п. 3 шукає за префіксом імені
     _description = "3D: двір (фури, КПП, ваги)"
-    _f3d_sequence = 160
-    _f3d_sections = ("yard",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 160
+    _td_sections = ("yard",)
+    _td_group = "td_factory3d.group_td_user"
 
-    def _f3d_viewer_collect(self, payload, ctx): ...      # R-20
-    def _f3d_viewer_delta(self, patch, ctx): ...          # R-20 п. 7 (infra — лише deep_merge, X-23)
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_collect(self, payload, ctx): ...      # R-20
+    def _td_viewer_delta(self, patch, ctx): ...          # R-20 п. 7 (infra — лише deep_merge, X-23)
+    def _td_viewer_bus_models(self):
         return ["td.yard.visit", "td.yard.gate", "td.yard.scale"]
 ```
 
@@ -864,7 +864,7 @@ SQL — R-19 п. 4. `init()`: `tools.drop_view_if_exists(cr, self._table)` + `CR
 `TransientModel`: `visit_id` (Many2one, `ro`), `event_id` (Many2one `td.yard.lpr.event`, `ro`), `reason` (Text,
 `req`, `string="Причина"`), `reason_code` (Selection `[('no_booking','Немає бронювання'),('wrong_docs','Документи не
 збігаються'),('late','Запізнення поза вікном'),('safety','Безпека / стан машини'),('other','Інше')]`, `req`,
-`default='no_booking'`). `action_confirm()`: `_f3d_yard_require(GRP_SEC)`; текст = `"%s: %s" % (label(reason_code),
+`default='no_booking'`). `action_confirm()`: `_td_yard_require(GRP_SEC)`; текст = `"%s: %s" % (label(reason_code),
 reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` → створити рейс `{'visit_type': 'other',
 'plate': event.plate_unicode or event.plate_raw, 'is_walk_in': True}` і `_set_state('rejected')` з тим самим текстом,
 `event.visit_id = visit`, `match_state='handled'`, `kpp_alert=False`.
@@ -878,7 +878,7 @@ reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` →
 | `td_yard_kind` | Selection | `[('open','Відкрити'),('close','Закрити'),('hold','Тримати відкритим'),('release','Зняти утримання')]`, `ro`, `string="Команда шлагбаума"` |
 | `td_yard_reason` | Selection | `[('manual','Вручну'),('auto_booking','Авто: бронювання'),('auto_exit','Авто: виїзд'),('auto_hold_max','Авто: ліміт утримання')]`, `ro` |
 
-`write(vals)`: після `super()`, якщо `state` змінився і `td_yard_gate_id` → `td_yard_gate_id._f3d_yard_refresh_state()`
+`write(vals)`: після `super()`, якщо `state` змінився і `td_yard_gate_id` → `td_yard_gate_id._td_yard_refresh_state()`
 (R-16: `failed`/`expired` → помилка воріт).
 
 ## 3. Представлення й меню
@@ -1053,7 +1053,7 @@ base §4.2) читає рейси, ворота, ваги, зважування;
 
 ### 4.4 Серверні перевірки й персональні дані
 
-- Кожна дія M-01…M-06 перевіряє групу хелпером `_f3d_yard_require` (таблиці §2) до будь-яких змін; кнопки з
+- Кожна дія M-01…M-06 перевіряє групу хелпером `_td_yard_require` (таблиці §2) до будь-яких змін; кнопки з
   `groups` у представленнях — лише зручність. `sudo()` дозволено тільки в місцях, названих у §2/§9: запис
   стану рейсу після перевірки (`_set_state`), створення `td.command` (R-15), синхронізація пакета (R-02),
   обробник LPR (M-12), гачок показань (M-13), запис нетто в документи (R-12), автостарт операції (R-09), крони.
@@ -1063,7 +1063,7 @@ base §4.2) читає рейси, ворота, ваги, зважування;
 - Журнали Python (`_logger`) не містять `driver_phone`, `driver_doc`, base64 знімків; номер фури — лише в
   DEBUG (AC-74).
 - Команди на шлагбаум: `reason='manual'` — лише `GRP_SEC`; автоматичні (`auto_*`) — лише з внутрішніх методів
-  (`_f3d_yard_auto_open`, `_cron_queue`), від імені `base.user_root` у полі `requested_by` (A-20).
+  (`_td_yard_auto_open`, `_cron_queue`), від імені `base.user_root` у полі `requested_by` (A-20).
 
 ## 5. Дані
 
@@ -1231,7 +1231,7 @@ UPDATE td_source SET read_enabled = false, write_enabled = false WHERE module = 
 
 | XML-id | Назва | Інтервал | Метод | Один прогін | Ліміти |
 |---|---|---|---|---|---|
-| `cron_td_yard_queue` | Двір: черга, ворота, «не приїхала» | 1 хв | `_cron_queue()` | 1) R-16: для кожних активних воріт `_f3d_yard_refresh_state()` (stale → `unknown`, таймаут відкриття, `failed/expired` команди, зняття утримання після `hold_until`); 2) R-07: події `kpp_alert=True`, `match_state in ('unmatched','low_confidence')`, `received_at < now − arrival_timeout_min` → `match_state='expired'`, `kpp_alert=False`; 3) R-19: рейси `planned` з `planned_start < now − no_show_min` і `is_no_show=False` → `is_no_show=True` + чаттер «Не приїхала»; 4) R-05: якщо `auto_call_next` — для кожних воріт без рейсу в `at_dock/handling` → `_f3d_yard_call_next(dock)` | ≤ 5 с; ≤ 200 рейсів за прогін |
+| `cron_td_yard_queue` | Двір: черга, ворота, «не приїхала» | 1 хв | `_cron_queue()` | 1) R-16: для кожних активних воріт `_td_yard_refresh_state()` (stale → `unknown`, таймаут відкриття, `failed/expired` команди, зняття утримання після `hold_until`); 2) R-07: події `kpp_alert=True`, `match_state in ('unmatched','low_confidence')`, `received_at < now − arrival_timeout_min` → `match_state='expired'`, `kpp_alert=False`; 3) R-19: рейси `planned` з `planned_start < now − no_show_min` і `is_no_show=False` → `is_no_show=True` + чаттер «Не приїхала»; 4) R-05: якщо `auto_call_next` — для кожних воріт без рейсу в `at_dock/handling` → `_td_yard_call_next(dock)` | ≤ 5 с; ≤ 200 рейсів за прогін |
 | `cron_td_yard_gc` | Двір: ротація й персональні дані | 1 доба, `nextcall` найближче 03:00 Київ (ставить хук через `zoneinfo`) | `_cron_gc()` | R-22 | батчі по 1 000; ≤ 60 с |
 | `cron_td_yard_day_reset` | Двір: добові лічильники воріт | 1 доба, `nextcall` найближче 00:05 Київ | `_cron_day_reset()` | R-23 | — |
 
@@ -1301,7 +1301,7 @@ id>` або `image_url` події. Обмеження: ≤ 50 рейсів у �
 ### API-03 Вхідна подія LPR (через telemetry API-05 → M-11 → M-12)
 
 Двір не приймає HTTP: камера/емулятор → колектор `POST http://collector:8080/f3d/lpr` (telemetry §8.7) →
-`POST /f3d/telemetry/event` (API-05 telemetry) → `td.push.handler.yard._f3d_handle_push('lpr', event)`.
+`POST /f3d/telemetry/event` (API-05 telemetry) → `td.push.handler.yard._td_handle_push('lpr', event)`.
 `event`: `{"event_id": "<64 hex>", "route": "lpr", "ts": datetime UTC, "remote": "10.90.2.5", "headers": {...},
 "payload": {...}}`. Ключі `payload`, які читає двір (Axis «License plate verifier API», developer.axis.com,
 переглянуто 14.10.2026; формат емулятора — iot_sim §8.13.2); решта ігнорується:
@@ -1604,32 +1604,32 @@ Q-05); перехід — зміна `params.host/port` джерела `SICS-TRU
 порожньо → без попередження; `bad` = категорії товарів рухів (`state != 'cancel'`), жодна з дозволених не є
 предком-або-самою (`categ.parent_path` починається з `allowed.parent_path`); непорожня → рядок `warning`
 «Ворота %s приймають: %s. У рейсі є: %s.» (назви через «, »). Не блокує ні підтвердження, ні виклик на ворота;
-`_f3d_yard_pick_dock` ставить ворота з попередженням у кінець списку (R-05 п. 2).
+`_td_yard_pick_dock` ставить ворота з попередженням у кінець списку (R-05 п. 2).
 Приклад: бронювання `DOCK-W1` під пакет `WH/IN/00132` (крайка `EB2-SON`, `EB2-WHT`) → «Ворота DOCK-W1 приймають:
 Плитні матеріали. У рейсі є: Крайка.»; `DOCK-W5` → без попередження.
 
 ### R-05 Черга й виклик на ворота
 
-1. **Зайнятість** `_f3d_yard_dock_busy(dock, start, end, exclude)`: рейс ≠ `exclude` у станах `at_dock`/`handling` з
+1. **Зайнятість** `_td_yard_dock_busy(dock, start, end, exclude)`: рейс ≠ `exclude` у станах `at_dock`/`handling` з
    `dock_id == dock` (незалежно від часу) або підтверджене бронювання воріт, що перетинає `[start, end)`, рейс якого
    порожній або в стані ∉ {`left`,`rejected`,`cancelled`} і ≠ `exclude`. Повертає рейс-зайняття (або бронювання
    без рейсу — тоді повідомлення «запит постачальника»).
-2. **Вибір воріт для рейсу без броні** `_f3d_yard_pick_dock()`: ворота `td_kind='dock'`, `td_side == side`, активні,
+2. **Вибір воріт для рейсу без броні** `_td_yard_pick_dock()`: ворота `td_kind='dock'`, `td_side == side`, активні,
    компанія рейсу; якщо пакет має `picking_type_id.dock_ids` — перетин із ними; порядок: спершу без попередження
    R-04, далі за `td_dock_no`; перші не зайняті на `[now, now + P.slot_default_min)`.
-3. **Порядок черги** `_f3d_yard_queue(side, dock=None)`: рейси `queued` цієї сторони; при `dock` — без тих, чиє
+3. **Порядок черги** `_td_yard_queue(side, dock=None)`: рейси `queued` цієї сторони; при `dock` — без тих, чиє
    бронювання на інших воротах. Ключ сортування: `(rank, k1, arrived_at, id)`: `rank = 0` — `priority='1'`; `rank =
    1` — є бронювання і `slot_start ≤ now + P.queue_slot_window_min` (`k1 = slot_start`); `rank = 2` — усі інші
    (`k1 = arrived_at`).
-4. **Наступний на ворота** `_f3d_yard_call_next(dock)`: перший кандидат з п. 3, для якого
-   `_f3d_yard_dock_busy(dock, now, now + slot_default_min, exclude=кандидат)` порожнє (для рейсу з бронюванням —
+4. **Наступний на ворота** `_td_yard_call_next(dock)`: перший кандидат з п. 3, для якого
+   `_td_yard_dock_busy(dock, now, now + slot_default_min, exclude=кандидат)` порожнє (для рейсу з бронюванням —
    його власне бронювання не заважає) → `action_call_to_dock(dock)`; інших пропустити. Викликається кнопкою
    «Наступний» не передбачено — лише авто: з `action_end_handling`/`action_leave` і крону при `P.auto_call_next`.
 5. «На ворота» вручну — M-01 `action_call_to_dock`.
 
 Приклад (зараз 12:50; захід, черга): V1 без броні, прибула 12:20; V2 бронювання `DOCK-W2` 13:00, прибула 12:40;
-V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без броні, `priority='1'`, прибула 12:45. `_f3d_yard_queue('west')`
-→ `[V4, V2, V1, V3]`; `_f3d_yard_queue('west', DOCK-W2)` → `[V4, V2, V1]`; `_f3d_yard_call_next(DOCK-W2)` → V4
+V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без броні, `priority='1'`, прибула 12:45. `_td_yard_queue('west')`
+→ `[V4, V2, V1, V3]`; `_td_yard_queue('west', DOCK-W2)` → `[V4, V2, V1]`; `_td_yard_call_next(DOCK-W2)` → V4
 пропущено (бронювання V2 13:00–14:00 перетинає `[12:50, 13:50)`), викликано V2 (`at_dock`).
 
 ### R-06 Фура без броні
@@ -1647,7 +1647,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 
 Приклад: сьогодні вже 5 рейсів без броні, охоронець → `UserError` з «(5)»; диспетчер → створено 6-й.
 
-### R-07 Приймання подій LPR і дублікати (`td.yard.lpr.event._f3d_from_push`)
+### R-07 Приймання подій LPR і дублікати (`td.yard.lpr.event._td_from_push`)
 
 1. `payload` не `dict` → WARNING, `return False`.
 2. Камера: `camera_code` з `sensorProviderID` (API-03); ворота — активні з `camera_code == camera_code`; немає →
@@ -1710,8 +1710,8 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
      рейсу» (`out`).
 8. Збіг: `visit_id`, `match_state='matched'`. В'їзд: рейс `draft|planned` → `action_arrive(ts, gate, event)` (під
    `sudo`); `arrived|queued` — без зміни стану, `note` «Повторне розпізнавання»; якщо `kpp_alert=False` →
-   `gate._f3d_yard_auto_open(visit, event)` (R-15 п. 10). Виїзд: `visit.gate_out_id = gate`; якщо `kpp_alert=False`
-   → `gate._f3d_yard_auto_open(visit, event)` (R-15 п. 11).
+   `gate._td_yard_auto_open(visit, event)` (R-15 п. 10). Виїзд: `visit.gate_out_id = gate`; якщо `kpp_alert=False`
+   → `gate._td_yard_auto_open(visit, event)` (R-15 п. 11).
 
 Приклади: (а) рейс `YV/2026/00007` (`planned`, `DOCK-W2` 13:00–14:00, пакет документа `WH/IN/00131`, номер
 порожній); подія CAM-05 12:40 `plateText="AA7310KT"`, `plateUnicode="АА7310КТ"`, `plateConfidence="0.912340"`,
@@ -1778,7 +1778,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 4. Звірка: немає обох зважувань → `none`; немає еталона або маса 0 → `no_reference`; `tol = max(expected ×
    P.net_tolerance_pct / 100, P.net_tolerance_kg)`; `dev = net − expected`; `|dev| ≤ tol` → `ok`, інакше
    `deviation`; `deviation_pct = round(dev / expected × 100, 2)` (expected > 0, інакше 0).
-5. Документи (`_f3d_yard_write_pickings`, `sudo`): документи пакета `state != 'cancel'` за `name`; один → уся `net`;
+5. Документи (`_td_yard_write_pickings`, `sudo`): документи пакета `state != 'cancel'` за `name`; один → уся `net`;
    кілька → частки `expected_i / Σ expected` (Σ = 0 → порівну); на документі: `td_net_weight_kg`, `td_weight_check`
    (п. 4 для частки й маси документа), `td_weight_deviation_pct`; для `outgoing` також `shipping_weight` (у
    одиниці ваги компанії). `deviation` → активність `mail.mail_activity_data_warning` на документі для `user_id`
@@ -1801,7 +1801,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 `gate.action_command(kind, visit=None, reason='manual')`, перевірки строго в цьому порядку (перша невдала —
 `UserError`/`AccessError`, нічого не створюється):
 1. `kind ∈ {open, close, hold, release}` інакше `ValueError`.
-2. `reason='manual'` → `_f3d_yard_require(GRP_SEC)`; `reason ∈ {auto_booking, auto_exit, auto_hold_max}` → лише
+2. `reason='manual'` → `_td_yard_require(GRP_SEC)`; `reason ∈ {auto_booking, auto_exit, auto_hold_max}` → лише
    при `env.su` (внутрішні виклики під `sudo()`, обробник LPR, крон від `base.user_root`), інакше
    `AccessError("Автоматичні команди створює лише система.")`. Далі — `SELECT id FROM td_yard_gate WHERE id=%s FOR UPDATE`.
 3. `P.write_enabled` → інакше `UserError("Команди на шлагбаум вимкнено (td.yard.write_enabled). Відкрийте
@@ -1818,10 +1818,10 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
    `open`/`close`/`hold` — `1.0`, `release` — `0.0`; імпульс ≥ 1 с для CAME дає адреса сигналу (`write.pulse_ms =
    1500` на `cmd_open`/`cmd_close`, Додаток A; плагін `modbus_tcp` пише 1, через `pulse_ms` — 0; X-46); `cmd_hold` —
    рівень без `pulse_ms`; кожні ворота мають власний `cmd_hold` (GATE-W PDU 20, GATE-E PDU 21; X-47).
-9. Наслідки: `open` → `open_cmd_id = cmd`, `_f3d_yard_count_permit(visit)`; `hold` → `hold_until = now +
+9. Наслідки: `open` → `open_cmd_id = cmd`, `_td_yard_count_permit(visit)`; `hold` → `hold_until = now +
    P.hold_max_min`; `release` → `hold_until = False`; усі → `last_command_id`, чаттер воріт і рейсу «Команда «%s»
    %s (#%s) · %s», R-21.
-10. **Авто на в'їзді** (`_f3d_yard_auto_open`, ворота `in`/`both`, подія `in`): умови — `gate.mode == 'auto'`,
+10. **Авто на в'їзді** (`_td_yard_auto_open`, ворота `in`/`both`, подія `in`): умови — `gate.mode == 'auto'`,
     `P.write_enabled`, `now − event.ts ≤ 60 с` (інакше `note` «Подія запізнилась на N с — авто-пропуск вимкнено»,
     `kpp_alert=True`; §11.2), рейс щойно `arrived`, не `is_walk_in`, `booking_id.state == 'confirmed'`, `ts ∈ [planned_start −
     P.early_min, planned_start + P.late_min]`; успіх → `action_command('open', visit, 'auto_booking')` і
@@ -1838,7 +1838,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 `note` «Поза вікном слоту 12:00–15:00», `kpp_alert=True`; фотоелемент 1 → `UserError` п. 5 (для ручної команди) /
 `note` з тим самим текстом (для авто).
 
-### R-16 Стан воріт, таймаути, утримання (`_f3d_yard_refresh_state`)
+### R-16 Стан воріт, таймаути, утримання (`_td_yard_refresh_state`)
 
 Виклики: після обробки показань воріт (M-13), після зміни команди (M-18), крон щохвилини, дії M-03.
 1. Контроль команди «відкрити» (`open_cmd_id`): `failed`/`expired` → `last_error = "Команду «Відкрити» не виконано:
@@ -1862,7 +1862,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 `error` «Немає підтвердження відкриття за 10 с». ADAM вимкнено → сигнали `stale` (telemetry R-07) → ворота
 `unknown`, кнопки команд КПП неактивні з поясненням.
 
-### R-17 Антипрохід і виявлення виїзду (`_f3d_yard_on_readings`)
+### R-17 Антипрохід і виявлення виїзду (`_td_yard_on_readings`)
 
 Для показань воріт за зростанням `ts`:
 1. `loop`: `occ = (v ≥ 0.5) xor invert_di`; перехід `True → False` (машина проїхала) при `pending_visit_id`: ворота
@@ -1875,7 +1875,7 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
    admitted_today)`, `last_tailgate_at = ts`, чаттер «Проїзд без дозволу: проїздів %s, дозволів %s», червоний банер
    КПП, R-21.
 4. `state`: перехід 0 → 1 запам'ятовує `opened_at = ts`.
-5. Після циклу — `_f3d_yard_refresh_state()`.
+5. Після циклу — `_td_yard_refresh_state()`.
 
 Дозвіл (`admitted_today += 1`) дають: команда `open` (будь-яка причина), «Пропустити» без команди (команди вимкнені),
 «Відкрито вручну». Приклад: після добового скидання `passes_day_start = 7`, `admitted_today = 0`; «Пропустити» (1
@@ -1942,7 +1942,7 @@ CREATE OR REPLACE VIEW td_yard_dock_report AS (
 
 ### R-20 Провайдер переглядача (FR-23, CY-06, A-13, A-16)
 
-`_f3d_viewer_collect(payload, ctx)` (схема — Додаток C, координати — Додаток B):
+`_td_viewer_collect(payload, ctx)` (схема — Додаток C, координати — Додаток B):
 1. `gates`: активні ворота → `{code: {name, state, mode, error, passes_today, admitted_today, tailgate_today,
    last_plate, last_plate_at, x, y}}`; `last_plate`/`last_plate_at` — лише якщо `ctx.user` у `GRP_SEC` і не
    `ctx.kiosk` (інакше ключі зі значенням `null`); читання полів з `groups` — тільки за цієї умови.
@@ -1961,7 +1961,7 @@ CREATE OR REPLACE VIEW td_yard_dock_report AS (
    "<номер або —> · брутто <вага> кг · <документ>"], ["Сьогодні зважувань", str(today)], ["Зараз", "<вага> кг ·
    стабільно|динамічно|немає даних"]]`. Числа — цілі з пробілом-розділювачем тисяч (`21 380`). Картка макета
    `infra.py:368` після міграції: «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413», «Сьогодні зважувань» — за фактом.
-7. `_f3d_viewer_delta(patch, ctx)`: якщо `ctx["changes"]` містить `td.yard.visit`/`td.yard.gate`/`td.yard.scale` →
+7. `_td_viewer_delta(patch, ctx)`: якщо `ctx["changes"]` містить `td.yard.visit`/`td.yard.gate`/`td.yard.scale` →
    `patch["yard"]` = повний розділ (власний розділ провайдера); спільний розділ `infra` лише доповнюється через
    спільний хелпер viewer `deep_merge` (viewer M-01, X-23; рекурсивне злиття словників, списки — заміна):
    `deep_merge(patch.setdefault("infra", {}), {"cards": {code: {"rows": ...}} для трьох карток})` (без статичних
@@ -1979,8 +1979,8 @@ CREATE OR REPLACE VIEW td_yard_dock_report AS (
 
 ### R-21 Сповіщення (шина viewer і `f3d_yard`)
 
-1. Рейс (`_f3d_yard_notify`): після `create`, `_set_state`, зміни `plate`/`batch_id`/`priority`, підтвердження/
-   скасування/перенесення бронювання, застосування зважування → `ev = self._f3d_yard_viewer_event()`; якщо `ev` —
+1. Рейс (`_td_yard_notify`): після `create`, `_set_state`, зміни `plate`/`batch_id`/`priority`, підтвердження/
+   скасування/перенесення бронювання, застосування зважування → `ev = self._td_yard_viewer_event()`; якщо `ev` —
    `ev._notify('td.yard.visit', [name, scene_code, dock_code], 'doc')` (порожні коди відкидає viewer M-03).
 2. Ворота: зміна `state`, `passes_today`, `admitted_today`, `tailgate_today`, `last_plate`, `last_error` →
    `_notify('td.yard.gate', [td_code], 'state')`.
@@ -2126,9 +2126,9 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-08 | FR-03, R-03 | Then 14:00–15:00 → `warning` містить «Між слотами 0 хв (буфер 15 хв)»; 14:15–15:15 → `warning == False` | UT |
 | AC-09 | FR-03, R-03 | Given календар «Зміна 1» (07:00–11:30, 12:00–15:30, Пн–Пт); Then 15:00–16:00 → `warning` «Слот поза зміною «Зміна 1 (07:00–15:30)» (07:00–15:30).»; `enforce_calendar=True` → `ValidationError` тим самим текстом; субота → «День без зміни»; ворота східної сторони для `incoming` → `ValidationError` «на стороні»; ворота поза `picking_type_id.dock_ids` → `ValidationError` «не належать типу операцій» | UT |
 | AC-10 | FR-04, R-04 | Given ворота `DOCK-T1` (`td_accepts=[Плитні матеріали]`) і пакет із товаром категорії «Крайка»; Then `booking.warning` містить «Ворота DOCK-T1 приймають: Плитні матеріали. У рейсі є: Крайка.»; товар «Плитні матеріали / ХДФ» → без цього рядка; `action_confirm` не блокується | UT |
-| AC-11 | FR-05, R-05 | Given рейси V1…V4 прикладу R-05 (зараз 12:50); Then `_f3d_yard_queue('west')` = `[V4, V2, V1, V3]`; `_f3d_yard_queue('west', DOCK-W2)` = `[V4, V2, V1]` | UT |
+| AC-11 | FR-05, R-05 | Given рейси V1…V4 прикладу R-05 (зараз 12:50); Then `_td_yard_queue('west')` = `[V4, V2, V1, V3]`; `_td_yard_queue('west', DOCK-W2)` = `[V4, V2, V1]` | UT |
 | AC-12 | FR-05, R-05 | Then `action_call_to_dock` для V2 → `at_dock` на своїх воротах; для V1 (без броні) → перші вільні ворота без попередження R-04, нове бронювання `source='walk_in'`, `confirmed`, `[now, now+60 хв]`; усі ворота сторони зайняті → `UserError` «Немає вільних воріт»; передані ворота зайняті рейсом у `handling` → `UserError` «зайняті рейсом»; з `arrived` → `UserError` | UT |
-| AC-13 | FR-05, R-05 | Then `_f3d_yard_call_next(DOCK-W2)` о 12:50 повертає/викликає V2 (V4 пропущено); `auto_call_next=True` і `action_leave` рейсу з `DOCK-W2` → наступний за чергою `at_dock`; `auto_call_next=False` → черга без змін | UT |
+| AC-13 | FR-05, R-05 | Then `_td_yard_call_next(DOCK-W2)` о 12:50 повертає/викликає V2 (V4 пропущено); `auto_call_next=True` і `action_leave` рейсу з `DOCK-W2` → наступний за чергою `at_dock`; `auto_call_next=False` → черга без змін | UT |
 | AC-14 | FR-14, M-07 | Given пакет приймання з документом партнера-контакту компанії «Плитсервіс (демо)»; When `action_f3d_create_visit`; Then рейс `incoming`, `partner_id` = компанія (commercial), бронювання `requested` з `dock_id/scheduled_date/end_date` пакета, повертається дія форми рейсу; повторний виклик відкриває той самий рейс; пакет `internal` → `UserError`; `search_read('stock.picking.batch', fields=['td_visit_id','td_visit_state','td_plate'])` повертає значення | UT |
 | AC-15 | FR-14, M-08, R-12 | Given документ із рухами 120 і 80 аркушів товарів з `weight=56`; Then `td_expected_weight_kg = 11200.0`; після проведення з `quantity` 72 і 48 → `6720.0`; `td_visit_id` = активний рейс пакета | UT |
 | AC-16 | FR-14, M-09, M-10 | Then `res.partner.td_visit_count` рахує рейси, де партнер — постачальник, перевізник або водій (3 різні рейси → 3); onchange `driver_id` заповнює `driver_phone`, `driver_doc`, `carrier_id`, `plate` з картки водія; користувач лише з `group_td_user` → `read(['td_driver_doc'])` дає `AccessError` | UT |
@@ -2138,7 +2138,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-20 | R-09 | Given рейс `at_dock` з документом; When `stock.move.line.write({'quantity': 12})`; Then рейс `handling`, `handling_start_at` заповнено; проведення всіх документів пакета → `handling_end_at`; з контекстом `f3d_yard_no_auto` — без змін | UT |
 | AC-21 | FR-22, §10.1 | Then `user_reader.action_admit()` → `AccessError`; комірник: `action_start_handling` — так, `action_admit` — `AccessError`; охоронець: `action_admit`, `action_leave`, майстер відхилення — так, `action_cancel` — `AccessError`; диспетчер — `action_cancel` так | UT |
 | AC-22 | FR-01, M-17 | Then `unlink` рейсу в `draft`/`planned`/`cancelled` — так, в `arrived` — `UserError`; майстер M-17 (`no_booking`, «немає документів») → `rejected`, `reject_reason="Немає бронювання: немає документів"`, бронювання `cancelled`; другий активний рейс на той самий пакет → `ValidationError`; `visit_type='outgoing'` з пакетом приймання → `ValidationError` | UT |
-| AC-23 | FR-07, R-07 (X-48, X-73) | Given `freeze_time('2026-10-14 05:15:10')`; When `_f3d_handle_push('lpr', event)` з тілом iot_sim §8.13.2 (дослівно, `lpr_payload()`: `capture_timestamp='1791954905507'`); Then одна подія: `camera_code='CAM-05'`, `gate_id=GATE-W`, `direction='in'`, `car_state='new'`, `plate_raw='AA4512KT'`, `plate_unicode='АА4512КТ'`, `plate_norm='AA4512KT'`, `confidence=0.912`, `plate_list='f3d_bookings'`, `plate_list_mode='allow'`, `plate_list_description='BATCH/OUT/00004 DOCK-E2 Меблі Дім (демо)'`, `dedup_key='CAM-05\|12891\|2117397'`, `ts = 2026-10-14 05:15:05.507` (= `capture_timestamp`, той самий час, що показання `yard/lpr/CAM-05/plate` за telemetry R-22). When `capture_timestamp='1792391105507'` (19.10.2026, `ts_future`) → `ts = 2026-10-14 05:15:10` (час прийому), `note` містить «Час камери відкинуто»; без `capture_timestamp` (є `datetime`) → `ts` = час прийому, `datetime` ігнорується; `capture_timestamp` 31 добу тому (`ts_too_old` при `keep_days=30`) → час прийому | UT |
+| AC-23 | FR-07, R-07 (X-48, X-73) | Given `freeze_time('2026-10-14 05:15:10')`; When `_td_handle_push('lpr', event)` з тілом iot_sim §8.13.2 (дослівно, `lpr_payload()`: `capture_timestamp='1791954905507'`); Then одна подія: `camera_code='CAM-05'`, `gate_id=GATE-W`, `direction='in'`, `car_state='new'`, `plate_raw='AA4512KT'`, `plate_unicode='АА4512КТ'`, `plate_norm='AA4512KT'`, `confidence=0.912`, `plate_list='f3d_bookings'`, `plate_list_mode='allow'`, `plate_list_description='BATCH/OUT/00004 DOCK-E2 Меблі Дім (демо)'`, `dedup_key='CAM-05\|12891\|2117397'`, `ts = 2026-10-14 05:15:05.507` (= `capture_timestamp`, той самий час, що показання `yard/lpr/CAM-05/plate` за telemetry R-22). When `capture_timestamp='1792391105507'` (19.10.2026, `ts_future`) → `ts = 2026-10-14 05:15:10` (час прийому), `note` містить «Час камери відкинуто»; без `capture_timestamp` (є `datetime`) → `ts` = час прийому, `datetime` ігнорується; `capture_timestamp` 31 добу тому (`ts_too_old` при `keep_days=30`) → час прийому | UT |
 | AC-24 | FR-07, R-07 | Then повтор того самого тіла → подій 1; `carState=update` того ж `carID` з вищою довірою → рядків 1, `confidence` оновлено; тіло без `carID` → `dedup_key = 'evt\|' + event_id` | UT |
 | AC-25 | FR-07, R-07 | Given `unmatched` подія з `kpp_alert`; When `carState=lost` того ж `carID`; Then `lost_at` заповнено, `match_state='expired'`, `kpp_alert=False`, нового рядка немає; `lost` без попередньої → рядок `ignored`; `_cron_queue` через 31 хв гасить інший `unmatched` → `expired` | UT |
 | AC-26 | FR-07, R-07 | Then `imageArray=["<base64 JPEG 2 КБ>"]` → `ir.attachment` (`mimetype='image/jpeg'`, `res_model='td.yard.lpr.event'`); 1,5 МБ → без вкладення, `note` містить «Знімок відхилено»; base64 тексту → відхилено; `lpr_store_images=False` → без вкладення; `imagesURI=["https://10.90.2.5/a.jpg"]` → `image_url`; `imageFile` ігнорується | UT |
@@ -2158,12 +2158,12 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-40 | FR-10, R-17 | Given `passes_day_start=7`, `admitted_today=0`; When «Пропустити» (+1), лічильник 8, потім 9; Then `passes_today=2`, `tailgate_today=1`, чаттер «Проїзд без дозволу»; `antipassback=False` → `tailgate_today=0`; петля 1→0 при `pending_visit_id` у стані `weighed` на GATE-E → рейс `left`; на GATE-W → `pending_visit_id` очищено, стан рейсу незмінний | UT |
 | AC-41 | FR-11, R-10 | Then ручне зважування 300 кг і 61 000 кг → `ValidationError` «поза межами»; друге `assigned` зважування `in` для рейсу → `ValidationError`; `ts` через 5 хв у майбутньому → `ValidationError` | UT |
 | AC-42 | FR-11, R-10, R-16 | Then показання ваг з `ts` 20 с тому → захоплення немає; `action_capture` при такому показанні → `UserError` «введіть вагу вручну»; сигнал ваги `stale` + `_cron_queue` → `capture_state='offline'` | UT |
-| AC-43 | FR-13, R-11 | Given один рейс `queued` (`in_out`, без `in`); When `_f3d_ingest` з кадрами прикладу R-11 (через `td.signal._f3d_ingest`, `src='module'`); Then одне зважування `auto`, `weight_kg=25200`, `kind='in'`, `role='gross'`, рейс `weighed_in_at`; подальші `25 200 S` — без нових; `300 S` → `idle`; наступна фура 14 000 → нове захоплення | UT |
+| AC-43 | FR-13, R-11 | Given один рейс `queued` (`in_out`, без `in`); When `_td_ingest` з кадрами прикладу R-11 (через `td.signal._td_ingest`, `src='module'`); Then одне зважування `auto`, `weight_kg=25200`, `kind='in'`, `role='gross'`, рейс `weighed_in_at`; подальші `25 200 S` — без нових; `300 S` → `idle`; наступна фура 14 000 → нове захоплення | UT |
 | AC-44 | FR-13, R-11 | Then лише кадри `D` → немає зважування; два `S` з різницею 60 кг → немає (кандидат замінено); `q='bad'` (перевантаження) → ігнор, `last_weight_kg` незмінний | UT |
 | AC-45 | FR-13, R-11 | Then два кандидати `queued` → зважування `unassigned`, `kind='check'`; `action_assign(visit)` → `assigned`, `kind='in'`, `weighed_in_at`; рейс `handling` з `handling_end_at` і `in` → захоплення `out`, рейс `weighed` | UT |
 | AC-46 | FR-15 | Then після установки: `GATE-W` (`direction='in'`, `side='west'`, `camera_code='CAM-05'`, `pos=(−20,−30)`, `mode='manual'`), `GATE-E` (`out`, `east`, `CAM-06`, `scale_id=TRUCK-SCALE`), `TRUCK-SCALE` (`max_kg=60000`, `min_kg=400`, `division_kg=20`, `pos=(172,−14)`); друга активна брама з `CAM-05` → `ValidationError` | UT |
 | AC-47 | FR-15, R-16 | Then DI0 свіжий 1 → `open`; `invert_di=True` → `closed`; сигнал `stale` → `unknown`; `last_error` + свіжий DI → `error`; `read_enabled=False` → `unknown` | UT |
-| AC-48 | FR-16, M-13, R-24 к. 2 | Then 18 `td.signal` з кодами й адресами Додатка A, `module='yard'`; 2 джерела з `params` §5.3 (`module='yard'`), валідація telemetry за схемою §8.2 без помилок (зокрема № 18 `field: "stable"`, X-45); сигнали LPR на `HTTP-PUSH`; 16 полів-сигналів воріт/ваг заповнено; повторний крок → `signals_created=0`, `signals_updated=18`, `last_value` незмінний; `_f3d_ingest` пакета без кодів `yard/gates\|scale` додає 0 SQL-запитів (`assertQueryCount` різниці з викликом `super`) | UT |
+| AC-48 | FR-16, M-13, R-24 к. 2 | Then 18 `td.signal` з кодами й адресами Додатка A, `module='yard'`; 2 джерела з `params` §5.3 (`module='yard'`), валідація telemetry за схемою §8.2 без помилок (зокрема № 18 `field: "stable"`, X-45); сигнали LPR на `HTTP-PUSH`; 16 полів-сигналів воріт/ваг заповнено; повторний крок → `signals_created=0`, `signals_updated=18`, `last_value` незмінний; `_td_ingest` пакета без кодів `yard/gates\|scale` додає 0 SQL-запитів (`assertQueryCount` різниці з викликом `super`) | UT |
 | AC-49 | FR-17, R-13 | `parse_line` і перетворення показань — усі рядки таблиці §8.5; `ES`/`ET`/`EL` → `error`; `g`/`t`/`lb` → кг | CT |
 | AC-50 | FR-17, R-14 | Given `FakeSicsServer` (кадри `S S 21380 kg`); Then `poll` у режимі `poll` → 2 показання (`21380.0`, `1.0`, `good`); режим `stream` → `SIR` надіслано, `poll` віддає останній кадр, наступний `poll` без нових кадрів → `[]`; `@` → `health().stats.device='FAKE-0001'`; сервер без `@` (`ES`) — підключення успішне | CT |
 | AC-51 | FR-17, R-14 | Then сервер не відповідає (`reply_delay_s=10`, `timeout_s=1`) → `PollError`; `drop_after=3` у `stream` → `PollError`, повторний `connect` відновлює кадри; 3 помилки поспіль → `health().state='error'`; `allowlist` відмовляє → `AllowlistDenied` до спроби з'єднання | CT |
@@ -2177,23 +2177,23 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-59 | FR-20 | Then дії журналів відкриваються охоронцем; `user_reader` читає зважування, але `td.yard.lpr.event` → `AccessError`; `action_td_yard_command` показує лише команди з `td_yard_gate_id` | UT |
 | AC-60 | FR-21 | Given два рейси одного перевізника з `wait_min` 20 і 40 і рейс без `at_dock_at`; Then `read_group(['carrier_id'], ['wait_min:avg'])` → 30.0 | UT |
 | AC-61 | FR-21, R-19 | Given рейс прикладу R-19 на `DOCK-T1`; Then рядок звіту: `busy_min=80.0`, `idle_min=400.0`, `occupancy_pct=16.7`, `visit_count=1`; параметр `dock_shift_min=600` → `idle_min=520.0` без переустановки | UT |
-| AC-62 | FR-23, R-20 | When `_f3d_viewer_collect(payload={}, ctx)`; Then `payload['yard']` має `gates`, `scale`, `trucks`, `queue`, `kpp`, `stats`, `updated`; рейс `handling` на західних воротах `td_x=0, td_y=5` → `x=-7.3, y=5.0, rz=0`; на східних `(150, 15)` → `(157.3, 15.0, 180)`; `arrived` на GATE-W → `(-20.0, -22.0, 90)`; другий `queued` заходу → `(-26.0, 25.0, 90)`; `weighed` 30 с тому → `(172.0, -14.0, 90)`; `ctx.kiosk` → `plate=None`; користувач без `GRP_SEC` → `gates[*].last_plate=None` | UT |
+| AC-62 | FR-23, R-20 | When `_td_viewer_collect(payload={}, ctx)`; Then `payload['yard']` має `gates`, `scale`, `trucks`, `queue`, `kpp`, `stats`, `updated`; рейс `handling` на західних воротах `td_x=0, td_y=5` → `x=-7.3, y=5.0, rz=0`; на східних `(150, 15)` → `(157.3, 15.0, 180)`; `arrived` на GATE-W → `(-20.0, -22.0, 90)`; другий `queued` заходу → `(-26.0, 25.0, 90)`; `weighed` 30 с тому → `(172.0, -14.0, 90)`; `ctx.kiosk` → `plate=None`; користувач без `GRP_SEC` → `gates[*].last_plate=None` | UT |
 | AC-63 | FR-23, A-16 | Given `payload['infra']['cards']` з `GATE-W`, `TRUCK-SCALE`; Then рядки карток R-20 п. 6 («Стан», «Сьогодні проїздів», «Режим»; «Остання машина» = «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413»); payload без `infra` → ключ `infra` не створено | UT |
-| AC-64 | FR-23, R-21 | Given патч `_f3d_yard_viewer_event()` → `Mock`; When `action_admit`; Then `_notify('td.yard.visit', [name, scene_code, dock_code], 'doc')`; зміна стану воріт → `_notify('td.yard.gate', ['GATE-W'], 'state')`; 10 переходів у транзакції → один `bus.bus._sendone` на модель (`precommit`) | UT |
-| AC-65 | FR-23 | Then модель `td.viewer.provider.yard` є в реєстрі без `td_viewer3d`, `_f3d_sequence=160`, `_f3d_sections=('yard',)`; `_f3d_viewer_delta(patch, {'changes': {}})` → `patch` порожній; з `{'changes': {'td.yard.visit': {...}}}` → `patch['yard']` | UT |
+| AC-64 | FR-23, R-21 | Given патч `_td_yard_viewer_event()` → `Mock`; When `action_admit`; Then `_notify('td.yard.visit', [name, scene_code, dock_code], 'doc')`; зміна стану воріт → `_notify('td.yard.gate', ['GATE-W'], 'state')`; 10 переходів у транзакції → один `bus.bus._sendone` на модель (`precommit`) | UT |
+| AC-65 | FR-23 | Then модель `td.viewer.provider.yard` є в реєстрі без `td_viewer3d`, `_td_sequence=160`, `_td_sections=('yard',)`; `_td_viewer_delta(patch, {'changes': {}})` → `patch` порожній; з `{'changes': {'td.yard.visit': {...}}}` → `patch['yard']` | UT |
 | AC-66 | FR-22 | Then `menu_td_yard` (батько `td_factory3d.menu_td_root`, `sequence=60`) і 16 пунктів його дерева із групами й sequence §3; `menu_td_yard_config_settings` — батько `td_factory3d.menu_td_config`, `sequence=60` (X-32); ланцюжок `implied_ids` §4.2; `group_td_admin` ⊃ `group_td_yard_manager` | UT |
 | AC-67 | FR-22, §4.1 | Then для кожного рядка CSV `check_access` (read/write/create/unlink) користувачів `reader`, `stock`, `guard`, `dispatcher`, `manager` відповідає матриці (параметризований тест) | UT |
 | AC-68 | FR-24, §4.4 | Then `user_reader`: `visit.read(['driver_phone'])`, `gate.read(['last_plate'])` → `AccessError`; `search_read(fields=['name','plate'])` — так; охоронець читає `driver_doc` | UT |
 | AC-69 | FR-22, §4.3 | Given рейс компанії B; Then користувач лише компанії A не бачить його (`search_count = 0`) | UT |
 | AC-70 | FR-24, R-22 | Given рейс `left` 96 діб тому з телефоном і документом; Then `_cron_gc` → `driver_phone=False`, `driver_doc=False`, `pii_cleared=True`, `plate` збережено; рейс 86 діб — без змін | UT |
 | AC-71 | FR-24, R-22 | Then подія LPR 31 добу тому зі знімком → видалена разом із `ir.attachment`; 29 діб — лишається; непризначене зважування 8 діб тому → видалене | UT |
-| AC-72 | FR-25 | Then хук крок 0: `environment='test'` → `read_enabled='True'`; `'prod'` (свіжа установка) → `'False'`; при `read_enabled=False` подія LPR → `ignored`, `_f3d_ingest` воріт не змінює `passes_today`, ворота `unknown` | UT |
+| AC-72 | FR-25 | Then хук крок 0: `environment='test'` → `read_enabled='True'`; `'prod'` (свіжа установка) → `'False'`; при `read_enabled=False` подія LPR → `ignored`, `_td_ingest` воріт не змінює `passes_today`, ворота `unknown` | UT |
 | AC-73 | FR-25 | When виконати `data/neutralize.sql` (`cr.execute`); Then `write_enabled='False'`, `read_enabled='False'`, крони модуля `active=False`, ворота `mode='manual'`, джерела `module='yard'` з `read_enabled=False` | UT |
 | AC-74 | FR-25, §4.4 | Then жодного параметра `td.yard.*` з `token`/`secret`/`password` у ключі; обробка події зі знімком і рейсом із телефоном водія при рівні логів INFO не пише в журнал телефон, документ і base64 (`assertLogs` + пошук підрядків) | UT |
 | AC-75 | FR-26, R-24 | Given копія демо-бази після base і telemetry; When установка; Then `migration_state='done'`, звіт §5.4 (`visits: 6`, `bookings: 6`, `conflicts: 0`, `weighings: 1`, `products_weighted: 7`, `carriers_linked: 2`, `signals_created: 18`, `sources_created: 2`, `linked_equipment: 3`); 6 рейсів таблиці §5.4 (тип, партнер, перевізник, ворота, слот, номер); `YV/2026/00001.wait_min=20.0` | TC |
 | AC-76 | FR-26, R-24 | Then синтетично (пакети `TRUCK-T-1` incoming, `TRUCK-T-2` outgoing з доками, перевізник «Власний транспорт»): `run_all` → 2 рейси `handling`, 2 бронювання `migration`; повторний `run_all` → `visits: 0`, `bookings: 0`; база без пакетів → `migration_state='skipped'`; копія демо — повтор кнопкою меню нічого не дублює (TC) | UT+TC |
 | AC-77 | FR-26, A-11 | Then крок 3: товари `DSP16-SON` (вага 0) → 56, `MDF18-RAW` → 70, товар з вагою 60 — незмінний; `seed_product_weights=False` → 0 змін | UT |
-| AC-78 | FR-27 | Then `test_contracts`: `td.signal._f3d_ingest(readings, src, collector)`, `td.command` поля (`signal_id`, `value`, `state`, `origin`, `expires_at`, `requested_by`, `done_at`, `error`), `td.push.handler._f3d_push_routes`, `stock.picking.batch` (`dock_id`, `end_date`, `td_code`), `td.scene.mixin.search_f3d`, `td.zone.zone_at` існують; усі класи тестів мають теги `post_install`, `-at_install`, `f3d`, `f3d_yard` | UT |
+| AC-78 | FR-27 | Then `test_contracts`: `td.signal._td_ingest(readings, src, collector)`, `td.command` поля (`signal_id`, `value`, `state`, `origin`, `expires_at`, `requested_by`, `done_at`, `error`), `td.push.handler._td_push_routes`, `stock.picking.batch` (`dock_id`, `end_date`, `td_code`), `td.scene.mixin.search_f3d`, `td.zone.zone_at` існують; усі класи тестів мають теги `post_install`, `-at_install`, `f3d`, `f3d_yard` | UT |
 | AC-79 | FR-28 | Given сигнали без значень (`unknown`), `write_enabled=False`; When повний ручний цикл: бронювання → «Прибула» → «Пропустити» → «На ворота» → ручне зважування `in`/`out` → «Виїхала»; Then кожна дія успішна, `admitted_today=1`, чаттер «відкрийте з пульта CAME», нетто пораховано; `kpp_data.can.command=False` з поясненням; ворота `unknown` | UT |
 | AC-80 | §6, R-23, R-19 | Then `_cron_day_reset` → `passes_day_start = counter_value`, лічильники дня 0; `_cron_queue`: рейс `planned` зі слотом 3 год тому → `is_no_show=True`; ворота перераховують стан | UT |
 | AC-81 | FR-07, FR-08, FR-09, FR-13 | ТК-01: `truck_arrival` повний цикл на стенді (§13.2) | TC |
@@ -2202,7 +2202,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-84 | FR-09, FR-10 | ТК-04: команда `open` → coil 16 = 1 і через 1,5 с — 0 (`pulse_ms`, X-46), DI0 = 1 ≤ 6 с, ворота `open`; `F3D_WRITE_ENABLED=0` → команда `expired`, ворота `error` | TC |
 | AC-85 | FR-11, FR-13, FR-28 | ТК-05/ТК-06: автозважування з емулятора (брутто 25 200 ± 20) і перехід на ручне при зупиненому SICS | TC |
 | AC-86 | FR-23 | ТК-08: `/f3d/viewer/data` містить `yard` з 6 фурами й `meta.sections.yard='live'`; картки `GATE-W`, `TRUCK-SCALE` з живими рядками | TC |
-| AC-87 | FR-23, R-20 п. 7 (X-23) | Given `patch = {"infra": {"totals": {"genset_kw": 348}, "cards": {"GENSET": {"rows": [["Стан", "резерв"]]}, "GATE-W": {"title": "КПП приймання"}}}}` (дельта інших провайдерів); When `_f3d_viewer_delta(patch, {"changes": {"td.yard.gate": {...}}})`; Then `patch["infra"]["totals"] == {"genset_kw": 348}`, картка `GENSET` незмінна, `GATE-W` має і `title`, і `rows` R-20 п. 6, `GATE-E` і `TRUCK-SCALE` мають `rows`; об'єкт `patch["infra"]` той самий (`is`, злиття, не присвоєння); `patch["yard"]` — повний розділ | UT |
+| AC-87 | FR-23, R-20 п. 7 (X-23) | Given `patch = {"infra": {"totals": {"genset_kw": 348}, "cards": {"GENSET": {"rows": [["Стан", "резерв"]]}, "GATE-W": {"title": "КПП приймання"}}}}` (дельта інших провайдерів); When `_td_viewer_delta(patch, {"changes": {"td.yard.gate": {...}}})`; Then `patch["infra"]["totals"] == {"genset_kw": 348}`, картка `GENSET` незмінна, `GATE-W` має і `title`, і `rows` R-20 п. 6, `GATE-E` і `TRUCK-SCALE` мають `rows`; об'єкт `patch["infra"]` той самий (`is`, злиття, не присвоєння); `patch["yard"]` — повний розділ | UT |
 | AC-88 | FR-09, FR-15, R-15 (X-46, X-47) | Then сигнали хука: `cmd_open`/`cmd_close` — `address.write = {"fc": 5, "addr": 16/18 (GATE-W), 17/19 (GATE-E), "pulse_ms": 1500}`; `cmd_hold` — без `pulse_ms`, `GATE-W` `addr 20`, `GATE-E` `addr 21`; охоронець з `enable_writes()`: `gate_e.action_hold()` → `td.command.signal_id` = `yard/gates/GATE-E/cmd_hold`, `value=1.0`; `gate_w.action_hold()` → `yard/gates/GATE-W/cmd_hold` (різні сигнали й адреси) | UT |
 
 ## 13. План тестування (для Opus)
@@ -2242,9 +2242,9 @@ draft ──бронювання підтверджено / action_plan──►
   `make_picking(ptype, lines, partner)` (підтверджений, `assigned`); `make_batch(pickings, dock=None, start=None,
   end=None, code=None)`; `make_visit(**vals)`; `make_booking(visit, dock, start, end, confirm=True)`;
   `lpr_payload(**over) -> dict` (тіло iot_sim §8.13.2 дослівно + перевизначення); `push_lpr(payload, ts=None,
-  event_id=None)` → `env['td.push.handler.yard']._f3d_handle_push('lpr', {...})`; `ingest(rows)` →
-  `env['td.signal']._f3d_ingest([{'code', 'ts', 'value', 'q'}], src='module')`; `viewer_mock()` — контекстний
-  менеджер `patch.object(type(env['td.yard.visit']), '_f3d_yard_viewer_event', return_value=Mock())` і так само
+  event_id=None)` → `env['td.push.handler.yard']._td_handle_push('lpr', {...})`; `ingest(rows)` →
+  `env['td.signal']._td_ingest([{'code', 'ts', 'value', 'q'}], src='module')`; `viewer_mock()` — контекстний
+  менеджер `patch.object(type(env['td.yard.visit']), '_td_yard_viewer_event', return_value=Mock())` і так само
   для воріт/ваг; `jpeg_b64(size_kb)` — валідний JPEG заданого розміру.
 
 | Файл / клас | Тести | AC | Фікстури | Що саме assert |
@@ -2333,10 +2333,10 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 | ID | Обсяг | Вимір | Поріг |
 |---|---|---|---|
 | ТП-01 | 50 рейсів сьогодні, 20 подій LPR, 2 ворота | `kpp_data()` (середнє 5 викликів, тепла база) | ≤ 50 мс (CI-допуск ×4 — ≤ 200 мс) |
-| ТП-02 | 40 фур на території | `_f3d_viewer_collect` | ≤ 30 мс; `json.dumps(payload['yard'])` ≤ 20 КБ |
-| ТП-03 | пакет `_f3d_ingest` 1 000 показань без кодів двору | додаткові SQL-запити гачка M-13 | 0 (`assertQueryCount`) |
+| ТП-02 | 40 фур на території | `_td_viewer_collect` | ≤ 30 мс; `json.dumps(payload['yard'])` ≤ 20 КБ |
+| ТП-03 | пакет `_td_ingest` 1 000 показань без кодів двору | додаткові SQL-запити гачка M-13 | 0 (`assertQueryCount`) |
 | ТП-04 | пакет 90 показань двору (5 с × 18 сигналів) | додаткові запити гачка | ≤ 15 |
-| ТП-05 | 1 подія LPR без знімка | `_f3d_handle_push` | ≤ 100 мс |
+| ТП-05 | 1 подія LPR без знімка | `_td_handle_push` | ≤ 100 мс |
 | ТП-06 | 60 000 подій LPR старших 30 діб зі знімками 10 % | `_cron_gc` | ≤ 60 с, батчі по 1 000, без помилок пам'яті |
 | ТП-07 | 15 000 рейсів (рік) | `search_read` V-05 pivot і SQL-вид M-15 за місяць | ≤ 1 с |
 
@@ -2394,7 +2394,7 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 |---|---|---|
 | A-15 | Провайдер `td.viewer.provider.yard` — `AbstractModel` без `_inherit` (атрибути й методи контракту viewer M-01 реалізовані самостійно) | viewer R-01 п. 3 знаходить провайдери за префіксом імені; так `td_viewer3d` лишається необов'язковим без міст-модуля (у telemetry — A-20 міст) |
 | A-16 | Провайдер оновлює рядки карток `infra.cards` `GATE-W`, `GATE-E`, `TRUCK-SCALE` (формат макета `infra.py:368–371`) | переглядач фази 1 уже показує ці картки; живі значення без зміни клієнта; статичні поля картки не чіпаються |
-| A-17 | Гачок показань — перевизначення `td.signal._f3d_ingest` (CT-10), не `write()` (виправляє ARCH A-07) | telemetry R-17 п. 7 оновлює `last_value` сирим SQL; `write()` не викликається |
+| A-17 | Гачок показань — перевизначення `td.signal._td_ingest` (CT-10), не `write()` (виправляє ARCH A-07) | telemetry R-17 п. 7 оновлює `last_value` сирим SQL; `write()` не викликається |
 | A-18 | Події LPR — через джерело telemetry `HTTP-PUSH` (`source_http_push`, маршрут `lpr`); свого `http_push`-джерела двір не створює | джерело вже є в data telemetry (§5.2/API-01); два джерела на один маршрут конфліктували б у колекторі |
 | A-19 | Джерела й сигнали двору створює хук (upsert за `code`) без `ir.model.data`; сигнали — з `data/td_yard_signals.csv` | сигнал з тим самим кодом може вже існувати (CT-11/рівень 0); деінсталяція двору не видаляє записи telemetry та їхні показання (ARCH §2.8) |
 | A-20 | `td.command` створюється `sudo()` після перевірок R-15; `requested_by` — фактичний користувач або `base.user_root` для авто | охорона не в `group_td_manager` (telemetry ACL); журнал команд лишається правдивим |

@@ -38,7 +38,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ### M-41 `td.viewer.provider.energy_layer` — провайдер шару «Енергетика в 3D» (`td_energy_viewer3d`; FR-62, R-57)
 
-`_name = "td.viewer.provider.energy_layer"` (`AbstractModel`, **без** `_inherit` моделей переглядача — duck typing, `docs/ARCHITECTURE.md` §6.7, `td_viewer3d` M-01), `_f3d_sequence = 101` (після `td.viewer.provider.energy` 100), `_f3d_sections = ("energy",)`, `_f3d_group = "td_factory3d.group_td_user"` (як у `td.viewer.provider.energy`; кіоск-користувач теж бачить розфарбовування; `card` — лише для `group_td_energy_user` і не в кіоску). Методи: `_f3d_viewer_collect(payload, ctx)` → `deep_merge(payload.setdefault("energy", {}), {"layer": tools.layer.build(env, ctx)})`; `_f3d_viewer_delta(patch, ctx)` → якщо `ctx["changes"]` містить `td.energy` або сигнали з префіксами W1 `ENERGY_PREFIXES` — `deep_merge(patch.setdefault("energy", {}), {"layer": layer})`, інакше нічого; `_f3d_viewer_bus_models()` → `["td.signal", "td.energy"]`. `from odoo.addons.td_viewer3d.tools.payload import deep_merge` — імпорт усередині методів (як `td_energy` R-18).
+`_name = "td.viewer.provider.energy_layer"` (`AbstractModel`, **без** `_inherit` моделей переглядача — duck typing, `docs/ARCHITECTURE.md` §6.7, `td_viewer3d` M-01), `_td_sequence = 101` (після `td.viewer.provider.energy` 100), `_td_sections = ("energy",)`, `_td_group = "td_factory3d.group_td_user"` (як у `td.viewer.provider.energy`; кіоск-користувач теж бачить розфарбовування; `card` — лише для `group_td_energy_user` і не в кіоску). Методи: `_td_viewer_collect(payload, ctx)` → `deep_merge(payload.setdefault("energy", {}), {"layer": tools.layer.build(env, ctx)})`; `_td_viewer_delta(patch, ctx)` → якщо `ctx["changes"]` містить `td.energy` або сигнали з префіксами W1 `ENERGY_PREFIXES` — `deep_merge(patch.setdefault("energy", {}), {"layer": layer})`, інакше нічого; `_td_viewer_bus_models()` → `["td.signal", "td.energy"]`. `from odoo.addons.td_viewer3d.tools.payload import deep_merge` — імпорт усередині методів (як `td_energy` R-18).
 
 ### M-42 `td.energy.node` і `res.config.settings` (міст 3D) — розширення (V-46, V-47, R-58)
 
@@ -59,7 +59,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ## 4. Права
 
-`ir.model.access.csv` відсутній: моделей із таблицями немає. Провайдер `td.viewer.provider.energy_layer` працює з правами користувача переглядача (`_f3d_group = td_factory3d.group_td_user`); читання вузлів/подій — `sudo()` лише на читання з відсіканням полів (R-57); `card` — лише для `group_td_energy_user` і не в кіоску. Налаштування `td.energy_viewer3d.*` змінює адміністратор у формі налаштувань (V-46).
+`ir.model.access.csv` відсутній: моделей із таблицями немає. Провайдер `td.viewer.provider.energy_layer` працює з правами користувача переглядача (`_td_group = td_factory3d.group_td_user`); читання вузлів/подій — `sudo()` лише на читання з відсіканням полів (R-57); `card` — лише для `group_td_energy_user` і не в кіоску. Налаштування `td.energy_viewer3d.*` змінює адміністратор у формі налаштувань (V-46).
 
 ## 5. Дані
 
@@ -67,7 +67,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ## 6. Крони й фонові процеси
 
-Немає. Живі оновлення — канал `f3d_viewer` переглядача (`_f3d_viewer_bus_models()` → `td.signal`, `td.energy`) і `/f3d/viewer/delta` (R-57).
+Немає. Живі оновлення — канал `f3d_viewer` переглядача (`_td_viewer_bus_models()` → `td.signal`, `td.energy`) і `/f3d/viewer/delta` (R-57).
 
 ## 7. HTTP/JSON API
 
@@ -107,7 +107,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
   "summary":{"alarm":1,"warn":2,"gen":1,"off":3}}}
 ```
 
-Правила: `nodes` — вузли `sld_show=True` (W1 R-26; ≈ 21) видів `line`, `transformer`, `cell` (feeder/cable/incomer/coupler/pfc), `generator`, `storage`, `ats`, `section`; `state` = `td.energy.node.sld_state` (`ok|warn|alarm|off|gen`, **та сама логіка й пороги `td.energy.load_warn_pct/_alarm_pct`, що в Пульті**); `load` — частка 0…∞ (`p_now / номінал`, W1 R-26) або `null`; `scene` — код об'єкта сцени: `equipment_id.td_code`, інакше `node.code`; для кабельних ліній `C1`, `C2` — `CABLES` (єдиний об'єкт сцени; стан об'єкта = найгірший серед вузлів з тим самим `scene`); `scene=null`, якщо коду немає серед відомих кодів сцени (множина з `ctx["static"]` — `model_static.json` `td_viewer3d`: `energy.lines|transformers|cells`, `equipment`, `zones`; воркер D бере наявний завантажувач статики `td_viewer3d.tools.payload`; якщо множину отримати неможливо — `scene = equipment.td_code or node.code` без перевірки, A-53) — вузол лишається в списку (картка доступна), але не розфарбовується й не має маркера; `alarms[]` — відкриті `td.energy.event` (`state in ('active','acked')`, `level in ('warn','bad')`, `node_id`), ≤ `marker_limit` (40), сортування `bad` → `warn`, далі за часом; `title` ≤ 80 символів; `time` — Київ `HH:MM`; `card` — `false` у кіоску й без групи; ключі вартості та імена користувачів (`acked_by`, `assigned_user_id`) **не віддаються**; для `ctx["kiosk"]` — `title` без технічних деталей діагностики. Розмір `layer` ≤ 12 КБ, побудова ≤ 150 мс (ТП-11). Дельта (`_f3d_viewer_delta`) — **повна заміна** `layer` (списки замінюються цілком за `deep_merge`).
+Правила: `nodes` — вузли `sld_show=True` (W1 R-26; ≈ 21) видів `line`, `transformer`, `cell` (feeder/cable/incomer/coupler/pfc), `generator`, `storage`, `ats`, `section`; `state` = `td.energy.node.sld_state` (`ok|warn|alarm|off|gen`, **та сама логіка й пороги `td.energy.load_warn_pct/_alarm_pct`, що в Пульті**); `load` — частка 0…∞ (`p_now / номінал`, W1 R-26) або `null`; `scene` — код об'єкта сцени: `equipment_id.td_code`, інакше `node.code`; для кабельних ліній `C1`, `C2` — `CABLES` (єдиний об'єкт сцени; стан об'єкта = найгірший серед вузлів з тим самим `scene`); `scene=null`, якщо коду немає серед відомих кодів сцени (множина з `ctx["static"]` — `model_static.json` `td_viewer3d`: `energy.lines|transformers|cells`, `equipment`, `zones`; воркер D бере наявний завантажувач статики `td_viewer3d.tools.payload`; якщо множину отримати неможливо — `scene = equipment.td_code or node.code` без перевірки, A-53) — вузол лишається в списку (картка доступна), але не розфарбовується й не має маркера; `alarms[]` — відкриті `td.energy.event` (`state in ('active','acked')`, `level in ('warn','bad')`, `node_id`), ≤ `marker_limit` (40), сортування `bad` → `warn`, далі за часом; `title` ≤ 80 символів; `time` — Київ `HH:MM`; `card` — `false` у кіоску й без групи; ключі вартості та імена користувачів (`acked_by`, `assigned_user_id`) **не віддаються**; для `ctx["kiosk"]` — `title` без технічних деталей діагностики. Розмір `layer` ≤ 12 КБ, побудова ≤ 150 мс (ТП-11). Дельта (`_td_viewer_delta`) — **повна заміна** `layer` (списки замінюються цілком за `deep_merge`).
 
 #### 8.4.3 Клієнт моста (UI-23…UI-27)
 
@@ -129,7 +129,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ### R-57 Шар «Енергетика в 3D»: правила payload
 
-Описано в розд. 8.4.2 (структура `energy.layer`, стани, вибір `scene`, маркери, кіоск, розмір). Додатково: `thresholds` беруться з `td.energy.load_warn_pct/_alarm_pct` (W1 §5.1), тому колір вузла в 3D збігається з Пультом (AC-284); провайдер не пише в БД і працює з правами користувача (`_f3d_group`), читання вузлів/подій — `sudo()` лише на читання з відсіканням полів за описом.
+Описано в розд. 8.4.2 (структура `energy.layer`, стани, вибір `scene`, маркери, кіоск, розмір). Додатково: `thresholds` беруться з `td.energy.load_warn_pct/_alarm_pct` (W1 §5.1), тому колір вузла в 3D збігається з Пультом (AC-284); провайдер не пише в БД і працює з правами користувача (`_td_group`), читання вузлів/подій — `sudo()` лише на читання з відсіканням полів за описом.
 
 ### R-58 «Відкрити в 3D» і підсвічування вузла
 
@@ -163,11 +163,11 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-282 | FR-62 | Given демо-БД; When `td.viewer.provider.energy_layer._f3d_viewer_collect`; Then `energy.layer` за схемою 8.4.2 (≈ 21 вузол, `thresholds` 80/100, `alarms`); `meta.schema` лишається `"1.1"`; `_f3d_sequence=101`; користувач без `td_factory3d.group_td_user` — розділ `denied` | UT |
+| AC-282 | FR-62 | Given демо-БД; When `td.viewer.provider.energy_layer._td_viewer_collect`; Then `energy.layer` за схемою 8.4.2 (≈ 21 вузол, `thresholds` 80/100, `alarms`); `meta.schema` лишається `"1.1"`; `_td_sequence=101`; користувач без `td_factory3d.group_td_user` — розділ `denied` | UT |
 | AC-283 | FR-62 | Then `scene` = `equipment.td_code` або `node.code`; `C1`,`C2` → `CABLES`; невідомий код → `scene=null` (вузол у списку, без маркера); стан об'єкта сцени = найгірший серед вузлів з тим самим `scene` | UT |
 | AC-284 | FR-62 | Given приклад 14:20 (W1 R-26); Then `state` збігається з `td.energy.node.sld_state` і Пультом: `C2` alarm, `PFC-2` warn, `PV-INV` gen, `CHP` off, `ATS-1` off, `QS` off, `T2` ok; пороги змінюються разом із `td.energy.load_*_pct` | UT |
 | AC-285 | FR-62 | Then `alarms[]` — лише `active/acked`, `warn\|bad`, ≤ `marker_limit`, `bad` першими, `title ≤ 80`; немає `acked_by`/користувачів/вартості | UT |
-| AC-286 | FR-62 | Given зміна `td.energy` або енергетичного `td.signal`; When `_f3d_viewer_delta`; Then `patch.energy.layer` — повна заміна (списки не конкатенуються); інші зміни — без `layer` | UT |
+| AC-286 | FR-62 | Given зміна `td.energy` або енергетичного `td.signal`; When `_td_viewer_delta`; Then `patch.energy.layer` — повна заміна (списки не конкатенуються); інші зміни — без `layer` | UT |
 | AC-287 | FR-62 | Given `ctx.kiosk`; Then розфарбування й `alarms` є, `card=false`, `title` без технічних деталей діагностики; користувач без `group_td_energy_user` (не кіоск) — теж `card=false` | UT |
 | AC-288 | FR-62 | Given `StateColors`; When `modeColor('td_energy', root)`; Then `ok`→зелений, `warn`→жовтий, `alarm`→червоний, `gen`→бурштиновий, `off`→сірий; невідомий `scene` → `null`; легенда містить пороги | UT-JS |
 | AC-289 | FR-62 | Given `AlarmMarkers`; Then спрайти для `alarms[]` зі `scene` у `codeRoot`, ≤ ліміту; знімаються/`dispose` при оновленні й вимиканні шару; `reduceMotion` вимикає пульсацію; клік → `api.select(scene)` | UT-JS |

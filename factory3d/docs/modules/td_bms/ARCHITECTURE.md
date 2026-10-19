@@ -130,7 +130,7 @@ Repaired (done), Scrap (done).
 |---|---|---|
 | CH-01 | Коди й тексти сигналів (SPEC Додаток B, 549): `ventilation/units/<U>/mode` — `last_text` ∈ {`VE`, `VEL`, `AQ`, `REC`, `EA`, `SA`, `ST`, `Off`} (сирі коди MSV:1); `…/state` ∈ {`running`, `stopped`, `fault`, `frost`} (EF-CHG: `running`, `stopped`, `stopped_charging`); `lighting/groups/<G>/level` — % 0…100; `…/p_now` — кВт; `…/faults` — шт.; стан-сигнали перевірок `…/check` (тексти SPEC R-19); `module='bms'` | fire_safety (крок навчання «вентиляція зупинена»), energy, viewer |
 | CH-02 | Розділи payload `lighting` і `ventilation` строго за viewer A.13 плюс ключі: `lighting.groups[*]`: `dali_group`, `faults`, `faulty`, `scene`, `deviation`, `deviation_text`, `stale`, `level_source` (`live`/`design`); `lighting.panels[*]`: `state`, `p_source` (`meter`/`dali`/`design`); `ventilation.units[*]`: `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`; `ventilation.totals`: `heat_need_kw`, `boilers_on_calc`, `deficit_kw`, `chp_source` (`signal`/`calc`/`design`); `ventilation.boiler` {`state`, `supply_c`, `return_c`, `silo_fill`, `heat_kw`} | viewer, кіоск, energy (`ventilation.totals.heat_kw` у картці CHP) |
-| CH-03 | Методи для energy: `env['td.bms.light.group']._f3d_bms_light_power()` → `{code: {"zone", "panel", "p_now_kw", "p_inst_kw", "level_pct"}}`; `env['td.bms.light.group']._f3d_bms_kwh(date_from, date_to)` → `{code: кВт·год}` з `td.reading.hour` сигналів `…/p_now`; `env['td.bms.hvac.unit']._f3d_bms_heat_now()` → `{code: кВт}` | energy (розподіл освітлення/вентиляції за зонами — за потреби) |
+| CH-03 | Методи для energy: `env['td.bms.light.group']._td_bms_light_power()` → `{code: {"zone", "panel", "p_now_kw", "p_inst_kw", "level_pct"}}`; `env['td.bms.light.group']._td_bms_kwh(date_from, date_to)` → `{code: кВт·год}` з `td.reading.hour` сигналів `…/p_now`; `env['td.bms.hvac.unit']._td_bms_heat_now()` → `{code: кВт}` | energy (розподіл освітлення/вентиляції за зонами — за потреби) |
 | CH-04 | Моделі `td.bms.light.norm`, `td.bms.light.panel`, `td.bms.light.group`, `td.bms.light.scene`, `td.bms.hvac.unit`, `td.bms.heat.balance`, `td.bms.heat.balance.line`, `td.bms.deviation` з іменами полів SPEC §2 — лише читання для інших модулів | viewer, energy, звіти |
 | CH-05 | Розширення схеми `address` типу `helvarnet` (telemetry CT-03, Додаток A.1 — обов'язкові `group`/`device`, `query`, `map` не змінено): `query` ∈ {`level`, `power`, `scene`, `faults`, `faulty`, `router`}, `devices` (список адрес/діапазонів), `sample` (1…16), `mask` (ціле), `fade_s` (0…90 — у межах команд HelvarNet, як SPEC §8.2.2; X-71), `block` (1…8); `params` + `cluster`, `router`, `version`, `rate_per_s`, `push`, `membership_ttl_s` | telemetry (валідація), колектор |
 | CH-06 | Події шини `td.viewer.event._notify('td.bms', [коди груп/установок/BOILER], 'state')` при зміні відхилення | viewer |
@@ -141,10 +141,10 @@ Repaired (done), Scrap (done).
 CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.signal`, `td.reading.hour`,
 `td.command`), CT-02/CT-03 (інтерфейс плагіна, схеми адрес), CT-05 (заявки з порогів), CT-07 (провайдер
 `telemetry` 95 пише значення сигналів до мене), CT-09 (`module='bms'` для `ventilation/*`, `lighting/*`), CT-10
-(`_f3d_ingest`), CT-12 (локальний тип джерела), `collector_main`, джерело `BAC-140-BOILER` і сигнали
+(`_td_ingest`), CT-12 (локальний тип джерела), `collector_main`, джерело `BAC-140-BOILER` і сигнали
 `equipment/BOILER/supply_c`, `/silo_fill` (Додаток C.1/C.2 telemetry); energy CE-02 (`infra/ats/src1_ok`), CE-03,
 `infra/chp/heat_kw`, `infra/totals/chp_kw`, `energy/consumers/LP-*/p_now` (A-19); fire_safety
-`fire/totals/system_state`, CF-06 (`td.fire.drill._f3d_is_active_at`); viewer M-01, M-03, A.13.
+`fire/totals/system_state`, CF-06 (`td.fire.drill._td_is_active_at`); viewer M-01, M-03, A.13.
 
 ### 2.2 Архітектурна схема
 
@@ -162,7 +162,7 @@ CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.sig
 ┌──────────────────────────────── Odoo 19: td_telemetry + td_bms ─────────────────┴──────────────────────┐
 │ td.source: HN-LP-1…3 (helvarnet) · BAC-101-RV-01 … BAC-133-EF-CHG (bacnet_ip) · BMS-DERIVED (f3d_bms, локальне)     │
 │ td.signal 549 (module=bms) ──► пороги CT-05 ──► maintenance.request (фільтри, аварії, світильники)                   │
-│        │ _f3d_ingest (перевизначення, R-20): умови «з якого часу» груп/установок                                       │
+│        │ _td_ingest (перевизначення, R-20): умови «з якого часу» груп/установок                                       │
 │        ▼                                                                                                              │
 │ td.bms.light.group/panel/norm ─ R-01…R-05 (норми, e_calc, e_now)      td.bms.hvac.unit ─ R-10…R-13                  │
 │ td.bms.heat.balance(+line) ─ R-14…R-17 (−15 °C, живий баланс, дефіцит)                                              │
@@ -191,7 +191,7 @@ CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.sig
 | `td.bms.overview` (M-10, AbstractModel) | дані для OWL-огляду | — | клієнт |
 | `td.viewer.provider.lighting` / `.ventilation` (M-11, AbstractModel без `_inherit`) | розділи payload | — | переглядач |
 | `td.source` (+ тип `f3d_bms`, M-12) | локальний тип для обчислених сигналів (CT-12) | хук | telemetry |
-| `td.signal` (перевизначення `_f3d_ingest`, constraint запису, M-13; власні сигнали — `origin='module'` базового selection telemetry, X-16) | реакція на зміни сигналів модуля | telemetry/колектор | — |
+| `td.signal` (перевизначення `_td_ingest`, constraint запису, M-13; власні сигнали — `origin='module'` базового selection telemetry, X-16) | реакція на зміни сигналів модуля | telemetry/колектор | — |
 | `maintenance.request` (+ `td_bms_rule`, `td_bms_deviation_id`, M-14) | правило модуля, що породило заявку; зв'язок із журналом | крон | механік, огляд |
 | `td.zone` (+ `td_light_group_ids`, `td_hvac_unit_ids`, M-15) | групи й установки зони (вкладка «Будівля») | — | форма зони |
 | `maintenance.equipment` (+ `td_bms_object`, M-16) | кнопка «Будівля» з картки обладнання до групи/установки | — | механік |
@@ -205,7 +205,7 @@ CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.sig
 | P-08 BACnet/IP | RV-01…25 (dev 101…125), AHU-1 (130), EF-ELEC/EF-CMP/EF-CHG (131…133) | UDP `iot-sim:47808`, роутер → мережа 2; плагін `bacnet_ip` telemetry; ReadPropertyMultiple, `mode="poll"` (A-02); об'єкти — iot_sim §8.10.2 (ПРИПУЩЕННЯ за мануалом Hoval RoofVent 4 214 745-en-06, Q-02) | читання; запис MSV:1, AV:1, AV:2 лише з `write_enabled` | 30 с (вимірювання, стани), 300 с (уставки) | як вище; `reliability` ≠ `no-fault-detected` → `q='bad'`; пристрій не відповідає → `error`, `stale` |
 | P-08 BACnet котельня | BOILER (dev 140) | джерело `BAC-140-BOILER` **telemetry** (Додаток C.1); bms додає сигнали `return_c` (AI:2), `state` (MSV:1), `heat_kw` (AI:5) на це джерело | читання | 30 с | як вище |
 | energy (optional) | CHP, ATS-1, LP-1…3 | сигнали `infra/chp/heat_kw`, `infra/totals/chp_kw`, `infra/ats/src1_ok`, `energy/consumers/LP-*/p_now` (читання `last_value`) | читання в Odoo | на кожному прогоні крона / побудові payload | немає сигналу → формула з паспорта КГУ (R-15) / сума груп (R-05) / придушення вимкнене |
-| fire_safety (optional) | FACP-1 | `fire/totals/system_state` (`last_text`), `td.fire.drill._f3d_is_active_at(now)` (CF-06) | читання | крон | немає → придушення лише за мережею |
+| fire_safety (optional) | FACP-1 | `fire/totals/system_state` (`last_text`), `td.fire.drill._td_is_active_at(now)` (CF-06) | читання | крон | немає → придушення лише за мережею |
 | Odoo → переглядач | — | провайдери 110/120; шина `f3d_viewer` (`td.bms`, `td.signal`) | — | за подією | без viewer — нічого |
 
 ### 2.5 Потік даних від пристрою до екрана
@@ -214,7 +214,7 @@ CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.sig
 до 285 Па за 2 хв; 2) колектор кожні 30 с читає RPM dev 105 (усі 16 об'єктів сигналів RV-05 одним запитом) і шле
 `ventilation/units/RV-05/filter_dp_pa = 285.0` у `POST /f3d/telemetry/push`; 3) telemetry R-04: `alarm_high=250`,
 `hysteresis=5` → `alarm` → R-05: заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на `RV-05`, команда
-«Служба головного механіка», `td_origin='threshold'`; 4) перевизначення `_f3d_ingest` bms бачить код і нічого не
+«Служба головного механіка», `td_origin='threshold'`; 4) перевизначення `_td_ingest` bms бачить код і нічого не
 пише (поріг — справа telemetry); 5) крон bms (≤ 60 с) відкриває епізод журналу `td.bms.deviation` (`rule=filter_supply`,
 `value=285`, `threshold=250`, `request_id`), ставить `maintenance.request.td_bms_rule='filter_supply'`, шле
 `_notify('td.bms', ['RV-05'], 'state')`; 6) провайдер 120 віддає `ventilation.units["RV-05"].filter_dp_pa=285.0`,
@@ -222,7 +222,7 @@ CB-10 (групи, `td.base.environment`); telemetry CT-01 (`td.source`, `td.sig
 
 Приклад 2 — група вимкнена в зміну: 1) у робочий час (календар «Зміна 1», вівторок 10:00) сценарій
 `lighting_scene group=LT-CUT level=0`; 2) роутер @1.2 шле push `>V:2,C:13,G:12,L:0,F:…#` → плагін емітує
-`lighting/groups/LT-CUT/level = 0`; опитування C:152 підтверджує; 3) перевизначення `_f3d_ingest` ставить
+`lighting/groups/LT-CUT/level = 0`; опитування C:152 підтверджує; 3) перевизначення `_td_ingest` ставить
 `LT-CUT.cond_off_since = ts`; 4) через `light_check_delay_min` (10 хв) крон пише стан-сигнал
 `lighting/groups/LT-CUT/check = "вимкнено в робочий час"` (CT-10, джерело `BMS-DERIVED`) → telemetry R-04/R-05
 створює заявку; 5) крон замінює назву на «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі
@@ -408,7 +408,7 @@ flags` — 2 RPM для RV) → ≈ 2 RPM/с на мережу; група 300 �
 | W1 освітлення | `models/td_bms_light_norm.py`, `td_bms_light_panel.py`, `td_bms_light_group.py`, `td_bms_light_scene.py`, `tools/lighting.py`, `views/td_bms_light_*_views.xml`, `tests/test_lighting_calc.py`, `tests/test_lighting_live.py` | M-01…M-04; R-01…R-06; AC-01…AC-12 | W0 |
 | W2 вентиляція й тепло | `models/td_bms_hvac_unit.py`, `td_bms_heat_balance.py`, `tools/hvac.py`, `tools/heat.py`, `views/td_bms_hvac_unit_views.xml`, `views/td_bms_heat_balance_views.xml`, `tests/test_heat_balance.py`, `tests/test_hvac_live.py` | M-05…M-07; R-10…R-17; AC-13…AC-24 | W0 |
 | W3 дані й хуки | `tools/gen_data.py`, `data/*.xml`, `data/bms_signals.csv`, `hooks.py`, `models/td_source.py`, `models/td_signal.py` (частина: constraint запису), `tests/test_data_sync.py` (pytest), `tests/test_hooks.py` | §5; R-29, R-30; AC-48…AC-56 | W1, W2 |
-| W4 правила й керування | `tools/rules.py`, `tools/schedule.py`, `models/td_bms_deviation.py`, `models/td_bms_check.py` (крон), `models/td_signal.py` (частина: `_f3d_ingest`), `models/maintenance_request.py`, `models/td_zone.py`, `models/maintenance_equipment.py`, `models/res_config_settings.py`, `wizard/*`, `views/td_bms_deviation_views.xml`, `views/res_config_settings_views.xml`, `views/maintenance_*_views.xml`, `tests/test_rules_lighting.py`, `test_rules_hvac.py`, `test_requests.py`, `test_commands.py`, `test_security.py` | M-08, M-09, M-13…M-17; R-18…R-25; AC-25…AC-41, AC-57…AC-63 | W3 |
+| W4 правила й керування | `tools/rules.py`, `tools/schedule.py`, `models/td_bms_deviation.py`, `models/td_bms_check.py` (крон), `models/td_signal.py` (частина: `_td_ingest`), `models/maintenance_request.py`, `models/td_zone.py`, `models/maintenance_equipment.py`, `models/res_config_settings.py`, `wizard/*`, `views/td_bms_deviation_views.xml`, `views/res_config_settings_views.xml`, `views/maintenance_*_views.xml`, `tests/test_rules_lighting.py`, `test_rules_hvac.py`, `test_requests.py`, `test_commands.py`, `test_security.py` | M-08, M-09, M-13…M-17; R-18…R-25; AC-25…AC-41, AC-57…AC-63 | W3 |
 | W5 переглядач і огляд | `models/viewer_provider.py`, `models/td_bms_overview.py`, `tools/payload.py`, `static/src/overview/*`, `views/td_bms_overview_views.xml`, `tests/test_viewer_provider.py`, `tests/test_overview.py`, `static/tests/overview.test.js` | M-10, M-11; R-26…R-28; AC-42…AC-47 | W4 |
 | W6 плагін `helvarnet` | `services/collector_plugins/f3d_collector_bms/**` (`helvarnet.py`, `protocol.py`, `schemas/*.json`, `tests/fake_helvar_router.py`, `tests/test_protocol.py`, `tests/test_plugin_helvarnet.py`) | §8; R-31…R-37; AC-64…AC-78 | W0 (паралельно з W1…W5) |
 | W7 стенд і ТК | `tests/stand/*`, `docs/modules/td_bms/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-12, ТБ, ТП, DEPLOY_TEST | W5, W6 |
