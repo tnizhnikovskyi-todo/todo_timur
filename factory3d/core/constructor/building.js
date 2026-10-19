@@ -4,6 +4,8 @@
 import { checkAisleWidth, checkHeight, checkInside, setSiteProvider } from "./building_core.js";
 import { registries } from "./registry.js";
 import { S } from "./state.js";
+import "./building_3d.js";
+import "./building_ui.js";
 
 setSiteProvider(() => S.site);
 

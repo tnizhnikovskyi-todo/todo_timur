@@ -210,6 +210,7 @@ export function slotFromApi(s, layerUid) {
         type_id: s.type_id ?? null,
         addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : null,
         depth_mode: s.depth_mode || null,
+        tech: s.tech || null, // S5 (N-06): техніка зони; null — як у складу
     };
     if (s.template === "zone") {
         // зона на сервері — полігон у світових координатах (x=y=0); редактор показує прямокутник
@@ -409,6 +410,7 @@ export function slotToApi(s) {
         type_id: s.type_id ?? null,
         addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : {},
         depth_mode: s.depth_mode || null,
+        tech: s.tech || false, // S5 (N-06): техніка зони
     };
     if (s.template === "zone") {
         const title = s.params.title;
