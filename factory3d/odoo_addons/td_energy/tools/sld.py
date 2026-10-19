@@ -18,6 +18,8 @@ CHP_STATES = {"stop": "стоп", "starting": "запуск", "running": "пра
 PV_P_RE = re.compile(r"^infra/pv/PV-INV-\d+/p_kw$")
 PV_TODAY_RE = re.compile(r"^infra/pv/PV-INV-\d+/kwh_today$")
 PV_STATUS_RE = re.compile(r"^infra/pv/PV-INV-\d+/status$")
+GEN_POWER = {"chp": "infra/totals/chp_kw", "pv_inverters": "infra/totals/pv_now"}  # сигнал P генератора за `gen_kind`
+SQRT3 = math.sqrt(3)
 NODE_FIELDS = [
     "code", "name", "kind", "cell_type", "line_kind", "gen_kind", "parent_id", "parent_path", "section", "rating_a",
     "rating_kva", "rating_kvar", "p_inst_kw", "equipment_id", "workcenter_id", "note", "sld_show", "sld_shape", "sld_x",
@@ -178,6 +180,23 @@ class Snap:
         meter = self.meter_of(row)
         return meter["data_state"] if meter else "none"
 
+    def generator_of(self, row):
+        """Генератор, що живиться через шафу вводу генератора (`cell_type='generator'`): перший дочірній `generator`."""
+        return next((c for c in self.children.get(row["id"], []) if c["kind"] == "generator"), None)
+
+    def generator_power(self, row):
+        """P шафи вводу генератора, кВт: вимірювання генератора (КГУ — `infra/totals/chp_kw`); `None` — немає даних."""
+        gen = self.generator_of(row)
+        code = GEN_POWER.get(gen["gen_kind"]) if gen else None
+        return self.v(code) if code else None
+
+    def generator_current(self, row):
+        """Струм шафи вводу генератора, А: `P·1000/(√3·380·cos φ)` (R-16 п. 6, DEC-15); `None` — немає P."""
+        p = self.generator_power(row)
+        if p is None:
+            return None
+        return abs(p) * 1000.0 / (SQRT3 * 380.0 * (row["cos_phi_nominal"] or 0.9))
+
     # --- R-26: стан вузла --------------------------------------------------------------------------------
     def load_pct(self, row):
         """Завантаження вузла, %: `None` — немає даних або номіналу."""
@@ -192,6 +211,8 @@ class Snap:
         if kind == "cell":
             if row["cell_type"] == "incomer":
                 i, rating = self.v("energy/cells/%s/i_now" % code), row["rating_a"]
+            elif row["cell_type"] == "generator":
+                i, rating = self.generator_current(row), row["rating_a"]
             else:
                 line = next((c for c in self.children.get(row["id"], []) if c["kind"] == "line"), None)
                 i = self.v("energy/lines/%s/i_now" % line["code"]) if line else None
@@ -237,6 +258,9 @@ class Snap:
             return "ok" if self.t("energy/cells/%s/state" % code) == "closed" else "off"
         if kind == "cell" and row["cell_type"] == "pfc":
             return self._pfc_state(row)
+        if kind == "cell" and row["cell_type"] == "generator":
+            gen = self.generator_of(row)  # шафа вводу генератора — за станом її генератора
+            return self.state(gen) if gen else "off"
         if kind in ("transformer", "line", "cell", "consumer"):
             return self._load_state(row)
         if kind in ("input", "substation", "section", "switchboard"):
@@ -345,6 +369,9 @@ class Snap:
             out.append("%s кВт" % fmt(self.v("infra/totals/pv_now")))
         elif kind == "generator" and row["gen_kind"] == "chp":
             out.append(CHP_STATES.get(self.t("infra/chp/state"), "немає даних"))
+        elif kind == "cell" and row["cell_type"] == "generator":
+            p, load = self.generator_power(row), self.load_pct(row)
+            out.append("немає даних" if p is None else "%s кВт · %s %%" % (fmt(p), fmt(load)))
         elif kind == "cell" and row["cell_type"] == "pfc":
             q = self.v("energy/cells/%s/q_kvar" % code)
             on, total = self.v("energy/cells/%s/steps_on" % code), self.v("energy/cells/%s/steps_total" % code)
@@ -395,6 +422,8 @@ class Snap:
                 out.append("Увімкнено: секції 1 і 2 працюють разом")
             else:
                 out.append("Вимкнено: секції живляться окремо від T1 і T2")
+        elif kind == "cell" and row["cell_type"] == "generator":
+            out += self._generator_cell_facts(row)
         elif kind == "cell" and row["cell_type"] == "pfc":
             out += self._pfc_facts(row)
         elif kind in ("line", "cell") and row["cell_type"] != "coupler":
@@ -404,6 +433,19 @@ class Snap:
         elif kind == "ats":
             out.append("Положення: %s" % ("ДГУ" if self.v("infra/ats/position") == 3 else "мережа"))
         return out + list(extra or [])
+
+    def _generator_cell_facts(self, row):
+        """Шафа вводу генератора (QF-CHP): куди підключена, номінал, що видає зараз — лише з даних."""
+        gen = self.generator_of(row)
+        out = []
+        if gen:
+            out.append("Ввід %s на секцію шин %s" % (gen["name"], row["section"] or "—"))
+        if row["rating_a"]:
+            out.append("Номінал %s А" % fmt(row["rating_a"]))
+        p, i = self.generator_power(row), self.generator_current(row)
+        if p is not None:
+            out.append("Видає %s кВт · ≈ %s А" % (fmt(p), fmt(i)))
+        return out
 
     def _transformer_facts(self, row):
         code = row["code"]

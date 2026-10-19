@@ -2775,6 +2775,10 @@ function energyHtml(code) {
     if (cell.type === "incomer") {rows.push(["Від", `<button class="o_f3d_lnk" data-go="obj:${esc(cell.feeds)}">трансформатора ${esc(cell.feeds)}</button>`],
       ["Струм", `${ev(("t:" + (cell.feeds) + ":i_a"), "a")} з ${nf.format(cell.rating_a)} А`], ["Потужність", ev(`t:${cell.feeds}:p_kw`, "kw")]);}
     if (cell.type === "coupler") {rows.push(["Стан", "розімкнений (АВР у готовності)"], ["Номінал", `${nf.format(cell.rating_a)} А`]);}
+    if (cell.type === "generator") {
+      if (cell.generator) {rows.push(["Підключено", `<button class="o_f3d_lnk" data-go="obj:${esc(cell.generator)}">${esc(cell.generator)}</button>`]);}
+      rows.push(["Номінал", `${nf.format(cell.rating_a)} А`], ["Потужність", cell.p_now != null ? ev("tot:chp_kw", "kw0") : "—"]);
+    }
     if (cell.type === "pfc") {rows.push(["Ступені", esc(cell.steps)], ["Видає", `${cell.q_now} квар з ${cell.rating_kvar}`],
       ["cos φ секції", `${cosU(cell.cos_before)} → ${cosU(cell.cos_after)}`]);}
     h += `<dl class="o_f3d_kv">${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>${cell.note ? ("<div class=\"o_f3d_note\">" + (esc(cell.note)) + "</div>") : ""}`;
@@ -2786,7 +2790,7 @@ function energyHtml(code) {
       <ul class="o_f3d_rows">${Object.keys(e.transformers).map(trafoRow).join("")}</ul>
       <div class="o_f3d_sub">Шафи ГРЩ</div>
       <table class="o_f3d_tbl"><tr><th>Шафа</th><th class="o_f3d_n">Струм</th></tr>
-        ${Object.entries(e.cells).map(([k, v]) => ("<tr class=\"o_f3d_click\" data-go=\"obj:" + (esc(k)) + "\"><td><b>" + (esc(k)) + "</b> · " + (esc(v.name)) + "</td>\n          <td class=\"o_f3d_n\">" + (v.line ? ev(("l:" + (v.line) + ":i_now"), "a") : v.type === "incomer" ? ev(("t:" + (v.feeds) + ":i_a"), "a") : v.type === "pfc" ? ("" + (v.q_now) + " квар") : "—") + "</td></tr>")).join("")}</table>
+        ${Object.entries(e.cells).map(([k, v]) => ("<tr class=\"o_f3d_click\" data-go=\"obj:" + (esc(k)) + "\"><td><b>" + (esc(k)) + "</b> · " + (esc(v.name)) + "</td>\n          <td class=\"o_f3d_n\">" + (v.line ? ev(("l:" + (v.line) + ":i_now"), "a") : v.type === "incomer" ? ev(("t:" + (v.feeds) + ":i_a"), "a") : v.type === "pfc" ? ("" + (v.q_now) + " квар") : v.type === "generator" ? (v.p_now != null ? ev("tot:chp_kw", "kw0") : "—") : "—") + "</td></tr>")).join("")}</table>
       <div class="o_f3d_row-btns" style="margin-top:8px"><button class="o_f3d_btn" data-go="etab:1">Енергія — детально</button></div>`;
   }
   if (code === "RM6-1") {

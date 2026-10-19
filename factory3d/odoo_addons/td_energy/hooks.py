@@ -151,6 +151,15 @@ def _depth(code, parents, seen=()):
     return 1 + _depth(parent, parents, seen + (code,))
 
 
+def _row_vals(row):
+    """Поля вузла з рядка `energy_nodes.csv` (без посилань: батько, шафа, обладнання, пул)."""
+    vals = {f: row[f] for f in NODE_STR if row[f]}
+    vals.update({v: int(row[k]) for k, v in NODE_INT.items() if row[k]})
+    vals.update({v: float(row[k]) for k, v in NODE_FLOAT.items() if row[k]})
+    vals["is_critical"] = row["is_critical"] in ("1", "True", "true")
+    return vals
+
+
 def nodes(env, report):
     _step("4 nodes")
     Node = env["td.energy.node"].with_context(active_test=False)
@@ -161,10 +170,7 @@ def nodes(env, report):
     stats = {"equipment_linked": 0, "workcenter_linked": 0, "unmatched_equipment": 0, "direct_without_wc": 0}
     for row in ordered:
         rec = Node.search([("code", "=", row["code"])], limit=1)
-        vals = {f: row[f] for f in NODE_STR if row[f]}
-        vals.update({v: int(row[k]) for k, v in NODE_INT.items() if row[k]})
-        vals.update({v: float(row[k]) for k, v in NODE_FLOAT.items() if row[k]})
-        vals["is_critical"] = row["is_critical"] in ("1", "True", "true")
+        vals = _row_vals(row)
         if row["equipment"]:
             equipment = env["maintenance.equipment"].search_f3d(row["equipment"])
             if equipment:
@@ -489,6 +495,46 @@ def _migrate_w1(env):
     report["sld"] = _load_sld_layout(env)
     report["events"] = _migrate_events(env)
     _logger.info("td_energy: міграція W1: %s", dump(report))
+    return report
+
+
+CHP_CELL, CHP_NODE, CHP_OLD_SLD = "QF-CHP", "CHP", (1214, 192, 88, 64)
+
+
+def _migrate_chp_cell(env):
+    """Міграція 19.0.1.1.2: шафа вводу КГУ `QF-CHP` (тип `generator`, секція 2) і `CHP.parent = QF-CHP`.
+
+    Ідемпотентна й обережна: `QF-CHP` створюється, лише якщо її немає (за рядком CSV); `CHP` перевішується, лише якщо
+    досі живиться від секції (типове старе розміщення) — правки користувача не перезаписуються; блок КГУ на схемі
+    зсувається, лише якщо стоїть на старому місці (1214, 192) — інакше вузол не чіпаємо; далі — геометрія `QF-CHP`.
+    """
+    env = env(su=True, context=dict(env.context, tracking_disable=True, f3d_energy_internal=True))
+    Node = env["td.energy.node"].with_context(active_test=False)
+    report = {"cell_created": False, "chp_moved": False, "chp_sld_moved": False}
+    row = next((r for r in _rows("energy_nodes.csv") if r["code"] == CHP_CELL), None)
+    chp = Node.search([("code", "=", CHP_NODE)], limit=1)
+    cell = Node.search([("code", "=", CHP_CELL)], limit=1)
+    if row and not cell:
+        parent = Node.search([("code", "=", row["parent"])], limit=1)
+        cabinet = Node.search([("code", "=", row["cabinet"])], limit=1) if row["cabinet"] else Node
+        if parent:
+            vals = dict(_row_vals(row), parent_id=parent.id, cabinet_id=cabinet.id or False)
+            cell = Node.create(dict(vals, code=CHP_CELL))
+            report["cell_created"] = True
+        else:
+            _logger.warning("td_energy: міграція %s: немає вузла %s", CHP_CELL, row["parent"])
+    if row and chp and cell:
+        if chp.parent_id.code == row["parent"]:  # старе розміщення: КГУ підключена прямо до секції
+            chp.write({"parent_id": cell.id})
+            report["chp_moved"] = True
+        elif chp.parent_id != cell:
+            _logger.warning("td_energy: КГУ живиться від %s — не перевішую на %s", chp.parent_id.code, CHP_CELL)
+        new = next((r for r in _rows("sld_layout.csv") if r["code"] == CHP_NODE), None)
+        if new and chp.sld_show and (chp.sld_x, chp.sld_y, chp.sld_w, chp.sld_h) == CHP_OLD_SLD:
+            chp.write({"sld_x": int(new["x"]), "sld_y": int(new["y"])})
+            report["chp_sld_moved"] = True
+    report["sld"] = _load_sld_layout(env)
+    _logger.info("td_energy: міграція %s: %s", CHP_CELL, dump(report))
     return report
 
 

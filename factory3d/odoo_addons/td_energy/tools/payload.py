@@ -4,6 +4,7 @@
 import math
 
 from . import dates, live
+from .sld import GEN_POWER
 
 COST_GROUP = "td_energy.group_td_energy_cost"
 ENERGY_PREFIXES = ("energy/", "infra/pv/", "infra/bess/", "infra/chp/", "infra/ats/", "infra/totals/")
@@ -354,6 +355,13 @@ def build_energy(env, ctx, payload):
                 item["p_now"] = round(_val(fresh, base + "p_now"), 1)
         elif ctype == "coupler":
             item.update({"section": None, "rating_a": cell.rating_a, "state": "off", "note": COUPLER_NOTE})
+        elif ctype == "generator":  # шафа вводу генератора (QF-CHP): P — вимірювання генератора, I — розрахунок за ним
+            gen = cell.child_ids.filtered(lambda c: c.kind == "generator")[:1]
+            item.update({"rating_a": cell.rating_a, "generator": gen.code or None})
+            p_now = _val(fresh, GEN_POWER[gen.gen_kind]) if gen.gen_kind in GEN_POWER else None
+            if p_now is not None:
+                item["p_now"] = round(p_now, 1)
+                item["i_now"] = int(round(abs(p_now) * 1000.0 / (SQRT3_U * (cell.cos_phi_nominal or 0.9))))
         elif ctype == "pfc":
             sec = sections.get(cell.section)
             item.update({"rating_kvar": cell.rating_kvar, "steps": "50 + 3 × 100 квар"})

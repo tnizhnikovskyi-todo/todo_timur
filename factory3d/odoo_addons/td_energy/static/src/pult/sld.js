@@ -21,7 +21,8 @@ const clamp = (value, lo, hi) => Math.min(Math.max(value, lo), hi);
  * Геометрія ребра «батько → дитина» (R-26, AC-106).
  * - батько — шина: вертикаль у x центру дитини, затиснутому в межі шини;
  * - дитина — шина: вертикаль у x центру батька, затиснутому в межі шини;
- * - блок → блок: ламана через y_mid = (низ батька + верх дитини) / 2 (напр. RM6-1 → T1: `M660 144 V168 H330 V192`).
+ * - блок → блок: ламана через y_mid = (низ батька + верх дитини) / 2 (напр. RM6-1 → T1: `M660 144 V168 H330 V192`);
+ * - блок → блок, дитина над батьком (генератор над шафою вводу: QF-CHP → КГУ): від верху батька до низу дитини.
  */
 export function edgePath(parent, child) {
     const P = parent;
@@ -35,9 +36,10 @@ export function edgePath(parent, child) {
         return N.y >= P.y + P.h ? `M${x} ${P.y + P.h} V${N.y}` : `M${x} ${P.y} V${N.y + N.h}`;
     }
     const x1 = P.x + P.w / 2;
-    const y1 = P.y + P.h;
     const x2 = N.x + N.w / 2;
-    const y2 = N.y;
+    const above = N.y + N.h <= P.y;
+    const y1 = above ? P.y : P.y + P.h;
+    const y2 = above ? N.y + N.h : N.y;
     if (x1 === x2) {
         return `M${x1} ${y1} V${y2}`;
     }

@@ -43,6 +43,7 @@ class NodeCard:
         self.now_slot = forecast.day_start_slot(self.now)
         self.kind = row["kind"]
         self.full = self.kind == "line" or (self.kind == "cell" and row["cell_type"] in ("feeder", "cable"))
+        self.gen_cell = self.kind == "cell" and row["cell_type"] == "generator"  # шафа вводу генератора (QF-CHP)
 
     # --- допоміжні вибірки --------------------------------------------------------------------------
     @property
@@ -69,6 +70,9 @@ class NodeCard:
             for child in snap.children.get(row["id"], []):
                 if child["kind"] == "cell" and child["cell_type"] == "incomer":
                     return snap.meters.get(child["id"])
+        if meter is None and self.gen_cell:  # облік шафи вводу генератора — лічильник її генератора (TEDOM-1)
+            gen = snap.generator_of(row)
+            return snap.meters.get(gen["id"]) if gen else None
         return meter
 
     def signal_prefix(self):
@@ -98,6 +102,8 @@ class NodeCard:
             return v("energy/transformers/%s/p_kw" % row["code"])
         if row["kind"] == "consumer":
             return v("energy/consumers/%s/p_now" % row["code"])
+        if self.gen_cell:
+            return self.snap.generator_power(row)
         prefix = self.signal_prefix()
         return v(prefix + "/p_now") if prefix else None
 
@@ -114,6 +120,8 @@ class NodeCard:
         v, row = self.snap.v, self.row
         if row["kind"] == "transformer":
             return v("energy/transformers/%s/i_a" % row["code"])
+        if self.gen_cell:
+            return self.snap.generator_current(row)
         prefix = self.signal_prefix()
         if not prefix:
             return None
@@ -125,6 +133,9 @@ class NodeCard:
     def p_inst(self):
         if self.row["kind"] == "consumer":
             return self.row["p_inst_kw"] or 0.0
+        if self.gen_cell:  # встановлена потужність шафи вводу генератора — його власна
+            gen = self.snap.generator_of(self.row)
+            return (gen["p_inst_kw"] if gen else 0.0) or 0.0
         return sum(n["p_inst_kw"] or 0.0 for n in self.subtree if n["kind"] == "consumer")
 
     # --- блоки -------------------------------------------------------------------------------------------
@@ -133,7 +144,10 @@ class NodeCard:
         path = self._path()
         state = snap.state(row)
         chips = []
-        if state == "alarm":
+        if self.gen_cell:
+            text = {"alarm": "Тривога", "warn": "Увага", "gen": "Генерує"}.get(state, "Не генерує")
+            chips.append({"text": text, "state": "ok" if state == "gen" else state})
+        elif state == "alarm":
             chips.append({"text": "Тривога", "state": "alarm"})
         elif state == "off":
             chips.append({"text": "Знеструмлено або резерв", "state": "off"})
@@ -491,13 +505,13 @@ class NodeCard:
     # --- збирання ----------------------------------------------------------------------------------------
     def build(self):
         out = {"node": self.header()}
-        if self.kind in ("line", "transformer", "consumer", "tapoff") or self.full:
+        if self.kind in ("line", "transformer", "consumer", "tapoff") or self.full or self.gen_cell:
             out["kpis"] = self.kpis()
-        if self.kind == "transformer" or self.full:
+        if self.kind == "transformer" or self.full or self.gen_cell:
             out["chart"] = self.chart()
         if self.full:
             out["taps"] = self.taps()
-        if self.kind == "transformer" or self.full:
+        if self.kind == "transformer" or self.full or self.gen_cell:
             meter = self.meter()
             if meter:
                 out["meter"] = meter

@@ -52,6 +52,7 @@ class F3dEnergyNode(models.Model):
             ("cable", "Кабельні фідери"),
             ("coupler", "Секційний вимикач"),
             ("pfc", "Компенсація"),
+            ("generator", "Ввід генератора"),
         ],
         string="Тип шафи",
     )
