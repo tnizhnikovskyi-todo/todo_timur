@@ -151,6 +151,10 @@ export function enterBuilding() {
     if (B.on || !S.site) {
         return;
     }
+    if (E.isMobile?.()) {
+        toast("У мобільному режимі правка вимкнена: режим «Будівля» недоступний.", "warn");
+        return;
+    }
     const ly = bLayer();
     if (!ly) {
         toast("На площадці немає шару «Будівля».", "warn");
@@ -1012,6 +1016,7 @@ function drawRulers(cursorOnly) {
 
 /* ===== життєвий цикл ===== */
 let mo = null;
+let ro = null;
 function onMount() {
     Object.assign(B, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null });
     ensureStyle();
@@ -1046,12 +1051,15 @@ function onMount() {
         mo.observe(vt, { childList: true });
     }
     if (typeof ResizeObserver !== "undefined" && cv) {
-        new ResizeObserver(() => drawRulers()).observe(cv);
+        ro = new ResizeObserver(() => drawRulers());
+        ro.observe(cv);
     }
 }
 function onUnmount() {
     mo?.disconnect();
     mo = null;
+    ro?.disconnect();
+    ro = null;
     Object.assign(B, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null });
 }
 E.lifecycle.mount.add(onMount);
