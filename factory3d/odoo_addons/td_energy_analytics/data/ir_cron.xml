@@ -1,3 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 4 крони (SPEC 6) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- 4 крони (W4_SPEC 6). nextcall: 02:10, 02:30 і 03:20 за Києвом улітку (UTC+3; узимку на годину раніше). -->
+<odoo noupdate="1">
+    <record id="cron_td_energy_daily" model="ir.cron">
+        <field name="name">Енергетика: добові факти</field>
+        <field name="model_id" ref="model_td_energy_daily"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_daily()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_td_energy_drivers" model="ir.cron">
+        <field name="name">Енергетика: драйвери</field>
+        <field name="model_id" ref="model_td_energy_driver"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_values()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 23:10:00')"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_td_energy_enpi" model="ir.cron">
+        <field name="name">Енергетика: EnPI</field>
+        <field name="model_id" ref="model_td_energy_enpi"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_enpi()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 23:30:00')"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_td_energy_analytics_rotate" model="ir.cron">
+        <field name="name">Енергетика: ротація аналітики</field>
+        <field name="model_id" ref="model_td_energy_daily"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_rotate()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 00:20:00')"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

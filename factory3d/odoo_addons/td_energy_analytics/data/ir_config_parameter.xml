@@ -1,3 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Параметри td.energy_analytics.* (SPEC 5.1) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- Параметри td.energy_analytics.* (W4_SPEC 5.1) -->
+<odoo noupdate="1">
+    <record id="param_daily_close_h" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.daily_close_h</field>
+        <field name="value">2</field>
+    </record>
+    <record id="param_catchup_days" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.catchup_days</field>
+        <field name="value">14</field>
+    </record>
+    <record id="param_forecast_weeks" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.forecast_weeks</field>
+        <field name="value">8</field>
+    </record>
+    <record id="param_forecast_min_days" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.forecast_min_days</field>
+        <field name="value">3</field>
+    </record>
+    <record id="param_r2_min" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.r2_min</field>
+        <field name="value">0.6</field>
+    </record>
+    <record id="param_baseline_min_days" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.baseline_min_days</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_refresh_s" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.refresh_s</field>
+        <field name="value">300</field>
+    </record>
+    <record id="param_top_equipment" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.top_equipment</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_top_mo" model="ir.config_parameter">
+        <field name="key">td.energy_analytics.top_mo</field>
+        <field name="value">20</field>
+    </record>
+</odoo>

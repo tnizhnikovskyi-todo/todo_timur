@@ -1,1 +1,9 @@
 code,name,sequence,color,spec_driver
+CUT,Розкрій,10,#5a3b52,plate_m2
+EDGE,Крайка,20,#8a6383,plate_m2
+DRILL,Присадка ЧПК,30,#b79ab0,plate_m2
+FACADE,Фасади МДФ,40,#b45309,plate_m2
+ASSY,Збирання й пакування,50,#f59e0b,plate_m2
+AIR_DUST,Аспірація й повітря,60,#0369a1,plate_m2
+HVAC,Вентиляція й опалення,70,#38bdf8,plate_m2
+LIGHT_OFFICE,Освітлення й офіс,80,#9ca3af,
