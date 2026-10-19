@@ -256,7 +256,7 @@ def test_tb06_injections(fresh, sim):
     jid = o.call("mrp.production", "action_f3d_feed_gantry", [mo["id"]])["res_id"]
     o.write("td.gantry.job", jid, {"external_ref": "a;b c"})
     o.call("td.gantry.job", "action_send", [jid])
-    cron_run(o, "Портал")  # UserError R-21 ловиться в `_f3d_send` (крон) → завдання `error`, команди немає
+    cron_run(o, "Портал")  # UserError R-21 ловиться в `_td_send` (крон) → завдання `error`, команди немає
     j = o.read("td.gantry.job", jid, ["state", "error"])[0]
     assert j["state"] == "error" and j["error"], j
     assert not commands(o, "equipment/GANTRY-1/cmd")
@@ -409,7 +409,7 @@ def test_tb10_neutralize(fresh):
     assert not cr, cr
     assert int(psql("select count(*) from td_cut_map where export_token_hash is not null", odoo_rpc.DB)[0][0]) == 0
     o.call("td.gantry.job", "action_send", [jid])
-    cron_run(o, "Портал")  # `UserError` «Запис вимкнено» ловиться в `_f3d_send` (крон): команди немає
+    cron_run(o, "Портал")  # `UserError` «Запис вимкнено» ловиться в `_td_send` (крон): команди немає
     j = o.read("td.gantry.job", jid, ["state", "error"])[0]
     assert j["state"] in ("to_send", "error") and "вимкнено" in (j["error"] or ""), j
     assert not [c for c in commands(o) if c["state"] != "failed"], commands(o)

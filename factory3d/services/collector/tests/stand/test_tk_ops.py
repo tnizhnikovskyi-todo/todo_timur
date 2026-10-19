@@ -141,7 +141,7 @@ def test_tk14_ac89_viewer_provider(fresh_sim, odoo, col):
         "import json\n"
         "p = env['td.viewer.provider.telemetry']\n"
         "payload = {'equipment': {'COMPRESSOR': {'pressure_bar': 0}, 'FL-C1': {'state': '', 'x': 1, 'y': 1}}, 'meta': {}}\n"
-        "p._f3d_viewer_collect(payload, {})\n"
+        "p._td_viewer_collect(payload, {})\n"
         "S = env['td.signal'].sudo()\n"
         "vis = S.search([('code', 'in', ['equipment/FL-C1/x', 'equipment/FL-C1/y'])]).mapped('viewer_visible')\n"
         "print('STAND ' + json.dumps({'payload': payload, 'xy_visible': vis, 'alarms': S.search_count([('status', '=', 'alarm')])}))\n"

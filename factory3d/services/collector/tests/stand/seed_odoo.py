@@ -41,7 +41,7 @@ for code in sorted(codes_eq):
 
 Signal = env["td.signal"].sudo().with_context(active_test=False)  # noqa: F821
 missing = [r["code"] for r in rows if not Signal.search_count([("code", "=", r["code"])])]
-rep = Signal._f3d_import_sim_catalog(codes=missing, source_map=hooks.SOURCE_MAP, defaults={"origin": "sim_data"})
+rep = Signal._td_import_sim_catalog(codes=missing, source_map=hooks.SOURCE_MAP, defaults={"origin": "sim_data"})
 print("STAND seed: імпорт з каталогу iot_sim:", {k: (len(v) if isinstance(v, list) else v) for k, v in rep.items()})
 print("STAND seed: signals_catalog:", hooks.signals_catalog(env))  # noqa: F821
 
