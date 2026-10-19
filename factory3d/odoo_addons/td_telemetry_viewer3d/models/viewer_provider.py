@@ -11,12 +11,12 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
     # Контракт провайдера — duck typing (ARCHITECTURE §6.7): без `_inherit` моделей viewer.
     _name = "td.viewer.provider.telemetry"
     _description = "3D: значення сигналів телеметрії"
-    _f3d_sequence = 95
-    _f3d_sections = ()
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 95
+    _td_sections = ()
+    _td_group = "td_factory3d.group_td_user"
 
     # --- R-12 ----------------------------------------------------------------------------------------
-    def _f3d_visible_signals(self):
+    def _td_visible_signals(self):
         return (
             self.env["td.signal"]
             .sudo()
@@ -24,7 +24,7 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
         )
 
     @staticmethod
-    def _f3d_value(sig):
+    def _td_value(sig):
         if sig.kind == "state":
             return sig.last_text
         v = sig.last_value
@@ -33,7 +33,7 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
         return round(v, 2) if abs(v) < 20 else round(v, 1)
 
     @staticmethod
-    def _f3d_node(payload, code):
+    def _td_node(payload, code):
         """Вузол payload для `code` (без створення відсутніх) і останній ключ; або (None, None)."""
         *path, leaf = code.split("/")
         node = payload
@@ -43,7 +43,7 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
                 return None, None
         return node, leaf
 
-    def _f3d_meta_iot(self, signals):
+    def _td_meta_iot(self, signals):
         stamps = [s.last_ts for s in signals if s.last_ts]
         updated = ""
         if stamps:
@@ -56,33 +56,33 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
             "updated": updated,
         }
 
-    def _f3d_viewer_collect(self, payload, ctx):
-        signals = self._f3d_visible_signals()
+    def _td_viewer_collect(self, payload, ctx):
+        signals = self._td_visible_signals()
         for sig in signals:
-            node, leaf = self._f3d_node(payload, sig.code)
+            node, leaf = self._td_node(payload, sig.code)
             if node is None:
                 continue
             if sig.kind != "state" and sig.last_value is None:
                 continue
-            node[leaf] = self._f3d_value(sig)
+            node[leaf] = self._td_value(sig)
         totals = ((payload.get("infra") or {}).get("totals")) if isinstance(payload.get("infra"), dict) else None
         energy = (payload.get("energy") or {}).get("totals") if isinstance(payload.get("energy"), dict) else None
         if isinstance(totals, dict) and isinstance(energy, dict):
             for src, dst in (("pv_now", "pv_kw"), ("chp_kw", "chp_kw")):
                 if src in totals:
                     energy[dst] = totals[src]
-        payload.setdefault("meta", {})["iot"] = self._f3d_meta_iot(signals)
+        payload.setdefault("meta", {})["iot"] = self._td_meta_iot(signals)
 
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         codes = (ctx.get("changes") or {}).get("td.signal", set())
         if not codes:
             return
-        signals = self._f3d_visible_signals()
+        signals = self._td_visible_signals()
         patch["signals"] = [
-            {"path": sig.code, "value": self._f3d_value(sig)}
+            {"path": sig.code, "value": self._td_value(sig)}
             for sig in signals.filtered(lambda s: s.code in codes and (s.kind == "state" or s.last_value is not None))
         ]
-        patch.setdefault("meta", {})["iot"] = self._f3d_meta_iot(signals)
+        patch.setdefault("meta", {})["iot"] = self._td_meta_iot(signals)
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["td.signal"]

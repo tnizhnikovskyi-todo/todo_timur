@@ -65,7 +65,7 @@ class TestCollect(ProviderCase):
     def test_values_and_meta(self):
         self.fill()
         payload = self.payload()
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         eq = payload["equipment"]
         self.assertEqual(eq["FL-C1-T"]["battery"], 0.236)
         self.assertEqual(eq["FL-C1-T"]["state"], "charging")
@@ -91,7 +91,7 @@ class TestCollect(ProviderCase):
     def test_missing_node_skipped(self):
         self.fill()
         payload = self.payload()
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         self.assertNotIn("WATER-T", payload["infra"])
         self.assertEqual(set(payload["infra"]), {"totals"})
 
@@ -99,14 +99,14 @@ class TestCollect(ProviderCase):
         self.fill()
         payload = self.payload()
         payload["equipment"]["FL-C1-T"]["x"] = "orig"
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         self.assertEqual(payload["equipment"]["FL-C1-T"]["x"], "orig")
         self.assertEqual(self.sig_fl2_hours.status, "unknown")
         self.assertNotIn("FL-2-T", payload["equipment"])
 
     def test_provider_sequence(self):
-        self.assertEqual(self.provider._f3d_sequence, 95)
-        self.assertEqual(self.provider._f3d_sections, ())
+        self.assertEqual(self.provider._td_sequence, 95)
+        self.assertEqual(self.provider._td_sections, ())
 
 
 @tagged(*TAGS)
@@ -115,18 +115,18 @@ class TestDelta(ProviderCase):
         self.fill()
         patch_ = {}
         ctx = {"changes": {"td.signal": {"equipment/FL-C1-T/battery", "equipment/FL-C1-T/x"}}}
-        self.provider._f3d_viewer_delta(patch_, ctx)
+        self.provider._td_viewer_delta(patch_, ctx)
         self.assertEqual(patch_["signals"], [{"path": "equipment/FL-C1-T/battery", "value": 0.236}])
         self.assertIn("iot", patch_["meta"])
 
     def test_empty_changes(self):
         self.fill()
         patch_ = {}
-        self.provider._f3d_viewer_delta(patch_, {"changes": {}})
+        self.provider._td_viewer_delta(patch_, {"changes": {}})
         self.assertEqual(patch_, {})
 
     def test_bus_models(self):
-        self.assertEqual(self.provider._f3d_viewer_bus_models(), ["td.signal"])
+        self.assertEqual(self.provider._td_viewer_bus_models(), ["td.signal"])
 
 
 @tagged(*TAGS)
