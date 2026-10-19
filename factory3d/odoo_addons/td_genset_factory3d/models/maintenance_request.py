@@ -12,10 +12,10 @@ class MaintenanceRequest(models.Model):
         was_done = {rec.id: rec.stage_id.done for rec in self}
         res = super().write(vals)
         for rec in self.filtered(lambda r: r.td_genset_event_key and r.stage_id.done and not was_done.get(r.id)):
-            rec._f3d_genset_on_closed()
+            rec._td_genset_on_closed()
         return res
 
-    def _f3d_genset_on_closed(self):
+    def _td_genset_on_closed(self):
         """R-08 крок 4: запис у чаттер зв'язки. Статус сигналу перераховує telemetry (_on_request_closed)."""
         self.ensure_one()
         link = self.env["td.genset3d.link"].sudo().search([("equipment_id", "=", self.equipment_id.id)], limit=1)

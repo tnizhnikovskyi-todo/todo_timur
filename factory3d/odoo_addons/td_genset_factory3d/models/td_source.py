@@ -9,6 +9,6 @@ class F3dSource(models.Model):
     )
 
     @api.model
-    def _f3d_local_types(self):
+    def _td_local_types(self):
         # CT-12, R-26 td_telemetry: джерело типу td_genset — локальне, без колектора (X-01, D-17)
-        return super()._f3d_local_types() + ["td_genset"]
+        return super()._td_local_types() + ["td_genset"]

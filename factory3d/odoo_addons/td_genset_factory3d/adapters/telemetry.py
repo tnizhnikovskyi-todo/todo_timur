@@ -112,7 +112,7 @@ def ensure_signals(env, link):
 
 
 def ingest(env, batch):
-    """TEL-03: пакет [{code, ts, value[, q]}] через CT-10 `_f3d_ingest(src="module")`."""
+    """TEL-03: пакет [{code, ts, value[, q]}] через CT-10 `_td_ingest(src="module")`."""
     readings = [
         {
             "code": item["code"],
@@ -122,7 +122,7 @@ def ingest(env, batch):
         }
         for item in batch
     ]
-    res = env["td.signal"].sudo()._f3d_ingest(readings, src="module")
+    res = env["td.signal"].sudo()._td_ingest(readings, src="module")
     return {"accepted": res["accepted"], "stored": res["stored"], "skipped": res["accepted"] - res["stored"]}
 
 

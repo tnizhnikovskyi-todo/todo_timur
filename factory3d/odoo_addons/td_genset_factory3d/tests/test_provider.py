@@ -20,7 +20,7 @@ class TestProvider(GensetCase):
 
     def collect(self):
         payload = {}
-        self.env["td.viewer.provider.genset"]._f3d_viewer_collect(payload, {})
+        self.env["td.viewer.provider.genset"]._td_viewer_collect(payload, {})
         return payload["infra"]
 
     def test_card_rows(self):  # AC-22, AC-30
@@ -49,32 +49,32 @@ class TestProvider(GensetCase):
 
     def test_order_and_bus_models(self):  # AC-23
         prov = self.env["td.viewer.provider.genset"]
-        self.assertEqual(prov._f3d_sequence, 155)
-        self.assertEqual(prov._f3d_viewer_bus_models(), ["maintenance.equipment", "td.signal"])
+        self.assertEqual(prov._td_sequence, 155)
+        self.assertEqual(prov._td_viewer_bus_models(), ["maintenance.equipment", "td.signal"])
         self.assertNotIn("td.viewer.provider", type(prov)._inherit if isinstance(type(prov)._inherit, list) else [])
 
     def test_no_link_static(self):  # AC-24
         self.link.unlink()
         payload = {}
-        self.env["td.viewer.provider.genset"]._f3d_viewer_collect(payload, {})
+        self.env["td.viewer.provider.genset"]._td_viewer_collect(payload, {})
         self.assertNotIn("infra", payload)
 
     def test_delta_condition(self):  # AC-26
         prov = self.env["td.viewer.provider.genset"]
         self.link._cron_publish()
         patch = {}
-        prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {"energy/other/x"}}})
+        prov._td_viewer_delta(patch, {"changes": {"td.signal": {"energy/other/x"}}})
         self.assertEqual(patch, {})
-        prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {PFX + "state"}}})
+        prov._td_viewer_delta(patch, {"changes": {"td.signal": {PFX + "state"}}})
         self.assertIn("GENSET", patch["infra"]["cards"])
         patch = {}
-        prov._f3d_viewer_delta(patch, {"changes": {"maintenance.equipment": {"GENSET"}}})
+        prov._td_viewer_delta(patch, {"changes": {"maintenance.equipment": {"GENSET"}}})
         self.assertIn("genset", patch["infra"])
 
     def test_delta_deep_merge(self):  # AC-72
         self.link._cron_publish()
         patch = {"infra": {"cards": {"PV-INV": {"rows": []}}, "totals": {"pv_now": 468, "chp_kw": 400}}}
-        self.env["td.viewer.provider.genset"]._f3d_viewer_delta(patch, {"changes": {"td.signal": {PFX + "state"}}})
+        self.env["td.viewer.provider.genset"]._td_viewer_delta(patch, {"changes": {"td.signal": {PFX + "state"}}})
         infra = patch["infra"]
         self.assertIn("PV-INV", infra["cards"])
         self.assertIn("GENSET", infra["cards"])

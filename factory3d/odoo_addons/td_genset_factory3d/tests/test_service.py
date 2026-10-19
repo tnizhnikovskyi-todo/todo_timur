@@ -24,7 +24,7 @@ class TestService(GensetCase):
 
     def old_reading(self):
         ts = fields.Datetime.now().replace(microsecond=0) - timedelta(days=29, hours=23)
-        self.env["td.signal"]._f3d_ingest(
+        self.env["td.signal"]._td_ingest(
             [{"code": self.hours_sig.code, "ts": ts, "value": 1177.0, "q": "good"}], src="module"
         )
 

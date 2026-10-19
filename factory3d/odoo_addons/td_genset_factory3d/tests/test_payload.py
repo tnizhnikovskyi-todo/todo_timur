@@ -32,7 +32,7 @@ class TestPayload(GensetCase):
 
     def collect(self):
         data = {}
-        self.provider()._f3d_viewer_collect(data, {})
+        self.provider()._td_viewer_collect(data, {})
         return data["infra"]
 
     def crit(self):
@@ -90,7 +90,7 @@ class TestPayload(GensetCase):
         }
         for code in (PFX + "state", "infra/ats/position"):
             patch = {"infra": {"cards": dict(base["infra"]["cards"]), "totals": dict(base["infra"]["totals"])}}
-            prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {code}}})
+            prov._td_viewer_delta(patch, {"changes": {"td.signal": {code}}})
             infra = patch["infra"]
             self.assertIn("PV-INV", infra["cards"])
             self.assertIn("GENSET", infra["cards"])
@@ -100,7 +100,7 @@ class TestPayload(GensetCase):
             self.assertIn("island", t)
             self.assertIn("grid_ok", t)
         patch = {"infra": {"totals": {"pv_now": 468}}}
-        prov._f3d_viewer_delta(patch, {"changes": {"td.signal": {"energy/totals/p_now"}}})
+        prov._td_viewer_delta(patch, {"changes": {"td.signal": {"energy/totals/p_now"}}})
         self.assertEqual(patch, {"infra": {"totals": {"pv_now": 468}}})
 
     def _queries(self, func):

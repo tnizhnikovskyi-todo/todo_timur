@@ -46,11 +46,11 @@ def _local(ts):
 class F3dViewerProviderGenset(models.AbstractModel):
     _name = "td.viewer.provider.genset"
     _description = "3D: постачальник даних генератора"
-    _f3d_sequence = 155
-    _f3d_sections = ("infra",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 155
+    _td_sections = ("infra",)
+    _td_group = "td_factory3d.group_td_user"
 
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         for link in self.env["td.genset3d.link"].sudo().search([("active", "=", True)]):
             self._collect_link(link, payload)
 
@@ -181,7 +181,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
             text += " — тест %s хв, %s" % (_fmt(info["duration_min"]), info.get("result") or "—")
         return text
 
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """R-13: власна дельта з глибоким злиттям; `patch["infra"]` не присвоюється."""
         changes = (ctx or {}).get("changes") or {}
         if not self._wants_delta(changes):
@@ -189,7 +189,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
         from odoo.addons.td_viewer3d.tools.payload import deep_merge
 
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         deep_merge(patch.setdefault("infra", {}), tmp.get("infra", {}))
 
     def _wants_delta(self, changes):
@@ -203,5 +203,5 @@ class F3dViewerProviderGenset(models.AbstractModel):
             return True
         return bool(signals) and bool(set(signals) & set(Link._critical_signal_codes()))
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["maintenance.equipment", "td.signal"]

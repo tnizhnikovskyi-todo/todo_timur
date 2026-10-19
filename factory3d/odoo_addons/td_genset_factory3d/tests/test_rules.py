@@ -151,7 +151,7 @@ class GensetCase(F3DCase):
                     }
                 )
             batch.append({"code": code, "ts": ts, "value": float(value), "q": "good"})
-        Signal._f3d_ingest(batch, src="module")
+        Signal._td_ingest(batch, src="module")
 
 
 @tagged("post_install", "-at_install")

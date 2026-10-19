@@ -13,8 +13,8 @@ from .test_rules import GensetCase
 class TestLocalSource(GensetCase):
     def test_local_type_hook(self):  # AC-69
         Source = self.env["td.source"]
-        self.assertIn("td_genset", Source._f3d_local_types())
-        self.assertEqual(address.validate_params("td_genset", {}, Source._f3d_local_types()), [])
+        self.assertIn("td_genset", Source._td_local_types())
+        self.assertEqual(address.validate_params("td_genset", {}, Source._td_local_types()), [])
         source = self.link.source_id
         self.assertEqual(source.code, "GENSET-RELAY")
         self.assertTrue(source.is_local)
