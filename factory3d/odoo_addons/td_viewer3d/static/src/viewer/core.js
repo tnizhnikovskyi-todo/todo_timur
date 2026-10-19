@@ -3285,8 +3285,8 @@ const clock = new THREE.Clock();
 // кіоск не палять GPU. Перемальовуємо, коли: камера рухалась (`controls` change, tween), хтось викликав `invalidate()`
 // (paint, шари, дані, розмір, клік/клавіша в інтерфейсі), працює анімація (маршрут замовлення, частинки, пожежа, програвання
 // зміни), пакетування змінило склад пакетів; блимання ламп статусу — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
-// страховка від пропущеної інвалідації. Нульовий рендерер (тести) і `opts.onDemand === false` малюють кожен виток, як раніше.
-const onDemand = !nullR && opts.onDemand !== false && perfFlag("ondemand") !== "0";
+// страховка від пропущеної інвалідації. Нульовий рендерер (тести), `opts.onDemand === false` і `?f3d_ondemand=0` малюють кожен виток, як раніше.
+const onDemand = opts.onDemand ?? (!nullR && perfFlag("ondemand") !== "0"); // `opts.onDemand: true` вмикає й для нульового рендерера (тести)
 const IDLE_MS = 400, LAMP_MS = 80, POLL_MS = 100;
 let lastDraw = 0, lastPoll = 0, drawn = 0;
 renderer.setAnimationLoop(() => {
