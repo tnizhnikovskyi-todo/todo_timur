@@ -5,6 +5,8 @@ from ..services.schemas import SchemaError
 
 MANAGER_XMLID = 'td_constructor.group_td_constructor_manager'
 ETAG_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+# F14: оренда зони перевіряється для сутностей з позицією на плані (місця й розміщення)
+LEASE_MODELS = ('td.slot', 'td.placement')
 
 
 class F3dDraftMixin(models.AbstractModel):
@@ -70,6 +72,16 @@ class F3dDraftMixin(models.AbstractModel):
         self.ensure_one()
         return self.write_date.strftime(ETAG_FORMAT) if self.write_date else ''
 
+    # --- F14: аренда зони -----------------------------------------------------------------------------
+    @api.model
+    def _f3d_lease_create(self, vals_list):
+        if self._name in LEASE_MODELS:
+            self.env['td.zone.lock'].f3d_assert_create(self._name, vals_list)
+
+    def _f3d_lease_write(self, vals=None):
+        if self._name in LEASE_MODELS:
+            self.env['td.zone.lock'].f3d_assert_write(self, vals)
+
     # --- перевірки на create / write / unlink: перевизначаються в моделях -----------------------------
     @api.model
     def _f3d_check_create(self, vals_list):
@@ -85,6 +97,7 @@ class F3dDraftMixin(models.AbstractModel):
     def create(self, vals_list):
         vals_list = [self._f3d_normalized(vals) for vals in vals_list]
         self._f3d_check_create(vals_list)
+        self._f3d_lease_create(vals_list)
         records = super().create(vals_list)
         records._f3d_touch_sites()
         return records
@@ -94,12 +107,14 @@ class F3dDraftMixin(models.AbstractModel):
             return True
         vals = self._f3d_normalized(vals)
         self._f3d_check_write(vals)
+        self._f3d_lease_write(vals)
         res = super().write(vals)
         self._f3d_touch_sites()
         return res
 
     def unlink(self):
         self._f3d_check_unlink()
+        self._f3d_lease_write()
         counts = {}
         for rec in self:
             counts[rec.site_id.id] = counts.get(rec.site_id.id, 0) + 1

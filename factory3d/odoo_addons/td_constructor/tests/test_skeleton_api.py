@@ -5,7 +5,7 @@ from .common import PASSWORD, F3DConstructorHttpCase
 # MERGE.md §3.5: API-11…API-24 -> маршрути; тіло порожнє, відповідь — заглушка W0-B
 # API-11 реалізовано слайсом S1 (controllers/library.py, тести test_s1_library.py): маршрут зареєстровано один раз
 # API-12, API-15, API-17, API-18 реалізував S2 (тести — test_s2_*.py), API-13/14/19 labels_pdf — S3 (test_s3_*.py),
-# API-16, API-20 і API-19 table_xlsx — S4 (test_s4_*.py)
+# API-16, API-20 і API-19 table_xlsx — S4 (test_s4_*.py), API-21…24 — S6 (test_s6_collab.py)
 IMPLEMENTED_ROUTES = [
     ('API-11', '/f3d/constructor/library'),
     ('API-13', '/f3d/constructor/stock/state'),
@@ -14,15 +14,15 @@ IMPLEMENTED_ROUTES = [
     ('API-16', '/f3d/constructor/odoo/locations'),
     ('API-19', '/f3d/constructor/render/table_xlsx'),
     ('API-20', '/f3d/constructor/parse/table'),
-]
-STUB_ROUTES = [
-    ('API-19', '/f3d/constructor/render/plan_pdf'),
-    ('API-19', '/f3d/constructor/render/spec_pdf'),
     ('API-21', '/f3d/constructor/variants'),
     ('API-22', '/f3d/constructor/comments'),
     ('API-23', '/f3d/constructor/locks'),
     ('API-24', '/f3d/constructor/version/view'),
     ('API-24', '/f3d/constructor/version/checkpoint'),
+]
+STUB_ROUTES = [
+    ('API-19', '/f3d/constructor/render/plan_pdf'),
+    ('API-19', '/f3d/constructor/render/spec_pdf'),
 ]
 
 
