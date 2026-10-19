@@ -1,6 +1,5 @@
 """Тестові провайдери (SPEC §13.0). Реєструються лише при завантаженні модуля."""
 from odoo import api, models
-
 from odoo.addons.td_viewer3d.tools.payload import deep_merge
 
 
