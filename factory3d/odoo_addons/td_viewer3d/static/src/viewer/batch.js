@@ -110,6 +110,8 @@ export function createBatcher(env) {
                 idx[i0 + i + 2] = v0 + (flip ? b : d);
             }
             r.v0 = v0; r.i0 = i0;
+            r.src = ix ? ix.array : null; // вихідні індекси меша: з них стискання відновлює діапазон (без другої копії індексів пакета)
+            r.flip = flip;
             v0 += r.vn; i0 += r.in;
         }
         const geom = new THREE.BufferGeometry();
@@ -131,7 +133,7 @@ export function createBatcher(env) {
         mesh.raycast = () => {}; // вибір — за проксі-мешами
         mesh.userData.f3dBatch = true;
         host.add(mesh);
-        const b = { mesh, geom, mat, host, idx, orig: idx.slice(), col, recs: list, dirtyIdx: false, dirtyCol: false };
+        const b = { mesh, geom, mat, host, idx, col, recs: list, dirtyIdx: false, dirtyCol: false };
         for (const r of list) { r.b = b; r.cold = true; }
         batches.push(b);
     }
@@ -206,8 +208,16 @@ export function createBatcher(env) {
         let w = 0;
         for (const r of b.recs) {
             if (!r.cold) { continue; }
-            b.idx.set(b.orig.subarray(r.i0, r.i0 + r.in), w);
-            w += r.in;
+            const idx = b.idx, src = r.src, v0 = r.v0, n = r.in;
+            if (src && !r.flip) {
+                for (let k = 0; k < n; k++) { idx[w + k] = v0 + src[k]; }
+            } else {
+                for (let k = 0; k < n; k += 3) {
+                    const a = src ? src[k] : k, b1 = src ? src[k + 1] : k + 1, c = src ? src[k + 2] : k + 2;
+                    idx[w + k] = v0 + a; idx[w + k + 1] = v0 + (r.flip ? c : b1); idx[w + k + 2] = v0 + (r.flip ? b1 : c);
+                }
+            }
+            w += n;
         }
         b.geom.setDrawRange(0, w);
         b.geom.index.needsUpdate = true;
