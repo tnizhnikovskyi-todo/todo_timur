@@ -41,7 +41,7 @@ class TestSnapshotDayFilter(F3dViewerBase):
                 self.assertEqual(Snap.search(base + [("is_today", "=", True)]), snaps[0], now)
                 self.assertEqual(Snap.search(base + [("is_today", "!=", True)]), all_snaps - snaps[0], now)
                 self.assertEqual(Snap.search(base + [("is_today", "=", False)]), all_snaps - snaps[0], now)
-                in_week = all_snaps.filtered(lambda s: s.shift_date >= week)
+                in_week = all_snaps.filtered(lambda s, week=week: s.shift_date >= week)
                 self.assertEqual(Snap.search(base + [("is_this_week", "=", True)]), in_week, now)
                 self.assertEqual(Snap.search(base + [("is_this_week", "=", False)]), all_snaps - in_week, now)
                 self.assertEqual(all_snaps.filtered("is_today"), snaps[0], now)
