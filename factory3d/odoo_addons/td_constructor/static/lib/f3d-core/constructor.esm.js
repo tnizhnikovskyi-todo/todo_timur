@@ -371,12 +371,12 @@ function obbAabb(obb) {
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 }
 var rectObb = (x0, y0, x1, y1) => makeObb((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2, 0);
-var aabbOverlap = (A, B2, eps = 0) => !(A[2] < B2[0] - eps || B2[2] < A[0] - eps || A[3] < B2[1] - eps || B2[3] < A[1] - eps);
-function satPenetration(A, B2) {
+var aabbOverlap = (A, B3, eps = 0) => !(A[2] < B3[0] - eps || B3[2] < A[0] - eps || A[3] < B3[1] - eps || B3[3] < A[1] - eps);
+function satPenetration(A, B3) {
   const [[a1x, a1y], [a2x, a2y]] = obbAxes(A);
-  const [[b1x, b1y], [b2x, b2y]] = obbAxes(B2);
-  const dx = B2.cx - A.cx;
-  const dy = B2.cy - A.cy;
+  const [[b1x, b1y], [b2x, b2y]] = obbAxes(B3);
+  const dx = B3.cx - A.cx;
+  const dy = B3.cy - A.cy;
   let best = Infinity;
   for (const [ux, uy] of [
     [a1x, a1y],
@@ -385,7 +385,7 @@ function satPenetration(A, B2) {
     [b2x, b2y]
   ]) {
     const rA = A.a * Math.abs(ux * a1x + uy * a1y) + A.b * Math.abs(ux * a2x + uy * a2y);
-    const rB = B2.a * Math.abs(ux * b1x + uy * b1y) + B2.b * Math.abs(ux * b2x + uy * b2y);
+    const rB = B3.a * Math.abs(ux * b1x + uy * b1y) + B3.b * Math.abs(ux * b2x + uy * b2y);
     const depth = rA + rB - Math.abs(dx * ux + dy * uy);
     if (depth < best) {
       best = depth;
@@ -706,18 +706,18 @@ function wordValues(addr, vals) {
   });
 }
 var renderCode = (addr, vals) => wordValues(addr, vals).filter((w) => w !== null).join(addr.sep);
-function intIn(value, lo, hi, label) {
+function intIn(value, lo, hi, label2) {
   if (typeof value !== "number" || !Number.isFinite(value) || !Number.isInteger(value)) {
-    throw new AddrError(`${label}: очікується ціле число.`);
+    throw new AddrError(`${label2}: очікується ціле число.`);
   }
   if (value < lo || value > hi) {
-    throw new AddrError(`${label}: допустимо від ${lo} до ${hi}.`);
+    throw new AddrError(`${label2}: допустимо від ${lo} до ${hi}.`);
   }
   return value;
 }
-function choice(value, allowed, label) {
+function choice(value, allowed, label2) {
   if (!allowed.includes(value)) {
-    throw new AddrError(`${label}: допустимо ${allowed.join(", ")}.`);
+    throw new AddrError(`${label2}: допустимо ${allowed.join(", ")}.`);
   }
   return value;
 }
@@ -762,12 +762,12 @@ function normalizeAddr(value) {
       throw new AddrError(`Сегмент «${key}»: очікується об'єкт.`);
     }
     const base2 = DEFAULT_SEG[key];
-    const label = `Сегмент «${key}»`;
-    const kind = choice(raw.kind ?? base2.kind, SEGMENT_KINDS, label + ": вид");
+    const label2 = `Сегмент «${key}»`;
+    const kind = choice(raw.kind ?? base2.kind, SEGMENT_KINDS, label2 + ": вид");
     segOut[key] = {
       kind,
-      width: intIn(raw.width ?? base2.width, 1, 8, label + ": ширина"),
-      start: intIn(raw.start ?? base2.start, kind === "alpha" ? 1 : 0, 999, label + ": початок")
+      width: intIn(raw.width ?? base2.width, 1, 8, label2 + ": ширина"),
+      start: intIn(raw.start ?? base2.start, kind === "alpha" ? 1 : 0, 999, label2 + ": початок")
     };
   }
   return Object.assign(out, {
@@ -1321,14 +1321,14 @@ function rawCellsStyled(template, p, prefix) {
     const wn = width(p.sections * sides, p.index_digits);
     const lv = levelsOf(p, p.shelves, p.cell_h);
     for (let side2 = 1; side2 <= sides; side2++) {
-      for (let sec = 1; sec <= p.sections; sec++) {
-        const secNo = sec + (side2 - 1) * p.sections;
+      for (let sec3 = 1; sec3 <= p.sections; sec3++) {
+        const secNo = sec3 + (side2 - 1) * p.sections;
         for (let lvl = 1; lvl <= p.shelves; lvl++) {
           cells.push({
             code: `${prefix}-S${zpad(secNo, wn)}-L${lvl}`,
             level: lvl,
             index: secNo,
-            lx: -length / 2 + (sec - 0.5) * p.cell_w + (sec - 1) * gx,
+            lx: -length / 2 + (sec3 - 0.5) * p.cell_w + (sec3 - 1) * gx,
             ly: sideY(side2, full, p.cell_d),
             dz: lv[lvl - 1].dz,
             l: p.cell_w,
@@ -1337,7 +1337,7 @@ function rawCellsStyled(template, p, prefix) {
             capacity: 0,
             max_load_kg: 0,
             kind: p.loc_kind,
-            k: sec,
+            k: sec3,
             side: side2
           });
         }
@@ -2165,7 +2165,7 @@ function openNewSite() {
   code.addEventListener("input", () => {
     code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
   });
-  const dim = (v, label, id) => h("input", { type: "number", value: v, min: 5, step: 1, "aria-label": label, id });
+  const dim = (v, label2, id) => h("input", { type: "number", value: v, min: 5, step: 1, "aria-label": label2, id });
   const l = dim(60, "Довжина", "newSiteL");
   const w = dim(30, "Ширина", "newSiteW");
   const hh = dim(8, "Висота", "newSiteH");
@@ -2390,10 +2390,10 @@ function renderStatusBlock(root, { rec }) {
   }
   const st = objStatus(S.sel.kind, rec);
   const acc = access();
-  const btn = h("button", { class: "fbtn sm", type: "button", id: "btnSaveObj", "data-title": "Записати чергу змін у чернетку негайно", onclick: saveAll }, "Зберегти");
-  btn.disabled = st !== "unsaved" || !acc.design;
-  btn.title = !acc.design ? accessHint("design") : st === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
-  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st }, STATUS_LABELS[st]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn)));
+  const btn3 = h("button", { class: "fbtn sm", type: "button", id: "btnSaveObj", "data-title": "Записати чергу змін у чернетку негайно", onclick: saveAll }, "Зберегти");
+  btn3.disabled = st !== "unsaved" || !acc.design;
+  btn3.title = !acc.design ? accessHint("design") : st === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
+  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st }, STATUS_LABELS[st]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn3)));
 }
 registries.panels.add("right:status", { area: "right", render: renderStatusBlock }, { sequence: 80, force: true });
 function openHotkeys() {
@@ -2475,7 +2475,7 @@ function numInput(o) {
   }
   return el;
 }
-var fld = (label, el, unit, cls) => h("label", { class: "fld" + (cls ? " " + cls : "") }, h("span", null, label, unit ? h("i", null, " · " + unit) : null), el);
+var fld = (label2, el, unit, cls) => h("label", { class: "fld" + (cls ? " " + cls : "") }, h("span", null, label2, unit ? h("i", null, " · " + unit) : null), el);
 function textInput(o) {
   const el = h("input", { type: "text", value: o.value == null ? "" : o.value, disabled: o.dis, "aria-label": o.label, "data-f": o.f });
   if (!o.dis) {
@@ -2485,10 +2485,10 @@ function textInput(o) {
   }
   return el;
 }
-function selectEl(opts2, value, onChange, dis, label) {
+function selectEl(opts2, value, onChange, dis, label2) {
   const el = h(
     "select",
-    { disabled: dis, "aria-label": label },
+    { disabled: dis, "aria-label": label2 },
     opts2.map(([v, t]) => h("option", { value: v, selected: String(v) === String(value) }, t))
   );
   el.addEventListener("change", () => onChange(el.value));
@@ -2614,7 +2614,7 @@ function loadDxfParser() {
 function parseDxf(text, Parser = window.DxfParser) {
   const dxf = new Parser().parseSync(text);
   const segs = [];
-  const line = (x12, y12, x2, y2) => segs.push(x12, y12, x2, y2);
+  const line2 = (x12, y12, x2, y2) => segs.push(x12, y12, x2, y2);
   const arc = (c, r, a0, a1, T) => {
     if (a1 <= a0) {
       a1 += Math.PI * 2;
@@ -2626,7 +2626,7 @@ function parseDxf(text, Parser = window.DxfParser) {
       const a = a0 + (a1 - a0) * i / n;
       const p = T(c.x + r * Math.cos(a), c.y + r * Math.sin(a));
       if (px != null) {
-        line(px, py, p[0], p[1]);
+        line2(px, py, p[0], p[1]);
       }
       px = p[0];
       py = p[1];
@@ -2652,7 +2652,7 @@ function parseDxf(text, Parser = window.DxfParser) {
       const a = a0 + th * i / n;
       const pt = T(cx + Math.abs(r) * Math.cos(a), cy + Math.abs(r) * Math.sin(a));
       if (px != null) {
-        line(px, py, pt[0], pt[1]);
+        line2(px, py, pt[0], pt[1]);
       }
       px = pt[0];
       py = pt[1];
@@ -2664,7 +2664,7 @@ function parseDxf(text, Parser = window.DxfParser) {
       case "LINE": {
         const a = pt(e.vertices[0]);
         const b = pt(e.vertices[1]);
-        line(a[0], a[1], b[0], b[1]);
+        line2(a[0], a[1], b[0], b[1]);
         break;
       }
       case "LWPOLYLINE":
@@ -2679,7 +2679,7 @@ function parseDxf(text, Parser = window.DxfParser) {
           } else {
             const a = pt(p);
             const b = pt(q);
-            line(a[0], a[1], b[0], b[1]);
+            line2(a[0], a[1], b[0], b[1]);
           }
         }
         break;
@@ -3522,11 +3522,11 @@ function renderMenu() {
   const top = [];
   const more = [];
   forEachEntry(registries.menu, (key, m) => (m.area === "more" ? more : top).push([key, m]), ctx2);
-  const btn = ([key, m], cls) => h("button", { class: cls + (m.cls ? " " + m.cls : ""), type: "button", id: "menu-" + key, disabled: m.disabled ? m.disabled(ctx2) : false, onclick: () => m.run(ctx2) }, m.icon ? ic(m.icon) : null, m.label);
+  const btn3 = ([key, m], cls) => h("button", { class: cls + (m.cls ? " " + m.cls : ""), type: "button", id: "menu-" + key, disabled: m.disabled ? m.disabled(ctx2) : false, onclick: () => m.run(ctx2) }, m.icon ? ic(m.icon) : null, m.label);
   box.replaceChildren(
     ...K(
-      top.map((e) => btn(e, "fbtn")),
-      more.length ? h("details", { class: "more", id: "menuMore" }, h("summary", { class: "fbtn" }, "Ще ▾"), h("div", { class: "morelist" }, more.map((e) => btn(e, "fbtn")))) : null
+      top.map((e) => btn3(e, "fbtn")),
+      more.length ? h("details", { class: "more", id: "menuMore" }, h("summary", { class: "fbtn" }, "Ще ▾"), h("div", { class: "morelist" }, more.map((e) => btn3(e, "fbtn")))) : null
     )
   );
   box.hidden = !top.length && !more.length;
@@ -3695,11 +3695,11 @@ function renderLayerList() {
       h("span", { class: "meta" }, (ly.elevation >= 0 ? "+" : "") + fmt(ly.elevation, 1) + " м · " + n)
     );
   };
-  const items = [];
+  const items2 = [];
   for (const g3 of groups) {
     const closed = !!g3.name && collapsed.has(g3.name) && !g3.layers.some((l) => l.id === S.ui.layer);
     if (g3.name) {
-      items.push(
+      items2.push(
         h(
           "div",
           {
@@ -3723,10 +3723,10 @@ function renderLayerList() {
       );
     }
     if (!closed) {
-      items.push(...g3.layers.map(row));
+      items2.push(...g3.layers.map(row));
     }
   }
-  box.replaceChildren(...K(h("div", { class: "layers" }, items)));
+  box.replaceChildren(...K(h("div", { class: "layers" }, items2)));
 }
 function addLayer() {
   const ly = { ...newLayerDefaults(), id: newUid(), rid: null, etag: null, sequence: Math.max(0, ...S.layers.map((l) => l.sequence)) + 10 };
@@ -3764,7 +3764,7 @@ function renderLayerForm() {
   }
   const dis = !canManage();
   const disC = !canEditLayer(ly);
-  const num4 = (label, key, unit, o) => fld(label, numInput(Object.assign({ value: ly[key], dis, label, set: (v) => layerEdit(() => {
+  const num4 = (label2, key, unit, o) => fld(label2, numInput(Object.assign({ value: ly[key], dis, label: label2, set: (v) => layerEdit(() => {
     ly[key] = v;
   }) }, o)), unit);
   const frag = [];
@@ -3988,12 +3988,12 @@ function renderSlotsTab(root) {
   const dis = !canEditLayer(ly);
   const T = S.ui.tpl = S.ui.tpl || { template: "pallet_rack", prefix: "R1", params: defaultParams("pallet_rack") };
   const spec = TPL[T.template];
-  const sec = h("div", { class: "sec" }, h("h3", null, "Новий шаблон"));
+  const sec3 = h("div", { class: "sec" }, h("h3", null, "Новий шаблон"));
   if (dis) {
-    sec.append(h("div", { class: "note lock" }, lockHint(ly)));
+    sec3.append(h("div", { class: "note lock" }, lockHint(ly)));
   }
   const allowed = ly.slot_types.includes(T.template);
-  sec.append(
+  sec3.append(
     h(
       "div",
       { class: "fcol" },
@@ -4013,7 +4013,7 @@ function renderSlotsTab(root) {
       h("button", { class: "fbtn primary", type: "button", id: "btnPlaceSlot", disabled: dis || !allowed, onclick: () => E.startPlacing({ kind: "slot", template: T.template, prefix: (T.prefix || spec.prefix).slice(0, 22), params: clone(T.params) }) }, "Поставити на сцену")
     )
   );
-  root.append(...K(sec));
+  root.append(...K(sec3));
   const slots = S.slots.filter((s) => s.layer_id === ly.id);
   const total = slots.reduce((a, s) => a + cellCount(s), 0);
   root.append(
@@ -4147,7 +4147,7 @@ function renderVTools() {
   if (!box) {
     return;
   }
-  const b = (icon, label, fn, pressed) => h("button", { class: "fbtn", type: "button", onclick: fn, "aria-pressed": pressed == null ? null : String(!!pressed), title: label, "aria-label": label }, ic(icon), h("span", { class: "lg" }, label));
+  const b = (icon, label2, fn, pressed) => h("button", { class: "fbtn", type: "button", onclick: fn, "aria-pressed": pressed == null ? null : String(!!pressed), title: label2, "aria-label": label2 }, ic(icon), h("span", { class: "lg" }, label2));
   box.replaceChildren(
     ...K(
       b("cube", "3D", () => E.setView("iso")),
@@ -5474,15 +5474,15 @@ function dispose(root) {
 var genericCategory = (cat) => cat === "cabinet" ? "panel" : cat || "other";
 function variantBody(cat, v, norm, ghost) {
   const L2 = v.length / 1e3;
-  const W = v.width / 1e3;
+  const W2 = v.width / 1e3;
   const H = v.height / 1e3;
   if (norm) {
-    return modelBody(norm, L2, H, W, ghost);
+    return modelBody(norm, L2, H, W2, ghost);
   }
   const ang = FRONT_ANGLE[v.front_side || "s"];
   const swap = ang === 90 || ang === 270;
   const g3 = new THREE.Group();
-  const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W : L2, w: swap ? L2 : W, h: H }, THREE);
+  const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W2 : L2, w: swap ? L2 : W2, h: H }, THREE);
   if (ghost) {
     b.traverse((c) => {
       if (c.isMesh) {
@@ -5492,14 +5492,14 @@ function variantBody(cat, v, norm, ghost) {
   }
   b.rotation.y = rad(ang);
   g3.add(b);
-  g3.add(boxEdge(L2, H, W, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
+  g3.add(boxEdge(L2, H, W2, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
   return g3;
 }
-function modelBody(m, L2, H, W, ghost) {
+function modelBody(m, L2, H, W2, ghost) {
   const g3 = new THREE.Group();
   const o = m.obj.clone(true);
   const sz = m.size;
-  o.scale.set(L2 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W / Math.max(sz.z, 1e-6));
+  o.scale.set(L2 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W2 / Math.max(sz.z, 1e-6));
   if (ghost) {
     o.traverse((c) => {
       if (c.isMesh) {
@@ -5528,43 +5528,43 @@ function buildPlacementView(pl, opts2) {
   const root = new THREE.Group();
   root.userData.ref = { kind: "placement", id: pl.id };
   root.add(variantBody(p && p.category || "other", v, V.models.get(v.id), ghost));
-  const view = { key: "p:" + pl.id, root, kind: "placement", id: pl.id, g: g3, H, ghost, layerId: ly.id };
-  view.foot = dashRect(g3.L / 2 + 0.06, g3.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
-  root.add(view.foot);
+  const view2 = { key: "p:" + pl.id, root, kind: "placement", id: pl.id, g: g3, H, ghost, layerId: ly.id };
+  view2.foot = dashRect(g3.L / 2 + 0.06, g3.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+  root.add(view2.foot);
   if (g3.svc && !ghost) {
-    view.svc = dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025);
-    root.add(view.svc);
+    view2.svc = dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025);
+    root.add(view2.svc);
   }
-  view.fill = planeMesh(g3.L + 0.7, g3.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
-  view.fill.visible = false;
-  root.add(view.fill);
-  view.sel = boxEdge(g3.L * 1.03, H * 1.02, g3.W * 1.03, 0, H / 2, 0, V.mat.sel);
-  view.sel.visible = false;
-  root.add(view.sel);
+  view2.fill = planeMesh(g3.L + 0.7, g3.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
+  view2.fill.visible = false;
+  root.add(view2.fill);
+  view2.sel = boxEdge(g3.L * 1.03, H * 1.02, g3.W * 1.03, 0, H / 2, 0, V.mat.sel);
+  view2.sel.visible = false;
+  root.add(view2.sel);
   const hit = boxMesh(g3.L, Math.max(H, 0.4), g3.W, 0, Math.max(H, 0.4) / 2, 0, V.mat.hit);
   hit.userData.ref = root.userData.ref;
-  hit.userData.view = view;
+  hit.userData.view = view2;
   root.add(hit);
-  view.hit = hit;
+  view2.hit = hit;
   if (!opts2.noLabel) {
     const lb = makeLabel(pl.code || pl.name || "", 0.9, 70);
     lb.position.set(0, H + 0.7, 0);
     root.add(lb);
-    view.label = lb;
+    view2.label = lb;
   }
-  poseView(view, pl, v);
-  return view;
+  poseView(view2, pl, v);
+  return view2;
 }
-function poseView(view, rec, v) {
-  if (view.kind === "placement") {
+function poseView(view2, rec, v) {
+  if (view2.kind === "placement") {
     v = v || variantOf(rec.variant_id);
     const g3 = pGeom(rec, v);
-    view.g = g3;
-    view.root.position.set(g3.cx, elevOf(rec.layer_id), -g3.cy);
+    view2.g = g3;
+    view2.root.position.set(g3.cx, elevOf(rec.layer_id), -g3.cy);
   } else {
-    view.root.position.set(rec.x, elevOf(rec.layer_id), -rec.y);
+    view2.root.position.set(rec.x, elevOf(rec.layer_id), -rec.y);
   }
-  view.root.rotation.y = rad(rec.rotation || 0);
+  view2.root.rotation.y = rad(rec.rotation || 0);
 }
 var frameOf = {
   pallet_rack(p, d, sg) {
@@ -5656,19 +5656,19 @@ function buildSlotView(s, opts2) {
   const g3 = sGeom(s);
   const root = new THREE.Group();
   root.userData.ref = { kind: "slot", id: s.id };
-  const view = { key: "s:" + s.id, root, kind: "slot", id: s.id, g: g3, H: d.H, ghost, layerId: ly.id, tpl: s.template };
+  const view2 = { key: "s:" + s.id, root, kind: "slot", id: s.id, g: g3, H: d.H, ghost, layerId: ly.id, tpl: s.template };
   const edgeMat = ghost ? V.mat.edgeGhost : V.mat.edge;
   const mkHit = (hh) => {
     const hit = boxMesh(d.L, hh, d.W, 0, hh / 2, 0, V.mat.hit);
     hit.userData.ref = root.userData.ref;
-    hit.userData.view = view;
+    hit.userData.view = view2;
     root.add(hit);
-    view.hit = hit;
+    view2.hit = hit;
   };
   if (s.template === "zone") {
     const col = new THREE.Color(s.params.color || ly.color);
-    const B2 = S.site.building;
-    const huge = d.L * d.W > ZONE_HUGE * B2.length * B2.width;
+    const B3 = S.site.building;
+    const huge = d.L * d.W > ZONE_HUGE * B3.length * B3.width;
     const fm = new THREE.MeshBasicMaterial({
       color: col,
       transparent: true,
@@ -5688,33 +5688,33 @@ function buildSlotView(s, opts2) {
     root.userData.mats.push(ol.material);
     root.add(ol);
     mkHit(0.05);
-    view.fillSel = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
-    view.fillSel.visible = false;
-    root.add(view.fillSel);
-    view.fill = view.fillSel;
-    view.foot = null;
+    view2.fillSel = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fillSel.visible = false;
+    root.add(view2.fillSel);
+    view2.fill = view2.fillSel;
+    view2.foot = null;
     const t = s.params.title || s.code_prefix;
     const lb = makeLabel(t, clamp(Math.min(d.W * 0.3, d.L * 0.2), 0.8, 2.4), 420, null, d.L * 0.92);
     lb.position.set(0, 0.03, 0);
     root.add(lb);
-    view.label = lb;
+    view2.label = lb;
   } else if (s.template === "machine_spot") {
-    view.foot = dashRect(d.L / 2, d.W / 2, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
-    root.add(view.foot);
+    view2.foot = dashRect(d.L / 2, d.W / 2, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+    root.add(view2.foot);
     if (g3.shx != null && !ghost) {
       root.add(dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025));
     }
-    view.fill = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
-    view.fill.visible = false;
-    root.add(view.fill);
+    view2.fill = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fill.visible = false;
+    root.add(view2.fill);
     mkHit(0.3);
     const lb = makeLabel(s.code_prefix, 0.8, 90);
     lb.position.set(0, 0.25, 0);
     root.add(lb);
-    view.label = lb;
-    view.sel = boxEdge(d.L, 0.3, d.W, 0, 0.15, 0, V.mat.sel);
-    view.sel.visible = false;
-    root.add(view.sel);
+    view2.label = lb;
+    view2.sel = boxEdge(d.L, 0.3, d.W, 0, 0.15, 0, V.mat.sel);
+    view2.sel.visible = false;
+    root.add(view2.sel);
   } else {
     const cells = cellsOf(s);
     const im = new THREE.InstancedMesh(V.geo.box, ghost ? V.mat.cellGhost : V.mat.cell, Math.max(cells.length, 1));
@@ -5738,45 +5738,45 @@ function buildSlotView(s, opts2) {
       im.instanceColor.needsUpdate = true;
     }
     root.add(im);
-    view.cells = im;
-    view.cellList = cells;
-    view.ly = ly;
+    view2.cells = im;
+    view2.cellList = cells;
+    view2.ly = ly;
     const fl = frameLines(s, d);
     if (fl.length) {
       const ls = new THREE.LineSegments(lineGeo(fl), edgeMat);
       ls.userData.own = 1;
       root.add(ls);
     }
-    view.foot = dashRect(d.L / 2 + 0.06, d.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
-    root.add(view.foot);
-    view.fill = planeMesh(d.L + 0.7, d.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
-    view.fill.visible = false;
-    root.add(view.fill);
+    view2.foot = dashRect(d.L / 2 + 0.06, d.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+    root.add(view2.foot);
+    view2.fill = planeMesh(d.L + 0.7, d.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fill.visible = false;
+    root.add(view2.fill);
     mkHit(Math.max(d.H, 0.3));
-    view.sel = boxEdge(d.L * 1.02, d.H * 1.02, d.W * 1.02, 0, d.H / 2, 0, V.mat.sel);
-    view.sel.visible = false;
-    root.add(view.sel);
+    view2.sel = boxEdge(d.L * 1.02, d.H * 1.02, d.W * 1.02, 0, d.H / 2, 0, V.mat.sel);
+    view2.sel.visible = false;
+    root.add(view2.sel);
     const lb = makeLabel(s.code_prefix, 1.1, 130);
     lb.position.set(0, d.H + 0.8, 0);
     root.add(lb);
-    view.label = lb;
+    view2.label = lb;
   }
-  poseView(view, s);
-  return view;
+  poseView(view2, s);
+  return view2;
 }
-function colorCells(view, selCode) {
-  if (!view.cells) {
+function colorCells(view2, selCode) {
+  if (!view2.cells) {
     return;
   }
-  const s = S.sIdx.get(view.id);
+  const s = S.sIdx.get(view2.id);
   if (!s) {
     return;
   }
-  view.cellList.forEach((c, i) => view.cells.setColorAt(i, cellColor(c, s, view.ly, c.code === selCode)));
-  if (view.cells.instanceColor) {
-    view.cells.instanceColor.needsUpdate = true;
+  view2.cellList.forEach((c, i) => view2.cells.setColorAt(i, cellColor(c, s, view2.ly, c.code === selCode)));
+  if (view2.cells.instanceColor) {
+    view2.cells.instanceColor.needsUpdate = true;
   }
-  view.selCode = selCode;
+  view2.selCode = selCode;
 }
 function gridStepDisplay(step, span) {
   let d = step;
@@ -5797,9 +5797,9 @@ function gridStepDisplay(step, span) {
   return Math.max(d, step);
 }
 function boundsBox(ly) {
-  const B2 = S.site.building;
+  const B3 = S.site.building;
   if (!ly.bounds || ly.bounds.length < 3) {
-    return { x0: 0, y0: 0, x1: B2.length, y1: B2.width };
+    return { x0: 0, y0: 0, x1: B3.length, y1: B3.width };
   }
   const xs = ly.bounds.map((p) => p[0]);
   const ys = ly.bounds.map((p) => p[1]);
@@ -5925,22 +5925,22 @@ function disposeDecor(g3) {
   dropLabels(g3);
 }
 function buildBuilding() {
-  const B2 = S.site.building;
+  const B3 = S.site.building;
   const g3 = new THREE.Group();
-  g3.add(planeMesh(B2.length, B2.width, B2.length / 2, -0.01, -B2.width / 2, V.mat.floor));
+  g3.add(planeMesh(B3.length, B3.width, B3.length / 2, -0.01, -B3.width / 2, V.mat.floor));
   const e = new THREE.LineSegments(V.geo.boxEdges, V.mat.bld);
-  e.scale.set(B2.length, B2.height, B2.width);
-  e.position.set(B2.length / 2, B2.height / 2, -B2.width / 2);
+  e.scale.set(B3.length, B3.height, B3.width);
+  e.position.set(B3.length / 2, B3.height / 2, -B3.width / 2);
   g3.add(e);
   const sx = S.site.column_grid.step_x;
   const sy = S.site.column_grid.step_y;
   if (sx > 1 && sy > 1) {
     const xs = [];
     const ys = [];
-    for (let x = sx; x < B2.length - 0.01; x += sx) {
+    for (let x = sx; x < B3.length - 0.01; x += sx) {
       xs.push(x);
     }
-    for (let y = sy; y < B2.width - 0.01; y += sy) {
+    for (let y = sy; y < B3.width - 0.01; y += sy) {
       ys.push(y);
     }
     const n = xs.length * ys.length;
@@ -5950,7 +5950,7 @@ function buildBuilding() {
       let i = 0;
       for (const x of xs) {
         for (const y of ys) {
-          m4.compose(new THREE.Vector3(x, B2.height / 2, -y), new THREE.Quaternion(), new THREE.Vector3(0.4, B2.height, 0.4));
+          m4.compose(new THREE.Vector3(x, B3.height / 2, -y), new THREE.Quaternion(), new THREE.Vector3(0.4, B3.height, 0.4));
           im.setMatrixAt(i++, m4);
         }
       }
@@ -5960,8 +5960,8 @@ function buildBuilding() {
   return g3;
 }
 function syncStatic() {
-  const B2 = S.site.building;
-  const sig = JSON.stringify([B2, S.site.column_grid, V.theme, S.site.id]);
+  const B3 = S.site.building;
+  const sig = JSON.stringify([B3, S.site.column_grid, V.theme, S.site.id]);
   if (sig === V.staticSig) {
     return;
   }
@@ -6031,13 +6031,13 @@ function syncScene(force) {
       V.world.remove(cur.root);
       dispose(cur.root);
     }
-    const view = buildPlacementView(pl);
-    if (!view) {
+    const view2 = buildPlacementView(pl);
+    if (!view2) {
       continue;
     }
-    view.sig = sig;
-    V.world.add(view.root);
-    V.views.set(key, view);
+    view2.sig = sig;
+    V.world.add(view2.root);
+    V.views.set(key, view2);
   }
   for (const s of S.slots) {
     const ly = layerOf(s.layer_id);
@@ -6055,13 +6055,13 @@ function syncScene(force) {
       V.world.remove(cur.root);
       dispose(cur.root);
     }
-    const view = buildSlotView(s);
-    if (!view) {
+    const view2 = buildSlotView(s);
+    if (!view2) {
       continue;
     }
-    view.sig = sig;
-    V.world.add(view.root);
-    V.views.set(key, view);
+    view2.sig = sig;
+    V.world.add(view2.root);
+    V.views.set(key, view2);
   }
   for (const [k, v] of V.views) {
     if (!seen.has(k)) {
@@ -6261,21 +6261,21 @@ function pickCandidates(e) {
   const out = [];
   for (const h0 of hits) {
     const ref2 = h0.object.userData.ref;
-    const view = h0.object.userData.view;
-    if (!ref2 || !view || seen.has(view.key)) {
+    const view2 = h0.object.userData.view;
+    if (!ref2 || !view2 || seen.has(view2.key)) {
       continue;
     }
-    seen.add(view.key);
-    const ly = layerOf(view.layerId);
+    seen.add(view2.key);
+    const ly = layerOf(view2.layerId);
     if (!ly || !isLayerVisible(ly)) {
       continue;
     }
-    const active = view.layerId === S.ui.layer;
-    if (!active && (view.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
+    const active = view2.layerId === S.ui.layer;
+    if (!active && (view2.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
       continue;
     }
     const tier = active ? 0 : canEditLayer(ly) ? 1 : 2;
-    out.push({ ref: ref2, view, hit: h0, tier, area: view.g.L * view.g.W, kind: view.kind === "placement" ? 0 : 1 });
+    out.push({ ref: ref2, view: view2, hit: h0, tier, area: view2.g.L * view2.g.W, kind: view2.kind === "placement" ? 0 : 1 });
   }
   out.sort((a, b) => a.tier - b.tier || a.area - b.area || a.kind - b.kind || a.hit.distance - b.hit.distance);
   return out;
@@ -6466,9 +6466,9 @@ function onMove(e) {
   const st = e.altKey ? 0.01 : snapStep(d.rec);
   d.rec.x = snapV(d.start.x + (pp.x - d.pt0.x), st);
   d.rec.y = snapV(d.start.y + (pp.y - d.pt0.y), st);
-  const view = V.views.get(d.key);
-  if (view) {
-    poseView(view, d.rec);
+  const view2 = V.views.get(d.key);
+  if (view2) {
+    poseView(view2, d.rec);
   }
   if (d.group) {
     const ddx = d.rec.x - d.start.x;
@@ -6556,37 +6556,37 @@ function liveCheck() {
   E.renderChecksBlock();
 }
 function finishMove(d) {
-  const items = d.group || [d];
+  const items2 = d.group || [d];
   const after = runLive();
-  const nb = items.flatMap((it) => newBlocks(d.before, after, it.key));
+  const nb = items2.flatMap((it) => newBlocks(d.before, after, it.key));
   if (nb.length) {
-    for (const it of items) {
+    for (const it of items2) {
       it.rec.x = it.start.x;
       it.rec.y = it.start.y;
-      const view = V.views.get(it.key);
-      if (view) {
-        poseView(view, it.rec);
+      const view2 = V.views.get(it.key);
+      if (view2) {
+        poseView(view2, it.rec);
       }
     }
     S.issues = runLive();
     updateVisual();
     E.syncPropsValues();
     E.renderChecksBlock();
-    toast("Заблоковано: " + nb[0].msg + (items.length > 1 ? ". Групу повернуто на місце." : ". Об’єкт повернуто на місце."), "err");
+    toast("Заблоковано: " + nb[0].msg + (items2.length > 1 ? ". Групу повернуто на місце." : ". Об’єкт повернуто на місце."), "err");
     return;
   }
-  for (const it of items) {
+  for (const it of items2) {
     if (it.ref.kind === "placement") {
       assignSlot(it.rec);
     }
   }
-  if (items.some((it) => it.start.x !== it.rec.x || it.start.y !== it.rec.y)) {
+  if (items2.some((it) => it.start.x !== it.rec.x || it.start.y !== it.rec.y)) {
     E.commit({});
   } else {
     S.issues = after;
     updateVisual();
   }
-  const first = items.map((it) => S.issues.byKey.get(it.key)).find((st) => st && st.level !== "block");
+  const first = items2.map((it) => S.issues.byKey.get(it.key)).find((st) => st && st.level !== "block");
   if (first) {
     toast(first.items[0].msg, "warn");
   }
@@ -6700,12 +6700,12 @@ function startPlacing(spec) {
     }
     rec = { id: "tmp", layer_id: ly.id, template: spec.template, code_prefix: spec.prefix, x: snapV(c.x, ly.grid_step), y: snapV(c.y, ly.grid_step), rotation: 0, params: clone(spec.params), overrides: {} };
   }
-  const view = rec.template ? buildSlotView(rec, { ghost: false }) : buildPlacementView(rec, { ghost: false, noLabel: true });
-  if (!view) {
+  const view2 = rec.template ? buildSlotView(rec, { ghost: false }) : buildPlacementView(rec, { ghost: false, noLabel: true });
+  if (!view2) {
     return;
   }
-  V.world.add(view.root);
-  V.placing = { spec, rec, view, kind: spec.kind };
+  V.world.add(view2.root);
+  V.placing = { spec, rec, view: view2, kind: spec.kind };
   V.canvas.style.cursor = "copy";
   V.placing.hint = toast("Клацніть на сцені, щоб поставити. Shift — поставити кілька, Esc — скасувати.");
   liveGhost();
@@ -7366,6 +7366,539 @@ __export(adapter_odoo_exports, {
   slotToApi: () => slotToApi,
   variantFromApi: () => variantFromApi
 });
+
+// core/constructor/building_core.js
+var ITEM_KINDS = {
+  column: "Колона",
+  wall: "Стіна",
+  gate: "Ворота",
+  dock: "Док",
+  door: "Двері",
+  office: "Офіс",
+  charger: "Зарядка техніки"
+};
+var ITEM_PREFIX = { column: "К", wall: "С", gate: "В", dock: "Д", door: "Дв", office: "Офіс", charger: "З" };
+var OBSTACLE_KINDS = ["column", "wall", "office", "charger"];
+var OBSTACLE_ACCUSATIVE = { column: "колону", wall: "стіну", office: "офіс", charger: "зарядку техніки" };
+var LINK_KINDS = ["gate", "dock"];
+var ITEM_DEFAULT_SIZE = { column: [0.4, 0.4], wall: [5, 0.2], gate: [3.5, 0.3], dock: [3, 0.5], door: [1, 0.2], office: [6, 4], charger: [1.2, 0.8] };
+var ITEM_HEIGHT = { column: null, wall: null, gate: 4, dock: 1.2, door: 2.1, office: 3, charger: 1.2 };
+var MAX_ITEMS = 5e3;
+var TECHS = {
+  hand: ["Ручний візок", 1.2],
+  stacker: ["Штабелер", 2],
+  reach: ["Ричтрак", 2.8],
+  vna: ["Вузькопрохідний", 1.8],
+  forklift: ["Навантажувач", 3.5],
+  custom: ["Свій мінімум", null],
+  none: ["Не перевіряти", null]
+};
+var SPRINKLER_CLEARANCE_M = 0.5;
+var SPACER_M = 0.6;
+var MIN_FACE_OVERLAP_M = 1;
+var MAX_NEED_M = 12;
+var INSIDE_KINDS = ["storage", "production", "custom"];
+var ROW_TEMPLATES2 = ["pallet_rack", "cantilever", "shelf"];
+var ANGLE_TOLERANCE_DEG = 1;
+var rnd2 = (v, d = 4) => Math.round(v * 10 ** d) / 10 ** d;
+var f2 = (v) => v.toFixed(2);
+var finite = (v) => typeof v === "number" && Number.isFinite(v);
+function newItem(kind, id, x, y, extra = {}) {
+  const [w, d] = ITEM_DEFAULT_SIZE[kind];
+  const it = { id, kind, name: "", x: rnd2(x), y: rnd2(y), w, d, rot: 0, location_uid: null };
+  if (kind === "wall") {
+    it.th = d;
+  }
+  return Object.assign(it, extra);
+}
+function nextName(items2, kind) {
+  const re = new RegExp("^" + ITEM_PREFIX[kind] + "-(\\d+)$");
+  let n = 0;
+  for (const it of items2) {
+    const m = it.kind === kind && re.exec(it.name || "");
+    if (m) {
+      n = Math.max(n, +m[1]);
+    }
+  }
+  return `${ITEM_PREFIX[kind]}-${n + 1}`;
+}
+function itemToApi(it) {
+  const out = {
+    id: String(it.id).slice(0, 32),
+    kind: it.kind,
+    name: String(it.name || "").slice(0, 64),
+    x: rnd2(it.x),
+    y: rnd2(it.y),
+    w: rnd2(Math.max(0.01, it.w || 0.01)),
+    d: rnd2(Math.max(0.01, (it.kind === "wall" ? it.th ?? it.d : it.d) || 0.01)),
+    rot: rnd2(it.rot || 0)
+  };
+  if (it.kind === "wall") {
+    out.th = out.d;
+  }
+  out.location_uid = LINK_KINDS.includes(it.kind) && it.location_uid ? String(it.location_uid).slice(0, 64) : null;
+  if (finite(it.h) && it.h > 0) {
+    out.h = rnd2(Math.min(it.h, 100));
+  }
+  return out;
+}
+var itemsToApi = (items2) => (items2 || []).map(itemToApi);
+var itemObb = (it) => makeObb(it.x, it.y, (it.w || 0) / 2, (it.d || 0) / 2, it.rot || 0);
+function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.4, d = 0.4 }) {
+  const out = [];
+  const have = existing.filter((it) => it.kind === "column");
+  let n = 0;
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < ny; j++) {
+      const x = rnd2(x0 + i * sx);
+      const y = rnd2(y0 + j * sy);
+      if (have.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05) || out.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+        continue;
+      }
+      const col = newItem("column", idOf(), x, y, { w, d });
+      col.name = nextName([...existing, ...out], "column");
+      out.push(col);
+      n++;
+      if (existing.length + n >= MAX_ITEMS) {
+        return out;
+      }
+    }
+  }
+  return out;
+}
+function contourWalls(pts, th, idOf, existing = []) {
+  const sign = pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0) >= 0 ? 1 : -1;
+  const out = [];
+  pts.forEach(([x1, y1], i) => {
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 0.1) {
+      return;
+    }
+    const ux = (x2 - x1) / len;
+    const uy = (y2 - y1) / len;
+    const wall = newItem("wall", idOf(), (x1 + x2) / 2 + -uy * sign * th / 2, (y1 + y2) / 2 + ux * sign * th / 2, { w: rnd2(len), d: th, th, rot: rnd2(Math.atan2(uy, ux) * 180 / Math.PI, 2) });
+    wall.name = nextName([...existing, ...out], "wall");
+    out.push(wall);
+  });
+  return out;
+}
+function itemAt(items2, x, y, tol = 0.15) {
+  const hits = [];
+  for (const it of items2) {
+    const o = itemObb(it);
+    const [lx, ly] = rotate(x - o.cx, y - o.cy, -o.rot);
+    if (Math.abs(lx) <= o.a + tol && Math.abs(ly) <= o.b + tol) {
+      hits.push([it, (it.w || 0) * (it.d || 0)]);
+    }
+  }
+  hits.sort((p, q) => p[1] - q[1]);
+  return hits.length ? hits[0][0] : null;
+}
+var polygonArea = (pts) => Math.abs(pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0)) / 2;
+var polygonPerimeter = (pts) => pts.reduce((a, [x, y], i) => a + Math.hypot(pts[(i + 1) % pts.length][0] - x, pts[(i + 1) % pts.length][1] - y), 0);
+var rectContour = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+var contourBbox = (pts) => {
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+};
+function isRectContour(pts) {
+  if (!pts || pts.length !== 4) {
+    return false;
+  }
+  const b = contourBbox(pts);
+  return pts.every(([x, y]) => (x === b.x0 || x === b.x1) && (y === b.y0 || y === b.y1)) && new Set(pts.map((p) => p.join(","))).size === 4;
+}
+function contourOf(layer, building) {
+  if (layer && layer.bounds && layer.bounds.length >= 3) {
+    return layer.bounds.map((p) => [p[0], p[1]]);
+  }
+  return rectPolygon((building || {}).length || 0, (building || {}).width || 0);
+}
+function contourAroundObjects(boxes, margin, fallback) {
+  if (!boxes.length) {
+    return rectContour(0, 0, fallback.length, fallback.width);
+  }
+  const x0 = Math.min(...boxes.map((b) => b[0])) - margin;
+  const y0 = Math.min(...boxes.map((b) => b[1])) - margin;
+  const x1 = Math.max(...boxes.map((b) => b[2])) + margin;
+  const y1 = Math.max(...boxes.map((b) => b[3])) + margin;
+  return rectContour(rnd2(x0, 2), rnd2(y0, 2), rnd2(x1, 2), rnd2(y1, 2));
+}
+function nearestEdge(pts, x, y) {
+  let best = null;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    const vx = x2 - x1;
+    const vy = y2 - y1;
+    const len2 = vx * vx + vy * vy;
+    const t = len2 ? Math.max(0, Math.min(1, ((x - x1) * vx + (y - y1) * vy) / len2)) : 0;
+    const p = [x1 + t * vx, y1 + t * vy];
+    const dist = Math.hypot(x - p[0], y - p[1]);
+    if (!best || dist < best.dist) {
+      best = { index: i, point: p, dist };
+    }
+  }
+  return best;
+}
+function segCross(p1, p2, p3, p4) {
+  const o = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  return o(p3, p4, p1) * o(p3, p4, p2) < 0 && o(p1, p2, p3) * o(p1, p2, p4) < 0;
+}
+function isSimplePolygon(pts) {
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (j === i + 1 || i === 0 && j === n - 1) {
+        continue;
+      }
+      if (segCross(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function aisleAxis(a) {
+  const w = a.x1 - a.x0;
+  const h2 = a.y1 - a.y0;
+  const cx = (a.x0 + a.x1) / 2;
+  const cy = (a.y0 + a.y1) / 2;
+  return w >= h2 ? { dir: "h", width: h2, len: w, p0: [a.x0, cy], p1: [a.x1, cy], cx, cy } : { dir: "v", width: w, len: h2, p0: [cx, a.y0], p1: [cx, a.y1], cx, cy };
+}
+function aisleFromPoints(p, q, width2) {
+  const dx = Math.abs(q[0] - p[0]);
+  const dy = Math.abs(q[1] - p[1]);
+  if (dx >= dy) {
+    return { x0: rnd2(Math.min(p[0], q[0])), x1: rnd2(Math.max(p[0], q[0])), y0: rnd2(p[1] - width2 / 2), y1: rnd2(p[1] + width2 / 2) };
+  }
+  return { y0: rnd2(Math.min(p[1], q[1])), y1: rnd2(Math.max(p[1], q[1])), x0: rnd2(p[0] - width2 / 2), x1: rnd2(p[0] + width2 / 2) };
+}
+var insideRect = (p, a, tol) => p[0] >= a.x0 - tol && p[0] <= a.x1 + tol && p[1] >= a.y0 - tol && p[1] <= a.y1 + tol;
+function aisleLinks(aisles2, tol = 0.05) {
+  const out = [];
+  for (const b of aisles2) {
+    const ax = aisleAxis(b);
+    for (const [end, p] of [[0, ax.p0], [1, ax.p1]]) {
+      for (const a of aisles2) {
+        if (a !== b && aisleAxis(a).dir !== ax.dir && insideRect(p, a, tol)) {
+          out.push({ aisle: b.id, end, host: a.id });
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+function moveAisle(aisles2, id, dx, dy, tol = 0.05) {
+  const a = aisles2.find((x) => x.id === id);
+  if (!a) {
+    return [];
+  }
+  const touched = [id];
+  const ax = aisleAxis(a);
+  const joined = [];
+  for (const b of aisles2) {
+    if (b === a) {
+      continue;
+    }
+    const bx = aisleAxis(b);
+    if (bx.dir === ax.dir) {
+      continue;
+    }
+    for (const [end, p] of [[0, bx.p0], [1, bx.p1]]) {
+      if (insideRect(p, a, tol)) {
+        joined.push([b, bx, end]);
+      }
+    }
+  }
+  Object.assign(a, { x0: rnd2(a.x0 + dx), x1: rnd2(a.x1 + dx), y0: rnd2(a.y0 + dy), y1: rnd2(a.y1 + dy) });
+  for (const [b, bx, end] of joined) {
+    const d = bx.dir === "v" ? dy : dx;
+    if (!d) {
+      continue;
+    }
+    const keys = bx.dir === "v" ? ["y0", "y1"] : ["x0", "x1"];
+    const k = keys[end];
+    const next = rnd2(b[k] + d);
+    const other = b[keys[1 - end]];
+    if (end === 0 ? next < other - 0.1 : next > other + 0.1) {
+      b[k] = next;
+      touched.push(b.id);
+    }
+  }
+  return touched;
+}
+function snapPoints({ contour: contour2 = [], items: items2 = [], aisles: aisles2 = [] }) {
+  const pts = contour2.map((p) => ({ x: p[0], y: p[1], kind: "vertex" }));
+  for (const it of items2) {
+    for (const [x, y] of obbCorners(itemObb(it))) {
+      pts.push({ x, y, kind: "corner" });
+    }
+    pts.push({ x: it.x, y: it.y, kind: "center" });
+  }
+  for (const a of aisles2) {
+    for (const [x, y] of [[a.x0, a.y0], [a.x1, a.y0], [a.x1, a.y1], [a.x0, a.y1]]) {
+      pts.push({ x, y, kind: "corner" });
+    }
+    const ax = aisleAxis(a);
+    pts.push({ x: ax.p0[0], y: ax.p0[1], kind: "end" }, { x: ax.p1[0], y: ax.p1[1], kind: "end" });
+  }
+  return pts;
+}
+function snapPoint(x, y, { step = 0.5, pts = [], aisles: aisles2 = [], from = null, alt = false, rad: rad3 = 0.3 } = {}) {
+  if (alt) {
+    return { x: rnd2(x, 2), y: rnd2(y, 2), kind: "free" };
+  }
+  let best = null;
+  for (const p of pts) {
+    const dist = Math.hypot(p.x - x, p.y - y);
+    if (dist <= rad3 && (!best || dist < best.dist)) {
+      best = { x: p.x, y: p.y, kind: p.kind, dist };
+    }
+  }
+  if (best) {
+    return { x: rnd2(best.x), y: rnd2(best.y), kind: best.kind };
+  }
+  let sx = Math.round(x / step) * step;
+  let sy = Math.round(y / step) * step;
+  let kind = "grid";
+  for (const a of aisles2) {
+    const ax = aisleAxis(a);
+    if (ax.dir === "h" && Math.abs(y - ax.cy) <= rad3 && x >= a.x0 - rad3 && x <= a.x1 + rad3) {
+      sy = ax.cy;
+      kind = "axis";
+    } else if (ax.dir === "v" && Math.abs(x - ax.cx) <= rad3 && y >= a.y0 - rad3 && y <= a.y1 + rad3) {
+      sx = ax.cx;
+      kind = "axis";
+    }
+  }
+  if (from) {
+    if (Math.abs(x - from[0]) <= rad3) {
+      sx = from[0];
+      kind = kind === "grid" ? "align" : kind;
+    }
+    if (Math.abs(y - from[1]) <= rad3) {
+      sy = from[1];
+      kind = kind === "grid" ? "align" : kind;
+    }
+  }
+  return { x: rnd2(sx), y: rnd2(sy), kind };
+}
+function parseTech(value) {
+  if (!value || typeof value !== "string") {
+    return [null, null];
+  }
+  const i = value.indexOf(":");
+  const key = (i < 0 ? value : value.slice(0, i)).trim();
+  if (!(key in TECHS)) {
+    return [null, null];
+  }
+  let min = null;
+  const rest = i < 0 ? "" : value.slice(i + 1).trim();
+  if (rest) {
+    const v = Number(rest.replace(",", "."));
+    min = Number.isFinite(v) && v > 0 ? v : null;
+  }
+  return [key, min];
+}
+function techMin(value) {
+  const [key, min] = parseTech(value);
+  if (key === null || key === "none") {
+    return null;
+  }
+  return min !== null ? min : TECHS[key][1];
+}
+var techLabel = (value) => {
+  const [key] = parseTech(value);
+  return key ? TECHS[key][0] : "";
+};
+function techValue(key, min) {
+  if (!key) {
+    return null;
+  }
+  const base2 = (TECHS[key] || [])[1];
+  return min != null && min > 0 && min !== base2 ? `${key}:${rnd2(min, 2)}` : key;
+}
+var siteProvider = () => null;
+var setSiteProvider = (fn) => {
+  siteProvider = fn;
+};
+var siteOf = (scene) => {
+  const st = (scene._state || {}).site || {};
+  const cur = siteProvider() || {};
+  return { sprinkler_height: st.sprinkler_height ?? cur.sprinkler_height ?? 0, aisle_tech: st.aisle_tech !== void 0 ? st.aisle_tech : cur.aisle_tech ?? null };
+};
+var zonesOf = (scene) => {
+  if (!scene._s5Zones) {
+    const out = [];
+    for (const slot of scene.slots.values()) {
+      const poly = slot.template === "zone" && slot.params && slot.params.polygon;
+      if (poly && poly.length >= 3) {
+        out.push({ slot, poly, area: polygonArea(poly) });
+      }
+    }
+    out.sort((a, b) => a.area - b.area);
+    scene._s5Zones = out;
+  }
+  return scene._s5Zones;
+};
+function techAt(scene, x, y) {
+  for (const { slot, poly } of zonesOf(scene)) {
+    if (slot.tech && polygonContains(poly, [x, y])) {
+      return slot.tech;
+    }
+  }
+  return siteOf(scene).aisle_tech || null;
+}
+function contourPolygon(scene) {
+  for (const l of scene.layers.values()) {
+    if (l.kind === "building" && l.bounds && l.bounds.length >= 3) {
+      return l.bounds.map((p) => [p[0], p[1]]);
+    }
+  }
+  return rectPolygon(scene.building.length || 0, scene.building.width || 0);
+}
+var buildingItems = (scene) => [...scene.layers.values()].filter((l) => l.kind === "building").flatMap((l) => l.items || []);
+var objKey3 = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
+function checkInside(scene, config, eps) {
+  const sev = config.mode;
+  const contour2 = contourPolygon(scene);
+  const obstacles = buildingItems(scene).filter((it) => OBSTACLE_KINDS.includes(it.kind)).map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)) }));
+  const issues = [];
+  for (const obj of scene.objects()) {
+    const layer = scene.layers.get(obj.layer_id) || {};
+    if (!INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    const k = [objKey3(obj.kind, obj.id)];
+    if (contour2.length >= 3 && !obbInsidePolygon(obj.obb, contour2, eps)) {
+      issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: поза контуром будівлі`, k, "contour"));
+    }
+    const box = obbAabb(obj.obb);
+    for (const { it, obb, box: ib } of obstacles) {
+      if (aabbOverlap(box, ib, eps) && satPenetration(obj.obb, obb) > eps) {
+        const what = OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "");
+        issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: перетинає ${what}`, k, String(it.id)));
+      }
+    }
+  }
+  return issues;
+}
+function rowGap(ra, rb, group, eps) {
+  const a = ra.obb;
+  const b = rb.obb;
+  const rel = ((a.rot - b.rot) % 180 + 180) % 180;
+  if (Math.min(rel, 180 - rel) > ANGLE_TOLERANCE_DEG) {
+    return null;
+  }
+  if (Math.hypot(b.cx - a.cx, b.cy - a.cy) > Math.hypot(a.a, a.b) + Math.hypot(b.a, b.b) + MAX_NEED_M) {
+    return null;
+  }
+  const [dx, dy] = rotate(b.cx - a.cx, b.cy - a.cy, -a.rot);
+  const xLo = Math.max(-a.a, dx - b.a);
+  const xHi = Math.min(a.a, dx + b.a);
+  if (xHi - xLo < MIN_FACE_OVERLAP_M) {
+    return null;
+  }
+  const gap = Math.abs(dy) - (a.b + b.b);
+  if (gap < SPACER_M) {
+    return null;
+  }
+  const sign = dy > 0 ? 1 : -1;
+  const [yLo, yHi] = [sign * a.b, dy - sign * b.b].sort((p, q) => p - q);
+  for (const o of group) {
+    if (o === ra || o === rb) {
+      continue;
+    }
+    const pts = obbCorners(o.obb).map(([px, py]) => rotate(px - a.cx, py - a.cy, -a.rot));
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    if (Math.min(Math.max(...xs), xHi) - Math.max(Math.min(...xs), xLo) > eps && Math.min(Math.max(...ys), yHi) - Math.max(Math.min(...ys), yLo) > eps) {
+      return null;
+    }
+  }
+  const [mx, my] = rotate((xLo + xHi) / 2, (yLo + yHi) / 2, a.rot);
+  return { gap, mid: [a.cx + mx, a.cy + my] };
+}
+function checkAisleWidth(scene, config, eps) {
+  const sev = config.mode;
+  const issues = [];
+  for (const layer of scene.layers.values()) {
+    for (const a of layer.aisles || []) {
+      const width2 = Math.min(a.x1 - a.x0, a.y1 - a.y0);
+      const raw = techAt(scene, (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2);
+      const need = techMin(raw);
+      if (need !== null && width2 < need - eps) {
+        const name = a.name || a.id;
+        issues.push(issue("aisle_width", sev, layer.id, [name], `Прохід «${name}»: ширина ${f2(width2)} м, потрібно ≥ ${f2(need)} м (${techLabel(raw)})`, [], String(a.id)));
+      }
+    }
+  }
+  const byLayer2 = /* @__PURE__ */ new Map();
+  for (const obj of scene.objects()) {
+    if (!byLayer2.has(obj.layer_id)) {
+      byLayer2.set(obj.layer_id, []);
+    }
+    byLayer2.get(obj.layer_id).push(obj);
+  }
+  for (const [layerId, group] of byLayer2) {
+    const rows = group.filter((o) => o.kind === "slot" && ROW_TEMPLATES2.includes(scene.slots.get(o.id).template));
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = i + 1; j < rows.length; j++) {
+        const found = rowGap(rows[i], rows[j], group, eps);
+        if (!found) {
+          continue;
+        }
+        const raw = techAt(scene, found.mid[0], found.mid[1]);
+        const need = techMin(raw);
+        if (need === null || found.gap >= need - eps) {
+          continue;
+        }
+        const [x, y] = [rows[i].code, rows[j].code].sort((p, q) => p < q ? -1 : p > q ? 1 : 0);
+        issues.push(
+          issue("aisle_width", sev, layerId, [x, y], `Вузький проїзд між рядами ${x} і ${y}: ${f2(found.gap)} м, потрібно ≥ ${f2(need)} м (${techLabel(raw)})`, [objKey3("slot", rows[i].id), objKey3("slot", rows[j].id)])
+        );
+      }
+    }
+  }
+  return issues;
+}
+function checkHeight(scene, config, eps) {
+  const sev = config.mode;
+  const ceiling = scene.building.height || 0;
+  const sprinkler = siteOf(scene).sprinkler_height || 0;
+  const issues = [];
+  const verify = (layerId, code, top, key) => {
+    if (ceiling > 0 && top > ceiling + eps) {
+      issues.push(issue("height", sev, layerId, [code], `${code}: висота ${f2(top)} м перевищує стелю будівлі ${f2(ceiling)} м`, [key], "ceiling"));
+    } else if (sprinkler > 0 && top > sprinkler - SPRINKLER_CLEARANCE_M + eps) {
+      issues.push(issue("height", sev, layerId, [code], `${code}: верх ${f2(top)} м ближче ${f2(SPRINKLER_CLEARANCE_M)} м до спринклерів (${f2(sprinkler)} м)`, [key], "sprinkler"));
+    }
+  };
+  for (const slot of scene.slots.values()) {
+    const layer = scene.layers.get(slot.layer_id) || {};
+    if (slot.template === "zone" || !INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    verify(slot.layer_id, slot.code_prefix, (layer.elevation || 0) + slotHeight({ ...slot, params: normalizeParams(slot.template, slot.params) }), objKey3("slot", slot.id));
+  }
+  for (const p of scene.placements) {
+    const layer = scene.layers.get(p.layer_id) || {};
+    if (p.dynamic || !INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    const height = (scene.variants.get(p.variant_id).height || 0) / 1e3;
+    if (Number.isFinite(height)) {
+      verify(p.layer_id, p.code, (layer.elevation || 0) + height, objKey3("placement", p.id));
+    }
+  }
+  return issues;
+}
+
+// core/constructor/adapter_odoo.js
 var MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3, "td.putaway.rule": 4, "td.replenish.rule": 5 };
 var REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
 var RES_OF_MODEL = { "stock.location": "location", "maintenance.equipment": "equipment", "mrp.workcenter": "workcenter", "stock.warehouse.orderpoint": "replenish", "stock.putaway.rule": "putaway" };
@@ -7459,6 +7992,8 @@ function layerFromApi(l) {
     aisles: (l.aisles || []).map(rectOf),
     fire_paths: (l.fire_paths || []).map(rectOf),
     utilities: clone(l.utilities || []),
+    items: clone(l.items || []),
+    // S5: об'єкти будівлі (F18)
     underlay: underlayFromApi(l.underlay)
   };
 }
@@ -7548,7 +8083,9 @@ function slotFromApi(s, layerUid) {
     // S1 (MERGE §3.3): тип місця, власна адресація й глибина локацій; порожні значення — «успадкувати» (null)
     type_id: s.type_id ?? null,
     addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : null,
-    depth_mode: s.depth_mode || null
+    depth_mode: s.depth_mode || null,
+    tech: s.tech || null
+    // S5 (N-06): техніка зони; null — як у складу
   };
   if (s.template === "zone") {
     const poly = rec.params.polygon || [];
@@ -7637,7 +8174,11 @@ function normalizeLoaded(data) {
       // S1: адресація площадки (R-22), ієрархія й глибина локацій; бібліотека типів і пресетів (API-03 `types`, `presets`)
       addr: clone(site.addr || {}),
       loc_tree: site.loc_tree || "flat",
-      depth_mode: site.depth_mode || "level"
+      depth_mode: site.depth_mode || "level",
+      // S5: висота спринклерів, техніка складу (N-06) і стан майстра «З нуля» (F16)
+      sprinkler_height: site.sprinkler_height || 0,
+      aisle_tech: site.aisle_tech || null,
+      wizard_state: clone(site.wizard_state || {})
     },
     layers,
     slots,
@@ -7697,7 +8238,9 @@ function layerToApi(l, groupIds = {}) {
       y: rnd(u.y, 4),
       z: rnd(u.z || 0, 4)
     })),
-    allowed_slot_types: [...l.slot_types || []]
+    allowed_slot_types: [...l.slot_types || []],
+    items: itemsToApi(l.items)
+    // S5: об'єкти будівлі (R-22)
   };
   if (l.underlay) {
     vals.underlay_params = { ...l.underlay.params };
@@ -7727,7 +8270,9 @@ function slotToApi(s) {
     overrides: clone(s.overrides || {}),
     type_id: s.type_id ?? null,
     addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : {},
-    depth_mode: s.depth_mode || null
+    depth_mode: s.depth_mode || null,
+    tech: s.tech || false
+    // S5 (N-06): техніка зони
   };
   if (s.template === "zone") {
     const title = s.params.title;
@@ -8051,8 +8596,8 @@ var OdooAdapter = class extends BaseAdapter {
     return batch;
   }
   /** Повертає записи в чергу (з урахуванням змін, поставлених, поки запит був у польоті). */
-  _requeue(items) {
-    for (const { key, entry } of items) {
+  _requeue(items2) {
+    for (const { key, entry } of items2) {
       const cur = this.pending.get(key);
       if (!cur) {
         this.pending.set(key, entry);
@@ -8239,6 +8784,10 @@ var OdooAdapter = class extends BaseAdapter {
       Object.assign(out, { column_step_x_m: out.column_grid.step_x, column_step_y_m: out.column_grid.step_y });
       delete out.column_grid;
     }
+    if ("sprinkler_height" in out) {
+      out.sprinkler_height_m = out.sprinkler_height;
+      delete out.sprinkler_height;
+    }
     await this.orm.write("td.site", [this.siteId], out);
   }
   /**
@@ -8251,6 +8800,24 @@ var OdooAdapter = class extends BaseAdapter {
       throw new StoreError(res.code, res.message);
     }
     return { pinned: res.pinned, reload: true };
+  }
+  /** Склади Odoo для вибору в майстрі «З нуля» (S5, F16-01): склад не створюється, лише вибирається → [{id, name, code}]. */
+  async warehouses() {
+    if (!this.orm) {
+      return [];
+    }
+    return await this.orm.searchRead("stock.warehouse", [], ["name", "code"], { order: "name", limit: 200 });
+  }
+  /**
+   * Стан майстра «З нуля» (S5, F16-04): значення форм і створене — свій маршрут `/site/wizard` (API-04 і ORM площадку не пишуть для
+   * проєктувальника); `state` — довільний Json до 256 КБ.
+   */
+  async saveWizard(state) {
+    const res = await this._call("/f3d/constructor/site/wizard", { site_id: this.siteId, state });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return { reload: false };
   }
   /**
    * Бібліотека типів і пресетів (API-11): `{op: "list"}` → {types, presets}; `{op: "save", kind, id?, vals}` → {record};
@@ -9414,7 +9981,7 @@ function optFields(tpl, params, o) {
   const wrap = (k, el) => h("div", { "data-opt": k }, el);
   const cells = [];
   for (const [key, [min, max, def, type]] of Object.entries(spec.opt || {})) {
-    const label = PARAM_UI[key] || key;
+    const label2 = PARAM_UI[key] || key;
     const commit2 = () => o.onChange && o.onChange();
     if (type === "bool") {
       const val = params[key] ?? def;
@@ -9423,10 +9990,10 @@ function optFields(tpl, params, o) {
         params[key] = e.target.checked;
         commit2();
         o.end && o.end();
-      } }), label)));
+      } }), label2)));
     } else if (type === "list") {
       const val = params[key] ? params[key].join(", ") : "";
-      cells.push(wrap(key, fld(label + ", м", textInput({ value: val, dis: o.dis, label, f: "p." + key, begin: o.begin, end: o.end, set: (v) => {
+      cells.push(wrap(key, fld(label2 + ", м", textInput({ value: val, dis: o.dis, label: label2, f: "p." + key, begin: o.begin, end: o.end, set: (v) => {
         const nums = v.split(/[;,\s]+/).map(Number).filter((x) => Number.isFinite(x) && x >= min && x <= max);
         if (nums.length) {
           params[key] = nums;
@@ -9436,7 +10003,7 @@ function optFields(tpl, params, o) {
         commit2();
       } }), null, "span2")));
     } else {
-      cells.push(wrap(key, fld(label, numInput({ value: params[key] ?? def, dis: o.dis, min, max, step: type === "int" ? 1 : 0.05, int: type === "int", f: "p." + key, label, begin: o.begin, end: o.end, set: (v) => {
+      cells.push(wrap(key, fld(label2, numInput({ value: params[key] ?? def, dis: o.dis, min, max, step: type === "int" ? 1 : 0.05, int: type === "int", f: "p." + key, label: label2, begin: o.begin, end: o.end, set: (v) => {
         params[key] = v;
         commit2();
       } }))));
@@ -10448,7 +11015,7 @@ function zonePoly(z) {
   const s = Math.sin(a);
   return [[-l / 2, -w / 2], [l / 2, -w / 2], [l / 2, w / 2], [-l / 2, w / 2]].map(([x, y]) => [z.x + x * c - y * s, z.y + x * s + y * c]);
 }
-function zonesOf(slots = S.slots) {
+function zonesOf2(slots = S.slots) {
   return slots.filter((s) => s.template === "zone").map((zone2) => ({ zone: zone2, poly: zone2.params.polygon || zonePoly(zone2) }));
 }
 var polyArea2 = (poly) => Math.abs(poly.reduce((a, [x1, y1], i) => a + (x1 * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * y1), 0)) / 2;
@@ -10487,7 +11054,7 @@ function cellLimit(slot, cell, category) {
   return { kg: 0, source: "" };
 }
 function capacitySummary(slots, { loads = null, categories = [], zone: zone2 = null, allSlots = S.slots } = {}) {
-  const zones = zonesOf(allSlots);
+  const zones = zonesOf2(allSlots);
   const cats = new Map(categories.map((c) => [c.id, c]));
   const out = { cells: 0, places: 0, area: 0, volume: 0, maxWeight: 0, withCategory: 0, occupied: 0, free: 0, fill: null };
   for (const slot of slots) {
@@ -10677,8 +11244,8 @@ function viewCounts(lines) {
   return Object.fromEntries(VIEWS.map((v) => [v.id, lines.filter((l) => v.test(l)).length]));
 }
 function filterLines(lines, viewId, scopeUid = "") {
-  const view = VIEWS.find((v) => v.id === viewId) || VIEWS[0];
-  return lines.filter((l) => view.test(l) && (!scopeUid || inScope(l, scopeUid)));
+  const view2 = VIEWS.find((v) => v.id === viewId) || VIEWS[0];
+  return lines.filter((l) => view2.test(l) && (!scopeUid || inScope(l, scopeUid)));
 }
 var inScope = (l, uid2) => l.scope_uid === uid2 || l.zone_uid === uid2;
 function selectAll(lines, on) {
@@ -10698,8 +11265,8 @@ function selectScope(lines, uid2) {
 function closure(lines) {
   const parents = new Map(lines.filter((l) => l.kind === "create" || l.kind === "attrs" && l.vals && l.vals.active).map((l) => [`${l.res}|${l.code}`, l]));
   const skipped = [];
-  const dead = (line) => {
-    let dep = line.depends_code;
+  const dead = (line2) => {
+    let dep = line2.depends_code;
     for (let guard2 = 0; dep && guard2 < 20; guard2++) {
       const parent = parents.get(`location|${dep}`);
       if (!parent) {
@@ -10726,8 +11293,8 @@ function closure(lines) {
   }
   const have = new Set(chosen);
   const added = [];
-  for (const line of [...chosen]) {
-    let dep = line.depends_code;
+  for (const line2 of [...chosen]) {
+    let dep = line2.depends_code;
     for (let guard2 = 0; dep && guard2 < 20; guard2++) {
       const parent = parents.get(`location|${dep}`);
       if (!parent) {
@@ -11124,9 +11691,9 @@ function lazyRefresh() {
     scheduleCaches(what);
   }
 }
-function lookupField({ kind, id, label, placeholder, onPick, dis }) {
+function lookupField({ kind, id, label: label2, placeholder, onPick, dis }) {
   const adapter = E.adapter;
-  const input = h("input", { type: "text", value: id != null ? nameOf(kind, id) : "", placeholder: placeholder || "Почніть вводити назву", "aria-label": label, disabled: dis, "data-lookup": kind, autocomplete: "off" });
+  const input = h("input", { type: "text", value: id != null ? nameOf(kind, id) : "", placeholder: placeholder || "Почніть вводити назву", "aria-label": label2, disabled: dis, "data-lookup": kind, autocomplete: "off" });
   const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "160px", overflow: "auto" } });
   const search = async () => {
     if (typeof adapter.lookup !== "function") {
@@ -11193,7 +11760,7 @@ function renderSlotBlock2(root, { rec }) {
   lazyRefresh();
   const ly = layerOf(rec.layer_id);
   const dis = !canEditLayer(ly) || !!rec.locked;
-  const zones = zonesOf();
+  const zones = zonesOf2();
   const home = isZone ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
   const cat = inheritedField(rec, "storage_category_id", home);
   const strat = inheritedField(rec, "removal_strategy_id", home);
@@ -11287,10 +11854,10 @@ function renderSlotBlock2(root, { rec }) {
     )
   );
 }
-var flagField = (label, opts2, value, onChange, dis, key) => {
-  const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts2] : opts2, value, onChange, dis, label);
+var flagField = (label2, opts2, value, onChange, dis, key) => {
+  const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts2] : opts2, value, onChange, dis, label2);
   el.dataset.flag = key;
-  return fld(label, el);
+  return fld(label2, el);
 };
 var categoryLine = (c) => c ? `${c.name}: макс. вага ${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без обмеження"}, ${POLICY_LABEL[c.allow_new_product] || c.allow_new_product}` : "";
 registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock2 }, { sequence: 35, force: true });
@@ -11349,8 +11916,8 @@ function renderChecksConfig(root) {
       refreshCaches([{ cell_load: "loads", putaway_fit: "fit", code_conflict: "codes" }[id]]);
     }
   };
-  const items = EXTRA_CHECKS.filter((c) => c.id !== "cell_load" || can("storage")).filter((c) => c.id !== "putaway_fit" || can("putaway"));
-  if (!items.length) {
+  const items2 = EXTRA_CHECKS.filter((c) => c.id !== "cell_load" || can("storage")).filter((c) => c.id !== "putaway_fit" || can("putaway"));
+  if (!items2.length) {
     return;
   }
   root.append(
@@ -11359,7 +11926,7 @@ function renderChecksConfig(root) {
       { class: "sec", id: "capChecks" },
       h("div", { class: "lbl", style: { margin: "6px 0" } }, "Перевірки ємності й правил"),
       dis ? h("div", { class: "note lock" }, "Налаштування змінює Менеджер.") : null,
-      items.map((c) => {
+      items2.map((c) => {
         const cur = cfg[c.id] || { enabled: false, mode: c.mode, params: {}, id: null };
         return h(
           "div",
@@ -11533,8 +12100,8 @@ function clearHighlight() {
   E.requestRender && E.requestRender();
 }
 var allCells = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => ({ code: c.code, slot: s })));
-function codeField({ value, label, onPick, dis }) {
-  const input = h("input", { type: "text", value: value || "", "aria-label": label, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
+function codeField({ value, label: label2, onPick, dis }) {
+  const input = h("input", { type: "text", value: value || "", "aria-label": label2, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
   const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "140px", overflow: "auto" } });
   const find = () => {
     const t = input.value.trim().toLowerCase();
@@ -11885,7 +12452,7 @@ function renderRulesInto(root, { rec }) {
     return;
   }
   const rules = rulesState();
-  const zones = zonesOf();
+  const zones = zonesOf2();
   let hits;
   let own;
   if (rec.template === "zone") {
@@ -12071,7 +12638,7 @@ function undoRecord() {
     return false;
   }
   const diff = diffSnapshots(JSON.parse(H.cur), JSON.parse(data));
-  const label = H.label || labelOf(diff);
+  const label2 = H.label || labelOf(diff);
   H.label = null;
   const one = diff.changed.length === 1 && !diff.added.length && !diff.removed.length && !diff.site ? diff.changed[0] : null;
   const key = one ? `${one.kind}:${one.id}:${one.fields.join(",")}` : null;
@@ -12082,7 +12649,7 @@ function undoRecord() {
     top.data = data;
     top.at = now;
   } else {
-    H.stack.push({ data, label, at: now, key });
+    H.stack.push({ data, label: label2, at: now, key });
     H.idx = H.stack.length - 1;
     trim(H);
   }
@@ -12136,7 +12703,7 @@ async function goto(i, verb) {
   const H = S.hist;
   const from = H.stack[H.idx];
   const to = H.stack[i];
-  const label = i < H.idx ? from.label : to.label;
+  const label2 = i < H.idx ? from.label : to.label;
   H.busy = true;
   try {
     if (E.adapter?.dirty) {
@@ -12153,7 +12720,7 @@ async function goto(i, verb) {
         await E.reload();
       }
     }
-    toast(`${verb}: ${label}`);
+    toast(`${verb}: ${label2}`);
   } catch (e) {
     toast(e.message || "Не вдалося виконати дію.", "err");
   } finally {
@@ -12212,13 +12779,13 @@ var idxOf = (kind) => kind === "placement" ? S.pIdx : S.sIdx;
 function selectedItems() {
   return selRefs().map((ref2) => ({ ref: ref2, kind: kindOf(ref2), rec: recOfRef(ref2) })).filter((it) => it.rec);
 }
-function canEditAll(items) {
+function canEditAll(items2) {
   const acc = E.access?.();
   if (acc && !acc.design) {
     toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
     return false;
   }
-  for (const it of items) {
+  for (const it of items2) {
     const ly = layerOf(it.rec.layer_id);
     if (!canEditLayer(ly)) {
       toastLock(ly);
@@ -12238,8 +12805,8 @@ function boxOf(it) {
   }
   return sGeom(it.rec).box;
 }
-function groupBox(items) {
-  const bs = items.map(boxOf);
+function groupBox(items2) {
+  const bs = items2.map(boxOf);
   return [Math.min(...bs.map((b) => b[0])), Math.min(...bs.map((b) => b[1])), Math.max(...bs.map((b) => b[2])), Math.max(...bs.map((b) => b[3]))];
 }
 function nextCodeLike(code, used, max = PREFIX_MAX) {
@@ -12318,13 +12885,13 @@ var rot = (x, y, deg) => {
   const a = deg * Math.PI / 180;
   return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
 };
-function offsetCandidates(items, { prefer = "length", gap = 0.5, aisle = 0 } = {}) {
-  const first = items[0].rec;
-  const b = groupBox(items);
+function offsetCandidates(items2, { prefer = "length", gap = 0.5, aisle = 0 } = {}) {
+  const first = items2[0].rec;
+  const b = groupBox(items2);
   const spanX = b[2] - b[0];
   const spanY = b[3] - b[1];
-  const single = items.length === 1;
-  const g3 = single ? sGeomOrP(items[0]) : { L: spanX, W: spanY, a: 0 };
+  const single = items2.length === 1;
+  const g3 = single ? sGeomOrP(items2[0]) : { L: spanX, W: spanY, a: 0 };
   const along = [g3.L + gap, 0];
   const across = [0, g3.W + gap + aisle];
   const a = single ? first.rotation || 0 : 0;
@@ -12340,7 +12907,7 @@ function offsetCandidates(items, { prefer = "length", gap = 0.5, aisle = 0 } = {
   return out.map(([dx, dy]) => [rnd(dx, 4), rnd(dy, 4)]);
 }
 var sGeomOrP = (it) => it.kind === "placement" ? pGeom(it.rec, variantOf(it.rec.variant_id) || { length: 1e3, width: 1e3 }) : sGeom(it.rec);
-function afterCopies(made, label) {
+function afterCopies(made, label2) {
   if (!made.length) {
     return;
   }
@@ -12350,30 +12917,30 @@ function afterCopies(made, label) {
   if (made.length > 1) {
     S.multi = made.map((c) => ({ kind: c.kind, id: c.rec.id }));
   }
-  E.undoLabel?.(label);
+  E.undoLabel?.(label2);
   E.commit({});
   pinNumbers(made.filter((c) => c.kind === "slot" && contextOf(c.rec)).map((c) => c.rec));
 }
 function duplicateSel(mode = null) {
-  const items = selectedItems();
-  if (!items.length || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
     return false;
   }
-  const one = items.length === 1 ? items[0] : null;
+  const one = items2.length === 1 ? items2[0] : null;
   if (one && one.kind === "slot" && (mode === "tier" || mode == null && S.selCell && LEVEL_KEYS[one.rec.template])) {
     return addTier(one.rec);
   }
   if (one && one.kind === "slot" && mode === "bay") {
     return addBay(one.rec);
   }
-  const ly = layerOf(one ? one.rec.layer_id : items[0].rec.layer_id);
+  const ly = layerOf(one ? one.rec.layer_id : items2[0].rec.layer_id);
   const rack3 = one && one.kind === "slot" && COUNT_KEY[one.rec.template] && one.rec.template !== "floor_stack";
   const used = usedCodes();
-  for (const [dx, dy] of offsetCandidates(items, { prefer: rack3 ? "across" : "length", gap: one && one.kind === "slot" && one.rec.template === "floor_spot" ? 0.3 : 0.5, aisle: rack3 ? ly?.aisle_width || 3 : 0 })) {
+  for (const [dx, dy] of offsetCandidates(items2, { prefer: rack3 ? "across" : "length", gap: one && one.kind === "slot" && one.rec.template === "floor_spot" ? 0.3 : 0.5, aisle: rack3 ? ly?.aisle_width || 3 : 0 })) {
     const u = { prefixes: new Set(used.prefixes), codes: new Set(used.codes) };
-    const copies = items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, used: u }) }));
+    const copies = items2.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, used: u }) }));
     if (!attempt(copies)) {
-      afterCopies(copies, items.length > 1 ? `Дублювання: ${items.length} об’єктів` : `Дублювання: ${items[0].rec.code_prefix || items[0].rec.code}`);
+      afterCopies(copies, items2.length > 1 ? `Дублювання: ${items2.length} об’єктів` : `Дублювання: ${items2[0].rec.code_prefix || items2[0].rec.code}`);
       return true;
     }
   }
@@ -12396,7 +12963,7 @@ function addBay(s) {
   }
   return bump(s, key, "Секція в кінці ряду");
 }
-function bump(s, key, label) {
+function bump(s, key, label2) {
   const max = (SLOT_TEMPLATES[s.template].params[key] || SLOT_TEMPLATES[s.template].opt[key] || [])[1] ?? 1e3;
   const cur = Number(s.params[key] ?? ((SLOT_TEMPLATES[s.template].params[key] || [])[2] || 1));
   if (cur + 1 > max) {
@@ -12413,20 +12980,20 @@ function bump(s, key, label) {
     toast("Заблоковано: " + nb[0].msg, "err");
     return false;
   }
-  E.undoLabel?.(`${label}: ${s.code_prefix}`);
+  E.undoLabel?.(`${label2}: ${s.code_prefix}`);
   E.commit({});
   return true;
 }
 var clip = null;
 function copySel() {
-  const items = selectedItems().filter((it) => !it.rec.locked);
-  if (!items.length) {
+  const items2 = selectedItems().filter((it) => !it.rec.locked);
+  if (!items2.length) {
     toast("Немає що копіювати: виділіть об’єкт.", "warn");
     return false;
   }
-  const b = groupBox(items);
-  clip = { items: items.map((it) => ({ kind: it.kind, rec: clone(it.rec) })), cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, layerId: items[0].rec.layer_id, w: b[2] - b[0], h: b[3] - b[1] };
-  toast(items.length > 1 ? `Скопійовано: ${items.length} об’єктів.` : `Скопійовано: ${items[0].rec.code_prefix || items[0].rec.code}.`);
+  const b = groupBox(items2);
+  clip = { items: items2.map((it) => ({ kind: it.kind, rec: clone(it.rec) })), cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, layerId: items2[0].rec.layer_id, w: b[2] - b[0], h: b[3] - b[1] };
+  toast(items2.length > 1 ? `Скопійовано: ${items2.length} об’єктів.` : `Скопійовано: ${items2[0].rec.code_prefix || items2[0].rec.code}.`);
   return true;
 }
 function targetLayer() {
@@ -12497,11 +13064,11 @@ function pasteClip() {
   return false;
 }
 function arrayCopies({ nx = 2, ny = 1, dx, dy }) {
-  const items = selectedItems();
-  if (!items.length || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
     return 0;
   }
-  const b = groupBox(items);
+  const b = groupBox(items2);
   const stepX = dx ?? rnd(b[2] - b[0] + 0.3, 3);
   const stepY = dy ?? rnd(b[3] - b[1] + 0.3, 3);
   const used = usedCodes();
@@ -12512,7 +13079,7 @@ function arrayCopies({ nx = 2, ny = 1, dx, dy }) {
       if (!i && !j) {
         continue;
       }
-      const copies = items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx: i * stepX, dy: j * stepY, used }) }));
+      const copies = items2.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx: i * stepX, dy: j * stepY, used }) }));
       if (attempt(copies)) {
         skipped++;
         for (const c of copies) {
@@ -12529,12 +13096,12 @@ function arrayCopies({ nx = 2, ny = 1, dx, dy }) {
   toast(made.length ? `Масив: створено ${made.length}${skipped ? `, не вмістилось або заблоковано: ${skipped}` : ""}.` : "Масив: жодної копії не вдалося розмістити.", made.length ? void 0 : "warn");
   return made.length;
 }
-function applyMoves(items, mutate, label) {
+function applyMoves(items2, mutate, label2) {
   const before = S.issues;
-  const snaps = items.map((it) => ({ it, x: it.rec.x, y: it.rec.y, rotation: it.rec.rotation }));
+  const snaps = items2.map((it) => ({ it, x: it.rec.x, y: it.rec.y, rotation: it.rec.rotation }));
   mutate();
   const after = runLive();
-  const nb = items.flatMap((it) => newBlocks(before, after, objKey(it.ref.kind, it.ref.id)));
+  const nb = items2.flatMap((it) => newBlocks(before, after, objKey(it.ref.kind, it.ref.id)));
   if (nb.length) {
     for (const s of snaps) {
       Object.assign(s.it.rec, { x: s.x, y: s.y, rotation: s.rotation });
@@ -12543,12 +13110,12 @@ function applyMoves(items, mutate, label) {
     toast("Заблоковано: " + nb[0].msg + ". Зміну скасовано.", "err");
     return false;
   }
-  for (const it of items) {
+  for (const it of items2) {
     if (it.kind === "placement") {
       E.assignSlot(it.rec);
     }
   }
-  E.undoLabel?.(label);
+  E.undoLabel?.(label2);
   E.commit({});
   return true;
 }
@@ -12562,15 +13129,15 @@ var ALIGN = {
 };
 var ALIGN_LABELS = { left: "Ліворуч", right: "Праворуч", top: "Угору", bottom: "Донизу", cx: "Центр X", cy: "Центр Y" };
 function alignSel(mode) {
-  const items = selectedItems();
-  if (items.length < 2 || !ALIGN[mode] || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (items2.length < 2 || !ALIGN[mode] || !canEditAll(items2)) {
     return false;
   }
-  const g3 = groupBox(items);
+  const g3 = groupBox(items2);
   return applyMoves(
-    items,
+    items2,
     () => {
-      for (const it of items) {
+      for (const it of items2) {
         const [dx, dy] = ALIGN[mode](boxOf(it), g3);
         it.rec.x = rnd(it.rec.x + dx, 4);
         it.rec.y = rnd(it.rec.y + dy, 4);
@@ -12580,21 +13147,21 @@ function alignSel(mode) {
   );
 }
 function distributeSel(axis) {
-  const items = selectedItems();
-  if (items.length < 3 || !canEditAll(items)) {
-    if (items.length < 3) {
+  const items2 = selectedItems();
+  if (items2.length < 3 || !canEditAll(items2)) {
+    if (items2.length < 3) {
       toast("Розподіл потребує щонайменше трьох об’єктів.", "warn");
     }
     return false;
   }
   const lo = axis === "x" ? 0 : 1;
   const hi = lo + 2;
-  const rows = items.map((it) => ({ it, b: boxOf(it) })).sort((a, b) => a.b[lo] + a.b[hi] - (b.b[lo] + b.b[hi]));
+  const rows = items2.map((it) => ({ it, b: boxOf(it) })).sort((a, b) => a.b[lo] + a.b[hi] - (b.b[lo] + b.b[hi]));
   const span = rows[rows.length - 1].b[hi] - rows[0].b[lo];
   const total = rows.reduce((s, r) => s + (r.b[hi] - r.b[lo]), 0);
   const gap = (span - total) / (rows.length - 1);
   return applyMoves(
-    items,
+    items2,
     () => {
       let pos = rows[0].b[hi] + gap;
       for (let i = 1; i < rows.length - 1; i++) {
@@ -12607,14 +13174,14 @@ function distributeSel(axis) {
   );
 }
 function rotateGroup(dir = 1) {
-  const items = selectedItems();
-  if (!items.length || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
     return false;
   }
-  const g3 = groupBox(items);
+  const g3 = groupBox(items2);
   const cx = (g3[0] + g3[2]) / 2;
   const cy = (g3[1] + g3[3]) / 2;
-  for (const it of items) {
+  for (const it of items2) {
     if (it.kind === "placement") {
       const al = rotationsList(variantOf(it.rec.variant_id));
       if (al && !al.includes(normDeg((it.rec.rotation || 0) + 90 * dir))) {
@@ -12624,9 +13191,9 @@ function rotateGroup(dir = 1) {
     }
   }
   return applyMoves(
-    items,
+    items2,
     () => {
-      for (const it of items) {
+      for (const it of items2) {
         const [dx, dy] = [it.rec.x - cx, it.rec.y - cy];
         const [nx, ny] = dir > 0 ? [-dy, dx] : [dy, -dx];
         it.rec.x = rnd(cx + nx, 4);
@@ -12634,19 +13201,19 @@ function rotateGroup(dir = 1) {
         it.rec.rotation = normDeg((it.rec.rotation || 0) + 90 * dir);
       }
     },
-    items.length > 1 ? "Поворот рядів" : `Поворот: ${items[0].rec.code_prefix || items[0].rec.code}`
+    items2.length > 1 ? "Поворот рядів" : `Поворот: ${items2[0].rec.code_prefix || items2[0].rec.code}`
   );
 }
 async function removeAll() {
-  const items = selectedItems();
-  if (!items.length || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
     return false;
   }
-  const ok = await E.confirmBox({ title: "Прибрати виділене?", text: `Буде видалено ${items.length} об’єктів із чернетки.`, ok: "Прибрати", danger: true });
+  const ok = await E.confirmBox({ title: "Прибрати виділене?", text: `Буде видалено ${items2.length} об’єктів із чернетки.`, ok: "Прибрати", danger: true });
   if (!ok) {
     return false;
   }
-  const ids = new Set(items.map((it) => it.ref.kind + ":" + it.ref.id));
+  const ids = new Set(items2.map((it) => it.ref.kind + ":" + it.ref.id));
   S.slots = S.slots.filter((s) => !ids.has("slot:" + s.id));
   S.placements = S.placements.filter((p) => !ids.has("placement:" + p.id));
   for (const p of S.placements) {
@@ -12657,19 +13224,19 @@ async function removeAll() {
   S.sel = null;
   S.multi = [];
   S.selCell = null;
-  E.undoLabel?.(`Видалення: ${items.length} об’єктів`);
+  E.undoLabel?.(`Видалення: ${items2.length} об’єктів`);
   E.commit({});
   return true;
 }
 function groupToZone() {
-  const items = selectedItems().filter((it) => it.rec.template !== "zone");
-  if (items.length < 2 || !canEditAll(items)) {
-    if (items.length < 2) {
+  const items2 = selectedItems().filter((it) => it.rec.template !== "zone");
+  if (items2.length < 2 || !canEditAll(items2)) {
+    if (items2.length < 2) {
       toast("Для групування виділіть щонайменше два об’єкти (не зони).", "warn");
     }
     return false;
   }
-  const lids = new Set(items.map((it) => it.rec.layer_id));
+  const lids = new Set(items2.map((it) => it.rec.layer_id));
   if (lids.size > 1) {
     toast("Групувати можна об’єкти одного шару.", "warn");
     return false;
@@ -12679,11 +13246,11 @@ function groupToZone() {
     toast(`Шар «${ly.name}» не допускає зони.`, "warn");
     return false;
   }
-  const slots = items.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const slots = items2.filter((it) => it.kind === "slot").map((it) => it.rec);
   const zones = new Set(slots.map((s) => (contextOf(s) || {}).zone ?? null));
   const prevZone = zones.size === 1 ? [...zones][0] : null;
   pinNumbers(slots.filter((s) => contextOf(s)));
-  const g3 = groupBox(items);
+  const g3 = groupBox(items2);
   const m = 1;
   const prefix = nextPrefix({ ref: "ZN", code: "ZN" });
   const zone2 = {
@@ -12711,19 +13278,19 @@ function groupToZone() {
   }
   S.multi = [];
   S.sel = { kind: "slot", id: zone2.id };
-  E.undoLabel?.(`Групування в зону: ${items.length} об’єктів`);
+  E.undoLabel?.(`Групування в зону: ${items2.length} об’єктів`);
   E.commit({});
   toast(`Створено зону «${zone2.params.title}».`);
   return true;
 }
 async function ungroupZone() {
-  const items = selectedItems();
-  const zone2 = items.length === 1 && items[0].kind === "slot" && items[0].rec.template === "zone" ? items[0].rec : null;
+  const items2 = selectedItems();
+  const zone2 = items2.length === 1 && items2[0].kind === "slot" && items2[0].rec.template === "zone" ? items2[0].rec : null;
   if (!zone2) {
     toast("Виділіть зону, яку треба розгрупувати.", "warn");
     return false;
   }
-  if (!canEditAll(items)) {
+  if (!canEditAll(items2)) {
     return false;
   }
   const inside = S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && (contextOf(s) || {}).zone != null);
@@ -12740,8 +13307,8 @@ async function ungroupZone() {
   return true;
 }
 function applyProps({ rotation, dx, dy }) {
-  const items = selectedItems();
-  if (!items.length || !canEditAll(items)) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
     return false;
   }
   const hasRot = rotation != null && rotation !== "";
@@ -12752,9 +13319,9 @@ function applyProps({ rotation, dx, dy }) {
     return false;
   }
   return applyMoves(
-    items,
+    items2,
     () => {
-      for (const it of items) {
+      for (const it of items2) {
         if (hasRot) {
           it.rec.rotation = Number(rotation);
         }
@@ -12762,7 +13329,7 @@ function applyProps({ rotation, dx, dy }) {
         it.rec.y = rnd(it.rec.y + my, 4);
       }
     },
-    `Властивості: ${items.length} об’єктів`
+    `Властивості: ${items2.length} об’єктів`
   );
 }
 var BULK_TEMPLATES = ["pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"];
@@ -12820,15 +13387,15 @@ function bulkCreate(o) {
 }
 function previewSvg(lay) {
   const r = lay.region;
-  const W = 320;
-  const k = W / Math.max(r.l, 1);
+  const W2 = 320;
+  const k = W2 / Math.max(r.l, 1);
   const Hh = Math.max(40, r.w * k);
   const rects = lay.rows.map((row) => {
     const u = ((row.x - r.cx) * Math.cos(-r.rot * Math.PI / 180) - (row.y - r.cy) * Math.sin(-r.rot * Math.PI / 180)) * k;
     const v = ((row.x - r.cx) * Math.sin(-r.rot * Math.PI / 180) + (row.y - r.cy) * Math.cos(-r.rot * Math.PI / 180)) * k;
-    return `<rect x="${(W / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
+    return `<rect x="${(W2 / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
   }).join("");
-  return `<svg viewBox="0 0 ${W} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
+  return `<svg viewBox="0 0 ${W2} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W2 - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
 }
 function openBulk() {
   const ly = layerOf(S.ui.layer);
@@ -12842,8 +13409,8 @@ function openBulk() {
     prev.innerHTML = previewSvg(lay);
     info.textContent = `Рядів: ${lay.rows.length} із ${st.rows} · комірок: ${lay.cells} · габарит ряду ${fmt(lay.fp.l, 1)}×${fmt(lay.fp.w, 1)} м`;
   };
-  const num4 = (key, label, min, max, step = 1) => {
-    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+  const num4 = (key, label2, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label2, "data-s3": key });
     el.addEventListener("input", () => {
       const v = parseFloat(el.value);
       if (isFinite(v) && v >= min && v <= max) {
@@ -12851,7 +13418,7 @@ function openBulk() {
         draw();
       }
     });
-    return fld(label, el);
+    return fld(label2, el);
   };
   const body = h(
     "div",
@@ -12891,22 +13458,22 @@ function openBulk() {
   });
 }
 function openArray() {
-  const items = selectedItems();
-  if (!items.length) {
+  const items2 = selectedItems();
+  if (!items2.length) {
     toast("Виділіть об’єкт для масиву.", "warn");
     return;
   }
-  const b = groupBox(items);
+  const b = groupBox(items2);
   const st = { nx: 3, ny: 2, dx: rnd(b[2] - b[0] + 0.3, 2), dy: rnd(b[3] - b[1] + 0.3, 2) };
-  const num4 = (key, label, min, max, step = 1) => {
-    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+  const num4 = (key, label2, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label2, "data-s3": key });
     el.addEventListener("input", () => {
       const v = parseFloat(el.value);
       if (isFinite(v)) {
         st[key] = v;
       }
     });
-    return fld(label, el);
+    return fld(label2, el);
   };
   openDialog({
     title: "Масив копій",
@@ -13005,10 +13572,10 @@ function renderMultiPanel() {
     return;
   }
   root.replaceChildren();
-  const items = selectedItems();
+  const items2 = selectedItems();
   const acc = E.access();
-  const btn = (label, fn, o = {}) => {
-    const b = h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, "data-title": o.title || "", onclick: fn }, o.icon ? ic(o.icon) : null, label);
+  const btn3 = (label2, fn, o = {}) => {
+    const b = h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, "data-title": o.title || "", onclick: fn }, o.icon ? ic(o.icon) : null, label2);
     b.disabled = !acc.design || !!o.dis;
     b.title = !acc.design ? E.accessHint("design") : o.title || "";
     return b;
@@ -13016,25 +13583,25 @@ function renderMultiPanel() {
   const list = h(
     "div",
     { class: "mlist", id: "multiList", style: { maxHeight: "180px", overflow: "auto", border: "1px solid var(--line)" } },
-    items.map(
+    items2.map(
       (it) => h(
         "div",
         { class: "frow", "data-key": it.ref.kind + ":" + it.ref.id, style: { padding: "2px 6px", borderBottom: "1px solid var(--line2)" } },
-        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items.map((x) => x.ref), it.ref) }, nameOf3(it)),
+        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items2.map((x) => x.ref), it.ref) }, nameOf3(it)),
         h("span", { class: "small muted" }, it.kind === "slot" ? it.rec.template : "обладнання"),
         h("button", { class: "xbtn", type: "button", "aria-label": "Прибрати з виділення", onclick: () => toggleMulti(it.ref) }, ic("x"))
       )
     )
   );
-  const slots = items.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const slots = items2.filter((it) => it.kind === "slot").map((it) => it.rec);
   const props = { rotation: "", dx: 0, dy: 0 };
-  const num4 = (key, label) => {
-    const el = h("input", { type: "number", step: 0.5, value: props[key], "aria-label": label, "data-s3": key });
+  const num4 = (key, label2) => {
+    const el = h("input", { type: "number", step: 0.5, value: props[key], "aria-label": label2, "data-s3": key });
     el.addEventListener("input", () => props[key] = parseFloat(el.value) || 0);
-    return fld(label, el);
+    return fld(label2, el);
   };
   root.append(
-    h("div", { class: "sec", id: "multiPanel" }, h("h3", null, `Виділено ${items.length}`), list),
+    h("div", { class: "sec", id: "multiPanel" }, h("h3", null, `Виділено ${items2.length}`), list),
     h(
       "div",
       { class: "sec" },
@@ -13042,25 +13609,25 @@ function renderMultiPanel() {
       h(
         "div",
         { class: "frow wrap" },
-        btn("Дублювати всі", () => duplicateSel(), { id: "btnMultiDup", icon: "copy", title: "Ctrl+D" }),
-        btn("Копіювати", () => copySel(), { id: "btnMultiCopy", title: "Ctrl+C" }),
-        btn("Повернути ряди", () => rotateGroup(1), { id: "btnMultiRot", icon: "rot", title: "R" }),
-        btn("Прибрати всі", () => removeAll(), { id: "btnMultiDel", icon: "trash", cls: "danger", title: "Del" }),
-        btn("Зберегти виділене", () => saveGroupPreset(slots), { id: "btnMultiPreset", dis: !slots.length || !canWriteLibrary(), title: canWriteLibrary() ? "Пресет «виділене» в бібліотеку" : "Бібліотеку пише проєктувальник" })
+        btn3("Дублювати всі", () => duplicateSel(), { id: "btnMultiDup", icon: "copy", title: "Ctrl+D" }),
+        btn3("Копіювати", () => copySel(), { id: "btnMultiCopy", title: "Ctrl+C" }),
+        btn3("Повернути ряди", () => rotateGroup(1), { id: "btnMultiRot", icon: "rot", title: "R" }),
+        btn3("Прибрати всі", () => removeAll(), { id: "btnMultiDel", icon: "trash", cls: "danger", title: "Del" }),
+        btn3("Зберегти виділене", () => saveGroupPreset(slots), { id: "btnMultiPreset", dis: !slots.length || !canWriteLibrary(), title: canWriteLibrary() ? "Пресет «виділене» в бібліотеку" : "Бібліотеку пише проєктувальник" })
       )
     ),
     h(
       "div",
       { class: "sec" },
       h("h3", null, "Вирівнювання"),
-      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t]) => btn(t, () => alignSel(k), { id: "btnAlign-" + k }))),
-      h("div", { class: "frow wrap" }, btn("Розподілити по X", () => distributeSel("x"), { id: "btnDistX", dis: items.length < 3 }), btn("Розподілити по Y", () => distributeSel("y"), { id: "btnDistY", dis: items.length < 3 }))
+      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t]) => btn3(t, () => alignSel(k), { id: "btnAlign-" + k }))),
+      h("div", { class: "frow wrap" }, btn3("Розподілити по X", () => distributeSel("x"), { id: "btnDistX", dis: items2.length < 3 }), btn3("Розподілити по Y", () => distributeSel("y"), { id: "btnDistY", dis: items2.length < 3 }))
     ),
     h(
       "div",
       { class: "sec" },
       h("h3", null, "Групи"),
-      h("div", { class: "frow wrap" }, btn("Згрупувати в нову зону", () => groupToZone(), { id: "btnGroupZone" }), btn("Розгрупувати зону", () => ungroupZone(), { id: "btnUngroup", dis: !(items.length === 1 && items[0].rec.template === "zone") }))
+      h("div", { class: "frow wrap" }, btn3("Згрупувати в нову зону", () => groupToZone(), { id: "btnGroupZone" }), btn3("Розгрупувати зону", () => ungroupZone(), { id: "btnUngroup", dis: !(items2.length === 1 && items2[0].rec.template === "zone") }))
     ),
     h(
       "div",
@@ -13068,7 +13635,7 @@ function renderMultiPanel() {
       h("h3", null, "Властивості"),
       h("div", { class: "grid3" }, fld("Поворот", selectEl([["", "—"], ["0", "0°"], ["90", "90°"], ["180", "180°"], ["270", "270°"]], "", (v) => props.rotation = v, !acc.design, "Поворот")), num4("dx", "Зсув X, м"), num4("dy", "Зсув Y, м")),
       h("div", { class: "small muted" }, "Застосовуються лише змінені поля."),
-      btn("Застосувати", () => applyProps(props), { id: "btnMultiApply" })
+      btn3("Застосувати", () => applyProps(props), { id: "btnMultiApply" })
     )
   );
 }
@@ -13104,8 +13671,8 @@ function renderToolsBlock(root, { rec }) {
   }
   const acc = E.access();
   const slot = S.sel.kind === "slot" ? rec : null;
-  const b = (label, fn, id, title) => {
-    const el = h("button", { class: "fbtn sm", type: "button", id, onclick: fn }, label);
+  const b = (label2, fn, id, title) => {
+    const el = h("button", { class: "fbtn sm", type: "button", id, onclick: fn }, label2);
     el.disabled = !acc.design;
     el.title = !acc.design ? E.accessHint("design") : title || "";
     return el;
@@ -13465,11 +14032,11 @@ var Matrix = class {
   penalty() {
     const n = this.size;
     let result = 0;
-    const runs = (line) => {
+    const runs = (line2) => {
       let p = 0;
       let run = 1;
-      for (let i = 1; i <= line.length; i++) {
-        if (i < line.length && line[i] === line[i - 1]) {
+      for (let i = 1; i <= line2.length; i++) {
+        if (i < line2.length && line2[i] === line2[i - 1]) {
           run++;
         } else {
           if (run >= 5) {
@@ -13480,13 +14047,13 @@ var Matrix = class {
       }
       return p;
     };
-    const finder = (line) => {
+    const finder = (line2) => {
       const pat = [true, false, true, true, true, false, true];
       let p = 0;
-      for (let i = 0; i + 7 <= line.length; i++) {
-        if (pat.every((v, k2) => line[i + k2] === v)) {
-          const before = i >= 4 && [1, 2, 3, 4].every((k2) => !line[i - k2]);
-          const after = i + 11 <= line.length && [7, 8, 9, 10].every((k2) => !line[i + k2]);
+      for (let i = 0; i + 7 <= line2.length; i++) {
+        if (pat.every((v, k2) => line2[i + k2] === v)) {
+          const before = i >= 4 && [1, 2, 3, 4].every((k2) => !line2[i - k2]);
+          const after = i + 11 <= line2.length && [7, 8, 9, 10].every((k2) => !line2[i + k2]);
           if (before || after) {
             p += 40;
           }
@@ -13695,12 +14262,12 @@ function pageGeometry(spec) {
   const usedH = rows * lab.h + (rows - 1) * gy;
   return { page, label: lab, cols, rows, perPage: cols * rows, x0: m ? m.l : (page.w - usedW) / 2, y0: m ? m.t : (page.h - usedH) / 2, gx, gy };
 }
-function paginate(items, spec) {
+function paginate(items2, spec) {
   const g3 = pageGeometry(spec);
   const skip = Math.max(0, Math.floor(Number(spec.skip) || 0)) % g3.perPage;
   const pages = [];
   let slot = skip;
-  for (const item of items) {
+  for (const item of items2) {
     const pi = Math.floor(slot / g3.perPage);
     const k = slot % g3.perPage;
     (pages[pi] = pages[pi] || []).push({ item, x: g3.x0 + k % g3.cols * (g3.label.w + g3.gx), y: g3.y0 + Math.floor(k / g3.cols) * (g3.label.h + g3.gy) });
@@ -13809,26 +14376,26 @@ async function sheetPng(svg, spec, dpi = 200) {
   return await new Promise((res) => cv.toBlob(res, "image/png"));
 }
 var dots = (mm, dpi) => Math.round(mm * dpi / 25.4);
-function toZpl(items, spec) {
+function toZpl(items2, spec) {
   const dpi = Number(spec.dpi) === 300 ? 300 : 203;
   const g3 = pageGeometry(spec);
-  const W = dots(g3.label.w, dpi);
+  const W2 = dots(g3.label.w, dpi);
   const H = dots(g3.label.h, dpi);
   const m = dots(Math.min(2.2, g3.label.w * 0.04), dpi);
   const warnings = /* @__PURE__ */ new Set();
   const out = [];
-  for (const item of items) {
+  for (const item of items2) {
     const kind = kindFor(item.code, spec);
     if (kind === "qr" && spec.kind !== "qr") {
       warnings.add(`Код «${item.code}» містить не-ASCII: Code128 не підходить, використано QR.`);
     }
     const lineDots = dots(3.2, dpi);
-    let z = `^XA^CI28^PW${W}^LL${H}^LH0,0
+    let z = `^XA^CI28^PW${W2}^LL${H}^LH0,0
 `;
-    const textFs = Math.min(Math.round(H * 0.22), Math.round((W - 2 * m) / (item.code.length * 0.62)));
+    const textFs = Math.min(Math.round(H * 0.22), Math.round((W2 - 2 * m) / (item.code.length * 0.62)));
     if (kind === "qr") {
       const q = qr(item.code, { ecc: "M" });
-      const side2 = Math.min(H - 2 * m, Math.round(W * 0.46));
+      const side2 = Math.min(H - 2 * m, Math.round(W2 * 0.46));
       const mag = Math.max(1, Math.min(10, Math.floor(side2 / (q.size + 8))));
       if (mag < 2) {
         warnings.add(`Дрібний QR: модуль ${mag} точк. при ${dpi} dpi (треба ≥ 2) — збільшіть етикетку.`);
@@ -13845,7 +14412,7 @@ function toZpl(items, spec) {
       });
     } else {
       const c = code128(item.code);
-      const modW = Math.max(1, Math.floor((W - 2 * m) / (c.width + 20)));
+      const modW = Math.max(1, Math.floor((W2 - 2 * m) / (c.width + 20)));
       if (modW < 2) {
         warnings.add(`Дрібний штрихкод «${item.code}»: модуль ${modW} точк. при ${dpi} dpi (треба ≥ 2) — збільште етикетку чи оберіть QR.`);
       }
@@ -13855,14 +14422,14 @@ function toZpl(items, spec) {
 `;
       });
       const bh = Math.max(20, H - top - textFs - 2 * m);
-      z += `^BY${modW},3,${bh}^FO${Math.round((W - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
+      z += `^BY${modW},3,${bh}^FO${Math.round((W2 - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
 `;
-      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W - 2 * m},1,0,C^FD${item.code}^FS
+      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W2 - 2 * m},1,0,C^FD${item.code}^FS
 `;
     }
     if (item.arrow) {
       const s = Math.round(H * 0.26);
-      const ax = W - m - s;
+      const ax = W2 - m - s;
       z += `^FO${ax + Math.round(s * 0.35)},${m + Math.round(s * 0.4)}^GB${Math.round(s * 0.3)},${Math.round(s * 0.6)},${Math.round(s * 0.3)}^FS
 `;
       z += `^FO${ax},${m}^GD${s},${Math.round(s * 0.5)},3,B,${item.arrow === "up" ? "R" : "L"}^FS
@@ -13872,7 +14439,7 @@ function toZpl(items, spec) {
   }
   return { zpl: out.join("\n"), warnings: [...warnings] };
 }
-function pdfPayload(items, spec, format = "pdf") {
+function pdfPayload(items2, spec, format = "pdf") {
   const g3 = pageGeometry(spec);
   return {
     format,
@@ -13881,7 +14448,7 @@ function pdfPayload(items, spec, format = "pdf") {
     page: g3.page,
     grid: { cols: g3.cols, rows: g3.rows, x0: g3.x0, y0: g3.y0, w: g3.label.w, h: g3.label.h, gx: g3.gx, gy: g3.gy },
     skip: Math.max(0, Math.floor(Number(spec.skip) || 0)),
-    labels: items.map((i) => ({ code: i.code, lines: i.lines, arrow: i.arrow }))
+    labels: items2.map((i) => ({ code: i.code, lines: i.lines, arrow: i.arrow }))
   };
 }
 function download2(name, mime, data, isB64 = false) {
@@ -13935,20 +14502,20 @@ async function openLabels(adapter, args = {}) {
     o[ks[0]] = v;
     recompute();
   };
-  const check = (label, path, get) => {
+  const check = (label2, path, get) => {
     const cb = h("input", { type: "checkbox", checked: !!get(), "data-s3": path });
     cb.addEventListener("change", () => set(path, cb.checked));
-    return h("label", { class: "frow", style: { gap: "4px" } }, cb, label);
+    return h("label", { class: "frow", style: { gap: "4px" } }, cb, label2);
   };
-  const numF = (label, path, get, min, max, step = 1) => {
-    const el = h("input", { type: "number", value: get(), min, max, step, "aria-label": label, "data-s3": path });
+  const numF = (label2, path, get, min, max, step = 1) => {
+    const el = h("input", { type: "number", value: get(), min, max, step, "aria-label": label2, "data-s3": path });
     el.addEventListener("input", () => {
       const v = parseFloat(el.value);
       if (isFinite(v)) {
         set(path, v);
       }
     });
-    return fld(label, el);
+    return fld(label2, el);
   };
   const mg = () => spec.margin || { l: 0, t: 0, r: 0, b: 0 };
   const draw = () => {
@@ -14252,7 +14819,7 @@ function legendOf(key) {
       counts.set(k, (counts.get(k) || 0) + 1);
     }
   }
-  const rows = DEFS[key].map(([k, label, color]) => ({ key: k, label, color, count: counts.get(k) || 0 }));
+  const rows = DEFS[key].map(([k, label2, color]) => ({ key: k, label: label2, color, count: counts.get(k) || 0 }));
   if (fresh) {
     rows.push({ key: "new", label: "Нові / без даних", color: "var(--ink3)", count: fresh });
   }
@@ -14900,6 +15467,2604 @@ function cellPicked(slotId, code) {
   }
 }
 Object.assign(E, { cellPicked, cardNode });
+
+// core/constructor/building_3d.js
+var PAL = {
+  light: { floor: "#c9d3dc", line: "#2b3640", wall: "#5b6b7b", column: "#7a8794", gate: "#3b82c4", dock: "#2a9d8f", door: "#c08a3e", office: "#8fa3b5", charger: "#e0b341" },
+  dark: { floor: "#33414e", line: "#cfd8e0", wall: "#8696a6", column: "#a1adb9", gate: "#5aa1de", dock: "#43b9aa", door: "#d9a45a", office: "#6b8297", charger: "#e9c45a" }
+};
+var SPRINKLER = "#ff8a00";
+var SELECT = "#e11d74";
+var rad2 = (a) => a * Math.PI / 180;
+var view = { sel: null, handles: false, handleSize: 0.5 };
+function setBuildingView(o) {
+  Object.assign(view, o);
+}
+var buildingLayer = () => S.layers.find((l) => l.kind === "building") || null;
+function disposeGroup(g3) {
+  g3.traverse((o) => {
+    if (o.geometry) {
+      o.geometry.dispose();
+    }
+    if (o.material) {
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    }
+    if (o.isInstancedMesh) {
+      o.dispose();
+    }
+  });
+}
+var P32 = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
+function lineLoop(pts, y, mat) {
+  const g3 = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => P32(x, z, y)));
+  return new THREE.LineLoop(g3, mat);
+}
+function build(ly) {
+  const pal = PAL[V.theme === "dark" ? "dark" : "light"];
+  const B3 = S.site.building;
+  const H = B3.height || 8;
+  const g3 = new THREE.Group();
+  g3.name = "td-building";
+  const elev = ly.elevation || 0;
+  const lineMat = new THREE.LineBasicMaterial({ color: pal.line });
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const edges = new THREE.EdgesGeometry(unit);
+  const mats = {};
+  const mat = (kind, opacity = 1) => mats[kind + opacity] ||= new THREE.MeshLambertMaterial({ color: pal[kind], transparent: opacity < 1, opacity });
+  const pts = ly.bounds && ly.bounds.length >= 3 ? ly.bounds : null;
+  if (pts) {
+    const shape = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+    const fill = new THREE.ShapeGeometry(shape);
+    fill.rotateX(-Math.PI / 2);
+    const floor = new THREE.Mesh(fill, new THREE.MeshBasicMaterial({ color: pal.floor, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+    floor.position.y = elev + 0.012;
+    g3.add(floor);
+    g3.add(lineLoop(pts, elev + 0.03, lineMat));
+    g3.add(lineLoop(pts, elev + H, lineMat));
+    const ribs = [];
+    for (const [x, y] of pts) {
+      ribs.push(P32(x, y, elev), P32(x, y, elev + H));
+    }
+    g3.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ribs), lineMat));
+    const sp = S.site.sprinkler_height || 0;
+    if (sp > 0 && sp < H + 0.01) {
+      g3.add(lineLoop(pts, elev + sp, new THREE.LineBasicMaterial({ color: SPRINKLER })));
+    }
+  }
+  const items2 = ly.items || [];
+  const columns = items2.filter((it) => it.kind === "column");
+  if (columns.length) {
+    const im = new THREE.InstancedMesh(unit, mat("column"), columns.length);
+    const m4 = new THREE.Matrix4();
+    columns.forEach((c, i) => {
+      const h2 = c.h || H;
+      m4.compose(P32(c.x, c.y, elev + h2 / 2), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rad2(c.rot || 0), 0)), new THREE.Vector3(c.w, h2, c.d));
+      im.setMatrixAt(i, m4);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    g3.add(im);
+  }
+  const place = (obj, it, h2) => {
+    obj.scale.set(it.w, h2, it.d);
+    obj.position.copy(P32(it.x, it.y, elev + h2 / 2));
+    obj.rotation.y = rad2(it.rot || 0);
+    return obj;
+  };
+  for (const it of items2) {
+    if (it.kind === "column") {
+      continue;
+    }
+    const h2 = it.h || ITEM_HEIGHT[it.kind] || H;
+    const opacity = it.kind === "office" ? 0.4 : it.kind === "gate" || it.kind === "door" ? 0.75 : 1;
+    g3.add(place(new THREE.Mesh(unit, mat(it.kind, opacity)), it, h2));
+    g3.add(place(new THREE.LineSegments(edges, lineMat), it, h2));
+  }
+  const sel = view.sel && view.sel.kind === "item" ? items2.find((it) => it.id === view.sel.id) : null;
+  if (sel) {
+    const m = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const h2 = sel.h || ITEM_HEIGHT[sel.kind] || H;
+    const o = place(new THREE.LineSegments(edges, m), { ...sel, w: sel.w + 0.1, d: sel.d + 0.1 }, h2 + 0.1);
+    o.renderOrder = 5;
+    g3.add(o);
+  }
+  const aisle = view.sel && view.sel.kind === "aisle" ? (ly.aisles || []).find((a) => a.id === view.sel.id) : null;
+  if (aisle) {
+    const m = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const ring = lineLoop([[aisle.x0, aisle.y0], [aisle.x1, aisle.y0], [aisle.x1, aisle.y1], [aisle.x0, aisle.y1]], elev + 0.06, m);
+    ring.renderOrder = 5;
+    g3.add(ring);
+  }
+  const handles = new THREE.Group();
+  handles.name = "td-building-handles";
+  if (view.handles && pts) {
+    const hm = new THREE.MeshBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const selIdx = view.sel && view.sel.kind === "vertex" ? view.sel.index : -1;
+    pts.forEach(([x, y], i) => {
+      const m = new THREE.Mesh(unit, i === selIdx ? new THREE.MeshBasicMaterial({ color: "#ffffff", depthTest: false, transparent: true }) : hm);
+      m.position.copy(P32(x, y, elev + 0.12));
+      m.renderOrder = 6;
+      handles.add(m);
+    });
+    scaleHandles(handles);
+  }
+  g3.add(handles);
+  g3.userData.handles = handles;
+  g3.userData.dispose = () => {
+    unit.dispose();
+    edges.dispose();
+    Object.values(mats).forEach((m) => m.dispose());
+    lineMat.dispose();
+  };
+  return g3;
+}
+function scaleHandles(handles) {
+  if (!V.camera || !V.controls) {
+    return;
+  }
+  const d = V.camera.position.distanceTo(V.controls.target);
+  const s = Math.min(3, Math.max(0.25, d * 0.014));
+  view.handleSize = s;
+  handles.children.forEach((m) => m.scale.set(s, s * 0.4, s));
+}
+function syncBuilding3D(force) {
+  if (!V.ok || !S.site || !THREE.Scene) {
+    return;
+  }
+  const ly = buildingLayer();
+  const shown = !!ly && isLayerVisible(ly);
+  const sig = JSON.stringify([shown, ly && [ly.bounds, ly.items, ly.elevation, ly.aisles && view.sel && view.sel.kind === "aisle" ? ly.aisles : null], S.site.building, S.site.sprinkler_height || 0, V.theme, view.sel, view.handles]);
+  const cur = V.bld5;
+  if (cur && cur.sig === sig && !force) {
+    return;
+  }
+  if (cur && cur.g) {
+    V.world.remove(cur.g);
+    disposeGroup(cur.g);
+    cur.g.userData.dispose?.();
+  }
+  const g3 = shown ? build(ly) : null;
+  if (g3) {
+    V.world.add(g3);
+  }
+  V.bld5 = { g: g3, sig };
+  if (!V.bld5Hook && V.controls) {
+    V.bld5Hook = true;
+    V.controls.addEventListener("change", () => {
+      const h2 = V.bld5 && V.bld5.g && V.bld5.g.userData.handles;
+      if (h2 && h2.children.length) {
+        scaleHandles(h2);
+      }
+    });
+  }
+  E.requestRender?.();
+}
+function setOverlay(o) {
+  if (!V.ok || !THREE.Scene) {
+    return;
+  }
+  if (V.bld5Over) {
+    V.world.remove(V.bld5Over);
+    disposeGroup(V.bld5Over);
+    V.bld5Over = null;
+  }
+  if (!o || !o.snap && !o.line && !o.rect) {
+    E.requestRender?.();
+    return;
+  }
+  const g3 = new THREE.Group();
+  const y = (buildingLayer() || { elevation: 0 }).elevation + 0.08;
+  const mat = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+  if (o.line && o.line.length > 1) {
+    g3.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(o.line.map(([x, z]) => P32(x, z, y))), mat));
+  }
+  if (o.rect) {
+    const r = o.rect;
+    g3.add(lineLoop([[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]], y, mat));
+  }
+  if (o.snap) {
+    const d = Math.max(0.25, view.handleSize * 0.9);
+    const [x, z] = o.snap;
+    const seg = [P32(x - d, z, y), P32(x + d, z, y), P32(x, z - d, y), P32(x, z + d, y)];
+    g3.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg), mat));
+  }
+  g3.traverse((m) => {
+    m.renderOrder = 7;
+  });
+  V.world.add(g3);
+  V.bld5Over = g3;
+  E.requestRender?.();
+}
+var origSync = E.syncScene;
+if (typeof origSync === "function" && !origSync.__s5) {
+  const wrapped = function syncSceneS5(...a) {
+    const r = origSync.apply(this, a);
+    try {
+      syncBuilding3D(a[0]);
+    } catch (e) {
+      console.error("S5 3D будівлі:", e);
+    }
+    return r;
+  };
+  wrapped.__s5 = true;
+  E.syncScene = wrapped;
+}
+
+// core/constructor/building_ui.js
+var B2 = { on: false, tool: null, sel: null, step: 0.5, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null, wallTh: 0.2, aisleW: null, rulers: false };
+var CHECK_IDS = ["inside", "aisle_width", "height"];
+var CHECK_NAMES = {
+  inside: ["Усередині контуру й поза об'єктами будівлі", "Місця й обладнання в контурі будівлі, не перетинають колони, стіни, офіс, зарядку"],
+  aisle_width: ["Ширина проходу й проїзду за технікою", "Проходи й проїзди між рядами не вужчі за мінімум техніки складу чи зони"],
+  height: ["Висота до стелі й спринклерів", "Верх складування не вище стелі й не ближче 0,5 м до спринклерів"]
+};
+var TOOLS = [
+  ["column", "Колона", "plus"],
+  ["wall", "Стіна", "plus"],
+  ["gate", "Ворота", "plus"],
+  ["dock", "Док", "plus"],
+  ["door", "Двері", "plus"],
+  ["office", "Офіс", "plus"],
+  ["charger", "Зарядка", "plus"],
+  ["aisle", "Прохід", "plus"]
+];
+var TOOL_HINTS = {
+  column: "Клацніть, щоб поставити колону.",
+  wall: "Стіна: клацніть початок і кінець відрізка.",
+  gate: "Ворота: клацніть на стіні чи ребрі контуру.",
+  dock: "Док: клацніть на стіні чи ребрі контуру.",
+  door: "Двері: клацніть на стіні чи ребрі контуру.",
+  office: "Офіс: клацніть два протилежні кути.",
+  charger: "Клацніть, щоб поставити зарядку техніки.",
+  aisle: "Прохід: клацніть початок і кінець осі (кінець на іншому проході з'єднує їх).",
+  vertex: "Клацніть ребро контуру, щоб додати вершину."
+};
+var bLayer = () => S.layers.find((l) => l.kind === "building") || null;
+var items = () => {
+  const ly = bLayer();
+  return ly ? ly.items ||= [] : [];
+};
+var aisles = () => {
+  const ly = bLayer();
+  return ly ? ly.aisles ||= [] : [];
+};
+var editable = () => !!bLayer() && canEditLayer(bLayer());
+var contourEditable = () => !!bLayer() && canManage();
+var contour = () => contourOf(bLayer(), S.site.building);
+var camDist = () => V.ok && V.camera && V.controls ? V.camera.position.distanceTo(V.controls.target) : 40;
+var snapRad = () => Math.min(1, Math.max(0.2, camDist() * 0.012));
+var hasExplicitContour = () => !!(bLayer() && bLayer().bounds && bLayer().bounds.length >= 3);
+var selItem = () => B2.sel && B2.sel.kind === "item" ? items().find((it) => it.id === B2.sel.id) || null : null;
+var selAisle = () => B2.sel && B2.sel.kind === "aisle" ? aisles().find((a) => a.id === B2.sel.id) || null : null;
+function updateView() {
+  setBuildingView({ sel: B2.sel, handles: B2.on && contourEditable() && hasExplicitContour() });
+}
+function liveB() {
+  updateView();
+  S.issues = runLive();
+  E.syncScene();
+  E.updateVisual?.();
+  E.requestRender?.();
+}
+function commitB(label2) {
+  updateView();
+  growBuilding();
+  const top = S.hist && S.hist.stack ? S.hist.stack[S.hist.idx] : null;
+  if (top) {
+    top.key = null;
+  }
+  E.commit({ label: label2 });
+}
+function growBuilding() {
+  const ly = bLayer();
+  if (!ly || !ly.bounds || ly.bounds.length < 3 || !S.site) {
+    return;
+  }
+  const b = contourBbox(ly.bounds);
+  const bd = S.site.building;
+  let grown = false;
+  if (b.x1 > bd.length) {
+    bd.length = Math.ceil(b.x1);
+    grown = true;
+  }
+  if (b.y1 > bd.width) {
+    bd.width = Math.ceil(b.y1);
+    grown = true;
+  }
+  if (grown) {
+    E.saveSiteProps?.();
+  }
+}
+var saveSiteExtra = debounce(async () => {
+  const a = E.adapter;
+  if (!a || !S.site) {
+    return;
+  }
+  try {
+    await a.saveSite({ sprinkler_height: S.site.sprinkler_height || 0, aisle_tech: S.site.aisle_tech || null });
+  } catch (e) {
+    toast("Не вдалося зберегти висоти й техніку: " + (e.data?.message || e.message || e), "err");
+  }
+}, 700);
+function enterBuilding() {
+  if (B2.on || !S.site) {
+    return;
+  }
+  const ly = bLayer();
+  if (!ly) {
+    toast("На площадці немає шару «Будівля».", "warn");
+    return;
+  }
+  S.app.mode = "edit";
+  B2.prev = { layer: S.ui.layer, tab: S.ui.leftTab };
+  Object.assign(B2, { on: true, tool: null, sel: null, pend: null, drag: null, cur: null, siteId: S.site.id });
+  S.sel = null;
+  S.multi = [];
+  S.selCell = null;
+  S.edit = null;
+  E.cancelModes?.();
+  if (S.ui.layer !== ly.id) {
+    E.setActiveLayer?.(ly.id);
+  }
+  updateView();
+  E.setView?.("plan");
+  E.renderAll();
+  E.setLeftTab?.("building");
+  E.syncScene(true);
+  drawRulers();
+}
+function exitBuilding() {
+  if (!B2.on) {
+    return;
+  }
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, cur: null });
+  setOverlay(null);
+  updateView();
+  const prev = B2.prev || {};
+  B2.prev = null;
+  if (prev.layer && layerOf(prev.layer) && S.ui.layer !== prev.layer) {
+    E.setActiveLayer?.(prev.layer);
+  }
+  E.syncScene(true);
+  E.renderAll();
+  E.setLeftTab?.(prev.tab && prev.tab !== "building" ? prev.tab : "layers");
+  drawRulers();
+}
+var toggleBuilding = () => B2.on ? exitBuilding() : enterBuilding();
+function setTool(tool) {
+  E.cancelModes?.();
+  B2.tool = B2.tool === tool ? null : tool;
+  B2.pend = null;
+  B2.cur = null;
+  setOverlay(null);
+  if (B2.tool && TOOL_HINTS[B2.tool]) {
+    toast(TOOL_HINTS[B2.tool]);
+  }
+  renderTab();
+  renderVToolsButton();
+}
+function addItem(kind, x, y, extra = {}) {
+  if (!editable()) {
+    toast(lockHint(bLayer()), "warn");
+    return null;
+  }
+  const it = newItem(kind, uid("bi_"), x, y, extra);
+  it.name = extra.name ?? nextName(items(), kind);
+  items().push(it);
+  B2.sel = { kind: "item", id: it.id };
+  commitB(`Додано: ${it.name}`);
+  return it;
+}
+function addAisle(rect2) {
+  const list = aisles();
+  const a = { id: uid("ai_"), name: `Прохід ${list.length + 1}`, ...rect2 };
+  list.push(a);
+  B2.sel = { kind: "aisle", id: a.id };
+  commitB(`Додано: ${a.name}`);
+  return a;
+}
+function deleteSelection() {
+  if (!B2.sel || !editable()) {
+    return false;
+  }
+  const ly = bLayer();
+  if (B2.sel.kind === "item") {
+    const it = selItem();
+    ly.items = items().filter((x) => x.id !== B2.sel.id);
+    B2.sel = null;
+    commitB(`Видалено: ${it ? it.name || ITEM_KINDS[it.kind] : "об'єкт"}`);
+  } else if (B2.sel.kind === "aisle") {
+    const a = selAisle();
+    ly.aisles = aisles().filter((x) => x.id !== B2.sel.id);
+    B2.sel = null;
+    commitB(`Видалено: ${a ? a.name || a.id : "прохід"}`);
+  } else if (B2.sel.kind === "vertex") {
+    if (!contourEditable()) {
+      return false;
+    }
+    if (ly.bounds.length <= 3) {
+      toast("У контурі має лишатися щонайменше 3 вершини.", "warn");
+      return true;
+    }
+    ly.bounds = ly.bounds.filter((_, i) => i !== B2.sel.index);
+    B2.sel = null;
+    commitB("Контур: видалено вершину");
+  }
+  return true;
+}
+function alignOpening(kind, s) {
+  const pts = contour();
+  const edge = nearestEdge(pts, s.x, s.y);
+  let best = null;
+  if (edge && edge.dist <= 1) {
+    const [a, b] = [pts[edge.index], pts[(edge.index + 1) % pts.length]];
+    best = { x: edge.point[0], y: edge.point[1], rot: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
+  }
+  for (const w of items().filter((it) => it.kind === "wall")) {
+    const r = (w.rot || 0) * Math.PI / 180;
+    const dx = s.x - w.x;
+    const dy = s.y - w.y;
+    const along = dx * Math.cos(r) + dy * Math.sin(r);
+    const across = -dx * Math.sin(r) + dy * Math.cos(r);
+    if (Math.abs(along) <= w.w / 2 && Math.abs(across) <= Math.max(1, w.d) && (!best || Math.abs(across) < 1)) {
+      best = { x: rnd(w.x + along * Math.cos(r)), y: rnd(w.y + along * Math.sin(r)), rot: w.rot || 0 };
+    }
+  }
+  const [, d] = ITEM_DEFAULT_SIZE[kind];
+  return best ? { x: rnd(best.x), y: rnd(best.y), extra: { rot: rnd(best.rot, 2), d } } : { x: s.x, y: s.y, extra: {} };
+}
+function wallsAlongContour(th = 0.3) {
+  if (!editable()) {
+    return 0;
+  }
+  const walls = contourWalls(contour(), th, () => uid("bi_"), items());
+  if (walls.length) {
+    items().push(...walls);
+    commitB(`Стіни по контуру: ${walls.length}`);
+  }
+  return walls.length;
+}
+function contourFromWarehouse(margin = 2) {
+  const ly = bLayer();
+  if (!ly || !contourEditable()) {
+    return false;
+  }
+  const boxes = [];
+  for (const s of S.slots) {
+    const lk = (layerOf(s.layer_id) || {}).kind;
+    if (s.template !== "zone" && lk !== "building" && lk !== "yard") {
+      boxes.push(obbAabb(slotObb(s.template, s.params || {}, s.x || 0, s.y || 0, s.rotation || 0)));
+    }
+  }
+  ly.bounds = contourAroundObjects(boxes, margin, S.site.building);
+  commitB("Контур за складом");
+  return true;
+}
+function pointer(e) {
+  const ly = bLayer();
+  return E.floorPoint ? E.floorPoint(e, ly ? ly.elevation : 0) : null;
+}
+var snapPts = (skipItemId = null) => snapPoints({ contour: bLayer()?.bounds || [], items: items().filter((it) => it.id !== skipItemId), aisles: aisles() });
+function snapAt(pt, e, from = null, skipId = null) {
+  return snapPoint(pt.x, pt.y, { step: B2.step, pts: snapPts(skipId), aisles: aisles(), from, alt: !!e.altKey, rad: snapRad() });
+}
+var busy = () => !!(V.placing || V.ruler.on || V.pickMode);
+function hitTest(pt) {
+  const ly = bLayer();
+  if (!ly) {
+    return null;
+  }
+  if (B2.on && contourEditable() && hasExplicitContour()) {
+    const r = Math.max(0.35, (V.camera ? camDist() * 0.014 : 0.5) * 0.9);
+    const i = ly.bounds.findIndex((p) => Math.hypot(p[0] - pt.x, p[1] - pt.y) <= r);
+    if (i >= 0) {
+      return { sel: { kind: "vertex", index: i }, drag: { kind: "vertex", index: i, orig: [...ly.bounds[i]] } };
+    }
+  }
+  const it = itemAt(items(), pt.x, pt.y, Math.min(0.5, Math.max(0.1, camDist() * 4e-3)));
+  if (it) {
+    return { sel: { kind: "item", id: it.id }, drag: { kind: "item", id: it.id, orig: { x: it.x, y: it.y } } };
+  }
+  const a = aisles().filter((x) => pt.x >= x.x0 && pt.x <= x.x1 && pt.y >= x.y0 && pt.y <= x.y1).sort((p, q) => (p.x1 - p.x0) * (p.y1 - p.y0) - (q.x1 - q.x0) * (q.y1 - q.y0))[0];
+  return a ? { sel: { kind: "aisle", id: a.id }, drag: { kind: "aisle", id: a.id, orig: { cx: (a.x0 + a.x1) / 2, cy: (a.y0 + a.y1) / 2 } } } : null;
+}
+function onDown2(e) {
+  if (!B2.on || !V.ok || busy() || e.pointerType === "mouse" && e.button !== 0) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  B2.down = { x: e.clientX, y: e.clientY };
+  if (B2.tool) {
+    return;
+  }
+  const hit = hitTest(pt);
+  if (!hit) {
+    return;
+  }
+  e.stopImmediatePropagation();
+  e.preventDefault();
+  B2.sel = hit.sel;
+  B2.drag = { ...hit.drag, pt0: pt, sx: e.clientX, sy: e.clientY, moved: false };
+  try {
+    V.canvas.setPointerCapture(e.pointerId);
+  } catch {
+  }
+  updateView();
+  E.syncScene();
+  renderTab();
+}
+function dragMove(e, pt) {
+  const d = B2.drag;
+  if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) {
+    return;
+  }
+  d.moved = true;
+  const ly = bLayer();
+  if (!ly || (d.kind === "vertex" ? !contourEditable() : !editable())) {
+    return;
+  }
+  const dx = pt.x - d.pt0.x;
+  const dy = pt.y - d.pt0.y;
+  if (d.kind === "item") {
+    const it = items().find((x) => x.id === d.id);
+    if (it) {
+      const s = snapAt({ x: d.orig.x + dx, y: d.orig.y + dy }, e, null, d.id);
+      it.x = s.x;
+      it.y = s.y;
+    }
+  } else if (d.kind === "vertex") {
+    const s = snapPoint(d.orig[0] + dx, d.orig[1] + dy, { step: B2.step, pts: ly.bounds.map(([x, y], i) => ({ x, y, kind: "vertex", skip: i === d.index })).filter((p) => !p.skip), alt: !!e.altKey, rad: snapRad() });
+    ly.bounds[d.index] = [s.x, s.y];
+  } else if (d.kind === "aisle") {
+    const a = aisles().find((x) => x.id === d.id);
+    if (a) {
+      const s = snapAt({ x: d.orig.cx + dx, y: d.orig.cy + dy }, e, null, null);
+      moveAisle(aisles(), d.id, rnd(s.x - (a.x0 + a.x1) / 2), rnd(s.y - (a.y0 + a.y1) / 2));
+    }
+  }
+  liveB();
+}
+function onMove2(e) {
+  if (!B2.on || !V.ok) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  B2.cursor = pt;
+  drawRulers(true);
+  if (B2.drag) {
+    e.stopImmediatePropagation();
+    dragMove(e, pt);
+    return;
+  }
+  if (B2.tool && !busy()) {
+    const from = B2.pend ? B2.pend[0] : null;
+    const s = snapAt(pt, e, from ? [from.x, from.y] : null);
+    B2.cur = s;
+    const ov = { snap: [s.x, s.y] };
+    if (from && (B2.tool === "wall" || B2.tool === "aisle")) {
+      ov.line = [[from.x, from.y], [s.x, s.y]];
+    } else if (from && B2.tool === "office") {
+      ov.rect = { x0: from.x, y0: from.y, x1: s.x, y1: s.y };
+    }
+    setOverlay(ov);
+    V.canvas.style.cursor = "crosshair";
+  }
+}
+function onUp2(e) {
+  if (!B2.on || !V.ok) {
+    return;
+  }
+  try {
+    V.canvas.releasePointerCapture(e.pointerId);
+  } catch {
+  }
+  const down = B2.down;
+  B2.down = null;
+  if (B2.drag) {
+    const d = B2.drag;
+    B2.drag = null;
+    e.stopImmediatePropagation();
+    if (d.moved && (d.kind === "vertex" ? contourEditable() : editable())) {
+      const ly = bLayer();
+      if (d.kind === "vertex" && !isSimplePolygon(ly.bounds)) {
+        ly.bounds[d.index] = d.orig;
+        toast("Контур не має перетинати сам себе.", "warn");
+        liveB();
+        renderTab();
+        return;
+      }
+      commitB(d.kind === "item" ? `Переміщено: ${selItem()?.name || "об'єкт"}` : d.kind === "aisle" ? `Переміщено: ${selAisle()?.name || "прохід"}` : "Контур: вершина");
+    } else {
+      renderTab();
+    }
+    return;
+  }
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) >= 5 || busy()) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  if (B2.tool) {
+    placeClick2(snapAt(pt, e, B2.pend ? [B2.pend[0].x, B2.pend[0].y] : null));
+  } else if (B2.sel) {
+    B2.sel = null;
+    updateView();
+    E.syncScene();
+    renderTab();
+  }
+}
+function placeClick2(s) {
+  if (!editable() && B2.tool !== "vertex") {
+    toast(lockHint(bLayer()), "warn");
+    return;
+  }
+  switch (B2.tool) {
+    case "column":
+    case "charger":
+      addItem(B2.tool, s.x, s.y);
+      break;
+    case "gate":
+    case "dock":
+    case "door": {
+      const o = alignOpening(B2.tool, s);
+      addItem(B2.tool, o.x, o.y, o.extra);
+      break;
+    }
+    case "wall":
+    case "office":
+    case "aisle":
+      if (!B2.pend) {
+        B2.pend = [s];
+        toast("Тепер клацніть другу точку.");
+        break;
+      }
+      finishTwoClick(B2.tool, B2.pend[0], s);
+      B2.pend = null;
+      setOverlay({ snap: [s.x, s.y] });
+      break;
+    case "vertex": {
+      if (!contourEditable() || !hasExplicitContour()) {
+        toast("Додавати вершини може менеджер до явного контуру: створіть контур.", "warn");
+        break;
+      }
+      const ly = bLayer();
+      const edge = nearestEdge(ly.bounds, s.x, s.y);
+      ly.bounds.splice(edge.index + 1, 0, [rnd(edge.point[0]), rnd(edge.point[1])]);
+      B2.sel = { kind: "vertex", index: edge.index + 1 };
+      commitB("Контур: додано вершину");
+      break;
+    }
+    default:
+  }
+}
+function finishTwoClick(tool, p, q) {
+  if (Math.hypot(q.x - p.x, q.y - p.y) < 0.1) {
+    toast("Точки збігаються.", "warn");
+    return;
+  }
+  if (tool === "wall") {
+    const len = Math.hypot(q.x - p.x, q.y - p.y);
+    addItem("wall", (p.x + q.x) / 2, (p.y + q.y) / 2, { w: rnd(len), d: B2.wallTh, th: B2.wallTh, rot: rnd(Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI, 2) });
+  } else if (tool === "office") {
+    addItem("office", (p.x + q.x) / 2, (p.y + q.y) / 2, { w: rnd(Math.max(0.5, Math.abs(q.x - p.x))), d: rnd(Math.max(0.5, Math.abs(q.y - p.y))) });
+  } else {
+    const width2 = B2.aisleW || (bLayer() || {}).aisle_width || 3;
+    addAisle(aisleFromPoints([p.x, p.y], [q.x, q.y], width2));
+  }
+}
+function openColumnGrid() {
+  if (!editable()) {
+    toast(lockHint(bLayer()), "warn");
+    return;
+  }
+  const cg = S.site.column_grid || { step_x: 6, step_y: 6 };
+  const bb = contourBbox(contour());
+  const st = { x0: rnd(bb.x0 + (cg.step_x || 6), 2), y0: rnd(bb.y0 + (cg.step_y || 6), 2), sx: cg.step_x || 6, sy: cg.step_y || 6, nx: 0, ny: 0 };
+  st.nx = Math.max(1, Math.floor((bb.x1 - bb.x0 - 1) / st.sx) - 0);
+  st.ny = Math.max(1, Math.floor((bb.y1 - bb.y0 - 1) / st.sy) - 0);
+  const info = h("div", { class: "small muted", id: "cgInfo" });
+  const num4 = (k, label2, min, max, step, int) => fld(label2, numInput({ value: st[k], min, max, step, int, label: label2, set: (v) => {
+    st[k] = v;
+    draw();
+  } }), k.startsWith("n") ? null : "м");
+  const draw = () => {
+    info.textContent = `Буде створено до ${Math.max(0, Math.round(st.nx) * Math.round(st.ny))} колон; наявні в тих самих точках пропускаються.`;
+  };
+  draw();
+  openDialog({
+    title: "Колони сіткою",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, h("div", { class: "grid2" }, num4("x0", "Початок X", -1e3, 1e4, 0.1), num4("y0", "Початок Y", -1e3, 1e4, 0.1)), h("div", { class: "grid2" }, num4("nx", "Колон по X", 1, 200, 1, true), num4("ny", "Колон по Y", 1, 200, 1, true)), h("div", { class: "grid2" }, num4("sx", "Крок X", 0.5, 200, 0.5), num4("sy", "Крок Y", 0.5, 200, 0.5)), info),
+    actions: [
+      { label: "Скасувати" },
+      {
+        label: "Створити",
+        cls: "primary",
+        id: "dlgColumnGrid",
+        onClick: () => {
+          const made = columnGrid({ x0: st.x0, y0: st.y0, nx: Math.round(st.nx), ny: Math.round(st.ny), sx: st.sx, sy: st.sy, existing: items(), idOf: () => uid("bi_") });
+          if (!made.length) {
+            toast("Нових колон немає: у цих точках вони вже стоять.", "warn");
+            return false;
+          }
+          items().push(...made);
+          B2.sel = null;
+          commitB(`Колони сіткою: ${made.length}`);
+          toast(`Додано колон: ${made.length}.`);
+          return void 0;
+        }
+      }
+    ]
+  });
+}
+var sec = (title, ...kids) => h("div", { class: "sec b5-sec" }, h("h3", null, title), ...kids);
+var btn = (label2, fn, o = {}) => h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, disabled: o.dis, title: o.title, "aria-pressed": o.pressed == null ? null : String(!!o.pressed), onclick: fn }, o.icon ? ic(o.icon) : null, label2);
+function contourSection() {
+  const ly = bLayer();
+  const pts = contour();
+  const dis = !contourEditable();
+  const explicit = hasExplicitContour();
+  const rect2 = isRectContour(pts) || !explicit;
+  const b = contourBbox(pts);
+  const kids = [
+    h("div", { class: "small", id: "b5Area" }, `Площа ${fmt(polygonArea(pts), 1)} м² · периметр ${fmt(polygonPerimeter(pts), 1)} м${explicit ? "" : " · контур = габарит площадки"}`),
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Контур змінює Менеджер.") : null,
+    h("div", { class: "frow wrap" }, btn("За складом (+2 м)", () => contourFromWarehouse(2), { dis, id: "btnContourAuto", title: "Контур за розмірами складу з відступом 2 м" }), btn("Стіни по контуру", () => wallsAlongContour(0.3), { dis: !editable(), id: "btnContourWalls" }), explicit ? btn("Скинути", () => {
+      ly.bounds = null;
+      B2.sel = null;
+      commitB("Контур скинуто до габариту площадки");
+    }, { dis, id: "btnContourReset" }) : null)
+  ];
+  if (rect2) {
+    const set = (k) => (v) => {
+      const c = { x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, [k]: v };
+      if (c.x1 - c.x0 < 1 || c.y1 - c.y0 < 1) {
+        return;
+      }
+      ly.bounds = rectContour(c.x0, c.y0, c.x1, c.y1);
+      liveB();
+    };
+    const ed = { end: () => commitB("Контур: прямокутник") };
+    kids.push(
+      h("div", { class: "grid2" }, fld("Від X", numInput({ value: b.x0, dis, step: 0.5, label: "Від X", set: set("x0"), ...ed }), "м"), fld("Від Y", numInput({ value: b.y0, dis, step: 0.5, label: "Від Y", set: set("y0"), ...ed }), "м")),
+      h("div", { class: "grid2" }, fld("До X", numInput({ value: b.x1, dis, step: 0.5, label: "До X", set: set("x1"), ...ed }), "м"), fld("До Y", numInput({ value: b.y1, dis, step: 0.5, label: "До Y", set: set("y1"), ...ed }), "м")),
+      h("div", { class: "small muted" }, "Прямокутник задається числами; «+ Вершина» перетворює його на многокутник.")
+    );
+  }
+  if (explicit) {
+    kids.push(
+      h("div", { class: "frow wrap" }, btn("+ Вершина", () => {
+        const i = B2.sel && B2.sel.kind === "vertex" ? B2.sel.index : ly.bounds.length - 1;
+        const [a, c] = [ly.bounds[i], ly.bounds[(i + 1) % ly.bounds.length]];
+        ly.bounds.splice(i + 1, 0, [rnd((a[0] + c[0]) / 2), rnd((a[1] + c[1]) / 2)]);
+        B2.sel = { kind: "vertex", index: i + 1 };
+        commitB("Контур: додано вершину");
+      }, { dis, id: "btnVertexPlus" }), btn("Додати вершину", () => setTool("vertex"), { dis, pressed: B2.tool === "vertex", id: "btnVertexTool", title: "Клацніть ребро контуру на сцені" })),
+      h("div", { class: "b5-verts", id: "b5Verts" }, ly.bounds.map(([x, y], i) => h("div", { class: "frow b5-vrow" + (B2.sel && B2.sel.kind === "vertex" && B2.sel.index === i ? " sel" : "") }, h("a", { href: "#", onclick: (ev) => {
+        ev.preventDefault();
+        B2.sel = { kind: "vertex", index: i };
+        updateView();
+        E.syncScene();
+        renderTab();
+      } }, "№" + (i + 1)), numInput({ value: x, dis, step: 0.1, label: `Вершина ${i + 1} X`, set: (v) => {
+        ly.bounds[i][0] = v;
+        liveB();
+      }, end: () => commitB("Контур: вершина") }), numInput({ value: y, dis, step: 0.1, label: `Вершина ${i + 1} Y`, set: (v) => {
+        ly.bounds[i][1] = v;
+        liveB();
+      }, end: () => commitB("Контур: вершина") }), btn("✕", () => {
+        B2.sel = { kind: "vertex", index: i };
+        deleteSelection();
+      }, { dis, title: "Видалити вершину (Delete)" }))))
+    );
+  }
+  return sec("Контур", ...K(kids));
+}
+function heightsSection() {
+  const dis = !canManage();
+  const bd = S.site.building;
+  const bump2 = () => {
+    liveB();
+    E.saveSiteProps?.();
+  };
+  return sec(
+    "Висоти",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Висоти змінює Менеджер.") : null,
+    h(
+      "div",
+      { class: "grid2" },
+      fld("До стелі", numInput({ value: bd.height, dis, min: 2, max: 60, step: 0.5, label: "Висота до стелі", set: (v) => {
+        bd.height = v;
+        bump2();
+      } }), "м"),
+      fld("До спринклерів", numInput({ value: S.site.sprinkler_height || 0, dis, min: 0, max: 60, step: 0.1, label: "Висота до спринклерів", set: (v) => {
+        S.site.sprinkler_height = v;
+        liveB();
+        saveSiteExtra();
+      } }), "м")
+    ),
+    (S.site.sprinkler_height || 0) > bd.height ? h("div", { class: "note err" }, "Спринклери вище стелі.") : h("div", { class: "small muted" }, "0 — спринклерів немає. Лінія спринклерів — помаранчева.")
+  );
+}
+function techSection() {
+  const dis = !canManage();
+  const [key, custom] = parseTech(S.site.aisle_tech);
+  const eff = techMin(S.site.aisle_tech);
+  const opts2 = [["", "Не задано"], ...Object.entries(TECHS).map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])];
+  const set = (k, m) => {
+    S.site.aisle_tech = techValue(k || null, m);
+    saveSiteExtra();
+    liveB();
+    renderTab();
+  };
+  const live = (v) => {
+    S.site.aisle_tech = techValue(key, v);
+    liveB();
+  };
+  return sec(
+    "Техніка складу",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Техніку складу змінює Менеджер.") : null,
+    h(
+      "div",
+      { class: "grid2" },
+      fld("Техніка", selectEl(opts2, key || "", (v) => set(v, null), dis, "Техніка складу")),
+      fld("Мін. ширина проїзду", numInput({ value: eff ?? "", dis: dis || !key || key === "none", min: 0.5, max: 12, step: 0.1, label: "Мінімальна ширина проїзду", set: live, end: () => {
+        saveSiteExtra();
+        renderTab();
+      } }), "м")
+    ),
+    h("div", { class: "small muted" }, custom ? "Свій мінімум замість умовного для техніки." : "Зона може мати власну техніку (панель зони). Перевірка «Ширина проходу» використовує мінімум."),
+    h("div", { class: "frow wrap" }, key ? btn("Скинути мінімум", () => set(key, null), { dis: dis || !custom }) : null)
+  );
+}
+function toolsSection() {
+  const dis = !editable();
+  return sec(
+    "Об'єкти й проходи",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " ", bLayer() ? lockHint(bLayer()) : "Шару «Будівля» немає.") : null,
+    h("div", { class: "b5-tools", id: "b5Tools" }, TOOLS.map(([k, label2]) => btn(label2, () => setTool(k), { dis, pressed: B2.tool === k, id: "tool-" + k }))),
+    h("div", { class: "frow wrap" }, btn("Колони сіткою…", openColumnGrid, { dis, id: "btnColumnGrid" }), btn("Рулетка", () => {
+      const on = !V.ruler.on;
+      E.cancelModes?.();
+      V.ruler.on = on;
+      B2.tool = null;
+      if (on) {
+        toast("Рулетка: клацніть дві точки — відстань і Δx, Δy.");
+      }
+      E.renderVTools?.();
+      renderTab();
+    }, { pressed: V.ruler.on, id: "btnRuler" })),
+    h(
+      "div",
+      { class: "grid3" },
+      fld("Товщина стіни", numInput({ value: B2.wallTh, dis, min: 0.05, max: 5, step: 0.05, label: "Товщина стіни", set: (v) => {
+        B2.wallTh = v;
+      } }), "м"),
+      fld("Ширина проходу", numInput({ value: B2.aisleW || (bLayer() || {}).aisle_width || 3, dis, min: 0.3, max: 12, step: 0.1, label: "Ширина проходу", set: (v) => {
+        B2.aisleW = v;
+      } }), "м"),
+      fld("Крок", selectEl([[0.1, "0,1 м"], [0.5, "0,5 м"], [1, "1 м"]], B2.step, (v) => {
+        B2.step = Number(v);
+      }, false, "Крок прив'язки"))
+    ),
+    h("div", { class: "small muted" }, "Alt — без прив'язки. Прив'язка: вершини контуру, кути об'єктів, кінці й осі проходів, сітка."),
+    h("label", { class: "frow" }, h("input", { type: "checkbox", checked: B2.rulers, "aria-label": "Лінійки по краях", onchange: (e) => {
+      B2.rulers = e.target.checked;
+      drawRulers();
+    } }), " Лінійки по краях «Плану»")
+  );
+}
+function itemSection() {
+  const it = selItem();
+  const a = selAisle();
+  const dis = !editable();
+  if (!it && !a) {
+    const list = items();
+    const counts = Object.entries(ITEM_KINDS).map(([k, n]) => [n, list.filter((x) => x.kind === k).length]).filter(([, c]) => c);
+    return sec("Вибраний об'єкт", h("div", { class: "small muted" }, "Клацніть об'єкт чи прохід на сцені."), counts.length ? h("div", { class: "small", id: "b5Counts" }, "Усього: " + counts.map(([n, c]) => `${n} — ${c}`).join(" · ")) : h("div", { class: "small muted" }, "Об'єктів будівлі ще немає."));
+  }
+  if (a) {
+    const ax = aisleAxis(a);
+    const raw = aisleTechRaw(a);
+    const need = techMin(raw);
+    const set2 = (fn, label2) => (v) => {
+      fn(v);
+      liveB();
+      void label2;
+    };
+    const end2 = () => commitB(`Прохід: ${a.name}`);
+    const linked = aisleLinks(aisles()).filter((l) => l.aisle === a.id || l.host === a.id).length;
+    return sec(
+      "Вибраний прохід",
+      fld("Назва", textInput({ value: a.name, dis, label: "Назва проходу", set: set2((v) => {
+        a.name = v.slice(0, 64);
+      }), end: end2 })),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Довжина", numInput({ value: rnd(ax.len, 3), dis, min: 0.5, step: 0.5, label: "Довжина проходу", set: set2((v) => {
+          if (ax.dir === "h") {
+            a.x1 = rnd(a.x0 + v);
+          } else {
+            a.y1 = rnd(a.y0 + v);
+          }
+        }), end: end2 }), "м"),
+        fld("Ширина", numInput({ value: rnd(ax.width, 3), dis, min: 0.3, step: 0.1, label: "Ширина проходу", set: set2((v) => {
+          const c = ax.dir === "h" ? ax.cy : ax.cx;
+          if (ax.dir === "h") {
+            a.y0 = rnd(c - v / 2);
+            a.y1 = rnd(c + v / 2);
+          } else {
+            a.x0 = rnd(c - v / 2);
+            a.x1 = rnd(c + v / 2);
+          }
+        }), end: end2 }), "м")
+      ),
+      need != null ? h("div", { class: "small" + (ax.width < need - 1e-3 ? " err" : " muted"), id: "b5AisleNeed" }, `Мінімум для техніки: ${fmt(need, 2)} м${ax.width < need - 1e-3 ? " — прохід вужчий" : ""}`) : h("div", { class: "small muted" }, "Техніку для перевірки ширини не задано."),
+      h("div", { class: "small muted" }, `З'єднань із сусідніми проходами: ${linked}`),
+      h("div", { class: "frow" }, h("span", { class: "grow" }), btn("Видалити", deleteSelection, { dis, cls: "danger", icon: "trash", id: "btnItemDelete" }))
+    );
+  }
+  const slotsForLink = S.slots.filter((s) => s.template === "floor_spot" || s.template === "zone");
+  const wall = it.kind === "wall";
+  const set = (fn) => (v) => {
+    fn(v);
+    liveB();
+  };
+  const end = () => commitB(`Об'єкт: ${it.name || ITEM_KINDS[it.kind]}`);
+  return sec(
+    `${ITEM_KINDS[it.kind]} ${it.name || ""}`.trim(),
+    fld("Назва", textInput({ value: it.name, dis, label: "Назва об'єкта", set: set((v) => {
+      it.name = v.slice(0, 64);
+    }), end })),
+    h(
+      "div",
+      { class: "grid3" },
+      fld("x", numInput({ value: it.x, dis, step: B2.step, label: "x", set: set((v) => {
+        it.x = v;
+      }), end }), "м"),
+      fld("y", numInput({ value: it.y, dis, step: B2.step, label: "y", set: set((v) => {
+        it.y = v;
+      }), end }), "м"),
+      fld("Поворот", numInput({ value: it.rot || 0, dis, step: 5, label: "Поворот", set: set((v) => {
+        it.rot = v;
+      }), end }), "°")
+    ),
+    h(
+      "div",
+      { class: "grid2" },
+      fld(wall ? "Довжина" : "Ширина", numInput({ value: it.w, dis, min: 0.05, max: 1e3, step: 0.1, label: wall ? "Довжина" : "Ширина", set: set((v) => {
+        it.w = v;
+      }), end }), "м"),
+      fld(wall ? "Товщина" : "Глибина", numInput({ value: it.d, dis, min: 0.05, max: wall ? 5 : 1e3, step: 0.05, label: wall ? "Товщина" : "Глибина", set: set((v) => {
+        it.d = v;
+        if (wall) {
+          it.th = v;
+        }
+      }), end }), "м")
+    ),
+    LINK_KINDS.includes(it.kind) ? h(
+      "div",
+      { class: "fcol", id: "b5Link" },
+      fld("Пов'язати з локацією", selectEl([["", "— без зв'язку (геометрія) —"], ...slotsForLink.map((s) => [s.id, `${s.code_prefix}${s.template === "zone" ? " · зона" : ""}`])], slotsForLink.some((s) => s.id === it.location_uid) ? it.location_uid : "", (v) => {
+        it.location_uid = v || null;
+        commitB(`Зв'язок: ${it.name}`);
+      }, dis, "Локація")),
+      fld("або код локації", textInput({ value: slotsForLink.some((s) => s.id === it.location_uid) ? "" : it.location_uid || "", dis, label: "Код локації", set: (v) => {
+        it.location_uid = v.trim() ? v.trim().slice(0, 64) : null;
+      }, end })),
+      h("div", { class: "small muted" }, it.location_uid ? "Зв'язано з локацією." : "Без зв'язку: лише геометрія.")
+    ) : null,
+    h("div", { class: "frow" }, h("span", { class: "grow" }), btn("Видалити", deleteSelection, { dis, cls: "danger", icon: "trash", id: "btnItemDelete" }))
+  );
+}
+function aisleTechRaw(a) {
+  const cx = (a.x0 + a.x1) / 2;
+  const cy = (a.y0 + a.y1) / 2;
+  const zones = S.slots.filter((s) => s.template === "zone").map((z) => {
+    const w = z.params.length || 1;
+    const hh = z.params.width || 1;
+    const r = (z.rotation || 0) * Math.PI / 180;
+    const dx = cx - z.x;
+    const dy = cy - z.y;
+    const lx = dx * Math.cos(r) + dy * Math.sin(r);
+    const ly = -dx * Math.sin(r) + dy * Math.cos(r);
+    return { z, inside: Math.abs(lx) <= w / 2 && Math.abs(ly) <= hh / 2, area: w * hh };
+  }).filter((c) => c.inside && c.z.tech).sort((p, q) => p.area - q.area);
+  return zones.length ? zones[0].z.tech : S.site.aisle_tech || null;
+}
+function checksSection() {
+  const dis = !canManage();
+  const cfg = S.settings.checks;
+  const save2 = (id) => {
+    const c = cfg[id];
+    const a = E.adapter;
+    if (a.kind === "odoo" && c.id == null && typeof a.queue === "function") {
+      a.queue({ model: "td.check.config", op: "create", uid: id, vals: { check_key: id, enabled: c.enabled, mode: c.mode, params: c.params || {} } });
+      c.id = -1;
+    } else {
+      a.saveCheck(id, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+    }
+    E.commit({});
+  };
+  const issues = (S.issues.list || []).filter((i) => CHECK_IDS.includes(i.check));
+  return sec(
+    "Перевірки будівлі",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Налаштування змінює Менеджер.") : null,
+    CHECK_IDS.map((id) => {
+      const cur = cfg[id] || { enabled: false, mode: "warn", params: {}, id: null };
+      const ensure = () => cfg[id] ||= { enabled: false, mode: "warn", params: {}, id: null };
+      return h(
+        "div",
+        { class: "frow", style: { margin: "5px 0" }, title: CHECK_NAMES[id][1] },
+        h("input", { type: "checkbox", checked: !!cur.enabled && !!cfg[id], disabled: dis, "aria-label": CHECK_NAMES[id][0], "data-check": id, onchange: (e) => {
+          ensure().enabled = e.target.checked;
+          save2(id);
+        } }),
+        h("span", { style: { flex: 1, minWidth: 0 } }, CHECK_NAMES[id][0]),
+        selectEl([["warn", "Попередження"], ["block", "Заборона"]], cur.mode, (v) => {
+          ensure().mode = v;
+          save2(id);
+        }, dis, CHECK_NAMES[id][0])
+      );
+    }),
+    issues.length ? h("div", { class: "b5-issues", id: "b5Issues" }, issues.slice(0, 12).map((i) => h("div", { class: "small " + (i.level === "block" ? "err" : "warn"), title: i.check }, i.msg)), issues.length > 12 ? h("div", { class: "small muted" }, `…і ще ${issues.length - 12}`) : null) : h("div", { class: "small muted" }, "Зауважень за ввімкненими перевірками будівлі немає.")
+  );
+}
+function docsSection() {
+  return sec(
+    "Документи",
+    h("div", { class: "frow wrap" }, btn("Специфікація стелажів…", () => E.runDialog("spec"), { id: "btnSpecDoc" }), btn("План…", () => E.runDialog("planDoc"), { id: "btnPlanDoc" }))
+  );
+}
+function renderBuildingTab(root) {
+  if (!S.site) {
+    return;
+  }
+  if (!bLayer()) {
+    root.append(sec("Будівля", h("div", { class: "note" }, "На площадці немає шару «Будівля»: створіть його у вкладці «Шари».")));
+    return;
+  }
+  root.append(
+    ...K(
+      sec("Режим «Будівля»", h("div", { class: "small muted" }, B2.on ? "Правка будівлі: клацання по сцені обробляє цей режим. Звичайна правка вимкнена." : "Режим вимкнено. Він взаємовиключний з «Редагувати»."), h("div", { class: "frow wrap" }, btn(B2.on ? "Вийти з режиму «Будівля»" : "Увімкнути режим «Будівля»", toggleBuilding, { cls: B2.on ? "" : "primary", id: "btnBuildingToggle" }))),
+      B2.on ? K(contourSection(), heightsSection(), toolsSection(), itemSection(), techSection(), checksSection(), docsSection()) : K(docsSection())
+    )
+  );
+}
+registries.panels.add("left:building", { area: "left", tab: "building", label: "Будівля", render: renderBuildingTab }, { sequence: 15, force: true });
+var renderTab = () => {
+  if (ROOT.el && S.ui.leftTab === "building") {
+    E.renderLeft?.();
+  }
+};
+registries.panels.add(
+  "slot:tech",
+  {
+    area: "slot",
+    when: ({ rec }) => !!rec && rec.template === "zone",
+    render(root, { rec }) {
+      const dis = !canEditLayer(layerOf(rec.layer_id));
+      const [key, custom] = parseTech(rec.tech);
+      const eff = techMin(rec.tech);
+      const opts2 = [["", "Як у складу"], ...Object.entries(TECHS).map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])];
+      const set = (k, m) => {
+        rec.tech = techValue(k || null, m);
+        E.commit({ label: `Техніка зони: ${rec.params.title || rec.code_prefix}` });
+      };
+      root.append(
+        h(
+          "div",
+          { class: "sec", id: "zoneTech" },
+          h("h3", null, "Техніка зони"),
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Техніка", selectEl(opts2, key || "", (v) => set(v, null), dis, "Техніка зони")),
+            fld("Мін. ширина проїзду", numInput({ value: eff ?? "", dis: dis || !key || key === "none", min: 0.5, max: 12, step: 0.1, label: "Мінімальна ширина проїзду зони", set: (v) => {
+              rec.tech = techValue(key, v);
+            }, end: () => E.commit({ label: `Техніка зони: ${rec.params.title || rec.code_prefix}` }) }), "м")
+          ),
+          h("div", { class: "small muted" }, custom ? "Свій мінімум для зони." : "Для проходів і рядів у зоні діє мінімум цієї техніки (N-06).")
+        )
+      );
+    }
+  },
+  { sequence: 60, force: true }
+);
+var STYLE_ID2 = "f3d-s5-style";
+var CSS2 = `
+.b5-sec .b5-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:6px 0}
+.b5-sec .b5-verts{max-height:150px;overflow:auto;margin:4px 0}
+.b5-sec .b5-vrow{gap:4px;margin:2px 0}.b5-sec .b5-vrow.sel{background:var(--warn-soft)}
+.b5-sec .b5-vrow input{min-width:0;width:80px}
+.b5-sec .b5-issues{margin-top:6px;max-height:140px;overflow:auto}
+.b5-sec .err{color:var(--err,#b3261e)}.b5-sec .warn{color:var(--warn,#8a5a00)}
+.b5-rx,.b5-ry{position:absolute;z-index:2;pointer-events:none;background:color-mix(in srgb,var(--surface) 88%,transparent)}
+.b5-rx{left:0;right:0;top:0;height:18px;border-bottom:1px solid var(--line)}
+.b5-ry{left:0;top:0;bottom:0;width:30px;border-right:1px solid var(--line)}
+#vtools .b5-mode[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.b5-doc .b5-prev{border:1px solid var(--line);background:#fff;max-height:60vh;overflow:auto;padding:4px}
+.b5-doc .b5-prev svg{max-width:100%;height:auto;display:block}
+.b5-doc table.b5-t{border-collapse:collapse;width:100%;font-size:12px}
+.b5-doc table.b5-t th,.b5-doc table.b5-t td{border:1px solid var(--line);padding:2px 6px;text-align:left}
+.b5-doc table.b5-t td.n{text-align:right}
+.b5-wiz .b5-steps{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.b5-wiz .b5-step{padding:3px 8px;border:1px solid var(--line);font-size:12px}
+.b5-wiz .b5-step.on{background:var(--ink);color:var(--surface)}.b5-wiz .b5-step.done{border-color:var(--ink)}
+`;
+function ensureStyle2() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID2)) {
+    return;
+  }
+  const st = document.createElement("style");
+  st.id = STYLE_ID2;
+  st.textContent = CSS2;
+  root.prepend(st);
+}
+function renderVToolsButton() {
+  const box = $("#vtools");
+  if (!box) {
+    return;
+  }
+  let b = $("#btnBuildingMode");
+  if (!b) {
+    b = h("button", { class: "fbtn b5-mode", type: "button", id: "btnBuildingMode", title: "Режим «Будівля»: контур, колони, стіни, проходи (взаємовиключний з «Редагувати»)", "aria-label": "Будівля", onclick: toggleBuilding }, ic("plan"), h("span", { class: "lg" }, "Будівля"));
+    const second = box.children[1];
+    if (second) {
+      second.after(b);
+    } else {
+      box.append(b);
+    }
+  }
+  b.setAttribute("aria-pressed", String(B2.on));
+}
+function decorate2() {
+  ensureStyle2();
+  renderVToolsButton();
+  const edit = $('#modeSeg button[data-mode="edit"]');
+  if (edit && B2.on) {
+    edit.setAttribute("aria-pressed", "false");
+  }
+  if (B2.on && S.site && B2.siteId !== S.site.id) {
+    exitBuilding();
+  }
+}
+function niceStep(pxPerM, min = 60) {
+  for (const s of [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]) {
+    if (s * pxPerM >= min) {
+      return s;
+    }
+  }
+  return 100;
+}
+function drawRulers(cursorOnly) {
+  const center2 = ROOT.el && ROOT.el.querySelector(".center");
+  let rx = $("#b5Rx");
+  let ry = $("#b5Ry");
+  const show = !!(B2.on || B2.rulers) && V.ok && V.camMode === "plan" && !V.testMode;
+  if (!center2 || !show) {
+    rx?.remove();
+    ry?.remove();
+    return;
+  }
+  if (!rx) {
+    rx = h("canvas", { class: "b5-rx", id: "b5Rx" });
+    ry = h("canvas", { class: "b5-ry", id: "b5Ry" });
+    center2.append(rx, ry);
+  }
+  const w = center2.clientWidth;
+  const hh = center2.clientHeight;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const size = (c, cw, ch) => {
+    if (c.width !== cw * dpr || c.height !== ch * dpr) {
+      c.width = cw * dpr;
+      c.height = ch * dpr;
+      c.style.width = cw + "px";
+      c.style.height = ch + "px";
+    }
+  };
+  size(rx, w, 18);
+  size(ry, 30, hh);
+  const proj = (x, y) => {
+    const v = new THREE.Vector3(x, 0, -y).project(V.camera);
+    return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * hh];
+  };
+  const t = V.controls.target;
+  const [ox, oy] = proj(t.x, -t.z);
+  const pxX = Math.abs(proj(t.x + 1, -t.z)[0] - ox);
+  const pxY = Math.abs(proj(t.x, -t.z + 1)[1] - oy);
+  if (!pxX || !pxY) {
+    return;
+  }
+  const css = getComputedStyle(center2);
+  const ink = css.getPropertyValue("--ink").trim() || "#222";
+  const cx = rx.getContext("2d");
+  const cy = ry.getContext("2d");
+  for (const c of [cx, cy]) {
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, hh);
+    c.strokeStyle = ink;
+    c.fillStyle = ink;
+    c.font = "10px sans-serif";
+    c.lineWidth = 1;
+  }
+  const sx = niceStep(pxX);
+  const sy = niceStep(pxY, 40);
+  const x0 = t.x + (0 - ox) / pxX;
+  const x1 = t.x + (w - ox) / pxX;
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1; x += sx) {
+    const px = ox + (x - t.x) * pxX;
+    cx.beginPath();
+    cx.moveTo(px + 0.5, 12);
+    cx.lineTo(px + 0.5, 18);
+    cx.stroke();
+    cx.fillText(String(rnd(x, 2)), px + 2, 10);
+  }
+  const yTop = -t.z + (oy - 0) / pxY;
+  const yBot = -t.z - (hh - oy) / pxY;
+  for (let y = Math.ceil(yBot / sy) * sy; y <= yTop; y += sy) {
+    const py = oy - (y + t.z) * pxY;
+    cy.beginPath();
+    cy.moveTo(24, py + 0.5);
+    cy.lineTo(30, py + 0.5);
+    cy.stroke();
+    cy.fillText(String(rnd(y, 2)), 1, py - 2);
+  }
+  const cur = B2.cursor || V.cursor;
+  if (cur) {
+    cx.strokeStyle = "#e11d74";
+    cx.beginPath();
+    cx.moveTo(ox + (cur.x - t.x) * pxX + 0.5, 0);
+    cx.lineTo(ox + (cur.x - t.x) * pxX + 0.5, 18);
+    cx.stroke();
+    cy.strokeStyle = "#e11d74";
+    const py = oy - (cur.y + t.z) * pxY;
+    cy.beginPath();
+    cy.moveTo(0, py + 0.5);
+    cy.lineTo(30, py + 0.5);
+    cy.stroke();
+  }
+  void cursorOnly;
+}
+var mo = null;
+function onMount2() {
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null });
+  ensureStyle2();
+  renderVToolsButton();
+  const cv = V.canvas;
+  if (cv) {
+    cv.addEventListener("pointerdown", onDown2, true);
+    cv.addEventListener("pointermove", onMove2, true);
+    cv.addEventListener("pointerup", onUp2, true);
+    cv.addEventListener("pointercancel", onUp2, true);
+    V.controls?.addEventListener("change", () => drawRulers());
+  }
+  const seg = $("#modeSeg");
+  if (seg) {
+    seg.addEventListener(
+      "click",
+      (e) => {
+        if (e.target.closest("button[data-mode]") && B2.on) {
+          exitBuilding();
+        }
+      },
+      true
+    );
+  }
+  const vt = $("#vtools");
+  if (vt && typeof MutationObserver !== "undefined") {
+    mo = new MutationObserver(() => {
+      if (!$("#btnBuildingMode")) {
+        renderVToolsButton();
+      }
+    });
+    mo.observe(vt, { childList: true });
+  }
+  if (typeof ResizeObserver !== "undefined" && cv) {
+    new ResizeObserver(() => drawRulers()).observe(cv);
+  }
+}
+function onUnmount2() {
+  mo?.disconnect();
+  mo = null;
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null });
+}
+E.lifecycle.mount.add(onMount2);
+E.lifecycle.unmount.add(onUnmount2);
+var origRenderAll2 = E.renderAll;
+E.renderAll = function renderAllS5(...a) {
+  const r = origRenderAll2.apply(this, a);
+  try {
+    decorate2();
+    drawRulers();
+  } catch (e) {
+    console.error("S5 режим «Будівля»:", e);
+  }
+  return r;
+};
+var origSetView = E.setView;
+E.setView = function setViewS5(...a) {
+  const r = origSetView.apply(this, a);
+  try {
+    drawRulers();
+  } catch (e) {
+    console.error("S5 лінійки:", e);
+  }
+  return r;
+};
+var origCancel = E.cancelModes;
+E.cancelModes = function cancelModesS5(...a) {
+  B2.tool = null;
+  B2.pend = null;
+  B2.drag = null;
+  setOverlay(null);
+  return origCancel ? origCancel.apply(this, a) : void 0;
+};
+registries.hotkeys.add(
+  "building_escape",
+  {
+    key: "Escape",
+    typing: true,
+    run() {
+      if (!B2.on || !(B2.tool || B2.pend || B2.sel)) {
+        return false;
+      }
+      if (B2.pend) {
+        B2.pend = null;
+      } else if (B2.tool) {
+        B2.tool = null;
+      } else {
+        B2.sel = null;
+      }
+      setOverlay(null);
+      updateView();
+      E.syncScene();
+      renderTab();
+      renderVToolsButton();
+      return true;
+    }
+  },
+  { sequence: 8, force: true }
+);
+registries.hotkeys.add(
+  "building_delete",
+  {
+    match: (e) => e.code === "Delete" || e.code === "Backspace",
+    when: () => B2.on && !!B2.sel,
+    run: (e) => (e.preventDefault(), deleteSelection())
+  },
+  { sequence: 9, force: true }
+);
+registries.menu.add("building", { area: "more", label: "Будівля (режим)", icon: "plan", sequence: 20, run: () => toggleBuilding() }, { sequence: 20, force: true });
+Object.assign(E, { enterBuilding, exitBuilding, toggleBuilding, buildingState: B2, deleteBuildingSelection: deleteSelection, openColumnGrid, wallsAlongContour, contourFromWarehouse });
+
+// core/constructor/building.js
+setSiteProvider(() => S.site);
+registries.checks.add("inside", { run: checkInside, label: "Усередині контуру й поза об'єктами будівлі" }, { sequence: 100, force: true });
+registries.checks.add("aisle_width", { run: checkAisleWidth, label: "Ширина проходу за технікою" }, { sequence: 110, force: true });
+registries.checks.add("height", { run: checkHeight, label: "Висота до стелі й спринклерів" }, { sequence: 120, force: true });
+
+// core/constructor/wizard.js
+var STEPS = [
+  ["building", "Будівля"],
+  ["zones", "Зони"],
+  ["rows", "Ряди"],
+  ["addr", "Адресація"],
+  ["checks", "Перевірки"],
+  ["plan", "План змін"]
+];
+var RACK_TYPES = [["pallet_rack", "Палетний стелаж"], ["shelf", "Полицевий стелаж"], ["cantilever", "Консольний стелаж"], ["floor_stack", "Напільне штабелювання"]];
+var VERSION = 1;
+function evenZones(n, a, gap = 1) {
+  const horizontal = a.x1 - a.x0 >= a.y1 - a.y0;
+  const total = horizontal ? a.x1 - a.x0 : a.y1 - a.y0;
+  const size = (total - gap * (n - 1)) / n;
+  return Array.from({ length: n }, (_, i) => {
+    const from = (horizontal ? a.x0 : a.y0) + i * (size + gap);
+    return horizontal ? { x0: rnd(from, 2), x1: rnd(from + size, 2), y0: a.y0, y1: a.y1 } : { y0: rnd(from, 2), y1: rnd(from + size, 2), x0: a.x0, x1: a.x1 };
+  });
+}
+var defaultState = () => {
+  const b = S.site.building;
+  const cg = S.site.column_grid || { step_x: 6, step_y: 6 };
+  return {
+    v: VERSION,
+    siteId: S.site.id,
+    step: 0,
+    reached: 0,
+    done: false,
+    applied: {},
+    form: {
+      building: { length: b.length, width: b.width, height: b.height, contour: true, columns: true, sx: cg.step_x || 6, sy: cg.step_y || 6, walls: false, th: 0.3, sprinkler: S.site.sprinkler_height || 0 },
+      zones: [],
+      count: 2
+    },
+    created: { items: [], bounds: false, zones: [], rows: [] }
+  };
+};
+var W = null;
+function current() {
+  if (!S.site) {
+    return null;
+  }
+  if (!W || W.siteId !== S.site.id) {
+    const st = S.site.wizard_state;
+    W = st && st.v === VERSION && st.siteId === S.site.id ? clone(st) : null;
+  }
+  return W;
+}
+var persist = debounce(async () => {
+  if (!W || !S.site) {
+    return;
+  }
+  S.site.wizard_state = clone(W);
+  try {
+    if (E.adapter && typeof E.adapter.saveWizard === "function") {
+      await E.adapter.saveWizard(S.site.wizard_state);
+    }
+  } catch (e) {
+    toast("Не вдалося зберегти стан майстра: " + (e.data?.message || e.message || e), "err");
+  }
+}, 400);
+var touch = () => {
+  S.site.wizard_state = clone(W);
+  persist();
+};
+var rerender = () => {
+  if (S.ui.leftTab === "wizard") {
+    E.renderLeft?.();
+  }
+};
+var bLayer2 = () => S.layers.find((l) => l.kind === "building") || null;
+var layerFor = (template) => S.layers.find((l) => l.kind === "storage" && l.slot_types.includes(template)) || S.layers.find((l) => (l.kind === "production" || l.kind === "custom") && l.slot_types.includes(template)) || S.layers.find((l) => l.slot_types.includes(template)) || null;
+var removeSlots = (ids) => {
+  const set = new Set(ids || []);
+  if (!set.size) {
+    return 0;
+  }
+  const before = S.slots.length;
+  S.slots = S.slots.filter((s) => !set.has(s.id));
+  S.placements = S.placements.filter((p) => !set.has(p.slot_id));
+  return before - S.slots.length;
+};
+var label = (t) => E.undoLabel?.(t);
+var fnOf = (id) => lib3.functions.find((f) => String(f.id) === String(id)) || lib3.functions[0] || null;
+function applyBuilding() {
+  const f = W.form.building;
+  const ly = bLayer2();
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає шару «Будівля».", "warn");
+    return false;
+  }
+  const b = S.site.building;
+  const manager = canManage();
+  if (manager) {
+    Object.assign(b, { length: f.length, width: f.width, height: f.height });
+    S.site.column_grid = { step_x: f.sx, step_y: f.sy };
+    S.site.sprinkler_height = f.sprinkler || 0;
+    E.saveSiteProps?.();
+    E.adapter?.saveSite?.({ sprinkler_height: S.site.sprinkler_height }).catch(() => {
+    });
+  }
+  const old = new Set(W.created.items);
+  ly.items = (ly.items || []).filter((it) => !old.has(it.id));
+  const L2 = manager ? f.length : b.length;
+  const Wd = manager ? f.width : b.width;
+  if (f.contour && manager) {
+    ly.bounds = rectContour(0, 0, L2, Wd);
+  }
+  W.created.bounds = !!(f.contour && manager);
+  const made = [];
+  if (f.columns) {
+    made.push(...columnGrid({ x0: f.sx, y0: f.sy, nx: Math.max(0, Math.floor((L2 - 0.5) / f.sx)), ny: Math.max(0, Math.floor((Wd - 0.5) / f.sy)), sx: f.sx, sy: f.sy, existing: ly.items, idOf: () => uid("bi_") }));
+  }
+  ly.items.push(...made);
+  if (f.walls) {
+    const walls = contourWalls(contourOf(ly, b), f.th, () => uid("bi_"), ly.items);
+    ly.items.push(...walls);
+    made.push(...walls);
+  }
+  W.created.items = made.map((it) => it.id);
+  W.applied.building = true;
+  W.reached = Math.max(W.reached, 1);
+  label("Майстер: Будівля");
+  E.commit({});
+  E.setView?.(E.camMode || "plan");
+  toast(`Будівля: колон і стін створено ${made.length}.`);
+  touch();
+  return true;
+}
+function applyZones() {
+  const zones = W.form.zones;
+  if (!zones.length) {
+    toast("Додайте хоча б одну зону або натисніть «Розкласти рівно».", "warn");
+    return false;
+  }
+  const ly = layerFor("zone");
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає шару, що допускає зони.", "warn");
+    return false;
+  }
+  removeSlots([...W.created.rows, ...W.created.zones]);
+  W.created.rows = [];
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const plans = zones.map((z, i) => {
+    let n = i + 1;
+    while (used.has(`Z${n}`)) {
+      n++;
+    }
+    used.add(`Z${n}`);
+    const fn = fnOf(z.fn);
+    return { template: "zone", prefix: `Z${n}`, x: rnd((z.x0 + z.x1) / 2, 2), y: rnd((z.y0 + z.y1) / 2, 2), rotation: 0, params: { length: rnd(z.x1 - z.x0, 2), width: rnd(z.y1 - z.y0, 2), title: z.name || `Зона ${i + 1}`, color: fn && fn.color || "#9fb7c9" } };
+  });
+  const prev = S.ui.layer;
+  S.ui.layer = ly.id;
+  label("Майстер: Зони");
+  const made = addSlots(plans);
+  S.ui.layer = prev;
+  made.forEach((rec, i) => {
+    const fn = fnOf(zones[i].fn);
+    rec.function_id = fn ? fn.id : null;
+    zones[i].slot = rec.id;
+  });
+  W.created.zones = made.map((s) => s.id);
+  W.applied.zones = true;
+  W.reached = Math.max(W.reached, 2);
+  label("Майстер: Зони");
+  E.commit({});
+  toast(`Зон створено: ${made.length}.`);
+  touch();
+  return true;
+}
+function applyRows() {
+  const zones = W.form.zones.filter((z) => z.slot && S.sIdx.has(z.slot));
+  if (!zones.length) {
+    toast("Спершу застосуйте крок «Зони».", "warn");
+    return false;
+  }
+  removeSlots(W.created.rows);
+  W.created.rows = [];
+  const prev = S.ui.layer;
+  const made = [];
+  let skipped = 0;
+  zones.forEach((z, zi) => {
+    const r = z.rows;
+    const ly = layerFor(r.template);
+    if (!ly || !canEditLayer(ly)) {
+      skipped += r.rows;
+      return;
+    }
+    const lay = bulkLayout({ template: r.template, rows: r.rows, sections: r.sections, levels: r.levels, aisle: r.aisle, vertical: !!r.vertical, zoneId: z.slot });
+    const used = new Set(S.slots.map((s) => s.code_prefix));
+    let k = 0;
+    const plans = lay.rows.map((row) => {
+      let code;
+      do {
+        k++;
+        code = `R${zi + 1}-${k}`;
+      } while (used.has(code));
+      used.add(code);
+      return { ...row, template: r.template, prefix: code };
+    });
+    skipped += Math.max(0, r.rows - plans.length);
+    S.ui.layer = ly.id;
+    label("Майстер: Ряди");
+    made.push(...addSlots(plans));
+    const zoneRec = S.sIdx.get(z.slot);
+    if (zoneRec) {
+      zoneRec.tech = techValue(r.tech || null, null);
+    }
+  });
+  S.ui.layer = prev;
+  W.created.rows = made.map((s) => s.id);
+  W.applied.rows = true;
+  W.reached = Math.max(W.reached, 3);
+  label("Майстер: Ряди");
+  E.commit({});
+  toast(`Рядів створено: ${made.length}${skipped ? `; не вмістилося: ${skipped}` : ""}.`, skipped ? "warn" : void 0);
+  touch();
+  return true;
+}
+var blockers = () => (S.issues && S.issues.list || []).filter((i) => i.level === "block");
+var sec2 = (title, ...kids) => h("div", { class: "sec b5-sec", "data-wiz": "sec" }, h("h3", null, title), ...kids);
+var btn2 = (text, fn, o = {}) => h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, disabled: o.dis, title: o.title, onclick: fn }, o.icon ? ic(o.icon) : null, text);
+var nf = (value, o, set) => numInput({ value, step: 0.5, ...o, set: (v) => {
+  set(v);
+  touch();
+} });
+function stepBuilding(root) {
+  const f = W.form.building;
+  const dis = !canManage();
+  root.append(
+    ...K(
+      dis ? h("div", { class: "note lock" }, ic("lock"), " Розміри будівлі змінює Менеджер; об'єкти будівлі — за правами шару.") : null,
+      h(
+        "div",
+        { class: "grid3" },
+        fld("Довжина", nf(f.length, { dis, min: 5, max: 1e3, step: 1, label: "Довжина" }, (v) => {
+          f.length = v;
+        }), "м"),
+        fld("Ширина", nf(f.width, { dis, min: 5, max: 1e3, step: 1, label: "Ширина" }, (v) => {
+          f.width = v;
+        }), "м"),
+        fld("Висота", nf(f.height, { dis, min: 2, max: 60, label: "Висота" }, (v) => {
+          f.height = v;
+        }), "м")
+      ),
+      fld("До спринклерів", nf(f.sprinkler, { dis, min: 0, max: 60, step: 0.1, label: "Висота до спринклерів" }, (v) => {
+        f.sprinkler = v;
+      }), "м"),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.contour, disabled: dis, "data-w": "contour", onchange: (e) => {
+        f.contour = e.target.checked;
+        touch();
+      } }), " Контур за розмірами (прямокутник)"),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.columns, "data-w": "columns", onchange: (e) => {
+        f.columns = e.target.checked;
+        touch();
+      } }), " Колони сіткою"),
+      h("div", { class: "grid2" }, fld("Крок X", nf(f.sx, { min: 1, max: 100, label: "Крок колон X" }, (v) => {
+        f.sx = v;
+      }), "м"), fld("Крок Y", nf(f.sy, { min: 1, max: 100, label: "Крок колон Y" }, (v) => {
+        f.sy = v;
+      }), "м")),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.walls, "data-w": "walls", onchange: (e) => {
+        f.walls = e.target.checked;
+        touch();
+      } }), " Стіни по контуру"),
+      fld("Товщина стіни", nf(f.th, { min: 0.1, max: 2, step: 0.05, label: "Товщина стіни" }, (v) => {
+        f.th = v;
+      }), "м")
+    )
+  );
+}
+function stepZones(root) {
+  const zones = W.form.zones;
+  const b = contourBbox(contourOf(bLayer2(), S.site.building));
+  const add = () => {
+    const w = Math.max(4, (b.x1 - b.x0) / 2 - 2);
+    zones.push({ id: uid("wz_"), name: `Зона ${zones.length + 1}`, fn: (lib3.functions[3] || lib3.functions[0] || {}).id ?? null, x0: rnd(b.x0 + 1, 2), x1: rnd(b.x0 + 1 + w, 2), y0: rnd(b.y0 + 1, 2), y1: rnd(b.y1 - 1, 2), rows: { template: "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: 3.3, vertical: false, tech: "" } });
+    touch();
+    rerender();
+  };
+  const even = () => {
+    const n = Math.max(1, Math.min(12, Math.round(W.form.count)));
+    const rects = evenZones(n, { x0: b.x0 + 1, y0: b.y0 + 1, x1: b.x1 - 1, y1: b.y1 - 1 });
+    const old = zones.splice(0, zones.length);
+    rects.forEach((r, i) => zones.push({ id: uid("wz_"), name: old[i] && old[i].name || `Зона ${i + 1}`, fn: old[i] ? old[i].fn : (lib3.functions[3] || lib3.functions[0] || {}).id ?? null, ...r, rows: old[i] ? old[i].rows : { template: "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: 3.3, vertical: false, tech: "" } }));
+    touch();
+    rerender();
+  };
+  root.append(
+    h("div", { class: "frow wrap" }, fld("Зон", nf(W.form.count, { min: 1, max: 12, step: 1, int: true, label: "Кількість зон" }, (v) => {
+      W.form.count = v;
+    }), null), btn2("Розкласти рівно", even, { id: "btnWizEven", title: "Поділити будівлю на рівні зони" }), btn2("+ Зона", add, { id: "btnWizAddZone" })),
+    ...zones.map((z, i) => h(
+      "div",
+      { class: "fcol", "data-wiz": "zone", style: { borderTop: "1px solid var(--line)", paddingTop: "6px", marginTop: "6px" } },
+      h("div", { class: "frow" }, textInput({ value: z.name, label: "Назва зони", set: (v) => {
+        z.name = v;
+        touch();
+      } }), btn2("✕", () => {
+        zones.splice(i, 1);
+        touch();
+        rerender();
+      }, { title: "Прибрати зону" })),
+      fld("Функція", selectEl(lib3.functions.map((f) => [f.id, f.name]), z.fn, (v) => {
+        z.fn = lib3.functions.find((f) => String(f.id) === String(v))?.id ?? v;
+        touch();
+      }, false, "Функція зони")),
+      h("div", { class: "grid2" }, fld("x від", nf(z.x0, { label: "x від" }, (v) => {
+        z.x0 = v;
+      }), "м"), fld("x до", nf(z.x1, { label: "x до" }, (v) => {
+        z.x1 = v;
+      }), "м")),
+      h("div", { class: "grid2" }, fld("y від", nf(z.y0, { label: "y від" }, (v) => {
+        z.y0 = v;
+      }), "м"), fld("y до", nf(z.y1, { label: "y до" }, (v) => {
+        z.y1 = v;
+      }), "м"))
+    )),
+    zones.length ? null : h("div", { class: "small muted" }, "Зон немає: додайте зону або натисніть «Розкласти рівно».")
+  );
+}
+function stepRows(root) {
+  const zones = W.form.zones;
+  if (!zones.length) {
+    root.append(h("div", { class: "note" }, "Спершу створіть зони (крок «Зони»)."));
+    return;
+  }
+  root.append(
+    ...zones.map((z) => {
+      const r = z.rows;
+      return h(
+        "div",
+        { class: "fcol", "data-wiz": "rows", style: { borderTop: "1px solid var(--line)", paddingTop: "6px", marginTop: "6px" } },
+        h("b", null, z.name),
+        fld("Тип стелажа", selectEl(RACK_TYPES, r.template, (v) => {
+          r.template = v;
+          touch();
+        }, false, "Тип стелажа")),
+        h("div", { class: "grid3" }, fld("Рядів", nf(r.rows, { min: 1, max: 60, step: 1, int: true, label: "Рядів" }, (v) => {
+          r.rows = v;
+        }), null), fld("Секцій", nf(r.sections, { min: 1, max: 100, step: 1, int: true, label: "Секцій" }, (v) => {
+          r.sections = v;
+        }), null), fld("Ярусів", nf(r.levels, { min: 1, max: 12, step: 1, int: true, label: "Ярусів" }, (v) => {
+          r.levels = v;
+        }), null)),
+        h("div", { class: "grid2" }, fld("Прохід між рядами", nf(r.aisle, { min: 0.5, max: 12, step: 0.1, label: "Прохід між рядами" }, (v) => {
+          r.aisle = v;
+        }), "м"), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], r.vertical ? "v" : "h", (v) => {
+          r.vertical = v === "v";
+          touch();
+        }, false, "Орієнтація"))),
+        fld("Техніка зони", selectEl([["", "Як у складу"], ...Object.entries(TECHS).filter(([k]) => k !== "custom").map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])], r.tech || "", (v) => {
+          r.tech = v;
+          touch();
+        }, false, "Техніка зони"))
+      );
+    })
+  );
+}
+function stepAddr(root) {
+  const box = h("div", { id: "wizAddr" });
+  root.append(h("div", { class: "small muted" }, "Шаблон адресації й напрямки нумерації; попередній перегляд кодів — нижче. Застосування — кнопкою «Застосувати» блоку."), box);
+  const p = registries.panels.get("site:addr", null);
+  if (p) {
+    p.render(box, { rec: null });
+  }
+  W.applied.addr = true;
+  W.reached = Math.max(W.reached, 4);
+}
+function stepChecks(root) {
+  const list = S.issues && S.issues.list || [];
+  const bl = list.filter((i) => i.level === "block");
+  root.append(
+    h("div", { class: "small", id: "wizIssues" }, bl.length ? `Помилок (заборона): ${bl.length}; попереджень: ${list.length - bl.length}. «Далі» закрито, доки помилки не усунуто.` : `Помилок немає; попереджень: ${list.length}.`),
+    h("div", { class: "b5-issues" }, list.slice(0, 15).map((i) => h("div", { class: "small " + (i.level === "block" ? "err" : "warn") }, i.msg)), list.length > 15 ? h("div", { class: "small muted" }, `…і ще ${list.length - 15}`) : null),
+    h("div", { class: "frow wrap" }, btn2("Перевірити", () => {
+      E.commit({});
+      rerender();
+    }, { id: "btnWizCheck" }), can("check") ? btn2("Перевірка на сервері", () => E.validateOnServer?.(), { id: "btnWizServer" }) : null)
+  );
+  W.applied.checks = true;
+  W.reached = Math.max(W.reached, 5);
+}
+function stepPlan(root) {
+  const n = { zones: W.created.zones.filter((id) => S.sIdx.has(id)).length, rows: W.created.rows.filter((id) => S.sIdx.has(id)).length, items: W.created.items.length };
+  const exportDlg = ["export", "exportFile", "tableExport"].find((k) => registries.dialogs.has(k));
+  root.append(
+    h("div", { class: "small", id: "wizSummary" }, `Створено майстром: зон ${n.zones}, рядів ${n.rows}, об'єктів будівлі ${n.items}. Кількість змін у чернетці: ${S.site.draft_changes ?? 0}.`),
+    h(
+      "div",
+      { class: "frow wrap" },
+      btn2("Застосувати в Odoo…", () => E.publish(), { cls: "primary", id: "btnWizPublish", dis: !can("publish"), title: can("publish") ? "План змін, журнал і відкат" : "Публікація недоступна в цьому режимі" }),
+      btn2("Файл для імпорту…", () => E.runDialog(exportDlg), { id: "btnWizExport", dis: !exportDlg, title: exportDlg ? "" : "Експорт файла для імпорту — разом з діалогами імпорту й експорту XLSX/CSV" })
+    ),
+    h("div", { class: "small muted" }, "«Застосувати в Odoo…» відкриває план змін із підтвердженням; без Odoo результат лишається в чернетці проєкту.")
+  );
+  W.applied.plan = true;
+  W.reached = Math.max(W.reached, 6);
+}
+var BODY2 = [stepBuilding, stepZones, stepRows, stepAddr, stepChecks, stepPlan];
+var APPLY = [applyBuilding, applyZones, applyRows];
+async function renderWizardTab(root) {
+  if (!S.site) {
+    return;
+  }
+  const w = current();
+  if (!w) {
+    root.append(
+      sec2("Майстер «З нуля»", h("div", { class: "small muted" }, "Будівля → Зони → Ряди → Адресація → Перевірки → План змін. Кожен крок — звичайні правки зі скасуванням (Ctrl+Z)."), h("div", { class: "frow wrap" }, btn2("Почати майстер", startWizard, { cls: "primary", id: "btnWizStart" }), btn2("Новий проєкт: з нуля…", () => E.runDialog("wizardNew"), { id: "btnWizNew", dis: !canManage() })))
+    );
+    return;
+  }
+  if (!lib3.loaded && !lib3.loading) {
+    loadLib().then(rerender);
+  }
+  const i = w.step;
+  const apply = APPLY[i];
+  const bl = i === 4 ? blockers() : [];
+  const last = i === STEPS.length - 1;
+  root.append(
+    sec2(
+      "Майстер «З нуля»",
+      h(
+        "div",
+        { class: "b5-wiz" },
+        h("div", { class: "b5-steps", id: "wizSteps" }, STEPS.map(([k, name], n) => h("button", { class: "b5-step fbtn sm" + (n === i ? " on" : n < w.reached ? " done" : ""), type: "button", "data-step": k, disabled: n > w.reached, onclick: () => go(n) }, `${n + 1}. ${name}`))),
+        h("div", { class: "frow" }, h("b", null, `Крок ${i + 1}: ${STEPS[i][1]}`), h("span", { class: "grow" }), btn2("×", closeWizard, { id: "btnWizClose", title: "Вийти (стан збережено; повернутися можна вкладкою «Майстер»)" })),
+        h("div", { class: "fcol", id: "wizBody" }),
+        h(
+          "div",
+          { class: "frow wrap", style: { marginTop: "8px" } },
+          btn2("← Назад", () => go(i - 1), { dis: i === 0, id: "btnWizBack" }),
+          apply ? btn2(w.applied[STEPS[i][0]] ? "Застосувати ще раз (замінити)" : "Застосувати", () => {
+            if (apply()) {
+              rerender();
+            }
+          }, { cls: "primary", id: "btnWizApply" }) : null,
+          last ? btn2("Завершити майстер", finishWizard, { id: "btnWizFinish", cls: "primary" }) : btn2("Далі →", () => go(i + 1), { id: "btnWizNext", dis: bl.length > 0, title: bl.length ? "Є помилки перевірок: усуньте їх" : "" })
+        )
+      )
+    )
+  );
+  BODY2[i]($("#wizBody", root) || root.querySelector("#wizBody"));
+}
+registries.panels.add("left:wizard", { area: "left", tab: "wizard", label: "Майстер", render: renderWizardTab }, { sequence: 16, force: true });
+function go(n) {
+  if (!W || n < 0 || n >= STEPS.length || n > W.reached) {
+    return;
+  }
+  W.step = n;
+  touch();
+  rerender();
+}
+function openWizard() {
+  if (!S.site) {
+    return;
+  }
+  E.setLeftTab?.("wizard");
+}
+function startWizard() {
+  W = defaultState();
+  S.site.wizard_state = clone(W);
+  persist();
+  openWizard();
+  rerender();
+}
+function closeWizard() {
+  E.setLeftTab?.("layers");
+}
+function finishWizard() {
+  W.done = true;
+  touch();
+  toast("Майстер завершено. Результат — у чернетці проєкту.");
+  E.setLeftTab?.("layers");
+}
+async function openNewProject() {
+  const a = E.adapter;
+  let warehouses = [];
+  try {
+    warehouses = typeof a.warehouses === "function" ? await a.warehouses() : [];
+  } catch {
+    warehouses = [];
+  }
+  const name = h("input", { type: "text", value: "Новий склад", id: "wizName", "aria-label": "Назва" });
+  const code = h("input", { type: "text", value: "", maxlength: 16, id: "wizCode", "aria-label": "Код", placeholder: "напр. MAIN" });
+  code.addEventListener("input", () => {
+    code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  });
+  const dim = (v, id, label2) => h("input", { type: "number", value: v, min: 5, step: 1, id, "aria-label": label2 });
+  const l = dim(60, "wizL", "Довжина");
+  const w = dim(30, "wizW", "Ширина");
+  const hh = dim(8, "wizH", "Висота");
+  const wh = warehouses.length ? selectEl([["", "— без прив'язки до складу Odoo —"], ...warehouses.map((x) => [x.id, `${x.name} (${x.code})`])], "", () => {
+  }, false, "Склад Odoo") : null;
+  const lab = (t, el) => h("label", { class: "fld" }, h("span", null, t), el);
+  openDialog({
+    title: "Новий проєкт: з нуля",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, lab("Назва", name), lab("Код (великі латинські літери й цифри, до 16)", code), h("div", { class: "grid3" }, lab("Довжина, м", l), lab("Ширина, м", w), lab("Висота, м", hh)), wh ? lab("Склад Odoo (склад не створюється)", wh) : null, h("div", { class: "small muted" }, a.kind === "odoo" ? "Площадка створюється порожньою; склад Odoo лише вибирається." : "Створюється заготовка проєкту з кодом; пов'язати зі складом Odoo можна пізніше.")),
+    actions: [
+      { label: "Скасувати" },
+      {
+        label: "Створити й почати",
+        cls: "primary",
+        id: "dlgWizNew",
+        onClick: async () => {
+          if (!name.value.trim() || !code.value) {
+            toast("Вкажіть назву й код площадки.", "warn");
+            return false;
+          }
+          const ok = await E.createSite({ name: name.value.trim(), code: code.value, building: { l: +l.value, w: +w.value, h: +hh.value } });
+          if (!ok) {
+            return false;
+          }
+          const sel = wh && wh.value ? Number(wh.value) : null;
+          if (sel && typeof a.saveSite === "function") {
+            await a.saveSite({ warehouse_id: sel }).catch((e) => toast("Склад не прив'язано: " + (e.message || e), "warn"));
+          }
+          startWizard();
+          return void 0;
+        }
+      }
+    ]
+  });
+}
+registries.dialogs.add("wizardNew", () => openNewProject(), { force: true });
+registries.menu.add("wizardNew", { area: "more", label: "Новий проєкт: з нуля…", icon: "plus", sequence: 18, run: () => E.runDialog("wizardNew"), disabled: () => !canManage() }, { sequence: 18, force: true });
+registries.menu.add("wizard", { area: "more", label: "Майстер «З нуля»", icon: "plan", sequence: 19, run: () => current() ? openWizard() : startWizard() }, { sequence: 19, force: true });
+E.lifecycle.mount.add(() => {
+  W = null;
+});
+Object.assign(E, { openWizard, startWizard, wizardState: () => current(), applyWizardStep: (n) => APPLY[n] && APPLY[n](), wizardGo: go });
+
+// core/constructor/docs_ui.js
+function scopeOptions() {
+  const sel = selRefs();
+  const out = [["all", "Весь склад"]];
+  if (sel.length) {
+    out.push(["selected", `Виділене (${sel.length})`]);
+  }
+  for (const { zone: zone2 } of zonesOf2()) {
+    out.push([`zone:${zone2.id}`, `Зона: ${zone2.params && zone2.params.title || zone2.code_prefix}`]);
+  }
+  return out;
+}
+var scopeLabel = (scope) => (scopeOptions().find(([v]) => v === scope) || scopeOptions()[0])[1];
+function inScope2(scope) {
+  const visible = (id) => {
+    const ly = layerOf(id);
+    return !!ly && ly.kind !== "engineering" && !V.hidden.has(id);
+  };
+  const zones = zonesOf2();
+  const inZone2 = (zone2, x, y) => {
+    const z = zones.find((c) => c.zone.id === zone2);
+    return !!z && polygonContains(z.poly, [x, y]);
+  };
+  let slots = S.slots.filter((s) => visible(s.layer_id));
+  let placements = S.placements.filter((p) => visible(p.layer_id));
+  if (scope && scope.startsWith("zone:")) {
+    const zid = scope.slice(5);
+    slots = slots.filter((s) => s.id === zid || inZone2(zid, s.x, s.y));
+    placements = placements.filter((p) => inZone2(zid, p.x, p.y));
+  } else if (scope === "selected") {
+    const keys = new Set(selRefs().map((r) => r.kind + ":" + r.id));
+    const zoneSel = selRefs().filter((r) => r.kind === "slot" && zones.some((c) => c.zone.id === r.id));
+    slots = slots.filter((s) => keys.has("slot:" + s.id) || zoneSel.some((z) => inZone2(z.id, s.x, s.y)));
+    placements = placements.filter((p) => keys.has("placement:" + p.id) || zoneSel.some((z) => inZone2(z.id, p.x, p.y)));
+  }
+  return { slots, placements };
+}
+function download3(name, mime, data, isB64 = false) {
+  const bin = isB64 ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : data;
+  const url = URL.createObjectURL(bin instanceof Blob ? bin : new Blob([bin], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function tableEl(t, { max = 400 } = {}) {
+  const numeric = t.columns.map((_, i) => t.rows.length > 0 && t.rows.every((r) => r[i] == null || typeof r[i] === "number"));
+  const cell = (v, i, tag) => h(tag, { class: numeric[i] ? "n" : null }, v == null ? "" : typeof v === "number" ? String(Math.round(v * 100) / 100) : String(v));
+  return h(
+    "table",
+    { class: "b5-t" },
+    h("thead", null, h("tr", null, t.columns.map((c, i) => cell(c, i, "th")))),
+    h("tbody", null, t.rows.slice(0, max).map((r) => h("tr", null, r.map((v, i) => cell(v, i, "td"))))),
+    t.rows.length > max ? h("tfoot", null, h("tr", null, h("td", { colspan: t.columns.length }, `…і ще ${t.rows.length - max} рядків (у файлі — усі)`))) : null
+  );
+}
+function tableCsv(t) {
+  const q = (v) => {
+    const s = v == null ? "" : typeof v === "number" ? String(Math.round(v * 1e4) / 1e4).replace(".", ",") : String(v);
+    return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return "\uFEFF" + [t.columns, ...t.rows].map((r) => r.map(q).join(";")).join("\r\n") + "\r\n";
+}
+async function svgToPng(svg, widthPx, ratio) {
+  const hh = Math.round(widthPx / ratio);
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("Не вдалося намалювати план."));
+  });
+  const cv = document.createElement("canvas");
+  cv.width = widthPx;
+  cv.height = hh;
+  const ctx2 = cv.getContext("2d");
+  ctx2.fillStyle = "#fff";
+  ctx2.fillRect(0, 0, widthPx, hh);
+  ctx2.drawImage(img, 0, 0, widthPx, hh);
+  return await new Promise((res) => cv.toBlob(res, "image/png"));
+}
+var slug = (s) => String(s || "plan").replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "plan";
+
+// core/constructor/spec.js
+var RACK_TEMPLATES = ["pallet_rack", "shelf", "cantilever"];
+var TEMPLATE_NAMES = { pallet_rack: "Палетний стелаж", shelf: "Полицевий стелаж", cantilever: "Консольний стелаж" };
+var LINE_ORDER = ["frame", "post", "beam", "console", "shelf", "brace", "tie"];
+var LINE_NAMES = { frame: "Рама", post: "Стійка", beam: "Балка", console: "Консоль", shelf: "Полиця (настил)", brace: "Зв'язки секції", tie: "Стяжка двостороннього ряду" };
+var MIN_TIE_M = 0.05;
+var PAIR_OVERLAP = 0.9;
+var PAIR_TOLERANCE_M = 1e-3;
+var COLUMNS = ["Позиція", "Типорозмір", "Од.", "К-сть", "Площа, м²"];
+var RACK_COLUMNS = ["Стелаж", "Зона", "Тип", "Позиція", "Типорозмір", "Од.", "К-сть", "Площа, м²"];
+var f22 = (v) => (Math.floor(v * 100 + 0.5) / 100).toFixed(2);
+var r4 = (v) => Math.round(v * 1e4) / 1e4;
+var line = (key, qty, size, w, d) => ({ key, name: LINE_NAMES[key], size, unit: "шт.", qty: Math.trunc(qty), area: w != null && d != null ? r4(qty * w * d) : null });
+var cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+function rackLines(template, params) {
+  if (!RACK_TEMPLATES.includes(template)) {
+    return null;
+  }
+  const p = normalizeParams(template, params || {});
+  const sides = p.double_sided ? 2 : 1;
+  const height = slotHeight({ template, params: p });
+  const gap = Math.max(p.gap_y || 0, MIN_TIE_M);
+  const lines = [];
+  let sections;
+  let levels;
+  if (template === "pallet_rack") {
+    sections = p.bays;
+    levels = p.levels;
+    const depth = p.depth * (p.deep ?? 1);
+    lines.push(line("frame", (sections + 1) * sides, `${f22(height)} × ${f22(depth)} м`));
+    lines.push(line("beam", sections * levels * 2 * sides, `${f22(p.bay_width)} м`));
+    lines.push(line("brace", 2 * sections * sides, `${f22(p.bay_width)} м`));
+  } else if (template === "shelf") {
+    sections = p.sections;
+    levels = p.shelves;
+    lines.push(line("post", (sections + 1) * 2 * sides, `${f22(height)} м`));
+    lines.push(line("shelf", sections * levels * sides, `${f22(p.cell_w)} × ${f22(p.cell_d)} м`, p.cell_w, p.cell_d));
+    lines.push(line("brace", sections * sides, `${f22(p.cell_w)} м`));
+  } else {
+    sections = p.arms;
+    levels = p.levels;
+    lines.push(line("post", (sections + 1) * sides, `${f22(height)} м`));
+    lines.push(line("console", (sections + 1) * levels * sides, `${f22(p.arm_length)} м`));
+    lines.push(line("brace", sections * sides, `${f22(p.length / sections)} м`));
+  }
+  if (sides === 2) {
+    lines.push(line("tie", sections + 1, `${f22(gap)} м`));
+  }
+  return { sides, sections, levels, height, lines };
+}
+function backToBack(a, b) {
+  const rel = ((a.rot - b.rot) % 180 + 180) % 180;
+  if (Math.min(rel, 180 - rel) > 1) {
+    return null;
+  }
+  const [dx, dy] = rotate(b.cx - a.cx, b.cy - a.cy, -a.rot);
+  const overlap = Math.min(a.a, dx + b.a) - Math.max(-a.a, dx - b.a);
+  if (overlap < PAIR_OVERLAP * 2 * Math.min(a.a, b.a)) {
+    return null;
+  }
+  const gap = Math.abs(dy) - (a.b + b.b);
+  return gap >= -PAIR_TOLERANCE_M && gap < SPACER_M ? gap : null;
+}
+function buildSpec(slots) {
+  const zones = zonesOf2(slots).map((c) => ({ title: c.zone.params && c.zone.params.title || c.zone.code_prefix || "", poly: c.poly, zone: c.zone }));
+  const zoneName = (x, y) => {
+    const chain = zoneChainAt(zones.map((z) => ({ zone: z, poly: z.poly })), x, y);
+    return chain.length ? chain[0].title : "";
+  };
+  const racks = [];
+  for (const slot of slots) {
+    const calc = rackLines(slot.template, slot.params);
+    if (!calc) {
+      continue;
+    }
+    const p = normalizeParams(slot.template, slot.params || {});
+    const fp = footprint(slot.template, p);
+    racks.push({
+      id: slot.id,
+      code: slot.code_prefix || "",
+      zone: zoneName(slot.x || 0, slot.y || 0),
+      template: slot.template,
+      type: TEMPLATE_NAMES[slot.template],
+      sides: calc.sides,
+      sections: calc.sections,
+      levels: calc.levels,
+      size: `${f22(fp.l)} × ${f22(fp.w)} × ${f22(calc.height)} м`,
+      lines: calc.lines,
+      _obb: slotObb(slot.template, p, slot.x || 0, slot.y || 0, slot.rotation || 0)
+    });
+  }
+  racks.sort((a, b) => cmp(a.code, b.code) || cmp(String(a.id), String(b.id)));
+  const pairs = [];
+  for (let i = 0; i < racks.length; i++) {
+    for (let j = i + 1; j < racks.length; j++) {
+      const ra = racks[i];
+      const rb = racks[j];
+      if (ra.template !== rb.template) {
+        continue;
+      }
+      const gap = backToBack(ra._obb, rb._obb);
+      if (gap === null) {
+        continue;
+      }
+      pairs.push({ codes: [ra.code, rb.code], zone: ra.zone, lines: [line("tie", Math.min(ra.sections, rb.sections) + 1, `${f22(Math.max(gap, MIN_TIE_M))} м`)] });
+    }
+  }
+  for (const r of racks) {
+    delete r._obb;
+  }
+  const totals = /* @__PURE__ */ new Map();
+  for (const rows of [...racks.map((r) => r.lines), ...pairs.map((p) => p.lines)]) {
+    for (const ln of rows) {
+      const key = ln.key + "\0" + ln.size;
+      const cur = totals.get(key) || { key: ln.key, name: ln.name, size: ln.size, unit: ln.unit, qty: 0, area: null };
+      cur.qty += ln.qty;
+      if (ln.area !== null) {
+        cur.area = r4((cur.area || 0) + ln.area);
+      }
+      totals.set(key, cur);
+    }
+  }
+  const ordered = [...totals.values()].sort((a, b) => LINE_ORDER.indexOf(a.key) - LINE_ORDER.indexOf(b.key) || cmp(a.size, b.size));
+  const types2 = /* @__PURE__ */ new Map();
+  for (const r of racks) {
+    const key = [r.template, r.size, r.sections, r.levels, r.sides].join("|");
+    const cur = types2.get(key) || { type: r.type, size: r.size, sections: r.sections, levels: r.levels, sides: r.sides, count: 0 };
+    cur.count++;
+    types2.set(key, cur);
+  }
+  const summary = { racks: racks.length, pairs: pairs.length };
+  for (const key of LINE_ORDER) {
+    summary[key] = ordered.filter((t) => t.key === key).reduce((a, t) => a + t.qty, 0);
+  }
+  summary.shelf_area = r4(ordered.filter((t) => t.key === "shelf").reduce((a, t) => a + (t.area || 0), 0));
+  return {
+    racks,
+    pairs,
+    totals: ordered,
+    types: [...types2.values()].sort((a, b) => cmp(a.type, b.type) || cmp(a.size, b.size) || a.sections - b.sections || a.levels - b.levels || a.sides - b.sides),
+    summary
+  };
+}
+function specTables(spec) {
+  const detail = [];
+  for (const r of spec.racks) {
+    for (const ln of r.lines) {
+      detail.push([r.code, r.zone, r.type, ln.name, ln.size, ln.unit, ln.qty, ln.area]);
+    }
+  }
+  for (const p of spec.pairs) {
+    for (const ln of p.lines) {
+      detail.push([p.codes.join(" + "), p.zone, "Пара «спина до спини»", ln.name, ln.size, ln.unit, ln.qty, ln.area]);
+    }
+  }
+  return [
+    { name: "Специфікація", columns: RACK_COLUMNS, rows: detail },
+    { name: "Підсумок", columns: COLUMNS, rows: spec.totals.map((t) => [t.name, t.size, t.unit, t.qty, t.area]) },
+    { name: "Типорозміри", columns: ["Тип", "Габарит (Д × Г × В)", "Секцій × ярусів", "Стелажів"], rows: spec.types.map((t) => [t.type, t.size, `${t.sections} × ${t.levels}${t.sides === 2 ? ", двосторонній" : ""}`, t.count]) }
+  ];
+}
+var TABLE_VIEWS = [["Специфікація", "По стелажах"], ["Підсумок", "Підсумок за типорозмірами"], ["Типорозміри", "Типорозміри стелажів"]];
+async function openSpec(adapter, args = {}) {
+  const st = { scope: args.scope || (S.multi.length || S.sel ? "selected" : "all"), view: "Підсумок" };
+  if (!scopeOptions().some(([v]) => v === st.scope)) {
+    st.scope = "all";
+  }
+  const body = h("div", { class: "fcol b5-doc", id: "specBody" });
+  const model = () => {
+    const { slots } = inScope2(st.scope);
+    const spec = buildSpec(st.scope === "all" ? slots : [...slots, ...S.slots.filter((s) => s.template === "zone" && !slots.includes(s))]);
+    return { spec, tables: specTables(spec) };
+  };
+  const draw = () => {
+    const { spec, tables } = model();
+    const sm = spec.summary;
+    const t = tables.find((x) => x.name === st.view) || tables[1];
+    body.replaceChildren(
+      h("div", { class: "grid2" }, fld("Область", selectEl(scopeOptions(), st.scope, (v) => {
+        st.scope = v;
+        draw();
+      }, false, "Область")), fld("Таблиця", selectEl(TABLE_VIEWS, st.view, (v) => {
+        st.view = v;
+        draw();
+      }, false, "Таблиця"))),
+      h("div", { class: "small", id: "specSummary" }, sm.racks ? `Стелажів: ${sm.racks} · рам ${sm.frame} · стійок ${sm.post} · балок ${sm.beam} · консолей ${sm.console} · полиць ${sm.shelf} (${f22(sm.shelf_area)} м²) · зв'язок ${sm.brace} · стяжок ${sm.tie}` : "У цій області немає стелажів (палетних, полицевих чи консольних)."),
+      h("div", { class: "b5-prev", id: "specTable" }, tableEl(t))
+    );
+    const dis = !sm.racks;
+    for (const id of ["btnSpecCsv", "btnSpecXlsx", "btnSpecPdf"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.disabled = dis;
+      }
+    }
+  };
+  const title = () => `Специфікація стелажів — ${S.site.name} (${scopeLabel(st.scope)})`;
+  const server = async (format) => {
+    try {
+      const { tables } = model();
+      const res = await adapter.render("spec_pdf", { format, title: title(), tables });
+      download3(res.filename || `spec.${format}`, res.mimetype, res.content, true);
+      toast(`${format.toUpperCase()} сформовано на сервері.`);
+    } catch (e) {
+      toast(e.message || "Не вдалося сформувати файл.", "err");
+    }
+    return false;
+  };
+  openDialog({
+    title: "Специфікація стелажів",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити" },
+      {
+        label: "CSV",
+        id: "btnSpecCsv",
+        onClick: () => {
+          const { tables } = model();
+          const t = tables.find((x) => x.name === st.view) || tables[1];
+          download3(`spec_${slug(S.site.name)}_${slug(t.name)}.csv`, "text/csv", tableCsv(t));
+          toast("CSV збережено.");
+          return false;
+        }
+      },
+      { label: "XLSX", id: "btnSpecXlsx", onClick: () => server("xlsx") },
+      { label: "PDF", cls: "primary", id: "btnSpecPdf", onClick: () => server("pdf") }
+    ]
+  });
+  draw();
+  if (!can("render")) {
+    for (const id of ["btnSpecXlsx", "btnSpecPdf"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.title = "XLSX і PDF формує сервер Odoo («на сервері»); у цьому режимі доступний CSV.";
+      }
+    }
+  }
+}
+registries.dialogs.add("spec", (a, { adapter }) => openSpec(adapter, a), { force: true });
+registries.menu.add("spec", { area: "more", label: "Специфікація стелажів…", icon: "tag", sequence: 33, run: () => E.runDialog("spec") }, { sequence: 33, force: true });
+Object.assign(E, { openSpec: (a) => E.runDialog("spec", a) });
+
+// core/constructor/plan_doc.js
+var PAGES = { A4: [210, 297], A3: [297, 420] };
+var SCALES = [50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1e3, 1500, 2e3, 3e3, 5e3];
+var PNG_WIDTHS = [1600, 2400, 3200, 4800, 6400];
+var MARGIN = 7;
+var INK = "#1f2933";
+var ITEM_FILL = { column: "#3a4652", wall: "#56606b", gate: "#7fb3e6", dock: "#6fcdbf", door: "#e0b36a", office: "#dfe6ec", charger: "#f0cf63" };
+var ITEM_LEGEND = { column: "Колона", wall: "Стіна", gate: "Ворота", dock: "Док", door: "Двері", office: "Офіс", charger: "Зарядка техніки" };
+var rnd3 = (v, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
+var mix = (hex, t = 0.82) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) {
+    return "#e3e8ee";
+  }
+  const n = parseInt(m[1], 16);
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => Math.round(v + (255 - v) * t));
+  return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+};
+var niceLen = (maxM) => [1, 2, 5, 10, 20, 50, 100, 200].filter((v) => v <= maxM).pop() || 1;
+function pageSize(size = "A3", orientation = "landscape") {
+  const [a, b] = PAGES[size] || PAGES.A3;
+  return orientation === "portrait" ? { w: a, h: b } : { w: b, h: a };
+}
+function planModel(o = {}) {
+  const scope = o.scope || "all";
+  const show = { building: true, columns: true, aisles: true, rows: true, zones: true, dims: true, ...o.show || {} };
+  const page = pageSize(o.size, o.orientation);
+  const strip3 = page.h > 250 && page.w <= 210 ? 36 : 32;
+  const area = { x: MARGIN + 2, y: MARGIN + 2, w: page.w - 2 * (MARGIN + 2), h: page.h - 2 * (MARGIN + 2) - strip3 };
+  const { slots, placements } = inScope2(scope);
+  const bld = S.layers.find((l) => l.kind === "building");
+  const contour2 = contourOf(bld, S.site.building);
+  const items2 = bld && bld.items || [];
+  const aislesAll = S.layers.flatMap((l) => l.kind === "engineering" ? [] : l.aisles || []);
+  const racks = slots.filter((s) => s.template !== "zone").map((s) => ({ s, g: sGeom(s) }));
+  const machines = placements.map((p) => ({ p, v: variantOf(p.variant_id) })).filter((m) => m.v).map((m) => ({ ...m, g: pGeom(m.p, m.v) }));
+  const zones = zonesOf2(slots);
+  const bounds = [];
+  if (scope === "all") {
+    bounds.push(...contour2);
+    for (const it of items2) {
+      bounds.push(...obbCorners(itemObb(it)));
+    }
+  }
+  for (const r of racks) {
+    bounds.push(...r.g.poly);
+  }
+  for (const m of machines) {
+    bounds.push(...m.g.poly);
+  }
+  for (const z of zones) {
+    bounds.push(...z.poly);
+  }
+  if (!bounds.length) {
+    bounds.push(...contour2);
+  }
+  const xs = bounds.map((p) => p[0]);
+  const ys = bounds.map((p) => p[1]);
+  const wb = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+  const bw = Math.max(1, wb.x1 - wb.x0);
+  const bh = Math.max(1, wb.y1 - wb.y0);
+  const room = show.dims ? 16 : 4;
+  const fitK = Math.min((area.w - room) / bw, (area.h - room) / bh);
+  let N = o.scaleN || SCALES.find((n) => 1e3 / n <= fitK) || SCALES[SCALES.length - 1];
+  let k = 1e3 / N;
+  if (k > fitK) {
+    k = fitK;
+    N = Math.round(1e3 / k);
+  }
+  const ox = area.x + room + (area.w - room - bw * k) / 2;
+  const oy = area.y + (area.h - room - bh * k) / 2 + room * 0.5;
+  const X = (x) => rnd3(ox + (x - wb.x0) * k, 2);
+  const Y = (y) => rnd3(oy + (wb.y1 - y) * k, 2);
+  const P = (pts) => pts.map(([x, y]) => [X(x), Y(y)]);
+  const ops = [];
+  const legend = [];
+  const stats = { racks: racks.length, machines: machines.length, zones: zones.length, items: items2.length };
+  const rotText = (a) => {
+    let r = (a % 360 + 360) % 360;
+    if (r > 90 && r <= 270) {
+      r -= 180;
+    }
+    return r > 180 ? r - 360 : r;
+  };
+  ops.push({ t: "rect", x: MARGIN, y: MARGIN, w: page.w - 2 * MARGIN, h: page.h - 2 * MARGIN, fill: null, stroke: INK, lw: 0.4 });
+  ops.push({ t: "clipBegin", x: area.x, y: area.y, w: area.w, h: area.h });
+  if (show.zones) {
+    for (const { zone: zone2, poly } of zones) {
+      const fn = ZONE_FUNCTIONS.find((f) => f.key === zone2.function_id);
+      const color = zone2.params && zone2.params.color || fn && fn.color || "#9fb7c9";
+      ops.push({ t: "poly", pts: P(poly), fill: mix(color), stroke: color, lw: 0.25, dash: [1.5, 1] });
+      const xsz = poly.map((p) => p[0]);
+      const ysz = poly.map((p) => p[1]);
+      ops.push({ t: "text", x: X(Math.min(...xsz)) + 1.2, y: Y(Math.max(...ysz)) + 3, s: zone2.params && zone2.params.title || zone2.code_prefix || "", size: 2.6, anchor: "start", color: INK });
+      if (o.legend === "functions") {
+        const key = fn ? fn.name : zone2.params && zone2.params.title || zone2.code_prefix;
+        if (!legend.some((l) => l.label === key)) {
+          legend.push({ type: "swatch", fill: mix(color), stroke: color, label: key });
+        }
+      }
+    }
+  }
+  if (show.building) {
+    ops.push({ t: "poly", pts: P(contour2), fill: null, stroke: INK, lw: 0.6 });
+    legend.push({ type: "line", stroke: INK, lw: 0.6, label: "Контур будівлі" });
+  }
+  if (show.aisles) {
+    for (const a of aislesAll) {
+      ops.push({ t: "poly", pts: P([[a.x0, a.y0], [a.x1, a.y0], [a.x1, a.y1], [a.x0, a.y1]]), fill: "#fff3c4", stroke: "#c9a227", lw: 0.2, dash: [1, 1] });
+    }
+    if (aislesAll.length) {
+      legend.push({ type: "swatch", fill: "#fff3c4", stroke: "#c9a227", label: "Прохід" });
+    }
+  }
+  if (show.building) {
+    const order = ["office", "wall", "gate", "dock", "door", "charger"];
+    for (const kind of order) {
+      for (const it of items2.filter((x) => x.kind === kind)) {
+        ops.push({ t: "poly", pts: P(obbCorners(itemObb(it))), fill: ITEM_FILL[kind], stroke: INK, lw: 0.15 });
+        if (kind === "office" && it.name) {
+          ops.push({ t: "text", x: X(it.x), y: Y(it.y) + 1, s: it.name, size: 2.4, anchor: "middle", color: INK });
+        }
+      }
+      if (items2.some((x) => x.kind === kind)) {
+        legend.push({ type: "swatch", fill: ITEM_FILL[kind], stroke: INK, label: ITEM_LEGEND[kind] });
+      }
+    }
+  }
+  if (show.columns) {
+    for (const it of items2.filter((x) => x.kind === "column")) {
+      ops.push({ t: "poly", pts: P(obbCorners(itemObb(it))), fill: ITEM_FILL.column, stroke: INK, lw: 0.15 });
+    }
+    if (items2.some((x) => x.kind === "column")) {
+      legend.push({ type: "swatch", fill: ITEM_FILL.column, stroke: INK, label: ITEM_LEGEND.column });
+    }
+  }
+  const metric = o.legend === "metric" && S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
+  if (show.rows) {
+    for (const { s, g: g3 } of racks) {
+      ops.push({ t: "poly", pts: P(g3.poly), fill: "#ffffff", stroke: INK, lw: 0.25 });
+      if (metric) {
+        const lk = layerOf(s.layer_id);
+        for (const c of cellsOf(s)) {
+          if ((c.level || 1) !== 1) {
+            continue;
+          }
+          const col = metric.color(c, s, lk);
+          if (col) {
+            ops.push({ t: "poly", pts: P(obbCorners({ cx: c.x, cy: c.y, a: c.l / 2, b: c.w / 2, rot: c.rot || 0 })), fill: col, stroke: null, lw: 0 });
+          }
+        }
+      }
+      const wmm = g3.L * k;
+      const hmm = g3.W * k;
+      const along = Math.max(wmm, hmm) >= Math.min(wmm, hmm) * 1.6;
+      const size = Math.max(1.4, Math.min(3, Math.min(wmm, hmm) * 0.5));
+      ops.push({ t: "text", x: X(g3.cx), y: Y(g3.cy) + size * 0.35, s: s.code_prefix || "", size, anchor: "middle", color: INK, rot: along ? rotText((g3.a || 0) + (hmm > wmm ? 90 : 0)) : 0 });
+    }
+    for (const { p, g: g3 } of machines) {
+      ops.push({ t: "poly", pts: P(g3.poly), fill: "#d6e6f5", stroke: INK, lw: 0.2 });
+      ops.push({ t: "text", x: X(g3.cx), y: Y(g3.cy) + 0.9, s: p.code || "", size: 2.2, anchor: "middle", color: INK });
+    }
+    if (racks.length) {
+      legend.push({ type: "swatch", fill: "#ffffff", stroke: INK, label: "Ряд (стелаж)" });
+    }
+    if (machines.length) {
+      legend.push({ type: "swatch", fill: "#d6e6f5", stroke: INK, label: "Обладнання" });
+    }
+    if (o.legend === "metric") {
+      const rows2 = metric && E.legendOf ? E.legendOf(S.ui.metric) : [];
+      legend.push({ type: "text", label: metric ? `Показник: ${metric.label}` : "Показник не вибрано (теплова карта)" });
+      legend.push(...rows2.map((r) => ({ type: "swatch", fill: r.color, stroke: INK, label: `${r.label}` })));
+    }
+  }
+  ops.push({ t: "clipEnd" });
+  if (show.dims) {
+    const cb = scope === "all" ? (() => {
+      const a = contour2.map((p) => p[0]);
+      const b = contour2.map((p) => p[1]);
+      return { x0: Math.min(...a), y0: Math.min(...b), x1: Math.max(...a), y1: Math.max(...b) };
+    })() : wb;
+    const yy = Y(cb.y1) - 6;
+    const xx = X(cb.x0) - 6;
+    const tick = (x, y) => ({ t: "line", x1: x - 1, y1: y + 1, x2: x + 1, y2: y - 1, stroke: INK, lw: 0.25 });
+    ops.push({ t: "line", x1: X(cb.x0), y1: yy, x2: X(cb.x1), y2: yy, stroke: INK, lw: 0.2 }, tick(X(cb.x0), yy), tick(X(cb.x1), yy));
+    ops.push({ t: "text", x: (X(cb.x0) + X(cb.x1)) / 2, y: yy - 1.2, s: `${rnd3(cb.x1 - cb.x0, 2)} м`, size: 2.8, anchor: "middle", color: INK });
+    ops.push({ t: "line", x1: xx, y1: Y(cb.y0), x2: xx, y2: Y(cb.y1), stroke: INK, lw: 0.2 }, tick(xx, Y(cb.y0)), tick(xx, Y(cb.y1)));
+    ops.push({ t: "text", x: xx - 1.2, y: (Y(cb.y0) + Y(cb.y1)) / 2, s: `${rnd3(cb.y1 - cb.y0, 2)} м`, size: 2.8, anchor: "middle", color: INK, rot: 90 });
+  }
+  const sy = page.h - MARGIN - strip3;
+  ops.push({ t: "line", x1: MARGIN, y1: sy, x2: page.w - MARGIN, y2: sy, stroke: INK, lw: 0.3 });
+  const barM = niceLen(Math.min(50, page.w * 0.28 / k));
+  const seg = barM * k / 4;
+  for (let i = 0; i < 4; i++) {
+    ops.push({ t: "rect", x: rnd3(MARGIN + 4 + i * seg, 2), y: sy + 4, w: rnd3(seg, 2), h: 2.2, fill: i % 2 ? "#ffffff" : INK, stroke: INK, lw: 0.2 });
+  }
+  ops.push({ t: "text", x: MARGIN + 4, y: sy + 10, s: "0", size: 2.4, anchor: "middle", color: INK });
+  ops.push({ t: "text", x: rnd3(MARGIN + 4 + barM * k, 2), y: sy + 10, s: `${barM} м`, size: 2.4, anchor: "middle", color: INK });
+  ops.push({ t: "text", x: MARGIN + 4, y: sy + 15, s: `Масштаб 1:${N}`, size: 2.6, anchor: "start", color: INK });
+  const stampW = 92;
+  const legendX = MARGIN + 4 + Math.max(36, barM * k + 10);
+  const maxLeg = Math.max(2, Math.floor((strip3 - 6) / 4.2));
+  const entries = o.legend === "none" ? [] : legend.slice(0, maxLeg * 3);
+  const colW = (page.w - MARGIN - stampW - 4 - legendX) / 3;
+  entries.forEach((e, i) => {
+    const cx = legendX + Math.floor(i / maxLeg) * colW;
+    const cy = sy + 4 + i % maxLeg * 4.2;
+    if (e.type === "line") {
+      ops.push({ t: "line", x1: cx, y1: cy + 1.5, x2: cx + 6, y2: cy + 1.5, stroke: e.stroke, lw: e.lw || 0.3 });
+    } else if (e.type === "swatch") {
+      ops.push({ t: "rect", x: cx, y: cy, w: 6, h: 3, fill: e.fill, stroke: e.stroke, lw: 0.15 });
+    }
+    ops.push({ t: "text", x: e.type === "text" ? cx : cx + 8, y: cy + 2.5, s: e.label, size: 2.4, anchor: "start", color: INK });
+  });
+  const rows = [["Проєкт", S.site.name], ["Документ", `План складу · ${scopeLabel(scope)}`], ["Масштаб", `1:${N}`], ["Формат", `${o.size || "A3"}, ${o.orientation === "portrait" ? "книжкова" : "альбомна"}`], ["Дата", o.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)], ["Лист", "1/1"]];
+  const rh = (strip3 - 4) / rows.length;
+  const sx = page.w - MARGIN - stampW;
+  ops.push({ t: "rect", x: sx, y: sy + 2, w: stampW, h: strip3 - 4, fill: null, stroke: INK, lw: 0.3 });
+  rows.forEach(([a, b], i) => {
+    const y = sy + 2 + i * rh;
+    if (i) {
+      ops.push({ t: "line", x1: sx, y1: y, x2: sx + stampW, y2: y, stroke: INK, lw: 0.15 });
+    }
+    ops.push({ t: "text", x: sx + 1.5, y: y + rh * 0.7, s: a, size: 2.4, anchor: "start", color: "#52606d" });
+    ops.push({ t: "text", x: sx + 22, y: y + rh * 0.7, s: String(b).slice(0, 44), size: 2.6, anchor: "start", color: INK });
+  });
+  stats.area = rnd3(polygonArea(contour2), 1);
+  stats.perimeter = rnd3(polygonPerimeter(contour2), 1);
+  return { page, scale: N, k, ops, legend: entries, stats };
+}
+function opsToSvg(doc, { px = null } = {}) {
+  const { w, h: hh } = doc.page;
+  const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const attrs = (o) => `fill="${o.fill || "none"}" stroke="${o.stroke || "none"}" stroke-width="${o.lw || 0}"${o.dash ? ` stroke-dasharray="${o.dash.join(" ")}"` : ""}`;
+  let clipN = 0;
+  const out = [];
+  const open = [];
+  for (const o of doc.ops) {
+    if (o.t === "poly") {
+      out.push(`<polygon points="${o.pts.map((p) => p.join(",")).join(" ")}" ${attrs(o)}/>`);
+    } else if (o.t === "rect") {
+      out.push(`<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" ${attrs(o)}/>`);
+    } else if (o.t === "line") {
+      out.push(`<line x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}" stroke="${o.stroke}" stroke-width="${o.lw || 0.2}"${o.dash ? ` stroke-dasharray="${o.dash.join(" ")}"` : ""}/>`);
+    } else if (o.t === "text") {
+      const rot2 = o.rot ? ` transform="rotate(${-o.rot} ${o.x} ${o.y})"` : "";
+      out.push(`<text x="${o.x}" y="${o.y}" font-size="${o.size}" text-anchor="${o.anchor === "middle" ? "middle" : o.anchor === "end" ? "end" : "start"}" fill="${o.color || INK}" font-family="Arial, sans-serif"${rot2}>${esc2(o.s)}</text>`);
+    } else if (o.t === "clipBegin") {
+      clipN++;
+      out.push(`<clipPath id="c${clipN}"><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/></clipPath><g clip-path="url(#c${clipN})">`);
+      open.push(1);
+    } else if (o.t === "clipEnd" && open.pop()) {
+      out.push("</g>");
+    }
+  }
+  const size = px ? `width="${px}" height="${Math.round(px * hh / w)}"` : `width="${w}mm" height="${hh}mm"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${size} viewBox="0 0 ${w} ${hh}"><rect width="${w}" height="${hh}" fill="#fff"/>${out.join("")}</svg>`;
+}
+var planPdfPayload = (doc, title) => ({ title, page: doc.page, scale: doc.scale, ops: doc.ops });
+async function openPlan(adapter, args = {}) {
+  const st = { scope: args.scope || "all", size: "A3", orientation: "landscape", legend: "functions", png: 3200, show: { building: true, columns: true, aisles: true, rows: true, zones: true, dims: true } };
+  if (!scopeOptions().some(([v]) => v === st.scope)) {
+    st.scope = "all";
+  }
+  const body = h("div", { class: "fcol b5-doc", id: "planBody" });
+  const legends = [["functions", "Функції зон"], ["metric", "Показник (теплова карта)"], ["none", "Без легенди"]];
+  const draw = () => {
+    const doc = planModel(st);
+    const toggles = [["building", "Будівля"], ["columns", "Колони"], ["aisles", "Проходи"], ["rows", "Ряди"], ["zones", "Зони"], ["dims", "Габарити"]];
+    body.replaceChildren(
+      h("div", { class: "grid3" }, fld("Область", selectEl(scopeOptions(), st.scope, (v) => {
+        st.scope = v;
+        draw();
+      }, false, "Область")), fld("Формат", selectEl([["A4", "A4"], ["A3", "A3"]], st.size, (v) => {
+        st.size = v;
+        draw();
+      }, false, "Формат")), fld("Орієнтація", selectEl([["landscape", "Альбомна"], ["portrait", "Книжкова"]], st.orientation, (v) => {
+        st.orientation = v;
+        draw();
+      }, false, "Орієнтація"))),
+      h("div", { class: "grid2" }, fld("Легенда", selectEl(legends, st.legend, (v) => {
+        st.legend = v;
+        draw();
+      }, false, "Легенда")), fld("PNG, px по ширині", selectEl(PNG_WIDTHS.map((v) => [v, String(v)]), st.png, (v) => {
+        st.png = Number(v);
+      }, false, "Ширина PNG"))),
+      h("div", { class: "frow wrap" }, toggles.map(([k, label2]) => h("label", { class: "frow" }, h("input", { type: "checkbox", checked: st.show[k], "aria-label": label2, "data-show": k, onchange: (e) => {
+        st.show[k] = e.target.checked;
+        draw();
+      } }), " " + label2))),
+      h("div", { class: "small", id: "planInfo" }, `Масштаб 1:${doc.scale} · рядів ${doc.stats.racks} · обладнання ${doc.stats.machines} · зон ${doc.stats.zones} · площа будівлі ${doc.stats.area} м²`),
+      h("div", { class: "b5-prev", id: "planPrev", html: opsToSvg(doc) })
+    );
+  };
+  const title = () => `План складу — ${S.site.name} (${scopeLabel(st.scope)})`;
+  openDialog({
+    title: "План складу",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити" },
+      {
+        label: "SVG",
+        id: "btnPlanSvg",
+        onClick: () => {
+          download3(`plan_${slug(S.site.name)}.svg`, "image/svg+xml", opsToSvg(planModel(st)));
+          toast("SVG збережено.");
+          return false;
+        }
+      },
+      {
+        label: "PNG",
+        id: "btnPlanPng",
+        onClick: async () => {
+          try {
+            const doc = planModel(st);
+            const blob = await svgToPng(opsToSvg(doc, { px: st.png }), st.png, doc.page.w / doc.page.h);
+            download3(`plan_${slug(S.site.name)}_${st.png}.png`, "image/png", blob);
+            toast(`PNG ${st.png} px збережено.`);
+          } catch (e) {
+            toast(e.message || "Не вдалося створити PNG.", "err");
+          }
+          return false;
+        }
+      },
+      {
+        label: "PDF",
+        cls: "primary",
+        id: "btnPlanPdf",
+        onClick: async () => {
+          try {
+            const res = await adapter.render("plan_pdf", planPdfPayload(planModel(st), title()));
+            download3(res.filename || "plan.pdf", res.mimetype || "application/pdf", res.content, true);
+            toast("PDF сформовано на сервері.");
+          } catch (e) {
+            toast(e.message || "Не вдалося сформувати PDF.", "err");
+          }
+          return false;
+        }
+      }
+    ]
+  });
+  draw();
+  const pdf = document.getElementById("btnPlanPdf");
+  if (pdf && !can("render")) {
+    pdf.title = "PDF формує сервер Odoo («на сервері»); у цьому режимі доступні SVG і PNG.";
+  }
+}
+registries.dialogs.add("planDoc", (a, { adapter }) => openPlan(adapter, a), { force: true });
+registries.menu.add("planDoc", { area: "more", label: "План (PDF, PNG)…", icon: "plan", sequence: 34, run: () => E.runDialog("planDoc") }, { sequence: 34, force: true });
+Object.assign(E, { openPlanDoc: (a) => E.runDialog("planDoc", a) });
 export {
   BaseAdapter,
   CAPABILITY_NAMES,
