@@ -1149,3 +1149,20 @@ access_td_energy_opportunity_admin,td.energy.opportunity admin,model_td_energy_o
 
 ---
 
+## Журнал змін документа
+
+| Дата | Версія | Зміна |
+|---|---|---|
+| 18.10.2026 | 0.1 | Перша редакція — Частина I `build/energy/W3_SPEC.md` (хвиля W3) |
+| 19.10.2026 | 0.2 | Перенесено до `docs/modules/td_energy_resources/`, переклад українською (технічні імена, ID, код, JSON — без змін); Частина II (міст) — у [../td_energy_resources_bms/SPEC.md](../td_energy_resources_bms/SPEC.md); внесено відхилення збірки (нижче) |
+
+### Рішення й відхилення, прийняті при збірці W3
+
+1. **`equipment/BOILER/gas_m3h` — BACnet AI instance 7** (`BOILER_GasFlow`), а не AI:6 із початкового припущення: за картою `BOILER` емулятора AI:4 (`FlueGasTemp`) і AI:6 (`BriquettesToday`) зайняті (розд. 5.4, `resource_signals.csv`, `td_sim_signal.csv`, AC-54). Адреса лишається **ПРИПУЩЕННЯМ** (Q-02).
+2. **Сигнали емулятора W3 мають n 1206…1215** (після W2: n 1178…1205 — вікно керування `SWB-CTRL`); джерела `GAS-MAIN` — Modbus unit 74, `AIR-MAIN` — unit 75; сценарії емулятора **S-21 `air_leak`, S-22 `gas_overuse`, S-23 `water_leak`** (розд. 5.4, 8.1, AC-56, ТК-04, ТК-05); версія `td_iot_sim` `19.0.2.0.4`.
+3. **Нові сигнали `td_iot_sim` на сервері з уже встановленим модулем** потрапляють у реєстр симулятора через `td_iot_sim.hooks.refresh_registry` (міграція/оновлення `-u td_iot_sim`), без перевстановлення (розд. 2.8 ARCH, 8.1).
+4. **V-11 `action_td_energy_resources_rebind`** — серверна дія «Оновити прив'язку ресурсів» (меню `menu_td_energy_resources_rebind`, seq 80, `group_td_energy_manager`): виконує `hooks._seed_points_meters` і `_bind_react_signals`, потім хук моста `_td_bind_extra` (розд. 3.1, 3.3).
+5. **`limit_kind` має підпис «Вид ліміту»**; значення: `none` «Без ліміту», `fixed` «Фіксований», `tariff_contract` «Договірна потужність» (M-01).
+6. **V-04: `meter_count` замінено на `meter_ids`** (віджет `many2many_tags`); поле `meter_count` (compute) лишається в M-01 для smart-кнопки ресурсу.
+7. **«Запустити зараз» (V-08)** — не кнопка `type="object"`, а `type="action"` на серверну дію `action_td_energy_opportunity_rule_run`: `action_run` повертає словник статистики (API-05), серверна дія загортає його у сповіщення.
+
