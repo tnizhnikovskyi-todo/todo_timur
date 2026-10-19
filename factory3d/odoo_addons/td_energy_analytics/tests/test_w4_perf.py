@@ -2,6 +2,7 @@
 далі — штатна побудова фактів `_td_build_days`; ТП-04 (сид) — у `test_w4_seed` і на стенді."""
 
 import json
+import logging
 import statistics
 import time
 from datetime import timedelta
@@ -13,6 +14,7 @@ from odoo.addons.td_energy.tools import dates
 from .common import TAGS, TODAY, TestW4Common
 
 DAYS = 400
+_logger = logging.getLogger(__name__)
 GEN_SQL = """
 INSERT INTO td_energy_interval (meter_id, node_id, role, ts_start, ts_end, day, hour_local, e_start, e_end, kwh,
     kwh_export, kw_avg, price, cost, quality, built_at, is_backfill)
@@ -32,7 +34,8 @@ ON CONFLICT DO NOTHING
 DRIVER_SQL = """
 INSERT INTO td_energy_driver_value (driver_id, day, value, quality, source_note)
 SELECT d.id, g.day::date, CASE d.code WHEN 'plate_m2' THEN 800 + 400 * abs(sin(EXTRACT(DOY FROM g.day)))
-                                      ELSE 9 + 8 * sin(EXTRACT(DOY FROM g.day) / 58.0) END,
+                                      WHEN 'hdd' THEN 9 + 8 * sin(EXTRACT(DOY FROM g.day) / 58.0)
+                                      ELSE 50 + 20 * cos(EXTRACT(DOY FROM g.day) / 13.0) END,
        'estimated', 'perf'
   FROM td_energy_driver d CROSS JOIN generate_series(%s::date, %s::date, interval '1 day') AS g(day)
  WHERE d.code IN ('plate_m2', 'hdd', 'perf_x')
@@ -80,15 +83,19 @@ class TestW4Perf(TestW4Common):
     def test_tp01_dashboard_speed_and_queries(self):
         api = self.Api.with_user(self.u_cost)
         month = self._median(lambda: api.get_dashboard("m", "area", None))
+        _logger.info("ТП-01: get_dashboard('m') медіана %.3f с", month)
         self.assertLess(month, 0.6, "get_dashboard('m'): %.3f с" % month)
         year = self._median(lambda: api.get_dashboard("y", "area", None))
+        _logger.info("ТП-01: get_dashboard('y') медіана %.3f с", year)
         self.assertLess(year, 1.5, "get_dashboard('y'): %.3f с" % year)
         heat = self._median(lambda: api.get_heatmap("y"))
+        _logger.info("ТП-01: теплокарта ('y') медіана %.3f с", heat)
         self.assertLess(heat, 0.4, "теплокарта: %.3f с" % heat)
         for period in ("m", "y"):
             before = self.env.cr.sql_log_count
             api.get_dashboard(period, "area", None)
             queries = self.env.cr.sql_log_count - before
+            _logger.info("ТП-01: SQL у get_dashboard(%r): %s", period, queries)
             self.assertLessEqual(queries, 60, "SQL у get_dashboard(%r): %s" % (period, queries))
 
     def test_tp01_all_dims_year(self):
@@ -102,6 +109,7 @@ class TestW4Perf(TestW4Common):
     # --- ТП-02 / AC-57 ----------------------------------------------------------------------------------
     def test_tp02_build_times(self):
         self.assertEqual(self.build_stats["days"], DAYS)
+        _logger.info("ТП-02: побудова 400 діб %.1f с (%s рядків)", self.build_seconds, self.build_stats["rows"])
         self.assertLess(self.build_seconds, 300.0, "400 діб: %.1f с" % self.build_seconds)
         day = self.days[200]
         started = time.monotonic()
@@ -115,6 +123,7 @@ class TestW4Perf(TestW4Common):
         )
         started = time.monotonic()
         draft.action_fit()
+        _logger.info("ТП-03: action_fit %.3f с", time.monotonic() - started)
         self.assertLess(time.monotonic() - started, 2.0)
         self.assertEqual(draft.n_days, 300)
         self.env.cr.execute("UPDATE ir_config_parameter SET value = '120' WHERE key = 'td.energy.keep_interval_days'")
