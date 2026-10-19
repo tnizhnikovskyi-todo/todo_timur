@@ -36,7 +36,7 @@ $td-an-heat-4: #5a3b52;
         gap: 12px;
     }
     .o_td_an_kpi {
-        flex: 1 1 190px;
+        flex: 1 1 180px;
         min-width: 0;
         background: #fff;
         border: 1px solid $td-an-line;
@@ -120,7 +120,10 @@ $td-an-heat-4: #5a3b52;
     .o_td_an_hm_cell--l3, .o_td_an_hm_swatch--l3 { background: $td-an-heat-3; }
     .o_td_an_hm_cell--l4, .o_td_an_hm_swatch--l4 { background: $td-an-heat-4; }
 
-    .o_td_an_enpi_chart { padding-bottom: 0; }
+    .o_td_an_enpi_chart {
+        padding-bottom: 0;
+        .o_td_an_axis text { fill: #6b7280; font-size: 10.5px; }
+    }
     .o_td_an_enpi_foot {
         display: flex;
         flex-wrap: wrap;

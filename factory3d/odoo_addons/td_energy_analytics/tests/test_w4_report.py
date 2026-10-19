@@ -311,6 +311,16 @@ class TestW4Report(TestW4Common):
         named = Wizard.with_user(self.u_view).create_and_print("shift", None, "Зміна 2")
         self.assertEqual(Wizard.sudo().browse(named["context"]["active_ids"]).shift_name, "Зміна 2")
 
+    def test_ac47_admin_gets_report_not_layout_wizard(self):
+        """Адміністратору (макет документа не задано) Odoo за замовчуванням підсовує майстер макета — тут його немає."""
+        admin = self.env.ref("base.user_admin")
+        self.env.company.external_report_layout_id = False
+        for kind, name in (("management", MANAGEMENT), ("shift", SHIFT)):
+            result = self.env["td.energy.report.wizard"].with_user(admin).create_and_print(kind)
+            self.assertEqual((result["type"], result["report_name"]), ("ir.actions.report", name))
+        action = self.env.ref("td_energy_analytics.action_td_energy_shift_report").with_user(admin).run()
+        self.assertEqual(action["type"], "ir.actions.report")
+
     def test_ac47_errors(self):
         Wizard = self.env["td.energy.report.wizard"]
         with self.assertRaisesRegex(UserError, r"Невідомий вид звіту: x\."):

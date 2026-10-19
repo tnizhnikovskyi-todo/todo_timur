@@ -56,4 +56,6 @@ class TdEnergyReportWizard(models.TransientModel):
         self.env["td.energy.analytics"]._td_check_access()
         if self.kind not in REPORTS:
             raise UserError(_("Невідомий вид звіту: %s.", self.kind))
-        return self.env.ref(REPORTS[self.kind]).report_action(self)
+        # config=False: звіти не використовують `external_layout` компанії, тож майстер «Налаштувати макет документа»
+        # (його Odoo показує адміністратору, коли макет не задано) не потрібен
+        return self.env.ref(REPORTS[self.kind]).report_action(self, config=False)

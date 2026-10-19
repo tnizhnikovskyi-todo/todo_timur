@@ -3,6 +3,8 @@
 <odoo>
     <template id="report_td_energy_style">
         <style>
+            .container { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+            .o_td_rep, .o_td_rep * { font-family: "Lato", "Noto Sans", Arial, "Liberation Sans", sans-serif; }
             .o_td_rep { font-size: 11px; line-height: 1.35; color: #111827; }
             .o_td_rep h1 { font-size: 20px; margin: 0 0 2px 0; font-weight: bold; }
             .o_td_rep h2 { font-size: 13px; margin: 14px 0 6px 0; padding-bottom: 3px; color: #714B67; font-weight: bold;
@@ -14,7 +16,7 @@
                                      border-bottom: 1px solid #9ca3af; }
             .o_td_rep table.rep td { padding: 3px 5px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
             .o_td_rep table.rep tr { page-break-inside: avoid; }
-            .o_td_rep .num { text-align: right; white-space: nowrap; }
+            .o_td_rep .num, .o_td_rep table.rep th.num, .o_td_rep table.rep td.num { text-align: right; white-space: nowrap; }
             .o_td_rep .total td { font-weight: bold; border-top: 1px solid #9ca3af; }
             .o_td_rep .good { color: #065f46; }
             .o_td_rep .bad { color: #9a3412; font-weight: bold; }
@@ -39,7 +41,7 @@
                     <!-- 1. Заголовок -->
                     <table class="rep" style="margin-bottom: 4px;">
                         <tr>
-                            <td style="border: 0; padding-left: 0;">
+                            <td style="border: 0; padding-left: 0; width: 68%;">
                                 <h1 t-out="r['title']"/>
                                 <div class="rep_sub"><t t-out="r['company']"/> · <t t-out="r['period_text']"/></div>
                                 <div class="rep_sub" t-out="r['subtitle']"/>
@@ -78,7 +80,7 @@
                                 <span><svg width="22" height="8" viewBox="0 0 22 8"><line x1="0" y1="4" x2="22" y2="4" stroke="#714B67" stroke-width="2.5"/></svg> факт, МВт·год на тиждень</span>
                                 <span><svg width="22" height="8" viewBox="0 0 22 8"><line x1="0" y1="4" x2="22" y2="4" stroke="#9ca3af" stroke-width="2" stroke-dasharray="5 4"/></svg> очікування за моделлю бази</span>
                             </div>
-                            <svg width="520" height="236" viewBox="0 0 440 200">
+                            <svg width="440" height="200" viewBox="0 0 440 200">
                                 <g t-foreach="r['enpi']['chart']['ticks']" t-as="tk">
                                     <line x1="40" x2="430" t-att-y1="tk['y']" t-att-y2="tk['y']" stroke="#e5e7eb" stroke-width="1"/>
                                     <text x="34" t-att-y="tk['y'] + 4" text-anchor="end" font-size="10.5" fill="#6b7280" t-out="tk['text']"/>
@@ -118,13 +120,14 @@
                     </div>
 
                     <!-- 5. Енергія за ділянками -->
-                    <div class="block o_td_rep_areas">
+                    <div class="o_td_rep_areas">
+                        <div class="block">
                         <h2>Енергія за ділянками</h2>
                         <div t-if="r['stack']">
                             <div class="legend muted">
                                 <span t-foreach="r['stack']['legend']" t-as="a"><i class="sw" t-attf-style="background: {{a['color']}};"/><t t-out="a['name']"/></span>
                             </div>
-                            <svg width="700" height="199" viewBox="0 0 880 250">
+                            <svg width="660" height="188" viewBox="0 0 880 250">
                                 <g t-foreach="r['stack']['ticks']" t-as="tk">
                                     <line x1="56" x2="870" t-att-y1="tk['y']" t-att-y2="tk['y']" stroke="#e5e7eb" stroke-width="1"/>
                                     <text x="48" t-att-y="tk['y'] + 4" text-anchor="end" font-size="12" fill="#6b7280" t-out="tk['text']"/>
@@ -133,6 +136,7 @@
                                 <text t-foreach="r['stack']['labels']" t-as="l" t-att-x="l['x']" y="247" text-anchor="middle" font-size="12" fill="#6b7280" t-out="l['text']"/>
                             </svg>
                             <div class="muted">Електроенергія за ділянками · <t t-out="r['stack_unit']"/></div>
+                        </div>
                         </div>
                         <table t-if="r['areas']" class="rep" style="margin-top: 4px;">
                             <thead><tr>
