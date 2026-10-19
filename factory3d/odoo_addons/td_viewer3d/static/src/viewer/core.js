@@ -852,6 +852,7 @@ function extData(reason, keys, repaint = true) {
   }
   syncExtModes();
   if (repaint && extModeOf(colorMode)) {repaintAll();}
+  invalidate(); // дані змінились: маркери розширення, пристрої, статуси
 }
 // VX-04: HTML-блоки в кінці картки об'єкта; VX-05: `data-ext="<id>:<action>:<arg>"` → ext.onAction
 function extCards(code) {
