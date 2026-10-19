@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.ReportButton">
+        <button type="button" class="o_td_en_btn o_td_en_btn--primary o_td_an_report"
+                t-att-aria-label="props.label" t-att-aria-busy="state.busy ? 'true' : 'false'"
+                t-att-disabled="state.busy" t-on-click="print">
+            <i t-if="state.busy" class="fa fa-circle-o-notch fa-spin me-1" role="img" aria-label="Формування"/>
+            <t t-esc="state.busy ? 'Формування…' : props.label"/>
+        </button>
+    </t>
+</templates>

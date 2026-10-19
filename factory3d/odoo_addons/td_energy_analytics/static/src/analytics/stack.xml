@@ -1,3 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-03 `AnStack` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnStack">
+        <section class="o_td_en_card o_td_an_stack" aria-labelledby="o_td_an_stack_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_an_stack_h">Електроенергія за ділянками · <t t-esc="props.stack.unit"/></h2>
+                <div class="o_td_en_legend o_td_an_legend">
+                    <span t-foreach="areas" t-as="area" t-key="area.code" class="o_td_an_legend_item"
+                          t-att-data-area="area.code">
+                        <span class="o_td_an_swatch" aria-hidden="true" t-attf-style="background: {{area.color}}"/>
+                        <t t-esc="area.name"/>
+                    </span>
+                </div>
+            </div>
+            <div t-if="bars.length" class="o_td_en_chart o_td_an_chart">
+                <svg viewBox="0 0 880 250" role="img" aria-label="Стовпчикова діаграма споживання електроенергії за ділянками">
+                    <g class="o_td_an_axis">
+                        <t t-foreach="gridLines" t-as="line" t-key="line_index">
+                            <line class="o_td_en_grid" t-att-x1="56" x2="872" t-att-y1="line.y" t-att-y2="line.y"/>
+                            <text t-att-x="44" t-att-y="line.y + 4" text-anchor="end" t-esc="line.text"/>
+                        </t>
+                    </g>
+                    <g t-foreach="columns" t-as="col" t-key="col.key" class="o_td_an_bar" t-att-data-bar="col.key">
+                        <title t-esc="title(col)"/>
+                        <rect t-foreach="col.segments" t-as="seg" t-key="seg.code" class="o_td_an_seg"
+                              t-att-data-area="seg.code" t-att-x="col.x" t-att-y="seg.y" t-att-width="col.width"
+                              t-att-height="seg.height" t-att-fill="seg.color">
+                            <title t-esc="segmentTitle(seg)"/>
+                        </rect>
+                    </g>
+                    <g class="o_td_an_axis">
+                        <t t-foreach="columns" t-as="col" t-key="col.key">
+                            <text t-if="col.label" t-att-x="col.labelX" y="246" text-anchor="middle" t-esc="col.label"/>
+                        </t>
+                    </g>
+                </svg>
+            </div>
+            <div t-else="" class="o_td_en_empty o_td_an_nodata" role="status">Немає даних за період.</div>
+        </section>
+    </t>
+</templates>

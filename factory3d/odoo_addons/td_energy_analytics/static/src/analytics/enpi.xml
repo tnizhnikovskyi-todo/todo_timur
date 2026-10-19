@@ -1,3 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-05 `AnEnpi` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnEnpi">
+        <section class="o_td_en_card o_td_an_enpi" aria-labelledby="o_td_an_enpi_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_an_enpi_h">EnPI · енергія проти бази (ISO 50001)</h2>
+                    <span class="o_td_en_note o_td_an_model" t-esc="props.enpi ? modelText : ''"/>
+                </div>
+            </div>
+            <div t-if="props.enpiError" class="o_td_en_error o_td_an_error" role="alert">
+                Не вдалося завантажити: EnPI<span class="o_td_an_error_text" t-esc="' — ' + props.enpiError"/>
+            </div>
+            <t t-elif="props.enpi">
+                <div t-if="hasPoints" class="o_td_en_chart o_td_an_enpi_chart">
+                    <svg viewBox="0 0 440 200" role="img" aria-label="Тижнева енергія фактично проти очікуваної за моделлю бази">
+                        <g class="o_td_an_axis">
+                            <t t-foreach="ticks" t-as="tick" t-key="tick_index">
+                                <line class="o_td_en_grid" x1="40" x2="430" t-att-y1="tick.y" t-att-y2="tick.y"/>
+                                <text x="34" t-att-y="tick.y + 4" text-anchor="end" t-esc="tick.text"/>
+                            </t>
+                            <text x="40" y="192">12 тижнів тому</text>
+                            <text x="430" y="192" text-anchor="end">цей тиждень</text>
+                        </g>
+                        <path class="o_td_an_line_expected" t-att-d="lines.expected" fill="none" stroke="#9ca3af"
+                              stroke-width="2" stroke-dasharray="5 4"/>
+                        <path class="o_td_an_line_actual" t-att-d="lines.actual" fill="none" stroke="#714B67"
+                              stroke-width="2.5"/>
+                    </svg>
+                </div>
+                <div t-else="" class="o_td_en_empty o_td_an_nodata" role="status">Немає даних за 12 тижнів.</div>
+                <div class="o_td_an_enpi_foot">
+                    <div class="o_td_en_legend">
+                        <span><span class="o_td_en_sw o_td_en_sw--line o_td_an_sw_actual" aria-hidden="true"/> факт</span>
+                        <span><span class="o_td_en_sw o_td_en_sw--dash_gray" aria-hidden="true"/> очікування за моделлю бази</span>
+                    </div>
+                    <span class="o_td_an_enpi_summary"><b t-esc="summary"/></span>
+                </div>
+            </t>
+
+            <div t-if="props.budgetError" class="o_td_en_error o_td_an_error o_td_an_budget_error" role="alert">
+                Не вдалося завантажити: бюджет<span class="o_td_an_error_text" t-esc="' — ' + props.budgetError"/>
+            </div>
+            <div t-elif="budget" class="o_td_an_budget">
+                <div class="o_td_an_budget_row">
+                    <span>Бюджет енергії · <t t-esc="budget.month"/></span>
+                    <b class="o_td_an_budget_plan" t-esc="budget.plan"/>
+                </div>
+                <div class="o_td_an_budget_bar" aria-hidden="true">
+                    <div class="o_td_an_budget_fill" t-attf-style="width: {{budget.fill}}%"/>
+                    <div class="o_td_an_budget_mark" t-attf-style="left: {{budget.mark}}%"/>
+                </div>
+                <div class="o_td_an_budget_text" t-esc="budget.text"/>
+            </div>
+        </section>
+    </t>
+</templates>

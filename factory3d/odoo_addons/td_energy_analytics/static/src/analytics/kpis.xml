@@ -1,3 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-02 `AnKpis` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnKpis">
+        <section class="o_td_an_kpis" aria-label="Показники за період">
+            <div t-foreach="props.kpis" t-as="kpi" t-key="kpi.id"
+                 t-attf-class="o_td_an_kpi o_td_an_kpi--{{kpi.id}}" t-att-data-kpi="kpi.id">
+                <div class="o_td_an_kpi_label" t-esc="kpi.label"/>
+                <div class="o_td_an_kpi_value">
+                    <span class="o_td_an_kpi_text" t-esc="value(kpi)"/>
+                    <span t-if="hasValue(kpi) and kpi.unit" class="o_td_an_unit"> <t t-esc="kpi.unit"/></span>
+                </div>
+                <div t-attf-class="o_td_an_kpi_note o_td_an_kpi_note--{{tone(kpi)}}" t-att-data-tone="tone(kpi)"
+                     t-esc="kpi.note or '—'"/>
+            </div>
+        </section>
+    </t>
+</templates>

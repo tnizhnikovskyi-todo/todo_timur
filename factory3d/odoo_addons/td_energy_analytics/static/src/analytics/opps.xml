@@ -1,3 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-07 `AnOpps` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnOpps">
+        <section class="o_td_en_card o_td_an_opps" aria-labelledby="o_td_an_opps_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_an_opps_h">Резерви економії</h2>
+                    <span class="o_td_en_note">знайдено автоматично з даних обліку, телеметрії й BMS · оцінка на місяць</span>
+                </div>
+                <div class="o_td_an_plan_sum">
+                    У плані: <b class="o_td_an_plan" t-esc="planSummary.plan"/> з <span class="o_td_an_all" t-esc="planSummary.all"/>
+                </div>
+            </div>
+            <ul t-if="items.length" class="o_td_an_opp_list">
+                <li t-foreach="items" t-as="item" t-key="item.id" class="o_td_an_opp" t-att-data-opp-id="item.id"
+                    t-att-data-in-plan="item.in_plan ? '1' : '0'">
+                    <label class="o_td_an_opp_body">
+                        <input type="checkbox" class="o_td_an_opp_check" t-att-checked="item.in_plan"
+                               t-att-disabled="!props.canPlan" t-att-aria-label="'У плані: ' + item.title"
+                               t-on-change="() => props.onToggle(item)"/>
+                        <span class="o_td_an_opp_text">
+                            <span class="o_td_an_opp_title" t-esc="item.title"/>
+                            <span class="o_td_an_opp_desc" t-esc="item.text"/>
+                        </span>
+                    </label>
+                    <span t-if="saving(item)" class="o_td_an_opp_save" t-esc="saving(item)"/>
+                    <button type="button" class="o_td_en_btn o_td_en_btn--sm o_td_an_opp_act"
+                            t-att-data-action-code="action(item).code"
+                            t-att-aria-label="action(item).label + ': ' + item.title"
+                            t-on-click="() => this.run(item)" t-esc="action(item).label"/>
+                </li>
+            </ul>
+            <div t-else="" class="o_td_en_empty o_td_an_nodata" role="status">Відкритих резервів немає.</div>
+        </section>
+    </t>
+</templates>

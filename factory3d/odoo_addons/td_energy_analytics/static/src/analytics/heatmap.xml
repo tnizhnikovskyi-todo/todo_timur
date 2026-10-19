@@ -1,3 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-04 `AnHeatmap` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnHeatmap">
+        <section class="o_td_en_card o_td_an_heatmap" aria-labelledby="o_td_an_hm_h">
+            <div class="o_td_en_card_head">
+                <div class="o_td_en_card_title">
+                    <h2 id="o_td_an_hm_h">Теплокарта навантаження</h2>
+                    <span class="o_td_en_note">середня потужність, кВт · година × день тижня</span>
+                </div>
+            </div>
+            <div class="o_td_an_hm_scroll">
+                <div class="o_td_an_hm_grid" role="table" aria-label="Середня потужність за годинами й днями тижня">
+                    <div class="o_td_an_hm_corner" aria-hidden="true"/>
+                    <div t-foreach="hours" t-as="hour" t-key="hour.h" class="o_td_an_hm_hour" aria-hidden="true"
+                         t-esc="hour.label"/>
+                    <t t-foreach="rows" t-as="row" t-key="row.day">
+                        <div class="o_td_an_hm_day" role="rowheader" t-esc="row.day"/>
+                        <div t-foreach="row.cells" t-as="cell" t-key="cell.h" role="img"
+                             t-attf-class="o_td_an_hm_cell o_td_an_hm_cell--l{{cell.level}}"
+                             t-att-title="cell.title" t-att-aria-label="cell.title"/>
+                    </t>
+                </div>
+            </div>
+            <div class="o_td_en_legend o_td_an_hm_legend">
+                <span>менше</span>
+                <span class="o_td_an_hm_scale" aria-hidden="true">
+                    <span t-foreach="levels" t-as="level" t-key="level" t-attf-class="o_td_an_hm_swatch o_td_an_hm_swatch--l{{level}}"/>
+                </span>
+                <span>більше · вихідні й ночі — базове навантаження <b t-esc="baseLoad"/> кВт</span>
+            </div>
+        </section>
+    </t>
+</templates>

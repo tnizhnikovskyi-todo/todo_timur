@@ -1,3 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-01 `Analytics`, UI-09 стилі (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.Analytics">
+        <div class="o_td_en o_td_an o_action overflow-auto">
+            <header class="o_td_en_head">
+                <div class="o_td_en_head_title">
+                    <div class="o_td_en_crumbs">Енергетика / Аналітика</div>
+                    <h1 class="o_td_en_h1">Аналітика енергетики заводу</h1>
+                    <div t-if="meta.subtitle" class="o_td_en_sub o_td_an_sub" t-esc="meta.subtitle"/>
+                </div>
+                <div class="o_td_en_head_tools">
+                    <div class="o_td_en_seg o_td_an_periods" role="group" aria-label="Період">
+                        <button t-foreach="periods" t-as="p" t-key="p[0]" type="button"
+                                t-attf-class="o_td_an_period o_td_an_period--{{p[0]}}"
+                                t-att-aria-pressed="state.period === p[0] ? 'true' : 'false'" t-att-aria-label="p[1]"
+                                t-on-click="() => this.setPeriod(p[0])" t-esc="p[1]"/>
+                    </div>
+                    <ReportButton kind="'management'" period="state.period" label="'Звіт для керівництва'"/>
+                </div>
+            </header>
+
+            <main class="o_td_en_main" t-att-aria-busy="state.loading ? 'true' : 'false'">
+                <div t-if="state.failed and !state.meta" class="o_td_en_card o_td_en_error o_td_an_failed" role="alert"
+                     t-esc="'Не вдалося завантажити екран: ' + state.failed"/>
+                <t t-if="state.meta">
+                    <div t-attf-class="o_td_an_body {{state.loading ? 'o_td_an_loading' : ''}}">
+                        <div t-if="error('kpis')" class="o_td_en_card o_td_en_error o_td_an_error o_td_an_error--kpis" role="alert">
+                            Не вдалося завантажити: <t t-esc="partName('kpis')"/>
+                            <span class="o_td_an_error_text" t-esc="' — ' + error('kpis')"/>
+                        </div>
+                        <AnKpis t-elif="state.data.kpis" kpis="state.data.kpis"/>
+
+                        <div t-if="error('stack')" class="o_td_en_card o_td_en_error o_td_an_error o_td_an_error--stack" role="alert">
+                            Не вдалося завантажити: <t t-esc="partName('stack')"/>
+                            <span class="o_td_an_error_text" t-esc="' — ' + error('stack')"/>
+                        </div>
+                        <AnStack t-elif="state.data.stack" stack="state.data.stack"/>
+
+                        <div class="o_td_an_cols">
+                            <div class="o_td_an_col_heat">
+                                <div t-if="error('heatmap')" class="o_td_en_card o_td_en_error o_td_an_error o_td_an_error--heatmap" role="alert">
+                                    Не вдалося завантажити: <t t-esc="partName('heatmap')"/>
+                                    <span class="o_td_an_error_text" t-esc="' — ' + error('heatmap')"/>
+                                </div>
+                                <AnHeatmap t-elif="state.data.heatmap" heatmap="state.data.heatmap"/>
+                            </div>
+                            <div class="o_td_an_col_enpi">
+                                <AnEnpi enpi="state.data.enpi or null" enpiError="error('enpi')"
+                                        budget="state.data.budget or null" budgetError="error('budget')"
+                                        baseline="meta.baseline or null" cost="cost"/>
+                            </div>
+                        </div>
+
+                        <div t-if="error('cut')" class="o_td_en_card o_td_en_error o_td_an_error o_td_an_error--cut" role="alert">
+                            Не вдалося завантажити: <t t-esc="partName('cut')"/>
+                            <span class="o_td_an_error_text" t-esc="' — ' + error('cut')"/>
+                        </div>
+                        <AnCut t-elif="state.data.cut" cut="state.data.cut" dim="state.dim" cost="cost"
+                               onDim="(dim) => this.setDim(dim)" onOpen="(row) => this.openCut(row)"/>
+
+                        <div t-if="error('opps')" class="o_td_en_card o_td_en_error o_td_an_error o_td_an_error--opps" role="alert">
+                            Не вдалося завантажити: <t t-esc="partName('opps')"/>
+                            <span class="o_td_an_error_text" t-esc="' — ' + error('opps')"/>
+                        </div>
+                        <AnOpps t-elif="state.data.opps" opps="state.data.opps" actions="actions" cost="cost"
+                                canPlan="!!capabilities.plan" onToggle="(item) => this.togglePlan(item)"/>
+                    </div>
+                </t>
+                <div t-elif="!state.failed" class="o_td_en_card o_td_en_empty" role="status">Завантаження…</div>
+            </main>
+        </div>
+    </t>
+</templates>

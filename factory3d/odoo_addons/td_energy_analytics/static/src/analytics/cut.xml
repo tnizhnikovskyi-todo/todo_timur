@@ -1,3 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- UI-06 `AnCut` (B). Каркас: наповнює воркер B. -->
-<templates xml:space="preserve"/>
+<templates xml:space="preserve">
+    <t t-name="td_energy_analytics.AnCut">
+        <section class="o_td_en_card o_td_an_cut" aria-labelledby="o_td_an_cut_h">
+            <div class="o_td_en_card_head">
+                <h2 id="o_td_an_cut_h">Розріз · <t t-esc="props.cut.dim_name"/></h2>
+                <div class="o_td_an_tabs" role="tablist" aria-label="Розріз">
+                    <button t-foreach="dims" t-as="d" t-key="d[0]" type="button" role="tab"
+                            t-attf-class="o_td_en_btn o_td_en_btn--sm o_td_an_tab o_td_an_tab--{{d[0]}}"
+                            t-att-aria-selected="props.dim === d[0] ? 'true' : 'false'" t-att-aria-label="'Розріз: ' + d[1]"
+                            t-on-click="() => props.onDim(d[0])" t-esc="d[1]"/>
+                </div>
+            </div>
+            <div class="o_td_an_table_scroll">
+                <table t-if="rows.length" class="o_td_an_table">
+                    <thead>
+                        <tr>
+                            <th scope="col" t-esc="props.cut.col_name"/>
+                            <th scope="col" class="o_td_an_num">Енергія, кВт·год</th>
+                            <th t-if="props.cost" scope="col" class="o_td_an_num">Вартість, ₴</th>
+                            <th scope="col">Частка</th>
+                            <th scope="col" class="o_td_an_num o_td_an_col_spec" t-esc="props.cut.col_spec"/>
+                            <th scope="col" class="o_td_an_num">До бази</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="rows" t-as="row" t-key="row.key" class="o_td_an_tr" t-att-data-key="row.key">
+                            <td>
+                                <button t-if="canOpen(row)" type="button" class="o_td_en_btn--inline o_td_an_open"
+                                        t-att-aria-label="'Деталізація: ' + row.name" t-on-click="() => props.onOpen(row)"
+                                        t-esc="row.name"/>
+                                <span t-else="" t-esc="row.name"/>
+                            </td>
+                            <td class="o_td_an_num o_td_an_kwh" t-esc="kwh(row)"/>
+                            <td t-if="props.cost" class="o_td_an_num o_td_an_cost" t-esc="costText(row)"/>
+                            <td class="o_td_an_share_cell">
+                                <div class="o_td_an_share">
+                                    <div class="o_td_an_share_bar" aria-hidden="true">
+                                        <div t-attf-style="width: {{barWidth(row)}}%"/>
+                                    </div>
+                                    <span class="o_td_an_share_text" t-esc="share(row)"/>
+                                </div>
+                            </td>
+                            <td class="o_td_an_num o_td_an_spec" t-esc="row.spec_text or '—'"/>
+                            <td t-attf-class="o_td_an_num o_td_an_delta o_td_an_delta--{{deltaTone(row)}}"
+                                t-att-data-tone="deltaTone(row)" t-esc="delta(row)"/>
+                        </tr>
+                    </tbody>
+                </table>
+                <div t-else="" class="o_td_en_empty o_td_an_nodata" role="status">Немає даних за період.</div>
+            </div>
+        </section>
+    </t>
+</templates>

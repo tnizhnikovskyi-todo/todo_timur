@@ -1,1 +1,239 @@
-// UI-09 токени кольорів ділянок і теплової шкали (B). Каркас: наповнює воркер B.
+// UI-09: екран «Аналітика» (W4-B). Токени теплової шкали й акценти; решта стилів — `td_energy.scss` (W1 UI-11, `.o_td_en`).
+// Кольори ділянок приходять з API (`areas[].color`) і підставляються inline. Адаптив ≥ 360 px: картки перелаштовуються
+// (flex-wrap), таблиця й теплокарта прокручуються в межах власного контейнера, сторінка горизонтально не скролиться.
+// Друкованих стилів немає: звіт — PDF (report/).
+$td-an-accent: #714B67;
+$td-an-line: #e5e7eb;
+$td-an-muted: #4b5563;
+$td-an-good: #065f46;
+$td-an-bad: #9a3412;
+// теплова шкала (UI-04), від меншого до більшого
+$td-an-heat-0: #f5f3f5;
+$td-an-heat-1: #e3d5df;
+$td-an-heat-2: #c9b0c2;
+$td-an-heat-3: #9a7392;
+$td-an-heat-4: #5a3b52;
+
+.o_td_an {
+    .o_td_en_head_title { flex: 1 1 320px; }
+    .o_td_an_sub { overflow-wrap: anywhere; }
+    .o_td_en_head_tools { flex-wrap: wrap; }
+
+    .o_td_an_body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+        &.o_td_an_loading { opacity: .55; transition: opacity .15s; }
+    }
+    .o_td_an_error_text { font-weight: 400; overflow-wrap: anywhere; }
+    .o_td_an_nodata { text-align: center; padding: 28px 16px; }
+
+    // ---- KPI (UI-02): 7 карток по 190 px ----
+    .o_td_an_kpis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .o_td_an_kpi {
+        flex: 1 1 190px;
+        min-width: 0;
+        background: #fff;
+        border: 1px solid $td-an-line;
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .o_td_an_kpi_label { font-size: 13px; color: $td-an-muted; }
+    .o_td_an_kpi_value {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: 4px;
+        font-size: 24px;
+        line-height: 30px;
+        font-weight: 600;
+        .o_td_an_unit { font-size: 13.5px; font-weight: 500; color: $td-an-muted; }
+    }
+    .o_td_an_kpi_note {
+        font-size: 13px;
+        color: #374151;
+        min-height: 20px;
+        overflow-wrap: anywhere;
+        // тон дублюється значком — стан читається не лише кольором
+        &.o_td_an_kpi_note--good { color: $td-an-good; &::before { content: "✓ "; } }
+        &.o_td_an_kpi_note--bad { color: $td-an-bad; font-weight: 500; &::before { content: "▲ "; font-size: 11px; } }
+    }
+
+    // ---- стовпці за ділянками (UI-03) ----
+    .o_td_an_legend { font-size: 12.5px; }
+    .o_td_an_swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+    }
+    .o_td_an_chart {
+        svg { display: block; width: 100%; height: auto; }
+        .o_td_an_axis text { fill: #6b7280; font-size: 11px; }
+        .o_td_an_bar:hover .o_td_an_seg { opacity: .85; }
+    }
+
+    // ---- теплокарта + EnPI в один ряд (UI-04, UI-05) ----
+    .o_td_an_cols {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    .o_td_an_col_heat { flex: 1 1 560px; min-width: 0; }
+    .o_td_an_col_enpi { flex: 1 1 420px; min-width: 0; }
+    .o_td_an_col_heat > .o_td_en_card, .o_td_an_col_enpi > .o_td_en_card { height: 100%; }
+
+    .o_td_an_hm_scroll { overflow-x: auto; padding: 12px 16px 4px; }
+    .o_td_an_hm_grid {
+        min-width: 520px;
+        display: grid;
+        grid-template-columns: 28px repeat(24, minmax(0, 1fr));
+        gap: 2px;
+        font-size: 10.5px;
+        color: #6b7280;
+    }
+    .o_td_an_hm_corner { height: 14px; }
+    .o_td_an_hm_hour { text-align: center; height: 14px; line-height: 14px; overflow: visible; white-space: nowrap; }
+    .o_td_an_hm_day { display: flex; align-items: center; height: 18px; }
+    .o_td_an_hm_cell {
+        height: 18px;
+        min-width: 0;
+        border-radius: 2px;
+        // пусті клітинки (немає даних) окреслені штрихом, а не лише кольором
+        &.o_td_an_hm_cell--l-1 { border: 1px dashed #d1d5db; box-sizing: border-box; }
+    }
+    .o_td_an_hm_legend { padding: 8px 16px 14px; }
+    .o_td_an_hm_scale { display: inline-flex; gap: 2px; }
+    .o_td_an_hm_swatch { width: 18px; height: 10px; border-radius: 2px; }
+    .o_td_an_hm_cell--l0, .o_td_an_hm_swatch--l0 { background: $td-an-heat-0; }
+    .o_td_an_hm_cell--l1, .o_td_an_hm_swatch--l1 { background: $td-an-heat-1; }
+    .o_td_an_hm_cell--l2, .o_td_an_hm_swatch--l2 { background: $td-an-heat-2; }
+    .o_td_an_hm_cell--l3, .o_td_an_hm_swatch--l3 { background: $td-an-heat-3; }
+    .o_td_an_hm_cell--l4, .o_td_an_hm_swatch--l4 { background: $td-an-heat-4; }
+
+    .o_td_an_enpi_chart { padding-bottom: 0; }
+    .o_td_an_enpi_foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 16px;
+        padding: 4px 16px 12px;
+        font-size: 13px;
+        .o_td_an_sw_actual { background: $td-an-accent; }
+    }
+    .o_td_an_model { overflow-wrap: anywhere; }
+
+    // ---- бюджет (UI-05) ----
+    .o_td_an_budget {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px 14px;
+        border-top: 1px solid $td-an-line;
+        font-size: 13px;
+    }
+    .o_td_an_budget_row { display: flex; justify-content: space-between; gap: 12px; }
+    .o_td_an_budget_bar {
+        position: relative;
+        height: 10px;
+        border-radius: 5px;
+        background: $td-an-line;
+    }
+    .o_td_an_budget_fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 5px;
+        background: $td-an-accent;
+    }
+    .o_td_an_budget_mark {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 2px;
+        background: #111827;
+    }
+    .o_td_an_budget_text { font-size: 12.5px; color: #374151; overflow-wrap: anywhere; }
+
+    // ---- розріз (UI-06) ----
+    .o_td_an_tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .o_td_an_tab {
+        border-radius: 6px;
+        &[aria-selected="true"] {
+            border-color: $td-an-accent;
+            background: $td-an-accent;
+            color: #fff;
+            font-weight: 600;
+        }
+    }
+    .o_td_an_table_scroll { overflow-x: auto; }
+    .o_td_an_table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+        font-size: 13px;
+        th { padding: 8px; font-weight: 500; text-align: left; color: $td-an-muted; &:first-child { padding-left: 16px; } }
+        td { padding: 8px; border-top: 1px solid #f3f4f6; &:first-child { padding-left: 16px; } }
+        .o_td_an_num { text-align: right; white-space: nowrap; }
+        .o_td_an_open { text-align: left; font-weight: 500; cursor: pointer; }
+        .o_td_an_share_cell { min-width: 140px; }
+    }
+    .o_td_an_share { display: flex; align-items: center; gap: 8px; }
+    .o_td_an_share_bar {
+        flex: 1 1 auto;
+        height: 6px;
+        border-radius: 3px;
+        background: #f3f4f6;
+        > div { height: 6px; border-radius: 3px; background: $td-an-accent; }
+    }
+    .o_td_an_share_text { flex: 0 0 38px; text-align: right; }
+    .o_td_an_delta {
+        &.o_td_an_delta--good { color: $td-an-good; &::before { content: "▼ "; font-size: 10px; } }
+        &.o_td_an_delta--bad { color: $td-an-bad; font-weight: 500; &::before { content: "▲ "; font-size: 10px; } }
+    }
+
+    // ---- резерви економії (UI-07) ----
+    .o_td_an_plan_sum { font-size: 14px; }
+    .o_td_an_opp_list { list-style: none; margin: 0; padding: 0; }
+    .o_td_an_opp {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 16px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .o_td_an_opp_body {
+        flex: 999 1 420px;
+        min-width: 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        cursor: pointer;
+    }
+    .o_td_an_opp_check {
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+        margin: 2px 0 0;
+        accent-color: $td-an-accent;
+    }
+    .o_td_an_opp_text { display: flex; flex-direction: column; min-width: 0; }
+    .o_td_an_opp_title { font-weight: 600; }
+    .o_td_an_opp_desc { font-size: 13px; color: $td-an-muted; overflow-wrap: anywhere; }
+    .o_td_an_opp_save { flex: 0 0 120px; text-align: right; font-weight: 600; color: $td-an-good; }
+    .o_td_an_opp_act { flex: 0 0 auto; }
+
+    @media (max-width: 720px) {
+        .o_td_an_opp_save { flex: 1 1 auto; text-align: left; }
+    }
+}
