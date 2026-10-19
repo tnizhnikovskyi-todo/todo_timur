@@ -8,7 +8,7 @@
     "розстановка обладнання "
     "з перевірками), каталог варіантів на паспортах обладнання з 3D-моделлю, чернетка → публікація "
     "з підтвердженням і історією версій.",
-    "version": "19.0.1.3.0",
+    "version": "19.0.1.4.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -49,6 +49,9 @@
             "td_constructor/static/tests/editor/**/*",
             "td_constructor/static/tests/model/**/*",
             "td_constructor/static/tests/fixtures/*.json",
+        ],
+        "web.assets_tests": [
+            "td_constructor/static/src/tours/*.js",
         ],
     },
     "post_init_hook": "post_init_hook",
