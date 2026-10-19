@@ -33,11 +33,7 @@ class TestStatic(TransactionCase):
     def test_write_enabled_not_read(self):  # AC-58, ТБ-10
         for path in files("models/*.py") + files("adapters/*.py") + [os.path.join(ROOT, "hooks.py")]:
             for no, line in enumerate(open(path, encoding="utf-8"), 1):
-                if (
-                    "write_enabled" in line
-                    and "td_genset_write_enabled" not in line
-                    and "config_parameter" not in line
-                ):
+                if "write_enabled" in line and "td_genset_write_enabled" not in line and "config_parameter" not in line:
                     self.assertNotRegex(line, r"get_param|_param\(", "%s:%d" % (path, no))
         for path in files("models/*.py") + files("adapters/*.py"):
             self.assertNotIn('_param("write_enabled"', open(path, encoding="utf-8").read(), path)
@@ -90,9 +86,7 @@ class TestStatic(TransactionCase):
 
     def test_manifest_depends(self):  # AC-71
         manifest = ast.literal_eval(read("__manifest__.py"))
-        self.assertEqual(
-            manifest["depends"], ["td_genset", "td_factory3d", "td_telemetry", "td_energy"]
-        )
+        self.assertEqual(manifest["depends"], ["td_genset", "td_factory3d", "td_telemetry", "td_energy"])
         text = read("models", "viewer_provider.py")
         self.assertNotRegex(
             text,

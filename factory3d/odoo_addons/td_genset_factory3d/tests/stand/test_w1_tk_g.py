@@ -88,4 +88,3 @@ def test_tk_g15_tile_hidden_and_restored(odoo):
         odoo.k("ir.module.module", "button_immediate_install", bridge)
     assert module_state(odoo, BRIDGE) == "installed"
     assert tile_active(odoo) is False
-

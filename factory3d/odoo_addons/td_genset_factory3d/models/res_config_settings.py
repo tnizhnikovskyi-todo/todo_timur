@@ -63,7 +63,5 @@ class ResConfigSettings(models.TransientModel):
         if offline != old_offline:
             offline_min = int(offline or 5)
             for link in self.env["td.genset3d.link"].sudo().search([]):
-                signals = (
-                    self.env["td.signal"].sudo().search([("code", "=like", "infra/genset/%s/%%" % link.td_code)])
-                )
+                signals = self.env["td.signal"].sudo().search([("code", "=like", "infra/genset/%s/%%" % link.td_code)])
                 signals.write({"period_s": max(60, offline_min * 20)})
