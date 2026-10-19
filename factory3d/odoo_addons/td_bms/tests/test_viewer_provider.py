@@ -101,7 +101,8 @@ class TestViewerProvider(F3DBmsCase):
         )
 
     def test_maintenance_request_id_same_name(self):
-        """Viewer R-22: заявки з однаковою назвою на різних установках не змішуються, ключ — `maintenance_request_id`."""
+        """Viewer R-22: заявки з однаковою назвою на різних установках не змішуються, ключ —
+        `maintenance_request_id`."""
         units = self.env["td.bms.hvac.unit"].search([("state_signal_id", "!=", False)], order="sequence, code", limit=2)
         self.assertEqual(len(units), 2)
         first, second = (self._request(u) for u in units)
