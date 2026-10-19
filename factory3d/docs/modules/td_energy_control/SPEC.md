@@ -1617,3 +1617,24 @@ AC-282…AC-293 перенесено до [td_energy_viewer3d/SPEC.md](../td_ene
 | A-66 | (реалізація A) План дня (R-54 п.7): слоти `genset` режиму `test` не будуються — `adapters.schedule_info` віддає текстові вікна, а не тест-слоти; рядок «ДГУ» розкладу порожній | ADP-06 не містить структурованих вікон; рядок лишається у виводі (6 рядків, AC-211) |
 | A-67 | (реалізація A) Номер дії — `ir.sequence` `td.energy.action` (`seq_action`, `ACT/%(y)s/#####`), `idem = sha1("<id>:<kind_code>")`; для подій автоматики `idem = event_id` (≤ 40 символів) | Єдина унікальність `idem` (частковий `UNIQUE`) і дедуплікація подій |
 | A-52, A-53, X-93 | (міст 3D) | Перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §15 (рішення про шар 3D, вибір `scene`, адитивність VX-01…VX-05) | Єдина нумерація W2 |
+
+## Журнал змін документа
+
+| Дата | Версія | Зміна |
+|---|---|---|
+| 18.10.2026 | 0.1 | Перша редакція (`build/energy/W2_SPEC.md`, хвиля W2) |
+| 19.10.2026 | 0.2 | Перенесено до `docs/modules/td_energy_control/`, переклад українською (технічні імена, ID, код, JSON — без змін); міст 3D (M-41, M-42, V-46, V-47, розд. 8.4 з R-26/VX, R-57, R-58, AC-278…AC-293, ТК-28, ТП-11, A-52, A-53, X-93) виокремлено в [../td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) із збереженням нумерації; рішення й відхилення збірки внесено в тіло документа (нижче) |
+
+### Рішення й відхилення, прийняті при збірці W2
+
+1. **D-45 — архівних таблиць немає** (скасовує R-66/AC-232/A-51 у початковій редакції). Деінсталяція видаляє дані модуля як у будь-якого модуля Odoo; `uninstall_hook` лише видаляє сигнали/джерела `energy_control`, крони, параметри, скидає прапори й публікує збирачу порожню конфігурацію. Відображено: FR-61, розд. 1, R-66, AC-232, A-51, DEPLOY_TEST (розд. 13.5).
+2. **D-46 — `td.energy_control.remote_switching_enabled`** (default `False`; demo-дані й стенд — `True`; `neutralize.sql` повертає `False`). Блокуються `qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test` (поле `remote_gated`, M-31) у `prepare`/`confirm`/`confirm_second`/`undo` (R-39 п.8); прапор іде збирачу в API-24 `flags.remote_switching_enabled`. Додано AC-309, AC-310 (разом AC-159…AC-310 = 152).
+3. **D-47 — похідні входи** (змінює заморожений API-24, C-39). Збирач не бачить значень EN-DERIVED, тож API-24 віддає блок `derived` (розд. 7.3 п.8): плагін сам обчислює `energy/totals/p_now`, `energy/sections/S1/p_kw`, `energy/sections/S2/p_kw` (сума `energy/lines/<код>/p_now`), `infra/ats/src1_ok` (`ge`), `infra/totals/grid_kw`, `infra/totals/export_kw` (Q1/Q2, острів → 0), `infra/totals/pv_now`. Операції: `sum` (`terms[].min`, `clamp_min`, `zero_if`), `ge`; терм відсутній/несвіжий → вхід відсутній (fail-closed). Плагін: `derived.py` (розд. 8.1.1).
+4. **D-48 — пожежна тривога** (`fire_state = alarm`) не переводить рушій у `hold`: режим лишається `auto`, блокуються лише записи `vent`/`light`, сценарій `night` → `warn`, подія `interlock` (R-44 п.8; AC-244).
+5. **D-49 — сценарій `night` не потребує `remote`** (цілі BMS ідуть не через контролер ГРЩ); у R-44 п.3 критичний вхід `remote` лишився лише в `pfc`.
+6. **A-64…A-67** — рішення реалізації A (заголовок `X-Config-Version`, `never_shed`/`NEVER_SHED_CODES`, порожній рядок «ДГУ» розкладу, нумерація дій і `idem`); розд. 15.
+7. **`verify_timeout_s`** — у відповіді API-17 `prepare` (розд. 7.2) і в параметрах (розд. 5.1, V-44): клієнт обмежує опитування `get_action` значенням `verify_timeout_s + 30`.
+8. **Публічні методи `action_confirm_second()`, `action_cancel()`, `action_undo()`** (M-33): безаргументні обгортки над тим самим потоком (права, гейт D-46, блокування, журнал) для кнопок форми V-41 — Odoo 19 валідує методи `type=object`; повертають `display_notification`.
+9. **Міст 3D** ([td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md)): ключ `show_markers` (`layer.show_markers`, параметр `td.energy_viewer3d.show_markers`), прапор `colorModes[].hidden` (VX-01), геттер `api.canOpenAction` (VX-05); AC-291 виправлено — `PFC-2` **є** в сцені (код `null` дає вузол без об'єкта в сцені, напр. `BW-4` з `equipment_id.td_code` поза сценою).
+10. **Не реалізовано в збірці:** підказка маркера при наведенні (UI-25; `userData.tooltip` готовий, ядро tooltip не показує); слоти «тест ДГУ» в розкладі (R-54 п.7, A-66 — `adapters.schedule_info` віддає текстові вікна); `DEPLOY_TEST.md` модуля (розд. 13.5) окремим файлом не створено.
+
