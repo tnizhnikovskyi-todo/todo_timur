@@ -9,7 +9,8 @@ def post_init_hook(env):
     """A-15: maintenance.equipment.workcenter_id = РЦ з тим самим td_code (лише порожнім полям).
 
     Потім — `zones.bind` (B-2, крок 7 міграції base): міст ставиться поверх уже встановленого base, коли його
-    `post_init_hook` пройшов без поля `workcenter_id` (CE), тож зони обладнання треба прив'язати знову (ідемпотентно)."""
+    `post_init_hook` пройшов без поля `workcenter_id` (CE), тож зони обладнання треба прив'язати знову
+    (ідемпотентно)."""
     workcenters = env["mrp.workcenter"].search([("td_code", "!=", False)])
     by_code = {wc.td_code: wc for wc in workcenters}
     equipment = env["maintenance.equipment"].search([("td_code", "in", list(by_code)), ("workcenter_id", "=", False)])
