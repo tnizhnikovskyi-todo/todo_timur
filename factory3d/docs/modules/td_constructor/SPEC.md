@@ -216,6 +216,28 @@ factory3d/build/constructor/proto/*      прототип-артефакт (buil
 `external_dependencies.python` порожні навмисно: `cascadio`, `ifcopenshell`, `IfcConvert` — **необов'язкові** (R-20, DEC-04), їх відсутність не блокує встановлення.
 `application: False` — пункти меню живуть під «Завод 3D» (`td_factory3d.menu_td_root`, DEC-01).
 
+### 1.1 Доповнення до маніфесту (19.0.1.4.0)
+
+Версія `19.0.1.4.0` (1.2.0 — S1, 1.3.0 — S2/довідники зони, 1.4.0 — S6: тури в `web.assets_tests`). `depends` і `external_dependencies` **не змінилися**: `mail` приходить транзитивно
+через `stock`/`maintenance` (`td.comment` успадковує `mail.thread`, `mail.activity.mixin`, M-22); XLSX/PDF — `openpyxl`, `xlsxwriter`, `reportlab`, `qrcode` з залежностей Odoo
+(CD-30: Community, без `stock_barcode`, `documents`, `knowledge`). Нові файли `data` у порядку підключення: після `data/td_generic_catalog.xml` — `data/td_slot_type_data.xml`;
+після `views/td_inherit_views.xml` — `views/td_slot_type_views.xml`, `views/td_putaway_views.xml`, `views/td_collab_views.xml`, `views/td_help.xml` (QWeb-сторінка й розширення
+коментарів/варіантів; посилається на `td_collab_views`); `wizard/td_publish_wizard_views.xml`, `data/actions.xml`, `views/td_menus.xml` — як раніше.
+
+```python
+"assets": {
+    "web.assets_backend": [   # без змін: action/, editor/ (лише core_loader.js, odoo_host.js), model/, widgets/
+        "td_constructor/static/src/action/**/*", "td_constructor/static/src/editor/**/*",
+        "td_constructor/static/src/model/**/*", "td_constructor/static/src/widgets/**/*"],
+    "web.assets_unit_tests": ["td_constructor/static/tests/editor/**/*", "td_constructor/static/tests/model/**/*",
+        "td_constructor/static/tests/fixtures/*.json"],
+    "web.assets_tests": ["td_constructor/static/src/tours/*.js"],   # 19.0.1.4.0: `start_tour` виконуються лише так (AC-130)
+},
+```
+
+Збірка ядра `static/lib/f3d-core/constructor.esm.js` **не входить** у bundle: вантажиться динамічним `import()` (`core_loader.js`, `CORE_URL?v=CORE_BUILD`), як `f3d-loaders` (DEC-06).
+Збирає розробник (`node tools/build_core.mjs module`), файл комітиться; на сервері нічого не збирається (ARCH §2.2a).
+
 ## 2. Моделі
 
 Спільні правила для M-01…M-07: `company_id` — Many2one `res.company`, на площадці `required`, `default=lambda s: s.env.company`; у дочірніх сутностей —
@@ -491,6 +513,255 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/td_term_data.xml` (12 запи
 ### M-15 `mrp.workcenter` — розширення
 
 Поля: `td_site_id` (як у M-13). Зв'язок `maintenance.equipment.workcenter_id` ставиться, лише якщо поле існує в реєстрі (`"workcenter_id" in env["maintenance.equipment"]._fields`; його додає `mrp_maintenance`, DEC-16).
+
+### 2.1 Моделі злиття (M-16…M-31): загальні правила
+
+Усе нижче — **факт коду** `19.0.1.4.0` (`models/*.py`); поля, які тут не названо, лишилися як у M-01…M-15. Правила, спільні для M-16…M-31:
+
+- Мультикомпанія: нові моделі з `company_id` мають глобальне `ir.rule` `['|', ('company_id','=',False), ('company_id','in',company_ids)]` (§4.5); `td.publish.op` — за `version_id.company_id`.
+- Чернетки (`td.putaway.rule`, `td.replenish.rule`) успадковують `td.draft.mixin` (M-24): `uid`, `etag`, лічильник R-21, права R-11, нормалізація JSON R-22, перевірка оренди зони R-39. У Odoo (`stock.putaway.rule`,
+  `stock.warehouse.orderpoint`) вони потрапляють **лише публікацією** (CD-31 Q4).
+- Типи, пресети, варіанти, коментарі, оренди — не чернетка площадки: `site._f3d_touch` вони не викликають (крім правок, що змінюють розкладку: `/site/addr`, `/odoo/rules`, перемикання варіанта).
+- Тексти помилок — українською; помилки доступу — `AccessError`, помилки даних — `ValidationError`/`UserError`; API перетворює їх на `rights`/`validation` (§7.1).
+
+### M-16 `td.slot.type` — тип місця (F08, CD-31 Q9)
+
+`_description = "Тип місця"`, `_order = 'group, sequence, id'`, `_rec_names_search = ['name','code','ref']`. Запис каталогу: генератор (R-26) + параметри за замовчуванням + форма 3D + група. Каталог — **50 типів** у `data/td_slot_type_data.xml` (`noupdate="0"`),
+який **генерується** з `core/constructor/types_data.js` (Node-тест `tools/test_core_s1.mjs` звіряє файл із ядром). Типи користувачів у файл не входять.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `code` | Char(32) | `required`, `index`; `^[A-Za-z0-9][A-Za-z0-9_]{0,31}$`; для каталогу — `ref` малими літерами; **не змінюється** після створення (API-11 `validation`) |
+| `ref` | Char(16) | позначення в каталозі: `R01`, `FL2`, `SP3`… |
+| `name` | Char | `required` |
+| `description` | Text | |
+| `group` | Selection | `required`, `default='rack'`, `index`: `rack` (20 типів), `floor` (5), `special` (8), `zone` (12), `mobile` (5) |
+| `template` | Selection | значення M-03 `template` (R-26); порожньо — об'єкт будівлі (ворота/док), без комірок |
+| `shape` | Char(32) | ключ форми з реєстру `shapes` ядра (`SHAPE_KEYS`: `rack`, `roll_rack`, `stack`, `zone`, `fence`, `cylinder`, `cabinet`, `mobile`, `gate`; порожньо — каркас генератора) |
+| `params` | Json | `default=dict`; параметри за замовчуванням, нормалізуються `cells.normalize_params(template, params)` (R-22) |
+| `relevance` | Integer | `default=0`; `CHECK (0..2)`: 0 — немає на фабриці («—»), 1 — буває («○»), 2 — є («●»); у UI за замовчуванням показуються 1 і 2 |
+| `loc_kind` | Selection | `stack`, `bin`, `shelf`, `pallet_cell`, `kit`, `area` (значення `stock.location.td_loc_kind`, CB-05) |
+| `is_custom` | Boolean | `default=False`; створений користувачем |
+| `company_id` | Many2one `res.company` | порожньо — тип каталогу, спільний для всіх; власний тип — компанія автора |
+| `sequence`, `active` | Integer(10), Boolean | |
+
+Обмеження: UNIQUE-індекс `(code, COALESCE(company_id, 0))`; `CHECK (relevance BETWEEN 0 AND 2)`; `_check_code`, `_check_params` («невідома форма 3D», помилка параметрів, JSON-ліміти R-22), `_check_template_spot` (генератори `machine_spot` і `zone`
+типом не стають: у них немає комірок). Права: менеджер створює/змінює типи каталогу й видаляє; проєктувальники (технолог, комірник, інженер) створюють **лише власні** (`is_custom=True`, компанія = поточна) і правлять їх; видалення — менеджер
+(`AccessError`). Тип, який використовує хоч одне місце (`td.slot.type_id`, `ondelete='restrict'`), видалити не можна (API-11).
+
+### M-17 `td.slot.preset` — пресет (F09-06/07)
+
+`_order = 'name, id'`. Збережена настройка для вставки.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `name` | Char | `required` |
+| `type_id` | Many2one `td.slot.type` | `ondelete='set null'`, `index` |
+| `kind` | Selection | `required`, `default='row'`: `row` (ряд), `section` (секція), `group` (виділене) |
+| `data` | Json | `default=dict`; для `row`/`section` — `{slot: Spec}`, для `group` — `{slots: [Spec…]}` (1…200); `Spec = {template, params, rotation, type_code?, prefix?, dx?, dy?, addr?}` |
+| `company_id` | Many2one `res.company` | `required`, `index`, `default=env.company` |
+| `active` | Boolean | |
+
+`data` зберігається **нормалізованим** (`_f3d_normalize_data`, R-22): `template` ∈ (`pallet_rack`, `cantilever`, `shelf`, `floor_stack`, `floor_spot`, `machine_spot`), `params` — за `cells.normalize_params`, `rotation` — ціле 0…359, `prefix` ≤ 32,
+`addr` — `addr.normalize_addr`; секцією може бути лише стелаж чи штабель (`pallet_rack`, `cantilever`, `shelf`, `floor_stack`). `_check_data` відхиляє ненормалізовані дані. Права — як у M-16 (видаляє лише менеджер).
+
+### M-18 `td.putaway.rule` — правило розміщення, чернетка (F04, CD-31 Q4)
+
+`_inherit = ['td.draft.mixin']`, `_order = 'site_id, sequence, id'`. UNIQUE `(site_id, uid)`.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
+| `uid` | Char(32) | `default=uuid4().hex`, `copy=False`, `index`, `readonly` |
+| `product_id` / `category_id` | Many2one `product.product` / `product.category` | `ondelete='cascade'`; умова «товар» або «категорія товару» |
+| `package_type_ids` | Many2many `stock.package.type` | таблиця `td_putaway_rule_package_type_rel` |
+| `in_location_id` | Many2one `stock.location` | «коли приходить у» (звідки) |
+| `out_code` | Char(32) | код комірки **чернетки**, ще не опублікованої; після публікації правило залежить від рядка її створення (`depends_code`) |
+| `out_location_id` | Many2one `stock.location` | «куди» (опублікована локація) |
+| `sublocation` | Selection | `no` (за замовч.), `last_used`, `closest_location` |
+| `storage_category_id` | Many2one `stock.storage.category` | |
+| `sequence` | Integer | `default=10` (пріоритет) |
+| `odoo_rule_id` | Many2one `stock.putaway.rule` | `readonly`, `copy=False`, `ondelete='set null'`, `index`; заповнює публікація |
+| `deleted` | Boolean | «Видалено в чернетці»: публікація видалить правило в Odoo |
+| `company_id` | related `site_id.company_id` | `store=True`, `index=True` |
+| `active` | Boolean | |
+
+Права: читає `group_td_user`; пишуть технолог, комірник, інженер, менеджер (в т.ч. видаляють). Поведінка — R-30, R-31.
+
+### M-19 `td.replenish.rule` — правило поповнення min/max, чернетка (F03-07)
+
+`_inherit = ['td.draft.mixin']`, `_order = 'site_id, cell_code, id'`. UNIQUE `(site_id, uid)`. Поля `site_id`, `uid`, `company_id`, `active`, `deleted` — як у M-18; решта:
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `product_id` | Many2one `product.product` | `required`, `ondelete='cascade'` |
+| `cell_code` | Char(32) | код комірки чернетки |
+| `location_id` | Many2one `stock.location` | `ondelete='cascade'`; опублікована локація |
+| `min_qty`, `max_qty` | Float | `digits='Product Unit'` |
+| `odoo_orderpoint_id` | Many2one `stock.warehouse.orderpoint` | `readonly`, `copy=False`, `ondelete='set null'`, `index` |
+
+`_check_min_max`: «Мінімум і максимум … не можуть бути від'ємними», «Максимум … не може бути меншим за мінімум». Права — як у M-18.
+
+### M-20 `td.publish.op` — операція публікації, журнал (F02-08)
+
+`_order = 'version_id, seq, id'`. Створює лише `publish.apply_plan` (під `sudo`); для всіх, крім адміна, — тільки читання. Відкат працює за цим журналом (R-32).
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `version_id` | Many2one `td.layout.version` | `required`, `ondelete='cascade'`, `index`, `readonly` |
+| `seq` | Integer | порядковий номер у версії |
+| `op` | Selection | `create`, `move`, `rename`, `attrs`, `archive` |
+| `res_model` | Selection | `stock.location`, `maintenance.equipment`, `mrp.workcenter`, `stock.warehouse.orderpoint`, `stock.putaway.rule` |
+| `res_id` | Integer | id запису Odoo |
+| `code` | Char | код (або ключ) запису |
+| `before`, `after` | Json | значення полів до й після (для `create` `before` порожнє) |
+| `rolled_back` | Boolean | `default=False`, ставить `rollback_version` |
+
+### M-21 `td.layout.variant` — варіант планування (F12, N-03)
+
+`_order = 'site_id, sequence, id'`. Гілка чернетки як **знімок** R-14; історія публікацій лишається в `td.layout.version`. Рівно один варіант на площадку активний (`site.active_variant_id`): чернетка площадки — його «живі» записи.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
+| `name` | Char | `required`; унікальність серед робочих варіантів площадки — без урахування регістру (перевіряється в `f3d_make`/`rename`) |
+| `sequence` | Integer | `default=10` |
+| `snapshot_id` | Many2one `ir.attachment` | знімок R-14 (JSON), `ondelete='set null'`, `copy=False` |
+| `base_version_id` | Many2one `td.layout.version` | версія, від якої гілка; `index` |
+| `is_training` | Boolean | «Навчальний»: тимчасова копія для турів (F19-04), **не публікується** |
+| `origin_id` | Many2one `td.layout.variant` | варіант, до якого повертає «Скасувати» навчальної копії |
+| `metrics` | Json | цифри для порівняння: `cells`, `places`, `area`, `volume`, `max_weight` (рахує ядро, сервер лише зберігає числа, округлені до 3 знаків) |
+| `company_id` | related `site_id.company_id` | `store=True` |
+| `active` | Boolean | |
+| `is_current` | Boolean | `compute`: `site.active_variant_id == self` |
+
+Методи (права — менеджер, `AccessError` «Варіантами планування керує лише менеджер конструктора»): `f3d_ensure(site)` — перший варіант «Як є» зі знімком поточної чернетки; `f3d_make(site, name, training, activate, metrics)` — «Створити з поточного»
+(ліміт `td.constructor.variants_max=12` на площадку для робочих; навчальна копія — одна); `f3d_activate(metrics)` — знімок поточної гілки → `apply_snapshot` вибраної, `draft_base_version_id`, `draft_changes` = відмінності від діючої версії
+(чернетка не втрачається); `f3d_end_training(keep)` — «Залишити зміни» (стає робочим) або «Скасувати» (повернення до `origin_id` і видалення копії); `f3d_dict(ops)`. Розширення `td.layout.version.create`: публікація
+(`kind='publish'`) пише `variant_id` активного варіанта, а для навчальної копії — `UserError("Навчальна копія не публікується в Odoo …")`. Видалення активного й єдиного варіанта заборонене в API-21 (форма Odoo це дозволяє: `ondelete='set null'`,
+наступний `f3d_ensure` бере перший робочий).
+
+### M-22 `td.comment` — коментар або задача (F13)
+
+`_inherit = ['mail.thread', 'mail.activity.mixin']`, `_order = 'site_id, state, id desc'`. Об'єкт чернетки позначається `target_uid` (записів Odoo в чернетки немає). **Відхилення від MERGE §3.2** («`mail.activity` не беремо»): для задач із виконавцем
+створюється завдання `mail.activity` (див. DEC-22 ARCH); сервіс `mail` — з Community.
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
+| `target_kind` | Selection | `required`, `default='slot'`: `site`, `layer`, `slot`, `cell`, `placement`, `item` (об'єкт будівлі) |
+| `target_uid` | Char(64) | `index`: uid шару/місця/розміщення/об'єкта або код комірки |
+| `target_label` | Char | підпис об'єкта (≤ 200) |
+| `kind` | Selection | `required`, `default='note'`, `tracking`: `note` (коментар), `task` (задача) |
+| `state` | Selection | `required`, `default='open'`, `index`, `tracking`: `open`, `resolved` |
+| `text` | Text | `required`; ≤ 4000 символів |
+| `author_id` | Many2one `res.users` | `required`, `default=env.user`, `ondelete='restrict'` |
+| `assignee_id` | Many2one `res.users` | `tracking`; лише для задачі; має мати доступ до конструктора |
+| `resolved_by_id`, `resolved_at` | Many2one `res.users`, Datetime | `readonly`, `copy=False` |
+| `company_id` | related `site_id.company_id` | `store=True` |
+| `active` | Boolean | |
+
+Методи: `f3d_add(site, vals)` (будь-хто з `group_td_user`; помилки «Введіть текст коментаря», «Текст довший за 4000 символів», «Вид: коментар або задача», «Невідомий вид об'єкта», «Виконавця можна призначити лише задачі»,
+«Виконавець не має доступу до конструктора»), `f3d_set_text`, `f3d_resolve(resolved)`, `f3d_remove` — **змінює, вирішує й видаляє автор або «Проєктування»** (технолог, комірник, інженер, менеджер); `_f3d_sync_activity` — відкрита задача з виконавцем має
+рівно одне `mail.activity` (`mail.mail_activity_data_todo`, `user_id = assignee_id`), вирішення/зміна виконавця/вид «нотатка» його закривають; `f3d_dict()`.
+
+### M-23 `td.zone.lock` — блокування (оренда) зони (F14, CD-31 Q6)
+
+`_order = 'site_id, zone_uid'`. UNIQUE `(site_id, zone_uid)` («Зона вже заблокована»). Оренда **необов'язкова** й діє поверх `etag` (R-21), а не замість нього: правку відхиляє лише чужа діюча оренда (R-39).
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `site_id` | Many2one `td.site` | `required`, `ondelete='cascade'`, `index` |
+| `zone_uid` | Char(32) | `required`, `index`: uid зони-контуру (`td.slot` з `template='zone'`) або, поза зонами, uid самого об'єкта |
+| `user_id` | Many2one `res.users` | `required`, `default=env.user`, `ondelete='cascade'` |
+| `expires_at` | Datetime | `required`, `index` |
+| `company_id` | related `site_id.company_id` | `store=True` |
+
+Методи: `f3d_ttl()` (`td.constructor.lock_ttl_s`, 300 с), `f3d_heartbeat()` (`lock_heartbeat_s`, 60 с), `f3d_acquire(site, zone_uid)` → `(ok, lock)` (продовжує свою, чужу діючу не перехоплює; гонку двох викликів вирішує savepoint + UNIQUE), `f3d_release(site, zone_uid=None)`,
+`f3d_purge(site)` (прострочені — прибираються при кожному зверненні, **крону немає**), `f3d_active(site)`, `f3d_assert_write/create` (R-39), `f3d_label`, `f3d_dict`. Читає `group_td_user`; пишуть технолог, комірник, інженер, менеджер (через API-23).
+
+### M-24 `td.draft.mixin` (AbstractModel) — спільна поведінка чернеток
+
+`_description = "Чернетка площадки: лічильник правок і права"`. Успадковують: `td.layer`, `td.slot`, `td.placement`, `td.check.config` (M-02, M-03, M-05, M-06) і `td.putaway.rule`, `td.replenish.rule` (M-18, M-19). Реалізує `create/write/unlink` з єдиним порядком:
+`_f3d_normalized` (R-22) → `_f3d_check_*` (R-11; перевизначають моделі) → `_f3d_lease_*` (R-39; лише `td.slot`, `td.placement`) → `super()` → `_f3d_touch_sites` (R-21; контекст `f3d_no_touch` вимикає). Допоміжні: `_f3d_is_manager`, `_f3d_can_edit_layer(layer)`,
+`_f3d_assert_layers` («Шар «%s» редагує: …»), `_f3d_assert_manager(what)`, `_f3d_etag()` (`write_date` у форматі `%Y-%m-%d %H:%M:%S.%f`).
+
+### M-25 `td.site` — розширення (MERGE §3.3; доповнює M-01)
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `warehouse_id` | Many2one `stock.warehouse` | `check_company`, `index`, `copy=False`, `ondelete='set null'`; склад Odoo площадки (конструктор склад **не створює**, F16) |
+| `addr` | Json | `default=dict`, `copy=False`; адресація (R-25, схема R-22); порожньо = пресет `legacy` |
+| `loc_tree` | Selection | `required`, `default='flat'`: `flat` (ім'я локації = повний код), `row`, `section` (CD-31 Q1: існуючим — плоско; нові — «ряд»; секції локаціями не робимо) |
+| `depth_mode` | Selection | `required`, `default='level'`: `level` (останній рівень-локація — ярус), `cell` (комірка) |
+| `sprinkler_height_m` | Float(10,3) | `0` — спринклерів немає (R-37) |
+| `aisle_tech` | Char(32) | ключ техніки складу: `ключ` або `ключ:мін_м` (N-06); порожньо — «не перевіряти» |
+| `parse_rules` | Json | `default=dict`, `copy=False`; правила розбору кодів і лоток «Не розміщено» (R-35, R-22) |
+| `active_variant_id` | Many2one `td.layout.variant` | `copy=False`, `ondelete='set null'`, `index` |
+| `wizard_state` | Json | `default=dict`, `copy=False`; стан майстра «З нуля» (F16-04), ≤ 256 КБ, вкладеність ≤ 8 |
+| `odoo_baseline_id` | Many2one `ir.attachment` | база порівняння «Оновити з Odoo» (R-35) |
+| `publish_copy_ack` | Boolean | «Копію БД підтверджено» (нагадування F02-10, R-31) |
+
+`_check_addr`; `create/write` нормалізують `addr` (`_f3d_normalize_addr_vals`, помилка — `ValidationError("Адресація площадки: …")`); зміна `addr`/`depth_mode`/`loc_tree` через `_f3d_apply_addr(vals, renumber='new'|'all')` (R-25).
+
+### M-26 `td.layer` — розширення
+
+`items` — Json, `default=list`: об'єкти будівлі (колона, стіна, ворота, док, двері, офіс, зарядка техніки; R-37, схема R-22 `building.normalize_items`, ≤ 5000). Входить у `LAYER_CONTENT_FIELDS` (разом з `aisles`, `fire_paths`, `utilities`,
+`underlay_*`): **проєктувальник із правом на шар** пише лише вміст шару, налаштування шару — тільки менеджер (R-11). Нормалізація при `create/write` і `_check` (`@api.constrains` включає `items`).
+
+### M-27 `td.slot` — розширення
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `template` | Selection | додано `floor_spot` («Місце на підлозі (одна локація)», R-26) |
+| `type_id` | Many2one `td.slot.type` | `index`, `ondelete='restrict'`; `_check_type`: тип — не об'єкт будівлі, `type.template == slot.template` |
+| `storage_category_id` | Many2one `stock.storage.category` | `ondelete='set null'`; діє на вкладені рівні, якщо там не задано своєї (R-28) |
+| `removal_strategy_id` | Many2one `product.removal` | `ondelete='set null'`; так само |
+| `function_id` | Many2one `td.term` | домен `term_type='zone_function'`; функція зони (10 значень) |
+| `attr_ids` | Many2many `td.term` | таблиця `td_slot_attr_rel`; домен `term_type='zone_attr'` (температурний режим, небезпечні вантажі, цінне, довгомірне) |
+| `temp_min_c`, `temp_max_c` | Float(5,1) | обидві `0` — режим не задано |
+| `tech` | Char(32) | техніка зони (N-06); порожньо — як у площадки |
+| `addr` | Json | `default=dict`; власна адресація місця/зони (порожньо — успадкувати) |
+| `depth_mode` | Selection | `level`/`cell`; порожньо — успадкувати |
+
+`overrides[code]` розширено ключами `usage` (`internal`/`view`) і `replenish_location` (R-28; `OVERRIDE_KEYS = disabled, max_load_kg, capacity, name, usage, replenish_location`). Службові методи адресації (`_f3d_addr_contexts`,
+`_f3d_codes_map`, `_f3d_renumber`, `_f3d_recompute_counts`, контекст `f3d_no_renumber`) — R-25. Зміна `template`/`params`/`addr` перераховує `cell_count`, `footprint_*` і (якщо потрібно) переносить правки комірок на нові коди.
+
+### M-28 `stock.location` — адресні номери (доповнює M-13)
+
+`td_row`, `td_bay`, `td_level`, `td_pos` — Integer, `copy=False`, `readonly`, `td_row` з `index`; `0` — не задано; заміна `posx/posy/posz` Odoo 18 (їх у Odoo 19 немає). `@api.constrains` — від'ємні значення заборонені. Метод
+`_f3d_address_vals(code, parts, addr, loc_tree)` лише **рахує** `{name, barcode, td_row, td_bay, td_level, td_pos}` (`addr.location_vals`, R-25); записує їх публікація (R-31).
+
+### M-29 `td.layout.version` — розширення (доповнює M-07)
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `kind` | Selection | `required`, `default='publish'`, `index`: `publish`, `checkpoint` (контрольна точка: знімок чернетки без змін в Odoo, N-03) |
+| `variant_id` | Many2one `td.layout.variant` | `readonly`, `copy=False`, `ondelete='set null'`, `index` |
+| `rolled_back_at`, `rolled_back_by_id` | Datetime, Many2one `res.users` | `readonly`, `copy=False` |
+| `op_ids` | One2many `td.publish.op` | `readonly` |
+| `metrics` | Json | `readonly`, `copy=False` |
+| `op_count`, `can_rollback`, `rollback_reason` | Integer, Boolean, Char | `compute` (`_compute_rollback`, R-32) |
+
+`action_rollback()` — відкат публікації (менеджер, з підтвердженням у формі). Контрольні точки не мають операцій у журналі й не є «діючою версією»; публікація тільки `kind='publish'`.
+
+### M-30 `td.term`, `td.check.config` — нові значення
+
+`td.term.term_type` розширено: `zone_function` («Функція зони»: 10 записів `receiving`, `quality`, `quarantine`, `storage`, `picking`, `packing`, `shipping`, `scrap`, `returns`, `wip` з кольором `#rrggbb`) і `zone_attr` («Атрибут зони»: `temp`, `hazmat`,
+`valuable`, `long`); додано `color` (Char(7), `#rrggbb`) і `value` (Char; для атрибута — значення за замовчуванням або підказка). Довідники сіються `data/td_term_data.xml` (xml-id; міграція `19.0.1.3.0/pre-migrate.py` прив'язує наявні терміни). `td.slot_type`-терміни
+доповнено `floor_spot`.
+
+`td.check.config.check_key` розширено: `inside`, `aisle_width`, `height`, `cell_load`, `putaway_fit`, `code_conflict` (R-27, R-29, R-37). Рядки налаштувань для нових перевірок **не створюються автоматично** при створенні площадки (її `CHECK_DEFAULTS` лишилися
+7, R-04): ядро створює їх при першому вмиканні в панелях «Ємність» і «Будівля» (`td.check.config` `create` через API-04), і лише тоді `run_checks` виконує перевірку (R-41).
+
+### M-31 `td.publish.wizard`, `td.publish.wizard.line` — розширення (доповнює M-08, M-09)
+
+`td.publish.wizard.line`: `kind` + `move` («Буде переміщено»), `rename`, `attrs`; `res_model` + `stock.warehouse.orderpoint`, `stock.putaway.rule` (`ondelete='cascade'` для доданих значень); нові поля: `depends_code` (Char, код рядка,
+який має бути застосований раніше), `scope_uid` (Char(32), uid місця/зони рядка), `zone_uid` (Char(32), зона, що містить комірку; для застосування частинами), `before` (Json, прежні значення), `flags` (Char: «stock» — є залишок, «barcode_busy» — штрихкод зайнятий та ін.).
+
+`td.publish.wizard`: `scope_slot_id` (Many2one `td.slot`, область застосування: зона чи ряд, батьки додаються самі), `scope_slot_ids` (compute), `create_line_ids`/`move_line_ids`/`rename_line_ids`/`attrs_line_ids` (One2many з доменом за `kind`),
+лічильники `n_move`, `n_rename`, `n_attrs`, `n_blocked` (`n_update` тепер рахує `update`+`move`+`rename`+`attrs`), `copy_reminder` (compute: перше застосування площадки — журнал порожній — і `publish_copy_ack=False`), `copy_ack` («Більше не нагадувати»).
+Кнопки: `action_select_scope` («Лише обране»), `action_select_all`, `action_select_none`, `action_open_log` («Журнал публікацій»); `action_confirm` передає в `apply_plan` також `excluded` (кортежі `(res_model, code, kind)` невибраних рядків) і `scope`; після підтвердження записує `site.publish_copy_ack`.
 
 ## 3. Представлення й меню
 
