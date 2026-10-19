@@ -12,6 +12,15 @@
 - Міграція `19.0.1.1.0`: сигнали, пороги, схема, R-24 для наявних подій (ідемпотентна). 3 нові крони; `neutralize.sql` без змін по суті.
 - Існуючі `_td_*`-методи не перейменовано (RENAME.md §6); SPEC-імена `_td_log`, `action_td_show` — аліаси.
 
+## 19.0.1.1.1 — виправлення backfill на стенді
+- `_td_backfill` (R-36): `_td_after_build` (kwh_shift, load15/grid15, пік) виконується в `cr.savepoint()`. На стенді збирач і крон
+  паралельно оновлюють ті самі `td_signal`, і UPDATE у `Ingester._finish` падав `SerializationFailure: could not serialize
+  access due to concurrent update`; виняток перехоплювався без savepoint, транзакція лишалась aborted, і наступний flush
+  (баланс/події) падав `InFailedSqlTransaction` — вікно історії пропадало. Тепер конкурентна помилка — warning, дані вікна збережено.
+- Той самий клас помилки прибрано в `tools/bus._flush` (шина), `td.energy.advice._td_run_rules` (кожне правило в savepoint) і
+  `td.energy.outage._td_ats_open` (`critical_kw`).
+- Тести: послідовні вікна з якорем + повтор вставляє 0; збій `_td_after_build` не ламає транзакцію.
+
 ## Unreleased
 - W4 (C-02): хук `td.energy.dashboard._td_report_action()` (у базі `None`; значення задає `td_energy_analytics`); `get_pult`:
   `meta.report_action` і `capabilities.report = bool(хук)`; кнопка «Звіт за зміну» Пульту відкриває `meta.report_action`

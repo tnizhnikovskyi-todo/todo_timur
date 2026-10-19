@@ -10,6 +10,8 @@ import math
 import time
 from datetime import datetime, timedelta
 
+from psycopg2 import OperationalError
+
 from odoo import fields
 from odoo.exceptions import UserError
 
@@ -378,8 +380,14 @@ def run(env, days=90, until=None, seed=20261018, purge=False, with_balance=True,
         _balance(env, until, stats)
     if with_advice:
         env["td.energy.advice"]._td_demo_seed()
+    # Живі сигнали (kwh_shift, load15/grid15, пік) оновлює й крон; на стенді збирач і крон пишуть ті самі td_signal
+    # паралельно, тож UPDATE тут може впасти SerializationFailure. Без savepoint перехоплена SQL-помилка лишала
+    # транзакцію в aborted, і наступний flush (баланс/події) падав InFailedSqlTransaction разом з усім вікном.
     try:
-        env["td.energy.interval"]._td_after_build(now)
+        with env.cr.savepoint():
+            env["td.energy.interval"]._td_after_build(now)
+    except OperationalError:
+        _logger.warning("td_energy: backfill: після побудови пропущено (конкурентне оновлення)", exc_info=True)
     except Exception:
         _logger.exception("td_energy: backfill: після побудови (R-11, R-15)")
     stats["seconds"] = round(time.monotonic() - started, 2)

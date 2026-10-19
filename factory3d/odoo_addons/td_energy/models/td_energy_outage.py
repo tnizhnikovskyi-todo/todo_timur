@@ -187,7 +187,8 @@ class F3dEnergyOutage(models.Model):
         ts = ts_src or (position[0]["last_ts"] if position[1] and source == "ats" else None) or now
         critical = 0.0
         try:
-            critical = self.env["td.energy.node"]._td_live_snapshot()["critical_kw"]
+            with self.env.cr.savepoint():
+                critical = self.env["td.energy.node"]._td_live_snapshot()["critical_kw"]
         except Exception:
             _logger.exception("f3d_energy: critical_kw при відкритті відключення")
         outage = self.sudo().create(

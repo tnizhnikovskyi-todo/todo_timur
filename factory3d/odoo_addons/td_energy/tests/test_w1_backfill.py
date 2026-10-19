@@ -2,9 +2,13 @@
 
 import hashlib
 from datetime import datetime, timedelta
+from unittest.mock import patch
+
+from psycopg2 import OperationalError
 
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 from .common import TAGS, TestW1Common
 
@@ -159,3 +163,42 @@ class TestW1Backfill(TestW1Common):
         )
         stats = self.Interval._td_backfill(days=1, with_balance=False, with_events=False, seed=4)
         self.assertEqual(stats["until"], "2026-10-17 06:15:00")
+
+    def test_sequential_windows_idempotent(self):  # стенд: історія шматками по 1 добі з якорем, потім повтор
+        windows = [(1, UNTIL - timedelta(days=2)), (1, UNTIL - timedelta(days=1)), (1, UNTIL)]
+        first = [self.backfill(days=d, until=u, seed=20261018, with_events=True) for d, u in windows]
+        for stats in first:
+            self.assertEqual((stats["rows"], stats["skipped"]), (67 * 96, 0))
+        self.assertEqual(self.Interval.search_count([("is_backfill", "=", True)]), 3 * 67 * 96)
+        events = self.env["td.energy.event"].search_count([("is_backfill", "=", True)])
+        self.assertTrue(events)
+        again = [self.backfill(days=d, until=u, seed=20261018, with_events=True) for d, u in windows]
+        for stats in again:
+            self.assertEqual((stats["rows"], stats["skipped"]), (0, 67 * 96))
+        self.assertEqual(self.Interval.search_count([("is_backfill", "=", True)]), 3 * 67 * 96)
+        self.assertEqual(self.env["td.energy.event"].search_count([("is_backfill", "=", True)]), events)
+
+    def _failing_after_build(self, exc):
+        """`_td_after_build` із SQL-помилкою (транзакція в aborted) і винятком `exc` — як SerializationFailure."""
+
+        def after_build(model, now):
+            with mute_logger("odoo.sql_db"):
+                try:
+                    model.env.cr.execute("SELECT 1 / 0")
+                except Exception:
+                    pass
+            raise exc
+
+        return patch.object(type(self.Interval), "_td_after_build", after_build)
+
+    def test_after_build_sql_error_keeps_transaction(self):  # InFailedSqlTransaction на стенді (вікно 10)
+        for exc in (OperationalError("could not serialize access due to concurrent update"), ValueError("boom")):
+            self.env.cr.execute("DELETE FROM td_energy_interval")
+            with self._failing_after_build(exc), self.assertLogs("odoo.addons.td_energy.tools.backfill") as logs:
+                stats = self.backfill(days=1, seed=3, with_balance=True, with_events=True)
+            self.assertEqual(len(logs.records), 1, exc)
+            self.assertEqual(stats["rows"], 67 * 96)
+            self.assertTrue(stats["balance"])
+            self.env.flush_all()  # раніше тут падав flush балансу: current transaction is aborted
+            self.env.cr.execute("SELECT count(*) FROM td_energy_interval WHERE is_backfill")
+            self.assertEqual(self.env.cr.fetchone()[0], 67 * 96)

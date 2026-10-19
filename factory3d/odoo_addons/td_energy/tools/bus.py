@@ -55,6 +55,7 @@ def _flush(env):
             return
         state["last"], state["pending"] = now, set()
         payload = {"kinds": [k for k in KINDS if k in kinds], "ts": fields.Datetime.to_string(fields.Datetime.now())}
-        env["bus.bus"].sudo()._sendone(CHANNEL, MESSAGE_TYPE, payload)
+        with env.cr.savepoint():  # SQL-помилка шини не повинна залишати транзакцію в aborted
+            env["bus.bus"].sudo()._sendone(CHANNEL, MESSAGE_TYPE, payload)
     except Exception:
         _logger.warning("td_energy: шина недоступна, повідомлення пропущено", exc_info=True)

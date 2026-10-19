@@ -153,7 +153,8 @@ class TdEnergyAdvice(models.Model):
         returned, created = set(), 0
         for name in self._td_rule_methods():
             try:
-                items = getattr(Advice, name)(now) or []
+                with self.env.cr.savepoint():  # SQL-помилка правила не повинна ламати наступні правила
+                    items = getattr(Advice, name)(now) or []
             except Exception:
                 _logger.exception("td_energy: правило рекомендацій %s", name)
                 continue
