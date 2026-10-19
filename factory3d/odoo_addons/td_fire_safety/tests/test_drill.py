@@ -252,9 +252,11 @@ class TestDrill(FireCase):
         d2 = self.drill(mode="sim")
         d.action_cancel()
         failed = SimpleNamespace(name="RUN/2026/0008", state="failed", message="збій")
-        with mock.patch.object(Drill, "_td_sim_create_run", return_value=failed):
-            with self.assertRaisesRegex(UserError, "збій"):
-                d2.action_start_sim()
+        with (
+            mock.patch.object(Drill, "_td_sim_create_run", return_value=failed),
+            self.assertRaisesRegex(UserError, "збій"),
+        ):
+            d2.action_start_sim()
         self.assertEqual(d2.state, "draft")
 
     # --- AC-50 -------------------------------------------------------------------------------------------
@@ -312,9 +314,8 @@ class TestDrill(FireCase):
         zone = self.z_cnc.zone_id
         signals = {}
         for code, (text, s) in states.items():
-            wc = self.env["mrp.workcenter"].search([("td_code", "=", code)]) or self.env["mrp.workcenter"].create(
-                {"name": code, "td_code": code, "td_zone_id": zone.id}
-            )
+            if not self.env["mrp.workcenter"].search([("td_code", "=", code)]):
+                self.env["mrp.workcenter"].create({"name": code, "td_code": code, "td_zone_id": zone.id})
             sig = self.env["td.signal"].create(
                 {
                     "code": "workcenters/%s/machine_state" % code,
@@ -348,7 +349,7 @@ class TestDrill(FireCase):
         self.assertEqual((step.done, step.t_fact_s), (True, 0))
 
     def test_auto_step_machines_nodata(self):
-        signals = self._machines_fixture({"WC-T1": ("nodata", -10)})
+        self._machines_fixture({"WC-T1": ("nodata", -10)})
         d = self.start_at(self.drill())
         step = d.step_ids.filtered(lambda s: s.auto_key == "machines")
         with freeze_time(self.at(5)):

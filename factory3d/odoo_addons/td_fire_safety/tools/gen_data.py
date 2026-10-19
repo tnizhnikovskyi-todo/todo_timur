@@ -13,6 +13,7 @@ evacuation.drill_steps).
 import argparse
 import csv
 import io
+import itertools
 import json
 import os
 import sys
@@ -106,9 +107,11 @@ AUTHORED = {
     ),
     "evac_distance_polymer": (
         50,
-        "ДБН В.2.2-27:2025 п. 8.2.11 — якщо стінові й покрівельні панелі з полімерним "
-        "утеплювачем; тупики — не довше 25 м (п. 8.2.9); ворота не рахуються виходами "
-        "(п. 8.2.6).",
+        (
+            "ДБН В.2.2-27:2025 п. 8.2.11 — якщо стінові й покрівельні панелі з полімерним "
+            "утеплювачем; тупики — не довше 25 м (п. 8.2.9); ворота не рахуються виходами "
+            "(п. 8.2.6)."
+        ),
         "Додано автором модуля: альтернативна норма відстані до виходу (параметр polymer_panels).",
     ),
     "exit_dispersal_k": (
@@ -261,35 +264,35 @@ def collect(root):
             rect, z_m = zrect[pz], fire.Z_DET
         loop = fire.loop_of(d["points"][0][0])
         zones.append(
-            dict(
-                fa=fa,
-                pz=pz,
-                name=g["zone_name"],
-                kind=d["kind"],
-                lsz=lsz,
-                loop=loop,
-                rect=rect,
-                z_m=z_m,
-                spacing=d["spacing"],
-                wall=3.2 if d["kind"] == "heat" else 4.4,
-                points=d["points"],
-                zs=d.get("zs"),
-            )
+            {
+                "fa": fa,
+                "pz": pz,
+                "name": g["zone_name"],
+                "kind": d["kind"],
+                "lsz": lsz,
+                "loop": loop,
+                "rect": rect,
+                "z_m": z_m,
+                "spacing": d["spacing"],
+                "wall": 3.2 if d["kind"] == "heat" else 4.4,
+                "points": d["points"],
+                "zs": d.get("zs"),
+            }
         )
-    return dict(
-        fire=fire,
-        infra=infra,
-        evacuation=evacuation,
-        layout=layout,
-        rpc=rpc,
-        demo=demo,
-        zones=zones,
-        loops_demo=loops_demo,
-    )
+    return {
+        "fire": fire,
+        "infra": infra,
+        "evacuation": evacuation,
+        "layout": layout,
+        "rpc": rpc,
+        "demo": demo,
+        "zones": zones,
+        "loops_demo": loops_demo,
+    }
 
 
 def build_devices(m):
-    fire, infra, rpc = m["fire"], m["infra"], m["rpc"]
+    fire, infra, _rpc = m["fire"], m["infra"], m["rpc"]
     devs = []
     for z in m["zones"]:
         code = z["fa"][3:]
@@ -299,17 +302,17 @@ def build_devices(m):
                 fail("сповіщувач %s.%s.%02d (x=%s) не в шлейфі зони %s" % (lp, code, nn, x, z["loop"]))
             zz = z["zs"][nn - 1] if z["zs"] else z["z_m"]
             devs.append(
-                dict(
-                    address="%d.%s.%02d" % (lp, code, nn),
-                    type=z["kind"],
-                    loop=lp,
-                    zone=z["fa"],
-                    lsp=lp * 10000 + z["lsz"] * 100 + nn,
-                    seq=nn,
-                    x=x,
-                    y=y,
-                    z=zz,
-                )
+                {
+                    "address": "%d.%s.%02d" % (lp, code, nn),
+                    "type": z["kind"],
+                    "loop": lp,
+                    "zone": z["fa"],
+                    "lsp": lp * 10000 + z["lsz"] * 100 + nn,
+                    "seq": nn,
+                    "x": x,
+                    "y": y,
+                    "z": zz,
+                }
             )
     counters = {}
 
@@ -321,102 +324,102 @@ def build_devices(m):
         lp = fire.loop_of(x)
         nn = seq_in_loop("mcp", lp)
         devs.append(
-            dict(
-                address="%d.MCP.%02d" % (lp, nn),
-                type="mcp",
-                loop=lp,
-                lsp=lp * 10000 + 9000 + nn,
-                seq=nn,
-                x=x,
-                y=y,
-                z=Z_MCP,
-                side=side,
-            )
+            {
+                "address": "%d.MCP.%02d" % (lp, nn),
+                "type": "mcp",
+                "loop": lp,
+                "lsp": lp * 10000 + 9000 + nn,
+                "seq": nn,
+                "x": x,
+                "y": y,
+                "z": Z_MCP,
+                "side": side,
+            }
         )
     for x, y, side in fire.sounders():
         lp = fire.loop_of(x)
         nn = seq_in_loop("snd", lp)
         devs.append(
-            dict(
-                address="%d.SND.%02d" % (lp, nn),
-                type="sounder",
-                loop=lp,
-                lsp=lp * 10000 + 9100 + nn,
-                seq=nn,
-                x=x,
-                y=y,
-                z=Z_SND,
-                side=side,
-            )
+            {
+                "address": "%d.SND.%02d" % (lp, nn),
+                "type": "sounder",
+                "loop": lp,
+                "lsp": lp * 10000 + 9100 + nn,
+                "seq": nn,
+                "x": x,
+                "y": y,
+                "z": Z_SND,
+                "side": side,
+            }
         )
     for nn, (x, y, z, heading) in enumerate(fire.FLAME, 1):
         lp = fire.loop_of(x)
         devs.append(
-            dict(
-                address="%d.FLM.%02d" % (lp, nn),
-                type="flame",
-                loop=lp,
-                lsp=lp * 10000 + 9200 + nn,
-                seq=nn,
-                x=x,
-                y=y,
-                z=z,
-                heading=heading,
-            )
+            {
+                "address": "%d.FLM.%02d" % (lp, nn),
+                "type": "flame",
+                "loop": lp,
+                "lsp": lp * 10000 + 9200 + nn,
+                "seq": nn,
+                "x": x,
+                "y": y,
+                "z": z,
+                "heading": heading,
+            }
         )
     for nn, (x, y) in enumerate(fire.SPARK_DETECTORS, 1):
         devs.append(
-            dict(
-                address="0.SPK.%02d" % nn,
-                type="spark_detector",
-                loop=0,
-                lsp=0,
-                seq=nn,
-                x=x,
-                y=y,
-                z=fire.DUCT_TOP,
-                system=SYS_SPARK,
-            )
+            {
+                "address": "0.SPK.%02d" % nn,
+                "type": "spark_detector",
+                "loop": 0,
+                "lsp": 0,
+                "seq": nn,
+                "x": x,
+                "y": y,
+                "z": fire.DUCT_TOP,
+                "system": SYS_SPARK,
+            }
         )
     for nn, (x, y, side) in enumerate(fire.SPARK_EXTINGUISH, 1):
         devs.append(
-            dict(
-                address="0.NOZ.%02d" % nn,
-                type="spark_nozzle",
-                loop=0,
-                lsp=0,
-                seq=nn,
-                x=x,
-                y=y,
-                z=fire.DUCT_TOP,
-                side=side,
-                system=SYS_SPARK,
-            )
+            {
+                "address": "0.NOZ.%02d" % nn,
+                "type": "spark_nozzle",
+                "loop": 0,
+                "lsp": 0,
+                "seq": nn,
+                "x": x,
+                "y": y,
+                "z": fire.DUCT_TOP,
+                "side": side,
+                "system": SYS_SPARK,
+            }
         )
     nn = 0
     for sz, zd in infra.smoke_zone_vents().items():
         for x, y in zd["points"]:
             nn += 1
             devs.append(
-                dict(
-                    address="0.SV.%02d" % nn,
-                    type="smoke_vent",
-                    loop=0,
-                    lsp=0,
-                    seq=nn,
-                    x=x,
-                    y=y,
-                    z=infra.ROOF_Z,
-                    system=SYS_SMOKE,
-                    smoke_zone=sz,
-                    note="SV-%02d" % nn,
-                )
+                {
+                    "address": "0.SV.%02d" % nn,
+                    "type": "smoke_vent",
+                    "loop": 0,
+                    "lsp": 0,
+                    "seq": nn,
+                    "x": x,
+                    "y": y,
+                    "z": infra.ROOF_Z,
+                    "system": SYS_SMOKE,
+                    "smoke_zone": sz,
+                    "note": "SV-%02d" % nn,
+                }
             )
     return devs
 
 
 def self_check(m, devs, norms, routes, exits):
-    fire = m["fire"]
+    m["fire"]
     cnt = {}
     for d in devs:
         cnt[d["type"]] = cnt.get(d["type"], 0) + 1
@@ -476,7 +479,7 @@ def self_check(m, devs, norms, routes, exits):
     # маршрути перетинають перегородки лише в прорізах (A-25)
     for code, r in routes.items():
         pts = r["path"]
-        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        for (x0, y0), (x1, y1) in itertools.pairwise(pts):
             for wx0, wy0, wx1, wy1, gaps in m["evacuation"].WALLS:
                 cross = _crossing(x0, y0, x1, y1, wx0, wy0, wx1, wy1)
                 if cross is None:
@@ -847,20 +850,20 @@ def build_signals(m):
         store=3600,
     ):
         sig.append(
-            dict(
-                code=code,
-                name=name,
-                kind=kind,
-                unit=unit,
-                src=src,
-                address=address,
-                period=period,
-                states=states,
-                alarm_states=alarm_states,
-                title=title,
-                create=create,
-                store=store,
-            )
+            {
+                "code": code,
+                "name": name,
+                "kind": kind,
+                "unit": unit,
+                "src": src,
+                "address": address,
+                "period": period,
+                "states": states,
+                "alarm_states": alarm_states,
+                "title": title,
+                "create": create,
+                "store": store,
+            }
         )
 
     def zone_signal(z):

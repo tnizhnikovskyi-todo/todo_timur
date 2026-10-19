@@ -34,5 +34,5 @@ class F3dFireDrillSimBridge(models.Model):
         try:
             if run.state in ("queued", "running"):
                 run.action_stop()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — збій емулятора не блокує закриття навчання, текст іде в чатер
             self.message_post(body="Емулятор: не вдалося зупинити сценарій: %s" % exc)

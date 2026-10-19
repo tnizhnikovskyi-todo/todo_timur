@@ -23,7 +23,7 @@ class F3dZone(models.Model):
             rec.td_fire_state = max(zones.mapped("state"), key=PRIORITY.get) if zones else False
 
     def _compute_f3d_evac(self):
-        Route = self.env["td.fire.route"] if "td.fire.route" in self.env else None
+        Route = self.env.get("td.fire.route", None)
         for rec in self:
             route = Route.search([("zone_id", "=", rec.id)], limit=1) if Route is not None else False
             rec.td_evac_route_id = route or False

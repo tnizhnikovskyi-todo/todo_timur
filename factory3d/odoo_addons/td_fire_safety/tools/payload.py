@@ -65,7 +65,7 @@ def build_fire(env, ctx=None):
             "kind_name": zone.kind_name or "",
             "n": zone.detector_count,
             "spacing": zone.spacing_m,
-            "area": int(round(zone.area_m2)),
+            "area": round(zone.area_m2),
             "loop": zone.loop_id.number,
             "state": _group_state(zone),
         }

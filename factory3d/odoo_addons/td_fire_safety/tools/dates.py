@@ -1,11 +1,11 @@
 """Часові пояси (SPEC §11): у БД — UTC naive; тексти й payload — Europe/Kyiv."""
 
 from datetime import timezone
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 try:
     KYIV = ZoneInfo("Europe/Kyiv")
-except Exception:  # старий tzdata
+except ZoneInfoNotFoundError:  # старий tzdata
     KYIV = ZoneInfo("Europe/Kiev")
 
 

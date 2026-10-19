@@ -12,7 +12,7 @@ def fmt_point(x, y):
 
 def grid_axis(a0, a1, step):
     """Координати сітки: a0 + step·i, i = 0…floor((a1 − a0)/step + 1e-9)."""
-    n = int(math.floor((a1 - a0) / step + 1e-9))
+    n = math.floor((a1 - a0) / step + 1e-9)
     return [a0 + step * i for i in range(n + 1)]
 
 

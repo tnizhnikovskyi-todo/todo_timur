@@ -491,7 +491,7 @@ class F3dFirePanel(models.Model):
             missing = (
                 self.env["td.zone"]
                 .search([("zone_type", "!=", "outdoor")])
-                .filtered(lambda z: z.id not in fire_zone_ids)
+                .filtered(lambda z, ids=fire_zone_ids: z.id not in ids)
             )
             vals["compliance_missing_zones"] = ", ".join(sorted(missing.mapped("td_code"))) or False
             # R-05…R-09 (моделі W3 — за наявності)

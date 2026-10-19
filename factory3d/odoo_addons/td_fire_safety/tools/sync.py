@@ -205,7 +205,7 @@ class FireSync:
         for role, fname in (("alarms", "alarms_count"), ("faults", "faults_count"), ("disabled", "disabled_count")):
             r = roles[role]
             if self.fresh(r) and r["last_value"] is not None:
-                v = int(round(r["last_value"]))
+                v = round(r["last_value"])
                 if v != panel[fname]:
                     vals[fname] = v
         ts_all = [r["last_ts"] for r in roles.values() if self.fresh(r)]
@@ -248,7 +248,7 @@ class FireSync:
             elif text.isdigit():
                 v = int(text)
             elif r1["last_value"] is not None:
-                v = int(round(r1["last_value"]))
+                v = round(r1["last_value"])
             if v is not None:
                 s1 = states.MSV_STATES.get(v)
                 if v != panel.system_state:
@@ -340,7 +340,7 @@ class FireSync:
                 )
             r = fresh.get("count")
             if r and r["last_value"] is not None:
-                c = int(round(r["last_value"]))
+                c = round(r["last_value"])
                 if c != system.count_today:
                     if c > system.count_today:
                         log(

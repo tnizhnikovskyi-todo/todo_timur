@@ -165,7 +165,6 @@ class F3dFireZone(models.Model):
         "device_ids.active",
     )
     def _compute_warn(self):
-        Norm = self.env["td.fire.norm"]
         alarm_pct = self.env["td.fire.panel"]._get_param("dust_alarm_pct", 90.0)
         for rec in self:
             devices = rec.device_ids.filtered("active")
@@ -286,7 +285,7 @@ class F3dFireZone(models.Model):
         panel = self.env["td.fire.panel"]
         tol = panel._get_param("cover_tol_m", 0.5)
         for rec in self:
-            s, missing = rec._step()
+            s, _missing = rec._step()
             if s is None:
                 continue  # compliance='na' уже виставлено _compute_required
             r = s / math.sqrt(2)

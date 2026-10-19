@@ -28,7 +28,7 @@ class F3dPushHandlerFire(models.AbstractModel):
     @api.model
     def _td_parse(self, payload):
         if not isinstance(payload, dict):
-            raise ValueError("bacnet_event: payload")
+            raise ValueError("bacnet_event: payload")  # noqa: TRY004 — контракт _td_parse: ValueError → 400
         for name, typ in REQUIRED:
             value = payload.get(name)
             if value is None or isinstance(value, bool) or not isinstance(value, typ):
