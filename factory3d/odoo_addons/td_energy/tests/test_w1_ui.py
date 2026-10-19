@@ -25,7 +25,9 @@ const waitFor = async (check, label, ms = 30000) => {
 };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-const run = (body) => body().then(() => console.log("test successful")).catch((error) => console.error("UI test failed: " + error));
+const run = (body) => body()
+    .then(() => console.log("test successful"))
+    .catch((error) => console.error("UI test failed: " + error));
 """
 
 
@@ -144,7 +146,8 @@ class TestW1Ui(HttpCase):
             await waitFor(() => $('.o_td_en_alarms_card'), "тривоги");
             $('.o_td_en_period_shift').click();
             await waitFor(() => $('.o_td_en_period_shift').getAttribute('aria-pressed') === 'true', "період Зміна");
-            const node = await waitFor(() => $$('button.o_td_en_node').find((el) => el.dataset.nodeCode === 'T1'), "вузол T1");
+            const node = await waitFor(
+                () => $$('button.o_td_en_node').find((el) => el.dataset.nodeCode === 'T1'), "вузол T1");
             node.click();
             await waitFor(() => $('.o_td_en_sel'), "панель вибраного вузла");
             node.click();
@@ -158,7 +161,8 @@ class TestW1Ui(HttpCase):
             "action_td_energy_pult",
             "document.querySelector('.o_td_en_pult button.o_td_en_node')",
             """
-            const node = await waitFor(() => $$('button.o_td_en_node').find((el) => el.dataset.nodeCode === 'BW-2'), "вузол BW-2");
+            const node = await waitFor(
+                () => $$('button.o_td_en_node').find((el) => el.dataset.nodeCode === 'BW-2'), "вузол BW-2");
             node.click();
             const open = await waitFor(() => $('.o_td_en_sel_card'), "кнопка картки");
             open.click();
@@ -195,19 +199,25 @@ class TestW1Ui(HttpCase):
         )
 
     def test_menus_in_browser(self):
-        """AC-144 (браузер): у меню «Енергетика» є Пульт, «Генерація й резерв» → «Огляд», Події; верхнього «Генератор» немає."""
+        """AC-144 (браузер): у меню «Енергетика» є Пульт, «Генерація й резерв» → «Огляд», Події; верхнього «Генератор»
+        немає."""
         self._browse(
             "action_td_energy_generation",
             "document.querySelector('.o_menu_sections .dropdown-toggle')",
             """
-            const toggle = await waitFor(() => $$('.o_menu_sections .dropdown-toggle').find((el) => el.innerText.trim() === 'Енергетика'), "меню Енергетика");
+            const toggle = await waitFor(
+                () => $$('.o_menu_sections .dropdown-toggle').find((el) => el.innerText.trim() === 'Енергетика'),
+                "меню Енергетика");
             if ($$('.o_menu_sections .dropdown-toggle').some((el) => el.innerText.trim() === 'Генератор')) {
                 throw new Error("верхнє меню «Генератор» не має існувати");
             }
             toggle.click();
             await waitFor(() => $('.o-dropdown--menu'), "випадне меню");
-            const texts = $$('.o-dropdown--menu .dropdown-item, .o-dropdown--menu .dropdown-header').map((el) => el.innerText.trim());
-            for (const name of ['Пульт', 'Чергування (телефон)', 'Вузли мережі', 'Генерація й резерв', 'Огляд', 'Планові відключення', 'Події']) {
+            const texts = $$('.o-dropdown--menu .dropdown-item, .o-dropdown--menu .dropdown-header')
+                .map((el) => el.innerText.trim());
+            const expected = ['Пульт', 'Чергування (телефон)', 'Вузли мережі', 'Генерація й резерв', 'Огляд',
+                              'Планові відключення', 'Події'];
+            for (const name of expected) {
                 if (!texts.includes(name)) { throw new Error("немає пункту «" + name + "»: " + texts.join(' | ')); }
             }
             if (texts.includes('Журнал подій')) { throw new Error("«Журнал подій» перейменовано на «Події»"); }
