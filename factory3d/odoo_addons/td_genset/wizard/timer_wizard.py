@@ -45,7 +45,8 @@ class TdGensetTimerWizard(models.TransientModel):
         return total
 
     def action_confirm(self):
-        """Валідація 1 хв…24 год («Вкажіть тривалість від 1 хв до 24 год.») → ``genset._timer_start(duration_min, user)``.
+        """Валідація 1 хв…24 год («Вкажіть тривалість від 1 хв до 24 год.») → ``genset._timer_start(duration_min,
+        user)``.
 
         AC-31.
         """

@@ -30,7 +30,7 @@ PULT_MODE_COMMANDS = ("auto", "manual", "start", "stop")
 class TdGensetScheduler(models.Model):
     _inherit = "td.genset"
 
-    # ------------------------------------------------------------------ cron «Генератори: розклад, таймер, тест, ескалація»
+    # ------------------------------------------------------------- cron «Генератори: розклад, таймер, тест, ескалація»
     @api.model
     def _cron_scheduler(self):
         """Точка входу cron ``cron_scheduler`` (1 хв, priority 3) — А.6, кроки 1–8: для кожного генератора з

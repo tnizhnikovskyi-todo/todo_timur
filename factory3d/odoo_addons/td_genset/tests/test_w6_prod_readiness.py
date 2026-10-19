@@ -235,7 +235,8 @@ class TestW6ProdReadiness(TdGensetCase):
                 self.run_pull()  # нових знімків немає
                 self.run_scheduler()
                 self.run_commands()
-            # команда в роботі: її кроки під час збою пишуть у той самий ключ «ретранслятор» (DEBUG після першого WARNING)
+            # команда в роботі: її кроки під час збою пишуть у той самий ключ «ретранслятор» (DEBUG після першого
+            # WARNING)
             self.env["td.genset.command"]._enqueue(self.genset, "manual", "schedule", "Odoo: розклад")
         self.relay.fail("timeout")
         with self.assertLogs(LOGGER, level="DEBUG") as logs:

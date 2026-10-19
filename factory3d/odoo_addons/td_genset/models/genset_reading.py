@@ -427,19 +427,22 @@ class TdGensetReading(models.Model):
         string="Струм навантаження генератора по фазах (A), A",
         readonly=True,
         aggregator="avg",
-        help="Струм навантаження генератора по фазах (A) (регістр 03H 14–16; ключ API «current_a»). NULL — немає даних.",
+        help="Струм навантаження генератора по фазах (A) (регістр 03H 14–16; ключ API «current_a»). NULL — немає "
+        "даних.",
     )
     current_b = fields.Float(
         string="Струм навантаження генератора по фазах (B), A",
         readonly=True,
         aggregator="avg",
-        help="Струм навантаження генератора по фазах (B) (регістр 03H 14–16; ключ API «current_b»). NULL — немає даних.",
+        help="Струм навантаження генератора по фазах (B) (регістр 03H 14–16; ключ API «current_b»). NULL — немає "
+        "даних.",
     )
     current_c = fields.Float(
         string="Струм навантаження генератора по фазах (C), A",
         readonly=True,
         aggregator="avg",
-        help="Струм навантаження генератора по фазах (C) (регістр 03H 14–16; ключ API «current_c»). NULL — немає даних.",
+        help="Струм навантаження генератора по фазах (C) (регістр 03H 14–16; ключ API «current_c»). NULL — немає "
+        "даних.",
     )
     water_temp = fields.Float(
         string="Температура охолоджувальної рідини, °C",
@@ -553,7 +556,8 @@ class TdGensetReading(models.Model):
         string="Дистанційний пуск",
         readonly=True,
         aggregator=None,
-        help="Дистанційний пуск: 0 — без затримки (No Delay), 1 — затримка пуску (Start Delay), 2 — затримка зупинки (Stop Delay) (регістр 03H 36; ключ API «remote_start_status»). NULL — немає даних.",
+        help="Дистанційний пуск: 0 — без затримки (No Delay), 1 — затримка пуску (Start Delay), 2 — затримка зупинки "
+        "(Stop Delay) (регістр 03H 36; ключ API «remote_start_status»). NULL — немає даних.",
     )
     remote_start_delay = fields.Integer(
         string="Відлік дистанційного пуску, с",
@@ -565,7 +569,8 @@ class TdGensetReading(models.Model):
         string="Стан ATS",
         readonly=True,
         aggregator=None,
-        help="Стан ATS (перемикання навантаження), код. Таблиці значень у протоколі немає. Спостереження: 5 → 2 після замикання мережі (регістр 03H 38; ключ API «ats_status»). NULL — немає даних.",
+        help="Стан ATS (перемикання навантаження), код. Таблиці значень у протоколі немає. Спостереження: 5 → 2 після "
+        "замикання мережі (регістр 03H 38; ключ API «ats_status»). NULL — немає даних.",
     )
     ats_status_delay = fields.Integer(
         string="Відлік ATS, с",
@@ -577,7 +582,8 @@ class TdGensetReading(models.Model):
         string="Стан мережі (код)",
         readonly=True,
         aggregator=None,
-        help="0 — норма (Normal), 1 — аварія (Abnormal), 2 — без затримки (No Delay); «є мережа» — за сигналом «Мережа в нормі» (регістр 03H 40; ключ API «mains_status»). NULL — немає даних.",
+        help="0 — норма (Normal), 1 — аварія (Abnormal), 2 — без затримки (No Delay); «є мережа» — за сигналом «Мережа "
+        "в нормі» (регістр 03H 40; ключ API «mains_status»). NULL — немає даних.",
     )
     mains_status_delay = fields.Integer(
         string="Відлік стану мережі, с",
@@ -607,44 +613,51 @@ class TdGensetReading(models.Model):
         string="Вироблено енергії генератором (накопичувальна), kWh",
         readonly=True,
         aggregator="max",
-        help="Вироблено енергії генератором (накопичувальна) (регістр 03H 48–49; ключ API «energy_kwh»). NULL — немає даних.",
+        help="Вироблено енергії генератором (накопичувальна) (регістр 03H 48–49; ключ API «energy_kwh»). NULL — немає "
+        "даних.",
     )
     water_temp_sensor_ohm = fields.Float(
         string="Опір датчика температури, Ом",
         readonly=True,
         digits=(16, 1),
         aggregator="avg",
-        help="Опір датчика температури — з версії 1.1.3 (регістр 03H 18; ключ API «water_temp_sensor_ohm»). NULL — немає даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
+        help="Опір датчика температури — з версії 1.1.3 (регістр 03H 18; ключ API «water_temp_sensor_ohm»). NULL — "
+        "немає даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
     )
     oil_pressure_sensor_ohm = fields.Float(
         string="Опір датчика тиску оливи, Ом",
         readonly=True,
         digits=(16, 1),
         aggregator="avg",
-        help="Опір датчика тиску оливи — з 1.1.3 (регістр 03H 20; ключ API «oil_pressure_sensor_ohm»). NULL — немає даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
+        help="Опір датчика тиску оливи — з 1.1.3 (регістр 03H 20; ключ API «oil_pressure_sensor_ohm»). NULL — немає "
+        "даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
     )
     fuel_sensor_ohm = fields.Float(
         string="Опір датчика рівня палива, Ом",
         readonly=True,
         digits=(16, 1),
         aggregator="avg",
-        help="Опір датчика рівня палива — з 1.1.3 (регістр 03H 22; ключ API «fuel_level_sensor_ohm»). NULL — немає даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
+        help="Опір датчика рівня палива — з 1.1.3 (регістр 03H 22; ключ API «fuel_level_sensor_ohm»). NULL — немає "
+        "даних. Крок 0,1 Ом; з ключа (ретранслятор ≥ 1.1.3) або з сирого образу raw=1 (регістр ÷ 10).",
     )
     controller_sw = fields.Char(
         string="Версія ПЗ контролера",
         readonly=True,
-        help="Версії ПЗ і апаратна контролера — з 1.1.3 (ПЗ) (регістр 03H 50, 51; ключ API «controller_sw»). NULL — немає даних.",
+        help="Версії ПЗ і апаратна контролера — з 1.1.3 (ПЗ) (регістр 03H 50, 51; ключ API «controller_sw»). NULL — "
+        "немає даних.",
     )
     controller_hw = fields.Char(
         string="Апаратна версія контролера",
         readonly=True,
-        help="Версії ПЗ і апаратна контролера — з 1.1.3 (апаратна) (регістр 03H 50, 51; ключ API «controller_hw»). NULL — немає даних.",
+        help="Версії ПЗ і апаратна контролера — з 1.1.3 (апаратна) (регістр 03H 50, 51; ключ API «controller_hw»). "
+        "NULL — немає даних.",
     )
     controller_mode = fields.Selection(
         CONTROLLER_MODES,
         string="Режим контролера",
         readonly=True,
-        help="Режим контролера з сигналів 01H 0040–0043 (ключ API «controller_mode»): Авто / Ручний / Стоп / Тест; null — невідомо або горить кілька.",
+        help="Режим контролера з сигналів 01H 0040–0043 (ключ API «controller_mode»): Авто / Ручний / Стоп / Тест; "
+        "null — невідомо або горить кілька.",
     )
     common_alarm = fields.Boolean(
         string="Загальна тривога",
@@ -654,12 +667,14 @@ class TdGensetReading(models.Model):
     common_warning = fields.Boolean(
         string="Загальне попередження",
         readonly=True,
-        help="Загальне попередження (сигнал 01H 0001; ключ API «common_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Загальне попередження (сигнал 01H 0001; ключ API «common_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     common_shutdown = fields.Boolean(
         string="Загальна аварійна зупинка",
         readonly=True,
-        help="Загальна аварійна зупинка (сигнал 01H 0002; ключ API «common_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Загальна аварійна зупинка (сигнал 01H 0002; ключ API «common_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     remote_mode = fields.Boolean(
         string="Дистанційний режим",
@@ -669,17 +684,20 @@ class TdGensetReading(models.Model):
     remote_lock = fields.Boolean(
         string="Дистанційне блокування",
         readonly=True,
-        help="Дистанційне блокування (сигнал 01H 0004; ключ API «remote_lock»). NULL — невідомо (ключа немає у знімку).",
+        help="Дистанційне блокування (сигнал 01H 0004; ключ API «remote_lock»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     mains_on_load = fields.Boolean(
         string="Мережа під навантаженням",
         readonly=True,
-        help="Мережа під навантаженням (сигнал 01H 0006; ключ API «mains_on_load»). NULL — невідомо (ключа немає у знімку).",
+        help="Мережа під навантаженням (сигнал 01H 0006; ключ API «mains_on_load»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     gen_on_load = fields.Boolean(
         string="Генератор під навантаженням",
         readonly=True,
-        help="Генератор під навантаженням (сигнал 01H 0007; ключ API «gen_on_load»). NULL — невідомо (ключа немає у знімку).",
+        help="Генератор під навантаженням (сигнал 01H 0007; ключ API «gen_on_load»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     emergency_stop = fields.Boolean(
         string="Аварійний стоп",
@@ -689,42 +707,50 @@ class TdGensetReading(models.Model):
     overspeed_shutdown = fields.Boolean(
         string="Аварія: перевищення обертів",
         readonly=True,
-        help="Перевищення обертів (сигнал 01H 0009; ключ API «overspeed_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевищення обертів (сигнал 01H 0009; ключ API «overspeed_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     underspeed_shutdown = fields.Boolean(
         string="Аварія: занижені оберти",
         readonly=True,
-        help="Занижені оберти (сигнал 01H 0010; ключ API «underspeed_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Занижені оберти (сигнал 01H 0010; ключ API «underspeed_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     speed_signal_loss_shutdown = fields.Boolean(
         string="Аварія: втрата сигналу обертів",
         readonly=True,
-        help="Втрата сигналу обертів (сигнал 01H 0011; ключ API «speed_signal_loss_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Втрата сигналу обертів (сигнал 01H 0011; ключ API «speed_signal_loss_shutdown»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     overfrequency_shutdown = fields.Boolean(
         string="Аварія: висока частота",
         readonly=True,
-        help="Висока частота (сигнал 01H 0012; ключ API «overfrequency_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Висока частота (сигнал 01H 0012; ключ API «overfrequency_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     underfrequency_shutdown = fields.Boolean(
         string="Аварія: низька частота",
         readonly=True,
-        help="Низька частота (сигнал 01H 0013; ключ API «underfrequency_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Низька частота (сигнал 01H 0013; ключ API «underfrequency_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     overvoltage_shutdown = fields.Boolean(
         string="Аварія: висока напруга",
         readonly=True,
-        help="Висока напруга (сигнал 01H 0014; ключ API «overvoltage_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Висока напруга (сигнал 01H 0014; ключ API «overvoltage_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     undervoltage_shutdown = fields.Boolean(
         string="Аварія: низька напруга",
         readonly=True,
-        help="Низька напруга (сигнал 01H 0015; ключ API «undervoltage_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Низька напруга (сигнал 01H 0015; ключ API «undervoltage_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     gen_overcurrent_shutdown = fields.Boolean(
         string="Аварія: перевантаження за струмом",
         readonly=True,
-        help="Перевантаження за струмом (сигнал 01H 0016; ключ API «gen_overcurrent_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевантаження за струмом (сигнал 01H 0016; ключ API «gen_overcurrent_shutdown»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     crank_failure = fields.Boolean(
         string="Аварія: невдалий пуск",
@@ -734,17 +760,20 @@ class TdGensetReading(models.Model):
     high_temp_shutdown = fields.Boolean(
         string="Аварія: висока температура ОР",
         readonly=True,
-        help="Висока температура ОР (сигнал 01H 0018; ключ API «high_temp_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Висока температура ОР (сигнал 01H 0018; ключ API «high_temp_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     low_oil_pressure_shutdown = fields.Boolean(
         string="Аварія: низький тиск оливи",
         readonly=True,
-        help="Низький тиск оливи (сигнал 01H 0019; ключ API «low_oil_pressure_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький тиск оливи (сигнал 01H 0019; ключ API «low_oil_pressure_shutdown»). NULL — невідомо (ключа немає "
+        "у знімку).",
     )
     frequency_loss_alarm = fields.Boolean(
         string="Аварія: втрата частоти",
         readonly=True,
-        help="Втрата частоти (сигнал 01H 0020; ключ API «frequency_loss_alarm»). NULL — невідомо (ключа немає у знімку).",
+        help="Втрата частоти (сигнал 01H 0020; ключ API «frequency_loss_alarm»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     input_shutdown = fields.Boolean(
         string="Аварія: аварійний вхід",
@@ -754,52 +783,62 @@ class TdGensetReading(models.Model):
     low_fuel_shutdown = fields.Boolean(
         string="Аварія: низький рівень палива",
         readonly=True,
-        help="Низький рівень палива (сигнал 01H 0022; ключ API «low_fuel_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький рівень палива (сигнал 01H 0022; ключ API «low_fuel_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     low_coolant_shutdown = fields.Boolean(
         string="Аварія: низький рівень ОР",
         readonly=True,
-        help="Низький рівень ОР (сигнал 01H 0023; ключ API «low_coolant_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький рівень ОР (сигнал 01H 0023; ключ API «low_coolant_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     high_temp_warning = fields.Boolean(
         string="Попередження: висока температура ОР",
         readonly=True,
-        help="Висока температура ОР (сигнал 01H 0024; ключ API «high_temp_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Висока температура ОР (сигнал 01H 0024; ключ API «high_temp_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     low_oil_pressure_warning = fields.Boolean(
         string="Попередження: низький тиск оливи",
         readonly=True,
-        help="Низький тиск оливи (сигнал 01H 0025; ключ API «low_oil_pressure_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький тиск оливи (сигнал 01H 0025; ключ API «low_oil_pressure_warning»). NULL — невідомо (ключа немає "
+        "у знімку).",
     )
     gen_overcurrent_warning = fields.Boolean(
         string="Попередження: перевантаження за струмом",
         readonly=True,
-        help="Перевантаження за струмом (сигнал 01H 0026; ключ API «gen_overcurrent_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевантаження за струмом (сигнал 01H 0026; ключ API «gen_overcurrent_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     stop_failure_warning = fields.Boolean(
         string="Попередження: невдала зупинка",
         readonly=True,
-        help="Невдала зупинка (сигнал 01H 0027; ключ API «stop_failure_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Невдала зупинка (сигнал 01H 0027; ключ API «stop_failure_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     low_fuel_warning = fields.Boolean(
         string="Попередження: низький рівень палива",
         readonly=True,
-        help="Низький рівень палива (сигнал 01H 0028; ключ API «low_fuel_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький рівень палива (сигнал 01H 0028; ключ API «low_fuel_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     charging_failure_warning = fields.Boolean(
         string="Попередження: немає заряду D+",
         readonly=True,
-        help="Немає заряду D+ (сигнал 01H 0029; ключ API «charging_failure_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Немає заряду D+ (сигнал 01H 0029; ключ API «charging_failure_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     battery_undervoltage_warning = fields.Boolean(
         string="Попередження: низька напруга АКБ",
         readonly=True,
-        help="Низька напруга АКБ (сигнал 01H 0030; ключ API «battery_undervoltage_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Низька напруга АКБ (сигнал 01H 0030; ключ API «battery_undervoltage_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     battery_overvoltage_warning = fields.Boolean(
         string="Попередження: висока напруга АКБ",
         readonly=True,
-        help="Висока напруга АКБ (сигнал 01H 0031; ключ API «battery_overvoltage_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Висока напруга АКБ (сигнал 01H 0031; ключ API «battery_overvoltage_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     input_warning = fields.Boolean(
         string="Попередження: вхід попередження",
@@ -809,22 +848,26 @@ class TdGensetReading(models.Model):
     speed_signal_loss_warning = fields.Boolean(
         string="Попередження: втрата сигналу обертів",
         readonly=True,
-        help="Втрата сигналу обертів (сигнал 01H 0033; ключ API «speed_signal_loss_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Втрата сигналу обертів (сигнал 01H 0033; ключ API «speed_signal_loss_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     low_coolant_warning = fields.Boolean(
         string="Попередження: низький рівень ОР",
         readonly=True,
-        help="Низький рівень ОР (сигнал 01H 0034; ключ API «low_coolant_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Низький рівень ОР (сигнал 01H 0034; ключ API «low_coolant_warning»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     temp_sensor_open_warning = fields.Boolean(
         string="Попередження: обрив датчика температури",
         readonly=True,
-        help="Обрив датчика температури (сигнал 01H 0035; ключ API «temp_sensor_open_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Обрив датчика температури (сигнал 01H 0035; ключ API «temp_sensor_open_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     oil_pressure_sensor_open_warning = fields.Boolean(
         string="Попередження: обрив датчика тиску",
         readonly=True,
-        help="Обрив датчика тиску (сигнал 01H 0036; ключ API «oil_pressure_sensor_open_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Обрив датчика тиску (сигнал 01H 0036; ключ API «oil_pressure_sensor_open_warning»). NULL — невідомо "
+        "(ключа немає у знімку).",
     )
     maintenance_due_warning = fields.Boolean(
         string="Попередження: термін ТО",
@@ -834,12 +877,14 @@ class TdGensetReading(models.Model):
     charger_fail_warning = fields.Boolean(
         string="Попередження: збій зарядного пристрою",
         readonly=True,
-        help="Збій зарядного пристрою (сигнал 01H 0038; ключ API «charger_fail_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Збій зарядного пристрою (сигнал 01H 0038; ключ API «charger_fail_warning»). NULL — невідомо (ключа немає "
+        "у знімку).",
     )
     overpower_warning = fields.Boolean(
         string="Попередження: перевантаження за потужністю",
         readonly=True,
-        help="Перевантаження за потужністю (сигнал 01H 0039; ключ API «overpower_warning»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевантаження за потужністю (сигнал 01H 0039; ключ API «overpower_warning»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     test_mode = fields.Boolean(
         string="Режим Тест",
@@ -864,27 +909,32 @@ class TdGensetReading(models.Model):
     temp_sensor_open_shutdown = fields.Boolean(
         string="Аварія: обрив датчика температури",
         readonly=True,
-        help="Обрив датчика температури (сигнал 01H 0044; ключ API «temp_sensor_open_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Обрив датчика температури (сигнал 01H 0044; ключ API «temp_sensor_open_shutdown»). NULL — невідомо "
+        "(ключа немає у знімку).",
     )
     oil_pressure_sensor_open_shutdown = fields.Boolean(
         string="Аварія: обрив датчика тиску",
         readonly=True,
-        help="Обрив датчика тиску (сигнал 01H 0045; ключ API «oil_pressure_sensor_open_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Обрив датчика тиску (сигнал 01H 0045; ключ API «oil_pressure_sensor_open_shutdown»). NULL — невідомо "
+        "(ключа немає у знімку).",
     )
     maintenance_due_shutdown = fields.Boolean(
         string="Аварія: прострочене ТО",
         readonly=True,
-        help="Прострочене ТО (сигнал 01H 0046; ключ API «maintenance_due_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Прострочене ТО (сигнал 01H 0046; ключ API «maintenance_due_shutdown»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     overpower_shutdown = fields.Boolean(
         string="Аварія: перевантаження за потужністю",
         readonly=True,
-        help="Перевантаження за потужністю (сигнал 01H 0047; ключ API «overpower_shutdown»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевантаження за потужністю (сигнал 01H 0047; ключ API «overpower_shutdown»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
     emergency_stop_input = fields.Boolean(
         string="Вхід аварійного стопу",
         readonly=True,
-        help="Вхід аварійного стопу (сигнал 01H 0048; ключ API «emergency_stop_input»). NULL — невідомо (ключа немає у знімку).",
+        help="Вхід аварійного стопу (сигнал 01H 0048; ключ API «emergency_stop_input»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     aux_input_1 = fields.Boolean(
         string="Дод. вхід 1",
@@ -999,12 +1049,14 @@ class TdGensetReading(models.Model):
     gen_overcurrent = fields.Boolean(
         string="Генератор: перевантаження за струмом",
         readonly=True,
-        help="Перевантаження за струмом (сигнал 01H 0077; ключ API «gen_overcurrent»). NULL — невідомо (ключа немає у знімку).",
+        help="Перевантаження за струмом (сигнал 01H 0077; ключ API «gen_overcurrent»). NULL — невідомо (ключа немає у "
+        "знімку).",
     )
     scheduled_not_run = fields.Boolean(
         string="Пропущено запуск за розкладом",
         readonly=True,
-        help="Пропущено запуск за розкладом (сигнал 01H 0078; ключ API «scheduled_not_run»). NULL — невідомо (ключа немає у знімку).",
+        help="Пропущено запуск за розкладом (сигнал 01H 0078; ключ API «scheduled_not_run»). NULL — невідомо (ключа "
+        "немає у знімку).",
     )
 
     _relay_id_uniq = models.Constraint(
@@ -1061,7 +1113,8 @@ class TdGensetReading(models.Model):
         неможливо обчислити (немає ні %, ні омів), і ``run_hours_total`` без даних теж лишаються NULL.
 
         :param genset: запис ``td.genset``.
-        :param list[dict] payloads: знімки ``/readings`` (``{id, ts, time_utc, hostid, reason, values[, regs, coils]}``).
+        :param list[dict] payloads: знімки ``/readings`` (``{id, ts, time_utc, hostid, reason, values[, regs,
+        coils]}``).
         :return: створені записи в порядку ``relay_id``.
         """
         if not payloads:

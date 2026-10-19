@@ -273,7 +273,9 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             const lock = root.querySelector(".o_td_pult_lock");
             if (!lock || !lock.innerText.includes("Вкажіть hostid")) { throw new Error("no hostid hint in pult"); }
             const sheet = document.querySelector(".o_form_sheet");
-            if (!sheet.innerText.includes("Вкажіть hostid і ввімкніть опитування")) { throw new Error("no hostid alert"); }
+            if (!sheet.innerText.includes("Вкажіть hostid і ввімкніть опитування")) {
+                throw new Error("no hostid alert");
+            }
             document.querySelector(".o_notebook .nav-link[name='current_data']").click();
             await waitFor(() => document.querySelector(".o_td_genset_current_data"), "current data tab");
             if (!document.querySelector(".o_td_genset_current_data").innerText.includes("Очікуємо перший знімок")) {

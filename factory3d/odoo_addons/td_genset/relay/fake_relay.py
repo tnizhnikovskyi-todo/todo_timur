@@ -40,7 +40,8 @@ no-store) и моделирует генератор (HGM6120N): режимы, �
     commands_enabled, no_exec (done, но контроллер не выполняет), reject (bool или число команд: failed,
     "controller rejected the command"), no_reply (sent → timeout "no reply in 30 s"), format_learned,
     remote_lock, mains_normal, fuel_level (%), crank_failure (следующий пуск неудачен), time_scale, snapshot_sec,
-    noise (шум напряжений), version ("1.1.1" — без 5 полей 1.1.3), cloud_press (<команда>), registers_known / coils_known,
+    noise (шум напряжений), version ("1.1.1" — без 5 полей 1.1.3), cloud_press (<команда>), registers_known /
+    coils_known,
     set ({ключ: значение}; null = «нет данных»), unset ([ключи] — снять подмену), drop ([ключи] — убрать ключ
     из values), snapshot (сделать снимок сейчас),
     advance (с: «прожить» N секунд мгновенно — шагами ≤ 1 с, для сдвигов больше ~5,5 ч крупнее (≤ 20 000 шагов):
