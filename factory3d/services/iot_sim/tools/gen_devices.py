@@ -6,7 +6,7 @@
 
 Джерела: ``dist/odoo_demo.json`` (паспорти, обладнання, зони), ``plant/equipment_specs.json`` (ролі),
 ``plant/layout.py`` (полігони зон), ``plant/fire.py`` (сповіщувачі), ``catalog/signals.csv``
-(протоколи/unit id). Очікувано: 210 + 5 ACR + TURN-1 + 2 CAM + 8 PV-INV + SWB-CTRL + 49 PM + CUTOPT = 277.
+(протоколи/unit id). Очікувано: 210 + 5 ACR + TURN-1 + 2 CAM + 8 PV-INV + SWB-CTRL + 49 PM + CUTOPT + GAS-MAIN + AIR-MAIN = 279.
 ``driver`` пишеться лише для драйверів цього воркера (machine, io_machine, gantry, mobile, facp,
 facp_zone, spark, smoke, access, yard); решту визначає ``registry.driver_for``.
 """
@@ -209,6 +209,13 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
         devs.append(pm)
     devs.append({"code": "CUTOPT", "name": "Оптимізатор розкрою", "driver": "passive", "protocols": [],
                  "params": {"protocol": "none"}})
+    # W3 «Енергоресурси» (§8.1): корректор газу і витратомір повітря — паспортів немає, пристрої похідні; unit/протокол — з каталогу
+    devs.append({"code": "GAS-MAIN", "name": "Корректор газу GAS-MAIN (u74; карта регістрів — ПРИПУЩЕННЯ Q-02)",
+                 "role": "gas_meter", "protocols": protocols("GAS-MAIN"), "unit_id": unit("GAS-MAIN"), "driver": "gas",
+                 "params": {"dry_nom": 6.0, "canteen": 1.0}})
+    devs.append({"code": "AIR-MAIN", "name": "Витратомір стисненого повітря AIR-MAIN (u75; карта регістрів — ПРИПУЩЕННЯ Q-02)",
+                 "role": "air_meter", "protocols": protocols("AIR-MAIN"), "unit_id": unit("AIR-MAIN"), "driver": "air",
+                 "params": {"leak": 1.6, "q_ref": 9.8, "load_ref": 66.0, "load_min": 25.0, "drop": 0.1}})
     return devs
 
 

@@ -5,6 +5,8 @@
 ``k_fire = boilers_on`` (0 → лише ``0,1·rate`` на обігрів шнека); ``≤ limit (15)`` → ``nominal (95)`` і
 подія «Бункер поповнено». ``supply_c`` — R-01 (78; при ``boilers_on = 0`` — 65), ``return_c = supply − 20·load``
 (мінімум 7 К), ``heat_kw = min(need, 495·boilers_on)``. ``state``: 1 standby / 2 K1 / 3 K1+K2 / 4 fault.
+
+W3 (SPEC §8.1): ``gas_m3h = heat_kw / (BOILER_ETA · GAS_KWH_M3)`` (0,914 · 10,5; при ``heat_kw = 0`` → 0): 390 кВт → 40,6 м³/год.
 """
 from __future__ import annotations
 
@@ -20,6 +22,8 @@ SUPPLY_ON, SUPPLY_OFF = 78.0, 65.0
 SILO_REFILL = 95.0
 SILO_RATE = 0.02
 SILO_LIMIT = 15.0
+BOILER_ETA = 0.914   # ККД котла (брикет/газ — W3 §8.1)
+GAS_KWH_M3 = 10.5    # теплотворність природного газу, кВт·год/м³
 
 
 def heat_total_vent(world: Any) -> float:
@@ -66,6 +70,7 @@ class Boiler(Model):
         self.set("supply_c", supply)
         self.set("return_c", supply - max(7.0, 20.0 * load))
         self.set("heat_kw", heat)
+        self.set("gas_m3h", heat / (BOILER_ETA * GAS_KWH_M3) if heat > 0 else 0.0)
         self.set("state", 4 if failed else 1 + self.boilers_on)
         p_nom = float(self.sig("p_now").params.get("nominal") or 10.0)
         self.set("p_now", p_nom * (0.8 + 0.2 * self.boilers_on))

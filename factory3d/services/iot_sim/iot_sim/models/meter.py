@@ -15,6 +15,9 @@ W2 (R-59, SPEC §8.2): вікно керування контролера ГРЩ
 ``shed_factor``), ``extra_load_kw`` (+/− до навантаження), ``export_target_kw`` (``export_demo``), ``qs_closed``.
 Споживач віддає ``consumer_p · shed_factor``; при ``qs_closed`` потужності вводів Q1 і Q2 вирівнюються; сторожовий
 таймер ``shed_valid_s`` (веде вводу Q1) повертає ліміти й ``pv_limit_pct`` до 100 %.
+
+W3 (SPEC §8.1): вводи Q1/Q2 ведуть ``kvarh_total += |q_kvar|·dt/3600`` (квар·год; старт — номінал сигналу; «Reset All
+Energies» обнуляє й його) — PM5560 «Reactive Energy Delivered», регістр pdu 3219 (i64, ×0,001).
 """
 from __future__ import annotations
 
@@ -197,6 +200,8 @@ class Meter(Model):
         self.own_wh = 0.0
         self.export_wh = 0.0
         self.pf = 0.9
+        self.kvarh_start = float(self.val("kvarh_total", 0.0) or 0.0) if self.cell else 0.0  # номінал каталогу
+        self.kvarh_acc = 0.0                  # накопичено емулятором, квар·год
         self.consumers = LINE_CONSUMERS.get(self.line, ())
 
     # --- зміна (R-03) ---------------------------------------------------------------
@@ -232,6 +237,7 @@ class Meter(Model):
         for c in mine:
             q.remove(c)
         self.own_wh = self.export_wh = 0.0
+        self.kvarh_start = self.kvarh_acc = 0.0
         for c in self.consumers:  # type: ignore[assignment]
             self.e_wh[c] = 0.0  # type: ignore[index]
             self.base_wh[c] = 0.0  # type: ignore[index]
@@ -305,6 +311,8 @@ class Meter(Model):
         self._currents(i)
         self.set("kwh_total", round(self.own_wh / 1000.0, 6))
         self.set("kwh_export", round(self.export_wh / 1000.0, 6))
+        self.kvarh_acc += abs(q) * self.dt_s / 3600.0
+        self.set("kvarh_total", round(self.kvarh_start + self.kvarh_acc, 6))
         self.set("state", 2 if failed else 1)
 
     def on_fault(self, reason: str, **kw: Any) -> None:
@@ -312,7 +320,8 @@ class Meter(Model):
 
     def get_state(self) -> dict[str, Any]:
         return {"e_wh": self.e_wh, "base_wh": self.base_wh, "shift_key": self.shift_key,
-                "own_wh": self.own_wh, "export_wh": self.export_wh, "pf": self.pf}
+                "own_wh": self.own_wh, "export_wh": self.export_wh, "pf": self.pf,
+                "kvarh_start": self.kvarh_start, "kvarh_acc": self.kvarh_acc}
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.e_wh = dict(d.get("e_wh", {}))
@@ -321,3 +330,5 @@ class Meter(Model):
         self.own_wh = float(d.get("own_wh", 0.0))
         self.export_wh = float(d.get("export_wh", 0.0))
         self.pf = float(d.get("pf", 0.9))
+        self.kvarh_start = float(d.get("kvarh_start", self.kvarh_start))
+        self.kvarh_acc = float(d.get("kvarh_acc", 0.0))

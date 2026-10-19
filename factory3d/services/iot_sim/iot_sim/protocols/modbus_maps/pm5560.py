@@ -107,7 +107,7 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     i64(3203, lambda: wh(3203))
     i64(3207, lambda: wh(3207))
     i64(3211, lambda: wh(3203) + wh(3207))
-    i64(3219, lambda: 0)
+    i64(3219, lambda: wh(3219))  # Reactive Energy Delivered: kvarh_total вводів Q1/Q2 (W3), на фідерах — 0
     f32(2699, lambda: f(3203))
     f32(2703, lambda: f(3207))
 

@@ -17,8 +17,8 @@ def test_gen_catalog_check():
 def test_catalog_rows():
     with (ROOT / "catalog/signals.csv").open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
-    assert len(rows) == 1205
-    assert len({r["code"] for r in rows}) == 1205
+    assert len(rows) == 1215
+    assert len({r["code"] for r in rows}) == 1215
 
 
 def test_health(client):

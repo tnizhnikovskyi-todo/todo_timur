@@ -1,5 +1,6 @@
 """Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію»), S-16 ``pfc_step_fault`` (W1 §8.1) і S-17…S-20
-(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``).
+(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``) і S-21…S-23 (W3 §8.1: ``air_leak``, ``gas_overuse``,
+``water_leak`` — ресурсні сценарії, ``duration_s = 0`` — до зупинки).
 
 ``ScenarioRunner(world).start(name, params, run_ref)`` (потрібен запущений asyncio-цикл):
 валідація pydantic (``ScenarioParamsError`` -> 422), режим і конфлікти (``ScenarioConflict`` -> 409),
@@ -10,7 +11,8 @@
 
 * ``world.flags[<name>]`` — стан: ``shift``, ``blackout``, ``pv_cf`` (float), ``compressor_fault``,
   ``boiler_force_on`` (int), ``fire_drill``, ``genset_test``, ``swb`` (S-16), ``extra_load_kw``/``bess_auto_idle``/
-  ``export_target_kw``/``ctl_remote``/``gas_bar`` (S-17…S-20, ``models.meter.CTL_DEFAULTS``); словники за ключем пристрою/групи:
+  ``export_target_kw``/``ctl_remote``/``gas_bar`` (S-17…S-20, ``models.meter.CTL_DEFAULTS``), ``air_leak`` (м³/хв),
+  ``gas_extra``/``water_leak`` (м³/год; S-21…S-23, моделі ``air``/``gas``/``water``); словники за ключем пристрою/групи:
   ``filter_clogged[dev]``, ``lighting_scene[group]``, ``battery_low[dev]``.
 * ``world.fault(device, reason)`` / ``clear`` — S-02 (R-15).
 * ``world.post(topic, payload)`` — одноразові команди: ``yard`` (truck_no_booking/truck_arrival),
@@ -349,6 +351,24 @@ class ChpNoGasParams(BaseParams):
 
     duration_s: int = Field(600, ge=0)
     gas_bar: float = Field(0.80, ge=0, le=1.4)
+
+
+class AirLeakParams(BaseParams):
+    """W3 §8.1 (S-21): додатковий витік стисненого повітря ``leak_extra`` м³/хв (модель ``air``, прапор ``air_leak``)."""
+
+    leak_extra: float = Field(3.0, ge=0, le=20)
+
+
+class GasOveruseParams(BaseParams):
+    """W3 §8.1 (S-22): перевитрата газу ``extra_m3h`` м³/год (модель ``gas``, прапор ``gas_extra``)."""
+
+    extra_m3h: float = Field(45.0, ge=0, le=500)
+
+
+class WaterLeakParams(BaseParams):
+    """W3 §8.1 (S-23): нічний витік води ``extra_m3h`` м³/год при 23:00–06:30 (модель ``water``, прапор ``water_leak``)."""
+
+    extra_m3h: float = Field(0.5, ge=0, le=20)
 
 
 class LightingSceneParams(BaseParams):
@@ -723,10 +743,49 @@ class ChpNoGas(Scenario):
         ctx.step("chp_no_gas", f"Тиск газу КГУ {p.gas_bar:g} бар", gas_bar=p.gas_bar)
 
 
+class AirLeak(Scenario):
+    """W3 §8.1 (S-21): ``air_leak = leak_extra`` — модель ``air`` додає витік до витрати магістралі (ніч: 1,6 → 4,6 м³/хв)."""
+
+    name, title_uk, group, Params = "air_leak", "Витік стисненого повітря", "energy", AirLeakParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"air_leak"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("air_leak", p.leak_extra)
+        ctx.step("air_leak", f"Витік повітря +{p.leak_extra:g} м³/хв", leak_extra=p.leak_extra)
+
+
+class GasOveruse(Scenario):
+    """W3 §8.1 (S-22): ``gas_extra = extra_m3h`` — модель ``gas`` додає перевитрату до витрати корректора."""
+
+    name, title_uk, group, Params = "gas_overuse", "Перевитрата газу", "energy", GasOveruseParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"gas_extra"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("gas_extra", p.extra_m3h)
+        ctx.step("gas_overuse", f"Перевитрата газу +{p.extra_m3h:g} м³/год", extra_m3h=p.extra_m3h)
+
+
+class WaterLeak(Scenario):
+    """W3 §8.1 (S-23): ``water_leak = extra_m3h`` — модель ``water`` додає нічний витік (23:00–06:30)."""
+
+    name, title_uk, group, Params = "water_leak", "Нічний витік води", "energy", WaterLeakParams
+
+    def conflicts(self, p: Any) -> Any:
+        return {"water_leak"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag("water_leak", p.extra_m3h)
+        ctx.step("water_leak", f"Нічний витік води +{p.extra_m3h:g} м³/год", extra_m3h=p.extra_m3h)
+
+
 SCENARIOS: list[type[Scenario]] = [
     Shift, MachineFault, Blackout, FilterClogged, TruckNoBooking, TruckArrival, FireDrill, Spark,
     AccessEvent, BatteryLow, CompressorFault, PvCloudy, BoilerRefill, GensetTest, LightingScene,
-    PfcStepFault, PeakLoad, ExportDemo, CtlLocal, ChpNoGas]
+    PfcStepFault, PeakLoad, ExportDemo, CtlLocal, ChpNoGas, AirLeak, GasOveruse, WaterLeak]
 
 
 def _tags_conflict(a: set[str], b: set[str]) -> str | None:
