@@ -5,7 +5,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// core/constructor/registry.js
+// factory3d/core/constructor/registry.js
 var Registry = class {
   constructor(name) {
     this.name = name;
@@ -112,7 +112,7 @@ function forEachEntry(registry, fn, ctx2) {
   }
 }
 
-// core/constructor/adapter.js
+// factory3d/core/constructor/adapter.js
 var REQUIRED_METHODS = [
   "listSites",
   "createSite",
@@ -191,7 +191,7 @@ var BaseAdapter = class {
   }
 };
 
-// core/constructor/body.js
+// factory3d/core/constructor/body.js
 var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
 <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
 <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.7A10 10 0 0 1 12 5.5C18.4 5.5 22 12 22 12a17 17 0 0 1-3.2 3.9M6.3 6.8A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1.5 0 2.8-.3 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
@@ -264,7 +264,7 @@ var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden
 </div>
 `;
 
-// core/constructor/data.js
+// factory3d/core/constructor/data.js
 var data_exports = {};
 __export(data_exports, {
   CATEGORIES: () => CATEGORIES,
@@ -286,7 +286,7 @@ __export(data_exports, {
   slotHeight: () => slotHeight
 });
 
-// core/constructor/cells.js
+// factory3d/core/constructor/cells.js
 var cells_exports = {};
 __export(cells_exports, {
   BOTTOM_LIFT: () => BOTTOM_LIFT,
@@ -312,7 +312,7 @@ __export(cells_exports, {
   templateCodes: () => templateCodes
 });
 
-// core/constructor/geometry.js
+// factory3d/core/constructor/geometry.js
 var geometry_exports = {};
 __export(geometry_exports, {
   FRONT_VECTORS: () => FRONT_VECTORS,
@@ -538,7 +538,7 @@ function utilityPoints(v, x, y, rotation) {
   });
 }
 
-// core/constructor/addr_core.js
+// factory3d/core/constructor/addr_core.js
 var SEGMENT_KEYS = ["zone", "row", "bay", "level", "pos"];
 var SEGMENT_KINDS = ["num", "alpha"];
 var ROW_FROM = ["up", "down", "left", "right"];
@@ -1048,7 +1048,7 @@ function conflicts(codesBySlot, occupied = []) {
   return out;
 }
 
-// core/constructor/cells.js
+// factory3d/core/constructor/cells.js
 var CODE_MAX_LEN2 = 32;
 var PREFIX_MAX_LEN = 22;
 var BOTTOM_LIFT = 0.15;
@@ -1537,7 +1537,7 @@ function cellsOf(s) {
 var cellCount = (s) => cellsOf(s).filter((c) => !c.disabled).length;
 var clearCellsCache = () => cache.clear();
 
-// core/constructor/data.js
+// factory3d/core/constructor/data.js
 var ROLES = [
   { id: "manager", name: "Менеджер" },
   { id: "technologist", name: "Технолог" },
@@ -1764,7 +1764,7 @@ var newLayerDefaults = () => ({
   underlay: null
 });
 
-// core/constructor/dialogs.js
+// factory3d/core/constructor/dialogs.js
 var dialogs_exports = {};
 __export(dialogs_exports, {
   askConflict: () => askConflict,
@@ -1775,7 +1775,7 @@ __export(dialogs_exports, {
   openServerIssues: () => openServerIssues
 });
 
-// core/constructor/roles.js
+// factory3d/core/constructor/roles.js
 var roles_exports = {};
 __export(roles_exports, {
   ROLES: () => ROLES,
@@ -1790,7 +1790,7 @@ __export(roles_exports, {
   viewAs: () => viewAs
 });
 
-// core/constructor/state.js
+// factory3d/core/constructor/state.js
 var state_exports = {};
 __export(state_exports, {
   E: () => E,
@@ -1811,7 +1811,7 @@ __export(state_exports, {
   variantOf: () => variantOf
 });
 
-// core/constructor/util.js
+// factory3d/core/constructor/util.js
 var util_exports = {};
 __export(util_exports, {
   $: () => $,
@@ -1938,7 +1938,7 @@ function toast(msg, kind) {
   return t;
 }
 
-// core/constructor/state.js
+// factory3d/core/constructor/state.js
 var E = { lifecycle: { mount: /* @__PURE__ */ new Set(), unmount: /* @__PURE__ */ new Set() } };
 var initialS = () => ({
   app: { sites: [], active: null, mode: "edit", viewAs: null },
@@ -2063,7 +2063,7 @@ var isLayerVisible = (ly) => !V.hidden.has(ly.id);
 var selRefs = () => S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : [];
 var selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
 
-// core/constructor/roles.js
+// factory3d/core/constructor/roles.js
 var viewAs = () => S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null;
 function canEditLayer(ly) {
   if (!ly || S.app.mode !== "edit") {
@@ -2101,7 +2101,7 @@ var myRoleNames = () => {
   return rs.length ? rs.map(roleName).join(", ") : "Без ролі";
 };
 
-// core/constructor/dialogs.js
+// factory3d/core/constructor/dialogs.js
 function openDialog(o) {
   const dlg = h("dialog", { class: o.cls || "" });
   const close = (r) => {
@@ -2299,7 +2299,7 @@ registries.dialogs.add("history", () => openHistory(), { force: true });
 registries.dialogs.add("serverIssues", ({ res }) => openServerIssues(res), { force: true });
 registries.dialogs.add("conflict", () => askConflict(), { force: true });
 
-// core/constructor/draft.js
+// factory3d/core/constructor/draft.js
 var DESIGN_ROLES = ["technologist", "storekeeper", "engineer"];
 var ACCESS_NAMES = { view: "Перегляд", design: "Проєктування", apply: "Застосування" };
 function access() {
@@ -2431,7 +2431,7 @@ registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
 registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
 Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus, syncSaveAll });
 
-// core/constructor/dxf.js
+// factory3d/core/constructor/dxf.js
 var dxf_exports = {};
 __export(dxf_exports, {
   DWG_MESSAGE: () => DWG_MESSAGE,
@@ -2447,7 +2447,7 @@ __export(dxf_exports, {
   renderDxfPanel: () => renderDxfPanel
 });
 
-// core/constructor/fields.js
+// factory3d/core/constructor/fields.js
 function numInput(o) {
   const el = h("input", {
     type: "number",
@@ -2567,7 +2567,7 @@ function paramFields(tpl, params, o) {
   );
 }
 
-// core/constructor/host.js
+// factory3d/core/constructor/host.js
 var host = {
   loadThree: null,
   buildGenericModel: null,
@@ -2597,7 +2597,7 @@ function setHost(h2 = {}) {
   return host;
 }
 
-// core/constructor/dxf.js
+// factory3d/core/constructor/dxf.js
 var DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
 var DXF_MAX_BYTES = 5 * 1024 * 1024;
 var DXF_MAX_SEGMENTS = 2e5;
@@ -3025,7 +3025,7 @@ function pickModeClick(pt) {
 }
 Object.assign(E, { openDxfPanel, renderDxfPanel, pickModeClick, loadUnderlays });
 
-// core/constructor/live.js
+// factory3d/core/constructor/live.js
 var live_exports = {};
 __export(live_exports, {
   checkConfigs: () => checkConfigs,
@@ -3037,7 +3037,7 @@ __export(live_exports, {
   toCheckState: () => toCheckState
 });
 
-// core/constructor/checks.js
+// factory3d/core/constructor/checks.js
 var checks_exports = {};
 __export(checks_exports, {
   CHECK_KEYS: () => CHECK_KEYS,
@@ -3407,7 +3407,7 @@ var summarize = (issues) => ({
 });
 var signature = (issues) => issues.map((i) => `${i.check}|${i.severity}|${i.codes.join(",")}`).sort();
 
-// core/constructor/live.js
+// factory3d/core/constructor/live.js
 function slotDims(s) {
   const H = slotHeight({ ...s, params: normalizeParams(s.template, s.params) });
   if (s.template === "zone") {
@@ -3494,7 +3494,7 @@ function newBlocks(before, after, key) {
   return after.list.filter((i) => i.level === "block" && i.keys.includes(key) && !ids.has(i.id));
 }
 
-// core/constructor/panels_left.js
+// factory3d/core/constructor/panels_left.js
 var isNarrow = () => window.matchMedia("(max-width: 900px)").matches;
 function renderTop() {
   const ss = $("#siteSel");
@@ -4244,7 +4244,7 @@ registries.panels.add("left:layers", { area: "left", tab: "layers", label: "Ша
 registries.panels.add("left:slots", { area: "left", tab: "slots", label: "Місця", render: renderSlotsTab }, { sequence: 20, force: true });
 registries.panels.add("left:catalog", { area: "left", tab: "catalog", label: "Каталог", render: renderCatalogTab }, { sequence: 30, force: true });
 
-// core/constructor/panels_right.js
+// factory3d/core/constructor/panels_right.js
 function selectObj(ref2) {
   S.sel = ref2 ? { kind: ref2.kind, id: ref2.id } : null;
   S.selCell = null;
@@ -5020,7 +5020,7 @@ Object.assign(E, {
   recOf: recOfRef
 });
 
-// core/constructor/scene.js
+// factory3d/core/constructor/scene.js
 var scene_exports = {};
 __export(scene_exports, {
   assignSlot: () => assignSlot,
@@ -5052,7 +5052,7 @@ __export(scene_exports, {
   variantBody: () => variantBody
 });
 
-// core/constructor/three.js
+// factory3d/core/constructor/three.js
 var THREE = {};
 var promise = null;
 function loadThree() {
@@ -5085,7 +5085,7 @@ function webglAvailable() {
   }
 }
 
-// core/constructor/scene.js
+// factory3d/core/constructor/scene.js
 var BODY = { other: "#9ba6b1" };
 var UCOL = { electric: "#e0a030", air: "#3a8fd0", dust: "#6aa04a" };
 function readColors() {
@@ -6831,7 +6831,7 @@ Object.assign(E, {
   buildSlotView
 });
 
-// core/constructor/app.js
+// factory3d/core/constructor/app.js
 var ctx = null;
 var lsGet = (k) => {
   try {
@@ -7352,7 +7352,7 @@ function unmountEditor() {
 }
 Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord, normalizeModel, loadVariantModels });
 
-// core/constructor/adapter_odoo.js
+// factory3d/core/constructor/adapter_odoo.js
 var adapter_odoo_exports = {};
 __export(adapter_odoo_exports, {
   OdooAdapter: () => OdooAdapter,
@@ -7377,7 +7377,7 @@ __export(adapter_odoo_exports, {
   variantFromApi: () => variantFromApi
 });
 
-// core/constructor/building_core.js
+// factory3d/core/constructor/building_core.js
 var ITEM_KINDS = {
   column: "Колона",
   wall: "Стіна",
@@ -7487,8 +7487,14 @@ function obstacleRects(layers, site) {
       if (!OBSTACLE_KINDS.includes(it.kind)) {
         continue;
       }
-      const [x0, y0, x1, y1] = obbAabb(itemObb(it));
-      out.push({ x0: rnd2(x0) + 0, y0: rnd2(y0) + 0, x1: rnd2(x1) + 0, y1: rnd2(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" });
+      const obb = itemObb(it);
+      const [x0, y0, x1, y1] = obbAabb(obb);
+      const rect2 = { x0: rnd2(x0) + 0, y0: rnd2(y0) + 0, x1: rnd2(x1) + 0, y1: rnd2(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" };
+      const k = (obb.rot % 90 + 90) % 90;
+      if (k > 1e-6 && k < 90 - 1e-6) {
+        rect2.obb = obb;
+      }
+      out.push(rect2);
       if (it.kind === "column") {
         explicit.push(it);
       }
@@ -7951,7 +7957,7 @@ function checkHeight(scene, config, eps) {
   return issues;
 }
 
-// core/constructor/adapter_odoo.js
+// factory3d/core/constructor/adapter_odoo.js
 var MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3, "td.putaway.rule": 4, "td.replenish.rule": 5 };
 var REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
 var RES_OF_MODEL = { "stock.location": "location", "maintenance.equipment": "equipment", "mrp.workcenter": "workcenter", "stock.warehouse.orderpoint": "replenish", "stock.putaway.rule": "putaway" };
@@ -9094,7 +9100,7 @@ var OdooAdapter = class extends BaseAdapter {
 };
 var OdooStore = OdooAdapter;
 
-// core/constructor/shape_forms.js
+// factory3d/core/constructor/shape_forms.js
 var levelCount = (p, tpl) => tpl === "shelf" ? p.shelves : p.levels;
 var bayCount = (p, tpl) => tpl === "pallet_rack" ? p.bays : tpl === "cantilever" ? p.arms : p.sections;
 var baseH = (p, tpl) => tpl === "shelf" ? p.cell_h : p.level_height;
@@ -9342,7 +9348,7 @@ function typeSvg(type, w = 160, h2 = 110) {
   return `<svg viewBox="0 0 ${w} ${h2}" width="${w}" height="${h2}" role="img" aria-label="${type.name}" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" data-dims="${d.L.toFixed(2)}x${d.W.toFixed(2)}x${d.H.toFixed(2)}">${lines}</svg>`;
 }
 
-// core/constructor/addr.js
+// factory3d/core/constructor/addr.js
 var SEG_LABELS = { zone: "Зона", row: "Ряд", bay: "Секція", level: "Ярус", pos: "Позиція" };
 var SEG_KINDS = [
   ["num", "Цифри"],
@@ -9853,7 +9859,7 @@ if (origAddSlotAt && !origAddSlotAt.s1) {
   E.addSlotAt.s1 = true;
 }
 
-// core/constructor/library.js
+// factory3d/core/constructor/library.js
 var EMPTY = () => ({ types: [], presets: [] });
 function libraryState() {
   if (!S.site) {
@@ -9904,7 +9910,7 @@ async function deleteRecord(adapter, kind, id) {
   lib4[key] = lib4[key].filter((x) => String(x.id) !== String(id));
 }
 
-// core/constructor/types_data.js
+// factory3d/core/constructor/types_data.js
 var GROUPS = {
   rack: "Стелажні",
   floor: "Напільні",
@@ -10023,7 +10029,7 @@ function customCopy(type, name) {
 }
 var isBuildingType = (t) => !t.template;
 
-// core/constructor/types_ui.js
+// factory3d/core/constructor/types_ui.js
 var KINDS_LABEL = { stack: "Стос", area: "Майданчик", kit: "Візок / етажерка", bin: "Комірка (bin)", shelf: "Полиця", pallet_cell: "Комірка палети" };
 var PLACEABLE = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"];
 var SIZE_KEYS = {
@@ -10630,7 +10636,7 @@ function renderTypesTab(root) {
 }
 registries.panels.add("left:types", { area: "left", tab: "types", label: "Типи", render: renderTypesTab }, { sequence: 25, force: true });
 
-// core/constructor/presets.js
+// factory3d/core/constructor/presets.js
 var PRESET_KINDS = { row: "Ряд", section: "Секція", group: "Виділене" };
 var MAX_GROUP = 200;
 var PLACEABLE2 = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot", "machine_spot"];
@@ -10999,7 +11005,7 @@ function renderPresetBlock(root, { rec }) {
 }
 registries.panels.add("slot:presets", { area: "slot", render: renderPresetBlock }, { sequence: 35, force: true });
 
-// core/constructor/capacity_core.js
+// factory3d/core/constructor/capacity_core.js
 var ZONE_FUNCTIONS = [
   { key: "receiving", name: "Приймання", color: "#3b82f6" },
   { key: "quality", name: "Контроль якості", color: "#8b5cf6" },
@@ -11293,7 +11299,7 @@ registries.metrics.add(
   { sequence: 80, force: true }
 );
 
-// core/constructor/plan_core.js
+// factory3d/core/constructor/plan_core.js
 var KIND_LABEL = {
   create: "Створити",
   move: "Перенести",
@@ -11432,7 +11438,7 @@ function lineText(l) {
   return Object.entries(l.vals || {}).map(([k, v]) => `${k}: ${l.before && k in l.before ? l.before[k] : "—"} → ${v}`).join("; ");
 }
 
-// core/constructor/plan_dialog.js
+// factory3d/core/constructor/plan_dialog.js
 var MAX_ROWS = 300;
 var ex = (list, f) => list.length ? list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? " … " + f(list[list.length - 1]) : "") : "—";
 var KIND_CLS = { create: "ok", move: "w", rename: "w", attrs: "w", update: "w", archive: "b" };
@@ -11701,7 +11707,7 @@ registries.dialogs.add("plan", (args, ctx2) => openPlanDialog({ adapter: ctx2?.a
 registries.dialogs.add("planLog", (args, ctx2) => openJournal({ adapter: ctx2?.adapter }), { force: true });
 registries.menu.add("planLog", { area: "more", label: "Журнал публікацій", icon: "hist", capability: "rollback", sequence: 60, run: () => E.runDialog("planLog") }, { sequence: 60, force: true });
 
-// core/constructor/capacity_ui.js
+// factory3d/core/constructor/capacity_ui.js
 var MODE_OPTS2 = [["warn", "Попередження"], ["block", "Заборона"]];
 var lib3 = { loaded: false, loading: null, categories: [], strategies: [], functions: ZONE_FUNCTIONS.map((f) => ({ id: f.key, ...f })), attrs: ZONE_ATTRS.map((a) => ({ id: a.key, ...a })) };
 async function loadLib(force = false) {
@@ -12153,7 +12159,7 @@ async function openCategories() {
 registries.dialogs.add("categories", () => openCategories(), { force: true });
 registries.menu.add("categories", { area: "more", label: "Категорії зберігання", icon: "tag", capability: "storage", sequence: 55, run: () => E.runDialog("categories") }, { sequence: 55, force: true });
 
-// core/constructor/rules_dialog.js
+// factory3d/core/constructor/rules_dialog.js
 var canEditRules = () => S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length > 0);
 var base = { site: null, putaway: /* @__PURE__ */ new Map(), replenish: /* @__PURE__ */ new Map() };
 function ensureBase() {
@@ -12589,13 +12595,33 @@ function renderRulesInto(root, { rec }) {
 }
 registries.panels.add("slot:rules", { area: "slot", render: renderRulesInto }, { sequence: 36, force: true });
 
-// core/constructor/undo.js
+// factory3d/core/constructor/undo.js
 var KINDS = ["layers", "slots", "placements", "putaway", "replenish"];
 var MAX_STEPS = 100;
 var MAX_CHARS = 3e7;
 var COALESCE_MS = 1200;
 var strip2 = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
-var siteVals = () => ({ addr: S.site?.addr ?? null, depth_mode: S.site?.depth_mode ?? null, loc_tree: S.site?.loc_tree ?? null });
+var ADDR_FIELDS = ["addr", "depth_mode", "loc_tree"];
+var BUILDING_FIELDS = ["building", "column_grid"];
+var EXTRA_FIELDS = ["sprinkler_height", "aisle_tech"];
+var pick = (o, keys) => Object.fromEntries(keys.map((k) => [k, o?.[k] ?? null]));
+var siteVals = () => {
+  const b = S.site?.building;
+  const cg = S.site?.column_grid;
+  return {
+    ...pick(S.site, ADDR_FIELDS),
+    building: b ? { length: b.length ?? null, width: b.width ?? null, height: b.height ?? null } : null,
+    column_grid: cg ? { step_x: cg.step_x ?? null, step_y: cg.step_y ?? null } : null,
+    sprinkler_height: S.site?.sprinkler_height ?? null,
+    aisle_tech: S.site?.aisle_tech ?? null
+  };
+};
+var SITE_LABELS = [
+  [ADDR_FIELDS, "Адресація площадки"],
+  [BUILDING_FIELDS, "Габарит площадки"],
+  [["sprinkler_height"], "Висота до спринклерів"],
+  [["aisle_tech"], "Техніка складу"]
+];
 var rulesOf = () => S.site && S.site.rules || {};
 var snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, putaway: rulesOf().putaway || [], replenish: rulesOf().replenish || [], site: siteVals() }, strip2);
 var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -12618,7 +12644,8 @@ function changedFields(a, b) {
   return out;
 }
 function diffSnapshots(a, b) {
-  const out = { added: [], removed: [], changed: [], site: !same2(a.site, b.site) };
+  const out = { added: [], removed: [], changed: [], site: !same2(a.site, b.site), siteFields: [] };
+  out.siteFields = [.../* @__PURE__ */ new Set([...Object.keys(a.site || {}), ...Object.keys(b.site || {})])].filter((k) => !same2((a.site || {})[k], (b.site || {})[k]));
   for (const kind of KINDS) {
     const ma = new Map((a[kind] || []).map((r) => [r.id, r]));
     const mb = new Map((b[kind] || []).map((r) => [r.id, r]));
@@ -12650,7 +12677,8 @@ var MOVE = ["x", "y"];
 function labelOf(d) {
   const n = d.added.length + d.removed.length + d.changed.length;
   if (!n && d.site) {
-    return "Адресація площадки";
+    const hit = SITE_LABELS.filter(([keys]) => keys.some((k) => (d.siteFields || ADDR_FIELDS).includes(k)));
+    return hit.length === 1 ? hit[0][1] : "Параметри площадки";
   }
   if (d.added.length && !d.removed.length && !d.changed.length) {
     return d.added.length === 1 ? `Додано: ${nameOf2(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
@@ -12778,7 +12806,14 @@ function restore(data, prevData) {
     S.site.rules = { ...rules, putaway: carry(rules.putaway || [], next.putaway || []), replenish: carry(rules.replenish || [], next.replenish || []) };
   }
   if (d.site && S.site) {
-    Object.assign(S.site, next.site);
+    const { building, column_grid: grid, ...flat } = next.site;
+    Object.assign(S.site, flat);
+    if (building) {
+      S.site.building = { ...S.site.building, ...building };
+    }
+    if (grid) {
+      S.site.column_grid = { ...S.site.column_grid, ...grid };
+    }
   }
   S.multi = [];
   S.selCell = null;
@@ -12787,7 +12822,23 @@ function restore(data, prevData) {
   const touched = [...d.changed, ...d.added].filter((e) => e.kind === "slots" || e.kind === "placements");
   const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
   S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
-  return { changedSite: d.site, site: next.site };
+  return { changedSite: d.site, site: next.site, siteFields: d.siteFields };
+}
+async function saveSiteChanges(site, fields) {
+  const has = (keys) => keys.some((k) => fields.includes(k));
+  if (has(EXTRA_FIELDS) && E.adapter?.saveSite) {
+    await E.adapter.saveSite({ sprinkler_height: S.site.sprinkler_height || 0, aisle_tech: S.site.aisle_tech || null });
+  }
+  if (has(BUILDING_FIELDS)) {
+    E.saveSiteProps?.();
+  }
+  if (has(ADDR_FIELDS) && E.adapter?.saveAddr) {
+    await E.adapter.saveAddr(pick(site, ADDR_FIELDS), { renumber: "new" });
+    if (E.adapter.serverRenumber) {
+      await E.flushNow();
+      await E.reload();
+    }
+  }
 }
 async function goto(i, verb) {
   const H = S.hist;
@@ -12799,16 +12850,12 @@ async function goto(i, verb) {
     if (E.adapter?.dirty) {
       await E.flushNow();
     }
-    const { changedSite, site } = restore(to.data, from.data);
+    const { changedSite, site, siteFields } = restore(to.data, from.data);
     H.idx = i;
     E.commit({});
     to.data = H.cur = snapshot();
-    if (changedSite && E.adapter?.saveAddr) {
-      await E.adapter.saveAddr(site, { renumber: "new" });
-      if (E.adapter.serverRenumber) {
-        await E.flushNow();
-        await E.reload();
-      }
+    if (changedSite) {
+      await saveSiteChanges(site, siteFields);
     }
     toast(`${verb}: ${label2}`);
   } catch (e) {
@@ -12861,7 +12908,7 @@ registries.hotkeys.add(
   { sequence: 6, force: true }
 );
 
-// core/constructor/edit_tools.js
+// factory3d/core/constructor/edit_tools.js
 var PREFIX_MAX = 22;
 var kindOf = (ref2) => ref2.kind === "placement" ? "placement" : "slot";
 var arrOf = (kind) => kind === "placement" ? S.placements : S.slots;
@@ -13608,7 +13655,7 @@ hk(
 );
 Object.assign(E, { duplicateSel, copySel, pasteClip, arrayCopies, alignSel, distributeSel, rotateGroup, removeAll, groupToZone, ungroupZone, applyProps, bulkCreate });
 
-// core/constructor/selection.js
+// factory3d/core/constructor/selection.js
 var same3 = (a, b) => a.kind === b.kind && a.id === b.id;
 function setMulti(refs, primary = null) {
   const uniq = [];
@@ -13790,7 +13837,7 @@ function renderToolsBlock(root, { rec }) {
 registries.panels.add("right:tools", { area: "right", render: renderToolsBlock }, { sequence: 60, force: true });
 Object.assign(E, { setMulti, toggleMulti, boxSelect });
 
-// core/constructor/barcode.js
+// factory3d/core/constructor/barcode.js
 var C128 = "212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(
   " "
 );
@@ -14208,7 +14255,7 @@ function qr(text, { ecc = "M", mask = null, minVersion = 1 } = {}) {
   return { version, size: mx.size, ecc, mask: best, rows, get: (x, y) => rows[y][x] === "1" };
 }
 
-// core/constructor/labels.js
+// factory3d/core/constructor/labels.js
 var LABELS_MAX = 5e3;
 var LAYOUTS = {
   "70x36": { name: "70×36 мм (3×8)", w: 70, h: 36, page: { w: 210, h: 297 } },
@@ -14722,7 +14769,7 @@ function renderLabelsBlock(root, { rec }) {
 registries.panels.add("right:labels", { area: "right", render: renderLabelsBlock }, { sequence: 70, force: true });
 Object.assign(E, { openLabels: (a) => E.runDialog("labels", a) });
 
-// core/constructor/stock_state.js
+// factory3d/core/constructor/stock_state.js
 var revN = 0;
 function applyStock(res, { merge = false } = {}) {
   const prev = merge && S.stock ? S.stock.byCode : /* @__PURE__ */ new Map();
@@ -14816,7 +14863,7 @@ var fmtAt = (at) => {
 };
 Object.assign(E, { loadStock, loadDetail, findStock, stockOf });
 
-// core/constructor/heat.js
+// factory3d/core/constructor/heat.js
 var GRAY = "#a9adb3";
 var FILL = [
   ["empty", "Порожньо", "#d9e3e8"],
@@ -14992,7 +15039,7 @@ registries.menu.add(
 );
 Object.assign(E, { setMetric, restoreMetric, refreshStock, renderHeat, legendOf });
 
-// core/constructor/search.js
+// factory3d/core/constructor/search.js
 var normCode = (s) => String(s ?? "").toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, "");
 function findCodes(q, limit = 40) {
   const n = normCode(q);
@@ -15172,7 +15219,7 @@ registries.hotkeys.add("search.ctrlk", { ctrl: true, code: "KeyK", typing: true,
 registries.menu.add("search", { area: "top", label: "Пошук", icon: "fit", sequence: 4, run: () => openSearch("goto") }, { sequence: 4, force: true });
 Object.assign(E, { openSearch, gotoCode, gotoHit, gotoCell: gotoCode, findCodes, setHighlight });
 
-// core/constructor/s3_chrome.js
+// factory3d/core/constructor/s3_chrome.js
 var MOBILE_QUERY = "(max-width: 768px)";
 var STYLE_ID = "f3d-s3-style";
 var CSS = `
@@ -15479,7 +15526,7 @@ E.renderAll = function renderAllS3(...a) {
 };
 Object.assign(E, { isMobile, mobilePanel, showTip, hideTip, showCard, hideCard, renderUndoButtons, decorateS3: decorate });
 
-// core/constructor/card.js
+// factory3d/core/constructor/card.js
 var pct = (v) => v == null ? "—" : Math.round(v * 100) + " %";
 var day = (iso) => iso ? String(iso).slice(0, 10) : "—";
 function cardNode(slot, cell) {
@@ -15558,7 +15605,7 @@ function cellPicked(slotId, code) {
 }
 Object.assign(E, { cellPicked, cardNode });
 
-// core/constructor/parse_codes.js
+// factory3d/core/constructor/parse_codes.js
 var PART_KEYS = ["zone", "row", "bay", "level", "pos", "prefix"];
 var PART_LABELS = { zone: "зона", row: "ряд", bay: "секція", level: "ярус", pos: "позиція", prefix: "префікс" };
 var NAMES = {
@@ -16034,7 +16081,7 @@ registries.dialogs.add("parseCodes", (args) => openParseCodes(args || {}), { for
 registries.menu.add("parseCodes", { area: "more", label: "Розбір кодів…", icon: "tag", sequence: 62, run: () => E.runDialog("parseCodes"), disabled: () => !S.site }, { sequence: 62, force: true });
 Object.assign(E, { siteParser, normalizeParseRules: normalizeRules, saveParseRules: saveRules });
 
-// core/constructor/autolayout.js
+// factory3d/core/constructor/autolayout.js
 var EPS = 1e-6;
 var ZONE_MAX = 150;
 var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t) => SLOT_TEMPLATES[t].cells);
@@ -16125,37 +16172,56 @@ function layoutLines(blocks, { aisle = 3, gap = 0.5, margin = 0.5, maxL = Infini
   return { ok: true, l: L2, w: W2, pos };
 }
 var overlap = (a, b) => a[0] < b[2] - EPS && b[0] < a[2] - EPS && a[1] < b[3] - EPS && b[1] < a[3] - EPS;
+var hitBy = (box, o) => overlap(box, o) && (!o.obb || satPenetration(rectObb(box[0], box[1], box[2], box[3]), o.obb) > EPS);
+var SCAN_STEP = 0.5;
 function packRects(items2, region, obstacles = [], { gap = 1, margin = 0.5 } = {}) {
   const x0 = region ? region.x0 + margin : margin;
   const x1 = region ? region.x1 - margin : Infinity;
   const y0 = region ? region.y0 + margin : margin;
   const y1 = region ? region.y1 - margin : Infinity;
+  const poly = region && region.poly && region.poly.length >= 3 ? region.poly : null;
   const pos = /* @__PURE__ */ new Map();
   let x = x0;
   let y = y0;
   let shelfH = 0;
+  let blocked = false;
+  let everBlocked = false;
+  let guard3 = 0;
   for (const it of items2) {
-    let guard3 = 0;
+    if (it.l > x1 - x0 + EPS) {
+      return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
+    }
     for (; ; ) {
-      if (++guard3 > 5e3) {
+      if (++guard3 > 4e5) {
         return { ok: false, reason: "не вдалося знайти місце для зон", need: null };
       }
       if (x + it.l > x1 + EPS) {
-        if (shelfH === 0) {
+        if (shelfH === 0 && !blocked) {
           return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
         }
         x = x0;
-        y += shelfH + gap;
+        y += shelfH > 0 ? shelfH + gap : SCAN_STEP;
         shelfH = 0;
+        blocked = false;
         continue;
       }
       if (y + it.w > y1 + EPS) {
-        return { ok: false, reason: `зона «${it.title || it.id}» не вміщається в контур (бракує глибини)`, need: { l: it.l + 2 * margin, w: y + it.w - y0 + margin } };
+        return {
+          ok: false,
+          reason: everBlocked ? `зона «${it.title || it.id}» не вміщається в контур: перешкоди (колони, стіни, офіс) і вирізи контуру не лишають місця` : `зона «${it.title || it.id}» не вміщається в контур (бракує глибини)`,
+          need: { l: it.l + 2 * margin, w: y + it.w - y0 + margin }
+        };
       }
       const box = [x, y, x + it.l, y + it.w];
-      const hit = obstacles.find((o) => overlap(box, o));
+      if (poly && !obbInsidePolygon(rectObb(box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin), poly)) {
+        blocked = everBlocked = true;
+        x += SCAN_STEP;
+        continue;
+      }
+      const hit = obstacles.find((o) => hitBy(box, o));
       if (hit) {
-        x = hit[2] + gap;
+        blocked = everBlocked = true;
+        x = hit.obb ? x + SCAN_STEP : hit[2] + gap;
         continue;
       }
       pos.set(it.id, { x: x + it.l / 2, y: y + it.w / 2 });
@@ -16219,12 +16285,19 @@ var rectOfItem = (it) => {
   const w = it.w ?? it.length ?? it.l;
   const d = it.d ?? it.depth ?? it.width;
   if ([it.x, it.y, w, d].every(Number.isFinite)) {
-    return [it.x - w / 2, it.y - d / 2, it.x + w / 2, it.y + d / 2];
+    const a = (it.rot || 0) * Math.PI / 180;
+    const ex2 = (Math.abs(Math.cos(a)) * w + Math.abs(Math.sin(a)) * d) / 2;
+    const ey = (Math.abs(Math.sin(a)) * w + Math.abs(Math.cos(a)) * d) / 2;
+    return [it.x - ex2, it.y - ey, it.x + ex2, it.y + ey];
   }
   return null;
 };
-function layerObstacles(ly) {
-  const out = [];
+function buildingRects({ grid = true } = {}) {
+  const list = E.buildingObstacles ? E.buildingObstacles() : obstacleRects(S.layers, S.site);
+  return list.filter((r) => grid || !r.grid).map((r) => Object.assign([r.x0, r.y0, r.x1, r.y1], r.obb ? { obb: r.obb } : {}));
+}
+function layerObstacles(ly, { grid = true } = {}) {
+  const out = buildingRects({ grid });
   for (const r of [...ly.aisles || [], ...ly.fire_paths || [], ...ly.items || []]) {
     const b = rectOfItem(r);
     if (b) {
@@ -16245,12 +16318,33 @@ function layerObstacles(ly) {
   return out;
 }
 function regionOf2(ly) {
-  const b = ly && ly.bounds && [ly.bounds.x0, ly.bounds.y0, ly.bounds.x1, ly.bounds.y1].every(Number.isFinite) ? ly.bounds : null;
-  if (b) {
-    return { x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 };
+  const own = ly && ly.bounds;
+  if (own && !Array.isArray(own) && [own.x0, own.y0, own.x1, own.y1].every(Number.isFinite)) {
+    return { x0: own.x0, y0: own.y0, x1: own.x1, y1: own.y1 };
   }
-  const bl = S.site && S.site.building;
-  return bl && bl.length > 0 && bl.width > 0 ? { x0: 0, y0: 0, x1: bl.length, y1: bl.width } : null;
+  const bl = (S.layers || []).find((l) => l.kind === "building");
+  const pts = Array.isArray(own) && own.length >= 3 ? own.map((p) => [p[0], p[1]]) : S.site ? contourOf(bl || null, S.site.building) : null;
+  if (!pts || pts.length < 3 || !pts.flat().every(Number.isFinite)) {
+    return null;
+  }
+  const b = contourBbox(pts);
+  if (!(b.x1 - b.x0 > 0 && b.y1 - b.y0 > 0)) {
+    return null;
+  }
+  return isRectContour(pts) ? b : { ...b, poly: pts };
+}
+function layoutAroundBuilding(ly, args, extra = []) {
+  const full = layerObstacles(ly);
+  const plan = layoutPlan({ ...args, obstacles: [...full, ...extra] });
+  if (plan.ok) {
+    return plan;
+  }
+  const lean = layerObstacles(ly, { grid: false });
+  if (lean.length === full.length) {
+    return plan;
+  }
+  const alt = layoutPlan({ ...args, obstacles: [...lean, ...extra] });
+  return alt.ok ? { ...alt, gridIgnored: true } : plan;
 }
 function pinBeforeMove(slots) {
   const zones = /* @__PURE__ */ new Map();
@@ -16371,16 +16465,18 @@ function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes = fals
   }
   const sorted = [...free].sort((a, b) => a.slot.x - b.slot.x || a.slot.y - b.slot.y || natural(a.slot.code_prefix, b.slot.code_prefix));
   const lineOf = (s) => s.addr?.row_no ? `r${s.addr.row_no}` : s.id;
-  const plan = layoutPlan({
+  const args = {
     zones: sorted.map((z) => ({ id: z.slot.id, title: z.slot.params.title || z.slot.code_prefix, blocks: orderBlocks(own.get(z.slot.id)).map((s) => ({ ...blockOf(s), line: lineOf(s) })), fixed: fixedSizes || !own.get(z.slot.id).length ? { l: z.slot.params.length, w: z.slot.params.width } : null })),
     orphans: orderBlocks(orphans).map((s) => ({ ...blockOf(s), line: lineOf(s) })),
     region: regionOf2(ly),
-    obstacles: [...layerObstacles(ly), ...lockedBoxes],
     aisle: ly.aisle_width || 3,
     step: ly.grid_step || 0.5
-  });
+  };
+  const plan = layoutAroundBuilding(ly, args, lockedBoxes);
   if (!plan.ok) {
-    const reason = `Не вміщається: ${plan.reason}. Нічого не змінено.`;
+    const cg2 = S.site && S.site.column_grid || {};
+    const hint = /перешкоди/.test(plan.reason) && cg2.step_x > 1 && cg2.step_y > 1 ? ` Колони сітки (крок ${fmt(cg2.step_x, 1)}×${fmt(cg2.step_y, 1)} м) теж вважаються перешкодами: збільште крок або задайте 0.` : "";
+    const reason = `Не вміщається: ${plan.reason}.${hint} Нічого не змінено.`;
     quiet || toast(reason, "warn");
     return { ok: false, reason, need: plan.need };
   }
@@ -16399,8 +16495,9 @@ function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes = fals
   }
   E.undoLabel?.("Авторозкладка площадки");
   E.commit({});
-  quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.`);
-  return { ok: true, zones: free.length, blocks: plan.blocks.size };
+  const cg = S.site && S.site.column_grid || {};
+  quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.` + (plan.gridIgnored ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) не обійдено: зони більші за крок.` : ""));
+  return { ok: true, zones: free.length, blocks: plan.blocks.size, gridIgnored: !!plan.gridIgnored };
 }
 function renderZoneBlock(root, { rec }) {
   if (!rec || rec.template !== "zone") {
@@ -16424,7 +16521,7 @@ function renderSiteBlock3(root) {
       "div",
       { class: "sec", id: "autoSite" },
       h("h3", null, "Авторозкладка"),
-      h("div", { class: "small muted" }, "Зони по горизонталі в контурі шару (обходячи проходи, пожежні шляхи й об'єкти), ряди — вглиб. Скасовується одним Ctrl+Z."),
+      h("div", { class: "small muted" }, "Зони по горизонталі в контурі шару чи будівлі (обходячи проходи, пожежні шляхи, колони, стіни, офіс), ряди — вглиб. Скасовується одним Ctrl+Z."),
       h("div", { class: "frow" }, h("button", { class: "fbtn", type: "button", id: "btnAutoSite", disabled: !ly || !canEditLayer(ly), onclick: () => autoLayoutSite() }, "Розкласти автоматично"))
     )
   );
@@ -16434,7 +16531,7 @@ registries.panels.add("site:autolayout", { area: "site", render: renderSiteBlock
 registries.menu.add("autolayout", { area: "more", label: "Авторозкладка площадки", icon: "fit", sequence: 64, run: () => autoLayoutSite(), disabled: () => !S.site || !canEditLayer(layerOf(S.ui.layer)) }, { sequence: 64, force: true });
 Object.assign(E, { autoLayoutZone, autoLayoutSite });
 
-// core/constructor/structure.js
+// factory3d/core/constructor/structure.js
 var REASONS = {
   no_rule: "Код не збігається з жодним правилом розбору й немає зони-родителя",
   bad_code: "Код не підходить для місця: великі латинські літери, цифри й дефіси, до 22 символів",
@@ -16866,7 +16963,7 @@ function commitStructure(plan, { label: label2 = "Імпорт структур�
     const orphans = racks.filter((r) => !r.spec.zoneKey).map((r) => blockOfSlot(r.rec, r.spec));
     const existing = S.slots.filter((s) => s.layer_id === ly.id).map((s) => sGeom(s).box);
     const base2 = { zones: zoneSpecs, orphans, aisle: ly.aisle_width || 3, step };
-    let lp = growBuilding2 ? { ok: false } : layoutPlan({ ...base2, region: regionOf2(ly), obstacles: [...layerObstacles(ly), ...existing] });
+    let lp = growBuilding2 ? { ok: false } : layoutAroundBuilding(ly, { ...base2, region: regionOf2(ly) }, existing);
     let outside = false;
     if (!lp.ok) {
       const right = Math.max(0, ...existing.map((b) => b[2]));
@@ -16938,7 +17035,7 @@ function importLocations(locs, { label: label2, layout = true, growBuilding: gro
 }
 Object.assign(E, { importLocations, planStructure, commitStructure });
 
-// core/constructor/tray.js
+// factory3d/core/constructor/tray.js
 var TRAY_MAX = 5e3;
 var PREFIX_RE2 = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
 var SPOT = { length: 1.2, width: 0.8, height: 1.5, capacity: 1, loc_kind: "area", shape: "zone" };
@@ -17228,7 +17325,7 @@ E.lifecycle.unmount.add(() => {
 });
 Object.assign(E, { trayItems, setTray, trayCodes, placeFromTray });
 
-// core/constructor/tabular_core.js
+// factory3d/core/constructor/tabular_core.js
 var enc = new TextEncoder();
 var u8 = (x) => x instanceof Uint8Array ? x : new Uint8Array(x);
 var xmlEsc = (s) => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -17439,11 +17536,11 @@ async function readXlsx(bytes, { sheet = 0 } = {}) {
   if (!sheets.length) {
     throw new Error("У книзі немає жодного аркуша.");
   }
-  const pick = typeof sheet === "number" ? sheets[sheet] : sheets.find((s) => s.name === sheet);
-  if (!pick) {
+  const pick2 = typeof sheet === "number" ? sheets[sheet] : sheets.find((s) => s.name === sheet);
+  if (!pick2) {
     throw new Error(`Аркуша «${sheet}» немає в книзі.`);
   }
-  let target = rels.get(pick.rid) || "worksheets/sheet1.xml";
+  let target = rels.get(pick2.rid) || "worksheets/sheet1.xml";
   target = target.startsWith("/") ? target.slice(1) : `xl/${target}`;
   const xml = get(target);
   if (xml == null) {
@@ -17480,7 +17577,7 @@ async function readXlsx(bytes, { sheet = 0 } = {}) {
     }
     rows[r] = row;
   }
-  return { sheets: sheets.map((s) => s.name), sheet: pick.name, rows: trimRows(rows) };
+  return { sheets: sheets.map((s) => s.name), sheet: pick2.name, rows: trimRows(rows) };
 }
 function trimRows(rows) {
   const out = rows.map((r) => {
@@ -17689,7 +17786,7 @@ function withParents(locs, known = /* @__PURE__ */ new Set()) {
 }
 var fileName = (base2, ext) => `${String(base2 || "locations").replace(/[^\w.-]+/g, "_")}.${ext}`;
 
-// core/constructor/files_ui.js
+// factory3d/core/constructor/files_ui.js
 var isXlsx = (b) => b.length > 3 && b[0] === 80 && b[1] === 75;
 function saveBlob(name, data, mime) {
   const url = URL.createObjectURL(new Blob([data], { type: mime }));
@@ -18029,7 +18126,7 @@ registries.menu.add("importLocations", { area: "more", label: "Імпорт ло
 registries.menu.add("exportLocations", { area: "more", label: "Експорт локацій…", icon: "tag", sequence: 57, run: () => E.runDialog("exportLocations"), disabled: () => !S.site }, { sequence: 57, force: true });
 Object.assign(E, { openImport, openExport, readFileTable });
 
-// core/constructor/sync_ui.js
+// factory3d/core/constructor/sync_ui.js
 var GROUPS2 = [
   ["appeared", "З'явилося в Odoo", "піде в лоток «Не розміщено»"],
   ["disappeared", "Зникло в Odoo (архів чи видалення)", "комірку вимкнено в моделі"],
@@ -18120,25 +18217,25 @@ async function openSync() {
     toast(r.baseline === "created" ? "Базу порівняння з Odoo створено." : "Розбіжностей з Odoo немає.");
     return void 0;
   }
-  const pick = /* @__PURE__ */ new Map();
+  const pick2 = /* @__PURE__ */ new Map();
   const keyOf = (g3, i) => `${g3}:${i}`;
   for (const [g3] of GROUPS2) {
-    diff[g3].forEach((_x, i) => pick.set(keyOf(g3, i), "odoo"));
+    diff[g3].forEach((_x, i) => pick2.set(keyOf(g3, i), "odoo"));
   }
   const list = h("div", { class: "fcol", id: "syncList" });
   const sum = h("div", { class: "small muted", id: "syncSum" });
   const draw = () => {
-    sum.textContent = `Прийняти з Odoo: ${[...pick.values()].filter((v) => v === "odoo").length} із ${total}`;
+    sum.textContent = `Прийняти з Odoo: ${[...pick2.values()].filter((v) => v === "odoo").length} із ${total}`;
     list.replaceChildren(
       ...K(GROUPS2.filter(([g3]) => diff[g3].length).flatMap(([g3, title, hint]) => [
         h("h4", { style: { margin: "8px 0 2px" } }, `${title}: ${fmtInt(diff[g3].length)}`, h("span", { class: "small muted" }, ` — ${hint}`)),
         ...diff[g3].slice(0, 200).map((it, i) => {
           const k = keyOf(g3, i);
           const text = g3 === "renamed" ? `${it.code}: «${it.old}» → «${it.new}»` : g3 === "moved" ? `${it.code}: ${it.old_parent} → ${it.new_parent}` : `${it.code}${it.name && it.name !== it.code ? ` — ${it.name}` : ""}`;
-          const sel = h("select", { "aria-label": text, "data-key": k }, h("option", { value: "odoo", selected: pick.get(k) === "odoo" }, "Прийняти з Odoo"), h("option", { value: "mine", selected: pick.get(k) === "mine" }, "Залишити моє"));
+          const sel = h("select", { "aria-label": text, "data-key": k }, h("option", { value: "odoo", selected: pick2.get(k) === "odoo" }, "Прийняти з Odoo"), h("option", { value: "mine", selected: pick2.get(k) === "mine" }, "Залишити моє"));
           sel.addEventListener("change", () => {
-            pick.set(k, sel.value);
-            sum.textContent = `Прийняти з Odoo: ${[...pick.values()].filter((v) => v === "odoo").length} із ${total}`;
+            pick2.set(k, sel.value);
+            sum.textContent = `Прийняти з Odoo: ${[...pick2.values()].filter((v) => v === "odoo").length} із ${total}`;
           });
           return h("div", { class: "frow", "data-group": g3 }, h("span", { class: "mono small", style: { flex: 1 } }, text), sel);
         }),
@@ -18148,8 +18245,8 @@ async function openSync() {
   };
   draw();
   const setAll = (v) => {
-    for (const k of pick.keys()) {
-      pick.set(k, v);
+    for (const k of pick2.keys()) {
+      pick2.set(k, v);
     }
     draw();
   };
@@ -18168,7 +18265,7 @@ async function openSync() {
           onClick: async () => {
             const items2 = [];
             for (const [g3] of GROUPS2) {
-              diff[g3].forEach((item, i) => pick.get(keyOf(g3, i)) === "odoo" && items2.push({ group: g3, item }));
+              diff[g3].forEach((item, i) => pick2.get(keyOf(g3, i)) === "odoo" && items2.push({ group: g3, item }));
             }
             try {
               const res = applyAccepted(items2);
@@ -18189,7 +18286,7 @@ registries.dialogs.add("syncOdoo", () => openSync(), { force: true });
 registries.menu.add("syncOdoo", { area: "more", label: "Оновити з Odoo", icon: "hist", capability: "odoo_import", sequence: 58, run: () => E.runDialog("syncOdoo"), disabled: () => !S.site || !can("odoo_import") }, { sequence: 58, force: true });
 Object.assign(E, { openSync, applySyncChoices: applyAccepted });
 
-// core/constructor/building_3d.js
+// factory3d/core/constructor/building_3d.js
 var PAL = {
   light: { floor: "#c9d3dc", line: "#2b3640", wall: "#5b6b7b", column: "#7a8794", gate: "#3b82c4", dock: "#2a9d8f", door: "#c08a3e", office: "#8fa3b5", charger: "#e0b341" },
   dark: { floor: "#33414e", line: "#cfd8e0", wall: "#8696a6", column: "#a1adb9", gate: "#5aa1de", dock: "#43b9aa", door: "#d9a45a", office: "#6b8297", charger: "#e9c45a" }
@@ -18410,7 +18507,7 @@ if (typeof origSync === "function" && !origSync.__s5) {
   E.syncScene = wrapped;
 }
 
-// core/constructor/building_ui.js
+// factory3d/core/constructor/building_ui.js
 var B2 = { on: false, tool: null, sel: null, step: 0.5, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null, wallTh: 0.2, aisleW: null, rulers: false };
 var CHECK_IDS = ["inside", "aisle_width", "height"];
 var CHECK_NAMES = {
@@ -19576,14 +19673,14 @@ registries.hotkeys.add(
 registries.menu.add("building", { area: "more", label: "Будівля (режим)", icon: "plan", sequence: 20, run: () => toggleBuilding() }, { sequence: 20, force: true });
 Object.assign(E, { enterBuilding, exitBuilding, toggleBuilding, buildingState: B2, deleteBuildingSelection: deleteSelection, openColumnGrid, wallsAlongContour, contourFromWarehouse });
 
-// core/constructor/building.js
+// factory3d/core/constructor/building.js
 setSiteProvider(() => S.site);
 registries.checks.add("inside", { run: checkInside, label: "Усередині контуру й поза об'єктами будівлі" }, { sequence: 100, force: true });
 registries.checks.add("aisle_width", { run: checkAisleWidth, label: "Ширина проходу за технікою" }, { sequence: 110, force: true });
 registries.checks.add("height", { run: checkHeight, label: "Висота до стелі й спринклерів" }, { sequence: 120, force: true });
 E.buildingObstacles = () => obstacleRects(S.layers, S.site);
 
-// core/constructor/wizard.js
+// factory3d/core/constructor/wizard.js
 var STEPS = [
   ["building", "Будівля"],
   ["zones", "Зони"],
@@ -20118,7 +20215,7 @@ E.lifecycle.mount.add(() => {
 });
 Object.assign(E, { openWizard, startWizard, wizardState: () => current(), applyWizardStep: (n) => APPLY[n] && APPLY[n](), wizardGo: go });
 
-// core/constructor/docs_ui.js
+// factory3d/core/constructor/docs_ui.js
 function scopeOptions() {
   const sel = selRefs();
   const out = [["all", "Весь склад"]];
@@ -20201,7 +20298,7 @@ async function svgToPng(svg, widthPx, ratio) {
 }
 var slug = (s) => String(s || "plan").replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "plan";
 
-// core/constructor/spec.js
+// factory3d/core/constructor/spec.js
 var RACK_TEMPLATES = ["pallet_rack", "shelf", "cantilever"];
 var TEMPLATE_NAMES = { pallet_rack: "Палетний стелаж", shelf: "Полицевий стелаж", cantilever: "Консольний стелаж" };
 var LINE_ORDER = ["frame", "post", "beam", "console", "shelf", "brace", "tie"];
@@ -20444,7 +20541,7 @@ registries.dialogs.add("spec", (a, { adapter }) => openSpec(adapter, a), { force
 registries.menu.add("spec", { area: "more", label: "Специфікація стелажів…", icon: "tag", sequence: 33, run: () => E.runDialog("spec") }, { sequence: 33, force: true });
 Object.assign(E, { openSpec: (a) => E.runDialog("spec", a) });
 
-// core/constructor/plan_doc.js
+// factory3d/core/constructor/plan_doc.js
 var PAGES = { A4: [210, 297], A3: [297, 420] };
 var SCALES = [50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1e3, 1500, 2e3, 3e3, 5e3];
 var PNG_WIDTHS = [1600, 2400, 3200, 4800, 6400];

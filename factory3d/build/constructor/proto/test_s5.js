@@ -148,6 +148,84 @@ async function t_items(page, errors) {
   ok('Ctrl+Shift+Z повторює (колона К-1)', (await bl(page)).items === 1);
 }
 
+/** Авторозкладка S4 + будівля S5: зони обходять колону й стіну, намальовані в режимі «Будівля», і лежать усередині контуру-многокутника. */
+async function t_autolayout(page, errors) {
+  await blank(page, 'S5A');
+  const zones = (list) => page.evaluate((list) => {
+    const { S, E } = __f3d;
+    const ly = S.layers.find((l) => l.kind === 'storage');
+    if (!ly.slot_types.includes('zone')) ly.slot_types.push('zone');
+    S.ui.layer = ly.id;
+    S.slots = list.map(([id, x, y, l, w]) => ({ id, rid: null, etag: null, layer_id: ly.id, template: 'zone', code_prefix: id.toUpperCase(), x, y, rotation: 0, params: { length: l, width: w, title: id, color: '#9fb7c9' }, overrides: {}, parent_location_id: null }));
+    S.site.column_grid = { step_x: 0, step_y: 0 };
+    E.commit({});
+    E.undoReset();
+  }, list);
+  await zones([['za', 5, 5, 10, 10], ['zb', 15, 5, 10, 10], ['zc', 25, 5, 10, 10]]);
+  // колона й стіна — інструментами режиму «Будівля» (клацання по сцені)
+  await page.click('#btnBuildingMode');
+  await page.waitForTimeout(200);
+  await page.click('#tool-column');
+  await clickWorld(page, 6.5, 5);
+  await page.keyboard.press('Escape');
+  await page.click('#tool-wall');
+  await clickWorld(page, 20, 1);
+  await clickWorld(page, 20, 12);
+  await page.keyboard.press('Escape');
+  const items = await bl(page);
+  ok('авторозкладка: у шарі «Будівля» колона й стіна', items.items === 2 && items.kinds.includes('column') && items.kinds.includes('wall'), JSON.stringify(items));
+  await page.click('#modeSeg button[data-mode="edit"]');
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { const { S } = __f3d; S.ui.layer = S.layers.find((l) => l.kind === 'storage').id; });
+  const hist0 = await page.evaluate(() => __f3d.S.hist.stack.length);
+  await page.evaluate(() => { document.getElementById('menuMore').open = true; });
+  await page.click('#menu-autolayout');
+  await page.waitForTimeout(400);
+  const res1 = await page.evaluate(() => {
+    const { S, core, E } = __f3d;
+    const g = core.geometry;
+    const b = S.layers.find((l) => l.kind === 'building');
+    const obs = b.items.map((it) => g.makeObb(it.x, it.y, it.w / 2, (it.kind === 'wall' ? it.th : it.d) / 2, it.rot || 0));
+    const zs = S.slots.filter((s) => s.template === 'zone');
+    const hits = zs.filter((z) => obs.some((o) => g.satPenetration(g.rectObb(z.x - z.params.length / 2, z.y - z.params.width / 2, z.x + z.params.length / 2, z.y + z.params.width / 2), o) > 1e-6)).map((z) => z.id);
+    return { xs: zs.map((z) => z.x), hits, steps: S.hist.stack.length, label: E.undoState().undoLabel };
+  });
+  ok('авторозкладка обходить колону й стіну: жодна зона їх не накриває', res1.hits.length === 0 && res1.xs.join() !== '5,15,25', JSON.stringify(res1));
+  ok('авторозкладка з будівлею — один крок історії', res1.steps === hist0 + 1 && res1.label === 'Авторозкладка площадки', JSON.stringify(res1));
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  const back = await page.evaluate(() => __f3d.S.slots.filter((s) => s.template === 'zone').map((z) => z.x).join());
+  ok('Ctrl+Z повертає зони на місця', back === '5,15,25', back);
+  // контур-многокутник (Г-подібний): зони лише всередині, виріз обійдено; четверта не влізає — нічого не змінюється
+  await page.evaluate(() => { const b = __f3d.S.layers.find((l) => l.kind === 'building'); b.items = []; b.bounds = [[0, 0], [40, 0], [40, 15], [20, 15], [20, 30], [0, 30]]; });
+  await zones([['za', 5, 5, 15, 12], ['zb', 25, 5, 15, 12], ['zc', 35, 25, 15, 12]]);
+  await page.evaluate(() => { document.getElementById('menuMore').open = true; });
+  await page.click('#menu-autolayout');
+  await page.waitForTimeout(400);
+  const res2 = await page.evaluate(() => {
+    const { S, core } = __f3d;
+    const g = core.geometry;
+    const L = S.layers.find((l) => l.kind === 'building').bounds;
+    const zs = S.slots.filter((s) => s.template === 'zone');
+    return { inside: zs.every((z) => g.obbInsidePolygon(g.rectObb(z.x - z.params.length / 2, z.y - z.params.width / 2, z.x + z.params.length / 2, z.y + z.params.width / 2), L)), pos: zs.map((z) => [z.x, z.y]) };
+  });
+  ok('контур-многокутник: усі зони всередині Г-подібного контуру', res2.inside, JSON.stringify(res2));
+  ok('контур-многокутник: третя зона лягла в лівий стовп (виріз обійдено)', res2.pos[2][0] < 20 && res2.pos[2][1] > 13, JSON.stringify(res2.pos));
+  const snap = await page.evaluate(() => JSON.stringify(__f3d.S.slots));
+  await page.evaluate(() => {
+    const { S, E } = __f3d;
+    const z = S.slots[0];
+    S.slots.push({ ...z, id: 'zd', code_prefix: 'ZD', x: 30, y: 25 });
+    E.commit({});
+  });
+  const snap4 = await page.evaluate(() => JSON.stringify(__f3d.S.slots));
+  await page.evaluate(() => { document.getElementById('menuMore').open = true; });
+  await page.click('#menu-autolayout');
+  await page.waitForTimeout(300);
+  const t = (await page.textContent('#toast').catch(() => '')) || '';
+  ok('четверта зона не вміщається: «Нічого не змінено», стан той самий', /Нічого не змінено/.test(t) && (await page.evaluate(() => JSON.stringify(__f3d.S.slots))) === snap4 && snap !== snap4, t);
+}
+
 async function t_checks(page, errors) {
   await blank(page, 'S5K');
   await page.evaluate(() => {
@@ -332,6 +410,7 @@ async function t_docs(page, errors) {
     await t_mode(page, errors);
     await t_contour(page, errors);
     await t_items(page, errors);
+    await t_autolayout(page, errors);
     await t_checks(page, errors);
     await t_3d(page, errors);
     await t_wizard(page, errors);

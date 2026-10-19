@@ -285,7 +285,7 @@ class TestS4Feed(StructureFixture, F3DConstructorCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor", "f3d_s4")
 class TestS4PublishBaseline(F3DConstructorCase):
-    """Інтеграція S2 → S4: успішна публікація оновлює базу порівняння «Оновити з Odoo», тож створене нею не «з'являється»."""
+    """Інтеграція S2 → S4: успішна публікація оновлює базу порівняння «Оновити з Odoo»."""
 
     EMPTY = {'appeared': [], 'disappeared': [], 'renamed': [], 'moved': []}
 
@@ -307,7 +307,9 @@ class TestS4PublishBaseline(F3DConstructorCase):
         self.assertLessEqual({'PB-R1-B01-L1', 'PB-R1-B02-L1'}, codes, "публікація створила локації в стрічці")
         out = odoo_sync.sync(self.env, self.site)
         self.assertEqual(out['baseline'], 'existing')
-        self.assertEqual(out['diff'], self.EMPTY, "створене публікацією не є розбіжністю з Odoo (експорт «нові й змінені» порожній)")
+        self.assertEqual(
+            out['diff'], self.EMPTY, "створене публікацією не є розбіжністю з Odoo (експорт «нові й змінені» порожній)"
+        )
         # перейменування в проєкті → публікація → знову без розбіжностей
         slot = self.env['td.slot'].search([('code_prefix', '=', 'PB-R1')])
         slot.overrides = {'PB-R1-B01-L1': {'name': 'Перша'}}
@@ -320,11 +322,14 @@ class TestS4PublishBaseline(F3DConstructorCase):
         self.publish()
         self.assertTrue(self.site.odoo_baseline_id, "бази ще не було — публікація створює її")
         self.make_slot(prefix='PB-R3', bays=1, levels=1, x=40.0)
-        with patch.object(odoo_sync, 'full_feed', side_effect=UserError("склад не знайдено")), mute_logger(
-            'odoo.addons.td_constructor.services.publish'
+        with (
+            patch.object(odoo_sync, 'full_feed', side_effect=UserError("склад не знайдено")),
+            mute_logger('odoo.addons.td_constructor.services.publish'),
         ):
             result = self.publish()
-        self.assertEqual([c['code'] for c in result['created']], ['PB-R3-B01-L1'], "помилка бази не скасовує публікацію")
+        self.assertEqual(
+            [c['code'] for c in result['created']], ['PB-R3-B01-L1'], "помилка бази не скасовує публікацію"
+        )
         self.assertTrue(self.env['stock.location'].search([('td_code', '=', 'PB-R3-B01-L1')]))
 
 

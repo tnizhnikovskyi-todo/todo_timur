@@ -506,7 +506,7 @@ export function register(test) {
         const b = await boot();
         const { S, E } = b;
         const ly = emptyStorage(b, { building: { length: 60, width: 30 } });
-        const { newItem } = await load("building_core.js");
+        const { newItem, obstacleRects } = await load("building_core.js");
         const { satPenetration, rectObb, obbInsidePolygon, makeObb } = await load("geometry.js");
         const { layerObstacles, regionOf } = await load("autolayout.js");
         S.site.column_grid = { step_x: 0, step_y: 0 };
@@ -533,10 +533,35 @@ export function register(test) {
         }
         const xs = S.slots.map((z) => z.x);
         assert.ok(xs.some((x, i) => x !== [5, 15, 25][i]), "зони зрушено");
-        // колона з column_grid теж перешкода; не вміщається — нічого не змінюється, причина називає крок сітки
+        // колони column_grid теж перешкоди: за кроку 12 м зони 10×12 стають між колонами
         bl.items = [];
+        S.site.column_grid = { step_x: 12, step_y: 12 };
+        S.slots = [mk("za", 5, 5, 10, 12), mk("zb", 15, 5, 10, 12), mk("zc", 25, 5, 10, 12)];
+        b.reindex();
+        const grid = E.autoLayoutSite({ quiet: true });
+        assert.ok(grid.ok && !grid.gridIgnored, grid.reason);
+        const cols = obstacleRects(S.layers, S.site).filter((r) => r.grid);
+        assert.ok(cols.length >= 6);
+        for (const z of S.slots) {
+            const box = boxOf(z);
+            assert.ok(!cols.some((c) => box[0] < c.x1 - 1e-6 && c.x0 < box[2] - 1e-6 && box[1] < c.y1 - 1e-6 && c.y0 < box[3] - 1e-6), `${z.id} не накриває колони сітки`);
+        }
+        assert.notDeepEqual(S.slots.map((z) => z.x), [5, 15, 25], "зони зрушено з колон сітки");
+        // крок сітки менший за зону: зони все одно розкладаються (без колон сітки), решта перешкод дотримана
         S.site.column_grid = { step_x: 6, step_y: 6 };
-        addZones();
+        S.slots = [mk("za", 5, 5, 10, 10), mk("zb", 15, 5, 10, 10)];
+        b.reindex();
+        bl.items = [newItem("column", "c1", 6.5, 5)];
+        const lean = E.autoLayoutSite({ quiet: true });
+        assert.ok(lean.ok && lean.gridIgnored, "колони сітки не обійдено, бо зона більша за крок: " + lean.reason);
+        for (const z of S.slots) {
+            const box = boxOf(z);
+            assert.ok(!(box[0] < 6.7 && box[2] > 6.3 && box[1] < 5.2 && box[3] > 4.8), `${z.id} не накриває явну колону`);
+        }
+        // не вміщається — нічого не змінюється, причина називає перешкоди й крок сітки
+        bl.items = [];
+        S.slots = [mk("za", 5, 5, 25, 16), mk("zb", 35, 5, 25, 16), mk("zc", 45, 20, 25, 16)];
+        b.reindex();
         const snap = JSON.stringify(S.slots);
         const no = E.autoLayoutSite({ quiet: true });
         assert.equal(no.ok, false);

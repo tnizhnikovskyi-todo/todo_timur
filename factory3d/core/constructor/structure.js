@@ -6,7 +6,7 @@
 import { newUid } from "./adapter.js";
 import { addressContext, effectiveAddr, normalizeAddr, parseTpl, safeNormalize, usableContext } from "./addr_core.js";
 import { addressedCells, cellsOf, footprint, normalizeParams } from "./cells.js";
-import { layerObstacles, layoutPlan, regionOf } from "./autolayout.js";
+import { layoutAroundBuilding, layoutPlan, regionOf } from "./autolayout.js";
 import { sGeom } from "./live.js";
 import { levelKind, makeParser, normalizeRules, siteRules } from "./parse_codes.js";
 import { canEditLayer, canManage, lockHint } from "./roles.js";
@@ -486,7 +486,7 @@ export function commitStructure(plan, { label = "Імпорт структури
         const orphans = racks.filter((r) => !r.spec.zoneKey).map((r) => blockOfSlot(r.rec, r.spec));
         const existing = S.slots.filter((s) => s.layer_id === ly.id).map((s) => sGeom(s).box);
         const base = { zones: zoneSpecs, orphans, aisle: ly.aisle_width || 3, step };
-        let lp = growBuilding ? { ok: false } : layoutPlan({ ...base, region: regionOf(ly), obstacles: [...layerObstacles(ly), ...existing] });
+        let lp = growBuilding ? { ok: false } : layoutAroundBuilding(ly, { ...base, region: regionOf(ly) }, existing);
         let outside = false;
         if (!lp.ok) {
             const right = Math.max(0, ...existing.map((b) => b[2]));

@@ -3,7 +3,7 @@
 // тож `Ctrl+Z` повертає все одним кроком. Номери рядів і коди зон перед рухом закріплюються (S1), щоб коди комірок не залежали від геометрії.
 // Не вміщається — нічого не змінюється, а в повідомленні сказано, скільки місця потрібно. Перешкоди: проходи, пожежні шляхи й об'єкти
 // шару (layer.items), розміщення шару і об'єкти будівлі (S5: колони, стіни, офіс, зарядка з шарів `building` і колони за `column_grid`;
-// `E.buildingObstacles()` = `obstacleRects(S.layers, S.site)`). Контур — `bounds` шару (масив точок ≥ 3), інакше контур будівлі
+// `E.buildingObstacles()` = `obstacleRects(S.layers, S.site)`; колони `column_grid` обходяться, поки це можливо). Контур — `bounds` шару (масив точок ≥ 3), інакше контур будівлі
 // (`contourOf(шар building, site.building)`): осьовий прямокутник або многокутник (зона має лежати цілком усередині, обходячи вирізи).
 import { contextOf, rowNumberOf } from "./addr.js";
 import { formatValue, safeNormalize, slotPolygon } from "./addr_core.js";
@@ -258,15 +258,15 @@ const rectOfItem = (it) => {
     return null;
 };
 
-/** Перешкоди будівлі (S5) як масиви [x0, y0, x1, y1] (+ `.obb` для похилих): `E.buildingObstacles()` або `obstacleRects(S.layers, S.site)`. */
-function buildingRects() {
+/** Перешкоди будівлі (S5) як масиви [x0, y0, x1, y1] (+ `.obb` для похилих): `E.buildingObstacles()` або `obstacleRects(S.layers, S.site)`; `grid: false` — без колон `column_grid`. */
+function buildingRects({ grid = true } = {}) {
     const list = E.buildingObstacles ? E.buildingObstacles() : obstacleRects(S.layers, S.site);
-    return list.map((r) => Object.assign([r.x0, r.y0, r.x1, r.y1], r.obb ? { obb: r.obb } : {}));
+    return list.filter((r) => grid || !r.grid).map((r) => Object.assign([r.x0, r.y0, r.x1, r.y1], r.obb ? { obb: r.obb } : {}));
 }
 
-/** Перешкоди шару: проходи, пожежні шляхи, об'єкти шару (layer.items), об'єкти будівлі (колони, стіни, офіс, зарядка, колони сітки), розміщення шару і місця під верстати. */
-export function layerObstacles(ly) {
-    const out = buildingRects();
+/** Перешкоди шару: проходи, пожежні шляхи, об'єкти шару (layer.items), об'єкти будівлі (колони, стіни, офіс, зарядка, колони сітки; `grid: false` — без колон сітки), розміщення шару і місця під верстати. */
+export function layerObstacles(ly, { grid = true } = {}) {
+    const out = buildingRects({ grid });
     for (const r of [...(ly.aisles || []), ...(ly.fire_paths || []), ...(ly.items || [])]) {
         const b = rectOfItem(r);
         if (b) {
@@ -306,6 +306,25 @@ export function regionOf(ly) {
         return null;
     }
     return isRectContour(pts) ? b : { ...b, poly: pts };
+}
+
+/**
+ * `layoutPlan` у контурі шару з перешкодами шару й будівлі; `args` — аргументи `layoutPlan` без `obstacles`, `extra` — додаткові перешкоди.
+ * Колони `column_grid` — лише крок сітки (стіни й явні колони — справжні об'єкти): за кроку менше за зону жодна зона між ними не стане,
+ * тож якщо з ними не вмістилось, а без них вміщається — розкладка йде без колон сітки (`gridIgnored: true`), решту перешкод дотримано.
+ */
+export function layoutAroundBuilding(ly, args, extra = []) {
+    const full = layerObstacles(ly);
+    const plan = layoutPlan({ ...args, obstacles: [...full, ...extra] });
+    if (plan.ok) {
+        return plan;
+    }
+    const lean = layerObstacles(ly, { grid: false });
+    if (lean.length === full.length) {
+        return plan;
+    }
+    const alt = layoutPlan({ ...args, obstacles: [...lean, ...extra] });
+    return alt.ok ? { ...alt, gridIgnored: true } : plan;
 }
 
 /** Закріплює номери рядів і коди зон (S1) без кроку історії: після руху коди комірок не залежать від геометрії. */
@@ -451,14 +470,14 @@ export function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes
     }
     const sorted = [...free].sort((a, b) => a.slot.x - b.slot.x || a.slot.y - b.slot.y || natural(a.slot.code_prefix, b.slot.code_prefix));
     const lineOf = (s) => (s.addr?.row_no ? `r${s.addr.row_no}` : s.id);
-    const plan = layoutPlan({
+    const args = {
         zones: sorted.map((z) => ({ id: z.slot.id, title: z.slot.params.title || z.slot.code_prefix, blocks: orderBlocks(own.get(z.slot.id)).map((s) => ({ ...blockOf(s), line: lineOf(s) })), fixed: fixedSizes || !own.get(z.slot.id).length ? { l: z.slot.params.length, w: z.slot.params.width } : null })),
         orphans: orderBlocks(orphans).map((s) => ({ ...blockOf(s), line: lineOf(s) })),
         region: regionOf(ly),
-        obstacles: [...layerObstacles(ly), ...lockedBoxes],
         aisle: ly.aisle_width || 3,
         step: ly.grid_step || 0.5,
-    });
+    };
+    const plan = layoutAroundBuilding(ly, args, lockedBoxes);
     if (!plan.ok) {
         const cg = (S.site && S.site.column_grid) || {};
         const hint = /перешкоди/.test(plan.reason) && cg.step_x > 1 && cg.step_y > 1 ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) теж вважаються перешкодами: збільште крок або задайте 0.` : "";
@@ -481,8 +500,9 @@ export function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes
     }
     E.undoLabel?.("Авторозкладка площадки");
     E.commit({});
-    quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.`);
-    return { ok: true, zones: free.length, blocks: plan.blocks.size };
+    const cg = (S.site && S.site.column_grid) || {};
+    quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.` + (plan.gridIgnored ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) не обійдено: зони більші за крок.` : ""));
+    return { ok: true, zones: free.length, blocks: plan.blocks.size, gridIgnored: !!plan.gridIgnored };
 }
 
 /* ---------- панелі, меню ---------- */
