@@ -396,5 +396,6 @@ class TdCollabController(http.Controller):
 
     # --- F19: сторінка «Інструкція» ---------------------------------------------------------------------
     @http.route('/f3d/constructor/help', type='http', auth='user', methods=['GET'])
-    def help_page(self, **kw):
-        return request.render('td_constructor.td_help_page', {'lang': request.env.lang or 'uk_UA'})
+    def help_page(self, lang=None, **kw):
+        """Мова сторінки: `?lang=en|uk`; за замовчуванням українська (як у редакторі)."""
+        return request.render('td_constructor.td_help_page', {'en': (lang or '').lower().startswith('en')})

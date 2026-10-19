@@ -168,17 +168,22 @@ export async function openHistory() {
                     ? list.map((v) =>
                           h(
                               "div",
-                              { class: "s6-item", "data-version": v.id, "data-kind": v.kind },
-                              h("div", { class: "s6-row sp" }, h("b", null, "v" + v.n), h("span", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null)),
-                              h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
-                              h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
-                              v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+                              { class: "ver", "data-version": v.id, "data-kind": v.kind },
+                              h("div", { class: "vn" }, "v" + v.n),
                               h(
                                   "div",
-                                  { class: "s6-row" },
-                                  hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
-                                  hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null,
-                                  h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити"))
+                                  { class: "vi s6-panel" },
+                                  h("div", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null),
+                                  h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
+                                  h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
+                                  v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+                                  h(
+                                      "div",
+                                      { class: "s6-row" },
+                                      h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити")),
+                                      hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
+                                      hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null
+                                  )
                               )
                           )
                       )
@@ -213,7 +218,7 @@ export async function openHistory() {
         }
     }
     async function onRestore(v) {
-        const ok = await confirmBox({ title: t("Відновити чернетку з v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
+        const ok = await confirmBox({ title: t("Повернути чернетку до v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
         if (!ok) {
             return;
         }
@@ -248,7 +253,7 @@ addEn({
     "Повертає Менеджер у режимі редагування": "Restored by a Manager in edit mode",
     "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
     "Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.": "Restoring changes the draft; Odoo records stay as they are until you publish a new version. Before restoring, the current draft is saved as a separate checkpoint.",
-    "Відновити чернетку з v{n}?": "Restore the draft from v{n}?",
+    "Повернути чернетку до v{n}?": "Return the draft to v{n}?",
     "Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою.": "The current draft will be replaced by the version snapshot; it is saved as a checkpoint first.",
     "Автокопія перед відновленням v{n}": "Auto-copy before restoring v{n}", "Не вдалося зберегти автокопію: {m}": "Could not save the auto-copy: {m}",
 });

@@ -5,7 +5,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// core/constructor/registry.js
+// factory3d/core/constructor/registry.js
 var Registry = class {
   constructor(name) {
     this.name = name;
@@ -112,7 +112,7 @@ function forEachEntry(registry, fn, ctx2) {
   }
 }
 
-// core/constructor/adapter.js
+// factory3d/core/constructor/adapter.js
 var REQUIRED_METHODS = [
   "listSites",
   "createSite",
@@ -191,7 +191,7 @@ var BaseAdapter = class {
   }
 };
 
-// core/constructor/body.js
+// factory3d/core/constructor/body.js
 var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
 <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
 <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.7A10 10 0 0 1 12 5.5C18.4 5.5 22 12 22 12a17 17 0 0 1-3.2 3.9M6.3 6.8A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1.5 0 2.8-.3 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
@@ -264,7 +264,7 @@ var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden
 </div>
 `;
 
-// core/constructor/data.js
+// factory3d/core/constructor/data.js
 var data_exports = {};
 __export(data_exports, {
   CATEGORIES: () => CATEGORIES,
@@ -286,7 +286,7 @@ __export(data_exports, {
   slotHeight: () => slotHeight
 });
 
-// core/constructor/cells.js
+// factory3d/core/constructor/cells.js
 var cells_exports = {};
 __export(cells_exports, {
   BOTTOM_LIFT: () => BOTTOM_LIFT,
@@ -312,7 +312,7 @@ __export(cells_exports, {
   templateCodes: () => templateCodes
 });
 
-// core/constructor/geometry.js
+// factory3d/core/constructor/geometry.js
 var geometry_exports = {};
 __export(geometry_exports, {
   FRONT_VECTORS: () => FRONT_VECTORS,
@@ -538,7 +538,7 @@ function utilityPoints(v, x, y, rotation) {
   });
 }
 
-// core/constructor/addr_core.js
+// factory3d/core/constructor/addr_core.js
 var SEGMENT_KEYS = ["zone", "row", "bay", "level", "pos"];
 var SEGMENT_KINDS = ["num", "alpha"];
 var ROW_FROM = ["up", "down", "left", "right"];
@@ -1048,7 +1048,7 @@ function conflicts(codesBySlot, occupied = []) {
   return out;
 }
 
-// core/constructor/cells.js
+// factory3d/core/constructor/cells.js
 var CODE_MAX_LEN2 = 32;
 var PREFIX_MAX_LEN = 22;
 var BOTTOM_LIFT = 0.15;
@@ -1537,7 +1537,7 @@ function cellsOf(s) {
 var cellCount = (s) => cellsOf(s).filter((c) => !c.disabled).length;
 var clearCellsCache = () => cache.clear();
 
-// core/constructor/data.js
+// factory3d/core/constructor/data.js
 var ROLES = [
   { id: "manager", name: "Менеджер" },
   { id: "technologist", name: "Технолог" },
@@ -1764,7 +1764,7 @@ var newLayerDefaults = () => ({
   underlay: null
 });
 
-// core/constructor/dialogs.js
+// factory3d/core/constructor/dialogs.js
 var dialogs_exports = {};
 __export(dialogs_exports, {
   askConflict: () => askConflict,
@@ -1775,7 +1775,7 @@ __export(dialogs_exports, {
   openServerIssues: () => openServerIssues
 });
 
-// core/constructor/roles.js
+// factory3d/core/constructor/roles.js
 var roles_exports = {};
 __export(roles_exports, {
   ROLES: () => ROLES,
@@ -1790,7 +1790,7 @@ __export(roles_exports, {
   viewAs: () => viewAs
 });
 
-// core/constructor/state.js
+// factory3d/core/constructor/state.js
 var state_exports = {};
 __export(state_exports, {
   E: () => E,
@@ -1811,7 +1811,7 @@ __export(state_exports, {
   variantOf: () => variantOf
 });
 
-// core/constructor/util.js
+// factory3d/core/constructor/util.js
 var util_exports = {};
 __export(util_exports, {
   $: () => $,
@@ -1938,7 +1938,7 @@ function toast(msg, kind) {
   return t2;
 }
 
-// core/constructor/state.js
+// factory3d/core/constructor/state.js
 var E = { lifecycle: { mount: /* @__PURE__ */ new Set(), unmount: /* @__PURE__ */ new Set() } };
 var initialS = () => ({
   app: { sites: [], active: null, mode: "edit", viewAs: null },
@@ -2063,7 +2063,7 @@ var isLayerVisible = (ly) => !V.hidden.has(ly.id);
 var selRefs = () => S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : [];
 var selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
 
-// core/constructor/roles.js
+// factory3d/core/constructor/roles.js
 var viewAs = () => S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null;
 function canEditLayer(ly) {
   if (!ly || S.app.mode !== "edit") {
@@ -2101,7 +2101,7 @@ var myRoleNames = () => {
   return rs.length ? rs.map(roleName).join(", ") : "Без ролі";
 };
 
-// core/constructor/dialogs.js
+// factory3d/core/constructor/dialogs.js
 function openDialog(o) {
   const dlg = h("dialog", { class: o.cls || "" });
   const close2 = (r) => {
@@ -2299,7 +2299,7 @@ registries.dialogs.add("history", () => openHistory(), { force: true });
 registries.dialogs.add("serverIssues", ({ res }) => openServerIssues(res), { force: true });
 registries.dialogs.add("conflict", () => askConflict(), { force: true });
 
-// core/constructor/draft.js
+// factory3d/core/constructor/draft.js
 var DESIGN_ROLES = ["technologist", "storekeeper", "engineer"];
 var ACCESS_NAMES = { view: "Перегляд", design: "Проєктування", apply: "Застосування" };
 function access() {
@@ -2431,7 +2431,7 @@ registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
 registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
 Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus, syncSaveAll });
 
-// core/constructor/dxf.js
+// factory3d/core/constructor/dxf.js
 var dxf_exports = {};
 __export(dxf_exports, {
   DWG_MESSAGE: () => DWG_MESSAGE,
@@ -2447,7 +2447,7 @@ __export(dxf_exports, {
   renderDxfPanel: () => renderDxfPanel
 });
 
-// core/constructor/fields.js
+// factory3d/core/constructor/fields.js
 function numInput(o) {
   const el = h("input", {
     type: "number",
@@ -2567,7 +2567,7 @@ function paramFields(tpl, params, o) {
   );
 }
 
-// core/constructor/host.js
+// factory3d/core/constructor/host.js
 var host = {
   loadThree: null,
   buildGenericModel: null,
@@ -2597,7 +2597,7 @@ function setHost(h2 = {}) {
   return host;
 }
 
-// core/constructor/dxf.js
+// factory3d/core/constructor/dxf.js
 var DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
 var DXF_MAX_BYTES = 5 * 1024 * 1024;
 var DXF_MAX_SEGMENTS = 2e5;
@@ -3025,7 +3025,7 @@ function pickModeClick(pt) {
 }
 Object.assign(E, { openDxfPanel, renderDxfPanel, pickModeClick, loadUnderlays });
 
-// core/constructor/live.js
+// factory3d/core/constructor/live.js
 var live_exports = {};
 __export(live_exports, {
   checkConfigs: () => checkConfigs,
@@ -3037,7 +3037,7 @@ __export(live_exports, {
   toCheckState: () => toCheckState
 });
 
-// core/constructor/checks.js
+// factory3d/core/constructor/checks.js
 var checks_exports = {};
 __export(checks_exports, {
   CHECK_KEYS: () => CHECK_KEYS,
@@ -3407,7 +3407,7 @@ var summarize = (issues) => ({
 });
 var signature = (issues) => issues.map((i) => `${i.check}|${i.severity}|${i.codes.join(",")}`).sort();
 
-// core/constructor/live.js
+// factory3d/core/constructor/live.js
 function slotDims(s) {
   const H = slotHeight({ ...s, params: normalizeParams(s.template, s.params) });
   if (s.template === "zone") {
@@ -3494,7 +3494,7 @@ function newBlocks(before, after, key) {
   return after.list.filter((i) => i.level === "block" && i.keys.includes(key) && !ids.has(i.id));
 }
 
-// core/constructor/panels_left.js
+// factory3d/core/constructor/panels_left.js
 var isNarrow = () => window.matchMedia("(max-width: 900px)").matches;
 function renderTop() {
   const ss = $("#siteSel");
@@ -4244,7 +4244,7 @@ registries.panels.add("left:layers", { area: "left", tab: "layers", label: "Ша
 registries.panels.add("left:slots", { area: "left", tab: "slots", label: "Місця", render: renderSlotsTab }, { sequence: 20, force: true });
 registries.panels.add("left:catalog", { area: "left", tab: "catalog", label: "Каталог", render: renderCatalogTab }, { sequence: 30, force: true });
 
-// core/constructor/panels_right.js
+// factory3d/core/constructor/panels_right.js
 function selectObj(ref2) {
   S.sel = ref2 ? { kind: ref2.kind, id: ref2.id } : null;
   S.selCell = null;
@@ -5020,7 +5020,7 @@ Object.assign(E, {
   recOf: recOfRef
 });
 
-// core/constructor/scene.js
+// factory3d/core/constructor/scene.js
 var scene_exports = {};
 __export(scene_exports, {
   assignSlot: () => assignSlot,
@@ -5052,7 +5052,7 @@ __export(scene_exports, {
   variantBody: () => variantBody
 });
 
-// core/constructor/three.js
+// factory3d/core/constructor/three.js
 var THREE = {};
 var promise = null;
 function loadThree() {
@@ -5085,7 +5085,7 @@ function webglAvailable() {
   }
 }
 
-// core/constructor/scene.js
+// factory3d/core/constructor/scene.js
 var BODY = { other: "#9ba6b1" };
 var UCOL = { electric: "#e0a030", air: "#3a8fd0", dust: "#6aa04a" };
 function readColors() {
@@ -6831,7 +6831,7 @@ Object.assign(E, {
   buildSlotView
 });
 
-// core/constructor/app.js
+// factory3d/core/constructor/app.js
 var ctx = null;
 var lsGet = (k) => {
   try {
@@ -7352,7 +7352,7 @@ function unmountEditor() {
 }
 Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord, normalizeModel, loadVariantModels });
 
-// core/constructor/adapter_odoo.js
+// factory3d/core/constructor/adapter_odoo.js
 var adapter_odoo_exports = {};
 __export(adapter_odoo_exports, {
   OdooAdapter: () => OdooAdapter,
@@ -8516,7 +8516,7 @@ var OdooAdapter = class extends BaseAdapter {
 };
 var OdooStore = OdooAdapter;
 
-// core/constructor/shape_forms.js
+// factory3d/core/constructor/shape_forms.js
 var levelCount = (p, tpl) => tpl === "shelf" ? p.shelves : p.levels;
 var bayCount = (p, tpl) => tpl === "pallet_rack" ? p.bays : tpl === "cantilever" ? p.arms : p.sections;
 var baseH = (p, tpl) => tpl === "shelf" ? p.cell_h : p.level_height;
@@ -8764,7 +8764,7 @@ function typeSvg(type, w = 160, h2 = 110) {
   return `<svg viewBox="0 0 ${w} ${h2}" width="${w}" height="${h2}" role="img" aria-label="${type.name}" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" data-dims="${d.L.toFixed(2)}x${d.W.toFixed(2)}x${d.H.toFixed(2)}">${lines}</svg>`;
 }
 
-// core/constructor/addr.js
+// factory3d/core/constructor/addr.js
 var SEG_LABELS = { zone: "Зона", row: "Ряд", bay: "Секція", level: "Ярус", pos: "Позиція" };
 var SEG_KINDS = [
   ["num", "Цифри"],
@@ -9275,7 +9275,7 @@ if (origAddSlotAt && !origAddSlotAt.s1) {
   E.addSlotAt.s1 = true;
 }
 
-// core/constructor/library.js
+// factory3d/core/constructor/library.js
 var EMPTY = () => ({ types: [], presets: [] });
 function libraryState() {
   if (!S.site) {
@@ -9326,7 +9326,7 @@ async function deleteRecord(adapter, kind, id) {
   lib4[key] = lib4[key].filter((x) => String(x.id) !== String(id));
 }
 
-// core/constructor/types_data.js
+// factory3d/core/constructor/types_data.js
 var GROUPS = {
   rack: "Стелажні",
   floor: "Напільні",
@@ -9445,7 +9445,7 @@ function customCopy(type, name) {
 }
 var isBuildingType = (t2) => !t2.template;
 
-// core/constructor/types_ui.js
+// factory3d/core/constructor/types_ui.js
 var KINDS_LABEL = { stack: "Стос", area: "Майданчик", kit: "Візок / етажерка", bin: "Комірка (bin)", shelf: "Полиця", pallet_cell: "Комірка палети" };
 var PLACEABLE = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"];
 var SIZE_KEYS = {
@@ -10052,7 +10052,7 @@ function renderTypesTab(root) {
 }
 registries.panels.add("left:types", { area: "left", tab: "types", label: "Типи", render: renderTypesTab }, { sequence: 25, force: true });
 
-// core/constructor/presets.js
+// factory3d/core/constructor/presets.js
 var PRESET_KINDS = { row: "Ряд", section: "Секція", group: "Виділене" };
 var MAX_GROUP = 200;
 var PLACEABLE2 = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot", "machine_spot"];
@@ -10421,7 +10421,7 @@ function renderPresetBlock(root, { rec }) {
 }
 registries.panels.add("slot:presets", { area: "slot", render: renderPresetBlock }, { sequence: 35, force: true });
 
-// core/constructor/capacity_core.js
+// factory3d/core/constructor/capacity_core.js
 var ZONE_FUNCTIONS = [
   { key: "receiving", name: "Приймання", color: "#3b82f6" },
   { key: "quality", name: "Контроль якості", color: "#8b5cf6" },
@@ -10718,7 +10718,7 @@ registries.metrics.add(
   { sequence: 80, force: true }
 );
 
-// core/constructor/plan_core.js
+// factory3d/core/constructor/plan_core.js
 var KIND_LABEL = {
   create: "Створити",
   move: "Перенести",
@@ -10857,7 +10857,7 @@ function lineText(l) {
   return Object.entries(l.vals || {}).map(([k, v]) => `${k}: ${l.before && k in l.before ? l.before[k] : "—"} → ${v}`).join("; ");
 }
 
-// core/constructor/plan_dialog.js
+// factory3d/core/constructor/plan_dialog.js
 var MAX_ROWS = 300;
 var ex = (list, f) => list.length ? list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? " … " + f(list[list.length - 1]) : "") : "—";
 var KIND_CLS = { create: "ok", move: "w", rename: "w", attrs: "w", update: "w", archive: "b" };
@@ -11126,7 +11126,7 @@ registries.dialogs.add("plan", (args, ctx2) => openPlanDialog({ adapter: ctx2?.a
 registries.dialogs.add("planLog", (args, ctx2) => openJournal({ adapter: ctx2?.adapter }), { force: true });
 registries.menu.add("planLog", { area: "more", label: "Журнал публікацій", icon: "hist", capability: "rollback", sequence: 60, run: () => E.runDialog("planLog") }, { sequence: 60, force: true });
 
-// core/constructor/capacity_ui.js
+// factory3d/core/constructor/capacity_ui.js
 var MODE_OPTS2 = [["warn", "Попередження"], ["block", "Заборона"]];
 var lib3 = { loaded: false, loading: null, categories: [], strategies: [], functions: ZONE_FUNCTIONS.map((f) => ({ id: f.key, ...f })), attrs: ZONE_ATTRS.map((a) => ({ id: a.key, ...a })) };
 async function loadLib(force = false) {
@@ -11578,7 +11578,7 @@ async function openCategories() {
 registries.dialogs.add("categories", () => openCategories(), { force: true });
 registries.menu.add("categories", { area: "more", label: "Категорії зберігання", icon: "tag", capability: "storage", sequence: 55, run: () => E.runDialog("categories") }, { sequence: 55, force: true });
 
-// core/constructor/rules_dialog.js
+// factory3d/core/constructor/rules_dialog.js
 var canEditRules = () => S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length > 0);
 var base = { site: null, putaway: /* @__PURE__ */ new Map(), replenish: /* @__PURE__ */ new Map() };
 function ensureBase() {
@@ -12014,7 +12014,7 @@ function renderRulesInto(root, { rec }) {
 }
 registries.panels.add("slot:rules", { area: "slot", render: renderRulesInto }, { sequence: 36, force: true });
 
-// core/constructor/undo.js
+// factory3d/core/constructor/undo.js
 var KINDS = ["layers", "slots", "placements", "putaway", "replenish"];
 var MAX_STEPS = 100;
 var MAX_CHARS = 3e7;
@@ -12286,7 +12286,7 @@ registries.hotkeys.add(
   { sequence: 6, force: true }
 );
 
-// core/constructor/edit_tools.js
+// factory3d/core/constructor/edit_tools.js
 var PREFIX_MAX = 22;
 var kindOf = (ref2) => ref2.kind === "placement" ? "placement" : "slot";
 var arrOf = (kind) => kind === "placement" ? S.placements : S.slots;
@@ -13033,7 +13033,7 @@ hk(
 );
 Object.assign(E, { duplicateSel, copySel, pasteClip, arrayCopies, alignSel, distributeSel, rotateGroup, removeAll, groupToZone, ungroupZone, applyProps, bulkCreate });
 
-// core/constructor/selection.js
+// factory3d/core/constructor/selection.js
 var same3 = (a, b) => a.kind === b.kind && a.id === b.id;
 function setMulti(refs, primary = null) {
   const uniq = [];
@@ -13215,7 +13215,7 @@ function renderToolsBlock(root, { rec }) {
 registries.panels.add("right:tools", { area: "right", render: renderToolsBlock }, { sequence: 60, force: true });
 Object.assign(E, { setMulti, toggleMulti, boxSelect });
 
-// core/constructor/barcode.js
+// factory3d/core/constructor/barcode.js
 var C128 = "212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(
   " "
 );
@@ -13633,7 +13633,7 @@ function qr(text, { ecc = "M", mask = null, minVersion = 1 } = {}) {
   return { version, size: mx.size, ecc, mask: best, rows, get: (x, y) => rows[y][x] === "1" };
 }
 
-// core/constructor/labels.js
+// factory3d/core/constructor/labels.js
 var LABELS_MAX = 5e3;
 var LAYOUTS = {
   "70x36": { name: "70×36 мм (3×8)", w: 70, h: 36, page: { w: 210, h: 297 } },
@@ -14147,7 +14147,7 @@ function renderLabelsBlock(root, { rec }) {
 registries.panels.add("right:labels", { area: "right", render: renderLabelsBlock }, { sequence: 70, force: true });
 Object.assign(E, { openLabels: (a) => E.runDialog("labels", a) });
 
-// core/constructor/stock_state.js
+// factory3d/core/constructor/stock_state.js
 var revN = 0;
 function applyStock(res, { merge = false } = {}) {
   const prev = merge && S.stock ? S.stock.byCode : /* @__PURE__ */ new Map();
@@ -14241,7 +14241,7 @@ var fmtAt = (at) => {
 };
 Object.assign(E, { loadStock, loadDetail, findStock, stockOf });
 
-// core/constructor/heat.js
+// factory3d/core/constructor/heat.js
 var GRAY = "#a9adb3";
 var FILL = [
   ["empty", "Порожньо", "#d9e3e8"],
@@ -14417,7 +14417,7 @@ registries.menu.add(
 );
 Object.assign(E, { setMetric, restoreMetric, refreshStock, renderHeat, legendOf });
 
-// core/constructor/search.js
+// factory3d/core/constructor/search.js
 var normCode = (s) => String(s ?? "").toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, "");
 function findCodes(q, limit = 40) {
   const n = normCode(q);
@@ -14597,7 +14597,7 @@ registries.hotkeys.add("search.ctrlk", { ctrl: true, code: "KeyK", typing: true,
 registries.menu.add("search", { area: "top", label: "Пошук", icon: "fit", sequence: 4, run: () => openSearch("goto") }, { sequence: 4, force: true });
 Object.assign(E, { openSearch, gotoCode, gotoHit, gotoCell: gotoCode, findCodes, setHighlight });
 
-// core/constructor/s3_chrome.js
+// factory3d/core/constructor/s3_chrome.js
 var MOBILE_QUERY = "(max-width: 768px)";
 var STYLE_ID = "f3d-s3-style";
 var CSS = `
@@ -14904,7 +14904,7 @@ E.renderAll = function renderAllS3(...a) {
 };
 Object.assign(E, { isMobile, mobilePanel, showTip, hideTip, showCard, hideCard, renderUndoButtons, decorateS3: decorate });
 
-// core/constructor/card.js
+// factory3d/core/constructor/card.js
 var pct = (v) => v == null ? "—" : Math.round(v * 100) + " %";
 var day = (iso) => iso ? String(iso).slice(0, 10) : "—";
 function cardNode(slot, cell) {
@@ -14983,7 +14983,7 @@ function cellPicked(slotId, code) {
 }
 Object.assign(E, { cellPicked, cardNode });
 
-// core/constructor/parse_codes.js
+// factory3d/core/constructor/parse_codes.js
 var PART_KEYS = ["zone", "row", "bay", "level", "pos", "prefix"];
 var PART_LABELS = { zone: "зона", row: "ряд", bay: "секція", level: "ярус", pos: "позиція", prefix: "префікс" };
 var NAMES = {
@@ -15459,7 +15459,7 @@ registries.dialogs.add("parseCodes", (args) => openParseCodes(args || {}), { for
 registries.menu.add("parseCodes", { area: "more", label: "Розбір кодів…", icon: "tag", sequence: 62, run: () => E.runDialog("parseCodes"), disabled: () => !S.site }, { sequence: 62, force: true });
 Object.assign(E, { siteParser, normalizeParseRules: normalizeRules, saveParseRules: saveRules });
 
-// core/constructor/autolayout.js
+// factory3d/core/constructor/autolayout.js
 var EPS = 1e-6;
 var ZONE_MAX = 150;
 var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t2) => SLOT_TEMPLATES[t2].cells);
@@ -15859,7 +15859,7 @@ registries.panels.add("site:autolayout", { area: "site", render: renderSiteBlock
 registries.menu.add("autolayout", { area: "more", label: "Авторозкладка площадки", icon: "fit", sequence: 64, run: () => autoLayoutSite(), disabled: () => !S.site || !canEditLayer(layerOf(S.ui.layer)) }, { sequence: 64, force: true });
 Object.assign(E, { autoLayoutZone, autoLayoutSite });
 
-// core/constructor/structure.js
+// factory3d/core/constructor/structure.js
 var REASONS = {
   no_rule: "Код не збігається з жодним правилом розбору й немає зони-родителя",
   bad_code: "Код не підходить для місця: великі латинські літери, цифри й дефіси, до 22 символів",
@@ -16363,7 +16363,7 @@ function importLocations(locs, { label, layout = true, growBuilding = false, par
 }
 Object.assign(E, { importLocations, planStructure, commitStructure });
 
-// core/constructor/tray.js
+// factory3d/core/constructor/tray.js
 var TRAY_MAX = 5e3;
 var PREFIX_RE2 = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
 var SPOT = { length: 1.2, width: 0.8, height: 1.5, capacity: 1, loc_kind: "area", shape: "zone" };
@@ -16653,7 +16653,7 @@ E.lifecycle.unmount.add(() => {
 });
 Object.assign(E, { trayItems, setTray, trayCodes, placeFromTray });
 
-// core/constructor/tabular_core.js
+// factory3d/core/constructor/tabular_core.js
 var enc = new TextEncoder();
 var u8 = (x) => x instanceof Uint8Array ? x : new Uint8Array(x);
 var xmlEsc = (s) => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -17114,7 +17114,7 @@ function withParents(locs, known = /* @__PURE__ */ new Set()) {
 }
 var fileName = (base2, ext) => `${String(base2 || "locations").replace(/[^\w.-]+/g, "_")}.${ext}`;
 
-// core/constructor/files_ui.js
+// factory3d/core/constructor/files_ui.js
 var isXlsx = (b) => b.length > 3 && b[0] === 80 && b[1] === 75;
 function saveBlob(name, data, mime) {
   const url = URL.createObjectURL(new Blob([data], { type: mime }));
@@ -17454,7 +17454,7 @@ registries.menu.add("importLocations", { area: "more", label: "Імпорт ло
 registries.menu.add("exportLocations", { area: "more", label: "Експорт локацій…", icon: "tag", sequence: 57, run: () => E.runDialog("exportLocations"), disabled: () => !S.site }, { sequence: 57, force: true });
 Object.assign(E, { openImport, openExport, readFileTable });
 
-// core/constructor/sync_ui.js
+// factory3d/core/constructor/sync_ui.js
 var GROUPS2 = [
   ["appeared", "З'явилося в Odoo", "піде в лоток «Не розміщено»"],
   ["disappeared", "Зникло в Odoo (архів чи видалення)", "комірку вимкнено в моделі"],
@@ -17614,7 +17614,7 @@ registries.dialogs.add("syncOdoo", () => openSync(), { force: true });
 registries.menu.add("syncOdoo", { area: "more", label: "Оновити з Odoo", icon: "hist", capability: "odoo_import", sequence: 58, run: () => E.runDialog("syncOdoo"), disabled: () => !S.site || !can("odoo_import") }, { sequence: 58, force: true });
 Object.assign(E, { openSync, applySyncChoices: applyAccepted });
 
-// core/constructor/collab_ui.js
+// factory3d/core/constructor/collab_ui.js
 var STYLE_ID3 = "f3d-s6-style";
 var CSS3 = `
 .s6-layer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
@@ -17646,6 +17646,8 @@ var CSS3 = `
 .s6-train[hidden]{display:none}
 .s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
 .s6-crumbs[hidden]{display:none}
+.s6-crumbs,.s6-pick{pointer-events:none}
+.s6-crumbs button,.s6-pick select,.s6-pick button,.s6-pick label{pointer-events:auto}
 .s6-crumbs button{border:0;background:transparent;padding:2px 5px;cursor:pointer;color:var(--ink);font:inherit}
 .s6-crumbs button:hover{background:var(--accent-soft)}
 .s6-crumbs button[aria-current="true"]{font-weight:700}
@@ -17744,7 +17746,7 @@ E.lifecycle.mount.add(() => {
 });
 E.lifecycle.unmount.add(() => hooks.clear());
 
-// core/constructor/i18n.js
+// factory3d/core/constructor/i18n.js
 var LANGS = { uk: "Українська", en: "English" };
 var KEY = "f3d_constructor_lang";
 var EN = /* @__PURE__ */ new Map();
@@ -17769,8 +17771,7 @@ function detectLang() {
   if (saved2 === "uk" || saved2 === "en") {
     return saved2;
   }
-  const from = String(host.lang || globalThis.document?.documentElement?.lang || "").toLowerCase();
-  return from.startsWith("en") ? "en" : "uk";
+  return String(host.lang || "").toLowerCase().startsWith("en") ? "en" : "uk";
 }
 var getLang = () => lang ||= detectLang();
 function addEn(map) {
@@ -17961,6 +17962,7 @@ addEn({
   "Опублікувати": "Publish",
   "Історія версій": "Version history",
   "Історія": "History",
+  "версій": "versions",
   "Тема": "Theme",
   "Шари": "Layers",
   "Місця": "Places",
@@ -18077,7 +18079,7 @@ addPattern(/^Створено місце «(.+)»: (\d+) комірок\.$/, (p,
 addPattern(/^Режим перегляду: правка вимкнена\. Увімкніть «Редагування»\.$/, () => "View mode: editing is off. Turn on “Edit”.");
 Object.assign(E, { t, setLang, getLang, onLang });
 
-// core/constructor/versions_ui.js
+// factory3d/core/constructor/versions_ui.js
 var hasVersions = () => !!E.adapter && typeof E.adapter.versions === "function";
 var KIND = { publish: "публікація", checkpoint: "контрольна точка" };
 async function loadList() {
@@ -18220,17 +18222,22 @@ async function openHistory2() {
         list.length ? list.map(
           (v) => h(
             "div",
-            { class: "s6-item", "data-version": v.id, "data-kind": v.kind },
-            h("div", { class: "s6-row sp" }, h("b", null, "v" + v.n), h("span", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null)),
-            h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
-            h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
-            v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+            { class: "ver", "data-version": v.id, "data-kind": v.kind },
+            h("div", { class: "vn" }, "v" + v.n),
             h(
               "div",
-              { class: "s6-row" },
-              hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
-              hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null,
-              h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити"))
+              { class: "vi s6-panel" },
+              h("div", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null),
+              h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
+              h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
+              v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+              h(
+                "div",
+                { class: "s6-row" },
+                h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити")),
+                hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
+                hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null
+              )
             )
           )
         ) : h("div", { class: "empty" }, t("Версій ще немає. Натисніть «Опублікувати»."))
@@ -18264,7 +18271,7 @@ async function openHistory2() {
     }
   }
   async function onRestore(v) {
-    const ok = await confirmBox({ title: t("Відновити чернетку з v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
+    const ok = await confirmBox({ title: t("Повернути чернетку до v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
     if (!ok) {
       return;
     }
@@ -18319,13 +18326,13 @@ addEn({
   "Повертає Менеджер у режимі редагування": "Restored by a Manager in edit mode",
   "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
   "Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.": "Restoring changes the draft; Odoo records stay as they are until you publish a new version. Before restoring, the current draft is saved as a separate checkpoint.",
-  "Відновити чернетку з v{n}?": "Restore the draft from v{n}?",
+  "Повернути чернетку до v{n}?": "Return the draft to v{n}?",
   "Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою.": "The current draft will be replaced by the version snapshot; it is saved as a checkpoint first.",
   "Автокопія перед відновленням v{n}": "Auto-copy before restoring v{n}",
   "Не вдалося зберегти автокопію: {m}": "Could not save the auto-copy: {m}"
 });
 
-// core/constructor/variants.js
+// factory3d/core/constructor/variants.js
 var METRIC_ROWS = [
   { key: "cells", label: "Місць (комірок)", digits: 0 },
   { key: "places", label: "Палетомісць", digits: 0 },
@@ -18631,16 +18638,28 @@ function renderTrainBar() {
     h("button", { class: "fbtn sm", type: "button", id: "s6TrainCancel", onclick: () => endTraining(false) }, t("Скасувати"))
   );
 }
+var inTraining = () => !!trainingVariant() && trainingVariant().id === st().active_id && can("variants");
+function lockPublish() {
+  const pub = $("#btnPublish");
+  if (pub && inTraining() && !pub.disabled) {
+    pub.disabled = true;
+    pub.title = t("Навчальна копія не публікується в Odoo");
+  }
+}
+var pubWatch = null;
+function watchPublish() {
+  const pub = $("#btnPublish");
+  pubWatch?.disconnect();
+  if (pub && typeof MutationObserver !== "undefined") {
+    pubWatch = new MutationObserver(lockPublish);
+    pubWatch.observe(pub, { attributes: true, attributeFilter: ["disabled"] });
+  }
+}
 function renderVariantsUi() {
   renderTab();
   renderTrainBar();
   E.renderMenu?.();
-  const pub = $("#btnPublish");
-  const training = trainingVariant() && trainingVariant().id === st().active_id;
-  if (pub && training) {
-    pub.disabled = true;
-    pub.title = t("Навчальна копія не публікується в Odoo");
-  }
+  lockPublish();
 }
 async function offerCleanup() {
   const v = trainingVariant();
@@ -18654,7 +18673,12 @@ async function offerCleanup() {
 }
 E.lifecycle.mount.add(() => {
   ensureStyle3();
+  watchPublish();
   refreshVariants().then(offerCleanup);
+});
+E.lifecycle.unmount.add(() => {
+  pubWatch?.disconnect();
+  pubWatch = null;
 });
 Object.assign(E, { variantMetrics, refreshVariants, createVariant, activateVariant, endTraining, renderVariantsUi });
 addEn({
@@ -18712,7 +18736,7 @@ addEn({
   "Залишити": "Keep"
 });
 
-// core/constructor/comments.js
+// factory3d/core/constructor/comments.js
 var POLL_MS = 15e3;
 var KINDS2 = { note: "Коментар", task: "Задача" };
 var TARGET_NAMES = { site: "Площадка", layer: "Шар", slot: "Місце", cell: "Комірка", placement: "Розміщення", item: "Об’єкт будівлі" };
@@ -19207,7 +19231,7 @@ addEn({
   "відкритих": "open"
 });
 
-// core/constructor/locks.js
+// factory3d/core/constructor/locks.js
 var POLL_MS2 = 15e3;
 var st3 = () => S.locks ||= { list: [], ttl: 300, heartbeat: 60, held: /* @__PURE__ */ new Map(), poll: 0, beat: 0, warned: "" };
 function zoneKeyOf(rec, slots = S.slots) {
@@ -19464,7 +19488,7 @@ addEn({
   "Зон, зайнятих для правки, немає.": "No zones are being edited."
 });
 
-// core/constructor/help_topics.js
+// factory3d/core/constructor/help_topics.js
 var TOPICS = [
   ["start", ["Початок роботи", "Getting started"], ["Конструктор — це 3D-редактор розкладки складу й виробництва. Зліва шари, місця й каталог, посередині сцена, праворуч властивості вибраного. Зміни йдуть у чернетку й зберігаються самі; в Odoo вони потрапляють лише після публікації.\nНовачкові допоможе «Тур новачка» (меню «Ще → Тури»).", "The constructor is a 3D editor of the warehouse and production layout. Layers, places and the catalog are on the left, the scene in the middle, properties of the selection on the right. Changes go to the draft and are saved automatically; they reach Odoo only after publishing.\nThe “Beginner tour” (menu “More → Tours”) helps newcomers."]],
   ["view", ["Вікно й камера", "The window and the camera"], ["Кнопки «3D» і «План» перемикають вигляд, «Вписати» показує все. Колесо — масштаб, права кнопка — панорама, ліва — обертання. «Підписи» вмикають підписи об'єктів, «Лінійка» (M) міряє відстань.", "“3D” and “Plan” switch the view, “Fit” shows everything. Wheel — zoom, right button — pan, left — rotate. “Labels” turns object labels on, “Ruler” (M) measures distance."]],
@@ -19505,7 +19529,7 @@ var TOPICS = [
 ];
 var TOPIC_BY_ID = Object.fromEntries(TOPICS.map((tp) => [tp[0], tp]));
 
-// core/constructor/tour_defs.js
+// factory3d/core/constructor/tour_defs.js
 var P = (uk, en) => [uk, en];
 var TAB = (tab) => `#ltabs button[data-tab="${tab}"]`;
 var MENU = (key) => [`#menu-${key}`, "#menuMore summary", "#menuExtra"];
@@ -19656,7 +19680,7 @@ var TOURS = [
 ];
 var TOUR_BY_ID = Object.fromEntries(TOURS.map((tr) => [tr.id, tr]));
 
-// core/constructor/tours.js
+// factory3d/core/constructor/tours.js
 var L2 = (pair) => Array.isArray(pair) ? pair[getLang() === "en" ? 1 : 0] : pair;
 var DONE_KEY = (id) => `f3d_tour_done:${id}`;
 var INVITE_KEY = "f3d_tour_invite";
@@ -20064,7 +20088,7 @@ addEn({
   "Яруси: {n}": "Tiers: {n}"
 });
 
-// core/constructor/minimap.js
+// factory3d/core/constructor/minimap.js
 var W = 168;
 var MAXH = 120;
 var FAR = 400;
@@ -20235,7 +20259,7 @@ E.lifecycle.unmount.add(() => {
 Object.assign(E, { renderMini, toggleMini, miniViewFootprint: viewFootprint });
 addEn({ "Мініатюра плану: клік переносить камеру": "Minimap: click to move the camera", "Мініатюра": "Minimap" });
 
-// core/constructor/levels.js
+// factory3d/core/constructor/levels.js
 var PICKS = [
   ["cell", "Місце"],
   ["bay", "Стелаж"],
@@ -20323,15 +20347,15 @@ function crumbsOf(f = S.ui.focus) {
 function boundsOf(f) {
   let pts = [];
   const row = f.row && S.sIdx.get(f.row);
-  if (row && f.bay != null) {
-    const codes = focusCodes(f);
-    pts = cellsOf(row).filter((c) => codes.has(c.code)).flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]);
-  }
-  if (!pts.length && row) {
-    const cells = cellsOf(row);
-    pts = cells.length ? cells.flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]) : [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
-  }
-  if (!pts.length && f.zone) {
+  const box = (c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]];
+  if (row) {
+    const all = cellsAbs(row, elevOf(row.layer_id));
+    const codes = f.bay != null ? focusCodes(f) : null;
+    pts = (codes && codes.size ? all.filter((c) => codes.has(c.code)) : all).flatMap(box);
+    if (!pts.length) {
+      pts = [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
+    }
+  } else if (f.zone) {
     pts = zonePoly2(f.zone) || [];
   }
   if (!pts.length) {
@@ -20487,7 +20511,7 @@ function bindCanvas() {
       }
       const rec = recOfRef(S.sel);
       const pick = S.ui.pick || "cell";
-      const same4 = !!p.sel && p.sel.kind === S.sel.kind && p.sel.id === S.sel.id;
+      const same4 = !!p.sel && S.sel.kind === "slot" && p.sel.kind === "slot" && p.sel.id === S.sel.id;
       if (same4) {
         applyPick(UP[curLevel(rec, !!p.cell)], !!p.cell);
       } else if (pick !== "cell" || S.selCell) {

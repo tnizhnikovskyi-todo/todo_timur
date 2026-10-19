@@ -20,15 +20,13 @@ const nowIso = () => new Date().toISOString();
 
 export const collabArtifact = {
     /* ===== варіанти (API-21) ===== */
+    /** Індекс варіантів площадки; поки варіантів не створено — лише в пам'яті («Як є»), у сховище нічого не пишеться (читання не пише). */
     async _variantIndex(S) {
-        const sid = S.site.id;
-        let ix = await this.storage.get("variants", sid);
-        if (!ix || !Array.isArray(ix.items) || !ix.items.length) {
-            ix = { seq: 1, active: 1, items: [{ id: 1, name: "Як є", is_training: false, origin_id: null, metrics: {}, by: this.userName, at: nowIso() }] };
-            await this.storage.set("variants", sid + ".1", makeSnapshot(S));
-            await this.storage.set("variants", sid, ix);
+        const ix = await this.storage.get("variants", S.site.id);
+        if (ix && Array.isArray(ix.items) && ix.items.length) {
+            return ix;
         }
-        return ix;
+        return { seq: 1, active: 1, items: [{ id: 1, name: "Як є", is_training: false, origin_id: null, metrics: {}, by: this.userName, at: nowIso() }] };
     },
 
     async _putVariant(S, ix, id, metrics) {

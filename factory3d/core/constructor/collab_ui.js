@@ -36,6 +36,8 @@ const CSS = `
 .s6-train[hidden]{display:none}
 .s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
 .s6-crumbs[hidden]{display:none}
+.s6-crumbs,.s6-pick{pointer-events:none}
+.s6-crumbs button,.s6-pick select,.s6-pick button,.s6-pick label{pointer-events:auto}
 .s6-crumbs button{border:0;background:transparent;padding:2px 5px;cursor:pointer;color:var(--ink);font:inherit}
 .s6-crumbs button:hover{background:var(--accent-soft)}
 .s6-crumbs button[aria-current="true"]{font-weight:700}

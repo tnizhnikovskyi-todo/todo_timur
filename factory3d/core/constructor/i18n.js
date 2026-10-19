@@ -4,7 +4,7 @@
 // реєструє свої фрази у СВОЄМУ файлі (`addEn({...})`). Рядки чужих файлів, які ще не загорнуто в `t()`, перекладає лише DOM-
 // перекладач (точні фрази й шаблони з цього файлу; атрибути title / placeholder / aria-label теж): без правки чужих файлів у режимі EN
 // перекладається шапка, вкладки, меню, основні діалоги; решта лишається українською (перелік місць для `t()` — у README, розділ S6).
-// Вибір мови запам'ятовується в браузері (`f3d_constructor_lang`); без вибору — мова сторінки Odoo (`<html lang>`), інакше UK.
+// Вибір мови запам'ятовується в браузері (`f3d_constructor_lang`); без вибору — `host.lang` (якщо хост передав), інакше UK.
 import { registries } from "./registry.js";
 import { host } from "./host.js";
 import { E } from "./state.js";
@@ -32,14 +32,13 @@ const lsSet = (k, v) => {
     }
 };
 
-/** Мова за вибором користувача, потім мовою хоста чи сторінки; `uk` за замовчуванням. */
+/** Мова за вибором користувача, потім явна мова хоста (`host.lang`); інакше `uk`. Мова сторінки Odoo не береться: користувачі en_US досі бачили українське. */
 export function detectLang() {
     const saved = lsGet(KEY);
     if (saved === "uk" || saved === "en") {
         return saved;
     }
-    const from = String(host.lang || globalThis.document?.documentElement?.lang || "").toLowerCase();
-    return from.startsWith("en") ? "en" : "uk";
+    return String(host.lang || "").toLowerCase().startsWith("en") ? "en" : "uk";
 }
 export const getLang = () => (lang ||= detectLang());
 
@@ -236,7 +235,7 @@ addEn({
     // шапка й вкладки
     "Конструктор": "Constructor", "Площадка": "Site", "Нова площадка": "New site", "Роль": "Role", "Режим": "Mode", "Ваша роль": "Your role",
     "Перегляд": "View", "Редагування": "Edit", "Проєктування": "Design", "Застосування": "Apply", "Менеджер (своя роль)": "Manager (own role)",
-    "Опублікувати": "Publish", "Історія версій": "Version history", "Історія": "History", "Тема": "Theme", "Шари": "Layers", "Місця": "Places",
+    "Опублікувати": "Publish", "Історія версій": "Version history", "Історія": "History", "версій": "versions", "Тема": "Theme", "Шари": "Layers", "Місця": "Places",
     "Каталог": "Catalog", "Об’єкт": "Object", "Ліва панель": "Left panel", "Властивості": "Properties", "3D-сцена": "3D scene",
     "Пошук": "Search", "Лоток": "Tray", "Типи": "Types", "Збережено": "Saved", "Зберігаємо…": "Saving…", "Помилка збереження": "Save error",
     "Чернетка · без змін": "Draft · no changes", "Ще ▾": "More ▾", "Зберегти все": "Save all", "Застосувати": "Apply",

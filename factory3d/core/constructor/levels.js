@@ -2,13 +2,13 @@
 // камера наїжджає на нього; «↑» — рівень вище, «⟲» — скинути. «Клік виділяє: Місце / Стелаж / Ряд / Зона» — що вибирає клік по сцені;
 // повторний клік по тому самому об'єкту піднімає вибір на рівень вище (місце → стелаж → ряд → зона → склад). Працює однаково в 2D і 3D;
 // scene.js не змінюється: видимість — хук `pre` кадру (collab_ui.js), клік — слухач на canvas сцени. Мініатюру плану малює minimap.js.
-import { zoneAt, zonesOf } from "./capacity_core.js";
+import { cellsAbs, zoneAt, zonesOf } from "./capacity_core.js";
 import { cellsOf } from "./cells.js";
 import { addFrameHook, centerEl, ensureStyle } from "./collab_ui.js";
 import { polygonContains } from "./geometry.js";
 import { addEn, t } from "./i18n.js";
 import { registries } from "./registry.js";
-import { E, S, V, recOfRef } from "./state.js";
+import { E, S, V, elevOf, recOfRef } from "./state.js";
 import { $, K, h, toast } from "./util.js";
 
 export const PICKS = [
@@ -107,19 +107,19 @@ export function crumbsOf(f = S.ui.focus) {
     return out;
 }
 
-/** Габарит фокуса: центр і розмір (м) для камери. */
+/** Габарит фокуса: центр і розмір (м) для камери (світові координати комірок — `cellsAbs`). */
 function boundsOf(f) {
     let pts = [];
     const row = f.row && S.sIdx.get(f.row);
-    if (row && f.bay != null) {
-        const codes = focusCodes(f);
-        pts = cellsOf(row).filter((c) => codes.has(c.code)).flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]);
-    }
-    if (!pts.length && row) {
-        const cells = cellsOf(row);
-        pts = cells.length ? cells.flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]) : [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
-    }
-    if (!pts.length && f.zone) {
+    const box = (c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]];
+    if (row) {
+        const all = cellsAbs(row, elevOf(row.layer_id));
+        const codes = f.bay != null ? focusCodes(f) : null;
+        pts = (codes && codes.size ? all.filter((c) => codes.has(c.code)) : all).flatMap(box);
+        if (!pts.length) {
+            pts = [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
+        }
+    } else if (f.zone) {
         pts = zonePoly(f.zone) || [];
     }
     if (!pts.length) {
@@ -286,7 +286,8 @@ function bindCanvas() {
             }
             const rec = recOfRef(S.sel);
             const pick = S.ui.pick || "cell";
-            const same = !!p.sel && p.sel.kind === S.sel.kind && p.sel.id === S.sel.id;
+            // повторний клік піднімає рівень лише в ієрархії місць (місце → стелаж → ряд → зона → склад); обладнання рівнів не має
+            const same = !!p.sel && S.sel.kind === "slot" && p.sel.kind === "slot" && p.sel.id === S.sel.id;
             if (same) {
                 applyPick(UP[curLevel(rec, !!p.cell)], !!p.cell);
             } else if (pick !== "cell" || S.selCell) {

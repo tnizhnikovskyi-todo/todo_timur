@@ -339,16 +339,30 @@ export function renderTrainBar() {
     );
 }
 
+const inTraining = () => !!trainingVariant() && trainingVariant().id === st().active_id && can("variants");
+function lockPublish() {
+    const pub = $("#btnPublish");
+    if (pub && inTraining() && !pub.disabled) {
+        pub.disabled = true;
+        pub.title = t("Навчальна копія не публікується в Odoo");
+    }
+}
+let pubWatch = null;
+/** Кнопку «Опублікувати» перемальовує шапка (renderTop): стежимо за атрибутом і знову вимикаємо в навчальній копії. */
+function watchPublish() {
+    const pub = $("#btnPublish");
+    pubWatch?.disconnect();
+    if (pub && typeof MutationObserver !== "undefined") {
+        pubWatch = new MutationObserver(lockPublish);
+        pubWatch.observe(pub, { attributes: true, attributeFilter: ["disabled"] });
+    }
+}
+
 export function renderVariantsUi() {
     renderTab();
     renderTrainBar();
     E.renderMenu?.();
-    const pub = $("#btnPublish");
-    const training = trainingVariant() && trainingVariant().id === st().active_id;
-    if (pub && training) {
-        pub.disabled = true;
-        pub.title = t("Навчальна копія не публікується в Odoo");
-    }
+    lockPublish();
 }
 
 async function offerCleanup() {
@@ -364,7 +378,12 @@ async function offerCleanup() {
 
 E.lifecycle.mount.add(() => {
     ensureStyle();
+    watchPublish();
     refreshVariants().then(offerCleanup);
+});
+E.lifecycle.unmount.add(() => {
+    pubWatch?.disconnect();
+    pubWatch = null;
 });
 
 Object.assign(E, { variantMetrics, refreshVariants, createVariant, activateVariant, endTraining, renderVariantsUi });
