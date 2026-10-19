@@ -46,9 +46,7 @@ class TestOeeDayFilter(F3DMachineCase):
                 self.assertEqual(Shift.search(base + [("is_this_week", "=", True)]), pick(lambda d: d >= week), now)
                 self.assertEqual(Shift.search(base + [("is_this_week", "=", False)]), pick(lambda d: d < week), now)
                 self.assertEqual(Shift.search(base + [("is_this_month", "=", True)]), pick(lambda d: d >= month), now)
-                self.assertEqual(
-                    sorted(all_rows.filtered("is_today").mapped("date")), [today], now
-                )
+                self.assertEqual(sorted(all_rows.filtered("is_today").mapped("date")), [today], now)
                 all_rows.unlink()
 
     def test_search_view_does_not_use_browser_date(self):

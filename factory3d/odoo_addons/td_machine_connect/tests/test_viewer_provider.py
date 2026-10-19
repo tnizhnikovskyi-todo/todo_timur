@@ -67,9 +67,7 @@ class TestViewerProvider(F3DMachineCase):
         )
         self.m_cnc.write({"state": "fault", "state_since": self.kt("09:42"), "current_downtime_id": down.id})
         job_model = self.env["td.gantry.job"]
-        job_model._td_set_gantry_status(
-            {"state": "moving", "aisles_open": [2], "alarms": ["Вакуум"], "vacuum_kpa": 71}
-        )
+        job_model._td_set_gantry_status({"state": "moving", "aisles_open": [2], "alarms": ["Вакуум"], "vacuum_kpa": 71})
         self.stack_t1.write({"ws_qty": 40, "ws_seen": self.kt("10:29")})
         self.stack_t1._td_refresh()
         self.job = job_model.create(

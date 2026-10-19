@@ -61,9 +61,7 @@ def param_bool(env, key, default="False"):
 
 def env_default(env):
     """Умовчання `read_enabled` при відсутньому параметрі (CB-10): `True` лише в тестовому середовищі."""
-    return (
-        "True" if env["ir.config_parameter"].sudo().get_param("td.base.environment", "") == "test" else "False"
-    )
+    return "True" if env["ir.config_parameter"].sudo().get_param("td.base.environment", "") == "test" else "False"
 
 
 def local(dt, fmt="%d.%m %H:%M"):

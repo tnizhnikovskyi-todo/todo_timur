@@ -3,6 +3,7 @@
 Записи сигналів `noupdate`, тож `-u` не підхоплює нове значення з `data/mc_signals.csv`. Оновлюються лише сигнали
 зі значенням 0 (ручні правки лишаються); повторний запуск нічого не змінює.
 """
+
 from odoo import SUPERUSER_ID, api
 
 from odoo.addons.td_machine_connect.hooks import migrate_store_period

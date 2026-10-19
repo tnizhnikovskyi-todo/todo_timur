@@ -213,9 +213,7 @@ class F3dGantryJob(models.Model):
         product = cut_map.material_product_id if cut_map else self.env["product.product"]
         moves = production.move_raw_ids.filtered(lambda m: m.state not in ("done", "cancel"))
         if not product:
-            plates = moves.filtered(lambda m: m.product_id.td_thickness_mm >= 8).sorted(
-                "product_uom_qty", reverse=True
-            )
+            plates = moves.filtered(lambda m: m.product_id.td_thickness_mm >= 8).sorted("product_uom_qty", reverse=True)
             product = plates[:1].product_id
         move = moves.filtered(lambda m: m.product_id == product)[:1]
         existing = self.sudo().search(

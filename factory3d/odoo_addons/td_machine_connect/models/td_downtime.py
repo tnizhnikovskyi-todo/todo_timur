@@ -88,8 +88,7 @@ class F3dDowntime(models.Model):
 
     def init(self):
         self.env.cr.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS td_downtime_open_uniq ON td_downtime (machine_id) "
-            "WHERE date_end IS NULL"
+            "CREATE UNIQUE INDEX IF NOT EXISTS td_downtime_open_uniq ON td_downtime (machine_id) WHERE date_end IS NULL"
         )
 
     @api.depends("code", "date_start")

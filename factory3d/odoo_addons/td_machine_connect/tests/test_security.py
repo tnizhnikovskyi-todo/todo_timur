@@ -71,9 +71,7 @@ class TestSecurity(F3DMachineCase):
             .with_company(company2)
             .create({"name": "РЦ C2", "td_code": "C2-1", "company_id": company2.id})
         )
-        machine2 = (
-            self.env["td.machine"].with_company(company2).create({"workcenter_id": wc2.id, "protocol": "manual"})
-        )
+        machine2 = self.env["td.machine"].with_company(company2).create({"workcenter_id": wc2.id, "protocol": "manual"})
         self.assertFalse(self.env["td.machine"].with_user(self.user_f3d).search([("id", "=", machine2.id)]))
         self.assertTrue(self.env["td.machine"].with_user(self.user_f3d).search([("id", "=", self.m_saw.id)]))
 

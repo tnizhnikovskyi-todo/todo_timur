@@ -98,9 +98,7 @@ class F3dMachineStateLog(models.Model):
         old = self.sudo().search([("date_end", "!=", False), ("date_end", "<", limit)])
         if old:
             old.unlink()
-        ev_days = int(
-            self.env["ir.config_parameter"].sudo().get_param("td.machine_connect.keep_event_days", "90")
-        )
+        ev_days = int(self.env["ir.config_parameter"].sudo().get_param("td.machine_connect.keep_event_days", "90"))
         ev_limit = fields.Datetime.now() - timedelta(days=ev_days)
         events = self.env["td.machine.event"].sudo().search([("ts", "<", ev_limit)])
         if events:

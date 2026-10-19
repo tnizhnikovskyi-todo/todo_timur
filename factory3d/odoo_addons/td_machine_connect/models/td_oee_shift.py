@@ -12,7 +12,9 @@ _logger = logging.getLogger(__name__)
 
 D12 = (12, 1)
 KYIV = ZoneInfo("Europe/Kyiv")
-TIMELOG_STALE_H = 12  # M-2: відкритий продуктивний запис журналу часу старший за стільки годин до початку вікна — застарілий
+TIMELOG_STALE_H = (
+    12  # M-2: відкритий продуктивний запис журналу часу старший за стільки годин до початку вікна — застарілий
+)
 AGG_FIELDS = ("ppt_min", "run_min", "run_wo_min", "ideal_min", "qty_total", "qty_bad")
 
 
