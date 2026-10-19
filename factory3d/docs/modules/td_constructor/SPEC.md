@@ -1753,6 +1753,37 @@ API-03 для seed ≤ 1,5 с (≈ 250 КБ); API-04 зі 100 операціям
 
 1. Копія демо-бази тестового сервера → встановлення модуля; 2. `seed_report`: `linked.locations` дорівнює числу локацій `FG-*`/`RCK-*`/`FUR-*` у базі, `unlinked` — перелічені; 3. «Опублікувати» на seed: `created` лише для кодів, яких бракувало; існуючі `FG-R1-B01-L4` не продубльовані; 4. відкат: деінсталяція — записи `stock.location`/`maintenance.equipment` на місці; 5. повторна установка — seed не дублюється (`seed_key`).
 
+### 13.6 Тести хвиль 0–2 (злиття): файли, класи, запуск
+
+**Python (Odoo, `odoo_addons/td_constructor/tests/`, теги `post_install`, `-at_install`, `f3d`, `f3d_constructor` і тег слайса `f3d_s1`…`f3d_s6` (`TestCoreNode` — `f3d_core`); ≈ 300 тестів у файлах нижче).** Базові класи — `common.py` (`F3DConstructorCase`, `F3DConstructorHttpCase`); еталони й «золоті» дані — `golden_s1.py`, `golden_s3.py`, `golden_s4.py`, `golden_s5.py`, `golden_scenes.py`.
+
+| Файл | Класи | AC |
+|---|---|---|
+| `test_skeleton_models.py`, `test_skeleton_rights.py`, `test_skeleton_api.py`, `test_install.py` | `TestSkeletonModels`, `TestSkeletonRights`, `TestSkeletonApi`, `TestInstall` | 70, 136, 138 |
+| `test_registries.py`, `test_registry_hooks.py` | `TestRegistries`, `TestRegistryHooks`, `TestRegistryHooksApi` | 71 |
+| `test_new_fields_api.py` | `TestNewFieldsApi`, `TestNewFieldsSnapshot` | 114, 135 |
+| `test_s1_addr.py`, `test_s1_catalog.py`, `test_s1_checks.py`, `test_s1_library.py`, `test_s1_golden.py`, `test_s1_migration.py`, `test_s1_core_node.py` | `TestAddrEngine`, `TestAddrModels`, `TestSiteAddrApi`, `TestCatalog`, `TestChecksWithAddressing`, `TestLibraryApi`, `TestS1Golden`, `TestMigrationFloorSpot`, `TestS1CoreNode` | 74…82, 137 |
+| `test_s2_plan.py`, `test_s2_capacity.py`, `test_s2_putaway.py`, `test_s2_core_node.py` | `TestS2Plan`, `TestS2PlanApi`, `TestS2Capacity`, `TestS2StorageApi`, `TestS2Putaway`, `TestS2PutawayApi`, `TestS2CoreNode` | 77, 83…98 |
+| `test_s3_labels.py`, `test_s3_stock.py`, `test_s3_core_node.py` | `TestS3Labels`, `TestS3LabelsApi`, `TestS3StockState`, `TestS3StockApi`, `TestS3CoreNode` | 99…102 |
+| `test_s4_sync.py`, `test_s4_tabular.py`, `test_s4_core_node.py` | `TestS4Schema`, `TestS4Feed`, `TestS4PublishBaseline`, `TestS4Api`, `TestS4Tabular`, `TestS4TabularApi`, `TestS4CoreNode` | 88, 108…111 |
+| `test_s5_checks.py`, `test_s5_docs.py`, `test_s5_wizard.py`, `test_s5_core_node.py` | `TestS5Building`, `TestS5Docs`, `TestS5Wizard`, `TestS5CoreNode` | 114…119, 121 |
+| `test_s6_collab.py`, `test_s6_help.py`, `test_s6_tours.py` | `TestVariants`, `TestCollabApi`, `TestComments`, `TestZoneLocks`, `TestHelp`, `TestS6Tours` | 122…126, 128, 130…132, 134 |
+| `test_core_node.py`, `test_hoot_editor.py`, `test_hoot_model.py` | `TestCoreNode` (запускає `node tools/test_core.mjs`), `TestEditorHoot`, `TestModelHoot` | 72, JS-частини |
+
+Запуск (за конвенцією проєкту, `T=factory3d/tools/odoo`): `F3D_TEST_INSTALL=td_constructor $T/run_tests.sh <db> /td_constructor` (усе), `…/td_constructor:TestS2Plan` (клас), `…/td_constructor:TestS6Tours` (тури; браузер Chrome потрібен `start_tour`).
+**Нестабільність:** тести S3 (`test_s3`) бувають нестабільними під навантаженням (кілька агентів на одному сервері) — Q-18; при падінні перезапустити окремо й порівняти.
+
+**Node (ядро без Odoo):** `node tools/test_core.mjs` — відносні імпорти, контракт адаптера, збірка свіжа (з `ESBUILD_DIR`), реєстр слайсів + `tools/test_core_s1.mjs` (адреси, каталог 50 типів ≡ XML, пресети), `_s2.mjs` (план, ємність, правила, «чи вміститься»), `_s3.mjs` (скасування, виділення, етикети, ZPL, теплові карти, пошук, доступ), `_s4.mjs` (розбір кодів, лоток, CSV/XLSX, авторозкладка, розбіжності),
+`_s5.mjs` (будівля, перевірки, специфікація, документи, майстер), `_s6.mjs` (варіанти, коментарі, оренди, тури, мови, рівні, мініатюра, історія). Кожен файл запускається й окремо. Збірка: `node tools/build_core.mjs module --check`.
+
+**HOOT** (`static/tests/editor/`, suite `@td_constructor/editor`, запускає `TestEditorHoot`): `engine.test.js`, `editor.test.js`, `store.test.js`, `dxf.test.js` (W2), `s3.test.js` (4 тести), `s4.test.js` (4), `s5.test.js` (5), `s6.test.js` (7); хелпери `core.js` (`setupCore`), `helpers.js`, `fixtures.js`; модельні тести W3 — `static/tests/model/*`.
+
+**Playwright (прототип, `build/constructor/proto/`):** `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node build/constructor/proto/test_s<N>.js [набір]` після `python3 build/constructor/proto/build.py`; набори — S3: `undo, multi, tools, align, labels, heat, search, card, mobile, save`; S4: `імпорт, файли, лоток, розкладка, розбіжності, правила`; S6: `chrome, варіанти, коментарі, рівні, мова, тури, запрошення, історія, блокування`;
+S1, S2, S5 — власні набори (`test_s1.js`, `test_s2.js`, `test_s5.js`); загальні — `smoke.js`, `test_ac.js`, `test_cell.js`, `test_idb.js`, `test_misc.js`, `test_nostorage.js`, `test_reload.js`, `test_scene.js`, `test_upgrade.js`. Потрібні каталоги `vendor/` і `fixtures/` **поза репозиторієм** (як у PROTOTYPE.md).
+
+**Додатково до §13.3 (безпека):** кожен API §7.1 має перевірки за ролями (AC-138); ін'єкції — `addr` (`tpl` лише `[A-Za-z0-9._/#:-]`, ≤ 64), `parse_rules.mask/regex`, `code` типу (регулярка), `zone_uid` ≤ 32, JSON ≤ 256 КБ / 8 рівнів (R-22); `confirm: true` для API-12 save/delete, API-18 rollback, API-07 publish; нічого не видаляється в Odoo (відкат архівує, публікація архівує лише з `archive_codes`).
+**Додатково до §13.4 (продуктивність):** `stock/state` — пачки ≤ 2000 локацій і ≤ 2 МБ (`TestS3StockState.test_batches`); стрічка локацій — пачки ≤ 20 000; бюджет прототипу 900 КБ (`test_scene.js`). **Навантажувального тесту на 5–50 тис. комірок немає** — Q-21.
+
 ## 14. Definition of Done
 
 - [ ] Усі UT (W1) і HOOT (W2, W3) зелені: `run_tests.sh` повертає `OK`; AC-01…AC-68 покриті (UT/JS) або пройдені за ТК (MAN) зі скриншотами.
@@ -1763,6 +1794,29 @@ API-03 для seed ≤ 1,5 с (≈ 250 КБ); API-04 зі 100 операціям
 - [ ] `README.md`, `CHANGELOG.md`, `DEPLOY_TEST.md`; інструкції ARCH §4 перенесені в README.
 - [ ] Відхилення від CD-16 (DEC-03) підтверджене замовником або позначене в README як «очікує підтвердження» (Q-01).
 
+- [ ] Злиття (хвилі 0–2): AC-70…AC-138 покриті або мають відкрите питання (AC-112, AC-116, AC-120 — Q-16, Q-19, Q-17); `node tools/test_core.mjs` і `node tools/build_core.mjs module --check` зелені; Playwright `test_s1…s6.js` пройдені перед публікацією прототипа; `i18n/*.po` без розбіжностей з `.pot` (AC-132).
+- [ ] `CHANGELOG.md` модуля має запис кожної версії до `19.0.1.4.0`; `core/constructor/README.md` описує S1…S6; `README.md` модуля й `DEPLOY_TEST.md` оновлено під хвилі 1–2 (перелік моделей, API-11…24, нові інструкції) — **не зроблено** (ARCH §5.3).
+
 ## 15. Відкриті питання
 
 Ті самі номери, що в ARCH §5.1: Q-01 (відхилення від CD-16), Q-02 (серверні конвертери), Q-03 (шаблон «зона» → `td.zone`), Q-04 (хто публікує), Q-05 (архівація при залишках), Q-06 (DWG на сервері), Q-07 (префікси кодів між площадками), Q-08 (фаза 2: переглядач з розкладки), Q-09 (ліміти навантаження), Q-10 (досяжність підключення), Q-11 (типові габарити), Q-12 (коди й види комірок консольних/підлогових шаблонів), Q-13 (`mrp_maintenance`), Q-14 (шлях Hoot-suite).
+
+
+Нові питання злиття (повний опис — ARCH §5.1; відповіді CD-31 Q1…Q11 прийнято, див. `build/constructor/DECISIONS.md`):
+
+| ID | Питання | Що робимо тим часом |
+|---|---|---|
+| Q-15 | Англійська через `t()`: зараз EN покриває DOM-перекладач `i18n.js` (точні фрази й шаблони), `t()` є лише в 7 файлах S6; потрібні виклики `t()` у ≈ 20 файлах ядра (панелі, діалоги, `app.js`, `addr.js`, `types_ui.js`, `capacity_ui.js`, `rules_dialog.js`, `plan_dialog.js`, `files_ui.js`, `sync_ui.js`, `docs_ui.js`, `building_ui.js`, `wizard.js` …) | режим EN працює через DOM-перекладач; нові рядки реєструються `addEn()` у своєму файлі (AC-132) |
+| Q-16 | F11-05 `.whproj.json` (експорт/імпорт проєкту) і CD-31 Q3 (одноразовий імпорт проєктів «Конструктора складу» в площадки й варіанти, відключення `wh_constructor`) — чекають зразків файлів від замовника (CD-31 Q12) | не реалізовано (AC-112); `wh_constructor` не відключається |
+| Q-17 | F15-03 «Місця в Excel» (код, штрихкод, зона, ряд, секція, ярус, позиція, тип, габарити, ємність, макс. вага, категорія, залишок, статус, id Odoo) не зроблено | не реалізовано (AC-120); сервер уже вміє `table_xlsx` (R-36) |
+| Q-18 | `test_s3` нестабільний під навантаженням | перезапуск окремо (§13.6) |
+| Q-19 | Колони `column_grid` при нестачі місця ігноруються авторозкладкою (`gridIgnored`), але `inside` їх не бачить (R-37 п. 2) — зауваження немає | фіксуємо як відоме обмеження (AC-116) |
+| Q-20 | Еталонні файли «Конструктора складу» (CD-31 Q12): формули специфікації стелажів (R-38), авторозкладки (§8.5), ZPL відновлено за інструкцією | реалізовано за інструкцією; зразки — звірити |
+| Q-21 | Склад 5–50 тис. комірок: навантажувальний тест (пачки `stock/state`, `InstancedMesh`) не виконано (MERGE §5.4) | пачки й ліміти (§13.4); тест на копії бази замовника перед продом |
+
+## Журнал змін документа
+
+| Версія | Дата | Зміни |
+|---|---|---|
+| 0.1 | 17.10.2026 | перший випуск: M-01…M-15, V-01…V-13, API-01…API-10, R-01…R-24, AC-01…AC-68, Q-01…Q-14 |
+| 0.2 | 19.10.2026 | злиття з «Конструктором складу» (хвилі 0–2, модуль `19.0.1.4.0`): §0.1 і §1.1 (файли, маніфест); §2.1 і M-16…M-31; §3.1 V-14…V-18 і меню; §4.5 права; §5.4 дані й міграції; §6 (кронів немає); §7.1 API-11…API-24 і маршрути `/site/addr`, `/odoo/rules`, `/site/wizard`, `/help`, `/storage/loads`, `/putaway/lookup`, `/removal_strategies`; §8.4 ядро + адаптер, §8.5 правила ядра; §9.1 R-25…R-41 (реєстри — R-41); §10.1, §11.1; §12.1 AC-70…AC-138; §13.6 тести; §14, §15 (Q-15…Q-21). Існуючі ID не змінено; `static/src/editor/*` у §0 замінено ядром (CD-29), `.po` тепер ведуться (CD-31 Q7) |
