@@ -26,7 +26,7 @@ registry.category("web_tour.tours").add("td_constructor_collab_tour", {
                 E.selectObj({ kind: "slot", id: rack.id });
             },
         },
-        { content: "Блок «Коментарі» у правій панелі", trigger: "#s6Comments #s6CmText" },
+        { content: "Блок «Коментарі» (під властивостями) показує вибраний ряд", trigger: "#s6Comments .s6-muted:contains('Місце')" },
         { content: "Текст нотатки", trigger: "#s6CmText", run: "edit Перевірити стелаж на місці" },
         { content: "Додати нотатку", trigger: "#s6CmAdd", run: "click" },
         { content: "Синій значок із числом 1", trigger: "#s6Badges .s6-badge[data-tone='note']:contains('1')" },

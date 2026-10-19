@@ -93,7 +93,7 @@ async function t_variants(page) {
 async function t_comments(page) {
   const rack = await ev(page, () => { const s = __f3d.S.slots.find((x) => x.template === 'pallet_rack'); return { id: s.id, x: s.x, y: s.y }; });
   await ev(page, (id) => __f3d.E.selectObj({ kind: 'slot', id }), rack.id);
-  await page.waitForSelector('#s6CmText');
+  await page.waitForFunction(() => /Місце/.test(document.getElementById('s6Comments').textContent)); // блок слідує за вибором
   ok('блок «Коментарі» в правій панелі для вибраного ряду', /Коментарі/.test(await page.textContent('#s6Comments h3')));
   await page.fill('#s6CmText', 'Перевірити стелаж на місці');
   await page.click('#s6CmAdd');
@@ -146,11 +146,13 @@ async function t_comments(page) {
   await page.keyboard.press('Escape');
   // коментар до комірки й площадки
   await ev(page, (id) => { __f3d.E.selectObj({ kind: 'slot', id }); const c = __f3d.cellsOf(__f3d.S.sIdx.get(id))[0]; __f3d.S.selCell = c.code; __f3d.E.renderRight(); }, rack.id);
+  await page.waitForFunction(() => /Комірка/.test(document.getElementById('s6Comments').textContent));
   await page.fill('#s6CmText', 'Комірка пошкоджена');
   await page.click('#s6CmAdd');
   await page.waitForFunction(() => document.querySelectorAll('#s6Badges .s6-badge').length === 2);
   ok('коментар до комірки — окремий значок', true);
   await ev(page, () => __f3d.E.selectObj(null));
+  await page.waitForFunction(() => /Площадка/.test(document.getElementById('s6Comments').textContent));
   await page.fill('#s6CmText', 'Загальна нотатка по складу');
   await page.click('#s6CmAdd');
   await page.waitForFunction(() => document.querySelectorAll('#s6Badges .s6-badge').length === 3);

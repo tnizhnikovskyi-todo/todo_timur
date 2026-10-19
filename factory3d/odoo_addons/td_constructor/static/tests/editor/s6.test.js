@@ -107,7 +107,7 @@ test("S6: коментарі — значок на сцені (колір за �
     const badge = document.querySelector("#s6Badges .s6-badge");
     expect([badge.dataset.tone, badge.textContent]).toEqual(["task", "1"]);
     E.selectObj({ kind: "slot", id: "slrack" });
-    await waitFor("#s6CmText");
+    await waitUntil(() => document.querySelector("#s6Comments")?.textContent.includes("Місце: PR-1")); // блок слідує за вибором
     document.querySelector("#s6CmText").value = "Нотатка";
     document.querySelector("#s6CmAdd").click();
     await waitFor("#s6Badges .s6-badge:not([hidden])");

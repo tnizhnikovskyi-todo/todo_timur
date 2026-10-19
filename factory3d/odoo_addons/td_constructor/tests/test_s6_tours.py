@@ -52,6 +52,8 @@ class TestS6Tours(F3DConstructorHttpCase):
         comments = self.env['td.comment'].search([('site_id', '=', self.site.id)], order='id')
         self.assertEqual(len(comments), 2)
         self.assertEqual(comments.mapped('state'), ['resolved', 'resolved'])
+        self.assertEqual(set(comments.mapped('target_uid')), {self.rack.uid}, "коментарі прив'язані до виділеного ряду")
+        self.assertEqual(set(comments.mapped('target_kind')), {'slot'})
         task = comments.filtered(lambda c: c.kind == 'task')
         self.assertEqual((task.assignee_id, task.author_id), (self.tour_store, self.tour_mgr))
         self.assertFalse(task.activity_ids, "завдання виконавця закрито вирішенням")

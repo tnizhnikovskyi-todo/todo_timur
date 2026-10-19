@@ -218,7 +218,7 @@ export async function openHistory() {
         }
     }
     async function onRestore(v) {
-        const ok = await confirmBox({ title: t("Повернути чернетку до v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
+        const ok = await confirmBox({ title: t("Повернути чернетку до v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Повернути"), danger: true });
         if (!ok) {
             return;
         }
