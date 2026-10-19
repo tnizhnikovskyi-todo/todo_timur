@@ -14,7 +14,7 @@
       "`kpis.generation.genset` — null без моста; `advice.actions[].enabled=false` — клієнт кнопку не малює (kind=control без W2).",
       "Рядки часу в API — `HH:MM` (Київ); `meta.now` — ISO UTC naive.",
       "Ребра схеми: `from` — батько, `to` — вузол; стан ребра лише ok|gen|off (warn/alarm вузла на ребро не переходять).",
-      "Імена методів Python: існуючі методи лишились `_f3d_*`/`action_f3d_*` (RENAME.md §6): `td.energy.event._f3d_log` (аліас `_td_log`), `td.energy.node.action_f3d_show` (аліас `action_td_show`); нові методи W1 — `_td_*`.",
+      "Імена методів Python: існуючі методи лишились `_td_*`/`action_f3d_*` (RENAME.md §6): `td.energy.event._td_log` (аліас `_td_log`), `td.energy.node.action_f3d_show` (аліас `action_td_show`); нові методи W1 — `_td_*`.",
       "Клієнт викликає `td.energy.node.action_open_card`, `action_td_show` (3D), `td.energy.event.action_ack|take|release|resolve`, `td.energy.outage.plan.preview|create|action_submit|action_approve|action_reject(reason)|action_cancel`, `td.energy.advice.action_snooze|action_dismiss`, `td.energy.ticket.wizard.create+action_create`; «Призначити на себе» для заявки ТО PFC — `maintenance.request.write({user_id: uid})` (елемент тривоги: `request_id`, `request_assignable`)."
     ]
   },

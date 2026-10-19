@@ -116,7 +116,7 @@ class TestW1Card(TestW1Common):
         qf2 = self.Node.search([("code", "=", "QF-2")])
         qf2.write({"protection_ir_ratio": 0.9, "protection_trip_unit": "електронний"})
         for k in range(2):
-            self.Event._f3d_log(
+            self.Event._td_log(
                 "warn", "trip", "QF-2", "Спрацював захист QF-2", ts=NOW - timedelta(days=30 + k), node=qf2
             )
         block = self.card()["protection"]
@@ -131,7 +131,7 @@ class TestW1Card(TestW1Common):
             (real_now - timedelta(minutes=5), "energy/lines/BW-2/state"),
         )
         self.env["td.signal"].invalidate_model()
-        self.env["td.signal"]._f3d_ingest([{"code": "energy/lines/BW-2/state", "ts": real_now, "text": "tripped"}])
+        self.env["td.signal"]._td_ingest([{"code": "energy/lines/BW-2/state", "ts": real_now, "text": "tripped"}])
         trip = self.Event.search([("kind", "=", "trip")])
         self.assertEqual(
             (trip.level, trip.state, trip.node_id.code, trip.title), ("warn", "active", "QF-2", "Спрацював захист QF-2")
@@ -144,7 +144,7 @@ class TestW1Card(TestW1Common):
             NOW - timedelta(days=4, hours=k) for k in range(6)
         ]
         for k, ts in enumerate(stamps):
-            self.Event._f3d_log("info", "peak", "SWB-1", "Подія %d. Деталі." % k, ts=ts, node=node)
+            self.Event._td_log("info", "peak", "SWB-1", "Подія %d. Деталі." % k, ts=ts, node=node)
         equipment = self.env["maintenance.equipment"].create({"name": "ШР-2 обладнання", "td_code": "W1-BW2"})
         self.Node.search([("code", "=", "CNC-4")]).write({"equipment_id": equipment.id})
         request = self.env["maintenance.request"].create({"name": "Перевірка", "equipment_id": equipment.id})

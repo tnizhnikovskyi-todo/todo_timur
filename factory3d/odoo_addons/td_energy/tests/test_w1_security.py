@@ -86,7 +86,7 @@ class TestW1Security(TestW1Common):
         source = self.env["td.source"].search([("code", "=", "MB-U73-SWB-CTRL")])
         self.assertEqual((source.read_enabled, source.state), (False, "disabled"))
         self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("td.energy.write_enabled"), "False")
-        event = self.Event._f3d_log("warn", "meter", "PM-QF-C2", "Лічильник. Немає даних.", ts=self.now)
+        event = self.Event._td_log("warn", "meter", "PM-QF-C2", "Лічильник. Немає даних.", ts=self.now)
         plan = self.env["td.energy.outage.plan"].create(
             {
                 "node_id": self.Node.search([("code", "=", "BW-2")]).id,
@@ -106,7 +106,7 @@ class TestW1Security(TestW1Common):
             self.env["td.energy.dashboard"].with_user(self.u_view).get_pult(parts=[])["meta"]["refresh_s"], 45
         )
         for k in range(5):
-            self.Event._f3d_log(
+            self.Event._td_log(
                 "warn", "meter", "PM-%d" % k, "Подія %d. Текст." % k, ts=self.now - timedelta(minutes=k)
             )
         items = self.env["td.energy.dashboard"].with_user(self.u_view).get_alarms()["items"]
@@ -121,10 +121,10 @@ class TestW1Security(TestW1Common):
             contract = json.load(f)["C-30"]
         self.fixture_grid()
         self.env["td.energy.advice"]._td_demo_seed()
-        event = self.Event._f3d_log("warn", "meter", "PM-QF-C2", "Лічильник PM-QF-C2. Немає даних.", ts=self.now,
+        event = self.Event._td_log("warn", "meter", "PM-QF-C2", "Лічильник PM-QF-C2. Немає даних.", ts=self.now,
                                     node=self.Node.search([("code", "=", "C2")]))  # fmt: skip
         event.with_user(self.u_eng).action_ack()
-        self.Event._f3d_log("info", "peak", "SWB-1", "Пік. Деталі.", ts=self.now)
+        self.Event._td_log("info", "peak", "SWB-1", "Пік. Деталі.", ts=self.now)
         self.interval("PM-Q1", self.now - timedelta(hours=5), 50.0)
         dash = self.env["td.energy.dashboard"].with_user(self.u_cost)
         check_keys(self, contract["API-05"]["response"], dash.get_pult())

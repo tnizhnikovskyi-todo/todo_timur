@@ -139,7 +139,7 @@ class F3dEnergyEvent(models.Model):
         return records
 
     @api.model
-    def _f3d_log(
+    def _td_log(
         self, level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0, title=None,
         detail=None,
     ):  # fmt: skip
@@ -174,37 +174,37 @@ class F3dEnergyEvent(models.Model):
 
     # --- R-13 п. 1–2: події за зміною показань ---------------------------------------------------------
     @api.model
-    def _f3d_on_ingest(self, before, readings):
+    def _td_on_ingest(self, before, readings):
         """`before` — {код: (status, last_text, last_value)} до прийому пакета; пакет уже в базі."""
         try:
             with self.env.cr.savepoint():
-                self._f3d_on_ingest_inner(before)
+                self._td_on_ingest_inner(before)
         except OperationalError:
             raise  # O-2: serialization/deadlock — ретрай запиту (Odoo http/telemetry) має спрацювати
         except Exception:
             _logger.exception("f3d_energy: помилка журналу подій після прийому показань")
 
     @api.model
-    def _f3d_on_ingest_inner(self, before):
+    def _td_on_ingest_inner(self, before):
         Signal = self.env["td.signal"].sudo()
-        self._f3d_ats_hook(before)  # W4: R-14
+        self._td_ats_hook(before)  # W4: R-14
         signals = Signal.search([("code", "in", list(before))])
         signals.invalidate_recordset(["status", "last_text", "last_value", "last_ts"])  # прийом пише SQL-ом
         for sig in signals.sorted("code"):
             old_status, old_text, _old_value = before[sig.code]
             if sig.code.startswith("workcenters/"):
                 if sig.last_text == "fault" and old_text != "fault":
-                    self._f3d_machine_fault(sig)
+                    self._td_machine_fault(sig)
             elif sig.module == "energy":
                 if PFC_FAULT_RE.match(sig.code):
                     self._td_pfc_fault_event(sig, _old_value)  # W1 R-35 п. 3а
                 if sig.status != old_status:
-                    self._f3d_status_event(sig, old_status)
+                    self._td_status_event(sig, old_status)
                 if sig.kind == "state" and sig.last_text == "tripped" and old_text != "tripped":
                     self._td_trip_event(sig)  # W1 R-30 п. 9
 
     @api.model
-    def _f3d_ats_hook(self, before):
+    def _td_ats_hook(self, before):
         """W4, R-14 п. 1: похідні `src{1,2}_ok`; п. 2–10: автомат відключення (крок після кожного пакета АВР/вводів)."""
         if self.env.context.get("f3d_ats_busy"):
             return
@@ -227,11 +227,11 @@ class F3dEnergyEvent(models.Model):
                     }
                 )
         if derived:
-            Signal._f3d_energy_put(derived)
-        self.env["td.energy.outage"]._f3d_ats_step()
+            Signal._td_energy_put(derived)
+        self.env["td.energy.outage"]._td_ats_step()
 
     @api.model
-    def _f3d_status_event(self, sig, old_status):
+    def _td_status_event(self, sig, old_status):
         new = sig.status
         if new in ("stale", "unknown"):
             return
@@ -243,7 +243,7 @@ class F3dEnergyEvent(models.Model):
         ts = sig.last_ts or dates.now_utc(self.env)
         unit = (" " + sig.unit) if sig.unit else ""
         if new in STATUS_LEVEL:
-            threshold, rel = thresholds.breach_info(sig._f3d_cfg(), sig.last_value)
+            threshold, rel = thresholds.breach_info(sig._td_cfg(), sig.last_value)
             text = render_title(sig, sig.last_value, rel, threshold, sig.last_text)
             level = STATUS_LEVEL[new]
         elif old_status in ("warn", "alarm"):
@@ -255,12 +255,12 @@ class F3dEnergyEvent(models.Model):
             level = "info"
         else:
             return
-        self._f3d_log(level, "threshold", sig.equipment_code or False, text, ts=ts, signal=sig)
+        self._td_log(level, "threshold", sig.equipment_code or False, text, ts=ts, signal=sig)
         if new == "ok":  # W1 R-25: поріг повернувся в норму — відкриті події сигналу вирішено
             self._td_auto_resolve("threshold", signal=sig)
 
     @api.model
-    def _f3d_machine_fault(self, sig):
+    def _td_machine_fault(self, sig):
         """R-13 п. 2: верстат став `fault` — аварійна зупинка зі споживанням вузла."""
         wc_code = sig.code.split("/")[1]
         Node = self.env["td.energy.node"].sudo()
@@ -269,10 +269,10 @@ class F3dEnergyEvent(models.Model):
         )
         p_now = node.p_now if node else 0.0
         text = "%s: аварійна зупинка, споживання впало до %s кВт." % (wc_code, fmt_num(p_now, 1))
-        self._f3d_log("bad", "threshold", wc_code, text, ts=sig.last_ts, node=node or None, signal=sig)
+        self._td_log("bad", "threshold", wc_code, text, ts=sig.last_ts, node=node or None, signal=sig)
 
     @api.model
-    def _f3d_pfc_event(self, node, old_q, new_q, cos_after, ts=None):
+    def _td_pfc_event(self, node, old_q, new_q, cos_after, ts=None):
         """R-13 п. 4: зміна кількості увімкнених ступенів компенсації секції."""
         diff = int(new_q) - int(old_q)
         if not diff:
@@ -287,7 +287,7 @@ class F3dEnergyEvent(models.Model):
             word = "ступені" if n in (2, 3, 4) else "ступенів"
             action = "%s %d %s (%d квар)" % ("увімкнено" if diff > 0 else "вимкнено", n, word, abs(diff))
         text = "Компенсація секції %d: %s, cos φ %s." % (node.section, action, fmt_num(cos_after, 2))
-        return self._f3d_log("info", "pfc", node.code, text, ts=ts, node=node, dedup_min=10)
+        return self._td_log("info", "pfc", node.code, text, ts=ts, node=node, dedup_min=10)
 
     # --- W1 (M-21, R-35): події PFC, захисту ------------------------------------------------------------
     @api.model
@@ -299,7 +299,7 @@ class F3dEnergyEvent(models.Model):
         if new > 0 and not old:
             node = self.env["td.energy.node"].sudo().search([("code", "=", code)], limit=1)
             title = "%s: ступінь %d не вмикається" % (code, new)
-            self._f3d_log(
+            self._td_log(
                 "warn", "pfc", code, title, ts=sig.last_ts, node=node or None, signal=sig, dedup_min=60, title=title
             )
         elif not new and old:
@@ -313,7 +313,7 @@ class F3dEnergyEvent(models.Model):
             node = self.env["td.energy.node"].sudo().search([("code", "=", code)], limit=1)
             title = "cos φ секції %d — %s" % (section, fmt_num(sig.last_value, 2))
             level = "bad" if sig.status == "alarm" else "warn"
-            return self._f3d_log(
+            return self._td_log(
                 level, "pfc", code, title, ts=sig.last_ts, node=node or None, signal=sig, dedup_min=5, title=title
             )
         if old_status in ("warn", "alarm"):
@@ -346,7 +346,7 @@ class F3dEnergyEvent(models.Model):
                 code = Node.search([("code", "=", match.group(2))], limit=1).parent_id.code or False
         node = Node.search([("code", "=", code)], limit=1) if code else None
         title = "Спрацював захист %s" % (code or sig.name)
-        return self._f3d_log(
+        return self._td_log(
             "warn", "trip", code, title, ts=sig.last_ts, node=node or None, signal=sig, dedup_min=1, title=title
         )
 

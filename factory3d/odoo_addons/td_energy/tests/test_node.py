@@ -87,7 +87,7 @@ class TestNodes(F3DEnergyCase):
         total = self.Node.search([("kind", "=", "consumer")])
         self.assertEqual(len(total), 49)
         self.assertAlmostEqual(sum(total.mapped("p_inst_kw")), 1201.0, delta=0.1)
-        meters = self.node("QF-3")._f3d_descendant_meters()
+        meters = self.node("QF-3")._td_descendant_meters()
         self.assertEqual(
             set(meters.node_id.mapped("code")),
             {"SAND-1", "AUTOSPRAY-1", "UV-1", "HINGE-1", "GLUE-1", "PRESS-1", "SPRAY-1", "DRY-1"},

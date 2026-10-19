@@ -40,7 +40,7 @@ class TestW1Signals(TestW1Common):
         meter.write({"last_verification": date(2026, 10, 17), "next_verification": date(2027, 10, 17)})
         self.Meter._cron_verification()
         self.assertEqual(events.state, "resolved")
-        old = self.Event._f3d_log("warn", "trip", "QF-2", "Спрацював захист QF-2", ts=self.now - timedelta(hours=30))
+        old = self.Event._td_log("warn", "trip", "QF-2", "Спрацював захист QF-2", ts=self.now - timedelta(hours=30))
         self.Meter._cron_verification()
         self.assertEqual(old.state, "resolved")  # R-25: trip старший за 24 год
 
@@ -88,9 +88,9 @@ class TestW1Signals(TestW1Common):
         sig.write({"equipment_id": equipment.id, "min_duration_s": 0})
         now = fields.Datetime.now()
         self.fresh("energy/sections/S2/cos_phi", 0.88)
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now - timedelta(seconds=20), "value": 0}])
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now - timedelta(seconds=10), "value": 3}])
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now - timedelta(seconds=5), "value": 3}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now - timedelta(seconds=20), "value": 0}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now - timedelta(seconds=10), "value": 3}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now - timedelta(seconds=5), "value": 3}])
         events = self.Event.search([("kind", "=", "pfc"), ("code", "=", "PFC-2")])
         self.assertEqual(len(events), 1)
         self.assertEqual(
@@ -100,9 +100,9 @@ class TestW1Signals(TestW1Common):
         request = self.env["maintenance.request"].search([("name", "=", "PFC-2: ступінь 3 не вмикається")])
         self.assertEqual(len(request), 1)
         self.fresh("energy/sections/S2/cos_phi", 0.88)
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now - timedelta(seconds=2), "value": 0}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now - timedelta(seconds=2), "value": 0}])
         self.assertEqual(events.state, "active")  # cos φ секції ще нижче 0,92
         self.fresh("energy/sections/S2/cos_phi", 0.95)
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now, "value": 3}])
-        self.Signal._f3d_ingest([{"code": sig.code, "ts": now + timedelta(seconds=2), "value": 0}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now, "value": 3}])
+        self.Signal._td_ingest([{"code": sig.code, "ts": now + timedelta(seconds=2), "value": 0}])
         self.assertEqual(events.state, "resolved")

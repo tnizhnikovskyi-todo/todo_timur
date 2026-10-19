@@ -270,14 +270,14 @@ class F3dEnergyNode(models.Model):
 
     # --- API ---------------------------------------------------------------------------------------
     @api.model
-    def _f3d_kwh_by_code(self, code, date_from, date_to):
+    def _td_kwh_by_code(self, code, date_from, date_to):
         """CE-06: кВт·год вузла за вікно; немає вузла чи лічильника — (0.0, 'missing')."""
         node = self.search([("code", "=", code)], limit=1)
         if not node or not node.meter_id:
             return 0.0, "missing"
-        return node.meter_id._f3d_kwh(date_from, date_to)
+        return node.meter_id._td_kwh(date_from, date_to)
 
-    def _f3d_descendant_meters(self):
+    def _td_descendant_meters(self):
         """Активні лічильники вузлів-нащадків (без самого `self`)."""
         nodes = self.search([("id", "child_of", self.ids)]) - self
         return nodes.meter_ids.filtered("active")

@@ -69,24 +69,24 @@ class F3dEnergyTariff(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        records._f3d_refresh_thresholds()
+        records._td_refresh_thresholds()
         return records
 
     def write(self, vals):
         res = super().write(vals)
         if CONTRACT_FIELDS & set(vals):
-            self._f3d_refresh_thresholds()
+            self._td_refresh_thresholds()
         return res
 
-    def _f3d_refresh_thresholds(self):
+    def _td_refresh_thresholds(self):
         """Після зміни договору: пороги беруться з тарифу, чинного сьогодні, для кожної компанії."""
         now = fields.Datetime.now()
         for company in self.company_id:
-            self._f3d_tariff_at(now, company)._f3d_apply_contract_thresholds()
+            self._td_tariff_at(now, company)._td_apply_contract_thresholds()
 
     # --- API ---------------------------------------------------------------------------------------
     @api.model
-    def _f3d_tariff_at(self, dt_utc, company=None):
+    def _td_tariff_at(self, dt_utc, company=None):
         """Активний тариф компанії, чинний на місцеву дату `dt_utc`; немає — порожній набір."""
         company = company or self.env.company
         local_date = tariff_tools.to_local(dt_utc).date()
@@ -104,11 +104,11 @@ class F3dEnergyTariff(models.Model):
         )
 
     @api.model
-    def _f3d_price_at(self, dt_utc, company=None, tariff=None):
+    def _td_price_at(self, dt_utc, company=None, tariff=None):
         """R-05: (зона, ціна) за початком слота; немає тарифу чи зони — (порожня зона, 0.0).
-        `tariff` — уже знайдений `_f3d_tariff_at(dt_utc, company)` (без повторного пошуку)."""
+        `tariff` — уже знайдений `_td_tariff_at(dt_utc, company)` (без повторного пошуку)."""
         zone_model = self.env["td.energy.tariff.zone"]
-        tariff = self._f3d_tariff_at(dt_utc, company) if tariff is None else tariff
+        tariff = self._td_tariff_at(dt_utc, company) if tariff is None else tariff
         if not tariff:
             return zone_model, 0.0
         zone = tariff_tools.zone_for(tariff_tools.to_local(dt_utc), tariff.zone_ids.sorted("sequence"))
@@ -116,7 +116,7 @@ class F3dEnergyTariff(models.Model):
             return zone_model, 0.0
         return zone, zone.price
 
-    def _f3d_apply_contract_thresholds(self):
+    def _td_apply_contract_thresholds(self):
         """R-12 п. 1: пороги сигналу `grid15_kw` з договірної потужності тарифу."""
         signal = (
             self.env["td.signal"].sudo().with_context(active_test=False).search([("code", "=", GRID15_CODE)], limit=1)

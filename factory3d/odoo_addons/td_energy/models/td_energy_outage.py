@@ -77,7 +77,7 @@ class F3dEnergyOutage(models.Model):
 
     # --- R-14: читання сигналів -------------------------------------------------------------------------
     @api.model
-    def _f3d_ats_read(self, now):
+    def _td_ats_read(self, now):
         """{код: (рядок сигналу, свіжий?)} для сигналів АВР і вводів."""
         factor = param_float(self.env, "ats_fresh_factor", 3.0)
         rows = (
@@ -95,17 +95,17 @@ class F3dEnergyOutage(models.Model):
         return out
 
     @api.model
-    def _f3d_ats_totals(self):
+    def _td_ats_totals(self):
         """Значення `energy/totals/p_now` (None — немає)."""
         sig = self.env["td.signal"].sudo().search([("code", "=", "energy/totals/p_now")], limit=1)
         return sig.last_value if sig and sig.last_ts else None
 
     # --- R-14 п. 2–10: крок автомата ---------------------------------------------------------------------
     @api.model
-    def _f3d_ats_step(self, now=None):
+    def _td_ats_step(self, now=None):
         """Ідемпотентний крок: стан мережі за свіжими сигналами → відкрити/оновити/закрити відключення."""
         now = now or dates.now_utc(self.env)
-        sig = self._f3d_ats_read(now)
+        sig = self._td_ats_read(now)
 
         def text(code, fresh_only=True):
             row, fresh = sig.get(ATS + code, (None, False))
@@ -134,25 +134,25 @@ class F3dEnergyOutage(models.Model):
         grid_ok, source = ats.grid_state(text("src1_state"), position_v, incomers)
         ats_fresh = text("src1_state") is not None or position_v is not None
         mode = text("mode", fresh_only=False)
-        self._f3d_ats_bridge_check(mode, now)
+        self._td_ats_bridge_check(mode, now)
 
         outage = self.sudo().search([("state", "=", "open")], limit=1)
         if not outage:
             if grid_ok:
                 return self.browse()
-            outage = self._f3d_ats_open(source, mode, text("src1_state") and ts_of("src1_state"), position, now)
+            outage = self._td_ats_open(source, mode, text("src1_state") and ts_of("src1_state"), position, now)
         outage = outage.sudo()
         Event = self.env["td.energy.event"]
         # п. 5: gen_start і FAIL START
         gen_on = text("gen_start", fresh_only=False) == "on"
         if gen_on and not outage.gen_start_at:
             outage.gen_start_at = ts_of("gen_start") or now
-        self._f3d_ats_fail_start(outage, mode, gen_on, text("src2_state", fresh_only=False), now)
+        self._td_ats_fail_start(outage, mode, gen_on, text("src2_state", fresh_only=False), now)
         # п. 6: переключення на генератор
         if position_v == ats.POS_GEN and not outage.gen_started:
             ts = ts_of("position") or now
             outage.write({"transfer_s": max(0.0, (ts - outage.ts_start).total_seconds()), "gen_started": True})
-            Event._f3d_log(
+            Event._td_log(
                 "info",
                 "ats",
                 "ATS-1",
@@ -170,7 +170,7 @@ class F3dEnergyOutage(models.Model):
                 ts = max(ts or now, outage.grid_back_at)
                 return_s = (ts - outage.grid_back_at).total_seconds()
                 outage.write({"ts_end": ts, "return_s": return_s, "state": "closed"})
-                Event._f3d_log(
+                Event._td_log(
                     "info",
                     "outage",
                     "ATS-1",
@@ -182,12 +182,12 @@ class F3dEnergyOutage(models.Model):
         return outage
 
     @api.model
-    def _f3d_ats_open(self, source, mode, ts_src, position, now):
+    def _td_ats_open(self, source, mode, ts_src, position, now):
         """П. 4: нове відключення."""
         ts = ts_src or (position[0]["last_ts"] if position[1] and source == "ats" else None) or now
         critical = 0.0
         try:
-            critical = self.env["td.energy.node"]._f3d_live_snapshot()["critical_kw"]
+            critical = self.env["td.energy.node"]._td_live_snapshot()["critical_kw"]
         except Exception:
             _logger.exception("f3d_energy: critical_kw при відкритті відключення")
         outage = self.sudo().create(
@@ -195,11 +195,11 @@ class F3dEnergyOutage(models.Model):
                 "ts_start": ts,
                 "source": source,
                 "amf_master": ats.amf_master(mode),
-                "load_before_kw": self._f3d_ats_totals() or 0.0,
+                "load_before_kw": self._td_ats_totals() or 0.0,
                 "critical_kw": critical,
             }
         )
-        self.env["td.energy.event"]._f3d_log(
+        self.env["td.energy.event"]._td_log(
             "bad",
             "outage",
             "ATS-1",
@@ -210,7 +210,7 @@ class F3dEnergyOutage(models.Model):
         return outage
 
     @api.model
-    def _f3d_ats_fail_start(self, outage, mode, gen_on, src2, now):
+    def _td_ats_fail_start(self, outage, mode, gen_on, src2, now):
         """П. 5: реле `infra/ats/fail_start` і прапорець відключення."""
         limit = param_float(self.env, "ats_fail_start_s", 35.0)
         Signal = self.env["td.signal"].sudo()
@@ -219,7 +219,7 @@ class F3dEnergyOutage(models.Model):
         if ats.fail_start_due(mode, age, src2, limit):
             if not outage.fail_start:
                 outage.fail_start = True
-                self.env["td.energy.event"]._f3d_log(
+                self.env["td.energy.event"]._td_log(
                     "bad",
                     "ats",
                     "ATS-1",
@@ -228,16 +228,16 @@ class F3dEnergyOutage(models.Model):
                     outage=outage,
                 )
             if not cur.last_value:
-                Signal._f3d_energy_put([{"code": ATS + "fail_start", "ts": now, "value": 1, "q": "good"}])
+                Signal._td_energy_put([{"code": ATS + "fail_start", "ts": now, "value": 1, "q": "good"}])
         elif cur.last_value and (src2 == "available" or not gen_on):
-            Signal._f3d_energy_put([{"code": ATS + "fail_start", "ts": now, "value": 0, "q": "good"}])
+            Signal._td_energy_put([{"code": ATS + "fail_start", "ts": now, "value": 0, "q": "good"}])
 
     @api.model
-    def _f3d_ats_bridge_check(self, mode, now):
+    def _td_ats_bridge_check(self, mode, now):
         """П. 10: узгодженість режиму АВР з налаштуванням моста генератора (раз на добу)."""
         bridge = self.env["ir.config_parameter"].sudo().get_param("td.genset.amf_master")
         if bridge in ("hgm", "ats") and ats.amf_master(mode) in ("hgm", "ats") and ats.amf_master(mode) != bridge:
-            self.env["td.energy.event"]._f3d_log(
+            self.env["td.energy.event"]._td_log(
                 "warn",
                 "ats",
                 "ATS-1",
@@ -248,13 +248,13 @@ class F3dEnergyOutage(models.Model):
 
     # --- R-14 п. 8: крон живих показників ----------------------------------------------------------------
     @api.model
-    def _f3d_ats_tick(self, now=None):
+    def _td_ats_tick(self, now=None):
         """Під час відкритого відключення: `load_island_kw`, `shed_kw`; повторний крок автомата (таймаут FAIL START)."""
         now = now or dates.now_utc(self.env)
-        self._f3d_ats_step(now)
+        self._td_ats_step(now)
         outage = self.sudo().search([("state", "=", "open")], limit=1)
         if outage:
-            load = self._f3d_ats_totals()
+            load = self._td_ats_totals()
             if load is not None:
                 outage.write({"load_island_kw": load, "shed_kw": ats.shed(outage.load_before_kw, load, outage.shed_kw)})
         return outage

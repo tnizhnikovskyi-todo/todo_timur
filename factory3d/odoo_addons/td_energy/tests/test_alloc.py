@@ -101,7 +101,7 @@ class AllocMixin(EnergyMixin):
         )
 
     def run_day(self, now=None):
-        return self.Alloc._f3d_alloc_days([self.day], now=now or self.now)
+        return self.Alloc._td_alloc_days([self.day], now=now or self.now)
 
     def rows(self, kind, **dom):
         domain = [("day", "=", self.day), ("kind", "=", kind)] + [(k, "=", v) for k, v in dom.items()]
@@ -179,7 +179,7 @@ class TestDirect(AllocMixin, F3DEnergyCase):
         self.log(wo, self.at(9), self.at(9, 30))  # журнал часу для підключеного РЦ ігнорується
         self.profile(node, [(self.at(6), self.at(8), 12.18), (self.at(9), self.at(9, 30), 40.0)])
         intervals = {wo.id: [(self.at(6, 55), self.at(7, 25, 48), "working")]}
-        with patch.object(type(self.Alloc), "_f3d_machine_intervals", return_value=intervals):
+        with patch.object(type(self.Alloc), "_td_machine_intervals", return_value=intervals):
             self.run_day()
         row = self.rows("direct", workorder_id=wo.id)
         self.assertAlmostEqual(row.kwh, 6.253, delta=0.005)
@@ -237,7 +237,7 @@ class TestPools(AllocMixin, F3DEnergyCase):
         ov = self.rows("overhead", node_id=boiler.id)
         self.assertAlmostEqual(ov.kwh, 240.0, places=2)
         shared = sum(self.rows("shared", pool_id=self.pool_dust.id).mapped("kwh"))
-        total = self.dust.meter_id._f3d_kwh(self.d0, self.d1)[0]
+        total = self.dust.meter_id._td_kwh(self.d0, self.d1)[0]
         self.assertAlmostEqual(shared + un.kwh, total, delta=0.003)
 
     def test_locked_untouched(self):  # AC-45
@@ -258,7 +258,7 @@ class TestPools(AllocMixin, F3DEnergyCase):
         b_after = self.shared(self.pool_dust, self.mo_b)
         self.assertNotAlmostEqual(b_after.kwh, b_before, places=3)
         un = self.rows("unallocated", pool_id=self.pool_dust.id)
-        pool_total = self.dust.meter_id._f3d_kwh(self.d0, self.d1)[0]
+        pool_total = self.dust.meter_id._td_kwh(self.d0, self.d1)[0]
         a_stored = sum(r.kwh for r in a_rows if r.pool_id == self.pool_dust)
         self.assertAlmostEqual(un.kwh, pool_total - a_stored - b_after.kwh, delta=0.003)
 

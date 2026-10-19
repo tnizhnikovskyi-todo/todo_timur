@@ -10,7 +10,7 @@
   `td.energy.dashboard` (API-05…07, 12, 13; хуки для моста), `tools/bus.py` (канал `td_energy`, без даних, throttle 5 с).
 - Сигнали: +15 (QS, PFC, секційні cos φ/P/Q) і джерело `MB-U73-SWB-CTRL`; пороги cos φ 0,92/0,90 (E-10); група «головний енергетик».
 - Міграція `19.0.1.1.0`: сигнали, пороги, схема, R-24 для наявних подій (ідемпотентна). 3 нові крони; `neutralize.sql` без змін по суті.
-- Існуючі `_f3d_*`-методи не перейменовано (RENAME.md §6); SPEC-імена `_td_log`, `action_td_show` — аліаси.
+- Існуючі `_td_*`-методи не перейменовано (RENAME.md §6); SPEC-імена `_td_log`, `action_td_show` — аліаси.
 
 ## Unreleased
 - W4 (C-02): хук `td.energy.dashboard._td_report_action()` (у базі `None`; значення задає `td_energy_analytics`); `get_pult`:
@@ -31,7 +31,7 @@
   ротація; стоп-крани `read_enabled`/`costing_enabled`; neutralize; хук встановлення.
 - Fix D-1: побудова 15-хв профілю — тариф і зони шукаються один раз на місцеву добу, а не на кожен слот
   (було ≈ 26 000 SQL на прогін); тест `test_build_query_count`.
-- Fix O-2: `_f3d_on_ingest` — помилки БД рівня транзакції (`OperationalError`, serialization failure) не ковтаються,
+- Fix O-2: `_td_on_ingest` — помилки БД рівня транзакції (`OperationalError`, serialization failure) не ковтаються,
   а пробрасуються для ретраю приймання; інші помилки журналу подій — лише лог у savepoint. Тест
   `test_on_ingest_db_error_propagates`.
 - O-4: `data_state='reset'` тримається 24 год після скидання за R-21 (SPEC) — поведінка за специфікацією.

@@ -27,7 +27,7 @@ etot = (energy.get("energy") or {}).get("totals", {})
 res["energy_totals_keys"] = sorted(etot.keys())
 res["productions_cost"] = [("energy_cost" in p) for p in (energy.get("productions") or [])]
 try:
-    snap = env["td.energy.node"]._f3d_live_snapshot()
+    snap = env["td.energy.node"]._td_live_snapshot()
     res["island"], res["bess_mode"] = snap.get("island"), snap.get("bess_mode")
 except Exception as e:
     res["island"] = res["bess_mode"] = None

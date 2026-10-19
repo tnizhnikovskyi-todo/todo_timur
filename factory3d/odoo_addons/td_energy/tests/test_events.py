@@ -27,7 +27,7 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             item["value"] = value
         if text is not None:
             item["text"] = text
-        self.Signal._f3d_ingest([item])
+        self.Signal._td_ingest([item])
 
     def test_threshold_events(self):  # AC-33
         sig = self.Signal.search([("code", "=", "energy/transformers/T1/s_kva")])
@@ -52,7 +52,7 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
     def test_contract_power_request(self):  # AC-34
         self.bind_equipment("energy/totals/grid15_kw", "SWB-1")
         tariff = self.env.ref("td_energy.tariff_demo")
-        tariff._f3d_apply_contract_thresholds()
+        tariff._td_apply_contract_thresholds()
         sig = self.Signal.search([("code", "=", "energy/totals/grid15_kw")])
         self.assertEqual((sig.warn_high, sig.alarm_high), (720.0, 800.0))
         self.put(sig.code, 812.4)
@@ -68,16 +68,16 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
         node = self.env["td.energy.node"].create(
             {"code": "PFC-T", "name": "PFC-T", "kind": "cell", "cell_type": "pfc", "parent_id": parent.id, "section": 1}
         )
-        first = self.Event._f3d_pfc_event(node, 35, 70, 0.97)  # W1 D-09: крок ступеня — 35 квар
+        first = self.Event._td_pfc_event(node, 35, 70, 0.97)  # W1 D-09: крок ступеня — 35 квар
         self.assertEqual(first.text, "Компенсація секції 1: увімкнено ще один ступінь 35 квар, cos φ 0,97.")
         self.assertEqual((first.level, first.kind, first.code), ("info", "pfc", "PFC-T"))
-        self.assertFalse(self.Event._f3d_pfc_event(node, 35, 70, 0.97))
+        self.assertFalse(self.Event._td_pfc_event(node, 35, 70, 0.97))
         self.assertEqual(
-            self.Event._f3d_pfc_event(node, 70, 35, 0.97).text,
+            self.Event._td_pfc_event(node, 70, 35, 0.97).text,
             "Компенсація секції 1: вимкнено ступінь 35 квар, cos φ 0,97.",
         )
         self.assertEqual(
-            self.Event._f3d_pfc_event(node, 0, 70, 0.95).text,
+            self.Event._td_pfc_event(node, 0, 70, 0.95).text,
             "Компенсація секції 1: увімкнено 2 ступені (70 квар), cos φ 0,95.",
         )
 
@@ -105,7 +105,7 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             for meter in (m1, m2):
                 self.mk_interval(meter, slot, 40.0 if slot == peak_slot else 10.0)
         Interval = self.env["td.energy.interval"]
-        self.assertTrue(Interval._f3d_peak_event(now))
+        self.assertTrue(Interval._td_peak_event(now))
         event = self.Event.search([("kind", "=", "peak")])
         yesterday = today - timedelta(days=1)
         self.assertEqual(
@@ -114,14 +114,14 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             % yesterday.strftime("%d.%m"),
         )
         self.assertEqual((event.level, event.code), ("info", "SWB-1"))
-        self.assertFalse(Interval._f3d_peak_event(now))  # одна подія за добу
+        self.assertFalse(Interval._td_peak_event(now))  # одна подія за добу
         self.assertEqual(self.Event.search_count([("kind", "=", "peak")]), 1)
 
     def test_snapshot_ignores_internal_context(self):
         """Власні вкладення модуля (контекст f3d_energy_internal) не породжують подій повторно."""
         sig = self.Signal.search([("code", "=", "energy/transformers/T1/s_kva")])
         sig.write({"min_duration_s": 0})
-        self.Signal.with_context(f3d_energy_internal=True)._f3d_ingest(
+        self.Signal.with_context(f3d_energy_internal=True)._td_ingest(
             [{"code": sig.code, "ts": fields.Datetime.now(), "value": 1500.0}]
         )
         self.assertFalse(self.Event.search([("signal_id", "=", sig.id)]))
@@ -133,9 +133,9 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
         from psycopg2 import errors
 
         Event = self.env["td.energy.event"]
-        with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=errors.SerializationFailure("x")):
+        with patch.object(type(Event), "_td_on_ingest_inner", side_effect=errors.SerializationFailure("x")):
             with self.assertRaises(errors.SerializationFailure):
-                Event._f3d_on_ingest({}, [])
-        with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=ValueError("x")):
+                Event._td_on_ingest({}, [])
+        with patch.object(type(Event), "_td_on_ingest_inner", side_effect=ValueError("x")):
             with self.assertLogs("odoo.addons.td_energy.models.td_energy_event", "ERROR"):
-                Event._f3d_on_ingest({}, [])
+                Event._td_on_ingest({}, [])

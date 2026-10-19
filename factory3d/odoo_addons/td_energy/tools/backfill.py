@@ -317,7 +317,7 @@ def _balance(env, until, stats):
     hour = dates.floor15(until).replace(minute=0) - timedelta(hours=1)
     count = 0
     for k in range(7 * 24):
-        result = Balance._f3d_balance_hour(hour - timedelta(hours=k))
+        result = Balance._td_balance_hour(hour - timedelta(hours=k))
         count += len(result)
     stats["balance"] = count
 
@@ -379,7 +379,7 @@ def run(env, days=90, until=None, seed=20261018, purge=False, with_balance=True,
     if with_advice:
         env["td.energy.advice"]._td_demo_seed()
     try:
-        env["td.energy.interval"]._f3d_after_build(now)
+        env["td.energy.interval"]._td_after_build(now)
     except Exception:
         _logger.exception("td_energy: backfill: після побудови (R-11, R-15)")
     stats["seconds"] = round(time.monotonic() - started, 2)

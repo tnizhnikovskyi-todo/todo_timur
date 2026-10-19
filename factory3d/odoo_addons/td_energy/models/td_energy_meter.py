@@ -19,7 +19,7 @@ POWER_UNIT = "кВт"
 
 
 class F3dEnergyMeter(models.Model):
-    """M-02. Методи `_f3d_counter_series`, `_f3d_kwh`, `_f3d_update_state` — R-03, R-21."""
+    """M-02. Методи `_td_counter_series`, `_td_kwh`, `_td_update_state` — R-03, R-21."""
 
     _name = "td.energy.meter"
     _description = "Енергетика: лічильник"
@@ -162,7 +162,7 @@ class F3dEnergyMeter(models.Model):
         }
 
     # --- безперервний лічильник (R-03) ---------------------------------------------------------------
-    def _f3d_counter_series(self, a, b, base=0.0, export=False):
+    def _td_counter_series(self, a, b, base=0.0, export=False):
         """R-03 п. 5: ряд `Ec` на вікно `[a, b]` (UTC naive). Показання `td.reading` у `[a − 2 год, b + 2 год]`,
         остання точка до вікна (якорь) і `last_value` сигналу; немає показань (вікно старше `keep_days`) —
         ряд з інтервалів лічильника (лише імпорт)."""
@@ -188,7 +188,7 @@ class F3dEnergyMeter(models.Model):
             keep_days = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.keep_days", "30"))
             old = a < dates.now_utc(self.env) - timedelta(days=keep_days)
             if not points or (old and min(points) > a):
-                series = self._f3d_series_from_intervals(a, b)
+                series = self._td_series_from_intervals(a, b)
                 if series:
                     return series
         anchor = max((t for t in points if t <= a), default=None)
@@ -201,7 +201,7 @@ class F3dEnergyMeter(models.Model):
             gap_max_s=param_float(self.env, "gap_max_s", 900),
         )
 
-    def _f3d_series_from_intervals(self, a, b):
+    def _td_series_from_intervals(self, a, b):
         ivs = (
             self.env["td.energy.interval"]
             .sudo()
@@ -227,18 +227,18 @@ class F3dEnergyMeter(models.Model):
             cs.append(iv["e_end"])
         return Series.from_segments(ts, cs, seg)
 
-    def _f3d_kwh(self, date_from, date_to):
+    def _td_kwh(self, date_from, date_to):
         """CE-06 / API: `(кВт·год, якість)` лічильника за вікно; немає даних — `(0.0, 'missing')`."""
         self.ensure_one()
         if date_from >= date_to:
             raise ValueError("date_from має бути раніше за date_to")
-        delta, quality = self._f3d_counter_series(date_from, date_to).delta(date_from, date_to)
+        delta, quality = self._td_counter_series(date_from, date_to).delta(date_from, date_to)
         if delta is None:
             return 0.0, "missing"
         return round(delta, 3), quality
 
     # --- стан даних (R-21) ---------------------------------------------------------------------------
-    def _f3d_update_state(self):
+    def _td_update_state(self):
         """R-21 п. 1–2: `data_state`, `data_state_since`; подія про відсутність даних довше `gap_alarm_min`."""
         now = dates.now_utc(self.env)
         Interval = self.env["td.energy.interval"].sudo()
@@ -278,7 +278,7 @@ class F3dEnergyMeter(models.Model):
                 minutes = int((now - sig.last_ts).total_seconds() // 60)
                 last_local = dates.to_local(sig.last_ts).strftime("%H:%M")
                 if not Event.search_count([("kind", "=", "meter"), ("code", "=", rec.code), ("ts", ">", sig.last_ts)]):
-                    Event._f3d_log(
+                    Event._td_log(
                         "warn",
                         "meter",
                         rec.code,
@@ -326,7 +326,7 @@ class F3dEnergyMeter(models.Model):
                     title, detail = split_text(text)
                     opened.write({"level": "bad", "text": text, "title": title, "detail": detail})
                 continue
-            Event._f3d_log("bad" if overdue else "warn", "meter", code, text, ts=now, node=rec.node_id, dedup_min=1440)
+            Event._td_log("bad" if overdue else "warn", "meter", code, text, ts=now, node=rec.node_id, dedup_min=1440)
         old_trips = Event.search([("kind", "=", "trip"), ("state", "in", ("active", "acked")),
                                   ("ts", "<", now - timedelta(hours=24))])  # fmt: skip
         if old_trips:

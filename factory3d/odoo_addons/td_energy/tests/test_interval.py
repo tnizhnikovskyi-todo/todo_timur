@@ -140,7 +140,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         meter.last_interval_start = start - M15
         self.Interval.invalidate_model()
         with self.assertQueryCount(QUERY_LIMIT):
-            self.Interval.with_context(f3d_now=start + timedelta(hours=30))._f3d_build_meter(
+            self.Interval.with_context(f3d_now=start + timedelta(hours=30))._td_build_meter(
                 meter, start + timedelta(hours=30)
             )
         self.assertEqual(len(self.rows(meter)), 99)
@@ -165,7 +165,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         start = dates.to_utc(datetime.combine(day, time(7, 0)))  # зміна 07:00 Київ
         now = start + timedelta(hours=3, minutes=30)  # 10:30 Київ
         self.feed(total, [(start, 1003.3), (now, 1053.8)])
-        self.Interval._f3d_shift_kwh(now)
+        self.Interval._td_shift_kwh(now)
         self.assertAlmostEqual(shift.last_value, 50.5, places=2)
         # о 06:30 за Києвом — від учорашніх 07:00
         early = dates.to_utc(datetime.combine(day, time(6, 30)))
@@ -185,7 +185,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         start = dates.local_day_bounds(day)[0]  # календаря зміни немає — місцева північ
         now = start + timedelta(hours=3, minutes=30)
         self.feed(total, [(start + timedelta(hours=1), 500.0), (start + timedelta(hours=2), 505.0), (now, 507.5)])
-        self.Interval._f3d_shift_kwh(now)
+        self.Interval._td_shift_kwh(now)
         self.assertEqual(shift.last_ts, now)
         self.assertAlmostEqual(shift.last_value, 7.5, places=2)
         self.assertEqual(shift.last_quality, "uncertain")
@@ -199,7 +199,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
             decimals=2,
         )
         self.feed(other.e_import_signal_id, [(start, 100.0), (now, 112.0)])
-        self.Interval._f3d_shift_kwh(now)
+        self.Interval._td_shift_kwh(now)
         self.assertAlmostEqual(shift2.last_value, 12.0, places=2)
         self.assertEqual(shift2.last_quality, "good")
 
@@ -214,7 +214,7 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
             for meter in (m1, m2):
                 self.mk_interval(meter, slot, kwh)
             slot += M15
-        data = self.Interval._f3d_day_profile(now)
+        data = self.Interval._td_day_profile(now)
         profile = data["profile"]
         self.assertEqual(len(profile), 24)
         self.assertTrue(all(v is not None for v in profile[:11]))
@@ -231,8 +231,8 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         now = dates.now_utc(self.env)
         old = self.mk_interval(meter, dates.floor15(now) - timedelta(days=401), 1.0)
         fresh = self.mk_interval(meter, dates.floor15(now) - timedelta(days=1), 1.0)
-        old_event = self.Event._f3d_log("info", "manual", "X", "старе", ts=now - timedelta(days=91))
-        fresh_event = self.Event._f3d_log("info", "manual", "X", "свіже", ts=now - timedelta(days=5))
+        old_event = self.Event._td_log("info", "manual", "X", "старе", ts=now - timedelta(days=91))
+        fresh_event = self.Event._td_log("info", "manual", "X", "свіже", ts=now - timedelta(days=5))
         self.Interval._cron_rotate()
         self.assertFalse(old.exists())
         self.assertTrue(fresh.exists())

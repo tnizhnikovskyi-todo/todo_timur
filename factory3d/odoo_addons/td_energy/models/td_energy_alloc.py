@@ -77,13 +77,13 @@ class F3dEnergyAlloc(models.Model):
                     [("day", "=", yesterday), ("write_date", ">=", midnight)]
                 ):
                     days.insert(0, yesterday)
-                self._f3d_alloc_days(days, now=now)
+                self._td_alloc_days(days, now=now)
         except Exception:
             _logger.exception("Енергетика: помилка розподілу на виробництво")
 
     # --- допоміжні -----------------------------------------------------------------------------------
     @api.model
-    def _f3d_machine_intervals(self, workorders, d0, end):
+    def _td_machine_intervals(self, workorders, d0, end):
         """CM-03 (обгортка): `{wo_id: [(start, end, state), …]}` для завдань РЦ з активним `td.machine`;
         без `td_machine_connect` — порожній словник. Ключ є для кожного завдання такого РЦ."""
         if "td.machine" not in self.env or not workorders:
@@ -95,7 +95,7 @@ class F3dEnergyAlloc(models.Model):
         wos = workorders.filtered(lambda w: w.workcenter_id in wcs)
         if not wos:
             return {}
-        res = Machine._f3d_wo_intervals(wos, d0, end)
+        res = Machine._td_wo_intervals(wos, d0, end)
         return {wo.id: list(res.get(wo.id, [])) for wo in wos}
 
     def _prepare_analytic_line_values(self, account_field_values, amount, unit_amount):
@@ -114,7 +114,7 @@ class F3dEnergyAlloc(models.Model):
         }
 
     @api.model
-    def _f3d_candidates(self, d0, end):
+    def _td_candidates(self, d0, end):
         """R-08 п. 1: завдання з журналом часу в добі, у роботі, або завершені в/після доби."""
         Prod = self.env["mrp.workcenter.productivity"]
         ids = set(
@@ -135,9 +135,9 @@ class F3dEnergyAlloc(models.Model):
         return wos.filtered(lambda w: w.state != "cancel")
 
     @api.model
-    def _f3d_intervals(self, wos, d0, end):
+    def _td_intervals(self, wos, d0, end):
         """R-08 п. 2: `{wo_id: [(s, e), …]}` — інтервали роботи завдань у `[d0, end)`."""
-        machine = self._f3d_machine_intervals(wos, d0, end) or {}
+        machine = self._td_machine_intervals(wos, d0, end) or {}
         machine_wcs = {w.workcenter_id.id for w in wos if w.id in machine}
         result = {}
         for wo in wos:
@@ -152,7 +152,7 @@ class F3dEnergyAlloc(models.Model):
 
     # --- розподіл діб --------------------------------------------------------------------------------
     @api.model
-    def _f3d_alloc_days(self, days, now=None):
+    def _td_alloc_days(self, days, now=None):
         """R-09 п. 8: повний перерахунок діб; `locked` не змінюються. Повертає статистику."""
         now = now or dates.now_utc(self.env)
         stats = {"days": 0, "rows": 0, "skipped": 0, "kwh": 0.0}
@@ -161,19 +161,19 @@ class F3dEnergyAlloc(models.Model):
             d0, d1 = dates.local_day_bounds(day)
             if min(d1, now) <= d0:
                 continue
-            res = self.sudo()._f3d_alloc_day(day, now, prices)
+            res = self.sudo()._td_alloc_day(day, now, prices)
             stats["days"] += 1
             for key in ("rows", "skipped", "kwh"):
                 stats[key] += res[key]
         return stats
 
-    def _f3d_price(self, prices, dt):
+    def _td_price(self, prices, dt):
         a = alloc_tools.floor15(dt)
         if a not in prices:
-            prices[a] = self.env["td.energy.tariff"]._f3d_price_at(a)[1]
+            prices[a] = self.env["td.energy.tariff"]._td_price_at(a)[1]
         return prices[a]
 
-    def _f3d_alloc_day(self, day, now, prices):
+    def _td_alloc_day(self, day, now, prices):
         Node = self.env["td.energy.node"]
         d0, d1 = dates.local_day_bounds(day)
         end = min(d1, now)
@@ -182,7 +182,7 @@ class F3dEnergyAlloc(models.Model):
         def series_of(node):
             if node.id not in series_memo:
                 meter = node.meter_id.sudo()
-                series = meter._f3d_counter_series(d0, end) if meter else None
+                series = meter._td_counter_series(d0, end) if meter else None
                 series_memo[node.id] = series or None
             return series_memo[node.id]
 
@@ -194,15 +194,15 @@ class F3dEnergyAlloc(models.Model):
                 if kwh is None:
                     continue
                 total += kwh
-                cost += kwh * self._f3d_price(prices, a)
+                cost += kwh * self._td_price(prices, a)
                 quals.append(q)
             if not quals:
                 return None
             return total, cost, alloc_tools.row_quality(quals)
 
         new = {}  # ключ → значення
-        wos = self._f3d_candidates(d0, end)
-        intervals = self._f3d_intervals(wos, d0, end)
+        wos = self._td_candidates(d0, end)
+        intervals = self._td_intervals(wos, d0, end)
         node_by_wc = {
             n.workcenter_id.id: n for n in Node.search([("alloc_role", "=", "direct"), ("workcenter_id", "!=", False)])
         }
@@ -228,7 +228,7 @@ class F3dEnergyAlloc(models.Model):
                     q = "estimate"
                 else:
                     q = alloc_tools.norm_quality(q)
-                price = self._f3d_price(prices, x)
+                price = self._td_price(prices, x)
                 if q != "estimate":
                     measured_kwh[wc_id] += kwh
                     measured_cost[wc_id] += kwh * price
@@ -295,7 +295,7 @@ class F3dEnergyAlloc(models.Model):
                     continue
                 pk = sum(r[0] for r in parts)
                 q = alloc_tools.row_quality([r[1] for r in parts])
-                price = self._f3d_price(prices, a)
+                price = self._td_price(prices, a)
                 pool_total += pk
                 pool_cost += pk * price
                 pool_quals.append(q)
@@ -355,9 +355,9 @@ class F3dEnergyAlloc(models.Model):
                     "company_id": node.company_id.id or self.env.company.id,
                 }
 
-        return self._f3d_alloc_write(day, new, existing, dups)
+        return self._td_alloc_write(day, new, existing, dups)
 
-    def _f3d_alloc_write(self, day, new, existing, dups):
+    def _td_alloc_write(self, day, new, existing, dups):
         """R-09 п. 8: upsert за ключем; `locked` не чіпаємо; зайві незафіксовані — видаляємо."""
         res = {"rows": 0, "skipped": sum(1 for r in existing.values() if r.locked), "kwh": 0.0}
         to_create = []

@@ -108,9 +108,9 @@ class TestW1NodeSld(TestW1Common):
     def test_open_events_priority(self):
         self.fixture_grid()
         node = self.Node.search([("code", "=", "BW-2")])
-        ev = self.Event._f3d_log("warn", "meter", "PM-QF-2", "Лічильник. Тест.", ts=self.now, node=node)
+        ev = self.Event._td_log("warn", "meter", "PM-QF-2", "Лічильник. Тест.", ts=self.now, node=node)
         self.assertEqual(self.state("BW-2"), "warn")
-        bad = self.Event._f3d_log("bad", "threshold", "QF-2", "Струм. Аварія.", ts=self.now, node=node)
+        bad = self.Event._td_log("bad", "threshold", "QF-2", "Струм. Аварія.", ts=self.now, node=node)
         self.assertEqual(self.state("BW-2"), "alarm")
         (ev | bad).write({"state": "resolved"})
         self.assertEqual(self.state("BW-2"), "ok")
@@ -132,7 +132,7 @@ class TestW1NodeSld(TestW1Common):
             pfc.write({"pfc_steps_total": 9})
         self.fixture_grid()
         self.fresh("energy/cells/PFC-2/q_kvar", 120.0)
-        snap = self.Node._f3d_live_snapshot()
+        snap = self.Node._td_live_snapshot()
         self.assertEqual(snap["totals"]["sections"][2]["pfc_q_now"], 105)
 
     def test_cron_live_writes_sections(self):  # R-35 п. 1
@@ -141,8 +141,8 @@ class TestW1NodeSld(TestW1Common):
         self.fresh("energy/lines/C2/i_now", 250.0)
         self.fresh("energy/cells/PFC-1/q_kvar", 70.0)
         self.fresh("energy/cells/PFC-2/q_kvar", 105.0)
-        snap = self.Node._f3d_live_snapshot()
-        self.assertTrue(self.Node._f3d_live_write(snap, fields.Datetime.now()))
+        snap = self.Node._td_live_snapshot()
+        self.assertTrue(self.Node._td_live_write(snap, fields.Datetime.now()))
         for s in (1, 2):
             for suffix in ("cos_phi", "p_kw", "q_kvar"):
                 sig = self.env["td.signal"].search([("code", "=", "energy/sections/S%d/%s" % (s, suffix))])

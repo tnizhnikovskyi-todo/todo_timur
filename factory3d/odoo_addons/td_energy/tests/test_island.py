@@ -27,7 +27,7 @@ class TestIsland(EnergyMixin, F3DEnergyCase):
             item["text"] = text
         if value is not None:
             item["value"] = value
-        self.Signal.with_context(f3d_now=at)._f3d_ingest([item])
+        self.Signal.with_context(f3d_now=at)._td_ingest([item])
 
     def test_island_load_and_shed(self):
         T = self.T
@@ -38,12 +38,12 @@ class TestIsland(EnergyMixin, F3DEnergyCase):
         self.put(A + "position", T + timedelta(seconds=14), text="pos_II")
         self.put("energy/totals/p_now", T + timedelta(seconds=20), value=348.0)
         now = T + timedelta(seconds=21)
-        self.Outage.with_context(f3d_now=now)._f3d_ats_tick(now)
+        self.Outage.with_context(f3d_now=now)._td_ats_tick(now)
         self.assertEqual((out.load_island_kw, out.shed_kw), (348.0, 278.0))
         self.put(A + "src1_state", T + timedelta(seconds=25), text="under")
         self.put("energy/totals/p_now", T + timedelta(seconds=30), value=400.0)
         now = T + timedelta(seconds=31)
-        self.Outage.with_context(f3d_now=now)._f3d_ats_tick(now)
+        self.Outage.with_context(f3d_now=now)._td_ats_tick(now)
         self.assertEqual((out.load_island_kw, out.shed_kw), (400.0, 278.0))
 
     def test_balance_skips_outage_hour(self):
@@ -56,7 +56,7 @@ class TestIsland(EnergyMixin, F3DEnergyCase):
                 "state": "closed",
             }
         )
-        rows = self.env["td.energy.balance"]._f3d_balance_hour(hour, hour + timedelta(hours=2))
+        rows = self.env["td.energy.balance"]._td_balance_hour(hour, hour + timedelta(hours=2))
         first = rows.filtered(lambda r: r.hour == hour)
         self.assertTrue(first)
         self.assertEqual(set(first.mapped("state")), {"skipped"})

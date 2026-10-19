@@ -67,7 +67,7 @@ class TestLiveCron(F3DEnergyCase):
 
     def put(self, values, seconds_ago=5):
         ts = fields.Datetime.now() - timedelta(seconds=seconds_ago)
-        self.Signal._f3d_ingest([{"code": c, "ts": ts, "value": v} for c, v in values.items()])
+        self.Signal._td_ingest([{"code": c, "ts": ts, "value": v} for c, v in values.items()])
 
     def put_lines(self, names=None):
         values = {}
@@ -89,7 +89,7 @@ class TestLiveCron(F3DEnergyCase):
             "energy/consumers/EF-CHG/p_now": 0.107, "energy/lines/BW-1/p_now": 106.9,
         }  # fmt: skip
         self.put(values)
-        snap = self.Node._f3d_live_snapshot()
+        snap = self.Node._td_live_snapshot()
         self.assertAlmostEqual(snap["critical_kw"], 347.847, places=3)
         self.assertEqual(round(snap["critical_kw"]), 348)
 
@@ -122,7 +122,7 @@ class TestLiveCron(F3DEnergyCase):
         t0, t1, t2 = now - timedelta(minutes=30), now - timedelta(minutes=20), now - timedelta(minutes=5)
 
         def phases(ts, a, b, c):
-            self.Signal._f3d_ingest(
+            self.Signal._td_ingest(
                 [
                     {"code": "energy/lines/BW-1/i_%s" % ph, "ts": ts, "value": v}
                     for ph, v in zip("abc", (a, b, c), strict=True)
@@ -130,16 +130,16 @@ class TestLiveCron(F3DEnergyCase):
             )
 
         phases(t0, 171, 180, 168)
-        self.Node._f3d_asymmetry(t0)
+        self.Node._td_asymmetry(t0)
         unbal = self.sig("energy/lines/BW-1/i_unbal_pct")
         self.assertAlmostEqual(unbal.last_value, 4.05, places=2)
         phases(t1, 140, 180, 150)
-        self.Node._f3d_asymmetry(t1)
+        self.Node._td_asymmetry(t1)
         self.assertAlmostEqual(unbal.last_value, 14.89, places=2)
         phases(t2, 140, 180, 150)
-        self.Node._f3d_asymmetry(t2)
+        self.Node._td_asymmetry(t2)
         self.assertAlmostEqual(unbal.last_value, 14.89, places=2)
         self.assertEqual(unbal.status, "warn")  # min_duration_s = 900: 15 хв від першого порушення
         phases(now, 2, 3, 4)
-        self.Node._f3d_asymmetry(now)
+        self.Node._td_asymmetry(now)
         self.assertAlmostEqual(unbal.last_value, 14.89, places=2)

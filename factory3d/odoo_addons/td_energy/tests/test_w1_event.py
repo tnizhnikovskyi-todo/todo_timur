@@ -18,7 +18,7 @@ MIGRATION = os.path.join(
 @tagged(*TAGS)
 class TestW1Event(TestW1Common):
     def log(self, level="warn", kind="meter", code="PM-QF-C2", text="Лічильник PM-QF-C2 не на зв'язку. 33 хв.", **kw):
-        return self.Event._f3d_log(level, kind, code, text, ts=kw.pop("ts", self.now), **kw)
+        return self.Event._td_log(level, kind, code, text, ts=kw.pop("ts", self.now), **kw)
 
     def as_user(self, rec, user):
         return rec.with_user(user)
@@ -94,7 +94,7 @@ class TestW1Event(TestW1Common):
         keep = self.log(level="warn", kind="peak", code="SWB-1", text="Пік. Високий.")
         meter.write({"data_state": "stale"})
         self.fresh("energy/lines/C2/kwh_total", 1000.0)
-        meter._f3d_update_state()
+        meter._td_update_state()
         self.assertEqual(meter.data_state, "ok")
         self.assertEqual((ev.state, ev.resolved_at), ("resolved", self.now))
         self.assertEqual((other.state, keep.state), ("active", "active"))
@@ -104,7 +104,7 @@ class TestW1Event(TestW1Common):
         ev = self.log(kind="threshold", code="QF-2", text="Струм. Високий.", signal=sig)
         ats = self.log(kind="ats", code="ATS-1", text="АВР. Невдалий пуск.", signal=sig)
         self.fresh(sig.code, 100.0)
-        self.Event._f3d_status_event(sig, "warn")
+        self.Event._td_status_event(sig, "warn")
         self.assertEqual((ev.state, ats.state), ("resolved", "active"))
 
     def test_migration_events(self):  # AC-100

@@ -79,7 +79,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         payload = (
             payload if payload is not None else {"energy": {"totals": {"peak_time": "09:15"}, "typical": [0] * 24}}
         )
-        self.provider("energy", user)._f3d_viewer_collect(payload, ctx or {})
+        self.provider("energy", user)._td_viewer_collect(payload, ctx or {})
         return payload
 
     def make_mo(self):
@@ -179,7 +179,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
     # --- infra --------------------------------------------------------------------------------------------
     def infra(self, payload=None, ctx=None):
         payload = payload if payload is not None else {}
-        self.provider("infra")._f3d_viewer_collect(payload, ctx or {})
+        self.provider("infra")._td_viewer_collect(payload, ctx or {})
         return payload["infra"]
 
     def test_infra_cards_totals(self):  # AC-67, AC-61
@@ -226,13 +226,13 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.set_infra()
         patch = {"infra": {"totals": {"genset_kw": 348}}}
         ctx = {"changes": {"td.signal": {"infra/pv/PV-INV-1/p_kw"}}}
-        self.provider("infra")._f3d_viewer_delta(patch, ctx)
+        self.provider("infra")._td_viewer_delta(patch, ctx)
         self.assertEqual(patch["infra"]["totals"]["genset_kw"], 348)
         self.assertEqual(patch["infra"]["totals"]["export_kw"], 42)
         patch = {}
-        self.provider("infra")._f3d_viewer_delta(patch, {"changes": {"td.signal": {"infra/genset/x"}}})
+        self.provider("infra")._td_viewer_delta(patch, {"changes": {"td.signal": {"infra/genset/x"}}})
         self.assertEqual(patch, {})
-        self.provider("energy")._f3d_viewer_delta(patch, {"changes": {"mrp.production": {1}}})
+        self.provider("energy")._td_viewer_delta(patch, {"changes": {"mrp.production": {1}}})
         self.assertIn("energy", patch)
 
     def test_providers_registered(self):  # AC-69
@@ -240,9 +240,9 @@ class TestPayload(AllocMixin, F3DEnergyCase):
             model = "td.viewer.provider.%s" % name
             self.assertIn(model, self.env.registry)
             prov = self.env[model]
-            self.assertEqual((prov._f3d_sequence, tuple(prov._f3d_sections)), (seq, sections))
+            self.assertEqual((prov._td_sequence, tuple(prov._td_sections)), (seq, sections))
             self.assertFalse(set(prov._inherit) - {"base"})
-            self.assertEqual(prov._f3d_group, "td_factory3d.group_td_user")
-            prov._f3d_viewer_collect({}, {})
-            prov._f3d_viewer_delta({}, {})
-        self.assertIn("mrp.production", self.env["td.viewer.provider.energy"]._f3d_viewer_bus_models())
+            self.assertEqual(prov._td_group, "td_factory3d.group_td_user")
+            prov._td_viewer_collect({}, {})
+            prov._td_viewer_delta({}, {})
+        self.assertIn("mrp.production", self.env["td.viewer.provider.energy"]._td_viewer_bus_models())

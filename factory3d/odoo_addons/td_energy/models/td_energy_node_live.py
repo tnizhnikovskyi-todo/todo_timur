@@ -18,7 +18,7 @@ class F3dEnergyNodeLive(models.Model):
     _inherit = "td.energy.node"
 
     @api.model
-    def _f3d_fresh_values(self):
+    def _td_fresh_values(self):
         """{код: (значення, текст)} свіжих сигналів енергетики й `infra/` (R-06: не stale/unknown, не bad)."""
         rows = (
             self.env["td.signal"]
@@ -35,9 +35,9 @@ class F3dEnergyNodeLive(models.Model):
         }
 
     @api.model
-    def _f3d_live_snapshot(self, fresh=None):
+    def _td_live_snapshot(self, fresh=None):
         """R-06 п. 1–7: розрахунок живих показників з свіжих сигналів (без запису)."""
-        fresh = fresh if fresh is not None else self._f3d_fresh_values()
+        fresh = fresh if fresh is not None else self._td_fresh_values()
         Node = self.sudo()
 
         def val(code):
@@ -95,7 +95,7 @@ class F3dEnergyNodeLive(models.Model):
         }
 
     @api.model
-    def _f3d_live_write(self, snap, now):
+    def _td_live_write(self, snap, now):
         """R-06 п. 8: тотали й `pfc_q_now`; при > 2 несвіжих фідерах або двох несвіжих вводах — не пишуться."""
         if snap["stale_feeders"] > 2 or snap["stale_incomers"] >= 2 or not snap["totals"]["lines"]:
             return False
@@ -116,20 +116,20 @@ class F3dEnergyNodeLive(models.Model):
             ):
                 code = "energy/sections/S%d/%s" % (section, suffix)
                 readings.append({"code": code, "ts": ts, "value": value, "q": "good"})
-        self.env["td.signal"].sudo()._f3d_energy_put(readings)
+        self.env["td.signal"].sudo()._td_energy_put(readings)
         for section, node in snap["pfc"].items():
             sec = totals["sections"].get(section)
             if sec is not None and node.pfc_q_now != sec["pfc_q_now"]:
                 old = node.pfc_q_now
                 node.write({"pfc_q_now": sec["pfc_q_now"]})
-                self.env["td.energy.event"]._f3d_pfc_event(node, old, sec["pfc_q_now"], sec["cos_after"], ts=now)
+                self.env["td.energy.event"]._td_pfc_event(node, old, sec["pfc_q_now"], sec["cos_after"], ts=now)
             self.env["td.energy.event"]._td_pfc_resolve(section)  # W1 R-25: `pfc` вирішується за fault_step і cos φ
         return True
 
     @api.model
-    def _f3d_asymmetry(self, now, fresh=None):
+    def _td_asymmetry(self, now, fresh=None):
         """R-12 п. 3: асиметрія фазних струмів шаф з фазними струмами → `…/i_unbal_pct`."""
-        fresh = fresh if fresh is not None else self._f3d_fresh_values()
+        fresh = fresh if fresh is not None else self._td_fresh_values()
         ts = dates.floor_minute(now)
         readings = []
         cells = self.sudo().search([("kind", "=", "cell"), ("cell_type", "in", ("incomer", "feeder", "cable"))])
@@ -145,7 +145,7 @@ class F3dEnergyNodeLive(models.Model):
             pct = live.unbalance_pct(*phases, cell.rating_a)
             if pct is not None:
                 readings.append({"code": prefix + "/i_unbal_pct", "ts": ts, "value": round(pct, 2), "q": "good"})
-        self.env["td.signal"].sudo()._f3d_energy_put(readings)
+        self.env["td.signal"].sudo()._td_energy_put(readings)
         return readings
 
     @api.model
@@ -156,13 +156,13 @@ class F3dEnergyNodeLive(models.Model):
         source = self.env.ref("td_energy.source_en_derived", raise_if_not_found=False)
         try:
             with self.env.cr.savepoint():
-                fresh = self._f3d_fresh_values()
-                self._f3d_live_write(self._f3d_live_snapshot(fresh), now)
+                fresh = self._td_fresh_values()
+                self._td_live_write(self._td_live_snapshot(fresh), now)
                 bus.tick(self.env, "kpi")  # W1 R-33
-                self.env["td.energy.outage"]._f3d_ats_tick(now)  # W4: R-14 п. 8
+                self.env["td.energy.outage"]._td_ats_tick(now)  # W4: R-14 п. 8
                 if now.minute % 5 == 0:
-                    self._f3d_asymmetry(now, fresh)
-                self.env["td.energy.meter"].sudo().search([("active", "=", True)])._f3d_update_state()
+                    self._td_asymmetry(now, fresh)
+                self.env["td.energy.meter"].sudo().search([("active", "=", True)])._td_update_state()
             if source and source.state != "online":
                 source.sudo().write({"state": "online", "last_error": False})
         except Exception as exc:

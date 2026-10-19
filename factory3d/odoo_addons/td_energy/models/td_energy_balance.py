@@ -55,14 +55,14 @@ class F3dEnergyBalance(models.Model):
         while hour <= h_max:
             try:
                 with self.env.cr.savepoint():
-                    count += len(self._f3d_balance_hour(hour, now))
+                    count += len(self._td_balance_hour(hour, now))
             except Exception:
                 _logger.exception("f3d_energy: баланс за %s", hour)
             hour += HOUR
         return count
 
     @api.model
-    def _f3d_balance_hour(self, hour, now=None):
+    def _td_balance_hour(self, hour, now=None):
         """R-07 для закритої години `hour` (UTC, `[hour, hour + 1 год)`); повертає записи балансу."""
         env = self.env
         now = now or dates.now_utc(env)
@@ -109,7 +109,7 @@ class F3dEnergyBalance(models.Model):
                 extra = meters.filtered(lambda m: m.role in ("generation", "storage")) if node.section == 2 else Meter
                 inputs = own | feeders | extra
             else:
-                consumers = node._f3d_descendant_meters().filtered(
+                consumers = node._td_descendant_meters().filtered(
                     lambda m: m.role == "consumer" and m.e_import_signal_id
                 )
                 feeders = extra = Meter
@@ -120,25 +120,25 @@ class F3dEnergyBalance(models.Model):
             elif node.cell_type != "incomer" and not consumers:
                 state, reason = "skipped", "немає лічильників споживачів"
             else:
-                reason = self._f3d_missing_reason(inputs, by_meter)
+                reason = self._td_missing_reason(inputs, by_meter)
                 state = "skipped" if reason else "ok"
             measured = expected = diff = pct = 0.0
             if state != "skipped":
                 if node.cell_type == "incomer":
-                    measured = self._f3d_sum(own, by_meter, net=True)
+                    measured = self._td_sum(own, by_meter, net=True)
                     if node.section == 2:
                         expected = balance_tools.expected_q2(
-                            [self._f3d_sum(m, by_meter) for m in feeders],
-                            [self._f3d_sum(m, by_meter) for m in extra if m.model == "sun2000"],
-                            sum(self._f3d_sum(m, by_meter) for m in extra if m.model == "tedom"),
-                            sum(self._f3d_sum(m, by_meter) for m in extra if m.role == "storage"),
-                            sum(self._f3d_sum(m, by_meter, field="kwh_export") for m in extra if m.role == "storage"),
+                            [self._td_sum(m, by_meter) for m in feeders],
+                            [self._td_sum(m, by_meter) for m in extra if m.model == "sun2000"],
+                            sum(self._td_sum(m, by_meter) for m in extra if m.model == "tedom"),
+                            sum(self._td_sum(m, by_meter) for m in extra if m.role == "storage"),
+                            sum(self._td_sum(m, by_meter, field="kwh_export") for m in extra if m.role == "storage"),
                         )
                     else:
-                        expected = balance_tools.expected_q1([self._f3d_sum(m, by_meter) for m in feeders])
+                        expected = balance_tools.expected_q1([self._td_sum(m, by_meter) for m in feeders])
                 else:
-                    measured = self._f3d_sum(own, by_meter)
-                    expected = sum(self._f3d_sum(m, by_meter) for m in consumers)
+                    measured = self._td_sum(own, by_meter)
+                    expected = sum(self._td_sum(m, by_meter) for m in consumers)
                 diff, pct, state = balance_tools.evaluate(measured, expected, tol_pct, tol_kwh)
             vals = {
                 "measured_kwh": measured, "expected_kwh": expected, "diff_kwh": diff, "diff_pct": pct,
@@ -158,7 +158,7 @@ class F3dEnergyBalance(models.Model):
             readings.append({"code": "%s/%s/imbalance_pct" % (prefix, name), "ts": h_end, "value": round(pct, 2),
                              "q": "good"})  # fmt: skip
             if state == "deviation":
-                env["td.energy.event"]._f3d_log(
+                env["td.energy.event"]._td_log(
                     "warn",
                     "balance",
                     node.code,
@@ -178,11 +178,11 @@ class F3dEnergyBalance(models.Model):
             elif state == "ok":  # W1 R-25: наступна година в нормі — відкриті події `balance` вузла вирішено
                 env["td.energy.event"]._td_auto_resolve("balance", node=node)
         if not env.context.get("td_backfill_mute"):  # R-36: історія не пише показань імбалансу
-            env["td.signal"].sudo()._f3d_energy_put(readings)
+            env["td.signal"].sudo()._td_energy_put(readings)
         return result
 
     @api.model
-    def _f3d_sum(self, meters, by_meter, net=False, field="kwh"):
+    def _td_sum(self, meters, by_meter, net=False, field="kwh"):
         total = 0.0
         for m in meters:
             for r in by_meter.get(m.id, []):
@@ -190,7 +190,7 @@ class F3dEnergyBalance(models.Model):
         return total
 
     @api.model
-    def _f3d_missing_reason(self, meters, by_meter):
+    def _td_missing_reason(self, meters, by_meter):
         parts = []
         for m in meters.sorted("code"):
             rows = by_meter.get(m.id, [])

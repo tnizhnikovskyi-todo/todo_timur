@@ -135,7 +135,7 @@ class TestCounterMeter(EnergyMixin, F3DEnergyCase):
             self.mk_interval(meter, day + timedelta(hours=1, minutes=15 * k), 2.0, e_start=energy)
             energy += 2.0
         a, b = day + timedelta(hours=1, minutes=15), day + timedelta(hours=1, minutes=45)
-        ser = meter._f3d_counter_series(a, b)
+        ser = meter._td_counter_series(a, b)
         self.assertEqual(ser.delta(a, b), (4.0, "measured"))
         inner = ser.delta(a + timedelta(minutes=5), b)
         self.assertAlmostEqual(inner[0], 3.3333, places=3)
@@ -147,10 +147,10 @@ class TestCounterMeter(EnergyMixin, F3DEnergyCase):
         start = day + timedelta(hours=1, minutes=35, seconds=30)
         self.feed(meter.e_import_signal_id, [(start + timedelta(seconds=60 * k), 999.89 + 0.22 * k) for k in range(80)])
         a, b = day + timedelta(hours=1, minutes=36), day + timedelta(hours=2, minutes=54)
-        self.assertEqual(meter._f3d_kwh(a, b), (17.16, "measured"))
-        self.assertEqual(self.env["td.energy.node"]._f3d_kwh_by_code("NOPE", a, b), (0.0, "missing"))
-        self.assertEqual(self.env["td.energy.node"]._f3d_kwh_by_code("SAW-T", a, b), (17.16, "measured"))
+        self.assertEqual(meter._td_kwh(a, b), (17.16, "measured"))
+        self.assertEqual(self.env["td.energy.node"]._td_kwh_by_code("NOPE", a, b), (0.0, "missing"))
+        self.assertEqual(self.env["td.energy.node"]._td_kwh_by_code("SAW-T", a, b), (17.16, "measured"))
         with self.assertRaises(ValueError):
-            meter._f3d_kwh(b, a)
+            meter._td_kwh(b, a)
         with self.assertRaises(ValueError):
-            meter._f3d_kwh(a, a)
+            meter._td_kwh(a, a)

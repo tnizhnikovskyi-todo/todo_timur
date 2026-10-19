@@ -95,7 +95,7 @@ def _show_cost(env, ctx):
 
 
 def _fresh(env):
-    return env["td.energy.node"]._f3d_fresh_values()
+    return env["td.energy.node"]._td_fresh_values()
 
 
 def _live(env, ctx):
@@ -104,7 +104,7 @@ def _live(env, ctx):
     if ctx is not None and "_td_live" in ctx:
         return ctx["_td_live"]
     fresh = _fresh(env)
-    live = (fresh, env["td.energy.node"]._f3d_live_snapshot(fresh))
+    live = (fresh, env["td.energy.node"]._td_live_snapshot(fresh))
     if ctx is not None:
         ctx["_td_live"] = live
     return live
@@ -188,8 +188,8 @@ def build_energy(env, ctx, payload):
     energy = payload.setdefault("energy", {})
 
     # meta
-    tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
-    _zone, price = env["td.energy.tariff"].sudo()._f3d_price_at(now, tariff=tariff)
+    tariff = env["td.energy.tariff"].sudo()._td_tariff_at(now)
+    _zone, price = env["td.energy.tariff"].sudo()._td_price_at(now, tariff=tariff)
     meta = energy.setdefault("meta", {})
     meta["source"] = SOURCE
     meta["u_kv"] = "10 / 0,4"
@@ -220,7 +220,7 @@ def build_energy(env, ctx, payload):
         totals["chp_kw"] = round(snap["chp_kw"], 1)
     if snap["bess_kw"] is not None:
         totals["bess_kw"] = round(snap["bess_kw"], 1)
-    day = env["td.energy.interval"]._f3d_day_profile(now) if env["td.energy.interval"].has_access("read") else None
+    day = env["td.energy.interval"]._td_day_profile(now) if env["td.energy.interval"].has_access("read") else None
     if day:
         totals["kwh_today"] = day["kwh_today"]
         totals["peak_kw"] = day["peak_kw"]

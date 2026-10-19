@@ -88,7 +88,7 @@ class TestHooks(F3DEnergyCase):
         derived = self.env.ref("td_energy.source_en_derived")
         self.assertEqual((derived.code, derived.type, derived.module), ("EN-DERIVED", "f3d_energy", "energy"))
         self.assertFalse(derived.collector_id)
-        self.assertIn("f3d_energy", self.env["td.source"]._f3d_local_types())
+        self.assertIn("f3d_energy", self.env["td.source"]._td_local_types())
         shifts = self.Signal.search([("code", "=like", "energy/consumers/%/kwh_shift")])
         self.assertEqual(len(shifts), 49)
         for s in shifts:

@@ -111,7 +111,7 @@ class TestCosting(CostingMixin, F3DEnergyCase):
             [("production_id", "=", mo.id), ("workcenter_id", "=", saw.id), ("kind", "=", "direct")]
         )
         self.assertEqual(row.analytic_line_ids, lines)
-        mo._f3d_energy_analytic(row)  # повторно — без дублів
+        mo._td_energy_analytic(row)  # повторно — без дублів
         self.assertEqual(self.env["account.analytic.line"].search_count([("name", "like", "[EN]%")]), 1)
 
     def test_cal_price_twice(self):  # AC-51

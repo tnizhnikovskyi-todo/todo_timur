@@ -91,7 +91,7 @@ class ResConfigSettings(models.TransientModel):
     @api.model
     def _td_apply_cos_thresholds(self):
         """W1 5.1: пороги cos φ з параметрів → `warn_low`/`alarm_low` сигналів заводу й секцій
-        (патерн `_f3d_apply_contract_thresholds`)."""
+        (патерн `_td_apply_contract_thresholds`)."""
         icp = self.env["ir.config_parameter"].sudo()
         warn = float(icp.get_param(P + "cos_phi_warn", "0.92") or 0.92)
         alarm = float(icp.get_param(P + "cos_phi_alarm", "0.90") or 0.90)

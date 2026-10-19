@@ -67,7 +67,7 @@ class MrpProduction(models.Model):
             else:
                 mo.td_energy_state = "partial"
 
-    def _f3d_energy_qty(self):
+    def _td_energy_qty(self):
         """Кількість у одиницях товару: `qty_producing` (або `product_qty`)."""
         self.ensure_one()
         return self.product_uom_id._compute_quantity(self.qty_producing or self.product_qty, self.product_id.uom_id)
@@ -75,18 +75,18 @@ class MrpProduction(models.Model):
     @api.depends("td_energy_cost", "qty_producing", "product_qty", "product_uom_id", "product_id")
     def _compute_f3d_energy_unit_cost(self):
         for mo in self:
-            qty = mo._f3d_energy_qty() if mo.product_id else 0.0
+            qty = mo._td_energy_qty() if mo.product_id else 0.0
             mo.td_energy_unit_cost = mo.sudo().td_energy_cost / qty if qty else 0.0
 
     # --- R-10 ------------------------------------------------------------------------------------------
     def _cal_price(self, consumed_moves):
         self.ensure_one()
         if not self.env.context.get("f3d_energy_skip"):
-            self._f3d_energy_finalize()
-            self._f3d_energy_apply_extra_cost()
+            self._td_energy_finalize()
+            self._td_energy_apply_extra_cost()
         return super()._cal_price(consumed_moves)
 
-    def _f3d_energy_days(self, now):
+    def _td_energy_days(self, now):
         """Місцеві дати від першої до останньої хвилини журналу часу завдань МО, обмежені `now`."""
         self.ensure_one()
         starts, ends = [], []
@@ -102,21 +102,21 @@ class MrpProduction(models.Model):
         first, last = dates.local_day(lo), dates.local_day(hi)
         return [first + timedelta(days=i) for i in range((last - first).days + 1)]
 
-    def _f3d_energy_finalize(self):
+    def _td_energy_finalize(self):
         """R-10 п. 2, 5: перерахунок діб, фіксація рядків, аналітика, чаттер."""
         self.ensure_one()
         if self.td_energy_locked:
             return
         now = dates.now_utc(self.env)
         Alloc = self.env["td.energy.alloc"].sudo()
-        days = self._f3d_energy_days(now)
+        days = self._td_energy_days(now)
         if days:
-            Alloc._f3d_alloc_days(days, now=now)
+            Alloc._td_alloc_days(days, now=now)
         rows = Alloc.search([("production_id", "=", self.id), ("kind", "in", ("direct", "shared"))])
         rows.write({"locked": True})
         mo = self.sudo()
         mo.td_energy_locked = True
-        self._f3d_energy_analytic(rows)
+        self._td_energy_analytic(rows)
         mo.message_post(
             body=_(
                 "Енергію зафіксовано: %(kwh)s кВт·год (прямі %(direct)s, спільні %(shared)s), вартість %(cost)s грн, "
@@ -129,7 +129,7 @@ class MrpProduction(models.Model):
             )
         )
 
-    def _f3d_energy_analytic(self, rows):
+    def _td_energy_analytic(self, rows):
         if not dates.param_bool(self.env, "analytic_enabled"):
             return
         Account = self.env["account.analytic.account"].sudo()
@@ -141,7 +141,7 @@ class MrpProduction(models.Model):
             if vals:
                 row.analytic_line_ids += self.env["account.analytic.line"].sudo().create(vals)
 
-    def _f3d_energy_apply_extra_cost(self):
+    def _td_energy_apply_extra_cost(self):
         """R-10 п. 3–4: енергія в `extra_cost` (FIFO/AVCO) або чаттер для `standard`."""
         self.ensure_one()
         if not dates.param_bool(self.env, "costing_enabled"):
@@ -149,7 +149,7 @@ class MrpProduction(models.Model):
         mo = self.sudo()
         if mo.td_energy_applied_unit:
             return
-        qty = self._f3d_energy_qty()
+        qty = self._td_energy_qty()
         if qty <= 0:
             return
         if mo.product_id.cost_method in ("fifo", "average"):
@@ -185,9 +185,9 @@ class MrpProduction(models.Model):
         total = 0.0
         now = dates.now_utc(self.env)
         for mo in self.filtered(lambda m: not m.td_energy_locked):
-            days = mo._f3d_energy_days(now)
+            days = mo._td_energy_days(now)
             if days:
-                self.env["td.energy.alloc"].sudo()._f3d_alloc_days(days, now=now)
+                self.env["td.energy.alloc"].sudo()._td_alloc_days(days, now=now)
             total += mo.sudo().td_energy_kwh
         return {
             "type": "ir.actions.client",

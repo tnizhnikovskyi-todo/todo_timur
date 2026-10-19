@@ -53,7 +53,7 @@ class TestW1Bus(TestW1Common):
             self.assertNotIn(word, text)
 
     def test_actions_add_kinds(self):  # AC-102
-        ev = self.Event._f3d_log("warn", "meter", "PM-QF-C2", "Лічильник. Немає даних.", ts=NOW)
+        ev = self.Event._td_log("warn", "meter", "PM-QF-C2", "Лічильник. Немає даних.", ts=NOW)
         self.assertIn("alarm", self.kinds())
         self.env.cr.precommit.data.pop(bus._KEY)
         ev.with_user(self.u_eng).action_ack()

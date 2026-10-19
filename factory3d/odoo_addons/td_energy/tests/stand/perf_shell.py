@@ -117,7 +117,7 @@ elif MODE == "tp02":
     env.invalidate_all()  # noqa: F821
     t0 = time.perf_counter()
     with Counter() as q:
-        stats = env["td.energy.alloc"].sudo()._f3d_alloc_days([day], now=now)  # noqa: F821
+        stats = env["td.energy.alloc"].sudo()._td_alloc_days([day], now=now)  # noqa: F821
     out.update(
         workcenters=len(wcs),
         workorders=len(mo.workorder_ids),
@@ -168,7 +168,7 @@ elif MODE == "tp04":
             for i, c in enumerate(codes)
         ]
         t0 = time.perf_counter()
-        Signal.with_context(**ctx)._f3d_ingest(readings, src="collector")
+        Signal.with_context(**ctx)._td_ingest(readings, src="collector")
         dt = time.perf_counter() - t0
         cr.rollback()
         return dt

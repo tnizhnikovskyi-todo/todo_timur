@@ -30,7 +30,7 @@ class TestAts(EnergyMixin, F3DEnergyCase):
             item["text"] = text
         if value is not None:
             item["value"] = value
-        self.Signal.with_context(f3d_now=at)._f3d_ingest([item])
+        self.Signal.with_context(f3d_now=at)._td_ingest([item])
 
     def sig(self, code):
         return self.Signal.search([("code", "=", code)])

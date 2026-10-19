@@ -42,12 +42,12 @@ class TestTariff(F3DEnergyCase):
             with self.subTest(local="%02d:%02d" % (hour, minute)):
                 self.demo.active = False
                 tariff = self.day_night()
-                zone_, got = self.Tariff._f3d_price_at(dt)
+                zone_, got = self.Tariff._td_price_at(dt)
                 self.assertEqual((zone_.name, got), (name, price))
                 self.assertEqual(zone_.tariff_id, tariff)
                 tariff.unlink()
                 self.demo.active = True
-                zone_, got = self.Tariff._f3d_price_at(dt)
+                zone_, got = self.Tariff._td_price_at(dt)
                 self.assertEqual((zone_.name, got), ("Цілодобова", 8.4))
 
     def test_zone_validation(self):  # AC-08
@@ -73,8 +73,8 @@ class TestTariff(F3DEnergyCase):
             self.Tariff.create({"name": "Новий", "date_from": "2026-06-01", "zone_ids": flat})
         self.demo.date_to = "2026-05-31"
         second = self.Tariff.create({"name": "Новий", "date_from": "2026-06-01", "zone_ids": flat})
-        self.assertEqual(self.Tariff._f3d_tariff_at(datetime(2026, 7, 1, 9, 0)), second)
-        self.assertEqual(self.Tariff._f3d_tariff_at(datetime(2026, 5, 1, 9, 0)), self.demo)
+        self.assertEqual(self.Tariff._td_tariff_at(datetime(2026, 7, 1, 9, 0)), second)
+        self.assertEqual(self.Tariff._td_tariff_at(datetime(2026, 5, 1, 9, 0)), self.demo)
         with self.assertRaisesRegex(ValidationError, "раніше"), self.env.cr.savepoint():
             second.date_to = "2026-01-01"
 
@@ -100,5 +100,5 @@ class TestTariff(F3DEnergyCase):
     def test_tariff_without_zones_price_zero(self):
         self.demo.active = False
         self.Tariff.create({"name": "Порожній", "date_from": "2026-01-01"})
-        zone_, price = self.Tariff._f3d_price_at(datetime(2026, 10, 12, 9, 0))
+        zone_, price = self.Tariff._td_price_at(datetime(2026, 10, 12, 9, 0))
         self.assertEqual((bool(zone_), price), (False, 0.0))

@@ -45,14 +45,14 @@ class TestBalance(EnergyMixin, F3DEnergyCase):
     def consumer(self, node_code):
         found = (
             self.Node.search([("code", "=", node_code)])
-            ._f3d_descendant_meters()
+            ._td_descendant_meters()
             .filtered(lambda m: m.role == "consumer")
         )
         self.assertTrue(found, node_code)
         return found.sorted("code")[0]
 
     def check(self, hour, node_code):
-        return self.Balance._f3d_balance_hour(hour, hour + timedelta(hours=2)).filtered(
+        return self.Balance._td_balance_hour(hour, hour + timedelta(hours=2)).filtered(
             lambda r: r.node_id.code == node_code
         )
 

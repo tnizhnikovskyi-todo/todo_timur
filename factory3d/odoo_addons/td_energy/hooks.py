@@ -369,7 +369,7 @@ def contract(env, report):
     _step("8 contract")
     Tariff = env["td.energy.tariff"]
     for company in env["res.company"].search([]):
-        Tariff._f3d_tariff_at(fields.Datetime.now(), company)._f3d_apply_contract_thresholds()
+        Tariff._td_tariff_at(fields.Datetime.now(), company)._td_apply_contract_thresholds()
 
 
 # --- W1 (A-24, A-27): схема Пульту, сигнали контролера ГРЩ, пороги cos φ ---------------------------------------

@@ -275,7 +275,7 @@ class TestW1Dashboard(TestW1Common):
 
     def test_mobile(self):  # AC-145
         self.fixture_grid()
-        ev = self.Event._f3d_log("warn", "meter", "PM-QF-C2", "Лічильник PM-QF-C2. Немає даних.", ts=NOW,
+        ev = self.Event._td_log("warn", "meter", "PM-QF-C2", "Лічильник PM-QF-C2. Немає даних.", ts=NOW,
                                  node=self.Node.search([("code", "=", "C2")]))  # fmt: skip
         ev.with_user(self.u_eng).action_take()
         mobile = self.Dash.with_user(self.u_eng).get_mobile(None)
@@ -297,7 +297,7 @@ class TestW1Dashboard(TestW1Common):
     def test_alarm_order_shared(self):  # однаковий порядок у get_pult і get_mobile: строгість, далі час спадно
         self.fixture_grid()
         mins = lambda n: NOW - timedelta(minutes=n)  # noqa: E731
-        log = lambda text, level, ts: self.Event._f3d_log(level, "meter", "PM-QF-C2", text, ts=ts)  # noqa: E731
+        log = lambda text, level, ts: self.Event._td_log(level, "meter", "PM-QF-C2", text, ts=ts)  # noqa: E731
         old_warn, new_warn = log("Стара. Увага.", "warn", mins(50)), log("Нова. Увага.", "warn", mins(10))
         bad = log("Аварія. Подія.", "bad", mins(90))
         acked_warn, acked_bad = log("Підтв. Увага.", "warn", mins(5)), log("Підтв. Аварія.", "bad", mins(70))

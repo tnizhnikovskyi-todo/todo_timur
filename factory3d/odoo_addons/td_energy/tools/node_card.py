@@ -221,7 +221,7 @@ class NodeCard:
         cost = 0.0
         if meter_row:
             meter = self.sudo["td.energy.meter"].browse(meter_row["id"])
-            value, quality = meter._f3d_kwh(self.day0, self.now) if self.now > self.day0 else (0.0, "missing")
+            value, quality = meter._td_kwh(self.day0, self.now) if self.now > self.day0 else (0.0, "missing")
             kwh = value
             if quality == "missing":  # без показань лічильника (демо-історія R-36) — сума інтервалів доби
                 self.env.cr.execute(

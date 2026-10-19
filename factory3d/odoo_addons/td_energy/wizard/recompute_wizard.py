@@ -33,14 +33,14 @@ class F3dEnergyRecomputeWizard(models.TransientModel):
     result = fields.Text(readonly=True)
 
     @api.model
-    def _f3d_check_manager(self):
+    def _td_check_manager(self):
         if not self.env.user.has_group("td_energy.group_td_energy_manager"):
             raise AccessError(_("Перерахунок енергії доступний енергетику."))
 
     def action_run(self):
-        """M-19, R-23: інтервали (`_f3d_rebuild`) і/або розподіл (`_f3d_alloc_days`); `locked` не змінюються."""
+        """M-19, R-23: інтервали (`_td_rebuild`) і/або розподіл (`_td_alloc_days`); `locked` не змінюються."""
         self.ensure_one()
-        self._f3d_check_manager()
+        self._td_check_manager()
         if self.date_to < self.date_from:
             raise UserError(_("Дата «По» раніше за дату «З»."))
         if (self.date_to - self.date_from).days > MAX_DAYS:
@@ -53,11 +53,11 @@ class F3dEnergyRecomputeWizard(models.TransientModel):
             meters = (self.meter_ids or self.env["td.energy.meter"].sudo().search([])).sudo()
             domain = [("meter_id", "in", meters.ids), ("ts_start", ">=", d0), ("ts_start", "<", d1)]
             before = Interval.search_count(domain)
-            n_iv = Interval._f3d_rebuild(meters, d0, d1)
+            n_iv = Interval._td_rebuild(meters, d0, d1)
             n_new = max(Interval.search_count(domain) - before, 0)
         if self.what in ("alloc", "both"):
             days = [self.date_from + timedelta(days=i) for i in range((self.date_to - self.date_from).days + 1)]
-            stats = self.env["td.energy.alloc"].sudo()._f3d_alloc_days(days)
+            stats = self.env["td.energy.alloc"].sudo()._td_alloc_days(days)
             n_days, n_skipped = stats["days"], stats["skipped"]
         self.result = _(
             "Інтервалів: %(n)s (нових %(new)s), діб розподілу: %(days)s, зафіксованих рядків пропущено: %(skipped)s",

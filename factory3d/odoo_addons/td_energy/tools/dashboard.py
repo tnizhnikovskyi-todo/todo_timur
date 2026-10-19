@@ -68,7 +68,7 @@ class Pult:
     # --- спільні вхідні дані ----------------------------------------------------------------------------
     @cached_property
     def tariff(self):
-        return self.sudo["td.energy.tariff"]._f3d_tariff_at(self.now)
+        return self.sudo["td.energy.tariff"]._td_tariff_at(self.now)
 
     @cached_property
     def contract_kw(self):
@@ -123,10 +123,10 @@ class Pult:
             if row["role"] != "incomer":
                 continue
             meter = Meter.browse(row["id"])
-            imp, _q = meter._f3d_counter_series(self.cur, self.now).delta(self.cur, self.now)
+            imp, _q = meter._td_counter_series(self.cur, self.now).delta(self.cur, self.now)
             exp = 0.0
             if meter.e_export_signal_id:
-                exp, _q = meter._f3d_counter_series(self.cur, self.now, export=True).delta(self.cur, self.now)
+                exp, _q = meter._td_counter_series(self.cur, self.now, export=True).delta(self.cur, self.now)
             total += (imp or 0.0) - (exp or 0.0)
         return total
 
@@ -135,7 +135,7 @@ class Pult:
         """R-27: вікно періоду `(start, label_kwh, label_peak, subtitle_time)` у UTC."""
         local = dates.to_local(self.now)
         if self.period == "shift":
-            start = dates.shift_start(self.now, self.sudo["td.energy.interval"]._f3d_shift_hours())
+            start = dates.shift_start(self.now, self.sudo["td.energy.interval"]._td_shift_hours())
             hhmm = dates.to_local(start).strftime("%H:%M")
             return start, "З мережі за зміну (з %s)" % hhmm, "Пік зміни"
         if self.period == "month":
