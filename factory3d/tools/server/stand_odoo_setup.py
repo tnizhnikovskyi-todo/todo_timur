@@ -3,7 +3,8 @@
 
 Запускает менеджер снаружи, после установки новой БД с модулями td_*:
 
-    export ODOO_URL=https://timur-o19demo.todo.ltd ODOO_DB=odoo ODOO_USER=admin ODOO_PASSWORD=...   # пароль или API-ключ
+    export ODOO_URL=https://timur-o19demo.todo.ltd ODOO_DB=odoo ODOO_USER=admin ODOO_PASSWORD=...   # пароль или
+    API-ключ
     python3 stand_odoo_setup.py setup > td-stand.secrets   # токены ОДИН раз в stdout, остальное в stderr
     python3 stand_odoo_setup.py status                     # состояние без секретов
     python3 stand_odoo_setup.py backfill                   # через >= 5 мин после запуска стенда
@@ -15,7 +16,8 @@
             Файл с этими строками клиент передаёт install_stand.sh как TD_SECRETS_FILE.
   params    только параметры (без токенов).
   backfill  td.energy.interval._td_backfill(days=90) (R-36). Метод приватный, по RPC его вызвать нельзя, поэтому
-            скрипт создаёт временное серверное действие, запускает и удаляет его. Опции --days, --seed, --purge, --force.
+            скрипт создаёт временное серверное действие, запускает и удаляет его. Опции --days, --seed, --purge,
+            --force.
   status    состояние коллектора, источников, свежих показаний и истории.
 
 Переменные: ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD (обязательны); TD_COLLECTOR_CODE (COL-MAIN), TD_SIM_URL
@@ -35,7 +37,8 @@ import xmlrpc.client
 
 COLLECTOR_NAME = "Основной коллектор (стенд)"
 HTTP_PUSH_CODE = "HTTP-PUSH"
-# Имена переменных окружения сборщика, на которые ссылается params источника (сами значения — в /etc/td-stand/collector.env)
+# Имена переменных окружения сборщика, на которые ссылается params источника (сами значения — в
+# /etc/td-stand/collector.env)
 HTTP_PUSH_PARAMS = {
     "routes": ["lpr"],
     "allow_ips": ["iot-sim", "127.0.0.1"],
@@ -136,7 +139,8 @@ def ensure_collector(odoo: Odoo, code: str, rotate: bool) -> str | None:
         info(f"коллектор {code}: создан (id {cid})")
     if rec.get("token_set_at") and not rotate:
         info(
-            f"токен коллектора {code} уже выдан (последние символы …{rec.get('token_hint') or '?'}): новый не выпускаю. "
+            f"токен коллектора {code} уже выдан (последние символы …{rec.get('token_hint') or '?'}): "
+            "новый не выпускаю. "
             "Потеряли значение, а сборщик ещё не подключён — повторите с --rotate (прежний токен перестанет работать)."
         )
         return None
