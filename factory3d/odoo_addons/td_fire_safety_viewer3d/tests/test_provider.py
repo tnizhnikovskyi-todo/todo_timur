@@ -15,12 +15,12 @@ class TestProvider(FireCase):
     def test_registered_and_live(self):
         names = {p._name: p for p in get_providers(self.env)}
         fire, evac = names["td.viewer.provider.fire"], names["td.viewer.provider.evacuation"]
-        self.assertEqual((fire._f3d_sequence, fire._f3d_sections), (130, ("fire",)))
-        self.assertEqual((evac._f3d_sequence, evac._f3d_sections), (140, ("evacuation",)))
-        self.assertEqual(fire._f3d_group, "td_factory3d.group_td_user")
-        self.assertEqual(fire._f3d_viewer_bus_models(), [
+        self.assertEqual((fire._td_sequence, fire._td_sections), (130, ("fire",)))
+        self.assertEqual((evac._td_sequence, evac._td_sections), (140, ("evacuation",)))
+        self.assertEqual(fire._td_group, "td_factory3d.group_td_user")
+        self.assertEqual(fire._td_viewer_bus_models(), [
             "td.fire.panel", "td.fire.zone", "td.fire.system", "td.fire.event", "td.fire.device"])
-        self.assertEqual(evac._f3d_viewer_bus_models(), ["td.fire.drill", "td.fire.route", "td.fire.exit"])
+        self.assertEqual(evac._td_viewer_bus_models(), ["td.fire.drill", "td.fire.route", "td.fire.exit"])
         data = PayloadBuilder(self.env(user=self.u), sections=["fire", "evacuation"]).build()
         self.assertEqual(data["meta"]["sections"]["fire"], "live")
         self.assertEqual(data["meta"]["sections"]["evacuation"], "live")
