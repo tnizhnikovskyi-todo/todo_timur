@@ -3,6 +3,7 @@
 Той самий автомат R-14 і потужність R-02, але ``state`` — біт DI «в роботі» (``CurrentState == WORKING``),
 ``alarm`` — біт DI «аварія» (``Error``), ``pieces_out`` — лічильник імпульсів (цикл = деталь, R-16).
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -11,6 +11,7 @@
 * ``ctl_remote = 0`` (місцевий режим) — записи ігноруються, командні регістри дають ``ack = 2``;
 * команди QS і КГУ додають подію світу ``command`` (``ctx.command(UNIT, "QS cmd = 2")``).
 """
+
 from __future__ import annotations
 
 import math
@@ -47,7 +48,12 @@ def build(ctx: Ctx) -> None:
         um.add_hr(addr, lambda: [max(0, min(U16_MAX, int(get())))], 1, None, name)
 
     def rw(
-        addr: int, get: Callable[[], int], put_: Callable[[int], None], lo: int, hi: int, name: str,
+        addr: int,
+        get: Callable[[], int],
+        put_: Callable[[int], None],
+        lo: int,
+        hi: int,
+        name: str,
         on_local: Callable[[], None] | None = None,
     ) -> None:
         def setter(_off: int, v: int) -> None:
@@ -101,8 +107,15 @@ def build(ctx: Ctx) -> None:
     def set_bess_mode(v: int) -> None:
         try_set_mode(w, v)
 
-    rw(220, lambda: int(ctl(w, "bess_mode")), set_bess_mode, 0, 3, "bess_mode",
-       on_local=lambda: w.set_flag("bess_ack", 2))
+    rw(
+        220,
+        lambda: int(ctl(w, "bess_mode")),
+        set_bess_mode,
+        0,
+        3,
+        "bess_mode",
+        on_local=lambda: w.set_flag("bess_ack", 2),
+    )
     rw(221, lambda: round(float(ctl(w, "bess_setpoint_kw"))), flag_setter("bess_setpoint_kw"), 0, 200, "bess_sp")
     rw(222, lambda: round(float(ctl(w, "bess_until_soc"))), flag_setter("bess_until_soc"), 0, 100, "bess_until")
 

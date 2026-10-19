@@ -1,4 +1,5 @@
 """ТБ-08 (права Odoo), ТБ-09 (токени навхрест), ТБ-10 (neutralize.sql) — на Odoo із шаблонною базою f3d_w6 (STAND_ODOO_*)."""
+
 import os
 import subprocess
 import time
@@ -28,8 +29,13 @@ def _user(od, login, group_xmlids):
     gids = [od.xid(*g.split(".")) for g in group_xmlids]
     uid = od.k("res.users", "search", [("login", "=", login)])
     if not uid:
-        uid = [od.k("res.users", "create", {"name": login, "login": login, "password": "Pw-" + login + "-1!",
-                                            "group_ids": [(6, 0, gids)]})]
+        uid = [
+            od.k(
+                "res.users",
+                "create",
+                {"name": login, "login": login, "password": "Pw-" + login + "-1!", "group_ids": [(6, 0, gids)]},
+            )
+        ]
     return uid[0], "Pw-" + login + "-1!"
 
 
@@ -39,6 +45,7 @@ def _as(login, pw):
 
     def call(model, method, *args, **kw):
         return proxy.execute_kw(DB, uid, pw, model, method, list(args), kw)
+
     return call
 
 
@@ -46,7 +53,7 @@ def test_tb08_group_user_cannot_write_and_manager_has_no_tokens(odoo):
     _user(odoo, "f3d_sim_reader_t", ["base.group_user", "td_factory3d.group_td_user"])
     reader = _as("f3d_sim_reader_t", "Pw-f3d_sim_reader_t-1!")
     for m in MODELS:
-        assert reader(m, "search_count", []) >= 0                      # читати можна
+        assert reader(m, "search_count", []) >= 0  # читати можна
         ids = reader(m, "search", [], limit=1)
         with pytest.raises(xmlrpc.Fault, match="AccessError|not allowed|доступ"):
             reader(m, "create", {})
@@ -66,7 +73,7 @@ def test_tb08_group_user_cannot_write_and_manager_has_no_tokens(odoo):
 def test_tb09_tokens_not_interchangeable(odoo):
     odoo.param("token", "panel-token-0123456789abcdef0123456789")
     odoo.param("export_token", EXPORT)
-    swapped = {"Authorization": "Bearer panel-token-0123456789abcdef0123456789"}      # token замість export_token
+    swapped = {"Authorization": "Bearer panel-token-0123456789abcdef0123456789"}  # token замість export_token
     assert httpx.get(ODOO + "/f3d/sim/devices", headers=swapped).status_code == 401
     assert httpx.post(ODOO + "/f3d/sim/events", json={"events": []}, headers=swapped).status_code == 401
     assert httpx.get(ODOO + "/f3d/sim/devices", headers={"Authorization": "Bearer " + EXPORT}).status_code == 200
@@ -89,11 +96,20 @@ def test_tb10_neutralize_sql_on_copy():
     psql = ["bash", "-c", f'source {TOOLS}/env.sh; "$PG_BINDIR/psql" -X -q -d {db} -v ON_ERROR_STOP=1 -c "$1"', "_"]
     run(*psql, "UPDATE ir_config_parameter SET value='http://127.0.0.1:8090' WHERE key='td.iot_sim.url'")
     run(*psql, "UPDATE ir_config_parameter SET value='tok' WHERE key='td.iot_sim.token'")
-    run(*psql, "UPDATE ir_cron SET active=true WHERE id IN (SELECT res_id FROM ir_model_data WHERE module="
-               "'td_iot_sim' AND model='ir.cron')")
+    run(
+        *psql,
+        "UPDATE ir_cron SET active=true WHERE id IN (SELECT res_id FROM ir_model_data WHERE module="
+        "'td_iot_sim' AND model='ir.cron')",
+    )
     sql = (Path(__file__).resolve().parents[4] / "odoo_addons" / "td_iot_sim" / "neutralize.sql").read_text()
-    subprocess.run(["bash", "-c", f'source {TOOLS}/env.sh; "$PG_BINDIR/psql" -X -q -d {db} -v ON_ERROR_STOP=1 -f -'],
-                   input=sql, env=env, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["bash", "-c", f'source {TOOLS}/env.sh; "$PG_BINDIR/psql" -X -q -d {db} -v ON_ERROR_STOP=1 -f -'],
+        input=sql,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
     run(str(TOOLS / "serve.sh"), db, port)
     try:
         url = f"http://127.0.0.1:{port}"
@@ -109,14 +125,25 @@ def test_tb10_neutralize_sql_on_copy():
 
         def k(model, method, *a, **kw):
             return o.execute_kw(db, uid, "admin", model, method, list(a), kw)
-        crons = k("ir.cron", "read", [k("ir.model.data", "search_read", [("module", "=", "td_iot_sim"),
-                                                                  ("name", "=", n)], fields=["res_id"])[0]["res_id"]
-                                      for n in ("cron_iot_sim", "cron_td_sim_status")], fields=["active"])
+
+        crons = k(
+            "ir.cron",
+            "read",
+            [
+                k("ir.model.data", "search_read", [("module", "=", "td_iot_sim"), ("name", "=", n)], fields=["res_id"])[
+                    0
+                ]["res_id"]
+                for n in ("cron_iot_sim", "cron_td_sim_status")
+            ],
+            fields=["active"],
+        )
         assert crons and not any(c["active"] for c in crons)
         panel = k("td.sim.panel", "search", [], limit=1)[0]
         assert k("td.sim.panel", "read", [panel], fields=["state"])[0]["state"] == "unconfigured"
-        res = k("td.sim.panel", "action_check", [panel])        # перевірка зв'язку — повідомлення danger, не виняток
-        assert res["params"]["type"] == "danger" and any(w in res["params"]["message"] for w in ("налаштовано", "вимкнено"))
+        res = k("td.sim.panel", "action_check", [panel])  # перевірка зв'язку — повідомлення danger, не виняток
+        assert res["params"]["type"] == "danger" and any(
+            w in res["params"]["message"] for w in ("налаштовано", "вимкнено")
+        )
         for method in ("action_stop_all", "action_reset", "action_apply_factor"):
             with pytest.raises(xmlrpc.Fault, match="налаштовано|configured|вимкнено|заборонен"):
                 k("td.sim.panel", method, [panel])
@@ -128,6 +155,7 @@ def test_tb05_odoo_devices_endpoint_signal_set(odoo):
     """ТБ-05, 4-те джерело: GET /f3d/sim/devices (сигнали) = множина code+address з catalog/signals.csv."""
     import csv
     import io
+
     cat = Path(__file__).resolve().parents[2] / "catalog" / "signals.csv"
     want = {(r["code"], r["address"]) for r in csv.DictReader(io.StringIO(cat.read_text(encoding="utf-8")))}
     odoo.param("export_token", EXPORT)

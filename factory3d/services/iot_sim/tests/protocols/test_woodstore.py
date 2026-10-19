@@ -1,4 +1,5 @@
 """P-03 woodStore API v1 (SPEC §8.5)."""
+
 import httpx
 import pytest
 from iot_sim.protocols.woodstore_api import WoodStoreApi
@@ -44,8 +45,10 @@ async def test_patch_stack(api):
 
 async def test_feed_job_lifecycle(api, world):
     stack = (await api.get("/stacks/PLT-01A")).json()
-    r = await api.post("/jobs", json={"type": "feed", "source": "PLT-01A", "target": "SAW-1",
-                                      "sheets": 2, "external_ref": "WH/MO/00231"})
+    r = await api.post(
+        "/jobs",
+        json={"type": "feed", "source": "PLT-01A", "target": "SAW-1", "sheets": 2, "external_ref": "WH/MO/00231"},
+    )
     assert r.status_code == 201
     job = r.json()
     assert job["state"] == "queued"
@@ -62,8 +65,7 @@ async def test_feed_job_lifecycle(api, world):
 
 
 async def test_job_conflicts_and_cancel(api, world):
-    r = await api.post("/jobs", json={"type": "feed", "source": "PLT-01A", "target": "SAW-1",
-                                      "sheets": 500})
+    r = await api.post("/jobs", json={"type": "feed", "source": "PLT-01A", "target": "SAW-1", "sheets": 500})
     assert r.status_code == 409 and r.json()["error"]["code"] == "CONFLICT"
     r = await api.post("/jobs", json={"type": "feed", "target": "XXX", "sheets": 1})
     assert r.status_code == 422
@@ -80,8 +82,7 @@ async def test_open_aisle_blocks(api, world):
 
 
 async def test_job_from_jobs_api_via_world(api, world):
-    world.post("woodstore_jobs", {"type": "feed", "target": "SAW-1", "sheets": 1,
-                                  "product": "DSP16-SON"})
+    world.post("woodstore_jobs", {"type": "feed", "target": "SAW-1", "sheets": 1, "product": "DSP16-SON"})
     world.advance(1)
     jobs = (await api.get("/jobs")).json()
     assert len(jobs) == 1 and jobs[0]["target"] == "SAW-1"

@@ -1,4 +1,5 @@
 """W2 §8.2 (AC-270…AC-274): реакції моделей на вікно керування — BESS, QS/PFC, КГУ, повітря, СЕС, скидання, сценарії."""
+
 import asyncio
 import math
 
@@ -429,8 +430,12 @@ async def test_scenarios_ctl_local_and_chp_no_gas(world):
 
 async def test_new_scenarios_params_and_conflicts(world):
     runner = ScenarioRunner(world)
-    for name, bad in (("peak_load", {"extra_kw": 5000}), ("export_demo", {"export_kw": -1}),
-                      ("chp_no_gas", {"gas_bar": 2.0}), ("ctl_local", {"x": 1})):
+    for name, bad in (
+        ("peak_load", {"extra_kw": 5000}),
+        ("export_demo", {"export_kw": -1}),
+        ("chp_no_gas", {"gas_bar": 2.0}),
+        ("ctl_local", {"x": 1}),
+    ):
         with pytest.raises(ScenarioParamsError):
             runner.start(name, bad)
     runner.start("peak_load", {})
@@ -450,7 +455,13 @@ def test_reset_flags_cover_all_defaults(world):
     world.set_flag("pv_limit_pct", 10.0)
     world.flags.clear()  # як POST /sim/v1/reset
     assert [ctl(world, n) for n in ("bess_mode", "chp_run", "qs_closed", "pv_limit_pct", "ctl_remote", "pfc_mode")] == [
-        0, False, False, 100.0, 1, 1]
+        0,
+        False,
+        False,
+        100.0,
+        1,
+        1,
+    ]
     assert ctl(world, "air_setpoint_bar") == 7.0 and ctl(world, "pfc_cos_target") is None
     world.step(1)
     assert val(world, "energy/cells/QS/state") == 0 and val(world, "energy_control/pfc/cos_target") == 0.95

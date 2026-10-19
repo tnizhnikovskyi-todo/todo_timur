@@ -1,4 +1,5 @@
 """P-07 SUN2000, LUNA2000, Elektronikon, ATyS p, TEDOM (SPEC §8.9.1–§8.9.5; AC-11, AC-12, AC-14, AC-20)."""
+
 import struct
 from types import SimpleNamespace
 
@@ -78,7 +79,7 @@ async def test_elektronikon_pdu_not_document_number(modbus, world):
     world.force("equipment/COMPRESSOR/hours", 17840.0, hold_s=600)
     world.force("equipment/COMPRESSOR/state", 1, hold_s=600)
     assert (await hr(modbus, 70, 3001)).registers == [6810]  # документ 3002
-    assert (await hr(modbus, 70, 3009)).registers == [64]    # документ 3010
+    assert (await hr(modbus, 70, 3009)).registers == [64]  # документ 3010
     assert (await hr(modbus, 70, 3000)).registers == [1]
     assert u32((await hr(modbus, 70, 3019, 2)).registers) == 17840
     assert (await hr(modbus, 70, 3010)).registers == [1200 + 36 * 64]

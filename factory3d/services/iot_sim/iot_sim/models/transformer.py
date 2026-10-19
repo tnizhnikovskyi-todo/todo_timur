@@ -1,4 +1,5 @@
 """Трансформатор T1/T2 (R-04): ``S = √(P²+Q²)`` секції, ``temp_c = 38 + 60·S/1000 + 0,3·r``."""
+
 from __future__ import annotations
 
 from iot_sim.models import register_model

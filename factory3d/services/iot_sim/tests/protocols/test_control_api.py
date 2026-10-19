@@ -1,4 +1,5 @@
 """REST керування /sim/v1 (SPEC §7.2, API-10…API-19; AC-21; §11)."""
+
 import pytest
 from fastapi.testclient import TestClient
 from iot_sim.config import Settings
@@ -43,8 +44,9 @@ def test_auth_required_and_open_endpoints(world):
         assert c.get("/sim/v1/status", headers={"Authorization": "Bearer x"}).json() == {"detail": "invalid token"}
         assert c.get("/sim/v1/health").status_code == 200
         assert c.get("/sim/v1/metrics").status_code == 200
-        assert c.post("/sim/v1/lpr-sink", json={"plateText": "AA1234KT", "sensorProviderID": "CAM-05",
-                                                "carState": "new"}).json() == {"received": True}
+        assert c.post(
+            "/sim/v1/lpr-sink", json={"plateText": "AA1234KT", "sensorProviderID": "CAM-05", "carState": "new"}
+        ).json() == {"received": True}
 
 
 def test_rate_limit_429(world):
@@ -86,8 +88,10 @@ def test_devices_fault_clear(api):
 def test_scenarios_start_conflict_stop(api):
     names = {s["name"] for s in api.get("/sim/v1/scenarios").json()}
     assert len(names) == 23 and "filter_clogged" in names
-    r = api.post("/sim/v1/scenario/filter_clogged/start",
-                 json={"run_ref": "RUN/2026/0007", "params": {"device": "RV-05", "value": 285}})
+    r = api.post(
+        "/sim/v1/scenario/filter_clogged/start",
+        json={"run_ref": "RUN/2026/0007", "params": {"device": "RV-05", "value": 285}},
+    )
     assert r.status_code == 201
     run = r.json()
     assert run["scenario"] == "filter_clogged" and run["state"] == "running" and run["id"].startswith("r-")
@@ -192,8 +196,15 @@ def test_lpr_sink_becomes_event(api):
 
 def test_metrics_and_catalog(api):
     text = api.get("/sim/v1/metrics").text
-    for name in ("iot_sim_up", "iot_sim_signals_total", "iot_sim_tick_seconds", "iot_sim_alarms",
-                 "iot_sim_protocol_up", "iot_sim_events_total", "iot_sim_runs_active"):
+    for name in (
+        "iot_sim_up",
+        "iot_sim_signals_total",
+        "iot_sim_tick_seconds",
+        "iot_sim_alarms",
+        "iot_sim_protocol_up",
+        "iot_sim_events_total",
+        "iot_sim_runs_active",
+    ):
         assert name in text
     assert "iot_sim_signal_value{code=" in text
     csv = api.get("/sim/v1/catalog/signals.csv")

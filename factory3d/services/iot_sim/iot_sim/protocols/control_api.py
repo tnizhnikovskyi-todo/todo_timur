@@ -6,6 +6,7 @@
 на 60 с. ``SIM_READONLY_API=1`` -> 403 на POST/PUT; ``SIM_ENABLED=0`` або ``stop-all`` -> 423 на команди.
 Стан сервісу (``locked``, тік, мета збоїв) — ``app.state.ctl`` (``ControlState``).
 """
+
 from __future__ import annotations
 
 import hmac
@@ -35,8 +36,7 @@ from iot_sim.core.events import CursorGone
 from iot_sim.core.scenarios import ScenarioError, ScenarioParamsError, ScenarioRunner
 from iot_sim.core.world import World
 
-EXPECTED_PROTOCOLS = ("opcua", "modbus", "bacnet", "mqtt", "helvarnet", "biostar", "woodstore",
-                      "jobs", "sics", "lpr")
+EXPECTED_PROTOCOLS = ("opcua", "modbus", "bacnet", "mqtt", "helvarnet", "biostar", "woodstore", "jobs", "sics", "lpr")
 TICK_LATE_S = 3.0
 MAX_HOLD_S = 86_400
 AUTH_FAILS = 5
@@ -48,8 +48,16 @@ LSZ_REASONS = ("sensor", "generic", "loop")
 class ControlState:
     """Спільний стан керування: читає/міняє головний цикл (``__main__``) і ендпоїнти."""
 
-    def __init__(self, settings: Settings | None, world: World | None, runner: ScenarioRunner | None,
-                 servers: dict[str, Any], follow: Any, guard: Any, mono: Callable[[], float]) -> None:
+    def __init__(
+        self,
+        settings: Settings | None,
+        world: World | None,
+        runner: ScenarioRunner | None,
+        servers: dict[str, Any],
+        follow: Any,
+        guard: Any,
+        mono: Callable[[], float],
+    ) -> None:
         self.settings, self.world, self.runner = settings, world, runner
         self.servers, self.follow, self.guard, self.mono = servers, follow, guard, mono
         self.token = settings.api_token if settings else ""
@@ -60,8 +68,12 @@ class ControlState:
         self.catalog_source = settings.catalog_source if settings else "local"
         self.fault_meta: dict[str, dict[str, Any]] = {}
         self.registry = CollectorRegistry()
-        self.tick_hist = Histogram("iot_sim_tick_seconds", "Тривалість тіку ядра", registry=self.registry,
-                                   buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5))
+        self.tick_hist = Histogram(
+            "iot_sim_tick_seconds",
+            "Тривалість тіку ядра",
+            registry=self.registry,
+            buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5),
+        )
         self._fails: dict[str, deque[float]] = defaultdict(deque)
         self._blocked_until: dict[str, float] = {}
 
@@ -128,10 +140,16 @@ def _device_state(dev: Any) -> str:
     return "passive" if dev.driver == "passive" else "ok"
 
 
-def create_app(settings: Settings | None = None, *, world: World | None = None,
-               runner: ScenarioRunner | None = None, servers: dict[str, Any] | None = None,
-               follow: Any = None, guard: Any = None,
-               mono: Callable[[], float] = time.monotonic) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    world: World | None = None,
+    runner: ScenarioRunner | None = None,
+    servers: dict[str, Any] | None = None,
+    follow: Any = None,
+    guard: Any = None,
+    mono: Callable[[], float] = time.monotonic,
+) -> FastAPI:
     app = FastAPI(title="iot_sim control API", version=__version__)
     ctl = ControlState(settings, world, runner, servers if servers is not None else {}, follow, guard, mono)
     app.state.ctl = ctl
@@ -192,9 +210,13 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             status = "degraded"
         else:
             status = "ok"
-        return {"status": status, "version": __version__,
-                "uptime_s": round(mono() - ctl.started, 1), "protocols": protocols,
-                "servers": {n: s for n, s in protocols.items() if s != "off"}}
+        return {
+            "status": status,
+            "version": __version__,
+            "uptime_s": round(mono() - ctl.started, 1),
+            "protocols": protocols,
+            "servers": {n: s for n, s in protocols.items() if s != "off"},
+        }
 
     class _Collector:
         def collect(self) -> Any:
@@ -205,8 +227,9 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                 lag = 0.0 if w.last_tick_real is None else max(0.0, mono() - w.last_tick_real - period)
                 yield GaugeMetricFamily("iot_sim_tick_lag_seconds", "Відставання тіку", value=lag)
                 yield GaugeMetricFamily("iot_sim_signals_total", "Сигнали", value=len(w.signals))
-                yield GaugeMetricFamily("iot_sim_alarms", "Сигнали в alarm",
-                                        value=sum(1 for s in w.signals.values() if s.status == "alarm"))
+                yield GaugeMetricFamily(
+                    "iot_sim_alarms", "Сигнали в alarm", value=sum(1 for s in w.signals.values() if s.status == "alarm")
+                )
                 g = GaugeMetricFamily("iot_sim_signal_value", "Значення сигналу", labels=["code"])
                 for s in w.signals.values():
                     if s.kind in ("gauge", "counter") and s.spec.emulated and isinstance(s.value, (int, float)):
@@ -216,11 +239,15 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                 for k, n in w.events.counts.items():
                     ev.add_metric([k], n)
                 yield ev
-                yield GaugeMetricFamily("iot_sim_runs_active", "Активні запуски",
-                                        value=len(ctl.runner.active()) if ctl.runner else 0)
+                yield GaugeMetricFamily(
+                    "iot_sim_runs_active", "Активні запуски", value=len(ctl.runner.active()) if ctl.runner else 0
+                )
                 last = ctl.follow.last_ok if ctl.follow is not None and ctl.follow.last_ok else None
-                yield GaugeMetricFamily("iot_sim_odoo_last_ok_timestamp", "Остання успішна синхронізація Odoo",
-                                        value=last.timestamp() if last else 0)
+                yield GaugeMetricFamily(
+                    "iot_sim_odoo_last_ok_timestamp",
+                    "Остання успішна синхронізація Odoo",
+                    value=last.timestamp() if last else 0,
+                )
             up = GaugeMetricFamily("iot_sim_protocol_up", "Протокол слухає", labels=["proto"])
             req = CounterMetricFamily("iot_sim_protocol_requests_total", "Запити", labels=["proto"])
             for name, srv in ctl.servers.items():
@@ -233,12 +260,14 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                     req.add_metric([name], h["requests"])
             yield up
             yield req
-            yield CounterMetricFamily("iot_sim_outbound_denied_total", "Відмови allow-list",
-                                      value=getattr(ctl.guard, "denied_total", 0))
+            yield CounterMetricFamily(
+                "iot_sim_outbound_denied_total", "Відмови allow-list", value=getattr(ctl.guard, "denied_total", 0)
+            )
             mq = ctl.servers.get("mqtt")
             if mq is not None:
-                yield CounterMetricFamily("iot_sim_mqtt_dropped_total", "Втрачені MQTT-повідомлення",
-                                          value=getattr(mq, "dropped", 0))
+                yield CounterMetricFamily(
+                    "iot_sim_mqtt_dropped_total", "Втрачені MQTT-повідомлення", value=getattr(mq, "dropped", 0)
+                )
 
     ctl.registry.register(_Collector())
 
@@ -257,8 +286,9 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             raise HTTPException(422, "JSON object expected")
         if ctl.world is not None:
             cam = str(body.get("sensorProviderID") or "") or None
-            ctl.world.events.emit("info", f"LPR {body.get('plateText', '?')} {body.get('carState', '')}".strip(),
-                                  device=cam, payload=body)
+            ctl.world.events.emit(
+                "info", f"LPR {body.get('plateText', '?')} {body.get('carState', '')}".strip(), device=cam, payload=body
+            )
         return {"received": True}
 
     # --- API-10 status ---------------------------------------------------------------------
@@ -268,38 +298,72 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         s = ctl.settings
         runs = [_run_brief(r) for r in (ctl.runner.active() if ctl.runner else [])]
         return {
-            "enabled": not ctl.locked, "version": __version__, "mode": w.mode, "factor": w.clock.factor,
-            "sim_now": w.now().isoformat(), "real_now": datetime.now(UTC).astimezone(w.clock.tz).isoformat(),
-            "uptime_s": round(mono() - ctl.started, 1), "seed": w.seed, "tick_ms": s.tick_ms if s else 1000,
-            "devices": len(w.devices), "signals": len(w.signals),
+            "enabled": not ctl.locked,
+            "version": __version__,
+            "mode": w.mode,
+            "factor": w.clock.factor,
+            "sim_now": w.now().isoformat(),
+            "real_now": datetime.now(UTC).astimezone(w.clock.tz).isoformat(),
+            "uptime_s": round(mono() - ctl.started, 1),
+            "seed": w.seed,
+            "tick_ms": s.tick_ms if s else 1000,
+            "devices": len(w.devices),
+            "signals": len(w.signals),
             "alarms": sum(1 for x in w.signals.values() if x.status == "alarm"),
             "devices_fault": sorted(c for c, d in w.devices.items() if d.fault),
-            "runs": runs, "protocols": ctl.protocols(),
-            "odoo": {**(ctl.follow.status() if ctl.follow is not None else
-                        {"configured": False, "last_ok": None, "stale": w.odoo_stale}),
-                     "catalog_source": ctl.catalog_source},
-            "catalog_hash": "sha256:" + w.registry.catalog_hash}
+            "runs": runs,
+            "protocols": ctl.protocols(),
+            "odoo": {
+                **(
+                    ctl.follow.status()
+                    if ctl.follow is not None
+                    else {"configured": False, "last_ok": None, "stale": w.odoo_stale}
+                ),
+                "catalog_source": ctl.catalog_source,
+            },
+            "catalog_hash": "sha256:" + w.registry.catalog_hash,
+        }
 
     def _run_brief(r: Any) -> dict[str, Any]:
-        return {"id": r.id, "run_ref": r.run_ref, "scenario": r.name, "state": r.state,
-                "started": _iso(r.started), "params": r.params}
+        return {
+            "id": r.id,
+            "run_ref": r.run_ref,
+            "scenario": r.name,
+            "state": r.state,
+            "started": _iso(r.started),
+            "params": r.params,
+        }
 
     # --- API-11/12 devices -----------------------------------------------------------------
     def _device(code: str) -> dict[str, Any]:
         d = W().devices[code]
         meta = ctl.fault_meta.get(code)
-        return {"code": code, "name": d.params.get("name", code), "protocol": d.protocol, "driver": d.driver,
-                "unit_id": d.unit_id, "instance": d.instance, "address": d.address, "enabled": True,
-                "state": _device_state(d),
-                "fault": ({"reason": d.fault, "note": (meta or {}).get("note", ""),
-                           "since": (meta or {}).get("since")} if d.fault else None),
-                "model": d.driver, "signals": [s.code for s in d.signals.values()], "extra": {}}
+        return {
+            "code": code,
+            "name": d.params.get("name", code),
+            "protocol": d.protocol,
+            "driver": d.driver,
+            "unit_id": d.unit_id,
+            "instance": d.instance,
+            "address": d.address,
+            "enabled": True,
+            "state": _device_state(d),
+            "fault": (
+                {"reason": d.fault, "note": (meta or {}).get("note", ""), "since": (meta or {}).get("since")}
+                if d.fault
+                else None
+            ),
+            "model": d.driver,
+            "signals": [s.code for s in d.signals.values()],
+            "extra": {},
+        }
 
     @app.get("/sim/v1/devices", dependencies=[Depends(read_auth)])
     def devices(protocol: str | None = None, state: str | None = None) -> list[dict[str, Any]]:
         out = [_device(c) for c in sorted(W().devices)]
-        return [d for d in out if (protocol is None or d["protocol"] == protocol)
-                and (state is None or d["state"] == state)]
+        return [
+            d for d in out if (protocol is None or d["protocol"] == protocol) and (state is None or d["state"] == state)
+        ]
 
     @app.get("/sim/v1/devices/{code}", dependencies=[Depends(read_auth)])
     def device(code: str) -> dict[str, Any]:
@@ -362,8 +426,13 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             run = R().start(name, body.params, body.run_ref)
         except ScenarioError as exc:
             raise _scenario_err(exc) from exc
-        return {"id": run.id, "scenario": run.name, "state": run.state, "started": _iso(run.started),
-                "ends": _iso(run.ends)}
+        return {
+            "id": run.id,
+            "scenario": run.name,
+            "state": run.state,
+            "started": _iso(run.started),
+            "ends": _iso(run.ends),
+        }
 
     @app.post("/sim/v1/scenario/{name}/stop", dependencies=[Depends(write_auth)])
     async def scenario_stop(name: str, body: StopBody | None = None) -> dict[str, Any]:
@@ -433,16 +502,34 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-16 signals --------------------------------------------------------------------
     def _signal(s: Any) -> dict[str, Any]:
-        return {"code": s.code, "value": s.value, "unit": s.unit, "status": s.status, "ts": _iso(s.ts),
-                "device": s.device, "protocol": s.protocol, "kind": s.kind}
+        return {
+            "code": s.code,
+            "value": s.value,
+            "unit": s.unit,
+            "status": s.status,
+            "ts": _iso(s.ts),
+            "device": s.device,
+            "protocol": s.protocol,
+            "kind": s.kind,
+        }
 
     @app.get("/sim/v1/signals", dependencies=[Depends(read_auth)])
-    def signals(prefix: str | None = None, device: str | None = None, status: str | None = None,
-                limit: int = 1000, offset: int = 0) -> dict[str, Any]:
-        rows = [s for s in W().signals.values() if s.spec.emulated
-                and (prefix is None or s.code.startswith(prefix)) and (device is None or s.device == device)
-                and (status is None or s.status == status)]
-        return {"count": len(rows), "items": [_signal(s) for s in rows[offset:offset + max(limit, 0)]]}
+    def signals(
+        prefix: str | None = None,
+        device: str | None = None,
+        status: str | None = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        rows = [
+            s
+            for s in W().signals.values()
+            if s.spec.emulated
+            and (prefix is None or s.code.startswith(prefix))
+            and (device is None or s.device == device)
+            and (status is None or s.status == status)
+        ]
+        return {"count": len(rows), "items": [_signal(s) for s in rows[offset : offset + max(limit, 0)]]}
 
     def _sig(code: str) -> Any:
         s = W().signals.get(code)
@@ -510,8 +597,9 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-19 events ---------------------------------------------------------------------
     @app.get("/sim/v1/events", dependencies=[Depends(read_auth)])
-    def events(since: str | None = None, kind: str | None = None, device: str | None = None,
-               limit: int = 500) -> JSONResponse:
+    def events(
+        since: str | None = None, kind: str | None = None, device: str | None = None, limit: int = 500
+    ) -> JSONResponse:
         bus = W().events
         cursor = 0
         if since:
@@ -523,8 +611,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             items, _ = bus.since(cursor, max(1, min(limit, 10_000)), kind, device)
         except CursorGone:
             return JSONResponse({"detail": "cursor is gone: re-read events from the start"}, status_code=410)
-        return JSONResponse({"items": [e.to_dict() for e in items],
-                             "next": items[-1].id if items else since})
+        return JSONResponse({"items": [e.to_dict() for e in items], "next": items[-1].id if items else since})
 
     # --- каталог -----------------------------------------------------------------------------
     @app.get("/sim/v1/catalog/signals.csv", dependencies=[Depends(read_auth)])

@@ -1,4 +1,5 @@
 """R-25, R-09 (запиленість FA-FAC), R-26/R-27 (spark, smoke); SPEC §13.1, AC-15, AC-50, AC-56, AC-61, AC-66."""
+
 import pytest
 from iot_sim.models.facp import (
     ALARM,
@@ -21,8 +22,10 @@ def v(world, code):
 
 
 def start_drill(world, zone="FA-CNC", real=False, detector=""):
-    world.set_flag("fire_drill", {"zone": zone, "detector": detector, "real": real,
-                                  "t0": world.now().isoformat(), "phase": "active"})
+    world.set_flag(
+        "fire_drill",
+        {"zone": zone, "detector": detector, "real": real, "t0": world.now().isoformat(), "phase": "active"},
+    )
 
 
 def at(world, seconds):
@@ -85,8 +88,7 @@ def test_drill_real_and_restore(world):
         for k in ("machines", "doors", "dampers", "vent_stop", "sounders", "alarm"):
             if k not in names and k not in first_off:
                 first_off[k] = i
-    assert sorted(first_off, key=first_off.get) == ["machines", "doors", "dampers", "vent_stop",
-                                                         "sounders", "alarm"]
+    assert sorted(first_off, key=first_off.get) == ["machines", "doors", "dampers", "vent_stop", "sounders", "alarm"]
     world.step(5)
     assert drill_view(world) is None
     assert v(world, ZONE) == QUIET and v(world, "fire/totals/system_state") == 1
@@ -174,7 +176,9 @@ def test_zone_fault_loop(world):
     world.advance(10)
     zone = world.devices["FA-CUT"].model
     loop = zone.detector_loop()
-    assert v(world, f"fire/loops/{loop}/state") == 1 and sum(v(world, f"fire/loops/{n}/state") for n in (1, 2, 3, 4)) == 1
+    assert (
+        v(world, f"fire/loops/{loop}/state") == 1 and sum(v(world, f"fire/loops/{n}/state") for n in (1, 2, 3, 4)) == 1
+    )
     assert any(e.message == f"Несправність шлейфу {loop}" for e in world.events.ring)
     assert zone.lsp[zone.first_detector]["reliability"] == 0  # лінія, а не сповіщувач
     world.clear("FA-CUT")
@@ -209,9 +213,18 @@ def test_object_types(world):
 def test_lsp_ids_fire_r23(world):
     cat = {o["address"]: o["id"] for o in world.devices["FACP-1"].model.lsp_catalog()}
     assert len(cat) == 302 and len(set(cat.values())) == 302
-    expect = {"1.MCP.01": 19001, "4.MCP.09": 49009, "2.SND.13": 29113, "2.FLM.01": 29201, "2.FAC.07": 21607,
-              "1.RCV-1.01": 10101, "2.CNC.05": 21405, "2.BOILER.02": 23302, "3.SOC.01": 33401,
-              "3.OFFICE.08": 33508}
+    expect = {
+        "1.MCP.01": 19001,
+        "4.MCP.09": 49009,
+        "2.SND.13": 29113,
+        "2.FLM.01": 29201,
+        "2.FAC.07": 21607,
+        "1.RCV-1.01": 10101,
+        "2.CNC.05": 21405,
+        "2.BOILER.02": 23302,
+        "3.SOC.01": 33401,
+        "3.OFFICE.08": 33508,
+    }
     for addr, i in expect.items():
         assert cat[addr] == i, addr
     assert lsp_id(2, 16, 7) == 21607

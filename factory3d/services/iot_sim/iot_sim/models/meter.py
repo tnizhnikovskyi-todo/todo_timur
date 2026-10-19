@@ -19,6 +19,7 @@ W2 (R-59, SPEC §8.2): вікно керування контролера ГРЩ
 W3 (SPEC §8.1): вводи Q1/Q2 ведуть ``kvarh_total += |q_kvar|·dt/3600`` (квар·год; старт — номінал сигналу; «Reset All
 Energies» обнуляє й його) — PM5560 «Reactive Energy Delivered», регістр pdu 3219 (i64, ×0,001).
 """
+
 from __future__ import annotations
 
 import math
@@ -30,19 +31,37 @@ from iot_sim.models.base import AGGREGATE, Model, noise_step
 
 LINE_CONSUMERS: dict[str, tuple[str, ...]] = {
     "BW-1": ("SAW-1", "SAW-2", "EDGE-1", "EDGE-2", "CNC-1", "CNC-2", "SORT-1"),
-    "BW-2": ("SAW-3", "SLIDE-1", "VSAW-1", "NEST-1", "EDGE-3", "CNC-3", "BORE-1", "CNC-4",
-             "DOWEL-1", "GANTRY-1"),
+    "BW-2": ("SAW-3", "SLIDE-1", "VSAW-1", "NEST-1", "EDGE-3", "CNC-3", "BORE-1", "CNC-4", "DOWEL-1", "GANTRY-1"),
     "BW-3": ("SAND-1", "AUTOSPRAY-1", "UV-1", "HINGE-1", "GLUE-1", "PRESS-1", "SPRAY-1", "DRY-1"),
-    "BW-4": ("ASMLINE-1", "ASM-1", "ASM-2", "ASM-3", "ASM-4", "ASM-5", "ASM-6", "PACK-1", "PACK-2",
-             "BOX-1", "PACKLINE-1"),
+    "BW-4": (
+        "ASMLINE-1",
+        "ASM-1",
+        "ASM-2",
+        "ASM-3",
+        "ASM-4",
+        "ASM-5",
+        "ASM-6",
+        "PACK-1",
+        "PACK-2",
+        "BOX-1",
+        "PACKLINE-1",
+    ),
     "C1": ("COMPRESSOR", "DUST-1", "BOILER"),
-    "C2": ("CHARGING", "OFFICE", "LP-1", "LP-2", "LP-3", "RV-ALL", "AHU-1", "EF-ELEC", "EF-CMP",
-           "EF-CHG"),
+    "C2": ("CHARGING", "OFFICE", "LP-1", "LP-2", "LP-3", "RV-ALL", "AHU-1", "EF-ELEC", "EF-CMP", "EF-CHG"),
 }
 SECTIONS: dict[int, tuple[str, ...]] = {1: ("BW-3", "BW-2", "C1"), 2: ("BW-1", "BW-4", "C2")}
 # R-22: ``CRITICAL`` макета (BW-1 — уся лінія, решта — окремі споживачі).
 CRITICAL: frozenset[str] = frozenset(LINE_CONSUMERS["BW-1"]) | {
-    "LP-1", "LP-2", "LP-3", "DUST-1", "COMPRESSOR", "BOILER", "OFFICE", "EF-ELEC", "EF-CHG"}
+    "LP-1",
+    "LP-2",
+    "LP-3",
+    "DUST-1",
+    "COMPRESSOR",
+    "BOILER",
+    "OFFICE",
+    "EF-ELEC",
+    "EF-CHG",
+}
 ALL_CONSUMERS: tuple[str, ...] = tuple(c for cs in LINE_CONSUMERS.values() for c in cs)
 PF_TRANSFORMER = 0.97
 V_LL = 400.0
@@ -72,13 +91,32 @@ def island(world: Any) -> bool:
 
 # --- прапори вікна керування контролера ГРЩ (SPEC §8.2, R-59) ------------------------------
 CTL_DEFAULTS: dict[str, Any] = {
-    "ctl_remote": 1, "qs_closed": False, "qs_cmd": 0, "qs_ack": 0,
-    "pfc_mode": 1, "pfc_cos_target": None,
-    "bess_mode": 0, "bess_setpoint_kw": 0.0, "bess_until_soc": 0.0, "bess_valid_s": 0.0, "bess_valid_left": 0.0,
-    "bess_ack": 0, "bess_reserve_pct": 30.0, "bess_auto_idle": False,
-    "chp_run": False, "chp_cmd": 0, "chp_ack": 0, "chp_permit": 1, "chp_start_s": 60.0, "gas_bar": 2.10,
-    "air_setpoint_bar": 7.00, "pv_limit_pct": 100.0,
-    "shed_valid_s": 0.0, "shed_valid_left": 0.0, "extra_load_kw": 0.0, "export_target_kw": None,
+    "ctl_remote": 1,
+    "qs_closed": False,
+    "qs_cmd": 0,
+    "qs_ack": 0,
+    "pfc_mode": 1,
+    "pfc_cos_target": None,
+    "bess_mode": 0,
+    "bess_setpoint_kw": 0.0,
+    "bess_until_soc": 0.0,
+    "bess_valid_s": 0.0,
+    "bess_valid_left": 0.0,
+    "bess_ack": 0,
+    "bess_reserve_pct": 30.0,
+    "bess_auto_idle": False,
+    "chp_run": False,
+    "chp_cmd": 0,
+    "chp_ack": 0,
+    "chp_permit": 1,
+    "chp_start_s": 60.0,
+    "gas_bar": 2.10,
+    "air_setpoint_bar": 7.00,
+    "pv_limit_pct": 100.0,
+    "shed_valid_s": 0.0,
+    "shed_valid_left": 0.0,
+    "extra_load_kw": 0.0,
+    "export_target_kw": None,
 }
 SHED_NODES = ("CHARGING", "RV-ALL", "DRY-1", "COMPRESSOR", "LP-1")
 BESS_TEMP_MAX_C = 40.0
@@ -194,14 +232,14 @@ class Meter(Model):
             parts = s.code.split("/")
             if parts[0] == "energy" and parts[1] == "lines":
                 self.line = parts[2]
-        self.e_wh: dict[str, float] = {}      # кожен споживач лінії, Вт·год
-        self.base_wh: dict[str, float] = {}   # Вт·год на початок зміни
+        self.e_wh: dict[str, float] = {}  # кожен споживач лінії, Вт·год
+        self.base_wh: dict[str, float] = {}  # Вт·год на початок зміни
         self.shift_key: str | None = None
         self.own_wh = 0.0
         self.export_wh = 0.0
         self.pf = 0.9
         self.kvarh_start = float(self.val("kvarh_total", 0.0) or 0.0) if self.cell else 0.0  # номінал каталогу
-        self.kvarh_acc = 0.0                  # накопичено емулятором, квар·год
+        self.kvarh_acc = 0.0  # накопичено емулятором, квар·год
         self.consumers = LINE_CONSUMERS.get(self.line, ())
 
     # --- зміна (R-03) ---------------------------------------------------------------
@@ -223,8 +261,7 @@ class Meter(Model):
             if self.shift_key is not None and key != self.shift_key:
                 self.base_wh[c] = self.e_wh[c]
             put(self.world, f"energy/consumers/{c}/kwh_total", round(self.e_wh[c] / 1000.0, 6))
-            put(self.world, f"energy/consumers/{c}/kwh_shift",
-                round((self.e_wh[c] - self.base_wh[c]) / 1000.0, 6))
+            put(self.world, f"energy/consumers/{c}/kwh_shift", round((self.e_wh[c] - self.base_wh[c]) / 1000.0, 6))
         self.shift_key = key
 
     # --- тік --------------------------------------------------------------------------
@@ -259,8 +296,7 @@ class Meter(Model):
         self._integrate_consumers()
         isl = island(self.world)
         failed = self.device.fault is not None
-        p = 0.0 if failed else sum(
-            consumer_p(self.world, c) for c in self.consumers if not isl or c in CRITICAL)
+        p = 0.0 if failed else sum(consumer_p(self.world, c) for c in self.consumers if not isl or c in CRITICAL)
         self.pf = min(0.97, max(0.8, noise_step(self.pf, 0.9, 0.02, self.r("cos_phi"), self.dt_min)))
         _, _, i = apparent(p, self.pf)
         self.own_wh += p * 1000.0 * self.dt_s / 3600.0
@@ -319,9 +355,16 @@ class Meter(Model):
         self.set("state", 2)
 
     def get_state(self) -> dict[str, Any]:
-        return {"e_wh": self.e_wh, "base_wh": self.base_wh, "shift_key": self.shift_key,
-                "own_wh": self.own_wh, "export_wh": self.export_wh, "pf": self.pf,
-                "kvarh_start": self.kvarh_start, "kvarh_acc": self.kvarh_acc}
+        return {
+            "e_wh": self.e_wh,
+            "base_wh": self.base_wh,
+            "shift_key": self.shift_key,
+            "own_wh": self.own_wh,
+            "export_wh": self.export_wh,
+            "pf": self.pf,
+            "kvarh_start": self.kvarh_start,
+            "kvarh_acc": self.kvarh_acc,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.e_wh = dict(d.get("e_wh", {}))

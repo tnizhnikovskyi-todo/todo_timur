@@ -7,6 +7,7 @@
 надходять через ``world.post("woodstore_jobs", {...})`` (поля як у POST /jobs).
 Режим ``follow_odoo`` (авто-``feed`` за РЦ у роботі) — НЕ реалізовано (ПРИПУЩЕННЯ).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -95,22 +96,21 @@ def install_errors(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
-        return JSONResponse({"error": {"code": "VALIDATION", "message": str(exc.errors())[:300]}},
-                            422)
+        return JSONResponse({"error": {"code": "VALIDATION", "message": str(exc.errors())[:300]}}, 422)
 
 
 def api_key_dep(expected: str) -> Any:
     def check(x_api_key: str | None = Header(default=None)) -> None:
         if not expected or x_api_key != expected:
             raise ApiError(401, "UNAUTHORIZED", "invalid or missing X-Api-Key")
+
     return check
 
 
 class WoodStore:
     """Модель сховища: стоси, завдання, події."""
 
-    def __init__(self, world: World, *, sheet_period_s: float = 60.0,
-                 demo_json: str | Path | None = None) -> None:
+    def __init__(self, world: World, *, sheet_period_s: float = 60.0, demo_json: str | Path | None = None) -> None:
         self.world = world
         self.sheet_period_s = sheet_period_s
         self.stacks: dict[str, dict[str, Any]] = {}
@@ -128,8 +128,11 @@ class WoodStore:
     def _seed(self, demo_json: str | Path | None) -> None:
         locs: dict[str, Any] = {}
         if demo_json and Path(demo_json).is_file():
-            locs = {k: v for k, v in json.loads(Path(demo_json).read_text("utf-8"))
-                    .get("locations", {}).items() if k.startswith("PLT-")}
+            locs = {
+                k: v
+                for k, v in json.loads(Path(demo_json).read_text("utf-8")).get("locations", {}).items()
+                if k.startswith("PLT-")
+            }
         for i in range(36):
             row, col = i // 6 + 1, i % 6 + 1
             sid = f"PLT-{row:02d}{chr(64 + col)}"
@@ -138,23 +141,43 @@ class WoodStore:
             product = src.get("product") or (DEMO_PRODUCTS[i % len(DEMO_PRODUCTS)] if filled else None)
             qty = int(src.get("qty", (20 + (i * 7) % 40) if filled else 0))
             self.stacks[sid] = {
-                "id": sid, "row": row, "col": col, "product": product if qty else None,
+                "id": sid,
+                "row": row,
+                "col": col,
+                "product": product if qty else None,
                 "lot": (src.get("lot") or f"{product}-2610-{100 + i}") if qty else None,
-                "qty": qty, "max": int(src.get("capacity", 60)), "reserved": 0,
-                "locked": False, "updated": self.world.now().isoformat()}
+                "qty": qty,
+                "max": int(src.get("capacity", 60)),
+                "reserved": 0,
+                "locked": False,
+                "updated": self.world.now().isoformat(),
+            }
 
     # --- події і завдання -----------------------------------------------------------
     def emit(self, type_: str, message: str = "", **kw: Any) -> None:
         self._ev_seq += 1
-        self.events.append({"id": self._ev_seq, "ts": self.world.now().isoformat(), "type": type_,
-                            "job": kw.get("job"), "stack": kw.get("stack"),
-                            "target": kw.get("target"), "message": message})
+        self.events.append(
+            {
+                "id": self._ev_seq,
+                "ts": self.world.now().isoformat(),
+                "type": type_,
+                "job": kw.get("job"),
+                "stack": kw.get("stack"),
+                "target": kw.get("target"),
+                "message": message,
+            }
+        )
 
     def available(self, product: str | None, lot: str | None, source: str | None) -> list[dict[str, Any]]:
-        out = [s for s in self.stacks.values() if s["qty"] - s["reserved"] > 0 and not s["locked"]
-               and (source is None or s["id"] == source)
-               and (product is None or s["product"] == product)
-               and (lot is None or s["lot"] == lot)]
+        out = [
+            s
+            for s in self.stacks.values()
+            if s["qty"] - s["reserved"] > 0
+            and not s["locked"]
+            and (source is None or s["id"] == source)
+            and (product is None or s["product"] == product)
+            and (lot is None or s["lot"] == lot)
+        ]
         return sorted(out, key=lambda s: -(s["qty"] - s["reserved"]))
 
     def create_job(self, body: JobIn | dict[str, Any]) -> dict[str, Any]:
@@ -181,11 +204,22 @@ class WoodStore:
                 st["reserved"] += j.sheets
                 product = product or st["product"]
         self._job_seq += 1
-        job = {"id": f"wj-{self._job_seq:05d}", "type": j.type, "source": source,
-               "target": j.target, "sheets": j.sheets, "done": 0, "product": product,
-               "lot": j.lot or (self.stacks[source]["lot"] if source else None),
-               "priority": j.priority, "external_ref": j.external_ref, "state": "queued",
-               "created": self.world.now().isoformat(), "started": None, "finished": None}
+        job = {
+            "id": f"wj-{self._job_seq:05d}",
+            "type": j.type,
+            "source": source,
+            "target": j.target,
+            "sheets": j.sheets,
+            "done": 0,
+            "product": product,
+            "lot": j.lot or (self.stacks[source]["lot"] if source else None),
+            "priority": j.priority,
+            "external_ref": j.external_ref,
+            "state": "queued",
+            "created": self.world.now().isoformat(),
+            "started": None,
+            "finished": None,
+        }
         self.jobs[job["id"]] = job  # type: ignore[index]
         return job
 
@@ -214,8 +248,9 @@ class WoodStore:
         epoch = w.clock.epoch()
         job = self.active()
         if job is None:
-            queued = sorted((j for j in self.jobs.values() if j["state"] == "queued"),
-                            key=lambda j: (-j["priority"], j["id"]))
+            queued = sorted(
+                (j for j in self.jobs.values() if j["state"] == "queued"), key=lambda j: (-j["priority"], j["id"])
+            )
             if queued:
                 job = queued[0]
                 job["state"], job["started"] = "active", w.now().isoformat()
@@ -227,8 +262,7 @@ class WoodStore:
             else:
                 self._place_sheet(job)
                 self._next_sheet_at = epoch + self.sheet_period_s
-        w.set_flag("woodstore", {"state": self.portal_state(), "current_job":
-                                 (self.active() or {}).get("id")})
+        w.set_flag("woodstore", {"state": self.portal_state(), "current_job": (self.active() or {}).get("id")})
 
     def _place_sheet(self, job: dict[str, Any]) -> None:
         self.cycles_total += 1
@@ -259,13 +293,18 @@ class WoodStore:
         vac = sig.get("equipment/GANTRY-1/vacuum_kpa")
         cyc = sig.get("equipment/GANTRY-1/cycles_today")
         job = self.active()
-        return {"state": self.portal_state(),
-                "position": {"x": 36.2, "y": 27.5, "z": 4.8},
-                "vacuum_kpa": round(float(vac.value), 1) if vac is not None else -71.9,
-                "cycles_today": max(self.cycles_today, int(cyc.value) if cyc is not None else 0),
-                "cycles_total": self.cycles_total, "hours": 11240.5,
-                "current_job": job["id"] if job else None, "aisles": self.aisles(),
-                "alarms": [], "ts": self.world.now().isoformat()}
+        return {
+            "state": self.portal_state(),
+            "position": {"x": 36.2, "y": 27.5, "z": 4.8},
+            "vacuum_kpa": round(float(vac.value), 1) if vac is not None else -71.9,
+            "cycles_today": max(self.cycles_today, int(cyc.value) if cyc is not None else 0),
+            "cycles_total": self.cycles_total,
+            "hours": 11240.5,
+            "current_job": job["id"] if job else None,
+            "aisles": self.aisles(),
+            "alarms": [],
+            "ts": self.world.now().isoformat(),
+        }
 
 
 def create_app(store: WoodStore, apikey: str) -> FastAPI:
@@ -289,9 +328,11 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
 
     @app.get("/api/v1/stacks", dependencies=dep)
     def stacks(product: str | None = None, row: int | None = None) -> list[Any]:
-        return [s for s in store.stacks.values()
-                if (product is None or s["product"] == product)
-                and (row is None or s["row"] == row)]
+        return [
+            s
+            for s in store.stacks.values()
+            if (product is None or s["product"] == product) and (row is None or s["row"] == row)
+        ]
 
     @app.get("/api/v1/stacks/{sid}", dependencies=dep)
     def stack(sid: str) -> dict[str, Any]:
@@ -316,9 +357,11 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
     def jobs(state: str | None = None, since: str | None = None) -> list[Any]:
         if state is not None and state not in JOB_STATES:
             raise ApiError(422, "VALIDATION", f"state must be one of {JOB_STATES}")
-        return [j for j in store.jobs.values()
-                if (state is None or j["state"] == state)
-                and (since is None or j["created"] >= since)]
+        return [
+            j
+            for j in store.jobs.values()
+            if (state is None or j["state"] == state) and (since is None or j["created"] >= since)
+        ]
 
     @app.post("/api/v1/jobs", dependencies=dep, status_code=201)
     def create_job(body: JobIn) -> dict[str, Any]:
@@ -344,9 +387,16 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
 class WoodStoreApi(ProtocolServer):
     name = "woodstore"
 
-    def __init__(self, world: World, *, port: int = 8082, host: str = "0.0.0.0",
-                 apikey: str = "", sheet_period_s: float = 60.0,
-                 demo_json: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        port: int = 8082,
+        host: str = "0.0.0.0",
+        apikey: str = "",
+        sheet_period_s: float = 60.0,
+        demo_json: str | Path | None = None,
+    ) -> None:
         self.world, self.port, self.host = world, port, host
         self.store = WoodStore(world, sheet_period_s=sheet_period_s, demo_json=demo_json)
         self.app = create_app(self.store, apikey)
@@ -359,5 +409,9 @@ class WoodStoreApi(ProtocolServer):
         await self._runner.stop()
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self._runner.up, "port": self.port,
-                "stacks": sum(1 for s in self.store.stacks.values() if s["qty"] > 0)}
+        return {
+            "proto": self.name,
+            "up": self._runner.up,
+            "port": self.port,
+            "stacks": sum(1 for s in self.store.stacks.values() if s["qty"] > 0),
+        }

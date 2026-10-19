@@ -1,4 +1,5 @@
 """R-23 вентустановки, R-24 освітлення, R-21 вода (AC-64)."""
+
 from datetime import datetime
 
 import pytest
@@ -49,10 +50,9 @@ def test_valve_percent(world):
     world.devices["RV-05"].params["k"] = 0.74
     world.advance(1800)
     assert val(world, unit("RV-05", "airflow_m3h")) == pytest.approx(8000 * 0.74, rel=0.03)
-    assert val(world, unit("RV-05", "p_now")) == pytest.approx(8.6 * 0.74 ** 3 + 0.1)
+    assert val(world, unit("RV-05", "p_now")) == pytest.approx(8.6 * 0.74**3 + 0.1)
     assert val(world, unit("RV-05", "state")) == "running"
-    assert val(world, unit("RV-05", "supply_c")) == pytest.approx(19.5 + (det("RV-05") % 10) / 10,
-                                                                  abs=0.5)
+    assert val(world, unit("RV-05", "supply_c")) == pytest.approx(19.5 + (det("RV-05") % 10) / 10, abs=0.5)
     assert val(world, "energy/consumers/AHU-1/p_now") == pytest.approx(9.3)
 
 
@@ -137,8 +137,7 @@ def test_ef_chg_alarm(world):
     world.step(1)  # 61 с
     assert val(world, "ventilation/units/EF-CHG/state") == "stopped_charging"
     events, _ = world.events.since(0, kind="alarm")
-    assert [e.message for e in events if "EF-CHG" in e.message] == [
-        "EF-CHG: не працює під час заряджання — водень!"]
+    assert [e.message for e in events if "EF-CHG" in e.message] == ["EF-CHG: не працює під час заряджання — водень!"]
     world.step(10)
     assert len([e for e in world.events.since(0, kind="alarm")[0] if "EF-CHG" in e.message]) == 1
     ef.enabled = True
@@ -207,8 +206,9 @@ def test_lighting_helvarnet_command_and_scene(world):
     world.set_flag("lighting_scene", {"all": {"scene": 4, "level": None, "fault_device": None}})
     world.step(10)
     assert val(world, "lighting/groups/LT-CUT/level") == 25
-    world.set_flag("lighting_scene", {"LT-CUT": {"level": 70, "scene": None, "fault_device": None},
-                                      "all": {"scene": 1}})
+    world.set_flag(
+        "lighting_scene", {"LT-CUT": {"level": 70, "scene": None, "fault_device": None}, "all": {"scene": 1}}
+    )
     world.step(10)
     assert val(world, "lighting/groups/LT-CUT/level") == 70
     assert val(world, "lighting/groups/LT-FG/level") == 100
@@ -258,7 +258,9 @@ def test_water_pulses_in_shift(world):
     start = val(world, "infra/water/m3_total")
     for _ in range(360):  # 1 год зміни, крок 10 с
         world.step(10)
-    assert val(world, "infra/water/m3_total") - start == pytest.approx(2.1, abs=0.04)  # 210 імп. (+ підживлення котельні 0,0125…0,025 м³/год, W3)
+    assert val(world, "infra/water/m3_total") - start == pytest.approx(
+        2.1, abs=0.04
+    )  # 210 імп. (+ підживлення котельні 0,0125…0,025 м³/год, W3)
     assert val(world, "infra/water/flow_m3h") == pytest.approx(2.1, abs=0.03)  # + підживлення котельні (W3)
 
 

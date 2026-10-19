@@ -3,6 +3,7 @@
 Із каталогу: ``p_kw`` (32080), ``status`` (32089), ``kwh_today`` (32114), ``kwh_total`` (32106);
 решта регістрів виводиться з активної потужності.
 """
+
 from __future__ import annotations
 
 import math
@@ -65,8 +66,7 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     for off in range(3):
         um.add_const(32069 + off, [2300], "v_phase")
     for off in range(3):
-        um.add_hr(32072 + 2 * off, lambda: i32(p() * 1000 / (math.sqrt(3) * 400), 1000), 2,
-                  None, "i_phase")
+        um.add_hr(32072 + 2 * off, lambda: i32(p() * 1000 / (math.sqrt(3) * 400), 1000), 2, None, "i_phase")
 
     peak_key = f"modbus.u{unit}.peak"
 
@@ -99,10 +99,8 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     um.add_hr(32090, lambda: [fault_code()], 1, None, "fault_code")
     um.add_hr(32091, lambda: words_of(_epoch(ctx, DAY_START), 2), 2, None, "startup")
     um.add_hr(32093, lambda: words_of(_epoch(ctx, DAY_END), 2), 2, None, "shutdown")
-    um.add_hr(32106, lambda: words_of(to_int(ctx.num(f"{base}/kwh_total") * 100), 2), 2,
-              None, "kwh_total")
-    um.add_hr(32114, lambda: words_of(to_int(ctx.num(f"{base}/kwh_today") * 100), 2), 2,
-              None, "kwh_today")
+    um.add_hr(32106, lambda: words_of(to_int(ctx.num(f"{base}/kwh_total") * 100), 2), 2, None, "kwh_total")
+    um.add_hr(32114, lambda: words_of(to_int(ctx.num(f"{base}/kwh_today") * 100), 2), 2, None, "kwh_today")
 
     # RW: час системи (40000+2) і код мережевого стандарту (42000) — запис лише при write_accept
     def rw(addr: int, n: int, default: Any) -> None:

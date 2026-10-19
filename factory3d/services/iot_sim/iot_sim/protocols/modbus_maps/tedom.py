@@ -1,4 +1,5 @@
 """P-07 TEDOM Quanto D800 NG (SPEC §8.9.5, ПРИПУЩЕННЯ): unit 72; адреси задано одразу в PDU."""
+
 from __future__ import annotations
 
 from iot_sim.protocols.modbus_maps import Ctx, ModbusError, to_int, words_of
@@ -27,8 +28,7 @@ def build(ctx: Ctx) -> None:
         ctx.world.set_flag("chp_run", v > 0)  # ненульове завдання навантаження запускає КГУ, 0 — зупиняє
         ctx.command(UNIT, f"Load setpoint = {v} %")
 
-    um.add_hr(40007, lambda: [to_int(ctx.world.flag("modbus.u72.setpoint", 50))], 1,
-              setpoint_set, "load_setpoint")
+    um.add_hr(40007, lambda: [to_int(ctx.world.flag("modbus.u72.setpoint", 50))], 1, setpoint_set, "load_setpoint")
     um.add_hr(40010, lambda: words_of(to_int(ctx.num(f"{H}/hours")), 2), 2, None, "hours")
     um.add_const(40012, words_of(211, 2), "starts")
     um.add_hr(40014, lambda: words_of(to_int(ctx.num(f"{H}/kwh_total")), 2), 2, None, "kwh_total")

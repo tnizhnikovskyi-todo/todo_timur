@@ -12,6 +12,7 @@ DI теж видно через fc01 — SPEC §8.4.2) і ``d`` (discrete inputs
 Команди запису не змінюють фізику самі: ``world.force`` (лише командний сигнал), ``world.post`` (тема
 для моделі), подія ``command`` — як у SPEC §8.13.1 і ARCHITECTURE «Права».
 """
+
 from __future__ import annotations
 
 import math
@@ -88,12 +89,16 @@ def f32_words(x: float, little: bool = False) -> list[int]:
 def str_words(text: str, nwords: int) -> list[int]:
     """ASCII/UTF-8 у ``nwords`` слів (2 символи на слово, добито нулями)."""
     b = text.encode("utf-8")[: nwords * 2].ljust(nwords * 2, b"\0")
-    return [int.from_bytes(b[i:i + 2], "big") for i in range(0, len(b), 2)]
+    return [int.from_bytes(b[i : i + 2], "big") for i in range(0, len(b), 2)]
 
 
 _TYPES = {  # dtype -> (слів, знаковий)
-    "u16": (1, False), "i16": (1, True), "u32": (2, False), "i32": (2, True),
-    "u64": (4, False), "i64": (4, True),
+    "u16": (1, False),
+    "i16": (1, True),
+    "u32": (2, False),
+    "i32": (2, True),
+    "u64": (4, False),
+    "i64": (4, True),
 }
 
 
@@ -125,16 +130,22 @@ class Entry:
 class UnitMap:
     unit: int
     name: str = ""
-    tables: dict[str, dict[int, tuple[Entry, int]]] = field(
-        default_factory=lambda: {t: {} for t in TABLES})
+    tables: dict[str, dict[int, tuple[Entry, int]]] = field(default_factory=lambda: {t: {} for t in TABLES})
 
     def free(self, table: str, start: int, n: int) -> bool:
         t = self.tables[table]
         return all(a not in t for a in range(start, start + n))
 
-    def add(self, table: str, start: int, n: int, get: Callable[[], list[Any]],
-            set: Callable[[int, int], None] | None = None, name: str = "",
-            force: bool = False) -> Entry | None:
+    def add(
+        self,
+        table: str,
+        start: int,
+        n: int,
+        get: Callable[[], list[Any]],
+        set: Callable[[int, int], None] | None = None,
+        name: str = "",
+        force: bool = False,
+    ) -> Entry | None:
         if not force and not self.free(table, start, n):
             return None
         e = Entry(start, n, get, set, name)
@@ -143,15 +154,27 @@ class UnitMap:
         return e
 
     # зручні обгортки
-    def add_hr(self, start: int, words: Callable[[], list[int]], n: int,
-               set: Callable[[int, int], None] | None = None, name: str = "") -> Entry | None:
+    def add_hr(
+        self,
+        start: int,
+        words: Callable[[], list[int]],
+        n: int,
+        set: Callable[[int, int], None] | None = None,
+        name: str = "",
+    ) -> Entry | None:
         return self.add("h", start, n, words, set, name)
 
     def add_const(self, start: int, words: list[int], name: str = "") -> Entry | None:
         return self.add("h", start, len(words), lambda w=tuple(words): list(w), None, name)  # type: ignore[misc]
 
-    def add_bit(self, table: str, addr: int, get: Callable[[], bool],
-                set: Callable[[int, int], None] | None = None, name: str = "") -> None:
+    def add_bit(
+        self,
+        table: str,
+        addr: int,
+        get: Callable[[], bool],
+        set: Callable[[int, int], None] | None = None,
+        name: str = "",
+    ) -> None:
         self.add(table, addr, 1, lambda: [bool(get())], set, name)
         if table == "d":  # DI видно й через fc01 (SPEC §8.4.2)
             self.add("c", addr, 1, lambda: [bool(get())], None, name)
@@ -224,14 +247,11 @@ class Ctx:
 
     def command(self, unit: int, what: str, payload: dict[str, Any] | None = None) -> None:
         """Подія ``command`` (SPEC AC-44): запис у ADAM-DO/ATyS/… логується."""
-        self.world.events.emit("command", f"Modbus u{unit}: {what}", payload={
-            "unit": unit, **(payload or {})})
+        self.world.events.emit("command", f"Modbus u{unit}: {what}", payload={"unit": unit, **(payload or {})})
 
-    def flag_store(self, unit: int, addr: int, default: int = 0) -> tuple[Callable[[], int],
-                                                                          Callable[[int], None]]:
+    def flag_store(self, unit: int, addr: int, default: int = 0) -> tuple[Callable[[], int], Callable[[int], None]]:
         key = f"modbus.u{unit}.{addr}"
-        return (lambda: int(self.world.flag(key, default)),
-                lambda v: self.world.set_flag(key, int(v)))
+        return (lambda: int(self.world.flag(key, default)), lambda v: self.world.set_flag(key, int(v)))
 
 
 def signal_specs(world: Any) -> list[SignalSpec]:
@@ -261,8 +281,13 @@ def bind_catalog(ctx: Ctx) -> int:
             if fc == 2:
                 um.add_bit("d", pdu, lambda s=sig: to_bool(s.value), None, spec.code)  # type: ignore[misc]
             else:  # fc1: coil; запис FC05 — командний сигнал (SPEC §8.13.1)
-                um.add_bit("c", pdu, lambda s=sig: to_bool(s.value),  # type: ignore[misc]
-                           coil_cmd(ctx, unit, spec), spec.code)
+                um.add_bit(
+                    "c",
+                    pdu,
+                    lambda s=sig: to_bool(s.value),  # type: ignore[misc]
+                    coil_cmd(ctx, unit, spec),
+                    spec.code,
+                )
             n_bound += 1
             continue
         if dtype not in _TYPES and dtype != "f32":
@@ -270,7 +295,7 @@ def bind_catalog(ctx: Ctx) -> int:
         scale = parse_scale(spec.scale)
         words = {"f32": 2, "u16": 1, "i16": 1, "u32": 2, "i32": 2, "u64": 4, "i64": 4}[dtype]
 
-        def get(s: Any=sig, sc: Any=scale, dt: Any=dtype, lt: Any=little) -> list[int]:
+        def get(s: Any = sig, sc: Any = scale, dt: Any = dtype, lt: Any = little) -> list[int]:
             v = to_float(s.value)
             return encode(v / sc, dt, lt)
 
@@ -284,11 +309,19 @@ def coil_cmd(ctx: Ctx, unit: int, spec: SignalSpec) -> Callable[[int, int], None
         if not ctx.write_accept:
             raise ModbusError(4)
         ctx.world.force(spec.code, 1 if v else 0)
-        ctx.world.post("yard" if spec.code.startswith("yard/") else "modbus_cmd",
-                       {"kind": "gate_cmd" if spec.code.startswith("yard/") else "coil",
-                        "signal": spec.code, "gate": spec.device,
-                        "cmd": spec.code.rsplit("/", 1)[-1], "value": bool(v), "unit": unit})
+        ctx.world.post(
+            "yard" if spec.code.startswith("yard/") else "modbus_cmd",
+            {
+                "kind": "gate_cmd" if spec.code.startswith("yard/") else "coil",
+                "signal": spec.code,
+                "gate": spec.device,
+                "cmd": spec.code.rsplit("/", 1)[-1],
+                "value": bool(v),
+                "unit": unit,
+            },
+        )
         ctx.command(unit, f"{spec.code} = {int(bool(v))}", {"signal": spec.code})
+
     return setter
 
 
@@ -307,9 +340,9 @@ def build_all(world: Any) -> dict[int, UnitMap]:
         swbctl,
         tedom,
     )
+
     ctx = Ctx(world)
-    for mod in (pm5560, sun2000, luna2000, elektronikon, atys, tedom,
-                adam6050, adam6060, adam6017, adam6015, swbctl):
+    for mod in (pm5560, sun2000, luna2000, elektronikon, atys, tedom, adam6050, adam6060, adam6017, adam6015, swbctl):
         mod.build(ctx)
     bind_catalog(ctx)
     return ctx.maps

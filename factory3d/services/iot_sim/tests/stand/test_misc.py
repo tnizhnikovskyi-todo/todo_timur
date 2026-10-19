@@ -1,4 +1,5 @@
 """ТК-10 (BioStar), ТК-11 (двір: LPR/шлагбаум/ваги), ТК-17 (HelvarNet), ТБ-04 (BioStar DELETE). AC-16/17/18/39/41/42/54/55/57."""
+
 import socket
 import time
 
@@ -33,8 +34,12 @@ def test_tk10_biostar_session_and_6400(api, host, bs):
     r = api.post("/scenario/access_event/start", {"params": {"device": "ACR-ELEC", "code": 6400}})
     assert r.status_code == 201, r.text
     time.sleep(3)
-    ev = _search(bs, limit=20, orders=[{"column": "datetime", "descending": True}],
-                 conditions=[{"column": "event_type_id.code", "operator": 0, "values": ["6400"]}])
+    ev = _search(
+        bs,
+        limit=20,
+        orders=[{"column": "datetime", "descending": True}],
+        conditions=[{"column": "event_type_id.code", "operator": 0, "values": ["6400"]}],
+    )
     assert int(ev["total"]) >= 1 and ev["rows"][0]["door_id"][0]["id"] == "2"
     bad = httpx.post(f"http://{host}:8081/api/login", json={"User": {"login_id": "admin", "password": "x"}})
     assert bad.status_code == 401 and bad.json()["Response"]["code"] == "101"
@@ -54,7 +59,7 @@ def test_tk10_biostar_shift_events_and_paging(api, bs):
         pytest.skip("немає працівників API-01 (сценарій без Odoo): ТК-10 п. 2–3 прогонити у follow_odoo")
     api.post("/time", {"set": "2026-10-12T06:30:00+03:00", "factor": 10})
     api.scenario("shift")
-    time.sleep(100)                      # ТК-10: 5 хв реального → скорочено до 100 с при factor=10 (≈17 хв sim)
+    time.sleep(100)  # ТК-10: 5 хв реального → скорочено до 100 с при factor=10 (≈17 хв sim)
     q = {"orders": [{"column": "datetime", "descending": False}]}
     full = _search(bs, limit=200, **q)
     assert int(full["total"]) > 0
@@ -105,7 +110,7 @@ def test_tk11_yard(api, host):
         if any("25200" in w for w in weights) and weights[-1].startswith("S S          0"):
             break
         time.sleep(0.15)
-    assert any(d[0] == 1 for d in di0), "DI0 (авто на в'їзді) не піднявся"          # AC-17
+    assert any(d[0] == 1 for d in di0), "DI0 (авто на в'їзді) не піднявся"  # AC-17
     assert any(abs(int(w.split()[2]) - 25200) <= 20 for w in weights if w.startswith("S S")), weights[-3:]
     ev = api.get("/events", params={"kind": "info"}).json()["items"]
     lpr = [e for e in ev if (e.get("payload") or {}).get("plateList") == "f3d_bookings"]
@@ -116,18 +121,32 @@ def test_tk11_yard(api, host):
     api.post("/scenario/truck_arrival/stop")
     r = api.post("/scenario/truck_arrival/start", {"params": {"booking": "BATCH/OUT/00004"}})
     assert r.status_code == 201, r.text
-    got = api.wait(lambda: [e for e in api.get("/events", params={"kind": "info"}).json()["items"]
-                            if (e.get("payload") or {}).get("plateText") == "AA4512KT"], timeout=90, step=1)
+    got = api.wait(
+        lambda: [
+            e
+            for e in api.get("/events", params={"kind": "info"}).json()["items"]
+            if (e.get("payload") or {}).get("plateText") == "AA4512KT"
+        ],
+        timeout=90,
+        step=1,
+    )
     assert got and got[0]["payload"]["plateUnicode"] == "АА4512КТ"
     assert got[0]["payload"]["plateListDescription"].startswith("BATCH/OUT/00004")
     api.post("/scenario/truck_arrival/stop")
     # AC-18: без бронювання
     r = api.post("/scenario/truck_no_booking/start", {"params": {"wait_min": 3}})
     assert r.status_code == 201, r.text
-    nb = api.wait(lambda: [e for e in api.get("/events", params={"kind": "info"}).json()["items"]
-                           if (e.get("payload") or {}).get("plateListMode") == "none"], timeout=90, step=1)
+    nb = api.wait(
+        lambda: [
+            e
+            for e in api.get("/events", params={"kind": "info"}).json()["items"]
+            if (e.get("payload") or {}).get("plateListMode") == "none"
+        ],
+        timeout=90,
+        step=1,
+    )
     assert nb and nb[0]["payload"]["plateList"] == ""
-    assert mb.di(86, 0, 1) == [0]        # AC-18: DI0 лишається 0 (немає бронювання)
+    assert mb.di(86, 0, 1) == [0]  # AC-18: DI0 лишається 0 (немає бронювання)
     mb.close()
 
 
@@ -157,8 +176,8 @@ class Helvar:
                 if not idx:
                     break
                 i = min(idx)
-                out.append(self.buf[:i + 1])
-                self.buf = self.buf[i + 1:]
+                out.append(self.buf[: i + 1])
+                self.buf = self.buf[i + 1 :]
             if out:
                 time.sleep(0.2)
         return out
@@ -172,17 +191,17 @@ def test_tk17_helvarnet(api, host):
     a, b = Helvar(host), Helvar(host)
     a.send(">V:2,C:152,@1.2.1.1#")
     fr = a.frames()
-    assert any(f.startswith("?V:2,C:152,@1.2.1.1=") for f in fr), fr                     # AC-39
+    assert any(f.startswith("?V:2,C:152,@1.2.1.1=") for f in fr), fr  # AC-39
     a.send(">V:2,C:152,@1.2.1.99#")
     assert "!V:2,C:152,@1.2.1.99=11#" in a.frames()
     # C:13 з A:1 і без A
     a.send(">V:2,C:13,G:19,L:50,F:200,A:1#")
     fa, fb = a.frames(), b.frames()
-    assert "!V:2,C:13,G:19,L:50,F:200,A:1=0#" in fa, fa                                     # AC-57
+    assert "!V:2,C:13,G:19,L:50,F:200,A:1=0#" in fa, fa  # AC-57
     assert ">V:2,C:13,G:19,L:50,F:200#" in fb and ">V:2,C:13,G:19,L:50,F:200#" in fa
     a.send(">V:2,C:13,G:12,L:30,F:100#")
     fa, fb = a.frames(), b.frames()
-    assert fa == [] or all("!" not in f for f in fa)      # без A — лише push
+    assert fa == [] or all("!" not in f for f in fa)  # без A — лише push
     assert ">V:2,C:13,G:12,L:30,F:100#" in fb
     assert api.sig("lighting/groups/LT-CUT/level") == pytest.approx(30)
     # V:1 і V:2 (версія відповіді = версії запиту)
@@ -197,7 +216,7 @@ def test_tk17_helvarnet(api, host):
     a.send(">V:2,C:191#")
     assert "?V:2,C:191=2#" in a.frames()
     a.send(">V:1,C:191#")
-    assert "?V:1,C:191=2#" in a.frames()       # SIM_HELVAR_VERSION=2: версія роутера в тілі (X-64)
+    assert "?V:1,C:191=2#" in a.frames()  # SIM_HELVAR_VERSION=2: версія роутера в тілі (X-64)
     # C:110 після lighting_scene fault_device
     r = api.post("/scenario/lighting_scene/start", {"params": {"group": "LT-CUT", "fault_device": "@1.2.1.5"}})
     assert r.status_code == 201, r.text
@@ -213,12 +232,14 @@ def test_tk17_helvarnet_version1(api, token):
     import subprocess
 
     from .conftest import ROOT
+
     off = ROOT / "tests" / "stand" / "_helvar1.override.yml"
-    off.write_text("services:\n  iot_sim:\n    environment:\n      SIM_HELVAR_VERSION: \"1\"\n")
+    off.write_text('services:\n  iot_sim:\n    environment:\n      SIM_HELVAR_VERSION: "1"\n')
     base = "docker compose -f docker-compose.sim.yml --profile dev"
     try:
-        subprocess.run((base + f" -f {off} up -d --force-recreate iot_sim").split(), cwd=ROOT, check=True,
-                       capture_output=True)
+        subprocess.run(
+            (base + f" -f {off} up -d --force-recreate iot_sim").split(), cwd=ROOT, check=True, capture_output=True
+        )
         for _ in range(60):
             try:
                 if httpx.get("http://127.0.0.1:8090/sim/v1/health", timeout=2).status_code == 200:
@@ -226,7 +247,7 @@ def test_tk17_helvarnet_version1(api, token):
             except Exception:  # noqa: BLE001
                 time.sleep(1)
         time.sleep(3)
-        h = Helvar(container_ip())      # після recreate IP контейнера міг змінитись
+        h = Helvar(container_ip())  # після recreate IP контейнера міг змінитись
         h.send(">V:2,C:152,@1.2.1.1#")
         assert "!V:2,C:152,@1.2.1.1=18#" in h.frames()
         h.send(">V:1,C:191#")
@@ -234,8 +255,7 @@ def test_tk17_helvarnet_version1(api, token):
         h.close()
     finally:
         off.unlink()
-        subprocess.run((base + " up -d --force-recreate iot_sim").split(), cwd=ROOT, check=True,
-                       capture_output=True)
+        subprocess.run((base + " up -d --force-recreate iot_sim").split(), cwd=ROOT, check=True, capture_output=True)
         for _ in range(60):
             try:
                 if httpx.get("http://127.0.0.1:8090/sim/v1/health", timeout=2).status_code == 200:
@@ -255,10 +275,18 @@ def test_tk08_fire_drill_side_effects(api, host, env_get):
     assert api.wait(lambda: mb.coils(86, 20, 2) == [1, 1], timeout=15, step=0.5), "u86 DO4/DO5 не стали 1"
     c = httpx.Client(base_url=f"http://{host}:8081", timeout=10)
     sid = c.post("/api/login", json={"User": {"login_id": "admin", "password": env_get("SIM_BIOSTAR_PASS")}}).headers[
-        "bs-session-id"]
+        "bs-session-id"
+    ]
     c.headers["bs-session-id"] = sid
-    rows = c.post("/api/events/search", json={"Query": {"limit": 200, "conditions": [
-        {"column": "event_type_id.code", "operator": 0, "values": ["20480"]}]}}).json()["EventCollection"]["rows"]
+    rows = c.post(
+        "/api/events/search",
+        json={
+            "Query": {
+                "limit": 200,
+                "conditions": [{"column": "event_type_id.code", "operator": 0, "values": ["20480"]}],
+            }
+        },
+    ).json()["EventCollection"]["rows"]
     doors = {d["id"] for r_ in rows for d in r_["door_id"]}
     assert {"1", "2", "3", "4", "5"} <= doors, doors
     mb.close()

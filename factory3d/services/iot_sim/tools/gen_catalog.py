@@ -6,6 +6,7 @@
 
 Якщо SPEC недоступний (наприклад, у Docker-образі), --check лише порівнює два CSV між собою.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,8 +22,20 @@ SPEC = FACTORY3D / "docs/modules/td_iot_sim/SPEC.md"
 SIGNALS_CSV = SERVICE_DIR / "catalog/signals.csv"
 ODOO_CSV = FACTORY3D / "odoo_addons/td_iot_sim/data/td_sim_signal.csv"
 
-COLUMNS = ["n", "code", "device", "protocol", "address", "dtype", "unit", "scale",
-           "nominal", "thresholds", "model", "status"]
+COLUMNS = [
+    "n",
+    "code",
+    "device",
+    "protocol",
+    "address",
+    "dtype",
+    "unit",
+    "scale",
+    "nominal",
+    "thresholds",
+    "model",
+    "status",
+]
 EXPECTED_ROWS = 1215
 ROW_RE = re.compile(r"^\| (\d+) \|")
 # Додаток A: сигнали `infra/pv/PV-INV-n/*` прив'язані до похідних пристроїв PV-INV-n (§5.3 п. 3), а в signals.csv

@@ -4,6 +4,7 @@
 (coil/DI ``0000N`` -> ``N-1``; HR ``4NNNN`` -> ``N-40001``); лічильники — 32 біт, **молодше слово першим**.
 DI/лічильники беруться з каталогу (``SignalSpec.modbus``); решта каналів — 0 (резерв).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -52,20 +53,26 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
         addr = 16 + j
         sig = ctx.sig_at(unit, addr, fc=1)
         if sig is not None:  # командний сигнал каталогу (шлагбауми)
-            um.add_bit("c", addr, lambda s=sig: to_bool(s.value), coil_cmd(ctx, unit, sig.spec),  # type: ignore[misc]
-                       sig.code)
+            um.add_bit(
+                "c",
+                addr,
+                lambda s=sig: to_bool(s.value),
+                coil_cmd(ctx, unit, sig.spec),  # type: ignore[misc]
+                sig.code,
+            )
             continue
         key = f"modbus.u{unit}.do{j}"
 
-        def do_set(_off: int, v: int, a: Any=addr, k: Any=key, jj: Any=j) -> None:
+        def do_set(_off: int, v: int, a: Any = addr, k: Any = key, jj: Any = j) -> None:
             if not ctx.write_accept:
                 raise ModbusError(4)
             world.set_flag(k, int(bool(v)))
             cmd = SMOKE_CMDS.get(a) if unit == 85 else None
             if cmd and v:
                 world.post("smoke", {"cmd": cmd, "unit": unit})
-            ctx.command(unit, f"DO{jj} = {int(bool(v))}" + ("" if cmd else " (резерв, без ефекту)"),
-                        {"channel": jj, "cmd": cmd})
+            ctx.command(
+                unit, f"DO{jj} = {int(bool(v))}" + ("" if cmd else " (резерв, без ефекту)"), {"channel": jj, "cmd": cmd}
+            )
 
         um.add_bit("c", addr, lambda k=key: bool(world.flag(k, 0)), do_set, f"DO{j}")  # type: ignore[misc]
 
@@ -90,14 +97,14 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
         for off, label in enumerate(("start", "clear", "clear_ovf", "latch")):
             ck = f"modbus.u{unit}.cnt{k}.{label}"
 
-            def cset(_o: int, v: int, lab: Any=label, okey: Any=okey, raw: Any=raw, ck: Any=ck) -> None:
+            def cset(_o: int, v: int, lab: Any = label, okey: Any = okey, raw: Any = raw, ck: Any = ck) -> None:
                 if lab == "clear":
                     if v:
                         world.set_flag(okey, raw())
                     return
                 world.set_flag(ck, int(bool(v)))
 
-            def cget(lab: Any=label, ck: Any=ck) -> Any:
+            def cget(lab: Any = label, ck: Any = ck) -> Any:
                 return False if lab == "clear" else bool(world.flag(ck, 1 if lab == "start" else 0))
 
             um.add_bit("c", base + off, cget, cset, f"cnt{k}_{label}")

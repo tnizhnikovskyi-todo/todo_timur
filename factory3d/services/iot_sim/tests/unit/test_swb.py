@@ -1,4 +1,5 @@
 """W1 §8.1: контролер ГРЩ SWB-CTRL (Modbus u73) — QS, PFC-1/PFC-2, сценарій ``pfc_step_fault``."""
+
 import asyncio
 import math
 from types import SimpleNamespace
@@ -48,8 +49,10 @@ def test_catalog_device_and_signals(registry):
         assert spec.emulated and spec.modbus[:2] == (73, 3) and spec.dtype == "U16", code
     assert registry.by_code["energy/cells/QS/state"].modbus[2] == 100
     for section, base in ((1, 110), (2, 120)):
-        assert [registry.by_code[f"energy/cells/PFC-{section}/{leaf}"].modbus[2] for leaf in (
-            "q_kvar", "steps_on", "steps_total", "fault_step")] == [base, base + 1, base + 2, base + 3]
+        assert [
+            registry.by_code[f"energy/cells/PFC-{section}/{leaf}"].modbus[2]
+            for leaf in ("q_kvar", "steps_on", "steps_total", "fault_step")
+        ] == [base, base + 1, base + 2, base + 3]
     fault = registry.by_code["energy/cells/PFC-1/fault_step"]
     assert fault.alarm == "above" and fault.threshold == 0.5
 
@@ -106,8 +109,18 @@ def test_pfc_off_in_island_and_on_device_fault(world):
     set_section(world, 2, 800.0, 0.85)
     world.step(1)
     assert pfc(world, 2, "steps_on") > 0
-    world.set_flag("blackout", {"t0": "x", "phase": "outage", "genset": True, "amf_master": "hgm",
-                                "restore_delay_s": 60, "genset_load_kw": None, "chp_island": False})
+    world.set_flag(
+        "blackout",
+        {
+            "t0": "x",
+            "phase": "outage",
+            "genset": True,
+            "amf_master": "hgm",
+            "restore_delay_s": 60,
+            "genset_load_kw": None,
+            "chp_island": False,
+        },
+    )
     world.step(1)
     assert pfc(world, 2, "steps_on") == 0 and pfc(world, 2, "q_kvar") == 0
     world.clear_flag("blackout")

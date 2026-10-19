@@ -15,6 +15,7 @@ ASSUMPTIONS: режим VE у зміні — RV-01…RV-04 (приймання/�
 перекриває); ``charging_active`` — прапор ``world.flags["ef_chg_charging"]`` або ``CHARGING p_now > 1 кВт``;
 ``outdoor_c`` (±3 °C, 9 °C о 10:30) веде RV-01.
 """
+
 from __future__ import annotations
 
 import math
@@ -82,8 +83,7 @@ class Roofvent(Model):
         if per is None or (per == self.period and not force):
             return
         self.period = per
-        self.sig("mode").force(
-            {"shift": self.zone_mode(), "off": VEL, "night": ST}[per], self.world.now())
+        self.sig("mode").force({"shift": self.zone_mode(), "off": VEL, "night": ST}[per], self.world.now())
 
     # --- параметри режиму ----------------------------------------------------------------
     def fraction(self, mode: int) -> float:
@@ -134,16 +134,23 @@ class Roofvent(Model):
         else:
             flow = 8000.0 * self.k
             heat = max(0.0, HEAT_NOM * self.k * (18.0 - outdoor) / 33.0 * F_BY_MODE.get(mode, 0.0))
-        self.set("airflow_m3h", noise_step(float(s_air.value), flow, s_air.params.get("noise") or 0.0,
-                                           self.r("airflow_m3h"), self.dt_min) if run else 0.0)
+        self.set(
+            "airflow_m3h",
+            noise_step(float(s_air.value), flow, s_air.params.get("noise") or 0.0, self.r("airflow_m3h"), self.dt_min)
+            if run
+            else 0.0,
+        )
         sup_nom = (19.5 + (self.det % 10) / 10.0) if in_shift else 16.0
-        self.set("supply_c", noise_step(float(s_sup.value), sup_nom, 0.2, self.r("supply_c"),
-                                        self.dt_min))
-        self.set("indoor_c", noise_step(float(self.val("indoor_c")), 17.5 + (self.det % 10) / 10.0,
-                                        0.1, self.r("indoor_c"), self.dt_min))
+        self.set("supply_c", noise_step(float(s_sup.value), sup_nom, 0.2, self.r("supply_c"), self.dt_min))
+        self.set(
+            "indoor_c",
+            noise_step(
+                float(self.val("indoor_c")), 17.5 + (self.det % 10) / 10.0, 0.1, self.r("indoor_c"), self.dt_min
+            ),
+        )
         self.set("heat_kw", heat)
         self.set("heating_valve", round(100.0 * clamp(heat / HEAT_NOM, 0.0, 1.0)))
-        fan_kw = 8.6 * self.k ** 3 + 0.1 if run else 0.0
+        fan_kw = 8.6 * self.k**3 + 0.1 if run else 0.0
         now = self.world.now()
         self.world.signals[f"ventilation/units/{self.device.code}/p_now"].set(fan_kw, now)
         cons = self.world.signals.get(f"energy/consumers/{self.device.code}/p_now")
@@ -168,14 +175,25 @@ class Roofvent(Model):
         run = self.running()
         s = self.sig("airflow_m3h")
         nominal = float(s.params.get("nominal") or 0.0) if run else 0.0
-        self.set("airflow_m3h", noise_step(float(s.value), nominal, s.params.get("noise") or 0.0,
-                                           self.r("airflow_m3h"), self.dt_min) if run else 0.0)
+        self.set(
+            "airflow_m3h",
+            noise_step(float(s.value), nominal, s.params.get("noise") or 0.0, self.r("airflow_m3h"), self.dt_min)
+            if run
+            else 0.0,
+        )
         cons = self.world.signals.get(f"energy/consumers/{self.device.code}/p_now")
         if cons is not None:
             p_nom = float(cons.params.get("nominal") or 0.0)
-            cons.set(noise_step(float(cons.value), p_nom if run else 0.0,
-                                cons.params.get("noise") or 0.0, self.world.r(cons.code),
-                                self.dt_min), self.world.now())
+            cons.set(
+                noise_step(
+                    float(cons.value),
+                    p_nom if run else 0.0,
+                    cons.params.get("noise") or 0.0,
+                    self.world.r(cons.code),
+                    self.dt_min,
+                ),
+                self.world.now(),
+            )
         state = "fault" if self.device.fault is not None else ("running" if run else "stopped")
         if self.device.code == "EF-CHG" and state == "stopped" and self.charging_active():
             self.stopped_s += self.dt_s
@@ -184,8 +202,11 @@ class Roofvent(Model):
                 if not self.alarmed:
                     self.alarmed = True
                     self.world.events.emit(
-                        "alarm", "EF-CHG: не працює під час заряджання — водень!",
-                        device=self.device.code, payload={"state": state})
+                        "alarm",
+                        "EF-CHG: не працює під час заряджання — водень!",
+                        device=self.device.code,
+                        payload={"state": state},
+                    )
         else:
             self.stopped_s = 0.0
             self.alarmed = False
@@ -196,9 +217,13 @@ class Roofvent(Model):
             self.drift.reset()
 
     def get_state(self) -> dict[str, Any]:
-        return {"period": self.period, "enabled": self.enabled, "stopped_s": self.stopped_s,
-                "alarmed": self.alarmed,
-                "clogged": self.drift.clogged if self.drift is not None else False}
+        return {
+            "period": self.period,
+            "enabled": self.enabled,
+            "stopped_s": self.stopped_s,
+            "alarmed": self.alarmed,
+            "clogged": self.drift.clogged if self.drift is not None else False,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.period = d.get("period")

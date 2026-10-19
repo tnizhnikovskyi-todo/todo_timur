@@ -1,4 +1,5 @@
 """P-10: BioStar 2 REST (SPEC §8.12, API-40…API-46; X-50)."""
+
 import datetime as dt
 
 import httpx
@@ -12,8 +13,9 @@ DAY = dt.datetime(2026, 10, 14, 3, 0, tzinfo=dt.UTC)
 @pytest.fixture
 async def bs(world, port, tmp_path):
     world.people = [{"name": "Олег Мельник", "barcode": "OPSAW1"}, {"name": "Іван Шевчук", "barcode": "OPSAW2"}]
-    srv = BioStarApi(world, port_http=port, port_https=None, host="127.0.0.1", user="admin",
-                     password=PWD, cert_dir=tmp_path)
+    srv = BioStarApi(
+        world, port_http=port, port_https=None, host="127.0.0.1", user="admin", password=PWD, cert_dir=tmp_path
+    )
     await srv.start()
     async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}") as c:
         r = await c.post("/api/login", json={"User": {"login_id": "admin", "password": PWD}})
@@ -24,8 +26,9 @@ async def bs(world, port, tmp_path):
 
 
 async def test_login_ok_and_failures(world, port, tmp_path):
-    srv = BioStarApi(world, port_http=port, port_https=None, host="127.0.0.1", user="admin",
-                     password=PWD, cert_dir=tmp_path)
+    srv = BioStarApi(
+        world, port_http=port, port_https=None, host="127.0.0.1", user="admin", password=PWD, cert_dir=tmp_path
+    )
     await srv.start()
     try:
         async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}") as c:
@@ -78,12 +81,22 @@ async def test_users_devices_doors_types(bs):
     assert (await bs.delete("/api/devices")).status_code == 405
 
 
-@pytest.mark.parametrize(("method", "path", "allow"), [
-    ("PUT", "/api/users", "GET"), ("DELETE", "/api/users", "GET"),
-    ("PUT", "/api/users/OPSAW1", ""), ("DELETE", "/api/users/1", ""), ("POST", "/api/users/OPSAW1", ""),
-    ("POST", "/api/cards", ""), ("PUT", "/api/cards/9001", ""), ("DELETE", "/api/cards/9001", ""),
-    ("POST", "/api/devices", "GET"), ("GET", "/api/login", "POST"), ("GET", "/api/events/search", "POST"),
-])
+@pytest.mark.parametrize(
+    ("method", "path", "allow"),
+    [
+        ("PUT", "/api/users", "GET"),
+        ("DELETE", "/api/users", "GET"),
+        ("PUT", "/api/users/OPSAW1", ""),
+        ("DELETE", "/api/users/1", ""),
+        ("POST", "/api/users/OPSAW1", ""),
+        ("POST", "/api/cards", ""),
+        ("PUT", "/api/cards/9001", ""),
+        ("DELETE", "/api/cards/9001", ""),
+        ("POST", "/api/devices", "GET"),
+        ("GET", "/api/login", "POST"),
+        ("GET", "/api/events/search", "POST"),
+    ],
+)
 async def test_known_path_wrong_method_is_405(bs, method, path, allow):  # D-2: 405, а не 404
     r = await bs.request(method, path, json={})
     assert r.status_code == 405, (method, path, r.status_code)
@@ -94,8 +107,13 @@ async def test_known_path_wrong_method_is_405(bs, method, path, allow):  # D-2: 
 
 
 async def test_unknown_path_is_404_and_served_methods_unchanged(bs):
-    for method, path in [("GET", "/api/nope"), ("POST", "/api/cardz"), ("PUT", "/api/users/1/cards"),
-                         ("DELETE", "/"), ("GET", "/api/cards/1/x")]:
+    for method, path in [
+        ("GET", "/api/nope"),
+        ("POST", "/api/cardz"),
+        ("PUT", "/api/users/1/cards"),
+        ("DELETE", "/"),
+        ("GET", "/api/cards/1/x"),
+    ]:
         assert (await bs.request(method, path, json={})).status_code == 404, (method, path)
     assert (await bs.get("/api/users")).status_code == 200
     assert (await bs.get("/api/devices")).status_code == 200
@@ -105,8 +123,13 @@ async def test_unknown_path_is_404_and_served_methods_unchanged(bs):
 def add_events(bs, n=7):
     store = bs.srv.store
     for i in range(n):
-        store.add_event("OPSAW1" if i % 2 == 0 else "OPSAW2", "ACR-IN" if i < 5 else "ACR-ELEC",
-                        4102 if i % 2 == 0 else 4867, tna_key="1", ts=DAY + dt.timedelta(minutes=i))
+        store.add_event(
+            "OPSAW1" if i % 2 == 0 else "OPSAW2",
+            "ACR-IN" if i < 5 else "ACR-ELEC",
+            4102 if i % 2 == 0 else 4867,
+            tna_key="1",
+            ts=DAY + dt.timedelta(minutes=i),
+        )
 
 
 async def search(bs, **q):
@@ -170,12 +193,16 @@ async def test_offset_pagination_and_hint(bs):
 
 async def test_invalid_query(bs):
     assert (await bs.post("/api/events/search", json={})).status_code == 400
-    r = await bs.post("/api/events/search", json={"Query": {"conditions": [{"column": "nope", "operator": 0, "values": ["1"]}]}})
+    r = await bs.post(
+        "/api/events/search", json={"Query": {"conditions": [{"column": "nope", "operator": 0, "values": ["1"]}]}}
+    )
     assert r.status_code == 400
 
 
 async def test_access_events_from_bus(bs, world):
-    world.events.emit("access", "вхід", device="ACR-IN", payload={"user_id": "OPSAW1", "event_code": 4102, "tna_key": "1"})
+    world.events.emit(
+        "access", "вхід", device="ACR-IN", payload={"user_id": "OPSAW1", "event_code": 4102, "tna_key": "1"}
+    )
     world.events.emit("access", "без коду", device="ACR-IN", payload={})
     world.events.emit("info", "інше", payload={"event_code": 1})
     col = await search(bs)
@@ -185,9 +212,11 @@ async def test_access_events_from_bus(bs, world):
 
 async def test_https_listener_self_signed(world, port, tmp_path):
     from tests.protocols.conftest import free_port
+
     https = free_port()
-    srv = BioStarApi(world, port_http=port, port_https=https, host="127.0.0.1", user="admin",
-                     password=PWD, cert_dir=tmp_path)
+    srv = BioStarApi(
+        world, port_http=port, port_https=https, host="127.0.0.1", user="admin", password=PWD, cert_dir=tmp_path
+    )
     await srv.start()
     try:
         async with httpx.AsyncClient(base_url=f"https://127.0.0.1:{https}", verify=False) as c:

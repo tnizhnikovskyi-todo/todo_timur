@@ -1,4 +1,5 @@
 """P-07 Socomec ATyS p 1600 (SPEC §8.9.4): unit 71, Annexe III; адреси вже PDU."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -38,8 +39,9 @@ def build(ctx: Ctx) -> None:
         um.add_hr(20500 + i, lambda: [400 if src2() > 0 else 0], 1, None, "s2_v")
     um.add_hr(20493, lambda: [500 if src1() > 0 else 0], 1, None, "s1_f")
     um.add_hr(20503, lambda: [500 if src2() > 0 else 0], 1, None, "s2_f")
-    um.add_hr(20510, lambda: words_of(to_int(ctx.world.flag("modbus.u71.transfers", 17)), 2), 2,
-              None, "transfer_counter")
+    um.add_hr(
+        20510, lambda: words_of(to_int(ctx.world.flag("modbus.u71.transfers", 17)), 2), 2, None, "transfer_counter"
+    )
     um.add_const(20512, words_of(LAST_TRANSFER, 2), "last_transfer")
     um.add_const(57635, [71], "slave_address")
 

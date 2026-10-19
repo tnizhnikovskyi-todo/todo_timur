@@ -7,6 +7,7 @@
 * DI6 (``battery``) — 1 під час ``blackout`` (фаза ``outage``).
 ``Model.set`` поважає ``held_until``: запис споживача/сценарію зверху (force) має пріоритет.
 """
+
 from __future__ import annotations
 
 from typing import Any

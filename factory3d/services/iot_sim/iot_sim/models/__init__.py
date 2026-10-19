@@ -3,6 +3,7 @@
 Невідомий драйвер -> ``PassiveModel`` (тримає номінал). Воркери поведінки додають файл
 ``models/<driver>.py`` з ``@register_model("<driver>")``; ``load_all()`` підхоплює його сам.
 """
+
 from __future__ import annotations
 
 import importlib

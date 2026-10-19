@@ -1,4 +1,5 @@
 """Спільні фікстури протокольних тестів: вільні порти (SIM_TEST_PORT_BASE)."""
+
 import itertools
 import os
 import socket

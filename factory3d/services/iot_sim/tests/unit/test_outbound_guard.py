@@ -53,8 +53,7 @@ def test_check_url_and_httpx_hook():
 
 
 def test_denied_emits_error_event(world):
-    g = OutboundGuard("mosquitto",
-                      on_denied=lambda h: world.events.emit("error", f"outbound denied: {h}"))
+    g = OutboundGuard("mosquitto", on_denied=lambda h: world.events.emit("error", f"outbound denied: {h}"))
     with pytest.raises(OutboundDenied):
         g.check("10.0.0.1")
     assert world.events.last("error").message == "outbound denied: 10.0.0.1"

@@ -9,6 +9,7 @@ task_start/task_end`` виводяться зі змін стану. Періо�
 при штатній зупинці ``status`` кожного коду публікується з ``online=false`` явно.
 Брокер недоступний: буфер 10 хв (``BUFFER_S``), старіше — втрата з лічильником ``dropped``.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,32 +32,59 @@ PERIOD_MOVING_S = 1.0
 HEARTBEAT_S = 60.0
 LOW_BATTERY_PCT = 20.0
 FW = "1.4.2"
-MODELS = {"FL-1": "Jungheinrich EFG 216", "FL-2": "Jungheinrich EFG 216", "FL-3": "Linde E20",
-          "FL-4": "Linde E20", "FL-5": "Linde E25", "FL-C1": "Linde E16 C", "FL-C2": "Linde E16 C",
-          "TUGGER-1": "Linde P50"}
-OPTIONAL = {"battery_v": "battery_v", "speed_kmh": "speed_kmh", "heading_deg": "heading_deg",
-            "zone": "zone", "task": "task", "load_kg": "load_kg", "operator": "operator",
-            "odometer_km": "odometer_km", "charging": "charging"}
+MODELS = {
+    "FL-1": "Jungheinrich EFG 216",
+    "FL-2": "Jungheinrich EFG 216",
+    "FL-3": "Linde E20",
+    "FL-4": "Linde E20",
+    "FL-5": "Linde E25",
+    "FL-C1": "Linde E16 C",
+    "FL-C2": "Linde E16 C",
+    "TUGGER-1": "Linde P50",
+}
+OPTIONAL = {
+    "battery_v": "battery_v",
+    "speed_kmh": "speed_kmh",
+    "heading_deg": "heading_deg",
+    "zone": "zone",
+    "task": "task",
+    "load_kg": "load_kg",
+    "operator": "operator",
+    "odometer_km": "odometer_km",
+    "charging": "charging",
+}
 
 
 def parse_mqtt_url(url: str) -> dict[str, Any]:
     u = urlsplit(url)
-    return {"host": u.hostname or "localhost", "port": u.port or (8883 if u.scheme == "mqtts" else 1883),
-            "user": unquote(u.username) if u.username else None,
-            "password": unquote(u.password) if u.password else None, "tls": u.scheme == "mqtts"}
+    return {
+        "host": u.hostname or "localhost",
+        "port": u.port or (8883 if u.scheme == "mqtts" else 1883),
+        "user": unquote(u.username) if u.username else None,
+        "password": unquote(u.password) if u.password else None,
+        "tls": u.scheme == "mqtts",
+    }
 
 
 def _make_client() -> Any:
     import paho.mqtt.client as mqtt
+
     return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="iot_sim")  # type: ignore[attr-defined]
 
 
 class MqttPublisher(ProtocolServer):
     name = "mqtt"
 
-    def __init__(self, world: World, *, url: str = "mqtt://localhost:1883", prefix: str = "f3d",
-                 client_factory: Callable[[], Any] = _make_client,
-                 clock: Callable[[], float] = time.monotonic, guard: Any = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        url: str = "mqtt://localhost:1883",
+        prefix: str = "f3d",
+        client_factory: Callable[[], Any] = _make_client,
+        clock: Callable[[], float] = time.monotonic,
+        guard: Any = None,
+    ) -> None:
         self.world, self.prefix, self.url = world, prefix.strip("/"), url
         self.conn = parse_mqtt_url(url)
         self.client = client_factory()
@@ -108,11 +136,17 @@ class MqttPublisher(ProtocolServer):
         self.connected = False
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self._started, "connected": self.connected,
-                "buffered": len(self._buffer), "dropped": self.dropped, "published": self.published}
+        return {
+            "proto": self.name,
+            "up": self._started,
+            "connected": self.connected,
+            "buffered": len(self._buffer),
+            "dropped": self.dropped,
+            "published": self.published,
+        }
 
     # --- paho-колбеки (потік paho) ------------------------------------------------------
-    def _on_connect(self, client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any=None) -> None:
+    def _on_connect(self, client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any = None) -> None:
         if getattr(reason_code, "is_failure", False) or (isinstance(reason_code, int) and reason_code):
             log.warning("mqtt connect refused: %s", reason_code, extra={"proto": "mqtt"})
             return
@@ -156,9 +190,17 @@ class MqttPublisher(ProtocolServer):
         return None if s is None else s.value
 
     def _status(self, code: str, online: bool) -> str:
-        return json.dumps({"code": code, "online": online, "ts": self.world.now().isoformat(),
-                           "fw": FW, "model": MODELS.get(code, ""), "gateway": "sim"},
-                          ensure_ascii=False)
+        return json.dumps(
+            {
+                "code": code,
+                "online": online,
+                "ts": self.world.now().isoformat(),
+                "fw": FW,
+                "model": MODELS.get(code, ""),
+                "gateway": "sim",
+            },
+            ensure_ascii=False,
+        )
 
     def telemetry(self, code: str) -> dict[str, Any]:
         dev = self.world.devices[code]
@@ -172,11 +214,14 @@ class MqttPublisher(ProtocolServer):
         elif dev.fault == "comm":
             state = "offline"
         d: dict[str, Any] = {
-            "ts": self.world.now().isoformat(), "code": code, "state": state,
+            "ts": self.world.now().isoformat(),
+            "code": code,
+            "state": state,
             "battery_pct": round(float(self._sig(code, "battery") or 0.0), 1),
             "hours": round(float(self._sig(code, "hours") or 0.0), 1),
             "x": round(float(self._sig(code, "x") or 0.0), 1),
-            "y": round(float(self._sig(code, "y") or 0.0), 1)}
+            "y": round(float(self._sig(code, "y") or 0.0), 1),
+        }
         for key, leaf in OPTIONAL.items():
             v = self._sig(code, leaf)
             if v is None:
@@ -190,9 +235,15 @@ class MqttPublisher(ProtocolServer):
         return d
 
     def _event(self, code: str, typ: str, detail: dict[str, Any] | None = None) -> None:
-        self._publish(self.topic(code, "event"),
-                      json.dumps({"ts": self.world.now().isoformat(), "code": code, "type": typ,
-                                  "detail": detail or {}}, ensure_ascii=False), 1, False)
+        self._publish(
+            self.topic(code, "event"),
+            json.dumps(
+                {"ts": self.world.now().isoformat(), "code": code, "type": typ, "detail": detail or {}},
+                ensure_ascii=False,
+            ),
+            1,
+            False,
+        )
 
     def _on_tick(self, world: World) -> None:
         self.tick()
@@ -225,8 +276,12 @@ class MqttPublisher(ProtocolServer):
             self._low[code] = low
         if now - self._last_hb >= HEARTBEAT_S:
             self._last_hb = now
-            self._publish(f"{self.prefix}/mobile/_all/heartbeat",
-                          json.dumps({"ts": self.world.now().isoformat(), "online": online}), 0, False)
+            self._publish(
+                f"{self.prefix}/mobile/_all/heartbeat",
+                json.dumps({"ts": self.world.now().isoformat(), "online": online}),
+                0,
+                False,
+            )
 
     def _derive_events(self, code: str, prev: str, tel: dict[str, Any]) -> None:
         new = tel["state"]

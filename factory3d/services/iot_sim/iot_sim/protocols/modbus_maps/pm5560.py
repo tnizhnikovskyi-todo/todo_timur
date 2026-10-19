@@ -4,6 +4,7 @@
 цього unit (``p_now``/``q``/``cos φ``/струми/енергія), решта величин виводиться з них.
 Регістр 2018 (Breaker state, лише unit 1–8) — ПРИПУЩЕННЯ §8.7.1.
 """
+
 from __future__ import annotations
 
 import math
@@ -20,9 +21,58 @@ from iot_sim.protocols.modbus_maps import (
 )
 
 FEEDERS = {3: "QF-1", 4: "QF-2", 5: "QF-3", 6: "QF-4", 7: "QF-C1", 8: "QF-C2"}
-CONSUMERS = ["SAW-1", "SAW-2", "SAW-3", "SLIDE-1", "VSAW-1", "NEST-1", "EDGE-1", "EDGE-2", "EDGE-3", "CNC-3", "CNC-1", "CNC-2", "BORE-1", "CNC-4", "DOWEL-1", "SORT-1", "SAND-1", "AUTOSPRAY-1", "UV-1", "HINGE-1", "GLUE-1", "PRESS-1", "SPRAY-1", "DRY-1", "ASMLINE-1", "ASM-1", "ASM-2", "ASM-3", "ASM-4", "ASM-5", "ASM-6", "PACK-1", "PACK-2", "BOX-1", "PACKLINE-1", "GANTRY-1", "COMPRESSOR", "DUST-1", "BOILER", "CHARGING", "OFFICE", "LP-1", "LP-2", "LP-3", "RV-ALL", "AHU-1", "EF-ELEC", "EF-CMP", "EF-CHG"]
-NAMES: dict[int, str] = {1: "Q1", 2: "Q2", **FEEDERS,
-                         **{11 + i: c for i, c in enumerate(CONSUMERS)}}
+CONSUMERS = [
+    "SAW-1",
+    "SAW-2",
+    "SAW-3",
+    "SLIDE-1",
+    "VSAW-1",
+    "NEST-1",
+    "EDGE-1",
+    "EDGE-2",
+    "EDGE-3",
+    "CNC-3",
+    "CNC-1",
+    "CNC-2",
+    "BORE-1",
+    "CNC-4",
+    "DOWEL-1",
+    "SORT-1",
+    "SAND-1",
+    "AUTOSPRAY-1",
+    "UV-1",
+    "HINGE-1",
+    "GLUE-1",
+    "PRESS-1",
+    "SPRAY-1",
+    "DRY-1",
+    "ASMLINE-1",
+    "ASM-1",
+    "ASM-2",
+    "ASM-3",
+    "ASM-4",
+    "ASM-5",
+    "ASM-6",
+    "PACK-1",
+    "PACK-2",
+    "BOX-1",
+    "PACKLINE-1",
+    "GANTRY-1",
+    "COMPRESSOR",
+    "DUST-1",
+    "BOILER",
+    "CHARGING",
+    "OFFICE",
+    "LP-1",
+    "LP-2",
+    "LP-3",
+    "RV-ALL",
+    "AHU-1",
+    "EF-ELEC",
+    "EF-CMP",
+    "EF-CHG",
+]
+NAMES: dict[int, str] = {1: "Q1", 2: "Q2", **FEEDERS, **{11 + i: c for i, c in enumerate(CONSUMERS)}}
 UNITS = sorted(NAMES)
 SEMAPHORE = 5679
 
@@ -62,8 +112,7 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
         return lambda _i=0: f(addr) if ctx.sig_at(unit, addr) else iavg()
 
     def f32(addr: int, fn: Any, n: int = 1) -> None:
-        um.add_hr(addr, lambda: [w for i in range(n) for w in f32_words(fn())], 2 * n,
-                  None, f"f32@{addr}")
+        um.add_hr(addr, lambda: [w for i in range(n) for w in f32_words(fn())], 2 * n, None, f"f32@{addr}")
 
     um.add_const(29, str_words(f"PM-{NAMES[unit]}", 20), "name")
     um.add_const(49, str_words("PM5560", 20), "model")

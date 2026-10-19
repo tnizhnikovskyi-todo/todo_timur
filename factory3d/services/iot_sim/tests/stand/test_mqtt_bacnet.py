@@ -1,4 +1,5 @@
 """ТК-04 (MQTT-телематика), ТК-03 і ТК-08 (BACnet: вентиляція/котельня, пожежна панель), ТБ-04 (BACnet). AC-08/15/38/40/56/61/64/66."""
+
 import asyncio
 import json
 import time
@@ -24,8 +25,12 @@ ALL = {99, *range(101, 126), 130, 131, 132, 133, 140, 200}
 
 # ------------------------------------------------------------------ MQTT
 def _mosq_ip():
-    out = docker("inspect", "iot_sim-mosquitto-1", "-f",
-                 "{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}")
+    out = docker(
+        "inspect",
+        "iot_sim-mosquitto-1",
+        "-f",
+        "{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}",
+    )
     return next(i.split("=")[1] for i in out.split() if i.split("=")[0].endswith("f3d_sim"))
 
 
@@ -48,20 +53,20 @@ def test_tk04_mqtt_telematics(api):
     api.scenario("shift")
     r = api.post("/scenario/battery_low/start", {"params": {"device": "FL-2", "level_pct": 18}})
     assert r.status_code == 201, r.text
-    got = _collect(45)      # ТК-04: 3 хв → скорочено до 45 с реального при factor=10
+    got = _collect(45)  # ТК-04: 3 хв → скорочено до 45 с реального при factor=10
     codes = {t.split("/")[2] for t, _, _ in got if t.endswith("/telemetry")}
-    assert len(codes) >= 8, codes                                  # AC-40
+    assert len(codes) >= 8, codes  # AC-40
     for t, p, _ in got:
-        json.loads(p)                                              # JSON валідний
+        json.loads(p)  # JSON валідний
     st = [(t, json.loads(p), ret) for t, p, ret in got if t.endswith("/status") and "_all" not in t]
     assert st and all(ret for _, _, ret in st) and all(b["online"] for _, b, _ in st)
     states = [json.loads(p)["state"] for t, p, _ in got if t.endswith("/FL-2/telemetry")]
-    assert {"to_charge", "charging"} & set(states), set(states)    # AC-08 (рух у зарядну)
+    assert {"to_charge", "charging"} & set(states), set(states)  # AC-08 (рух у зарядну)
     api.post("/device/FL-3/fault", {"reason": "comm"})
     got2 = _collect(8)
     last = [json.loads(p) for t, p, _ in got2 if t == "f3d/mobile/FL-3/status"]
     assert last and last[-1]["online"] is False
-    assert _collect(2, user="sim", password="bad") == []            # ТБ: лише аутентифіковані
+    assert _collect(2, user="sim", password="bad") == []  # ТБ: лише аутентифіковані
 
 
 # ------------------------------------------------------------------ BACnet
@@ -75,9 +80,15 @@ async def bac(host, api):
     bp_settings.route_aware = True
     gw = _gateway(host)
     client = NormalApplication(
-        DeviceObject(objectIdentifier=("device", 4000), objectName="client", vendorIdentifier=999,
-                     maxApduLengthAccepted=1476, segmentationSupported="segmentedBoth"),
-        IPv4Address(f"{gw}/16:47810"))
+        DeviceObject(
+            objectIdentifier=("device", 4000),
+            objectName="client",
+            vendorIdentifier=999,
+            maxApduLengthAccepted=1476,
+            segmentationSupported="segmentedBoth",
+        ),
+        IPv4Address(f"{gw}/16:47810"),
+    )
     await asyncio.sleep(0.3)
 
     class B:
@@ -102,7 +113,7 @@ async def bac(host, api):
 async def test_tk03_ventilation_boiler(bac, api):
     api.post("/time", {"set": NOON, "factor": 1})
     found = await bac.who_is()
-    assert ALL - {99} <= set(found), ALL - set(found)                              # AC-38 (99 — опційно)
+    assert ALL - {99} <= set(found), ALL - set(found)  # AC-38 (99 — опційно)
     assert isinstance(await bac.rp(105, "analog-input,4"), float)
     # RPM 25 RV ≤ 2 с — через ReadProperty по 25 пристроях
     t0 = time.time()
@@ -136,23 +147,29 @@ async def test_tk08_fire_panel(bac, api):
     r = api.post("/scenario/fire_drill/start", {"params": {"zone": "FA-CNC"}})
     assert r.status_code == 201, r.text
     await asyncio.sleep(4)
-    assert str(await bac.rp(200, "life-safety-zone,14")) == "test-alarm"            # AC-15
+    assert str(await bac.rp(200, "life-safety-zone,14")) == "test-alarm"  # AC-15
     assert str(await bac.rp(200, "life-safety-point,21405")) == "test-alarm"
     assert str(await bac.rp(200, "binary-value,10")) == "active"
     # ТБ-04: запис у LSZ/BV/PIV/MSV відхилено, ReinitializeDevice/DCC відхилені
-    for objid, value in (("life-safety-zone,14", "alarm"), ("binary-value,10", "inactive"),
-                         ("positive-integer-value,1", 5), ("multi-state-value,1", 2)):
+    for objid, value in (
+        ("life-safety-zone,14", "alarm"),
+        ("binary-value,10", "inactive"),
+        ("positive-integer-value,1", 5),
+        ("multi-state-value,1", 2),
+    ):
         with pytest.raises(ErrorRejectAbortNack) as ei:
             await bac.c.write_property(bac.dev(200), objid, "present-value", value, priority=8)
         assert "write-access-denied" in str(ei.value)
-    for req in (ReinitializeDeviceRequest(reinitializedStateOfDevice="coldstart", destination=bac.dev(200)),
-                DeviceCommunicationControlRequest(enableDisable="disable", destination=bac.dev(200))):
+    for req in (
+        ReinitializeDeviceRequest(reinitializedStateOfDevice="coldstart", destination=bac.dev(200)),
+        DeviceCommunicationControlRequest(enableDisable="disable", destination=bac.dev(200)),
+    ):
         with pytest.raises(ErrorRejectAbortNack):
             await bac.c.request(req)
     assert str(await bac.rp(200, "life-safety-zone,14")) == "test-alarm"
     # forms: filter_clogged FA-FAC value=92 → PIV:21607
     api.post("/scenario/fire_drill/stop")
-    api.post("/time", {"factor": 60})          # рампа забруднення (ramp_min) — на прискореному часі
+    api.post("/time", {"factor": 60})  # рампа забруднення (ramp_min) — на прискореному часі
     r = api.post("/scenario/filter_clogged/start", {"params": {"device": "FA-FAC", "value": 92}})
     assert r.status_code == 201, r.text
     for _ in range(40):
@@ -160,7 +177,7 @@ async def test_tk08_fire_panel(bac, api):
         if piv >= 90:
             break
         await asyncio.sleep(1)
-    assert piv >= 90, piv                                                      # AC-61: було 82
+    assert piv >= 90, piv  # AC-61: було 82
     api.post("/time", {"factor": 1})
     # FA-CUT fault sensor → clear → loop
     assert api.post("/device/FA-CUT/fault", {"reason": "sensor"}).status_code == 200
@@ -176,8 +193,14 @@ async def test_tk08_fire_panel(bac, api):
     bac.c.asap.device_object = bac.c.device_object
     ol = await bac.rp(200, "device,200", "object-list")
     types = {str(o[0]) for o in ol}
-    assert types <= {"device", "life-safety-zone", "life-safety-point", "binary-value",
-                     "multi-state-value", "positive-integer-value"}, types
+    assert types <= {
+        "device",
+        "life-safety-zone",
+        "life-safety-point",
+        "binary-value",
+        "multi-state-value",
+        "positive-integer-value",
+    }, types
     assert sum(1 for o in ol if str(o[0]) == "life-safety-point") == 302
     for inst, name in ((19001, "1.MCP.01"), (29113, "2.SND.13"), (29201, "2.FLM.01")):
         assert await bac.rp(200, f"life-safety-point,{inst}", "object-name") == name

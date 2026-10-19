@@ -19,6 +19,7 @@ W2 (SPEC §8.2, R-59, C-47): вікно керування HR 200…291 (``proto
 лише ``settings.pfc_cos_target``), ``ctl_remote`` (0 — команди ігноруються з ``ack = 2``), heartbeat ``ctl/heartbeat``
 (+1 за симульовану секунду: ``epoch`` часу світу mod 65536). Кожен тік модель віддзеркалює прапори у сигнали ``energy_control/*`` (``/sim/v1/signals``).
 """
+
 from __future__ import annotations
 
 import math
@@ -125,18 +126,27 @@ class Swb(Model):
         w = self.world
         left = float(ctl(w, "bess_valid_left"))
         values = {
-            "ctl/heartbeat": int(w.clock.epoch()) % 65536, "ctl/remote": int(remote(w)),
-            "qs/cmd": int(ctl(w, "qs_cmd")), "qs/ack": int(ctl(w, "qs_ack")),
-            "pfc/mode": int(ctl(w, "pfc_mode")), "pfc/cos_target": self.cos_target(),
-            "bess/mode": int(ctl(w, "bess_mode")), "bess/setpoint_kw": float(ctl(w, "bess_setpoint_kw")),
-            "bess/until_soc": float(ctl(w, "bess_until_soc")), "bess/valid_s": float(ctl(w, "bess_valid_s")),
+            "ctl/heartbeat": int(w.clock.epoch()) % 65536,
+            "ctl/remote": int(remote(w)),
+            "qs/cmd": int(ctl(w, "qs_cmd")),
+            "qs/ack": int(ctl(w, "qs_ack")),
+            "pfc/mode": int(ctl(w, "pfc_mode")),
+            "pfc/cos_target": self.cos_target(),
+            "bess/mode": int(ctl(w, "bess_mode")),
+            "bess/setpoint_kw": float(ctl(w, "bess_setpoint_kw")),
+            "bess/until_soc": float(ctl(w, "bess_until_soc")),
+            "bess/valid_s": float(ctl(w, "bess_valid_s")),
             "bess/remaining_s": math.ceil(left) if int(ctl(w, "bess_mode")) else 0,
-            "bess/reserve_pct": float(ctl(w, "bess_reserve_pct")), "bess/ack": int(ctl(w, "bess_ack")),
+            "bess/reserve_pct": float(ctl(w, "bess_reserve_pct")),
+            "bess/ack": int(ctl(w, "bess_ack")),
             "bess/temp_c": bess_temp_c(w),
-            "chp/cmd": int(ctl(w, "chp_cmd")), "chp/ack": int(ctl(w, "chp_ack")),
-            "chp/permit": int(ctl(w, "chp_permit")), "chp/gas_bar": float(ctl(w, "gas_bar")),
+            "chp/cmd": int(ctl(w, "chp_cmd")),
+            "chp/ack": int(ctl(w, "chp_ack")),
+            "chp/permit": int(ctl(w, "chp_permit")),
+            "chp/gas_bar": float(ctl(w, "gas_bar")),
             "air/setpoint_bar": float(ctl(w, "air_setpoint_bar")),
-            "pv/limit_pct": float(ctl(w, "pv_limit_pct")), "shed/valid_s": float(ctl(w, "shed_valid_s")),
+            "pv/limit_pct": float(ctl(w, "pv_limit_pct")),
+            "shed/valid_s": float(ctl(w, "shed_valid_s")),
         }
         limits = w.flags.get("shed_limit")
         for node in SHED_NODES:

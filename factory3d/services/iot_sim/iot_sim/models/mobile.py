@@ -11,6 +11,7 @@
   ``x, y`` — лінійна інтерполяція, ``zone`` — полігон, що містить точку, ``heading`` — напрям.
 * ``outbox`` — події для MQTT (``charge_start|charge_end|low_battery|fault|task_start|task_end``).
 """
+
 from __future__ import annotations
 
 import json
@@ -98,8 +99,9 @@ class Mobile(Model):
         return zones()[code]["centroid"]  # type: ignore[no-any-return]
 
     def emit(self, typ: str, **detail: Any) -> None:
-        self.outbox.append({"ts": self.world.now().isoformat(), "code": self.device.code, "type": typ,
-                            "detail": detail})
+        self.outbox.append(
+            {"ts": self.world.now().isoformat(), "code": self.device.code, "type": typ, "detail": detail}
+        )
 
     def _set_state(self, st: str) -> None:
         if st != self.mstate:
@@ -223,16 +225,32 @@ class Mobile(Model):
 
     def telemetry(self) -> dict[str, Any]:
         """Схема ``telemetry`` §8.8.1 (``to_charge`` лишається повним станом)."""
-        return {"ts": self.world.now().isoformat(), "code": self.device.code, "state": self.mstate,
-                "battery_pct": round(self.battery, 1), "charging": self.mstate == "charging",
-                "hours": round(self.hours, 1), "x": round(self.pos[0], 2), "y": round(self.pos[1], 2),
-                "heading_deg": round(self.heading), "speed_kmh": round(self.speed_ms * 3.6, 1),
-                "zone": self.zone, "task": f"{self.route[0]}→{self.route[-1]}" if self.mstate == "busy" else None,
-                "faults": [self.device.fault] if self.device.fault else []}
+        return {
+            "ts": self.world.now().isoformat(),
+            "code": self.device.code,
+            "state": self.mstate,
+            "battery_pct": round(self.battery, 1),
+            "charging": self.mstate == "charging",
+            "hours": round(self.hours, 1),
+            "x": round(self.pos[0], 2),
+            "y": round(self.pos[1], 2),
+            "heading_deg": round(self.heading),
+            "speed_kmh": round(self.speed_ms * 3.6, 1),
+            "zone": self.zone,
+            "task": f"{self.route[0]}→{self.route[-1]}" if self.mstate == "busy" else None,
+            "faults": [self.device.fault] if self.device.fault else [],
+        }
 
     def get_state(self) -> dict[str, Any]:
-        return {"mstate": self.mstate, "pos": list(self.pos), "leg": self.leg, "dir": self.dir,
-                "dwell": self.dwell, "battery": self.battery, "hours": self.hours}
+        return {
+            "mstate": self.mstate,
+            "pos": list(self.pos),
+            "leg": self.leg,
+            "dir": self.dir,
+            "dwell": self.dwell,
+            "battery": self.battery,
+            "hours": self.hours,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.mstate = d.get("mstate", "idle")

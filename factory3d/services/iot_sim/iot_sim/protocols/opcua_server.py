@@ -11,6 +11,7 @@
 ``energy/consumers/<C>/p_now``, ``equipment/GANTRY-1/*``. Нові ``JobOrder`` від ``/jobs`` (API-33)
 надходять через ``world.post("opc_joborders", {"machine", "job_order_id", ...})``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,35 +31,96 @@ from iot_sim.protocols.base import ProtocolServer
 log = logging.getLogger("iot_sim.opcua")
 
 NS_URIS = [
-    "http://todo.ltd/f3d/iot_sim/instances/",       # 2
-    "http://opcfoundation.org/UA/DI/",              # 3
-    "http://opcfoundation.org/UA/Machinery/",       # 4
+    "http://todo.ltd/f3d/iot_sim/instances/",  # 2
+    "http://opcfoundation.org/UA/DI/",  # 3
+    "http://opcfoundation.org/UA/Machinery/",  # 4
     "http://opcfoundation.org/UA/Machinery/Jobs/",  # 5
     "http://opcfoundation.org/UA/ISA95-JOBCONTROL_V2/",  # 6
-    "http://opcfoundation.org/UA/Woodworking/",     # 7
+    "http://opcfoundation.org/UA/Woodworking/",  # 7
 ]
 APP_URI = "urn:todo.ltd:f3d:iot_sim"
 STATE_ENUM = {"OFFLINE": 0, "STANDBY": 1, "READY": 2, "WORKING": 3, "ERROR": 4}
 GANTRY_STATE = {"idle": 2, "moving": 3, "picking": 3, "placing": 3, "blocked": 1, "error": 4}
-DEVICE_CLASS = {"SAW": "PanelSaw", "NEST": "NestingMachine", "EDGE": "EdgeBander",
-                "CNC": "CNCMachiningCenter", "BORE": "ThroughfeedDrilling",
-                "DOWEL": "DowelInserting", "SORT": "SortingCell", "ASMLINE": "CaseClamp",
-                "GANTRY": "StorageSystem"}
+DEVICE_CLASS = {
+    "SAW": "PanelSaw",
+    "NEST": "NestingMachine",
+    "EDGE": "EdgeBander",
+    "CNC": "CNCMachiningCenter",
+    "BORE": "ThroughfeedDrilling",
+    "DOWEL": "DowelInserting",
+    "SORT": "SortingCell",
+    "ASMLINE": "CaseClamp",
+    "GANTRY": "StorageSystem",
+}
 # 9 обов'язкових (M) + 17 опційних, SPEC §8.3 (AC-36: 26 булевих)
-FLAGS = ("MachineOn", "MachineInitialized", "PowerPresent", "Emergency", "Calibrated",
-         "Error", "Alarm", "Warning", "RecipeInRun",
-         "AirPresent", "DustChipSuction", "Safety", "Remote", "WorkpiecePresent", "Moving", "Hold",
-         "RecipeInSetup", "RecipeInHold", "ManualActivityRequired", "LoadingEnabled", "WaitUnload",
-         "WaitLoad", "EnergySaving", "ExternalEmergency", "MaintenanceRequired", "FeedRuns")
-VALUES_U64 = ("AbsoluteMachineOnTime", "RelativeMachineOnTime", "AbsoluteProductionTime",
-              "RelativeProductionTime", "AbsoluteWorkingTime", "RelativeWorkingTime",
-              "AbsoluteErrorTime", "RelativeErrorTime", "AbsolutePiecesIn", "RelativePiecesIn",
-              "AbsolutePiecesOut", "RelativePiecesOut", "AbsoluteRunsTotal", "RelativeRunsTotal")
-JOB_METHODS = ("Store", "StoreAndStart", "Start", "Update", "Stop", "Cancel", "Clear", "Pause",
-               "Resume", "Abort", "RevokeStart")
-JOB_STATES = {"Store": "AllowedToStart", "StoreAndStart": "Running", "Start": "Running",
-              "Resume": "Running", "Pause": "Interrupted", "Stop": "Ended", "Cancel": "Ended",
-              "Abort": "Aborted", "RevokeStart": "NotAllowedToStart"}
+FLAGS = (
+    "MachineOn",
+    "MachineInitialized",
+    "PowerPresent",
+    "Emergency",
+    "Calibrated",
+    "Error",
+    "Alarm",
+    "Warning",
+    "RecipeInRun",
+    "AirPresent",
+    "DustChipSuction",
+    "Safety",
+    "Remote",
+    "WorkpiecePresent",
+    "Moving",
+    "Hold",
+    "RecipeInSetup",
+    "RecipeInHold",
+    "ManualActivityRequired",
+    "LoadingEnabled",
+    "WaitUnload",
+    "WaitLoad",
+    "EnergySaving",
+    "ExternalEmergency",
+    "MaintenanceRequired",
+    "FeedRuns",
+)
+VALUES_U64 = (
+    "AbsoluteMachineOnTime",
+    "RelativeMachineOnTime",
+    "AbsoluteProductionTime",
+    "RelativeProductionTime",
+    "AbsoluteWorkingTime",
+    "RelativeWorkingTime",
+    "AbsoluteErrorTime",
+    "RelativeErrorTime",
+    "AbsolutePiecesIn",
+    "RelativePiecesIn",
+    "AbsolutePiecesOut",
+    "RelativePiecesOut",
+    "AbsoluteRunsTotal",
+    "RelativeRunsTotal",
+)
+JOB_METHODS = (
+    "Store",
+    "StoreAndStart",
+    "Start",
+    "Update",
+    "Stop",
+    "Cancel",
+    "Clear",
+    "Pause",
+    "Resume",
+    "Abort",
+    "RevokeStart",
+)
+JOB_STATES = {
+    "Store": "AllowedToStart",
+    "StoreAndStart": "Running",
+    "Start": "Running",
+    "Resume": "Running",
+    "Pause": "Interrupted",
+    "Stop": "Ended",
+    "Cancel": "Ended",
+    "Abort": "Aborted",
+    "RevokeStart": "NotAllowedToStart",
+}
 
 
 def _state_int(v: Any) -> int:
@@ -99,7 +161,7 @@ class _Users(UserManager):
     def __init__(self, user: str, password: str) -> None:
         self.user, self.password = user, password
 
-    def get_user(self, iserver: Any, username: Any=None, password: Any=None, certificate: Any=None) -> Any:
+    def get_user(self, iserver: Any, username: Any = None, password: Any = None, certificate: Any = None) -> Any:
         if username:
             if username == self.user and password == self.password:
                 return User(role=UserRole.Admin, name=username)
@@ -110,9 +172,16 @@ class _Users(UserManager):
 class OpcUaServer(ProtocolServer):
     name = "opcua"
 
-    def __init__(self, world: World, *, port: int = 4840, host: str = "0.0.0.0",
-                 user: str = "collector", password: str = "",
-                 cert_dir: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        port: int = 4840,
+        host: str = "0.0.0.0",
+        user: str = "collector",
+        password: str = "",
+        cert_dir: str | Path | None = None,
+    ) -> None:
         self.world = world
         self.port, self.host = port, host
         self.user, self.password = user, password
@@ -146,8 +215,7 @@ class OpcUaServer(ProtocolServer):
         srv.set_server_name("iot_sim")
         await srv.set_application_uri(APP_URI)
         policies = [ua.SecurityPolicyType.NoSecurity]
-        if self.cert_dir and (self.cert_dir / "server.der").is_file() \
-                and (self.cert_dir / "server.key").is_file():
+        if self.cert_dir and (self.cert_dir / "server.der").is_file() and (self.cert_dir / "server.key").is_file():
             await srv.load_certificate(self.cert_dir / "server.der")
             await srv.load_private_key(self.cert_dir / "server.key")
             policies.append(ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt)
@@ -156,8 +224,7 @@ class OpcUaServer(ProtocolServer):
             await srv.register_namespace(uri)
         self.ns = await srv.get_namespace_index(NS_URIS[0])
         self.machines = self._machine_codes()
-        folder = await srv.nodes.objects.add_folder(ua.NodeId("Machines", self.ns),
-                                                    ua.QualifiedName("Machines", 4))
+        folder = await srv.nodes.objects.add_folder(ua.NodeId("Machines", self.ns), ua.QualifiedName("Machines", 4))
         for code in self.machines:
             await self._build_machine(folder, code)
         self._cursor = self.world.events.seq
@@ -184,8 +251,7 @@ class OpcUaServer(ProtocolServer):
             pass
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self.up, "port": self.port,
-                "machines": len(self.machines)}
+        return {"proto": self.name, "up": self.up, "port": self.port, "machines": len(self.machines)}
 
     def _on_tick(self, _world: World) -> None:
         if self._loop is not None:
@@ -201,19 +267,18 @@ class OpcUaServer(ProtocolServer):
                 log.exception("opcua refresh failed")
 
     # --- побудова адресного простору --------------------------------------------------
-    async def _var(self, parent: Any, path: str, name: str, value: Any, vt: ua.VariantType,
-                   writable: bool = False) -> Any:
+    async def _var(
+        self, parent: Any, path: str, name: str, value: Any, vt: ua.VariantType, writable: bool = False
+    ) -> Any:
         nid = ua.NodeId(f"{path}.{name}", self.ns)
-        node = await parent.add_variable(nid, ua.QualifiedName(name, self.ns),
-                                         ua.Variant(value, vt))
+        node = await parent.add_variable(nid, ua.QualifiedName(name, self.ns), ua.Variant(value, vt))
         if writable:
             await node.set_writable()
         self._nodes[f"{path}.{name}"] = (node, vt)
         return node
 
     async def _obj(self, parent: Any, path: str, name: str) -> Any:
-        return await parent.add_object(ua.NodeId(f"{path}.{name}", self.ns),
-                                       ua.QualifiedName(name, self.ns))
+        return await parent.add_object(ua.NodeId(f"{path}.{name}", self.ns), ua.QualifiedName(name, self.ns))
 
     async def _build_machine(self, folder: Any, code: str) -> None:
         dev = self.world.devices[code]
@@ -222,12 +287,16 @@ class OpcUaServer(ProtocolServer):
         ident = await self._obj(obj, code, "Identification")
         p = f"{code}.Identification"
         model = str(dev.params.get("model", code))
-        for k, v in (("Manufacturer", "HOMAG"), ("Model", model),
-                     ("ProductInstanceUri", f"urn:homag:{model}:{code}"), ("SerialNumber", code),
-                     ("DeviceClass", DEVICE_CLASS.get(code.split("-")[0], "Machine")),
-                     ("AssetId", code), ("Location", str(dev.params.get("zone", "")))):
-            await self._var(ident, p, k, v, ua.VariantType.String,
-                            writable=k in ("AssetId", "Location"))
+        for k, v in (
+            ("Manufacturer", "HOMAG"),
+            ("Model", model),
+            ("ProductInstanceUri", f"urn:homag:{model}:{code}"),
+            ("SerialNumber", code),
+            ("DeviceClass", DEVICE_CLASS.get(code.split("-")[0], "Machine")),
+            ("AssetId", code),
+            ("Location", str(dev.params.get("zone", ""))),
+        ):
+            await self._var(ident, p, k, v, ua.VariantType.String, writable=k in ("AssetId", "Location"))
         await self._var(ident, p, "YearOfConstruction", 2024, ua.VariantType.UInt16)
         state = await self._obj(obj, code, "State")
         machine = await self._obj(state, f"{code}.State", "Machine")
@@ -246,8 +315,7 @@ class OpcUaServer(ProtocolServer):
         for v in ("AxisOverride", "SpindleOverride"):
             await self._var(values, f"{mp}.Values", v, 100, ua.VariantType.UInt32)
         events = await self._obj(obj, code, "Events")
-        await events.write_attribute(ua.AttributeIds.EventNotifier,
-                                     ua.DataValue(ua.Variant(1, ua.VariantType.Byte)))
+        await events.write_attribute(ua.AttributeIds.EventNotifier, ua.DataValue(ua.Variant(1, ua.VariantType.Byte)))
         self._events[code] = events
         ms = await self._obj(obj, code, "ManufacturerSpecific")
         msp = f"{code}.ManufacturerSpecific"
@@ -261,22 +329,28 @@ class OpcUaServer(ProtocolServer):
         jp = f"{code}.JobManagement.JobOrderControl"
         await self._var(joc, jp, "JobOrderList", [""], ua.VariantType.String)
         for m in JOB_METHODS:
-            await joc.add_method(ua.NodeId(f"{jp}.{m}", ns), ua.QualifiedName(m, ns),
-                                 self._make_method(code, m),
-                                 [ua.VariantType.String, ua.VariantType.String],
-                                 [ua.VariantType.UInt64])
+            await joc.add_method(
+                ua.NodeId(f"{jp}.{m}", ns),
+                ua.QualifiedName(m, ns),
+                self._make_method(code, m),
+                [ua.VariantType.String, ua.VariantType.String],
+                [ua.VariantType.UInt64],
+            )
         res = await self._obj(jm, f"{code}.JobManagement", "JobOrderResults")
-        await self._var(res, f"{code}.JobManagement.JobOrderResults", "JobOrderResponseList",
-                        [""], ua.VariantType.String)
+        await self._var(
+            res, f"{code}.JobManagement.JobOrderResults", "JobOrderResponseList", [""], ua.VariantType.String
+        )
         self.joborders[code] = []
 
     def _make_method(self, code: str, method: str) -> Any:
         @uamethod
         def call(parent: Any, job_order_id: str = "", comment: str = "") -> int:
-            self.world.post("opc_joborder", {"machine": code, "method": method,
-                                             "job_order_id": job_order_id, "comment": comment})
+            self.world.post(
+                "opc_joborder", {"machine": code, "method": method, "job_order_id": job_order_id, "comment": comment}
+            )
             self._apply_command(code, method, job_order_id)
             return 0
+
         return call
 
     def _apply_command(self, code: str, method: str, job_id: str) -> None:
@@ -335,19 +409,39 @@ class OpcUaServer(ProtocolServer):
                 alarmed, cur = True, 4
             mode = self._sig(f"workcenters/{code}/mode")
             mode_v = 1 if mode is None or isinstance(mode.value, str) else _u64(mode.value)
-            flags = {"MachineOn": cur > 0, "MachineInitialized": cur > 0,
-                     "PowerPresent": dev.fault != "power", "Emergency": dev.fault == "emergency",
-                     "Calibrated": True, "Error": cur == 4, "Alarm": alarmed,
-                     "Warning": bool(alarm is not None and alarm.status == "warn"),
-                     "RecipeInRun": cur == 3, "Moving": cur == 3, "MaintenanceRequired": False}
+            flags = {
+                "MachineOn": cur > 0,
+                "MachineInitialized": cur > 0,
+                "PowerPresent": dev.fault != "power",
+                "Emergency": dev.fault == "emergency",
+                "Calibrated": True,
+                "Error": cur == 4,
+                "Alarm": alarmed,
+                "Warning": bool(alarm is not None and alarm.status == "warn"),
+                "RecipeInRun": cur == 3,
+                "Moving": cur == 3,
+                "MaintenanceRequired": False,
+            }
             mf = getattr(getattr(dev, "model", None), "flags", None) or {}
-            flags.update({
-                "AirPresent": True, "Safety": True, "Remote": True, "DustChipSuction": cur == 3,
-                "WorkpiecePresent": cur == 3, "Hold": False, "RecipeInSetup": False, "RecipeInHold": False,
-                "ManualActivityRequired": False, "LoadingEnabled": cur in (2, 3), "WaitUnload": False,
-                "WaitLoad": cur == 2, "FeedRuns": cur == 3,
-                "EnergySaving": bool(mf.get("EnergySaving", cur == 1)),
-                "ExternalEmergency": bool(mf.get("ExternalEmergency", False))})
+            flags.update(
+                {
+                    "AirPresent": True,
+                    "Safety": True,
+                    "Remote": True,
+                    "DustChipSuction": cur == 3,
+                    "WorkpiecePresent": cur == 3,
+                    "Hold": False,
+                    "RecipeInSetup": False,
+                    "RecipeInHold": False,
+                    "ManualActivityRequired": False,
+                    "LoadingEnabled": cur in (2, 3),
+                    "WaitUnload": False,
+                    "WaitLoad": cur == 2,
+                    "FeedRuns": cur == 3,
+                    "EnergySaving": bool(mf.get("EnergySaving", cur == 1)),
+                    "ExternalEmergency": bool(mf.get("ExternalEmergency", False)),
+                }
+            )
             flags["Emergency"] = flags["Emergency"] or flags["ExternalEmergency"]
             await self._write(f"{mp}.Overview.CurrentState", cur, True, now)
             await self._write(f"{mp}.Overview.CurrentMode", mode_v, ok, now)
@@ -361,14 +455,17 @@ class OpcUaServer(ProtocolServer):
             if cyc is not None:
                 await self._write(f"{mp}.Values.RelativeRunsTotal", _u64(cyc.value), ok, now)
             pw = self._sig(f"energy/consumers/{code}/p_now")
-            await self._write(f"{code}.ManufacturerSpecific.PowerActive",
-                              float(pw.value) if pw is not None else 0.0, ok, now)
+            await self._write(
+                f"{code}.ManufacturerSpecific.PowerActive", float(pw.value) if pw is not None else 0.0, ok, now
+            )
             if code == "GANTRY-1":
                 vac = self._sig("equipment/GANTRY-1/vacuum_kpa")
-                await self._write("GANTRY-1.ManufacturerSpecific.VacuumKpa",
-                                  float(vac.value) if vac is not None else 0.0, ok, now)
-                await self._write("GANTRY-1.ManufacturerSpecific.CyclesToday",
-                                  _u64(cyc.value) if cyc is not None else 0, ok, now)
+                await self._write(
+                    "GANTRY-1.ManufacturerSpecific.VacuumKpa", float(vac.value) if vac is not None else 0.0, ok, now
+                )
+                await self._write(
+                    "GANTRY-1.ManufacturerSpecific.CyclesToday", _u64(cyc.value) if cyc is not None else 0, ok, now
+                )
             else:
                 await self._write_joborders(code, ok, now)
         await self._emit_events()
@@ -380,14 +477,16 @@ class OpcUaServer(ProtocolServer):
         if cur and not any(j["id"] == cur for j in lst):
             lst.append({"id": cur, "state": "Running"})
         for j in lst:  # завдання з сигналу: зникло -> Ended/Completed (лишається до зміни)
-            if jsig is not None and j["state"] == "Running" and j["id"] != cur \
-                    and not j["id"].startswith("cj-"):
+            if jsig is not None and j["state"] == "Running" and j["id"] != cur and not j["id"].startswith("cj-"):
                 j["state"] = "Ended"
         base = f"{code}.JobManagement"
-        await self._write(f"{base}.JobOrderControl.JobOrderList",
-                          [j["id"] for j in lst] or [""], ok, now)
-        await self._write(f"{base}.JobOrderResults.JobOrderResponseList",
-                          [j["id"] for j in lst if j["state"] == "Ended"] or [""], ok, now)
+        await self._write(f"{base}.JobOrderControl.JobOrderList", [j["id"] for j in lst] or [""], ok, now)
+        await self._write(
+            f"{base}.JobOrderResults.JobOrderResponseList",
+            [j["id"] for j in lst if j["state"] == "Ended"] or [""],
+            ok,
+            now,
+        )
 
     def job_orders(self, code: str) -> list[dict[str, Any]]:
         return list(self.joborders.get(code, []))

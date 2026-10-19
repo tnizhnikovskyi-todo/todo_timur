@@ -1,4 +1,5 @@
 """Контракти «протокол <-> модель <-> ядро» (World + моделі + сервер у пам'яті, без мережі)."""
+
 import logging
 import re
 from pathlib import Path
@@ -64,8 +65,9 @@ def test_access_events_reach_biostar(world):
     world.post("access", {"device": "ACR-IN", "user": "OPSAW1", "code": 4102, "tna_key": "1"})
     world.advance(1)
     new = srv.store.events[before:]
-    assert any(e["user_id"] == "OPSAW1" and e["code"] == 4102 and e["tna_key"] == "1"
-               and e["device"] == "5390001" for e in new)
+    assert any(
+        e["user_id"] == "OPSAW1" and e["code"] == 4102 and e["tna_key"] == "1" and e["device"] == "5390001" for e in new
+    )
 
 
 def test_mobile_signals_feed_mqtt_telemetry(world):
@@ -97,14 +99,22 @@ def test_follow_odoo_data_drives_models(world):
     world.workcenters = {code: {"state": "ERROR", "blocked": True, "job": None, "qty_produced": 0.0}}
     world.jobs = [{"id": "WO00013", "wo_id": 13, "workcenter": code, "state": "ready", "name": "X"}]
     world.people = [{"name": "A", "barcode": "OPSAW1", "job": None, "shift": None}]
-    world.trucks = [{"code": "TRUCK-IN-1", "batch": "WH/BATCH/1", "type": "incoming", "plate": None,
-                     "dock": "DOCK-W1", "scheduled": "2026-10-12T07:40:00Z", "state": "assigned",
-                     "progress": 0.0}]
+    world.trucks = [
+        {
+            "code": "TRUCK-IN-1",
+            "batch": "WH/BATCH/1",
+            "type": "incoming",
+            "plate": None,
+            "dock": "DOCK-W1",
+            "scheduled": "2026-10-12T07:40:00Z",
+            "state": "assigned",
+            "progress": 0.0,
+        }
+    ]
     world.maintenance_closed.add("nothing")
     world.advance(30)
     assert world.devices[code].model.flags.get("ExternalEmergency") is not None
-    yard = next(d.model for d in world.devices.values() if d.driver == "yard"
-                and hasattr(d.model, "ctl"))
+    yard = next(d.model for d in world.devices.values() if d.driver == "yard" and hasattr(d.model, "ctl"))
     assert any(t["id"] == "TRUCK-IN-1" for t in yard.ctl.trucks)
 
 

@@ -8,6 +8,7 @@
 Параметри пристрою (``devices.yaml``): ``leak`` 1,6, ``q_ref`` 9,8, ``load_ref`` 66, ``load_min`` 25, ``drop`` 0,1.
 Фаза ``aggregate``: компресор уже порахував ``load`` і тиск цього тіка.
 """
+
 from __future__ import annotations
 
 import math

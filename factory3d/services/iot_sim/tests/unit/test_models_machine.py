@@ -1,4 +1,5 @@
 """R-02, R-14…R-17 (machine, io_machine) і портал R-18 (gantry); SPEC §13.1, AC-07, AC-19, AC-63."""
+
 import itertools
 import re
 from datetime import datetime
@@ -120,8 +121,9 @@ def test_fault_clear(world):
     assert sig(world, wc("SAW-1", "state")) == WORKING and sig(world, wc("SAW-1", "event")) == ""
 
 
-@pytest.mark.parametrize("reason,mid", [("emergency", "A0201"), ("power", "E0430"), ("generic", "E0400"),
-                                        ("sensor", "A0202")])
+@pytest.mark.parametrize(
+    "reason,mid", [("emergency", "A0201"), ("power", "E0430"), ("generic", "E0400"), ("sensor", "A0202")]
+)
 def test_fault_messages(world, reason, mid):
     world.advance(10)
     world.fault("EDGE-1", reason)
@@ -186,8 +188,17 @@ def test_job_order_id_format(world):
     assert job_order_id({"id": "cj-00077"}) == "cj-00077"
     assert job_order_id({"job_order_id": "cj-5", "wo_id": 3}) == "cj-5"
     assert job_order_id({"id": "abc"}) is None
-    world.jobs.append({"wo_id": 13, "workcenter": "SAW-1", "state": "progress", "name": "Розкрій",
-                       "qty": 20, "order": "WH/MO/00231", "origin": "odoo"})
+    world.jobs.append(
+        {
+            "wo_id": 13,
+            "workcenter": "SAW-1",
+            "state": "progress",
+            "name": "Розкрій",
+            "qty": 20,
+            "order": "WH/MO/00231",
+            "origin": "odoo",
+        }
+    )
     world.advance(10)
     assert sig(world, wc("SAW-1", "job")) == "WO00013"
     synth = [j["id"] for j in world.jobs if j.get("origin") == "sim"]
@@ -215,8 +226,17 @@ def test_ready_job_started_by_planner(world):
 
 
 def test_completed_job_stays_in_list(world):
-    world.jobs.append({"wo_id": 13, "workcenter": "SAW-1", "state": "progress", "origin": "sim",
-                       "qty": 4, "duration_expected": 1, "elapsed_s": 0.0})
+    world.jobs.append(
+        {
+            "wo_id": 13,
+            "workcenter": "SAW-1",
+            "state": "progress",
+            "origin": "sim",
+            "qty": 4,
+            "duration_expected": 1,
+            "elapsed_s": 0.0,
+        }
+    )
     zero_noise(world)
     world.advance(90)
     m = world.devices["SAW-1"].model

@@ -1,4 +1,5 @@
 """P-11: автоваги, SICS по TCP (SPEC §8.13.3)."""
+
 import asyncio
 
 import pytest

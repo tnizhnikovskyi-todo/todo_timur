@@ -4,6 +4,7 @@
 Хост: ``STAND_HOST`` або IP контейнера ``iot_sim-iot_sim-1`` у мережі f3d_sim (порти §8.1.3 не публікуються на хост — ТБ-01).
 Токен: ``SIM_API_TOKEN`` з ``.env``.
 """
+
 from __future__ import annotations
 
 import os
@@ -51,9 +52,14 @@ def container_ip() -> str:
     if os.environ.get("STAND_HOST"):
         return os.environ["STAND_HOST"]
     out = ""
-    for _ in range(30):      # після recreate мережа підключається не одразу
-        out = docker("inspect", CONTAINER, "-f",
-                     "{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}", check=False)
+    for _ in range(30):  # після recreate мережа підключається не одразу
+        out = docker(
+            "inspect",
+            CONTAINER,
+            "-f",
+            "{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}",
+            check=False,
+        )
         for item in out.split():
             name, _, ip = item.partition("=")
             if name.endswith("f3d_sim") and ip:

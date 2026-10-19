@@ -8,6 +8,7 @@ HTTPS (самопідписаний, ``SIM_PORT_BIOSTAR_HTTPS``) і HTTP (``SIM_
 ``name``, необов'язково ``group``). Відомий шлях + непідтримуваний метод (POST/PUT/DELETE на незмінні ресурси,
 у т. ч. ``/api/users/{id}``, ``/api/cards``) -> 405 з ``Allow``; невідомий шлях -> 404.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -40,25 +41,52 @@ DEVICES = [
     ("5390002", "ACR-ELEC", "ACR-ELEC BioEntry W3 (електрощитова)", "10.90.1.12", "2"),
     ("5390003", "ACR-CHG", "ACR-CHG BioEntry W3 (зарядна)", "10.90.1.13", "3"),
     ("5390004", "ACR-PAINT", "ACR-PAINT BioEntry W3 (склад ЛФМ)", "10.90.1.14", "4"),
-    ("5390005", "ACR-SRV", "ACR-SRV BioEntry W3 (серверна)", "10.90.1.15", "5")]
-DOORS = {"1": "Турнікет TURN-1 (вхід персоналу)", "2": "Електрощитова", "3": "Зарядна",
-         "4": "Склад ЛФМ", "5": "Серверна"}
+    ("5390005", "ACR-SRV", "ACR-SRV BioEntry W3 (серверна)", "10.90.1.15", "5"),
+]
+DOORS = {
+    "1": "Турнікет TURN-1 (вхід персоналу)",
+    "2": "Електрощитова",
+    "3": "Зарядна",
+    "4": "Склад ЛФМ",
+    "5": "Серверна",
+}
 DOOR_SHORT = {"1": "Турнікет TURN-1"}
 EVENT_TYPES = {
-    4102: "Verify Success (Card)", 4100: "Verify Success (ID+Face)", 4867: "Identify Success (Face)",
-    4865: "Identify Success (Fingerprint)", 5120: "Identify Fail", 4352: "Verify Fail",
-    6400: "Access Denied", 6401: "Access Denied (not in access group)",
-    6402: "Access Denied (user inactive)", 6403: "Access Denied (expired)",
-    6405: "Access Denied (anti-passback)", 20480: "Door Unlocked", 20736: "Door Locked",
-    20992: "Door Opened", 21248: "Door Closed", 21504: "Door Forced Open", 21760: "Door Held Open",
-    26368: "Zone Fire Alarm", 12544: "Device System Started", 15104: "TCP Connected"}
+    4102: "Verify Success (Card)",
+    4100: "Verify Success (ID+Face)",
+    4867: "Identify Success (Face)",
+    4865: "Identify Success (Fingerprint)",
+    5120: "Identify Fail",
+    4352: "Verify Fail",
+    6400: "Access Denied",
+    6401: "Access Denied (not in access group)",
+    6402: "Access Denied (user inactive)",
+    6403: "Access Denied (expired)",
+    6405: "Access Denied (anti-passback)",
+    20480: "Door Unlocked",
+    20736: "Door Locked",
+    20992: "Door Opened",
+    21248: "Door Closed",
+    21504: "Door Forced Open",
+    21760: "Door Held Open",
+    26368: "Zone Fire Alarm",
+    12544: "Device System Started",
+    15104: "TCP Connected",
+}
 # Ресурси BioStar 2, які є на реальному пристрої, але емулятор їх не обслуговує (лише читання підмножини):
 # будь-який метод на них -> 405, а не 404 (SPEC §8.12: «POST на незмінні ресурси → 405»).
 IMMUTABLE_PATHS = ("/api/users/{user_id}", "/api/cards", "/api/cards/{card_id}")
 _METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
-_COLUMN_SYNONYMS = {"device_id.id": "device", "door_id.id": "door", "event_type_id.code": "code",
-                    "user_group_id.id": "group", "user_id.user_id": "user", "datetime": "datetime",
-                    "server_datetime": "server_datetime", "id": "id"}
+_COLUMN_SYNONYMS = {
+    "device_id.id": "device",
+    "door_id.id": "door",
+    "event_type_id.code": "code",
+    "user_group_id.id": "group",
+    "user_id.user_id": "user",
+    "datetime": "datetime",
+    "server_datetime": "server_datetime",
+    "id": "id",
+}
 
 
 def _iso(t: dt.datetime) -> str:
@@ -80,8 +108,9 @@ def fail(status: int, code: str, message: str) -> JSONResponse:
 
 
 class BioStarStore:
-    def __init__(self, world: World, *, login: str = "admin", password: str = "",
-                 clock: Callable[[], float] = time.monotonic) -> None:
+    def __init__(
+        self, world: World, *, login: str = "admin", password: str = "", clock: Callable[[], float] = time.monotonic
+    ) -> None:
         self.world, self.login, self.password, self._clock = world, login, password, clock
         self.sessions: dict[str, float] = {}
         self.events: list[dict[str, Any]] = []
@@ -101,8 +130,14 @@ class BioStarStore:
                 ts = dt.datetime.fromisoformat(str(p["ts"]))
             except ValueError:
                 pass
-        self.add_event(p.get("user_id"), p.get("device") or ev.device or "ACR-IN", int(p["event_code"]),
-                       door=p.get("door"), tna_key=p.get("tna_key", ""), ts=ts)
+        self.add_event(
+            p.get("user_id"),
+            p.get("device") or ev.device or "ACR-IN",
+            int(p["event_code"]),
+            door=p.get("door"),
+            tna_key=p.get("tna_key", ""),
+            ts=ts,
+        )
 
     def _user(self, user_id: str | None) -> dict[str, Any] | None:
         if not user_id:
@@ -112,13 +147,28 @@ class BioStarStore:
                 return p
         return {"barcode": user_id, "name": str(user_id)}
 
-    def add_event(self, user_id: str | None, device: str, code: int, *, door: str | None = None,
-                  tna_key: str = "", ts: dt.datetime | None = None) -> dict[str, Any]:
+    def add_event(
+        self,
+        user_id: str | None,
+        device: str,
+        code: int,
+        *,
+        door: str | None = None,
+        tna_key: str = "",
+        ts: dt.datetime | None = None,
+    ) -> dict[str, Any]:
         ts = ts or self.world.now()
         dev = self._by_code.get(device) or DEVICES[0]
-        row = {"id": self._next_id, "ts": ts.astimezone(dt.UTC), "user_id": user_id,
-               "device": dev[0], "device_name": dev[2], "door": str(door or dev[4]),
-               "code": int(code), "tna_key": str(tna_key or "")}
+        row = {
+            "id": self._next_id,
+            "ts": ts.astimezone(dt.UTC),
+            "user_id": user_id,
+            "device": dev[0],
+            "device_name": dev[2],
+            "door": str(door or dev[4]),
+            "code": int(code),
+            "tna_key": str(tna_key or ""),
+        }
         self._next_id += 1
         self.events.append(row)
         if len(self.events) > 100_000:
@@ -132,16 +182,25 @@ class BioStarStore:
         person = self._user(e["user_id"])
         door_name = DOOR_SHORT.get(e["door"], DOORS.get(e["door"], ""))
         return {
-            "id": str(e["id"]), "server_datetime": _iso(e["ts"] + dt.timedelta(seconds=1)),
-            "datetime": _iso(e["ts"]), "index": str(e["id"] * 2 + 344),
-            "user_id": ({"user_id": str(e["user_id"]), "name": person["name"], "photo_exists": "false"}
-                        if person else {"user_id": "", "name": "", "photo_exists": "false"}),
+            "id": str(e["id"]),
+            "server_datetime": _iso(e["ts"] + dt.timedelta(seconds=1)),
+            "datetime": _iso(e["ts"]),
+            "index": str(e["id"] * 2 + 344),
+            "user_id": (
+                {"user_id": str(e["user_id"]), "name": person["name"], "photo_exists": "false"}
+                if person
+                else {"user_id": "", "name": "", "photo_exists": "false"}
+            ),
             "user_group_id": (person or {}).get("group") or DEFAULT_GROUP,
             "device_id": {"id": e["device"], "name": e["device_name"]},
             "door_id": [{"id": e["door"], "name": door_name}],
-            "event_type_id": {"code": str(e["code"])}, "tna_key": e["tna_key"], "is_dst": "0",
+            "event_type_id": {"code": str(e["code"])},
+            "tna_key": e["tna_key"],
+            "is_dst": "0",
             "timezone": {"half": "0", "hour": str(hours), "negative": "1" if off.total_seconds() < 0 else "0"},
-            "user_update_by_device": "false", "hint": f"h{e['id']}"}
+            "user_update_by_device": "false",
+            "hint": f"h{e['id']}",
+        }
 
     # --- пошук (API-45) -------------------------------------------------------------------
     @staticmethod
@@ -196,8 +255,10 @@ class BioStarStore:
             if col not in ("datetime", "id"):
                 raise ValueError(f"unsupported order column {col!r}")
             desc = str(o.get("descending", False)).lower() == "true"
-            rows.sort(key=lambda e, c=col: (e["ts"], e["id"]) if c == "datetime" else e["id"],  # type: ignore[misc]
-                      reverse=desc)
+            rows.sort(
+                key=lambda e, c=col: (e["ts"], e["id"]) if c == "datetime" else e["id"],  # type: ignore[misc]
+                reverse=desc,
+            )
         total = len(rows)
         limit = min(int(query.get("limit", 100)), MAX_LIMIT)
         hint, offset = query.get("hint"), int(query.get("offset", 0))
@@ -208,7 +269,7 @@ class BioStarStore:
                     break
             else:
                 raise ValueError("invalid hint")
-        page = rows[offset:offset + limit]
+        page = rows[offset : offset + limit]
         return {"EventCollection": {"total": str(total), "rows": [self._row(e) for e in page]}}
 
     # --- сесії --------------------------------------------------------------------------
@@ -233,17 +294,35 @@ class BioStarStore:
         return False
 
     def users(self) -> list[dict[str, Any]]:
-        rows = [{"user_id": "1", "name": "Administrator", "user_group_id": {"id": "1", "name": "All Users"},
-                 "start_datetime": "2001-01-01T00:00:00.00Z", "expiry_datetime": "2030-12-31T23:59:00.00Z",
-                 "disabled": "false", "card_count": "0", "face_count": "0", "login_id": self.login}]
+        rows = [
+            {
+                "user_id": "1",
+                "name": "Administrator",
+                "user_group_id": {"id": "1", "name": "All Users"},
+                "start_datetime": "2001-01-01T00:00:00.00Z",
+                "expiry_datetime": "2030-12-31T23:59:00.00Z",
+                "disabled": "false",
+                "card_count": "0",
+                "face_count": "0",
+                "login_id": self.login,
+            }
+        ]
         for p in self.world.people:
             if not p.get("barcode"):
                 continue
-            rows.append({"user_id": str(p["barcode"]), "name": p.get("name", ""),
-                         "user_group_id": p.get("group") or DEFAULT_GROUP,
-                         "start_datetime": "2001-01-01T00:00:00.00Z",
-                         "expiry_datetime": "2030-12-31T23:59:00.00Z", "disabled": "false",
-                         "card_count": "1", "face_count": "1", "login_id": ""})
+            rows.append(
+                {
+                    "user_id": str(p["barcode"]),
+                    "name": p.get("name", ""),
+                    "user_group_id": p.get("group") or DEFAULT_GROUP,
+                    "start_datetime": "2001-01-01T00:00:00.00Z",
+                    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+                    "disabled": "false",
+                    "card_count": "1",
+                    "face_count": "1",
+                    "login_id": "",
+                }
+            )
         return rows
 
 
@@ -262,8 +341,7 @@ def create_app(store: BioStarStore) -> FastAPI:
         store.requests += 1
         try:
             u = (await request.json())["User"]
-            good = (u.get("login_id") == store.login and bool(store.password)
-                    and u.get("password") == store.password)
+            good = u.get("login_id") == store.login and bool(store.password) and u.get("password") == store.password
         except (ValueError, KeyError, TypeError, AttributeError):
             good = False
         if not good:
@@ -272,43 +350,61 @@ def create_app(store: BioStarStore) -> FastAPI:
         sid = store.new_session()
         if sid is None:
             return fail(429, "102", "Too many sessions")
-        return ok({"User": {"user_id": "1", "name": "Administrator", "login_id": store.login}},
-                  headers={"bs-session-id": sid})
+        return ok(
+            {"User": {"user_id": "1", "name": "Administrator", "login_id": store.login}}, headers={"bs-session-id": sid}
+        )
 
     @app.post("/api/logout")
     async def logout(request: Request) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
         store.sessions.pop(request.headers["bs-session-id"], None)
         return ok()
 
     @app.get("/api/users")
     async def users(request: Request, limit: int = 100, offset: int = 0) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
         rows = store.users()
-        return ok({"UserCollection": {"total": str(len(rows)), "rows": rows[offset:offset + limit]}})
+        return ok({"UserCollection": {"total": str(len(rows)), "rows": rows[offset : offset + limit]}})
 
     @app.get("/api/devices")
     async def devices(request: Request) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
-        rows = [{"id": d[0], "name": d[2], "device_type_id": {"id": "62", "name": "BioEntry W3"},
-                 "status": "1", "ip": d[3], "port": "51211", "door": d[4]} for d in DEVICES]
+        rows = [
+            {
+                "id": d[0],
+                "name": d[2],
+                "device_type_id": {"id": "62", "name": "BioEntry W3"},
+                "status": "1",
+                "ip": d[3],
+                "port": "51211",
+                "door": d[4],
+            }
+            for d in DEVICES
+        ]
         return ok({"DeviceCollection": {"rows": rows}})
 
     @app.get("/api/doors")
     async def doors(request: Request) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
-        rows = [{"id": k, "name": v, "status": "1", "open_duration": "5",
-                 **({"entry_device_id": {"id": "5390001"}} if k == "1" else {})}
-                for k, v in DOORS.items()]
+        rows = [
+            {
+                "id": k,
+                "name": v,
+                "status": "1",
+                "open_duration": "5",
+                **({"entry_device_id": {"id": "5390001"}} if k == "1" else {}),
+            }
+            for k, v in DOORS.items()
+        ]
         return ok({"DoorCollection": {"rows": rows}})
 
     @app.post("/api/events/search")
     async def events_search(request: Request) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
         try:
             query = (await request.json())["Query"]
@@ -318,7 +414,7 @@ def create_app(store: BioStarStore) -> FastAPI:
 
     @app.get("/api/event_types")
     async def event_types(request: Request) -> Any:
-        if (err := session_error(request)):
+        if err := session_error(request):
             return err
         rows = [{"code": str(c), "name": n, "description": n} for c, n in EVENT_TYPES.items()]
         return ok({"EventTypeCollection": {"rows": rows}})
@@ -340,11 +436,16 @@ def _add_method_not_allowed(app: FastAPI) -> None:
             served.setdefault(path, set()).update(getattr(route, "methods", None) or ())
     for path in IMMUTABLE_PATHS:
         served.setdefault(path, set())
+
     def make_handler(allow: str) -> Callable[[Request], Awaitable[JSONResponse]]:
         async def handler(request: Request) -> JSONResponse:
             log.warning("BioStar 405 %s %s", request.method, request.url.path, extra={"proto": "biostar"})
-            return JSONResponse({"Response": {"code": "405", "message": "Method Not Allowed"}},
-                                status_code=405, headers={"Allow": allow})
+            return JSONResponse(
+                {"Response": {"code": "405", "message": "Method Not Allowed"}},
+                status_code=405,
+                headers={"Allow": allow},
+            )
+
         return handler
 
     for path, methods in served.items():
@@ -367,16 +468,28 @@ def ensure_cert(cert_dir: Path) -> tuple[Path, Path]:
     k = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "iot-sim")])
     now = dt.datetime.now(dt.UTC)
-    cert = (x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(k.public_key())
-            .serial_number(x509.random_serial_number()).not_valid_before(now - dt.timedelta(days=1))
-            .not_valid_after(now + dt.timedelta(days=3650))
-            .add_extension(x509.SubjectAlternativeName([
-                x509.DNSName("iot-sim"), x509.DNSName("localhost"),
-                x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]), critical=False)
-            .sign(k, hashes.SHA256()))
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(k.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - dt.timedelta(days=1))
+        .not_valid_after(now + dt.timedelta(days=3650))
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [x509.DNSName("iot-sim"), x509.DNSName("localhost"), x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]
+            ),
+            critical=False,
+        )
+        .sign(k, hashes.SHA256())
+    )
     crt.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
-    key.write_bytes(k.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL,
-                                    serialization.NoEncryption()))
+    key.write_bytes(
+        k.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption()
+        )
+    )
     key.chmod(0o600)
     return crt, key
 
@@ -384,9 +497,17 @@ def ensure_cert(cert_dir: Path) -> tuple[Path, Path]:
 class BioStarApi(ProtocolServer):
     name = "biostar"
 
-    def __init__(self, world: World, *, port_http: int = 8081, port_https: int | None = 8443,
-                 host: str = "0.0.0.0", user: str = "admin", password: str = "",
-                 cert_dir: str | Path = "./certs") -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        port_http: int = 8081,
+        port_https: int | None = 8443,
+        host: str = "0.0.0.0",
+        user: str = "admin",
+        password: str = "",
+        cert_dir: str | Path = "./certs",
+    ) -> None:
         self.world, self.host = world, host
         self.port_http, self.port_https = port_http, port_https
         self.store = BioStarStore(world, login=user, password=password)
@@ -400,9 +521,17 @@ class BioStarApi(ProtocolServer):
         if self.port_https:
             crt, key = ensure_cert(self.cert_dir)
             runner = UvicornRunner(self.app, self.host, self.port_https)
-            runner.server = uvicorn.Server(uvicorn.Config(
-                self.app, host=self.host, port=self.port_https, log_level="warning", lifespan="off",
-                ssl_certfile=str(crt), ssl_keyfile=str(key)))
+            runner.server = uvicorn.Server(
+                uvicorn.Config(
+                    self.app,
+                    host=self.host,
+                    port=self.port_https,
+                    log_level="warning",
+                    lifespan="off",
+                    ssl_certfile=str(crt),
+                    ssl_keyfile=str(key),
+                )
+            )
             runner.server.capture_signals = contextlib.nullcontext  # type: ignore[assignment,method-assign]
             self._https = runner
             await runner.start()
@@ -414,5 +543,11 @@ class BioStarApi(ProtocolServer):
 
     def health(self) -> dict[str, Any]:
         up = self._http.up and (self._https is None or self._https.up)
-        return {"proto": self.name, "up": up, "port": self.port_http, "port_https": self.port_https,
-                "sessions": len(self.store.sessions), "events": len(self.store.events)}
+        return {
+            "proto": self.name,
+            "up": up,
+            "port": self.port_http,
+            "port_https": self.port_https,
+            "sessions": len(self.store.sessions),
+            "events": len(self.store.events),
+        }

@@ -1,4 +1,5 @@
 """W3 §8.1, AC-55 (реактивна енергія): ``kvarh_total`` вводів Q1/Q2 росте на ``|q_kvar|·dt/3600`` (PM5560, pdu 3219 i64)."""
+
 import pytest
 from iot_sim.models import meter
 from iot_sim.protocols.modbus_maps import build_all

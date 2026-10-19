@@ -3,6 +3,7 @@
 ``raw = round(65535·(mA−4)/16)``, ``mA = 4 + 16·(eng−lo)/(hi−lo)``; float-регістри (``pdu30+2i``) — мА
 IEEE754, молодше слово першим. AI4–AI7 — резерв: raw 0, burnout ``fc1 pdu124+4`` = 1.
 """
+
 from __future__ import annotations
 
 from iot_sim.protocols.modbus_maps import Ctx, f32_words, to_float
@@ -29,10 +30,22 @@ def raw_of(value: float, lo: float, hi: float) -> int:
 def build(ctx: Ctx) -> None:
     um = ctx.unit(UNIT, "ADAM-6017")
     for i, (code, lo, hi) in enumerate(CHANNELS):
-        um.add_hr(i, lambda c=code, a=lo, b=hi: [raw_of(to_float(ctx.val(c)), a, b)], 1, None,  # type: ignore[misc]
-                  f"AI{i}")
-        um.add_hr(30 + 2 * i, lambda c=code, a=lo, b=hi: f32_words(  # type: ignore[misc]
-            milliamps(to_float(ctx.val(c)), a, b), little=True), 2, None, f"AI{i}_ma")
+        um.add_hr(
+            i,
+            lambda c=code, a=lo, b=hi: [raw_of(to_float(ctx.val(c)), a, b)],
+            1,
+            None,  # type: ignore[misc]
+            f"AI{i}",
+        )
+        um.add_hr(
+            30 + 2 * i,
+            lambda c=code, a=lo, b=hi: f32_words(  # type: ignore[misc]
+                milliamps(to_float(ctx.val(c)), a, b), little=True
+            ),
+            2,
+            None,
+            f"AI{i}_ma",
+        )
         um.add_bit("c", 120 + i, lambda: False, None, f"burnout{i}")
     for i in range(4, 8):
         um.add_const(i, [0], f"AI{i}")

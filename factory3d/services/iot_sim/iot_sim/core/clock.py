@@ -5,6 +5,7 @@
 ``FakeClock`` — ручний годинник для тестів: час рухається лише через ``advance()``,
 а ``World.step(dt)`` сам його просуває.
 """
+
 from __future__ import annotations
 
 import time
@@ -33,9 +34,13 @@ class FakeRealTime:
 class SimClock:
     manual = False
 
-    def __init__(self, tz: str = "Europe/Kyiv", factor: float = 1.0,
-                 sim_t0: datetime | None = None,
-                 real_time: Callable[[], float] = time.time) -> None:
+    def __init__(
+        self,
+        tz: str = "Europe/Kyiv",
+        factor: float = 1.0,
+        sim_t0: datetime | None = None,
+        real_time: Callable[[], float] = time.time,
+    ) -> None:
         self.tz = ZoneInfo(tz)
         self._real = real_time
         self.factor = float(factor)
@@ -80,8 +85,9 @@ class FakeClock(SimClock):
 
     manual = True
 
-    def __init__(self, start: datetime | str = "2026-10-12T10:30:00",
-                 tz: str = "Europe/Kyiv", factor: float = 1.0) -> None:
+    def __init__(
+        self, start: datetime | str = "2026-10-12T10:30:00", tz: str = "Europe/Kyiv", factor: float = 1.0
+    ) -> None:
         if isinstance(start, str):
             start = datetime.fromisoformat(start)
         self._fake = FakeRealTime()

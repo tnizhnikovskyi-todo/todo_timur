@@ -14,6 +14,7 @@ W2 (SPEC §8.2, R-59): ``chp/cmd`` контролера ГРЩ (прапор ``c
 False``; при ``ctl_remote = 0`` команди ігноруються з ``ack = 2``. Тривалість запуску — прапор ``chp_start_s`` (60),
 тиск газу — ``gas_bar`` (2,10); HR 40007 лишається джерелом тих самих прапорів.
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -8,6 +8,7 @@
   хоча б один SAW-*/NEST-1 (``current_state == WORKING``).
 * Імпульс видно щонайменше один тік: значення пишуться до зменшення таймерів.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -41,8 +42,11 @@ class Spark(Model):
         if fault:
             self.t_fault = FAULT_HOLD_S
         self.world.events.emit(
-            "fire", f"Іскрогасіння: іскру виявлено на магістралі аспірації над лінією {line}, гасіння 0,6 с",
-            device=self.device.code, payload={"line": line, "fault": fault, "level": "warn"})
+            "fire",
+            f"Іскрогасіння: іскру виявлено на магістралі аспірації над лінією {line}, гасіння 0,6 с",
+            device=self.device.code,
+            payload={"line": line, "fault": fault, "level": "warn"},
+        )
 
     def _working(self) -> bool:
         for code in SOURCES:

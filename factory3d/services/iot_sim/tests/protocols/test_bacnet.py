@@ -1,5 +1,6 @@
 """P-08/P-09 BACnet/IP: роутер + мережа 2, об'єкти RV/AHU/EF/BOILER, панель FACP-1 тільки читання
 (SPEC §8.10–§8.11, A-04, AC-09, AC-15, ТБ-04). Клієнт bacpypes3 на 127.0.0.1 зі своїм портом."""
+
 import asyncio
 
 import pytest
@@ -24,9 +25,15 @@ async def bacnet(world):
     await srv.start()
     cport = free_port()
     client = NormalApplication(
-        DeviceObject(objectIdentifier=("device", 4000), objectName="client", vendorIdentifier=999,
-                     maxApduLengthAccepted=1476, segmentationSupported="segmentedBoth"),
-        IPv4Address(f"127.0.0.1/8:{cport}"))
+        DeviceObject(
+            objectIdentifier=("device", 4000),
+            objectName="client",
+            vendorIdentifier=999,
+            maxApduLengthAccepted=1476,
+            segmentationSupported="segmentedBoth",
+        ),
+        IPv4Address(f"127.0.0.1/8:{cport}"),
+    )
     await asyncio.sleep(0.2)
     srv.client = client
     yield srv
@@ -66,8 +73,7 @@ async def test_device_object_properties(bacnet):
     assert await c.read_property(addr, "device,105", "protocol-revision") == 19
     assert await c.read_property(addr, "device,105", "max-apdu-length-accepted") == 1476
     assert await c.read_property(addr, "device,105", "firmware-revision") == "sim-0.1"
-    for inst, vendor in ((130, "VTS"), (131, "VENTS/Systemair"), (140, "Kalvis (emulated)"),
-                         (200, "Siemens")):
+    for inst, vendor in ((130, "VTS"), (131, "VENTS/Systemair"), (140, "Kalvis (emulated)"), (200, "Siemens")):
         a = await dev(bacnet, inst)
         assert await c.read_property(a, f"device,{inst}", "vendor-name") == vendor
 
@@ -192,8 +198,12 @@ async def test_facp_is_read_only(bacnet):
     """ТБ-04: WriteProperty -> write-access-denied; ReinitializeDevice/DCC -> service-request-denied."""
     addr = await dev(bacnet, 200)
     c = bacnet.client
-    for objid, value in (("life-safety-zone,14", "alarm"), ("binary-value,10", "inactive"),
-                         ("positive-integer-value,1", 5), ("multi-state-value,1", 2)):
+    for objid, value in (
+        ("life-safety-zone,14", "alarm"),
+        ("binary-value,10", "inactive"),
+        ("positive-integer-value,1", 5),
+        ("multi-state-value,1", 2),
+    ):
         with pytest.raises(ErrorRejectAbortNack) as ei:
             await c.write_property(addr, objid, "present-value", value, priority=8)
         assert "write-access-denied" in str(ei.value)
@@ -201,8 +211,11 @@ async def test_facp_is_read_only(bacnet):
         DeviceCommunicationControlRequest,
         ReinitializeDeviceRequest,
     )
-    for req in (ReinitializeDeviceRequest(reinitializedStateOfDevice="coldstart", destination=addr),
-                DeviceCommunicationControlRequest(enableDisable="disable", destination=addr)):
+
+    for req in (
+        ReinitializeDeviceRequest(reinitializedStateOfDevice="coldstart", destination=addr),
+        DeviceCommunicationControlRequest(enableDisable="disable", destination=addr),
+    ):
         with pytest.raises(ErrorRejectAbortNack) as ei:
             await c.request(req)
         assert "service-request-denied" in str(ei.value)

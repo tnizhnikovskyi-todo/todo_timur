@@ -8,16 +8,29 @@ MODBUS_RE = r"u\d+ fc\d+ pdu\d+(\+\d+)?"
 
 
 def _row(**kw):
-    base = {"n": "1", "code": "a/b/c", "device": "B", "protocol": "P-05", "address": "",
-            "dtype": "F32", "unit": "кВт", "scale": "×1", "nominal": "", "thresholds": "—",
-            "model": "noise (R-01)", "status": "макет"}
+    base = {
+        "n": "1",
+        "code": "a/b/c",
+        "device": "B",
+        "protocol": "P-05",
+        "address": "",
+        "dtype": "F32",
+        "unit": "кВт",
+        "scale": "×1",
+        "nominal": "",
+        "thresholds": "—",
+        "model": "noise (R-01)",
+        "status": "макет",
+    }
     base.update(kw)
     return base
 
 
 def test_catalog_load_1215(registry):
     assert len(registry.signals) == 1215
-    assert len(registry.served()) == 1064  # без protocol=none (X-35); 1017 + 9 регістрів SWB-CTRL (W1) + 28 вікна керування (W2) + 10 ресурсів (W3)
+    assert (
+        len(registry.served()) == 1064
+    )  # без protocol=none (X-35); 1017 + 9 регістрів SWB-CTRL (W1) + 28 вікна керування (W2) + 10 ресурсів (W3)
     assert sum(1 for s in registry.signals if not s.emulated) == 151
     # ASSUMPTION: devices.yaml W0 — 184 пристрої (повні 276 генерує tools/gen_devices.py пізніше)
     assert len(registry.devices) >= 276

@@ -16,6 +16,7 @@
 * ``fault(reason)`` / ``clear()`` — R-15; перевизначайте ``on_fault``/``on_clear``.
 * ``get_state()/set_state()`` — доповнюють знімок (JSON-сумісні дані).
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -79,8 +80,9 @@ class Model:
         self.device.fault = reason
         self.device.state = "offline" if reason == "comm" else "fault"
         self.on_fault(reason, **kw)
-        self.world.events.emit("fault", f"Збій {self.device.code}: {reason}",
-                               device=self.device.code, payload={"reason": reason, **kw})
+        self.world.events.emit(
+            "fault", f"Збій {self.device.code}: {reason}", device=self.device.code, payload={"reason": reason, **kw}
+        )
 
     def clear(self) -> None:
         was = self.device.fault
@@ -88,8 +90,9 @@ class Model:
         self.device.state = "ok"
         self.on_clear()
         if was:
-            self.world.events.emit("info", f"Збій {self.device.code} усунено",
-                                   device=self.device.code, payload={"reason": was})
+            self.world.events.emit(
+                "info", f"Збій {self.device.code} усунено", device=self.device.code, payload={"reason": was}
+            )
 
     def on_fault(self, reason: str, **kw: Any) -> None:
         """Хук для моделей: p_now → 0, прапори тощо."""
@@ -136,12 +139,13 @@ class NoiseModel(Model):
 
     def attach(self) -> None:
         self.noisy: list[Signal] = [
-            s for s in self.device.signals.values()
-            if s.params.get("nominal") is not None and s.params.get("noise") is not None]
+            s
+            for s in self.device.signals.values()
+            if s.params.get("nominal") is not None and s.params.get("noise") is not None
+        ]
 
     def tick(self, dt_s: float) -> None:
         now = self.world.now()
         for s in self.noisy:
-            v = noise_step(float(s.value), s.params["nominal"], s.params["noise"],
-                           self.world.r(s.code), self.dt_min)
+            v = noise_step(float(s.value), s.params["nominal"], s.params["noise"], self.world.r(s.code), self.dt_min)
             s.set(v, now)

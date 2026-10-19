@@ -17,6 +17,7 @@
 прапора ``blackout`` замінює формулу; API-F-04 — при зміні ≥ 1 кВт. Таймери (мануал 542 001 D):
 1FT 3 с, 2AT 5 с, ODT 3 с, 1RT 180 с, 2CT 180 с, 2ST 30 с.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -193,8 +194,7 @@ class Ats(Model):
             elif gen_ok and not self.b_sched:
                 self.b_sched = True
                 self._after(AT2, lambda: self.transfer(POS_II) if self.outage else None)
-            elif not gen_ok and self.cmd_t is not None and not self.fail \
-                    and self.clk - self.cmd_t >= ST2:
+            elif not gen_ok and self.cmd_t is not None and not self.fail and self.clk - self.cmd_t >= ST2:
                 self.fail = 1
                 self._info("АВР: генератор не запустився (FAIL START)", "alarm")
         elif self.test and on_load and gen_ok:
@@ -244,17 +244,30 @@ class Ats(Model):
             want = float(override)
         else:
             kw_max = float(getattr(world.settings, "genset_kw_max", 558.0))
-            want = min(kw_max, max(0.0, p_crit(world) - float(get(world, "infra/totals/chp_kw"))
-                                   - float(get(world, "infra/totals/pv_now"))
-                                   + float(get(world, "infra/totals/bess_kw"))))
+            want = min(
+                kw_max,
+                max(
+                    0.0,
+                    p_crit(world)
+                    - float(get(world, "infra/totals/chp_kw"))
+                    - float(get(world, "infra/totals/pv_now"))
+                    + float(get(world, "infra/totals/bess_kw")),
+                ),
+            )
         self.genset_kw = want
         if self.last_sent is None or abs(want - self.last_sent) >= 1.0:
             self._relay("load", {"kw": round(want, 1)})
             self.last_sent = want
 
     def get_state(self) -> dict[str, Any]:
-        return {"pos": self.pos, "src1": self.src1, "src2": self.src2, "counter": self.counter,
-                "gen_start": self.gen_start, "fail": self.fail}
+        return {
+            "pos": self.pos,
+            "src1": self.src1,
+            "src2": self.src2,
+            "counter": self.counter,
+            "gen_start": self.gen_start,
+            "fail": self.fail,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.pos = int(d.get("pos", POS_I))

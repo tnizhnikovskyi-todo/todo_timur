@@ -4,6 +4,7 @@
 Запис FC 05 у DO: командний сигнал каталогу (``yard/gates/<G>/cmd_*``) + ``world.post("yard",
 {"kind": "gate_cmd", "gate", "cmd", "value"})`` + подія ``command``; стрілою керує модель ``yard``.
 """
+
 from __future__ import annotations
 
 from iot_sim.protocols.modbus_maps import Ctx

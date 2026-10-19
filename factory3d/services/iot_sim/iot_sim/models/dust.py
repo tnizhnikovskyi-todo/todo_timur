@@ -4,6 +4,7 @@
 (1 = працює). Дрейф скидається до ``nominal`` після закриття заявки ТО (``World.maintenance_closed`` містить код
 пристрою або сигналу), після ``clear`` і коли сценарій S-04 (``filter_clogged``) знято.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -55,8 +56,7 @@ class Dust(Model):
         for key in ("airflow_m3h", "p_now"):
             s = self.sig(key)
             nominal = float(s.params.get("nominal") or 0.0) if running else 0.0
-            self.set(key, noise_step(float(s.value), nominal, s.params.get("noise") or 0.0,
-                                     self.r(key), self.dt_min))
+            self.set(key, noise_step(float(s.value), nominal, s.params.get("noise") or 0.0, self.r(key), self.dt_min))
         self.drift.step(running)
         self.set("state", 1 if running else 0)  # DUST-1 — критична лінія (R-22): працює і в острові
 

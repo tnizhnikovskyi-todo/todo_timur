@@ -4,6 +4,7 @@
 ``save()`` пише атомарно (tmp + rename); ``load()`` повертає ``None`` для пошкодженого/старого
 (> 24 год реального часу) знімка — тоді старт від каталогу.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,8 +33,11 @@ def _dt(s: str | None) -> datetime | None:
 
 
 def dump(world: World) -> dict[str, Any]:
-    runs = {rid: r.to_dict() for rid, r in world.runs.items()
-            if getattr(r, "state", "") in ("running", "queued", "stopping")}
+    runs = {
+        rid: r.to_dict()
+        for rid, r in world.runs.items()
+        if getattr(r, "state", "") in ("running", "queued", "stopping")
+    }
     return {
         "version": VERSION,
         "saved_at": time.time(),
@@ -42,14 +46,18 @@ def dump(world: World) -> dict[str, Any]:
         "seed": world.seed,
         "minute0": world.minute0,
         "catalog_hash": world.registry.catalog_hash,
-        "signals": {c: [s.value, _iso(s.ts), s.status, _iso(s.held_until)]
-                    for c, s in world.signals.items()},
+        "signals": {c: [s.value, _iso(s.ts), s.status, _iso(s.held_until)] for c, s in world.signals.items()},
         "devices": {c: d.model.to_dict() for c, d in world.devices.items()},
         "rng": {c: r.to_dict() for c, r in world._rngs.items()},
         "world": {
-            "mode": world.mode, "flags": world.flags, "workcenters": world.workcenters,
-            "jobs": world.jobs, "trucks": world.trucks, "people": world.people,
-            "balance": world.balance, "maintenance_closed": sorted(world.maintenance_closed),
+            "mode": world.mode,
+            "flags": world.flags,
+            "workcenters": world.workcenters,
+            "jobs": world.jobs,
+            "trucks": world.trucks,
+            "people": world.people,
+            "balance": world.balance,
+            "maintenance_closed": sorted(world.maintenance_closed),
             "tick_count": world.tick_count,
         },
         "runs": runs,

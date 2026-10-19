@@ -9,6 +9,7 @@ WORKING = завдання в роботі). API-завдання (``add_job``, 
 ``aisles`` ({№: gate_open}; ``set_aisle(n, True)`` -> ``blocked``), ``cycles_total``, ``status()``.
 Початкові стоси — ``params["stacks"]`` з ``devices.yaml`` (з ``locations["PLT-*"]`` демо).
 """
+
 from __future__ import annotations
 
 from collections import deque
@@ -47,22 +48,57 @@ class Gantry(Model):
         self.p_now = 0.0
 
     # --- API ----------------------------------------------------------------------------
-    def event(self, typ: str, message: str, job: str | None = None, stack: str | None = None,
-              target: str | None = None) -> None:
+    def event(
+        self, typ: str, message: str, job: str | None = None, stack: str | None = None, target: str | None = None
+    ) -> None:
         self.ev_seq += 1
-        self.events.append({"id": self.ev_seq, "ts": self.world.now().isoformat(), "type": typ, "job": job,
-                            "stack": stack, "target": target, "message": message})
+        self.events.append(
+            {
+                "id": self.ev_seq,
+                "ts": self.world.now().isoformat(),
+                "type": typ,
+                "job": job,
+                "stack": stack,
+                "target": target,
+                "message": message,
+            }
+        )
 
-    def add_job(self, target: str, sheets: int, product: str, source: str | None = None, lot: str | None = None,
-                typ: str = "feed", priority: int = 5, external_ref: str | None = None) -> dict[str, Any]:
-        avail = sum(s["qty"] for s in self.stacks.values() if s["product"] == product) if source is None \
+    def add_job(
+        self,
+        target: str,
+        sheets: int,
+        product: str,
+        source: str | None = None,
+        lot: str | None = None,
+        typ: str = "feed",
+        priority: int = 5,
+        external_ref: str | None = None,
+    ) -> dict[str, Any]:
+        avail = (
+            sum(s["qty"] for s in self.stacks.values() if s["product"] == product)
+            if source is None
             else self.stacks[source]["qty"]
+        )
         if sheets > avail:
             raise ValueError("CONFLICT")
         self.seq += 1
-        job = {"id": f"wj-{self.seq:05d}", "type": typ, "source": source, "target": target, "sheets": sheets,
-               "done": 0, "product": product, "lot": lot, "priority": priority, "external_ref": external_ref,
-               "state": "queued", "created": self.world.now().isoformat(), "started": None, "finished": None}
+        job = {
+            "id": f"wj-{self.seq:05d}",
+            "type": typ,
+            "source": source,
+            "target": target,
+            "sheets": sheets,
+            "done": 0,
+            "product": product,
+            "lot": lot,
+            "priority": priority,
+            "external_ref": external_ref,
+            "state": "queued",
+            "created": self.world.now().isoformat(),
+            "started": None,
+            "finished": None,
+        }
         self.jobs.append(job)
         return job
 
@@ -79,14 +115,20 @@ class Gantry(Model):
     def set_aisle(self, n: int, gate_open: bool) -> None:
         if self.aisles.get(n) != gate_open:
             self.aisles[n] = gate_open
-            self.event("aisle_opened" if gate_open else "aisle_closed", f"Прохід {n}: ворота "
-                       f"{'відкрито' if gate_open else 'закрито'}")
+            self.event(
+                "aisle_opened" if gate_open else "aisle_closed",
+                f"Прохід {n}: ворота {'відкрито' if gate_open else 'закрито'}",
+            )
 
     def status(self) -> dict[str, Any]:
-        return {"state": self.state, "vacuum_kpa": self.val("vacuum_kpa"), "cycles_today": self.cycles_today,
-                "cycles_total": self.cycles_total,
-                "current_job": self.cur["job"]["id"] if self.cur and self.cur["job"] else None,
-                "aisles": [{"no": n, "gate_open": o} for n, o in self.aisles.items()]}
+        return {
+            "state": self.state,
+            "vacuum_kpa": self.val("vacuum_kpa"),
+            "cycles_today": self.cycles_today,
+            "cycles_total": self.cycles_total,
+            "current_job": self.cur["job"]["id"] if self.cur and self.cur["job"] else None,
+            "aisles": [{"no": n, "gate_open": o} for n, o in self.aisles.items()],
+        }
 
     # --- вибір стосу --------------------------------------------------------------------
     @staticmethod
@@ -96,8 +138,11 @@ class Gantry(Model):
     def pick_stack(self, job: dict[str, Any]) -> dict[str, Any] | None:
         if job.get("source") and self.stacks[job["source"]]["qty"] > 0:
             return self.stacks[job["source"]]
-        cands = [s for s in self.stacks.values() if s["qty"] > 0 and (
-            job.get("product") is None or s["product"] == job["product"])]
+        cands = [
+            s
+            for s in self.stacks.values()
+            if s["qty"] > 0 and (job.get("product") is None or s["product"] == job["product"])
+        ]
         return min(cands, key=lambda s: s["id"]) if cands else None
 
     def _default_product(self) -> str | None:
@@ -106,23 +151,38 @@ class Gantry(Model):
 
     # --- цикл ---------------------------------------------------------------------------
     def _next_cycle(self) -> bool:
-        job = next((j for j in sorted(self.jobs, key=lambda x: -x["priority"])
-                    if j["state"] in ("queued", "active")), None)
+        job = next(
+            (j for j in sorted(self.jobs, key=lambda x: -x["priority"]) if j["state"] in ("queued", "active")), None
+        )
         if job is None and self.queue:
             tgt = self.queue.pop(0)
             self.seq += 1
-            job = {"id": f"wj-{self.seq:05d}", "type": "feed", "source": None, "target": tgt, "sheets": 1,
-                   "done": 0, "product": self._default_product(), "lot": None, "priority": 1, "auto": True,
-                   "external_ref": None, "state": "queued", "created": self.world.now().isoformat(),
-                   "started": None, "finished": None}
+            job = {
+                "id": f"wj-{self.seq:05d}",
+                "type": "feed",
+                "source": None,
+                "target": tgt,
+                "sheets": 1,
+                "done": 0,
+                "product": self._default_product(),
+                "lot": None,
+                "priority": 1,
+                "auto": True,
+                "external_ref": None,
+                "state": "queued",
+                "created": self.world.now().isoformat(),
+                "started": None,
+                "finished": None,
+            }
             self.jobs.append(job)
         if job is None:
             return False
         stack = self.pick_stack(job)
         if stack is None:
             job["state"], job["finished"] = "error", self.world.now().isoformat()
-            self.event("stack_empty", f"Немає листів {job['product']} для {job['target']}", job["id"],
-                       None, job["target"])
+            self.event(
+                "stack_empty", f"Немає листів {job['product']} для {job['target']}", job["id"], None, job["target"]
+            )
             return True
         if self.aisles.get(self.aisle_of(stack)):
             self.state = "blocked"
@@ -144,8 +204,12 @@ class Gantry(Model):
         self.event("sheet_placed", f"Лист покладено на {job['target']}", job["id"], stack["id"], job["target"])
         if stack["qty"] <= 0:
             self.event("stack_empty", f"Стос {stack['id']} порожній", job["id"], stack["id"], job["target"])
-            self.world.events.emit("info", f"Стос {stack['id']} порожній", device=self.device.code,
-                                   payload={"type": "stack_empty", "stack": stack["id"]})
+            self.world.events.emit(
+                "info",
+                f"Стос {stack['id']} порожній",
+                device=self.device.code,
+                payload={"type": "stack_empty", "stack": stack["id"]},
+            )
         if job.get("cancel") or job["done"] >= job["sheets"]:
             job["state"] = "cancelled" if job.get("cancel") else "done"
             job["finished"] = self.world.now().isoformat()
@@ -217,12 +281,20 @@ class Gantry(Model):
         self.set("job", self.cur["job"]["id"] if self.cur else "")
         if self.has("vacuum_kpa"):
             s = self.sig("vacuum_kpa")
-            self.set("vacuum_kpa", noise_step(float(s.value), s.params["nominal"], s.params["noise"],
-                                              self.r("vacuum_kpa"), self.dt_min))
+            self.set(
+                "vacuum_kpa",
+                noise_step(float(s.value), s.params["nominal"], s.params["noise"], self.r("vacuum_kpa"), self.dt_min),
+            )
 
     def get_state(self) -> dict[str, Any]:
-        return {"stacks": self.stacks, "jobs": self.jobs, "cycles_total": self.cycles_total,
-                "cycles_today": self.cycles_today, "seq": self.seq, "energy_wh": self.energy_wh}
+        return {
+            "stacks": self.stacks,
+            "jobs": self.jobs,
+            "cycles_total": self.cycles_total,
+            "cycles_today": self.cycles_today,
+            "seq": self.seq,
+            "energy_wh": self.energy_wh,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.stacks = d.get("stacks", self.stacks)

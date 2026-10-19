@@ -16,6 +16,7 @@
 (лічильники/часи), ``job_list()`` (JobOrderList). ``IoMachine`` (``io_machine``, P-02) — той самий
 автомат, але ``state``/``alarm`` віддаються бітом DI (``di_run``/``di_fault``).
 """
+
 from __future__ import annotations
 
 import math
@@ -42,14 +43,18 @@ MESSAGES = {
     "sensor": ("A0202", "ALARM", "AxisCommLost", "Втрата зв'язку з приводом осі"),
     "loop": ("E0440", "ERROR", "GuardOpen", "Відкрито огородження"),
 }
-ISA_STATES = {"pending": ("NotAllowedToStart", None), "waiting": ("NotAllowedToStart", None),
-              "ready": ("AllowedToStart", None), "progress": ("Running", None),
-              "done": ("Ended", "Completed"), "cancel": ("Ended", "Cancelled")}
+ISA_STATES = {
+    "pending": ("NotAllowedToStart", None),
+    "waiting": ("NotAllowedToStart", None),
+    "ready": ("AllowedToStart", None),
+    "progress": ("Running", None),
+    "done": ("Ended", "Completed"),
+    "cancel": ("Ended", "Cancelled"),
+}
 _ID_RE = re.compile(r"^(WO\d+|SIM-\d+|cj-.+)$")
 
 
-def compute_state(on: bool, init: bool, energy_saving: bool, error: bool, calibrated: bool,
-                  recipe: bool) -> int:
+def compute_state(on: bool, init: bool, energy_saving: bool, error: bool, calibrated: bool, recipe: bool) -> int:
     """``CurrentState`` строго за логікою §7.7 (R-14)."""
     if not on:
         return OFFLINE
@@ -96,16 +101,41 @@ class Machine(Model):
         self.rate = pn.get("rate") if pn.get("rate") is not None else 0.08 * p_inst
         self.noise = pn.get("noise") if pn.get("noise") is not None else 0.08
         self.flags: dict[str, bool] = dict.fromkeys(
-            ("MachineOn", "MachineInitialized", "PowerPresent", "Emergency", "Calibrated", "Error",
-             "Alarm", "Warning", "RecipeInRun", "EnergySaving", "ExternalEmergency"), False)
+            (
+                "MachineOn",
+                "MachineInitialized",
+                "PowerPresent",
+                "Emergency",
+                "Calibrated",
+                "Error",
+                "Alarm",
+                "Warning",
+                "RecipeInRun",
+                "EnergySaving",
+                "ExternalEmergency",
+            ),
+            False,
+        )
         self.flags["Calibrated"] = True
         self.current_state = OFFLINE
         self.pieces_acc = 0.0
         self.pieces_in = 0
         self.values: dict[str, float] = {
-            k: 0.0 for k in ("MachineOnTime", "ProductionTime", "WorkingTime", "StandbyTime", "ReadyTime",
-                             "ErrorTime", "PowerPresentTime", "PiecesOut", "PiecesIn", "RunsGood",
-                             "RunsTotal")}
+            k: 0.0
+            for k in (
+                "MachineOnTime",
+                "ProductionTime",
+                "WorkingTime",
+                "StandbyTime",
+                "ReadyTime",
+                "ErrorTime",
+                "PowerPresentTime",
+                "PiecesOut",
+                "PiecesIn",
+                "RunsGood",
+                "RunsTotal",
+            )
+        }
         self.relative: dict[str, float] = dict(self.values)
         self.shift_key: Any = None
         self.msg_id = ""
@@ -132,10 +162,18 @@ class Machine(Model):
         out = []
         for j in self.my_jobs():
             st, sub = isa95_state(j)
-            out.append({"JobOrderID": job_order_id(j), "State": st, "SubState": sub,
-                        "Description": j.get("name", ""), "PlannedOrderQuantity": j.get("qty"),
-                        "OrderNumbers": [j["order"]] if j.get("order") else [],
-                        "StartTime": j.get("started"), "EndTime": j.get("ended")})
+            out.append(
+                {
+                    "JobOrderID": job_order_id(j),
+                    "State": st,
+                    "SubState": sub,
+                    "Description": j.get("name", ""),
+                    "PlannedOrderQuantity": j.get("qty"),
+                    "OrderNumbers": [j["order"]] if j.get("order") else [],
+                    "StartTime": j.get("started"),
+                    "EndTime": j.get("ended"),
+                }
+            )
         return out
 
     def _next_sim_id(self) -> str:
@@ -160,27 +198,43 @@ class Machine(Model):
                 job.update(state="done", ended=self.world.now().isoformat(), qty_produced=job["qty"])
                 self.relative["RunsGood"] += 1
                 self.relative["RunsTotal"] += 1
-                self.world.events.emit("info", f"Завдання {job_order_id(job)} завершено, деталей {job['qty']}",
-                                       device=self.device.code, payload={"message_id": "I0002"})
+                self.world.events.emit(
+                    "info",
+                    f"Завдання {job_order_id(job)} завершено, деталей {job['qty']}",
+                    device=self.device.code,
+                    payload={"message_id": "I0002"},
+                )
                 job = None
         if job is None and in_shift and self.world.mode == "scenario" and not blocked:
             ready = next((j for j in self.my_jobs() if j.get("state") == "ready"), None)
             if ready is not None:
                 ready["state"], ready["started"] = "progress", self.world.now().isoformat()
             elif self.device.code not in IDLE_DEMO and not any(
-                    j.get("state") in ("ready", "progress", "pending", "waiting") for j in jobs):
+                j.get("state") in ("ready", "progress", "pending", "waiting") for j in jobs
+            ):
                 qty = JOB_QTY
-                self.world.jobs.append({
-                    "id": self._next_sim_id(), "workcenter": self.device.code, "state": "progress",
-                    "name": "Операція", "qty": qty, "qty_produced": 0, "origin": "sim",
-                    "duration_expected": 15 + self.per_unit * qty, "elapsed_s": 0.0,
-                    "started": self.world.now().isoformat(), "t": now_ep})
+                self.world.jobs.append(
+                    {
+                        "id": self._next_sim_id(),
+                        "workcenter": self.device.code,
+                        "state": "progress",
+                        "name": "Операція",
+                        "qty": qty,
+                        "qty_produced": 0,
+                        "origin": "sim",
+                        "duration_expected": 15 + self.per_unit * qty,
+                        "elapsed_s": 0.0,
+                        "started": self.world.now().isoformat(),
+                        "t": now_ep,
+                    }
+                )
 
     def _new_shift(self) -> None:
         """Початок зміни: прибрати завершені завдання, обнулити ``Relative*`` (R-16)."""
         code = self.device.code
-        self.world.jobs[:] = [j for j in self.world.jobs
-                              if not (j.get("workcenter") == code and j.get("state") in ("done", "cancel"))]
+        self.world.jobs[:] = [
+            j for j in self.world.jobs if not (j.get("workcenter") == code and j.get("state") in ("done", "cancel"))
+        ]
         for k in ("PiecesOut", "PiecesIn", "RunsGood", "RunsTotal"):
             self.values[k] += self.relative[k]  # Absolute* — ніколи не обнуляються
         self.pieces_acc = 0.0
@@ -199,12 +253,10 @@ class Machine(Model):
         self.shift_key = key
         wc = w.workcenters.get(code, {})
         blackout = w.flags.get("blackout")
-        power = not (isinstance(blackout, dict) and blackout.get("phase") == "outage") \
-            and self.device.fault != "power"
+        power = not (isinstance(blackout, dict) and blackout.get("phase") == "outage") and self.device.fault != "power"
         blocked = wc.get("working_state") == "blocked" or bool(wc.get("blocked"))  # follow_odoo: blocked
         view = drill_view(w)
-        ext_emergency = bool(view and view["steps"]["machines"]
-                             and view["zone"] == zone_of_machine(self.zone))
+        ext_emergency = bool(view and view["steps"]["machines"] and view["zone"] == zone_of_machine(self.zone))
         error = (self.device.fault not in (None, "comm")) or blocked or not power or ext_emergency
         self._plan(in_shift, error)
         task = self.active_job() is not None
@@ -219,8 +271,9 @@ class Machine(Model):
         f["Alarm"] = error
         f["RecipeInRun"] = task and not error
         f["EnergySaving"] = not in_shift and not task
-        cs = compute_state(f["MachineOn"], f["MachineInitialized"], f["EnergySaving"], f["Error"],
-                           f["Calibrated"], f["RecipeInRun"])
+        cs = compute_state(
+            f["MachineOn"], f["MachineInitialized"], f["EnergySaving"], f["Error"], f["Calibrated"], f["RecipeInRun"]
+        )
         if self.device.fault == "comm":
             cs = OFFLINE
         self.current_state = cs
@@ -239,10 +292,15 @@ class Machine(Model):
         self.set("p_now", p)
 
     def _counters(self, cs: int, dt_s: float) -> None:
-        for name, on in (("MachineOnTime", cs != OFFLINE), ("WorkingTime", cs == WORKING),
-                         ("ProductionTime", cs == WORKING), ("StandbyTime", cs == STANDBY),
-                         ("ReadyTime", cs == READY), ("ErrorTime", cs == ERROR),
-                         ("PowerPresentTime", self.flags["PowerPresent"])):
+        for name, on in (
+            ("MachineOnTime", cs != OFFLINE),
+            ("WorkingTime", cs == WORKING),
+            ("ProductionTime", cs == WORKING),
+            ("StandbyTime", cs == STANDBY),
+            ("ReadyTime", cs == READY),
+            ("ErrorTime", cs == ERROR),
+            ("PowerPresentTime", self.flags["PowerPresent"]),
+        ):
             if on:
                 self.values[name] += dt_s
                 self.relative[name] += dt_s
@@ -257,14 +315,16 @@ class Machine(Model):
         self.relative["PiecesOut"], self.relative["PiecesIn"] = done, self.pieces_in
 
     def _publish(self, cs: int) -> None:
-        self.mode = MODE_SLEEP if cs in (OFFLINE, STANDBY) else (
-            MODE_MANUAL if self.device.code.startswith(MANUAL_PREFIXES) else MODE_AUTOMATIC)
+        self.mode = (
+            MODE_SLEEP
+            if cs in (OFFLINE, STANDBY)
+            else (MODE_MANUAL if self.device.code.startswith(MANUAL_PREFIXES) else MODE_AUTOMATIC)
+        )
         self.set("state", self.state_value(cs))
         self.set("mode", self.mode)
         self.set("alarm", self.flag_value(self.flags["Alarm"]))
         self.set("pieces_out", int(self.relative["PiecesOut"]))
-        job = self.active_job() or next(
-            (j for j in self.my_jobs() if j.get("state") == "ready"), None)
+        job = self.active_job() or next((j for j in self.my_jobs() if j.get("state") == "ready"), None)
         jid = job_order_id(job) if job else ""
         self.set("job", jid or "")
         self.set("event", self.msg_id)
@@ -277,9 +337,11 @@ class Machine(Model):
         self.fault_msg = (mid, cat, name, text)
         self.msg_id = mid
         self.world.events.emit(
-            "alarm" if cat == "ALARM" else "fault", f"{self.device.code}: {text}", device=self.device.code,
-            payload={"message_id": mid, "category": cat, "message_name": name, "reason": reason,
-                     "arguments": kw})
+            "alarm" if cat == "ALARM" else "fault",
+            f"{self.device.code}: {text}",
+            device=self.device.code,
+            payload={"message_id": mid, "category": cat, "message_name": name, "reason": reason, "arguments": kw},
+        )
 
     def on_clear(self) -> None:
         self.fault_msg = None
@@ -287,9 +349,13 @@ class Machine(Model):
 
     # --- знімок -------------------------------------------------------------------------
     def get_state(self) -> dict[str, Any]:
-        return {"pieces_acc": self.pieces_acc, "values": self.values,
-                "relative": self.relative, "msg_id": self.msg_id,
-                "shift_key": [self.shift_key[0].isoformat(), self.shift_key[1]] if self.shift_key else None}
+        return {
+            "pieces_acc": self.pieces_acc,
+            "values": self.values,
+            "relative": self.relative,
+            "msg_id": self.msg_id,
+            "shift_key": [self.shift_key[0].isoformat(), self.shift_key[1]] if self.shift_key else None,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.pieces_acc = d.get("pieces_acc", 0.0)

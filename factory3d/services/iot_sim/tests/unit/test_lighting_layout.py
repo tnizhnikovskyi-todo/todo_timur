@@ -1,4 +1,5 @@
 """X-65, AC-65: розкладка світильників по лініях DALI = bms Додаток A.1 дослівно."""
+
 import csv
 from pathlib import Path
 
@@ -25,7 +26,12 @@ def test_dali_layout_matches_bms():
 def test_groups_table_matches_bms():
     for g, r in zip(GROUPS, _rows(), strict=True):
         assert (g[0], g[1], g[2], g[3], g[4]) == (
-            r["code"], r["panel"], int(r["n_fixtures"]), float(r["level_design"]), r["control"])
+            r["code"],
+            r["panel"],
+            int(r["n_fixtures"]),
+            float(r["level_design"]),
+            r["control"],
+        )
 
 
 def test_documented_examples():
@@ -39,8 +45,9 @@ def test_documented_examples():
 
 
 def test_single_device_and_exact_fill():
-    layout = dali_layout((("A", "LP-1", 1, 1.0, "shift"), ("B", "LP-1", 64, 1.0, "shift"),
-                          ("C", "LP-1", 3, 1.0, "shift")))
+    layout = dali_layout(
+        (("A", "LP-1", 1, 1.0, "shift"), ("B", "LP-1", 64, 1.0, "shift"), ("C", "LP-1", 3, 1.0, "shift"))
+    )
     assert format_dali(layout["A"]) == "@1.1.1.1"
     assert format_dali(layout["B"]) == "@1.1.2.1-64"  # 64 > 63 → нова лінія
     assert format_dali(layout["C"]) == "@1.1.3.1-3"  # лінія повна → наступна

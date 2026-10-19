@@ -14,6 +14,7 @@
 * ``world.post("access", {...})`` (S-09) — довільна подія; ``fire_drill`` (крок ``doors``) — 20480 на всіх
   дверях і 26368.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -30,9 +31,13 @@ DEVICE_ID = {c: str(5390001 + i) for i, c in enumerate(READERS)}
 EV_CARD, EV_FACE, EV_DENIED = 4102, 4867, 6400
 EV_UNLOCKED, EV_OPENED, EV_CLOSED, EV_FIRE = 20480, 20992, 21248, 26368
 NO_DEVICE_CODES = frozenset({EV_UNLOCKED, 20736, EV_OPENED, EV_CLOSED, 21504, 21760, EV_FIRE})  # двері/зона
-ROLE_ROUTES = (("OP-W1", "ACR-ELEC", (9, 51)), ("OP-W2", "ACR-PAINT", (10, 20)),
-               ("OP-W3", "ACR-CHG", (11, 15)), ("OP-W5", "ACR-CHG", (14, 40)),
-               ("OP-W7", "ACR-SRV", (13, 10)))
+ROLE_ROUTES = (
+    ("OP-W1", "ACR-ELEC", (9, 51)),
+    ("OP-W2", "ACR-PAINT", (10, 20)),
+    ("OP-W3", "ACR-CHG", (11, 15)),
+    ("OP-W5", "ACR-CHG", (14, 40)),
+    ("OP-W7", "ACR-SRV", (13, 10)),
+)
 MAX_EVENTS = 20000
 
 
@@ -54,15 +59,31 @@ class AccessCtl:
         self.drill_id: float | None = None
 
     # --- події --------------------------------------------------------------------------
-    def add(self, when: datetime, device: str, code: int, user: dict[str, Any] | None = None,
-            tna: str = "", door: int | None = None) -> dict[str, Any]:
+    def add(
+        self,
+        when: datetime,
+        device: str,
+        code: int,
+        user: dict[str, Any] | None = None,
+        tna: str = "",
+        door: int | None = None,
+    ) -> dict[str, Any]:
         self.seq += 1
         no_dev = code in NO_DEVICE_CODES  # події дверей/зони не належать зчитувачу (AC-16: 35 подій ACR-IN)
-        ev = {"id": self.seq, "datetime": when, "device": None if no_dev else device,
-              "device_id": None if no_dev else DEVICE_ID.get(device), "reader": device,
-              "user_id": user.get("barcode") if user else None, "name": user.get("name") if user else None,
-              "group": user.get("group") if user else None, "code": code, "tna_key": tna,
-              "door_id": door if door is not None else DOOR_ID.get(device), "hint": f"h{self.seq}"}
+        ev = {
+            "id": self.seq,
+            "datetime": when,
+            "device": None if no_dev else device,
+            "device_id": None if no_dev else DEVICE_ID.get(device),
+            "reader": device,
+            "user_id": user.get("barcode") if user else None,
+            "name": user.get("name") if user else None,
+            "group": user.get("group") if user else None,
+            "code": code,
+            "tna_key": tna,
+            "door_id": door if door is not None else DOOR_ID.get(device),
+            "hint": f"h{self.seq}",
+        }
         self.events.append(ev)
         if len(self.events) > MAX_EVENTS:
             del self.events[: len(self.events) - MAX_EVENTS]
@@ -72,9 +93,19 @@ class AccessCtl:
             self.on_site = max(0, self.on_site - 1)
         # контракт з BioStar (protocols/biostar_api): payload {user_id,event_code,door,tna_key}
         self.world.events.emit(
-            "access", f"Доступ {code}: {device}", device=device,
-            payload={"user_id": ev["user_id"], "event_code": code, "door": str(ev["door_id"] or ""),
-                     "tna_key": tna, "ts": when.isoformat(), "code": code, "user": ev["user_id"]})
+            "access",
+            f"Доступ {code}: {device}",
+            device=device,
+            payload={
+                "user_id": ev["user_id"],
+                "event_code": code,
+                "door": str(ev["door_id"] or ""),
+                "tna_key": tna,
+                "ts": when.isoformat(),
+                "code": code,
+                "user": ev["user_id"],
+            },
+        )
         return ev
 
     def _doors(self, when: datetime, device: str) -> None:
@@ -95,19 +126,26 @@ class AccessCtl:
             key = p.get("code") or p["barcode"]
             m = det(key) % 20
             code = verify_code(key)
-            items.append((base + timedelta(hours=6, minutes=40 + m),
-                          {"device": "ACR-IN", "user": p, "code": code, "tna": "1"}))
-            items.append((base + timedelta(hours=15, minutes=30 + m),
-                          {"device": "ACR-IN", "user": p, "code": code, "tna": "2"}))
+            items.append(
+                (base + timedelta(hours=6, minutes=40 + m), {"device": "ACR-IN", "user": p, "code": code, "tna": "1"})
+            )
+            items.append(
+                (base + timedelta(hours=15, minutes=30 + m), {"device": "ACR-IN", "user": p, "code": code, "tna": "2"})
+            )
         for who, reader, (hh, mm) in ROLE_ROUTES:
             p = by_code.get(who)
             if p is not None:
-                items.append((base + timedelta(hours=hh, minutes=mm),
-                              {"device": reader, "user": p, "code": verify_code(who), "tna": ""}))
+                items.append(
+                    (
+                        base + timedelta(hours=hh, minutes=mm),
+                        {"device": reader, "user": p, "code": verify_code(who), "tna": ""},
+                    )
+                )
         for t, it in list(items):  # двері після кожної події зчитувача: розклад лишається впорядкованим
             for off, code in ((1, EV_UNLOCKED), (2, EV_OPENED), (6, EV_CLOSED)):
-                items.append((t + timedelta(seconds=off),
-                              {"device": it["device"], "user": None, "code": code, "tna": ""}))
+                items.append(
+                    (t + timedelta(seconds=off), {"device": it["device"], "user": None, "code": code, "tna": ""})
+                )
         items.sort(key=lambda t: t[0])
         self.schedule = [(t.timestamp(), dict(it, when=t)) for t, it in items]
 
@@ -149,19 +187,32 @@ class AccessCtl:
             self._doors(ev["datetime"], device)
 
     # --- пошук (API-45) -----------------------------------------------------------------
-    def search(self, device_id: str | None = None, start: datetime | None = None,
-               end: datetime | None = None, user_id: str | None = None, code: int | None = None,
-               descending: bool = False, limit: int = 100, offset: int = 0,
-               hint: str | None = None) -> tuple[list[dict[str, Any]], int]:
-        rows = [e for e in self.events
-                if (device_id is None or device_id in (e["device"], e["device_id"]))
-                and (start is None or e["datetime"] >= start) and (end is None or e["datetime"] <= end)
-                and (user_id is None or e["user_id"] == user_id) and (code is None or e["code"] == code)]
+    def search(
+        self,
+        device_id: str | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        user_id: str | None = None,
+        code: int | None = None,
+        descending: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+        hint: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        rows = [
+            e
+            for e in self.events
+            if (device_id is None or device_id in (e["device"], e["device_id"]))
+            and (start is None or e["datetime"] >= start)
+            and (end is None or e["datetime"] <= end)
+            and (user_id is None or e["user_id"] == user_id)
+            and (code is None or e["code"] == code)
+        ]
         rows.sort(key=lambda e: (e["datetime"], e["id"]), reverse=descending)
         total = len(rows)
         if hint is not None:
             idx = next((i for i, e in enumerate(rows) if e["hint"] == hint), -1)
-            rows = rows[idx + 1:]
+            rows = rows[idx + 1 :]
         else:
             rows = rows[offset:]
         return rows[:limit], total
@@ -197,9 +248,13 @@ class Access(Model):
         if self.device.code != "ACCESS":
             return {}
         c = self.ctl
-        return {"seq": c.seq, "on_site": c.on_site, "ptr": c.ptr,
-                "day": c.day.isoformat() if c.day else None,
-                "events": [dict(e, datetime=e["datetime"].isoformat()) for e in c.events]}
+        return {
+            "seq": c.seq,
+            "on_site": c.on_site,
+            "ptr": c.ptr,
+            "day": c.day.isoformat() if c.day else None,
+            "events": [dict(e, datetime=e["datetime"].isoformat()) for e in c.events],
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         if self.device.code != "ACCESS" or not d:

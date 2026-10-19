@@ -8,6 +8,7 @@ infra/chp/gas_m3h``, ``dry = dry_nom`` при роботі ``DRY-1`` (``models.w
 
 Фаза ``aggregate``: джерела (котельня, КГУ, верстати) вже порахували свої витрати цього тіка.
 """
+
 from __future__ import annotations
 
 import math
@@ -45,9 +46,12 @@ class Gas(Model):
         w = self.world
         now = w.now()
         canteen = now.weekday() < 5 and CANTEEN_FROM <= now.time() < CANTEEN_TO
-        return {"boiler": float(get(w, BOILER_GAS)), "chp": float(get(w, CHP_GAS)),
-                "dry": self.dry_nom if is_working(w, "DRY-1") else 0.0,
-                "canteen": self.canteen_nom if canteen else 0.0}
+        return {
+            "boiler": float(get(w, BOILER_GAS)),
+            "chp": float(get(w, CHP_GAS)),
+            "dry": self.dry_nom if is_working(w, "DRY-1") else 0.0,
+            "canteen": self.canteen_nom if canteen else 0.0,
+        }
 
     def tick(self, dt_s: float) -> None:
         eps = EPS0 + EPS_AMP * self.r("flow_m3h")

@@ -1,4 +1,5 @@
 """P-05 PM5560 (SPEC §8.7.1): PDU-адреси, F32/INT64 big, службові регістри, винятки (AC-03, AC-37, AC-44)."""
+
 import struct
 
 import pytest
@@ -68,7 +69,7 @@ async def test_derived_electricals(modbus, world):
     s = f32((await hr(modbus, 11, 3075, 2)).registers)
     assert s >= p > 0
     ia = f32((await hr(modbus, 11, 2999, 2)).registers)
-    assert ia == pytest.approx(s * 1000 / (3 ** 0.5 * 400), rel=1e-4)
+    assert ia == pytest.approx(s * 1000 / (3**0.5 * 400), rel=1e-4)
     assert f32((await hr(modbus, 11, 3109, 2)).registers) == pytest.approx(50.0)
     assert f32((await hr(modbus, 11, 3019, 2)).registers) == pytest.approx(400.0)
 

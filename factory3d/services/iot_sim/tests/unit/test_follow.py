@@ -1,4 +1,5 @@
 """Режим follow_odoo (SPEC §8.9.7, A-08, A-12; AC-07, AC-63) і клієнт Odoo (API-01/API-03)."""
+
 import json
 
 import httpx
@@ -15,44 +16,115 @@ class FakeOdoo:
         self.fail = False
         self.plate_field = True
         self.data = {
-            "mrp.workcenter": [{"id": 1, "code": "SAW-1", "working_state": "normal"},
-                               {"id": 2, "code": "CNC-2", "working_state": "blocked"},
-                               {"id": 3, "code": "EDGE-1", "working_state": "normal"}],
+            "mrp.workcenter": [
+                {"id": 1, "code": "SAW-1", "working_state": "normal"},
+                {"id": 2, "code": "CNC-2", "working_state": "blocked"},
+                {"id": 3, "code": "EDGE-1", "working_state": "normal"},
+            ],
             "mrp.workorder": [
-                {"id": 13, "name": "Розкрій", "state": "progress", "workcenter_id": [1, "SAW-1"],
-                 "production_id": [5, "WH/MO/00231"], "qty_produced": 6.0, "qty_production": 40.0,
-                 "duration": 12.0, "duration_expected": 60.0, "date_start": "2026-10-12 06:00:00",
-                 "working_state": "normal"},
-                {"id": 94, "name": "Кромка", "state": "ready", "workcenter_id": [3, "EDGE-1"],
-                 "production_id": [5, "WH/MO/00231"], "qty_produced": 0, "qty_production": 40.0,
-                 "duration": 0, "duration_expected": 30.0, "date_start": False, "working_state": "normal"},
-                {"id": 20, "name": "Присадка", "state": "progress", "workcenter_id": [2, "CNC-2"],
-                 "production_id": [6, "WH/MO/00232"], "qty_produced": 1.0, "qty_production": 10.0,
-                 "duration": 3.0, "duration_expected": 20.0, "date_start": "2026-10-12 06:30:00",
-                 "working_state": "blocked"},
-                {"id": 7, "name": "Збирання", "state": "done", "workcenter_id": [1, "SAW-1"],
-                 "production_id": [4, "WH/MO/00230"], "qty_produced": 10, "qty_production": 10,
-                 "duration": 30, "duration_expected": 30, "date_start": "2026-10-12 05:00:00",
-                 "working_state": "normal"}],
+                {
+                    "id": 13,
+                    "name": "Розкрій",
+                    "state": "progress",
+                    "workcenter_id": [1, "SAW-1"],
+                    "production_id": [5, "WH/MO/00231"],
+                    "qty_produced": 6.0,
+                    "qty_production": 40.0,
+                    "duration": 12.0,
+                    "duration_expected": 60.0,
+                    "date_start": "2026-10-12 06:00:00",
+                    "working_state": "normal",
+                },
+                {
+                    "id": 94,
+                    "name": "Кромка",
+                    "state": "ready",
+                    "workcenter_id": [3, "EDGE-1"],
+                    "production_id": [5, "WH/MO/00231"],
+                    "qty_produced": 0,
+                    "qty_production": 40.0,
+                    "duration": 0,
+                    "duration_expected": 30.0,
+                    "date_start": False,
+                    "working_state": "normal",
+                },
+                {
+                    "id": 20,
+                    "name": "Присадка",
+                    "state": "progress",
+                    "workcenter_id": [2, "CNC-2"],
+                    "production_id": [6, "WH/MO/00232"],
+                    "qty_produced": 1.0,
+                    "qty_production": 10.0,
+                    "duration": 3.0,
+                    "duration_expected": 20.0,
+                    "date_start": "2026-10-12 06:30:00",
+                    "working_state": "blocked",
+                },
+                {
+                    "id": 7,
+                    "name": "Збирання",
+                    "state": "done",
+                    "workcenter_id": [1, "SAW-1"],
+                    "production_id": [4, "WH/MO/00230"],
+                    "qty_produced": 10,
+                    "qty_production": 10,
+                    "duration": 30,
+                    "duration_expected": 30,
+                    "date_start": "2026-10-12 05:00:00",
+                    "working_state": "normal",
+                },
+            ],
             "stock.picking.batch": [
-                {"id": 1, "name": "BATCH/IN/00001", "dock_id": [11, "DOCK-W1"], "scheduled_date": "2026-10-12 03:30:00",
-                 "state": "in_progress", "picking_ids": [101], "td_code": "TRUCK-IN-1", "td_truck": "Фура Iveco",
-                 "td_plate": "AA7777KT"},
-                {"id": 2, "name": "BATCH/OUT/00004", "dock_id": [12, "DOCK-E2"], "scheduled_date": "2026-10-12 08:00:00",
-                 "state": "draft", "picking_ids": [102], "td_code": "TRUCK-OUT-1", "td_truck": "Фура Volvo",
-                 "td_plate": False}],
+                {
+                    "id": 1,
+                    "name": "BATCH/IN/00001",
+                    "dock_id": [11, "DOCK-W1"],
+                    "scheduled_date": "2026-10-12 03:30:00",
+                    "state": "in_progress",
+                    "picking_ids": [101],
+                    "td_code": "TRUCK-IN-1",
+                    "td_truck": "Фура Iveco",
+                    "td_plate": "AA7777KT",
+                },
+                {
+                    "id": 2,
+                    "name": "BATCH/OUT/00004",
+                    "dock_id": [12, "DOCK-E2"],
+                    "scheduled_date": "2026-10-12 08:00:00",
+                    "state": "draft",
+                    "picking_ids": [102],
+                    "td_code": "TRUCK-OUT-1",
+                    "td_truck": "Фура Volvo",
+                    "td_plate": False,
+                },
+            ],
             "stock.location": [{"id": 11, "td_code": "DOCK-W1"}, {"id": 12, "td_code": "DOCK-E2"}],
-            "stock.picking": [{"id": 101, "name": "WH/IN/1", "state": "assigned", "picking_type_code": "incoming"},
-                              {"id": 102, "name": "WH/OUT/4", "state": "assigned", "picking_type_code": "outgoing"}],
-            "stock.move": [{"picking_id": [101, "x"], "quantity": 6.0, "product_uom_qty": 10.0},
-                           {"picking_id": [102, "y"], "quantity": 0.0, "product_uom_qty": 5.0}],
-            "hr.employee": [{"id": 1, "name": "Олег Мельник", "barcode": "OPSAW1", "job_title": "Оператор",
-                             "resource_calendar_id": [1, "Зміна 1"]}],
+            "stock.picking": [
+                {"id": 101, "name": "WH/IN/1", "state": "assigned", "picking_type_code": "incoming"},
+                {"id": 102, "name": "WH/OUT/4", "state": "assigned", "picking_type_code": "outgoing"},
+            ],
+            "stock.move": [
+                {"picking_id": [101, "x"], "quantity": 6.0, "product_uom_qty": 10.0},
+                {"picking_id": [102, "y"], "quantity": 0.0, "product_uom_qty": 5.0},
+            ],
+            "hr.employee": [
+                {
+                    "id": 1,
+                    "name": "Олег Мельник",
+                    "barcode": "OPSAW1",
+                    "job_title": "Оператор",
+                    "resource_calendar_id": [1, "Зміна 1"],
+                }
+            ],
             "resource.calendar.attendance": [
                 {"dayofweek": str(d), "hour_from": h0, "hour_to": h1}
-                for d in range(5) for h0, h1 in ((7.0, 11.5), (12.0, 15.5))],
+                for d in range(5)
+                for h0, h1 in ((7.0, 11.5), (12.0, 15.5))
+            ],
             "maintenance.request": [{"id": 35, "equipment_id": [9, "RV-05"]}],
-            "maintenance.equipment": [{"id": 9, "td_code": "RV-05"}]}
+            "maintenance.equipment": [{"id": 9, "td_code": "RV-05"}],
+        }
 
     async def search_read(self, model, domain, fields, **kw):
         self.calls.append(("search_read", model, domain))
@@ -187,6 +259,7 @@ def test_readonly_client_has_no_write_methods():
 
 def test_readonly_client_respects_allow_list():
     from iot_sim.core.outbound import OutboundDenied, OutboundGuard
+
     c = OdooReadOnly("http://evil.example:8069", "db", "u", "k", guard=OutboundGuard("odoo19"))
     with pytest.raises(OutboundDenied):
         c._call("res.partner", "search_read", [[]], {})
@@ -194,7 +267,9 @@ def test_readonly_client_respects_allow_list():
 
 # --- devices_client -----------------------------------------------------------------------
 def client_with(handler):
-    return DevicesClient("http://odoo19:8069/", "export-token", client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    return DevicesClient(
+        "http://odoo19:8069/", "export-token", client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
 
 
 async def test_get_devices_bearer_etag_304():
@@ -227,6 +302,7 @@ async def test_post_events_format(world):
     fw.on_event(world.events.emit("info", "без запуску"))  # info без run_id не пересилається
     fw.on_event(world.events.emit("yard", "двір"))
     from iot_sim.core.scenarios import ScenarioRunner
+
     run = ScenarioRunner(world).start("spark", {}, "RUN/2026/0007")
     fw.on_event(world.events.emit("scenario", "старт", run_id=run.id, payload={"state": "running"}))
     assert await fw.flush() == 2 and fw.queue == []

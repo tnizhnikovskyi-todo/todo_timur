@@ -1,4 +1,5 @@
 """Налаштування сервісу: усі змінні SIM_* (SPEC §8.2.1)."""
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -39,7 +40,9 @@ class Settings(BaseSettings):
     mqtt_url: str = "mqtt://user:pass@mosquitto:1883"
     mqtt_prefix: str = "f3d"
     lpr_push_url: str = "http://127.0.0.1:8090/sim/v1/lpr-sink"
-    lpr_push_token: str = ""  # SIM_LPR_PUSH_TOKEN: токен http_push-маршруту колектора (X-F3D-Token); порожньо — без заголовка
+    lpr_push_token: str = (
+        ""  # SIM_LPR_PUSH_TOKEN: токен http_push-маршруту колектора (X-F3D-Token); порожньо — без заголовка
+    )
     allow_outbound: str = "mosquitto,odoo19,collector,genset_relay,127.0.0.1"
     genset_relay_url: str = "http://genset_relay:8000"
     genset_relay_token: str = ""

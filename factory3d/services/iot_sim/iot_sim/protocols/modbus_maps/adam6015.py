@@ -4,6 +4,7 @@ RTD0–2 -> ``energy/transformers/T1/temp_c`` (максимум з трьох о
 (burnout ``fc1 pdu126`` = 1). ``raw = round(65535·(t+50)/200)``; float (``pdu30+2i``) — °C, молодше слово першим.
 Розкид обмоток (ПРИПУЩЕННЯ): перша = максимум, наступні на 0,4 °C і 0,8 °C нижче.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,7 +25,7 @@ def build(ctx: Ctx) -> None:
     for ch in range(6):
         code, off = SIGNALS[ch // 3], SPREAD[ch % 3]
 
-        def temp(c: Any=code, o: Any=off) -> float:
+        def temp(c: Any = code, o: Any = off) -> float:
             return to_float(ctx.val(c)) - o  # type: ignore[no-any-return]
 
         um.add_hr(ch, lambda t=temp: [raw_of(t())], 1, None, f"RTD{ch}")  # type: ignore[misc]

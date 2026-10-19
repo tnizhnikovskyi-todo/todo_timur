@@ -6,6 +6,7 @@
 
 Реєстрація у ``__main__ run``: ``ModbusServer(world, port=settings.port_modbus)``; ``await start()``.
 """
+
 from __future__ import annotations
 
 import logging

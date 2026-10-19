@@ -1,4 +1,5 @@
 """W3 §8.1, AC-55 (газ): ``GAS-MAIN`` = BOILER + КГУ + сушарка + їдальня, лічильник, прапор ``gas_extra``, сценарій ``gas_overuse``."""
+
 import asyncio
 from datetime import datetime
 
@@ -12,8 +13,11 @@ BOILER_GAS = "equipment/BOILER/gas_m3h"
 CHP_GAS = "infra/chp/gas_m3h"
 FLOW = "infra/gas/flow_m3h"
 TOTAL = "infra/gas/m3_total"
-MONDAY_10, MONDAY_20, SATURDAY_10 = (datetime(2026, 10, 12, 10, 30), datetime(2026, 10, 12, 20, 0),
-                                     datetime(2026, 10, 17, 10, 30))
+MONDAY_10, MONDAY_20, SATURDAY_10 = (
+    datetime(2026, 10, 12, 10, 30),
+    datetime(2026, 10, 12, 20, 0),
+    datetime(2026, 10, 17, 10, 30),
+)
 
 
 def val(world, code: str):
@@ -68,8 +72,12 @@ def test_canteen_weekdays_0800_1600_only(world):
     branches(world, boiler=0.0, at=SATURDAY_10)
     world.step(10)
     assert gas.branches()["canteen"] == 0.0
-    for at, canteen in ((datetime(2026, 10, 12, 7, 59), 0.0), (datetime(2026, 10, 12, 8, 0), 1.0),
-                        (datetime(2026, 10, 12, 15, 59), 1.0), (datetime(2026, 10, 12, 16, 0), 0.0)):
+    for at, canteen in (
+        (datetime(2026, 10, 12, 7, 59), 0.0),
+        (datetime(2026, 10, 12, 8, 0), 1.0),
+        (datetime(2026, 10, 12, 15, 59), 1.0),
+        (datetime(2026, 10, 12, 16, 0), 0.0),
+    ):
         world.clock.set(at)
         assert gas.branches()["canteen"] == canteen
 

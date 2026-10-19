@@ -1,4 +1,5 @@
 """R-28 (СКУД BioStar); SPEC §13.1, AC-16, AC-55."""
+
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -9,17 +10,41 @@ from iot_sim.models.access import DEVICE_ID, EV_CARD, EV_DENIED, EV_FACE, verify
 pytestmark = pytest.mark.unit
 
 KYIV = ZoneInfo("Europe/Kyiv")
-CODES = (["OP-SAW-1", "OP-SAW-2", "OP-SLIDE-1", "OP-NEST-1", "OP-EDGE-1", "OP-EDGE-2", "OP-CNC-3", "OP-CNC-1",
-          "OP-CNC-2", "OP-BORE-1", "OP-CNC-4", "OP-DOWEL-1", "OP-SAND-1", "OP-AUTOSPRAY-1", "OP-HINGE-1",
-          "OP-GLUE-1", "OP-PRESS-1", "OP-SPRAY-1", "OP-ASMLINE-1", "OP-ASM-1", "OP-ASM-2", "OP-ASM-3",
-          "OP-ASM-4", "OP-ASM-6", "OP-PACK-1", "OP-PACK-2", "OP-BOX-1", "OP-PACKLINE-1"]
-         + [f"OP-W{i}" for i in range(1, 8)])
+CODES = [
+    "OP-SAW-1",
+    "OP-SAW-2",
+    "OP-SLIDE-1",
+    "OP-NEST-1",
+    "OP-EDGE-1",
+    "OP-EDGE-2",
+    "OP-CNC-3",
+    "OP-CNC-1",
+    "OP-CNC-2",
+    "OP-BORE-1",
+    "OP-CNC-4",
+    "OP-DOWEL-1",
+    "OP-SAND-1",
+    "OP-AUTOSPRAY-1",
+    "OP-HINGE-1",
+    "OP-GLUE-1",
+    "OP-PRESS-1",
+    "OP-SPRAY-1",
+    "OP-ASMLINE-1",
+    "OP-ASM-1",
+    "OP-ASM-2",
+    "OP-ASM-3",
+    "OP-ASM-4",
+    "OP-ASM-6",
+    "OP-PACK-1",
+    "OP-PACK-2",
+    "OP-BOX-1",
+    "OP-PACKLINE-1",
+] + [f"OP-W{i}" for i in range(1, 8)]
 
 
 @pytest.fixture
 def people():
-    return [{"code": c, "barcode": c.replace("-", ""), "name": f"Працівник {c}", "group": "Виробництво"}
-            for c in CODES]
+    return [{"code": c, "barcode": c.replace("-", ""), "name": f"Працівник {c}", "group": "Виробництво"} for c in CODES]
 
 
 @pytest.fixture
@@ -100,8 +125,11 @@ def test_exit_and_roles_after_shift(world, ctl):
     world.advance(10)
     outs = [e for e in ctl.events if e["tna_key"] == "2"]
     assert len(outs) == 35 and all(
-        datetime(2026, 10, 12, 15, 30, tzinfo=KYIV) <= e["datetime"].astimezone(KYIV)
-        < datetime(2026, 10, 12, 15, 50, tzinfo=KYIV) for e in outs)
+        datetime(2026, 10, 12, 15, 30, tzinfo=KYIV)
+        <= e["datetime"].astimezone(KYIV)
+        < datetime(2026, 10, 12, 15, 50, tzinfo=KYIV)
+        for e in outs
+    )
     assert ctl.on_site == 0 and world.signals["access/turnstiles/TURNSTILES/on_site"].value == 0
 
 
@@ -151,8 +179,10 @@ def test_snapshot_roundtrip(world, ctl):
 
 
 def test_fire_drill_doors_once(world, ctl):
-    world.set_flag("fire_drill", {"zone": "FA-CNC", "detector": "", "real": False,
-                                  "t0": world.now().isoformat(), "phase": "active"})
+    world.set_flag(
+        "fire_drill",
+        {"zone": "FA-CNC", "detector": "", "real": False, "t0": world.now().isoformat(), "phase": "active"},
+    )
     for _ in range(30):
         world.step(1)
     assert sum(1 for e in ctl.events if e["code"] == 26368) == 1

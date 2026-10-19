@@ -1,4 +1,5 @@
 """W3 §8.1, AC-55/AC-56 (вода і котельня): ``gas_m3h`` котельні, підживлення ``boiler_m3_total``, прапор/сценарій ``water_leak``."""
+
 import asyncio
 from datetime import datetime
 
@@ -13,8 +14,12 @@ TOTAL = "infra/water/boiler_m3_total"
 FLOW = "infra/water/boiler_flow_m3h"
 MAIN_FLOW = "infra/water/flow_m3h"
 SHIFT_10, NIGHT_2330, NIGHT_0600, DAY_0630, EVENING_2259 = (
-    datetime(2026, 10, 12, 10, 30), datetime(2026, 10, 12, 23, 30), datetime(2026, 10, 13, 6, 0),
-    datetime(2026, 10, 13, 6, 30), datetime(2026, 10, 12, 22, 59))
+    datetime(2026, 10, 12, 10, 30),
+    datetime(2026, 10, 12, 23, 30),
+    datetime(2026, 10, 13, 6, 0),
+    datetime(2026, 10, 13, 6, 30),
+    datetime(2026, 10, 12, 22, 59),
+)
 
 
 def val(world, code: str):
@@ -142,8 +147,10 @@ def test_modbus_u84_boiler_counter(world):
 
 
 # --- water_leak ---------------------------------------------------------------------------------------
-@pytest.mark.parametrize(("at", "leaking"), [
-    (SHIFT_10, False), (EVENING_2259, False), (NIGHT_2330, True), (NIGHT_0600, True), (DAY_0630, False)])
+@pytest.mark.parametrize(
+    ("at", "leaking"),
+    [(SHIFT_10, False), (EVENING_2259, False), (NIGHT_2330, True), (NIGHT_0600, True), (DAY_0630, False)],
+)
 def test_water_leak_window_2300_0630(world, at, leaking):
     """AC-56: ``water_leak`` — нічний витрата води +0,5 м³/год при ``23:00 ≤ t < 06:30`` (число або словник)."""
     idle_world(world, state=2, at=at)

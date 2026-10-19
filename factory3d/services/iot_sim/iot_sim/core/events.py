@@ -1,4 +1,5 @@
 """Події емулятора (SPEC §8.2.4): ``Event`` і ``EventBus`` (кільцевий буфер 10 000, API-19)."""
+
 from __future__ import annotations
 
 import os
@@ -47,9 +48,15 @@ class Event:
     seq: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "ts": self.ts.isoformat(), "kind": self.kind,
-                "device": self.device, "run_id": self.run_id, "message": self.message,
-                "payload": self.payload}
+        return {
+            "id": self.id,
+            "ts": self.ts.isoformat(),
+            "kind": self.kind,
+            "device": self.device,
+            "run_id": self.run_id,
+            "message": self.message,
+            "payload": self.payload,
+        }
 
 
 class EventBus:
@@ -65,26 +72,35 @@ class EventBus:
     def subscribe(self, fn: Callable[[Event], None]) -> None:
         self.subscribers.append(fn)
 
-    def emit(self, kind: str, message: str, device: str | None = None,
-             run_id: str | None = None, payload: dict[str, Any] | None = None) -> Event:
+    def emit(
+        self,
+        kind: str,
+        message: str,
+        device: str | None = None,
+        run_id: str | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> Event:
         if kind not in KINDS:
             raise ValueError(f"unknown event kind {kind!r}")
         self.seq += 1
-        ev = Event(f"e-{ulid()}", self._now(), kind, message, device, run_id,
-                   dict(payload or {}), self.seq)
+        ev = Event(f"e-{ulid()}", self._now(), kind, message, device, run_id, dict(payload or {}), self.seq)
         self.ring.append(ev)
         self.counts[kind] += 1
         for fn in list(self.subscribers):
             fn(ev)
         return ev
 
-    def since(self, cursor: int = 0, limit: int = 1000, kind: str | None = None,
-              device: str | None = None) -> tuple[list[Event], int]:
+    def since(
+        self, cursor: int = 0, limit: int = 1000, kind: str | None = None, device: str | None = None
+    ) -> tuple[list[Event], int]:
         """Події з ``seq > cursor`` і новий курсор. ``CursorGone``, якщо курсор витіснено."""
         if self.ring and cursor and cursor < self.ring[0].seq - 1:
             raise CursorGone(cursor)
-        out = [e for e in self.ring if e.seq > cursor
-               and (kind is None or e.kind == kind) and (device is None or e.device == device)]
+        out = [
+            e
+            for e in self.ring
+            if e.seq > cursor and (kind is None or e.kind == kind) and (device is None or e.device == device)
+        ]
         out = out[:limit]
         return out, (out[-1].seq if out else cursor)
 

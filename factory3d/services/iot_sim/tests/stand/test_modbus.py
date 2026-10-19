@@ -1,4 +1,5 @@
 """ТК-02, 06, 07, 09, 12 (Modbus: лічильники, I/O, інженерія, енергетика). AC-03/11/12/14/20/37/44/52/53."""
+
 import time
 
 import pytest
@@ -34,7 +35,7 @@ def test_tk02_pm5560_counters_and_io(api, mb):
     assert mb.raw_hr(11, 9998).exception_code == 0x02
     api.put("/signals/workcenters/SLIDE-1/pieces_out", {"value": 65537, "hold_s": 60})
     time.sleep(2.5)
-    assert mb.hr(80, 0, 2) == [1, 1]            # AC-52: молодше слово першим
+    assert mb.hr(80, 0, 2) == [1, 1]  # AC-52: молодше слово першим
     assert u32_le(mb.hr(80, 0, 2)) == 65537
     # 5) FC05 u86 pdu16 → DI0 (AC-44); FC06 u11 3059 → виняток 0x02
     assert not mb.c.write_coil(16, True, slave=86).isError()
@@ -60,7 +61,7 @@ def test_tk06_engineering_compressor_dust_water(api, mb):
     # AC-12/AC-52: u70 pdu3001 = pressure·1000, load (pdu3009) ≥ 80 при WORKING
     ps = api.sig("equipment/COMPRESSOR/pressure_bar")
     assert mb.hr(70, 3001)[0] == pytest.approx(ps * 1000, rel=0.02)
-    load = api.sig("equipment/COMPRESSOR/load")      # AC-12 (≥ 80 — лише коли всі 35 РЦ WORKING; на стенді 13/35)
+    load = api.sig("equipment/COMPRESSOR/load")  # AC-12 (≥ 80 — лише коли всі 35 РЦ WORKING; на стенді 13/35)
     assert mb.hr(70, 3009)[0] == pytest.approx(load, abs=3) and load >= 25
     assert ps >= 6.0
     api.scenario("compressor_fault", kind="pressure_drop", duration_s=900)
@@ -77,7 +78,7 @@ def test_tk06_engineering_compressor_dust_water(api, mb):
     assert all(0 < x < 65535 for x in t)
     assert len(mb.di(84, 0, 2)) == 2
     w0 = u32_le(mb.hr(84, 16, 2))
-    time.sleep(10)   # 10 хв sim
+    time.sleep(10)  # 10 хв sim
     assert u32_le(mb.hr(84, 16, 2)) >= w0
 
 
@@ -89,7 +90,7 @@ def test_tk07_energy_blackout(api, mb):
     pv = sum(s32(mb.hr(u, 32080, 2)) for u in range(61, 69))
     assert pv > 0
     assert mb.hr(61, 32089)
-    assert api.post("/scenario/pv_cloudy/stop").status_code == 200    # домен energy зайнятий (409)
+    assert api.post("/scenario/pv_cloudy/stop").status_code == 200  # домен energy зайнятий (409)
     assert mb.hr(69, 37001, 2) is not None
     assert len(mb.hr(72, 40000, 4)) == 4
     # блок без перекриттів (X-51): широке читання дає виняток 0x02
@@ -122,8 +123,8 @@ def test_tk09_spark_and_smoke(api, mb):
         edges += 1 if d and not prev else 0
         prev = d
         time.sleep(0.1)
-    assert edges == 2, edges                                     # імпульси DI0
-    assert u32_le(mb.hr(85, 0, 2)) == c0 + 2                     # count_today += 2
+    assert edges == 2, edges  # імпульси DI0
+    assert u32_le(mb.hr(85, 0, 2)) == c0 + 2  # count_today += 2
     # DO0 (FC05 pdu16) → клапани димовидалення DI4 через 60 с sim
     api.post("/time", {"factor": 30})
     assert mb.di(85, 4)[0] == 0
@@ -139,11 +140,11 @@ def test_tk12_machines_without_interface(api, mb):
     assert len(mb.hr(83, 0, 20)) == 20
     c0 = u32_le(mb.hr(82, 16, 2))
     api.post("/time", {"factor": 60})
-    time.sleep(10)           # ≈10 хв sim
+    time.sleep(10)  # ≈10 хв sim
     c1 = u32_le(mb.hr(82, 16, 2))
     assert c1 >= c0
     api.post("/scenario/machine_fault/start", {"params": {"device": "ASM-3", "reason": "emergency"}})
     time.sleep(3)
     di = mb.di(83, 0, 12)
-    assert di[3] == 1 and di[2] == 0          # ASM-3: аварія=1, в роботі=0
+    assert di[3] == 1 and di[2] == 0  # ASM-3: аварія=1, в роботі=0
     assert api.post("/device/ASM-3/clear").status_code == 200

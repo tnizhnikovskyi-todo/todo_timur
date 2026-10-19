@@ -1,4 +1,5 @@
 """P-08 HelvarNet (SPEC §8.10.4): кадри, версії, склад груп (AC-65), C:110, команди + push, часткові кадри."""
+
 import asyncio
 import inspect
 
@@ -18,7 +19,7 @@ class Client:
         while True:
             m = [i for i, ch in enumerate(self.buf) if ch in "#$"]
             if m:
-                out, self.buf = self.buf[: m[0] + 1], self.buf[m[0] + 1:]
+                out, self.buf = self.buf[: m[0] + 1], self.buf[m[0] + 1 :]
                 return out
             data = await asyncio.wait_for(self.r.read(4096), timeout)
             assert data, "з'єднання закрито"
@@ -130,8 +131,8 @@ async def test_c110_fault_and_blackout(helvar, world):
     assert await c.ask(">V:2,C:110,@1.2.1.6#") == "?V:2,C:110,@1.2.1.6=0#"
     world.clear_flag("lighting_scene")
     world.set_flag("blackout", {"phase": "outage"})
-    assert await c.ask(">V:2,C:110,@1.2.1.1#") == "?V:2,C:110,@1.2.1.1=0#"   # звичайні — без бітів
-    assert await c.ask(">V:2,C:152,@1.2.1.1#") == "?V:2,C:152,@1.2.1.1=0#"   # рівень 0
+    assert await c.ask(">V:2,C:110,@1.2.1.1#") == "?V:2,C:110,@1.2.1.1=0#"  # звичайні — без бітів
+    assert await c.ask(">V:2,C:152,@1.2.1.1#") == "?V:2,C:152,@1.2.1.1=0#"  # рівень 0
     em = helvar.layout.emergency[0]
     assert await c.ask(f">V:2,C:110,{em}#") == f"?V:2,C:110,{em}=1024#"  # 0x400
 

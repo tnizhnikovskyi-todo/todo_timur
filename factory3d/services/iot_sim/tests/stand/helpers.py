@@ -1,4 +1,5 @@
 """Спільні помічники стендових тестів: Modbus-клієнт, розбір регістрів."""
+
 from __future__ import annotations
 
 import struct

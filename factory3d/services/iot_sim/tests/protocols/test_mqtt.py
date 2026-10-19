@@ -1,4 +1,5 @@
 """P-06: MQTT-телематика (SPEC §8.8) на моку paho-клієнта (брокер не потрібен)."""
+
 import json
 
 import pytest
@@ -62,7 +63,12 @@ def connect(p):
 
 def test_parse_url():
     assert parse_mqtt_url("mqtt://u:p%40@mosquitto:1884") == {
-        "host": "mosquitto", "port": 1884, "user": "u", "password": "p@", "tls": False}
+        "host": "mosquitto",
+        "port": 1884,
+        "user": "u",
+        "password": "p@",
+        "tls": False,
+    }
     assert parse_mqtt_url("mqtt://mosquitto")["port"] == 1883
 
 
@@ -94,7 +100,8 @@ async def test_telemetry_topic_payload_qos(pub, world):
     for k in ("ts", "code", "state", "battery_pct", "hours", "x", "y", "faults"):
         assert k in body
     assert body["code"] == "FL-1" and body["battery_pct"] == pytest.approx(
-        world.devices["FL-1"].signals["battery"].value, abs=0.06)
+        world.devices["FL-1"].signals["battery"].value, abs=0.06
+    )
     assert body["state"] in ("idle", "busy", "to_charge", "charging", "offline", "fault")
     assert 0 <= body["battery_pct"] <= 100 and isinstance(body["faults"], list)
 

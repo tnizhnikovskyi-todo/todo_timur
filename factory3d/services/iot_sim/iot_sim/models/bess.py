@@ -17,6 +17,7 @@ W2 (SPEC §8.2, R-59): режими контролера (прапор ``bess_mo
 у ``try_set_mode`` (розряд при SOC ≤ ``reserve_pct`` або температурі шафи > 40 °C): режим не змінюється. Баланс із
 примусовим зарядом: імпорт ``grid = max(0, load + заряд − gen − розряд)``, експорт — навпаки.
 """
+
 from __future__ import annotations
 
 from typing import Any

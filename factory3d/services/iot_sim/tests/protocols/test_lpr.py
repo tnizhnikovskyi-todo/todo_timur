@@ -1,4 +1,5 @@
 """P-11: Axis LPV push (SPEC §8.13.2; AC-18, AC-53, AC-54)."""
+
 import asyncio
 import json
 from datetime import datetime
@@ -43,9 +44,16 @@ async def settle():
 
 def test_build_axis_payload_example():
     ts = datetime.fromisoformat("2026-10-14T08:15:05.507+03:00")
-    body = build_axis_payload({"camera": "CAM-05", "plate": "AA4512KT", "state": "new",
-                               "booking": {"batch": "BATCH/OUT/00004", "dock": "DOCK-E2", "partner": "Меблі Дім (демо)"}},
-                              ts, counter=2117397)
+    body = build_axis_payload(
+        {
+            "camera": "CAM-05",
+            "plate": "AA4512KT",
+            "state": "new",
+            "booking": {"batch": "BATCH/OUT/00004", "dock": "DOCK-E2", "partner": "Меблі Дім (демо)"},
+        },
+        ts,
+        counter=2117397,
+    )
     assert body["capture_timestamp"] == body["frame_timestamp"] == "1791954905507"
     assert body["capture_ts"] == "1791954905507000000" and body["datetime"] == "20261014 081505507"
     assert body["plateText"] == "AA4512KT" and body["plateUnicode"] == "АА4512КТ"
@@ -67,8 +75,12 @@ async def test_event_with_lpr_payload_is_posted_json(world):
     rec = Recorder()
     p = make(world, rec)
     await p.start()
-    world.events.emit("yard", "в'їзд", device="CAM-05",
-                      payload={"lpr": {"camera": "CAM-05", "plate": "AA4512KT", "state": "new", "booking": None}})
+    world.events.emit(
+        "yard",
+        "в'їзд",
+        device="CAM-05",
+        payload={"lpr": {"camera": "CAM-05", "plate": "AA4512KT", "state": "new", "booking": None}},
+    )
     world.events.emit("yard", "без lpr", device="CAM-05", payload={})
     await settle()
     assert len(rec.calls) == 1
@@ -148,6 +160,7 @@ async def test_token_resent_on_every_retry(world):
 
 def test_settings_read_lpr_push_token_from_env(monkeypatch):
     from iot_sim.config import Settings
+
     monkeypatch.setenv("SIM_LPR_PUSH_TOKEN", "tok-0123456789abcdef")
     assert Settings(_env_file=None).lpr_push_token == "tok-0123456789abcdef"
     monkeypatch.delenv("SIM_LPR_PUSH_TOKEN")

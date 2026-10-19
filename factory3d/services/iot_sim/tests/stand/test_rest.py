@@ -1,4 +1,5 @@
 """ТК-13 (REST і стоп-крани), ТБ-02/03/09-частково, ТП-05, ТК-14 (час), ТК-16 (рестарт)."""
+
 import re
 import statistics
 import time
@@ -10,10 +11,19 @@ from .conftest import docker
 
 
 def test_tk13_endpoints_with_and_without_token(api):
-    for path in ("/status", "/devices", "/devices/CNC-2", "/scenarios", "/runs", "/signals", "/events",
-                 "/catalog/signals.csv", "/catalog/devices.json"):
+    for path in (
+        "/status",
+        "/devices",
+        "/devices/CNC-2",
+        "/scenarios",
+        "/runs",
+        "/signals",
+        "/events",
+        "/catalog/signals.csv",
+        "/catalog/devices.json",
+    ):
         assert api.get(path).status_code == 200, path
-    for path in ("/status", "/devices", "/signals"):   # ≤ 5 хибних на хвилину: далі — блокування IP (ТБ-02)
+    for path in ("/status", "/devices", "/signals"):  # ≤ 5 хибних на хвилину: далі — блокування IP (ТБ-02)
         assert api.get(path, auth=False).status_code == 401, path
     assert api.get("/health", auth=False).json()["status"] == "ok"
     assert api.get("/metrics", auth=False).status_code in (200, 401)
@@ -27,7 +37,7 @@ def test_tk13_stop_all_resume(api):
     r = api.post("/scenario/shift/start", {"params": {}})
     assert r.status_code == 423
     assert api.post("/device/CNC-2/fault", {"reason": "generic"}).status_code == 423
-    assert api.get("/status").status_code == 200      # читання працює
+    assert api.get("/status").status_code == 200  # читання працює
     assert api.post("/resume").status_code == 200
     assert api.post("/scenario/shift/start", {"params": {}}).status_code == 201
 
@@ -40,7 +50,7 @@ def test_tk13_put_signal_hold(api):
     assert api.sig(code) == 77
     assert api.put("/signals/" + code, {"release": True}).status_code == 200
     assert api.put("/signals/" + code, {"value": 1, "hold_s": 999999}).status_code == 422
-    assert api.get("/signals/equipment/GANTRY-1/stacks").status_code == 404   # X-76
+    assert api.get("/signals/equipment/GANTRY-1/stacks").status_code == 404  # X-76
 
 
 def test_tk13_sim_enabled_0_restart(api, token):
@@ -48,12 +58,14 @@ def test_tk13_sim_enabled_0_restart(api, token):
     import subprocess
 
     from .conftest import ROOT
+
     off = ROOT / "tests" / "stand" / "_off.override.yml"
-    off.write_text("services:\n  iot_sim:\n    environment:\n      SIM_ENABLED: \"0\"\n")
+    off.write_text('services:\n  iot_sim:\n    environment:\n      SIM_ENABLED: "0"\n')
     base = "docker compose -f docker-compose.sim.yml --profile dev"
     env = dict(__import__("os").environ)
-    subprocess.run((base + f" -f {off} up -d --force-recreate iot_sim").split(), cwd=ROOT, env=env, check=True,
-                   capture_output=True)
+    subprocess.run(
+        (base + f" -f {off} up -d --force-recreate iot_sim").split(), cwd=ROOT, env=env, check=True, capture_output=True
+    )
     try:
         for _ in range(40):
             try:
@@ -67,8 +79,9 @@ def test_tk13_sim_enabled_0_restart(api, token):
         assert httpx.post("http://127.0.0.1:8090/sim/v1/resume", headers=h).status_code == 423
     finally:
         off.unlink()
-        subprocess.run((base + " up -d --force-recreate iot_sim").split(), cwd=ROOT, env=env, check=True,
-                       capture_output=True)
+        subprocess.run(
+            (base + " up -d --force-recreate iot_sim").split(), cwd=ROOT, env=env, check=True, capture_output=True
+        )
         for _ in range(40):
             try:
                 if httpx.get("http://127.0.0.1:8090/sim/v1/health", timeout=2).status_code == 200:
@@ -101,13 +114,14 @@ def test_tb03_injections(api):
         cur = cur["a"]
     assert api.post("/scenario/shift/start", {"params": deep}).status_code in (400, 422)
     assert api.post("/scenario/shift; DROP/start", {"params": {}}).status_code == 404
-    assert api.get("/status").status_code == 200       # сервіс живий
+    assert api.get("/status").status_code == 200  # сервіс живий
     log = docker("logs", "iot_sim-iot_sim-1", check=False)
     assert "Traceback" not in "\n".join(l for l in log.splitlines() if "Unhandled" in l or "ASGI" in l)
 
 
 def test_tb06_no_secrets_in_logs(env_get):
     import subprocess
+
     r = subprocess.run(["docker", "logs", "iot_sim-iot_sim-1"], check=False, capture_output=True, text=True)
     log = r.stdout + r.stderr
     for key in ("SIM_API_TOKEN", "SIM_BIOSTAR_PASS", "SIM_WOODSTORE_APIKEY", "SIM_JOBS_APIKEY", "SIM_OPCUA_PASS"):
@@ -141,8 +155,9 @@ def test_tk14_time_factor(api):
     time.sleep(10)
     t1 = api.get("/status").json()["sim_now"]
     from datetime import datetime
+
     d = (datetime.fromisoformat(t1) - datetime.fromisoformat(t0)).total_seconds()
-    assert 85 <= d <= 115, d       # 10 с реального × 10
+    assert 85 <= d <= 115, d  # 10 с реального × 10
     assert api.post("/time", {"factor": 500}).status_code == 422
 
 
@@ -165,5 +180,5 @@ def test_tk16_restore_after_restart(api):
     time.sleep(2)
     assert "restored" in docker("logs", "iot_sim-iot_sim-1", check=False)
     after = api.sig("workcenters/SAW-1/pieces_out")
-    assert after >= before * 0.5          # лічильники продовжені, не скинуті в 0 (AC-48)
+    assert after >= before * 0.5  # лічильники продовжені, не скинуті в 0 (AC-48)
     assert api.get("/devices/CNC-3").json()["state"] == "fault"

@@ -8,6 +8,7 @@
 
 W3 (SPEC §8.1): ``gas_m3h = heat_kw / (BOILER_ETA · GAS_KWH_M3)`` (0,914 · 10,5; при ``heat_kw = 0`` → 0): 390 кВт → 40,6 м³/год.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,13 +23,16 @@ SUPPLY_ON, SUPPLY_OFF = 78.0, 65.0
 SILO_REFILL = 95.0
 SILO_RATE = 0.02
 SILO_LIMIT = 15.0
-BOILER_ETA = 0.914   # ККД котла (брикет/газ — W3 §8.1)
-GAS_KWH_M3 = 10.5    # теплотворність природного газу, кВт·год/м³
+BOILER_ETA = 0.914  # ККД котла (брикет/газ — W3 §8.1)
+GAS_KWH_M3 = 10.5  # теплотворність природного газу, кВт·год/м³
 
 
 def heat_total_vent(world: Any) -> float:
-    return sum(float(s.value) for c, s in world.signals.items()
-               if c.startswith("ventilation/units/") and c.endswith("/heat_kw"))
+    return sum(
+        float(s.value)
+        for c, s in world.signals.items()
+        if c.startswith("ventilation/units/") and c.endswith("/heat_kw")
+    )
 
 
 @register_model("boiler")
@@ -59,12 +63,10 @@ class Boiler(Model):
         if v <= limit:
             v = float(silo.params.get("nominal") or SILO_REFILL)
             self.refills += 1
-            self.world.events.emit("info", "Бункер поповнено", device=self.device.code,
-                                   payload={"silo_fill": v})
+            self.world.events.emit("info", "Бункер поповнено", device=self.device.code, payload={"silo_fill": v})
         self.set("silo_fill", v)
         nominal = SUPPLY_ON if self.boilers_on else SUPPLY_OFF
-        supply = noise_step(float(self.val("supply_c")), nominal, 0.4, self.r("supply_c"),
-                            self.dt_min)
+        supply = noise_step(float(self.val("supply_c")), nominal, 0.4, self.r("supply_c"), self.dt_min)
         heat = min(max(0.0, self.need), BOILER_KW * self.boilers_on)
         load = heat / (2 * BOILER_KW)
         self.set("supply_c", supply)

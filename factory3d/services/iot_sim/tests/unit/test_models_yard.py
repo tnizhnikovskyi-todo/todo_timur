@@ -1,4 +1,5 @@
 """R-29, R-30 (двір: фури, шлагбауми, LPR, ваги); SPEC §13.1, AC-17, AC-18, AC-53, AC-54."""
+
 import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -16,12 +17,26 @@ from iot_sim.models.yard import (
 pytestmark = pytest.mark.unit
 
 KYIV = ZoneInfo("Europe/Kyiv")
-IN = {"batch": "BATCH/IN/00001", "truck": "TRUCK-IN-1", "dock": "DOCK-W1", "plate": None, "type": "incoming",
-      "picking": "WH/IN/00128", "partner": "Постачальник плит (демо)",
-      "lines": [{"product": "DSP16-SON", "qty": 120}, {"product": "DSP16-WHT", "qty": 80}]}
-OUT = {"batch": "BATCH/OUT/00004", "truck": "TRUCK-OUT-1", "dock": "DOCK-E2", "plate": "АА4512КТ",
-       "type": "outgoing", "picking": "WH/OUT/00413", "partner": "Меблі Дім (демо)",
-       "lines": [{"product": "PAL-FG", "qty": 12}]}
+IN = {
+    "batch": "BATCH/IN/00001",
+    "truck": "TRUCK-IN-1",
+    "dock": "DOCK-W1",
+    "plate": None,
+    "type": "incoming",
+    "picking": "WH/IN/00128",
+    "partner": "Постачальник плит (демо)",
+    "lines": [{"product": "DSP16-SON", "qty": 120}, {"product": "DSP16-WHT", "qty": 80}],
+}
+OUT = {
+    "batch": "BATCH/OUT/00004",
+    "truck": "TRUCK-OUT-1",
+    "dock": "DOCK-E2",
+    "plate": "АА4512КТ",
+    "type": "outgoing",
+    "picking": "WH/OUT/00413",
+    "partner": "Меблі Дім (демо)",
+    "lines": [{"product": "PAL-FG", "qty": 12}],
+}
 
 
 def v(world, code):
@@ -44,8 +59,17 @@ def yard(world):
 
 
 def arrive(world, booking, **kw):
-    world.post("yard", {"kind": "truck_arrival", "booking": booking, "plate": None, "at": None,
-                        "unload_min": kw.pop("unload_min", 1), "run_id": kw.pop("run_id", "r-1")})
+    world.post(
+        "yard",
+        {
+            "kind": "truck_arrival",
+            "booking": booking,
+            "plate": None,
+            "at": None,
+            "unload_min": kw.pop("unload_min", 1),
+            "run_id": kw.pop("run_id", "r-1"),
+        },
+    )
     world.step(0)
     return ctl_of(world).trucks[-1]
 
@@ -77,14 +101,22 @@ def test_truck_state_machine(world, yard):
     world.advance(30)
     assert tr["state"] == "left" and gate(world, "GATE-E", "passes_today") == 1
     states = [s for s, _ in tr["history"]]
-    assert states == ["expected", "at_gate", "weigh_in", "to_dock", "at_dock", "to_exit", "weigh_out",
-                      "at_gate_out", "left"]
+    assert states == [
+        "expected",
+        "at_gate",
+        "weigh_in",
+        "to_dock",
+        "at_dock",
+        "to_exit",
+        "weigh_out",
+        "at_gate_out",
+        "left",
+    ]
     times = dict(tr["history"])
     assert times["at_gate"] - t0 == 0 and times["weigh_in"] - t0 == 5 and times["to_dock"] - t0 == 65
     assert times["at_dock"] - t0 == 245 and times["to_exit"] - times["at_dock"] == 60
     assert times["weigh_out"] - times["to_exit"] == 120 and times["left"] - times["at_gate_out"] == 5
-    assert world.run_results["r-1"] == {"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1",
-                                        "unloaded_pct": 100}
+    assert world.run_results["r-1"] == {"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1", "unloaded_pct": 100}
     cams = [p["carState"] for p in world.devices["CAM-05"].model.outbox]
     assert cams == ["new"]
     out = list(world.devices["CAM-06"].model.outbox)
@@ -94,8 +126,9 @@ def test_truck_state_machine(world, yard):
 
 
 def test_no_booking_rejected(world):
-    world.post("yard", {"kind": "truck_no_booking", "plate": "AA1234KT", "gate": "GATE-W", "wait_min": 10,
-                        "run_id": "r-2"})
+    world.post(
+        "yard", {"kind": "truck_no_booking", "plate": "AA1234KT", "gate": "GATE-W", "wait_min": 10, "run_id": "r-2"}
+    )
     world.step(0)
     tr = ctl_of(world).trucks[-1]
     assert tr["state"] == "rejected" and not tr["booked"] and tr["plate"] == "АА1234КТ"
@@ -207,8 +240,10 @@ def test_hold_channels(world):
 
 
 def test_drill_holds_both_gates(world):
-    world.set_flag("fire_drill", {"zone": "FA-CNC", "detector": "", "real": False,
-                                  "t0": world.now().isoformat(), "phase": "active"})
+    world.set_flag(
+        "fire_drill",
+        {"zone": "FA-CNC", "detector": "", "real": False, "t0": world.now().isoformat(), "phase": "active"},
+    )
     for _ in range(11):
         world.step(1)
     assert gate(world, "GATE-W", "cmd_hold") == 0 and gate(world, "GATE-E", "cmd_hold") == 0

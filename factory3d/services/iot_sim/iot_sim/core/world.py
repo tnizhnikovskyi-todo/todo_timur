@@ -13,6 +13,7 @@
 * Стан для моделей: ``mode``, ``shift`` (календар), ``workcenters``, ``jobs``, ``trucks``, ``people``,
   ``balance``, ``maintenance_closed``, ``flags`` (JSON-сумісний словник), ``run_results``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,8 +35,7 @@ from iot_sim.models.base import AGGREGATE, Model
 log = logging.getLogger("iot_sim.world")
 
 # теми команд, які протоколи вже застосували самі (force/flag) і ніхто з моделей не drain-ить: ліміт черги
-BOUNDED_TOPICS = {"ats": 256, "hvac": 256, "boiler": 256, "meter": 256, "modbus_cmd": 256,
-                  "opc_joborder": 256}
+BOUNDED_TOPICS = {"ats": 256, "hvac": 256, "boiler": 256, "meter": 256, "modbus_cmd": 256, "opc_joborder": 256}
 STATUSES = ("ok", "warn", "alarm", "stale")
 HOOK_STAGES = ("planner", "balance", "post")
 
@@ -57,9 +57,14 @@ class Signal:
         self.ts = ts
         self.held_until: datetime | None = None
         self.params: dict[str, Any] = {
-            "nominal": spec.nominal, "noise": spec.noise, "rate": spec.rate,
-            "limit": spec.limit, "alarm": spec.alarm, "threshold": spec.threshold,
-            "source": spec.status}
+            "nominal": spec.nominal,
+            "noise": spec.noise,
+            "rate": spec.rate,
+            "limit": spec.limit,
+            "alarm": spec.alarm,
+            "threshold": spec.threshold,
+            "source": spec.status,
+        }
 
     @property
     def title(self) -> str:
@@ -101,8 +106,16 @@ class Signal:
 class Device:
     """Пристрій: ``signals`` — за коротким ключем (див. ``models.base``), ``fault`` — причина збою."""
 
-    def __init__(self, code: str, driver: str, protocol: str | None, unit_id: int | None,
-                 instance: str | None, address: str | None, params: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        code: str,
+        driver: str,
+        protocol: str | None,
+        unit_id: int | None,
+        instance: str | None,
+        address: str | None,
+        params: dict[str, Any],
+    ) -> None:
         self.code = code
         self.driver = driver
         self.protocol = protocol
@@ -145,9 +158,15 @@ class _Timer:
 
 
 class World:
-    def __init__(self, registry: Registry, *, seed: int = 20261012,
-                 clock: SimClock | None = None, settings: Any = None,
-                 mode: str = "scenario") -> None:
+    def __init__(
+        self,
+        registry: Registry,
+        *,
+        seed: int = 20261012,
+        clock: SimClock | None = None,
+        settings: Any = None,
+        mode: str = "scenario",
+    ) -> None:
         self.registry = registry
         self.seed = seed
         self.clock = clock or SimClock()
@@ -184,8 +203,7 @@ class World:
         for spec in self.registry.signals:
             self.signals[spec.code] = Signal(spec, ts)
         for ds in self.registry.devices.values():
-            dev = Device(ds.code, ds.driver, ds.protocol, ds.unit_id, ds.instance, None,
-                         dict(ds.params))
+            dev = Device(ds.code, ds.driver, ds.protocol, ds.unit_id, ds.instance, None, dict(ds.params))
             leaves: dict[str, list[Signal]] = defaultdict(list)
             for code in ds.signals:
                 dev.by_code[code] = self.signals[code]
@@ -197,8 +215,13 @@ class World:
                     for s in sigs:
                         short = f"{s.code.split('/')[-2]}/{leaf}"
                         if short in dev.signals and dev.signals[short] is not s:
-                            log.warning("колізія коротких ключів %s.signals[%r]: лишається %s, %s лише за повним кодом",
-                                        ds.code, short, dev.signals[short].code, s.code)
+                            log.warning(
+                                "колізія коротких ключів %s.signals[%r]: лишається %s, %s лише за повним кодом",
+                                ds.code,
+                                short,
+                                dev.signals[short].code,
+                                s.code,
+                            )
                             continue
                         dev.signals[short] = s
             dev.model = model_class(ds.driver)(dev, self)
@@ -216,7 +239,9 @@ class World:
                     dev.model.from_dict(copy.deepcopy(init))
                 except Exception:
                     log.exception("reset моделі %s", code)
-        if hasattr(self, "_yard"):  # двір: ворота, фури, імпульси, LPR-черги — спільний контролер (відтворюється ліниво)
+        if hasattr(
+            self, "_yard"
+        ):  # двір: ворота, фури, імпульси, LPR-черги — спільний контролер (відтворюється ліниво)
             del self._yard
         self._rngs.clear()
         if self.mode == "scenario":
@@ -283,8 +308,7 @@ class World:
             fut.set_result(None)
         else:
             self._timer_seq += 1
-            self._timers.append(_Timer(epoch, self._timer_seq,
-                                       lambda: fut.done() or fut.set_result(None)))  # type: ignore[arg-type,func-returns-value]
+            self._timers.append(_Timer(epoch, self._timer_seq, lambda: fut.done() or fut.set_result(None)))  # type: ignore[arg-type,func-returns-value]
             self._timers.sort(key=lambda t: (t.deadline, t.seq))
         return fut
 
@@ -372,17 +396,24 @@ class World:
                 continue
             sig.status = new
             if new == "alarm":
-                self.events.emit("alarm", sig.norm_text(), device=sig.device,
-                                 payload={"signal": sig.code, "value": sig.value})
+                self.events.emit(
+                    "alarm", sig.norm_text(), device=sig.device, payload={"signal": sig.code, "value": sig.value}
+                )
             elif old == "alarm" and new in ("ok", "warn"):
-                self.events.emit("info", f"{sig.title}: повернувся в норму", device=sig.device,
-                                 payload={"signal": sig.code, "value": sig.value})
+                self.events.emit(
+                    "info",
+                    f"{sig.title}: повернувся в норму",
+                    device=sig.device,
+                    payload={"signal": sig.code, "value": sig.value},
+                )
 
     # --- знімок ----------------------------------------------------------------------
     def snapshot(self) -> dict[str, Any]:
         from iot_sim.core.snapshot import dump
+
         return dump(self)
 
     def restore(self, data: dict[str, Any]) -> None:
         from iot_sim.core.snapshot import restore
+
         restore(self, data)

@@ -17,6 +17,7 @@
 стан завдань заморожено); після відновлення — повна синхронізація і подія ``info``.
 Фактор у цьому режимі завжди 1 (A-12) — це контролює ``control_api``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,8 +33,13 @@ from iot_sim.core.world import World
 
 log = logging.getLogger("iot_sim.follow")
 
-ISA_STATE = {"ready": "AllowedToStart", "progress": "Running", "done": "Ended/Completed",
-             "pending": "NotAllowedToStart", "cancel": "Ended/Cancelled"}
+ISA_STATE = {
+    "ready": "AllowedToStart",
+    "progress": "Running",
+    "done": "Ended/Completed",
+    "pending": "NotAllowedToStart",
+    "cancel": "Ended/Cancelled",
+}
 
 
 class OdooReadOnly:
@@ -41,8 +47,7 @@ class OdooReadOnly:
 
     ALLOWED = ("search_read", "read", "search_count", "fields_get")
 
-    def __init__(self, url: str, db: str, user: str, apikey: str, *, guard: Any = None,
-                 timeout: float = 10.0) -> None:
+    def __init__(self, url: str, db: str, user: str, apikey: str, *, guard: Any = None, timeout: float = 10.0) -> None:
         self.url, self.db, self.user, self.apikey = url.rstrip("/"), db, user, apikey
         self.guard, self.timeout = guard, timeout
         self._uid: int | None = None
@@ -88,9 +93,17 @@ def _hm(h: float) -> dtime:
 
 
 class FollowOdoo:
-    def __init__(self, world: World, odoo: Any, *, follow_s: float = 10.0, slow_s: float = 60.0,
-                 stale_s: float = 120.0, mono: Callable[[], float] = time.monotonic,
-                 level0_sync: bool = True) -> None:
+    def __init__(
+        self,
+        world: World,
+        odoo: Any,
+        *,
+        follow_s: float = 10.0,
+        slow_s: float = 60.0,
+        stale_s: float = 120.0,
+        mono: Callable[[], float] = time.monotonic,
+        level0_sync: bool = True,
+    ) -> None:
         self.world, self.odoo = world, odoo
         self.follow_s, self.slow_s, self.stale_s = follow_s, slow_s, stale_s
         self._mono = mono
@@ -115,9 +128,11 @@ class FollowOdoo:
         return self.world.mode == "follow_odoo" and self.configured
 
     def status(self) -> dict[str, Any]:
-        return {"configured": self.configured,
-                "last_ok": self.last_ok.isoformat() if self.last_ok else None,
-                "stale": self.world.odoo_stale}
+        return {
+            "configured": self.configured,
+            "last_ok": self.last_ok.isoformat() if self.last_ok else None,
+            "stale": self.world.odoo_stale,
+        }
 
     def kick(self) -> None:
         """Повна синхронізація при найближчому циклі (перехід у follow_odoo, відновлення)."""
@@ -129,10 +144,27 @@ class FollowOdoo:
         wcs = await self.odoo.search_read("mrp.workcenter", [], ["id", "code", "working_state"])
         wos = await self.odoo.search_read(
             "mrp.workorder",
-            ["&", ("state", "in", ["ready", "progress", "done"]), "|", ("state", "!=", "done"),
-             ("date_finished", ">=", since)],
-            ["id", "name", "state", "workcenter_id", "production_id", "qty_produced", "qty_production",
-             "duration", "duration_expected", "date_start", "working_state"])
+            [
+                "&",
+                ("state", "in", ["ready", "progress", "done"]),
+                "|",
+                ("state", "!=", "done"),
+                ("date_finished", ">=", since),
+            ],
+            [
+                "id",
+                "name",
+                "state",
+                "workcenter_id",
+                "production_id",
+                "qty_produced",
+                "qty_production",
+                "duration",
+                "duration_expected",
+                "date_start",
+                "working_state",
+            ],
+        )
         code_by_id = {w["id"]: w.get("code") for w in wcs}
         blocked = {w["code"] for w in wcs if w.get("working_state") == "blocked" and w.get("code")}
         jobs: list[dict[str, Any]] = []
@@ -142,13 +174,22 @@ class FollowOdoo:
                 continue
             if wo.get("working_state") == "blocked":
                 blocked.add(code)
-            jobs.append({
-                "id": f"WO{wo['id']:05d}", "wo_id": wo["id"], "workcenter": code, "name": wo.get("name"),
-                "state": wo["state"], "isa_state": ISA_STATE.get(wo["state"], "NotAllowedToStart"),
-                "production": (wo.get("production_id") or [None, ""])[1],
-                "qty_produced": wo.get("qty_produced") or 0.0, "qty_production": wo.get("qty_production") or 0.0,
-                "duration": wo.get("duration") or 0.0, "duration_expected": wo.get("duration_expected") or 0.0,
-                "date_start": wo.get("date_start") or None})
+            jobs.append(
+                {
+                    "id": f"WO{wo['id']:05d}",
+                    "wo_id": wo["id"],
+                    "workcenter": code,
+                    "name": wo.get("name"),
+                    "state": wo["state"],
+                    "isa_state": ISA_STATE.get(wo["state"], "NotAllowedToStart"),
+                    "production": (wo.get("production_id") or [None, ""])[1],
+                    "qty_produced": wo.get("qty_produced") or 0.0,
+                    "qty_production": wo.get("qty_production") or 0.0,
+                    "duration": wo.get("duration") or 0.0,
+                    "duration_expected": wo.get("duration_expected") or 0.0,
+                    "date_start": wo.get("date_start") or None,
+                }
+            )
         centers: dict[str, dict[str, Any]] = {}
         for code in sorted(c for c in code_by_id.values() if c):
             mine = [j for j in jobs if j["workcenter"] == code]
@@ -156,8 +197,12 @@ class FollowOdoo:
             ready = next((j for j in mine if j["state"] == "ready"), None)
             is_blocked = code in blocked
             state = "ERROR" if is_blocked else ("WORKING" if running else ("READY" if ready else "STANDBY"))
-            centers[code] = {"state": state, "blocked": is_blocked, "job": running or ready,
-                             "qty_produced": (running or {}).get("qty_produced", 0.0)}
+            centers[code] = {
+                "state": state,
+                "blocked": is_blocked,
+                "job": running or ready,
+                "qty_produced": (running or {}).get("qty_produced", 0.0),
+            }
         self.world.jobs = jobs
         self.world.workcenters = centers
 
@@ -171,16 +216,28 @@ class FollowOdoo:
                 self._plate_field = False
         bf = ["name", "dock_id", "scheduled_date", "state", "picking_ids", "td_code", "td_truck"]
         batches = await o.search_read(
-            "stock.picking.batch", [("dock_id", "!=", False), ("state", "in", ["draft", "in_progress"])],
-            bf + (["td_plate"] if self._plate_field else []))
+            "stock.picking.batch",
+            [("dock_id", "!=", False), ("state", "in", ["draft", "in_progress"])],
+            bf + (["td_plate"] if self._plate_field else []),
+        )
         dock_ids = sorted({d for b in batches if (d := _m2o_id(b.get("dock_id")))})
-        docks = {d["id"]: d.get("td_code") for d in
-                 (await o.read("stock.location", dock_ids, ["td_code"]) if dock_ids else [])}
+        docks = {
+            d["id"]: d.get("td_code")
+            for d in (await o.read("stock.location", dock_ids, ["td_code"]) if dock_ids else [])
+        }
         pick_ids = sorted({i for b in batches for i in b.get("picking_ids", [])})
-        pickings = await o.search_read("stock.picking", [("id", "in", pick_ids)],
-                                       ["name", "state", "picking_type_code"]) if pick_ids else []
-        moves = await o.search_read("stock.move", [("picking_id", "in", pick_ids)],
-                                    ["picking_id", "quantity", "product_uom_qty"]) if pick_ids else []
+        pickings = (
+            await o.search_read("stock.picking", [("id", "in", pick_ids)], ["name", "state", "picking_type_code"])
+            if pick_ids
+            else []
+        )
+        moves = (
+            await o.search_read(
+                "stock.move", [("picking_id", "in", pick_ids)], ["picking_id", "quantity", "product_uom_qty"]
+            )
+            if pick_ids
+            else []
+        )
         ptype = {p["id"]: p.get("picking_type_code") for p in pickings}
         qty: dict[int, list[float]] = {}
         for m in moves:
@@ -194,22 +251,39 @@ class FollowOdoo:
             done = sum(qty.get(i, [0, 0])[0] for i in ids)
             plan = sum(qty.get(i, [0, 0])[1] for i in ids)
             kinds = {ptype.get(i) for i in ids}
-            trucks.append({
-                "code": b.get("td_code") or None, "description": b.get("td_truck") or None,
-                "plate": (b.get("td_plate") or None) if self._plate_field else None,
-                "dock": docks.get(_m2o_id(b.get("dock_id"))), "batch": b["name"],
-                "type": "incoming" if "incoming" in kinds else "outgoing",
-                "scheduled": (b.get("scheduled_date") or "").replace(" ", "T") + "Z" if b.get("scheduled_date") else None,
-                "state": b["state"], "progress": round(min(done / plan, 1.0), 3) if plan else 0.0})
+            trucks.append(
+                {
+                    "code": b.get("td_code") or None,
+                    "description": b.get("td_truck") or None,
+                    "plate": (b.get("td_plate") or None) if self._plate_field else None,
+                    "dock": docks.get(_m2o_id(b.get("dock_id"))),
+                    "batch": b["name"],
+                    "type": "incoming" if "incoming" in kinds else "outgoing",
+                    "scheduled": (b.get("scheduled_date") or "").replace(" ", "T") + "Z"
+                    if b.get("scheduled_date")
+                    else None,
+                    "state": b["state"],
+                    "progress": round(min(done / plan, 1.0), 3) if plan else 0.0,
+                }
+            )
         w.trucks = trucks
-        emps = await o.search_read("hr.employee", [("barcode", "!=", False)],
-                                   ["name", "barcode", "resource_calendar_id", "job_title"])
-        w.people = [{"name": e["name"], "barcode": e["barcode"], "job": e.get("job_title") or None,
-                     "shift": (e.get("resource_calendar_id") or [None, None])[1]} for e in emps]
+        emps = await o.search_read(
+            "hr.employee", [("barcode", "!=", False)], ["name", "barcode", "resource_calendar_id", "job_title"]
+        )
+        w.people = [
+            {
+                "name": e["name"],
+                "barcode": e["barcode"],
+                "job": e.get("job_title") or None,
+                "shift": (e.get("resource_calendar_id") or [None, None])[1],
+            }
+            for e in emps
+        ]
         cal_ids = sorted({c for e in emps if (c := _m2o_id(e.get("resource_calendar_id")))})
         if cal_ids:
-            att = await o.search_read("resource.calendar.attendance", [("calendar_id", "in", cal_ids)],
-                                      ["dayofweek", "hour_from", "hour_to"])
+            att = await o.search_read(
+                "resource.calendar.attendance", [("calendar_id", "in", cal_ids)], ["dayofweek", "hour_from", "hour_to"]
+            )
             self._apply_shift(att)
         await self._poll_maintenance()
         if self.level0_sync and not self._level0_done:
@@ -243,11 +317,18 @@ class FollowOdoo:
                 if e.get("td_code"):
                     w.maintenance_closed.add(e["td_code"])
         try:  # заявки рівня 0 (x_f3d_signal.x_request_id); модель може бути відсутня
-            sigs = await o.search_read("x_f3d_signal", [("x_request_id", "!=", False)],
-                                       ["x_code", "x_request_id"])
+            sigs = await o.search_read("x_f3d_signal", [("x_request_id", "!=", False)], ["x_code", "x_request_id"])
             rids = [s["x_request_id"][0] for s in sigs if s.get("x_request_id")]
-            done = {r["id"] for r in await o.search_read(
-                "maintenance.request", [("id", "in", rids), ("stage_id.done", "=", True)], ["id"])} if rids else set()
+            done = (
+                {
+                    r["id"]
+                    for r in await o.search_read(
+                        "maintenance.request", [("id", "in", rids), ("stage_id.done", "=", True)], ["id"]
+                    )
+                }
+                if rids
+                else set()
+            )
             for s in sigs:
                 sig = w.signals.get(s.get("x_code") or "")
                 if sig is not None and _m2o_id(s["x_request_id"]) in done:
@@ -295,8 +376,9 @@ class FollowOdoo:
             ref = self._last_ok_mono if self._last_ok_mono is not None else self._started_mono
             if now - ref > self.stale_s and not self.world.odoo_stale:
                 self.world.odoo_stale = True
-                self.world.events.emit("error", "Odoo недоступна: дані follow_odoo застаріли",
-                                       payload={"stale_s": self.stale_s})
+                self.world.events.emit(
+                    "error", "Odoo недоступна: дані follow_odoo застаріли", payload={"stale_s": self.stale_s}
+                )
             if self.world.odoo_stale:
                 self.kick()  # після відновлення — повна синхронізація
 

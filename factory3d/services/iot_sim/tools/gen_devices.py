@@ -10,6 +10,7 @@
 ``driver`` пишеться лише для драйверів цього воркера (machine, io_machine, gantry, mobile, facp,
 facp_zone, spark, smoke, access, yard); решту визначає ``registry.driver_for``.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,23 +29,68 @@ CATALOG = SERVICE / "catalog"
 sys.path.insert(0, str(FACTORY3D))
 
 # SPEC §5.2: ролі -> драйвер
-P01_ROLES = {"beam_saw", "beam_saw_book", "nesting_cnc", "edgebander_laser", "edgebander", "ptp_cnc",
-             "throughfeed_drilling", "dowel_inserting", "sorting_cell", "case_clamp_auto"}
-P02_ROLES = {"sliding_table_saw", "vertical_panel_saw", "wide_belt_sander", "membrane_press",
-             "glue_spray_booth", "manual_spray_booth", "automatic_spraying", "drying", "uv_line",
-             "hinge_insertion", "box_machine", "stretch_wrapper", "shrink_line", "case_clamp_manual"}
+P01_ROLES = {
+    "beam_saw",
+    "beam_saw_book",
+    "nesting_cnc",
+    "edgebander_laser",
+    "edgebander",
+    "ptp_cnc",
+    "throughfeed_drilling",
+    "dowel_inserting",
+    "sorting_cell",
+    "case_clamp_auto",
+}
+P02_ROLES = {
+    "sliding_table_saw",
+    "vertical_panel_saw",
+    "wide_belt_sander",
+    "membrane_press",
+    "glue_spray_booth",
+    "manual_spray_booth",
+    "automatic_spraying",
+    "drying",
+    "uv_line",
+    "hinge_insertion",
+    "box_machine",
+    "stretch_wrapper",
+    "shrink_line",
+    "case_clamp_manual",
+}
 # R-16: хв/шт за роллю (маршрути макета)
-PER_UNIT = {"beam_saw": 2.2, "sliding_table_saw": 2.2, "vertical_panel_saw": 2.2, "beam_saw_book": 0.9,
-            "nesting_cnc": 1.5, "edgebander_laser": 1.6, "edgebander": 1.6, "ptp_cnc": 2.0,
-            "throughfeed_drilling": 0.8, "dowel_inserting": 1.0, "sorting_cell": 0.5,
-            "case_clamp_auto": 6.0, "case_clamp_manual": 6.0, "box_machine": 3.0,
-            "stretch_wrapper": 3.0, "shrink_line": 3.0}
+PER_UNIT = {
+    "beam_saw": 2.2,
+    "sliding_table_saw": 2.2,
+    "vertical_panel_saw": 2.2,
+    "beam_saw_book": 0.9,
+    "nesting_cnc": 1.5,
+    "edgebander_laser": 1.6,
+    "edgebander": 1.6,
+    "ptp_cnc": 2.0,
+    "throughfeed_drilling": 0.8,
+    "dowel_inserting": 1.0,
+    "sorting_cell": 0.5,
+    "case_clamp_auto": 6.0,
+    "case_clamp_manual": 6.0,
+    "box_machine": 3.0,
+    "stretch_wrapper": 3.0,
+    "shrink_line": 3.0,
+}
 # R-19: маршрути техніки (зони)
-MOBILE_ROUTE = {"FL-1": ["Z-POST", "Z-FG"], "FL-2": ["Z-RCV-1", "Z-SHEETS"], "FL-3": ["Z-FG", "Z-OUT-2"],
-                "FL-4": ["Z-FG", "Z-OUT-5"], "FL-5": ["Z-PACK", "Z-POST"],
-                "TUGGER-1": ["Z-HW", "Z-PRE", "Z-ASM"], "FL-C1": ["Z-CHG"], "FL-C2": ["Z-CHG"]}
-GATES = {"GATE-W": {"di_open": 0, "di_loop": 1, "di_photo": 4, "do_open": 0, "do_close": 2, "do_hold": 4},
-         "GATE-E": {"di_open": 2, "di_loop": 3, "di_photo": 5, "do_open": 1, "do_close": 3, "do_hold": 5}}
+MOBILE_ROUTE = {
+    "FL-1": ["Z-POST", "Z-FG"],
+    "FL-2": ["Z-RCV-1", "Z-SHEETS"],
+    "FL-3": ["Z-FG", "Z-OUT-2"],
+    "FL-4": ["Z-FG", "Z-OUT-5"],
+    "FL-5": ["Z-PACK", "Z-POST"],
+    "TUGGER-1": ["Z-HW", "Z-PRE", "Z-ASM"],
+    "FL-C1": ["Z-CHG"],
+    "FL-C2": ["Z-CHG"],
+}
+GATES = {
+    "GATE-W": {"di_open": 0, "di_loop": 1, "di_photo": 4, "do_open": 0, "do_close": 2, "do_hold": 4},
+    "GATE-E": {"di_open": 2, "di_loop": 3, "di_photo": 5, "do_open": 1, "do_close": 3, "do_hold": 5},
+}
 ACR = ["ACR-IN", "ACR-ELEC", "ACR-CHG", "ACR-PAINT", "ACR-SRV"]
 
 
@@ -98,8 +144,7 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
     det_addr: dict[str, list[str]] = {}
     for z, d in dets.items():
         g = "FA-" + z[2:]
-        det_addr[g] = [f"{fire_mod.loop_of(x)}.{g[3:]}.{n:02d}"
-                       for n, (x, *_) in enumerate(d["points"], 1)]
+        det_addr[g] = [f"{fire_mod.loop_of(x)}.{g[3:]}.{n:02d}" for n, (x, *_) in enumerate(d["points"], 1)]
 
     def seq(pts: list, tag: str) -> list[str]:
         cnt: dict[int, int] = {}
@@ -110,17 +155,25 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
             out.append(f"{lp}.{tag}.{cnt[lp]:02d}")
         return out
 
-    facp_params = {"detectors": sum(len(v) for v in det_addr.values()),
-                   "mcp": seq(fire_mod.call_points(), "MCP"), "sounders": seq(fire_mod.sounders(), "SND"),
-                   "flame": [f"2.FLM.{i:02d}" for i in range(1, len(fire_mod.FLAME) + 1)],
-                   "loops": [1, 2, 3, 4]}
+    facp_params = {
+        "detectors": sum(len(v) for v in det_addr.values()),
+        "mcp": seq(fire_mod.call_points(), "MCP"),
+        "sounders": seq(fire_mod.sounders(), "SND"),
+        "flame": [f"2.FLM.{i:02d}" for i in range(1, len(fire_mod.FLAME) + 1)],
+        "loops": [1, 2, 3, 4],
+    }
 
     base = list(pas) + [c for c in ("CHARGING", "SPRINKLERS", "AIR-RING") if c not in pas]
     devs: list[dict] = []
     for code in base:
         role = pas[code]["role"] if code in pas else "equipment"
-        name = (wcs.get(code, {}).get("name") or cons.get(code, {}).get("name")
-                or equip.get(code, {}).get("name") or pas.get(code, {}).get("model") or code)
+        name = (
+            wcs.get(code, {}).get("name")
+            or cons.get(code, {}).get("name")
+            or equip.get(code, {}).get("name")
+            or pas.get(code, {}).get("model")
+            or code
+        )
         d: dict = {"code": code, "name": name, "role": role}
         prot = protocols(code)
         if prot:
@@ -131,13 +184,15 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
         params: dict = {}
         if code in wcs and role in P01_ROLES | P02_ROLES:
             d["driver"] = "machine" if role in P01_ROLES else "io_machine"
-            params = {"zone": zone_of.get(code), "per_unit": PER_UNIT.get(role, 1.5),
-                      "p_inst": cons.get(code, {}).get("p_inst")}
+            params = {
+                "zone": zone_of.get(code),
+                "per_unit": PER_UNIT.get(role, 1.5),
+                "p_inst": cons.get(code, {}).get("p_inst"),
+            }
             if d["driver"] == "machine":
                 params["address"] = f"ns=2;s={code}"
             else:
-                run, flt, cnt = (sig_addr(code, "/state"), sig_addr(code, "/alarm"),
-                                 sig_addr(code, "/pieces_out"))
+                run, flt, cnt = (sig_addr(code, "/state"), sig_addr(code, "/alarm"), sig_addr(code, "/pieces_out"))
                 if run and flt and cnt:
                     params.update(unit=run[0], di_run=run[2], di_fault=flt[2], counter=cnt[2])
         elif code == "GANTRY-1":
@@ -146,9 +201,18 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
             for sid, loc in demo["locations"].items():
                 if sid.startswith("PLT-") and loc.get("quants"):
                     q = loc["quants"][0]
-                    stacks.append({"id": sid, "row": int(sid[4:6]), "col": ord(sid[6]) - 64,
-                                   "product": q["product"], "lot": q.get("lot"), "qty": int(q["qty"]),
-                                   "max": loc.get("capacity", 60), "reserved": int(q.get("reserved", 0))})
+                    stacks.append(
+                        {
+                            "id": sid,
+                            "row": int(sid[4:6]),
+                            "col": ord(sid[6]) - 64,
+                            "product": q["product"],
+                            "lot": q.get("lot"),
+                            "qty": int(q["qty"]),
+                            "max": loc.get("capacity", 60),
+                            "reserved": int(q.get("reserved", 0)),
+                        }
+                    )
             params = {"per_unit": 2.2, "address": "http://iot-sim:8082/api/v1", "aisles": 9, "stacks": stacks}
         elif code in MOBILE_ROUTE:
             d["driver"] = "mobile"
@@ -186,36 +250,100 @@ def build_devices(demo: dict, rows: list[dict]) -> list[dict]:
         devs.append(d)
     # похідні пристрої
     for i, c in enumerate(ACR):
-        devs.append({"code": c, "name": f"Зчитувач {c}", "driver": "access", "protocols": ["P-10"],
-                     "params": {"biostar_device_id": 5390001 + i, "door": i + 1}})
-    devs.append({"code": "TURN-1", "name": "Турнікет TURN-1", "driver": "access", "protocols": ["P-10"],
-                 "params": {"reader": "ACR-IN"}})
+        devs.append(
+            {
+                "code": c,
+                "name": f"Зчитувач {c}",
+                "driver": "access",
+                "protocols": ["P-10"],
+                "params": {"biostar_device_id": 5390001 + i, "door": i + 1},
+            }
+        )
+    devs.append(
+        {
+            "code": "TURN-1",
+            "name": "Турнікет TURN-1",
+            "driver": "access",
+            "protocols": ["P-10"],
+            "params": {"reader": "ACR-IN"},
+        }
+    )
     for i, (c, gate) in enumerate((("CAM-05", "GATE-W"), ("CAM-06", "GATE-E"))):
-        devs.append({"code": c, "name": f"Камера LPR {c}", "driver": "yard", "protocols": ["P-11"],
-                     "params": {"gate": gate, "direction": "in" if i == 0 else "out"}})
+        devs.append(
+            {
+                "code": c,
+                "name": f"Камера LPR {c}",
+                "driver": "yard",
+                "protocols": ["P-11"],
+                "params": {"gate": gate, "direction": "in" if i == 0 else "out"},
+            }
+        )
     for k in range(1, 9):
-        devs.append({"code": f"PV-INV-{k}", "name": f"Інвертор PV-INV-{k}", "driver": "passive",
-                     "protocols": ["P-07"], "unit_id": 60 + k, "params": {"inverter": k}})
+        devs.append(
+            {
+                "code": f"PV-INV-{k}",
+                "name": f"Інвертор PV-INV-{k}",
+                "driver": "passive",
+                "protocols": ["P-07"],
+                "unit_id": 60 + k,
+                "params": {"inverter": k},
+            }
+        )
     # W1 «Енергетика» (§8.1): контролер ГРЩ — паспорта в odoo_demo.json немає, пристрій похідний; unit/протокол — з каталогу
-    devs.append({"code": "SWB-CTRL", "name": "Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; "
-                 "карта регістрів — ПРИПУЩЕННЯ A-24)", "role": "switchboard_ctrl", "protocols": protocols("SWB-CTRL"),
-                 "unit_id": unit("SWB-CTRL"), "driver": "swb"})
+    devs.append(
+        {
+            "code": "SWB-CTRL",
+            "name": "Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; карта регістрів — ПРИПУЩЕННЯ A-24)",
+            "role": "switchboard_ctrl",
+            "protocols": protocols("SWB-CTRL"),
+            "unit_id": unit("SWB-CTRL"),
+            "driver": "swb",
+        }
+    )
     for code in sorted(cons):
-        pm = {"code": f"{code}-PM", "name": f"PM5560 {code}", "driver": "passive", "protocols": ["P-05"],
-              "params": {"consumer": code}}
+        pm = {
+            "code": f"{code}-PM",
+            "name": f"PM5560 {code}",
+            "driver": "passive",
+            "protocols": ["P-05"],
+            "params": {"consumer": code},
+        }
         u = sig_addr(code, "/p_now")
         if u:
             pm["unit_id"] = u[0]
         devs.append(pm)
-    devs.append({"code": "CUTOPT", "name": "Оптимізатор розкрою", "driver": "passive", "protocols": [],
-                 "params": {"protocol": "none"}})
+    devs.append(
+        {
+            "code": "CUTOPT",
+            "name": "Оптимізатор розкрою",
+            "driver": "passive",
+            "protocols": [],
+            "params": {"protocol": "none"},
+        }
+    )
     # W3 «Енергоресурси» (§8.1): корректор газу і витратомір повітря — паспортів немає, пристрої похідні; unit/протокол — з каталогу
-    devs.append({"code": "GAS-MAIN", "name": "Корректор газу GAS-MAIN (u74; карта регістрів — ПРИПУЩЕННЯ Q-02)",
-                 "role": "gas_meter", "protocols": protocols("GAS-MAIN"), "unit_id": unit("GAS-MAIN"), "driver": "gas",
-                 "params": {"dry_nom": 6.0, "canteen": 1.0}})
-    devs.append({"code": "AIR-MAIN", "name": "Витратомір стисненого повітря AIR-MAIN (u75; карта регістрів — ПРИПУЩЕННЯ Q-02)",
-                 "role": "air_meter", "protocols": protocols("AIR-MAIN"), "unit_id": unit("AIR-MAIN"), "driver": "air",
-                 "params": {"leak": 1.6, "q_ref": 9.8, "load_ref": 66.0, "load_min": 25.0, "drop": 0.1}})
+    devs.append(
+        {
+            "code": "GAS-MAIN",
+            "name": "Корректор газу GAS-MAIN (u74; карта регістрів — ПРИПУЩЕННЯ Q-02)",
+            "role": "gas_meter",
+            "protocols": protocols("GAS-MAIN"),
+            "unit_id": unit("GAS-MAIN"),
+            "driver": "gas",
+            "params": {"dry_nom": 6.0, "canteen": 1.0},
+        }
+    )
+    devs.append(
+        {
+            "code": "AIR-MAIN",
+            "name": "Витратомір стисненого повітря AIR-MAIN (u75; карта регістрів — ПРИПУЩЕННЯ Q-02)",
+            "role": "air_meter",
+            "protocols": protocols("AIR-MAIN"),
+            "unit_id": unit("AIR-MAIN"),
+            "driver": "air",
+            "params": {"leak": 1.6, "q_ref": 9.8, "load_ref": 66.0, "load_min": 25.0, "drop": 0.1},
+        }
+    )
     return devs
 
 
@@ -224,8 +352,14 @@ def build_zones() -> dict:
 
     out = []
     for code, name, (x0, y0, x1, y1), *_ in ZONES:
-        out.append({"code": code, "name": name, "polygon": [[x0, y0], [x1, y0], [x1, y1], [x0, y1]],
-                    "centroid": [round((x0 + x1) / 2, 2), round((y0 + y1) / 2, 2)]})
+        out.append(
+            {
+                "code": code,
+                "name": name,
+                "polygon": [[x0, y0], [x1, y0], [x1, y1], [x0, y1]],
+                "centroid": [round((x0 + x1) / 2, 2), round((y0 + y1) / 2, 2)],
+            }
+        )
     return {"zones": out}
 
 
@@ -235,8 +369,12 @@ def build_passports(demo: dict) -> dict:
     for code, p in demo["passports"].items():
         e = {k: p.get(k) for k in ("role", "manufacturer", "model", "power_kw", "connected_kw")}
         if code in cons:
-            e.update(p_inst=cons[code].get("p_inst"), cos_phi=cons[code].get("cos_phi"),
-                     feeder=cons[code].get("feeder"), p_now=cons[code].get("p_now"))
+            e.update(
+                p_inst=cons[code].get("p_inst"),
+                cos_phi=cons[code].get("cos_phi"),
+                feeder=cons[code].get("feeder"),
+                p_now=cons[code].get("p_now"),
+            )
         out[code] = e
     return {"passports": out}
 
@@ -244,12 +382,16 @@ def build_passports(demo: dict) -> dict:
 def render() -> dict[str, str]:
     demo, _specs, rows = load_inputs()
     devs = build_devices(demo, rows)
-    head = ("# Реєстр пристроїв (генерує tools/gen_devices.py з dist/odoo_demo.json + plant/*; не правити вручну).\n"
-            f"# {len(devs)} пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.\n")
+    head = (
+        "# Реєстр пристроїв (генерує tools/gen_devices.py з dist/odoo_demo.json + plant/*; не правити вручну).\n"
+        f"# {len(devs)} пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.\n"
+    )
     ydoc = head + yaml.safe_dump({"devices": devs}, allow_unicode=True, sort_keys=False, width=120)
-    dump = {"devices.yaml": ydoc,
-            "zones.json": json.dumps(build_zones(), ensure_ascii=False, indent=1) + "\n",
-            "passports.json": json.dumps(build_passports(demo), ensure_ascii=False, indent=1) + "\n"}
+    dump = {
+        "devices.yaml": ydoc,
+        "zones.json": json.dumps(build_zones(), ensure_ascii=False, indent=1) + "\n",
+        "passports.json": json.dumps(build_passports(demo), ensure_ascii=False, indent=1) + "\n",
+    }
     return dump
 
 

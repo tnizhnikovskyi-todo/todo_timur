@@ -1,4 +1,5 @@
 """R-11: СЕС (AC-11)."""
+
 from datetime import datetime
 from types import SimpleNamespace
 

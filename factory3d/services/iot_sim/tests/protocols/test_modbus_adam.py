@@ -1,4 +1,5 @@
 """P-02/P-09/P-11 ADAM-6050/6060/6017/6015 (SPEC §8.4.2, §8.9.6, §8.11.3, §8.13.1; AC-37, AC-44)."""
+
 import struct
 from types import SimpleNamespace
 
@@ -136,8 +137,8 @@ async def test_gates_di_layout_and_hold_channels(modbus, world):
     world.force("yard/gates/GATE-E/passes_today", 6, hold_s=600)
     bits = (await di(modbus, 86, 0, 6)).bits[:6]
     assert bits == [False, True, True, False, False, False]  # DI0 W state, DI1 W loop, DI2 E state
-    assert u32_little((await hr(modbus, 86, 2, 2)).registers) == 7   # 40003–40004
-    assert u32_little((await hr(modbus, 86, 6, 2)).registers) == 6   # 40007–40008
+    assert u32_little((await hr(modbus, 86, 2, 2)).registers) == 7  # 40003–40004
+    assert u32_little((await hr(modbus, 86, 6, 2)).registers) == 6  # 40007–40008
     # «тримати відкритим»: DO4 лише GATE-W, DO5 лише GATE-E (X-47)
     assert not (await modbus.client.write_coil(20, True, slave=86)).isError()
     assert world.signals["yard/gates/GATE-W/cmd_hold"].value == 1

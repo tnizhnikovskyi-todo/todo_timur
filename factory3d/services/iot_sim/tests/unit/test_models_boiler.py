@@ -1,4 +1,5 @@
 """R-10: бункер котельні і кількість котлів (AC-10)."""
+
 import pytest
 
 SILO = "equipment/BOILER/silo_fill"

@@ -20,6 +20,7 @@
   ``world.run_results[run_id]``.
 * Сигнали, що їх явно веде сценарій (S-04, S-10, S-13), пишуться ``Signal.force``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -70,8 +71,15 @@ class ScenarioParamsError(ScenarioError):
 
 # --- запуск ------------------------------------------------------------------------------
 class Run:
-    def __init__(self, run_id: str, name: str, params: dict[str, Any], started: datetime,
-                 ends: datetime | None, run_ref: str | None) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        name: str,
+        params: dict[str, Any],
+        started: datetime,
+        ends: datetime | None,
+        run_ref: str | None,
+    ) -> None:
         self.id = run_id
         self.name = name
         self.params = params
@@ -87,11 +95,19 @@ class Run:
         self.task: asyncio.Task[Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "name": self.name, "state": self.state, "params": self.params,
-                "started": self.started.isoformat(), "ends": self.ends.isoformat() if self.ends else None,
-                "result": self.result, "error": self.error, "run_ref": self.run_ref,
-                "timeline": self.timeline,
-                "owned_flags": [list(x) for x in self.owned_flags]}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "state": self.state,
+            "params": self.params,
+            "started": self.started.isoformat(),
+            "ends": self.ends.isoformat() if self.ends else None,
+            "result": self.result,
+            "error": self.error,
+            "run_ref": self.run_ref,
+            "timeline": self.timeline,
+            "owned_flags": [list(x) for x in self.owned_flags],
+        }
 
 
 class ScenarioContext:
@@ -125,11 +141,13 @@ class ScenarioContext:
         return True
 
     def step(self, step: str, message: str, **payload: Any) -> None:
-        self.run.timeline.append({"ts": self.world.now().isoformat(), "step": step,
-                                  "message": message})
-        self.world.events.emit("scenario", message, run_id=self.run.id,
-                               payload={"state": "progress", "step": step, "name": self.run.name,
-                                        **payload})
+        self.run.timeline.append({"ts": self.world.now().isoformat(), "step": step, "message": message})
+        self.world.events.emit(
+            "scenario",
+            message,
+            run_id=self.run.id,
+            payload={"state": "progress", "step": step, "name": self.run.name, **payload},
+        )
 
     async def timeline(self, steps: list[tuple[float, str, str]]) -> bool:
         """[(t_с_від_початку, step, повідомлення)…] — за абсолютними дедлайнами (нагнати при
@@ -213,9 +231,10 @@ class MachineFaultParams(BaseParams):
     def _dev(cls, v: str, info: ValidationInfo) -> str:
         world = (info.context or {}).get("world")
         if world is not None:
-            ok = v == "GANTRY-1" or any(s.code.startswith("workcenters/")
-                                        for s in (world.devices[v].signals.values()
-                                                  if v in world.devices else []))
+            ok = v == "GANTRY-1" or any(
+                s.code.startswith("workcenters/")
+                for s in (world.devices[v].signals.values() if v in world.devices else [])
+            )
             if not ok:
                 raise ValueError(f"unknown device {v!r}")
         return v
@@ -430,9 +449,16 @@ class Shift(Scenario):
             raise ScenarioConflict("shift недоступний у follow_odoo")
 
     async def apply(self, ctx: Any, p: Any) -> None:
-        ctx.flag("shift", {"date": (p.date or ctx.world.now().date()).isoformat(),
-                           "lines": p.lines, "speed": p.speed, "trucks": p.trucks,
-                           "people": p.people})
+        ctx.flag(
+            "shift",
+            {
+                "date": (p.date or ctx.world.now().date()).isoformat(),
+                "lines": p.lines,
+                "speed": p.speed,
+                "trucks": p.trucks,
+                "people": p.people,
+            },
+        )
 
 
 class MachineFault(Scenario):
@@ -464,10 +490,18 @@ class Blackout(Scenario):
     async def run(self, ctx: Any) -> Any:
         p = ctx.params
         amf = p.amf_master or getattr(ctx.world.settings, "genset_amf_master", "hgm")
-        ctx.flag("blackout", {"t0": ctx.world.now().isoformat(), "phase": "outage",
-                              "genset": p.genset, "amf_master": amf,
-                              "restore_delay_s": p.restore_delay_s,
-                              "genset_load_kw": p.genset_load_kw, "chp_island": p.chp_island})
+        ctx.flag(
+            "blackout",
+            {
+                "t0": ctx.world.now().isoformat(),
+                "phase": "outage",
+                "genset": p.genset,
+                "amf_master": amf,
+                "restore_delay_s": p.restore_delay_s,
+                "genset_load_kw": p.genset_load_kw,
+                "chp_island": p.chp_island,
+            },
+        )
         ctx.step("mains_lost", "Зникнення мережі (blackout)", amf_master=amf)
         stopped = await ctx.wait_or_stop(p.duration_s)
         ctx.world.flags["blackout"]["phase"] = "restoring"
@@ -477,9 +511,11 @@ class Blackout(Scenario):
 
 class FilterClogged(Scenario):
     name, title_uk, group, Params = "filter_clogged", "Забивання фільтра", "bms", FilterParams
-    TARGETS: ClassVar[dict[str, str]] = {"AHU-1": "ventilation/units/AHU-1/filter_dp_pa",
-               "DUST-1": "equipment/DUST-1/filter_dp_kpa",
-               "FA-FAC": "fire/groups/FA-FAC/dust"}
+    TARGETS: ClassVar[dict[str, str]] = {
+        "AHU-1": "ventilation/units/AHU-1/filter_dp_pa",
+        "DUST-1": "equipment/DUST-1/filter_dp_kpa",
+        "FA-FAC": "fire/groups/FA-FAC/dust",
+    }
     DEFAULTS: ClassVar[dict[str, float]] = {"DUST-1": 1.9, "FA-FAC": 92.0}
 
     def conflicts(self, p: Any) -> Any:
@@ -516,8 +552,10 @@ class TruckNoBooking(Scenario):
     async def run(self, ctx: Any) -> Any:
         p = ctx.params
         plate = p.plate or f"AA{ctx.world.minute % 10000:04d}KT"
-        ctx.world.post("yard", {"kind": "truck_no_booking", "plate": plate, "gate": p.gate,
-                                "wait_min": p.wait_min, "run_id": ctx.run.id})
+        ctx.world.post(
+            "yard",
+            {"kind": "truck_no_booking", "plate": plate, "gate": p.gate, "wait_min": p.wait_min, "run_id": ctx.run.id},
+        )
         ctx.step("rejected", f"Фура {plate} без бронювання біля воріт {p.gate}", plate=plate)
         if await ctx.sleep(p.wait_min * 60):
             return {"plate": plate}
@@ -534,33 +572,60 @@ class TruckArrival(Scenario):
 
     async def run(self, ctx: Any) -> Any:
         p = ctx.params
-        ctx.world.post("yard", {"kind": "truck_arrival", "booking": p.booking, "plate": p.plate,
-                                "at": p.at.isoformat() if p.at else None,
-                                "unload_min": p.unload_min, "run_id": ctx.run.id})
-        ok = await ctx.timeline([
-            (0, "at_gate", f"Фура {p.booking} біля воріт"), (5, "weigh_in", "Ваги: брутто"),
-            (65, "to_dock", "До дока"), (245, "at_dock", "Розвантаження")])
+        ctx.world.post(
+            "yard",
+            {
+                "kind": "truck_arrival",
+                "booking": p.booking,
+                "plate": p.plate,
+                "at": p.at.isoformat() if p.at else None,
+                "unload_min": p.unload_min,
+                "run_id": ctx.run.id,
+            },
+        )
+        ok = await ctx.timeline(
+            [
+                (0, "at_gate", f"Фура {p.booking} біля воріт"),
+                (5, "weigh_in", "Ваги: брутто"),
+                (65, "to_dock", "До дока"),
+                (245, "at_dock", "Розвантаження"),
+            ]
+        )
         if not ok or await ctx.sleep(p.unload_min * 60):
             return None
-        ok = await ctx.timeline([(0, "to_exit", "До виїзду"), (120, "weigh_out", "Ваги: тара"),
-                                 (180, "left", "Фура виїхала")])
+        ok = await ctx.timeline(
+            [(0, "to_exit", "До виїзду"), (120, "weigh_out", "Ваги: тара"), (180, "left", "Фура виїхала")]
+        )
         return ctx.world.run_results.pop(ctx.run.id, {}) if ok else None
 
 
 class FireDrill(Scenario):
     name, title_uk, group, Params = "fire_drill", "Пожежні навчання/тривога", "safety", FireDrillParams
     conflict_groups = frozenset({"safety", "bms"})
-    STEPS: ClassVar[list[tuple[int, str, str]]] = [(0, "alarm", "Тривога на панелі"), (3, "sounders", "Сирени"),
-             (6, "vent_stop", "Зупинка вентиляції"), (9, "dampers", "Димовидалення"),
-             (12, "doors", "Двері й шлагбауми"), (20, "machines", "Верстати зони → ERROR")]
+    STEPS: ClassVar[list[tuple[int, str, str]]] = [
+        (0, "alarm", "Тривога на панелі"),
+        (3, "sounders", "Сирени"),
+        (6, "vent_stop", "Зупинка вентиляції"),
+        (9, "dampers", "Димовидалення"),
+        (12, "doors", "Двері й шлагбауми"),
+        (20, "machines", "Верстати зони → ERROR"),
+    ]
 
     def conflicts(self, p: Any) -> Any:
         return {f"zone:{p.zone}"}
 
     async def run(self, ctx: Any) -> Any:
         p = ctx.params
-        ctx.flag("fire_drill", {"zone": p.zone, "detector": p.detector, "real": p.real,
-                                "t0": ctx.world.now().isoformat(), "phase": "active"})
+        ctx.flag(
+            "fire_drill",
+            {
+                "zone": p.zone,
+                "detector": p.detector,
+                "real": p.real,
+                "t0": ctx.world.now().isoformat(),
+                "phase": "active",
+            },
+        )
         if await ctx.timeline(self.STEPS):
             await ctx.wait_or_stop(max(p.duration_s - 20, 0))
         ctx.world.flags["fire_drill"]["phase"] = "restoring"  # відкат у зворотному порядку за 30 с
@@ -586,9 +651,17 @@ class AccessEvent(Scenario):
 
     async def run(self, ctx: Any) -> None:
         p = ctx.params
-        ctx.world.post("access", {"device": p.device, "user": p.user, "code": p.code,
-                                  "tna_key": p.tna_key, "door_open": p.door_open,
-                                  "run_id": ctx.run.id})
+        ctx.world.post(
+            "access",
+            {
+                "device": p.device,
+                "user": p.user,
+                "code": p.code,
+                "tna_key": p.tna_key,
+                "door_open": p.door_open,
+                "run_id": ctx.run.id,
+            },
+        )
         ctx.step("access", f"Подія {p.code} на {p.device}")
 
 
@@ -668,8 +741,7 @@ class LightingScene(Scenario):
 
     async def run(self, ctx: Any) -> None:
         p = ctx.params
-        ctx.flag("lighting_scene", {"scene": p.scene, "level": p.level,
-                                    "fault_device": p.fault_device}, key=p.group)
+        ctx.flag("lighting_scene", {"scene": p.scene, "level": p.level, "fault_device": p.fault_device}, key=p.group)
         ctx.step("scene", f"Освітлення {p.group}")
         await ctx.wait_or_stop(p.duration_s)
 
@@ -685,7 +757,9 @@ class PfcStepFault(Scenario):
     async def apply(self, ctx: Any, p: Any) -> None:
         ctx.flag("swb", {"section": p.section, "step": p.step, "qs_closed": p.qs_closed})
         if p.step:
-            ctx.step("pfc_fault", f"PFC-{p.section}: ступінь {p.step} не вмикається", section=p.section, pfc_step=p.step)
+            ctx.step(
+                "pfc_fault", f"PFC-{p.section}: ступінь {p.step} не вмикається", section=p.section, pfc_step=p.step
+            )
         else:
             ctx.step("swb", "Контролер ГРЩ: параметри сценарію", qs_closed=p.qs_closed)
 
@@ -783,16 +857,36 @@ class WaterLeak(Scenario):
 
 
 SCENARIOS: list[type[Scenario]] = [
-    Shift, MachineFault, Blackout, FilterClogged, TruckNoBooking, TruckArrival, FireDrill, Spark,
-    AccessEvent, BatteryLow, CompressorFault, PvCloudy, BoilerRefill, GensetTest, LightingScene,
-    PfcStepFault, PeakLoad, ExportDemo, CtlLocal, ChpNoGas, AirLeak, GasOveruse, WaterLeak]
+    Shift,
+    MachineFault,
+    Blackout,
+    FilterClogged,
+    TruckNoBooking,
+    TruckArrival,
+    FireDrill,
+    Spark,
+    AccessEvent,
+    BatteryLow,
+    CompressorFault,
+    PvCloudy,
+    BoilerRefill,
+    GensetTest,
+    LightingScene,
+    PfcStepFault,
+    PeakLoad,
+    ExportDemo,
+    CtlLocal,
+    ChpNoGas,
+    AirLeak,
+    GasOveruse,
+    WaterLeak,
+]
 
 
 def _tags_conflict(a: set[str], b: set[str]) -> str | None:
     for x in a:
         for y in b:
-            if x == y or (x.endswith("*") and y.startswith(x[:-1])) or (
-                    y.endswith("*") and x.startswith(y[:-1])):
+            if x == y or (x.endswith("*") and y.startswith(x[:-1])) or (y.endswith("*") and x.startswith(y[:-1])):
                 return x if x == y else (y if x.endswith("*") else x)
     return None
 
@@ -805,9 +899,16 @@ class ScenarioRunner:
         self._tags: dict[str, set[str]] = {}
 
     def list(self) -> list[dict[str, Any]]:
-        return [{"name": s.name, "title_uk": s.title_uk, "group": s.group,
-                 "duration_s": s.default_duration(),
-                 "params_schema": s.Params.model_json_schema()} for s in self.scenarios.values()]
+        return [
+            {
+                "name": s.name,
+                "title_uk": s.title_uk,
+                "group": s.group,
+                "duration_s": s.default_duration(),
+                "params_schema": s.Params.model_json_schema(),
+            }
+            for s in self.scenarios.values()
+        ]
 
     def active(self) -> list[Run]:  # type: ignore[valid-type]
         return [r for r in self.runs.values() if r.state in RUN_ACTIVE]
@@ -836,15 +937,15 @@ class ScenarioRunner:
                 raise ScenarioConflict(f"{what} busy by run {other.id}")
         now = self.world.now()
         dur = p.duration_s  # type: ignore[attr-defined]
-        run = Run(f"r-{ulid()}", name, p.model_dump(mode="json"), now,
-                  now + timedelta(seconds=dur) if dur else None, run_ref)
+        run = Run(
+            f"r-{ulid()}", name, p.model_dump(mode="json"), now, now + timedelta(seconds=dur) if dur else None, run_ref
+        )
         self.runs[run.id] = run
         self._tags[run.id] = tags
         self._emit(run, "started", f"Сценарій {name} запущено")
         ctx = ScenarioContext(self.world, run, p)
         # eager: ефекти (прапори, збої) застосовуються до повернення з start()
-        run.task = asyncio.Task(self._execute(sc, ctx), loop=asyncio.get_running_loop(),
-                                eager_start=True)
+        run.task = asyncio.Task(self._execute(sc, ctx), loop=asyncio.get_running_loop(), eager_start=True)
         return run
 
     async def _execute(self, sc: Scenario, ctx: ScenarioContext) -> None:
@@ -864,8 +965,9 @@ class ScenarioRunner:
         self._emit(run, state, f"Сценарій {run.name}: {state}")
 
     def _emit(self, run: Run, state: str, msg: str) -> None:
-        self.world.events.emit("scenario", msg, run_id=run.id,
-                               payload={"state": state, "name": run.name, "run_ref": run.run_ref})
+        self.world.events.emit(
+            "scenario", msg, run_id=run.id, payload={"state": state, "name": run.name, "run_ref": run.run_ref}
+        )
 
     async def stop(self, run_id: str) -> Run:
         run = self.runs.get(run_id)
@@ -885,8 +987,7 @@ class ScenarioRunner:
         їхні прапори знімаються."""
         for rid, d in saved.items():
             clear_flags(self.world, [tuple(x) for x in d.get("owned_flags", [])])
-            run = Run(rid, d["name"], d["params"], datetime.fromisoformat(d["started"]), None,
-                      d.get("run_ref"))
+            run = Run(rid, d["name"], d["params"], datetime.fromisoformat(d["started"]), None, d.get("run_ref"))
             run.state = "stopped"
             self.runs[rid] = run
             self._emit(run, "stopped", f"Сценарій {run.name}: stopped (рестарт сервісу)")

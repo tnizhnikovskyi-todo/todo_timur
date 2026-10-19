@@ -9,6 +9,7 @@ W3 (SPEC §8.1): підживлення котельні — ``boiler_m3_total +
 ковзне середнє за 5 хв; основна витрата ``q`` збільшується на цю підживлювальну. Прапор ``water_leak`` (сценарій
 ``water_leak``, число ``extra_m3h`` або ``{"extra_m3h": …}``) додає ``extra_m3h`` при ``23:00 ≤ t < 06:30`` (київський час).
 """
+
 from __future__ import annotations
 
 import math

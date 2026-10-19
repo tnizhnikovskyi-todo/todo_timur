@@ -1,4 +1,5 @@
 """catalog/odoo_demo.json (fire+lighting) збігається з dist/odoo_demo.json і підхоплюється load_layout."""
+
 import json
 from pathlib import Path
 

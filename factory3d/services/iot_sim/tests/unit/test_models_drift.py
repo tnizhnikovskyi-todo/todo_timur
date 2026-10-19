@@ -1,4 +1,5 @@
 """R-09: дрейф забивання фільтрів (AC-09)."""
+
 import pytest
 
 RV05 = "ventilation/units/RV-05/filter_dp_pa"
@@ -11,8 +12,7 @@ def test_drift_rate(world):
     world.step(10)
     r = world.r(RV05)
     assert sig.value == pytest.approx(120 + 0.05 * (1 + 0.5 * r) * 10 / 60, abs=1e-9)
-    assert world.signals["ventilation/units/RV-05/filter_extract_dp_pa"].value == pytest.approx(
-        0.8 * sig.value)
+    assert world.signals["ventilation/units/RV-05/filter_extract_dp_pa"].value == pytest.approx(0.8 * sig.value)
 
 
 def test_reset_on_maintenance_closed(world):

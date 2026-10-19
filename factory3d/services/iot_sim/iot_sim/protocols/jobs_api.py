@@ -6,6 +6,7 @@
 ``JobOrderList`` і ``world.post("woodstore_jobs", {type: "feed", target, sheets, product, ...})``
 для порталу (лише для target ∈ SAW-*/NEST-1). Стани ``running/done`` не ведуться (ПРИПУЩЕННЯ).
 """
+
 from __future__ import annotations
 
 import csv
@@ -27,8 +28,20 @@ from iot_sim.protocols.woodstore_api import (
     install_errors,
 )
 
-CSV_COLUMNS = ("PartId", "Description", "Material", "Length", "Width", "Quantity", "Grain",
-               "EdgeTop", "EdgeBottom", "EdgeLeft", "EdgeRight", "Program")
+CSV_COLUMNS = (
+    "PartId",
+    "Description",
+    "Material",
+    "Length",
+    "Width",
+    "Quantity",
+    "Grain",
+    "EdgeTop",
+    "EdgeBottom",
+    "EdgeLeft",
+    "EdgeRight",
+    "Program",
+)
 MAX_LEN, MAX_WID = 2800, 2070
 ETA_S = 5
 
@@ -61,9 +74,16 @@ def parse_parts(text: str) -> list[dict[str, Any]]:
         if err:
             errors.append({"row": i, "error": err})
             continue
-        parts.append({"id": r.get("PartId") or f"P{i - 1:03d}", "description": r.get("Description"),
-                      "length": length, "width": width, "quantity": qty,
-                      "program": r.get("Program") or None})
+        parts.append(
+            {
+                "id": r.get("PartId") or f"P{i - 1:03d}",
+                "description": r.get("Description"),
+                "length": length,
+                "width": width,
+                "quantity": qty,
+                "program": r.get("Program") or None,
+            }
+        )
     if not rows:
         errors.append({"row": 1, "error": "no data rows"})
     if errors:
@@ -108,8 +128,9 @@ def optimize(parts: list[dict[str, Any]], sheet_w: int, sheet_h: int, product: s
         else:
             placed = False
         if not placed:
-            sheets.append({"shelves": [{"y": 0, "h": it["h"], "x": it["w"]}],
-                           "parts": [{**it, "x": 0, "y": 0, "rot": 0}]})
+            sheets.append(
+                {"shelves": [{"y": 0, "h": it["h"], "x": it["w"]}], "parts": [{**it, "x": 0, "y": 0, "rot": 0}]}
+            )
     out_sheets, cut_mm, used_total = [], 0, 0
     for no, sh in enumerate(sheets, start=1):
         area = sum(p["w"] * p["h"] for p in sh["parts"])
@@ -121,26 +142,58 @@ def optimize(parts: list[dict[str, Any]], sheet_w: int, sheet_h: int, product: s
         for p in sh["parts"]:
             cuts.append({"dir": "x", "pos": p["x"] + p["w"], "from": p["y"], "to": p["y"] + p["h"]})
             cut_mm += p["h"]
-        out_sheets.append({
-            "no": no, "product": product,
-            "parts": [{"id": p["id"], "x": p["x"], "y": p["y"], "w": p["w"], "h": p["h"],
-                       "rot": p["rot"]} for p in sh["parts"]],
-            "waste_pct": round(100 * (1 - area / (sheet_w * sheet_h)), 1), "cuts": cuts})
+        out_sheets.append(
+            {
+                "no": no,
+                "product": product,
+                "parts": [
+                    {"id": p["id"], "x": p["x"], "y": p["y"], "w": p["w"], "h": p["h"], "rot": p["rot"]}
+                    for p in sh["parts"]
+                ],
+                "waste_pct": round(100 * (1 - area / (sheet_w * sheet_h)), 1),
+                "cuts": cuts,
+            }
+        )
     total = len(out_sheets)
     waste = round(100 * (1 - used_total / (total * sheet_w * sheet_h)), 1) if total else 0.0
-    return {"sheets": out_sheets, "total_sheets": total, "waste_pct": waste,
-            "cut_length_m": round(cut_mm / 1000, 1), "est_min": math.ceil(total * 3 + cut_mm / 20000)}
+    return {
+        "sheets": out_sheets,
+        "total_sheets": total,
+        "waste_pct": waste,
+        "cut_length_m": round(cut_mm / 1000, 1),
+        "est_min": math.ceil(total * 3 + cut_mm / 20000),
+    }
 
 
 def mpr_text(job: dict[str, Any], part: dict[str, Any]) -> str:
     """Мінімальний валідний MPR woodWOP (ПРИПУЩЕННЯ: лише заголовок і контур)."""
     length, width = part["length"], part["width"]
-    return "\r\n".join([
-        "[H", 'VERSION="4.0 Alpha"', 'OP="1"', 'WW="9.0.82"', "",
-        "[001", f"LA={length}", f"BR={width}", "DI=16", "",
-        "<100 \\WerkStck\\", f'LA="{length}"', f'BR="{width}"', 'DI="16"', "",
-        '<101 \\Kommentar\\', f'KM="{job["external_ref"] or job["job_id"]} {part["id"]}"', "",
-        "!"]) + "\r\n"
+    return (
+        "\r\n".join(
+            [
+                "[H",
+                'VERSION="4.0 Alpha"',
+                'OP="1"',
+                'WW="9.0.82"',
+                "",
+                "[001",
+                f"LA={length}",
+                f"BR={width}",
+                "DI=16",
+                "",
+                "<100 \\WerkStck\\",
+                f'LA="{length}"',
+                f'BR="{width}"',
+                'DI="16"',
+                "",
+                "<101 \\Kommentar\\",
+                f'KM="{job["external_ref"] or job["job_id"]} {part["id"]}"',
+                "",
+                "!",
+            ]
+        )
+        + "\r\n"
+    )
 
 
 class JobStore:
@@ -149,8 +202,9 @@ class JobStore:
         self.jobs: dict[str, dict[str, Any]] = {}
         self._seq = 76
 
-    def create(self, parts: list[dict[str, Any]], material: str, sheet: str,
-               external_ref: str | None, machine: str | None) -> dict[str, Any]:
+    def create(
+        self, parts: list[dict[str, Any]], material: str, sheet: str, external_ref: str | None, machine: str | None
+    ) -> dict[str, Any]:
         m = re.fullmatch(r"(\d+)x(\d+)(?:x\d+)?", sheet or "2800x2070x16")
         if not m:
             raise ApiError(422, "VALIDATION", "sheet must look like 2800x2070x16")
@@ -158,11 +212,21 @@ class JobStore:
         self._seq += 1
         now = self.world.now().isoformat()
         plan = optimize(parts, sw, sh, material)
-        job = {"job_id": f"cj-{self._seq:05d}", "state": "optimizing",
-               "external_ref": external_ref, "machine": machine, "material": material,
-               "parts": sum(p["quantity"] for p in parts), "plan": None, "created": now,
-               "updated": now, "error": None, "_plan": plan, "_parts": parts,
-               "_ready": self.world.clock.epoch() + ETA_S}
+        job = {
+            "job_id": f"cj-{self._seq:05d}",
+            "state": "optimizing",
+            "external_ref": external_ref,
+            "machine": machine,
+            "material": material,
+            "parts": sum(p["quantity"] for p in parts),
+            "plan": None,
+            "created": now,
+            "updated": now,
+            "error": None,
+            "_plan": plan,
+            "_parts": parts,
+            "_ready": self.world.clock.epoch() + ETA_S,
+        }
         self.jobs[job["job_id"]] = job
         return job
 
@@ -205,8 +269,13 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
             return JSONResponse({"detail": e.errors}, 422)
         if not body.get("material"):
             raise ApiError(422, "VALIDATION", "material is required")
-        job = store.create(parts, str(body["material"]), str(body.get("sheet") or "2800x2070x16"),
-                           body.get("external_ref"), body.get("machine"))
+        job = store.create(
+            parts,
+            str(body["material"]),
+            str(body.get("sheet") or "2800x2070x16"),
+            body.get("external_ref"),
+            body.get("machine"),
+        )
         return {"job_id": job["job_id"], "state": "optimizing", "eta_s": ETA_S}
 
     @app.get("/jobs/{jid}", dependencies=dep)
@@ -237,13 +306,22 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
         job["machine"], job["state"] = machine, "released"
         job["updated"] = store.world.now().isoformat()
         w = store.world
-        w.post("opc_joborders", {"machine": machine, "job_order_id": jid, "priority": prio,
-                                 "external_ref": job["external_ref"]})
+        w.post(
+            "opc_joborders",
+            {"machine": machine, "job_order_id": jid, "priority": prio, "external_ref": job["external_ref"]},
+        )
         if machine in TARGETS:
-            w.post("woodstore_jobs", {"type": "feed", "target": machine, "priority": prio,
-                                      "sheets": job["_plan"]["total_sheets"],
-                                      "product": job["material"],
-                                      "external_ref": job["external_ref"]})
+            w.post(
+                "woodstore_jobs",
+                {
+                    "type": "feed",
+                    "target": machine,
+                    "priority": prio,
+                    "sheets": job["_plan"]["total_sheets"],
+                    "product": job["material"],
+                    "external_ref": job["external_ref"],
+                },
+            )
         return {"job_id": jid, "state": "released", "job_order_id": jid}
 
     @app.get("/jobs/{jid}/mpr", dependencies=dep)
@@ -264,8 +342,7 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
 class JobsApi(ProtocolServer):
     name = "jobs"
 
-    def __init__(self, world: World, *, port: int = 8083, host: str = "0.0.0.0",
-                 apikey: str = "") -> None:
+    def __init__(self, world: World, *, port: int = 8083, host: str = "0.0.0.0", apikey: str = "") -> None:
         self.world, self.port = world, port
         self.store = JobStore(world)
         self.app = create_app(self.store, apikey)
@@ -278,8 +355,7 @@ class JobsApi(ProtocolServer):
         await self._runner.stop()
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self._runner.up, "port": self.port,
-                "jobs": len(self.store.jobs)}
+        return {"proto": self.name, "up": self._runner.up, "port": self.port, "jobs": len(self.store.jobs)}
 
 
 __all__ = ["JobStore", "JobsApi", "create_app", "optimize", "parse_parts"]

@@ -10,6 +10,7 @@
 W2 (SPEC §8.2): номінальний тиск = ``air_setpoint_bar − 0,19`` (прапор, за замовчуванням 7,00 → 6,81 — поведінка W0
 збережена); ``min_consumer_bar`` = 6,20 (константа регістра 241).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -70,8 +71,7 @@ class Compressor(Model):
         p_nom = float(ctl(self.world, "air_setpoint_bar")) - AIR_OFFSET_BAR
         prod, pmax = production(self.world)
         target = clamp(25.0 + 60.0 * prod / pmax, 20.0, 100.0) if pmax > 0 else 25.0
-        load = clamp(noise_step(float(self.val("load")), target, LOAD_NOISE, self.r("load"),
-                                self.dt_min), 20.0, 100.0)
+        load = clamp(noise_step(float(self.val("load")), target, LOAD_NOISE, self.r("load"), self.dt_min), 20.0, 100.0)
         step = 0.02 * self.dt_min
         if kind == "pressure_drop":
             self.nominal = P_FAULT
@@ -82,8 +82,10 @@ class Compressor(Model):
         else:
             self.nominal = min(p_nom, self.nominal + step)
         self.set("load", load)
-        self.set("pressure_bar", noise_step(float(self.val("pressure_bar")), self.nominal, 0.05,
-                                            self.r("pressure_bar"), self.dt_min))
+        self.set(
+            "pressure_bar",
+            noise_step(float(self.val("pressure_bar")), self.nominal, 0.05, self.r("pressure_bar"), self.dt_min),
+        )
         temp = 115.0 if kind == "overtemp" else 70.0 + 0.2 * load + 0.3 * self.r("temp_c")
         self.set("temp_c", temp)
         faulty = kind in ("pressure_drop", "overtemp") or self.device.fault == "generic"
@@ -92,8 +94,12 @@ class Compressor(Model):
             self.hours += dt_s / 3600.0
             self.set("hours", self.hours)
         nominal_p = float(self.sig("p_now").params.get("nominal") or 50.2)
-        self.set("p_now", noise_step(float(self.val("p_now")), nominal_p * (0.4 + 0.6 * load / 64.0),
-                                     2.0, self.r("p_now"), self.dt_min))
+        self.set(
+            "p_now",
+            noise_step(
+                float(self.val("p_now")), nominal_p * (0.4 + 0.6 * load / 64.0), 2.0, self.r("p_now"), self.dt_min
+            ),
+        )
 
     def get_state(self) -> dict[str, Any]:
         return {"nominal": self.nominal, "hours": self.hours, "comm_from_flag": self.comm_from_flag}

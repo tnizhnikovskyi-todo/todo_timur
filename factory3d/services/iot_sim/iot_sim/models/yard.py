@@ -19,6 +19,7 @@ weigh_out (60 с) -> at_gate_out -> left; без бронювання: at_gate -
 DO5 — лише GATE-E, X-47) і на кроці ``doors`` каскаду R-25.
 Дані для протоколів: ``YardCtl.trucks``, ``gates``, ``scale()``, ``Yard.outbox`` (LPR-події камер).
 """
+
 from __future__ import annotations
 
 from collections import deque
@@ -39,19 +40,55 @@ DEFAULT_UNLOAD_MIN = 40
 DEFAULT_CARGO_KG = 11200.0
 LIST_NAME = "f3d_bookings"
 CAMS = {"GATE-W": "CAM-05", "GATE-E": "CAM-06"}
-LAT_TO_CYR = {"A": "А", "B": "В", "E": "Е", "I": "І", "K": "К", "M": "М", "H": "Н", "O": "О", "P": "Р",
-              "C": "С", "T": "Т", "X": "Х"}
+LAT_TO_CYR = {
+    "A": "А",
+    "B": "В",
+    "E": "Е",
+    "I": "І",
+    "K": "К",
+    "M": "М",
+    "H": "Н",
+    "O": "О",
+    "P": "Р",
+    "C": "С",
+    "T": "Т",
+    "X": "Х",
+}
 CYR_TO_LAT = {v: k for k, v in LAT_TO_CYR.items()}
 LETTERS = "ABEIKMHOPCTX"
-UNIT_KG = (("DSP", 56.0), ("MDF", 70.0), ("HDF", 12.0), ("PAL", 420.0), ("ДСП", 56.0), ("МДФ", 70.0),
-           ("ХДФ", 12.0), ("палета", 420.0))
+UNIT_KG = (
+    ("DSP", 56.0),
+    ("MDF", 70.0),
+    ("HDF", 12.0),
+    ("PAL", 420.0),
+    ("ДСП", 56.0),
+    ("МДФ", 70.0),
+    ("ХДФ", 12.0),
+    ("палета", 420.0),
+)
 DEMO_BOOKINGS = (
-    {"batch": "BATCH/IN/00001", "truck": "TRUCK-IN-1", "dock": "DOCK-W1", "plate": None,
-     "type": "incoming", "picking": "WH/IN/00128", "partner": "Постачальник плит (демо)", "hhmm": (6, 50),
-     "lines": [{"product": "DSP16-SON", "qty": 120}, {"product": "DSP16-WHT", "qty": 80}]},
-    {"batch": "BATCH/OUT/00004", "truck": "TRUCK-OUT-1", "dock": "DOCK-E2", "plate": "АА4512КТ",
-     "type": "outgoing", "picking": "WH/OUT/00413", "partner": "Меблі Дім (демо)", "hhmm": (13, 0),
-     "lines": [{"product": "PAL-FG", "qty": 12}]},
+    {
+        "batch": "BATCH/IN/00001",
+        "truck": "TRUCK-IN-1",
+        "dock": "DOCK-W1",
+        "plate": None,
+        "type": "incoming",
+        "picking": "WH/IN/00128",
+        "partner": "Постачальник плит (демо)",
+        "hhmm": (6, 50),
+        "lines": [{"product": "DSP16-SON", "qty": 120}, {"product": "DSP16-WHT", "qty": 80}],
+    },
+    {
+        "batch": "BATCH/OUT/00004",
+        "truck": "TRUCK-OUT-1",
+        "dock": "DOCK-E2",
+        "plate": "АА4512КТ",
+        "type": "outgoing",
+        "picking": "WH/OUT/00413",
+        "partner": "Меблі Дім (демо)",
+        "hhmm": (13, 0),
+        "lines": [{"product": "PAL-FG", "qty": 12}],
+    },
 )
 
 
@@ -92,16 +129,31 @@ def lpr_payload(cam: str, gate: str, truck: dict[str, Any], car_state: str, now:
     plate = truck["plate"]
     booked = truck["booked"]
     return {
-        "packetCounter": str(truck["seq"]), "capture_timestamp": str(ms), "frame_timestamp": str(ms),
-        "capture_ts": str(ms * 1_000_000), "datetime": now.strftime("%Y%m%d %H%M%S") + f"{now.microsecond // 1000:03d}",
-        "plateText": to_lat(plate), "plateUnicode": plate, "plateUTF8": plate, "plateASCII": to_lat(plate),
-        "plateCountry": "UKR", "plateISO3166-2": "UA", "plateRegion": "", "plateRegionCode": "",
-        "plateList": LIST_NAME if booked else "", "plateListMode": "allow" if booked else "none",
-        "plateListDescription": (f"{truck['batch']} {truck['dock']} {truck.get('partner') or ''}".strip()
-                                 if booked else ""),
-        "plateConfidence": "0.912340", "carState": car_state, "roiID": "1",
-        "carMoveDirection": "in" if gate == "GATE-W" else "out", "carID": str(truck["seq"]),
-        "GEOtarget": gate, "sensorProviderID": cam,
+        "packetCounter": str(truck["seq"]),
+        "capture_timestamp": str(ms),
+        "frame_timestamp": str(ms),
+        "capture_ts": str(ms * 1_000_000),
+        "datetime": now.strftime("%Y%m%d %H%M%S") + f"{now.microsecond // 1000:03d}",
+        "plateText": to_lat(plate),
+        "plateUnicode": plate,
+        "plateUTF8": plate,
+        "plateASCII": to_lat(plate),
+        "plateCountry": "UKR",
+        "plateISO3166-2": "UA",
+        "plateRegion": "",
+        "plateRegionCode": "",
+        "plateList": LIST_NAME if booked else "",
+        "plateListMode": "allow" if booked else "none",
+        "plateListDescription": (
+            f"{truck['batch']} {truck['dock']} {truck.get('partner') or ''}".strip() if booked else ""
+        ),
+        "plateConfidence": "0.912340",
+        "carState": car_state,
+        "roiID": "1",
+        "carMoveDirection": "in" if gate == "GATE-W" else "out",
+        "carID": str(truck["seq"]),
+        "GEOtarget": gate,
+        "sensorProviderID": cam,
         "vehicle_info": {"view": "front", "type": "TRUCK", "color": "WHITE"},
     }
 
@@ -112,8 +164,17 @@ class YardCtl:
         self.trucks: list[dict[str, Any]] = []
         self.known: set[str] = set()
         self.gates: dict[str, dict[str, Any]] = {
-            g: {"state": "closed", "t": 0.0, "free_at": None, "passes": 0, "loop": False, "pulse": None,
-                "close_cmd": False} for g in CAMS}
+            g: {
+                "state": "closed",
+                "t": 0.0,
+                "free_at": None,
+                "passes": 0,
+                "loop": False,
+                "pulse": None,
+                "close_cmd": False,
+            }
+            for g in CAMS
+        }
         self.epoch_key: tuple[float, int] | None = None
         self.seq = 0
         self.lpr_out: dict[str, deque[dict[str, Any]]] = {c: deque(maxlen=500) for c in CAMS.values()}
@@ -130,21 +191,50 @@ class YardCtl:
         return datetime.fromtimestamp(epoch, self.world.clock.tz)
 
     # --- створення фур --------------------------------------------------------------------
-    def make_truck(self, booking: dict[str, Any], arrival: float, booked: bool = True, gate: str = "GATE-W",
-                   unload_min: float | None = None, run_id: str | None = None, wait_min: float = 10,
-                   plate: str | None = None) -> dict[str, Any]:
+    def make_truck(
+        self,
+        booking: dict[str, Any],
+        arrival: float,
+        booked: bool = True,
+        gate: str = "GATE-W",
+        unload_min: float | None = None,
+        run_id: str | None = None,
+        wait_min: float = 10,
+        plate: str | None = None,
+    ) -> dict[str, Any]:
         self.seq += 1
-        code = booking.get("truck") or booking.get("code") or f"TRUCK-{'OUT' if booking.get('type') == 'outgoing' else 'IN'}-{self.seq}"
+        code = (
+            booking.get("truck")
+            or booking.get("code")
+            or f"TRUCK-{'OUT' if booking.get('type') == 'outgoing' else 'IN'}-{self.seq}"
+        )
         incoming = booking.get("type", "incoming") != "outgoing"
         cargo = cargo_kg(booking)
-        t = {"seq": self.seq, "id": code, "batch": booking.get("batch", ""), "picking": booking.get("picking"),
-             "dock": booking.get("dock", "DOCK-W1"), "partner": booking.get("partner"), "kind":
-             "incoming" if incoming else "outgoing", "plate": plate or booking.get("plate") or gen_plate(code),
-             "booked": booked, "state": "expected", "t": arrival, "arrival": arrival, "gate_in": gate,
-             "cargo_kg": cargo, "gross_kg": TARE_KG + cargo, "tare_kg": TARE_KG,
-             "unload_min": unload_min if unload_min is not None else DEFAULT_UNLOAD_MIN,
-             "run_id": run_id, "wait_s": wait_min * 60, "req": None, "booking": booking, "unloaded_pct": 0.0,
-             "history": [("expected", arrival)]}
+        t = {
+            "seq": self.seq,
+            "id": code,
+            "batch": booking.get("batch", ""),
+            "picking": booking.get("picking"),
+            "dock": booking.get("dock", "DOCK-W1"),
+            "partner": booking.get("partner"),
+            "kind": "incoming" if incoming else "outgoing",
+            "plate": plate or booking.get("plate") or gen_plate(code),
+            "booked": booked,
+            "state": "expected",
+            "t": arrival,
+            "arrival": arrival,
+            "gate_in": gate,
+            "cargo_kg": cargo,
+            "gross_kg": TARE_KG + cargo,
+            "tare_kg": TARE_KG,
+            "unload_min": unload_min if unload_min is not None else DEFAULT_UNLOAD_MIN,
+            "run_id": run_id,
+            "wait_s": wait_min * 60,
+            "req": None,
+            "booking": booking,
+            "unloaded_pct": 0.0,
+            "history": [("expected", arrival)],
+        }
         self.trucks.append(t)
         return t
 
@@ -156,8 +246,10 @@ class YardCtl:
             if isinstance(sh, dict) and sh.get("trucks", True):
                 self.demo_loaded = True
                 base = datetime.combine(now.date(), datetime.min.time(), tzinfo=now.tzinfo)
-                src = [dict(b, scheduled=(base + timedelta(hours=b["hhmm"][0], minutes=b["hhmm"][1])).isoformat())  # type: ignore[arg-type,index]
-                       for b in DEMO_BOOKINGS]
+                src = [
+                    dict(b, scheduled=(base + timedelta(hours=b["hhmm"][0], minutes=b["hhmm"][1])).isoformat())  # type: ignore[arg-type,index]
+                    for b in DEMO_BOOKINGS
+                ]
                 w.trucks.extend(src)
         for b in list(w.trucks):
             key = b.get("batch") or b.get("picking") or b.get("truck")
@@ -178,25 +270,45 @@ class YardCtl:
         for cmd in w.drain("yard"):
             ep = now.timestamp()
             if cmd.get("kind") == "truck_no_booking":
-                self.make_truck({"truck": None, "type": "incoming", "batch": "", "dock": ""}, ep, booked=False,
-                                gate=cmd.get("gate") or "GATE-W", run_id=cmd.get("run_id"),
-                                wait_min=cmd.get("wait_min") or 10,
-                                plate=to_cyr(cmd["plate"]) if cmd.get("plate") else None)
+                self.make_truck(
+                    {"truck": None, "type": "incoming", "batch": "", "dock": ""},
+                    ep,
+                    booked=False,
+                    gate=cmd.get("gate") or "GATE-W",
+                    run_id=cmd.get("run_id"),
+                    wait_min=cmd.get("wait_min") or 10,
+                    plate=to_cyr(cmd["plate"]) if cmd.get("plate") else None,
+                )
             elif cmd.get("kind") == "truck_arrival":
                 ref = cmd.get("booking")
-                waiting = next((t for t in self.trucks if t["state"] == "rejected"
-                                and cmd.get("plate") and t["plate"] == to_cyr(cmd["plate"])), None)
+                waiting = next(
+                    (
+                        t
+                        for t in self.trucks
+                        if t["state"] == "rejected" and cmd.get("plate") and t["plate"] == to_cyr(cmd["plate"])
+                    ),
+                    None,
+                )
                 if waiting is not None:  # бронювання з'явилось: фуру біля воріт впускають
                     waiting["admit"] = True
                     continue
                 b = next((x for x in w.trucks if ref in (x.get("batch"), x.get("picking"))), None)
                 if b is None:
-                    b = {"batch": ref, "picking": ref, "type": "outgoing" if "OUT" in str(ref) else "incoming",
-                         "dock": "DOCK-W1" if "IN" in str(ref) else "DOCK-E2"}
+                    b = {
+                        "batch": ref,
+                        "picking": ref,
+                        "type": "outgoing" if "OUT" in str(ref) else "incoming",
+                        "dock": "DOCK-W1" if "IN" in str(ref) else "DOCK-E2",
+                    }
                 at = cmd.get("at")
                 arrival = (datetime.fromisoformat(at) if isinstance(at, str) else at or now).timestamp()
-                self.make_truck(b, arrival, run_id=cmd.get("run_id"), unload_min=cmd.get("unload_min"),
-                                plate=to_cyr(cmd["plate"]) if cmd.get("plate") else None)
+                self.make_truck(
+                    b,
+                    arrival,
+                    run_id=cmd.get("run_id"),
+                    unload_min=cmd.get("unload_min"),
+                    plate=to_cyr(cmd["plate"]) if cmd.get("plate") else None,
+                )
 
     # --- ворота ---------------------------------------------------------------------------
     def open_request(self, gate: str, at: float) -> None:
@@ -207,8 +319,9 @@ class YardCtl:
 
     def hold(self, gate: str) -> bool:
         dev = self.world.devices.get(gate)
-        return bool(dev is not None and dev.signals.get("cmd_hold") is not None
-                    and dev.signals["cmd_hold"].value in (1, True))
+        return bool(
+            dev is not None and dev.signals.get("cmd_hold") is not None and dev.signals["cmd_hold"].value in (1, True)
+        )
 
     def _pulses(self, epoch: float) -> None:
         for gate, g in self.gates.items():
@@ -228,8 +341,11 @@ class YardCtl:
                         g["close_cmd"] = True
 
     def _waiting(self, gate: str) -> bool:
-        return any((tr["state"] in ("at_gate", "rejected") and tr["gate_in"] == gate)
-                   or (tr["state"] == "at_gate_out" and gate == "GATE-E") for tr in self.trucks)
+        return any(
+            (tr["state"] in ("at_gate", "rejected") and tr["gate_in"] == gate)
+            or (tr["state"] == "at_gate_out" and gate == "GATE-E")
+            for tr in self.trucks
+        )
 
     def _drill_hold(self) -> None:
         """R-25 +12 с: DO4 і DO5 = 1 (окремі канали); знімаються разом із відкатом каскаду."""
@@ -254,10 +370,16 @@ class YardCtl:
         for _ in range(4):
             if g["state"] == "opening" and epoch >= g["t"] + OPEN_S:
                 g["state"], g["t"] = "open", g["t"] + OPEN_S
-            elif g["state"] == "open" and not hold and not g["loop"] and (
-                    (g["free_at"] is not None and epoch >= g["free_at"] + CLOSE_DELAY_S) or g["close_cmd"]):
-                g["state"], g["t"] = "closing", (g["free_at"] + CLOSE_DELAY_S if g["free_at"] and not g["close_cmd"]
-                                                else epoch)
+            elif (
+                g["state"] == "open"
+                and not hold
+                and not g["loop"]
+                and ((g["free_at"] is not None and epoch >= g["free_at"] + CLOSE_DELAY_S) or g["close_cmd"])
+            ):
+                g["state"], g["t"] = (
+                    "closing",
+                    (g["free_at"] + CLOSE_DELAY_S if g["free_at"] and not g["close_cmd"] else epoch),
+                )
                 g["close_cmd"] = False
             elif g["state"] == "closing" and epoch >= g["t"] + CLOSING_S:
                 g["state"], g["t"] = "closed", g["t"] + CLOSING_S
@@ -269,16 +391,21 @@ class YardCtl:
 
     # --- фури -----------------------------------------------------------------------------
     def _event(self, truck: dict[str, Any], msg: str, **payload: Any) -> None:
-        self.world.events.emit("yard", msg, device=truck["id"], payload={"truck": truck["id"],
-                                                                        "state": truck["state"], **payload})
+        self.world.events.emit(
+            "yard", msg, device=truck["id"], payload={"truck": truck["id"], "state": truck["state"], **payload}
+        )
 
     def _lpr(self, truck: dict[str, Any], gate: str, car_state: str, epoch: float) -> None:
         cam = CAMS[gate]
         payload = lpr_payload(cam, gate, truck, car_state, self.now_dt(epoch))
         self.lpr_out[cam].append(payload)
         # контракт з LprPusher: подія yard з payload["lpr"] (тіло Axis LPV)
-        self.world.events.emit("yard", f"LPR {payload['plateText']} {car_state}", device=cam,
-                               payload={"lpr": payload, "truck": truck["id"]})
+        self.world.events.emit(
+            "yard",
+            f"LPR {payload['plateText']} {car_state}",
+            device=cam,
+            payload={"lpr": payload, "truck": truck["id"]},
+        )
         dev = self.world.devices.get(cam)
         if dev is not None and car_state == "new" and "plate" in dev.signals:
             dev.signals["plate"].set(payload["plateText"], self.world.now())
@@ -373,8 +500,11 @@ class YardCtl:
                 self._event(tr, f"Фура {tr['plate']} виїхала")
                 if tr["run_id"]:
                     self.world.run_results[tr["run_id"]] = {
-                        "gross_kg": int(tr["gross_kg"]), "tare_kg": int(tr["tare_kg"]), "dock": tr["dock"],
-                        "unloaded_pct": int(tr["unloaded_pct"])}
+                        "gross_kg": int(tr["gross_kg"]),
+                        "tare_kg": int(tr["tare_kg"]),
+                        "dock": tr["dock"],
+                        "unloaded_pct": int(tr["unloaded_pct"]),
+                    }
             else:
                 return
 

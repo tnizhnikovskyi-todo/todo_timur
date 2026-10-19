@@ -5,6 +5,7 @@
 ``ODOO_HTTP_INTERFACE=0.0.0.0 tools/odoo/serve.sh f3d_w6 18069``. Змінні: STAND_ODOO_URL (з хоста), STAND_ODOO_DB.
 Дані (РЦ, наряди, працівники) сідуються тут же через XML-RPC. Без Odoo тести пропускаються.
 """
+
 import asyncio
 import os
 import subprocess
@@ -31,14 +32,15 @@ class Odoo:
     def k(self, model, method, *args, **kw):
         try:
             return self.o.execute_kw(DB, self.uid, "admin", model, method, list(args), kw)
-        except xmlrpc.Fault as exc:   # методи без return None → «cannot marshal None»: дія виконана
+        except xmlrpc.Fault as exc:  # методи без return None → «cannot marshal None»: дія виконана
             if "cannot marshal None" in exc.faultString:
                 return None
             raise
 
     def xid(self, module, name):
-        return self.k("ir.model.data", "search_read", [("module", "=", module), ("name", "=", name)],
-                      fields=["res_id"])[0]["res_id"]
+        return self.k(
+            "ir.model.data", "search_read", [("module", "=", module), ("name", "=", name)], fields=["res_id"]
+        )[0]["res_id"]
 
     def param(self, key, value):
         self.k("ir.config_parameter", "set_param", "td.iot_sim." + key, value)
@@ -59,22 +61,38 @@ def _seed(od: Odoo):
     prod = od.k("product.product", "create", {"name": "Panel X", "is_storable": True})
     for code in ("SAW-1", "CNC-2"):
         wc = od.k("mrp.workcenter", "create", {"name": code, "code": code})
-        mo = od.k("mrp.production", "create", {
-            "product_id": prod, "product_qty": 10,
-            "workorder_ids": [(0, 0, {"name": "Op " + code, "workcenter_id": wc, "duration_expected": 60})]})
+        mo = od.k(
+            "mrp.production",
+            "create",
+            {
+                "product_id": prod,
+                "product_qty": 10,
+                "workorder_ids": [(0, 0, {"name": "Op " + code, "workcenter_id": wc, "duration_expected": 60})],
+            },
+        )
         od.k("mrp.production", "action_confirm", [mo])
         wo = od.k("mrp.workorder", "search", [("production_id", "=", mo)])
         if code == "SAW-1":
             od.k("mrp.workorder", "button_start", wo)
         else:
             loss = od.k("mrp.workcenter.productivity.loss", "search", [("loss_type", "!=", "productive")], limit=1)
-            od.k("mrp.workcenter.productivity", "create", {
-                "workcenter_id": wc, "workorder_id": wo[0], "loss_id": loss[0],
-                "date_start": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())})
+            od.k(
+                "mrp.workcenter.productivity",
+                "create",
+                {
+                    "workcenter_id": wc,
+                    "workorder_id": wo[0],
+                    "loss_id": loss[0],
+                    "date_start": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+                },
+            )
     if not od.k("hr.employee", "search_count", [("barcode", "!=", False)]):
         for i in range(35):
-            od.k("hr.employee", "create", {"name": f"Працівник {i + 1}", "barcode": f"EMP{i + 1:03d}",
-                                           "job_title": "Оператор"})
+            od.k(
+                "hr.employee",
+                "create",
+                {"name": f"Працівник {i + 1}", "barcode": f"EMP{i + 1:03d}", "job_title": "Оператор"},
+            )
 
 
 def _wait_health(timeout=60):
@@ -91,14 +109,40 @@ def _wait_health(timeout=60):
 def _recreate(extra_env: dict | None):
     off = ROOT / "tests" / "stand" / "_odoo.override.yml"
     gw = docker("network", "inspect", "odoo_default", "-f", "{{(index .IPAM.Config 0).Gateway}}")
-    env = {"SIM_MODE": "follow_odoo", "SIM_RESTORE_SNAPSHOT": "0", "SIM_ODOO_URL": f"http://{gw}:18069", "SIM_ODOO_DB": DB,
-           "SIM_ODOO_USER": "admin", "SIM_ODOO_APIKEY": "admin", "SIM_ODOO_EXPORT_TOKEN": EXPORT,
-           "SIM_ALLOW_OUTBOUND": f"mosquitto,127.0.0.1,{gw}", "SIM_ODOO_FOLLOW_S": "3", "SIM_ODOO_FOLLOW_SLOW_S": "10",
-           **(extra_env or {})}
+    env = {
+        "SIM_MODE": "follow_odoo",
+        "SIM_RESTORE_SNAPSHOT": "0",
+        "SIM_ODOO_URL": f"http://{gw}:18069",
+        "SIM_ODOO_DB": DB,
+        "SIM_ODOO_USER": "admin",
+        "SIM_ODOO_APIKEY": "admin",
+        "SIM_ODOO_EXPORT_TOKEN": EXPORT,
+        "SIM_ALLOW_OUTBOUND": f"mosquitto,127.0.0.1,{gw}",
+        "SIM_ODOO_FOLLOW_S": "3",
+        "SIM_ODOO_FOLLOW_SLOW_S": "10",
+        **(extra_env or {}),
+    }
     off.write_text("services:\n  iot_sim:\n    environment:\n" + "".join(f'      {k}: "{v}"\n' for k, v in env.items()))
     try:
-        subprocess.run(["docker", "compose", "-f", "docker-compose.sim.yml", "--profile", "dev", "-f", str(off), "up",
-                        "-d", "--force-recreate", "iot_sim"], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-f",
+                "docker-compose.sim.yml",
+                "--profile",
+                "dev",
+                "-f",
+                str(off),
+                "up",
+                "-d",
+                "--force-recreate",
+                "iot_sim",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
         _wait_health()
     finally:
         off.unlink()
@@ -122,10 +166,12 @@ def follow(odoo, token):
 @pytest.mark.timeout(300)
 async def test_tk01_follow_odoo_states(follow, api, host, env_get):
     """AC-07: SAW-1 (workorder progress) → CurrentState=3, CNC-2 (blocked) → 4, Error=True; PM5560 CNC-2 = 0."""
-    assert api.post("/mode", {"mode": "follow_odoo"}).status_code == 200        # fixture api ставить scenario
+    assert api.post("/mode", {"mode": "follow_odoo"}).status_code == 200  # fixture api ставить scenario
     await asyncio.sleep(12)
     assert api.get("/status").json()["mode"] == "follow_odoo"
-    assert api.post("/time", {"set": "2026-10-12T10:30:00+03:00"}).status_code == 200      # робоча зміна (factor лишається 1)
+    assert (
+        api.post("/time", {"set": "2026-10-12T10:30:00+03:00"}).status_code == 200
+    )  # робоча зміна (factor лишається 1)
     c = Client(f"opc.tcp://{host}:4840/f3d/", timeout=10)
     c.set_user("collector")
     c.set_password(env_get("SIM_OPCUA_PASS"))
@@ -144,7 +190,7 @@ async def test_tk01_follow_odoo_states(follow, api, host, env_get):
             await asyncio.sleep(2)
         assert await cnc.read_value() == 4
         assert await c.get_node(f"ns={ns};s=CNC-2.State.Machine.Flags.Error").read_value() is True
-    assert api.post("/time", {"factor": 5}).status_code == 409          # у follow_odoo factor фіксований (A-12)
+    assert api.post("/time", {"factor": 5}).status_code == 409  # у follow_odoo factor фіксований (A-12)
 
 
 @pytest.mark.timeout(400)
@@ -187,7 +233,7 @@ def test_tk15_odoo_panel_end_to_end(follow, odoo, api):
     assert p["state"] in ("online", "degraded") and p["version"]
     cron_id = odoo.xid("td_iot_sim", "cron_iot_sim")
     cron0 = odoo.k("ir.cron", "read", [cron_id], fields=["active"])[0]
-    assert cron0["active"] is False and p["level0_state"] == "auto_off"                   # AC-26
+    assert cron0["active"] is False and p["level0_state"] == "auto_off"  # AC-26
     # 2) режим scenario + прискорення 5
     odoo.k("td.sim.panel", "write", [pid], {"mode_new": "scenario", "factor_new": 5})
     odoo.k("td.sim.panel", "action_apply_mode", [pid])
@@ -198,11 +244,14 @@ def test_tk15_odoo_panel_end_to_end(follow, odoo, api):
     scen = odoo.xid("td_iot_sim", "scenario_filter_clogged")
     dev = odoo.k("td.sim.device", "search", [("code", "=", "RV-05")], limit=1)
     assert dev, "RV-05 немає у td.sim.device"
-    wiz = odoo.k("td.sim.run.wizard", "create", {"scenario_id": scen, "device_id": dev[0],
-                                                  "params_text": '{"value": 285, "ramp_min": 1}'})
+    wiz = odoo.k(
+        "td.sim.run.wizard",
+        "create",
+        {"scenario_id": scen, "device_id": dev[0], "params_text": '{"value": 285, "ramp_min": 1}'},
+    )
     act = odoo.k("td.sim.run.wizard", "action_confirm", [wiz])
     run = odoo.k("td.sim.run", "read", [act["res_id"]], fields=["state", "name", "sim_run_id"])[0]
-    assert run["state"] == "running" and run["sim_run_id"] and run["name"].startswith("RUN/")     # AC-27
+    assert run["state"] == "running" and run["sim_run_id"] and run["name"].startswith("RUN/")  # AC-27
     assert api.wait(lambda: api.sig("ventilation/units/RV-05/filter_dp_pa") > 250, timeout=60, step=1)
     ev = odoo.k("td.sim.event", "search_count", [("kind", "=", "command")])
     assert ev >= 1
@@ -210,7 +259,7 @@ def test_tk15_odoo_panel_end_to_end(follow, odoo, api):
     cnc = odoo.k("td.sim.device", "search", [("code", "=", "CNC-2")], limit=1)
     fw = odoo.k("td.sim.fault.wizard", "create", {"device_id": cnc[0], "reason": "generic"})
     odoo.k("td.sim.fault.wizard", "action_confirm", [fw])
-    assert api.get("/devices/CNC-2").json()["state"] == "fault"                            # AC-28
+    assert api.get("/devices/CNC-2").json()["state"] == "fault"  # AC-28
     odoo.k("td.sim.device", "action_clear", cnc)
     assert api.get("/devices/CNC-2").json()["state"] != "fault"
     # 5) зупинка сервісу → через level0_after_min=1 хв крон рівня 0 вмикається; запуск → вимикається (AC-29/58)
@@ -246,14 +295,22 @@ def test_tp06_odoo_signal_refresh_and_events(follow, odoo):
     assert n >= 1000 and dt <= 5, (n, dt)
     ev0 = odoo.k("td.sim.event", "search_count", [])
     stamp = int(time.time())
-    batch = [{"ts": "2026-10-12T10:00:00+03:00", "kind": "info", "device": "SAW-1", "message": f"stand event {i}",
-              "payload": {"event_id": f"stand-{stamp}-{i:05d}"}} for i in range(2000)]
+    batch = [
+        {
+            "ts": "2026-10-12T10:00:00+03:00",
+            "kind": "info",
+            "device": "SAW-1",
+            "message": f"stand event {i}",
+            "payload": {"event_id": f"stand-{stamp}-{i:05d}"},
+        }
+        for i in range(2000)
+    ]
     hdr = {"Authorization": "Bearer " + EXPORT}
     t0 = time.perf_counter()
-    for i in range(0, 2000, 100):     # API-03: ≤ 100 подій у запиті
-        r = httpx.post(ODOO + "/f3d/sim/events", json={"events": batch[i:i + 100]}, headers=hdr, timeout=30)
+    for i in range(0, 2000, 100):  # API-03: ≤ 100 подій у запиті
+        r = httpx.post(ODOO + "/f3d/sim/events", json={"events": batch[i : i + 100]}, headers=hdr, timeout=30)
         assert r.status_code == 200 and r.json()["accepted"] == 100, r.text
     assert time.perf_counter() - t0 < 60
     assert odoo.k("td.sim.event", "search_count", []) >= ev0 + 2000
     again = httpx.post(ODOO + "/f3d/sim/events", json={"events": batch[:50]}, headers=hdr).json()
-    assert again["accepted"] == 0                                  # дедуплікація за event_id
+    assert again["accepted"] == 0  # дедуплікація за event_id

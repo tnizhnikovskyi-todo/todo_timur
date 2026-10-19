@@ -1,4 +1,5 @@
 """ТК-01 (OPC UA, scenario+shift), ТК-05 (портал woodStore + OPC UA), ТП-04 (скорочено). AC-07*/13/36/67."""
+
 import asyncio
 import time
 
@@ -32,7 +33,7 @@ async def test_tk01_address_space_states_and_readonly(api, host, env_get):
         ns = await c.get_namespace_index(NS)
         machines = await c.nodes.objects.get_child(["4:Machines"])
         names = {(await n.read_browse_name()).Name for n in await machines.get_children()}
-        assert len(names) >= 16 and {"SAW-1", "CNC-2", "GANTRY-1"} <= names          # AC-36
+        assert len(names) >= 16 and {"SAW-1", "CNC-2", "GANTRY-1"} <= names  # AC-36
         base = f"ns={ns};s="
         st = c.get_node(base + "SAW-1.State.Machine.Overview.CurrentState")
         assert await st.read_value() == api.sig("workcenters/SAW-1/state")
@@ -88,7 +89,7 @@ async def test_tk05_portal_woodstore_and_opcua(api, host, env_get):
     api.scenario("shift")
     async with httpx.AsyncClient(headers=h, timeout=10) as w:
         stacks = (await w.get(base + "/stacks")).json()
-        assert sum(1 for s in stacks if s["qty"] > 0) == 23                        # AC-67
+        assert sum(1 for s in stacks if s["qty"] > 0) == 23  # AC-67
         st = next(s for s in stacks if s["id"] == "PLT-04C")
         qty0 = st["qty"]
         r = await w.post(base + "/jobs", json={"type": "feed", "source": "PLT-04C", "target": "SAW-1", "sheets": 3})
@@ -105,10 +106,10 @@ async def test_tk05_portal_woodstore_and_opcua(api, host, env_get):
                     break
                 await asyncio.sleep(5)
         assert {"moving", "picking", "placing"} <= states | {"moving", "picking", "placing"} or states
-        assert (await w.get(base + "/stacks/PLT-04C")).json()["qty"] == qty0 - 3     # AC-13
+        assert (await w.get(base + "/stacks/PLT-04C")).json()["qty"] == qty0 - 3  # AC-13
         assert (await w.get(base + "/events")).status_code == 200
         assert (await w.get(base + "/status", headers={"X-Api-Key": "bad"})).status_code == 401
-    assert api.get("/signals/equipment/GANTRY-1/stacks").status_code == 404      # X-76
+    assert api.get("/signals/equipment/GANTRY-1/stacks").status_code == 404  # X-76
 
 
 @pytest.mark.timeout(300)
@@ -129,8 +130,10 @@ async def test_tp04_opcua_10_clients_reduced(api, host, env_get):
             nodes = []
             for m in await machines.get_children():
                 code = (await m.read_browse_name()).Name
-                nodes += [c.get_node(f"ns={ns};s={code}.State.Machine.Overview.CurrentState"),
-                          c.get_node(f"ns={ns};s={code}.State.Machine.Values.RelativePiecesOut")]
+                nodes += [
+                    c.get_node(f"ns={ns};s={code}.State.Machine.Overview.CurrentState"),
+                    c.get_node(f"ns={ns};s={code}.State.Machine.Values.RelativePiecesOut"),
+                ]
             seen: dict[int, float] = {}
             n_notif = [0]
 
@@ -153,7 +156,7 @@ async def test_tp04_opcua_10_clients_reduced(api, host, env_get):
             v = 1000 + i
             t_put[v] = time.time()
             api.put("/signals/workcenters/SAW-1/pieces_out", {"value": v, "hold_s": 5})
-            await asyncio.sleep(5 + 1.37 * (i % 3) + 0.19 * i)      # без фазової синхронізації з тіком 1 с
+            await asyncio.sleep(5 + 1.37 * (i % 3) + 0.19 * i)  # без фазової синхронізації з тіком 1 с
 
     await asyncio.gather(driver(), *[one(i) for i in range(10)])
     assert all(n >= 30 and k >= n for n, k in counts), counts

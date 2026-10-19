@@ -15,6 +15,7 @@ EMERGENCY (G:40) — ПРИПУЩЕННЯ: по 2 світильники ``@1.r.
 Реєстрація у ``__main__ run``: ``HelvarServer(world, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp,
 version=s.helvar_version)``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,7 +33,9 @@ log = logging.getLogger("iot_sim.helvarnet")
 LINE_SIZE = 64
 MAX_PARTIAL = 64
 EMERGENCY_G = 40
-SCENE_LEVELS = [100, 75, 50, 25, 10, 0] + [100] * 10  # R-24: S1=100, S2=75, S3=50, S4=25, S5=10, S6=0, S7…S16 — ПРИПУЩЕННЯ
+SCENE_LEVELS = [100, 75, 50, 25, 10, 0] + [
+    100
+] * 10  # R-24: S1=100, S2=75, S3=50, S4=25, S5=10, S6=0, S7…S16 — ПРИПУЩЕННЯ
 SCENE_NAMES = ["Зміна", "Прибирання", "Ніч", "Чергове", "10 %", "Вимкнено"] + [f"Сцена {i}" for i in range(7, 17)]
 HOLD_S = 1800.0  # утримання ручного рівня проти розкладу DALI (sim-секунди)
 NS_LAMP_FAILURE, NS_EM_INEMERGENCY = 0x2, 0x400
@@ -63,7 +66,7 @@ class Group:
 class Request:
     version: int
     cmd: int
-    items: list[tuple[str, str]]   # у порядку запиту, без V і C
+    items: list[tuple[str, str]]  # у порядку запиту, без V і C
 
     def get(self, key: str) -> str | None:
         for k, v in self.items:
@@ -104,15 +107,22 @@ class Layout:
 
     def __init__(self, world: World, layout: dict[str, Any]) -> None:
         lt = [c.split("/")[2] for c in world.signals if c.startswith("lighting/groups/") and c.endswith("/level")]
-        lay = (layout.get("lighting") or {})
+        lay = layout.get("lighting") or {}
         lgroups = lay.get("groups") or {}
         panels = lay.get("panels") or {}
         panel_of = {g: p for p, info in panels.items() for g in info.get("groups", [])}
         self.groups: list[Group] = []
         for i, code in enumerate(lt, 1):
             info = lgroups.get(code, {})
-            self.groups.append(Group(i, code, panel_of.get(code, info.get("panel", "LP-1")),
-                                     int(info.get("n", 4)), info.get("zone_name", code)))
+            self.groups.append(
+                Group(
+                    i,
+                    code,
+                    panel_of.get(code, info.get("panel", "LP-1")),
+                    int(info.get("n", 4)),
+                    info.get("zone_name", code),
+                )
+            )
         self.by_g = {g.g: g for g in self.groups}
         self.by_code = {g.code: g for g in self.groups}
         self.devices: dict[str, Group | None] = {}
@@ -139,16 +149,27 @@ class Layout:
                 if a not in self.devices:
                     self.emergency.append(a)
                     self.devices[a] = None  # EMERGENCY: не належить LT-групі
-        self.sensors = {f"@1.{r}.{s}.{d}" for r in range(1, getattr(self, "routers", 3) + 1)
-                        for s in range(1, 5) for d in range(65, 71)}
+        self.sensors = {
+            f"@1.{r}.{s}.{d}"
+            for r in range(1, getattr(self, "routers", 3) + 1)
+            for s in range(1, 5)
+            for d in range(65, 71)
+        }
 
 
 class HelvarServer(ProtocolServer):
     name = "helvarnet"
 
-    def __init__(self, world: World, *, tcp_port: int = 50000, udp_port: int | None = 50001,
-                 host: str = "0.0.0.0", version: int | None = None,
-                 layout: dict[str, Any] | str | None = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        tcp_port: int = 50000,
+        udp_port: int | None = 50001,
+        host: str = "0.0.0.0",
+        version: int | None = None,
+        layout: dict[str, Any] | str | None = None,
+    ) -> None:
         self.world = world
         self.tcp_port, self.udp_port, self.host = tcp_port, udp_port, host
         self.version = version or int(getattr(world.settings, "helvar_version", 2) or 2)
@@ -159,7 +180,7 @@ class HelvarServer(ProtocolServer):
         self._server: asyncio.AbstractServer | None = None
         self._udp: asyncio.DatagramTransport | None = None
         self._last: dict[int, int] = {}
-        self.overrides: dict[str, int] = {}            # рівні окремих світильників
+        self.overrides: dict[str, int] = {}  # рівні окремих світильників
         self.em: dict[str, int] = {"ft_time": 0, "ft_state": 0, "dt_time": 0, "dt_state": 0}
 
     # --- життєвий цикл ---------------------------------------------------------------
@@ -185,8 +206,9 @@ class HelvarServer(ProtocolServer):
         self._last = {g.g: self._level(g) for g in self.layout.groups}
         self.world.on_tick(self._on_tick)
         self.up = True
-        log.info("HelvarNet TCP %d UDP %s v%d, груп %d", self.tcp_port, self.udp_port, self.version,
-                 len(self.layout.groups))
+        log.info(
+            "HelvarNet TCP %d UDP %s v%d, груп %d", self.tcp_port, self.udp_port, self.version, len(self.layout.groups)
+        )
 
     async def stop(self) -> None:
         self.up = False
@@ -202,8 +224,14 @@ class HelvarServer(ProtocolServer):
             self._udp = None
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self.up, "tcp": self.tcp_port, "udp": self.udp_port,
-                "clients": len(self.clients), "groups": len(self.layout.groups)}
+        return {
+            "proto": self.name,
+            "up": self.up,
+            "tcp": self.tcp_port,
+            "udp": self.udp_port,
+            "clients": len(self.clients),
+            "groups": len(self.layout.groups),
+        }
 
     # --- TCP -------------------------------------------------------------------------
     @staticmethod
@@ -221,7 +249,7 @@ class HelvarServer(ProtocolServer):
                 buf += data.decode("utf-8", "replace")
                 frames = self._frames(buf)
                 if frames:
-                    buf = buf[buf.rfind("#") + 1:]
+                    buf = buf[buf.rfind("#") + 1 :]
                 for frame in frames:
                     resp, push = self.handle(frame)
                     if push:
@@ -357,7 +385,9 @@ class HelvarServer(ProtocolServer):
         ver, cmd, items = parse_frame(frame)
         v = ver if ver in (1, 2) else self.version
         if ver is None or cmd is None or cmd < 0:
-            return [f"!V:{v},C:{cmd if cmd and cmd > 0 else 0}={ERR_PARAM if ver is None or cmd is None else ERR_CMD}#"], None
+            return [
+                f"!V:{v},C:{cmd if cmd and cmd > 0 else 0}={ERR_PARAM if ver is None or cmd is None else ERR_CMD}#"
+            ], None
         req = Request(v, cmd, items)
         if ver not in (1, 2) or (self.version == 1 and ver == 2):
             return [f"!{req.header()}={ERR_VERSION}#"], None
@@ -390,7 +420,7 @@ class HelvarServer(ProtocolServer):
     def _command(self, req: Request) -> tuple[list[str], str | None]:
         grp, addr = self._targets(req)
         c = req.cmd
-        fade = self._int(req, "F", 0, 10 ** 6, ERR_PARAM, default=0)
+        fade = self._int(req, "F", 0, 10**6, ERR_PARAM, default=0)
         old = self._level(grp) if grp else self._dev_level(addr or "")
         if c in (11, 12):
             self._int(req, "B", 1, 8, ERR_BLOCK)
@@ -423,8 +453,12 @@ class HelvarServer(ProtocolServer):
             self.overrides[addr or ""] = level
             target = addr or ""
         w.post("lighting", {"target": target, "level": level, "fade_cs": fade, **extra})
-        w.events.emit("command", f"HelvarNet: {target} -> {level} %", device=grp.panel if grp else None,
-                      payload={"target": target, "level": level, **extra})
+        w.events.emit(
+            "command",
+            f"HelvarNet: {target} -> {level} %",
+            device=grp.panel if grp else None,
+            payload={"target": target, "level": level, **extra},
+        )
 
     # --- аварійні тести C:19…24 ------------------------------------------------------
     def _emergency_cmd(self, req: Request) -> tuple[list[str], str | None]:
@@ -535,7 +569,7 @@ class HelvarServer(ProtocolServer):
         if not devs:
             raise HelvarError(ERR_GROUP)
         head = req.header()
-        chunks = [devs[i:i + MAX_PARTIAL] for i in range(0, len(devs), MAX_PARTIAL)]
+        chunks = [devs[i : i + MAX_PARTIAL] for i in range(0, len(devs), MAX_PARTIAL)]
         frames = [f"?{head}={','.join(ch)}{'#' if i == len(chunks) - 1 else '$'}" for i, ch in enumerate(chunks)]
         return frames, None
 

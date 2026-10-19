@@ -11,13 +11,29 @@ from iot_sim.core.scenarios import (
 )
 
 MIN_PARAMS = {
-    "shift": {}, "machine_fault": {"device": "CNC-2", "reason": "spindle"}, "blackout": {},
-    "filter_clogged": {"device": "RV-05"}, "truck_no_booking": {},
-    "truck_arrival": {"booking": "BATCH/IN/00001"}, "fire_drill": {}, "spark": {},
-    "access_event": {}, "battery_low": {"device": "FL-2"}, "compressor_fault": {},
-    "pv_cloudy": {}, "boiler_refill": {}, "genset_test": {}, "lighting_scene": {"level": 50},
-    "pfc_step_fault": {}, "peak_load": {}, "export_demo": {}, "ctl_local": {}, "chp_no_gas": {},
-    "air_leak": {}, "gas_overuse": {}, "water_leak": {},
+    "shift": {},
+    "machine_fault": {"device": "CNC-2", "reason": "spindle"},
+    "blackout": {},
+    "filter_clogged": {"device": "RV-05"},
+    "truck_no_booking": {},
+    "truck_arrival": {"booking": "BATCH/IN/00001"},
+    "fire_drill": {},
+    "spark": {},
+    "access_event": {},
+    "battery_low": {"device": "FL-2"},
+    "compressor_fault": {},
+    "pv_cloudy": {},
+    "boiler_refill": {},
+    "genset_test": {},
+    "lighting_scene": {"level": 50},
+    "pfc_step_fault": {},
+    "peak_load": {},
+    "export_demo": {},
+    "ctl_local": {},
+    "chp_no_gas": {},
+    "air_leak": {},
+    "gas_overuse": {},
+    "water_leak": {},
 }
 
 
@@ -32,8 +48,7 @@ def runner(world):
 
 
 def states(world, run):
-    return [e.payload["state"] for e in world.events.since(0, kind="scenario")[0]
-            if e.run_id == run.id]
+    return [e.payload["state"] for e in world.events.since(0, kind="scenario")[0] if e.run_id == run.id]
 
 
 def test_registry_of_23(runner):
@@ -84,8 +99,12 @@ async def test_conflict_409(world, runner):
 
 async def test_conflict_groups_and_tags(runner):
     runner.start("fire_drill", {})
-    for name, params in (("spark", {}), ("filter_clogged", {"device": "AHU-1"}),
-                         ("boiler_refill", {}), ("lighting_scene", {})):
+    for name, params in (
+        ("spark", {}),
+        ("filter_clogged", {"device": "AHU-1"}),
+        ("boiler_refill", {}),
+        ("lighting_scene", {}),
+    ):
         with pytest.raises(ScenarioConflict):
             runner.start(name, params)
     runner.start("shift", {})  # production — не safety/bms
@@ -111,18 +130,32 @@ async def test_conflict_groups_and_tags(runner):
 
 
 async def test_params_validation(world, runner):
-    bad = [("machine_fault", {}), ("machine_fault", {"device": "NOPE-1"}),
-           ("machine_fault", {"device": "CNC-2", "reason": "x"}),
-           ("filter_clogged", {"device": "RV-26"}), ("filter_clogged", {"device": "RV-00"}),
-           ("blackout", {"genset_load_kw": 600}), ("blackout", {"zzz": 1}),
-           ("blackout", {"duration_s": -1}), ("shift", {"speed": 5}), ("shift", {"lines": ["Z"]}),
-           ("truck_arrival", {}), ("truck_arrival", {"booking": ""}),
-           ("fire_drill", {"zone": "cnc"}), ("spark", {"count": 6}),
-           ("access_event", {"device": "X"}), ("access_event", {"code": 5}),
-           ("battery_low", {"device": "FL-X"}), ("battery_low", {"device": "FL-1", "level_pct": 101}),
-           ("pv_cloudy", {"cf": 0.01}), ("boiler_refill", {"force_on": 3}),
-           ("lighting_scene", {"scene": 17}), ("lighting_scene", {"scene": 1, "level": 5}),
-           ("lighting_scene", {"group": "x"}), ("lighting_scene", {"fault_device": "bad"})]
+    bad = [
+        ("machine_fault", {}),
+        ("machine_fault", {"device": "NOPE-1"}),
+        ("machine_fault", {"device": "CNC-2", "reason": "x"}),
+        ("filter_clogged", {"device": "RV-26"}),
+        ("filter_clogged", {"device": "RV-00"}),
+        ("blackout", {"genset_load_kw": 600}),
+        ("blackout", {"zzz": 1}),
+        ("blackout", {"duration_s": -1}),
+        ("shift", {"speed": 5}),
+        ("shift", {"lines": ["Z"]}),
+        ("truck_arrival", {}),
+        ("truck_arrival", {"booking": ""}),
+        ("fire_drill", {"zone": "cnc"}),
+        ("spark", {"count": 6}),
+        ("access_event", {"device": "X"}),
+        ("access_event", {"code": 5}),
+        ("battery_low", {"device": "FL-X"}),
+        ("battery_low", {"device": "FL-1", "level_pct": 101}),
+        ("pv_cloudy", {"cf": 0.01}),
+        ("boiler_refill", {"force_on": 3}),
+        ("lighting_scene", {"scene": 17}),
+        ("lighting_scene", {"scene": 1, "level": 5}),
+        ("lighting_scene", {"group": "x"}),
+        ("lighting_scene", {"fault_device": "bad"}),
+    ]
     for name, params in bad:
         with pytest.raises(ScenarioParamsError) as ei:
             runner.start(name, params)
@@ -215,8 +248,10 @@ async def test_filter_clogged_ramp_and_restore(world, runner):
     assert start != 285.0
     await runner.stop(run.id)
     assert sig.value == sig.params["nominal"]
-    for dev, code, target in (("DUST-1", "equipment/DUST-1/filter_dp_kpa", 1.9),
-                              ("FA-FAC", "fire/groups/FA-FAC/dust", 92.0)):
+    for dev, code, target in (
+        ("DUST-1", "equipment/DUST-1/filter_dp_kpa", 1.9),
+        ("FA-FAC", "fire/groups/FA-FAC/dust", 92.0),
+    ):
         run = runner.start("filter_clogged", {"device": dev, "ramp_min": 0})
         await settle()
         assert world.signals[code].value == target
@@ -276,30 +311,36 @@ async def test_posted_commands(world, runner):
 async def test_truck_arrival_result_and_fire_drill_result(world, runner):
     run = runner.start("truck_arrival", {"booking": "BATCH/IN/00001", "unload_min": 1})
     await settle()
-    world.run_results[run.id] = {"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1",
-                                 "unloaded_pct": 100}
+    world.run_results[run.id] = {"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1", "unloaded_pct": 100}
     for _ in range(20):
         world.advance(30)
         await settle()
     assert run.state == "done" and run.result["gross_kg"] == 25200
     assert [s["step"] for s in run.timeline] == [
-        "at_gate", "weigh_in", "to_dock", "at_dock", "to_exit", "weigh_out", "left"]
+        "at_gate",
+        "weigh_in",
+        "to_dock",
+        "at_dock",
+        "to_exit",
+        "weigh_out",
+        "left",
+    ]
     run = runner.start("fire_drill", {"zone": "FA-CNC", "duration_s": 40})
     assert world.flags["fire_drill"]["phase"] == "active"
     for _ in range(6):
         world.advance(10)
         await settle()
     assert run.state == "done" and run.result["doors_s"] == 12 and world.flags == {}
-    assert [s["step"] for s in run.timeline][:6] == [
-        "alarm", "sounders", "vent_stop", "dampers", "doors", "machines"]
+    assert [s["step"] for s in run.timeline][:6] == ["alarm", "sounders", "vent_stop", "dampers", "doors", "machines"]
     run = runner.start("fire_drill", {"duration_s": 300})
     await settle()
     world.advance(5)
     await settle()
     await runner.stop(run.id)
     assert run.state == "stopped" and run.timeline[-1]["step"] == "restoring"
-    run = runner.start("truck_arrival", {"booking": "X", "plate": "AA1", "unload_min": 1,
-                                         "at": "2026-10-12T11:00:00+03:00"})
+    run = runner.start(
+        "truck_arrival", {"booking": "X", "plate": "AA1", "unload_min": 1, "at": "2026-10-12T11:00:00+03:00"}
+    )
     await settle()
     await runner.stop(run.id)  # зупинка під час розвантаження
     assert run.state == "stopped"
@@ -340,5 +381,6 @@ async def test_shift_flag_defaults(world, runner):
     await runner.stop_all()
     world.flags.setdefault("a", {})["k"] = 1
     from iot_sim.core.scenarios import clear_flags
+
     clear_flags(world, [("a", "zz"), ("missing", "k"), ("a", "k")])
     assert "a" not in world.flags

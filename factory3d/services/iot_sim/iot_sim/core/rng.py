@@ -3,6 +3,7 @@
 ``s0 = fnv1a32(code) XOR seed``; кожен крок ``s = (s*1103515245 + 12345) mod 2**31``,
 ``r = s/2**30 - 1`` ∈ [-1, 1). Та сама послідовність, що в ``action_iot_tick`` макета.
 """
+
 from __future__ import annotations
 
 from typing import Any

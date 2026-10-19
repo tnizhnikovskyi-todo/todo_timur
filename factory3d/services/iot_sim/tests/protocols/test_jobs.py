@@ -1,4 +1,5 @@
 """P-04 /jobs: карти розкрою (SPEC §8.6)."""
+
 import httpx
 import pytest
 from iot_sim.protocols.jobs_api import JobsApi, optimize, parse_parts
@@ -31,9 +32,11 @@ async def test_auth(api):
 
 
 async def test_submit_plan_release(api, world):
-    r = await api.post("/jobs", data={"material": "DSP16-SON", "sheet": "2800x2070x16",
-                                      "external_ref": "WH/MO/00231", "machine": "SAW-1"},
-                       files={"parts": ("parts.csv", CSV.encode(), "text/csv")})
+    r = await api.post(
+        "/jobs",
+        data={"material": "DSP16-SON", "sheet": "2800x2070x16", "external_ref": "WH/MO/00231", "machine": "SAW-1"},
+        files={"parts": ("parts.csv", CSV.encode(), "text/csv")},
+    )
     assert r.status_code == 202
     jid = r.json()["job_id"]
     assert r.json()["state"] == "optimizing" and jid.startswith("cj-")
@@ -54,8 +57,14 @@ async def test_submit_plan_release(api, world):
 
 
 async def test_json_submit_and_mpr_for_cnc(api, world):
-    r = await api.post("/jobs", json={"material": "DSP16-SON", "machine": "CNC-1", "parts": [
-        {"PartId": "A1", "Length": 500, "Width": 300, "Quantity": 2}]})
+    r = await api.post(
+        "/jobs",
+        json={
+            "material": "DSP16-SON",
+            "machine": "CNC-1",
+            "parts": [{"PartId": "A1", "Length": 500, "Width": 300, "Quantity": 2}],
+        },
+    )
     assert r.status_code == 202
     jid = r.json()["job_id"]
     world.advance(6)
@@ -68,8 +77,6 @@ async def test_validation_errors(api):
     bad = HEADER + "P001;x;M;100;100;1;0;;;;;\nP002;x;M;100;2100;1;0;;;;;\nP003;x;M;3000;100;1;0;;;;;\n"
     r = await api.post("/jobs", data={"material": "M"}, files={"parts": ("p.csv", bad.encode())})
     assert r.status_code == 422
-    assert r.json()["detail"] == [{"row": 3, "error": "Width > 2070"},
-                                  {"row": 4, "error": "Length > 2800"}]
-    r = await api.post("/jobs", data={"material": "M"},
-                       files={"parts": ("p.csv", HEADER.encode())})
+    assert r.json()["detail"] == [{"row": 3, "error": "Width > 2070"}, {"row": 4, "error": "Length > 2800"}]
+    r = await api.post("/jobs", data={"material": "M"}, files={"parts": ("p.csv", HEADER.encode())})
     assert r.status_code == 422

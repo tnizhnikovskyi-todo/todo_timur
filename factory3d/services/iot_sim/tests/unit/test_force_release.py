@@ -1,4 +1,5 @@
 """ST-4: примусове значення (force) повертається до моделі — після ``hold_s`` і після ``release`` (SPEC API-16, AC-50)."""
+
 from datetime import timedelta
 
 import pytest
@@ -71,8 +72,7 @@ def test_expiry_uses_sim_clock_and_each_signal_separately(world):
 
 
 def test_api_release_returns_value_to_model(world):
-    app = create_app(Settings(_env_file=None, api_token=TOKEN), world=world, runner=ScenarioRunner(world),
-                     follow=None)
+    app = create_app(Settings(_env_file=None, api_token=TOKEN), world=world, runner=ScenarioRunner(world), follow=None)
     with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as api:
         r = api.put(f"/sim/v1/signals/{AIR}", json={"value": 4.5, "hold_s": 600})
         assert r.json()["value"] == 4.5 and r.json()["held_until"] is not None

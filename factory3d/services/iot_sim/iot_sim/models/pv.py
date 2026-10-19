@@ -11,6 +11,7 @@
 W2 (SPEC §8.2): потужність кожного інвертора множиться на ``pv_limit_pct / 100`` (прапор, за замовчуванням 100; обмеження
 контролера ГРЩ із сторожовим таймером ``shed_valid_s``); статус рахується за вільною (необмеженою) потужністю.
 """
+
 from __future__ import annotations
 
 import math
@@ -122,8 +123,13 @@ class Pv(Model):
         self.set("pv_now", p_k * len(self.keys))
 
     def get_state(self) -> dict[str, Any]:
-        return {"kwh_today": self.kwh_today, "kwh_total": self.kwh_total, "day": self.day,
-                "restart_left": self.restart_left, "was_island": self.was_island}
+        return {
+            "kwh_today": self.kwh_today,
+            "kwh_total": self.kwh_total,
+            "day": self.day,
+            "restart_left": self.restart_left,
+            "was_island": self.was_island,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.kwh_today = dict(d.get("kwh_today", self.kwh_today))

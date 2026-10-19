@@ -1,4 +1,5 @@
 """W3 §8.1, AC-55/AC-56 (повітря): ``AIR-MAIN`` — витрата від завантаження компресора, тиск, лічильник, сценарій ``air_leak``."""
+
 import asyncio
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -142,7 +143,9 @@ def test_scenario_resources_xml():
         assert eval(r["params_default"], {"__builtins__": {}}, {"True": True, "False": False}) == params
         assert "properties" in r["params_schema"]
         assert emu[code].default_duration() == 0
-        assert emu[code].Params().model_dump(exclude={"duration_s", "note"}) == params  # значення за замовчуванням збігаються
+        assert (
+            emu[code].Params().model_dump(exclude={"duration_s", "note"}) == params
+        )  # значення за замовчуванням збігаються
 
 
 async def settle(n=6):

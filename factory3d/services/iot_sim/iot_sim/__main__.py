@@ -1,4 +1,5 @@
 """CLI: python -m iot_sim run|check-config|dump-catalog (SPEC §8.1.1)."""
+
 from __future__ import annotations
 
 import argparse
@@ -17,6 +18,7 @@ from iot_sim import __version__
 from iot_sim.config import Settings
 
 log = logging.getLogger("iot_sim")
+
 
 def cmd_check_config(settings: Settings) -> int:
     errors = settings.validate_required()
@@ -134,27 +136,40 @@ class Service:
                 self.servers[srv.name] = srv
 
         w = self.world
-        add(OpcUaServer(w, port=s.port_opcua, user=s.opcua_user, password=s.opcua_pass,
-                        cert_dir=s.opcua_cert_dir))
+        add(OpcUaServer(w, port=s.port_opcua, user=s.opcua_user, password=s.opcua_pass, cert_dir=s.opcua_cert_dir))
         add(WoodStoreApi(w, port=s.port_woodstore, apikey=s.woodstore_apikey))
         add(JobsApi(w, port=s.port_jobs, apikey=s.jobs_apikey))
         add(MqttPublisher(w, url=s.mqtt_url, prefix=s.mqtt_prefix, guard=self.guard))
-        add(BioStarApi(w, port_http=s.port_biostar_http, port_https=s.port_biostar_https,
-                       user=s.biostar_user, password=s.biostar_pass, cert_dir=s.opcua_cert_dir))
+        add(
+            BioStarApi(
+                w,
+                port_http=s.port_biostar_http,
+                port_https=s.port_biostar_https,
+                user=s.biostar_user,
+                password=s.biostar_pass,
+                cert_dir=s.opcua_cert_dir,
+            )
+        )
         add(SicsServer(w, port=s.port_sics, write_accept=s.write_accept))
         add(LprPusher(w, url=s.lpr_push_url, guard=self.guard, token=s.lpr_push_token))
         add(ModbusServer(w, port=s.port_modbus))
         add(BacnetServer(w, address=f"{_local_bip(_mqtt_host(s.mqtt_url))}:{s.port_bacnet}"))
-        add(HelvarServer(w, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp,
-                         version=s.helvar_version))
+        add(HelvarServer(w, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp, version=s.helvar_version))
 
         self.odoo = OdooReadOnly(s.odoo_url, s.odoo_db, s.odoo_user, s.odoo_apikey, guard=self.guard)
-        self.follow = FollowOdoo(w, self.odoo, follow_s=s.odoo_follow_s, slow_s=s.odoo_follow_slow_s,
-                                 stale_s=s.odoo_stale_s, level0_sync=s.level0_sync)
+        self.follow = FollowOdoo(
+            w,
+            self.odoo,
+            follow_s=s.odoo_follow_s,
+            slow_s=s.odoo_follow_slow_s,
+            stale_s=s.odoo_stale_s,
+            level0_sync=s.level0_sync,
+        )
         self.devices_client = DevicesClient(s.odoo_url, s.odoo_export_token, guard=self.guard)
         self.forwarder = EventForwarder(w, self.devices_client)
-        self.app = create_app(s, world=w, runner=self.runner, servers=self.servers, follow=self.follow,
-                              guard=self.guard)
+        self.app = create_app(
+            s, world=w, runner=self.runner, servers=self.servers, follow=self.follow, guard=self.guard
+        )
         self.ctl = self.app.state.ctl
         self.control = UvicornRunner(self.app, "0.0.0.0", s.port_control)
         self._odoo_host = odoo_host
@@ -188,8 +203,13 @@ class Service:
                 log.exception("сервер %s не стартував", name)
         await self.follow.start()
         await self.control.start()
-        log.info("iot_sim %s запущено: mode=%s, factor=%s, servers=%s", __version__, w.mode,
-                 w.clock.factor, sorted(self.servers))
+        log.info(
+            "iot_sim %s запущено: mode=%s, factor=%s, servers=%s",
+            __version__,
+            w.mode,
+            w.clock.factor,
+            sorted(self.servers),
+        )
 
     async def tick_loop(self) -> None:
         from iot_sim.core import snapshot

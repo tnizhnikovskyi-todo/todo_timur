@@ -1,4 +1,5 @@
 """ТБ-01 (ізоляція compose), ТБ-05 (хеші каталогу), ТБ-07 (allow-list вихідних з'єднань)."""
+
 import csv
 import hashlib
 import io
@@ -15,8 +16,14 @@ COMPOSE = ["docker", "compose", "-f", "docker-compose.sim.yml"]
 
 
 def _cfg(profile):
-    r = subprocess.run([*COMPOSE, "--profile", profile, "config", "--format", "json"], cwd=ROOT, check=True,
-                       capture_output=True, text=True, env={**__import__("os").environ, "TD_GENSET_PATH": "/x"})
+    r = subprocess.run(
+        [*COMPOSE, "--profile", profile, "config", "--format", "json"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**__import__("os").environ, "TD_GENSET_PATH": "/x"},
+    )
     return json.loads(r.stdout)
 
 
@@ -70,8 +77,12 @@ def test_tb07_outbound_allowlist(api, token):
     off.write_text("services:\n  iot_sim:\n    environment:\n      SIM_LPR_PUSH_URL: http://203.0.113.9:9/lpr\n")
     base = [*COMPOSE, "--profile", "dev"]
     try:
-        subprocess.run([*base, "-f", str(off), "up", "-d", "--force-recreate", "iot_sim"], cwd=ROOT, check=True,
-                       capture_output=True)
+        subprocess.run(
+            [*base, "-f", str(off), "up", "-d", "--force-recreate", "iot_sim"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
         for _ in range(60):
             try:
                 if httpx.get("http://127.0.0.1:8090/sim/v1/health", timeout=2).status_code == 200:
@@ -80,15 +91,21 @@ def test_tb07_outbound_allowlist(api, token):
                 time.sleep(1)
         time.sleep(3)
         h = {"Authorization": "Bearer " + token}
-        httpx.post("http://127.0.0.1:8090/sim/v1/time", json={"set": "2026-10-14T06:25:00+03:00", "factor": 3}, headers=h)
-        r = httpx.post("http://127.0.0.1:8090/sim/v1/scenario/truck_arrival/start",
-                       json={"params": {"booking": "BATCH/IN/00001"}}, headers=h)
+        httpx.post(
+            "http://127.0.0.1:8090/sim/v1/time", json={"set": "2026-10-14T06:25:00+03:00", "factor": 3}, headers=h
+        )
+        r = httpx.post(
+            "http://127.0.0.1:8090/sim/v1/scenario/truck_arrival/start",
+            json={"params": {"booking": "BATCH/IN/00001"}},
+            headers=h,
+        )
         assert r.status_code == 201, r.text
 
         def denied():
             m = httpx.get("http://127.0.0.1:8090/sim/v1/metrics").text
-            return next((float(ln.split()[-1]) for ln in m.splitlines()
-                         if ln.startswith("iot_sim_outbound_denied_total")), 0.0)
+            return next(
+                (float(ln.split()[-1]) for ln in m.splitlines() if ln.startswith("iot_sim_outbound_denied_total")), 0.0
+            )
 
         end = time.time() + 60
         while time.time() < end and denied() < 1:

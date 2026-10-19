@@ -4,6 +4,7 @@
 (номінал, шум, швидкість, поріг, межа, Modbus-адреса розібрані з тексту). ``driver_for()`` —
 відповідність пристрій -> ім'я драйвера моделі (``iot_sim.models``); невідомі — ``passive``.
 """
+
 from __future__ import annotations
 
 import csv
@@ -73,8 +74,16 @@ class SignalSpec:
     @property
     def kind(self) -> str:
         """gauge | counter | state (ASSUMPTION: евристика за одиницею/листом)."""
-        if self.leaf in {"kwh_total", "kwh_today", "kwh_shift", "hours", "cycles_today",
-                         "m3_total", "pieces_out", "pieces_in"} or self.unit in {"кВт·год", "год"}:
+        if self.leaf in {
+            "kwh_total",
+            "kwh_today",
+            "kwh_shift",
+            "hours",
+            "cycles_today",
+            "m3_total",
+            "pieces_out",
+            "pieces_in",
+        } or self.unit in {"кВт·год", "год"}:
             return "counter"
         if self.dtype in NUMERIC_DTYPES:
             return "gauge"
@@ -89,9 +98,19 @@ class SignalSpec:
 def parse_spec(row: dict[str, str]) -> SignalSpec:
     nom, thr = row["nominal"], row["thresholds"]
     s = SignalSpec(
-        n=int(row["n"]), code=row["code"], device=row["device"], protocol=row["protocol"],
-        address=row["address"], dtype=row["dtype"], unit=row["unit"], scale=row["scale"],
-        nominal_text=nom, thresholds_text=thr, model=row["model"], status=row["status"])
+        n=int(row["n"]),
+        code=row["code"],
+        device=row["device"],
+        protocol=row["protocol"],
+        address=row["address"],
+        dtype=row["dtype"],
+        unit=row["unit"],
+        scale=row["scale"],
+        nominal_text=nom,
+        thresholds_text=thr,
+        model=row["model"],
+        status=row["status"],
+    )
     m = re.match(rf"\s*({_NUM})", nom)
     if m:
         s.nominal = _f(m.group(1))
@@ -120,15 +139,28 @@ def parse_spec(row: dict[str, str]) -> SignalSpec:
 
 # ASSUMPTION: імена драйверів — за переліком SPEC §8.2.3; перший збіг за префіксом коду сигналу.
 DRIVER_RULES: list[tuple[str, str]] = [
-    ("workcenters/", "machine"), ("equipment/GANTRY", "gantry"), ("equipment/FL-", "mobile"),
-    ("equipment/TUGGER", "mobile"), ("equipment/COMPRESSOR", "compressor"),
-    ("equipment/BOILER", "boiler"), ("equipment/DUST", "dust"),
-    ("equipment/SPRINKLERS", "passive"), ("equipment/CUTOPT", "passive"),
-    ("ventilation/units/", "roofvent"), ("lighting/", "lighting"), ("infra/pv/", "pv"),
-    ("infra/chp/", "chp"), ("infra/ats/", "ats"), ("infra/bess/", "bess"),
-    ("infra/water/", "water"), ("energy/transformers/", "transformer"),
-    ("energy/lines/", "meter"), ("energy/cells/", "meter"), ("fire/", "facp"),
-    ("access/", "access"), ("yard/", "yard"),
+    ("workcenters/", "machine"),
+    ("equipment/GANTRY", "gantry"),
+    ("equipment/FL-", "mobile"),
+    ("equipment/TUGGER", "mobile"),
+    ("equipment/COMPRESSOR", "compressor"),
+    ("equipment/BOILER", "boiler"),
+    ("equipment/DUST", "dust"),
+    ("equipment/SPRINKLERS", "passive"),
+    ("equipment/CUTOPT", "passive"),
+    ("ventilation/units/", "roofvent"),
+    ("lighting/", "lighting"),
+    ("infra/pv/", "pv"),
+    ("infra/chp/", "chp"),
+    ("infra/ats/", "ats"),
+    ("infra/bess/", "bess"),
+    ("infra/water/", "water"),
+    ("energy/transformers/", "transformer"),
+    ("energy/lines/", "meter"),
+    ("energy/cells/", "meter"),
+    ("fire/", "facp"),
+    ("access/", "access"),
+    ("yard/", "yard"),
 ]
 
 
@@ -155,8 +187,7 @@ class DeviceSpec:
 
 
 class Registry:
-    def __init__(self, signals: list[SignalSpec], devices: list[DeviceSpec],
-                 catalog_hash: str = "") -> None:
+    def __init__(self, signals: list[SignalSpec], devices: list[DeviceSpec], catalog_hash: str = "") -> None:
         self.signals = signals
         self.by_code = {s.code: s for s in signals}
         self.devices = {d.code: d for d in devices}
@@ -174,9 +205,13 @@ class Registry:
         devs: dict[str, DeviceSpec] = {}
         for item in raw:
             devs[item["code"]] = DeviceSpec(
-                code=item["code"], driver=item.get("driver", ""),
-                protocols=list(item.get("protocols", [])), unit_id=item.get("unit_id"),
-                instance=item.get("instance"), params=dict(item.get("params", {})))
+                code=item["code"],
+                driver=item.get("driver", ""),
+                protocols=list(item.get("protocols", [])),
+                unit_id=item.get("unit_id"),
+                instance=item.get("instance"),
+                params=dict(item.get("params", {})),
+            )
         for s in specs:  # пристрої, відомі лише з каталогу сигналів
             dev = devs.setdefault(s.device, DeviceSpec(code=s.device))
             dev.signals.append(s.code)

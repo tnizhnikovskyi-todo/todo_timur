@@ -6,6 +6,7 @@
 ASSUMPTION: «сирий» ``socket.connect`` на IP не перехоплюється (hostname там уже втрачено);
 усі клієнти сервісу створюються через ``create_connection``/httpx.
 """
+
 from __future__ import annotations
 
 import ipaddress
@@ -27,8 +28,7 @@ class OutboundDenied(Exception):
 
 
 class OutboundGuard:
-    def __init__(self, allow: str | list[str] = "",
-                 on_denied: Callable[[str], None] | None = None) -> None:
+    def __init__(self, allow: str | list[str] = "", on_denied: Callable[[str], None] | None = None) -> None:
         if isinstance(allow, str):
             allow = [h for h in (x.strip() for x in allow.split(",")) if h]
         self.allow = [h.lower() for h in allow]

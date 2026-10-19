@@ -14,6 +14,7 @@ LSZ, сповіщувачі, запиленість R-09).
   ``yard`` (DO4/DO5), ``access`` (20480), вентиляція (``vent_stop`` -> ``BV:1=0``).
 * Об'єкти BACnet: ``Facp.lsp_catalog()`` (302 LSP за fire R-23: ``lsp_id``), ``Zone.lsp``.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -25,10 +26,22 @@ from iot_sim.models.base import AGGREGATE, Model
 
 QUIET, PRE_ALARM, ALARM, FAULT, NOT_READY, TEST_ALARM = 0, 1, 2, 3, 6, 9
 RELIABLE, UNRELIABLE = 0, 7
-DRILL_STEPS = (("alarm", 0.0), ("sounders", 3.0), ("vent_stop", 6.0), ("dampers", 9.0),
-               ("doors", 12.0), ("machines", 20.0))
-RESTORE_OFFSET = {"machines": 0.0, "doors": 5.0, "dampers": 10.0, "vent_stop": 15.0,
-                  "sounders": 20.0, "alarm": 25.0}  # зворотний порядок, разом 30 с
+DRILL_STEPS = (
+    ("alarm", 0.0),
+    ("sounders", 3.0),
+    ("vent_stop", 6.0),
+    ("dampers", 9.0),
+    ("doors", 12.0),
+    ("machines", 20.0),
+)
+RESTORE_OFFSET = {
+    "machines": 0.0,
+    "doors": 5.0,
+    "dampers": 10.0,
+    "vent_stop": 15.0,
+    "sounders": 20.0,
+    "alarm": 25.0,
+}  # зворотний порядок, разом 30 с
 RESTORE_S = 30.0
 PSEUDO_ORDINAL = {"MCP": 90, "SND": 91, "FLM": 92}
 DUST_ALARM = 90.0
@@ -53,8 +66,13 @@ def drill_view(world: Any) -> dict[str, Any] | None:
     if flag:
         t0 = datetime.fromisoformat(flag["t0"]).timestamp()
         if (st is None or st["t0"] != t0) and flag.get("phase") != "restoring":
-            st = world._drill = {"t0": t0, "zone": flag.get("zone"), "detector": flag.get("detector"),
-                                 "real": bool(flag.get("real")), "restore0": None}
+            st = world._drill = {
+                "t0": t0,
+                "zone": flag.get("zone"),
+                "detector": flag.get("detector"),
+                "real": bool(flag.get("real")),
+                "restore0": None,
+            }
         if st is not None and flag.get("phase") == "restoring" and st["restore0"] is None:
             st["restore0"] = epoch
     elif st is not None and st["restore0"] is None:
@@ -72,9 +90,15 @@ def drill_view(world: Any) -> dict[str, Any] | None:
                 if rel is not None:
                     on = on and rel < RESTORE_OFFSET[name]
                 steps[name] = on
-            view = {"zone": st["zone"], "detector": st["detector"], "real": st["real"],
-                    "t": epoch - st["t0"], "restoring": rel is not None, "steps": steps,
-                    "id": st["t0"]}
+            view = {
+                "zone": st["zone"],
+                "detector": st["detector"],
+                "real": st["real"],
+                "t": epoch - st["t0"],
+                "restoring": rel is not None,
+                "steps": steps,
+                "id": st["t0"],
+            }
     world._drill_cache = (ckey, view)
     return view
 
@@ -95,14 +119,14 @@ class FacpZone(Model):
         # PIV Contamination для кожного сповіщувача зони: 5…30 %, повільний дрейф (R-09)
         self.contamination = {a: 5.0 + det(a) % 26 for a in self.detectors}
         # детектор, прив'язаний до сигналу ``dust`` (FA-FAC: 2.FAC.07), інакше перший у зоні
-        self.main_detector: str | None = p.get("dust_detector") or (
-            self.detectors[0] if self.detectors else None)
+        self.main_detector: str | None = p.get("dust_detector") or (self.detectors[0] if self.detectors else None)
         if self.has("dust") and p.get("dust_initial") is not None:
             self.sig("dust").value = float(p["dust_initial"])
         if self.has("dust") and self.main_detector:
             self.contamination[self.main_detector] = float(self.val("dust"))
         self.lsp: dict[str, dict[str, Any]] = {
-            a: {"present_value": QUIET, "reliability": RELIABLE} for a in self.detectors}
+            a: {"present_value": QUIET, "reliability": RELIABLE} for a in self.detectors
+        }
         self.dust_alerted = False
         self.drill_id: float | None = None
         self.state_value = QUIET
@@ -128,12 +152,19 @@ class FacpZone(Model):
         loop = self.detector_loop(det_addr)
         if reason == "loop":
             self.loop_fault = True
-            self.world.events.emit("fault", f"Несправність шлейфу {loop}", device=self.device.code,
-                                   payload={"loop": loop, "reason": reason})
+            self.world.events.emit(
+                "fault",
+                f"Несправність шлейфу {loop}",
+                device=self.device.code,
+                payload={"loop": loop, "reason": reason},
+            )
         elif reason not in ("comm",):
             self.world.events.emit(
-                "fault", f"Несправність сповіщувача {det_addr} (зона {self.device.code}, шлейф {loop})",
-                device=self.device.code, payload={"detector": det_addr, "loop": loop, "reason": reason})
+                "fault",
+                f"Несправність сповіщувача {det_addr} (зона {self.device.code}, шлейф {loop})",
+                device=self.device.code,
+                payload={"detector": det_addr, "loop": loop, "reason": reason},
+            )
 
     def on_clear(self) -> None:
         self.loop_fault = False
@@ -159,7 +190,8 @@ class FacpZone(Model):
                 pv = alarm
             obj["present_value"] = pv
             bad = self.contamination[addr] > DUST_ALARM or (
-                fault and self.device.fault in ("sensor", "generic") and addr == self.main_detector)
+                fault and self.device.fault in ("sensor", "generic") and addr == self.main_detector
+            )
             obj["reliability"] = UNRELIABLE if bad else RELIABLE
 
     def _dust(self) -> None:
@@ -186,8 +218,11 @@ class FacpZone(Model):
             if v > DUST_ALARM and not self.dust_alerted:
                 self.dust_alerted = True
                 self.world.events.emit(
-                    "alarm", f"Очистити сповіщувач {self.main_detector} (запиленість {round(v)} %)",
-                    device=code, payload={"detector": self.main_detector, "dust_pct": round(v)})
+                    "alarm",
+                    f"Очистити сповіщувач {self.main_detector} (запиленість {round(v)} %)",
+                    device=code,
+                    payload={"detector": self.main_detector, "dust_pct": round(v)},
+                )
             elif v <= DUST_ALARM:
                 self.dust_alerted = False
 
@@ -227,14 +262,31 @@ class Facp(Model):
         for z in self.zones():
             for a in z.detectors:
                 loop, _, nn = a.split(".")
-                out.append({"address": a, "id": lsp_id(int(loop), z.lsz, int(nn)), "kind": "detector",
-                            "zone": z.device.code, "piv": True})
-        for kind, tag, items in (("mcp", "MCP", self.mcp), ("sounder", "SND", self.sounders),
-                                 ("flame", "FLM", self.flame)):
+                out.append(
+                    {
+                        "address": a,
+                        "id": lsp_id(int(loop), z.lsz, int(nn)),
+                        "kind": "detector",
+                        "zone": z.device.code,
+                        "piv": True,
+                    }
+                )
+        for kind, tag, items in (
+            ("mcp", "MCP", self.mcp),
+            ("sounder", "SND", self.sounders),
+            ("flame", "FLM", self.flame),
+        ):
             for a in items:
                 loop, _, nn = a.split(".")
-                out.append({"address": a, "id": lsp_id(int(loop), PSEUDO_ORDINAL[tag], int(nn)),
-                            "kind": kind, "zone": None, "piv": False})
+                out.append(
+                    {
+                        "address": a,
+                        "id": lsp_id(int(loop), PSEUDO_ORDINAL[tag], int(nn)),
+                        "kind": kind,
+                        "zone": None,
+                        "piv": False,
+                    }
+                )
         return out
 
     def tick(self, dt_s: float) -> None:
@@ -273,6 +325,9 @@ class Facp(Model):
             det_addr = view["detector"] or (zone.model.drill_detector if zone else None)  # type: ignore[attr-defined,index]
             label = "Тривога" if view["real"] else "Навчальна тривога"  # type: ignore[index]
             self.world.events.emit(
-                "fire", f"{label}: сповіщувач {det_addr}, зона {view['zone']}", device=self.device.code,  # type: ignore[index]
-                payload={"zone": view["zone"], "detector": det_addr, "real": view["real"]})  # type: ignore[index]
+                "fire",
+                f"{label}: сповіщувач {det_addr}, зона {view['zone']}",
+                device=self.device.code,  # type: ignore[index]
+                payload={"zone": view["zone"], "detector": det_addr, "real": view["real"]},
+            )  # type: ignore[index]
         self.drill_id = did

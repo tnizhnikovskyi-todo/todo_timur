@@ -4,6 +4,7 @@
 20 кг, НПВ 60 000 кг. Вага й стабільність — сигнали ``yard/scale/TRUCK-SCALE/{weight_kg,stable}``
 (їх веде модель двору, R-29/R-30). Запис тари (``TA <v> kg``) — лише при ``write_accept``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,8 +25,12 @@ STABLE_WAIT_S = 5.0
 STREAM_PERIOD_S = 0.5
 ZERO_BAND_KG = 100
 IDENT = {
-    "I0": 'I0 B 0 "I0"', "I1": 'I1 A "01" "2.30"', "I2": 'I2 A "AKSIS 60-18 (sim) 60000 kg"',
-    "I3": 'I3 A "sim-0.1"', "I4": 'I4 A "AX2026-0001"'}
+    "I0": 'I0 B 0 "I0"',
+    "I1": 'I1 A "01" "2.30"',
+    "I2": 'I2 A "AKSIS 60-18 (sim) 60000 kg"',
+    "I3": 'I3 A "sim-0.1"',
+    "I4": 'I4 A "AX2026-0001"',
+}
 _TA_SET = re.compile(r"^TA\s+(-?\d+(?:\.\d+)?)\s*kg$", re.IGNORECASE)
 
 
@@ -36,9 +41,16 @@ def fmt_weight(w: float) -> str:
 class SicsServer(ProtocolServer):
     name = "sics"
 
-    def __init__(self, world: World, *, port: int = 4001, host: str = "0.0.0.0",
-                 write_accept: bool = False, stable_wait_s: float = STABLE_WAIT_S,
-                 stream_period_s: float = STREAM_PERIOD_S) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        port: int = 4001,
+        host: str = "0.0.0.0",
+        write_accept: bool = False,
+        stable_wait_s: float = STABLE_WAIT_S,
+        stream_period_s: float = STREAM_PERIOD_S,
+    ) -> None:
         self.world, self.port, self.host = world, port, host
         self.write_accept = write_accept
         self.stable_wait_s = stable_wait_s
@@ -179,5 +191,9 @@ class SicsServer(ProtocolServer):
             self._server = None
 
     def health(self) -> dict[str, Any]:
-        return {"proto": self.name, "up": self._server is not None and self._server.is_serving(),
-                "port": self.port, "requests": self.requests}
+        return {
+            "proto": self.name,
+            "up": self._server is not None and self._server.is_serving(),
+            "port": self.port,
+            "requests": self.requests,
+        }

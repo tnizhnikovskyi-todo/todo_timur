@@ -13,6 +13,7 @@
 ASSUMPTIONS: присутність — ``world.flags["presence"][<група>]``; аварійний світильник кожної групи — перший за
 адресою; сцени 7…16 дають 100 %.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -65,8 +66,9 @@ GROUPS: tuple[tuple[str, str, int, float, str], ...] = (
 BY_CODE = {g[0]: g for g in GROUPS}
 
 
-def dali_layout(groups: tuple[tuple[str, str, int, float, str], ...] = GROUPS
-                ) -> dict[str, list[tuple[int, int, int, int]]]:
+def dali_layout(
+    groups: tuple[tuple[str, str, int, float, str], ...] = GROUPS,
+) -> dict[str, list[tuple[int, int, int, int]]]:
     """Склад груп: ``{код: [(router, line, d_from, d_to), …]}`` за правилом bms R-06."""
     out: dict[str, list[tuple[int, int, int, int]]] = {}
     state: dict[str, list[int]] = {}  # щит -> [лінія, використано]
@@ -226,14 +228,18 @@ class Lighting(Model):
         self.set("faulty", "; ".join(self.faulty) if self.faulty else "—")
 
     def _tick_panel(self) -> None:
-        total = sum(float(get(self.world, f"lighting/groups/{c}/p_now"))
-                    for c, p, *_ in GROUPS if p == self.code)
+        total = sum(float(get(self.world, f"lighting/groups/{c}/p_now")) for c, p, *_ in GROUPS if p == self.code)
         self.set("p_now", round(total / 1000.0, 3))
         self.set("state", "fault" if self.device.fault else "ok")
 
     def get_state(self) -> dict[str, Any]:
-        return {"period": self.period, "override": self.override, "scene": self.scene,
-                "faulty": self.faulty, "flag_faults": self.flag_faults}
+        return {
+            "period": self.period,
+            "override": self.override,
+            "scene": self.scene,
+            "faulty": self.faulty,
+            "flag_faults": self.flag_faults,
+        }
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.period = d.get("period")

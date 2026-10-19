@@ -1,4 +1,5 @@
 """R-03, R-04, R-12, R-13, R-22: баланс, лічильники, трансформатор, АВР, острів (AC-14, AC-51, AC-60)."""
+
 import math
 from datetime import datetime
 from types import SimpleNamespace
@@ -28,9 +29,19 @@ def run(world, seconds: int, dt: int = 1) -> None:
 
 
 def set_blackout(world, amf: str = "hgm", **kw) -> None:
-    world.set_flag("blackout", {"t0": "x", "phase": "outage", "genset": True, "amf_master": amf,
-                                "restore_delay_s": 60, "genset_load_kw": None,
-                                "chp_island": False, **kw})
+    world.set_flag(
+        "blackout",
+        {
+            "t0": "x",
+            "phase": "outage",
+            "genset": True,
+            "amf_master": amf,
+            "restore_delay_s": 60,
+            "genset_load_kw": None,
+            "chp_island": False,
+            **kw,
+        },
+    )
 
 
 def ats(world):
@@ -110,11 +121,21 @@ def test_meter_aggregation(world):
     assert val(world, "energy/lines/BW-2/p_now") == pytest.approx(7.0)
     assert val(world, "energy/lines/C1/p_now") == pytest.approx(40.0)
     q1 = val(world, "energy/cells/Q1/p_now")
-    assert q1 == pytest.approx(47.0) == pytest.approx(
-        val(world, "energy/lines/BW-2/p_now") + val(world, "energy/lines/BW-3/p_now")
-        + val(world, "energy/lines/C1/p_now"))
-    q2_expected = val(world, "energy/lines/BW-1/p_now") + val(world, "energy/lines/BW-4/p_now") \
-        + val(world, "energy/lines/C2/p_now") + val(world, "infra/totals/bess_kw")
+    assert (
+        q1
+        == pytest.approx(47.0)
+        == pytest.approx(
+            val(world, "energy/lines/BW-2/p_now")
+            + val(world, "energy/lines/BW-3/p_now")
+            + val(world, "energy/lines/C1/p_now")
+        )
+    )
+    q2_expected = (
+        val(world, "energy/lines/BW-1/p_now")
+        + val(world, "energy/lines/BW-4/p_now")
+        + val(world, "energy/lines/C2/p_now")
+        + val(world, "infra/totals/bess_kw")
+    )
     assert val(world, "energy/cells/Q2/p_now") == pytest.approx(q2_expected)
     # R-03: P=12,18 кВт, dt=60 с → +203 Вт·год
     assert val(world, "energy/consumers/SAW-1/kwh_shift") - shift0 == pytest.approx(0.203, abs=0.002)
@@ -223,12 +244,15 @@ def _loads_sent(a):
     return [p["kw"] for e, p in a.relay_log if e == "load"]
 
 
-@pytest.mark.parametrize(("crit", "chp_island", "override", "expected"), [
-    (348.0, False, None, 348.0),    # AC-60: острів без КГУ
-    (348.0, True, None, 0.0),       # КГУ в острові покриває критичне навантаження вдень
-    (600.0, False, None, 558.0),    # обмеження SIM_GENSET_KW_MAX
-    (348.0, False, 200.0, 200.0),   # явний genset_load_kw
-])
+@pytest.mark.parametrize(
+    ("crit", "chp_island", "override", "expected"),
+    [
+        (348.0, False, None, 348.0),  # AC-60: острів без КГУ
+        (348.0, True, None, 0.0),  # КГУ в острові покриває критичне навантаження вдень
+        (600.0, False, None, 558.0),  # обмеження SIM_GENSET_KW_MAX
+        (348.0, False, 200.0, 200.0),  # явний genset_load_kw
+    ],
+)
 def test_island_genset_load(world, crit, chp_island, override, expected):
     world.set_flag("chp_run", True)  # КГУ запущено командою (штатно — резерв)
     a = _hgm_island(world, crit=crit, chp_island=chp_island, genset_load_kw=override)
@@ -325,8 +349,7 @@ def test_ats_variant_b_relay_fail_start_then_ok(world):
     run(world, 40)
     assert val(world, "infra/ats/fail_start") == 1  # 2ST = 30 с
     assert val(world, "infra/ats/position") == 2
-    assert any(e.message.startswith("АВР: генератор не запустився")
-               for e in world.events.since(0)[0])
+    assert any(e.message.startswith("АВР: генератор не запустився") for e in world.events.since(0)[0])
     a.set_relay_state({"gen_ok": True, "breaker": "mains", "state": "running"})
     run(world, 4)
     assert val(world, "infra/ats/src2_state") == 2 and val(world, "infra/ats/position") == 2

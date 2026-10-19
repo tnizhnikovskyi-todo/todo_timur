@@ -1,4 +1,5 @@
 """ТБ-06: SecretFilter не пропускає секрети в логи (SPEC §8.16)."""
+
 import io
 import json
 import logging
@@ -29,7 +30,9 @@ def test_json_log_format_and_masking():
     s = Settings(_env_file=None, **SECRETS)
     log, buf = make_logger(s)
     log.setLevel(logging.DEBUG)
-    log.warning("auth %s with %s", SECRETS["api_token"], SECRETS["odoo_apikey"], extra={"proto": "biostar", "device": "ACR-IN"})
+    log.warning(
+        "auth %s with %s", SECRETS["api_token"], SECRETS["odoo_apikey"], extra={"proto": "biostar", "device": "ACR-IN"}
+    )
     try:
         raise RuntimeError("boom " + SECRETS["biostar_pass"])
     except RuntimeError:

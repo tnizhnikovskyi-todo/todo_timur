@@ -8,6 +8,7 @@
 Автентифікація (стенд, ST-2): якщо задано ``SIM_LPR_PUSH_TOKEN`` — заголовок ``X-F3D-Token`` (як чекає http_push колектора,
 telemetry SPEC §8.7, ``token_ref`` джерела); порожній токен — без заголовка.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,10 +27,9 @@ log = logging.getLogger("iot_sim.lpr")
 
 RETRY_DELAYS_S = (2.0, 5.0, 10.0)
 CAMERAS = {
-    "CAM-05": {"geo": "GATE-W", "dir": "in", "serial": "B8A44F000005", "ip": "10.90.2.5",
-               "mac": "B8:A4:4F:00:00:05"},
-    "CAM-06": {"geo": "GATE-E", "dir": "out", "serial": "B8A44F000006", "ip": "10.90.2.6",
-               "mac": "B8:A4:4F:00:00:06"}}
+    "CAM-05": {"geo": "GATE-W", "dir": "in", "serial": "B8A44F000005", "ip": "10.90.2.5", "mac": "B8:A4:4F:00:00:05"},
+    "CAM-06": {"geo": "GATE-E", "dir": "out", "serial": "B8A44F000006", "ip": "10.90.2.6", "mac": "B8:A4:4F:00:00:06"},
+}
 _CYR = str.maketrans("ABCEHIKMOPTXY", "АВСЕНІКМОРТХУ")
 
 
@@ -43,35 +43,67 @@ def build_axis_payload(spec: dict[str, Any], now: datetime, counter: int = 1) ->
     book = spec.get("booking")
     local = ts.astimezone(now.tzinfo) if now.tzinfo else ts
     return {
-        "packetCounter": str(counter), "capture_timestamp": str(ms), "frame_timestamp": str(ms),
+        "packetCounter": str(counter),
+        "capture_timestamp": str(ms),
+        "frame_timestamp": str(ms),
         "capture_ts": str(ms * 1_000_000),
         "datetime": local.strftime("%Y%m%d %H%M%S") + f"{local.microsecond // 1000:03d}",
-        "plateText": plate, "plateUnicode": plate.translate(_CYR), "plateUTF8": plate.translate(_CYR),
-        "plateASCII": plate, "plateCountry": "UKR", "plateISO3166-2": "UA", "plateRegion": "",
+        "plateText": plate,
+        "plateUnicode": plate.translate(_CYR),
+        "plateUTF8": plate.translate(_CYR),
+        "plateASCII": plate,
+        "plateCountry": "UKR",
+        "plateISO3166-2": "UA",
+        "plateRegion": "",
         "plateRegionCode": "",
-        "plateList": "f3d_bookings" if book else "", "plateListMode": "allow" if book else "none",
-        "plateListDescription": (f"{book.get('batch', '')} {book.get('dock', '')} "
-                                 f"{book.get('partner', '')}").strip() if book else "",
+        "plateList": "f3d_bookings" if book else "",
+        "plateListMode": "allow" if book else "none",
+        "plateListDescription": (f"{book.get('batch', '')} {book.get('dock', '')} {book.get('partner', '')}").strip()
+        if book
+        else "",
         "plateConfidence": f"{float(spec.get('confidence', 0.91234)):.6f}",
-        "carState": spec.get("state", "new"), "roiID": "1", "geotag": {"lat": 50.45, "lon": 30.52},
-        "imageType": "plate", "plateImageType": "jpeg", "plateImageSize": "0",
-        "carMoveDirection": cam["dir"], "timeProcessing": "41",
-        "plateCoordinates": [514, 570, 120, 28], "plateCoordinatesRelative": [0, 0, 120, 28],
-        "carID": str(spec.get("car_id", counter)), "GEOtarget": cam["geo"], "imagesURI": [],
-        "imageArray": [], "imageFile": "", "imageFile2": "", "profileID": "1",
+        "carState": spec.get("state", "new"),
+        "roiID": "1",
+        "geotag": {"lat": 50.45, "lon": 30.52},
+        "imageType": "plate",
+        "plateImageType": "jpeg",
+        "plateImageSize": "0",
+        "carMoveDirection": cam["dir"],
+        "timeProcessing": "41",
+        "plateCoordinates": [514, 570, 120, 28],
+        "plateCoordinatesRelative": [0, 0, 120, 28],
+        "carID": str(spec.get("car_id", counter)),
+        "GEOtarget": cam["geo"],
+        "imagesURI": [],
+        "imageArray": [],
+        "imageFile": "",
+        "imageFile2": "",
+        "profileID": "1",
         "vehicle_info": {"view": "front", "type": spec.get("truck_type", "TRUCK"), "color": "WHITE"},
-        "camera_info": {"SerialNumber": cam["serial"], "ProdShortName": "AXIS P1488-LE",
-                        "IPAddress": cam["ip"], "MACAddress": cam["mac"]},
-        "sensorProviderID": code}
+        "camera_info": {
+            "SerialNumber": cam["serial"],
+            "ProdShortName": "AXIS P1488-LE",
+            "IPAddress": cam["ip"],
+            "MACAddress": cam["mac"],
+        },
+        "sensorProviderID": code,
+    }
 
 
 class LprPusher(ProtocolServer):
     name = "lpr"
 
-    def __init__(self, world: World, *, url: str, guard: Any = None,
-                 client: httpx.AsyncClient | None = None, token: str = "",
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-                 delays: tuple[float, ...] = RETRY_DELAYS_S) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        url: str,
+        guard: Any = None,
+        client: httpx.AsyncClient | None = None,
+        token: str = "",
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        delays: tuple[float, ...] = RETRY_DELAYS_S,
+    ) -> None:
         self.world, self.url, self.guard = world, url, guard
         self.token = token
         self._client = client
@@ -147,6 +179,9 @@ class LprPusher(ProtocolServer):
             log.warning("LPR push failed (%s), attempt %d", last, i + 1, extra={"proto": "lpr"})
         self.failed += 1
         self.world.events.emit(
-            "error", f"LPR не доставлено ({body.get('plateText')}): {last}",
-            device=device or body.get("sensorProviderID"), payload={"url_failed": True})
+            "error",
+            f"LPR не доставлено ({body.get('plateText')}): {last}",
+            device=device or body.get("sensorProviderID"),
+            payload={"url_failed": True},
+        )
         return False
