@@ -57,6 +57,17 @@ export function openImport({ file = null } = {}) {
     let goBtn = null;
 
     const rulesNow = () => [...siteRules().rules, ...st.extra];
+    /** Що вже є в проєкті: для нового проєкту — нічого (імпорт іде у порожній), для поточного — його комірки й префікси. */
+    const existing = () => (st.mode === "new" ? { existingCodes: new Set(), existingPrefixes: new Set() } : { existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((x) => x.code_prefix)) });
+    /** Маски за зразками, відсортовані за тим, скільки комірок справді стане рядами (відтворюється адресацією), а не лише розбереться. */
+    const rankSuggestions = (list) => {
+        const base = { siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() };
+        const scored = list.map((g) => {
+            const p = planStructure(st.locs, { ...base, parser: makeParser({ rules: [...rulesNow(), { id: "probe", mask: g.mask }], addr: S.site.addr || null }) });
+            return { ...g, placed: p.slots.filter((x) => x.template !== "floor_spot").reduce((n, x) => n + x.items.length, 0) };
+        });
+        return scored.filter((g) => g.placed > 0).sort((a, b) => b.placed - a.placed || b.matched - a.matched).slice(0, 3);
+    };
     const recompute = () => {
         st.suggestions = [];
         if (st.table) {
@@ -73,10 +84,10 @@ export function openImport({ file = null } = {}) {
         if (st.source !== "odoo") {
             st.warehouses = null;
         }
-        st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((s) => s.code_prefix)) });
+        st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() });
         const un = st.plan.stats.unparsedCodes; // без правила (навіть якщо стали місцями на підлозі в зоні-родителі)
         if (un.length && un.length >= 0.3 * Math.max(1, st.plan.stats.cells)) {
-            st.suggestions = guessMasks(un, { limit: 3 });
+            st.suggestions = rankSuggestions(guessMasks(un, { limit: 5 }));
         }
     };
 
@@ -165,7 +176,7 @@ export function openImport({ file = null } = {}) {
                         p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
                         h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
                         ...reasonRows(p),
-                        ...st.suggestions.map((g) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g.mask), h("span", { class: "muted small" }, `${g.matched} із ${g.total} нерозібраних`), h("button", { class: "fbtn sm", type: "button", "data-mask": g.mask, onclick: () => { st.extra.push({ id: `s${st.extra.length + 1}`, mode: "mask", mask: g.mask, type: "auto", enabled: true }); recompute(); renderSummary(); } }, "Застосувати"))),
+                        ...st.suggestions.map((g) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g.mask), h("span", { class: "muted small" }, `розібрано ${g.matched} із ${g.total}, рядами стане ${g.placed}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g.mask, onclick: () => { st.extra.push({ id: `s${st.extra.length + 1}`, mode: "mask", mask: g.mask, type: "auto", enabled: true }); recompute(); renderSummary(); } }, "Застосувати"))),
                         st.extra.length ? h("div", { class: "small muted" }, `Додані правила (збережуться з імпортом): ${st.extra.map((r) => r.mask).join(" · ")}`) : null,
                     ]
                   : [h("div", { class: "small muted" }, "Оберіть файл CSV чи XLSX або прочитайте структуру складу з Odoo.")])
@@ -187,9 +198,9 @@ export function openImport({ file = null } = {}) {
             h(
                 "div",
                 { class: "fcol" },
-                h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st.mode === "new", disabled: !mgr, onchange: () => { st.mode = "new"; renderOpts(); } }), "Створити новий проєкт «з файлу»", mgr ? null : h("span", { class: "small muted" }, " (лише менеджер)")),
+                h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st.mode === "new", disabled: !mgr, onchange: () => { st.mode = "new"; recompute(); renderSummary(); renderOpts(); } }), "Створити новий проєкт «з файлу»", mgr ? null : h("span", { class: "small muted" }, " (лише менеджер)")),
                 st.mode === "new" ? fld("Назва проєкту", h("input", { type: "text", id: "impName", value: st.projName, "aria-label": "Назва проєкту", oninput: (e) => { st.projName = e.target.value; } })) : null,
-                h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st.mode === "current", onchange: () => { st.mode = "current"; renderOpts(); } }), `Додати в поточний проєкт «${S.site.name}»`),
+                h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st.mode === "current", onchange: () => { st.mode = "current"; recompute(); renderSummary(); renderOpts(); } }), `Додати в поточний проєкт «${S.site.name}»`),
                 h("label", { class: "frow" }, h("input", { type: "checkbox", id: "impLayout", checked: st.layout, onchange: (e) => { st.layout = e.target.checked; } }), "Розкласти автоматично (зони по горизонталі, ряди вглиб)"),
                 h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "impRules", onclick: () => E.runDialog("parseCodes", { items: st.locs.map((l) => l.code) }) }, "Правила розбору…"))
             )

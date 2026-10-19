@@ -310,9 +310,8 @@ export function maskCandidates(code) {
     }
     const build = (keys, firstAlpha) => {
         let i = 0;
-        let seenAlpha = 0;
         return toks
-            .map((t) => {
+            .map((t, j) => {
                 if (t.t === "sep") {
                     return t.text;
                 }
@@ -320,10 +319,11 @@ export function maskCandidates(code) {
                     const key = keys[i++];
                     return key ? `{${PART_LABELS[key]}}` : "*";
                 }
-                if (seenAlpha++ === 0 && firstAlpha) {
+                const glued = toks[j - 1]?.t === "num" || toks[j + 1]?.t === "num"; // «Z1», «R3A»: літери впритул до числа лишаються літералом
+                if (j === 0 && firstAlpha && !glued) {
                     return firstAlpha;
                 }
-                return /^[A-Za-z]$/.test(t.text) ? t.text : "*";
+                return glued || /^[A-Za-z]$/.test(t.text) ? t.text : "*";
             })
             .join("");
     };
