@@ -14,6 +14,7 @@ import {
     contourAroundObjects,
     contourBbox,
     contourOf,
+    contourWalls,
     isRectContour,
     isSimplePolygon,
     itemAt,
@@ -284,28 +285,12 @@ export function wallsAlongContour(th = 0.3) {
     if (!editable()) {
         return 0;
     }
-    const pts = contour();
-    const sign = pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0) >= 0 ? 1 : -1;
-    let n = 0;
-    pts.forEach(([x1, y1], i) => {
-        const [x2, y2] = pts[(i + 1) % pts.length];
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        if (len < 0.1) {
-            return;
-        }
-        const ux = (x2 - x1) / len;
-        const uy = (y2 - y1) / len;
-        const nx = -uy * sign;
-        const ny = ux * sign;
-        const it = newItem("wall", uid("bi_"), (x1 + x2) / 2 + (nx * th) / 2, (y1 + y2) / 2 + (ny * th) / 2, { w: rnd(len), d: th, th, rot: rnd((Math.atan2(uy, ux) * 180) / Math.PI, 2) });
-        it.name = nextName(items(), "wall");
-        items().push(it);
-        n++;
-    });
-    if (n) {
-        commitB(`Стіни по контуру: ${n}`);
+    const walls = contourWalls(contour(), th, () => uid("bi_"), items());
+    if (walls.length) {
+        items().push(...walls);
+        commitB(`Стіни по контуру: ${walls.length}`);
     }
-    return n;
+    return walls.length;
 }
 
 /** Контур за складом + відступ 2 м (F18-01). */

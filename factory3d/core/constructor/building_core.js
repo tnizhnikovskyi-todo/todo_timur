@@ -127,6 +127,25 @@ export function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.
     return out;
 }
 
+/** Стіни вздовж ребер контуру: усередину на пів товщини, щоб місця біля стіни не перетинали її. */
+export function contourWalls(pts, th, idOf, existing = []) {
+    const sign = pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0) >= 0 ? 1 : -1;
+    const out = [];
+    pts.forEach(([x1, y1], i) => {
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        if (len < 0.1) {
+            return;
+        }
+        const ux = (x2 - x1) / len;
+        const uy = (y2 - y1) / len;
+        const wall = newItem("wall", idOf(), (x1 + x2) / 2 + (-uy * sign * th) / 2, (y1 + y2) / 2 + (ux * sign * th) / 2, { w: rnd(len), d: th, th, rot: rnd((Math.atan2(uy, ux) * 180) / Math.PI, 2) });
+        wall.name = nextName([...existing, ...out], "wall");
+        out.push(wall);
+    });
+    return out;
+}
+
 /** Об'єкт під точкою: від найменшого за площею (колона перемагає стіну й офіс). */
 export function itemAt(items, x, y, tol = 0.15) {
     const hits = [];

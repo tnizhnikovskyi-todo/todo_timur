@@ -985,6 +985,14 @@ export class OdooAdapter extends BaseAdapter {
         return { pinned: res.pinned, reload: true };
     }
 
+    /** Склади Odoo для вибору в майстрі «З нуля» (S5, F16-01): склад не створюється, лише вибирається → [{id, name, code}]. */
+    async warehouses() {
+        if (!this.orm) {
+            return [];
+        }
+        return await this.orm.searchRead("stock.warehouse", [], ["name", "code"], { order: "name", limit: 200 });
+    }
+
     /**
      * Стан майстра «З нуля» (S5, F16-04): значення форм і створене — свій маршрут `/site/wizard` (API-04 і ORM площадку не пишуть для
      * проєктувальника); `state` — довільний Json до 256 КБ.

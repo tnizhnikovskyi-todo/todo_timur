@@ -45,7 +45,8 @@ RACK_COLUMNS = ["Стелаж", "Зона", "Тип", "Позиція", "Тип�
 
 
 def _f2(value):
-    return '%.2f' % value
+    """Число з двома знаками: округлення «половина вгору» (той самий результат у JS: `Math.floor(v·100 + 0.5)`)."""
+    return '%.2f' % (math.floor(value * 100 + 0.5) / 100)
 
 
 def _line(key, qty, size, w=None, d=None):
