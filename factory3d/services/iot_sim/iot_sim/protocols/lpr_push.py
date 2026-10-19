@@ -5,7 +5,8 @@
 ``build_axis_payload``: ``camera`` (CAM-05/06), ``plate``, ``state`` (new|lost), ``booking``
 (``{"batch","dock","partner"}`` або ``None``), ``ts`` (необов'язково), ``confidence``, ``truck_type``.
 Помилка доставки: 3 повтори через 2/5/10 с, далі подія ``error`` (подія фури не переривається).
-Автентифікація (стенд, ST-2): якщо задано ``SIM_LPR_PUSH_TOKEN`` — заголовок ``X-F3D-Token`` (як чекає http_push колектора,
+Автентифікація (стенд, ST-2): якщо задано ``SIM_LPR_PUSH_TOKEN`` — заголовок ``X-F3D-Token`` (як чекає http_push
+колектора,
 telemetry SPEC §8.7, ``token_ref`` джерела); порожній токен — без заголовка.
 """
 

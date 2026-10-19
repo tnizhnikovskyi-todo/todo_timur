@@ -1,4 +1,5 @@
-"""ST-4: примусове значення (force) повертається до моделі — після ``hold_s`` і після ``release`` (SPEC API-16, AC-50)."""
+"""ST-4: примусове значення (force) повертається до моделі — після ``hold_s`` і після ``release`` (SPEC API-16,
+AC-50)."""
 
 from datetime import timedelta
 

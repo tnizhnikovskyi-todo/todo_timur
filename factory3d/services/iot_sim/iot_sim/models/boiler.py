@@ -6,7 +6,8 @@
 подія «Бункер поповнено». ``supply_c`` — R-01 (78; при ``boilers_on = 0`` — 65), ``return_c = supply − 20·load``
 (мінімум 7 К), ``heat_kw = min(need, 495·boilers_on)``. ``state``: 1 standby / 2 K1 / 3 K1+K2 / 4 fault.
 
-W3 (SPEC §8.1): ``gas_m3h = heat_kw / (BOILER_ETA · GAS_KWH_M3)`` (0,914 · 10,5; при ``heat_kw = 0`` → 0): 390 кВт → 40,6 м³/год.
+W3 (SPEC §8.1): ``gas_m3h = heat_kw / (BOILER_ETA · GAS_KWH_M3)`` (0,914 · 10,5; при ``heat_kw = 0`` → 0): 390 кВт →
+40,6 м³/год.
 """
 
 from __future__ import annotations

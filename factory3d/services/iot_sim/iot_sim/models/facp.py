@@ -139,7 +139,8 @@ class FacpZone(Model):
 
     @property
     def drill_detector(self) -> str | None:
-        """Сповіщувач навчальної тривоги за умовчанням: AC-15 — для FA-CNC це 2.CNC.05 (LSP:21405), інакше перший у зоні."""
+        """Сповіщувач навчальної тривоги за умовчанням: AC-15 — для FA-CNC це 2.CNC.05 (LSP:21405), інакше перший у
+        зоні."""
         pref = {"FA-CNC": "2.CNC.05"}.get(self.device.code)
         return pref if pref in self.detectors else self.first_detector
 

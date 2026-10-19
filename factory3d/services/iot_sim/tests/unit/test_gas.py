@@ -1,4 +1,5 @@
-"""W3 §8.1, AC-55 (газ): ``GAS-MAIN`` = BOILER + КГУ + сушарка + їдальня, лічильник, прапор ``gas_extra``, сценарій ``gas_overuse``."""
+"""W3 §8.1, AC-55 (газ): ``GAS-MAIN`` = BOILER + КГУ + сушарка + їдальня, лічильник, прапор ``gas_extra``, сценарій
+``gas_overuse``."""
 
 import asyncio
 from datetime import datetime
@@ -48,7 +49,8 @@ def test_boiler_gas_from_heat(world):
 
 
 def test_gas_is_sum_of_branches(world):
-    """AC-55: ``gas = BOILER + CHP + dry + canteen`` (+ ε ≈ 0,6…1,4 %): будній день, сушарка працює, їдальня відкрита."""
+    """AC-55: ``gas = BOILER + CHP + dry + canteen`` (+ ε ≈ 0,6…1,4 %): будній день, сушарка працює, їдальня
+    відкрита."""
     branches(world, boiler=40.6, chp=0.0, dry=True)
     world.step(10)
     expected = 40.6 + 6.0 + 1.0

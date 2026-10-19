@@ -35,7 +35,8 @@ def test_tk18_step1_compose_config_has_genset_relay():
 
 @pytest.mark.skipif(
     not os.environ.get("TD_GENSET_PATH") or not (Path(os.environ.get("TD_GENSET_PATH", "")) / "relay").is_dir(),
-    reason="немає TD_GENSET_PATH/relay: у td_genset (origin/claude/dreamy-ramanujan-p2wlej) немає каталогу relay/ і /sim/v1 API-F — запасний режим §8.14",
+    reason="немає TD_GENSET_PATH/relay: у td_genset (origin/claude/dreamy-ramanujan-p2wlej) немає каталогу relay/ і "
+    "/sim/v1 API-F — запасний режим §8.14",
 )
 def test_tk18_steps2_5_genset_relay_up():  # pragma: no cover - потребує td_genset
 

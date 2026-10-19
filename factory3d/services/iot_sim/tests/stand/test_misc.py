@@ -1,4 +1,5 @@
-"""ТК-10 (BioStar), ТК-11 (двір: LPR/шлагбаум/ваги), ТК-17 (HelvarNet), ТБ-04 (BioStar DELETE). AC-16/17/18/39/41/42/54/55/57."""
+"""ТК-10 (BioStar), ТК-11 (двір: LPR/шлагбаум/ваги), ТК-17 (HelvarNet), ТБ-04 (BioStar DELETE).
+AC-16/17/18/39/41/42/54/55/57."""
 
 import socket
 import time

@@ -1,4 +1,5 @@
-"""W3 §8.1, AC-55/AC-56 (повітря): ``AIR-MAIN`` — витрата від завантаження компресора, тиск, лічильник, сценарій ``air_leak``."""
+"""W3 §8.1, AC-55/AC-56 (повітря): ``AIR-MAIN`` — витрата від завантаження компресора, тиск, лічильник, сценарій
+``air_leak``."""
 
 import asyncio
 import xml.etree.ElementTree as ET
@@ -132,7 +133,8 @@ def _xml_records() -> dict[str, dict[str, str]]:
 
 @pytest.mark.skipif(not XML.is_file(), reason="немає odoo_addons (образ Docker)")
 def test_scenario_resources_xml():
-    """AC-56: файл ``td_sim_scenario_resources.xml`` містить ``air_leak``, ``gas_overuse``, ``water_leak`` з параметрами."""
+    """AC-56: файл ``td_sim_scenario_resources.xml`` містить ``air_leak``, ``gas_overuse``, ``water_leak`` з
+    параметрами."""
     recs = _xml_records()
     assert set(recs) == {"air_leak", "gas_overuse", "water_leak"}
     emu = {c.name: c for c in SCENARIOS}

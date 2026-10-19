@@ -1,5 +1,6 @@
 """Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію»), S-16 ``pfc_step_fault`` (W1 §8.1) і S-17…S-20
-(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``) і S-21…S-23 (W3 §8.1: ``air_leak``, ``gas_overuse``,
+(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``) і S-21…S-23 (W3 §8.1: ``air_leak``,
+``gas_overuse``,
 ``water_leak`` — ресурсні сценарії, ``duration_s = 0`` — до зупинки).
 
 ``ScenarioRunner(world).start(name, params, run_ref)`` (потрібен запущений asyncio-цикл):
@@ -373,7 +374,8 @@ class ChpNoGasParams(BaseParams):
 
 
 class AirLeakParams(BaseParams):
-    """W3 §8.1 (S-21): додатковий витік стисненого повітря ``leak_extra`` м³/хв (модель ``air``, прапор ``air_leak``)."""
+    """W3 §8.1 (S-21): додатковий витік стисненого повітря ``leak_extra`` м³/хв (модель ``air``, прапор
+    ``air_leak``)."""
 
     leak_extra: float = Field(3.0, ge=0, le=20)
 
@@ -385,7 +387,8 @@ class GasOveruseParams(BaseParams):
 
 
 class WaterLeakParams(BaseParams):
-    """W3 §8.1 (S-23): нічний витік води ``extra_m3h`` м³/год при 23:00–06:30 (модель ``water``, прапор ``water_leak``)."""
+    """W3 §8.1 (S-23): нічний витік води ``extra_m3h`` м³/год при 23:00–06:30 (модель ``water``, прапор
+    ``water_leak``)."""
 
     extra_m3h: float = Field(0.5, ge=0, le=20)
 
@@ -778,7 +781,8 @@ class PeakLoad(Scenario):
 
 
 class ExportDemo(Scenario):
-    """W2 §8.2 (S-18): ``bess_auto_idle`` + ``export_target_kw`` — експорт рівно ``export_kw`` (``load = gen − export``)."""
+    """W2 §8.2 (S-18): ``bess_auto_idle`` + ``export_target_kw`` — експорт рівно ``export_kw`` (``load = gen −
+    export``)."""
 
     name, title_uk, group, Params = "export_demo", "Демо експорту СЕС", "energy", ExportDemoParams
 
@@ -818,7 +822,8 @@ class ChpNoGas(Scenario):
 
 
 class AirLeak(Scenario):
-    """W3 §8.1 (S-21): ``air_leak = leak_extra`` — модель ``air`` додає витік до витрати магістралі (ніч: 1,6 → 4,6 м³/хв)."""
+    """W3 §8.1 (S-21): ``air_leak = leak_extra`` — модель ``air`` додає витік до витрати магістралі (ніч: 1,6 → 4,6
+    м³/хв)."""
 
     name, title_uk, group, Params = "air_leak", "Витік стисненого повітря", "energy", AirLeakParams
 

@@ -44,7 +44,8 @@ def test_tp01_factor10_three_clients(api, api_url, host, env_get):
                 (
                     "import time,sys\nfrom pymodbus.client import ModbusTcpClient\n"
                     f"c=ModbusTcpClient('{host}',port=502);c.connect()\n"
-                    f"t=time.time()+125\nwhile time.time()<t:\n c.read_holding_registers(3059,count=2,slave=11);time.sleep(0.05)\n"
+                    "t=time.time()+125\nwhile time.time()<t:\n"
+                    " c.read_holding_registers(3059,count=2,slave=11);time.sleep(0.05)\n"
                 ),
             ]
         )
@@ -204,7 +205,8 @@ async def test_tp03_bacnet_rpm_and_cov(api, host):
                 await asyncio.sleep(max(0, 1 - cycles[-1]))
             cpu, _ = _stats()
         print(
-            f"\nTP03 objects={total} cov={len(qs)} cycle_max={max(cycles):.2f} с cycle_avg={sum(cycles) / len(cycles):.2f} с "
+            f"\nTP03 objects={total} cov={len(qs)} cycle_max={max(cycles):.2f} с "
+            f"cycle_avg={sum(cycles) / len(cycles):.2f} с "
             f"cpu={cpu:.2f}"
         )
         assert max(cycles) < 2.0, f"max cycle {max(cycles):.2f}"

@@ -1,4 +1,5 @@
-"""W3 §8.1, AC-55/AC-56 (вода і котельня): ``gas_m3h`` котельні, підживлення ``boiler_m3_total``, прапор/сценарій ``water_leak``."""
+"""W3 §8.1, AC-55/AC-56 (вода і котельня): ``gas_m3h`` котельні, підживлення ``boiler_m3_total``, прапор/сценарій
+``water_leak``."""
 
 import asyncio
 from datetime import datetime

@@ -1,7 +1,8 @@
 """Стенд (SPEC §13.2): клієнти pymodbus/asyncua/bacpypes3/paho/httpx проти docker compose (профіль dev).
 
 Підняти: ``tests/stand/up.sh``; прогін: ``.venv/bin/pytest -m stand tests/stand``.
-Хост: ``STAND_HOST`` або IP контейнера ``iot_sim-iot_sim-1`` у мережі f3d_sim (порти §8.1.3 не публікуються на хост — ТБ-01).
+Хост: ``STAND_HOST`` або IP контейнера ``iot_sim-iot_sim-1`` у мережі f3d_sim (порти §8.1.3 не публікуються на хост —
+ТБ-01).
 Токен: ``SIM_API_TOKEN`` з ``.env``.
 """
 
@@ -69,7 +70,8 @@ def container_ip() -> str:
 
 
 def fresh_service() -> None:
-    """Перестворити iot_sim зі СВІЖИМ станом (том зі знімком видаляється: інакше mode/лічильники переживають рестарт)."""
+    """Перестворити iot_sim зі СВІЖИМ станом (том зі знімком видаляється: інакше mode/лічильники переживають
+    рестарт)."""
     base = ["docker", "compose", "-f", "docker-compose.sim.yml", "--profile", "dev"]
     subprocess.run([*base, "rm", "-sf", "iot_sim"], cwd=ROOT, check=False, capture_output=True)
     subprocess.run(["docker", "volume", "rm", "-f", "iot_sim_iot_sim_state"], check=False, capture_output=True)

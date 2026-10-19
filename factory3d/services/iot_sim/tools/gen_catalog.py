@@ -51,7 +51,8 @@ def _cell(s: str) -> str:
 
 
 def parse_spec(path: Path = SPEC) -> list[list[str]]:
-    """Рядки таблиці Додатка A: [№, код, пристрій, P-xx, адреса, тип, одиниця, масштаб, номінал, пороги, модель, статус]."""
+    """Рядки таблиці Додатка A: [№, код, пристрій, P-xx, адреса, тип, одиниця, масштаб, номінал, пороги, модель,
+    статус]."""
     text = path.read_text(encoding="utf-8").splitlines()
     start = next(i for i, ln in enumerate(text) if ln.startswith("## Додаток A."))
     rows: list[list[str]] = []

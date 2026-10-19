@@ -170,7 +170,8 @@ def gen_kw(world: Any) -> float:
 
 
 def extra_load(world: Any, base: float | None = None) -> float:
-    """Додаток до навантаження: ``extra_load_kw`` (≥ −load) і підгонка ``export_demo`` (експорт = ``export_target_kw``)."""
+    """Додаток до навантаження: ``extra_load_kw`` (≥ −load) і підгонка ``export_demo`` (експорт =
+    ``export_target_kw``)."""
     if island(world):
         return 0.0
     base = base_load(world) if base is None else base

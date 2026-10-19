@@ -1,7 +1,8 @@
 """Витратомір стисненого повітря AIR-MAIN (W3, SPEC §8.1; unit 75): витрата, тиск і лічильник магістралі.
 
 ``act = clamp((load − load_min)/(load_ref − load_min), 0, 1,3)``, ``load = equipment/COMPRESSOR/load``;
-``flow = leak + leak_extra + (q_ref − leak)·act`` м³/хв; ``leak_extra`` — прапор ``air_leak`` (сценарій ``air_leak``: число
+``flow = leak + leak_extra + (q_ref − leak)·act`` м³/хв; ``leak_extra`` — прапор ``air_leak`` (сценарій ``air_leak``:
+число
 або ``{"leak_extra": …}``, м³/хв). ``pressure = equipment/COMPRESSOR/pressure_bar − drop``; ``m3_total += flow·dt/60`` з
 квантом 0,1 норм. м³ (залишок переноситься). Приклад: ``load = 66`` → 9,8 м³/хв, ``load = 25`` (ніч) → 1,6.
 

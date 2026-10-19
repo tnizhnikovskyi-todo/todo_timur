@@ -7,8 +7,10 @@ ASCII-кадри ``>V:<v>,C:<cmd>[,G:|B:|S:|L:|P:|F:|A:|@c.r.s.d…]#``; від�
 ``lighting/groups/<LT>/{level,scene}`` із утриманням, ``world.post("lighting", …)``, подія ``command``).
 
 Склад груп (``@c.r.s.d``) — за правилом bms R-06 (SPEC §8.10.4) з ``dist/odoo_demo.json`` (``lighting.groups[*].n``,
-``lighting.panels[*].groups``); шлях — параметр ``layout`` / ``SIM_LAYOUT_PATH``. Без макета — ПРИПУЩЕННЯ: групи з каталогу
-сигналів по 4 світильники, усі на LP-1. Стан світильника (C:110) — з прапорів ``World``: ``blackout`` (фаза ``outage``) ->
+``lighting.panels[*].groups``); шлях — параметр ``layout`` / ``SIM_LAYOUT_PATH``. Без макета — ПРИПУЩЕННЯ: групи з
+каталогу
+сигналів по 4 світильники, усі на LP-1. Стан світильника (C:110) — з прапорів ``World``: ``blackout`` (фаза ``outage``)
+->
 EMERGENCY ``0x400``; ``lighting_scene[*].fault_device`` і ``lighting.fault_devices`` -> ``0x2``.
 EMERGENCY (G:40) — ПРИПУЩЕННЯ: по 2 світильники ``@1.r.1.63/64`` на роутер.
 

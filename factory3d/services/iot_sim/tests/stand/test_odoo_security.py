@@ -1,4 +1,5 @@
-"""ТБ-08 (права Odoo), ТБ-09 (токени навхрест), ТБ-10 (neutralize.sql) — на Odoo із шаблонною базою f3d_w6 (STAND_ODOO_*)."""
+"""ТБ-08 (права Odoo), ТБ-09 (токени навхрест), ТБ-10 (neutralize.sql) — на Odoo із шаблонною базою f3d_w6
+(STAND_ODOO_*)."""
 
 import os
 import subprocess

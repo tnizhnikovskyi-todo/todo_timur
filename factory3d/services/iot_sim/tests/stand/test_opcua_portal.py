@@ -164,6 +164,7 @@ async def test_tp04_opcua_10_clients_reduced(api, host, env_get):
     assert len(lat) >= 80, len(lat)
     lat.sort()
     p50, p95 = lat[len(lat) // 2], lat[int(0.95 * len(lat)) - 1]
-    # Критерій ТП-04 «< 1 с»: сервер публікує значення раз на тік (1 с) + publishing 500 мс → p50 ≈ 0,8, максимум ≈ 1,5 с
+    # Критерій ТП-04 «< 1 с»: сервер публікує значення раз на тік (1 с) + publishing 500 мс → p50 ≈ 0,8, максимум ≈ 1,5
+    # с
     print(f"\nTP04 samples={len(lat)} p50={p50:.2f} p95={p95:.2f} max={max(lat):.2f} с")
     assert p50 < 1.0 and p95 < 1.6, f"p50={p50:.2f} p95={p95:.2f} max={max(lat):.2f} с"
