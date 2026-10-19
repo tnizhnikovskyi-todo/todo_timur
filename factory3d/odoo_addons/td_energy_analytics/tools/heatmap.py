@@ -5,9 +5,10 @@ from .periods import WEEKDAYS
 
 LEVELS = 5
 HEAT_SQL = """
-SELECT EXTRACT(ISODOW FROM day)::int, hour_local, SUM(kwh), COUNT(DISTINCT day)
-  FROM td_energy_interval
- WHERE role = 'feeder' AND day BETWEEN %s AND %s AND quality != 'missing'
+SELECT EXTRACT(ISODOW FROM d)::int, h, SUM(k), COUNT(*)
+  FROM (SELECT day AS d, hour_local AS h, SUM(kwh) AS k FROM td_energy_interval
+         WHERE role = 'feeder' AND day BETWEEN %s AND %s AND quality != 'missing'
+         GROUP BY day, hour_local) t
  GROUP BY 1, 2
 """
 
