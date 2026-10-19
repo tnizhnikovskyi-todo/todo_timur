@@ -245,9 +245,7 @@ def test_tk08_ac86_device_unreachable(fresh_sim, odoo):
     src_rec = odoo.search_read("td.source", [("id", "=", src)], ["last_error"])[0]
     assert src_rec["last_error"] and "token" not in src_rec["last_error"].lower()
     stale = wait(
-        lambda: all(
-            s["status"] == "stale" for s in odoo.search_read("td.signal", [("id", "in", sig_ids)], ["status"])
-        ),
+        lambda: all(s["status"] == "stale" for s in odoo.search_read("td.signal", [("id", "in", sig_ids)], ["status"])),
         150,
         5,
     )

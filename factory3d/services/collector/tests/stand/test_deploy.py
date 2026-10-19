@@ -75,9 +75,7 @@ def dep_db():
 
 def test_dep03_install_report(dep_db):
     """П. 3 (на чистій базі): звіт `level0_migrated` існує, state = skipped (рівня 0 немає), помилок немає."""
-    rep = json.loads(
-        _psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'")
-    )
+    rep = json.loads(_psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'"))
     assert rep["state"] in ("skipped", "done"), rep
     assert rep["mismatches"] == []
 
@@ -86,8 +84,7 @@ def test_dep06_rerun_migration(dep_db):
     """П. 6: повтор міграції — без змін кількостей і без помилок (на демо: `created: 0`)."""
     before = _psql(
         dep_db,
-        "select (select count(*) from td_signal), (select count(*) from td_source), "
-        "(select count(*) from td_reading)",
+        "select (select count(*) from td_signal), (select count(*) from td_source), (select count(*) from td_reading)",
     )
     res = _shell(
         "import json\nfrom odoo.addons.td_telemetry import hooks\n"
@@ -97,8 +94,7 @@ def test_dep06_rerun_migration(dep_db):
     )
     after = _psql(
         dep_db,
-        "select (select count(*) from td_signal), (select count(*) from td_source), "
-        "(select count(*) from td_reading)",
+        "select (select count(*) from td_signal), (select count(*) from td_source), (select count(*) from td_reading)",
     )
     assert res["mismatches"] == [] and res["catalog"]["created"] == 0, res
     assert before == after
@@ -142,9 +138,7 @@ def test_dep07_uninstall_reinstall(dep_db):
     assert "Traceback" not in out.stdout[-2000:], out.stdout[-800:]
     state = _psql(dep_db, "select state from ir_module_module where name = 'td_telemetry'")
     assert state == "installed", (state, out.stdout[-400:])
-    rep = json.loads(
-        _psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'")
-    )
+    rep = json.loads(_psql(dep_db, "select value from ir_config_parameter where key = 'td.telemetry.level0_migrated'"))
     assert rep["mismatches"] == [] and rep["state"] in ("skipped", "done")
 
 
