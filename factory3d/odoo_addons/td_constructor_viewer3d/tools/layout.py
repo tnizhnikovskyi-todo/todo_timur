@@ -88,7 +88,7 @@ def _variants(env, snaps):
     ids = {p.get("variant_id") for snap in snaps for p in snap.get("placements", []) if p.get("variant_id")}
     out = {}
     for variant in env["td.equipment.variant"].with_context(active_test=False).browse(sorted(ids)).exists():
-        geom = variant._f3d_local_geometry()
+        geom = variant._td_local_geometry()
         out[variant.id] = {
             "geom": geom,
             "category": variant.category or "other",

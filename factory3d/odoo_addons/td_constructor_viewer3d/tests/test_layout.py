@@ -57,9 +57,9 @@ class TestLayoutPayload(LayoutBase):
 
     def test_provider_registered(self):
         provider = {p._name: p for p in get_providers(self.env)}["td.viewer.provider.layout"]
-        self.assertEqual((provider._f3d_sequence, provider._f3d_sections), (180, ("layout",)))
-        self.assertEqual(provider._f3d_group, "td_factory3d.group_td_user")
-        self.assertEqual(provider._f3d_viewer_bus_models(), ["td.layout.version", "td.site"])
+        self.assertEqual((provider._td_sequence, provider._td_sections), (180, ("layout",)))
+        self.assertEqual(provider._td_group, "td_factory3d.group_td_user")
+        self.assertEqual(provider._td_viewer_bus_models(), ["td.layout.version", "td.site"])
 
     def test_no_published_version_no_key(self):
         """Лише база (v1 seed) — ключа немає; площадка без версій — теж."""
@@ -117,7 +117,7 @@ class TestLayoutPayload(LayoutBase):
         self.publish()
         move = self.layout()["moved"]["SAW-1"]
         self.assertEqual(move["drot"], -90.0)
-        variant = saw.variant_id._f3d_local_geometry()
+        variant = saw.variant_id._td_local_geometry()
         if (variant.get("anchor") or "center") == "center":
             self.assertEqual((move["dx"], move["dy"]), (0.0, 0.0))
 
@@ -173,7 +173,7 @@ class TestLayoutPayload(LayoutBase):
         self.assertEqual((entry["variant_id"], entry["kind"]), (self.generic.id, "placement"))
 
     def test_model_url_for_variant_with_glb(self):
-        self.generic._f3d_set_model(glb=("m.glb", make_glb()), status="ok")
+        self.generic._td_set_model(glb=("m.glb", make_glb()), status="ok")
         self.Placement.create({
             "layer_id": self.prod_layer.id, "variant_id": self.generic.id, "code": "NEWM-2", "name": "З моделлю",
             "x_m": 100.0, "y_m": 30.0})
@@ -263,7 +263,7 @@ class TestKioskModel(HttpCase, LayoutBase):
         params = self.env["ir.config_parameter"].sudo()
         params.set_param("td.viewer.kiosk_enabled", "True")
         self.kiosk_url = "/f3d/kiosk/" + params.get_param("td.viewer.kiosk_token")
-        self.generic._f3d_set_model(glb=("m.glb", make_glb()), status="ok")
+        self.generic._td_set_model(glb=("m.glb", make_glb()), status="ok")
         self.env.flush_all()
         self.env.cr.commit = lambda: None  # HttpCase: дані тесту видно серверу через спільний курсор
 
