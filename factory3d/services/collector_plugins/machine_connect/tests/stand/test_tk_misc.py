@@ -41,8 +41,7 @@ def test_tk11_reasons(fresh, sim):
     closed = o.read("td.downtime", d["id"], ["date_end"])[0]["date_end"]
     assert closed, "простій не закрито"
     assert (
-        o.search_read("mrp.workcenter", [("td_code", "=", "SAW-2")], ["working_state"])[0]["working_state"]
-        != "blocked"
+        o.search_read("mrp.workcenter", [("td_code", "=", "SAW-2")], ["working_state"])[0]["working_state"] != "blocked"
     )
 
 

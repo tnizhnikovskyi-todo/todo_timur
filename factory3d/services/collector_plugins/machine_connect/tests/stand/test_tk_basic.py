@@ -141,8 +141,7 @@ def test_tk02_machine_fault_cnc2(fresh, sim):
     closed = wait(lambda: [x for x in downtimes(o, "CNC-2") if x["state_kind"] == "fault" and x["date_end"]], 30, 2)
     assert closed
     assert (
-        o.search_read("mrp.workcenter", [("td_code", "=", "CNC-2")], ["working_state"])[0]["working_state"]
-        != "blocked"
+        o.search_read("mrp.workcenter", [("td_code", "=", "CNC-2")], ["working_state"])[0]["working_state"] != "blocked"
     )
     req2 = o.search_read("maintenance.request", [("id", "=", req[0]["id"])], ["stage_id"])[0]
     assert req2["stage_id"] == req[0]["stage_id"]  # заявка лишається відкритою

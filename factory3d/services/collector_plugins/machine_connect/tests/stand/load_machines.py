@@ -20,9 +20,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-MACHINES_CSV = (
-    Path(__file__).resolve().parents[5] / "odoo_addons" / "td_machine_connect" / "data" / "mc_machines.csv"
-)
+MACHINES_CSV = Path(__file__).resolve().parents[5] / "odoo_addons" / "td_machine_connect" / "data" / "mc_machines.csv"
 
 
 def load_machines(path: Path = MACHINES_CSV) -> list[tuple[str, str]]:
