@@ -114,22 +114,22 @@ class TestBacnetPush(EventCase):
     def test_attach_message(self):
         ts = self.T0 + timedelta(minutes=10)
         ev = self.log('test', 'FA-CNC', ts=ts, zone_id=self.z_cnc.id)
-        self.handler._f3d_handle_push('bacnet_event', self.payload(ts='2026-10-14T07:10:03Z'))
+        self.handler._td_handle_push('bacnet_event', self.payload(ts='2026-10-14T07:10:03Z'))
         self.assertEqual(ev.message_text, 'Тест: сповіщувач 2.CNC.05, Присадка')
         self.assertEqual(ev.device_id, self.dev_cnc05)
 
     def test_new_bacnet_event(self):
         before = self.env['td.fire.event'].search_count([('etype', '=', 'bacnet')])
-        self.handler._f3d_handle_push('bacnet_event', self.payload())
+        self.handler._td_handle_push('bacnet_event', self.payload())
         self.assertEqual(self.env['td.fire.event'].search_count([('etype', '=', 'bacnet')]), before + 1)
 
     def test_invalid_payload(self):
         data = self.payload()
         del data['payload']['instance']
         with self.assertRaises(ValueError):
-            self.handler._f3d_handle_push('bacnet_event', data)
+            self.handler._td_handle_push('bacnet_event', data)
 
     def test_control_chars(self):
-        self.handler._f3d_handle_push('bacnet_event', self.payload(message_text='Тест\x00\x07 зона'))
+        self.handler._td_handle_push('bacnet_event', self.payload(message_text='Тест\x00\x07 зона'))
         ev = self.env['td.fire.event'].search([('etype', '=', 'bacnet')], limit=1)
         self.assertFalse(re.search(r'[\x00-\x08\x0a-\x1f\x7f]', ev.message_text))

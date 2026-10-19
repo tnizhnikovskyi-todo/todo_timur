@@ -1,6 +1,6 @@
 """Синхронізація станів моделей із сигналами (SPEC R-19; правила R-10…R-13, R-22).
 
-`FireSync(env).run(codes=None, full=False)` викликається з `td.signal._f3d_ingest` (коди змін) і крона (`full=True`).
+`FireSync(env).run(codes=None, full=False)` викликається з `td.signal._td_ingest` (коди змін) і крона (`full=True`).
 Усе читається з БД (`search_read`), стани пишуть методи моделей (`_set_state`, `_set_dust`) — вони ж ведуть журнал.
 """
 import logging
@@ -104,7 +104,7 @@ class FireSync:
         # заявку telemetry створює до звірки, тож подію журналу (R-22 п. 1) прив'язуємо тут
         env["maintenance.request"].search([
             ("td_signal_id", "in", list(self.rows)), ("td_fire_event_id", "=", False),
-            ("stage_id.done", "=", False)])._f3d_fire_link_events()
+            ("stage_id.done", "=", False)])._td_fire_link_events()
         return {"signals": n_signals, "changed": self.changed, "events": Event.search_count([]) - events0}
 
     # --- пристрої (R-11, R-13 п. 1) -----------------------------------------------------------------------

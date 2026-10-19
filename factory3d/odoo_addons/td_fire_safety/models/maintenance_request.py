@@ -24,7 +24,7 @@ class MaintenanceRequest(models.Model):
         team_id = self.env["ir.config_parameter"].sudo().get_param("td.fire_safety.team_id") or ""
         if team_id.isdigit():
             Signal = self.env["td.signal"].sudo()
-            pressure = Signal._f3d_fire_extra_codes()
+            pressure = Signal._td_fire_extra_codes()
             for vals in vals_list:
                 if not vals.get("td_signal_id"):
                     continue
@@ -36,10 +36,10 @@ class MaintenanceRequest(models.Model):
                 if sig.module == "fire_safety" or sig.code in pressure:
                     vals["maintenance_team_id"] = int(team_id)
         records = super().create(vals_list)
-        records._f3d_fire_link()
+        records._td_fire_link()
         return records
 
-    def _f3d_fire_link(self):
+    def _td_fire_link(self):
         """R-22 п. 1: зв'язок заявки сигналу модуля з зоною, пристроєм і подією журналу."""
         Device = self.env["td.fire.device"].sudo().with_context(active_test=False)
         Zone = self.env["td.fire.zone"].sudo()
@@ -65,9 +65,9 @@ class MaintenanceRequest(models.Model):
             line += "."
             vals["description"] = "%s<p>%s</p>" % (rec.description or "", html_escape(line))
             rec.write(vals)
-        self._f3d_fire_link_events()
+        self._td_fire_link_events()
 
-    def _f3d_fire_link_events(self):
+    def _td_fire_link_events(self):
         """R-22 п. 1: остання подія (≤ 10 хв) сигналу, пристрою чи зони; події — `request_id`."""
         Event = self.env["td.fire.event"].sudo()
         since = fields.Datetime.now() - timedelta(minutes=10)

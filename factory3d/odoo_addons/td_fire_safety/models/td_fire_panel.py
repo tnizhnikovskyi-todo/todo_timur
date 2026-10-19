@@ -270,22 +270,22 @@ class F3dFirePanel(models.Model):
                 panel_id=self.id)
             self._schedule_activity(
                 "Втрата зв'язку з приладом %s" % self.code, ev.text if ev else "")
-            if hasattr(self, "_f3d_fire_comm_request"):
-                self._f3d_fire_comm_request(ts)
+            if hasattr(self, "_td_fire_comm_request"):
+                self._td_fire_comm_request(ts)
         fire_notify(self.env, "td.fire.panel", [self.code], "state")
 
     # --- синхронізація з сигналами (R-19, R-22 п. 3) -------------------------------------------------------
     @api.model
-    def _f3d_fire_sync(self, codes=None, full=False):
+    def _td_fire_sync(self, codes=None, full=False):
         from ..tools.sync import FireSync
         return FireSync(self.env).run(codes=codes, full=full)
 
     @api.model
     def _cron_sync(self):
         """Крон «звірка станів і зв'язку» (A-22): наздоганяє push, виставляє зв'язок."""
-        return self._f3d_fire_sync(full=True)
+        return self._td_fire_sync(full=True)
 
-    def _f3d_fire_comm_request(self, ts):
+    def _td_fire_comm_request(self, ts):
         """Заявка ТО про втрату зв'язку (R-22 п. 3): одна відкрита на прилад."""
         self.ensure_one()
         request = self.comm_request_id
@@ -526,7 +526,7 @@ class F3dFirePanel(models.Model):
             "context": {"default_etype": "manual", "default_level": "info", "default_source": "manual",
                         "default_object_code": self.code, "default_panel_id": self.id}}
 
-    def _f3d_print_evac_report(self):
+    def _td_print_evac_report(self):
         self.ensure_one()
         if self.compliance_dirty:
             self.action_recompute_compliance()

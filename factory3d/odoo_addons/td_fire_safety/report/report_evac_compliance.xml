@@ -10,11 +10,11 @@
         <field name="print_report_name">'Перевірка евакуації та розстановки — %s' % object.code</field>
     </record>
 
-    <!-- пункт меню «Звіт перевірки»: _f3d_print_evac_report() на панелі (W1) перераховує норми, якщо потрібно -->
+    <!-- пункт меню «Звіт перевірки»: _td_print_evac_report() на панелі (W1) перераховує норми, якщо потрібно -->
     <record id="action_td_fire_evac_report" model="ir.actions.server">
         <field name="name">Звіт перевірки евакуації</field>
         <field name="model_id" ref="model_td_fire_panel"/>
         <field name="state">code</field>
-        <field name="code">action = env['td.fire.panel'].search([], limit=1)._f3d_print_evac_report()</field>
+        <field name="code">action = env['td.fire.panel'].search([], limit=1)._td_print_evac_report()</field>
     </record>
 </odoo>

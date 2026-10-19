@@ -266,10 +266,10 @@ class F3dFireDrill(models.Model):
             if other:
                 raise UserError("Уже триває навчання %s." % other.name)
             start = fields.Datetime.to_datetime(ts) or fields.Datetime.now()
-            src = base._f3d_get_source()
-            key = base._f3d_source_key(src)
+            src = base._td_get_source()
+            key = base._td_source_key(src)
             try:
-                people = base._f3d_people_at(src, start)
+                people = base._td_people_at(src, start)
             except Exception as exc:
                 _logger.exception("Джерело проходів %s недоступне", key)
                 raise UserError("Джерело проходів %s недоступне: %s" % (key, exc))
@@ -299,7 +299,7 @@ class F3dFireDrill(models.Model):
         for rec in self:
             if rec.mode != "sim" or not rec.sim_available:
                 raise UserError("Модуль емулятора не встановлено.")
-            run = rec._f3d_sim_start()
+            run = rec._td_sim_start()
             rec.sim_run_ref = run.name
             if run.state == "failed":
                 raise UserError("Емулятор не запустив сценарій: %s" % run.message)
@@ -327,7 +327,7 @@ class F3dFireDrill(models.Model):
     def _sim_stop_if_any(self):
         self.ensure_one()
         if self.sim_run_ref and self.sim_available:
-            self._f3d_sim_stop()
+            self._td_sim_stop()
 
     def action_rollcall(self):
         self.ensure_one()
@@ -387,7 +387,7 @@ class F3dFireDrill(models.Model):
         name = base.PREFIX + (self.passage_source or "")
         if self.passage_source and name in self.env.registry:
             return self.env[name].sudo()
-        return base._f3d_get_source()
+        return base._td_get_source()
 
     def _process_passages(self):
         """R-16 п. 2: виходи людей за проходами джерела."""
@@ -396,7 +396,7 @@ class F3dFireDrill(models.Model):
             return False
         now = fields.Datetime.now()
         end = min(now, self.end_ts) if self.end_ts else now
-        passages = self._passage_model()._f3d_passages(self.start_ts, end)
+        passages = self._passage_model()._td_passages(self.start_ts, end)
         persons = {p.employee_id.id: p for p in self.sudo().person_ids if p.employee_id}
         changed = False
         for passage in sorted((p for p in passages if p.get("direction") == "out"), key=lambda p: p["ts"]):
@@ -526,7 +526,7 @@ class F3dFireDrill(models.Model):
                 break
 
     @api.model
-    def _f3d_is_active_at(self, ts):
+    def _td_is_active_at(self, ts):
         """CF-06 (для td_access): чи йшло навчання в момент ts (UTC naive)."""
         return self.sudo().search_count([
             ("start_ts", "!=", False), ("start_ts", "<=", ts), "|", ("end_ts", "=", False), ("end_ts", ">=", ts),

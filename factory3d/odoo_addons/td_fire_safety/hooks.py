@@ -138,7 +138,7 @@ def _requests_link(env):
     """Крок 4: зв'язок заявок із зонами (R-22): сигнал модуля й порожнє `td_fire_zone_id`."""
     Request = env["maintenance.request"].sudo().with_context(active_test=False)
     todo = Request.search([("td_signal_id.module", "=", "fire_safety"), ("td_fire_zone_id", "=", False)])
-    todo._f3d_fire_link()
+    todo._td_fire_link()
     return {"requests_linked": len(todo.filtered("td_fire_zone_id"))}
 
 
@@ -196,7 +196,7 @@ def _drills_demo(env):
 
 def _sync_first(env):
     """Крок 7: перший sync (R-19); без показань прилад отримує `comm='lost'` без події й заявки."""
-    env["td.fire.panel"].sudo()._f3d_fire_sync(full=True)
+    env["td.fire.panel"].sudo()._td_fire_sync(full=True)
     panel = env["td.fire.panel"].sudo().search([], limit=1)
     return {"sync": "ok", "comm": panel.comm}
 

@@ -8,37 +8,37 @@ class F3dFirePassageSource(models.AbstractModel):
     _name = "td.fire.passage.source"
     _description = "Пожежна безпека: джерело даних про людей на об'єкті"
 
-    _f3d_priority = 1000  # менше — пріоритетніше
+    _td_priority = 1000  # менше — пріоритетніше
     PREFIX = "td.fire.passage.source."
 
     @api.model
-    def _f3d_source_names(self):
+    def _td_source_names(self):
         return sorted(n for n in self.env.registry if n.startswith(self.PREFIX))
 
     @api.model
-    def _f3d_get_source(self):
+    def _td_get_source(self):
         candidates = []
-        for name in self._f3d_source_names():
+        for name in self._td_source_names():
             model = self.env[name].sudo()
-            if not hasattr(model, "_f3d_passages"):
+            if not hasattr(model, "_td_passages"):
                 continue
-            if hasattr(model, "_f3d_available") and not model._f3d_available():
+            if hasattr(model, "_td_available") and not model._td_available():
                 continue
-            candidates.append((getattr(model, "_f3d_priority", 1000), name, model))
+            candidates.append((getattr(model, "_td_priority", 1000), name, model))
         if candidates:
             return min(candidates, key=lambda c: (c[0], c[1]))[2]
         return self.env["td.fire.passage.source.hr_attendance"].sudo()
 
     @api.model
-    def _f3d_source_key(self, model):
-        return getattr(model, "_f3d_key", None) or model._name[len(self.PREFIX):]
+    def _td_source_key(self, model):
+        return getattr(model, "_td_key", None) or model._name[len(self.PREFIX):]
 
     @api.model
-    def _f3d_people_at(self, model, at):
-        if hasattr(model, "_f3d_on_site"):
-            return model._f3d_on_site(at)
+    def _td_people_at(self, model, at):
+        if hasattr(model, "_td_on_site"):
+            return model._td_on_site(at)
         last = {}
-        for passage in sorted(model._f3d_passages(at - timedelta(hours=24), at), key=lambda p: p["ts"]):
+        for passage in sorted(model._td_passages(at - timedelta(hours=24), at), key=lambda p: p["ts"]):
             if passage["direction"] == "in":
                 last[passage["employee_id"]] = {
                     "employee_id": passage["employee_id"], "since": passage["ts"], "point": passage["point"]}
@@ -52,13 +52,13 @@ class F3dFirePassageSourceHrAttendance(models.AbstractModel):
     _inherit = "td.fire.passage.source"
     _description = "Пожежна безпека: джерело проходів — відмітки hr.attendance"
 
-    _f3d_priority = 100
-    _f3d_key = "hr_attendance"
+    _td_priority = 100
+    _td_key = "hr_attendance"
 
-    def _f3d_available(self):
+    def _td_available(self):
         return True
 
-    def _f3d_on_site(self, at):
+    def _td_on_site(self, at):
         attendances = self.env["hr.attendance"].sudo().search(
             [("check_in", "<=", at), "|", ("check_out", "=", False), ("check_out", ">", at)],
             order="check_in, id")
@@ -68,7 +68,7 @@ class F3dFirePassageSourceHrAttendance(models.AbstractModel):
                 "employee_id": att.employee_id.id, "since": att.check_in, "point": "Відмітка входу"})
         return list(people.values())
 
-    def _f3d_passages(self, start, end):
+    def _td_passages(self, start, end):
         attendances = self.env["hr.attendance"].sudo().search(
             [("check_out", ">=", start), ("check_out", "<=", end)], order="check_out")
         return [{"employee_id": att.employee_id.id, "ts": att.check_out, "point": "Відмітка виходу",

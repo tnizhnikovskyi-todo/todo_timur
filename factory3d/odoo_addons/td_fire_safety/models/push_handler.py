@@ -18,10 +18,10 @@ class F3dPushHandlerFire(models.AbstractModel):
     _name = "td.push.handler.fire"
     _inherit = "td.push.handler"
     _description = "Пожежна безпека: обробник повідомлень BACnet"
-    _f3d_push_routes = ("bacnet_event",)
+    _td_push_routes = ("bacnet_event",)
 
     @api.model
-    def _f3d_parse(self, payload):
+    def _td_parse(self, payload):
         if not isinstance(payload, dict):
             raise ValueError("bacnet_event: payload")
         for name, typ in REQUIRED:
@@ -49,10 +49,10 @@ class F3dPushHandlerFire(models.AbstractModel):
             "from": str(payload.get("from_state") or "")[:32], "to": str(payload.get("to_state") or "")[:32],
             "text": text}
 
-    def _f3d_handle_push(self, route, event):
+    def _td_handle_push(self, route, event):
         if route != "bacnet_event":
-            return super()._f3d_handle_push(route, event)
-        data = self._f3d_parse((event or {}).get("payload"))
+            return super()._td_handle_push(route, event)
+        data = self._td_parse((event or {}).get("payload"))
         env = self.env
         Event = env["td.fire.event"].sudo()
         panel = env["td.fire.panel"].sudo().search([], limit=1)
@@ -74,7 +74,7 @@ class F3dPushHandlerFire(models.AbstractModel):
                 links.update(device_id=device.id, zone_id=device.zone_id.id)
         to_state = states.normalize(data["to"])
         state = states.ZONE_MAP.get(to_state)
-        etype = self._f3d_etype(state, to_state, states.normalize(data["from"]))
+        etype = self._td_etype(state, to_state, states.normalize(data["from"]))
         ts = data["ts"]
         message = data["text"]
         found_dev = env["td.fire.device"]
@@ -103,7 +103,7 @@ class F3dPushHandlerFire(models.AbstractModel):
         return ev.id
 
     @api.model
-    def _f3d_etype(self, state, to_state, from_state):
+    def _td_etype(self, state, to_state, from_state):
         """Тип переходу за R-14 п. 1/5; `None` — переходу в таблиці немає (нова подія `bacnet`)."""
         if state in ("test", "alarm", "prealarm", "fault", "disabled"):
             return state

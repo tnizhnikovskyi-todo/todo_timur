@@ -97,7 +97,7 @@ class FireCase(TransactionCase):
     # --- сигнали -----------------------------------------------------------------------------------------
     def _push(self, readings, ts):
         with freeze_time(ts + timedelta(seconds=1)):  # щоб не спрацював ts_future
-            return self.env['td.signal']._f3d_ingest(readings, src='module')
+            return self.env['td.signal']._td_ingest(readings, src='module')
 
     def push_text(self, code, text, ts=None):
         return self._push([{'code': code, 'ts': ts or T0, 'text': text}], ts or T0)
@@ -108,7 +108,7 @@ class FireCase(TransactionCase):
     def sync(self, s=None):
         """Повна звірка; `s` — секунди від T0 (час заморожується, інакше «зараз» далеко від T0)."""
         with freeze_time(self.at(s if s is not None else 5)):
-            return self.panel._f3d_fire_sync(full=True)
+            return self.panel._td_fire_sync(full=True)
 
     def ev(self, etype, **dom):
         domain = [('etype', '=', etype), ('source', '!=', 'demo')] + [(k, '=', v) for k, v in dom.items()]
@@ -134,5 +134,5 @@ class FireCase(TransactionCase):
     @contextmanager
     def viewer_installed(self, flag):
         from odoo.addons.td_factory3d.models.td_scene_mixin import F3dSceneMixin
-        with mock.patch.object(F3dSceneMixin, '_f3d_viewer_installed', return_value=flag):
+        with mock.patch.object(F3dSceneMixin, '_td_viewer_installed', return_value=flag):
             yield

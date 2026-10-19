@@ -49,7 +49,7 @@ class ResConfigSettings(models.TransientModel):
         res["td_fire_alert_group_id"] = group.id if group and group._name == "res.groups" else False
         return res
 
-    def _f3d_fire_validate(self):
+    def _td_fire_validate(self):
         self.ensure_one()
         if self.td_fire_comm_stale_after_s < 30:
             raise UserError("Поріг «Дані застарілі» має бути не меншим за 30 с.")
@@ -74,7 +74,7 @@ class ResConfigSettings(models.TransientModel):
         old = {key: icp.get_param(P + key) for key in
                ("read_enabled", "dust_warn_pct", "dust_alarm_pct", "polymer_panels", "cover_tol_m")}
         for rec in self:
-            rec._f3d_fire_validate()
+            rec._td_fire_validate()
             if rec.td_fire_alert_group_id:
                 ids = rec.td_fire_alert_group_id.get_external_id()
                 if not ids.get(rec.td_fire_alert_group_id.id):
@@ -103,4 +103,4 @@ class ResConfigSettings(models.TransientModel):
         if (old["polymer_panels"], old["cover_tol_m"]) != (new["polymer_panels"], new["cover_tol_m"]):
             panel._schedule_compliance()
         if old["read_enabled"] != new["read_enabled"]:
-            panel._f3d_fire_sync(full=True)
+            panel._td_fire_sync(full=True)

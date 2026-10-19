@@ -23,10 +23,10 @@ class TestDrill(FireCase):
         super().setUp()
         # без td_access: інакше його джерело (пріоритет 10) перекриває hr_attendance (AC-53)
         Base = type(self.env['td.fire.passage.source'])
-        real = Base._f3d_source_names
+        real = Base._td_source_names
         self.real_source_names = lambda: real(self.env['td.fire.passage.source'])
         patcher = mock.patch.object(
-            Base, '_f3d_source_names',
+            Base, '_td_source_names',
             lambda model: [n for n in real(model) if n != 'td.fire.passage.source.access'])
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -239,7 +239,7 @@ class TestDrill(FireCase):
         d = self.drill(mode='sim')
         Drill = type(self.env['td.fire.drill'])
         run = SimpleNamespace(name='RUN/2026/0007', state='running', message='')
-        with mock.patch.object(Drill, '_f3d_sim_create_run', return_value=run) as create:
+        with mock.patch.object(Drill, '_td_sim_create_run', return_value=run) as create:
             d.action_start_sim()
         self.assertEqual(create.call_args.args[1],
                          {'zone': 'FA-CNC', 'detector': '2.CNC.05', 'real': False, 'duration_s': 300})
@@ -247,7 +247,7 @@ class TestDrill(FireCase):
         d2 = self.drill(mode='sim')
         d.action_cancel()
         failed = SimpleNamespace(name='RUN/2026/0008', state='failed', message='збій')
-        with mock.patch.object(Drill, '_f3d_sim_create_run', return_value=failed):
+        with mock.patch.object(Drill, '_td_sim_create_run', return_value=failed):
             with self.assertRaisesRegex(UserError, 'збій'):
                 d2.action_start_sim()
         self.assertEqual(d2.state, 'draft')
@@ -291,12 +291,12 @@ class TestDrill(FireCase):
     def test_is_active_at(self):
         d = self.start_at(self.drill())
         Drill = self.env['td.fire.drill']
-        self.assertTrue(Drill._f3d_is_active_at(self.at(100)))
-        self.assertFalse(Drill._f3d_is_active_at(self.at(-1)))
+        self.assertTrue(Drill._td_is_active_at(self.at(100)))
+        self.assertFalse(Drill._td_is_active_at(self.at(-1)))
         with freeze_time(self.at(330)):
             d.action_stop()
-        self.assertTrue(Drill._f3d_is_active_at(self.at(180)))
-        self.assertFalse(Drill._f3d_is_active_at(self.at(360)))
+        self.assertTrue(Drill._td_is_active_at(self.at(180)))
+        self.assertFalse(Drill._td_is_active_at(self.at(360)))
 
     # --- AC-78 -------------------------------------------------------------------------------------------
     def _machines_fixture(self, states):

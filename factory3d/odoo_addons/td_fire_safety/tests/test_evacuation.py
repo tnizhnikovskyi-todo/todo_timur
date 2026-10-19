@@ -48,7 +48,7 @@ class EvacCase(TransactionCase):
     @contextmanager
     def viewer_installed(self, flag):
         from odoo.addons.td_factory3d.models.td_scene_mixin import F3dSceneMixin
-        with mock.patch.object(F3dSceneMixin, '_f3d_viewer_installed', return_value=flag):
+        with mock.patch.object(F3dSceneMixin, '_td_viewer_installed', return_value=flag):
             yield
 
 

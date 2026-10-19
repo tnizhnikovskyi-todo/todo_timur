@@ -118,7 +118,7 @@ class F3dFireSystem(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        self.env.registry.clear_cache()  # td.signal._f3d_fire_extra_codes (M-15)
+        self.env.registry.clear_cache()  # td.signal._td_fire_extra_codes (M-15)
         return records
 
     def write(self, vals):
