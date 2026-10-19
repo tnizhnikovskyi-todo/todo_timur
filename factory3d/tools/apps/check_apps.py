@@ -389,7 +389,7 @@ def check_index(res: Result, mdir: Path):
                 low = v.lower()
                 if not v or v.startswith("#") or low.startswith(("mailto:", "skype:")):
                     continue
-                if low.startswith("javascript:") or low.startswith("data:"):
+                if low.startswith(("javascript:", "data:")):
                     once("html.url", f"{name}={v[:40]!r}: javascript:/data: URLs are forbidden")
                 elif re.match(r"^([a-z][a-z0-9+.-]*:)?//", low) or re.match(r"^[a-z][a-z0-9+.-]*:", low):
                     if name == "href" and tag == "a" and (YOUTUBE_RE.match(v) or TEAMS_RE.match(v)):
@@ -541,7 +541,7 @@ def check_module(
     # dependencies
     depends = manifest.get("depends") or []
     for dep in depends:
-        if dep.startswith("td_") or dep.startswith("test_td_"):
+        if dep.startswith(("td_", "test_td_")):
             if dep not in all_manifests:
                 res.err("dep.missing", f"depends on {dep}, which is not in this addons directory")
                 continue

@@ -97,7 +97,7 @@ def codes(res, kind="errors"):
 
 
 def set_edition(env, **editions):
-    tmp, _, _, cat = env
+    _tmp, _, _, cat = env
     cat.write_text(json.dumps({"modules": {m: {"edition": e} for m, e in editions.items()}}))
 
 
@@ -338,7 +338,7 @@ def test_main_exit_codes(env, capsys):
 
 
 def test_main_strict_fails_on_warnings(env):
-    tmp, addons, ce, cat = env
+    _tmp, addons, ce, cat = env
     make_module(addons, pot=False)
     set_edition(env, td_demo="ce")
     args = [str(addons), "--ce-addons", str(ce), "--catalog", str(cat)]
@@ -366,17 +366,20 @@ def test_export_script_flat_layout(tmp_path):
         pytest.skip("odoo_addons/tar/bash not available")
     out = tmp_path / "out"
     cp = subprocess.run(
-        ["bash", str(script), str(out), "--modules", "td_viewer3d_sale"], capture_output=True, text=True
+        ["bash", str(script), str(out), "--modules", "td_viewer3d_sale"], capture_output=True, text=True, check=False
     )
     assert cp.returncode == 0, cp.stdout + cp.stderr
     assert sorted(p.name for p in out.iterdir() if p.is_dir()) == ["td_factory3d", "td_viewer3d", "td_viewer3d_sale"]
     assert (out / "README.md").is_file() and (out / "td_viewer3d_sale" / "__manifest__.py").is_file()
     assert not list(out.glob("*/tests")) and not list(out.rglob("*.pyc")) and not list(out.glob("*/ruff.toml"))
     assert not list(out.glob("*/*.md")) and (out / "td_viewer3d" / "static" / "description" / "banner.png").is_file()
-    again = subprocess.run(["bash", str(script), str(out)], capture_output=True, text=True)
+    again = subprocess.run(["bash", str(script), str(out)], capture_output=True, text=True, check=False)
     assert again.returncode == 2 and "--force" in again.stderr  # refuses a non-empty directory
     skip = subprocess.run(
-        ["bash", str(script), str(tmp_path / "noee"), "--skip-ee", "--no-check"], capture_output=True, text=True
+        ["bash", str(script), str(tmp_path / "noee"), "--skip-ee", "--no-check"],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert skip.returncode == 0, skip.stderr
     names = {p.name for p in (tmp_path / "noee").iterdir() if p.is_dir()}

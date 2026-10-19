@@ -319,7 +319,7 @@ def is_placeholder(path: Path) -> bool:
         if GENERATED_MARK in raw.info:
             return True
         im = raw.convert("RGBA")
-    except Exception:
+    except Exception:  # noqa: BLE001 — Pillow на битій картинці кидає SyntaxError/OSError/ValueError/DecompressionBombError
         return True
     return len(im.getcolors(10000) or range(10001)) <= 3  # flat single-color / 2-3 color stubs
 
@@ -369,9 +369,8 @@ def main(argv=None) -> int:
         desc = mdir / "static" / "description"
         desc.mkdir(parents=True, exist_ok=True)
         done = []
-        if "manifest" not in skip:
-            if patch_manifest(mdir / "__manifest__.py", entry, catalog["defaults"]):
-                done.append("manifest")
+        if "manifest" not in skip and patch_manifest(mdir / "__manifest__.py", entry, catalog["defaults"]):
+            done.append("manifest")
         manifest = load_manifest((mdir / "__manifest__.py").read_text(encoding="utf8"))
         if "html" not in skip:
             (desc / "index.html").write_text(render_index(mod, entry, manifest, catalog, addons), encoding="utf8")
