@@ -17210,7 +17210,7 @@ function openImport({ file = null } = {}) {
         )
       ] : []
     );
-    box.replaceChildren(drop, st.error ? h("div", { class: "note lock", id: "impError" }, st.error) : null, mapBox, sumBox, optBox);
+    box.replaceChildren(...K(drop, st.error ? h("div", { class: "note lock", id: "impError" }, st.error) : null, mapBox, sumBox, optBox));
     renderSummary();
     renderOpts();
   };
@@ -17218,7 +17218,7 @@ function openImport({ file = null } = {}) {
     const p = st.plan;
     const need = st.table && !("name" in st.map) && !("complete_name" in st.map);
     sumBox.replaceChildren(
-      ...need ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")] : p ? [
+      ...K(need ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")] : p ? [
         h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt((st.warehouses || p.stats.warehouses).length)}${(st.warehouses || p.stats.warehouses).length ? ` (${(st.warehouses || p.stats.warehouses).slice(0, 4).join(", ")})` : ""}`))),
         p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
         h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
@@ -17229,7 +17229,7 @@ function openImport({ file = null } = {}) {
           renderSummary();
         } }, "Застосувати"))),
         st.extra.length ? h("div", { class: "small muted" }, `Додані правила (збережуться з імпортом): ${st.extra.map((r) => r.mask).join(" · ")}`) : null
-      ] : [h("div", { class: "small muted" }, "Оберіть файл CSV чи XLSX або прочитайте структуру складу з Odoo.")]
+      ] : [h("div", { class: "small muted" }, "Оберіть файл CSV чи XLSX або прочитайте структуру складу з Odoo.")])
     );
     if (goBtn) {
       goBtn.disabled = !p || st.busy || need || !(p.slots.length || p.tray.length);
@@ -17520,7 +17520,7 @@ async function openSync() {
   const draw = () => {
     sum.textContent = `Прийняти з Odoo: ${[...pick.values()].filter((v) => v === "odoo").length} із ${total}`;
     list.replaceChildren(
-      ...GROUPS2.filter(([g3]) => diff[g3].length).flatMap(([g3, title, hint]) => [
+      ...K(GROUPS2.filter(([g3]) => diff[g3].length).flatMap(([g3, title, hint]) => [
         h("h4", { style: { margin: "8px 0 2px" } }, `${title}: ${fmtInt(diff[g3].length)}`, h("span", { class: "small muted" }, ` — ${hint}`)),
         ...diff[g3].slice(0, 200).map((it, i) => {
           const k = keyOf(g3, i);
@@ -17533,7 +17533,7 @@ async function openSync() {
           return h("div", { class: "frow", "data-group": g3 }, h("span", { class: "mono small", style: { flex: 1 } }, text), sel);
         }),
         diff[g3].length > 200 ? h("div", { class: "small muted" }, `Показано 200 із ${diff[g3].length}; «Прийняти все» діє на всі.`) : null
-      ])
+      ]))
     );
   };
   draw();

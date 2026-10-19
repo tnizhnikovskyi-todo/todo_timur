@@ -14,7 +14,7 @@ import { E, S } from "./state.js";
 import { FIELDS, autoMap, fileName, locationsToRows, readTable, rowsToLocations, toCsv, withParents, writeXlsx } from "./tabular_core.js";
 import { safeNormalize, slotPolygon } from "./addr_core.js";
 import { polygonContains } from "./geometry.js";
-import { fmtInt, h, toast } from "./util.js";
+import { K, fmtInt, h, toast } from "./util.js";
 
 const isXlsx = (b) => b.length > 3 && b[0] === 0x50 && b[1] === 0x4b;
 
@@ -159,7 +159,7 @@ export function openImport({ file = null } = {}) {
                   ]
                 : [])
         );
-        box.replaceChildren(drop, st.error ? h("div", { class: "note lock", id: "impError" }, st.error) : null, mapBox, sumBox, optBox);
+        box.replaceChildren(...K(drop, st.error ? h("div", { class: "note lock", id: "impError" }, st.error) : null, mapBox, sumBox, optBox));
         renderSummary();
         renderOpts();
     };
@@ -168,7 +168,7 @@ export function openImport({ file = null } = {}) {
         const p = st.plan;
         const need = st.table && !("name" in st.map) && !("complete_name" in st.map);
         sumBox.replaceChildren(
-            ...(need
+            ...K(need
                 ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")]
                 : p
                   ? [

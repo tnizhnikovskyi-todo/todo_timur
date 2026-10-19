@@ -8,7 +8,7 @@ import { feedLoc } from "./files_ui.js";
 import { registries, can } from "./registry.js";
 import { E, S } from "./state.js";
 import { projectCodes } from "./structure.js";
-import { fmtInt, h, toast } from "./util.js";
+import { K, fmtInt, h, toast } from "./util.js";
 
 const GROUPS = [
     ["appeared", "З'явилося в Odoo", "піде в лоток «Не розміщено»"],
@@ -115,7 +115,7 @@ export async function openSync() {
     const draw = () => {
         sum.textContent = `Прийняти з Odoo: ${[...pick.values()].filter((v) => v === "odoo").length} із ${total}`;
         list.replaceChildren(
-            ...GROUPS.filter(([g]) => diff[g].length).flatMap(([g, title, hint]) => [
+            ...K(GROUPS.filter(([g]) => diff[g].length).flatMap(([g, title, hint]) => [
                 h("h4", { style: { margin: "8px 0 2px" } }, `${title}: ${fmtInt(diff[g].length)}`, h("span", { class: "small muted" }, ` — ${hint}`)),
                 ...diff[g].slice(0, 200).map((it, i) => {
                     const k = keyOf(g, i);
@@ -128,7 +128,7 @@ export async function openSync() {
                     return h("div", { class: "frow", "data-group": g }, h("span", { class: "mono small", style: { flex: 1 } }, text), sel);
                 }),
                 diff[g].length > 200 ? h("div", { class: "small muted" }, `Показано 200 із ${diff[g].length}; «Прийняти все» діє на всі.`) : null,
-            ])
+            ]))
         );
     };
     draw();

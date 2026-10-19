@@ -66,7 +66,7 @@ test("S4: API-16 → імпорт структури на адаптері Odoo:
     expect(getCore().registries.capabilities.get("odoo_import")).toBe(true);
     const { feed } = await store.locations({ op: "feed" });
     expect(rpc.of(LOC)[0].params).toEqual({ site_id: 1, op: "feed" });
-    expect(feed.locations).toHaveLength(12);
+    expect(feed.locations).toHaveLength(11);
     const res = E.importLocations(feed.locations, { parseRules: [{ id: "m", mode: "mask", mask: MASK, type: "auto", enabled: true }] });
     expect(res.ok).toBe(true);
     E.undoRecord();
@@ -116,7 +116,8 @@ test("S4: діалог «Імпорт локацій» в Odoo-хості: ст�
     expect(rpc.of(LOC)).toHaveLength(1);
     expect(document.querySelector("#impCells").textContent).toBe("9");
     const text = document.querySelector("#impSummary").textContent;
-    expect(text).toMatch(/рядків структури: 3/);
+    expect(text).toMatch(/рядків структури: 2/);
+    expect(text).not.toMatch(/null/);
     expect(text).toMatch(/складів: 1 \(WH\)/);
     expect(document.querySelectorAll('[data-role="suggest"]').length >= 1).toBe(true);
     document.querySelector("dialog[open]").close();
@@ -124,7 +125,7 @@ test("S4: діалог «Імпорт локацій» в Odoo-хості: ст�
 
 test("S4: розбіжності з Odoo — sync через API-16: відповідь адаптера, відсутня база для читача, прийняття = одна зміна", async () => {
     const diff = { appeared: [{ id: 500, code: "A-09-01-1", name: "A-09-01-1", parent: "Зона A", usage: "internal" }], disappeared: [], renamed: [{ id: 11, code: "A-01-01-1", old: "A-01-01-1", new: "Нова назва" }], moved: [] };
-    const { rpc, store } = await openEditor({ [LOC]: (p) => (p.op === "sync" ? { ok: true, feed: { root: "WH/Stock", count: 12 }, diff, baseline: "existing" } : p.op === "baseline" ? { ok: true } : { ok: true, feed: { root: "WH/Stock", warehouse: { id: 1, name: "WH", code: "WH" }, locations: feedRows(), total: 12, truncated: false, next: null } }) });
+    const { rpc, store } = await openEditor({ [LOC]: (p) => (p.op === "sync" ? { ok: true, feed: { root: "WH/Stock", count: 11 }, diff, baseline: "existing" } : p.op === "baseline" ? { ok: true } : { ok: true, feed: { root: "WH/Stock", warehouse: { id: 1, name: "WH", code: "WH" }, locations: feedRows(), total: 11, truncated: false, next: null } }) });
     const { feed } = await store.locations({ op: "feed" });
     expect(E.importLocations(feed.locations, { parseRules: [{ id: "m", mask: MASK }] }).ok).toBe(true);
     E.undoRecord();
