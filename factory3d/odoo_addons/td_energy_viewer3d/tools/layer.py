@@ -249,6 +249,7 @@ def build(env, ctx=None):
         "schema": SCHEMA,
         "thresholds": {"warn_pct": _num(snap.warn_pct), "alarm_pct": _num(snap.alarm_pct)},
         "show_markers": prm["show_markers"],
+        "can_pult": card_ok,  # «Відкрити пульт»: не киоск і група td_energy.group_td_energy_user (або вища)
         "nodes": nodes,
         "alarms": alarms,
         "summary": summary,

@@ -15,7 +15,7 @@ Key features
 * Node card with live values
 * Jump from the Energy console to the 3D scene
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

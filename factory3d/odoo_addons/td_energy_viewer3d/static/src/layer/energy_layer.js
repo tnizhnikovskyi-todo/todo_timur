@@ -1,7 +1,7 @@
 /** @odoo-module **/
 // UI-23 EnergyLayerExtension (SPEC 8.4.3): розширення «Переглядача» — шар «Енергетика в 3D».
 // Реєструється в ядрі `registerViewerExtension` (R-26): режим розфарбування (UI-24), маркери тривог (UI-25),
-// блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06). Без `D.energy.layer` (старий сервер) шар неактивний, режим схований (кнопка «Відкрити пульт» від шару не залежить).
+// блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06, за `layer.can_pult`). Без `D.energy.layer` (старий сервер) розширення неактивне, режим схований.
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
@@ -110,9 +110,12 @@ export class EnergyLayerExtension {
         return nodes.map((n) => nodeBlockHtml(n, layer, !!api?.canOpenAction));
     }
 
-    /** VX-06: основна кнопка «Відкрити пульт» у верхньому ряду картки `PULT_CODES`; у кіоску (`!canOpenAction`) її немає. */
+    /**
+     * VX-06: основна кнопка «Відкрити пульт» у верхньому ряду картки `PULT_CODES`. Лише коли сервер дозволив (`layer.can_pult`:
+     * група `td_energy.group_td_energy_user` або вища, не киоск) і `api.canOpenAction`; без шару (старий сервер) кнопки немає.
+     */
     cardActions(code, D, api) {
-        if (!PULT_CODES.has(code) || !api?.canOpenAction) {
+        if (!PULT_CODES.has(code) || !api?.canOpenAction || layerOf(D)?.can_pult !== true) {
             return [];
         }
         return [{ id: "open_pult", label: "Відкрити пульт", primary: true }];

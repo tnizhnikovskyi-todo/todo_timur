@@ -2,7 +2,7 @@
 // HOOT: VX-06 у мості — основна кнопка «Відкрити пульт» у верхньому ряду картки EMS-1 / SWB-1 (PULT_CODES).
 import { describe, expect, test } from "@odoo/hoot";
 import { PULT_ACTION, PULT_CODES, energyLayer } from "@td_energy_viewer3d/layer/energy_layer";
-import { mountEnergy } from "./helpers";
+import { makeLayer, mountEnergy } from "./helpers";
 
 describe.current.tags("desktop");
 
@@ -17,13 +17,19 @@ test("VX06 константи: PULT_CODES = {EMS-1, SWB-1}, дія — xml-id П
     expect(PULT_ACTION).toBe("td_energy.action_td_energy_pult");
 });
 
-test("VX06 cardActions: основна кнопка лише для PULT_CODES і лише коли api.canOpenAction", () => {
+test("VX06 cardActions: основна кнопка лише для PULT_CODES, коли api.canOpenAction і сервер дозволив (layer.can_pult)", () => {
     const action = { id: "open_pult", label: "Відкрити пульт", primary: true };
-    expect(energyLayer.cardActions("EMS-1", null, { canOpenAction: true })).toEqual([action]);
-    expect(energyLayer.cardActions("SWB-1", {}, { canOpenAction: true })).toEqual([action]);
-    expect(energyLayer.cardActions("BW-2", null, { canOpenAction: true })).toEqual([]);
-    expect(energyLayer.cardActions("EMS-1", null, { canOpenAction: false })).toEqual([]);
-    expect(energyLayer.cardActions("EMS-1", null, null)).toEqual([]);
+    const D = (can_pult) => ({ energy: { layer: { can_pult } } });
+    const api = { canOpenAction: true };
+    expect(energyLayer.cardActions("EMS-1", D(true), api)).toEqual([action]);
+    expect(energyLayer.cardActions("SWB-1", D(true), api)).toEqual([action]);
+    expect(energyLayer.cardActions("BW-2", D(true), api)).toEqual([]);
+    expect(energyLayer.cardActions("EMS-1", D(true), { canOpenAction: false })).toEqual([]);
+    expect(energyLayer.cardActions("EMS-1", D(true), null)).toEqual([]);
+    expect(energyLayer.cardActions("EMS-1", D(false), api)).toEqual([]); // користувач без групи td_energy
+    expect(energyLayer.cardActions("EMS-1", D(undefined), api)).toEqual([]);
+    expect(energyLayer.cardActions("EMS-1", { energy: {} }, api)).toEqual([]); // старий сервер без шару
+    expect(energyLayer.cardActions("EMS-1", null, api)).toEqual([]);
 });
 
 test("VX06 картки EMS-1 і SWB-1: «Відкрити пульт» — основна кнопка верхнього ряду, «Відкрити в Odoo» лишається звичайною; клік → openAction(Пульт)", async () => {
@@ -64,10 +70,22 @@ test("VX06 у кіоску (без onOpenAction) «Відкрити пульт»
     }
 });
 
-test("VX06 кнопка від шару не залежить: старий сервер без energy.layer теж показує її (є td_energy)", async () => {
+test("VX06 користувач без групи td_energy (layer.can_pult=false) або старий сервер без шару: кнопки немає; з правом — є", async () => {
     const actions = [];
-    const { viewer, el } = await mountEnergy({ layer: null, viewerOpts: { onOpenAction: (a) => actions.push(a) } });
-    viewer.select("EMS-1");
-    pultBtn(el).click();
+    const viewerOpts = { onOpenAction: (a) => actions.push(a) };
+    const denied = await mountEnergy({ layer: { ...makeLayer(), can_pult: false }, viewerOpts });
+    for (const code of ["EMS-1", "SWB-1"]) {
+        denied.viewer.select(code);
+        expect(pultBtn(denied.el)).toBe(null);
+        expect(qa(top(denied.el), "button").map(text).slice(0, 2)).toEqual(["Наблизити", "Закрити"]);
+    }
+    denied.viewer.destroy();
+    const old = await mountEnergy({ layer: null, viewerOpts });
+    old.viewer.select("EMS-1");
+    expect(pultBtn(old.el)).toBe(null);
+    old.viewer.destroy();
+    const allowed = await mountEnergy({ viewerOpts }); // makeLayer(): can_pult = true
+    allowed.viewer.select("EMS-1");
+    pultBtn(allowed.el).click();
     expect(actions).toEqual([PULT_ACTION]);
 });

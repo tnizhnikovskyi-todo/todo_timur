@@ -25,7 +25,7 @@ class TestLayerPayload(LayerCase):
             list(self.node(layer, "BW-2")),
             "code scene kind name state load i_a p_kw rating_a card alarms worst title".split(),
         )
-        self.assertEqual(set(layer), {"schema", "thresholds", "show_markers", "nodes", "alarms", "summary"})
+        self.assertEqual(set(layer), {"schema", "thresholds", "show_markers", "can_pult", "nodes", "alarms", "summary"})
         self.assertEqual(set(layer["summary"]), {"alarm", "warn", "gen", "off"})
         self.assertEqual(sum(layer["summary"].values()), sum(n["state"] != "ok" for n in layer["nodes"]))
         self.assertLess(len(json.dumps(layer)), 12 * 1024)  # ≤ 12 КБ

@@ -12,6 +12,7 @@ export const makeLayer = () => ({
     schema: 1,
     thresholds: { warn_pct: 80, alarm_pct: 100 },
     show_markers: true,
+    can_pult: true,
     nodes: [
         node("BW-2", "BW-2", "ok", { name: "ШР-2", load: 0.3, i_a: 192, p_kw: 124, rating_a: 630 }),
         node("C1", "CABLES", "ok", { name: "C1" }),
