@@ -21,8 +21,7 @@ class SaleOrder(models.Model):
         domain = [("origin", "=", self.name), ("state", "!=", "cancel")]
         group = self.procurement_group_id if "procurement_group_id" in self._fields else False
         if group:
-            domain = ["&", ("state", "!=", "cancel"), "|", ("group_id", "=", group.id),
-                      ("origin", "=", self.name)]
+            domain = ["&", ("state", "!=", "cancel"), "|", ("group_id", "=", group.id), ("origin", "=", self.name)]
         return self.env["stock.picking"].search(domain, order="id asc")
 
     def _compute_f3d_has_3d(self):
@@ -40,5 +39,4 @@ class SaleOrder(models.Model):
             if not pickings:
                 raise UserError(_("Для замовлення ще немає виробничих замовлень чи відвантажень"))
             params = {"picking": pickings[0].name, "so": self.name}
-        return {"type": "ir.actions.client", "tag": "f3d_viewer.action", "name": "3D: " + self.name,
-                "params": params}
+        return {"type": "ir.actions.client", "tag": "f3d_viewer.action", "name": "3D: " + self.name, "params": params}
