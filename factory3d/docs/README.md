@@ -30,7 +30,7 @@
 | 3 | `td_iot_sim` | 1 | [v0.3, 323 р.](modules/td_iot_sim/ARCHITECTURE.md) | [v0.3, 2 964 р.](modules/td_iot_sim/SPEC.md) |
 | 4 | `td_telemetry` | 2 | [v0.3, 522 р.](modules/td_telemetry/ARCHITECTURE.md) | [v0.3, 2 409 р.](modules/td_telemetry/SPEC.md) |
 | 5 | `td_machine_connect` | 2 | [v0.2, 567 р.](modules/td_machine_connect/ARCHITECTURE.md) | [v0.2, 2 883 р.](modules/td_machine_connect/SPEC.md) |
-| 6 | `td_energy` | 3 | [v0.2, 463 р.](modules/td_energy/ARCHITECTURE.md) | [v0.2, 2 445 р.](modules/td_energy/SPEC.md) |
+| 6 | `td_energy` (W1, енергетика) | 3 | [v0.2, 471 р.](modules/td_energy/ARCHITECTURE.md) | [v0.2, 2 461 р.; W1 — за посиланням на `build/energy/W1_SPEC.md`](modules/td_energy/SPEC.md) |
 | 7 | `td_genset` (міст `td_genset_factory3d`) | 3 | [v0.3, 589 р.](modules/td_genset/ARCHITECTURE.md) | [v0.3, 1 720 р.](modules/td_genset/SPEC.md) |
 | 8 | `td_yard` | 4 | [v0.3, 498 р.](modules/td_yard/ARCHITECTURE.md) | [v0.2, 2 516 р.](modules/td_yard/SPEC.md) |
 | 9 | `td_access` | 4 | [v0.2, 506 р.](modules/td_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/td_access/SPEC.md) |
@@ -38,8 +38,14 @@
 | 11 | `td_fire_safety` | 5 | [v0.3, 551 р.](modules/td_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/td_fire_safety/SPEC.md) |
 | 12 | `td_constructor` | 6 | [v0.1, 295 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/td_constructor/SPEC.md) |
 | 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач») | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
-| 14 | `td_energy_analytics` (W4, енергетика) | 3 | [v0.1, 353 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.1, 956 р.](modules/td_energy_analytics/SPEC.md) |
-| 15 | `td_energy_mobile` (W4, енергетика) | 3 | [v0.1, 353 р. (спільне з № 14)](modules/td_energy_mobile/ARCHITECTURE.md) | [v0.1, 476 р.](modules/td_energy_mobile/SPEC.md) |
+| 14 | `td_energy_analytics` (W4, енергетика: аналітика, модель бази ISO 50001, звіти) | 3 | [v0.2, 378 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.2, 979 р.](modules/td_energy_analytics/SPEC.md) |
+| 15 | `td_energy_mobile` (W4, енергетика: вкладка «Обхід» мобільного екрана) | 3 | [v0.2, 378 р. (спільне з № 14)](modules/td_energy_mobile/ARCHITECTURE.md) | [v0.2, 494 р.](modules/td_energy_mobile/SPEC.md) |
+| 16 | `td_energy_control` (W2, енергетика: керування, плагін збирача `td_collector_energy`) | 3 | [v0.2, 337 р.](modules/td_energy_control/ARCHITECTURE.md) | [v0.2, 1 640 р.](modules/td_energy_control/SPEC.md) |
+| 17 | `td_energy_viewer3d` (W2, міст «Енергетика в 3D» → «Переглядач») | 3 | [v0.2, 129 р.](modules/td_energy_viewer3d/ARCHITECTURE.md) | [v0.2, 222 р.](modules/td_energy_viewer3d/SPEC.md) |
+| 18 | `td_energy_resources` (W3, енергетика: газ, повітря, тепло, тарифи, резерви) | 3 | [v0.2, 337 р.](modules/td_energy_resources/ARCHITECTURE.md) | [v0.2, 1 168 р.](modules/td_energy_resources/SPEC.md) |
+| 19 | `td_energy_resources_bms` (W3, міст «Енергоресурси — Будівля») | 3 | [v0.2, 114 р.](modules/td_energy_resources_bms/ARCHITECTURE.md) | [v0.2, 137 р.](modules/td_energy_resources_bms/SPEC.md) |
+
+**Енергетика (хвилі W1–W4, стан на 19.10.2026).** Модулі № 6 і 14–19 збудовано; їхні документи переведено з робочих файлів `build/energy/W*_SPEC.md`/`W*_ARCH.md` у `modules/`, а відхилення й рішення збірки внесено в розділ «Журнал змін документа» наприкінці кожного файлу. W1 (`td_energy`, `td_genset_factory3d`) лишається за посиланням на `build/energy/W1_SPEC.md` і `W1_ARCH.md` (див. кінець `modules/td_energy/SPEC.md`). W2 — `td_energy_control` і міст `td_energy_viewer3d` (плагін збирача — [README плагіна](../services/collector_plugins/td_collector_energy/README.md)), W3 — `td_energy_resources` і міст `td_energy_resources_bms`, W4 — `td_energy_analytics` і `td_energy_mobile` (архітектура спільна). Рішення D-45…D-49 (W2) також у журналі рішень [ARCHITECTURE.md](ARCHITECTURE.md) §8; нумерація D-xx у документах енергетики модульна.
 
 ## Як читати
 
