@@ -99,9 +99,12 @@ class F3dSimRun(models.Model):
     def _check_device(self, schema, params):
         """Параметр device має вказувати на наявний пристрій емулятора (S-02/S-04/S-09/S-10)."""
         code = params.get("device")
-        if code and "device" in ((schema or {}).get("properties") or {}):
-            if not self.env["td.sim.device"].sudo().search_count([("code", "=", code)]):
-                raise ValidationError("Невідомий пристрій «%s»: такого коду немає в каталозі емулятора" % code)
+        if (
+            code
+            and "device" in ((schema or {}).get("properties") or {})
+            and not self.env["td.sim.device"].sudo().search_count([("code", "=", code)])
+        ):
+            raise ValidationError("Невідомий пристрій «%s»: такого коду немає в каталозі емулятора" % code)
 
     @api.model
     def _create_and_start(self, scenario, params):

@@ -39,7 +39,7 @@ def _auth_error():
 
 
 def _hhmm(value):
-    hours = int(round(value * 60))
+    hours = round(value * 60)
     return "%02d:%02d" % (hours // 60, hours % 60)
 
 
@@ -251,7 +251,7 @@ class F3dSimApi(http.Controller):
             body = json.loads(raw.decode("utf-8"))
             events = body["events"]
             if not isinstance(events, list):
-                raise ValueError("events must be a list")
+                raise ValueError("events must be a list")  # noqa: TRY004 — ловиться нижче (ValueError → 400)
         except (ValueError, KeyError, TypeError, UnicodeDecodeError) as exc:
             return _error(400, "bad_request", "invalid JSON: %s" % exc)
         if len(events) > MAX_EVENTS:
