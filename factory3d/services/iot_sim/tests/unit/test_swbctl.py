@@ -2,7 +2,6 @@
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.protocols.modbus_maps import ModbusError, build_all
 from iot_sim.protocols.modbus_server import UnitContext
 
@@ -167,7 +166,6 @@ def test_registers_mirror_into_signals(world, um):
 def test_reset_restores_defaults(world, um):
     """R-59 п. 3: ``POST /sim/v1/reset`` очищає прапори → стандартні значення регістрів."""
     from fastapi.testclient import TestClient
-
     from iot_sim.config import Settings
     from iot_sim.core.scenarios import ScenarioRunner
     from iot_sim.protocols.control_api import create_app

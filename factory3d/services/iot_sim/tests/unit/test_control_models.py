@@ -3,7 +3,6 @@ import asyncio
 import math
 
 import pytest
-
 from iot_sim.core.scenarios import ScenarioConflict, ScenarioParamsError, ScenarioRunner
 from iot_sim.models.meter import (
     SECTIONS,

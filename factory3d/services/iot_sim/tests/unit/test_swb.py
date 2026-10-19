@@ -4,7 +4,6 @@ import math
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.core.scenarios import ScenarioParamsError, ScenarioRunner
 from iot_sim.models.meter import SECTIONS
 from iot_sim.models.swb import STEP_KVAR, Swb, section_pq, steps_needed
