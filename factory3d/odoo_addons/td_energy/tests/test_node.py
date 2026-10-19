@@ -24,16 +24,16 @@ class TestNodes(F3DEnergyCase):
         self.assertTrue(rec, "немає вузла %s" % code)
         return rec
 
-    def test_123_nodes(self):  # AC-01
+    def test_123_nodes(self):  # AC-01 (19.0.1.1.2: +QF-CHP → 124 вузли, 12 шаф)
         nodes = self.Node.search([])
-        self.assertEqual(len(nodes), 123)
+        self.assertEqual(len(nodes), 124)
         self.assertEqual(
             dict(Counter(nodes.mapped("kind"))),
-            {"input": 1, "substation": 1, "transformer": 2, "switchboard": 1, "section": 2, "cell": 11, "line": 6,
+            {"input": 1, "substation": 1, "transformer": 2, "switchboard": 1, "section": 2, "cell": 12, "line": 6,
              "tapoff": 36, "consumer": 49, "generator": 12, "storage": 1, "ats": 1},
         )  # fmt: skip
         for code, parent in (("QF-1", "SEC-2"), ("BW-1", "QF-1"), ("SAW-1", "TAP-SAW-1"), ("TAP-SAW-1", "BW-1"),
-                             ("COMPRESSOR", "C1")):  # fmt: skip
+                             ("COMPRESSOR", "C1"), ("QF-CHP", "SEC-2"), ("CHP", "QF-CHP")):  # fmt: skip
             self.assertEqual(self.node(code).parent_id.code, parent, code)
         self.assertEqual(self.node("QS").peer_id.code, "SEC-2")
         self.assertEqual(set(nodes.filtered(lambda n: n.kind == "cell").cabinet_id.mapped("code")), {"SWB-1"})

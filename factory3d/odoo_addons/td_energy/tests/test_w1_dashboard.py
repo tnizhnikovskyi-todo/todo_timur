@@ -281,7 +281,11 @@ class TestW1Dashboard(TestW1Common):
         mobile = self.Dash.with_user(self.u_eng).get_mobile(None)
         self.assertTrue({"state", "alarms", "scheme"} <= set(mobile))
         self.assertLessEqual(len(json.dumps(mobile)), 20 * 1024)
-        self.assertEqual([r["code"] for r in mobile["scheme"]][:3], ["GRID-10KV", "T1", "T2"])
+        # порядок — за положенням на схемі (y, x): КГУ (19.0.1.1.2) тепер над шафою QF-CHP, у верхньому ряду після вводу 10 кВ
+        self.assertEqual([r["code"] for r in mobile["scheme"]][:4], ["GRID-10KV", "CHP", "T1", "T2"])
+        self.assertNotIn(
+            "QF-CHP", [r["code"] for r in mobile["scheme"]]
+        )  # шафа вводу КГУ у мобільному списку не дублює КГУ
         self.assertTrue({"GRID-10KV", "T1", "T2", "BW-2", "C2", "PFC-2", "PV-INV", "BESS", "ATS-1"}
                         <= {r["code"] for r in mobile["scheme"]})  # fmt: skip
         active = mobile["alarms"]["active"]
