@@ -125,10 +125,14 @@ class TdEnergyAnalytics(models.AbstractModel):
 
     @api.model
     def _td_enpi(self, ctx):
-        """R-05 п. 3: 12 ковзних тижнів і підсумок за ними (вікно не залежить від періоду екрана, D-58)."""
+        """R-05 п. 3: 12 ковзних тижнів і підсумок за ними (вікно не залежить від періоду екрана, D-58).
+
+        Неповна поточна доба в точки не входить: беруться доби до вчора, а останній тиждень (він має ≤ 6 повних діб)
+        нормується до 7 діб (`7/n`; `enpi` від цього не залежить), щоб не було хибного провалу «цього тижня»."""
         cr = ctx.cr
         weeks = periods.weeks(ctx.today, WEEKS)
         first = weeks[0]["date_from"]
+        last = ctx.today - timedelta(days=1)
         base = ctx.baseline("el")
         index = {}
         for i, week in enumerate(weeks):
@@ -138,25 +142,32 @@ class TdEnergyAnalytics(models.AbstractModel):
                 day += timedelta(days=1)
         exp = [None] * WEEKS
         act = [None] * WEEKS
+        days_in = [0] * WEEKS
         if base:
             cr.execute(
                 """SELECT day, actual, expected FROM td_energy_enpi
                     WHERE baseline_id = %s AND day BETWEEN %s AND %s AND expected IS NOT NULL
                       AND quality != 'no_driver'""",
-                (base.id, first, ctx.today),
+                (base.id, first, last),
             )
             for day, actual, expected in cr.fetchall():
                 i = index[day]
+                days_in[i] += 1
                 act[i] = (act[i] or 0.0) + float(actual)
                 exp[i] = (exp[i] or 0.0) + float(expected)
         else:
             cr.execute(
                 "SELECT day, qty FROM td_energy_daily WHERE scope = 'plant' AND day BETWEEN %s AND %s",
-                (first, ctx.today),
+                (first, last),
             )
             for day, qty in cr.fetchall():
                 i = index[day]
+                days_in[i] += 1
                 act[i] = (act[i] or 0.0) + float(qty)
+        if 0 < days_in[-1] < 7:  # поточний тиждень без неповної поточної доби
+            factor = 7.0 / days_in[-1]
+            act[-1] = None if act[-1] is None else act[-1] * factor
+            exp[-1] = None if exp[-1] is None else exp[-1] * factor
         rows = []
         for i, week in enumerate(weeks):
             label = "12 тижнів тому" if i == 0 else "цей тиждень" if i == WEEKS - 1 else ""
@@ -173,7 +184,7 @@ class TdEnergyAnalytics(models.AbstractModel):
             "saving_uah": None,
         }  # fmt: skip
         if base:
-            tot = self.env["td.energy.enpi"].sudo().period_totals(base, first, ctx.today)
+            tot = self.env["td.energy.enpi"].sudo().period_totals(base, first, last)
             if tot["enpi"] is not None:
                 out.update(enpi=tot["enpi"], saving_pct=tot["saving_pct"], saving_kwh=round(tot["saving_qty"], 1))
                 if ctx.cost_access and tot.get("saving_cost") is not None:

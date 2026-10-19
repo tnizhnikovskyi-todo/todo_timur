@@ -104,10 +104,10 @@ class TestW4Enpi(TestW4Common):
         base = self._base()
         days = [TODAY - timedelta(days=k) for k in range(84)]
         for day in days:
-            self._daily(day, qty=6800.0, import_qty=100.0, cost=840.0)
-            self.Enpi.create(
-                {"baseline_id": base.id, "day": day, "actual": 6800.0, "expected": 7100.0, "quality": "ok"}
-            )
+            partial_today = day == TODAY  # неповна поточна доба: у точки тижнів не входить
+            qty = 1000.0 if partial_today else 6800.0
+            self._daily(day, qty=qty, import_qty=100.0, cost=840.0)
+            self.Enpi.create({"baseline_id": base.id, "day": day, "actual": qty, "expected": 7100.0, "quality": "ok"})
         data = self.Api.with_user(self.u_cost).get_enpi()
         weeks = data["weeks"]
         self.assertEqual(len(weeks), 12)
@@ -118,11 +118,14 @@ class TestW4Enpi(TestW4Common):
         self.assertEqual({w["label"] for w in weeks[1:-1]}, {""})
         self.assertAlmostEqual(weeks[3]["expected_mwh"], 49.7)
         self.assertAlmostEqual(weeks[3]["actual_mwh"], 47.6)
+        # останній тиждень (6 повних діб + неповна поточна) нормується до 7 діб: без хибного провалу
+        self.assertAlmostEqual(weeks[-1]["expected_mwh"], 49.7)
+        self.assertAlmostEqual(weeks[-1]["actual_mwh"], 47.6)
         self.assertEqual((data["y_min"], data["y_max"]), (45, 55))  # floor5(0,95·47,6), ceil5(1,05·49,7)
         self.assertAlmostEqual(data["enpi"], 6800 / 7100, places=4)
         self.assertAlmostEqual(data["saving_pct"], 4.2)
-        self.assertAlmostEqual(data["saving_kwh"], 84 * 300.0)
-        self.assertEqual(data["saving_uah"], round(84 * 300.0 * 8.4))
+        self.assertAlmostEqual(data["saving_kwh"], 83 * 300.0)  # доби до вчора
+        self.assertEqual(data["saving_uah"], round(83 * 300.0 * 8.4))
         view = self.Api.with_user(self.u_view).get_enpi()
         self.assertNotIn("saving_uah", view)
         self.assertAlmostEqual(view["enpi"], data["enpi"])
@@ -134,4 +137,11 @@ class TestW4Enpi(TestW4Common):
         self.assertIsNone(data["enpi"])
         self.assertIsNone(data["saving_pct"])
         self.assertIsNone(data["weeks"][-1]["expected_mwh"])
-        self.assertAlmostEqual(data["weeks"][-1]["actual_mwh"], 6.8)
+        self.assertAlmostEqual(data["weeks"][-1]["actual_mwh"], 6.8 * 7)  # одна повна доба нормується до тижня
+
+    def test_ac20_partial_today_without_baseline(self):
+        for k in range(1, 7):
+            self._daily(TODAY - timedelta(days=k), qty=6800.0)
+        self._daily(TODAY, qty=900.0)  # неповна доба
+        last = self.Api.get_enpi()["weeks"][-1]
+        self.assertAlmostEqual(last["actual_mwh"], 47.6)
