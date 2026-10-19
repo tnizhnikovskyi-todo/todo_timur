@@ -20,3 +20,4 @@ from . import (  # noqa: F401  (W1-A)
     test_w1_ticket,
 )
 from . import test_w1_ui, test_w1_hoot  # noqa: F401  (W1-B)
+from . import test_chp_cell  # noqa: F401  (шафа вводу КГУ QF-CHP)

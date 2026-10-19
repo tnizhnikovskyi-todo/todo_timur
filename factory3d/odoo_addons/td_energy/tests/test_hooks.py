@@ -36,7 +36,7 @@ class TestHooks(F3DEnergyCase):
 
     def test_install_report(self):  # AC-12 (звіт установки; кількості, що не залежать від наявності обладнання)
         report = json.loads(self.env["ir.config_parameter"].get_param("td.energy.install_report"))
-        for key, value in {"nodes": 123, "sources": 69, "meters": 67, "pools": 5}.items():
+        for key, value in {"nodes": 124, "sources": 69, "meters": 67, "pools": 5}.items():
             self.assertEqual(report[key], value, key)
         self.assertEqual(report["equipment_linked"] + report["unmatched_equipment"], 80)
         self.assertEqual(report["workcenter_linked"] + report["direct_without_wc"], 35)

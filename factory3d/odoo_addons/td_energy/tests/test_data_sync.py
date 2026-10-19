@@ -36,7 +36,7 @@ class TestDataSync(BaseCase):
     def test_counts(self):
         self.assertEqual(
             (len(self.nodes), len(self.sources), len(self.signals), len(self.meters), len(self.pools)),
-            (123, 69, 312, 67, 5),
+            (124, 69, 312, 67, 5),
         )
 
     def test_codes_unique(self):
@@ -54,7 +54,7 @@ class TestDataSync(BaseCase):
             if r["pool"]:
                 self.assertIn(r["pool"], pools)
             self.assertEqual(bool(r["pool"]), r["alloc_role"] == "shared", r["code"])
-        self.assertEqual(len([r for r in self.nodes if r["kind"] == "cell"]), 11)
+        self.assertEqual(len([r for r in self.nodes if r["kind"] == "cell"]), 12)
         self.assertEqual([r["sequence"] for r in self.nodes if r["cabinet"]][:2], ["20", "100"])
 
     def test_nodes_counts_appendix_b(self):
@@ -85,6 +85,12 @@ class TestDataSync(BaseCase):
         self.assertEqual((n["PV-INV-3"]["unit"], n["PV-INV-3"]["p_inst_kw"]), ("63", "115"))
         self.assertEqual((n["CHP"]["unit"], n["BESS"]["unit"], n["ATS-1"]["unit"]), ("72", "69", "71"))
         self.assertEqual((n["GENSET"]["parent"], n["GENSET"]["p_inst_kw"]), ("ATS-1", "507"))
+        qf = n["QF-CHP"]  # шафа вводу КГУ: секція 2, ГРЩ, автомат 1600 А, КГУ живиться через неї
+        self.assertEqual(
+            (qf["kind"], qf["cell_type"], qf["parent"], qf["cabinet"]), ("cell", "generator", "SEC-2", "SWB-1")
+        )
+        self.assertEqual((qf["section"], qf["sequence"], qf["rating_a"], qf["equipment"]), ("2", "105", "1600", ""))
+        self.assertEqual((n["CHP"]["parent"], n["CHP"]["gen_kind"], n["CHP"]["p_inst_kw"]), ("QF-CHP", "chp", "800"))
         self.assertEqual((n["T1"]["rating_kva"], n["Q1"]["rating_a"], n["QF-C2"]["rating_a"]), ("1000", "1600", "400"))
         self.assertEqual((n["RM6-1"]["voltage_kv"], n["GRID-10KV"]["voltage_kv"]), ("10", "10"))
         self.assertEqual(n["TAP-SAW-3"]["parent"], "BW-2")

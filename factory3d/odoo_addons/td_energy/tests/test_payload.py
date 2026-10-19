@@ -105,7 +105,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
             self.assertTrue({"name", "rating_kva", "section", "incomer"} <= set(item))
         self.assertEqual(
             list(energy["cells"]),
-            ["PFC-1", "Q1", "QF-3", "QF-2", "QF-C1", "QS", "QF-1", "QF-4", "QF-C2", "Q2", "PFC-2"],
+            ["PFC-1", "Q1", "QF-3", "QF-2", "QF-C1", "QS", "QF-1", "QF-4", "QF-C2", "Q2", "QF-CHP", "PFC-2"],
         )
         self.assertEqual(len(energy["lines"]), 6)
         self.assertEqual(len(energy["consumers"]), 49)
@@ -114,6 +114,26 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.assertLessEqual(len(energy["events"]), 6)
         self.assertEqual((totals["grid_kw"], totals["export_kw"]), (0.0, 42.0))
         self.assertTrue(energy["lines"]["BW-1"]["consumers"])
+
+    def test_generator_cell(self):  # QF-CHP: шафа вводу КГУ; P — вимірювання КГУ, I — розрахунок (380 В, cos φ 0,95)
+        self.set_grid()
+        cell = self.energy()["energy"]["cells"]["QF-CHP"]
+        self.assertEqual(
+            (cell["type"], cell["section"], cell["rating_a"], cell["generator"]), ("generator", 2, 1600, "CHP")
+        )
+        self.assertIsNone(cell["feeds"])
+        self.assertNotIn("p_now", cell)  # немає вимірювання КГУ — немає й значень
+        self.set_infra(chp=400.0)
+        energy = self.energy()["energy"]
+        self.assertEqual(
+            energy["cells"]["QF-CHP"],
+            {
+                "name": "Ввід КГУ · TEDOM Quanto D800", "type": "generator", "section": 2, "feeds": None,
+                "rating_a": 1600, "generator": "CHP", "p_now": 400.0, "i_now": 640,
+            },
+        )  # fmt: skip
+        self.assertEqual(energy["totals"]["chp_kw"], 400.0)  # КГУ в підсумках — з вимірювання, не з шафи
+        self.assertNotIn("line", energy["cells"]["QF-CHP"])  # шафа генератора не є фідером ліній
 
     def test_cells_states_consumers(self):  # AC-64
         self.set_grid()

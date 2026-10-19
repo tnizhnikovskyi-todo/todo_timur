@@ -20,7 +20,7 @@ class TestW1NodeSld(TestW1Common):
 
     def test_layout_load(self):  # AC-103
         shown = self.Node.search([("sld_show", "=", True)])
-        self.assertEqual(len(shown), 21)
+        self.assertEqual(len(shown), 22)
         by = {n.code: n for n in shown}
         self.assertEqual(
             (by["GRID-10KV"].sld_x, by["GRID-10KV"].sld_y, by["GRID-10KV"].sld_w, by["GRID-10KV"].sld_h),

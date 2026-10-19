@@ -370,8 +370,8 @@ class Snap:
         elif kind == "generator" and row["gen_kind"] == "chp":
             out.append(CHP_STATES.get(self.t("infra/chp/state"), "немає даних"))
         elif kind == "cell" and row["cell_type"] == "generator":
-            p, load = self.generator_power(row), self.load_pct(row)
-            out.append("немає даних" if p is None else "%s кВт · %s %%" % (fmt(p), fmt(load)))
+            p = self.generator_power(row)
+            out.append("немає даних" if p is None else "%s кВт" % fmt(p))
         elif kind == "cell" and row["cell_type"] == "pfc":
             q = self.v("energy/cells/%s/q_kvar" % code)
             on, total = self.v("energy/cells/%s/steps_on" % code), self.v("energy/cells/%s/steps_total" % code)

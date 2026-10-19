@@ -209,7 +209,7 @@ class TestW1Dashboard(TestW1Common):
         self.fresh("energy/cells/QS/state", 0.0, "open")
         sld = self.pult(parts=["sld"])["sld"]
         nodes = {n["code"]: n for n in sld["nodes"]}
-        self.assertEqual(len(nodes), 21)
+        self.assertEqual(len(nodes), 22)
         bw2_taps = len(self.Node.search([("id", "child_of", self.Node.search([("code", "=", "BW-2")]).id),
                                          ("kind", "=", "tapoff")]))  # fmt: skip
         self.assertEqual(nodes["BW-2"]["facts"][0], "192 А з 630 А · 30 %")
