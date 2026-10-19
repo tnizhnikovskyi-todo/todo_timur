@@ -21,7 +21,7 @@ Requirements and notes
 
 * PDF reports use the standard Odoo wkhtmltopdf setup.
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",

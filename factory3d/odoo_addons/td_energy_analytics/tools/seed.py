@@ -372,9 +372,11 @@ def _seed_orders(env, plates, seed, first, until, alloc=True):
                 product, area, _w = picks[i]
                 qty = max(1, int(round(plate * weights[i] / sum(weights) / area))) if area > 0 else 1
                 start, end = _window(calendar, day, i)
+                # явне ім'я: послідовність МО на демо-базі може відставати від наявних номерів («Reference must be
+                # unique per Company!»); префікс сиду однозначно відрізняє МО від справжніх
                 vals.append(
-                    {"product_id": product.id, "product_qty": qty, "origin": ORIGIN, "date_start": start,
-                     "date_finished": end}
+                    {"name": "EN-DEMO/%s/%02d" % (day.strftime("%Y%m%d"), i + 1), "product_id": product.id,
+                     "product_qty": qty, "origin": ORIGIN, "date_start": start, "date_finished": end}
                 )  # fmt: skip
             orders = Production.create(vals)
             wo_vals, jobs, busy = [], [], {}

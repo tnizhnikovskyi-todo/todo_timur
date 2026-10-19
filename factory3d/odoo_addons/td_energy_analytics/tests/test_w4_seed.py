@@ -48,6 +48,9 @@ class TestW4Seed(TestW4Common):
         # МО: ≥ 3 у робочі доби, наряди, розподіл
         orders = self.env["mrp.production"].search([("origin", "=", "td_energy_seed")])
         self.assertEqual(len(orders), stats["mos"])
+        # імена МО сиду явні й не залежать від послідовності (на демо-базі вона може відставати від наявних номерів)
+        self.assertTrue(all(mo.name.startswith("EN-DEMO/") for mo in orders))
+        self.assertEqual(len(set(orders.mapped("name"))), len(orders))
         per_day = {}
         for mo in orders:
             per_day[mo.date_finished.date()] = per_day.get(mo.date_finished.date(), 0) + 1
