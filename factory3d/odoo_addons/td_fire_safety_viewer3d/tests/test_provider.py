@@ -1,4 +1,5 @@
 """AC-58 (M-17): провайдери 130/140 у PayloadBuilder і DeltaBuilder переглядача."""
+
 import json
 from datetime import timedelta
 
@@ -11,15 +12,16 @@ from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder, PayloadBuilder, 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_fire_viewer")
 class TestProvider(FireCase):
-
     def test_registered_and_live(self):
         names = {p._name: p for p in get_providers(self.env)}
         fire, evac = names["td.viewer.provider.fire"], names["td.viewer.provider.evacuation"]
         self.assertEqual((fire._td_sequence, fire._td_sections), (130, ("fire",)))
         self.assertEqual((evac._td_sequence, evac._td_sections), (140, ("evacuation",)))
         self.assertEqual(fire._td_group, "td_factory3d.group_td_user")
-        self.assertEqual(fire._td_viewer_bus_models(), [
-            "td.fire.panel", "td.fire.zone", "td.fire.system", "td.fire.event", "td.fire.device"])
+        self.assertEqual(
+            fire._td_viewer_bus_models(),
+            ["td.fire.panel", "td.fire.zone", "td.fire.system", "td.fire.event", "td.fire.device"],
+        )
         self.assertEqual(evac._td_viewer_bus_models(), ["td.fire.drill", "td.fire.route", "td.fire.exit"])
         data = PayloadBuilder(self.env(user=self.u), sections=["fire", "evacuation"]).build()
         self.assertEqual(data["meta"]["sections"]["fire"], "live")
@@ -53,9 +55,13 @@ class TestProvider(FireCase):
         self.push_value("fire/groups/FA-FAC/dust", 90.1, self.at(0))
         request = self.env["maintenance.request"].search([("td_fire_zone_id", "=", self.z_fac.id)])
         self.assertEqual(len(request), 1)
-        twin = self.env["maintenance.request"].create({
-            "name": request.name, "equipment_id": request.equipment_id.id,
-            "stage_id": self.env["maintenance.stage"].search([("done", "=", False)], limit=1).id})
+        twin = self.env["maintenance.request"].create(
+            {
+                "name": request.name,
+                "equipment_id": request.equipment_id.id,
+                "stage_id": self.env["maintenance.stage"].search([("done", "=", False)], limit=1).id,
+            }
+        )
         self.assertNotEqual(twin.id, request.id)
         self.env.invalidate_all()
         data = PayloadBuilder(self.env(user=self.u), sections=["fire", "maintenance_requests", "equipment"]).build()

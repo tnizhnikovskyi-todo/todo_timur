@@ -1,4 +1,5 @@
 """M-17: провайдери переглядача `fire` (130) і `evacuation` (140); payload збирає основний модуль (R-20, R-21)."""
+
 from odoo import api, models
 
 from odoo.addons.td_fire_safety.tools import payload as fire_payload
