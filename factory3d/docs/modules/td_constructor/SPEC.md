@@ -1,13 +1,18 @@
 # td_constructor — специфікація
 
-Версія 0.1 · 17.10.2026 · технічне рішення: `docs/modules/td_constructor/ARCHITECTURE.md` (далі ARCH; рішення DEC-xx, питання Q-xx — там).
+Версія 0.2 · 19.10.2026 (v0.1 — 17.10.2026; зміни — «Журнал змін документа» в кінці) · технічне рішення: `docs/modules/td_constructor/ARCHITECTURE.md` (далі ARCH; рішення DEC-xx, питання Q-xx — там).
 Вхідні документи: `build/constructor/DECISIONS.md` (рішення замовника CD-01…CD-24, 17.10.2026) і `build/constructor/PROTOTYPE.md`
 (прототип-артефакт: його модель даних — чернетка моделей нижче, імена полів збережено).
 Спирається на контракти каркаса: C-6.1 (код сцени), CB-01/CB-03/CB-05/CB-07 (`td_factory3d`: домішка, `td.zone.zone_at`, `stock.location`
 вид і місткість, паспорт `td.equipment.passport`), CB-09 (меню), CB-10 (групи), CB-12 (габарит будівлі), конвенції §5. Нових протоколів P-xx немає.
 Контракти, які модуль визначає сам: CC-01 (`td_site_id`), CC-02 (геометрія розкладки для переглядача, фаза 2) — ARCH §2.1.
 
-Усі імена остаточні. Рядки інтерфейсу — українською в коді (`string="…"`), `.po` не ведемо. Odoo 19: SQL-обмеження — `models.Constraint`,
+**Злиття з «Конструктором складу» (CD-27, CD-29…CD-31).** v0.2 додає те, що зроблено в хвилях 0–2 слияння (модуль `19.0.1.4.0`, ядро `factory3d/core/constructor`):
+моделі M-16…M-31, правила R-25…R-41, API-11…API-24 і додаткові маршрути (§7.1), представлення V-14…V-18, критерії AC-70…AC-137 (§12.1), тести (§13.6). Існуючі ID не
+змінено. План слияння — `build/constructor/MERGE.md` (російською; F01…F19 — функції «Конструктора складу», N-xx — знайдене понад список), рішення замовника — `DECISIONS.md`
+(CD-31: відповіді Q1…Q12; у цьому документі вони позначаються «CD-31 Q3» — на відміну від Q-xx ARCH/SPEC). Джерело істини — код і тести; розбіжності з MERGE.md описано в тексті.
+
+Усі імена остаточні. Рядки інтерфейсу Odoo — українською в коді (`string="…"`); з v0.2 є `i18n/uk.po`, `i18n/en.po`, `i18n/td_constructor.pot` (574 терміни, CD-31 Q7: UK + EN; RU — за запитом). Odoo 19: SQL-обмеження — `models.Constraint`,
 хуки — `post_init_hook(env)` / `uninstall_hook(env)`, команди — `odoo.fields.Command`, списки — `<list>`, видимість — `invisible="expr"`,
 група користувача — `user.group_ids`, з імплікацією — `user.all_group_ids`, JSON-RPC — `type="jsonrpc"`.
 
@@ -83,7 +88,7 @@ odoo_addons/td_constructor/
 │   ├── lib/dxf-parser/dxf-parser.min.js [W2] dxf-parser@1.1.2 (UMD, глобал DxfParser), LICENSE
 │   ├── lib/f3d-loaders/f3d-loaders.esm.js [W3] OBJ, MTL, STL, FBX, Collada, 3MF, GLTFExporter + fflate (three r160 examples/jsm), LICENSE
 │   ├── src/action/                      [W2] constructor_action.js/.xml/.scss — клієнтська дія f3d_constructor
-│   ├── src/editor/                      [W2] store.js, geometry.js, cells.js, checks.js, dxf.js, scene.js, panels_*.js, dialogs.js, roles.js
+│   ├── src/editor/                      [W0-A] core_loader.js, odoo_host.js (з CD-29 код редактора — у `factory3d/core/constructor/*`, див. нижче; раніше тут були store/geometry/cells/checks/dxf/scene/panels/dialogs/roles)
 │   ├── src/model/                       [W3] formats.js, import.js, normalize.js, simplify.js, generic.js, three.js, upload.js
 │   ├── src/widgets/                     [W3] model_preview.js/.xml/.scss, model_upload.js/.xml/.scss
 │   └── tests/
@@ -109,6 +114,44 @@ odoo_addons/td_constructor/
     ├── test_seed_hook.py                [W1] AC-02, 03, 05, 06
     ├── test_hoot_editor.py              [W2] TestEditorHoot — запуск @td_constructor/editor
     └── test_hoot_model.py               [W3] TestModelHoot — запуск @td_constructor/model
+```
+
+### 0.1 Доповнення до дерева (хвилі 0–2 слияння, версія модуля 19.0.1.4.0)
+
+Позначки: **W0-A** ядро й адаптер, **W0-B** скелет бекенду, **S1…S6** слайси (ARCH §6). Файли, що вже є в дереві вище й лише розширені, позначено `(+)`.
+
+```
+odoo_addons/td_constructor/
+├── CHANGELOG.md (+)                     19.0.1.0.1 … 19.0.1.4.0 (по записах версій)
+├── i18n/                                [S6] td_constructor.pot, uk.po, en.po (574 терміни; CD-31 Q7)
+├── migrations/                          19.0.1.0.1 post (resync seed), 19.0.1.2.0 post (floor_spot у дозволені типи шарів), 19.0.1.3.0 pre (прив'язка довідників зони до xml-id)
+├── models/
+│   ├── td_slot_type.py                  [S1] M-16     td_slot_preset.py   [S1] M-17
+│   ├── td_putaway_rule.py               [S2] M-18     td_replenish_rule.py [S2] M-19
+│   ├── td_publish_op.py                 [S2] M-20     td_layout_variant.py [S6] M-21 (+ розширення td.layout.version: variant_id)
+│   ├── td_comment.py                    [S6] M-22     td_zone_lock.py      [S6] M-23
+│   ├── td_draft_mixin.py                [W0-B/S6] M-24 (аренда зони)
+│   └── td_site.py, td_layer.py, td_slot.py, stock_location.py, td_layout_version.py, td_term.py, td_check_config.py (+)   M-25…M-30
+├── services/                            чисті Python-модулі (ORM — лише state.py, snapshot.py, publish.py, capacity.py, putaway.py, metrics.py, odoo_sync.py)
+│   ├── registry.py                      [W0-B] R-41: CHECKS, PLAN_BUILDERS, SNAPSHOT_SECTIONS, RENDERERS
+│   ├── schemas.py, state.py             R-22 (схеми JSON), стан площадки для API-03/перевірок/плану
+│   ├── addr.py [S1] R-25 · cells.py (+) [S1] R-26 · capacity.py [S2] R-28, R-29 · putaway.py [S2] R-30 · publish.py (+) [S2] R-31, R-32
+│   ├── metrics.py [S3] R-33 · labels.py [S3] R-34 · odoo_sync.py [S4] R-35 · tabular.py [S4] R-36
+│   └── building.py, checks_building.py [S5] R-37 · rack_spec.py, render_docs.py [S5] R-38 · snapshot.py (+) R-14/R-40
+├── wizard/ (+)                          td_publish_wizard.py, td_publish_wizard_line.py, td_publish_wizard_views.xml: M-31, V-08
+├── controllers/                         constructor.py (+) API-01…08 · library.py API-11, /site/addr · storage.py API-12 · stock.py API-13, 14 · putaway.py API-15 ·
+│                                        odoo_import.py API-16, 20, /odoo/rules · plan.py API-17, 18 · render.py API-19 · wizard.py /site/wizard · collab.py API-21…24, /help · stub.py (not_implemented)
+├── data/                                td_slot_type_data.xml [S1] (50 типів + `term_slot_type_floor_spot`), td_term_data.xml (+) (10 функцій і 4 атрибути зони), params.xml (+) (6 параметрів)
+├── views/                               td_slot_type_views.xml (V-14), td_putaway_views.xml (V-15, V-16), td_collab_views.xml (V-17), td_help.xml (V-18: сторінка «Інструкція», розширення коментарів і варіантів)
+├── static/
+│   ├── lib/f3d-core/constructor.esm.js  [W0-A] збірка ядра (ESM, без three.js; коміт; `tools/build_core.mjs module`; хеш — `CORE_BUILD` у core_loader.js)
+│   ├── src/tours/                       [S6] td_constructor_guide_tour.js, _variants_tour.js, _collab_tour.js (`web_tour.tours`, bundle `web.assets_tests`)
+│   └── tests/{editor/s3…s6.test.js, fixtures/{addr_golden,cells_s1_golden,s2_fit_cases,s3_barcode_golden,s5_golden}.json, s4_python.xlsx, s4_roundtrip.xlsx}
+└── tests/                               test_skeleton_*, test_registries, test_registry_hooks, test_new_fields_api, test_s1_* … test_s6_*, test_core_node, golden_*.py (§13.6)
+
+factory3d/core/constructor/*             [W0-A, S1…S6] ядро редактора (JS + Three.js без Odoo), README.md; адаптери adapter.js, adapter_odoo.js, artifact/adapter_artifact.js
+factory3d/tools/build_core.mjs, test_core.mjs, test_core_s1…s6.mjs     збірка й Node-тести ядра
+factory3d/build/constructor/proto/*      прототип-артефакт (build.py, src/main.js, page.css, test_*.js Playwright)
 ```
 
 ## 1. Маніфест
