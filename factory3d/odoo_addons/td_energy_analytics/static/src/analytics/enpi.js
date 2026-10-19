@@ -80,7 +80,8 @@ export class AnEnpi extends Component {
     get summary() {
         const enpi = this.props.enpi;
         if (!enpi || isEmpty(enpi.enpi)) {
-            return "База не задана";
+            // база є, але покриття вікна 12 тижнів < 50 % (R-05): EnPI не рахується
+            return this.props.baseline ? "Недостатньо даних для розрахунку EnPI" : "База не задана";
         }
         const saving = Number(enpi.saving_pct);
         const word = saving < 0 ? "перевитрата" : "економія";

@@ -55,6 +55,12 @@ def _num(value, digits=1):
     return fmt_int(value) if float(value).is_integer() else fmt_dec(value, digits)
 
 
+def _trim(value, digits=2):
+    """Число без зайвих нулів (до `digits` знаків): 4,10 → «4,1», 1820 → «1 820»."""
+    text = ("%.*f" % (digits, float(value))).rstrip("0").rstrip(".")
+    return fmt_dec(float(text), len(text.split(".")[1]) if "." in text else 0)
+
+
 def _delta(value):
     """Відхилення в %: «+2 %», «−6 %»; `None` → «—»."""
     return DASH if value is None else "%s %%" % fmt_signed(value)
@@ -146,11 +152,20 @@ def _model_text(env, base):
     record = env["td.energy.baseline"].sudo().browse(base["id"]).exists()
     codes = [c["driver"] for c in base["coefs"]]
     drivers = {d.code: d for d in env["td.energy.driver"].sudo().search([("code", "in", codes)])}
-    terms = ["%s × %s" % (_num(c["coef"], 3), drivers[c["driver"]].name if c["driver"] in drivers else c["driver"])
-             for c in base["coefs"]]  # fmt: skip
+    terms = []
+    for coef in base["coefs"]:
+        driver = drivers.get(coef["driver"])
+        label = (
+            "%s (%s)" % (driver.name, driver.uom)
+            if driver and driver.uom
+            else driver.name
+            if driver
+            else coef["driver"]
+        )
+        terms.append("%s × %s" % (_trim(coef["coef"], 3), label))
     period = "%s – %s" % (_day(record.period_from), _day(record.period_to)) if record else base.get("label", DASH)
     return {
-        "formula": " + ".join(["%s кВт·год/добу" % _num(base["const_per_day"]), *terms]),
+        "formula": " + ".join(["%s кВт·год/добу" % _trim(base["const_per_day"], 1), *terms]),
         "r2": fmt_dec(base["r2"], 2) if base.get("r2") is not None else DASH,
         "period": period,
     }
@@ -231,7 +246,8 @@ class ReportManagement(models.AbstractModel):
     @api.model
     def _td_enpi(self, meta, enpi):
         base = meta.get("baseline")
-        out = {"base": bool(base), "chart": None, "summary": _("База не задана"), "model": None}
+        summary = _("Недостатньо даних для розрахунку EnPI (покриття вікна < 50 %)") if base else _("База не задана")
+        out = {"base": bool(base), "chart": None, "summary": summary, "model": None}
         if enpi:
             out["chart"] = _enpi_chart(enpi)
             if enpi.get("enpi") is not None:

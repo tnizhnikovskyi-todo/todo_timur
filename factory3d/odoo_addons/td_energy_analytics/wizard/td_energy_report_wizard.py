@@ -1,7 +1,8 @@
 """M-13 `td.energy.report.wizard` — звіти (Transient; W4-B): «Звіт для керівництва» й «Звіт за зміну».
 
-`create_and_print(kind, period=None, shift_name=None)` (API-12, `api.model`) створює запис і повертає `ir.actions.report`;
-`action_print()` — те саме для відкритої форми. Права: `group_td_energy_user`; суми ₴ у PDF — за групою вартості (R-18).
+`create_and_print(kind, period=None, shift_name=None)` (API-12, `api.model`) створює запис і повертає
+`ir.actions.report`; `action_print()` — те саме для відкритої форми. Права: `group_td_energy_user`;
+суми ₴ у PDF — за групою вартості (R-18).
 Дані звітів збирає `report/report_data.py` (AbstractModel `report.td_energy_analytics.*`).
 """
 
@@ -31,9 +32,7 @@ class TdEnergyReportWizard(models.TransientModel):
     period = fields.Selection(
         [("w", "7 днів"), ("m", "30 днів"), ("q", "Квартал"), ("y", "Рік")], string="Період", default="m"
     )
-    shift_date = fields.Date(
-        string="Дата зміни", default=lambda self: dates.local_day(dates.now_utc(self.env))
-    )
+    shift_date = fields.Date(string="Дата зміни", default=lambda self: dates.local_day(dates.now_utc(self.env)))
     shift_name = fields.Char(string="Зміна", size=32)
 
     @api.model

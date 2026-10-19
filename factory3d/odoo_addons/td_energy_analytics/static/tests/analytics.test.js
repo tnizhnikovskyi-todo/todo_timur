@@ -291,6 +291,20 @@ test("EnPI: null у тижні розриває лінію; без бази — 
     expect(queryText(".o_td_an_model")).toBe("база не задана");
 });
 
+test("EnPI: база є, але покриття вікна замале (enpi = null) — «Недостатньо даних для розрахунку EnPI»", async () => {
+    mockApi({
+        patch: (data) => {
+            data.enpi.enpi = null;
+            data.enpi.saving_pct = null;
+            data.enpi.saving_kwh = null;
+            data.enpi.saving_uah = null;
+        },
+    });
+    await mountScreen();
+    expect(queryText(".o_td_an_enpi_summary")).toBe("Недостатньо даних для розрахунку EnPI");
+    expect(queryText(".o_td_an_model")).toMatch(/^модель бази: /);
+});
+
 test("бюджет: смуга факту 56 %, маркер 55 % місяця, сума й текст; без cost — блоку немає", async () => {
     mockApi();
     await mountScreen();
