@@ -36,8 +36,11 @@
 | 9 | `td_access` | 4 | [v0.2, 506 р.](modules/td_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/td_access/SPEC.md) |
 | 10 | `td_bms` | 5 | [v0.2, 444 р.](modules/td_bms/ARCHITECTURE.md) | [v0.2, 1 812 р.](modules/td_bms/SPEC.md) |
 | 11 | `td_fire_safety` | 5 | [v0.3, 551 р.](modules/td_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/td_fire_safety/SPEC.md) |
-| 12 | `td_constructor` | 6 | [v0.1, 295 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/td_constructor/SPEC.md) |
-| 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач») | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
+| 12 | `td_constructor` («Конструктор»; злито з «Конструктором складу»: ядро `core/constructor`, M-16…M-31, API-11…API-24, AC-70…AC-138; модуль `19.0.1.4.0`) | 6 | [v0.2, 450 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.2, 1 825 р.](modules/td_constructor/SPEC.md) |
+| 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач»; не оновлювався злиттям — Q-22) | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
+
+**Конструктор (`td_constructor`).** Продукт називається просто «Конструктор» (CD-28). З v0.2 документи описують об'єднаний конструктор (CD-27, CD-29…CD-31): один код ядра `factory3d/core/constructor` (JS + Three.js без Odoo; [README ядра](../core/constructor/README.md)) обслуговує модуль і прототип-артефакт через адаптер; хід злиття — хвилі 0–2, слайси S1…S6 ([ARCHITECTURE §2.2a і §6](modules/td_constructor/ARCHITECTURE.md)); критерії приймання злиття — [SPEC §12.1](modules/td_constructor/SPEC.md);
+журнал змін модуля — [CHANGELOG](../odoo_addons/td_constructor/CHANGELOG.md). Плани й рішення замовника: [MERGE.md](../build/constructor/MERGE.md) (план злиття, російською), [DECISIONS.md](../build/constructor/DECISIONS.md) (CD-01…CD-31). Відкриті питання конструктора — Q-15…Q-22 (ARCHITECTURE §5.1).
 
 ## Як читати
 
