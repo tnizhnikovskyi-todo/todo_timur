@@ -1,4 +1,3 @@
-# ruff: noqa: B018
 {
     "name": "MRP Maintenance Bridge",
     "summary": "Fills maintenance.equipment.workcenter_id by matching td_code with the work center",
