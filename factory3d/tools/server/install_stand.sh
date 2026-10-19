@@ -10,7 +10,7 @@
 # Что делает (идемпотентно; повторный запуск = обновление кода из репозитория):
 #   1. пользователь td-stand, каталоги /opt/td-stand, /etc/td-stand, /var/lib/td-stand;
 #   2. venv: /opt/td-stand/venv-sim (эмулятор) и /opt/td-stand/venv-collector (сборщик + плагины bms, yard,
-#      machine_connect) из factory3d/services вашего git-клона (по умолчанию /mnt/f3d-addons);
+#      machine_connect, td_collector_energy) из factory3d/services вашего git-клона (по умолчанию /mnt/f3d-addons);
 #   3. /etc/td-stand/iot-sim.env и collector.env (0640 root:td-stand); токен сборщика берётся из TD_COLLECTOR_TOKEN
 #      (или файла), остальные секреты стенда генерируются один раз и дальше не меняются; в репозитории секретов нет;
 #   4. псевдонимы iot-sim, mosquitto, collector -> 127.0.0.1 в /etc/hosts (блок «# BEGIN td-stand»);
@@ -28,7 +28,8 @@
 # Переменные (значения по умолчанию подходят для timur-o19demo): TD_REPO (по умолчанию — клон, в котором лежит этот
 #   скрипт), TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON, TD_USER, TD_PUSH_PORT, TD_SIM_PORT_BIOSTAR_HTTP (HTTP-порт
 #   эмулятора BioStar, по умолчанию 8081; пишется в iot-sim.env как SIM_PORT_BIOSTAR_HTTP), TD_IP_FILTER (0 — не
-#   ограничивать сеть служб), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
+#   ограничивать сеть служб), TD_IP_ALLOW (доп. сети в фильтр служб, например 172.16.0.0/12 — чтобы Odoo из
+#   контейнера Docker достучался до эмулятора; через пробел), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
 # Пример (Odoo в Docker на 8094, порт 8081 занят ретранслятором SmartGen):
 #   sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
 #       bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
@@ -69,6 +70,7 @@ ODOO_URL="${ODOO_URL%/}"
 ODOO_SERVICE="${TD_ODOO_SERVICE:-odoo}"
 COLLECTOR_CODE="${TD_COLLECTOR_CODE:-COL-MAIN}"
 IP_FILTER="${TD_IP_FILTER:-1}"
+IP_ALLOW_EXTRA="${TD_IP_ALLOW:-}"                      # доп. сети для фильтра служб, напр. 172.16.0.0/12 (Odoo в Docker → эмулятор)
 HARDEN="${TD_HARDEN:-1}"                             # 0 — без песочницы mount-namespace (LXC и т. п., status=226/NAMESPACE)
 SECRETS_FILE="${TD_SECRETS_FILE:-/etc/td-stand/secrets.env}"
 HOSTS_NAMES="iot-sim mosquitto collector"
@@ -78,7 +80,8 @@ BIOSTAR_HTTP_PORT="${TD_SIM_PORT_BIOSTAR_HTTP:-8081}"   # 8081 на timur-o19dem
 PORTS_SIM_TCP="502 4001 4840 $BIOSTAR_HTTP_PORT 8082 8083 8090 8443 50000"
 PUSH_PORT="${TD_PUSH_PORT:-8080}"
 PORTS_COL_TCP="$PUSH_PORT 9108"
-RECIPE=2                                             # версия способа установки: меняется — venv пересобираются
+RECIPE=3                                             # версия способа установки: меняется — venv пересобираются
+COL_PLUGINS="f3d_collector_bms f3d_collector_yard machine_connect td_collector_energy"   # плагины сборщика (W2: energy_ctl)
 SIM_ENV="$ETC/iot-sim.env"
 COL_ENV="$ETC/collector.env"
 
@@ -89,6 +92,10 @@ plan() { printf '   БУДЕТ    %s\n' "$*"; }
 warn() { printf '   ВНИМАНИЕ %s\n' "$*" >&2; WARNS=$((WARNS + 1)); }
 block() { printf '   ПРЕПЯТСТВИЕ %s\n' "$*" >&2; BLOCKERS=$((BLOCKERS + 1)); }
 die() { printf '%s  ОШИБКА: %s\n' "$(date +%H:%M:%S)" "$*" >&2; exit 1; }
+for net in $IP_ALLOW_EXTRA; do
+    [[ "$net" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}(/[0-9]{1,2})?$ || "$net" =~ ^[0-9a-fA-F]*:[0-9a-fA-F:]*(/[0-9]{1,3})?$ ]] \
+        || die "TD_IP_ALLOW: «$net» — нужна сеть вида 172.16.0.0/12 (несколько — через пробел)"
+done
 [[ "$BIOSTAR_HTTP_PORT" =~ ^[0-9]+$ ]] && ((BIOSTAR_HTTP_PORT >= 1 && BIOSTAR_HTTP_PORT <= 65535)) \
     || die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT: нужен номер порта 1…65535"
 case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 " in
@@ -332,10 +339,10 @@ collector_install() {
     "$v/bin/pip" install -q --disable-pip-version-check -r "$tmp/req-col.txt"
     mkdir -p "$tmp/src"
     cp -a "$SERVICES/collector" "$tmp/src/collector"
-    for p in f3d_collector_bms f3d_collector_yard machine_connect; do cp -a "$SERVICES/collector_plugins/$p" "$tmp/src/$p"; done
+    for p in $COL_PLUGINS; do cp -a "$SERVICES/collector_plugins/$p" "$tmp/src/$p"; done
     rm -rf "$tmp"/src/*/tests "$tmp"/src/collector/build
     "$v/bin/pip" install -q --disable-pip-version-check --no-deps --force-reinstall "$tmp/src/collector"
-    for p in f3d_collector_bms f3d_collector_yard machine_connect; do
+    for p in $COL_PLUGINS; do
         "$v/bin/pip" install -q --disable-pip-version-check --no-deps --force-reinstall "$tmp/src/$p"
     done
 }
@@ -521,7 +528,9 @@ remove_mosquitto() {
 
 # ---------------------------------------------------------------- unit-файлы
 ip_filter_lines() { # ip_filter_lines loopback_only
-    [[ "$IP_FILTER" == 1 && "$1" == 1 ]] && printf 'IPAddressDeny=any\nIPAddressAllow=localhost\n' || true
+    [[ "$IP_FILTER" == 1 && "$1" == 1 ]] || return 0
+    printf 'IPAddressDeny=any\nIPAddressAllow=localhost\n'
+    [[ -z "$IP_ALLOW_EXTRA" ]] || printf 'IPAddressAllow=%s\n' "$IP_ALLOW_EXTRA"
 }
 
 is_loopback_url() { [[ "$ODOO_URL" =~ ^https?://(127\.[0-9.]+|localhost|\[::1\])([:/]|$) ]]; }

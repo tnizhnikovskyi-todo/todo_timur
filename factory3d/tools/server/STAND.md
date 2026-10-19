@@ -38,18 +38,25 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor). Эмулятор поднима
 `TD_COLLECTOR_CODE` (`COL-MAIN`), `TD_PUSH_PORT` (8080), `TD_SIM_PORT_BIOSTAR_HTTP` (HTTP-порт эмулятора BioStar,
 8081; пишется в `iot-sim.env` как `SIM_PORT_BIOSTAR_HTTP`; Odoo и сборщик ходят в BioStar по HTTPS 8443, им менять
 нечего), `TD_PYTHON`, `TD_IP_FILTER=0` (не ограничивать сеть служб),
-`TD_HARDEN=0` (без песочницы systemd: нужен, если в `journalctl` у службы `status=226/NAMESPACE`, например в LXC),
+`TD_IP_ALLOW` (доп. сети в фильтр `IPAddressAllow` служб через пробел, например `172.16.0.0/12`, чтобы Odoo из
+контейнера Docker обращался к эмулятору; фильтр остаётся включённым), `TD_HARDEN=0` (без песочницы systemd: нужен, если в `journalctl` у службы `status=226/NAMESPACE`, например в LXC),
 `--no-mqtt` (не ставить брокер).
 
 **timur-o19demo** (Odoo в Docker, опубликован на хосте как 127.0.0.1:8094; 127.0.0.1:8081 занят ретранслятором SmartGen,
 его не трогаем; клон — `/opt/timur-o19/timur-o19e/git/todo_timur`, пути `/mnt/f3d-addons` на хосте нет):
 
     sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
+        TD_IP_ALLOW=172.16.0.0/12 \
         bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
 
 Затем та же команда без `--check`. Обращение Odoo → эмулятор (`td.iot_sim.url`, сценарии и сбои из пульта) из контейнера
-в сети bridge не попадёт на `127.0.0.1:8090` хоста: нужен адрес хоста со стороны контейнера (шлюз сети Docker) и
-`TD_IP_FILTER=0` (иначе службы принимают только localhost). Сбор показаний это не затрагивает.
+в сети bridge не попадёт на `127.0.0.1:8090` хоста: менеджер задаёт `td.iot_sim.url` = адрес хоста со стороны
+контейнера (шлюз сети compose, на timur-o19demo `http://172.18.0.1:8090`; `stand_odoo_setup.py params` с `TD_SIM_URL`),
+а установка — `TD_IP_ALLOW=172.16.0.0/12`, чтобы фильтр служб пропускал сеть Docker. Сбор показаний это не затрагивает.
+
+Плагины сборщика: `f3d_collector_bms`, `f3d_collector_yard`, `machine_connect`, `td_collector_energy` (`energy_ctl`,
+автоматика энергетики W2). Источник `GENSET-RELAY` (`td_genset`) сборщик не опрашивает — Odoo ходит к ретранслятору
+сам, поэтому его состояние `unknown` нормально.
 
 ## Что ставится
 
