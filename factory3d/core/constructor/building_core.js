@@ -127,6 +127,55 @@ export function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.
     return out;
 }
 
+/**
+ * Перешкоди будівлі як осьові прямокутники для авторозкладки (S4): колони, стіни, офіс, зарядка з `layer.items` шарів `building`
+ * (повернуті — описаним прямокутником) і колони за `site.column_grid` (як їх малює сцена: 0,4 × 0,4 м у вузлах сітки; сітка
+ * не дублює явні колони в тих самих точках). Результат: [{x0, y0, x1, y1, kind, id, name, grid?}].
+ */
+export function obstacleRects(layers, site) {
+    const out = [];
+    const explicit = [];
+    for (const ly of layers || []) {
+        if (ly.kind !== "building") {
+            continue;
+        }
+        for (const it of ly.items || []) {
+            if (!OBSTACLE_KINDS.includes(it.kind)) {
+                continue;
+            }
+            const [x0, y0, x1, y1] = obbAabb(itemObb(it));
+            out.push({ x0: rnd(x0) + 0, y0: rnd(y0) + 0, x1: rnd(x1) + 0, y1: rnd(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" });
+            if (it.kind === "column") {
+                explicit.push(it);
+            }
+        }
+    }
+    const b = (site && site.building) || {};
+    const cg = (site && site.column_grid) || {};
+    const sx = cg.step_x || 0;
+    const sy = cg.step_y || 0;
+    if (sx > 1 && sy > 1 && b.length && b.width) {
+        const xs = [];
+        const ys = [];
+        for (let x = sx; x < b.length - 0.01; x += sx) {
+            xs.push(x);
+        }
+        for (let y = sy; y < b.width - 0.01; y += sy) {
+            ys.push(y);
+        }
+        if (xs.length * ys.length < 2000) {
+            for (const x of xs) {
+                for (const y of ys) {
+                    if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+                        out.push({ x0: rnd(x - 0.2), y0: rnd(y - 0.2), x1: rnd(x + 0.2), y1: rnd(y + 0.2), kind: "column", id: `grid:${rnd(x, 2)}:${rnd(y, 2)}`, name: "", grid: true });
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
+
 /** Стіни вздовж ребер контуру: усередину на пів товщини, щоб місця біля стіни не перетинали її. */
 export function contourWalls(pts, th, idOf, existing = []) {
     const sign = pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0) >= 0 ? 1 : -1;

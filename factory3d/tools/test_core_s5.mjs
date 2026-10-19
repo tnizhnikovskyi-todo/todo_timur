@@ -122,6 +122,23 @@ export function register(test) {
         assert.deepEqual(c.contourOf(null, { length: 6, width: 4 }), [[0, 0], [6, 0], [6, 4], [0, 4]]);
     });
 
+    test("S5 перешкоди будівлі для авторозкладки: items як прямокутники, колони за column_grid, без дублів явних колон", async () => {
+        const { obstacleRects, newItem } = await load("building_core.js");
+        const layers = [
+            { kind: "building", items: [newItem("column", "c1", 6, 6), newItem("wall", "w1", 30, 5, { w: 10, d: 0.3, th: 0.3, rot: 90 }), newItem("gate", "g1", 0, 5), newItem("office", "o1", 45, 10)] },
+            { kind: "storage", items: [newItem("column", "x", 1, 1)] },
+        ];
+        const site = { building: { length: 20, width: 14 }, column_grid: { step_x: 6, step_y: 6 } };
+        const r = obstacleRects(layers, site);
+        const wall = r.find((x) => x.id === "w1");
+        assert.deepEqual([wall.x0, wall.y0, wall.x1, wall.y1], [29.85, 0, 30.15, 10]);
+        assert.ok(!r.some((x) => x.id === "g1" || x.id === "x"), "ворота (проріз) і шари не будівлі — не перешкоди");
+        const grid = r.filter((x) => x.grid);
+        assert.deepEqual(grid.map((x) => x.id), ["grid:6:12", "grid:12:6", "grid:12:12", "grid:18:6", "grid:18:12"], "вузол (6; 6) вже зайнятий явною колоною");
+        assert.deepEqual([grid[0].x0, grid[0].x1], [5.8, 6.2]);
+        assert.equal(obstacleRects(layers, { building: { length: 20, width: 14 }, column_grid: { step_x: 0, step_y: 0 } }).filter((x) => x.grid).length, 0);
+    });
+
     test("S5 специфікація стелажів: рами, балки, полиці, стійки, консолі, зв'язки, стяжки збігаються з Python (золота фікстура)", async () => {
         await load("index.js");
         const { buildSpec, specTables } = await load("spec.js");

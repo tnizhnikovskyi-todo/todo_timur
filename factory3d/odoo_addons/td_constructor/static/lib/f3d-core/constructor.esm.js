@@ -15789,6 +15789,10 @@ function enterBuilding() {
   if (B2.on || !S.site) {
     return;
   }
+  if (E.isMobile?.()) {
+    toast("У мобільному режимі правка вимкнена: режим «Будівля» недоступний.", "warn");
+    return;
+  }
   const ly = bLayer();
   if (!ly) {
     toast("На площадці немає шару «Будівля».", "warn");
@@ -16736,6 +16740,7 @@ function drawRulers(cursorOnly) {
   void cursorOnly;
 }
 var mo = null;
+var ro = null;
 function onMount2() {
   Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null });
   ensureStyle2();
@@ -16770,12 +16775,15 @@ function onMount2() {
     mo.observe(vt, { childList: true });
   }
   if (typeof ResizeObserver !== "undefined" && cv) {
-    new ResizeObserver(() => drawRulers()).observe(cv);
+    ro = new ResizeObserver(() => drawRulers());
+    ro.observe(cv);
   }
 }
 function onUnmount2() {
   mo?.disconnect();
   mo = null;
+  ro?.disconnect();
+  ro = null;
   Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null });
 }
 E.lifecycle.mount.add(onMount2);
@@ -17013,7 +17021,7 @@ function applyZones() {
   S.ui.layer = prev;
   made.forEach((rec, i) => {
     const fn = fnOf(zones[i].fn);
-    rec.function_id = fn ? fn.id : null;
+    rec.function_id = fn && (lib3.loaded || !can("storage")) ? fn.id : null;
     zones[i].slot = rec.id;
   });
   W.created.zones = made.map((s) => s.id);

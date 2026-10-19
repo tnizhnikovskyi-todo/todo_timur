@@ -125,7 +125,7 @@ class TestS5Building(F3DConstructorCase):
         self.assertEqual(self.issues('aisle_width'), [], "техніку складу не задано — перевірка мовчить")
         self.site.aisle_tech = 'reach'
         self.assertEqual(
-            [codes for codes, _sev in self.issues('aisle_width')], [('A1', 'A2'), ('У зоні візків',), ("Вузький",)]
+            [codes for codes, _sev in self.issues('aisle_width')], [('A1', 'A2'), ("Вузький",), ('У зоні візків',)]
         )
         zone.tech = 'hand'  # візки: мінімум 1.2 м → прохід 1.0 м усе ще вузький
         self.assertIn((("У зоні візків",), 'warn'), self.issues('aisle_width'))

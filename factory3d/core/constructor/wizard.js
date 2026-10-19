@@ -180,7 +180,7 @@ export function applyZones() {
     S.ui.layer = prev;
     made.forEach((rec, i) => {
         const fn = fnOf(zones[i].fn);
-        rec.function_id = fn ? fn.id : null;
+        rec.function_id = fn && (lib.loaded || !can("storage")) ? fn.id : null; // ключ функції без довідника Odoo — не id
         zones[i].slot = rec.id;
     });
     W.created.zones = made.map((s) => s.id);
