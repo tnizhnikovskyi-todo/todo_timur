@@ -1,4 +1,5 @@
 """Тестове джерело проходів (SPEC §0.3, A-19): БЕЗ _inherit, без _td_on_site і _td_key."""
+
 from odoo import models
 
 
