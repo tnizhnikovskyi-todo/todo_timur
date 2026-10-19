@@ -7,7 +7,8 @@
     API-ключ
     python3 stand_odoo_setup.py setup > td-stand.secrets   # токены ОДИН раз в stdout, остальное в stderr
     python3 stand_odoo_setup.py status                     # состояние без секретов
-    python3 stand_odoo_setup.py backfill                   # через >= 5 мин после запуска стенда
+    python3 stand_odoo_setup.py backfill                   # через >= 5 мин после запуска стенда (электрика + ресурсы)
+    python3 stand_odoo_setup.py seed                       # затем демо-данные аналитики W4
 
 Команды:
   setup     коллектор COL-MAIN (создать/включить), токен сборщика (если ещё не выдан или --rotate), токен API эмулятора,
@@ -226,9 +227,30 @@ def cmd_params(odoo: Odoo, args: argparse.Namespace) -> None:
 
 # --------------------------------------------------------------------------------------------- backfill
 BACKFILL_CODE = """\
-res = env['td.energy.interval']._td_backfill(days=%(days)d, seed=%(seed)d, purge=%(purge)s)
+res = env[%(model)r]._td_backfill(days=%(days)d, until=%(until)r, seed=%(seed)d, purge=%(purge)s)
 action = {'type': 'ir.actions.act_window_close', 'td_result': str(res)}
 """
+SEED_CODE = """\
+res = env['td.energy.analytics']._td_seed_demo(days=%(days)d, seed=%(seed)d)
+action = {'type': 'ir.actions.act_window_close', 'td_result': str(res)}
+"""
+# Прокси перед Odoo (Cloudflare) рве запит ~100 с, а Odoo знімає воркер за limit_time_real: історію пишемо шматками
+# по --chunk-days діб — кожен шматок окремим коротким викликом; запис ідемпотентний (ON CONFLICT DO NOTHING).
+TARGETS = {"energy": "td.energy.interval", "resources": "td.energy.res.interval"}
+
+
+def _run_code(odoo: Odoo, act: int, code: str, retries: int = 1):
+    """Записати код у тимчасову серверну дію й виконати; 502/504 (обрив проксі) — один повтор."""
+    odoo.call("ir.actions.server", "write", [act], {"code": code})
+    for attempt in range(retries + 1):
+        try:
+            result = odoo.call("ir.actions.server", "run", [act])
+            return (result or {}).get("td_result") if isinstance(result, dict) else result
+        except xmlrpc.client.ProtocolError as e:
+            if e.errcode not in (502, 504) or attempt == retries:
+                raise
+            info(f"обрив {e.errcode}, повторюю шматок (запис ідемпотентний)")
+    return None
 
 
 def cmd_backfill(odoo: Odoo, args: argparse.Namespace) -> None:
@@ -252,29 +274,76 @@ def cmd_backfill(odoo: Odoo, args: argparse.Namespace) -> None:
                 "(иначе на стыке истории и живых данных будут пропуски; --force обходит проверку)",
                 3,
             )
-    model_id = odoo.call("ir.model", "search", [("model", "=", "td.energy.interval")], limit=1)[0]
-    code = BACKFILL_CODE % {"days": args.days, "seed": args.seed, "purge": bool(args.purge)}
+    first_rows = odoo.search_read("td.reading", [("src", "=", "collector")], ["ts"], order="ts asc", limit=1)
+    anchor = (
+        dt.datetime.strptime(first_rows[0]["ts"], "%Y-%m-%d %H:%M:%S")
+        if first_rows
+        else dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+    )
+    anchor = anchor.replace(second=0, microsecond=0) + dt.timedelta(minutes=(15 - anchor.minute % 15) % 15)
+    targets = ["energy", "resources"] if args.target == "all" else [args.target]
+    for target in targets:
+        model = TARGETS[target]
+        if not odoo.model_exists(model):
+            info(f"{model}: моделі немає (модуль не встановлено) — пропускаю")
+            continue
+        act = odoo.call(
+            "ir.actions.server",
+            "create",
+            {
+                "name": "td-stand: backfill історії (тимчасова, видаляється)",
+                "model_id": odoo.call("ir.model", "search", [("model", "=", model)], limit=1)[0],
+                "state": "code",
+                "code": "action = False",
+            },
+        )
+        try:
+            if args.purge:
+                windows = [(args.days, anchor)]
+            else:
+                step = max(1, args.chunk_days)
+                windows = []
+                left = args.days
+                while left > 0:
+                    d = min(step, left)
+                    windows.append((d, anchor - dt.timedelta(days=left - d)))
+                    left -= d
+            for i, (days, until) in enumerate(windows, 1):
+                info(f"{model}: шматок {i}/{len(windows)} — {days} діб до {until:%Y-%m-%d %H:%M} UTC")
+                code = BACKFILL_CODE % {
+                    "model": model, "days": days, "until": until.strftime("%Y-%m-%d %H:%M:%S"),
+                    "seed": args.seed, "purge": bool(args.purge),
+                }  # fmt: skip
+                res = _run_code(odoo, act, code)
+                if res:
+                    info(f"    {str(res)[:200]}")
+        finally:
+            odoo.call("ir.actions.server", "unlink", [act])
+        n = odoo.call(model, "search_count", [("is_backfill", "=", True)])
+        info(f"{model}: рядків із is_backfill=True: {n}")
+    print("backfill: готово")
+
+
+def cmd_seed(odoo: Odoo, args: argparse.Namespace) -> None:
+    """W4 R-20: демо-дані аналітики за `--days` діб (після backfill електрики й ресурсів); повтор замінює попередній."""
+    if not odoo.model_exists("td.energy.analytics"):
+        die("у базі немає td.energy.analytics: встановіть модуль td_energy_analytics")
     act = odoo.call(
         "ir.actions.server",
         "create",
         {
-            "name": "td-stand: backfill истории (временное, удаляется)",
-            "model_id": model_id,
+            "name": "td-stand: демо аналітики (тимчасова, видаляється)",
+            "model_id": odoo.call("ir.model", "search", [("model", "=", "td.energy.analytics")], limit=1)[0],
             "state": "code",
-            "code": code,
+            "code": "action = False",
         },
     )
     try:
-        info(
-            f"запускаю _td_backfill(days={args.days}, seed={args.seed}, purge={bool(args.purge)}): до нескольких минут"
-        )
-        result = odoo.call("ir.actions.server", "run", [act])
+        info(f"запускаю _td_seed_demo(days={args.days}): до кількох хвилин")
+        res = _run_code(odoo, act, SEED_CODE % {"days": args.days, "seed": args.seed}, retries=0)
     finally:
         odoo.call("ir.actions.server", "unlink", [act])
-    stats = (result or {}).get("td_result") if isinstance(result, dict) else result
-    print(stats if stats else "(метод вернул пустой результат)")
-    n = odoo.call("td.energy.interval", "search_count", [("is_backfill", "=", True)])
-    info(f"строк td.energy.interval с is_backfill=True: {n}")
+    print(f"seed: {str(res)[:300] if res else 'готово'}")
 
 
 # --------------------------------------------------------------------------------------------- status
@@ -341,7 +410,14 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=20261018)
     p.add_argument("--purge", action="store_true", help="удалить сгенерированные интервалы (is_backfill) и выйти")
     p.add_argument("--force", action="store_true", help="не ждать 5 минут работы стенда")
+    p.add_argument("--chunk-days", type=int, default=5, help="діб на один виклик (проксі рве довгі запити), 5")
+    p.add_argument("--target", choices=("energy", "resources", "all"), default="all",
+                   help="електрика (td_energy), ресурси (td_energy_resources) чи обидва")  # fmt: skip
     p.set_defaults(fn=cmd_backfill)
+    p = sub.add_parser("seed", help="демо-дані аналітики W4 (_td_seed_demo) після backfill")
+    p.add_argument("--days", type=int, default=90)
+    p.add_argument("--seed", type=int, default=20261018)
+    p.set_defaults(fn=cmd_seed)
     sub.add_parser("status", help="состояние без секретов").set_defaults(fn=cmd_status)
     args = ap.parse_args()
     if not 1 <= getattr(args, "days", 1) <= 400:
