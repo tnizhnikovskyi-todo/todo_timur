@@ -15,6 +15,7 @@ import {
 import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
 import { createStockLoad, liveLine } from "./stock_load.js";
+import { createBatcher } from "./batch.js";
 
 const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 
@@ -329,6 +330,14 @@ stage.appendChild(renderer.domElement);
 const labelRenderer = new CSS2DRenderer({ element: $(".o_f3d_labels") });
 
 const scene = new THREE.Scene();
+// PERF: статичні меші частин моделі малюються пакетами (batch.js); `opts.batch === false` вимикає (порівняння, відладка)
+const NO_BATCH = { add: () => 0, sync: () => false, touch: () => false, beforeRender() {}, afterRender() {}, stats: () => ({ batches: 0, eligible: 0, cold: 0, solo: 0 }), dispose() {}, batches: [], isBatched: () => false };
+// ручне вимкнення для порівняння й відладки: `?f3d_batch=0` / `?f3d_ondemand=0` в URL (кіоск) або localStorage `f3d.batch` / `f3d.ondemand` = "0"
+const perfFlag = (k) => { try { return new URLSearchParams(window.location.search).get("f3d_" + k) ?? storage?.getItem("f3d." + k); } catch { return null; } };
+const batcher = opts.batch === false || perfFlag("batch") === "0" ? NO_BATCH : createBatcher({ THREE, scene, cell: (perfFlag("cell") ?? opts.batchCell) == null ? undefined : Number(perfFlag("cell") ?? opts.batchCell) });
+// PERF: рендер за потребою (див. «цикл»): `invalidate()` — кадр треба перемалювати; працює лише з WebGL-рендерером
+let needDraw = true;
+function invalidate() { needDraw = true; }
 const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 1200);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = LS.damping;
@@ -337,6 +346,7 @@ controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 2;
 controls.maxDistance = 440;
 controls.screenSpacePanning = false;
+controls.addEventListener("change", invalidate);
 
 if (LS.environment && !nullR) {
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -366,6 +376,7 @@ function applyTheme() {
   const dark = isDark();
   root.dataset.theme = dark ? "dark" : "light";
   scene.background = new THREE.Color(css("--f3d-scene") || (dark ? "#1a2027" : "#e4e9ec"));
+  invalidate();
 }
 applyTheme();
 const themeMq = matchMedia("(prefers-color-scheme: dark)");
@@ -380,6 +391,7 @@ function resize() {
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  invalidate();
 }
 on(window, "resize", resize);
 resize();
@@ -515,6 +527,8 @@ function onPart(gltf) {
   fresh.forEach(paint);
   syncLayerGroups();
   if (D) {extData("load");} // нова частина моделі: розширення бачить свої об'єкти (маркери тощо)
+  batcher.add(root); // PERF: останнім — після зсуву розкладкою, вантажу за залишками й підсвічування
+  invalidate();
 }
 function loadPart(key) {
   if (!key) {return Promise.resolve();}
@@ -663,6 +677,7 @@ function setLayer(key, on) {
   syncFireDevices();
   store("f3d.layers", JSON.stringify([...layers].filter(([, l]) => l.want).map(([k]) => k)));
   if (selected && !isShown(selected)) {select(null);}
+  invalidate();
 }
 // шари згруповано: заголовок групи вмикає/вимикає всі її шари, стрілка розгортає список
 function buildLayersUI() {
@@ -837,6 +852,7 @@ function extData(reason, keys, repaint = true) {
   }
   syncExtModes();
   if (repaint && extModeOf(colorMode)) {repaintAll();}
+  invalidate(); // дані змінились: маркери розширення, пристрої, статуси
 }
 // VX-04: HTML-блоки в кінці картки об'єкта; VX-05: `data-ext="<id>:<action>:<arg>"` → ext.onAction
 function extCards(code) {
@@ -909,6 +925,8 @@ function paint(root) {
     }
   });
   stockLoad.tint(root, color, k);
+  batcher.touch(root); // PERF: підсвічений меш виходить з пакета й малюється сам, повернувся в норму — знову в пакеті
+  invalidate();
 }
 function repaintAll() { for (const r of items.values()) {paint(r);} }
 function bindCmode(el) { el.onchange = () => { colorMode = el.value; repaintAll(); renderPanel(); }; }
@@ -1322,7 +1340,10 @@ function select(obj, { keepHighlight = false } = {}) {
     selBox.visible = false;
     if (panel.type === "object") {openTab(panel.tab || "overview");}
   }
+  invalidate();
 }
+// будь-який клік, перемикач чи клавіша в інтерфейсі може змінити сцену (шари, підписи, тіні, анімація)
+for (const ev of ["click", "change", "input", "keydown"]) {on(root, ev, invalidate);}
 let down = null;
 renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener("pointerup", (e) => {
@@ -1536,7 +1557,7 @@ function applyPatch(patch) {
   if (lists.has("zones")) {syncOutdoorZones();}
   if (lists.has("fire")) {syncFireDevices();}
   if (lists.has("layout")) { applyLayout(); stockLoad.sync(); items.forEach(paint); } // R-25: до вантажу за залишками
-  else if (lists.has("locations")) {stockLoad.sync([...changed]);}
+  else if (lists.has("locations")) { stockLoad.sync([...changed]); batcher.sync(); invalidate(); }
   for (const c of changed) {
     const o = items.get(c);
     if (o) {paint(o);}
@@ -3261,45 +3282,79 @@ $(".o_f3d_toggle-side").onclick = () => {
 // ---------------------------------------------------------------- цикл
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clock = new THREE.Clock();
+// PERF: рендер за потребою. Кадр без змін (камера стоїть, нічого не рухається) не перемальовується: холостий перегляд і
+// кіоск не палять GPU. Перемальовуємо, коли: камера рухалась (`controls` change, tween), хтось викликав `invalidate()`
+// (paint, шари, дані, розмір, клік/клавіша в інтерфейсі), працює анімація (маршрут замовлення, частинки, пожежа, програвання
+// зміни), пакетування змінило склад пакетів; блимання ламп статусу й пульсація маркерів — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
+// страховка від пропущеної інвалідації. Нульовий рендерер (тести), `opts.onDemand === false` і `?f3d_ondemand=0` малюють кожен виток, як раніше.
+const onDemand = opts.onDemand ?? (!nullR && perfFlag("ondemand") !== "0"); // `opts.onDemand: true` вмикає й для нульового рендерера (тести)
+const IDLE_MS = 400, AMBIENT_MS = 80, POLL_MS = 250;
+const paceNow = opts.now ?? (() => performance.now()); // годинник темпу кадрів (тести підставляють змоканий Date.now)
+let lastDraw = 0, lastPoll = 0, drawn = 0;
+let ambient = false; // у сцені є об'єкти, що змінюються самі по собі (маркери енергетики пульсують в onBeforeRender)
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const now = performance.now();
+  let live = false; // анімація, що змінює кадр щоразу
   if (tween) {
     const k = Math.min((now - tween.start) / tween.dur, 1), e = ease(k);
     camera.position.lerpVectors(tween.p0, tween.p1, e);
     controls.target.lerpVectors(tween.t0, tween.t1, e);
     if (k === 1) {tween = null;}
+    live = true;
   }
-  controls.update();
+  controls.update(); // змінена камера кидає "change" → invalidate()
   const blink = 0.5 + 0.5 * Math.sin(now / 220);
+  let lampsMoved = false;
   for (const l of lamps) {
     const ro = codeRoot(l);
     const st = ro ? machStatus(ro.userData) : undefined;
+    const k = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
+    if (l.material.emissiveIntensity !== k || !l.material.emissive.equals(l.material.color)) { lampsMoved = true; }
     l.material.emissive.set(l.material.color);
-    l.material.emissiveIntensity = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
+    l.material.emissiveIntensity = k;
   }
-  pulse.visible = !!(hl.curve && $(".o_f3d_opt-motion").checked);
+  const motion = $(".o_f3d_opt-motion").checked;
+  pulse.visible = !!(hl.curve && motion);
   if (pulse.visible) {
     pulseT = (pulseT + dt * 0.12) % 1;
     pulse.position.copy(hl.curve.getPointAt(pulseT));
+    live = true;
   }
-  if (!reduceMotion && $(".o_f3d_opt-motion").checked) { // матеріали біжать гілками
-    if (prodOv.parts?.length) {moveParticles(prodOv.parts, dt);}
-    if (hl.parts.length) {moveParticles(hl.parts, dt);}
+  if (!reduceMotion && motion) { // матеріали біжать гілками
+    if (prodOv.parts?.length) { moveParticles(prodOv.parts, dt); live = true; }
+    if (hl.parts.length) { moveParticles(hl.parts, dt); live = true; }
   }
   if (prodOv.dots.length && !reduceMotion) {
     const s = 1 + 0.25 * Math.sin(now / 260);
     for (const r of prodOv.dots) {r.scale.setScalar(s);}
+    live = true;
   }
   if (drill.on) {
     const on = Math.sin(now / 180) > 0;
-    for (const r of drill.blink) {r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });}
+    for (const r of drill.blink) {r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } }); batcher.touch(r);}
     drill.dots.forEach((d, i) => d.position.copy(drill.curves[i].getPointAt(((now / 1000) * 0.08 + i * 0.13) % 1)));
+    live = true;
   }
   const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
-  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) {prodSimMove(sm);} }
+  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) {prodSimMove(sm);} live = true; }
+  const pace = paceNow();
+  if (pace - lastPoll >= POLL_MS || pace < lastPoll) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
+    lastPoll = pace;
+    if (batcher.sync()) { needDraw = true; }
+    if (onDemand) { // `userData.f3dAnimated` — прапорець для будь-якого об'єкта, що анімується сам (спрайти з `extPick` вважаються такими)
+      ambient = false;
+      scene.traverse((o) => { if (o.visible && (o.userData.extPick || o.userData.f3dAnimated)) { ambient = true; } });
+    }
+  }
+  const since = pace - lastDraw; // < 0 — годинник відкотився: вважаємо, що пора малювати
+  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && since >= AMBIENT_MS) && since >= 0 && since < IDLE_MS) {return;}
+  needDraw = false;
+  lastDraw = pace;
+  drawn++;
   syncLabels();
-  renderer.render(scene, camera);
+  batcher.beforeRender();
+  try { renderer.render(scene, camera); } finally { batcher.afterRender(); }
   labelRenderer.render(scene, camera);
 });
 
@@ -3364,6 +3419,7 @@ function destroy() {
   disposers.forEach((f) => f());
   themeObs.disconnect();
   renderer.setAnimationLoop(null);
+  batcher.dispose();
   scene.traverse((o) => {
     o.geometry?.dispose?.();
     for (const m of [].concat(o.material || [])) {m?.dispose?.();}
@@ -3373,7 +3429,7 @@ function destroy() {
 }
 
 return {
-  get D() { return D; }, get idx() { return idx; }, items, stockLoad, layers, scene, camera, controls, renderer, labels, lamps, hl,
+  get D() { return D; }, get idx() { return idx; }, items, stockLoad, batcher, invalidate, get drawn() { return drawn; }, layers, scene, camera, controls, renderer, labels, lamps, hl,
   get prodOv() { return prodOv; }, get drill() { return drill; }, lite, coreReady, partsReady: () => bgReady,
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,
