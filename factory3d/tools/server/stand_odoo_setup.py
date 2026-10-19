@@ -333,7 +333,8 @@ def cmd_seed(odoo: Odoo, args: argparse.Namespace) -> None:
         "create",
         {
             "name": "td-stand: демо аналітики (тимчасова, видаляється)",
-            "model_id": odoo.call("ir.model", "search", [("model", "=", "td.energy.analytics")], limit=1)[0],
+            # td.energy.analytics — абстрактна модель без ACL: run() відмовляє; дія вішається на td.energy.daily
+            "model_id": odoo.call("ir.model", "search", [("model", "=", "td.energy.daily")], limit=1)[0],
             "state": "code",
             "code": "action = False",
         },
