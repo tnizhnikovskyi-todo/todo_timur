@@ -21,6 +21,8 @@ ignore = [
     # Атрибути класу моделі Odoo (`_inherit = [...]`, `_order`, `_rec_names_search`, `_depends`) — списки/словники
     # за конвенцією Odoo; ORM копіює їх у реєстр, а не мутує спільний атрибут.
     "RUF012",
+    # `self = self.sudo()` / `self = self.with_context(...)` — поширений прийом службових методів Odoo
+    "PLW0642",
 ]
 
 [lint.per-file-ignores]
