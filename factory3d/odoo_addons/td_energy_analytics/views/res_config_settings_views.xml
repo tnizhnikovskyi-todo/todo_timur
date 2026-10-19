@@ -1,3 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-14 група «Аналітика» у налаштуваннях (B). Каркас. -->
-<odoo/>
+<!-- V-14: група «Аналітика» у налаштуваннях енергетики (поля M-15, параметри td.energy_analytics.*). -->
+<odoo>
+    <record id="res_config_settings_view_form_td_energy_analytics" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.energy.analytics</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="td_energy.res_config_settings_view_form_td_energy"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='td_energy']" position="inside">
+                <block title="Аналітика" name="td_energy_analytics">
+                    <setting string="Добові факти"
+                             help="Закриття вчорашньої доби, глибина догону пропущених діб">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_daily_close_h"/>
+                                <field name="td_energy_analytics_daily_close_h"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_catchup_days"/>
+                                <field name="td_energy_analytics_catchup_days"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Типові доби й прогноз бюджету"
+                             help="Скільки тижнів і не менше скількох діб брати для «типової» доби тижня">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_forecast_weeks"/>
+                                <field name="td_energy_analytics_forecast_weeks"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_forecast_min_days"/>
+                                <field name="td_energy_analytics_forecast_min_days"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Модель бази ISO 50001"
+                             help="Умови затвердження моделі: якість підгонки й довжина періоду бази">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_r2_min"/>
+                                <field name="td_energy_analytics_r2_min"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_baseline_min_days"/>
+                                <field name="td_energy_analytics_baseline_min_days"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Екран «Аналітика»"
+                             help="Автооновлення й довжина рейтингів у розрізах">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_refresh_s"/>
+                                <field name="td_energy_analytics_refresh_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_top_equipment"/>
+                                <field name="td_energy_analytics_top_equipment"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_analytics_top_mo"/>
+                                <field name="td_energy_analytics_top_mo"/></div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

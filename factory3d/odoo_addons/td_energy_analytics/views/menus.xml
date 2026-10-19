@@ -1,3 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-15 меню (B; останнім у data). Каркас: наповнює воркер B. -->
-<odoo/>
+<!-- V-15: меню «Аналітика» (SPEC 3.3; seq 12 — перед «Завантаження вузлів», 15) і розділ «Налаштування → Аналітика». -->
+<odoo>
+    <menuitem id="menu_td_energy_analytics" name="Аналітика" parent="td_energy.menu_td_energy" sequence="12"
+              action="action_td_energy_analytics" groups="td_energy.group_td_energy_user"/>
+
+    <menuitem id="menu_td_energy_analytics_config" name="Аналітика" parent="td_energy.menu_td_energy_config"
+              sequence="60" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_area" name="Ділянки" parent="menu_td_energy_analytics_config" sequence="10"
+              action="action_td_energy_area" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_driver" name="Драйвери" parent="menu_td_energy_analytics_config" sequence="20"
+              action="action_td_energy_driver" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_driver_value" name="Значення драйверів" parent="menu_td_energy_analytics_config"
+              sequence="25" action="action_td_energy_driver_value" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_baseline" name="Моделі бази (ISO 50001)" parent="menu_td_energy_analytics_config"
+              sequence="30" action="action_td_energy_baseline" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_enpi" name="EnPI за добами" parent="menu_td_energy_analytics_config"
+              sequence="40" action="action_td_energy_enpi" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_budget" name="Бюджет енергії" parent="menu_td_energy_analytics_config"
+              sequence="50" action="action_td_energy_budget" groups="td_energy.group_td_energy_cost"/>
+    <menuitem id="menu_td_energy_daily" name="Добові факти" parent="menu_td_energy_analytics_config"
+              sequence="60" action="action_td_energy_daily" groups="td_energy.group_td_energy_manager"/>
+    <menuitem id="menu_td_energy_daily_rebuild" name="Перерахувати добові факти"
+              parent="menu_td_energy_analytics_config" sequence="70" action="action_td_energy_daily_rebuild"
+              groups="td_energy.group_td_energy_manager"/>
+</odoo>

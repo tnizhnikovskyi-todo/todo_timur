@@ -1,3 +1,401 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-01 клієнтська дія, V-02…V-09, V-11, V-16 (B). Каркас: наповнює воркер B. -->
-<odoo/>
+<!-- W4-B: V-01 клієнтська дія «Аналітика», V-02…V-06 (ділянки, драйвери, база, EnPI), V-09, V-11, V-16. -->
+<odoo>
+    <!-- V-01: екран «Аналітика» (OWL `td_energy_analytics.analytics`, UI-01) -->
+    <record id="action_td_energy_analytics" model="ir.actions.client">
+        <field name="name">Аналітика енергетики заводу</field>
+        <field name="tag">td_energy_analytics.analytics</field>
+        <field name="context">{"td_energy_period": "m"}</field>
+    </record>
+
+    <!-- V-02: ділянки -->
+    <record id="view_td_energy_area_list" model="ir.ui.view">
+        <field name="name">td.energy.area.list</field>
+        <field name="model">td.energy.area</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="color" widget="color"/>
+                <field name="spec_driver_id"/>
+                <field name="node_count"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_area_form" model="ir.ui.view">
+        <field name="name">td.energy.area.form</field>
+        <field name="model">td.energy.area</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва ділянки"/></h1>
+                        <h2><field name="code" placeholder="Код"/></h2>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="color" widget="color"/>
+                            <field name="spec_driver_id"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="node_count"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Вузли" name="nodes">
+                            <field name="node_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="kind"/>
+                                    <field name="p_inst_kw"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_area" model="ir.actions.act_window">
+        <field name="name">Ділянки</field>
+        <field name="res_model">td.energy.area</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-03: драйвери нормалізації -->
+    <record id="view_td_energy_driver_list" model="ir.ui.view">
+        <field name="name">td.energy.driver.list</field>
+        <field name="model">td.energy.driver</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="source_kind"/>
+                <field name="uom"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_driver_form" model="ir.ui.view">
+        <field name="name">td.energy.driver.form</field>
+        <field name="model">td.energy.driver</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва драйвера"/></h1>
+                        <h2><field name="code" placeholder="Код"/></h2>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="source_kind"/>
+                            <field name="uom"/>
+                            <field name="base_temp_c" invisible="source_kind != 'weather_hdd'"/>
+                            <field name="temp_signal_code" invisible="source_kind != 'weather_hdd'"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Значення" name="values">
+                            <field name="value_ids" readonly="source_kind != 'manual'">
+                                <list editable="bottom" default_order="day desc">
+                                    <field name="day"/>
+                                    <field name="value"/>
+                                    <field name="quality" readonly="1"/>
+                                    <field name="source_note"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_driver" model="ir.actions.act_window">
+        <field name="name">Драйвери нормалізації</field>
+        <field name="res_model">td.energy.driver</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-04: значення драйверів -->
+    <record id="view_td_energy_driver_value_list" model="ir.ui.view">
+        <field name="name">td.energy.driver.value.list</field>
+        <field name="model">td.energy.driver.value</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="day" readonly="quality != 'manual'"/>
+                <field name="driver_id" readonly="quality != 'manual'"/>
+                <field name="value" readonly="quality != 'manual'"/>
+                <field name="quality" widget="badge" decoration-success="quality == 'measured'"
+                       decoration-warning="quality == 'estimated'" decoration-info="quality == 'manual'"/>
+                <field name="source_note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_driver_value_pivot" model="ir.ui.view">
+        <field name="name">td.energy.driver.value.pivot</field>
+        <field name="model">td.energy.driver.value</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="day" type="row" interval="month"/>
+                <field name="driver_id" type="col"/>
+                <field name="value" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_energy_driver_value_search" model="ir.ui.view">
+        <field name="name">td.energy.driver.value.search</field>
+        <field name="model">td.energy.driver.value</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="driver_id"/>
+                <field name="day"/>
+                <filter name="manual" string="Вручну" domain="[('quality', '=', 'manual')]"/>
+                <filter name="estimated" string="Оцінка" domain="[('quality', '=', 'estimated')]"/>
+                <group>
+                    <filter name="group_driver" string="Драйвер" context="{'group_by': 'driver_id'}"/>
+                    <filter name="group_day" string="Місяць" context="{'group_by': 'day:month'}"/>
+                    <filter name="group_quality" string="Якість" context="{'group_by': 'quality'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_driver_value" model="ir.actions.act_window">
+        <field name="name">Значення драйверів</field>
+        <field name="res_model">td.energy.driver.value</field>
+        <field name="view_mode">list,pivot</field>
+    </record>
+
+    <!-- V-05: моделі бази (ISO 50001) -->
+    <record id="view_td_energy_baseline_list" model="ir.ui.view">
+        <field name="name">td.energy.baseline.list</field>
+        <field name="model">td.energy.baseline</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'archived'" decoration-success="state == 'approved'">
+                <field name="name"/>
+                <field name="resource_id"/>
+                <field name="scope"/>
+                <field name="area_id" optional="show"/>
+                <field name="period_from"/>
+                <field name="period_to"/>
+                <field name="r2"/>
+                <field name="n_days" optional="show"/>
+                <field name="state" widget="badge" decoration-success="state == 'approved'"
+                       decoration-info="state == 'draft'" decoration-muted="state == 'archived'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_baseline_form" model="ir.ui.view">
+        <field name="name">td.energy.baseline.form</field>
+        <field name="model">td.energy.baseline</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_fit" type="object" string="Розрахувати модель" class="btn-primary"
+                            invisible="state != 'draft' or method != 'ols'" groups="td_energy.group_td_energy_manager"/>
+                    <button name="action_approve" type="object" string="Затвердити"
+                            invisible="state != 'draft'" groups="td_energy.group_td_energy_chief"/>
+                    <button name="action_archive" type="object" string="В архів"
+                            invisible="state == 'archived'" groups="td_energy.group_td_energy_chief"/>
+                    <button name="action_to_draft" type="object" string="У чернетку"
+                            invisible="state == 'draft'" groups="td_energy.group_td_energy_chief"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,approved,archived"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not warning">
+                        <field name="warning" nolabel="1"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Що моделюємо">
+                            <field name="resource_id"/>
+                            <field name="scope"/>
+                            <field name="area_id" invisible="scope != 'area'" required="scope == 'area'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Період бази">
+                            <field name="period_from"/>
+                            <field name="period_to"/>
+                            <field name="method"/>
+                        </group>
+                    </group>
+                    <group string="Модель">
+                        <group>
+                            <field name="const_per_day"/>
+                            <field name="n_days"/>
+                        </group>
+                        <group>
+                            <field name="r2"/>
+                            <field name="rmse"/>
+                            <field name="fitted_at"/>
+                            <field name="approved_by"/>
+                            <field name="approved_at"/>
+                        </group>
+                    </group>
+                    <field name="line_ids" readonly="state != 'draft'">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="driver_id"/>
+                            <field name="coef" readonly="parent.method != 'manual'"/>
+                        </list>
+                    </field>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_baseline" model="ir.actions.act_window">
+        <field name="name">Моделі бази (ISO 50001)</field>
+        <field name="res_model">td.energy.baseline</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- V-11: майстер «Перерахувати добові факти» (M-16) -->
+    <record id="view_td_energy_daily_rebuild_wizard_form" model="ir.ui.view">
+        <field name="name">td.energy.daily.rebuild.wizard.form</field>
+        <field name="model">td.energy.daily.rebuild.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <div class="text-muted" colspan="2">
+                        Добові факти й EnPI будуються за київськими добами; не більше 400 діб за раз.
+                    </div>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                </group>
+                <footer>
+                    <button name="action_rebuild" type="object" string="Перерахувати" class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Скасувати" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_daily_rebuild" model="ir.actions.act_window">
+        <field name="name">Перерахувати добові факти</field>
+        <field name="res_model">td.energy.daily.rebuild.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- V-06: EnPI за добами (лише читання) -->
+    <record id="view_td_energy_enpi_list" model="ir.ui.view">
+        <field name="name">td.energy.enpi.list</field>
+        <field name="model">td.energy.enpi</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false" decoration-danger="enpi &gt; 1.05"
+                  decoration-success="enpi &lt; 0.95 and expected &gt; 0">
+                <header>
+                    <button name="%(action_td_energy_daily_rebuild)d" type="action" string="Перерахувати"
+                            display="always" groups="td_energy.group_td_energy_manager"/>
+                </header>
+                <field name="day"/>
+                <field name="baseline_id"/>
+                <field name="actual"/>
+                <field name="expected"/>
+                <field name="enpi"/>
+                <field name="quality" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_enpi_graph" model="ir.ui.view">
+        <field name="name">td.energy.enpi.graph</field>
+        <field name="model">td.energy.enpi</field>
+        <field name="arch" type="xml">
+            <graph type="line">
+                <field name="day" interval="week"/>
+                <field name="actual" type="measure"/>
+                <field name="expected" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_energy_enpi_pivot" model="ir.ui.view">
+        <field name="name">td.energy.enpi.pivot</field>
+        <field name="model">td.energy.enpi</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="day" type="row" interval="week"/>
+                <field name="baseline_id" type="col"/>
+                <field name="actual" type="measure"/>
+                <field name="expected" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_energy_enpi_search" model="ir.ui.view">
+        <field name="name">td.energy.enpi.search</field>
+        <field name="model">td.energy.enpi</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="baseline_id"/>
+                <field name="day"/>
+                <filter name="over" string="Перевитрата (&gt; 1,05)" domain="[('enpi', '&gt;', 1.05)]"/>
+                <filter name="saving" string="Економія (&lt; 0,95)" domain="[('enpi', '&lt;', 0.95), ('expected', '&gt;', 0)]"/>
+                <group>
+                    <filter name="group_baseline" string="Модель бази" context="{'group_by': 'baseline_id'}"/>
+                    <filter name="group_week" string="Тиждень" context="{'group_by': 'day:week'}"/>
+                    <filter name="group_month" string="Місяць" context="{'group_by': 'day:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_enpi" model="ir.actions.act_window">
+        <field name="name">EnPI за добами</field>
+        <field name="res_model">td.energy.enpi</field>
+        <field name="view_mode">list,graph,pivot</field>
+    </record>
+
+    <!-- V-09: ділянка у формі вузла (група «Прив'язка» форми W1) -->
+    <record id="view_td_energy_node_form_area" model="ir.ui.view">
+        <field name="name">td.energy.node.form.area</field>
+        <field name="model">td.energy.node</field>
+        <field name="inherit_id" ref="td_energy.view_td_energy_node_form"/>
+        <field name="arch" type="xml">
+            <field name="zone_id" position="after">
+                <field name="area_id"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- V-16: групування «Продукт» у пошуку розподілу енергії (W3) -->
+    <record id="view_td_energy_alloc_search_product" model="ir.ui.view">
+        <field name="name">td.energy.alloc.search.product</field>
+        <field name="model">td.energy.alloc</field>
+        <field name="inherit_id" ref="td_energy.view_td_energy_alloc_search"/>
+        <field name="arch" type="xml">
+            <field name="workcenter_id" position="after">
+                <field name="product_id"/>
+            </field>
+            <filter name="group_kind" position="after">
+                <filter name="group_product" string="Продукт" context="{'group_by': 'product_id'}"/>
+            </filter>
+        </field>
+    </record>
+</odoo>

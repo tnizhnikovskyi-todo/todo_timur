@@ -1,3 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V-12 `ir.actions.report` «Звіт для керівництва» (B). Каркас: наповнює воркер B. -->
-<odoo/>
+<!-- V-12: «Звіт для керівництва» (R-18). A4 книжкова, поля 12 мм; дані — report_data.ReportManagement. -->
+<odoo>
+    <record id="paperformat_td_energy_a4" model="report.paperformat">
+        <field name="name">Енергетика: A4, поля 12 мм</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">12</field>
+        <field name="margin_left">12</field>
+        <field name="margin_right">12</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <record id="report_td_energy_management" model="ir.actions.report">
+        <field name="name">Звіт для керівництва · Енергетика</field>
+        <field name="model">td.energy.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">td_energy_analytics.report_management_document</field>
+        <field name="report_file">td_energy_analytics.report_management_document</field>
+        <field name="print_report_name">'Енергетика_звіт_%s' % time.strftime('%Y-%m-%d')</field>
+        <field name="paperformat_id" ref="paperformat_td_energy_a4"/>
+    </record>
+</odoo>

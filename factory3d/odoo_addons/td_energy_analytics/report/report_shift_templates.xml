@@ -1,3 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- QWeb «Звіт за зміну» (B). Каркас: наповнює воркер B. -->
-<odoo/>
+<!-- QWeb A4 «Звіт за зміну» (R-19): одна сторінка; дані — report_data.ReportShift. Стилі — report_td_energy_style. -->
+<odoo>
+    <template id="report_shift_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="r" t-value="reports[o.id]"/>
+                <div class="article o_td_rep o_td_rep_shift">
+                    <t t-call="td_energy_analytics.report_td_energy_style"/>
+
+                    <table class="rep" style="margin-bottom: 4px;">
+                        <tr>
+                            <td style="border: 0; padding-left: 0;">
+                                <h1><t t-out="r['title']"/> · <t t-out="r['shift']"/></h1>
+                                <div class="rep_sub"><t t-out="r['company']"/> · <t t-out="r['day_text']"/>, <t t-out="r['interval']"/> · <t t-out="r['status']"/></div>
+                            </td>
+                            <td class="rep_meta" style="border: 0; padding-right: 0;">
+                                <div>Сформовано: <t t-out="r['generated']"/></div>
+                                <div>Автор: <t t-out="r['author']"/></div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="block o_td_rep_energy">
+                        <h2>Енергія за зміну</h2>
+                        <table class="rep">
+                            <tbody>
+                                <tr><td style="width: 55%;">Споживання (фідери)</td><td class="num"><b t-out="r['feeder']"/> кВт·год</td></tr>
+                                <tr><td>Надходження з мережі (вводи)</td><td class="num"><b t-out="r['incomer']"/> кВт·год</td></tr>
+                                <tr>
+                                    <td>Пік потужності (15-хвилинний інтервал)</td>
+                                    <td class="num"><b t-out="r['peak']"/> кВт<t t-if="r['peak_at']"> о <t t-out="r['peak_at']"/></t></td>
+                                </tr>
+                                <tr t-if="r['cost_text'] is not None"><td>Вартість</td><td class="num"><b t-out="r['cost_text']"/> ₴</td></tr>
+                                <tr>
+                                    <td>Відхилення від типової зміни
+                                        <span class="muted" t-if="r['typical_n']">(середнє останніх <t t-out="r['typical_n']"/> змін: <t t-out="r['typical']"/> кВт·год)</span>
+                                    </td>
+                                    <td class="num">
+                                        <b t-att-class="'bad' if (r['deviation_value'] or 0) &gt;= 5 else ('good' if (r['deviation_value'] or 0) &lt;= -5 else '')" t-out="r['deviation']"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="block o_td_rep_events">
+                        <h2>Події</h2>
+                        <div>
+                            <t t-foreach="r['events']" t-as="lvl"><span style="margin-right: 14px;"><t t-out="lvl['label']"/>: <b t-out="lvl['count']"/></span></t>
+                        </div>
+                        <table t-if="r['event_rows']" class="rep" style="margin-top: 4px;">
+                            <thead><tr><th style="width: 9%;">Час</th><th style="width: 15%;">Рівень</th><th>Подія</th><th style="width: 16%;">Стан</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="r['event_rows']" t-as="ev">
+                                    <td t-out="ev['time']"/><td t-out="ev['level']"/><td t-out="ev['title']"/><td t-out="ev['state']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-if="not r['event_rows']" class="muted">Подій за вікно немає.</div>
+                    </div>
+
+                    <div class="block o_td_rep_outages">
+                        <h2>Планові відключення</h2>
+                        <table t-if="r['outages']" class="rep">
+                            <thead><tr><th>Відключення</th><th style="width: 20%;">Інтервал</th><th style="width: 18%;">Статус</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="r['outages']" t-as="outage">
+                                    <td t-out="outage['name']"/><td><t t-out="outage['from']"/>–<t t-out="outage['to']"/></td><td t-out="outage['state']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-else="" class="muted">Планових відключень у вікні зміни немає.</div>
+                    </div>
+
+                    <div t-if="r['rounds'] is not None" class="block o_td_rep_rounds">
+                        <h2>Обходи</h2>
+                        <table t-if="r['rounds']" class="rep">
+                            <thead><tr><th>Обхід</th><th style="width: 24%;">Виконавець</th><th class="num" style="width: 10%;">Пункти</th><th style="width: 16%;">Статус</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="r['rounds']" t-as="rnd">
+                                    <td t-out="rnd['name']"/><td t-out="rnd['performer']"/><td class="num" t-out="rnd['progress']"/><td t-out="rnd['state']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-else="" class="muted">Обходів у зміні немає.</div>
+                    </div>
+
+                    <div class="block o_td_rep_opps">
+                        <h2>Найбільші резерви економії</h2>
+                        <table t-if="r['opps']" class="rep">
+                            <thead><tr><th>Резерв</th><th t-if="r['cost']" class="num" style="width: 16%;">₴/міс</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="r['opps']" t-as="item">
+                                    <td><b t-out="item['title']"/><div class="muted" t-out="item['text']"/></td>
+                                    <td t-if="r['cost']" class="num" t-out="item['save']"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-else="" class="muted">Відкритих резервів немає.</div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>
