@@ -64,7 +64,8 @@ class TestS5Docs(F3DConstructorHttpCase):
     # --- специфікація -------------------------------------------------------------------------------------
     def test_spec_xlsx_from_tables(self):
         name, mime, data = self.render('spec_pdf', {'format': 'xlsx', 'title': "Специфікація — тест", 'tables': TABLES})
-        self.assertEqual((name, mime[:30]), ('spec.xlsx', 'application/vnd.openxmlformats-of'))
+        self.assertEqual(name, 'spec.xlsx')
+        self.assertTrue(mime.startswith('application/vnd.openxmlformats'), mime)
         wb = load_workbook(io.BytesIO(data))
         self.assertEqual(wb.sheetnames, ["Специфікація", "Підсумок_за _типорозмірами_"])
         ws = wb["Специфікація"]

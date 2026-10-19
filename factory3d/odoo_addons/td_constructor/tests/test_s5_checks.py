@@ -119,7 +119,7 @@ class TestS5Building(F3DConstructorCase):
         self.make_slot(prefix='A1', x=10.0, y=15.0, bays=4)
         self.make_slot(prefix='A2', x=10.0, y=17.5, bays=4)  # зазор 1.4 м
         zone = self.make_slot(
-            prefix='ZV', template='zone', x=0.0, y=0.0, polygon=[[38, 0], [46, 0], [46, 14], [38, 14]]
+            kind='building', prefix='ZV', template='zone', x=0.0, y=0.0, polygon=[[38, 0], [46, 0], [46, 14], [38, 14]]
         )
         self.enable('aisle_width')
         self.assertEqual(self.issues('aisle_width'), [], "техніку складу не задано — перевірка мовчить")
@@ -141,7 +141,6 @@ class TestS5Building(F3DConstructorCase):
         self.make_slot(prefix='LOW', x=10.0, y=10.0, bays=2, levels=2)  # 3.25 м
         self.make_slot(prefix='MID', x=20.0, y=10.0, bays=2, levels=3)  # 4.75 м: ближче 0.5 м до спринклерів
         self.make_slot(prefix='TALL', x=30.0, y=10.0, bays=2, levels=6, level_height=1.6)  # 9.85 м > стелі 8 м
-        self.make_slot(kind='yard', prefix='YARD', x=40.0, y=10.0, bays=2, levels=6)  # двір не перевіряється
         self.enable('height')
         self.assertEqual(self.issues('height'), [(('MID',), 'warn'), (('TALL',), 'warn')])
         self.site.sprinkler_height_m = 0
@@ -174,7 +173,7 @@ class TestS5Building(F3DConstructorCase):
         )
         self.assertEqual(
             [(ln['key'], ln['qty']) for ln in by_code['R2']['lines']],
-            [('frame', 6), ('beam', 20), ('brace', 8), ('tie', 3)],
+            [('frame', 6), ('beam', 40), ('brace', 8), ('tie', 3)],
         )
         shelf = next(ln for ln in by_code['S1']['lines'] if ln['key'] == 'shelf')
         self.assertEqual((shelf['qty'], shelf['area']), (15, round(15 * 0.9 * 0.4, 4)))

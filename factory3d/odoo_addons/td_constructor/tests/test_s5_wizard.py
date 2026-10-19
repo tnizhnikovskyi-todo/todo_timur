@@ -38,14 +38,16 @@ class TestS5Wizard(F3DConstructorHttpCase):
         self.assertEqual(load['site']['wizard_state'], STATE, "load віддає стан майстра")
 
     def test_designer_with_layer_rights(self):
-        res = self.call(self.u_store, site_id=self.site.id, state=STATE)
-        self.assertEqual((res['ok'], res['code']), (False, 'rights'), "комірник без прав на шар не пише")
-        self.layers['storage'].edit_group_ids = [
-            Command.set([self.env.ref('td_constructor.group_td_constructor_storekeeper').id])
-        ]
-        self.assertTrue(self.call(self.u_store, site_id=self.site.id, state=STATE)['ok'])
+        self.assertTrue(
+            self.call(self.u_store, site_id=self.site.id, state=STATE)['ok'], "комірник редагує шар «Склади»"
+        )
+        self.assertTrue(self.call(self.u_tech, site_id=self.site.id, state=STATE)['ok'], "технолог — шар «Виробництво»")
         res = self.call(self.u_plain, site_id=self.site.id, state=STATE)
-        self.assertEqual((res['ok'], res['code']), (False, 'rights'))
+        self.assertEqual((res['ok'], res['code']), (False, 'rights'), "без ролі й прав на шар майстер не пише")
+        for layer in self.layers.values():
+            layer.edit_group_ids = [Command.clear()]
+        res = self.call(self.u_store, site_id=self.site.id, state=STATE)
+        self.assertEqual((res['ok'], res['code']), (False, 'rights'), "права йдуть за групами шарів")
 
     def test_validation(self):
         for state in ([1, 2], "x", 5):

@@ -33,9 +33,30 @@ class NewFieldsMixin:
             'addr': {'tpl': '{row}-{bay}'},
             'depth_mode': 'cell',
         }
-        cls.items = [
-            {'kind': 'column', 'x': 6.0, 'y': 6.0},
-            {'kind': 'wall', 'x1': 0, 'y1': 0, 'x2': 10, 'y2': 0, 't': 0.3},
+        cls.items = [  # R-22 у нормалізованому вигляді (services/building.py): round-trip збігається побуквено
+            {
+                'id': 'c1',
+                'kind': 'column',
+                'name': '',
+                'x': 6.0,
+                'y': 6.0,
+                'w': 0.4,
+                'd': 0.4,
+                'rot': 0.0,
+                'location_uid': None,
+            },
+            {
+                'id': 'w1',
+                'kind': 'wall',
+                'name': '',
+                'x': 5.0,
+                'y': 0.0,
+                'w': 10.0,
+                'd': 0.3,
+                'rot': 0.0,
+                'th': 0.3,
+                'location_uid': None,
+            },
         ]
 
 

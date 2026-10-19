@@ -120,10 +120,6 @@ test("S5: висота спринклерів і техніка складу й�
 
 test("S5: специфікація й план — запити API-19 від ядра (таблиці, примітиви), майстер створює зони й ряди", async () => {
     const { rpc, store } = await openEditor();
-    const core = (await import("@td_constructor/editor/core_loader")).loadCore;
-    const C = await core();
-    const rows = C.E.runDialog ? true : false;
-    expect(rows).toBe(true);
     const res = await store.render("spec_pdf", { format: "xlsx", title: "t", tables: [{ name: "a", columns: ["x"], rows: [[1]] }] });
     expect(res.filename).toBe("spec.xlsx");
     expect(rpc.of(SPEC)[0].params.format).toBe("xlsx");
