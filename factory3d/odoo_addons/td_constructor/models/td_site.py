@@ -3,7 +3,12 @@ import re
 from odoo import Command, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+from ..services import addr as addr_mod
 from ..services.checks import CHECK_DEFAULTS
+
+# MERGE.md §2.5, F01-10: як локації Odoo відображають адресу і що вважається останнім рівнем
+LOC_TREE_SELECTION = [('flat', "Плоско"), ('row', "Ряд"), ('section', "Секція")]
+DEPTH_MODE_SELECTION = [('level', "Ярус"), ('cell', "Комірка")]
 
 
 class F3dSite(models.Model):
@@ -54,6 +59,59 @@ class F3dSite(models.Model):
         string="Є непубліковані зміни", compute='_compute_has_changes', search='_search_has_changes'
     )
     seed_key = fields.Char(string="Ключ seed", size=32, copy=False, readonly=True)
+    # --- MERGE.md §3.3 (волни 1–2): поля без логіки; наповнюють слайси ---------------------------------
+    warehouse_id = fields.Many2one(
+        'stock.warehouse',
+        string="Склад Odoo",
+        check_company=True,
+        index=True,
+        copy=False,
+        ondelete='set null',
+        help="Склад, до якого належить площадка (склад конструктор не створює)",
+    )
+    addr = fields.Json(
+        string="Адресація",
+        default=dict,
+        copy=False,
+        help="R-22: шаблон коду, сегменти, напрями; порожньо — пресет legacy (поточні коди)",
+    )
+    loc_tree = fields.Selection(
+        LOC_TREE_SELECTION,
+        string="Ієрархія локацій",
+        required=True,
+        default='flat',
+        help="flat — ім'я локації = повний код; row/section — у ряду/секції своя віртуальна локація (Q1)",
+    )
+    depth_mode = fields.Selection(
+        DEPTH_MODE_SELECTION,
+        string="Глибина локацій",
+        required=True,
+        default='level',
+        help="Останній рівень, що стає локацією Odoo: ярус або комірка (F01-10)",
+    )
+    sprinkler_height_m = fields.Float(
+        string="Висота спринклерів, м",
+        digits=(10, 3),
+        help="0 — спринклерів немає, перевірка «Висота» враховує лише висоту будівлі",
+    )
+    aisle_tech = fields.Char(
+        string="Техніка проходів", size=32, help="Ключ техніки; мінімальна ширина — у params перевірки"
+    )
+    parse_rules = fields.Json(string="Правила розбору кодів", default=dict, copy=False)
+    active_variant_id = fields.Many2one(
+        'td.layout.variant', string="Активний варіант", copy=False, ondelete='set null', index=True
+    )
+    wizard_state = fields.Json(string="Стан майстра «З нуля»", default=dict, copy=False)
+    odoo_baseline_id = fields.Many2one(
+        'ir.attachment',
+        string="База розбіжностей з Odoo",
+        copy=False,
+        ondelete='set null',
+        help="Стрічка локацій на момент останньої публікації або «Оновити з Odoo» (F02-09)",
+    )
+    publish_copy_ack = fields.Boolean(
+        string="Копію БД підтверджено", copy=False, help="Нагадування про копію бази перед публікацією (O-03)"
+    )
     slot_count = fields.Integer(string="Місць", compute='_compute_counts')
     placement_count = fields.Integer(string="Розміщень", compute='_compute_counts')
     layer_count = fields.Integer(string="Шарів", compute='_compute_counts')
@@ -105,10 +163,28 @@ class F3dSite(models.Model):
             if not re.match(r'^[A-Z0-9]+$', site.code or ''):
                 raise ValidationError("Код площадки: лише великі латинські літери й цифри.")
 
+    @api.constrains('addr')
+    def _check_addr(self):
+        for site in self:
+            try:
+                addr_mod.normalize_addr(site.addr)
+            except addr_mod.AddrError as exc:
+                raise ValidationError("Адресація площадки: %s" % exc) from None
+
+    @api.model
+    def _f3d_normalize_addr_vals(self, vals):
+        """R-22: `addr` площадки → нормалізований вигляд (хибне → ValidationError)."""
+        if 'addr' in vals:
+            try:
+                vals = dict(vals, addr=addr_mod.normalize_addr(vals['addr']))
+            except addr_mod.AddrError as exc:
+                raise ValidationError("Адресація площадки: %s" % exc) from None
+        return vals
+
     # --- create / службові -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
-        sites = super().create(vals_list)
+        sites = super().create([self._f3d_normalize_addr_vals(vals) for vals in vals_list])
         sites._f3d_init_checks()
         if self.env.context.get('f3d_blank'):
             sites._f3d_init_blank()
@@ -147,7 +223,7 @@ class F3dSite(models.Model):
                 20,
                 0.0,
                 'storekeeper',
-                ['pallet_rack', 'cantilever', 'shelf', 'floor_stack'],
+                ['pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'floor_spot'],
                 '#e8a33d',
             ),
             ("Виробництво", 'production', 30, 0.0, 'technologist', ['machine_spot', 'zone'], '#5b7c99'),
@@ -170,13 +246,69 @@ class F3dSite(models.Model):
                         'aisle_width_m': 3.0,
                         'color': color,
                         'allowed_slot_type_ids': [Command.set(terms.ids)],
-                        'edit_group_ids': [
-                            Command.set([group('td_constructor.group_td_constructor_%s' % role).id])
-                        ]
+                        'edit_group_ids': [Command.set([group('td_constructor.group_td_constructor_%s' % role).id])]
                         if role
                         else [],
                     }
                 )
+
+    def write(self, vals):
+        vals = self._f3d_normalize_addr_vals(vals)
+        renumber = bool({'addr', 'depth_mode'} & set(vals)) and not self.env.context.get('f3d_no_renumber')
+        Slot = self.env['td.slot']
+        old_codes = Slot._f3d_codes_map(self) if renumber else None
+        Slot._f3d_addr_memo_clear()
+        try:
+            res = super().write(vals)
+        finally:
+            Slot._f3d_addr_memo_clear()
+        if renumber:
+            Slot._f3d_renumber(old_codes)
+        return res
+
+    def _f3d_published_slot_uids(self):
+        """uid місць площадки, що вже мають локації Odoo (опубліковані)."""
+        self.ensure_one()
+        locations = self.env['stock.location'].sudo().with_context(active_test=False)
+        return set(locations.search([('td_site_id', '=', self.id), ('td_slot_uid', '!=', False)]).mapped('td_slot_uid'))
+
+    def _f3d_apply_addr(self, vals, renumber='new'):
+        """Записує адресацію площадки (F01-03, F01-06): `vals` — {addr, loc_tree, depth_mode}; права перевіряє виклик.
+
+        `renumber='new'` (Q2, за замовчуванням): місця з уже опублікованими локаціями й без власних налаштувань
+        «закріплюють» поточну адресацію й номер ряду (їхні коди не змінюються), нові беруть нову; `'all'` — зняти
+        закріплення й перенумерувати все за геометрією. Ручні правки комірок і розміщення йдуть за кодами."""
+        self.ensure_one()
+        vals = self._f3d_normalize_addr_vals({k: v for k, v in vals.items() if k in ('addr', 'loc_tree', 'depth_mode')})
+        if not vals:
+            return {'pinned': 0}
+        Slot = self.env['td.slot'].sudo().with_context(f3d_no_renumber=True)
+        pinned = 0
+        if {'addr', 'depth_mode'} & set(vals):
+            Slot._f3d_addr_memo_clear()
+            contexts = Slot._f3d_addr_contexts(self)
+            published = self._f3d_published_slot_uids() if renumber == 'new' else set()
+            for slot in Slot.search([('site_id', '=', self.id), ('template', '!=', 'zone')]):
+                own = addr_mod.safe_normalize(slot.addr)
+                if addr_mod.is_own(own):
+                    continue
+                ctx = contexts.get(slot.uid) or {}
+                if renumber == 'all':
+                    if 'row_no' in own:
+                        slot.addr = {k: v for k, v in own.items() if k != 'row_no'}
+                        pinned += 1
+                elif slot.uid in published:
+                    base = dict(ctx.get('addr') or {'legacy': True})
+                    number = ctx.get('row') or ctx.get('spot')
+                    if number:
+                        base['row_no'] = number
+                    slot.addr = {**own, **base}
+                    pinned += 1
+        site_vals = dict(vals)
+        if 'loc_tree' in site_vals and site_vals['loc_tree'] not in dict(LOC_TREE_SELECTION):
+            raise ValidationError("Ієрархія локацій: допустимо flat, row, section.")
+        self.sudo().write(site_vals)
+        return {'pinned': pinned}
 
     def _f3d_touch(self, n=1):
         """R-21: лічильник чернетки без зміни write_date площадки."""

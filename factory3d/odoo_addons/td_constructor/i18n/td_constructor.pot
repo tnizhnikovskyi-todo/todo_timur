@@ -1,0 +1,3376 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* td_constructor
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-19 02:05+0000\n"
+"PO-Revision-Date: 2026-10-19 02:05+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_term__color
+msgid "#rrggbb; для функції зони — колір рамки й підпису"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ". Публікацію дозволено."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__relevance
+msgid ""
+"0 — немає на фабриці (—), 1 — буває (○), 2 — є (●); за замовчуванням "
+"показуються 1 і 2 (Q9)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__max_floor_load_kn_m2
+msgid "0 — перевірка «Навантаження» для шару вимкнена"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__sprinkler_height_m
+msgid "0 — спринклерів немає, перевірка «Висота» враховує лише висоту будівлі"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.xml:0
+msgid "3D недоступне в цьому браузері"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "3D-модель"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "3D-модель: %s"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "3D-превью"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.xml:0
+msgid "3D-превью моделі варіанта"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "<span class=\"fw-bold\">Зона або ряд:</span>"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "AB-R1"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_needaction
+msgid "Action Needed"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__active
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__active
+msgid "Active"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_ids
+msgid "Activities"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_state
+msgid "Activity State"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_type_icon
+msgid "Activity Type Icon"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_attachment_count
+msgid "Attachment Count"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__can_publish
+msgid "Can Publish"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__copy_reminder
+msgid "Copy Reminder"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__create_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__create_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__underlay_format__dwg
+msgid "DWG"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__underlay_format__dxf
+msgid "DXF"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_maintenance_equipment__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_mrp_workcenter__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_draft_mixin__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_passport__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__display_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+msgid "EQ-1"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_follower_ids
+msgid "Followers"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_partner_ids
+msgid "Followers (Partners)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__model_glb_id
+msgid "GLB для перегляду"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid ""
+"GLB, glTF, OBJ+MTL, FBX, STL, 3MF, DAE · STEP, IGES, IFC (перетворення на "
+"сервері)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__has_message
+msgid "Has Message"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_maintenance_equipment__id
+#: model:ir.model.fields,field_description:td_constructor.field_mrp_workcenter__id
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_draft_mixin__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_passport__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__id
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__id
+msgid "ID"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__res_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__res_id
+msgid "ID запису"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_exception_icon
+msgid "Icon"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__message_has_error
+#: model:ir.model.fields,help:td_constructor.field_td_comment__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_stock_location
+msgid "Inventory Locations"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_is_follower
+msgid "Is Follower"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__is_manager
+msgid "Is Manager"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__write_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__write_date
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__items
+msgid ""
+"MERGE.md §3.3, R-22: колони, стіни, ворота, док, двері, офіс, зарядка (F18, "
+"services/building.py)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_maintenance_equipment
+msgid "Maintenance Equipment"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_has_error
+msgid "Message Delivery error"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_ids
+msgid "Messages"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_summary
+msgid "Next Activity Summary"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_type_id
+msgid "Next Activity Type"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_needaction_counter
+msgid "Number of Actions"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_has_error_counter
+msgid "Number of errors"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__message_needaction_counter
+msgid "Number of messages requiring action"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__addr
+msgid "R-22: порожньо — успадкувати від зони або площадки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__addr
+msgid ""
+"R-22: шаблон коду, сегменти, напрями; порожньо — пресет legacy (поточні "
+"коди)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__activity_user_id
+msgid "Responsible User"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__snapshot_sha1
+msgid "SHA-1 знімка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_site_f3d_site_seed_uniq
+msgid "Seed-площадка вже існує."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__sequence
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__sequence
+msgid "Sequence"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__state
+msgid "State"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__activity_state
+msgid ""
+"Status based on activities\n"
+"Overdue: Due date is already passed\n"
+"Today: Activity date is today\n"
+"Planned: Future activities."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__activity_exception_decoration
+msgid "Type of the exception activity on record."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__uid
+msgid "UID"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__source_uid
+msgid "UID джерела"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__zone_uid
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__zone_uid
+msgid "UID зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_slot_uid
+msgid "UID місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard_line__scope_uid
+msgid "UID місця або зони, до якої належить рядок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_slot_f3d_slot_uid_uniq
+msgid "UID місця має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__target_uid
+msgid "UID об'єкта"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__scope_uid
+msgid "UID області"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_putaway_rule_td_putaway_uid_uniq
+#: model:ir.model.constraint,message:td_constructor.constraint_td_replenish_rule_td_replenish_uid_uniq
+msgid "UID правила має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_maintenance_equipment__td_placement_uid
+msgid "UID розміщення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_placement_f3d_placement_uid_uniq
+msgid "UID розміщення має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_layer_f3d_layer_uid_uniq
+msgid "UID шару має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__target_uid
+msgid "UID шару/місця/розміщення або код комірки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__website_message_ids
+msgid "Website Messages"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_comment__website_message_ids
+msgid "Website communication history"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__wizard_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__wizard_id
+msgid "Wizard"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_mrp_workcenter
+msgid "Work Center"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__x_m
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__x_m
+msgid "X, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__y_m
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__y_m
+msgid "Y, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__bounds
+msgid "[[x, y], …] у метрах, ≥3 точки; порожньо — габарит будівлі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__utilities
+msgid ""
+"[{kind: electric|air|dust, x_mm, y_mm, z_mm}], початок — центр габариту"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__loc_tree
+msgid ""
+"flat — ім'я локації = повний код; row/section — у ряду/секції своя "
+"віртуальна локація (Q1)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard_line__flags
+msgid "«stock» — є залишок, «barcode_busy» — штрихкод уже зайнятий та ін."
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Атрибути й обладнання:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Без змін:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Застосувати не можна:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Перейменовано:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Перенесено:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid ""
+"·\n"
+"                        Пропонуємо архівувати:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Є на фабриці"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__has_changes
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_search
+msgid "Є непубліковані зміни"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Є попередження перевірок:"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__is_seed
+msgid "Імпорт із макета"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__engineering
+msgid "Інженерні мережі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_url,name:td_constructor.action_td_help
+#: model:ir.ui.menu,name:td_constructor.menu_td_constructor_help
+msgid "Інструкція конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__other
+msgid "Інше"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__loc_tree
+msgid "Ієрархія локацій"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.xml:0
+msgid "Автообертання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__author_id
+msgid "Автор"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__addr
+msgid "Адресація"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__addr
+msgid "Адресація місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__is_current
+msgid "Активний"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__active_variant_id
+msgid "Активний варіант"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Архівні"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__archived_count
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__op__archive
+msgid "Архівовано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_term__term_type__zone_attr
+msgid "Атрибут зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__attrs_line_ids
+msgid "Атрибути"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__attr_ids
+msgid "Атрибути зони"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Атрибути, правила, обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__odoo_baseline_id
+msgid "База розбіжностей з Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__is_draft_base
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__draft_base_version_id
+msgid "База чернетки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__base_version_id
+msgid "Базова версія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__parent_location_id
+msgid "Батьківська локація"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__default_parent_location_id
+msgid "Батьківська локація за замовчуванням"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Без 3D-моделі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_unchanged
+msgid "Без змін"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_zone_lock
+#: model:ir.ui.menu,name:td_constructor.menu_td_zone_lock
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_zone_lock_list
+msgid "Блокування зон"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_zone_lock
+msgid "Блокування зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_archive
+msgid "Буде архівовано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__attrs
+msgid "Буде змінено атрибути"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_update
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__update
+msgid "Буде оновлено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_rename
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__rename
+msgid "Буде перейменовано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__move
+msgid "Буде переміщено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_move
+msgid "Буде перенесено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_create
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__create
+msgid "Буде створено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__change_line_ids
+msgid "Буде створено / оновлено"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Буде створено:"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__rotation_mode__any
+msgid "Будь-який кут"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__building
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Будівля"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__before
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__before
+msgid "Було"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__group__zone
+msgid "Буферні та технологічні зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__copy_ack
+msgid "Більше не нагадувати"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form_ops
+msgid ""
+"В Odoo буде повернуто стан до цієї публікації (створене піде в архів, "
+"значення повернуться). Чернетка не змінюється. Продовжити?"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__cell_load
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__cell_load
+msgid "Вага запасу в комірці"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__relevance
+msgid "Важливість"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_slot_type_td_slot_type_relevance_check
+msgid "Важливість типу: 0, 1 або 2."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__variant_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__variant_id
+msgid "Варіант"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_equipment_variant
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Варіант обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_layout_variant
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_variant_form
+msgid "Варіант планування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layout_variant__origin_id
+msgid "Варіант, до якого повертає «Скасувати» навчальної копії (F19-04)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_passport__variant_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_passport_form_inherit
+msgid "Варіанти"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Варіанти обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_layout_variant
+#: model:ir.ui.menu,name:td_constructor.menu_td_layout_variant
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_variant_list
+msgid "Варіанти планування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_passport__variant_count
+msgid "Варіантів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__machine
+msgid "Верстат"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__version_count
+msgid "Версій"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__version_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__version_id
+msgid "Версія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_layout_version
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form
+msgid "Версія планування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__version_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Версії"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_layout_version
+#: model:ir.ui.menu,name:td_constructor.menu_td_version
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_list
+msgid "Версії планування"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Вибрати все"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Вигляд"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__kind
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__kind
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__kind
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__kind
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_search
+msgid "Вид"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__loc_kind
+msgid "Вид локації Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_term__term_type__layer_kind
+msgid "Вид шару"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__deleted
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__deleted
+msgid "Видалено в чернетці"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+msgid "Видалити"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Видалити модель"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__visible
+msgid "Видимий за замовчуванням"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_preset__kind__group
+msgid "Виділене"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__assignee_id
+msgid "Виконавець"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__production
+msgid "Виробництво"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__resolved_at
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__state__resolved
+msgid "Вирішено"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Вирішені"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__resolved_by_id
+msgid "Вирішив"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__building_height_m
+msgid "Висота будівлі, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__height
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__height
+msgid "Висота до стелі й спринклерів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__sprinkler_height_m
+msgid "Висота спринклерів, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__height_mm
+msgid "Висота, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__is_custom
+msgid "Власний тип"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Власні"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__fits
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__fits
+msgid "Вміщується"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_passport__td_category
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__category
+msgid "Від категорії залежить умовна 3D-модель варіанта без файла (CD-18)"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form_ops
+msgid "Відкат недоступний:"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__rolled_back_by_id
+msgid "Відкотив"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form_ops
+msgid "Відкотити публікацію"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__rolled_back_at
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__rolled_back
+msgid "Відкочено"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Відкрити в конструкторі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__state__open
+msgid "Відкрито"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Відкриті"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__elevation_m
+msgid "Відмітка, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__kit
+msgid "Візок / етажерка комплекту"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Вісь Z вгору"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Габарит (Д×Ш×В)"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Габарити й обслуговування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__template
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Генератор"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__depth_mode
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__depth_mode
+msgid "Глибина локацій"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__model_status__ok
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__underlay_status__ready
+msgid "Готово"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Готово до завантаження на сервер"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__group_name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__group
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Група"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__group_name
+msgid ""
+"Група шарів у списку (наприклад, «Інженерні мережі»); порожньо — без групи"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__edit_group_ids
+msgid "Групи, що пишуть місця й розміщення шару; порожньо — лише менеджер"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__data
+msgid "Дані"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__data
+msgid "Дані пресету"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__yard
+msgid "Двір"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Де можна ставити"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__dynamic
+msgid "Динамічний"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_term__value
+msgid "Для атрибута зони: значення за замовчуванням або підказка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__building_length_m
+msgid "Довжина будівлі, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__footprint_l_m
+msgid "Довжина габариту, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__length_mm
+msgid "Довжина, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__term_type
+msgid "Довідник"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_term
+msgid "Довідник конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_term
+#: model:ir.ui.menu,name:td_constructor.menu_td_constructor_terms
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_term_list
+msgid "Довідники конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__allowed_layer_kind_ids
+msgid "Дозволені види шарів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__allowed_slot_type_ids
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__allowed_slot_type_ids
+msgid "Дозволені типи місць"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__utility_reach
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__utility_reach
+msgid "Досяжність підключення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layout_version__state__active
+msgid "Діюча"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__active_version_id
+msgid "Діюча версія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layout_version__is_draft_base
+msgid "Діюча версія, на якій уже ґрунтується чернетка: відновлювати нічого"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__kind
+msgid "Дія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__expires_at
+msgid "Діє до"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__storage_category_id
+msgid "Діє на вкладені рівні, якщо там не задано своєї (F03-02)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__removal_strategy_id
+msgid "Діє на вкладені рівні, якщо там не задано своєї (F03-06)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_publish_op
+#: model:ir.ui.menu,name:td_constructor.menu_td_publish_op
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_op_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Журнал публікацій"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__blocked
+msgid "Заблоковано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_block
+msgid "Заборон"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__mode__block
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__severity__block
+msgid "Заборона"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.xml:0
+msgid "Завантаження моделі…"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form
+msgid "Завантажити знімок"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Завантажити модель…"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__kind__task
+msgid "Задача"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Задачі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__depends_code
+msgid "Залежить від коду"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Залишити як є"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layout_version__state__superseded
+msgid "Замінена"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_stock_location__td_site_id
+msgid "Запис керується конструктором розкладки (CC-01)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__selected
+msgid "Застосувати"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard__scope_slot_id
+msgid ""
+"Застосувати лише рядки обраної зони чи ряду; потрібні батьки додаються самі "
+"(F02-03)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_blocked
+msgid "Застосувати не можна"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__issue_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Зауваження перевірок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_publish_wizard_issue
+msgid "Зауваження перевірок публікації"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__front_side__w
+msgid "Захід (−X)"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Зберегти модель"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+msgid "Збережено оригінал; перетворення на сервері очікує."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_term__key
+msgid "Збігається зі значенням td.layer.kind / td.slot.template"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__in_location_id
+msgid "Звідки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__report
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form
+msgid "Звіт"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__op__attrs
+msgid "Змінено атрибути"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__draft_changes
+msgid "Змінено від діючої версії"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__changes
+msgid "Зміни"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_attrs
+msgid "Зміни атрибутів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__value
+msgid "Значення"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Зняти все"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__snapshot_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__snapshot_id
+msgid "Знімок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__scope_slot_id
+msgid "Зона або ряд"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_zone_lock_td_zone_lock_uniq
+msgid "Зона вже заблокована."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__service_free
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__service_free
+msgid "Зона обслуговування вільна"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard_line__zone_uid
+msgid "Зона, що містить комірку (F02-03: застосування частинами)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__zone
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__zone
+msgid "Зона-контур"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__scope_slot_ids
+msgid "Зони й ряди плану"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__style__wire
+msgid "Каркас"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_equipment_variant
+#: model:ir.ui.menu,name:td_constructor.menu_td_variant
+msgid "Каталог варіантів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__category
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Категорія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_passport__td_category
+msgid "Категорія (конструктор)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__storage_category_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__storage_category_id
+msgid "Категорія зберігання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__category_id
+msgid "Категорія товару"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__code
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__key
+msgid "Ключ"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__seed_key
+msgid "Ключ seed"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_term_f3d_term_key_uniq
+msgid "Ключ довідника має бути унікальним у межах типу."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__tech
+msgid "Ключ техніки зони; порожньо — як у площадки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__aisle_tech
+msgid "Ключ техніки; мінімальна ширина — у params перевірки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_slot_type_td_slot_type_code_uniq
+msgid "Ключ типу має бути унікальним у межах компанії."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__shape
+msgid "Ключ форми з реєстру shapes ядра"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__code
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__code
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__code
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__code
+msgid "Код"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__cell_code
+msgid "Код комірки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_putaway_rule__out_code
+#: model:ir.model.fields,help:td_constructor.field_td_replenish_rule__cell_code
+msgid "Код комірки чернетки, ще не опублікованої"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__out_code
+msgid "Код місця призначення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_site_f3d_site_code_uniq
+msgid "Код площадки має бути унікальним у компанії."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_placement_f3d_placement_code_uniq
+msgid "Код розміщення має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard_line__depends_code
+msgid "Код рядка, який має бути застосований раніше"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__codes
+msgid "Коди"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__color
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__color
+msgid "Колір"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__kind__note
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_form
+msgid "Коментар"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_comment
+msgid "Коментар конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.ui.menu,name:td_constructor.menu_td_comment
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Коментарі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_comment
+msgid "Коментарі конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__company_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__company_id
+msgid "Компанія"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__cell_code
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__cell
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_site__depth_mode__cell
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__depth_mode__cell
+msgid "Комірка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__pallet_cell
+msgid "Комірка палет ГП"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_placement__cell_code
+msgid "Комірка стелажа місця (для перевірок fits і load)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__bin
+msgid "Комірка фурнітури"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__cells_html
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Комірки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__cell_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__cell_count
+msgid "Комірок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__conveyor
+msgid "Конвеєр"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__cantilever
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__cantilever
+msgid "Консольний стелаж"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.client,name:td_constructor.action_td_constructor
+#: model:ir.ui.menu,name:td_constructor.menu_td_constructor
+#: model:res.groups.privilege,name:td_constructor.privilege_td_constructor
+msgid "Конструктор"
+msgstr ""
+
+#. module: td_constructor
+#: model:res.groups,name:td_constructor.group_td_constructor_storekeeper
+msgid "Конструктор: комірник"
+msgstr ""
+
+#. module: td_constructor
+#: model:res.groups,name:td_constructor.group_td_constructor_manager
+msgid "Конструктор: менеджер"
+msgstr ""
+
+#. module: td_constructor
+#: model:res.groups,name:td_constructor.group_td_constructor_technologist
+msgid "Конструктор: технолог"
+msgstr ""
+
+#. module: td_constructor
+#: model:res.groups,name:td_constructor.group_td_constructor_engineer
+msgid "Конструктор: інженер"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layout_version__kind__checkpoint
+msgid "Контрольна точка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layout_version__kind
+msgid "Контрольна точка — знімок чернетки без змін в Odoo (N-03)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__bounds
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Контур"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__conflict
+msgid "Конфлікт кодів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__code_conflict
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__code_conflict
+msgid "Конфлікт кодів і штрихкодів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__publish_copy_ack
+msgid "Копію БД підтверджено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__column_step_x_m
+msgid "Крок колон по X, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__column_step_y_m
+msgid "Крок колон по Y, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__grid_step_m
+msgid "Крок сітки, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__out_location_id
+msgid "Куди"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__parent_location_id
+msgid "Куди публікувати комірки місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__default_parent_location_id
+msgid "Куди публікуються комірки, у яких не задано батьківську локацію місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__rotation_mode__z
+msgid "Лише 0°"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Лише обране"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__location_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__res_model__stock_location
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__res_model__stock_location
+msgid "Локація"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_placement__dynamic
+msgid ""
+"Люди й транспорт рухаються: не беруть участі в перевірках collide, aisles, "
+"service і fire"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__anchor__corner
+msgid "Лівий передній кут"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__published_rev
+msgid "Лічильник на момент публікації"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__draft_rev
+msgid "Лічильник правок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__draft_rev
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__draft_rev
+msgid "Лічильник чернетки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_placement__name
+msgid "Майбутня назва maintenance.equipment"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_placement__code
+msgid ""
+"Майбутній td_code обладнання: великі латинські літери, цифри, дефіси між "
+"групами"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__area
+msgid "Майданчик"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__max_floor_load_kn_m2
+msgid "Макс. навантаження на підлогу, кН/м²"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__max_qty
+msgid "Максимум"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Маса"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__weight_kg
+msgid "Маса, кг"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__utilities
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Мережі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__model_meta
+msgid "Метадані моделі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__group__mobile
+msgid "Мобільні носії"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__res_model
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__res_model
+msgid "Модель"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+msgid "Модель завантажено."
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+msgid "Модель має %(n)s тис. трикутників (ліміт %(m)s тис.)."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__can_rollback
+msgid "Можна відкотити"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Мої задачі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__image
+msgid "Мініатюра"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__min_qty
+msgid "Мінімум"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__slot_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__slot
+msgid "Місце"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_slot
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Місце (шаблон)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__floor_spot
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__floor_spot
+msgid "Місце на підлозі (одна локація)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__machine_spot
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__machine_spot
+msgid "Місце під верстат"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_placement__slot_id
+msgid "Місце під верстат або стелаж, в який поставлено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__slot_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__slot_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__slot_count
+msgid "Місць"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_search
+msgid "Місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__flags
+msgid "Мітки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__load
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__load
+msgid "Навантаження"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__floor_load_kn_m2
+msgid "Навантаження на підлогу, кН/м²"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__forklift
+msgid "Навантажувач"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__is_training
+msgid "Навчальний"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layout_variant__is_training
+msgid "Навчальний варіант не публікується в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__publish_copy_ack
+msgid "Нагадування про копію бази перед публікацією (O-03)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__name
+#: model:ir.model.fields,field_description:td_constructor.field_td_term__name
+msgid "Назва"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__name
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Назва варіанта"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Назва площадки"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Назва шару"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Назва, ключ, позначення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_putaway_rule__sublocation__closest_location
+msgid "Найближча"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "Не вдалося завантажити 3D-файл. Показано умовну модель."
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__model_status__none
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__underlay_status__none
+msgid "Немає"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_layout_version_f3d_version_n_uniq
+msgid "Номер версії має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__note
+msgid "Нотатка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__note
+msgid "Нотатка до версії"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_putaway_rule__sublocation__no
+msgid "Ні"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__target_kind
+msgid "Об'єкт"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__item
+msgid "Об'єкт будівлі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__items
+msgid "Об'єкти будівлі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__temp_min_c
+msgid "Обидві межі 0 — режим не задано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__res_model__maintenance_equipment
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__res_model__maintenance_equipment
+msgid "Обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__equipment_id
+msgid "Обладнання Odoo"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Одиниці"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Одиниці файла"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__updated_count
+msgid "Оновлено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__op_count
+msgid "Операцій в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__op
+msgid "Операція"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_publish_op
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_op_form
+msgid "Операція публікації"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form_ops
+msgid "Операції в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__op_ids
+msgid "Операції публікації"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__description
+msgid "Опис"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_form
+msgid "Опис типу"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Опрацювання…"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__published_at
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__published_at
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard__state__done
+msgid "Опубліковано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__published_by_id
+msgid "Опублікував"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Опублікувати…"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__model_original_id
+msgid "Оригінал моделі"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+msgid ""
+"Оригінал і GLB буде видалено. Варіант показуватиметься умовною моделлю. "
+"Продовжити?"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Орієнтація"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Основне"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_putaway_rule__sublocation__last_used
+msgid "Остання використана"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__depth_mode
+msgid "Останній рівень, що стає локацією Odoo: ярус або комірка (F01-10)"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Очікують перетворення"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__model_status__pending_conversion
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__underlay_status__pending_conversion
+msgid "Очікує перетворення"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "Очікує перетворення на сервері"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__pallet_rack
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__pallet_rack
+msgid "Паллетний стелаж"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__params
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Параметри"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__params
+msgid "Параметри за замовчуванням"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__underlay_params
+msgid "Параметри підкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__params
+msgid "Параметри шаблону"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Паспорт"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_equipment_passport
+msgid "Паспорт обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__overrides
+msgid "Перевизначення комірок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__check_key
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__check_key
+msgid "Перевірка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_check_config_f3d_check_uniq
+msgid "Перевірка вже налаштована для площадки."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_check_config
+msgid "Перевірка розкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__check_config_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Перевірки"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_check_config_list
+msgid "Перевірки розкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__op__rename
+msgid "Перейменовано"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__rename_line_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Перейменування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__op__move
+msgid "Переміщено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__move_line_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Перенесення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__collide
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__collide
+msgid "Перетини"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Перше застосування площадки: спершу виконайте його на копії бази Odoo."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__line_ids
+msgid "План"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.ui.menu,name:td_constructor.menu_td_constructor_plan
+msgid "Планування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_site__loc_tree__flat
+msgid "Плоско"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_site
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__site_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__site_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__site
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Площадка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_maintenance_equipment__td_site_id
+#: model:ir.model.fields,field_description:td_constructor.field_mrp_workcenter__td_site_id
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_site_id
+msgid "Площадка конструктора"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_site
+#: model:ir.ui.menu,name:td_constructor.menu_td_site
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_search
+msgid "Площадки"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form
+msgid "Повернути чернетку до цієї версії"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__rotation
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__rotation
+msgid "Поворот, °"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__rotation_mode
+msgid "Повороти"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Повторити перетворення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__message
+msgid "Повідомлення"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Пожежні проходи"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__fire_paths
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__fire
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__fire
+msgid "Пожежні проходи й виходи"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_pos
+msgid "Позиція"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__ref
+msgid "Позначення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__ref
+msgid "Позначення в каталозі: R01, FL2, SP3 …"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+msgid "Показати в 3D"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__shelf
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__shelf
+msgid "Полицевий стелаж / комірки фурнітури"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__shelf
+msgid "Полиця крайки"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Положення"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__model_status__error
+msgid "Помилка"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "Помилка перетворення моделі. Показано умовну модель."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__mode__warn
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__severity__warn
+msgid "Попередження"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__model_warning
+msgid "Попередження моделі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_warn
+msgid "Попереджень"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard__state__preview
+msgid "Попередній перегляд"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "Попередній перегляд: файл ще не збережено на сервері"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__allowed_slot_type_ids
+msgid "Порожньо — без обмежень"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__allowed_layer_kind_ids
+msgid "Порожньо — будь-який шар"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__template
+msgid "Порожньо — об'єкт будівлі (ворота/док), без комірок"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__company_id
+msgid "Порожньо — тип каталогу, спільний для всіх компаній"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__depth_mode
+msgid "Порожньо — успадкувати від зони або площадки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_layer__allowed_slot_type_ids
+msgid "Порожньо — усі типи"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Поточна модель"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__power_kw
+msgid "Потужність, кВт"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Права"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_replenish_rule
+#: model:ir.ui.menu,name:td_constructor.menu_td_replenish_rule
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_replenish_rule_list
+msgid "Правила поповнення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__parse_rules
+msgid "Правила розбору кодів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_putaway_rule
+#: model:ir.ui.menu,name:td_constructor.menu_td_putaway_rule
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_putaway_rule_list
+msgid "Правила розміщення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__odoo_rule_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__odoo_orderpoint_id
+msgid "Правило в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__res_model__stock_warehouse_orderpoint
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__res_model__stock_warehouse_orderpoint
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_replenish_rule_form
+msgid "Правило поповнення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_replenish_rule
+msgid "Правило поповнення (чернетка)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__res_model__stock_putaway_rule
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__res_model__stock_putaway_rule
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_putaway_rule_form
+msgid "Правило розміщення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_putaway_rule
+msgid "Правило розміщення (чернетка)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__putaway_fit
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__putaway_fit
+msgid "Правило розміщення: вміститься"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_publish_wizard_line__before
+msgid "Прежні значення полів запису в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_slot_preset
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_preset_form
+msgid "Пресет місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_slot_preset
+#: model:ir.ui.menu,name:td_constructor.menu_td_slot_preset
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_preset_list
+msgid "Пресети місць"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__code_prefix
+msgid "Префікс коду"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot__code_prefix
+msgid "Префікс кодів комірок: AB-R1 → AB-R1-B01-L1; не більше 22 символів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.constraint,message:td_constructor.constraint_td_slot_f3d_slot_prefix_uniq
+msgid "Префікс місця має бути унікальним на площадці."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__code
+msgid ""
+"Префікс площадки для сторонніх кодів: латиниця великими літерами й цифри"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__anchor
+msgid "Прив'язка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__note
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__note
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__note
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_form
+msgid "Примітка"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_line__blocked_reason
+msgid "Причина блокування"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__opacity
+msgid "Прозорість"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__archive_line_ids
+msgid "Пропозиції архівації"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__n_archive_offer
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__kind__archive
+msgid "Пропонуємо архівувати"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Пропонуємо архівувати (лише пропозиція, нічого не видаляється)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__aisles
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Проходи"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__aisles_free
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__aisles_free
+msgid "Проходи вільні"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form_ops
+msgid "Публікацію відкочено:"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Публікацію заборонено: є зауваження зі статусом «Заборона» ("
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layout_version__kind__publish
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+msgid "Публікація"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_putaway_rule__deleted
+#: model:ir.model.fields,help:td_constructor.field_td_replenish_rule__deleted
+msgid "Публікація видалить правило в Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_publish_wizard
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Публікація розкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__create_equipment
+msgid ""
+"Публікація створює maintenance.equipment для розміщень цього варіанта, якщо "
+"запису ще немає. Для зведених варіантів сцени («Об'єкти сцени · …») "
+"вимкнено: будівлі, планшети, світильники тощо — частина 3D-моделі, а не "
+"облік обладнання; увімкніть свідомо, якщо потрібен запис."
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__style__dashed
+msgid "Пунктир"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__front_side__s
+msgid "Південь (−Y)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__front_side__n
+msgid "Північ (+Y)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__underlay_attachment_id
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Підкладка"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Підключення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__template__floor_stack
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__template__floor_stack
+msgid "Підлогове штабелювання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__group__floor
+msgid "Підлогові"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__sublocation
+msgid "Підлокація"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__target_label
+msgid "Підпис об'єкта"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Підставити габарити з моделі"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Підтвердити й опублікувати"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__mode
+msgid "Режим"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__robot
+msgid "Робот"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__workcenter_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__res_model__mrp_workcenter
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_line__res_model__mrp_workcenter
+msgid "Робочий центр"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Розмір"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__placement
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Розміщення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_placement
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_placement_form
+msgid "Розміщення обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__placement_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__placement_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__placement_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__placement_count
+msgid "Розміщень"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_row
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_site__loc_tree__row
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_preset__kind__row
+msgid "Ряд"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_publish_wizard_line
+msgid "Рядок плану публікації"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__custom
+msgid "Свій шар"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_bay
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_site__loc_tree__section
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_preset__kind__section
+msgid "Секція"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__service_back_mm
+msgid "Сервіс ззаду, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__service_left_mm
+msgid "Сервіс ліворуч, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__service_right_mm
+msgid "Сервіс праворуч, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__service_front_mm
+msgid "Сервіс спереду, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__severity
+msgid "Серйозність"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.js:0
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Скасувати"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__warehouse_id
+msgid "Склад Odoo"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__warehouse_id
+msgid "Склад, до якого належить площадка (склад конструктор не створює)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__kind__storage
+msgid "Склади"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__group__special
+msgid "Спеціальні"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Спростити"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Спростити?"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__code
+msgid "Стабільний ключ типу (латиниця)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__after
+msgid "Стало"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__state
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__state
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_search
+msgid "Стан"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__wizard_state
+msgid "Стан майстра «З нуля»"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__model_status
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_search
+msgid "Статус моделі"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__underlay_status
+msgid "Статус підкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard__create_line_ids
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_publish_wizard_form
+msgid "Створення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__created_count
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_op__op__create
+msgid "Створено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__origin_id
+msgid "Створено з"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_slot_type__is_custom
+msgid "Створено користувачем; типи каталогу — ні"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__create_equipment
+msgid "Створювати обладнання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__create_workcenter
+msgid "Створювати робочий центр"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__rack
+msgid "Стелаж"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__group__rack
+msgid "Стелажні"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__style
+msgid "Стиль"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__front_side
+msgid "Сторона фронту"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__front_side
+msgid "Сторона фронту при повороті 0°"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot_type__loc_kind__stack
+msgid "Стос плит"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__removal_strategy_id
+msgid "Стратегія списання"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_site__odoo_baseline_id
+msgid ""
+"Стрічка локацій на момент останньої публікації або «Оновити з Odoo» (F02-09)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_layer__style__solid
+msgid "Суцільний"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__front_side__e
+msgid "Схід (+X)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_comment__text
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_comment_form
+msgid "Текст"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__temp_min_c
+msgid "Температура від, °C"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__temp_max_c
+msgid "Температура до, °C"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__tech
+msgid "Техніка зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__aisle_tech
+msgid "Техніка проходів"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_form
+msgid "Тип"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__passport_id
+msgid "Тип (паспорт)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_slot_type
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__type_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_preset__type_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_term__term_type__slot_type
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_form
+msgid "Тип місця"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_slot_type
+#: model:ir.ui.menu,name:td_constructor.menu_td_slot_type
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_type_search
+msgid "Типи місць"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__package_type_ids
+msgid "Типи упаковки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_putaway_rule__product_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_replenish_rule__product_id
+msgid "Товар"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,help:td_constructor.field_td_equipment_variant__anchor
+msgid "Точка, якою виріб прив'язаний до (x, y) розміщення"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__utilities
+msgid "Точки підключення"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Трикутників"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_check_config__enabled
+msgid "Увімкнено"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_preview.js:0
+msgid "Умовна модель (3D-файлу немає)"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__inside
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__inside
+msgid "Усередині контуру"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Файл"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot_type__shape
+msgid "Форма 3D"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "Формат"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__underlay_format
+msgid "Формат підкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__function_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_term__term_type__zone_function
+msgid "Функція зони"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__edit_group_ids
+#: model:ir.model.fields,field_description:td_constructor.field_td_zone_lock__user_id
+msgid "Хто редагує"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__anchor__center
+msgid "Центр"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__anchor__back
+msgid "Центр тилу"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_variant__anchor__front
+msgid "Центр фронту"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_variant__metrics
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__metrics
+msgid "Цифри для порівняння"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Чернетка · змінено"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_draft_mixin
+msgid "Чернетка площадки: лічильник правок і права"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layout_version_form
+msgid ""
+"Чернетку площадки буде замінено знімком цієї версії. Записи Odoo не "
+"змінюються. Продовжити?"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__rollback_reason
+msgid "Чому не можна відкотити"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__template
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_search
+msgid "Шаблон"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_placement__layer_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_wizard_issue__layer_id
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__layer_id
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_comment__target_kind__layer
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_slot_search
+msgid "Шар"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model,name:td_constructor.model_td_layer
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_form
+msgid "Шар розкладки"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.actions.act_window,name:td_constructor.action_td_layer
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__layer_ids
+#: model:ir.ui.menu,name:td_constructor.menu_td_layer
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_list
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_layer_search
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_site_form
+msgid "Шари"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layout_version__layer_count
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__layer_count
+msgid "Шарів"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_equipment_passport__td_category__panel
+msgid "Шафа/щит"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_site__building_width_m
+msgid "Ширина будівлі, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_slot__footprint_w_m
+msgid "Ширина габариту, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_check_config__check_key__aisle_width
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_publish_wizard_issue__check_key__aisle_width
+msgid "Ширина проходу за технікою"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_layer__aisle_width_m
+msgid "Ширина проходу, м"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__width_mm
+msgid "Ширина, мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_equipment_variant__panel
+msgid "Щит"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_stock_location__td_level
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_site__depth_mode__level
+#: model:ir.model.fields.selection,name:td_constructor.selection__td_slot__depth_mode__level
+msgid "Ярус"
+msgstr ""
+
+#. module: td_constructor
+#. odoo-javascript
+#: code:addons/td_constructor/static/src/widgets/model_upload.xml:0
+msgid "визначено автоматично"
+msgstr ""
+
+#. module: td_constructor
+#: model_terms:ir.ui.view,arch_db:td_constructor.view_td_equipment_variant_kanban
+msgid "мм"
+msgstr ""
+
+#. module: td_constructor
+#: model:ir.model.fields,field_description:td_constructor.field_td_publish_op__seq
+msgid "№ п/п"
+msgstr ""

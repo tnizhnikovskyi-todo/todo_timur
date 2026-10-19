@@ -1,17 +1,13 @@
 /** @odoo-module */
 // Редактор у зборі (нульовий рендерер, мок RPC): AC-10 (шари, сітка, видимість), AC-49 (роль → блокування), AC-63 (перетягування
 // у прохід), AC-64 (поворот), AC-65 (лінійка, Delete без нативних діалогів), групи шарів, dynamic у перевірках, code_style 'exact'.
-import { advanceTime, after, animationFrame, describe, expect, getFixture, queryAll, queryOne, test } from "@odoo/hoot";
-import { generateCells } from "@td_constructor/editor/cells";
-import { runChecks } from "@td_constructor/editor/checks";
-import { E, S, V } from "@td_constructor/editor/state";
-import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
-import { OdooStore } from "@td_constructor/editor/store";
-import { THREE } from "@td_constructor/editor/three";
+import { advanceTime, after, animationFrame, beforeEach, describe, expect, getFixture, queryAll, queryOne, test } from "@odoo/hoot";
+import { E, OdooStore, S, THREE, V, generateCells, mountEditor, runChecks, setupCore, unmountEditor } from "./core";
 import { golden, near } from "./helpers";
 import { makeLoad, mockRpc } from "./fixtures";
 
 describe.current.tags("desktop");
+beforeEach(setupCore);
 
 const SAVE = "/f3d/constructor/save";
 

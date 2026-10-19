@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- S6 (волна 2): «Інструкція» (F19-01) — ті самі 36 тем, що в редакторі (core/constructor/help_topics.js; відповідність
+         перевіряє tests/test_s6_help.py), двома мовами: UK за замовчуванням, EN — мовою користувача en* чи ?lang=en.
+         Файл створює скрипт з help_topics.js: правити тексти в JS і перегенерувати. Також: вигляди `td.comment` (виконавець, чат,
+         пошук) і `td.layout.variant` поверх скелета td_collab_views.xml, меню «Інструкція». -->
+    <template id="td_help_page" name="Інструкція конструктора">
+        <t t-call="web.layout" t-translation="off">
+            <t t-set="title"><t t-if="en">Constructor help</t><t t-else="">Інструкція конструктора</t></t>
+            <t t-set="head">
+                <style>
+                    body { font-family: system-ui, sans-serif; margin: 0; color: #1f2933; background: #f6f7f9; }
+                    .td-help { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; background: #fff; min-height: 100vh; }
+                    .td-help h1 { font-size: 26px; margin: 0 0 4px; }
+                    .td-help nav ol { columns: 2; column-gap: 32px; padding-left: 22px; }
+                    .td-help nav a { text-decoration: none; color: #0b6e75; }
+                    .td-help section { margin-top: 26px; border-top: 1px solid #e2e6ea; padding-top: 8px; }
+                    .td-help h2 { font-size: 18px; margin: 8px 0; }
+                    .td-help p { line-height: 1.55; margin: 6px 0; }
+                    .td-help .lang { float: right; font-size: 13px; }
+                </style>
+            </t>
+            <div class="td-help" t-translation="off" t-att-lang="'en' if en else 'uk'">
+                <div class="lang">
+                    <a href="?lang=uk">Українська</a> · <a href="?lang=en">English</a>
+                </div>
+                <h1><t t-if="en">Constructor help</t><t t-else="">Інструкція конструктора</t></h1>
+                <p><t t-if="en">36 topics. The same text is available in the editor (More → Help).</t><t t-else="">36 тем. Той самий текст — у редакторі (Ще → Інструкція).</t></p>
+                <nav>
+                    <ol>
+                        <li><a href="#topic-start"><t t-if="en">Getting started</t><t t-else="">Початок роботи</t></a></li>
+                        <li><a href="#topic-view"><t t-if="en">The window and the camera</t><t t-else="">Вікно й камера</t></a></li>
+                        <li><a href="#topic-levels"><t t-if="en">Levels and navigation</t><t t-else="">Рівні й навігація</t></a></li>
+                        <li><a href="#topic-minimap"><t t-if="en">The minimap</t><t t-else="">Мініатюра плану</t></a></li>
+                        <li><a href="#topic-select"><t t-if="en">Selection</t><t t-else="">Виділення</t></a></li>
+                        <li><a href="#topic-multi"><t t-if="en">Several objects and copying</t><t t-else="">Кілька об'єктів і копіювання</t></a></li>
+                        <li><a href="#topic-undo"><t t-if="en">Undo and redo</t><t t-else="">Скасування й повтор</t></a></li>
+                        <li><a href="#topic-layers"><t t-if="en">Layers and visibility</t><t t-else="">Шари й видимість</t></a></li>
+                        <li><a href="#topic-racks"><t t-if="en">Racks and places</t><t t-else="">Стелажі й місця</t></a></li>
+                        <li><a href="#topic-catalog"><t t-if="en">The type catalog and parameters</t><t t-else="">Каталог типів і параметри</t></a></li>
+                        <li><a href="#topic-presets"><t t-if="en">Templates and library</t><t t-else="">Шаблони й бібліотека</t></a></li>
+                        <li><a href="#topic-zones"><t t-if="en">Zones and aisles</t><t t-else="">Зони й проходи</t></a></li>
+                        <li><a href="#topic-address"><t t-if="en">Addressing</t><t t-else="">Адресація</t></a></li>
+                        <li><a href="#topic-capacity"><t t-if="en">Capacity, categories and attributes</t><t t-else="">Ємність, категорії та атрибути</t></a></li>
+                        <li><a href="#topic-putaway"><t t-if="en">Putaway rules</t><t t-else="">Правила розміщення</t></a></li>
+                        <li><a href="#topic-checks"><t t-if="en">Model checks</t><t t-else="">Перевірки моделі</t></a></li>
+                        <li><a href="#topic-building"><t t-if="en">The building plan and aisles</t><t t-else="">План будівлі та проходи</t></a></li>
+                        <li><a href="#topic-scratch"><t t-if="en">The “From scratch” wizard</t><t t-else="">Майстер «З нуля»</t></a></li>
+                        <li><a href="#topic-autolayout"><t t-if="en">Auto-layout</t><t t-else="">Авторозкладка</t></a></li>
+                        <li><a href="#topic-parse"><t t-if="en">Code parsing and the tray</t><t t-else="">Розбір кодів і лоток</t></a></li>
+                        <li><a href="#topic-import"><t t-if="en">Files: import and export</t><t t-else="">Файли: імпорт і експорт</t></a></li>
+                        <li><a href="#topic-odoo"><t t-if="en">Structure from Odoo and differences</t><t t-else="">Структура з Odoo і розбіжності</t></a></li>
+                        <li><a href="#topic-find"><t t-if="en">Search and go to a code</t><t t-else="">Пошук і перехід по коду</t></a></li>
+                        <li><a href="#topic-heat"><t t-if="en">Metrics and heat maps</t><t t-else="">Показники й теплові карти</t></a></li>
+                        <li><a href="#topic-labels"><t t-if="en">Labels</t><t t-else="">Етикетки</t></a></li>
+                        <li><a href="#topic-docs"><t t-if="en">Documents</t><t t-else="">Документи</t></a></li>
+                        <li><a href="#topic-save"><t t-if="en">Saving and the draft</t><t t-else="">Збереження й чернетка</t></a></li>
+                        <li><a href="#topic-publish"><t t-if="en">Applying to Odoo</t><t t-else="">Застосування в Odoo</t></a></li>
+                        <li><a href="#topic-history"><t t-if="en">Version history</t><t t-else="">Історія версій</t></a></li>
+                        <li><a href="#topic-variants"><t t-if="en">Layout variants</t><t t-else="">Варіанти планування</t></a></li>
+                        <li><a href="#topic-comments"><t t-if="en">Comments on objects</t><t t-else="">Коментарі на об'єктах</t></a></li>
+                        <li><a href="#topic-locks"><t t-if="en">Zone locks</t><t t-else="">Блокування зон</t></a></li>
+                        <li><a href="#topic-tours"><t t-if="en">Tours and the training copy</t><t t-else="">Тури й навчальна копія</t></a></li>
+                        <li><a href="#topic-phone"><t t-if="en">Working from a phone</t><t t-else="">Робота з телефона</t></a></li>
+                        <li><a href="#topic-roles"><t t-if="en">Roles and rights</t><t t-else="">Ролі й права</t></a></li>
+                        <li><a href="#topic-hotkeys"><t t-if="en">Hotkeys</t><t t-else="">Гарячі клавіші</t></a></li>
+                    </ol>
+                </nav>
+                <section id="topic-start" class="td-help-topic">
+                    <h2><t t-if="en">Getting started</t><t t-else="">Початок роботи</t></h2>
+                    <t t-if="en">
+                        <p>The constructor is a 3D editor of the warehouse and production layout. Layers, places and the catalog are on the left, the scene in the middle, properties of the selection on the right. Changes go to the draft and are saved automatically; they reach Odoo only after publishing.</p>
+                        <p>The “Beginner tour” (menu “More → Tours”) helps newcomers.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Конструктор — це 3D-редактор розкладки складу й виробництва. Зліва шари, місця й каталог, посередині сцена, праворуч властивості вибраного. Зміни йдуть у чернетку й зберігаються самі; в Odoo вони потрапляють лише після публікації.</p>
+                        <p>Новачкові допоможе «Тур новачка» (меню «Ще → Тури»).</p>
+                    </t>
+                </section>
+                <section id="topic-view" class="td-help-topic">
+                    <h2><t t-if="en">The window and the camera</t><t t-else="">Вікно й камера</t></h2>
+                    <t t-if="en">
+                        <p>“3D” and “Plan” switch the view, “Fit” shows everything. Wheel — zoom, right button — pan, left — rotate. “Labels” turns object labels on, “Ruler” (M) measures distance.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Кнопки «3D» і «План» перемикають вигляд, «Вписати» показує все. Колесо — масштаб, права кнопка — панорама, ліва — обертання. «Підписи» вмикають підписи об'єктів, «Лінійка» (M) міряє відстань.</p>
+                    </t>
+                </section>
+                <section id="topic-levels" class="td-help-topic">
+                    <h2><t t-if="en">Levels and navigation</t><t t-else="">Рівні й навігація</t></h2>
+                    <t t-if="en">
+                        <p>The bar above the scene shows the levels: warehouse › zone › row › bay › tier. Click a level — the rest hides and the camera zooms in. “↓” drills down to the selection, “↑” goes a level up, “⟲” resets. Key U — level up.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Рядок над сценою показує рівні: склад › зона › ряд › стелаж › ярус. Клацніть рівень — решта сховається, камера наїде на нього. «↓» заглиблює до виділеного, «↑» піднімає на рівень, «⟲» скидає. Клавіша U — рівень вище.</p>
+                    </t>
+                </section>
+                <section id="topic-minimap" class="td-help-topic">
+                    <h2><t t-if="en">The minimap</t><t t-else="">Мініатюра плану</t></h2>
+                    <t t-if="en">
+                        <p>A minimap with the outline, zones and objects sits in the scene corner. The red frame is what is on screen; click or drag on it to move the camera. The “Minimap” button hides it.</p>
+                    </t>
+                    <t t-else="">
+                        <p>У куті сцени — мініатюра з контуром, зонами й об'єктами. Червона рамка — те, що видно на екрані; клік чи перетягування по мініатюрі переносить камеру. Кнопка «Мініатюра» ховає її.</p>
+                    </t>
+                </section>
+                <section id="topic-select" class="td-help-topic">
+                    <h2><t t-if="en">Selection</t><t t-else="">Виділення</t></h2>
+                    <t t-if="en">
+                        <p>A click selects an object. “Click selects” under the levels chooses what exactly: a place, bay, row or zone; a repeated click on the same object goes a level up (place → bay → row → zone → warehouse).</p>
+                    </t>
+                    <t t-else="">
+                        <p>Клік по об'єкту виділяє його. «Клік виділяє» під рівнями вибирає, що саме: місце, стелаж, ряд чи зону; повторний клік по тому самому піднімає вибір на рівень вище (місце → стелаж → ряд → зона → склад).</p>
+                    </t>
+                </section>
+                <section id="topic-multi" class="td-help-topic">
+                    <h2><t t-if="en">Several objects and copying</t><t t-else="">Кілька об'єктів і копіювання</t></h2>
+                    <t t-if="en">
+                        <p>Ctrl+click adds to the selection, Shift+box in Plan selects an area. A group has common properties, alignment and distribution. Ctrl+D duplicates, Ctrl+C/Ctrl+V copies and pastes, “Array of copies…” lays out N×M.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Ctrl+клік додає до виділення, Shift+рамка в «Плані» виділяє область. Для групи — спільні властивості, вирівнювання, розподіл. Ctrl+D дублює, Ctrl+C/Ctrl+V копіює й вставляє, «Масив копій…» розкладає N×M.</p>
+                    </t>
+                </section>
+                <section id="topic-undo" class="td-help-topic">
+                    <h2><t t-if="en">Undo and redo</t><t t-else="">Скасування й повтор</t></h2>
+                    <t t-if="en">
+                        <p>Ctrl+Z undoes the last change, Ctrl+Shift+Z or Ctrl+Y redoes it. Buttons ↶ ↷ are on the scene header. The history is shared by all session changes, including addressing and rules.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Ctrl+Z скасовує останню зміну, Ctrl+Shift+Z чи Ctrl+Y повертає. Кнопки ↶ ↷ у шапці сцени. Історія спільна для всіх змін сеансу, у тому числі адресації й правил.</p>
+                    </t>
+                </section>
+                <section id="topic-layers" class="td-help-topic">
+                    <h2><t t-if="en">Layers and visibility</t><t t-else="">Шари й видимість</t></h2>
+                    <t t-if="en">
+                        <p>A layer is a separate set of objects with an elevation, grid step and rules: who edits, which place types are allowed. The eye toggles visibility for you only; the active layer is always visible.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Шар — окремий набір об'єктів із відміткою висоти, кроком сітки й правилами: хто редагує, які типи місць дозволені. Око вмикає видимість лише для вас, активний шар завжди видно.</p>
+                    </t>
+                </section>
+                <section id="topic-racks" class="td-help-topic">
+                    <h2><t t-if="en">Racks and places</t><t t-else="">Стелажі й місця</t></h2>
+                    <t t-if="en">
+                        <p>The “Places” tab holds templates: pallet rack, shelves, cantilevers, floor spots, zones. A place yields cells with codes; parameters (bays, tiers, size, load) change on the right and show on the scene at once.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Вкладка «Місця» — шаблони: палетний стелаж, полиці, консолі, місця на підлозі, зони. Місце дає комірки з кодами; параметри (пролети, яруси, габарит, навантаження) змінюються праворуч і відразу видні на сцені.</p>
+                    </t>
+                </section>
+                <section id="topic-catalog" class="td-help-topic">
+                    <h2><t t-if="en">The type catalog and parameters</t><t t-else="">Каталог типів і параметри</t></h2>
+                    <t t-if="en">
+                        <p>The catalog has 50 place types: racks, areas, stacks, cabinets, fences. Each type has a shape, parameters and an Odoo location kind. Types can be added and changed; a changed type applies to places of that type.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Каталог — 50 типів місць: стелажі, площі, стопки, шафи, огородження. Кожен тип має форму, параметри й вид локації в Odoo. Типи можна додавати й змінювати; змінений тип застосовується до місць цього типу.</p>
+                    </t>
+                </section>
+                <section id="topic-presets" class="td-help-topic">
+                    <h2><t t-if="en">Templates and library</t><t t-else="">Шаблони й бібліотека</t></h2>
+                    <t t-if="en">
+                        <p>A selection can be saved as a template and inserted into another project. The “Library” shows saved types and templates; a manager deletes them.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Виділене можна зберегти як шаблон і вставити в інший проєкт. «Бібліотека» показує збережені типи й шаблони; видаляє менеджер.</p>
+                    </t>
+                </section>
+                <section id="topic-zones" class="td-help-topic">
+                    <h2><t t-if="en">Zones and aisles</t><t t-else="">Зони й проходи</t></h2>
+                    <t t-if="en">
+                        <p>A zone is an outline within which common settings apply: storage category, function, attributes, temperature. Objects inside inherit them. Aisles and fire zones are set on the layer.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Зона — контур, у межах якого діють спільні налаштування: категорія зберігання, функція, атрибути, температура. Об'єкти всередині успадковують їх. Проходи й пожежні зони задаються на шарі.</p>
+                    </t>
+                </section>
+                <section id="topic-address" class="td-help-topic">
+                    <h2><t t-if="en">Addressing</t><t t-else="">Адресація</t></h2>
+                    <t t-if="en">
+                        <p>A code mask such as “{zone}-{row}-{bay}-{tier}” sets cell and Odoo location names. Published codes are pinned by default; renumbering all is for a manager only, with a warning about new labels.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Маска коду, напр. «{зона}-{ряд}-{секція}-{ярус}», задає імена комірок і локацій Odoo. Опубліковані коди за замовчуванням закріплені; перенумерація всіх — лише менеджер, із попередженням про нові етикетки.</p>
+                    </t>
+                </section>
+                <section id="topic-capacity" class="td-help-topic">
+                    <h2><t t-if="en">Capacity, categories and attributes</t><t t-else="">Ємність, категорії та атрибути</t></h2>
+                    <t t-if="en">
+                        <p>A cell capacity is pallet places and maximum weight; the storage category defines what and how much can be put. Capacity summaries exist for a row, a zone and the warehouse. Category data comes from Odoo.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Ємність комірки — палетомісця й максимальна вага; категорія зберігання задає, що й скільки можна класти. Зведення ємності є для ряду, зони й складу. Дані категорій беруться з Odoo.</p>
+                    </t>
+                </section>
+                <section id="topic-putaway" class="td-help-topic">
+                    <h2><t t-if="en">Putaway rules</t><t t-else="">Правила розміщення</t></h2>
+                    <t t-if="en">
+                        <p>A rule says where to put a product or category and sets min/max replenishment. Rules are part of the draft and reach Odoo only by publishing; the “does it fit” check warns about overflow.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Правило каже, куди покласти товар чи категорію, і задає min/max поповнення. Правила — частина чернетки й потрапляють в Odoo лише публікацією; перевірка «чи вміститься» попереджає про переповнення.</p>
+                    </t>
+                </section>
+                <section id="topic-checks" class="td-help-topic">
+                    <h2><t t-if="en">Model checks</t><t t-else="">Перевірки моделі</t></h2>
+                    <t t-if="en">
+                        <p>Overlaps, outside the outline, aisles, ceiling height, weight against load, code conflicts. A block stops the action, a warning only informs; each check's mode is configurable.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Перетини, вихід за контур, проходи, висота до стелі, вага проти навантаження, конфлікти кодів. Заборона блокує дію, попередження лише повідомляє; режим кожної перевірки налаштовується.</p>
+                    </t>
+                </section>
+                <section id="topic-building" class="td-help-topic">
+                    <h2><t t-if="en">The building plan and aisles</t><t t-else="">План будівлі та проходи</t></h2>
+                    <t t-if="en">
+                        <p>The building outline, columns, walls, doors and aisles are set in “Building” mode. Checks for leaving the outline, a narrow aisle and height depend on them.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Контур будівлі, колони, стіни, двері й проходи задаються в режимі «Будівля». Від них залежать перевірки виходу за контур, вузького проходу й висоти.</p>
+                    </t>
+                </section>
+                <section id="topic-scratch" class="td-help-topic">
+                    <h2><t t-if="en">The “From scratch” wizard</t><t t-else="">Майстер «З нуля»</t></h2>
+                    <t t-if="en">
+                        <p>For a new site the wizard leads step by step: outline, columns, zones, first rows. Steps are saved — you can stop and come back.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Для нової площадки майстер веде крок за кроком: контур, колони, зони, перші ряди. Кроки зберігаються — можна припинити й повернутися.</p>
+                    </t>
+                </section>
+                <section id="topic-autolayout" class="td-help-topic">
+                    <h2><t t-if="en">Auto-layout</t><t t-else="">Авторозкладка</t></h2>
+                    <t t-if="en">
+                        <p>The algorithm lays out racks in a zone by aisle widths and handling equipment. The result is ordinary places you can edit; undo with Ctrl+Z.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Алгоритм розкладає стелажі в зоні за ширинами проходів і технікою. Результат — звичайні місця, їх можна правити; скасування — Ctrl+Z.</p>
+                    </t>
+                </section>
+                <section id="topic-parse" class="td-help-topic">
+                    <h2><t t-if="en">Code parsing and the tray</t><t t-else="">Розбір кодів і лоток</t></h2>
+                    <t t-if="en">
+                        <p>Odoo codes are split by a mask into zone, row, bay and tier. Unrecognised ones go to the “Not placed” tray, from where they can be dragged onto the scene.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Коди з Odoo розкладаються за маскою на зону, ряд, секцію й ярус. Нерозпізнані потрапляють у лоток «Не розміщено», звідки їх можна перетягнути на сцену.</p>
+                    </t>
+                </section>
+                <section id="topic-import" class="td-help-topic">
+                    <h2><t t-if="en">Files: import and export</t><t t-else="">Файли: імпорт і експорт</t></h2>
+                    <t t-if="en">
+                        <p>Import of XLSX/CSV (cp1251 and the “;” separator are recognised) and of the warehouse structure from Odoo; export to CSV/XLSX “there and back”. A preview is shown before creating.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Імпорт XLSX/CSV (кодування cp1251 і розділювач «;» розпізнаються) і структури складу з Odoo; експорт у CSV/XLSX «туди й назад». Перед створенням показується попередній перегляд.</p>
+                    </t>
+                </section>
+                <section id="topic-odoo" class="td-help-topic">
+                    <h2><t t-if="en">Structure from Odoo and differences</t><t t-else="">Структура з Odoo і розбіжності</t></h2>
+                    <t t-if="en">
+                        <p>“Update from Odoo” compares the model with current locations and shows differences; each can be accepted or rejected. Records created in Odoo without stock can be rolled back.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Оновити з Odoo» порівнює модель із поточними локаціями й показує розбіжності; кожну можна прийняти чи відхилити. Створені в Odoo без залишків можна відкотити.</p>
+                    </t>
+                </section>
+                <section id="topic-find" class="td-help-topic">
+                    <h2><t t-if="en">Search and go to a code</t><t t-else="">Пошук і перехід по коду</t></h2>
+                    <t t-if="en">
+                        <p>Key “/” or Ctrl+K opens “Go to a place”: a code or barcode, the camera zooms to the cell. “Where is it” searches by product, lot or package.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Клавіша «/» чи Ctrl+K відкриває «Перейти до місця»: код або штрихкод, камера наїжджає на комірку. «Де лежить» шукає за товаром, партією чи упаковкою.</p>
+                    </t>
+                </section>
+                <section id="topic-heat" class="td-help-topic">
+                    <h2><t t-if="en">Metrics and heat maps</t><t t-else="">Показники й теплові карти</t></h2>
+                    <t t-if="en">
+                        <p>“Metric” paints cells by fill, stock age, movement and min/max. The legend shows cell counts per class. In the prototype the data is a demo, marked “demo”.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Показник» фарбує комірки за заповненістю, віком запасу, рухом і min/max. Легенда показує кількість комірок у класах. У прототипі дані демонстраційні, позначені «демо».</p>
+                    </t>
+                </section>
+                <section id="topic-labels" class="td-help-topic">
+                    <h2><t t-if="en">Labels</t><t t-else="">Етикетки</t></h2>
+                    <t t-if="en">
+                        <p>Cell labels: selection (row, zone, selection), content (code, Code128 barcode, QR), sheet layout. Formats: PDF (on the server), ZPL, CSV and PNG (in the browser).</p>
+                    </t>
+                    <t t-else="">
+                        <p>Етикетки комірок: вибір (ряд, зона, виділення), вміст (код, штрихкод Code128, QR), розкладка аркуша. Формати: PDF (на сервері), ZPL, CSV і PNG (у браузері).</p>
+                    </t>
+                </section>
+                <section id="topic-docs" class="td-help-topic">
+                    <h2><t t-if="en">Documents</t><t t-else="">Документи</t></h2>
+                    <t t-if="en">
+                        <p>Rack specification, site plan and tables. Documents are built from the current draft; tables open in Excel.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Специфікація стелажів, план площадки й таблиці. Документи будуються з поточної чернетки; таблиці відкриваються в Excel.</p>
+                    </t>
+                </section>
+                <section id="topic-save" class="td-help-topic">
+                    <h2><t t-if="en">Saving and the draft</t><t t-else="">Збереження й чернетка</t></h2>
+                    <t t-if="en">
+                        <p>Changes are saved automatically; objects with unsaved changes are marked teal. “Save all” writes at once, “Reset to Odoo data” returns objects to the Odoo state.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Зміни зберігаються автоматично; об'єкти з незбереженими змінами позначені бірюзовим. «Зберегти все» записує негайно, «Скинути до даних Odoo» повертає об'єкти до стану Odoo.</p>
+                    </t>
+                </section>
+                <section id="topic-publish" class="td-help-topic">
+                    <h2><t t-if="en">Applying to Odoo</t><t t-else="">Застосування в Odoo</t></h2>
+                    <t t-if="en">
+                        <p>“Publish” shows the plan of changes: what will be created, renamed, archived. Only after confirmation one transaction runs; created records can be rolled back while they have no stock. Only the active variant is applied.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Опублікувати» показує план змін: що створиться, перейменується, архівується. Лише після підтвердження виконується одна транзакція; створене можна відкотити, поки воно без залишків. Застосовується тільки активний варіант.</p>
+                    </t>
+                </section>
+                <section id="topic-history" class="td-help-topic">
+                    <h2><t t-if="en">Version history</t><t t-else="">Історія версій</t></h2>
+                    <t t-if="en">
+                        <p>The last 50 versions and checkpoints with notes. “View” shows the plan and figures next to the current state, “Restore” returns the draft (the current one is first saved as a separate checkpoint).</p>
+                    </t>
+                    <t t-else="">
+                        <p>Останні 50 версій і контрольних точок із нотатками. «Переглянути» показує схему й цифри поряд із поточним станом, «Відновити» повертає чернетку (поточна спершу зберігається окремою контрольною точкою).</p>
+                    </t>
+                </section>
+                <section id="topic-variants" class="td-help-topic">
+                    <h2><t t-if="en">Layout variants</t><t t-else="">Варіанти планування</t></h2>
+                    <t t-if="en">
+                        <p>“As is”, “Project A/B…” — up to 12 per site. “Create from current” copies the draft, “Make active” switches without losing edits. Comparison: places, pallet places, floor area, volume, capacity, plan operations.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Як є», «Проєкт A/B…» — до 12 на площадку. «Створити з поточного» копіює чернетку, «Зробити активним» перемикає, не втрачаючи правок. Порівняння: місць, палетомісць, площа підлоги, об'єм, ємність, операції плану.</p>
+                    </t>
+                </section>
+                <section id="topic-comments" class="td-help-topic">
+                    <h2><t t-if="en">Comments on objects</t><t t-else="">Коментарі на об'єктах</t></h2>
+                    <t t-if="en">
+                        <p>A note or a “check on site” task on the warehouse, layer, place, cell or placement. Scene badge: blue — a note, orange — an open task, grey — all resolved. Everyone reads and writes, the author or “Design” resolves. In Odoo a task with an assignee becomes their activity.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Нотатка чи задача «перевірити на місці» на складі, шарі, місці, комірці чи розміщенні. Значок на сцені: синій — нотатка, помаранчевий — відкрита задача, сірий — усе вирішено. Читають і пишуть усі, вирішує автор чи «Проєктування». У Odoo задача з виконавцем стає його завданням.</p>
+                    </t>
+                </section>
+                <section id="topic-locks" class="td-help-topic">
+                    <h2><t t-if="en">Zone locks</t><t t-else="">Блокування зон</t></h2>
+                    <t t-if="en">
+                        <p>Selecting an object in edit mode takes its zone for 5 minutes (renewed every minute, released on exit). Someone else's zone shows a red badge; edits there are rejected with a “who and until when” message. Viewing, selecting and commenting are allowed.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Вибір об'єкта в режимі редагування бере його зону на 5 хвилин (продовження раз на хвилину, зняття при виході). Чужу зону видно за червоним значком; правки там відхиляються повідомленням «хто й до котрої». Дивитися, виділяти й коментувати можна.</p>
+                    </t>
+                </section>
+                <section id="topic-tours" class="td-help-topic">
+                    <h2><t t-if="en">Tours and the training copy</t><t t-else="">Тури й навчальна копія</t></h2>
+                    <t t-if="en">
+                        <p>“More → Tours”: the beginner tour and 11 thematic ones; a link like #tour-rack starts a tour at once. A tour that changes data runs in a “training copy” — a temporary variant; at the end — “Keep changes” or “Cancel”. Not available on a phone.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Ще → Тури»: тур новачка й 11 тематичних; посилання виду #tour-rack запускає тур одразу. Тур, що змінює дані, йде в «навчальній копії» — тимчасовому варіанті; в кінці — «Залишити зміни» або «Скасувати». На телефоні недоступно.</p>
+                    </t>
+                </section>
+                <section id="topic-phone" class="td-help-topic">
+                    <h2><t t-if="en">Working from a phone</t><t t-else="">Робота з телефона</t></h2>
+                    <t t-if="en">
+                        <p>On a phone — viewing and search: panels slide in, the place card is full screen, editing is off. The minimap and tours are not available.</p>
+                    </t>
+                    <t t-else="">
+                        <p>На телефоні — перегляд і пошук: панелі висувні, картка місця на весь екран, правка вимкнена. Мініатюра й тури недоступні.</p>
+                    </t>
+                </section>
+                <section id="topic-roles" class="td-help-topic">
+                    <h2><t t-if="en">Roles and rights</t><t t-else="">Ролі й права</t></h2>
+                    <t t-if="en">
+                        <p>“View” — read and comment; “Design” — edit objects of your layers; “Apply” — publish. A manager can see the editor through another role's eyes. Unavailable buttons are disabled with a hint.</p>
+                    </t>
+                    <t t-else="">
+                        <p>«Перегляд» — читати й коментувати; «Проєктування» — правити об'єкти своїх шарів; «Застосування» — публікувати. Менеджер може подивитися на редактор очима іншої ролі. Недоступні кнопки неактивні з підказкою.</p>
+                    </t>
+                </section>
+                <section id="topic-hotkeys" class="td-help-topic">
+                    <h2><t t-if="en">Hotkeys</t><t t-else="">Гарячі клавіші</t></h2>
+                    <t t-if="en">
+                        <p>Ctrl+Z / Ctrl+Y — undo / redo; Ctrl+D, Ctrl+C, Ctrl+V — duplicate, copy, paste; Del — delete; Alt+R — rotate; M — ruler; “/” or Ctrl+K — search; U — level up; Esc — cancel. The full list is under “More → Hotkeys”.</p>
+                    </t>
+                    <t t-else="">
+                        <p>Ctrl+Z / Ctrl+Y — скасувати / повторити; Ctrl+D, Ctrl+C, Ctrl+V — дублювати, копіювати, вставити; Del — видалити; Alt+R — повернути; M — лінійка; «/» чи Ctrl+K — пошук; U — рівень вище; Esc — скасувати. Повний список — «Ще → Гарячі клавіші».</p>
+                    </t>
+                </section>
+            </div>
+        </t>
+    </template>
+
+    <record id="action_td_help" model="ir.actions.act_url">
+        <field name="name">Інструкція конструктора</field>
+        <field name="url">/f3d/constructor/help</field>
+        <field name="target">new</field>
+    </record>
+    <menuitem id="menu_td_constructor_help" name="Інструкція конструктора" parent="td_factory3d.menu_td_root"
+              sequence="16" action="action_td_help" groups="td_factory3d.group_td_user"/>
+
+    <!-- td.comment: виконавець, завдання mail.activity, обговорення (chatter), фільтри -->
+    <record id="view_td_comment_form_s6" model="ir.ui.view">
+        <field name="name">td.comment.form.s6</field>
+        <field name="model">td.comment</field>
+        <field name="inherit_id" ref="td_constructor.view_td_comment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='author_id']" position="after">
+                <field name="assignee_id"/>
+            </xpath>
+            <xpath expr="//sheet" position="after">
+                <chatter/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_td_comment_list_s6" model="ir.ui.view">
+        <field name="name">td.comment.list.s6</field>
+        <field name="model">td.comment</field>
+        <field name="inherit_id" ref="td_constructor.view_td_comment_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='author_id']" position="after">
+                <field name="assignee_id" optional="show"/>
+                <field name="activity_ids" widget="list_activity" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_td_comment_search" model="ir.ui.view">
+        <field name="name">td.comment.search</field>
+        <field name="model">td.comment</field>
+        <field name="arch" type="xml">
+            <search string="Коментарі">
+                <field name="text"/>
+                <field name="target_label"/>
+                <field name="author_id"/>
+                <field name="assignee_id"/>
+                <field name="site_id"/>
+                <filter name="open" string="Відкриті" domain="[('state', '=', 'open')]"/>
+                <filter name="resolved" string="Вирішені" domain="[('state', '=', 'resolved')]"/>
+                <separator/>
+                <filter name="tasks" string="Задачі" domain="[('kind', '=', 'task')]"/>
+                <filter name="notes" string="Коментарі" domain="[('kind', '=', 'note')]"/>
+                <filter name="mine" string="Мої задачі" domain="[('assignee_id', '=', uid)]"/>
+                <group>
+                    <filter name="group_site" string="Площадка" context="{'group_by': 'site_id'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- td.layout.variant: походження навчальної копії, активність -->
+    <record id="view_td_layout_variant_form_s6" model="ir.ui.view">
+        <field name="name">td.layout.variant.form.s6</field>
+        <field name="model">td.layout.variant</field>
+        <field name="inherit_id" ref="td_constructor.view_td_layout_variant_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='is_training']" position="after">
+                <field name="is_current"/>
+                <field name="origin_id"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_td_layout_variant_list_s6" model="ir.ui.view">
+        <field name="name">td.layout.variant.list.s6</field>
+        <field name="model">td.layout.variant</field>
+        <field name="inherit_id" ref="td_constructor.view_td_layout_variant_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='is_training']" position="after">
+                <field name="is_current"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -9,9 +9,9 @@ class TestInstall(TransactionCase):
         env = self.env
         privilege = env.ref('td_constructor.privilege_td_constructor')
         self.assertEqual(len(env['res.groups'].search([('privilege_id', '=', privilege.id)])), 4)
-        self.assertEqual(env['td.term'].search_count([]), 12)
+        self.assertEqual(env['td.term'].search_count([]), 27)  # 13 (+ floor_spot, S1) + 14 довідників зони (S2)
         keys = env['ir.config_parameter'].sudo().search([('key', '=like', 'td.constructor.%')]).mapped('key')
-        self.assertEqual(len(keys), 8)  # 6 з params.xml + publish_enabled і seed_report з хука
+        self.assertEqual(len(keys), 14)  # 12 з params.xml (6 + 6 волн 1–2) + publish_enabled і seed_report з хука
         plan = env.ref('td_constructor.menu_td_constructor_plan')
         main = env.ref('td_constructor.menu_td_constructor')
         root = env.ref('td_factory3d.menu_td_root')

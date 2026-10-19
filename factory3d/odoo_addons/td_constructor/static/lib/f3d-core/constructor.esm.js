@@ -1,0 +1,24013 @@
+// Згенеровано tools/build_core.mjs з factory3d/core/constructor/*. НЕ правити вручну: правте core/ і запустіть збірку.
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// core/constructor/registry.js
+var Registry = class {
+  constructor(name) {
+    this.name = name;
+    this._map = /* @__PURE__ */ new Map();
+    this._n = 0;
+    this._subs = /* @__PURE__ */ new Set();
+  }
+  /**
+   * @param {string} key
+   * @param {*} value
+   * @param {{sequence?: number, force?: boolean}} [opts] sequence — порядок (менше = раніше, за замовчуванням 50);
+   *   без `force` повторна реєстрація ключа — помилка (щоб два слайси не затирали один одного мовчки)
+   */
+  add(key, value, { sequence = 50, force = false } = {}) {
+    if (this._map.has(key) && !force) {
+      throw new Error(`Реєстр «${this.name}»: ключ «${key}» уже зайнятий`);
+    }
+    this._map.set(key, { value, sequence, n: this._n++ });
+    this._notify();
+    return this;
+  }
+  get(key, fallback) {
+    const e = this._map.get(key);
+    if (e) {
+      return e.value;
+    }
+    if (arguments.length > 1) {
+      return fallback;
+    }
+    throw new Error(`Реєстр «${this.name}»: немає ключа «${key}»`);
+  }
+  has(key) {
+    return this._map.has(key);
+  }
+  remove(key) {
+    const had = this._map.delete(key);
+    if (had) {
+      this._notify();
+    }
+    return had;
+  }
+  clear() {
+    this._map.clear();
+    this._notify();
+  }
+  /** [[key, value], …] у порядку sequence, далі — у порядку додавання. */
+  getEntries() {
+    return [...this._map.entries()].sort((a, b) => a[1].sequence - b[1].sequence || a[1].n - b[1].n).map(([k, e]) => [k, e.value]);
+  }
+  getAll() {
+    return this.getEntries().map(([, v]) => v);
+  }
+  keys() {
+    return this.getEntries().map(([k]) => k);
+  }
+  /** Підписка на зміни (повертає функцію відписки). */
+  subscribe(fn) {
+    this._subs.add(fn);
+    return () => this._subs.delete(fn);
+  }
+  _notify() {
+    for (const fn of this._subs) {
+      fn(this);
+    }
+  }
+};
+var REGISTRY_NAMES = ["panels", "dialogs", "checks", "shapes", "metrics", "menu", "hotkeys", "capabilities"];
+var registries = Object.fromEntries(REGISTRY_NAMES.map((n) => [n, new Registry(n)]));
+var CAPABILITY_NAMES = [
+  "publish",
+  "check",
+  "library",
+  "storage",
+  "stock",
+  "putaway",
+  "odoo_import",
+  "rollback",
+  "render",
+  "files",
+  "variants",
+  "comments",
+  "locks"
+];
+var can = (name) => registries.capabilities.get(name, false) === true;
+function setCapabilities(caps = {}) {
+  registries.capabilities.clear();
+  for (const [name, on] of Object.entries(caps)) {
+    registries.capabilities.add(name, !!on, { force: true });
+  }
+}
+function forEachEntry(registry, fn, ctx2) {
+  for (const [key, value] of registry.getEntries()) {
+    if (value && typeof value.when === "function" && !value.when(ctx2)) {
+      continue;
+    }
+    if (value && value.capability && !can(value.capability)) {
+      continue;
+    }
+    try {
+      fn(key, value);
+    } catch (e) {
+      console.error(`Реєстр «${registry.name}», ключ «${key}»:`, e);
+    }
+  }
+}
+
+// core/constructor/adapter.js
+var REQUIRED_METHODS = [
+  "listSites",
+  "createSite",
+  "load",
+  "save",
+  "flush",
+  "saveSite",
+  "saveCheck",
+  "check",
+  "publish",
+  "restoreVersion",
+  "uploadModel",
+  "loadModel",
+  "attachUnderlay",
+  "detachUnderlay",
+  "loadUnderlay",
+  "ensureGroupIds"
+];
+var StoreError = class extends Error {
+  constructor(code, message, extra = {}) {
+    super(message || code);
+    this.code = code;
+    Object.assign(this, extra);
+  }
+};
+function newUid() {
+  const b = new Uint8Array(16);
+  (globalThis.crypto || window.crypto).getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+}
+function assertAdapter(adapter) {
+  const missing = REQUIRED_METHODS.filter((m) => typeof adapter?.[m] !== "function");
+  if (missing.length) {
+    throw new Error(`Адаптер даних не відповідає контракту: немає ${missing.join(", ")}`);
+  }
+  const caps = adapter.capabilities;
+  if (!caps || typeof caps !== "object") {
+    throw new Error("Адаптер даних не оголосив capabilities");
+  }
+  for (const name of Object.keys(caps)) {
+    if (!CAPABILITY_NAMES.includes(name)) {
+      throw new Error(`Адаптер оголосив невідому можливість «${name}»`);
+    }
+  }
+  return adapter;
+}
+var noop = () => {
+};
+var BaseAdapter = class {
+  constructor(o = {}) {
+    this.kind = "base";
+    this.capabilities = {};
+    this.autosaveMs = o.autosaveMs ?? 1500;
+    this.status = "saved";
+    this.onStatus = o.onStatus || noop;
+    this.onSaved = o.onSaved || noop;
+    this.onConflict = o.onConflict || (() => "theirs");
+    this.onReject = o.onReject || noop;
+    this.onReload = o.onReload || noop;
+  }
+  get dirty() {
+    return false;
+  }
+  _setStatus(status, info) {
+    this.status = status;
+    this.onStatus(status, info);
+  }
+  async ensureGroupIds() {
+    return {};
+  }
+  async loadModel() {
+    return null;
+  }
+  async loadUnderlay() {
+    return null;
+  }
+};
+
+// core/constructor/body.js
+var BODY_HTML = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.7A10 10 0 0 1 12 5.5C18.4 5.5 22 12 22 12a17 17 0 0 1-3.2 3.9M6.3 6.8A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1.5 0 2.8-.3 4-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-rot" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+<symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></symbol>
+<symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5L12 12l8-4.5M12 12v9"/></symbol>
+<symbol id="i-plan" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><path d="M3 12h9V3M12 12v9M16 12h5"/></symbol>
+<symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v4h16v-4"/></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5M12 7v5l3 2"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M4 5h16M9 5v14M15 5v14M7 19h4M13 19h4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></symbol>
+</defs></svg>
+<div id="app" data-mtab="layers">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" aria-hidden="true"><path d="M3 21V3h18"/><path d="M7 21V9h6v12M13 15h8v6"/><path d="M3 21h18" stroke-dasharray="2 2"/></svg>
+      <span>Конструктор</span>
+    </div>
+    <div class="grp" id="siteGrp"><label for="siteSel">Площадка</label><select id="siteSel" aria-label="Площадка"></select><button class="fbtn sm" id="btnNewSite" type="button">+<span class="lg"> Нова площадка</span></button></div>
+    <div class="grp"><label for="roleSel">Роль</label><select id="roleSel" aria-label="Роль"></select></div>
+    <div class="seg" id="modeSeg" role="group" aria-label="Режим"><button type="button" data-mode="view" aria-pressed="false">Перегляд</button><button type="button" data-mode="edit" aria-pressed="true">Редагування</button></div>
+    <div class="grow"></div>
+    <span class="chip" id="draftChip">Чернетка · без змін</span>
+    <span class="store" id="storeTag"></span>
+    <div class="grp" id="menuExtra" hidden></div>
+    <button class="fbtn primary" id="btnPublish" type="button">Опублікувати</button>
+    <button class="fbtn" id="btnHistory" type="button">Історія<span class="lg"> версій</span></button>
+    <button class="fbtn icon" id="btnTheme" type="button" aria-label="Тема"></button>
+  </header>
+  <div class="main">
+    <aside class="left" id="left" aria-label="Ліва панель">
+      <nav class="ltabs" role="tablist" id="ltabs">
+        <button type="button" role="tab" data-tab="layers">Шари</button>
+        <button type="button" role="tab" data-tab="slots">Місця</button>
+        <button type="button" role="tab" data-tab="catalog">Каталог</button>
+      </nav>
+      <div class="pane" id="leftBody"></div>
+    </aside>
+    <section class="center" aria-label="3D-сцена">
+      <div id="vp"></div>
+      <div class="vtools" id="vtools"></div>
+      <div class="vnotice" id="vnotice"></div>
+      <div class="legend" id="legend"><div><kbd>R</kbd> поворот · <kbd>Del</kbd> видалити · <kbd>Esc</kbd> скасувати · <kbd>Alt</kbd> без прив’язки · <kbd>←↑↓→</kbd> крок сітки · <kbd>M</kbd> лінійка · ПКМ — панорама (у «Плані» й ЛКМ на порожньому) · колесо — масштаб</div>
+        <div class="lgd"><span><i class="sq e"></i>електрика</span><span><i class="ci a"></i>повітря</span><span><i class="tr d"></i>аспірація</span><span><i class="bx ai"></i>прохід</span><span><i class="bx fp"></i>пожежна зона</span><span><i class="ds w"></i>попередження</span><span><i class="ds b"></i>заборона</span></div></div>
+      <div class="stamp" id="stamp"></div>
+      <div class="rlabel" id="rlabel" hidden></div>
+      <div class="float" id="dxfPanel" hidden></div>
+    </section>
+    <aside class="right" id="right" aria-label="Властивості">
+      <div class="pane" id="rightBody"></div>
+    </aside>
+  </div>
+  <nav class="mtabs" id="mtabs" role="tablist">
+    <button type="button" role="tab" data-mtab="layers">Шари</button>
+    <button type="button" role="tab" data-mtab="slots">Місця</button>
+    <button type="button" role="tab" data-mtab="catalog">Каталог</button>
+    <button type="button" role="tab" data-mtab="props">Об’єкт</button>
+  </nav>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+`;
+
+// core/constructor/data.js
+var data_exports = {};
+__export(data_exports, {
+  CATEGORIES: () => CATEGORIES,
+  CHECKS: () => CHECKS,
+  FRONT_ANGLE: () => FRONT_ANGLE,
+  FRONT_SIDES: () => FRONT_SIDES,
+  LAYER_KINDS: () => LAYER_KINDS,
+  LAYER_UTIL_KINDS: () => LAYER_UTIL_KINDS,
+  LOC_KIND_LABELS: () => LOC_KIND_LABELS,
+  ROLES: () => ROLES,
+  SHAPE_LABELS: () => SHAPE_LABELS,
+  SOLID_SLOTS: () => SOLID_SLOTS,
+  TPL: () => TPL,
+  UTIL_KINDS: () => UTIL_KINDS,
+  defaultParams: () => defaultParams,
+  newLayerDefaults: () => newLayerDefaults,
+  roleName: () => roleName,
+  rotationsList: () => rotationsList,
+  slotHeight: () => slotHeight
+});
+
+// core/constructor/cells.js
+var cells_exports = {};
+__export(cells_exports, {
+  BOTTOM_LIFT: () => BOTTOM_LIFT,
+  CODE_MAX_LEN: () => CODE_MAX_LEN2,
+  LEVEL_KEYS: () => LEVEL_KEYS,
+  LOC_KINDS: () => LOC_KINDS,
+  OVERRIDE_KEYS: () => OVERRIDE_KEYS,
+  PREFIX_MAX_LEN: () => PREFIX_MAX_LEN,
+  SERVICE_SIDES: () => SERVICE_SIDES,
+  SHAPE_KEYS: () => SHAPE_KEYS,
+  SLOT_TEMPLATES: () => SLOT_TEMPLATES,
+  addressedCells: () => addressedCells,
+  cellCount: () => cellCount,
+  cellsOf: () => cellsOf,
+  clearCellsCache: () => clearCellsCache,
+  countCells: () => countCells,
+  footprint: () => footprint,
+  generateCells: () => generateCells,
+  normalizeParams: () => normalizeParams,
+  rawCells: () => rawCells,
+  setContextResolver: () => setContextResolver,
+  slotObb: () => slotObb,
+  templateCodes: () => templateCodes
+});
+
+// core/constructor/geometry.js
+var geometry_exports = {};
+__export(geometry_exports, {
+  FRONT_VECTORS: () => FRONT_VECTORS,
+  aabbOverlap: () => aabbOverlap,
+  anchorOffset: () => anchorOffset,
+  makeObb: () => makeObb,
+  obbAabb: () => obbAabb,
+  obbAxes: () => obbAxes,
+  obbCorners: () => obbCorners,
+  obbInsidePolygon: () => obbInsidePolygon,
+  placementObb: () => placementObb,
+  polygonContains: () => polygonContains,
+  rectObb: () => rectObb,
+  rectPolygon: () => rectPolygon,
+  rotate: () => rotate,
+  satPenetration: () => satPenetration,
+  segmentsCross: () => segmentsCross,
+  serviceObb: () => serviceObb,
+  serviceTotal: () => serviceTotal,
+  utilityPoints: () => utilityPoints
+});
+var FRONT_VECTORS = { s: [0, -1], n: [0, 1], e: [1, 0], w: [-1, 0] };
+var makeObb = (cx, cy, a, b, rot2 = 0) => ({ cx: +cx, cy: +cy, a: +a, b: +b, rot: +rot2 });
+function rotate(x, y, deg) {
+  if (!deg) {
+    return [x, y];
+  }
+  const r = deg * Math.PI / 180;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  return [x * c - y * s, x * s + y * c];
+}
+function obbAxes(obb) {
+  const r = obb.rot * Math.PI / 180;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  return [
+    [c, s],
+    [-s, c]
+  ];
+}
+function obbCorners(obb) {
+  const [[ux, uy], [vx, vy]] = obbAxes(obb);
+  const { cx, cy, a, b } = obb;
+  return [
+    [cx - a * ux - b * vx, cy - a * uy - b * vy],
+    [cx + a * ux - b * vx, cy + a * uy - b * vy],
+    [cx + a * ux + b * vx, cy + a * uy + b * vy],
+    [cx - a * ux + b * vx, cy - a * uy + b * vy]
+  ];
+}
+function obbAabb(obb) {
+  const cs = obbCorners(obb);
+  const xs = cs.map((p) => p[0]);
+  const ys = cs.map((p) => p[1]);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+var rectObb = (x0, y0, x1, y1) => makeObb((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2, 0);
+var aabbOverlap = (A, B3, eps = 0) => !(A[2] < B3[0] - eps || B3[2] < A[0] - eps || A[3] < B3[1] - eps || B3[3] < A[1] - eps);
+function satPenetration(A, B3) {
+  const [[a1x, a1y], [a2x, a2y]] = obbAxes(A);
+  const [[b1x, b1y], [b2x, b2y]] = obbAxes(B3);
+  const dx = B3.cx - A.cx;
+  const dy = B3.cy - A.cy;
+  let best = Infinity;
+  for (const [ux, uy] of [
+    [a1x, a1y],
+    [a2x, a2y],
+    [b1x, b1y],
+    [b2x, b2y]
+  ]) {
+    const rA = A.a * Math.abs(ux * a1x + uy * a1y) + A.b * Math.abs(ux * a2x + uy * a2y);
+    const rB = B3.a * Math.abs(ux * b1x + uy * b1y) + B3.b * Math.abs(ux * b2x + uy * b2y);
+    const depth = rA + rB - Math.abs(dx * ux + dy * uy);
+    if (depth < best) {
+      best = depth;
+    }
+  }
+  return best;
+}
+function distPointSegment(px, py, p1, p2) {
+  const [x1, y1] = p1;
+  const [x2, y2] = p2;
+  const vx = x2 - x1;
+  const vy = y2 - y1;
+  const l2 = vx * vx + vy * vy;
+  if (l2 === 0) {
+    return Math.hypot(px - x1, py - y1);
+  }
+  const t2 = Math.max(0, Math.min(1, ((px - x1) * vx + (py - y1) * vy) / l2));
+  return Math.hypot(px - (x1 + t2 * vx), py - (y1 + t2 * vy));
+}
+function polygonContains(poly2, point, eps = 1e-3) {
+  const [px, py] = point;
+  const n = poly2.length;
+  for (let i = 0; i < n; i++) {
+    if (distPointSegment(px, py, poly2[i], poly2[(i + 1) % n]) <= eps) {
+      return true;
+    }
+  }
+  let inside = false;
+  let j = n - 1;
+  for (let i = 0; i < n; i++) {
+    const [xi, yi] = poly2[i];
+    const [xj, yj] = poly2[j];
+    if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+    j = i;
+  }
+  return inside;
+}
+function side(p, q1, q2) {
+  const vx = q2[0] - q1[0];
+  const vy = q2[1] - q1[1];
+  const len = Math.hypot(vx, vy);
+  return len === 0 ? 0 : (vx * (p[1] - q1[1]) - vy * (p[0] - q1[0])) / len;
+}
+function segmentsCross(p1, p2, q1, q2, eps = 1e-3) {
+  const d1 = side(p1, q1, q2);
+  const d2 = side(p2, q1, q2);
+  const e1 = side(q1, p1, p2);
+  const e2 = side(q2, p1, p2);
+  if (Math.min(Math.abs(d1), Math.abs(d2), Math.abs(e1), Math.abs(e2)) <= eps) {
+    return false;
+  }
+  return d1 * d2 < 0 && e1 * e2 < 0;
+}
+function obbInsidePolygon(obb, poly2, eps = 1e-3) {
+  const cs = obbCorners(obb);
+  if (!cs.every((c) => polygonContains(poly2, c, eps))) {
+    return false;
+  }
+  const n = poly2.length;
+  for (let i = 0; i < 4; i++) {
+    const c1 = cs[i];
+    const c2 = cs[(i + 1) % 4];
+    for (let j = 0; j < n; j++) {
+      if (segmentsCross(c1, c2, poly2[j], poly2[(j + 1) % n], eps)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+var rectPolygon = (length, width2) => [
+  [0, 0],
+  [length, 0],
+  [length, width2],
+  [0, width2]
+];
+function frontFrame(v) {
+  const a = v.length / 2e3;
+  const b = v.width / 2e3;
+  const [fx, fy] = FRONT_VECTORS[v.front_side || "s"] || FRONT_VECTORS.s;
+  const rx = -fy;
+  const ry = fx;
+  const [hf, hl] = fx === 0 ? [b, a] : [a, b];
+  return { f: [fx, fy], r: [rx, ry], hf, hl, a, b };
+}
+function anchorOffset(v) {
+  const { f, r, hf, hl } = frontFrame(v);
+  const anchor = v.anchor || "center";
+  if (anchor === "front") {
+    return [-f[0] * hf, -f[1] * hf];
+  }
+  if (anchor === "back") {
+    return [f[0] * hf, f[1] * hf];
+  }
+  if (anchor === "corner") {
+    return [-f[0] * hf + r[0] * hl, -f[1] * hf + r[1] * hl];
+  }
+  return [0, 0];
+}
+function placementObb(v, x, y, rotation) {
+  const [ox, oy] = anchorOffset(v);
+  const [wx, wy] = rotate(ox, oy, rotation);
+  return makeObb(x + wx, y + wy, v.length / 2e3, v.width / 2e3, rotation);
+}
+function serviceTotal(v) {
+  const s = v.service || {};
+  return ["front", "back", "left", "right"].reduce((acc, k) => acc + Math.max(0, s[k] || 0), 0);
+}
+function serviceObb(v, x, y, rotation) {
+  if (serviceTotal(v) <= 0) {
+    return null;
+  }
+  const s = v.service || {};
+  const { f, r, a, b } = frontFrame(v);
+  const ext = { "+x": 0, "-x": 0, "+y": 0, "-y": 0 };
+  const add = ([vx, vy], value) => {
+    if (vx > 0) {
+      ext["+x"] += value;
+    } else if (vx < 0) {
+      ext["-x"] += value;
+    } else if (vy > 0) {
+      ext["+y"] += value;
+    } else {
+      ext["-y"] += value;
+    }
+  };
+  add(f, (s.front || 0) / 1e3);
+  add([-f[0], -f[1]], (s.back || 0) / 1e3);
+  add(r, (s.right || 0) / 1e3);
+  add([-r[0], -r[1]], (s.left || 0) / 1e3);
+  const body = placementObb(v, x, y, rotation);
+  const lx = (ext["+x"] - ext["-x"]) / 2;
+  const ly = (ext["+y"] - ext["-y"]) / 2;
+  const [wx, wy] = rotate(lx, ly, rotation);
+  return makeObb(
+    body.cx + wx,
+    body.cy + wy,
+    a + (ext["+x"] + ext["-x"]) / 2,
+    b + (ext["+y"] + ext["-y"]) / 2,
+    rotation
+  );
+}
+function utilityPoints(v, x, y, rotation) {
+  const body = placementObb(v, x, y, rotation);
+  return (v.utilities || []).map((u) => {
+    const [wx, wy] = rotate((u.x_mm || 0) / 1e3, (u.y_mm || 0) / 1e3, rotation);
+    return [u.kind, body.cx + wx, body.cy + wy];
+  });
+}
+
+// core/constructor/addr_core.js
+var SEGMENT_KEYS = ["zone", "row", "bay", "level", "pos"];
+var SEGMENT_KINDS = ["num", "alpha"];
+var ROW_FROM = ["up", "down", "left", "right"];
+var ROW_MODES = ["seq", "snake"];
+var BAY_DIRS = ["ltr", "rtl", "odd_even"];
+var LEVEL_DIRS = ["up", "down"];
+var DEPTH_MODES = ["level", "cell"];
+var LOC_TREES = ["flat", "row", "section"];
+var ROW_TEMPLATES = ["pallet_rack", "cantilever", "shelf", "floor_stack"];
+var SPOT_TEMPLATES = ["floor_spot"];
+var SPOT_SEGMENT_ORDER = ["pos", "row", "bay", "level"];
+var CODE_MAX_LEN = 32;
+var TPL_MAX_LEN = 64;
+var ZONE_CODE_MAX_LEN = 8;
+var MAX_ROW_NO = 9999;
+var ALIASES = {
+  prefix: "prefix",
+  "префікс": "prefix",
+  zone: "zone",
+  "зона": "zone",
+  row: "row",
+  aisle: "row",
+  "ряд": "row",
+  bay: "bay",
+  section: "bay",
+  "секція": "bay",
+  level: "level",
+  tier: "level",
+  "ярус": "level",
+  pos: "pos",
+  position: "pos",
+  "позиція": "pos"
+};
+var DEFAULT_TPL = "{zone} {row} {bay} {level} {pos}";
+var DEFAULT_SEP = "-";
+var DEFAULT_SEG = {
+  zone: { kind: "alpha", width: 1, start: 1 },
+  row: { kind: "num", width: 2, start: 1 },
+  bay: { kind: "num", width: 2, start: 1 },
+  level: { kind: "num", width: 1, start: 1 },
+  pos: { kind: "num", width: 1, start: 1 }
+};
+var PRESETS = {
+  legacy: {},
+  zone_row_bay_level: { tpl: DEFAULT_TPL },
+  prefix_bay_level: { tpl: "{prefix} B{bay} L{level} {pos}" },
+  prefix_bay_letter: { tpl: "{prefix} {bay}{level} {pos}", seg: { level: { kind: "alpha" } } },
+  row_odd_even: { tpl: DEFAULT_TPL, bay_dir: "odd_even" }
+};
+var PRESET_LABELS = {
+  legacy: "Як зараз (ПРЕФІКС-B01-L1)",
+  zone_row_bay_level: "Зона-ряд-секція-ярус",
+  prefix_bay_level: "Префікс B01 L1",
+  prefix_bay_letter: "Префікс 01A (ярус буквою)",
+  row_odd_even: "Зона-ряд-секція (чет/непарні)"
+};
+var SEP_RE = /^[A-Za-z0-9._/#:-]{0,3}$/;
+var LITERAL_RE = /^[A-Za-z0-9._/#:-]*$/;
+var AddrError = class extends Error {
+};
+var tplCache = /* @__PURE__ */ new Map();
+function parseTpl(tpl) {
+  if (tplCache.has(tpl)) {
+    return tplCache.get(tpl);
+  }
+  if (typeof tpl !== "string" || !tpl.trim()) {
+    throw new AddrError("Шаблон коду порожній.");
+  }
+  if (tpl.length > TPL_MAX_LEN) {
+    throw new AddrError(`Шаблон коду довший за ${TPL_MAX_LEN} символів.`);
+  }
+  const words = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const raw of tpl.trim().split(/\s+/)) {
+    const tokens = [];
+    let pos = 0;
+    for (const m of raw.matchAll(/\{([^{}]*)\}/g)) {
+      addLiteral(tokens, raw.slice(pos, m.index));
+      const name = ALIASES[m[1].trim().toLowerCase()];
+      if (!name) {
+        throw new AddrError(`Невідомий сегмент {${m[1]}} у шаблоні.`);
+      }
+      if (seen.has(name)) {
+        throw new AddrError(`Сегмент {${m[1]}} повторюється в шаблоні.`);
+      }
+      seen.add(name);
+      tokens.push(["seg", name]);
+      pos = m.index + m[0].length;
+    }
+    addLiteral(tokens, raw.slice(pos));
+    words.push(tokens);
+  }
+  if (!seen.size) {
+    throw new AddrError("У шаблоні немає жодного сегмента ({ряд}, {секція}, {ярус} …).");
+  }
+  if (tplCache.size > 256) {
+    tplCache.clear();
+  }
+  tplCache.set(tpl, words);
+  return words;
+}
+function addLiteral(tokens, text) {
+  if (!text) {
+    return;
+  }
+  if (text.includes("{") || text.includes("}")) {
+    throw new AddrError("Шаблон: дужки { } мають обрамляти назву сегмента.");
+  }
+  if (!LITERAL_RE.test(text)) {
+    throw new AddrError("Шаблон: літери слова — латиниця, цифри та . _ / # : -");
+  }
+  tokens.push(["lit", text]);
+}
+function tplSegments(addr) {
+  const out = /* @__PURE__ */ new Set();
+  for (const word of parseTpl(addr.tpl)) {
+    for (const [kind, name] of word) {
+      if (kind === "seg") {
+        out.add(name);
+      }
+    }
+  }
+  return out;
+}
+function toAlpha(n) {
+  if (!Number.isInteger(n) || n < 1) {
+    throw new AddrError("Буквений сегмент: номер має бути ≥ 1.");
+  }
+  let out = "";
+  while (n) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+function fromAlpha(text) {
+  if (!text || !/^[A-Z]+$/.test(text)) {
+    return null;
+  }
+  let n = 0;
+  for (const ch of text) {
+    n = n * 26 + ch.charCodeAt(0) - 64;
+  }
+  return n;
+}
+function formatValue(spec, n) {
+  if (typeof n === "string") {
+    return n;
+  }
+  const value = spec.start + n - 1;
+  if (spec.kind === "alpha") {
+    return toAlpha(value);
+  }
+  if (value < 0) {
+    throw new AddrError("Номер сегмента менший за нуль.");
+  }
+  return String(value).padStart(spec.width, "0");
+}
+function wordValues(addr, vals) {
+  return parseTpl(addr.tpl).map((word) => {
+    let out = "";
+    for (const [kind, item] of word) {
+      if (kind === "lit") {
+        out += item;
+        continue;
+      }
+      const value = vals[item];
+      if (value == null || value === "") {
+        return null;
+      }
+      out += item === "prefix" ? String(value) : formatValue(addr.seg[item], value);
+    }
+    return out;
+  });
+}
+var renderCode = (addr, vals) => wordValues(addr, vals).filter((w) => w !== null).join(addr.sep);
+function intIn(value, lo, hi, label2) {
+  if (typeof value !== "number" || !Number.isFinite(value) || !Number.isInteger(value)) {
+    throw new AddrError(`${label2}: очікується ціле число.`);
+  }
+  if (value < lo || value > hi) {
+    throw new AddrError(`${label2}: допустимо від ${lo} до ${hi}.`);
+  }
+  return value;
+}
+function choice(value, allowed, label2) {
+  if (!allowed.includes(value)) {
+    throw new AddrError(`${label2}: допустимо ${allowed.join(", ")}.`);
+  }
+  return value;
+}
+var empty = (v) => v == null || v === false || v === "";
+function normalizeAddr(value) {
+  if (empty(value) || value === "legacy") {
+    return {};
+  }
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new AddrError("Адресація має бути об'єктом.");
+  }
+  const out = {};
+  if (!empty(value.row_no)) {
+    out.row_no = intIn(value.row_no, 1, MAX_ROW_NO, "Номер ряду");
+  }
+  if (!empty(value.zone_code)) {
+    const z = value.zone_code;
+    if (typeof z !== "string" || z.length > ZONE_CODE_MAX_LEN || !LITERAL_RE.test(z)) {
+      throw new AddrError(`Код зони: до ${ZONE_CODE_MAX_LEN} символів, латиниця, цифри та . _ / # : -`);
+    }
+    out.zone_code = z;
+  }
+  if (empty(value.tpl)) {
+    if (value.legacy === true) {
+      out.legacy = true;
+    }
+    return out;
+  }
+  parseTpl(value.tpl);
+  const sep = value.sep ?? DEFAULT_SEP;
+  if (typeof sep !== "string" || !SEP_RE.test(sep)) {
+    throw new AddrError("Роздільник: до 3 символів (латиниця, цифри та . _ / # : -).");
+  }
+  const segs2 = value.seg || {};
+  if (typeof segs2 !== "object" || Array.isArray(segs2)) {
+    throw new AddrError("Сегменти мають бути об'єктом.");
+  }
+  const segOut = {};
+  for (const key of SEGMENT_KEYS) {
+    const raw = segs2[key] || {};
+    if (typeof raw !== "object" || Array.isArray(raw)) {
+      throw new AddrError(`Сегмент «${key}»: очікується об'єкт.`);
+    }
+    const base2 = DEFAULT_SEG[key];
+    const label2 = `Сегмент «${key}»`;
+    const kind = choice(raw.kind ?? base2.kind, SEGMENT_KINDS, label2 + ": вид");
+    segOut[key] = {
+      kind,
+      width: intIn(raw.width ?? base2.width, 1, 8, label2 + ": ширина"),
+      start: intIn(raw.start ?? base2.start, kind === "alpha" ? 1 : 0, 999, label2 + ": початок")
+    };
+  }
+  return Object.assign(out, {
+    tpl: value.tpl.trim(),
+    sep,
+    seg: segOut,
+    row_from: choice(value.row_from ?? "up", ROW_FROM, "Напрям рядів"),
+    row_mode: choice(value.row_mode ?? "seq", ROW_MODES, "Режим рядів"),
+    bay_dir: choice(value.bay_dir ?? "ltr", BAY_DIRS, "Напрям секцій"),
+    level_dir: choice(value.level_dir ?? "up", LEVEL_DIRS, "Напрям ярусів")
+  });
+}
+function safeNormalize(value) {
+  try {
+    return normalizeAddr(value);
+  } catch (e) {
+    if (e instanceof AddrError) {
+      return {};
+    }
+    throw e;
+  }
+}
+var isOwn = (addr) => !!addr && ("tpl" in addr || addr.legacy === true);
+function effectiveAddr(...levels) {
+  const own = levels.find((a) => isOwn(a));
+  return own && !own.legacy ? own : null;
+}
+function slotPolygon(slot) {
+  const params = slot.params || {};
+  const poly2 = params.polygon || slot.polygon;
+  if (poly2 && poly2.length >= 3) {
+    return poly2.map((p) => [Number(p[0]), Number(p[1])]);
+  }
+  const { length, width: width2 } = params;
+  if (!length || !width2) {
+    return null;
+  }
+  const rot2 = (slot.rotation || 0) * Math.PI / 180;
+  const cos = Math.cos(rot2);
+  const sin = Math.sin(rot2);
+  const cx = slot.x || 0;
+  const cy = slot.y || 0;
+  return [
+    [-length / 2, -width2 / 2],
+    [length / 2, -width2 / 2],
+    [length / 2, width2 / 2],
+    [-length / 2, width2 / 2]
+  ].map(([px, py]) => [cx + px * cos - py * sin, cy + px * sin + py * cos]);
+}
+function polyArea(poly2) {
+  let total = 0;
+  poly2.forEach(([x1, y1], i) => {
+    const [x2, y2] = poly2[(i + 1) % poly2.length];
+    total += x1 * y2 - x2 * y1;
+  });
+  return Math.abs(total) / 2;
+}
+function center(slot, poly2) {
+  if (poly2) {
+    return [poly2.reduce((a, p) => a + p[0], 0) / poly2.length, poly2.reduce((a, p) => a + p[1], 0) / poly2.length];
+  }
+  return [slot.x || 0, slot.y || 0];
+}
+function orderKey(rowFrom, point, uid2) {
+  const x = Math.floor(point[0] * 100 + 0.5);
+  const y = Math.floor(point[1] * 100 + 0.5);
+  const main = { up: y, down: -y, right: x, left: -x }[rowFrom];
+  const side2 = rowFrom === "up" || rowFrom === "down" ? x : y;
+  return [main, side2, String(uid2)];
+}
+function cmpKeys(a, b) {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] < b[i]) {
+      return -1;
+    }
+    if (a[i] > b[i]) {
+      return 1;
+    }
+  }
+  return 0;
+}
+var uidOf = (slot) => slot.uid || slot.id;
+function* freeNumbers(used) {
+  let n = 0;
+  for (; ; ) {
+    n++;
+    if (!used.has(n)) {
+      yield n;
+    }
+  }
+}
+function addressContext(slots, siteAddr = null, siteDepthMode = "level") {
+  const site = safeNormalize(siteAddr);
+  const out = /* @__PURE__ */ new Map();
+  const byLayer2 = /* @__PURE__ */ new Map();
+  for (const s of slots) {
+    if (!byLayer2.has(s.layer_id)) {
+      byLayer2.set(s.layer_id, []);
+    }
+    byLayer2.get(s.layer_id).push(s);
+  }
+  for (const layerSlots of byLayer2.values()) {
+    const zones = [];
+    for (const s of layerSlots) {
+      const poly2 = s.template === "zone" ? slotPolygon(s) : null;
+      if (poly2) {
+        zones.push({ slot: s, poly: poly2, area: polyArea(poly2) });
+      }
+    }
+    const zoneFrom = site.row_from || "up";
+    const ordered = [...zones].sort((a, b) => cmpKeys(orderKey(zoneFrom, center(a.slot, a.poly), uidOf(a.slot)), orderKey(zoneFrom, center(b.slot, b.poly), uidOf(b.slot))));
+    const zoneNo = new Map(ordered.map((z, i) => [uidOf(z.slot), i + 1]));
+    const scopes = /* @__PURE__ */ new Map();
+    for (const s of layerSlots) {
+      if (s.template === "zone") {
+        continue;
+      }
+      const point = center(s);
+      let host2 = null;
+      for (const z of zones) {
+        if (polygonContains(z.poly, point) && (!host2 || z.area < host2.area)) {
+          host2 = z;
+        }
+      }
+      const zone2 = host2 ? host2.slot : null;
+      const key = zone2 ? uidOf(zone2) : null;
+      if (!scopes.has(key)) {
+        scopes.set(key, { zone: zone2, members: [] });
+      }
+      scopes.get(key).members.push(s);
+    }
+    for (const { zone: zone2, members } of scopes.values()) {
+      const zoneAddr = zone2 ? safeNormalize(zone2.addr) : {};
+      const scopeAddr = effectiveAddr(zoneAddr, site) || {};
+      const rowFrom = scopeAddr.row_from || "up";
+      const zoneValue = zone2 ? zoneAddr.zone_code || zoneNo.get(uidOf(zone2)) || null : null;
+      const depthMode = zone2 && zone2.depth_mode || siteDepthMode || "level";
+      const numbers = /* @__PURE__ */ new Map();
+      for (const templates of [ROW_TEMPLATES, SPOT_TEMPLATES]) {
+        const group = members.filter((s) => templates.includes(s.template));
+        const pinned = new Map(group.map((s) => [uidOf(s), safeNormalize(s.addr).row_no]));
+        const free = freeNumbers(new Set([...pinned.values()].filter((n) => n)));
+        const sorted = [...group].sort((a, b) => cmpKeys(orderKey(rowFrom, center(a), uidOf(a)), orderKey(rowFrom, center(b), uidOf(b))));
+        for (const s of sorted) {
+          numbers.set(uidOf(s), pinned.get(uidOf(s)) || free.next().value);
+        }
+      }
+      for (const s of members) {
+        const uid2 = uidOf(s);
+        const isRow = ROW_TEMPLATES.includes(s.template);
+        out.set(uid2, {
+          addr: effectiveAddr(safeNormalize(s.addr), zoneAddr, site),
+          zone: zoneValue,
+          row: isRow ? numbers.get(uid2) ?? null : null,
+          spot: isRow ? null : numbers.get(uid2) ?? null,
+          depth_mode: s.depth_mode || depthMode
+        });
+      }
+    }
+    for (const s of layerSlots) {
+      if (s.template === "zone") {
+        out.set(uidOf(s), {
+          addr: effectiveAddr(safeNormalize(s.addr), site),
+          zone: null,
+          row: null,
+          spot: null,
+          depth_mode: s.depth_mode || siteDepthMode || "level"
+        });
+      }
+    }
+  }
+  return out;
+}
+var usableContext = (ctx2) => ctx2 && (ctx2.addr || ctx2.depth_mode === "cell") ? ctx2 : null;
+function stateContexts(state) {
+  const site = state.site || {};
+  return addressContext((state.slots || []).map((s) => ({ ...s, uid: s.uid || s.id })), site.addr, site.depth_mode || "level");
+}
+function bayForward(rot2) {
+  const r = (rot2 || 0) * Math.PI / 180;
+  const cos = Math.cos(r);
+  const sin = Math.sin(r);
+  return Math.abs(cos) >= Math.abs(sin) ? cos > 0 : sin < 0;
+}
+function cellVals(ctx2, prefix, rot2, raw, sizes) {
+  const addr = ctx2.addr;
+  const row = ctx2.row;
+  const leftRight = bayForward(rot2);
+  let forward = leftRight;
+  if (addr.row_mode === "snake" && row && row % 2 === 0) {
+    forward = !forward;
+  }
+  if (addr.bay_dir === "rtl") {
+    forward = !forward;
+  }
+  const k = forward ? raw.k : sizes.bays - raw.k + 1;
+  const side2 = raw.side || 1;
+  let bay;
+  if (addr.bay_dir === "odd_even") {
+    const sideNo = (sizes.sides || 1) > 1 ? side2 : (row || 1) % 2 ? 1 : 2;
+    bay = sideNo === 1 ? 2 * k - 1 : 2 * k;
+  } else {
+    bay = k + (side2 - 1) * sizes.bays;
+  }
+  let level = raw.level ?? null;
+  if (level !== null && addr.level_dir === "down") {
+    level = sizes.levels - level + 1;
+  }
+  let pos = raw.pos ?? null;
+  if (pos !== null && raw.pos_x && !leftRight) {
+    pos = raw.pos_n - pos + 1;
+  }
+  return { prefix, zone: ctx2.zone ?? null, row: row ?? null, bay, level, pos };
+}
+function spotVals(ctx2, prefix) {
+  const have = tplSegments(ctx2.addr);
+  const vals = { prefix, zone: ctx2.zone ?? null, row: null, bay: null, level: null, pos: null };
+  for (const key of SPOT_SEGMENT_ORDER) {
+    if (have.has(key)) {
+      vals[key] = ctx2.spot || 1;
+      break;
+    }
+  }
+  return vals;
+}
+function findDuplicates(codes) {
+  const seen = /* @__PURE__ */ new Set();
+  const dup = [];
+  for (const c of codes) {
+    if (seen.has(c) && !dup.includes(c)) {
+      dup.push(c);
+    }
+    seen.add(c);
+  }
+  return dup;
+}
+function preview(codes, oldCodes = null, limit = 10) {
+  let changed = 0;
+  if (oldCodes) {
+    changed = codes.filter((c, i) => i >= oldCodes.length || oldCodes[i] !== c).length;
+  }
+  return {
+    first: codes.slice(0, limit),
+    last: codes.length ? codes[codes.length - 1] : null,
+    total: codes.length,
+    changed,
+    duplicates: findDuplicates(codes),
+    too_long: codes.filter((c) => c.length > CODE_MAX_LEN)
+  };
+}
+function conflicts(codesBySlot, occupied = []) {
+  const owners = /* @__PURE__ */ new Map();
+  for (const [uid2, codes] of codesBySlot) {
+    for (const c of codes) {
+      if (!owners.has(c)) {
+        owners.set(c, []);
+      }
+      owners.get(c).push(uid2);
+    }
+  }
+  const taken = new Set(occupied);
+  const out = {};
+  for (const [code, uids] of owners) {
+    if (uids.length > 1 || taken.has(code)) {
+      out[code] = uids;
+    }
+  }
+  return out;
+}
+
+// core/constructor/cells.js
+var CODE_MAX_LEN2 = 32;
+var PREFIX_MAX_LEN = 22;
+var BOTTOM_LIFT = 0.15;
+var I = "int";
+var F = "float";
+var B = "bool";
+var L = "list";
+var LOC_KINDS = ["stack", "area", "kit", "bin", "shelf", "pallet_cell"];
+var SHAPE_KEYS = ["", "rack", "roll_rack", "stack", "zone", "fence", "cylinder", "cabinet", "mobile", "gate"];
+var OPT_RACK = {
+  bottom_on_floor: [null, null, true, B],
+  double_sided: [null, null, false, B],
+  gap_x: [0, 2, 0, F],
+  gap_y: [0, 2, 0, F],
+  beam_th: [0, 0.3, 0, F],
+  slope: [0, 20, 0, F],
+  cells_per_level: [1, 12, 1, I],
+  level_heights: [0.1, 3, null, L]
+};
+var { gap_x: _gx, ...OPT_CANTILEVER } = OPT_RACK;
+var SLOT_TEMPLATES = {
+  pallet_rack: {
+    label: "Палетний стелаж",
+    cells: true,
+    params: {
+      bays: [1, 200, 6, I],
+      levels: [1, 12, 4, I],
+      bay_width: [0.3, 6, 2.7, F],
+      depth: [0.2, 3, 1.1, F],
+      level_height: [0.1, 3, 1.5, F],
+      positions_per_bay: [1, 8, 3, I],
+      max_load_kg: [0, null, 1e3, F],
+      index_digits: [1, 4, 2, I]
+    },
+    opt: { ...OPT_RACK, deep: [1, 6, 1, I] },
+    choices: { code_style: [["default", "bay_letter", "exact"], "default"] },
+    optChoices: { shape: [SHAPE_KEYS, ""] }
+  },
+  cantilever: {
+    label: "Консольний стелаж",
+    cells: true,
+    params: {
+      arms: [1, 100, 4, I],
+      levels: [1, 12, 3, I],
+      arm_length: [0.3, 2, 1, F],
+      length: [0.5, 60, 6, F],
+      level_height: [0.1, 3, 1.2, F],
+      max_load_kg: [0, null, 500, F],
+      index_digits: [1, 4, 2, I]
+    },
+    opt: OPT_CANTILEVER,
+    choices: { code_style: [["default", "exact"], "default"] },
+    optChoices: { shape: [SHAPE_KEYS, ""] }
+  },
+  shelf: {
+    label: "Полицевий стелаж / комірки",
+    cells: true,
+    params: {
+      sections: [1, 100, 4, I],
+      shelves: [1, 20, 5, I],
+      cell_w: [0.1, 8, 0.9, F],
+      cell_d: [0.1, 2, 0.4, F],
+      cell_h: [0.05, 2, 0.4, F],
+      index_digits: [1, 4, 2, I]
+    },
+    opt: { ...OPT_RACK },
+    choices: { loc_kind: [["bin", "shelf"], "bin"], code_style: [["default", "exact"], "default"] },
+    optChoices: { shape: [SHAPE_KEYS, ""] }
+  },
+  floor_stack: {
+    label: "Напільне штабелювання",
+    cells: true,
+    params: {
+      rows: [1, 50, 2, I],
+      cols: [1, 26, 4, I],
+      cell_l: [0.3, 6, 1.2, F],
+      cell_w: [0.3, 4, 0.8, F],
+      max_height: [0.1, 6, 1.5, F],
+      index_digits: [1, 4, 2, I]
+    },
+    opt: { gap_x: [0, 2, 0, F], gap_y: [0, 2, 0, F] },
+    choices: { code_style: [["default", "exact"], "default"], loc_kind: [LOC_KINDS, "stack"] },
+    optChoices: { shape: [SHAPE_KEYS, ""] }
+  },
+  // прямокутник на підлозі = ОДНА локація (MERGE.md §2.3): буферні й спеціальні зони, мобільні носії, зона на підлозі
+  floor_spot: {
+    label: "Місце на підлозі (одна локація)",
+    cells: true,
+    params: {
+      length: [0.1, 200, 1.2, F],
+      width: [0.1, 200, 0.8, F],
+      height: [0, 30, 1.5, F],
+      max_load_kg: [0, null, 0, F],
+      capacity: [0, null, 0, F]
+    },
+    choices: { loc_kind: [LOC_KINDS, "area"], shape: [SHAPE_KEYS, "zone"] }
+  },
+  machine_spot: {
+    label: "Місце під верстат",
+    cells: false,
+    params: { length: [0.3, 30, 3, F], width: [0.3, 30, 1.5, F] },
+    service: true
+  },
+  zone: { label: "Зона-контур", cells: false, params: {}, polygon: true }
+};
+var SERVICE_SIDES = ["front", "back", "left", "right"];
+var OVERRIDE_KEYS = ["disabled", "max_load_kg", "capacity", "name", "usage", "replenish_location"];
+var LEVEL_KEYS = { pallet_rack: ["levels", "level_height"], cantilever: ["levels", "level_height"], shelf: ["shelves", "cell_h"] };
+var BAY_KEYS = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
+function normalizeParams(template, params) {
+  const spec = SLOT_TEMPLATES[template];
+  const src = params || {};
+  const out = {};
+  if (!spec) {
+    return out;
+  }
+  for (const [key, [, , def]] of Object.entries(spec.params)) {
+    out[key] = src[key] ?? def;
+  }
+  for (const [key, [, def]] of Object.entries(spec.choices || {})) {
+    out[key] = src[key] ?? def;
+  }
+  for (const [key, [, , , type]] of Object.entries(spec.opt || {})) {
+    if (src[key] == null) {
+      continue;
+    }
+    if (type === L) {
+      const [countKey, heightKey] = LEVEL_KEYS[template];
+      const list = Array.isArray(src[key]) ? src[key].map(Number) : [];
+      if (list.length) {
+        const pad = Array(out[countKey]).fill(out[heightKey]);
+        out[key] = [...list, ...pad].slice(0, out[countKey]);
+      }
+    } else {
+      out[key] = type === B ? !!src[key] : src[key];
+    }
+  }
+  for (const key of Object.keys(spec.optChoices || {})) {
+    if (src[key]) {
+      out[key] = src[key];
+    }
+  }
+  if (spec.service) {
+    out.service = {};
+    for (const s of SERVICE_SIDES) {
+      out.service[s] = (src.service || {})[s] ?? 0;
+    }
+  }
+  if (spec.polygon) {
+    out.polygon = (src.polygon || []).map((p) => [Number(p[0]), Number(p[1])]);
+  }
+  return out;
+}
+var sidesOf = (p) => p.double_sided ? 2 : 1;
+function footprint(template, params) {
+  const p = normalizeParams(template, params);
+  const gx = p.gap_x ?? 0;
+  const gy = p.gap_y ?? 0;
+  const sd = sidesOf(p);
+  switch (template) {
+    case "pallet_rack":
+      return { l: p.bays * p.bay_width + (p.bays - 1) * gx, w: sd * p.depth * (p.deep ?? 1) + (sd - 1) * gy };
+    case "cantilever":
+      return { l: p.length, w: sd * p.arm_length + (sd - 1) * gy };
+    case "shelf":
+      return { l: p.sections * p.cell_w + (p.sections - 1) * gx, w: sd * p.cell_d + (sd - 1) * gy };
+    case "floor_stack":
+      return { l: p.cols * p.cell_l + (p.cols - 1) * gx, w: p.rows * p.cell_w + (p.rows - 1) * gy };
+    case "machine_spot":
+    case "floor_spot":
+      return { l: p.length, w: p.width };
+    default: {
+      const xs = p.polygon.map((q) => q[0]);
+      const ys = p.polygon.map((q) => q[1]);
+      return xs.length ? { l: Math.max(...xs) - Math.min(...xs), w: Math.max(...ys) - Math.min(...ys) } : { l: 0, w: 0 };
+    }
+  }
+}
+function slotObb(template, params, x, y, rot2) {
+  const { l, w } = footprint(template, params);
+  if (template === "zone") {
+    const poly2 = normalizeParams(template, params).polygon;
+    const xs = poly2.map((q) => q[0]);
+    const ys = poly2.map((q) => q[1]);
+    return makeObb((Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...ys) + Math.min(...ys)) / 2, l / 2, w / 2, 0);
+  }
+  return makeObb(x, y, l / 2, w / 2, rot2);
+}
+var width = (count, digits = 2) => Math.max(digits, String(count).length);
+var zpad = (n, w) => String(n).padStart(w, "0");
+var letter = (n) => String.fromCharCode(64 + n);
+function levelsOf(p, n, baseH2) {
+  const heights = p.level_heights;
+  const lift = p.bottom_on_floor === false ? BOTTOM_LIFT : 0;
+  const beam = p.beam_th || 0;
+  const out = [];
+  let z = lift;
+  for (let i = 0; i < n; i++) {
+    const h2 = heights ? heights[i] : baseH2;
+    out.push({ dz: heights ? z : lift + i * baseH2, h: beam ? Math.max(h2 - beam, 0.05) : h2 });
+    z += h2;
+  }
+  return out;
+}
+function rawCells(template, p, prefix) {
+  const cells = rawCellsStyled(template, p, prefix);
+  if (p.code_style === "exact" && cells.length === 1) {
+    cells[0].code = prefix;
+  }
+  return cells;
+}
+function rawCellsStyled(template, p, prefix) {
+  const cells = [];
+  const gx = p.gap_x ?? 0;
+  const gy = p.gap_y ?? 0;
+  const sides = sidesOf(p);
+  const sideY = (side2, full, d) => sides === 1 ? 0 : side2 === 1 ? -(full - d) / 2 : (full - d) / 2;
+  if (template === "pallet_rack") {
+    const deep = p.deep ?? 1;
+    const d = p.depth * deep;
+    const length = p.bays * p.bay_width + (p.bays - 1) * gx;
+    const full = sides * d + (sides - 1) * gy;
+    const wn = width(p.bays * sides, p.index_digits);
+    const lv = levelsOf(p, p.levels, p.level_height);
+    for (let side2 = 1; side2 <= sides; side2++) {
+      for (let bay = 1; bay <= p.bays; bay++) {
+        const bayNo = bay + (side2 - 1) * p.bays;
+        for (let lvl = 1; lvl <= p.levels; lvl++) {
+          cells.push({
+            code: p.code_style === "bay_letter" ? `${prefix}-${zpad(bayNo, wn)}${letter(lvl)}` : `${prefix}-B${zpad(bayNo, wn)}-L${lvl}`,
+            level: lvl,
+            index: bayNo,
+            lx: -length / 2 + (bay - 0.5) * p.bay_width + (bay - 1) * gx,
+            ly: sideY(side2, full, d),
+            dz: lv[lvl - 1].dz,
+            l: p.bay_width,
+            w: d,
+            h: lv[lvl - 1].h,
+            capacity: Number(p.positions_per_bay) * deep,
+            max_load_kg: p.max_load_kg,
+            kind: "pallet_cell",
+            k: bay,
+            side: side2
+          });
+        }
+      }
+    }
+  } else if (template === "cantilever") {
+    const length = p.length;
+    const armL = length / p.arms;
+    const full = sides * p.arm_length + (sides - 1) * gy;
+    const wn = width(p.arms * sides, p.index_digits);
+    const lv = levelsOf(p, p.levels, p.level_height);
+    for (let side2 = 1; side2 <= sides; side2++) {
+      for (let arm = 1; arm <= p.arms; arm++) {
+        const armNo = arm + (side2 - 1) * p.arms;
+        for (let lvl = 1; lvl <= p.levels; lvl++) {
+          cells.push({
+            code: `${prefix}-A${zpad(armNo, wn)}-L${lvl}`,
+            level: lvl,
+            index: armNo,
+            lx: -length / 2 + (arm - 0.5) * armL,
+            ly: sideY(side2, full, p.arm_length),
+            dz: lv[lvl - 1].dz,
+            l: armL,
+            w: p.arm_length,
+            h: lv[lvl - 1].h,
+            capacity: 0,
+            max_load_kg: p.max_load_kg,
+            kind: "shelf",
+            k: arm,
+            side: side2
+          });
+        }
+      }
+    }
+  } else if (template === "shelf") {
+    const length = p.sections * p.cell_w + (p.sections - 1) * gx;
+    const full = sides * p.cell_d + (sides - 1) * gy;
+    const wn = width(p.sections * sides, p.index_digits);
+    const lv = levelsOf(p, p.shelves, p.cell_h);
+    for (let side2 = 1; side2 <= sides; side2++) {
+      for (let sec3 = 1; sec3 <= p.sections; sec3++) {
+        const secNo = sec3 + (side2 - 1) * p.sections;
+        for (let lvl = 1; lvl <= p.shelves; lvl++) {
+          cells.push({
+            code: `${prefix}-S${zpad(secNo, wn)}-L${lvl}`,
+            level: lvl,
+            index: secNo,
+            lx: -length / 2 + (sec3 - 0.5) * p.cell_w + (sec3 - 1) * gx,
+            ly: sideY(side2, full, p.cell_d),
+            dz: lv[lvl - 1].dz,
+            l: p.cell_w,
+            w: p.cell_d,
+            h: lv[lvl - 1].h,
+            capacity: 0,
+            max_load_kg: 0,
+            kind: p.loc_kind,
+            k: sec3,
+            side: side2
+          });
+        }
+      }
+    }
+  } else if (template === "floor_stack") {
+    const length = p.cols * p.cell_l + (p.cols - 1) * gx;
+    const wid = p.rows * p.cell_w + (p.rows - 1) * gy;
+    const wn = width(p.rows, p.index_digits);
+    for (let row = 1; row <= p.rows; row++) {
+      for (let col = 1; col <= p.cols; col++) {
+        cells.push({
+          code: `${prefix}-${zpad(row, wn)}${letter(col)}`,
+          level: 1,
+          index: (row - 1) * p.cols + col,
+          lx: -length / 2 + (col - 0.5) * p.cell_l + (col - 1) * gx,
+          ly: -wid / 2 + (row - 0.5) * p.cell_w + (row - 1) * gy,
+          dz: 0,
+          l: p.cell_l,
+          w: p.cell_w,
+          h: p.max_height,
+          capacity: 0,
+          max_load_kg: 0,
+          kind: p.loc_kind,
+          k: col,
+          side: 1,
+          pos: row,
+          pos_n: p.rows
+        });
+      }
+    }
+  } else if (template === "floor_spot") {
+    cells.push({
+      code: prefix,
+      level: 1,
+      index: 1,
+      lx: 0,
+      ly: 0,
+      dz: 0,
+      l: p.length,
+      w: p.width,
+      h: p.height,
+      capacity: p.capacity,
+      max_load_kg: p.max_load_kg,
+      kind: p.loc_kind,
+      k: 1,
+      side: 1
+    });
+  }
+  return cells;
+}
+function splitCells(cells, n) {
+  const out = [];
+  for (const c of cells) {
+    for (let j = 1; j <= n; j++) {
+      out.push({
+        ...c,
+        code: `${c.code}-${j}`,
+        lx: c.lx - c.l / 2 + (j - 0.5) * c.l / n,
+        l: c.l / n,
+        capacity: c.capacity / n,
+        max_load_kg: c.max_load_kg / n,
+        pos: j,
+        pos_n: n,
+        pos_x: true
+      });
+    }
+  }
+  return out;
+}
+function addressedCells(template, p, prefix, rot2, ctx2) {
+  let cells = rawCells(template, p, prefix);
+  if (!ctx2) {
+    return cells;
+  }
+  if (ctx2.depth_mode === "cell" && LEVEL_KEYS[template]) {
+    cells = splitCells(cells, p.cells_per_level ?? 1);
+  }
+  const addr = ctx2.addr;
+  if (!addr || p.code_style === "exact") {
+    return cells;
+  }
+  if (template === "floor_spot") {
+    for (const c of cells) {
+      c.code = renderCode(addr, spotVals(ctx2, prefix));
+    }
+    return cells;
+  }
+  const sizes = { sides: sidesOf(p), levels: LEVEL_KEYS[template] ? p[LEVEL_KEYS[template][0]] : 1, bays: p[BAY_KEYS[template]] };
+  for (const c of cells) {
+    c.code = renderCode(addr, cellVals(ctx2, prefix, rot2, { ...c, level: LEVEL_KEYS[template] ? c.level : null }, sizes));
+  }
+  return cells;
+}
+function generateCells(template, prefix, x, y, rot2, params, overrides, elevation = 0, ctx2 = null) {
+  const spec = SLOT_TEMPLATES[template];
+  if (!spec || !spec.cells) {
+    return [];
+  }
+  const p = normalizeParams(template, params);
+  const ovs = overrides || {};
+  const out = [];
+  for (const raw of addressedCells(template, p, prefix, rot2, ctx2)) {
+    const ov = ovs[raw.code] || {};
+    if (ov.disabled) {
+      continue;
+    }
+    const [wx, wy] = rotate(raw.lx, raw.ly, rot2);
+    const cell = {
+      code: raw.code,
+      name: ov.name || raw.code,
+      template,
+      level: raw.level,
+      index: raw.index,
+      x: x + wx,
+      y: y + wy,
+      z0: elevation + raw.dz,
+      l: raw.l,
+      w: raw.w,
+      h: raw.h,
+      rot: Number(rot2),
+      capacity: ov.capacity ?? raw.capacity,
+      max_load_kg: ov.max_load_kg ?? raw.max_load_kg,
+      kind: raw.kind
+    };
+    for (const k of ["usage", "replenish_location"]) {
+      if (k in ov) {
+        cell[k] = ov[k];
+      }
+    }
+    out.push(cell);
+  }
+  return out;
+}
+var templateCodes = (template, params, prefix, ctx2 = null) => {
+  const spec = SLOT_TEMPLATES[template];
+  return spec && spec.cells ? addressedCells(template, normalizeParams(template, params), prefix, 0, ctx2).map((c) => c.code) : [];
+};
+var countCells = (template, prefix, params, overrides, ctx2 = null) => generateCells(template, prefix, 0, 0, 0, params, overrides, 0, ctx2).length;
+var cache = /* @__PURE__ */ new Map();
+var resolver = null;
+function setContextResolver(fn) {
+  resolver = fn;
+  cache.clear();
+}
+function cellsOf(s) {
+  const ctx2 = resolver ? resolver(s) : null;
+  const sig = [s.template, s.code_prefix, JSON.stringify(s.params), JSON.stringify(s.overrides || {}), s.rotation || 0, ctx2 ? JSON.stringify(ctx2) : ""].join("|");
+  const hit = cache.get(s.id);
+  if (hit && hit.sig === sig) {
+    return hit.cells;
+  }
+  const spec = SLOT_TEMPLATES[s.template];
+  let cells = [];
+  if (spec && spec.cells) {
+    const ovs = s.overrides || {};
+    cells = addressedCells(s.template, normalizeParams(s.template, s.params), s.code_prefix || "", s.rotation || 0, ctx2).map((c) => {
+      const ov = ovs[c.code];
+      const r = { ...c };
+      if (ov) {
+        r.ov = true;
+        r.disabled = !!ov.disabled;
+        if (ov.capacity != null) {
+          r.capacity = ov.capacity;
+        }
+        if (ov.max_load_kg != null) {
+          r.max_load_kg = ov.max_load_kg;
+        }
+        if (ov.name) {
+          r.name = ov.name;
+        }
+        for (const k of ["usage", "replenish_location"]) {
+          if (k in ov) {
+            r[k] = ov[k];
+          }
+        }
+      }
+      return r;
+    });
+  }
+  if (cache.size > 400) {
+    cache.clear();
+  }
+  cache.set(s.id, { sig, cells });
+  return cells;
+}
+var cellCount = (s) => cellsOf(s).filter((c) => !c.disabled).length;
+var clearCellsCache = () => cache.clear();
+
+// core/constructor/data.js
+var ROLES = [
+  { id: "manager", name: "Менеджер" },
+  { id: "technologist", name: "Технолог" },
+  { id: "storekeeper", name: "Комірник" },
+  { id: "engineer", name: "Інженер" }
+];
+var roleName = (id) => (ROLES.find((r) => r.id === id) || { name: id }).name;
+var LAYER_KINDS = {
+  building: "Будівля",
+  storage: "Склади",
+  production: "Виробництво",
+  engineering: "Інженерні мережі",
+  yard: "Двір",
+  custom: "Свій шар"
+};
+var CATEGORIES = {
+  machine: "Верстат",
+  rack: "Стелаж",
+  forklift: "Навантажувач",
+  conveyor: "Конвеєр",
+  panel: "Шафа / щит",
+  robot: "Робот",
+  other: "Інше"
+};
+var UTIL_KINDS = { electric: "Електрика", air: "Стиснене повітря", dust: "Аспірація" };
+var LAYER_UTIL_KINDS = { ...UTIL_KINDS, panel: "Щит" };
+var FRONT_SIDES = { s: "Низ креслення (−Y)", e: "Праворуч (+X)", n: "Верх креслення (+Y)", w: "Ліворуч (−X)" };
+var FRONT_ANGLE = { s: 0, e: 90, n: 180, w: 270 };
+var range = (tpl, k) => {
+  const [min, max, def, type] = SLOT_TEMPLATES[tpl].params[k] || SLOT_TEMPLATES[tpl].opt[k];
+  return { min, max: max ?? 1e5, def, int: type === "int" ? 1 : 0 };
+};
+var num = (tpl, k, l, u, step) => ({ k, l, u, step, ...range(tpl, k) });
+var LOC_KIND_LABELS = {
+  stack: "Стос",
+  area: "Майданчик",
+  kit: "Візок / етажерка",
+  bin: "Комірка (bin)",
+  shelf: "Полиця",
+  pallet_cell: "Комірка палети"
+};
+var SHAPE_LABELS = {
+  "": "За генератором",
+  rack: "Стійка",
+  roll_rack: "Рулонний стелаж",
+  stack: "Штабель",
+  zone: "Зона",
+  fence: "Огорожа / камера",
+  cylinder: "Циліндр / бункер",
+  cabinet: "Шафа-машина",
+  mobile: "Мобільний носій",
+  gate: "Ворота / док"
+};
+var TPL = {
+  pallet_rack: {
+    name: "Палетний стелаж",
+    prefix: "R1",
+    info: "Прольоти × яруси → комірки ПРЕФІКС-B01-L1",
+    params: [
+      num("pallet_rack", "bays", "Прольотів", null, 1),
+      num("pallet_rack", "levels", "Ярусів", null, 1),
+      num("pallet_rack", "bay_width", "Ширина прольоту", "м", 0.05),
+      num("pallet_rack", "depth", "Глибина", "м", 0.05),
+      num("pallet_rack", "level_height", "Висота ярусу", "м", 0.05),
+      num("pallet_rack", "positions_per_bay", "Місць у прольоті", null, 1),
+      num("pallet_rack", "max_load_kg", "Макс. навантаження на ярус", "кг", 50),
+      num("pallet_rack", "index_digits", "Розрядів у номері", null, 1),
+      { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "B01-L1"], ["bay_letter", "1A (проліт+ярус)"], ["exact", "Один код = префікс"]], def: "default" }
+    ]
+  },
+  cantilever: {
+    name: "Консольний стелаж",
+    prefix: "CL1",
+    info: "Секції × яруси консолей",
+    params: [
+      num("cantilever", "arms", "Секцій консолей", null, 1),
+      num("cantilever", "levels", "Ярусів", null, 1),
+      num("cantilever", "arm_length", "Виліт консолі", "м", 0.05),
+      num("cantilever", "length", "Довжина", "м", 0.1),
+      num("cantilever", "level_height", "Висота ярусу", "м", 0.05),
+      num("cantilever", "max_load_kg", "Макс. навантаження на ярус", "кг", 50),
+      num("cantilever", "index_digits", "Розрядів у номері", null, 1)
+    ]
+  },
+  shelf: {
+    name: "Полицевий стелаж / комірки",
+    prefix: "SH1",
+    info: "Секції × полиці → комірки PREFIX-S01-L1",
+    params: [
+      num("shelf", "sections", "Секцій", null, 1),
+      num("shelf", "shelves", "Полиць", null, 1),
+      num("shelf", "cell_w", "Ширина комірки", "м", 0.05),
+      num("shelf", "cell_d", "Глибина комірки", "м", 0.05),
+      num("shelf", "cell_h", "Висота комірки", "м", 0.05),
+      num("shelf", "index_digits", "Розрядів у номері", null, 1),
+      { k: "loc_kind", l: "Вид локацій", type: "select", options: [["bin", "Комірка (bin)"], ["shelf", "Полиця (shelf)"]], def: "bin" }
+    ]
+  },
+  floor_stack: {
+    name: "Напільне штабелювання",
+    prefix: "ST1",
+    info: "Рядки × колонки → місця під стос (PREFIX-01A)",
+    params: [
+      num("floor_stack", "rows", "Рядів", null, 1),
+      num("floor_stack", "cols", "Колонок", null, 1),
+      num("floor_stack", "cell_l", "Довжина місця", "м", 0.05),
+      num("floor_stack", "cell_w", "Ширина місця", "м", 0.05),
+      num("floor_stack", "max_height", "Макс. висота стосу", "м", 0.1),
+      num("floor_stack", "index_digits", "Розрядів у номері", null, 1),
+      { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "PREFIX-01A"], ["exact", "Один код = префікс"]], def: "default" }
+    ]
+  },
+  floor_spot: {
+    name: "Місце на підлозі",
+    prefix: "FS1",
+    info: "Прямокутник на підлозі = одна локація (буферна чи спеціальна зона, візок, ворота-зона)",
+    params: [
+      num("floor_spot", "length", "Довжина", "м", 0.1),
+      num("floor_spot", "width", "Ширина", "м", 0.1),
+      num("floor_spot", "height", "Висота", "м", 0.1),
+      num("floor_spot", "max_load_kg", "Макс. навантаження", "кг", 50),
+      num("floor_spot", "capacity", "Місткість", "місць", 1),
+      { k: "loc_kind", l: "Вид локації", type: "select", options: LOC_KINDS.map((v) => [v, LOC_KIND_LABELS[v]]), def: "area" },
+      { k: "shape", l: "Форма 3D", type: "select", options: SHAPE_KEYS.filter(Boolean).map((v) => [v, SHAPE_LABELS[v]]), def: "zone" }
+    ]
+  },
+  machine_spot: {
+    name: "Місце під верстат",
+    prefix: "MS1",
+    info: "Габарит місця й зона обслуговування",
+    params: [
+      num("machine_spot", "length", "Довжина", "м", 0.1),
+      num("machine_spot", "width", "Ширина", "м", 0.1),
+      { k: "service.front", l: "Обслуговування спереду", u: "м", min: 0, max: 8, step: 0.1 },
+      { k: "service.back", l: "Ззаду", u: "м", min: 0, max: 8, step: 0.1 },
+      { k: "service.left", l: "Зліва", u: "м", min: 0, max: 8, step: 0.1 },
+      { k: "service.right", l: "Справа", u: "м", min: 0, max: 8, step: 0.1 }
+    ]
+  },
+  zone: {
+    name: "Зона-контур",
+    prefix: "Z1",
+    info: "Прямокутний контур-розмітка зони",
+    params: [
+      { k: "length", l: "Довжина", u: "м", min: 0.5, max: 150, step: 0.1 },
+      { k: "width", l: "Ширина", u: "м", min: 0.5, max: 150, step: 0.1 },
+      { k: "title", l: "Назва зони", type: "text" },
+      { k: "color", l: "Колір", type: "color" }
+    ]
+  }
+};
+function defaultParams(template) {
+  if (template === "zone") {
+    return { length: 10, width: 8, title: "Нова зона", color: "#9fb7c9" };
+  }
+  if (template === "machine_spot") {
+    return { length: 6, width: 4, service: { front: 1.5, back: 0.5, left: 0.5, right: 0.5 } };
+  }
+  const out = {};
+  for (const p of TPL[template].params) {
+    out[p.k] = p.def;
+  }
+  return out;
+}
+var SOLID_SLOTS = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"];
+var CHECKS = [
+  { id: "fits", name: "Вміщується в місце", hint: "У межах місця, будівлі чи контуру шару; дозволені шар і поворот" },
+  { id: "collide", name: "Немає перетинів", hint: "Габарит не перетинає інші об’єкти шару (OBB, SAT)" },
+  { id: "service_free", name: "Зона обслуговування вільна", hint: "Розширений зоною обслуговування прямокутник не зачіпає чужі габарити" },
+  { id: "aisles_free", name: "Проходи не перекриті", hint: "Габарит не перетинає проходи шару" },
+  { id: "load", name: "Навантаження в нормі", hint: "Вага на площу ≤ ліміту шару; для комірки стелажа ≤ max_load_kg" },
+  { id: "utility_reach", name: "Підключення досяжне", hint: "До найближчої точки потрібного виду не далі N м" },
+  { id: "fire", name: "Пожежні проходи й виходи", hint: "Не перекриті пожежні проходи та зони перед виходами" }
+];
+function slotHeight(s) {
+  const p = s.params || {};
+  const lift = p.bottom_on_floor === false ? 0.15 : 0;
+  switch (s.template) {
+    case "pallet_rack":
+    case "cantilever":
+      return (p.level_heights ? p.level_heights.reduce((a, x) => a + x, 0) : (p.levels || 1) * (p.level_height || 1.5)) + lift + 0.25;
+    case "shelf":
+      return (p.level_heights ? p.level_heights.reduce((a, x) => a + x, 0) : (p.shelves || 1) * (p.cell_h || 0.4)) + lift + 0.1;
+    case "floor_stack":
+      return p.max_height || 1.5;
+    case "floor_spot":
+      return p.height ?? 1.5;
+    case "machine_spot":
+      return 0.05;
+    default:
+      return 0.02;
+  }
+}
+function rotationsList(v) {
+  switch (v && v.rotations) {
+    case "q":
+      return [0, 90, 180, 270];
+    case "h":
+      return [0, 180];
+    case "z":
+      return [0];
+    default:
+      return null;
+  }
+}
+var newLayerDefaults = () => ({
+  name: "Новий шар",
+  kind: "custom",
+  elevation: 3,
+  grid_step: 0.5,
+  aisle_width: 3,
+  max_floor_load: 10,
+  bounds: null,
+  slot_types: Object.keys(TPL),
+  edit_roles: ["manager"],
+  edit_groups: [],
+  color: "#9a6bb3",
+  opacity: 0.6,
+  style: "solid",
+  visible: true,
+  aisles: [],
+  fire_paths: [],
+  utilities: [],
+  underlay: null
+});
+
+// core/constructor/dialogs.js
+var dialogs_exports = {};
+__export(dialogs_exports, {
+  askConflict: () => askConflict,
+  confirmBox: () => confirmBox,
+  openDialog: () => openDialog,
+  openHistory: () => openHistory,
+  openNewSite: () => openNewSite,
+  openServerIssues: () => openServerIssues
+});
+
+// core/constructor/roles.js
+var roles_exports = {};
+__export(roles_exports, {
+  ROLES: () => ROLES,
+  canCatalog: () => canCatalog,
+  canEditLayer: () => canEditLayer,
+  canManage: () => canManage,
+  canPublish: () => canPublish,
+  layerRoleNames: () => layerRoleNames,
+  lockHint: () => lockHint,
+  myRoleNames: () => myRoleNames,
+  toastLock: () => toastLock,
+  viewAs: () => viewAs
+});
+
+// core/constructor/state.js
+var state_exports = {};
+__export(state_exports, {
+  E: () => E,
+  S: () => S,
+  V: () => V,
+  elevOf: () => elevOf,
+  isLayerVisible: () => isLayerVisible,
+  layerOf: () => layerOf,
+  objKey: () => objKey,
+  passportOf: () => passportOf,
+  recOfRef: () => recOfRef,
+  reindex: () => reindex,
+  resetState: () => resetState,
+  selKeys: () => selKeys,
+  selRefs: () => selRefs,
+  snapStep: () => snapStep,
+  snapV: () => snapV,
+  variantOf: () => variantOf
+});
+
+// core/constructor/util.js
+var util_exports = {};
+__export(util_exports, {
+  $: () => $,
+  $$: () => $$,
+  K: () => K,
+  ROOT: () => ROOT,
+  clamp: () => clamp,
+  clone: () => clone,
+  debounce: () => debounce,
+  fmt: () => fmt,
+  fmtDate: () => fmtDate,
+  fmtInt: () => fmtInt,
+  fmtSize: () => fmtSize,
+  getp: () => getp,
+  h: () => h,
+  ic: () => ic,
+  normDeg: () => normDeg,
+  pad2: () => pad2,
+  rad: () => rad,
+  rnd: () => rnd,
+  setp: () => setp,
+  sleep: () => sleep,
+  toast: () => toast,
+  uid: () => uid
+});
+var ROOT = { el: null };
+var $ = (s, r) => (r || ROOT.el)?.querySelector(s) || null;
+var $$ = (s, r) => Array.from((r || ROOT.el)?.querySelectorAll(s) || []);
+var K = (...a) => a.flat(Infinity).filter((x) => x != null && x !== false);
+function h(tag, attrs2, ...kids) {
+  const el = document.createElement(tag);
+  let val;
+  if (attrs2) {
+    for (const k in attrs2) {
+      const v = attrs2[k];
+      if (v == null || v === false) {
+        continue;
+      }
+      if (k === "class") {
+        el.className = v;
+      } else if (k === "style" && typeof v === "object") {
+        Object.assign(el.style, v);
+      } else if (k.startsWith("on") && typeof v === "function") {
+        el.addEventListener(k.slice(2), v);
+      } else if (k === "value") {
+        val = v;
+      } else if (k === "checked" || k === "disabled" || k === "selected" || k === "hidden" || k === "indeterminate") {
+        el[k] = !!v;
+      } else if (k === "html") {
+        el.innerHTML = v;
+      } else {
+        el.setAttribute(k, v === true ? "" : v);
+      }
+    }
+  }
+  for (const c of K(kids)) {
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  if (val !== void 0) {
+    el.value = val;
+  }
+  return el;
+}
+var ic = (n) => h("span", { class: "ic", "aria-hidden": "true", html: `<svg><use href="#i-${n}"/></svg>` });
+var uid = (p) => p + Math.random().toString(36).slice(2, 7) + Date.now().toString(36).slice(-3);
+var clone = (o) => JSON.parse(JSON.stringify(o));
+var rnd = (v, d = 3) => {
+  const k = Math.pow(10, d);
+  const r = Math.round(v * k) / k;
+  return r === 0 ? 0 : r;
+};
+var fmt = (n, d = 1) => {
+  if (n == null || !isFinite(n)) {
+    return "—";
+  }
+  const s = Number(n).toFixed(d);
+  return (s === "-0" || /^-0\.0+$/.test(s) ? s.slice(1) : s).replace(".", ",");
+};
+var fmtInt = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+var rad = (a) => a * Math.PI / 180;
+var pad2 = (n) => String(n).padStart(2, "0");
+var clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+var debounce = (fn, ms) => {
+  let t2;
+  const f = (...a) => {
+    clearTimeout(t2);
+    t2 = setTimeout(() => fn(...a), ms);
+  };
+  f.cancel = () => clearTimeout(t2);
+  return f;
+};
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+var getp = (o, path) => path.split(".").reduce((a, k) => a == null ? a : a[k], o);
+var setp = (o, path, v) => {
+  const ks = path.split(".");
+  let a = o;
+  while (ks.length > 1) {
+    const k = ks.shift();
+    a = a[k] = a[k] || {};
+  }
+  a[ks[0]] = v;
+};
+var normDeg = (a) => (a % 360 + 360) % 360;
+var fmtDate = (iso) => {
+  try {
+    const d = new Date(String(iso).includes("T") ? iso : String(iso).replace(" ", "T") + "Z");
+    return d.toLocaleString("uk-UA", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+};
+var fmtSize = (b) => b >= 1048576 ? fmt(b / 1048576, 1) + " МБ" : b >= 1024 ? fmt(b / 1024, 0) + " КБ" : b + " Б";
+function toast(msg, kind) {
+  const box = $("#toast");
+  if (!box) {
+    return null;
+  }
+  const t2 = h("div", { class: "ftoast" + (kind ? " " + kind : "") }, msg);
+  box.append(t2);
+  while (box.children.length > 3) {
+    box.firstChild.remove();
+  }
+  setTimeout(() => t2.remove(), kind === "err" || kind === "warn" ? 5200 : 3200);
+  return t2;
+}
+
+// core/constructor/state.js
+var E = { lifecycle: { mount: /* @__PURE__ */ new Set(), unmount: /* @__PURE__ */ new Set() } };
+var initialS = () => ({
+  app: { sites: [], active: null, mode: "edit", viewAs: null },
+  site: null,
+  layers: [],
+  slots: [],
+  placements: [],
+  catalog: [],
+  settings: { checks: {}, reach_n: 15, labels: true },
+  versions: [],
+  rights: { is_manager: false, roles: [], editable_layer_ids: [], can_publish: false, can_edit_catalog: false },
+  sel: null,
+  multi: [],
+  // мультивиділення (S3, F09-02): [{kind, id}] з ≥ 2 об'єктів; S.sel — основний (останній) серед них
+  selCell: null,
+  edit: null,
+  issues: { list: [], byKey: /* @__PURE__ */ new Map() },
+  ui: { leftTab: "layers", layer: null },
+  vIdx: /* @__PURE__ */ new Map(),
+  lIdx: /* @__PURE__ */ new Map(),
+  sIdx: /* @__PURE__ */ new Map(),
+  pIdx: /* @__PURE__ */ new Map(),
+  changed: 0,
+  saveState: "saved",
+  // saved | saving | error
+  hist: { stack: [], idx: -1, cur: "", label: null, busy: false },
+  // скасування/повтор (S3, undo.js)
+  unsaved: /* @__PURE__ */ new Set(),
+  // ключі об'єктів, змінених після останнього збереження (N-05, «не збережено»)
+  stock: null,
+  // залишки по кодах для карти й картки (S3, stock_state.js): {at, demo, days, byCode: Map}
+  hl: null
+  // підсвічені комірки пошуку (S3): {kind, codes: Set}
+});
+var S = initialS();
+var initialV = () => ({
+  ok: false,
+  testMode: false,
+  renderer: null,
+  scene: null,
+  camera: null,
+  controls: null,
+  canvas: null,
+  raf: 0,
+  world: null,
+  views: /* @__PURE__ */ new Map(),
+  decor: /* @__PURE__ */ new Map(),
+  underlays: /* @__PURE__ */ new Map(),
+  uldata: /* @__PURE__ */ new Map(),
+  pick: [],
+  labels: [],
+  theme: "light",
+  col: {},
+  mat: {},
+  geo: {},
+  bodyMats: /* @__PURE__ */ new Map(),
+  labelCache: /* @__PURE__ */ new Map(),
+  ruler: { on: false, pts: [], objs: [] },
+  placing: null,
+  drag: null,
+  models: /* @__PURE__ */ new Map(),
+  staticSig: "",
+  pickMode: null,
+  hoverKey: null,
+  cursor: { x: 0, y: 0 },
+  buildingG: null,
+  hidden: /* @__PURE__ */ new Set()
+  // шари, приховані в цьому сеансі (видимість — клієнтська, на сервер не пишеться)
+});
+var V = initialV();
+function resetState() {
+  for (const o of [S, V]) {
+    for (const k of Object.keys(o)) {
+      delete o[k];
+    }
+  }
+  Object.assign(S, initialS());
+  Object.assign(V, initialV());
+}
+function reindex() {
+  S.vIdx.clear();
+  S.lIdx.clear();
+  S.sIdx.clear();
+  S.pIdx.clear();
+  for (const p of S.catalog) {
+    for (const v of p.variants) {
+      S.vIdx.set(v.id, { v, p });
+    }
+  }
+  for (const l of S.layers) {
+    S.lIdx.set(l.id, l);
+  }
+  for (const s of S.slots) {
+    S.sIdx.set(s.id, s);
+  }
+  for (const p of S.placements) {
+    S.pIdx.set(p.id, p);
+  }
+  if (S.multi.length) {
+    S.multi = S.multi.filter((r) => (r.kind === "placement" ? S.pIdx : S.sIdx).has(r.id));
+    if (S.multi.length < 2) {
+      if (S.multi.length === 1 && !S.sel) {
+        S.sel = { ...S.multi[0] };
+      }
+      S.multi = [];
+    } else if (!S.sel) {
+      S.sel = { ...S.multi[S.multi.length - 1] };
+    } else if (!S.multi.some((r) => r.kind === S.sel.kind && r.id === S.sel.id)) {
+      S.multi = [];
+    }
+  }
+}
+var layerOf = (id) => S.lIdx.get(id);
+var variantOf = (id) => (S.vIdx.get(id) || {}).v;
+var passportOf = (id) => (S.vIdx.get(id) || {}).p;
+var elevOf = (layerId) => (layerOf(layerId) || { elevation: 0 }).elevation;
+var objKey = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
+var recOfRef = (ref2) => ref2.kind === "placement" ? S.pIdx.get(ref2.id) : S.sIdx.get(ref2.id);
+var snapStep = (rec) => (layerOf(rec.layer_id) || { grid_step: 0.5 }).grid_step || 0.5;
+var snapV = (v, st4) => rnd(Math.round(v / st4) * st4, 4);
+var isLayerVisible = (ly) => !V.hidden.has(ly.id);
+var selRefs = () => S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : [];
+var selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
+
+// core/constructor/roles.js
+var viewAs = () => S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null;
+function canEditLayer(ly) {
+  if (!ly || S.app.mode !== "edit") {
+    return false;
+  }
+  const va = viewAs();
+  if (va) {
+    return (ly.edit_roles || []).includes(va);
+  }
+  if (S.rights.is_manager) {
+    return true;
+  }
+  return ly.rid != null && (S.rights.editable_layer_ids || []).includes(ly.rid);
+}
+var canManage = () => S.app.mode === "edit" && S.rights.is_manager && !viewAs();
+var canCatalog = () => {
+  if (S.app.mode !== "edit") {
+    return false;
+  }
+  const va = viewAs();
+  return va ? va === "technologist" : !!(S.rights.is_manager || S.rights.can_edit_catalog);
+};
+var canPublish = () => canManage() && !!S.rights.can_publish;
+var layerRoleNames = (ly) => (ly.edit_roles || []).filter((r) => r !== "manager").map(roleName);
+function lockHint(ly) {
+  if (S.app.mode !== "edit") {
+    return "Режим перегляду: правка вимкнена. Увімкніть «Редагування».";
+  }
+  const rs = layerRoleNames(ly);
+  return `Шар «${ly.name}» редагує ${rs.length ? rs.join(", ") + " і Менеджер" : "Менеджер"}`;
+}
+var toastLock = (ly) => toast(lockHint(ly), "warn");
+var myRoleNames = () => {
+  const rs = S.rights.roles || [];
+  return rs.length ? rs.map(roleName).join(", ") : "Без ролі";
+};
+
+// core/constructor/dialogs.js
+function openDialog(o) {
+  const dlg = h("dialog", { class: o.cls || "" });
+  const close2 = (r) => {
+    dlg.returnValue = r || "";
+    dlg.close();
+  };
+  dlg.append(
+    ...K(
+      h("div", { class: "dh" }, h("h2", null, o.title), h("button", { class: "xbtn", type: "button", "aria-label": "Закрити", onclick: () => close2("") }, ic("x"))),
+      h("div", { class: "db" }, o.body),
+      o.actions && o.actions.length ? h(
+        "div",
+        { class: "df" },
+        o.actions.map(
+          (a) => h(
+            "button",
+            {
+              class: "fbtn " + (a.cls || ""),
+              type: "button",
+              disabled: a.disabled,
+              id: a.id,
+              onclick: async () => {
+                const r = a.onClick ? await a.onClick(dlg) : void 0;
+                if (r !== false) {
+                  close2(a.value || "ok");
+                }
+              }
+            },
+            a.label
+          )
+        )
+      ) : null
+    )
+  );
+  dlg.addEventListener("close", () => {
+    if (o.onClose) {
+      o.onClose(dlg.returnValue);
+    }
+    dlg.remove();
+  });
+  dlg.addEventListener("click", (e) => {
+    if (e.target === dlg && o.light) {
+      close2("");
+    }
+  });
+  ($("#app") || document.body).append(dlg);
+  dlg.showModal();
+  dlg.close2 = close2;
+  return dlg;
+}
+function confirmBox(o) {
+  return new Promise((res) => {
+    let done = false;
+    openDialog({
+      title: o.title,
+      cls: "narrow",
+      body: h("p", { style: { margin: 0 } }, o.text),
+      actions: [
+        { label: o.cancel || "Скасувати", value: "no" },
+        { label: o.ok || "Так", cls: o.danger ? "danger" : "primary", value: "yes", id: "dlgYes", onClick: () => {
+          done = true;
+        } }
+      ],
+      onClose: () => res(done)
+    });
+  });
+}
+function openNewSite() {
+  const name = h("input", { type: "text", value: "Нова площадка", "aria-label": "Назва", id: "newSiteName" });
+  const code = h("input", { type: "text", value: "", maxlength: 16, "aria-label": "Код", id: "newSiteCode", placeholder: "напр. MAIN" });
+  code.addEventListener("input", () => {
+    code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  });
+  const dim = (v, label2, id) => h("input", { type: "number", value: v, min: 5, step: 1, "aria-label": label2, id });
+  const l = dim(60, "Довжина", "newSiteL");
+  const w = dim(30, "Ширина", "newSiteW");
+  const hh = dim(8, "Висота", "newSiteH");
+  const lab = (t2, el) => h("label", { class: "fld" }, h("span", null, t2), el);
+  openDialog({
+    title: "Нова площадка",
+    cls: "narrow",
+    body: h(
+      "div",
+      { class: "fcol" },
+      lab("Назва", name),
+      lab("Код (великі латинські літери й цифри, до 16)", code),
+      h("div", { class: "grid3" }, lab("Довжина, м", l), lab("Ширина, м", w), lab("Висота, м", hh)),
+      h("div", { class: "small muted" }, "Створюється порожня площадка: п’ять базових шарів і каталог типових варіантів.")
+    ),
+    actions: [
+      { label: "Скасувати" },
+      {
+        label: "Створити",
+        cls: "primary",
+        id: "dlgCreateSite",
+        onClick: async () => {
+          if (!name.value.trim() || !code.value) {
+            toast("Вкажіть назву й код площадки.", "warn");
+            return false;
+          }
+          const ok = await E.createSite({ name: name.value.trim(), code: code.value, building: { l: +l.value, w: +w.value, h: +hh.value } });
+          return ok ? void 0 : false;
+        }
+      }
+    ]
+  });
+}
+function openHistory() {
+  const body = h("div");
+  const dlg = openDialog({ title: "Історія версій", cls: "narrow", body, actions: [{ label: "Закрити" }] });
+  const render2 = () => {
+    const vs = [...S.versions].sort((a, b) => b.n - a.n);
+    const act = S.site.active_version ? S.site.active_version.n : null;
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "small muted", style: { marginBottom: "6px" } }, "Повернення змінює чернетку; записи Odoo (локації, обладнання) не змінюються, доки ви не опублікуєте нову версію."),
+        vs.length ? vs.map(
+          (v) => h(
+            "div",
+            { class: "ver" },
+            h("div", { class: "vn" }, "v" + v.n),
+            h(
+              "div",
+              { class: "vi" },
+              h("div", null, fmtDate(v.published_at) + " · " + v.by, v.n === act ? h("span", { class: "fbadge ok", style: { marginLeft: "8px" } }, "активна") : null),
+              h("div", { class: "small" }, v.note || "без нотатки"),
+              v.counts ? h("div", { class: "small muted mono" }, `${v.counts.layers} шарів · ${v.counts.slots} місць · ${v.counts.cells} комірок · ${v.counts.placements} обл.`) : null
+            ),
+            h(
+              "button",
+              {
+                class: "fbtn sm",
+                type: "button",
+                "data-version": v.id,
+                disabled: !canManage(),
+                title: canManage() ? "" : "Повертає Менеджер у режимі редагування",
+                onclick: async () => {
+                  const ok = await confirmBox({ title: `Повернути чернетку до v${v.n}?`, text: "Поточна чернетка буде замінена знімком версії. Незбережені зміни пропадуть.", ok: "Повернути", danger: true });
+                  if (!ok) {
+                    return;
+                  }
+                  await E.restoreVersion(v.id, v.n);
+                  dlg.close2("");
+                }
+              },
+              "Повернути чернетку"
+            )
+          )
+        ) : h("div", { class: "empty" }, "Версій ще немає. Натисніть «Опублікувати».")
+      )
+    );
+  };
+  render2();
+}
+function openServerIssues(res) {
+  const issues = res.issues || [];
+  const name = (c) => (CHECKS.find((x) => x.id === c) || {}).name || c;
+  openDialog({
+    title: "Перевірка на сервері",
+    cls: "narrow",
+    body: h(
+      "div",
+      { class: "fcol" },
+      h("div", { class: "frow" }, res.summary.block ? h("span", { class: "fbadge b" }, res.summary.block + " заборон") : null, res.summary.warn ? h("span", { class: "fbadge w" }, res.summary.warn + " попер.") : null, !issues.length ? h("span", { class: "fbadge ok" }, "усе гаразд") : null),
+      h(
+        "div",
+        { class: "issues", id: "serverIssues" },
+        issues.map((i) => h("div", { class: "issue " + i.severity }, h("div", { class: "im" }, i.message, h("div", { class: "io" }, (i.severity === "block" ? "ЗАБОРОНА" : "ПОПЕРЕДЖЕННЯ") + " · " + name(i.check)))))
+      )
+    ),
+    actions: [{ label: "Закрити" }]
+  });
+}
+function askConflict() {
+  return new Promise((res) => {
+    let choice2 = "theirs";
+    openDialog({
+      title: "Запис змінив інший користувач",
+      cls: "narrow",
+      body: h("p", { style: { margin: 0 } }, "Об’єкт на сервері новіший за ваш. Залишити вашу версію чи взяти серверну (ваші зміни цього об’єкта буде втрачено)?"),
+      actions: [
+        { label: "Взяти серверне", value: "theirs", id: "dlgTheirs" },
+        { label: "Залишити моє", cls: "primary", value: "mine", id: "dlgMine", onClick: () => {
+          choice2 = "mine";
+        } }
+      ],
+      onClose: () => res(choice2)
+    });
+  });
+}
+Object.assign(E, { openDialog, confirmBox, openNewSite, openHistory, openServerIssues, askConflict });
+registries.dialogs.add("confirm", (o) => confirmBox(o), { force: true });
+registries.dialogs.add("newSite", () => openNewSite(), { force: true });
+registries.dialogs.add("history", () => openHistory(), { force: true });
+registries.dialogs.add("serverIssues", ({ res }) => openServerIssues(res), { force: true });
+registries.dialogs.add("conflict", () => askConflict(), { force: true });
+
+// core/constructor/draft.js
+var DESIGN_ROLES = ["technologist", "storekeeper", "engineer"];
+var ACCESS_NAMES = { view: "Перегляд", design: "Проєктування", apply: "Застосування" };
+function access() {
+  const va = viewAs();
+  const mobile2 = !!E.isMobile?.();
+  const edit = S.app.mode === "edit" && !mobile2;
+  const isDesigner = va ? DESIGN_ROLES.includes(va) : !!S.rights.is_manager || (S.rights.roles || []).some((r) => DESIGN_ROLES.includes(r));
+  const design2 = edit && isDesigner;
+  const apply = !mobile2 && canPublish();
+  return { view: true, design: design2, apply, level: apply ? "apply" : design2 ? "design" : "view", name: ACCESS_NAMES[apply ? "apply" : design2 ? "design" : "view"] };
+}
+function accessHint(need) {
+  if (E.isMobile?.()) {
+    return "У мобільному режимі доступні перегляд і пошук; правка вимкнена.";
+  }
+  if (S.app.mode !== "edit") {
+    return "Режим перегляду: увімкніть «Редагування».";
+  }
+  if (need === "apply") {
+    return "Застосування в Odoo доступне менеджеру в режимі редагування (група «Застосування»).";
+  }
+  return "Потрібен рівень «Проєктування»: технолог, комірник, інженер або менеджер.";
+}
+var strip = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
+var recJson = (r) => JSON.stringify(r, strip);
+var keyed = () => [...S.layers.map((l) => ["l:" + l.id, l]), ...S.slots.map((s) => ["s:" + s.id, s]), ...S.placements.map((p) => ["p:" + p.id, p])];
+var saved = /* @__PURE__ */ new Map();
+function syncSaveAll() {
+  const b = $("#menu-saveAll");
+  if (b) {
+    b.disabled = !S.unsaved.size && S.saveState === "saved";
+  }
+}
+function markSaved() {
+  saved = new Map(keyed().map(([k, r]) => [k, recJson(r)]));
+  if (S.unsaved.size) {
+    S.unsaved = /* @__PURE__ */ new Set();
+    E.updateVisual?.();
+  }
+  syncSaveAll();
+}
+function refreshUnsaved() {
+  const next = /* @__PURE__ */ new Set();
+  for (const [k, r] of keyed()) {
+    if (saved.get(k) !== recJson(r)) {
+      next.add(k);
+    }
+  }
+  const old = S.unsaved;
+  if (next.size !== old.size || [...next].some((k) => !old.has(k))) {
+    S.unsaved = next;
+    E.updateVisual?.();
+    syncSaveAll();
+  }
+}
+function objStatus(kind, rec) {
+  const key = objKey(kind, rec.id);
+  if (S.unsaved.has(key)) {
+    return "unsaved";
+  }
+  if (rec.rid != null || E.adapter?.baseMap?.has?.(key)) {
+    return "odoo";
+  }
+  return "new";
+}
+var STATUS_LABELS = { unsaved: "не збережено", new: "нове · лише в моделі", odoo: "з Odoo" };
+async function saveAll() {
+  const r = await E.flushNow();
+  toast(r && r.ok === false ? "Не вдалося зберегти зміни." : "Усе збережено.", r && r.ok === false ? "err" : void 0);
+  markSaved();
+}
+async function resetToOdoo() {
+  const av = S.site?.active_version;
+  const ver = av && S.versions.find((v) => v.n === av.n);
+  if (!ver) {
+    toast("Немає опублікованої версії: нічого скидати.", "warn");
+    return;
+  }
+  const ok = await E.confirmBox({ title: "Скинути до даних Odoo?", text: `Чернетку буде повернуто до опублікованої версії v${ver.n}; усі незастосовані зміни втрачено.`, ok: "Скинути", danger: true });
+  if (ok) {
+    E.undoReset();
+    await E.restoreVersion(ver.id, ver.n);
+  }
+}
+registries.menu.add(
+  "saveAll",
+  { area: "top", label: "Зберегти все", icon: "check", sequence: 5, run: saveAll, disabled: () => !S.unsaved.size && S.saveState === "saved" },
+  { sequence: 5, force: true }
+);
+registries.menu.add(
+  "resetToOdoo",
+  { area: "more", label: "Скинути до даних Odoo", icon: "hist", sequence: 20, run: resetToOdoo, disabled: () => !access().design || !S.site?.active_version },
+  { sequence: 20, force: true }
+);
+function renderStatusBlock(root, { rec }) {
+  if (!rec || !S.sel) {
+    return;
+  }
+  const st4 = objStatus(S.sel.kind, rec);
+  const acc = access();
+  const btn3 = h("button", { class: "fbtn sm", type: "button", id: "btnSaveObj", "data-title": "Записати чергу змін у чернетку негайно", onclick: saveAll }, "Зберегти");
+  btn3.disabled = st4 !== "unsaved" || !acc.design;
+  btn3.title = !acc.design ? accessHint("design") : st4 === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
+  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st4 }, STATUS_LABELS[st4]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn3)));
+}
+registries.panels.add("right:status", { area: "right", render: renderStatusBlock }, { sequence: 80, force: true });
+function openHotkeys() {
+  const rows = registries.hotkeys.getEntries().filter(([, hk2]) => hk2.label);
+  const base2 = [
+    ["Esc", "скасувати режим / зняти вибір"],
+    ["R", "поворот на 90° (Shift — у інший бік)"],
+    ["Del", "видалити виділене"],
+    ["←↑↓→", "зсунути на крок сітки (Shift — на 10)"],
+    ["M", "лінійка"],
+    ["Alt", "без прив’язки до сітки при перетягуванні"]
+  ];
+  const extra = rows.map(([, hk2]) => {
+    const [k, ...rest] = hk2.label.split(" — ");
+    return [k, rest.join(" — ")];
+  });
+  openDialog({
+    title: "Гарячі клавіші",
+    cls: "narrow",
+    body: h("table", { class: "tbl", id: "hotkeysTable" }, h("tbody", null, K([...base2, ...extra].map(([k, d]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, d)))))),
+    actions: [{ label: "Закрити" }]
+  });
+}
+registries.dialogs.add("hotkeys", () => openHotkeys(), { force: true });
+registries.menu.add("hotkeys", { area: "more", label: "Гарячі клавіші", icon: "tag", sequence: 90, run: () => E.runDialog("hotkeys") }, { sequence: 90, force: true });
+Object.assign(E, { access, accessHint, markSaved, refreshUnsaved, objStatus, syncSaveAll });
+
+// core/constructor/dxf.js
+var dxf_exports = {};
+__export(dxf_exports, {
+  DWG_MESSAGE: () => DWG_MESSAGE,
+  DXF_MAX_BYTES: () => DXF_MAX_BYTES,
+  DXF_MAX_SEGMENTS: () => DXF_MAX_SEGMENTS,
+  DXF_PARSER_URL: () => DXF_PARSER_URL,
+  defaultUnderlayParams: () => defaultUnderlayParams,
+  importUnderlayFile: () => importUnderlayFile,
+  loadDxfParser: () => loadDxfParser,
+  loadUnderlays: () => loadUnderlays,
+  openDxfPanel: () => openDxfPanel,
+  parseDxf: () => parseDxf,
+  renderDxfPanel: () => renderDxfPanel
+});
+
+// core/constructor/fields.js
+function numInput(o) {
+  const el = h("input", {
+    type: "number",
+    step: o.step == null ? "any" : o.step,
+    min: o.min,
+    max: o.max,
+    value: o.value == null ? "" : String(rnd(o.value, 4)),
+    disabled: o.dis,
+    "data-f": o.f,
+    inputmode: "decimal",
+    "aria-label": o.label
+  });
+  if (!o.dis) {
+    el.addEventListener("focus", () => o.begin && o.begin());
+    el.addEventListener("input", () => {
+      if (el.value === "" || el.validity.badInput) {
+        return;
+      }
+      let v = parseFloat(el.value);
+      if (!isFinite(v)) {
+        return;
+      }
+      if (o.int) {
+        v = Math.round(v);
+      }
+      if (o.min != null && v < o.min - 1e-9) {
+        return;
+      }
+      if (o.max != null && v > o.max + 1e-9) {
+        return;
+      }
+      o.set(v);
+    });
+    el.addEventListener("change", () => o.end && o.end());
+  }
+  return el;
+}
+var fld = (label2, el, unit, cls) => h("label", { class: "fld" + (cls ? " " + cls : "") }, h("span", null, label2, unit ? h("i", null, " · " + unit) : null), el);
+function textInput(o) {
+  const el = h("input", { type: "text", value: o.value == null ? "" : o.value, disabled: o.dis, "aria-label": o.label, "data-f": o.f });
+  if (!o.dis) {
+    el.addEventListener("focus", () => o.begin && o.begin());
+    el.addEventListener("input", () => o.set(el.value));
+    el.addEventListener("change", () => o.end && o.end());
+  }
+  return el;
+}
+function selectEl(opts2, value, onChange, dis, label2) {
+  const el = h(
+    "select",
+    { disabled: dis, "aria-label": label2 },
+    opts2.map(([v, t2]) => h("option", { value: v, selected: String(v) === String(value) }, t2))
+  );
+  el.addEventListener("change", () => onChange(el.value));
+  return el;
+}
+function checkGroup(opts2, vals, onChange, dis) {
+  return h(
+    "div",
+    { class: "checks" },
+    opts2.map(([v, t2]) => {
+      const cb = h("input", { type: "checkbox", checked: vals.includes(v), disabled: dis });
+      cb.addEventListener("change", () => {
+        const cur = new Set(vals);
+        if (cb.checked) {
+          cur.add(v);
+        } else {
+          cur.delete(v);
+        }
+        onChange([...cur]);
+      });
+      return h("label", null, cb, t2);
+    })
+  );
+}
+function paramFields(tpl, params, o) {
+  const spec = TPL[tpl];
+  return h(
+    "div",
+    { class: "grid2" },
+    spec.params.map((p) => {
+      const val = getp(params, p.k) ?? p.def;
+      const common = { dis: o.dis, label: p.l, begin: o.begin, end: o.end };
+      if (p.type === "text") {
+        return fld(p.l, textInput({ ...common, value: val, set: (v) => {
+          setp(params, p.k, v);
+          o.onChange();
+        } }), null, "span2");
+      }
+      if (p.type === "select") {
+        return fld(p.l, selectEl(p.options, val, (v) => {
+          o.begin && o.begin();
+          setp(params, p.k, v);
+          o.onChange();
+          o.end && o.end();
+        }, o.dis, p.l), p.u);
+      }
+      if (p.type === "color") {
+        const c = h("input", { type: "color", value: val || "#9fb7c9", disabled: o.dis, "aria-label": p.l });
+        c.addEventListener("focus", () => o.begin && o.begin());
+        c.addEventListener("input", () => {
+          setp(params, p.k, c.value);
+          o.onChange();
+        });
+        c.addEventListener("change", () => o.end && o.end());
+        return fld(p.l, c);
+      }
+      return fld(
+        p.l,
+        numInput({ ...common, value: val, min: p.min, max: p.max, step: p.step, int: p.int, f: "p." + p.k, set: (v) => {
+          setp(params, p.k, v);
+          o.onChange();
+        } }),
+        p.u
+      );
+    })
+  );
+}
+
+// core/constructor/host.js
+var host = {
+  loadThree: null,
+  buildGenericModel: null,
+  loadLoaders: null,
+  themeTarget: null,
+  themeKey: "f3d_constructor_theme",
+  themeAuto: false,
+  onTheme: null,
+  siteKey: "f3d_constructor_site",
+  dxfParserUrl: null,
+  services: {}
+};
+function setHost(h2 = {}) {
+  Object.assign(host, {
+    loadThree: null,
+    buildGenericModel: null,
+    loadLoaders: null,
+    themeTarget: null,
+    themeKey: "f3d_constructor_theme",
+    themeAuto: false,
+    onTheme: null,
+    siteKey: "f3d_constructor_site",
+    dxfParserUrl: null,
+    services: {}
+  });
+  Object.assign(host, h2);
+  return host;
+}
+
+// core/constructor/dxf.js
+var DXF_PARSER_URL = "/td_constructor/static/lib/dxf-parser/dxf-parser.min.js";
+var DXF_MAX_BYTES = 5 * 1024 * 1024;
+var DXF_MAX_SEGMENTS = 2e5;
+var DWG_MESSAGE = "Конвертуйте в DXF; DWG буде на сервері.";
+var parserPromise = null;
+function loadDxfParser() {
+  if (window.DxfParser) {
+    return Promise.resolve(window.DxfParser);
+  }
+  if (!parserPromise) {
+    parserPromise = new Promise((resolve, reject) => {
+      const el = document.createElement("script");
+      el.src = host.dxfParserUrl || DXF_PARSER_URL;
+      el.onload = () => resolve(window.DxfParser);
+      el.onerror = () => {
+        parserPromise = null;
+        reject(new Error("Не вдалося завантажити розбирач DXF."));
+      };
+      document.head.append(el);
+    });
+  }
+  return parserPromise;
+}
+function parseDxf(text, Parser = window.DxfParser) {
+  const dxf = new Parser().parseSync(text);
+  const segs2 = [];
+  const line2 = (x12, y12, x2, y2) => segs2.push(x12, y12, x2, y2);
+  const arc = (c, r, a0, a1, T) => {
+    if (a1 <= a0) {
+      a1 += Math.PI * 2;
+    }
+    const n = Math.max(8, Math.ceil((a1 - a0) / (Math.PI / 24)));
+    let px = null;
+    let py = null;
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + (a1 - a0) * i / n;
+      const p = T(c.x + r * Math.cos(a), c.y + r * Math.sin(a));
+      if (px != null) {
+        line2(px, py, p[0], p[1]);
+      }
+      px = p[0];
+      py = p[1];
+    }
+  };
+  const bulgeArc = (p, q, b, T) => {
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1e-9) {
+      return;
+    }
+    const th = 4 * Math.atan(b);
+    const r = d / (2 * Math.sin(th / 2));
+    const off = r * Math.cos(th / 2);
+    const cx = (p.x + q.x) / 2 - dy / d * off;
+    const cy = (p.y + q.y) / 2 + dx / d * off;
+    const a0 = Math.atan2(p.y - cy, p.x - cx);
+    const n = Math.max(6, Math.ceil(Math.abs(th) / (Math.PI / 24)));
+    let px = null;
+    let py = null;
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + th * i / n;
+      const pt = T(cx + Math.abs(r) * Math.cos(a), cy + Math.abs(r) * Math.sin(a));
+      if (px != null) {
+        line2(px, py, pt[0], pt[1]);
+      }
+      px = pt[0];
+      py = pt[1];
+    }
+  };
+  const ent = (e, T, depth) => {
+    const pt = (v) => T(v.x, v.y);
+    switch (e.type) {
+      case "LINE": {
+        const a = pt(e.vertices[0]);
+        const b = pt(e.vertices[1]);
+        line2(a[0], a[1], b[0], b[1]);
+        break;
+      }
+      case "LWPOLYLINE":
+      case "POLYLINE": {
+        const vs = e.vertices || [];
+        const n = vs.length;
+        for (let i = 0; i < n - 1 + (e.shape ? 1 : 0); i++) {
+          const p = vs[i];
+          const q = vs[(i + 1) % n];
+          if (p.bulge) {
+            bulgeArc(p, q, p.bulge, T);
+          } else {
+            const a = pt(p);
+            const b = pt(q);
+            line2(a[0], a[1], b[0], b[1]);
+          }
+        }
+        break;
+      }
+      case "CIRCLE":
+        arc(e.center, e.radius, 0, Math.PI * 2, T);
+        break;
+      case "ARC":
+        arc(e.center, e.radius, e.startAngle, e.endAngle, T);
+        break;
+      case "INSERT": {
+        const b = dxf.blocks && dxf.blocks[e.name];
+        if (!b || !b.entities || depth > 3) {
+          break;
+        }
+        const sx = e.xScale == null ? 1 : e.xScale;
+        const sy = e.yScale == null ? 1 : e.yScale;
+        const rot2 = rad(e.rotation || 0);
+        const c = Math.cos(rot2);
+        const s = Math.sin(rot2);
+        const bp = b.position || { x: 0, y: 0 };
+        const p0 = e.position || { x: 0, y: 0 };
+        const T2 = (x, y) => {
+          const lx = (x - bp.x) * sx;
+          const ly = (y - bp.y) * sy;
+          return T(p0.x + lx * c - ly * s, p0.y + lx * s + ly * c);
+        };
+        for (const be of b.entities) {
+          ent(be, T2, depth + 1);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+  const ident = (x, y) => [x, y];
+  for (const e of dxf.entities || []) {
+    ent(e, ident, 0);
+    if (segs2.length >= DXF_MAX_SEGMENTS * 4) {
+      break;
+    }
+  }
+  const cap = Math.min(segs2.length, DXF_MAX_SEGMENTS * 4);
+  const arr = new Float32Array(cap);
+  for (let i = 0; i < cap; i++) {
+    arr[i] = segs2[i];
+  }
+  let x0 = 1e30;
+  let y0 = 1e30;
+  let x1 = -1e30;
+  let y1 = -1e30;
+  for (let i = 0; i < arr.length; i += 2) {
+    const x = arr[i];
+    const y = arr[i + 1];
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  return { segs: arr, n: arr.length / 4, bbox: [x0, y0, x1, y1], truncated: segs2.length > arr.length };
+}
+var defaultUnderlayParams = (bbox) => ({
+  unit: Math.max(bbox[2] - bbox[0], bbox[3] - bbox[1]) > 500 ? "mm" : "m",
+  dx: 0,
+  dy: 0,
+  rot_deg: 0,
+  scale: 1,
+  opacity: 0.75
+});
+async function loadUnderlays() {
+  V.uldata.clear();
+  let Parser = null;
+  for (const ly of S.layers) {
+    const u = ly.underlay;
+    if (!u || u.format !== "dxf" || u.status !== "ready") {
+      continue;
+    }
+    try {
+      const src = await E.adapter.loadUnderlay(ly);
+      if (!src) {
+        continue;
+      }
+      if (src.segs) {
+        V.uldata.set(ly.id, { segs: src.segs, n: src.segs.length / 4 });
+        continue;
+      }
+      Parser = Parser || await loadDxfParser();
+      const res = parseDxf(src.text, Parser);
+      u.bbox = res.bbox;
+      V.uldata.set(ly.id, { segs: res.segs, n: res.n });
+    } catch (e) {
+      console.warn("underlay", ly.name, e);
+    }
+  }
+  E.syncUnderlays();
+}
+function openDxfPanel() {
+  S.ui.dxfOpen = true;
+  renderDxfPanel();
+}
+function closeDxfPanel() {
+  S.ui.dxfOpen = false;
+  if (V.pickMode) {
+    V.pickMode = null;
+    E.rulerClear();
+  }
+  renderDxfPanel();
+}
+async function importUnderlayFile(ly, file, store, msg) {
+  const note = (cls, text) => msg && msg.replaceChildren(...K(h("div", { class: "note " + cls, style: { margin: "6px 0" } }, text)));
+  msg && msg.replaceChildren();
+  const isDwg = /\.dwg$/i.test(file.name);
+  if (!isDwg && !/\.dxf$/i.test(file.name)) {
+    note("err", "Потрібен файл .dxf.");
+    return false;
+  }
+  if (isDwg) {
+    note("lock", DWG_MESSAGE);
+  } else if (file.size > DXF_MAX_BYTES) {
+    toast("Файл завеликий (> 5 МБ): буде прочитано лише перші 200 тис. відрізків.", "warn");
+  }
+  let res = null;
+  if (!isDwg) {
+    try {
+      const Parser = await loadDxfParser();
+      res = parseDxf(await file.text(), Parser);
+    } catch (e) {
+      console.warn(e);
+      note("err", "Не вдалося прочитати DXF: " + (e && e.message ? e.message : e));
+      return false;
+    }
+    if (!res.n) {
+      note("err", "У файлі не знайдено підтримуваних ліній.");
+      return false;
+    }
+  }
+  if (ly.rid == null) {
+    await E.flushNow();
+  }
+  const att = await store.attachUnderlay(ly, file);
+  ly.underlay = {
+    url: att.url,
+    name: file.name,
+    format: isDwg ? "dwg" : "dxf",
+    status: isDwg ? "pending_conversion" : "ready",
+    params: res ? defaultUnderlayParams(res.bbox) : { unit: "mm", dx: 0, dy: 0, rot_deg: 0, scale: 1, opacity: 0.75 },
+    bbox: res ? res.bbox : null
+  };
+  if (res) {
+    V.uldata.set(ly.id, { segs: res.segs, n: res.n });
+    toast(`Підкладку завантажено: ${fmtInt(res.n)} відрізків.` + (res.truncated ? " Файл обрізано до ліміту." : ""));
+  } else {
+    V.uldata.delete(ly.id);
+  }
+  E.liveEdit();
+  return true;
+}
+function renderDxfPanel() {
+  const box = $("#dxfPanel");
+  if (!box) {
+    return;
+  }
+  if (!S.ui.dxfOpen) {
+    box.hidden = true;
+    return;
+  }
+  const ly = layerOf(S.ui.layer);
+  if (!ly) {
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren();
+  const u = ly.underlay;
+  const dis = !canEditLayer(ly);
+  const upd = () => {
+    E.liveEdit();
+  };
+  box.append(
+    ...K(
+      h("h4", null, "Підкладка DXF", h("button", { class: "xbtn", type: "button", "aria-label": "Закрити", onclick: closeDxfPanel }, ic("x"))),
+      h("div", { class: "small muted", style: { marginBottom: "6px" } }, `Шар «${ly.name}», відмітка ${fmt(ly.elevation, 1)} м. LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC, INSERT.`),
+      dis ? h("div", { class: "note lock" }, lockHint(ly)) : null
+    )
+  );
+  const fi = h("input", { type: "file", accept: ".dxf,.dwg", hidden: true, id: "dxfFile", "aria-label": "Файл DXF" });
+  const msg = h("div", { id: "dxfMsg" });
+  fi.addEventListener("change", async () => {
+    const f = fi.files[0];
+    if (!f) {
+      return;
+    }
+    const ok = await importUnderlayFile(ly, f, E.adapter, msg);
+    if (ok) {
+      renderDxfPanel();
+    }
+  });
+  box.append(...K(h("button", { class: "fbtn", type: "button", disabled: dis, onclick: () => fi.click() }, ic("upload"), u ? "Замінити файл" : "Обрати файл DXF"), fi, msg));
+  if (!u) {
+    box.append(h("div", { class: "small muted", style: { marginTop: "8px" } }, "Файл не завантажено. Підкладка малюється лініями на підлозі активного шару для обведення в масштабі."));
+    return;
+  }
+  if (u.format === "dwg" || u.status === "pending_conversion") {
+    box.append(h("div", { class: "note lock", id: "dwgNote", style: { margin: "8px 0" } }, DWG_MESSAGE), h("div", { class: "small" }, u.name));
+    box.append(removeBtn(ly, dis));
+    return;
+  }
+  const m = u.params;
+  const real = V.underlays.get(ly.id) ? "" : h("div", { class: "note lock", style: { margin: "6px 0" } }, "Дані підкладки ще завантажуються або недоступні. Спробуйте замінити файл.");
+  box.append(
+    ...K(
+      h("div", { class: "small", style: { margin: "8px 0 4px" } }, `${u.name}${V.uldata.get(ly.id) ? " · " + fmtInt(V.uldata.get(ly.id).n) + " відрізків" : ""}`),
+      real,
+      h(
+        "div",
+        { class: "fcol" },
+        h("div", { class: "frow" }, h("span", { class: "lbl" }, "Одиниці"), h("span", { class: "seg" }, ["mm", "m"].map((x) => h("button", { type: "button", disabled: dis, "aria-pressed": String(m.unit === x), onclick: () => {
+          m.unit = x;
+          upd();
+          renderDxfPanel();
+        } }, x === "mm" ? "мм" : "м")))),
+        h(
+          "div",
+          { class: "grid3" },
+          fld("Зсув X", numInput({ value: m.dx, dis, step: 0.5, label: "Зсув X", f: "dxf-dx", set: (v) => {
+            m.dx = v;
+            upd();
+          } }), "м"),
+          fld("Зсув Y", numInput({ value: m.dy, dis, step: 0.5, label: "Зсув Y", f: "dxf-dy", set: (v) => {
+            m.dy = v;
+            upd();
+          } }), "м"),
+          fld("Поворот", numInput({ value: m.rot_deg, dis, step: 1, label: "Поворот", f: "dxf-rot", set: (v) => {
+            m.rot_deg = v;
+            upd();
+          } }), "°")
+        ),
+        fld("Прозорість", h("input", { type: "range", min: 0.1, max: 1, step: 0.05, value: m.opacity, disabled: dis, "aria-label": "Прозорість", oninput: (e) => {
+          m.opacity = parseFloat(e.target.value);
+          upd();
+        } }), "лінії"),
+        h("div", { class: "small muted" }, `Масштаб ×${fmt(m.scale || 1, 4)}`),
+        h(
+          "div",
+          { class: "frow wrap" },
+          h("button", { class: "fbtn sm", type: "button", disabled: dis || !u.bbox, onclick: () => {
+            const k = (m.unit === "m" ? 1 : 1e-3) * (m.scale || 1), b = u.bbox;
+            m.dx = rnd(S.site.building.length / 2 - (b[0] + b[2]) / 2 * k, 2);
+            m.dy = rnd(S.site.building.width / 2 - (b[1] + b[3]) / 2 * k, 2);
+            m.rot_deg = 0;
+            upd();
+            renderDxfPanel();
+          } }, "До центру будівлі"),
+          h("button", { class: "fbtn sm", type: "button", disabled: dis, "aria-pressed": String(!!V.pickMode), onclick: () => {
+            E.cancelModes();
+            V.pickMode = "dxfscale";
+            V.pickPts = [];
+            S.ui.dxfScale = null;
+            toast("Клацніть дві точки на підкладці, потім введіть реальну відстань.");
+            renderDxfPanel();
+          } }, ic("ruler"), "Прив’язати масштаб по двох точках")
+        ),
+        S.ui.dxfScale ? h(
+          "div",
+          { class: "note" },
+          `Відстань між точками на кресленні: ${fmt(S.ui.dxfScale.d, 3)} м`,
+          h(
+            "div",
+            { class: "frow", style: { marginTop: "6px" } },
+            numInput({ value: null, dis, min: 1e-3, step: 0.01, label: "Реальна відстань, м", f: "ulreal", set: (v) => {
+              S.ui.dxfScale.real = v;
+            } }),
+            h("button", { class: "fbtn sm primary", type: "button", onclick: () => {
+              const sc = S.ui.dxfScale;
+              if (!sc.real) {
+                toast("Введіть реальну відстань у метрах.", "warn");
+                return;
+              }
+              m.scale = rnd((m.scale || 1) * sc.real / sc.d, 6);
+              S.ui.dxfScale = null;
+              E.rulerClear();
+              upd();
+              renderDxfPanel();
+              toast("Масштаб підкладки уточнено.");
+            } }, "Застосувати")
+          )
+        ) : null,
+        removeBtn(ly, dis)
+      )
+    )
+  );
+}
+function removeBtn(ly, dis) {
+  return h(
+    "button",
+    {
+      class: "fbtn sm danger",
+      type: "button",
+      id: "btnRemoveUnderlay",
+      disabled: dis,
+      onclick: () => {
+        ly.underlay = null;
+        V.uldata.delete(ly.id);
+        E.adapter.detachUnderlay(ly);
+        E.liveEdit();
+        renderDxfPanel();
+      }
+    },
+    ic("trash"),
+    "Прибрати підкладку"
+  );
+}
+function pickModeClick(pt) {
+  if (V.pickMode !== "dxfscale") {
+    return;
+  }
+  const v = E.underlayVertex(S.ui.layer, pt.x, pt.y, 0.6);
+  if (v) {
+    pt.x = v.x;
+    pt.y = v.y;
+  }
+  V.pickPts = V.pickPts || [];
+  V.pickPts.push(pt);
+  E.rulerPoint(pt);
+  if (V.pickPts.length === 2) {
+    const [a, b] = V.pickPts;
+    V.pickMode = null;
+    V.pickPts = [];
+    S.ui.dxfScale = { d: Math.hypot(b.x - a.x, b.y - a.y), real: null };
+    $("#rlabel").hidden = true;
+    renderDxfPanel();
+  }
+}
+Object.assign(E, { openDxfPanel, renderDxfPanel, pickModeClick, loadUnderlays });
+
+// core/constructor/live.js
+var live_exports = {};
+__export(live_exports, {
+  checkConfigs: () => checkConfigs,
+  newBlocks: () => newBlocks,
+  pGeom: () => pGeom,
+  runLive: () => runLive,
+  sGeom: () => sGeom,
+  slotDims: () => slotDims,
+  toCheckState: () => toCheckState
+});
+
+// core/constructor/checks.js
+var checks_exports = {};
+__export(checks_exports, {
+  CHECK_KEYS: () => CHECK_KEYS,
+  DEFAULT_EPS_M: () => DEFAULT_EPS_M,
+  DEFAULT_REACH_M: () => DEFAULT_REACH_M,
+  Scene: () => Scene,
+  issue: () => issue,
+  runChecks: () => runChecks,
+  signature: () => signature,
+  summarize: () => summarize
+});
+var CHECK_KEYS = ["fits", "collide", "service_free", "aisles_free", "load", "utility_reach", "fire"];
+var DEFAULT_EPS_M = 1e-3;
+var DEFAULT_REACH_M = 15;
+var ROTATION_TOLERANCE_DEG = 0.01;
+var fmtAngle = (v) => String(parseFloat(v.toFixed(2)));
+var fix = (v, d) => v.toFixed(d);
+var g = (v) => String(parseFloat(Number(v).toPrecision(6)));
+function rotationOk(mode, rotation) {
+  const period = { q: 90, h: 180, z: 360 }[mode];
+  if (period === void 0) {
+    return true;
+  }
+  const rem = (rotation % period + period) % period;
+  return Math.min(rem, period - rem) <= ROTATION_TOLERANCE_DEG;
+}
+var objKey2 = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
+function hasAddr(state) {
+  const site = state.site || {};
+  const filled = (a) => !!a && Object.keys(a).length > 0;
+  return filled(site.addr) || site.depth_mode === "cell" || (state.slots || []).some((s) => filled(s.addr) || !!s.depth_mode);
+}
+var Scene = class {
+  constructor(state) {
+    this._state = state;
+    this._contexts = null;
+    this.building = (state.site || {}).building || {};
+    this.layers = new Map((state.layers || []).map((l) => [l.id, l]));
+    this.variants = new Map((state.variants || []).map((v) => [v.id, v]));
+    this.slots = new Map((state.slots || []).map((s) => [s.id, s]));
+    this.placements = (state.placements || []).filter((p) => this.variants.has(p.variant_id));
+    this._slotObb = /* @__PURE__ */ new Map();
+    this._slotCells = /* @__PURE__ */ new Map();
+    this._body = /* @__PURE__ */ new Map();
+    this._service = /* @__PURE__ */ new Map();
+  }
+  slotObb(slot) {
+    if (!this._slotObb.has(slot.id)) {
+      this._slotObb.set(
+        slot.id,
+        slotObb(slot.template, slot.params || {}, slot.x || 0, slot.y || 0, slot.rotation || 0)
+      );
+    }
+    return this._slotObb.get(slot.id);
+  }
+  /** Контекст адресації місця (F01): коди комірок як у розкладці з адресацією; без адресації — null (legacy-коди). */
+  slotCtx(slot) {
+    if (this._contexts === null) {
+      this._contexts = hasAddr(this._state) ? stateContexts(this._state) : /* @__PURE__ */ new Map();
+    }
+    return usableContext(this._contexts.get(slot.uid || slot.id));
+  }
+  slotCells(slot) {
+    if (!this._slotCells.has(slot.id)) {
+      const elevation = (this.layers.get(slot.layer_id) || {}).elevation || 0;
+      const cells = generateCells(
+        slot.template,
+        slot.code_prefix || "",
+        slot.x || 0,
+        slot.y || 0,
+        slot.rotation || 0,
+        slot.params || {},
+        slot.overrides || {},
+        elevation,
+        this.slotCtx(slot)
+      );
+      this._slotCells.set(slot.id, new Map(cells.map((c) => [c.code, c])));
+    }
+    return this._slotCells.get(slot.id);
+  }
+  body(p) {
+    if (!this._body.has(p.id)) {
+      this._body.set(p.id, placementObb(this.variants.get(p.variant_id), p.x || 0, p.y || 0, p.rotation || 0));
+    }
+    return this._body.get(p.id);
+  }
+  service(p) {
+    if (!this._service.has(p.id)) {
+      this._service.set(p.id, serviceObb(this.variants.get(p.variant_id), p.x || 0, p.y || 0, p.rotation || 0));
+    }
+    return this._service.get(p.id);
+  }
+  /** F = розміщення ∪ місця (крім zone). */
+  objects() {
+    const out = [];
+    for (const p of this.placements) {
+      if (p.dynamic) {
+        continue;
+      }
+      out.push({ kind: "placement", id: p.id, code: p.code, layer_id: p.layer_id, obb: this.body(p), slot_id: p.slot_id });
+    }
+    for (const s of this.slots.values()) {
+      if (s.template !== "zone") {
+        out.push({ kind: "slot", id: s.id, code: s.code_prefix, layer_id: s.layer_id, obb: this.slotObb(s), slot_id: null });
+      }
+    }
+    return out;
+  }
+  containerPolygon(layer) {
+    const bounds = layer ? layer.bounds : null;
+    if (bounds && bounds.length >= 3) {
+      return [bounds.map((p) => [p[0], p[1]]), "контуру шару"];
+    }
+    return [rectPolygon(this.building.length || 0, this.building.width || 0), "будівлі"];
+  }
+};
+var issue = (check, severity, layer_id, codes, message, keys, sub) => ({
+  check,
+  severity,
+  layer_id,
+  codes: [...codes],
+  message,
+  keys: [...keys],
+  id: [check, ...[...keys].sort(), sub || ""].join("|")
+});
+function epsOf(config, eps) {
+  const tol = (config.params || {}).tolerance_mm;
+  return typeof tol === "number" ? tol / 1e3 : eps;
+}
+function checkFits(scene, config, eps) {
+  const sev = config.mode;
+  const issues = [];
+  for (const p of scene.placements) {
+    const variant = scene.variants.get(p.variant_id);
+    const layer = scene.layers.get(p.layer_id) || {};
+    const { code } = p;
+    const lid = p.layer_id;
+    const k = [objKey2("placement", p.id)];
+    const kinds = variant.layer_kinds || [];
+    if (kinds.length && !kinds.includes(layer.kind)) {
+      issues.push(issue("fits", sev, lid, [code], `${code}: варіант не допускається на шарі «${layer.name || ""}»`, k, "layer"));
+    }
+    const slot = p.slot_id != null ? scene.slots.get(p.slot_id) : null;
+    const types2 = variant.slot_types || [];
+    if (slot && types2.length && !types2.includes(slot.template)) {
+      issues.push(issue("fits", sev, lid, [code], `${code}: варіант не допускається в місці типу ${slot.template}`, k, "tpl"));
+    }
+    const rotation = p.rotation || 0;
+    if (!rotationOk(variant.rotations, rotation)) {
+      issues.push(issue("fits", sev, lid, [code], `${code}: поворот ${fmtAngle(rotation)}° недозволений`, k, "rot"));
+    }
+    const cellCode = p.cell_code;
+    let container;
+    let what;
+    if (cellCode && slot) {
+      const cell = scene.slotCells(slot).get(cellCode);
+      if (!cell) {
+        issues.push(issue("fits", sev, lid, [code], `${code}: комірки ${cellCode} немає в місці ${slot.code_prefix}`, k, "cell"));
+        continue;
+      }
+      container = obbCorners(makeObb(cell.x, cell.y, cell.l / 2, cell.w / 2, cell.rot));
+      what = "комірки";
+    } else if (slot) {
+      container = obbCorners(scene.slotObb(slot));
+      what = "місця";
+    } else {
+      [container, what] = scene.containerPolygon(layer);
+    }
+    if (!obbInsidePolygon(scene.body(p), container, eps)) {
+      issues.push(issue("fits", sev, lid, [code], `${code}: виходить за межі ${what}`, k, "bounds"));
+    }
+  }
+  for (const slot of scene.slots.values()) {
+    if (slot.template === "zone") {
+      continue;
+    }
+    const [container, what] = scene.containerPolygon(scene.layers.get(slot.layer_id) || {});
+    if (!obbInsidePolygon(scene.slotObb(slot), container, eps)) {
+      issues.push(
+        issue("fits", sev, slot.layer_id, [slot.code_prefix], `${slot.code_prefix}: виходить за межі ${what}`, [objKey2("slot", slot.id)], "bounds")
+      );
+    }
+  }
+  return issues;
+}
+function byLayer(objects) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const o of objects) {
+    if (!groups.has(o.layer_id)) {
+      groups.set(o.layer_id, []);
+    }
+    groups.get(o.layer_id).push(o);
+  }
+  return groups;
+}
+var sameSlot = (a, b) => {
+  if (a.kind === "placement" && b.kind === "slot") {
+    return a.slot_id === b.id;
+  }
+  if (a.kind === "slot" && b.kind === "placement") {
+    return b.slot_id === a.id;
+  }
+  return false;
+};
+function checkCollide(scene, config, eps) {
+  const sev = config.mode;
+  const issues = [];
+  for (const [layerId, group] of byLayer(scene.objects())) {
+    const boxes = group.map((o) => obbAabb(o.obb));
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i];
+        const b = group[j];
+        if (sameSlot(a, b) || !aabbOverlap(boxes[i], boxes[j], eps)) {
+          continue;
+        }
+        const depth = satPenetration(a.obb, b.obb);
+        if (depth > eps) {
+          const [x, y] = a.code <= b.code ? [a, b] : [b, a];
+          issues.push(
+            issue("collide", sev, layerId, [x.code, y.code], `${x.code} перетинається з ${y.code} на ${fix(depth, 2)} м`, [objKey2(x.kind, x.id), objKey2(y.kind, y.id)])
+          );
+        }
+      }
+    }
+  }
+  return issues;
+}
+function checkServiceFree(scene, config, eps) {
+  const sev = config.mode;
+  const issues = [];
+  const groups = byLayer(scene.objects());
+  for (const p of scene.placements) {
+    const service = p.dynamic ? null : scene.service(p);
+    if (!service) {
+      continue;
+    }
+    const box = obbAabb(service);
+    for (const other of groups.get(p.layer_id) || []) {
+      if (other.kind === "placement" && other.id === p.id) {
+        continue;
+      }
+      if (other.kind === "slot" && other.id === p.slot_id) {
+        continue;
+      }
+      if (!aabbOverlap(box, obbAabb(other.obb), eps)) {
+        continue;
+      }
+      if (satPenetration(service, other.obb) > eps) {
+        issues.push(
+          issue("service_free", sev, p.layer_id, [p.code, other.code], `Зона обслуговування ${p.code} зачіпає ${other.code}`, [objKey2("placement", p.id), objKey2(other.kind, other.id)])
+        );
+      }
+    }
+  }
+  return issues;
+}
+function checkRects(scene, config, eps, check, key) {
+  const sev = config.mode;
+  const issues = [];
+  for (const [layerId, group] of byLayer(scene.objects())) {
+    const rects = (scene.layers.get(layerId) || {})[key] || [];
+    for (const obj of group) {
+      for (const rect2 of rects) {
+        if (satPenetration(obj.obb, rectObb(rect2.x0, rect2.y0, rect2.x1, rect2.y1)) <= eps) {
+          continue;
+        }
+        const name = rect2.name || "";
+        let message;
+        if (check === "aisles_free") {
+          message = `Прохід перекрито: ${obj.code} × ${name}`;
+        } else if (rect2.kind === "exit") {
+          message = `Вихід перекрито: ${obj.code} × ${name}`;
+        } else {
+          message = `Пожежний прохід перекрито: ${obj.code} × ${name}`;
+        }
+        issues.push(issue(check, sev, layerId, [obj.code], message, [objKey2(obj.kind, obj.id)], String(rect2.id ?? name)));
+      }
+    }
+  }
+  return issues;
+}
+var checkAislesFree = (scene, config, eps) => checkRects(scene, config, eps, "aisles_free", "aisles");
+var checkFire = (scene, config, eps) => checkRects(scene, config, eps, "fire", "fire_paths");
+function checkLoad(scene, config) {
+  const sev = config.mode;
+  const issues = [];
+  for (const p of scene.placements) {
+    const variant = scene.variants.get(p.variant_id);
+    const layer = scene.layers.get(p.layer_id) || {};
+    const limit = layer.max_floor_load || 0;
+    const load = variant.floor_load || 0;
+    const k = [objKey2("placement", p.id)];
+    if (limit > 0 && load > limit) {
+      issues.push(issue("load", sev, p.layer_id, [p.code], `${p.code}: навантаження ${fix(load, 1)} кН/м² перевищує ${fix(limit, 1)}`, k, "floor"));
+    }
+    const slot = p.slot_id != null ? scene.slots.get(p.slot_id) : null;
+    if (p.cell_code && slot) {
+      const cell = scene.slotCells(slot).get(p.cell_code);
+      const weight = variant.weight_kg || 0;
+      if (cell && cell.max_load_kg > 0 && weight > cell.max_load_kg) {
+        issues.push(issue("load", sev, p.layer_id, [p.code], `${p.code}: маса ${g(weight)} кг перевищує ${g(cell.max_load_kg)} кг комірки ${p.cell_code}`, k, "cell"));
+      }
+    }
+  }
+  return issues;
+}
+function checkUtilityReach(scene, config) {
+  const sev = config.mode;
+  let maxM = (config.params || {}).max_m;
+  if (typeof maxM !== "number" || !(maxM > 0)) {
+    maxM = DEFAULT_REACH_M;
+  }
+  const points = /* @__PURE__ */ new Map();
+  for (const layer of scene.layers.values()) {
+    for (const u of layer.utilities || []) {
+      const kind = u.kind === "panel" ? "electric" : u.kind;
+      if (!points.has(kind)) {
+        points.set(kind, []);
+      }
+      points.get(kind).push([u.x, u.y]);
+    }
+  }
+  const issues = [];
+  for (const p of scene.placements) {
+    const variant = scene.variants.get(p.variant_id);
+    const k = [objKey2("placement", p.id)];
+    for (const [kind, ux, uy] of utilityPoints(variant, p.x || 0, p.y || 0, p.rotation || 0)) {
+      const cands = points.get(kind) || [];
+      if (!cands.length) {
+        issues.push(issue("utility_reach", sev, p.layer_id, [p.code], `${p.code}: на площадці немає точки «${kind}»`, k, kind));
+        continue;
+      }
+      const dist = Math.min(...cands.map(([cx, cy]) => Math.hypot(ux - cx, uy - cy)));
+      if (dist > maxM) {
+        issues.push(issue("utility_reach", sev, p.layer_id, [p.code], `${p.code}: до найближчої точки «${kind}» ${fix(dist, 1)} м (ліміт ${g(maxM)} м)`, k, kind));
+      }
+    }
+  }
+  return issues;
+}
+var CHECKERS = {
+  fits: checkFits,
+  collide: checkCollide,
+  service_free: checkServiceFree,
+  aisles_free: checkAislesFree,
+  load: checkLoad,
+  utility_reach: checkUtilityReach,
+  fire: checkFire
+};
+CHECK_KEYS.forEach((key, i) => registries.checks.add(key, { run: CHECKERS[key] }, { sequence: (i + 1) * 10, force: true }));
+function runChecks(state, configs, eps = DEFAULT_EPS_M) {
+  const scene = new Scene(state);
+  const byKey = new Map((configs || []).filter((c) => c.enabled).map((c) => [c.check, c]));
+  const issues = [];
+  for (const [key, chk] of registries.checks.getEntries()) {
+    const config = byKey.get(chk.config || key);
+    if (config) {
+      issues.push(...chk.run(scene, config, epsOf(config, eps)));
+    }
+  }
+  return issues;
+}
+var summarize = (issues) => ({
+  block: issues.filter((i) => i.severity === "block").length,
+  warn: issues.filter((i) => i.severity === "warn").length
+});
+var signature = (issues) => issues.map((i) => `${i.check}|${i.severity}|${i.codes.join(",")}`).sort();
+
+// core/constructor/live.js
+function slotDims(s) {
+  const H = slotHeight({ ...s, params: normalizeParams(s.template, s.params) });
+  if (s.template === "zone") {
+    return { L: s.params.length || 1, W: s.params.width || 1, H };
+  }
+  const f = footprint(s.template, s.params);
+  return { L: f.l, W: f.w, H };
+}
+function pGeom(pl, v) {
+  const rot2 = pl.rotation || 0;
+  const body = placementObb(v, pl.x, pl.y, rot2);
+  const svc = serviceObb(v, pl.x, pl.y, rot2);
+  const g3 = { cx: body.cx, cy: body.cy, L: v.length / 1e3, W: v.width / 1e3, a: rot2, body, svc: null };
+  g3.poly = obbCorners(body);
+  g3.box = obbAabb(body);
+  if (svc) {
+    const [ox, oy] = rotate(svc.cx - body.cx, svc.cy - body.cy, -rot2);
+    Object.assign(g3, { shx: svc.a, shy: svc.b, sox: ox, soy: oy, svc: obbCorners(svc) });
+  }
+  return g3;
+}
+function sGeom(s) {
+  const d = slotDims(s);
+  const a = s.rotation || 0;
+  const g3 = { cx: s.x, cy: s.y, L: d.L, W: d.W, H: d.H, a };
+  g3.body = makeObb(s.x, s.y, d.L / 2, d.W / 2, a);
+  g3.poly = obbCorners(g3.body);
+  g3.box = obbAabb(g3.body);
+  if (s.template === "machine_spot") {
+    const sv = (s.params || {}).service || {};
+    const e = { yn: sv.front || 0, yp: sv.back || 0, xn: sv.left || 0, xp: sv.right || 0 };
+    g3.shx = d.L / 2 + (e.xn + e.xp) / 2;
+    g3.shy = d.W / 2 + (e.yn + e.yp) / 2;
+    g3.sox = (e.xp - e.xn) / 2;
+    g3.soy = (e.yp - e.yn) / 2;
+  }
+  return g3;
+}
+function slotForChecks(s) {
+  if (s.template !== "zone") {
+    return s;
+  }
+  const g3 = sGeom(s);
+  return { ...s, x: 0, y: 0, rotation: 0, params: { polygon: g3.poly } };
+}
+function toCheckState() {
+  return {
+    site: { building: S.site.building, addr: S.site.addr || null, depth_mode: S.site.depth_mode || "level" },
+    layers: S.layers,
+    slots: S.slots.map(slotForChecks),
+    placements: S.placements,
+    variants: S.catalog.flatMap((p) => p.variants)
+  };
+}
+var checkConfigs = () => Object.entries(S.settings.checks).map(([check, c]) => ({
+  check,
+  enabled: c.enabled,
+  mode: c.mode,
+  params: check === "utility_reach" ? { ...c.params, max_m: S.settings.reach_n } : c.params || {}
+}));
+var epsM = () => (S.site && S.site.settings && S.site.settings.eps_mm || 1) / 1e3;
+function runLive() {
+  const list = runChecks(toCheckState(), checkConfigs(), epsM()).map((i) => ({
+    ...i,
+    level: i.severity,
+    msg: i.message,
+    layerId: i.layer_id
+  }));
+  const byKey = /* @__PURE__ */ new Map();
+  for (const it of list) {
+    for (const k of it.keys) {
+      const e = byKey.get(k) || { level: "warn", items: [] };
+      e.items.push(it);
+      if (it.level === "block") {
+        e.level = "block";
+      }
+      byKey.set(k, e);
+    }
+  }
+  return { list, byKey, summary: summarize(list) };
+}
+function newBlocks(before, after, key) {
+  const ids = new Set(before.list.filter((i) => i.level === "block" && i.keys.includes(key)).map((i) => i.id));
+  return after.list.filter((i) => i.level === "block" && i.keys.includes(key) && !ids.has(i.id));
+}
+
+// core/constructor/panels_left.js
+var isNarrow = () => window.matchMedia("(max-width: 900px)").matches;
+function renderTop() {
+  const ss = $("#siteSel");
+  ss.replaceChildren(...K(S.app.sites.map((s) => h("option", { value: s.id, selected: s.id === S.app.active }, s.name))));
+  const rs = $("#roleSel");
+  if (S.rights.is_manager) {
+    rs.disabled = false;
+    rs.setAttribute("aria-label", "Переглянути як роль");
+    rs.replaceChildren(
+      ...K(ROLES.map((r) => h("option", { value: r.id, selected: r.id === (S.app.viewAs || "manager") }, r.id === "manager" ? "Менеджер (своя роль)" : "Переглянути як: " + r.name)))
+    );
+  } else {
+    rs.disabled = true;
+    rs.setAttribute("aria-label", "Ваша роль");
+    rs.replaceChildren(h("option", { value: "me" }, myRoleNames()));
+  }
+  $$("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.app.mode)));
+  const pub = $("#btnPublish");
+  pub.hidden = !can("publish");
+  pub.disabled = !canPublish();
+  pub.title = pub.disabled ? S.rights.is_manager && !S.rights.can_publish ? "Публікацію вимкнено (параметр td.constructor.publish_enabled)" : "Публікує Менеджер у режимі редагування" : "";
+  $("#btnNewSite").disabled = !canManage();
+  renderMenu();
+  renderChips();
+  const tt = $("#btnTheme");
+  tt.replaceChildren(ic(curTheme() === "dark" ? "sun" : "moon"));
+  renderSaveState();
+}
+function renderMenu() {
+  const box = $("#menuExtra");
+  if (!box) {
+    return;
+  }
+  const ctx2 = { E, S, V };
+  const top = [];
+  const more = [];
+  forEachEntry(registries.menu, (key, m) => (m.area === "more" ? more : top).push([key, m]), ctx2);
+  const btn3 = ([key, m], cls) => h("button", { class: cls + (m.cls ? " " + m.cls : ""), type: "button", id: "menu-" + key, disabled: m.disabled ? m.disabled(ctx2) : false, onclick: () => m.run(ctx2) }, m.icon ? ic(m.icon) : null, m.label);
+  box.replaceChildren(
+    ...K(
+      top.map((e) => btn3(e, "fbtn")),
+      more.length ? h("details", { class: "more", id: "menuMore" }, h("summary", { class: "fbtn" }, "Ще ▾"), h("div", { class: "morelist" }, more.map((e) => btn3(e, "fbtn")))) : null
+    )
+  );
+  box.hidden = !top.length && !more.length;
+}
+var SAVE_LABELS = { saved: "Збережено", saving: "Зберігаємо…", error: "Помилка збереження" };
+function renderSaveState() {
+  const el = $("#storeTag");
+  if (!el) {
+    return;
+  }
+  el.textContent = SAVE_LABELS[S.saveState] || "";
+  el.dataset.state = S.saveState;
+  renderNotice();
+}
+var curTheme = () => {
+  const t2 = (host.themeTarget || ROOT.el)?.dataset.theme;
+  if (t2 === "dark" || t2 === "light") {
+    return t2;
+  }
+  return host.themeAuto && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+function renderChips() {
+  const chip = $("#draftChip");
+  if (!chip || !S.site) {
+    return;
+  }
+  const n = S.site.draft_changes || 0;
+  chip.textContent = isNarrow() ? `Чернетка · ${n}` : n ? `Чернетка · змінено ${n}` : "Чернетка · без змін";
+  chip.classList.toggle("dirty", n > 0);
+  const v = S.site.active_version ? "v" + S.site.active_version.n : "не опубліковано";
+  chip.title = "Активна версія: " + v;
+}
+function updateTabs() {
+  $$("#ltabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === S.ui.leftTab)));
+  const m = $("#app").dataset.mtab;
+  $$("#mtabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mtab === m)));
+}
+function setLeftTab(t2) {
+  S.ui.leftTab = t2;
+  $("#app").dataset.mtab = t2;
+  renderLeft();
+  updateTabs();
+}
+function setMTab(t2) {
+  if (t2 === "props") {
+    $("#app").dataset.mtab = "props";
+    updateTabs();
+    E.renderRight();
+  } else {
+    setLeftTab(t2);
+  }
+}
+var leftPanels = () => registries.panels.getEntries().filter(([, p]) => p.area === "left");
+function renderLeft() {
+  const root = $("#leftBody");
+  root.replaceChildren();
+  const found2 = leftPanels().find(([, p]) => p.tab === S.ui.leftTab) || leftPanels()[0];
+  if (found2) {
+    found2[1].render(root);
+  }
+}
+function ensureTabs() {
+  for (const [, p] of leftPanels()) {
+    if (!p.tab || $(`#ltabs button[data-tab="${p.tab}"]`)) {
+      continue;
+    }
+    const mk = (mobile2) => h("button", { type: "button", role: "tab", [mobile2 ? "data-mtab" : "data-tab"]: p.tab, onclick: () => mobile2 ? E.setMTab(p.tab) : E.setLeftTab(p.tab) }, p.label || p.tab);
+    $("#ltabs").append(mk(false));
+    const props = $('#mtabs button[data-mtab="props"]');
+    if (props) {
+      props.before(mk(true));
+    }
+  }
+}
+function renderAll() {
+  ensureTabs();
+  renderTop();
+  renderLeft();
+  E.renderRight();
+  renderVTools();
+  renderStamp();
+  renderNotice();
+  E.renderDxfPanel();
+  updateTabs();
+}
+function setActiveLayer(id) {
+  if (S.ui.layer === id) {
+    return;
+  }
+  V.hidden.delete(id);
+  S.ui.layer = id;
+  S.issues = runLive();
+  E.syncScene();
+  renderLayerList();
+  renderLayerForm();
+  renderStamp();
+  E.renderDxfPanel();
+  if (S.ui.leftTab === "slots") {
+    renderLeft();
+  }
+  E.requestRender();
+}
+function renderLayersTab(root) {
+  const add = h("button", { class: "fbtn sm", type: "button", disabled: !canManage(), onclick: addLayer, title: canManage() ? "" : "Шари додає Менеджер" }, ic("plus"), "Шар");
+  root.append(...K(h("div", { class: "sec" }, h("h3", null, "Шари", add), h("div", { id: "layerList" })), h("div", { class: "sec", id: "layerForm" })));
+  renderLayerList();
+  renderLayerForm();
+}
+function renderLayerList() {
+  const box = $("#layerList");
+  if (!box) {
+    return;
+  }
+  const lys = [...S.layers].sort((a, b) => a.sequence - b.sequence);
+  const groups = [];
+  for (const ly of lys) {
+    const name = ly.group || "";
+    let g3 = groups.find((x) => x.name === name);
+    if (!g3) {
+      g3 = { name, layers: [] };
+      groups.push(g3);
+    }
+    g3.layers.push(ly);
+  }
+  const collapsed = S.ui.collapsed = S.ui.collapsed || /* @__PURE__ */ new Set();
+  const row = (ly) => {
+    const n = S.slots.filter((s) => s.layer_id === ly.id).length + S.placements.filter((p) => p.layer_id === ly.id).length;
+    const vis = isLayerVisible(ly);
+    return h(
+      "div",
+      {
+        class: "layer" + (ly.id === S.ui.layer ? " active" : "") + (vis ? "" : " hidden"),
+        role: "button",
+        tabindex: 0,
+        "data-layer": ly.id,
+        onclick: () => setActiveLayer(ly.id),
+        onkeydown: (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setActiveLayer(ly.id);
+          }
+        }
+      },
+      h(
+        "button",
+        {
+          class: "eye",
+          type: "button",
+          "aria-label": vis ? "Сховати шар" : "Показати шар",
+          onclick: (e) => {
+            e.stopPropagation();
+            if (vis) {
+              V.hidden.add(ly.id);
+            } else {
+              V.hidden.delete(ly.id);
+            }
+            E.syncScene();
+            renderLayerList();
+          }
+        },
+        ic(vis ? "eye" : "eyeoff")
+      ),
+      h("span", { class: "sw", style: { background: ly.color } }),
+      h("span", { class: "nm", title: ly.name }, ly.name),
+      canEditLayer(ly) ? null : h("span", { class: "ic", title: lockHint(ly) }, ic("lock")),
+      h("span", { class: "meta" }, (ly.elevation >= 0 ? "+" : "") + fmt(ly.elevation, 1) + " м · " + n)
+    );
+  };
+  const items2 = [];
+  for (const g3 of groups) {
+    const closed = !!g3.name && collapsed.has(g3.name) && !g3.layers.some((l) => l.id === S.ui.layer);
+    if (g3.name) {
+      items2.push(
+        h(
+          "div",
+          {
+            class: "lgroup" + (closed ? " closed" : ""),
+            role: "button",
+            tabindex: 0,
+            "data-group": g3.name,
+            onclick: () => {
+              if (collapsed.has(g3.name)) {
+                collapsed.delete(g3.name);
+              } else {
+                collapsed.add(g3.name);
+              }
+              renderLayerList();
+            }
+          },
+          ic(closed ? "down" : "up"),
+          h("span", { class: "nm" }, g3.name),
+          h("span", { class: "meta" }, String(g3.layers.length))
+        )
+      );
+    }
+    if (!closed) {
+      items2.push(...g3.layers.map(row));
+    }
+  }
+  box.replaceChildren(...K(h("div", { class: "layers" }, items2)));
+}
+function addLayer() {
+  const ly = { ...newLayerDefaults(), id: newUid(), rid: null, etag: null, sequence: Math.max(0, ...S.layers.map((l) => l.sequence)) + 10 };
+  S.layers.push(ly);
+  S.ui.layer = ly.id;
+  E.commit({});
+}
+function layerEdit(fn) {
+  fn();
+  E.liveEdit();
+}
+function boundsRect(b) {
+  if (!b || b.length !== 4) {
+    return null;
+  }
+  const xs = [...new Set(b.map((p) => p[0]))];
+  const ys = [...new Set(b.map((p) => p[1]))];
+  return xs.length === 2 && ys.length === 2 ? { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) } : null;
+}
+var rectBounds = (r) => [
+  [r.x0, r.y0],
+  [r.x1, r.y0],
+  [r.x1, r.y1],
+  [r.x0, r.y1]
+];
+function renderLayerForm() {
+  const box = $("#layerForm");
+  if (!box) {
+    return;
+  }
+  const ly = layerOf(S.ui.layer);
+  box.replaceChildren();
+  if (!ly) {
+    return;
+  }
+  const dis = !canManage();
+  const disC = !canEditLayer(ly);
+  const num4 = (label2, key, unit, o) => fld(label2, numInput(Object.assign({ value: ly[key], dis, label: label2, set: (v) => layerEdit(() => {
+    ly[key] = v;
+  }) }, o)), unit);
+  const frag = [];
+  frag.push(h("h3", null, "Параметри шару"));
+  if (dis) {
+    frag.push(h("div", { class: "note lock" }, S.app.mode === "edit" ? "Параметри шарів змінює Менеджер." : lockHint(ly)));
+  }
+  const rect2 = boundsRect(ly.bounds);
+  frag.push(
+    h(
+      "div",
+      { class: "fcol" },
+      fld("Назва", textInput({ value: ly.name, dis, label: "Назва", f: "layer-name", set: (v) => layerEdit(() => {
+        ly.name = v;
+      }) })),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Тип", selectEl(Object.entries(LAYER_KINDS), ly.kind, (v) => layerEdit(() => {
+          ly.kind = v;
+        }), dis, "Тип")),
+        num4("Відмітка", "elevation", "м", { step: 0.1 })
+      ),
+      h("div", { class: "grid3" }, num4("Крок сітки", "grid_step", "м", { step: 0.05, min: 0.05 }), num4("Ширина проходів", "aisle_width", "м", { step: 0.1, min: 0 }), num4("Навант. на підлогу", "max_floor_load", "кН/м²", { step: 1, min: 0 })),
+      h(
+        "div",
+        { class: "frow" },
+        fld("Колір", h("input", { type: "color", value: ly.color, disabled: dis, onchange: (e) => layerEdit(() => {
+          ly.color = e.target.value;
+        }) })),
+        fld("Непрозорість", h("input", { type: "range", min: 0.1, max: 1, step: 0.05, value: ly.opacity, disabled: dis, oninput: (e) => layerEdit(() => {
+          ly.opacity = parseFloat(e.target.value);
+        }) }))
+      ),
+      fld(
+        "Контур шару",
+        h(
+          "div",
+          { class: "fcol" },
+          h(
+            "label",
+            { class: "frow" },
+            h("input", {
+              type: "checkbox",
+              checked: !!ly.bounds,
+              disabled: dis,
+              onchange: (e) => {
+                layerEdit(() => {
+                  ly.bounds = e.target.checked ? rectBounds({ x0: 0, y0: 0, x1: S.site.building.length, y1: S.site.building.width }) : null;
+                });
+                renderLayerForm();
+              }
+            }),
+            "Задати контур (інакше — межі будівлі)"
+          ),
+          ly.bounds && rect2 ? h("div", { class: "grid4" }, ["x0", "y0", "x1", "y1"].map((k) => numInput({ value: rect2[k], dis, label: k, step: 0.5, set: (v) => layerEdit(() => {
+            ly.bounds = rectBounds({ ...boundsRect(ly.bounds), [k]: v });
+          }) }))) : ly.bounds ? h("div", { class: "small muted" }, `Контур із ${ly.bounds.length} точок: редагується у формі Odoo.`) : null
+        ),
+        "м"
+      ),
+      fld("Допустимі типи місць", checkGroup(Object.entries(TPL).map(([k, t2]) => [k, t2.name]), ly.slot_types, (v) => layerEdit(() => {
+        ly.slot_types = v;
+      }), dis)),
+      fld(
+        "Редагують ролі",
+        checkGroup(
+          ROLES.map((r) => [r.id, r.name]),
+          ly.edit_roles,
+          async (v) => {
+            const roles = v.includes("manager") ? v : ["manager", ...v];
+            await E.adapter.ensureGroupIds(roles);
+            layerEdit(() => {
+              ly.edit_roles = roles;
+            });
+          },
+          dis
+        )
+      )
+    )
+  );
+  frag.push(h("hr"), h("div", { class: "h3" }, "Підкладка"), h("button", { class: "fbtn sm", type: "button", onclick: () => E.openDxfPanel() }, ic("upload"), ly.underlay ? "Підкладка: " + ly.underlay.name : "Підкладка DXF"));
+  const rectRows = (arr, container) => arr.map(
+    (a, i) => h(
+      "div",
+      { class: "mini fp" },
+      textInput({ value: a.name || "", dis: disC, label: "Назва", set: (v) => layerEdit(() => {
+        a.name = v;
+      }) }),
+      ...["x0", "y0", "x1", "y1"].map((k) => numInput({ value: a[k], dis: disC, label: k, step: 0.1, set: (v) => layerEdit(() => {
+        a[k] = v;
+      }) })),
+      h("button", { class: "xbtn", type: "button", disabled: disC, "aria-label": "Видалити", onclick: () => {
+        layerEdit(() => {
+          const j = container.indexOf(a);
+          container.splice(j >= 0 ? j : i, 1);
+        });
+        renderLayerForm();
+      } }, ic("x"))
+    )
+  );
+  const fireAll = ly.fire_paths;
+  const paths = fireAll.filter((f) => f.kind !== "exit");
+  const exits = fireAll.filter((f) => f.kind === "exit");
+  frag.push(
+    h("hr"),
+    h("div", { class: "h3" }, "Проходи шару"),
+    h("div", null, rectRows(ly.aisles, ly.aisles)),
+    h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
+      const t2 = E.camTarget(), w = ly.aisle_width || 2.5;
+      layerEdit(() => ly.aisles.push({ id: uid("ai_"), name: "Прохід " + (ly.aisles.length + 1), x0: rnd(t2.x - 6), y0: rnd(t2.y - w / 2), x1: rnd(t2.x + 6), y1: rnd(t2.y + w / 2) }));
+      renderLayerForm();
+    } }, ic("plus"), "Прохід")
+  );
+  frag.push(
+    h("hr"),
+    h("div", { class: "h3" }, "Пожежні проходи й виходи"),
+    h("div", null, rectRows(paths, fireAll)),
+    exits.length ? h("details", null, h("summary", { class: "small muted" }, `Виходи: ${exits.length}`), rectRows(exits, fireAll)) : null,
+    h(
+      "div",
+      { class: "frow wrap" },
+      h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
+        const t2 = E.camTarget();
+        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "path", name: "Пожежний прохід " + (paths.length + 1), x0: rnd(t2.x - 6), y0: rnd(t2.y - 0.6), x1: rnd(t2.x + 6), y1: rnd(t2.y + 0.6) }));
+        renderLayerForm();
+      } }, ic("plus"), "Прохід"),
+      h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
+        const t2 = E.camTarget();
+        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "exit", name: "Вихід " + (exits.length + 1), x0: rnd(t2.x - 1), y0: 0, x1: rnd(t2.x + 1), y1: 2.5 }));
+        renderLayerForm();
+      } }, ic("plus"), "Вихід")
+    )
+  );
+  const ut = ly.utilities;
+  frag.push(
+    h("hr"),
+    h("div", { class: "h3" }, "Точки щитів і магістралей"),
+    ut.length ? h(
+      "details",
+      null,
+      h("summary", { class: "small muted" }, `Точок: ${ut.length}`),
+      ut.map(
+        (a) => h(
+          "div",
+          { class: "mini u" },
+          selectEl(Object.entries(LAYER_UTIL_KINDS), a.kind, (v) => layerEdit(() => {
+            a.kind = v;
+          }), disC, "Вид"),
+          numInput({ value: a.x, dis: disC, label: "x", step: 0.5, set: (v) => layerEdit(() => {
+            a.x = v;
+          }) }),
+          numInput({ value: a.y, dis: disC, label: "y", step: 0.5, set: (v) => layerEdit(() => {
+            a.y = v;
+          }) }),
+          h("button", { class: "xbtn", type: "button", disabled: disC, "aria-label": "Видалити", onclick: () => {
+            layerEdit(() => ut.splice(ut.indexOf(a), 1));
+            renderLayerForm();
+          } }, ic("x"))
+        )
+      )
+    ) : h("div", { class: "small muted" }, "Точок немає."),
+    h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
+      const t2 = E.camTarget();
+      layerEdit(() => ut.push({ id: uid("u"), kind: "electric", name: "", x: rnd(t2.x, 1), y: rnd(t2.y, 1) }));
+      renderLayerForm();
+    } }, ic("plus"), "Точка")
+  );
+  const sorted = [...S.layers].sort((a, b) => a.sequence - b.sequence);
+  const idx = sorted.indexOf(ly);
+  const move = (d) => {
+    const o = sorted[idx + d];
+    if (!o) {
+      return;
+    }
+    layerEdit(() => {
+      const t2 = ly.sequence;
+      ly.sequence = o.sequence;
+      o.sequence = t2;
+      if (ly.sequence === o.sequence) {
+        ly.sequence += d;
+      }
+    });
+    renderLayerForm();
+  };
+  frag.push(
+    h("hr"),
+    h(
+      "div",
+      { class: "frow wrap" },
+      h("button", { class: "fbtn sm icon", type: "button", disabled: dis || idx <= 0, "aria-label": "Вище", onclick: () => move(-1) }, ic("up")),
+      h("button", { class: "fbtn sm icon", type: "button", disabled: dis || idx >= sorted.length - 1, "aria-label": "Нижче", onclick: () => move(1) }, ic("down")),
+      h("span", { class: "grow" }),
+      h("button", { class: "fbtn sm danger", type: "button", disabled: dis || S.layers.length < 2, onclick: () => deleteLayer(ly) }, ic("trash"), "Видалити шар")
+    )
+  );
+  box.append(...K(frag));
+}
+async function deleteLayer(ly) {
+  const n = S.slots.filter((s) => s.layer_id === ly.id).length + S.placements.filter((p) => p.layer_id === ly.id).length;
+  const ok = await E.confirmBox({ title: "Видалити шар?", text: `Шар «${ly.name}»${n ? ` містить ${n} об’єктів — вони теж будуть видалені.` : "."}`, ok: "Видалити", danger: true });
+  if (!ok) {
+    return;
+  }
+  S.slots = S.slots.filter((s) => s.layer_id !== ly.id);
+  S.placements = S.placements.filter((p) => p.layer_id !== ly.id);
+  S.layers = S.layers.filter((l) => l.id !== ly.id);
+  V.uldata.delete(ly.id);
+  reindex();
+  if (S.sel && !S.sIdx.has(S.sel.id) && !S.pIdx.has(S.sel.id)) {
+    S.sel = null;
+  }
+  S.ui.layer = (S.layers.find((l) => l.kind === "production") || S.layers[0]).id;
+  E.commit({});
+}
+function renderSlotsTab(root) {
+  const ly = layerOf(S.ui.layer);
+  if (!ly) {
+    return;
+  }
+  const dis = !canEditLayer(ly);
+  const T = S.ui.tpl = S.ui.tpl || { template: "pallet_rack", prefix: "R1", params: defaultParams("pallet_rack") };
+  const spec = TPL[T.template];
+  const sec3 = h("div", { class: "sec" }, h("h3", null, "Новий шаблон"));
+  if (dis) {
+    sec3.append(h("div", { class: "note lock" }, lockHint(ly)));
+  }
+  const allowed = ly.slot_types.includes(T.template);
+  sec3.append(
+    h(
+      "div",
+      { class: "fcol" },
+      fld("Шаблон", selectEl(Object.entries(TPL).map(([k, t2]) => [k, t2.name]), T.template, (v) => {
+        T.template = v;
+        T.params = defaultParams(v);
+        T.prefix = TPL[v].prefix;
+        renderLeft();
+      }, false, "Шаблон")),
+      h("div", { class: "small muted" }, spec.info),
+      fld("Префікс коду", textInput({ value: T.prefix, label: "Префікс", f: "tpl-prefix", set: (v) => {
+        T.prefix = v;
+      } }), "напр. PR-1; до 22 символів"),
+      paramFields(T.template, T.params, { dis: false, onChange: () => {
+      } }),
+      !allowed ? h("div", { class: "note err" }, `Шар «${ly.name}» не допускає цей шаблон. Змініть «Допустимі типи місць» у параметрах шару.`) : null,
+      h("button", { class: "fbtn primary", type: "button", id: "btnPlaceSlot", disabled: dis || !allowed, onclick: () => E.startPlacing({ kind: "slot", template: T.template, prefix: (T.prefix || spec.prefix).slice(0, 22), params: clone(T.params) }) }, "Поставити на сцену")
+    )
+  );
+  root.append(...K(sec3));
+  const slots = S.slots.filter((s) => s.layer_id === ly.id);
+  const total = slots.reduce((a, s) => a + cellCount(s), 0);
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, `Місця шару · ${slots.length}`),
+        slots.length ? h(
+          "div",
+          { class: "rowlist" },
+          slots.map(
+            (s) => h(
+              "div",
+              {
+                class: "it" + (S.sel && S.sel.id === s.id ? " sel" : ""),
+                role: "button",
+                tabindex: 0,
+                onclick: () => {
+                  E.selectObj({ kind: "slot", id: s.id });
+                  E.focusOn(s.x, s.y);
+                },
+                onkeydown: (e) => {
+                  if (e.key === "Enter") {
+                    E.selectObj({ kind: "slot", id: s.id });
+                    E.focusOn(s.x, s.y);
+                  }
+                }
+              },
+              h("span", { class: "t" }, (s.template === "zone" && s.params.title && s.params.title !== s.code_prefix ? s.params.title + " · " : "") + s.code_prefix),
+              h("span", { class: "tag" }, TPL[s.template].name.split(" ")[0]),
+              h("span", { class: "m" }, SOLID_SLOTS.includes(s.template) ? cellCount(s) + " ком." : "—")
+            )
+          )
+        ) : h("div", { class: "empty" }, "На цьому шарі місць ще немає."),
+        h("div", { class: "small muted", style: { marginTop: "6px" } }, `Комірок на шарі: ${fmtInt(total)}`)
+      )
+    )
+  );
+}
+function renderCatalogTab(root) {
+  const q = (S.ui.catQ || "").toLowerCase();
+  const canCat = canCatalog();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, "Каталог обладнання", h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openPassportForm(null) }, ic("plus"), "Тип")),
+        h("input", {
+          type: "text",
+          placeholder: "Пошук: тип, виробник, модель",
+          value: S.ui.catQ || "",
+          "aria-label": "Пошук",
+          style: { width: "100%" },
+          oninput: (e) => {
+            S.ui.catQ = e.target.value;
+            const pos = e.target.selectionStart;
+            renderLeft();
+            const ni = $("#leftBody input[type=text]");
+            if (ni) {
+              ni.focus();
+              ni.setSelectionRange(pos, pos);
+            }
+          }
+        })
+      )
+    )
+  );
+  if (!canCat) {
+    root.append(h("div", { class: "note lock", style: { marginBottom: "8px" } }, S.app.mode === "edit" ? "Каталог редагують Менеджер і Технолог." : "Режим перегляду."));
+  }
+  for (const [ck, cn] of Object.entries(CATEGORIES)) {
+    const pps = S.catalog.filter((p) => p.category === ck && (!q || (p.name + " " + p.manufacturer + " " + p.model + " " + p.variants.map((v) => v.name).join(" ")).toLowerCase().includes(q)));
+    if (!pps.length) {
+      continue;
+    }
+    root.append(
+      ...K(
+        h(
+          "details",
+          { class: "cat", open: true },
+          h("summary", null, cn, h("span", { class: "c" }, pps.reduce((a, p) => a + p.variants.length, 0))),
+          pps.map(
+            (p) => h(
+              "div",
+              { class: "pp" },
+              h("div", { class: "ph" }, h("b", null, p.name), h("button", { class: "fbtn sm", type: "button", title: "Тип: виробник, модель, категорія", onclick: () => E.openPassportForm(p) }, "Тип")),
+              h("div", { class: "mf" }, [p.manufacturer, p.model].filter((x) => x && x !== "—").join(" · ") || "без виробника"),
+              p.variants.map(
+                (v) => h(
+                  "div",
+                  {
+                    class: "var",
+                    draggable: "true",
+                    "data-variant": v.id,
+                    title: "Перетягніть на сцену",
+                    ondragstart: (e) => {
+                      e.dataTransfer.setData("text/f3d-variant", v.id);
+                      e.dataTransfer.setData("text/plain", v.name);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }
+                  },
+                  h("span", { class: "vn" }, v.name),
+                  h("span", { class: "vm" }, `${fmt(v.length / 1e3, 1)}×${fmt(v.width / 1e3, 1)}×${fmt(v.height / 1e3, 1)} м`, v.model && v.model.status === "ok" ? h("span", { class: "tag", title: "Є 3D-модель" }, "3D") : v.model && v.model.status === "pending_conversion" ? h("span", { class: "tag", title: "Очікує перетворення на сервері" }, "3D…") : null),
+                  h("button", { class: "fbtn sm icon", type: "button", title: "Поставити на сцену", "aria-label": "Поставити на сцену", onclick: () => E.startPlacing({ kind: "placement", variantId: v.id }) }, ic("plus")),
+                  h("button", { class: "fbtn sm", type: "button", title: "Картка варіанта: габарити, сервіс, 3D-модель", onclick: () => E.openVariantForm(v, p) }, "Змінити")
+                )
+              ),
+              h("button", { class: "fbtn sm", type: "button", disabled: !canCat, onclick: () => E.openVariantForm(null, p) }, ic("plus"), "Варіант")
+            )
+          )
+        )
+      )
+    );
+  }
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", style: { marginTop: "12px" } },
+        h("h3", null, "Підкладка"),
+        h("button", { class: "fbtn", type: "button", onclick: () => E.openDxfPanel() }, ic("upload"), "Підкладка DXF"),
+        h("div", { class: "small muted", style: { marginTop: "4px" } }, "DXF для обведення в масштабі; DWG — на сервері.")
+      )
+    )
+  );
+}
+function renderVTools() {
+  const box = $("#vtools");
+  if (!box) {
+    return;
+  }
+  const b = (icon, label2, fn, pressed) => h("button", { class: "fbtn", type: "button", onclick: fn, "aria-pressed": pressed == null ? null : String(!!pressed), title: label2, "aria-label": label2 }, ic(icon), h("span", { class: "lg" }, label2));
+  box.replaceChildren(
+    ...K(
+      b("cube", "3D", () => E.setView("iso")),
+      b("plan", "План", () => E.setView("plan")),
+      b("fit", "Вписати", () => E.setView(V.camMode || "iso")),
+      b("ruler", "Лінійка", () => {
+        const on = !V.ruler.on;
+        E.cancelModes();
+        V.ruler.on = on;
+        if (on) {
+          toast("Лінійка: клацніть дві точки на підлозі активного шару.");
+        }
+        renderVTools();
+      }, V.ruler.on),
+      b("tag", "Підписи", () => {
+        S.settings.labels = !S.settings.labels;
+        E.requestRender();
+        renderVTools();
+      }, S.settings.labels),
+      V.placing ? h("button", { class: "fbtn danger", type: "button", onclick: E.cancelModes }, ic("x"), h("span", null, "Скасувати")) : null
+    )
+  );
+}
+function renderStamp() {
+  const st4 = $("#stamp");
+  if (!st4 || !S.site) {
+    return;
+  }
+  const ly = layerOf(S.ui.layer);
+  st4.replaceChildren(
+    ...K(
+      h("div", null, "Площадка"),
+      h("div", { class: "mono" }, S.site.name.length > 22 ? S.site.name.slice(0, 21) + "…" : S.site.name),
+      h("div", null, "Шар"),
+      h("div", { class: "mono" }, ly ? ly.name : "—"),
+      h("div", null, "Відмітка"),
+      h("div", { class: "mono" }, ly ? (ly.elevation >= 0 ? "+" : "") + fmt(ly.elevation, 1) + " м" : "—"),
+      h("div", null, "Сітка"),
+      h("div", { class: "mono" }, ly ? fmt(ly.grid_step, 2) + " м" : "—"),
+      h("div", null, "Курсор"),
+      h("div", { class: "mono", id: "curPos" }, "—"),
+      h("div", null, "Об’єкт"),
+      h("div", { class: "mono", id: "hoverName", style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "190px" } }, "—")
+    )
+  );
+}
+function updateStamp() {
+  const el = $("#curPos");
+  if (el) {
+    el.textContent = `x ${fmt(V.cursor.x, 1)} · y ${fmt(V.cursor.y, 1)}`;
+  }
+}
+function renderNotice() {
+  const box = $("#vnotice");
+  if (!box) {
+    return;
+  }
+  box.replaceChildren();
+  if (S.saveState === "error") {
+    box.append(h("div", { class: "note err" }, "Не вдалося зберегти зміни на сервері. Чернетка лишається в пам’яті, повтор виконується автоматично."));
+  }
+}
+Object.assign(E, {
+  renderTop,
+  renderMenu,
+  renderSaveState,
+  renderChips,
+  renderLeft,
+  renderAll,
+  renderLayerList,
+  renderLayerForm,
+  renderVTools,
+  renderStamp,
+  updateStamp,
+  renderNotice,
+  setActiveLayer,
+  setLeftTab,
+  setMTab,
+  updateTabs,
+  isNarrow,
+  curTheme
+});
+registries.panels.add("left:layers", { area: "left", tab: "layers", label: "Шари", render: renderLayersTab }, { sequence: 10, force: true });
+registries.panels.add("left:slots", { area: "left", tab: "slots", label: "Місця", render: renderSlotsTab }, { sequence: 20, force: true });
+registries.panels.add("left:catalog", { area: "left", tab: "catalog", label: "Каталог", render: renderCatalogTab }, { sequence: 30, force: true });
+
+// core/constructor/panels_right.js
+function selectObj(ref2) {
+  S.sel = ref2 ? { kind: ref2.kind, id: ref2.id } : null;
+  S.selCell = null;
+  S.edit = null;
+  if (ref2) {
+    const rec = recOfRef(ref2);
+    if (rec && rec.layer_id !== S.ui.layer) {
+      S.ui.layer = rec.layer_id;
+      S.issues = runLive();
+      E.syncScene();
+      E.renderLayerList();
+      E.renderLayerForm();
+      E.renderStamp();
+    }
+  }
+  renderRight();
+  E.updateVisual();
+  const rb = $("#rightBody");
+  if (rb) {
+    rb.scrollTop = 0;
+  }
+  if (S.ui.leftTab === "slots") {
+    E.renderLeft();
+  }
+  if (ref2 && E.isNarrow() && $("#app").dataset.mtab !== "props") {
+    $("#app").dataset.mtab = "props";
+    E.updateTabs();
+  }
+}
+function beginEdit(kind, rec) {
+  if (!S.edit || S.edit.rec !== rec) {
+    S.edit = { kind, rec, snap: clone(rec), before: S.issues };
+  }
+}
+function liveEdit() {
+  S.issues = runLive();
+  E.syncScene();
+  renderChecksBlock();
+  E.renderChips();
+  E.renderLayerList();
+  renderDerived();
+  renderCellsBox();
+  E.scheduleSave();
+}
+function restoreRec(rec, snap) {
+  for (const k of Object.keys(rec)) {
+    if (!(k in snap)) {
+      delete rec[k];
+    }
+  }
+  for (const k of Object.keys(snap)) {
+    rec[k] = clone(snap[k]);
+  }
+}
+function endEdit() {
+  const e = S.edit;
+  if (!e) {
+    return;
+  }
+  S.edit = null;
+  const after = runLive();
+  const key = objKey(e.kind, e.rec.id);
+  const nb = newBlocks(e.before, after, key);
+  if (nb.length) {
+    restoreRec(e.rec, e.snap);
+    S.issues = runLive();
+    E.syncScene();
+    toast("Заблоковано: " + nb[0].msg + ". Значення повернуто.", "err");
+    renderRight();
+    E.renderChips();
+    E.renderLayerList();
+    E.scheduleSave();
+    return;
+  }
+  S.issues = after;
+  E.updateVisual();
+  renderChecksBlock();
+}
+function syncPropsValues() {
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    return;
+  }
+  $$("#rightBody [data-f]").forEach((el) => {
+    if (document.activeElement === el) {
+      return;
+    }
+    const f = el.dataset.f;
+    const v = f.startsWith("p.") ? getp(rec.params, f.slice(2)) : rec[f];
+    if (v != null && el.type === "number") {
+      el.value = String(rnd(v, 4));
+    }
+  });
+  renderDerived();
+}
+function renderRight() {
+  const root = $("#rightBody");
+  if (!root) {
+    return;
+  }
+  root.replaceChildren();
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    S.sel = null;
+    renderSiteProps(root);
+  } else if (S.sel.kind === "placement") {
+    renderPlacementProps(root, rec);
+  } else {
+    renderSlotProps(root, rec);
+  }
+  renderPanelBlocks("right", root, { rec });
+}
+function renderPanelBlocks(area, root, ctx2) {
+  forEachEntry(registries.panels, (_key, p) => p.area === area && p.render(root, ctx2), ctx2);
+}
+registries.panels.add(
+  "right:checks",
+  {
+    area: "right",
+    render(root) {
+      root.append(h("div", { class: "sec", id: "checksBlock" }));
+      renderChecksBlock();
+    }
+  },
+  { sequence: 90, force: true }
+);
+function renderSiteProps(root) {
+  const dis = !canManage();
+  const b = S.site.building;
+  const cg = S.site.column_grid;
+  const upd = () => {
+    S.issues = runLive();
+    E.syncScene(true);
+    E.setView(V.camMode || "iso");
+    E.renderChips();
+    E.saveSiteProps();
+  };
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, "Площадка"),
+        dis ? h("div", { class: "note lock", style: { marginBottom: "8px" } }, S.app.mode === "edit" ? "Параметри площадки змінює Менеджер." : lockHint(layerOf(S.ui.layer))) : null,
+        h(
+          "div",
+          { class: "fcol" },
+          fld("Назва", textInput({ value: S.site.name, dis, label: "Назва", set: (v) => {
+            S.site.name = v;
+            const e = S.app.sites.find((s) => s.id === S.site.id);
+            if (e) {
+              e.name = v;
+            }
+            E.renderTop();
+            E.renderStamp();
+            E.saveSiteProps();
+          } })),
+          h(
+            "div",
+            { class: "grid3" },
+            fld("Довжина", numInput({ value: b.length, dis, min: 5, max: 1e3, step: 1, label: "Довжина", set: (v) => {
+              b.length = v;
+              upd();
+            } }), "м"),
+            fld("Ширина", numInput({ value: b.width, dis, min: 5, max: 1e3, step: 1, label: "Ширина", set: (v) => {
+              b.width = v;
+              upd();
+            } }), "м"),
+            fld("Висота", numInput({ value: b.height, dis, min: 2, max: 60, step: 0.5, label: "Висота", set: (v) => {
+              b.height = v;
+              upd();
+            } }), "м")
+          ),
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Крок колон X", numInput({ value: cg.step_x, dis, min: 0, max: 100, step: 1, label: "Крок колон X", set: (v) => {
+              cg.step_x = v;
+              upd();
+            } }), "м"),
+            fld("Крок колон Y", numInput({ value: cg.step_y, dis, min: 0, max: 100, step: 1, label: "Крок колон Y", set: (v) => {
+              cg.step_y = v;
+              upd();
+            } }), "м")
+          ),
+          h("div", { class: "small muted" }, `Активна версія: ${S.site.active_version ? "v" + S.site.active_version.n : "не опубліковано"}. Об’єктів: ${S.slots.length} місць, ${S.placements.length} одиниць обладнання.`),
+          h("div", { class: "note" }, "Клацніть об’єкт на сцені або в списках, щоб побачити точні параметри. Перетягування працює з прив’язкою до сітки активного шару.")
+        )
+      )
+    )
+  );
+  renderPanelBlocks("site", root, { rec: null });
+}
+var lockNote = (ly) => canEditLayer(ly) ? null : h("div", { class: "note lock", style: { marginBottom: "8px" } }, ic("lock"), " ", lockHint(ly));
+function renderPlacementProps(root, pl) {
+  const ly = layerOf(pl.layer_id);
+  const dis = !canEditLayer(ly);
+  const v = variantOf(pl.variant_id);
+  const kind = "placement";
+  const ed = { begin: () => beginEdit(kind, pl), end: endEdit };
+  const set = (fn) => (val) => {
+    fn(val);
+    liveEdit();
+  };
+  const opts2 = [];
+  for (const p of S.catalog) {
+    for (const x of p.variants) {
+      opts2.push([x.id, `${p.name} — ${x.name}`]);
+    }
+  }
+  const rots = rotationsList(v);
+  const eq = pl.equipment;
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, "Обладнання"),
+        lockNote(ly),
+        pl.dynamic ? h("div", { class: "note", id: "dynamicNote" }, "Динамічний об’єкт (люди, транспорт): не враховується в перевірках перетинів, проходів, обслуговування й пожежних шляхів.") : null,
+        h(
+          "div",
+          { class: "fcol" },
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Код", textInput({ value: pl.code, dis, label: "Код", f: "code", set: set((x) => {
+              pl.code = x;
+            }), ...ed })),
+            fld("Назва", textInput({ value: pl.name, dis, label: "Назва", f: "name", set: set((x) => {
+              pl.name = x;
+            }), ...ed }))
+          ),
+          fld("Варіант (тип обладнання)", selectEl(opts2, pl.variant_id, (x) => {
+            beginEdit(kind, pl);
+            pl.variant_id = x;
+            liveEdit();
+            endEdit();
+            renderRight();
+          }, dis, "Варіант")),
+          h(
+            "div",
+            { class: "grid3" },
+            fld("x", numInput({ value: pl.x, dis, step: snapStep(pl), f: "x", label: "x", set: set((x) => {
+              pl.x = x;
+            }), ...ed }), "м"),
+            fld("y", numInput({ value: pl.y, dis, step: snapStep(pl), f: "y", label: "y", set: set((x) => {
+              pl.y = x;
+            }), ...ed }), "м"),
+            fld(
+              "Поворот",
+              rots ? selectEl(rots.map((r) => [r, r + "°"]), normDeg(Math.round(pl.rotation || 0)), (x) => {
+                beginEdit(kind, pl);
+                pl.rotation = Number(x);
+                liveEdit();
+                endEdit();
+              }, dis, "Поворот") : numInput({ value: pl.rotation || 0, dis, step: 15, f: "rotation", label: "Поворот", set: set((x) => {
+                pl.rotation = normDeg(x);
+              }), ...ed }),
+              rots ? null : "°"
+            )
+          ),
+          h("div", { id: "derived" }),
+          eq ? h("div", { class: "small" }, "Запис в Odoo: ", h("a", { href: "#", onclick: (e) => {
+            e.preventDefault();
+            E.openRecord("maintenance.equipment", eq.id);
+          } }, eq.name)) : null,
+          h(
+            "div",
+            { class: "frow wrap" },
+            h("button", { class: "fbtn sm", type: "button", id: "btnRotate", disabled: dis, onclick: () => rotateSel(1) }, ic("rot"), "Повернути 90°"),
+            h("button", { class: "fbtn sm", type: "button", onclick: () => {
+              const x = variantOf(pl.variant_id);
+              if (x) {
+                E.openVariantForm(x, passportOf(x.id));
+              }
+            } }, "Картка варіанта"),
+            h("span", { class: "grow" }),
+            h("button", { class: "fbtn sm danger", type: "button", id: "btnDelete", disabled: dis, onclick: askDelete }, ic("trash"), "Видалити")
+          )
+        )
+      )
+    )
+  );
+  renderPanelBlocks("placement", root, { rec: pl });
+  renderDerived();
+}
+function renderDerived() {
+  const box = $("#derived");
+  if (!box || !S.sel) {
+    return;
+  }
+  const rec = recOfRef(S.sel);
+  if (!rec) {
+    return;
+  }
+  if (S.sel.kind === "placement") {
+    const v = variantOf(rec.variant_id);
+    const p = passportOf(rec.variant_id);
+    if (!v) {
+      return;
+    }
+    const g3 = pGeom(rec, v);
+    const host2 = rec.slot_id ? S.sIdx.get(rec.slot_id) : null;
+    const q = v.floor_load != null && v.floor_load !== "" ? Number(v.floor_load) : v.weight_kg * 9.81 / 1e3 / Math.max(g3.L * g3.W, 0.01);
+    box.replaceChildren(
+      ...K(
+        h(
+          "dl",
+          { class: "kv" },
+          h("dt", null, "Тип"),
+          h("dd", null, p.name),
+          h("dt", null, "Виробник"),
+          h("dd", null, p.manufacturer || "—"),
+          h("dt", null, "Габарит"),
+          h("dd", null, `${fmt(g3.L, 2)} × ${fmt(g3.W, 2)} м · ${normDeg(Math.round(rec.rotation || 0))}°`),
+          h("dt", null, "Охоплення AABB"),
+          h("dd", null, `${fmt(g3.box[2] - g3.box[0], 2)} × ${fmt(g3.box[3] - g3.box[1], 2)} м`),
+          h("dt", null, "Центр"),
+          h("dd", null, `${fmt(g3.cx, 2)} ; ${fmt(g3.cy, 2)}`),
+          h("dt", null, "Потужність"),
+          h("dd", null, v.power_kw ? fmt(v.power_kw, 1) + " кВт" : "—"),
+          h("dt", null, "Маса · на підлогу"),
+          h("dd", null, `${fmtInt(v.weight_kg)} кг · ${fmt(q, 1)} кН/м²`),
+          h("dt", null, "Місце"),
+          h("dd", null, host2 ? host2.code_prefix : "—")
+        )
+      )
+    );
+  } else {
+    const d = slotDims(rec);
+    const n = cellCount(rec);
+    const cap = cellsOf(rec).reduce((a, c) => a + (c.disabled ? 0 : c.capacity || 0), 0);
+    box.replaceChildren(
+      ...K(
+        h(
+          "dl",
+          { class: "kv" },
+          h("dt", null, "Шаблон"),
+          h("dd", null, TPL[rec.template].name),
+          h("dt", null, "Габарит"),
+          h("dd", null, `${fmt(d.L, 2)} × ${fmt(d.W, 2)} м`),
+          SOLID_SLOTS.includes(rec.template) ? [h("dt", null, "Комірок"), h("dd", { id: "cellCount" }, fmtInt(n)), h("dt", null, "Місткість"), h("dd", null, fmtInt(cap))] : null
+        )
+      )
+    );
+  }
+}
+function renderSlotProps(root, s) {
+  const ly = layerOf(s.layer_id);
+  const dis = !canEditLayer(ly) || !!s.locked;
+  const kind = "slot";
+  const ed = { begin: () => beginEdit(kind, s), end: endEdit };
+  const set = (fn) => (val) => {
+    fn(val);
+    liveEdit();
+  };
+  const spec = TPL[s.template];
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, spec.name),
+        lockNote(ly),
+        s.locked ? h("div", { class: "note lock" }, "Складний контур зони редагується у формі Odoo.") : null,
+        h(
+          "div",
+          { class: "fcol" },
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Код / префікс", textInput({ value: s.code_prefix, dis, label: "Префікс", f: "code_prefix", set: set((x) => {
+              s.code_prefix = x.slice(0, 22);
+            }), ...ed })),
+            fld("Шар", h("input", { type: "text", value: ly.name, disabled: true }))
+          ),
+          h(
+            "div",
+            { class: "grid3" },
+            fld("x", numInput({ value: s.x, dis, step: snapStep(s), f: "x", label: "x", set: set((x) => {
+              s.x = x;
+            }), ...ed }), "м"),
+            fld("y", numInput({ value: s.y, dis, step: snapStep(s), f: "y", label: "y", set: set((x) => {
+              s.y = x;
+            }), ...ed }), "м"),
+            fld("Поворот", numInput({ value: s.rotation || 0, dis, step: 15, f: "rotation", label: "Поворот", set: set((x) => {
+              s.rotation = normDeg(x);
+            }), ...ed }), "°")
+          ),
+          paramFields(s.template, s.params, { dis, begin: ed.begin, end: ed.end, onChange: () => liveEdit() }),
+          h("div", { id: "derived" }),
+          h(
+            "div",
+            { class: "frow wrap" },
+            h("button", { class: "fbtn sm", type: "button", id: "btnRotate", disabled: dis, onclick: () => rotateSel(1) }, ic("rot"), "Повернути 90°"),
+            h("span", { class: "grow" }),
+            h("button", { class: "fbtn sm danger", type: "button", id: "btnDelete", disabled: dis, onclick: askDelete }, ic("trash"), "Видалити")
+          )
+        )
+      )
+    )
+  );
+  if (SOLID_SLOTS.includes(s.template)) {
+    root.append(h("div", { class: "sec", id: "cellsBox" }));
+  }
+  renderPanelBlocks("slot", root, { rec: s });
+  renderDerived();
+  renderCellsBox();
+}
+function renderCellsBox() {
+  const box = $("#cellsBox");
+  if (!box || !S.sel || S.sel.kind !== "slot") {
+    return;
+  }
+  const s = S.sIdx.get(S.sel.id);
+  if (!s) {
+    return;
+  }
+  const ly = layerOf(s.layer_id);
+  const dis = !canEditLayer(ly);
+  const cells = cellsOf(s);
+  const lim = S.ui.cellsAll ? cells.length : 120;
+  const nOv = Object.keys(s.overrides || {}).length;
+  const rows = cells.slice(0, lim).map(
+    (c) => h(
+      "tr",
+      {
+        class: (S.selCell === c.code ? "sel " : "") + (c.ov ? "ov " : "") + (c.disabled ? "blk" : ""),
+        "data-code": c.code,
+        onclick: () => {
+          S.selCell = S.selCell === c.code ? null : c.code;
+          E.updateVisual();
+          renderCellsBox();
+        }
+      },
+      h("td", null, c.code),
+      h("td", null, c.capacity == null ? "—" : c.capacity),
+      h("td", null, c.max_load_kg == null ? "—" : fmtInt(c.max_load_kg))
+    )
+  );
+  box.replaceChildren(
+    ...K(
+      h("h3", { class: "h3" }, `Комірки · ${fmtInt(cells.filter((c) => !c.disabled).length)}`),
+      h("div", { class: "scroll" }, h("table", { class: "cells" }, h("thead", null, h("tr", null, h("th", null, "Код"), h("th", null, "Місць"), h("th", null, "Макс. кг"))), h("tbody", null, rows))),
+      cells.length > lim ? h("button", { class: "fbtn sm", type: "button", style: { marginTop: "6px" }, onclick: () => {
+        S.ui.cellsAll = true;
+        renderCellsBox();
+      } }, `Показати всі (${cells.length})`) : null,
+      h("div", { class: "small muted", style: { marginTop: "4px" } }, "Це майбутні stock.location із td_code, barcode і місткістю (створюються при публікації). Позначені рядки — ручна правка комірки.")
+    )
+  );
+  const sc = S.selCell && cells.find((c) => c.code === S.selCell);
+  if (sc) {
+    const setOv = (key, val) => {
+      s.overrides = s.overrides || {};
+      const o = s.overrides[sc.code] = s.overrides[sc.code] || {};
+      if (val === false || val == null) {
+        delete o[key];
+      } else {
+        o[key] = val;
+      }
+      if (!Object.keys(o).length) {
+        delete s.overrides[sc.code];
+      }
+      liveEdit();
+    };
+    box.append(
+      ...K(
+        h(
+          "div",
+          { class: "note", style: { marginTop: "8px" } },
+          h("div", { class: "h3" }, "Комірка " + sc.code),
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Місткість", numInput({ value: sc.capacity, dis, min: 0, step: 1, label: "Місткість", set: (v) => setOv("capacity", v) })),
+            fld("Макс. навантаження", numInput({ value: sc.max_load_kg, dis, min: 0, step: 50, label: "Макс. навантаження", set: (v) => setOv("max_load_kg", v) }), "кг")
+          ),
+          h("label", { class: "frow", style: { marginTop: "6px" } }, h("input", { type: "checkbox", checked: !!sc.disabled, disabled: dis, onchange: (e) => setOv("disabled", e.target.checked) }), "Не використовувати (вимкнена)"),
+          h("button", { class: "fbtn sm", type: "button", style: { marginTop: "6px" }, disabled: dis || !sc.ov, onclick: () => {
+            delete s.overrides[sc.code];
+            liveEdit();
+          } }, "Скинути ручні правки")
+        )
+      )
+    );
+  }
+  if (nOv) {
+    box.append(h("div", { class: "small muted", style: { marginTop: "6px" } }, `Ручних правок: ${nOv}`));
+  }
+}
+var MODE_OPTS = [["warn", "Попередження"], ["block", "Заборона"]];
+function issueRow(it, selKey) {
+  return h(
+    "div",
+    { class: "issue " + it.level, role: "button", tabindex: 0, onclick: () => gotoIssue(it, selKey), onkeydown: (e) => {
+      if (e.key === "Enter") {
+        gotoIssue(it, selKey);
+      }
+    } },
+    h("div", { class: "im" }, it.msg, h("div", { class: "io" }, (it.level === "block" ? "ЗАБОРОНА" : "ПОПЕРЕДЖЕННЯ") + " · " + (CHECKS.find((c) => c.id === it.check) || {}).name))
+  );
+}
+function gotoIssue(it, selKey) {
+  const key = it.keys.find((k) => k !== selKey) || it.keys[0];
+  const ref2 = { kind: key.startsWith("p:") ? "placement" : "slot", id: key.slice(2) };
+  const rec = recOfRef(ref2);
+  if (!rec) {
+    return;
+  }
+  selectObj(ref2);
+  E.focusOn(rec.x, rec.y);
+}
+function renderChecksBlock() {
+  const box = $("#checksBlock");
+  if (!box) {
+    return;
+  }
+  const selKey = S.sel ? objKey(S.sel.kind, S.sel.id) : null;
+  const ly = layerOf(S.ui.layer);
+  const all = S.issues.list;
+  const mine = selKey ? all.filter((i) => i.keys.includes(selKey)) : [];
+  const layerList = all.filter((i) => i.layerId === S.ui.layer && !mine.includes(i));
+  const nb = all.filter((i) => i.level === "block").length;
+  const nw = all.length - nb;
+  const frag = [
+    h(
+      "h3",
+      null,
+      "Перевірки",
+      h("span", { class: "frow" }, nb ? h("span", { class: "fbadge b" }, nb + " заборон") : null, nw ? h("span", { class: "fbadge w" }, nw + " попер.") : null, !all.length ? h("span", { class: "fbadge ok" }, "усе гаразд") : null)
+    )
+  ];
+  if (selKey) {
+    frag.push(h("div", { class: "lbl", style: { margin: "4px 0" } }, "Вибраний об’єкт"), mine.length ? h("div", { class: "issues" }, mine.map((i) => issueRow(i, selKey))) : h("div", { class: "small muted" }, "Зауважень немає."));
+  }
+  frag.push(h("div", { class: "lbl", style: { margin: "8px 0 4px" } }, `Шар «${ly ? ly.name : ""}»`), layerList.length ? h("div", { class: "issues" }, layerList.slice(0, 40).map((i) => issueRow(i, selKey))) : h("div", { class: "small muted" }, "Зауважень немає."));
+  if (layerList.length > 40) {
+    frag.push(h("div", { class: "small muted" }, `… ще ${layerList.length - 40}`));
+  }
+  if (can("check")) {
+    frag.push(h("button", { class: "fbtn sm", type: "button", id: "btnValidate", style: { marginTop: "8px" }, onclick: () => E.validateOnServer() }, ic("check"), "Перевірити на сервері"));
+  }
+  const dis = !canManage();
+  const cfg = S.settings.checks;
+  frag.push(
+    h(
+      "details",
+      { style: { marginTop: "10px" }, open: S.ui.cfgOpen, ontoggle: (e) => {
+        S.ui.cfgOpen = e.target.open;
+      } },
+      h("summary", { class: "lbl", style: { cursor: "pointer" } }, "Налаштування перевірок"),
+      dis ? h("div", { class: "note lock", style: { margin: "6px 0" } }, "Налаштування змінює Менеджер.") : null,
+      CHECKS.filter((c) => cfg[c.id]).map(
+        (c) => h(
+          "div",
+          { class: "frow", style: { margin: "5px 0" }, title: c.hint },
+          h("input", { type: "checkbox", checked: cfg[c.id].enabled, disabled: dis, "aria-label": c.name, onchange: (e) => {
+            cfg[c.id].enabled = e.target.checked;
+            liveCfg(c.id);
+          } }),
+          h("span", { style: { flex: 1, minWidth: 0 } }, c.name),
+          selectEl(MODE_OPTS, cfg[c.id].mode, (v) => {
+            cfg[c.id].mode = v;
+            liveCfg(c.id);
+          }, dis, c.name)
+        )
+      ),
+      cfg.utility_reach ? h("div", { class: "frow", style: { marginTop: "6px" } }, h("span", { style: { flex: 1 } }, "Макс. відстань до точки мережі, N"), numInput({ value: S.settings.reach_n, dis, min: 1, max: 200, step: 1, label: "N", set: (v) => {
+        S.settings.reach_n = v;
+        cfg.utility_reach.params = { ...cfg.utility_reach.params, max_m: v };
+        liveCfg("utility_reach");
+      } }), "м") : null
+    )
+  );
+  box.replaceChildren(...K(frag));
+}
+function liveCfg(check) {
+  S.issues = runLive();
+  E.updateVisual();
+  E.renderChips();
+  renderChecksBlock();
+  const c = S.settings.checks[check];
+  E.adapter.saveCheck(check, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+}
+function rotateSel(dir) {
+  if (!S.sel) {
+    return;
+  }
+  const rec = recOfRef(S.sel);
+  const ly = layerOf(rec.layer_id);
+  if (!canEditLayer(ly)) {
+    toastLock(ly);
+    return;
+  }
+  if (rec.locked) {
+    return;
+  }
+  const kind = S.sel.kind;
+  beginEdit(kind, rec);
+  let next = normDeg((rec.rotation || 0) + 90 * dir);
+  if (kind === "placement") {
+    const al = rotationsList(variantOf(rec.variant_id));
+    if (al) {
+      let c = rec.rotation || 0;
+      let ok = null;
+      for (let i = 0; i < 4; i++) {
+        c = normDeg(c + 90 * dir);
+        if (al.includes(c)) {
+          ok = c;
+          break;
+        }
+      }
+      if (ok == null) {
+        toast("Для цього варіанта поворот не дозволено", "warn");
+        S.edit = null;
+        return;
+      }
+      next = ok;
+    }
+  }
+  rec.rotation = next;
+  liveEdit();
+  endEdit();
+  renderRight();
+  const ne = S.issues.byKey.get(objKey(kind, rec.id));
+  if (ne && ne.level === "warn") {
+    toast(ne.items[0].msg, "warn");
+  }
+}
+async function askDelete() {
+  if (!S.sel) {
+    return;
+  }
+  const rec = recOfRef(S.sel);
+  const ly = layerOf(rec.layer_id);
+  if (!canEditLayer(ly)) {
+    toastLock(ly);
+    return;
+  }
+  const nm = rec.code || rec.code_prefix || rec.name;
+  const extra = S.sel.kind === "slot" && cellCount(rec) ? ` Буде видалено ${cellCount(rec)} комірок.` : "";
+  const ok = await E.confirmBox({ title: "Видалити об’єкт?", text: `«${nm}» буде видалено з чернетки.${extra}`, ok: "Видалити", danger: true });
+  if (!ok) {
+    return;
+  }
+  if (S.sel.kind === "placement") {
+    S.placements = S.placements.filter((p) => p.id !== rec.id);
+  } else {
+    S.slots = S.slots.filter((s) => s.id !== rec.id);
+    for (const p of S.placements) {
+      if (p.slot_id === rec.id) {
+        p.slot_id = null;
+      }
+    }
+  }
+  S.sel = null;
+  S.selCell = null;
+  E.commit({});
+}
+var CODE_PREFIX = { machine: "M", rack: "RK", forklift: "FL", conveyor: "CV", panel: "SW", robot: "RB" };
+function addPlacementAt(variantId, x, y, snap) {
+  const ly = layerOf(S.ui.layer);
+  const v = variantOf(variantId);
+  if (!ly || !v) {
+    return;
+  }
+  if (!canEditLayer(ly)) {
+    toastLock(ly);
+    return;
+  }
+  const st4 = ly.grid_step || 0.5;
+  const cat = (passportOf(variantId) || {}).category;
+  const pre = CODE_PREFIX[cat] || "EQ";
+  let n = 1;
+  while (S.placements.some((p) => p.code === pre + "-" + pad2(n))) {
+    n++;
+  }
+  const pl = {
+    id: newUid(),
+    rid: null,
+    etag: null,
+    layer_id: ly.id,
+    variant_id: v.id,
+    slot_id: null,
+    cell_code: null,
+    x: snap ? snapV(x, st4) : x,
+    y: snap ? snapV(y, st4) : y,
+    rotation: 0,
+    code: pre + "-" + pad2(n),
+    name: v.name,
+    equipment: null
+  };
+  const before = S.issues;
+  S.placements.push(pl);
+  S.pIdx.set(pl.id, pl);
+  E.assignSlot(pl);
+  const after = runLive();
+  const nb = newBlocks(before, after, "p:" + pl.id);
+  if (nb.length) {
+    S.placements.pop();
+    S.pIdx.delete(pl.id);
+    toast("Заблоковано: " + nb[0].msg, "err");
+    return;
+  }
+  S.sel = { kind: "placement", id: pl.id };
+  E.commit({});
+  const st22 = S.issues.byKey.get("p:" + pl.id);
+  if (st22) {
+    toast(st22.items[0].msg, "warn");
+  }
+}
+function addSlotAt(spec, x, y) {
+  const ly = layerOf(S.ui.layer);
+  if (!ly) {
+    return;
+  }
+  const s = { id: newUid(), rid: null, etag: null, layer_id: ly.id, template: spec.template, code_prefix: spec.prefix, x, y, rotation: 0, params: clone(spec.params), overrides: {}, parent_location_id: null };
+  const before = S.issues;
+  S.slots.push(s);
+  S.sIdx.set(s.id, s);
+  const after = runLive();
+  const nb = newBlocks(before, after, "s:" + s.id);
+  if (nb.length) {
+    S.slots.pop();
+    S.sIdx.delete(s.id);
+    toast("Заблоковано: " + nb[0].msg, "err");
+    return;
+  }
+  S.sel = { kind: "slot", id: s.id };
+  E.commit({});
+  const n = cellCount(s);
+  toast(n ? `Створено місце «${s.code_prefix}»: ${fmtInt(n)} комірок.` : `Створено місце «${s.code_prefix}».`);
+}
+function nudge(dx, dy) {
+  if (!S.sel) {
+    return;
+  }
+  const rec = recOfRef(S.sel);
+  const ly = layerOf(rec.layer_id);
+  if (!canEditLayer(ly)) {
+    toastLock(ly);
+    return;
+  }
+  if (rec.locked) {
+    return;
+  }
+  const kind = S.sel.kind;
+  const st4 = ly.grid_step || 0.5;
+  beginEdit(kind, rec);
+  rec.x = rnd(rec.x + dx * st4, 4);
+  rec.y = rnd(rec.y + dy * st4, 4);
+  liveEdit();
+  endEdit();
+  syncPropsValues();
+}
+Object.assign(E, {
+  selectObj,
+  beginEdit,
+  liveEdit,
+  endEdit,
+  syncPropsValues,
+  renderRight,
+  renderDerived,
+  renderCellsBox,
+  renderChecksBlock,
+  rotateSel,
+  askDelete,
+  addPlacementAt,
+  addSlotAt,
+  nudge,
+  recOf: recOfRef
+});
+
+// core/constructor/scene.js
+var scene_exports = {};
+__export(scene_exports, {
+  assignSlot: () => assignSlot,
+  buildPlacementView: () => buildPlacementView,
+  buildSlotView: () => buildSlotView,
+  camTarget: () => camTarget,
+  cancelModes: () => cancelModes,
+  dashRect: () => dashRect,
+  disposeScene: () => disposeScene,
+  floorPoint: () => floorPoint,
+  focusOn: () => focusOn,
+  initScene: () => initScene,
+  lineGeo: () => lineGeo,
+  pickCandidates: () => pickCandidates,
+  poseView: () => poseView,
+  recolorCells: () => recolorCells,
+  recolorMats: () => recolorMats,
+  refsInRect: () => refsInRect,
+  requestRender: () => requestRender,
+  resizeScene: () => resizeScene,
+  rulerClear: () => rulerClear,
+  rulerPoint: () => rulerPoint,
+  setView: () => setView,
+  startPlacing: () => startPlacing,
+  syncScene: () => syncScene,
+  syncUnderlays: () => syncUnderlays,
+  underlayVertex: () => underlayVertex,
+  updateVisual: () => updateVisual,
+  variantBody: () => variantBody
+});
+
+// core/constructor/three.js
+var THREE = {};
+var promise = null;
+function loadThree() {
+  if (!promise) {
+    if (typeof host.loadThree !== "function") {
+      return Promise.reject(new Error("Хост не передав host.loadThree()"));
+    }
+    promise = Promise.resolve(host.loadThree()).then((m) => {
+      Object.assign(THREE, m);
+      return THREE;
+    }).catch((e) => {
+      promise = null;
+      throw e;
+    });
+  }
+  return promise;
+}
+function getThree() {
+  if (!THREE.Vector3) {
+    throw new Error("three.js ще не завантажено: спершу await loadThree()");
+  }
+  return THREE;
+}
+function webglAvailable() {
+  try {
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
+// core/constructor/scene.js
+var BODY = { other: "#9ba6b1" };
+var UCOL = { electric: "#e0a030", air: "#3a8fd0", dust: "#6aa04a" };
+function readColors() {
+  const cs = getComputedStyle($("#app") || document.documentElement);
+  const g3 = (n) => cs.getPropertyValue(n).trim() || "#888888";
+  return {
+    scene: g3("--scene"),
+    grid: g3("--grid"),
+    grid2: g3("--grid2"),
+    floor: g3("--floor"),
+    stroke: g3("--stroke"),
+    accent: g3("--accent"),
+    warn: g3("--warn"),
+    block: g3("--block"),
+    ink: g3("--ink"),
+    unsaved: "#12a5a0",
+    // бірюзовий «не збережено» (N-05)
+    hl: "#f2c200"
+    // підсвітка результатів пошуку (F06-02)
+  };
+}
+function initMats() {
+  const C = V.col;
+  const M = V.mat = {};
+  const T = V.themed = [];
+  const th = (m, k) => {
+    T.push([m, k]);
+    return m;
+  };
+  M.edge = th(new THREE.LineBasicMaterial({ color: C.stroke, transparent: true, opacity: 0.85 }), "stroke");
+  M.edgeGhost = th(new THREE.LineBasicMaterial({ color: C.stroke, transparent: true, opacity: 0.22 }), "stroke");
+  const dash = (k, o, ds, gs) => th(new THREE.LineDashedMaterial({ color: C[k], dashSize: ds || 0.4, gapSize: gs || 0.22, transparent: true, opacity: o || 0.95 }), k);
+  M.dash = { normal: dash("stroke", 0.85), sel: dash("accent"), warn: dash("warn"), block: dash("block"), unsaved: dash("unsaved") };
+  M.dashGhost = dash("stroke", 0.28);
+  M.svc = dash("accent", 0.7, 0.18, 0.16);
+  M.sel = th(new THREE.LineBasicMaterial({ color: C.accent }), "accent");
+  const fl = (k, o) => th(new THREE.MeshBasicMaterial({ color: C[k], transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide }), k);
+  M.fill = { sel: fl("accent", 0.2), warn: fl("warn", 0.34), block: fl("block", 0.38) };
+  M.hit = new THREE.MeshBasicMaterial({ visible: false });
+  M.gridMinor = th(new THREE.LineBasicMaterial({ color: C.grid, transparent: true, opacity: 0.75 }), "grid");
+  M.gridMajor = th(new THREE.LineBasicMaterial({ color: C.grid2, transparent: true, opacity: 0.9 }), "grid2");
+  M.floor = th(new THREE.MeshBasicMaterial({ color: C.floor }), "floor");
+  M.bld = th(new THREE.LineBasicMaterial({ color: C.stroke }), "stroke");
+  M.col = new THREE.MeshLambertMaterial({ color: "#8a96a3", transparent: true, opacity: 0.5 });
+  M.ruler = th(new THREE.LineBasicMaterial({ color: C.accent, depthTest: false }), "accent");
+  M.rulerPt = th(new THREE.MeshBasicMaterial({ color: C.accent, depthTest: false }), "accent");
+  M.cell = new THREE.MeshLambertMaterial({ color: "#ffffff", transparent: true, opacity: 0.62, depthWrite: false });
+  M.cellGhost = new THREE.MeshLambertMaterial({ color: "#ffffff", transparent: true, opacity: 0.16, depthWrite: false });
+  M.pt = {};
+  for (const k in UCOL) {
+    M.pt[k] = new THREE.MeshLambertMaterial({ color: UCOL[k] });
+  }
+  M.under = th(new THREE.LineBasicMaterial({ color: C.accent, transparent: true, opacity: 0.8 }), "accent");
+}
+function recolorMats() {
+  V.col = readColors();
+  for (const [m, k] of V.themed) {
+    m.color.set(V.col[k]);
+  }
+  V.scene.background = new THREE.Color(V.col.scene);
+}
+function bodyMat(name, ghost) {
+  const k = name + (ghost ? "_g" : "");
+  let m = V.bodyMats.get(k);
+  if (!m) {
+    m = new THREE.MeshLambertMaterial({ color: BODY[name] || "#999999", transparent: !!ghost, opacity: ghost ? 0.3 : 1, depthWrite: !ghost });
+    V.bodyMats.set(k, m);
+  }
+  return m;
+}
+function nullRenderer() {
+  return {
+    domElement: document.createElement("canvas"),
+    setSize() {
+    },
+    setPixelRatio() {
+    },
+    // як справжній рендерер: оновлює світові матриці (від них залежать промені вибору й перетягування)
+    render(scene, camera) {
+      scene.updateMatrixWorld();
+      if (camera.parent === null) {
+        camera.updateMatrixWorld();
+      }
+    },
+    dispose() {
+    },
+    forceContextLoss() {
+    }
+  };
+}
+function initScene() {
+  const host2 = $("#vp");
+  let renderer = null;
+  if (V.testMode) {
+    renderer = nullRenderer();
+  } else {
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    } catch {
+      host2.append(h("div", { class: "nogl" }, "3D недоступне в цьому браузері. Форми й перевірки працюють, 3D-вид — ні."));
+      return false;
+    }
+  }
+  V.renderer = renderer;
+  V.ok = true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  V.canvas = renderer.domElement;
+  V.canvas.tabIndex = 0;
+  V.canvas.setAttribute("aria-label", "3D-сцена площадки");
+  host2.append(V.canvas);
+  V.scene = new THREE.Scene();
+  V.col = readColors();
+  V.scene.background = new THREE.Color(V.col.scene);
+  initMats();
+  const G = V.geo;
+  G.box = new THREE.BoxGeometry(1, 1, 1);
+  G.boxEdges = new THREE.EdgesGeometry(G.box);
+  G.cyl = new THREE.CylinderGeometry(1, 1, 1, 18);
+  G.plane = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  G.octa = new THREE.OctahedronGeometry(0.45);
+  G.cone = new THREE.ConeGeometry(0.4, 0.9, 10);
+  G.sph = new THREE.SphereGeometry(0.4, 12, 8);
+  V.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 4e3);
+  const lk = Number(THREE.REVISION) >= 155 ? Math.PI : 1;
+  V.scene.add(new THREE.AmbientLight(16777215, 0.78 * lk));
+  const dl = new THREE.DirectionalLight(16777215, 0.55 * lk);
+  dl.position.set(40, 100, 60);
+  V.scene.add(dl);
+  V.world = new THREE.Group();
+  V.scene.add(V.world);
+  V.raycaster = new THREE.Raycaster();
+  initPointer();
+  V.controls = new THREE.OrbitControls(V.camera, V.canvas);
+  V.controls.enableDamping = false;
+  V.controls.screenSpacePanning = false;
+  V.controls.maxPolarAngle = Math.PI * 0.495;
+  V.controls.minDistance = 2;
+  V.controls.maxDistance = 900;
+  V.controls.addEventListener("change", requestRender);
+  V.ro = new ResizeObserver(() => resizeScene());
+  V.ro.observe(host2);
+  resizeScene();
+  return true;
+}
+function disposeScene() {
+  cancelAnimationFrame(V.raf);
+  cancelAnimationFrame(V.hoverRaf);
+  V.raf = 0;
+  V.hoverRaf = 0;
+  V.ro?.disconnect();
+  V.controls?.dispose();
+  for (const v of V.views.values()) {
+    dispose(v.root);
+  }
+  for (const d of V.decor.values()) {
+    disposeDecor(d.g);
+  }
+  for (const u of V.underlays.values()) {
+    u.o.geometry.dispose();
+    u.o.material.dispose();
+  }
+  if (V.buildingG) {
+    const shared = Object.values(V.geo);
+    V.buildingG.traverse((o) => {
+      if (o.geometry && !shared.includes(o.geometry)) {
+        o.geometry.dispose();
+      }
+    });
+  }
+  for (const c of V.labelCache.values()) {
+    c.tex.dispose();
+  }
+  for (const m of V.bodyMats.values()) {
+    m.dispose();
+  }
+  for (const g3 of Object.values(V.geo)) {
+    g3.dispose?.();
+  }
+  for (const m of Object.values(V.mat)) {
+    if (m && m.dispose) {
+      m.dispose();
+    } else if (m && typeof m === "object") {
+      Object.values(m).forEach((x) => x.dispose?.());
+    }
+  }
+  V.renderer?.dispose();
+  V.renderer?.forceContextLoss?.();
+  V.ok = false;
+}
+function resizeScene() {
+  if (!V.ok) {
+    return;
+  }
+  const host2 = $("#vp");
+  const w = host2.clientWidth;
+  const hh = host2.clientHeight;
+  if (w < 2 || hh < 2) {
+    return;
+  }
+  V.renderer.setSize(w, hh, false);
+  V.camera.aspect = w / hh;
+  V.camera.updateProjectionMatrix();
+  requestRender();
+}
+function requestRender() {
+  if (V.ok && !V.raf) {
+    V.raf = requestAnimationFrame(() => {
+      V.raf = 0;
+      render();
+    });
+  }
+}
+function render() {
+  if (!V.ok) {
+    return;
+  }
+  const dist = V.camera.position.distanceTo(V.controls.target);
+  const on = S.settings.labels;
+  for (const l of V.labels) {
+    l.s.visible = on && dist < l.max;
+  }
+  V.renderer.render(V.scene, V.camera);
+  updateRulerLabel();
+}
+var P3 = (x, y, z) => new THREE.Vector3(x, z || 0, -y);
+function setView(kind) {
+  if (!V.ok) {
+    return;
+  }
+  V.camMode = kind;
+  const b = S.site.building;
+  const cx = b.length / 2;
+  const cz = -b.width / 2;
+  const tgt = new THREE.Vector3(cx, 0, cz);
+  const dir = kind === "plan" ? new THREE.Vector3(0, 1, 1e-4) : new THREE.Vector3(-0.42, 0.72, 0.7).normalize();
+  const pts = [];
+  for (const x of [0, b.length]) {
+    for (const y of [0, b.width]) {
+      for (const z of [0, b.height]) {
+        pts.push(new THREE.Vector3(x, z, -y));
+      }
+    }
+  }
+  V.camera.aspect = Math.max(0.2, ($("#vp").clientWidth || 800) / Math.max(1, $("#vp").clientHeight || 600));
+  V.camera.updateProjectionMatrix();
+  let d = Math.hypot(b.length, b.width) * 0.25;
+  for (let i = 0; i < 80; i++) {
+    V.camera.position.copy(tgt).addScaledVector(dir, d);
+    V.camera.lookAt(tgt);
+    V.camera.updateMatrixWorld();
+    let ok = true;
+    for (const p of pts) {
+      const q = p.clone().project(V.camera);
+      if (Math.abs(q.x) > 0.97 || Math.abs(q.y) > 0.92 || q.z > 1) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) {
+      break;
+    }
+    d *= 1.05;
+  }
+  const plan = kind === "plan";
+  V.controls.enableRotate = !plan;
+  V.controls.mouseButtons.LEFT = plan ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+  V.controls.touches.ONE = plan ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE;
+  V.controls.target.copy(tgt);
+  V.controls.update();
+  requestRender();
+}
+function focusOn(x, y, dist) {
+  if (!V.ok) {
+    return;
+  }
+  const el = V.controls.target.clone();
+  const off = V.camera.position.clone().sub(el);
+  const nt = P3(x, y, 0);
+  if (dist) {
+    off.setLength(dist);
+  }
+  V.controls.target.copy(nt);
+  V.camera.position.copy(nt).add(off);
+  V.controls.update();
+  requestRender();
+}
+function camTarget() {
+  if (!V.ok) {
+    return { x: S.site.building.length / 2, y: S.site.building.width / 2 };
+  }
+  const t2 = V.controls.target;
+  return { x: t2.x, y: -t2.z };
+}
+var FONT = '"Arial Narrow", "Roboto Condensed", system-ui, sans-serif';
+function makeLabel(text, h0, max, color, flatW) {
+  const col = color || V.col.stroke;
+  const key = text + "|" + col + "|" + V.theme;
+  let c = V.labelCache.get(key);
+  if (!c) {
+    const cv = document.createElement("canvas");
+    const ctx2 = cv.getContext("2d");
+    const fs = 34;
+    ctx2.font = `500 ${fs}px ${FONT}`;
+    const w = Math.ceil(ctx2.measureText(text).width) + 20;
+    cv.width = w;
+    cv.height = 50;
+    ctx2.font = `500 ${fs}px ${FONT}`;
+    ctx2.textBaseline = "middle";
+    ctx2.lineWidth = 6;
+    ctx2.strokeStyle = V.col.scene;
+    ctx2.lineJoin = "round";
+    ctx2.strokeText(text, 10, 27);
+    ctx2.fillStyle = col;
+    ctx2.fillText(text, 10, 27);
+    const tex = new THREE.CanvasTexture(cv);
+    if (THREE.SRGBColorSpace) {
+      tex.colorSpace = THREE.SRGBColorSpace;
+    }
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    c = { tex, aspect: w / 50 };
+    V.labelCache.set(key, c);
+  }
+  let sp;
+  if (flatW) {
+    if (h0 * c.aspect > flatW) {
+      h0 = flatW / c.aspect;
+    }
+    sp = new THREE.Mesh(V.geo.plane, new THREE.MeshBasicMaterial({ map: c.tex, transparent: true, depthWrite: false }));
+    sp.scale.set(h0 * c.aspect, 1, h0);
+    sp.renderOrder = 1;
+  } else {
+    sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: c.tex, transparent: true, depthWrite: false }));
+    sp.scale.set(h0 * c.aspect, h0, 1);
+  }
+  sp.userData.label = true;
+  const rec = { s: sp, max: max || 120 };
+  V.labels.push(rec);
+  sp.userData.rec = rec;
+  return sp;
+}
+function dropLabels(root) {
+  root.traverse((o) => {
+    if (o.userData.rec) {
+      const i = V.labels.indexOf(o.userData.rec);
+      if (i >= 0) {
+        V.labels.splice(i, 1);
+      }
+      if (o.material) {
+        o.material.dispose();
+      }
+    }
+  });
+}
+function boxMesh(w, hh, d, x, y, z, mat) {
+  const m = new THREE.Mesh(V.geo.box, mat);
+  m.scale.set(w, hh, d);
+  m.position.set(x, y, z);
+  return m;
+}
+function boxEdge(w, hh, d, x, y, z, mat) {
+  const e = new THREE.LineSegments(V.geo.boxEdges, mat);
+  e.scale.set(w, hh, d);
+  e.position.set(x, y, z);
+  return e;
+}
+function lineGeo(pts) {
+  const g3 = new THREE.BufferGeometry();
+  g3.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  return g3;
+}
+function dashRect(hx, hy, ox, oy, mat, y) {
+  const g3 = lineGeo([-hx + ox, y, -(-hy + oy), hx + ox, y, -(-hy + oy), hx + ox, y, -(hy + oy), -hx + ox, y, -(hy + oy)]);
+  const l = new THREE.LineLoop(g3, mat);
+  l.computeLineDistances();
+  return l;
+}
+function planeMesh(w, d, x, y, z, mat) {
+  const m = new THREE.Mesh(V.geo.plane, mat);
+  m.scale.set(w, 1, d);
+  m.position.set(x, y, z);
+  return m;
+}
+function dispose(root) {
+  root.traverse((o) => {
+    if (o.userData.own && o.geometry) {
+      o.geometry.dispose();
+    }
+    if (o.userData.inst) {
+      o.dispose();
+    }
+  });
+  (root.userData.mats || []).forEach((m) => m.dispose());
+  dropLabels(root);
+}
+var genericCategory = (cat) => cat === "cabinet" ? "panel" : cat || "other";
+function variantBody(cat, v, norm, ghost) {
+  const L3 = v.length / 1e3;
+  const W3 = v.width / 1e3;
+  const H = v.height / 1e3;
+  if (norm) {
+    return modelBody(norm, L3, H, W3, ghost);
+  }
+  const ang = FRONT_ANGLE[v.front_side || "s"];
+  const swap = ang === 90 || ang === 270;
+  const g3 = new THREE.Group();
+  const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W3 : L3, w: swap ? L3 : W3, h: H }, THREE);
+  if (ghost) {
+    b.traverse((c) => {
+      if (c.isMesh) {
+        c.material = bodyMat("other", true);
+      }
+    });
+  }
+  b.rotation.y = rad(ang);
+  g3.add(b);
+  g3.add(boxEdge(L3, H, W3, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
+  return g3;
+}
+function modelBody(m, L3, H, W3, ghost) {
+  const g3 = new THREE.Group();
+  const o = m.obj.clone(true);
+  const sz = m.size;
+  o.scale.set(L3 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W3 / Math.max(sz.z, 1e-6));
+  if (ghost) {
+    o.traverse((c) => {
+      if (c.isMesh) {
+        c.material = bodyMat("other", true);
+      }
+    });
+  }
+  g3.add(o);
+  return g3;
+}
+var isGhost = (ly) => ly.id !== S.ui.layer;
+function variantSig(v, p) {
+  return [v.length, v.width, v.height, v.service, v.front_side, v.anchor, p && p.category];
+}
+function buildPlacementView(pl, opts2) {
+  opts2 = opts2 || {};
+  const v = variantOf(pl.variant_id);
+  const ly = layerOf(pl.layer_id);
+  if (!v || !ly) {
+    return null;
+  }
+  const p = passportOf(pl.variant_id);
+  const g3 = pGeom(pl, v);
+  const ghost = opts2.ghost != null ? opts2.ghost : isGhost(ly);
+  const H = v.height / 1e3;
+  const root = new THREE.Group();
+  root.userData.ref = { kind: "placement", id: pl.id };
+  root.add(variantBody(p && p.category || "other", v, V.models.get(v.id), ghost));
+  const view2 = { key: "p:" + pl.id, root, kind: "placement", id: pl.id, g: g3, H, ghost, layerId: ly.id };
+  view2.foot = dashRect(g3.L / 2 + 0.06, g3.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+  root.add(view2.foot);
+  if (g3.svc && !ghost) {
+    view2.svc = dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025);
+    root.add(view2.svc);
+  }
+  view2.fill = planeMesh(g3.L + 0.7, g3.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
+  view2.fill.visible = false;
+  root.add(view2.fill);
+  view2.sel = boxEdge(g3.L * 1.03, H * 1.02, g3.W * 1.03, 0, H / 2, 0, V.mat.sel);
+  view2.sel.visible = false;
+  root.add(view2.sel);
+  const hit = boxMesh(g3.L, Math.max(H, 0.4), g3.W, 0, Math.max(H, 0.4) / 2, 0, V.mat.hit);
+  hit.userData.ref = root.userData.ref;
+  hit.userData.view = view2;
+  root.add(hit);
+  view2.hit = hit;
+  if (!opts2.noLabel) {
+    const lb = makeLabel(pl.code || pl.name || "", 0.9, 70);
+    lb.position.set(0, H + 0.7, 0);
+    root.add(lb);
+    view2.label = lb;
+  }
+  poseView(view2, pl, v);
+  return view2;
+}
+function poseView(view2, rec, v) {
+  if (view2.kind === "placement") {
+    v = v || variantOf(rec.variant_id);
+    const g3 = pGeom(rec, v);
+    view2.g = g3;
+    view2.root.position.set(g3.cx, elevOf(rec.layer_id), -g3.cy);
+  } else {
+    view2.root.position.set(rec.x, elevOf(rec.layer_id), -rec.y);
+  }
+  view2.root.rotation.y = rad(rec.rotation || 0);
+}
+var frameOf = {
+  pallet_rack(p, d, sg) {
+    for (let b = 0; b <= p.bays; b++) {
+      const x = -d.L / 2 + b * p.bay_width;
+      for (const sy of [-d.W / 2, d.W / 2]) {
+        sg([x, sy, 0], [x, sy, d.H]);
+      }
+      sg([x, -d.W / 2, d.H], [x, d.W / 2, d.H]);
+    }
+    for (let l = 1; l <= p.levels; l++) {
+      for (const sy of [-d.W / 2, d.W / 2]) {
+        sg([-d.L / 2, sy, l * p.level_height], [d.L / 2, sy, l * p.level_height]);
+      }
+    }
+  },
+  shelf(p, d, sg) {
+    for (let b = 0; b <= p.sections; b++) {
+      const x = -d.L / 2 + b * p.cell_w;
+      for (const sy of [-d.W / 2, d.W / 2]) {
+        sg([x, sy, 0], [x, sy, d.H]);
+      }
+    }
+    for (let l = 0; l <= p.shelves; l++) {
+      const z = l * p.cell_h + 0.05;
+      for (const sy of [-d.W / 2, d.W / 2]) {
+        sg([-d.L / 2, sy, z], [d.L / 2, sy, z]);
+      }
+    }
+  },
+  cantilever(p, d, sg) {
+    const y0 = -d.W / 2 + 0.075;
+    for (let b = 0; b <= p.arms; b++) {
+      const x = -d.L / 2 + b * d.L / p.arms;
+      sg([x, y0, 0], [x, y0, d.H]);
+      for (let l = 1; l <= p.levels; l++) {
+        sg([x, y0, l * p.level_height], [x, d.W / 2, l * p.level_height]);
+      }
+    }
+  }
+};
+for (const [tpl, fn] of Object.entries(frameOf)) {
+  registries.shapes.add(
+    tpl,
+    {
+      frame(p, d) {
+        const pts = [];
+        fn(p, d, (a, b) => pts.push(a[0], a[2], -a[1], b[0], b[2], -b[1]));
+        return pts;
+      }
+    },
+    { force: true }
+  );
+}
+function frameLines(s, d) {
+  const shape = registries.shapes.get(s.template, null);
+  return shape && shape.frame ? shape.frame(normalizeParams(s.template, s.params), d) : [];
+}
+function cellColor(c, s, ly, sel) {
+  if (sel) {
+    return new THREE.Color(V.col.accent);
+  }
+  if (S.hl && S.hl.codes.has(c.code)) {
+    return new THREE.Color(V.col.hl);
+  }
+  const metric = S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
+  const mc = metric && metric.color ? metric.color(c, s, ly) : null;
+  if (mc) {
+    return new THREE.Color(mc);
+  }
+  if (c.disabled) {
+    return new THREE.Color("#8b8b8b");
+  }
+  const col = new THREE.Color(ly.color);
+  if (c.ov) {
+    col.lerp(new THREE.Color(V.col.warn), 0.5);
+  }
+  return col;
+}
+var ZONE_HUGE = 0.1;
+function buildSlotView(s, opts2) {
+  opts2 = opts2 || {};
+  const ly = layerOf(s.layer_id);
+  if (!ly) {
+    return null;
+  }
+  const ghost = opts2.ghost != null ? opts2.ghost : isGhost(ly);
+  const d = slotDims(s);
+  const g3 = sGeom(s);
+  const root = new THREE.Group();
+  root.userData.ref = { kind: "slot", id: s.id };
+  const view2 = { key: "s:" + s.id, root, kind: "slot", id: s.id, g: g3, H: d.H, ghost, layerId: ly.id, tpl: s.template };
+  const edgeMat = ghost ? V.mat.edgeGhost : V.mat.edge;
+  const mkHit = (hh) => {
+    const hit = boxMesh(d.L, hh, d.W, 0, hh / 2, 0, V.mat.hit);
+    hit.userData.ref = root.userData.ref;
+    hit.userData.view = view2;
+    root.add(hit);
+    view2.hit = hit;
+  };
+  if (s.template === "zone") {
+    const col = new THREE.Color(s.params.color || ly.color);
+    const B3 = S.site.building;
+    const huge = d.L * d.W > ZONE_HUGE * B3.length * B3.width;
+    const fm = new THREE.MeshBasicMaterial({
+      color: col,
+      transparent: true,
+      opacity: ghost ? huge ? 0 : 0.06 : huge ? 0.06 : clamp(ly.opacity * 0.55, 0.1, 0.5),
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    root.userData.mats = [fm];
+    if (fm.opacity > 0) {
+      root.add(planeMesh(d.L, d.W, 0, 0.012, 0, fm));
+    }
+    const ol = new THREE.LineLoop(
+      lineGeo([-d.L / 2, 0.016, d.W / 2, d.L / 2, 0.016, d.W / 2, d.L / 2, 0.016, -d.W / 2, -d.L / 2, 0.016, -d.W / 2]),
+      new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(0.55), transparent: true, opacity: ghost ? 0.25 : 0.9 })
+    );
+    ol.userData.own = 1;
+    root.userData.mats.push(ol.material);
+    root.add(ol);
+    mkHit(0.05);
+    view2.fillSel = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fillSel.visible = false;
+    root.add(view2.fillSel);
+    view2.fill = view2.fillSel;
+    view2.foot = null;
+    const t2 = s.params.title || s.code_prefix;
+    const lb = makeLabel(t2, clamp(Math.min(d.W * 0.3, d.L * 0.2), 0.8, 2.4), 420, null, d.L * 0.92);
+    lb.position.set(0, 0.03, 0);
+    root.add(lb);
+    view2.label = lb;
+  } else if (s.template === "machine_spot") {
+    view2.foot = dashRect(d.L / 2, d.W / 2, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+    root.add(view2.foot);
+    if (g3.shx != null && !ghost) {
+      root.add(dashRect(g3.shx, g3.shy, g3.sox, g3.soy, V.mat.svc, 0.025));
+    }
+    view2.fill = planeMesh(d.L, d.W, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fill.visible = false;
+    root.add(view2.fill);
+    mkHit(0.3);
+    const lb = makeLabel(s.code_prefix, 0.8, 90);
+    lb.position.set(0, 0.25, 0);
+    root.add(lb);
+    view2.label = lb;
+    view2.sel = boxEdge(d.L, 0.3, d.W, 0, 0.15, 0, V.mat.sel);
+    view2.sel.visible = false;
+    root.add(view2.sel);
+  } else {
+    const cells = cellsOf(s);
+    const im = new THREE.InstancedMesh(V.geo.box, ghost ? V.mat.cellGhost : V.mat.cell, Math.max(cells.length, 1));
+    im.userData.inst = 1;
+    im.count = cells.length;
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const sc = new THREE.Vector3();
+    const ps = new THREE.Vector3();
+    const stack3 = s.template === "floor_stack";
+    cells.forEach((c, i) => {
+      const hh = stack3 ? Math.min(c.h, 0.5) : c.h * 0.78;
+      sc.set(c.l * 0.92, hh, c.w * 0.9);
+      ps.set(c.lx, c.dz + (s.template === "shelf" ? 0.05 : 0) + hh / 2 + (stack3 ? 0.02 : 0.1), -c.ly);
+      m4.compose(ps, q, sc);
+      im.setMatrixAt(i, m4);
+      im.setColorAt(i, cellColor(c, s, ly, false));
+    });
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) {
+      im.instanceColor.needsUpdate = true;
+    }
+    root.add(im);
+    view2.cells = im;
+    view2.cellList = cells;
+    view2.ly = ly;
+    const fl = frameLines(s, d);
+    if (fl.length) {
+      const ls = new THREE.LineSegments(lineGeo(fl), edgeMat);
+      ls.userData.own = 1;
+      root.add(ls);
+    }
+    view2.foot = dashRect(d.L / 2 + 0.06, d.W / 2 + 0.06, 0, 0, ghost ? V.mat.dashGhost : V.mat.dash.normal, 0.03);
+    root.add(view2.foot);
+    view2.fill = planeMesh(d.L + 0.7, d.W + 0.7, 0, 0.02, 0, V.mat.fill.sel);
+    view2.fill.visible = false;
+    root.add(view2.fill);
+    mkHit(Math.max(d.H, 0.3));
+    view2.sel = boxEdge(d.L * 1.02, d.H * 1.02, d.W * 1.02, 0, d.H / 2, 0, V.mat.sel);
+    view2.sel.visible = false;
+    root.add(view2.sel);
+    const lb = makeLabel(s.code_prefix, 1.1, 130);
+    lb.position.set(0, d.H + 0.8, 0);
+    root.add(lb);
+    view2.label = lb;
+  }
+  poseView(view2, s);
+  return view2;
+}
+function colorCells(view2, selCode) {
+  if (!view2.cells) {
+    return;
+  }
+  const s = S.sIdx.get(view2.id);
+  if (!s) {
+    return;
+  }
+  view2.cellList.forEach((c, i) => view2.cells.setColorAt(i, cellColor(c, s, view2.ly, c.code === selCode)));
+  if (view2.cells.instanceColor) {
+    view2.cells.instanceColor.needsUpdate = true;
+  }
+  view2.selCode = selCode;
+}
+function gridStepDisplay(step, span) {
+  let d = step;
+  if (span / d > 160) {
+    for (const k of [1, 2, 5, 10, 20]) {
+      if (k <= d) {
+        continue;
+      }
+      d = k;
+      if (span / d <= 160) {
+        break;
+      }
+    }
+  }
+  while (span / d > 160) {
+    d *= 2;
+  }
+  return Math.max(d, step);
+}
+function boundsBox(ly) {
+  const B3 = S.site.building;
+  if (!ly.bounds || ly.bounds.length < 3) {
+    return { x0: 0, y0: 0, x1: B3.length, y1: B3.width };
+  }
+  const xs = ly.bounds.map((p) => p[0]);
+  const ys = ly.bounds.map((p) => p[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+function buildDecor(ly) {
+  const g3 = new THREE.Group();
+  const own = [];
+  const active2 = ly.id === S.ui.layer;
+  const el = ly.elevation;
+  const bp = boundsBox(ly);
+  const add = (o, ownGeo) => {
+    g3.add(o);
+    if (ownGeo) {
+      o.userData.own = 1;
+    }
+    return o;
+  };
+  const col = new THREE.Color(ly.color);
+  if (active2) {
+    const ds = gridStepDisplay(ly.grid_step || 1, Math.max(bp.x1 - bp.x0, bp.y1 - bp.y0));
+    const mj = [];
+    const mn = [];
+    const y = el + 6e-3;
+    const nx = Math.floor((bp.x1 - bp.x0) / ds + 1e-6);
+    const ny = Math.floor((bp.y1 - bp.y0) / ds + 1e-6);
+    for (let i = 0; i <= nx; i++) {
+      const x = bp.x0 + i * ds;
+      (i % 5 === 0 ? mj : mn).push(x, y, -bp.y0, x, y, -(bp.y0 + ny * ds));
+    }
+    for (let j = 0; j <= ny; j++) {
+      const yy = bp.y0 + j * ds;
+      (j % 5 === 0 ? mj : mn).push(bp.x0, y, -yy, bp.x0 + nx * ds, y, -yy);
+    }
+    if (mn.length) {
+      add(new THREE.LineSegments(lineGeo(mn), V.mat.gridMinor), 1);
+    }
+    if (mj.length) {
+      add(new THREE.LineSegments(lineGeo(mj), V.mat.gridMajor), 1);
+    }
+  }
+  const outline = (yv) => {
+    const poly2 = ly.bounds && ly.bounds.length >= 3 ? ly.bounds : [
+      [bp.x0, bp.y0],
+      [bp.x1, bp.y0],
+      [bp.x1, bp.y1],
+      [bp.x0, bp.y1]
+    ];
+    return lineGeo(poly2.flatMap(([x, y]) => [x, yv, -y]));
+  };
+  if (el > 0.01) {
+    const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active2 ? 0.06 : 0.015, depthWrite: false, side: THREE.DoubleSide });
+    own.push(vm);
+    g3.add(planeMesh(bp.x1 - bp.x0, bp.y1 - bp.y0, (bp.x0 + bp.x1) / 2, el, -(bp.y0 + bp.y1) / 2, vm));
+    const lm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: active2 ? 0.9 : 0.45 });
+    own.push(lm);
+    add(new THREE.LineLoop(outline(el), lm), 1);
+    const vl = [];
+    for (const [x, y] of [
+      [bp.x0, bp.y0],
+      [bp.x1, bp.y0],
+      [bp.x1, bp.y1],
+      [bp.x0, bp.y1]
+    ]) {
+      vl.push(x, 0, -y, x, el, -y);
+    }
+    add(new THREE.LineSegments(lineGeo(vl), lm), 1);
+  } else if (ly.bounds) {
+    const lm = new THREE.LineDashedMaterial({ color: col, dashSize: 1, gapSize: 0.6 });
+    own.push(lm);
+    const ol = new THREE.LineLoop(outline(0.02), lm);
+    ol.computeLineDistances();
+    add(ol, 1);
+  }
+  const zone2 = (x0, y0, x1, y1, color, op2, lab) => {
+    const fm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: active2 ? op2 : op2 * 0.4, depthWrite: false, side: THREE.DoubleSide });
+    own.push(fm);
+    g3.add(planeMesh(Math.abs(x1 - x0), Math.abs(y1 - y0), (x0 + x1) / 2, el + 0.018, -(y0 + y1) / 2, fm));
+    const lm = new THREE.LineDashedMaterial({ color, dashSize: 0.4, gapSize: 0.25, transparent: true, opacity: active2 ? 0.9 : 0.35 });
+    own.push(lm);
+    const ol = new THREE.LineLoop(lineGeo([x0, el + 0.02, -y0, x1, el + 0.02, -y0, x1, el + 0.02, -y1, x0, el + 0.02, -y1]), lm);
+    ol.computeLineDistances();
+    add(ol, 1);
+    if (lab && active2) {
+      const lb = makeLabel(lab, 0.7, 70, color);
+      lb.position.set((x0 + x1) / 2, el + 0.4, -(y0 + y1) / 2);
+      g3.add(lb);
+    }
+  };
+  for (const a of ly.aisles || []) {
+    zone2(a.x0, a.y0, a.x1, a.y1, "#2e9d8f", 0.16, a.name);
+  }
+  for (const f of ly.fire_paths || []) {
+    zone2(f.x0, f.y0, f.x1, f.y1, "#d6453d", f.kind === "exit" ? 0.2 : 0.18, f.name);
+  }
+  if ((ly.utilities || []).length) {
+    const stems = [];
+    for (const u of ly.utilities) {
+      const geo = u.kind === "electric" || u.kind === "panel" ? V.geo.octa : u.kind === "air" ? V.geo.sph : V.geo.cone;
+      const m = new THREE.Mesh(geo, V.mat.pt[u.kind] || V.mat.pt.electric);
+      m.position.set(u.x, el + 0.1, -u.y);
+      g3.add(m);
+      if (el > 0.5) {
+        stems.push(u.x, 0, -u.y, u.x, el, -u.y);
+      }
+    }
+    if (stems.length) {
+      const sm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.25 });
+      own.push(sm);
+      add(new THREE.LineSegments(lineGeo(stems), sm), 1);
+    }
+  }
+  g3.userData.ownMats = own;
+  return g3;
+}
+function disposeDecor(g3) {
+  g3.traverse((o) => {
+    if (o.userData.own && o.geometry) {
+      o.geometry.dispose();
+    }
+  });
+  (g3.userData.ownMats || []).forEach((m) => m.dispose());
+  dropLabels(g3);
+}
+function buildBuilding() {
+  const B3 = S.site.building;
+  const g3 = new THREE.Group();
+  g3.add(planeMesh(B3.length, B3.width, B3.length / 2, -0.01, -B3.width / 2, V.mat.floor));
+  const e = new THREE.LineSegments(V.geo.boxEdges, V.mat.bld);
+  e.scale.set(B3.length, B3.height, B3.width);
+  e.position.set(B3.length / 2, B3.height / 2, -B3.width / 2);
+  g3.add(e);
+  const sx = S.site.column_grid.step_x;
+  const sy = S.site.column_grid.step_y;
+  if (sx > 1 && sy > 1) {
+    const xs = [];
+    const ys = [];
+    for (let x = sx; x < B3.length - 0.01; x += sx) {
+      xs.push(x);
+    }
+    for (let y = sy; y < B3.width - 0.01; y += sy) {
+      ys.push(y);
+    }
+    const n = xs.length * ys.length;
+    if (n > 0 && n < 2e3) {
+      const im = new THREE.InstancedMesh(V.geo.box, V.mat.col, n);
+      const m4 = new THREE.Matrix4();
+      let i = 0;
+      for (const x of xs) {
+        for (const y of ys) {
+          m4.compose(new THREE.Vector3(x, B3.height / 2, -y), new THREE.Quaternion(), new THREE.Vector3(0.4, B3.height, 0.4));
+          im.setMatrixAt(i++, m4);
+        }
+      }
+      g3.add(im);
+    }
+  }
+  return g3;
+}
+function syncStatic() {
+  const B3 = S.site.building;
+  const sig = JSON.stringify([B3, S.site.column_grid, V.theme, S.site.id]);
+  if (sig === V.staticSig) {
+    return;
+  }
+  V.staticSig = sig;
+  if (V.buildingG) {
+    V.world.remove(V.buildingG);
+    const shared = Object.values(V.geo);
+    V.buildingG.traverse((o) => {
+      if (o.geometry && !shared.includes(o.geometry)) {
+        o.geometry.dispose();
+      }
+      if (o.isInstancedMesh) {
+        o.dispose();
+      }
+    });
+  }
+  V.buildingG = buildBuilding();
+  V.world.add(V.buildingG);
+}
+function syncScene(force) {
+  if (!V.ok) {
+    return;
+  }
+  syncStatic();
+  const lseen = /* @__PURE__ */ new Set();
+  for (const ly of S.layers) {
+    lseen.add(ly.id);
+    const sig = JSON.stringify([ly.elevation, ly.grid_step, ly.bounds, ly.color, !isLayerVisible(ly), ly.aisles, ly.fire_paths, ly.utilities, ly.id === S.ui.layer, S.site.building, V.theme]);
+    const cur = V.decor.get(ly.id);
+    if (cur && cur.sig === sig && !force) {
+      continue;
+    }
+    if (cur) {
+      V.world.remove(cur.g);
+      disposeDecor(cur.g);
+    }
+    if (!isLayerVisible(ly)) {
+      V.decor.delete(ly.id);
+      continue;
+    }
+    const g3 = buildDecor(ly);
+    V.world.add(g3);
+    V.decor.set(ly.id, { g: g3, sig });
+  }
+  for (const [id, d] of V.decor) {
+    if (!lseen.has(id)) {
+      V.world.remove(d.g);
+      disposeDecor(d.g);
+      V.decor.delete(id);
+    }
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const pl of S.placements) {
+    const ly = layerOf(pl.layer_id);
+    const v = variantOf(pl.variant_id);
+    if (!ly || !v || !isLayerVisible(ly)) {
+      continue;
+    }
+    const key = "p:" + pl.id;
+    seen.add(key);
+    const sig = JSON.stringify([pl.x, pl.y, pl.rotation, pl.variant_id, pl.layer_id, pl.code, variantSig(v, passportOf(pl.variant_id)), ly.elevation, isGhost(ly), V.theme, V.models.has(v.id)]);
+    const cur = V.views.get(key);
+    if (cur && cur.sig === sig && !force) {
+      continue;
+    }
+    if (cur) {
+      V.world.remove(cur.root);
+      dispose(cur.root);
+    }
+    const view2 = buildPlacementView(pl);
+    if (!view2) {
+      continue;
+    }
+    view2.sig = sig;
+    V.world.add(view2.root);
+    V.views.set(key, view2);
+  }
+  for (const s of S.slots) {
+    const ly = layerOf(s.layer_id);
+    if (!ly || !isLayerVisible(ly)) {
+      continue;
+    }
+    const key = "s:" + s.id;
+    seen.add(key);
+    const sig = JSON.stringify([s, ly.elevation, ly.color, ly.opacity, isGhost(ly), V.theme]);
+    const cur = V.views.get(key);
+    if (cur && cur.sig === sig && !force) {
+      continue;
+    }
+    if (cur) {
+      V.world.remove(cur.root);
+      dispose(cur.root);
+    }
+    const view2 = buildSlotView(s);
+    if (!view2) {
+      continue;
+    }
+    view2.sig = sig;
+    V.world.add(view2.root);
+    V.views.set(key, view2);
+  }
+  for (const [k, v] of V.views) {
+    if (!seen.has(k)) {
+      V.world.remove(v.root);
+      dispose(v.root);
+      V.views.delete(k);
+    }
+  }
+  V.pick = [];
+  for (const v of V.views.values()) {
+    if (v.hit) {
+      V.pick.push(v.hit);
+    }
+  }
+  syncUnderlays();
+  updateVisual();
+}
+var colorSig = () => `${S.ui.metric || ""}|${S.hl ? S.hl.rev || S.hl.codes.size : 0}|${S.stock ? S.stock.rev || 0 : 0}`;
+function recolorCells() {
+  V.colorSig = null;
+  updateVisual();
+}
+function updateVisual() {
+  if (!V.ok) {
+    return;
+  }
+  const keys = selKeys();
+  const selKey = S.sel ? objKey(S.sel.kind, S.sel.id) : null;
+  const sig = colorSig();
+  const recolor = V.colorSig !== sig;
+  V.colorSig = sig;
+  for (const [key, v] of V.views) {
+    const st4 = S.issues.byKey.get(key);
+    const lvl = st4 ? st4.level : "normal";
+    const isSel = keys.has(key);
+    const unsaved = S.unsaved.has(key);
+    if (v.foot) {
+      v.foot.material = v.ghost ? V.mat.dashGhost : lvl === "normal" && unsaved ? V.mat.dash.unsaved : V.mat.dash[lvl] || V.mat.dash.normal;
+    }
+    if (v.fill) {
+      v.fill.visible = !v.ghost && (lvl !== "normal" || isSel);
+      v.fill.material = lvl === "normal" ? V.mat.fill.sel : V.mat.fill[lvl];
+    }
+    if (v.sel) {
+      v.sel.visible = isSel;
+    }
+    if (v.cells) {
+      const want = key === selKey ? S.selCell || "" : "";
+      if (recolor || (v.selCode || "") !== want) {
+        colorCells(v, want || null);
+      }
+    }
+  }
+  requestRender();
+}
+function rulerClear() {
+  for (const o of V.ruler.objs) {
+    V.world.remove(o);
+    if (o.geometry && o.geometry !== V.geo.sph) {
+      o.geometry.dispose();
+    }
+  }
+  V.ruler.objs = [];
+  V.ruler.pts = [];
+  const rl = $("#rlabel");
+  if (rl) {
+    rl.hidden = true;
+  }
+  requestRender();
+}
+function rulerPoint(pt) {
+  const R = V.ruler;
+  if (R.pts.length >= 2) {
+    rulerClear();
+  }
+  R.pts.push(pt);
+  const m = new THREE.Mesh(V.geo.sph, V.mat.rulerPt);
+  m.position.set(pt.x, pt.z + 0.05, -pt.y);
+  m.scale.setScalar(0.6);
+  m.renderOrder = 10;
+  V.world.add(m);
+  R.objs.push(m);
+  if (R.pts.length === 2) {
+    const [a, b] = R.pts;
+    const l = new THREE.Line(lineGeo([a.x, a.z + 0.06, -a.y, b.x, b.z + 0.06, -b.y]), V.mat.ruler);
+    l.renderOrder = 10;
+    V.world.add(l);
+    R.objs.push(l);
+    R.dist = Math.hypot(b.x - a.x, b.y - a.y);
+    const rl = $("#rlabel");
+    rl.textContent = fmt(R.dist, 2) + " м · Δx " + fmt(Math.abs(b.x - a.x), 2) + " · Δy " + fmt(Math.abs(b.y - a.y), 2);
+    rl.hidden = false;
+  }
+  requestRender();
+}
+function updateRulerLabel() {
+  const R = V.ruler;
+  if (R.pts.length < 2) {
+    return;
+  }
+  const a = R.pts[0];
+  const b = R.pts[1];
+  const mid = new THREE.Vector3((a.x + b.x) / 2, (a.z + b.z) / 2, -(a.y + b.y) / 2).project(V.camera);
+  const w = V.canvas.clientWidth;
+  const hh = V.canvas.clientHeight;
+  const el = $("#rlabel");
+  el.style.left = (mid.x + 1) / 2 * w + "px";
+  el.style.top = (1 - mid.y) / 2 * hh + "px";
+}
+function syncUnderlays() {
+  for (const [id, cur] of V.underlays) {
+    if (!layerOf(id)) {
+      V.world.remove(cur.o);
+      cur.o.geometry.dispose();
+      cur.o.material.dispose();
+      V.underlays.delete(id);
+    }
+  }
+  for (const ly of S.layers) {
+    const u = ly.underlay;
+    const data = V.uldata.get(ly.id);
+    const sig = u && data && u.status === "ready" ? JSON.stringify([u.params, ly.elevation, !isLayerVisible(ly), V.theme, data.n]) : "";
+    const cur = V.underlays.get(ly.id);
+    if (cur && cur.sig === sig) {
+      continue;
+    }
+    if (cur) {
+      V.world.remove(cur.o);
+      cur.o.geometry.dispose();
+      cur.o.material.dispose();
+      V.underlays.delete(ly.id);
+    }
+    if (!sig || !isLayerVisible(ly)) {
+      continue;
+    }
+    const p = u.params;
+    const segs2 = data.segs;
+    const k = (p.unit === "m" ? 1 : 1e-3) * (p.scale || 1);
+    const a = rad(p.rot_deg || 0);
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const pos = new Float32Array(segs2.length / 2 * 3);
+    const y0 = ly.elevation + 0.04;
+    for (let i = 0, j = 0; i < segs2.length; i += 2, j += 3) {
+      const px = segs2[i] * k;
+      const py = segs2[i + 1] * k;
+      pos[j] = px * c - py * s + p.dx;
+      pos[j + 1] = y0;
+      pos[j + 2] = -(px * s + py * c + p.dy);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const mat = V.mat.under.clone();
+    mat.opacity = clamp(p.opacity == null ? 0.7 : p.opacity, 0.05, 1);
+    const o = new THREE.LineSegments(geo, mat);
+    o.renderOrder = 2;
+    V.world.add(o);
+    V.underlays.set(ly.id, { o, sig });
+  }
+  requestRender();
+}
+function underlayVertex(layerId, wx, wy, maxD) {
+  const cur = V.underlays.get(layerId);
+  if (!cur) {
+    return null;
+  }
+  const p = cur.o.geometry.attributes.position.array;
+  let best = null;
+  let bd = maxD;
+  for (let i = 0; i < p.length; i += 3) {
+    const d = Math.hypot(p[i] - wx, -p[i + 2] - wy);
+    if (d < bd) {
+      bd = d;
+      best = { x: p[i], y: -p[i + 2] };
+    }
+  }
+  return best;
+}
+function ndc(e) {
+  const r = V.canvas.getBoundingClientRect();
+  return new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+}
+function floorPoint(e, elev) {
+  V.raycaster.setFromCamera(ndc(e), V.camera);
+  const out = new THREE.Vector3();
+  if (!V.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -(elev || 0)), out)) {
+    return null;
+  }
+  return { x: out.x, y: -out.z, z: elev || 0 };
+}
+var OVERLAY_KINDS = ["building", "engineering"];
+function pickCandidates(e) {
+  V.world.updateMatrixWorld(true);
+  V.raycaster.setFromCamera(ndc(e), V.camera);
+  const hits = V.raycaster.intersectObjects(V.pick, false);
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const h0 of hits) {
+    const ref2 = h0.object.userData.ref;
+    const view2 = h0.object.userData.view;
+    if (!ref2 || !view2 || seen.has(view2.key)) {
+      continue;
+    }
+    seen.add(view2.key);
+    const ly = layerOf(view2.layerId);
+    if (!ly || !isLayerVisible(ly)) {
+      continue;
+    }
+    const active2 = view2.layerId === S.ui.layer;
+    if (!active2 && (view2.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
+      continue;
+    }
+    const tier = active2 ? 0 : canEditLayer(ly) ? 1 : 2;
+    out.push({ ref: ref2, view: view2, hit: h0, tier, area: view2.g.L * view2.g.W, kind: view2.kind === "placement" ? 0 : 1 });
+  }
+  out.sort((a, b) => a.tier - b.tier || a.area - b.area || a.kind - b.kind || a.hit.distance - b.hit.distance);
+  return out;
+}
+function pickAt(e) {
+  const best = pickCandidates(e)[0];
+  return best ? { ref: best.ref, view: best.view, hit: best.hit } : null;
+}
+var rafLive = /* @__PURE__ */ (() => {
+  let f = 0;
+  return () => {
+    if (f) {
+      return;
+    }
+    f = requestAnimationFrame(() => {
+      f = 0;
+      liveCheck();
+    });
+  };
+})();
+function initPointer() {
+  const cv = V.canvas;
+  const listeners2 = {
+    pointerdown: onDown,
+    pointermove: onMove,
+    pointerup: onUp,
+    pointercancel: onUp,
+    pointerleave: () => E.hideTip?.(),
+    contextmenu: (e) => e.preventDefault(),
+    dragover: (e) => {
+      if ([...e.dataTransfer.types].includes("text/f3d-variant")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }
+    },
+    drop: (e) => {
+      const id = e.dataTransfer.getData("text/f3d-variant");
+      if (!id) {
+        return;
+      }
+      e.preventDefault();
+      const ly = layerOf(S.ui.layer);
+      const pt = floorPoint(e, ly ? ly.elevation : 0);
+      if (pt) {
+        E.addPlacementAt(id, pt.x, pt.y, true);
+      }
+    }
+  };
+  for (const [t2, fn] of Object.entries(listeners2)) {
+    cv.addEventListener(t2, fn);
+  }
+}
+function onDown(e) {
+  V.canvas.focus({ preventScroll: true });
+  if (e.pointerType === "mouse" && e.button !== 0) {
+    return;
+  }
+  const ly = layerOf(S.ui.layer);
+  const elev = ly ? ly.elevation : 0;
+  if (V.pickMode) {
+    const pt2 = floorPoint(e, elev);
+    if (pt2) {
+      E.pickModeClick(pt2);
+    }
+    e.preventDefault();
+    return;
+  }
+  if (V.ruler.on) {
+    const pt2 = floorPoint(e, elev);
+    if (pt2) {
+      pt2.x = rnd(pt2.x, 2);
+      pt2.y = rnd(pt2.y, 2);
+      rulerPoint(pt2);
+    }
+    return;
+  }
+  if (V.placing) {
+    V.placing.down = { x: e.clientX, y: e.clientY };
+    V.controls.enabled = true;
+    return;
+  }
+  const hit = pickAt(e);
+  V.bg = null;
+  const additive = e.ctrlKey || e.metaKey;
+  if (e.shiftKey && V.camMode === "plan" && e.pointerType !== "touch") {
+    startBox(e, hit, additive);
+    return;
+  }
+  if (!hit) {
+    V.bg = { x: e.clientX, y: e.clientY };
+    return;
+  }
+  if (additive) {
+    E.toggleMulti(hit.ref);
+    return;
+  }
+  const inMulti = S.multi.length > 1 && S.multi.some((r) => r.kind === hit.ref.kind && r.id === hit.ref.id);
+  if (inMulti) {
+    S.sel = { kind: hit.ref.kind, id: hit.ref.id };
+  } else {
+    E.selectObj(hit.ref);
+  }
+  if (hit.view.cells && !inMulti) {
+    const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
+    if (ci && ci.instanceId != null && hit.view.cellList[ci.instanceId]) {
+      S.selCell = hit.view.cellList[ci.instanceId].code;
+      updateVisual();
+      E.renderCellsBox();
+      const tr = $("#cellsBox tr.sel");
+      if (tr) {
+        tr.scrollIntoView({ block: "nearest" });
+      }
+      E.cellPicked?.(hit.ref.id, S.selCell, e);
+    }
+  }
+  const rec = recOfRef(hit.ref);
+  if (!rec) {
+    return;
+  }
+  const lyr = layerOf(rec.layer_id);
+  if (!canEditLayer(lyr)) {
+    if (S.app.mode === "edit") {
+      toastLock(lyr);
+    }
+    return;
+  }
+  if (rec.locked) {
+    toast("Складний контур зони редагується у формі Odoo.", "warn");
+    return;
+  }
+  const pt = floorPoint(e, lyr.elevation);
+  if (!pt) {
+    return;
+  }
+  let group = null;
+  if (inMulti) {
+    group = [];
+    for (const r of S.multi) {
+      const rr = recOfRef(r);
+      if (!rr || !canEditLayer(layerOf(rr.layer_id)) || rr.locked) {
+        toast(rr && !canEditLayer(layerOf(rr.layer_id)) ? lockHint(layerOf(rr.layer_id)) : "Складний контур зони редагується у формі Odoo.", "warn");
+        return;
+      }
+      group.push({ ref: r, rec: rr, key: objKey(r.kind, r.id), start: { x: rr.x, y: rr.y } });
+    }
+  }
+  V.controls.enabled = false;
+  try {
+    V.canvas.setPointerCapture(e.pointerId);
+  } catch {
+  }
+  V.drag = { ref: hit.ref, rec, key: objKey(hit.ref.kind, hit.ref.id), start: { x: rec.x, y: rec.y }, pt0: pt, moved: false, sx: e.clientX, sy: e.clientY, before: S.issues, elev: lyr.elevation, group };
+}
+function onMove(e) {
+  const ly = layerOf(S.ui.layer);
+  const elev = ly ? ly.elevation : 0;
+  const pp = floorPoint(e, V.drag ? V.drag.elev : elev);
+  if (pp) {
+    V.cursor = pp;
+    E.updateStamp();
+  }
+  if (V.placing) {
+    movePlacing(e);
+    return;
+  }
+  if (V.box) {
+    moveBox(e);
+    return;
+  }
+  if (!V.drag && !V.hoverRaf) {
+    const ex2 = { clientX: e.clientX, clientY: e.clientY };
+    V.hoverRaf = requestAnimationFrame(() => {
+      V.hoverRaf = 0;
+      hoverAt(ex2);
+    });
+  }
+  const d = V.drag;
+  if (!d) {
+    return;
+  }
+  if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) {
+    return;
+  }
+  d.moved = true;
+  if (!pp) {
+    return;
+  }
+  const st4 = e.altKey ? 0.01 : snapStep(d.rec);
+  d.rec.x = snapV(d.start.x + (pp.x - d.pt0.x), st4);
+  d.rec.y = snapV(d.start.y + (pp.y - d.pt0.y), st4);
+  const view2 = V.views.get(d.key);
+  if (view2) {
+    poseView(view2, d.rec);
+  }
+  if (d.group) {
+    const ddx = d.rec.x - d.start.x;
+    const ddy = d.rec.y - d.start.y;
+    for (const it of d.group) {
+      if (it.rec === d.rec) {
+        continue;
+      }
+      it.rec.x = rnd(it.start.x + ddx, 4);
+      it.rec.y = rnd(it.start.y + ddy, 4);
+      const v2 = V.views.get(it.key);
+      if (v2) {
+        poseView(v2, it.rec);
+      }
+    }
+  }
+  rafLive();
+}
+function hoverAt(e) {
+  if (!V.canvas || V.drag || V.box || V.placing || V.ruler.on || V.pickMode) {
+    return;
+  }
+  const hit = pickAt(e);
+  let cell = null;
+  if (hit && hit.view.cells) {
+    const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
+    cell = ci && ci.instanceId != null ? hit.view.cellList[ci.instanceId] || null : null;
+  }
+  const key = hit ? objKey(hit.ref.kind, hit.ref.id) : null;
+  const hk2 = key ? key + "|" + (cell ? cell.code : "") : null;
+  if (hk2 === V.hoverKey) {
+    return;
+  }
+  V.hoverKey = hk2;
+  const rec = hit && recOfRef(hit.ref);
+  V.canvas.style.cursor = hit ? canEditLayer(layerOf(rec.layer_id)) ? "move" : "pointer" : "";
+  const el = $("#hoverName");
+  if (el) {
+    el.textContent = rec ? (rec.code || rec.code_prefix) + (rec.name ? " · " + rec.name : rec.params && rec.params.title ? " · " + rec.params.title : "") : "—";
+  }
+  if (rec) {
+    E.showTip?.({ x: e.clientX, y: e.clientY, rec, kind: hit.ref.kind, cell });
+  } else {
+    E.hideTip?.();
+  }
+}
+function onUp(e) {
+  try {
+    V.canvas.releasePointerCapture(e.pointerId);
+  } catch {
+  }
+  if (V.placing && V.placing.down) {
+    const d0 = V.placing.down;
+    V.placing.down = null;
+    if (Math.hypot(e.clientX - d0.x, e.clientY - d0.y) < 5) {
+      movePlacing(e);
+      placeClick(e.shiftKey);
+    }
+    return;
+  }
+  if (V.box) {
+    finishBox(e);
+    return;
+  }
+  const d = V.drag;
+  V.drag = null;
+  V.controls.enabled = true;
+  if (V.bg) {
+    const b = V.bg;
+    V.bg = null;
+    if (Math.hypot(e.clientX - b.x, e.clientY - b.y) < 4) {
+      E.selectObj(null);
+    }
+    return;
+  }
+  if (!d || !d.moved) {
+    return;
+  }
+  finishMove(d);
+}
+function liveCheck() {
+  S.issues = runLive();
+  updateVisual();
+  E.syncPropsValues();
+  E.renderChecksBlock();
+}
+function finishMove(d) {
+  const items2 = d.group || [d];
+  const after = runLive();
+  const nb = items2.flatMap((it) => newBlocks(d.before, after, it.key));
+  if (nb.length) {
+    for (const it of items2) {
+      it.rec.x = it.start.x;
+      it.rec.y = it.start.y;
+      const view2 = V.views.get(it.key);
+      if (view2) {
+        poseView(view2, it.rec);
+      }
+    }
+    S.issues = runLive();
+    updateVisual();
+    E.syncPropsValues();
+    E.renderChecksBlock();
+    toast("Заблоковано: " + nb[0].msg + (items2.length > 1 ? ". Групу повернуто на місце." : ". Об’єкт повернуто на місце."), "err");
+    return;
+  }
+  for (const it of items2) {
+    if (it.ref.kind === "placement") {
+      assignSlot(it.rec);
+    }
+  }
+  if (items2.some((it) => it.start.x !== it.rec.x || it.start.y !== it.rec.y)) {
+    E.commit({});
+  } else {
+    S.issues = after;
+    updateVisual();
+  }
+  const first = items2.map((it) => S.issues.byKey.get(it.key)).find((st4) => st4 && st4.level !== "block");
+  if (first) {
+    toast(first.items[0].msg, "warn");
+  }
+}
+function startBox(e, hit, add) {
+  V.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, add, moved: false, hit };
+  V.controls.enabled = false;
+  try {
+    V.canvas.setPointerCapture(e.pointerId);
+  } catch {
+  }
+}
+function moveBox(e) {
+  const b = V.box;
+  b.x1 = e.clientX;
+  b.y1 = e.clientY;
+  if (!b.moved && Math.hypot(b.x1 - b.x0, b.y1 - b.y0) < 5) {
+    return;
+  }
+  b.moved = true;
+  if (!b.el) {
+    b.el = h("div", { class: "s3-box", style: { position: "absolute", pointerEvents: "none", border: "1px dashed var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)", zIndex: "3" } });
+    $("#vp").append(b.el);
+  }
+  const r = $("#vp").getBoundingClientRect();
+  Object.assign(b.el.style, { left: Math.min(b.x0, b.x1) - r.left + "px", top: Math.min(b.y0, b.y1) - r.top + "px", width: Math.abs(b.x1 - b.x0) + "px", height: Math.abs(b.y1 - b.y0) + "px" });
+}
+function refsInRect(rect2) {
+  const cv = V.canvas.getBoundingClientRect();
+  const out = [];
+  const q = new THREE.Vector3();
+  for (const v of V.views.values()) {
+    if (v.layerId !== S.ui.layer || !v.g || !v.g.poly) {
+      continue;
+    }
+    const ly = layerOf(v.layerId);
+    if (!ly || !isLayerVisible(ly) || OVERLAY_KINDS.includes(ly.kind) || v.tpl === "building") {
+      continue;
+    }
+    const el = ly.elevation || 0;
+    const inside = v.g.poly.every(([px, py]) => {
+      q.set(px, el, -py).project(V.camera);
+      const cx = cv.left + (q.x + 1) / 2 * cv.width;
+      const cy = cv.top + (1 - q.y) / 2 * cv.height;
+      return cx >= rect2.x0 && cx <= rect2.x1 && cy >= rect2.y0 && cy <= rect2.y1;
+    });
+    if (inside) {
+      out.push({ kind: v.kind, id: v.id });
+    }
+  }
+  return out;
+}
+function finishBox(e) {
+  const b = V.box;
+  V.box = null;
+  V.controls.enabled = true;
+  if (b.el) {
+    b.el.remove();
+  }
+  if (!b.moved) {
+    if (b.hit) {
+      if (b.add) {
+        E.toggleMulti(b.hit.ref);
+      } else {
+        E.selectObj(b.hit.ref);
+      }
+    } else if (!b.add) {
+      E.selectObj(null);
+    }
+    return;
+  }
+  const rect2 = { x0: Math.min(b.x0, b.x1), y0: Math.min(b.y0, b.y1), x1: Math.max(b.x0, b.x1), y1: Math.max(b.y0, b.y1) };
+  E.boxSelect(refsInRect(rect2), b.add);
+}
+function assignSlot(pl) {
+  const v = variantOf(pl.variant_id);
+  if (!v) {
+    return;
+  }
+  const g3 = pGeom(pl, v);
+  let found2 = null;
+  for (const s of S.slots) {
+    if (s.template === "machine_spot" && s.layer_id === pl.layer_id && polygonContains(sGeom(s).poly, [g3.cx, g3.cy], 1e-6)) {
+      found2 = s;
+    }
+  }
+  pl.slot_id = found2 ? found2.id : null;
+}
+function startPlacing(spec) {
+  cancelModes();
+  const ly = layerOf(S.ui.layer);
+  if (!ly) {
+    return;
+  }
+  if (!canEditLayer(ly)) {
+    toastLock(ly);
+    return;
+  }
+  const c = camTarget();
+  let rec;
+  if (spec.kind === "placement") {
+    const v = variantOf(spec.variantId);
+    if (!v) {
+      return;
+    }
+    rec = { id: "tmp", layer_id: ly.id, variant_id: v.id, slot_id: null, cell_code: null, x: snapV(c.x, ly.grid_step), y: snapV(c.y, ly.grid_step), rotation: 0, code: "", name: v.name };
+  } else {
+    if (!ly.slot_types.includes(spec.template)) {
+      toast(`Шар «${ly.name}» не допускає шаблон «${TPL[spec.template].name}»`, "warn");
+      return;
+    }
+    rec = { id: "tmp", layer_id: ly.id, template: spec.template, code_prefix: spec.prefix, x: snapV(c.x, ly.grid_step), y: snapV(c.y, ly.grid_step), rotation: 0, params: clone(spec.params), overrides: {} };
+  }
+  const view2 = rec.template ? buildSlotView(rec, { ghost: false }) : buildPlacementView(rec, { ghost: false, noLabel: true });
+  if (!view2) {
+    return;
+  }
+  V.world.add(view2.root);
+  V.placing = { spec, rec, view: view2, kind: spec.kind };
+  V.canvas.style.cursor = "copy";
+  V.placing.hint = toast("Клацніть на сцені, щоб поставити. Shift — поставити кілька, Esc — скасувати.");
+  liveGhost();
+  requestRender();
+  E.renderVTools();
+}
+function movePlacing(e) {
+  const P2 = V.placing;
+  if (!P2) {
+    return;
+  }
+  const ly = layerOf(P2.rec.layer_id);
+  const pt = floorPoint(e, ly.elevation);
+  if (!pt) {
+    return;
+  }
+  const st4 = e.altKey ? 0.01 : ly.grid_step || 0.5;
+  P2.rec.x = snapV(pt.x, st4);
+  P2.rec.y = snapV(pt.y, st4);
+  poseView(P2.view, P2.rec);
+  liveGhost();
+}
+function liveGhost() {
+  const P2 = V.placing;
+  if (!P2) {
+    return;
+  }
+  const isSlot = !!P2.rec.template;
+  const arr = isSlot ? S.slots : S.placements;
+  const idx = isSlot ? S.sIdx : S.pIdx;
+  arr.push(P2.rec);
+  idx.set("tmp", P2.rec);
+  const res = runLive();
+  arr.pop();
+  idx.delete("tmp");
+  const key = (isSlot ? "s:" : "p:") + "tmp";
+  const st4 = res.byKey.get(key);
+  const lvl = st4 ? st4.level : "normal";
+  P2.lvl = lvl;
+  P2.issues = st4 ? st4.items : [];
+  const v = P2.view;
+  if (v.foot) {
+    v.foot.material = V.mat.dash[lvl] || V.mat.dash.normal;
+  }
+  if (v.fill) {
+    v.fill.visible = true;
+    v.fill.material = lvl === "normal" ? V.mat.fill.sel : V.mat.fill[lvl];
+  }
+  requestRender();
+}
+function placeClick(keep) {
+  const P2 = V.placing;
+  if (!P2) {
+    return;
+  }
+  if (P2.lvl === "block") {
+    toast("Заблоковано: " + P2.issues.find((i) => i.level === "block").msg, "err");
+    return;
+  }
+  if (P2.kind === "placement") {
+    E.addPlacementAt(P2.spec.variantId, P2.rec.x, P2.rec.y, false);
+  } else {
+    E.addSlotAt(P2.spec, P2.rec.x, P2.rec.y);
+  }
+  if (!keep) {
+    cancelModes();
+  }
+}
+function cancelModes() {
+  if (V.placing) {
+    if (V.placing.hint) {
+      V.placing.hint.remove();
+    }
+    V.world.remove(V.placing.view.root);
+    dispose(V.placing.view.root);
+    V.placing = null;
+    if (V.canvas) {
+      V.canvas.style.cursor = "";
+    }
+  }
+  if (V.ruler.on) {
+    V.ruler.on = false;
+    rulerClear();
+  }
+  if (V.pickMode) {
+    V.pickMode = null;
+  }
+  requestRender();
+  E.renderVTools?.();
+}
+Object.assign(E, {
+  requestRender,
+  setView,
+  focusOn,
+  camTarget,
+  syncScene,
+  updateVisual,
+  recolorCells,
+  rulerClear,
+  rulerPoint,
+  syncUnderlays,
+  underlayVertex,
+  startPlacing,
+  cancelModes,
+  assignSlot,
+  initScene,
+  disposeScene,
+  resizeScene,
+  recolorMats,
+  floorPoint,
+  poseView,
+  buildPlacementView,
+  buildSlotView
+});
+
+// core/constructor/app.js
+var ctx = null;
+var lsGet = (k) => {
+  try {
+    return window.localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+var lsSet = (k, v) => {
+  try {
+    window.localStorage.setItem(k, v);
+  } catch {
+  }
+};
+var syncNow = () => {
+  if (!ctx || !S.site) {
+    return;
+  }
+  E.undoRecord?.();
+  E.refreshUnsaved?.();
+  ctx.adapter.save(S);
+};
+var scheduleSave = debounce(syncNow, 150);
+async function flushNow() {
+  if (!ctx) {
+    return { ok: true };
+  }
+  scheduleSave.cancel();
+  syncNow();
+  const r = await ctx.adapter.flush();
+  if (r.reload && r.ok !== false) {
+    await reload();
+  }
+  return r;
+}
+var saveSiteProps = debounce(async () => {
+  if (!ctx || !S.site) {
+    return;
+  }
+  const b = S.site.building;
+  const cg = S.site.column_grid;
+  try {
+    await ctx.adapter.saveSite({
+      name: S.site.name,
+      building: { length: b.length, width: b.width, height: b.height },
+      column_grid: { step_x: cg.step_x, step_y: cg.step_y }
+    });
+  } catch (e) {
+    toast("Не вдалося зберегти параметри площадки: " + (e.data?.message || e.message || e), "err");
+  }
+}, 700);
+function commit(o) {
+  if (o && o.label) {
+    E.undoLabel?.(o.label);
+  }
+  reindex();
+  S.issues = runLive();
+  E.syncScene();
+  E.renderAll();
+  scheduleSave();
+}
+function applyLoaded(st4, keep) {
+  S.site = st4.site;
+  S.layers = st4.layers;
+  S.slots = st4.slots;
+  S.placements = st4.placements;
+  S.catalog = st4.catalog;
+  S.settings = st4.settings;
+  S.versions = st4.versions;
+  S.rights = st4.rights;
+  S.app.active = st4.site.id;
+  const entry = S.app.sites.find((s) => s.id === st4.site.id);
+  if (entry) {
+    entry.name = st4.site.name;
+  }
+  ctx.adapter.autosaveMs = st4.site.settings?.autosave_ms ?? 1500;
+  reindex();
+  S.sel = keep?.sel && (keep.sel.kind === "slot" ? S.sIdx : S.pIdx).has(keep.sel.id) ? keep.sel : null;
+  S.multi = [];
+  S.hl = null;
+  S.selCell = null;
+  S.edit = null;
+  if (!keep) {
+    V.hidden = new Set(S.layers.filter((l) => !l.visible).map((l) => l.id));
+  }
+  const first = S.layers.find((l) => l.kind === "production") || S.layers.find((l) => l.kind !== "building") || S.layers[0];
+  S.ui.layer = keep?.layer && layerOf(keep.layer) ? keep.layer : first.id;
+  S.ui.dxfScale = null;
+  V.models.clear();
+  S.issues = runLive();
+  if (!keep) {
+    S.stock = null;
+  }
+  if (keep) {
+    E.undoRebase?.();
+  } else {
+    E.undoReset?.();
+  }
+  E.markSaved?.();
+}
+async function afterSiteLoad(keep) {
+  E.renderAll();
+  E.syncScene(true);
+  if (!keep) {
+    E.setView("iso");
+  }
+  await Promise.all([loadVariantModels(), E.loadUnderlays()]);
+}
+async function openSite(id, keep) {
+  const st4 = await ctx.adapter.load(id);
+  if (!ctx) {
+    return;
+  }
+  applyLoaded(st4, keep);
+  lsSet(host.siteKey, String(id));
+  await afterSiteLoad(keep);
+}
+async function switchSite(id) {
+  if (id === S.app.active) {
+    return;
+  }
+  const r = await flushNow();
+  if (r.ok === false) {
+    toast("Не вдалося зберегти зміни: площадку не перемкнено.", "err");
+    E.renderTop();
+    return;
+  }
+  try {
+    E.cancelModes();
+    await openSite(id);
+  } catch (e) {
+    toast("Не вдалося відкрити площадку: " + (e.message || e), "err");
+    E.renderTop();
+  }
+}
+async function reload() {
+  if (!ctx || !S.site) {
+    return;
+  }
+  const keep = { sel: S.sel, layer: S.ui.layer };
+  await openSite(S.site.id, keep);
+}
+async function createSite(o) {
+  try {
+    const id = await ctx.adapter.createSite(o);
+    S.app.sites = await ctx.adapter.listSites();
+    await flushNow();
+    await openSite(id);
+    toast("Створено порожню площадку.");
+    return true;
+  } catch (e) {
+    toast(e.message || "Не вдалося створити площадку.", "err");
+    return false;
+  }
+}
+async function restoreVersion(versionId, n) {
+  try {
+    const res = await ctx.adapter.restoreVersion(versionId);
+    await openSite(res.site_id || S.site.id, { sel: null, layer: S.ui.layer });
+    E.undoReset?.();
+    toast(`Чернетку повернуто до версії ${n}.`);
+  } catch (e) {
+    toast(e.message || "Не вдалося повернути чернетку.", "err");
+  }
+}
+async function publish() {
+  try {
+    await ctx.adapter.publish({
+      onClose: () => {
+        E.undoReset?.();
+        return reload();
+      },
+      state: S
+    });
+  } catch (e) {
+    toast(e.message || "Не вдалося підготувати публікацію.", "err");
+  }
+}
+async function validateOnServer() {
+  try {
+    await flushNow();
+    E.openServerIssues(await ctx.adapter.check());
+  } catch (e) {
+    toast(e.message || "Не вдалося виконати перевірку.", "err");
+  }
+}
+var dialogCtx = () => ({ E, S, V, adapter: ctx?.adapter, host, reload });
+async function runDialog(name, args) {
+  if (!registries.dialogs.has(name)) {
+    toast(`Діалог «${name}» недоступний у цьому хості.`, "warn");
+    return void 0;
+  }
+  return await registries.dialogs.get(name)(args || {}, dialogCtx());
+}
+var openVariantForm = (variant, passport) => runDialog("variantForm", { variant: variant || null, passport });
+var openPassportForm = (passport) => runDialog("passportForm", { passport: passport || null });
+var openRecord = (model, id) => runDialog("record", { model, id });
+function normalizeModel(obj) {
+  const wrap = new THREE.Group();
+  const inner = obj.clone(true);
+  wrap.add(inner);
+  wrap.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(wrap);
+  const c = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  inner.position.set(-c.x, -box.min.y, -c.z);
+  wrap.updateMatrixWorld(true);
+  return { obj: wrap, size };
+}
+async function loadVariantModels() {
+  if (V.testMode) {
+    return;
+  }
+  let any = false;
+  for (const p of S.catalog) {
+    for (const v of p.variants) {
+      if (!v.model || V.models.has(v.id)) {
+        continue;
+      }
+      try {
+        const obj = await ctx.adapter.loadModel(v, THREE);
+        if (!obj) {
+          continue;
+        }
+        if (!ctx) {
+          return;
+        }
+        V.models.set(v.id, normalizeModel(obj));
+        any = true;
+      } catch (e) {
+        console.warn("model", v.id, e);
+      }
+    }
+  }
+  if (any && ctx) {
+    E.syncScene();
+  }
+}
+var themeEl = () => host.themeTarget || ROOT.el;
+function applyTheme(t2) {
+  themeEl().dataset.theme = t2;
+  lsSet(host.themeKey, t2);
+  host.onTheme?.(t2);
+  V.theme = t2;
+  if (V.ok) {
+    E.recolorMats();
+    E.syncScene(true);
+  }
+  E.renderTop();
+  E.renderStamp();
+}
+function listen(target, type, fn) {
+  target.addEventListener(type, fn);
+  ctx.listeners.push([target, type, fn]);
+}
+function bindEvents() {
+  listen($("#siteSel"), "change", (e) => switchSite(S.app.sites.find((s) => String(s.id) === e.target.value)?.id));
+  listen($("#roleSel"), "change", (e) => {
+    if (!S.rights.is_manager) {
+      return;
+    }
+    S.app.viewAs = e.target.value === "manager" ? null : e.target.value;
+    S.edit = null;
+    S.issues = runLive();
+    E.renderAll();
+    const ly = layerOf(S.ui.layer);
+    if (ly && S.app.mode === "edit" && !canEditLayer(ly)) {
+      toast(lockHint(ly), "warn");
+    }
+  });
+  $$("#modeSeg button").forEach(
+    (b) => listen(b, "click", () => {
+      S.app.mode = b.dataset.mode;
+      S.edit = null;
+      E.cancelModes();
+      E.renderAll();
+    })
+  );
+  listen($("#btnNewSite"), "click", () => runDialog("newSite"));
+  listen($("#btnPublish"), "click", publish);
+  listen($("#btnHistory"), "click", () => E.openHistory());
+  listen($("#btnTheme"), "click", () => applyTheme(E.curTheme() === "dark" ? "light" : "dark"));
+  $$("#ltabs button").forEach((b) => listen(b, "click", () => E.setLeftTab(b.dataset.tab)));
+  $$("#mtabs button").forEach((b) => listen(b, "click", () => E.setMTab(b.dataset.mtab)));
+  listen(document, "keydown", onKey);
+  if (host.themeAuto && window.matchMedia) {
+    listen(window.matchMedia("(prefers-color-scheme: dark)"), "change", () => {
+      if (!themeEl().dataset.theme) {
+        applyTheme(E.curTheme());
+      }
+    });
+  }
+  listen(window, "beforeunload", (e) => {
+    if (ctx && (ctx.adapter.dirty || S.saveState === "error")) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+}
+function onKey(e) {
+  if (!ctx || !ROOT.el || !ROOT.el.isConnected) {
+    return;
+  }
+  const t2 = e.target;
+  const typing = t2 && (t2.tagName === "INPUT" || t2.tagName === "TEXTAREA" || t2.tagName === "SELECT");
+  if ($("dialog[open]") || document.querySelector(".modal.show, .o_dialog")) {
+    return;
+  }
+  for (const [key, hk2] of registries.hotkeys.getEntries()) {
+    if (typing && !hk2.typing) {
+      continue;
+    }
+    if ((e.ctrlKey || e.metaKey) && !hk2.ctrl) {
+      continue;
+    }
+    if (e.altKey && !hk2.alt) {
+      continue;
+    }
+    if (hk2.ctrl && !(e.ctrlKey || e.metaKey)) {
+      continue;
+    }
+    const hit = hk2.match ? hk2.match(e) : (hk2.code ? e.code === hk2.code : e.key === hk2.key) && (hk2.shift == null || hk2.shift === e.shiftKey);
+    if (!hit || hk2.when && !hk2.when(e)) {
+      continue;
+    }
+    try {
+      if (hk2.run(e) !== false) {
+        return;
+      }
+    } catch (err) {
+      console.error(`Гаряча клавіша «${key}»:`, err);
+    }
+  }
+}
+function registerBuiltinHotkeys() {
+  const add = (key, hk2, sequence) => registries.hotkeys.add(key, hk2, { sequence, force: true });
+  add(
+    "escape",
+    {
+      key: "Escape",
+      typing: true,
+      run() {
+        if (V.placing || V.ruler.on || V.pickMode) {
+          E.cancelModes();
+        } else if (S.sel) {
+          E.selectObj(null);
+        }
+      }
+    },
+    10
+  );
+  add("rotate", { code: "KeyR", alt: true, run: (e) => (e.preventDefault(), E.rotateSel(e.shiftKey ? -1 : 1)) }, 20);
+  add(
+    "delete",
+    {
+      match: (e) => e.code === "Delete" || e.code === "Backspace",
+      when: () => !!S.sel,
+      run: (e) => (e.preventDefault(), E.askDelete())
+    },
+    30
+  );
+  add(
+    "ruler",
+    {
+      code: "KeyM",
+      run() {
+        const on = !V.ruler.on;
+        E.cancelModes();
+        V.ruler.on = on;
+        E.renderVTools();
+      }
+    },
+    40
+  );
+  add(
+    "nudge",
+    {
+      match: (e) => e.code.startsWith("Arrow"),
+      when: () => !!S.sel,
+      run(e) {
+        e.preventDefault();
+        const k = e.shiftKey ? 10 : 1;
+        E.nudge(e.code === "ArrowRight" ? k : e.code === "ArrowLeft" ? -k : 0, e.code === "ArrowUp" ? k : e.code === "ArrowDown" ? -k : 0);
+      }
+    },
+    50
+  );
+}
+registerBuiltinHotkeys();
+function wireAdapter(store) {
+  store.onStatus = (status) => {
+    if (!ctx) {
+      return;
+    }
+    S.saveState = status;
+    if (status === "saved") {
+      E.markSaved?.();
+    }
+    E.renderSaveState();
+    E.syncSaveAll?.();
+  };
+  store.onSaved = (r) => {
+    if (!ctx || !S.site) {
+      return;
+    }
+    Object.assign(S.site, { draft_rev: r.rev, draft_changes: r.draft_changes, has_changes: r.has_changes });
+    const pools = { "td.layer": S.layers, "td.slot": S.slots, "td.placement": S.placements };
+    for (const u of r.updates) {
+      const rec = (pools[u.model] || []).find((x) => x.id === u.uid);
+      if (rec) {
+        rec.rid = u.rid ?? rec.rid;
+        if (u.etag) {
+          rec.etag = u.etag;
+        }
+      }
+    }
+    E.renderChips();
+  };
+  store.onConflict = () => E.askConflict();
+  store.onReject = (r) => toast(r.message || "Сервер відхилив зміну.", "err");
+  store.onReload = () => {
+    if (ctx && S.site) {
+      E.undoReset?.();
+      syncNow();
+      ctx.adapter.flush().then(() => ctx && reload());
+    }
+  };
+}
+async function mountEditor(rootEl, { adapter, store, host: hostSvc, services, siteId, testMode } = {}) {
+  adapter = assertAdapter(adapter || store);
+  resetState();
+  setHost({ ...hostSvc || {}, services: { ...hostSvc?.services || {}, ...services || {} } });
+  setCapabilities(adapter.capabilities);
+  ROOT.el = rootEl;
+  ctx = { adapter, listeners: [] };
+  E.adapter = adapter;
+  E.store = adapter;
+  E.host = host;
+  rootEl.innerHTML = BODY_HTML;
+  const th = lsGet(host.themeKey);
+  if (th === "dark" || th === "light") {
+    themeEl().dataset.theme = th;
+    host.onTheme?.(th);
+  } else if (!host.themeAuto) {
+    themeEl().dataset.theme = "light";
+  }
+  V.theme = E.curTheme();
+  V.testMode = !!testMode;
+  wireAdapter(adapter);
+  if (host.debug) {
+    window.__f3dEditor = { S, V, E, THREE, adapter, store: adapter };
+  }
+  try {
+    await loadThree();
+  } catch (e) {
+    $("#vp").append(Object.assign(document.createElement("div"), { className: "nogl", textContent: "Не вдалося завантажити 3D-бібліотеку: " + (e.message || e) }));
+    throw e;
+  }
+  if (!ctx) {
+    return;
+  }
+  bindEvents();
+  S.app.sites = await adapter.listSites();
+  if (!ctx) {
+    return;
+  }
+  if (!S.app.sites.length) {
+    $("#vp").append(Object.assign(document.createElement("div"), { className: "nogl", textContent: "Площадок немає. Створіть площадку в меню «Планування → Площадки»." }));
+    return;
+  }
+  const stored = lsGet(host.siteKey);
+  const want = siteId ?? stored;
+  const entry = S.app.sites.find((s) => String(s.id) === String(want)) || S.app.sites[0];
+  E.initScene();
+  await openSite(entry.id);
+  for (const fn of E.lifecycle.mount) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("mount hook:", e);
+    }
+  }
+  rootEl.dataset.ready = "1";
+}
+function unmountEditor() {
+  if (!ctx) {
+    return;
+  }
+  const c = ctx;
+  try {
+    scheduleSave.cancel();
+    saveSiteProps.cancel();
+    if (S.site) {
+      c.adapter.save(S);
+    }
+    c.adapter.flush();
+  } catch {
+  }
+  for (const [target, type, fn] of c.listeners) {
+    target.removeEventListener(type, fn);
+  }
+  E.cancelModes?.();
+  for (const fn of E.lifecycle.unmount) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("unmount hook:", e);
+    }
+  }
+  E.disposeScene?.();
+  ctx = null;
+  if (ROOT.el) {
+    ROOT.el.innerHTML = "";
+    delete ROOT.el.dataset.ready;
+  }
+  ROOT.el = null;
+  resetState();
+}
+Object.assign(E, { commit, scheduleSave, flushNow, reload, switchSite, createSite, restoreVersion, publish, validateOnServer, saveSiteProps, runDialog, openVariantForm, openPassportForm, openRecord, normalizeModel, loadVariantModels });
+
+// core/constructor/adapter_odoo.js
+var adapter_odoo_exports = {};
+__export(adapter_odoo_exports, {
+  OdooAdapter: () => OdooAdapter,
+  OdooStore: () => OdooStore,
+  StoreError: () => StoreError,
+  attachRules: () => attachRules,
+  layerFromApi: () => layerFromApi,
+  layerToApi: () => layerToApi,
+  newUid: () => newUid,
+  normalizeLoaded: () => normalizeLoaded,
+  passportFromApi: () => passportFromApi,
+  placementFromApi: () => placementFromApi,
+  placementToApi: () => placementToApi,
+  polygonToRect: () => polygonToRect,
+  putawayFromApi: () => putawayFromApi,
+  putawayToApi: () => putawayToApi,
+  rectToPolygon: () => rectToPolygon,
+  replenishFromApi: () => replenishFromApi,
+  replenishToApi: () => replenishToApi,
+  slotFromApi: () => slotFromApi,
+  slotToApi: () => slotToApi,
+  variantFromApi: () => variantFromApi
+});
+
+// core/constructor/building_core.js
+var ITEM_KINDS = {
+  column: "Колона",
+  wall: "Стіна",
+  gate: "Ворота",
+  dock: "Док",
+  door: "Двері",
+  office: "Офіс",
+  charger: "Зарядка техніки"
+};
+var ITEM_PREFIX = { column: "К", wall: "С", gate: "В", dock: "Д", door: "Дв", office: "Офіс", charger: "З" };
+var OBSTACLE_KINDS = ["column", "wall", "office", "charger"];
+var OBSTACLE_ACCUSATIVE = { column: "колону", wall: "стіну", office: "офіс", charger: "зарядку техніки" };
+var LINK_KINDS = ["gate", "dock"];
+var ITEM_DEFAULT_SIZE = { column: [0.4, 0.4], wall: [5, 0.2], gate: [3.5, 0.3], dock: [3, 0.5], door: [1, 0.2], office: [6, 4], charger: [1.2, 0.8] };
+var ITEM_HEIGHT = { column: null, wall: null, gate: 4, dock: 1.2, door: 2.1, office: 3, charger: 1.2 };
+var MAX_ITEMS = 5e3;
+var TECHS = {
+  hand: ["Ручний візок", 1.2],
+  stacker: ["Штабелер", 2],
+  reach: ["Ричтрак", 2.8],
+  vna: ["Вузькопрохідний", 1.8],
+  forklift: ["Навантажувач", 3.5],
+  custom: ["Свій мінімум", null],
+  none: ["Не перевіряти", null]
+};
+var SPRINKLER_CLEARANCE_M = 0.5;
+var SPACER_M = 0.6;
+var MIN_FACE_OVERLAP_M = 1;
+var MAX_NEED_M = 12;
+var INSIDE_KINDS = ["storage", "production", "custom"];
+var ROW_TEMPLATES2 = ["pallet_rack", "cantilever", "shelf"];
+var ANGLE_TOLERANCE_DEG = 1;
+var rnd2 = (v, d = 4) => Math.round(v * 10 ** d) / 10 ** d;
+var f2 = (v) => v.toFixed(2);
+var finite = (v) => typeof v === "number" && Number.isFinite(v);
+function newItem(kind, id, x, y, extra = {}) {
+  const [w, d] = ITEM_DEFAULT_SIZE[kind];
+  const it = { id, kind, name: "", x: rnd2(x), y: rnd2(y), w, d, rot: 0, location_uid: null };
+  if (kind === "wall") {
+    it.th = d;
+  }
+  return Object.assign(it, extra);
+}
+function nextName(items2, kind) {
+  const re = new RegExp("^" + ITEM_PREFIX[kind] + "-(\\d+)$");
+  let n = 0;
+  for (const it of items2) {
+    const m = it.kind === kind && re.exec(it.name || "");
+    if (m) {
+      n = Math.max(n, +m[1]);
+    }
+  }
+  return `${ITEM_PREFIX[kind]}-${n + 1}`;
+}
+function itemToApi(it) {
+  const out = {
+    id: String(it.id).slice(0, 32),
+    kind: it.kind,
+    name: String(it.name || "").slice(0, 64),
+    x: rnd2(it.x),
+    y: rnd2(it.y),
+    w: rnd2(Math.max(0.01, it.w || 0.01)),
+    d: rnd2(Math.max(0.01, (it.kind === "wall" ? it.th ?? it.d : it.d) || 0.01)),
+    rot: rnd2(it.rot || 0)
+  };
+  if (it.kind === "wall") {
+    out.th = out.d;
+  }
+  out.location_uid = LINK_KINDS.includes(it.kind) && it.location_uid ? String(it.location_uid).slice(0, 64) : null;
+  if (finite(it.h) && it.h > 0) {
+    out.h = rnd2(Math.min(it.h, 100));
+  }
+  return out;
+}
+var itemsToApi = (items2) => (items2 || []).map(itemToApi);
+var itemObb = (it) => makeObb(it.x, it.y, (it.w || 0) / 2, (it.d || 0) / 2, it.rot || 0);
+function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.4, d = 0.4 }) {
+  const out = [];
+  const have = existing.filter((it) => it.kind === "column");
+  let n = 0;
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < ny; j++) {
+      const x = rnd2(x0 + i * sx);
+      const y = rnd2(y0 + j * sy);
+      if (have.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05) || out.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+        continue;
+      }
+      const col = newItem("column", idOf(), x, y, { w, d });
+      col.name = nextName([...existing, ...out], "column");
+      out.push(col);
+      n++;
+      if (existing.length + n >= MAX_ITEMS) {
+        return out;
+      }
+    }
+  }
+  return out;
+}
+function obstacleRects(layers, site) {
+  const out = [];
+  const explicit = [];
+  for (const ly of layers || []) {
+    if (ly.kind !== "building") {
+      continue;
+    }
+    for (const it of ly.items || []) {
+      if (!OBSTACLE_KINDS.includes(it.kind)) {
+        continue;
+      }
+      const obb = itemObb(it);
+      const [x0, y0, x1, y1] = obbAabb(obb);
+      const rect2 = { x0: rnd2(x0) + 0, y0: rnd2(y0) + 0, x1: rnd2(x1) + 0, y1: rnd2(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" };
+      const k = (obb.rot % 90 + 90) % 90;
+      if (k > 1e-6 && k < 90 - 1e-6) {
+        rect2.obb = obb;
+      }
+      out.push(rect2);
+      if (it.kind === "column") {
+        explicit.push(it);
+      }
+    }
+  }
+  const b = site && site.building || {};
+  const cg = site && site.column_grid || {};
+  const sx = cg.step_x || 0;
+  const sy = cg.step_y || 0;
+  if (sx > 1 && sy > 1 && b.length && b.width) {
+    const xs = [];
+    const ys = [];
+    for (let x = sx; x < b.length - 0.01; x += sx) {
+      xs.push(x);
+    }
+    for (let y = sy; y < b.width - 0.01; y += sy) {
+      ys.push(y);
+    }
+    if (xs.length * ys.length < 2e3) {
+      for (const x of xs) {
+        for (const y of ys) {
+          if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+            out.push({ x0: rnd2(x - 0.2), y0: rnd2(y - 0.2), x1: rnd2(x + 0.2), y1: rnd2(y + 0.2), kind: "column", id: `grid:${rnd2(x, 2)}:${rnd2(y, 2)}`, name: "", grid: true });
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+function contourWalls(pts, th, idOf, existing = []) {
+  const sign = pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0) >= 0 ? 1 : -1;
+  const out = [];
+  pts.forEach(([x1, y1], i) => {
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 0.1) {
+      return;
+    }
+    const ux = (x2 - x1) / len;
+    const uy = (y2 - y1) / len;
+    const wall = newItem("wall", idOf(), (x1 + x2) / 2 + -uy * sign * th / 2, (y1 + y2) / 2 + ux * sign * th / 2, { w: rnd2(len), d: th, th, rot: rnd2(Math.atan2(uy, ux) * 180 / Math.PI, 2) });
+    wall.name = nextName([...existing, ...out], "wall");
+    out.push(wall);
+  });
+  return out;
+}
+function itemAt(items2, x, y, tol = 0.15) {
+  const hits = [];
+  for (const it of items2) {
+    const o = itemObb(it);
+    const [lx, ly] = rotate(x - o.cx, y - o.cy, -o.rot);
+    if (Math.abs(lx) <= o.a + tol && Math.abs(ly) <= o.b + tol) {
+      hits.push([it, (it.w || 0) * (it.d || 0)]);
+    }
+  }
+  hits.sort((p, q) => p[1] - q[1]);
+  return hits.length ? hits[0][0] : null;
+}
+var polygonArea = (pts) => Math.abs(pts.reduce((a, [x, y], i) => a + x * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * y, 0)) / 2;
+var polygonPerimeter = (pts) => pts.reduce((a, [x, y], i) => a + Math.hypot(pts[(i + 1) % pts.length][0] - x, pts[(i + 1) % pts.length][1] - y), 0);
+var rectContour = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+var contourBbox = (pts) => {
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+};
+function isRectContour(pts) {
+  if (!pts || pts.length !== 4) {
+    return false;
+  }
+  const b = contourBbox(pts);
+  return pts.every(([x, y]) => (x === b.x0 || x === b.x1) && (y === b.y0 || y === b.y1)) && new Set(pts.map((p) => p.join(","))).size === 4;
+}
+function contourOf(layer, building) {
+  if (layer && layer.bounds && layer.bounds.length >= 3) {
+    return layer.bounds.map((p) => [p[0], p[1]]);
+  }
+  return rectPolygon((building || {}).length || 0, (building || {}).width || 0);
+}
+function contourAroundObjects(boxes, margin, fallback) {
+  if (!boxes.length) {
+    return rectContour(0, 0, fallback.length, fallback.width);
+  }
+  const x0 = Math.min(...boxes.map((b) => b[0])) - margin;
+  const y0 = Math.min(...boxes.map((b) => b[1])) - margin;
+  const x1 = Math.max(...boxes.map((b) => b[2])) + margin;
+  const y1 = Math.max(...boxes.map((b) => b[3])) + margin;
+  return rectContour(rnd2(x0, 2), rnd2(y0, 2), rnd2(x1, 2), rnd2(y1, 2));
+}
+function nearestEdge(pts, x, y) {
+  let best = null;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    const vx = x2 - x1;
+    const vy = y2 - y1;
+    const len2 = vx * vx + vy * vy;
+    const t2 = len2 ? Math.max(0, Math.min(1, ((x - x1) * vx + (y - y1) * vy) / len2)) : 0;
+    const p = [x1 + t2 * vx, y1 + t2 * vy];
+    const dist = Math.hypot(x - p[0], y - p[1]);
+    if (!best || dist < best.dist) {
+      best = { index: i, point: p, dist };
+    }
+  }
+  return best;
+}
+function segCross(p1, p2, p3, p4) {
+  const o = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  return o(p3, p4, p1) * o(p3, p4, p2) < 0 && o(p1, p2, p3) * o(p1, p2, p4) < 0;
+}
+function isSimplePolygon(pts) {
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (j === i + 1 || i === 0 && j === n - 1) {
+        continue;
+      }
+      if (segCross(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n])) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function aisleAxis(a) {
+  const w = a.x1 - a.x0;
+  const h2 = a.y1 - a.y0;
+  const cx = (a.x0 + a.x1) / 2;
+  const cy = (a.y0 + a.y1) / 2;
+  return w >= h2 ? { dir: "h", width: h2, len: w, p0: [a.x0, cy], p1: [a.x1, cy], cx, cy } : { dir: "v", width: w, len: h2, p0: [cx, a.y0], p1: [cx, a.y1], cx, cy };
+}
+function aisleFromPoints(p, q, width2) {
+  const dx = Math.abs(q[0] - p[0]);
+  const dy = Math.abs(q[1] - p[1]);
+  if (dx >= dy) {
+    return { x0: rnd2(Math.min(p[0], q[0])), x1: rnd2(Math.max(p[0], q[0])), y0: rnd2(p[1] - width2 / 2), y1: rnd2(p[1] + width2 / 2) };
+  }
+  return { y0: rnd2(Math.min(p[1], q[1])), y1: rnd2(Math.max(p[1], q[1])), x0: rnd2(p[0] - width2 / 2), x1: rnd2(p[0] + width2 / 2) };
+}
+var insideRect = (p, a, tol) => p[0] >= a.x0 - tol && p[0] <= a.x1 + tol && p[1] >= a.y0 - tol && p[1] <= a.y1 + tol;
+function aisleLinks(aisles2, tol = 0.05) {
+  const out = [];
+  for (const b of aisles2) {
+    const ax = aisleAxis(b);
+    for (const [end, p] of [[0, ax.p0], [1, ax.p1]]) {
+      for (const a of aisles2) {
+        if (a !== b && aisleAxis(a).dir !== ax.dir && insideRect(p, a, tol)) {
+          out.push({ aisle: b.id, end, host: a.id });
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+function moveAisle(aisles2, id, dx, dy, tol = 0.05) {
+  const a = aisles2.find((x) => x.id === id);
+  if (!a) {
+    return [];
+  }
+  const touched = [id];
+  const ax = aisleAxis(a);
+  const joined = [];
+  for (const b of aisles2) {
+    if (b === a) {
+      continue;
+    }
+    const bx = aisleAxis(b);
+    if (bx.dir === ax.dir) {
+      continue;
+    }
+    for (const [end, p] of [[0, bx.p0], [1, bx.p1]]) {
+      if (insideRect(p, a, tol)) {
+        joined.push([b, bx, end]);
+      }
+    }
+  }
+  Object.assign(a, { x0: rnd2(a.x0 + dx), x1: rnd2(a.x1 + dx), y0: rnd2(a.y0 + dy), y1: rnd2(a.y1 + dy) });
+  for (const [b, bx, end] of joined) {
+    const d = bx.dir === "v" ? dy : dx;
+    if (!d) {
+      continue;
+    }
+    const keys = bx.dir === "v" ? ["y0", "y1"] : ["x0", "x1"];
+    const k = keys[end];
+    const next = rnd2(b[k] + d);
+    const other = b[keys[1 - end]];
+    if (end === 0 ? next < other - 0.1 : next > other + 0.1) {
+      b[k] = next;
+      touched.push(b.id);
+    }
+  }
+  return touched;
+}
+function snapPoints({ contour: contour2 = [], items: items2 = [], aisles: aisles2 = [] }) {
+  const pts = contour2.map((p) => ({ x: p[0], y: p[1], kind: "vertex" }));
+  for (const it of items2) {
+    for (const [x, y] of obbCorners(itemObb(it))) {
+      pts.push({ x, y, kind: "corner" });
+    }
+    pts.push({ x: it.x, y: it.y, kind: "center" });
+  }
+  for (const a of aisles2) {
+    for (const [x, y] of [[a.x0, a.y0], [a.x1, a.y0], [a.x1, a.y1], [a.x0, a.y1]]) {
+      pts.push({ x, y, kind: "corner" });
+    }
+    const ax = aisleAxis(a);
+    pts.push({ x: ax.p0[0], y: ax.p0[1], kind: "end" }, { x: ax.p1[0], y: ax.p1[1], kind: "end" });
+  }
+  return pts;
+}
+function snapPoint(x, y, { step = 0.5, pts = [], aisles: aisles2 = [], from = null, alt = false, rad: rad3 = 0.3 } = {}) {
+  if (alt) {
+    return { x: rnd2(x, 2), y: rnd2(y, 2), kind: "free" };
+  }
+  let best = null;
+  for (const p of pts) {
+    const dist = Math.hypot(p.x - x, p.y - y);
+    if (dist <= rad3 && (!best || dist < best.dist)) {
+      best = { x: p.x, y: p.y, kind: p.kind, dist };
+    }
+  }
+  if (best) {
+    return { x: rnd2(best.x), y: rnd2(best.y), kind: best.kind };
+  }
+  let sx = Math.round(x / step) * step;
+  let sy = Math.round(y / step) * step;
+  let kind = "grid";
+  for (const a of aisles2) {
+    const ax = aisleAxis(a);
+    if (ax.dir === "h" && Math.abs(y - ax.cy) <= rad3 && x >= a.x0 - rad3 && x <= a.x1 + rad3) {
+      sy = ax.cy;
+      kind = "axis";
+    } else if (ax.dir === "v" && Math.abs(x - ax.cx) <= rad3 && y >= a.y0 - rad3 && y <= a.y1 + rad3) {
+      sx = ax.cx;
+      kind = "axis";
+    }
+  }
+  if (from) {
+    if (Math.abs(x - from[0]) <= rad3) {
+      sx = from[0];
+      kind = kind === "grid" ? "align" : kind;
+    }
+    if (Math.abs(y - from[1]) <= rad3) {
+      sy = from[1];
+      kind = kind === "grid" ? "align" : kind;
+    }
+  }
+  return { x: rnd2(sx), y: rnd2(sy), kind };
+}
+function parseTech(value) {
+  if (!value || typeof value !== "string") {
+    return [null, null];
+  }
+  const i = value.indexOf(":");
+  const key = (i < 0 ? value : value.slice(0, i)).trim();
+  if (!(key in TECHS)) {
+    return [null, null];
+  }
+  let min = null;
+  const rest = i < 0 ? "" : value.slice(i + 1).trim();
+  if (rest) {
+    const v = Number(rest.replace(",", "."));
+    min = Number.isFinite(v) && v > 0 ? v : null;
+  }
+  return [key, min];
+}
+function techMin(value) {
+  const [key, min] = parseTech(value);
+  if (key === null || key === "none") {
+    return null;
+  }
+  return min !== null ? min : TECHS[key][1];
+}
+var techLabel = (value) => {
+  const [key] = parseTech(value);
+  return key ? TECHS[key][0] : "";
+};
+function techValue(key, min) {
+  if (!key) {
+    return null;
+  }
+  const base2 = (TECHS[key] || [])[1];
+  return min != null && min > 0 && min !== base2 ? `${key}:${rnd2(min, 2)}` : key;
+}
+var siteProvider = () => null;
+var setSiteProvider = (fn) => {
+  siteProvider = fn;
+};
+var siteOf = (scene) => {
+  const st4 = (scene._state || {}).site || {};
+  const cur = siteProvider() || {};
+  return { sprinkler_height: st4.sprinkler_height ?? cur.sprinkler_height ?? 0, aisle_tech: st4.aisle_tech !== void 0 ? st4.aisle_tech : cur.aisle_tech ?? null };
+};
+var zonesOf = (scene) => {
+  if (!scene._s5Zones) {
+    const out = [];
+    for (const slot of scene.slots.values()) {
+      const poly2 = slot.template === "zone" && slot.params && slot.params.polygon;
+      if (poly2 && poly2.length >= 3) {
+        out.push({ slot, poly: poly2, area: polygonArea(poly2) });
+      }
+    }
+    out.sort((a, b) => a.area - b.area);
+    scene._s5Zones = out;
+  }
+  return scene._s5Zones;
+};
+function techAt(scene, x, y) {
+  for (const { slot, poly: poly2 } of zonesOf(scene)) {
+    if (slot.tech && polygonContains(poly2, [x, y])) {
+      return slot.tech;
+    }
+  }
+  return siteOf(scene).aisle_tech || null;
+}
+function contourPolygon(scene) {
+  for (const l of scene.layers.values()) {
+    if (l.kind === "building" && l.bounds && l.bounds.length >= 3) {
+      return l.bounds.map((p) => [p[0], p[1]]);
+    }
+  }
+  return rectPolygon(scene.building.length || 0, scene.building.width || 0);
+}
+var buildingItems = (scene) => [...scene.layers.values()].filter((l) => l.kind === "building").flatMap((l) => l.items || []);
+var objKey3 = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
+function checkInside(scene, config, eps) {
+  const sev = config.mode;
+  const contour2 = contourPolygon(scene);
+  const obstacles = buildingItems(scene).filter((it) => OBSTACLE_KINDS.includes(it.kind)).map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)) }));
+  const issues = [];
+  for (const obj of scene.objects()) {
+    const layer = scene.layers.get(obj.layer_id) || {};
+    if (!INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    const k = [objKey3(obj.kind, obj.id)];
+    if (contour2.length >= 3 && !obbInsidePolygon(obj.obb, contour2, eps)) {
+      issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: поза контуром будівлі`, k, "contour"));
+    }
+    const box = obbAabb(obj.obb);
+    for (const { it, obb, box: ib } of obstacles) {
+      if (aabbOverlap(box, ib, eps) && satPenetration(obj.obb, obb) > eps) {
+        const what = OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "");
+        issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: перетинає ${what}`, k, String(it.id)));
+      }
+    }
+  }
+  return issues;
+}
+function rowGap(ra, rb, group, eps) {
+  const a = ra.obb;
+  const b = rb.obb;
+  const rel = ((a.rot - b.rot) % 180 + 180) % 180;
+  if (Math.min(rel, 180 - rel) > ANGLE_TOLERANCE_DEG) {
+    return null;
+  }
+  if (Math.hypot(b.cx - a.cx, b.cy - a.cy) > Math.hypot(a.a, a.b) + Math.hypot(b.a, b.b) + MAX_NEED_M) {
+    return null;
+  }
+  const [dx, dy] = rotate(b.cx - a.cx, b.cy - a.cy, -a.rot);
+  const xLo = Math.max(-a.a, dx - b.a);
+  const xHi = Math.min(a.a, dx + b.a);
+  if (xHi - xLo < MIN_FACE_OVERLAP_M) {
+    return null;
+  }
+  const gap = Math.abs(dy) - (a.b + b.b);
+  if (gap < SPACER_M) {
+    return null;
+  }
+  const sign = dy > 0 ? 1 : -1;
+  const [yLo, yHi] = [sign * a.b, dy - sign * b.b].sort((p, q) => p - q);
+  for (const o of group) {
+    if (o === ra || o === rb) {
+      continue;
+    }
+    const pts = obbCorners(o.obb).map(([px, py]) => rotate(px - a.cx, py - a.cy, -a.rot));
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    if (Math.min(Math.max(...xs), xHi) - Math.max(Math.min(...xs), xLo) > eps && Math.min(Math.max(...ys), yHi) - Math.max(Math.min(...ys), yLo) > eps) {
+      return null;
+    }
+  }
+  const [mx, my] = rotate((xLo + xHi) / 2, (yLo + yHi) / 2, a.rot);
+  return { gap, mid: [a.cx + mx, a.cy + my] };
+}
+function checkAisleWidth(scene, config, eps) {
+  const sev = config.mode;
+  const issues = [];
+  for (const layer of scene.layers.values()) {
+    for (const a of layer.aisles || []) {
+      const width2 = Math.min(a.x1 - a.x0, a.y1 - a.y0);
+      const raw = techAt(scene, (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2);
+      const need = techMin(raw);
+      if (need !== null && width2 < need - eps) {
+        const name = a.name || a.id;
+        issues.push(issue("aisle_width", sev, layer.id, [name], `Прохід «${name}»: ширина ${f2(width2)} м, потрібно ≥ ${f2(need)} м (${techLabel(raw)})`, [], String(a.id)));
+      }
+    }
+  }
+  const byLayer2 = /* @__PURE__ */ new Map();
+  for (const obj of scene.objects()) {
+    if (!byLayer2.has(obj.layer_id)) {
+      byLayer2.set(obj.layer_id, []);
+    }
+    byLayer2.get(obj.layer_id).push(obj);
+  }
+  for (const [layerId, group] of byLayer2) {
+    const rows = group.filter((o) => o.kind === "slot" && ROW_TEMPLATES2.includes(scene.slots.get(o.id).template));
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = i + 1; j < rows.length; j++) {
+        const found2 = rowGap(rows[i], rows[j], group, eps);
+        if (!found2) {
+          continue;
+        }
+        const raw = techAt(scene, found2.mid[0], found2.mid[1]);
+        const need = techMin(raw);
+        if (need === null || found2.gap >= need - eps) {
+          continue;
+        }
+        const [x, y] = [rows[i].code, rows[j].code].sort((p, q) => p < q ? -1 : p > q ? 1 : 0);
+        issues.push(
+          issue("aisle_width", sev, layerId, [x, y], `Вузький проїзд між рядами ${x} і ${y}: ${f2(found2.gap)} м, потрібно ≥ ${f2(need)} м (${techLabel(raw)})`, [objKey3("slot", rows[i].id), objKey3("slot", rows[j].id)])
+        );
+      }
+    }
+  }
+  return issues;
+}
+function checkHeight(scene, config, eps) {
+  const sev = config.mode;
+  const ceiling = scene.building.height || 0;
+  const sprinkler = siteOf(scene).sprinkler_height || 0;
+  const issues = [];
+  const verify = (layerId, code, top, key) => {
+    if (ceiling > 0 && top > ceiling + eps) {
+      issues.push(issue("height", sev, layerId, [code], `${code}: висота ${f2(top)} м перевищує стелю будівлі ${f2(ceiling)} м`, [key], "ceiling"));
+    } else if (sprinkler > 0 && top > sprinkler - SPRINKLER_CLEARANCE_M + eps) {
+      issues.push(issue("height", sev, layerId, [code], `${code}: верх ${f2(top)} м ближче ${f2(SPRINKLER_CLEARANCE_M)} м до спринклерів (${f2(sprinkler)} м)`, [key], "sprinkler"));
+    }
+  };
+  for (const slot of scene.slots.values()) {
+    const layer = scene.layers.get(slot.layer_id) || {};
+    if (slot.template === "zone" || !INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    verify(slot.layer_id, slot.code_prefix, (layer.elevation || 0) + slotHeight({ ...slot, params: normalizeParams(slot.template, slot.params) }), objKey3("slot", slot.id));
+  }
+  for (const p of scene.placements) {
+    const layer = scene.layers.get(p.layer_id) || {};
+    if (p.dynamic || !INSIDE_KINDS.includes(layer.kind)) {
+      continue;
+    }
+    const height = (scene.variants.get(p.variant_id).height || 0) / 1e3;
+    if (Number.isFinite(height)) {
+      verify(p.layer_id, p.code, (layer.elevation || 0) + height, objKey3("placement", p.id));
+    }
+  }
+  return issues;
+}
+
+// core/constructor/adapter_odoo.js
+var MODEL_ORDER = { "td.check.config": 0, "td.layer": 1, "td.slot": 2, "td.placement": 3, "td.putaway.rule": 4, "td.replenish.rule": 5 };
+var REF_MODELS = { layer_id: "td.layer", slot_id: "td.slot" };
+var RES_OF_MODEL = { "stock.location": "location", "maintenance.equipment": "equipment", "mrp.workcenter": "workcenter", "stock.warehouse.orderpoint": "replenish", "stock.putaway.rule": "putaway" };
+var BATCH = 400;
+var rectOf = (a) => ({
+  ...a,
+  x0: Math.min(a.x0, a.x1),
+  x1: Math.max(a.x0, a.x1),
+  y0: Math.min(a.y0, a.y1),
+  y1: Math.max(a.y0, a.y1)
+});
+function polygonToRect(poly2) {
+  if (!poly2 || poly2.length !== 4) {
+    return null;
+  }
+  const [p0, p1, p2, p3] = poly2;
+  const ex2 = p1[0] - p0[0];
+  const ey = p1[1] - p0[1];
+  const fx = p2[0] - p1[0];
+  const fy = p2[1] - p1[1];
+  const l = Math.hypot(ex2, ey);
+  const w = Math.hypot(fx, fy);
+  const tol = 1e-6 * Math.max(1, l, w);
+  if (l < tol || w < tol || Math.abs(ex2 * fx + ey * fy) > tol * Math.max(l, w) * 1e3) {
+    return null;
+  }
+  if (Math.abs(p0[0] + fx - p3[0]) > tol * 1e3 || Math.abs(p0[1] + fy - p3[1]) > tol * 1e3) {
+    return null;
+  }
+  return {
+    cx: (p0[0] + p2[0]) / 2,
+    cy: (p0[1] + p2[1]) / 2,
+    l,
+    w,
+    rot: (Math.atan2(ey, ex2) * 180 / Math.PI + 360) % 360
+  };
+}
+function rectToPolygon(cx, cy, l, w, rot2) {
+  const r = rot2 * Math.PI / 180;
+  const c = Math.cos(r);
+  const s = Math.sin(r);
+  return [
+    [-l / 2, -w / 2],
+    [l / 2, -w / 2],
+    [l / 2, w / 2],
+    [-l / 2, w / 2]
+  ].map(([x, y]) => [rnd(cx + x * c - y * s, 6), rnd(cy + x * s + y * c, 6)]);
+}
+function underlayFromApi(u) {
+  if (!u) {
+    return null;
+  }
+  const p = u.params || {};
+  return {
+    url: u.url,
+    name: u.name || "",
+    format: u.format,
+    status: u.status,
+    params: {
+      unit: p.unit || "mm",
+      dx: p.dx ?? 0,
+      dy: p.dy ?? 0,
+      rot_deg: p.rot_deg ?? 0,
+      scale: p.scale ?? 1,
+      opacity: p.opacity ?? 0.75
+    }
+  };
+}
+function layerFromApi(l) {
+  const groups = l.edit_groups || [];
+  return {
+    id: l.uid,
+    rid: l.id,
+    etag: l.etag,
+    name: l.name,
+    kind: l.kind,
+    sequence: l.sequence,
+    elevation: l.elevation,
+    grid_step: l.grid_step,
+    aisle_width: l.aisle_width,
+    max_floor_load: l.max_floor_load,
+    bounds: l.bounds || null,
+    slot_types: [...l.slot_types || []],
+    group: l.group || "",
+    edit_groups: clone(groups),
+    edit_roles: ["manager", ...groups.map((g3) => g3.role).filter((r) => r && r !== "manager")],
+    color: l.color,
+    opacity: l.opacity,
+    style: l.style,
+    visible: l.visible !== false,
+    aisles: (l.aisles || []).map(rectOf),
+    fire_paths: (l.fire_paths || []).map(rectOf),
+    utilities: clone(l.utilities || []),
+    items: clone(l.items || []),
+    // S5: об'єкти будівлі (F18)
+    underlay: underlayFromApi(l.underlay)
+  };
+}
+function putawayFromApi(r) {
+  return {
+    id: r.uid,
+    rid: r.id,
+    etag: r.etag,
+    product_id: r.product_id ?? null,
+    product: r.product || "",
+    category_id: r.category_id ?? null,
+    package_type_ids: [...r.package_type_ids || []],
+    in_location_id: r.in_location_id ?? null,
+    out_code: r.out_code || "",
+    out_location_id: r.out_location_id ?? null,
+    sublocation: r.sublocation || "no",
+    storage_category_id: r.storage_category_id ?? null,
+    sequence: r.sequence ?? 10,
+    odoo_rule_id: r.odoo_rule_id ?? null,
+    deleted: !!r.deleted
+  };
+}
+var putawayToApi = (r) => ({
+  uid: r.id,
+  product_id: r.product_id ?? null,
+  category_id: r.category_id ?? null,
+  package_type_ids: [...r.package_type_ids || []],
+  in_location_id: r.in_location_id ?? null,
+  out_code: r.out_code || null,
+  out_location_id: r.out_location_id ?? null,
+  sublocation: r.sublocation || "no",
+  storage_category_id: r.sublocation === "closest_location" ? r.storage_category_id ?? null : null,
+  sequence: r.sequence ?? 10,
+  deleted: !!r.deleted
+});
+function replenishFromApi(r) {
+  return {
+    id: r.uid,
+    rid: r.id,
+    etag: r.etag,
+    product_id: r.product_id ?? null,
+    product: r.product || "",
+    cell_code: r.cell_code || "",
+    location_id: r.location_id ?? null,
+    min_qty: r.min_qty || 0,
+    max_qty: r.max_qty || 0,
+    odoo_orderpoint_id: r.odoo_orderpoint_id ?? null,
+    deleted: !!r.deleted
+  };
+}
+var replenishToApi = (r) => ({
+  uid: r.id,
+  product_id: r.product_id ?? null,
+  cell_code: r.cell_code || null,
+  location_id: r.location_id ?? null,
+  min_qty: r.min_qty || 0,
+  max_qty: r.max_qty || 0,
+  deleted: !!r.deleted
+});
+function attachRules(st4, rules) {
+  const r = rules || {};
+  Object.defineProperty(st4.site, "rules", { value: { putaway: (r.putaway || []).map(putawayFromApi), replenish: (r.replenish || []).map(replenishFromApi) }, writable: true, configurable: true, enumerable: false });
+  return st4;
+}
+function slotFromApi(s, layerUid) {
+  const rec = {
+    id: s.uid,
+    rid: s.id,
+    etag: s.etag,
+    layer_id: layerUid.get(s.layer_id),
+    template: s.template,
+    code_prefix: s.code_prefix,
+    x: s.x,
+    y: s.y,
+    rotation: s.rotation || 0,
+    // S2 (MERGE §3.3): категорія зберігання, стратегія списання, функція й атрибути зони, температурний режим (null — успадкувати)
+    storage_category_id: s.storage_category_id ?? null,
+    removal_strategy_id: s.removal_strategy_id ?? null,
+    function_id: s.function_id ?? null,
+    attr_ids: [...s.attr_ids || []],
+    temp_min_c: s.temp_min_c || 0,
+    temp_max_c: s.temp_max_c || 0,
+    params: clone(s.params || {}),
+    overrides: clone(s.overrides || {}),
+    parent_location_id: s.parent_location_id || null,
+    note: s.note || "",
+    // S1 (MERGE §3.3): тип місця, власна адресація й глибина локацій; порожні значення — «успадкувати» (null)
+    type_id: s.type_id ?? null,
+    addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : null,
+    depth_mode: s.depth_mode || null,
+    tech: s.tech || null
+    // S5 (N-06): техніка зони; null — як у складу
+  };
+  if (s.template === "zone") {
+    const poly2 = rec.params.polygon || [];
+    const rc = polygonToRect(poly2);
+    const old = rec.params;
+    const xs = poly2.map((p) => p[0]);
+    const ys = poly2.map((p) => p[1]);
+    if (rc) {
+      rec.x = rnd(rc.cx, 6);
+      rec.y = rnd(rc.cy, 6);
+      rec.rotation = rnd(rc.rot, 6);
+      rec.params = { length: rnd(rc.l, 6), width: rnd(rc.w, 6) };
+    } else {
+      rec.x = (Math.min(...xs) + Math.max(...xs)) / 2;
+      rec.y = (Math.min(...ys) + Math.max(...ys)) / 2;
+      rec.rotation = 0;
+      rec.params = { length: Math.max(...xs) - Math.min(...xs), width: Math.max(...ys) - Math.min(...ys) };
+      rec.locked = true;
+      rec.polygon = clone(poly2);
+    }
+    rec.params.title = s.note || old.title || s.code_prefix;
+    rec.params.color = old.color || null;
+  }
+  return rec;
+}
+function placementFromApi(p, layerUid, slotUid) {
+  return {
+    id: p.uid,
+    rid: p.id,
+    etag: p.etag,
+    layer_id: layerUid.get(p.layer_id),
+    variant_id: String(p.variant_id),
+    slot_id: p.slot_id ? slotUid.get(p.slot_id) || null : null,
+    cell_code: p.cell_code || null,
+    x: p.x,
+    y: p.y,
+    rotation: p.rotation || 0,
+    code: p.code,
+    name: p.name,
+    equipment: p.equipment || null,
+    dynamic: !!p.dynamic
+  };
+}
+function variantFromApi(v) {
+  return { ...clone(v), id: String(v.id), rid: v.id };
+}
+function passportFromApi(p) {
+  return {
+    id: String(p.passport_id),
+    pid: p.passport_id,
+    name: p.name,
+    role: p.role,
+    manufacturer: p.manufacturer,
+    model: p.model,
+    category: p.category || "other",
+    variants: (p.variants || []).map(variantFromApi)
+  };
+}
+function normalizeLoaded(data) {
+  const settings = data.site.settings || {};
+  const layers = (data.layers || []).map(layerFromApi);
+  const layerUid = new Map((data.layers || []).map((l) => [l.id, l.uid]));
+  const slots = (data.slots || []).map((s) => slotFromApi(s, layerUid));
+  const slotUid = new Map((data.slots || []).map((s) => [s.id, s.uid]));
+  const placements = (data.placements || []).map((p) => placementFromApi(p, layerUid, slotUid));
+  const checks = {};
+  for (const c of data.checks || []) {
+    checks[c.check] = { enabled: !!c.enabled, mode: c.mode, params: clone(c.params || {}), id: c.id ?? null };
+  }
+  const reach = checks.utility_reach?.params?.max_m ?? settings.reach_default_m ?? 15;
+  const site = data.site;
+  const out = {
+    site: {
+      id: site.id,
+      name: site.name,
+      code: site.code,
+      building: { ...site.building },
+      column_grid: { ...site.column_grid },
+      default_parent_location: site.default_parent_location || null,
+      active_version: site.active_version || null,
+      draft_base_version: site.draft_base_version || null,
+      draft_rev: site.draft_rev,
+      draft_changes: site.draft_changes,
+      has_changes: site.has_changes,
+      settings,
+      // S1: адресація площадки (R-22), ієрархія й глибина локацій; бібліотека типів і пресетів (API-03 `types`, `presets`)
+      addr: clone(site.addr || {}),
+      loc_tree: site.loc_tree || "flat",
+      depth_mode: site.depth_mode || "level",
+      // S5: висота спринклерів, техніка складу (N-06) і стан майстра «З нуля» (F16)
+      sprinkler_height: site.sprinkler_height || 0,
+      aisle_tech: site.aisle_tech || null,
+      wizard_state: clone(site.wizard_state || {}),
+      parse_rules: clone(site.parse_rules || {})
+      // S4: правила розбору кодів і лоток «Не розміщено» (F10)
+    },
+    layers,
+    slots,
+    placements,
+    catalog: (data.catalog || []).map(passportFromApi),
+    settings: { checks, reach_n: reach, labels: true },
+    versions: clone(data.versions || []),
+    rights: {
+      is_manager: !!data.rights?.is_manager,
+      roles: [...data.rights?.roles || []],
+      editable_layer_ids: [...data.rights?.editable_layer_ids || []],
+      can_publish: !!data.rights?.can_publish,
+      can_edit_catalog: !!data.rights?.can_edit_catalog
+    }
+  };
+  Object.defineProperty(out.site, "library", { value: { types: clone(data.types || []), presets: clone(data.presets || []) }, writable: true, configurable: true, enumerable: false });
+  return out;
+}
+var ref = (uid2) => uid2 ? "@" + uid2 : null;
+var num2 = (v) => v == null || v === "" ? 0 : Number(v);
+function rectToApi(a, i, prefix) {
+  const r = rectOf(a);
+  const out = {
+    id: String(a.id || `${prefix}${i + 1}`).slice(0, 32),
+    name: String(a.name || "").slice(0, 64),
+    x0: rnd(r.x0, 4),
+    y0: rnd(r.y0, 4),
+    x1: rnd(r.x1, 4),
+    y1: rnd(r.y1, 4)
+  };
+  if (a.kind) {
+    out.kind = a.kind;
+  }
+  return out;
+}
+function layerToApi(l, groupIds = {}) {
+  const vals = {
+    uid: l.id,
+    name: l.name,
+    kind: l.kind,
+    sequence: Math.round(l.sequence),
+    elevation_m: num2(l.elevation),
+    grid_step_m: num2(l.grid_step),
+    aisle_width_m: num2(l.aisle_width),
+    max_floor_load_kn_m2: num2(l.max_floor_load),
+    bounds: l.bounds && l.bounds.length >= 3 ? l.bounds.map((p) => [rnd(p[0], 4), rnd(p[1], 4)]) : null,
+    color: l.color,
+    opacity: num2(l.opacity),
+    style: l.style || "solid",
+    aisles: (l.aisles || []).map((a, i) => rectToApi(a, i, "ai")),
+    fire_paths: (l.fire_paths || []).map((a, i) => rectToApi({ kind: "path", ...a }, i, "fp")),
+    utilities: (l.utilities || []).map((u, i) => ({
+      id: String(u.id || `u${i + 1}`).slice(0, 32),
+      kind: u.kind,
+      name: String(u.name || "").slice(0, 64),
+      x: rnd(u.x, 4),
+      y: rnd(u.y, 4),
+      z: rnd(u.z || 0, 4)
+    })),
+    allowed_slot_types: [...l.slot_types || []],
+    items: itemsToApi(l.items)
+    // S5: об'єкти будівлі (R-22)
+  };
+  if (l.underlay) {
+    vals.underlay_params = { ...l.underlay.params };
+  }
+  const roles = (l.edit_roles || []).filter((r) => r !== "manager");
+  if (roles.every((r) => groupIds[r] != null)) {
+    vals.edit_group_ids = roles.map((r) => groupIds[r]).sort((a, b) => a - b);
+  }
+  return vals;
+}
+function slotToApi(s) {
+  const vals = {
+    uid: s.id,
+    layer_id: ref(s.layer_id),
+    template: s.template,
+    code_prefix: s.code_prefix,
+    x_m: rnd(s.x, 4),
+    y_m: rnd(s.y, 4),
+    rotation: rnd(s.rotation || 0, 4),
+    storage_category_id: s.storage_category_id ?? null,
+    removal_strategy_id: s.removal_strategy_id ?? null,
+    function_id: s.function_id ?? null,
+    attr_ids: [...s.attr_ids || []],
+    temp_min_c: s.temp_min_c || 0,
+    temp_max_c: s.temp_max_c || 0,
+    params: clone(s.params),
+    overrides: clone(s.overrides || {}),
+    type_id: s.type_id ?? null,
+    addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : {},
+    depth_mode: s.depth_mode || null,
+    tech: s.tech || false
+    // S5 (N-06): техніка зони
+  };
+  if (s.template === "zone") {
+    const title = s.params.title;
+    vals.x_m = 0;
+    vals.y_m = 0;
+    vals.rotation = 0;
+    vals.params = {
+      polygon: s.locked ? clone(s.polygon) : rectToPolygon(s.x, s.y, s.params.length, s.params.width, s.rotation || 0)
+    };
+    if (title != null && title !== s.code_prefix) {
+      vals.note = String(title).slice(0, 255);
+    }
+  }
+  return vals;
+}
+function placementToApi(p) {
+  return {
+    uid: p.id,
+    layer_id: ref(p.layer_id),
+    variant_id: Number(p.variant_id),
+    slot_id: ref(p.slot_id),
+    cell_code: p.cell_code || null,
+    code: p.code,
+    name: p.name || p.code,
+    x_m: rnd(p.x, 4),
+    y_m: rnd(p.y, 4),
+    rotation: rnd(p.rotation || 0, 4)
+  };
+}
+var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+var OdooAdapter = class extends BaseAdapter {
+  /**
+   * @param {object} o
+   * @param {Function} o.rpc          `rpc(route, params)` — JSON-RPC Odoo
+   * @param {object}   [o.orm]        сервіс orm (створення вкладень підкладки, запис полів площадки, id налаштувань перевірок)
+   * @param {object}   [o.action]     сервіс action (майстер публікації)
+   * @param {Function} [o.uploadModel] завантаження 3D-моделі варіанта (API-09): `(variantId, {original, glb, meta}, opts) => Promise`
+   * @param {number}   [o.autosaveMs] затримка автозбереження (settings.autosave_ms)
+   * @param {number[]} [o.retryDelays] повтори при мережевій помилці: 2, 5, 15 с
+   * @param {Function} [o.onStatus]   (status: 'saved'|'saving'|'error', info)
+   * @param {Function} [o.onSaved]    ({rev, draft_changes, has_changes, updates: [{model, uid, rid, etag}]})
+   * @param {Function} [o.onConflict] ({model, uid, current, message}) → 'mine' | 'theirs' (або проміс)
+   * @param {Function} [o.onReject]   ({code, message, model, uid, kind})
+   * @param {Function} [o.onReload]   () — автозбереження: сервер відхилив/змінив запис, стан слід перечитати (API-03)
+   */
+  constructor(o) {
+    super(o);
+    this.kind = "odoo";
+    this.capabilities = { publish: true, check: true, library: true, ...o.capabilities || {} };
+    Object.assign(this.capabilities, { stock: true, render: true, ...o.capabilities || {} });
+    this.serverRenumber = true;
+    this.rpc = o.rpc;
+    this.orm = o.orm;
+    this.action = o.action;
+    this._uploadModel = o.uploadModel;
+    this.retryDelays = o.retryDelays || [2e3, 5e3, 15e3];
+    this.siteId = null;
+    Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true });
+    Object.assign(this.capabilities, { odoo_import: true, files: true });
+    Object.assign(this.capabilities, { variants: true, comments: true, locks: true, ...o.capabilities || {} });
+    this.groupIds = {};
+    this._seq = 0;
+    this._resetTracking();
+  }
+  _resetTracking() {
+    clearTimeout(this._timer);
+    this._timer = null;
+    this._retryN = 0;
+    this.pending = /* @__PURE__ */ new Map();
+    this.rids = /* @__PURE__ */ new Map();
+    this.etags = /* @__PURE__ */ new Map();
+    this.byId = /* @__PURE__ */ new Map();
+    this.shadow = /* @__PURE__ */ new Map();
+  }
+  get pendingCount() {
+    return this.pending.size;
+  }
+  /** Є незбережені зміни (черга або запит у польоті) — для `beforeunload`. */
+  get dirty() {
+    return this.pending.size > 0 || !!this.flushing;
+  }
+  // --- читання -------------------------------------------------------------------------------------------
+  async _call(route, params) {
+    return await this.rpc(route, params);
+  }
+  /** API-01 */
+  async listSites() {
+    const res = await this._call("/f3d/constructor/sites", {});
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.sites;
+  }
+  /** API-02: повертає id нової площадки. */
+  async createSite({ name, code, building }) {
+    const res = await this._call("/f3d/constructor/site/create", { name, code, ...building ? { building } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.site_id;
+  }
+  /** API-03: завантажує площадку й скидає відстеження змін (чергу слід скинути на сервер перед цим: `flush()`). */
+  async load(id) {
+    const res = await this._call("/f3d/constructor/load", { site_id: id });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    const st4 = attachRules(normalizeLoaded(res), res.rules);
+    this.reset(id, st4);
+    return st4;
+  }
+  /** Запам'ятовує серверні id/etag і «тіньовий» знімок сутностей стану. */
+  reset(siteId, st4) {
+    this._resetTracking();
+    this.siteId = siteId;
+    const groupIds = {};
+    for (const l of st4.layers) {
+      this._bind("td.layer", l.id, l.rid, l.etag);
+      for (const g3 of l.edit_groups || []) {
+        if (g3.role) {
+          groupIds[g3.role] = g3.id;
+        }
+      }
+    }
+    this.groupIds = { ...this.groupIds, ...groupIds };
+    for (const s of st4.slots) {
+      this._bind("td.slot", s.id, s.rid, s.etag);
+    }
+    for (const p of st4.placements) {
+      this._bind("td.placement", p.id, p.rid, p.etag);
+    }
+    for (const [check, c] of Object.entries(st4.settings.checks)) {
+      if (c.id != null) {
+        this._bind("td.check.config", check, c.id, null);
+      }
+    }
+    for (const r of st4.site.rules?.putaway || []) {
+      this._bind("td.putaway.rule", r.id, r.rid, r.etag);
+    }
+    for (const r of st4.site.rules?.replenish || []) {
+      this._bind("td.replenish.rule", r.id, r.rid, r.etag);
+    }
+    this._snapshot(st4);
+    this._setStatus("saved");
+  }
+  _bind(model, uid2, rid, etag) {
+    const key = `${model}:${uid2}`;
+    if (rid != null) {
+      this.rids.set(key, rid);
+      this.byId.set(`${model}:${rid}`, key);
+    }
+    if (etag) {
+      this.etags.set(key, etag);
+    }
+  }
+  _snapshot(st4) {
+    this.shadow.clear();
+    for (const e of this._entities(st4)) {
+      this.shadow.set(e.key, JSON.stringify(e.vals));
+    }
+  }
+  _entities(st4) {
+    const out = [];
+    for (const l of st4.layers) {
+      out.push({ model: "td.layer", uid: l.id, key: "td.layer:" + l.id, vals: layerToApi(l, this.groupIds) });
+    }
+    for (const s of st4.slots) {
+      out.push({ model: "td.slot", uid: s.id, key: "td.slot:" + s.id, vals: slotToApi(s) });
+    }
+    for (const p of st4.placements) {
+      out.push({ model: "td.placement", uid: p.id, key: "td.placement:" + p.id, vals: placementToApi(p) });
+    }
+    for (const r of st4.site?.rules?.putaway || []) {
+      out.push({ model: "td.putaway.rule", uid: r.id, key: "td.putaway.rule:" + r.id, vals: putawayToApi(r) });
+    }
+    for (const r of st4.site?.rules?.replenish || []) {
+      out.push({ model: "td.replenish.rule", uid: r.id, key: "td.replenish.rule:" + r.id, vals: replenishToApi(r) });
+    }
+    return out;
+  }
+  // --- запис: черга операцій -----------------------------------------------------------------------------
+  /**
+   * Додає операцію API-04 у чергу; операції над тим самим записом зливаються:
+   * create+write → create; write+write → один write; create+unlink → нічого; write+unlink → unlink.
+   * Автозбереження спрацьовує через `autosaveMs`.
+   * @param {{model: string, op: 'create'|'write'|'unlink', uid?: string, id?: number, etag?: string, vals?: object}} op
+   */
+  queue(op2) {
+    const { model } = op2;
+    const uid2 = op2.uid ?? op2.tmp;
+    const key = `${model}:${uid2 ?? "#" + op2.id}`;
+    if (op2.id != null && uid2 == null) {
+      this._bind(model, `#${op2.id}`, op2.id, op2.etag);
+    }
+    const cur = this.pending.get(key);
+    if (op2.op === "create") {
+      this.pending.set(key, { model, kind: "create", uid: uid2, vals: { ...op2.vals }, seq: this._seq++ });
+    } else if (op2.op === "write") {
+      if (cur && (cur.kind === "create" || cur.kind === "write")) {
+        Object.assign(cur.vals, op2.vals);
+      } else if (!cur) {
+        this.pending.set(key, { model, kind: "write", uid: uid2, id: op2.id, etag: op2.etag, vals: { ...op2.vals }, seq: this._seq++ });
+      }
+    } else if (op2.op === "unlink") {
+      if (cur && cur.kind === "create") {
+        this.pending.delete(key);
+      } else {
+        this.pending.set(key, { model, kind: "unlink", uid: uid2, id: op2.id, etag: cur?.etag ?? op2.etag, seq: this._seq++ });
+      }
+    }
+    if (this.pending.size) {
+      this._setStatus("saving");
+      this._schedule(this.autosaveMs);
+    }
+  }
+  /** Контракт: порівнює стан із відомим серверу й ставить зміни в чергу; `now` — відправити негайно. */
+  save(st4, { now = false } = {}) {
+    this.sync(st4);
+    return now ? this.flush() : void 0;
+  }
+  /**
+   * Порівнює стан редактора (шари, місця, розміщення) з тим, що вже знає сервер, і ставить у чергу create/write/unlink
+   * (write — лише змінені поля). Повертає кількість поставлених операцій.
+   */
+  sync(st4) {
+    let n = 0;
+    const seen = /* @__PURE__ */ new Set();
+    for (const e of this._entities(st4)) {
+      seen.add(e.key);
+      const before = this.shadow.get(e.key);
+      if (before === void 0) {
+        this.queue({ model: e.model, op: "create", uid: e.uid, vals: e.vals });
+        n++;
+      } else if (before !== JSON.stringify(e.vals)) {
+        const prev = JSON.parse(before);
+        const diff = {};
+        for (const k of Object.keys(e.vals)) {
+          if (!same(e.vals[k], prev[k])) {
+            diff[k] = e.vals[k];
+          }
+        }
+        this.queue({ model: e.model, op: "write", uid: e.uid, vals: diff });
+        n++;
+      } else {
+        continue;
+      }
+      this.shadow.set(e.key, JSON.stringify(e.vals));
+    }
+    for (const key of [...this.shadow.keys()]) {
+      if (!seen.has(key)) {
+        const [model, uid2] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
+        this.shadow.delete(key);
+        this.queue({ model, op: "unlink", uid: uid2 });
+        n++;
+      }
+    }
+    return n;
+  }
+  _schedule(delay) {
+    if (this._timer) {
+      return;
+    }
+    this._timer = setTimeout(async () => {
+      this._timer = null;
+      const r = await this.flush();
+      if (r && r.reload && r.ok !== false) {
+        this.onReload();
+      }
+    }, delay);
+  }
+  _scheduleRetry() {
+    const delays = this.retryDelays;
+    const d = delays[Math.min(this._retryN, delays.length - 1)];
+    this._retryN++;
+    clearTimeout(this._timer);
+    this._timer = null;
+    this._schedule(d);
+  }
+  _resolve(vals) {
+    const out = { ...vals };
+    for (const [field, model] of Object.entries(REF_MODELS)) {
+      const v = out[field];
+      if (typeof v === "string" && v.startsWith("@")) {
+        const rid = this.rids.get(`${model}:${v.slice(1)}`);
+        if (rid != null) {
+          out[field] = rid;
+        }
+      }
+    }
+    return out;
+  }
+  /** Бере з черги пакет операцій (create → write → unlink; за порядком моделей); записи, що чекають на create, лишаються. */
+  _takeBatch() {
+    const entries = [...this.pending.entries()];
+    const rank = (e) => {
+      const o = MODEL_ORDER[e.model] ?? 9;
+      return e.kind === "create" ? o : e.kind === "write" ? 10 + o : 20 + (9 - o);
+    };
+    entries.sort((a, b) => rank(a[1]) - rank(b[1]) || a[1].seq - b[1].seq);
+    const batch = [];
+    for (const [key, e] of entries) {
+      if (batch.length >= BATCH) {
+        break;
+      }
+      const id = this.rids.get(key) ?? e.id;
+      if (e.kind !== "create" && id == null) {
+        continue;
+      }
+      const etag = this.etags.get(key) ?? e.etag;
+      let op2;
+      if (e.kind === "create") {
+        op2 = { model: e.model, op: "create", tmp: e.uid, vals: this._resolve(e.vals) };
+      } else if (e.kind === "write") {
+        op2 = { model: e.model, op: "write", id, ...etag ? { etag } : {}, vals: this._resolve(e.vals) };
+      } else {
+        op2 = { model: e.model, op: "unlink", id, ...etag ? { etag } : {} };
+      }
+      batch.push({ key, entry: e, op: op2 });
+    }
+    for (const b of batch) {
+      this.pending.delete(b.key);
+    }
+    return batch;
+  }
+  /** Повертає записи в чергу (з урахуванням змін, поставлених, поки запит був у польоті). */
+  _requeue(items2) {
+    for (const { key, entry } of items2) {
+      const cur = this.pending.get(key);
+      if (!cur) {
+        this.pending.set(key, entry);
+      } else if (entry.kind === "create" && cur.kind === "write") {
+        cur.kind = "create";
+        cur.vals = { ...entry.vals, ...cur.vals };
+      } else if (entry.kind === "write" && cur.kind === "write") {
+        cur.vals = { ...entry.vals, ...cur.vals };
+        cur.etag = entry.etag ?? cur.etag;
+      }
+    }
+  }
+  /** Надсилає чергу (API-04); повертає {ok, rejected, reload}. Паралельні виклики стають у чергу. */
+  flush() {
+    if (this.flushing) {
+      this._again = true;
+      return this.flushing;
+    }
+    clearTimeout(this._timer);
+    this._timer = null;
+    this.flushing = this._flushLoop().finally(() => {
+      this.flushing = null;
+      if (this._again) {
+        this._again = false;
+        if (this.pending.size) {
+          this._schedule(0);
+        }
+      }
+    });
+    return this.flushing;
+  }
+  async _flushLoop() {
+    const result = { ok: true, rejected: [], reload: false };
+    for (let guard3 = 0; guard3 < 100 && this.pending.size; guard3++) {
+      const batch = this._takeBatch();
+      if (!batch.length) {
+        break;
+      }
+      this._setStatus("saving");
+      let res;
+      try {
+        res = await this._call("/f3d/constructor/save", { site_id: this.siteId, ops: batch.map((b) => b.op) });
+      } catch (e) {
+        this._requeue(batch);
+        this._setStatus("error", e);
+        this._scheduleRetry();
+        return { ...result, ok: false, error: e };
+      }
+      if (res.ok) {
+        this._applyOk(batch, res);
+        this._retryN = 0;
+        continue;
+      }
+      const bad = res.op_index != null ? batch[res.op_index] : null;
+      const rest = batch.filter((b) => b !== bad);
+      if (res.code === "conflict" && bad) {
+        const choice2 = await this.onConflict({
+          model: bad.entry.model,
+          uid: bad.entry.uid,
+          current: res.current,
+          message: res.message
+        });
+        if (choice2 === "mine") {
+          if (res.current?.etag) {
+            this.etags.set(bad.key, res.current.etag);
+          }
+          this._requeue(batch);
+        } else {
+          this._requeue(rest);
+          result.reload = true;
+          result.rejected.push({ code: "conflict", message: res.message, model: bad.entry.model, uid: bad.entry.uid, kind: bad.entry.kind });
+        }
+        continue;
+      }
+      const dropped = bad ? [bad] : batch;
+      if (bad) {
+        this._requeue(rest);
+      }
+      for (const b of dropped) {
+        const rej = { code: res.code, message: res.message, model: b.entry.model, uid: b.entry.uid, kind: b.entry.kind };
+        result.rejected.push(rej);
+        this.onReject(rej);
+      }
+      result.reload = true;
+    }
+    this._setStatus(this.pending.size ? "saving" : "saved");
+    return result;
+  }
+  _applyOk(batch, res) {
+    const idMap = res.id_map || {};
+    const updates = [];
+    for (const { key, entry } of batch) {
+      if (entry.kind === "create") {
+        const rid = idMap[entry.uid];
+        if (rid != null) {
+          this._bind(entry.model, entry.uid, rid, null);
+          updates.push({ model: entry.model, uid: entry.uid, rid, etag: null });
+        }
+      } else if (entry.kind === "unlink") {
+        const rid = this.rids.get(key);
+        this.rids.delete(key);
+        this.etags.delete(key);
+        this.byId.delete(`${entry.model}:${rid}`);
+      }
+    }
+    for (const [mid, etag] of Object.entries(res.etags || {})) {
+      const key = this.byId.get(mid);
+      if (key) {
+        this.etags.set(key, etag);
+        const model = mid.slice(0, mid.indexOf(":"));
+        const upd = updates.find((u) => u.model === model && `${u.model}:${u.rid}` === mid);
+        if (upd) {
+          upd.etag = etag;
+        } else {
+          updates.push({ model, uid: key.slice(model.length + 1), rid: this.rids.get(key), etag });
+        }
+      }
+    }
+    this.onSaved({ rev: res.rev, draft_changes: res.draft_changes, has_changes: res.has_changes, id_map: idMap, updates });
+  }
+  // --- інші виклики --------------------------------------------------------------------------------------
+  /** API-05: перевірка на сервері (спершу зберігає чергу). */
+  async check(layerId) {
+    await this.flush();
+    const res = await this._call("/f3d/constructor/validate", { site_id: this.siteId, ...layerId ? { layer_id: layerId } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /**
+   * API-06: зберігає чергу, створює майстер публікації й відкриває його діалогом (попередній перегляд «буде створено /
+   * оновлено / пропонуємо архівувати» і підтвердження). Повертає відповідь API; `onClose` — після закриття майстра.
+   */
+  async publish({ onClose } = {}) {
+    const fl = await this.flush();
+    if (!fl.ok || this.pending.size) {
+      throw new StoreError("save_failed", "Не вдалося зберегти чернетку перед публікацією.");
+    }
+    const res = await this._call("/f3d/constructor/publish/preview", { site_id: this.siteId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    const act = { ...res.action };
+    if (act.type === "ir.actions.act_window" && !act.views) {
+      act.views = String(act.view_mode || "form").split(",").map((m) => [false, m.trim()]);
+    }
+    await this.action.doAction(act, { onClose });
+    return res;
+  }
+  /** API-08: повертає чернетку до знімка версії. */
+  async restoreVersion(versionId) {
+    await this.flush();
+    const res = await this._call("/f3d/constructor/version/restore", { version_id: versionId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Налаштування перевірки (API-04 для td.check.config; id записів — з API-03 або з ORM). */
+  async saveCheck(check, vals) {
+    const key = `td.check.config:${check}`;
+    if (!this.rids.has(key) && this.orm) {
+      const rows = await this.orm.searchRead("td.check.config", [["site_id", "=", this.siteId]], ["check_key"]);
+      for (const r of rows) {
+        this._bind("td.check.config", r.check_key, r.id, null);
+      }
+    }
+    this.queue({ model: "td.check.config", op: "write", uid: check, id: this.rids.get(key), vals });
+  }
+  /**
+   * Поля площадки (назва, габарити будівлі, крок колон) — стандартний ORM: API-04 їх не охоплює.
+   * Нейтральний вигляд контракту: {name, building: {length, width, height}, column_grid: {step_x, step_y}} (метри);
+   * поля Odoo (`building_length_m`…) проходять без змін.
+   */
+  async saveSite(vals) {
+    const out = { ...vals };
+    if (out.building) {
+      const { length, width: width2, height } = out.building;
+      Object.assign(out, { building_length_m: length, building_width_m: width2, building_height_m: height });
+      delete out.building;
+    }
+    if (out.column_grid) {
+      Object.assign(out, { column_step_x_m: out.column_grid.step_x, column_step_y_m: out.column_grid.step_y });
+      delete out.column_grid;
+    }
+    if ("sprinkler_height" in out) {
+      out.sprinkler_height_m = out.sprinkler_height;
+      delete out.sprinkler_height;
+    }
+    await this.orm.write("td.site", [this.siteId], out);
+  }
+  /**
+   * Адресація площадки (S1): addr, depth_mode, loc_tree — свій маршрут `/site/addr` (API-04 і ORM площадку не пишуть для проєктувальника);
+   * `opts.renumber`: "new" — закріпити номери вже опублікованих, "all" — перенумерувати все (лише менеджер).
+   */
+  async saveAddr(vals, { renumber = "new" } = {}) {
+    const res = await this._call("/f3d/constructor/site/addr", { site_id: this.siteId, renumber, ...vals });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return { pinned: res.pinned, reload: true };
+  }
+  /** Склади Odoo для вибору в майстрі «З нуля» (S5, F16-01): склад не створюється, лише вибирається → [{id, name, code}]. */
+  async warehouses() {
+    if (!this.orm) {
+      return [];
+    }
+    return await this.orm.searchRead("stock.warehouse", [], ["name", "code"], { order: "name", limit: 200 });
+  }
+  /**
+   * Стан майстра «З нуля» (S5, F16-04): значення форм і створене — свій маршрут `/site/wizard` (API-04 і ORM площадку не пишуть для
+   * проєктувальника); `state` — довільний Json до 256 КБ.
+   */
+  async saveWizard(state) {
+    const res = await this._call("/f3d/constructor/site/wizard", { site_id: this.siteId, state });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return { reload: false };
+  }
+  /**
+   * Бібліотека типів і пресетів (API-11): `{op: "list"}` → {types, presets}; `{op: "save", kind, id?, vals}` → {record};
+   * `{op: "delete", kind, id}` → {id}.
+   */
+  async library(req) {
+    const res = await this._call("/f3d/constructor/library", req);
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /**
+   * Залишки по кодах (API-13 `/stock/state`, S3): `{codes?, days?, detail?}` → {at, days, demo: false, truncated, codes: {код: {qty, reserved, fill,
+   * in_date, age_days, moves, min, max, capacity, top_product, location_id?, detail?}}}; `detail` — рядки залишків, рух, правила для картки;
+   * великий склад віддається пачками: `truncated` + `next` → наступний виклик з `offset: next`.
+   */
+  async stock({ codes = null, days = null, detail = false, offset = 0 } = {}) {
+    const res = await this._call("/f3d/constructor/stock/state", { site_id: this.siteId, codes, days, detail, ...offset ? { offset } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /**
+   * Спільна робота й версії (S6): API-21 `/variants`, API-22 `/comments`, API-23 `/locks`, API-24 `/version/view|checkpoint`. Усі повертають
+   * відповідь сервера або кидають StoreError(code, message) з усіма полями відповіді (`locks`, `lock` у `locked`).
+   * `variants({op: list|create|activate|rename|delete|end_training, id?, name?, metrics?, training?, activate?, keep?})`
+   *   → {variants: [{id, name, is_training, active, origin_id, base_version, metrics, by, at}], active_id, training_id, max, can_edit, reload?};
+   * `comments({op: list|create|update|resolve|delete|assignees, id?, vals?, text?, resolved?})` → {comments: [...], at} / {users, me};
+   * `locks({op: list|acquire|release, zone_uid?})` → {locks: [{zone_uid, user, mine, expires_at}], ttl, heartbeat, now};
+   * `versions({op: list|view|checkpoint|note, version_id?, note?})` → {versions} / {version, view} / {version}.
+   */
+  async _collab(route, req) {
+    const res = await this._call(route, { site_id: this.siteId, ...req });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message, res);
+    }
+    return res;
+  }
+  async variants(req) {
+    return await this._collab("/f3d/constructor/variants", req);
+  }
+  async comments(req) {
+    return await this._collab("/f3d/constructor/comments", req);
+  }
+  async locks(req) {
+    return await this._collab("/f3d/constructor/locks", req);
+  }
+  async versions({ op: op2 = "list", ...req } = {}) {
+    if (op2 === "list" || op2 === "view") {
+      return await this._collab("/f3d/constructor/version/view", req);
+    }
+    return await this._collab("/f3d/constructor/version/checkpoint", { op: op2 === "checkpoint" ? "create" : op2, ...req });
+  }
+  /** Пошук «де лежить» (API-14 `/stock/find`): `{q, mode}` → {hits: [{code, items: [{product, ref, qty, lot, package}]}]}. */
+  async find({ q, mode = "any" } = {}) {
+    const res = await this._call("/f3d/constructor/stock/find", { site_id: this.siteId, q, mode });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Файл від сервера (API-19): `kind` — labels_pdf | table_xlsx | plan_pdf | spec_pdf → {filename, mimetype, content (base64)}. */
+  async render(kind, payload) {
+    const res = await this._call(`/f3d/constructor/render/${kind}`, { site_id: this.siteId, ...payload });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** id груп ролей конструктора (для «Хто редагує» шару): з уже завантажених шарів або з res.groups. */
+  async ensureGroupIds(roles) {
+    if (roles.every((r) => r === "manager" || this.groupIds[r] != null) || !this.orm) {
+      return this.groupIds;
+    }
+    const rows = await this.orm.searchRead("res.groups", [["privilege_id.name", "=", "Конструктор"]], ["name"]);
+    const map = { технолог: "technologist", комірник: "storekeeper", інженер: "engineer", менеджер: "manager" };
+    for (const r of rows) {
+      const role = map[String(r.name).split(":").pop().trim().toLowerCase()];
+      if (role) {
+        this.groupIds[role] = r.id;
+      }
+    }
+    return this.groupIds;
+  }
+  /** Підкладка: файл → вкладення шару (ORM), далі — операція write у чергу (`underlay_attachment_id`). Повертає {id, url}. */
+  async attachUnderlay(layer, file) {
+    const data = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(",").pop());
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+    const ids = await this.orm.create("ir.attachment", [
+      { name: file.name, datas: data, res_model: "td.layer", res_id: layer.rid }
+    ]);
+    const id = Array.isArray(ids) ? ids[0] : ids;
+    this.queue({ model: "td.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: id } });
+    return { id, url: `/web/content/${id}` };
+  }
+  /** Знімає підкладку з шару (операція write у чергу). */
+  async detachUnderlay(layer) {
+    this.queue({ model: "td.layer", op: "write", uid: layer.id, vals: { underlay_attachment_id: false } });
+  }
+  /** 3D-модель варіанта (API-09): завантаження виконує хост (`o.uploadModel` — multipart + csrf, model/upload.js). */
+  async uploadModel(variantId, payload, opts2 = {}) {
+    if (!this._uploadModel) {
+      throw new StoreError("not_supported", "Завантаження моделей у цьому хості не налаштоване.");
+    }
+    return await this._uploadModel(variantId, payload, opts2);
+  }
+  /** Модель варіанта: GLB із вкладення (API-10; `?v=` — etag для скидання кешу) → Object3D або null. */
+  async loadModel(variant, T) {
+    const m = variant?.model;
+    if (!m || m.status !== "ok" || !m.glb_url || !T?.GLTFLoader) {
+      return null;
+    }
+    const gltf = await new T.GLTFLoader().loadAsync(m.glb_url + "?v=" + encodeURIComponent(variant.etag || ""));
+    return gltf.scene;
+  }
+  /** Підкладка DXF: текст файла з вкладення шару (`underlay.url`) або null. */
+  async loadUnderlay(layer) {
+    const u = layer?.underlay;
+    if (!u || u.format !== "dxf" || u.status !== "ready" || !u.url) {
+      return null;
+    }
+    const r = await fetch(u.url, { credentials: "same-origin" });
+    return r.ok ? { text: await r.text() } : null;
+  }
+  // --- S2: категорії зберігання, залишки, правила розміщення, журнал публікацій і відкат (API-12, API-15, API-17, API-18) ---
+  /** API-12: `{op: "list"}` → {categories, strategies, functions, attrs}; `{op: "save", id?, vals, confirm}` → {category}; `{op: "delete", id, confirm}`. */
+  async categories(req = { op: "list" }) {
+    const res = await this._call("/f3d/constructor/storage_categories", req);
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Залишки й вага запасу за кодами комірок + макс. вага комірки: {loads: {код: {qty, weight_kg}}, limits}. */
+  async stockLoads(codes) {
+    const res = await this._call("/f3d/constructor/storage/loads", { site_id: this.siteId, ...codes ? { codes } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-17: зайнятість кодів у зовнішній системі → {codes: {код: {state: free|own|match|busy, reason}}}. */
+  async codesCheck(codes) {
+    const res = await this._call("/f3d/constructor/codes/check", { site_id: this.siteId, codes });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-15 `fit`: «чи вміститься» для правил розміщення чернетки → {rules: {uid: [{code, reason}]}}. */
+  async putawayFit() {
+    await this.flush();
+    const res = await this._call("/f3d/constructor/putaway/fit", { site_id: this.siteId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-15 `where`: куди Odoo покладе товар → {location: {id, code, name}, moved, estimate: false}. */
+  async putawayWhere(q) {
+    const res = await this._call("/f3d/constructor/putaway/where", { site_id: this.siteId, product_id: q.product_id, quantity: q.quantity, package_type_id: q.package_type_id || null, ...q.location_code ? { location_code: q.location_code } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Пошук записів для форм правил: kind ∈ product | category | package_type | location; `ids` — назви за id. */
+  async lookup(kind, term = "", ids = null) {
+    const res = await this._call("/f3d/constructor/putaway/lookup", { site_id: this.siteId, kind, term, ...ids ? { ids } : {} });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.rows;
+  }
+  /** API-18: журнал публікацій → {versions: [{id, n, counts, ops, rolled_back, can_rollback, reason}], can_rollback}. */
+  async planLog() {
+    const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** API-18: операції версії журналу. */
+  async planOps(versionId) {
+    const res = await this._call("/f3d/constructor/publish/log", { site_id: this.siteId, version_id: versionId });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res.ops.map((o) => ({ ...o, res: RES_OF_MODEL[o.res_model] || o.res_model }));
+  }
+  /** API-18: відкат публікації (лише записи Odoo; чернетка не змінюється). */
+  async rollback(versionId) {
+    const res = await this._call("/f3d/constructor/publish/rollback", { site_id: this.siteId, version_id: versionId, confirm: true });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message, { issues: res.issues });
+    }
+    return res;
+  }
+  // --- S4: структура з Odoo й файли (API-16, API-20; F10, F11, F02-09/12) ---
+  /**
+   * Стрічка локацій складу (API-16 `/odoo/locations`): `{op: "feed"}` (за замовчуванням) → {feed: {root, warehouse, locations: [{id, code, name,
+   * parent, parent_id, usage, barcode, qty, active}], truncated, next}}; `{op: "sync"}` → те саме + {diff: {appeared, disappeared, renamed, moved},
+   * baseline: "created"|"existing"}; `{op: "baseline"}` — база порівняння (`site.odoo_baseline_id`) стає нинішньою стрічкою.
+   */
+  async locations({ op: op2 = "feed", ...rest } = {}) {
+    const res = await this._call("/f3d/constructor/odoo/locations", { site_id: this.siteId, op: op2, ...rest });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  /** Правила розбору кодів і лоток «Не розміщено» площадки (`site.parse_rules`): окремий маршрут, бо ORM площадку проєктувальнику не пише. */
+  async saveParseRules(rules) {
+    const res = await this._call("/f3d/constructor/odoo/rules", { site_id: this.siteId, parse_rules: rules });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    this.onSaved({ rev: res.rev, draft_changes: res.draft_changes, has_changes: res.has_changes, id_map: {}, updates: [] });
+    return res;
+  }
+  /** Розбір таблиці на сервері (API-20 `/parse/table`): `{filename, bytes (Uint8Array), sheet?}` → {format, sheets?, rows}. */
+  async parseTable({ filename, bytes, sheet = 0 }) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 32768) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+    }
+    const res = await this._call("/f3d/constructor/parse/table", { site_id: this.siteId, filename, content: btoa(bin), sheet });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message);
+    }
+    return res;
+  }
+  // --- старі назви методів (HOOT-тести W2 і зовнішній код) ---
+  loadSite(id) {
+    return this.load(id);
+  }
+  validate(layerId) {
+    return this.check(layerId);
+  }
+  publishPreview(o) {
+    return this.publish(o);
+  }
+};
+var OdooStore = OdooAdapter;
+
+// core/constructor/shape_forms.js
+var levelCount = (p, tpl) => tpl === "shelf" ? p.shelves : p.levels;
+var bayCount = (p, tpl) => tpl === "pallet_rack" ? p.bays : tpl === "cantilever" ? p.arms : p.sections;
+var baseH = (p, tpl) => tpl === "shelf" ? p.cell_h : p.level_height;
+function levelTops(p, tpl) {
+  const n = levelCount(p, tpl);
+  const heights = p.level_heights || Array(n).fill(baseH(p, tpl));
+  const out = [];
+  let z = p.bottom_on_floor === false ? 0.15 : 0;
+  for (const h2 of heights) {
+    z += h2;
+    out.push(z);
+  }
+  return out;
+}
+function sideBlocks(p, d, tpl) {
+  if (!p.double_sided) {
+    return [{ y0: -d.W / 2, y1: d.W / 2 }];
+  }
+  const one = tpl === "pallet_rack" ? p.depth * (p.deep ?? 1) : tpl === "cantilever" ? p.arm_length : p.cell_d;
+  return [
+    { y0: -d.W / 2, y1: -d.W / 2 + one },
+    { y0: d.W / 2 - one, y1: d.W / 2 }
+  ];
+}
+function rack(p, d, sg, tpl) {
+  const n = bayCount(p, tpl);
+  const pitch = tpl === "pallet_rack" ? p.bay_width : tpl === "cantilever" ? d.L / n : p.cell_w;
+  const gx = p.gap_x ?? 0;
+  const tops = levelTops(p, tpl);
+  for (const { y0, y1 } of sideBlocks(p, d, tpl)) {
+    for (let i = 0; i < n; i++) {
+      const xa = -d.L / 2 + i * (pitch + gx);
+      const xb = xa + pitch;
+      for (const x of [xa, xb]) {
+        for (const y of [y0, y1]) {
+          sg([x, y, 0], [x, y, d.H]);
+        }
+        sg([x, y0, d.H], [x, y1, d.H]);
+      }
+      for (const z of tops) {
+        for (const y of [y0, y1]) {
+          sg([xa, y, z], [xb, y, z]);
+        }
+      }
+    }
+  }
+}
+function rollRack(p, d, sg, tpl) {
+  const n = bayCount(p, tpl);
+  const pitch = d.L / n;
+  const tops = levelTops(p, tpl);
+  for (const { y0, y1 } of sideBlocks(p, d, tpl)) {
+    const back = p.double_sided && y0 > -d.W / 2 ? y1 : y0;
+    const front = back === y0 ? y1 : y0;
+    for (let i = 0; i <= n; i++) {
+      const x = -d.L / 2 + i * pitch;
+      sg([x, back, 0], [x, back, d.H]);
+      for (const z of tops) {
+        sg([x, back, z], [x, front, z]);
+        sg([x, front, z], [x, front, z + 0.15]);
+      }
+    }
+  }
+}
+function stack(p, d, sg) {
+  const rows = p.rows || 1;
+  const cols = p.cols || 1;
+  const gx = p.gap_x ?? 0;
+  const gy = p.gap_y ?? 0;
+  const cl = p.cell_l ?? d.L;
+  const cw = p.cell_w ?? d.W;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x0 = -d.L / 2 + c * (cl + gx);
+      const y0 = -d.W / 2 + r * (cw + gy);
+      rect(sg, x0, y0, x0 + cl, y0 + cw, 0.02);
+      rect(sg, x0, y0, x0 + cl, y0 + cw, d.H);
+      for (const [x, y] of [[x0, y0], [x0 + cl, y0], [x0 + cl, y0 + cw], [x0, y0 + cw]]) {
+        sg([x, y, 0.02], [x, y, d.H]);
+      }
+    }
+  }
+}
+var rect = (sg, x0, y0, x1, y1, z) => {
+  sg([x0, y0, z], [x1, y0, z]);
+  sg([x1, y0, z], [x1, y1, z]);
+  sg([x1, y1, z], [x0, y1, z]);
+  sg([x0, y1, z], [x0, y0, z]);
+};
+function zone(p, d, sg) {
+  const z = 0.03;
+  rect(sg, -d.L / 2, -d.W / 2, d.L / 2, d.W / 2, z);
+  const k = Math.min(d.L, d.W) * 0.12;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const x = sx * d.L / 2;
+    const y = sy * d.W / 2;
+    sg([x, y, z], [x - sx * k, y, z + 0]);
+    sg([x, y, z], [x, y - sy * k, z]);
+  }
+  sg([-d.L / 2, -d.W / 2, z], [d.L / 2, d.W / 2, z]);
+  sg([-d.L / 2, d.W / 2, z], [d.L / 2, -d.W / 2, z]);
+}
+function fence(p, d, sg) {
+  const hx = d.L / 2;
+  const hy = d.W / 2;
+  rect(sg, -hx, -hy, hx, hy, 0.02);
+  rect(sg, -hx, -hy, hx, hy, d.H);
+  rect(sg, -hx, -hy, hx, hy, d.H / 2);
+  const nx = Math.max(1, Math.round(d.L));
+  const ny = Math.max(1, Math.round(d.W));
+  for (let i = 0; i <= nx; i++) {
+    const x = -hx + i * d.L / nx;
+    for (const y of [-hy, hy]) {
+      sg([x, y, 0.02], [x, y, d.H]);
+    }
+  }
+  for (let j = 1; j < ny; j++) {
+    const y = -hy + j * d.W / ny;
+    for (const x of [-hx, hx]) {
+      sg([x, y, 0.02], [x, y, d.H]);
+    }
+  }
+}
+var ellipse = (sg, rx, ry, z, steps = 24) => {
+  for (let i = 0; i < steps; i++) {
+    const a = i / steps * Math.PI * 2;
+    const b = (i + 1) / steps * Math.PI * 2;
+    sg([Math.cos(a) * rx, Math.sin(a) * ry, z], [Math.cos(b) * rx, Math.sin(b) * ry, z]);
+  }
+};
+function cylinder(p, d, sg) {
+  const rx = d.L / 2;
+  const ry = d.W / 2;
+  ellipse(sg, rx, ry, 0.02);
+  ellipse(sg, rx, ry, d.H);
+  for (const [x, y] of [[rx, 0], [-rx, 0], [0, ry], [0, -ry]]) {
+    sg([x, y, 0.02], [x, y, d.H]);
+  }
+  ellipse(sg, rx, ry, d.H * 0.5, 16);
+}
+function cabinet(p, d, sg) {
+  const hx = d.L / 2;
+  const hy = d.W / 2;
+  rect(sg, -hx, -hy, hx, hy, 0.02);
+  rect(sg, -hx, -hy, hx, hy, d.H);
+  for (const [x, y] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) {
+    sg([x, y, 0.02], [x, y, d.H]);
+  }
+  sg([0, -hy, 0.02], [0, -hy, d.H]);
+  for (let i = 1; i <= 4; i++) {
+    const z = d.H - i * d.H / 12;
+    sg([-hx * 0.8, -hy, z], [hx * 0.8, -hy, z]);
+  }
+}
+function mobile(p, d, sg) {
+  const hx = d.L / 2;
+  const hy = d.W / 2;
+  const base2 = Math.min(0.12, d.H * 0.2);
+  rect(sg, -hx, -hy, hx, hy, base2);
+  rect(sg, -hx, -hy, hx, hy, d.H);
+  for (const [x, y] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) {
+    sg([x, y, base2], [x, y, d.H]);
+    sg([x, y, 0], [x, y, base2]);
+  }
+  sg([-hx, 0, d.H * 0.5], [hx, 0, d.H * 0.5]);
+}
+function gate(p, d, sg) {
+  const hx = d.L / 2;
+  sg([-hx, 0, 0], [-hx, 0, d.H]);
+  sg([hx, 0, 0], [hx, 0, d.H]);
+  sg([-hx, 0, d.H], [hx, 0, d.H]);
+  sg([-hx, -d.W / 2, 0.02], [hx, -d.W / 2, 0.02]);
+  sg([-hx, d.W / 2, 0.02], [hx, d.W / 2, 0.02]);
+  sg([-hx, -d.W / 2, 0.02], [-hx, d.W / 2, 0.02]);
+  sg([hx, -d.W / 2, 0.02], [hx, d.W / 2, 0.02]);
+}
+var FORMS = { rack, roll_rack: rollRack, stack, zone, fence, cylinder, cabinet, mobile, gate };
+var FORM_KEYS = Object.keys(FORMS);
+var DEFAULT_FORM = { pallet_rack: "rack", shelf: "rack", cantilever: "roll_rack", floor_stack: "stack", floor_spot: "zone" };
+var NEW_PARAMS = ["deep", "gap_x", "gap_y", "double_sided", "level_heights", "bottom_on_floor", "beam_th"];
+function runForm(form, tpl, p, d, out) {
+  const fn = FORMS[form];
+  if (!fn) {
+    return false;
+  }
+  fn(p, d, (a, b) => out.push(a[0], a[2], -a[1], b[0], b[2], -b[1]), tpl);
+  return true;
+}
+function frameFor(tpl, p, d, base2) {
+  const out = [];
+  const form = p.shape || (NEW_PARAMS.some((k) => p[k] != null) ? DEFAULT_FORM[tpl] : "");
+  if (form && runForm(form, tpl, p, d, out)) {
+    return out;
+  }
+  return base2 ? base2.frame(p, d) : [];
+}
+for (const tpl of ["pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"]) {
+  const base2 = registries.shapes.get(tpl, null);
+  registries.shapes.add(tpl, { frame: (p, d) => frameFor(tpl, p, d, base2) }, { force: true });
+}
+for (const key of FORM_KEYS) {
+  registries.shapes.add("form:" + key, { frame: (p, d) => {
+    const out = [];
+    runForm(key, "floor_spot", p, d, out);
+    return out;
+  } }, { force: true });
+}
+function typeSegments(type) {
+  const tpl = type.template || "floor_spot";
+  const params = type.template ? { ...type.params || {}, ...type.shape ? { shape: type.shape } : {} } : { length: type.params?.width || 3.5, width: 0.3, height: type.params?.height || 4, shape: "gate" };
+  const p = normalizeParams(tpl, params);
+  const fp = footprint(tpl, params);
+  const d = { L: fp.l, W: fp.w, H: slotHeight({ template: tpl, params: p }) };
+  const form = p.shape || DEFAULT_FORM[tpl];
+  const segs2 = [];
+  const fn = FORMS[form];
+  if (fn) {
+    fn(p, d, (a, b) => segs2.push([a, b]), tpl);
+  }
+  if (!segs2.length && SLOT_TEMPLATES[tpl]) {
+    FORMS.rack(p, d, (a, b) => segs2.push([a, b]), tpl);
+  }
+  return { segs: segs2, d };
+}
+function typeSvg(type, w = 160, h2 = 110) {
+  const { segs: segs2, d } = typeSegments(type);
+  const proj = ([x, y, z]) => [x + 0.5 * y, z + 0.5 * y];
+  const pts = segs2.flatMap(([a, b]) => [proj(a), proj(b)]);
+  if (!pts.length) {
+    return "";
+  }
+  const xs = pts.map((q) => q[0]);
+  const ys = pts.map((q) => q[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const k = Math.min((w - 12) / Math.max(maxX - minX, 0.1), (h2 - 12) / Math.max(maxY - minY, 0.1));
+  const f = (q) => [6 + (q[0] - minX) * k, h2 - 6 - (q[1] - minY) * k];
+  const lines = segs2.map(([a, b]) => {
+    const [x1, y1] = f(proj(a));
+    const [x2, y2] = f(proj(b));
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${w} ${h2}" width="${w}" height="${h2}" role="img" aria-label="${type.name}" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" data-dims="${d.L.toFixed(2)}x${d.W.toFixed(2)}x${d.H.toFixed(2)}">${lines}</svg>`;
+}
+
+// core/constructor/addr.js
+var SEG_LABELS = { zone: "Зона", row: "Ряд", bay: "Секція", level: "Ярус", pos: "Позиція" };
+var SEG_KINDS = [
+  ["num", "Цифри"],
+  ["alpha", "Букви"]
+];
+var DIR_LABELS = {
+  row_from: { up: "Вгору (+Y)", down: "Вниз (−Y)", right: "Праворуч (+X)", left: "Ліворуч (−X)" },
+  row_mode: { seq: "Підряд", snake: "Змійкою" },
+  bay_dir: { ltr: "Зліва направо", rtl: "Справа наліво", odd_even: "Чет/непарні по сторонах проходу" },
+  level_dir: { up: "Знизу вгору", down: "Зверху вниз" },
+  depth_mode: { level: "Ярус", cell: "Комірка (ярус ділиться)" },
+  loc_tree: { flat: "Плоско (ім'я = код)", row: "Ряд (віртуальна локація)", section: "Секція (віртуальна локація)" }
+};
+var opts = (keys, labels) => keys.map((k) => [k, labels[k]]);
+var ROW_SLOTS = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"];
+var isRowSlot = (s) => ROW_SLOTS.includes(s.template);
+var hasKeys = (a) => !!a && Object.keys(a).length > 0;
+var slotDict = (s) => ({
+  uid: s.id,
+  id: s.id,
+  layer_id: s.layer_id,
+  template: s.template,
+  code_prefix: s.code_prefix,
+  x: s.x,
+  y: s.y,
+  rotation: s.rotation || 0,
+  params: s.params,
+  polygon: s.locked ? s.polygon : null,
+  addr: s.addr || null,
+  depth_mode: s.depth_mode || null
+});
+var memo = { sig: "", ctx: null };
+function anyAddressing() {
+  const site = S.site || {};
+  const own = safeNormalize(site.addr);
+  if ("tpl" in own || site.depth_mode === "cell") {
+    return true;
+  }
+  return S.slots.some((x) => hasKeys(x.addr) || x.depth_mode);
+}
+function contextsOf(slots, siteAddr, siteDepth) {
+  const sig = JSON.stringify([
+    siteAddr || null,
+    siteDepth || null,
+    slots.map((s) => [s.id, s.layer_id, s.template, s.x, s.y, s.rotation || 0, s.addr || null, s.depth_mode || null, s.template === "zone" ? [s.params.length, s.params.width, s.polygon || null] : 0])
+  ]);
+  if (memo.sig !== sig) {
+    memo = { sig, ctx: addressContext(slots.map(slotDict), siteAddr, siteDepth || "level") };
+  }
+  return memo.ctx;
+}
+function contextOf(s) {
+  if (!S.site || !S.sIdx || !S.sIdx.has(s.id) || !anyAddressing()) {
+    return null;
+  }
+  const ctx2 = contextsOf(S.slots, S.site.addr, S.site.depth_mode).get(s.id);
+  return ctx2 && (ctx2.addr || ctx2.depth_mode === "cell") ? ctx2 : null;
+}
+setContextResolver(contextOf);
+function sceneCodes({ siteAddr = S.site?.addr, siteDepth = S.site?.depth_mode, patch = null } = {}) {
+  const slots = patch ? S.slots.map((s) => patch(s) || s) : S.slots;
+  const ctxs = addressContext(slots.map(slotDict), siteAddr, siteDepth || "level");
+  const out = /* @__PURE__ */ new Map();
+  for (const s of slots) {
+    if (s.template === "zone") {
+      continue;
+    }
+    const ctx2 = ctxs.get(s.id);
+    const useCtx = ctx2 && (ctx2.addr || ctx2.depth_mode === "cell") ? ctx2 : null;
+    try {
+      out.set(s.id, generateCells(s.template, s.code_prefix || "", s.x, s.y, s.rotation || 0, s.params, null, 0, useCtx).map((c) => c.code));
+    } catch {
+      out.set(s.id, []);
+    }
+  }
+  return out;
+}
+var labelOfSlot = (id) => (S.sIdx.get(id) || {}).code_prefix || id;
+function previewScene(o = {}) {
+  const now = sceneCodes();
+  const next = sceneCodes(o);
+  const ids = [...next.keys()];
+  const pv = preview(
+    ids.flatMap((id) => next.get(id)),
+    ids.flatMap((id) => now.get(id) || [])
+  );
+  pv.conflicts = conflicts(next);
+  pv.slots = ids.length;
+  return pv;
+}
+function rowNumberOf(s) {
+  if (!S.sIdx || !S.sIdx.has(s.id)) {
+    return null;
+  }
+  const ctx2 = contextsOf(S.slots, S.site?.addr, S.site?.depth_mode).get(s.id);
+  return ctx2 ? ctx2.row ?? ctx2.spot ?? null : null;
+}
+function fromAddr(addr, depthMode) {
+  const { zone_code: zoneCode, row_no: rowNo, legacy, ...rest } = safeNormalize(addr);
+  return {
+    mode: legacy ? "legacy" : "tpl" in rest ? "own" : "inherit",
+    addr: "tpl" in rest ? clone(rest) : normalizeAddr({ tpl: PRESETS.zone_row_bay_level.tpl }),
+    zone_code: zoneCode || "",
+    row_no: rowNo || null,
+    depth_mode: depthMode || ""
+  };
+}
+function toAddr(st4, { site = false, zone: zone2 = false, row = false } = {}) {
+  let out = {};
+  if (st4.mode === "own") {
+    out = { ...st4.addr };
+  } else if (st4.mode === "legacy" && !site) {
+    out = { legacy: true };
+  }
+  if (zone2 && st4.zone_code) {
+    out.zone_code = st4.zone_code;
+  }
+  if (row && st4.row_no) {
+    out.row_no = st4.row_no;
+  }
+  return normalizeAddr(out);
+}
+function addrEditor(o) {
+  const { st: st4, dis } = o;
+  const box = h("div", { class: "fcol", "data-role": "addr-editor" });
+  const change = () => {
+    let err = null;
+    try {
+      if (st4.mode === "own") {
+        normalizeAddr(st4.addr);
+      }
+    } catch (e) {
+      if (!(e instanceof AddrError)) {
+        throw e;
+      }
+      err = e.message;
+    }
+    o.onChange(err);
+  };
+  const draw3 = () => {
+    const modes = [
+      ...o.mode === "site" ? [] : [["inherit", "Успадкувати"]],
+      ["legacy", "Як зараз (ПРЕФІКС-B01-L1)"],
+      ["own", "Власний шаблон"]
+    ];
+    const kids = [
+      fld(
+        o.mode === "site" ? "Адресація кодів" : "Власні налаштування",
+        selectEl(modes, st4.mode, (v) => {
+          st4.mode = v;
+          draw3();
+          change();
+        }, dis, "Режим адресації")
+      )
+    ];
+    if (st4.mode === "own") {
+      const a = st4.addr;
+      const presetKeys = Object.keys(PRESETS).filter((k) => k !== "legacy");
+      kids.push(
+        fld(
+          "Пресет шаблону",
+          selectEl([["", "—"], ...presetKeys.map((k) => [k, PRESET_LABELS[k]])], "", (v) => {
+            if (v) {
+              st4.addr = normalizeAddr(PRESETS[v]);
+              draw3();
+              change();
+            }
+          }, dis, "Пресет шаблону")
+        ),
+        fld("Шаблон: слова через пробіл, сегменти {prefix} {zone} {row} {bay} {level} {pos}", textInput({ value: a.tpl, dis, label: "Шаблон", f: "addr-tpl", set: (v) => {
+          a.tpl = v;
+          change();
+        } })),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Роздільник (до 3 символів)", textInput({ value: a.sep, dis, label: "Роздільник", f: "addr-sep", set: (v) => {
+            a.sep = v;
+            change();
+          } })),
+          fld("Ряди від входу", selectEl(opts(ROW_FROM, DIR_LABELS.row_from), a.row_from, (v) => {
+            a.row_from = v;
+            change();
+          }, dis, "Напрям рядів"))
+        ),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Секції", selectEl(opts(BAY_DIRS, DIR_LABELS.bay_dir), a.bay_dir, (v) => {
+            a.bay_dir = v;
+            change();
+          }, dis, "Напрям секцій")),
+          fld("Ряди", selectEl(opts(ROW_MODES, DIR_LABELS.row_mode), a.row_mode, (v) => {
+            a.row_mode = v;
+            change();
+          }, dis, "Режим рядів"))
+        ),
+        fld("Яруси", selectEl(opts(LEVEL_DIRS, DIR_LABELS.level_dir), a.level_dir, (v) => {
+          a.level_dir = v;
+          change();
+        }, dis, "Напрям ярусів")),
+        h("div", { class: "small muted" }, "Сегмент: вид · ширина (ведучі нулі) · початкове значення"),
+        ...SEGMENT_KEYS.map(
+          (k) => h(
+            "div",
+            { class: "grid3", "data-seg": k },
+            fld(SEG_LABELS[k], selectEl(SEG_KINDS, a.seg[k].kind, (v) => {
+              a.seg[k].kind = v;
+              if (v === "alpha" && a.seg[k].start < 1) {
+                a.seg[k].start = 1;
+              }
+              draw3();
+              change();
+            }, dis, SEG_LABELS[k] + ": вид")),
+            fld("Ширина", numInput({ value: a.seg[k].width, dis, min: 1, max: 8, step: 1, int: true, label: SEG_LABELS[k] + ": ширина", set: (v) => {
+              a.seg[k].width = v;
+              change();
+            } })),
+            fld("Початок", numInput({ value: a.seg[k].start, dis, min: a.seg[k].kind === "alpha" ? 1 : 0, max: 999, step: 1, int: true, label: SEG_LABELS[k] + ": початок", set: (v) => {
+              a.seg[k].start = v;
+              change();
+            } }))
+          )
+        )
+      );
+    }
+    if (o.mode === "zone") {
+      kids.push(fld("Код зони замість номера", textInput({ value: st4.zone_code, dis, label: "Код зони", f: "addr-zone-code", set: (v) => {
+        st4.zone_code = v.trim();
+        change();
+      } }), "до 8 символів"));
+    }
+    if (o.mode === "slot" && o.row) {
+      kids.push(fld("Закріплений номер", numInput({ value: st4.row_no, dis, min: 1, max: 9999, step: 1, int: true, label: "Номер ряду", set: (v) => {
+        st4.row_no = v;
+        change();
+      } }), "порожньо — за геометрією"));
+    }
+    kids.push(
+      fld(
+        "Остання локація в Odoo",
+        selectEl([["", o.mode === "site" ? "Ярус" : "Як у зони / площадки"], ...opts(DEPTH_MODES, DIR_LABELS.depth_mode).filter(([k]) => o.mode !== "site" || k !== "level")], st4.depth_mode || "", (v) => {
+          st4.depth_mode = v;
+          change();
+        }, dis, "Глибина локацій")
+      )
+    );
+    box.replaceChildren(...K(kids));
+  };
+  draw3();
+  return box;
+}
+var hasConflicts = (pv) => Object.keys(pv.conflicts).length > 0 || pv.too_long.length > 0;
+function previewBlock(compute) {
+  const box = h("div", { class: "note", "data-role": "addr-preview" });
+  const render2 = (err) => {
+    let pv = null;
+    let msg = err;
+    if (!msg) {
+      try {
+        pv = compute();
+      } catch (e) {
+        msg = e.message || String(e);
+      }
+    }
+    if (msg) {
+      box.className = "note err";
+      box.replaceChildren(msg);
+      return false;
+    }
+    const dups = Object.entries(pv.conflicts);
+    box.className = "note" + (hasConflicts(pv) ? " err" : "");
+    box.replaceChildren(
+      ...K(
+        h("div", { class: "h3" }, "Попередній перегляд"),
+        h("div", { class: "small", "data-role": "addr-first" }, pv.first.length ? pv.first.join(" · ") : "Кодів немає"),
+        pv.last ? h("div", { class: "small muted", "data-role": "addr-last" }, `Останній: ${pv.last} · усього ${fmtInt(pv.total)} кодів у ${fmtInt(pv.slots)} місцях`) : null,
+        h("div", { class: "small", "data-role": "addr-changed" }, pv.changed ? `Зміниться кодів: ${fmtInt(pv.changed)} (потрібні нові етикетки)` : "Коди не змінюються"),
+        pv.too_long.length ? h("div", { class: "small", style: { color: "var(--block)" } }, `Код довший за 32 символи: ${pv.too_long[0]}`) : null,
+        dups.length ? h(
+          "div",
+          { class: "small", "data-role": "addr-dups" },
+          h("div", { style: { color: "var(--block)" } }, `Повтори кодів: ${dups.length} — зберегти не можна`),
+          dups.slice(0, 5).map(
+            ([code, ids]) => h("div", null, code + " — ", ids.map((id, i) => h("a", { href: "#", style: { marginRight: "6px" }, onclick: (e) => {
+              e.preventDefault();
+              E.selectObj({ kind: "slot", id });
+            } }, labelOfSlot(id) + (i < ids.length - 1 ? "," : ""))))
+          )
+        ) : null
+      )
+    );
+    return !hasConflicts(pv);
+  };
+  return { box, render: render2 };
+}
+function renderSiteBlock(root) {
+  const dis = !(S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length));
+  const st4 = fromAddr(S.site.addr, S.site.depth_mode);
+  if (st4.mode === "inherit") {
+    st4.mode = "legacy";
+  }
+  let tree = S.site.loc_tree || "flat";
+  let renumber = "new";
+  const hypo = () => ({ siteAddr: toAddr(st4, { site: true }), siteDepth: st4.depth_mode || "level" });
+  const pvBox = previewBlock(() => previewScene(hypo()));
+  const apply = h("button", { class: "fbtn primary", type: "button", id: "btnAddrApply", disabled: dis, onclick: () => applySite() }, "Застосувати");
+  const upd = (err) => {
+    apply.disabled = dis || !pvBox.render(err);
+  };
+  async function applySite() {
+    const vals = { addr: toAddr(st4, { site: true }), depth_mode: st4.depth_mode || "level", loc_tree: tree };
+    const res = await E.runDialog("addr.applySite", { vals, renumber });
+    if (res && res.ok) {
+      toast(res.pinned ? `Адресацію застосовано; закріплено номерів: ${res.pinned}.` : "Адресацію застосовано.");
+    }
+  }
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "addrSite" },
+        h("h3", null, "Адресація"),
+        dis ? h("div", { class: "note lock" }, "Адресацію змінює проєктувальник чи менеджер.") : null,
+        h(
+          "div",
+          { class: "fcol" },
+          addrEditor({ st: st4, mode: "site", dis, onChange: upd }),
+          fld("Ієрархія локацій в Odoo", selectEl(opts(LOC_TREES, DIR_LABELS.loc_tree), tree, (v) => {
+            tree = v;
+          }, dis || !canManage(), "Ієрархія локацій")),
+          fld("Перенумерація наявних", selectEl([["new", "Нумерувати тільки нові"], ["all", "Перенумерувати все (лише менеджер)"]], renumber, (v) => {
+            renumber = v;
+          }, dis, "Перенумерація")),
+          h("div", { class: "small muted" }, "Імена й штрихкоди опублікованих локацій змінює лише публікація; для змінених кодів потрібні нові етикетки."),
+          pvBox.box,
+          h("div", { class: "frow" }, apply)
+        )
+      )
+    )
+  );
+  upd(null);
+}
+function renderSlotBlock(root, { rec }) {
+  if (!rec || !rec.template || rec.template === "machine_spot") {
+    return;
+  }
+  const ly = layerOf(rec.layer_id);
+  const dis = !canEditLayer(ly) || !!rec.locked;
+  const zone2 = rec.template === "zone";
+  const st4 = fromAddr(rec.addr, rec.depth_mode);
+  const draftAddr = () => toAddr(st4, { zone: zone2, row: !zone2 });
+  const patch = (s) => s.id === rec.id ? { ...s, addr: draftAddr(), depth_mode: st4.depth_mode || null } : null;
+  const pvBox = previewBlock(() => previewScene({ patch }));
+  const apply = h("button", { class: "fbtn primary", type: "button", id: "btnAddrSlotApply", disabled: dis, onclick: () => applySlot() }, "Застосувати");
+  const upd = (err) => {
+    apply.disabled = dis || !pvBox.render(err);
+  };
+  async function applySlot() {
+    const res = await E.runDialog("addr.applySlot", { id: rec.id, addr: draftAddr(), depth_mode: st4.depth_mode || null });
+    if (res && res.ok) {
+      toast("Адресацію місця застосовано.");
+    }
+  }
+  const addressed = !!contextOf(rec);
+  const num4 = addressed && !zone2 ? rowNumberOf(rec) : null;
+  const codes = zone2 ? [] : cellsOf(rec).map((c) => c.code);
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "addrSlot" },
+        h("h3", null, "Адресація"),
+        num4 != null ? h("div", { class: "small muted", "data-role": "addr-row-no" }, `Номер ${rec.template === "floor_spot" ? "місця" : "ряду"}: ${num4}`) : null,
+        codes.length ? h("div", { class: "small", "data-role": "addr-slot-codes" }, `Коди: ${codes.slice(0, 3).join(", ")}${codes.length > 3 ? ` … ${codes[codes.length - 1]}` : ""}`) : null,
+        h(
+          "div",
+          { class: "fcol" },
+          addrEditor({ st: st4, mode: zone2 ? "zone" : "slot", row: !zone2 && isRowSlot(rec), dis, onChange: upd }),
+          pvBox.box,
+          h(
+            "div",
+            { class: "frow wrap" },
+            apply,
+            zone2 || !isRowSlot(rec) ? null : h("button", { class: "fbtn sm", type: "button", id: "btnRowPin", disabled: dis || !addressed, onclick: () => pinNumbers([rec]) }, "Закріпити номер")
+          )
+        )
+      )
+    )
+  );
+  upd(null);
+}
+registries.panels.add("site:addr", { area: "site", render: renderSiteBlock }, { sequence: 40, force: true });
+registries.panels.add("slot:addr", { area: "slot", render: renderSlotBlock }, { sequence: 40, force: true });
+function pinNumbers(slots) {
+  const ctxs = contextsOf(S.slots, S.site?.addr, S.site?.depth_mode);
+  let n = 0;
+  for (const s of slots) {
+    const ctx2 = ctxs.get(s.id);
+    const number = ctx2 && (ctx2.row ?? ctx2.spot);
+    if (number && safeNormalize(s.addr).row_no !== number) {
+      s.addr = { ...safeNormalize(s.addr), row_no: number };
+      n++;
+    }
+  }
+  if (n) {
+    E.commit({});
+    toast(`Закріплено номерів: ${n}.`);
+  }
+  return n;
+}
+function remapCodes(oldCodes, newCodes) {
+  for (const s of S.slots) {
+    const old = oldCodes.get(s.id) || [];
+    const next = newCodes.get(s.id) || [];
+    if (!old.length || old.join() === next.join()) {
+      continue;
+    }
+    const map = old.length === next.length ? new Map(old.map((c, i) => [c, next[i]])) : /* @__PURE__ */ new Map();
+    if (s.overrides && Object.keys(s.overrides).length) {
+      const keep = new Set(next);
+      const out = {};
+      for (const [k, v] of Object.entries(s.overrides)) {
+        const nk = map.get(k) ?? k;
+        if (keep.has(nk)) {
+          out[nk] = v;
+        }
+      }
+      s.overrides = out;
+    }
+    for (const p of S.placements) {
+      if (p.slot_id === s.id && p.cell_code && map.has(p.cell_code)) {
+        p.cell_code = map.get(p.cell_code);
+      }
+    }
+  }
+}
+registries.dialogs.add(
+  "addr.applySite",
+  async ({ vals, renumber }, { adapter }) => {
+    const prev = { addr: S.site.addr, depth_mode: S.site.depth_mode, loc_tree: S.site.loc_tree };
+    try {
+      const old = sceneCodes();
+      Object.assign(S.site, vals);
+      const res = (adapter.saveAddr ? await adapter.saveAddr(vals, { renumber }) : await adapter.saveSite(vals)) || {};
+      if (adapter.serverRenumber || res.reload) {
+        await E.flushNow();
+        await E.reload();
+      } else {
+        remapCodes(old, sceneCodes());
+        E.commit({});
+      }
+      return { ok: true, pinned: res.pinned || 0 };
+    } catch (e) {
+      Object.assign(S.site, prev);
+      toast(e.message || "Не вдалося застосувати адресацію.", "err");
+      return { ok: false };
+    }
+  },
+  { force: true }
+);
+registries.dialogs.add(
+  "addr.applySlot",
+  async ({ id, addr, depth_mode: depthMode }, { adapter }) => {
+    const rec = S.sIdx.get(id);
+    if (!rec) {
+      return { ok: false };
+    }
+    const old = sceneCodes();
+    rec.addr = hasKeys(addr) ? addr : null;
+    rec.depth_mode = depthMode || null;
+    if (adapter.serverRenumber) {
+      E.commit({});
+      await E.flushNow();
+      await E.reload();
+    } else {
+      remapCodes(old, sceneCodes());
+      E.commit({});
+      E.renderRight();
+    }
+    return { ok: true };
+  },
+  { force: true }
+);
+var origAddSlotAt = E.addSlotAt;
+if (origAddSlotAt && !origAddSlotAt.s1) {
+  E.addSlotAt = function addSlotAtPinned(spec, x, y) {
+    const before = new Set(S.slots.map((s) => s.id));
+    origAddSlotAt.call(this, spec, x, y);
+    let changed = false;
+    for (const s of S.slots.filter((x2) => !before.has(x2.id))) {
+      if (spec.type_id != null) {
+        s.type_id = spec.type_id;
+        changed = true;
+      }
+      if (anyAddressing() && isRowSlot(s) && !safeNormalize(s.addr).row_no) {
+        const number = rowNumberOf(s);
+        if (number) {
+          s.addr = { ...safeNormalize(s.addr), row_no: number };
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      E.commit({});
+    }
+  };
+  E.addSlotAt.s1 = true;
+}
+
+// core/constructor/library.js
+var EMPTY = () => ({ types: [], presets: [] });
+function libraryState() {
+  if (!S.site) {
+    return EMPTY();
+  }
+  if (!S.site.library) {
+    Object.defineProperty(S.site, "library", { value: EMPTY(), writable: true, configurable: true, enumerable: false });
+  }
+  return S.site.library;
+}
+var canWriteLibrary = () => S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length > 0);
+var canDeleteLibrary = () => S.app.mode === "edit" && !!S.rights.is_manager;
+async function call(adapter, req) {
+  if (adapter && typeof adapter.library === "function") {
+    return await adapter.library(req);
+  }
+  return null;
+}
+var upsert = (list, rec) => {
+  const i = list.findIndex((x) => String(x.id) === String(rec.id));
+  if (i >= 0) {
+    list[i] = rec;
+  } else {
+    list.push(rec);
+  }
+};
+async function refreshLibrary(adapter) {
+  const res = await call(adapter, { op: "list" });
+  const lib4 = libraryState();
+  if (res) {
+    lib4.types = res.types || [];
+    lib4.presets = res.presets || [];
+  }
+  return lib4;
+}
+async function saveRecord(adapter, kind, vals, id = null) {
+  const lib4 = libraryState();
+  const key = kind === "type" ? "types" : "presets";
+  const res = await call(adapter, { op: "save", kind, id, vals });
+  const rec = res ? res.record : { ...vals, id: id ?? "l_" + Math.random().toString(36).slice(2, 10) };
+  upsert(lib4[key], rec);
+  return rec;
+}
+async function deleteRecord(adapter, kind, id) {
+  const lib4 = libraryState();
+  const key = kind === "type" ? "types" : "presets";
+  await call(adapter, { op: "delete", kind, id });
+  lib4[key] = lib4[key].filter((x) => String(x.id) !== String(id));
+}
+
+// core/constructor/types_data.js
+var GROUPS = {
+  rack: "Стелажні",
+  floor: "Напільні",
+  special: "Спеціальні",
+  zone: "Буферні та технологічні зони",
+  mobile: "Мобільні носії"
+};
+var RELEVANCE_MARK = { 2: "●", 1: "○", 0: "—" };
+var RELEVANCE_LABEL = { 2: "є на меблевій фабриці", 1: "буває", 0: "немає" };
+var rack2 = (over = {}) => ({ bays: 6, levels: 4, bay_width: 2.7, depth: 1.1, level_height: 1.5, positions_per_bay: 3, max_load_kg: 1e3, ...over });
+var shelf = (over = {}) => ({ sections: 4, shelves: 5, cell_w: 0.9, cell_d: 0.4, cell_h: 0.4, ...over });
+var cant = (over = {}) => ({ arms: 4, levels: 3, arm_length: 1, length: 6, level_height: 1.2, max_load_kg: 500, ...over });
+var stack2 = (over = {}) => ({ rows: 2, cols: 4, cell_l: 1.2, cell_w: 0.8, max_height: 1.5, ...over });
+var spot = (over = {}) => ({ length: 4, width: 3, height: 0.1, ...over });
+var ROWS = [
+  ["R01", "Фронтальний палетний стелаж", "rack", "pallet_rack", "", 2, "pallet_cell", rack2(), "Класичний палетний стелаж: кожен проліт × ярус — комірка на кілька палет."],
+  ["R02", "Стелаж подвійної глибини (double-deep)", "rack", "pallet_rack", "", 1, "pallet_cell", rack2({ deep: 2 }), "Палети ставляться у два ряди в глибину; доступ лише до крайнього."],
+  ["R03", "Стелаж для вузьких проходів (VNA)", "rack", "pallet_rack", "", 1, "pallet_cell", rack2({ levels: 8, level_height: 1.6 }), "Високий стелаж із вузьким проходом для висотного штабелера."],
+  ["R04", "Заїзний стелаж (drive-in)", "rack", "pallet_rack", "", 0, "pallet_cell", rack2({ deep: 4, levels: 3, positions_per_bay: 1 }), "Навантажувач заїжджає всередину; багато палет в глибину."],
+  ["R05", "Гравітаційний стелаж", "rack", "pallet_rack", "", 0, "pallet_cell", rack2({ deep: 5, levels: 3, slope: 3 }), "Палети котяться по похилих роликах до виходу (FIFO)."],
+  ["R06", "Flow-стелаж (роликовий)", "rack", "shelf", "", 1, "bin", shelf({ sections: 4, shelves: 4, cell_w: 1, cell_d: 2, cell_h: 0.5, slope: 4 }), "Короби котяться по похилих роликах до зони комплектації."],
+  ["R07", "Стелаж push-back", "rack", "pallet_rack", "", 1, "pallet_cell", rack2({ deep: 3, levels: 4, slope: 5 }), "Палети штовхають одна одну по похилих візках (LIFO)."],
+  ["R08", "Мобільний стелаж (на рейках)", "rack", "pallet_rack", "", 0, "pallet_cell", rack2({ double_sided: true, gap_y: 0 }), "Блоки стелажів розсуваються по рейках; один проход на всі."],
+  ["R09", "Шаттл-стелаж", "rack", "pallet_rack", "", 0, "pallet_cell", rack2({ deep: 6, levels: 5, positions_per_bay: 1 }), "Глибокі канали, у яких палети возить шаттл."],
+  ["R10", "Консольний стелаж", "rack", "cantilever", "", 2, "shelf", cant(), "Довгомірні вантажі (плити, профіль, труби) на консолях."],
+  ["R11", "Полицевий стелаж", "rack", "shelf", "", 2, "shelf", shelf({ cell_w: 1, cell_d: 0.5, cell_h: 0.5, loc_kind: "shelf" }), "Вантажі без палет на полицях."],
+  ["R12", "Мезонін (антресоль)", "rack", "shelf", "", 1, "shelf", shelf({ shelves: 3, cell_w: 1.2, cell_d: 0.6, cell_h: 0.6, loc_kind: "shelf" }), "Другий поверх; відмітку задає шар (CD-04)."],
+  ["R13", "Комірковий стелаж / біни (фурнітура)", "rack", "shelf", "", 2, "bin", shelf({ sections: 6, shelves: 6, cell_w: 0.4, cell_d: 0.4, cell_h: 0.25 }), "Дрібні складові (фурнітура, кріплення) у комірках."],
+  ["R14", "Вертикальна карусель", "rack", "shelf", "cylinder", 0, "bin", shelf({ sections: 1, shelves: 12, cell_w: 1.6, cell_d: 1, cell_h: 0.3 }), "Автоматична карусель; параметри автоматики не моделюються."],
+  ["R15", "Вертикальний ліфтовий модуль (VLM)", "rack", "shelf", "cabinet", 0, "bin", shelf({ sections: 1, shelves: 20, cell_w: 1.5, cell_d: 0.8, cell_h: 0.2 }), "Автоматична шафа з лотками; параметри автоматики не моделюються."],
+  ["R16", "Горизонтальна карусель", "rack", "shelf", "cylinder", 0, "bin", shelf({ sections: 6, shelves: 3, cell_w: 0.8, cell_d: 0.6, cell_h: 0.5 }), "Горизонтальна карусель; параметри автоматики не моделюються."],
+  ["R17", "Стільниковий стелаж", "rack", "shelf", "", 0, "shelf", shelf({ sections: 4, shelves: 6, cell_w: 0.8, cell_d: 2, cell_h: 0.4 }), "Глибокі осередки для довгомірних (труби, прути, профіль)."],
+  ["R18", "A-frame", "rack", "shelf", "", 0, "bin", shelf({ sections: 10, shelves: 2, cell_w: 0.3, cell_d: 0.6, cell_h: 0.8 }), "Модуль швидкого комплектування малих складових."],
+  ["R19", "Консольний стелаж для рулонів", "rack", "cantilever", "roll_rack", 1, "shelf", cant({ arms: 6, levels: 2, arm_length: 1.2, level_height: 1.4 }), "Рулони (тканина, плівка, шпон) на консолях-жолобах."],
+  ["R20", "Вішалки (підвісне зберігання)", "rack", "shelf", "", 0, "shelf", shelf({ sections: 4, shelves: 2, cell_w: 1.2, cell_d: 0.6, cell_h: 1.6, loc_kind: "shelf" }), "Штанги для підвісних виробів."],
+  ["FL1", "Штабель", "floor", "floor_stack", "stack", 2, "stack", stack2(), "Плити й піддони штабелем на підлозі."],
+  ["FL2", "Зона на підлозі", "floor", "floor_spot", "zone", 2, "area", spot({ length: 4, width: 3 }), "Розмічений прямокутник на підлозі — одна локація."],
+  ["FL3", "Блочне зберігання", "floor", "floor_stack", "stack", 1, "stack", stack2({ rows: 3, cols: 5, max_height: 3 }), "Щільні блоки штабелів без проходів між ними."],
+  ["FL4", "Розмітка палетомісць", "floor", "floor_stack", "zone", 1, "area", stack2({ rows: 2, cols: 6, max_height: 1.8, loc_kind: "area" }), "Палетомісця, розмічені на підлозі."],
+  ["FL5", "Штабель у стоякових піддонах", "floor", "floor_stack", "stack", 0, "stack", stack2({ rows: 2, cols: 4, max_height: 4 }), "Високий штабель у піддонах зі стійками."],
+  ["SP1", "Клітка", "special", "floor_spot", "fence", 1, "area", spot({ length: 3, width: 3, height: 2.4 }), "Огороджена зона для цінних і режимних вантажів."],
+  ["SP2", "Холодильна камера", "special", "floor_spot", "fence", 0, "area", spot({ length: 4, width: 3, height: 2.6 }), "Охолоджуване приміщення (температуру задає зона)."],
+  ["SP3", "Морозильна камера", "special", "floor_spot", "fence", 0, "area", spot({ length: 4, width: 3, height: 2.6 }), "Приміщення для глибокого заморожування."],
+  ["SP4", "Склад ЛФМ (лакофарбових матеріалів)", "special", "floor_spot", "fence", 2, "area", spot({ length: 4, width: 3, height: 2.6 }), "Пожежонебезпечні матеріали: лаки, фарби, розчинники, клеї."],
+  ["SP5", "Склад газових балонів", "special", "floor_spot", "fence", 0, "area", spot({ length: 3, width: 2, height: 2.2 }), "Огороджена зона для балонів зі стиснутим газом."],
+  ["SP6", "Бункер", "special", "floor_spot", "cylinder", 1, "area", spot({ length: 2.5, width: 2.5, height: 4 }), "Сипкі матеріали (тирса, стружка, гранули)."],
+  ["SP7", "Ємність (резервуар)", "special", "floor_spot", "cylinder", 1, "area", spot({ length: 2, width: 2, height: 3 }), "Рідини: клей, розчинники, пально-мастильні матеріали."],
+  ["SP8", "Інструментальна", "special", "floor_spot", "cabinet", 2, "area", spot({ length: 4, width: 3, height: 2.4 }), "Зберігання й видача інструменту та оснастки."],
+  ["BF01", "Зона приймання", "zone", "floor_spot", "zone", 2, "area", spot({ length: 6, width: 4 }), "Буфер розвантаження й первинного розбору."],
+  ["BF02", "Зона відвантаження", "zone", "floor_spot", "zone", 2, "area", spot({ length: 6, width: 4 }), "Буфер готових до відвантаження вантажів."],
+  ["BF03", "Ворота / док", "zone", null, "gate", 2, null, { width: 3.5, height: 4 }, "Об'єкт будівлі (layer.items), пов'язаний із локацією виду «док»."],
+  ["BF04", "Буфер перед виробництвом", "zone", "floor_spot", "zone", 2, "area", spot({ length: 5, width: 3 }), "Матеріали, подані до дільниці."],
+  ["BF05", "Зона комплектації", "zone", "floor_spot", "zone", 2, "area", spot({ length: 5, width: 3 }), "Збір комплектів і замовлень."],
+  ["BF06", "Зона вхідного контролю (QC)", "zone", "floor_spot", "zone", 2, "area", spot({ length: 4, width: 3 }), "Перевірка якості до розміщення."],
+  ["BF07", "Карантин", "zone", "floor_spot", "zone", 1, "area", spot({ length: 3, width: 3 }), "Вантажі до рішення щодо якості."],
+  ["BF08", "Зона браку", "zone", "floor_spot", "zone", 1, "area", spot({ length: 3, width: 2 }), "Забракована продукція й матеріали."],
+  ["BF09", "Зона повернень", "zone", "floor_spot", "zone", 1, "area", spot({ length: 3, width: 2 }), "Повернення від клієнтів і з виробництва."],
+  ["BF10", "Зона пакування", "zone", "floor_spot", "zone", 1, "area", spot({ length: 5, width: 3 }), "Пакування готових виробів."],
+  ["BF11", "Зона розпакування / сортування", "zone", "floor_spot", "zone", 1, "area", spot({ length: 4, width: 3 }), "Розпакування й сортування вхідних поставок."],
+  ["BF12", "Транзитна зона (cross-docking)", "zone", "floor_spot", "zone", 0, "area", spot({ length: 6, width: 3 }), "Вантаж проходить без розміщення на зберігання."],
+  ["MB1", "Візок", "mobile", "floor_spot", "mobile", 2, "kit", spot({ length: 1.2, width: 0.8, height: 1 }), "Візок для комплектів і напівфабрикатів."],
+  ["MB2", "Роллконтейнер", "mobile", "floor_spot", "mobile", 1, "kit", spot({ length: 0.8, width: 0.7, height: 1.7 }), "Сітчастий контейнер на колесах."],
+  ["MB3", "Касета", "mobile", "floor_spot", "mobile", 1, "kit", spot({ length: 1.2, width: 0.6, height: 1.2 }), "Касета для плит і деталей на колесах."],
+  ["MB4", "Gitterbox", "mobile", "floor_spot", "mobile", 1, "kit", spot({ length: 1.2, width: 0.8, height: 0.97 }), "Сітчастий ящик-піддон, що штабелюється."],
+  ["MB5", "Етажерка комплекту", "mobile", "floor_spot", "mobile", 2, "kit", spot({ length: 0.8, width: 0.6, height: 1.6 }), "Багатополична етажерка для комплекту деталей."]
+];
+var CATALOG = ROWS.map(([ref2, name, group, template, shape, relevance, locKind, params, description], i) => ({
+  id: ref2.toLowerCase(),
+  code: ref2.toLowerCase(),
+  ref: ref2,
+  name,
+  description,
+  group,
+  template,
+  shape,
+  params,
+  relevance,
+  loc_kind: locKind,
+  is_custom: false,
+  company_id: null,
+  sequence: (i + 1) * 10
+}));
+function allTypes(lib4) {
+  const server = lib4 && lib4.types || [];
+  const codes = new Set(server.map((t2) => t2.code));
+  return [...server, ...CATALOG.filter((t2) => !codes.has(t2.code))];
+}
+function typeOf(typeId, lib4) {
+  if (typeId == null || typeId === "") {
+    return null;
+  }
+  return allTypes(lib4).find((t2) => String(t2.id) === String(typeId) || t2.code === typeId) || null;
+}
+function startParams(type) {
+  const p = { ...type.params || {} };
+  if (type.shape && type.template && SLOT_TEMPLATES[type.template]) {
+    p.shape = type.shape;
+  }
+  if (type.loc_kind && SLOT_TEMPLATES[type.template]?.choices?.loc_kind && LOC_KINDS.includes(type.loc_kind)) {
+    const allowed = SLOT_TEMPLATES[type.template].choices.loc_kind[0];
+    if (allowed.includes(type.loc_kind) && p.loc_kind == null) {
+      p.loc_kind = type.loc_kind;
+    }
+  }
+  return p;
+}
+function filterTypes(types2, { q = "", group = "", minRelevance = 0 } = {}) {
+  const needle = q.trim().toLowerCase();
+  return types2.filter(
+    (t2) => (!group || t2.group === group) && t2.relevance >= minRelevance && (!needle || [t2.name, t2.ref, t2.code, t2.description].some((x) => (x || "").toLowerCase().includes(needle)))
+  );
+}
+function customCopy(type, name) {
+  const code = "c_" + newUid().slice(0, 10);
+  return { ...JSON.parse(JSON.stringify(type)), id: code, code, ref: null, name: name || `${type.name} (копія)`, is_custom: true, relevance: type.relevance };
+}
+var isBuildingType = (t2) => !t2.template;
+
+// core/constructor/types_ui.js
+var KINDS_LABEL = { stack: "Стос", area: "Майданчик", kit: "Візок / етажерка", bin: "Комірка (bin)", shelf: "Полиця", pallet_cell: "Комірка палети" };
+var PLACEABLE = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot"];
+var SIZE_KEYS = {
+  pallet_rack: ["bay_width", "depth", "level_height"],
+  shelf: ["cell_w", "cell_d", "cell_h"],
+  cantilever: ["arm_length", "level_height"],
+  floor_stack: ["cell_l", "cell_w", "max_height"],
+  floor_spot: ["length", "width", "height"]
+};
+var PARAM_UI = {
+  bay_width: "Ширина секції",
+  depth: "Глибина секції",
+  level_height: "Висота ярусу",
+  cell_w: "Ширина комірки",
+  cell_d: "Глибина комірки",
+  cell_h: "Висота комірки",
+  arm_length: "Виліт консолі",
+  cell_l: "Довжина місця",
+  max_height: "Макс. висота",
+  length: "Довжина",
+  width: "Ширина",
+  height: "Висота",
+  deep: "Глибина в палетах",
+  bottom_on_floor: "Нижній ярус на підлозі",
+  double_sided: "Двосторонній ряд",
+  gap_x: "Зазор між секціями",
+  gap_y: "Зазор між сторонами",
+  beam_th: "Товщина балки",
+  slope: "Ухил, °",
+  cells_per_level: "Комірок на ярусі",
+  level_heights: "Висоти ярусів",
+  shape: "Форма 3D"
+};
+var lib = () => libraryState();
+var types = () => allTypes(lib());
+var layerAllows = (tpl) => {
+  const ly = layerOf(S.ui.layer);
+  return !!ly && (ly.slot_types || []).includes(tpl);
+};
+function optFields(tpl, params, o) {
+  const spec = SLOT_TEMPLATES[tpl];
+  if (!spec) {
+    return null;
+  }
+  const wrap = (k, el) => h("div", { "data-opt": k }, el);
+  const cells = [];
+  for (const [key, [min, max, def, type]] of Object.entries(spec.opt || {})) {
+    const label2 = PARAM_UI[key] || key;
+    const commit2 = () => o.onChange && o.onChange();
+    if (type === "bool") {
+      const val = params[key] ?? def;
+      cells.push(wrap(key, h("label", { class: "frow", style: { gap: "6px" } }, h("input", { type: "checkbox", checked: !!val, disabled: o.dis, "data-f": "p." + key, onchange: (e) => {
+        o.begin && o.begin();
+        params[key] = e.target.checked;
+        commit2();
+        o.end && o.end();
+      } }), label2)));
+    } else if (type === "list") {
+      const val = params[key] ? params[key].join(", ") : "";
+      cells.push(wrap(key, fld(label2 + ", м", textInput({ value: val, dis: o.dis, label: label2, f: "p." + key, begin: o.begin, end: o.end, set: (v) => {
+        const nums = v.split(/[;,\s]+/).map(Number).filter((x) => Number.isFinite(x) && x >= min && x <= max);
+        if (nums.length) {
+          params[key] = nums;
+        } else {
+          delete params[key];
+        }
+        commit2();
+      } }), null, "span2")));
+    } else {
+      cells.push(wrap(key, fld(label2, numInput({ value: params[key] ?? def, dis: o.dis, min, max, step: type === "int" ? 1 : 0.05, int: type === "int", f: "p." + key, label: label2, begin: o.begin, end: o.end, set: (v) => {
+        params[key] = v;
+        commit2();
+      } }))));
+    }
+  }
+  if (spec.optChoices && spec.optChoices.shape) {
+    cells.push(wrap("shape", fld("Форма 3D", selectEl(Object.entries(SHAPE_LABELS), params.shape || "", (v) => {
+      o.begin && o.begin();
+      if (v) {
+        params.shape = v;
+      } else {
+        delete params.shape;
+      }
+      o.onChange && o.onChange();
+      o.end && o.end();
+    }, o.dis, "Форма 3D"))));
+  }
+  return h("div", { class: "grid2", "data-role": "opt-fields" }, cells);
+}
+function nextPrefix(type, usedSet = null) {
+  const base2 = ((type.ref || type.code || "T").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "T").slice(0, 16);
+  const used = usedSet || new Set(S.slots.map((s) => s.code_prefix));
+  let n = 1;
+  while (used.has(`${base2}-${n}`)) {
+    n++;
+  }
+  return `${base2}-${n}`;
+}
+var paramsForType = (type) => ({ ...defaultParams(type.template), ...clone(startParams(type)) });
+function placeTypeOnScene(type, params) {
+  if (isBuildingType(type) || !PLACEABLE.includes(type.template)) {
+    toast("Цей тип — об'єкт будівлі: його додають у режимі «Будівля».", "warn");
+    return false;
+  }
+  if (!layerAllows(type.template)) {
+    toast(`Шар «${(layerOf(S.ui.layer) || {}).name}» не допускає цей тип місця. Змініть «Допустимі типи місць» шару.`, "warn");
+    return false;
+  }
+  (S.ui.projectTypes = S.ui.projectTypes || /* @__PURE__ */ new Set()).add(type.code);
+  E.startPlacing({ kind: "slot", template: type.template, prefix: nextPrefix(type), params: clone(params || paramsForType(type)), type_id: type.id });
+  return true;
+}
+function regionOf(zoneId) {
+  const zone2 = zoneId ? S.sIdx.get(zoneId) : null;
+  const b = S.site.building || { length: 60, width: 30 };
+  return zone2 ? { cx: zone2.x, cy: zone2.y, l: zone2.params.length, w: zone2.params.width, rot: zone2.rotation || 0 } : { cx: b.length / 2, cy: b.width / 2, l: b.length, w: b.width, rot: 0 };
+}
+function layoutInRegion(fp, region, n, { aisle = 0.5, gap = 0.5, step = 0.5 } = {}) {
+  const cos = Math.cos(region.rot * Math.PI / 180);
+  const sin = Math.sin(region.rot * Math.PI / 180);
+  const out = [];
+  let u = -region.l / 2 + 0.5 + fp.l / 2;
+  let v = -region.w / 2 + 0.5 + fp.w / 2;
+  while (out.length < n) {
+    if (u + fp.l / 2 > region.l / 2 - 0.5 + 1e-6) {
+      u = -region.l / 2 + 0.5 + fp.l / 2;
+      v += fp.w + aisle;
+    }
+    if (v + fp.w / 2 > region.w / 2 - 0.5 + 1e-6) {
+      break;
+    }
+    out.push({ x: snapV(region.cx + u * cos - v * sin, step), y: snapV(region.cy + u * sin + v * cos, step), rotation: region.rot });
+    u += fp.l + gap;
+  }
+  return out;
+}
+function addSlots(list) {
+  const ly = layerOf(S.ui.layer);
+  const made = [];
+  for (const spec of list) {
+    const s = {
+      id: newUid(),
+      rid: null,
+      etag: null,
+      layer_id: ly.id,
+      template: spec.template,
+      code_prefix: spec.prefix,
+      x: spec.x,
+      y: spec.y,
+      rotation: spec.rotation || 0,
+      params: clone(spec.params),
+      overrides: {},
+      parent_location_id: null
+    };
+    if (spec.type_id != null) {
+      s.type_id = spec.type_id;
+    }
+    if (spec.addr && Object.keys(spec.addr).length) {
+      s.addr = clone(spec.addr);
+    }
+    const before = S.issues;
+    S.slots.push(s);
+    S.sIdx.set(s.id, s);
+    if (newBlocks(before, runLive(), "s:" + s.id).length) {
+      S.slots.pop();
+      S.sIdx.delete(s.id);
+    } else {
+      made.push(s);
+    }
+  }
+  if (made.length) {
+    S.sel = { kind: "slot", id: made[made.length - 1].id };
+    E.commit({});
+    pinNumbers(made.filter((s) => contextOf(s)));
+  }
+  return made;
+}
+function placeTypeOnPlan(type, params, zoneId, count) {
+  const ly = layerOf(S.ui.layer);
+  if (!ly || !canEditLayer(ly)) {
+    toast("Шар не редагується вами.", "warn");
+    return 0;
+  }
+  if (!layerAllows(type.template)) {
+    toast("Шар не допускає цей тип місця.", "warn");
+    return 0;
+  }
+  const floor = ["floor_spot", "floor_stack"].includes(type.template);
+  const slots = layoutInRegion(footprint(type.template, params), regionOf(zoneId), count, { aisle: floor ? 0.5 : ly.aisle_width || 3, gap: type.template === "floor_spot" ? 0.3 : 0.5, step: ly.grid_step || 0.5 });
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const list = slots.map((pos) => {
+    const prefix = nextPrefix(type, used);
+    used.add(prefix);
+    return { ...pos, template: type.template, params, prefix, type_id: type.id };
+  });
+  const made = addSlots(list);
+  const left = count - made.length;
+  toast(made.length ? `Додано місць: ${made.length}${left ? `; не вмістилось або заблоковано: ${left}` : ""}.` : "Не вдалося додати: у зоні немає вільного місця.", made.length ? "ok" : "warn");
+  return made.length;
+}
+async function openCatalog(adapter, args = {}) {
+  try {
+    await refreshLibrary(adapter);
+  } catch {
+  }
+  const st4 = { q: "", group: "", minRel: 1, sel: args.code || null, params: null, plan: false, zone: "", count: 4 };
+  const body = h("div", { class: "fcol", id: "catalogBody" });
+  const grid = h("div", { id: "catalogGrid", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px", alignContent: "start", overflow: "auto", maxHeight: "60vh", flex: "1 1 60%" } });
+  const detail = h("div", { id: "catalogDetail", class: "fcol", style: { flex: "1 1 40%", minWidth: "260px", overflow: "auto", maxHeight: "60vh" } });
+  const dlg = openDialog({ title: "Каталог типів місць", cls: "wide", body, actions: [{ label: "Закрити", value: "close" }] });
+  const choose = (t2) => {
+    st4.sel = t2.code;
+    st4.params = isBuildingType(t2) ? {} : paramsForType(t2);
+    st4.plan = false;
+    draw3();
+  };
+  const draw3 = () => {
+    const all = types();
+    const list = filterTypes(all, { q: st4.q, group: st4.group, minRelevance: st4.minRel });
+    grid.replaceChildren(
+      ...K(
+        list.length ? null : h("div", { class: "empty", style: { gridColumn: "1 / -1" } }, "Типів за цим фільтром немає."),
+        list.map(
+          (t3) => h(
+            "div",
+            { class: "it" + (t3.code === st4.sel ? " sel" : ""), role: "button", tabindex: 0, "data-type": t3.code, style: { border: "1px solid var(--line)", padding: "6px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "4px", background: t3.code === st4.sel ? "var(--accent-soft)" : "" }, onclick: () => choose(t3), onkeydown: (e) => {
+              if (e.key === "Enter") {
+                choose(t3);
+              }
+            } },
+            h("div", { html: typeSvg(t3, 160, 90), style: { color: "var(--ink2)" } }),
+            h("div", { class: "frow" }, h("b", null, t3.ref || "★"), h("span", { class: "grow" }), h("span", { title: RELEVANCE_LABEL[t3.relevance] }, RELEVANCE_MARK[t3.relevance])),
+            h("div", { class: "small" }, t3.name)
+          )
+        )
+      )
+    );
+    const t2 = st4.sel && all.find((x) => x.code === st4.sel);
+    detail.replaceChildren(...K(t2 ? detailOf(t2) : h("div", { class: "empty" }, "Оберіть тип: праворуч з'являться опис, параметри й дії.")));
+  };
+  function detailOf(t2) {
+    const building = isBuildingType(t2);
+    const dis = false;
+    const fp = !building ? footprint(t2.template, st4.params) : null;
+    const zones = S.slots.filter((s) => s.template === "zone" && s.layer_id === S.ui.layer);
+    const canWrite = canWriteLibrary();
+    return [
+      h("div", { html: typeSvg(t2, 280, 150), style: { color: "var(--ink2)", alignSelf: "center" } }),
+      h("h3", { class: "h3" }, `${t2.ref || "Власний"} · ${t2.name}`),
+      h("div", { class: "frow wrap" }, h("span", { class: "tag" }, GROUPS[t2.group] || t2.group), h("span", { class: "tag" }, building ? "об'єкт будівлі" : SLOT_TEMPLATES[t2.template].label), h("span", { class: "tag" }, `${RELEVANCE_MARK[t2.relevance]} ${RELEVANCE_LABEL[t2.relevance]}`), t2.loc_kind ? h("span", { class: "tag" }, KINDS_LABEL[t2.loc_kind] || t2.loc_kind) : null),
+      h("div", { class: "small", "data-role": "type-desc" }, t2.description || ""),
+      building ? h("div", { class: "note" }, "Ворота й доки — об'єкти будівлі (layer.items): їх додають у режимі «Будівля»; тут — лише довідка.") : K(
+        h("div", { class: "small muted" }, `Габарит: ${fmt(fp.l, 2)} × ${fmt(fp.w, 2)} м`),
+        paramFields(t2.template, st4.params, { dis, onChange: () => {
+          draw22();
+        } }),
+        optFields(t2.template, st4.params, { dis, onChange: () => {
+          draw22();
+        } }),
+        st4.plan ? h(
+          "div",
+          { class: "note", id: "planBox" },
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Зона", selectEl([["", "Вільна частина шару"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st4.zone, (v) => {
+              st4.zone = v;
+            }, false, "Зона")),
+            fld("Кількість", numInput({ value: st4.count, min: 1, max: 200, step: 1, int: true, label: "Кількість", f: "plan-count", set: (v) => {
+              st4.count = v;
+            } }))
+          ),
+          h(
+            "div",
+            { class: "frow", style: { marginTop: "6px" } },
+            h("button", { class: "fbtn primary", type: "button", id: "btnPlanGo", onclick: () => {
+              if (placeTypeOnPlan(t2, st4.params, st4.zone, st4.count)) {
+                dlg.close2("ok");
+              }
+            } }, "Додати"),
+            h("button", { class: "fbtn", type: "button", onclick: () => {
+              st4.plan = false;
+              draw3();
+            } }, "Скасувати")
+          )
+        ) : h(
+          "div",
+          { class: "frow wrap" },
+          h("button", { class: "fbtn primary", type: "button", id: "btnAddToProject", onclick: () => {
+            if (placeTypeOnScene(t2, st4.params)) {
+              dlg.close2("ok");
+            }
+          } }, "Додати в проєкт"),
+          h("button", { class: "fbtn", type: "button", id: "btnAddToPlan", onclick: () => {
+            st4.plan = true;
+            draw3();
+          } }, "Додати на план")
+        )
+      ),
+      h(
+        "div",
+        { class: "frow wrap" },
+        !building && !t2.is_custom ? h("button", { class: "fbtn sm", type: "button", id: "btnToLibrary", disabled: !canWrite, title: canWrite ? "Власна копія типу в бібліотеці (каталог не змінюється)" : "Бібліотеку пише проєктувальник", onclick: () => saveCopy(t2) }, "У бібліотеку") : null,
+        t2.is_custom ? h("button", { class: "fbtn sm danger", type: "button", id: "btnTypeDelete", disabled: !canDeleteLibrary(), title: canDeleteLibrary() ? "" : "Видаляє менеджер", onclick: () => removeType(t2) }, ic("trash"), "Видалити з бібліотеки") : null
+      )
+    ];
+  }
+  const draw22 = () => {
+    const t2 = types().find((x) => x.code === st4.sel);
+    if (t2) {
+      detail.replaceChildren(...K(detailOf(t2)));
+    }
+  };
+  async function saveCopy(t2) {
+    try {
+      const cp = customCopy(t2, st4.params && t2.template ? `${t2.name} (мій)` : null);
+      cp.params = { ...clone(t2.params || {}), ...clone(st4.params || {}) };
+      const rec = await saveRecord(adapter, "type", { code: cp.code, name: cp.name, description: cp.description, group: cp.group, template: cp.template, shape: cp.shape, params: cp.params, relevance: cp.relevance, loc_kind: cp.loc_kind, is_custom: true });
+      toast(`Тип «${rec.name}» збережено в бібліотеці.`);
+      st4.sel = rec.code;
+      draw3();
+    } catch (e) {
+      toast(e.message || "Не вдалося зберегти тип у бібліотеці.", "err");
+    }
+  }
+  async function removeType(t2) {
+    try {
+      await deleteRecord(adapter, "type", t2.id);
+      st4.sel = null;
+      draw3();
+      toast("Тип видалено з бібліотеки.");
+    } catch (e) {
+      toast(e.message || "Не вдалося видалити тип.", "err");
+    }
+  }
+  body.append(
+    ...K(
+      h(
+        "div",
+        { class: "frow wrap" },
+        h("input", { type: "search", placeholder: "Пошук типу…", "aria-label": "Пошук типу", id: "catalogSearch", style: { flex: "1 1 200px" }, oninput: (e) => {
+          st4.q = e.target.value;
+          drawGrid();
+        } }),
+        selectEl([["", "Усі групи"], ...Object.entries(GROUPS)], st4.group, (v) => {
+          st4.group = v;
+          drawGrid();
+        }, false, "Група"),
+        h("label", { class: "frow", style: { gap: "6px" } }, h("input", { type: "checkbox", id: "catalogRel", checked: st4.minRel > 0, onchange: (e) => {
+          st4.minRel = e.target.checked ? 1 : 0;
+          drawGrid();
+        } }), "Лише ті, що є на меблевій фабриці (● ○)")
+      ),
+      h("div", { class: "frow", style: { alignItems: "flex-start", gap: "12px", flexWrap: "wrap" } }, grid, detail)
+    )
+  );
+  const drawGrid = () => {
+    const list = filterTypes(types(), { q: st4.q, group: st4.group, minRelevance: st4.minRel });
+    if (st4.sel && !list.find((t2) => t2.code === st4.sel)) {
+      st4.sel = null;
+    }
+    draw3();
+  };
+  const first = args.code && types().find((t2) => t2.code === args.code);
+  if (first) {
+    choose(first);
+  } else {
+    draw3();
+  }
+  return await new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
+}
+registries.dialogs.add("catalog", (args, { adapter }) => openCatalog(adapter, args || {}), { force: true });
+registries.menu.add("catalog", { area: "more", label: "Каталог типів", icon: "plus", sequence: 30, run: () => E.runDialog("catalog") }, { sequence: 30, force: true });
+function renderTypeBlock(root, { rec }) {
+  if (!rec || ["zone", "machine_spot"].includes(rec.template) || !SLOT_TEMPLATES[rec.template]) {
+    return;
+  }
+  const ly = layerOf(rec.layer_id);
+  const dis = !canEditLayer(ly) || !!rec.locked;
+  const opts2 = types().filter((t2) => t2.template === rec.template);
+  const cur = typeOf(rec.type_id, lib());
+  const ed = { begin: () => E.beginEdit("slot", rec), end: () => E.endEdit() };
+  const note = h("div", { class: "small muted", "data-role": "type-note" });
+  const asTypeBtn = h("button", { class: "fbtn sm", type: "button", id: "btnAsType", onclick: () => asType() }, "Як у типу");
+  const refresh = () => {
+    const cur2 = typeOf(rec.type_id, lib());
+    const diff = cur2 ? Object.entries(startParams(cur2)).filter(([k, v]) => JSON.stringify(rec.params[k] ?? null) !== JSON.stringify(v)).length : 0;
+    note.textContent = cur2 ? `${cur2.description || ""}${diff ? ` · змінено параметрів відносно типу: ${diff}` : " · як у типу"}` : "";
+    asTypeBtn.disabled = dis || !cur2 || !diff;
+  };
+  const live = () => {
+    E.liveEdit();
+    refresh();
+  };
+  const asType = () => {
+    if (!cur) {
+      return;
+    }
+    E.beginEdit("slot", rec);
+    rec.params = { ...defaultParams(rec.template), ...clone(startParams(cur)) };
+    E.liveEdit();
+    E.endEdit();
+    E.renderRight();
+  };
+  refresh();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "typeBlock" },
+        h("h3", null, "Тип"),
+        h(
+          "div",
+          { class: "fcol" },
+          fld("Тип місця", selectEl([["", "— не задано —"], ...opts2.map((t2) => [t2.id, `${t2.ref ? t2.ref + " · " : ""}${t2.name}`])], rec.type_id ?? "", (v) => {
+            E.beginEdit("slot", rec);
+            const picked = opts2.find((t2) => String(t2.id) === v);
+            rec.type_id = picked ? picked.id : null;
+            E.liveEdit();
+            E.endEdit();
+            E.renderRight();
+          }, dis, "Тип місця")),
+          cur ? note : null,
+          cur ? asTypeBtn : null,
+          h("div", { class: "small muted" }, "Конструкція ряду: переозначення параметрів типу для цього ряду"),
+          optFields(rec.template, rec.params, { dis, begin: ed.begin, end: ed.end, onChange: live })
+        )
+      )
+    )
+  );
+}
+registries.panels.add("slot:type", { area: "slot", render: renderTypeBlock }, { sequence: 30, force: true });
+function usedTypes() {
+  const rows = /* @__PURE__ */ new Map();
+  for (const s of S.slots) {
+    if (s.type_id == null) {
+      continue;
+    }
+    const t2 = typeOf(s.type_id, lib());
+    if (t2) {
+      rows.set(t2.code, { type: t2, slots: [...rows.get(t2.code)?.slots || [], s] });
+    }
+  }
+  for (const code of S.ui.projectTypes || []) {
+    const t2 = types().find((x) => x.code === code);
+    if (t2 && !rows.has(code)) {
+      rows.set(code, { type: t2, slots: [] });
+    }
+  }
+  for (const t2 of lib().types.filter((x) => x.is_custom)) {
+    if (!rows.has(t2.code)) {
+      rows.set(t2.code, { type: t2, slots: [] });
+    }
+  }
+  return [...rows.values()];
+}
+function openResize(row) {
+  const t2 = row.type;
+  const keys = SIZE_KEYS[t2.template] || [];
+  const base2 = row.slots[0] ? row.slots[0].params : paramsForType(t2);
+  const vals = Object.fromEntries(keys.map((k) => [k, getp(base2, k) ?? getp(defaultParams(t2.template), k)]));
+  const body = h(
+    "div",
+    { class: "fcol" },
+    h("div", { class: "small muted" }, `Нові розміри застосуються до всіх місць типу «${t2.name}» (${fmtInt(row.slots.length)}); комірки перебудуються.`),
+    h("div", { class: "grid2" }, keys.map((k) => {
+      const [min, max, , kind] = SLOT_TEMPLATES[t2.template].params[k];
+      return fld(PARAM_UI[k] || k, numInput({ value: vals[k], min, max: max ?? 1e3, step: kind === "int" ? 1 : 0.05, label: PARAM_UI[k] || k, f: "size-" + k, set: (v) => {
+        vals[k] = v;
+      } }), "м");
+    }))
+  );
+  openDialog({
+    title: `Розмір типу: ${t2.ref || t2.name}`,
+    cls: "narrow",
+    body,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Застосувати до всіх місць",
+        cls: "primary",
+        id: "btnResizeGo",
+        onClick: () => {
+          for (const s of row.slots) {
+            for (const k of keys) {
+              setp(s.params, k, vals[k]);
+            }
+          }
+          if (!row.slots.length) {
+            t2.params = { ...t2.params || {}, ...vals };
+          }
+          E.commit({});
+          toast(`Перебудовано місць: ${row.slots.length}.`);
+        }
+      }
+    ]
+  });
+}
+function openNewType(adapter) {
+  const draft = { name: "", group: "rack", template: "pallet_rack", shape: "", loc_kind: "", description: "", params: defaultParams("pallet_rack") };
+  const form = h("div", { class: "fcol" });
+  const dlgRef = {};
+  const redraw = () => {
+    form.replaceChildren(
+      ...K(
+        fld("Назва типу", textInput({ value: draft.name, label: "Назва типу", f: "type-name", set: (v) => {
+          draft.name = v;
+        } })),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Група", selectEl(Object.entries(GROUPS), draft.group, (v) => {
+            draft.group = v;
+          }, false, "Група")),
+          fld("Генератор", selectEl(PLACEABLE.map((k) => [k, TPL[k].name]), draft.template, (v) => {
+            draft.template = v;
+            draft.params = defaultParams(v);
+            redraw();
+          }, false, "Генератор"))
+        ),
+        paramFields(draft.template, draft.params, { dis: false, onChange: () => {
+        } }),
+        optFields(draft.template, draft.params, { dis: false, onChange: () => {
+        } }),
+        fld("Опис", textInput({ value: draft.description, label: "Опис", f: "type-desc", set: (v) => {
+          draft.description = v;
+        } }))
+      )
+    );
+  };
+  redraw();
+  dlgRef.dlg = openDialog({
+    title: "Новий тип місця",
+    cls: "narrow",
+    body: form,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Зберегти тип",
+        cls: "primary",
+        id: "btnTypeSave",
+        onClick: async () => {
+          if (!draft.name.trim()) {
+            toast("Вкажіть назву типу.", "warn");
+            return false;
+          }
+          try {
+            const rec = await saveRecord(adapter, "type", { code: "c_" + newUid().slice(0, 10), name: draft.name.trim(), description: draft.description, group: draft.group, template: draft.template, shape: draft.params.shape || "", params: clone(draft.params), relevance: 1, loc_kind: draft.loc_kind || null, is_custom: true });
+            toast(`Тип «${rec.name}» збережено.`);
+            E.renderLeft();
+            return true;
+          } catch (e) {
+            toast(e.message || "Не вдалося зберегти тип.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+}
+registries.dialogs.add("typeNew", (_a, { adapter }) => openNewType(adapter), { force: true });
+registries.dialogs.add("typeResize", ({ code }) => {
+  const row = usedTypes().find((r) => r.type.code === code);
+  if (row) {
+    openResize(row);
+  }
+}, { force: true });
+function renderTypesTab(root) {
+  const rows = usedTypes();
+  const canWrite = canWriteLibrary();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec" },
+        h("h3", null, "Типи місць"),
+        h(
+          "div",
+          { class: "frow wrap" },
+          h("button", { class: "fbtn primary", type: "button", id: "btnOpenCatalog", onclick: () => E.runDialog("catalog") }, "Каталог типів…"),
+          h("button", { class: "fbtn", type: "button", id: "btnNewType", disabled: !canWrite, title: canWrite ? "" : "Типи створює проєктувальник", onclick: () => E.runDialog("typeNew") }, ic("plus"), "Новий тип")
+        ),
+        h("div", { class: "small muted", style: { marginTop: "6px" } }, "Каталог не змінюється: «Додати в проєкт» ставить тип на сцену, «У бібліотеку» робить власну копію.")
+      ),
+      h(
+        "div",
+        { class: "sec", id: "projectTypes" },
+        h("h3", null, `У проєкті · ${rows.length}`),
+        rows.length ? h(
+          "div",
+          { class: "rowlist" },
+          rows.map((r) => h(
+            "div",
+            { class: "it", "data-type": r.type.code },
+            h("span", { class: "t", title: r.type.name }, `${r.type.ref ? r.type.ref + " · " : "★ "}${r.type.name}`),
+            h("span", { class: "tag" }, r.type.is_custom ? "свій" : "каталог"),
+            h("span", { class: "m" }, `${fmtInt(r.slots.length)} міс.`),
+            h("button", { class: "fbtn sm icon", type: "button", title: "Змінити розмір для всіх місць типу", "aria-label": "Змінити розмір типу", disabled: !SIZE_KEYS[r.type.template], onclick: () => E.runDialog("typeResize", { code: r.type.code }) }, "↔")
+          ))
+        ) : h("div", { class: "empty" }, "У проєкті ще немає місць із типом.")
+      )
+    )
+  );
+}
+registries.panels.add("left:types", { area: "left", tab: "types", label: "Типи", render: renderTypesTab }, { sequence: 25, force: true });
+
+// core/constructor/presets.js
+var PRESET_KINDS = { row: "Ряд", section: "Секція", group: "Виділене" };
+var MAX_GROUP = 200;
+var PLACEABLE2 = ["pallet_rack", "cantilever", "shelf", "floor_stack", "floor_spot", "machine_spot"];
+var COUNT_KEY = { pallet_rack: "bays", cantilever: "arms", shelf: "sections", floor_stack: "cols" };
+function specOf(slot, origin = null, lib4 = libraryState()) {
+  const spec = { template: slot.template, params: clone(slot.params || {}), rotation: Math.round(slot.rotation || 0) };
+  const type = typeOf(slot.type_id, lib4);
+  if (type) {
+    spec.type_code = type.code;
+  }
+  if (slot.addr && Object.keys(slot.addr).length) {
+    const { row_no: _pin, ...addr } = slot.addr;
+    if (Object.keys(addr).length) {
+      spec.addr = clone(addr);
+    }
+  }
+  if (origin) {
+    spec.dx = Math.round((slot.x - origin.x) * 1e4) / 1e4;
+    spec.dy = Math.round((slot.y - origin.y) * 1e4) / 1e4;
+    spec.prefix = slot.code_prefix;
+  }
+  return spec;
+}
+function normalizePresetData(kind, data) {
+  if (!PRESET_KINDS[kind]) {
+    throw new Error(`Невідомий вид пресету «${kind}».`);
+  }
+  const one = (spec2) => {
+    if (!spec2 || typeof spec2 !== "object" || !PLACEABLE2.includes(spec2.template)) {
+      throw new Error("Пресет: невідомий або непридатний генератор місця.");
+    }
+    const out = { template: spec2.template, params: normalizeParams(spec2.template, spec2.params), rotation: (Math.round(Number(spec2.rotation) || 0) % 360 + 360) % 360 };
+    for (const k of ["type_code", "prefix"]) {
+      if (spec2[k]) {
+        out[k] = String(spec2[k]).slice(0, 32);
+      }
+    }
+    for (const k of ["dx", "dy"]) {
+      if (spec2[k] != null) {
+        if (!Number.isFinite(Number(spec2[k]))) {
+          throw new Error("Пресет: зсув має бути числом.");
+        }
+        out[k] = Number(spec2[k]);
+      }
+    }
+    if (spec2.addr && typeof spec2.addr === "object") {
+      out.addr = clone(spec2.addr);
+    }
+    return out;
+  };
+  if (kind === "group") {
+    const list = data && data.slots;
+    if (!Array.isArray(list) || !list.length || list.length > MAX_GROUP) {
+      throw new Error(`Пресет «Виділене»: від 1 до ${MAX_GROUP} місць.`);
+    }
+    return { slots: list.map(one) };
+  }
+  const spec = one(data && data.slot);
+  if (kind === "section" && !COUNT_KEY[spec.template]) {
+    throw new Error("Секцією може бути лише стелаж чи штабель.");
+  }
+  return { slot: spec };
+}
+function presetFromSlot(slot, kind, name, lib4 = libraryState()) {
+  const spec = specOf(slot, null, lib4);
+  if (kind === "section") {
+    const key = COUNT_KEY[slot.template];
+    if (!key) {
+      throw new Error("Секцію можна зберегти лише зі стелажа чи штабеля.");
+    }
+    spec.params[key] = 1;
+  }
+  const type = typeOf(slot.type_id, lib4);
+  return { name, kind, type_id: type && typeof type.id === "number" ? type.id : null, data: normalizePresetData(kind, { slot: spec }) };
+}
+function presetFromSlots(slots, name, lib4 = libraryState()) {
+  if (!slots.length) {
+    throw new Error("Немає що зберігати.");
+  }
+  const origin = { x: slots[0].x, y: slots[0].y };
+  return { name, kind: "group", type_id: null, data: normalizePresetData("group", { slots: slots.map((s) => specOf(s, origin, lib4)) }) };
+}
+var typeIdOf = (spec, lib4) => {
+  const t2 = spec.type_code && allTypes(lib4).find((x) => x.code === spec.type_code);
+  return t2 ? t2.id : null;
+};
+function insertSection(preset, row, n = 1) {
+  const spec = preset.data.slot;
+  if (spec.template !== row.template || !COUNT_KEY[row.template]) {
+    throw new Error("Секція пресету не підходить до цього ряду: інший генератор.");
+  }
+  const key = COUNT_KEY[row.template];
+  const add = (spec.params[key] || 1) * n;
+  const next = (row.params[key] ?? normalizeParams(row.template, {})[key]) + add;
+  const max = SLOT_TEMPLATES[row.template].params[key][1];
+  if (next > max) {
+    throw new Error(`Забагато секцій: допустимо до ${max}.`);
+  }
+  for (const [k, v] of Object.entries(spec.params)) {
+    if (k !== key && !["index_digits", "max_load_kg"].includes(k)) {
+      row.params[k] = clone(v);
+    }
+  }
+  row.params[key] = next;
+  return next;
+}
+function plansFromPreset(preset, { zoneId = "", count = 1, lib: lib4 = libraryState(), at = null } = {}) {
+  const ly = layerOf(S.ui.layer);
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const makePrefix = (spec2) => {
+    const type = spec2.type_code && allTypes(lib4).find((t2) => t2.code === spec2.type_code);
+    const base2 = spec2.prefix && !used.has(spec2.prefix) ? spec2.prefix : nextPrefix(type || { ref: spec2.template === "pallet_rack" ? "R" : spec2.template.slice(0, 3) }, used);
+    used.add(base2);
+    return base2;
+  };
+  const common = (spec2) => ({ template: spec2.template, params: clone(spec2.params), rotation: spec2.rotation, prefix: makePrefix(spec2), type_id: typeIdOf(spec2, lib4), addr: spec2.addr });
+  if (preset.kind === "group") {
+    const region = regionOf(zoneId);
+    const origin = at || { x: region.cx, y: region.cy };
+    return preset.data.slots.map((spec2) => ({ ...common(spec2), x: origin.x + (spec2.dx || 0), y: origin.y + (spec2.dy || 0) }));
+  }
+  const spec = preset.data.slot;
+  const spots = layoutInRegion(footprint(spec.template, spec.params), regionOf(zoneId), count, { aisle: ly.aisle_width || 3, gap: 0.5, step: ly.grid_step || 0.5 });
+  return spots.map((pos) => ({ ...common(spec), ...pos, rotation: pos.rotation + spec.rotation }));
+}
+var lib2 = () => libraryState();
+function inZone(z, s) {
+  const a = (z.rotation || 0) * Math.PI / 180;
+  const dx = s.x - z.x;
+  const dy = s.y - z.y;
+  const u = dx * Math.cos(a) + dy * Math.sin(a);
+  const v = -dx * Math.sin(a) + dy * Math.cos(a);
+  return Math.abs(u) <= z.params.length / 2 && Math.abs(v) <= z.params.width / 2;
+}
+function openSave(adapter, { id }) {
+  const slot = S.sIdx.get(id);
+  if (!slot) {
+    return void 0;
+  }
+  const isZone2 = slot.template === "zone";
+  const draft = { name: slot.code_prefix, kind: isZone2 ? "group" : "row" };
+  const kinds = isZone2 ? [["group", "Виділене: зона з вмістом"]] : [["row", "Ряд"], ...COUNT_KEY[slot.template] ? [["section", "Секція"]] : []];
+  const dlg = openDialog({
+    title: "Зберегти як шаблон",
+    cls: "narrow",
+    body: h(
+      "div",
+      { class: "fcol" },
+      fld("Назва шаблону", textInput({ value: draft.name, label: "Назва шаблону", f: "preset-name", set: (v) => {
+        draft.name = v;
+      } })),
+      fld("Що зберегти", selectEl(kinds, draft.kind, (v) => {
+        draft.kind = v;
+      }, false, "Вид шаблону")),
+      h("div", { class: "small muted" }, "Шаблон потрапляє в бібліотеку: його видно в інших проєктах. Тип, яруси, комірки, параметри й поворот зберігаються разом.")
+    ),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Зберегти",
+        cls: "primary",
+        id: "btnPresetSaveGo",
+        onClick: async () => {
+          if (!draft.name.trim()) {
+            toast("Вкажіть назву шаблону.", "warn");
+            return false;
+          }
+          try {
+            const inside = isZone2 ? S.slots.filter((s) => s.id !== slot.id && s.layer_id === slot.layer_id && s.template !== "zone" && inZone(slot, s)) : [];
+            const vals = isZone2 ? presetFromSlots(inside, draft.name.trim()) : presetFromSlot(slot, draft.kind, draft.name.trim());
+            const rec = await saveRecord(adapter, "preset", vals);
+            toast(`Шаблон «${rec.name}» збережено в бібліотеці.`);
+            return true;
+          } catch (e) {
+            toast(e.message || "Не вдалося зберегти шаблон.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+  return new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
+}
+async function openInsert(adapter, { id }) {
+  try {
+    await refreshLibrary(adapter);
+  } catch {
+  }
+  const target = S.sIdx.get(id);
+  const ly = target ? layerOf(target.layer_id) : layerOf(S.ui.layer);
+  if (!ly || !canEditLayer(ly)) {
+    toast("Шар не редагується вами.", "warn");
+    return void 0;
+  }
+  const isZone2 = !!target && target.template === "zone";
+  const fits = (p) => isZone2 ? p.kind === "row" || p.kind === "group" : !!target && p.kind === "section" && p.data.slot.template === target.template;
+  const list = lib2().presets.filter(fits);
+  const draft = { id: list[0] ? list[0].id : null, count: 1 };
+  const listBox = h("div", { class: "rowlist", id: "presetList" });
+  const draw3 = () => {
+    listBox.replaceChildren(
+      ...K(
+        list.length ? list.map((p) => h("div", { class: "it" + (String(p.id) === String(draft.id) ? " sel" : ""), role: "button", tabindex: 0, "data-preset": p.id, onclick: () => {
+          draft.id = p.id;
+          draw3();
+        } }, h("span", { class: "t" }, p.name), h("span", { class: "tag" }, PRESET_KINDS[p.kind] || p.kind))) : h("div", { class: "empty" }, "Підходящих шаблонів у бібліотеці немає.")
+      )
+    );
+  };
+  draw3();
+  const dlg = openDialog({
+    title: "Вставити з шаблону",
+    cls: "narrow",
+    body: h(
+      "div",
+      { class: "fcol" },
+      h("div", { class: "small muted" }, isZone2 ? "Ряд вставляється ×N у зону; «Виділене» — одним блоком у зону." : "Секція додається в кінець вибраного ряду."),
+      listBox,
+      fld("Кількість (рядів чи секцій)", numInput({ value: draft.count, min: 1, max: 100, step: 1, int: true, label: "Кількість", f: "preset-count", set: (v) => {
+        draft.count = v;
+      } }))
+    ),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Вставити",
+        cls: "primary",
+        id: "btnPresetInsertGo",
+        onClick: () => {
+          const preset = list.find((p) => String(p.id) === String(draft.id));
+          if (!preset) {
+            toast("Оберіть шаблон.", "warn");
+            return false;
+          }
+          try {
+            applyPreset(preset, target, draft.count);
+            return true;
+          } catch (e) {
+            toast(e.message || "Не вдалося вставити шаблон.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+  return new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
+}
+function applyPreset(preset, target, count = 1) {
+  const data = { ...preset, data: normalizePresetData(preset.kind, preset.data) };
+  if (preset.kind === "section") {
+    E.beginEdit("slot", target);
+    const n = insertSection(data, target, count);
+    E.liveEdit();
+    E.endEdit();
+    E.renderRight();
+    toast(`Додано секції: тепер ${n}.`);
+    return n;
+  }
+  const made = addSlots(plansFromPreset(data, { zoneId: target && target.template === "zone" ? target.id : "", count }));
+  toast(made.length ? `Вставлено місць: ${fmtInt(made.length)}.` : "Не вдалося вставити: немає вільного місця або заблоковано перевірками.", made.length ? "ok" : "warn");
+  return made.length;
+}
+registries.dialogs.add("presetSave", (args, { adapter }) => openSave(adapter, args), { force: true });
+registries.dialogs.add("presetInsert", (args, { adapter }) => openInsert(adapter, args), { force: true });
+async function openLibrary(adapter) {
+  try {
+    await refreshLibrary(adapter);
+  } catch (e) {
+    toast(e.message || "Не вдалося прочитати бібліотеку.", "warn");
+  }
+  const body = h("div", { class: "fcol", id: "libraryBody" });
+  const guard3 = async (fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      toast(e.message || "Не вдалося виконати дію.", "err");
+    }
+    draw3();
+  };
+  function rename(p) {
+    const draft = { name: p.name };
+    openDialog({
+      title: "Перейменувати шаблон",
+      cls: "narrow",
+      body: fld("Назва", textInput({ value: draft.name, label: "Назва", f: "preset-rename", set: (v) => {
+        draft.name = v;
+      } })),
+      actions: [
+        { label: "Скасувати", value: "no" },
+        { label: "Зберегти", cls: "primary", id: "btnPresetRename", onClick: async () => {
+          if (!draft.name.trim()) {
+            return false;
+          }
+          await guard3(() => saveRecord(adapter, "preset", { name: draft.name.trim() }, p.id));
+          return true;
+        } }
+      ]
+    });
+  }
+  function draw3() {
+    const l = lib2();
+    const canW = canWriteLibrary();
+    const canD = canDeleteLibrary();
+    const customTypes = l.types.filter((t2) => t2.is_custom);
+    body.replaceChildren(
+      ...K(
+        h("h3", { class: "h3" }, `Шаблони · ${l.presets.length}`),
+        l.presets.length ? h(
+          "div",
+          { class: "rowlist", id: "libPresets" },
+          l.presets.map((p) => h(
+            "div",
+            { class: "it", "data-preset": p.id },
+            h("span", { class: "t" }, p.name),
+            h("span", { class: "tag" }, PRESET_KINDS[p.kind] || p.kind),
+            h("button", { class: "fbtn sm icon", type: "button", title: "Перейменувати", "aria-label": "Перейменувати шаблон", disabled: !canW, onclick: () => rename(p) }, "✎"),
+            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити шаблон", disabled: !canD, onclick: () => guard3(() => deleteRecord(adapter, "preset", p.id)) }, ic("trash"))
+          ))
+        ) : h("div", { class: "empty" }, "Шаблонів ще немає: збережіть ряд чи секцію («Зберегти як шаблон» у властивостях місця)."),
+        h("h3", { class: "h3" }, `Власні типи · ${customTypes.length}`),
+        customTypes.length ? h(
+          "div",
+          { class: "rowlist", id: "libTypes" },
+          customTypes.map((t2) => h(
+            "div",
+            { class: "it", "data-type": t2.code },
+            h("span", { class: "t" }, t2.name),
+            h("span", { class: "tag" }, SLOT_TEMPLATES[t2.template] ? SLOT_TEMPLATES[t2.template].label.split(" ")[0] : "тип"),
+            h("button", { class: "fbtn sm icon", type: "button", title: "Відкрити в каталозі", "aria-label": "Відкрити в каталозі", onclick: () => E.runDialog("catalog", { code: t2.code }) }, ic("plus")),
+            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити тип", disabled: !canD, onclick: () => guard3(() => deleteRecord(adapter, "type", t2.id)) }, ic("trash"))
+          ))
+        ) : h("div", { class: "empty" }, "Власних типів немає: «У бібліотеку» в каталозі типів робить копію типу."),
+        h("div", { class: "small muted" }, "Бібліотека спільна для всіх проєктів компанії; правка типу чи шаблону в проєкті бібліотеку не змінює.")
+      )
+    );
+  }
+  draw3();
+  const dlg = openDialog({ title: "Бібліотека", cls: "wide", body, actions: [{ label: "Закрити", value: "close" }] });
+  return new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
+}
+registries.dialogs.add("library", (_a, { adapter }) => openLibrary(adapter), { force: true });
+registries.menu.add("library", { area: "more", label: "Бібліотека", icon: "tag", sequence: 31, run: () => E.runDialog("library") }, { sequence: 31, force: true });
+function renderPresetBlock(root, { rec }) {
+  const zone2 = !!rec && rec.template === "zone";
+  if (!rec || !(zone2 || PLACEABLE2.includes(rec.template)) || rec.template === "machine_spot") {
+    return;
+  }
+  const ly = layerOf(rec.layer_id);
+  const dis = !canEditLayer(ly) || !!rec.locked;
+  const canSave = canWriteLibrary();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "presetBlock" },
+        h("h3", null, "Шаблони"),
+        h(
+          "div",
+          { class: "frow wrap" },
+          h("button", { class: "fbtn sm", type: "button", id: "btnPresetSave", disabled: !canSave, title: canSave ? "" : "Бібліотеку пише проєктувальник", onclick: () => E.runDialog("presetSave", { id: rec.id }) }, zone2 ? "Зберегти вміст зони" : "Зберегти як шаблон"),
+          h("button", { class: "fbtn sm", type: "button", id: "btnPresetInsert", disabled: dis || !zone2 && !COUNT_KEY[rec.template], onclick: () => E.runDialog("presetInsert", { id: rec.id }) }, "Вставити з шаблону…")
+        )
+      )
+    )
+  );
+}
+registries.panels.add("slot:presets", { area: "slot", render: renderPresetBlock }, { sequence: 35, force: true });
+
+// core/constructor/capacity_core.js
+var ZONE_FUNCTIONS = [
+  { key: "receiving", name: "Приймання", color: "#3b82f6" },
+  { key: "quality", name: "Контроль якості", color: "#8b5cf6" },
+  { key: "quarantine", name: "Карантин", color: "#f59e0b" },
+  { key: "storage", name: "Зберігання", color: "#10b981" },
+  { key: "picking", name: "Комплектація", color: "#06b6d4" },
+  { key: "packing", name: "Пакування", color: "#ec4899" },
+  { key: "shipping", name: "Відвантаження", color: "#ef4444" },
+  { key: "scrap", name: "Брак", color: "#6b7280" },
+  { key: "returns", name: "Повернення", color: "#a855f7" },
+  { key: "wip", name: "Буфер виробництва", color: "#84cc16" }
+];
+var ZONE_ATTRS = [
+  { key: "temp", name: "Температурний режим" },
+  { key: "hazmat", name: "Небезпечні вантажі" },
+  { key: "valuable", name: "Цінне" },
+  { key: "long", name: "Довгомірне" }
+];
+var ALLOW_NEW = [
+  ["mixed", "Змішане зберігання"],
+  ["same", "Лише той самий товар"],
+  ["empty", "Лише порожнє місце"]
+];
+var SUBLOCATION = [
+  ["no", "Ні"],
+  ["closest_location", "Місце з категорією зберігання"],
+  ["last_used", "Остання використана"]
+];
+var SUBLOCATION_LABEL = Object.fromEntries(SUBLOCATION);
+var POLICY_LABEL = Object.fromEntries(ALLOW_NEW);
+var cache2 = { loads: {}, limits: {}, fit: {}, codes: {}, demo: false };
+var nameCache = /* @__PURE__ */ new Map();
+var rememberName = (kind, id, name) => id != null && name && nameCache.set(`${kind}:${id}`, name);
+function nameOf(kind, id) {
+  const hit = nameCache.get(`${kind}:${id}`);
+  if (hit) {
+    return hit;
+  }
+  if (kind === "product" && S.site && S.site.rules) {
+    const r = [...S.site.rules.putaway || [], ...S.site.rules.replenish || []].find((x) => x.product_id === id && x.product);
+    if (r) {
+      return r.product;
+    }
+  }
+  return id != null ? `#${id}` : "—";
+}
+function rulesState() {
+  if (!S.site) {
+    return { putaway: [], replenish: [] };
+  }
+  if (!S.site.rules) {
+    S.site.rules = { putaway: [], replenish: [] };
+  }
+  S.site.rules.putaway ||= [];
+  S.site.rules.replenish ||= [];
+  return S.site.rules;
+}
+var newPutawayRule = (o = {}) => ({
+  id: newUid(),
+  product_id: null,
+  category_id: null,
+  package_type_ids: [],
+  in_location_id: null,
+  out_code: "",
+  out_location_id: null,
+  sublocation: "no",
+  storage_category_id: null,
+  sequence: 10,
+  odoo_rule_id: null,
+  deleted: false,
+  ...o
+});
+var newReplenishRule = (o = {}) => ({
+  id: newUid(),
+  product_id: null,
+  cell_code: "",
+  location_id: null,
+  min_qty: 0,
+  max_qty: 0,
+  odoo_orderpoint_id: null,
+  deleted: false,
+  ...o
+});
+function ruleStatus(rule, base2, linkKey) {
+  if (rule.deleted) {
+    return "deleted";
+  }
+  if (!rule[linkKey]) {
+    return "new";
+  }
+  const was = base2 && base2.get(rule.id);
+  return was && was !== ruleSig(rule) ? "changed" : "";
+}
+var STATUS_LABEL = { new: "нове", changed: "змінене", deleted: "буде видалено" };
+var SIG_FIELDS = ["product_id", "category_id", "package_type_ids", "in_location_id", "out_code", "out_location_id", "sublocation", "storage_category_id", "sequence", "cell_code", "location_id", "min_qty", "max_qty"];
+var ruleSig = (r) => JSON.stringify(SIG_FIELDS.map((k) => r[k] === void 0 ? null : r[k]));
+var rulesBase = (list) => new Map(list.map((r) => [r.id, ruleSig(r)]));
+function zonePoly(z) {
+  const l = z.params.length || 1;
+  const w = z.params.width || 1;
+  const a = (z.rotation || 0) * Math.PI / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [[-l / 2, -w / 2], [l / 2, -w / 2], [l / 2, w / 2], [-l / 2, w / 2]].map(([x, y]) => [z.x + x * c - y * s, z.y + x * s + y * c]);
+}
+function zonesOf2(slots = S.slots) {
+  return slots.filter((s) => s.template === "zone").map((zone2) => ({ zone: zone2, poly: zone2.params.polygon || zonePoly(zone2) }));
+}
+var polyArea2 = (poly2) => Math.abs(poly2.reduce((a, [x1, y1], i) => a + (x1 * poly2[(i + 1) % poly2.length][1] - poly2[(i + 1) % poly2.length][0] * y1), 0)) / 2;
+function zoneChainAt(zones, x, y) {
+  return zones.filter(({ poly: poly2 }) => polygonContains(poly2, [x, y])).sort((a, b) => polyArea2(a.poly) - polyArea2(b.poly)).map(({ zone: zone2 }) => zone2);
+}
+function zoneAt(zones, x, y) {
+  return zoneChainAt(zones, x, y)[0] || null;
+}
+function inheritedField(slot, field, zone2) {
+  const has = (v) => v != null && v !== "" && !(Array.isArray(v) && !v.length);
+  if (has(slot[field])) {
+    return { value: slot[field], from: "own" };
+  }
+  for (const z of Array.isArray(zone2) ? zone2 : zone2 ? [zone2] : []) {
+    if (has(z[field])) {
+      return { value: z[field], from: "zone" };
+    }
+  }
+  return { value: null, from: null };
+}
+function cellsAbs(slot, elevation = 0) {
+  if (!SLOT_TEMPLATES[slot.template] || !SLOT_TEMPLATES[slot.template].cells) {
+    return [];
+  }
+  return generateCells(slot.template, slot.code_prefix || "", slot.x, slot.y, slot.rotation || 0, slot.params, slot.overrides || {}, elevation);
+}
+function cellLimit(slot, cell, category) {
+  const ov = (slot.overrides || {})[cell.code] || {};
+  if (ov.max_load_kg != null && ov.max_load_kg > 0) {
+    return { kg: ov.max_load_kg, source: "місце" };
+  }
+  if (cell.max_load_kg > 0) {
+    return { kg: cell.max_load_kg, source: "тип місця" };
+  }
+  if (category && category.max_weight > 0) {
+    return { kg: category.max_weight, source: "категорія" };
+  }
+  return { kg: 0, source: "" };
+}
+function capacitySummary(slots, { loads = null, categories = [], zone: zone2 = null, allSlots = S.slots } = {}) {
+  const zones = zonesOf2(allSlots);
+  const cats = new Map(categories.map((c) => [c.id, c]));
+  const out = { cells: 0, places: 0, area: 0, volume: 0, maxWeight: 0, withCategory: 0, occupied: 0, free: 0, fill: null };
+  for (const slot of slots) {
+    for (const cell of cellsAbs(slot)) {
+      const home = zoneChainAt(zones, cell.x, cell.y);
+      if (zone2 && !home.includes(zone2)) {
+        continue;
+      }
+      const cat = cats.get(inheritedField(slot, "storage_category_id", home).value);
+      out.cells++;
+      out.places += cell.capacity || 0;
+      if ((cell.level || 1) === 1) {
+        out.area += cell.l * cell.w;
+      }
+      out.volume += cell.l * cell.w * cell.h;
+      out.maxWeight += cellLimit(slot, cell, cat).kg;
+      out.withCategory += inheritedField(slot, "storage_category_id", home).value ? 1 : 0;
+      if (loads) {
+        if ((loads[cell.code] || {}).qty > 0) {
+          out.occupied++;
+        } else {
+          out.free++;
+        }
+      }
+    }
+  }
+  if (loads && out.cells) {
+    out.fill = out.occupied / out.cells;
+  }
+  return out;
+}
+var g2 = (v) => String(parseFloat(Number(v).toPrecision(6)));
+var issue2 = (check, severity, layerId, codes, message, slotId) => ({ check, severity, layer_id: layerId, codes, message, keys: slotId ? [`s:${slotId}`] : [], id: `${check}|${codes.join(",")}|${message}` });
+function cellLoadIssues(scene, config, eps = 1e-3, data = cache2) {
+  const out = [];
+  for (const slot of scene.slots.values()) {
+    for (const [code, cell] of scene.slotCells(slot)) {
+      const load = data.loads[code];
+      const limit = data.limits[code] || cell.max_load_kg || 0;
+      if (load && limit > 0 && load.weight_kg > limit + eps) {
+        out.push(issue2("cell_load", config.mode, slot.layer_id, [code], `${code}: вага запасу ${g2(Math.round(load.weight_kg * 100) / 100)} кг перевищує допустимі ${g2(limit)} кг`, slot.id));
+      }
+    }
+  }
+  return out;
+}
+function putawayFitIssues(scene, config, eps = 1e-3, data = cache2, rules = rulesState().putaway) {
+  const out = [];
+  const bySlot = /* @__PURE__ */ new Map();
+  for (const slot of scene.slots.values()) {
+    for (const [code] of scene.slotCells(slot)) {
+      bySlot.set(code, slot);
+    }
+  }
+  for (const rule of rules) {
+    if (rule.deleted) {
+      continue;
+    }
+    for (const { code, reason } of data.fit[rule.id] || []) {
+      const slot = bySlot.get(code);
+      if (slot) {
+        out.push(issue2("putaway_fit", config.mode, slot.layer_id, [code], `Правило «${ruleLabel(rule)}»: не вміститься в ${code} — ${reason}`, slot.id));
+      }
+    }
+  }
+  return out;
+}
+function codeConflictIssues(scene, config, eps = 1e-3, data = cache2) {
+  const out = [];
+  const owner = /* @__PURE__ */ new Map();
+  for (const slot of scene.slots.values()) {
+    for (const [code] of scene.slotCells(slot)) {
+      const st4 = data.codes[code];
+      if (st4 && st4.state === "busy") {
+        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `${code}: ${st4.reason}`, slot.id));
+      }
+      if (owner.has(code) && owner.get(code) !== slot.id) {
+        const first = scene.slots.get(owner.get(code));
+        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `Код ${code} дублюється в місцях ${first.code_prefix} і ${slot.code_prefix}`, slot.id));
+      }
+      owner.set(code, slot.id);
+    }
+  }
+  return out;
+}
+var ruleLabel = (rule) => rule.product_id ? rule.product || nameOf("product", rule.product_id) : rule.category_id ? rule.category || nameOf("category", rule.category_id) : "усі товари";
+function rulesInto(code, slot, rules = rulesState().putaway, zone2 = null) {
+  const cat = inheritedField(slot, "storage_category_id", zone2).value;
+  return rules.filter((r) => !r.deleted && (r.out_code === code || r.sublocation === "closest_location" && r.storage_category_id && r.storage_category_id === cat));
+}
+function rulesIntoSlot(slot, rules = rulesState().putaway, zone2 = null) {
+  const out = [];
+  for (const rule of rules) {
+    if (rule.deleted) {
+      continue;
+    }
+    const codes = cellsAbs(slot).map((c) => c.code).filter((code) => rulesInto(code, slot, [rule], zone2).length);
+    if (codes.length) {
+      out.push({ rule, codes });
+    }
+  }
+  return out;
+}
+registries.checks.add("cell_load", { run: (scene, config, eps) => cellLoadIssues(scene, config, eps), label: "Вага запасу в комірці" }, { sequence: 80, force: true });
+registries.checks.add("putaway_fit", { run: (scene, config, eps) => putawayFitIssues(scene, config, eps), label: "Правило розміщення: вміститься" }, { sequence: 90, force: true });
+registries.checks.add("code_conflict", { run: (scene, config, eps) => codeConflictIssues(scene, config, eps), label: "Конфлікт кодів і штрихкодів" }, { sequence: 95, force: true });
+var EXTRA_CHECKS = [
+  { id: "cell_load", name: "Вага запасу в комірці", hint: "Вага залишків із зовнішньої системи проти макс. ваги комірки чи категорії зберігання", mode: "warn" },
+  { id: "putaway_fit", name: "Правило розміщення: вміститься", hint: "Вага/об'єм товару й габарити упаковки проти габаритів і макс. ваги комірки-цілі", mode: "warn" },
+  { id: "code_conflict", name: "Конфлікт кодів і штрихкодів", hint: "Код зайнятий у зовнішній системі (інший склад, архів, інша компанія) або дублюється в чернетці", mode: "warn" }
+];
+var HIGHLIGHT = { target: "#2563eb", match: "#f59e0b" };
+function highlightCodes(rule) {
+  const targets = /* @__PURE__ */ new Set();
+  const matches = /* @__PURE__ */ new Set();
+  if (!rule) {
+    return { targets, matches };
+  }
+  if (rule.out_code) {
+    targets.add(rule.out_code);
+  }
+  for (const slot of S.slots) {
+    for (const cell of cellsAbs(slot)) {
+      if (rule.sublocation === "closest_location" && rule.storage_category_id && inheritedField(slot, "storage_category_id", null).value === rule.storage_category_id) {
+        targets.add(cell.code);
+      }
+      const stock = cache2.loads[cell.code];
+      if (rule.product_id && stock && (stock.product_ids || []).includes(rule.product_id)) {
+        matches.add(cell.code);
+      }
+    }
+  }
+  return { targets, matches };
+}
+registries.metrics.add(
+  "rule_target",
+  {
+    label: "Правило розміщення",
+    color(cell) {
+      const rule = rulesState().putaway.find((r) => r.id === S.ui.ruleHighlight);
+      const { targets, matches } = highlightCodes(rule);
+      return targets.has(cell.code) ? HIGHLIGHT.target : matches.has(cell.code) ? HIGHLIGHT.match : null;
+    },
+    legend: [["Куди веде правило", HIGHLIGHT.target], ["Є відповідний товар", HIGHLIGHT.match]]
+  },
+  { sequence: 80, force: true }
+);
+
+// core/constructor/plan_core.js
+var KIND_LABEL = {
+  create: "Створити",
+  move: "Перенести",
+  rename: "Перейменувати",
+  attrs: "Атрибути",
+  update: "Оновити",
+  archive: "Архівувати"
+};
+var RES_LABEL = {
+  location: "Місце зберігання",
+  equipment: "Обладнання",
+  workcenter: "Робочий центр",
+  replenish: "Правило поповнення",
+  putaway: "Правило розміщення"
+};
+var FLAG_LABEL = {
+  stock: "є залишок",
+  barcode_busy: "штрихкод уже зайнятий",
+  moves: "є незавершені переміщення",
+  requests: "є відкриті заявки",
+  workorders: "є незавершені завдання",
+  target: "ціль не знайдено",
+  warehouse: "поза складом"
+};
+var OP_LABEL = { create: "створено", move: "переміщено", rename: "перейменовано", attrs: "змінено атрибути", archive: "архівовано" };
+var VIEWS = [
+  { id: "all", label: "Усе", test: () => true },
+  { id: "create", label: "Створити", test: (l) => l.kind === "create" && !isRule(l) },
+  { id: "move", label: "Перенести", test: (l) => l.kind === "move" },
+  { id: "rename", label: "Перейменувати", test: (l) => l.kind === "rename" },
+  { id: "attrs", label: "Атрибути", test: (l) => (l.kind === "attrs" || l.kind === "update") && !isRule(l) },
+  { id: "archive", label: "Архів", test: (l) => l.kind === "archive" && !isRule(l) },
+  { id: "rules", label: "Правила", test: (l) => isRule(l) },
+  { id: "blocked", label: "Застосувати не можна", test: (l) => !!l.blocked }
+];
+var isRule = (l) => l.res === "replenish" || l.res === "putaway";
+function viewCounts(lines) {
+  return Object.fromEntries(VIEWS.map((v) => [v.id, lines.filter((l) => v.test(l)).length]));
+}
+function filterLines(lines, viewId, scopeUid = "") {
+  const view2 = VIEWS.find((v) => v.id === viewId) || VIEWS[0];
+  return lines.filter((l) => view2.test(l) && (!scopeUid || inScope(l, scopeUid)));
+}
+var inScope = (l, uid2) => l.scope_uid === uid2 || l.zone_uid === uid2;
+function selectAll(lines, on) {
+  for (const l of lines) {
+    if (l.kind !== "archive" || l.explicit) {
+      l.selected = on && !l.blocked;
+    }
+  }
+}
+function selectScope(lines, uid2) {
+  for (const l of lines) {
+    if (l.kind !== "archive" || l.explicit) {
+      l.selected = !l.blocked && inScope(l, uid2);
+    }
+  }
+}
+function closure(lines) {
+  const parents = new Map(lines.filter((l) => l.kind === "create" || l.kind === "attrs" && l.vals && l.vals.active).map((l) => [`${l.res}|${l.code}`, l]));
+  const skipped = [];
+  const dead = (line2) => {
+    let dep = line2.depends_code;
+    for (let guard3 = 0; dep && guard3 < 20; guard3++) {
+      const parent = parents.get(`location|${dep}`);
+      if (!parent) {
+        return null;
+      }
+      if (parent.blocked) {
+        return dep;
+      }
+      dep = parent.depends_code;
+    }
+    return null;
+  };
+  const chosen = [];
+  for (const l of lines) {
+    if (!l.selected || l.blocked) {
+      continue;
+    }
+    const bad = dead(l);
+    if (bad) {
+      skipped.push({ code: l.code, reason: `Залежність ${bad} заблокована` });
+    } else {
+      chosen.push(l);
+    }
+  }
+  const have = new Set(chosen);
+  const added = [];
+  for (const line2 of [...chosen]) {
+    let dep = line2.depends_code;
+    for (let guard3 = 0; dep && guard3 < 20; guard3++) {
+      const parent = parents.get(`location|${dep}`);
+      if (!parent) {
+        break;
+      }
+      if (!have.has(parent)) {
+        have.add(parent);
+        chosen.push(parent);
+        added.push(parent);
+      }
+      dep = parent.depends_code;
+    }
+  }
+  return { chosen, added, skipped };
+}
+function planSummary(lines) {
+  const { chosen } = closure(lines);
+  const n = (test) => chosen.filter(test).length;
+  return {
+    create: n((l) => l.kind === "create" && !isRule(l)),
+    move: n((l) => l.kind === "move"),
+    rename: n((l) => l.kind === "rename"),
+    attrs: n((l) => (l.kind === "attrs" || l.kind === "update") && !isRule(l)),
+    archive: n((l) => l.kind === "archive" && !isRule(l)),
+    rules: n(isRule),
+    blocked: lines.filter((l) => l.blocked).length,
+    selected: chosen.length
+  };
+}
+var IMPORT_HEADER = ["Назва", "Батьківська локація", "Штрихкод", "Код сцени", "Вид", "Місткість", "Категорія зберігання"];
+function planTable(lines, { onlyChanged = false } = {}) {
+  const rows = lines.filter((l) => l.res === "location" && ["create", "rename", "attrs"].includes(l.kind) && (!onlyChanged || l.selected) && !l.blocked).map((l) => [l.vals.name ?? l.name ?? l.code, l.vals.parent_name ?? "", l.vals.barcode ?? l.code, l.vals.td_code ?? l.code, l.vals.td_loc_kind ?? "", l.vals.td_capacity ?? "", l.vals.storage_category_name ?? ""]);
+  return { header: IMPORT_HEADER, rows };
+}
+var csvCell = (v) => {
+  const s = v == null ? "" : String(v);
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+var toCsv = ({ header, rows }) => [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n");
+var flagLabels = (l) => (l.flags || []).map((f) => FLAG_LABEL[f] || f);
+function lineText(l) {
+  if (l.changes) {
+    return l.changes;
+  }
+  return Object.entries(l.vals || {}).map(([k, v]) => `${k}: ${l.before && k in l.before ? l.before[k] : "—"} → ${v}`).join("; ");
+}
+
+// core/constructor/plan_dialog.js
+var MAX_ROWS = 300;
+var ex = (list, f) => list.length ? list.slice(0, 3).map(f).join(", ") + (list.length > 3 ? " … " + f(list[list.length - 1]) : "") : "—";
+var KIND_CLS = { create: "ok", move: "w", rename: "w", attrs: "w", update: "w", archive: "b" };
+function download(name, text, mime) {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1e3);
+}
+async function openPlanDialog({ adapter, onClose } = {}) {
+  adapter ||= E.adapter;
+  let plan;
+  try {
+    plan = await adapter.planPreview();
+  } catch (e) {
+    toast(e.message || "Не вдалося побудувати план публікації.", "err");
+    return void 0;
+  }
+  const { lines } = plan;
+  const st4 = { view: "all", scope: "" };
+  const first = plan.first;
+  const blocks = plan.issues.filter((i) => i.severity === "block");
+  const warns = plan.issues.filter((i) => i.severity === "warn");
+  const note = h("textarea", { placeholder: "Що змінено в цій версії (необов’язково)", "aria-label": "Нотатка" });
+  const copyAck = h("input", { type: "checkbox", "aria-label": "Більше не нагадувати" });
+  const chips = h("div", { class: "frow", style: { flexWrap: "wrap", gap: "6px" } });
+  const table = h("div", { class: "plan-lines", style: { maxHeight: "42vh", overflow: "auto", border: "1px solid var(--line, #ccd)", borderRadius: "6px" } });
+  const sum = h("div", { class: "small muted", "data-role": "plan-sum" });
+  const summaryBox = h("div", { class: "fcol" });
+  let confirmBtn = null;
+  const countOf = (test) => lines.filter(test);
+  const renderSummary = () => {
+    const created = countOf((l) => l.kind === "create" && l.res === "location");
+    const eq = countOf((l) => l.kind === "create" && (l.res === "equipment" || l.res === "workcenter"));
+    const changed = countOf((l) => ["move", "rename", "attrs", "update"].includes(l.kind) && l.res !== "replenish" && l.res !== "putaway");
+    const removed = countOf((l) => l.kind === "archive" && l.res !== "replenish" && l.res !== "putaway");
+    const rules = countOf((l) => l.res === "replenish" || l.res === "putaway");
+    const row = (n, t2, x) => h("div", { class: "sumrow" }, h("div", { class: "n" }, fmtInt(n)), h("div", null, h("div", null, t2), h("div", { class: "x" }, x)));
+    summaryBox.replaceChildren(
+      ...K(
+        h("div", { class: "lbl" }, "Буде створено в Odoo" + (first ? " (перша публікація площадки)" : "")),
+        row(created.length, "місць зберігання (td_code, штрихкод, місткість, категорія)", ex(created, (l) => l.code)),
+        row(eq.length, "одиниць обладнання / робочих центрів", ex(eq, (l) => l.code || l.name)),
+        row(changed.length, "змінено", `перенесень ${countOf((l) => l.kind === "move").length} · перейменувань ${countOf((l) => l.kind === "rename").length} · атрибутів і обладнання ${countOf((l) => l.kind === "attrs" || l.kind === "update" && l.res !== "putaway" && l.res !== "replenish").length}`),
+        row(removed.length, "видалено в чернетці (пропозиції архівації; нічого не видаляється)", `місць ${removed.filter((l) => l.res === "location").length} · обладнання ${removed.filter((l) => l.res !== "location").length}`),
+        rules.length ? row(rules.length, "правил поповнення й розміщення", ex(rules, (l) => l.name)) : null
+      )
+    );
+  };
+  const renderChips2 = () => {
+    const counts = viewCounts(lines);
+    chips.replaceChildren(
+      ...VIEWS.filter((v) => v.id === "all" || counts[v.id]).map(
+        (v) => h("button", { class: "fbtn sm" + (st4.view === v.id ? " primary" : ""), type: "button", "data-view": v.id, "aria-pressed": String(st4.view === v.id), onclick: () => {
+          st4.view = v.id;
+          refresh();
+        } }, `${v.label} · ${fmtInt(counts[v.id])}`)
+      )
+    );
+  };
+  const lineRow = (l) => h(
+    "div",
+    { class: "plan-row", "data-code": l.code, style: { display: "grid", gridTemplateColumns: "28px 110px 150px 1fr 1.4fr", gap: "8px", padding: "3px 8px", alignItems: "center", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: l.blocked ? 0.65 : 1 } },
+    h("input", {
+      type: "checkbox",
+      checked: !!l.selected && !l.blocked,
+      disabled: !!l.blocked,
+      "aria-label": `Застосувати ${l.code}`,
+      onchange: (e) => {
+        l.selected = e.target.checked;
+        refreshSummary();
+      }
+    }),
+    h("span", { class: "fbadge " + (KIND_CLS[l.kind] || "") }, KIND_LABEL[l.kind] || l.kind),
+    h("span", { class: "small" }, RES_LABEL[l.res] || l.res),
+    h("span", { style: { fontFamily: "monospace", overflowWrap: "anywhere" } }, l.code, l.depends_code ? h("span", { class: "small muted" }, ` ← ${l.depends_code}`) : null),
+    h("span", { class: "small" }, lineText(l), l.blocked ? h("span", { class: "fbadge b", style: { marginLeft: "6px" } }, l.blocked_reason || "застосувати не можна") : flagLabels(l).map((f) => h("span", { class: "fbadge w", style: { marginLeft: "6px" } }, f)))
+  );
+  const renderTable = () => {
+    const shown = filterLines(lines, st4.view, st4.scope);
+    table.replaceChildren(
+      ...K(
+        shown.length ? shown.slice(0, MAX_ROWS).map(lineRow) : h("div", { class: "note", style: { margin: "8px" } }, "У цьому виді немає рядків."),
+        shown.length > MAX_ROWS ? h("div", { class: "small muted", style: { padding: "6px 8px" } }, `… ще ${shown.length - MAX_ROWS} (фільтр за зоною чи видом звузить список)`) : null
+      )
+    );
+  };
+  const refreshSummary = () => {
+    const s = planSummary(lines);
+    const { added, skipped } = closure(lines);
+    sum.textContent = `Буде застосовано: ${fmtInt(s.selected)} (створити ${fmtInt(s.create)}, перенести ${fmtInt(s.move)}, перейменувати ${fmtInt(s.rename)}, атрибути ${fmtInt(s.attrs)}, архів ${fmtInt(s.archive)}, правила ${fmtInt(s.rules)})` + (added.length ? ` · батьки додано автоматично: ${added.map((l) => l.code).join(", ")}` : "") + (skipped.length ? ` · пропущено через заблоковану залежність: ${skipped.map((x) => x.code).join(", ")}` : "") + (s.blocked ? ` · застосувати не можна: ${s.blocked}` : "");
+    if (confirmBtn) {
+      confirmBtn.disabled = !!blocks.length || !s.selected && !(plan.draftChanges > 0);
+    }
+  };
+  const refresh = () => {
+    renderChips2();
+    renderTable();
+    refreshSummary();
+  };
+  const scopeSel = plan.scopes && plan.scopes.length ? selectEl([["", "Усі зони й ряди"], ...plan.scopes.map((s) => [s.uid, `${s.name} (${s.n})`])], st4.scope, (v) => {
+    st4.scope = v;
+    refresh();
+  }, false, "Зона або ряд") : null;
+  const toolbar = h(
+    "div",
+    { class: "frow", style: { gap: "6px", flexWrap: "wrap", alignItems: "center" } },
+    scopeSel ? fld("Зона або ряд", scopeSel) : null,
+    scopeSel ? h("button", { class: "fbtn sm", type: "button", id: "planScopeOnly", onclick: () => {
+      if (st4.scope) {
+        selectScope(lines, st4.scope);
+        refresh();
+      }
+    } }, "Лише обране") : null,
+    h("button", { class: "fbtn sm", type: "button", id: "planSelectAll", onclick: () => {
+      selectAll(lines, true);
+      refresh();
+    } }, "Вибрати все"),
+    h("button", { class: "fbtn sm", type: "button", id: "planSelectNone", onclick: () => {
+      selectAll(lines, false);
+      refresh();
+    } }, "Зняти все")
+  );
+  renderSummary();
+  refresh();
+  const nextN = S.versions.reduce((a, v) => Math.max(a, v.n), 0) + 1;
+  const imitation = adapter.kind !== "odoo";
+  return await new Promise((resolve) => {
+    const dlg = openDialog({
+      title: "Публікація версії " + nextN,
+      cls: "wide",
+      body: h(
+        "div",
+        { class: "fcol" },
+        imitation ? h("div", { class: "note" }, "Це імітація: записи в Odoo не створюються. Підтвердження зберігає нову версію макета й оновлює «стан Odoo» прототипу (журнал і відкат — «Журнал публікацій»).") : null,
+        summaryBox,
+        blocks.length ? h("div", { class: "note lock", "data-role": "plan-blocks" }, `Публікацію заборонено: зауваження зі статусом «Заборона» (${blocks.length}): ${blocks.slice(0, 3).map((i) => i.message).join("; ")}${blocks.length > 3 ? " …" : ""}`) : null,
+        warns.length ? h("div", { class: "small muted" }, `Попередження перевірок: ${warns.length}. Публікацію дозволено.`) : null,
+        plan.copyReminder ? h("label", { class: "note", style: { display: "flex", gap: "8px", alignItems: "center" } }, copyAck, "Перше застосування: спершу виконайте його на копії бази Odoo. Більше не нагадувати.") : null,
+        chips,
+        toolbar,
+        table,
+        sum,
+        total0(plan) ? h("div", { class: "note lock" }, "З моменту останньої версії змін немає.") : null,
+        fld("Нотатка до версії", note)
+      ),
+      actions: [
+        { label: "Файл для імпорту (CSV)", id: "planCsv", onClick: () => {
+          download("plan_import.csv", toCsv(planTable(lines, { onlyChanged: true })), "text/csv;charset=utf-8");
+          return false;
+        } },
+        { label: "Скасувати" },
+        {
+          label: "Підтвердити й опублікувати",
+          cls: "primary",
+          id: "planConfirm",
+          onClick: async () => {
+            try {
+              const res = await adapter.planApply({ lines, note: note.value.trim(), copyAck: copyAck.checked });
+              toast(`Версію ${res.version.n} опубліковано` + (imitation ? " (імітація: записи Odoo не створено)." : "."));
+              if (res.skipped && res.skipped.length) {
+                toast(`Пропущено рядків із заблокованою залежністю: ${res.skipped.length}`, "warn");
+              }
+            } catch (e) {
+              toast(e.message || "Публікація не вдалася.", "err");
+              return false;
+            }
+            return void 0;
+          }
+        }
+      ],
+      onClose: async () => {
+        if (onClose) {
+          await onClose();
+        }
+        resolve();
+      }
+    });
+    confirmBtn = dlg.querySelector("#planConfirm");
+    refreshSummary();
+  });
+}
+var total0 = (plan) => !plan.first && !plan.lines.length && !(plan.draftChanges > 0);
+var countText = (c) => ["create", "move", "rename", "attrs", "archive"].filter((k) => c[k]).map((k) => `${OP_LABEL[k]} ${c[k]}`).join(" · ") || "без змін";
+function fmtVal(v) {
+  if (v == null) {
+    return "—";
+  }
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+async function openJournal({ adapter } = {}) {
+  adapter ||= E.adapter;
+  const box = h("div", { class: "fcol", "data-role": "journal" });
+  const opened = /* @__PURE__ */ new Set();
+  const load = async () => {
+    let res;
+    try {
+      res = await adapter.planLog();
+    } catch (e) {
+      box.replaceChildren(h("div", { class: "note lock" }, e.message || "Журнал недоступний."));
+      return;
+    }
+    const rows = [];
+    for (const v of res.versions) {
+      const ops = opened.has(v.n) ? await adapter.planOps(v.id) : null;
+      rows.push(
+        h(
+          "div",
+          { class: "jrow", "data-version": v.n, style: { padding: "8px 0", borderBottom: "1px solid var(--line, #e3e6ee)" } },
+          h(
+            "div",
+            { class: "frow", style: { gap: "8px", alignItems: "center", flexWrap: "wrap" } },
+            h("b", null, "v" + v.n),
+            h("span", { class: "small muted" }, `${fmtDate(v.published_at)} · ${v.by || "—"}`),
+            v.rolled_back ? h("span", { class: "fbadge b" }, "відкочено") : v.ops ? h("span", { class: "fbadge ok" }, `${v.ops} операцій`) : h("span", { class: "fbadge" }, "без операцій в Odoo"),
+            h("span", { style: { flex: 1 } }),
+            v.ops ? h("button", { class: "fbtn sm", type: "button", "data-act": "ops", onclick: async () => {
+              opened.has(v.n) ? opened.delete(v.n) : opened.add(v.n);
+              await load();
+            } }, opened.has(v.n) ? "Сховати операції" : "Операції") : null,
+            canManage() && can("rollback") && !v.rolled_back && v.ops ? h("button", { class: "fbtn sm", type: "button", "data-act": "rollback", disabled: !v.can_rollback, title: v.can_rollback ? "Повернути Odoo до стану перед цією публікацією" : v.reason, onclick: () => rollbackAsk(v) }, "Відкотити") : null
+          ),
+          v.note ? h("div", { class: "small" }, v.note) : null,
+          h("div", { class: "small muted" }, countText(v.counts)),
+          !v.can_rollback && !v.rolled_back && v.ops && v.reason ? h("div", { class: "small", style: { color: "var(--warn, #b45309)" } }, "Відкат недоступний: " + v.reason) : null,
+          v.rolled_back ? h("div", { class: "small muted" }, `Відкотив ${v.rolled_back_by || "—"} · ${fmtDate(v.rolled_back_at)}`) : null,
+          ops ? h(
+            "div",
+            { class: "small", style: { maxHeight: "28vh", overflow: "auto", marginTop: "6px", fontFamily: "monospace" } },
+            ops.slice(0, 300).map((o) => h("div", { style: { opacity: o.rolled_back ? 0.55 : 1 } }, `${o.seq}. ${OP_LABEL[o.op] || o.op} · ${RES_LABEL[o.res] || o.res} · ${o.code}`, o.op !== "create" ? h("span", { class: "muted" }, `  ${fmtVal(o.before)} → ${fmtVal(o.after)}`) : null)),
+            ops.length > 300 ? h("div", { class: "muted" }, `… ще ${ops.length - 300}`) : null
+          ) : null
+        )
+      );
+    }
+    box.replaceChildren(...K(rows.length ? rows : h("div", { class: "note" }, "Публікацій ще не було.")));
+  };
+  const rollbackAsk = async (v) => {
+    const ok = await E.confirmBox({
+      title: "Відкотити публікацію v" + v.n + "?",
+      text: "В Odoo буде повернуто стан до цієї публікації: створене піде в архів, значення полів повернуться, архівне відновиться. Чернетка не змінюється — наступний план знову запропонує зміни.",
+      ok: "Відкотити"
+    });
+    if (!ok) {
+      return;
+    }
+    try {
+      const res = await adapter.rollback(v.id);
+      toast(`Відкочено операцій: ${res.reverted}. Чернетка не змінена.`);
+      await load();
+      if (E.reload) {
+        await E.reload();
+      }
+    } catch (e) {
+      toast(e.message || "Відкат не вдався.", "err");
+    }
+  };
+  await load();
+  return await new Promise(
+    (resolve) => openDialog({ title: "Журнал публікацій", cls: "wide", body: box, actions: [{ label: "Закрити" }], onClose: resolve })
+  );
+}
+registries.dialogs.add("plan", (args, ctx2) => openPlanDialog({ adapter: ctx2?.adapter, ...args || {} }), { force: true });
+registries.dialogs.add("planLog", (args, ctx2) => openJournal({ adapter: ctx2?.adapter }), { force: true });
+registries.menu.add("planLog", { area: "more", label: "Журнал публікацій", icon: "hist", capability: "rollback", sequence: 60, run: () => E.runDialog("planLog") }, { sequence: 60, force: true });
+
+// core/constructor/capacity_ui.js
+var MODE_OPTS2 = [["warn", "Попередження"], ["block", "Заборона"]];
+var lib3 = { loaded: false, loading: null, categories: [], strategies: [], functions: ZONE_FUNCTIONS.map((f) => ({ id: f.key, ...f })), attrs: ZONE_ATTRS.map((a) => ({ id: a.key, ...a })) };
+async function loadLib(force = false) {
+  const adapter = E.adapter;
+  if (!adapter || typeof adapter.categories !== "function" || !can("storage")) {
+    lib3.loaded = true;
+    return lib3;
+  }
+  if (lib3.loaded && !force) {
+    return lib3;
+  }
+  lib3.loading ||= adapter.categories({ op: "list" }).then((res) => {
+    Object.assign(lib3, { categories: res.categories || [], strategies: res.strategies || [], functions: (res.functions || lib3.functions).map((f) => ({ ...f })), attrs: (res.attrs || lib3.attrs).map((a) => ({ ...a })) });
+  }).catch((e) => console.warn("Категорії зберігання недоступні:", e.message || e)).finally(() => {
+    lib3.loaded = true;
+    lib3.loading = null;
+  });
+  await lib3.loading;
+  return lib3;
+}
+function ensureLib() {
+  if (!lib3.loaded && !lib3.loading) {
+    loadLib().then(() => E.renderRight && E.renderRight());
+  }
+}
+var categoryOf = (id) => lib3.categories.find((c) => String(c.id) === String(id)) || null;
+var strategyName = (id) => (lib3.strategies.find((s) => String(s.id) === String(id)) || {}).name || "";
+var functionOf = (id) => lib3.functions.find((f) => String(f.id) === String(id)) || null;
+function rerunLive() {
+  if (!S.site) {
+    return;
+  }
+  S.issues = runLive();
+  E.renderChips && E.renderChips();
+  E.updateVisual && E.updateVisual();
+  E.renderChecksBlock && E.renderChecksBlock();
+}
+var allCodes = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => c.code));
+var sigCodes = "";
+async function refreshCaches(what = ["loads", "fit", "codes"]) {
+  const a = E.adapter;
+  if (!a || !S.site) {
+    return;
+  }
+  try {
+    if (what.includes("loads") && typeof a.stockLoads === "function" && can("storage")) {
+      const r = await a.stockLoads();
+      cache2.loads = r.loads || {};
+      cache2.limits = r.limits || {};
+      cache2.demo = !!r.demo;
+    }
+    if (what.includes("fit") && typeof a.putawayFit === "function" && can("putaway")) {
+      cache2.fit = rulesState().putaway.length ? (await a.putawayFit()).rules || {} : {};
+    }
+    if (what.includes("codes") && typeof a.codesCheck === "function") {
+      const codes = allCodes();
+      const sig = codes.length + ":" + codes.slice(0, 50).join(",") + ":" + codes.slice(-50).join(",");
+      if (sig !== sigCodes) {
+        sigCodes = sig;
+        cache2.codes = {};
+        for (let i = 0; i < codes.length; i += 4e3) {
+          Object.assign(cache2.codes, (await a.codesCheck(codes.slice(i, i + 4e3))).codes || {});
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Кеш перевірок ємності:", e);
+    return;
+  }
+  rerunLive();
+}
+var scheduleCaches = debounce((what) => refreshCaches(what), 900);
+function lazyRefresh() {
+  const on = (k) => !!(S.settings.checks[k] && S.settings.checks[k].enabled);
+  const what = [on("cell_load") ? "loads" : null, on("putaway_fit") ? "fit" : null, on("code_conflict") ? "codes" : null].filter(Boolean);
+  if (S.site && what.length) {
+    scheduleCaches(what);
+  }
+}
+function lookupField({ kind, id, label: label2, placeholder, onPick, dis }) {
+  const adapter = E.adapter;
+  const input = h("input", { type: "text", value: id != null ? nameOf(kind, id) : "", placeholder: placeholder || "Почніть вводити назву", "aria-label": label2, disabled: dis, "data-lookup": kind, autocomplete: "off" });
+  const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "160px", overflow: "auto" } });
+  const search = async () => {
+    if (typeof adapter.lookup !== "function") {
+      return;
+    }
+    const rows = await adapter.lookup(kind, input.value);
+    list.replaceChildren(
+      ...rows.map(
+        (r) => h("button", { class: "fbtn sm", type: "button", style: { textAlign: "left" }, onclick: () => {
+          rememberName(kind, r.id, r.name);
+          input.value = r.name;
+          list.replaceChildren();
+          onPick(r);
+        } }, r.name)
+      )
+    );
+  };
+  const delayed = debounce(search, 250);
+  input.addEventListener("input", () => {
+    if (!input.value.trim()) {
+      list.replaceChildren();
+      onPick(null);
+      return;
+    }
+    delayed();
+  });
+  input.addEventListener("focus", () => !input.value && search());
+  return h("div", { class: "fcol" }, input, list);
+}
+var USAGE_OPTS = [["", "— як в Odoo —"], ["internal", "Внутрішня (зберігання)"], ["view", "Віртуальна (група, без залишків)"]];
+var REPLENISH_OPTS = [["", "— як в Odoo —"], ["1", "Так"], ["0", "Ні"]];
+var flagText = (key, v) => key === "replenish_location" ? v ? "1" : "0" : String(v);
+function flagValue(rec, cells, key) {
+  const seen = new Set(cells.map((c) => {
+    const v = ((rec.overrides || {})[c.code] || {})[key];
+    return v == null ? "" : flagText(key, v);
+  }));
+  return seen.size > 1 ? "~" : [...seen][0] ?? "";
+}
+function setFlag(rec, cells, key, value) {
+  rec.overrides = rec.overrides || {};
+  for (const c of cells) {
+    const o = rec.overrides[c.code] = rec.overrides[c.code] || {};
+    if (value == null) {
+      delete o[key];
+    } else {
+      o[key] = value;
+    }
+    if (!Object.keys(o).length) {
+      delete rec.overrides[c.code];
+    }
+  }
+}
+function renderSlotBlock2(root, { rec }) {
+  if (!rec || rec.template === "machine_spot") {
+    return;
+  }
+  const isZone2 = rec.template === "zone";
+  const cells = isZone2 ? [] : cellsAbs(rec, (layerOf(rec.layer_id) || {}).elevation || 0);
+  if (!isZone2 && !cells.length) {
+    return;
+  }
+  ensureLib();
+  lazyRefresh();
+  const ly = layerOf(rec.layer_id);
+  const dis = !canEditLayer(ly) || !!rec.locked;
+  const zones = zonesOf2();
+  const home = isZone2 ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
+  const cat = inheritedField(rec, "storage_category_id", home);
+  const strat = inheritedField(rec, "removal_strategy_id", home);
+  const edit = (fn2) => (v) => {
+    E.beginEdit("slot", rec);
+    fn2(v);
+    E.liveEdit();
+    E.endEdit();
+  };
+  const catOpts = [["", cat.from === "zone" ? `— як у зони: ${(categoryOf(cat.value) || {}).name || "…"} —` : "— без категорії —"], ...lib3.categories.map((c) => [c.id, c.name])];
+  const stratOpts = [["", strat.from === "zone" ? `— як у зони: ${strategyName(strat.value) || "…"} —` : "— як в Odoo —"], ...lib3.strategies.map((s) => [s.id, s.name])];
+  const conv = (v) => v === "" ? null : isNaN(Number(v)) ? v : Number(v);
+  const fn = functionOf(rec.function_id);
+  const first = cells[0];
+  const info = first ? cellLimit(rec, first, categoryOf(cat.value)) : null;
+  const sumScope = isZone2 ? capacitySummary(S.slots.filter((s) => s !== rec), { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories, zone: rec }) : capacitySummary([rec], { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories });
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "capacityBlock" },
+        h("h3", null, "Зберігання й ємність"),
+        h(
+          "div",
+          { class: "fcol" },
+          isZone2 ? [
+            fld("Функція зони", selectEl([["", "— не задано —"], ...lib3.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", (v) => {
+              edit((x) => {
+                rec.function_id = conv(x);
+                const f = functionOf(rec.function_id);
+                if (f && f.color) {
+                  rec.params.color = f.color;
+                }
+              })(v);
+              E.renderRight();
+            }, dis, "Функція зони")),
+            // колір рамки зони — колір функції
+            fn && fn.color ? h("div", { class: "small", style: { display: "flex", alignItems: "center", gap: "6px" } }, h("span", { style: { width: "14px", height: "14px", background: fn.color, display: "inline-block", borderRadius: "3px" } }), "Колір рамки й підпису зони: " + fn.name) : null,
+            h("div", { class: "lbl" }, "Атрибути зони (лише в проєкті)"),
+            h("div", { class: "checks" }, lib3.attrs.map((a) => {
+              const on = (rec.attr_ids || []).some((x) => String(x) === String(a.id));
+              const cb = h("input", { type: "checkbox", checked: on, disabled: dis, "aria-label": a.name, "data-attr": a.key || a.id });
+              cb.addEventListener("change", () => {
+                edit(() => {
+                  const cur = new Set(rec.attr_ids || []);
+                  cb.checked ? cur.add(a.id) : cur.delete(a.id);
+                  rec.attr_ids = [...cur];
+                })();
+                E.renderRight();
+              });
+              return h("label", null, cb, a.name);
+            })),
+            (rec.attr_ids || []).some((x) => (lib3.attrs.find((a) => String(a.id) === String(x)) || {}).key === "temp" || x === "temp") ? h("div", { class: "grid2" }, fld("Температура від", numInput({ value: rec.temp_min_c ?? 0, dis, step: 1, label: "Температура від", set: (v) => {
+              E.beginEdit("slot", rec);
+              rec.temp_min_c = v;
+              E.liveEdit();
+              E.endEdit();
+            } }), "°C"), fld("до", numInput({ value: rec.temp_max_c ?? 0, dis, step: 1, label: "Температура до", set: (v) => {
+              E.beginEdit("slot", rec);
+              rec.temp_max_c = v;
+              E.liveEdit();
+              E.endEdit();
+            } }), "°C")) : null
+          ] : null,
+          fld("Категорія зберігання", selectEl(catOpts, rec.storage_category_id ?? "", edit((v) => {
+            rec.storage_category_id = conv(v);
+          }), dis || !can("storage"), "Категорія зберігання")),
+          cat.value ? h("div", { class: "small muted" }, categoryLine(categoryOf(cat.value))) : null,
+          fld("Стратегія списання", selectEl(stratOpts, rec.removal_strategy_id ?? "", edit((v) => {
+            rec.removal_strategy_id = conv(v);
+          }), dis || !can("storage"), "Стратегія списання")),
+          isZone2 ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "usage", v || null);
+            }
+          }), dis, "usage"),
+          isZone2 ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => {
+            if (v !== "~") {
+              setFlag(rec, cells, "replenish_location", v === "" ? null : v === "1");
+            }
+          }), dis, "replenish_location"),
+          info ? h("div", { class: "small", "data-role": "cell-limit" }, `Комірка ${first.code}: ${fmt(first.l, 2)}×${fmt(first.w, 2)}×${fmt(first.h, 2)} м · місткість ${fmtInt(first.capacity || 0)} · макс. вага ${info.kg ? fmtInt(info.kg) + " кг (" + info.source + ")" : "не задано"}`) : null,
+          h(
+            "div",
+            { class: "small muted", "data-role": "slot-summary" },
+            `${isZone2 ? "Усередині зони" : "У місці"}: комірок ${fmtInt(sumScope.cells)} · палетомісць ${fmtInt(sumScope.places)} · площа ${fmt(sumScope.area, 1)} м² · об'єм ${fmt(sumScope.volume, 1)} м³ · сума макс. ваги ${fmtInt(sumScope.maxWeight)} кг · з категорією ${fmtInt(sumScope.withCategory)}` + (sumScope.fill != null ? ` · зайнято ${fmtInt(sumScope.occupied)} / вільно ${fmtInt(sumScope.free)} (${fmt(sumScope.fill * 100, 0)}%)${cache2.demo ? " · демо" : ""}` : "")
+          ),
+          !can("storage") ? h("div", { class: "small muted" }, "Категорії й стратегії в цьому хості недоступні.") : null
+        )
+      )
+    )
+  );
+}
+var flagField = (label2, opts2, value, onChange, dis, key) => {
+  const el = selectEl(value === "~" ? [["~", "— різні —"], ...opts2] : opts2, value, onChange, dis, label2);
+  el.dataset.flag = key;
+  return fld(label2, el);
+};
+var categoryLine = (c) => c ? `${c.name}: макс. вага ${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без обмеження"}, ${POLICY_LABEL[c.allow_new_product] || c.allow_new_product}` : "";
+registries.panels.add("slot:capacity", { area: "slot", render: renderSlotBlock2 }, { sequence: 35, force: true });
+function renderSiteBlock2(root) {
+  ensureLib();
+  lazyRefresh();
+  const loads = Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null;
+  const sum = capacitySummary(S.slots, { loads, categories: lib3.categories });
+  const rules = rulesState();
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "siteCapacity" },
+        h("h3", null, "Ємність площадки"),
+        h(
+          "div",
+          { class: "small", "data-role": "site-summary" },
+          `Комірок ${fmtInt(sum.cells)} · палетомісць ${fmtInt(sum.places)} · площа ${fmt(sum.area, 1)} м² · об'єм ${fmt(sum.volume, 1)} м³ · сума макс. ваги ${fmtInt(sum.maxWeight)} кг · з категорією ${fmtInt(sum.withCategory)}` + (sum.fill != null ? ` · зайнято ${fmtInt(sum.occupied)}, вільно ${fmtInt(sum.free)} · заповнення ${fmt(sum.fill * 100, 0)}%${cache2.demo ? " (демо)" : ""}` : "")
+        ),
+        h(
+          "div",
+          { class: "frow", style: { flexWrap: "wrap", gap: "6px", marginTop: "6px" } },
+          can("storage") ? h("button", { class: "fbtn sm", type: "button", id: "btnCategories", onclick: () => E.runDialog("categories") }, "Категорії зберігання…") : null,
+          can("putaway") ? h("button", { class: "fbtn sm", type: "button", id: "btnRules", onclick: () => E.runDialog("rules") }, `Правила розміщення й поповнення (${rules.putaway.filter((r) => !r.deleted).length}/${rules.replenish.filter((r) => !r.deleted).length})…`) : null,
+          E.adapter && E.adapter.kind === "artifact" && typeof E.adapter.stockLoads === "function" ? h("button", { class: "fbtn sm", type: "button", id: "btnDemoStock", onclick: async () => {
+            E.adapter.demoStock = !E.adapter.demoStock;
+            await refreshCaches(["loads"]);
+            E.renderRight();
+          } }, E.adapter.demoStock ? "Сховати демо-залишки" : "Показати демо-залишки") : null,
+          typeof (E.adapter || {}).codesCheck === "function" ? h("button", { class: "fbtn sm", type: "button", id: "btnCheckCodes", title: "Перевірити зайнятість кодів у зовнішній системі", onclick: async () => {
+            sigCodes = "";
+            await refreshCaches(["codes"]);
+            toast("Зайнятість кодів перевірено.");
+          } }, "Перевірити коди") : null
+        )
+      )
+    )
+  );
+}
+registries.panels.add("site:capacity", { area: "site", render: renderSiteBlock2 }, { sequence: 50, force: true });
+function renderChecksConfig(root) {
+  const dis = !canManage();
+  const cfg = S.settings.checks;
+  const save2 = (id) => {
+    const c = cfg[id];
+    const a = E.adapter;
+    if (a.kind === "odoo" && c.id == null && typeof a.queue === "function") {
+      a.queue({ model: "td.check.config", op: "create", uid: id, vals: { check_key: id, enabled: c.enabled, mode: c.mode, params: c.params || {} } });
+      c.id = -1;
+    } else {
+      a.saveCheck(id, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+    }
+    rerunLive();
+    if (c.enabled) {
+      refreshCaches([{ cell_load: "loads", putaway_fit: "fit", code_conflict: "codes" }[id]]);
+    }
+  };
+  const items2 = EXTRA_CHECKS.filter((c) => c.id !== "cell_load" || can("storage")).filter((c) => c.id !== "putaway_fit" || can("putaway"));
+  if (!items2.length) {
+    return;
+  }
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "capChecks" },
+      h("div", { class: "lbl", style: { margin: "6px 0" } }, "Перевірки ємності й правил"),
+      dis ? h("div", { class: "note lock" }, "Налаштування змінює Менеджер.") : null,
+      items2.map((c) => {
+        const cur = cfg[c.id] || { enabled: false, mode: c.mode, params: {}, id: null };
+        return h(
+          "div",
+          { class: "frow", style: { margin: "5px 0" }, title: c.hint },
+          h("input", { type: "checkbox", checked: !!cur.enabled && !!cfg[c.id], disabled: dis, "aria-label": c.name, "data-check": c.id, onchange: (e) => {
+            cfg[c.id] ||= { enabled: false, mode: c.mode, params: {}, id: null };
+            cfg[c.id].enabled = e.target.checked;
+            save2(c.id);
+          } }),
+          h("span", { style: { flex: 1, minWidth: 0 } }, c.name),
+          selectEl(MODE_OPTS2, cur.mode, (v) => {
+            cfg[c.id] ||= { enabled: false, mode: c.mode, params: {}, id: null };
+            cfg[c.id].mode = v;
+            save2(c.id);
+          }, dis, c.name)
+        );
+      })
+    )
+  );
+}
+registries.panels.add("right:capchecks", { area: "right", render: renderChecksConfig }, { sequence: 92, force: true });
+async function openCategories() {
+  const adapter = E.adapter;
+  await loadLib(true);
+  const dis = !canManage();
+  const body = h("div", { class: "fcol", "data-role": "categories" });
+  const draft = { id: null, name: "", max_weight: 0, allow_new_product: "mixed", capacity: [] };
+  const form = h("div", { class: "fcol", style: { borderTop: "1px solid var(--line, #e3e6ee)", paddingTop: "8px", marginTop: "8px" } });
+  const refresh = async () => {
+    await loadLib(true);
+    render2();
+  };
+  const edit = (c) => {
+    Object.assign(draft, c ? { id: c.id, name: c.name, max_weight: c.max_weight, allow_new_product: c.allow_new_product, capacity: (c.capacity || []).map((x) => ({ ...x })) } : { id: null, name: "", max_weight: 0, allow_new_product: "mixed", capacity: [] });
+    renderForm();
+  };
+  const save2 = async () => {
+    try {
+      await adapter.categories({ op: "save", id: draft.id, confirm: true, vals: { name: draft.name, max_weight: draft.max_weight, allow_new_product: draft.allow_new_product, capacity: draft.capacity.map((r) => ({ product_id: r.product_id || null, package_type_id: r.package_type_id || null, quantity: r.quantity })) } });
+      toast("Категорію збережено.");
+      edit(null);
+      await refresh();
+      E.renderRight();
+    } catch (e) {
+      toast(e.message || "Не вдалося зберегти категорію.", "err");
+    }
+  };
+  const del = async (c) => {
+    try {
+      await adapter.categories({ op: "delete", id: c.id, confirm: true });
+      toast("Категорію видалено.");
+      await refresh();
+    } catch (e) {
+      toast(e.message || "Не вдалося видалити.", "err");
+    }
+  };
+  function render2() {
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "note" }, "Категорії зберігання (в Odoo — `stock.storage.category`) змінюються одразу, поза планом публікації. Призначення місцям, рядам і зонам — у блоці «Зберігання й ємність»; діє вниз."),
+        lib3.categories.length ? lib3.categories.map(
+          (c) => h(
+            "div",
+            { class: "frow", "data-cat": c.id, style: { gap: "8px", padding: "4px 0", borderBottom: "1px solid var(--line, #e3e6ee)", alignItems: "center" } },
+            h("b", { style: { flex: 1 } }, c.name),
+            h("span", { class: "small muted" }, `${c.max_weight ? fmtInt(c.max_weight) + " кг" : "без ліміту"} · ${POLICY_LABEL[c.allow_new_product]} · ємність: ${c.capacity.length} · місць: ${c.locations}`),
+            h("button", { class: "fbtn sm", type: "button", disabled: dis, "data-act": "edit", onclick: () => edit(c) }, "Змінити"),
+            h("button", { class: "fbtn sm", type: "button", disabled: dis || c.in_use, title: c.in_use ? "Категорію вже використано" : "", "data-act": "delete", onclick: () => del(c) }, "Видалити")
+          )
+        ) : h("div", { class: "note" }, "Категорій ще немає."),
+        dis ? h("div", { class: "note lock" }, "Категорії зберігання змінює Менеджер.") : h("button", { class: "fbtn sm", type: "button", id: "btnNewCategory", onclick: () => edit(null) }, "Нова категорія"),
+        form
+      )
+    );
+    renderForm();
+  }
+  function renderForm() {
+    if (dis) {
+      form.replaceChildren();
+      return;
+    }
+    form.replaceChildren(
+      h("div", { class: "lbl" }, draft.id ? "Зміна категорії" : "Нова категорія"),
+      fld("Назва", textInput({ value: draft.name, label: "Назва категорії", set: (v) => {
+        draft.name = v;
+      } })),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Макс. вага", numInput({ value: draft.max_weight, min: 0, step: 10, label: "Макс. вага", set: (v) => {
+          draft.max_weight = v;
+        } }), "кг"),
+        fld("Політика", selectEl(ALLOW_NEW, draft.allow_new_product, (v) => {
+          draft.allow_new_product = v;
+        }, false, "Політика"))
+      ),
+      h("div", { class: "lbl" }, "Ємність за товаром або упаковкою"),
+      draft.capacity.map(
+        (r, i) => h(
+          "div",
+          { class: "frow", style: { gap: "6px", alignItems: "flex-start" } },
+          r.package_type_id != null || r.kind === "package" ? lookupField({ kind: "package_type", id: r.package_type_id, label: "Упаковка", onPick: (x) => {
+            r.package_type_id = x ? x.id : null;
+          } }) : lookupField({ kind: "product", id: r.product_id, label: "Товар", onPick: (x) => {
+            r.product_id = x ? x.id : null;
+          } }),
+          numInput({ value: r.quantity, min: 0, step: 1, label: "Кількість", set: (v) => {
+            r.quantity = v;
+          } }),
+          h("button", { class: "fbtn sm", type: "button", "aria-label": "Прибрати рядок ємності", onclick: () => {
+            draft.capacity.splice(i, 1);
+            renderForm();
+          } }, "×")
+        )
+      ),
+      h(
+        "div",
+        { class: "frow", style: { gap: "6px" } },
+        h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          draft.capacity.push({ product_id: null, package_type_id: null, quantity: 1 });
+          renderForm();
+        } }, "+ Товар"),
+        h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          draft.capacity.push({ product_id: null, package_type_id: -1, kind: "package", quantity: 1 });
+          renderForm();
+        } }, "+ Упаковка")
+      ),
+      h("div", { class: "frow", style: { gap: "6px" } }, h("button", { class: "fbtn primary", type: "button", id: "btnSaveCategory", onclick: save2 }, "Зберегти категорію"), draft.id ? h("button", { class: "fbtn", type: "button", onclick: () => edit(null) }, "Скасувати правку") : null)
+    );
+  }
+  render2();
+  return await new Promise((resolve) => openDialog({ title: "Категорії зберігання", cls: "wide", body, actions: [{ label: "Закрити" }], onClose: resolve }));
+}
+registries.dialogs.add("categories", () => openCategories(), { force: true });
+registries.menu.add("categories", { area: "more", label: "Категорії зберігання", icon: "tag", capability: "storage", sequence: 55, run: () => E.runDialog("categories") }, { sequence: 55, force: true });
+
+// core/constructor/rules_dialog.js
+var canEditRules = () => S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length > 0);
+var base = { site: null, putaway: /* @__PURE__ */ new Map(), replenish: /* @__PURE__ */ new Map() };
+function ensureBase() {
+  const r = rulesState();
+  if (base.site !== (S.site && S.site.id)) {
+    base = { site: S.site && S.site.id, putaway: rulesBase(r.putaway), replenish: rulesBase(r.replenish) };
+  }
+  return base;
+}
+var save = () => {
+  rerunLive();
+  E.scheduleSave && E.scheduleSave();
+  refreshCaches(["fit"]);
+};
+function highlightRule(rule) {
+  S.ui.metric = "rule_target";
+  S.ui.ruleHighlight = rule ? rule.id : null;
+  S.ui.whereCode = null;
+  E.syncScene && E.syncScene(true);
+  E.requestRender && E.requestRender();
+  const codes = rule && rule.out_code ? [rule.out_code] : [];
+  const slot = S.slots.find((s) => cellsAbs(s).some((c) => codes.includes(c.code)));
+  if (slot && E.focusOn) {
+    E.focusOn(slot.x, slot.y);
+  }
+}
+function clearHighlight() {
+  if (S.ui.metric === "rule_target") {
+    S.ui.metric = null;
+  }
+  S.ui.ruleHighlight = null;
+  S.ui.whereCode = null;
+  E.syncScene && E.syncScene(true);
+  E.requestRender && E.requestRender();
+}
+var allCells = () => S.slots.flatMap((s) => cellsAbs(s).map((c) => ({ code: c.code, slot: s })));
+function codeField({ value, label: label2, onPick, dis }) {
+  const input = h("input", { type: "text", value: value || "", "aria-label": label2, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
+  const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "140px", overflow: "auto" } });
+  const find = () => {
+    const t2 = input.value.trim().toLowerCase();
+    const rows = t2 ? allCells().filter((c) => c.code.toLowerCase().includes(t2)).slice(0, 30) : [];
+    list.replaceChildren(...rows.map((c) => h("button", { class: "fbtn sm", type: "button", style: { textAlign: "left" }, onclick: () => {
+      input.value = c.code;
+      list.replaceChildren();
+      onPick(c.code);
+    } }, c.code)));
+    onPick(input.value.trim());
+  };
+  input.addEventListener("input", find);
+  return h("div", { class: "fcol" }, input, list);
+}
+async function openPutawayForm(rule, isNew) {
+  const adapter = E.adapter;
+  await loadLib();
+  const d = { ...rule, package_type_ids: [...rule.package_type_ids] };
+  const mode = { by: d.category_id && !d.product_id ? "category" : "product" };
+  const body = h("div", { class: "fcol", "data-role": "putaway-form" });
+  const render2 = () => {
+    body.replaceChildren(
+      ...K(
+        h(
+          "div",
+          { class: "frow", style: { gap: "10px" } },
+          ["product", "category"].map((m) => h("label", null, h("input", { type: "radio", name: "pwby", checked: mode.by === m, onchange: () => {
+            mode.by = m;
+            if (m === "product") {
+              d.category_id = null;
+            } else {
+              d.product_id = null;
+            }
+            render2();
+          } }), m === "product" ? " Товар" : " Категорія товару"))
+        ),
+        mode.by === "product" ? fld("Товар", lookupField({ kind: "product", id: d.product_id, label: "Товар", onPick: (r) => {
+          d.product_id = r ? r.id : null;
+          d.product = r ? r.name : "";
+        } })) : fld("Категорія товару", lookupField({ kind: "category", id: d.category_id, label: "Категорія товару", onPick: (r) => {
+          d.category_id = r ? r.id : null;
+          d.category = r ? r.name : "";
+        } })),
+        fld("Типи упаковки (необов'язково)", h("div", { class: "fcol" }, d.package_type_ids.length ? h("div", { class: "small" }, d.package_type_ids.map((id) => nameOf("package_type", id)).join(", ")) : null, lookupField({ kind: "package_type", id: null, label: "Тип упаковки", placeholder: "Додати тип упаковки", onPick: (r) => {
+          if (r && !d.package_type_ids.includes(r.id)) {
+            d.package_type_ids.push(r.id);
+            render2();
+          }
+        } }), d.package_type_ids.length ? h("button", { class: "fbtn sm", type: "button", onclick: () => {
+          d.package_type_ids = [];
+          render2();
+        } }, "Прибрати упаковки") : null)),
+        fld("Коли надходить у (необов'язково)", lookupField({ kind: "location", id: d.in_location_id, label: "Коли надходить у", placeholder: "За замовчуванням — склад площадки", onPick: (r) => {
+          d.in_location_id = r ? r.id : null;
+        } })),
+        fld("Покласти в комірку", codeField({ value: d.out_code, label: "Куди покласти", onPick: (code) => {
+          d.out_code = code;
+        } })),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Шукати всередині", selectEl(SUBLOCATION, d.sublocation, (v) => {
+            d.sublocation = v;
+            render2();
+          }, false, "Шукати всередині")),
+          fld("Пріоритет", numInput({ value: d.sequence, step: 1, int: true, label: "Пріоритет", set: (v) => {
+            d.sequence = v;
+          } }))
+        ),
+        d.sublocation === "closest_location" ? fld("Категорія зберігання місця", selectEl([["", "— оберіть —"], ...lib3.categories.map((c) => [c.id, c.name])], d.storage_category_id ?? "", (v) => {
+          d.storage_category_id = v === "" ? null : isNaN(Number(v)) ? v : Number(v);
+        }, false, "Категорія зберігання")) : null
+      )
+    );
+  };
+  render2();
+  return await new Promise(
+    (resolve) => openDialog({
+      title: isNew ? "Нове правило розміщення" : "Правило розміщення",
+      body,
+      actions: [
+        { label: "Скасувати" },
+        {
+          label: "Зберегти",
+          cls: "primary",
+          id: "btnSaveRule",
+          onClick: () => {
+            if (!d.product_id && !d.category_id) {
+              toast("Вкажіть товар або категорію товару.", "warn");
+              return false;
+            }
+            if (!d.out_code) {
+              toast("Вкажіть комірку призначення.", "warn");
+              return false;
+            }
+            if (d.sublocation === "closest_location" && !d.storage_category_id) {
+              toast("Для «місце з категорією зберігання» оберіть категорію.", "warn");
+              return false;
+            }
+            if (d.sublocation !== "closest_location") {
+              d.storage_category_id = null;
+            }
+            Object.assign(rule, d);
+            if (isNew) {
+              rulesState().putaway.push(rule);
+            }
+            save();
+            resolve(true);
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => resolve(false)
+    })
+  );
+}
+async function openReplenishForm(rule, isNew) {
+  const d = { ...rule };
+  const body = h(
+    "div",
+    { class: "fcol", "data-role": "replenish-form" },
+    fld("Товар", lookupField({ kind: "product", id: d.product_id, label: "Товар", onPick: (r) => {
+      d.product_id = r ? r.id : null;
+      d.product = r ? r.name : "";
+    } })),
+    fld("Комірка", codeField({ value: d.cell_code, label: "Комірка", onPick: (code) => {
+      d.cell_code = code;
+    } })),
+    h("div", { class: "grid2" }, fld("Мінімум", numInput({ value: d.min_qty, min: 0, step: 1, label: "Мінімум", set: (v) => {
+      d.min_qty = v;
+    } })), fld("Максимум", numInput({ value: d.max_qty, min: 0, step: 1, label: "Максимум", set: (v) => {
+      d.max_qty = v;
+    } }))),
+    h("div", { class: "small muted" }, "Правило можливе для комірки із залишком або з уже наявним правилом; у Odoo воно потрапить публікацією.")
+  );
+  return await new Promise(
+    (resolve) => openDialog({
+      title: isNew ? "Нове правило поповнення" : "Правило поповнення",
+      body,
+      actions: [
+        { label: "Скасувати" },
+        {
+          label: "Зберегти",
+          cls: "primary",
+          id: "btnSaveRule",
+          onClick: () => {
+            if (!d.product_id || !d.cell_code) {
+              toast("Вкажіть товар і комірку.", "warn");
+              return false;
+            }
+            if (d.max_qty < d.min_qty) {
+              toast("Максимум не може бути меншим за мінімум.", "warn");
+              return false;
+            }
+            Object.assign(rule, d);
+            if (isNew) {
+              rulesState().replenish.push(rule);
+            }
+            save();
+            resolve(true);
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => resolve(false)
+    })
+  );
+}
+async function prefetchNames(adapter) {
+  const rules = rulesState();
+  const need = { category: /* @__PURE__ */ new Set(), package_type: /* @__PURE__ */ new Set(), location: /* @__PURE__ */ new Set(), product: /* @__PURE__ */ new Set() };
+  for (const r of rules.putaway) {
+    r.category_id != null && need.category.add(r.category_id);
+    r.package_type_ids.forEach((id) => need.package_type.add(id));
+    [r.in_location_id, r.out_location_id].forEach((id) => id != null && need.location.add(id));
+  }
+  for (const r of rules.replenish) {
+    r.location_id != null && need.location.add(r.location_id);
+  }
+  if (typeof adapter.lookup !== "function") {
+    return;
+  }
+  for (const [kind, ids] of Object.entries(need)) {
+    const missing = [...ids].filter((id) => nameOf(kind, id).startsWith("#"));
+    if (missing.length) {
+      try {
+        (await adapter.lookup(kind, "", missing)).forEach((r) => rememberName(kind, r.id, r.name));
+      } catch (e) {
+        console.warn("Назви правил недоступні:", e.message || e);
+      }
+    }
+  }
+}
+async function openRules({ tab = "putaway" } = {}) {
+  const adapter = E.adapter;
+  await loadLib();
+  await prefetchNames(adapter);
+  await refreshCaches(["fit"]);
+  const st4 = { tab };
+  const body = h("div", { class: "fcol", "data-role": "rules" });
+  const dis = !canEditRules();
+  const rules = rulesState();
+  const bs = ensureBase();
+  const chip = (status) => status ? h("span", { class: "fbadge " + (status === "deleted" ? "b" : status === "changed" ? "w" : "ok"), "data-status": status }, STATUS_LABEL[status]) : null;
+  const remove = (list, rule) => {
+    if (rule[list === rules.putaway ? "odoo_rule_id" : "odoo_orderpoint_id"]) {
+      rule.deleted = true;
+    } else {
+      list.splice(list.indexOf(rule), 1);
+    }
+    save();
+    render2();
+  };
+  const restore3 = (rule) => {
+    rule.deleted = false;
+    save();
+    render2();
+  };
+  const putawayRows = () => {
+    const sorted = [...rules.putaway].sort((a, b) => a.sequence - b.sequence);
+    if (!sorted.length) {
+      return h("div", { class: "note" }, "Правил розміщення ще немає.");
+    }
+    return sorted.map((r) => {
+      const status = ruleStatus(r, bs.putaway, "odoo_rule_id");
+      const fit = cache2.fit[r.id] || [];
+      return h(
+        "div",
+        { class: "rule-row", "data-rule": r.id, style: { display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", padding: "6px 0", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: r.deleted ? 0.6 : 1, alignItems: "center" } },
+        h("div", null, h("b", null, ruleLabel(r)), " ", chip(status), r.package_type_ids.length ? h("div", { class: "small muted" }, "упаковка: " + r.package_type_ids.map((id) => nameOf("package_type", id)).join(", ")) : null, h("div", { class: "small muted" }, `пріоритет ${r.sequence} · коли надходить у: ${r.in_location_id ? nameOf("location", r.in_location_id) : "склад площадки"}`)),
+        h("div", { class: "small" }, "→ ", h("b", null, r.out_code || "—"), r.sublocation !== "no" ? h("span", { class: "muted" }, ` · шукати: ${SUBLOCATION_LABEL[r.sublocation]}${r.storage_category_id ? " (" + ((categoryOf(r.storage_category_id) || {}).name || "категорія") + ")" : ""}`) : null, fit.length ? h("div", { class: "small", style: { color: "var(--warn, #b45309)" }, "data-role": "fit-warn" }, "Правило: не вміститься — " + fit.map((f) => f.reason).join("; ")) : null),
+        h(
+          "div",
+          { class: "frow", style: { gap: "4px" } },
+          h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => {
+            highlightRule(r);
+            toast("Ціль правила підсвічено.");
+            render2();
+          }, disabled: !r.out_code }, "Підсвітити"),
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore3(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+            if (await openPutawayForm(r, false)) {
+              render2();
+            }
+          } }, "Змінити"), h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: dis, onclick: () => remove(rules.putaway, r) }, "Видалити")]
+        )
+      );
+    });
+  };
+  const replenishRows = () => {
+    if (!rules.replenish.length) {
+      return h("div", { class: "note" }, "Правил поповнення ще немає.");
+    }
+    return rules.replenish.map((r) => {
+      const status = ruleStatus(r, bs.replenish, "odoo_orderpoint_id");
+      return h(
+        "div",
+        { class: "rule-row", "data-rule": r.id, style: { display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "8px", padding: "6px 0", borderBottom: "1px solid var(--line, #e3e6ee)", opacity: r.deleted ? 0.6 : 1, alignItems: "center" } },
+        h("div", null, h("b", null, r.product || nameOf("product", r.product_id)), " ", chip(status)),
+        h("div", { class: "small" }, `${r.cell_code || "—"} · мін ${fmt(r.min_qty, 0)} / макс ${fmt(r.max_qty, 0)}`),
+        h(
+          "div",
+          { class: "frow", style: { gap: "4px" } },
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore3(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+            if (await openReplenishForm(r, false)) {
+              render2();
+            }
+          } }, "Змінити"), h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: dis, onclick: () => remove(rules.replenish, r) }, "Видалити")]
+        )
+      );
+    });
+  };
+  function render2() {
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "note" }, "Правила змінюються в чернетці й потрапляють у зовнішню систему лише публікацією (вид «Правила» у плані); видалення — архів, відкат повертає."),
+        h(
+          "div",
+          { class: "frow", style: { gap: "6px" } },
+          h("button", { class: "fbtn sm" + (st4.tab === "putaway" ? " primary" : ""), type: "button", "data-tab": "putaway", onclick: () => {
+            st4.tab = "putaway";
+            render2();
+          } }, `Розміщення · ${rules.putaway.filter((r) => !r.deleted).length}`),
+          h("button", { class: "fbtn sm" + (st4.tab === "replenish" ? " primary" : ""), type: "button", "data-tab": "replenish", onclick: () => {
+            st4.tab = "replenish";
+            render2();
+          } }, `Поповнення min/max · ${rules.replenish.filter((r) => !r.deleted).length}`),
+          h("span", { style: { flex: 1 } }),
+          S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", id: "btnClearHighlight", onclick: () => {
+            clearHighlight();
+            render2();
+          } }, "Зняти підсвітку") : null
+        ),
+        st4.tab === "putaway" ? putawayRows() : replenishRows(),
+        dis ? h("div", { class: "note lock" }, "Правила пише проєктувальник або менеджер у режимі редагування.") : h("button", { class: "fbtn sm", type: "button", id: "btnNewRule", onclick: async () => {
+          const ok = st4.tab === "putaway" ? await openPutawayForm(newPutawayRule(), true) : await openReplenishForm(newReplenishRule(), true);
+          if (ok) {
+            render2();
+          }
+        } }, st4.tab === "putaway" ? "Нове правило розміщення" : "Нове правило поповнення"),
+        st4.tab === "putaway" && can("putaway") ? whereBox() : null
+      )
+    );
+  }
+  function whereBox() {
+    const q = { product_id: null, package_type_id: null, quantity: 1 };
+    const out = h("div", { class: "small", "data-role": "where-result" });
+    return h(
+      "div",
+      { class: "fcol", style: { borderTop: "1px solid var(--line, #e3e6ee)", paddingTop: "8px", marginTop: "8px" } },
+      h("div", { class: "lbl" }, "Куди покладе Odoo?"),
+      h("div", { class: "grid2" }, fld("Товар", lookupField({ kind: "product", id: null, label: "Товар для підбору місця", onPick: (r) => {
+        q.product_id = r ? r.id : null;
+      } })), fld("Кількість", numInput({ value: 1, min: 0, step: 1, label: "Кількість", set: (v) => {
+        q.quantity = v;
+      } }))),
+      fld("Упаковка (необов'язково)", lookupField({ kind: "package_type", id: null, label: "Упаковка", onPick: (r) => {
+        q.package_type_id = r ? r.id : null;
+      } })),
+      h("button", { class: "fbtn sm", type: "button", id: "btnWhere", onclick: async () => {
+        if (!q.product_id) {
+          toast("Оберіть товар.", "warn");
+          return;
+        }
+        try {
+          const res = await adapter.putawayWhere({ ...q });
+          const code = res.location && res.location.code || "";
+          out.textContent = res.moved ? `Odoo покладе в ${code || res.location.name}${res.estimate ? " (оцінка за застосованими правилами)" : ""}.` : `Застосованих правил немає: товар лишається на місці приймання${res.estimate ? " (оцінка)" : ""}.`;
+          if (code) {
+            S.ui.metric = "rule_target";
+            S.ui.ruleHighlight = null;
+            S.ui.whereCode = code;
+            E.syncScene && E.syncScene(true);
+          }
+        } catch (e) {
+          toast(e.message || "Не вдалося визначити місце.", "err");
+        }
+      } }, "Показати місце"),
+      out
+    );
+  }
+  render2();
+  return await new Promise((resolve) => openDialog({ title: "Правила розміщення й поповнення", cls: "wide", body, actions: [{ label: "Закрити" }], onClose: resolve }));
+}
+registries.dialogs.add("rules", (args) => openRules(args || {}), { force: true });
+registries.menu.add("rules", { area: "more", label: "Правила розміщення", icon: "tag", capability: "putaway", sequence: 54, run: () => E.runDialog("rules") }, { sequence: 54, force: true });
+function renderRulesInto(root, { rec }) {
+  if (!rec || rec.template === "machine_spot" || !can("putaway")) {
+    return;
+  }
+  const rules = rulesState();
+  const zones = zonesOf2();
+  let hits;
+  let own;
+  if (rec.template === "zone") {
+    const poly2 = (zones.find((z) => z.zone === rec) || {}).poly;
+    const inside = new Set(poly2 ? S.slots.flatMap((s) => cellsAbs(s)).filter((c) => polygonContains(poly2, [c.x, c.y])).map((c) => c.code) : []);
+    hits = rules.putaway.filter((r) => !r.deleted && inside.has(r.out_code)).map((rule) => ({ rule, codes: [rule.out_code] }));
+    own = [...inside];
+  } else {
+    hits = rulesIntoSlot(rec, rules.putaway, zoneChainAt(zones, rec.x, rec.y));
+    own = cellsAbs(rec).map((c) => c.code);
+  }
+  const replenish = rec.template === "zone" ? [] : rules.replenish.filter((r) => !r.deleted && own.includes(r.cell_code));
+  if (!hits.length && !replenish.length && !(rec.template !== "zone" && own.length && canEditRules())) {
+    return;
+  }
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "rulesInto" },
+        h("h3", null, "Правила розміщення сюди"),
+        hits.length ? null : h("div", { class: "small muted" }, "Правил, що ведуть сюди, немає."),
+        hits.map(
+          ({ rule, codes }) => h("div", { class: "frow", "data-rule": rule.id, style: { gap: "6px", alignItems: "center" } }, h("span", { style: { flex: 1 }, class: "small" }, `${ruleLabel(rule)} → ${codes.length > 3 ? codes.slice(0, 3).join(", ") + " …" : codes.join(", ")}`), h("button", { class: "fbtn sm", type: "button", "data-act": "highlight", onclick: () => highlightRule(rule) }, "Підсвітити"))
+        ),
+        replenish.length ? h("div", { class: "lbl", style: { margin: "6px 0 2px" } }, "Поповнення (min/max)") : null,
+        replenish.map((r) => h("div", { class: "small", "data-replenish": r.id }, `${r.product || nameOf("product", r.product_id)} · ${r.cell_code}: мін ${fmt(r.min_qty, 0)} / макс ${fmt(r.max_qty, 0)}`)),
+        h(
+          "div",
+          { class: "frow", style: { gap: "6px", marginTop: "4px", flexWrap: "wrap" } },
+          S.ui.metric === "rule_target" ? h("button", { class: "fbtn sm", type: "button", onclick: () => {
+            clearHighlight();
+            E.renderRight();
+          } }, "Зняти підсвітку") : null,
+          rec.template !== "zone" && own.length && canEditRules() ? h("button", { class: "fbtn sm", type: "button", id: "btnNewMinMax", onclick: async () => {
+            if (await openReplenishForm(newReplenishRule({ cell_code: own[0] }), true)) {
+              E.renderRight();
+            }
+          } }, "Нове правило min/max…") : null
+        )
+      )
+    )
+  );
+}
+registries.panels.add("slot:rules", { area: "slot", render: renderRulesInto }, { sequence: 36, force: true });
+
+// core/constructor/undo.js
+var KINDS = ["layers", "slots", "placements", "putaway", "replenish"];
+var MAX_STEPS = 100;
+var MAX_CHARS = 3e7;
+var COALESCE_MS = 1200;
+var strip2 = (k, v) => k === "rid" || k === "etag" ? void 0 : v;
+var ADDR_FIELDS = ["addr", "depth_mode", "loc_tree"];
+var BUILDING_FIELDS = ["building", "column_grid"];
+var EXTRA_FIELDS = ["sprinkler_height", "aisle_tech"];
+var pick = (o, keys) => Object.fromEntries(keys.map((k) => [k, o?.[k] ?? null]));
+var siteVals = () => {
+  const b = S.site?.building;
+  const cg = S.site?.column_grid;
+  return {
+    ...pick(S.site, ADDR_FIELDS),
+    building: b ? { length: b.length ?? null, width: b.width ?? null, height: b.height ?? null } : null,
+    column_grid: cg ? { step_x: cg.step_x ?? null, step_y: cg.step_y ?? null } : null,
+    sprinkler_height: S.site?.sprinkler_height ?? null,
+    aisle_tech: S.site?.aisle_tech ?? null
+  };
+};
+var SITE_LABELS = [
+  [ADDR_FIELDS, "Адресація площадки"],
+  [BUILDING_FIELDS, "Габарит площадки"],
+  [["sprinkler_height"], "Висота до спринклерів"],
+  [["aisle_tech"], "Техніка складу"]
+];
+var rulesOf = () => S.site && S.site.rules || {};
+var snapshot = () => JSON.stringify({ layers: S.layers, slots: S.slots, placements: S.placements, putaway: rulesOf().putaway || [], replenish: rulesOf().replenish || [], site: siteVals() }, strip2);
+var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function changedFields(a, b) {
+  const out = [];
+  for (const k of /* @__PURE__ */ new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (same2(a[k], b[k])) {
+      continue;
+    }
+    if ((k === "params" || k === "overrides") && a[k] && b[k] && typeof a[k] === "object" && typeof b[k] === "object") {
+      for (const kk of /* @__PURE__ */ new Set([...Object.keys(a[k]), ...Object.keys(b[k])])) {
+        if (!same2(a[k][kk], b[k][kk])) {
+          out.push(`${k}.${kk}`);
+        }
+      }
+    } else {
+      out.push(k);
+    }
+  }
+  return out;
+}
+function diffSnapshots(a, b) {
+  const out = { added: [], removed: [], changed: [], site: !same2(a.site, b.site), siteFields: [] };
+  out.siteFields = [.../* @__PURE__ */ new Set([...Object.keys(a.site || {}), ...Object.keys(b.site || {})])].filter((k) => !same2((a.site || {})[k], (b.site || {})[k]));
+  for (const kind of KINDS) {
+    const ma = new Map((a[kind] || []).map((r) => [r.id, r]));
+    const mb = new Map((b[kind] || []).map((r) => [r.id, r]));
+    for (const [id, r] of mb) {
+      if (!ma.has(id)) {
+        out.added.push({ kind, id, rec: r });
+      } else {
+        const fields = changedFields(ma.get(id), r);
+        if (fields.length) {
+          out.changed.push({ kind, id, rec: r, fields });
+        }
+      }
+    }
+    for (const [id, r] of ma) {
+      if (!mb.has(id)) {
+        out.removed.push({ kind, id, rec: r });
+      }
+    }
+  }
+  return out;
+}
+var nameOf2 = (e) => {
+  if (e.kind === "putaway" || e.kind === "replenish") {
+    return `${e.kind === "putaway" ? "правило розміщення" : "правило поповнення"} ${e.rec.product?.name || e.rec.out_code || e.rec.cell_code || ""}`.trim();
+  }
+  return (e.kind === "layers" ? e.rec.name : e.kind === "slots" ? e.rec.params?.title || e.rec.code_prefix : e.rec.code || e.rec.name) || "об’єкт";
+};
+var MOVE = ["x", "y"];
+function labelOf(d) {
+  const n = d.added.length + d.removed.length + d.changed.length;
+  if (!n && d.site) {
+    const hit = SITE_LABELS.filter(([keys]) => keys.some((k) => (d.siteFields || ADDR_FIELDS).includes(k)));
+    return hit.length === 1 ? hit[0][1] : "Параметри площадки";
+  }
+  if (d.added.length && !d.removed.length && !d.changed.length) {
+    return d.added.length === 1 ? `Додано: ${nameOf2(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
+  }
+  if (d.removed.length && !d.added.length && !d.changed.length) {
+    return d.removed.length === 1 ? `Видалено: ${nameOf2(d.removed[0])}` : `Видалено об’єктів: ${d.removed.length}`;
+  }
+  if (d.changed.length && !d.added.length && !d.removed.length) {
+    const all = (set) => d.changed.every((c) => c.fields.every((f) => set.includes(f)));
+    const one = d.changed.length === 1;
+    const nm = one ? nameOf2(d.changed[0]) : "";
+    if (all(MOVE)) {
+      return one ? `Переміщено: ${nm}` : `Переміщено об’єктів: ${d.changed.length}`;
+    }
+    if (all(["rotation"]) || all(["x", "y", "rotation"])) {
+      return one ? `Повернуто: ${nm}` : `Повернуто об’єктів: ${d.changed.length}`;
+    }
+    if (one && d.changed[0].fields.every((f) => f.startsWith("params.") || f.startsWith("overrides."))) {
+      return `Параметри: ${nm}`;
+    }
+    if (one && d.changed[0].fields.every((f) => f === "addr" || f === "depth_mode")) {
+      return `Адресація: ${nm}`;
+    }
+    if (one && (d.changed[0].kind === "putaway" || d.changed[0].kind === "replenish")) {
+      return `Правило: ${nm}`;
+    }
+    return one ? `Зміна: ${nm}` : `Зміна об’єктів: ${d.changed.length}`;
+  }
+  return `Зміна: ${n} дій`;
+}
+function undoLabel(text) {
+  S.hist.label = text || null;
+}
+var trim = (H) => {
+  let total = H.stack.reduce((s, e) => s + e.data.length, 0);
+  while (H.stack.length > 1 && (H.stack.length > MAX_STEPS || total > MAX_CHARS)) {
+    total -= H.stack.shift().data.length;
+    H.idx--;
+  }
+};
+var notify = () => E.renderUndoButtons?.();
+function undoReset() {
+  const H = S.hist;
+  const data = S.site ? snapshot() : "";
+  H.stack = [{ data, label: "", at: 0, key: null }];
+  H.idx = 0;
+  H.cur = data;
+  H.label = null;
+  H.busy = false;
+  notify();
+}
+function undoRebase() {
+  const H = S.hist;
+  if (!H.stack.length || !S.site) {
+    return undoReset();
+  }
+  const data = snapshot();
+  H.stack.length = H.idx + 1;
+  H.stack[H.idx] = { ...H.stack[H.idx], data };
+  H.cur = data;
+  H.label = null;
+  notify();
+}
+function undoRecord() {
+  const H = S.hist;
+  if (!S.site || H.busy) {
+    return false;
+  }
+  const data = snapshot();
+  if (!H.stack.length) {
+    undoReset();
+    return false;
+  }
+  if (data === H.cur) {
+    return false;
+  }
+  const diff = diffSnapshots(JSON.parse(H.cur), JSON.parse(data));
+  const label2 = H.label || labelOf(diff);
+  H.label = null;
+  const one = diff.changed.length === 1 && !diff.added.length && !diff.removed.length && !diff.site ? diff.changed[0] : null;
+  const key = one ? `${one.kind}:${one.id}:${one.fields.join(",")}` : null;
+  H.stack.length = H.idx + 1;
+  const top = H.stack[H.idx];
+  const now = Date.now();
+  if (key && top && top.key === key && now - top.at < COALESCE_MS && H.idx > 0) {
+    top.data = data;
+    top.at = now;
+  } else {
+    H.stack.push({ data, label: label2, at: now, key });
+    H.idx = H.stack.length - 1;
+    trim(H);
+  }
+  H.cur = data;
+  notify();
+  return true;
+}
+function undoState() {
+  const H = S.hist;
+  const hasRedo = H.idx >= 0 && H.idx < H.stack.length - 1;
+  return {
+    canUndo: H.idx > 0,
+    canRedo: hasRedo,
+    undoLabel: H.idx > 0 ? H.stack[H.idx].label : "",
+    redoLabel: hasRedo ? H.stack[H.idx + 1].label : ""
+  };
+}
+function restore(data, prevData) {
+  const next = JSON.parse(data);
+  const prev = JSON.parse(prevData);
+  const d = diffSnapshots(prev, next);
+  const carry = (list, fresh) => {
+    const cur = new Map(list.map((r) => [r.id, r]));
+    return fresh.map((r) => {
+      const c = cur.get(r.id);
+      r.rid = c ? c.rid ?? null : null;
+      r.etag = c ? c.etag ?? null : null;
+      return r;
+    });
+  };
+  for (const kind of ["layers", "slots", "placements"]) {
+    S[kind] = carry(S[kind], next[kind] || []);
+  }
+  if (S.site && (S.site.rules || (next.putaway || []).length || (next.replenish || []).length)) {
+    const rules = S.site.rules || { putaway: [], replenish: [] };
+    S.site.rules = { ...rules, putaway: carry(rules.putaway || [], next.putaway || []), replenish: carry(rules.replenish || [], next.replenish || []) };
+  }
+  if (d.site && S.site) {
+    const { building, column_grid: grid, ...flat } = next.site;
+    Object.assign(S.site, flat);
+    if (building) {
+      S.site.building = { ...S.site.building, ...building };
+    }
+    if (grid) {
+      S.site.column_grid = { ...S.site.column_grid, ...grid };
+    }
+  }
+  S.multi = [];
+  S.selCell = null;
+  S.edit = null;
+  reindex();
+  const touched = [...d.changed, ...d.added].filter((e) => e.kind === "slots" || e.kind === "placements");
+  const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
+  S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
+  return { changedSite: d.site, site: next.site, siteFields: d.siteFields };
+}
+async function saveSiteChanges(site, fields) {
+  const has = (keys) => keys.some((k) => fields.includes(k));
+  if (has(EXTRA_FIELDS) && E.adapter?.saveSite) {
+    await E.adapter.saveSite({ sprinkler_height: S.site.sprinkler_height || 0, aisle_tech: S.site.aisle_tech || null });
+  }
+  if (has(BUILDING_FIELDS)) {
+    E.saveSiteProps?.();
+  }
+  if (has(ADDR_FIELDS) && E.adapter?.saveAddr) {
+    await E.adapter.saveAddr(pick(site, ADDR_FIELDS), { renumber: "new" });
+    if (E.adapter.serverRenumber) {
+      await E.flushNow();
+      await E.reload();
+    }
+  }
+}
+async function goto(i, verb) {
+  const H = S.hist;
+  const from = H.stack[H.idx];
+  const to = H.stack[i];
+  const label2 = i < H.idx ? from.label : to.label;
+  H.busy = true;
+  try {
+    if (E.adapter?.dirty) {
+      await E.flushNow();
+    }
+    const { changedSite, site, siteFields } = restore(to.data, from.data);
+    H.idx = i;
+    E.commit({});
+    to.data = H.cur = snapshot();
+    if (changedSite) {
+      await saveSiteChanges(site, siteFields);
+    }
+    toast(`${verb}: ${label2}`);
+  } catch (e) {
+    toast(e.message || "Не вдалося виконати дію.", "err");
+  } finally {
+    H.busy = false;
+    notify();
+  }
+}
+var guard = () => {
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  return true;
+};
+async function undo() {
+  undoRecord();
+  const H = S.hist;
+  if (H.idx <= 0) {
+    toast("Немає що скасувати.");
+    return false;
+  }
+  if (!guard()) {
+    return false;
+  }
+  await goto(H.idx - 1, "Скасовано");
+  return true;
+}
+async function redo() {
+  undoRecord();
+  const H = S.hist;
+  if (H.idx < 0 || H.idx >= H.stack.length - 1) {
+    toast("Немає що повторити.");
+    return false;
+  }
+  if (!guard()) {
+    return false;
+  }
+  await goto(H.idx + 1, "Повторено");
+  return true;
+}
+Object.assign(E, { undo, redo, undoLabel, undoRecord, undoReset, undoRebase, undoState });
+var isZ = (e) => e.code === "KeyZ";
+registries.hotkeys.add("undo", { ctrl: true, label: "Ctrl+Z — скасувати", match: (e) => isZ(e) && !e.shiftKey && !e.altKey, run: (e) => (e.preventDefault(), void undo()) }, { sequence: 5, force: true });
+registries.hotkeys.add(
+  "redo",
+  { ctrl: true, label: "Ctrl+Shift+Z / Ctrl+Y — повторити", match: (e) => isZ(e) && e.shiftKey || e.code === "KeyY", run: (e) => (e.preventDefault(), void redo()) },
+  { sequence: 6, force: true }
+);
+
+// core/constructor/edit_tools.js
+var PREFIX_MAX = 22;
+var kindOf = (ref2) => ref2.kind === "placement" ? "placement" : "slot";
+var arrOf = (kind) => kind === "placement" ? S.placements : S.slots;
+var idxOf = (kind) => kind === "placement" ? S.pIdx : S.sIdx;
+function selectedItems() {
+  return selRefs().map((ref2) => ({ ref: ref2, kind: kindOf(ref2), rec: recOfRef(ref2) })).filter((it) => it.rec);
+}
+function canEditAll(items2) {
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  for (const it of items2) {
+    const ly = layerOf(it.rec.layer_id);
+    if (!canEditLayer(ly)) {
+      toastLock(ly);
+      return false;
+    }
+    if (it.rec.locked) {
+      toast("Складний контур зони редагується у формі Odoo.", "warn");
+      return false;
+    }
+  }
+  return true;
+}
+function boxOf(it) {
+  if (it.kind === "placement") {
+    const v = variantOf(it.rec.variant_id);
+    return v ? pGeom(it.rec, v).box : [it.rec.x, it.rec.y, it.rec.x, it.rec.y];
+  }
+  return sGeom(it.rec).box;
+}
+function groupBox(items2) {
+  const bs = items2.map(boxOf);
+  return [Math.min(...bs.map((b) => b[0])), Math.min(...bs.map((b) => b[1])), Math.max(...bs.map((b) => b[2])), Math.max(...bs.map((b) => b[3]))];
+}
+function nextCodeLike(code, used, max = PREFIX_MAX) {
+  const m = /^(.*?)(\d+)(\D*)$/.exec(code || "");
+  const [stem, num4, tail] = m ? [m[1], m[2], m[3]] : [(code || "X") + "-", "1", ""];
+  for (let n = Number(num4) + 1; n < 1e5; n++) {
+    const cand = stem + String(n).padStart(num4.length, "0") + tail;
+    if (!used.has(cand) && cand.length <= max) {
+      used.add(cand);
+      return cand;
+    }
+  }
+  return code;
+}
+var cleanAddr = (addr) => {
+  if (!addr) {
+    return null;
+  }
+  const { row_no: _pin, ...rest } = addr;
+  return Object.keys(rest).length ? rest : null;
+};
+function copyRec(kind, rec, { dx = 0, dy = 0, layerId = null, used }) {
+  const c = clone(rec);
+  c.id = newUid();
+  c.rid = null;
+  c.etag = null;
+  c.x = rnd(rec.x + dx, 4);
+  c.y = rnd(rec.y + dy, 4);
+  if (layerId) {
+    c.layer_id = layerId;
+  }
+  if (kind === "slot") {
+    c.overrides = {};
+    c.parent_location_id = null;
+    c.code_prefix = nextCodeLike(rec.code_prefix, used.prefixes);
+    c.addr = cleanAddr(c.addr);
+    if (!c.addr) {
+      delete c.addr;
+    }
+    if (c.template === "zone") {
+      c.params = { ...c.params, title: `${rec.params?.title || rec.code_prefix} (копія)` };
+    }
+  } else {
+    c.code = nextCodeLike(rec.code || "EQ-00", used.codes, 32);
+    c.slot_id = null;
+    c.cell_code = null;
+    c.equipment = null;
+  }
+  return c;
+}
+var usedCodes = () => ({ prefixes: new Set(S.slots.map((s) => s.code_prefix)), codes: new Set(S.placements.map((p) => p.code)) });
+function attempt(copies) {
+  const before = S.issues;
+  for (const c of copies) {
+    arrOf(c.kind).push(c.rec);
+    idxOf(c.kind).set(c.rec.id, c.rec);
+  }
+  for (const c of copies) {
+    if (c.kind === "placement") {
+      E.assignSlot(c.rec);
+    }
+  }
+  const after = runLive();
+  const nb = copies.flatMap((c) => newBlocks(before, after, objKey(c.kind, c.rec.id)));
+  if (nb.length) {
+    for (const c of copies) {
+      const a = arrOf(c.kind);
+      a.splice(a.indexOf(c.rec), 1);
+      idxOf(c.kind).delete(c.rec.id);
+    }
+    return nb[0].msg;
+  }
+  return null;
+}
+var rot = (x, y, deg) => {
+  const a = deg * Math.PI / 180;
+  return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+};
+function offsetCandidates(items2, { prefer = "length", gap = 0.5, aisle = 0 } = {}) {
+  const first = items2[0].rec;
+  const b = groupBox(items2);
+  const spanX = b[2] - b[0];
+  const spanY = b[3] - b[1];
+  const single = items2.length === 1;
+  const g3 = single ? sGeomOrP(items2[0]) : { L: spanX, W: spanY, a: 0 };
+  const along = [g3.L + gap, 0];
+  const across = [0, g3.W + gap + aisle];
+  const a = single ? first.rotation || 0 : 0;
+  const dirs = prefer === "across" ? [across, along] : [along, across];
+  const out = [];
+  for (const k of [1, 2, 3]) {
+    for (const [ux, uy] of dirs) {
+      for (const sgn of [1, -1]) {
+        out.push(rot(ux * k * sgn, uy * k * sgn, a));
+      }
+    }
+  }
+  return out.map(([dx, dy]) => [rnd(dx, 4), rnd(dy, 4)]);
+}
+var sGeomOrP = (it) => it.kind === "placement" ? pGeom(it.rec, variantOf(it.rec.variant_id) || { length: 1e3, width: 1e3 }) : sGeom(it.rec);
+function afterCopies(made, label2) {
+  if (!made.length) {
+    return;
+  }
+  S.multi = [];
+  S.selCell = null;
+  S.sel = { kind: made[made.length - 1].kind, id: made[made.length - 1].rec.id };
+  if (made.length > 1) {
+    S.multi = made.map((c) => ({ kind: c.kind, id: c.rec.id }));
+  }
+  E.undoLabel?.(label2);
+  E.commit({});
+  pinNumbers(made.filter((c) => c.kind === "slot" && contextOf(c.rec)).map((c) => c.rec));
+}
+function duplicateSel(mode = null) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
+    return false;
+  }
+  const one = items2.length === 1 ? items2[0] : null;
+  if (one && one.kind === "slot" && (mode === "tier" || mode == null && S.selCell && LEVEL_KEYS[one.rec.template])) {
+    return addTier(one.rec);
+  }
+  if (one && one.kind === "slot" && mode === "bay") {
+    return addBay(one.rec);
+  }
+  const ly = layerOf(one ? one.rec.layer_id : items2[0].rec.layer_id);
+  const rack3 = one && one.kind === "slot" && COUNT_KEY[one.rec.template] && one.rec.template !== "floor_stack";
+  const used = usedCodes();
+  for (const [dx, dy] of offsetCandidates(items2, { prefer: rack3 ? "across" : "length", gap: one && one.kind === "slot" && one.rec.template === "floor_spot" ? 0.3 : 0.5, aisle: rack3 ? ly?.aisle_width || 3 : 0 })) {
+    const u = { prefixes: new Set(used.prefixes), codes: new Set(used.codes) };
+    const copies = items2.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, used: u }) }));
+    if (!attempt(copies)) {
+      afterCopies(copies, items2.length > 1 ? `Дублювання: ${items2.length} об’єктів` : `Дублювання: ${items2[0].rec.code_prefix || items2[0].rec.code}`);
+      return true;
+    }
+  }
+  toast("Немає вільного місця поруч для копії.", "warn");
+  return false;
+}
+function addTier(s) {
+  const [key] = LEVEL_KEYS[s.template] || [];
+  if (!key) {
+    toast("У цього місця немає ярусів.", "warn");
+    return false;
+  }
+  return bump(s, key, "Ярус зверху");
+}
+function addBay(s) {
+  const key = COUNT_KEY[s.template];
+  if (!key) {
+    toast("У цього місця немає секцій.", "warn");
+    return false;
+  }
+  return bump(s, key, "Секція в кінці ряду");
+}
+function bump(s, key, label2) {
+  const max = (SLOT_TEMPLATES[s.template].params[key] || SLOT_TEMPLATES[s.template].opt[key] || [])[1] ?? 1e3;
+  const cur = Number(s.params[key] ?? ((SLOT_TEMPLATES[s.template].params[key] || [])[2] || 1));
+  if (cur + 1 > max) {
+    toast(`Досягнуто межу: ${max}.`, "warn");
+    return false;
+  }
+  const before = S.issues;
+  s.params[key] = cur + 1;
+  S.selCell = null;
+  const nb = newBlocks(before, runLive(), objKey("slot", s.id));
+  if (nb.length) {
+    s.params[key] = cur;
+    S.issues = runLive();
+    toast("Заблоковано: " + nb[0].msg, "err");
+    return false;
+  }
+  E.undoLabel?.(`${label2}: ${s.code_prefix}`);
+  E.commit({});
+  return true;
+}
+var clip = null;
+function copySel() {
+  const items2 = selectedItems().filter((it) => !it.rec.locked);
+  if (!items2.length) {
+    toast("Немає що копіювати: виділіть об’єкт.", "warn");
+    return false;
+  }
+  const b = groupBox(items2);
+  clip = { items: items2.map((it) => ({ kind: it.kind, rec: clone(it.rec) })), cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, layerId: items2[0].rec.layer_id, w: b[2] - b[0], h: b[3] - b[1] };
+  toast(items2.length > 1 ? `Скопійовано: ${items2.length} об’єктів.` : `Скопійовано: ${items2[0].rec.code_prefix || items2[0].rec.code}.`);
+  return true;
+}
+function targetLayer() {
+  const accepts = (ly) => ly && canEditLayer(ly) && clip.items.every((it) => it.kind === "slot" ? ly.slot_types.includes(it.rec.template) : ly.kind !== "building");
+  const active2 = layerOf(S.ui.layer);
+  if (accepts(active2)) {
+    return active2;
+  }
+  const base2 = active2 ? active2.elevation : 0;
+  return S.layers.filter(accepts).sort((a, b) => Math.abs(a.elevation - base2) - Math.abs(b.elevation - base2))[0] || null;
+}
+function pasteClip() {
+  if (!clip) {
+    toast("Буфер порожній: спершу скопіюйте (Ctrl+C).", "warn");
+    return false;
+  }
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  const sel = selectedItems();
+  const zone2 = sel.length === 1 && sel[0].kind === "slot" && sel[0].rec.template === "zone" && canEditLayer(layerOf(sel[0].rec.layer_id)) ? sel[0].rec : null;
+  const ly = zone2 ? layerOf(zone2.layer_id) : targetLayer();
+  if (!ly) {
+    toast("Немає шару, що допускає ці об’єкти й дозволяє правку.", "warn");
+    return false;
+  }
+  if (zone2 && !clip.items.every((it) => it.kind === "slot" ? ly.slot_types.includes(it.rec.template) : true)) {
+    toast("Зона не підходить: її шар не допускає ці типи місць.", "warn");
+    return false;
+  }
+  const sameLayer = ly.id === clip.layerId;
+  const c = E.camTarget ? E.camTarget() : { x: S.site.building.length / 2, y: S.site.building.width / 2 };
+  const home = zone2 ? { x: zone2.x, y: zone2.y } : sameLayer ? { x: clip.cx, y: clip.cy } : c;
+  const tries = [];
+  if (zone2) {
+    const zl = zone2.params.length;
+    const zw = zone2.params.width;
+    for (let k = 0; k < 40; k++) {
+      const u = -zl / 2 + 0.5 + clip.w / 2 + k % 6 * (clip.w + 0.5);
+      const v = -zw / 2 + 0.5 + clip.h / 2 + Math.floor(k / 6) * (clip.h + 0.5);
+      if (Math.abs(u) + clip.w / 2 <= zl / 2 && Math.abs(v) + clip.h / 2 <= zw / 2) {
+        const [wx, wy] = rot(u, v, zone2.rotation || 0);
+        tries.push([zone2.x + wx - clip.cx, zone2.y + wy - clip.cy]);
+      }
+    }
+  } else {
+    const step = Math.max(clip.w, clip.h) + 0.5;
+    const first = sameLayer ? [step, 0] : [0, 0];
+    tries.push([home.x - clip.cx + first[0], home.y - clip.cy + first[1]]);
+    for (const k of [1, 2, 3]) {
+      for (const [ux, uy] of [[1, 0], [0, -1], [-1, 0], [0, 1]]) {
+        tries.push([home.x - clip.cx + ux * step * k, home.y - clip.cy + uy * step * k]);
+      }
+    }
+  }
+  const used = usedCodes();
+  for (const [dx, dy] of tries) {
+    const u = { prefixes: new Set(used.prefixes), codes: new Set(used.codes) };
+    const copies = clip.items.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx, dy, layerId: ly.id, used: u }) }));
+    if (!attempt(copies)) {
+      afterCopies(copies, `Вставлення: ${copies.length > 1 ? copies.length + " об’єктів" : copies[0].rec.code_prefix || copies[0].rec.code}`);
+      return true;
+    }
+  }
+  toast(zone2 ? "У зоні немає вільного місця для вставлення." : "Немає вільного місця для вставлення.", "warn");
+  return false;
+}
+function arrayCopies({ nx = 2, ny = 1, dx, dy }) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
+    return 0;
+  }
+  const b = groupBox(items2);
+  const stepX = dx ?? rnd(b[2] - b[0] + 0.3, 3);
+  const stepY = dy ?? rnd(b[3] - b[1] + 0.3, 3);
+  const used = usedCodes();
+  const made = [];
+  let skipped = 0;
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      if (!i && !j) {
+        continue;
+      }
+      const copies = items2.map((it) => ({ kind: it.kind, rec: copyRec(it.kind, it.rec, { dx: i * stepX, dy: j * stepY, used }) }));
+      if (attempt(copies)) {
+        skipped++;
+        for (const c of copies) {
+          (c.kind === "slot" ? used.prefixes : used.codes).delete(c.kind === "slot" ? c.rec.code_prefix : c.rec.code);
+        }
+      } else {
+        made.push(...copies);
+      }
+    }
+  }
+  if (made.length) {
+    afterCopies(made, `Масив ${nx}×${ny}: ${made.length} копій`);
+  }
+  toast(made.length ? `Масив: створено ${made.length}${skipped ? `, не вмістилось або заблоковано: ${skipped}` : ""}.` : "Масив: жодної копії не вдалося розмістити.", made.length ? void 0 : "warn");
+  return made.length;
+}
+function applyMoves(items2, mutate, label2) {
+  const before = S.issues;
+  const snaps = items2.map((it) => ({ it, x: it.rec.x, y: it.rec.y, rotation: it.rec.rotation }));
+  mutate();
+  const after = runLive();
+  const nb = items2.flatMap((it) => newBlocks(before, after, objKey(it.ref.kind, it.ref.id)));
+  if (nb.length) {
+    for (const s of snaps) {
+      Object.assign(s.it.rec, { x: s.x, y: s.y, rotation: s.rotation });
+    }
+    S.issues = runLive();
+    toast("Заблоковано: " + nb[0].msg + ". Зміну скасовано.", "err");
+    return false;
+  }
+  for (const it of items2) {
+    if (it.kind === "placement") {
+      E.assignSlot(it.rec);
+    }
+  }
+  E.undoLabel?.(label2);
+  E.commit({});
+  return true;
+}
+var ALIGN = {
+  left: (b, g3) => [g3[0] - b[0], 0],
+  right: (b, g3) => [g3[2] - b[2], 0],
+  top: (b, g3) => [0, g3[3] - b[3]],
+  bottom: (b, g3) => [0, g3[1] - b[1]],
+  cx: (b, g3) => [(g3[0] + g3[2]) / 2 - (b[0] + b[2]) / 2, 0],
+  cy: (b, g3) => [0, (g3[1] + g3[3]) / 2 - (b[1] + b[3]) / 2]
+};
+var ALIGN_LABELS = { left: "Ліворуч", right: "Праворуч", top: "Угору", bottom: "Донизу", cx: "Центр X", cy: "Центр Y" };
+function alignSel(mode) {
+  const items2 = selectedItems();
+  if (items2.length < 2 || !ALIGN[mode] || !canEditAll(items2)) {
+    return false;
+  }
+  const g3 = groupBox(items2);
+  return applyMoves(
+    items2,
+    () => {
+      for (const it of items2) {
+        const [dx, dy] = ALIGN[mode](boxOf(it), g3);
+        it.rec.x = rnd(it.rec.x + dx, 4);
+        it.rec.y = rnd(it.rec.y + dy, 4);
+      }
+    },
+    `Вирівнювання: ${ALIGN_LABELS[mode]}`
+  );
+}
+function distributeSel(axis) {
+  const items2 = selectedItems();
+  if (items2.length < 3 || !canEditAll(items2)) {
+    if (items2.length < 3) {
+      toast("Розподіл потребує щонайменше трьох об’єктів.", "warn");
+    }
+    return false;
+  }
+  const lo = axis === "x" ? 0 : 1;
+  const hi = lo + 2;
+  const rows = items2.map((it) => ({ it, b: boxOf(it) })).sort((a, b) => a.b[lo] + a.b[hi] - (b.b[lo] + b.b[hi]));
+  const span = rows[rows.length - 1].b[hi] - rows[0].b[lo];
+  const total = rows.reduce((s, r) => s + (r.b[hi] - r.b[lo]), 0);
+  const gap = (span - total) / (rows.length - 1);
+  return applyMoves(
+    items2,
+    () => {
+      let pos = rows[0].b[hi] + gap;
+      for (let i = 1; i < rows.length - 1; i++) {
+        const d = pos - rows[i].b[lo];
+        rows[i].it.rec[axis] = rnd(rows[i].it.rec[axis] + d, 4);
+        pos += rows[i].b[hi] - rows[i].b[lo] + gap;
+      }
+    },
+    `Розподіл по ${axis === "x" ? "X" : "Y"}`
+  );
+}
+function rotateGroup(dir = 1) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
+    return false;
+  }
+  const g3 = groupBox(items2);
+  const cx = (g3[0] + g3[2]) / 2;
+  const cy = (g3[1] + g3[3]) / 2;
+  for (const it of items2) {
+    if (it.kind === "placement") {
+      const al = rotationsList(variantOf(it.rec.variant_id));
+      if (al && !al.includes(normDeg((it.rec.rotation || 0) + 90 * dir))) {
+        toast(`Для «${it.rec.code}» поворот не дозволено.`, "warn");
+        return false;
+      }
+    }
+  }
+  return applyMoves(
+    items2,
+    () => {
+      for (const it of items2) {
+        const [dx, dy] = [it.rec.x - cx, it.rec.y - cy];
+        const [nx, ny] = dir > 0 ? [-dy, dx] : [dy, -dx];
+        it.rec.x = rnd(cx + nx, 4);
+        it.rec.y = rnd(cy + ny, 4);
+        it.rec.rotation = normDeg((it.rec.rotation || 0) + 90 * dir);
+      }
+    },
+    items2.length > 1 ? "Поворот рядів" : `Поворот: ${items2[0].rec.code_prefix || items2[0].rec.code}`
+  );
+}
+async function removeAll() {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
+    return false;
+  }
+  const ok = await E.confirmBox({ title: "Прибрати виділене?", text: `Буде видалено ${items2.length} об’єктів із чернетки.`, ok: "Прибрати", danger: true });
+  if (!ok) {
+    return false;
+  }
+  const ids = new Set(items2.map((it) => it.ref.kind + ":" + it.ref.id));
+  S.slots = S.slots.filter((s) => !ids.has("slot:" + s.id));
+  S.placements = S.placements.filter((p) => !ids.has("placement:" + p.id));
+  for (const p of S.placements) {
+    if (p.slot_id && !S.slots.some((s) => s.id === p.slot_id)) {
+      p.slot_id = null;
+    }
+  }
+  S.sel = null;
+  S.multi = [];
+  S.selCell = null;
+  E.undoLabel?.(`Видалення: ${items2.length} об’єктів`);
+  E.commit({});
+  return true;
+}
+function groupToZone() {
+  const items2 = selectedItems().filter((it) => it.rec.template !== "zone");
+  if (items2.length < 2 || !canEditAll(items2)) {
+    if (items2.length < 2) {
+      toast("Для групування виділіть щонайменше два об’єкти (не зони).", "warn");
+    }
+    return false;
+  }
+  const lids = new Set(items2.map((it) => it.rec.layer_id));
+  if (lids.size > 1) {
+    toast("Групувати можна об’єкти одного шару.", "warn");
+    return false;
+  }
+  const ly = layerOf([...lids][0]);
+  if (!ly.slot_types.includes("zone")) {
+    toast(`Шар «${ly.name}» не допускає зони.`, "warn");
+    return false;
+  }
+  const slots = items2.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const zones = new Set(slots.map((s) => (contextOf(s) || {}).zone ?? null));
+  const prevZone = zones.size === 1 ? [...zones][0] : null;
+  pinNumbers(slots.filter((s) => contextOf(s)));
+  const g3 = groupBox(items2);
+  const m = 1;
+  const prefix = nextPrefix({ ref: "ZN", code: "ZN" });
+  const zone2 = {
+    id: newUid(),
+    rid: null,
+    etag: null,
+    layer_id: ly.id,
+    template: "zone",
+    code_prefix: prefix,
+    x: rnd((g3[0] + g3[2]) / 2, 4),
+    y: rnd((g3[1] + g3[3]) / 2, 4),
+    rotation: 0,
+    params: { length: rnd(g3[2] - g3[0] + 2 * m, 3), width: rnd(g3[3] - g3[1] + 2 * m, 3), title: `Група ${prefix}`, color: ly.color },
+    overrides: {},
+    parent_location_id: null
+  };
+  if (prevZone != null) {
+    zone2.addr = { zone_code: String(prevZone) };
+  }
+  const copies = [{ kind: "slot", rec: zone2 }];
+  const why = attempt(copies);
+  if (why) {
+    toast("Заблоковано: " + why, "err");
+    return false;
+  }
+  S.multi = [];
+  S.sel = { kind: "slot", id: zone2.id };
+  E.undoLabel?.(`Групування в зону: ${items2.length} об’єктів`);
+  E.commit({});
+  toast(`Створено зону «${zone2.params.title}».`);
+  return true;
+}
+async function ungroupZone() {
+  const items2 = selectedItems();
+  const zone2 = items2.length === 1 && items2[0].kind === "slot" && items2[0].rec.template === "zone" ? items2[0].rec : null;
+  if (!zone2) {
+    toast("Виділіть зону, яку треба розгрупувати.", "warn");
+    return false;
+  }
+  if (!canEditAll(items2)) {
+    return false;
+  }
+  const inside = S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && (contextOf(s) || {}).zone != null);
+  const ok = await E.confirmBox({ title: "Розгрупувати зону?", text: `Зону «${zone2.params.title || zone2.code_prefix}» буде видалено; об’єкти всередині лишаться, їхні коди не змінюються.`, ok: "Розгрупувати" });
+  if (!ok) {
+    return false;
+  }
+  pinNumbers(inside);
+  S.slots = S.slots.filter((s) => s.id !== zone2.id);
+  S.sel = null;
+  S.multi = [];
+  E.undoLabel?.(`Розгрупування: ${zone2.params.title || zone2.code_prefix}`);
+  E.commit({});
+  return true;
+}
+function applyProps({ rotation, dx, dy }) {
+  const items2 = selectedItems();
+  if (!items2.length || !canEditAll(items2)) {
+    return false;
+  }
+  const hasRot = rotation != null && rotation !== "";
+  const mx = Number(dx) || 0;
+  const my = Number(dy) || 0;
+  if (!hasRot && !mx && !my) {
+    toast("Немає змін: вкажіть поворот чи зсув.", "warn");
+    return false;
+  }
+  return applyMoves(
+    items2,
+    () => {
+      for (const it of items2) {
+        if (hasRot) {
+          it.rec.rotation = Number(rotation);
+        }
+        it.rec.x = rnd(it.rec.x + mx, 4);
+        it.rec.y = rnd(it.rec.y + my, 4);
+      }
+    },
+    `Властивості: ${items2.length} об’єктів`
+  );
+}
+var BULK_TEMPLATES = ["pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"];
+var SECT_KEY = { pallet_rack: "bays", shelf: "sections", cantilever: "arms", floor_stack: "cols", floor_spot: null };
+var LVL_KEY = { pallet_rack: "levels", shelf: "shelves", cantilever: "levels", floor_stack: null, floor_spot: null };
+function bulkLayout({ template, rows, sections, levels, aisle, vertical, zoneId }) {
+  const params = {};
+  if (SECT_KEY[template]) {
+    params[SECT_KEY[template]] = sections;
+  }
+  if (LVL_KEY[template]) {
+    params[LVL_KEY[template]] = levels;
+  }
+  const full = { ...Object.fromEntries(Object.entries(SLOT_TEMPLATES[template].params).map(([k, v]) => [k, v[2]])), ...params };
+  const fp = footprint(template, full);
+  const zone2 = zoneId ? S.sIdx.get(zoneId) : null;
+  const b = S.site.building;
+  const region = zone2 ? { cx: zone2.x, cy: zone2.y, l: zone2.params.length, w: zone2.params.width, rot: zone2.rotation || 0 } : { cx: b.length / 2, cy: b.width / 2, l: b.length, w: b.width, rot: 0 };
+  const step = (layerOf(S.ui.layer) || {}).grid_step || 0.5;
+  const [fl, fw] = vertical ? [fp.w, fp.l] : [fp.l, fp.w];
+  const out = [];
+  const cos = Math.cos(region.rot * Math.PI / 180);
+  const sin = Math.sin(region.rot * Math.PI / 180);
+  for (let i = 0; i < rows; i++) {
+    const u = -region.l / 2 + 0.5 + fl / 2;
+    const v = -region.w / 2 + 0.5 + fw / 2 + i * (fw + aisle);
+    if (u + fl / 2 > region.l / 2 - 0.5 + 1e-6 || v + fw / 2 > region.w / 2 - 0.5 + 1e-6) {
+      break;
+    }
+    out.push({ x: rnd(Math.round((region.cx + u * cos - v * sin) / step) * step, 4), y: rnd(Math.round((region.cy + u * sin + v * cos) / step) * step, 4), rotation: normDeg(region.rot + (vertical ? 90 : 0)), params: { ...full } });
+  }
+  return { rows: out, fp: { l: fl, w: fw }, region, cells: out.length * sections * (levels || 1) };
+}
+function bulkCreate(o) {
+  const ly = layerOf(S.ui.layer);
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає активного шару.", "warn");
+    return 0;
+  }
+  if (!ly.slot_types.includes(o.template)) {
+    toast(`Шар «${ly.name}» не допускає цей тип місця.`, "warn");
+    return 0;
+  }
+  const lay = bulkLayout(o);
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const list = lay.rows.map((r) => {
+    const prefix = nextPrefix({ ref: TPL[o.template].prefix, code: o.template }, used);
+    used.add(prefix);
+    return { ...r, template: o.template, prefix };
+  });
+  E.undoLabel?.(`Масове створення: ${list.length} рядів`);
+  const made = addSlots(list);
+  toast(made.length ? `Створено рядів: ${made.length}${made.length < o.rows ? `; не вмістилось або заблоковано: ${o.rows - made.length}` : ""}.` : "У зоні немає вільного місця.", made.length ? void 0 : "warn");
+  return made.length;
+}
+function previewSvg(lay) {
+  const r = lay.region;
+  const W3 = 320;
+  const k = W3 / Math.max(r.l, 1);
+  const Hh = Math.max(40, r.w * k);
+  const rects = lay.rows.map((row) => {
+    const u = ((row.x - r.cx) * Math.cos(-r.rot * Math.PI / 180) - (row.y - r.cy) * Math.sin(-r.rot * Math.PI / 180)) * k;
+    const v = ((row.x - r.cx) * Math.sin(-r.rot * Math.PI / 180) + (row.y - r.cy) * Math.cos(-r.rot * Math.PI / 180)) * k;
+    return `<rect x="${(W3 / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W3} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W3 - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
+}
+function openBulk() {
+  const ly = layerOf(S.ui.layer);
+  const zones = S.slots.filter((s) => s.template === "zone" && s.layer_id === S.ui.layer);
+  const sel = selectedItems();
+  const st4 = { template: BULK_TEMPLATES.find((t2) => ly && ly.slot_types.includes(t2)) || "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: ly && ly.aisle_width || 3, orient: "h", zoneId: sel.length === 1 && sel[0].rec.template === "zone" ? sel[0].rec.id : zones[0]?.id || "" };
+  const prev = h("div", { id: "bulkPreview" });
+  const info = h("div", { class: "small muted", id: "bulkInfo" });
+  const draw3 = () => {
+    const lay = bulkLayout({ ...st4, vertical: st4.orient === "v" });
+    prev.innerHTML = previewSvg(lay);
+    info.textContent = `Рядів: ${lay.rows.length} із ${st4.rows} · комірок: ${lay.cells} · габарит ряду ${fmt(lay.fp.l, 1)}×${fmt(lay.fp.w, 1)} м`;
+  };
+  const num4 = (key, label2, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st4[key], "aria-label": label2, "data-s3": key });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v) && v >= min && v <= max) {
+        st4[key] = v;
+        draw3();
+      }
+    });
+    return fld(label2, el);
+  };
+  const body = h(
+    "div",
+    { class: "fcol", id: "bulkBody" },
+    h("div", { class: "grid2" }, fld("Тип місця", selectEl(BULK_TEMPLATES.filter((t2) => ly && ly.slot_types.includes(t2)).map((t2) => [t2, SLOT_TEMPLATES[t2].label || t2]), st4.template, (v) => {
+      st4.template = v;
+      draw3();
+    }, false, "Тип місця")), fld("Зона", selectEl([["", "Вся будівля"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st4.zoneId, (v) => {
+      st4.zoneId = v;
+      draw3();
+    }, false, "Зона"))),
+    h("div", { class: "grid3" }, num4("rows", "Рядів", 1, 60), num4("sections", "Секцій у ряду", 1, 60), num4("levels", "Ярусів", 1, 12)),
+    h("div", { class: "grid2" }, num4("aisle", "Прохід між рядами, м", 0, 12, 0.1), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], st4.orient, (v) => {
+      st4.orient = v;
+      draw3();
+    }, false, "Орієнтація"))),
+    prev,
+    info
+  );
+  draw3();
+  openDialog({
+    title: "Масове створення",
+    cls: "narrow",
+    body,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Створити",
+        cls: "primary",
+        id: "btnBulkGo",
+        onClick: () => {
+          const n = bulkCreate({ ...st4, vertical: st4.orient === "v" });
+          return n ? void 0 : false;
+        }
+      }
+    ]
+  });
+}
+function openArray() {
+  const items2 = selectedItems();
+  if (!items2.length) {
+    toast("Виділіть об’єкт для масиву.", "warn");
+    return;
+  }
+  const b = groupBox(items2);
+  const st4 = { nx: 3, ny: 2, dx: rnd(b[2] - b[0] + 0.3, 2), dy: rnd(b[3] - b[1] + 0.3, 2) };
+  const num4 = (key, label2, min, max, step = 1) => {
+    const el = h("input", { type: "number", min, max, step, value: st4[key], "aria-label": label2, "data-s3": key });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v)) {
+        st4[key] = v;
+      }
+    });
+    return fld(label2, el);
+  };
+  openDialog({
+    title: "Масив копій",
+    cls: "narrow",
+    body: h("div", { class: "fcol", id: "arrayBody" }, h("div", { class: "grid2" }, num4("nx", "Копій по X (N)", 1, 50), num4("ny", "Копій по Y (M)", 1, 50)), h("div", { class: "grid2" }, num4("dx", "Крок X, м", -500, 500, 0.05), num4("dy", "Крок Y, м", -500, 500, 0.05)), h("div", { class: "small muted" }, "Копії — того ж типу, з наступними кодами; заблоковані перевірками пропускаються.")),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      { label: "Створити", cls: "primary", id: "btnArrayGo", onClick: () => arrayCopies({ nx: Math.round(st4.nx), ny: Math.round(st4.ny), dx: st4.dx, dy: st4.dy }) ? void 0 : false }
+    ]
+  });
+}
+registries.dialogs.add("bulk", () => openBulk(), { force: true });
+registries.dialogs.add("array", () => openArray(), { force: true });
+var designOnly = () => !E.access?.().design;
+registries.menu.add("bulk", { area: "more", label: "Масове створення…", icon: "plus", sequence: 40, run: () => E.runDialog("bulk"), disabled: designOnly }, { sequence: 40, force: true });
+registries.menu.add("array", { area: "more", label: "Масив копій…", icon: "copy", sequence: 41, run: () => E.runDialog("array"), disabled: () => designOnly() || !selRefs().length }, { sequence: 41, force: true });
+var hk = (key, def, seq) => registries.hotkeys.add(key, { ctrl: true, ...def }, { sequence: seq, force: true });
+hk("duplicate", { label: "Ctrl+D — дублювати", match: (e) => e.code === "KeyD" && !e.shiftKey, when: () => selRefs().length > 0, run: (e) => (e.preventDefault(), void duplicateSel()) }, 12);
+hk("copy", { label: "Ctrl+C — копіювати", match: (e) => e.code === "KeyC" && !e.shiftKey, when: () => selRefs().length > 0, run: (e) => (e.preventDefault(), void copySel()) }, 13);
+hk("paste", { label: "Ctrl+V — вставити", match: (e) => e.code === "KeyV" && !e.shiftKey, when: () => !!clip, run: (e) => (e.preventDefault(), void pasteClip()) }, 14);
+registries.hotkeys.add("multi.rotate", { alt: true, label: "R — повернути виділені ряди", code: "KeyR", when: () => S.multi.length > 1, run: (e) => (e.preventDefault(), void rotateGroup(e.shiftKey ? -1 : 1)) }, { sequence: 15, force: true });
+registries.hotkeys.add(
+  "multi.delete",
+  { match: (e) => e.code === "Delete" || e.code === "Backspace", when: () => S.multi.length > 1, run: (e) => (e.preventDefault(), void removeAll()) },
+  { sequence: 25, force: true }
+);
+hk(
+  "selectAll",
+  {
+    label: "Ctrl+A — виділити все на шарі",
+    match: (e) => e.code === "KeyA" && !e.shiftKey,
+    run(e) {
+      e.preventDefault();
+      const refs = [
+        ...S.slots.filter((s) => s.layer_id === S.ui.layer && !(layerOf(s.layer_id) || {}).kind?.match(/building|engineering/)).map((s) => ({ kind: "slot", id: s.id })),
+        ...S.placements.filter((p) => p.layer_id === S.ui.layer).map((p) => ({ kind: "placement", id: p.id }))
+      ];
+      E.boxSelect(refs, false);
+    }
+  },
+  16
+);
+Object.assign(E, { duplicateSel, copySel, pasteClip, arrayCopies, alignSel, distributeSel, rotateGroup, removeAll, groupToZone, ungroupZone, applyProps, bulkCreate });
+
+// core/constructor/selection.js
+var same3 = (a, b) => a.kind === b.kind && a.id === b.id;
+function setMulti(refs, primary = null) {
+  const uniq = [];
+  for (const r of refs) {
+    if (!uniq.some((u) => same3(u, r))) {
+      uniq.push({ kind: r.kind, id: r.id });
+    }
+  }
+  S.selCell = null;
+  S.edit = null;
+  if (uniq.length >= 2) {
+    S.multi = uniq;
+    S.sel = primary && uniq.some((u) => same3(u, primary)) ? { kind: primary.kind, id: primary.id } : { ...uniq[uniq.length - 1] };
+  } else {
+    S.multi = [];
+    S.sel = uniq[0] || null;
+  }
+  E.renderRight();
+  E.updateVisual();
+  if (S.ui.leftTab === "slots") {
+    E.renderLeft();
+  }
+}
+function toggleMulti(ref2) {
+  const cur = selRefs();
+  const has = cur.some((r) => same3(r, ref2));
+  setMulti(has ? cur.filter((r) => !same3(r, ref2)) : [...cur, ref2], has ? null : ref2);
+}
+function boxSelect(refs, add = false) {
+  setMulti([...add ? selRefs() : [], ...refs]);
+  if (refs.length) {
+    toast(`Виділено: ${selRefs().length}.`);
+  }
+}
+var origSelect = E.selectObj;
+E.selectObj = function selectObjMulti(ref2, ...rest) {
+  S.multi = [];
+  return origSelect.call(this, ref2, ...rest);
+};
+var origRight = E.renderRight;
+E.renderRight = function renderRightMulti(...args) {
+  if (S.multi.length > 1) {
+    return renderMultiPanel();
+  }
+  return origRight.apply(this, args);
+};
+var nameOf3 = (it) => it.kind === "slot" ? it.rec.params?.title || it.rec.code_prefix : it.rec.code || it.rec.name;
+function renderMultiPanel() {
+  const root = $("#rightBody");
+  if (!root) {
+    return;
+  }
+  root.replaceChildren();
+  const items2 = selectedItems();
+  const acc = E.access();
+  const btn3 = (label2, fn, o = {}) => {
+    const b = h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, "data-title": o.title || "", onclick: fn }, o.icon ? ic(o.icon) : null, label2);
+    b.disabled = !acc.design || !!o.dis;
+    b.title = !acc.design ? E.accessHint("design") : o.title || "";
+    return b;
+  };
+  const list = h(
+    "div",
+    { class: "mlist", id: "multiList", style: { maxHeight: "180px", overflow: "auto", border: "1px solid var(--line)" } },
+    items2.map(
+      (it) => h(
+        "div",
+        { class: "frow", "data-key": it.ref.kind + ":" + it.ref.id, style: { padding: "2px 6px", borderBottom: "1px solid var(--line2)" } },
+        h("button", { class: "linkbtn", type: "button", style: { flex: "1", textAlign: "left", border: 0, background: "none", cursor: "pointer", fontWeight: S.sel && same3(S.sel, it.ref) ? "600" : "400" }, onclick: () => setMulti(items2.map((x) => x.ref), it.ref) }, nameOf3(it)),
+        h("span", { class: "small muted" }, it.kind === "slot" ? it.rec.template : "обладнання"),
+        h("button", { class: "xbtn", type: "button", "aria-label": "Прибрати з виділення", onclick: () => toggleMulti(it.ref) }, ic("x"))
+      )
+    )
+  );
+  const slots = items2.filter((it) => it.kind === "slot").map((it) => it.rec);
+  const props = { rotation: "", dx: 0, dy: 0 };
+  const num4 = (key, label2) => {
+    const el = h("input", { type: "number", step: 0.5, value: props[key], "aria-label": label2, "data-s3": key });
+    el.addEventListener("input", () => props[key] = parseFloat(el.value) || 0);
+    return fld(label2, el);
+  };
+  root.append(
+    h("div", { class: "sec", id: "multiPanel" }, h("h3", null, `Виділено ${items2.length}`), list),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Дії"),
+      h(
+        "div",
+        { class: "frow wrap" },
+        btn3("Дублювати всі", () => duplicateSel(), { id: "btnMultiDup", icon: "copy", title: "Ctrl+D" }),
+        btn3("Копіювати", () => copySel(), { id: "btnMultiCopy", title: "Ctrl+C" }),
+        btn3("Повернути ряди", () => rotateGroup(1), { id: "btnMultiRot", icon: "rot", title: "R" }),
+        btn3("Прибрати всі", () => removeAll(), { id: "btnMultiDel", icon: "trash", cls: "danger", title: "Del" }),
+        btn3("Зберегти виділене", () => saveGroupPreset(slots), { id: "btnMultiPreset", dis: !slots.length || !canWriteLibrary(), title: canWriteLibrary() ? "Пресет «виділене» в бібліотеку" : "Бібліотеку пише проєктувальник" })
+      )
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Вирівнювання"),
+      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t2]) => btn3(t2, () => alignSel(k), { id: "btnAlign-" + k }))),
+      h("div", { class: "frow wrap" }, btn3("Розподілити по X", () => distributeSel("x"), { id: "btnDistX", dis: items2.length < 3 }), btn3("Розподілити по Y", () => distributeSel("y"), { id: "btnDistY", dis: items2.length < 3 }))
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Групи"),
+      h("div", { class: "frow wrap" }, btn3("Згрупувати в нову зону", () => groupToZone(), { id: "btnGroupZone" }), btn3("Розгрупувати зону", () => ungroupZone(), { id: "btnUngroup", dis: !(items2.length === 1 && items2[0].rec.template === "zone") }))
+    ),
+    h(
+      "div",
+      { class: "sec" },
+      h("h3", null, "Властивості"),
+      h("div", { class: "grid3" }, fld("Поворот", selectEl([["", "—"], ["0", "0°"], ["90", "90°"], ["180", "180°"], ["270", "270°"]], "", (v) => props.rotation = v, !acc.design, "Поворот")), num4("dx", "Зсув X, м"), num4("dy", "Зсув Y, м")),
+      h("div", { class: "small muted" }, "Застосовуються лише змінені поля."),
+      btn3("Застосувати", () => applyProps(props), { id: "btnMultiApply" })
+    )
+  );
+}
+async function saveGroupPreset(slots) {
+  const draft = { name: `Виділене (${slots.length})` };
+  openDialog({
+    title: "Зберегти виділене",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, fld("Назва шаблону", textInput({ value: draft.name, label: "Назва шаблону", f: "multi-preset-name", set: (v) => draft.name = v })), h("div", { class: "small muted" }, "Місця зберігаються з взаємним розташуванням; шаблон потрапляє в бібліотеку.")),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Зберегти",
+        cls: "primary",
+        id: "btnMultiPresetGo",
+        onClick: async () => {
+          try {
+            const rec = await saveRecord(E.adapter, "preset", presetFromSlots(slots, draft.name.trim() || "Виділене"));
+            toast(`Шаблон «${rec.name}» збережено в бібліотеці.`);
+            return true;
+          } catch (e) {
+            toast(e.message || "Не вдалося зберегти шаблон.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+}
+function renderToolsBlock(root, { rec }) {
+  if (!rec || !S.sel || S.multi.length > 1) {
+    return;
+  }
+  const acc = E.access();
+  const slot = S.sel.kind === "slot" ? rec : null;
+  const b = (label2, fn, id, title) => {
+    const el = h("button", { class: "fbtn sm", type: "button", id, onclick: fn }, label2);
+    el.disabled = !acc.design;
+    el.title = !acc.design ? E.accessHint("design") : title || "";
+    return el;
+  };
+  const tier = slot && LEVEL_KEYS[slot.template];
+  const bay = slot && COUNT_KEY[slot.template];
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "toolsBlock" },
+      h("h3", null, "Дублювання й копії"),
+      h(
+        "div",
+        { class: "frow wrap" },
+        b(slot && slot.template === "zone" ? "Копія зони" : slot && tier ? "Ряд із наступним номером" : "Дублювати", () => duplicateSel(slot && tier ? "row" : null), "btnDup", "Ctrl+D"),
+        tier ? b("Ярус зверху", () => duplicateSel("tier"), "btnDupTier", "Додати ярус над останнім") : null,
+        bay ? b("Секція в кінець ряду", () => duplicateSel("bay"), "btnDupBay", "Додати секцію в кінці ряду") : null,
+        b("Копіювати", () => copySel(), "btnCopy", "Ctrl+C; вставлення — Ctrl+V"),
+        slot && slot.template === "zone" ? b("Розгрупувати", () => ungroupZone(), "btnUngroup", "Прибрати зону; об’єкти всередині лишаються") : null,
+        b("Масив…", () => E.runDialog("array"), "btnArray", "N×M копій із кроком")
+      )
+    )
+  );
+}
+registries.panels.add("right:tools", { area: "right", render: renderToolsBlock }, { sequence: 60, force: true });
+Object.assign(E, { setMulti, toggleMulti, boxSelect });
+
+// core/constructor/barcode.js
+var C128 = "212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(
+  " "
+);
+var START_B = 104;
+var START_C = 105;
+var CODE_B = 100;
+var CODE_C = 99;
+var STOP = 106;
+var isPrintableAscii = (text) => /^[\x20-\x7e]*$/.test(text);
+var digitRun = (text, i) => {
+  let n = 0;
+  while (i + n < text.length && text.charCodeAt(i + n) >= 48 && text.charCodeAt(i + n) <= 57) {
+    n++;
+  }
+  return n;
+};
+function code128Values(text) {
+  const s = String(text);
+  if (!s.length) {
+    throw new Error("Code128: порожній рядок.");
+  }
+  if (!isPrintableAscii(s)) {
+    throw new Error("Code128: лише друкований ASCII (для інших символів — QR).");
+  }
+  const out = [];
+  let set = null;
+  let i = 0;
+  const run0 = digitRun(s, 0);
+  if (run0 >= 4 || run0 === s.length && run0 >= 2) {
+    out.push(START_C);
+    set = "C";
+  } else {
+    out.push(START_B);
+    set = "B";
+  }
+  while (i < s.length) {
+    const run2 = digitRun(s, i);
+    if (set === "B") {
+      if (run2 >= 6 || run2 >= 4 && i + run2 === s.length) {
+        if (run2 % 2) {
+          out.push(s.charCodeAt(i) - 32);
+          i++;
+        }
+        out.push(CODE_C);
+        set = "C";
+        continue;
+      }
+      out.push(s.charCodeAt(i) - 32);
+      i++;
+    } else {
+      if (run2 >= 2) {
+        out.push(Number(s.slice(i, i + 2)));
+        i += 2;
+      } else {
+        out.push(CODE_B);
+        set = "B";
+      }
+    }
+  }
+  let sum = out[0];
+  for (let k = 1; k < out.length; k++) {
+    sum += out[k] * k;
+  }
+  out.push(sum % 103, STOP);
+  return out;
+}
+function code128(text) {
+  const values = code128Values(text);
+  let bits = "";
+  for (const v of values) {
+    const pat = C128[v];
+    let bar = true;
+    for (const ch of pat) {
+      bits += (bar ? "1" : "0").repeat(Number(ch));
+      bar = !bar;
+    }
+  }
+  return { values, modules: bits, width: bits.length };
+}
+var RS = [
+  [[1, 26, 19], [1, 26, 16], [1, 26, 13], [1, 26, 9]],
+  [[1, 44, 34], [1, 44, 28], [1, 44, 22], [1, 44, 16]],
+  [[1, 70, 55], [1, 70, 44], [2, 35, 17], [2, 35, 13]],
+  [[1, 100, 80], [2, 50, 32], [2, 50, 24], [4, 25, 9]],
+  [[1, 134, 108], [2, 67, 43], [2, 33, 15, 2, 34, 16], [2, 33, 11, 2, 34, 12]],
+  [[2, 86, 68], [4, 43, 27], [4, 43, 19], [4, 43, 15]],
+  [[2, 98, 78], [4, 49, 31], [2, 32, 14, 4, 33, 15], [4, 39, 13, 1, 40, 14]],
+  [[2, 121, 97], [2, 60, 38, 2, 61, 39], [4, 40, 18, 2, 41, 19], [4, 40, 14, 2, 41, 15]],
+  [[2, 146, 116], [3, 58, 36, 2, 59, 37], [4, 36, 16, 4, 37, 17], [4, 36, 12, 4, 37, 13]],
+  [[2, 86, 68, 2, 87, 69], [4, 69, 43, 1, 70, 44], [6, 43, 19, 2, 44, 20], [6, 43, 15, 2, 44, 16]],
+  [[4, 101, 81], [1, 80, 50, 4, 81, 51], [4, 50, 22, 4, 51, 23], [3, 36, 12, 8, 37, 13]],
+  [[2, 116, 92, 2, 117, 93], [6, 58, 36, 2, 59, 37], [4, 46, 20, 6, 47, 21], [7, 42, 14, 4, 43, 15]],
+  [[4, 133, 107], [8, 59, 37, 1, 60, 38], [8, 44, 20, 4, 45, 21], [12, 33, 11, 4, 34, 12]],
+  [[3, 145, 115, 1, 146, 116], [4, 64, 40, 5, 65, 41], [11, 36, 16, 5, 37, 17], [11, 36, 12, 5, 37, 13]],
+  [[5, 109, 87, 1, 110, 88], [5, 65, 41, 5, 66, 42], [5, 54, 24, 7, 55, 25], [11, 36, 12, 7, 37, 13]]
+];
+var ALIGN2 = [[], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58], [6, 34, 62], [6, 26, 46, 66], [6, 26, 48, 70]];
+var ECC_INDEX = { L: 0, M: 1, Q: 2, H: 3 };
+var ECC_FORMAT = { L: 1, M: 0, Q: 3, H: 2 };
+var QR_MAX_VERSION = RS.length;
+var blocksOf = (version, ecc) => {
+  const e = RS[version - 1][ECC_INDEX[ecc]];
+  const out = [];
+  for (let i = 0; i < e.length; i += 3) {
+    for (let k = 0; k < e[i]; k++) {
+      out.push({ total: e[i + 1], data: e[i + 2] });
+    }
+  }
+  return out;
+};
+var dataCodewords = (version, ecc) => blocksOf(version, ecc).reduce((n, b) => n + b.data, 0);
+var EXP = new Array(512);
+var LOG = new Array(256);
+for (let i = 0, x = 1; i < 255; i++) {
+  EXP[i] = x;
+  LOG[x] = i;
+  x <<= 1;
+  if (x & 256) {
+    x ^= 285;
+  }
+}
+for (let i = 255; i < 512; i++) {
+  EXP[i] = EXP[i - 255];
+}
+var gmul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0;
+function rsGenerator(deg) {
+  let g3 = [1];
+  for (let i = 0; i < deg; i++) {
+    const next = new Array(g3.length + 1).fill(0);
+    for (let j = 0; j < g3.length; j++) {
+      next[j] ^= g3[j];
+      next[j + 1] ^= gmul(g3[j], EXP[i]);
+    }
+    g3 = next;
+  }
+  return g3;
+}
+function rsRemainder(data, deg) {
+  const gen = rsGenerator(deg);
+  const rem = new Array(deg).fill(0);
+  for (const b of data) {
+    const f = b ^ rem.shift();
+    rem.push(0);
+    if (f) {
+      for (let i = 0; i < deg; i++) {
+        rem[i] ^= gmul(gen[i + 1], f);
+      }
+    }
+  }
+  return rem;
+}
+var utf8 = (text) => Array.from(new TextEncoder().encode(text));
+function buildCodewords(bytes, version, ecc) {
+  const cap = dataCodewords(version, ecc) * 8;
+  const bits = [];
+  const put = (val, n) => {
+    for (let i = n - 1; i >= 0; i--) {
+      bits.push(val >>> i & 1);
+    }
+  };
+  put(4, 4);
+  put(bytes.length, version <= 9 ? 8 : 16);
+  for (const b of bytes) {
+    put(b, 8);
+  }
+  put(0, Math.min(4, cap - bits.length));
+  while (bits.length % 8) {
+    bits.push(0);
+  }
+  for (let pad = 236; bits.length < cap; pad ^= 236 ^ 17) {
+    put(pad, 8);
+  }
+  const data = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    data.push(parseInt(bits.slice(i, i + 8).join(""), 2));
+  }
+  const blocks = blocksOf(version, ecc);
+  let pos = 0;
+  const parts = blocks.map((b) => {
+    const d = data.slice(pos, pos + b.data);
+    pos += b.data;
+    return { d, e: rsRemainder(d, b.total - b.data) };
+  });
+  const out = [];
+  for (let i = 0; i < Math.max(...parts.map((p) => p.d.length)); i++) {
+    for (const p of parts) {
+      if (i < p.d.length) {
+        out.push(p.d[i]);
+      }
+    }
+  }
+  for (let i = 0; i < parts[0].e.length; i++) {
+    for (const p of parts) {
+      out.push(p.e[i]);
+    }
+  }
+  return out;
+}
+var MASKS = [
+  (x, y) => (x + y) % 2 === 0,
+  (x, y) => y % 2 === 0,
+  (x, y) => x % 3 === 0,
+  (x, y) => (x + y) % 3 === 0,
+  (x, y) => ((y / 2 | 0) + (x / 3 | 0)) % 2 === 0,
+  (x, y) => x * y % 2 + x * y % 3 === 0,
+  (x, y) => (x * y % 2 + x * y % 3) % 2 === 0,
+  (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0
+];
+var Matrix = class {
+  constructor(version) {
+    this.version = version;
+    this.size = 17 + 4 * version;
+    this.m = Array.from({ length: this.size }, () => new Array(this.size).fill(false));
+    this.fn = Array.from({ length: this.size }, () => new Array(this.size).fill(false));
+  }
+  set(x, y, dark, isFn = true) {
+    this.m[y][x] = dark;
+    if (isFn) {
+      this.fn[y][x] = true;
+    }
+  }
+  drawFunctionPatterns() {
+    const n = this.size;
+    for (let i = 0; i < n; i++) {
+      this.set(6, i, i % 2 === 0);
+      this.set(i, 6, i % 2 === 0);
+    }
+    for (const [cx, cy] of [[3, 3], [n - 4, 3], [3, n - 4]]) {
+      for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x >= 0 && x < n && y >= 0 && y < n) {
+            const d = Math.max(Math.abs(dx), Math.abs(dy));
+            this.set(x, y, d !== 2 && d !== 4);
+          }
+        }
+      }
+    }
+    const pos = ALIGN2[this.version - 1];
+    for (let a = 0; a < pos.length; a++) {
+      for (let b = 0; b < pos.length; b++) {
+        if (a === 0 && b === 0 || a === 0 && b === pos.length - 1 || a === pos.length - 1 && b === 0) {
+          continue;
+        }
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            this.set(pos[a] + dx, pos[b] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+          }
+        }
+      }
+    }
+    this.drawFormat("M", 0);
+    this.drawVersion();
+  }
+  drawFormat(ecc, mask) {
+    const n = this.size;
+    const data = ECC_FORMAT[ecc] << 3 | mask;
+    let rem = data;
+    for (let i = 0; i < 10; i++) {
+      rem = rem << 1 ^ (rem >>> 9) * 1335;
+    }
+    const bits = (data << 10 | rem) ^ 21522;
+    const bit = (i) => (bits >>> i & 1) !== 0;
+    for (let i = 0; i <= 5; i++) {
+      this.set(8, i, bit(i));
+    }
+    this.set(8, 7, bit(6));
+    this.set(8, 8, bit(7));
+    this.set(7, 8, bit(8));
+    for (let i = 9; i < 15; i++) {
+      this.set(14 - i, 8, bit(i));
+    }
+    for (let i = 0; i < 8; i++) {
+      this.set(n - 1 - i, 8, bit(i));
+    }
+    for (let i = 8; i < 15; i++) {
+      this.set(8, n - 15 + i, bit(i));
+    }
+    this.set(8, n - 8, true);
+  }
+  drawVersion() {
+    if (this.version < 7) {
+      return;
+    }
+    let rem = this.version;
+    for (let i = 0; i < 12; i++) {
+      rem = rem << 1 ^ (rem >>> 11) * 7973;
+    }
+    const bits = this.version << 12 | rem;
+    for (let i = 0; i < 18; i++) {
+      const dark = (bits >>> i & 1) !== 0;
+      const a = this.size - 11 + i % 3;
+      const b = Math.floor(i / 3);
+      this.set(a, b, dark);
+      this.set(b, a, dark);
+    }
+  }
+  drawCodewords(words) {
+    const n = this.size;
+    let i = 0;
+    for (let right = n - 1; right >= 1; right -= 2) {
+      if (right === 6) {
+        right = 5;
+      }
+      for (let vert = 0; vert < n; vert++) {
+        for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const upward = (right + 1 & 2) === 0;
+          const y = upward ? n - 1 - vert : vert;
+          if (!this.fn[y][x] && i < words.length * 8) {
+            this.m[y][x] = (words[i >>> 3] >>> 7 - (i & 7) & 1) !== 0;
+            i++;
+          }
+        }
+      }
+    }
+  }
+  applyMask(mask) {
+    const f = MASKS[mask];
+    for (let y = 0; y < this.size; y++) {
+      for (let x = 0; x < this.size; x++) {
+        if (!this.fn[y][x] && f(x, y)) {
+          this.m[y][x] = !this.m[y][x];
+        }
+      }
+    }
+  }
+  penalty() {
+    const n = this.size;
+    let result = 0;
+    const runs = (line2) => {
+      let p = 0;
+      let run2 = 1;
+      for (let i = 1; i <= line2.length; i++) {
+        if (i < line2.length && line2[i] === line2[i - 1]) {
+          run2++;
+        } else {
+          if (run2 >= 5) {
+            p += 3 + (run2 - 5);
+          }
+          run2 = 1;
+        }
+      }
+      return p;
+    };
+    const finder = (line2) => {
+      const pat = [true, false, true, true, true, false, true];
+      let p = 0;
+      for (let i = 0; i + 7 <= line2.length; i++) {
+        if (pat.every((v, k2) => line2[i + k2] === v)) {
+          const before = i >= 4 && [1, 2, 3, 4].every((k2) => !line2[i - k2]);
+          const after = i + 11 <= line2.length && [7, 8, 9, 10].every((k2) => !line2[i + k2]);
+          if (before || after) {
+            p += 40;
+          }
+        }
+      }
+      return p;
+    };
+    for (let y = 0; y < n; y++) {
+      result += runs(this.m[y]) + finder(this.m[y]);
+    }
+    for (let x = 0; x < n; x++) {
+      const col = this.m.map((r) => r[x]);
+      result += runs(col) + finder(col);
+    }
+    for (let y = 0; y < n - 1; y++) {
+      for (let x = 0; x < n - 1; x++) {
+        const c = this.m[y][x];
+        if (c === this.m[y][x + 1] && c === this.m[y + 1][x] && c === this.m[y + 1][x + 1]) {
+          result += 3;
+        }
+      }
+    }
+    const dark = this.m.reduce((s, r) => s + r.filter(Boolean).length, 0);
+    const k = Math.ceil(Math.abs(dark * 20 - n * n * 10) / (n * n)) - 1;
+    return result + Math.max(0, k) * 10;
+  }
+};
+function qr(text, { ecc = "M", mask = null, minVersion = 1 } = {}) {
+  if (!(ecc in ECC_INDEX)) {
+    throw new Error(`QR: невідомий рівень «${ecc}».`);
+  }
+  const bytes = utf8(String(text));
+  let version = minVersion;
+  for (; version <= QR_MAX_VERSION; version++) {
+    if (4 + (version <= 9 ? 8 : 16) + bytes.length * 8 <= dataCodewords(version, ecc) * 8) {
+      break;
+    }
+  }
+  if (version > QR_MAX_VERSION) {
+    throw new Error("QR: текст задовгий (до 400 байт).");
+  }
+  const mx = new Matrix(version);
+  mx.drawFunctionPatterns();
+  mx.drawCodewords(buildCodewords(bytes, version, ecc));
+  let best = mask;
+  if (best == null) {
+    let min = Infinity;
+    for (let m = 0; m < 8; m++) {
+      mx.applyMask(m);
+      mx.drawFormat(ecc, m);
+      const p = mx.penalty();
+      if (p < min) {
+        min = p;
+        best = m;
+      }
+      mx.applyMask(m);
+    }
+  }
+  mx.applyMask(best);
+  mx.drawFormat(ecc, best);
+  const rows = mx.m.map((r) => r.map((d) => d ? "1" : "0").join(""));
+  return { version, size: mx.size, ecc, mask: best, rows, get: (x, y) => rows[y][x] === "1" };
+}
+
+// core/constructor/labels.js
+var LABELS_MAX = 5e3;
+var LAYOUTS = {
+  "70x36": { name: "70×36 мм (3×8)", w: 70, h: 36, page: { w: 210, h: 297 } },
+  "105x48": { name: "105×48 мм (2×6)", w: 105, h: 48, page: { w: 210, h: 297 } },
+  "100x150": { name: "100×150 мм (рулон, 1 на аркуш)", w: 100, h: 150, page: { w: 100, h: 150 } },
+  custom: { name: "Свій розмір", w: 70, h: 36, page: { w: 210, h: 297 } }
+};
+var SCOPES = { selected: "Виділене (все всередині)", zone: "Зона", row: "Ряд", tier: "Ярус знизу", all: "Усі місця" };
+var defaultSpec = () => ({
+  scope: "selected",
+  zoneId: "",
+  rowId: "",
+  tier: 1,
+  onlyNew: false,
+  onlyApplied: false,
+  kind: "code128",
+  show: { zone: false, row: false, bay: false, level: false, type: false },
+  arrows: "none",
+  scanLevel: 2,
+  layout: "70x36",
+  custom: { w: 70, h: 36 },
+  pageSize: "A4",
+  margin: null,
+  // {l, t, r, b} мм; null — по центру
+  gap: { x: 0, y: 0 },
+  skip: 0,
+  font: "cyr",
+  dpi: 203
+});
+var slotsInside = (zone2) => {
+  const poly2 = sGeom(zone2).poly;
+  return S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && polygonContains(poly2, [s.x, s.y]));
+};
+var isApplied = (s) => s.rid != null || !!E.adapter?.baseMap?.has?.("s:" + s.id);
+var isNewOrRenumbered = (s) => {
+  const st4 = E.objStatus ? E.objStatus("slot", s) : "new";
+  return st4 === "new" || st4 === "unsaved";
+};
+function scopeSlots(spec) {
+  const sel = selRefs().filter((r) => r.kind === "slot").map((r) => S.sIdx.get(r.id)).filter(Boolean);
+  const expand = (list) => list.flatMap((s) => s.template === "zone" ? slotsInside(s) : [s]);
+  switch (spec.scope) {
+    case "zone": {
+      const z = S.sIdx.get(spec.zoneId) || sel.find((s) => s.template === "zone");
+      return z ? slotsInside(z) : [];
+    }
+    case "row": {
+      const s = S.sIdx.get(spec.rowId) || sel.find((x) => x.template !== "zone");
+      return s ? [s] : [];
+    }
+    case "tier":
+      return sel.length ? expand(sel) : S.slots.filter((s) => s.template !== "zone");
+    case "all":
+      return S.slots.filter((s) => s.template !== "zone");
+    default:
+      return expand(sel);
+  }
+}
+function collectCells(spec) {
+  let slots = scopeSlots(spec);
+  if (spec.onlyNew) {
+    slots = slots.filter(isNewOrRenumbered);
+  }
+  if (spec.onlyApplied) {
+    slots = slots.filter(isApplied);
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const s of slots) {
+    for (const c of cellsOf(s)) {
+      if (c.disabled || seen.has(c.code)) {
+        continue;
+      }
+      if (spec.scope === "tier" && c.level !== Number(spec.tier)) {
+        continue;
+      }
+      seen.add(c.code);
+      out.push({ code: c.code, slot: s, cell: c });
+    }
+  }
+  return out;
+}
+var TR = { а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh", з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ь: "", ю: "iu", я: "ia", ы: "y", э: "e", ё: "io", ъ: "" };
+var translit = (t2) => String(t2).split("").map((ch) => {
+  const lo = ch.toLowerCase();
+  if (!(lo in TR)) {
+    return ch;
+  }
+  const r = TR[lo];
+  return ch === lo ? r : r.charAt(0).toUpperCase() + r.slice(1);
+}).join("");
+function buildItems(cells, spec) {
+  const fix2 = spec.font === "latin" ? translit : (x) => x;
+  return cells.map(({ code, slot, cell }) => {
+    const ctx2 = contextOf(slot) || {};
+    const lines = [];
+    const parts = [];
+    if (spec.show.zone && ctx2.zone != null) {
+      parts.push(`Зона ${ctx2.zone}`);
+    }
+    if (spec.show.row) {
+      const r = rowNumberOf(slot);
+      parts.push(`Ряд ${r ?? slot.code_prefix}`);
+    }
+    if (spec.show.bay && cell.index != null && slot.template !== "floor_spot") {
+      parts.push(`Секція ${cell.index}`);
+    }
+    if (spec.show.level && cell.level != null && slot.template !== "floor_spot") {
+      parts.push(`Ярус ${cell.level}`);
+    }
+    if (parts.length) {
+      lines.push(fix2(parts.join(" · ")));
+    }
+    if (spec.show.type) {
+      const t2 = typeOf(slot.type_id, libraryState());
+      lines.push(fix2(t2 ? t2.name : slot.template));
+    }
+    let arrow = null;
+    if (spec.arrows !== "none" && cell.level != null) {
+      if (cell.level > Number(spec.scanLevel)) {
+        arrow = "up";
+      } else if (spec.arrows === "updown" && cell.level < Number(spec.scanLevel)) {
+        arrow = "down";
+      }
+    }
+    return { code, lines, arrow };
+  });
+}
+function pageGeometry(spec) {
+  const L3 = LAYOUTS[spec.layout] || LAYOUTS.custom;
+  const lab = spec.layout === "custom" ? { w: Number(spec.custom.w) || 70, h: Number(spec.custom.h) || 36 } : { w: L3.w, h: L3.h };
+  const page = spec.layout === "100x150" ? { w: 100, h: 150 } : { w: 210, h: 297 };
+  const gx = Number(spec.gap.x) || 0;
+  const gy = Number(spec.gap.y) || 0;
+  const m = spec.margin;
+  const avW = page.w - (m ? m.l + m.r : 0);
+  const avH = page.h - (m ? m.t + m.b : 0);
+  const cols = Math.max(1, Math.floor((avW + gx + 1e-6) / (lab.w + gx)));
+  const rows = Math.max(1, Math.floor((avH + gy + 1e-6) / (lab.h + gy)));
+  const usedW = cols * lab.w + (cols - 1) * gx;
+  const usedH = rows * lab.h + (rows - 1) * gy;
+  return { page, label: lab, cols, rows, perPage: cols * rows, x0: m ? m.l : (page.w - usedW) / 2, y0: m ? m.t : (page.h - usedH) / 2, gx, gy };
+}
+function paginate(items2, spec) {
+  const g3 = pageGeometry(spec);
+  const skip = Math.max(0, Math.floor(Number(spec.skip) || 0)) % g3.perPage;
+  const pages = [];
+  let slot = skip;
+  for (const item of items2) {
+    const pi = Math.floor(slot / g3.perPage);
+    const k = slot % g3.perPage;
+    (pages[pi] = pages[pi] || []).push({ item, x: g3.x0 + k % g3.cols * (g3.label.w + g3.gx), y: g3.y0 + Math.floor(k / g3.cols) * (g3.label.h + g3.gy) });
+    slot++;
+  }
+  return pages.map((p) => p || []);
+}
+var esc = (t2) => String(t2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+var num3 = (v) => Number(v.toFixed(3));
+function barsSvg(code, x, y, w, hh) {
+  const c = code128(code);
+  const mod = w / (c.width + 20);
+  let d = "";
+  let i = 0;
+  while (i < c.width) {
+    if (c.modules[i] === "1") {
+      let j = i;
+      while (j < c.width && c.modules[j] === "1") {
+        j++;
+      }
+      d += `M${num3(x + (10 + i) * mod)} ${num3(y)}h${num3((j - i) * mod)}v${num3(hh)}h${num3(-(j - i) * mod)}z`;
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return `<path d="${d}" fill="#000"/>`;
+}
+function qrSvg(code, x, y, side2) {
+  const q = qr(code, { ecc: "M" });
+  const mod = side2 / (q.size + 8);
+  let d = "";
+  for (let r = 0; r < q.size; r++) {
+    let c = 0;
+    while (c < q.size) {
+      if (q.rows[r][c] === "1") {
+        let e = c;
+        while (e < q.size && q.rows[r][e] === "1") {
+          e++;
+        }
+        d += `M${num3(x + (4 + c) * mod)} ${num3(y + (4 + r) * mod)}h${num3((e - c) * mod)}v${num3(mod)}h${num3(-(e - c) * mod)}z`;
+        c = e;
+      } else {
+        c++;
+      }
+    }
+  }
+  return `<path d="${d}" fill="#000"/>`;
+}
+var arrowSvg = (dir, x, y, s) => `<path d="${dir === "up" ? `M${num3(x + s / 2)} ${num3(y)}L${num3(x + s)} ${num3(y + s * 0.6)}H${num3(x + s * 0.7)}V${num3(y + s)}H${num3(x + s * 0.3)}V${num3(y + s * 0.6)}H${num3(x)}z` : `M${num3(x + s / 2)} ${num3(y + s)}L${num3(x)} ${num3(y + s * 0.4)}H${num3(x + s * 0.3)}V${num3(y)}H${num3(x + s * 0.7)}V${num3(y + s * 0.4)}H${num3(x + s)}z`}" fill="#000"/>`;
+var kindFor = (code, spec) => spec.kind === "qr" || !isPrintableAscii(code) ? "qr" : "code128";
+function labelSvg(item, spec, w, hh) {
+  const m = Math.min(2.2, w * 0.04, hh * 0.06);
+  const kind = kindFor(item.code, spec);
+  const lineH = Math.min(3.6, hh * 0.1);
+  let out = "";
+  const extra = item.lines.length;
+  if (kind === "qr") {
+    const side2 = Math.min(hh - 2 * m, w * 0.46);
+    out += qrSvg(item.code, m, (hh - side2) / 2, side2);
+    const tx = m + side2 + m * 0.8;
+    const tw = w - tx - m;
+    const fs = Math.min(hh * 0.24, tw / (item.code.length * 0.56));
+    out += `<text x="${num3(tx)}" y="${num3(hh / 2 - (extra ? lineH * 0.2 : 0) + fs * 0.35)}" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}" textLength="${num3(Math.min(tw, item.code.length * fs * 0.62))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
+    item.lines.forEach((t2, i) => {
+      out += `<text x="${num3(tx)}" y="${num3(hh / 2 + fs * 0.35 + lineH * (i + 1) * 0.95)}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t2)}</text>`;
+    });
+  } else {
+    const top = m + extra * lineH;
+    item.lines.forEach((t2, i) => {
+      out += `<text x="${num3(m)}" y="${num3(m + lineH * (i + 0.8))}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t2)}</text>`;
+    });
+    const fs = Math.min(hh * 0.26, (w - 2 * m) / (item.code.length * 0.6));
+    const bh = Math.max(4, hh - top - fs * 1.25 - m);
+    out += barsSvg(item.code, m, top, w - 2 * m, bh);
+    out += `<text x="${num3(w / 2)}" y="${num3(top + bh + fs * 0.95)}" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}" textLength="${num3(Math.min(item.code.length * fs * 0.62, w - 2 * m))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
+  }
+  if (item.arrow) {
+    const s = Math.min(hh * 0.28, w * 0.14);
+    out += arrowSvg(item.arrow, w - s - m, m, s);
+  }
+  return out;
+}
+function sheetSvg(pages, spec, index = 0, { frame = true } = {}) {
+  const g3 = pageGeometry(spec);
+  const inner = (pages[index] || []).map(({ item, x, y }) => `<g transform="translate(${num3(x)} ${num3(y)})">${frame ? `<rect width="${g3.label.w}" height="${g3.label.h}" fill="none" stroke="#c6c6c6" stroke-width="0.2"/>` : ""}${labelSvg(item, spec, g3.label.w, g3.label.h)}</g>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g3.page.w} ${g3.page.h}" width="${g3.page.w}mm" height="${g3.page.h}mm"><rect width="${g3.page.w}" height="${g3.page.h}" fill="#fff"/>${inner}</svg>`;
+}
+async function sheetPng(svg, spec, dpi = 200) {
+  const g3 = pageGeometry(spec);
+  const w = Math.round(g3.page.w / 25.4 * dpi);
+  const hh = Math.round(g3.page.h / 25.4 * dpi);
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, `width="${w}" height="${hh}"`));
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("Не вдалося намалювати етикетки."));
+  });
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = hh;
+  const ctx2 = cv.getContext("2d");
+  ctx2.fillStyle = "#fff";
+  ctx2.fillRect(0, 0, w, hh);
+  ctx2.drawImage(img, 0, 0, w, hh);
+  return await new Promise((res) => cv.toBlob(res, "image/png"));
+}
+var dots = (mm, dpi) => Math.round(mm * dpi / 25.4);
+function toZpl(items2, spec) {
+  const dpi = Number(spec.dpi) === 300 ? 300 : 203;
+  const g3 = pageGeometry(spec);
+  const W3 = dots(g3.label.w, dpi);
+  const H = dots(g3.label.h, dpi);
+  const m = dots(Math.min(2.2, g3.label.w * 0.04), dpi);
+  const warnings = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const item of items2) {
+    const kind = kindFor(item.code, spec);
+    if (kind === "qr" && spec.kind !== "qr") {
+      warnings.add(`Код «${item.code}» містить не-ASCII: Code128 не підходить, використано QR.`);
+    }
+    const lineDots = dots(3.2, dpi);
+    let z = `^XA^CI28^PW${W3}^LL${H}^LH0,0
+`;
+    const textFs = Math.min(Math.round(H * 0.22), Math.round((W3 - 2 * m) / (item.code.length * 0.62)));
+    if (kind === "qr") {
+      const q = qr(item.code, { ecc: "M" });
+      const side2 = Math.min(H - 2 * m, Math.round(W3 * 0.46));
+      const mag = Math.max(1, Math.min(10, Math.floor(side2 / (q.size + 8))));
+      if (mag < 2) {
+        warnings.add(`Дрібний QR: модуль ${mag} точк. при ${dpi} dpi (треба ≥ 2) — збільшіть етикетку.`);
+      }
+      const qx = m;
+      z += `^FO${qx},${m}^BQN,2,${mag}^FDMA,${item.code}^FS
+`;
+      const tx = m + (q.size + 8) * mag;
+      z += `^FO${tx},${Math.round(H / 2 - textFs / 2)}^A0N,${textFs},${textFs}^FD${item.code}^FS
+`;
+      item.lines.forEach((t2, i) => {
+        z += `^FO${tx},${Math.round(H / 2 + textFs / 2 + lineDots * i)}^A0N,${lineDots},${lineDots}^FD${t2}^FS
+`;
+      });
+    } else {
+      const c = code128(item.code);
+      const modW = Math.max(1, Math.floor((W3 - 2 * m) / (c.width + 20)));
+      if (modW < 2) {
+        warnings.add(`Дрібний штрихкод «${item.code}»: модуль ${modW} точк. при ${dpi} dpi (треба ≥ 2) — збільште етикетку чи оберіть QR.`);
+      }
+      const top = m + item.lines.length * lineDots;
+      item.lines.forEach((t2, i) => {
+        z += `^FO${m},${m + lineDots * i}^A0N,${lineDots},${lineDots}^FD${t2}^FS
+`;
+      });
+      const bh = Math.max(20, H - top - textFs - 2 * m);
+      z += `^BY${modW},3,${bh}^FO${Math.round((W3 - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
+`;
+      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W3 - 2 * m},1,0,C^FD${item.code}^FS
+`;
+    }
+    if (item.arrow) {
+      const s = Math.round(H * 0.26);
+      const ax = W3 - m - s;
+      z += `^FO${ax + Math.round(s * 0.35)},${m + Math.round(s * 0.4)}^GB${Math.round(s * 0.3)},${Math.round(s * 0.6)},${Math.round(s * 0.3)}^FS
+`;
+      z += `^FO${ax},${m}^GD${s},${Math.round(s * 0.5)},3,B,${item.arrow === "up" ? "R" : "L"}^FS
+`;
+    }
+    out.push(z + "^PQ1^XZ");
+  }
+  return { zpl: out.join("\n"), warnings: [...warnings] };
+}
+function pdfPayload(items2, spec, format = "pdf") {
+  const g3 = pageGeometry(spec);
+  return {
+    format,
+    font: spec.font,
+    kind: spec.kind,
+    page: g3.page,
+    grid: { cols: g3.cols, rows: g3.rows, x0: g3.x0, y0: g3.y0, w: g3.label.w, h: g3.label.h, gx: g3.gx, gy: g3.gy },
+    skip: Math.max(0, Math.floor(Number(spec.skip) || 0)),
+    labels: items2.map((i) => ({ code: i.code, lines: i.lines, arrow: i.arrow }))
+  };
+}
+function download2(name, mime, data, isB64 = false) {
+  const bin = isB64 ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : data;
+  const url = URL.createObjectURL(bin instanceof Blob ? bin : new Blob([bin], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function openLabels(adapter, args = {}) {
+  const spec = { ...defaultSpec(), ...args.spec || {} };
+  const zones = S.slots.filter((s) => s.template === "zone");
+  const racks = S.slots.filter((s) => s.template !== "zone");
+  if (!args.spec) {
+    const sel = selRefs().filter((r) => r.kind === "slot");
+    spec.scope = sel.length ? "selected" : "all";
+  }
+  const body = h("div", { class: "fcol", id: "labelsBody" });
+  const prev = h("div", { id: "labelsPreview", style: { background: "var(--surface2)", border: "1px solid var(--line)", padding: "6px", overflow: "auto", maxHeight: "50vh", textAlign: "center" } });
+  const info = h("div", { class: "small", id: "labelsInfo" });
+  const warn = h("div", { class: "note warn", id: "labelsWarn", hidden: true });
+  let model = { items: [], pages: [], cells: [] };
+  const recompute = () => {
+    model.cells = collectCells(spec);
+    model.items = buildItems(model.cells, spec);
+    model.pages = paginate(model.items, spec);
+    const over = model.items.length > LABELS_MAX;
+    info.textContent = `Етикеток: ${model.items.length}${over ? ` (ліміт ${LABELS_MAX})` : ""} · аркушів: ${model.pages.length}`;
+    prev.innerHTML = model.items.length ? sheetSvg(model.pages, spec, 0).replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%" style="max-width:360px;height:auto"') : "";
+    if (!model.items.length) {
+      prev.textContent = "Немає комірок за цим вибором.";
+    }
+    const z = model.items.length ? toZpl(model.items.slice(0, 50), spec).warnings : [];
+    warn.hidden = !z.length;
+    warn.textContent = z.join(" ");
+    for (const id of ["btnLabelsPdf", "btnLabelsPng", "btnLabelsZpl"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.disabled = !model.items.length || over || id === "btnLabelsPdf" && !can("render");
+      }
+    }
+  };
+  const set = (path, v) => {
+    const ks = path.split(".");
+    let o = spec;
+    while (ks.length > 1) {
+      o = o[ks.shift()];
+    }
+    o[ks[0]] = v;
+    recompute();
+  };
+  const check = (label2, path, get) => {
+    const cb = h("input", { type: "checkbox", checked: !!get(), "data-s3": path });
+    cb.addEventListener("change", () => set(path, cb.checked));
+    return h("label", { class: "frow", style: { gap: "4px" } }, cb, label2);
+  };
+  const numF = (label2, path, get, min, max, step = 1) => {
+    const el = h("input", { type: "number", value: get(), min, max, step, "aria-label": label2, "data-s3": path });
+    el.addEventListener("input", () => {
+      const v = parseFloat(el.value);
+      if (isFinite(v)) {
+        set(path, v);
+      }
+    });
+    return fld(label2, el);
+  };
+  const mg = () => spec.margin || { l: 0, t: 0, r: 0, b: 0 };
+  const draw3 = () => {
+    const custom = spec.layout === "custom";
+    body.replaceChildren(
+      ...K([
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Що друкувати", selectEl(Object.entries(SCOPES), spec.scope, (v) => {
+            spec.scope = v;
+            recompute();
+            draw3();
+          }, false, "Що друкувати")),
+          spec.scope === "zone" ? fld("Зона", selectEl([["", "—"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], spec.zoneId, (v) => set("zoneId", v), false, "Зона")) : spec.scope === "row" ? fld("Ряд", selectEl([["", "—"], ...racks.map((z) => [z.id, z.code_prefix])], spec.rowId, (v) => set("rowId", v), false, "Ряд")) : spec.scope === "tier" ? numF("Ярус знизу", "tier", () => spec.tier, 1, 12) : h("div")
+        ),
+        h("div", { class: "frow wrap" }, check("Лише нові та перенумеровані", "onlyNew", () => spec.onlyNew), check("Лише застосовані в Odoo", "onlyApplied", () => spec.onlyApplied)),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Штрихкод", selectEl([["code128", "Code128"], ["qr", "QR"]], spec.kind, (v) => set("kind", v), false, "Штрихкод")),
+          fld("Шрифт", selectEl([["cyr", "З кирилицею"], ["latin", "Лише латиниця"]], spec.font, (v) => set("font", v), false, "Шрифт"))
+        ),
+        h("div", { class: "frow wrap" }, check("Зона", "show.zone", () => spec.show.zone), check("Ряд", "show.row", () => spec.show.row), check("Секція", "show.bay", () => spec.show.bay), check("Ярус", "show.level", () => spec.show.level), check("Тип", "show.type", () => spec.show.type)),
+        h(
+          "div",
+          { class: "grid2" },
+          fld("Стрілка ярусів", selectEl([["none", "Немає"], ["up", "Вгору (вище точки)"], ["updown", "Вгору й вниз"]], spec.arrows, (v) => set("arrows", v), false, "Стрілка")),
+          numF("Точка сканування: ярус", "scanLevel", () => spec.scanLevel, 1, 12)
+        ),
+        h("div", { class: "grid2" }, fld("Розкладка", selectEl(Object.entries(LAYOUTS).map(([k, v]) => [k, v.name]), spec.layout, (v) => {
+          spec.layout = v;
+          recompute();
+          draw3();
+        }, false, "Розкладка")), numF("Пропустити перші", "skip", () => spec.skip, 0, 500)),
+        custom ? h("div", { class: "grid2" }, numF("Ширина, мм", "custom.w", () => spec.custom.w, 10, 300), numF("Висота, мм", "custom.h", () => spec.custom.h, 10, 300)) : null,
+        h(
+          "div",
+          { class: "grid3" },
+          numF("Проміжок X, мм", "gap.x", () => spec.gap.x, 0, 30, 0.5),
+          numF("Проміжок Y, мм", "gap.y", () => spec.gap.y, 0, 30, 0.5),
+          fld("Поля", selectEl([["auto", "По центру"], ["zero", "0 мм"], ["5", "5 мм"], ["10", "10 мм"]], spec.margin ? mg().l === 0 ? "zero" : String(mg().l) : "auto", (v) => {
+            spec.margin = v === "auto" ? null : { l: v === "zero" ? 0 : +v, t: v === "zero" ? 0 : +v, r: v === "zero" ? 0 : +v, b: v === "zero" ? 0 : +v };
+            recompute();
+          }, false, "Поля"))
+        ),
+        fld("ZPL: роздільна здатність", selectEl([["203", "203 dpi"], ["300", "300 dpi"]], String(spec.dpi), (v) => set("dpi", +v), false, "dpi")),
+        info,
+        warn,
+        prev
+      ])
+    );
+    recompute();
+  };
+  openDialog({
+    title: "Етикетки",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити", value: "close" },
+      {
+        label: "ZPL",
+        id: "btnLabelsZpl",
+        onClick: () => {
+          const { zpl, warnings } = toZpl(model.items, spec);
+          download2(`labels_${spec.dpi}dpi.zpl`, "text/plain", zpl);
+          toast(warnings.length ? `ZPL збережено. Попередження: ${warnings[0]}` : "ZPL збережено.", warnings.length ? "warn" : void 0);
+          return false;
+        }
+      },
+      {
+        label: "PNG",
+        id: "btnLabelsPng",
+        onClick: async () => {
+          const blob = await sheetPng(sheetSvg(model.pages, spec, 0, { frame: false }), spec);
+          download2("labels.png", "image/png", blob);
+          toast("PNG (аркуш 1) збережено.");
+          return false;
+        }
+      },
+      {
+        label: "PDF",
+        cls: "primary",
+        id: "btnLabelsPdf",
+        onClick: async () => {
+          try {
+            const res = await adapter.render("labels_pdf", pdfPayload(model.items, spec));
+            download2(res.filename || "labels.pdf", res.mimetype || "application/pdf", res.content, true);
+            toast("PDF сформовано на сервері.");
+          } catch (e) {
+            toast(e.message || "Не вдалося сформувати PDF.", "err");
+          }
+          return false;
+        }
+      }
+    ]
+  });
+  draw3();
+  const pdf = document.getElementById("btnLabelsPdf");
+  if (pdf && !can("render")) {
+    pdf.title = "PDF формує сервер Odoo («на сервері»); у цьому режимі доступні ZPL і PNG.";
+  }
+}
+registries.dialogs.add("labels", (a, { adapter }) => openLabels(adapter, a), { force: true });
+registries.menu.add("labels", { area: "more", label: "Етикетки…", icon: "tag", sequence: 32, run: () => E.runDialog("labels") }, { sequence: 32, force: true });
+function renderLabelsBlock(root, { rec }) {
+  if (!rec || !S.sel || S.sel.kind !== "slot" || rec.template !== "zone" && !cellsOf(rec).length) {
+    return;
+  }
+  root.append(
+    h("div", { class: "sec", id: "labelsBlock" }, h("h3", null, "Етикетки"), h("button", { class: "fbtn sm", type: "button", id: "btnLabels", onclick: () => E.runDialog("labels", rec.template === "zone" ? { spec: { scope: "zone", zoneId: rec.id } } : { spec: { scope: "row", rowId: rec.id } }) }, "Друк етикеток…"))
+  );
+}
+registries.panels.add("right:labels", { area: "right", render: renderLabelsBlock }, { sequence: 70, force: true });
+Object.assign(E, { openLabels: (a) => E.runDialog("labels", a) });
+
+// core/constructor/stock_state.js
+var revN = 0;
+function applyStock(res, { merge = false } = {}) {
+  const prev = merge && S.stock ? S.stock.byCode : /* @__PURE__ */ new Map();
+  const byCode = new Map(prev);
+  for (const [code, v] of Object.entries(res.codes || {})) {
+    byCode.set(code, { ...byCode.get(code) || {}, ...v });
+  }
+  S.stock = { at: res.at || (/* @__PURE__ */ new Date()).toISOString(), demo: !!res.demo, days: res.days || 90, rev: ++revN, byCode, abc: abcClasses(byCode), truncated: !!res.truncated };
+  return S.stock;
+}
+function abcClasses(byCode) {
+  const rows = [...byCode].map(([code, v]) => [code, Number(v.moves) || 0]).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  const out = /* @__PURE__ */ new Map();
+  let cum = 0;
+  for (const [code, m] of rows) {
+    if (!m) {
+      out.set(code, "0");
+      continue;
+    }
+    out.set(code, cum < total * 0.8 - 1e-9 ? "A" : cum < total * 0.95 - 1e-9 ? "B" : "C");
+    cum += m;
+  }
+  return out;
+}
+async function loadStock({ force = false, codes = null, quiet = false } = {}) {
+  if (!can("stock") || !E.adapter?.stock) {
+    return null;
+  }
+  if (S.stock && !force && !codes) {
+    return S.stock;
+  }
+  try {
+    let res = await E.adapter.stock({ codes, days: S.stock?.days || null });
+    const all = { ...res, codes: { ...res.codes } };
+    for (let i = 0; i < 50 && !codes && res.truncated && res.next; i++) {
+      res = await E.adapter.stock({ codes, days: all.days, offset: res.next });
+      Object.assign(all.codes, res.codes);
+      all.truncated = res.truncated;
+    }
+    const st4 = applyStock(all, { merge: !!codes });
+    E.recolorCells?.();
+    E.renderHeat?.();
+    return st4;
+  } catch (e) {
+    if (!quiet) {
+      toast(e.message || "Не вдалося прочитати залишки.", "err");
+    }
+    return null;
+  }
+}
+async function loadDetail(code) {
+  const cur = S.stock?.byCode.get(code);
+  if (cur && cur.detail) {
+    return cur.detail;
+  }
+  if (!can("stock") || !E.adapter?.stock) {
+    return null;
+  }
+  try {
+    const res = await E.adapter.stock({ codes: [code], detail: true });
+    const v = (res.codes || {})[code];
+    if (!v) {
+      return null;
+    }
+    if (!S.stock) {
+      applyStock({ ...res, codes: {} });
+    }
+    const entry = S.stock.byCode.get(code) || {};
+    S.stock.byCode.set(code, { ...entry, ...v });
+    return v.detail || null;
+  } catch {
+    return null;
+  }
+}
+async function findStock(q, mode = "any") {
+  if (!can("stock") || !E.adapter?.find) {
+    return null;
+  }
+  const res = await E.adapter.find({ q, mode });
+  return { hits: res.hits || [], demo: !!res.demo };
+}
+var stockOf = (code) => S.stock ? S.stock.byCode.get(code) : void 0;
+var fmtAt = (at) => {
+  try {
+    const d = new Date(String(at).includes("T") ? at : String(at).replace(" ", "T") + "Z");
+    return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return String(at);
+  }
+};
+Object.assign(E, { loadStock, loadDetail, findStock, stockOf });
+
+// core/constructor/heat.js
+var GRAY = "#a9adb3";
+var FILL = [
+  ["empty", "Порожньо", "#d9e3e8"],
+  ["q1", "до 25 %", "#b5dcc3"],
+  ["q2", "25–50 %", "#7cc49a"],
+  ["q3", "50–75 %", "#3e9e6a"],
+  ["q4", "понад 75 %", "#1e6b47"],
+  ["nocap", "без ємності", GRAY]
+];
+var BELOW = [
+  ["none", "Запасу немає", "#c32d2d"],
+  ["below", "Нижче мінімуму", "#e08a00"],
+  ["ok", "Не нижче мінімуму", "#2c9a5b"],
+  ["norule", "Без правила", GRAY]
+];
+var EMPTY2 = [
+  ["empty", "Порожнє (можна класти)", "#2c9a5b"],
+  ["busy", "Зайняте", "#c9ccd1"]
+];
+var ABC = [
+  ["A", "A — 80 % руху", "#c32d2d"],
+  ["B", "B — наступні 15 %", "#e0a030"],
+  ["C", "C — останні 5 %", "#4f8fcf"],
+  ["0", "Без руху", GRAY]
+];
+var AGE = [
+  ["a30", "до 30 днів", "#2c9a5b"],
+  ["a90", "31–90 днів", "#8ac24a"],
+  ["a180", "91–180 днів", "#e0c030"],
+  ["a365", "181–365 днів", "#e08a00"],
+  ["a999", "понад 365 днів", "#c32d2d"],
+  ["none", "Порожньо", "#d9e3e8"]
+];
+var CLASSIFY = {
+  fill(e) {
+    if (e.fill == null) {
+      return "nocap";
+    }
+    return e.fill <= 0 ? "empty" : e.fill <= 0.25 ? "q1" : e.fill <= 0.5 ? "q2" : e.fill <= 0.75 ? "q3" : "q4";
+  },
+  below_min(e) {
+    if (e.min == null) {
+      return "norule";
+    }
+    return !e.qty ? "none" : e.qty < e.min ? "below" : "ok";
+  },
+  empty: (e) => e.qty ? "busy" : "empty",
+  abc: (e, code) => S.stock.abc.get(code) || "0",
+  age(e) {
+    if (!e.qty) {
+      return "none";
+    }
+    const d = e.age_days ?? 0;
+    return d <= 30 ? "a30" : d <= 90 ? "a90" : d <= 180 ? "a180" : d <= 365 ? "a365" : "a999";
+  }
+};
+var DEFS = { fill: FILL, below_min: BELOW, empty: EMPTY2, abc: ABC, age: AGE };
+var METRIC_LABELS = { fill: "Заповненість", below_min: "Нижче мінімуму", empty: "Порожні місця", abc: "Оборотність ABC", age: "Вік запасу" };
+var colorOf = (key, cls) => (DEFS[key].find((c) => c[0] === cls) || [])[2] || null;
+for (const key of Object.keys(DEFS)) {
+  registries.metrics.add(
+    key,
+    {
+      label: METRIC_LABELS[key],
+      color(cell) {
+        const e = stockOf(cell.code);
+        if (!e) {
+          return null;
+        }
+        return colorOf(key, CLASSIFY[key](e, cell.code));
+      }
+    },
+    { sequence: 10 + Object.keys(DEFS).indexOf(key), force: true }
+  );
+}
+function legendOf(key) {
+  const counts = new Map(DEFS[key].map((c) => [c[0], 0]));
+  let fresh = 0;
+  for (const s of S.slots) {
+    for (const c of cellsOf(s)) {
+      if (c.disabled) {
+        continue;
+      }
+      const e = stockOf(c.code);
+      if (!e) {
+        fresh++;
+        continue;
+      }
+      const k = CLASSIFY[key](e, c.code);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+  }
+  const rows = DEFS[key].map(([k, label2, color]) => ({ key: k, label: label2, color, count: counts.get(k) || 0 }));
+  if (fresh) {
+    rows.push({ key: "new", label: "Нові / без даних", color: "var(--ink3)", count: fresh });
+  }
+  return rows;
+}
+var LS_KEY = "f3d_constructor_metric";
+var lsGet2 = () => {
+  try {
+    return window.localStorage.getItem(LS_KEY);
+  } catch {
+    return null;
+  }
+};
+var lsSet2 = (v) => {
+  try {
+    window.localStorage.setItem(LS_KEY, v || "");
+  } catch {
+  }
+};
+async function setMetric(key) {
+  if (key && !registries.metrics.has(key)) {
+    return;
+  }
+  S.ui.metric = key || "";
+  lsSet2(S.ui.metric);
+  if (key && !S.stock) {
+    await loadStock({ quiet: false });
+  }
+  E.recolorCells?.();
+  renderHeat();
+}
+async function restoreMetric() {
+  const k = lsGet2();
+  if (k && registries.metrics.has(k) && can("stock")) {
+    S.ui.metric = k;
+    await loadStock({ quiet: true });
+    E.recolorCells?.();
+    renderHeat();
+  }
+}
+async function refreshStock() {
+  const st4 = await loadStock({ force: true });
+  if (st4) {
+    E.recolorCells?.();
+    renderHeat();
+  }
+  return st4;
+}
+function renderHeat() {
+  const sel = $("#s3Metric");
+  const box = $("#s3Heat");
+  if (!sel || !box) {
+    return;
+  }
+  const avail = can("stock");
+  sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t2]) => h("option", { value: k, selected: S.ui.metric === k }, t2)));
+  const key = DEFS[S.ui.metric] ? S.ui.metric : "";
+  sel.value = key;
+  sel.disabled = !avail;
+  sel.title = avail ? "Забарвлення комірок за залишками" : "Адаптер не віддає залишки";
+  const rf = $("#s3Refresh");
+  if (rf) {
+    rf.disabled = !avail || !key;
+  }
+  if (!key || !S.stock) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren(
+    h("div", { class: "s3-heat-h" }, h("b", null, METRIC_LABELS[key]), S.stock.demo ? h("span", { class: "tag s3-demo", title: "У демо-знімку немає рухів і дат: значення синтетичні" }, "демо") : null, h("span", { class: "small muted" }, "станом на " + fmtAt(S.stock.at))),
+    ...legendOf(key).map((r) => h("div", { class: "s3-heat-row", "data-class": r.key }, h("i", { class: "sq", style: { background: r.color } }), h("span", null, r.label), h("span", { class: "num" }, String(r.count))))
+  );
+}
+registries.menu.add(
+  "refreshStock",
+  { area: "more", label: "Оновити дані", icon: "hist", capability: "stock", sequence: 33, run: () => refreshStock() },
+  { sequence: 33, force: true }
+);
+Object.assign(E, { setMetric, restoreMetric, refreshStock, renderHeat, legendOf });
+
+// core/constructor/search.js
+var normCode = (s) => String(s ?? "").toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, "");
+function findCodes(q, limit = 40) {
+  const n = normCode(q);
+  if (!n) {
+    return { hits: [], total: 0 };
+  }
+  const hits = [];
+  const push = (kind, code, rec, extra) => {
+    const c = normCode(code);
+    const at = c.indexOf(n);
+    if (at >= 0) {
+      hits.push({ kind, code, rec, rank: c === n ? 0 : at === 0 ? 1 : 2, ...extra });
+    }
+  };
+  for (const s of S.slots) {
+    if (s.template === "zone") {
+      push("slot", s.params?.title || s.code_prefix, s, { slot: s, zoneName: true });
+      continue;
+    }
+    for (const c of cellsOf(s)) {
+      if (!c.disabled) {
+        push("cell", c.code, s, { slot: s, cell: c });
+      }
+    }
+  }
+  for (const p of S.placements) {
+    push("placement", p.code || p.name || "", p, {});
+  }
+  hits.sort((a, b) => a.rank - b.rank || a.code.length - b.code.length || (a.code < b.code ? -1 : 1));
+  return { hits: hits.slice(0, limit), total: hits.length };
+}
+function worldOf(slot, cell) {
+  const [wx, wy] = rotate(cell.lx, cell.ly, slot.rotation || 0);
+  return { x: slot.x + wx, y: slot.y + wy, z: (layerOf(slot.layer_id) || { elevation: 0 }).elevation + (cell.dz || 0) };
+}
+function gotoCode(code) {
+  const { hits } = findCodes(code, 5);
+  const hit = hits.find((x) => x.rank === 0) || hits[0];
+  if (!hit) {
+    toast(`Код «${code}» не знайдено.`, "warn");
+    return false;
+  }
+  return gotoHit(hit);
+}
+function gotoHit(hit) {
+  const rec = hit.rec;
+  const ly = layerOf(rec.layer_id);
+  if (ly && V.hidden.has(ly.id)) {
+    V.hidden.delete(ly.id);
+    E.syncScene();
+  }
+  E.selectObj({ kind: hit.kind === "placement" ? "placement" : "slot", id: rec.id });
+  let pos = { x: rec.x, y: rec.y };
+  if (hit.kind === "cell") {
+    S.selCell = hit.cell.code;
+    pos = worldOf(hit.slot, hit.cell);
+    E.updateVisual();
+    E.renderCellsBox?.();
+  }
+  E.focusOn?.(pos.x, pos.y, hit.kind === "cell" ? 14 : 24);
+  if (hit.kind === "cell") {
+    E.cellPicked?.(rec.id, hit.cell.code);
+  }
+  return true;
+}
+var hlN = 0;
+function setHighlight(codes, kind = "find") {
+  S.hl = codes && codes.size ? { kind, codes, rev: ++hlN } : null;
+  E.recolorCells?.();
+}
+var findState = { q: "", hits: null, demo: false };
+function itemText(it) {
+  const parts = [it.product || it.ref || "", it.qty != null ? `${it.qty}` : "", it.lot ? `партія ${it.lot}` : "", it.package ? `уп. ${it.package}` : ""];
+  return parts.filter(Boolean).join(" · ");
+}
+function renderSearchTab(root) {
+  const gotoIn = h("input", { type: "search", id: "s3Goto", placeholder: "Код або штрихкод, напр. PLT-01A", autocomplete: "off", "aria-label": "Перейти до місця", enterkeyhint: "go" });
+  const gotoList = h("div", { class: "s3-list", id: "s3GotoList", role: "listbox" });
+  const findIn = h("input", { type: "search", id: "s3Find", placeholder: "Товар, артикул, партія, упаковка", autocomplete: "off", "aria-label": "Де лежить", value: findState.q, enterkeyhint: "search" });
+  const findInfo = h("div", { class: "small", id: "s3FindInfo" });
+  const findList = h("div", { class: "s3-list", id: "s3FindList" });
+  const drawGoto = () => {
+    const { hits, total } = findCodes(gotoIn.value, 8);
+    gotoList.replaceChildren(
+      ...gotoIn.value && !hits.length ? [h("div", { class: "small muted" }, "Нічого не знайдено")] : [],
+      ...hits.map(
+        (x) => h("button", { class: "s3-item", type: "button", "data-code": x.code, role: "option", onclick: () => gotoHit(x) }, h("b", null, x.code), h("span", { class: "small muted" }, x.kind === "cell" ? "комірка" : x.kind === "placement" ? "обладнання" : x.slot?.template === "zone" ? "зона" : "місце"))
+      ),
+      ...total > hits.length ? [h("div", { class: "small muted" }, `…ще ${total - hits.length}: уточніть код`)] : []
+    );
+  };
+  gotoIn.addEventListener("input", drawGoto);
+  gotoIn.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") {
+      return;
+    }
+    e.preventDefault();
+    const { hits } = findCodes(gotoIn.value, 5);
+    const exact = hits.find((x) => x.rank === 0);
+    if (exact || hits.length === 1) {
+      gotoHit(exact || hits[0]);
+      gotoIn.select();
+    } else if (hits.length) {
+      drawGoto();
+      toast(`Збігів: ${hits.length}. Оберіть зі списку.`);
+    } else {
+      toast(`Код «${gotoIn.value}» не знайдено.`, "warn");
+    }
+  });
+  const drawFind = () => {
+    if (findState.hits == null) {
+      findInfo.textContent = can("stock") ? "" : "Пошук за товаром недоступний: адаптер не віддає залишки.";
+      findList.replaceChildren();
+      return;
+    }
+    const n = findState.hits.length;
+    findInfo.replaceChildren(`Знайдено місць: ${n}`, findState.demo ? h("span", { class: "tag s3-demo" }, "демо") : "", n ? h("button", { class: "fbtn sm", type: "button", id: "s3FindClear", onclick: () => {
+      findState = { q: "", hits: null, demo: false };
+      setHighlight(null);
+      renderSearchTab(root.replaceChildren() || root);
+    } }, "Скинути підсвітку") : "");
+    findList.replaceChildren(
+      ...findState.hits.slice(0, 100).map(
+        (x) => h("button", { class: "s3-item", type: "button", "data-code": x.code, onclick: () => gotoCode(x.code) }, h("b", null, x.code), h("span", { class: "small" }, (x.items || []).map(itemText).join("; ")))
+      )
+    );
+  };
+  const runFind = async () => {
+    const q = findIn.value.trim();
+    findState.q = q;
+    if (!q) {
+      return;
+    }
+    if (!can("stock")) {
+      toast("Пошук за товаром недоступний: адаптер не віддає залишки.", "warn");
+      return;
+    }
+    try {
+      const r = await findStock(q);
+      findState = { q, hits: r ? r.hits : [], demo: !!r?.demo };
+      setHighlight(new Set(findState.hits.map((x) => x.code)));
+      drawFind();
+      if (!findState.hits.length) {
+        toast("Нічого не знайдено.", "warn");
+      }
+    } catch (e) {
+      toast(e.message || "Не вдалося виконати пошук.", "err");
+    }
+  };
+  findIn.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runFind();
+    }
+  });
+  root.append(
+    h("div", { class: "sec", id: "s3GotoBox" }, h("h3", null, "Перейти до місця"), gotoIn, gotoList, h("div", { class: "small muted" }, "Регістр і розділювачі не важливі: plt01a → PLT-01A. Сканер: код + Enter.")),
+    h("div", { class: "sec", id: "s3FindBox" }, h("h3", null, "Де лежить"), h("div", { class: "frow" }, findIn, h("button", { class: "fbtn sm", type: "button", id: "s3FindGo", onclick: runFind }, "Знайти")), findInfo, findList, h("div", { class: "small muted" }, "Кілька слів шукаються в одному залишку."))
+  );
+  drawGoto();
+  drawFind();
+}
+registries.panels.add("left:search", { area: "left", tab: "search", label: "Пошук", render: renderSearchTab }, { sequence: 15, force: true });
+function openSearch(mode = "goto") {
+  E.setLeftTab("search");
+  E.mobilePanel?.("left");
+  setTimeout(() => {
+    const el = $(mode === "find" ? "#s3Find" : "#s3Goto");
+    if (el) {
+      el.focus();
+      el.select?.();
+    }
+  }, 30);
+}
+registries.hotkeys.add("search.slash", { key: "/", label: "/ — перейти до місця", run: (e) => (e.preventDefault(), openSearch("goto")) }, { sequence: 8, force: true });
+registries.hotkeys.add("search.ctrlk", { ctrl: true, code: "KeyK", typing: true, label: "Ctrl+K — пошук", match: (e) => e.code === "KeyK" && !e.shiftKey, run: (e) => (e.preventDefault(), openSearch("goto")) }, { sequence: 9, force: true });
+registries.menu.add("search", { area: "top", label: "Пошук", icon: "fit", sequence: 4, run: () => openSearch("goto") }, { sequence: 4, force: true });
+Object.assign(E, { openSearch, gotoCode, gotoHit, gotoCell: gotoCode, findCodes, setHighlight });
+
+// core/constructor/s3_chrome.js
+var MOBILE_QUERY = "(max-width: 768px)";
+var STYLE_ID = "f3d-s3-style";
+var CSS = `
+.f3d-s3 .s3-burger,.f3d-s3 .s3-mbar,.f3d-s3 .s3-objbtn,.f3d-s3 .s3-card-ov{display:none}
+.f3d-s3 .s3-tools{position:absolute;right:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 16px);z-index:2;align-items:center}
+.f3d-s3 .s3-tools select{max-width:190px;min-height:30px}
+.f3d-s3 .s3-heat{position:absolute;right:8px;bottom:8px;z-index:2;background:var(--surface);border:1px solid var(--line);padding:6px 8px;font-size:12px;line-height:1.5;max-width:230px}
+.f3d-s3 .s3-heat-h{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px}
+.f3d-s3 .s3-heat-row{display:flex;gap:6px;align-items:center}
+.f3d-s3 .s3-heat-row .num{margin-left:auto;color:var(--ink2)}
+.f3d-s3 .s3-heat .sq{display:inline-block;width:12px;height:12px;border:1px solid var(--line);flex:none}
+.f3d-s3 .s3-demo{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);padding:0 4px;font-size:11px}
+.f3d-s3 .s3-tip{position:absolute;z-index:6;pointer-events:none;background:var(--ink);color:var(--surface);padding:5px 8px;font-size:12px;line-height:1.4;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.f3d-s3 .s3-list{display:flex;flex-direction:column;max-height:260px;overflow:auto;border:1px solid var(--line2);margin-top:4px}
+.f3d-s3 .s3-list:empty{display:none}
+.f3d-s3 .s3-item{display:flex;gap:8px;align-items:baseline;justify-content:space-between;border:0;border-bottom:1px solid var(--line2);background:var(--surface);padding:6px 8px;text-align:left;cursor:pointer;min-height:34px}
+.f3d-s3 .s3-item:hover{background:var(--accent-soft)}
+.f3d-s3 .s3-card table{width:100%;border-collapse:collapse;font-size:12px}
+.f3d-s3 .s3-card td,.f3d-s3 .s3-card th{padding:2px 4px;border-bottom:1px solid var(--line2);text-align:left}
+.f3d-s3 .s3-card .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:4px 0}
+.f3d-s3 .s3-card .kv span:nth-child(odd){color:var(--ink2)}
+.f3d-s3 .s3-bar{height:8px;background:var(--surface3);border:1px solid var(--line);margin:2px 0 6px}
+.f3d-s3 .s3-bar i{display:block;height:100%;background:var(--accent)}
+.f3d-s3 .s3-status{background:var(--accent-soft)}
+.f3d-s3 .s3-status[data-status="unsaved"]{background:#bfeceb;color:#064e4c}
+.f3d-s3 .s3-status[data-status="new"]{background:var(--warn-soft)}
+@media (max-width: 768px){
+  .f3d-s3 .top{gap:4px 6px;padding:4px 6px}
+  .f3d-s3 .top .brand,.f3d-s3 .top .grow,.f3d-s3 .top .grp:not(#siteGrp),.f3d-s3 #modeSeg,.f3d-s3 #draftChip,.f3d-s3 #storeTag,.f3d-s3 #s3Access,.f3d-s3 #btnPublish,.f3d-s3 #btnHistory,.f3d-s3 #menuExtra,.f3d-s3 #btnNewSite,.f3d-s3 .s3-undo{display:none!important}
+  .f3d-s3 .s3-burger{display:inline-flex}
+  .f3d-s3 #siteGrp{flex:1 1 0;min-width:0}
+  .f3d-s3 #siteSel{max-width:none;width:100%}
+  .f3d-s3 .main{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+  .f3d-s3 .center{grid-column:1!important;grid-row:1!important;min-width:0}
+  .f3d-s3 .mtabs,.f3d-s3 .stamp,.f3d-s3 .legend,.f3d-s3 .vnotice{display:none!important}
+  .f3d-s3 .left,.f3d-s3 .right{display:none!important;position:absolute;top:0;bottom:0;z-index:30;width:min(88vw,360px);max-width:100%;grid-column:auto!important;grid-row:auto!important;background:var(--surface);box-shadow:0 0 24px rgba(0,0,0,.35);border:0}
+  .f3d-s3.m-left .left{display:flex!important;left:0}
+  .f3d-s3.m-right .right{display:flex!important;right:0}
+  .f3d-s3 .ltabs{display:flex!important;flex-wrap:wrap}
+  .f3d-s3 .s3-mbar{display:flex;position:absolute;left:6px;right:6px;top:6px;z-index:4;gap:4px}
+  .f3d-s3 .s3-mbar input{flex:1;min-width:0;min-height:36px;font-size:16px}
+  .f3d-s3 .s3-mlist{position:absolute;left:0;right:0;top:40px;background:var(--surface);border:1px solid var(--line);max-height:50vh;overflow:auto}
+  .f3d-s3 .vtools{top:50px!important;left:6px!important}
+  .f3d-s3 .vtools .fbtn{min-height:34px}
+  .f3d-s3 .s3-tools{top:auto;bottom:56px;right:6px;left:6px;justify-content:flex-start}
+  .f3d-s3 .s3-tools select{max-width:60vw}
+  .f3d-s3 .s3-heat{right:6px;bottom:96px;max-width:46vw;font-size:11px}
+  .f3d-s3 .s3-objbtn{display:inline-flex;position:absolute;right:6px;bottom:8px;z-index:40}
+  .f3d-s3.m-left .s3-burger{position:absolute;left:calc(min(88vw,360px) + 4px);top:6px;z-index:40}
+  .f3d-s3.m-left .s3-objbtn{display:none}
+  .f3d-s3 .s3-card-ov{display:flex;flex-direction:column;position:fixed;inset:0;z-index:60;background:var(--surface)}
+  .f3d-s3 .s3-card-ov[hidden]{display:none}
+  .f3d-s3 .s3-card-ov .s3-card-h{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .f3d-s3 .s3-card-ov .s3-card-b{flex:1;overflow:auto;padding:10px}
+  .f3d-s3 dialog{max-width:100vw;width:100%}
+  .f3d-s3 .fbtn,.f3d-s3 .s3-item{min-height:36px}
+}
+`;
+var isMobile = () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(MOBILE_QUERY).matches;
+function ensureStyle() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID)) {
+    return;
+  }
+  const st4 = document.createElement("style");
+  st4.id = STYLE_ID;
+  st4.textContent = CSS;
+  root.prepend(st4);
+}
+function applyMobile() {
+  const app = $("#app");
+  if (!app) {
+    return;
+  }
+  const mob = isMobile();
+  app.classList.toggle("m", mob);
+  if (mob) {
+    if (S.app.mode !== "view") {
+      S.ui.modeBefore = S.app.mode;
+      S.app.mode = "view";
+      S.edit = null;
+      E.cancelModes?.();
+      E.renderAll?.();
+    }
+  } else {
+    app.classList.remove("m-left", "m-right");
+    hideCard();
+    if (S.ui.modeBefore) {
+      S.app.mode = S.ui.modeBefore;
+      S.ui.modeBefore = null;
+      E.renderAll?.();
+    }
+  }
+}
+function mobilePanel(side2, open = null) {
+  const app = $("#app");
+  if (!app || !isMobile()) {
+    return;
+  }
+  const cls = side2 === "left" ? "m-left" : "m-right";
+  const other = side2 === "left" ? "m-right" : "m-left";
+  const on = open == null ? !app.classList.contains(cls) : open;
+  app.classList.remove(other);
+  app.classList.toggle(cls, on);
+  decorate();
+}
+function tipHtml({ rec, kind, cell }) {
+  const code = cell ? cell.code : kind === "placement" ? rec.code : rec.params?.title || rec.code_prefix;
+  const lines = [h("b", null, code || "—")];
+  const e = cell && E.stockOf?.(cell.code);
+  if (cell) {
+    if (e) {
+      const top = e.top_product || e.detail && e.detail.rows && e.detail.rows[0] && e.detail.rows[0].product;
+      lines.push(h("div", null, top ? `Товар: ${top}` : e.qty ? `Кількість: ${e.qty}` : "Порожньо"));
+      lines.push(h("div", null, e.fill != null ? `Заповненість: ${Math.round(e.fill * 100)} %` : "Заповненість: —"));
+    } else if (can("stock")) {
+      lines.push(h("div", { style: { opacity: 0.8 } }, S.stock ? "нова комірка · без даних Odoo" : "залишки не завантажено"));
+    }
+  } else if (kind === "placement") {
+    lines.push(h("div", null, rec.name || ""));
+  }
+  return lines;
+}
+function showTip(info) {
+  const tip = $("#s3Tip");
+  const cv = $("#vp");
+  if (!tip || !cv || isMobile()) {
+    return;
+  }
+  const r = cv.getBoundingClientRect();
+  tip.replaceChildren(...tipHtml(info));
+  tip.hidden = false;
+  tip.style.left = Math.min(info.x - r.left + 14, r.width - 200) + "px";
+  tip.style.top = Math.max(4, info.y - r.top + 14) + "px";
+}
+function hideTip() {
+  const tip = $("#s3Tip");
+  if (tip) {
+    tip.hidden = true;
+  }
+}
+function showCard(node, title) {
+  const ov = $("#s3CardOv");
+  if (!ov) {
+    return;
+  }
+  $("#s3CardTitle").textContent = title || "";
+  $("#s3CardBody").replaceChildren(node);
+  ov.hidden = false;
+}
+function hideCard() {
+  const ov = $("#s3CardOv");
+  if (ov) {
+    ov.hidden = true;
+  }
+}
+function ensureDom() {
+  const app = $("#app");
+  if (!app) {
+    return false;
+  }
+  app.classList.add("f3d-s3");
+  const center2 = $(".center");
+  if (!$("#s3Tools")) {
+    const tools = h(
+      "div",
+      { class: "s3-tools", id: "s3Tools" },
+      h("button", { class: "fbtn icon s3-undo", type: "button", id: "s3Undo", "aria-label": "Скасувати", onclick: () => E.undo() }, ic("rot")),
+      h("button", { class: "fbtn icon s3-undo", type: "button", id: "s3Redo", "aria-label": "Повторити", style: { transform: "scaleX(-1)" }, onclick: () => E.redo() }, ic("rot")),
+      h("select", { id: "s3Metric", "aria-label": "Показник", onchange: (e) => E.setMetric(e.target.value) }),
+      h("button", { class: "fbtn icon", type: "button", id: "s3Refresh", "aria-label": "Оновити дані", title: "Оновити дані", onclick: () => E.refreshStock() }, ic("hist"))
+    );
+    center2.append(tools, h("div", { class: "s3-heat", id: "s3Heat", hidden: true }), h("div", { class: "s3-tip", id: "s3Tip", hidden: true }));
+  }
+  if (!$("#s3Burger")) {
+    $(".top").prepend(h("button", { class: "fbtn icon s3-burger", type: "button", id: "s3Burger", "aria-label": "Панель", onclick: () => mobilePanel("left") }, h("span", { "aria-hidden": "true" }, "☰")));
+  }
+  const legend = $("#legend");
+  if (legend && !$("#s3Keys")) {
+    const k = (t2) => h("kbd", null, t2);
+    legend.prepend(h("div", { id: "s3Keys" }, k("Ctrl+Z"), "/", k("Y"), " скасувати · ", k("Ctrl+D"), " дублювати · ", k("Ctrl+C"), "/", k("V"), " копіювати · ", k("Ctrl+клік"), " виділення · ", k("Shift+рамка"), " у «Плані» · ", k("/"), " пошук"));
+  }
+  if (!$("#s3Access")) {
+    $("#storeTag").after(h("span", { class: "chip", id: "s3Access" }));
+  }
+  if (!$("#s3Mbar")) {
+    const inp = h("input", { type: "search", id: "s3mSearch", placeholder: "Код місця, напр. PLT-01A", "aria-label": "Пошук місця", autocomplete: "off", enterkeyhint: "go" });
+    const list = h("div", { class: "s3-mlist", id: "s3mList", hidden: true });
+    const draw3 = () => {
+      const { hits } = E.findCodes(inp.value, 8);
+      list.hidden = !inp.value;
+      list.replaceChildren(...hits.map((x) => h("button", { class: "s3-item", type: "button", onclick: () => (E.gotoHit(x), list.hidden = true, inp.blur()) }, h("b", null, x.code), h("span", { class: "small muted" }, x.kind === "cell" ? "комірка" : x.kind === "placement" ? "обладнання" : "місце"))));
+    };
+    inp.addEventListener("input", draw3);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const { hits } = E.findCodes(inp.value, 5);
+        const hit = hits.find((x) => x.rank === 0) || (hits.length === 1 ? hits[0] : null);
+        if (hit) {
+          E.gotoHit(hit);
+          list.hidden = true;
+          inp.blur();
+        } else {
+          draw3();
+        }
+      }
+    });
+    center2.append(h("div", { class: "s3-mbar", id: "s3Mbar" }, inp, h("button", { class: "fbtn", type: "button", id: "s3mFind", onclick: () => E.openSearch("find"), "aria-label": "Де лежить" }, "Де?"), list));
+    center2.append(h("button", { class: "fbtn primary s3-objbtn", type: "button", id: "s3ObjBtn", onclick: () => mobilePanel("right") }, "Панель об’єкта"));
+    app.append(
+      h(
+        "div",
+        { class: "s3-card-ov", id: "s3CardOv", hidden: true },
+        h("div", { class: "s3-card-h" }, h("b", { id: "s3CardTitle", style: { flex: "1" } }), h("button", { class: "fbtn", type: "button", id: "s3CardClose", onclick: hideCard }, "Закрити")),
+        h("div", { class: "s3-card-b", id: "s3CardBody" })
+      )
+    );
+  }
+  return true;
+}
+function decorate() {
+  ensureStyle();
+  if (!ensureDom()) {
+    return;
+  }
+  renderUndoButtons();
+  E.renderHeat?.();
+  const acc = E.access?.();
+  const tag = $("#s3Access");
+  if (tag && acc) {
+    tag.textContent = acc.name;
+    tag.title = "Рівень доступу: " + acc.name + (acc.design ? "" : ". " + E.accessHint("design"));
+  }
+  $("#modeSeg")?.querySelectorAll("button").forEach((b) => {
+    b.disabled = isMobile();
+    b.title = isMobile() ? "У мобільному режимі правка вимкнена" : "";
+  });
+  const br = $("#s3Burger");
+  if (br) {
+    const open = $("#app").classList.contains("m-left");
+    br.setAttribute("aria-expanded", String(open));
+    br.firstChild.textContent = open ? "✕" : "☰";
+  }
+  const ob = $("#s3ObjBtn");
+  if (ob) {
+    ob.textContent = $("#app").classList.contains("m-right") ? "Закрити панель" : "Панель об’єкта";
+  }
+}
+function renderUndoButtons() {
+  const u = $("#s3Undo");
+  if (!u) {
+    return;
+  }
+  const st4 = E.undoState();
+  const acc = E.access?.() || { design: true };
+  const r = $("#s3Redo");
+  u.disabled = !st4.canUndo || !acc.design;
+  r.disabled = !st4.canRedo || !acc.design;
+  u.title = !acc.design ? E.accessHint("design") : st4.canUndo ? `Скасувати: ${st4.undoLabel} (Ctrl+Z)` : "Немає що скасувати";
+  r.title = !acc.design ? E.accessHint("design") : st4.canRedo ? `Повторити: ${st4.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
+}
+var onRootClick = (e) => {
+  const more = $("#menuMore");
+  if (more && more.open && (!more.contains(e.target) || e.target.closest(".morelist button"))) {
+    more.open = false;
+  }
+};
+var mql = null;
+var onMql = () => {
+  applyMobile();
+  decorate();
+};
+function onMount() {
+  decorate();
+  applyMobile();
+  mql = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
+  mql?.addEventListener("change", onMql);
+  ROOT.el?.addEventListener("click", onRootClick, true);
+  rootWithClick = ROOT.el;
+  E.restoreMetric?.();
+}
+var rootWithClick = null;
+function onUnmount() {
+  mql?.removeEventListener("change", onMql);
+  mql = null;
+  rootWithClick?.removeEventListener("click", onRootClick, true);
+  rootWithClick = null;
+}
+E.lifecycle.mount.add(onMount);
+E.lifecycle.unmount.add(onUnmount);
+var origRenderAll = E.renderAll;
+E.renderAll = function renderAllS3(...a) {
+  const r = origRenderAll.apply(this, a);
+  try {
+    decorate();
+    if (isMobile() && S.app.mode !== "view") {
+      applyMobile();
+    }
+  } catch (e) {
+    console.error("S3 chrome:", e);
+  }
+  return r;
+};
+Object.assign(E, { isMobile, mobilePanel, showTip, hideTip, showCard, hideCard, renderUndoButtons, decorateS3: decorate });
+
+// core/constructor/card.js
+var pct = (v) => v == null ? "—" : Math.round(v * 100) + " %";
+var day = (iso) => iso ? String(iso).slice(0, 10) : "—";
+function cardNode(slot, cell) {
+  const root = h("div", { class: "s3-card", id: "s3Card", "data-code": cell.code });
+  const draw3 = () => {
+    const e = stockOf(cell.code);
+    const d = e && e.detail || null;
+    const ly = layerOf(slot.layer_id);
+    const type = typeOf(slot.type_id, libraryState());
+    const fill2 = e ? e.fill : null;
+    root.replaceChildren(
+      ...K(
+        h("div", { class: "frow wrap" }, h("h3", { style: { margin: 0, flex: "1" } }, cell.code), h("span", { class: "tag" }, type ? type.name : (SLOT_TEMPLATES[slot.template] || {}).label || slot.template), ly ? h("span", { class: "tag" }, ly.name) : null),
+        h(
+          "div",
+          { class: "kv" },
+          h("span", null, "Місць"),
+          h("span", null, String(cell.capacity ?? "—")),
+          h("span", null, "Макс. навантаження"),
+          h("span", null, cell.max_load_kg ? `${fmt(cell.max_load_kg, 0)} кг` : "—"),
+          h("span", null, "Категорія"),
+          h("span", null, d && d.category || slot.storage_category_name || "—"),
+          e ? h("span", null, "Запас / резерв") : null,
+          e ? h("span", null, `${e.qty ?? 0} / ${e.reserved ?? 0}`) : null,
+          e && (e.min != null || e.max != null) ? h("span", null, "Min / max") : null,
+          e && (e.min != null || e.max != null) ? h("span", null, `${e.min ?? "—"} / ${e.max ?? "—"}`) : null,
+          e && e.age_days != null && e.qty ? h("span", null, "Вік запасу") : null,
+          e && e.age_days != null && e.qty ? h("span", null, `${e.age_days} дн.`) : null
+        ),
+        fill2 != null ? h("div", null, h("div", { class: "small" }, `Заповненість: ${pct(fill2)}`), h("div", { class: "s3-bar" }, h("i", { style: { width: Math.min(100, Math.round(fill2 * 100)) + "%" } }))) : null,
+        !e && can("stock") ? h("div", { class: "small muted" }, S.stock ? "Нова комірка: даних Odoo ще немає." : "Залишки не завантажено (оберіть «Показник» чи «Оновити дані»).") : null,
+        e && S.stock && S.stock.demo ? h("div", { class: "small" }, h("span", { class: "tag s3-demo" }, "демо"), " значення синтетичні") : null,
+        d && d.rows && d.rows.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Залишки"), h("table", null, h("thead", null, h("tr", null, ["Товар", "К-сть", "Резерв", "Партія", "Вік"].map((t2) => h("th", null, t2)))), h("tbody", null, d.rows.map((r) => h("tr", null, h("td", null, r.product || r.ref || "—"), h("td", null, String(r.qty ?? "")), h("td", null, String(r.reserved ?? "")), h("td", null, r.lot || "—"), h("td", null, r.age_days != null ? r.age_days + " дн." : day(r.in_date))))))) : null,
+        d && d.rules && d.rules.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Правила розміщення"), h("ul", { class: "small", style: { margin: 0, paddingLeft: "16px" } }, d.rules.map((r) => h("li", null, typeof r === "string" ? r : r.label || r.name)))) : null,
+        d && d.moves && d.moves.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, `Рух за ${S.stock && S.stock.days || 90} днів`), h("table", null, h("tbody", null, d.moves.slice(0, 10).map((m) => h("tr", null, h("td", null, day(m.date)), h("td", null, m.product || ""), h("td", null, String(m.qty ?? "")), h("td", { class: "small muted" }, [m.from, m.to].filter(Boolean).join(" → "))))))) : null,
+        h(
+          "div",
+          { class: "frow wrap", style: { marginTop: "6px" } },
+          d && d.record && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord(d.record.model, d.record.id) }, "Відкрити в Odoo") : null,
+          h("button", { class: "fbtn sm", type: "button", id: "btnCardLabel", onclick: () => E.runDialog("labels", { spec: { scope: "row", rowId: slot.id } }) }, "Етикетка…")
+        )
+      )
+    );
+  };
+  draw3();
+  if (can("stock")) {
+    loadDetail(cell.code).then(() => {
+      if (root.isConnected || $("#s3CardOv:not([hidden])")) {
+        draw3();
+      }
+    });
+  }
+  return root;
+}
+function renderCardBlock(root, { rec }) {
+  if (!rec || !S.sel || S.sel.kind !== "slot" || !S.selCell) {
+    return;
+  }
+  const cell = cellsOf(rec).find((c) => c.code === S.selCell);
+  if (!cell) {
+    return;
+  }
+  root.append(h("div", { class: "sec", id: "cardBlock" }, h("h3", null, "Картка місця"), cardNode(rec, cell)));
+}
+registries.panels.add("right:card", { area: "right", render: renderCardBlock }, { sequence: 20, force: true });
+function cellPicked(slotId, code) {
+  if (!E.isMobile?.()) {
+    E.renderRight?.();
+    return;
+  }
+  const slot = S.sIdx.get(slotId);
+  const cell = slot && cellsOf(slot).find((c) => c.code === code);
+  if (cell) {
+    E.showCard(cardNode(slot, cell), cell.code);
+  }
+}
+Object.assign(E, { cellPicked, cardNode });
+
+// core/constructor/parse_codes.js
+var PART_KEYS = ["zone", "row", "bay", "level", "pos", "prefix"];
+var PART_LABELS = { zone: "зона", row: "ряд", bay: "секція", level: "ярус", pos: "позиція", prefix: "префікс" };
+var NAMES = {
+  zone: ["зона", "zone"],
+  row: ["ряд", "row", "aisle"],
+  bay: ["секція", "секция", "bay", "section"],
+  level: ["ярус", "level", "tier"],
+  pos: ["позиція", "позиция", "pos", "position"],
+  prefix: ["префікс", "префикс", "prefix"]
+};
+var ALIAS = Object.fromEntries(Object.entries(NAMES).flatMap(([k, a]) => a.map((x) => [x, k])));
+var RULE_TYPES = ["auto", "pallet_rack", "shelf", "cantilever", "floor_stack", "floor_spot"];
+var TYPE_LABELS = { auto: "Тип: за частинами", pallet_rack: "Палетний стелаж", shelf: "Полицевий", cantilever: "Консольний", floor_stack: "Штабелі", floor_spot: "Місце на підлозі" };
+var RULES_MAX = 30;
+var TEXT_MAX = 160;
+var esc2 = (s) => s.replace(/[.*+?^${}()|[\]\\/-]/g, "\\$&");
+function tokenizeMask(mask) {
+  if (typeof mask !== "string" || !mask.trim()) {
+    throw new Error("Маска порожня.");
+  }
+  const toks = [];
+  let lit = "";
+  const flush = () => {
+    if (lit) {
+      toks.push({ t: "lit", text: lit });
+      lit = "";
+    }
+  };
+  for (let i = 0; i < mask.length; i++) {
+    const ch = mask[i];
+    if (ch === "{") {
+      const j = mask.indexOf("}", i);
+      if (j < 0) {
+        throw new Error("У масці немає закриваючої дужки }.");
+      }
+      flush();
+      const body = mask.slice(i + 1, j);
+      const colon = body.indexOf(":");
+      const key = ALIAS[(colon < 0 ? body : body.slice(0, colon)).trim().toLowerCase()];
+      if (!key) {
+        throw new Error(`Невідома частина {${body.trim()}}. Доступні: ряд, секція, ярус, зона, позиція, префікс.`);
+      }
+      toks.push({ t: "part", key, mod: colon < 0 ? "" : body.slice(colon + 1).trim() });
+      i = j;
+    } else if (ch === "*") {
+      flush();
+      toks.push({ t: "any" });
+    } else {
+      lit += ch;
+    }
+  }
+  flush();
+  if (!toks.some((x) => x.t === "part")) {
+    throw new Error("У масці немає жодної частини ({ряд}, {секція}, {ярус} …).");
+  }
+  const seen = /* @__PURE__ */ new Set();
+  for (const t2 of toks) {
+    if (t2.t === "part") {
+      if (seen.has(t2.key)) {
+        throw new Error(`Частина {${PART_LABELS[t2.key]}} повторюється в масці.`);
+      }
+      seen.add(t2.key);
+    }
+  }
+  return toks;
+}
+function partSpec(key, mod) {
+  if (!mod) {
+    return key === "zone" ? { kind: "text", src: "[A-Za-z0-9]+" } : key === "prefix" ? { kind: "text", src: "[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*?" } : { kind: "num", src: "[0-9]+" };
+  }
+  if (mod === "a" || mod === "A") {
+    return { kind: "alpha", src: "[A-Za-z]+" };
+  }
+  if (mod === "n" || mod === "d" || mod === "#") {
+    return { kind: "num", src: "[0-9]+" };
+  }
+  let m = /^([A-Za-z])\s*-\s*([A-Za-z])$/.exec(mod);
+  if (m) {
+    const [lo, hi] = [m[1].toUpperCase().charCodeAt(0) - 64, m[2].toUpperCase().charCodeAt(0) - 64];
+    if (lo > hi) {
+      throw new Error(`Діапазон літер {${PART_LABELS[key]}:${mod}}: початок більший за кінець.`);
+    }
+    return { kind: "alpha", lo, hi, src: "[A-Za-z]" };
+  }
+  m = /^(\d+)\s*-\s*(\d+)$/.exec(mod);
+  if (m) {
+    if (+m[1] > +m[2]) {
+      throw new Error(`Діапазон чисел {${PART_LABELS[key]}:${mod}}: початок більший за кінець.`);
+    }
+    return { kind: "num", lo: +m[1], hi: +m[2], src: "[0-9]+" };
+  }
+  throw new Error(`Невідомий модифікатор «${mod}» у {${PART_LABELS[key]}:${mod}}: a (літери), A-D, 1-5.`);
+}
+function compileRule(rule) {
+  const out = { ok: false, id: rule.id || "", type: rule.type || "auto", enabled: rule.enabled !== false, mode: rule.mode === "regex" ? "regex" : "mask", re: null, kinds: {}, tokens: null, spec: rule };
+  try {
+    if (out.mode === "regex") {
+      const src = String(rule.regex || "");
+      if (!src.trim() || src.length > TEXT_MAX) {
+        throw new Error(`Регулярний вираз: 1…${TEXT_MAX} символів.`);
+      }
+      out.re = new RegExp(src, "i");
+      const known = [...src.matchAll(/\(\?<([A-Za-z_]\w*)>/g)].map((m) => m[1]).filter((n) => PART_KEYS.includes(n));
+      if (!known.length) {
+        throw new Error("Регулярний вираз має містити групи (?<row>…), (?<bay>…), (?<level>…) (також zone, pos, prefix).");
+      }
+      for (const k of known) {
+        out.kinds[k] = { kind: k === "zone" || k === "prefix" ? "text" : "num" };
+      }
+    } else {
+      out.tokens = tokenizeMask(rule.mask);
+      let src = "";
+      for (const t2 of out.tokens) {
+        if (t2.t === "lit") {
+          src += esc2(t2.text);
+        } else if (t2.t === "any") {
+          src += ".*?";
+        } else {
+          const sp = partSpec(t2.key, t2.mod);
+          out.kinds[t2.key] = sp;
+          src += `(?<${t2.key}>${sp.src})`;
+        }
+      }
+      out.re = new RegExp(`^${src}$`, "i");
+    }
+    out.ok = true;
+  } catch (e) {
+    out.error = e.message || String(e);
+  }
+  return out;
+}
+function partValue(kind, text) {
+  if (kind.kind === "text") {
+    return text;
+  }
+  const n = kind.kind === "num" ? parseInt(text, 10) : fromAlpha(text.toUpperCase());
+  return n == null || Number.isNaN(n) || kind.lo != null && (n < kind.lo || n > kind.hi) ? void 0 : n;
+}
+function matchRule(cr, code) {
+  if (!cr.ok || !cr.enabled) {
+    return null;
+  }
+  const m = cr.re.exec(code);
+  if (!m) {
+    return null;
+  }
+  const parts = {};
+  const raw = {};
+  for (const [key, text] of Object.entries(m.groups || {})) {
+    if (text == null || !PART_KEYS.includes(key)) {
+      continue;
+    }
+    const v = partValue(cr.kinds[key] || { kind: "num" }, text);
+    if (v === void 0) {
+      return null;
+    }
+    parts[key] = key === "zone" ? text : v;
+    raw[key] = text;
+  }
+  return Object.keys(parts).length ? { parts, raw } : null;
+}
+var NUM_KEYS = ["row", "bay", "level", "pos"];
+var segRe = (addr, key) => key === "prefix" ? "(?<prefix>[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*?)" : addr.seg[key].kind === "alpha" ? `(?<${key}>[A-Z]+)` : `(?<${key}>[0-9]+)`;
+function addrMatchers(addrValue) {
+  const addr = safeNormalize(addrValue);
+  if (!addr.tpl) {
+    return [];
+  }
+  const words = parseTpl(addr.tpl);
+  const n = words.length;
+  const subsets = [];
+  for (let mask = 1; mask < 2 ** n; mask++) {
+    const idx = [];
+    for (let i = 0; i < n; i++) {
+      if (mask >> i & 1) {
+        idx.push(i);
+      }
+    }
+    const keys = idx.flatMap((i) => words[i].filter(([k]) => k === "seg").map(([, name]) => name));
+    if (keys.some((k) => NUM_KEYS.includes(k) || k === "prefix")) {
+      subsets.push({ idx, keys });
+    }
+  }
+  subsets.sort((a, b) => b.idx.length - a.idx.length || a.idx.join().localeCompare(b.idx.join(), "en", { numeric: true }));
+  return subsets.map(({ idx, keys }) => {
+    const body = idx.map((i) => words[i].map(([kind, item]) => kind === "lit" ? esc2(item) : segRe(addr, item)).join("")).join(esc2(addr.sep));
+    return { addr, idx, keys, re: new RegExp(`^${body}$`) };
+  });
+}
+function matchAddr(matchers, code) {
+  for (const mt of matchers) {
+    const m = mt.re.exec(code);
+    if (!m) {
+      continue;
+    }
+    const parts = {};
+    const raw = {};
+    let ok = true;
+    for (const [key, text] of Object.entries(m.groups || {})) {
+      raw[key] = text;
+      if (key === "prefix" || key === "zone") {
+        parts[key] = text;
+        continue;
+      }
+      const spec = mt.addr.seg[key];
+      const v = (spec.kind === "alpha" ? fromAlpha(text) : parseInt(text, 10)) - spec.start + 1;
+      if (!(v >= 1)) {
+        ok = false;
+        break;
+      }
+      parts[key] = v;
+    }
+    if (ok) {
+      return { parts, raw, matcher: mt };
+    }
+  }
+  return null;
+}
+var LEGACY_RULES = [
+  { id: "legacy:pallet_rack", mask: "{prefix}-B{bay}-L{level}", type: "pallet_rack" },
+  { id: "legacy:cantilever", mask: "{prefix}-A{bay}-L{level}", type: "cantilever" },
+  { id: "legacy:shelf", mask: "{prefix}-S{bay}-L{level}", type: "shelf" }
+];
+function makeParser({ rules = [], addr = null, legacy = true } = {}) {
+  const custom = rules.map(compileRule);
+  const matchers = addrMatchers(addr);
+  const builtin = legacy ? LEGACY_RULES.map(compileRule) : [];
+  const parse = (code) => {
+    for (const cr of custom) {
+      const r = matchRule(cr, code);
+      if (r) {
+        return { kind: "custom", rule: cr.id, type: cr.type, cr, ...r };
+      }
+    }
+    const a = matchAddr(matchers, code);
+    if (a) {
+      return { kind: "addr", rule: "addr", type: "auto", ...a };
+    }
+    for (const cr of builtin) {
+      const r = matchRule(cr, code);
+      if (r) {
+        return { kind: "legacy", rule: cr.id, type: cr.type, cr, ...r };
+      }
+    }
+    return null;
+  };
+  return { parse, custom, matchers, errors: custom.filter((c) => !c.ok).map((c) => ({ id: c.id, error: c.error })) };
+}
+function levelKind(parts) {
+  const hasBay = parts.bay != null;
+  const hasLevel = parts.level != null;
+  return hasBay && hasLevel ? "rack" : hasBay || hasLevel ? "stack" : "spot";
+}
+var LETTER = "A-Za-zА-Яа-яІіЇїЄєҐґ";
+var lex = (code) => [...code.matchAll(new RegExp(`[${LETTER}]+|[0-9]+|[^${LETTER}0-9]+`, "g"))].map((m) => ({ t: /^[0-9]/.test(m[0]) ? "num" : new RegExp(`^[${LETTER}]`).test(m[0]) ? "alpha" : "sep", text: m[0] }));
+var NUM_ORDER = { 1: ["bay"], 2: ["bay", "level"], 3: ["row", "bay", "level"], 4: ["zone", "row", "bay", "level"] };
+function maskCandidates(code) {
+  const toks = lex(code);
+  const nums = toks.filter((t2) => t2.t === "num");
+  const names = NUM_ORDER[Math.min(nums.length, 4)];
+  if (!names) {
+    return [];
+  }
+  const build2 = (keys, firstAlpha) => {
+    let i = 0;
+    return toks.map((t2, j) => {
+      if (t2.t === "sep") {
+        return t2.text;
+      }
+      if (t2.t === "num") {
+        const key = keys[i++];
+        return key ? `{${PART_LABELS[key]}}` : "*";
+      }
+      const glued = toks[j - 1]?.t === "num" || toks[j + 1]?.t === "num";
+      if (j === 0 && firstAlpha && !glued) {
+        return firstAlpha;
+      }
+      return glued || /^[A-Za-z]$/.test(t2.text) ? t2.text : "*";
+    }).join("");
+  };
+  const out = [];
+  if (toks[0].t === "alpha") {
+    const lead = [build2(names, "{префікс}"), build2(names, "{зона:a}")];
+    out.push(...toks[0].text.length === 1 ? lead.reverse() : lead);
+    if (nums.length >= 3) {
+      out.push(build2(NUM_ORDER[nums.length - 1], "{префікс}"));
+    }
+  }
+  out.push(build2(names, null));
+  return [...new Set(out)].filter((m) => m.includes("{"));
+}
+function guessMasks(codes, { limit = 5, sample = 40 } = {}) {
+  const cands = /* @__PURE__ */ new Set();
+  for (const code of codes.slice(0, sample)) {
+    maskCandidates(code).forEach((m) => cands.add(m));
+  }
+  const rows = [];
+  for (const mask of cands) {
+    const cr = compileRule({ mask });
+    if (cr.ok) {
+      rows.push({ mask, matched: codes.reduce((n, c) => n + (matchRule(cr, c) ? 1 : 0), 0), total: codes.length, parts: cr.tokens.filter((t2) => t2.t === "part").length, order: rows.length });
+    }
+  }
+  rows.sort((a, b) => b.matched - a.matched || b.parts - a.parts || a.order - b.order);
+  return rows.filter((r) => r.matched > 0).slice(0, limit).map(({ mask, matched, total }) => ({ mask, matched, total }));
+}
+function normalizeRules(value) {
+  const src = value && typeof value === "object" ? value : {};
+  const rules = (Array.isArray(src.rules) ? src.rules : []).slice(0, RULES_MAX).map((r, i) => {
+    const mode = r.mode === "regex" ? "regex" : "mask";
+    const out2 = { id: String(r.id || `r${i + 1}`).slice(0, 24), mode, type: RULE_TYPES.includes(r.type) ? r.type : "auto", enabled: r.enabled !== false };
+    out2[mode] = String(r[mode] || "").slice(0, TEXT_MAX);
+    return out2;
+  });
+  const out = { v: 1, rules };
+  if (Array.isArray(src.tray) && src.tray.length) {
+    out.tray = src.tray;
+  }
+  if (src.tray_more) {
+    out.tray_more = src.tray_more;
+  }
+  return out;
+}
+var siteRules = () => normalizeRules(S.site?.parse_rules);
+var siteParser = (rules = siteRules().rules) => makeParser({ rules, addr: S.site?.addr || null });
+function analyzeCodes(items2, parser) {
+  const out = { total: items2.length, parsed: 0, unparsed: [], byRule: {} };
+  for (const it of items2) {
+    const code = typeof it === "string" ? it : it.code;
+    const r = parser.parse(code);
+    if (!r) {
+      out.unparsed.push({ code, loc: it });
+    } else {
+      out.parsed++;
+      out.byRule[r.rule] = (out.byRule[r.rule] || 0) + 1;
+    }
+  }
+  return out;
+}
+async function saveRules(next) {
+  if (!S.site) {
+    return;
+  }
+  S.site.parse_rules = next;
+  if (E.adapter && typeof E.adapter.saveParseRules === "function") {
+    await E.adapter.saveParseRules(next);
+  }
+  E.renderLeft?.();
+}
+var ruleSeq = 0;
+var newRule = (mask = "") => ({ id: `r${Date.now().toString(36)}${ruleSeq++}`, mode: "mask", mask, type: "auto", enabled: true });
+var codeOf = (i) => typeof i === "string" ? i : i.code;
+function openParseCodes({ items: items2 = null } = {}) {
+  const st4 = { rules: siteRules().rules.map((r) => ({ ...r })), items: items2 || (E.trayCodes ? E.trayCodes() : []) };
+  const stats = h("div", { class: "small", id: "pcStats" });
+  const bad = h("div", { class: "small", id: "pcUnparsed" });
+  const rowsBox = h("div", { class: "fcol", id: "pcRules" });
+  const guessBox = h("div", { class: "small", id: "pcGuess" });
+  const parser = () => makeParser({ rules: st4.rules, addr: S.site?.addr || null });
+  const refresh = () => {
+    const p = parser();
+    const a = analyzeCodes(st4.items, p);
+    stats.textContent = `З ${a.total} місць розібрано ${a.parsed}` + (p.errors.length ? ` · правил із помилкою: ${p.errors.length}` : "");
+    const ex2 = a.unparsed.slice(0, 8).map((u) => u.code);
+    bad.replaceChildren(h("b", null, `Не розпізнано: ${a.unparsed.length}`), ex2.length ? h("div", { class: "mono small", id: "pcExamples" }, ex2.join(" · ") + (a.unparsed.length > ex2.length ? " …" : "")) : h("span", null, " — усе розібрано"));
+    return p;
+  };
+  const render2 = () => {
+    const p = refresh();
+    rowsBox.replaceChildren(
+      ...st4.rules.map((r, i) => {
+        const key = r.mode === "regex" ? "regex" : "mask";
+        const input = h("input", { type: "text", value: r[key] || "", placeholder: key === "regex" ? "^(?<row>\\d+)-(?<bay>\\d+)-(?<level>\\d+)$" : "{ряд}-{секція}-{ярус}", "aria-label": "Маска", class: "pc-mask" });
+        input.addEventListener("input", () => {
+          r[key] = input.value;
+          refresh();
+        });
+        const sel = (opts2, val, on, label2) => {
+          const s = h("select", { "aria-label": label2 }, opts2.map(([v, t2]) => h("option", { value: v, selected: v === val }, t2)));
+          s.addEventListener("change", () => on(s.value));
+          return s;
+        };
+        const move = (d) => {
+          if (st4.rules[i + d]) {
+            [st4.rules[i], st4.rules[i + d]] = [st4.rules[i + d], st4.rules[i]];
+            render2();
+          }
+        };
+        const cr = p.custom[i];
+        return h(
+          "div",
+          { class: "frow wrap pc-rule", "data-rule": r.id },
+          h("input", { type: "checkbox", checked: r.enabled !== false, "aria-label": "Увімкнено", onchange: (e) => {
+            r.enabled = e.target.checked;
+            refresh();
+          } }),
+          sel([["mask", "Маска"], ["regex", "Регулярний вираз"]], r.mode, (v) => {
+            r.mode = v;
+            render2();
+          }, "Режим"),
+          input,
+          sel(RULE_TYPES.map((t2) => [t2, TYPE_LABELS[t2]]), r.type || "auto", (v) => {
+            r.type = v;
+          }, "Тип місця"),
+          h("button", { class: "fbtn sm", type: "button", title: "Вище", "aria-label": "Вище", onclick: () => move(-1) }, "↑"),
+          h("button", { class: "fbtn sm", type: "button", title: "Нижче", "aria-label": "Нижче", onclick: () => move(1) }, "↓"),
+          h("button", { class: "fbtn sm danger", type: "button", title: "Видалити правило", "aria-label": "Видалити правило", onclick: () => {
+            st4.rules.splice(i, 1);
+            render2();
+          } }, "×"),
+          cr && !cr.ok ? h("div", { class: "small err", style: { flexBasis: "100%" } }, cr.error) : null
+        );
+      })
+    );
+  };
+  const guess = () => {
+    const rest = analyzeCodes(st4.items, parser()).unparsed.map((u) => u.code);
+    const rows = guessMasks(rest.length ? rest : st4.items.map(codeOf));
+    guessBox.replaceChildren(
+      ...rows.length ? rows.map((g3) => h("div", { class: "frow" }, h("span", { class: "mono" }, g3.mask), h("span", { class: "muted" }, `${g3.matched} із ${g3.total}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
+        st4.rules.push(newRule(g3.mask));
+        render2();
+      } }, "Додати"))) : [h("span", { class: "muted" }, "Не вдалося підібрати маску за зразками.")]
+    );
+  };
+  const body = h(
+    "div",
+    { class: "fcol", id: "pcBody" },
+    h("div", { class: "small muted" }, "Частини: {ряд} {секція} {ярус} {зона} {позиція} {префікс}; {x:a} — літери, {x:A-D} — діапазон літер, {x:1-5} — діапазон чисел, * — будь-який текст. Порядок = пріоритет; далі діє адресація площадки й «ПРЕФІКС-B01-L1»."),
+    rowsBox,
+    h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "pcAdd", onclick: () => {
+      st4.rules.push(newRule());
+      render2();
+    } }, "+ Правило"), h("button", { class: "fbtn sm", type: "button", id: "pcGuessBtn", onclick: guess }, "Підібрати маску за зразками")),
+    guessBox,
+    stats,
+    bad
+  );
+  render2();
+  return new Promise((resolve) => {
+    let saved2 = null;
+    E.openDialog({
+      title: "Розбір кодів",
+      body,
+      onClose: () => resolve(saved2),
+      actions: [
+        { label: "Закрити", value: "no" },
+        {
+          label: "Зберегти правила",
+          cls: "primary",
+          id: "pcSave",
+          onClick: async () => {
+            if (parser().errors.length) {
+              toast("Виправте правила з помилкою.", "warn");
+              return false;
+            }
+            try {
+              saved2 = normalizeRules({ ...S.site?.parse_rules || {}, rules: st4.rules });
+              await saveRules(saved2);
+            } catch (e) {
+              saved2 = null;
+              toast(e.message || "Не вдалося зберегти правила.", "err");
+              return false;
+            }
+            toast("Правила розбору збережено.");
+          }
+        }
+      ]
+    });
+  });
+}
+registries.dialogs.add("parseCodes", (args) => openParseCodes(args || {}), { force: true });
+registries.menu.add("parseCodes", { area: "more", label: "Розбір кодів…", icon: "tag", sequence: 62, run: () => E.runDialog("parseCodes"), disabled: () => !S.site }, { sequence: 62, force: true });
+Object.assign(E, { siteParser, normalizeParseRules: normalizeRules, saveParseRules: saveRules });
+
+// core/constructor/autolayout.js
+var EPS = 1e-6;
+var ZONE_MAX = 150;
+var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t2) => SLOT_TEMPLATES[t2].cells);
+var isBlockSlot = (s) => CELL_TEMPLATES.includes(s.template);
+var natural = (a, b) => String(a).localeCompare(String(b), "uk", { numeric: true });
+var ceilTo = (v, step) => Math.ceil(v / step - EPS) * step;
+function layoutLines(blocks, { aisle = 3, gap = 0.5, margin = 0.5, maxL = Infinity, maxW = Infinity } = {}) {
+  const limL = maxL - 2 * margin;
+  const limW = maxW - 2 * margin;
+  const lines = [];
+  const byKey = /* @__PURE__ */ new Map();
+  const push = (ln, b) => {
+    ln.blocks.push(b);
+    ln.len += b.l + (ln.blocks.length > 1 ? gap : 0);
+    ln.depth = Math.max(ln.depth, b.w);
+  };
+  const newLine = (spot2) => ({ blocks: [], len: 0, depth: 0, spot: spot2 });
+  for (const b of blocks.filter((x) => !x.spot)) {
+    const key = b.line ?? b.id;
+    let ln = byKey.get(key);
+    if (!ln) {
+      ln = newLine(false);
+      byKey.set(key, ln);
+      lines.push(ln);
+    }
+    push(ln, b);
+  }
+  const flat = [];
+  for (const ln of lines) {
+    if (ln.len <= limL + EPS) {
+      flat.push(ln);
+      continue;
+    }
+    let cur2 = newLine(false);
+    for (const b of ln.blocks) {
+      if (cur2.blocks.length && cur2.len + gap + b.l > limL + EPS) {
+        flat.push(cur2);
+        cur2 = newLine(false);
+      }
+      push(cur2, b);
+    }
+    flat.push(cur2);
+  }
+  const target = Number.isFinite(limL) ? limL : Math.max(20, ...flat.map((l) => l.len));
+  let cur = null;
+  for (const b of blocks.filter((x) => x.spot)) {
+    if (!cur || cur.len + gap + b.l > target + EPS) {
+      cur = newLine(true);
+      flat.push(cur);
+    }
+    push(cur, b);
+  }
+  const tooLong = flat.find((ln) => ln.len > limL + EPS);
+  if (tooLong) {
+    return { ok: false, need: { l: tooLong.len + 2 * margin, w: 0 }, reason: `ряд довжиною ${fmt(tooLong.len, 1)} м не вміщається в зону` };
+  }
+  const cols = [];
+  let col = null;
+  for (const ln of flat) {
+    const add = (col && col.lines.length ? aisle : 0) + ln.depth;
+    if (!col || col.lines.length && col.depth + add > limW + EPS) {
+      col = { lines: [], depth: 0, len: 0 };
+      cols.push(col);
+    }
+    col.depth += (col.lines.length ? aisle : 0) + ln.depth;
+    col.lines.push(ln);
+    col.len = Math.max(col.len, ln.len);
+  }
+  const L3 = cols.reduce((s, c) => s + c.len, 0) + Math.max(0, cols.length - 1) * aisle + 2 * margin;
+  const W3 = Math.max(0, ...cols.map((c) => c.depth)) + 2 * margin;
+  if (L3 > maxL + EPS || W3 > maxW + EPS) {
+    return { ok: false, need: { l: L3, w: W3 }, reason: `потрібно ${fmt(L3, 1)}×${fmt(W3, 1)} м` };
+  }
+  const pos = /* @__PURE__ */ new Map();
+  let u0 = margin;
+  for (const c of cols) {
+    let v0 = margin;
+    for (const ln of c.lines) {
+      let u = u0;
+      for (const b of ln.blocks) {
+        pos.set(b.id, { u: u + b.l / 2 - L3 / 2, v: v0 + ln.depth / 2 - W3 / 2 });
+        u += b.l + gap;
+      }
+      v0 += ln.depth + aisle;
+    }
+    u0 += c.len + aisle;
+  }
+  return { ok: true, l: L3, w: W3, pos };
+}
+var overlap = (a, b) => a[0] < b[2] - EPS && b[0] < a[2] - EPS && a[1] < b[3] - EPS && b[1] < a[3] - EPS;
+var hitBy = (box, o) => overlap(box, o) && (!o.obb || satPenetration(rectObb(box[0], box[1], box[2], box[3]), o.obb) > EPS);
+var SCAN_STEP = 0.5;
+function packRects(items2, region, obstacles = [], { gap = 1, margin = 0.5 } = {}) {
+  const x0 = region ? region.x0 + margin : margin;
+  const x1 = region ? region.x1 - margin : Infinity;
+  const y0 = region ? region.y0 + margin : margin;
+  const y1 = region ? region.y1 - margin : Infinity;
+  const poly2 = region && region.poly && region.poly.length >= 3 ? region.poly : null;
+  const pos = /* @__PURE__ */ new Map();
+  let x = x0;
+  let y = y0;
+  let shelfH = 0;
+  let blocked = false;
+  let everBlocked = false;
+  let guard3 = 0;
+  for (const it of items2) {
+    if (it.l > x1 - x0 + EPS) {
+      return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
+    }
+    for (; ; ) {
+      if (++guard3 > 4e5) {
+        return { ok: false, reason: "не вдалося знайти місце для зон", need: null };
+      }
+      if (x + it.l > x1 + EPS) {
+        if (shelfH === 0 && !blocked) {
+          return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
+        }
+        x = x0;
+        y += shelfH > 0 ? shelfH + gap : SCAN_STEP;
+        shelfH = 0;
+        blocked = false;
+        continue;
+      }
+      if (y + it.w > y1 + EPS) {
+        return {
+          ok: false,
+          reason: everBlocked ? `зона «${it.title || it.id}» не вміщається в контур: перешкоди (колони, стіни, офіс) і вирізи контуру не лишають місця` : `зона «${it.title || it.id}» не вміщається в контур (бракує глибини)`,
+          need: { l: it.l + 2 * margin, w: y + it.w - y0 + margin }
+        };
+      }
+      const box = [x, y, x + it.l, y + it.w];
+      if (poly2 && !obbInsidePolygon(rectObb(box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin), poly2)) {
+        blocked = everBlocked = true;
+        x += SCAN_STEP;
+        continue;
+      }
+      const hit = obstacles.find((o) => hitBy(box, o));
+      if (hit) {
+        blocked = everBlocked = true;
+        x = hit.obb ? x + SCAN_STEP : hit[2] + gap;
+        continue;
+      }
+      pos.set(it.id, { x: x + it.l / 2, y: y + it.w / 2 });
+      x += it.l + gap;
+      shelfH = Math.max(shelfH, it.w);
+      break;
+    }
+  }
+  return { ok: true, pos };
+}
+function layoutPlan({ zones, orphans = [], region = null, obstacles = [], aisle = 3, gap = 0.5, margin = 0.5, step = 0.5, zoneGap = 1 }) {
+  const lim = { maxL: Math.min(ZONE_MAX, region ? region.x1 - region.x0 : Infinity), maxW: Math.min(ZONE_MAX, region ? region.y1 - region.y0 : Infinity) };
+  const items2 = [];
+  const lays = /* @__PURE__ */ new Map();
+  const all = [...zones, ...orphans.length ? [{ id: "__orphans", title: "Поза зонами", blocks: orphans }] : []];
+  for (const z of all) {
+    const fixed = z.fixed || null;
+    const r = layoutLines(z.blocks, { aisle, gap, margin, maxL: fixed ? fixed.l : lim.maxL, maxW: fixed ? fixed.w : lim.maxW });
+    if (!r.ok) {
+      return { ok: false, reason: `Зона «${z.title || z.id}»: ${r.reason}`, need: r.need };
+    }
+    const even = 2 * step;
+    const size = fixed ? { l: fixed.l, w: fixed.w } : { l: Math.max(even * 2, ceilTo(r.l, even)), w: Math.max(even * 2, ceilTo(r.w, even)) };
+    lays.set(z.id, { lay: r, size });
+    items2.push({ id: z.id, title: z.title, l: size.l, w: size.w });
+  }
+  const packed = packRects(items2, region, obstacles, { gap: zoneGap, margin });
+  if (!packed.ok) {
+    return { ok: false, reason: packed.reason, need: packed.need };
+  }
+  const out = { ok: true, zones: /* @__PURE__ */ new Map(), blocks: /* @__PURE__ */ new Map(), orphans: null };
+  for (const z of all) {
+    const { lay, size } = lays.get(z.id);
+    const c = packed.pos.get(z.id);
+    const rect2 = { x: rnd(c.x, 3), y: rnd(c.y, 3), l: size.l, w: size.w };
+    z.id === "__orphans" ? out.orphans = rect2 : out.zones.set(z.id, rect2);
+    for (const [bid, p] of lay.pos) {
+      out.blocks.set(bid, { x: rnd(c.x + p.u, 3), y: rnd(c.y + p.v, 3) });
+    }
+  }
+  return out;
+}
+var slotOfZone = (zones, s) => {
+  let host2 = null;
+  for (const z of zones) {
+    if (polygonContains(z.poly, [s.x, s.y]) && (!host2 || z.area < host2.area)) {
+      host2 = z;
+    }
+  }
+  return host2;
+};
+var polyArea3 = (p) => Math.abs(p.reduce((a, [x1, y1], i) => a + x1 * p[(i + 1) % p.length][1] - p[(i + 1) % p.length][0] * y1, 0)) / 2;
+function blockOf(s) {
+  const fp = footprint(s.template, s.params);
+  return { id: s.id, l: fp.l, w: fp.w, spot: s.template === "floor_spot" };
+}
+var rectOfItem = (it) => {
+  if ([it.x0, it.y0, it.x1, it.y1].every(Number.isFinite)) {
+    return [it.x0, it.y0, it.x1, it.y1];
+  }
+  const w = it.w ?? it.length ?? it.l;
+  const d = it.d ?? it.depth ?? it.width;
+  if ([it.x, it.y, w, d].every(Number.isFinite)) {
+    const a = (it.rot || 0) * Math.PI / 180;
+    const ex2 = (Math.abs(Math.cos(a)) * w + Math.abs(Math.sin(a)) * d) / 2;
+    const ey = (Math.abs(Math.sin(a)) * w + Math.abs(Math.cos(a)) * d) / 2;
+    return [it.x - ex2, it.y - ey, it.x + ex2, it.y + ey];
+  }
+  return null;
+};
+function buildingRects({ grid = true } = {}) {
+  const list = E.buildingObstacles ? E.buildingObstacles() : obstacleRects(S.layers, S.site);
+  return list.filter((r) => grid || !r.grid).map((r) => Object.assign([r.x0, r.y0, r.x1, r.y1], r.obb ? { obb: r.obb } : {}));
+}
+function layerObstacles(ly, { grid = true } = {}) {
+  const out = buildingRects({ grid });
+  for (const r of [...ly.aisles || [], ...ly.fire_paths || [], ...ly.items || []]) {
+    const b = rectOfItem(r);
+    if (b) {
+      out.push(b);
+    }
+  }
+  for (const p of S.placements) {
+    const v = p.layer_id === ly.id ? variantOf(p.variant_id) : null;
+    if (v) {
+      out.push(pGeom(p, v).box);
+    }
+  }
+  for (const s of S.slots) {
+    if (s.layer_id === ly.id && s.template === "machine_spot") {
+      out.push(sGeom(s).box);
+    }
+  }
+  return out;
+}
+function regionOf2(ly) {
+  const own = ly && ly.bounds;
+  if (own && !Array.isArray(own) && [own.x0, own.y0, own.x1, own.y1].every(Number.isFinite)) {
+    return { x0: own.x0, y0: own.y0, x1: own.x1, y1: own.y1 };
+  }
+  const bl = (S.layers || []).find((l) => l.kind === "building");
+  const pts = Array.isArray(own) && own.length >= 3 ? own.map((p) => [p[0], p[1]]) : S.site ? contourOf(bl || null, S.site.building) : null;
+  if (!pts || pts.length < 3 || !pts.flat().every(Number.isFinite)) {
+    return null;
+  }
+  const b = contourBbox(pts);
+  if (!(b.x1 - b.x0 > 0 && b.y1 - b.y0 > 0)) {
+    return null;
+  }
+  return isRectContour(pts) ? b : { ...b, poly: pts };
+}
+function layoutAroundBuilding(ly, args, extra = []) {
+  const full = layerObstacles(ly);
+  const plan = layoutPlan({ ...args, obstacles: [...full, ...extra] });
+  if (plan.ok) {
+    return plan;
+  }
+  const lean = layerObstacles(ly, { grid: false });
+  if (lean.length === full.length) {
+    return plan;
+  }
+  const alt = layoutPlan({ ...args, obstacles: [...lean, ...extra] });
+  return alt.ok ? { ...alt, gridIgnored: true } : plan;
+}
+function pinBeforeMove(slots) {
+  const zones = /* @__PURE__ */ new Map();
+  for (const s of slots) {
+    const ctx2 = contextOf(s);
+    if (!ctx2) {
+      continue;
+    }
+    const n = ctx2.row ?? ctx2.spot;
+    if (n && safeNormalize(s.addr).row_no !== n) {
+      s.addr = { ...safeNormalize(s.addr), row_no: n };
+    }
+    if (ctx2.zone != null && ctx2.addr && ctx2.addr.seg && /\{zone\}/.test(ctx2.addr.tpl || "")) {
+      zones.set(s.id, { zone: ctx2.zone, spec: ctx2.addr.seg.zone });
+    }
+  }
+  for (const z of S.slots.filter((x) => x.template === "zone" && !safeNormalize(x.addr).zone_code)) {
+    const poly2 = slotPolygon(z);
+    const hit = poly2 && slots.find((s) => zones.has(s.id) && polygonContains(poly2, [s.x, s.y]));
+    if (hit) {
+      const { zone: zone2, spec } = zones.get(hit.id);
+      const code = typeof zone2 === "string" ? zone2 : formatValue(spec, zone2);
+      if (/^[A-Za-z0-9._/#:-]{1,8}$/.test(code)) {
+        z.addr = { ...safeNormalize(z.addr), zone_code: code };
+      }
+    }
+  }
+}
+var rotOf = (z) => z.rotation || 0;
+var toWorld = (zone2, u, v) => {
+  const a = rotOf(zone2) * Math.PI / 180;
+  return { x: rnd(zone2.x + u * Math.cos(a) - v * Math.sin(a), 3), y: rnd(zone2.y + u * Math.sin(a) + v * Math.cos(a), 3) };
+};
+var orderBlocks = (list) => [...list].sort((a, b) => (a.template === "floor_spot") - (b.template === "floor_spot") || (rowNumberOf(a) ?? 1e9) - (rowNumberOf(b) ?? 1e9) || natural(a.code_prefix, b.code_prefix));
+function guard2(ly) {
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return false;
+  }
+  if (!ly || !canEditLayer(ly)) {
+    if (ly) {
+      toastLock(ly);
+    }
+    return false;
+  }
+  return true;
+}
+var zonesOf3 = (ly) => S.slots.filter((s) => s.template === "zone" && s.layer_id === ly.id).map((s) => ({ slot: s, poly: slotPolygon(s), area: 0 })).filter((z) => z.poly).map((z) => ({ ...z, area: polyArea3(z.poly) }));
+function autoLayoutZone(zoneId, { quiet = false } = {}) {
+  const zone2 = S.sIdx.get(zoneId);
+  const ly = zone2 && layerOf(zone2.layer_id);
+  if (!zone2 || zone2.template !== "zone") {
+    return { ok: false, reason: "Зону не знайдено." };
+  }
+  if (!quiet && !guard2(ly)) {
+    return { ok: false, reason: "Немає прав." };
+  }
+  if (zone2.locked) {
+    const reason = "Складний контур зони редагується у формі Odoo.";
+    quiet || toast(reason, "warn");
+    return { ok: false, reason };
+  }
+  const zones = zonesOf3(ly);
+  const mine = orderBlocks(S.slots.filter((s) => s.layer_id === ly.id && isBlockSlot(s) && slotOfZone(zones, s)?.slot.id === zone2.id));
+  if (!mine.length) {
+    quiet || toast("У зоні немає рядів для розкладки.", "warn");
+    return { ok: false, reason: "У зоні немає рядів." };
+  }
+  const rot2 = rotOf(zone2);
+  const plan = layoutPlan({
+    zones: [{ id: zone2.id, title: zone2.params.title || zone2.code_prefix, blocks: mine.map((s) => ({ ...blockOf(s), line: s.addr?.row_no ? `r${s.addr.row_no}` : s.id })), fixed: { l: zone2.params.length, w: zone2.params.width } }],
+    aisle: ly.aisle_width || 3,
+    region: null,
+    step: ly.grid_step || 0.5
+  });
+  if (!plan.ok) {
+    const reason = `Ряди не вміщаються в зону: ${plan.reason}. Нічого не змінено.`;
+    quiet || toast(reason, "warn");
+    return { ok: false, reason };
+  }
+  E.undoRecord?.();
+  pinBeforeMove(mine);
+  const c = plan.zones.get(zone2.id);
+  for (const s of mine) {
+    const p = plan.blocks.get(s.id);
+    Object.assign(s, { ...toWorld(zone2, p.x - c.x, p.y - c.y), rotation: rot2 });
+  }
+  E.undoLabel?.(`Авторозкладка: ${zone2.params.title || zone2.code_prefix}`);
+  E.commit({});
+  quiet || toast(`Розкладено рядів: ${mine.length}.`);
+  return { ok: true, moved: mine.length };
+}
+function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes = false } = {}) {
+  const ly = layerOf(layerId);
+  if (!quiet && !guard2(ly)) {
+    return { ok: false, reason: "Немає прав." };
+  }
+  if (!ly) {
+    return { ok: false, reason: "Немає активного шару." };
+  }
+  const zs = zonesOf3(ly);
+  const free = zs.filter((z) => !z.slot.locked);
+  const lockedBoxes = zs.filter((z) => z.slot.locked).map((z) => [Math.min(...z.poly.map((p) => p[0])), Math.min(...z.poly.map((p) => p[1])), Math.max(...z.poly.map((p) => p[0])), Math.max(...z.poly.map((p) => p[1]))]);
+  const blocks = S.slots.filter((s) => s.layer_id === ly.id && isBlockSlot(s));
+  const own = new Map(free.map((z) => [z.slot.id, []]));
+  const orphans = [];
+  for (const s of blocks) {
+    const host2 = slotOfZone(zs, s);
+    if (host2 && host2.slot.locked) {
+      continue;
+    }
+    (host2 ? own.get(host2.slot.id) : orphans).push(s);
+  }
+  if (!free.length && !orphans.length) {
+    quiet || toast("Немає що розкладати: на шарі немає зон і рядів.", "warn");
+    return { ok: false, reason: "Немає що розкладати." };
+  }
+  const sorted = [...free].sort((a, b) => a.slot.x - b.slot.x || a.slot.y - b.slot.y || natural(a.slot.code_prefix, b.slot.code_prefix));
+  const lineOf = (s) => s.addr?.row_no ? `r${s.addr.row_no}` : s.id;
+  const args = {
+    zones: sorted.map((z) => ({ id: z.slot.id, title: z.slot.params.title || z.slot.code_prefix, blocks: orderBlocks(own.get(z.slot.id)).map((s) => ({ ...blockOf(s), line: lineOf(s) })), fixed: fixedSizes || !own.get(z.slot.id).length ? { l: z.slot.params.length, w: z.slot.params.width } : null })),
+    orphans: orderBlocks(orphans).map((s) => ({ ...blockOf(s), line: lineOf(s) })),
+    region: regionOf2(ly),
+    aisle: ly.aisle_width || 3,
+    step: ly.grid_step || 0.5
+  };
+  const plan = layoutAroundBuilding(ly, args, lockedBoxes);
+  if (!plan.ok) {
+    const cg2 = S.site && S.site.column_grid || {};
+    const hint = /перешкоди/.test(plan.reason) && cg2.step_x > 1 && cg2.step_y > 1 ? ` Колони сітки (крок ${fmt(cg2.step_x, 1)}×${fmt(cg2.step_y, 1)} м) теж вважаються перешкодами: збільште крок або задайте 0.` : "";
+    const reason = `Не вміщається: ${plan.reason}.${hint} Нічого не змінено.`;
+    quiet || toast(reason, "warn");
+    return { ok: false, reason, need: plan.need };
+  }
+  E.undoRecord?.();
+  pinBeforeMove(blocks);
+  for (const z of free) {
+    const r = plan.zones.get(z.slot.id);
+    Object.assign(z.slot, { x: r.x, y: r.y, rotation: 0 });
+    z.slot.params = { ...z.slot.params, length: r.l, width: r.w };
+  }
+  for (const s of blocks) {
+    const p = plan.blocks.get(s.id);
+    if (p) {
+      Object.assign(s, { x: p.x, y: p.y, rotation: 0 });
+    }
+  }
+  E.undoLabel?.("Авторозкладка площадки");
+  E.commit({});
+  const cg = S.site && S.site.column_grid || {};
+  quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.` + (plan.gridIgnored ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) не обійдено: зони більші за крок.` : ""));
+  return { ok: true, zones: free.length, blocks: plan.blocks.size, gridIgnored: !!plan.gridIgnored };
+}
+function renderZoneBlock(root, { rec }) {
+  if (!rec || rec.template !== "zone") {
+    return;
+  }
+  const dis = !canEditLayer(layerOf(rec.layer_id)) || !!rec.locked;
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "autoZone" },
+      h("h3", null, "Авторозкладка"),
+      h("div", { class: "small muted" }, "Ряди вглиб у межах зони; ручні положення й повороти всередині знімаються. Скасовується одним Ctrl+Z."),
+      h("div", { class: "frow" }, h("button", { class: "fbtn", type: "button", id: "btnAutoZone", disabled: dis, onclick: () => autoLayoutZone(rec.id) }, "Розкласти автоматично"))
+    )
+  );
+}
+function renderSiteBlock3(root) {
+  const ly = layerOf(S.ui.layer);
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "autoSite" },
+      h("h3", null, "Авторозкладка"),
+      h("div", { class: "small muted" }, "Зони по горизонталі в контурі шару чи будівлі (обходячи проходи, пожежні шляхи, колони, стіни, офіс), ряди — вглиб. Скасовується одним Ctrl+Z."),
+      h("div", { class: "frow" }, h("button", { class: "fbtn", type: "button", id: "btnAutoSite", disabled: !ly || !canEditLayer(ly), onclick: () => autoLayoutSite() }, "Розкласти автоматично"))
+    )
+  );
+}
+registries.panels.add("slot:autolayout", { area: "slot", render: renderZoneBlock }, { sequence: 45, force: true });
+registries.panels.add("site:autolayout", { area: "site", render: renderSiteBlock3 }, { sequence: 45, force: true });
+registries.menu.add("autolayout", { area: "more", label: "Авторозкладка площадки", icon: "fit", sequence: 64, run: () => autoLayoutSite(), disabled: () => !S.site || !canEditLayer(layerOf(S.ui.layer)) }, { sequence: 64, force: true });
+Object.assign(E, { autoLayoutZone, autoLayoutSite });
+
+// core/constructor/structure.js
+var REASONS = {
+  no_rule: "Код не збігається з жодним правилом розбору й немає зони-родителя",
+  bad_code: "Код не підходить для місця: великі латинські літери, цифри й дефіси, до 22 символів",
+  dup: "Код повторюється",
+  size: "Секцій більше 200 або ярусів більше 12",
+  not_reproduced: "Адресація не відтворює цей код",
+  mask: "Маска не відтворюється адресацією (розділювач чи літерали)",
+  bad_part: "Номер частини коду менший за початок нумерації",
+  new_in_odoo: "З'явилося в Odoo після останнього оновлення"
+};
+var PREFIX_RE = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
+var PREFIX_MAX2 = 22;
+var LITERAL_RE2 = /^[A-Za-z0-9._/#:-]*$/;
+var RACKS = ["pallet_rack", "shelf", "cantilever"];
+var BAY_PARAM = { pallet_rack: ["bays", "levels"], shelf: ["sections", "shelves"], cantilever: ["arms", "levels"], floor_stack: ["cols", null] };
+var SPOT_DEFAULT = { length: 1.2, width: 0.8, height: 1.5, capacity: 1, loc_kind: "area", shape: "zone" };
+var ZONE_COLORS = ["#9fb7c9", "#c9b79f", "#a9c99f", "#c99fb7", "#9fc9c4", "#c9c49f"];
+var fullName = (l) => l.parent ? `${l.parent}/${l.name}` : l.name;
+var segs = (path) => path ? path.split("/") : [];
+var natural2 = (a, b) => String(a).localeCompare(String(b), "uk", { numeric: true });
+var validPrefix = (code) => PREFIX_RE.test(code) && code.length <= PREFIX_MAX2;
+var trayItem = (loc, reason) => ({ code: loc.code, name: loc.name, parent: loc.parent || "", usage: loc.usage || "internal", reason });
+function commonRoot(locs) {
+  let root = null;
+  for (const l of locs) {
+    if (!l.parent) {
+      continue;
+    }
+    const s = segs(l.parent);
+    if (root === null) {
+      root = s;
+    } else {
+      let i = 0;
+      while (i < root.length && root[i] === s[i]) {
+        i++;
+      }
+      root = root.slice(0, i);
+    }
+  }
+  return root || [];
+}
+function deriveRoot(usable, cells) {
+  const root = commonRoot(cells);
+  const same4 = cells.length && cells.every((c) => c.parent === cells[0].parent);
+  if (same4 && root.length >= 2 && usable.some((l) => l.usage === "view" && fullName(l) === root.join("/"))) {
+    return root.slice(0, -1);
+  }
+  return root;
+}
+var tailNumber = (name) => {
+  const m = /(\d+)\s*$/.exec(name || "");
+  return m ? parseInt(m[1], 10) : null;
+};
+var ownAddr = (siteAddr) => !!(siteAddr && siteAddr.tpl);
+function deriveAddr(cr, rawByKey, { levelAsBay = false } = {}) {
+  if (!cr || !cr.tokens || cr.tokens.some((t2) => t2.t === "any")) {
+    return null;
+  }
+  const keyOf2 = (k) => levelAsBay && k === "level" ? "bay" : k;
+  const lits = cr.tokens.filter((t2) => t2.t === "lit").map((t2) => t2.text);
+  const counts = {};
+  for (const ch of lits.join("")) {
+    if ("-._/#:".includes(ch)) {
+      counts[ch] = (counts[ch] || 0) + 1;
+    }
+  }
+  const sep = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "-";
+  const words = [""];
+  for (const t2 of cr.tokens) {
+    if (t2.t === "part") {
+      words[words.length - 1] += `{${keyOf2(t2.key)}}`;
+      continue;
+    }
+    t2.text.split(sep).forEach((piece, i) => {
+      if (i) {
+        words.push("");
+      }
+      words[words.length - 1] += piece;
+    });
+  }
+  if (words.some((w) => !w) || words.some((w) => !LITERAL_RE2.test(w.replace(/\{[a-z]+\}/g, "")))) {
+    return null;
+  }
+  const seg = {};
+  for (const [key0, spec] of Object.entries(cr.kinds)) {
+    const key = keyOf2(key0);
+    if (key === "prefix") {
+      continue;
+    }
+    const raws = rawByKey[key0] || [];
+    const padded = raws.some((r) => r.length > 1 && r.startsWith("0"));
+    seg[key] = {
+      kind: spec.kind === "alpha" ? "alpha" : "num",
+      width: spec.kind === "alpha" ? 1 : padded ? Math.min(8, Math.max(...raws.map((r) => r.length))) : 1,
+      start: spec.kind === "alpha" ? 1 : raws.some((r) => parseInt(r, 10) === 0) ? 0 : 1
+    };
+  }
+  try {
+    const out = normalizeAddr({ tpl: words.join(" "), sep, seg });
+    parseTpl(out.tpl);
+    return out;
+  } catch {
+    return null;
+  }
+}
+function subsetAddr(siteAddr, matcher) {
+  const words = siteAddr.tpl.trim().split(/\s+/);
+  if (matcher.idx.length === words.length) {
+    return null;
+  }
+  return normalizeAddr({ ...siteAddr, tpl: matcher.idx.map((i) => words[i]).join(" ") });
+}
+function emulate(spec, zone2, siteAddr, depthMode) {
+  const addr = safeNormalize(spec.addr);
+  const zoneAddr = zone2 && zone2.code ? { zone_code: zone2.code } : {};
+  const eff = effectiveAddr(addr, zoneAddr, siteAddr);
+  const ctx2 = { addr: eff, zone: zone2?.code ?? null, row: spec.template === "floor_spot" ? null : addr.row_no ?? null, spot: null, depth_mode: depthMode };
+  return addressedCells(spec.template, normalizeParams(spec.template, spec.params), spec.code_prefix, 0, usableContext(ctx2) || { addr: null, depth_mode: depthMode }).map((c) => c.code);
+}
+function planStructure(locs, o = {}) {
+  const { parser = makeParser({ rules: [], addr: null }), siteAddr = {}, depthMode = "level", existingCodes = /* @__PURE__ */ new Set(), existingPrefixes = /* @__PURE__ */ new Set() } = o;
+  const stats = { total: locs.length, unparsedCodes: [], structure: 0, skipped_usage: 0, cells: 0, known: 0, parsed: 0, unparsed: 0, racks: 0, spots: 0, stock_qty: 0, warehouses: [], rules: {} };
+  const tray = [];
+  const usable = locs.filter((l) => {
+    if (l.usage && !["internal", "view"].includes(l.usage)) {
+      stats.skipped_usage++;
+      return false;
+    }
+    return true;
+  });
+  const parents = new Set(usable.map((l) => l.parent).filter(Boolean));
+  stats.warehouses = [...new Set(usable.map((l) => segs(fullName(l))[0]).filter(Boolean))];
+  const cells = usable.filter((l) => {
+    const isCell = l.usage !== "view" && !parents.has(fullName(l));
+    if (!isCell) {
+      stats.structure++;
+    }
+    return isCell;
+  });
+  const rootSegs = o.root || deriveRoot(usable, cells);
+  stats.cells = cells.length;
+  const zones = /* @__PURE__ */ new Map();
+  const groups = /* @__PURE__ */ new Map();
+  const spots = [];
+  const seen = /* @__PURE__ */ new Set();
+  const zoneRef = (key, title, code = null) => {
+    if (!zones.has(key)) {
+      zones.set(key, { key, title, code, order: zones.size });
+    }
+    return zones.get(key);
+  };
+  const byId = new Map(usable.filter((l) => l.id != null).map((l) => [l.id, l]));
+  const below = (l) => {
+    if (l.parent_id != null && byId.has(l.parent_id)) {
+      const names = [];
+      let cur = byId.get(l.parent_id);
+      while (cur && cur.parent_id != null && byId.has(cur.parent_id)) {
+        names.unshift(cur.name);
+        cur = byId.get(cur.parent_id);
+      }
+      return names;
+    }
+    const p = segs(l.parent);
+    return rootSegs.length && rootSegs.every((s, i) => p[i] === s) ? p.slice(rootSegs.length) : p.slice(Math.min(1, p.length));
+  };
+  for (const loc of [...cells].sort((a, b) => natural2(a.code, b.code))) {
+    if (existingCodes.has(loc.code)) {
+      stats.known++;
+      continue;
+    }
+    if (seen.has(loc.code)) {
+      tray.push(trayItem(loc, "dup"));
+      continue;
+    }
+    seen.add(loc.code);
+    stats.stock_qty += Number(loc.qty) > 0 ? 1 : 0;
+    const ch = below(loc);
+    const r = parser.parse(loc.code);
+    if (!r) {
+      stats.unparsedCodes.push(loc.code);
+      if (!ch.length) {
+        tray.push(trayItem(loc, "no_rule"));
+      } else if (validPrefix(loc.code)) {
+        spots.push({ loc, zone: zoneRef(`p:${ch[0]}`, ch[0]) });
+      } else {
+        tray.push(trayItem(loc, "bad_code"));
+      }
+      continue;
+    }
+    stats.parsed++;
+    stats.rules[r.rule] = (stats.rules[r.rule] || 0) + 1;
+    const parts = r.parts;
+    let kind = r.type === "floor_spot" ? "spot" : levelKind(parts);
+    let zone2 = null;
+    let zoneFromPath = false;
+    if (parts.zone != null) {
+      const raw = r.raw.zone ?? String(parts.zone);
+      zone2 = zoneRef(`z:${raw.toUpperCase()}`, `Зона ${raw}`, /^[A-Za-z0-9._/#:-]{1,8}$/.test(raw) ? raw : null);
+    } else if (ch.length >= 2 || ch.length === 1 && parts.row != null) {
+      zone2 = zoneRef(`p:${ch[0]}`, ch[0]);
+      zoneFromPath = true;
+    }
+    if (kind === "spot") {
+      if (!validPrefix(loc.code)) {
+        tray.push(trayItem(loc, "bad_code"));
+        continue;
+      }
+      spots.push({ loc, zone: zone2, rule: r });
+      continue;
+    }
+    const rest = zoneFromPath ? ch.slice(1) : ch;
+    const holder = rest.length ? rest[rest.length - 1] : null;
+    let rowKey;
+    let rowVal = null;
+    if (parts.row != null) {
+      rowKey = `r:${parts.row}`;
+      rowVal = parts.row;
+    } else if (parts.prefix != null) {
+      rowKey = `x:${String(parts.prefix).toUpperCase()}`;
+    } else if (holder) {
+      rowKey = `c:${loc.parent_id ?? segs(loc.parent).join("/")}`;
+      rowVal = tailNumber(holder);
+    } else {
+      rowKey = "none";
+    }
+    const keys = Object.keys(parts).sort().join(",");
+    const gkey = [zone2 ? zone2.key : "", rowKey, r.kind, r.rule, kind, keys].join("|");
+    if (!groups.has(gkey)) {
+      groups.set(gkey, { key: gkey, zone: zone2, rowKey, rowVal, kind, rule: r, items: [], holder, subsetOf: r.matcher || null });
+    }
+    const bay = parts.bay ?? parts.level;
+    groups.get(gkey).items.push({ loc, bay, level: parts.bay != null ? parts.level ?? null : null, raw: r.raw, parts });
+  }
+  const used = new Set(existingPrefixes);
+  const mkPrefix = (base2) => {
+    let b = base2.toUpperCase().replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-").slice(0, PREFIX_MAX2 - 4) || "R";
+    let p = b;
+    for (let n = 2; used.has(p); n++) {
+      p = `${b}-${n}`;
+    }
+    used.add(p);
+    return p;
+  };
+  const slots = [];
+  const siteN = safeNormalize(siteAddr);
+  const demote = (g3, reason) => g3.items.forEach((it) => tray.push(trayItem(it.loc, reason)));
+  for (const g3 of [...groups.values()].sort((a, b) => natural2(a.zone?.key || "", b.zone?.key || "") || natural2(a.rowKey, b.rowKey))) {
+    const rule = g3.rule;
+    let startBay = 1;
+    let startLevel = 1;
+    let startRow = 1;
+    let deriv = null;
+    if (rule.kind === "custom") {
+      const raws = {};
+      for (const it of g3.items) {
+        for (const [k, v] of Object.entries(it.raw)) {
+          (raws[k] ||= []).push(v);
+        }
+      }
+      deriv = deriveAddr(rule.cr, raws, { levelAsBay: g3.kind === "stack" && g3.items[0].parts.bay == null });
+      if (!deriv) {
+        demote(g3, "mask");
+        continue;
+      }
+      startBay = deriv.seg.bay ? deriv.seg.bay.start : 1;
+      startLevel = deriv.seg.level ? deriv.seg.level.start : 1;
+      startRow = deriv.seg.row ? deriv.seg.row.start : 1;
+    }
+    const bays = Math.max(...g3.items.map((it) => it.bay - startBay + 1));
+    const levels = g3.kind === "rack" ? Math.max(...g3.items.map((it) => it.level - startLevel + 1)) : 1;
+    if (Math.min(...g3.items.map((it) => it.bay - startBay + 1)) < 1 || g3.kind === "rack" && Math.min(...g3.items.map((it) => it.level - startLevel + 1)) < 1) {
+      demote(g3, "bad_part");
+      continue;
+    }
+    if (bays > 200 || levels > 12) {
+      demote(g3, "size");
+      continue;
+    }
+    const template = g3.kind === "rack" ? RACKS.includes(rule.type) ? rule.type : "pallet_rack" : "floor_stack";
+    const [bk, lk] = BAY_PARAM[template];
+    const params = { [bk]: bays };
+    if (lk) {
+      params[lk] = levels;
+    } else {
+      params.rows = 1;
+    }
+    if (rule.kind === "legacy") {
+      const w = g3.items.map((it) => it.raw.bay || "");
+      params.index_digits = Math.min(4, Math.max(1, w.some((x) => x.length > 1 && x.startsWith("0")) ? Math.max(...w.map((x) => x.length)) : 1));
+    }
+    let addr = null;
+    if (rule.kind === "custom") {
+      addr = deriv;
+    } else if (rule.kind === "addr") {
+      addr = subsetAddr(siteN, rule.matcher);
+    } else if (ownAddr(siteN)) {
+      addr = { legacy: true };
+    }
+    let rowNo = null;
+    if (g3.rowVal != null && rule.kind !== "legacy") {
+      rowNo = g3.rowVal - (rule.kind === "custom" ? startRow : 1) + 1;
+      if (rowNo >= 1 && rowNo <= 9999 && g3.rowKey.startsWith("r:")) {
+        addr = { ...addr || {}, row_no: rowNo };
+      } else {
+        rowNo = null;
+      }
+    }
+    const prefix0 = rule.kind === "legacy" ? String(g3.items[0].raw.prefix || "") : [g3.zone ? g3.zone.code || `Z${g3.zone.order + 1}` : "", g3.rowKey.startsWith("r:") ? `R${String(g3.rowVal).padStart(2, "0")}` : g3.holder ? g3.holder : "R"].filter(Boolean).join("-");
+    if (rule.kind === "legacy" && (!validPrefix(prefix0) || used.has(prefix0))) {
+      demote(g3, used.has(prefix0) ? "dup" : "bad_code");
+      continue;
+    }
+    const spec = { id: newUid(), template, code_prefix: rule.kind === "legacy" ? (used.add(prefix0), prefix0) : mkPrefix(prefix0), params, addr: addr && Object.keys(addr).length ? addr : null, overrides: {}, zoneKey: g3.zone ? g3.zone.key : null, lineKey: g3.rowKey, items: g3.items.map((it) => it.loc), group: g3.key };
+    const want = new Set(g3.items.map((it) => it.loc.code));
+    const got = emulate(spec, g3.zone, siteN, depthMode);
+    if ([...want].some((c) => !got.includes(c))) {
+      used.delete(spec.code_prefix);
+      demote(g3, "not_reproduced");
+      continue;
+    }
+    for (const c of got) {
+      if (!want.has(c)) {
+        spec.overrides[c] = { disabled: true };
+      }
+    }
+    for (const it of g3.items) {
+      if (it.loc.name && it.loc.name !== it.loc.code) {
+        spec.overrides[it.loc.code] = { ...spec.overrides[it.loc.code] || {}, name: it.loc.name };
+      }
+    }
+    slots.push(spec);
+    stats.racks++;
+  }
+  const owner = /* @__PURE__ */ new Map();
+  for (const sp of [...slots]) {
+    const codes = sp.items.map((l) => l.code);
+    const clash = codes.find((c) => owner.has(c));
+    if (clash) {
+      slots.splice(slots.indexOf(sp), 1);
+      sp.items.forEach((l) => tray.push(trayItem(l, "dup")));
+      used.delete(sp.code_prefix);
+      stats.racks--;
+    } else {
+      codes.forEach((c) => owner.set(c, sp.id));
+    }
+  }
+  for (const { loc, zone: zone2 } of spots) {
+    if (existingPrefixes.has(loc.code) || used.has(loc.code)) {
+      tray.push(trayItem(loc, "dup"));
+      continue;
+    }
+    used.add(loc.code);
+    const spec = { id: newUid(), template: "floor_spot", code_prefix: loc.code, params: { ...SPOT_DEFAULT }, addr: ownAddr(siteN) ? { legacy: true } : null, overrides: {}, zoneKey: zone2 ? zone2.key : null, lineKey: `s:${zone2 ? zone2.key : ""}`, items: [loc], group: `s:${loc.code}` };
+    if (loc.name && loc.name !== loc.code) {
+      spec.overrides[loc.code] = { name: loc.name };
+    }
+    slots.push(spec);
+    stats.spots++;
+  }
+  const usedZones = new Set(slots.map((s) => s.zoneKey).filter(Boolean));
+  for (const key of [...zones.keys()]) {
+    if (!usedZones.has(key)) {
+      zones.delete(key);
+    }
+  }
+  stats.unparsed = tray.length;
+  return { zones, slots, tray, stats };
+}
+var slotDict2 = (s) => ({ uid: s.id, id: s.id, layer_id: s.layer_id, template: s.template, code_prefix: s.code_prefix, x: s.x, y: s.y, rotation: s.rotation || 0, params: s.params, polygon: null, addr: s.addr || null, depth_mode: s.depth_mode || null });
+function realCodes(slots, others = S.slots) {
+  const ids = new Set(slots.map((s) => s.id));
+  const all = [...others.filter((s) => !ids.has(s.id)), ...slots];
+  const ctxs = addressContext(all.map(slotDict2), S.site?.addr, S.site?.depth_mode || "level");
+  const out = /* @__PURE__ */ new Map();
+  for (const s of slots) {
+    if (s.template !== "zone") {
+      const ov = s.overrides || {};
+      const cells = addressedCells(s.template, normalizeParams(s.template, s.params), s.code_prefix, s.rotation || 0, usableContext(ctxs.get(s.id)));
+      out.set(s.id, cells.map((c) => c.code).filter((c) => !(ov[c] && ov[c].disabled)));
+    }
+  }
+  return out;
+}
+var importLayer = () => {
+  const cur = layerOf(S.ui.layer);
+  return cur && cur.kind === "storage" ? cur : S.layers.find((l) => l.kind === "storage") || cur;
+};
+var blockOfSlot = (r, spec) => {
+  const fp = footprint(r.template, r.params);
+  return { id: r.id, line: spec.lineKey, spot: r.template === "floor_spot", l: fp.l, w: fp.w };
+};
+var projectCodes = () => new Set(S.slots.flatMap((s) => cellsOf(s).filter((c) => !c.disabled).map((c) => c.code)));
+function commitStructure(plan, { label: label2 = "Імпорт структури", layout = true, growBuilding: growBuilding2 = false, keepTray = true } = {}) {
+  const ly = importLayer();
+  if (!ly || !canEditLayer(ly)) {
+    return { ok: false, reason: ly ? lockHint(ly) : "Немає шару для місць." };
+  }
+  const need = [...new Set(plan.slots.map((s) => s.template).concat(plan.zones.size ? ["zone"] : []))];
+  const miss = need.filter((t2) => !ly.slot_types.includes(t2));
+  if (miss.length && !canManage()) {
+    return { ok: false, reason: `Шар «${ly.name}» не допускає типи місць: ${miss.join(", ")}. Дозвіл змінює менеджер.` };
+  }
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const zoneSlots = /* @__PURE__ */ new Map();
+  let zi = 0;
+  for (const z of [...plan.zones.values()].sort((a, b) => a.order - b.order)) {
+    let prefix = `Z-${(z.code || String(++zi)).toUpperCase().replace(/[^A-Z0-9]/g, "") || zi}`.slice(0, 12);
+    for (let n = 2; used.has(prefix); n++) {
+      prefix = `${prefix.replace(/-\d+$/, "")}-${n}`;
+    }
+    used.add(prefix);
+    const rec = { id: newUid(), rid: null, etag: null, layer_id: ly.id, template: "zone", code_prefix: prefix, x: 0, y: 0, rotation: 0, params: { length: 10, width: 8, title: z.title, color: ZONE_COLORS[z.order % ZONE_COLORS.length] }, overrides: {}, parent_location_id: null };
+    if (z.code) {
+      rec.addr = { zone_code: z.code };
+    }
+    zoneSlots.set(z.key, rec);
+  }
+  const racks = plan.slots.map((sp) => {
+    const rec = { id: sp.id, rid: null, etag: null, layer_id: ly.id, template: sp.template, code_prefix: sp.code_prefix, x: 0, y: 0, rotation: 0, params: clone(sp.params), overrides: clone(sp.overrides), parent_location_id: null };
+    if (sp.addr) {
+      rec.addr = clone(sp.addr);
+    }
+    return { rec, spec: sp };
+  });
+  const step = ly.grid_step || 0.5;
+  let rects = [];
+  if (layout) {
+    const zoneSpecs = [...zoneSlots].map(([key, z]) => ({ id: z.id, title: z.params.title, blocks: racks.filter((r) => r.spec.zoneKey === key).map((r) => blockOfSlot(r.rec, r.spec)) }));
+    const orphans = racks.filter((r) => !r.spec.zoneKey).map((r) => blockOfSlot(r.rec, r.spec));
+    const existing = S.slots.filter((s) => s.layer_id === ly.id).map((s) => sGeom(s).box);
+    const base2 = { zones: zoneSpecs, orphans, aisle: ly.aisle_width || 3, step };
+    let lp = growBuilding2 ? { ok: false } : layoutAroundBuilding(ly, { ...base2, region: regionOf2(ly) }, existing);
+    let outside = false;
+    if (!lp.ok) {
+      const right = Math.max(0, ...existing.map((b) => b[2]));
+      lp = layoutPlan({ ...base2, region: { x0: right ? right + 1 : 0, y0: 0, x1: Infinity, y1: Infinity }, obstacles: [] });
+      outside = !growBuilding2 && !!regionOf2(ly);
+      if (!lp.ok) {
+        return { ok: false, reason: lp.reason };
+      }
+    }
+    for (const [, z] of zoneSlots) {
+      const r = lp.zones.get(z.id);
+      Object.assign(z, { x: r.x, y: r.y });
+      Object.assign(z.params, { length: r.l, width: r.w });
+    }
+    for (const { rec } of racks) {
+      Object.assign(rec, lp.blocks.get(rec.id));
+    }
+    rects = [...lp.zones.values(), ...lp.orphans ? [lp.orphans] : []];
+    plan = { ...plan, outside };
+  }
+  const codes = realCodes(racks.map((r) => r.rec), [...S.slots, ...zoneSlots.values()]);
+  const tray = [...plan.tray];
+  const kept = [];
+  for (const { rec, spec } of racks) {
+    const want = new Set(spec.items.map((l) => l.code));
+    const got = new Set(codes.get(rec.id) || []);
+    if (want.size === got.size && [...want].every((c) => got.has(c))) {
+      kept.push({ rec, spec });
+    } else {
+      spec.items.forEach((l) => tray.push(trayItem(l, "not_reproduced")));
+    }
+  }
+  const keptZones = [...zoneSlots].filter(([key]) => kept.some((k) => k.spec.zoneKey === key)).map(([, z]) => z);
+  E.undoRecord?.();
+  S.ui.layer = ly.id;
+  if (miss.length) {
+    ly.slot_types.push(...miss);
+  }
+  if (growBuilding2 && rects.length && S.site.building) {
+    const L3 = Math.ceil(Math.max(...rects.map((r) => r.x + r.l / 2)) + 2);
+    const W3 = Math.ceil(Math.max(...rects.map((r) => r.y + r.w / 2)) + 2);
+    const b = S.site.building;
+    if (L3 > b.length || W3 > b.width) {
+      Object.assign(b, { length: Math.max(L3, b.length), width: Math.max(W3, b.width) });
+      E.saveSiteProps?.();
+    }
+  }
+  keptZones.forEach((z) => S.slots.push(z));
+  kept.forEach((k) => S.slots.push(k.rec));
+  const have = new Set((keepTray ? S.site.parse_rules?.tray || [] : []).map((t2) => t2.code));
+  E.setTray?.([...keepTray ? S.site.parse_rules?.tray || [] : [], ...tray.filter((t2) => !have.has(t2.code))]);
+  const cellsN = kept.reduce((n, k) => n + k.spec.items.length, 0);
+  E.undoLabel?.(`${label2}: ${fmtInt(cellsN)} місць`);
+  E.commit({});
+  return { ok: true, created: kept.length + keptZones.length, zones: keptZones.length, slots: kept.length, cells: cellsN, tray: tray.length, outside: !!plan.outside };
+}
+function importLocations(locs, { label: label2, layout = true, growBuilding: growBuilding2 = false, parseRules = null } = {}) {
+  const parser = makeParser({ rules: parseRules || siteRules().rules, addr: S.site?.addr || null });
+  const plan = planStructure(locs, { parser, siteAddr: safeNormalize(S.site?.addr), depthMode: S.site?.depth_mode || "level", existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((s) => s.code_prefix)) });
+  const keep = S.site.parse_rules;
+  if (parseRules) {
+    S.site.parse_rules = normalizeRules({ ...keep || {}, rules: parseRules });
+  }
+  const res = commitStructure(plan, { label: label2, layout, growBuilding: growBuilding2 });
+  if (!res.ok) {
+    S.site.parse_rules = keep;
+  }
+  return { ...res, plan };
+}
+Object.assign(E, { importLocations, planStructure, commitStructure });
+
+// core/constructor/tray.js
+var TRAY_MAX = 5e3;
+var PREFIX_RE2 = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
+var SPOT = { length: 1.2, width: 0.8, height: 1.5, capacity: 1, loc_kind: "area", shape: "zone" };
+var SHOWN = 120;
+var filterText = "";
+function trayItems() {
+  const stored = S.site && S.site.parse_rules && S.site.parse_rules.tray || [];
+  if (!stored.length) {
+    return [];
+  }
+  const have = projectCodes();
+  return stored.filter((t2) => !have.has(t2.code));
+}
+function setTray(list, { persist: persist2 = true } = {}) {
+  if (!S.site) {
+    return;
+  }
+  const keep = list.slice(0, TRAY_MAX);
+  const next = normalizeRules({ ...S.site.parse_rules || {}, tray: keep, tray_more: Math.max(0, list.length - keep.length) });
+  if (!keep.length) {
+    delete next.tray;
+    delete next.tray_more;
+  }
+  S.site.parse_rules = next;
+  if (persist2) {
+    Promise.resolve(saveRules(next)).catch((e) => toast(e.message || "Не вдалося зберегти лоток.", "err"));
+  }
+  updateTabLabel();
+}
+function trayCodes() {
+  return [.../* @__PURE__ */ new Set([...trayItems().map((t2) => t2.code), ...projectCodes()])];
+}
+var zonesOnLayer = (layerId) => S.slots.filter((s) => s.template === "zone" && s.layer_id === layerId && slotPolygon(s));
+var zoneAt2 = (layerId, x, y) => {
+  let best = null;
+  for (const z of zonesOnLayer(layerId)) {
+    const poly2 = slotPolygon(z);
+    const area = (z.params.length || 1) * (z.params.width || 1);
+    if (polygonContains(poly2, [x, y]) && (!best || area < best.area)) {
+      best = { z, area };
+    }
+  }
+  return best ? best.z : null;
+};
+var overlaps = (a, b) => a[0] < b[2] - 1e-6 && b[0] < a[2] - 1e-6 && a[1] < b[3] - 1e-6 && b[1] < a[3] - 1e-6;
+function freePositions(layerId, n, { zone: zone2 = null, point = null } = {}) {
+  const [fl, fw] = [SPOT.length, SPOT.width];
+  const gap = 0.3;
+  const taken = S.slots.filter((s) => s.layer_id === layerId && s.template !== "zone").map((s) => sGeom(s).box);
+  const out = [];
+  const free = (x2, y2) => {
+    const box = [x2 - fl / 2, y2 - fw / 2, x2 + fl / 2, y2 + fw / 2];
+    return !taken.some((t2) => overlaps(box, t2)) && !out.some((o) => overlaps(box, [o.x - fl / 2, o.y - fw / 2, o.x + fl / 2, o.y + fw / 2]));
+  };
+  if (zone2) {
+    const rot2 = (zone2.rotation || 0) * Math.PI / 180;
+    const [L3, W3] = [zone2.params.length, zone2.params.width];
+    for (let v = -W3 / 2 + 0.5 + fw / 2; v <= W3 / 2 - 0.5 - fw / 2 + 1e-6 && out.length < n; v += fw + gap) {
+      for (let u = -L3 / 2 + 0.5 + fl / 2; u <= L3 / 2 - 0.5 - fl / 2 + 1e-6 && out.length < n; u += fl + gap) {
+        const x2 = zone2.x + u * Math.cos(rot2) - v * Math.sin(rot2);
+        const y2 = zone2.y + u * Math.sin(rot2) + v * Math.cos(rot2);
+        if (free(x2, y2)) {
+          out.push({ x: Math.round(x2 * 100) / 100, y: Math.round(y2 * 100) / 100, rotation: zone2.rotation || 0 });
+        }
+      }
+    }
+    return out;
+  }
+  const b = S.site.building || { length: 60, width: 30 };
+  let x = point ? point.x : 1;
+  let y = point ? point.y : 1;
+  const x0 = x;
+  for (let guard3 = 0; guard3 < 4e3 && out.length < n; guard3++) {
+    if (free(x, y)) {
+      out.push({ x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, rotation: 0 });
+    }
+    x += fl + gap;
+    if (x > Math.max(b.length, x0 + 30) - 1) {
+      x = x0;
+      y += fw + gap;
+    }
+  }
+  return out;
+}
+function placeFromTray(items2, { zoneId = null, point = null } = {}) {
+  const ly = layerOf(S.ui.layer);
+  const acc = E.access?.();
+  if (acc && !acc.design) {
+    toast(E.accessHint?.("design") || "Правка недоступна.", "warn");
+    return { ok: false, placed: 0, reason: "Немає прав." };
+  }
+  if (!ly || !canEditLayer(ly)) {
+    if (ly) {
+      toastLock(ly);
+    }
+    return { ok: false, placed: 0, reason: "Шар не редагується вами." };
+  }
+  if (!ly.slot_types.includes("floor_spot")) {
+    toast(`Шар «${ly.name}» не допускає місця на підлозі.`, "warn");
+    return { ok: false, placed: 0, reason: "Шар не допускає місця на підлозі." };
+  }
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const ok = items2.filter((t2) => PREFIX_RE2.test(t2.code) && t2.code.length <= 22 && !used.has(t2.code));
+  const bad = items2.length - ok.length;
+  if (!ok.length) {
+    const why = items2.length === 1 ? REASONS[items2[0].reason === "dup" ? "dup" : "bad_code"] : "Коди не підходять для місць: великі латинські літери, цифри й дефіси, до 22 символів.";
+    toast(why, "warn");
+    return { ok: false, placed: 0, reason: why };
+  }
+  const zone2 = zoneId ? S.sIdx.get(zoneId) : null;
+  const pos = freePositions(ly.id, ok.length, { zone: zone2, point });
+  const n = Math.min(pos.length, ok.length);
+  if (!n) {
+    toast(zone2 ? "У зоні немає вільного місця." : "Немає вільного місця.", "warn");
+    return { ok: false, placed: 0, reason: "Немає вільного місця." };
+  }
+  const siteOwn = !!safeNormalize(S.site.addr).tpl;
+  E.undoRecord?.();
+  ok.slice(0, n).forEach((t2, i) => {
+    const s = { id: newUid(), rid: null, etag: null, layer_id: ly.id, template: "floor_spot", code_prefix: t2.code, x: pos[i].x, y: pos[i].y, rotation: pos[i].rotation, params: { ...SPOT }, overrides: {}, parent_location_id: null };
+    if (t2.name && t2.name !== t2.code) {
+      s.overrides[t2.code] = { name: t2.name };
+    }
+    if (siteOwn) {
+      s.addr = { legacy: true };
+    }
+    S.slots.push(s);
+  });
+  E.undoLabel?.(`Розміщено з лотка: ${n}`);
+  E.commit({});
+  updateTabLabel();
+  toast(`Розміщено з лотка: ${n}${bad || n < ok.length ? `; не розміщено: ${items2.length - n}` : ""}.`, bad || n < ok.length ? "warn" : void 0);
+  return { ok: true, placed: n };
+}
+function openPlaceDialog(items2) {
+  const ly = layerOf(S.ui.layer);
+  const zones = ly ? zonesOnLayer(ly.id) : [];
+  let zoneId = zones.find((z) => S.sel && S.sel.id === z.id)?.id || "";
+  const opts2 = [["", "Вільне місце шару (поза зонами)"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])];
+  openDialog({
+    title: "Розмістити в…",
+    cls: "narrow",
+    body: h("div", { class: "fcol", id: "trayPlaceBody" }, h("div", { class: "small" }, items2.length === 1 ? `Код ${items2[0].code}` : `Записів: ${items2.length}`), fld("Куди", selectEl(opts2, zoneId, (v) => {
+      zoneId = v;
+    }, false, "Зона"))),
+    actions: [
+      { label: "Скасувати", value: "no" },
+      { label: "Розмістити", cls: "primary", id: "trayPlaceGo", onClick: () => placeFromTray(items2, { zoneId: zoneId || null }).ok ? void 0 : false }
+    ]
+  });
+}
+function renderTrayTab(root) {
+  const all = trayItems();
+  const q = filterText.trim().toLowerCase();
+  const list = q ? all.filter((t2) => `${t2.code} ${t2.name} ${t2.parent}`.toLowerCase().includes(q)) : all;
+  const more = (S.site?.parse_rules || {}).tray_more || 0;
+  const input = h("input", { type: "search", value: filterText, placeholder: "Фільтр за кодом чи назвою", "aria-label": "Фільтр лотка", id: "trayFilter" });
+  input.addEventListener("input", () => {
+    filterText = input.value;
+    E.renderLeft();
+    $("#trayFilter")?.focus();
+  });
+  const rows = list.slice(0, SHOWN).map(
+    (t2) => h(
+      "div",
+      { class: "tray-row", draggable: "true", "data-code": t2.code, title: REASONS[t2.reason] || "" },
+      h("div", { class: "tray-main" }, h("span", { class: "mono tray-code" }, t2.code), t2.name && t2.name !== t2.code ? h("span", { class: "small muted" }, ` ${t2.name}`) : null),
+      h("div", { class: "small muted" }, REASONS[t2.reason] || t2.reason || ""),
+      h("button", { class: "fbtn sm", type: "button", "data-act": "place", onclick: () => openPlaceDialog([t2]) }, "Розмістити в…")
+    )
+  );
+  for (const r of rows) {
+    r.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", `f3d-tray:${r.dataset.code}`);
+      e.dataTransfer.effectAllowed = "copy";
+    });
+  }
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "trayBlock" },
+      h("h3", null, "Не розміщено"),
+      h("div", { class: "small", id: "trayCount" }, all.length ? `Без правила й зони-родителя: ${fmtInt(all.length)}${more ? ` (+${fmtInt(more)} не збережено)` : ""}` : "Усе розміщено."),
+      h("div", { class: "small muted" }, "Перетягніть запис на зону чи вільне місце сцени або натисніть «Розмістити в…». Ctrl+Z повертає запис у лоток."),
+      h(
+        "div",
+        { class: "frow wrap" },
+        h("button", { class: "fbtn sm", type: "button", id: "trayParse", onclick: () => E.runDialog("parseCodes") }, "Розбір кодів…"),
+        h("button", { class: "fbtn sm", type: "button", id: "trayAll", disabled: !list.length, onclick: () => openPlaceDialog(list) }, q ? "Розмістити знайдені…" : "Розмістити всі…"),
+        h("button", { class: "fbtn sm danger", type: "button", id: "trayClear", disabled: !all.length, onclick: clearTray }, "Очистити лоток")
+      ),
+      all.length ? input : null,
+      h("div", { class: "tray-list", id: "trayList" }, rows),
+      list.length > SHOWN ? h("div", { class: "small muted" }, `Показано ${SHOWN} із ${fmtInt(list.length)}; уточніть фільтр.`) : null
+    )
+  );
+}
+async function clearTray() {
+  const ok = await E.confirmBox({ title: "Очистити лоток?", text: "Записи лотка буде видалено з проєкту. Локації в Odoo не змінюються; їх можна імпортувати знову.", ok: "Очистити", danger: true });
+  if (ok) {
+    setTray([]);
+    E.renderLeft();
+  }
+}
+registries.panels.add("left:tray", { area: "left", tab: "tray", label: "Лоток", render: renderTrayTab }, { sequence: 22, force: true });
+function updateTabLabel() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const n = trayItems().length;
+  for (const b of document.querySelectorAll('#ltabs button[data-tab="tray"], #mtabs button[data-mtab="tray"]')) {
+    b.textContent = n ? `Лоток (${n > 999 ? "999+" : n})` : "Лоток";
+  }
+}
+var origRenderAll2 = E.renderAll;
+if (typeof origRenderAll2 === "function") {
+  E.renderAll = function renderAllTray(...a) {
+    const r = origRenderAll2.apply(this, a);
+    try {
+      updateTabLabel();
+    } catch (e) {
+      console.error("tray label:", e);
+    }
+    return r;
+  };
+}
+var STYLE_ID2 = "f3d-s4-style";
+var CSS2 = `
+.tray-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.tray-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:grab}
+.tray-row:active{cursor:grabbing}
+.tray-row .tray-main,.tray-row .small{grid-column:1/2;min-width:0;overflow-wrap:anywhere}
+.tray-row button{grid-column:2/3;grid-row:1/3}
+.tray-code{font-weight:600}
+.pc-rule .pc-mask{flex:1;min-width:160px;font-family:var(--mono)}
+#syncList .frow{justify-content:space-between}
+#impOpts label.frow{cursor:pointer}
+`;
+function ensureStyle2() {
+  const root = ROOT.el;
+  if (root && !root.querySelector("#" + STYLE_ID2)) {
+    const st4 = document.createElement("style");
+    st4.id = STYLE_ID2;
+    st4.textContent = CSS2;
+    root.prepend(st4);
+  }
+}
+var bound = null;
+function onMount2() {
+  ensureStyle2();
+  const cv = V.canvas;
+  if (!cv) {
+    return;
+  }
+  const over = (e) => {
+    if ([...e.dataTransfer?.types || []].includes("text/plain")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+  const drop = (e) => {
+    const text = e.dataTransfer?.getData("text/plain") || "";
+    if (!text.startsWith("f3d-tray:")) {
+      return;
+    }
+    e.preventDefault();
+    const item = trayItems().find((t2) => t2.code === text.slice(9));
+    const p = E.floorPoint?.(e, elevOf(S.ui.layer));
+    if (item && p) {
+      const z = zoneAt2(S.ui.layer, p.x, p.y);
+      placeFromTray([item], z ? { zoneId: z.id } : { point: p });
+    }
+  };
+  cv.addEventListener("dragover", over);
+  cv.addEventListener("drop", drop);
+  bound = () => {
+    cv.removeEventListener("dragover", over);
+    cv.removeEventListener("drop", drop);
+  };
+}
+E.lifecycle.mount.add(onMount2);
+E.lifecycle.unmount.add(() => {
+  if (bound) {
+    bound();
+    bound = null;
+  }
+});
+Object.assign(E, { trayItems, setTray, trayCodes, placeFromTray });
+
+// core/constructor/tabular_core.js
+var enc = new TextEncoder();
+var u8 = (x) => x instanceof Uint8Array ? x : new Uint8Array(x);
+var xmlEsc = (s) => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+var xmlUnesc = (s) => s.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (_m, e) => {
+  if (e[0] === "#") {
+    return String.fromCodePoint(e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+  }
+  return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }[e];
+});
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c2 = n;
+      for (let k = 0; k < 8; k++) {
+        c2 = c2 & 1 ? 3988292384 ^ c2 >>> 1 : c2 >>> 1;
+      }
+      crcTable[n] = c2 >>> 0;
+    }
+  }
+  let c = 4294967295;
+  for (let i = 0; i < bytes.length; i++) {
+    c = crcTable[(c ^ bytes[i]) & 255] ^ c >>> 8;
+  }
+  return (c ^ 4294967295) >>> 0;
+}
+async function pipe(bytes, stream) {
+  const w = stream.writable.getWriter();
+  w.write(bytes);
+  w.close();
+  const chunks = [];
+  const r = stream.readable.getReader();
+  for (; ; ) {
+    const { done, value } = await r.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let o = 0;
+  for (const c of chunks) {
+    out.set(c, o);
+    o += c.length;
+  }
+  return out;
+}
+var deflateRaw = (b) => pipe(b, new CompressionStream("deflate-raw"));
+var inflateRaw = (b) => pipe(b, new DecompressionStream("deflate-raw"));
+async function zipFiles(files) {
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  const compress = typeof CompressionStream === "function";
+  for (const f of files) {
+    const name = enc.encode(f.name);
+    const data = u8(f.data);
+    const crc = crc32(data);
+    const body = compress && data.length > 64 ? await deflateRaw(data) : data;
+    const method = body === data ? 0 : 8;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 67324752, true);
+    lh.setUint16(4, 20, true);
+    lh.setUint16(6, 2048, true);
+    lh.setUint16(8, method, true);
+    lh.setUint16(10, 0, true);
+    lh.setUint16(12, 33, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, body.length, true);
+    lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true);
+    lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, body);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 33639248, true);
+    ch.setUint16(4, 20, true);
+    ch.setUint16(6, 20, true);
+    ch.setUint16(8, 2048, true);
+    ch.setUint16(10, method, true);
+    ch.setUint16(12, 0, true);
+    ch.setUint16(14, 33, true);
+    ch.setUint32(16, crc, true);
+    ch.setUint32(20, body.length, true);
+    ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + body.length;
+  }
+  const cdSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 101010256, true);
+  end.setUint16(8, files.length, true);
+  end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true);
+  end.setUint32(16, offset, true);
+  const all = [...parts, ...central, new Uint8Array(end.buffer)];
+  const out = new Uint8Array(all.reduce((n, c) => n + c.length, 0));
+  let o = 0;
+  for (const c of all) {
+    out.set(c, o);
+    o += c.length;
+  }
+  return out;
+}
+async function unzip(bytes) {
+  const b = u8(bytes);
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let eocd = -1;
+  for (let i = b.length - 22; i >= Math.max(0, b.length - 7e4); i--) {
+    if (dv.getUint32(i, true) === 101010256) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) {
+    throw new Error("Файл не схожий на XLSX (немає zip-каталогу).");
+  }
+  const n = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const out = /* @__PURE__ */ new Map();
+  const dec = new TextDecoder();
+  for (let i = 0; i < n; i++) {
+    if (dv.getUint32(p, true) !== 33639248) {
+      throw new Error("Пошкоджений zip-каталог.");
+    }
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true);
+    const xlen = dv.getUint16(p + 30, true);
+    const clen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = dec.decode(b.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + xlen + clen;
+    const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+    const raw = b.subarray(start, start + csize);
+    if (name.endsWith("/")) {
+      continue;
+    }
+    if (method === 0) {
+      out.set(name, raw);
+    } else if (method === 8) {
+      out.set(name, await inflateRaw(raw));
+    } else {
+      throw new Error(`Непідтримуваний метод стиснення zip: ${method}.`);
+    }
+  }
+  return out;
+}
+var colName = (i) => {
+  let s = "";
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+    s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  }
+  return s;
+};
+var colIndex = (ref2) => {
+  let n = 0;
+  for (const ch of /^[A-Z]+/.exec(ref2)[0]) {
+    n = n * 26 + ch.charCodeAt(0) - 64;
+  }
+  return n - 1;
+};
+async function writeXlsx(rows, { sheet = "Локації" } = {}) {
+  const name = xmlEsc(String(sheet).replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || "Лист1");
+  const body = rows.map((row, r) => {
+    const cells = row.map((v, c) => {
+      if (v === "" || v == null) {
+        return "";
+      }
+      const ref2 = `${colName(c)}${r + 1}`;
+      if (typeof v === "number" && Number.isFinite(v)) {
+        return `<c r="${ref2}"><v>${v}</v></c>`;
+      }
+      if (typeof v === "boolean") {
+        return `<c r="${ref2}" t="b"><v>${v ? 1 : 0}</v></c>`;
+      }
+      return `<c r="${ref2}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
+    }).join("");
+    return `<row r="${r + 1}">${cells}</row>`;
+  }).join("");
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  const files = [
+    { name: "[Content_Types].xml", data: enc.encode(`${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`) },
+    { name: "_rels/.rels", data: enc.encode(`${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`) },
+    { name: "xl/workbook.xml", data: enc.encode(`${head}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets></workbook>`) },
+    { name: "xl/_rels/workbook.xml.rels", data: enc.encode(`${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`) },
+    { name: "xl/worksheets/sheet1.xml", data: enc.encode(`${head}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`) }
+  ];
+  return await zipFiles(files);
+}
+var attr = (tag, name) => {
+  const m = new RegExp(`\\b${name}="([^"]*)"`).exec(tag);
+  return m ? xmlUnesc(m[1]) : null;
+};
+var textOf = (xml) => [...xml.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((m) => xmlUnesc(m[1])).join("");
+async function readXlsx(bytes, { sheet = 0 } = {}) {
+  const files = await unzip(bytes);
+  const dec = new TextDecoder();
+  const get = (n) => files.has(n) ? dec.decode(files.get(n)) : null;
+  const wb = get("xl/workbook.xml");
+  if (!wb) {
+    throw new Error("Файл не схожий на XLSX (немає xl/workbook.xml).");
+  }
+  const rels = new Map([...(get("xl/_rels/workbook.xml.rels") || "").matchAll(/<Relationship\b[^>]*>/g)].map((m) => [attr(m[0], "Id"), attr(m[0], "Target")]));
+  const sheets = [...wb.matchAll(/<sheet\b[^>]*>/g)].map((m) => ({ name: attr(m[0], "name"), rid: attr(m[0], "r:id") }));
+  if (!sheets.length) {
+    throw new Error("У книзі немає жодного аркуша.");
+  }
+  const pick2 = typeof sheet === "number" ? sheets[sheet] : sheets.find((s) => s.name === sheet);
+  if (!pick2) {
+    throw new Error(`Аркуша «${sheet}» немає в книзі.`);
+  }
+  let target = rels.get(pick2.rid) || "worksheets/sheet1.xml";
+  target = target.startsWith("/") ? target.slice(1) : `xl/${target}`;
+  const xml = get(target);
+  if (xml == null) {
+    throw new Error(`Немає даних аркуша (${target}).`);
+  }
+  const sst = (get("xl/sharedStrings.xml") || "").split(/<si\b[^>]*>/).slice(1).map((si) => textOf(si.split("</si>")[0].replace(/<rPh\b[\s\S]*?<\/rPh>/g, "")));
+  const rows = [];
+  for (const rm of xml.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+    const r = parseInt(attr(rm[1], "r") || rows.length + 1, 10) - 1;
+    const row = [];
+    for (const cm of (rm[2] || "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const ref2 = attr(cm[1], "r");
+      const idx = ref2 ? colIndex(ref2) : row.length;
+      const t2 = attr(cm[1], "t");
+      const inner = cm[2] || "";
+      const v = /<v>([\s\S]*?)<\/v>/.exec(inner);
+      let val = "";
+      if (t2 === "inlineStr") {
+        val = textOf(inner);
+      } else if (v) {
+        const raw = xmlUnesc(v[1]);
+        val = t2 === "s" ? sst[parseInt(raw, 10)] ?? "" : t2 === "b" ? raw === "1" : t2 === "str" || t2 === "e" ? raw : raw.trim() === "" ? "" : Number(raw);
+        if (typeof val === "number" && Number.isNaN(val)) {
+          val = raw;
+        }
+      }
+      while (row.length < idx) {
+        row.push("");
+      }
+      row[idx] = val;
+    }
+    while (rows.length < r) {
+      rows.push([]);
+    }
+    rows[r] = row;
+  }
+  return { sheets: sheets.map((s) => s.name), sheet: pick2.name, rows: trimRows(rows) };
+}
+function trimRows(rows) {
+  const out = rows.map((r) => {
+    const a = [...r];
+    while (a.length && (a[a.length - 1] === "" || a[a.length - 1] == null)) {
+      a.pop();
+    }
+    return a.map((v) => v == null ? "" : v);
+  });
+  while (out.length && !out[out.length - 1].length) {
+    out.pop();
+  }
+  const w = Math.max(0, ...out.map((r) => r.length));
+  return out.map((r) => [...r, ...Array(w - r.length).fill("")]);
+}
+function decodeText(bytes) {
+  const b = u8(bytes);
+  try {
+    return { text: new TextDecoder("utf-8", { fatal: true }).decode(b).replace(/^﻿/, ""), encoding: "utf-8" };
+  } catch {
+    return { text: new TextDecoder("windows-1251").decode(b), encoding: "windows-1251" };
+  }
+}
+function detectDelimiter(text) {
+  const first = text.split(/\r\n|\n|\r/, 1)[0] || "";
+  let best = ",";
+  let max = -1;
+  for (const d of [",", ";", "	"]) {
+    let n = 0;
+    let q = false;
+    for (const ch of first) {
+      if (ch === '"') {
+        q = !q;
+      } else if (ch === d && !q) {
+        n++;
+      }
+    }
+    if (n > max) {
+      max = n;
+      best = d;
+    }
+  }
+  return best;
+}
+function parseCsv(text, delim = detectDelimiter(text)) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          q = false;
+        }
+      } else {
+        cell += ch;
+      }
+    } else if (ch === '"' && cell === "") {
+      q = true;
+    } else if (ch === delim) {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") {
+        i++;
+      }
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell !== "" || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return trimRows(rows);
+}
+function toCsv2(rows, { delim = ",", bom = true } = {}) {
+  const cell = (v) => {
+    const s = v == null ? "" : String(v);
+    return s.includes('"') || s.includes(delim) || /[\r\n]/.test(s) || /^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return (bom ? "\uFEFF" : "") + rows.map((r) => r.map(cell).join(delim)).join("\r\n") + "\r\n";
+}
+async function readTable(bytes, _filename = "", { delimiter = null, sheet = 0 } = {}) {
+  const b = u8(bytes);
+  if (b.length > 3 && b[0] === 80 && b[1] === 75) {
+    const x = await readXlsx(b, { sheet });
+    return { format: "xlsx", sheets: x.sheets, sheet: x.sheet, rows: x.rows };
+  }
+  const { text, encoding } = decodeText(b);
+  const d = delimiter || detectDelimiter(text);
+  return { format: "csv", encoding, delimiter: d, rows: parseCsv(text, d) };
+}
+var FIELDS = [
+  { key: "complete_name", label: "Повна назва локації", aliases: ["full location name", "complete name", "complete_name", "повна назва локації", "повне ім'я локації", "повна назва", "полное название местоположения", "полное имя локации", "полное название"] },
+  { key: "name", label: "Назва", aliases: ["location name", "name", "назва локації", "назва", "ім'я", "название местоположения", "название локации", "название", "имя"] },
+  { key: "parent", label: "Батьківська локація", aliases: ["parent location", "location_id", "parent", "батьківська локація", "батьківська", "родительское местоположение", "родительская локация", "родитель"] },
+  { key: "usage", label: "Тип локації", aliases: ["location type", "usage", "type", "тип локації", "тип", "тип местоположения", "тип локации"] },
+  { key: "barcode", label: "Штрихкод", aliases: ["barcode", "штрихкод", "штрих-код", "штрих код"] },
+  { key: "posx", label: "Коридор (X)", aliases: ["corridor (x)", "corridor", "posx", "коридор (x)", "коридор"] },
+  { key: "posy", label: "Стелажі (Y)", aliases: ["shelves (y)", "shelves", "posy", "стелажі (y)", "стелажі", "стеллажи (y)", "стеллажи"] },
+  { key: "posz", label: "Висота (Z)", aliases: ["height (z)", "height", "posz", "висота (z)", "висота", "высота (z)", "высота"] },
+  { key: "product", label: "Товар", aliases: ["product", "product/name", "товар", "продукт", "номенклатура"] },
+  { key: "qty", label: "Кількість", aliases: ["quantity", "on hand quantity", "qty", "кількість", "залишок", "количество", "остаток"] },
+  { key: "lot", label: "Партія", aliases: ["lot/serial number", "lot", "lot/serial", "партія", "серійний номер", "партія/серійний номер", "партия", "серийный номер"] }
+];
+var normHeader = (s) => String(s ?? "").toLowerCase().replace(/[’`ʼ]/g, "'").replace(/\s+/g, " ").trim();
+var ALIAS_OF = new Map(FIELDS.flatMap((f) => f.aliases.map((a) => [a, f.key])));
+function autoMap(header) {
+  const map = {};
+  header.forEach((h2, i) => {
+    const key = ALIAS_OF.get(normHeader(h2));
+    if (key && !(key in map)) {
+      map[key] = i;
+    }
+  });
+  return map;
+}
+var USAGE_PATTERNS = [
+  [/internal|внутр/i, "internal"],
+  [/view|вигляд|вид\b|представ|віртуал|виртуал/i, "view"],
+  [/customer|клієнт|покупц|клиент|покупат/i, "customer"],
+  [/supplier|vendor|постач|поставщ/i, "supplier"],
+  [/inventory|інвентар|инвентар/i, "inventory"],
+  [/production|виробн|производ/i, "production"],
+  [/transit|транзит/i, "transit"]
+];
+var usageOf = (v) => {
+  const s = String(v ?? "").trim();
+  if (!s) {
+    return "internal";
+  }
+  const hit = USAGE_PATTERNS.find(([re]) => re.test(s));
+  return hit ? hit[1] : s.toLowerCase();
+};
+var str = (v) => (v == null ? "" : String(v)).trim();
+function rowsToLocations(rows, map) {
+  const get = (row, key) => key in map ? row[map[key]] : "";
+  const byFull = /* @__PURE__ */ new Map();
+  const stats = { rows: rows.length, locations: 0, stockRows: 0, skippedEmpty: 0 };
+  for (const row of rows) {
+    let name = str(get(row, "name"));
+    let parent = str(get(row, "parent"));
+    const full = str(get(row, "complete_name"));
+    if (full) {
+      const i = full.lastIndexOf("/");
+      name = i < 0 ? full : full.slice(i + 1).trim();
+      parent = i < 0 ? parent : full.slice(0, i).trim();
+    }
+    if (!name) {
+      stats.skippedEmpty++;
+      continue;
+    }
+    const key = parent ? `${parent}/${name}` : name;
+    let loc = byFull.get(key);
+    if (!loc) {
+      const barcode = str(get(row, "barcode"));
+      loc = { code: barcode || name, name, parent, usage: usageOf(get(row, "usage")), barcode, qty: 0 };
+      for (const k of ["posx", "posy", "posz"]) {
+        const v = get(row, k);
+        if (v !== "" && v != null && !Number.isNaN(Number(v))) {
+          loc[k] = Number(v);
+        }
+      }
+      byFull.set(key, loc);
+    }
+    const q = Number(get(row, "qty"));
+    if (str(get(row, "product")) && q > 0) {
+      loc.qty += q;
+      stats.stockRows++;
+    }
+  }
+  const locs = [...byFull.values()];
+  stats.locations = locs.length;
+  return { locs, stats };
+}
+var EXPORT_HEADER = ["name", "location_id", "usage", "barcode", "posx", "posy", "posz"];
+function locationsToRows(locs) {
+  return [EXPORT_HEADER, ...locs.map((l) => [l.name ?? l.code, l.parent || "", l.usage || "internal", l.barcode || l.code || "", l.posx ?? "", l.posy ?? "", l.posz ?? ""])];
+}
+function withParents(locs, known = /* @__PURE__ */ new Set()) {
+  const have = /* @__PURE__ */ new Set([...known, ...locs.map((l) => l.parent ? `${l.parent}/${l.name}` : l.name)]);
+  const out = [];
+  const add = (path) => {
+    if (!path || have.has(path)) {
+      return;
+    }
+    const i = path.lastIndexOf("/");
+    add(i < 0 ? "" : path.slice(0, i));
+    have.add(path);
+    out.push({ code: "", name: i < 0 ? path : path.slice(i + 1), parent: i < 0 ? "" : path.slice(0, i), usage: "view", barcode: "" });
+  };
+  for (const l of locs) {
+    add(l.parent);
+  }
+  return [...out, ...locs];
+}
+var fileName = (base2, ext) => `${String(base2 || "locations").replace(/[^\w.-]+/g, "_")}.${ext}`;
+
+// core/constructor/files_ui.js
+var isXlsx = (b) => b.length > 3 && b[0] === 80 && b[1] === 75;
+function saveBlob(name, data, mime) {
+  const url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function readFileTable(bytes, filename, opts2 = {}) {
+  const ad = E.adapter;
+  if (isXlsx(bytes) && can("files") && ad && typeof ad.parseTable === "function") {
+    try {
+      return await ad.parseTable({ filename, bytes, sheet: opts2.sheet ?? 0 });
+    } catch (e) {
+      console.warn("parseTable (сервер) не вдався, читаю локально:", e);
+    }
+  }
+  return await readTable(bytes, filename, opts2);
+}
+var feedLoc = (r) => ({ id: r.id ?? null, code: r.code || r.barcode || r.name, name: r.name, parent: r.parent || "", parent_id: r.parent_id ?? null, usage: r.usage || "internal", barcode: r.barcode || "", qty: Number(r.qty) || 0, active: r.active !== false });
+function openImport({ file = null } = {}) {
+  if (!S.site) {
+    return void 0;
+  }
+  const st4 = { source: null, label: "", table: null, map: {}, locs: [], stats: null, plan: null, mode: canManage() ? "new" : "current", projName: "", layout: true, extra: [], busy: false, error: "", suggestions: [] };
+  const box = h("div", { class: "fcol", id: "impBody" });
+  const mapBox = h("div", { class: "fcol", id: "impMap" });
+  const sumBox = h("div", { class: "fcol", id: "impSummary" });
+  const optBox = h("div", { class: "fcol", id: "impOpts" });
+  let goBtn = null;
+  const rulesNow = () => [...siteRules().rules, ...st4.extra];
+  const existing = () => st4.mode === "new" ? { existingCodes: /* @__PURE__ */ new Set(), existingPrefixes: /* @__PURE__ */ new Set() } : { existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((x) => x.code_prefix)) };
+  const rankSuggestions = (list) => {
+    const base2 = { siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() };
+    const scored = list.map((g3) => {
+      const p = planStructure(st4.locs, { ...base2, parser: makeParser({ rules: [...rulesNow(), { id: "probe", mask: g3.mask }], addr: S.site.addr || null }) });
+      return { ...g3, placed: p.slots.filter((x) => x.template !== "floor_spot").reduce((n, x) => n + x.items.length, 0) };
+    });
+    return scored.filter((g3) => g3.placed > 0).sort((a, b) => b.placed - a.placed || b.matched - a.matched).slice(0, 3);
+  };
+  const recompute = () => {
+    st4.suggestions = [];
+    if (st4.table) {
+      const body = st4.table.rows.slice(1);
+      const r = rowsToLocations(body, st4.map);
+      st4.locs = r.locs;
+      st4.stats = r.stats;
+    }
+    if (!st4.locs.length) {
+      st4.plan = null;
+      return;
+    }
+    const parser = makeParser({ rules: rulesNow(), addr: S.site.addr || null });
+    if (st4.source !== "odoo") {
+      st4.warehouses = null;
+    }
+    st4.plan = planStructure(st4.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() });
+    const un = st4.plan.stats.unparsedCodes;
+    if (un.length && un.length >= 0.3 * Math.max(1, st4.plan.stats.cells)) {
+      st4.suggestions = rankSuggestions(guessMasks(un, { limit: 5 }));
+    }
+  };
+  const setTable = async (table, label2) => {
+    st4.source = "file";
+    st4.table = table;
+    st4.label = label2;
+    st4.map = autoMap(table.rows[0] || []);
+    st4.projName = st4.projName || label2.replace(/\.[^.]+$/, "");
+    recompute();
+    render2();
+  };
+  const loadFile = async (f) => {
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const table = await readFileTable(bytes, f.name);
+      if (!table.rows.length) {
+        throw new Error("Файл порожній.");
+      }
+      st4.error = "";
+      await setTable(table, f.name);
+    } catch (e) {
+      st4.error = e.message || String(e);
+      render2();
+    }
+  };
+  const loadOdoo = async () => {
+    try {
+      const r = await E.adapter.locations({ op: "feed" });
+      st4.source = "odoo";
+      st4.table = null;
+      st4.label = `Odoo: ${r.feed.warehouse?.name || r.feed.root || "склад"}${r.demo || r.feed.demo ? " (приклад)" : ""}`;
+      st4.locs = r.feed.locations.map(feedLoc);
+      st4.stats = { rows: st4.locs.length, locations: st4.locs.length, stockRows: st4.locs.filter((l) => l.qty > 0).length, skippedEmpty: 0 };
+      st4.projName = st4.projName || r.feed.warehouse?.name || "Склад з Odoo";
+      st4.error = r.feed.truncated ? "Стрічка обрізана: перші " + fmtInt(st4.locs.length) + " локацій." : "";
+      st4.warehouses = r.feed.warehouse ? [r.feed.warehouse.code || r.feed.warehouse.name] : null;
+      recompute();
+      render2();
+    } catch (e) {
+      st4.error = e.message || String(e);
+      render2();
+    }
+  };
+  const render2 = () => {
+    const fileIn = h("input", { type: "file", accept: ".csv,.txt,.xlsx,.xls,text/csv", id: "impFile", "aria-label": "Файл імпорту" });
+    fileIn.addEventListener("change", () => fileIn.files[0] && loadFile(fileIn.files[0]));
+    const drop = h("div", { class: "frow wrap", id: "impSource" }, fileIn, can("odoo_import") ? h("button", { class: "fbtn", type: "button", id: "impOdoo", onclick: loadOdoo }, "Прочитати структуру з Odoo") : null);
+    drop.addEventListener("dragover", (e) => e.preventDefault());
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.dataTransfer.files[0] && loadFile(e.dataTransfer.files[0]);
+    });
+    const header = st4.table ? st4.table.rows[0] || [] : [];
+    mapBox.replaceChildren(
+      ...st4.table ? [
+        h("div", { class: "small muted" }, `Файл: ${st4.label} · ${st4.table.format === "xlsx" ? `аркуш «${st4.table.sheet}»` : `${st4.table.encoding}, роздільник ${st4.table.delimiter === "	" ? "табуляція" : st4.table.delimiter}`} · рядків: ${fmtInt(st4.table.rows.length - 1)}`),
+        h(
+          "div",
+          { class: "grid3", id: "impMapGrid" },
+          FIELDS.map(
+            (f) => fld(f.label, selectEl([["", "— немає —"], ...header.map((x, i) => [String(i), String(x || `Колонка ${i + 1}`)])], f.key in st4.map ? String(st4.map[f.key]) : "", (v) => {
+              v === "" ? delete st4.map[f.key] : st4.map[f.key] = Number(v);
+              recompute();
+              renderSummary();
+            }, false, f.label))
+          )
+        )
+      ] : []
+    );
+    box.replaceChildren(...K(drop, st4.error ? h("div", { class: "note lock", id: "impError" }, st4.error) : null, mapBox, sumBox, optBox));
+    renderSummary();
+    renderOpts();
+  };
+  const renderSummary = () => {
+    const p = st4.plan;
+    const need = st4.table && !("name" in st4.map) && !("complete_name" in st4.map);
+    sumBox.replaceChildren(
+      ...K(need ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")] : p ? [
+        h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st4.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt((st4.warehouses || p.stats.warehouses).length)}${(st4.warehouses || p.stats.warehouses).length ? ` (${(st4.warehouses || p.stats.warehouses).slice(0, 4).join(", ")})` : ""}`))),
+        p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
+        h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
+        ...reasonRows(p),
+        ...st4.suggestions.map((g3) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g3.mask), h("span", { class: "muted small" }, `розібрано ${g3.matched} із ${g3.total}, рядами стане ${g3.placed}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
+          st4.extra.push({ id: `s${st4.extra.length + 1}`, mode: "mask", mask: g3.mask, type: "auto", enabled: true });
+          recompute();
+          renderSummary();
+        } }, "Застосувати"))),
+        st4.extra.length ? h("div", { class: "small muted" }, `Додані правила (збережуться з імпортом): ${st4.extra.map((r) => r.mask).join(" · ")}`) : null
+      ] : [h("div", { class: "small muted" }, "Оберіть файл CSV чи XLSX або прочитайте структуру складу з Odoo.")])
+    );
+    if (goBtn) {
+      goBtn.disabled = !p || st4.busy || need || !(p.slots.length || p.tray.length);
+    }
+  };
+  const reasonRows = (p) => {
+    const by = {};
+    for (const t2 of p.tray) {
+      (by[t2.reason] ||= []).push(t2.code);
+    }
+    return Object.entries(by).map(([k, codes]) => h("div", { class: "small muted", "data-role": "reason", "data-reason": k }, `${fmtInt(codes.length)} — ${REASONS[k] || k}: ${codes.slice(0, 3).join(", ")}${codes.length > 3 ? " …" : ""}`));
+  };
+  const renderOpts = () => {
+    const mgr = canManage();
+    optBox.replaceChildren(
+      h(
+        "div",
+        { class: "fcol" },
+        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st4.mode === "new", disabled: !mgr, onchange: () => {
+          st4.mode = "new";
+          recompute();
+          renderSummary();
+          renderOpts();
+        } }), "Створити новий проєкт «з файлу»", mgr ? null : h("span", { class: "small muted" }, " (лише менеджер)")),
+        st4.mode === "new" ? fld("Назва проєкту", h("input", { type: "text", id: "impName", value: st4.projName, "aria-label": "Назва проєкту", oninput: (e) => {
+          st4.projName = e.target.value;
+        } })) : null,
+        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st4.mode === "current", onchange: () => {
+          st4.mode = "current";
+          recompute();
+          renderSummary();
+          renderOpts();
+        } }), `Додати в поточний проєкт «${S.site.name}»`),
+        h("label", { class: "frow" }, h("input", { type: "checkbox", id: "impLayout", checked: st4.layout, onchange: (e) => {
+          st4.layout = e.target.checked;
+        } }), "Розкласти автоматично (зони по горизонталі, ряди вглиб)"),
+        h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "impRules", onclick: () => E.runDialog("parseCodes", { items: st4.locs.map((l) => l.code) }) }, "Правила розбору…"))
+      )
+    );
+  };
+  const apply = async () => {
+    if (!st4.plan || st4.busy) {
+      return false;
+    }
+    st4.busy = true;
+    goBtn.disabled = true;
+    try {
+      const rules = normalizeRules({ rules: rulesNow() }).rules;
+      let res;
+      if (st4.mode === "new") {
+        const code = `IMP${Date.now().toString(36).toUpperCase().slice(-9)}`;
+        if (!await E.createSite({ name: st4.projName.trim() || "Імпорт", code })) {
+          return false;
+        }
+        S.site.parse_rules = normalizeRules({ rules });
+        res = E.importLocations(st4.locs, { label: "Імпорт структури", layout: st4.layout, growBuilding: true, parseRules: rules });
+        await saveRules(S.site.parse_rules);
+      } else {
+        if (st4.extra.length) {
+          await saveRules(normalizeRules({ ...S.site.parse_rules || {}, rules }));
+        }
+        res = E.importLocations(st4.locs, { label: "Імпорт структури", layout: st4.layout, parseRules: rules });
+      }
+      if (!res.ok) {
+        toast(res.reason || "Імпорт не виконано.", "warn");
+        return false;
+      }
+      toast(`Імпортовано: зон ${res.zones}, рядів і місць ${res.slots}, комірок ${fmtInt(res.cells)}${res.tray ? `; у лоток «Не розміщено»: ${fmtInt(res.tray)}` : ""}.`);
+      E.setLeftTab?.(res.tray && !res.slots ? "tray" : S.ui.leftTab);
+      return true;
+    } catch (e) {
+      toast(e.message || "Не вдалося імпортувати.", "err");
+      return false;
+    } finally {
+      st4.busy = false;
+    }
+  };
+  render2();
+  const dlg = openDialog({
+    title: "Імпорт локацій",
+    cls: "wide",
+    body: box,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      { label: "Імпортувати", cls: "primary", id: "impGo", disabled: true, onClick: async () => await apply() ? void 0 : false }
+    ]
+  });
+  goBtn = dlg.querySelector("#impGo");
+  renderSummary();
+  if (file) {
+    loadFile(file);
+  }
+  return dlg;
+}
+var projectRoot = () => S.site.default_parent_location?.name || E.adapter?.defaultParent || "Склад";
+function projectLocations({ zones = false } = {}) {
+  const root = projectRoot();
+  const parser = makeParser({ rules: siteRules().rules, addr: S.site.addr || null });
+  const zs = zones ? S.slots.filter((s) => s.template === "zone" && slotPolygon(s)).map((z) => ({ title: z.params.title || z.code_prefix, poly: slotPolygon(z), area: (z.params.length || 1) * (z.params.width || 1), layer: z.layer_id })) : [];
+  const out = [];
+  for (const s of S.slots) {
+    const host2 = zs.filter((z) => z.layer === s.layer_id && polygonContains(z.poly, [s.x, s.y])).sort((a, b) => a.area - b.area)[0];
+    for (const c of cellsOf(s)) {
+      if (c.disabled) {
+        continue;
+      }
+      const r = parser.parse(c.code);
+      const loc = { code: c.code, name: c.name || c.code, parent: host2 ? `${root}/${host2.title}` : root, usage: c.usage && c.usage !== "internal" ? c.usage : "internal", barcode: c.code };
+      if (r) {
+        Object.assign(loc, typeof r.parts.row === "number" ? { posx: r.parts.row } : {}, r.parts.bay != null ? { posy: r.parts.bay } : {}, r.parts.level != null ? { posz: r.parts.level } : {});
+      }
+      out.push(loc);
+    }
+  }
+  return out;
+}
+function changedLocations(all, feed) {
+  const byCode = new Map(feed.map((l) => [l.code, l]));
+  const changed = all.filter((l) => {
+    const f = byCode.get(l.code);
+    return !f || f.name !== l.name;
+  });
+  return withParents(changed, new Set(feed.map(fullName)));
+}
+function openExport() {
+  if (!S.site) {
+    return void 0;
+  }
+  const st4 = { scope: "all", format: "xlsx", zones: false };
+  const info = h("div", { class: "small muted", id: "expInfo" });
+  info.textContent = `Місць у проєкті: ${fmtInt(S.slots.reduce((n, sl) => n + cellsOf(sl).filter((c) => !c.disabled).length, 0))}.`;
+  const body = h(
+    "div",
+    { class: "fcol", id: "expBody" },
+    fld("Що експортувати", selectEl([["all", "Усі місця"], ...can("odoo_import") ? [["changed", "Нові й змінені відносно Odoo (з недостаючими батьками)"]] : []], st4.scope, (v) => {
+      st4.scope = v;
+    }, false, "Що експортувати")),
+    fld("Формат", selectEl([["xlsx", "XLSX"], ["csv", "CSV (UTF-8, кома)"]], st4.format, (v) => {
+      st4.format = v;
+    }, false, "Формат")),
+    h("label", { class: "frow" }, h("input", { type: "checkbox", id: "expZones", onchange: (e) => {
+      st4.zones = e.target.checked;
+    } }), "Зони як батьківські локації (для перенесення структури в інший проєкт)"),
+    info,
+    h("div", { class: "small muted" }, "Формат імпорту Odoo: name, location_id (повне ім'я батька), usage, barcode, posx/posy/posz. Файл створюється в браузері й нікуди не надсилається.")
+  );
+  openDialog({
+    title: "Експорт локацій",
+    cls: "narrow",
+    body,
+    actions: [
+      { label: "Скасувати", value: "no" },
+      {
+        label: "Завантажити",
+        cls: "primary",
+        id: "expGo",
+        onClick: async () => {
+          try {
+            let locs = projectLocations({ zones: st4.zones });
+            if (st4.scope === "changed") {
+              const r = await E.adapter.locations({ op: "feed" });
+              locs = changedLocations(locs, r.feed.locations.map(feedLoc));
+            } else if (st4.zones) {
+              locs = withParents(locs, /* @__PURE__ */ new Set([projectRoot()]));
+            }
+            const rows = locationsToRows(locs);
+            const base2 = S.site.code || S.site.name;
+            if (st4.format === "csv") {
+              saveBlob(fileName(base2, "csv"), toCsv2(rows), "text/csv;charset=utf-8");
+            } else {
+              saveBlob(fileName(base2, "xlsx"), await writeXlsx(rows, { sheet: "Локації" }), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            }
+            toast(`Файл створено: ${fmtInt(rows.length - 1)} рядків.`);
+          } catch (e) {
+            toast(e.message || "Не вдалося створити файл.", "err");
+            return false;
+          }
+        }
+      }
+    ]
+  });
+}
+registries.dialogs.add("importLocations", (args) => openImport(args || {}), { force: true });
+registries.dialogs.add("exportLocations", () => openExport(), { force: true });
+var design = () => !S.site || (E.access ? !E.access().design : false);
+registries.menu.add("importLocations", { area: "more", label: "Імпорт локацій…", icon: "plus", sequence: 56, run: () => E.runDialog("importLocations"), disabled: design }, { sequence: 56, force: true });
+registries.menu.add("exportLocations", { area: "more", label: "Експорт локацій…", icon: "tag", sequence: 57, run: () => E.runDialog("exportLocations"), disabled: () => !S.site }, { sequence: 57, force: true });
+Object.assign(E, { openImport, openExport, readFileTable });
+
+// core/constructor/sync_ui.js
+var GROUPS2 = [
+  ["appeared", "З'явилося в Odoo", "піде в лоток «Не розміщено»"],
+  ["disappeared", "Зникло в Odoo (архів чи видалення)", "комірку вимкнено в моделі"],
+  ["renamed", "Перейменовано в Odoo", "назва комірки оновиться"],
+  ["moved", "Інший батько в Odoo", "батька запам'ятовано для місця на підлозі"]
+];
+var ownerOf = (code) => S.slots.find((s) => s.template !== "zone" && cellsOf(s).some((c) => c.code === code));
+function relevantDiff(diff, have = projectCodes(), trayCodes2 = new Set(E.trayItems?.().map((t2) => t2.code) || [])) {
+  const known = (c) => have.has(c) || trayCodes2.has(c);
+  return {
+    appeared: (diff.appeared || []).map(feedLoc).filter((l) => l.usage === "internal" && !known(l.code)),
+    disappeared: (diff.disappeared || []).filter((l) => known(l.code || l.name)).map((l) => ({ ...feedLoc(l) })),
+    renamed: (diff.renamed || []).filter((r) => known(r.code)),
+    moved: (diff.moved || []).filter((r) => known(r.code))
+  };
+}
+function applyAccepted(items2) {
+  const tray = [...S.site.parse_rules?.tray || []];
+  const stored = new Set(tray.map((t2) => t2.code));
+  let changed = 0;
+  E.undoRecord?.();
+  const drop = /* @__PURE__ */ new Set();
+  for (const { group, item } of items2) {
+    if (group === "appeared") {
+      if (!stored.has(item.code)) {
+        tray.push({ code: item.code, name: item.name, parent: item.parent, usage: item.usage, reason: "new_in_odoo" });
+        stored.add(item.code);
+      }
+    } else if (group === "disappeared") {
+      const code = item.code;
+      const s = ownerOf(code);
+      drop.add(code);
+      if (s) {
+        if (s.template === "floor_spot" || cellsOf(s).filter((c) => !c.disabled).length <= 1) {
+          S.slots.splice(S.slots.indexOf(s), 1);
+        } else {
+          s.overrides = { ...s.overrides || {}, [code]: { ...(s.overrides || {})[code] || {}, disabled: true } };
+        }
+        changed++;
+      }
+    } else if (group === "renamed") {
+      const s = ownerOf(item.code);
+      if (s) {
+        s.overrides = { ...s.overrides || {}, [item.code]: { ...(s.overrides || {})[item.code] || {}, name: item.new } };
+        changed++;
+      }
+      const t2 = tray.find((x) => x.code === item.code);
+      if (t2) {
+        t2.name = item.new;
+      }
+    } else if (group === "moved") {
+      const s = ownerOf(item.code);
+      if (s && s.template === "floor_spot" && item.new_parent_id) {
+        s.parent_location_id = item.new_parent_id;
+        changed++;
+      }
+    }
+  }
+  E.setTray?.(tray.filter((t2) => !drop.has(t2.code)));
+  if (changed) {
+    E.undoLabel?.("Оновлення з Odoo");
+    E.commit({});
+  } else {
+    E.renderLeft?.();
+  }
+  return { slots: changed, tray: tray.length };
+}
+async function openSync() {
+  const ad = E.adapter;
+  if (!S.site || !ad || typeof ad.locations !== "function") {
+    return void 0;
+  }
+  let r;
+  try {
+    r = await ad.locations({ op: "sync" });
+  } catch (e) {
+    toast(e.message || "Не вдалося прочитати структуру з Odoo.", "err");
+    return void 0;
+  }
+  if (r.baseline === "missing") {
+    toast("Бази порівняння з Odoo ще немає: її створює менеджер чи проєктувальник при першому «Оновити з Odoo».", "warn");
+    return void 0;
+  }
+  const diff = relevantDiff(r.diff || {});
+  const total = GROUPS2.reduce((n, [k]) => n + diff[k].length, 0);
+  if (!total) {
+    await ad.locations({ op: "baseline" });
+    toast(r.baseline === "created" ? "Базу порівняння з Odoo створено." : "Розбіжностей з Odoo немає.");
+    return void 0;
+  }
+  const pick2 = /* @__PURE__ */ new Map();
+  const keyOf2 = (g3, i) => `${g3}:${i}`;
+  for (const [g3] of GROUPS2) {
+    diff[g3].forEach((_x, i) => pick2.set(keyOf2(g3, i), "odoo"));
+  }
+  const list = h("div", { class: "fcol", id: "syncList" });
+  const sum = h("div", { class: "small muted", id: "syncSum" });
+  const draw3 = () => {
+    sum.textContent = `Прийняти з Odoo: ${[...pick2.values()].filter((v) => v === "odoo").length} із ${total}`;
+    list.replaceChildren(
+      ...K(GROUPS2.filter(([g3]) => diff[g3].length).flatMap(([g3, title, hint]) => [
+        h("h4", { style: { margin: "8px 0 2px" } }, `${title}: ${fmtInt(diff[g3].length)}`, h("span", { class: "small muted" }, ` — ${hint}`)),
+        ...diff[g3].slice(0, 200).map((it, i) => {
+          const k = keyOf2(g3, i);
+          const text = g3 === "renamed" ? `${it.code}: «${it.old}» → «${it.new}»` : g3 === "moved" ? `${it.code}: ${it.old_parent} → ${it.new_parent}` : `${it.code}${it.name && it.name !== it.code ? ` — ${it.name}` : ""}`;
+          const sel = h("select", { "aria-label": text, "data-key": k }, h("option", { value: "odoo", selected: pick2.get(k) === "odoo" }, "Прийняти з Odoo"), h("option", { value: "mine", selected: pick2.get(k) === "mine" }, "Залишити моє"));
+          sel.addEventListener("change", () => {
+            pick2.set(k, sel.value);
+            sum.textContent = `Прийняти з Odoo: ${[...pick2.values()].filter((v) => v === "odoo").length} із ${total}`;
+          });
+          return h("div", { class: "frow", "data-group": g3 }, h("span", { class: "mono small", style: { flex: 1 } }, text), sel);
+        }),
+        diff[g3].length > 200 ? h("div", { class: "small muted" }, `Показано 200 із ${diff[g3].length}; «Прийняти все» діє на всі.`) : null
+      ]))
+    );
+  };
+  draw3();
+  const setAll = (v) => {
+    for (const k of pick2.keys()) {
+      pick2.set(k, v);
+    }
+    draw3();
+  };
+  return new Promise((resolve) => {
+    openDialog({
+      title: "Розбіжності з Odoo",
+      cls: "wide",
+      body: h("div", { class: "fcol", id: "syncBody" }, h("div", { class: "small" }, "Після «Оновити з Odoo» знайдено зміни, зроблені в Odoo поза конструктором. Ваші правки моделі не зачіпаються, доки не вибрано «Прийняти з Odoo»."), h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "syncAllOdoo", onclick: () => setAll("odoo") }, "Прийняти все з Odoo"), h("button", { class: "fbtn sm", type: "button", id: "syncAllMine", onclick: () => setAll("mine") }, "Залишити все моє")), list, sum),
+      onClose: () => resolve(null),
+      actions: [
+        { label: "Пізніше", value: "no" },
+        {
+          label: "Застосувати вибір",
+          cls: "primary",
+          id: "syncApply",
+          onClick: async () => {
+            const items2 = [];
+            for (const [g3] of GROUPS2) {
+              diff[g3].forEach((item, i) => pick2.get(keyOf2(g3, i)) === "odoo" && items2.push({ group: g3, item }));
+            }
+            try {
+              const res = applyAccepted(items2);
+              await ad.locations({ op: "baseline" });
+              toast(`Прийнято з Odoo: ${items2.length}; змінено місць: ${res.slots}.`);
+              resolve(res);
+            } catch (e) {
+              toast(e.message || "Не вдалося застосувати.", "err");
+              return false;
+            }
+          }
+        }
+      ]
+    });
+  });
+}
+registries.dialogs.add("syncOdoo", () => openSync(), { force: true });
+registries.menu.add("syncOdoo", { area: "more", label: "Оновити з Odoo", icon: "hist", capability: "odoo_import", sequence: 58, run: () => E.runDialog("syncOdoo"), disabled: () => !S.site || !can("odoo_import") }, { sequence: 58, force: true });
+Object.assign(E, { openSync, applySyncChoices: applyAccepted });
+
+// core/constructor/building_3d.js
+var PAL = {
+  light: { floor: "#c9d3dc", line: "#2b3640", wall: "#5b6b7b", column: "#7a8794", gate: "#3b82c4", dock: "#2a9d8f", door: "#c08a3e", office: "#8fa3b5", charger: "#e0b341" },
+  dark: { floor: "#33414e", line: "#cfd8e0", wall: "#8696a6", column: "#a1adb9", gate: "#5aa1de", dock: "#43b9aa", door: "#d9a45a", office: "#6b8297", charger: "#e9c45a" }
+};
+var SPRINKLER = "#ff8a00";
+var SELECT = "#e11d74";
+var rad2 = (a) => a * Math.PI / 180;
+var view = { sel: null, handles: false, handleSize: 0.5 };
+function setBuildingView(o) {
+  Object.assign(view, o);
+}
+var buildingLayer = () => S.layers.find((l) => l.kind === "building") || null;
+function disposeGroup(g3) {
+  g3.traverse((o) => {
+    if (o.geometry) {
+      o.geometry.dispose();
+    }
+    if (o.material) {
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    }
+    if (o.isInstancedMesh) {
+      o.dispose();
+    }
+  });
+}
+var P32 = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
+function lineLoop(pts, y, mat) {
+  const g3 = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => P32(x, z, y)));
+  return new THREE.LineLoop(g3, mat);
+}
+function build(ly) {
+  const pal = PAL[V.theme === "dark" ? "dark" : "light"];
+  const B3 = S.site.building;
+  const H = B3.height || 8;
+  const g3 = new THREE.Group();
+  g3.name = "td-building";
+  const elev = ly.elevation || 0;
+  const lineMat = new THREE.LineBasicMaterial({ color: pal.line });
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const edges = new THREE.EdgesGeometry(unit);
+  const mats = {};
+  const mat = (kind, opacity = 1) => mats[kind + opacity] ||= new THREE.MeshLambertMaterial({ color: pal[kind], transparent: opacity < 1, opacity });
+  const pts = ly.bounds && ly.bounds.length >= 3 ? ly.bounds : null;
+  if (pts) {
+    const shape = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+    const fill2 = new THREE.ShapeGeometry(shape);
+    fill2.rotateX(-Math.PI / 2);
+    const floor = new THREE.Mesh(fill2, new THREE.MeshBasicMaterial({ color: pal.floor, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+    floor.position.y = elev + 0.012;
+    g3.add(floor);
+    g3.add(lineLoop(pts, elev + 0.03, lineMat));
+    g3.add(lineLoop(pts, elev + H, lineMat));
+    const ribs = [];
+    for (const [x, y] of pts) {
+      ribs.push(P32(x, y, elev), P32(x, y, elev + H));
+    }
+    g3.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ribs), lineMat));
+    const sp = S.site.sprinkler_height || 0;
+    if (sp > 0 && sp < H + 0.01) {
+      g3.add(lineLoop(pts, elev + sp, new THREE.LineBasicMaterial({ color: SPRINKLER })));
+    }
+  }
+  const items2 = ly.items || [];
+  const columns = items2.filter((it) => it.kind === "column");
+  if (columns.length) {
+    const im = new THREE.InstancedMesh(unit, mat("column"), columns.length);
+    const m4 = new THREE.Matrix4();
+    columns.forEach((c, i) => {
+      const h2 = c.h || H;
+      m4.compose(P32(c.x, c.y, elev + h2 / 2), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rad2(c.rot || 0), 0)), new THREE.Vector3(c.w, h2, c.d));
+      im.setMatrixAt(i, m4);
+    });
+    im.instanceMatrix.needsUpdate = true;
+    g3.add(im);
+  }
+  const place2 = (obj, it, h2) => {
+    obj.scale.set(it.w, h2, it.d);
+    obj.position.copy(P32(it.x, it.y, elev + h2 / 2));
+    obj.rotation.y = rad2(it.rot || 0);
+    return obj;
+  };
+  for (const it of items2) {
+    if (it.kind === "column") {
+      continue;
+    }
+    const h2 = it.h || ITEM_HEIGHT[it.kind] || H;
+    const opacity = it.kind === "office" ? 0.4 : it.kind === "gate" || it.kind === "door" ? 0.75 : 1;
+    g3.add(place2(new THREE.Mesh(unit, mat(it.kind, opacity)), it, h2));
+    g3.add(place2(new THREE.LineSegments(edges, lineMat), it, h2));
+  }
+  const sel = view.sel && view.sel.kind === "item" ? items2.find((it) => it.id === view.sel.id) : null;
+  if (sel) {
+    const m = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const h2 = sel.h || ITEM_HEIGHT[sel.kind] || H;
+    const o = place2(new THREE.LineSegments(edges, m), { ...sel, w: sel.w + 0.1, d: sel.d + 0.1 }, h2 + 0.1);
+    o.renderOrder = 5;
+    g3.add(o);
+  }
+  const aisle = view.sel && view.sel.kind === "aisle" ? (ly.aisles || []).find((a) => a.id === view.sel.id) : null;
+  if (aisle) {
+    const m = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const ring = lineLoop([[aisle.x0, aisle.y0], [aisle.x1, aisle.y0], [aisle.x1, aisle.y1], [aisle.x0, aisle.y1]], elev + 0.06, m);
+    ring.renderOrder = 5;
+    g3.add(ring);
+  }
+  const handles = new THREE.Group();
+  handles.name = "td-building-handles";
+  if (view.handles && pts) {
+    const hm = new THREE.MeshBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+    const selIdx = view.sel && view.sel.kind === "vertex" ? view.sel.index : -1;
+    pts.forEach(([x, y], i) => {
+      const m = new THREE.Mesh(unit, i === selIdx ? new THREE.MeshBasicMaterial({ color: "#ffffff", depthTest: false, transparent: true }) : hm);
+      m.position.copy(P32(x, y, elev + 0.12));
+      m.renderOrder = 6;
+      handles.add(m);
+    });
+    scaleHandles(handles);
+  }
+  g3.add(handles);
+  g3.userData.handles = handles;
+  g3.userData.dispose = () => {
+    unit.dispose();
+    edges.dispose();
+    Object.values(mats).forEach((m) => m.dispose());
+    lineMat.dispose();
+  };
+  return g3;
+}
+function scaleHandles(handles) {
+  if (!V.camera || !V.controls) {
+    return;
+  }
+  const d = V.camera.position.distanceTo(V.controls.target);
+  const s = Math.min(3, Math.max(0.25, d * 0.014));
+  view.handleSize = s;
+  handles.children.forEach((m) => m.scale.set(s, s * 0.4, s));
+}
+function syncBuilding3D(force) {
+  if (!V.ok || !S.site || !THREE.Scene) {
+    return;
+  }
+  const ly = buildingLayer();
+  const shown = !!ly && isLayerVisible(ly);
+  const sig = JSON.stringify([shown, ly && [ly.bounds, ly.items, ly.elevation, ly.aisles && view.sel && view.sel.kind === "aisle" ? ly.aisles : null], S.site.building, S.site.sprinkler_height || 0, V.theme, view.sel, view.handles]);
+  const cur = V.bld5;
+  if (cur && cur.sig === sig && !force) {
+    return;
+  }
+  if (cur && cur.g) {
+    V.world.remove(cur.g);
+    disposeGroup(cur.g);
+    cur.g.userData.dispose?.();
+  }
+  const g3 = shown ? build(ly) : null;
+  if (g3) {
+    V.world.add(g3);
+  }
+  V.bld5 = { g: g3, sig };
+  if (!V.bld5Hook && V.controls) {
+    V.bld5Hook = true;
+    V.controls.addEventListener("change", () => {
+      const h2 = V.bld5 && V.bld5.g && V.bld5.g.userData.handles;
+      if (h2 && h2.children.length) {
+        scaleHandles(h2);
+      }
+    });
+  }
+  E.requestRender?.();
+}
+function setOverlay(o) {
+  if (!V.ok || !THREE.Scene) {
+    return;
+  }
+  if (V.bld5Over) {
+    V.world.remove(V.bld5Over);
+    disposeGroup(V.bld5Over);
+    V.bld5Over = null;
+  }
+  if (!o || !o.snap && !o.line && !o.rect) {
+    E.requestRender?.();
+    return;
+  }
+  const g3 = new THREE.Group();
+  const y = (buildingLayer() || { elevation: 0 }).elevation + 0.08;
+  const mat = new THREE.LineBasicMaterial({ color: SELECT, depthTest: false, transparent: true });
+  if (o.line && o.line.length > 1) {
+    g3.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(o.line.map(([x, z]) => P32(x, z, y))), mat));
+  }
+  if (o.rect) {
+    const r = o.rect;
+    g3.add(lineLoop([[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]], y, mat));
+  }
+  if (o.snap) {
+    const d = Math.max(0.25, view.handleSize * 0.9);
+    const [x, z] = o.snap;
+    const seg = [P32(x - d, z, y), P32(x + d, z, y), P32(x, z - d, y), P32(x, z + d, y)];
+    g3.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg), mat));
+  }
+  g3.traverse((m) => {
+    m.renderOrder = 7;
+  });
+  V.world.add(g3);
+  V.bld5Over = g3;
+  E.requestRender?.();
+}
+var origSync = E.syncScene;
+if (typeof origSync === "function" && !origSync.__s5) {
+  const wrapped = function syncSceneS5(...a) {
+    const r = origSync.apply(this, a);
+    try {
+      syncBuilding3D(a[0]);
+    } catch (e) {
+      console.error("S5 3D будівлі:", e);
+    }
+    return r;
+  };
+  wrapped.__s5 = true;
+  E.syncScene = wrapped;
+}
+
+// core/constructor/building_ui.js
+var B2 = { on: false, tool: null, sel: null, step: 0.5, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null, wallTh: 0.2, aisleW: null, rulers: false };
+var CHECK_IDS = ["inside", "aisle_width", "height"];
+var CHECK_NAMES = {
+  inside: ["Усередині контуру й поза об'єктами будівлі", "Місця й обладнання в контурі будівлі, не перетинають колони, стіни, офіс, зарядку"],
+  aisle_width: ["Ширина проходу й проїзду за технікою", "Проходи й проїзди між рядами не вужчі за мінімум техніки складу чи зони"],
+  height: ["Висота до стелі й спринклерів", "Верх складування не вище стелі й не ближче 0,5 м до спринклерів"]
+};
+var TOOLS = [
+  ["column", "Колона", "plus"],
+  ["wall", "Стіна", "plus"],
+  ["gate", "Ворота", "plus"],
+  ["dock", "Док", "plus"],
+  ["door", "Двері", "plus"],
+  ["office", "Офіс", "plus"],
+  ["charger", "Зарядка", "plus"],
+  ["aisle", "Прохід", "plus"]
+];
+var TOOL_HINTS = {
+  column: "Клацніть, щоб поставити колону.",
+  wall: "Стіна: клацніть початок і кінець відрізка.",
+  gate: "Ворота: клацніть на стіні чи ребрі контуру.",
+  dock: "Док: клацніть на стіні чи ребрі контуру.",
+  door: "Двері: клацніть на стіні чи ребрі контуру.",
+  office: "Офіс: клацніть два протилежні кути.",
+  charger: "Клацніть, щоб поставити зарядку техніки.",
+  aisle: "Прохід: клацніть початок і кінець осі (кінець на іншому проході з'єднує їх).",
+  vertex: "Клацніть ребро контуру, щоб додати вершину."
+};
+var bLayer = () => S.layers.find((l) => l.kind === "building") || null;
+var items = () => {
+  const ly = bLayer();
+  return ly ? ly.items ||= [] : [];
+};
+var aisles = () => {
+  const ly = bLayer();
+  return ly ? ly.aisles ||= [] : [];
+};
+var editable = () => !!bLayer() && canEditLayer(bLayer());
+var contourEditable = () => !!bLayer() && canManage();
+var contour = () => contourOf(bLayer(), S.site.building);
+var camDist = () => V.ok && V.camera && V.controls ? V.camera.position.distanceTo(V.controls.target) : 40;
+var snapRad = () => Math.min(1, Math.max(0.2, camDist() * 0.012));
+var hasExplicitContour = () => !!(bLayer() && bLayer().bounds && bLayer().bounds.length >= 3);
+var selItem = () => B2.sel && B2.sel.kind === "item" ? items().find((it) => it.id === B2.sel.id) || null : null;
+var selAisle = () => B2.sel && B2.sel.kind === "aisle" ? aisles().find((a) => a.id === B2.sel.id) || null : null;
+function updateView() {
+  setBuildingView({ sel: B2.sel, handles: B2.on && contourEditable() && hasExplicitContour() });
+}
+function liveB() {
+  updateView();
+  S.issues = runLive();
+  E.syncScene();
+  E.updateVisual?.();
+  E.requestRender?.();
+}
+function commitB(label2) {
+  updateView();
+  growBuilding();
+  const top = S.hist && S.hist.stack ? S.hist.stack[S.hist.idx] : null;
+  if (top) {
+    top.key = null;
+  }
+  E.commit({ label: label2 });
+}
+function growBuilding() {
+  const ly = bLayer();
+  if (!ly || !ly.bounds || ly.bounds.length < 3 || !S.site) {
+    return;
+  }
+  const b = contourBbox(ly.bounds);
+  const bd = S.site.building;
+  let grown = false;
+  if (b.x1 > bd.length) {
+    bd.length = Math.ceil(b.x1);
+    grown = true;
+  }
+  if (b.y1 > bd.width) {
+    bd.width = Math.ceil(b.y1);
+    grown = true;
+  }
+  if (grown) {
+    E.saveSiteProps?.();
+  }
+}
+var saveSiteExtra = debounce(async () => {
+  const a = E.adapter;
+  if (!a || !S.site) {
+    return;
+  }
+  try {
+    await a.saveSite({ sprinkler_height: S.site.sprinkler_height || 0, aisle_tech: S.site.aisle_tech || null });
+  } catch (e) {
+    toast("Не вдалося зберегти висоти й техніку: " + (e.data?.message || e.message || e), "err");
+  }
+}, 700);
+function enterBuilding() {
+  if (B2.on || !S.site) {
+    return;
+  }
+  if (E.isMobile?.()) {
+    toast("У мобільному режимі правка вимкнена: режим «Будівля» недоступний.", "warn");
+    return;
+  }
+  const ly = bLayer();
+  if (!ly) {
+    toast("На площадці немає шару «Будівля».", "warn");
+    return;
+  }
+  S.app.mode = "edit";
+  B2.prev = { layer: S.ui.layer, tab: S.ui.leftTab };
+  Object.assign(B2, { on: true, tool: null, sel: null, pend: null, drag: null, cur: null, siteId: S.site.id });
+  S.sel = null;
+  S.multi = [];
+  S.selCell = null;
+  S.edit = null;
+  E.cancelModes?.();
+  if (S.ui.layer !== ly.id) {
+    E.setActiveLayer?.(ly.id);
+  }
+  updateView();
+  E.setView?.("plan");
+  E.renderAll();
+  E.setLeftTab?.("building");
+  E.syncScene(true);
+  drawRulers();
+}
+function exitBuilding() {
+  if (!B2.on) {
+    return;
+  }
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, cur: null });
+  setOverlay(null);
+  updateView();
+  const prev = B2.prev || {};
+  B2.prev = null;
+  if (prev.layer && layerOf(prev.layer) && S.ui.layer !== prev.layer) {
+    E.setActiveLayer?.(prev.layer);
+  }
+  E.syncScene(true);
+  E.renderAll();
+  E.setLeftTab?.(prev.tab && prev.tab !== "building" ? prev.tab : "layers");
+  drawRulers();
+}
+var toggleBuilding = () => B2.on ? exitBuilding() : enterBuilding();
+function setTool(tool) {
+  E.cancelModes?.();
+  B2.tool = B2.tool === tool ? null : tool;
+  B2.pend = null;
+  B2.cur = null;
+  setOverlay(null);
+  if (B2.tool && TOOL_HINTS[B2.tool]) {
+    toast(TOOL_HINTS[B2.tool]);
+  }
+  renderTab();
+  renderVToolsButton();
+}
+function addItem(kind, x, y, extra = {}) {
+  if (!editable()) {
+    toast(lockHint(bLayer()), "warn");
+    return null;
+  }
+  const it = newItem(kind, uid("bi_"), x, y, extra);
+  it.name = extra.name ?? nextName(items(), kind);
+  items().push(it);
+  B2.sel = { kind: "item", id: it.id };
+  commitB(`Додано: ${it.name}`);
+  return it;
+}
+function addAisle(rect2) {
+  const list = aisles();
+  const a = { id: uid("ai_"), name: `Прохід ${list.length + 1}`, ...rect2 };
+  list.push(a);
+  B2.sel = { kind: "aisle", id: a.id };
+  commitB(`Додано: ${a.name}`);
+  return a;
+}
+function deleteSelection() {
+  if (!B2.sel || !editable()) {
+    return false;
+  }
+  const ly = bLayer();
+  if (B2.sel.kind === "item") {
+    const it = selItem();
+    ly.items = items().filter((x) => x.id !== B2.sel.id);
+    B2.sel = null;
+    commitB(`Видалено: ${it ? it.name || ITEM_KINDS[it.kind] : "об'єкт"}`);
+  } else if (B2.sel.kind === "aisle") {
+    const a = selAisle();
+    ly.aisles = aisles().filter((x) => x.id !== B2.sel.id);
+    B2.sel = null;
+    commitB(`Видалено: ${a ? a.name || a.id : "прохід"}`);
+  } else if (B2.sel.kind === "vertex") {
+    if (!contourEditable()) {
+      return false;
+    }
+    if (ly.bounds.length <= 3) {
+      toast("У контурі має лишатися щонайменше 3 вершини.", "warn");
+      return true;
+    }
+    ly.bounds = ly.bounds.filter((_, i) => i !== B2.sel.index);
+    B2.sel = null;
+    commitB("Контур: видалено вершину");
+  }
+  return true;
+}
+function alignOpening(kind, s) {
+  const pts = contour();
+  const edge = nearestEdge(pts, s.x, s.y);
+  let best = null;
+  if (edge && edge.dist <= 1) {
+    const [a, b] = [pts[edge.index], pts[(edge.index + 1) % pts.length]];
+    best = { x: edge.point[0], y: edge.point[1], rot: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
+  }
+  for (const w of items().filter((it) => it.kind === "wall")) {
+    const r = (w.rot || 0) * Math.PI / 180;
+    const dx = s.x - w.x;
+    const dy = s.y - w.y;
+    const along = dx * Math.cos(r) + dy * Math.sin(r);
+    const across = -dx * Math.sin(r) + dy * Math.cos(r);
+    if (Math.abs(along) <= w.w / 2 && Math.abs(across) <= Math.max(1, w.d) && (!best || Math.abs(across) < 1)) {
+      best = { x: rnd(w.x + along * Math.cos(r)), y: rnd(w.y + along * Math.sin(r)), rot: w.rot || 0 };
+    }
+  }
+  const [, d] = ITEM_DEFAULT_SIZE[kind];
+  return best ? { x: rnd(best.x), y: rnd(best.y), extra: { rot: rnd(best.rot, 2), d } } : { x: s.x, y: s.y, extra: {} };
+}
+function wallsAlongContour(th = 0.3) {
+  if (!editable()) {
+    return 0;
+  }
+  const walls = contourWalls(contour(), th, () => uid("bi_"), items());
+  if (walls.length) {
+    items().push(...walls);
+    commitB(`Стіни по контуру: ${walls.length}`);
+  }
+  return walls.length;
+}
+function contourFromWarehouse(margin = 2) {
+  const ly = bLayer();
+  if (!ly || !contourEditable()) {
+    return false;
+  }
+  const boxes = [];
+  for (const s of S.slots) {
+    const lk = (layerOf(s.layer_id) || {}).kind;
+    if (s.template !== "zone" && lk !== "building" && lk !== "yard") {
+      boxes.push(obbAabb(slotObb(s.template, s.params || {}, s.x || 0, s.y || 0, s.rotation || 0)));
+    }
+  }
+  ly.bounds = contourAroundObjects(boxes, margin, S.site.building);
+  commitB("Контур за складом");
+  return true;
+}
+function pointer(e) {
+  const ly = bLayer();
+  return E.floorPoint ? E.floorPoint(e, ly ? ly.elevation : 0) : null;
+}
+var snapPts = (skipItemId = null) => snapPoints({ contour: bLayer()?.bounds || [], items: items().filter((it) => it.id !== skipItemId), aisles: aisles() });
+function snapAt(pt, e, from = null, skipId = null) {
+  return snapPoint(pt.x, pt.y, { step: B2.step, pts: snapPts(skipId), aisles: aisles(), from, alt: !!e.altKey, rad: snapRad() });
+}
+var busy = () => !!(V.placing || V.ruler.on || V.pickMode);
+function hitTest(pt) {
+  const ly = bLayer();
+  if (!ly) {
+    return null;
+  }
+  if (B2.on && contourEditable() && hasExplicitContour()) {
+    const r = Math.max(0.35, (V.camera ? camDist() * 0.014 : 0.5) * 0.9);
+    const i = ly.bounds.findIndex((p) => Math.hypot(p[0] - pt.x, p[1] - pt.y) <= r);
+    if (i >= 0) {
+      return { sel: { kind: "vertex", index: i }, drag: { kind: "vertex", index: i, orig: [...ly.bounds[i]] } };
+    }
+  }
+  const it = itemAt(items(), pt.x, pt.y, Math.min(0.5, Math.max(0.1, camDist() * 4e-3)));
+  if (it) {
+    return { sel: { kind: "item", id: it.id }, drag: { kind: "item", id: it.id, orig: { x: it.x, y: it.y } } };
+  }
+  const a = aisles().filter((x) => pt.x >= x.x0 && pt.x <= x.x1 && pt.y >= x.y0 && pt.y <= x.y1).sort((p, q) => (p.x1 - p.x0) * (p.y1 - p.y0) - (q.x1 - q.x0) * (q.y1 - q.y0))[0];
+  return a ? { sel: { kind: "aisle", id: a.id }, drag: { kind: "aisle", id: a.id, orig: { cx: (a.x0 + a.x1) / 2, cy: (a.y0 + a.y1) / 2 } } } : null;
+}
+function onDown2(e) {
+  if (!B2.on || !V.ok || busy() || e.pointerType === "mouse" && e.button !== 0) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  B2.down = { x: e.clientX, y: e.clientY };
+  if (B2.tool) {
+    return;
+  }
+  const hit = hitTest(pt);
+  if (!hit) {
+    return;
+  }
+  e.stopImmediatePropagation();
+  e.preventDefault();
+  B2.sel = hit.sel;
+  B2.drag = { ...hit.drag, pt0: pt, sx: e.clientX, sy: e.clientY, moved: false };
+  try {
+    V.canvas.setPointerCapture(e.pointerId);
+  } catch {
+  }
+  updateView();
+  E.syncScene();
+  renderTab();
+}
+function dragMove(e, pt) {
+  const d = B2.drag;
+  if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) {
+    return;
+  }
+  d.moved = true;
+  const ly = bLayer();
+  if (!ly || (d.kind === "vertex" ? !contourEditable() : !editable())) {
+    return;
+  }
+  const dx = pt.x - d.pt0.x;
+  const dy = pt.y - d.pt0.y;
+  if (d.kind === "item") {
+    const it = items().find((x) => x.id === d.id);
+    if (it) {
+      const s = snapAt({ x: d.orig.x + dx, y: d.orig.y + dy }, e, null, d.id);
+      it.x = s.x;
+      it.y = s.y;
+    }
+  } else if (d.kind === "vertex") {
+    const s = snapPoint(d.orig[0] + dx, d.orig[1] + dy, { step: B2.step, pts: ly.bounds.map(([x, y], i) => ({ x, y, kind: "vertex", skip: i === d.index })).filter((p) => !p.skip), alt: !!e.altKey, rad: snapRad() });
+    ly.bounds[d.index] = [s.x, s.y];
+  } else if (d.kind === "aisle") {
+    const a = aisles().find((x) => x.id === d.id);
+    if (a) {
+      const s = snapAt({ x: d.orig.cx + dx, y: d.orig.cy + dy }, e, null, null);
+      moveAisle(aisles(), d.id, rnd(s.x - (a.x0 + a.x1) / 2), rnd(s.y - (a.y0 + a.y1) / 2));
+    }
+  }
+  liveB();
+}
+function onMove2(e) {
+  if (!B2.on || !V.ok) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  B2.cursor = pt;
+  drawRulers(true);
+  if (B2.drag) {
+    e.stopImmediatePropagation();
+    dragMove(e, pt);
+    return;
+  }
+  if (B2.tool && !busy()) {
+    const from = B2.pend ? B2.pend[0] : null;
+    const s = snapAt(pt, e, from ? [from.x, from.y] : null);
+    B2.cur = s;
+    const ov = { snap: [s.x, s.y] };
+    if (from && (B2.tool === "wall" || B2.tool === "aisle")) {
+      ov.line = [[from.x, from.y], [s.x, s.y]];
+    } else if (from && B2.tool === "office") {
+      ov.rect = { x0: from.x, y0: from.y, x1: s.x, y1: s.y };
+    }
+    setOverlay(ov);
+    V.canvas.style.cursor = "crosshair";
+  }
+}
+function onUp2(e) {
+  if (!B2.on || !V.ok) {
+    return;
+  }
+  try {
+    V.canvas.releasePointerCapture(e.pointerId);
+  } catch {
+  }
+  const down = B2.down;
+  B2.down = null;
+  if (B2.drag) {
+    const d = B2.drag;
+    B2.drag = null;
+    e.stopImmediatePropagation();
+    if (d.moved && (d.kind === "vertex" ? contourEditable() : editable())) {
+      const ly = bLayer();
+      if (d.kind === "vertex" && !isSimplePolygon(ly.bounds)) {
+        ly.bounds[d.index] = d.orig;
+        toast("Контур не має перетинати сам себе.", "warn");
+        liveB();
+        renderTab();
+        return;
+      }
+      commitB(d.kind === "item" ? `Переміщено: ${selItem()?.name || "об'єкт"}` : d.kind === "aisle" ? `Переміщено: ${selAisle()?.name || "прохід"}` : "Контур: вершина");
+    } else {
+      renderTab();
+    }
+    return;
+  }
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) >= 5 || busy()) {
+    return;
+  }
+  const pt = pointer(e);
+  if (!pt) {
+    return;
+  }
+  if (B2.tool) {
+    placeClick2(snapAt(pt, e, B2.pend ? [B2.pend[0].x, B2.pend[0].y] : null));
+  } else if (B2.sel) {
+    B2.sel = null;
+    updateView();
+    E.syncScene();
+    renderTab();
+  }
+}
+function placeClick2(s) {
+  if (!editable() && B2.tool !== "vertex") {
+    toast(lockHint(bLayer()), "warn");
+    return;
+  }
+  switch (B2.tool) {
+    case "column":
+    case "charger":
+      addItem(B2.tool, s.x, s.y);
+      break;
+    case "gate":
+    case "dock":
+    case "door": {
+      const o = alignOpening(B2.tool, s);
+      addItem(B2.tool, o.x, o.y, o.extra);
+      break;
+    }
+    case "wall":
+    case "office":
+    case "aisle":
+      if (!B2.pend) {
+        B2.pend = [s];
+        toast("Тепер клацніть другу точку.");
+        break;
+      }
+      finishTwoClick(B2.tool, B2.pend[0], s);
+      B2.pend = null;
+      setOverlay({ snap: [s.x, s.y] });
+      break;
+    case "vertex": {
+      if (!contourEditable() || !hasExplicitContour()) {
+        toast("Додавати вершини може менеджер до явного контуру: створіть контур.", "warn");
+        break;
+      }
+      const ly = bLayer();
+      const edge = nearestEdge(ly.bounds, s.x, s.y);
+      ly.bounds.splice(edge.index + 1, 0, [rnd(edge.point[0]), rnd(edge.point[1])]);
+      B2.sel = { kind: "vertex", index: edge.index + 1 };
+      commitB("Контур: додано вершину");
+      break;
+    }
+    default:
+  }
+}
+function finishTwoClick(tool, p, q) {
+  if (Math.hypot(q.x - p.x, q.y - p.y) < 0.1) {
+    toast("Точки збігаються.", "warn");
+    return;
+  }
+  if (tool === "wall") {
+    const len = Math.hypot(q.x - p.x, q.y - p.y);
+    addItem("wall", (p.x + q.x) / 2, (p.y + q.y) / 2, { w: rnd(len), d: B2.wallTh, th: B2.wallTh, rot: rnd(Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI, 2) });
+  } else if (tool === "office") {
+    addItem("office", (p.x + q.x) / 2, (p.y + q.y) / 2, { w: rnd(Math.max(0.5, Math.abs(q.x - p.x))), d: rnd(Math.max(0.5, Math.abs(q.y - p.y))) });
+  } else {
+    const width2 = B2.aisleW || (bLayer() || {}).aisle_width || 3;
+    addAisle(aisleFromPoints([p.x, p.y], [q.x, q.y], width2));
+  }
+}
+function openColumnGrid() {
+  if (!editable()) {
+    toast(lockHint(bLayer()), "warn");
+    return;
+  }
+  const cg = S.site.column_grid || { step_x: 6, step_y: 6 };
+  const bb = contourBbox(contour());
+  const st4 = { x0: rnd(bb.x0 + (cg.step_x || 6), 2), y0: rnd(bb.y0 + (cg.step_y || 6), 2), sx: cg.step_x || 6, sy: cg.step_y || 6, nx: 0, ny: 0 };
+  st4.nx = Math.max(1, Math.floor((bb.x1 - bb.x0 - 1) / st4.sx) - 0);
+  st4.ny = Math.max(1, Math.floor((bb.y1 - bb.y0 - 1) / st4.sy) - 0);
+  const info = h("div", { class: "small muted", id: "cgInfo" });
+  const num4 = (k, label2, min, max, step, int) => fld(label2, numInput({ value: st4[k], min, max, step, int, label: label2, set: (v) => {
+    st4[k] = v;
+    draw3();
+  } }), k.startsWith("n") ? null : "м");
+  const draw3 = () => {
+    info.textContent = `Буде створено до ${Math.max(0, Math.round(st4.nx) * Math.round(st4.ny))} колон; наявні в тих самих точках пропускаються.`;
+  };
+  draw3();
+  openDialog({
+    title: "Колони сіткою",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, h("div", { class: "grid2" }, num4("x0", "Початок X", -1e3, 1e4, 0.1), num4("y0", "Початок Y", -1e3, 1e4, 0.1)), h("div", { class: "grid2" }, num4("nx", "Колон по X", 1, 200, 1, true), num4("ny", "Колон по Y", 1, 200, 1, true)), h("div", { class: "grid2" }, num4("sx", "Крок X", 0.5, 200, 0.5), num4("sy", "Крок Y", 0.5, 200, 0.5)), info),
+    actions: [
+      { label: "Скасувати" },
+      {
+        label: "Створити",
+        cls: "primary",
+        id: "dlgColumnGrid",
+        onClick: () => {
+          const made = columnGrid({ x0: st4.x0, y0: st4.y0, nx: Math.round(st4.nx), ny: Math.round(st4.ny), sx: st4.sx, sy: st4.sy, existing: items(), idOf: () => uid("bi_") });
+          if (!made.length) {
+            toast("Нових колон немає: у цих точках вони вже стоять.", "warn");
+            return false;
+          }
+          items().push(...made);
+          B2.sel = null;
+          commitB(`Колони сіткою: ${made.length}`);
+          toast(`Додано колон: ${made.length}.`);
+          return void 0;
+        }
+      }
+    ]
+  });
+}
+var sec = (title, ...kids) => h("div", { class: "sec b5-sec" }, h("h3", null, title), ...kids);
+var btn = (label2, fn, o = {}) => h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, disabled: o.dis, title: o.title, "aria-pressed": o.pressed == null ? null : String(!!o.pressed), onclick: fn }, o.icon ? ic(o.icon) : null, label2);
+function contourSection() {
+  const ly = bLayer();
+  const pts = contour();
+  const dis = !contourEditable();
+  const explicit = hasExplicitContour();
+  const rect2 = isRectContour(pts) || !explicit;
+  const b = contourBbox(pts);
+  const kids = [
+    h("div", { class: "small", id: "b5Area" }, `Площа ${fmt(polygonArea(pts), 1)} м² · периметр ${fmt(polygonPerimeter(pts), 1)} м${explicit ? "" : " · контур = габарит площадки"}`),
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Контур змінює Менеджер.") : null,
+    h("div", { class: "frow wrap" }, btn("За складом (+2 м)", () => contourFromWarehouse(2), { dis, id: "btnContourAuto", title: "Контур за розмірами складу з відступом 2 м" }), btn("Стіни по контуру", () => wallsAlongContour(0.3), { dis: !editable(), id: "btnContourWalls" }), explicit ? btn("Скинути", () => {
+      ly.bounds = null;
+      B2.sel = null;
+      commitB("Контур скинуто до габариту площадки");
+    }, { dis, id: "btnContourReset" }) : null)
+  ];
+  if (rect2) {
+    const set = (k) => (v) => {
+      const c = { x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, [k]: v };
+      if (c.x1 - c.x0 < 1 || c.y1 - c.y0 < 1) {
+        return;
+      }
+      ly.bounds = rectContour(c.x0, c.y0, c.x1, c.y1);
+      liveB();
+    };
+    const ed = { end: () => commitB("Контур: прямокутник") };
+    kids.push(
+      h("div", { class: "grid2" }, fld("Від X", numInput({ value: b.x0, dis, step: 0.5, label: "Від X", set: set("x0"), ...ed }), "м"), fld("Від Y", numInput({ value: b.y0, dis, step: 0.5, label: "Від Y", set: set("y0"), ...ed }), "м")),
+      h("div", { class: "grid2" }, fld("До X", numInput({ value: b.x1, dis, step: 0.5, label: "До X", set: set("x1"), ...ed }), "м"), fld("До Y", numInput({ value: b.y1, dis, step: 0.5, label: "До Y", set: set("y1"), ...ed }), "м")),
+      h("div", { class: "small muted" }, "Прямокутник задається числами; «+ Вершина» перетворює його на многокутник.")
+    );
+  }
+  if (explicit) {
+    kids.push(
+      h("div", { class: "frow wrap" }, btn("+ Вершина", () => {
+        const i = B2.sel && B2.sel.kind === "vertex" ? B2.sel.index : ly.bounds.length - 1;
+        const [a, c] = [ly.bounds[i], ly.bounds[(i + 1) % ly.bounds.length]];
+        ly.bounds.splice(i + 1, 0, [rnd((a[0] + c[0]) / 2), rnd((a[1] + c[1]) / 2)]);
+        B2.sel = { kind: "vertex", index: i + 1 };
+        commitB("Контур: додано вершину");
+      }, { dis, id: "btnVertexPlus" }), btn("Додати вершину", () => setTool("vertex"), { dis, pressed: B2.tool === "vertex", id: "btnVertexTool", title: "Клацніть ребро контуру на сцені" })),
+      h("div", { class: "b5-verts", id: "b5Verts" }, ly.bounds.map(([x, y], i) => h("div", { class: "frow b5-vrow" + (B2.sel && B2.sel.kind === "vertex" && B2.sel.index === i ? " sel" : "") }, h("a", { href: "#", onclick: (ev) => {
+        ev.preventDefault();
+        B2.sel = { kind: "vertex", index: i };
+        updateView();
+        E.syncScene();
+        renderTab();
+      } }, "№" + (i + 1)), numInput({ value: x, dis, step: 0.1, label: `Вершина ${i + 1} X`, set: (v) => {
+        ly.bounds[i][0] = v;
+        liveB();
+      }, end: () => commitB("Контур: вершина") }), numInput({ value: y, dis, step: 0.1, label: `Вершина ${i + 1} Y`, set: (v) => {
+        ly.bounds[i][1] = v;
+        liveB();
+      }, end: () => commitB("Контур: вершина") }), btn("✕", () => {
+        B2.sel = { kind: "vertex", index: i };
+        deleteSelection();
+      }, { dis, title: "Видалити вершину (Delete)" }))))
+    );
+  }
+  return sec("Контур", ...K(kids));
+}
+function heightsSection() {
+  const dis = !canManage();
+  const bd = S.site.building;
+  const bump2 = () => {
+    liveB();
+    E.saveSiteProps?.();
+  };
+  return sec(
+    "Висоти",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Висоти змінює Менеджер.") : null,
+    h(
+      "div",
+      { class: "grid2" },
+      fld("До стелі", numInput({ value: bd.height, dis, min: 2, max: 60, step: 0.5, label: "Висота до стелі", set: (v) => {
+        bd.height = v;
+        bump2();
+      } }), "м"),
+      fld("До спринклерів", numInput({ value: S.site.sprinkler_height || 0, dis, min: 0, max: 60, step: 0.1, label: "Висота до спринклерів", set: (v) => {
+        S.site.sprinkler_height = v;
+        liveB();
+        saveSiteExtra();
+      } }), "м")
+    ),
+    (S.site.sprinkler_height || 0) > bd.height ? h("div", { class: "note err" }, "Спринклери вище стелі.") : h("div", { class: "small muted" }, "0 — спринклерів немає. Лінія спринклерів — помаранчева.")
+  );
+}
+function techSection() {
+  const dis = !canManage();
+  const [key, custom] = parseTech(S.site.aisle_tech);
+  const eff = techMin(S.site.aisle_tech);
+  const opts2 = [["", "Не задано"], ...Object.entries(TECHS).map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])];
+  const set = (k, m) => {
+    S.site.aisle_tech = techValue(k || null, m);
+    saveSiteExtra();
+    liveB();
+    renderTab();
+  };
+  const live = (v) => {
+    S.site.aisle_tech = techValue(key, v);
+    liveB();
+  };
+  return sec(
+    "Техніка складу",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Техніку складу змінює Менеджер.") : null,
+    h(
+      "div",
+      { class: "grid2" },
+      fld("Техніка", selectEl(opts2, key || "", (v) => set(v, null), dis, "Техніка складу")),
+      fld("Мін. ширина проїзду", numInput({ value: eff ?? "", dis: dis || !key || key === "none", min: 0.5, max: 12, step: 0.1, label: "Мінімальна ширина проїзду", set: live, end: () => {
+        saveSiteExtra();
+        renderTab();
+      } }), "м")
+    ),
+    h("div", { class: "small muted" }, custom ? "Свій мінімум замість умовного для техніки." : "Зона може мати власну техніку (панель зони). Перевірка «Ширина проходу» використовує мінімум."),
+    h("div", { class: "frow wrap" }, key ? btn("Скинути мінімум", () => set(key, null), { dis: dis || !custom }) : null)
+  );
+}
+function toolsSection() {
+  const dis = !editable();
+  return sec(
+    "Об'єкти й проходи",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " ", bLayer() ? lockHint(bLayer()) : "Шару «Будівля» немає.") : null,
+    h("div", { class: "b5-tools", id: "b5Tools" }, TOOLS.map(([k, label2]) => btn(label2, () => setTool(k), { dis, pressed: B2.tool === k, id: "tool-" + k }))),
+    h("div", { class: "frow wrap" }, btn("Колони сіткою…", openColumnGrid, { dis, id: "btnColumnGrid" }), btn("Рулетка", () => {
+      const on = !V.ruler.on;
+      E.cancelModes?.();
+      V.ruler.on = on;
+      B2.tool = null;
+      if (on) {
+        toast("Рулетка: клацніть дві точки — відстань і Δx, Δy.");
+      }
+      E.renderVTools?.();
+      renderTab();
+    }, { pressed: V.ruler.on, id: "btnRuler" })),
+    h(
+      "div",
+      { class: "grid3" },
+      fld("Товщина стіни", numInput({ value: B2.wallTh, dis, min: 0.05, max: 5, step: 0.05, label: "Товщина стіни", set: (v) => {
+        B2.wallTh = v;
+      } }), "м"),
+      fld("Ширина проходу", numInput({ value: B2.aisleW || (bLayer() || {}).aisle_width || 3, dis, min: 0.3, max: 12, step: 0.1, label: "Ширина проходу", set: (v) => {
+        B2.aisleW = v;
+      } }), "м"),
+      fld("Крок", selectEl([[0.1, "0,1 м"], [0.5, "0,5 м"], [1, "1 м"]], B2.step, (v) => {
+        B2.step = Number(v);
+      }, false, "Крок прив'язки"))
+    ),
+    h("div", { class: "small muted" }, "Alt — без прив'язки. Прив'язка: вершини контуру, кути об'єктів, кінці й осі проходів, сітка."),
+    h("label", { class: "frow" }, h("input", { type: "checkbox", checked: B2.rulers, "aria-label": "Лінійки по краях", onchange: (e) => {
+      B2.rulers = e.target.checked;
+      drawRulers();
+    } }), " Лінійки по краях «Плану»")
+  );
+}
+function itemSection() {
+  const it = selItem();
+  const a = selAisle();
+  const dis = !editable();
+  if (!it && !a) {
+    const list = items();
+    const counts = Object.entries(ITEM_KINDS).map(([k, n]) => [n, list.filter((x) => x.kind === k).length]).filter(([, c]) => c);
+    return sec("Вибраний об'єкт", h("div", { class: "small muted" }, "Клацніть об'єкт чи прохід на сцені."), counts.length ? h("div", { class: "small", id: "b5Counts" }, "Усього: " + counts.map(([n, c]) => `${n} — ${c}`).join(" · ")) : h("div", { class: "small muted" }, "Об'єктів будівлі ще немає."));
+  }
+  if (a) {
+    const ax = aisleAxis(a);
+    const raw = aisleTechRaw(a);
+    const need = techMin(raw);
+    const set2 = (fn, label2) => (v) => {
+      fn(v);
+      liveB();
+      void label2;
+    };
+    const end2 = () => commitB(`Прохід: ${a.name}`);
+    const linked = aisleLinks(aisles()).filter((l) => l.aisle === a.id || l.host === a.id).length;
+    return sec(
+      "Вибраний прохід",
+      fld("Назва", textInput({ value: a.name, dis, label: "Назва проходу", set: set2((v) => {
+        a.name = v.slice(0, 64);
+      }), end: end2 })),
+      h(
+        "div",
+        { class: "grid2" },
+        fld("Довжина", numInput({ value: rnd(ax.len, 3), dis, min: 0.5, step: 0.5, label: "Довжина проходу", set: set2((v) => {
+          if (ax.dir === "h") {
+            a.x1 = rnd(a.x0 + v);
+          } else {
+            a.y1 = rnd(a.y0 + v);
+          }
+        }), end: end2 }), "м"),
+        fld("Ширина", numInput({ value: rnd(ax.width, 3), dis, min: 0.3, step: 0.1, label: "Ширина проходу", set: set2((v) => {
+          const c = ax.dir === "h" ? ax.cy : ax.cx;
+          if (ax.dir === "h") {
+            a.y0 = rnd(c - v / 2);
+            a.y1 = rnd(c + v / 2);
+          } else {
+            a.x0 = rnd(c - v / 2);
+            a.x1 = rnd(c + v / 2);
+          }
+        }), end: end2 }), "м")
+      ),
+      need != null ? h("div", { class: "small" + (ax.width < need - 1e-3 ? " err" : " muted"), id: "b5AisleNeed" }, `Мінімум для техніки: ${fmt(need, 2)} м${ax.width < need - 1e-3 ? " — прохід вужчий" : ""}`) : h("div", { class: "small muted" }, "Техніку для перевірки ширини не задано."),
+      h("div", { class: "small muted" }, `З'єднань із сусідніми проходами: ${linked}`),
+      h("div", { class: "frow" }, h("span", { class: "grow" }), btn("Видалити", deleteSelection, { dis, cls: "danger", icon: "trash", id: "btnItemDelete" }))
+    );
+  }
+  const slotsForLink = S.slots.filter((s) => s.template === "floor_spot" || s.template === "zone");
+  const wall = it.kind === "wall";
+  const set = (fn) => (v) => {
+    fn(v);
+    liveB();
+  };
+  const end = () => commitB(`Об'єкт: ${it.name || ITEM_KINDS[it.kind]}`);
+  return sec(
+    `${ITEM_KINDS[it.kind]} ${it.name || ""}`.trim(),
+    fld("Назва", textInput({ value: it.name, dis, label: "Назва об'єкта", set: set((v) => {
+      it.name = v.slice(0, 64);
+    }), end })),
+    h(
+      "div",
+      { class: "grid3" },
+      fld("x", numInput({ value: it.x, dis, step: B2.step, label: "x", set: set((v) => {
+        it.x = v;
+      }), end }), "м"),
+      fld("y", numInput({ value: it.y, dis, step: B2.step, label: "y", set: set((v) => {
+        it.y = v;
+      }), end }), "м"),
+      fld("Поворот", numInput({ value: it.rot || 0, dis, step: 5, label: "Поворот", set: set((v) => {
+        it.rot = v;
+      }), end }), "°")
+    ),
+    h(
+      "div",
+      { class: "grid2" },
+      fld(wall ? "Довжина" : "Ширина", numInput({ value: it.w, dis, min: 0.05, max: 1e3, step: 0.1, label: wall ? "Довжина" : "Ширина", set: set((v) => {
+        it.w = v;
+      }), end }), "м"),
+      fld(wall ? "Товщина" : "Глибина", numInput({ value: it.d, dis, min: 0.05, max: wall ? 5 : 1e3, step: 0.05, label: wall ? "Товщина" : "Глибина", set: set((v) => {
+        it.d = v;
+        if (wall) {
+          it.th = v;
+        }
+      }), end }), "м")
+    ),
+    LINK_KINDS.includes(it.kind) ? h(
+      "div",
+      { class: "fcol", id: "b5Link" },
+      fld("Пов'язати з локацією", selectEl([["", "— без зв'язку (геометрія) —"], ...slotsForLink.map((s) => [s.id, `${s.code_prefix}${s.template === "zone" ? " · зона" : ""}`])], slotsForLink.some((s) => s.id === it.location_uid) ? it.location_uid : "", (v) => {
+        it.location_uid = v || null;
+        commitB(`Зв'язок: ${it.name}`);
+      }, dis, "Локація")),
+      fld("або код локації", textInput({ value: slotsForLink.some((s) => s.id === it.location_uid) ? "" : it.location_uid || "", dis, label: "Код локації", set: (v) => {
+        it.location_uid = v.trim() ? v.trim().slice(0, 64) : null;
+      }, end })),
+      h("div", { class: "small muted" }, it.location_uid ? "Зв'язано з локацією." : "Без зв'язку: лише геометрія.")
+    ) : null,
+    h("div", { class: "frow" }, h("span", { class: "grow" }), btn("Видалити", deleteSelection, { dis, cls: "danger", icon: "trash", id: "btnItemDelete" }))
+  );
+}
+function aisleTechRaw(a) {
+  const cx = (a.x0 + a.x1) / 2;
+  const cy = (a.y0 + a.y1) / 2;
+  const zones = S.slots.filter((s) => s.template === "zone").map((z) => {
+    const w = z.params.length || 1;
+    const hh = z.params.width || 1;
+    const r = (z.rotation || 0) * Math.PI / 180;
+    const dx = cx - z.x;
+    const dy = cy - z.y;
+    const lx = dx * Math.cos(r) + dy * Math.sin(r);
+    const ly = -dx * Math.sin(r) + dy * Math.cos(r);
+    return { z, inside: Math.abs(lx) <= w / 2 && Math.abs(ly) <= hh / 2, area: w * hh };
+  }).filter((c) => c.inside && c.z.tech).sort((p, q) => p.area - q.area);
+  return zones.length ? zones[0].z.tech : S.site.aisle_tech || null;
+}
+function checksSection() {
+  const dis = !canManage();
+  const cfg = S.settings.checks;
+  const save2 = (id) => {
+    const c = cfg[id];
+    const a = E.adapter;
+    if (a.kind === "odoo" && c.id == null && typeof a.queue === "function") {
+      a.queue({ model: "td.check.config", op: "create", uid: id, vals: { check_key: id, enabled: c.enabled, mode: c.mode, params: c.params || {} } });
+      c.id = -1;
+    } else {
+      a.saveCheck(id, { enabled: c.enabled, mode: c.mode, params: c.params || {} });
+    }
+    E.commit({});
+  };
+  const issues = (S.issues.list || []).filter((i) => CHECK_IDS.includes(i.check));
+  return sec(
+    "Перевірки будівлі",
+    dis ? h("div", { class: "note lock" }, ic("lock"), " Налаштування змінює Менеджер.") : null,
+    CHECK_IDS.map((id) => {
+      const cur = cfg[id] || { enabled: false, mode: "warn", params: {}, id: null };
+      const ensure = () => cfg[id] ||= { enabled: false, mode: "warn", params: {}, id: null };
+      return h(
+        "div",
+        { class: "frow", style: { margin: "5px 0" }, title: CHECK_NAMES[id][1] },
+        h("input", { type: "checkbox", checked: !!cur.enabled && !!cfg[id], disabled: dis, "aria-label": CHECK_NAMES[id][0], "data-check": id, onchange: (e) => {
+          ensure().enabled = e.target.checked;
+          save2(id);
+        } }),
+        h("span", { style: { flex: 1, minWidth: 0 } }, CHECK_NAMES[id][0]),
+        selectEl([["warn", "Попередження"], ["block", "Заборона"]], cur.mode, (v) => {
+          ensure().mode = v;
+          save2(id);
+        }, dis, CHECK_NAMES[id][0])
+      );
+    }),
+    issues.length ? h("div", { class: "b5-issues", id: "b5Issues" }, issues.slice(0, 12).map((i) => h("div", { class: "small " + (i.level === "block" ? "err" : "warn"), title: i.check }, i.msg)), issues.length > 12 ? h("div", { class: "small muted" }, `…і ще ${issues.length - 12}`) : null) : h("div", { class: "small muted" }, "Зауважень за ввімкненими перевірками будівлі немає.")
+  );
+}
+function docsSection() {
+  return sec(
+    "Документи",
+    h("div", { class: "frow wrap" }, btn("Специфікація стелажів…", () => E.runDialog("spec"), { id: "btnSpecDoc" }), btn("План…", () => E.runDialog("planDoc"), { id: "btnPlanDoc" }))
+  );
+}
+function renderBuildingTab(root) {
+  if (!S.site) {
+    return;
+  }
+  if (!bLayer()) {
+    root.append(sec("Будівля", h("div", { class: "note" }, "На площадці немає шару «Будівля»: створіть його у вкладці «Шари».")));
+    return;
+  }
+  root.append(
+    ...K(
+      sec("Режим «Будівля»", h("div", { class: "small muted" }, B2.on ? "Правка будівлі: клацання по сцені обробляє цей режим. Звичайна правка вимкнена." : "Режим вимкнено. Він взаємовиключний з «Редагувати»."), h("div", { class: "frow wrap" }, btn(B2.on ? "Вийти з режиму «Будівля»" : "Увімкнути режим «Будівля»", toggleBuilding, { cls: B2.on ? "" : "primary", id: "btnBuildingToggle" }))),
+      B2.on ? K(contourSection(), heightsSection(), toolsSection(), itemSection(), techSection(), checksSection(), docsSection()) : K(docsSection())
+    )
+  );
+}
+registries.panels.add("left:building", { area: "left", tab: "building", label: "Будівля", render: renderBuildingTab }, { sequence: 15, force: true });
+var renderTab = () => {
+  if (ROOT.el && S.ui.leftTab === "building") {
+    E.renderLeft?.();
+  }
+};
+registries.panels.add(
+  "slot:tech",
+  {
+    area: "slot",
+    when: ({ rec }) => !!rec && rec.template === "zone",
+    render(root, { rec }) {
+      const dis = !canEditLayer(layerOf(rec.layer_id));
+      const [key, custom] = parseTech(rec.tech);
+      const eff = techMin(rec.tech);
+      const opts2 = [["", "Як у складу"], ...Object.entries(TECHS).map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])];
+      const set = (k, m) => {
+        rec.tech = techValue(k || null, m);
+        E.commit({ label: `Техніка зони: ${rec.params.title || rec.code_prefix}` });
+      };
+      root.append(
+        h(
+          "div",
+          { class: "sec", id: "zoneTech" },
+          h("h3", null, "Техніка зони"),
+          h(
+            "div",
+            { class: "grid2" },
+            fld("Техніка", selectEl(opts2, key || "", (v) => set(v, null), dis, "Техніка зони")),
+            fld("Мін. ширина проїзду", numInput({ value: eff ?? "", dis: dis || !key || key === "none", min: 0.5, max: 12, step: 0.1, label: "Мінімальна ширина проїзду зони", set: (v) => {
+              rec.tech = techValue(key, v);
+            }, end: () => E.commit({ label: `Техніка зони: ${rec.params.title || rec.code_prefix}` }) }), "м")
+          ),
+          h("div", { class: "small muted" }, custom ? "Свій мінімум для зони." : "Для проходів і рядів у зоні діє мінімум цієї техніки (N-06).")
+        )
+      );
+    }
+  },
+  { sequence: 60, force: true }
+);
+var STYLE_ID3 = "f3d-s5-style";
+var CSS3 = `
+.b5-sec .b5-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:6px 0}
+.b5-sec .b5-verts{max-height:150px;overflow:auto;margin:4px 0}
+.b5-sec .b5-vrow{gap:4px;margin:2px 0}.b5-sec .b5-vrow.sel{background:var(--warn-soft)}
+.b5-sec .b5-vrow input{min-width:0;width:80px}
+.b5-sec .b5-issues{margin-top:6px;max-height:140px;overflow:auto}
+.b5-sec .err{color:var(--err,#b3261e)}.b5-sec .warn{color:var(--warn,#8a5a00)}
+.b5-rx,.b5-ry{position:absolute;z-index:2;pointer-events:none;background:color-mix(in srgb,var(--surface) 88%,transparent)}
+.b5-rx{left:0;right:0;top:0;height:18px;border-bottom:1px solid var(--line)}
+.b5-ry{left:0;top:0;bottom:0;width:30px;border-right:1px solid var(--line)}
+#vtools .b5-mode[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.b5-doc .b5-prev{border:1px solid var(--line);background:#fff;max-height:60vh;overflow:auto;padding:4px}
+.b5-doc .b5-prev svg{max-width:100%;height:auto;display:block}
+.b5-doc table.b5-t{border-collapse:collapse;width:100%;font-size:12px}
+.b5-doc table.b5-t th,.b5-doc table.b5-t td{border:1px solid var(--line);padding:2px 6px;text-align:left}
+.b5-doc table.b5-t td.n{text-align:right}
+.b5-wiz .b5-steps{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.b5-wiz .b5-step{padding:3px 8px;border:1px solid var(--line);font-size:12px}
+.b5-wiz .b5-step.on{background:var(--ink);color:var(--surface)}.b5-wiz .b5-step.done{border-color:var(--ink)}
+`;
+function ensureStyle3() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID3)) {
+    return;
+  }
+  const st4 = document.createElement("style");
+  st4.id = STYLE_ID3;
+  st4.textContent = CSS3;
+  root.prepend(st4);
+}
+function renderVToolsButton() {
+  const box = $("#vtools");
+  if (!box) {
+    return;
+  }
+  let b = $("#btnBuildingMode");
+  if (!b) {
+    b = h("button", { class: "fbtn b5-mode", type: "button", id: "btnBuildingMode", title: "Режим «Будівля»: контур, колони, стіни, проходи (взаємовиключний з «Редагувати»)", "aria-label": "Будівля", onclick: toggleBuilding }, ic("plan"), h("span", { class: "lg" }, "Будівля"));
+    const second = box.children[1];
+    if (second) {
+      second.after(b);
+    } else {
+      box.append(b);
+    }
+  }
+  b.setAttribute("aria-pressed", String(B2.on));
+}
+function decorate2() {
+  ensureStyle3();
+  renderVToolsButton();
+  const edit = $('#modeSeg button[data-mode="edit"]');
+  if (edit && B2.on) {
+    edit.setAttribute("aria-pressed", "false");
+  }
+  if (B2.on && S.site && B2.siteId !== S.site.id) {
+    exitBuilding();
+  }
+}
+function niceStep(pxPerM, min = 60) {
+  for (const s of [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]) {
+    if (s * pxPerM >= min) {
+      return s;
+    }
+  }
+  return 100;
+}
+function drawRulers(cursorOnly) {
+  const center2 = ROOT.el && ROOT.el.querySelector(".center");
+  let rx = $("#b5Rx");
+  let ry = $("#b5Ry");
+  const show = !!(B2.on || B2.rulers) && V.ok && V.camMode === "plan" && !V.testMode;
+  if (!center2 || !show) {
+    rx?.remove();
+    ry?.remove();
+    return;
+  }
+  if (!rx) {
+    rx = h("canvas", { class: "b5-rx", id: "b5Rx" });
+    ry = h("canvas", { class: "b5-ry", id: "b5Ry" });
+    center2.append(rx, ry);
+  }
+  const w = center2.clientWidth;
+  const hh = center2.clientHeight;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const size = (c, cw, ch) => {
+    if (c.width !== cw * dpr || c.height !== ch * dpr) {
+      c.width = cw * dpr;
+      c.height = ch * dpr;
+      c.style.width = cw + "px";
+      c.style.height = ch + "px";
+    }
+  };
+  size(rx, w, 18);
+  size(ry, 30, hh);
+  const proj = (x, y) => {
+    const v = new THREE.Vector3(x, 0, -y).project(V.camera);
+    return [(v.x + 1) / 2 * w, (1 - v.y) / 2 * hh];
+  };
+  const t2 = V.controls.target;
+  const [ox, oy] = proj(t2.x, -t2.z);
+  const pxX = Math.abs(proj(t2.x + 1, -t2.z)[0] - ox);
+  const pxY = Math.abs(proj(t2.x, -t2.z + 1)[1] - oy);
+  if (!pxX || !pxY) {
+    return;
+  }
+  const css2 = getComputedStyle(center2);
+  const ink = css2.getPropertyValue("--ink").trim() || "#222";
+  const cx = rx.getContext("2d");
+  const cy = ry.getContext("2d");
+  for (const c of [cx, cy]) {
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, w, hh);
+    c.strokeStyle = ink;
+    c.fillStyle = ink;
+    c.font = "10px sans-serif";
+    c.lineWidth = 1;
+  }
+  const sx = niceStep(pxX);
+  const sy = niceStep(pxY, 40);
+  const x0 = t2.x + (0 - ox) / pxX;
+  const x1 = t2.x + (w - ox) / pxX;
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1; x += sx) {
+    const px = ox + (x - t2.x) * pxX;
+    cx.beginPath();
+    cx.moveTo(px + 0.5, 12);
+    cx.lineTo(px + 0.5, 18);
+    cx.stroke();
+    cx.fillText(String(rnd(x, 2)), px + 2, 10);
+  }
+  const yTop = -t2.z + (oy - 0) / pxY;
+  const yBot = -t2.z - (hh - oy) / pxY;
+  for (let y = Math.ceil(yBot / sy) * sy; y <= yTop; y += sy) {
+    const py = oy - (y + t2.z) * pxY;
+    cy.beginPath();
+    cy.moveTo(24, py + 0.5);
+    cy.lineTo(30, py + 0.5);
+    cy.stroke();
+    cy.fillText(String(rnd(y, 2)), 1, py - 2);
+  }
+  const cur = B2.cursor || V.cursor;
+  if (cur) {
+    cx.strokeStyle = "#e11d74";
+    cx.beginPath();
+    cx.moveTo(ox + (cur.x - t2.x) * pxX + 0.5, 0);
+    cx.lineTo(ox + (cur.x - t2.x) * pxX + 0.5, 18);
+    cx.stroke();
+    cy.strokeStyle = "#e11d74";
+    const py = oy - (cur.y + t2.z) * pxY;
+    cy.beginPath();
+    cy.moveTo(0, py + 0.5);
+    cy.lineTo(30, py + 0.5);
+    cy.stroke();
+  }
+  void cursorOnly;
+}
+var mo = null;
+var ro = null;
+function onMount3() {
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null, siteId: null, cur: null });
+  ensureStyle3();
+  renderVToolsButton();
+  const cv = V.canvas;
+  if (cv) {
+    cv.addEventListener("pointerdown", onDown2, true);
+    cv.addEventListener("pointermove", onMove2, true);
+    cv.addEventListener("pointerup", onUp2, true);
+    cv.addEventListener("pointercancel", onUp2, true);
+    V.controls?.addEventListener("change", () => drawRulers());
+  }
+  const seg = $("#modeSeg");
+  if (seg) {
+    seg.addEventListener(
+      "click",
+      (e) => {
+        if (e.target.closest("button[data-mode]") && B2.on) {
+          exitBuilding();
+        }
+      },
+      true
+    );
+  }
+  const vt = $("#vtools");
+  if (vt && typeof MutationObserver !== "undefined") {
+    mo = new MutationObserver(() => {
+      if (!$("#btnBuildingMode")) {
+        renderVToolsButton();
+      }
+    });
+    mo.observe(vt, { childList: true });
+  }
+  if (typeof ResizeObserver !== "undefined" && cv) {
+    ro = new ResizeObserver(() => drawRulers());
+    ro.observe(cv);
+  }
+}
+function onUnmount2() {
+  mo?.disconnect();
+  mo = null;
+  ro?.disconnect();
+  ro = null;
+  Object.assign(B2, { on: false, tool: null, sel: null, pend: null, drag: null, down: null, prev: null });
+}
+E.lifecycle.mount.add(onMount3);
+E.lifecycle.unmount.add(onUnmount2);
+var origRenderAll3 = E.renderAll;
+E.renderAll = function renderAllS5(...a) {
+  const r = origRenderAll3.apply(this, a);
+  try {
+    decorate2();
+    drawRulers();
+  } catch (e) {
+    console.error("S5 режим «Будівля»:", e);
+  }
+  return r;
+};
+var origSetView = E.setView;
+E.setView = function setViewS5(...a) {
+  const r = origSetView.apply(this, a);
+  try {
+    drawRulers();
+  } catch (e) {
+    console.error("S5 лінійки:", e);
+  }
+  return r;
+};
+var origCancel = E.cancelModes;
+E.cancelModes = function cancelModesS5(...a) {
+  B2.tool = null;
+  B2.pend = null;
+  B2.drag = null;
+  setOverlay(null);
+  return origCancel ? origCancel.apply(this, a) : void 0;
+};
+registries.hotkeys.add(
+  "building_escape",
+  {
+    key: "Escape",
+    typing: true,
+    run() {
+      if (!B2.on || !(B2.tool || B2.pend || B2.sel)) {
+        return false;
+      }
+      if (B2.pend) {
+        B2.pend = null;
+      } else if (B2.tool) {
+        B2.tool = null;
+      } else {
+        B2.sel = null;
+      }
+      setOverlay(null);
+      updateView();
+      E.syncScene();
+      renderTab();
+      renderVToolsButton();
+      return true;
+    }
+  },
+  { sequence: 8, force: true }
+);
+registries.hotkeys.add(
+  "building_delete",
+  {
+    match: (e) => e.code === "Delete" || e.code === "Backspace",
+    when: () => B2.on && !!B2.sel,
+    run: (e) => (e.preventDefault(), deleteSelection())
+  },
+  { sequence: 9, force: true }
+);
+registries.menu.add("building", { area: "more", label: "Будівля (режим)", icon: "plan", sequence: 20, run: () => toggleBuilding() }, { sequence: 20, force: true });
+Object.assign(E, { enterBuilding, exitBuilding, toggleBuilding, buildingState: B2, deleteBuildingSelection: deleteSelection, openColumnGrid, wallsAlongContour, contourFromWarehouse });
+
+// core/constructor/building.js
+setSiteProvider(() => S.site);
+registries.checks.add("inside", { run: checkInside, label: "Усередині контуру й поза об'єктами будівлі" }, { sequence: 100, force: true });
+registries.checks.add("aisle_width", { run: checkAisleWidth, label: "Ширина проходу за технікою" }, { sequence: 110, force: true });
+registries.checks.add("height", { run: checkHeight, label: "Висота до стелі й спринклерів" }, { sequence: 120, force: true });
+E.buildingObstacles = () => obstacleRects(S.layers, S.site);
+
+// core/constructor/wizard.js
+var STEPS = [
+  ["building", "Будівля"],
+  ["zones", "Зони"],
+  ["rows", "Ряди"],
+  ["addr", "Адресація"],
+  ["checks", "Перевірки"],
+  ["plan", "План змін"]
+];
+var RACK_TYPES = [["pallet_rack", "Палетний стелаж"], ["shelf", "Полицевий стелаж"], ["cantilever", "Консольний стелаж"], ["floor_stack", "Напільне штабелювання"]];
+var VERSION = 1;
+function evenZones(n, a, gap = 1) {
+  const horizontal = a.x1 - a.x0 >= a.y1 - a.y0;
+  const total = horizontal ? a.x1 - a.x0 : a.y1 - a.y0;
+  const size = (total - gap * (n - 1)) / n;
+  return Array.from({ length: n }, (_, i) => {
+    const from = (horizontal ? a.x0 : a.y0) + i * (size + gap);
+    return horizontal ? { x0: rnd(from, 2), x1: rnd(from + size, 2), y0: a.y0, y1: a.y1 } : { y0: rnd(from, 2), y1: rnd(from + size, 2), x0: a.x0, x1: a.x1 };
+  });
+}
+var defaultState = () => {
+  const b = S.site.building;
+  const cg = S.site.column_grid || { step_x: 6, step_y: 6 };
+  return {
+    v: VERSION,
+    siteId: S.site.id,
+    step: 0,
+    reached: 0,
+    done: false,
+    applied: {},
+    form: {
+      building: { length: b.length, width: b.width, height: b.height, contour: true, columns: true, sx: cg.step_x || 6, sy: cg.step_y || 6, walls: false, th: 0.3, sprinkler: S.site.sprinkler_height || 0 },
+      zones: [],
+      count: 2
+    },
+    created: { items: [], bounds: false, zones: [], rows: [] }
+  };
+};
+var W = null;
+function current() {
+  if (!S.site) {
+    return null;
+  }
+  if (!W || W.siteId !== S.site.id) {
+    const st4 = S.site.wizard_state;
+    W = st4 && st4.v === VERSION && st4.siteId === S.site.id ? clone(st4) : null;
+  }
+  return W;
+}
+var persist = debounce(async () => {
+  if (!W || !S.site) {
+    return;
+  }
+  S.site.wizard_state = clone(W);
+  try {
+    if (E.adapter && typeof E.adapter.saveWizard === "function") {
+      await E.adapter.saveWizard(S.site.wizard_state);
+    }
+  } catch (e) {
+    toast("Не вдалося зберегти стан майстра: " + (e.data?.message || e.message || e), "err");
+  }
+}, 400);
+var touch = () => {
+  S.site.wizard_state = clone(W);
+  persist();
+};
+var rerender = () => {
+  if (S.ui.leftTab === "wizard") {
+    E.renderLeft?.();
+  }
+};
+var bLayer2 = () => S.layers.find((l) => l.kind === "building") || null;
+var layerFor = (template) => S.layers.find((l) => l.kind === "storage" && l.slot_types.includes(template)) || S.layers.find((l) => (l.kind === "production" || l.kind === "custom") && l.slot_types.includes(template)) || S.layers.find((l) => l.slot_types.includes(template)) || null;
+var removeSlots = (ids) => {
+  const set = new Set(ids || []);
+  if (!set.size) {
+    return 0;
+  }
+  const before = S.slots.length;
+  S.slots = S.slots.filter((s) => !set.has(s.id));
+  S.placements = S.placements.filter((p) => !set.has(p.slot_id));
+  return before - S.slots.length;
+};
+var label = (t2) => E.undoLabel?.(t2);
+var fnOf = (id) => lib3.functions.find((f) => String(f.id) === String(id)) || lib3.functions[0] || null;
+function applyBuilding() {
+  const f = W.form.building;
+  const ly = bLayer2();
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає шару «Будівля».", "warn");
+    return false;
+  }
+  const b = S.site.building;
+  const manager = canManage();
+  if (manager) {
+    Object.assign(b, { length: f.length, width: f.width, height: f.height });
+    S.site.column_grid = { step_x: f.sx, step_y: f.sy };
+    S.site.sprinkler_height = f.sprinkler || 0;
+    E.saveSiteProps?.();
+    E.adapter?.saveSite?.({ sprinkler_height: S.site.sprinkler_height }).catch(() => {
+    });
+  }
+  const old = new Set(W.created.items);
+  ly.items = (ly.items || []).filter((it) => !old.has(it.id));
+  const L3 = manager ? f.length : b.length;
+  const Wd = manager ? f.width : b.width;
+  if (f.contour && manager) {
+    ly.bounds = rectContour(0, 0, L3, Wd);
+  }
+  W.created.bounds = !!(f.contour && manager);
+  const made = [];
+  if (f.columns) {
+    made.push(...columnGrid({ x0: f.sx, y0: f.sy, nx: Math.max(0, Math.floor((L3 - 0.5) / f.sx)), ny: Math.max(0, Math.floor((Wd - 0.5) / f.sy)), sx: f.sx, sy: f.sy, existing: ly.items, idOf: () => uid("bi_") }));
+  }
+  ly.items.push(...made);
+  if (f.walls) {
+    const walls = contourWalls(contourOf(ly, b), f.th, () => uid("bi_"), ly.items);
+    ly.items.push(...walls);
+    made.push(...walls);
+  }
+  W.created.items = made.map((it) => it.id);
+  W.applied.building = true;
+  W.reached = Math.max(W.reached, 1);
+  label("Майстер: Будівля");
+  E.commit({});
+  E.setView?.(E.camMode || "plan");
+  toast(`Будівля: колон і стін створено ${made.length}.`);
+  touch();
+  return true;
+}
+function applyZones() {
+  const zones = W.form.zones;
+  if (!zones.length) {
+    toast("Додайте хоча б одну зону або натисніть «Розкласти рівно».", "warn");
+    return false;
+  }
+  const ly = layerFor("zone");
+  if (!ly || !canEditLayer(ly)) {
+    toast(ly ? lockHint(ly) : "Немає шару, що допускає зони.", "warn");
+    return false;
+  }
+  removeSlots([...W.created.rows, ...W.created.zones]);
+  W.created.rows = [];
+  const used = new Set(S.slots.map((s) => s.code_prefix));
+  const plans = zones.map((z, i) => {
+    let n = i + 1;
+    while (used.has(`Z${n}`)) {
+      n++;
+    }
+    used.add(`Z${n}`);
+    const fn = fnOf(z.fn);
+    return { template: "zone", prefix: `Z${n}`, x: rnd((z.x0 + z.x1) / 2, 2), y: rnd((z.y0 + z.y1) / 2, 2), rotation: 0, params: { length: rnd(z.x1 - z.x0, 2), width: rnd(z.y1 - z.y0, 2), title: z.name || `Зона ${i + 1}`, color: fn && fn.color || "#9fb7c9" } };
+  });
+  const prev = S.ui.layer;
+  S.ui.layer = ly.id;
+  label("Майстер: Зони");
+  const made = addSlots(plans);
+  S.ui.layer = prev;
+  made.forEach((rec, i) => {
+    const fn = fnOf(zones[i].fn);
+    rec.function_id = fn && (lib3.loaded || !can("storage")) ? fn.id : null;
+    zones[i].slot = rec.id;
+  });
+  W.created.zones = made.map((s) => s.id);
+  W.applied.zones = true;
+  W.reached = Math.max(W.reached, 2);
+  label("Майстер: Зони");
+  E.commit({});
+  toast(`Зон створено: ${made.length}.`);
+  touch();
+  return true;
+}
+function applyRows() {
+  const zones = W.form.zones.filter((z) => z.slot && S.sIdx.has(z.slot));
+  if (!zones.length) {
+    toast("Спершу застосуйте крок «Зони».", "warn");
+    return false;
+  }
+  removeSlots(W.created.rows);
+  W.created.rows = [];
+  const prev = S.ui.layer;
+  const made = [];
+  let skipped = 0;
+  zones.forEach((z, zi) => {
+    const r = z.rows;
+    const ly = layerFor(r.template);
+    if (!ly || !canEditLayer(ly)) {
+      skipped += r.rows;
+      return;
+    }
+    const lay = bulkLayout({ template: r.template, rows: r.rows, sections: r.sections, levels: r.levels, aisle: r.aisle, vertical: !!r.vertical, zoneId: z.slot });
+    const used = new Set(S.slots.map((s) => s.code_prefix));
+    let k = 0;
+    const plans = lay.rows.map((row) => {
+      let code;
+      do {
+        k++;
+        code = `R${zi + 1}-${k}`;
+      } while (used.has(code));
+      used.add(code);
+      return { ...row, template: r.template, prefix: code };
+    });
+    skipped += Math.max(0, r.rows - plans.length);
+    S.ui.layer = ly.id;
+    label("Майстер: Ряди");
+    made.push(...addSlots(plans));
+    const zoneRec = S.sIdx.get(z.slot);
+    if (zoneRec) {
+      zoneRec.tech = techValue(r.tech || null, null);
+    }
+  });
+  S.ui.layer = prev;
+  W.created.rows = made.map((s) => s.id);
+  W.applied.rows = true;
+  W.reached = Math.max(W.reached, 3);
+  label("Майстер: Ряди");
+  E.commit({});
+  toast(`Рядів створено: ${made.length}${skipped ? `; не вмістилося: ${skipped}` : ""}.`, skipped ? "warn" : void 0);
+  touch();
+  return true;
+}
+var blockers = () => (S.issues && S.issues.list || []).filter((i) => i.level === "block");
+var sec2 = (title, ...kids) => h("div", { class: "sec b5-sec", "data-wiz": "sec" }, h("h3", null, title), ...kids);
+var btn2 = (text, fn, o = {}) => h("button", { class: "fbtn sm" + (o.cls ? " " + o.cls : ""), type: "button", id: o.id, disabled: o.dis, title: o.title, onclick: fn }, o.icon ? ic(o.icon) : null, text);
+var nf = (value, o, set) => numInput({ value, step: 0.5, ...o, set: (v) => {
+  set(v);
+  touch();
+} });
+function stepBuilding(root) {
+  const f = W.form.building;
+  const dis = !canManage();
+  root.append(
+    ...K(
+      dis ? h("div", { class: "note lock" }, ic("lock"), " Розміри будівлі змінює Менеджер; об'єкти будівлі — за правами шару.") : null,
+      h(
+        "div",
+        { class: "grid3" },
+        fld("Довжина", nf(f.length, { dis, min: 5, max: 1e3, step: 1, label: "Довжина" }, (v) => {
+          f.length = v;
+        }), "м"),
+        fld("Ширина", nf(f.width, { dis, min: 5, max: 1e3, step: 1, label: "Ширина" }, (v) => {
+          f.width = v;
+        }), "м"),
+        fld("Висота", nf(f.height, { dis, min: 2, max: 60, label: "Висота" }, (v) => {
+          f.height = v;
+        }), "м")
+      ),
+      fld("До спринклерів", nf(f.sprinkler, { dis, min: 0, max: 60, step: 0.1, label: "Висота до спринклерів" }, (v) => {
+        f.sprinkler = v;
+      }), "м"),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.contour, disabled: dis, "data-w": "contour", onchange: (e) => {
+        f.contour = e.target.checked;
+        touch();
+      } }), " Контур за розмірами (прямокутник)"),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.columns, "data-w": "columns", onchange: (e) => {
+        f.columns = e.target.checked;
+        touch();
+      } }), " Колони сіткою"),
+      h("div", { class: "grid2" }, fld("Крок X", nf(f.sx, { min: 1, max: 100, label: "Крок колон X" }, (v) => {
+        f.sx = v;
+      }), "м"), fld("Крок Y", nf(f.sy, { min: 1, max: 100, label: "Крок колон Y" }, (v) => {
+        f.sy = v;
+      }), "м")),
+      h("label", { class: "frow" }, h("input", { type: "checkbox", checked: f.walls, "data-w": "walls", onchange: (e) => {
+        f.walls = e.target.checked;
+        touch();
+      } }), " Стіни по контуру"),
+      fld("Товщина стіни", nf(f.th, { min: 0.1, max: 2, step: 0.05, label: "Товщина стіни" }, (v) => {
+        f.th = v;
+      }), "м")
+    )
+  );
+}
+function stepZones(root) {
+  const zones = W.form.zones;
+  const b = contourBbox(contourOf(bLayer2(), S.site.building));
+  const add = () => {
+    const w = Math.max(4, (b.x1 - b.x0) / 2 - 2);
+    zones.push({ id: uid("wz_"), name: `Зона ${zones.length + 1}`, fn: (lib3.functions[3] || lib3.functions[0] || {}).id ?? null, x0: rnd(b.x0 + 1, 2), x1: rnd(b.x0 + 1 + w, 2), y0: rnd(b.y0 + 1, 2), y1: rnd(b.y1 - 1, 2), rows: { template: "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: 3.3, vertical: false, tech: "" } });
+    touch();
+    rerender();
+  };
+  const even = () => {
+    const n = Math.max(1, Math.min(12, Math.round(W.form.count)));
+    const rects = evenZones(n, { x0: b.x0 + 1, y0: b.y0 + 1, x1: b.x1 - 1, y1: b.y1 - 1 });
+    const old = zones.splice(0, zones.length);
+    rects.forEach((r, i) => zones.push({ id: uid("wz_"), name: old[i] && old[i].name || `Зона ${i + 1}`, fn: old[i] ? old[i].fn : (lib3.functions[3] || lib3.functions[0] || {}).id ?? null, ...r, rows: old[i] ? old[i].rows : { template: "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: 3.3, vertical: false, tech: "" } }));
+    touch();
+    rerender();
+  };
+  root.append(
+    h("div", { class: "frow wrap" }, fld("Зон", nf(W.form.count, { min: 1, max: 12, step: 1, int: true, label: "Кількість зон" }, (v) => {
+      W.form.count = v;
+    }), null), btn2("Розкласти рівно", even, { id: "btnWizEven", title: "Поділити будівлю на рівні зони" }), btn2("+ Зона", add, { id: "btnWizAddZone" })),
+    ...zones.map((z, i) => h(
+      "div",
+      { class: "fcol", "data-wiz": "zone", style: { borderTop: "1px solid var(--line)", paddingTop: "6px", marginTop: "6px" } },
+      h("div", { class: "frow" }, textInput({ value: z.name, label: "Назва зони", set: (v) => {
+        z.name = v;
+        touch();
+      } }), btn2("✕", () => {
+        zones.splice(i, 1);
+        touch();
+        rerender();
+      }, { title: "Прибрати зону" })),
+      fld("Функція", selectEl(lib3.functions.map((f) => [f.id, f.name]), z.fn, (v) => {
+        z.fn = lib3.functions.find((f) => String(f.id) === String(v))?.id ?? v;
+        touch();
+      }, false, "Функція зони")),
+      h("div", { class: "grid2" }, fld("x від", nf(z.x0, { label: "x від" }, (v) => {
+        z.x0 = v;
+      }), "м"), fld("x до", nf(z.x1, { label: "x до" }, (v) => {
+        z.x1 = v;
+      }), "м")),
+      h("div", { class: "grid2" }, fld("y від", nf(z.y0, { label: "y від" }, (v) => {
+        z.y0 = v;
+      }), "м"), fld("y до", nf(z.y1, { label: "y до" }, (v) => {
+        z.y1 = v;
+      }), "м"))
+    )),
+    zones.length ? null : h("div", { class: "small muted" }, "Зон немає: додайте зону або натисніть «Розкласти рівно».")
+  );
+}
+function stepRows(root) {
+  const zones = W.form.zones;
+  if (!zones.length) {
+    root.append(h("div", { class: "note" }, "Спершу створіть зони (крок «Зони»)."));
+    return;
+  }
+  root.append(
+    ...zones.map((z) => {
+      const r = z.rows;
+      return h(
+        "div",
+        { class: "fcol", "data-wiz": "rows", style: { borderTop: "1px solid var(--line)", paddingTop: "6px", marginTop: "6px" } },
+        h("b", null, z.name),
+        fld("Тип стелажа", selectEl(RACK_TYPES, r.template, (v) => {
+          r.template = v;
+          touch();
+        }, false, "Тип стелажа")),
+        h("div", { class: "grid3" }, fld("Рядів", nf(r.rows, { min: 1, max: 60, step: 1, int: true, label: "Рядів" }, (v) => {
+          r.rows = v;
+        }), null), fld("Секцій", nf(r.sections, { min: 1, max: 100, step: 1, int: true, label: "Секцій" }, (v) => {
+          r.sections = v;
+        }), null), fld("Ярусів", nf(r.levels, { min: 1, max: 12, step: 1, int: true, label: "Ярусів" }, (v) => {
+          r.levels = v;
+        }), null)),
+        h("div", { class: "grid2" }, fld("Прохід між рядами", nf(r.aisle, { min: 0.5, max: 12, step: 0.1, label: "Прохід між рядами" }, (v) => {
+          r.aisle = v;
+        }), "м"), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], r.vertical ? "v" : "h", (v) => {
+          r.vertical = v === "v";
+          touch();
+        }, false, "Орієнтація"))),
+        fld("Техніка зони", selectEl([["", "Як у складу"], ...Object.entries(TECHS).filter(([k]) => k !== "custom").map(([k, [n, m]]) => [k, m ? `${n} · від ${fmt(m, 1)} м` : n])], r.tech || "", (v) => {
+          r.tech = v;
+          touch();
+        }, false, "Техніка зони"))
+      );
+    })
+  );
+}
+function stepAddr(root) {
+  const box = h("div", { id: "wizAddr" });
+  root.append(h("div", { class: "small muted" }, "Шаблон адресації й напрямки нумерації; попередній перегляд кодів — нижче. Застосування — кнопкою «Застосувати» блоку."), box);
+  const p = registries.panels.get("site:addr", null);
+  if (p) {
+    p.render(box, { rec: null });
+  }
+  W.applied.addr = true;
+  W.reached = Math.max(W.reached, 4);
+}
+function stepChecks(root) {
+  const list = S.issues && S.issues.list || [];
+  const bl = list.filter((i) => i.level === "block");
+  root.append(
+    h("div", { class: "small", id: "wizIssues" }, bl.length ? `Помилок (заборона): ${bl.length}; попереджень: ${list.length - bl.length}. «Далі» закрито, доки помилки не усунуто.` : `Помилок немає; попереджень: ${list.length}.`),
+    h("div", { class: "b5-issues" }, list.slice(0, 15).map((i) => h("div", { class: "small " + (i.level === "block" ? "err" : "warn") }, i.msg)), list.length > 15 ? h("div", { class: "small muted" }, `…і ще ${list.length - 15}`) : null),
+    h("div", { class: "frow wrap" }, btn2("Перевірити", () => {
+      E.commit({});
+      rerender();
+    }, { id: "btnWizCheck" }), can("check") ? btn2("Перевірка на сервері", () => E.validateOnServer?.(), { id: "btnWizServer" }) : null)
+  );
+  W.applied.checks = true;
+  W.reached = Math.max(W.reached, 5);
+}
+function stepPlan(root) {
+  const n = { zones: W.created.zones.filter((id) => S.sIdx.has(id)).length, rows: W.created.rows.filter((id) => S.sIdx.has(id)).length, items: W.created.items.length };
+  const exportDlg = ["export", "exportFile", "tableExport"].find((k) => registries.dialogs.has(k));
+  root.append(
+    h("div", { class: "small", id: "wizSummary" }, `Створено майстром: зон ${n.zones}, рядів ${n.rows}, об'єктів будівлі ${n.items}. Кількість змін у чернетці: ${S.site.draft_changes ?? 0}.`),
+    h(
+      "div",
+      { class: "frow wrap" },
+      btn2("Застосувати в Odoo…", () => E.publish(), { cls: "primary", id: "btnWizPublish", dis: !can("publish"), title: can("publish") ? "План змін, журнал і відкат" : "Публікація недоступна в цьому режимі" }),
+      btn2("Файл для імпорту…", () => E.runDialog(exportDlg), { id: "btnWizExport", dis: !exportDlg, title: exportDlg ? "" : "Експорт файла для імпорту — разом з діалогами імпорту й експорту XLSX/CSV" })
+    ),
+    h("div", { class: "small muted" }, "«Застосувати в Odoo…» відкриває план змін із підтвердженням; без Odoo результат лишається в чернетці проєкту.")
+  );
+  W.applied.plan = true;
+  W.reached = Math.max(W.reached, 6);
+}
+var BODY2 = [stepBuilding, stepZones, stepRows, stepAddr, stepChecks, stepPlan];
+var APPLY = [applyBuilding, applyZones, applyRows];
+async function renderWizardTab(root) {
+  if (!S.site) {
+    return;
+  }
+  const w = current();
+  if (!w) {
+    root.append(
+      sec2("Майстер «З нуля»", h("div", { class: "small muted" }, "Будівля → Зони → Ряди → Адресація → Перевірки → План змін. Кожен крок — звичайні правки зі скасуванням (Ctrl+Z)."), h("div", { class: "frow wrap" }, btn2("Почати майстер", startWizard, { cls: "primary", id: "btnWizStart" }), btn2("Новий проєкт: з нуля…", () => E.runDialog("wizardNew"), { id: "btnWizNew", dis: !canManage() })))
+    );
+    return;
+  }
+  if (!lib3.loaded && !lib3.loading) {
+    loadLib().then(rerender);
+  }
+  const i = w.step;
+  const apply = APPLY[i];
+  const bl = i === 4 ? blockers() : [];
+  const last = i === STEPS.length - 1;
+  root.append(
+    sec2(
+      "Майстер «З нуля»",
+      h(
+        "div",
+        { class: "b5-wiz" },
+        h("div", { class: "b5-steps", id: "wizSteps" }, STEPS.map(([k, name], n) => h("button", { class: "b5-step fbtn sm" + (n === i ? " on" : n < w.reached ? " done" : ""), type: "button", "data-step": k, disabled: n > w.reached, onclick: () => go(n) }, `${n + 1}. ${name}`))),
+        h("div", { class: "frow" }, h("b", null, `Крок ${i + 1}: ${STEPS[i][1]}`), h("span", { class: "grow" }), btn2("×", closeWizard, { id: "btnWizClose", title: "Вийти (стан збережено; повернутися можна вкладкою «Майстер»)" })),
+        h("div", { class: "fcol", id: "wizBody" }),
+        h(
+          "div",
+          { class: "frow wrap", style: { marginTop: "8px" } },
+          btn2("← Назад", () => go(i - 1), { dis: i === 0, id: "btnWizBack" }),
+          apply ? btn2(w.applied[STEPS[i][0]] ? "Застосувати ще раз (замінити)" : "Застосувати", () => {
+            if (apply()) {
+              rerender();
+            }
+          }, { cls: "primary", id: "btnWizApply" }) : null,
+          last ? btn2("Завершити майстер", finishWizard, { id: "btnWizFinish", cls: "primary" }) : btn2("Далі →", () => go(i + 1), { id: "btnWizNext", dis: bl.length > 0, title: bl.length ? "Є помилки перевірок: усуньте їх" : "" })
+        )
+      )
+    )
+  );
+  BODY2[i]($("#wizBody", root) || root.querySelector("#wizBody"));
+}
+registries.panels.add("left:wizard", { area: "left", tab: "wizard", label: "Майстер", render: renderWizardTab }, { sequence: 16, force: true });
+function go(n) {
+  if (!W || n < 0 || n >= STEPS.length || n > W.reached) {
+    return;
+  }
+  W.step = n;
+  touch();
+  rerender();
+}
+function openWizard() {
+  if (!S.site) {
+    return;
+  }
+  E.setLeftTab?.("wizard");
+}
+function startWizard() {
+  W = defaultState();
+  S.site.wizard_state = clone(W);
+  persist();
+  openWizard();
+  rerender();
+}
+function closeWizard() {
+  E.setLeftTab?.("layers");
+}
+function finishWizard() {
+  W.done = true;
+  touch();
+  toast("Майстер завершено. Результат — у чернетці проєкту.");
+  E.setLeftTab?.("layers");
+}
+async function openNewProject() {
+  const a = E.adapter;
+  let warehouses = [];
+  try {
+    warehouses = typeof a.warehouses === "function" ? await a.warehouses() : [];
+  } catch {
+    warehouses = [];
+  }
+  const name = h("input", { type: "text", value: "Новий склад", id: "wizName", "aria-label": "Назва" });
+  const code = h("input", { type: "text", value: "", maxlength: 16, id: "wizCode", "aria-label": "Код", placeholder: "напр. MAIN" });
+  code.addEventListener("input", () => {
+    code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  });
+  const dim = (v, id, label2) => h("input", { type: "number", value: v, min: 5, step: 1, id, "aria-label": label2 });
+  const l = dim(60, "wizL", "Довжина");
+  const w = dim(30, "wizW", "Ширина");
+  const hh = dim(8, "wizH", "Висота");
+  const wh = warehouses.length ? selectEl([["", "— без прив'язки до складу Odoo —"], ...warehouses.map((x) => [x.id, `${x.name} (${x.code})`])], "", () => {
+  }, false, "Склад Odoo") : null;
+  const lab = (t2, el) => h("label", { class: "fld" }, h("span", null, t2), el);
+  openDialog({
+    title: "Новий проєкт: з нуля",
+    cls: "narrow",
+    body: h("div", { class: "fcol" }, lab("Назва", name), lab("Код (великі латинські літери й цифри, до 16)", code), h("div", { class: "grid3" }, lab("Довжина, м", l), lab("Ширина, м", w), lab("Висота, м", hh)), wh ? lab("Склад Odoo (склад не створюється)", wh) : null, h("div", { class: "small muted" }, a.kind === "odoo" ? "Площадка створюється порожньою; склад Odoo лише вибирається." : "Створюється заготовка проєкту з кодом; пов'язати зі складом Odoo можна пізніше.")),
+    actions: [
+      { label: "Скасувати" },
+      {
+        label: "Створити й почати",
+        cls: "primary",
+        id: "dlgWizNew",
+        onClick: async () => {
+          if (!name.value.trim() || !code.value) {
+            toast("Вкажіть назву й код площадки.", "warn");
+            return false;
+          }
+          const ok = await E.createSite({ name: name.value.trim(), code: code.value, building: { l: +l.value, w: +w.value, h: +hh.value } });
+          if (!ok) {
+            return false;
+          }
+          const sel = wh && wh.value ? Number(wh.value) : null;
+          if (sel && typeof a.saveSite === "function") {
+            await a.saveSite({ warehouse_id: sel }).catch((e) => toast("Склад не прив'язано: " + (e.message || e), "warn"));
+          }
+          startWizard();
+          return void 0;
+        }
+      }
+    ]
+  });
+}
+registries.dialogs.add("wizardNew", () => openNewProject(), { force: true });
+registries.menu.add("wizardNew", { area: "more", label: "Новий проєкт: з нуля…", icon: "plus", sequence: 18, run: () => E.runDialog("wizardNew"), disabled: () => !canManage() }, { sequence: 18, force: true });
+registries.menu.add("wizard", { area: "more", label: "Майстер «З нуля»", icon: "plan", sequence: 19, run: () => current() ? openWizard() : startWizard() }, { sequence: 19, force: true });
+E.lifecycle.mount.add(() => {
+  W = null;
+});
+Object.assign(E, { openWizard, startWizard, wizardState: () => current(), applyWizardStep: (n) => APPLY[n] && APPLY[n](), wizardGo: go });
+
+// core/constructor/docs_ui.js
+function scopeOptions() {
+  const sel = selRefs();
+  const out = [["all", "Весь склад"]];
+  if (sel.length) {
+    out.push(["selected", `Виділене (${sel.length})`]);
+  }
+  for (const { zone: zone2 } of zonesOf2()) {
+    out.push([`zone:${zone2.id}`, `Зона: ${zone2.params && zone2.params.title || zone2.code_prefix}`]);
+  }
+  return out;
+}
+var scopeLabel = (scope) => (scopeOptions().find(([v]) => v === scope) || scopeOptions()[0])[1];
+function inScope2(scope) {
+  const visible = (id) => {
+    const ly = layerOf(id);
+    return !!ly && ly.kind !== "engineering" && !V.hidden.has(id);
+  };
+  const zones = zonesOf2();
+  const inZone2 = (zone2, x, y) => {
+    const z = zones.find((c) => c.zone.id === zone2);
+    return !!z && polygonContains(z.poly, [x, y]);
+  };
+  let slots = S.slots.filter((s) => visible(s.layer_id));
+  let placements = S.placements.filter((p) => visible(p.layer_id));
+  if (scope && scope.startsWith("zone:")) {
+    const zid = scope.slice(5);
+    slots = slots.filter((s) => s.id === zid || inZone2(zid, s.x, s.y));
+    placements = placements.filter((p) => inZone2(zid, p.x, p.y));
+  } else if (scope === "selected") {
+    const keys = new Set(selRefs().map((r) => r.kind + ":" + r.id));
+    const zoneSel = selRefs().filter((r) => r.kind === "slot" && zones.some((c) => c.zone.id === r.id));
+    slots = slots.filter((s) => keys.has("slot:" + s.id) || zoneSel.some((z) => inZone2(z.id, s.x, s.y)));
+    placements = placements.filter((p) => keys.has("placement:" + p.id) || zoneSel.some((z) => inZone2(z.id, p.x, p.y)));
+  }
+  return { slots, placements };
+}
+function download3(name, mime, data, isB64 = false) {
+  const bin = isB64 ? Uint8Array.from(atob(data), (c) => c.charCodeAt(0)) : data;
+  const url = URL.createObjectURL(bin instanceof Blob ? bin : new Blob([bin], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function tableEl(t2, { max = 400 } = {}) {
+  const numeric = t2.columns.map((_, i) => t2.rows.length > 0 && t2.rows.every((r) => r[i] == null || typeof r[i] === "number"));
+  const cell = (v, i, tag) => h(tag, { class: numeric[i] ? "n" : null }, v == null ? "" : typeof v === "number" ? String(Math.round(v * 100) / 100) : String(v));
+  return h(
+    "table",
+    { class: "b5-t" },
+    h("thead", null, h("tr", null, t2.columns.map((c, i) => cell(c, i, "th")))),
+    h("tbody", null, t2.rows.slice(0, max).map((r) => h("tr", null, r.map((v, i) => cell(v, i, "td"))))),
+    t2.rows.length > max ? h("tfoot", null, h("tr", null, h("td", { colspan: t2.columns.length }, `…і ще ${t2.rows.length - max} рядків (у файлі — усі)`))) : null
+  );
+}
+function tableCsv(t2) {
+  const q = (v) => {
+    const s = v == null ? "" : typeof v === "number" ? String(Math.round(v * 1e4) / 1e4).replace(".", ",") : String(v);
+    return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return "\uFEFF" + [t2.columns, ...t2.rows].map((r) => r.map(q).join(";")).join("\r\n") + "\r\n";
+}
+async function svgToPng(svg, widthPx, ratio) {
+  const hh = Math.round(widthPx / ratio);
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("Не вдалося намалювати план."));
+  });
+  const cv = document.createElement("canvas");
+  cv.width = widthPx;
+  cv.height = hh;
+  const ctx2 = cv.getContext("2d");
+  ctx2.fillStyle = "#fff";
+  ctx2.fillRect(0, 0, widthPx, hh);
+  ctx2.drawImage(img, 0, 0, widthPx, hh);
+  return await new Promise((res) => cv.toBlob(res, "image/png"));
+}
+var slug = (s) => String(s || "plan").replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "plan";
+
+// core/constructor/spec.js
+var RACK_TEMPLATES = ["pallet_rack", "shelf", "cantilever"];
+var TEMPLATE_NAMES = { pallet_rack: "Палетний стелаж", shelf: "Полицевий стелаж", cantilever: "Консольний стелаж" };
+var LINE_ORDER = ["frame", "post", "beam", "console", "shelf", "brace", "tie"];
+var LINE_NAMES = { frame: "Рама", post: "Стійка", beam: "Балка", console: "Консоль", shelf: "Полиця (настил)", brace: "Зв'язки секції", tie: "Стяжка двостороннього ряду" };
+var MIN_TIE_M = 0.05;
+var PAIR_OVERLAP = 0.9;
+var PAIR_TOLERANCE_M = 1e-3;
+var COLUMNS = ["Позиція", "Типорозмір", "Од.", "К-сть", "Площа, м²"];
+var RACK_COLUMNS = ["Стелаж", "Зона", "Тип", "Позиція", "Типорозмір", "Од.", "К-сть", "Площа, м²"];
+var f22 = (v) => (Math.floor(v * 100 + 0.5) / 100).toFixed(2);
+var r4 = (v) => Math.round(v * 1e4) / 1e4;
+var line = (key, qty, size, w, d) => ({ key, name: LINE_NAMES[key], size, unit: "шт.", qty: Math.trunc(qty), area: w != null && d != null ? r4(qty * w * d) : null });
+var cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+function rackLines(template, params) {
+  if (!RACK_TEMPLATES.includes(template)) {
+    return null;
+  }
+  const p = normalizeParams(template, params || {});
+  const sides = p.double_sided ? 2 : 1;
+  const height = slotHeight({ template, params: p });
+  const gap = Math.max(p.gap_y || 0, MIN_TIE_M);
+  const lines = [];
+  let sections;
+  let levels;
+  if (template === "pallet_rack") {
+    sections = p.bays;
+    levels = p.levels;
+    const depth = p.depth * (p.deep ?? 1);
+    lines.push(line("frame", (sections + 1) * sides, `${f22(height)} × ${f22(depth)} м`));
+    lines.push(line("beam", sections * levels * 2 * sides, `${f22(p.bay_width)} м`));
+    lines.push(line("brace", 2 * sections * sides, `${f22(p.bay_width)} м`));
+  } else if (template === "shelf") {
+    sections = p.sections;
+    levels = p.shelves;
+    lines.push(line("post", (sections + 1) * 2 * sides, `${f22(height)} м`));
+    lines.push(line("shelf", sections * levels * sides, `${f22(p.cell_w)} × ${f22(p.cell_d)} м`, p.cell_w, p.cell_d));
+    lines.push(line("brace", sections * sides, `${f22(p.cell_w)} м`));
+  } else {
+    sections = p.arms;
+    levels = p.levels;
+    lines.push(line("post", (sections + 1) * sides, `${f22(height)} м`));
+    lines.push(line("console", (sections + 1) * levels * sides, `${f22(p.arm_length)} м`));
+    lines.push(line("brace", sections * sides, `${f22(p.length / sections)} м`));
+  }
+  if (sides === 2) {
+    lines.push(line("tie", sections + 1, `${f22(gap)} м`));
+  }
+  return { sides, sections, levels, height, lines };
+}
+function backToBack(a, b) {
+  const rel = ((a.rot - b.rot) % 180 + 180) % 180;
+  if (Math.min(rel, 180 - rel) > 1) {
+    return null;
+  }
+  const [dx, dy] = rotate(b.cx - a.cx, b.cy - a.cy, -a.rot);
+  const overlap2 = Math.min(a.a, dx + b.a) - Math.max(-a.a, dx - b.a);
+  if (overlap2 < PAIR_OVERLAP * 2 * Math.min(a.a, b.a)) {
+    return null;
+  }
+  const gap = Math.abs(dy) - (a.b + b.b);
+  return gap >= -PAIR_TOLERANCE_M && gap < SPACER_M ? gap : null;
+}
+function buildSpec(slots) {
+  const zones = zonesOf2(slots).map((c) => ({ title: c.zone.params && c.zone.params.title || c.zone.code_prefix || "", poly: c.poly, zone: c.zone }));
+  const zoneName = (x, y) => {
+    const chain = zoneChainAt(zones.map((z) => ({ zone: z, poly: z.poly })), x, y);
+    return chain.length ? chain[0].title : "";
+  };
+  const racks = [];
+  for (const slot of slots) {
+    const calc = rackLines(slot.template, slot.params);
+    if (!calc) {
+      continue;
+    }
+    const p = normalizeParams(slot.template, slot.params || {});
+    const fp = footprint(slot.template, p);
+    racks.push({
+      id: slot.id,
+      code: slot.code_prefix || "",
+      zone: zoneName(slot.x || 0, slot.y || 0),
+      template: slot.template,
+      type: TEMPLATE_NAMES[slot.template],
+      sides: calc.sides,
+      sections: calc.sections,
+      levels: calc.levels,
+      size: `${f22(fp.l)} × ${f22(fp.w)} × ${f22(calc.height)} м`,
+      lines: calc.lines,
+      _obb: slotObb(slot.template, p, slot.x || 0, slot.y || 0, slot.rotation || 0)
+    });
+  }
+  racks.sort((a, b) => cmp(a.code, b.code) || cmp(String(a.id), String(b.id)));
+  const pairs = [];
+  for (let i = 0; i < racks.length; i++) {
+    for (let j = i + 1; j < racks.length; j++) {
+      const ra = racks[i];
+      const rb = racks[j];
+      if (ra.template !== rb.template) {
+        continue;
+      }
+      const gap = backToBack(ra._obb, rb._obb);
+      if (gap === null) {
+        continue;
+      }
+      pairs.push({ codes: [ra.code, rb.code], zone: ra.zone, lines: [line("tie", Math.min(ra.sections, rb.sections) + 1, `${f22(Math.max(gap, MIN_TIE_M))} м`)] });
+    }
+  }
+  for (const r of racks) {
+    delete r._obb;
+  }
+  const totals = /* @__PURE__ */ new Map();
+  for (const rows of [...racks.map((r) => r.lines), ...pairs.map((p) => p.lines)]) {
+    for (const ln of rows) {
+      const key = ln.key + "\0" + ln.size;
+      const cur = totals.get(key) || { key: ln.key, name: ln.name, size: ln.size, unit: ln.unit, qty: 0, area: null };
+      cur.qty += ln.qty;
+      if (ln.area !== null) {
+        cur.area = r4((cur.area || 0) + ln.area);
+      }
+      totals.set(key, cur);
+    }
+  }
+  const ordered = [...totals.values()].sort((a, b) => LINE_ORDER.indexOf(a.key) - LINE_ORDER.indexOf(b.key) || cmp(a.size, b.size));
+  const types2 = /* @__PURE__ */ new Map();
+  for (const r of racks) {
+    const key = [r.template, r.size, r.sections, r.levels, r.sides].join("|");
+    const cur = types2.get(key) || { type: r.type, size: r.size, sections: r.sections, levels: r.levels, sides: r.sides, count: 0 };
+    cur.count++;
+    types2.set(key, cur);
+  }
+  const summary = { racks: racks.length, pairs: pairs.length };
+  for (const key of LINE_ORDER) {
+    summary[key] = ordered.filter((t2) => t2.key === key).reduce((a, t2) => a + t2.qty, 0);
+  }
+  summary.shelf_area = r4(ordered.filter((t2) => t2.key === "shelf").reduce((a, t2) => a + (t2.area || 0), 0));
+  return {
+    racks,
+    pairs,
+    totals: ordered,
+    types: [...types2.values()].sort((a, b) => cmp(a.type, b.type) || cmp(a.size, b.size) || a.sections - b.sections || a.levels - b.levels || a.sides - b.sides),
+    summary
+  };
+}
+function specTables(spec) {
+  const detail = [];
+  for (const r of spec.racks) {
+    for (const ln of r.lines) {
+      detail.push([r.code, r.zone, r.type, ln.name, ln.size, ln.unit, ln.qty, ln.area]);
+    }
+  }
+  for (const p of spec.pairs) {
+    for (const ln of p.lines) {
+      detail.push([p.codes.join(" + "), p.zone, "Пара «спина до спини»", ln.name, ln.size, ln.unit, ln.qty, ln.area]);
+    }
+  }
+  return [
+    { name: "Специфікація", columns: RACK_COLUMNS, rows: detail },
+    { name: "Підсумок", columns: COLUMNS, rows: spec.totals.map((t2) => [t2.name, t2.size, t2.unit, t2.qty, t2.area]) },
+    { name: "Типорозміри", columns: ["Тип", "Габарит (Д × Г × В)", "Секцій × ярусів", "Стелажів"], rows: spec.types.map((t2) => [t2.type, t2.size, `${t2.sections} × ${t2.levels}${t2.sides === 2 ? ", двосторонній" : ""}`, t2.count]) }
+  ];
+}
+var TABLE_VIEWS = [["Специфікація", "По стелажах"], ["Підсумок", "Підсумок за типорозмірами"], ["Типорозміри", "Типорозміри стелажів"]];
+async function openSpec(adapter, args = {}) {
+  const st4 = { scope: args.scope || (S.multi.length || S.sel ? "selected" : "all"), view: "Підсумок" };
+  if (!scopeOptions().some(([v]) => v === st4.scope)) {
+    st4.scope = "all";
+  }
+  const body = h("div", { class: "fcol b5-doc", id: "specBody" });
+  const model = () => {
+    const { slots } = inScope2(st4.scope);
+    const spec = buildSpec(st4.scope === "all" ? slots : [...slots, ...S.slots.filter((s) => s.template === "zone" && !slots.includes(s))]);
+    return { spec, tables: specTables(spec) };
+  };
+  const draw3 = () => {
+    const { spec, tables } = model();
+    const sm = spec.summary;
+    const t2 = tables.find((x) => x.name === st4.view) || tables[1];
+    body.replaceChildren(
+      h("div", { class: "grid2" }, fld("Область", selectEl(scopeOptions(), st4.scope, (v) => {
+        st4.scope = v;
+        draw3();
+      }, false, "Область")), fld("Таблиця", selectEl(TABLE_VIEWS, st4.view, (v) => {
+        st4.view = v;
+        draw3();
+      }, false, "Таблиця"))),
+      h("div", { class: "small", id: "specSummary" }, sm.racks ? `Стелажів: ${sm.racks} · рам ${sm.frame} · стійок ${sm.post} · балок ${sm.beam} · консолей ${sm.console} · полиць ${sm.shelf} (${f22(sm.shelf_area)} м²) · зв'язок ${sm.brace} · стяжок ${sm.tie}` : "У цій області немає стелажів (палетних, полицевих чи консольних)."),
+      h("div", { class: "b5-prev", id: "specTable" }, tableEl(t2))
+    );
+    const dis = !sm.racks;
+    for (const id of ["btnSpecCsv", "btnSpecXlsx", "btnSpecPdf"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.disabled = dis;
+      }
+    }
+  };
+  const title = () => `Специфікація стелажів — ${S.site.name} (${scopeLabel(st4.scope)})`;
+  const server = async (format) => {
+    try {
+      const { tables } = model();
+      const res = await adapter.render("spec_pdf", { format, title: title(), tables });
+      download3(res.filename || `spec.${format}`, res.mimetype, res.content, true);
+      toast(`${format.toUpperCase()} сформовано на сервері.`);
+    } catch (e) {
+      toast(e.message || "Не вдалося сформувати файл.", "err");
+    }
+    return false;
+  };
+  openDialog({
+    title: "Специфікація стелажів",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити" },
+      {
+        label: "CSV",
+        id: "btnSpecCsv",
+        onClick: () => {
+          const { tables } = model();
+          const t2 = tables.find((x) => x.name === st4.view) || tables[1];
+          download3(`spec_${slug(S.site.name)}_${slug(t2.name)}.csv`, "text/csv", tableCsv(t2));
+          toast("CSV збережено.");
+          return false;
+        }
+      },
+      { label: "XLSX", id: "btnSpecXlsx", onClick: () => server("xlsx") },
+      { label: "PDF", cls: "primary", id: "btnSpecPdf", onClick: () => server("pdf") }
+    ]
+  });
+  draw3();
+  if (!can("render")) {
+    for (const id of ["btnSpecXlsx", "btnSpecPdf"]) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.title = "XLSX і PDF формує сервер Odoo («на сервері»); у цьому режимі доступний CSV.";
+      }
+    }
+  }
+}
+registries.dialogs.add("spec", (a, { adapter }) => openSpec(adapter, a), { force: true });
+registries.menu.add("spec", { area: "more", label: "Специфікація стелажів…", icon: "tag", sequence: 33, run: () => E.runDialog("spec") }, { sequence: 33, force: true });
+Object.assign(E, { openSpec: (a) => E.runDialog("spec", a) });
+
+// core/constructor/plan_doc.js
+var PAGES = { A4: [210, 297], A3: [297, 420] };
+var SCALES = [50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1e3, 1500, 2e3, 3e3, 5e3];
+var PNG_WIDTHS = [1600, 2400, 3200, 4800, 6400];
+var MARGIN = 7;
+var INK = "#1f2933";
+var ITEM_FILL = { column: "#3a4652", wall: "#56606b", gate: "#7fb3e6", dock: "#6fcdbf", door: "#e0b36a", office: "#dfe6ec", charger: "#f0cf63" };
+var ITEM_LEGEND = { column: "Колона", wall: "Стіна", gate: "Ворота", dock: "Док", door: "Двері", office: "Офіс", charger: "Зарядка техніки" };
+var rnd3 = (v, d = 3) => Math.round(v * 10 ** d) / 10 ** d;
+var mix = (hex, t2 = 0.82) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) {
+    return "#e3e8ee";
+  }
+  const n = parseInt(m[1], 16);
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => Math.round(v + (255 - v) * t2));
+  return "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+};
+var niceLen = (maxM) => [1, 2, 5, 10, 20, 50, 100, 200].filter((v) => v <= maxM).pop() || 1;
+function pageSize(size = "A3", orientation = "landscape") {
+  const [a, b] = PAGES[size] || PAGES.A3;
+  return orientation === "portrait" ? { w: a, h: b } : { w: b, h: a };
+}
+function planModel(o = {}) {
+  const scope = o.scope || "all";
+  const show = { building: true, columns: true, aisles: true, rows: true, zones: true, dims: true, ...o.show || {} };
+  const page = pageSize(o.size, o.orientation);
+  const strip3 = page.h > 250 && page.w <= 210 ? 36 : 32;
+  const area = { x: MARGIN + 2, y: MARGIN + 2, w: page.w - 2 * (MARGIN + 2), h: page.h - 2 * (MARGIN + 2) - strip3 };
+  const { slots, placements } = inScope2(scope);
+  const bld = S.layers.find((l) => l.kind === "building");
+  const contour2 = contourOf(bld, S.site.building);
+  const items2 = bld && bld.items || [];
+  const aislesAll = S.layers.flatMap((l) => l.kind === "engineering" ? [] : l.aisles || []);
+  const racks = slots.filter((s) => s.template !== "zone").map((s) => ({ s, g: sGeom(s) }));
+  const machines = placements.map((p) => ({ p, v: variantOf(p.variant_id) })).filter((m) => m.v).map((m) => ({ ...m, g: pGeom(m.p, m.v) }));
+  const zones = zonesOf2(slots);
+  const bounds = [];
+  if (scope === "all") {
+    bounds.push(...contour2);
+    for (const it of items2) {
+      bounds.push(...obbCorners(itemObb(it)));
+    }
+  }
+  for (const r of racks) {
+    bounds.push(...r.g.poly);
+  }
+  for (const m of machines) {
+    bounds.push(...m.g.poly);
+  }
+  for (const z of zones) {
+    bounds.push(...z.poly);
+  }
+  if (!bounds.length) {
+    bounds.push(...contour2);
+  }
+  const xs = bounds.map((p) => p[0]);
+  const ys = bounds.map((p) => p[1]);
+  const wb = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+  const bw = Math.max(1, wb.x1 - wb.x0);
+  const bh = Math.max(1, wb.y1 - wb.y0);
+  const room = show.dims ? 16 : 4;
+  const fitK = Math.min((area.w - room) / bw, (area.h - room) / bh);
+  let N = o.scaleN || SCALES.find((n) => 1e3 / n <= fitK) || SCALES[SCALES.length - 1];
+  let k = 1e3 / N;
+  if (k > fitK) {
+    k = fitK;
+    N = Math.round(1e3 / k);
+  }
+  const ox = area.x + room + (area.w - room - bw * k) / 2;
+  const oy = area.y + (area.h - room - bh * k) / 2 + room * 0.5;
+  const X = (x) => rnd3(ox + (x - wb.x0) * k, 2);
+  const Y = (y) => rnd3(oy + (wb.y1 - y) * k, 2);
+  const P2 = (pts) => pts.map(([x, y]) => [X(x), Y(y)]);
+  const ops = [];
+  const legend = [];
+  const stats = { racks: racks.length, machines: machines.length, zones: zones.length, items: items2.length };
+  const rotText = (a) => {
+    let r = (a % 360 + 360) % 360;
+    if (r > 90 && r <= 270) {
+      r -= 180;
+    }
+    return r > 180 ? r - 360 : r;
+  };
+  ops.push({ t: "rect", x: MARGIN, y: MARGIN, w: page.w - 2 * MARGIN, h: page.h - 2 * MARGIN, fill: null, stroke: INK, lw: 0.4 });
+  ops.push({ t: "clipBegin", x: area.x, y: area.y, w: area.w, h: area.h });
+  if (show.zones) {
+    for (const { zone: zone2, poly: poly2 } of zones) {
+      const fn = ZONE_FUNCTIONS.find((f) => f.key === zone2.function_id);
+      const color = zone2.params && zone2.params.color || fn && fn.color || "#9fb7c9";
+      ops.push({ t: "poly", pts: P2(poly2), fill: mix(color), stroke: color, lw: 0.25, dash: [1.5, 1] });
+      const xsz = poly2.map((p) => p[0]);
+      const ysz = poly2.map((p) => p[1]);
+      ops.push({ t: "text", x: X(Math.min(...xsz)) + 1.2, y: Y(Math.max(...ysz)) + 3, s: zone2.params && zone2.params.title || zone2.code_prefix || "", size: 2.6, anchor: "start", color: INK });
+      if (o.legend === "functions") {
+        const key = fn ? fn.name : zone2.params && zone2.params.title || zone2.code_prefix;
+        if (!legend.some((l) => l.label === key)) {
+          legend.push({ type: "swatch", fill: mix(color), stroke: color, label: key });
+        }
+      }
+    }
+  }
+  if (show.building) {
+    ops.push({ t: "poly", pts: P2(contour2), fill: null, stroke: INK, lw: 0.6 });
+    legend.push({ type: "line", stroke: INK, lw: 0.6, label: "Контур будівлі" });
+  }
+  if (show.aisles) {
+    for (const a of aislesAll) {
+      ops.push({ t: "poly", pts: P2([[a.x0, a.y0], [a.x1, a.y0], [a.x1, a.y1], [a.x0, a.y1]]), fill: "#fff3c4", stroke: "#c9a227", lw: 0.2, dash: [1, 1] });
+    }
+    if (aislesAll.length) {
+      legend.push({ type: "swatch", fill: "#fff3c4", stroke: "#c9a227", label: "Прохід" });
+    }
+  }
+  if (show.building) {
+    const order = ["office", "wall", "gate", "dock", "door", "charger"];
+    for (const kind of order) {
+      for (const it of items2.filter((x) => x.kind === kind)) {
+        ops.push({ t: "poly", pts: P2(obbCorners(itemObb(it))), fill: ITEM_FILL[kind], stroke: INK, lw: 0.15 });
+        if (kind === "office" && it.name) {
+          ops.push({ t: "text", x: X(it.x), y: Y(it.y) + 1, s: it.name, size: 2.4, anchor: "middle", color: INK });
+        }
+      }
+      if (items2.some((x) => x.kind === kind)) {
+        legend.push({ type: "swatch", fill: ITEM_FILL[kind], stroke: INK, label: ITEM_LEGEND[kind] });
+      }
+    }
+  }
+  if (show.columns) {
+    for (const it of items2.filter((x) => x.kind === "column")) {
+      ops.push({ t: "poly", pts: P2(obbCorners(itemObb(it))), fill: ITEM_FILL.column, stroke: INK, lw: 0.15 });
+    }
+    if (items2.some((x) => x.kind === "column")) {
+      legend.push({ type: "swatch", fill: ITEM_FILL.column, stroke: INK, label: ITEM_LEGEND.column });
+    }
+  }
+  const metric = o.legend === "metric" && S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
+  if (show.rows) {
+    for (const { s, g: g3 } of racks) {
+      ops.push({ t: "poly", pts: P2(g3.poly), fill: "#ffffff", stroke: INK, lw: 0.25 });
+      if (metric) {
+        const lk = layerOf(s.layer_id);
+        for (const c of cellsOf(s)) {
+          if ((c.level || 1) !== 1) {
+            continue;
+          }
+          const col = metric.color(c, s, lk);
+          if (col) {
+            ops.push({ t: "poly", pts: P2(obbCorners({ cx: c.x, cy: c.y, a: c.l / 2, b: c.w / 2, rot: c.rot || 0 })), fill: col, stroke: null, lw: 0 });
+          }
+        }
+      }
+      const wmm = g3.L * k;
+      const hmm = g3.W * k;
+      const along = Math.max(wmm, hmm) >= Math.min(wmm, hmm) * 1.6;
+      const size = Math.max(1.4, Math.min(3, Math.min(wmm, hmm) * 0.5));
+      ops.push({ t: "text", x: X(g3.cx), y: Y(g3.cy) + size * 0.35, s: s.code_prefix || "", size, anchor: "middle", color: INK, rot: along ? rotText((g3.a || 0) + (hmm > wmm ? 90 : 0)) : 0 });
+    }
+    for (const { p, g: g3 } of machines) {
+      ops.push({ t: "poly", pts: P2(g3.poly), fill: "#d6e6f5", stroke: INK, lw: 0.2 });
+      ops.push({ t: "text", x: X(g3.cx), y: Y(g3.cy) + 0.9, s: p.code || "", size: 2.2, anchor: "middle", color: INK });
+    }
+    if (racks.length) {
+      legend.push({ type: "swatch", fill: "#ffffff", stroke: INK, label: "Ряд (стелаж)" });
+    }
+    if (machines.length) {
+      legend.push({ type: "swatch", fill: "#d6e6f5", stroke: INK, label: "Обладнання" });
+    }
+    if (o.legend === "metric") {
+      const rows2 = metric && E.legendOf ? E.legendOf(S.ui.metric) : [];
+      legend.push({ type: "text", label: metric ? `Показник: ${metric.label}` : "Показник не вибрано (теплова карта)" });
+      legend.push(...rows2.map((r) => ({ type: "swatch", fill: r.color, stroke: INK, label: `${r.label}` })));
+    }
+  }
+  ops.push({ t: "clipEnd" });
+  if (show.dims) {
+    const cb = scope === "all" ? (() => {
+      const a = contour2.map((p) => p[0]);
+      const b = contour2.map((p) => p[1]);
+      return { x0: Math.min(...a), y0: Math.min(...b), x1: Math.max(...a), y1: Math.max(...b) };
+    })() : wb;
+    const yy = Y(cb.y1) - 6;
+    const xx = X(cb.x0) - 6;
+    const tick = (x, y) => ({ t: "line", x1: x - 1, y1: y + 1, x2: x + 1, y2: y - 1, stroke: INK, lw: 0.25 });
+    ops.push({ t: "line", x1: X(cb.x0), y1: yy, x2: X(cb.x1), y2: yy, stroke: INK, lw: 0.2 }, tick(X(cb.x0), yy), tick(X(cb.x1), yy));
+    ops.push({ t: "text", x: (X(cb.x0) + X(cb.x1)) / 2, y: yy - 1.2, s: `${rnd3(cb.x1 - cb.x0, 2)} м`, size: 2.8, anchor: "middle", color: INK });
+    ops.push({ t: "line", x1: xx, y1: Y(cb.y0), x2: xx, y2: Y(cb.y1), stroke: INK, lw: 0.2 }, tick(xx, Y(cb.y0)), tick(xx, Y(cb.y1)));
+    ops.push({ t: "text", x: xx - 1.2, y: (Y(cb.y0) + Y(cb.y1)) / 2, s: `${rnd3(cb.y1 - cb.y0, 2)} м`, size: 2.8, anchor: "middle", color: INK, rot: 90 });
+  }
+  const sy = page.h - MARGIN - strip3;
+  ops.push({ t: "line", x1: MARGIN, y1: sy, x2: page.w - MARGIN, y2: sy, stroke: INK, lw: 0.3 });
+  const barM = niceLen(Math.min(50, page.w * 0.28 / k));
+  const seg = barM * k / 4;
+  for (let i = 0; i < 4; i++) {
+    ops.push({ t: "rect", x: rnd3(MARGIN + 4 + i * seg, 2), y: sy + 4, w: rnd3(seg, 2), h: 2.2, fill: i % 2 ? "#ffffff" : INK, stroke: INK, lw: 0.2 });
+  }
+  ops.push({ t: "text", x: MARGIN + 4, y: sy + 10, s: "0", size: 2.4, anchor: "middle", color: INK });
+  ops.push({ t: "text", x: rnd3(MARGIN + 4 + barM * k, 2), y: sy + 10, s: `${barM} м`, size: 2.4, anchor: "middle", color: INK });
+  ops.push({ t: "text", x: MARGIN + 4, y: sy + 15, s: `Масштаб 1:${N}`, size: 2.6, anchor: "start", color: INK });
+  const stampW = 92;
+  const legendX = MARGIN + 4 + Math.max(36, barM * k + 10);
+  const maxLeg = Math.max(2, Math.floor((strip3 - 6) / 4.2));
+  const entries = o.legend === "none" ? [] : legend.slice(0, maxLeg * 3);
+  const colW = (page.w - MARGIN - stampW - 4 - legendX) / 3;
+  entries.forEach((e, i) => {
+    const cx = legendX + Math.floor(i / maxLeg) * colW;
+    const cy = sy + 4 + i % maxLeg * 4.2;
+    if (e.type === "line") {
+      ops.push({ t: "line", x1: cx, y1: cy + 1.5, x2: cx + 6, y2: cy + 1.5, stroke: e.stroke, lw: e.lw || 0.3 });
+    } else if (e.type === "swatch") {
+      ops.push({ t: "rect", x: cx, y: cy, w: 6, h: 3, fill: e.fill, stroke: e.stroke, lw: 0.15 });
+    }
+    ops.push({ t: "text", x: e.type === "text" ? cx : cx + 8, y: cy + 2.5, s: e.label, size: 2.4, anchor: "start", color: INK });
+  });
+  const rows = [["Проєкт", S.site.name], ["Документ", `План складу · ${scopeLabel(scope)}`], ["Масштаб", `1:${N}`], ["Формат", `${o.size || "A3"}, ${o.orientation === "portrait" ? "книжкова" : "альбомна"}`], ["Дата", o.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)], ["Лист", "1/1"]];
+  const rh = (strip3 - 4) / rows.length;
+  const sx = page.w - MARGIN - stampW;
+  ops.push({ t: "rect", x: sx, y: sy + 2, w: stampW, h: strip3 - 4, fill: null, stroke: INK, lw: 0.3 });
+  rows.forEach(([a, b], i) => {
+    const y = sy + 2 + i * rh;
+    if (i) {
+      ops.push({ t: "line", x1: sx, y1: y, x2: sx + stampW, y2: y, stroke: INK, lw: 0.15 });
+    }
+    ops.push({ t: "text", x: sx + 1.5, y: y + rh * 0.7, s: a, size: 2.4, anchor: "start", color: "#52606d" });
+    ops.push({ t: "text", x: sx + 22, y: y + rh * 0.7, s: String(b).slice(0, 44), size: 2.6, anchor: "start", color: INK });
+  });
+  stats.area = rnd3(polygonArea(contour2), 1);
+  stats.perimeter = rnd3(polygonPerimeter(contour2), 1);
+  return { page, scale: N, k, ops, legend: entries, stats };
+}
+function opsToSvg(doc, { px = null } = {}) {
+  const { w, h: hh } = doc.page;
+  const esc3 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const attrs2 = (o) => `fill="${o.fill || "none"}" stroke="${o.stroke || "none"}" stroke-width="${o.lw || 0}"${o.dash ? ` stroke-dasharray="${o.dash.join(" ")}"` : ""}`;
+  let clipN = 0;
+  const out = [];
+  const open = [];
+  for (const o of doc.ops) {
+    if (o.t === "poly") {
+      out.push(`<polygon points="${o.pts.map((p) => p.join(",")).join(" ")}" ${attrs2(o)}/>`);
+    } else if (o.t === "rect") {
+      out.push(`<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" ${attrs2(o)}/>`);
+    } else if (o.t === "line") {
+      out.push(`<line x1="${o.x1}" y1="${o.y1}" x2="${o.x2}" y2="${o.y2}" stroke="${o.stroke}" stroke-width="${o.lw || 0.2}"${o.dash ? ` stroke-dasharray="${o.dash.join(" ")}"` : ""}/>`);
+    } else if (o.t === "text") {
+      const rot2 = o.rot ? ` transform="rotate(${-o.rot} ${o.x} ${o.y})"` : "";
+      out.push(`<text x="${o.x}" y="${o.y}" font-size="${o.size}" text-anchor="${o.anchor === "middle" ? "middle" : o.anchor === "end" ? "end" : "start"}" fill="${o.color || INK}" font-family="Arial, sans-serif"${rot2}>${esc3(o.s)}</text>`);
+    } else if (o.t === "clipBegin") {
+      clipN++;
+      out.push(`<clipPath id="c${clipN}"><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/></clipPath><g clip-path="url(#c${clipN})">`);
+      open.push(1);
+    } else if (o.t === "clipEnd" && open.pop()) {
+      out.push("</g>");
+    }
+  }
+  const size = px ? `width="${px}" height="${Math.round(px * hh / w)}"` : `width="${w}mm" height="${hh}mm"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${size} viewBox="0 0 ${w} ${hh}"><rect width="${w}" height="${hh}" fill="#fff"/>${out.join("")}</svg>`;
+}
+var planPdfPayload = (doc, title) => ({ title, page: doc.page, scale: doc.scale, ops: doc.ops });
+async function openPlan(adapter, args = {}) {
+  const st4 = { scope: args.scope || "all", size: "A3", orientation: "landscape", legend: "functions", png: 3200, show: { building: true, columns: true, aisles: true, rows: true, zones: true, dims: true } };
+  if (!scopeOptions().some(([v]) => v === st4.scope)) {
+    st4.scope = "all";
+  }
+  const body = h("div", { class: "fcol b5-doc", id: "planBody" });
+  const legends = [["functions", "Функції зон"], ["metric", "Показник (теплова карта)"], ["none", "Без легенди"]];
+  const draw3 = () => {
+    const doc = planModel(st4);
+    const toggles = [["building", "Будівля"], ["columns", "Колони"], ["aisles", "Проходи"], ["rows", "Ряди"], ["zones", "Зони"], ["dims", "Габарити"]];
+    body.replaceChildren(
+      h("div", { class: "grid3" }, fld("Область", selectEl(scopeOptions(), st4.scope, (v) => {
+        st4.scope = v;
+        draw3();
+      }, false, "Область")), fld("Формат", selectEl([["A4", "A4"], ["A3", "A3"]], st4.size, (v) => {
+        st4.size = v;
+        draw3();
+      }, false, "Формат")), fld("Орієнтація", selectEl([["landscape", "Альбомна"], ["portrait", "Книжкова"]], st4.orientation, (v) => {
+        st4.orientation = v;
+        draw3();
+      }, false, "Орієнтація"))),
+      h("div", { class: "grid2" }, fld("Легенда", selectEl(legends, st4.legend, (v) => {
+        st4.legend = v;
+        draw3();
+      }, false, "Легенда")), fld("PNG, px по ширині", selectEl(PNG_WIDTHS.map((v) => [v, String(v)]), st4.png, (v) => {
+        st4.png = Number(v);
+      }, false, "Ширина PNG"))),
+      h("div", { class: "frow wrap" }, toggles.map(([k, label2]) => h("label", { class: "frow" }, h("input", { type: "checkbox", checked: st4.show[k], "aria-label": label2, "data-show": k, onchange: (e) => {
+        st4.show[k] = e.target.checked;
+        draw3();
+      } }), " " + label2))),
+      h("div", { class: "small", id: "planInfo" }, `Масштаб 1:${doc.scale} · рядів ${doc.stats.racks} · обладнання ${doc.stats.machines} · зон ${doc.stats.zones} · площа будівлі ${doc.stats.area} м²`),
+      h("div", { class: "b5-prev", id: "planPrev", html: opsToSvg(doc) })
+    );
+  };
+  const title = () => `План складу — ${S.site.name} (${scopeLabel(st4.scope)})`;
+  openDialog({
+    title: "План складу",
+    cls: "wide",
+    body,
+    actions: [
+      { label: "Закрити" },
+      {
+        label: "SVG",
+        id: "btnPlanSvg",
+        onClick: () => {
+          download3(`plan_${slug(S.site.name)}.svg`, "image/svg+xml", opsToSvg(planModel(st4)));
+          toast("SVG збережено.");
+          return false;
+        }
+      },
+      {
+        label: "PNG",
+        id: "btnPlanPng",
+        onClick: async () => {
+          try {
+            const doc = planModel(st4);
+            const blob = await svgToPng(opsToSvg(doc, { px: st4.png }), st4.png, doc.page.w / doc.page.h);
+            download3(`plan_${slug(S.site.name)}_${st4.png}.png`, "image/png", blob);
+            toast(`PNG ${st4.png} px збережено.`);
+          } catch (e) {
+            toast(e.message || "Не вдалося створити PNG.", "err");
+          }
+          return false;
+        }
+      },
+      {
+        label: "PDF",
+        cls: "primary",
+        id: "btnPlanPdf",
+        onClick: async () => {
+          try {
+            const res = await adapter.render("plan_pdf", planPdfPayload(planModel(st4), title()));
+            download3(res.filename || "plan.pdf", res.mimetype || "application/pdf", res.content, true);
+            toast("PDF сформовано на сервері.");
+          } catch (e) {
+            toast(e.message || "Не вдалося сформувати PDF.", "err");
+          }
+          return false;
+        }
+      }
+    ]
+  });
+  draw3();
+  const pdf = document.getElementById("btnPlanPdf");
+  if (pdf && !can("render")) {
+    pdf.title = "PDF формує сервер Odoo («на сервері»); у цьому режимі доступні SVG і PNG.";
+  }
+}
+registries.dialogs.add("planDoc", (a, { adapter }) => openPlan(adapter, a), { force: true });
+registries.menu.add("planDoc", { area: "more", label: "План (PDF, PNG)…", icon: "plan", sequence: 34, run: () => E.runDialog("planDoc") }, { sequence: 34, force: true });
+Object.assign(E, { openPlanDoc: (a) => E.runDialog("planDoc", a) });
+
+// core/constructor/collab_ui.js
+var STYLE_ID4 = "f3d-s6-style";
+var CSS4 = `
+.s6-layer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.s6-badge{position:absolute;left:0;top:0;pointer-events:auto;cursor:pointer;min-width:22px;height:22px;padding:0 6px;border-radius:11px;border:2px solid var(--surface);color:#fff;font:600 12px/18px var(--sans,system-ui);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-100%)}
+.s6-badge[data-tone="note"]{background:#2563eb}
+.s6-badge[data-tone="task"]{background:#ea8a1a}
+.s6-badge[data-tone="done"]{background:#8b8b8b}
+.s6-badge:hover,.s6-badge:focus-visible{outline:2px solid var(--ink);z-index:3}
+.s6-lockb{position:absolute;left:0;top:0;pointer-events:auto;padding:1px 7px;border-radius:3px;border:1px solid var(--surface);color:#fff;font:600 11px/17px var(--sans,system-ui);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%)}
+.s6-lockb[data-mine="1"]{background:#15803d}
+.s6-lockb[data-mine="0"]{background:#b91c1c}
+.s6-panel{display:flex;flex-direction:column;gap:6px}
+.s6-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.s6-row.sp{justify-content:space-between}
+.s6-item{border:1px solid var(--line2,var(--line));background:var(--surface);padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.s6-item[data-active="1"]{border-color:var(--accent);background:var(--accent-soft)}
+.s6-item.res{opacity:.7}
+.s6-tag{display:inline-block;border:1px solid var(--line);padding:0 5px;font-size:11px;color:var(--ink2);background:var(--surface2,var(--surface))}
+.s6-tag.ok{border-color:var(--accent);color:var(--accent)}
+.s6-tag.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.s6-muted{color:var(--ink2);font-size:12px}
+.s6-text{white-space:pre-wrap;word-break:break-word;font-size:13px}
+.s6-cmp{width:100%;border-collapse:collapse;font-size:12px}
+.s6-cmp th,.s6-cmp td{border-bottom:1px solid var(--line2,var(--line));padding:3px 5px;text-align:right}
+.s6-cmp th:first-child,.s6-cmp td:first-child{text-align:left}
+.s6-cmp .pos{color:#15803d}.s6-cmp .neg{color:#b91c1c}
+#ltabs{flex-wrap:wrap}
+.s6-dock{flex:none;max-height:46%;overflow:auto;border-top:1px solid var(--line);padding:8px 12px 10px;background:var(--surface)}
+.s6-dock[hidden]{display:none}
+.s6-train{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:4;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px);box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.s6-train[hidden]{display:none}
+.s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
+.s6-crumbs[hidden]{display:none}
+.s6-crumbs,.s6-pick{pointer-events:none}
+.s6-crumbs button,.s6-pick select,.s6-pick button,.s6-pick label{pointer-events:auto}
+.s6-crumbs button{border:0;background:transparent;padding:2px 5px;cursor:pointer;color:var(--ink);font:inherit}
+.s6-crumbs button:hover{background:var(--accent-soft)}
+.s6-crumbs button[aria-current="true"]{font-weight:700}
+.s6-crumbs .sep{color:var(--ink2)}
+.s6-pick{position:absolute;left:8px;top:76px;z-index:3;display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);padding:2px 6px;font-size:12px}
+.s6-pick select{min-height:24px;font-size:12px}
+.s6-mini{position:absolute;right:8px;top:44px;z-index:3;border:1px solid var(--ink);background:var(--surface);padding:2px}
+.s6-mini canvas{display:block;cursor:crosshair}
+.s6-mini[hidden]{display:none}
+.s6-tour-dim{position:absolute;inset:0;z-index:50;pointer-events:auto;background:transparent}
+.s6-tour-hole{position:fixed;z-index:51;border:2px solid var(--accent);border-radius:3px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:all .15s}
+.s6-tour-card{position:fixed;z-index:52;width:min(340px,calc(100% - 16px));background:var(--surface);color:var(--ink);border:1px solid var(--ink);box-shadow:0 8px 28px rgba(0,0,0,.4);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.s6-tour-card h3{margin:0;font-size:14px}
+.s6-tour-card .body{font-size:13px;line-height:1.45}
+.s6-tour-card .kind{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.s6-help{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;min-height:320px;max-height:60vh}
+.s6-help nav{overflow:auto;border:1px solid var(--line2,var(--line));display:flex;flex-direction:column}
+.s6-help nav button{border:0;border-bottom:1px solid var(--line2,var(--line));background:var(--surface);text-align:left;padding:6px 8px;cursor:pointer;font-size:12px;color:var(--ink)}
+.s6-help nav button[aria-current="true"]{background:var(--accent-soft);font-weight:700}
+.s6-help article{overflow:auto;font-size:13px;line-height:1.5;padding-right:4px}
+.s6-plan{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.s6-plan svg{width:100%;height:auto;border:1px solid var(--line);background:var(--surface)}
+@media (max-width:768px){.s6-help{grid-template-columns:1fr}.s6-crumbs{top:6px;max-width:calc(100% - 12px)}.s6-pick,.s6-mini,.s6-train{display:none}}
+`;
+function ensureStyle4() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID4)) {
+    return;
+  }
+  const st4 = document.createElement("style");
+  st4.id = STYLE_ID4;
+  st4.textContent = CSS4;
+  root.prepend(st4);
+}
+var centerEl = () => ROOT.el?.querySelector(".center") || null;
+function layerEl(id, tag = "div") {
+  const c = centerEl();
+  if (!c) {
+    return null;
+  }
+  let el = c.querySelector("#" + id);
+  if (!el) {
+    el = document.createElement(tag);
+    el.id = id;
+    el.className = "s6-layer";
+    c.append(el);
+  }
+  return el;
+}
+function project(x, y, z = 0) {
+  const host2 = ROOT.el?.querySelector("#vp");
+  if (!V.ok || !V.camera || !host2 || !THREE.Vector3) {
+    return { x: 0, y: 0, ok: false };
+  }
+  const w = host2.clientWidth;
+  const hh = host2.clientHeight;
+  const p = new THREE.Vector3(x, z, -y).project(V.camera);
+  const sx = (p.x * 0.5 + 0.5) * w;
+  const sy = (-p.y * 0.5 + 0.5) * hh;
+  return { x: sx, y: sy, ok: p.z > -1 && p.z < 1 && sx > -20 && sx < w + 20 && sy > -20 && sy < hh + 20 };
+}
+var hooks = /* @__PURE__ */ new Map();
+function addFrameHook(key, fn, { pre = false } = {}) {
+  hooks.set(key, { fn, pre });
+  installRenderHook();
+}
+function installRenderHook() {
+  const r = V.renderer;
+  if (!r || r.__s6) {
+    return;
+  }
+  const orig = r.render.bind(r);
+  const run2 = (pre) => {
+    for (const [key, hook] of hooks) {
+      if (hook.pre === pre) {
+        try {
+          hook.fn();
+        } catch (e) {
+          console.error(`S6 кадр «${key}»:`, e);
+        }
+      }
+    }
+  };
+  r.render = function renderS6(scene, camera) {
+    run2(true);
+    orig(scene, camera);
+    run2(false);
+  };
+  r.__s6 = true;
+}
+var redrawOverlays = () => E.requestRender?.();
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  installRenderHook();
+  redrawOverlays();
+});
+E.lifecycle.unmount.add(() => hooks.clear());
+
+// core/constructor/i18n.js
+var LANGS = { uk: "Українська", en: "English" };
+var KEY = "f3d_constructor_lang";
+var EN = /* @__PURE__ */ new Map();
+var PATTERNS = [];
+var lang = null;
+var subs = /* @__PURE__ */ new Set();
+var lsGet3 = (k) => {
+  try {
+    return globalThis.localStorage ? globalThis.localStorage.getItem(k) : null;
+  } catch {
+    return null;
+  }
+};
+var lsSet3 = (k, v) => {
+  try {
+    globalThis.localStorage?.setItem(k, v);
+  } catch {
+  }
+};
+function detectLang() {
+  const saved2 = lsGet3(KEY);
+  if (saved2 === "uk" || saved2 === "en") {
+    return saved2;
+  }
+  return String(host.lang || "").toLowerCase().startsWith("en") ? "en" : "uk";
+}
+var getLang = () => lang ||= detectLang();
+function addEn(map) {
+  for (const [uk, en] of Object.entries(map)) {
+    EN.set(uk, en);
+  }
+}
+function addPattern(re, fn) {
+  PATTERNS.push([re, fn]);
+}
+var fill = (s, p) => p ? String(s).replace(/\{(\w+)\}/g, (m, k) => p[k] == null ? m : p[k]) : String(s);
+function t(key, params) {
+  return fill(getLang() === "en" && EN.has(key) ? EN.get(key) : key, params);
+}
+function enOf(text) {
+  if (EN.has(text)) {
+    return EN.get(text);
+  }
+  for (const [re, fn] of PATTERNS) {
+    const m = re.exec(text);
+    if (m) {
+      return fn(...m.slice(1));
+    }
+  }
+  return null;
+}
+function setLang(next, { persist: persist2 = true } = {}) {
+  if (!LANGS[next] || next === getLang()) {
+    return;
+  }
+  lang = next;
+  if (persist2) {
+    lsSet3(KEY, next);
+  }
+  if (ROOT.el) {
+    ROOT.el.lang = next;
+  }
+  for (const fn of subs) {
+    fn(next);
+  }
+  if (ROOT.el) {
+    E.renderAll?.();
+    translateTree(ROOT.el);
+  }
+}
+var onLang = (fn) => (subs.add(fn), () => subs.delete(fn));
+var ATTRS = ["title", "placeholder", "aria-label", "alt"];
+var SKIP = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
+var OBS = { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS };
+var texts = /* @__PURE__ */ new Map();
+var attrs = /* @__PURE__ */ new Map();
+var observer = null;
+var pending = false;
+function translateText(node) {
+  const rec = texts.get(node);
+  if (rec && node.data === rec.shown) {
+    return;
+  }
+  texts.delete(node);
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(node.data);
+  const en = m[2] ? enOf(m[2]) : null;
+  if (en != null) {
+    const shown = m[1] + en + m[3];
+    texts.set(node, { orig: node.data, shown });
+    node.data = shown;
+  }
+}
+function translateAttrs(el) {
+  let map = attrs.get(el);
+  for (const a of ATTRS) {
+    if (!el.hasAttribute(a)) {
+      continue;
+    }
+    const cur = el.getAttribute(a);
+    const rec = map && map.get(a);
+    if (rec && cur === rec.shown) {
+      continue;
+    }
+    map?.delete(a);
+    const en = cur ? enOf(cur.trim()) : null;
+    if (en != null) {
+      if (!map) {
+        map = /* @__PURE__ */ new Map();
+        attrs.set(el, map);
+      }
+      map.set(a, { orig: cur, shown: en });
+      el.setAttribute(a, en);
+    }
+  }
+}
+function translateTree(rootEl) {
+  if (!rootEl || typeof document === "undefined") {
+    return;
+  }
+  if (getLang() !== "en") {
+    restore2();
+    return;
+  }
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  for (let n = walker.currentNode; n; n = walker.nextNode()) {
+    if (n.nodeType === 3) {
+      if (!SKIP.has(n.parentNode?.tagName)) {
+        translateText(n);
+      }
+    } else {
+      translateAttrs(n);
+    }
+  }
+}
+function restore2() {
+  for (const [node, rec] of texts) {
+    if (node.data === rec.shown) {
+      node.data = rec.orig;
+    }
+  }
+  texts.clear();
+  for (const [el, map] of attrs) {
+    for (const [a, rec] of map) {
+      if (el.getAttribute(a) === rec.shown) {
+        el.setAttribute(a, rec.orig);
+      }
+    }
+  }
+  attrs.clear();
+}
+function startObserver() {
+  if (observer || typeof MutationObserver === "undefined" || !ROOT.el) {
+    return;
+  }
+  observer = new MutationObserver(() => {
+    if (pending || getLang() !== "en") {
+      return;
+    }
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      if (!observer) {
+        return;
+      }
+      observer.disconnect();
+      translateTree(ROOT.el);
+      if (ROOT.el) {
+        observer.observe(ROOT.el, OBS);
+      }
+    });
+  });
+  observer.observe(ROOT.el, OBS);
+}
+E.lifecycle.mount.add(() => {
+  if (ROOT.el) {
+    ROOT.el.lang = getLang();
+  }
+  startObserver();
+  translateTree(ROOT.el);
+});
+E.lifecycle.unmount.add(() => {
+  observer?.disconnect();
+  observer = null;
+  texts.clear();
+  attrs.clear();
+  pending = false;
+});
+registries.menu.add(
+  "lang",
+  {
+    area: "top",
+    get label() {
+      return getLang() === "uk" ? "EN" : "UK";
+    },
+    cls: "s6-lang",
+    run: () => setLang(getLang() === "uk" ? "en" : "uk")
+  },
+  { sequence: 95, force: true }
+);
+addEn({
+  // шапка й вкладки
+  "Конструктор": "Constructor",
+  "Площадка": "Site",
+  "Нова площадка": "New site",
+  "Роль": "Role",
+  "Режим": "Mode",
+  "Ваша роль": "Your role",
+  "Перегляд": "View",
+  "Редагування": "Edit",
+  "Проєктування": "Design",
+  "Застосування": "Apply",
+  "Менеджер (своя роль)": "Manager (own role)",
+  "Опублікувати": "Publish",
+  "Історія версій": "Version history",
+  "Історія": "History",
+  "версій": "versions",
+  "Тема": "Theme",
+  "Шари": "Layers",
+  "Місця": "Places",
+  "Каталог": "Catalog",
+  "Об’єкт": "Object",
+  "Ліва панель": "Left panel",
+  "Властивості": "Properties",
+  "3D-сцена": "3D scene",
+  "Пошук": "Search",
+  "Лоток": "Tray",
+  "Типи": "Types",
+  "Збережено": "Saved",
+  "Зберігаємо…": "Saving…",
+  "Помилка збереження": "Save error",
+  "Чернетка · без змін": "Draft · no changes",
+  "Ще ▾": "More ▾",
+  "Зберегти все": "Save all",
+  "Застосувати": "Apply",
+  // сцена
+  "План": "Plan",
+  "Вписати": "Fit",
+  "Лінійка": "Ruler",
+  "Підписи": "Labels",
+  "Показник": "Metric",
+  "електрика": "electricity",
+  "повітря": "air",
+  "аспірація": "aspiration",
+  "прохід": "aisle",
+  "пожежна зона": "fire zone",
+  "попередження": "warning",
+  "заборона": "forbidden",
+  "Будівля": "Building",
+  "Шар": "Layer",
+  "Відмітка": "Elevation",
+  "Сітка": "Grid",
+  "Курсор": "Cursor",
+  // меню «Ще» й загальні кнопки
+  "Імпорт локацій…": "Import locations…",
+  "Експорт локацій…": "Export locations…",
+  "Авторозкладка площадки": "Auto-layout of the site",
+  "Бібліотека": "Library",
+  "Етикетки…": "Labels…",
+  "Масове створення…": "Bulk create…",
+  "Масив копій…": "Array of copies…",
+  "Категорії зберігання": "Storage categories",
+  "Правила розміщення": "Putaway rules",
+  "Журнал публікацій": "Publication log",
+  "Розбір кодів…": "Parse codes…",
+  "Оновити з Odoo": "Update from Odoo",
+  "Скинути до даних Odoo": "Reset to Odoo data",
+  "Гарячі клавіші": "Hotkeys",
+  "Закрити": "Close",
+  "Скасувати": "Cancel",
+  "Створити": "Create",
+  "Зберегти": "Save",
+  "Видалити": "Delete",
+  "Так": "Yes",
+  "Ні": "No",
+  "Назва": "Name",
+  "Код": "Code",
+  "Опис": "Description",
+  "Усе": "All",
+  "Пізніше": "Later",
+  "Додати": "Add",
+  "Перейменувати": "Rename",
+  "Копіювати": "Copy",
+  "Вставити": "Paste",
+  "Повернути": "Restore",
+  "Відкрити в Odoo": "Open in Odoo",
+  // діалоги ядра
+  "Назва площадки": "Site name",
+  "Повернути чернетку": "Restore draft",
+  "активна": "active",
+  "без нотатки": "no note",
+  "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
+  "Перевірка на сервері": "Server check",
+  "усе гаразд": "all good",
+  "Запис змінив інший користувач": "Another user changed the record",
+  "Взяти серверне": "Take the server version",
+  "Залишити моє": "Keep mine",
+  "Видалити об’єкт?": "Delete the object?",
+  "Видалити шар?": "Delete the layer?",
+  // права панель
+  "Картка місця": "Place card",
+  "Місць": "Places",
+  "Макс. навантаження": "Max load",
+  "Категорія": "Category",
+  "Етикетка…": "Label…",
+  "Залишки": "Stock",
+  "Правила": "Rules",
+  "Перевірки": "Checks",
+  "Довжина": "Length",
+  "Ширина": "Width",
+  "Висота": "Height",
+  "Крок колон X": "Column step X",
+  "Крок колон Y": "Column step Y",
+  "Адресація кодів": "Code addressing",
+  "Поворот": "Rotation",
+  "Рівень доступу": "Access level",
+  "Оновити дані": "Refresh data",
+  "Перейти до місця": "Go to a place",
+  "Де лежить": "Where is it",
+  "Не розміщено": "Not placed",
+  "Імпорт": "Import",
+  "Експорт": "Export",
+  "Імпорт структури": "Import structure"
+});
+addPattern(/^Чернетка · змінено (\d+)$/, (n) => `Draft · ${n} changed`);
+addPattern(/^Чернетка · (\d+)$/, (n) => `Draft · ${n}`);
+addPattern(/^Виділено: (\d+)\.?$/, (n) => `Selected: ${n}`);
+addPattern(/^Активна версія: (.+)$/, (v) => `Active version: ${v}`);
+addPattern(/^Шар «(.+)» редагує (.+)$/, (a, b) => `Layer “${a}” is edited by ${b}`);
+addPattern(/^Створено місце «(.+)»: (\d+) комірок\.$/, (p, n) => `Created place “${p}”: ${n} cells.`);
+addPattern(/^Режим перегляду: правка вимкнена\. Увімкніть «Редагування»\.$/, () => "View mode: editing is off. Turn on “Edit”.");
+Object.assign(E, { t, setLang, getLang, onLang });
+
+// core/constructor/versions_ui.js
+var hasVersions = () => !!E.adapter && typeof E.adapter.versions === "function";
+var KIND = { publish: "публікація", checkpoint: "контрольна точка" };
+async function loadList() {
+  if (hasVersions()) {
+    try {
+      return (await E.adapter.versions({ op: "list" })).versions;
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  return [...S.versions].sort((a, b) => b.n - a.n).map((v) => ({ ...v, kind: v.kind || "publish", is_active: !!S.site.active_version && v.n === S.site.active_version.n, has_snapshot: false }));
+}
+var NS = "http://www.w3.org/2000/svg";
+var svgEl = (tag, attrs2, ...kids) => {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs2 || {})) {
+    el.setAttribute(k, v);
+  }
+  el.append(...kids);
+  return el;
+};
+var polyPts = (pts) => pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+function planSvg(view2) {
+  const b = view2.site && view2.site.building || { length: 100, width: 60 };
+  const L3 = b.length || 100;
+  const W3 = b.width || 60;
+  const layer = new Map(view2.layers.map((l) => [l.id, l]));
+  const g3 = svgEl("g", { transform: `translate(0 ${W3}) scale(1 -1)`, "stroke-linejoin": "round" });
+  g3.append(svgEl("rect", { x: 0, y: 0, width: L3, height: W3, fill: "none", stroke: "currentColor", "stroke-width": Math.max(L3, W3) / 400 }));
+  const stroke = Math.max(L3, W3) / 900;
+  for (const s of view2.slots) {
+    const ly = layer.get(s.layer_id);
+    if (!ly || ly.visible === false || ly.kind === "building") {
+      continue;
+    }
+    let pts = null;
+    if (s.template === "zone" && s.params && s.params.polygon) {
+      pts = s.params.polygon;
+    } else {
+      try {
+        pts = obbCorners(slotObb(s.template, s.params || {}, s.x, s.y, s.rotation || 0));
+      } catch {
+        pts = null;
+      }
+    }
+    if (pts) {
+      const zone2 = s.template === "zone";
+      g3.append(svgEl("polygon", { points: polyPts(pts), fill: ly.color || "#888", "fill-opacity": zone2 ? 0.08 : 0.55, stroke: ly.color || "#888", "stroke-width": stroke }));
+    }
+  }
+  for (const p of view2.placements) {
+    const ly = layer.get(p.layer_id);
+    const v = variantOf(p.variant_id);
+    if (!ly || ly.visible === false || !v) {
+      continue;
+    }
+    try {
+      g3.append(svgEl("polygon", { points: polyPts(obbCorners(placementObb(v, p.x, p.y, p.rotation || 0))), fill: ly.color || "#557", "fill-opacity": 0.8, stroke: "currentColor", "stroke-width": stroke }));
+    } catch {
+    }
+  }
+  return svgEl("svg", { viewBox: `-2 -2 ${L3 + 4} ${W3 + 4}`, role: "img", "aria-label": t("Схема площадки") }, g3);
+}
+var currentView = () => ({ site: { building: S.site.building }, layers: S.layers, slots: S.slots, placements: S.placements });
+function metricsOf(view2) {
+  return E.variantMetrics ? E.variantMetrics(view2.slots, view2.slots) : null;
+}
+async function openView(v) {
+  let res;
+  try {
+    res = await E.adapter.versions({ op: "view", version_id: v.id });
+  } catch (e) {
+    toast(e.message || String(e), "err");
+    return;
+  }
+  const was = res.view;
+  const now = currentView();
+  const a = metricsOf(was);
+  const b = metricsOf(now);
+  const rows = [
+    ["cells", "Місць (комірок)", 0],
+    ["places", "Палетомісць", 0],
+    ["area", "Площа підлоги, м²", 1],
+    ["volume", "Об’єм місць, м³", 1],
+    ["max_weight", "Ємність, кг", 0]
+  ];
+  const cell = (x, d) => x == null ? "—" : d ? fmt(x, d) : fmtInt(x);
+  openDialog({
+    title: t("Версія v{n}: перегляд", { n: v.n }),
+    cls: "wide",
+    body: h(
+      "div",
+      { class: "s6-panel", id: "s6VerView" },
+      h("div", { class: "s6-muted" }, t("Лише читання: чернетка не змінюється. Ліворуч — версія, праворуч — поточна чернетка.")),
+      h("div", { class: "s6-plan" }, h("div", null, h("b", null, `v${v.n}`), planSvg(was)), h("div", null, h("b", null, t("Чернетка")), planSvg(now))),
+      h(
+        "table",
+        { class: "s6-cmp" },
+        h("thead", null, h("tr", null, h("th", null, t("Показник")), h("th", null, `v${v.n}`), h("th", null, t("Чернетка")), h("th", null, "Δ"))),
+        h(
+          "tbody",
+          null,
+          rows.map(
+            ([k, label2, d]) => h("tr", { "data-key": k }, h("td", null, t(label2)), h("td", null, cell(a && a[k], d)), h("td", null, cell(b && b[k], d)), h("td", null, a && b ? (b[k] - a[k] > 0 ? "+" : "") + cell(b[k] - a[k], d) : "—"))
+          )
+        )
+      )
+    ),
+    actions: [{ label: t("Закрити") }]
+  });
+}
+function askNote({ title, value = "", ok = t("Зберегти") }) {
+  return new Promise((res) => {
+    const input = h("input", { type: "text", value, maxlength: 200, id: "s6VerNote", "aria-label": t("Нотатка") });
+    let out = null;
+    openDialog({
+      title,
+      cls: "narrow",
+      body: h("label", { class: "fld" }, h("span", null, t("Нотатка")), input),
+      actions: [{ label: t("Скасувати") }, { label: ok, cls: "primary", id: "s6VerNoteOk", onClick: () => {
+        out = input.value.trim();
+      } }],
+      onClose: () => res(out)
+    });
+    input.focus();
+  });
+}
+async function openHistory2() {
+  ensureStyle4();
+  const body = h("div", { class: "s6-panel", id: "s6History" });
+  const dlg = openDialog({ title: t("Історія версій"), cls: "narrow", body, actions: [{ label: t("Закрити") }] });
+  const manager = canManage();
+  const design2 = E.access ? E.access().design : true;
+  const render2 = async () => {
+    const list = await loadList();
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "s6-muted" }, t("Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.")),
+        hasVersions() ? h("div", { class: "s6-row" }, h("button", { class: "fbtn sm", type: "button", id: "s6VerCheckpoint", disabled: !design2, title: design2 ? "" : E.accessHint?.("design") || "", onclick: onCheckpoint }, t("Зберегти контрольну точку…")), h("span", { class: "s6-muted" }, t("Зберігається останніх {n} точок.", { n: 50 }))) : null,
+        list.length ? list.map(
+          (v) => h(
+            "div",
+            { class: "ver", "data-version": v.id, "data-kind": v.kind },
+            h("div", { class: "vn" }, "v" + v.n),
+            h(
+              "div",
+              { class: "vi s6-panel" },
+              h("div", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null),
+              h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
+              h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
+              v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+              h(
+                "div",
+                { class: "s6-row" },
+                h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити")),
+                hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
+                hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null
+              )
+            )
+          )
+        ) : h("div", { class: "empty" }, t("Версій ще немає. Натисніть «Опублікувати»."))
+      )
+    );
+  };
+  async function onCheckpoint() {
+    const note = await askNote({ title: t("Контрольна точка"), ok: t("Зберегти") });
+    if (note == null) {
+      return;
+    }
+    try {
+      await E.flushNow?.();
+      await E.adapter.versions({ op: "checkpoint", note });
+      toast(t("Контрольну точку збережено."));
+      await render2();
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  async function onNote(v) {
+    const note = await askNote({ title: t("Нотатка до v{n}", { n: v.n }), value: v.note || "" });
+    if (note == null) {
+      return;
+    }
+    try {
+      await E.adapter.versions({ op: "note", version_id: v.id, note });
+      await render2();
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  async function onRestore(v) {
+    const ok = await confirmBox({ title: t("Повернути чернетку до v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Повернути"), danger: true });
+    if (!ok) {
+      return;
+    }
+    try {
+      await E.flushNow?.();
+      if (hasVersions()) {
+        await E.adapter.versions({ op: "checkpoint", note: t("Автокопія перед відновленням v{n}", { n: v.n }) });
+      }
+    } catch (e) {
+      toast(t("Не вдалося зберегти автокопію: {m}", { m: e.message || String(e) }), "err");
+      return;
+    }
+    await E.restoreVersion(v.id, v.n);
+    dlg.close2("");
+  }
+  await render2();
+}
+E.openHistory = openHistory2;
+registries.dialogs.add("history", () => openHistory2(), { force: true });
+addEn({
+  "Історія версій": "Version history",
+  "Схема площадки": "Site plan",
+  "Версія v{n}: перегляд": "Version v{n}: view",
+  "Чернетка": "Draft",
+  "Лише читання: чернетка не змінюється. Ліворуч — версія, праворуч — поточна чернетка.": "Read-only: the draft is not changed. Left — the version, right — the current draft.",
+  "Показник": "Metric",
+  "Місць (комірок)": "Places (cells)",
+  "Палетомісць": "Pallet places",
+  "Площа підлоги, м²": "Floor area, m²",
+  "Об’єм місць, м³": "Places volume, m³",
+  "Ємність, кг": "Capacity, kg",
+  "Закрити": "Close",
+  "Нотатка": "Note",
+  "Зберегти": "Save",
+  "Скасувати": "Cancel",
+  "публікація": "publication",
+  "контрольна точка": "checkpoint",
+  "активна": "active",
+  "без нотатки": "no note",
+  "шарів": "layers",
+  "місць": "places",
+  "комірок": "cells",
+  "обл.": "equip.",
+  "Переглянути": "View",
+  "Відновити": "Restore",
+  "Зберегти контрольну точку…": "Save a checkpoint…",
+  "Контрольна точка": "Checkpoint",
+  "Зберігається останніх {n} точок.": "The last {n} checkpoints are kept.",
+  "Контрольну точку збережено.": "Checkpoint saved.",
+  "Нотатка до v{n}": "Note for v{n}",
+  "Нотатку змінює менеджер у режимі редагування": "The note is changed by a manager in edit mode",
+  "Повертає Менеджер у режимі редагування": "Restored by a Manager in edit mode",
+  "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
+  "Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.": "Restoring changes the draft; Odoo records stay as they are until you publish a new version. Before restoring, the current draft is saved as a separate checkpoint.",
+  "Повернути чернетку до v{n}?": "Return the draft to v{n}?",
+  "Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою.": "The current draft will be replaced by the version snapshot; it is saved as a checkpoint first.",
+  "Автокопія перед відновленням v{n}": "Auto-copy before restoring v{n}",
+  "Не вдалося зберегти автокопію: {m}": "Could not save the auto-copy: {m}"
+});
+
+// core/constructor/variants.js
+var METRIC_ROWS = [
+  { key: "cells", label: "Місць (комірок)", digits: 0 },
+  { key: "places", label: "Палетомісць", digits: 0 },
+  { key: "area", label: "Площа підлоги, м²", digits: 1 },
+  { key: "volume", label: "Об’єм місць, м³", digits: 1 },
+  { key: "max_weight", label: "Ємність, кг", digits: 0 },
+  { key: "ops", label: "Операцій плану", digits: 0 }
+];
+function variantMetrics(slots = S.slots, all = S.slots) {
+  const sum = capacitySummary(slots, { categories: lib3.categories || [], allSlots: all });
+  return { cells: sum.cells, places: sum.places, area: sum.area, volume: sum.volume, max_weight: sum.maxWeight };
+}
+function compareMetrics(a, b) {
+  return METRIC_ROWS.map(({ key, label: label2, digits }) => {
+    const x = a && typeof a[key] === "number" ? a[key] : null;
+    const y = b && typeof b[key] === "number" ? b[key] : null;
+    return { key, label: label2, digits, a: x, b: y, diff: x != null && y != null ? Math.round((y - x) * 1e3) / 1e3 : null };
+  });
+}
+var st = () => S.variants ||= { list: [], active_id: null, training_id: null, max: 12, can_edit: false, loaded: false, cmp: [null, null] };
+var activeVariant = () => st().list.find((v) => v.id === st().active_id) || null;
+var trainingVariant = () => st().list.find((v) => v.is_training) || null;
+var busy2 = false;
+function pack(res) {
+  const s = st();
+  s.list = res.variants || [];
+  s.active_id = res.active_id;
+  s.training_id = res.training_id || null;
+  s.max = res.max || 12;
+  s.can_edit = !!res.can_edit;
+  s.loaded = true;
+  return s;
+}
+function liveList() {
+  const s = st();
+  const live = variantMetrics();
+  return s.list.map((v) => v.id === s.active_id ? { ...v, metrics: { ...live, ops: S.site ? S.site.draft_changes || 0 : v.metrics.ops } } : v);
+}
+async function refreshVariants({ render: render2 = true, quiet = false } = {}) {
+  if (!can("variants") || !E.adapter || !S.site) {
+    return null;
+  }
+  try {
+    pack(await E.adapter.variants({ op: "list" }));
+  } catch (e) {
+    if (quiet) {
+      console.warn("variants:", e);
+    } else {
+      toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+    }
+    return null;
+  }
+  if (render2) {
+    renderVariantsUi();
+  }
+  return st();
+}
+var errText = (e) => e?.message || String(e);
+async function call2(req, { reload: reload2 = false } = {}) {
+  if (busy2) {
+    return null;
+  }
+  busy2 = true;
+  try {
+    const saved2 = await E.flushNow?.();
+    if (saved2 && saved2.ok === false) {
+      toast(t("Не вдалося зберегти зміни: перехід не виконано."), "err");
+      return null;
+    }
+    const res = await E.adapter.variants({ ...req, metrics: variantMetrics() });
+    pack(res);
+    if (res.reload || reload2) {
+      E.undoReset?.();
+      await E.reload();
+    }
+    renderVariantsUi();
+    E.renderAll?.();
+    return res;
+  } catch (e) {
+    toast(errText(e), "err");
+    await refreshVariants();
+    return null;
+  } finally {
+    busy2 = false;
+  }
+}
+var createVariant = async (name, { training = false, activate = true } = {}) => {
+  const res = await call2({ op: "create", name, training, activate });
+  if (res) {
+    toast(training ? t("Створено навчальну копію.") : t("Створено варіант «{name}».", { name }));
+  }
+  return res;
+};
+async function activateVariant(id) {
+  const v = st().list.find((x) => x.id === id);
+  const res = await call2({ op: "activate", id });
+  if (res && v) {
+    toast(t("Активний варіант: «{name}». Ваша чернетка збережена в попередньому.", { name: v.name }));
+  }
+  return res;
+}
+var renameVariant = (id, name) => call2({ op: "rename", id, name });
+var deleteVariant = (id) => call2({ op: "delete", id });
+async function endTraining(keep) {
+  const v = trainingVariant();
+  if (!v) {
+    return null;
+  }
+  const res = await call2({ op: "end_training", id: v.id, keep: !!keep });
+  if (res) {
+    toast(keep ? t("Зміни навчальної копії залишено як звичайний варіант.") : t("Навчальну копію скасовано: чернетка повернулась до попереднього варіанта."));
+  }
+  return res;
+}
+function askName({ title, value = "", ok = t("Зберегти") }) {
+  return new Promise((res) => {
+    const input = h("input", { type: "text", value, maxlength: 60, id: "s6VarName", "aria-label": t("Назва варіанта") });
+    let out = null;
+    const dlg = openDialog({
+      title,
+      cls: "narrow",
+      body: h("label", { class: "fld" }, h("span", null, t("Назва")), input),
+      actions: [
+        { label: t("Скасувати") },
+        {
+          label: ok,
+          cls: "primary",
+          id: "s6VarOk",
+          onClick: () => {
+            if (!input.value.trim()) {
+              toast(t("Вкажіть назву варіанта."), "warn");
+              return false;
+            }
+            out = input.value.trim();
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => res(out)
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        $("#s6VarOk", dlg)?.click();
+      }
+    });
+    input.focus();
+    input.select();
+  });
+}
+var nextName2 = () => {
+  const names = new Set(st().list.map((v) => v.name.toLowerCase()));
+  for (let i = 0; i < 26; i++) {
+    const n = t("Проєкт {n}", { n: String.fromCharCode(65 + i) });
+    if (!names.has(n.toLowerCase())) {
+      return n;
+    }
+  }
+  return t("Проєкт {n}", { n: st().list.length + 1 });
+};
+async function onCreate() {
+  const name = await askName({ title: t("Створити варіант з поточного"), value: nextName2(), ok: t("Створити") });
+  if (name) {
+    await createVariant(name);
+  }
+}
+async function onRename(v) {
+  const name = await askName({ title: t("Перейменувати варіант"), value: v.name });
+  if (name && name !== v.name) {
+    await renameVariant(v.id, name);
+  }
+}
+async function onDelete(v) {
+  const ok = await confirmBox({ title: t("Видалити варіант «{name}»?", { name: v.name }), text: t("Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються."), ok: t("Видалити"), danger: true });
+  if (ok) {
+    await deleteVariant(v.id);
+  }
+}
+var fmtMetric = (v, digits) => v == null ? "—" : digits ? fmt(v, digits) : fmtInt(v);
+function compareBlock(list) {
+  const s = st();
+  const others = list.filter((v) => v.id !== s.active_id);
+  if (list.length < 2) {
+    return h("div", { class: "s6-muted" }, t("Для порівняння потрібні щонайменше два варіанти."));
+  }
+  let [ia, ib] = s.cmp;
+  ia = list.some((v) => v.id === ia) ? ia : s.active_id;
+  ib = list.some((v) => v.id === ib && v.id !== ia) ? ib : (others[0] || list.find((v) => v.id !== ia)).id;
+  s.cmp = [ia, ib];
+  const sel = (cur, which) => h(
+    "select",
+    { "aria-label": which ? t("Варіант B") : t("Варіант A"), "data-cmp": which ? "b" : "a", onchange: (e) => {
+      s.cmp[which] = Number(e.target.value);
+      renderTab2();
+    } },
+    list.map((v) => h("option", { value: v.id, selected: v.id === cur }, v.name + (v.id === s.active_id ? " ●" : "")))
+  );
+  const va = list.find((v) => v.id === ia);
+  const vb = list.find((v) => v.id === ib);
+  const rows = compareMetrics(va.metrics, vb.metrics);
+  return h(
+    "div",
+    { class: "s6-panel", id: "s6VarCmp" },
+    h("div", { class: "s6-row" }, sel(ia, 0), h("span", null, "→"), sel(ib, 1)),
+    h(
+      "table",
+      { class: "s6-cmp" },
+      h("thead", null, h("tr", null, h("th", null, t("Показник")), h("th", null, va.name), h("th", null, vb.name), h("th", null, "Δ"))),
+      h(
+        "tbody",
+        null,
+        rows.map(
+          (r) => h(
+            "tr",
+            { "data-key": r.key },
+            h("td", null, t(r.label)),
+            h("td", null, fmtMetric(r.a, r.digits)),
+            h("td", null, fmtMetric(r.b, r.digits)),
+            h("td", { class: r.diff ? r.diff > 0 ? "pos" : "neg" : "" }, r.diff == null ? "—" : (r.diff > 0 ? "+" : "") + fmtMetric(r.diff, r.digits))
+          )
+        )
+      )
+    ),
+    h("div", { class: "s6-muted" }, t("Цифри неактивного варіанта — на момент, коли з нього перейшли; операції плану — відносно діючої версії."))
+  );
+}
+function renderTab2(root) {
+  root = root || $("#leftBody");
+  if (!root || S.ui.leftTab !== "variants") {
+    return;
+  }
+  root.replaceChildren();
+  const s = st();
+  if (!can("variants")) {
+    root.append(h("div", { class: "sec" }, h("div", { class: "empty" }, t("Варіанти недоступні в цьому режимі."))));
+    return;
+  }
+  const list = liveList();
+  const design2 = E.access?.().design !== false;
+  const canEdit = s.can_edit && design2;
+  const hint = !s.can_edit ? t("Варіантами керує менеджер конструктора.") : !design2 ? E.accessHint?.("design") || "" : "";
+  const real = list.filter((v) => !v.is_training);
+  const items2 = list.map(
+    (v) => h(
+      "div",
+      { class: "s6-item", "data-id": v.id, "data-active": v.id === s.active_id ? "1" : "0" },
+      h(
+        "div",
+        { class: "s6-row sp" },
+        h("b", null, v.name),
+        h("span", { class: "s6-row" }, v.id === s.active_id ? h("span", { class: "s6-tag ok" }, t("активний")) : null, v.is_training ? h("span", { class: "s6-tag warn" }, t("навчальна копія")) : null)
+      ),
+      h("div", { class: "s6-muted" }, [`${t("Місць")}: ${fmtMetric(v.metrics.cells, 0)}`, `${t("палетомісць")}: ${fmtMetric(v.metrics.places, 0)}`, v.at ? fmtDate(v.at) : ""].filter(Boolean).join(" · ")),
+      h(
+        "div",
+        { class: "s6-row" },
+        h("button", { class: "fbtn sm", type: "button", "data-act": "activate", disabled: !canEdit || v.id === s.active_id, title: hint, onclick: () => activateVariant(v.id) }, t("Зробити активним")),
+        h("button", { class: "fbtn sm", type: "button", "data-act": "rename", disabled: !canEdit, title: hint, onclick: () => onRename(v) }, t("Перейменувати")),
+        h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: !canEdit || v.id === s.active_id || !v.is_training && real.length <= 1, title: v.id === s.active_id ? t("Активний варіант видалити не можна") : hint, onclick: () => onDelete(v) }, t("Видалити"))
+      )
+    )
+  );
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "s6Variants" },
+        h("h3", null, t("Варіанти планування"), h("button", { class: "fbtn sm", type: "button", id: "s6VarCreate", disabled: !canEdit || real.length >= s.max, title: hint || (real.length >= s.max ? t("Не більше {n} варіантів", { n: s.max }) : ""), onclick: onCreate }, t("Створити з поточного"))),
+        h("div", { class: "s6-muted" }, t("{n} з {max}. У застосуванні й публікації бере участь лише активний варіант; чернетка кожного зберігається при переході.", { n: real.length, max: s.max })),
+        hint ? h("div", { class: "note lock", style: { margin: "6px 0" } }, hint) : null,
+        h("div", { class: "s6-panel", id: "s6VarList" }, items2)
+      ),
+      h("div", { class: "sec" }, h("h3", null, t("Порівняння двох варіантів")), compareBlock(list))
+    )
+  );
+}
+registries.panels.add("left:variants", { area: "left", tab: "variants", label: "Варіанти", render: (root) => (refreshVariants({ render: false }).then(() => renderTab2(root)), renderTab2(root)) }, { sequence: 45, force: true });
+registries.menu.add(
+  "variants",
+  {
+    area: "top",
+    capability: "variants",
+    get label() {
+      const v = activeVariant();
+      return v ? `${t("Варіант")}: ${v.name}` : t("Варіанти");
+    },
+    run: () => E.setLeftTab("variants")
+  },
+  { sequence: 12, force: true }
+);
+function renderTrainBar() {
+  const c = centerEl();
+  if (!c) {
+    return;
+  }
+  let bar = c.querySelector("#s6Train");
+  const v = trainingVariant();
+  const on = !!v && v.id === st().active_id && can("variants");
+  if (!bar) {
+    bar = h("div", { class: "s6-train", id: "s6Train", hidden: true });
+    c.append(bar);
+  }
+  bar.hidden = !on;
+  if (!on) {
+    bar.replaceChildren();
+    return;
+  }
+  bar.replaceChildren(
+    h("b", null, t("Навчальна копія")),
+    h("span", null, t("Зміни не потрапляють у робочий варіант.")),
+    h("button", { class: "fbtn sm primary", type: "button", id: "s6TrainKeep", onclick: () => endTraining(true) }, t("Залишити зміни")),
+    h("button", { class: "fbtn sm", type: "button", id: "s6TrainCancel", onclick: () => endTraining(false) }, t("Скасувати"))
+  );
+}
+var inTraining = () => !!trainingVariant() && trainingVariant().id === st().active_id && can("variants");
+function lockPublish() {
+  const pub = $("#btnPublish");
+  if (pub && inTraining() && !pub.disabled) {
+    pub.disabled = true;
+    pub.title = t("Навчальна копія не публікується в Odoo");
+  }
+}
+var pubWatch = null;
+function watchPublish() {
+  const pub = $("#btnPublish");
+  pubWatch?.disconnect();
+  if (pub && typeof MutationObserver !== "undefined") {
+    pubWatch = new MutationObserver(lockPublish);
+    pubWatch.observe(pub, { attributes: true, attributeFilter: ["disabled"] });
+  }
+}
+function renderVariantsUi() {
+  renderTab2();
+  renderTrainBar();
+  E.renderMenu?.();
+  lockPublish();
+}
+async function offerCleanup() {
+  const v = trainingVariant();
+  if (!v || S.ui.tourRunning) {
+    return;
+  }
+  const clean = await confirmBox({ title: t("Знайдено навчальну копію"), text: t("Попередній тур не завершено. Прибрати навчальну копію й повернутися до робочого варіанта?"), ok: t("Прибрати"), cancel: t("Залишити") });
+  if (clean) {
+    await endTraining(false);
+  }
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  watchPublish();
+  refreshVariants({ quiet: true }).then(offerCleanup);
+});
+E.lifecycle.unmount.add(() => {
+  pubWatch?.disconnect();
+  pubWatch = null;
+});
+Object.assign(E, { variantMetrics, refreshVariants, createVariant, activateVariant, endTraining, renderVariantsUi });
+addEn({
+  "Варіанти": "Variants",
+  "Варіант": "Variant",
+  "Варіанти планування": "Layout variants",
+  "Створити з поточного": "Create from current",
+  "Створити варіант з поточного": "Create a variant from the current one",
+  "Перейменувати варіант": "Rename the variant",
+  "Назва варіанта": "Variant name",
+  "Зробити активним": "Make active",
+  "активний": "active",
+  "навчальна копія": "training copy",
+  "Навчальна копія": "Training copy",
+  "Проєкт {n}": "Project {n}",
+  "Порівняння двох варіантів": "Compare two variants",
+  "Варіант A": "Variant A",
+  "Варіант B": "Variant B",
+  "Показник": "Metric",
+  "Місць (комірок)": "Places (cells)",
+  "Палетомісць": "Pallet places",
+  "палетомісць": "pallet places",
+  "Площа підлоги, м²": "Floor area, m²",
+  "Об’єм місць, м³": "Places volume, m³",
+  "Ємність, кг": "Capacity, kg",
+  "Операцій плану": "Plan operations",
+  "Місць": "Places",
+  "Видалити": "Delete",
+  "Скасувати": "Cancel",
+  "Створити": "Create",
+  "Зберегти": "Save",
+  "Назва": "Name",
+  "Створено навчальну копію.": "Training copy created.",
+  "Створено варіант «{name}».": "Variant “{name}” created.",
+  "Активний варіант: «{name}». Ваша чернетка збережена в попередньому.": "Active variant: “{name}”. Your draft is kept in the previous one.",
+  "Зміни навчальної копії залишено як звичайний варіант.": "The training copy changes were kept as a regular variant.",
+  "Навчальну копію скасовано: чернетка повернулась до попереднього варіанта.": "Training copy cancelled: the draft is back to the previous variant.",
+  "Вкажіть назву варіанта.": "Enter a variant name.",
+  "Не вдалося зберегти зміни: перехід не виконано.": "Could not save the changes: the switch was not made.",
+  "Не вдалося завантажити варіанти.": "Could not load the variants.",
+  "Видалити варіант «{name}»?": "Delete the variant “{name}”?",
+  "Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються.": "The variant snapshot will be deleted for good. The active variant and Odoo are not changed.",
+  "Варіантами керує менеджер конструктора.": "Variants are managed by the constructor manager.",
+  "Активний варіант видалити не можна": "The active variant cannot be deleted",
+  "Не більше {n} варіантів": "No more than {n} variants",
+  "{n} з {max}. У застосуванні й публікації бере участь лише активний варіант; чернетка кожного зберігається при переході.": "{n} of {max}. Only the active variant takes part in apply and publish; each draft is saved when you switch.",
+  "Для порівняння потрібні щонайменше два варіанти.": "Comparison needs at least two variants.",
+  "Цифри неактивного варіанта — на момент, коли з нього перейшли; операції плану — відносно діючої версії.": "Figures of an inactive variant are as of the moment you left it; plan operations are relative to the active version.",
+  "Варіанти недоступні в цьому режимі.": "Variants are not available in this mode.",
+  "Зміни не потрапляють у робочий варіант.": "Changes do not reach the working variant.",
+  "Залишити зміни": "Keep changes",
+  "Навчальна копія не публікується в Odoo": "The training copy is not published to Odoo",
+  "Знайдено навчальну копію": "A training copy was found",
+  "Попередній тур не завершено. Прибрати навчальну копію й повернутися до робочого варіанта?": "The previous tour was not finished. Remove the training copy and return to the working variant?",
+  "Прибрати": "Remove",
+  "Залишити": "Keep"
+});
+
+// core/constructor/comments.js
+var POLL_MS = 15e3;
+var KINDS2 = { note: "Коментар", task: "Задача" };
+var TARGET_NAMES = { site: "Площадка", layer: "Шар", slot: "Місце", cell: "Комірка", placement: "Розміщення", item: "Об’єкт будівлі" };
+var keyOf = (kind, uid2) => `${kind}:${uid2}`;
+function toneOf(list) {
+  if (list.some((c) => c.kind === "task" && c.state === "open")) {
+    return "task";
+  }
+  return list.some((c) => c.state === "open") ? "note" : "done";
+}
+function groupByTarget(list) {
+  const m = /* @__PURE__ */ new Map();
+  for (const c of list) {
+    const k = keyOf(c.target_kind, c.target_uid);
+    if (!m.has(k)) {
+      m.set(k, []);
+    }
+    m.get(k).push(c);
+  }
+  return m;
+}
+function filterComments(list, f = {}, target = null) {
+  const q = String(f.q || "").trim().toLowerCase();
+  return list.filter((c) => {
+    if (f.state && f.state !== "all" && c.state !== f.state) {
+      return false;
+    }
+    if (f.kind && f.kind !== "all" && c.kind !== f.kind) {
+      return false;
+    }
+    if (f.only && target && !(c.target_kind === target.kind && c.target_uid === target.uid)) {
+      return false;
+    }
+    return !q || [c.text, c.target_label, c.author].some((x) => String(x || "").toLowerCase().includes(q));
+  });
+}
+function targetOfSelection() {
+  const rec = S.sel && recOfRef(S.sel);
+  if (rec && S.sel.kind === "placement") {
+    return { kind: "placement", uid: rec.id, label: rec.code || rec.name || rec.id };
+  }
+  if (rec) {
+    if (S.selCell) {
+      return { kind: "cell", uid: S.selCell, label: S.selCell };
+    }
+    return { kind: "slot", uid: rec.id, label: rec.params && rec.params.title || rec.code_prefix || rec.id };
+  }
+  return { kind: "site", uid: S.site ? String(S.site.id) : "", label: S.site ? S.site.name : "" };
+}
+var st2 = () => S.comments ||= { list: [], at: null, loaded: false, users: [], me: null, filter: { state: "open", kind: "all", q: "", only: false }, timer: 0 };
+function setList(res) {
+  const s = st2();
+  s.list = res.comments || [];
+  s.at = res.at || null;
+  s.loaded = true;
+  drawBadges();
+  renderBlocks();
+}
+async function refreshComments() {
+  if (!can("comments") || !E.adapter || !S.site) {
+    return;
+  }
+  try {
+    setList(await E.adapter.comments({ op: "list" }));
+  } catch (e) {
+    console.warn("comments:", e);
+  }
+}
+async function loadUsers() {
+  const s = st2();
+  if (s.users.length || !can("comments")) {
+    return;
+  }
+  try {
+    const res = await E.adapter.comments({ op: "assignees" });
+    s.users = res.users || [];
+    s.me = res.me;
+  } catch {
+  }
+}
+async function op(req, okMsg) {
+  try {
+    const res = await E.adapter.comments(req);
+    setList(res);
+    if (okMsg) {
+      toast(okMsg);
+    }
+    return res;
+  } catch (e) {
+    toast(e.message || String(e), "err");
+    await refreshComments();
+    return null;
+  }
+}
+var addComment = (target, { text, kind = "note", assignee_id = null }) => op({ op: "create", vals: { target_kind: target.kind, target_uid: target.uid, target_label: target.label, text, kind, assignee_id } }, kind === "task" ? t("Задачу додано.") : t("Коментар додано."));
+var resolveComment = (id, resolved = true) => op({ op: "resolve", id, resolved });
+var removeComment = (id) => op({ op: "delete", id });
+var fmtWhen = (c) => `${c.author || ""} · ${c.at ? fmtDate(c.at) : ""}`;
+function commentItem(c) {
+  return h(
+    "div",
+    { class: "s6-item" + (c.state === "resolved" ? " res" : ""), "data-id": c.id, "data-kind": c.kind, "data-state": c.state },
+    h("div", { class: "s6-row sp" }, h("span", { class: "s6-muted" }, fmtWhen(c)), h("span", { class: "s6-row" }, h("span", { class: "s6-tag" + (c.kind === "task" ? " warn" : "") }, t(KINDS2[c.kind])), c.state === "resolved" ? h("span", { class: "s6-tag ok" }, t("вирішено")) : null)),
+    h("div", { class: "s6-text" }, c.text),
+    c.assignee ? h("div", { class: "s6-muted" }, `${t("Виконавець")}: ${c.assignee}`) : null,
+    c.state === "resolved" && c.resolved_by ? h("div", { class: "s6-muted" }, `${t("Вирішив")}: ${c.resolved_by}${c.resolved_at ? ", " + fmtDate(c.resolved_at) : ""}`) : null,
+    h(
+      "div",
+      { class: "s6-row" },
+      c.can_resolve ? h("button", { class: "fbtn sm", type: "button", "data-act": "resolve", onclick: () => resolveComment(c.id, c.state !== "resolved") }, c.state === "resolved" ? t("Відкрити знову") : t("Вирішено")) : null,
+      c.can_delete ? h(
+        "button",
+        {
+          class: "fbtn sm",
+          type: "button",
+          "data-act": "delete",
+          onclick: async () => {
+            if (await confirmBox({ title: t("Видалити коментар?"), text: c.text.slice(0, 120), ok: t("Видалити"), danger: true })) {
+              removeComment(c.id);
+            }
+          }
+        },
+        t("Видалити")
+      ) : null
+    )
+  );
+}
+function threadNode(target, { onChange } = {}) {
+  const s = st2();
+  const list = s.list.filter((c) => c.target_kind === target.kind && c.target_uid === target.uid).sort((a, b) => a.state === b.state ? b.id - a.id : a.state === "open" ? -1 : 1);
+  const text = h("textarea", { rows: 3, maxlength: 4e3, placeholder: t("Нотатка або задача «перевірити на місці»"), "aria-label": t("Текст коментаря"), id: "s6CmText" });
+  const kind = h("select", { "aria-label": t("Вид"), id: "s6CmKind" }, h("option", { value: "note" }, t("Коментар")), h("option", { value: "task" }, t("Задача")));
+  const who = h("select", { "aria-label": t("Виконавець"), id: "s6CmWho", hidden: true }, h("option", { value: "" }, t("— без виконавця —")), s.users.map((u) => h("option", { value: u.id }, u.name)));
+  kind.addEventListener("change", () => {
+    who.hidden = kind.value !== "task" || !s.users.length;
+  });
+  const add = h(
+    "button",
+    {
+      class: "fbtn sm primary",
+      type: "button",
+      id: "s6CmAdd",
+      onclick: async () => {
+        const body = text.value.trim();
+        if (!body) {
+          toast(t("Введіть текст коментаря."), "warn");
+          return;
+        }
+        add.disabled = true;
+        const res = await addComment(target, { text: body, kind: kind.value, assignee_id: who.value ? Number(who.value) : null });
+        add.disabled = false;
+        if (res) {
+          text.value = "";
+          onChange?.();
+        }
+      }
+    },
+    t("Додати")
+  );
+  return h(
+    "div",
+    { class: "s6-panel", "data-target": keyOf(target.kind, target.uid) },
+    list.length ? list.map(commentItem) : h("div", { class: "s6-muted" }, t("Коментарів ще немає.")),
+    h("div", { class: "s6-panel" }, text, h("div", { class: "s6-row" }, kind, who, add))
+  );
+}
+function keepForm(box, draw3) {
+  const old = box.querySelector("#s6CmText");
+  const keep = old ? { v: old.value, k: box.querySelector("#s6CmKind").value, w: box.querySelector("#s6CmWho")?.value, f: document.activeElement === old } : null;
+  draw3();
+  const now = keep && box.querySelector("#s6CmText");
+  if (now) {
+    now.value = keep.v;
+    const kind = box.querySelector("#s6CmKind");
+    kind.value = keep.k;
+    kind.dispatchEvent(new Event("change"));
+    const who = box.querySelector("#s6CmWho");
+    if (who && keep.w) {
+      who.value = keep.w;
+    }
+    if (keep.f) {
+      now.focus();
+    }
+  }
+}
+async function openThread(target) {
+  ensureStyle4();
+  await loadUsers();
+  const body = h("div", { id: "s6Thread" });
+  const draw3 = () => body.replaceChildren(threadNode(target));
+  draw3();
+  const off = subscribe(() => body.isConnected && keepForm(body, draw3));
+  openDialog({ title: `${t(TARGET_NAMES[target.kind] || "Об’єкт")}: ${target.label || target.uid}`, cls: "narrow", body, actions: [{ label: t("Закрити") }], onClose: off });
+}
+var listeners = /* @__PURE__ */ new Set();
+var subscribe = (fn) => (listeners.add(fn), () => listeners.delete(fn));
+function renderBlocks() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  for (const fn of listeners) {
+    fn();
+  }
+  renderDock({ keep: true });
+  const typing = document.activeElement && $("#s6CmList")?.contains(document.activeElement) && document.activeElement.tagName === "INPUT" && document.activeElement.type === "search";
+  if (S.ui.leftTab === "comments" && !typing) {
+    renderTab3();
+  }
+}
+function renderRightInto(box) {
+  const target = targetOfSelection();
+  const n = st2().list.filter((c) => c.target_kind === target.kind && c.target_uid === target.uid && c.state === "open").length;
+  box.replaceChildren(
+    h("h3", null, t("Коментарі"), n ? h("span", { class: "s6-tag warn", style: { marginLeft: "8px" } }, String(n)) : null),
+    h("div", { class: "s6-muted" }, `${t(TARGET_NAMES[target.kind])}: ${target.label || "—"}`),
+    threadNode(target)
+  );
+}
+var dockKey = "";
+var dockObs = null;
+var dockRaf = 0;
+function dockBox() {
+  const aside = $("#right");
+  if (!aside) {
+    return null;
+  }
+  let dock = aside.querySelector("#s6RightDock");
+  if (!dock) {
+    dock = h("div", { class: "s6-dock", id: "s6RightDock" }, h("div", { id: "s6Comments" }));
+    aside.append(dock);
+  }
+  return dock;
+}
+function renderDock({ keep = false } = {}) {
+  const dock = dockBox();
+  if (!dock) {
+    return;
+  }
+  dock.hidden = !can("comments");
+  if (dock.hidden) {
+    return;
+  }
+  const box = dock.querySelector("#s6Comments");
+  const target = targetOfSelection();
+  const key = keyOf(target.kind, target.uid);
+  const fresh = key !== dockKey || !box.childElementCount;
+  if (!fresh && !keep) {
+    return;
+  }
+  dockKey = key;
+  if (fresh) {
+    renderRightInto(box);
+  } else {
+    keepForm(box, () => renderRightInto(box));
+  }
+}
+function watchRight() {
+  const body = $("#rightBody");
+  dockObs?.disconnect();
+  if (body && typeof MutationObserver !== "undefined") {
+    dockObs = new MutationObserver(() => {
+      cancelAnimationFrame(dockRaf);
+      dockRaf = requestAnimationFrame(() => renderDock());
+    });
+    dockObs.observe(body, { childList: true, subtree: true });
+  }
+}
+var cellMemo = /* @__PURE__ */ new Map();
+var cellHome = /* @__PURE__ */ new Map();
+function slotCells(slot) {
+  const sig = [slot.x, slot.y, slot.rotation, JSON.stringify(slot.params), JSON.stringify(slot.overrides || {}), slot.code_prefix, elevOf(slot.layer_id)].join("|");
+  const hit = cellMemo.get(slot.id);
+  if (hit && hit.sig === sig) {
+    return hit.cells;
+  }
+  const cells = cellsAbs(slot, elevOf(slot.layer_id));
+  cellMemo.set(slot.id, { sig, cells });
+  return cells;
+}
+function cellAnchor(code) {
+  const make = (slot, cell2) => ({ x: cell2.x, y: cell2.y, z: cell2.z0 + cell2.h, layer: slot.layer_id, slot: slot.id });
+  const home = S.sIdx.get(cellHome.get(code));
+  const cell = home && slotCells(home).find((c) => c.code === code);
+  if (cell) {
+    return make(home, cell);
+  }
+  for (const slot of S.slots) {
+    const c = slotCells(slot).find((x) => x.code === code);
+    if (c) {
+      cellHome.set(code, slot.id);
+      return make(slot, c);
+    }
+  }
+  return null;
+}
+function anchorFor(kind, uid2) {
+  const B3 = S.site && S.site.building;
+  if (kind === "site") {
+    return B3 ? { x: B3.length / 2, y: 0, z: B3.height || 8 } : null;
+  }
+  if (kind === "layer") {
+    const ly = layerOf(uid2);
+    const pts = ly && ly.bounds && ly.bounds.length ? ly.bounds : null;
+    return ly && pts ? { x: pts.reduce((a, p) => a + p[0], 0) / pts.length, y: pts.reduce((a, p) => a + p[1], 0) / pts.length, z: ly.elevation || 0 } : B3 ? { x: B3.length / 2, y: B3.width / 2, z: ly && ly.elevation || 0 } : null;
+  }
+  if (kind === "slot" || kind === "placement") {
+    const rec = (kind === "slot" ? S.sIdx : S.pIdx).get(uid2);
+    if (!rec) {
+      return null;
+    }
+    const view2 = V.views && V.views.get((kind === "slot" ? "s:" : "p:") + uid2);
+    return { x: rec.x, y: rec.y, z: elevOf(rec.layer_id) + (view2 && view2.H || 1.5), layer: rec.layer_id };
+  }
+  if (kind === "cell") {
+    return cellAnchor(uid2);
+  }
+  if (kind === "item") {
+    for (const ly of S.layers) {
+      const it = (ly.items || []).find((i) => String(i.id ?? i.uid) === uid2);
+      if (it && it.x != null) {
+        return { x: it.x, y: it.y ?? 0, z: (ly.elevation || 0) + (it.height || it.h || 1), layer: ly.id };
+      }
+    }
+  }
+  return null;
+}
+function gotoTarget(c) {
+  const kind = c.target_kind;
+  const uid2 = c.target_uid;
+  if (kind === "site") {
+    E.selectObj(null);
+    return;
+  }
+  if (kind === "layer") {
+    if (layerOf(uid2)) {
+      E.setActiveLayer(uid2);
+    }
+    return;
+  }
+  const a = anchorFor(kind, uid2);
+  if (!a) {
+    toast(t("Об’єкта вже немає в цій чернетці."), "warn");
+    return;
+  }
+  if (kind === "slot" || kind === "placement") {
+    E.selectObj({ kind, id: uid2 });
+  } else if (kind === "cell" && a.slot) {
+    E.selectObj({ kind: "slot", id: a.slot });
+    S.selCell = uid2;
+    E.updateVisual?.();
+    E.renderRight?.();
+  } else if (a.layer) {
+    E.setActiveLayer(a.layer);
+  }
+  E.focusOn?.(a.x, a.y);
+}
+function renderTab3(root) {
+  root = root || $("#leftBody");
+  if (!root || S.ui.leftTab !== "comments") {
+    return;
+  }
+  const s = st2();
+  root.replaceChildren();
+  if (!can("comments")) {
+    root.append(h("div", { class: "sec" }, h("div", { class: "empty" }, t("Коментарі недоступні в цьому режимі."))));
+    return;
+  }
+  const f = s.filter;
+  const target = targetOfSelection();
+  const rows = filterComments(s.list, f, target);
+  const redraw = () => renderTab3();
+  const sel = (key, opts2, label2) => h("select", { "aria-label": label2, "data-f": key, onchange: (e) => {
+    f[key] = e.target.value;
+    redraw();
+  } }, opts2.map(([v, l]) => h("option", { value: v, selected: f[key] === v }, l)));
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "s6CmList" },
+      h("h3", null, t("Коментарі й задачі"), h("button", { class: "fbtn sm", type: "button", id: "s6CmRefresh", onclick: () => refreshComments() }, t("Оновити"))),
+      h(
+        "div",
+        { class: "s6-row" },
+        sel("state", [["open", t("Відкриті")], ["resolved", t("Вирішені")], ["all", t("Усі")]], t("Статус")),
+        sel("kind", [["all", t("Усі види")], ["note", t("Коментарі")], ["task", t("Задачі")]], t("Вид"))
+      ),
+      h("div", { class: "s6-row" }, h("input", { type: "search", value: f.q, placeholder: t("Пошук у тексті"), "aria-label": t("Пошук у тексті"), id: "s6CmQ", style: { flex: "1" }, oninput: (e) => {
+        f.q = e.target.value;
+        clearTimeout(s.qt);
+        s.qt = setTimeout(redraw, 200);
+      } })),
+      h("label", { class: "s6-row" }, h("input", { type: "checkbox", id: "s6CmOnly", checked: f.only, onchange: (e) => {
+        f.only = e.target.checked;
+        redraw();
+      } }), t("Лише цей об’єкт: {label}", { label: target.label || "—" })),
+      h(
+        "div",
+        { class: "s6-panel", id: "s6CmRows" },
+        rows.length ? rows.map(
+          (c) => h(
+            "div",
+            { class: "s6-item" + (c.state === "resolved" ? " res" : ""), "data-id": c.id, style: { cursor: "pointer" }, tabindex: 0, role: "button", onclick: () => gotoTarget(c), onkeydown: (e) => e.key === "Enter" && gotoTarget(c) },
+            h("div", { class: "s6-row sp" }, h("b", null, `${t(TARGET_NAMES[c.target_kind] || "")}: ${c.target_label || c.target_uid || "—"}`), h("span", { class: "s6-tag" + (c.kind === "task" ? " warn" : "") }, t(KINDS2[c.kind]))),
+            h("div", { class: "s6-text" }, c.text.length > 160 ? c.text.slice(0, 157) + "…" : c.text),
+            h("div", { class: "s6-muted" }, fmtWhen(c) + (c.state === "resolved" ? " · " + t("вирішено") : ""))
+          )
+        ) : h("div", { class: "empty" }, s.loaded ? t("Нічого не знайдено.") : t("Завантаження…"))
+      )
+    )
+  );
+}
+registries.panels.add("left:comments", { area: "left", tab: "comments", label: "Коментарі", render: (root) => (refreshComments(), renderTab3(root)) }, { sequence: 47, force: true });
+function drawBadges() {
+  const layer = layerEl("s6Badges");
+  if (!layer) {
+    return;
+  }
+  const groups = groupByTarget(can("comments") ? st2().list : []);
+  const have = new Map([...layer.children].map((el) => [el.dataset.key, el]));
+  for (const [key, list] of groups) {
+    let el = have.get(key);
+    if (!el) {
+      const [kind, ...rest] = key.split(":");
+      const uid2 = rest.join(":");
+      el = h("button", { class: "s6-badge", type: "button", "data-key": key, onclick: () => openThread({ kind, uid: uid2, label: list[0].target_label || uid2 }) });
+      layer.append(el);
+    }
+    have.delete(key);
+    el.dataset.tone = toneOf(list);
+    el.textContent = String(list.length);
+    const open = list.filter((c) => c.state === "open").length;
+    el.title = `${list[0].target_label || list[0].target_uid}: ${list.length} (${t("відкритих")}: ${open})`;
+    el.setAttribute("aria-label", el.title);
+  }
+  for (const el of have.values()) {
+    el.remove();
+  }
+  placeBadges();
+  redrawOverlays();
+}
+var hiddenByView = (kind, uid2) => E.objVisible ? !E.objVisible(kind, uid2) : false;
+function placeBadges() {
+  const layer = $("#s6Badges");
+  if (!layer || !V.ok) {
+    return;
+  }
+  for (const el of layer.children) {
+    const [kind, ...rest] = el.dataset.key.split(":");
+    const uid2 = rest.join(":");
+    const a = anchorFor(kind, uid2);
+    const hide = !a || a.layer && V.hidden && V.hidden.has(a.layer) || hiddenByView(a.slot ? "slot" : kind, a.slot || uid2);
+    const p = hide ? { ok: false } : project(a.x, a.y, a.z);
+    el.hidden = !p.ok;
+    if (p.ok) {
+      el.style.left = Math.round(p.x) + "px";
+      el.style.top = Math.round(p.y) + "px";
+    }
+  }
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  addFrameHook("comments", placeBadges);
+  dockKey = "";
+  loadUsers().then(() => renderDock({ keep: true }));
+  renderDock();
+  watchRight();
+  const s = st2();
+  clearInterval(s.timer);
+  refreshComments();
+  s.timer = setInterval(() => {
+    if (!document.hidden) {
+      refreshComments();
+    }
+  }, POLL_MS);
+});
+E.lifecycle.unmount.add(() => {
+  dockObs?.disconnect();
+  dockObs = null;
+  cancelAnimationFrame(dockRaf);
+  clearInterval(st2().timer);
+  cellMemo.clear();
+  cellHome.clear();
+});
+onLang(() => {
+  drawBadges();
+  renderDock({ keep: true });
+});
+Object.assign(E, { refreshComments, openThread, addComment, gotoTarget, commentsTarget: targetOfSelection });
+addEn({
+  "Коментар": "Comment",
+  "Задача": "Task",
+  "Площадка": "Site",
+  "Шар": "Layer",
+  "Місце": "Place",
+  "Комірка": "Cell",
+  "Розміщення": "Placement",
+  "Об’єкт будівлі": "Building object",
+  "Об’єкт": "Object",
+  "Коментарі": "Comments",
+  "Коментарі й задачі": "Comments and tasks",
+  "Оновити": "Refresh",
+  "вирішено": "resolved",
+  "Виконавець": "Assignee",
+  "Вирішив": "Resolved by",
+  "Вирішено": "Resolve",
+  "Відкрити знову": "Reopen",
+  "Видалити": "Delete",
+  "Видалити коментар?": "Delete the comment?",
+  "Нотатка або задача «перевірити на місці»": "A note or a “check on site” task",
+  "Текст коментаря": "Comment text",
+  "Вид": "Kind",
+  "— без виконавця —": "— no assignee —",
+  "Додати": "Add",
+  "Введіть текст коментаря.": "Enter the comment text.",
+  "Коментарів ще немає.": "No comments yet.",
+  "Закрити": "Close",
+  "Задачу додано.": "Task added.",
+  "Коментар додано.": "Comment added.",
+  "Об’єкта вже немає в цій чернетці.": "The object is no longer in this draft.",
+  "Коментарі недоступні в цьому режимі.": "Comments are not available in this mode.",
+  "Відкриті": "Open",
+  "Вирішені": "Resolved",
+  "Усі": "All",
+  "Усі види": "All kinds",
+  "Коментарі ": "Comments ",
+  "Задачі": "Tasks",
+  "Статус": "Status",
+  "Пошук у тексті": "Search in text",
+  "Лише цей об’єкт: {label}": "Only this object: {label}",
+  "Нічого не знайдено.": "Nothing found.",
+  "Завантаження…": "Loading…",
+  "відкритих": "open"
+});
+
+// core/constructor/locks.js
+var POLL_MS2 = 15e3;
+var st3 = () => S.locks ||= { list: [], ttl: 300, heartbeat: 60, held: /* @__PURE__ */ new Map(), poll: 0, beat: 0, warned: "" };
+function zoneKeyOf(rec, slots = S.slots) {
+  if (!rec) {
+    return null;
+  }
+  if (rec.template === "zone") {
+    return rec.id;
+  }
+  const zone2 = zoneAt(zonesOf2(slots), rec.x, rec.y);
+  return zone2 ? zone2.id : rec.id;
+}
+function clock(iso) {
+  try {
+    return new Date(String(iso).includes("T") ? iso : String(iso).replace(" ", "T") + "Z").toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return String(iso || "");
+  }
+}
+var lockOf = (uid2) => st3().list.find((l) => l.zone_uid === uid2) || null;
+function labelOf2(uid2) {
+  const s = S.sIdx.get(uid2);
+  if (s) {
+    return s.params && s.params.title || s.code_prefix || uid2;
+  }
+  const p = S.pIdx.get(uid2);
+  return p ? p.code || p.name || uid2 : uid2;
+}
+var busyText = (l) => t("Зону «{zone}» редагує {user} до {time}.", { zone: labelOf2(l.zone_uid), user: l.user, time: clock(l.expires_at) });
+var active = () => can("locks") && !!S.site && S.app.mode === "edit" && E.access?.().design !== false && !E.isMobile?.();
+function setList2(res) {
+  const s = st3();
+  s.list = res.locks || [];
+  s.ttl = res.ttl || s.ttl;
+  s.heartbeat = res.heartbeat || s.heartbeat;
+  for (const key of [...s.held.keys()]) {
+    if (!s.list.some((l) => l.zone_uid === key && l.mine)) {
+      s.held.delete(key);
+    }
+  }
+  const sig = JSON.stringify(s.list.map((l) => [l.zone_uid, l.user, l.mine]));
+  drawBadges2();
+  if (sig !== s.sig) {
+    s.sig = sig;
+    renderBlocks2();
+  }
+}
+async function refreshLocks() {
+  if (!can("locks") || !E.adapter || !S.site) {
+    return;
+  }
+  try {
+    setList2(await E.adapter.locks({ op: "list" }));
+  } catch (e) {
+    console.warn("locks:", e);
+  }
+}
+async function acquire(key, { quiet = false } = {}) {
+  if (!key) {
+    return true;
+  }
+  try {
+    setList2(await E.adapter.locks({ op: "acquire", zone_uid: key }));
+    st3().held.set(key, Date.now());
+    return true;
+  } catch (e) {
+    if (e.code === "locked" && e.lock) {
+      if (e.locks) {
+        setList2({ locks: e.locks });
+      }
+      if (!quiet) {
+        toast(e.message || busyText(e.lock), "warn");
+      }
+    } else if (!quiet) {
+      toast(e.message || String(e), "err");
+    }
+    return false;
+  }
+}
+async function release(key = null) {
+  const s = st3();
+  try {
+    if (key) {
+      s.held.delete(key);
+    } else {
+      s.held.clear();
+    }
+    if (can("locks") && E.adapter) {
+      setList2(await E.adapter.locks(key ? { op: "release", zone_uid: key } : { op: "release" }));
+    }
+  } catch (e) {
+    console.warn("locks release:", e);
+  }
+}
+async function onSelect(ref2) {
+  const s = st3();
+  if (!ref2 || !active()) {
+    return;
+  }
+  const rec = recOfRef(ref2);
+  const key = zoneKeyOf(rec);
+  if (!key) {
+    return;
+  }
+  const mine = s.held.has(key);
+  if (!mine || Date.now() - s.held.get(key) > s.heartbeat * 1e3 / 2) {
+    await acquire(key);
+  }
+  for (const other of [...s.held.keys()]) {
+    if (other !== key && !(E.adapter && E.adapter.dirty)) {
+      release(other);
+    }
+  }
+  refreshBlocks();
+}
+async function heartbeat() {
+  const s = st3();
+  if (!active()) {
+    if (s.held.size) {
+      release();
+    }
+    return;
+  }
+  for (const key of [...s.held.keys()]) {
+    await acquire(key, { quiet: true });
+  }
+}
+function drawBadges2() {
+  const layer = layerEl("s6Locks");
+  if (!layer || !can("locks")) {
+    return;
+  }
+  const s = st3();
+  layer.replaceChildren(
+    ...s.list.map((l) => {
+      const el = h("span", { class: "s6-lockb", "data-uid": l.zone_uid, "data-mine": l.mine ? "1" : "0", title: l.mine ? t("Зона заблокована за вами до {time}", { time: clock(l.expires_at) }) : busyText(l) }, ic("lock"), " " + (l.mine ? t("Ви") : l.user));
+      return el;
+    })
+  );
+  placeBadges2();
+}
+function placeBadges2() {
+  const layer = $("#s6Locks");
+  if (!layer || !V.ok) {
+    return;
+  }
+  for (const el of layer.children) {
+    const uid2 = el.dataset.uid;
+    const a = S.sIdx.has(uid2) ? anchorFor("slot", uid2) : S.pIdx.has(uid2) ? anchorFor("placement", uid2) : null;
+    const p = a && !(a.layer && V.hidden && V.hidden.has(a.layer)) ? project(a.x, a.y, a.z) : { ok: false };
+    el.hidden = !p.ok;
+    if (p.ok) {
+      el.style.left = Math.round(p.x) + "px";
+      el.style.top = Math.round(p.y) + "px";
+    }
+  }
+}
+function bannerFor(rec) {
+  const key = rec && zoneKeyOf(rec);
+  const l = key && lockOf(key);
+  if (!l) {
+    return null;
+  }
+  return h("div", { class: "note " + (l.mine ? "" : "lock"), id: "s6LockBanner", "data-mine": l.mine ? "1" : "0", style: { marginBottom: "8px" } }, l.mine ? t("Зона заблокована за вами до {time}: інші не зможуть її правити.", { time: clock(l.expires_at) }) : t("{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.", { busy: busyText(l) }));
+}
+function lockListNode() {
+  const list = st3().list;
+  return h(
+    "div",
+    { class: "sec", id: "s6LockList" },
+    h("h3", null, t("Блокування зон")),
+    list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf2(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
+  );
+}
+registries.panels.add(
+  "right:lock",
+  {
+    area: "right",
+    capability: "locks",
+    sequence: 2,
+    render(root, { rec }) {
+      const b = bannerFor(rec);
+      if (b) {
+        root.prepend(b);
+      }
+    }
+  },
+  { sequence: 2, force: true }
+);
+registries.panels.add("site:locks", { area: "site", capability: "locks", render: (root) => root.append(lockListNode()) }, { sequence: 60, force: true });
+function refreshBlocks() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const body = $("#rightBody");
+  if (!body || !can("locks")) {
+    return;
+  }
+  const rec = S.sel && recOfRef(S.sel);
+  const old = $("#s6LockBanner");
+  const next = bannerFor(rec);
+  if (old && next) {
+    old.replaceWith(next);
+  } else if (old) {
+    old.remove();
+  } else if (next) {
+    body.prepend(next);
+  }
+  const list = $("#s6LockList");
+  if (list) {
+    list.replaceWith(lockListNode());
+  }
+}
+var renderBlocks2 = refreshBlocks;
+var origSelect2 = E.selectObj;
+E.selectObj = function selectObjLocks(ref2, ...rest) {
+  const r = origSelect2.call(this, ref2, ...rest);
+  onSelect(ref2);
+  return r;
+};
+var origAll = E.renderAll;
+E.renderAll = function renderAllLocks(...args) {
+  const r = origAll.apply(this, args);
+  if (!active() && st3().held.size) {
+    release();
+  }
+  return r;
+};
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  const s = st3();
+  clearInterval(s.poll);
+  clearInterval(s.beat);
+  if (!can("locks")) {
+    return;
+  }
+  addFrameHook("locks", placeBadges2);
+  refreshLocks();
+  s.poll = setInterval(() => !document.hidden && refreshLocks(), POLL_MS2);
+  s.beat = setInterval(heartbeat, Math.max(5, s.heartbeat) * 1e3);
+});
+E.lifecycle.unmount.add(() => {
+  const s = st3();
+  clearInterval(s.poll);
+  clearInterval(s.beat);
+  if (s.held.size && E.adapter && can("locks")) {
+    release();
+  }
+});
+Object.assign(E, { refreshLocks, acquireZone: acquire, releaseZone: release, zoneKeyOf });
+addEn({
+  "Зону «{zone}» редагує {user} до {time}.": "Zone “{zone}” is being edited by {user} until {time}.",
+  "Зона заблокована за вами до {time}": "The zone is locked by you until {time}",
+  "Ви": "You",
+  "Зона заблокована за вами до {time}: інші не зможуть її правити.": "The zone is locked by you until {time}: others cannot edit it.",
+  "{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.": "{busy} Your edits here will be rejected; you can still view, select and comment.",
+  "Блокування зон": "Zone locks",
+  "до": "until",
+  "Зон, зайнятих для правки, немає.": "No zones are being edited."
+});
+
+// core/constructor/help_topics.js
+var TOPICS = [
+  ["start", ["Початок роботи", "Getting started"], ["Конструктор — це 3D-редактор розкладки складу й виробництва. Зліва шари, місця й каталог, посередині сцена, праворуч властивості вибраного. Зміни йдуть у чернетку й зберігаються самі; в Odoo вони потрапляють лише після публікації.\nНовачкові допоможе «Тур новачка» (меню «Ще → Тури»).", "The constructor is a 3D editor of the warehouse and production layout. Layers, places and the catalog are on the left, the scene in the middle, properties of the selection on the right. Changes go to the draft and are saved automatically; they reach Odoo only after publishing.\nThe “Beginner tour” (menu “More → Tours”) helps newcomers."]],
+  ["view", ["Вікно й камера", "The window and the camera"], ["Кнопки «3D» і «План» перемикають вигляд, «Вписати» показує все. Колесо — масштаб, права кнопка — панорама, ліва — обертання. «Підписи» вмикають підписи об'єктів, «Лінійка» (M) міряє відстань.", "“3D” and “Plan” switch the view, “Fit” shows everything. Wheel — zoom, right button — pan, left — rotate. “Labels” turns object labels on, “Ruler” (M) measures distance."]],
+  ["levels", ["Рівні й навігація", "Levels and navigation"], ["Рядок над сценою показує рівні: склад › зона › ряд › стелаж › ярус. Клацніть рівень — решта сховається, камера наїде на нього. «↓» заглиблює до виділеного, «↑» піднімає на рівень, «⟲» скидає. Клавіша U — рівень вище.", "The bar above the scene shows the levels: warehouse › zone › row › bay › tier. Click a level — the rest hides and the camera zooms in. “↓” drills down to the selection, “↑” goes a level up, “⟲” resets. Key U — level up."]],
+  ["minimap", ["Мініатюра плану", "The minimap"], ["У куті сцени — мініатюра з контуром, зонами й об'єктами. Червона рамка — те, що видно на екрані; клік чи перетягування по мініатюрі переносить камеру. Кнопка «Мініатюра» ховає її.", "A minimap with the outline, zones and objects sits in the scene corner. The red frame is what is on screen; click or drag on it to move the camera. The “Minimap” button hides it."]],
+  ["select", ["Виділення", "Selection"], ["Клік по об'єкту виділяє його. «Клік виділяє» під рівнями вибирає, що саме: місце, стелаж, ряд чи зону; повторний клік по тому самому піднімає вибір на рівень вище (місце → стелаж → ряд → зона → склад).", "A click selects an object. “Click selects” under the levels chooses what exactly: a place, bay, row or zone; a repeated click on the same object goes a level up (place → bay → row → zone → warehouse)."]],
+  ["multi", ["Кілька об'єктів і копіювання", "Several objects and copying"], ["Ctrl+клік додає до виділення, Shift+рамка в «Плані» виділяє область. Для групи — спільні властивості, вирівнювання, розподіл. Ctrl+D дублює, Ctrl+C/Ctrl+V копіює й вставляє, «Масив копій…» розкладає N×M.", "Ctrl+click adds to the selection, Shift+box in Plan selects an area. A group has common properties, alignment and distribution. Ctrl+D duplicates, Ctrl+C/Ctrl+V copies and pastes, “Array of copies…” lays out N×M."]],
+  ["undo", ["Скасування й повтор", "Undo and redo"], ["Ctrl+Z скасовує останню зміну, Ctrl+Shift+Z чи Ctrl+Y повертає. Кнопки ↶ ↷ у шапці сцени. Історія спільна для всіх змін сеансу, у тому числі адресації й правил.", "Ctrl+Z undoes the last change, Ctrl+Shift+Z or Ctrl+Y redoes it. Buttons ↶ ↷ are on the scene header. The history is shared by all session changes, including addressing and rules."]],
+  ["layers", ["Шари й видимість", "Layers and visibility"], ["Шар — окремий набір об'єктів із відміткою висоти, кроком сітки й правилами: хто редагує, які типи місць дозволені. Око вмикає видимість лише для вас, активний шар завжди видно.", "A layer is a separate set of objects with an elevation, grid step and rules: who edits, which place types are allowed. The eye toggles visibility for you only; the active layer is always visible."]],
+  ["racks", ["Стелажі й місця", "Racks and places"], ["Вкладка «Місця» — шаблони: палетний стелаж, полиці, консолі, місця на підлозі, зони. Місце дає комірки з кодами; параметри (пролети, яруси, габарит, навантаження) змінюються праворуч і відразу видні на сцені.", "The “Places” tab holds templates: pallet rack, shelves, cantilevers, floor spots, zones. A place yields cells with codes; parameters (bays, tiers, size, load) change on the right and show on the scene at once."]],
+  ["catalog", ["Каталог типів і параметри", "The type catalog and parameters"], ["Каталог — 50 типів місць: стелажі, площі, стопки, шафи, огородження. Кожен тип має форму, параметри й вид локації в Odoo. Типи можна додавати й змінювати; змінений тип застосовується до місць цього типу.", "The catalog has 50 place types: racks, areas, stacks, cabinets, fences. Each type has a shape, parameters and an Odoo location kind. Types can be added and changed; a changed type applies to places of that type."]],
+  ["presets", ["Шаблони й бібліотека", "Templates and library"], ["Виділене можна зберегти як шаблон і вставити в інший проєкт. «Бібліотека» показує збережені типи й шаблони; видаляє менеджер.", "A selection can be saved as a template and inserted into another project. The “Library” shows saved types and templates; a manager deletes them."]],
+  ["zones", ["Зони й проходи", "Zones and aisles"], ["Зона — контур, у межах якого діють спільні налаштування: категорія зберігання, функція, атрибути, температура. Об'єкти всередині успадковують їх. Проходи й пожежні зони задаються на шарі.", "A zone is an outline within which common settings apply: storage category, function, attributes, temperature. Objects inside inherit them. Aisles and fire zones are set on the layer."]],
+  ["address", ["Адресація", "Addressing"], ["Маска коду, напр. «{зона}-{ряд}-{секція}-{ярус}», задає імена комірок і локацій Odoo. Опубліковані коди за замовчуванням закріплені; перенумерація всіх — лише менеджер, із попередженням про нові етикетки.", "A code mask such as “{zone}-{row}-{bay}-{tier}” sets cell and Odoo location names. Published codes are pinned by default; renumbering all is for a manager only, with a warning about new labels."]],
+  ["capacity", ["Ємність, категорії та атрибути", "Capacity, categories and attributes"], ["Ємність комірки — палетомісця й максимальна вага; категорія зберігання задає, що й скільки можна класти. Зведення ємності є для ряду, зони й складу. Дані категорій беруться з Odoo.", "A cell capacity is pallet places and maximum weight; the storage category defines what and how much can be put. Capacity summaries exist for a row, a zone and the warehouse. Category data comes from Odoo."]],
+  ["putaway", ["Правила розміщення", "Putaway rules"], ["Правило каже, куди покласти товар чи категорію, і задає min/max поповнення. Правила — частина чернетки й потрапляють в Odoo лише публікацією; перевірка «чи вміститься» попереджає про переповнення.", "A rule says where to put a product or category and sets min/max replenishment. Rules are part of the draft and reach Odoo only by publishing; the “does it fit” check warns about overflow."]],
+  ["checks", ["Перевірки моделі", "Model checks"], ["Перетини, вихід за контур, проходи, висота до стелі, вага проти навантаження, конфлікти кодів. Заборона блокує дію, попередження лише повідомляє; режим кожної перевірки налаштовується.", "Overlaps, outside the outline, aisles, ceiling height, weight against load, code conflicts. A block stops the action, a warning only informs; each check's mode is configurable."]],
+  ["building", ["План будівлі та проходи", "The building plan and aisles"], ["Контур будівлі, колони, стіни, двері й проходи задаються в режимі «Будівля». Від них залежать перевірки виходу за контур, вузького проходу й висоти.", "The building outline, columns, walls, doors and aisles are set in “Building” mode. Checks for leaving the outline, a narrow aisle and height depend on them."]],
+  ["scratch", ["Майстер «З нуля»", "The “From scratch” wizard"], ["Для нової площадки майстер веде крок за кроком: контур, колони, зони, перші ряди. Кроки зберігаються — можна припинити й повернутися.", "For a new site the wizard leads step by step: outline, columns, zones, first rows. Steps are saved — you can stop and come back."]],
+  ["autolayout", ["Авторозкладка", "Auto-layout"], ["Алгоритм розкладає стелажі в зоні за ширинами проходів і технікою. Результат — звичайні місця, їх можна правити; скасування — Ctrl+Z.", "The algorithm lays out racks in a zone by aisle widths and handling equipment. The result is ordinary places you can edit; undo with Ctrl+Z."]],
+  ["parse", ["Розбір кодів і лоток", "Code parsing and the tray"], ["Коди з Odoo розкладаються за маскою на зону, ряд, секцію й ярус. Нерозпізнані потрапляють у лоток «Не розміщено», звідки їх можна перетягнути на сцену.", "Odoo codes are split by a mask into zone, row, bay and tier. Unrecognised ones go to the “Not placed” tray, from where they can be dragged onto the scene."]],
+  ["import", ["Файли: імпорт і експорт", "Files: import and export"], ["Імпорт XLSX/CSV (кодування cp1251 і розділювач «;» розпізнаються) і структури складу з Odoo; експорт у CSV/XLSX «туди й назад». Перед створенням показується попередній перегляд.", "Import of XLSX/CSV (cp1251 and the “;” separator are recognised) and of the warehouse structure from Odoo; export to CSV/XLSX “there and back”. A preview is shown before creating."]],
+  ["odoo", ["Структура з Odoo і розбіжності", "Structure from Odoo and differences"], ["«Оновити з Odoo» порівнює модель із поточними локаціями й показує розбіжності; кожну можна прийняти чи відхилити. Створені в Odoo без залишків можна відкотити.", "“Update from Odoo” compares the model with current locations and shows differences; each can be accepted or rejected. Records created in Odoo without stock can be rolled back."]],
+  ["find", ["Пошук і перехід по коду", "Search and go to a code"], ["Клавіша «/» чи Ctrl+K відкриває «Перейти до місця»: код або штрихкод, камера наїжджає на комірку. «Де лежить» шукає за товаром, партією чи упаковкою.", "Key “/” or Ctrl+K opens “Go to a place”: a code or barcode, the camera zooms to the cell. “Where is it” searches by product, lot or package."]],
+  ["heat", ["Показники й теплові карти", "Metrics and heat maps"], ["«Показник» фарбує комірки за заповненістю, віком запасу, рухом і min/max. Легенда показує кількість комірок у класах. У прототипі дані демонстраційні, позначені «демо».", "“Metric” paints cells by fill, stock age, movement and min/max. The legend shows cell counts per class. In the prototype the data is a demo, marked “demo”."]],
+  ["labels", ["Етикетки", "Labels"], ["Етикетки комірок: вибір (ряд, зона, виділення), вміст (код, штрихкод Code128, QR), розкладка аркуша. Формати: PDF (на сервері), ZPL, CSV і PNG (у браузері).", "Cell labels: selection (row, zone, selection), content (code, Code128 barcode, QR), sheet layout. Formats: PDF (on the server), ZPL, CSV and PNG (in the browser)."]],
+  ["docs", ["Документи", "Documents"], ["Специфікація стелажів, план площадки й таблиці. Документи будуються з поточної чернетки; таблиці відкриваються в Excel.", "Rack specification, site plan and tables. Documents are built from the current draft; tables open in Excel."]],
+  ["save", ["Збереження й чернетка", "Saving and the draft"], ["Зміни зберігаються автоматично; об'єкти з незбереженими змінами позначені бірюзовим. «Зберегти все» записує негайно, «Скинути до даних Odoo» повертає об'єкти до стану Odoo.", "Changes are saved automatically; objects with unsaved changes are marked teal. “Save all” writes at once, “Reset to Odoo data” returns objects to the Odoo state."]],
+  ["publish", ["Застосування в Odoo", "Applying to Odoo"], ["«Опублікувати» показує план змін: що створиться, перейменується, архівується. Лише після підтвердження виконується одна транзакція; створене можна відкотити, поки воно без залишків. Застосовується тільки активний варіант.", "“Publish” shows the plan of changes: what will be created, renamed, archived. Only after confirmation one transaction runs; created records can be rolled back while they have no stock. Only the active variant is applied."]],
+  ["history", ["Історія версій", "Version history"], ["Останні 50 версій і контрольних точок із нотатками. «Переглянути» показує схему й цифри поряд із поточним станом, «Відновити» повертає чернетку (поточна спершу зберігається окремою контрольною точкою).", "The last 50 versions and checkpoints with notes. “View” shows the plan and figures next to the current state, “Restore” returns the draft (the current one is first saved as a separate checkpoint)."]],
+  ["variants", ["Варіанти планування", "Layout variants"], ["«Як є», «Проєкт A/B…» — до 12 на площадку. «Створити з поточного» копіює чернетку, «Зробити активним» перемикає, не втрачаючи правок. Порівняння: місць, палетомісць, площа підлоги, об'єм, ємність, операції плану.", "“As is”, “Project A/B…” — up to 12 per site. “Create from current” copies the draft, “Make active” switches without losing edits. Comparison: places, pallet places, floor area, volume, capacity, plan operations."]],
+  ["comments", ["Коментарі на об'єктах", "Comments on objects"], ["Нотатка чи задача «перевірити на місці» на складі, шарі, місці, комірці чи розміщенні. Значок на сцені: синій — нотатка, помаранчевий — відкрита задача, сірий — усе вирішено. Читають і пишуть усі, вирішує автор чи «Проєктування». У Odoo задача з виконавцем стає його завданням.", "A note or a “check on site” task on the warehouse, layer, place, cell or placement. Scene badge: blue — a note, orange — an open task, grey — all resolved. Everyone reads and writes, the author or “Design” resolves. In Odoo a task with an assignee becomes their activity."]],
+  ["locks", ["Блокування зон", "Zone locks"], ["Вибір об'єкта в режимі редагування бере його зону на 5 хвилин (продовження раз на хвилину, зняття при виході). Чужу зону видно за червоним значком; правки там відхиляються повідомленням «хто й до котрої». Дивитися, виділяти й коментувати можна.", "Selecting an object in edit mode takes its zone for 5 minutes (renewed every minute, released on exit). Someone else's zone shows a red badge; edits there are rejected with a “who and until when” message. Viewing, selecting and commenting are allowed."]],
+  ["tours", ["Тури й навчальна копія", "Tours and the training copy"], ["«Ще → Тури»: тур новачка й 11 тематичних; посилання виду #tour-rack запускає тур одразу. Тур, що змінює дані, йде в «навчальній копії» — тимчасовому варіанті; в кінці — «Залишити зміни» або «Скасувати». На телефоні недоступно.", "“More → Tours”: the beginner tour and 11 thematic ones; a link like #tour-rack starts a tour at once. A tour that changes data runs in a “training copy” — a temporary variant; at the end — “Keep changes” or “Cancel”. Not available on a phone."]],
+  ["phone", ["Робота з телефона", "Working from a phone"], ["На телефоні — перегляд і пошук: панелі висувні, картка місця на весь екран, правка вимкнена. Мініатюра й тури недоступні.", "On a phone — viewing and search: panels slide in, the place card is full screen, editing is off. The minimap and tours are not available."]],
+  ["roles", ["Ролі й права", "Roles and rights"], ["«Перегляд» — читати й коментувати; «Проєктування» — правити об'єкти своїх шарів; «Застосування» — публікувати. Менеджер може подивитися на редактор очима іншої ролі. Недоступні кнопки неактивні з підказкою.", "“View” — read and comment; “Design” — edit objects of your layers; “Apply” — publish. A manager can see the editor through another role's eyes. Unavailable buttons are disabled with a hint."]],
+  ["hotkeys", ["Гарячі клавіші", "Hotkeys"], ["Ctrl+Z / Ctrl+Y — скасувати / повторити; Ctrl+D, Ctrl+C, Ctrl+V — дублювати, копіювати, вставити; Del — видалити; Alt+R — повернути; M — лінійка; «/» чи Ctrl+K — пошук; U — рівень вище; Esc — скасувати. Повний список — «Ще → Гарячі клавіші».", "Ctrl+Z / Ctrl+Y — undo / redo; Ctrl+D, Ctrl+C, Ctrl+V — duplicate, copy, paste; Del — delete; Alt+R — rotate; M — ruler; “/” or Ctrl+K — search; U — level up; Esc — cancel. The full list is under “More → Hotkeys”."]]
+];
+var TOPIC_BY_ID = Object.fromEntries(TOPICS.map((tp) => [tp[0], tp]));
+
+// core/constructor/tour_defs.js
+var P = (uk, en) => [uk, en];
+var TAB = (tab) => `#ltabs button[data-tab="${tab}"]`;
+var MENU = (key) => [`#menu-${key}`, "#menuMore summary", "#menuExtra"];
+var TOURS = [
+  {
+    id: "welcome",
+    title: P("Тур новачка", "Beginner tour"),
+    desc: P("13 кроків: план, рівні, виділення, мініатюра, перехід по коду, правка, каталог, перевірки, застосування, інструкція.", "13 steps: plan, levels, selection, minimap, go to code, editing, catalog, checks, applying, help."),
+    steps: [
+      { sel: "#vp", kind: "read", title: P("Сцена: 3D і «План»", "The scene: 3D and Plan"), text: P("Тут модель складу. Колесо — масштаб, права кнопка — панорама, ліва — обертання. Кнопки «3D» і «План» зверху перемикають вигляд.", "This is the warehouse model. Wheel — zoom, right button — pan, left — rotate. The “3D” and “Plan” buttons on top switch the view.") },
+      { sel: "#s6Crumbs", kind: "read", title: P("Рівні: склад › зона › ряд › стелаж › ярус", "Levels: warehouse › zone › row › bay › tier"), text: P("Вибраний рівень ховає решту, а камера наїжджає на нього. «↓» заглиблює до виділеного, «↑» піднімає, «⟲» скидає.", "A chosen level hides the rest and the camera zooms in. “↓” drills down to the selection, “↑” goes up, “⟲” resets.") },
+      { sel: TAB("layers"), kind: "do", act: { tab: "layers" }, title: P("Шари", "Layers"), text: P("Відкрийте вкладку «Шари»: у ній видимість, відмітка й правила редагування кожного шару.", "Open the “Layers” tab: visibility, elevation and edit rules of each layer.") },
+      { sel: "#vp", kind: "do", act: { select: "*" }, title: P("Виділення", "Selection"), text: P("Клацніть по ряду чи місцю на сцені: праворуч з'являться властивості. «Клік виділяє» під рівнями вибирає: місце, стелаж, ряд або зону; повторний клік піднімає вибір вище.", "Click a row or a place on the scene: properties appear on the right. “Click selects” under the levels picks a place, bay, row or zone; a repeated click goes one level up.") },
+      { sel: "#s6Mini", kind: "read", title: P("Мініатюра плану", "Minimap"), text: P("Червона рамка — те, що видно на екрані. Клацніть чи потягніть по мініатюрі, щоб перенести камеру.", "The red frame is what is on screen. Click or drag the minimap to move the camera.") },
+      { sel: TAB("search"), kind: "do", act: { search: true }, title: P("Перехід по коду", "Go to a code"), text: P("Вкладка «Пошук»: введіть код або штрихкод місця — камера перейде до нього. Швидко: клавіша «/».", "The “Search” tab: type a place code or barcode and the camera goes there. Quick key: “/”.") },
+      { sel: "#modeSeg", kind: "read", title: P("Перегляд і редагування", "View and edit"), text: P("«Редагування» вмикає правку об'єктів. Права визначає ваша роль; недоступні кнопки неактивні з підказкою.", "“Edit” turns on object editing. Your role defines your rights; unavailable buttons are disabled with a hint.") },
+      { sel: TAB("catalog"), kind: "read", title: P("Каталог", "Catalog"), text: P("Каталог обладнання й типів місць: 50 типів, параметри, 3D-моделі. Звідси об'єкти потрапляють на сцену.", "The equipment and place-type catalog: 50 types, parameters, 3D models. Objects reach the scene from here.") },
+      { sel: ["#checksBlock", "#rightBody"], kind: "read", title: P("Перевірки", "Checks"), text: P("Модель перевіряється під час правки: перетини, вихід за контур, проходи, висота, вага. Заборона блокує дію, попередження лише повідомляє.", "The model is checked while editing: overlaps, outside the outline, aisles, height, weight. A block stops the action, a warning only informs.") },
+      { sel: "#draftChip", kind: "read", title: P("Чернетка", "Draft"), text: P("Зміни живуть у чернетці й зберігаються автоматично. Чип показує, скільки об'єктів змінено проти діючої версії.", "Changes live in the draft and are saved automatically. The chip shows how many objects differ from the active version.") },
+      { sel: "#btnPublish", kind: "read", title: P("Застосування в Odoo", "Applying to Odoo"), text: P("«Опублікувати» показує план змін у Odoo; лише після підтвердження створюються й оновлюються локації. Публікує менеджер.", "“Publish” shows the plan of changes in Odoo; locations are created and updated only after confirmation. Done by a manager.") },
+      { sel: "#btnHistory", kind: "read", title: P("Історія версій", "Version history"), text: P("Версії й контрольні точки: «Переглянути» порівняє схему з поточною, «Відновити» поверне чернетку (поточна збережеться окремо).", "Versions and checkpoints: “View” compares the plan with the current one, “Restore” returns the draft (the current one is saved separately).") },
+      { sel: ["#menu-help", "#menu-lang", "#menuExtra"], kind: "read", title: P("Інструкція, тури, мова", "Help, tours, language"), text: P("Меню «Ще» містить «Інструкцію» (36 тем) і «Тури». Кнопка «UK/EN» перемикає мову інтерфейсу й підказок.", "The “More” menu holds “Help” (36 topics) and “Tours”. The “UK/EN” button switches the language of the interface and hints.") }
+    ]
+  },
+  {
+    id: "basic",
+    title: P("Основи роботи", "The basics"),
+    desc: P("Камера, виділення, скасування, збереження.", "Camera, selection, undo, saving."),
+    steps: [
+      { sel: "#vtools", kind: "read", title: P("Інструменти сцени", "Scene tools"), text: P("«3D»/«План», «Вписати», «Лінійка», «Підписи». Лінійка (клавіша M) міряє відстань між двома точками.", "“3D”/“Plan”, “Fit”, “Ruler”, “Labels”. The ruler (key M) measures the distance between two points.") },
+      { sel: "#vp", kind: "do", act: { select: "*" }, title: P("Виділіть об'єкт", "Select an object"), text: P("Клацніть по об'єкту. Ctrl+клік додає до виділення, Shift+рамка в «Плані» виділяє кілька.", "Click an object. Ctrl+click adds to the selection, Shift+box in Plan selects several.") },
+      { sel: "#modeSeg", kind: "do", act: { mode: "edit" }, title: P("Режим редагування", "Edit mode"), text: P("Увімкніть «Редагування»: тепер об'єкти можна переміщувати, повертати (Alt+R), видаляти (Del).", "Turn on “Edit”: now objects can be moved, rotated (Alt+R), deleted (Del).") },
+      { sel: ".s3-undo, #btnUndo, #vtools", kind: "read", title: P("Скасування й повтор", "Undo and redo"), text: P("Ctrl+Z скасовує, Ctrl+Shift+Z чи Ctrl+Y повторює; історія спільна для всіх змін у цьому сеансі.", "Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes; the history is shared by all changes in this session.") },
+      { sel: ["#menu-saveAll", "#storeTag"], kind: "read", title: P("Збереження", "Saving"), text: P("Зміни зберігаються самі. Бірюзові позначки «не збережено» зникають після запису; «Зберегти все» робить це негайно.", "Changes are saved by themselves. Teal “unsaved” marks vanish after saving; “Save all” does it at once.") },
+      { sel: "#vp", kind: "read", title: P("Гарячі клавіші", "Hotkeys"), text: P("Повний список — у меню «Ще → Гарячі клавіші».", "The full list is under “More → Hotkeys”.") }
+    ]
+  },
+  {
+    id: "rack",
+    mutates: true,
+    title: P("Стелаж: від порожнього місця до комірок", "A rack: from empty floor to cells"),
+    desc: P("Тур змінює дані — у навчальній копії: поставити стелаж, змінити яруси, побачити комірки й перевірки.", "This tour changes data — in a training copy: place a rack, change tiers, see cells and checks."),
+    steps: [
+      { sel: "#modeSeg", kind: "do", act: { mode: "edit" }, title: P("Режим редагування", "Edit mode"), text: P("Для цього туру потрібне «Редагування».", "This tour needs “Edit”.") },
+      { sel: TAB("slots"), kind: "do", act: { tab: "slots" }, title: P("Місця", "Places"), text: P("Вкладка «Місця» містить шаблони: палетний стелаж, полиці, консолі, місця на підлозі.", "The “Places” tab holds templates: pallet rack, shelves, cantilevers, floor spots.") },
+      { sel: "#vp", kind: "do", act: { rack: true }, title: P("Поставте стелаж", "Place a rack"), text: P("Натисніть «Палетний стелаж» і клацніть на сцені. «Показати мені» ставить стелаж у центрі виду.", "Press “Pallet rack” and click the scene. “Show me” places a rack at the view centre.") },
+      { sel: "#rightBody", kind: "read", title: P("Властивості ряду", "Row properties"), text: P("Праворуч — габарит, пролети, яруси, навантаження, префікс коду. Усе змінюється одразу на сцені.", "On the right — size, bays, tiers, load, code prefix. Everything changes on the scene at once.") },
+      { sel: "#rightBody", kind: "do", act: { levels: 3 }, title: P("Змініть число ярусів", "Change the number of tiers"), text: P("Поставте «Ярусів» = 3. «Показати мені» робить це за вас.", "Set “Tiers” = 3. “Show me” does it for you.") },
+      { sel: ["#cellsBox", "#rightBody"], kind: "read", title: P("Комірки й коди", "Cells and codes"), text: P("Кожне місце дає комірки з кодами за правилом адресації. У Odoo вони стануть локаціями після публікації.", "Each place gives cells with codes by the addressing rule. They become Odoo locations after publishing.") },
+      { sel: ["#checksBlock", "#rightBody"], kind: "read", title: P("Перевірки", "Checks"), text: P("Перевірки одразу показують, чи вміщується стелаж у контур і чи не перетинає сусідів.", "Checks immediately show whether the rack fits the outline and does not overlap neighbours.") },
+      { sel: "#draftChip", kind: "read", title: P("Лічильник чернетки", "Draft counter"), text: P("Чернетка змінена; опублікувати змінене можна лише з робочого варіанта, а не з навчальної копії.", "The draft is changed; changes can be published only from a working variant, not from a training copy.") }
+    ]
+  },
+  {
+    id: "import",
+    title: P("Імпорт і експорт", "Import and export"),
+    desc: P("Структура з Odoo, файли XLSX/CSV, експорт.", "Structure from Odoo, XLSX/CSV files, export."),
+    steps: [
+      { sel: MENU("importLocations"), kind: "do", act: { open: true }, title: P("«Імпорт локацій…»", "“Import locations…”"), text: P("Відкрийте «Ще» й оберіть «Імпорт локацій…»: джерело — файл XLSX/CSV або структура складу з Odoo.", "Open “More” and choose “Import locations…”: the source is an XLSX/CSV file or the warehouse structure from Odoo.") },
+      { sel: MENU("parseCodes"), kind: "read", title: P("Розбір кодів", "Code parsing"), text: P("Коди з Odoo розкладаються за маскою на зону, ряд, секцію й ярус; нерозпізнані йдуть у лоток «Не розміщено».", "Odoo codes are split by a mask into zone, row, bay and tier; unrecognised ones go to the “Not placed” tray.") },
+      { sel: TAB("tray"), kind: "read", title: P("Лоток «Не розміщено»", "The “Not placed” tray"), text: P("Звідти місця тягнуться на сцену або розкладаються автоматично.", "Places are dragged from there onto the scene or laid out automatically.") },
+      { sel: MENU("exportLocations"), kind: "read", title: P("Експорт", "Export"), text: P("Експорт у CSV/XLSX «туди й назад»: файл можна виправити в Excel й імпортувати знову.", "Export to CSV/XLSX “there and back”: edit the file in Excel and import it again.") }
+    ]
+  },
+  {
+    id: "scratch",
+    title: P("Склад «з нуля»", "A warehouse from scratch"),
+    desc: P("Майстер: контур, колони, зони, перші ряди.", "The wizard: outline, columns, zones, first rows."),
+    steps: [
+      { sel: "#btnNewSite", kind: "read", title: P("Нова площадка", "A new site"), text: P("«Нова площадка» створює порожню площадку; майстер «З нуля» проведе через контур, колони, зони й перші ряди.", "“New site” creates an empty site; the “From scratch” wizard guides you through outline, columns, zones and first rows.") },
+      { sel: [TAB("wizard"), "#menu-wizard", "#menuMore summary"], kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
+      { sel: MENU("autolayout"), kind: "read", title: P("Авторозкладка", "Auto-layout"), text: P("Після зон запропонує розкласти стелажі за ширинами проходів і технікою.", "After the zones it proposes laying out racks by aisle widths and handling equipment.") }
+    ]
+  },
+  {
+    id: "address",
+    title: P("Адресація кодів", "Code addressing"),
+    desc: P("Як формуються коди комірок і локацій Odoo.", "How cell codes and Odoo locations are built."),
+    steps: [
+      { sel: "#vp", kind: "do", act: { select: null }, title: P("Властивості площадки", "Site properties"), text: P("Зніміть виділення (Esc): праворуч — властивості площадки, серед них «Адресація кодів».", "Clear the selection (Esc): the site properties are on the right, including “Code addressing”.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Маска коду", "The code mask"), text: P("Маска, напр. «{зона}-{ряд}-{секція}-{ярус}», задає імена комірок і штрихкоди локацій.", "A mask like “{zone}-{row}-{bay}-{tier}” sets cell names and location barcodes.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Перенумерація", "Renumbering"), text: P("Опубліковані коди за замовчуванням не змінюються; перенумерація всіх — лише менеджер, із попередженням про нові етикетки.", "Published codes stay by default; renumbering all is for a manager only, with a warning about new labels.") }
+    ]
+  },
+  {
+    id: "putaway",
+    title: P("Правила розміщення", "Putaway rules"),
+    desc: P("Куди Odoo кладе товар і що пополняти.", "Where Odoo puts goods and what to replenish."),
+    steps: [
+      { sel: MENU("rules"), kind: "do", act: { open: true }, title: P("Правила розміщення", "Putaway rules"), text: P("«Ще → Правила розміщення»: товар чи категорія → куди покласти; тут же min/max поповнення.", "“More → Putaway rules”: product or category → where to put; min/max replenishment too.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Місткість і категорії", "Capacity and categories"), text: P("Категорії зберігання й ємність комірки впливають на перевірку «чи вміститься».", "Storage categories and cell capacity feed the “does it fit” check.") },
+      { sel: ["#btnPublish"], kind: "read", title: P("У Odoo — лише публікацією", "In Odoo — by publishing only"), text: P("Правила потрапляють в Odoo так само, як локації: план, підтвердження, одна транзакція з відкатом.", "Rules reach Odoo like locations: plan, confirmation, one transaction with rollback.") }
+    ]
+  },
+  {
+    id: "apply",
+    title: P("Застосування в Odoo", "Applying to Odoo"),
+    desc: P("План змін, підтвердження, журнал і відкат.", "Plan of changes, confirmation, log and rollback."),
+    steps: [
+      { sel: "#btnPublish", kind: "read", title: P("План", "The plan"), text: P("«Опублікувати» будує план: що створиться, перейменується, архівується; блокувальні проблеми видно одразу.", "“Publish” builds the plan: what will be created, renamed, archived; blocking issues show at once.") },
+      { sel: "#s6Variants, #menu-variants", kind: "read", title: P("Лише активний варіант", "Only the active variant"), text: P("Застосовується завжди активний варіант; навчальна копія не публікується.", "The active variant is always the one applied; a training copy is never published.") },
+      { sel: MENU("planLog"), kind: "read", title: P("Журнал і відкат", "Log and rollback"), text: P("«Журнал публікацій» показує операції; відкат можливий, поки створене не використано.", "The “Publication log” shows operations; rollback is possible while created records are unused.") },
+      { sel: "#btnHistory", kind: "read", title: P("Версії", "Versions"), text: P("Кожне застосування — нова версія зі знімком; до неї можна повернути чернетку.", "Each applying is a new version with a snapshot; the draft can be returned to it.") }
+    ]
+  },
+  {
+    id: "find",
+    title: P("Пошук і залишки", "Search and stock"),
+    desc: P("Код, штрихкод, товар; теплові карти.", "Code, barcode, product; heat maps."),
+    steps: [
+      { sel: TAB("search"), kind: "do", act: { search: true }, title: P("Вкладка «Пошук»", "The “Search” tab"), text: P("Відкрийте «Пошук»: «Перейти до місця» за кодом або штрихкодом і «Де лежить» за товаром.", "Open “Search”: “Go to a place” by code or barcode and “Where is it” by product.") },
+      { sel: ["#s3Goto", "#leftBody"], kind: "read", title: P("Перехід по коду", "Go to a code"), text: P("Введіть код (напр. PLT-01A) і Enter: камера наїде на місце, відкриється картка із залишками.", "Type a code (e.g. PLT-01A) and Enter: the camera zooms in and the card with stock opens.") },
+      { sel: ["#s3Metric", ".s3-tools"], kind: "read", title: P("Показник", "Metric"), text: P("«Показник» фарбує комірки за заповненістю, віком запасу чи рухом; легенда показує кількість у класах.", "“Metric” paints cells by fill, stock age or movement; the legend shows counts per class.") }
+    ]
+  },
+  {
+    id: "labels",
+    title: P("Етикетки", "Labels"),
+    desc: P("Вибір комірок, розкладка аркуша, ZPL, PDF.", "Cell selection, sheet layout, ZPL, PDF."),
+    steps: [
+      { sel: MENU("labels"), kind: "do", act: { open: true }, title: P("«Етикетки…»", "“Labels…”"), text: P("Оберіть комірки (ряд, зона, виділення), вміст (код, штрихкод, QR) і розкладку аркуша.", "Choose cells (row, zone, selection), content (code, barcode, QR) and the sheet layout.") },
+      { sel: ["#rightBody"], kind: "read", title: P("З картки ряду", "From the row card"), text: P("Блок «Етикетки» у властивостях ряду друкує його комірки одним кліком.", "The “Labels” block in the row properties prints its cells in one click.") },
+      { sel: MENU("labels"), kind: "read", title: P("Формати", "Formats"), text: P("PDF формує сервер; ZPL, CSV і PNG — у браузері.", "The server builds PDF; ZPL, CSV and PNG are built in the browser.") }
+    ]
+  },
+  {
+    id: "docs",
+    title: P("Документи", "Documents"),
+    desc: P("Специфікація стелажів, план, експорт.", "Rack specification, plan, export."),
+    steps: [
+      { sel: ["#menu-spec", "#menu-planDoc", "#menuMore summary"], kind: "read", title: P("Документи", "Documents"), text: P("«Ще → Специфікація стелажів…» і «План (PDF, PNG)…»: документи будуються з поточної чернетки; таблиці відкриваються в Excel.", "“More → Rack specification…” and “Plan (PDF, PNG)…”: documents are built from the current draft; tables open in Excel.") },
+      { sel: MENU("exportLocations"), kind: "read", title: P("Експорт таблиць", "Table export"), text: P("Той самий файл можна відкрити в Excel, виправити й імпортувати назад.", "The same file can be opened in Excel, fixed and imported back.") },
+      { sel: ["#btnHistory"], kind: "read", title: P("Документ версії", "A version document"), text: P("Знімок версії можна завантажити й порівняти зі схемою.", "A version snapshot can be downloaded and compared with the plan.") }
+    ]
+  },
+  {
+    id: "team",
+    title: P("Командна робота", "Teamwork"),
+    desc: P("Варіанти, коментарі й задачі, блокування зон.", "Variants, comments and tasks, zone locks."),
+    steps: [
+      { sel: TAB("variants"), kind: "do", act: { variants: true }, title: P("Варіанти планування", "Layout variants"), text: P("Вкладка «Варіанти»: «Як є» і «Проєкт A/B…». «Створити з поточного» копіює чернетку; «Зробити активним» перемикає, не втрачаючи правок.", "The “Variants” tab: “As is” and “Project A/B…”. “Create from current” copies the draft; “Make active” switches without losing edits.") },
+      { sel: ["#s6VarCmp", "#leftBody"], kind: "read", title: P("Порівняння", "Comparison"), text: P("Два варіанти поряд: місць, палетомісць, площа підлоги, об'єм, ємність, операції плану й різниця.", "Two variants side by side: places, pallet places, floor area, volume, capacity, plan operations and the difference.") },
+      { sel: TAB("comments"), kind: "do", act: { comments: true }, title: P("Коментарі й задачі", "Comments and tasks"), text: P("Вкладка «Коментарі»: список із фільтрами; значки на сцені — синій нотатка, помаранчевий відкрита задача, сірий усе вирішено.", "The “Comments” tab: a list with filters; scene badges — blue a note, orange an open task, grey all resolved.") },
+      { sel: ["#s6Comments", "#rightBody"], kind: "read", title: P("Додати коментар", "Add a comment"), text: P("Виділіть об'єкт і додайте нотатку або задачу «перевірити на місці». У Odoo задача з виконавцем стає його завданням.", "Select an object and add a note or a “check on site” task. In Odoo a task with an assignee becomes their activity.") },
+      { sel: ["#s6LockList", "#rightBody"], kind: "read", title: P("Блокування зон", "Zone locks"), text: P("Вибір об'єкта в режимі редагування бере його зону на 5 хвилин. Червоний значок — зона зайнята іншим, зелений — вами.", "Selecting an object in edit mode takes its zone for 5 minutes. A red badge — the zone is held by someone else, green — by you.") }
+    ]
+  }
+];
+var TOUR_BY_ID = Object.fromEntries(TOURS.map((tr) => [tr.id, tr]));
+
+// core/constructor/tours.js
+var L2 = (pair) => Array.isArray(pair) ? pair[getLang() === "en" ? 1 : 0] : pair;
+var DONE_KEY = (id) => `f3d_tour_done:${id}`;
+var INVITE_KEY = "f3d_tour_invite";
+var lsGet4 = (k) => {
+  try {
+    return globalThis.localStorage ? globalThis.localStorage.getItem(k) : null;
+  } catch {
+    return null;
+  }
+};
+var lsSet4 = (k, v) => {
+  try {
+    globalThis.localStorage?.setItem(k, v);
+  } catch {
+  }
+};
+var tourDone = (id) => lsGet4(DONE_KEY(id)) === "1";
+var TOUR_PREFIX = "TOUR-R1";
+var slotByPrefix = (p) => S.slots.find((s) => s.code_prefix === p);
+var firstSlot = () => S.slots.find((s) => s.template !== "zone" && E.objVisible?.("slot", s.id) !== false);
+async function showAct(act) {
+  if (!act) {
+    return;
+  }
+  if (act.tab) {
+    E.setLeftTab(act.tab);
+  } else if (act.mode) {
+    S.app.mode = act.mode;
+    S.edit = null;
+    E.cancelModes?.();
+    E.renderAll();
+  } else if (act.select !== void 0) {
+    const rec = act.select === "*" ? firstSlot() : act.select ? slotByPrefix(act.select) : null;
+    E.selectObj(rec ? { kind: "slot", id: rec.id } : null);
+    if (rec) {
+      E.focusOn?.(rec.x, rec.y);
+    }
+  } else if (act.rack) {
+    if (!slotByPrefix(TOUR_PREFIX)) {
+      const c = E.camTarget ? E.camTarget() : { x: 10, y: 10 };
+      E.addSlotAt({ kind: "slot", template: "pallet_rack", prefix: TOUR_PREFIX, params: defaultParams("pallet_rack") }, Math.round(c.x), Math.round(c.y));
+    }
+  } else if (act.levels) {
+    const s = slotByPrefix(TOUR_PREFIX);
+    if (s) {
+      s.params = { ...s.params, levels: act.levels };
+      E.selectObj({ kind: "slot", id: s.id });
+      E.commit({ label: t("Яруси: {n}", { n: act.levels }) });
+    }
+  } else if (act.search) {
+    E.setLeftTab("search");
+  } else if (act.variants) {
+    E.setLeftTab("variants");
+  } else if (act.comments) {
+    E.setLeftTab("comments");
+  } else if (act.open) {
+    const more = $("#menuMore");
+    if (more) {
+      more.open = true;
+    }
+  }
+}
+function actDone(act) {
+  if (!act) {
+    return true;
+  }
+  if (act.tab || act.search || act.variants || act.comments) {
+    return S.ui.leftTab === (act.tab || act.search && "search" || act.variants && "variants" || "comments");
+  }
+  if (act.mode) {
+    return S.app.mode === act.mode;
+  }
+  if (act.select !== void 0) {
+    return act.select === null ? !S.sel : !!S.sel;
+  }
+  if (act.rack) {
+    return !!slotByPrefix(TOUR_PREFIX);
+  }
+  if (act.levels) {
+    const s = slotByPrefix(TOUR_PREFIX);
+    return !!s && Number(s.params.levels) === act.levels;
+  }
+  if (act.open) {
+    const more = $("#menuMore");
+    return !!more && more.open;
+  }
+  return false;
+}
+var run = { tour: null, i: 0, training: false, timer: 0, onKey: null };
+function S_flag(on) {
+  if (S.ui) {
+    S.ui.tourRunning = on;
+  }
+}
+var tourState = () => ({ id: run.tour && run.tour.id, step: run.i, training: run.training });
+var found = (sel) => {
+  const list = Array.isArray(sel) ? sel : sel ? [sel] : [];
+  for (const s of list) {
+    const el = $(s) || ROOT.el?.querySelector(s);
+    if (el && (el.offsetParent !== null || el.getClientRects().length)) {
+      return el;
+    }
+  }
+  return null;
+};
+function overlay() {
+  const root = $("#app") || ROOT.el;
+  let hole = root.querySelector("#s6TourHole");
+  let card = root.querySelector("#s6TourCard");
+  if (!hole) {
+    hole = h("div", { class: "s6-tour-hole", id: "s6TourHole", hidden: true });
+    card = h("div", { class: "s6-tour-card", id: "s6TourCard", role: "dialog", "aria-live": "polite" });
+    root.append(hole, card);
+  }
+  return { hole, card };
+}
+function place(card, hole, el) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (!el) {
+    hole.hidden = true;
+    card.style.left = Math.max(8, (vw - card.offsetWidth) / 2) + "px";
+    card.style.top = Math.max(8, (vh - card.offsetHeight) / 3) + "px";
+    return;
+  }
+  const r = el.getBoundingClientRect();
+  hole.hidden = false;
+  Object.assign(hole.style, { left: r.left - 3 + "px", top: r.top - 3 + "px", width: r.width + 6 + "px", height: r.height + 6 + "px" });
+  const cw = card.offsetWidth || 340;
+  const ch = card.offsetHeight || 160;
+  let top = r.bottom + 10;
+  if (top + ch > vh - 8) {
+    top = r.top - ch - 10;
+  }
+  if (top < 8) {
+    top = Math.min(vh - ch - 8, Math.max(8, r.top + 12));
+  }
+  let left = Math.min(Math.max(8, r.left), vw - cw - 8);
+  if (top > r.top - ch && top < r.bottom && left < r.right && left + cw > r.left) {
+    left = Math.min(vw - cw - 8, r.right + 10);
+  }
+  Object.assign(card.style, { left: Math.max(8, left) + "px", top: Math.max(8, top) + "px" });
+}
+function stepNode(tour, i) {
+  const step = tour.steps[i];
+  const last = i === tour.steps.length - 1;
+  const done = step.kind === "do" ? actDone(step.act) : false;
+  return h(
+    "div",
+    { style: { display: "contents" } },
+    h("div", { class: "kind" }, `${t("Крок")} ${i + 1} / ${tour.steps.length} · ${step.kind === "do" ? t("дія") : t("прочитати")}${done ? " · ✓" : ""}`),
+    h("h3", null, L2(step.title)),
+    h("div", { class: "body" }, L2(step.text)),
+    h(
+      "div",
+      { class: "s6-row sp" },
+      h("button", { class: "fbtn sm", type: "button", id: "s6TourPrev", disabled: i === 0, onclick: () => go2(i - 1) }, "← " + t("Назад")),
+      step.kind === "do" && step.act ? h("button", { class: "fbtn sm", type: "button", id: "s6TourShow", onclick: async () => {
+        await showAct(step.act);
+        draw();
+      } }, t("Показати мені")) : null,
+      h("button", { class: "fbtn sm primary", type: "button", id: "s6TourNext", onclick: () => last ? finish() : go2(i + 1) }, last ? t("Завершити") : t("Далі") + " →")
+    ),
+    h("div", { class: "s6-row sp" }, h("span", { class: "s6-muted" }, "← → Esc"), h("button", { class: "fbtn sm", type: "button", id: "s6TourClose", onclick: () => close(false) }, t("Закрити")))
+  );
+}
+function draw() {
+  if (!run.tour) {
+    return;
+  }
+  const { hole, card } = overlay();
+  const step = run.tour.steps[run.i];
+  card.replaceChildren(stepNode(run.tour, run.i));
+  const el = found(step.sel);
+  el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  place(card, hole, el);
+  requestAnimationFrame(() => run.tour && place(card, hole, found(step.sel)));
+}
+function go2(i) {
+  if (!run.tour) {
+    return;
+  }
+  run.i = Math.max(0, Math.min(run.tour.steps.length - 1, i));
+  draw();
+}
+function removeOverlay() {
+  for (const id of ["s6TourHole", "s6TourCard"]) {
+    $("#" + id)?.remove();
+  }
+}
+async function endTraining2() {
+  if (!run.training) {
+    return;
+  }
+  run.training = false;
+  const keep = await confirmBox({ title: t("Навчальна копія"), text: t("Залишити зміни туру як звичайний варіант чи скасувати їх і повернутися до робочого варіанта?"), ok: t("Залишити зміни"), cancel: t("Скасувати") });
+  await E.endTraining(!!keep);
+}
+async function close(completed) {
+  if (!run.tour) {
+    return;
+  }
+  const tour = run.tour;
+  clearInterval(run.timer);
+  document.removeEventListener("keydown", run.onKey, true);
+  run.tour = null;
+  S_flag(false);
+  removeOverlay();
+  if (completed) {
+    lsSet4(DONE_KEY(tour.id), "1");
+    toast(t("Тур «{name}» пройдено.", { name: L2(tour.title) }));
+  }
+  await endTraining2();
+}
+var finish = () => close(true);
+function onKey2(e) {
+  if (!run.tour || $("dialog[open]")) {
+    return;
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    close(false);
+  } else if (e.key === "ArrowRight") {
+    e.preventDefault();
+    e.stopPropagation();
+    run.i < run.tour.steps.length - 1 ? go2(run.i + 1) : finish();
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    e.stopPropagation();
+    go2(run.i - 1);
+  }
+}
+function tourBlocker(tour) {
+  if (E.isMobile?.()) {
+    return t("На телефоні тури недоступні.");
+  }
+  if (tour.mutates) {
+    if (!can("variants")) {
+      return t("Цей тур змінює дані й потребує «навчальної копії», якої тут немає.");
+    }
+    if (!S.rights.is_manager) {
+      return t("Цей тур змінює дані й іде в «навчальній копії»: її створює менеджер конструктора.");
+    }
+  }
+  return null;
+}
+async function startTour(id, { from = 0 } = {}) {
+  const tour = TOUR_BY_ID[id];
+  if (!tour || !ROOT.el) {
+    return false;
+  }
+  if (run.tour) {
+    await close(false);
+  }
+  const why = tourBlocker(tour);
+  if (why) {
+    toast(why, "warn");
+    return false;
+  }
+  ensureStyle4();
+  if (tour.mutates) {
+    const v = E.refreshVariants ? await E.refreshVariants({ render: false }) : null;
+    const active2 = v && v.list.find((x) => x.id === v.active_id);
+    if (!(active2 && active2.is_training)) {
+      const res = await E.createVariant(t("Навчальна копія"), { training: true });
+      if (!res) {
+        return false;
+      }
+    }
+    run.training = true;
+    S.app.mode = "edit";
+    E.renderAll();
+  }
+  run.tour = tour;
+  S_flag(true);
+  run.onKey = onKey2;
+  document.addEventListener("keydown", run.onKey, true);
+  clearInterval(run.timer);
+  run.timer = setInterval(() => run.tour && draw(), 700);
+  go2(from);
+  return true;
+}
+var stopTour = () => close(false);
+function openTours() {
+  ensureStyle4();
+  const rows = TOURS.map((tr) => {
+    const why = tourBlocker(tr);
+    return h(
+      "div",
+      { class: "s6-item", "data-tour": tr.id },
+      h("div", { class: "s6-row sp" }, h("b", null, L2(tr.title)), h("span", { class: "s6-row" }, tr.mutates ? h("span", { class: "s6-tag warn" }, t("навчальна копія")) : null, tourDone(tr.id) ? h("span", { class: "s6-tag ok" }, t("пройдено")) : null)),
+      h("div", { class: "s6-muted" }, L2(tr.desc)),
+      h("div", { class: "s6-row" }, h("button", { class: "fbtn sm primary", type: "button", "data-act": "start", disabled: !!why, title: why || "", onclick: () => {
+        dlg.close2("");
+        startTour(tr.id);
+      } }, t("Почати")), h("span", { class: "s6-muted" }, `#tour-${tr.id} · ${tr.steps.length} ${t("кроків")}`))
+    );
+  });
+  const dlg = openDialog({ title: t("Тури"), cls: "narrow", body: h("div", { class: "s6-panel", id: "s6Tours" }, rows), actions: [{ label: t("Закрити") }] });
+  return dlg;
+}
+function openHelp(topicId) {
+  ensureStyle4();
+  let cur = TOPICS.find((tp) => tp[0] === topicId) || TOPICS[0];
+  const nav = h("nav", { "aria-label": t("Теми") });
+  const art = h("article", { id: "s6HelpBody" });
+  const draw22 = () => {
+    nav.replaceChildren(...TOPICS.map((tp) => h("button", { type: "button", "data-topic": tp[0], "aria-current": String(tp === cur), onclick: () => {
+      cur = tp;
+      draw22();
+    } }, L2(tp[1]))));
+    art.replaceChildren(h("h3", null, L2(cur[1])), ...L2(cur[2]).split("\n").map((p) => h("p", null, p)));
+  };
+  draw22();
+  return openDialog({ title: t("Інструкція"), cls: "wide", body: h("div", { class: "s6-help", id: "s6Help" }, nav, art), actions: [{ label: t("← До моделі"), id: "s6HelpBack" }] });
+}
+registries.dialogs.add("tours", () => openTours(), { force: true });
+registries.dialogs.add("help", (a) => openHelp(a && a.topic), { force: true });
+registries.menu.add("tours", { area: "more", label: "Тури", icon: "tag", sequence: 85, run: () => E.runDialog("tours") }, { sequence: 85, force: true });
+registries.menu.add("help", { area: "more", label: "Інструкція", icon: "tag", sequence: 86, run: () => E.runDialog("help") }, { sequence: 86, force: true });
+function invite() {
+  if (E.isMobile?.() || run.tour || tourDone("welcome") || lsGet4(INVITE_KEY) === "1" || globalThis.navigator?.webdriver || E.host?.autoTour === false) {
+    return;
+  }
+  const root = $("#app");
+  if (!root || root.querySelector("#s6TourInvite")) {
+    return;
+  }
+  const box = h(
+    "div",
+    { class: "s6-tour-card", id: "s6TourInvite", style: { right: "12px", bottom: "12px", left: "auto", top: "auto", position: "fixed" } },
+    h("h3", null, t("Вітаємо в конструкторі")),
+    h("div", { class: "body" }, t("Пройти короткий тур новачка (13 кроків)? Його завжди можна знайти в меню «Ще → Тури».")),
+    h("div", { class: "s6-row sp" }, h("button", { class: "fbtn sm", type: "button", id: "s6InviteNo", onclick: () => {
+      lsSet4(INVITE_KEY, "1");
+      box.remove();
+    } }, t("Не показувати")), h("button", { class: "fbtn sm primary", type: "button", id: "s6InviteYes", onclick: () => {
+      box.remove();
+      startTour("welcome");
+    } }, t("Пройти тур")))
+  );
+  root.append(box);
+}
+function fromHash() {
+  const m = /^#tour-([a-z]+)$/.exec(globalThis.location?.hash || "");
+  if (m && TOUR_BY_ID[m[1]]) {
+    startTour(m[1]);
+    return true;
+  }
+  return false;
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  S_flag(false);
+  if (!fromHash()) {
+    setTimeout(invite, 600);
+  }
+  globalThis.addEventListener?.("hashchange", fromHash);
+});
+E.lifecycle.unmount.add(() => {
+  clearInterval(run.timer);
+  if (run.onKey) {
+    document.removeEventListener("keydown", run.onKey, true);
+  }
+  run.tour = null;
+  run.training = false;
+  globalThis.removeEventListener?.("hashchange", fromHash);
+});
+onLang(() => {
+  if (run.tour) {
+    draw();
+  }
+});
+Object.assign(E, { startTour, stopTour, openTours, openHelp, tourState });
+addEn({
+  "Крок": "Step",
+  "дія": "action",
+  "прочитати": "read",
+  "Назад": "Back",
+  "Показати мені": "Show me",
+  "Завершити": "Finish",
+  "Далі": "Next",
+  "Закрити": "Close",
+  "Навчальна копія": "Training copy",
+  "Залишити зміни": "Keep changes",
+  "Скасувати": "Cancel",
+  "Залишити зміни туру як звичайний варіант чи скасувати їх і повернутися до робочого варіанта?": "Keep the tour changes as a regular variant or cancel them and return to the working variant?",
+  "Тур «{name}» пройдено.": "Tour “{name}” completed.",
+  "На телефоні тури недоступні.": "Tours are not available on a phone.",
+  "Цей тур змінює дані й потребує «навчальної копії», якої тут немає.": "This tour changes data and needs a “training copy”, which is not available here.",
+  "Цей тур змінює дані й іде в «навчальній копії»: її створює менеджер конструктора.": "This tour changes data and runs in a “training copy”: the constructor manager creates it.",
+  "навчальна копія": "training copy",
+  "пройдено": "completed",
+  "Почати": "Start",
+  "кроків": "steps",
+  "Тури": "Tours",
+  "Теми": "Topics",
+  "Інструкція": "Help",
+  "← До моделі": "← Back to the model",
+  "Вітаємо в конструкторі": "Welcome to the constructor",
+  "Пройти короткий тур новачка (13 кроків)? Його завжди можна знайти в меню «Ще → Тури».": "Take the short beginner tour (13 steps)? You can always find it under “More → Tours”.",
+  "Не показувати": "Do not show",
+  "Пройти тур": "Take the tour",
+  "Яруси: {n}": "Tiers: {n}"
+});
+
+// core/constructor/minimap.js
+var W2 = 168;
+var MAXH = 120;
+var FAR = 400;
+function viewFootprint(camera) {
+  if (!camera || !THREE.Vector3) {
+    return null;
+  }
+  const o = camera.position.clone();
+  const pts = [];
+  for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const d = new THREE.Vector3(nx, ny, 0.5).unproject(camera).sub(o).normalize();
+    let k = d.y < -1e-4 ? -o.y / d.y : FAR;
+    k = Math.min(Math.max(k, 0), FAR);
+    pts.push([o.x + d.x * k, -(o.z + d.z * k)]);
+  }
+  return pts;
+}
+function miniScale(B3, maxW = W2, maxH = MAXH) {
+  const k = Math.min(maxW / (B3.length || 1), maxH / (B3.width || 1));
+  return { k, w: Math.round(B3.length * k), h: Math.round(B3.width * k) };
+}
+var miniToWorld = (px, py, B3, sc) => ({ x: Math.max(0, Math.min(B3.length, px / sc.k)), y: Math.max(0, Math.min(B3.width, (sc.h - py) / sc.k)) });
+var canvas = null;
+var drag = false;
+function ensureMini() {
+  const c = centerEl();
+  if (!c) {
+    return null;
+  }
+  let box = c.querySelector("#s6Mini");
+  if (!box) {
+    canvas = h("canvas", { width: W2, height: 90, id: "s6MiniCanvas", "aria-label": t("Мініатюра плану: клік переносить камеру"), role: "img" });
+    box = h("div", { class: "s6-mini", id: "s6Mini", title: t("Мініатюра плану: клік переносить камеру") }, canvas);
+    const move = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const B3 = S.site.building;
+      const sc = miniScale(B3);
+      const p = miniToWorld((e.clientX - r.left) / r.width * canvas.width, (e.clientY - r.top) / r.height * canvas.height, B3, sc);
+      E.focusOn?.(p.x, p.y);
+    };
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = true;
+      canvas.setPointerCapture?.(e.pointerId);
+      move(e);
+    });
+    canvas.addEventListener("pointermove", (e) => drag && move(e));
+    canvas.addEventListener("pointerup", () => drag = false);
+    canvas.addEventListener("pointercancel", () => drag = false);
+    c.append(box);
+  }
+  canvas = box.querySelector("canvas");
+  return box;
+}
+var css = (name, fallback) => (getComputedStyle(ROOTEL()).getPropertyValue(name) || fallback).trim() || fallback;
+var ROOTEL = () => centerEl() || document.body;
+function poly(g3, pts, X, Y, fill2) {
+  if (!pts || pts.length < 3) {
+    return false;
+  }
+  g3.beginPath();
+  pts.forEach(([x, y], i) => i ? g3.lineTo(X(x), Y(y)) : g3.moveTo(X(x), Y(y)));
+  g3.closePath();
+  if (fill2) {
+    g3.fill();
+  }
+  return true;
+}
+function draw2() {
+  const box = $("#s6Mini");
+  if (!box || !S.site || box.hidden) {
+    return;
+  }
+  const B3 = S.site.building;
+  const sc = miniScale(B3);
+  if (canvas.width !== sc.w || canvas.height !== sc.h) {
+    canvas.width = sc.w;
+    canvas.height = sc.h;
+  }
+  const g3 = canvas.getContext("2d");
+  const ink = css("--ink", "#1f2933");
+  g3.clearRect(0, 0, sc.w, sc.h);
+  g3.fillStyle = css("--surface2", "#f2f4f6");
+  g3.fillRect(0, 0, sc.w, sc.h);
+  const X = (x) => x * sc.k;
+  const Y = (y) => sc.h - y * sc.k;
+  const layers = new Map(S.layers.map((l) => [l.id, l]));
+  for (const s of S.slots) {
+    const ly = layers.get(s.layer_id);
+    if (!ly || V.hidden && V.hidden.has(ly.id) || ly.kind === "building") {
+      continue;
+    }
+    if (E.objVisible && !E.objVisible("slot", s.id)) {
+      continue;
+    }
+    g3.fillStyle = ly.color || "#888";
+    if (s.template === "zone") {
+      g3.globalAlpha = 0.12;
+      poly(g3, s.params && s.params.polygon, X, Y, true);
+      g3.globalAlpha = 1;
+      continue;
+    }
+    let pts = null;
+    try {
+      pts = obbCorners(slotObb(s.template, s.params || {}, s.x, s.y, s.rotation || 0));
+    } catch {
+      pts = null;
+    }
+    poly(g3, pts, X, Y, true);
+  }
+  for (const p of S.placements) {
+    const ly = layers.get(p.layer_id);
+    if (!ly || V.hidden && V.hidden.has(ly.id) || E.objVisible && !E.objVisible("placement", p.id)) {
+      continue;
+    }
+    g3.fillStyle = ly.color || "#557";
+    const v = variantOf(p.variant_id);
+    let pts = null;
+    try {
+      pts = v ? obbCorners(placementObb(v, p.x, p.y, p.rotation || 0)) : null;
+    } catch {
+      pts = null;
+    }
+    if (!poly(g3, pts, X, Y, true)) {
+      g3.fillRect(X(p.x) - 1.5, Y(p.y) - 1.5, 3, 3);
+    }
+  }
+  g3.strokeStyle = ink;
+  g3.lineWidth = 1;
+  g3.strokeRect(0.5, 0.5, sc.w - 1, sc.h - 1);
+  const sel = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).get(S.sel.id);
+  if (sel) {
+    g3.strokeStyle = css("--accent", "#0e7c86");
+    g3.lineWidth = 2;
+    g3.strokeRect(X(sel.x) - 4, Y(sel.y) - 4, 8, 8);
+  }
+  const fp = V.ok && viewFootprint(V.camera);
+  if (fp) {
+    g3.strokeStyle = "#e11d48";
+    g3.lineWidth = 1.5;
+    g3.beginPath();
+    fp.forEach(([x, y], i) => i ? g3.lineTo(X(x), Y(y)) : g3.moveTo(X(x), Y(y)));
+    g3.closePath();
+    g3.stroke();
+  }
+}
+function renderMini() {
+  const box = ensureMini();
+  if (box) {
+    box.hidden = S.ui.minimap === false;
+    draw2();
+  }
+}
+function toggleMini(on = S.ui.minimap === false) {
+  S.ui.minimap = !!on;
+  renderMini();
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  ensureMini();
+  addFrameHook("minimap", draw2);
+  renderMini();
+  E.requestRender?.();
+});
+E.lifecycle.unmount.add(() => {
+  canvas = null;
+  drag = false;
+});
+Object.assign(E, { renderMini, toggleMini, miniViewFootprint: viewFootprint });
+addEn({ "Мініатюра плану: клік переносить камеру": "Minimap: click to move the camera", "Мініатюра": "Minimap" });
+
+// core/constructor/levels.js
+var PICKS = [
+  ["cell", "Місце"],
+  ["bay", "Стелаж"],
+  ["row", "Ряд"],
+  ["zone", "Зона"]
+];
+var UP = { cell: "bay", bay: "row", row: "zone", zone: "site" };
+var isZone = (s) => !!s && s.template === "zone";
+var zoneOfRec = (rec) => rec && !isZone(rec) ? zoneAt(zonesOf2(S.slots), rec.x, rec.y) : null;
+function normalizeFocus(f) {
+  if (!f) {
+    return null;
+  }
+  const out = { zone: null, row: null, bay: null, level: null };
+  const row = f.row && S.sIdx.get(f.row);
+  if (row && !isZone(row)) {
+    out.row = row.id;
+    const z = zoneOfRec(row);
+    out.zone = z ? z.id : null;
+    if (f.bay != null) {
+      out.bay = Number(f.bay);
+      if (f.level != null) {
+        out.level = Number(f.level);
+      }
+    }
+  } else if (f.zone && isZone(S.sIdx.get(f.zone))) {
+    out.zone = f.zone;
+  }
+  return out.zone || out.row ? out : null;
+}
+var memo2 = { rec: null, sig: "", poly: null };
+function zonePoly2(id) {
+  const z = S.sIdx.get(id);
+  if (!z) {
+    return null;
+  }
+  const sig = [z.x, z.y, z.rotation, z.params].join("|");
+  if (memo2.rec === z && memo2.sig === sig) {
+    return memo2.poly;
+  }
+  const hit = zonesOf2([z])[0];
+  memo2 = { rec: z, sig, poly: hit ? hit.poly : null };
+  return memo2.poly;
+}
+function objVisible(kind, id) {
+  const f = S.ui && S.ui.focus;
+  if (!f || kind !== "slot" && kind !== "placement") {
+    return true;
+  }
+  if (f.row) {
+    return kind === "slot" && (id === f.row || id === f.zone);
+  }
+  if (id === f.zone) {
+    return true;
+  }
+  const rec = (kind === "slot" ? S.sIdx : S.pIdx).get(id);
+  const poly2 = f.zone && zonePoly2(f.zone);
+  return !rec || !poly2 || polygonContains(poly2, [rec.x, rec.y]);
+}
+function focusCodes(f = S.ui.focus) {
+  const row = f && f.row && S.sIdx.get(f.row);
+  if (!row || f.bay == null) {
+    return /* @__PURE__ */ new Set();
+  }
+  return new Set(cellsOf(row).filter((c) => !c.disabled && c.index === f.bay && (f.level == null || c.level === f.level)).map((c) => c.code));
+}
+function crumbsOf(f = S.ui.focus) {
+  const out = [{ key: "site", label: S.site && S.site.name || "WH", focus: null }];
+  const zone2 = f && f.zone && S.sIdx.get(f.zone);
+  const row = f && f.row && S.sIdx.get(f.row);
+  if (zone2) {
+    out.push({ key: "zone", label: zone2.params && zone2.params.title || zone2.code_prefix || t("Зона"), focus: { zone: zone2.id } });
+  }
+  if (row) {
+    out.push({ key: "row", label: row.code_prefix || t("Ряд"), focus: { zone: f.zone, row: row.id } });
+    if (f.bay != null) {
+      out.push({ key: "bay", label: `${t("Стелаж")} ${f.bay}`, focus: { zone: f.zone, row: row.id, bay: f.bay } });
+      if (f.level != null) {
+        out.push({ key: "level", label: `${t("Ярус")} ${f.level}`, focus: { ...f } });
+      }
+    }
+  }
+  return out;
+}
+function boundsOf(f) {
+  let pts = [];
+  const row = f.row && S.sIdx.get(f.row);
+  const box = (c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]];
+  if (row) {
+    const all = cellsAbs(row, elevOf(row.layer_id));
+    const codes = f.bay != null ? focusCodes(f) : null;
+    pts = (codes && codes.size ? all.filter((c) => codes.has(c.code)) : all).flatMap(box);
+    if (!pts.length) {
+      pts = [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
+    }
+  } else if (f.zone) {
+    pts = zonePoly2(f.zone) || [];
+  }
+  if (!pts.length) {
+    return null;
+  }
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0, 2) };
+}
+var clearLevelHl = () => {
+  if (S.hl && S.hl.kind === "level") {
+    E.setHighlight?.(null);
+  }
+};
+function applyHighlight() {
+  const codes = focusCodes();
+  if (codes.size) {
+    E.setHighlight?.(codes, "level");
+  } else {
+    clearLevelHl();
+  }
+}
+function setFocus(f, { camera = true } = {}) {
+  S.ui.focus = normalizeFocus(f);
+  S.ui.selBay = null;
+  applyHighlight();
+  const b = S.ui.focus && boundsOf(S.ui.focus);
+  if (camera) {
+    if (b) {
+      E.focusOn?.(b.x, b.y, Math.min(400, Math.max(8, b.size * 1.9 + 4)));
+    } else if (V.ok) {
+      E.setView?.(V.camMode || "iso");
+    }
+  }
+  renderNav();
+  E.requestRender?.();
+}
+function levelUp() {
+  const f = S.ui.focus;
+  if (!f) {
+    return false;
+  }
+  const n = { ...f };
+  if (n.level != null) {
+    n.level = null;
+  } else if (n.bay != null) {
+    n.bay = null;
+  } else if (n.row) {
+    n.row = null;
+  } else {
+    n.zone = null;
+  }
+  setFocus(n);
+  return true;
+}
+function resetFocus() {
+  setFocus(null);
+}
+function drill() {
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    toast(t("Спершу виділіть зону, ряд або місце."), "warn");
+    return false;
+  }
+  const f = S.ui.focus || {};
+  if (S.sel.kind === "placement" || isZone(rec)) {
+    const z = isZone(rec) ? rec : zoneOfRec(rec);
+    setFocus(z ? { zone: z.id } : null);
+    return !!z;
+  }
+  const zone2 = zoneOfRec(rec);
+  const cell = S.selCell && cellsOf(rec).find((c) => c.code === S.selCell);
+  if (!f.zone && !f.row && zone2) {
+    setFocus({ zone: zone2.id });
+  } else if (f.row !== rec.id) {
+    setFocus({ zone: zone2 ? zone2.id : null, row: rec.id });
+  } else if (f.bay == null) {
+    setFocus({ ...f, bay: cell ? cell.index : S.ui.selBay && S.ui.selBay.index || 1 });
+  } else if (f.level == null) {
+    setFocus({ ...f, level: cell ? cell.level : 1 });
+  } else {
+    return false;
+  }
+  return true;
+}
+var curLevel = (rec, hadCell) => isZone(rec) ? "zone" : hadCell ? "cell" : S.ui.selBay ? "bay" : "row";
+function applyPick(level, hadCell) {
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    return;
+  }
+  const ex2 = S.sel.kind === "slot" ? S.selCell || hadCell : null;
+  S.ui.selLevel = level;
+  if (level === "site") {
+    E.selectObj(null);
+    return;
+  }
+  if (level === "zone") {
+    const z = isZone(rec) ? rec : zoneOfRec(rec);
+    if (z && z.id !== rec.id) {
+      E.selectObj({ kind: "slot", id: z.id });
+    } else if (!z) {
+      applyPick("row", hadCell);
+      return;
+    }
+  } else if (level === "bay" && S.sel.kind === "slot" && !isZone(rec)) {
+    const cell = ex2 && cellsOf(rec).find((c) => c.code === ex2);
+    if (cell) {
+      S.selCell = null;
+      S.ui.selBay = { slot: rec.id, index: cell.index };
+      E.setHighlight?.(new Set(cellsOf(rec).filter((c) => !c.disabled && c.index === cell.index).map((c) => c.code)), "level");
+    } else {
+      applyPick("row", hadCell);
+      return;
+    }
+  } else if (level === "row") {
+    S.selCell = null;
+    S.ui.selBay = null;
+    clearLevelHl();
+  } else if (level === "cell") {
+    S.ui.selBay = null;
+    clearLevelHl();
+  }
+  E.updateVisual?.();
+  E.renderCellsBox?.();
+  E.renderRight?.();
+  renderNav();
+}
+function bindCanvas() {
+  const cv = V.canvas;
+  if (!cv || cv.__s6click) {
+    return;
+  }
+  cv.__s6click = true;
+  let pre = null;
+  cv.addEventListener(
+    "pointerdown",
+    (e) => {
+      pre = e.button === 0 || e.pointerType !== "mouse" ? { x: e.clientX, y: e.clientY, sel: S.sel ? { ...S.sel } : null, cell: S.selCell, multi: S.multi.length } : null;
+    },
+    true
+  );
+  cv.addEventListener("pointerup", (e) => {
+    const p = pre;
+    pre = null;
+    if (!p || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 5 || e.ctrlKey || e.metaKey || e.shiftKey) {
+      return;
+    }
+    setTimeout(() => {
+      if (!S.sel || S.multi.length > 1 || S.app.mode !== "view" && S.app.mode !== "edit") {
+        return;
+      }
+      const rec = recOfRef(S.sel);
+      const pick2 = S.ui.pick || "cell";
+      const same4 = !!p.sel && S.sel.kind === "slot" && p.sel.kind === "slot" && p.sel.id === S.sel.id;
+      if (same4) {
+        applyPick(UP[curLevel(rec, !!p.cell)], !!p.cell);
+      } else if (pick2 !== "cell" || S.selCell) {
+        applyPick(pick2, !!S.selCell);
+      }
+    }, 0);
+  });
+}
+function renderNav() {
+  const c = centerEl();
+  if (!c) {
+    return;
+  }
+  let bar = c.querySelector("#s6Crumbs");
+  if (!bar) {
+    bar = h("div", { class: "s6-crumbs", id: "s6Crumbs", role: "navigation", "aria-label": t("Рівні") });
+    c.append(bar);
+  }
+  let pick2 = c.querySelector("#s6Pick");
+  if (!pick2) {
+    pick2 = h("div", { class: "s6-pick", id: "s6Pick" });
+    c.append(pick2);
+  }
+  const crumbs = crumbsOf();
+  bar.replaceChildren(
+    ...K(
+      crumbs.map((cr, i) => [i ? h("span", { class: "sep" }, "›") : null, h("button", { type: "button", "data-level": cr.key, "aria-current": i === crumbs.length - 1 ? "true" : "false", onclick: () => setFocus(cr.focus) }, cr.label)]),
+      h("button", { type: "button", id: "s6Down", title: t("Заглибитись до виділеного"), "aria-label": t("Заглибитись до виділеного"), onclick: drill }, "↓"),
+      h("button", { type: "button", id: "s6Up", title: t("Рівень вище"), "aria-label": t("Рівень вище"), disabled: !S.ui.focus, onclick: levelUp }, "↑"),
+      h("button", { type: "button", id: "s6Reset", title: t("Скинути рівні"), "aria-label": t("Скинути рівні"), disabled: !S.ui.focus, onclick: resetFocus }, "⟲")
+    )
+  );
+  pick2.replaceChildren(
+    h("label", { for: "s6PickSel" }, t("Клік виділяє")),
+    h("select", { id: "s6PickSel", "aria-label": t("Клік виділяє"), onchange: (e) => {
+      S.ui.pick = e.target.value;
+    } }, PICKS.map(([v, l]) => h("option", { value: v, selected: (S.ui.pick || "cell") === v }, t(l)))),
+    h("button", { class: "fbtn sm", type: "button", id: "s6MiniToggle", "aria-pressed": String(S.ui.minimap !== false), title: t("Показати чи сховати мініатюру плану"), onclick: () => {
+      E.toggleMini?.();
+      renderNav();
+    } }, t("Мініатюра"))
+  );
+}
+registries.hotkeys.add("levels.up", { code: "KeyU", label: "U — рівень вище", run: (e) => levelUp() ? e.preventDefault() : false }, { sequence: 60, force: true });
+var origSelect3 = E.selectObj;
+E.selectObj = function selectObjLevels(ref2, ...rest) {
+  S.ui.selBay = null;
+  const r = origSelect3.call(this, ref2, ...rest);
+  if (!(S.ui.focus && S.ui.focus.bay != null)) {
+    clearLevelHl();
+  }
+  return r;
+};
+E.lifecycle.mount.add(() => {
+  ensureStyle4();
+  S.ui.focus = null;
+  S.ui.pick = S.ui.pick || "cell";
+  addFrameHook(
+    "levels",
+    () => {
+      const f = S.ui.focus;
+      for (const [key, view2] of V.views) {
+        const kind = key[0] === "s" ? "slot" : key[0] === "p" ? "placement" : null;
+        if (kind && view2.root) {
+          view2.root.visible = !f || objVisible(kind, key.slice(2));
+        }
+      }
+    },
+    { pre: true }
+  );
+  bindCanvas();
+  renderNav();
+});
+Object.assign(E, { setFocus, levelUp, resetFocus, drillToSelection: drill, objVisible, renderNav, applyPick });
+addEn({
+  "Місце": "Place",
+  "Стелаж": "Bay",
+  "Ряд": "Row",
+  "Зона": "Zone",
+  "Ярус": "Tier",
+  "Рівні": "Levels",
+  "Клік виділяє": "Click selects",
+  "Заглибитись до виділеного": "Drill down to the selection",
+  "Рівень вище": "Level up",
+  "Скинути рівні": "Reset levels",
+  "Мініатюра": "Minimap",
+  "Показати чи сховати мініатюру плану": "Show or hide the minimap",
+  "Спершу виділіть зону, ряд або місце.": "Select a zone, row or place first.",
+  "U — рівень вище": "U — level up"
+});
+export {
+  BaseAdapter,
+  CAPABILITY_NAMES,
+  E,
+  OdooAdapter,
+  OdooStore,
+  REGISTRY_NAMES,
+  REQUIRED_METHODS,
+  Registry,
+  S,
+  StoreError,
+  THREE,
+  V,
+  adapter_odoo_exports as adapter_odoo,
+  assertAdapter,
+  can,
+  cells_exports as cells,
+  checks_exports as checks,
+  data_exports as data,
+  dialogs_exports as dialogs,
+  dxf_exports as dxf,
+  forEachEntry,
+  geometry_exports as geometry,
+  getThree,
+  host,
+  live_exports as live,
+  loadThree,
+  mountEditor,
+  newUid,
+  registries,
+  roles_exports as roles,
+  scene_exports as scene,
+  setCapabilities,
+  setHost,
+  state_exports as state,
+  unmountEditor,
+  util_exports as util,
+  webglAvailable
+};

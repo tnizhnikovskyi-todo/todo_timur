@@ -1,10 +1,11 @@
 /** @odoo-module */
 // AC-61 (черга, автозбереження, id_map, повтор), AC-48 (x_m з API ↔ x у редакторі), AC-66 (площадки), відображення API-03 ↔ стан редактора.
-import { advanceTime, describe, expect, test } from "@odoo/hoot";
-import { OdooStore, normalizeLoaded, placementToApi, polygonToRect, rectToPolygon, slotToApi } from "@td_constructor/editor/store";
+import { advanceTime, beforeEach, describe, expect, test } from "@odoo/hoot";
+import { OdooStore, normalizeLoaded, placementToApi, polygonToRect, rectToPolygon, setupCore, slotToApi } from "./core";
 import { makeLoad, makeSecondSite, mockRpc } from "./fixtures";
 
 describe.current.tags("desktop");
+beforeEach(setupCore);
 
 const SAVE = "/f3d/constructor/save";
 const ok = (extra = {}) => ({ ok: true, rev: 4, draft_changes: 1, has_changes: true, id_map: {}, etags: {}, ...extra });

@@ -3,9 +3,10 @@
 Вхід — словник стану у форматі API-03 `load` (метри для шарів/місць/розміщень, мм для варіантів):
 
     state = {
-      'site': {'building': {'length', 'width', 'height'}},
-      'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities}],
-      'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides}],
+      'site': {'building': {'length', 'width', 'height'}, 'sprinkler_height', 'aisle_tech'},
+      'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities, items}],
+      'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides, type_id, function_id, tech,
+                 addr, …}],
       'placements': [{id, layer_id, variant_id, slot_id, cell_code, code, name, x, y, rotation, dynamic}],
       'variants': [{id, length, width, height, service: {front, back, left, right}, rotations, layer_kinds,
                     slot_types, utilities, weight_kg, floor_load, anchor, front_side}],
@@ -14,12 +15,15 @@
 
 Результат — список `issue = {check, severity, layer_id, codes, message}` лише для увімкнених перевірок.
 Коди пар у `collide` відсортовані за алфавітом (пара не має напрямку).
+Перевірки слайсів (MERGE.md §5.0) реєструються в `registry.CHECKS` і запускаються після вбудованих.
 """
 
 import math
 
+from . import addr as addr_mod
 from . import cells as cells_mod
 from . import geometry as geo
+from .registry import CHECKS
 
 CHECK_KEYS = ['fits', 'collide', 'service_free', 'aisles_free', 'load', 'utility_reach', 'fire']
 
@@ -61,6 +65,14 @@ def _rotation_ok(mode, rotation):
     return min(rem, period - rem) <= ROTATION_TOLERANCE_DEG
 
 
+def _has_addr(state):
+    """Чи є в стані адресація (площадки, зони чи місця) або глибина «комірка»: інакше контексти не потрібні."""
+    site = state.get('site') or {}
+    if site.get('addr') or site.get('depth_mode') == 'cell':
+        return True
+    return any(s.get('addr') or s.get('depth_mode') for s in state.get('slots') or [])
+
+
 class _Scene:
     """Індекси стану й кеш геометрії для перевірок."""
 
@@ -73,8 +85,24 @@ class _Scene:
         self.dynamic = {p['id'] for p in self.placements if p.get('dynamic')}
         self._slot_obb = {}
         self._slot_cells = {}
+        self._state = state
+        self._extra = None
+        self._contexts = None
         self._body = {}
         self._service = {}
+
+    @property
+    def extra(self):
+        """Дані БД для перевірок слайсів (залишки, правила розміщення, зайнятість кодів): `state['extra']` — словник
+        або функція `fn(scene)` (обчислюється один раз, лише коли потрібна ввімкненим перевіркам)."""
+        if self._extra is None:
+            raw = self._state.get('extra')
+            self._extra = raw(self) if callable(raw) else (raw or {})
+        return self._extra
+
+    @extra.setter
+    def extra(self, value):
+        self._extra = value
 
     def slot_obb(self, slot):
         key = slot['id']
@@ -87,6 +115,12 @@ class _Scene:
                 slot.get('rotation') or 0.0,
             )
         return self._slot_obb[key]
+
+    def _slot_ctx(self, slot):
+        """Контекст адресації місця (F01): коди комірок як у розкладці; без адресації — None (legacy-коди)."""
+        if self._contexts is None:
+            self._contexts = addr_mod.state_contexts(self._state) if _has_addr(self._state) else {}
+        return addr_mod.usable_context(self._contexts.get(slot.get('uid') or slot['id']))
 
     def slot_cells(self, slot):
         key = slot['id']
@@ -103,6 +137,7 @@ class _Scene:
                     slot.get('params') or {},
                     slot.get('overrides') or {},
                     elevation,
+                    self._slot_ctx(slot),
                 )
             }
         return self._slot_cells[key]
@@ -445,6 +480,11 @@ def run_checks(state, configs, eps=DEFAULT_EPS_M):
         config = by_key.get(key)
         if config is not None:
             issues.extend(CHECKERS[key](scene, config, _eps(config, eps)))
+    # перевірки слайсів (services.registry.CHECKS) — після вбудованих; вбудовані ключі реєстром не перекриваються
+    for key, checker in CHECKS.items():
+        config = by_key.get(key)
+        if config is not None and key not in CHECKERS:
+            issues.extend(checker(scene, config, _eps(config, eps)))
     return issues
 
 

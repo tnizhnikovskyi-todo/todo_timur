@@ -25,4 +25,29 @@
         <field name="key">td.constructor.convert_server_enabled</field>
         <field name="value">True</field>
     </record>
+    <!-- MERGE.md §3.6: параметри хвиль 1–2 (блокування зон, варіанти, версії, залишки, етикетки) -->
+    <record id="param_lock_ttl_s" model="ir.config_parameter">
+        <field name="key">td.constructor.lock_ttl_s</field>
+        <field name="value">300</field>
+    </record>
+    <record id="param_lock_heartbeat_s" model="ir.config_parameter">
+        <field name="key">td.constructor.lock_heartbeat_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_variants_max" model="ir.config_parameter">
+        <field name="key">td.constructor.variants_max</field>
+        <field name="value">12</field>
+    </record>
+    <record id="param_versions_keep" model="ir.config_parameter">
+        <field name="key">td.constructor.versions_keep</field>
+        <field name="value">50</field>
+    </record>
+    <record id="param_stock_days" model="ir.config_parameter">
+        <field name="key">td.constructor.stock_days</field>
+        <field name="value">90</field>
+    </record>
+    <record id="param_labels_max" model="ir.config_parameter">
+        <field name="key">td.constructor.labels_max</field>
+        <field name="value">5000</field>
+    </record>
 </odoo>

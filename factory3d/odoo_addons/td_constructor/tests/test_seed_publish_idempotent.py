@@ -320,11 +320,11 @@ class TestPublishRules(F3DConstructorCase):
         self.assertEqual([i for i in plan['issues'] if i['check'] == 'conflict'], [])
         self.assertEqual([line['code'] for line in plan['lines'] if line['res_model'] == publish.LOCATION], ['UNL-T1'])
         self.assertEqual(self.plan_lines('archive', publish.LOCATION), [])
-        # kind 'area' збігається з локацією; різні види — оновлення
-        update = self.plan_lines('update', publish.LOCATION)
+        # kind 'area' збігається з локацією; різні види — зміна атрибутів (S2: `update` локацій → move/rename/attrs)
+        update = self.plan_lines('attrs', publish.LOCATION)
         self.assertEqual([line['vals'] for line in update], [{'td_slot_uid': slot.uid}])
         slot.params = dict(slot.params, loc_kind='kit')
-        update = self.plan_lines('update', publish.LOCATION)
+        update = self.plan_lines('attrs', publish.LOCATION)
         self.assertEqual(update[0]['vals']['td_loc_kind'], 'kit')
 
     def test_barcode_with_other_scene_code_is_still_a_conflict(self):

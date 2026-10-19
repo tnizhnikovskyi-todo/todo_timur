@@ -47,6 +47,7 @@ SAVE_FIELDS = {
         'aisles',
         'fire_paths',
         'utilities',
+        'items',
         'underlay_params',
         'underlay_attachment_id',
         'active',
@@ -64,6 +65,16 @@ SAVE_FIELDS = {
         'params',
         'overrides',
         'parent_location_id',
+        'type_id',
+        'storage_category_id',
+        'removal_strategy_id',
+        'function_id',
+        'attr_ids',
+        'temp_min_c',
+        'temp_max_c',
+        'tech',
+        'addr',
+        'depth_mode',
         'note',
         'active',
     },
@@ -83,9 +94,61 @@ SAVE_FIELDS = {
         'active',
     },
     'td.check.config': {'check_key', 'enabled', 'mode', 'params'},
+    'td.putaway.rule': {
+        'uid',
+        'product_id',
+        'category_id',
+        'package_type_ids',
+        'in_location_id',
+        'out_code',
+        'out_location_id',
+        'sublocation',
+        'storage_category_id',
+        'sequence',
+        'deleted',
+        'active',
+    },
+    'td.replenish.rule': {
+        'uid',
+        'product_id',
+        'cell_code',
+        'location_id',
+        'min_qty',
+        'max_qty',
+        'deleted',
+        'active',
+    },
 }
 REF_FIELDS = {'layer_id', 'slot_id', 'variant_id'}
-DICT_FUNCS = {'td.layer': st.layer_dict, 'td.slot': st.slot_dict, 'td.placement': st.placement_dict}
+DICT_FUNCS = {
+    'td.layer': st.layer_dict,
+    'td.slot': st.slot_dict,
+    'td.placement': st.placement_dict,
+    'td.putaway.rule': st.putaway_rule_dict,
+    'td.replenish.rule': st.replenish_rule_dict,
+}
+# MERGE.md §3.3/§3.4: посилання на записи довідників і Odoo у vals API-04 (id або null); списки — M2M
+SAVE_M2O = {
+    'td.slot': {
+        'type_id': 'td.slot.type',
+        'storage_category_id': 'stock.storage.category',
+        'removal_strategy_id': 'product.removal',
+        'function_id': 'td.term',
+    },
+    'td.putaway.rule': {
+        'product_id': 'product.product',
+        'category_id': 'product.category',
+        'in_location_id': 'stock.location',
+        'out_location_id': 'stock.location',
+        'storage_category_id': 'stock.storage.category',
+    },
+    'td.replenish.rule': {'product_id': 'product.product', 'location_id': 'stock.location'},
+}
+SAVE_M2M = {
+    'td.slot': {'attr_ids': 'td.term'},
+    'td.putaway.rule': {'package_type_ids': 'stock.package.type'},
+}
+SAVE_TERM_TYPE = {('td.slot', 'function_id'): 'zone_function', ('td.slot', 'attr_ids'): 'zone_attr'}
 
 
 def fail(code, message, **extra):
@@ -247,11 +310,14 @@ class F3dConstructorController(http.Controller):
                 'draft_changes': site.draft_changes,
                 'has_changes': site.has_changes,
                 'settings': params(env),
+                **st.site_ext_dict(site),
             },
             'layers': [st.layer_dict(layer, xmlids) for layer in layers],
             'slots': [st.slot_dict(s) for s in slots],
             'placements': [st.placement_dict(p) for p in placements],
             'catalog': list(catalog.values()),
+            **st.library_state(env),
+            'rules': st.rules_state(site),
             'checks': st.check_configs(site),
             'versions': [
                 {
@@ -349,6 +415,7 @@ class F3dConstructorController(http.Controller):
             vals['allowed_slot_type_ids'] = [Command.set(terms.ids)]
         if 'edit_group_ids' in vals:
             vals['edit_group_ids'] = [Command.set([int(i) for i in vals['edit_group_ids'] or []])]
+        self._prepare_refs(model, vals)
         if model in ('td.slot', 'td.placement') and 'layer_id' in vals:
             layer = env['td.layer'].browse(vals['layer_id']).exists()
             if not layer or layer.site_id != site:
@@ -358,9 +425,40 @@ class F3dConstructorController(http.Controller):
             if not slot or slot.site_id != site:
                 raise _OpError('validation', "Місце не належить цій площадці.")
         if creating:
-            if model in ('td.layer', 'td.check.config'):
+            if model in ('td.layer', 'td.check.config', 'td.putaway.rule', 'td.replenish.rule'):
                 vals['site_id'] = site.id
         return vals
+
+    def _prepare_refs(self, model, vals):
+        """Посилання на довідники й записи Odoo (SAVE_M2O/SAVE_M2M): id існуючого запису або null; M2M — Command.set."""
+        env = request.env
+        for field, target in SAVE_M2O.get(model, {}).items():
+            if field not in vals:
+                continue
+            value = vals[field]
+            if value in (None, False, 0):
+                vals[field] = False
+                continue
+            if not isinstance(value, int) or isinstance(value, bool) or not env[target].browse(value).exists():
+                raise _OpError('validation', "Поле %s: запис не знайдено." % field)
+            self._check_term_type(model, field, env[target].browse(value))
+        for field, target in SAVE_M2M.get(model, {}).items():
+            if field not in vals:
+                continue
+            ids = vals[field] or []
+            if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
+                raise _OpError('validation', "Поле %s: очікується список id." % field)
+            records = env[target].browse(ids).exists()
+            if len(records) != len(set(ids)):
+                raise _OpError('validation', "Поле %s: запис не знайдено." % field)
+            self._check_term_type(model, field, records)
+            vals[field] = [Command.set(records.ids)]
+
+    @staticmethod
+    def _check_term_type(model, field, records):
+        term_type = SAVE_TERM_TYPE.get((model, field))
+        if term_type and any(rec.term_type != term_type for rec in records):
+            raise _OpError('validation', "Поле %s: очікується довідник «%s»." % (field, term_type))
 
     def _save_op(self, site, op, id_map, touched):
         env = request.env
@@ -423,7 +521,9 @@ class F3dConstructorController(http.Controller):
 
     # --- API-07 -------------------------------------------------------------------------------------
     @http.route('/f3d/constructor/publish', type='jsonrpc', auth='user', methods=['POST'])
-    def publish(self, site_id=None, note=None, archive_codes=None, confirm=None, **kw):
+    def publish(self, site_id=None, note=None, archive_codes=None, confirm=None, scope=None, excluded=None, **kw):
+        """`scope` — uid місць/зон (застосувати лише їхні рядки, F02-03); `excluded` — рядки, що пропускаються:
+        `[модель, код]` або `[модель, код, вид]` (вид: create/move/rename/attrs/update)."""
         env = request.env
         site = find_site(env, site_id)
         if not site:
@@ -432,9 +532,26 @@ class F3dConstructorController(http.Controller):
             return fail('validation', "Підтвердіть публікацію: confirm = true.")
         if not is_manager(env):
             return fail('rights', "Публікувати розкладку може лише менеджер конструктора.")
+        if scope is not None and not (isinstance(scope, list) and all(isinstance(u, str) for u in scope)):
+            return fail('validation', "scope має бути списком uid місць або зон.")
+        if excluded is not None and not (
+            isinstance(excluded, list)
+            and all(
+                isinstance(e, list | tuple) and 2 <= len(e) <= 3 and all(isinstance(x, str) for x in e)
+                for e in excluded
+            )
+        ):
+            return fail('validation', "excluded має бути списком [модель, код] або [модель, код, вид].")
         try:
             plan = publish.build_plan(site)
-            result = publish.apply_plan(site, plan, set(archive_codes or []), note if isinstance(note, str) else '')
+            result = publish.apply_plan(
+                site,
+                plan,
+                set(archive_codes or []),
+                note if isinstance(note, str) else '',
+                {tuple(e) for e in excluded or []},
+                set(scope) if scope is not None else None,
+            )
         except publish.PublishError as exc:
             return fail(exc.code, str(exc), issues=exc.issues)
         except AccessError as exc:
@@ -447,6 +564,8 @@ class F3dConstructorController(http.Controller):
             'updated': result['updated'],
             'archived': result['archived'],
             'counts': {k: len(result[k]) for k in ('created', 'updated', 'archived')},
+            'ops': result['ops'],
+            'skipped': result['skipped'],
             'warnings': result['warnings'],
         }
 

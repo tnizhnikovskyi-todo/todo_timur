@@ -1,25 +1,32 @@
 /** @odoo-module */
 // AC-12, AC-14, AC-22, AC-31: JS-дзеркала R-01…R-10 за золотими фікстурами W1.
-import { describe, expect, test } from "@odoo/hoot";
-import { SLOT_TEMPLATES, cellCount, cellsOf, footprint, generateCells } from "@td_constructor/editor/cells";
-import { runChecks, signature } from "@td_constructor/editor/checks";
+import { beforeEach, describe, expect, test } from "@odoo/hoot";
 import {
+    SLOT_TEMPLATES,
+    cellCount,
+    cellsOf,
+    footprint,
+    generateCells,
     obbInsidePolygon,
     placementObb,
     polygonContains,
+    runChecks,
     satPenetration,
     serviceObb,
+    setupCore,
+    signature,
     utilityPoints,
-} from "@td_constructor/editor/geometry";
+} from "./core";
 import { golden, near } from "./helpers";
 
 describe.current.tags("desktop");
+beforeEach(setupCore);
 
 const CELL_KEYS = ["x", "y", "z0", "l", "w", "h", "rot", "capacity", "max_load_kg", "level", "index"];
 
 test("AC-12 комірки JS збігаються з еталоном Python для всіх шаблонів", async () => {
     const g = await golden("cells_golden");
-    expect(Object.keys(SLOT_TEMPLATES).length).toBe(6);
+    expect(Object.keys(SLOT_TEMPLATES).length).toBe(7); // S1: + floor_spot
     expect(g.cases.length >= 10).toBe(true);
     for (const c of g.cases) {
         const cells = generateCells(c.template, c.prefix, c.x, c.y, c.rot, c.params, c.overrides, c.elevation);

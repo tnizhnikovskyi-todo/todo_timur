@@ -4,11 +4,11 @@ import { rpc } from "@web/core/network/rpc";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { mountEditor, unmountEditor } from "@td_constructor/editor/app";
-import { OdooStore } from "@td_constructor/editor/store";
+import { prepareOdooEditor } from "@td_constructor/editor/odoo_host";
 
 /**
- * Клієнтська дія `f3d_constructor` (SPEC §8.2, DEC-08): 3D-редактор розкладки заводу — порт затвердженого прототипу.
+ * Клієнтська дія `f3d_constructor` (SPEC §8.2, DEC-08): хост Owl для 3D-редактора розкладки заводу. Ядро — Odoo-free збірка
+ * `static/lib/f3d-core/constructor.esm.js` (CD-29, спільна з прототипом); дані йдуть через адаптер Odoo (API `/f3d/constructor/*`).
  * `params.site_id` (необов'язково) вибирає площадку; інакше — остання з localStorage або перша з API-01.
  */
 export class F3dConstructorAction extends Component {
@@ -31,11 +31,16 @@ export class F3dConstructorAction extends Component {
         this.orm = useService("orm");
         onMounted(async () => {
             const p = this.props.action.params || {};
-            const store = new OdooStore({ rpc, orm: this.orm, action: this.action });
             try {
-                await mountEditor(this.root.el, {
-                    store,
-                    services: { action: this.action, notification: this.notification, orm: this.orm },
+                const services = { rpc, orm: this.orm, action: this.action, notification: this.notification };
+                const { core, adapter, host } = await prepareOdooEditor(services);
+                this.core = core;
+                if (this._gone) {
+                    return;
+                }
+                await core.mountEditor(this.root.el, {
+                    adapter,
+                    host,
                     siteId: p.site_id,
                     testMode: !!p.f3d_test || this._testFlag(),
                 });
@@ -43,12 +48,12 @@ export class F3dConstructorAction extends Component {
                 this.notification.add(`Конструктор: не вдалося відкрити редактор. ${e.data?.message || e.message || e}`, { type: "danger" });
             }
             if (this._gone) {
-                unmountEditor(); // користувач вийшов зі сторінки, поки редактор вантажився
+                this.core?.unmountEditor(); // користувач вийшов зі сторінки, поки редактор вантажився
             }
         });
         onWillUnmount(() => {
             this._gone = true;
-            unmountEditor();
+            this.core?.unmountEditor();
         });
     }
 }

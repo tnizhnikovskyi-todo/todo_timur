@@ -70,6 +70,48 @@
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
 
+    <!-- MERGE.md §3.5: мультикомпанія для моделей волн 1–2; запис ролями — за ACL (шару в них немає) -->
+    <record id="rule_td_slot_type_company" model="ir.rule">
+        <field name="name">Типи місць: мультикомпанія</field>
+        <field name="model_id" ref="model_td_slot_type"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_slot_preset_company" model="ir.rule">
+        <field name="name">Пресети місць: мультикомпанія</field>
+        <field name="model_id" ref="model_td_slot_preset"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_putaway_rule_company" model="ir.rule">
+        <field name="name">Правила розміщення: мультикомпанія</field>
+        <field name="model_id" ref="model_td_putaway_rule"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_replenish_rule_company" model="ir.rule">
+        <field name="name">Правила поповнення: мультикомпанія</field>
+        <field name="model_id" ref="model_td_replenish_rule"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_layout_variant_company" model="ir.rule">
+        <field name="name">Варіанти планування: мультикомпанія</field>
+        <field name="model_id" ref="model_td_layout_variant"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_comment_company" model="ir.rule">
+        <field name="name">Коментарі: мультикомпанія</field>
+        <field name="model_id" ref="model_td_comment"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_zone_lock_company" model="ir.rule">
+        <field name="name">Блокування зон: мультикомпанія</field>
+        <field name="model_id" ref="model_td_zone_lock"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_td_publish_op_company" model="ir.rule">
+        <field name="name">Операції публікації: мультикомпанія</field>
+        <field name="model_id" ref="model_td_publish_op"/>
+        <field name="domain_force">[('version_id.company_id', 'in', company_ids)]</field>
+    </record>
+
     <!-- §4.3: правила записів за ролями (read=0: читання не обмежується, CD-02) -->
     <record id="rule_td_layer_manager" model="ir.rule">
         <field name="name">Шари: менеджер редагує всі</field>

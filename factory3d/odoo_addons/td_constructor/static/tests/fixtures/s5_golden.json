@@ -1,0 +1,3154 @@
+{
+ "meta": {
+  "eps_m": 0.001
+ },
+ "scenes": [
+  {
+   "name": "inside_contour",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach"
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": [
+       [
+        0,
+        0
+       ],
+       [
+        40,
+        0
+       ],
+       [
+        40,
+        15
+       ],
+       [
+        20,
+        15
+       ],
+       [
+        20,
+        30
+       ],
+       [
+        0,
+        30
+       ]
+      ],
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "IN1",
+      "x": 10,
+      "y": 8,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "OUT1",
+      "x": 30,
+      "y": 22,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "EDGE",
+      "x": 20,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "IN2",
+      "x": 10,
+      "y": 25,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "ZN",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         30,
+         20
+        ],
+        [
+         38,
+         20
+        ],
+        [
+         38,
+         28
+        ],
+        [
+         30,
+         28
+        ]
+       ]
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [
+     {
+      "id": 1,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-OUT",
+      "name": "m",
+      "x": 35.0,
+      "y": 25.0,
+      "rotation": 0,
+      "dynamic": false
+     },
+     {
+      "id": 2,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-IN",
+      "name": "m",
+      "x": 5.0,
+      "y": 5.0,
+      "rotation": 0,
+      "dynamic": false
+     },
+     {
+      "id": 3,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "P-OUT",
+      "name": "p",
+      "x": 35.0,
+      "y": 25.0,
+      "rotation": 0,
+      "dynamic": true
+     }
+    ],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "inside",
+     "enabled": true,
+     "mode": "block",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "M-OUT"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "OUT1"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "EDGE"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "inside_items",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach"
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": [
+       {
+        "id": "c1",
+        "kind": "column",
+        "name": "К-1",
+        "x": 10,
+        "y": 5,
+        "w": 0.4,
+        "d": 0.4,
+        "rot": 0
+       },
+       {
+        "id": "w1",
+        "kind": "wall",
+        "name": "Стіна А",
+        "x": 30,
+        "y": 5,
+        "w": 10,
+        "d": 0.3,
+        "rot": 90
+       },
+       {
+        "id": "o1",
+        "kind": "office",
+        "name": "Офіс",
+        "x": 45,
+        "y": 10,
+        "w": 6.0,
+        "d": 4.0,
+        "rot": 0
+       },
+       {
+        "id": "g1",
+        "kind": "gate",
+        "name": "",
+        "x": 10,
+        "y": 1.5,
+        "w": 3.5,
+        "d": 0.3,
+        "rot": 0
+       },
+       {
+        "id": "ch1",
+        "kind": "charger",
+        "name": "",
+        "x": 50,
+        "y": 25,
+        "w": 1.2,
+        "d": 0.8,
+        "rot": 0
+       },
+       {
+        "id": "wd",
+        "kind": "wall",
+        "name": "",
+        "x": 20,
+        "y": 24,
+        "w": 8,
+        "d": 0.2,
+        "rot": 45
+       }
+      ]
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 3,
+      "name": "Двір",
+      "kind": "yard",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RC",
+      "x": 10.2,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RW",
+      "x": 30,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RO",
+      "x": 45,
+      "y": 10,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RG",
+      "x": 10,
+      "y": 1.5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RK",
+      "x": 20,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 6,
+      "uid": "u6",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RCH",
+      "x": 50,
+      "y": 25.3,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 7,
+      "uid": "u7",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "RD",
+      "x": 20,
+      "y": 24,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 8,
+      "uid": "u8",
+      "layer_id": 3,
+      "template": "floor_stack",
+      "code_prefix": "YARD",
+      "x": 10,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "rows": 1,
+       "cols": 1
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [
+     {
+      "id": 1,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-COL",
+      "name": "m",
+      "x": 10.0,
+      "y": 5.0,
+      "rotation": 0,
+      "dynamic": false
+     }
+    ],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "inside",
+     "enabled": true,
+     "mode": "warn",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "M-COL"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "RC"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "RW"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "RO"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "RCH"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "warn",
+     "codes": [
+      "RD"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "aisle_width_aisles",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach"
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [
+       {
+        "id": "a1",
+        "name": "Вузький",
+        "x0": 0,
+        "y0": 0,
+        "x1": 30,
+        "y1": 2.0
+       },
+       {
+        "id": "a2",
+        "name": "Достатній",
+        "x0": 0,
+        "y0": 4,
+        "x1": 30,
+        "y1": 7.0
+       },
+       {
+        "id": "a3",
+        "name": "У зоні візків 1.0",
+        "x0": 40,
+        "y0": 2,
+        "x1": 41.0,
+        "y1": 12
+       },
+       {
+        "id": "a4",
+        "name": "У зоні візків 1.5",
+        "x0": 42,
+        "y0": 2,
+        "x1": 43.5,
+        "y1": 12
+       },
+       {
+        "id": "a5",
+        "name": "У зоні без перевірки",
+        "x0": 50,
+        "y0": 2,
+        "x1": 50.5,
+        "y1": 12
+       },
+       {
+        "id": "a6",
+        "name": "У зоні 3.5",
+        "x0": 40,
+        "y0": 16,
+        "x1": 43.0,
+        "y1": 26
+       },
+       {
+        "id": "a7",
+        "name": "Вкладена зона",
+        "x0": 54,
+        "y0": 16,
+        "x1": 55.0,
+        "y1": 26
+       }
+      ],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "Z1",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         38,
+         0
+        ],
+        [
+         46,
+         0
+        ],
+        [
+         46,
+         14
+        ],
+        [
+         38,
+         14
+        ]
+       ],
+       "title": "Візки"
+      },
+      "overrides": {},
+      "tech": "hand"
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "Z2",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         48,
+         0
+        ],
+        [
+         52,
+         0
+        ],
+        [
+         52,
+         14
+        ],
+        [
+         48,
+         14
+        ]
+       ],
+       "title": "Без перевірки"
+      },
+      "overrides": {},
+      "tech": "none"
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "Z3",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         38,
+         15
+        ],
+        [
+         46,
+         15
+        ],
+        [
+         46,
+         28
+        ],
+        [
+         38,
+         28
+        ]
+       ],
+       "title": "Свій мінімум"
+      },
+      "overrides": {},
+      "tech": "custom:3.5"
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "Z4",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         52,
+         15
+        ],
+        [
+         60,
+         15
+        ],
+        [
+         60,
+         28
+        ],
+        [
+         52,
+         28
+        ]
+       ],
+       "title": "Велика"
+      },
+      "overrides": {},
+      "tech": "stacker"
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "zone",
+      "code_prefix": "Z5",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "params": {
+       "polygon": [
+        [
+         53,
+         17
+        ],
+        [
+         56,
+         17
+        ],
+        [
+         56,
+         27
+        ],
+        [
+         53,
+         27
+        ]
+       ],
+       "title": "Вкладена без техніки"
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "aisle_width",
+     "enabled": true,
+     "mode": "warn",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "aisle_width",
+     "severity": "warn",
+     "codes": [
+      "Вузький"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "warn",
+     "codes": [
+      "У зоні візків 1.0"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "warn",
+     "codes": [
+      "У зоні 3.5"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "warn",
+     "codes": [
+      "Вкладена зона"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "aisle_width_rows",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach"
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "A1",
+      "x": 10,
+      "y": 3,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "A2",
+      "x": 10,
+      "y": 5.5,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "B1",
+      "x": 10,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "B2",
+      "x": 10,
+      "y": 13.3,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "C1",
+      "x": 10,
+      "y": 20,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 6,
+      "uid": "u6",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "C2",
+      "x": 10,
+      "y": 24.5,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 7,
+      "uid": "u7",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "D1",
+      "x": 35,
+      "y": 3,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 8,
+      "uid": "u8",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "D2",
+      "x": 35,
+      "y": 4.9,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 0.4,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 9,
+      "uid": "u9",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "D3",
+      "x": 35,
+      "y": 6.3,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 10,
+      "uid": "u10",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "E1",
+      "x": 50,
+      "y": 3,
+      "rotation": 90,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 11,
+      "uid": "u11",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "E2",
+      "x": 52.5,
+      "y": 3,
+      "rotation": 90,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 12,
+      "uid": "u12",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "F1",
+      "x": 25,
+      "y": 20,
+      "rotation": 30,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 13,
+      "uid": "u13",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "F2",
+      "x": 25,
+      "y": 22.4,
+      "rotation": 120,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "aisle_width",
+     "enabled": true,
+     "mode": "block",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "aisle_width",
+     "severity": "block",
+     "codes": [
+      "A1",
+      "A2"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "block",
+     "codes": [
+      "D1",
+      "D2"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "block",
+     "codes": [
+      "D2",
+      "D3"
+     ]
+    },
+    {
+     "check": "aisle_width",
+     "severity": "block",
+     "codes": [
+      "E1",
+      "E2"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "height",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach"
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 3,
+      "name": "Мережі",
+      "kind": "engineering",
+      "elevation": 6.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 4,
+      "name": "Антресоль",
+      "kind": "custom",
+      "elevation": 3.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "H4",
+      "x": 10,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 4,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "H2",
+      "x": 20,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 2,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "H5",
+      "x": 30,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 5,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 2.0
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "HM",
+      "x": 40,
+      "y": 5,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5,
+       "level_heights": [
+        1.0,
+        1.0,
+        3.0
+       ]
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "shelf",
+      "code_prefix": "SH",
+      "x": 10,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "sections": 2,
+       "shelves": 5,
+       "cell_h": 1.0
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 6,
+      "uid": "u6",
+      "layer_id": 2,
+      "template": "floor_stack",
+      "code_prefix": "FS",
+      "x": 20,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "rows": 1,
+       "cols": 1,
+       "max_height": 6.0
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 7,
+      "uid": "u7",
+      "layer_id": 3,
+      "template": "pallet_rack",
+      "code_prefix": "EN",
+      "x": 30,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 2,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 8,
+      "uid": "u8",
+      "layer_id": 4,
+      "template": "pallet_rack",
+      "code_prefix": "MZ",
+      "x": 40,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 2,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 9,
+      "uid": "u9",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "NB",
+      "x": 50,
+      "y": 15,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5,
+       "bottom_on_floor": false
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [
+     {
+      "id": 1,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-TALL",
+      "name": "m",
+      "x": 5.0,
+      "y": 25.0,
+      "rotation": 0,
+      "dynamic": false
+     }
+    ],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "height",
+     "enabled": true,
+     "mode": "block",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "height",
+     "severity": "block",
+     "codes": [
+      "H4"
+     ]
+    },
+    {
+     "check": "height",
+     "severity": "block",
+     "codes": [
+      "H5"
+     ]
+    },
+    {
+     "check": "height",
+     "severity": "block",
+     "codes": [
+      "FS"
+     ]
+    },
+    {
+     "check": "height",
+     "severity": "block",
+     "codes": [
+      "MZ"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "quiet",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 0.0,
+     "aisle_tech": null
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [
+       {
+        "id": "a1",
+        "name": "Вузький",
+        "x0": 0,
+        "y0": 0,
+        "x1": 30,
+        "y1": 0.5
+       }
+      ],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "Q1",
+      "x": 10,
+      "y": 3,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "Q2",
+      "x": 10,
+      "y": 5.5,
+      "rotation": 0,
+      "params": {
+       "bays": 4,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "aisle_width",
+     "enabled": true,
+     "mode": "warn",
+     "params": {}
+    },
+    {
+     "check": "height",
+     "enabled": true,
+     "mode": "warn",
+     "params": {}
+    },
+    {
+     "check": "inside",
+     "enabled": true,
+     "mode": "warn",
+     "params": {}
+    }
+   ],
+   "expected": []
+  }
+ ],
+ "items": {
+  "good": [
+   {
+    "id": "c1",
+    "kind": "column",
+    "x": 1,
+    "y": 2,
+    "w": 0.4,
+    "d": 0.4
+   },
+   {
+    "id": "w1",
+    "kind": "wall",
+    "name": "Стіна",
+    "x": 5,
+    "y": 5,
+    "w": 8,
+    "th": 0.3,
+    "rot": 30
+   },
+   {
+    "id": "g1",
+    "kind": "gate",
+    "x": 0,
+    "y": 10,
+    "w": 3.5,
+    "d": 0.3,
+    "rot": 90,
+    "location_uid": "LOC-1"
+   },
+   {
+    "id": "o1",
+    "kind": "office",
+    "x": 20,
+    "y": 20,
+    "w": 6,
+    "d": 4,
+    "location_uid": "ignored",
+    "h": 3
+   }
+  ],
+  "normalized": [
+   {
+    "id": "c1",
+    "kind": "column",
+    "name": "",
+    "x": 1.0,
+    "y": 2.0,
+    "w": 0.4,
+    "d": 0.4,
+    "rot": 0.0,
+    "location_uid": null
+   },
+   {
+    "id": "w1",
+    "kind": "wall",
+    "name": "Стіна",
+    "x": 5.0,
+    "y": 5.0,
+    "w": 8.0,
+    "d": 0.3,
+    "rot": 30.0,
+    "th": 0.3,
+    "location_uid": null
+   },
+   {
+    "id": "g1",
+    "kind": "gate",
+    "name": "",
+    "x": 0.0,
+    "y": 10.0,
+    "w": 3.5,
+    "d": 0.3,
+    "rot": 90.0,
+    "location_uid": "LOC-1"
+   },
+   {
+    "id": "o1",
+    "kind": "office",
+    "name": "",
+    "x": 20.0,
+    "y": 20.0,
+    "w": 6.0,
+    "d": 4.0,
+    "rot": 0.0,
+    "location_uid": null,
+    "h": 3.0
+   }
+  ],
+  "bad": [
+   {
+    "label": "не список",
+    "value": {
+     "id": "x"
+    },
+    "error": "Об'єкти будівлі: очікується список."
+   },
+   {
+    "label": "повторний id",
+    "value": [
+     {
+      "id": "c1",
+      "kind": "column",
+      "x": 1,
+      "y": 2,
+      "w": 0.4,
+      "d": 0.4
+     },
+     {
+      "id": "c1",
+      "kind": "column",
+      "x": 1,
+      "y": 2,
+      "w": 0.4,
+      "d": 0.4
+     }
+    ],
+    "error": "Об'єкт будівлі 2: id «c1» повторюється."
+   },
+   {
+    "label": "вид",
+    "value": [
+     {
+      "id": "c1",
+      "kind": "tree",
+      "x": 1,
+      "y": 2,
+      "w": 0.4,
+      "d": 0.4
+     }
+    ],
+    "error": "Об'єкт будівлі 1: вид має бути одним із column, wall, gate, dock, door, office, charger."
+   },
+   {
+    "label": "розмір",
+    "value": [
+     {
+      "id": "c1",
+      "kind": "column",
+      "x": 1,
+      "y": 2,
+      "w": 0,
+      "d": 0.4
+     }
+    ],
+    "error": "Об'єкт будівлі 1: некоректні координати чи розміри."
+   },
+   {
+    "label": "координата",
+    "value": [
+     {
+      "id": "c1",
+      "kind": "column",
+      "x": "1",
+      "y": 2,
+      "w": 0.4,
+      "d": 0.4
+     }
+    ],
+    "error": "Об'єкт будівлі 1: некоректні координати чи розміри."
+   },
+   {
+    "label": "довге ім'я",
+    "value": [
+     {
+      "id": "c1",
+      "kind": "column",
+      "x": 1,
+      "y": 2,
+      "w": 0.4,
+      "d": 0.4,
+      "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+     }
+    ],
+    "error": "Об'єкт будівлі 1: назва — рядок до 64 символів."
+   },
+   {
+    "label": "висота",
+    "value": [
+     {
+      "id": "o1",
+      "kind": "office",
+      "x": 20,
+      "y": 20,
+      "w": 6,
+      "d": 4,
+      "location_uid": "ignored",
+      "h": -1
+     }
+    ],
+    "error": "Об'єкт будівлі 1: висота — число від 0 до 100 м."
+   }
+  ]
+ },
+ "tech": [
+  {
+   "value": null,
+   "min": null,
+   "label": ""
+  },
+  {
+   "value": "",
+   "min": null,
+   "label": ""
+  },
+  {
+   "value": "reach",
+   "min": 2.8,
+   "label": "Ричтрак"
+  },
+  {
+   "value": "hand",
+   "min": 1.2,
+   "label": "Ручний візок"
+  },
+  {
+   "value": "forklift",
+   "min": 3.5,
+   "label": "Навантажувач"
+  },
+  {
+   "value": "vna",
+   "min": 1.8,
+   "label": "Вузькопрохідний"
+  },
+  {
+   "value": "stacker",
+   "min": 2.0,
+   "label": "Штабелер"
+  },
+  {
+   "value": "none",
+   "min": null,
+   "label": "Не перевіряти"
+  },
+  {
+   "value": "custom",
+   "min": null,
+   "label": "Свій мінімум"
+  },
+  {
+   "value": "custom:3.2",
+   "min": 3.2,
+   "label": "Свій мінімум"
+  },
+  {
+   "value": "custom:abc",
+   "min": null,
+   "label": "Свій мінімум"
+  },
+  {
+   "value": "reach:2.5",
+   "min": 2.5,
+   "label": "Ричтрак"
+  },
+  {
+   "value": "reach:-1",
+   "min": 2.8,
+   "label": "Ричтрак"
+  },
+  {
+   "value": "xyz",
+   "min": null,
+   "label": ""
+  }
+ ],
+ "contours": [
+  {
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     40,
+     0
+    ],
+    [
+     40,
+     15
+    ],
+    [
+     20,
+     15
+    ],
+    [
+     20,
+     30
+    ],
+    [
+     0,
+     30
+    ]
+   ],
+   "area": 900.0,
+   "perimeter": 140.0
+  },
+  {
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     10,
+     0
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     0,
+     5
+    ]
+   ],
+   "area": 50.0,
+   "perimeter": 30.0
+  },
+  {
+   "points": [
+    [
+     0,
+     0
+    ],
+    [
+     4,
+     0
+    ],
+    [
+     0,
+     3
+    ]
+   ],
+   "area": 6.0,
+   "perimeter": 12.0
+  }
+ ],
+ "spec": {
+  "slots": [
+   {
+    "id": 1,
+    "template": "zone",
+    "code_prefix": "Z1",
+    "x": 0,
+    "y": 0,
+    "rotation": 0,
+    "params": {
+     "polygon": [
+      [
+       0,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       20
+      ],
+      [
+       0,
+       20
+      ]
+     ],
+     "title": "Зона А"
+    }
+   },
+   {
+    "id": 2,
+    "template": "pallet_rack",
+    "code_prefix": "R1",
+    "x": 10,
+    "y": 5,
+    "rotation": 0,
+    "params": {
+     "bays": 4,
+     "levels": 3,
+     "bay_width": 2.7,
+     "depth": 1.1,
+     "level_height": 1.5
+    }
+   },
+   {
+    "id": 3,
+    "template": "pallet_rack",
+    "code_prefix": "R2",
+    "x": 10,
+    "y": 6.3,
+    "rotation": 0,
+    "params": {
+     "bays": 4,
+     "levels": 3,
+     "bay_width": 2.7,
+     "depth": 1.1,
+     "level_height": 1.5
+    }
+   },
+   {
+    "id": 4,
+    "template": "pallet_rack",
+    "code_prefix": "R3",
+    "x": 10,
+    "y": 12,
+    "rotation": 0,
+    "params": {
+     "bays": 2,
+     "levels": 5,
+     "bay_width": 2.7,
+     "depth": 1.1,
+     "level_height": 1.5,
+     "double_sided": true,
+     "gap_y": 0.2,
+     "deep": 2
+    }
+   },
+   {
+    "id": 5,
+    "template": "shelf",
+    "code_prefix": "S1",
+    "x": 40,
+    "y": 5,
+    "rotation": 0,
+    "params": {
+     "sections": 3,
+     "shelves": 5,
+     "cell_w": 0.9,
+     "cell_d": 0.4,
+     "cell_h": 0.4
+    }
+   },
+   {
+    "id": 6,
+    "template": "shelf",
+    "code_prefix": "S2",
+    "x": 40,
+    "y": 5.4,
+    "rotation": 0,
+    "params": {
+     "sections": 3,
+     "shelves": 5,
+     "cell_w": 0.9,
+     "cell_d": 0.4,
+     "cell_h": 0.4
+    }
+   },
+   {
+    "id": 7,
+    "template": "cantilever",
+    "code_prefix": "C1",
+    "x": 45,
+    "y": 15,
+    "rotation": 90,
+    "params": {
+     "arms": 4,
+     "levels": 3,
+     "arm_length": 1.0,
+     "length": 6.0,
+     "level_height": 1.2,
+     "double_sided": true
+    }
+   },
+   {
+    "id": 8,
+    "template": "floor_stack",
+    "code_prefix": "F1",
+    "x": 5,
+    "y": 25,
+    "rotation": 0,
+    "params": {
+     "rows": 1,
+     "cols": 2
+    }
+   },
+   {
+    "id": 9,
+    "template": "pallet_rack",
+    "code_prefix": "R4",
+    "x": 12,
+    "y": 25,
+    "rotation": 0,
+    "params": {
+     "bays": 3,
+     "levels": 2,
+     "bay_width": 2.7,
+     "depth": 1.1,
+     "level_height": 1.5,
+     "bottom_on_floor": false,
+     "level_heights": [
+      1.2,
+      1.8
+     ]
+    }
+   }
+  ],
+  "spec": {
+   "racks": [
+    {
+     "id": 7,
+     "code": "C1",
+     "zone": "",
+     "template": "cantilever",
+     "type": "Консольний стелаж",
+     "sides": 2,
+     "sections": 4,
+     "levels": 3,
+     "size": "6.00 × 2.00 × 3.85 м",
+     "lines": [
+      {
+       "key": "post",
+       "name": "Стійка",
+       "size": "3.85 м",
+       "unit": "шт.",
+       "qty": 10,
+       "area": null
+      },
+      {
+       "key": "console",
+       "name": "Консоль",
+       "size": "1.00 м",
+       "unit": "шт.",
+       "qty": 30,
+       "area": null
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "1.50 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      },
+      {
+       "key": "tie",
+       "name": "Стяжка двостороннього ряду",
+       "size": "0.05 м",
+       "unit": "шт.",
+       "qty": 5,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 2,
+     "code": "R1",
+     "zone": "Зона А",
+     "template": "pallet_rack",
+     "type": "Палетний стелаж",
+     "sides": 1,
+     "sections": 4,
+     "levels": 3,
+     "size": "10.80 × 1.10 × 4.75 м",
+     "lines": [
+      {
+       "key": "frame",
+       "name": "Рама",
+       "size": "4.75 × 1.10 м",
+       "unit": "шт.",
+       "qty": 5,
+       "area": null
+      },
+      {
+       "key": "beam",
+       "name": "Балка",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 24,
+       "area": null
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 3,
+     "code": "R2",
+     "zone": "Зона А",
+     "template": "pallet_rack",
+     "type": "Палетний стелаж",
+     "sides": 1,
+     "sections": 4,
+     "levels": 3,
+     "size": "10.80 × 1.10 × 4.75 м",
+     "lines": [
+      {
+       "key": "frame",
+       "name": "Рама",
+       "size": "4.75 × 1.10 м",
+       "unit": "шт.",
+       "qty": 5,
+       "area": null
+      },
+      {
+       "key": "beam",
+       "name": "Балка",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 24,
+       "area": null
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 4,
+     "code": "R3",
+     "zone": "Зона А",
+     "template": "pallet_rack",
+     "type": "Палетний стелаж",
+     "sides": 2,
+     "sections": 2,
+     "levels": 5,
+     "size": "5.40 × 4.60 × 7.75 м",
+     "lines": [
+      {
+       "key": "frame",
+       "name": "Рама",
+       "size": "7.75 × 2.20 м",
+       "unit": "шт.",
+       "qty": 6,
+       "area": null
+      },
+      {
+       "key": "beam",
+       "name": "Балка",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 40,
+       "area": null
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      },
+      {
+       "key": "tie",
+       "name": "Стяжка двостороннього ряду",
+       "size": "0.20 м",
+       "unit": "шт.",
+       "qty": 3,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 9,
+     "code": "R4",
+     "zone": "",
+     "template": "pallet_rack",
+     "type": "Палетний стелаж",
+     "sides": 1,
+     "sections": 3,
+     "levels": 2,
+     "size": "8.10 × 1.10 × 3.40 м",
+     "lines": [
+      {
+       "key": "frame",
+       "name": "Рама",
+       "size": "3.40 × 1.10 м",
+       "unit": "шт.",
+       "qty": 4,
+       "area": null
+      },
+      {
+       "key": "beam",
+       "name": "Балка",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 12,
+       "area": null
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "2.70 м",
+       "unit": "шт.",
+       "qty": 6,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 5,
+     "code": "S1",
+     "zone": "",
+     "template": "shelf",
+     "type": "Полицевий стелаж",
+     "sides": 1,
+     "sections": 3,
+     "levels": 5,
+     "size": "2.70 × 0.40 × 2.10 м",
+     "lines": [
+      {
+       "key": "post",
+       "name": "Стійка",
+       "size": "2.10 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      },
+      {
+       "key": "shelf",
+       "name": "Полиця (настил)",
+       "size": "0.90 × 0.40 м",
+       "unit": "шт.",
+       "qty": 15,
+       "area": 5.4
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "0.90 м",
+       "unit": "шт.",
+       "qty": 3,
+       "area": null
+      }
+     ]
+    },
+    {
+     "id": 6,
+     "code": "S2",
+     "zone": "",
+     "template": "shelf",
+     "type": "Полицевий стелаж",
+     "sides": 1,
+     "sections": 3,
+     "levels": 5,
+     "size": "2.70 × 0.40 × 2.10 м",
+     "lines": [
+      {
+       "key": "post",
+       "name": "Стійка",
+       "size": "2.10 м",
+       "unit": "шт.",
+       "qty": 8,
+       "area": null
+      },
+      {
+       "key": "shelf",
+       "name": "Полиця (настил)",
+       "size": "0.90 × 0.40 м",
+       "unit": "шт.",
+       "qty": 15,
+       "area": 5.4
+      },
+      {
+       "key": "brace",
+       "name": "Зв'язки секції",
+       "size": "0.90 м",
+       "unit": "шт.",
+       "qty": 3,
+       "area": null
+      }
+     ]
+    }
+   ],
+   "pairs": [
+    {
+     "codes": [
+      "R1",
+      "R2"
+     ],
+     "zone": "Зона А",
+     "lines": [
+      {
+       "key": "tie",
+       "name": "Стяжка двостороннього ряду",
+       "size": "0.20 м",
+       "unit": "шт.",
+       "qty": 5,
+       "area": null
+      }
+     ]
+    },
+    {
+     "codes": [
+      "S1",
+      "S2"
+     ],
+     "zone": "",
+     "lines": [
+      {
+       "key": "tie",
+       "name": "Стяжка двостороннього ряду",
+       "size": "0.05 м",
+       "unit": "шт.",
+       "qty": 4,
+       "area": null
+      }
+     ]
+    }
+   ],
+   "totals": [
+    {
+     "key": "frame",
+     "name": "Рама",
+     "size": "3.40 × 1.10 м",
+     "unit": "шт.",
+     "qty": 4,
+     "area": null
+    },
+    {
+     "key": "frame",
+     "name": "Рама",
+     "size": "4.75 × 1.10 м",
+     "unit": "шт.",
+     "qty": 10,
+     "area": null
+    },
+    {
+     "key": "frame",
+     "name": "Рама",
+     "size": "7.75 × 2.20 м",
+     "unit": "шт.",
+     "qty": 6,
+     "area": null
+    },
+    {
+     "key": "post",
+     "name": "Стійка",
+     "size": "2.10 м",
+     "unit": "шт.",
+     "qty": 16,
+     "area": null
+    },
+    {
+     "key": "post",
+     "name": "Стійка",
+     "size": "3.85 м",
+     "unit": "шт.",
+     "qty": 10,
+     "area": null
+    },
+    {
+     "key": "beam",
+     "name": "Балка",
+     "size": "2.70 м",
+     "unit": "шт.",
+     "qty": 100,
+     "area": null
+    },
+    {
+     "key": "console",
+     "name": "Консоль",
+     "size": "1.00 м",
+     "unit": "шт.",
+     "qty": 30,
+     "area": null
+    },
+    {
+     "key": "shelf",
+     "name": "Полиця (настил)",
+     "size": "0.90 × 0.40 м",
+     "unit": "шт.",
+     "qty": 30,
+     "area": 10.8
+    },
+    {
+     "key": "brace",
+     "name": "Зв'язки секції",
+     "size": "0.90 м",
+     "unit": "шт.",
+     "qty": 6,
+     "area": null
+    },
+    {
+     "key": "brace",
+     "name": "Зв'язки секції",
+     "size": "1.50 м",
+     "unit": "шт.",
+     "qty": 8,
+     "area": null
+    },
+    {
+     "key": "brace",
+     "name": "Зв'язки секції",
+     "size": "2.70 м",
+     "unit": "шт.",
+     "qty": 30,
+     "area": null
+    },
+    {
+     "key": "tie",
+     "name": "Стяжка двостороннього ряду",
+     "size": "0.05 м",
+     "unit": "шт.",
+     "qty": 9,
+     "area": null
+    },
+    {
+     "key": "tie",
+     "name": "Стяжка двостороннього ряду",
+     "size": "0.20 м",
+     "unit": "шт.",
+     "qty": 8,
+     "area": null
+    }
+   ],
+   "types": [
+    {
+     "type": "Консольний стелаж",
+     "size": "6.00 × 2.00 × 3.85 м",
+     "sections": 4,
+     "levels": 3,
+     "sides": 2,
+     "count": 1
+    },
+    {
+     "type": "Палетний стелаж",
+     "size": "10.80 × 1.10 × 4.75 м",
+     "sections": 4,
+     "levels": 3,
+     "sides": 1,
+     "count": 2
+    },
+    {
+     "type": "Палетний стелаж",
+     "size": "5.40 × 4.60 × 7.75 м",
+     "sections": 2,
+     "levels": 5,
+     "sides": 2,
+     "count": 1
+    },
+    {
+     "type": "Палетний стелаж",
+     "size": "8.10 × 1.10 × 3.40 м",
+     "sections": 3,
+     "levels": 2,
+     "sides": 1,
+     "count": 1
+    },
+    {
+     "type": "Полицевий стелаж",
+     "size": "2.70 × 0.40 × 2.10 м",
+     "sections": 3,
+     "levels": 5,
+     "sides": 1,
+     "count": 2
+    }
+   ],
+   "summary": {
+    "racks": 7,
+    "pairs": 2,
+    "frame": 20,
+    "post": 26,
+    "beam": 100,
+    "console": 30,
+    "shelf": 30,
+    "brace": 44,
+    "tie": 17,
+    "shelf_area": 10.8
+   }
+  },
+  "tables": [
+   {
+    "name": "Специфікація",
+    "columns": [
+     "Стелаж",
+     "Зона",
+     "Тип",
+     "Позиція",
+     "Типорозмір",
+     "Од.",
+     "К-сть",
+     "Площа, м²"
+    ],
+    "rows": [
+     [
+      "C1",
+      "",
+      "Консольний стелаж",
+      "Стійка",
+      "3.85 м",
+      "шт.",
+      10,
+      null
+     ],
+     [
+      "C1",
+      "",
+      "Консольний стелаж",
+      "Консоль",
+      "1.00 м",
+      "шт.",
+      30,
+      null
+     ],
+     [
+      "C1",
+      "",
+      "Консольний стелаж",
+      "Зв'язки секції",
+      "1.50 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "C1",
+      "",
+      "Консольний стелаж",
+      "Стяжка двостороннього ряду",
+      "0.05 м",
+      "шт.",
+      5,
+      null
+     ],
+     [
+      "R1",
+      "Зона А",
+      "Палетний стелаж",
+      "Рама",
+      "4.75 × 1.10 м",
+      "шт.",
+      5,
+      null
+     ],
+     [
+      "R1",
+      "Зона А",
+      "Палетний стелаж",
+      "Балка",
+      "2.70 м",
+      "шт.",
+      24,
+      null
+     ],
+     [
+      "R1",
+      "Зона А",
+      "Палетний стелаж",
+      "Зв'язки секції",
+      "2.70 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "R2",
+      "Зона А",
+      "Палетний стелаж",
+      "Рама",
+      "4.75 × 1.10 м",
+      "шт.",
+      5,
+      null
+     ],
+     [
+      "R2",
+      "Зона А",
+      "Палетний стелаж",
+      "Балка",
+      "2.70 м",
+      "шт.",
+      24,
+      null
+     ],
+     [
+      "R2",
+      "Зона А",
+      "Палетний стелаж",
+      "Зв'язки секції",
+      "2.70 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "R3",
+      "Зона А",
+      "Палетний стелаж",
+      "Рама",
+      "7.75 × 2.20 м",
+      "шт.",
+      6,
+      null
+     ],
+     [
+      "R3",
+      "Зона А",
+      "Палетний стелаж",
+      "Балка",
+      "2.70 м",
+      "шт.",
+      40,
+      null
+     ],
+     [
+      "R3",
+      "Зона А",
+      "Палетний стелаж",
+      "Зв'язки секції",
+      "2.70 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "R3",
+      "Зона А",
+      "Палетний стелаж",
+      "Стяжка двостороннього ряду",
+      "0.20 м",
+      "шт.",
+      3,
+      null
+     ],
+     [
+      "R4",
+      "",
+      "Палетний стелаж",
+      "Рама",
+      "3.40 × 1.10 м",
+      "шт.",
+      4,
+      null
+     ],
+     [
+      "R4",
+      "",
+      "Палетний стелаж",
+      "Балка",
+      "2.70 м",
+      "шт.",
+      12,
+      null
+     ],
+     [
+      "R4",
+      "",
+      "Палетний стелаж",
+      "Зв'язки секції",
+      "2.70 м",
+      "шт.",
+      6,
+      null
+     ],
+     [
+      "S1",
+      "",
+      "Полицевий стелаж",
+      "Стійка",
+      "2.10 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "S1",
+      "",
+      "Полицевий стелаж",
+      "Полиця (настил)",
+      "0.90 × 0.40 м",
+      "шт.",
+      15,
+      5.4
+     ],
+     [
+      "S1",
+      "",
+      "Полицевий стелаж",
+      "Зв'язки секції",
+      "0.90 м",
+      "шт.",
+      3,
+      null
+     ],
+     [
+      "S2",
+      "",
+      "Полицевий стелаж",
+      "Стійка",
+      "2.10 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "S2",
+      "",
+      "Полицевий стелаж",
+      "Полиця (настил)",
+      "0.90 × 0.40 м",
+      "шт.",
+      15,
+      5.4
+     ],
+     [
+      "S2",
+      "",
+      "Полицевий стелаж",
+      "Зв'язки секції",
+      "0.90 м",
+      "шт.",
+      3,
+      null
+     ],
+     [
+      "R1 + R2",
+      "Зона А",
+      "Пара «спина до спини»",
+      "Стяжка двостороннього ряду",
+      "0.20 м",
+      "шт.",
+      5,
+      null
+     ],
+     [
+      "S1 + S2",
+      "",
+      "Пара «спина до спини»",
+      "Стяжка двостороннього ряду",
+      "0.05 м",
+      "шт.",
+      4,
+      null
+     ]
+    ]
+   },
+   {
+    "name": "Підсумок",
+    "columns": [
+     "Позиція",
+     "Типорозмір",
+     "Од.",
+     "К-сть",
+     "Площа, м²"
+    ],
+    "rows": [
+     [
+      "Рама",
+      "3.40 × 1.10 м",
+      "шт.",
+      4,
+      null
+     ],
+     [
+      "Рама",
+      "4.75 × 1.10 м",
+      "шт.",
+      10,
+      null
+     ],
+     [
+      "Рама",
+      "7.75 × 2.20 м",
+      "шт.",
+      6,
+      null
+     ],
+     [
+      "Стійка",
+      "2.10 м",
+      "шт.",
+      16,
+      null
+     ],
+     [
+      "Стійка",
+      "3.85 м",
+      "шт.",
+      10,
+      null
+     ],
+     [
+      "Балка",
+      "2.70 м",
+      "шт.",
+      100,
+      null
+     ],
+     [
+      "Консоль",
+      "1.00 м",
+      "шт.",
+      30,
+      null
+     ],
+     [
+      "Полиця (настил)",
+      "0.90 × 0.40 м",
+      "шт.",
+      30,
+      10.8
+     ],
+     [
+      "Зв'язки секції",
+      "0.90 м",
+      "шт.",
+      6,
+      null
+     ],
+     [
+      "Зв'язки секції",
+      "1.50 м",
+      "шт.",
+      8,
+      null
+     ],
+     [
+      "Зв'язки секції",
+      "2.70 м",
+      "шт.",
+      30,
+      null
+     ],
+     [
+      "Стяжка двостороннього ряду",
+      "0.05 м",
+      "шт.",
+      9,
+      null
+     ],
+     [
+      "Стяжка двостороннього ряду",
+      "0.20 м",
+      "шт.",
+      8,
+      null
+     ]
+    ]
+   },
+   {
+    "name": "Типорозміри",
+    "columns": [
+     "Тип",
+     "Габарит (Д × Г × В)",
+     "Секцій × ярусів",
+     "Стелажів"
+    ],
+    "rows": [
+     [
+      "Консольний стелаж",
+      "6.00 × 2.00 × 3.85 м",
+      "4 × 3, двосторонній",
+      1
+     ],
+     [
+      "Палетний стелаж",
+      "10.80 × 1.10 × 4.75 м",
+      "4 × 3",
+      2
+     ],
+     [
+      "Палетний стелаж",
+      "5.40 × 4.60 × 7.75 м",
+      "2 × 5, двосторонній",
+      1
+     ],
+     [
+      "Палетний стелаж",
+      "8.10 × 1.10 × 3.40 м",
+      "3 × 2",
+      1
+     ],
+     [
+      "Полицевий стелаж",
+      "2.70 × 0.40 × 2.10 м",
+      "3 × 5",
+      2
+     ]
+    ]
+   }
+  ],
+  "finite": true
+ }
+}

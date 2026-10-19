@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+    <!-- S1 (волна 1): ГЕНЕРУЄТЬСЯ з core/constructor/types_data.js: node tools/test_core_s1.mjs з прапорцем write-xml. Каталог із 50 типів місць (F08, Q9);
+         відповідність файлу ядру перевіряє tools/test_core_s1.mjs. Типи, створені користувачами, сюди не входять (is_custom). -->
+    <record id="term_slot_type_floor_spot" model="td.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">floor_spot</field>
+        <field name="name">Місце на підлозі (одна локація)</field>
+        <field name="sequence">55</field>
+    </record>
+    <record id="slot_type_r01" model="td.slot.type">
+        <field name="code">r01</field>
+        <field name="ref">R01</field>
+        <field name="name">Фронтальний палетний стелаж</field>
+        <field name="description">Класичний палетний стелаж: кожен проліт × ярус — комірка на кілька палет.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 3, 'max_load_kg': 1000}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="slot_type_r02" model="td.slot.type">
+        <field name="code">r02</field>
+        <field name="ref">R02</field>
+        <field name="name">Стелаж подвійної глибини (double-deep)</field>
+        <field name="description">Палети ставляться у два ряди в глибину; доступ лише до крайнього.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 3, 'max_load_kg': 1000, 'deep': 2}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="slot_type_r03" model="td.slot.type">
+        <field name="code">r03</field>
+        <field name="ref">R03</field>
+        <field name="name">Стелаж для вузьких проходів (VNA)</field>
+        <field name="description">Високий стелаж із вузьким проходом для висотного штабелера.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 8, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.6, 'positions_per_bay': 3, 'max_load_kg': 1000}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="slot_type_r04" model="td.slot.type">
+        <field name="code">r04</field>
+        <field name="ref">R04</field>
+        <field name="name">Заїзний стелаж (drive-in)</field>
+        <field name="description">Навантажувач заїжджає всередину; багато палет в глибину.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 3, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 1, 'max_load_kg': 1000, 'deep': 4}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="slot_type_r05" model="td.slot.type">
+        <field name="code">r05</field>
+        <field name="ref">R05</field>
+        <field name="name">Гравітаційний стелаж</field>
+        <field name="description">Палети котяться по похилих роликах до виходу (FIFO).</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 3, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 3, 'max_load_kg': 1000, 'deep': 5, 'slope': 3}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="slot_type_r06" model="td.slot.type">
+        <field name="code">r06</field>
+        <field name="ref">R06</field>
+        <field name="name">Flow-стелаж (роликовий)</field>
+        <field name="description">Короби котяться по похилих роликах до зони комплектації.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 4, 'shelves': 4, 'cell_w': 1, 'cell_d': 2, 'cell_h': 0.5, 'slope': 4}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">60</field>
+    </record>
+    <record id="slot_type_r07" model="td.slot.type">
+        <field name="code">r07</field>
+        <field name="ref">R07</field>
+        <field name="name">Стелаж push-back</field>
+        <field name="description">Палети штовхають одна одну по похилих візках (LIFO).</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 3, 'max_load_kg': 1000, 'deep': 3, 'slope': 5}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">70</field>
+    </record>
+    <record id="slot_type_r08" model="td.slot.type">
+        <field name="code">r08</field>
+        <field name="ref">R08</field>
+        <field name="name">Мобільний стелаж (на рейках)</field>
+        <field name="description">Блоки стелажів розсуваються по рейках; один проход на всі.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 3, 'max_load_kg': 1000, 'double_sided': True, 'gap_y': 0}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">80</field>
+    </record>
+    <record id="slot_type_r09" model="td.slot.type">
+        <field name="code">r09</field>
+        <field name="ref">R09</field>
+        <field name="name">Шаттл-стелаж</field>
+        <field name="description">Глибокі канали, у яких палети возить шаттл.</field>
+        <field name="group">rack</field>
+        <field name="template">pallet_rack</field>
+        <field name="params" eval="{'bays': 6, 'levels': 5, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5, 'positions_per_bay': 1, 'max_load_kg': 1000, 'deep': 6}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">pallet_cell</field>
+        <field name="sequence">90</field>
+    </record>
+    <record id="slot_type_r10" model="td.slot.type">
+        <field name="code">r10</field>
+        <field name="ref">R10</field>
+        <field name="name">Консольний стелаж</field>
+        <field name="description">Довгомірні вантажі (плити, профіль, труби) на консолях.</field>
+        <field name="group">rack</field>
+        <field name="template">cantilever</field>
+        <field name="params" eval="{'arms': 4, 'levels': 3, 'arm_length': 1, 'length': 6, 'level_height': 1.2, 'max_load_kg': 500}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">100</field>
+    </record>
+    <record id="slot_type_r11" model="td.slot.type">
+        <field name="code">r11</field>
+        <field name="ref">R11</field>
+        <field name="name">Полицевий стелаж</field>
+        <field name="description">Вантажі без палет на полицях.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 4, 'shelves': 5, 'cell_w': 1, 'cell_d': 0.5, 'cell_h': 0.5, 'loc_kind': 'shelf'}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">110</field>
+    </record>
+    <record id="slot_type_r12" model="td.slot.type">
+        <field name="code">r12</field>
+        <field name="ref">R12</field>
+        <field name="name">Мезонін (антресоль)</field>
+        <field name="description">Другий поверх; відмітку задає шар (CD-04).</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 4, 'shelves': 3, 'cell_w': 1.2, 'cell_d': 0.6, 'cell_h': 0.6, 'loc_kind': 'shelf'}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">120</field>
+    </record>
+    <record id="slot_type_r13" model="td.slot.type">
+        <field name="code">r13</field>
+        <field name="ref">R13</field>
+        <field name="name">Комірковий стелаж / біни (фурнітура)</field>
+        <field name="description">Дрібні складові (фурнітура, кріплення) у комірках.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 6, 'shelves': 6, 'cell_w': 0.4, 'cell_d': 0.4, 'cell_h': 0.25}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">130</field>
+    </record>
+    <record id="slot_type_r14" model="td.slot.type">
+        <field name="code">r14</field>
+        <field name="ref">R14</field>
+        <field name="name">Вертикальна карусель</field>
+        <field name="description">Автоматична карусель; параметри автоматики не моделюються.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="shape">cylinder</field>
+        <field name="params" eval="{'sections': 1, 'shelves': 12, 'cell_w': 1.6, 'cell_d': 1, 'cell_h': 0.3}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">140</field>
+    </record>
+    <record id="slot_type_r15" model="td.slot.type">
+        <field name="code">r15</field>
+        <field name="ref">R15</field>
+        <field name="name">Вертикальний ліфтовий модуль (VLM)</field>
+        <field name="description">Автоматична шафа з лотками; параметри автоматики не моделюються.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="shape">cabinet</field>
+        <field name="params" eval="{'sections': 1, 'shelves': 20, 'cell_w': 1.5, 'cell_d': 0.8, 'cell_h': 0.2}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">150</field>
+    </record>
+    <record id="slot_type_r16" model="td.slot.type">
+        <field name="code">r16</field>
+        <field name="ref">R16</field>
+        <field name="name">Горизонтальна карусель</field>
+        <field name="description">Горизонтальна карусель; параметри автоматики не моделюються.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="shape">cylinder</field>
+        <field name="params" eval="{'sections': 6, 'shelves': 3, 'cell_w': 0.8, 'cell_d': 0.6, 'cell_h': 0.5}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">160</field>
+    </record>
+    <record id="slot_type_r17" model="td.slot.type">
+        <field name="code">r17</field>
+        <field name="ref">R17</field>
+        <field name="name">Стільниковий стелаж</field>
+        <field name="description">Глибокі осередки для довгомірних (труби, прути, профіль).</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 4, 'shelves': 6, 'cell_w': 0.8, 'cell_d': 2, 'cell_h': 0.4}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">170</field>
+    </record>
+    <record id="slot_type_r18" model="td.slot.type">
+        <field name="code">r18</field>
+        <field name="ref">R18</field>
+        <field name="name">A-frame</field>
+        <field name="description">Модуль швидкого комплектування малих складових.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 10, 'shelves': 2, 'cell_w': 0.3, 'cell_d': 0.6, 'cell_h': 0.8}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">bin</field>
+        <field name="sequence">180</field>
+    </record>
+    <record id="slot_type_r19" model="td.slot.type">
+        <field name="code">r19</field>
+        <field name="ref">R19</field>
+        <field name="name">Консольний стелаж для рулонів</field>
+        <field name="description">Рулони (тканина, плівка, шпон) на консолях-жолобах.</field>
+        <field name="group">rack</field>
+        <field name="template">cantilever</field>
+        <field name="shape">roll_rack</field>
+        <field name="params" eval="{'arms': 6, 'levels': 2, 'arm_length': 1.2, 'length': 6, 'level_height': 1.4, 'max_load_kg': 500}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">190</field>
+    </record>
+    <record id="slot_type_r20" model="td.slot.type">
+        <field name="code">r20</field>
+        <field name="ref">R20</field>
+        <field name="name">Вішалки (підвісне зберігання)</field>
+        <field name="description">Штанги для підвісних виробів.</field>
+        <field name="group">rack</field>
+        <field name="template">shelf</field>
+        <field name="params" eval="{'sections': 4, 'shelves': 2, 'cell_w': 1.2, 'cell_d': 0.6, 'cell_h': 1.6, 'loc_kind': 'shelf'}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">shelf</field>
+        <field name="sequence">200</field>
+    </record>
+    <record id="slot_type_fl1" model="td.slot.type">
+        <field name="code">fl1</field>
+        <field name="ref">FL1</field>
+        <field name="name">Штабель</field>
+        <field name="description">Плити й піддони штабелем на підлозі.</field>
+        <field name="group">floor</field>
+        <field name="template">floor_stack</field>
+        <field name="shape">stack</field>
+        <field name="params" eval="{'rows': 2, 'cols': 4, 'cell_l': 1.2, 'cell_w': 0.8, 'max_height': 1.5}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">stack</field>
+        <field name="sequence">210</field>
+    </record>
+    <record id="slot_type_fl2" model="td.slot.type">
+        <field name="code">fl2</field>
+        <field name="ref">FL2</field>
+        <field name="name">Зона на підлозі</field>
+        <field name="description">Розмічений прямокутник на підлозі — одна локація.</field>
+        <field name="group">floor</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">220</field>
+    </record>
+    <record id="slot_type_fl3" model="td.slot.type">
+        <field name="code">fl3</field>
+        <field name="ref">FL3</field>
+        <field name="name">Блочне зберігання</field>
+        <field name="description">Щільні блоки штабелів без проходів між ними.</field>
+        <field name="group">floor</field>
+        <field name="template">floor_stack</field>
+        <field name="shape">stack</field>
+        <field name="params" eval="{'rows': 3, 'cols': 5, 'cell_l': 1.2, 'cell_w': 0.8, 'max_height': 3}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">stack</field>
+        <field name="sequence">230</field>
+    </record>
+    <record id="slot_type_fl4" model="td.slot.type">
+        <field name="code">fl4</field>
+        <field name="ref">FL4</field>
+        <field name="name">Розмітка палетомісць</field>
+        <field name="description">Палетомісця, розмічені на підлозі.</field>
+        <field name="group">floor</field>
+        <field name="template">floor_stack</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'rows': 2, 'cols': 6, 'cell_l': 1.2, 'cell_w': 0.8, 'max_height': 1.8, 'loc_kind': 'area'}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">240</field>
+    </record>
+    <record id="slot_type_fl5" model="td.slot.type">
+        <field name="code">fl5</field>
+        <field name="ref">FL5</field>
+        <field name="name">Штабель у стоякових піддонах</field>
+        <field name="description">Високий штабель у піддонах зі стійками.</field>
+        <field name="group">floor</field>
+        <field name="template">floor_stack</field>
+        <field name="shape">stack</field>
+        <field name="params" eval="{'rows': 2, 'cols': 4, 'cell_l': 1.2, 'cell_w': 0.8, 'max_height': 4}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">stack</field>
+        <field name="sequence">250</field>
+    </record>
+    <record id="slot_type_sp1" model="td.slot.type">
+        <field name="code">sp1</field>
+        <field name="ref">SP1</field>
+        <field name="name">Клітка</field>
+        <field name="description">Огороджена зона для цінних і режимних вантажів.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">fence</field>
+        <field name="params" eval="{'length': 3, 'width': 3, 'height': 2.4}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">260</field>
+    </record>
+    <record id="slot_type_sp2" model="td.slot.type">
+        <field name="code">sp2</field>
+        <field name="ref">SP2</field>
+        <field name="name">Холодильна камера</field>
+        <field name="description">Охолоджуване приміщення (температуру задає зона).</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">fence</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 2.6}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">270</field>
+    </record>
+    <record id="slot_type_sp3" model="td.slot.type">
+        <field name="code">sp3</field>
+        <field name="ref">SP3</field>
+        <field name="name">Морозильна камера</field>
+        <field name="description">Приміщення для глибокого заморожування.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">fence</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 2.6}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">280</field>
+    </record>
+    <record id="slot_type_sp4" model="td.slot.type">
+        <field name="code">sp4</field>
+        <field name="ref">SP4</field>
+        <field name="name">Склад ЛФМ (лакофарбових матеріалів)</field>
+        <field name="description">Пожежонебезпечні матеріали: лаки, фарби, розчинники, клеї.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">fence</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 2.6}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">290</field>
+    </record>
+    <record id="slot_type_sp5" model="td.slot.type">
+        <field name="code">sp5</field>
+        <field name="ref">SP5</field>
+        <field name="name">Склад газових балонів</field>
+        <field name="description">Огороджена зона для балонів зі стиснутим газом.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">fence</field>
+        <field name="params" eval="{'length': 3, 'width': 2, 'height': 2.2}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">300</field>
+    </record>
+    <record id="slot_type_sp6" model="td.slot.type">
+        <field name="code">sp6</field>
+        <field name="ref">SP6</field>
+        <field name="name">Бункер</field>
+        <field name="description">Сипкі матеріали (тирса, стружка, гранули).</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">cylinder</field>
+        <field name="params" eval="{'length': 2.5, 'width': 2.5, 'height': 4}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">310</field>
+    </record>
+    <record id="slot_type_sp7" model="td.slot.type">
+        <field name="code">sp7</field>
+        <field name="ref">SP7</field>
+        <field name="name">Ємність (резервуар)</field>
+        <field name="description">Рідини: клей, розчинники, пально-мастильні матеріали.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">cylinder</field>
+        <field name="params" eval="{'length': 2, 'width': 2, 'height': 3}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">320</field>
+    </record>
+    <record id="slot_type_sp8" model="td.slot.type">
+        <field name="code">sp8</field>
+        <field name="ref">SP8</field>
+        <field name="name">Інструментальна</field>
+        <field name="description">Зберігання й видача інструменту та оснастки.</field>
+        <field name="group">special</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">cabinet</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 2.4}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">330</field>
+    </record>
+    <record id="slot_type_bf01" model="td.slot.type">
+        <field name="code">bf01</field>
+        <field name="ref">BF01</field>
+        <field name="name">Зона приймання</field>
+        <field name="description">Буфер розвантаження й первинного розбору.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 6, 'width': 4, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">340</field>
+    </record>
+    <record id="slot_type_bf02" model="td.slot.type">
+        <field name="code">bf02</field>
+        <field name="ref">BF02</field>
+        <field name="name">Зона відвантаження</field>
+        <field name="description">Буфер готових до відвантаження вантажів.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 6, 'width': 4, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">350</field>
+    </record>
+    <record id="slot_type_bf03" model="td.slot.type">
+        <field name="code">bf03</field>
+        <field name="ref">BF03</field>
+        <field name="name">Ворота / док</field>
+        <field name="description">Об'єкт будівлі (layer.items), пов'язаний із локацією виду «док».</field>
+        <field name="group">zone</field>
+        <field name="shape">gate</field>
+        <field name="params" eval="{'width': 3.5, 'height': 4}"/>
+        <field name="relevance">2</field>
+        <field name="sequence">360</field>
+    </record>
+    <record id="slot_type_bf04" model="td.slot.type">
+        <field name="code">bf04</field>
+        <field name="ref">BF04</field>
+        <field name="name">Буфер перед виробництвом</field>
+        <field name="description">Матеріали, подані до дільниці.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 5, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">370</field>
+    </record>
+    <record id="slot_type_bf05" model="td.slot.type">
+        <field name="code">bf05</field>
+        <field name="ref">BF05</field>
+        <field name="name">Зона комплектації</field>
+        <field name="description">Збір комплектів і замовлень.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 5, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">380</field>
+    </record>
+    <record id="slot_type_bf06" model="td.slot.type">
+        <field name="code">bf06</field>
+        <field name="ref">BF06</field>
+        <field name="name">Зона вхідного контролю (QC)</field>
+        <field name="description">Перевірка якості до розміщення.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">390</field>
+    </record>
+    <record id="slot_type_bf07" model="td.slot.type">
+        <field name="code">bf07</field>
+        <field name="ref">BF07</field>
+        <field name="name">Карантин</field>
+        <field name="description">Вантажі до рішення щодо якості.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 3, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">400</field>
+    </record>
+    <record id="slot_type_bf08" model="td.slot.type">
+        <field name="code">bf08</field>
+        <field name="ref">BF08</field>
+        <field name="name">Зона браку</field>
+        <field name="description">Забракована продукція й матеріали.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 3, 'width': 2, 'height': 0.1}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">410</field>
+    </record>
+    <record id="slot_type_bf09" model="td.slot.type">
+        <field name="code">bf09</field>
+        <field name="ref">BF09</field>
+        <field name="name">Зона повернень</field>
+        <field name="description">Повернення від клієнтів і з виробництва.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 3, 'width': 2, 'height': 0.1}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">420</field>
+    </record>
+    <record id="slot_type_bf10" model="td.slot.type">
+        <field name="code">bf10</field>
+        <field name="ref">BF10</field>
+        <field name="name">Зона пакування</field>
+        <field name="description">Пакування готових виробів.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 5, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">430</field>
+    </record>
+    <record id="slot_type_bf11" model="td.slot.type">
+        <field name="code">bf11</field>
+        <field name="ref">BF11</field>
+        <field name="name">Зона розпакування / сортування</field>
+        <field name="description">Розпакування й сортування вхідних поставок.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 4, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">440</field>
+    </record>
+    <record id="slot_type_bf12" model="td.slot.type">
+        <field name="code">bf12</field>
+        <field name="ref">BF12</field>
+        <field name="name">Транзитна зона (cross-docking)</field>
+        <field name="description">Вантаж проходить без розміщення на зберігання.</field>
+        <field name="group">zone</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">zone</field>
+        <field name="params" eval="{'length': 6, 'width': 3, 'height': 0.1}"/>
+        <field name="relevance">0</field>
+        <field name="loc_kind">area</field>
+        <field name="sequence">450</field>
+    </record>
+    <record id="slot_type_mb1" model="td.slot.type">
+        <field name="code">mb1</field>
+        <field name="ref">MB1</field>
+        <field name="name">Візок</field>
+        <field name="description">Візок для комплектів і напівфабрикатів.</field>
+        <field name="group">mobile</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">mobile</field>
+        <field name="params" eval="{'length': 1.2, 'width': 0.8, 'height': 1}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">kit</field>
+        <field name="sequence">460</field>
+    </record>
+    <record id="slot_type_mb2" model="td.slot.type">
+        <field name="code">mb2</field>
+        <field name="ref">MB2</field>
+        <field name="name">Роллконтейнер</field>
+        <field name="description">Сітчастий контейнер на колесах.</field>
+        <field name="group">mobile</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">mobile</field>
+        <field name="params" eval="{'length': 0.8, 'width': 0.7, 'height': 1.7}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">kit</field>
+        <field name="sequence">470</field>
+    </record>
+    <record id="slot_type_mb3" model="td.slot.type">
+        <field name="code">mb3</field>
+        <field name="ref">MB3</field>
+        <field name="name">Касета</field>
+        <field name="description">Касета для плит і деталей на колесах.</field>
+        <field name="group">mobile</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">mobile</field>
+        <field name="params" eval="{'length': 1.2, 'width': 0.6, 'height': 1.2}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">kit</field>
+        <field name="sequence">480</field>
+    </record>
+    <record id="slot_type_mb4" model="td.slot.type">
+        <field name="code">mb4</field>
+        <field name="ref">MB4</field>
+        <field name="name">Gitterbox</field>
+        <field name="description">Сітчастий ящик-піддон, що штабелюється.</field>
+        <field name="group">mobile</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">mobile</field>
+        <field name="params" eval="{'length': 1.2, 'width': 0.8, 'height': 0.97}"/>
+        <field name="relevance">1</field>
+        <field name="loc_kind">kit</field>
+        <field name="sequence">490</field>
+    </record>
+    <record id="slot_type_mb5" model="td.slot.type">
+        <field name="code">mb5</field>
+        <field name="ref">MB5</field>
+        <field name="name">Етажерка комплекту</field>
+        <field name="description">Багатополична етажерка для комплекту деталей.</field>
+        <field name="group">mobile</field>
+        <field name="template">floor_spot</field>
+        <field name="shape">mobile</field>
+        <field name="params" eval="{'length': 0.8, 'width': 0.6, 'height': 1.6}"/>
+        <field name="relevance">2</field>
+        <field name="loc_kind">kit</field>
+        <field name="sequence">500</field>
+    </record>
+</odoo>

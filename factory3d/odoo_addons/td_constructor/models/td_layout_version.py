@@ -33,6 +33,25 @@ class F3dLayoutVersion(models.Model):
         compute='_compute_is_draft_base',
         help="Діюча версія, на якій уже ґрунтується чернетка: відновлювати нічого",
     )
+    # --- MERGE.md §3.3 (волни 1–2): поля без логіки; наповнюють слайси ---------------------------------
+    kind = fields.Selection(
+        [('publish', "Публікація"), ('checkpoint', "Контрольна точка")],
+        string="Вид",
+        required=True,
+        default='publish',
+        index=True,
+        help="Контрольна точка — знімок чернетки без змін в Odoo (N-03)",
+    )
+    variant_id = fields.Many2one(
+        'td.layout.variant', string="Варіант", readonly=True, copy=False, ondelete='set null', index=True
+    )
+    rolled_back_at = fields.Datetime(string="Відкочено", readonly=True, copy=False)
+    rolled_back_by_id = fields.Many2one('res.users', string="Відкотив", readonly=True, copy=False)
+    op_ids = fields.One2many('td.publish.op', 'version_id', string="Операції публікації", readonly=True)
+    metrics = fields.Json(string="Цифри для порівняння", readonly=True, copy=False)
+    op_count = fields.Integer(string="Операцій в Odoo", compute='_compute_rollback')
+    can_rollback = fields.Boolean(string="Можна відкотити", compute='_compute_rollback')
+    rollback_reason = fields.Char(string="Чому не можна відкотити", compute='_compute_rollback')
 
     _f3d_version_n_uniq = models.Constraint('UNIQUE(site_id, n)', "Номер версії має бути унікальним на площадці.")
 
@@ -45,6 +64,42 @@ class F3dLayoutVersion(models.Model):
     def _compute_display_name(self):
         for ver in self:
             ver.display_name = "v%d · %s" % (ver.n, ver.site_id.name or '')
+
+    def _compute_rollback(self):
+        """F02-08: чи можна відкотити публікацію (створене не використано, немає пізнішої з тими самими кодами)."""
+        from ..services import publish
+
+        for ver in self:
+            ver.op_count = len(ver.op_ids)
+            problems = publish.rollback_problems(ver.sudo()) if ver.id and ver.op_ids and not ver.rolled_back_at else []
+            ver.can_rollback = bool(ver.op_ids) and not ver.rolled_back_at and not problems
+            ver.rollback_reason = (
+                "Версію вже відкочено" if ver.rolled_back_at else problems[0]['reason'] if problems else False
+            )
+
+    def action_rollback(self):
+        """F02-08: відкотити публікацію — обернені операції в Odoo (менеджер); чернетка не змінюється."""
+        from ..services import publish
+
+        self.ensure_one()
+        self.site_id._f3d_check_rights_manager()
+        result = publish.rollback_version(self.site_id, self)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success',
+                'message': "Відкочено операцій: %d. Чернетка не змінена: наступний план запропонує зміни знову."
+                % result['reverted'],
+                'next': {
+                    'type': 'ir.actions.act_window',
+                    'res_model': self._name,
+                    'res_id': self.id,
+                    'view_mode': 'form',
+                    'views': [(False, 'form')],
+                },
+            },
+        }
 
     def write(self, vals):
         """Історію не переписуємо: користувач (менеджер) міняє лише `note`; решту пишуть публікація й хук (sudo)."""

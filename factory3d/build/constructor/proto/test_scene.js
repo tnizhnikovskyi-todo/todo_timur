@@ -9,7 +9,7 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefine
   const { browser, page, errors } = await launch();
   await open(page);
   const size = fs.statSync(__dirname + '/index.html').size;
-  ok('розмір сторінки < 600 КБ', size < 600 * 1024, Math.round(size / 1024) + ' КБ');
+  ok('розмір сторінки < 900 КБ (збірка F3D_PROTO_MINIFY=1 після S1…S6: 833 КБ; +15 % дало б 957 КБ — стеля 900 КБ; після S5 було 697 КБ)', size < 900 * 1024, Math.round(size / 1024) + ' КБ');
   const st = await page.evaluate((codes) => {
     const S = __f3d.S, covered = new Set();
     for (const p of S.placements) covered.add(p.code);
@@ -43,9 +43,9 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefine
   const pp = await page.evaluate(() => __f3d.S.catalog.filter((p) => p.role.startsWith('scene_')).map((p) => p.name + ':' + p.variants.length));
   ok('автопаспорти «Об’єкти сцени» на вид', pp.length >= 10 && pp.every((x) => x.startsWith('Об’єкти сцени')), pp.join(' | '));
   // активація інженерного шару показує його об'єкти
-  await page.click('.layer[data-layer="lighting"]'); await page.waitForTimeout(400);
+  await page.click('.layer[data-layer="ly_lighting"]'); await page.waitForTimeout(400);
   const act = await page.evaluate(() => ({ ly: __f3d.S.ui.layer, el: __f3d.S.layers.find((l) => l.key === 'lighting').elevation }));
-  const vis = await page.evaluate(() => __f3d.S.layers.find((l) => l.key === 'lighting').visible);
+  const vis = await page.evaluate(() => !__f3d.V.hidden.has('ly_lighting')); // видимість шару — стан сеансу (V.hidden), а не поле запису
   ok('активація інженерного шару «Освітлення» робить його видимим', act.ly === 'ly_lighting' && act.el > 7 && vis === true, JSON.stringify(act));
   ok('консоль без помилок', errors.length === 0, errors.slice(0, 4).join(' | '));
   await browser.close();
