@@ -252,6 +252,35 @@ def check_index(res: Result, mdir: Path):
         res.warn("html.blocks", f"index.html has {sections} <section> blocks; 3-6 are recommended")
 
 
+# ------------------------------------------------------------------------------------------------ manifest files
+GLOB_CHARS = set("*?[")
+
+
+def check_files(res: Result, mdir: Path, manifest: dict, all_manifests: dict):
+    """Every file named in data/demo and every td_* asset path must exist (also proves an export is complete)."""
+    for key in ("data", "demo"):
+        for rel in manifest.get(key) or []:
+            if isinstance(rel, str) and not (mdir / rel).is_file():
+                res.err("files.missing", f"{key} file {rel} does not exist")
+    addons = mdir.parent
+    for bundle, entries in (manifest.get("assets") or {}).items():
+        for entry in entries:
+            parts = list(entry[1:]) if isinstance(entry, (tuple, list)) else [entry]
+            if isinstance(entry, (tuple, list)) and entry and entry[0] == "include":
+                continue
+            for path in parts:
+                if not isinstance(path, str) or "/" not in path:
+                    continue
+                mod = path.split("/", 1)[0]
+                if mod not in all_manifests:
+                    continue
+                if GLOB_CHARS & set(path):
+                    if not list(addons.glob(path)):
+                        res.warn("files.glob_empty", f"assets {bundle}: pattern {path} matches no file")
+                elif not (addons / path).exists():
+                    res.err("files.missing", f"assets {bundle}: {path} does not exist")
+
+
 # ------------------------------------------------------------------------------------------------ per module
 def check_module(mdir: Path, manifest: dict, all_manifests: dict, catalog: dict, ce_modules, closure_ee, chain) -> Result:
     res = Result()
@@ -338,6 +367,7 @@ def check_module(mdir: Path, manifest: dict, all_manifests: dict, catalog: dict,
                 res.warn("icon.size", f"icon.png is {w}x{h}; the project standard is {ICON_SIZE[0]}x{ICON_SIZE[1]}")
 
     check_index(res, mdir)
+    check_files(res, mdir, manifest, all_manifests)
 
     # i18n and license file
     if not (mdir / "i18n").is_dir() or not list((mdir / "i18n").glob("*.pot")):

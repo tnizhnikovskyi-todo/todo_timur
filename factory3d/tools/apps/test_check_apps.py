@@ -247,6 +247,24 @@ def test_duplicate_names_and_tests_are_skipped(env):
     assert "test_td_one" in run(env, include_tests=True)
 
 
+def test_manifest_files_must_exist(env):
+    d = make_module(env[1], data=["views/a.xml"], demo=["demo/d.xml"],
+                    assets={"web.assets_backend": ["td_demo/static/src/*.js", ("remove", "td_demo/static/src/x.js"),
+                                                   ("include", "web._assets_helpers"), "web/static/lib/y.js"]})
+    r = run(env)["td_demo"]
+    msgs = " | ".join(m for _, m in r.errors)
+    assert "views/a.xml" in msgs and "demo/d.xml" in msgs and "td_demo/static/src/x.js" in msgs
+    assert "files.glob_empty" in codes(r, "warnings")
+    (d / "views").mkdir()
+    (d / "views/a.xml").write_text("<odoo/>")
+    (d / "demo").mkdir()
+    (d / "demo/d.xml").write_text("<odoo/>")
+    (d / "static/src").mkdir()
+    (d / "static/src/x.js").write_text("//")
+    r = run(env)["td_demo"]
+    assert "files.missing" not in codes(r) and "files.glob_empty" not in codes(r, "warnings")
+
+
 def test_unparsable_manifest(env):
     d = env[1] / "td_bad"
     d.mkdir()
@@ -300,3 +318,27 @@ def test_repo_addons_have_no_errors():
     results, _ = ca.check_addons(ca.DEFAULT_ADDONS)
     bad = {m: r.errors for m, r in results.items() if r.errors}
     assert not bad, bad
+
+
+def test_export_script_flat_layout(tmp_path):
+    """export_apps.sh: module in the root, dependency closure, no tests/pyc/internal docs, check passes."""
+    import shutil
+    import subprocess
+    script = Path(__file__).resolve().parent / "export_apps.sh"
+    if not ca.DEFAULT_ADDONS.is_dir() or not shutil.which("tar") or not shutil.which("bash"):
+        pytest.skip("odoo_addons/tar/bash not available")
+    out = tmp_path / "out"
+    cp = subprocess.run(["bash", str(script), str(out), "--modules", "td_viewer3d_sale"],
+                        capture_output=True, text=True)
+    assert cp.returncode == 0, cp.stdout + cp.stderr
+    assert sorted(p.name for p in out.iterdir() if p.is_dir()) == ["td_factory3d", "td_viewer3d", "td_viewer3d_sale"]
+    assert (out / "README.md").is_file() and (out / "td_viewer3d_sale" / "__manifest__.py").is_file()
+    assert not list(out.glob("*/tests")) and not list(out.rglob("*.pyc")) and not list(out.glob("*/ruff.toml"))
+    assert not list(out.glob("*/*.md")) and (out / "td_viewer3d" / "static" / "description" / "banner.png").is_file()
+    again = subprocess.run(["bash", str(script), str(out)], capture_output=True, text=True)
+    assert again.returncode == 2 and "--force" in again.stderr  # refuses a non-empty directory
+    skip = subprocess.run(["bash", str(script), str(tmp_path / "noee"), "--skip-ee", "--no-check"],
+                          capture_output=True, text=True)
+    assert skip.returncode == 0, skip.stderr
+    names = {p.name for p in (tmp_path / "noee").iterdir() if p.is_dir()}
+    assert "td_yard_gantt" not in names and "td_yard" in names and "test_td_viewer3d" not in names
