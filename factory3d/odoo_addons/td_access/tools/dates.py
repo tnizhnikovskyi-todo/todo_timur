@@ -52,7 +52,8 @@ def local_day_start_utc(dt, tz=KYIV):
 
 
 def local_day_bounds_utc(dt, tz=KYIV):
-    """[початок, кінець) локальної доби, що містить `dt`, як naive UTC (у дні переходу на літній/зимовий час доба не 24 год)."""
+    """[початок, кінець) локальної доби, що містить `dt`, як naive UTC (у дні переходу на літній/зимовий час доба не 24
+    год)."""
     zone = _tz(tz)
     day = local_date(dt, zone)
     start = zone.localize(datetime.combine(day, time())).astimezone(pytz.utc).replace(tzinfo=None)

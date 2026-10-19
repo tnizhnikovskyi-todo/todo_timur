@@ -124,7 +124,8 @@ class F3dAccessVisitor(models.Model):
             rec.is_today = bool(rec.date_from and rec.date_to and rec.date_from < end and rec.date_to >= start)
 
     def _search_is_today(self, operator, value):
-        """Фільтр «Сьогодні»: візит перетинає київську добу сервера (а не `context_today()` браузера з py.js без datetime.time.min/max)."""
+        """Фільтр «Сьогодні»: візит перетинає київську добу сервера (а не `context_today()` браузера з py.js без
+        datetime.time.min/max)."""
         if operator not in ("=", "!=") or not isinstance(value, bool):
             raise NotImplementedError("Пошук «Сьогодні» підтримує лише = / != True/False")
         start, end = local_day_bounds_utc(fields.Datetime.now())
