@@ -14,7 +14,7 @@ class TestEmployeeCode(F3DCase):
     def code(self, barcode, wc=None):
         with mock.patch('odoo.addons.td_factory3d.models.hr_employee._employee_table',
                         return_value=TABLE):
-            return self.env['hr.employee']._f3d_code_from_barcode(barcode, wc)
+            return self.env['hr.employee']._td_code_from_barcode(barcode, wc)
 
     def test_from_table(self):
         self.assertEqual(self.code('OPSAW1'), 'OP-SAW-1')

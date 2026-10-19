@@ -20,8 +20,8 @@ class F3dSceneMixin(models.AbstractModel):
     _name = 'td.scene.mixin'
     _description = 'Код сцени 3D'
 
-    _f3d_kind = 'other'
-    _f3d_resolve_order = ['td.zone', 'stock.location', 'mrp.workcenter',
+    _td_kind = 'other'
+    _td_resolve_order = ['td.zone', 'stock.location', 'mrp.workcenter',
                           'maintenance.equipment', 'hr.employee', 'stock.picking.batch']
     F3D_CODE_RE = re.compile(r'^[A-Z0-9]+(-[A-Z0-9]+)*$')
 
@@ -34,7 +34,7 @@ class F3dSceneMixin(models.AbstractModel):
              "(ворота DOCK-W1 і майданчик UNLOAD-1)")
     td_kind = fields.Selection(
         F3D_KIND_SELECTION, string='Вид у сцені', required=True, index=True,
-        default=lambda self: self._f3d_kind)
+        default=lambda self: self._td_kind)
     td_viewer_available = fields.Boolean(compute='_compute_f3d_viewer_available')
     td_is_manager = fields.Boolean(compute='_compute_is_f3d_manager')
 
@@ -45,7 +45,7 @@ class F3dSceneMixin(models.AbstractModel):
 
     # --- compute ---
     def _compute_f3d_viewer_available(self):
-        available = self._f3d_viewer_installed()
+        available = self._td_viewer_installed()
         for rec in self:
             rec.td_viewer_available = available
 
@@ -83,19 +83,19 @@ class F3dSceneMixin(models.AbstractModel):
 
     # --- R-04 ---
     @api.model
-    def _f3d_check_code_rights(self, vals):
+    def _td_check_code_rights(self, vals):
         if (not self.env.su and {'td_code', 'td_alias', 'td_kind'} & set(vals)
                 and not self.env.user.has_group('td_factory3d.group_td_manager')):
             raise AccessError("Змінювати код сцени може лише менеджер «Завод 3D».")
 
     def write(self, vals):
-        self._f3d_check_code_rights(vals)
+        self._td_check_code_rights(vals)
         return super().write(vals)
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            self._f3d_check_code_rights(vals)
+            self._td_check_code_rights(vals)
         return super().create(vals_list)
 
     # --- API ---
@@ -108,7 +108,7 @@ class F3dSceneMixin(models.AbstractModel):
 
     @api.model
     def f3d_resolve(self, code):
-        for model in self._f3d_resolve_order:
+        for model in self._td_resolve_order:
             # носій може ще не мати домішки (модулі збираються поетапно) — пропускаємо
             if model in self.env and hasattr(self.env[model], 'search_f3d'):
                 found = self.env[model].search_f3d(code)
@@ -134,7 +134,7 @@ class F3dSceneMixin(models.AbstractModel):
         return [c for c in (self.td_code, self.td_alias) if c]
 
     @api.model
-    def _f3d_viewer_installed(self):
+    def _td_viewer_installed(self):
         return self.env['ir.module.module'].sudo().search_count(
             [('name', '=', 'td_viewer3d'), ('state', '=', 'installed')]) > 0
 
@@ -143,7 +143,7 @@ class F3dSceneMixin(models.AbstractModel):
         if not self.td_code:
             raise UserError(
                 "Запис не має коду сцени. Заповніть «Код сцени» на вкладці «Завод 3D».")
-        if self._f3d_viewer_installed():
+        if self._td_viewer_installed():
             return {
                 'type': 'ir.actions.client',
                 'tag': 'f3d_viewer.action',

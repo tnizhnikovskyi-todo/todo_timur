@@ -4,7 +4,7 @@ from odoo import api, fields, models
 class StockPickingBatch(models.Model):
     _name = 'stock.picking.batch'
     _inherit = ['stock.picking.batch', 'td.scene.mixin']
-    _f3d_kind = 'vehicle'
+    _td_kind = 'vehicle'
     _rec_names_search = ['name', 'td_code', 'td_truck']
 
     td_truck = fields.Char(

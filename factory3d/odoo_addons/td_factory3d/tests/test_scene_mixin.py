@@ -133,7 +133,7 @@ class TestShow(SceneCase):
     def test_viewer_detection_real(self):
         mod = self.env['ir.module.module'].sudo().search(
             [('name', '=', 'td_viewer3d'), ('state', '=', 'installed')])
-        self.assertEqual(self.env['td.scene.mixin']._f3d_viewer_installed(), bool(mod))
+        self.assertEqual(self.env['td.scene.mixin']._td_viewer_installed(), bool(mod))
 
 
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')

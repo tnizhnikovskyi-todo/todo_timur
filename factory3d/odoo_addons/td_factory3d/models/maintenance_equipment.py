@@ -5,7 +5,7 @@ class MaintenanceEquipment(models.Model):
     _name = 'maintenance.equipment'
     _inherit = ['maintenance.equipment', 'td.scene.mixin']
 
-    _f3d_kind = 'equipment'
+    _td_kind = 'equipment'
     _rec_names_search = ['name', 'serial_no', 'td_code']
 
     # td_zone_id оголошено в models/td_zone.py

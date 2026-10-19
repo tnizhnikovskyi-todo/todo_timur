@@ -28,7 +28,7 @@ def is_valid_code(code):
 
 
 def employee_table(env):
-    """barcode -> код сцени за scene_employee_codes.csv (для hr.employee._f3d_code_from_barcode)."""
+    """barcode -> код сцени за scene_employee_codes.csv (для hr.employee._td_code_from_barcode)."""
     return {r['barcode']: r['td_code'] for r in read_rows('scene_employee_codes.csv')}
 
 
@@ -91,7 +91,7 @@ def employees(env):
     for emp in env['hr.employee'].with_context(active_test=False).search(
             [('barcode', '!=', False), ('td_code', '=', False)]):
         wc = WC.search([('employee_ids', 'in', emp.id)], order='id', limit=1) if has_link else WC
-        code = emp._f3d_code_from_barcode(emp.barcode, wc)
+        code = emp._td_code_from_barcode(emp.barcode, wc)
         if code and _assign(emp, code, "Працівник"):
             res['employees'] += 1
     return res

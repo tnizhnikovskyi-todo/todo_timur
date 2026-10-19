@@ -31,7 +31,7 @@ _ORDER_LEAF = re.compile(r"\(\s*'([\w.]+)'\s*,\s*'(<|>|<=|>=)'\s*,\s*'([a-z_][a-
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')
 class TestViewJsGuards(TransactionCase):
 
-    def _f3d_views(self):
+    def _td_views(self):
         modules = self.env['ir.module.module'].search([('state', '=', 'installed')]).filtered(
             lambda m: m.name.startswith('td_')).mapped('name')
         data = self.env['ir.model.data'].search([('model', '=', 'ir.ui.view'), ('module', 'in', modules)])
@@ -43,7 +43,7 @@ class TestViewJsGuards(TransactionCase):
 
     def test_kanban_template_expressions_are_js(self):
         problems = []
-        views = self._f3d_views()
+        views = self._td_views()
         self.assertTrue(views)
         for view in views:
             for el in self._arch(view).iter():
@@ -65,7 +65,7 @@ class TestViewJsGuards(TransactionCase):
 
     def test_filter_domains_are_client_safe(self):
         problems = []
-        for view in self._f3d_views():
+        for view in self._td_views():
             Model = self.env.get(view.model) if view.model else None
             for el in self._arch(view).iter():
                 if not isinstance(el.tag, str) or el.tag not in ('filter', 'field'):
@@ -86,7 +86,7 @@ class TestViewJsGuards(TransactionCase):
 
     def test_code_editor_modes(self):
         problems = []
-        for view in self._f3d_views():
+        for view in self._td_views():
             for el in self._arch(view).iter('field'):
                 if el.get('widget') not in ('ace', 'code') or not el.get('options'):
                     continue
@@ -100,7 +100,7 @@ class TestViewJsGuards(TransactionCase):
 
     def test_stat_buttons_are_buttons(self):
         problems = []
-        for view in self._f3d_views():
+        for view in self._td_views():
             for el in self._arch(view).iter():
                 if isinstance(el.tag, str) and el.tag != 'button' and 'oe_stat_button' in (el.get('class') or '').split():
                     problems.append("%s: <%s class=%r name=%r>" % (view.xml_id or view.name, el.tag, el.get('class'), el.get('name')))

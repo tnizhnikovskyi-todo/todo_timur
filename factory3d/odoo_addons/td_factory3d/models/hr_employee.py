@@ -18,14 +18,14 @@ class HrEmployee(models.Model):
     _name = 'hr.employee'
     _inherit = ['hr.employee', 'td.scene.mixin']
 
-    _f3d_kind = 'employee'
+    _td_kind = 'employee'
     _rec_names_search = ['name', 'td_code']
 
     td_code = fields.Char(
         help="Код людини в сцені (OP-SAW-1); бейдж barcode — без дефісів")
 
     @api.model
-    def _f3d_code_from_barcode(self, barcode, workcenter=None):
+    def _td_code_from_barcode(self, barcode, workcenter=None):
         if not barcode:
             return False
         code = _employee_table(self.env).get(barcode)

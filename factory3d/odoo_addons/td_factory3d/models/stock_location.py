@@ -5,7 +5,7 @@ from odoo.exceptions import ValidationError
 class StockLocation(models.Model):
     _name = 'stock.location'
     _inherit = ['stock.location', 'td.scene.mixin']
-    _f3d_kind = 'location'
+    _td_kind = 'location'
     _rec_names_search = ['complete_name', 'barcode', 'td_code', 'td_alias']
 
     # td_zone_id оголошено у models/td_zone.py (W2)
