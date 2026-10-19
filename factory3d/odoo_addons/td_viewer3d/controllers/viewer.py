@@ -17,7 +17,8 @@ from ..tools.cycle_check import check
 
 _logger = logging.getLogger(__name__)
 
-# сегменти через «/» (назви документів `WH/MO/00231`) не починаються з «.», тож `..`, `../x`, `/x`, `x//y` не проходять (V-2)
+# сегменти через «/» (назви документів `WH/MO/00231`) не починаються з «.», тож `..`, `../x`, `/x`, `x//y` не проходять
+# (V-2)
 CODE_RE = re.compile(r"^(?=.{1,64}\Z)[A-Za-z0-9_\-][A-Za-z0-9_.\-]*(?:/[A-Za-z0-9_\-][A-Za-z0-9_.\-]*)*\Z")
 SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
@@ -240,7 +241,8 @@ class F3dViewerController(http.Controller):
 
     @http.route("/f3d/viewer/maintenance/plan", type="jsonrpc", auth="user", methods=["POST"])
     def maintenance_plan(self, code=None, equipment_id=None, **kw):
-        """API-11: «Запланувати ТО». jsonrpc (JSON-тіло, без CSRF-токена), помилки — у тілі `{ok:false,status,error}`."""
+        """API-11: «Запланувати ТО». jsonrpc (JSON-тіло, без CSRF-токена), помилки — у тілі
+        `{ok:false,status,error}`."""
         if request.env.user.has_group(GROUP_KIOSK):
             return plan_error(403, "kiosk", "Екран цеху не може створювати заявки на обслуговування.")
         if not self._allowed():

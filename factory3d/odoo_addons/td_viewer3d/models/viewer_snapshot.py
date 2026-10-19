@@ -83,7 +83,8 @@ class F3dViewerSnapshot(models.Model):
 
     @staticmethod
     def _day_domain(operator, value, first, last=None):
-        """`shift_date ∈ [first, last]` (`last=None` — без верхньої межі) для `= True` / `!= False`; інакше — доповнення."""
+        """`shift_date ∈ [first, last]` (`last=None` — без верхньої межі) для `= True` / `!= False`; інакше —
+        доповнення."""
         if operator not in ("=", "!=") or not isinstance(value, bool):
             raise NotImplementedError("Пошук за добою підтримує лише = / != True/False")
         if (operator == "=") == value:

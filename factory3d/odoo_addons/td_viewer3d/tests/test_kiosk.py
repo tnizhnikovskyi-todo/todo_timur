@@ -129,7 +129,8 @@ class TestKioskHttp(HttpCase, F3dViewerBase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestKioskAssets(TransactionCase):
-    """QA 16.10.2026: бандл `assets_kiosk` не компілювався (Undefined variable $theme-colors-rgb) -> кіоск без стилів."""
+    """QA 16.10.2026: бандл `assets_kiosk` не компілювався (Undefined variable $theme-colors-rgb) -> кіоск без
+    стилів."""
 
     def test_kiosk_bundle_compiles(self):
         bundle = self.env["ir.qweb"]._get_asset_bundle("td_viewer3d.assets_kiosk", css=True, js=False)
