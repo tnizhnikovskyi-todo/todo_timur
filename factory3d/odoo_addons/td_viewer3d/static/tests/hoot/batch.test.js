@@ -261,15 +261,17 @@ test("core: batch=false вимикає пакетування (порівнян�
     expect(batches).toBe(0);
 });
 
-test("core: вибір (Raycaster) дає ті самі коди з пакетуванням і без нього", async () => {
+test("core: вибір (Raycaster) дає ті самі коди з пакетуванням і після його зняття", async () => {
     const T = await three();
     const codes = ["SAW-1", "CNC-2", "EDGE-1", "FG-R1-B01-L4", "PLT-01A", "FUR-R1-S01-L1"];
-    const a = await mountViewer({ model: "core" });
-    await a.viewer.partsReady(); // фонові частини моделі (будівля, стелажі) мають бути однаково завантажені в обох запусках
-    const withBatch = codes.map((c) => pickAbove(T, a.viewer, c));
-    const b = await mountViewer({ model: "core", viewerOpts: { batch: false } });
-    await b.viewer.partsReady();
-    const without = codes.map((c) => pickAbove(T, b.viewer, c));
+    const { viewer } = await mountViewer({ model: "core" });
+    await viewer.partsReady(); // усі фонові частини (будівля, інженерія, стелажі) завантажено
+    const bt = viewer.core.batcher;
+    expect(bt.stats().cold).toBeGreaterThan(100);
+    const withBatch = codes.map((c) => pickAbove(T, viewer, c));
+    bt.dispose(); // пакети прибрано, проксі видимі — те саме, що без пакетування (одна й та сама сцена, без гонки завантаження частин)
+    expect(bt.stats().cold).toBe(0);
+    const without = codes.map((c) => pickAbove(T, viewer, c));
     expect(withBatch).toEqual(without);
     expect(withBatch.filter(Boolean).length).toBeGreaterThan(2);
 });
@@ -354,7 +356,7 @@ test("on-demand: у спокої кадр не малюється щовитка
     const eagerFrames = eager.viewer.core.drawn - e0;
     expect(eagerFrames).toBeGreaterThan(15); // як раніше: кожен виток (100 мс)
 
-    const { viewer } = await mountViewer({ model: "none", viewerOpts: { onDemand: true } });
+    const { viewer } = await mountViewer({ model: "none", viewerOpts: { onDemand: true, now: () => Date.now() } });
     await advanceTime(500); // усе початкове (дані, шари) відпрацювало
     const d0 = viewer.core.drawn;
     await advanceTime(2000);
@@ -368,7 +370,7 @@ test("on-demand: у спокої кадр не малюється щовитка
 
 /** Змонтувати з рендером за потребою й дочекатись спокою (початкові інвалідації відпрацювали). */
 async function calm(model = "core") {
-    const m = await mountViewer({ model, viewerOpts: { onDemand: true } });
+    const m = await mountViewer({ model, viewerOpts: { onDemand: true, now: () => Date.now() } });
     await advanceTime(600);
     m.viewer.core.invalidate();
     await advanceTime(300);

@@ -3289,6 +3289,7 @@ const clock = new THREE.Clock();
 // страховка від пропущеної інвалідації. Нульовий рендерер (тести), `opts.onDemand === false` і `?f3d_ondemand=0` малюють кожен виток, як раніше.
 const onDemand = opts.onDemand ?? (!nullR && perfFlag("ondemand") !== "0"); // `opts.onDemand: true` вмикає й для нульового рендерера (тести)
 const IDLE_MS = 400, AMBIENT_MS = 80, POLL_MS = 250;
+const paceNow = opts.now ?? (() => performance.now()); // годинник темпу кадрів (тести підставляють змоканий Date.now)
 let lastDraw = 0, lastPoll = 0, drawn = 0;
 let ambient = false; // у сцені є об'єкти, що змінюються самі по собі (маркери енергетики пульсують в onBeforeRender)
 renderer.setAnimationLoop(() => {
@@ -3337,17 +3338,19 @@ renderer.setAnimationLoop(() => {
   }
   const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
   if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) {prodSimMove(sm);} live = true; }
-  if (now - lastPoll >= POLL_MS) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
-    lastPoll = now;
+  const pace = paceNow();
+  if (pace - lastPoll >= POLL_MS || pace < lastPoll) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
+    lastPoll = pace;
     if (batcher.sync()) { needDraw = true; }
     if (onDemand) { // `userData.f3dAnimated` — прапорець для будь-якого об'єкта, що анімується сам (спрайти з `extPick` вважаються такими)
       ambient = false;
       scene.traverse((o) => { if (o.visible && (o.userData.extPick || o.userData.f3dAnimated)) { ambient = true; } });
     }
   }
-  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && now - lastDraw >= AMBIENT_MS) && now - lastDraw < IDLE_MS) {return;}
+  const since = pace - lastDraw; // < 0 — годинник відкотився: вважаємо, що пора малювати
+  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && since >= AMBIENT_MS) && since >= 0 && since < IDLE_MS) {return;}
   needDraw = false;
-  lastDraw = now;
+  lastDraw = pace;
   drawn++;
   syncLabels();
   batcher.beforeRender();
