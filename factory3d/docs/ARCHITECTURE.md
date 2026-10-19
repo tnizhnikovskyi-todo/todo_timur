@@ -113,6 +113,10 @@ td_access_telemetry       ← td_access, td_telemetry        (7 сигналів
   `<module>.<model>_<what>` (`td_factory3d.view_td_zone_form`); групи
   `td_factory3d.group_td_user` / `group_td_manager` / `group_td_admin`; параметри
   `ir.config_parameter` з ключем `td.<module>.<param>`.
+- **Приватні методи й атрибути Python** — з префіксом `_td_` (`_td_ingest`, `_td_log`, `_td_viewer_collect`); `_f3d_` — застарілий
+  префікс (лишилися лише імена SQL-обмежень `_f3d_*_uniq`, див. `build/RENAME.md` §9). Публічні `action_f3d_*`/`search_f3d` не міняються.
+- **Лінтер.** `ruff check` і `ruff format --check` по `odoo_addons`, `services`, `tools` дають 0: спільний `factory3d/ruff.toml`
+  (120 колонок; UP031, DTZ, RUF012 вимкнено за конвенціями Odoo), власні `ruff.toml` модулів, `noqa` — лише з причиною.
 - **Жодних `x_`-полів** у прод-модулях. Демо-поля `x_*` мігрують у `post_init_hook` модуля-власника.
 - **Мова.** Інтерфейс і документація — українська (`uk_UA`), технічні імена — англійська.
   Python 3.12, Odoo 19 ORM; маніфест: `version` `19.0.1.0.0`, `author` `ToDo`, `license` `LGPL-3`,

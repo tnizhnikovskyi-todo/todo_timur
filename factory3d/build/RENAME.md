@@ -94,7 +94,7 @@ display-імена (маніфести, `<app string>` у налаштуванн
 | Легасі-моделі рівня 0 | `x_f3d_signal`, `x_f3d_reading`, `model_x_f3d_*`, поля `x_*` | Odoo вимагає префікс `x_` для manual-моделей; контракт із демо-завантажувачем `plant/odoo_push.py` (`MOD = "factory3d"`) |
 | Простір xml-id демо-завантажувача | `factory3d.loss_tool`, `factory3d.view_picking_form_dock`, `ir.model.data.module = 'factory3d'` | дані на демо-базі, які створює `plant/odoo_push.py` |
 | CSS/JS-імена | `o_f3d_*`, `--f3d-*`, `.f3d-card`, `userData.f3dBase`, ключі localStorage `f3d.ui`, `f3d.lite`, `f3d.layers`, `f3d.static` | внутрішні (не охоплені стандартом) |
-| Методи й атрибути Python | `_f3d_ingest`, `action_f3d_show`, `search_f3d`, `_compute_f3d_*` (зокрема `_compute_is_f3d_manager`), `_f3d_*_uniq = models.Constraint(...)` (імена SQL-обмежень у БД лишаються `f3d_*`) | стандарт називає модулі, моделі, поля, xml-id; методи — внутрішнє API (рішення узгодити, див. розділ 6) |
+| Методи й атрибути Python | ~~`_f3d_ingest`~~ (→ `_td_ingest`, розділ 9), `action_f3d_show`, `search_f3d`, `_compute_f3d_*` (зокрема `_compute_is_f3d_manager`), `_f3d_*_uniq = models.Constraint(...)` (імена SQL-обмежень у БД лишаються `f3d_*`) | стандарт називає модулі, моделі, поля, xml-id; приватні `_f3d_*` перейменовано в розділі 9, публічні `action_f3d_*`/`search_f3d` і SQL-об'єкти лишилися |
 | Ключі контексту, теги тестів, імена тестових користувачів і баз | `f3d_bms_internal`, `f3d_now`, теги `f3d`, `f3d_base`, `f3d_telemetry`, `f3d_template`, `f3d_w1_*` | внутрішні ключі/значення; базу-шаблон `f3d_template` (лише стандартні модулі Odoo) не перебудовувано |
 | Shell-функції й змінні середовища | `f3d_log`, `f3d_die`, `F3D_TEST_INSTALL`, `F3D_TEMPLATE_DB` | інструментарій `tools/odoo` (змінні названо в завданні) |
 | Product name і каталог | `factory3d/`, «Завод 3D», `ir.module.category` `module_category_factory3d` | назва продукту/проєкту |
@@ -173,3 +173,33 @@ display-імена (маніфести, `<app string>` у налаштуванн
 python3 factory3d/build/rename_td.py            # сухий прогін (на вже перейменованому дереві — 0 змін)
 git grep -nE 'factory3d_|f3d\.' -- factory3d    # залишки: див. розділ 3
 ```
+
+
+## 9. Технічний борг: `_f3d_*` → `_td_*` і ruff (гілка `claude/td-techdebt`)
+
+Поведінка не змінювалась. Скрипт `build/rename_private.py` (карта імен будується з дерева, перевірка колізій перед заміною,
+`--apply --group <модуль>`; у ньому за призначенням згадуються старі імена).
+
+- **Що перейменовано.** Приватні Python-імена з префіксом `_f3d_` (методи, атрибути-контракти провайдерів
+  `_f3d_sequence/_sections/_group/_viewer_collect/_viewer_delta`, `_f3d_passages/_available/_priority/_key/_on_site`,
+  модульні функції): 466 імен, 3524 входження — Python, тести, XML-дані (`ir.actions.server.code`: `_td_run_migration`,
+  `_td_bms_get`, `_td_print_evac_report`), JSON-фікстура контрактів td_energy, `services/*/tests/stand`, SPEC/ARCHITECTURE/build-документи.
+  Колізій `_td_x` з уже наявним `_td_x` на тій самій моделі (чи її предках) немає; єдиний випадок —
+  аліас `_td_log = _f3d_log` у `td.energy.event` — зведено до одного методу `_td_log`.
+- **Лишилося без змін:** SQL-об'єкти моделей — `_f3d_*_uniq/_idx/_check = models.Constraint/Index(...)` (90 імен): з атрибута Odoo
+  будує ім'я обмеження/індексу в БД і xml-id `constraint_*` (у `i18n`), перейменування потребувало б `ALTER … RENAME` на живих базах;
+  імена з `f3d` усередині (`_compute_f3d_*`, `_check_f3d_*`, `action_f3d_*`, `search_f3d`); ключі контексту `f3d_*` (29, наприклад
+  `f3d_now`, `f3d_no_touch`, `f3d_mc_internal`, `f3d_energy_internal`, `f3d_bms_internal`, `f3d_yard_sync`); маршрути, канал шини,
+  коди сигналів, CSS/JS-імена, теги тестів, xml-id `factory3d.*`.
+- **Сумісність баз.** Серверні дії й крони, чий `code` посилається на переименовані методи, — лише три `ir.actions.server` у XML без
+  `noupdate` (оновлюються при `-u`); у кронах `code` приватних методів немає; хуки записів `ir.cron/ir.actions.server` з такими посиланнями
+  не створюють. Тож міграцій і аліасів не потрібно, версії модулів не піднімались. Перевірено: база зі старим кодом (`4448abf`) →
+  `-u` новим → у БД 0 посилань `_f3d_` (`ir_act_server.code`, `ir_ui_view.arch_db`, `ir_filters`, `ir_rule`, `ir_config_parameter`…),
+  усі 59 кронів td_* і 20 серверних дій виконуються без `AttributeError`. Зовнішні модулі (поза репозиторієм), що реалізують
+  duck-typing-контракти провайдерів переглядача/пожежних проходів під старими іменами `_f3d_*`, треба перейменувати вручну.
+- **ruff.** Спільний `factory3d/ruff.toml` (для каталогів без власного конфіга: `td_genset`, `td_fire_safety`, `td_iot_sim`,
+  `td_viewer3d_sale`, `test_td_*`, `services/iot_sim`, `tools/`): стандартний набір ruff + E/W + сортування імпортів, 120 колонок,
+  `py310`; ігноруються UP031 (`_("… %s") % x`, логування), DTZ (naive UTC в Odoo), RUF012 (атрибути моделей), PLW0642 (`self = self.sudo()`),
+  F401/I001 у `__init__.py` (порядок імпортів = порядок завантаження моделей). Модулі з власним `ruff.toml` (E, F, W, B) лишили свої
+  конфіги; у маніфестах дозволено E501 (довгі `summary`/`description`). Було 1037 зауважень, `ruff format --check` — 446 файлів; стало 0 і 0.
+  `noqa` лише з причиною (BLE001 — ізоляція збою фону/обробника, TRY004 — контракт `ValueError`, B017/SIM115 у стендових тестах).
