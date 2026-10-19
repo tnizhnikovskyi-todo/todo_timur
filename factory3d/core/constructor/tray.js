@@ -4,7 +4,6 @@
 // зону/вільне місце сцени (HTML5 drag-and-drop) або діалог «Розмістити в…».
 import { newUid } from "./adapter.js";
 import { safeNormalize, slotPolygon } from "./addr_core.js";
-import { footprint } from "./cells.js";
 import { openDialog } from "./dialogs.js";
 import { fld, selectEl } from "./fields.js";
 import { sGeom } from "./live.js";
@@ -14,7 +13,7 @@ import { canEditLayer, toastLock } from "./roles.js";
 import { REASONS, projectCodes } from "./structure.js";
 import { E, S, V, elevOf, layerOf } from "./state.js";
 import { polygonContains } from "./geometry.js";
-import { $, fmtInt, h, toast } from "./util.js";
+import { $, ROOT, fmtInt, h, toast } from "./util.js";
 
 export const TRAY_MAX = 5000;
 const PREFIX_RE = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
@@ -261,9 +260,32 @@ if (typeof origRenderAll === "function") {
     };
 }
 
-/* ---------- перетягування на сцену ---------- */
+/* ---------- стилі S4 (лоток, правила розбору, розбіжності) і перетягування на сцену ---------- */
+const STYLE_ID = "f3d-s4-style";
+const CSS = `
+.tray-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.tray-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:grab}
+.tray-row:active{cursor:grabbing}
+.tray-row .tray-main,.tray-row .small{grid-column:1/2;min-width:0;overflow-wrap:anywhere}
+.tray-row button{grid-column:2/3;grid-row:1/3}
+.tray-code{font-weight:600}
+.pc-rule .pc-mask{flex:1;min-width:160px;font-family:var(--mono)}
+#syncList .frow{justify-content:space-between}
+#impOpts label.frow{cursor:pointer}
+`;
+function ensureStyle() {
+    const root = ROOT.el;
+    if (root && !root.querySelector("#" + STYLE_ID)) {
+        const st = document.createElement("style");
+        st.id = STYLE_ID;
+        st.textContent = CSS;
+        root.prepend(st);
+    }
+}
+
 let bound = null;
 function onMount() {
+    ensureStyle();
     const cv = V.canvas;
     if (!cv) {
         return;

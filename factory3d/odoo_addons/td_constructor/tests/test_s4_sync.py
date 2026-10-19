@@ -298,6 +298,8 @@ class TestS4Api(StructureFixture, F3DConstructorHttpCase):
         self.assertTrue(any(r['code'] == 'A-01-01-1' for r in res['feed']['locations']))
         self.assertEqual(self.rpc(LOCATIONS, site_id=self.site.id, op='зайве')['code'], 'validation')
         self.assertEqual(self.rpc(LOCATIONS, site_id=0)['code'], 'not_found')
+        self.assertEqual(self.rpc(LOCATIONS, site_id=self.site.id, offset='x')['code'], 'validation')
+        self.assertEqual(self.rpc(LOCATIONS, site_id=self.site.id, warehouse_id='ab')['code'], 'validation')
         small = self.rpc(LOCATIONS, site_id=self.site.id, limit=3)
         self.assertEqual((len(small['feed']['locations']), small['feed']['truncated']), (3, True))
         outsider = (
@@ -323,6 +325,10 @@ class TestS4Api(StructureFixture, F3DConstructorHttpCase):
         diff = self.rpc(LOCATIONS, site_id=self.site.id, op='sync')['diff']
         self.assertEqual([x['code'] for x in diff['renamed']], ['A-01-01-1'])
         self.authenticate(self.u_plain.login, PASSWORD)
+        self.site.sudo().odoo_baseline_id.unlink()
+        viewer = self.rpc(LOCATIONS, site_id=self.site.id, op='sync')
+        self.assertEqual((viewer['ok'], viewer['baseline']), (True, 'missing'), "читач бази не створює")
+        self.assertFalse(self.site.sudo().odoo_baseline_id)
         denied = self.rpc(LOCATIONS, site_id=self.site.id, op='baseline')
         self.assertEqual(denied['code'], 'rights', "базу змінює менеджер чи проєктувальник шару")
         self.authenticate(self.u_manager.login, PASSWORD)

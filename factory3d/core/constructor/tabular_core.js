@@ -381,7 +381,7 @@ export function toCsv(rows, { delim = ",", bom = true } = {}) {
 }
 
 /** Файл (байти + ім'я) → {format, encoding?, delimiter?, sheets?, rows}. XLSX розпізнається за zip-сигнатурою, а не за розширенням. */
-export async function readTable(bytes, filename = "", { delimiter = null, sheet = 0 } = {}) {
+export async function readTable(bytes, _filename = "", { delimiter = null, sheet = 0 } = {}) {
     const b = u8(bytes);
     if (b.length > 3 && b[0] === 0x50 && b[1] === 0x4b) {
         const x = await readXlsx(b, { sheet });

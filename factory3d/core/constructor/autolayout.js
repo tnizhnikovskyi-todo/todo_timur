@@ -14,6 +14,7 @@ import { E, S, layerOf, variantOf } from "./state.js";
 import { fmt, h, rnd, toast } from "./util.js";
 
 const EPS = 1e-6;
+const ZONE_MAX = 150; // межа розміру зони (TPL.zone у data.js)
 const CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t) => SLOT_TEMPLATES[t].cells);
 export const isBlockSlot = (s) => CELL_TEMPLATES.includes(s.template);
 const natural = (a, b) => String(a).localeCompare(String(b), "uk", { numeric: true });
@@ -165,13 +166,13 @@ export function packRects(items, region, obstacles = [], { gap = 1, margin = 0.5
  * {ok, zones: Map(id → {x, y, l, w}), blocks: Map(id → {x, y}), orphans: {x, y, l, w}|null} або {ok: false, reason, need}.
  */
 export function layoutPlan({ zones, orphans = [], region = null, obstacles = [], aisle = 3, gap = 0.5, margin = 0.5, step = 0.5, zoneGap = 1 }) {
-    const lim = region ? { maxL: region.x1 - region.x0, maxW: region.y1 - region.y0 } : {};
+    const lim = { maxL: Math.min(ZONE_MAX, region ? region.x1 - region.x0 : Infinity), maxW: Math.min(ZONE_MAX, region ? region.y1 - region.y0 : Infinity) }; // зона в UI — до 150 м
     const items = [];
     const lays = new Map();
     const all = [...zones, ...(orphans.length ? [{ id: "__orphans", title: "Поза зонами", blocks: orphans }] : [])];
     for (const z of all) {
         const fixed = z.fixed || null;
-        const r = layoutLines(z.blocks, { aisle, gap, margin, maxL: fixed ? fixed.l : (lim.maxL ?? Infinity), maxW: fixed ? fixed.w : (lim.maxW ?? Infinity) });
+        const r = layoutLines(z.blocks, { aisle, gap, margin, maxL: fixed ? fixed.l : lim.maxL, maxW: fixed ? fixed.w : lim.maxW });
         if (!r.ok) {
             return { ok: false, reason: `Зона «${z.title || z.id}»: ${r.reason}`, need: r.need };
         }

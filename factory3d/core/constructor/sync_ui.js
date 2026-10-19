@@ -94,6 +94,10 @@ export async function openSync() {
         toast(e.message || "Не вдалося прочитати структуру з Odoo.", "err");
         return undefined;
     }
+    if (r.baseline === "missing") {
+        toast("Бази порівняння з Odoo ще немає: її створює менеджер чи проєктувальник при першому «Оновити з Odoo».", "warn");
+        return undefined;
+    }
     const diff = relevantDiff(r.diff || {});
     const total = GROUPS.reduce((n, [k]) => n + diff[k].length, 0);
     if (!total) {

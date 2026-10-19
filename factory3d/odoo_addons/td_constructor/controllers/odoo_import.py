@@ -27,6 +27,11 @@ OPS = ('feed', 'sync', 'baseline')
 
 
 class TdOdooImportController(http.Controller):
+    @staticmethod
+    def _can_write(env, site):
+        """Менеджер чи проєктувальник із правом на шар площадки (як `/site/addr`)."""
+        return is_manager(env) or any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+
     def _site(self, env, site_id, write=False):
         """Площадка для читання (група «Перегляд») чи запису (менеджер або проєктувальник шару) або готова відповідь-
         помилка."""
@@ -50,13 +55,19 @@ class TdOdooImportController(http.Controller):
         if op not in OPS:
             return fail('validation', "op: очікується %s." % ', '.join(OPS))
         try:
+            warehouse_id = int(warehouse_id) if warehouse_id else None
+            offset = max(0, int(offset or 0))
+            limit = int(limit) if limit else None
+        except (TypeError, ValueError):
+            return fail('validation', "warehouse_id, offset і limit мають бути числами.")
+        try:
             site, error = self._site(env, site_id, write=(op == 'baseline'))
             if error:
                 return error
             if op == 'feed':
                 return {'ok': True, 'feed': odoo_sync.locations_feed(env, site, warehouse_id, offset, limit)}
             if op == 'sync':
-                return dict(ok=True, **odoo_sync.sync(env, site, warehouse_id))
+                return dict(ok=True, **odoo_sync.sync(env, site, warehouse_id, save=self._can_write(env, site)))
             odoo_sync.save_baseline(site, odoo_sync.full_feed(env, site, warehouse_id)['locations'])
             return {'ok': True}
         except (AccessError, UserError, ValidationError) as exc:

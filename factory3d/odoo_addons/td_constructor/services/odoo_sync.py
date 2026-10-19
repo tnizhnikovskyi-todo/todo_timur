@@ -280,19 +280,20 @@ def save_baseline(site, locations):
     return fields.Datetime.now()
 
 
-def sync(env, site, warehouse_id=None):
-    """«Оновити з Odoo» (F02-12): читає стрічку, порівнює з базою; бази ще немає — створює її (розбіжностей немає).
-    Повертає {feed (без списку локацій), diff, baseline: 'created'|'existing'}; базу після вибору користувача оновлює
-    `save_baseline`."""
+def sync(env, site, warehouse_id=None, save=True):
+    """«Оновити з Odoo» (F02-12): читає стрічку, порівнює з базою; бази ще немає — створює її (розбіжностей немає), а
+    користувач без права запису (`save=False`) бази не створює: `baseline: 'missing'`. Повертає {feed (без списку
+    локацій), diff, baseline: 'created'|'existing'|'missing'}; базу після вибору користувача оновлює `save_baseline`."""
     feed = full_feed(env, site, warehouse_id)
     base = load_baseline(site)
     summary = {k: v for k, v in feed.items() if k != 'locations'}
     summary['count'] = len(feed['locations'])
     if base is None:
-        save_baseline(site, feed['locations'])
+        if save:
+            save_baseline(site, feed['locations'])
         return {
             'feed': summary,
             'diff': {'appeared': [], 'disappeared': [], 'renamed': [], 'moved': []},
-            'baseline': 'created',
+            'baseline': 'created' if save else 'missing',
         }
     return {'feed': summary, 'diff': diff_feeds(base, feed['locations']), 'baseline': 'existing'}

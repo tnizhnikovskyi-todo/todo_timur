@@ -1187,6 +1187,7 @@ export class OdooAdapter extends BaseAdapter {
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
         }
+        this.onSaved({ rev: res.rev, draft_changes: res.draft_changes, has_changes: res.has_changes, id_map: {}, updates: [] }); // лічильник чернетки в шапці
         return res;
     }
 

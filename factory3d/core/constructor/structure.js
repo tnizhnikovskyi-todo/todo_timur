@@ -387,7 +387,7 @@ export function planStructure(locs, o = {}) {
             codes.forEach((c) => owner.set(c, sp.id));
         }
     }
-    for (const { loc, zone, rule } of spots) {
+    for (const { loc, zone } of spots) {
         if (existingPrefixes.has(loc.code) || used.has(loc.code)) {
             tray.push(trayItem(loc, "dup"));
             continue;

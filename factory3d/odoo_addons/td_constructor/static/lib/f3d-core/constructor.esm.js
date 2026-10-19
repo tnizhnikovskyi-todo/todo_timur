@@ -8456,6 +8456,7 @@ var OdooAdapter = class extends BaseAdapter {
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
+    this.onSaved({ rev: res.rev, draft_changes: res.draft_changes, has_changes: res.has_changes, id_map: {}, updates: [] });
     return res;
   }
   /** Розбір таблиці на сервері (API-20 `/parse/table`): `{filename, bytes (Uint8Array), sheet?}` → {format, sheets?, rows}. */
@@ -15213,8 +15214,7 @@ function maskCandidates(code) {
   }
   const build = (keys, firstAlpha) => {
     let i = 0;
-    let seenAlpha = 0;
-    return toks.map((t) => {
+    return toks.map((t, j) => {
       if (t.t === "sep") {
         return t.text;
       }
@@ -15222,10 +15222,11 @@ function maskCandidates(code) {
         const key = keys[i++];
         return key ? `{${PART_LABELS[key]}}` : "*";
       }
-      if (seenAlpha++ === 0 && firstAlpha) {
+      const glued = toks[j - 1]?.t === "num" || toks[j + 1]?.t === "num";
+      if (j === 0 && firstAlpha && !glued) {
         return firstAlpha;
       }
-      return /^[A-Za-z]$/.test(t.text) ? t.text : "*";
+      return glued || /^[A-Za-z]$/.test(t.text) ? t.text : "*";
     }).join("");
   };
   const out = [];
@@ -15425,6 +15426,7 @@ Object.assign(E, { siteParser, normalizeParseRules: normalizeRules, saveParseRul
 
 // core/constructor/autolayout.js
 var EPS = 1e-6;
+var ZONE_MAX = 150;
 var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t) => SLOT_TEMPLATES[t].cells);
 var isBlockSlot = (s) => CELL_TEMPLATES.includes(s.template);
 var natural = (a, b) => String(a).localeCompare(String(b), "uk", { numeric: true });
@@ -15555,13 +15557,13 @@ function packRects(items, region, obstacles = [], { gap = 1, margin = 0.5 } = {}
   return { ok: true, pos };
 }
 function layoutPlan({ zones, orphans = [], region = null, obstacles = [], aisle = 3, gap = 0.5, margin = 0.5, step = 0.5, zoneGap = 1 }) {
-  const lim = region ? { maxL: region.x1 - region.x0, maxW: region.y1 - region.y0 } : {};
+  const lim = { maxL: Math.min(ZONE_MAX, region ? region.x1 - region.x0 : Infinity), maxW: Math.min(ZONE_MAX, region ? region.y1 - region.y0 : Infinity) };
   const items = [];
   const lays = /* @__PURE__ */ new Map();
   const all = [...zones, ...orphans.length ? [{ id: "__orphans", title: "Поза зонами", blocks: orphans }] : []];
   for (const z of all) {
     const fixed = z.fixed || null;
-    const r = layoutLines(z.blocks, { aisle, gap, margin, maxL: fixed ? fixed.l : lim.maxL ?? Infinity, maxW: fixed ? fixed.w : lim.maxW ?? Infinity });
+    const r = layoutLines(z.blocks, { aisle, gap, margin, maxL: fixed ? fixed.l : lim.maxL, maxW: fixed ? fixed.w : lim.maxW });
     if (!r.ok) {
       return { ok: false, reason: `Зона «${z.title || z.id}»: ${r.reason}`, need: r.need };
     }
@@ -16169,7 +16171,7 @@ function planStructure(locs, o = {}) {
       codes.forEach((c) => owner.set(c, sp.id));
     }
   }
-  for (const { loc, zone: zone2, rule } of spots) {
+  for (const { loc, zone: zone2 } of spots) {
     if (existingPrefixes.has(loc.code) || used.has(loc.code)) {
       tray.push(trayItem(loc, "dup"));
       continue;
@@ -16553,8 +16555,30 @@ if (typeof origRenderAll2 === "function") {
     return r;
   };
 }
+var STYLE_ID2 = "f3d-s4-style";
+var CSS2 = `
+.tray-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.tray-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:grab}
+.tray-row:active{cursor:grabbing}
+.tray-row .tray-main,.tray-row .small{grid-column:1/2;min-width:0;overflow-wrap:anywhere}
+.tray-row button{grid-column:2/3;grid-row:1/3}
+.tray-code{font-weight:600}
+.pc-rule .pc-mask{flex:1;min-width:160px;font-family:var(--mono)}
+#syncList .frow{justify-content:space-between}
+#impOpts label.frow{cursor:pointer}
+`;
+function ensureStyle2() {
+  const root = ROOT.el;
+  if (root && !root.querySelector("#" + STYLE_ID2)) {
+    const st = document.createElement("style");
+    st.id = STYLE_ID2;
+    st.textContent = CSS2;
+    root.prepend(st);
+  }
+}
 var bound = null;
 function onMount2() {
+  ensureStyle2();
   const cv = V.canvas;
   if (!cv) {
     return;
@@ -16939,7 +16963,7 @@ function toCsv2(rows, { delim = ",", bom = true } = {}) {
   };
   return (bom ? "\uFEFF" : "") + rows.map((r) => r.map(cell).join(delim)).join("\r\n") + "\r\n";
 }
-async function readTable(bytes, filename = "", { delimiter = null, sheet = 0 } = {}) {
+async function readTable(bytes, _filename = "", { delimiter = null, sheet = 0 } = {}) {
   const b = u8(bytes);
   if (b.length > 3 && b[0] === 80 && b[1] === 75) {
     const x = await readXlsx(b, { sheet });
@@ -17088,6 +17112,15 @@ function openImport({ file = null } = {}) {
   const optBox = h("div", { class: "fcol", id: "impOpts" });
   let goBtn = null;
   const rulesNow = () => [...siteRules().rules, ...st.extra];
+  const existing = () => st.mode === "new" ? { existingCodes: /* @__PURE__ */ new Set(), existingPrefixes: /* @__PURE__ */ new Set() } : { existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((x) => x.code_prefix)) };
+  const rankSuggestions = (list) => {
+    const base2 = { siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() };
+    const scored = list.map((g3) => {
+      const p = planStructure(st.locs, { ...base2, parser: makeParser({ rules: [...rulesNow(), { id: "probe", mask: g3.mask }], addr: S.site.addr || null }) });
+      return { ...g3, placed: p.slots.filter((x) => x.template !== "floor_spot").reduce((n, x) => n + x.items.length, 0) };
+    });
+    return scored.filter((g3) => g3.placed > 0).sort((a, b) => b.placed - a.placed || b.matched - a.matched).slice(0, 3);
+  };
   const recompute = () => {
     st.suggestions = [];
     if (st.table) {
@@ -17104,10 +17137,10 @@ function openImport({ file = null } = {}) {
     if (st.source !== "odoo") {
       st.warehouses = null;
     }
-    st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((s) => s.code_prefix)) });
+    st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() });
     const un = st.plan.stats.unparsedCodes;
     if (un.length && un.length >= 0.3 * Math.max(1, st.plan.stats.cells)) {
-      st.suggestions = guessMasks(un, { limit: 3 });
+      st.suggestions = rankSuggestions(guessMasks(un, { limit: 5 }));
     }
   };
   const setTable = async (table, label) => {
@@ -17190,7 +17223,7 @@ function openImport({ file = null } = {}) {
         p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
         h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
         ...reasonRows(p),
-        ...st.suggestions.map((g3) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g3.mask), h("span", { class: "muted small" }, `${g3.matched} із ${g3.total} нерозібраних`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
+        ...st.suggestions.map((g3) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g3.mask), h("span", { class: "muted small" }, `розібрано ${g3.matched} із ${g3.total}, рядами стане ${g3.placed}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
           st.extra.push({ id: `s${st.extra.length + 1}`, mode: "mask", mask: g3.mask, type: "auto", enabled: true });
           recompute();
           renderSummary();
@@ -17217,6 +17250,8 @@ function openImport({ file = null } = {}) {
         { class: "fcol" },
         h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st.mode === "new", disabled: !mgr, onchange: () => {
           st.mode = "new";
+          recompute();
+          renderSummary();
           renderOpts();
         } }), "Створити новий проєкт «з файлу»", mgr ? null : h("span", { class: "small muted" }, " (лише менеджер)")),
         st.mode === "new" ? fld("Назва проєкту", h("input", { type: "text", id: "impName", value: st.projName, "aria-label": "Назва проєкту", oninput: (e) => {
@@ -17224,6 +17259,8 @@ function openImport({ file = null } = {}) {
         } })) : null,
         h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st.mode === "current", onchange: () => {
           st.mode = "current";
+          recompute();
+          renderSummary();
           renderOpts();
         } }), `Додати в поточний проєкт «${S.site.name}»`),
         h("label", { class: "frow" }, h("input", { type: "checkbox", id: "impLayout", checked: st.layout, onchange: (e) => {
@@ -17460,6 +17497,10 @@ async function openSync() {
     r = await ad.locations({ op: "sync" });
   } catch (e) {
     toast(e.message || "Не вдалося прочитати структуру з Odoo.", "err");
+    return void 0;
+  }
+  if (r.baseline === "missing") {
+    toast("Бази порівняння з Odoo ще немає: її створює менеджер чи проєктувальник при першому «Оновити з Odoo».", "warn");
     return void 0;
   }
   const diff = relevantDiff(r.diff || {});
