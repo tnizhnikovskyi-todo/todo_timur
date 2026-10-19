@@ -4,7 +4,7 @@ from uuid import uuid4
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
-from ..services import schemas
+from ..services import building, schemas
 
 LAYER_KIND_SELECTION = [
     ('building', "Будівля"),
@@ -80,7 +80,7 @@ class F3dLayer(models.Model):
     items = fields.Json(
         string="Об'єкти будівлі",
         default=list,
-        help="MERGE.md §3.3, R-22: колони, стіни, ворота, док, двері, офіс, зарядка техніки (F18); наповнює слайс S5",
+        help="MERGE.md §3.3, R-22: колони, стіни, ворота, док, двері, офіс, зарядка (F18, services/building.py)",
     )
     underlay_attachment_id = fields.Many2one('ir.attachment', string="Підкладка", ondelete='set null', copy=False)
     underlay_format = fields.Selection(
@@ -146,7 +146,7 @@ class F3dLayer(models.Model):
             if not COLOR_RE.match(layer.color or ''):
                 raise ValidationError("Колір має бути у форматі #RRGGBB.")
 
-    @api.constrains('bounds', 'aisles', 'fire_paths', 'utilities', 'underlay_params')
+    @api.constrains('bounds', 'aisles', 'fire_paths', 'utilities', 'items', 'underlay_params')
     def _check_json(self):
         for layer in self:
             try:
@@ -154,6 +154,7 @@ class F3dLayer(models.Model):
                 schemas.normalize_aisles(layer.aisles)
                 schemas.normalize_fire_paths(layer.fire_paths)
                 schemas.normalize_layer_utilities(layer.utilities)
+                building.normalize_items(layer.items)
                 schemas.normalize_underlay_params(layer.underlay_params)
             except schemas.SchemaError as exc:
                 raise ValidationError(str(exc)) from None
@@ -175,6 +176,8 @@ class F3dLayer(models.Model):
             vals['fire_paths'] = schemas.normalize_fire_paths(vals['fire_paths'])
         if 'utilities' in vals:
             vals['utilities'] = schemas.normalize_layer_utilities(vals['utilities'])
+        if 'items' in vals:
+            vals['items'] = building.normalize_items(vals['items'])
         if 'underlay_params' in vals:
             vals['underlay_params'] = schemas.normalize_underlay_params(vals['underlay_params'])
         return vals
