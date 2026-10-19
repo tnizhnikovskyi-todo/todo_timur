@@ -255,8 +255,10 @@ class TestW4Report(TestW4Common):
             self.skipTest("td_energy_mobile не встановлено: блок «Обходи» пропускається")
         self._calendar_two_shifts()
         friday = self._shift_fixture()
+        template = self.env["td.energy.round.template"].create({"name": "Обхід ТП (тест)", "code": "TP-W4B"})
         done = self.env["td.energy.round"].create(
             {
+                "template_id": template.id,
                 "slot_name": "Зміна 2",
                 "date": friday,
                 "starts_at": self._local(friday, 16),
@@ -268,6 +270,7 @@ class TestW4Report(TestW4Common):
         # обхід іншої зміни (ранок) у вікно не потрапляє
         self.env["td.energy.round"].create(
             {
+                "template_id": template.id,
                 "slot_name": "Зміна 1",
                 "date": friday,
                 "starts_at": self._local(friday, 8),
