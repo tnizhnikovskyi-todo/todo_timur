@@ -21,6 +21,7 @@ def plan_error(status, code, message):
 
 class F3dViewerProviderMaintenance(models.AbstractModel):
     """M-01e: обладнання й заявки на обслуговування."""
+
     _name = "td.viewer.provider.maintenance"
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних maintenance"
@@ -45,9 +46,16 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         requests = env["maintenance.request"].browse()
         open_by_eq, open_id_by_eq, open_prev, next_prev, recurring = {}, {}, set(), {}, {}
         if payload_tools.access_ok(env, "maintenance.request"):
-            requests = env["maintenance.request"].search_fetch([
-                ("equipment_id.td_code", "!=", False), ("archive", "=", False),
-                "|", ("stage_id.done", "=", False), ("close_date", ">=", since.date())], order="request_date, id")
+            requests = env["maintenance.request"].search_fetch(
+                [
+                    ("equipment_id.td_code", "!=", False),
+                    ("archive", "=", False),
+                    "|",
+                    ("stage_id.done", "=", False),
+                    ("close_date", ">=", since.date()),
+                ],
+                order="request_date, id",
+            )
             for r in requests.filtered(lambda r: not r.stage_id.done):
                 open_by_eq.setdefault(r.equipment_id.id, r.name)
                 open_id_by_eq.setdefault(r.equipment_id.id, r.id)
@@ -63,8 +71,9 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         passport_ok = payload_tools.access_ok(env, "td.equipment.passport")
         tasks = {}
         if payload_tools.access_ok(env, "stock.picking.batch"):
-            for b in env["stock.picking.batch"].search_fetch([("td_vehicle_id", "!=", False),
-                                                        ("state", "in", ("in_progress", "draft"))], order="id"):
+            for b in env["stock.picking.batch"].search_fetch(
+                [("td_vehicle_id", "!=", False), ("state", "in", ("in_progress", "draft"))], order="id"
+            ):
                 tasks.setdefault(b.td_vehicle_id.id, b.name)
 
         for eq in env["maintenance.equipment"].search_fetch([("td_code", "!=", False)], order="id"):
@@ -100,16 +109,25 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         """Запис `maintenance_requests[]` (A.9). `res_id`, `done`, `equipment_name`, `overdue_days` — R-22:
         назва заявки не унікальна («Планове ТО» у всіх), тож клієнт знаходить заявку за `res_id`."""
         done = bool(r.stage_id.done)
-        rec = {"id": r.name, "res_id": r.id, "name": r.name, "equipment": r.equipment_id.td_code,
-               "equipment_name": r.equipment_id.name, "maintenance_type": r.maintenance_type,
-               "stage": r.stage_id.name, "done": done, "priority": r.priority or "0"}
+        rec = {
+            "id": r.name,
+            "res_id": r.id,
+            "name": r.name,
+            "equipment": r.equipment_id.td_code,
+            "equipment_name": r.equipment_id.name,
+            "maintenance_type": r.maintenance_type,
+            "stage": r.stage_id.name,
+            "done": done,
+            "priority": r.priority or "0",
+        }
         if r.request_date:
             rec["request_date"] = dates.date_to_local(r.request_date)
         if r.schedule_date:
             rec["schedule_date"] = dates.local(r.schedule_date)
             if not done and r.schedule_date < now:
-                rec["overdue_days"] = max(0, (date.fromisoformat(today)
-                                              - date.fromisoformat(rec["schedule_date"][:10])).days)
+                rec["overdue_days"] = max(
+                    0, (date.fromisoformat(today) - date.fromisoformat(rec["schedule_date"][:10])).days
+                )
         if r.user_id:
             rec["technician"] = r.user_id.name
         return rec
@@ -131,11 +149,18 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         if not payload_tools.access_ok(self.env, "maintenance.request"):
             return out
         eq_domain = [("equipment_id", "in", equipment.ids)] if equipment else [("equipment_id.td_code", "!=", False)]
-        done = self.env["maintenance.request"].search(eq_domain + [
-            ("maintenance_type", "=", "preventive"), ("stage_id.done", "=", True),
-            ("recurring_maintenance", "=", True), ("archive", "=", False)], order="schedule_date, request_date, id")
+        done = self.env["maintenance.request"].search(
+            eq_domain
+            + [
+                ("maintenance_type", "=", "preventive"),
+                ("stage_id.done", "=", True),
+                ("recurring_maintenance", "=", True),
+                ("archive", "=", False),
+            ],
+            order="schedule_date, request_date, id",
+        )
         for r in done:  # від старіших до новіших: остання закрита перекриває попередні
-            base = (date.fromisoformat(dates.local(r.schedule_date)[:10]) if r.schedule_date else r.request_date)
+            base = date.fromisoformat(dates.local(r.schedule_date)[:10]) if r.schedule_date else r.request_date
             if not base:
                 continue
             nxt = base + relativedelta(**{f"{r.repeat_unit or 'week'}s": max(1, r.repeat_interval or 1)})
@@ -156,8 +181,10 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         self._td_viewer_collect(tmp, ctx)
         reqs = [r for r in tmp.get("maintenance_requests") or [] if r["id"] in sel or r["equipment"] in sel]
         eq_sel = sel | {r["equipment"] for r in reqs}
-        part = {"maintenance_requests": reqs,
-                "equipment": {c: v for c, v in (tmp.get("equipment") or {}).items() if c in eq_sel}}
+        part = {
+            "maintenance_requests": reqs,
+            "equipment": {c: v for c, v in (tmp.get("equipment") or {}).items() if c in eq_sel},
+        }
         part = {k: v for k, v in part.items() if v}
         if part:
             payload_tools.deep_merge(patch, part)
@@ -173,24 +200,39 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         if not Request.has_access("create"):
             return plan_error(403, "forbidden", "Немає прав на створення заявок на обслуговування.")
         eq = env["maintenance.equipment"].search(
-            [("id", "=", equipment_id) if equipment_id else ("td_code", "=", code), ("td_code", "!=", False)],
-            limit=1)
+            [("id", "=", equipment_id) if equipment_id else ("td_code", "=", code), ("td_code", "!=", False)], limit=1
+        )
         if not eq:
             return plan_error(404, "not_found", "Обладнання не знайдено.")
         env.cr.execute("SELECT pg_advisory_xact_lock(%s, %s)", (PLAN_LOCK_NS, eq.id))
         now, today = dates.now(env), dates.today(env)
-        req = Request.search([("equipment_id", "=", eq.id), ("maintenance_type", "=", "preventive"),
-                              ("stage_id.done", "=", False), ("archive", "=", False)], order="schedule_date, id", limit=1)
+        req = Request.search(
+            [
+                ("equipment_id", "=", eq.id),
+                ("maintenance_type", "=", "preventive"),
+                ("stage_id.done", "=", False),
+                ("archive", "=", False),
+            ],
+            order="schedule_date, id",
+            limit=1,
+        )
         created = not req
         if created:
             team = eq.maintenance_team_id.id or Request._get_default_team_id()
             if not team:
-                return plan_error(400, "no_team", "Немає команди обслуговування: створіть її в розділі «Обслуговування».")
+                return plan_error(
+                    400, "no_team", "Немає команди обслуговування: створіть її в розділі «Обслуговування»."
+                )
             nxt = eq.next_action_date if "next_action_date" in eq._fields else False
             nxt = nxt or self._td_recurring_next(eq).get(eq.id)
-            vals = {"name": f"Планове ТО · {eq.name}", "equipment_id": eq.id, "maintenance_type": "preventive",
-                    "schedule_date": dates.utc(f"{nxt} 08:00") if nxt else now.replace(second=0),
-                    "request_date": fields.Date.to_date(today), "maintenance_team_id": team}
+            vals = {
+                "name": f"Планове ТО · {eq.name}",
+                "equipment_id": eq.id,
+                "maintenance_type": "preventive",
+                "schedule_date": dates.utc(f"{nxt} 08:00") if nxt else now.replace(second=0),
+                "request_date": fields.Date.to_date(today),
+                "maintenance_team_id": team,
+            }
             tech = eq.technician_user_id or eq.category_id.technician_user_id
             if tech:
                 vals["user_id"] = tech.id
@@ -204,5 +246,9 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         eq_patch = {"maintenance_request": req.name, "maintenance_request_id": req.id, "maintenance_due": None}
         if req.schedule_date:
             eq_patch["next_maintenance"] = dates.local(req.schedule_date)[:10]
-        return {"ok": True, "created": created, "request": self._td_request_rec(req, now, today),
-                "equipment": {eq.td_code: eq_patch}}
+        return {
+            "ok": True,
+            "created": created,
+            "request": self._td_request_rec(req, now, today),
+            "equipment": {eq.td_code: eq_patch},
+        }

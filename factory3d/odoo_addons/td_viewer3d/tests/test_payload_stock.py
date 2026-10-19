@@ -12,13 +12,22 @@ class TestStockSynthetic(F3dViewerBase):
         super().setUpClass()
         cls.user_plain = cls._make_user("f3d_plain", ["base.group_user", "td_factory3d.group_td_user"])
         wh = cls.env["stock.warehouse"].search([], limit=1)
-        cls.loc = cls.env["stock.location"].create({
-            "name": "TST stack", "location_id": wh.lot_stock_id.id, "usage": "internal",
-            "td_code": "TST-STK-1", "td_loc_kind": "stack", "td_capacity": 60})
-        cls.kit = cls.env["stock.location"].create({
-            "name": "TST kit", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "TST-KIT-1"})
-        cls.product = cls.env["product.product"].create({
-            "name": "TST sheet", "default_code": "TST-DSP", "is_storable": True})
+        cls.loc = cls.env["stock.location"].create(
+            {
+                "name": "TST stack",
+                "location_id": wh.lot_stock_id.id,
+                "usage": "internal",
+                "td_code": "TST-STK-1",
+                "td_loc_kind": "stack",
+                "td_capacity": 60,
+            }
+        )
+        cls.kit = cls.env["stock.location"].create(
+            {"name": "TST kit", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "TST-KIT-1"}
+        )
+        cls.product = cls.env["product.product"].create(
+            {"name": "TST sheet", "default_code": "TST-DSP", "is_storable": True}
+        )
         cls.env["stock.quant"]._update_available_quantity(cls.product, cls.loc, 15)
 
     def _data(self):
@@ -49,12 +58,18 @@ class TestStockSynthetic(F3dViewerBase):
         self.assertIsNone(rec["fill"])
 
     def test_orderpoint_state(self):
-        bin_loc = self.env["stock.location"].create({
-            "name": "TST bin", "location_id": self.loc.location_id.id, "usage": "internal",
-            "td_code": "TST-BIN-1", "td_loc_kind": "bin"})
-        self.env["stock.warehouse.orderpoint"].create({
-            "product_id": self.product.id, "location_id": bin_loc.id, "product_min_qty": 10,
-            "product_max_qty": 40})
+        bin_loc = self.env["stock.location"].create(
+            {
+                "name": "TST bin",
+                "location_id": self.loc.location_id.id,
+                "usage": "internal",
+                "td_code": "TST-BIN-1",
+                "td_loc_kind": "bin",
+            }
+        )
+        self.env["stock.warehouse.orderpoint"].create(
+            {"product_id": self.product.id, "location_id": bin_loc.id, "product_min_qty": 10, "product_max_qty": 40}
+        )
         rec = self._data()["locations"]["TST-BIN-1"]
         self.assertEqual(rec["orderpoint"], {"product": "TST-DSP", "min": 10, "max": 40})
         self.assertEqual((rec["state"], rec["capacity"], rec["fill"]), ("out", 40, 0.0))
@@ -70,8 +85,10 @@ class TestStockSynthetic(F3dViewerBase):
 
     def test_delta_only_changed_locations(self):
         from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
-        res = DeltaBuilder(self.env(user=self.user_stock_only), since=None,
-                           changes={"stock.quant": {"TST-STK-1"}}).build()
+
+        res = DeltaBuilder(
+            self.env(user=self.user_stock_only), since=None, changes={"stock.quant": {"TST-STK-1"}}
+        ).build()
         self.assertEqual(set(res["patch"]["locations"]), {"TST-STK-1"})
 
 
@@ -86,8 +103,9 @@ class TestStock(F3dViewerCase):
         """R-03: усі `internal|transit` локації з `td_code`. Еталонна демо — 689; шаблон на CE кодує ворота
         як `DOCK-*` (аліас `UNLOAD-*`), тож рахуємо очікування з бази, не слабше за еталон."""
         locs = self._locs()
-        expected = self.env["stock.location"].search_count([
-            ("td_code", "!=", False), ("usage", "in", ("internal", "transit"))])
+        expected = self.env["stock.location"].search_count(
+            [("td_code", "!=", False), ("usage", "in", ("internal", "transit"))]
+        )
         self.assertEqual(len(locs), expected)
         self.assertGreaterEqual(len(locs), 689)
 

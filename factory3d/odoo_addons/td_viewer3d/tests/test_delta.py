@@ -17,14 +17,15 @@ LOGGER = "odoo.addons.td_viewer3d.tools.payload"
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestDeepMerge(BaseCase):
-
     def test_semantics(self):
         """AC-56."""
         dst = {"cards": {"PV-INV": {"rows": [1]}}, "totals": {"pv_now": 468}}
         res = deep_merge(dst, {"cards": {"GENSET": {"rows": [2]}}, "totals": {"island": False}})
         self.assertIs(res, dst)
-        self.assertEqual(res, {"cards": {"PV-INV": {"rows": [1]}, "GENSET": {"rows": [2]}},
-                               "totals": {"pv_now": 468, "island": False}})
+        self.assertEqual(
+            res,
+            {"cards": {"PV-INV": {"rows": [1]}, "GENSET": {"rows": [2]}}, "totals": {"pv_now": 468, "island": False}},
+        )
         self.assertEqual(deep_merge({"a": [1, 2]}, {"a": [3]}), {"a": [3]})
         self.assertEqual(deep_merge({"a": {"x": 1}}, {"a": 5}), {"a": 5})
         self.assertEqual(deep_merge({"a": 1}, {"a": None}), {"a": None})
@@ -39,12 +40,12 @@ class TestDeepMerge(BaseCase):
 
     def test_import_path(self):
         from odoo.addons.td_viewer3d.tools.payload import deep_merge as imported
+
         self.assertIs(imported, payload_tools.deep_merge)
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestDelta(F3dViewerBase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -97,9 +98,13 @@ class TestDelta(F3dViewerBase):
         """Зниклий opt-ключ -> null у патчі."""
         cls = type(self.env[ZZ + "test"])
         self.patch(cls, "_td_sections", ("zones", "workorders"))
-        self.patch(cls, "_td_viewer_collect",
-                   lambda this, payload, ctx: payload.setdefault("workorders", {}).update(
-                       {"WO00001": {"state": "done", "workcenter": "SAW-1"}}))
+        self.patch(
+            cls,
+            "_td_viewer_collect",
+            lambda this, payload, ctx: payload.setdefault("workorders", {}).update(
+                {"WO00001": {"state": "done", "workcenter": "SAW-1"}}
+            ),
+        )
         wo = self._delta({"mrp.workorder": {"WO00001"}})["patch"]["workorders"]["WO00001"]
         self.assertIsNone(wo["blocked"])
         self.assertEqual(wo["state"], "done")
@@ -113,8 +118,9 @@ class TestDelta(F3dViewerBase):
 
     def test_provider_error_in_delta(self):
         with self.assertLogs(LOGGER, level="ERROR"):
-            res = DeltaBuilder(self.env(user=self.user_f3d, context=dict(self.env.context, zz_fail=True)), None,
-                               changes={"x": {"A"}}).build()
+            res = DeltaBuilder(
+                self.env(user=self.user_f3d, context=dict(self.env.context, zz_fail=True)), None, changes={"x": {"A"}}
+            ).build()
         self.assertIn({"provider": ZZ + "fail", "error": "ValueError"}, res["patch"]["meta"]["errors"])
         self.assertNotIn("partial", res["patch"].get("fire", {}))  # частковий запис zz_fail відкотився
 

@@ -56,15 +56,23 @@ class TestDemoWizardGuard(F3dViewerBase):
         self.assertEqual(wiz.state, "queued")
         cron = self.env.ref("td_viewer3d.cron_td_demo")
         self.assertTrue(cron.active)
-        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_clock"),
-                         "2026-10-13 09:00")
+        self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_clock"), "2026-10-13 09:00")
         self.assertIn('"settings"', self.env["ir.config_parameter"].sudo().get_param("td.viewer.demo_queue"))
 
     def test_steps_from_form_without_name(self):
         """Вебклієнт не шле readonly name: кроки з форми валідні, ключ відновлюється."""
-        wiz = self.env["td.demo.wizard"].with_user(self.user_admin).create({"step_ids": [
-            (0, 0, {"label": LABELS["views"], "sequence": 40, "selected": True}),
-            (0, 0, {"label": "довільна назва", "sequence": 310, "selected": True})]})
+        wiz = (
+            self.env["td.demo.wizard"]
+            .with_user(self.user_admin)
+            .create(
+                {
+                    "step_ids": [
+                        (0, 0, {"label": LABELS["views"], "sequence": 40, "selected": True}),
+                        (0, 0, {"label": "довільна назва", "sequence": 310, "selected": True}),
+                    ]
+                }
+            )
+        )
         self.assertEqual(wiz.step_ids.mapped("name"), ["views", "iot_module"])
 
     def test_cron_run_does_not_touch_cron(self):
@@ -78,6 +86,7 @@ class TestDemoWizardGuard(F3dViewerBase):
 
         def forbidden(self, *a, **kw):
             raise UserError("cron currently being executed")
+
         with patch.object(type(self.env["ir.cron"]), "write", forbidden):
             wiz.with_user(SUPERUSER_ID)._cron_run()
         wiz.invalidate_recordset()
@@ -96,8 +105,10 @@ class TestDemoWizardGuard(F3dViewerBase):
         wiz.step_ids.write({"selected": False})
         wiz.step_ids.filtered(lambda s: s.name == "calendar").write({"selected": True})
         wiz.action_run()
-        with patch.object(demo_steps.Runner, "run", side_effect=RuntimeError("boom")), self.assertLogs(
-                "odoo.addons.td_viewer3d.wizard.demo_wizard", "ERROR"):
+        with (
+            patch.object(demo_steps.Runner, "run", side_effect=RuntimeError("boom")),
+            self.assertLogs("odoo.addons.td_viewer3d.wizard.demo_wizard", "ERROR"),
+        ):
             wiz.with_user(SUPERUSER_ID)._cron_run()
         wiz.invalidate_recordset()
         self.assertEqual(wiz.state, "error")
@@ -138,12 +149,15 @@ class TestDemoWizardGuard(F3dViewerBase):
         def read(path, start, stop=None):
             with open(path, encoding="utf-8") as fh:
                 text = fh.read()
-            text = text[text.index(start):]
-            return text[:text.index(stop)] if stop else text
-        theirs = read(flows, "# зони, де товар").rstrip("\n") + "\n\n\n" + read(
-            push, "MOD = ", "def main").rstrip("\n")
-        diff = [ln for ln in difflib.unified_diff(theirs.splitlines(), body.rstrip("\n").splitlines(), lineterm="", n=0)
-                if ln[:1] in "+-" and not ln.startswith(("+++", "---"))]
+            text = text[text.index(start) :]
+            return text[: text.index(stop)] if stop else text
+
+        theirs = read(flows, "# зони, де товар").rstrip("\n") + "\n\n\n" + read(push, "MOD = ", "def main").rstrip("\n")
+        diff = [
+            ln
+            for ln in difflib.unified_diff(theirs.splitlines(), body.rstrip("\n").splitlines(), lineterm="", n=0)
+            if ln[:1] in "+-" and not ln.startswith(("+++", "---"))
+        ]
         self.assertLessEqual(len(diff), DIFF_LIMIT, "\n".join(diff[:40]))
 
 
@@ -160,8 +174,11 @@ class TestDemoWizard(F3dViewerBase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        missing = [m for m in NEEDED if cls.env["ir.module.module"].search_count(
-            [("name", "=", m), ("state", "=", "installed")]) == 0]
+        missing = [
+            m
+            for m in NEEDED
+            if cls.env["ir.module.module"].search_count([("name", "=", m), ("state", "=", "installed")]) == 0
+        ]
         if missing:
             cls.skipTest(cls, "заливка потребує модулів: " + ", ".join(missing))
         cls.env["ir.config_parameter"].sudo().set_param("td.viewer.demo_enabled", "True")
@@ -187,7 +204,7 @@ class TestDemoWizard(F3dViewerBase):
         skipped = {s.name for s in wiz.step_ids if s.state == "skipped"}
         self.assertTrue({"views", "iot_module"} <= skipped, skipped)
         line = next(x for x in wiz.log.splitlines() if x.startswith("cycle_check:"))
-        rest = [i for i in line[len("cycle_check:"):].split(";") if i.strip() not in ("OK", "")]
+        rest = [i for i in line[len("cycle_check:") :].split(";") if i.strip() not in ("OK", "")]
         self.assertEqual(rest, [], line)
         self.assertEqual(wiz.progress, 100)
         self.assertGreater(wiz.new_records, 0)

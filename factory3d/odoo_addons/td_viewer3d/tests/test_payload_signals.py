@@ -10,15 +10,24 @@ PROV = "td.viewer.provider.signals"
 
 
 def _row(code, value, unit="", mode="noise", charging=False, updated=None, state="норма"):
-    return {"x_code": code, "x_value": value, "x_unit": unit, "x_mode": mode, "x_charging": charging,
-            "x_updated": updated, "x_state": state}
+    return {
+        "x_code": code,
+        "x_value": value,
+        "x_unit": unit,
+        "x_mode": mode,
+        "x_charging": charging,
+        "x_updated": updated,
+        "x_state": state,
+    }
 
 
 def _payload():
     return {
-        "meta": {}, "energy": {"consumers": {"SAW-1": {"p_now": 0.0}}, "transformers": {}, "totals": {}},
+        "meta": {},
+        "energy": {"consumers": {"SAW-1": {"p_now": 0.0}}, "transformers": {}, "totals": {}},
         "equipment": {"FL-1": {"state": "idle", "battery": 1.0}},
-        "ventilation": {"units": {}}, "fire": {"groups": {}},
+        "ventilation": {"units": {}},
+        "fire": {"groups": {}},
         "infra": {"totals": {"pv_now": 55.5, "chp_kw": 120.0}},
     }
 
@@ -31,15 +40,21 @@ class TestSignalsMocked(F3dViewerBase):
         payload = payload if payload is not None else _payload()
         ctx = {"sections": {}, "changes": {}}
         env = self.env(user=user or self.user_f3d)
-        with patch.object(sig, "SIGNAL_MODEL", "res.partner"), \
-                patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows):
+        with (
+            patch.object(sig, "SIGNAL_MODEL", "res.partner"),
+            patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows),
+        ):
             env[PROV]._td_viewer_collect(payload, ctx)
         return payload, ctx
 
     def test_paths_applied(self):
         """AC-17."""
-        data, ctx = self._run([_row("energy/consumers/SAW-1/p_now", 13.1234, "кВт"),
-                               _row("equipment/FL-1/battery", 57.1, "%", "drain", True)])
+        data, ctx = self._run(
+            [
+                _row("energy/consumers/SAW-1/p_now", 13.1234, "кВт"),
+                _row("equipment/FL-1/battery", 57.1, "%", "drain", True),
+            ]
+        )
         self.assertEqual(data["energy"]["consumers"]["SAW-1"]["p_now"], 13.12)
         self.assertEqual(data["equipment"]["FL-1"]["battery"], 0.571)
         self.assertEqual(data["equipment"]["FL-1"]["state"], "charging")
@@ -70,11 +85,15 @@ class TestSignalsMocked(F3dViewerBase):
 
     def test_meta_iot(self):
         from datetime import datetime
-        rows = [_row("energy/consumers/SAW-1/p_now", 1.0, state="тривога", updated=datetime(2026, 10, 12, 7, 30, 0)),
-                _row("equipment/FL-1/battery", 50.0, "%", updated=datetime(2026, 10, 12, 7, 20, 0))]
+
+        rows = [
+            _row("energy/consumers/SAW-1/p_now", 1.0, state="тривога", updated=datetime(2026, 10, 12, 7, 30, 0)),
+            _row("equipment/FL-1/battery", 50.0, "%", updated=datetime(2026, 10, 12, 7, 20, 0)),
+        ]
         data, _ctx = self._run(rows)
-        self.assertEqual(data["meta"]["iot"], {"source": sig.IOT_SOURCE, "signals": 2, "alarms": 1,
-                                               "updated": "2026-10-12 10:30"})
+        self.assertEqual(
+            data["meta"]["iot"], {"source": sig.IOT_SOURCE, "signals": 2, "alarms": 1, "updated": "2026-10-12 10:30"}
+        )
 
     def test_missing_model(self):
         payload = _payload()
@@ -90,8 +109,10 @@ class TestSignalsMocked(F3dViewerBase):
         env = self.env(user=self.user_f3d)
         patch_ = {}
         ctx = {"changes": {"res.partner": {"energy/consumers/SAW-1/p_now"}}}
-        with patch.object(sig, "SIGNAL_MODEL", "res.partner"), \
-                patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows):
+        with (
+            patch.object(sig, "SIGNAL_MODEL", "res.partner"),
+            patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows),
+        ):
             env[PROV]._td_viewer_delta(patch_, ctx)
         self.assertEqual(patch_["signals"], [{"path": "energy/consumers/SAW-1/p_now", "value": 13.1}])
         self.assertEqual(patch_["meta"]["iot"]["signals"], 1)

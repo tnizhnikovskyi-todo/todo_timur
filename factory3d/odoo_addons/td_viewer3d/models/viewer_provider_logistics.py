@@ -7,12 +7,13 @@ from odoo.tools import html2plaintext
 from ..tools import dates
 from ..tools import payload as payload_tools
 
-PICK_STATE = {"confirmed": "waiting", "waiting": "waiting", "assigned": "assigned", "done": "done",
-              "draft": "draft"}
+PICK_STATE = {"confirmed": "waiting", "waiting": "waiting", "assigned": "assigned", "done": "done", "draft": "draft"}
 # внутрішні типи операцій за назвою (lower, uk) -> type
 INTERNAL_TYPES = (
-    ("розміщення плит", "putaway"), ("поповнення під портал", "replenish"),
-    ("комплектація компонентів", "pick_components"), ("розміщення готової продукції", "store_finished"),
+    ("розміщення плит", "putaway"),
+    ("поповнення під портал", "replenish"),
+    ("комплектація компонентів", "pick_components"),
+    ("розміщення готової продукції", "store_finished"),
 )
 SRC_TYPES = ("outgoing", "putaway", "replenish", "pick_components")
 DEST_CODE_TYPES = ("pick_components", "replenish", "putaway")
@@ -41,6 +42,7 @@ def _dock_code(loc, outgoing):
 
 class F3dViewerProviderLogistics(models.AbstractModel):
     """M-01c: переміщення, ворота, замовлення клієнтів і постачальників (R-05, R-09)."""
+
     _name = "td.viewer.provider.logistics"
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних logistics"
@@ -60,8 +62,10 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         pickings = self._pickings(ctx)
         payload["pickings"] = pickings
         payload["docks"] = self._docks(pickings, ctx)
-        for key, model, func in (("sale_orders", "sale.order", self._sale_orders),
-                                 ("purchase_orders", "purchase.order", self._purchase_orders)):
+        for key, model, func in (
+            ("sale_orders", "sale.order", self._sale_orders),
+            ("purchase_orders", "purchase.order", self._purchase_orders),
+        ):
             if payload_tools.access_ok(env, model):
                 payload[key] = func(ctx)
             else:
@@ -87,9 +91,17 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         today = ctx["today"]
         start = dates.utc(today + " 00:00") - timedelta(days=7)
         end = dates.utc(today + " 00:00") + timedelta(days=8)
-        recs = env["stock.picking"].search_fetch([
-            ("state", "!=", "cancel"), "|", "&", ("scheduled_date", ">=", start), ("scheduled_date", "<", end),
-            ("state", "in", ("assigned", "waiting", "confirmed"))], order="scheduled_date, id")
+        recs = env["stock.picking"].search_fetch(
+            [
+                ("state", "!=", "cancel"),
+                "|",
+                "&",
+                ("scheduled_date", ">=", start),
+                ("scheduled_date", "<", end),
+                ("state", "in", ("assigned", "waiting", "confirmed")),
+            ],
+            order="scheduled_date, id",
+        )
         quality_fail = self._quality_fail(recs)
         moves_of = {}  # одна вибірка рядків замість o2m-читання на кожну комплектацію (AC-52)
         if recs:
@@ -106,16 +118,27 @@ class F3dViewerProviderLogistics(models.AbstractModel):
             lines = []
             for m in moves:
                 done = m.quantity if (m.picked or m.state == "done") else 0
-                lines.append({"product": m.product_id.default_code or m.product_id.name,
-                              "qty": m.product_uom_qty, "qty_done": round(done, 2)})
+                lines.append(
+                    {
+                        "product": m.product_id.default_code or m.product_id.name,
+                        "qty": m.product_uom_qty,
+                        "qty_done": round(done, 2),
+                    }
+                )
             total = sum(x["qty"] for x in lines)
             progress = round(sum(min(x["qty_done"], x["qty"]) for x in lines) / max(total, 1), 2)
             state = PICK_STATE.get(p.state, p.state)
             sched = p.date_done if p.state == "done" and p.date_done else p.scheduled_date
             rec = {
-                "name": p.name, "picking_type": p.picking_type_id.name, "type": typ,
-                "partner": p.partner_id.name or "", "origin": p.origin or "", "state": state,
-                "scheduled_date": dates.local(sched) if sched else None, "progress": progress, "lines": lines,
+                "name": p.name,
+                "picking_type": p.picking_type_id.name,
+                "type": typ,
+                "partner": p.partner_id.name or "",
+                "origin": p.origin or "",
+                "state": state,
+                "scheduled_date": dates.local(sched) if sched else None,
+                "progress": progress,
+                "lines": lines,
             }
             mls = p.move_line_ids
             batch = p.batch_id
@@ -137,7 +160,7 @@ class F3dViewerProviderLogistics(models.AbstractModel):
                 if src:
                     rec["source_locations"] = src
             if typ in DEST_CODE_TYPES:
-                dest = (mls.location_dest_id[:1] or p.location_dest_id)
+                dest = mls.location_dest_id[:1] or p.location_dest_id
                 if dest.td_code:
                     rec["location_dest"] = dest.td_code
             elif typ in ("incoming", "store_finished"):
@@ -170,8 +193,9 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         if not pickings or not payload_tools.access_ok(env, "quality.check"):
             return {}
         res = {}
-        for c in env["quality.check"].search_fetch([
-                ("picking_id", "in", pickings.ids), ("quality_state", "=", "fail")]):
+        for c in env["quality.check"].search_fetch(
+            [("picking_id", "in", pickings.ids), ("quality_state", "=", "fail")]
+        ):
             # Odoo 19: лише lot_ids (m2m); перевірка без партій, як і раніше, відповідає рядкам без партії
             res.setdefault(c.picking_id.id, set()).update(c.lot_ids.ids or [False])
         return res
@@ -185,8 +209,7 @@ class F3dViewerProviderLogistics(models.AbstractModel):
             bad = sum(ml.quantity for ml in p.move_line_ids if ml.lot_id.id in lots)
             total = sum(ml.quantity for ml in p.move_line_ids)
             if bad:
-                return "%s арк. пройшли контроль; %s — у карантині (QC-1)" % (
-                    _fmt(total - bad), _fmt(bad))
+                return "%s арк. пройшли контроль; %s — у карантині (QC-1)" % (_fmt(total - bad), _fmt(bad))
         return _text(p.note, 200)
 
     # ------------------------------------------------------------------ ворота (R-05)
@@ -220,8 +243,9 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         if payload_tools.access_ok(env, "mrp.production"):
             for mo in env["mrp.production"].search_fetch([("origin", "in", names)], order="id"):
                 prod_by_origin.setdefault(mo.origin, []).append(mo.name)
-        for pk in env["stock.picking"].search_fetch([("origin", "in", names), ("picking_type_code", "=", "outgoing"),
-                                               ("state", "!=", "cancel")], order="id"):
+        for pk in env["stock.picking"].search_fetch(
+            [("origin", "in", names), ("picking_type_code", "=", "outgoing"), ("state", "!=", "cancel")], order="id"
+        ):
             ship_by_origin.setdefault(pk.origin, pk.name)
         lines_of = {}
         for ln in env["sale.order.line"].search_fetch([("order_id", "in", orders.ids)]):
@@ -230,11 +254,16 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         out = []
         for so in orders:
             rec = {
-                "name": so.name, "partner": so.partner_id.name or "", "state": so.state,
+                "name": so.name,
+                "partner": so.partner_id.name or "",
+                "state": so.state,
                 "date_order": dates.local(so.date_order) if so.date_order else None,
                 "commitment_date": dates.local(so.commitment_date) if so.commitment_date else None,
-                "lines": [{"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_uom_qty}
-                          for ln in lines_of.get(so.id, []) if not ln.display_type and ln.product_id],
+                "lines": [
+                    {"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_uom_qty}
+                    for ln in lines_of.get(so.id, [])
+                    if not ln.display_type and ln.product_id
+                ],
                 "productions": prod_by_origin.get(so.name, []),
                 "delivery": ship_by_origin.get(so.name, ""),
             }
@@ -261,14 +290,20 @@ class F3dViewerProviderLogistics(models.AbstractModel):
                     code = ln.orderpoint_id.location_id.td_code
                     if code and code not in locs:
                         locs.append(code)
-            out.append({
-                "name": po.name, "partner": po.partner_id.name or "", "state": po.state,
-                "date_order": dates.local(po.date_order) if po.date_order else None,
-                "date_planned": dates.local(po.date_planned) if po.date_planned else None,
-                "lines": [{"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_qty}
-                          for ln in lines],
-                "locations": locs,
-            })
+            out.append(
+                {
+                    "name": po.name,
+                    "partner": po.partner_id.name or "",
+                    "state": po.state,
+                    "date_order": dates.local(po.date_order) if po.date_order else None,
+                    "date_planned": dates.local(po.date_planned) if po.date_planned else None,
+                    "lines": [
+                        {"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_qty}
+                        for ln in lines
+                    ],
+                    "locations": locs,
+                }
+            )
         return out
 
     # ------------------------------------------------------------------ delta (R-14)

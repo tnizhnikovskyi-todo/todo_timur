@@ -10,6 +10,7 @@ OP_RE = re.compile(r"^OP-(.+)$")
 
 class F3dViewerProviderPeople(models.AbstractModel):
     """M-01f: співробітники (hr.employee.public, без sudo, X-09)."""
+
     _name = "td.viewer.provider.people"
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних people"
@@ -29,7 +30,9 @@ class F3dViewerProviderPeople(models.AbstractModel):
             return
         rows = env["hr.employee.public"].search_read(
             [("td_code", "!=", False), ("active", "=", True)],
-            ["td_code", "name", "job_title", "job_id", "department_id", "resource_calendar_id"], order="id")
+            ["td_code", "name", "job_title", "job_id", "department_id", "resource_calendar_id"],
+            order="id",
+        )
         out = payload.setdefault("employees", {})
         op_wo, wo_by_wc = self._operators(env)
         known_wc = set(wo_by_wc) | set(((ctx.get("static") or {}).get("workcenters") or {}))
@@ -86,8 +89,9 @@ class F3dViewerProviderPeople(models.AbstractModel):
         if not emp_ids or not payload_tools.access_ok(env, "hr.attendance"):
             return set()
         start = dates.utc(ctx["today"] + " 00:00")
-        att = env["hr.attendance"].search_fetch([("employee_id", "in", emp_ids), ("check_in", ">=", start),
-                                           ("check_out", "=", False)])
+        att = env["hr.attendance"].search_fetch(
+            [("employee_id", "in", emp_ids), ("check_in", ">=", start), ("check_out", "=", False)]
+        )
         return set(att.employee_id.ids)
 
     @api.model
@@ -99,7 +103,10 @@ class F3dViewerProviderPeople(models.AbstractModel):
             sel |= set(changes.get(model) or ())
         tmp = {}
         self._td_viewer_collect(tmp, ctx)
-        part = {c: v for c, v in (tmp.get("employees") or {}).items()
-                if c in sel or v.get("workcenter") in sel or c.replace("OP-", "", 1) in sel}
+        part = {
+            c: v
+            for c, v in (tmp.get("employees") or {}).items()
+            if c in sel or v.get("workcenter") in sel or c.replace("OP-", "", 1) in sel
+        }
         if part:
             payload_tools.deep_merge(patch, {"employees": part})

@@ -34,13 +34,17 @@ def apply_signals(payload, rows):
 
 def iot_meta(rows):
     stamps = [r["x_updated"] for r in rows if r.get("x_updated")]
-    return {"source": IOT_SOURCE, "signals": len(rows),
-            "alarms": sum(r.get("x_state") == "тривога" for r in rows),
-            "updated": dates.local(max(stamps)) if stamps else None}
+    return {
+        "source": IOT_SOURCE,
+        "signals": len(rows),
+        "alarms": sum(r.get("x_state") == "тривога" for r in rows),
+        "updated": dates.local(max(stamps)) if stamps else None,
+    }
 
 
 class F3dViewerProviderSignals(models.AbstractModel):
     """M-01h: значення сигналів імітації за шляхами (Додаток C)."""
+
     _name = "td.viewer.provider.signals"
     _inherit = "td.viewer.provider"
     _description = "3D: постачальник — сигнали імітації"
@@ -84,8 +88,11 @@ class F3dViewerProviderSignals(models.AbstractModel):
     def _td_viewer_delta(self, patch, ctx):
         """R-14 п. 5: `patch.signals = [{path, value}]` для шляхів із `codes` + `meta.iot`."""
         changes = ctx.get("changes") or {}
-        if SIGNAL_MODEL not in self.env or SIGNAL_MODEL not in changes \
-                or not payload_tools.access_ok(self.env, SIGNAL_MODEL):
+        if (
+            SIGNAL_MODEL not in self.env
+            or SIGNAL_MODEL not in changes
+            or not payload_tools.access_ok(self.env, SIGNAL_MODEL)
+        ):
             return
         codes = set(changes[SIGNAL_MODEL])
         rows = self._td_signal_rows(codes) if codes else []

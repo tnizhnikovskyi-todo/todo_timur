@@ -1,4 +1,5 @@
 """Y-2: фільтри «Сьогодні»/«Цей тиждень» журналу знімків — київська доба сервера, а не `context_today()` браузера."""
+
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -31,8 +32,9 @@ class TestSnapshotDayFilter(F3dViewerBase):
                 snaps = {}
                 for shift in (-8, -1, 0, 1):
                     ts = now + timedelta(days=shift)
-                    snaps[shift] = Snap.create({
-                        "ts": ts, "kind": "manual", "payload_file": Snap._pack({"meta": {"schema": "1.1"}})})
+                    snaps[shift] = Snap.create(
+                        {"ts": ts, "kind": "manual", "payload_file": Snap._pack({"meta": {"schema": "1.1"}})}
+                    )
                 all_snaps = Snap.browse([s.id for s in snaps.values()])
                 base = [("id", "in", all_snaps.ids)]
                 self.assertEqual(snaps[0].shift_date, today, now)

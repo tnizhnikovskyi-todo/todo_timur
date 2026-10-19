@@ -9,13 +9,18 @@ from .common import F3dViewerBase, F3dViewerCase
 
 
 def _empty():
-    return {"pickings": [], "locations": {}, "sale_orders": [], "quality_checks": [], "productions": [],
-            "workorders": {}}
+    return {
+        "pickings": [],
+        "locations": {},
+        "sale_orders": [],
+        "quality_checks": [],
+        "productions": [],
+        "workorders": {},
+    }
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestCycleCheckPure(BaseCase):
-
     def test_empty_returns_list(self):
         issues = check(_empty())
         self.assertIsInstance(issues, list)
@@ -29,12 +34,13 @@ class TestCycleCheckPure(BaseCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestCycleCheck(F3dViewerCase):
-
     def setUp(self):
         super().setUp()
         # payload будується з правами користувача: адміністратору «Завод 3D» потрібен ще й доступ до складу/МО
-        self.user_admin.group_ids = [(4, self.env.ref("stock.group_stock_user").id),
-                                     (4, self.env.ref("mrp.group_mrp_user").id)]
+        self.user_admin.group_ids = [
+            (4, self.env.ref("stock.group_stock_user").id),
+            (4, self.env.ref("mrp.group_mrp_user").id),
+        ]
 
     def test_ok_on_demo(self):
         if "td.viewer.provider.logistics" not in self.env:
@@ -65,19 +71,19 @@ class TestCycleCheck(F3dViewerCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestCycleCheckWizard(F3dViewerBase):
-
     def _run(self, issues, payload):
         wiz = self.env["td.viewer.cycle.check"].with_user(self.user_admin).create({})
         base = "odoo.addons.td_viewer3d.wizard.cycle_check_wizard"
-        with patch(base + ".check", return_value=issues), \
-                patch(base + ".PayloadBuilder.build", return_value=payload):
+        with patch(base + ".check", return_value=issues), patch(base + ".PayloadBuilder.build", return_value=payload):
             wiz.action_run()
         return wiz
 
     def test_html_links(self):
         """AC-36: «{name}: …» зі збігом у payload — data-f3d-open, інакше — data-f3d-code."""
-        wiz = self._run(["WH/IN/00134: приймання без західних воріт", "S00087: немає відвантаження"],
-                        {"pickings": [{"name": "WH/IN/00134"}], "productions": [], "quality_checks": []})
+        wiz = self._run(
+            ["WH/IN/00134: приймання без західних воріт", "S00087: немає відвантаження"],
+            {"pickings": [{"name": "WH/IN/00134"}], "productions": [], "quality_checks": []},
+        )
         self.assertEqual((wiz.state, wiz.issue_count), ("issues", 2))
         self.assertIn('data-f3d-open="WH/IN/00134"', wiz.result_html)
         self.assertIn('data-f3d-code="S00087"', wiz.result_html)
@@ -94,8 +100,11 @@ class TestCycleCheckWizard(F3dViewerBase):
         wiz.payload_user_id = self.user_kiosk
         seen = []
         base = "odoo.addons.td_viewer3d.wizard.cycle_check_wizard"
-        with patch(base + ".check", return_value=[]), patch(
-                base + ".PayloadBuilder",
-                side_effect=lambda env, **kw: seen.append(env.uid) or Mock(build=lambda: {})):
+        with (
+            patch(base + ".check", return_value=[]),
+            patch(
+                base + ".PayloadBuilder", side_effect=lambda env, **kw: seen.append(env.uid) or Mock(build=lambda: {})
+            ),
+        ):
             wiz.action_run()
         self.assertEqual(seen, [self.user_manager.id])

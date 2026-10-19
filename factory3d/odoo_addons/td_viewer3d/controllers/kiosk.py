@@ -3,6 +3,7 @@
 Усі перевірки токена однакові: вимкнений кіоск і невірний токен дають однакову відповідь `404`. Далі середовище
 запиту перемикається на технічного користувача `user_kiosk` (`ctx.kiosk=True`) і викликається та сама логіка, що в
 API-01…07 (`serve_*` з `controllers/viewer.py`). Рейт-лимит — у пам'яті воркера (AC-48)."""
+
 import collections
 import hmac
 import json
@@ -54,7 +55,6 @@ def _not_found():
 
 
 class F3dKioskController(http.Controller):
-
     @staticmethod
     def _token_ok(token):
         """kiosk_enabled і hmac.compare_digest(token, kiosk_token); без подробиць у відповіді."""
@@ -101,47 +101,77 @@ class F3dKioskController(http.Controller):
 
     # --- API-08 ------------------------------------------------------------
 
-    @http.route("/f3d/kiosk/<string:token>", type="http", auth="public", methods=["GET"],
-                website=False, sitemap=False, csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        website=False,
+        sitemap=False,
+        csrf=False,
+        save_session=False,
+    )
     def page(self, token, **kw):
         if not self._token_ok(token):
             return _not_found()
         values = {
             "token": token,
             "params": self._page_params(kw),
-            "session_info_json": Markup(json.dumps({"db": request.db, "lang": "uk_UA",
-                                              "user_context": {"tz": "Europe/Kyiv"}})),
+            "session_info_json": Markup(
+                json.dumps({"db": request.db, "lang": "uk_UA", "user_context": {"tz": "Europe/Kyiv"}})
+            ),
         }
         return request.render("td_viewer3d.kiosk_page", values)
 
     # --- API-09 ------------------------------------------------------------
 
-    @http.route("/f3d/kiosk/<string:token>/static", type="http", auth="public", methods=["GET"],
-                csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/static", type="http", auth="public", methods=["GET"], csrf=False, save_session=False
+    )
     def kiosk_static(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_static()
 
-    @http.route("/f3d/kiosk/<string:token>/data", type="http", auth="public", methods=["GET"],
-                csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/data", type="http", auth="public", methods=["GET"], csrf=False, save_session=False
+    )
     def kiosk_data(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_data(kw, kiosk=True)
 
-    @http.route("/f3d/kiosk/<string:token>/delta", type="http", auth="public", methods=["GET"],
-                csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/delta", type="http", auth="public", methods=["GET"], csrf=False, save_session=False
+    )
     def kiosk_delta(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_delta(kw, kiosk=True)
 
-    @http.route("/f3d/kiosk/<string:token>/parts/manifest.json", type="http", auth="public", methods=["GET"],
-                csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/parts/manifest.json",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=False,
+    )
     def kiosk_manifest(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_manifest()
 
-    @http.route("/f3d/kiosk/<string:token>/snapshots", type="http", auth="public", methods=["GET"],
-                csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/snapshots",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=False,
+    )
     def kiosk_snapshots(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_snapshots(kw)
 
-    @http.route("/f3d/kiosk/<string:token>/snapshot/<string:snapshot_id>", type="http", auth="public",
-                methods=["GET"], csrf=False, save_session=False)
+    @http.route(
+        "/f3d/kiosk/<string:token>/snapshot/<string:snapshot_id>",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=False,
+    )
     def kiosk_snapshot(self, token, snapshot_id, **kw):
         return self._guard(token) or F3dViewerController.serve_snapshot(snapshot_id)

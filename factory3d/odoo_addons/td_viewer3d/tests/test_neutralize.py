@@ -29,9 +29,23 @@ class TestNeutralize(HttpCase, F3dViewerBase):
         token = params.get_param("td.viewer.kiosk_token")
         self.assertRegex(token, r"^[0-9a-f]{32}$")
         self.assertNotEqual(token, old_token)
-        crons = self.env["ir.cron"].sudo().with_context(active_test=False).search([
-            ("id", "in", self.env["ir.model.data"].sudo().search([
-                ("module", "=", "td_viewer3d"), ("model", "=", "ir.cron")]).mapped("res_id"))])
+        crons = (
+            self.env["ir.cron"]
+            .sudo()
+            .with_context(active_test=False)
+            .search(
+                [
+                    (
+                        "id",
+                        "in",
+                        self.env["ir.model.data"]
+                        .sudo()
+                        .search([("module", "=", "td_viewer3d"), ("model", "=", "ir.cron")])
+                        .mapped("res_id"),
+                    )
+                ]
+            )
+        )
         self.assertGreaterEqual(len(crons), 4)
         self.assertFalse(crons.filtered("active"))
         # повторний запуск ідемпотентний і знову міняє токен

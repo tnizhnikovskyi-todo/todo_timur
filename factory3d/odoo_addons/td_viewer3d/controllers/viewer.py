@@ -1,5 +1,6 @@
 """API-01…04, 07, 10, 11, 12 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
 з `request.env` користувача кіоска."""
+
 import base64
 import gzip
 import json
@@ -81,14 +82,17 @@ def etag_matches(header, etag):
 
 
 class F3dViewerController(http.Controller):
-
     # --- спільна логіка (використовує і кіоск) -----------------------------
 
     @staticmethod
     def serve_static():
         body, body_gz, sha1 = static_data.static_body()
-        headers = {"ETag": '"%s"' % sha1, "Content-Type": JSON_CT, "Cache-Control": "private, max-age=3600",
-                   "Vary": "Accept-Encoding"}
+        headers = {
+            "ETag": '"%s"' % sha1,
+            "Content-Type": JSON_CT,
+            "Cache-Control": "private, max-age=3600",
+            "Vary": "Accept-Encoding",
+        }
         if etag_matches(request.httprequest.headers.get("If-None-Match"), sha1):
             return request.make_response(b"", headers=list(headers.items()), status=304)
         if "gzip" in (request.httprequest.headers.get("Accept-Encoding") or ""):
@@ -111,7 +115,8 @@ class F3dViewerController(http.Controller):
             return bad_request("Невалідний параметр: %s" % e)
         try:
             data = payload_tools.PayloadBuilder(
-                request.env, full=full, lite=lite, kiosk=kiosk, sections=sections, codes=codes).build()
+                request.env, full=full, lite=lite, kiosk=kiosk, sections=sections, codes=codes
+            ).build()
         except Exception:  # noqa: BLE001
             _logger.exception("збирач payload впав")
             return error("payload_failed", "Не вдалося зібрати дані переглядача", 500)
@@ -244,11 +249,11 @@ class F3dViewerController(http.Controller):
             return plan_error(400, "bad_request", "Потрібен рівно один параметр: code або equipment_id")
         if code is not None and not (isinstance(code, str) and CODE_RE.match(code)):
             return plan_error(400, "bad_request", "Невалідний параметр: code")
-        if equipment_id is not None and (isinstance(equipment_id, bool) or not isinstance(equipment_id, int)
-                                         or not 0 < equipment_id < 2 ** 31):
+        if equipment_id is not None and (
+            isinstance(equipment_id, bool) or not isinstance(equipment_id, int) or not 0 < equipment_id < 2**31
+        ):
             return plan_error(400, "bad_request", "Невалідний параметр: equipment_id")
-        return request.env["td.viewer.provider.maintenance"]._td_plan_maintenance(
-            code=code, equipment_id=equipment_id)
+        return request.env["td.viewer.provider.maintenance"]._td_plan_maintenance(code=code, equipment_id=equipment_id)
 
     # --- знімки (API-05, API-06) -------------------------------------------
 
@@ -258,8 +263,10 @@ class F3dViewerController(http.Controller):
         if not DATE_RE.match(date):
             return bad_request("Невалідний параметр: date")
         snaps = request.env["td.viewer.snapshot"].search([("shift_date", "=", date)], order="ts asc, id asc")
-        items = [{"id": s.id, "ts": dates.local(s.ts), "kind": s.kind, "size_kb": s.size_kb, "note": s.note or None}
-                 for s in snaps]
+        items = [
+            {"id": s.id, "ts": dates.local(s.ts), "kind": s.kind, "size_kb": s.size_kb, "note": s.note or None}
+            for s in snaps
+        ]
         return json_response({"date": date, "snapshots": items, "mode": "snapshots" if len(items) >= 3 else "plan"})
 
     @staticmethod

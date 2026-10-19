@@ -19,26 +19,37 @@ class TestProductionSynthetic(F3dViewerBase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        att = [(5, 0, 0)] + [(0, 0, {"name": "d%d" % d, "dayofweek": str(d), "hour_from": 7.0, "hour_to": 15.0,
-                                     "day_period": "morning"}) for d in range(7)]
+        att = [(5, 0, 0)] + [
+            (0, 0, {"name": "d%d" % d, "dayofweek": str(d), "hour_from": 7.0, "hour_to": 15.0, "day_period": "morning"})
+            for d in range(7)
+        ]
         cls.calendar = env["resource.calendar"].create(
-            {"name": "TST зміна 07-15", "tz": "Europe/Kyiv", "attendance_ids": att})
-        cls.wc1 = env["mrp.workcenter"].create({"name": "TST WC1", "code": "TSTWC1", "td_code": "TST-WC-1",
-                                                "resource_calendar_id": cls.calendar.id})
-        cls.wc2 = env["mrp.workcenter"].create({"name": "TST WC2", "code": "TSTWC2", "td_code": "TST-WC-2",
-                                                "resource_calendar_id": cls.calendar.id})
-        cls.finished = env["product.product"].create({"name": "TST finished", "default_code": "TST-FIN",
-                                                      "is_storable": True})
-        cls.comp = env["product.product"].create({"name": "TST comp", "default_code": "TST-CMP",
-                                                  "is_storable": True})
-        cls.bom = env["mrp.bom"].create({
-            "product_tmpl_id": cls.finished.product_tmpl_id.id, "product_id": cls.finished.id, "product_qty": 1,
-            "code": "T",
-            "bom_line_ids": [(0, 0, {"product_id": cls.comp.id, "product_qty": 2})],
-            "operation_ids": [(0, 0, {"name": "Op1", "workcenter_id": cls.wc1.id, "time_cycle_manual": 30}),
-                              (0, 0, {"name": "Op2", "workcenter_id": cls.wc2.id, "time_cycle_manual": 20})]})
-        cls.mo = env["mrp.production"].create({"product_id": cls.finished.id, "bom_id": cls.bom.id,
-                                               "product_qty": 1})
+            {"name": "TST зміна 07-15", "tz": "Europe/Kyiv", "attendance_ids": att}
+        )
+        cls.wc1 = env["mrp.workcenter"].create(
+            {"name": "TST WC1", "code": "TSTWC1", "td_code": "TST-WC-1", "resource_calendar_id": cls.calendar.id}
+        )
+        cls.wc2 = env["mrp.workcenter"].create(
+            {"name": "TST WC2", "code": "TSTWC2", "td_code": "TST-WC-2", "resource_calendar_id": cls.calendar.id}
+        )
+        cls.finished = env["product.product"].create(
+            {"name": "TST finished", "default_code": "TST-FIN", "is_storable": True}
+        )
+        cls.comp = env["product.product"].create({"name": "TST comp", "default_code": "TST-CMP", "is_storable": True})
+        cls.bom = env["mrp.bom"].create(
+            {
+                "product_tmpl_id": cls.finished.product_tmpl_id.id,
+                "product_id": cls.finished.id,
+                "product_qty": 1,
+                "code": "T",
+                "bom_line_ids": [(0, 0, {"product_id": cls.comp.id, "product_qty": 2})],
+                "operation_ids": [
+                    (0, 0, {"name": "Op1", "workcenter_id": cls.wc1.id, "time_cycle_manual": 30}),
+                    (0, 0, {"name": "Op2", "workcenter_id": cls.wc2.id, "time_cycle_manual": 20}),
+                ],
+            }
+        )
+        cls.mo = env["mrp.production"].create({"product_id": cls.finished.id, "bom_id": cls.bom.id, "product_qty": 1})
         cls.mo.action_confirm()
         Loss = env["mrp.workcenter.productivity.loss"]
         cls.l_prod = Loss.search([("loss_type", "=", "productive")], limit=1)
@@ -78,9 +89,14 @@ class TestProductionSynthetic(F3dViewerBase):
         """AC-15: відкритий журнал від 09:58 -> duration 32 на демо-годиннику."""
         wo = self.mo.workorder_ids.sorted("sequence")[0]
         wo.write({"state": "progress", "date_start": "2026-10-12 06:58:00"})
-        self.env["mrp.workcenter.productivity"].create({
-            "workcenter_id": self.wc1.id, "workorder_id": wo.id, "loss_id": self.l_prod.id,
-            "date_start": "2026-10-12 06:58:00"})
+        self.env["mrp.workcenter.productivity"].create(
+            {
+                "workcenter_id": self.wc1.id,
+                "workorder_id": wo.id,
+                "loss_id": self.l_prod.id,
+                "date_start": "2026-10-12 06:58:00",
+            }
+        )
         data = self._data()
         self.assertEqual(data["meta"]["now"], "2026-10-12 10:30")
         rec = data["workorders"]["WO%05d" % wo.id]
@@ -94,10 +110,22 @@ class TestProductionSynthetic(F3dViewerBase):
     def test_oee_and_losses(self):
         """R-06: 176 продуктивних хвилин при зміні з 07:00 і now 10:30 -> oee 0.84; простій у losses."""
         Log = self.env["mrp.workcenter.productivity"]
-        Log.create({"workcenter_id": self.wc1.id, "loss_id": self.l_prod.id, "date_start": START_0700,
-                    "date_end": "2026-10-12 06:56:00"})
-        Log.create({"workcenter_id": self.wc2.id, "loss_id": self.l_avail.id, "date_start": "2026-10-12 06:40:00",
-                    "date_end": "2026-10-12 06:55:00"})
+        Log.create(
+            {
+                "workcenter_id": self.wc1.id,
+                "loss_id": self.l_prod.id,
+                "date_start": START_0700,
+                "date_end": "2026-10-12 06:56:00",
+            }
+        )
+        Log.create(
+            {
+                "workcenter_id": self.wc2.id,
+                "loss_id": self.l_avail.id,
+                "date_start": "2026-10-12 06:40:00",
+                "date_end": "2026-10-12 06:55:00",
+            }
+        )
         data = self._data()
         wc1, wc2 = data["workcenters"]["TST-WC-1"], data["workcenters"]["TST-WC-2"]
         self.assertEqual(wc1["productive_minutes"], 176)
@@ -107,8 +135,9 @@ class TestProductionSynthetic(F3dViewerBase):
 
     def test_blocked_workcenter_stops(self):
         """AC-42 (CNC-2): відкрита поломка -> working_state blocked, status stop."""
-        self.env["mrp.workcenter.productivity"].create({
-            "workcenter_id": self.wc2.id, "loss_id": self.l_avail.id, "date_start": "2026-10-12 06:42:00"})
+        self.env["mrp.workcenter.productivity"].create(
+            {"workcenter_id": self.wc2.id, "loss_id": self.l_avail.id, "date_start": "2026-10-12 06:42:00"}
+        )
         rec = self._data()["workcenters"]["TST-WC-2"]
         self.assertEqual(rec["working_state"], "blocked")
         self.assertEqual(rec["status"], "stop")
@@ -135,12 +164,14 @@ class TestProductionSynthetic(F3dViewerBase):
 
         def fake(env, xmlid):
             return True if xmlid == payload_tools.ENERGY_COST_GROUP else orig(env, xmlid)
+
         with patch.object(payload_tools, "group_ok", side_effect=fake):
             self.assertIn("energy_cost", self._mo(self._data()))
             self.assertNotIn("energy_cost", self._mo(self._data(kiosk=True)))
 
     def test_delta_selects_mo(self):
         from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
+
         res = DeltaBuilder(self.env(user=self.user_f3d), since=None, changes={"mrp.production": {self.mo.name}}).build()
         patch_ = res["patch"]
         self.assertEqual([m["name"] for m in patch_["productions"]], [self.mo.name])
@@ -165,12 +196,23 @@ class TestProduction(F3dViewerCase):
         env = self.env
         now = dates.utc("2026-10-12 10:30")
         today_start = dates.utc("2026-10-12 00:00")
-        logs = env["mrp.workcenter.productivity"].search([
-            ("workcenter_id.td_code", "=", "SAW-1"), ("loss_id.loss_type", "=", "productive"),
-            "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
-        expected = round(sum(
-            (lg.duration or 0.0) if lg.date_end
-            else max(0.0, (now - max(lg.date_start, today_start)).total_seconds() / 60) for lg in logs))
+        logs = env["mrp.workcenter.productivity"].search(
+            [
+                ("workcenter_id.td_code", "=", "SAW-1"),
+                ("loss_id.loss_type", "=", "productive"),
+                "|",
+                ("date_end", "=", False),
+                ("date_start", ">=", today_start),
+            ]
+        )
+        expected = round(
+            sum(
+                (lg.duration or 0.0)
+                if lg.date_end
+                else max(0.0, (now - max(lg.date_start, today_start)).total_seconds() / 60)
+                for lg in logs
+            )
+        )
         self.assertTrue(expected)
         self.assertEqual(wc["productive_minutes"], expected)
         workcenter = env["mrp.workcenter"].search([("td_code", "=", "SAW-1")])
@@ -212,9 +254,18 @@ class TestProduction(F3dViewerCase):
             return
         mo = env["mrp.production"].search([("name", "=", "WH/MO/00231")], limit=1)
         wo = mo.workorder_ids.sorted("sequence")[:1]
-        env["td.energy.alloc"].sudo().create({
-            "day": dates.local(dates.utc("2026-10-12 10:30"))[:10], "kind": "direct", "workorder_id": wo.id,
-            "workcenter_id": wo.workcenter_id.id, "kwh": 86.2, "cost": 724.08, "minutes": 60.0, "quality": "measured"})
+        env["td.energy.alloc"].sudo().create(
+            {
+                "day": dates.local(dates.utc("2026-10-12 10:30"))[:10],
+                "kind": "direct",
+                "workorder_id": wo.id,
+                "workcenter_id": wo.workcenter_id.id,
+                "kwh": 86.2,
+                "cost": 724.08,
+                "minutes": 60.0,
+                "quality": "measured",
+            }
+        )
         if cost_group:
             group = env.ref("td_energy.group_td_energy_cost")
             self.user_f3d.sudo().write({"group_ids": [(4, group.id)]})
@@ -232,6 +283,7 @@ class TestProduction(F3dViewerCase):
 
         def fake(env, xmlid):
             return True if xmlid == payload_tools.ENERGY_COST_GROUP else orig(env, xmlid)
+
         with patch.object(payload_tools, "group_ok", side_effect=fake):
             mo = next(m for m in self._data()["productions"] if m["name"] == "WH/MO/00231")
             self.assertAlmostEqual(mo["energy_cost"], 724, delta=2)

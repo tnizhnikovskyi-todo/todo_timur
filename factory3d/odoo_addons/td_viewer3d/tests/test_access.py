@@ -15,7 +15,6 @@ MODULE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestAccess(F3dViewerBase):
-
     def _capture_ctx(self):
         """Перехоплює ctx, який збирач передає першому провайдеру (потрібен zz_test)."""
         if ZZ_TEST not in self.env:
@@ -27,6 +26,7 @@ class TestAccess(F3dViewerBase):
         def wrapper(this, payload, ctx):
             seen.append(ctx)
             return orig(this, payload, ctx)
+
         self.patch(cls, "_td_viewer_collect", wrapper)
         return seen
 
@@ -54,6 +54,7 @@ class TestAccess(F3dViewerBase):
 
         def fake(env, xmlid):
             return True if xmlid == payload_tools.ENERGY_COST_GROUP else real(env, xmlid)
+
         self.patch(payload_tools, "group_ok", fake)
         PayloadBuilder(self.env(user=self.user_f3d)).build()
         PayloadBuilder(self.env(user=self.user_kiosk), kiosk=True).build()

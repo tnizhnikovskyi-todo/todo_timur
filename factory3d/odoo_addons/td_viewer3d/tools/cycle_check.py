@@ -1,11 +1,19 @@
 """Перевірка наскрізного циклу в демо-даних: усе починається з вивантаження фури й закінчується
 відвантаженням клієнту. Без Blender: python -m plant.cycle_check dist/odoo_demo.json"""
+
 import json
 import sys
 
 # які товари приймають біля яких західних воріт (див. layout.RCV_GOODS)
-DOOR_GOODS = {1: ("DSP", "MDF", "HDF"), 2: ("DSP", "MDF", "HDF"), 3: ("DSP", "MDF", "HDF"), 4: ("FUR",),
-              5: ("EB",), 6: ("LFM", "PVC"), 7: ("PK",)}
+DOOR_GOODS = {
+    1: ("DSP", "MDF", "HDF"),
+    2: ("DSP", "MDF", "HDF"),
+    3: ("DSP", "MDF", "HDF"),
+    4: ("FUR",),
+    5: ("EB",),
+    6: ("LFM", "PVC"),
+    7: ("PK",),
+}
 
 
 def check(d):
@@ -15,6 +23,7 @@ def check(d):
 
     def prods(loc):
         return {q["product"] for q in L.get(loc, {}).get("quants", [])}
+
     # приймання: кожне — через західні ворота, що приймають саме ці товари
     for p in d["pickings"]:
         if p["type"] == "incoming":
@@ -39,8 +48,12 @@ def check(d):
                     issues.append(f"{p['name']}: у комірці {c} немає товару відвантаження")
     # що лежить біля воріт — з приймань цих воріт
     for k in range(1, 8):
-        got = {ln["product"] for p in d["pickings"] if p["type"] == "incoming" and p.get("dock") == f"DOCK-W{k}"
-               for ln in p["lines"]}
+        got = {
+            ln["product"]
+            for p in d["pickings"]
+            if p["type"] == "incoming" and p.get("dock") == f"DOCK-W{k}"
+            for ln in p["lines"]
+        }
         for loc in (f"UNLOAD-{k}", f"QC-PLT-{k}"):
             extra = prods(loc) - got
             if extra:
@@ -60,8 +73,11 @@ def check(d):
         s, dl = m.get("supply"), m.get("delivery")
         if not s or s["steps"][0]["code"] != "GATE-W" or not any(st["code"].startswith("UNLOAD-") for st in s["steps"]):
             issues.append(f"{m['name']}: шлях плити не починається з в'їзду й вивантаження")
-        if not dl or dl["steps"][-1]["code"] != "GATE-E" or not any(
-                st["code"].startswith(("TRUCK-OUT", "DOCK-E")) for st in dl["steps"]):
+        if (
+            not dl
+            or dl["steps"][-1]["code"] != "GATE-E"
+            or not any(st["code"].startswith(("TRUCK-OUT", "DOCK-E")) for st in dl["steps"])
+        ):
             issues.append(f"{m['name']}: шлях не закінчується відвантаженням і виїздом")
         steps = (dl or {}).get("steps", [])
         if m["route"].startswith("F") and not any(st["code"].startswith("FRONTS-") for st in steps):
@@ -83,9 +99,25 @@ def check(d):
         used |= {d["workorders"][w]["workcenter"] for w in m["workorders"]}
         for c in m["components"]:
             used |= {st["code"] for st in c.get("path") or []}
-    need = ["GATE-W", "GATE-E", "TRUCK-SCALE", "TUGGER-1", "BOARD-RACKS", "QC-1", "SCALE-RCV", "PRN-RCV",
-            "PACK-STORE", "PAINT-STORE", "BOX-1", "POST-STAGE", "PRN-PACK1"] + \
-        [f"UNLOAD-{k}" for k in range(1, 8)] + [f"DOCK-W{k}" for k in range(1, 8) if False]
+    need = (
+        [
+            "GATE-W",
+            "GATE-E",
+            "TRUCK-SCALE",
+            "TUGGER-1",
+            "BOARD-RACKS",
+            "QC-1",
+            "SCALE-RCV",
+            "PRN-RCV",
+            "PACK-STORE",
+            "PAINT-STORE",
+            "BOX-1",
+            "POST-STAGE",
+            "PRN-PACK1",
+        ]
+        + [f"UNLOAD-{k}" for k in range(1, 8)]
+        + [f"DOCK-W{k}" for k in range(1, 8) if False]
+    )
     for code in need:
         if code not in used and not any(u.startswith(code) for u in used):
             if code == "BOARD-RACKS" and any(u.startswith("RCK-") for u in used):

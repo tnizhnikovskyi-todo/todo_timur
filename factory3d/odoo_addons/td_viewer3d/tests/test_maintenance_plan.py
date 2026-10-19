@@ -1,4 +1,5 @@
 """API-11 і R-22: «Запланувати ТО», поля заявок і обладнання в payload, null-поля delta."""
+
 from unittest.mock import patch
 
 from odoo.models import BaseModel
@@ -19,8 +20,9 @@ class MaintenanceFixtures:
     @classmethod
     def _fixtures(cls):
         env = cls.env
-        cls.user_maint = cls._make_user("f3d_mplan", [
-            "base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"])
+        cls.user_maint = cls._make_user(
+            "f3d_mplan", ["base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"]
+        )
         cls.user_tech = cls._make_user("f3d_mtech", ["base.group_user"])
         cls.stage_new = env["maintenance.stage"].create({"name": "TST Нова", "sequence": 1})
         cls.stage_done = env["maintenance.stage"].create({"name": "TST Виконано", "sequence": 90, "done": True})
@@ -37,8 +39,13 @@ class MaintenanceFixtures:
         return cls.env["maintenance.equipment"].create(vals)
 
     def _req(self, eq, name="Планове ТО", mtype="preventive", sched=None, done=False, **kw):
-        vals = {"name": name, "equipment_id": eq.id, "maintenance_type": mtype, "maintenance_team_id": self.team.id,
-                "stage_id": (self.stage_done if done else self.stage_new).id}
+        vals = {
+            "name": name,
+            "equipment_id": eq.id,
+            "maintenance_type": mtype,
+            "maintenance_team_id": self.team.id,
+            "stage_id": (self.stage_done if done else self.stage_new).id,
+        }
         if sched:
             vals["schedule_date"] = dates.utc(sched)
         vals.update(kw)
@@ -47,12 +54,21 @@ class MaintenanceFixtures:
     def _recurring(self, eq, sched, unit="week", **kw):
         """Закрита повторювана профілактична заявка: Odoo не копіює її при create, тож відкритої заявки немає."""
         kw.setdefault("repeat_type", "forever")
-        return self._req(eq, name="TST повторюване ТО", sched=sched, done=True, recurring_maintenance=True,
-                         repeat_interval=1, repeat_unit=unit, **kw)
+        return self._req(
+            eq,
+            name="TST повторюване ТО",
+            sched=sched,
+            done=True,
+            recurring_maintenance=True,
+            repeat_interval=1,
+            repeat_unit=unit,
+            **kw,
+        )
 
     def _open_prev(self, eq):
-        return self.env["maintenance.request"].search([
-            ("equipment_id", "=", eq.id), ("maintenance_type", "=", "preventive"), ("stage_id.done", "=", False)])
+        return self.env["maintenance.request"].search(
+            [("equipment_id", "=", eq.id), ("maintenance_type", "=", "preventive"), ("stage_id.done", "=", False)]
+        )
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
@@ -73,13 +89,17 @@ class TestMaintenanceProviderFields(MaintenanceFixtures, F3dViewerBase):
 
     @staticmethod
     def _rec(data, code, name=None):
-        return next(r for r in data["maintenance_requests"] if r["equipment"] == code and (not name or r["name"] == name))
+        return next(
+            r for r in data["maintenance_requests"] if r["equipment"] == code and (not name or r["name"] == name)
+        )
 
     def test_request_fields_and_overdue_days(self):
         late = self._req(self.equipment, sched="2026-10-14 08:00")
         rec = self._rec(self._data(), "TST-SAW-2")
-        self.assertEqual((rec["res_id"], rec["equipment_name"], rec["done"], rec["stage"]),
-                         (late.id, "TST Розкрій 2", False, "TST Нова"))
+        self.assertEqual(
+            (rec["res_id"], rec["equipment_name"], rec["done"], rec["stage"]),
+            (late.id, "TST Розкрій 2", False, "TST Нова"),
+        )
         self.assertEqual(rec["schedule_date"], "2026-10-14 08:00")
         self.assertEqual(rec["overdue_days"], 2)
 
@@ -106,7 +126,9 @@ class TestMaintenanceProviderFields(MaintenanceFixtures, F3dViewerBase):
         self.assertEqual(r1.name, r2.name)
         self.assertEqual(data["equipment"]["TST-SAW-2"]["maintenance_request_id"], r1.id)
         self.assertEqual(data["equipment"]["TST-SAW-3"]["maintenance_request_id"], r2.id)
-        self.assertEqual({self._rec(data, "TST-SAW-2")["res_id"], self._rec(data, "TST-SAW-3")["res_id"]}, {r1.id, r2.id})
+        self.assertEqual(
+            {self._rec(data, "TST-SAW-2")["res_id"], self._rec(data, "TST-SAW-3")["res_id"]}, {r1.id, r2.id}
+        )
 
     def test_open_request_blocks_due_flag(self):
         self._req(self.equipment, sched="2026-10-01 08:00")
@@ -117,12 +139,14 @@ class TestMaintenanceProviderFields(MaintenanceFixtures, F3dViewerBase):
     def test_due_without_open_request(self):
         """Odoo 19 без next_action_date: наступна дата — остання закрита повторювана профілактична заявка + період."""
         over, soon, far, ended = (self._eq(c, c) for c in ("TST-D1", "TST-D2", "TST-D3", "TST-D4"))
-        self._recurring(over, "2026-10-02 08:00")                    # +1 тиждень = 09.10 → минуло
-        self._recurring(soon, "2026-10-12 08:00")                    # 19.10 → за 3 дні
-        self._recurring(far, "2026-10-15 08:00", unit="month")       # 15.11 → не скоро
+        self._recurring(over, "2026-10-02 08:00")  # +1 тиждень = 09.10 → минуло
+        self._recurring(soon, "2026-10-12 08:00")  # 19.10 → за 3 дні
+        self._recurring(far, "2026-10-15 08:00", unit="month")  # 15.11 → не скоро
         self._recurring(ended, "2026-10-02 08:00", repeat_type="until", repeat_until="2026-10-05")  # повтор закінчився
         eqs = self._data()["equipment"]
-        self.assertEqual((eqs["TST-D1"]["maintenance_due"], eqs["TST-D1"]["next_maintenance"]), ("overdue", "2026-10-09"))
+        self.assertEqual(
+            (eqs["TST-D1"]["maintenance_due"], eqs["TST-D1"]["next_maintenance"]), ("overdue", "2026-10-09")
+        )
         self.assertEqual((eqs["TST-D2"]["maintenance_due"], eqs["TST-D2"]["next_maintenance"]), ("soon", "2026-10-19"))
         self.assertEqual(eqs["TST-D3"]["next_maintenance"], "2026-11-15")
         self.assertNotIn("maintenance_due", eqs["TST-D3"])
@@ -177,7 +201,10 @@ class TestMaintenancePlanApi(MaintenanceFixtures, HttpCase, F3dViewerBase):
         res = self._plan({"code": "TST-SAW-2"})
         self.assertTrue(res["ok"] and res["created"], res)
         req = self.env["maintenance.request"].browse(res["request"]["res_id"])
-        self.assertEqual((req.name, req.maintenance_type, req.equipment_id), ("Планове ТО · TST Розкрій 2", "preventive", self.equipment))
+        self.assertEqual(
+            (req.name, req.maintenance_type, req.equipment_id),
+            ("Планове ТО · TST Розкрій 2", "preventive", self.equipment),
+        )
         self.assertEqual((req.maintenance_team_id, req.user_id), (self.team, self.user_tech))
         self.assertTrue(req.schedule_date and not req.stage_id.done)
         self.assertEqual(res["request"]["name"], req.name)
@@ -259,19 +286,32 @@ class TestMaintenancePlanApi(MaintenanceFixtures, HttpCase, F3dViewerBase):
         self.assertFalse(self._open_prev(self.equipment))
 
     def test_kiosk_url_has_no_plan_route(self):
-        res = self.url_open("/f3d/kiosk/any-token/maintenance/plan", data="{}", headers={"Content-Type": "application/json"},
-                            allow_redirects=False)
+        res = self.url_open(
+            "/f3d/kiosk/any-token/maintenance/plan",
+            data="{}",
+            headers={"Content-Type": "application/json"},
+            allow_redirects=False,
+        )
         self.assertEqual(res.status_code, 404)
 
     # --- параметри
     def test_bad_params(self):
         no_code = self.env["maintenance.equipment"].create({"name": "TST без коду"})
         cases = [
-            ({}, 400), ({"code": "../x"}, 400), ({"code": ""}, 400), ({"code": 5}, 400), ({"code": "A" * 65}, 400),
-            ({"equipment_id": "5"}, 400), ({"equipment_id": True}, 400), ({"equipment_id": -3}, 400),
-            ({"equipment_id": 0}, 400), ({"equipment_id": 2 ** 40}, 400),
+            ({}, 400),
+            ({"code": "../x"}, 400),
+            ({"code": ""}, 400),
+            ({"code": 5}, 400),
+            ({"code": "A" * 65}, 400),
+            ({"equipment_id": "5"}, 400),
+            ({"equipment_id": True}, 400),
+            ({"equipment_id": -3}, 400),
+            ({"equipment_id": 0}, 400),
+            ({"equipment_id": 2**40}, 400),
             ({"code": "TST-SAW-2", "equipment_id": self.equipment.id}, 400),
-            ({"code": "NO-SUCH-1"}, 404), ({"equipment_id": 987654}, 404), ({"equipment_id": no_code.id}, 404),
+            ({"code": "NO-SUCH-1"}, 404),
+            ({"equipment_id": 987654}, 404),
+            ({"equipment_id": no_code.id}, 404),
         ]
         self.authenticate("f3d_mplan", "f3d_mplan")
         for params, status in cases:

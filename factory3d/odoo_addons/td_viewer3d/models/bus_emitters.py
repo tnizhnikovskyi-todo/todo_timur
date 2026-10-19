@@ -3,6 +3,7 @@
 Спільний міксин перехоплює create / write / _write_multi (обчислювані збережені поля пишуться через `_write`) / unlink
 і публікує коди через `td.viewer.event._notify` (коалесценція — R-15).
 """
+
 from odoo import api, models
 
 IN_PROGRESS_NAMES = {"in progress", "в роботі"}
@@ -83,8 +84,11 @@ class StockMoveLine(models.Model):
     _td_bus_kind = "stock"
 
     def _td_bus_codes(self):
-        return (set(self.location_id.mapped("td_code")) | set(self.location_dest_id.mapped("td_code"))
-                | set(self.picking_id.mapped("name")))
+        return (
+            set(self.location_id.mapped("td_code"))
+            | set(self.location_dest_id.mapped("td_code"))
+            | set(self.picking_id.mapped("name"))
+        )
 
 
 class StockPicking(models.Model):
@@ -102,8 +106,12 @@ class StockPickingBatch(models.Model):
     _td_bus_kind = "doc"
 
     def _td_bus_codes(self):
-        return (set(self.picking_ids.mapped("name")) | set(self.dock_id.mapped("td_code"))
-                | set(self.mapped("td_code")) | set(self.td_vehicle_id.mapped("td_code")))
+        return (
+            set(self.picking_ids.mapped("name"))
+            | set(self.dock_id.mapped("td_code"))
+            | set(self.mapped("td_code"))
+            | set(self.td_vehicle_id.mapped("td_code"))
+        )
 
 
 class MrpWorkorder(models.Model):
@@ -112,8 +120,11 @@ class MrpWorkorder(models.Model):
     _td_bus_kind = "state"
 
     def _td_bus_codes(self):
-        return ({_wo_code(wo) for wo in self} | set(self.production_id.mapped("name"))
-                | set(self.workcenter_id.mapped("td_code")))
+        return (
+            {_wo_code(wo) for wo in self}
+            | set(self.production_id.mapped("name"))
+            | set(self.workcenter_id.mapped("td_code"))
+        )
 
 
 class MrpProduction(models.Model):

@@ -7,7 +7,6 @@ from .common import F3dViewerBase
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestControllers(HttpCase, F3dViewerBase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -58,8 +57,13 @@ class TestControllers(HttpCase, F3dViewerBase):
         self.assertEqual(list(full)[0], "meta")
 
     def test_data_validation(self):
-        for qs in ("full=2", "lite=yes", "codes=A,B C", "codes=" + ",".join("C%d" % i for i in range(201)),
-                   "sections=Bad-Key"):
+        for qs in (
+            "full=2",
+            "lite=yes",
+            "codes=A,B C",
+            "codes=" + ",".join("C%d" % i for i in range(201)),
+            "sections=Bad-Key",
+        ):
             with self.subTest(qs=qs):
                 res = self._get("/f3d/viewer/data?" + qs)
                 self.assertEqual(res.status_code, 400)
@@ -118,8 +122,9 @@ class TestControllers(HttpCase, F3dViewerBase):
     def test_resolve_group(self):
         """R-16 п. 5: `codes` — дочірні коди об'єкта без власного запису."""
         stock = self.env.ref("stock.stock_location_stock")
-        bins = self.env["stock.location"].create([
-            {"name": f"ZZ-GB{i}", "location_id": stock.id, "td_code": f"ZZ-GB{i}"} for i in (1, 2)])
+        bins = self.env["stock.location"].create(
+            [{"name": f"ZZ-GB{i}", "location_id": stock.id, "td_code": f"ZZ-GB{i}"} for i in (1, 2)]
+        )
         res = self._get("/f3d/viewer/resolve?code=ZZ-RACK-G&codes=ZZ-GB1,ZZ-GB2,ZZ-NONE")
         self.assertEqual(res.status_code, 200)
         data = res.json()
@@ -133,8 +138,12 @@ class TestControllers(HttpCase, F3dViewerBase):
 
     def test_resolve_group_bad_codes(self):
         too_many = ",".join(f"C{i}" for i in range(201))
-        for qs in ("code=A&codes=bad%20code", "name=WH/IN/00001&codes=A", "code=A&codes=" + too_many,
-                   "code=A&codes=../x"):
+        for qs in (
+            "code=A&codes=bad%20code",
+            "name=WH/IN/00001&codes=A",
+            "code=A&codes=" + too_many,
+            "code=A&codes=../x",
+        ):
             with self.subTest(qs=qs[:40]):
                 res = self._get("/f3d/viewer/resolve?" + qs)
                 self.assertEqual(res.status_code, 400)
@@ -150,18 +159,22 @@ class TestControllers(HttpCase, F3dViewerBase):
         self.assertIn("max-age=3600", res.headers["Cache-Control"])
         for part in res.json()["parts"]:
             self.assertRegex(part["file"], r"\.glb\?v=[0-9a-f]{12}$")
-        res2 = self.url_open("/f3d/viewer/parts/manifest.json", headers={"If-None-Match": res.headers["ETag"]},
-                             allow_redirects=False)
+        res2 = self.url_open(
+            "/f3d/viewer/parts/manifest.json", headers={"If-None-Match": res.headers["ETag"]}, allow_redirects=False
+        )
         self.assertEqual(res2.status_code, 304)
 
     # --- API-10 ---
     def test_cycle_check(self):
         from .common import _has_demo_data
+
         if not _has_demo_data(self.env):
             raise unittest.SkipTest("потрібна демо-база: на порожній payload неповний")
         # payload будується з правами користувача: менеджеру «Завод 3D» потрібен ще й доступ до складу/МО
-        self.user_manager.group_ids = [(4, self.env.ref("stock.group_stock_user").id),
-                                       (4, self.env.ref("mrp.group_mrp_user").id)]
+        self.user_manager.group_ids = [
+            (4, self.env.ref("stock.group_stock_user").id),
+            (4, self.env.ref("mrp.group_mrp_user").id),
+        ]
         self.authenticate("f3d_manager", "f3d_manager")
         res = self.make_jsonrpc_request("/f3d/viewer/cycle_check", {})
         self.assertEqual(res, {"ok": True, "issues": []})

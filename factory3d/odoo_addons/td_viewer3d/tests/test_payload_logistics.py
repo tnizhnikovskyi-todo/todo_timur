@@ -19,25 +19,59 @@ class TestLogisticsSynthetic(F3dViewerBase):
         env = cls.env
         wh = env["stock.warehouse"].search([], limit=1)
         cls.wh = wh
-        cls.dock9 = env["stock.location"].create({
-            "name": "TST dock 9", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "DOCK-W9",
-            "td_kind": "dock", "td_x": 0, "td_y": 5,
-            "td_alias": "UNLOAD-9", "td_side": "west", "td_dock_no": 9})
-        cls.dock8 = env["stock.location"].create({
-            "name": "TST dock 8", "location_id": wh.lot_stock_id.id, "usage": "internal", "td_code": "DOCK-W8",
-            "td_kind": "dock", "td_x": 0, "td_y": 15,
-            "td_side": "west", "td_dock_no": 8})
-        cls.product = env["product.product"].create({"name": "TST item", "default_code": "TST-ITM",
-                                                     "is_storable": True})
+        cls.dock9 = env["stock.location"].create(
+            {
+                "name": "TST dock 9",
+                "location_id": wh.lot_stock_id.id,
+                "usage": "internal",
+                "td_code": "DOCK-W9",
+                "td_kind": "dock",
+                "td_x": 0,
+                "td_y": 5,
+                "td_alias": "UNLOAD-9",
+                "td_side": "west",
+                "td_dock_no": 9,
+            }
+        )
+        cls.dock8 = env["stock.location"].create(
+            {
+                "name": "TST dock 8",
+                "location_id": wh.lot_stock_id.id,
+                "usage": "internal",
+                "td_code": "DOCK-W8",
+                "td_kind": "dock",
+                "td_x": 0,
+                "td_y": 15,
+                "td_side": "west",
+                "td_dock_no": 8,
+            }
+        )
+        cls.product = env["product.product"].create(
+            {"name": "TST item", "default_code": "TST-ITM", "is_storable": True}
+        )
         cls.supplier = env["res.partner"].create({"name": "TST supplier"})
 
     def _picking(self, dest, **kw):
-        vals = {"picking_type_id": self.wh.in_type_id.id, "partner_id": self.supplier.id,
-                "location_id": self.env.ref("stock.stock_location_suppliers").id, "location_dest_id": dest.id,
-                "scheduled_date": fields.Datetime.now(), "origin": "P-TST",
-                "move_ids": [(0, 0, {"product_id": self.product.id, "product_uom_qty": 10,
-                                     "location_id": self.env.ref("stock.stock_location_suppliers").id,
-                                     "location_dest_id": dest.id})]}
+        vals = {
+            "picking_type_id": self.wh.in_type_id.id,
+            "partner_id": self.supplier.id,
+            "location_id": self.env.ref("stock.stock_location_suppliers").id,
+            "location_dest_id": dest.id,
+            "scheduled_date": fields.Datetime.now(),
+            "origin": "P-TST",
+            "move_ids": [
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": self.product.id,
+                        "product_uom_qty": 10,
+                        "location_id": self.env.ref("stock.stock_location_suppliers").id,
+                        "location_dest_id": dest.id,
+                    },
+                )
+            ],
+        }
         vals.update(kw)
         p = self.env["stock.picking"].create(vals)
         p.action_confirm()
@@ -61,9 +95,15 @@ class TestLogisticsSynthetic(F3dViewerBase):
     def test_dock_from_batch(self):
         """AC-41: dock з батча, truck з td_code (не з td_truck)."""
         p = self._picking(self.wh.lot_stock_id)
-        batch = self.env["stock.picking.batch"].create({
-            "picking_type_id": self.wh.in_type_id.id, "dock_id": self.dock8.id, "td_code": "TRUCK-IN-9",
-            "td_truck": "Фура постачальника плит", "picking_ids": [(4, p.id)]})
+        batch = self.env["stock.picking.batch"].create(
+            {
+                "picking_type_id": self.wh.in_type_id.id,
+                "dock_id": self.dock8.id,
+                "td_code": "TRUCK-IN-9",
+                "td_truck": "Фура постачальника плит",
+                "picking_ids": [(4, p.id)],
+            }
+        )
         data = self._data()
         rec = self._find(data, p.name)
         self.assertEqual(rec["dock"], "DOCK-W8")
@@ -83,8 +123,7 @@ class TestLogisticsSynthetic(F3dViewerBase):
         self.assertEqual(rec["origin"], "P-TST")
 
     def test_other_internal_types_skipped(self):
-        p = self._picking(self.dock9, picking_type_id=self.wh.int_type_id.id,
-                          location_id=self.wh.lot_stock_id.id)
+        p = self._picking(self.dock9, picking_type_id=self.wh.int_type_id.id, location_id=self.wh.lot_stock_id.id)
         self.assertFalse([x for x in self._data()["pickings"] if x["name"] == p.name])
 
     def test_sale_purchase_optional(self):
@@ -93,6 +132,7 @@ class TestLogisticsSynthetic(F3dViewerBase):
 
         def fake(env, model):
             return False if model in ("sale.order", "purchase.order") else orig(env, model)
+
         with patch.object(payload_tools, "access_ok", side_effect=fake):
             data = self._data()
         self.assertEqual(data["sale_orders"], [])
@@ -126,8 +166,9 @@ class TestLogistics(F3dViewerCase):
         types = {}
         for p in self._data()["pickings"]:
             types[p["type"]] = types.get(p["type"], 0) + 1
-        self.assertEqual(set(types), {"incoming", "outgoing", "putaway", "replenish", "pick_components",
-                                      "store_finished"})
+        self.assertEqual(
+            set(types), {"incoming", "outgoing", "putaway", "replenish", "pick_components", "store_finished"}
+        )
         self.assertEqual(types["incoming"], 13)
         self.assertEqual(types["pick_components"], 12)
 

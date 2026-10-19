@@ -5,12 +5,19 @@ from odoo.addons.td_viewer3d.tools.payload import resolve
 from .common import F3dViewerBase, F3dViewerCase
 
 CODES = {
-    "PLT-04C": "stock.location", "SAW-1": "mrp.workcenter", "FL-1": "maintenance.equipment",
-    "OP-SAW-1": "hr.employee", "Z-CUT": "td.zone", "TRUCK-IN-1": "stock.picking.batch",
-    "DOCK-W1": "stock.location", "WO00013": "mrp.workorder",
+    "PLT-04C": "stock.location",
+    "SAW-1": "mrp.workcenter",
+    "FL-1": "maintenance.equipment",
+    "OP-SAW-1": "hr.employee",
+    "Z-CUT": "td.zone",
+    "TRUCK-IN-1": "stock.picking.batch",
+    "DOCK-W1": "stock.location",
+    "WO00013": "mrp.workorder",
 }
 NAMES = {
-    "WH/MO/00231": "mrp.production", "WH/IN/00128": "stock.picking", "S00087": "sale.order",
+    "WH/MO/00231": "mrp.production",
+    "WH/IN/00128": "stock.picking",
+    "S00087": "sale.order",
     "MR/00031": "maintenance.request",
 }
 
@@ -23,9 +30,14 @@ class TestResolver(F3dViewerBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.wc = cls.env["mrp.workcenter"].create({"name": "ZZ центр", "td_code": "ZZ-WC-1"})
-        cls.loc = cls.env["stock.location"].create({
-            "name": "ZZ", "location_id": cls.env.ref("stock.stock_location_stock").id, "td_code": "ZZ-LOC-1",
-            "td_alias": "ZZ-LOC-ALIAS"})
+        cls.loc = cls.env["stock.location"].create(
+            {
+                "name": "ZZ",
+                "location_id": cls.env.ref("stock.stock_location_stock").id,
+                "td_code": "ZZ-LOC-1",
+                "td_alias": "ZZ-LOC-ALIAS",
+            }
+        )
         cls.req = cls.env["maintenance.request"].create({"name": "ZZ-MR-1"})
 
     def test_codes_synthetic(self):
@@ -49,9 +61,10 @@ class TestResolver(F3dViewerBase):
 
     def _bins(self):
         stock = self.env.ref("stock.stock_location_stock")
-        return self.env["stock.location"].create([
-            {"name": f"ZZ-RK-B{i}", "location_id": stock.id, "td_code": f"ZZ-RK-B{i}"} for i in (1, 2)
-        ] + [{"name": "ZZ-RK-B3", "location_id": stock.id, "td_code": "ZZ-RK-X3", "td_alias": "ZZ-RK-B3"}])
+        return self.env["stock.location"].create(
+            [{"name": f"ZZ-RK-B{i}", "location_id": stock.id, "td_code": f"ZZ-RK-B{i}"} for i in (1, 2)]
+            + [{"name": "ZZ-RK-B3", "location_id": stock.id, "td_code": "ZZ-RK-X3", "td_alias": "ZZ-RK-B3"}]
+        )
 
     def test_group_of_children(self):
         """R-16 п. 5: стелаж без власного запису -> список записів комірок (код і аліас), res_id порожній."""
@@ -82,7 +95,6 @@ class TestResolver(F3dViewerBase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestResolverDemo(F3dViewerCase):
-
     def test_codes(self):
         """AC-24."""
         for code, model in CODES.items():

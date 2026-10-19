@@ -17,6 +17,7 @@ UPSTREAM = ("stock", "production", "logistics", "quality")
 
 class F3dViewerProviderChains(models.AbstractModel):
     """M-01g: ланцюжки, шляхи матеріалів, живі поля зон (R-10…R-13)."""
+
     _name = "td.viewer.provider.chains"
     _inherit = "td.viewer.provider"
     _description = "3D: постачальник — ланцюжки й зони"
@@ -30,8 +31,9 @@ class F3dViewerProviderChains(models.AbstractModel):
         env = self.env
         sections = ctx.get("sections")
         status = sections if isinstance(sections, dict) else {}
-        partial = (not env.user.has_group("stock.group_stock_user")
-                   or any(k not in payload or status.get(k) in ("denied", "error", "missing") for k in NEEDED))
+        partial = not env.user.has_group("stock.group_stock_user") or any(
+            k not in payload or status.get(k) in ("denied", "error", "missing") for k in NEEDED
+        )
         if partial:
             productions = payload.get("productions") or []
             payload["sheet_chain"] = {"steps": [], "path": []}

@@ -1,4 +1,5 @@
 """M-06: налаштування переглядача (res.config.settings)."""
+
 import re
 import secrets
 
@@ -8,33 +9,42 @@ from odoo.exceptions import AccessError, ValidationError
 PREFIX = "td.viewer."
 HOURS_RE = re.compile(r"^\d\d:\d\d-\d\d:\d\d$")
 CLOCK_RE = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
-BOOL_FIELDS = {"td_kiosk_enabled": "kiosk_enabled", "td_bus_enabled": "bus_enabled",
-               "td_demo_enabled": "demo_enabled"}
+BOOL_FIELDS = {"td_kiosk_enabled": "kiosk_enabled", "td_bus_enabled": "bus_enabled", "td_demo_enabled": "demo_enabled"}
 
 
 class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
     td_snapshot_minutes = fields.Integer(
-        string="Період знімків, хв", config_parameter=PREFIX + "snapshot_minutes", default=10)
+        string="Період знімків, хв", config_parameter=PREFIX + "snapshot_minutes", default=10
+    )
     td_snapshot_hours = fields.Char(
-        string="Вікно знімків (HH:MM-HH:MM)", config_parameter=PREFIX + "snapshot_hours",
-        help="Порожньо — знімки цілодобово.")
+        string="Вікно знімків (HH:MM-HH:MM)",
+        config_parameter=PREFIX + "snapshot_hours",
+        help="Порожньо — знімки цілодобово.",
+    )
     td_snapshot_keep_days = fields.Integer(
-        string="Зберігати знімки, днів", config_parameter=PREFIX + "snapshot_keep_days", default=14)
+        string="Зберігати знімки, днів", config_parameter=PREFIX + "snapshot_keep_days", default=14
+    )
     td_event_keep_hours = fields.Integer(
-        string="Зберігати події, годин", config_parameter=PREFIX + "event_keep_hours", default=48)
+        string="Зберігати події, годин", config_parameter=PREFIX + "event_keep_hours", default=48
+    )
     td_delta_debounce_ms = fields.Integer(
-        string="Затримка оновлень, мс", config_parameter=PREFIX + "delta_debounce_ms", default=1500)
+        string="Затримка оновлень, мс", config_parameter=PREFIX + "delta_debounce_ms", default=1500
+    )
     td_kiosk_enabled = fields.Boolean(string="Кіоск увімкнено", config_parameter=PREFIX + "kiosk_enabled")
     td_kiosk_refresh_s = fields.Integer(
-        string="Оновлення кіоска, с", config_parameter=PREFIX + "kiosk_refresh_s", default=15)
+        string="Оновлення кіоска, с", config_parameter=PREFIX + "kiosk_refresh_s", default=15
+    )
     td_bus_enabled = fields.Boolean(string="Живі оновлення (шина)", config_parameter=PREFIX + "bus_enabled")
     td_demo_enabled = fields.Boolean(string="Демо-режим", config_parameter=PREFIX + "demo_enabled")
     td_demo_clock = fields.Char(string="Демо-годинник", config_parameter=PREFIX + "demo_clock")
     td_lite_default = fields.Selection(
-        [("0", "Ні"), ("1", "Так"), ("auto", "Авто")], string="Спрощений режим для планшетів",
-        config_parameter=PREFIX + "lite_default", default="auto")
+        [("0", "Ні"), ("1", "Так"), ("auto", "Авто")],
+        string="Спрощений режим для планшетів",
+        config_parameter=PREFIX + "lite_default",
+        default="auto",
+    )
     td_kiosk_url = fields.Char(string="Адреса кіоска", compute="_compute_f3d_kiosk_url", readonly=True)
 
     @api.depends_context("uid")

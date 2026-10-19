@@ -26,24 +26,40 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         cls.wh = env["stock.warehouse"].search([], limit=1)
         cls.supplier = env.ref("stock.stock_location_suppliers")
         cls.customer = env.ref("stock.stock_location_customers")
-        cls.cell = env["stock.location"].create({
-            "name": "ZZ-H-CELL", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-CELL"})
-        cls.dest = env["stock.location"].create({
-            "name": "ZZ-H-DEST", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-DEST"})
+        cls.cell = env["stock.location"].create(
+            {"name": "ZZ-H-CELL", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-CELL"}
+        )
+        cls.dest = env["stock.location"].create(
+            {"name": "ZZ-H-DEST", "location_id": cls.wh.lot_stock_id.id, "td_code": "ZZ-H-DEST"}
+        )
         make = env["product.product"].create
-        cls.plate = make({"name": "ZZ Плита", "default_code": "ZZ-PLATE", "is_storable": True, "type": "consu",
-                          "tracking": "lot"})
+        cls.plate = make(
+            {"name": "ZZ Плита", "default_code": "ZZ-PLATE", "is_storable": True, "type": "consu", "tracking": "lot"}
+        )
         cls.fitting = make({"name": "ZZ Фурнітура", "default_code": "ZZ-FIT", "is_storable": True, "type": "consu"})
-        cls.lot = env["stock.lot"].create({"name": "ZZ-LOT-1", "product_id": cls.plate.id,
-                                           "company_id": cls.wh.company_id.id})
+        cls.lot = env["stock.lot"].create(
+            {"name": "ZZ-LOT-1", "product_id": cls.plate.id, "company_id": cls.wh.company_id.id}
+        )
 
     # --- фікстури ---------------------------------------------------------
     def _picking(self, ptype, src, dest, product, qty, confirm=True):
-        pick = self.env["stock.picking"].create({
-            "picking_type_id": ptype.id, "location_id": src.id, "location_dest_id": dest.id,
-            "move_ids": [Command.create({
-                "product_id": product.id, "product_uom_qty": qty,
-                "location_id": src.id, "location_dest_id": dest.id})]})
+        pick = self.env["stock.picking"].create(
+            {
+                "picking_type_id": ptype.id,
+                "location_id": src.id,
+                "location_dest_id": dest.id,
+                "move_ids": [
+                    Command.create(
+                        {
+                            "product_id": product.id,
+                            "product_uom_qty": qty,
+                            "location_id": src.id,
+                            "location_dest_id": dest.id,
+                        }
+                    )
+                ],
+            }
+        )
         if confirm:
             pick.action_confirm()
             pick.action_assign()
@@ -110,7 +126,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         recs = self._fixture()
         data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
         self.assertEqual((data["code"], data["truncated"]), ("ZZ-H-CELL", False))
-        self.assertEqual(data["left"], [])      # усе, що приймали, ще в комірці
+        self.assertEqual(data["left"], [])  # усе, що приймали, ще в комірці
         by = {p["product"]: p for p in data["products"]}
         self.assertEqual(list(by), ["ZZ-FIT", "ZZ-PLATE"])
         plate = by["ZZ-PLATE"]
@@ -121,8 +137,16 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         # «Надійшло»: останні виконані приймання цієї партії, ≤ 3, новіші першими
         self.assertEqual([a["qty"] for a in lot["arrived"]], [10, 4, 3])
         first = lot["arrived"][0]
-        self.assertEqual(first["doc"], {"name": recs["receipts"][-1].name, "model": "stock.picking",
-                                        "id": recs["receipts"][-1].id, "kind": "picking", "state": "done"})
+        self.assertEqual(
+            first["doc"],
+            {
+                "name": recs["receipts"][-1].name,
+                "model": "stock.picking",
+                "id": recs["receipts"][-1].id,
+                "kind": "picking",
+                "state": "done",
+            },
+        )
         self.assertEqual(first["from"]["name"], "Постачальники")  # віртуальна локація — українською
         self.assertRegex(first["date"], r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
 
@@ -150,20 +174,23 @@ class TestLocHistory(HttpCase, F3dViewerBase):
 
     def test_inventory_document(self):
         """Інвентаризація (без документа-переміщення) — запис без посилання."""
-        quant = self.env["stock.quant"].with_context(inventory_mode=True).create({
-            "product_id": self.fitting.id, "location_id": self.cell.id, "inventory_quantity": 4})
+        quant = (
+            self.env["stock.quant"]
+            .with_context(inventory_mode=True)
+            .create({"product_id": self.fitting.id, "location_id": self.cell.id, "inventory_quantity": 4})
+        )
         quant.action_apply_inventory()
         data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
         fit = next(p for p in data["products"] if p["product"] == "ZZ-FIT")
         self.assertEqual((fit["qty"], len(fit["lots"])), (4, 1))
         doc = fit["lots"][0]["arrived"][0]["doc"]
-        self.assertEqual(doc, {"name": "Інвентаризація", "model": None, "id": None, "kind": "inventory",
-                               "state": None})
+        self.assertEqual(doc, {"name": "Інвентаризація", "model": None, "id": None, "kind": "inventory", "state": None})
         self.assertIsNone(fit["lots"][0]["arrived"][0]["from"])  # не «з Inventory adjustment»
 
     def test_virtual_places_ukrainian(self):
         """Віртуальні локації Odoo (англійські назви з даних) — українською за usage."""
         from odoo.addons.td_viewer3d.tools.loc_history import _place
+
         Loc = self.env["stock.location"]
         self.assertEqual(_place(Loc.search([("usage", "=", "customer")], limit=1))["name"], "Клієнти")
         self.assertEqual(_place(Loc.search([("usage", "=", "supplier")], limit=1))["name"], "Постачальники")
@@ -181,13 +208,17 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         self.assertEqual(len(data["left"]), 1)
         row = data["left"][0]
         self.assertEqual((row["product"], row["name"], row["lot"]), ("ZZ-PLATE", "ZZ Плита", "ZZ-LOT-1"))
-        self.assertEqual(row["out"]["doc"], {"name": shipped.name, "model": "stock.picking", "id": shipped.id,
-                                              "kind": "picking", "state": "done"})
+        self.assertEqual(
+            row["out"]["doc"],
+            {"name": shipped.name, "model": "stock.picking", "id": shipped.id, "kind": "picking", "state": "done"},
+        )
         self.assertEqual((row["out"]["qty"], row["out"]["to"]), (5, {"code": None, "name": "Клієнти"}))
         self.assertRegex(row["out"]["date"], r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
         self.assertEqual(len(row["arrived"]), 1)
-        self.assertEqual((row["arrived"][0]["doc"]["name"], row["arrived"][0]["qty"], row["arrived"][0]["from"]["name"]),
-                         (arrival.name, 5, "Постачальники"))
+        self.assertEqual(
+            (row["arrived"][0]["doc"]["name"], row["arrived"][0]["qty"], row["arrived"][0]["from"]["name"]),
+            (arrival.name, 5, "Постачальники"),
+        )
 
     def test_left_not_listed_while_in_cell(self):
         """Партія, що частково вийшла (залишок у комірці), лишається в `products`, а не в `left`."""
@@ -199,8 +230,12 @@ class TestLocHistory(HttpCase, F3dViewerBase):
 
     def test_left_window_and_limit(self):
         """Вихід старший за вікно не потрапляє в `left`; понад KEEP_LEFT товарів/партій — найсвіжіші й `truncated`."""
-        lots = [self.env["stock.lot"].create({"name": "ZZ-LOT-W%d" % i, "product_id": self.plate.id,
-                                              "company_id": self.wh.company_id.id}) for i in range(1, 5)]
+        lots = [
+            self.env["stock.lot"].create(
+                {"name": "ZZ-LOT-W%d" % i, "product_id": self.plate.id, "company_id": self.wh.company_id.id}
+            )
+            for i in range(1, 5)
+        ]
         ships = []
         for lot in lots:
             self._receive(2, lot)
@@ -241,8 +276,9 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         pick = self._picking(self.wh.in_type_id, self.supplier, self.cell, self.fitting, 1, confirm=False)
         done = self._receive(2)
         found = docs_tools.lookup_states(self.env, {pick.name, done.name, "NO/SUCH/00001"})
-        self.assertEqual(found, {pick.name: {"kind": "picking", "state": "draft"},
-                                 done.name: {"kind": "picking", "state": "done"}})
+        self.assertEqual(
+            found, {pick.name: {"kind": "picking", "state": "draft"}, done.name: {"kind": "picking", "state": "done"}}
+        )
         pick.action_confirm()
         self.assertEqual(docs_tools.lookup_states(self.env, {pick.name})[pick.name]["state"], "assigned")
         pick.action_cancel()
@@ -254,16 +290,28 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         pick = self._receive(2)
         known = self._picking(self.wh.in_type_id, self.supplier, self.cell, self.fitting, 1)
         payload = {
-            "pickings": [{"name": known.name}], "quality_checks": [{"name": "QC/00001"}],
-            "productions": [{"name": "WH/MO/00001", "supply": {"note": None, "steps": [
-                {"code": "A", "doc": known.name, "note": "у стелаж (%s), контроль QC/00001." % pick.name}]}}],
+            "pickings": [{"name": known.name}],
+            "quality_checks": [{"name": "QC/00001"}],
+            "productions": [
+                {
+                    "name": "WH/MO/00001",
+                    "supply": {
+                        "note": None,
+                        "steps": [
+                            {"code": "A", "doc": known.name, "note": "у стелаж (%s), контроль QC/00001." % pick.name}
+                        ],
+                    },
+                }
+            ],
         }
         self.env["td.viewer.provider.chains"]._td_doc_states(payload)
         # known і QC/00001 є в payload — клієнт бере стан звідти; fallback лише для відсутніх
-        self.assertEqual(payload["productions"][0]["supply"]["docs"],
-                         {pick.name: {"kind": "picking", "state": "done"}})
+        self.assertEqual(payload["productions"][0]["supply"]["docs"], {pick.name: {"kind": "picking", "state": "done"}})
 
     def test_names_in(self):
-        self.assertEqual(docs_tools.names_in("WH/IN/00128 — фура", None, "у стелаж (WH/INT/00061), QC/00413.",
-                                             "WH/Сировина/Плити/RCK-R1-3B", "10:30"),
-                         {"WH/IN/00128", "WH/INT/00061", "QC/00413"})
+        self.assertEqual(
+            docs_tools.names_in(
+                "WH/IN/00128 — фура", None, "у стелаж (WH/INT/00061), QC/00413.", "WH/Сировина/Плити/RCK-R1-3B", "10:30"
+            ),
+            {"WH/IN/00128", "WH/INT/00061", "QC/00413"},
+        )

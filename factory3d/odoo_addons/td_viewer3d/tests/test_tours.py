@@ -32,27 +32,41 @@ class TestViewerTours(HttpCase, F3dViewerBase):
         env = cls.env
         Workcenter = env["mrp.workcenter"]
         cls.wc_saw = Workcenter.search([("td_code", "=", "SAW-1")], limit=1) or Workcenter.create(
-            {"name": "Пила TST", "code": "SAW1TST", "td_code": "SAW-1"})
+            {"name": "Пила TST", "code": "SAW1TST", "td_code": "SAW-1"}
+        )
         product = env["product.product"].create({"name": "TST tour fin", "is_storable": True})
         comp = env["product.product"].create({"name": "TST tour cmp", "is_storable": True})
-        bom = env["mrp.bom"].create({
-            "product_tmpl_id": product.product_tmpl_id.id, "product_id": product.id, "product_qty": 1,
-            "bom_line_ids": [(0, 0, {"product_id": comp.id, "product_qty": 1})],
-            "operation_ids": [(0, 0, {"name": "Op", "workcenter_id": cls.wc_saw.id, "time_cycle_manual": 10})]})
+        bom = env["mrp.bom"].create(
+            {
+                "product_tmpl_id": product.product_tmpl_id.id,
+                "product_id": product.id,
+                "product_qty": 1,
+                "bom_line_ids": [(0, 0, {"product_id": comp.id, "product_qty": 1})],
+                "operation_ids": [(0, 0, {"name": "Op", "workcenter_id": cls.wc_saw.id, "time_cycle_manual": 10})],
+            }
+        )
         cls.mo = env["mrp.production"].create({"product_id": product.id, "bom_id": bom.id, "product_qty": 1})
         cls.mo.action_confirm()
 
     def test_show_in_3d_tour(self):
         """AC-23: кнопка на формі МО відкриває дію f3d_viewer.action з params.mo."""
-        self.start_tour("/odoo/action-mrp.mrp_production_action/%d?debug=1" % self.mo.id,
-                        "f3d_show_in_3d_tour", login="admin", timeout=180)
+        self.start_tour(
+            "/odoo/action-mrp.mrp_production_action/%d?debug=1" % self.mo.id,
+            "f3d_show_in_3d_tour",
+            login="admin",
+            timeout=180,
+        )
 
     def test_click_open_record_tour(self):
         """AC-08: клік по SAW-1 -> «Відкрити в Odoo» -> форма робочого центру."""
         # f3d_test в params дії -> нульовий рендерер (програмний WebGL у headless Chrome гальмує тур)
         self.env.ref("td_viewer3d.action_td_viewer").params = {"f3d_test": 1}
-        self.start_tour("/odoo/action-td_viewer3d.action_td_viewer?debug=1",
-                        "f3d_click_open_record_tour", login="admin", timeout=180)
+        self.start_tour(
+            "/odoo/action-td_viewer3d.action_td_viewer?debug=1",
+            "f3d_click_open_record_tour",
+            login="admin",
+            timeout=180,
+        )
 
     def test_kiosk_page_renders(self):
         """AC-28 (браузер): сторінка кіоска монтує переглядач без навігації Odoo (без tour-менеджера)."""

@@ -1,5 +1,6 @@
 """Адаптер OrmProxy (A-08): та сама сигнатура `o(model, method, *args, **kw)`, що в plant/odoo_rpc.Odoo,
 але виклики йдуть у ORM поточного env. Так кроки заливки з plant/odoo_push.py працюють без змін."""
+
 import hashlib
 import re
 from datetime import date, datetime, timezone
@@ -8,11 +9,19 @@ from zoneinfo import ZoneInfo
 from odoo import fields
 from odoo.models import BaseModel
 
-CTX = {"lang": "uk_UA", "tz": "Europe/Kyiv", "tracking_disable": True,
-       "mail_create_nolog": True, "mail_notrack": True}
+CTX = {"lang": "uk_UA", "tz": "Europe/Kyiv", "tracking_disable": True, "mail_create_nolog": True, "mail_notrack": True}
 TZ = ZoneInfo("Europe/Kyiv")
-MODEL_METHODS = {"search_read", "search", "search_count", "fields_get", "name_search", "create", "default_get",
-                 "read_group", "name_create"}
+MODEL_METHODS = {
+    "search_read",
+    "search",
+    "search_count",
+    "fields_get",
+    "name_search",
+    "create",
+    "default_get",
+    "read_group",
+    "name_create",
+}
 
 
 def key(*parts):
@@ -58,8 +67,9 @@ class OrmProxy:
 
     def refresh_lang(self):
         """Мова з контексту діє, лише коли вона встановлена (інакше Odoo кидає «Invalid language code»)."""
-        self.lang_ok = bool(self.env["res.lang"].sudo().search_count(
-            [("code", "=", self.ctx.get("lang")), ("active", "=", True)]))
+        self.lang_ok = bool(
+            self.env["res.lang"].sudo().search_count([("code", "=", self.ctx.get("lang")), ("active", "=", True)])
+        )
 
     def __call__(self, model, method, *args, **kw):
         if self.lang_ok is None:

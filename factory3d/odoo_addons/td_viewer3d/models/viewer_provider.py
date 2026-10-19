@@ -6,6 +6,7 @@ from ..tools import payload as payload_tools
 class F3dViewerProvider(models.AbstractModel):
     """M-01: хук постачальника даних (C-02). Duck-typing (X-22): провайдер — будь-яка модель реєстру
     з іменем `td.viewer.provider.<key>`; цей клас дає умовчання для способу (а) `_inherit`."""
+
     _name = "td.viewer.provider"
     _description = "3D: постачальник даних переглядача"
 

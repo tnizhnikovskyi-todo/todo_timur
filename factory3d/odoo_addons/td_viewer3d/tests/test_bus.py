@@ -18,9 +18,11 @@ class TestBus(F3dViewerBase):
         cls.Event = env["td.viewer.event"]
         cls.wh = env["stock.warehouse"].search([], limit=1)
         cls.loc_a = env["stock.location"].create(
-            {"name": "TST-A", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-A"})
+            {"name": "TST-A", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-A"}
+        )
         cls.loc_b = env["stock.location"].create(
-            {"name": "TST-B", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-B"})
+            {"name": "TST-B", "location_id": cls.wh.lot_stock_id.id, "td_code": "TST-LOC-B"}
+        )
         cls.product = env["product.product"].create({"name": "TST bus", "default_code": "TST-BUS", "is_storable": True})
         env["stock.quant"]._update_available_quantity(cls.product, cls.loc_a, 100)
 
@@ -44,11 +46,25 @@ class TestBus(F3dViewerBase):
         picking_type = self.wh.int_type_id
         pickings = self.env["stock.picking"]
         for _i in range(12):
-            pickings |= self.env["stock.picking"].create({
-                "picking_type_id": picking_type.id, "location_id": self.loc_a.id,
-                "location_dest_id": self.loc_b.id,
-                "move_ids": [(0, 0, {"product_id": self.product.id, "product_uom_qty": 1,
-                                     "location_id": self.loc_a.id, "location_dest_id": self.loc_b.id})]})
+            pickings |= self.env["stock.picking"].create(
+                {
+                    "picking_type_id": picking_type.id,
+                    "location_id": self.loc_a.id,
+                    "location_dest_id": self.loc_b.id,
+                    "move_ids": [
+                        (
+                            0,
+                            0,
+                            {
+                                "product_id": self.product.id,
+                                "product_uom_qty": 1,
+                                "location_id": self.loc_a.id,
+                                "location_dest_id": self.loc_b.id,
+                            },
+                        )
+                    ],
+                }
+            )
         pickings.action_confirm()
         pickings.action_assign()
         self._flush()
@@ -69,9 +85,15 @@ class TestBus(F3dViewerBase):
     def test_workorder_finish_codes(self):
         wc = self.env["mrp.workcenter"].create({"name": "TST WC", "code": "TSTWC", "td_code": "TST-WC-BUS"})
         fin = self.env["product.product"].create({"name": "TST fin", "default_code": "TST-FIN-B", "is_storable": True})
-        bom = self.env["mrp.bom"].create({
-            "product_tmpl_id": fin.product_tmpl_id.id, "product_id": fin.id, "product_qty": 1, "code": "TB",
-            "operation_ids": [(0, 0, {"name": "Op", "workcenter_id": wc.id, "time_cycle_manual": 10})]})
+        bom = self.env["mrp.bom"].create(
+            {
+                "product_tmpl_id": fin.product_tmpl_id.id,
+                "product_id": fin.id,
+                "product_qty": 1,
+                "code": "TB",
+                "operation_ids": [(0, 0, {"name": "Op", "workcenter_id": wc.id, "time_cycle_manual": 10})],
+            }
+        )
         mo = self.env["mrp.production"].create({"product_id": fin.id, "bom_id": bom.id, "product_qty": 1})
         mo.action_confirm()
         wo = mo.workorder_ids[:1]
@@ -91,7 +113,8 @@ class TestBus(F3dViewerBase):
         stage_new = self.env.ref("maintenance.stage_0")
         stage_work = self.env.ref("maintenance.stage_1")
         req = self.env["maintenance.request"].create(
-            {"name": "TST/MR/00031", "equipment_id": eq.id, "stage_id": stage_new.id})
+            {"name": "TST/MR/00031", "equipment_id": eq.id, "stage_id": stage_new.id}
+        )
         self._reset()
         self.env["td.viewer.snapshot"].sudo().search([]).unlink()
         req.write({"stage_id": stage_work.id})

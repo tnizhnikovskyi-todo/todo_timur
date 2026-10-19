@@ -2,6 +2,7 @@
 
 Жодного `sudo()` окрім читання `ir.config_parameter`: усе читається з правами користувача запиту (AC-14).
 """
+
 import copy
 import json
 import logging
@@ -21,10 +22,32 @@ DELTA_MAX_BYTES = 200 * 1024
 
 # 26 базових ключів верхнього рівня у порядку Додатка A.0 (X-24)
 BASE_KEYS = (
-    "meta", "products", "locations", "workcenters", "productions", "workorders", "sale_orders", "purchase_orders",
-    "pickings", "quality_checks", "maintenance_requests", "equipment", "employees", "docks", "zones", "energy",
-    "lighting", "ventilation", "fire", "infra", "evacuation", "sheet_chain", "ship_chain", "material_paths",
-    "full_cycle_mo", "passports",
+    "meta",
+    "products",
+    "locations",
+    "workcenters",
+    "productions",
+    "workorders",
+    "sale_orders",
+    "purchase_orders",
+    "pickings",
+    "quality_checks",
+    "maintenance_requests",
+    "equipment",
+    "employees",
+    "docks",
+    "zones",
+    "energy",
+    "lighting",
+    "ventilation",
+    "fire",
+    "infra",
+    "evacuation",
+    "sheet_chain",
+    "ship_chain",
+    "material_paths",
+    "full_cycle_mo",
+    "passports",
 )
 # статичні розділи, що потрапляють у `full=1` (R-01 п. 2)
 STATIC_SECTIONS = ("energy", "lighting", "ventilation", "fire", "infra", "evacuation", "passports", "zones", "docks")
@@ -55,6 +78,7 @@ class DeltaTooLarge(Exception):
 
 
 # --- helpers ---------------------------------------------------------------
+
 
 def deep_merge(dst, src):
     """Зливає src у dst на місці й повертає dst (той самий об'єкт). dict — рекурсивно, решта — заміна."""
@@ -122,8 +146,9 @@ def filter_codes(payload, codes):
     """`codes` обмежує locations/workcenters/equipment кодами; документи — ті, що посилаються на коди."""
     for key in ("locations", "workcenters", "equipment", "workorders"):
         if isinstance(payload.get(key), dict):
-            payload[key] = {k: v for k, v in payload[key].items()
-                            if k in codes or any(s in codes for s in _walk_strings(v))}
+            payload[key] = {
+                k: v for k, v in payload[key].items() if k in codes or any(s in codes for s in _walk_strings(v))
+            }
     for key in LIST_SECTIONS:
         if isinstance(payload.get(key), list):
             payload[key] = [r for r in payload[key] if any(s in codes for s in _walk_strings(r))]
@@ -180,8 +205,7 @@ class _Base:
 
     @staticmethod
     def _info(p):
-        return (tuple(getattr(p, "_td_sections", ())),
-                getattr(p, "_td_group", DEFAULT_GROUP))
+        return (tuple(getattr(p, "_td_sections", ())), getattr(p, "_td_group", DEFAULT_GROUP))
 
     def _call(self, p, func, target, secs, errors):
         """Виклик у savepoint; при помилці розділи провайдера відновлюються. True — успіх."""
@@ -296,10 +320,14 @@ class PayloadBuilder(_Base):
         return ordered
 
     def _note(self, payload, meta):
-        quants = sum(len(loc.get("quants") or []) for loc in (payload.get("locations") or {}).values()
-                     if isinstance(loc, dict))
+        quants = sum(
+            len(loc.get("quants") or []) for loc in (payload.get("locations") or {}).values() if isinstance(loc, dict)
+        )
         note = "Живі дані з бази: %d переміщень, %d виробничих замовлень, %d залишків." % (
-            len(payload.get("pickings") or []), len(payload.get("productions") or []), quants)
+            len(payload.get("pickings") or []),
+            len(payload.get("productions") or []),
+            quants,
+        )
         iot = meta.get("iot")
         if iot:
             note += " Сигналів імітації: %s." % iot.get("signals", 0)
@@ -354,13 +382,19 @@ class DeltaBuilder(_Base):
                     default_delta(p, target, ctx)
                 else:
                     delta(target, ctx)
+
             if not self._call(p, run, patch, secs, errors):
                 failed.update(secs)
         if not errors:
             patch["meta"].pop("errors")
         self._null_opt_keys(patch)
-        return {"ts": ts, "full": False, "events": len(changes), "patch": patch,
-                "removed": self._removed(changes, patch, failed)}
+        return {
+            "ts": ts,
+            "full": False,
+            "events": len(changes),
+            "patch": patch,
+            "removed": self._removed(changes, patch, failed),
+        }
 
     @staticmethod
     def _null_opt_keys(patch):
@@ -386,8 +420,7 @@ class DeltaBuilder(_Base):
 
 # --- резолвер R-16 -----------------------------------------------------------
 
-DOC_MODELS = ("mrp.production", "stock.picking", "sale.order", "purchase.order", "maintenance.request",
-              "quality.check")
+DOC_MODELS = ("mrp.production", "stock.picking", "sale.order", "purchase.order", "maintenance.request", "quality.check")
 WO_RE = re.compile(r"^WO(\d{5})$")
 
 
@@ -411,11 +444,16 @@ def _resolve_group(env, codes):
     for model in env["td.scene.mixin"]._td_resolve_order:
         if not codes or model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
             continue
-        recs = env[model].search(["|", ("td_code", "in", codes), ("td_alias", "in", codes)],
-                                 limit=RESOLVE_GROUP_MAX)
+        recs = env[model].search(["|", ("td_code", "in", codes), ("td_alias", "in", codes)], limit=RESOLVE_GROUP_MAX)
         if recs:
-            return {"model": model, "res_id": None, "res_ids": recs.ids, "display_name": None, "kind": "group",
-                    "count": len(recs)}
+            return {
+                "model": model,
+                "res_id": None,
+                "res_ids": recs.ids,
+                "display_name": None,
+                "kind": "group",
+                "count": len(recs),
+            }
     return _not_found()
 
 
@@ -476,5 +514,4 @@ def log_scene_codes(env):
             continue
         if res["model"]:
             by_model[res["model"]] = by_model.get(res["model"], 0) + 1
-    _logger.info("td_viewer3d: знайдено записів %d з %d кодів сцени: %s",
-                 sum(by_model.values()), len(codes), by_model)
+    _logger.info("td_viewer3d: знайдено записів %d з %d кодів сцени: %s", sum(by_model.values()), len(codes), by_model)

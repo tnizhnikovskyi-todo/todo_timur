@@ -1,4 +1,5 @@
 """R-02: час і часовий пояс. Усі обчислення в UTC (naive), рендер — за Києвом."""
+
 import logging
 import re
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ def local(dt_utc):
 
 
 def utc(s_local):
-    """"YYYY-MM-DD HH:MM" за Києвом -> datetime (UTC, naive)."""
+    """ "YYYY-MM-DD HH:MM" за Києвом -> datetime (UTC, naive)."""
     naive = datetime.strptime(s_local[:16], FMT)
     return naive.replace(tzinfo=TZ).astimezone(timezone.utc).replace(tzinfo=None)
 
@@ -49,7 +50,7 @@ def iso_utc(dt_utc):
 
 
 def parse_iso_utc(s):
-    """"2026-10-12T07:30:12Z" (або без Z, або з дробовою частиною) -> datetime UTC naive; ValueError."""
+    """ "2026-10-12T07:30:12Z" (або без Z, або з дробовою частиною) -> datetime UTC naive; ValueError."""
     s = s.rstrip("Z")
     for fmt in ("%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
         try:

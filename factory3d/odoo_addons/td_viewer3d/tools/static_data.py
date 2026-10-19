@@ -1,4 +1,5 @@
 """Кеш статичних файлів переглядача в пам'яті воркера (API-01, API-07)."""
+
 import gzip
 import hashlib
 import json
@@ -39,8 +40,7 @@ def _static_builder(raw):
     sha1 = hashlib.sha1(raw).hexdigest()
     out = dict(data)
     src = data.get("meta") or {}
-    out["meta"] = {"schema": src.get("schema", "1.1"), "built_at": src.get("built_at"),
-                   "static_etag": sha1[:16]}
+    out["meta"] = {"schema": src.get("schema", "1.1"), "built_at": src.get("built_at"), "static_etag": sha1[:16]}
     body = json.dumps(out, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return {"data": data, "body": body, "body_gz": gzip.compress(body, 6)}
 
@@ -78,4 +78,3 @@ def parts_manifest():
     """(bytes, sha1) переписаного manifest.json (parts[].file -> URL з ?v=)."""
     entry = _entry(MANIFEST_PATH, _manifest_builder)
     return entry["body"], entry["body_sha1"]
-

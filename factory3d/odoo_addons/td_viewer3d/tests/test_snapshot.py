@@ -26,10 +26,14 @@ class TestSnapshot(F3dViewerBase):
         self.set_param("snapshot_hours", "06:30-16:00")
 
     def _make(self, kind="periodic", days_ago=0, company=None):
-        return self.Snap.create({
-            "ts": fields.Datetime.now() - timedelta(days=days_ago), "kind": kind,
-            "payload_file": self.Snap._pack({"meta": {"schema": "1.1"}}),
-            "company_id": (company or self.env.company).id})
+        return self.Snap.create(
+            {
+                "ts": fields.Datetime.now() - timedelta(days=days_ago),
+                "kind": kind,
+                "payload_file": self.Snap._pack({"meta": {"schema": "1.1"}}),
+                "company_id": (company or self.env.company).id,
+            }
+        )
 
     def test_cron_window(self):
         """AC-25: 10:00 Київ (07:00 UTC) — знімок; 20:00 — ні."""
@@ -74,8 +78,9 @@ class TestSnapshot(F3dViewerBase):
         old_install = self._make("install", 15)
         fresh = self._make("periodic", 1)
         Event = self.env["td.viewer.event"].sudo()
-        old_ev = Event.create({"ts": fields.Datetime.now() - timedelta(days=15), "model": "m", "codes": ["A"],
-                               "kind": "state"})
+        old_ev = Event.create(
+            {"ts": fields.Datetime.now() - timedelta(days=15), "model": "m", "codes": ["A"], "kind": "state"}
+        )
         fresh_ev = Event.create({"model": "m", "codes": ["B"], "kind": "state"})
         self.Snap._cron_rotate()
         self.assertFalse(old.exists())
@@ -114,9 +119,13 @@ class TestSnapshotHttp(HttpCase, F3dViewerBase):
         cls.Snap.search([]).unlink()
 
     def _snap(self, hhmm):
-        return self.Snap.create({
-            "ts": datetime(2026, 10, 12, int(hhmm[:2]), int(hhmm[3:])), "kind": "periodic",
-            "payload_file": self.Snap._pack({"meta": {"schema": "1.1"}})})
+        return self.Snap.create(
+            {
+                "ts": datetime(2026, 10, 12, int(hhmm[:2]), int(hhmm[3:])),
+                "kind": "periodic",
+                "payload_file": self.Snap._pack({"meta": {"schema": "1.1"}}),
+            }
+        )
 
     def _get(self, url, user="f3d_user", **kw):
         self.authenticate(user, user)
@@ -152,6 +161,7 @@ class TestSnapshotDemoClock(F3dViewerBase):
 
     def test_snapshots_found_under_demo_clock(self):
         from odoo.addons.td_viewer3d.tools import dates
+
         self.env["ir.config_parameter"].sudo().set_param("td.viewer.demo_clock", "2020-01-12 10:30")
         Snap = self.env["td.viewer.snapshot"].sudo()
         Snap.search([]).unlink()

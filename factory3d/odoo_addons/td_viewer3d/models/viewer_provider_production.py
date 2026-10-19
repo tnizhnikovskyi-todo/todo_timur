@@ -9,10 +9,30 @@ from ..tools import payload as payload_tools
 
 # коефіцієнт завантаження за типом верстата (plant/energy.PROFILE): запасний, якщо у статиці немає energy.profile_k
 PROFILE_KF = {
-    "saw": 0.55, "saw_book": 0.6, "slide": 0.45, "vsaw": 0.4, "nest": 0.55, "edge": 0.65, "edge_robot": 0.65,
-    "cnc": 0.5, "bore": 0.5, "dowel": 0.45, "hinge": 0.3, "sortbot": 0.45, "sand": 0.7, "press": 0.6, "glue": 0.7,
-    "spray": 0.75, "autospray": 0.6, "dry": 0.75, "uv": 0.7, "asmline": 0.4, "asm": 0.35, "box": 0.45,
-    "pack": 0.4, "packline": 0.65,
+    "saw": 0.55,
+    "saw_book": 0.6,
+    "slide": 0.45,
+    "vsaw": 0.4,
+    "nest": 0.55,
+    "edge": 0.65,
+    "edge_robot": 0.65,
+    "cnc": 0.5,
+    "bore": 0.5,
+    "dowel": 0.45,
+    "hinge": 0.3,
+    "sortbot": 0.45,
+    "sand": 0.7,
+    "press": 0.6,
+    "glue": 0.7,
+    "spray": 0.75,
+    "autospray": 0.6,
+    "dry": 0.75,
+    "uv": 0.7,
+    "asmline": 0.4,
+    "asm": 0.35,
+    "box": 0.45,
+    "pack": 0.4,
+    "packline": 0.65,
 }
 WO_RE = re.compile(r"^WO(\d{5})$")
 MO_STATE = {"to_close": "progress", "draft": "confirmed"}
@@ -29,6 +49,7 @@ def _num(value):
 
 class F3dViewerProviderProduction(models.AbstractModel):
     """M-01b: робочі центри, виробничі замовлення й завдання (R-06, R-07, R-08)."""
+
     _name = "td.viewer.provider.production"
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних production"
@@ -45,16 +66,24 @@ class F3dViewerProviderProduction(models.AbstractModel):
     @api.model
     def _td_viewer_collect(self, payload, ctx):
         env = self.env
-        if not all(payload_tools.access_ok(env, m) for m in (
-                "mrp.workcenter", "mrp.production", "mrp.workorder", "mrp.workcenter.productivity")):
+        if not all(
+            payload_tools.access_ok(env, m)
+            for m in ("mrp.workcenter", "mrp.production", "mrp.workorder", "mrp.workcenter.productivity")
+        ):
             return
         now = ctx["now"]
         static = ctx.get("static") or {}
         today_start = dates.utc(ctx["today"] + " 00:00")
 
-        mos = env["mrp.production"].search_fetch([
-            ("state", "!=", "cancel"), "|", ("state", "in", ("confirmed", "progress", "to_close")),
-            ("date_finished", ">=", today_start)], order="id")
+        mos = env["mrp.production"].search_fetch(
+            [
+                ("state", "!=", "cancel"),
+                "|",
+                ("state", "in", ("confirmed", "progress", "to_close")),
+                ("date_finished", ">=", today_start),
+            ],
+            order="id",
+        )
         wos_all = env["mrp.workorder"].search_fetch([("production_id", "in", mos.ids)], order="sequence, id")
         wcs = env["mrp.workcenter"].search_fetch([("td_code", "!=", False)], order="id")
         wcs.resource_calendar_id.attendance_ids.mapped("hour_from")  # прогрів змін для _shift
@@ -62,9 +91,17 @@ class F3dViewerProviderProduction(models.AbstractModel):
 
         # --- журнал продуктивності: по завданнях (будь-коли) і по центрах (сьогодні)
         # один запит на обидві вибірки журналу (AC-52); далі розділяємо в Python
-        logs_all = env["mrp.workcenter.productivity"].search_fetch([
-            "|", ("workorder_id", "in", wos_all.ids),
-            "&", ("workcenter_id", "in", wcs.ids), "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
+        logs_all = env["mrp.workcenter.productivity"].search_fetch(
+            [
+                "|",
+                ("workorder_id", "in", wos_all.ids),
+                "&",
+                ("workcenter_id", "in", wcs.ids),
+                "|",
+                ("date_end", "=", False),
+                ("date_start", ">=", today_start),
+            ]
+        )
         wo_ids, wc_ids = set(wos_all.ids), set(wcs.ids)
         logs_wo = logs_all.filtered(lambda lg: lg.workorder_id.id in wo_ids)
         worked, first, last = {}, {}, {}
@@ -74,8 +111,9 @@ class F3dViewerProviderProduction(models.AbstractModel):
             first[k] = min(first.get(k, lg.date_start), lg.date_start)
             if lg.date_end:
                 last[k] = max(last.get(k, lg.date_end), lg.date_end)
-        logs_today = logs_all.filtered(lambda lg: lg.workcenter_id.id in wc_ids and (
-            not lg.date_end or lg.date_start >= today_start))
+        logs_today = logs_all.filtered(
+            lambda lg: lg.workcenter_id.id in wc_ids and (not lg.date_end or lg.date_start >= today_start)
+        )
 
         # --- робочі завдання й МО
         wo_out, mo_out = {}, []
@@ -101,13 +139,24 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 wid = f"WO{wo.id:05d}"
                 st = wo.state
                 if st in ("ready", "blocked", "pending"):
-                    st = ("waiting" if (k == 0 and res_waiting)
-                          else "ready" if prev in ("done", "progress") else "pending")
+                    st = (
+                        "waiting"
+                        if (k == 0 and res_waiting)
+                        else "ready"
+                        if prev in ("done", "progress")
+                        else "pending"
+                    )
                 prev = st
                 mins = worked.get(wo.id, 0.0)
-                rec = {"id": wid, "name": wo.name, "production": mo.name,
-                       "workcenter": wo.workcenter_id.td_code or "", "state": st, "sequence": k + 1,
-                       "duration_expected": round(wo.duration_expected or 0)}
+                rec = {
+                    "id": wid,
+                    "name": wo.name,
+                    "production": mo.name,
+                    "workcenter": wo.workcenter_id.td_code or "",
+                    "state": st,
+                    "sequence": k + 1,
+                    "duration_expected": round(wo.duration_expected or 0),
+                }
                 start = first.get(wo.id) or wo.date_start
                 if st == "done":
                     fin = last.get(wo.id) or wo.date_finished
@@ -122,8 +171,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                     rec.update(progress=prog, duration=round(mins))
                     if start:
                         rec["date_start"] = dates.local(start)
-                        rec["date_planned_finished"] = dates.local(
-                            start + timedelta(minutes=wo.duration_expected or 0))
+                        rec["date_planned_finished"] = dates.local(start + timedelta(minutes=wo.duration_expected or 0))
                     if wo.working_state == "blocked":
                         rec["blocked"] = True
                     sum_prog += prog
@@ -143,12 +191,21 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 ids.append(wid)
             n = len(ws)
             item = {
-                "name": mo.name, "product": mo.product_id.default_code or "", "product_name": mo.product_id.name,
-                "qty": mo.product_qty, "uom": mo.product_uom_id.name, "state": state,
-                "origin": mo.origin or "", "route": mo.bom_id.code or "", "workorders": ids,
+                "name": mo.name,
+                "product": mo.product_id.default_code or "",
+                "product_name": mo.product_id.name,
+                "qty": mo.product_qty,
+                "uom": mo.product_uom_id.name,
+                "state": state,
+                "origin": mo.origin or "",
+                "route": mo.bom_id.code or "",
+                "workorders": ids,
                 "date_start": dates.local(mo.date_start) if mo.date_start else None,
-                "date_deadline": (dates.local(mo.date_deadline or mo.date_finished)
-                                  if (mo.date_deadline or mo.date_finished) else None),
+                "date_deadline": (
+                    dates.local(mo.date_deadline or mo.date_finished)
+                    if (mo.date_deadline or mo.date_finished)
+                    else None
+                ),
                 "progress": round((n_done + sum_prog) / n, 2) if n else 0.0,
                 "components": self._components(mo, comp_locs),
                 "energy_kwh": round(kwh, 1),
@@ -185,9 +242,9 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 wc_code = (eq.workcenter_id.td_code if link and eq.workcenter_id else None) or eq.td_code
                 eq_by_wc.setdefault(wc_code, eq)
             if payload_tools.access_ok(env, "maintenance.request"):
-                for r in env["maintenance.request"].search_fetch([("stage_id.done", "=", False),
-                                                            ("equipment_id", "in", eqs.ids)],
-                                                           order="request_date, id"):
+                for r in env["maintenance.request"].search_fetch(
+                    [("stage_id.done", "=", False), ("equipment_id", "in", eqs.ids)], order="request_date, id"
+                ):
                     req_by_eq.setdefault(r.equipment_id.id, r)
 
         passport_ok = payload_tools.access_ok(env, "td.equipment.passport")
@@ -210,8 +267,10 @@ class F3dViewerProviderProduction(models.AbstractModel):
             code = wc.td_code
             items = by_wc.get(wc.id, [])
             cur = sorted((x for x in items if x[1] == "progress"), key=lambda x: x[2].date_start or now)
-            queue = sorted((x for x in items if x[1] in ("ready", "waiting", "pending")),
-                           key=lambda x: (x[1] != "ready", x[2].production_id.name))[:8]
+            queue = sorted(
+                (x for x in items if x[1] in ("ready", "waiting", "pending")),
+                key=lambda x: (x[1] != "ready", x[2].production_id.name),
+            )[:8]
             current = cur[0][0] if cur else None
             status = "stop" if wc.working_state == "blocked" else "work" if current else "idle"
             productive = round(prod_min.get(wc.id, 0.0))
@@ -223,12 +282,20 @@ class F3dViewerProviderProduction(models.AbstractModel):
             eq = eq_by_wc.get(code)
             passport = (static.get("passports") or {}).get(code) or (static.get("workcenters") or {}).get(code) or {}
             rec = {
-                "name": wc.name, "code": code, "status": status, "working_state": wc.working_state,
-                "oee": oee, "capacity": capacity, "time_efficiency": round((wc.time_efficiency or 100) / 100, 2),
+                "name": wc.name,
+                "code": code,
+                "status": status,
+                "working_state": wc.working_state,
+                "oee": oee,
+                "capacity": capacity,
+                "time_efficiency": round((wc.time_efficiency or 100) / 100, 2),
                 "productive_minutes": productive,
-                "losses": sorted(({"reason": r, "minutes": round(m)} for r, m in loss_min.get(wc.id, {}).items()),
-                                 key=lambda x: -x["minutes"]),
-                "current_workorder": current, "queue": [x[0] for x in queue],
+                "losses": sorted(
+                    ({"reason": r, "minutes": round(m)} for r, m in loss_min.get(wc.id, {}).items()),
+                    key=lambda x: -x["minutes"],
+                ),
+                "current_workorder": current,
+                "queue": [x[0] for x in queue],
                 "manufacturer": (eq and passport_ok and eq.td_manufacturer) or passport.get("manufacturer") or "",
                 "model": (eq and passport_ok and eq.td_model) or passport.get("model") or "",
             }
@@ -252,10 +319,13 @@ class F3dViewerProviderProduction(models.AbstractModel):
         """Початок і кінець зміни за календарем центру; без календаря — з 07:00."""
         day = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
         atts = wc.resource_calendar_id.attendance_ids.filtered(
-            lambda a: a.dayofweek == str(weekday) and a.day_period != "lunch" and not a.display_type)
+            lambda a: a.dayofweek == str(weekday) and a.day_period != "lunch" and not a.display_type
+        )
         if atts:
-            return (day + timedelta(hours=min(atts.mapped("hour_from"))),
-                    day + timedelta(hours=max(atts.mapped("hour_to"))))
+            return (
+                day + timedelta(hours=min(atts.mapped("hour_from"))),
+                day + timedelta(hours=max(atts.mapped("hour_to"))),
+            )
         return day + timedelta(hours=7), day + timedelta(days=1)
 
     # ------------------------------------------------------------------ компоненти (R-08)
@@ -265,8 +335,9 @@ class F3dViewerProviderProduction(models.AbstractModel):
         if not mos or not payload_tools.access_ok(env, "stock.quant"):
             return {}
         pids = mos.move_raw_ids.filtered(lambda m: m.state != "cancel").product_id.ids
-        quants = env["stock.quant"].search_fetch([("product_id", "in", pids), ("quantity", "!=", 0),
-                                            ("location_id.td_code", "!=", False)])
+        quants = env["stock.quant"].search_fetch(
+            [("product_id", "in", pids), ("quantity", "!=", 0), ("location_id.td_code", "!=", False)]
+        )
         order = {c: i for i, c in enumerate(((static.get("layout") or {}).get("locations") or {}))}
         res = {}
         for q in quants:
@@ -283,10 +354,14 @@ class F3dViewerProviderProduction(models.AbstractModel):
             g["done"] = g["done"] and mv.state == "done"
         out = []
         for product, g in groups.items():
-            out.append({
-                "product": product.default_code or "", "qty": round(g["qty"]),
-                "available": g["avail"] >= g["qty"] or g["done"],
-                "locations": comp_locs.get(product.id, [])[:12]})
+            out.append(
+                {
+                    "product": product.default_code or "",
+                    "qty": round(g["qty"]),
+                    "available": g["avail"] >= g["qty"] or g["done"],
+                    "locations": comp_locs.get(product.id, [])[:12],
+                }
+            )
         return out
 
     # ------------------------------------------------------------------ delta (R-14)
@@ -298,12 +373,17 @@ class F3dViewerProviderProduction(models.AbstractModel):
         for model in ("mrp.production", "mrp.workorder", "mrp.workcenter", "mrp.workcenter.productivity"):
             sel |= set(changes.get(model) or ())
         env = self.env
-        if sel and not any(WO_RE.match(c) for c in sel) and all(payload_tools.access_ok(env, m) for m in (
-                "mrp.workcenter", "mrp.production")):
+        if (
+            sel
+            and not any(WO_RE.match(c) for c in sel)
+            and all(payload_tools.access_ok(env, m) for m in ("mrp.workcenter", "mrp.production"))
+        ):
             # жодного коду WO*, центру чи МО серед вибраних (напр. лише локації) — збирати нічого, 2 SQL замість ~9
             names = list(sel)
-            if not (env["mrp.workcenter"].search_count([("td_code", "in", names)], limit=1)
-                    or env["mrp.production"].search_count([("name", "in", names)], limit=1)):
+            if not (
+                env["mrp.workcenter"].search_count([("td_code", "in", names)], limit=1)
+                or env["mrp.production"].search_count([("name", "in", names)], limit=1)
+            ):
                 return
         tmp = {}
         self._td_viewer_collect(tmp, ctx)

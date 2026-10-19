@@ -12,7 +12,6 @@ ZZ = "td.viewer.provider.zz_"
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestProviders(F3dViewerBase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -32,8 +31,7 @@ class TestProviders(F3dViewerBase):
     def _covered_sections(self, exclude=()):
         """Розділи, які обслуговує хоч один зареєстрований провайдер (крім `exclude`): очікування
         «static/error» не мають залежати від того, які модулі з провайдерами (access, fire_safety…) встановлено."""
-        return {s for p in get_providers(self.env) if p._name not in exclude
-                for s in getattr(p, "_td_sections", ())}
+        return {s for p in get_providers(self.env) if p._name not in exclude for s in getattr(p, "_td_sections", ())}
 
     def _patch_zz_fail_section(self):
         """Переносить zz_fail на статичний розділ без «живого» провайдера й повертає його назву
@@ -49,6 +47,7 @@ class TestProviders(F3dViewerBase):
             if this.env.context.get("zz_fail"):
                 payload.setdefault(section, {})["partial"] = True  # частковий запис, який має відкотитись
                 raise ValueError("boom")
+
         self.patch(cls, "_td_viewer_collect", collect)
         return section
 
@@ -61,6 +60,7 @@ class TestProviders(F3dViewerBase):
             def wrapper(this, payload, ctx, orig=orig, name=p._name):
                 calls.append(name)
                 return orig(this, payload, ctx)
+
             self.patch(cls, "_td_viewer_collect", wrapper)
         return calls
 
@@ -92,6 +92,7 @@ class TestProviders(F3dViewerBase):
 
     def test_failed_provider_restores_static_full(self):
         from odoo.addons.td_viewer3d.tools import static_data
+
         section = self._patch_zz_fail_section()
         with self.assertLogs("odoo.addons.td_viewer3d.tools.payload", level="ERROR"):
             data = self._builder(ctx={"zz_fail": True}, full=True).build()
@@ -106,8 +107,11 @@ class TestProviders(F3dViewerBase):
         # відмову за кількома розділами лише тоді, коли пізніших провайдерів цього розділу немає
         duck = self.env[ZZ + "duck"]
         key = (getattr(duck, "_td_sequence", 1000), duck._name)
-        later = [p._name for p in get_providers(self.env)
-                 if (getattr(p, "_td_sequence", 1000), p._name) > key and "infra" in getattr(p, "_td_sections", ())]
+        later = [
+            p._name
+            for p in get_providers(self.env)
+            if (getattr(p, "_td_sequence", 1000), p._name) > key and "infra" in getattr(p, "_td_sections", ())
+        ]
         if not later:
             self.assertEqual(data["meta"]["sections"]["infra"], "denied")
         self.assertNotIn("zz_duck", data)
@@ -145,13 +149,16 @@ class TestProviders(F3dViewerBase):
         data = self._builder(full=True).build()
         keys = list(data)
         base = [k for k in keys if k in BASE_KEYS]
-        self.assertEqual(keys[:len(base)], base)
+        self.assertEqual(keys[: len(base)], base)
         self.assertEqual(base, [k for k in BASE_KEYS if k in base])
-        self.assertEqual([k for k in keys[len(base):] if k.startswith("zz_")], ["zz_duck"])
+        self.assertEqual([k for k in keys[len(base) :] if k.startswith("zz_")], ["zz_duck"])
         self.assertEqual(data["meta"]["schema"], "1.1")
         covered = self._covered_sections()
-        checked = [k for k in ("energy", "lighting", "ventilation", "evacuation", "passports")
-                   if k in STATIC_SECTIONS and k not in covered]
+        checked = [
+            k
+            for k in ("energy", "lighting", "ventilation", "evacuation", "passports")
+            if k in STATIC_SECTIONS and k not in covered
+        ]
         self.assertTrue(checked, "усі перевірювані статичні розділи вже мають провайдера")
         for k in checked:
             self.assertEqual(data["meta"]["sections"].get(k), "static")

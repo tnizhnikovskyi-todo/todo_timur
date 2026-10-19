@@ -12,11 +12,23 @@ from odoo.addons.td_viewer3d.tools import dates, static_data
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestStatic(BaseCase):
-
     def test_static_keys(self):
         data = static_data.load()
-        for key in ("passports", "energy", "layout", "path_templates", "lighting", "ventilation", "fire", "infra",
-                    "evacuation", "zones", "locations", "workcenters", "equipment"):
+        for key in (
+            "passports",
+            "energy",
+            "layout",
+            "path_templates",
+            "lighting",
+            "ventilation",
+            "fire",
+            "infra",
+            "evacuation",
+            "zones",
+            "locations",
+            "workcenters",
+            "equipment",
+        ):
             self.assertIn(key, data)
 
     def test_static_etag_stable(self):
@@ -59,7 +71,6 @@ class TestStatic(BaseCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestDates(BaseCase):
-
     def test_roundtrip_kyiv(self):
         # 12.10.2026 — літній час (UTC+3)
         self.assertEqual(dates.local(dates.utc("2026-10-12 10:30")), "2026-10-12 10:30")

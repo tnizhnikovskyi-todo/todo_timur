@@ -1,4 +1,5 @@
 """M-03: подія шини td.viewer.event, коалесценція повідомлень (R-15), крон сигналів."""
+
 import logging
 from datetime import timedelta
 from functools import partial
@@ -38,15 +39,17 @@ class F3dViewerEvent(models.Model):
     model = fields.Char(string="Модель", required=True, index=True, size=64)
     codes = fields.Json(string="Коди", required=True)
     kind = fields.Selection(
-        [("state", "Стан"), ("stock", "Залишки"), ("doc", "Документ"), ("signal", "Сигнал"),
-         ("maintenance", "ТО")], string="Тип", required=True, index=True)
+        [("state", "Стан"), ("stock", "Залишки"), ("doc", "Документ"), ("signal", "Сигнал"), ("maintenance", "ТО")],
+        string="Тип",
+        required=True,
+        index=True,
+    )
     user_id = fields.Many2one("res.users", string="Користувач", ondelete="set null")
     n = fields.Integer(string="Кодів", compute="_compute_n", store=True)
     codes_text = fields.Char(string="Коди (текст)", compute="_compute_codes_text")
 
     def init(self):
-        self.env.cr.execute(
-            "CREATE INDEX IF NOT EXISTS td_viewer_event_ts_model_idx ON td_viewer_event (ts, model)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS td_viewer_event_ts_model_idx ON td_viewer_event (ts, model)")
 
     @api.depends("codes")
     def _compute_n(self):
@@ -87,11 +90,14 @@ class F3dViewerEvent(models.Model):
                 for (model, kind), codes in sorted(data.items()):
                     codes = sorted(codes)[:CODES_CAP]
                     env["td.viewer.event"].sudo().create(
-                        {"ts": now, "model": model, "codes": codes, "kind": kind, "user_id": env.uid})
+                        {"ts": now, "model": model, "codes": codes, "kind": kind, "user_id": env.uid}
+                    )
                     if bus_on:
                         env["bus.bus"]._sendone(
-                            "f3d_viewer", "f3d_viewer",
-                            {"model": model, "codes": codes, "kind": kind, "ts": dates.iso_utc(now)})
+                            "f3d_viewer",
+                            "f3d_viewer",
+                            {"model": model, "codes": codes, "kind": kind, "ts": dates.iso_utc(now)},
+                        )
         except Exception:  # noqa: BLE001
             _logger.exception("не вдалося опублікувати події шини f3d_viewer")
 
@@ -147,8 +153,11 @@ class F3dViewerEvent(models.Model):
         domain = [("x_active", "=", True), ("x_code", "!=", False)]
         if last:
             domain.append(("x_updated", ">", last))
-        rows = self.env["x_f3d_signal"].sudo().search_read(
-            domain, ["x_code", "x_updated"], order="x_updated asc, id asc", limit=CODES_CAP)
+        rows = (
+            self.env["x_f3d_signal"]
+            .sudo()
+            .search_read(domain, ["x_code", "x_updated"], order="x_updated asc, id asc", limit=CODES_CAP)
+        )
         if not rows:
             return
         self._notify("x_f3d_signal", [r["x_code"] for r in rows], "signal")

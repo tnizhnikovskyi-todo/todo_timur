@@ -97,7 +97,7 @@ class TestChainsPure(BaseCase):
         for m in via:
             parent = self.mo[m["origin"]]
             self.assertEqual(m["delivery"]["via"], parent["name"])
-            self.assertEqual(m["delivery"]["steps"][-len(parent["delivery"]["steps"]):], parent["delivery"]["steps"])
+            self.assertEqual(m["delivery"]["steps"][-len(parent["delivery"]["steps"]) :], parent["delivery"]["steps"])
         ref = {m["name"]: m.get("delivery") for m in self.ref["productions"]}
         for m in self.data["productions"]:
             self.assertEqual(m.get("delivery"), ref[m["name"]])
@@ -141,7 +141,6 @@ class TestChainsPure(BaseCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestChainsProvider(F3dViewerBase):
-
     def _collect(self, user, payload):
         env = self.env(user=user)
         ctx = {"sections": {}, "static": static_data.load(), "changes": {}, "codes": None}
@@ -180,7 +179,6 @@ class TestChainsProvider(F3dViewerBase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestChains(F3dViewerCase):
-
     def test_zones_45_outdoor_polygon_roof(self):
         """AC-61."""
         data = self.payload(self.user_f3d, full=True)
@@ -215,7 +213,7 @@ class TestChains(F3dViewerCase):
     def test_delta_on_mrp_production_change(self):
         """R-14: дельта chains викликає collect вбудованих провайдерів без помилок."""
         from odoo.addons.td_viewer3d.tools.payload import DeltaBuilder
-        res = DeltaBuilder(self.env(user=self.user_f3d), since=None,
-                           changes={"mrp.production": {"WH/MO/TST"}}).build()
+
+        res = DeltaBuilder(self.env(user=self.user_f3d), since=None, changes={"mrp.production": {"WH/MO/TST"}}).build()
         self.assertFalse(res["patch"]["meta"].get("errors"))
         self.assertIn("sheet_chain", res["patch"])

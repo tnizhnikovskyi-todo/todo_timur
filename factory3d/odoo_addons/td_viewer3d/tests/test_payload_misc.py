@@ -15,17 +15,26 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         super().setUpClass()
         env = cls.env
         # у Odoo 19 звичайний користувач бачить лише обладнання, яке «відстежує» (ir.rule maintenance)
-        cls.user_maint = cls._make_user("f3d_maint", [
-            "base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"])
+        cls.user_maint = cls._make_user(
+            "f3d_maint", ["base.group_user", "td_factory3d.group_td_user", "maintenance.group_equipment_manager"]
+        )
         cls.category = env["maintenance.equipment.category"].create({"name": "TST Навантажувачі"})
-        cls.equipment = env["maintenance.equipment"].create({
-            "name": "TST forklift", "td_code": "TST-FL-1", "category_id": cls.category.id, "serial_no": "SN-123"})
+        cls.equipment = env["maintenance.equipment"].create(
+            {"name": "TST forklift", "td_code": "TST-FL-1", "category_id": cls.category.id, "serial_no": "SN-123"}
+        )
         stage_new = env["maintenance.stage"].search([("done", "=", False)], limit=1)
-        cls.request = env["maintenance.request"].create({
-            "name": "TST гідравліка", "equipment_id": cls.equipment.id, "stage_id": stage_new.id,
-            "maintenance_type": "corrective", "priority": "2"})
-        cls.employee = env["hr.employee"].create({
-            "name": "TST оператор", "td_code": "OP-TST-9", "job_title": "Оператор"})
+        cls.request = env["maintenance.request"].create(
+            {
+                "name": "TST гідравліка",
+                "equipment_id": cls.equipment.id,
+                "stage_id": stage_new.id,
+                "maintenance_type": "corrective",
+                "priority": "2",
+            }
+        )
+        cls.employee = env["hr.employee"].create(
+            {"name": "TST оператор", "td_code": "OP-TST-9", "job_title": "Оператор"}
+        )
 
     # --- M-01e
     def test_equipment_and_requests(self):
@@ -35,8 +44,10 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         self.assertEqual((eq["name"], eq["category"], eq["serial"]), ("TST forklift", "TST Навантажувачі", "SN-123"))
         self.assertEqual(eq["maintenance_request"], "TST гідравліка")
         req = next(r for r in data["maintenance_requests"] if r["equipment"] == "TST-FL-1")
-        self.assertEqual((req["id"], req["stage"], req["priority"], req["maintenance_type"]),
-                         ("TST гідравліка", self.request.stage_id.name, "2", "corrective"))
+        self.assertEqual(
+            (req["id"], req["stage"], req["priority"], req["maintenance_type"]),
+            ("TST гідравліка", self.request.stage_id.name, "2", "corrective"),
+        )
         self.assertEqual(data["meta"]["sections"]["equipment"], "live")
 
     def test_serial_equal_code_omitted(self):
@@ -68,6 +79,7 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         def spy_emp(this, *a, **kw):
             calls.append("employee")
             return orig_emp(this, *a, **kw)
+
         with patch.object(pub, "search_read", spy_pub), patch.object(emp, "search_read", spy_emp):
             # лише секція employees (власний шлях viewer): сторонні провайдери (access) не виконуються
             data = self.payload(self.user_mrp_only, sections={"employees"})
@@ -77,8 +89,9 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         self.assertEqual(rec["name"], "TST оператор")
         self.assertEqual(rec["job"], "Оператор")
         self.assertEqual(set(rec) & {"name", "job", "department", "shift"}, {"name", "job", "department", "shift"})
-        self.assertFalse(set(rec) - {"name", "job", "department", "shift", "workcenter", "current_workorder",
-                                     "present"})
+        self.assertFalse(
+            set(rec) - {"name", "job", "department", "shift", "workcenter", "current_workorder", "present"}
+        )
 
     # --- M-01d
     def test_quality_missing_without_model(self):

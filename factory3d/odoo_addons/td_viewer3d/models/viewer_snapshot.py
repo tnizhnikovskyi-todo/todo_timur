@@ -1,4 +1,5 @@
 """M-02: знімок стану заводу (gzip JSON), плановий/подієвий/ручний; ротація."""
+
 import base64
 import gzip
 import json
@@ -35,22 +36,29 @@ class F3dViewerSnapshot(models.Model):
 
     ts = fields.Datetime(string="Момент", required=True, index=True, default=fields.Datetime.now)
     shift_date = fields.Date(
-        string="Дата зміни", required=True, index=True, compute="_compute_shift_date", store=True, precompute=True)
+        string="Дата зміни", required=True, index=True, compute="_compute_shift_date", store=True, precompute=True
+    )
     is_today = fields.Boolean(string="Сьогодні", compute="_compute_day_flags", search="_search_is_today")
     is_this_week = fields.Boolean(string="Цей тиждень", compute="_compute_day_flags", search="_search_is_this_week")
     kind = fields.Selection(
         [("periodic", "Плановий"), ("event", "Подія"), ("install", "Установка"), ("manual", "Вручну")],
-        string="Тип", required=True, default="periodic", index=True)
+        string="Тип",
+        required=True,
+        default="periodic",
+        index=True,
+    )
     payload_file = fields.Binary(string="Дані (gzip JSON)", attachment=True, required=True)
     payload_name = fields.Char(string="Файл", default="snapshot.json.gz")
     size_kb = fields.Integer(
-        string="Розмір, КБ", readonly=True, compute="_compute_size_kb", store=True, precompute=True)
+        string="Розмір, КБ", readonly=True, compute="_compute_size_kb", store=True, precompute=True
+    )
     schema = fields.Char(string="Версія схеми", default="1.1", required=True)
     note = fields.Char(string="Примітка")
     event_count = fields.Integer(string="Подій з попереднього", readonly=True)
     user_id = fields.Many2one("res.users", string="Від імені")
     company_id = fields.Many2one(
-        "res.company", string="Компанія", required=True, default=lambda s: s.env.company, index=True)
+        "res.company", string="Компанія", required=True, default=lambda s: s.env.company, index=True
+    )
     display_name = fields.Char(compute="_compute_display_name")
 
     _f3d_size_nonneg = models.Constraint("CHECK (size_kb >= 0)", "Розмір знімка не може бути від'ємним.")
@@ -113,6 +121,7 @@ class F3dViewerSnapshot(models.Model):
     @api.model
     def _take(self, kind="periodic", note=None, user=None):
         from ..tools.payload import PayloadBuilder
+
         env = self.env
         now = dates.now(env)  # шкала демо-годинника (R-21): shift_date знімка збігається з «сьогодні» API-05
         prev = self.search([], limit=1)
@@ -124,18 +133,32 @@ class F3dViewerSnapshot(models.Model):
         payload = PayloadBuilder(env(user=user.id, su=False), full=True).build()
         events = []
         if prev:
-            rows = env["td.viewer.event"].sudo().search_read(
-                [("ts", ">", prev.ts)], ["ts", "model", "codes", "kind"], limit=EVENTS_CAP, order="ts desc, id desc")
-            events = [{"ts": dates.iso_utc(r["ts"]), "model": r["model"], "codes": r["codes"], "kind": r["kind"]}
-                      for r in rows]
+            rows = (
+                env["td.viewer.event"]
+                .sudo()
+                .search_read(
+                    [("ts", ">", prev.ts)], ["ts", "model", "codes", "kind"], limit=EVENTS_CAP, order="ts desc, id desc"
+                )
+            )
+            events = [
+                {"ts": dates.iso_utc(r["ts"]), "model": r["model"], "codes": r["codes"], "kind": r["kind"]}
+                for r in rows
+            ]
         meta = payload.setdefault("meta", {})
         meta["events"] = events
         meta["snapshot"] = {"id": None, "ts": dates.local(now), "kind": kind}
-        rec = self.create({
-            "ts": now, "kind": kind, "note": note, "payload_file": self._pack(payload),
-            "schema": meta.get("schema") or "1.1", "event_count": len(events),
-            "user_id": user.id, "company_id": env.company.id,
-        })
+        rec = self.create(
+            {
+                "ts": now,
+                "kind": kind,
+                "note": note,
+                "payload_file": self._pack(payload),
+                "schema": meta.get("schema") or "1.1",
+                "event_count": len(events),
+                "user_id": user.id,
+                "company_id": env.company.id,
+            }
+        )
         # id відомий лише після create: дописуємо його в meta.snapshot (API-06 віддає вкладення як є)
         meta["snapshot"]["id"] = rec.id
         rec.payload_file = self._pack(payload)

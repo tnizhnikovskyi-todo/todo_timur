@@ -11,8 +11,7 @@ DEMO_CLOCK = "2026-10-12 10:30"
 
 def is_demo_db(env):
     """Ознака демо/тестової бази: встановлений td_iot_sim або компанія демо."""
-    iot = env["ir.module.module"].sudo().search_count(
-        [("name", "=", "td_iot_sim"), ("state", "=", "installed")])
+    iot = env["ir.module.module"].sudo().search_count([("name", "=", "td_iot_sim"), ("state", "=", "installed")])
     return bool(iot) or bool(env["res.company"].sudo().search_count([("name", "=", DEMO_COMPANY)]))
 
 
@@ -33,6 +32,7 @@ def post_init(env):
     # 3. перевірка кодів сцени (резолвер R-16 — tools/payload, якщо вже є)
     try:
         from .tools import payload  # noqa: F401
+
         check = getattr(payload, "log_scene_codes", None)
         if check:
             check(env)
@@ -51,8 +51,11 @@ def post_init(env):
 def uninstall(env):
     params = env["ir.config_parameter"].sudo()
     params.search([("key", "=like", PREFIX + "%")]).unlink()
-    data = env["ir.model.data"].sudo().search(
-        [("module", "=", "td_viewer3d"), ("name", "=", "user_kiosk"), ("model", "=", "res.users")])
+    data = (
+        env["ir.model.data"]
+        .sudo()
+        .search([("module", "=", "td_viewer3d"), ("name", "=", "user_kiosk"), ("model", "=", "res.users")])
+    )
     user = env["res.users"].sudo().browse(data.mapped("res_id")).exists()
     # без xmlid модульна деінсталяція не видалить користувача (він лише архівується)
     data.unlink()

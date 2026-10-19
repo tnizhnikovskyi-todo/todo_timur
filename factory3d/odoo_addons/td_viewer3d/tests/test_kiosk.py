@@ -86,8 +86,7 @@ class TestKioskHttp(HttpCase, F3dViewerBase):
             self.assertEqual(self.url_open("/f3d/kiosk/" + bad, allow_redirects=False).status_code, 404, bad[:20])
             self.assertEqual(self.url_open("/f3d/kiosk/%s/data" % bad, allow_redirects=False).status_code, 404)
         self.set_param("kiosk_enabled", "False")
-        for path in ("", "/data", "/static", "/delta?since=2026-10-12T00:00:00Z", "/snapshots",
-                     "/parts/manifest.json"):
+        for path in ("", "/data", "/static", "/delta?since=2026-10-12T00:00:00Z", "/snapshots", "/parts/manifest.json"):
             res = self._get(path)
             self.assertEqual(res.status_code, 404, path)
             self.assertEqual(res.content, b"")

@@ -8,7 +8,6 @@ from .common import F3dViewerBase
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestInstall(F3dViewerBase):
-
     def _param(self, key):
         return self.env["ir.config_parameter"].sudo().get_param("td.viewer." + key)
 
@@ -19,9 +18,17 @@ class TestInstall(F3dViewerBase):
         return set(self.env["ir.ui.menu"].with_user(user)._visible_menu_ids())
 
     def test_params_defaults(self):
-        expected = {"snapshot_minutes": "10", "snapshot_hours": "06:30-16:00", "snapshot_keep_days": "14",
-                    "event_keep_hours": "48", "delta_debounce_ms": "1500", "kiosk_enabled": "True",
-                    "kiosk_refresh_s": "15", "bus_enabled": "True", "lite_default": "auto"}
+        expected = {
+            "snapshot_minutes": "10",
+            "snapshot_hours": "06:30-16:00",
+            "snapshot_keep_days": "14",
+            "event_keep_hours": "48",
+            "delta_debounce_ms": "1500",
+            "kiosk_enabled": "True",
+            "kiosk_refresh_s": "15",
+            "bus_enabled": "True",
+            "lite_default": "auto",
+        }
         for key, val in expected.items():
             self.assertEqual(self._param(key), val, key)
         self.assertRegex(self._param("kiosk_token") or "", r"^[0-9a-f]{32}$")
@@ -40,8 +47,7 @@ class TestInstall(F3dViewerBase):
         self.assertEqual(user.login, "f3d_kiosk")
         self.assertEqual(user.action_id.id, self.env.ref("td_viewer3d.action_td_viewer").id)
         with self.assertRaises(AccessDenied):
-            user.sudo()._check_credentials({"type": "password", "password": "anything"},
-                                           {"interactive": True})
+            user.sudo()._check_credentials({"type": "password", "password": "anything"}, {"interactive": True})
 
     def test_menus_by_group(self):  # AC-54
         nobody, f3d = self._visible(self.user_nobody), self._visible(self.user_f3d)
@@ -65,8 +71,7 @@ class TestInstall(F3dViewerBase):
 
     def test_menu_sequences(self):  # AC-64
         root = self.env.ref("td_factory3d.menu_td_root")
-        expected = {"menu_td_viewer": 10, "menu_td_journal": 12, "menu_td_cycle_check": 14,
-                    "menu_td_demo": 16}
+        expected = {"menu_td_viewer": 10, "menu_td_journal": 12, "menu_td_cycle_check": 14, "menu_td_demo": 16}
         for xmlid, seq in expected.items():
             menu = self._menu(xmlid)
             if not menu:
@@ -89,15 +94,16 @@ class TestInstall(F3dViewerBase):
         self.assertEqual(privilege.category_id, self.env.ref("td_factory3d.module_category_factory3d"))
         self.assertEqual(privilege.sequence, 10)
         self.assertNotEqual(group.privilege_id, self.env.ref("td_factory3d.privilege_td"))
-        implied = {self.env.ref(x) for x in ("base.group_user", "td_factory3d.group_td_user",
-                                              "stock.group_stock_user", "mrp.group_mrp_user")}
+        implied = {
+            self.env.ref(x)
+            for x in ("base.group_user", "td_factory3d.group_td_user", "stock.group_stock_user", "mrp.group_mrp_user")
+        }
         self.assertEqual(set(group.implied_ids), implied)
 
     def test_uninstall_archives_kiosk_user(self):  # ARCHITECTURE §2.8
         user = self.env.ref("td_viewer3d.user_kiosk")
         uninstall(self.env)
-        data = self.env["ir.model.data"].sudo().search(
-            [("module", "=", "td_viewer3d"), ("name", "=", "user_kiosk")])
+        data = self.env["ir.model.data"].sudo().search([("module", "=", "td_viewer3d"), ("name", "=", "user_kiosk")])
         self.assertFalse(data, "xmlid user_kiosk має бути видалений, щоб користувач пережив деінсталяцію")
         self.assertTrue(user.exists())
         self.assertFalse(user.active)
