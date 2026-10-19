@@ -1679,6 +1679,18 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 `td_constructor_viewer3d` (R-01…R-06 його SPEC) застосовує `layout`; ключ `layout` у `/data` — **не** статичний
 `static.layout` (макет будівлі, `D.static.layout`).
 
+### R-26 Розширення ядра: кнопки в картці об'єкта (VX-06)
+
+Крім R-25, `ext` може мати `cardActions(code, D, api) → [{id, label, primary?}]` (VX-06; решта точок R-26 — VX-01…VX-05: режими
+розфарбування, `applyData`, `cardBlocks`, `onAction`/`api.openAction`/`api.canOpenAction` — описано в `td_energy_viewer3d/SPEC.md` §8.4.1).
+Ядро додає кнопки в **верхній ряд дій** картки (`.o_f3d_actions-top`) між «Закрити» і «Відкрити в Odoo»:
+`<button class="o_f3d_btn[ o_f3d_btn-primary]" data-ext="<ext.id>:<id>">`, `label` екранує ядро; `primary` — акцентна заливка
+(`--f3d-accent`), решта кнопок ряду — звичайні; клік іде тим самим шляхом `data-ext` → `ext.onAction(api, id, "", el)`. `id` — без
+двокрапки. Помилка `cardActions` логується й не ламає картку та інші розширення; елемент без `id` або `label` і не-масив пропускаються;
+`D` може бути `null`. Розширення саме не віддає кнопок, що потребують `api.openAction`, коли `api.canOpenAction` = `false` (кіоск).
+Ядро не знає, що це за кнопки: перший споживач — міст `td_energy_viewer3d` («Відкрити пульт» у картках `EMS-1` / `SWB-1`).
+Тест: `static/tests/hoot/extension_energy.test.js` (`VX06`), `tests/test_r26_extension.py`.
+
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи / джерело |

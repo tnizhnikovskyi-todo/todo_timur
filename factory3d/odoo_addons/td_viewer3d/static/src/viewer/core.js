@@ -23,8 +23,8 @@ const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 // після завантаження моделі, на кожній повній дельті й зміні розкладки — ДО `stockLoad.sync`, щоб вантаж за залишками
 // ліг у вже зсунуті комірки. Без зареєстрованих розширень і без `D.layout` ядро працює як раніше.
 const EXTENSIONS = new Set();
-/** `ext = { id, applyLayout(api, layout, fresh), colorModes, modeColor, applyData, cardBlocks, onAction }`; усе, крім `id`
- * (потрібен для `data-ext`), необов'язкове (R-26, VX-01…VX-05, див. блок «розширення ядра» нижче); `layout` — `D.layout`
+/** `ext = { id, applyLayout(api, layout, fresh), colorModes, modeColor, applyData, cardBlocks, cardActions, onAction }`; усе, крім `id`
+ * (потрібен для `data-ext`), необов'язкове (R-26, VX-01…VX-06, див. блок «розширення ядра» нижче); `layout` — `D.layout`
  * або null; повертає функцію зняття. */
 export function registerViewerExtension(ext) {
     EXTENSIONS.add(ext);
@@ -811,7 +811,7 @@ function applyLayout(fresh) {
     try { ext.applyLayout(extApi, D?.layout ?? null, fresh || null); } catch (err) { console.error(err); }
   }
 }
-// ---------------------------------------------------------------- розширення ядра (R-26: VX-01…VX-05)
+// ---------------------------------------------------------------- розширення ядра (R-26: VX-01…VX-06)
 // Збій розширення лише логуємо: ядро й інші розширення працюють далі. Без розширень цей блок нічого не робить.
 function extTry(fn, fallback) {
   try { return fn(); } catch (err) { console.error(err); return fallback; }
@@ -860,6 +860,19 @@ function extCards(code) {
   for (const ext of EXTENSIONS) {
     if (typeof ext.cardBlocks !== "function") {continue;}
     for (const b of [].concat(extTry(() => ext.cardBlocks(code, D, extApi), []) || [])) {h += b;}
+  }
+  return h;
+}
+// VX-06: кнопки розширень у верхньому ряду дій картки; `cardActions(code, D, api) → [{id, label, primary?}]`;
+// клік → `data-ext="<ext.id>:<id>"` → ext.onAction(api, id, "", el); `id` без двокрапки; `primary` — акцентна кнопка
+function extActions(code) {
+  let h = "";
+  for (const ext of EXTENSIONS) {
+    if (typeof ext.cardActions !== "function") {continue;}
+    for (const a of [].concat(extTry(() => ext.cardActions(code, D, extApi), []) || [])) {
+      if (!a || !a.id || !a.label) {continue;}
+      h += "<button type=\"button\" class=\"o_f3d_btn" + (a.primary ? " o_f3d_btn-primary" : "") + "\" data-ext=\"" + esc(ext.id + ":" + a.id) + "\">" + esc(a.label) + "</button>";
+    }
   }
   return h;
 }
@@ -2335,7 +2348,7 @@ function renderObject(code) {
     <h3>${esc(u.label || u.code)}</h3>
     <div class="o_f3d_code">${esc(u.code)}</div>
     ${chip}
-    <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${oi?.show ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
+    <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${extActions(code)}${oi?.show ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
     ${stockLine(code, u) || (u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : "")}
     ${extra}`;
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);

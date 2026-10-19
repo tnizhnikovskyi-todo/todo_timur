@@ -1,4 +1,4 @@
-"""R-26 (расширение ядра, VX-01…VX-05; AC-278…AC-281): сторожові перевірки джерел клієнта.
+"""R-26 (расширение ядра, VX-01…VX-06; AC-278…AC-281): сторожові перевірки джерел клієнта.
 
 Поведінку розширень перевіряє HOOT (`static/tests/hoot/extension_energy.test.js`, запускається `test_hoot.py`);
 тут — те, що hoot не бачить: мінімізатор асетів (`rjsmin`) і межі втручання в ядро.
@@ -32,6 +32,7 @@ class TestR26Extension(BaseCase):
             "xm.ext.modeColor(colorMode, root, D)",
             "ext.applyData(extApi, D, info)",
             "ext.cardBlocks(code, D, extApi)",
+            "ext.cardActions(code, D, extApi)",
             "ext.onAction(extApi, act",
             "data-ext",  # в обробнику кліку панелі: `[data-ext]`
         ):
@@ -44,7 +45,7 @@ class TestR26Extension(BaseCase):
         self.assertLessEqual(len(self.block.splitlines()), 70)
         self.assertFalse(NESTED_TEMPLATE.search(self.block), "вкладений шаблонний літерал у блоці R-26")
         for line in self.core.splitlines():
-            if "extData(" in line or "extModeOf(" in line or "extCards(" in line:
+            if "extData(" in line or "extModeOf(" in line or "extCards(" in line or "extActions(" in line:
                 self.assertFalse(NESTED_TEMPLATE.search(line), line)
 
     def test_rjsmin_keeps_block_literals(self):  # мінімізація не ламає рядки з пробілами/лапками
@@ -67,7 +68,7 @@ class TestR26Extension(BaseCase):
         self.assertIn("onOpenAction: (act) => this.action.doAction(act)", action)
         self.assertNotIn("onOpenAction", (STATIC / "src" / "kiosk" / "kiosk.js").read_text(encoding="utf-8"))
 
-    def test_hoot_covers_all_points(self):  # AC-278…AC-280: по тесту на кожен VX
+    def test_hoot_covers_all_points(self):  # AC-278…AC-280: по тесту на кожен VX (VX-06 входить до AC-280)
         hoot = (STATIC / "tests" / "hoot" / "extension_energy.test.js").read_text(encoding="utf-8")
-        for vx in ("VX01", "VX02", "VX03", "VX04", "VX05"):
+        for vx in ("VX01", "VX02", "VX03", "VX04", "VX05", "VX06"):
             self.assertRegex(hoot, r'test\("%s' % vx)

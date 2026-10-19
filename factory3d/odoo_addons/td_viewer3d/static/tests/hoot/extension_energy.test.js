@@ -1,5 +1,5 @@
 /** @odoo-module */
-// HOOT: розширення ядра R-26 (VX-01…VX-05; AC-278…AC-280, AC-281): colorModes/modeColor, applyData, cardBlocks, onAction/openAction.
+// HOOT: розширення ядра R-26 (VX-01…VX-06; AC-278…AC-280, AC-281): colorModes/modeColor, applyData, cardBlocks, cardActions, onAction/openAction.
 // Без нових членів розширення (R-25 `applyLayout`) працює як раніше — це перевіряє extension.test.js.
 import { after, describe, expect, test } from "@odoo/hoot";
 import { tick } from "@odoo/hoot-mock";
@@ -265,6 +265,70 @@ test("VX05 api.openAction → opts.onOpenAction (true); без onOpenAction (к�
     expect(kapi).not.toBe(api);
     expect(kapi.canOpenAction).toBe(false);
     expect(kapi.openAction({ type: "x" })).toBe(false);
+});
+
+test("VX06 cardActions → кнопки у верхньому ряду картки (між «Закрити» і «Відкрити в Odoo»); primary — акцентна; клік → onAction(api, id, \"\", el)", async () => {
+    const acts = [];
+    const calls = [];
+    after(registerViewerExtension({
+        id: "spy",
+        cardActions(code, D, api) {
+            calls.push([code, D, api]);
+            return code === "SAW-1" ? [{ id: "go", label: "Перейти <1>", primary: true }, { id: "two", label: "Друга" }] : [];
+        },
+        onAction(api, action, arg, el) {
+            acts.push({ api, action, arg, el });
+        },
+    }));
+    after(registerViewerExtension({ id: "none", cardActions: () => null }));
+    const { viewer, el } = await mountViewer({ model: "core" });
+    viewer.select("SAW-1");
+    const row = q(el, ".o_f3d_actions-top");
+    const btns = qa(row, "button");
+    expect(btns.map((b) => b.textContent).slice(0, 4)).toEqual(["Наблизити", "Закрити", "Перейти <1>", "Друга"]); // текст екранує ядро
+    const [, , first, second] = btns;
+    expect(first.classList.contains("o_f3d_btn-primary")).toBe(true);
+    expect(second.classList.contains("o_f3d_btn-primary")).toBe(false);
+    expect(first.dataset.ext).toBe("spy:go");
+    expect(calls.at(-1)[0]).toBe("SAW-1");
+    expect(calls.at(-1)[1]).toBe(viewer.D);
+    expect(typeof calls.at(-1)[2].openAction).toBe("function");
+    first.click();
+    expect(acts.length).toBe(1);
+    expect(acts[0].action).toBe("go");
+    expect(acts[0].arg).toBe("");
+    expect(acts[0].el).toBe(first);
+    second.click();
+    expect(acts.map((a) => a.action)).toEqual(["go", "two"]);
+    viewer.select("CNC-2"); // пустий масив і не-масив — нічого
+    expect(qa(q(el, ".o_f3d_actions-top"), "[data-ext]").length).toBe(0);
+});
+
+test("VX06 cardActions: помилка розширення і сміття в списку логуються/пропускаються, ядро і сусіди працюють", async () => {
+    const errors = silence();
+    after(registerViewerExtension({ id: "bad", cardActions() { throw new Error("boom"); } }));
+    after(registerViewerExtension({ id: "junk", cardActions: () => [null, {}, { id: "x" }, { label: "y" }, "str"] }));
+    after(registerViewerExtension({ id: "ok", cardActions: () => ({ id: "fine", label: "Добре" }) }));
+    const { viewer, el } = await mountViewer({ model: "core" });
+    viewer.select("SAW-1");
+    expect(errors.length).toBeGreaterThan(0);
+    expect(qa(q(el, ".o_f3d_actions-top"), "[data-ext]").map((b) => b.dataset.ext)).toEqual(["ok:fine"]);
+    expect(q(el, ".o_f3d_actions-top .o_f3d_c-focus")).not.toBe(null);
+    expect(q(el, ".o_f3d_actions-top .o_f3d_c-close")).not.toBe(null);
+});
+
+test("VX06 кнопка розширення, що перевіряє api.canOpenAction, у кіоску не показується", async () => {
+    after(registerViewerExtension({
+        id: "spy",
+        cardActions: (code, D, api) => (api.canOpenAction ? [{ id: "go", label: "Перейти", primary: true }] : []),
+    }));
+    const withOpen = await mountViewer({ model: "core", viewerOpts: { onOpenAction: () => {} } });
+    withOpen.viewer.select("SAW-1");
+    expect(qa(withOpen.el, ".o_f3d_actions-top [data-ext]").length).toBe(1);
+    withOpen.viewer.destroy();
+    const kiosk = await mountViewer({ model: "core", kiosk: true });
+    kiosk.viewer.select("SAW-1");
+    expect(qa(kiosk.el, ".o_f3d_actions-top [data-ext]").length).toBe(0);
 });
 
 test("VX05 api: select/codeRoot приймають код, focusOn(obj), labelsRoot — контейнер міток", async () => {
