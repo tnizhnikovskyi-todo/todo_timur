@@ -239,6 +239,4 @@ class TestYardKppTours(HttpCase):
         self.start_tour("/odoo/action-td_yard.action_td_yard_kpp", "f3d_yard_kpp_tour", login="yard_tour")
 
     def test_dispatch_tour(self):  # AC-54
-        self.start_tour(
-            "/odoo/action-td_yard.action_td_yard_dispatch", "f3d_yard_dispatch_tour", login="yard_tour"
-        )
+        self.start_tour("/odoo/action-td_yard.action_td_yard_dispatch", "f3d_yard_dispatch_tour", login="yard_tour")

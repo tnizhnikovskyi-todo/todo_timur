@@ -77,9 +77,7 @@ class TestYardVisit(YardFlowCase):
         visit._set_state("arrived")
         with self.assertRaises(AccessError):
             visit.with_user(self.user_reader).action_admit()
-        stock_user = new_test_user(
-            self.env, "yard_stock", groups="td_factory3d.group_td_user,stock.group_stock_user"
-        )
+        stock_user = new_test_user(self.env, "yard_stock", groups="td_factory3d.group_td_user,stock.group_stock_user")
         with self.assertRaises(AccessError):
             visit.with_user(stock_user).action_admit()
         visit.with_user(self.user_guard).action_admit()

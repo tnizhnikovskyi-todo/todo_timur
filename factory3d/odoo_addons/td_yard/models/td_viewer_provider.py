@@ -219,9 +219,7 @@ class F3dViewerProviderYard(models.AbstractModel):
             "walk_in_today": Visit.search_count(
                 base + today("arrived_at") + [("is_walk_in", "=", True), ("state", "!=", "rejected")]
             ),
-            "unmatched": env["td.yard.lpr.event"].sudo().search_count([("kpp_alert", "=", True)])
-            if c["sec"]
-            else None,
+            "unmatched": env["td.yard.lpr.event"].sudo().search_count([("kpp_alert", "=", True)]) if c["sec"] else None,
             "avg_wait_min": round(sum(waited.mapped("wait_min")) / len(waited), 1) if waited else None,
             "weighings_today": env["td.yard.weighing"].sudo().search_count(today("ts") + [("state", "!=", "void")]),
         }

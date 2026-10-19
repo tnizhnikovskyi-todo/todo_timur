@@ -146,9 +146,7 @@ class TestYardSecurity(YardFlowCase):
             self.env["td.yard.lpr.event"].with_user(reader).search_count([])
         self.assertIn("td_yard_gate_id", command.domain)
         gate = self.env.ref("td_yard.gate_w")
-        sig = self.env["td.signal"].create(
-            {"code": "other/cmd/z", "name": "T", "kind": "gauge", "write_enabled": True}
-        )
+        sig = self.env["td.signal"].create({"code": "other/cmd/z", "name": "T", "kind": "gauge", "write_enabled": True})
         self.env["ir.config_parameter"].sudo().set_param("td.telemetry.write_enabled", "True")
         Cmd = self.env["td.command"].sudo()
         mine = Cmd.create({"signal_id": sig.id, "value": 1, "td_yard_gate_id": gate.id})
