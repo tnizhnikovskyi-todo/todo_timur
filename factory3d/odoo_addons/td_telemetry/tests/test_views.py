@@ -86,7 +86,8 @@ class TestViewsLoad(F3DTelemetryCase):
             form.save()
 
     def _default_filters_domain(self, action):
-        """Домен типових фільтрів дії, як його будує клієнт: фільтри одного блоку — OR, блоки (між `separator`) — AND."""
+        """Домен типових фільтрів дії, як його будує клієнт: фільтри одного блоку — OR, блоки (між `separator`) —
+        AND."""
         ctx = ast.literal_eval(action.context)
         arch = self.env["td.signal"].get_views([(False, "search")])["views"]["search"]["arch"]
         blocks, current = [], []
