@@ -1,13 +1,34 @@
 # ruff: noqa: B018
 {
-    "name": "Двір",
-    "summary": "Двір: рейси сторонніх фур, бронювання воріт, LPR, шлагбауми, автоваги",
-    "description": "Облік рейсів і бронювання воріт, розпізнавання номерів (Axis LPV), команди на шлагбауми "
-    "через telemetry, автоваги (SICS), диспетчерська й екран КПП.",
+    "name": "Yard Management",
+    "summary": "Plant yard: third-party truck trips, gate booking, license plate recognition, barriers, truck scales",
+    "description": """
+Yard Management
+===============
+
+Manages the plant yard: visiting trucks, gate booking, number plate recognition, barriers and weighbridges, with a dispatcher board and a checkpoint screen.
+
+Key features
+------------
+
+* Trips of third-party trucks and gate booking
+* License plate recognition events (Axis LPV)
+* Barrier commands (CAME) sent through telemetry, with safety switches
+* Truck scales (SICS protocol, Mettler Toledo)
+* Dispatcher board and a checkpoint (gatehouse) screen
+
+Requirements and notes
+----------------------
+
+* Device events and commands go through the Factory 3D collector service (yard plugin), which is not part of this module.
+* Processing of events and sending of barrier commands are disabled by default.
+* The Gantt view of gate bookings is provided by the separate bridge Yard Gantt, which requires Odoo Enterprise.
+""",
     "version": "19.0.1.0.0",
     "category": "Inventory/Inventory",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     # DEC-1: web_gantt (Enterprise) не в depends; Gantt — у мосту td_yard_gantt
     "depends": [
@@ -20,6 +41,7 @@
         "mail",
         "bus",
     ],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/td_yard_security.xml",
         "security/ir.model.access.csv",

@@ -1,8 +1,48 @@
 <section class="oe_container">
     <div class="oe_row oe_spaced">
-        <h2 class="oe_slogan">Генератори</h2>
-        <h3 class="oe_slogan">Моніторинг і керування генератором SmartGen HGM6120N через ретранслятор</h3>
-        <p>Поточний стан і журнал показань, події, тривоги з ескалацією, пульт з підтвердженням команд,
-            розклад/таймер/тест, паливо і ТО за мотогодинами.</p>
+        <h2 class="oe_slogan">Generators</h2>
+        <h3 class="oe_slogan">Monitoring and control of SmartGen HGM6120N generators through a relay</h3>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>Monitoring and control of generator sets with the SmartGen HGM6120N controller through a relay service. Current state, event and alarm journals, a control console with command confirmation, fuel accounting and maintenance by engine hours.</p>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>Current state and a journal of readings</li>
+            <li>Events and alarms with escalation</li>
+            <li>Control console with confirmation of commands by snapshots, schedule, timer and test</li>
+            <li>Fuel: canisters, refuelling, sensor calibration</li>
+            <li>Maintenance by engine hours through the standard Maintenance app</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Odoo modules: <code>base</code>, <code>mail</code>, <code>bus</code>, <code>web</code>, <code>maintenance</code>.</li>
+            <li>Python packages: <code>requests</code>, <code>pytz</code>.</li>
+            <li>Requires a SmartGen relay service reachable over HTTP. The relay is operated separately and is not part of this module.</li>
+            <li>The relay address and token are entered by an administrator and removed when the module is uninstalled.</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
     </div>
 </section>

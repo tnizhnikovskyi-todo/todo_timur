@@ -1,17 +1,36 @@
 # ruff: noqa: B018
 {
-    "name": "Будівля",
-    "summary": "Групи освітлення за нормами, DALI/HelvarNet, дахові установки й котельня (BACnet), тепловий баланс, "
-    "відхилення → заявки ТО",
-    "description": "td_bms: норми освітленості, щити й групи освітлення LT-* (Helvar Imagine 950), установки "
-    "RV-01…25, AHU-1, EF-*, котельня, тепловий баланс цеху, журнал відхилень, огляд будівлі, провайдери "
-    "3D-переглядача lighting/ventilation; плагін колектора helvarnet (services/collector_plugins/f3d_collector_bms).",
+    "name": "Building Management",
+    "summary": "Lighting groups by norms, DALI/HelvarNet, rooftop units and boiler room (BACnet), heat balance, deviations",
+    "description": """
+Building Management
+===================
+
+Building management for the plant: lighting, ventilation and heating, with a heat balance and a deviation journal that creates maintenance requests.
+
+Key features
+------------
+
+* Lighting norms, panels and lighting groups (DALI, HelvarNet)
+* Ventilation and heating units and the boiler room (BACnet)
+* Heat balance of the workshop
+* Deviation journal; deviations create maintenance requests
+* Building overview and 3D viewer providers for lighting and ventilation
+
+Requirements and notes
+----------------------
+
+* Device data comes from the Factory 3D collector service (HelvarNet and BACnet plugins), which is not part of this module.
+* Writing to building systems is disabled by default.
+""",
     "version": "19.0.1.0.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "depends": ["td_telemetry", "web"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
