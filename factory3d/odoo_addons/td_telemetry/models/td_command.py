@@ -97,7 +97,7 @@ class F3dCommand(models.Model):
                 raise UserError(_("Запис у пристрій вимкнено: сигнал %s.", sig.code))
             if src and isinstance(src.params, dict) and src.params.get("read_only"):
                 raise UserError(_("Джерело лише для читання."))
-            if src and src.type in self.env["td.source"]._f3d_local_types():
+            if src and src.type in self.env["td.source"]._td_local_types():
                 raise UserError(_("Джерело %s без колектора: запис у пристрій неможливий.", src.code))
             if sig.kind == "state" and vals.get("text") and "value" not in vals:
                 states = sig.states or []

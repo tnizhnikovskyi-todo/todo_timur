@@ -98,13 +98,13 @@ class F3dSource(models.Model):
 
     # --- обчислювані ---------------------------------------------------------------------------------
     @api.model
-    def _f3d_local_types(self):
+    def _td_local_types(self):
         """CT-12, R-26: типи локальних джерел (без колектора). Модулі розширюють через `super()`."""
         return []
 
     @api.depends("type")
     def _compute_is_local(self):
-        local = self._f3d_local_types()
+        local = self._td_local_types()
         for rec in self:
             rec.is_local = rec.type in local
 
@@ -143,7 +143,7 @@ class F3dSource(models.Model):
 
     @api.constrains("type", "params")
     def _check_params(self):
-        local = self._f3d_local_types()
+        local = self._td_local_types()
         for rec in self:
             errors = address_tools.validate_params(rec.type, rec.params or {}, local)
             if errors:
@@ -162,7 +162,7 @@ class F3dSource(models.Model):
 
     @api.constrains("type", "collector_id")
     def _check_f3d_collector_required(self):
-        local = self._f3d_local_types()
+        local = self._td_local_types()
         for rec in self:
             if not rec.collector_id and rec.type not in local:
                 raise ValidationError(_("Джерело %s: вкажіть колектор.", rec.code))
@@ -236,7 +236,7 @@ class F3dSource(models.Model):
 
     def action_test_params(self):
         self.ensure_one()
-        errors = address_tools.validate_params(self.type, self.params or {}, self._f3d_local_types())
+        errors = address_tools.validate_params(self.type, self.params or {}, self._td_local_types())
         if errors:
             message, kind = "; ".join(errors), "danger"
         else:

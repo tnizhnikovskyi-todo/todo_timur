@@ -1,6 +1,6 @@
 """Ingester: валідація пакета показань, SQL-вставка, оновлення last_*, пороги, шина (R-17).
 
-Викликається лише з `td.signal._f3d_ingest` (CT-10): контролери й модулі напряму Ingester не використовують.
+Викликається лише з `td.signal._td_ingest` (CT-10): контролери й модулі напряму Ingester не використовують.
 «Зараз» — `fields.Datetime.now()` (не SQL `now()`), щоб працював `freezegun`.
 """
 
@@ -471,9 +471,9 @@ class Ingester:
 
     def _meter_checks(self, ids):
         Equipment = self.env["maintenance.equipment"].sudo()
-        if not hasattr(Equipment, "_f3d_meter_check") or "td_meter_signal_id" not in Equipment._fields:
+        if not hasattr(Equipment, "_td_meter_check") or "td_meter_signal_id" not in Equipment._fields:
             return
-        Equipment.search([("td_meter_signal_id", "in", ids)])._f3d_meter_check()
+        Equipment.search([("td_meter_signal_id", "in", ids)])._td_meter_check()
 
     def _bus(self, sts, changed_ids):
         if "td.viewer.event" not in self.env:

@@ -87,14 +87,14 @@ class MaintenanceEquipment(models.Model):
                 raise ValidationError(_("Лічильник належить іншому обладнанню."))
 
     # --- R-11 ----------------------------------------------------------------------------------------
-    def _f3d_default_team(self):
+    def _td_default_team(self):
         self.ensure_one()
         if self.maintenance_team_id:
             return self.maintenance_team_id
         param = self.env["ir.config_parameter"].sudo().get_param("td.telemetry.default_team_id") or ""
         return self.env["maintenance.team"].browse(int(param)) if param.isdigit() else self.env["maintenance.team"]
 
-    def _f3d_meter_rate(self, signal, now):
+    def _td_meter_rate(self, signal, now):
         """Приріст лічильника за годину за останні 7 діб (з годинних агрегатів); 0 — невідомо."""
         rows = (
             self.env["td.reading.hour"]
@@ -104,7 +104,7 @@ class MaintenanceEquipment(models.Model):
         total = rows[0][0] if rows else 0.0
         return (total or 0.0) / 168.0
 
-    def _f3d_meter_check(self):
+    def _td_meter_check(self):
         """R-11: заявка ТО, коли лічильник наблизився до порога `next − lead`."""
         now = fields.Datetime.now()
         Request = self.env["maintenance.request"].sudo()
@@ -119,9 +119,9 @@ class MaintenanceEquipment(models.Model):
             lead = rec.td_meter_interval * rec.td_meter_lead_pct / 100.0
             if current < nxt - lead:
                 continue
-            rate = rec._f3d_meter_rate(sig, now)
+            rate = rec._td_meter_rate(sig, now)
             wait_h = max(0.0, (nxt - current) / rate) if rate > 0 else 0.0
-            team = rec._f3d_default_team()
+            team = rec._td_default_team()
             name = _(
                 "ТО за лічильником: %(code)s — %(next)s %(unit)s (зараз %(cur)s)",
                 code=rec.td_code or rec.name,
@@ -150,7 +150,7 @@ class MaintenanceEquipment(models.Model):
                 body=_("Створено заявку ТО за лічильником: %s", request.name), subtype_xmlid="mail.mt_note"
             )
 
-    def _f3d_meter_closed(self, request):
+    def _td_meter_closed(self, request):
         """R-11 п. 5: ТО виконано — зафіксувати показник і дату, перерахувати наступне."""
         today = fields.Datetime.now().replace(tzinfo=ZoneInfo("UTC")).astimezone(KYIV).date()
         for rec in self.sudo():

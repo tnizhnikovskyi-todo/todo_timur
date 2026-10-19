@@ -51,11 +51,11 @@ class TestDispatch(F3DTelemetryCase):
     def receive(self, events, models=None, handle=None):
         handle = handle or Mock()
         with (
-            patch.object(F3dPushHandler, "_f3d_handler_models", return_value=models or []),
-            patch.object(F3dPushHandler, "_f3d_handle_push", handle),
+            patch.object(F3dPushHandler, "_td_handler_models", return_value=models or []),
+            patch.object(F3dPushHandler, "_td_handle_push", handle),
             mute_logger("odoo.addons.td_telemetry.models.td_push_event"),
         ):
-            res = self.Event._f3d_receive(events, self.col)
+            res = self.Event._td_receive(events, self.col)
         return res, handle
 
     def test_handler_called(self):

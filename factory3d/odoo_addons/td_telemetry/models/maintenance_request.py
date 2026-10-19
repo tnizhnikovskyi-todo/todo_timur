@@ -33,7 +33,7 @@ class MaintenanceRequest(models.Model):
                 if signal:
                     signal._on_request_closed(rec)
                 if rec.td_origin == "meter":
-                    rec.equipment_id._f3d_meter_closed(rec)
+                    rec.equipment_id._td_meter_closed(rec)
             elif signal and not signal.maintenance_request_id:
                 signal.with_context(mail_notrack=True).write({"maintenance_request_id": rec.id})
         return res

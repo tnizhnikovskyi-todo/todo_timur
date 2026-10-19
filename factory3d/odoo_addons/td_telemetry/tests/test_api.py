@@ -341,7 +341,7 @@ def _event(sig_provider="CAM-05", suffix="", seconds=-2, **extra):
 class TestEvent(ApiCase):
     def test_event_ok(self):
         # без обробників маршруту: модулі на кшталт td_yard реєструють власні (`handled` залежить від них)
-        with patch.object(F3dPushHandler, "_f3d_handler_models", return_value=[]):
+        with patch.object(F3dPushHandler, "_td_handler_models", return_value=[]):
             status, res, _h = self.post("event", {"collector": "COL-T", "events": [_event()]})
         self.assertEqual((status, res), (200, {"accepted": 1, "rejected": [], "handled": {}}))
         self.reload()
@@ -459,7 +459,7 @@ class TestCommandsApi(CommandCase):
 class TestIngestEntryPoint(ApiCase):
     def spy(self):
         model = type(self.env["td.signal"])
-        return patch.object(model, "_f3d_ingest", autospec=True, side_effect=model._f3d_ingest)
+        return patch.object(model, "_td_ingest", autospec=True, side_effect=model._td_ingest)
 
     def test_push_goes_through_f3d_ingest(self):
         readings = [self.reading(self.sig_press, 6.8)]

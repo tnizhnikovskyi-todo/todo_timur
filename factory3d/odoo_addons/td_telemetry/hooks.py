@@ -485,7 +485,7 @@ def sim_catalog(env):
         _logger.info("sim_catalog: td.sim.signal відсутня — пропуск")
         return {"state": "skipped"}
     codes = _signals(env).search([("origin", "in", ("sim_data", "catalog"))]).mapped("code")
-    report = env["td.signal"].sudo()._f3d_import_sim_catalog(codes=codes, source_map=SOURCE_MAP, defaults={})
+    report = env["td.signal"].sudo()._td_import_sim_catalog(codes=codes, source_map=SOURCE_MAP, defaults={})
     report = {
         "created": report["created"],
         "updated": report["updated"],

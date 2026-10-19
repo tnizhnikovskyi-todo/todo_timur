@@ -210,7 +210,7 @@ class TestStale(ThresholdCase):
         self.env["td.signal"]._cron_stale()
         self.assertEqual(self.sig_press.status, "stale")
         self.assertEqual(self.sig_rv.status, "ok")
-        self.assertEqual(self.sig_press._f3d_stale_after(), 50)
+        self.assertEqual(self.sig_press._td_stale_after(), 50)
 
 
 @tagged(*TAGS)
@@ -237,8 +237,8 @@ class TestStaleCov(ThresholdCase):
 
     def test_stale_after_cov_poll_ro(self):
         sigs = self._signals()
-        self.assertEqual([s._f3d_stale_after() for s in sigs], [900, 900, 90, 90])
-        self.assertEqual(self.sig_rv._f3d_stale_after(), 60)
+        self.assertEqual([s._td_stale_after() for s in sigs], [900, 900, 90, 90])
+        self.assertEqual(self.sig_rv._td_stale_after(), 60)
 
     def test_cron_cov_not_stale_301s(self):
         sigs = self._signals()

@@ -264,7 +264,7 @@ class F3DTelemetryMixin:
 
     # --- помічники ---
     def push(self, readings, collector=None, src="collector"):
-        return self.env["td.signal"].sudo()._f3d_ingest(readings, src=src, collector=collector or self.col)
+        return self.env["td.signal"].sudo()._td_ingest(readings, src=src, collector=collector or self.col)
 
     def rd(self, sig, value=None, text=None, at=0, q="good"):
         res = {"code": sig.code, "ts": self.T0 + timedelta(seconds=at), "value": value, "text": text, "q": q}

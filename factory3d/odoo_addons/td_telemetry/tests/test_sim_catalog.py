@@ -183,7 +183,7 @@ class TestImportRows(F3DTelemetryCase):
         ]
         last_before = self.sig_press.last_value
         self.set_sql(self.sig_press, last_value=6.8)
-        res = self.env["td.signal"]._f3d_import_sim_rows(rows, {"u70": "MB-T-U70"}, {})
+        res = self.env["td.signal"]._td_import_sim_rows(rows, {"u70": "MB-T-U70"}, {})
         self.assertEqual(
             res, {"created": 1, "updated": 1, "unparsed": ["energy/consumers/SIGMA-T/p_now"], "skipped": ["Bad/Code"]}
         )
@@ -203,6 +203,6 @@ class TestImportRows(F3DTelemetryCase):
         if "td.sim.signal" in self.env:
             self.skipTest("встановлено td_iot_sim: модель td.sim.signal є")
         self.assertEqual(
-            self.env["td.signal"]._f3d_import_sim_catalog(),
+            self.env["td.signal"]._td_import_sim_catalog(),
             {"created": 0, "updated": 0, "unparsed": [], "skipped": [], "state": "skipped"},
         )

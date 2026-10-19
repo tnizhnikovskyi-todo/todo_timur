@@ -370,13 +370,13 @@ class TestModuleIngest(ReadingCase):
     def test_ct10_no_rate_limit_and_rules(self):
         Sig = self.env["td.signal"]
         for i in range(100):
-            res = Sig._f3d_ingest([self.rd(self.sig_free, float(i), at=i)], src="module")
+            res = Sig._td_ingest([self.rd(self.sig_free, float(i), at=i)], src="module")
             self.assertEqual(res["accepted"], 1)
             self.assertEqual(res["rejected"], [])
         self.assertEqual(set(self.rows(self.sig_free).mapped("src")), {"module"})
-        res = Sig._f3d_ingest([{"code": "equipment/NOPE/x", "ts": self.T0, "value": 1}], src="module")
+        res = Sig._td_ingest([{"code": "equipment/NOPE/x", "ts": self.T0, "value": 1}], src="module")
         self.assertEqual(res["rejected"][0]["reason"], "unknown_code")
         self.sig_press.min_duration_s = 0
-        res = Sig._f3d_ingest([self.rd(self.sig_press, 5.9)], src="module")
+        res = Sig._td_ingest([self.rd(self.sig_press, 5.9)], src="module")
         self.assertEqual(res["alarms_opened"], 1)
         self.assertTrue(self.sig_press.maintenance_request_id)

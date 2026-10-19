@@ -206,7 +206,7 @@ class TestApplyStatus(SourceCase):
 @tagged(*TAGS)
 class TestLocalSource(SourceCase):
     def _patch(self):
-        return patch.object(type(self.env["td.source"]), "_f3d_local_types", lambda self: ["rest_vendor"])
+        return patch.object(type(self.env["td.source"]), "_td_local_types", lambda self: ["rest_vendor"])
 
     def _local(self):
         return (
@@ -240,8 +240,8 @@ class TestLocalSource(SourceCase):
         # базова реалізація (telemetry) повертає []; модулі-розширення (td_genset, td_energy…) дописують
         # свої типи через super(), тому перевіряємо саме її, а не результат усього ланцюжка
         Source = self.env["td.source"]
-        base_impl = next(vars(c)["_f3d_local_types"] for c in reversed(type(Source).__mro__)
-                         if "_f3d_local_types" in vars(c))
+        base_impl = next(vars(c)["_td_local_types"] for c in reversed(type(Source).__mro__)
+                         if "_td_local_types" in vars(c))
         self.assertEqual(base_impl(Source), [])
         self.assertEqual(address_tools.validate_params("td_genset", {}), ["type: невідомий тип джерела «td_genset»"])
 
@@ -281,7 +281,7 @@ class TestLocalSource(SourceCase):
     def test_local_ingest_module_only(self):
         with self._patch(), freeze_time("2026-10-14 08:00:00"):
             sig = self._local_signal(self._local())
-            res = self.env["td.signal"]._f3d_ingest([self.rd(sig, 75)], src="module")
+            res = self.env["td.signal"]._td_ingest([self.rd(sig, 75)], src="module")
             self.assertEqual(res["accepted"], 1)
             self.assertEqual(sig.last_value, 75)
             self.assertEqual(self.env["td.reading"].search([("signal_id", "=", sig.id)]).src, "module")

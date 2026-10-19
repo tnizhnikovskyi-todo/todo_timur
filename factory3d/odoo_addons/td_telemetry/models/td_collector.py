@@ -176,7 +176,7 @@ class F3dCollector(models.Model):
             return icp.get_param("td.telemetry." + key, "False") in ("True", "true", "1")
 
         read_enabled, write_enabled = flag("read_enabled"), flag("write_enabled")
-        local = self.env["td.source"]._f3d_local_types()
+        local = self.env["td.source"]._td_local_types()
         sources = []
         for src in self.sudo().source_ids.filtered(lambda s: s.active and s.type not in local).sorted("code"):
             signals = []

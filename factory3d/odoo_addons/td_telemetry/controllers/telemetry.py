@@ -1,7 +1,7 @@
 """HTTP/JSON API колектора (SPEC §7, API-01…API-07).
 
 Контролер лише автентифікує колектор, розбирає й перевіряє тіло; показання проходять через
-`td.signal._f3d_ingest` (X-02), події — через `td.push.event._f3d_receive` (R-22).
+`td.signal._td_ingest` (X-02), події — через `td.push.event._td_receive` (R-22).
 """
 
 import hashlib
@@ -149,7 +149,7 @@ class F3dTelemetryController(http.Controller):
             if not collector._rate_check():
                 return _error(429, "rate_limited", "Забагато пакетів за хвилину", NO_STORE + [("Retry-After", "10")])
             collector._touch(request.httprequest.remote_addr, pushed=True)
-            res = env["td.signal"].sudo()._f3d_ingest(readings, src="collector", collector=collector)
+            res = env["td.signal"].sudo()._td_ingest(readings, src="collector", collector=collector)
             return _json(
                 {
                     "accepted": res["accepted"],
@@ -254,7 +254,7 @@ class F3dTelemetryController(http.Controller):
                     return _error(400, "bad_schema", "Невалідна подія у пакеті")
                 clean.append(item)
             collector._touch(request.httprequest.remote_addr)
-            res = env["td.push.event"]._f3d_receive(clean, collector)
+            res = env["td.push.event"]._td_receive(clean, collector)
             return _json(res)
 
         return self._guard(run, "POST")

@@ -71,7 +71,7 @@ class F3dPushEvent(models.Model):
     _f3d_push_event_uniq = models.Constraint("UNIQUE(event_id)", "Подія з таким ідентифікатором уже є.")
 
     @api.model
-    def _f3d_receive(self, events, collector):
+    def _td_receive(self, events, collector):
         """R-22: журнал, обробники M-11 і показання сигналів `http_push` для пакета подій API-05."""
         received_at = fields.Datetime.now()
         Handler = self.env["td.push.handler"]
@@ -95,23 +95,23 @@ class F3dPushEvent(models.Model):
                 "headers": ev.get("headers") or {},
                 "payload": payload,
             }
-            names = Handler._f3d_handler_models(route)
+            names = Handler._td_handler_models(route)
             errors = []
             for name in names:
                 try:
                     with self.env.cr.savepoint():
-                        self.env[name]._f3d_handle_push(route, event)
+                        self.env[name]._td_handle_push(route, event)
                 except Exception as e:  # noqa: BLE001 — обробники ізольовані (M-11)
                     _logger.exception("f3d push handler %s failed for route %s", name, route)
                     errors.append("%s: %s" % (type(e).__name__, e))
-            readings = self._f3d_event_readings(route, payload, collector, received_at)
+            readings = self._td_event_readings(route, payload, collector, received_at)
             count = 0
             if readings:
                 res = (
                     self.env["td.signal"]
                     .sudo()
                     .with_context(f3d_received_at=received_at)
-                    ._f3d_ingest(readings, src="collector", collector=collector)
+                    ._td_ingest(readings, src="collector", collector=collector)
                 )
                 count = len(readings) - len(res["rejected"])
             self.sudo().create(
@@ -133,7 +133,7 @@ class F3dPushEvent(models.Model):
         return {"accepted": accepted, "rejected": rejected, "handled": handled}
 
     @api.model
-    def _f3d_event_readings(self, route, payload, collector, received_at):
+    def _td_event_readings(self, route, payload, collector, received_at):
         """Показання сигналів `http_push` колектора, чий `address.route/match` підходить події (R-22, X-63)."""
         keep_days = int(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.keep_days", "30") or 30)
         signals = (
