@@ -2,6 +2,7 @@
 """DEPLOY_TEST п.7 (деінсталяція → відмітки збережені, режими biostar → manual, параметрів немає), для ``odoo-bin shell``.
 
 Друкує ``LIFE {json}``. Після нього повторна установка: ``update.sh <db>`` (ТК-01 зелений)."""
+
 import json
 
 cr = env.cr  # noqa: F821
@@ -17,9 +18,13 @@ module.button_immediate_uninstall()
 cr.commit()
 env.invalidate_all()
 out["after"] = snap() if False else None
-cr.execute("SELECT count(*) FROM hr_attendance"); total = cr.fetchone()[0]
-cr.execute("SELECT count(*) FROM hr_attendance WHERE in_mode='biostar' OR out_mode='biostar'"); bio = cr.fetchone()[0]
-cr.execute("SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'td.access.%'"); params = cr.fetchone()[0]
-cr.execute("SELECT state FROM ir_module_module WHERE name='td_access'"); state = cr.fetchone()[0]
+cr.execute("SELECT count(*) FROM hr_attendance")
+total = cr.fetchone()[0]
+cr.execute("SELECT count(*) FROM hr_attendance WHERE in_mode='biostar' OR out_mode='biostar'")
+bio = cr.fetchone()[0]
+cr.execute("SELECT count(*) FROM ir_config_parameter WHERE key LIKE 'td.access.%'")
+params = cr.fetchone()[0]
+cr.execute("SELECT state FROM ir_module_module WHERE name='td_access'")
+state = cr.fetchone()[0]
 out["after"] = {"attendances": total, "biostar_modes": bio, "params": params, "module_state": state}
 print("LIFE " + json.dumps(out))

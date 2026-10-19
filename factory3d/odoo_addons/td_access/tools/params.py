@@ -1,4 +1,5 @@
 """Параметри td.access.* і регулярні вирази R-01 (SPEC §5.1)."""
+
 import logging
 import re
 
@@ -6,18 +7,18 @@ _logger = logging.getLogger(__name__)
 
 PREFIX = "td.access."
 
-CODE_RE = re.compile(r'^[A-Z0-9]+(-[A-Z0-9]+)*$')
-BSID_RE = re.compile(r'^[0-9A-Za-z_\-]{1,64}$')
-URL_RE = re.compile(r'^https?://[A-Za-z0-9.\-]+(:[0-9]{1,5})?/?$')
-CARD_RE = re.compile(r'^[0-9]{1,32}$')
+CODE_RE = re.compile(r"^[A-Z0-9]+(-[A-Z0-9]+)*$")
+BSID_RE = re.compile(r"^[0-9A-Za-z_\-]{1,64}$")
+URL_RE = re.compile(r"^https?://[A-Za-z0-9.\-]+(:[0-9]{1,5})?/?$")
+CARD_RE = re.compile(r"^[0-9]{1,32}$")
 
 
-def get_str(env, key, default=''):
-    return env['ir.config_parameter'].sudo().get_param(PREFIX + key, default)
+def get_str(env, key, default=""):
+    return env["ir.config_parameter"].sudo().get_param(PREFIX + key, default)
 
 
 def get_flag(env, key):
-    return get_str(env, key, 'False') in ('True', 'true', '1')
+    return get_str(env, key, "False") in ("True", "true", "1")
 
 
 def get_int(env, key, default, lo=None, hi=None):
@@ -33,4 +34,4 @@ def get_int(env, key, default, lo=None, hi=None):
 
 
 def set_param(env, key, value):
-    env['ir.config_parameter'].sudo().set_param(PREFIX + key, value)
+    env["ir.config_parameter"].sudo().set_param(PREFIX + key, value)

@@ -1,30 +1,31 @@
 """Час BioStar і локальна доба (R-15). Усі Datetime — naive UTC."""
+
 import re
 from datetime import datetime, time, timedelta
 
 import pytz
 
-KYIV = 'Europe/Kyiv'
-_BS_RE = re.compile(r'^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})?$')
+KYIV = "Europe/Kyiv"
+_BS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})?$")
 
 
 def parse_bs_dt(value):
     """`2026-10-12T03:52:10.00Z` / `.000Z` / `10Z` / `+00:00` -> naive UTC; порожнє -> None; інше -> ValueError."""
-    if value is None or value == '':
+    if value is None or value == "":
         return None
     match = _BS_RE.match(str(value).strip())
     if not match:
         raise ValueError("Невалідний час BioStar: %r" % (value,))
-    dt = datetime.strptime('%sT%s' % (match.group(1), match.group(2)), '%Y-%m-%dT%H:%M:%S')
+    dt = datetime.strptime("%sT%s" % (match.group(1), match.group(2)), "%Y-%m-%dT%H:%M:%S")
     zone = match.group(3)
-    if zone and zone != 'Z':
-        sign = 1 if zone[0] == '+' else -1
+    if zone and zone != "Z":
+        sign = 1 if zone[0] == "+" else -1
         dt -= sign * timedelta(hours=int(zone[1:3]), minutes=int(zone[4:6]))
     return dt
 
 
 def fmt_bs_dt(dt):
-    return dt.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def _tz(tz):
@@ -35,8 +36,8 @@ def to_local(dt, tz=KYIV):
     return pytz.utc.localize(dt).astimezone(_tz(tz))
 
 
-def to_local_str(dt, tz=KYIV, fmt='%Y-%m-%d %H:%M:%S'):
-    return to_local(dt, tz).strftime(fmt) if dt else ''
+def to_local_str(dt, tz=KYIV, fmt="%Y-%m-%d %H:%M:%S"):
+    return to_local(dt, tz).strftime(fmt) if dt else ""
 
 
 def local_date(dt, tz=KYIV):

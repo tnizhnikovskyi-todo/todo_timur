@@ -4,6 +4,7 @@
 Дата sim-сценаріїв — ``day`` (учора): реальний «зараз» Odoo пізніше за 15:50, тож вихід 15:30 «сьогодні» був би
 «майбутнім» (future_tolerance_s). Для першого опитування збільшується ``initial_lookback_h`` (72).
 """
+
 from __future__ import annotations
 
 import json
@@ -15,7 +16,7 @@ import pytest
 from helpers import kyiv_iso, wait_for
 
 pytestmark = pytest.mark.stand
-KYIV = timedelta(hours=3)          # літній час до 25.10.2026 (DEC-4)
+KYIV = timedelta(hours=3)  # літній час до 25.10.2026 (DEC-4)
 
 
 def tk_report(tk, data):
@@ -41,8 +42,13 @@ def count(od, model, domain):
 
 
 def employee(od, barcode):
-    return od.k("hr.employee", "search_read", [("barcode", "=", barcode)],
-                ["id", "td_access_present", "td_access_zone_id", "td_home_zone_id", "name"], limit=1)[0]
+    return od.k(
+        "hr.employee",
+        "search_read",
+        [("barcode", "=", barcode)],
+        ["id", "td_access_present", "td_access_zone_id", "td_home_zone_id", "name"],
+        limit=1,
+    )[0]
 
 
 def zone_code(m2o):
@@ -78,6 +84,7 @@ def feed_visitor_to_sim(od, sim, bs_http, uid):
     def known():
         r = bs_http.get("/api/users", params={"limit": 200, "offset": 0}).json()
         return any(x["user_id"] == uid for x in r["UserCollection"]["rows"])
+
     try:
         assert wait_for(known, 90, 3), f"емулятор не підхопив {uid}"
     finally:
@@ -116,23 +123,36 @@ def test_tk02_connect_and_catalogs(odoo, sim, server_id, people_loaded):
     assert (srv["state"], srv["users_total"], srv["devices_total"]) == ("online", 36, 5)
     odoo.k("td.access.server", "action_sync_devices", [server_id])
     odoo.k("td.access.server", "action_sync_users", [server_id])
-    devs = odoo.k("td.access.device", "search_read", [("server_id", "=", server_id)],
-                  ["code", "device_type", "status"])
+    devs = odoo.k("td.access.device", "search_read", [("server_id", "=", server_id)], ["code", "device_type", "status"])
     assert len(devs) == 5 and {d["code"] for d in devs} >= {"ACR-IN", "ACR-ELEC"}
     assert all(d["status"] == "online" and "BioEntry W3" in (d["device_type"] or "") for d in devs), devs
     doors = odoo.k("td.access.door", "search_read", [("server_id", "=", server_id)], ["code", "open_duration_s"])
     assert len(doors) == 5 and all(d["open_duration_s"] > 0 for d in doors), doors
-    links = odoo.k("td.access.user.link", "search_read", [("server_id", "=", server_id)],
-                   ["biostar_user_id", "match", "employee_id"])
+    links = odoo.k(
+        "td.access.user.link",
+        "search_read",
+        [("server_id", "=", server_id)],
+        ["biostar_user_id", "match", "employee_id"],
+    )
     assert len(links) == 36
     assert sum(1 for x in links if x["match"] == "barcode") == 35
     none = [x for x in links if x["match"] == "none"]
     assert [x["biostar_user_id"] for x in none] == ["1"]
     assert odoo.server()["users_total"] == 36
-    tk_report("02", {"state": srv["state"], "users_total": 36, "devices": len(devs), "doors": len(doors),
-                     "links": len(links), "by_barcode": 35, "unlinked": [x["biostar_user_id"] for x in none],
-                     "device_types": sorted({d["device_type"] for d in devs}),
-                     "open_duration_s": sorted({d["open_duration_s"] for d in doors})})
+    tk_report(
+        "02",
+        {
+            "state": srv["state"],
+            "users_total": 36,
+            "devices": len(devs),
+            "doors": len(doors),
+            "links": len(links),
+            "by_barcode": 35,
+            "unlinked": [x["biostar_user_id"] for x in none],
+            "device_types": sorted({d["device_type"] for d in devs}),
+            "open_duration_s": sorted({d["open_duration_s"] for d in doors}),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------- ТК-03
@@ -144,8 +164,11 @@ def test_tk03_morning_entry(odoo, sim, server_id, day):
     wait_sim_until(sim, day, "07:00")
     new = odoo.poll_until_quiet(server_id)
     assert new >= 35 * 4, new
-    passes = count(odoo, "td.access.event", [("event_type", "=", "pass"), ("direction", "=", "in"),
-                                              ("device_id.code", "=", "ACR-IN")])
+    passes = count(
+        odoo,
+        "td.access.event",
+        [("event_type", "=", "pass"), ("direction", "=", "in"), ("device_id.code", "=", "ACR-IN")],
+    )
     assert passes == 35, passes
     door_evts = count(odoo, "td.access.event", [("event_type", "=", "door"), ("door_id.biostar_id", "=", "1")])
     assert door_evts == 105, door_evts
@@ -155,16 +178,29 @@ def test_tk03_morning_entry(odoo, sim, server_id, day):
     for a in atts:
         t = to_local(a["check_in"])
         assert t.strftime("%Y-%m-%d") == day and "06:40" <= t.strftime("%H:%M") <= "06:59", a
-    demo = odoo.k("hr.attendance", "search_read", [("check_in", "like", "2026-10-12"), ("in_mode", "=", "manual")],
-                  ["check_out", "td_closed_by_rule"])
+    demo = odoo.k(
+        "hr.attendance",
+        "search_read",
+        [("check_in", "like", "2026-10-12"), ("in_mode", "=", "manual")],
+        ["check_out", "td_closed_by_rule"],
+    )
     assert len(demo) == 35 and all(d["check_out"] and d["td_closed_by_rule"] for d in demo), demo[:2]
     assert count(odoo, "td.access.presence", []) == 35
     assert count(odoo, "td.access.event", [("process_state", "=", "error")]) == 0
     times = sorted(to_local(a["check_in"]).strftime("%H:%M") for a in atts)
-    tk_report("03", {"new_events_polled": new, "events_total": count(odoo, "td.access.event", []),
-                     "passes_ACR-IN_in": passes, "door_events_TURN-1": door_evts, "attendances_biostar": len(atts),
-                     "check_in_range": [times[0], times[-1]], "demo_closed_by_rule": len(demo),
-                     "presence_cards": count(odoo, "td.access.presence", [])})
+    tk_report(
+        "03",
+        {
+            "new_events_polled": new,
+            "events_total": count(odoo, "td.access.event", []),
+            "passes_ACR-IN_in": passes,
+            "door_events_TURN-1": door_evts,
+            "attendances_biostar": len(atts),
+            "check_in_range": [times[0], times[-1]],
+            "demo_closed_by_rule": len(demo),
+            "presence_cards": count(odoo, "td.access.presence", []),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------- ТК-05
@@ -174,27 +210,43 @@ def test_tk05_internal_doors_and_denial(odoo, sim, server_id):
     before = odoo.k("hr.attendance", "search_read", w1_att, ["id", "check_in", "check_out"])
     sim.access_event("ACR-ELEC", "OPW1", 4102, "", door_open=True)
     sim.access_event("ACR-ELEC", "OPW2", 6400, "")
-    wait_for(lambda: False, 6, 1)      # події емулятора генеруються на tick (1 с)
+    wait_for(lambda: False, 6, 1)  # події емулятора генеруються на tick (1 с)
     odoo.poll_until_quiet(server_id)
     w1 = employee(odoo, "OPW1")
     assert zone_code(w1["td_access_zone_id"]) == "Z-ELEC", w1
-    denied = odoo.k("td.access.event", "search_read", [("code", "=", 6400), ("employee_id.barcode", "=", "OPW2")],
-                    ["event_type", "door_id", "deny_reason"])
+    denied = odoo.k(
+        "td.access.event",
+        "search_read",
+        [("code", "=", 6400), ("employee_id.barcode", "=", "OPW2")],
+        ["event_type", "door_id", "deny_reason"],
+    )
     assert len(denied) == 1 and denied[0]["event_type"] == "denied"
     assert denied[0]["door_id"] and denied[0]["door_id"][0] == door_id(odoo, "DOOR-ELEC")
     door = odoo.k("td.access.door", "read", [door_id(odoo, "DOOR-ELEC")], ["state"])[0]
     assert door["state"] in ("closed", "locked", "open"), door
-    dseq = odoo.k("td.access.event", "search_read", [("door_id.code", "=", "DOOR-ELEC"), ("event_type", "=", "door")],
-                  ["code"], order="ts, id")
+    dseq = odoo.k(
+        "td.access.event",
+        "search_read",
+        [("door_id.code", "=", "DOOR-ELEC"), ("event_type", "=", "door")],
+        ["code"],
+        order="ts, id",
+    )
     assert [e["code"] for e in dseq][:3] == [20480, 20992, 21248], dseq
     cron_run(odoo, "повернення з технічних")
     w1 = employee(odoo, "OPW1")
     assert zone_code(w1["td_access_zone_id"]) == "Z-HW", w1
     after = odoo.k("hr.attendance", "search_read", w1_att, ["id", "check_in", "check_out"])
     assert before == after
-    tk_report("05", {"OPW1_zone_after_dwell": zone_code(w1["td_access_zone_id"]), "OPW1_attendance_unchanged": True,
-                     "denied_6400": len(denied), "DOOR-ELEC_events": [e["code"] for e in dseq][:3],
-                     "DOOR-ELEC_state": door["state"]})
+    tk_report(
+        "05",
+        {
+            "OPW1_zone_after_dwell": zone_code(w1["td_access_zone_id"]),
+            "OPW1_attendance_unchanged": True,
+            "denied_6400": len(denied),
+            "DOOR-ELEC_events": [e["code"] for e in dseq][:3],
+            "DOOR-ELEC_state": door["state"],
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------- ТК-07
@@ -202,9 +254,17 @@ def test_tk07_visitor(odoo, sim, server_id, bs_http):
     """AC-44, AC-45: on_site → порушення зон (ACR-ELEC) → left; відміток відвідувача немає; бейдж у «Люди по зонах»."""
     host = employee(odoo, "OPW1")["id"]
     office = odoo.k("td.zone", "search", [("td_code", "=", "Z-OFFICE")], limit=1)
-    visitor = odoo.k("td.access.visitor", "create", {
-        "name": "Іван Петренко", "visitor_company": "ТОВ Постачальник", "host_employee_id": host,
-        "allowed_zone_ids": [(6, 0, office)], "server_id": server_id})
+    visitor = odoo.k(
+        "td.access.visitor",
+        "create",
+        {
+            "name": "Іван Петренко",
+            "visitor_company": "ТОВ Постачальник",
+            "host_employee_id": host,
+            "allowed_zone_ids": [(6, 0, office)],
+            "server_id": server_id,
+        },
+    )
     card = odoo.k("td.access.card", "create", {"number": "7700001", "holder_type": "pool", "server_id": server_id})
     odoo.k("td.access.visitor", "write", [visitor], {"card_id": card})
     odoo.k("td.access.visitor", "action_expect", [visitor])
@@ -237,8 +297,16 @@ def test_tk04_exit(odoo, sim, server_id, day):
     sim.set_time(kyiv_iso(day, "15:25"), 10)
     wait_sim_until(sim, day, "15:52")
     odoo.poll_until_quiet(server_id)
-    outs = count(odoo, "td.access.event", [("event_type", "=", "pass"), ("direction", "=", "out"),
-                                            ("device_id.code", "=", "ACR-IN"), ("employee_id", "!=", False)])
+    outs = count(
+        odoo,
+        "td.access.event",
+        [
+            ("event_type", "=", "pass"),
+            ("direction", "=", "out"),
+            ("device_id.code", "=", "ACR-IN"),
+            ("employee_id", "!=", False),
+        ],
+    )
     assert outs == 35, outs
     atts = odoo.k("hr.attendance", "search_read", [("out_mode", "=", "biostar")], ["check_out", "employee_id"])
     assert len(atts) == 35, len(atts)
@@ -250,8 +318,16 @@ def test_tk04_exit(odoo, sim, server_id, day):
     state = odoo.k("td.access.door", "read", [door_id(odoo, "TURN-1")], ["state"])[0]["state"]
     assert state in ("closed", "locked"), state
     times = sorted(to_local(a["check_out"]).strftime("%H:%M") for a in atts)
-    tk_report("04", {"passes_out": outs, "attendances_out_biostar": len(atts), "check_out_range": [times[0], times[-1]],
-                     "open_biostar": 0, "TURN-1_state": state})
+    tk_report(
+        "04",
+        {
+            "passes_out": outs,
+            "attendances_out_biostar": len(atts),
+            "check_out_range": [times[0], times[-1]],
+            "open_biostar": 0,
+            "TURN-1_state": state,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------- ТК-09
@@ -266,15 +342,21 @@ def test_tk10_fire_drill(odoo, sim, server_id):
     sim.scenario("fire_drill", {"zone": "FA-CNC"})
     wait_for(lambda: False, 14, 1)
     odoo.poll_until_quiet(server_id)
-    doors = odoo.k("td.access.door", "search_read", [("server_id", "=", server_id)],
-                   ["code", "state", "alarm", "alarm_reason"])
+    doors = odoo.k(
+        "td.access.door", "search_read", [("server_id", "=", server_id)], ["code", "state", "alarm", "alarm_reason"]
+    )
     assert len(doors) == 5
     assert all(d["alarm"] and d["alarm_reason"] == "fire" and d["state"] == "unlocked" for d in doors), doors
     assert count(odoo, "td.access.event", [("code", "=", 26368)]) >= 1
     odoo.k("td.access.door", "action_ack_alarm", [d["id"] for d in doors])
     assert count(odoo, "td.access.door", [("alarm", "=", True)]) == 0
-    tk_report("10", {"doors_alarm_fire_unlocked": len(doors), "events_26368": count(odoo, "td.access.event",
-                                                                                   [("code", "=", 26368)])})
+    tk_report(
+        "10",
+        {
+            "doors_alarm_fire_unlocked": len(doors),
+            "events_26368": count(odoo, "td.access.event", [("code", "=", 26368)]),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------------------------- ТБ-08
@@ -289,8 +371,12 @@ def test_tb08_no_writes_before_tk08():
     lines = open(path, encoding="utf-8").read().splitlines()
     assert any(x.startswith("GET /api/users") for x in lines)
     assert any(x.startswith("POST /api/events/search") for x in lines)
-    writes = [x for x in lines if x.split()[0] in ("POST", "PUT", "DELETE", "PATCH")
-              and not x.startswith(("POST /api/login", "POST /api/logout", "POST /api/events/search"))]
+    writes = [
+        x
+        for x in lines
+        if x.split()[0] in ("POST", "PUT", "DELETE", "PATCH")
+        and not x.startswith(("POST /api/login", "POST /api/logout", "POST /api/events/search"))
+    ]
     assert writes == [], writes
 
 
@@ -298,8 +384,11 @@ def test_tb08_no_writes_before_tk08():
 def test_tk08_card_block(odoo, sim, server_id):
     """AC-40, AC-41: write_enabled=False → local; mark synced; write_enabled=True → 405 від емулятора."""
     emp = employee(odoo, "OPSAW1")["id"]
-    card = odoo.k("td.access.card", "create", {"number": "12345678", "holder_type": "employee",
-                                                "employee_id": emp, "server_id": server_id})
+    card = odoo.k(
+        "td.access.card",
+        "create",
+        {"number": "12345678", "holder_type": "employee", "employee_id": emp, "server_id": server_id},
+    )
     odoo.k("td.access.card", "action_issue", [card])
     c = odoo.k("td.access.card", "read", [card], ["state", "sync_state", "pending_op"])[0]
     assert (c["state"], c["sync_state"]) == ("active", "local")
@@ -324,26 +413,30 @@ def test_tk08_card_block(odoo, sim, server_id):
         assert any(code in c["sync_error"] for code in ("404", "405", "Not Found")), c
         # 405 емулятор віддає на POST /api/users (маршрут лише GET): запис користувача-відвідувача (R-14)
         host = employee(odoo, "OPW1")["id"]
-        v2 = odoo.k("td.access.visitor", "create",
-                    {"name": "Тест 405", "host_employee_id": host, "server_id": server_id})
-        pool = odoo.k("td.access.card", "create",
-                      {"number": "7700002", "holder_type": "pool", "server_id": server_id})
+        v2 = odoo.k(
+            "td.access.visitor", "create", {"name": "Тест 405", "host_employee_id": host, "server_id": server_id}
+        )
+        pool = odoo.k("td.access.card", "create", {"number": "7700002", "holder_type": "pool", "server_id": server_id})
         odoo.k("td.access.visitor", "write", [v2], {"card_id": pool})
         odoo.k("td.access.visitor", "action_expect", [v2])
         cron_run(odoo, "запис карток і відвідувачів")
         vis = odoo.k("td.access.visitor", "read", [v2], ["sync_state", "sync_error"])[0]
         assert vis["sync_state"] == "error" and "405" in vis["sync_error"], vis
         path = os.environ.get("F3D_PROXY_LOG")
-        if path and os.path.exists(path):      # у лозі проксі — рівно записи цього кроку, відповідь 405
-            writes = [x for x in open(path, encoding="utf-8").read().splitlines()
-                      if x.split()[0] in ("POST", "PUT", "DELETE", "PATCH")
-                      and not x.startswith(("POST /api/login", "POST /api/logout", "POST /api/events/search"))]
+        if path and os.path.exists(path):  # у лозі проксі — рівно записи цього кроку, відповідь 405
+            writes = [
+                x
+                for x in open(path, encoding="utf-8").read().splitlines()
+                if x.split()[0] in ("POST", "PUT", "DELETE", "PATCH")
+                and not x.startswith(("POST /api/login", "POST /api/logout", "POST /api/events/search"))
+            ]
             assert writes and all(x.endswith((" 405", " 404")) for x in writes), writes
             assert any(x.startswith("POST /api/users") and x.endswith(" 405") for x in writes), writes
         else:
             writes = []
-        tk_report("08", {"card_sync_error": c["sync_error"], "visitor_sync_error": vis["sync_error"],
-                         "proxy_writes": writes})
+        tk_report(
+            "08", {"card_sync_error": c["sync_error"], "visitor_sync_error": vis["sync_error"], "proxy_writes": writes}
+        )
     finally:
         odoo.param("write_enabled", "False")
 
@@ -352,7 +445,7 @@ def test_tk08_card_block(odoo, sim, server_id):
 def test_tk06_outage_and_recovery(odoo, sim, server_id, bs_http):
     """AC-08: недоступність (невірний пароль, потім недосяжний порт) → error/error_count/next_try_at; відновлення."""
     odoo.param("biostar_password", "wrong-password")
-    odoo.k("td.access.server", "write", [server_id], {"session_id": False})   # без кешованої сесії — потрібен login
+    odoo.k("td.access.server", "write", [server_id], {"session_id": False})  # без кешованої сесії — потрібен login
     for _ in range(2):
         odoo.poll(server_id)
     srv = odoo.server()
@@ -377,8 +470,20 @@ def test_tk06_outage_and_recovery(odoo, sim, server_id, bs_http):
     odoo.k("td.access.server", "write", [server_id], {"url": "https://127.0.0.1:1"})
     odoo.poll(server_id)
     assert odoo.server()["state"] == "error"
-    odoo.k("td.access.server", "write", [server_id], {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443")})
+    odoo.k(
+        "td.access.server",
+        "write",
+        [server_id],
+        {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443")},
+    )
     odoo.k("td.access.server", "action_test_connection", [server_id])
     assert odoo.server()["state"] == "online"
-    tk_report("06", {"error_count_during_outage": srv_err["error_count"], "next_try_at": srv_err["next_try_at"],
-                     "events_odoo": ours, "events_biostar": total})
+    tk_report(
+        "06",
+        {
+            "error_count_during_outage": srv_err["error_count"],
+            "next_try_at": srv_err["next_try_at"],
+            "events_odoo": ours,
+            "events_biostar": total,
+        },
+    )

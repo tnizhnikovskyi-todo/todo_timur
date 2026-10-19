@@ -3,6 +3,7 @@
 ТБ-08 (запис при write_enabled=False) перевіряється в test_tk.py (``test_tb08_*``): лог проксі потрібен до ТК-08.
 Юніт-варіанти ТБ (мок requests, `fake.calls`) — у tests/test_security.py, test_client.py, test_hooks.py.
 """
+
 from __future__ import annotations
 
 import os
@@ -14,8 +15,11 @@ import pytest
 
 pytestmark = pytest.mark.stand
 PWD = "Stand-pass-1"
-SEC, ADM, FADM = ("td_access.group_td_access_security", "td_access.group_td_access_admin",
-                  "td_factory3d.group_td_admin")
+SEC, ADM, FADM = (
+    "td_access.group_td_access_security",
+    "td_access.group_td_access_admin",
+    "td_factory3d.group_td_admin",
+)
 USER_GROUPS = {
     "user_plain": ["base.group_user"],
     "user_f3d": ["base.group_user", "td_factory3d.group_td_user"],
@@ -48,9 +52,16 @@ def users(odoo, server_id):
     for key, groups in USER_GROUPS.items():
         login = f"stand_{key}"
         if not odoo.k("res.users", "search_count", [("login", "=", login)]):
-            odoo.k("res.users", "create", {
-                "name": login, "login": login, "password": PWD,
-                "group_ids": [(6, 0, [xmlid_id(odoo, g) for g in groups])]})
+            odoo.k(
+                "res.users",
+                "create",
+                {
+                    "name": login,
+                    "login": login,
+                    "password": PWD,
+                    "group_ids": [(6, 0, [xmlid_id(odoo, g) for g in groups])],
+                },
+            )
         out[key] = odoo.as_user(login, PWD)
     return out
 
@@ -87,10 +98,13 @@ def test_tb02_secrets(odoo, users, server_id):
     fault = denied(lambda: users["user_admin"].k("td.access.server", "read", [server_id], ["session_id"]))
     assert fault
     for key in ("user_admin", "user_security", "user_f3d"):
-        assert denied(lambda key=key: users[key].k(
-            "ir.config_parameter", "search_read", [("key", "=", "td.access.biostar_password")], ["value"])) \
-            or not users[key].k("ir.config_parameter", "search_read",
-                                [("key", "=", "td.access.biostar_password")], ["value"])
+        assert denied(
+            lambda key=key: users[key].k(
+                "ir.config_parameter", "search_read", [("key", "=", "td.access.biostar_password")], ["value"]
+            )
+        ) or not users[key].k(
+            "ir.config_parameter", "search_read", [("key", "=", "td.access.biostar_password")], ["value"]
+        )
     # пароль не потрапляє в last_error / чаттер карток і відвідувачів
     pwd = os.environ["SIM_BIOSTAR_PASS"]
     assert pwd not in (odoo.server()["last_error"] or "")
@@ -119,17 +133,23 @@ def test_tb03_stop_taps_and_neutralize(odoo, sim, server_id):
     sql = os.path.join(os.path.dirname(__file__), "..", "..", "data", "neutralize.sql")
     if subprocess.run(["which", "psql"], capture_output=True).returncode:
         pytest.skip("psql недоступний: AC-57 перевіряється юніт-тестом test_neutralize")
-    script = (f"BEGIN;\n\\i {os.path.abspath(sql)}\n"
-              "SELECT count(*) FROM ir_cron c JOIN ir_model_data d ON d.res_id=c.id AND d.model='ir.cron' "
-              "AND d.module='td_access' WHERE c.active;\n"
-              "SELECT string_agg(key||'='||value, ',' ORDER BY key) FROM ir_config_parameter "
-              "WHERE key IN ('td.access.read_enabled','td.access.write_enabled',"
-              "'td.access.biostar_password');\nROLLBACK;\n")
-    res = subprocess.run(["psql", "-At", "-v", "ON_ERROR_STOP=1", "-d", db], input=script, capture_output=True,
-                         text=True, timeout=60)
+    script = (
+        f"BEGIN;\n\\i {os.path.abspath(sql)}\n"
+        "SELECT count(*) FROM ir_cron c JOIN ir_model_data d ON d.res_id=c.id AND d.model='ir.cron' "
+        "AND d.module='td_access' WHERE c.active;\n"
+        "SELECT string_agg(key||'='||value, ',' ORDER BY key) FROM ir_config_parameter "
+        "WHERE key IN ('td.access.read_enabled','td.access.write_enabled',"
+        "'td.access.biostar_password');\nROLLBACK;\n"
+    )
+    res = subprocess.run(
+        ["psql", "-At", "-v", "ON_ERROR_STOP=1", "-d", db], input=script, capture_output=True, text=True, timeout=60
+    )
     assert res.returncode == 0, res.stderr[-300:]
-    lines = [x for x in res.stdout.splitlines()
-             if x and x not in ("BEGIN", "ROLLBACK") and not re.match(r"^(UPDATE|DELETE|INSERT) \d+", x)]
+    lines = [
+        x
+        for x in res.stdout.splitlines()
+        if x and x not in ("BEGIN", "ROLLBACK") and not re.match(r"^(UPDATE|DELETE|INSERT) \d+", x)
+    ]
     assert lines[0] == "0", res.stdout
     assert "read_enabled=False" in lines[1] and "write_enabled=False" in lines[1]
     assert "bs-pass" not in lines[1]
@@ -152,6 +172,7 @@ def test_tb04_injections(odoo, sim, server_id):
     except Exception:  # емулятор може відхилити параметр — тоді достатньо перевірок вище
         pass
     import time
+
     time.sleep(4)
     odoo.poll_until_quiet(server_id)
     assert odoo.k("hr.employee", "search_count", []) == emps
@@ -168,8 +189,11 @@ def test_tb05_tls(odoo, server_id):
     try:
         odoo.k("ir.config_parameter", "write", param, {"value": "prod"})
         assert denied(lambda: odoo.k("td.access.server", "write", [server_id], {"verify_ssl": False}))
-        assert denied(lambda: odoo.k("td.access.server", "create",
-                                     {"name": "plain", "url": "http://127.0.0.1:8081", "verify_ssl": True}))
+        assert denied(
+            lambda: odoo.k(
+                "td.access.server", "create", {"name": "plain", "url": "http://127.0.0.1:8081", "verify_ssl": True}
+            )
+        )
     finally:
         odoo.k("ir.config_parameter", "write", param, {"value": base})
 

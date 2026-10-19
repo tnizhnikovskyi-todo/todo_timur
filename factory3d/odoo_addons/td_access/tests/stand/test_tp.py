@@ -4,6 +4,7 @@
 Межі: ТП-01 ≤ 60 с і 20 запитів; ТП-02 опитування ≤ 2 с, CPU воркера < 5 %; ТП-03 collect ≤ 200 мс,
 td_people_now (45 зон) ≤ 50 мс, Index Scan по ts; ТП-04 ротація 130 000 подій ≤ 120 с.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,10 +48,17 @@ def shell_perf(mode: str, **env_extra) -> dict:
     env_sh = os.environ.get("F3D_ENV_SH")
     if not env_sh:
         pytest.skip("F3D_ENV_SH (factory3d/tools/odoo/env.sh) не задано: odoo shell недоступний")
-    cmd = (f'source "{env_sh}" && "$ODOO_PY" "$ODOO_BIN" shell -c "$ODOO_CONF" --addons-path="$ODOO_ADDONS_PATH" '
-           f'-d "{os.environ["F3D_ODOO_DB"]}" --no-http --log-level=warn < "{HERE / "perf_shell.py"}"')
-    res = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=1500,
-                         env={**os.environ, "PERF_MODE": mode, **env_extra})
+    cmd = (
+        f'source "{env_sh}" && "$ODOO_PY" "$ODOO_BIN" shell -c "$ODOO_CONF" --addons-path="$ODOO_ADDONS_PATH" '
+        f'-d "{os.environ["F3D_ODOO_DB"]}" --no-http --log-level=warn < "{HERE / "perf_shell.py"}"'
+    )
+    res = subprocess.run(
+        ["bash", "-c", cmd],
+        capture_output=True,
+        text=True,
+        timeout=1500,
+        env={**os.environ, "PERF_MODE": mode, **env_extra},
+    )
     lines = [x for x in res.stdout.splitlines() if x.startswith("PERF ")]
     assert lines, (res.stdout[-500:], res.stderr[-500:])
     return json.loads(lines[-1][5:])
@@ -71,9 +79,13 @@ def test_tp02_daily_volume(odoo, sim, server_id):
         durations.append(time.perf_counter() - t0)
         rows.append(odoo.k("td.access.server", "read", [server_id], ["last_poll_rows"])[0]["last_poll_rows"])
     cpu1 = odoo_cpu_seconds()
-    data = {"polls": len(durations), "mean_s": round(statistics.mean(durations), 3),
-            "max_s": round(max(durations), 3), "p95_s": round(sorted(durations)[int(0.95 * len(durations)) - 1], 3),
-            "rows_per_poll_mean": round(statistics.mean(rows), 1)}
+    data = {
+        "polls": len(durations),
+        "mean_s": round(statistics.mean(durations), 3),
+        "max_s": round(max(durations), 3),
+        "p95_s": round(sorted(durations)[int(0.95 * len(durations)) - 1], 3),
+        "rows_per_poll_mean": round(statistics.mean(rows), 1),
+    }
     if cpu0 is not None:
         per_poll = (cpu1 - cpu0) / len(durations)
         data["cpu_s_per_poll"] = round(per_poll, 3)
@@ -92,10 +104,11 @@ def test_tp01_avalanche(odoo, sim, server_id, bs_http):
 
     def total():
         return int(bs_http.post("/api/events/search", json=q).json()["EventCollection"]["total"])
+
     first_day = day = datetime.now() - timedelta(days=60)
     while total() < 10_500 and day < datetime.now() - timedelta(days=2):
         sim.set_time(kyiv_iso(day.strftime("%Y-%m-%d"), "23:30"), 10)
-        time.sleep(1.6)           # tick 1 с: розклад доби викидається одразу (події мають свої `when`)
+        time.sleep(1.6)  # tick 1 с: розклад доби викидається одразу (події мають свої `when`)
         day += timedelta(days=1)
     rows_in_sim = total()
     assert rows_in_sim >= 10_000, rows_in_sim
@@ -110,8 +123,13 @@ def test_tp01_avalanche(odoo, sim, server_id, bs_http):
     odoo.poll(server_id)
     elapsed = time.perf_counter() - t0
     srv = odoo.k("td.access.server", "read", [server_id], ["last_poll_rows", "last_poll_new", "last_poll_more"])[0]
-    data = {"sim_rows": rows_in_sim, "poll_s": round(elapsed, 2), "rows": srv["last_poll_rows"],
-            "new": srv["last_poll_new"], "more": srv["last_poll_more"]}
+    data = {
+        "sim_rows": rows_in_sim,
+        "poll_s": round(elapsed, 2),
+        "rows": srv["last_poll_rows"],
+        "new": srv["last_poll_new"],
+        "more": srv["last_poll_more"],
+    }
     if PROXY_LOG:
         new_lines = Path(PROXY_LOG).read_text().splitlines()[lines0:]
         data["search_requests"] = sum(1 for x in new_lines if x.startswith("POST /api/events/search"))

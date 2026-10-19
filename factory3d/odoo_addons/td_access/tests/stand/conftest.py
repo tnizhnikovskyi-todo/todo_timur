@@ -6,6 +6,7 @@ https://127.0.0.1:8443), SIM_BIOSTAR_PASS (пароль BioStar емулятор
 журналу, за замовчуванням http://127.0.0.1:8081), F3D_STAND_DAY (день sim-сценаріїв ТК-03/04, YYYY-MM-DD).
 Без F3D_ODOO_URL усі стендові тести пропускаються.
 """
+
 from __future__ import annotations
 
 import os
@@ -34,8 +35,7 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(scope="session")
 def odoo() -> Odoo:
-    return Odoo(env("F3D_ODOO_URL"), env("F3D_ODOO_DB"), env("F3D_ODOO_USER", "admin"),
-                env("F3D_ODOO_PASSWORD"))
+    return Odoo(env("F3D_ODOO_URL"), env("F3D_ODOO_DB"), env("F3D_ODOO_USER", "admin"), env("F3D_ODOO_PASSWORD"))
 
 
 @pytest.fixture(scope="session")
@@ -64,8 +64,12 @@ def server_id(odoo, sim):
     """Підготовка стенду: 35 працівників, URL емулятора, пароль, read_enabled=True, write_enabled=False."""
     seed_employees(odoo)
     sid = odoo.server()["id"]
-    odoo.k("td.access.server", "write", [sid], {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443"),
-                                                  "verify_ssl": False})
+    odoo.k(
+        "td.access.server",
+        "write",
+        [sid],
+        {"url": os.environ.get("F3D_SIM_BIOSTAR_URL", "https://127.0.0.1:8443"), "verify_ssl": False},
+    )
     assert odoo.get_param("td.base.environment") == "test"
     odoo.param("biostar_password", env("SIM_BIOSTAR_PASS"))
     odoo.param("read_enabled", "True")
@@ -81,6 +85,7 @@ def people_loaded(odoo, sim, server_id):
     def total():
         msg = odoo.k("td.access.server", "action_test_connection", [server_id])["params"]["message"]
         return int(msg.split("користувачів ")[1].split(",")[0])
+
     assert wait_for(lambda: total() >= 36, 150, 5), "емулятор не підхопив працівників з Odoo"
     sim.post("/mode", {"mode": "scenario"})
     return True

@@ -4,6 +4,7 @@
 ведеться тут. Проксі завершує TLS тим самим самопідписаним сертифікатом емулятора і пересилає запити на його HTTP-порт
 (A-07). Запуск: ``python logging_proxy.py <cert> <key> <лог> [listen_port=18443] [upstream=http://127.0.0.1:8081]``.
 """
+
 from __future__ import annotations
 
 import ssl

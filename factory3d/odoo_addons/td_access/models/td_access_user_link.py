@@ -9,60 +9,69 @@ _logger = logging.getLogger(__name__)
 
 
 class F3dAccessUserLink(models.Model):
-    _name = 'td.access.user.link'
-    _description = 'СКУД: користувач BioStar'
-    _order = 'server_id, biostar_user_id'
-    _rec_name = 'biostar_user_id'
-    _rec_names_search = ['biostar_user_id', 'biostar_name']
+    _name = "td.access.user.link"
+    _description = "СКУД: користувач BioStar"
+    _order = "server_id, biostar_user_id"
+    _rec_name = "biostar_user_id"
+    _rec_names_search = ["biostar_user_id", "biostar_name"]
 
-    server_id = fields.Many2one('td.access.server', required=True, index=True, ondelete='cascade')
-    company_id = fields.Many2one('res.company', related='server_id.company_id', store=True, index=True)
-    biostar_user_id = fields.Char(string='Користувач BioStar (user_id)', required=True, index=True, size=64)
+    server_id = fields.Many2one("td.access.server", required=True, index=True, ondelete="cascade")
+    company_id = fields.Many2one("res.company", related="server_id.company_id", store=True, index=True)
+    biostar_user_id = fields.Char(string="Користувач BioStar (user_id)", required=True, index=True, size=64)
     biostar_name = fields.Char(string="Ім'я в BioStar", size=128, readonly=True)
-    employee_id = fields.Many2one('hr.employee', string='Працівник', index=True, ondelete='set null')
+    employee_id = fields.Many2one("hr.employee", string="Працівник", index=True, ondelete="set null")
     match = fields.Selection(
-        [('barcode', 'За бейджем'), ('alias', 'За другим кодом сцени'),
-         ('code', 'За кодом сцени без дефісів'), ('manual', 'Вручну'), ('visitor', 'Відвідувач'),
-         ('none', "Не зв'язано")], required=True, default='none', readonly=True)
-    user_group = fields.Char(string='Група BioStar', size=64, readonly=True)
-    disabled = fields.Boolean(string='Вимкнено в BioStar', readonly=True)
-    start_dt = fields.Datetime(string='Діє з', readonly=True)
-    expiry_dt = fields.Datetime(string='Діє до', readonly=True)
-    card_count = fields.Integer(string='Карток у BioStar', readonly=True)
-    has_face = fields.Boolean(string='Є шаблон обличчя', readonly=True)
-    has_finger = fields.Boolean(string='Є відбиток', readonly=True)
-    in_biostar = fields.Boolean(string='Є в BioStar', default=True, readonly=True)
+        [
+            ("barcode", "За бейджем"),
+            ("alias", "За другим кодом сцени"),
+            ("code", "За кодом сцени без дефісів"),
+            ("manual", "Вручну"),
+            ("visitor", "Відвідувач"),
+            ("none", "Не зв'язано"),
+        ],
+        required=True,
+        default="none",
+        readonly=True,
+    )
+    user_group = fields.Char(string="Група BioStar", size=64, readonly=True)
+    disabled = fields.Boolean(string="Вимкнено в BioStar", readonly=True)
+    start_dt = fields.Datetime(string="Діє з", readonly=True)
+    expiry_dt = fields.Datetime(string="Діє до", readonly=True)
+    card_count = fields.Integer(string="Карток у BioStar", readonly=True)
+    has_face = fields.Boolean(string="Є шаблон обличчя", readonly=True)
+    has_finger = fields.Boolean(string="Є відбиток", readonly=True)
+    in_biostar = fields.Boolean(string="Є в BioStar", default=True, readonly=True)
     synced = fields.Boolean(default=False, readonly=True)
     last_sync = fields.Datetime(readonly=True)
-    event_count = fields.Integer(compute='_compute_event_count')
+    event_count = fields.Integer(compute="_compute_event_count")
     active = fields.Boolean(default=True)
 
     _f3d_access_link_uniq = models.Constraint(
-        "UNIQUE(server_id, biostar_user_id)", "Користувач BioStar уже зв'язаний на цьому сервері.")
+        "UNIQUE(server_id, biostar_user_id)", "Користувач BioStar уже зв'язаний на цьому сервері."
+    )
     _f3d_access_link_employee_uniq = models.Constraint(
-        "UNIQUE(server_id, employee_id)", "Працівник уже має користувача BioStar на цьому сервері.")
+        "UNIQUE(server_id, employee_id)", "Працівник уже має користувача BioStar на цьому сервері."
+    )
 
-    @api.constrains('biostar_user_id')
+    @api.constrains("biostar_user_id")
     def _check_biostar_user_id(self):
         for rec in self:
-            if not P.BSID_RE.match(rec.biostar_user_id or ''):
-                raise ValidationError(
-                    "Користувач BioStar %s: 1–64 символи [0-9A-Za-z_-]." % rec.biostar_user_id)
+            if not P.BSID_RE.match(rec.biostar_user_id or ""):
+                raise ValidationError("Користувач BioStar %s: 1–64 символи [0-9A-Za-z_-]." % rec.biostar_user_id)
 
-    @api.depends('biostar_user_id', 'employee_id', 'biostar_name')
+    @api.depends("biostar_user_id", "employee_id", "biostar_name")
     def _compute_display_name(self):
         for rec in self:
-            visitor = rec['visitor_id'] if 'visitor_id' in rec._fields else False
-            who = rec.employee_id.name or (visitor.name if visitor else False) or rec.biostar_name \
-                or "не зв'язано"
+            visitor = rec["visitor_id"] if "visitor_id" in rec._fields else False
+            who = rec.employee_id.name or (visitor.name if visitor else False) or rec.biostar_name or "не зв'язано"
             rec.display_name = "%s · %s" % (rec.biostar_user_id, who)
 
     def _compute_event_count(self):
-        if 'td.access.event' not in self.env:
+        if "td.access.event" not in self.env:
             self.event_count = 0
             return
         for rec in self:
-            rec.event_count = self.env['td.access.event'].search_count([('link_id', '=', rec.id)])
+            rec.event_count = self.env["td.access.event"].search_count([("link_id", "=", rec.id)])
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -75,27 +84,27 @@ class F3dAccessUserLink(models.Model):
         return super().write(vals)
 
     def _set_manual_match(self, vals):
-        if 'match' in vals or not ({'employee_id', 'visitor_id'} & set(vals)):
+        if "match" in vals or not ({"employee_id", "visitor_id"} & set(vals)):
             return
-        if vals.get('employee_id'):
-            vals['match'] = 'manual'
-        elif vals.get('visitor_id'):
-            vals['match'] = 'visitor'
-        elif not vals.get('employee_id') and not vals.get('visitor_id'):
-            vals['match'] = 'none'
+        if vals.get("employee_id"):
+            vals["match"] = "manual"
+        elif vals.get("visitor_id"):
+            vals["match"] = "visitor"
+        elif not vals.get("employee_id") and not vals.get("visitor_id"):
+            vals["match"] = "none"
 
     # ------------------------------------------------------------------ R-03
     def _td_rematch(self):
         """R-03 кроки 1–6 для зв'язків; повертає self."""
-        Employee = self.env['hr.employee'].sudo()
+        Employee = self.env["hr.employee"].sudo()
         for link in self.sudo():
-            if link.match in ('manual', 'visitor'):
+            if link.match in ("manual", "visitor"):
                 continue
             uid = link.biostar_user_id
-            company = [('company_id', '=', link.server_id.company_id.id)]
-            employee, match = Employee, 'none'
+            company = [("company_id", "=", link.server_id.company_id.id)]
+            employee, match = Employee, "none"
             ambiguous = False
-            for kind in ('barcode', 'alias', 'code'):
+            for kind in ("barcode", "alias", "code"):
                 candidates = self._candidates(kind, uid, company)
                 if len(candidates) == 1:
                     employee, match = candidates, kind
@@ -104,50 +113,65 @@ class F3dAccessUserLink(models.Model):
                     ambiguous = True
                     _logger.warning("Неоднозначний збіг користувача BioStar %s (%s)", uid, kind)
                     break
-            vals = {'employee_id': False, 'match': 'none'}
+            vals = {"employee_id": False, "match": "none"}
             if employee:
-                busy = self.sudo().search([('server_id', '=', link.server_id.id),
-                                           ('employee_id', '=', employee.id), ('id', '!=', link.id)], limit=1)
+                busy = self.sudo().search(
+                    [("server_id", "=", link.server_id.id), ("employee_id", "=", employee.id), ("id", "!=", link.id)],
+                    limit=1,
+                )
                 if busy:
-                    _logger.warning("Працівник %s уже має зв'язок на сервері: користувач %s не зв'язано",
-                                    employee.name, uid)
+                    _logger.warning(
+                        "Працівник %s уже має зв'язок на сервері: користувач %s не зв'язано", employee.name, uid
+                    )
                 else:
-                    vals = {'employee_id': employee.id, 'match': match}
-            elif not ambiguous and 'td.access.visitor' in self.env:
-                visitor = self.env['td.access.visitor'].sudo().search(
-                    [('biostar_user_id', '=', uid), ('server_id', '=', link.server_id.id)])
+                    vals = {"employee_id": employee.id, "match": match}
+            elif not ambiguous and "td.access.visitor" in self.env:
+                visitor = (
+                    self.env["td.access.visitor"]
+                    .sudo()
+                    .search([("biostar_user_id", "=", uid), ("server_id", "=", link.server_id.id)])
+                )
                 if len(visitor) == 1:
-                    vals = {'visitor_id': visitor.id, 'match': 'visitor'}
+                    vals = {"visitor_id": visitor.id, "match": "visitor"}
             link.write(dict(vals))
         return self
 
     def _candidates(self, kind, uid, company):
-        Employee = self.env['hr.employee'].sudo()
-        if kind == 'barcode':
-            return Employee.search([('barcode', '=', uid)] + company)
-        if kind == 'alias':
-            return Employee.search([('td_alias', '=', uid)] + company)
-        return Employee.search([('td_code', '!=', False)] + company).filtered(
-            lambda e: e.td_code.replace('-', '') == uid)
+        Employee = self.env["hr.employee"].sudo()
+        if kind == "barcode":
+            return Employee.search([("barcode", "=", uid)] + company)
+        if kind == "alias":
+            return Employee.search([("td_alias", "=", uid)] + company)
+        return Employee.search([("td_code", "!=", False)] + company).filtered(
+            lambda e: e.td_code.replace("-", "") == uid
+        )
 
     @api.model
     def _td_match_employee(self, biostar_user_id, server=None):
         """R-03: знайти або створити зв'язок (server, user) і зіставити з працівником; повертає зв'язок."""
-        server = server or self.env['td.access.server'].sudo().search([('active', '=', True)], limit=1)
-        link = self.sudo().with_context(active_test=False).search(
-            [('server_id', '=', server.id), ('biostar_user_id', '=', biostar_user_id)], limit=1)
+        server = server or self.env["td.access.server"].sudo().search([("active", "=", True)], limit=1)
+        link = (
+            self.sudo()
+            .with_context(active_test=False)
+            .search([("server_id", "=", server.id), ("biostar_user_id", "=", biostar_user_id)], limit=1)
+        )
         if not link:
-            link = self.sudo().create({'server_id': server.id, 'biostar_user_id': biostar_user_id})
+            link = self.sudo().create({"server_id": server.id, "biostar_user_id": biostar_user_id})
         link._td_rematch()
         return link
 
     def action_rematch(self):
-        if not self.env.su and not self.env.user.has_group('td_access.group_td_access_admin'):
+        if not self.env.su and not self.env.user.has_group("td_access.group_td_access_admin"):
             raise AccessError("Підбирати працівників може лише адміністратор СКУД.")
-        self.filtered(lambda r: r.match in ('none', 'barcode', 'alias', 'code'))._td_rematch()
+        self.filtered(lambda r: r.match in ("none", "barcode", "alias", "code"))._td_rematch()
         return True
 
     def action_open_events(self):
         self.ensure_one()
-        return {'type': 'ir.actions.act_window', 'name': 'Події', 'res_model': 'td.access.event',
-                'view_mode': 'list,form', 'domain': [('link_id', '=', self.id)]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Події",
+            "res_model": "td.access.event",
+            "view_mode": "list,form",
+            "domain": [("link_id", "=", self.id)],
+        }

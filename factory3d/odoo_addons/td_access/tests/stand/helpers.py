@@ -1,4 +1,5 @@
 """Клієнти стенду: XML-RPC до Odoo і REST керування емулятора (/sim/v1)."""
+
 from __future__ import annotations
 
 import os
@@ -50,16 +51,33 @@ class Odoo:
         return self.k("ir.config_parameter", "get_param", full_key) or None
 
     def server(self) -> dict:
-        rows = self.k("td.access.server", "search_read", [], ["name", "url", "state", "error_count", "last_error",
-                      "users_total", "devices_total", "next_try_at", "last_poll_new", "last_poll_rows",
-                      "last_event_ts"], limit=1, order="id")
+        rows = self.k(
+            "td.access.server",
+            "search_read",
+            [],
+            [
+                "name",
+                "url",
+                "state",
+                "error_count",
+                "last_error",
+                "users_total",
+                "devices_total",
+                "next_try_at",
+                "last_poll_new",
+                "last_poll_rows",
+                "last_event_ts",
+            ],
+            limit=1,
+            order="id",
+        )
         return rows[0]
 
     def poll(self, server_id: int, times: int = 1):
         """«Опитати зараз»; повертає останнє повідомлення нотифікації."""
         res = None
         for _ in range(times):
-            for attempt in range(12):       # одночасно з кроном «опитування подій» (lock) — повторити
+            for attempt in range(12):  # одночасно з кроном «опитування подій» (lock) — повторити
                 try:
                     res = self.k("td.access.server", "action_poll_now", [server_id])
                     break
