@@ -402,7 +402,10 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
 /* ---------- 9. слайс S3 «Робота зі складом» (tools/test_core_s3.mjs) ---------- */
 (await import("./test_core_s3.mjs")).register(test);
 
-/* ---------- 10. слайс S5 «Будівля, майстер, документи» (tools/test_core_s5.mjs) ---------- */
+/* ---------- 10. слайс S4 «Структура з Odoo, файли» (tools/test_core_s4.mjs) ---------- */
+(await import("./test_core_s4.mjs")).register(test);
+
+/* ---------- 11. слайс S5 «Будівля, майстер, документи» (tools/test_core_s5.mjs) ---------- */
 (await import("./test_core_s5.mjs")).register(test);
 
 for (const [name, fn] of tests) {

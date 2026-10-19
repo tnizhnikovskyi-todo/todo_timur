@@ -8,6 +8,7 @@ import { BaseAdapter, StoreError, newUid } from "../adapter.js";
 import { clone } from "../util.js";
 import { SEED_REV, buildEmptySite, buildSample, fromProto, makeSnapshot, versionFromProto } from "./sample.js";
 import { demoFind, demoStockState } from "./demo_stock.js";
+import { diffFeeds, sampleFeed } from "./sample_locations.js";
 import { createFiles, createStorage } from "./storage.js";
 
 const FULL = "sample_full";
@@ -80,6 +81,7 @@ export class ArtifactAdapter extends BaseAdapter {
         this.base = null;
         this.baseMap = null;
         Object.assign(this.capabilities, { stock: true }); // S3: демо-залишки з позначкою «демо» (F07-08)
+        Object.assign(this.capabilities, { odoo_import: true }); // S4: файл-приклад структури складу («Odoo» прототипа), XLSX/CSV читає ядро
     }
 
     get userName() {
@@ -397,6 +399,47 @@ export class ArtifactAdapter extends BaseAdapter {
     /** PDF формує сервер Odoo; у прототипі («на сервері») його немає. */
     async render() {
         throw new StoreError("not_available", "PDF формує сервер Odoo; у прототипі доступні ZPL і PNG.");
+    }
+
+    /* ===== структура з Odoo й файли (S4, F10/F11/F02-09/12): «Odoo» прототипа — приклад стрічки локацій ===== */
+    /** Підміна стрічки для демо й тестів: список локацій {id, code, name, parent, usage, …} або null (повернути приклад). */
+    simSetFeed(list) {
+        this._feed = list ? clone(list) : null;
+    }
+
+    _feedNow() {
+        const base = sampleFeed();
+        return this._feed ? { ...base, locations: clone(this._feed) } : base;
+    }
+
+    /** Те саме, що API-16 в Odoo: `{op: "feed"|"sync"|"baseline"}`; база порівняння — у сховищі (`<площадка>.baseline`). */
+    async locations({ op = "feed" } = {}) {
+        await this._boot();
+        const feed = this._feedNow();
+        const key = `${(this.getState() || this._st).site.id}.baseline`;
+        if (op === "baseline") {
+            await this.storage.set("versions", key, { locations: feed.locations });
+            return { ok: true, demo: true };
+        }
+        if (op === "feed") {
+            return { ok: true, feed, demo: true };
+        }
+        const base = await this.storage.get("versions", key);
+        if (!base) {
+            await this.storage.set("versions", key, { locations: feed.locations });
+            return { ok: true, feed, diff: { appeared: [], disappeared: [], renamed: [], moved: [] }, baseline: "created", demo: true };
+        }
+        return { ok: true, feed, diff: diffFeeds(base.locations, feed.locations), baseline: "existing", demo: true };
+    }
+
+    /** Правила розбору й лоток живуть у документі площадки (`site.parse_rules`) і записуються разом із ним. */
+    async saveParseRules(rules) {
+        const st = this.getState() || this._st;
+        if (st && st.site) {
+            st.site.parse_rules = clone(rules);
+        }
+        this.save(this.getState(), { now: true });
+        return { ok: true };
     }
 
     async createSite({ name, code, building, kind } = {}) {

@@ -4,21 +4,21 @@ from .common import PASSWORD, F3DConstructorHttpCase
 
 # MERGE.md §3.5: API-11…API-24 -> маршрути; тіло порожнє, відповідь — заглушка W0-B
 # API-11 реалізовано слайсом S1 (controllers/library.py, тести test_s1_library.py): маршрут зареєстровано один раз
-# API-12, API-15, API-17, API-18 реалізував S2 (тести — tests/test_s2_*.py), API-13/14/19 labels_pdf — S3
-# (test_s3_*.py), API-19 plan_pdf / spec_pdf й /site/wizard — S5 (test_s5_*.py)
+# API-12, API-15, API-17, API-18 реалізував S2 (тести — test_s2_*.py), API-13/14/19 labels_pdf — S3 (test_s3_*.py),
+# API-16, API-20 і API-19 table_xlsx — S4 (test_s4_*.py), API-19 plan_pdf / spec_pdf й /site/wizard — S5 (test_s5_*.py)
 IMPLEMENTED_ROUTES = [
     ('API-11', '/f3d/constructor/library'),
     ('API-13', '/f3d/constructor/stock/state'),
     ('API-14', '/f3d/constructor/stock/find'),
     ('API-19', '/f3d/constructor/render/labels_pdf'),
+    ('API-16', '/f3d/constructor/odoo/locations'),
+    ('API-19', '/f3d/constructor/render/table_xlsx'),
+    ('API-20', '/f3d/constructor/parse/table'),
     ('API-19', '/f3d/constructor/render/plan_pdf'),  # S5 (test_s5_docs.py)
     ('API-19', '/f3d/constructor/render/spec_pdf'),
     ('F16-04', '/f3d/constructor/site/wizard'),  # S5 (test_s5_wizard.py)
 ]
 STUB_ROUTES = [
-    ('API-16', '/f3d/constructor/odoo/locations'),
-    ('API-19', '/f3d/constructor/render/table_xlsx'),
-    ('API-20', '/f3d/constructor/parse/table'),
     ('API-21', '/f3d/constructor/variants'),
     ('API-22', '/f3d/constructor/comments'),
     ('API-23', '/f3d/constructor/locks'),
