@@ -54,7 +54,7 @@ class TestWHSchedule(TestWHCommon):
         # правка шаблона не змінює створений обхід (знімок)
         self.tpl.item_ids[0].title = "Змінено"
         self.tpl.item_ids[0].norm_max = 70.0
-        self.assertEqual(rnd.item_ids[0].title, "T1: огляд, температура масла")
+        self.assertEqual(rnd.item_ids[0].title, "T1: огляд, температура олії")
         self.assertEqual(rnd.item_ids[0].norm_max, 85.0)
 
     def test_ac_h03_windows(self):

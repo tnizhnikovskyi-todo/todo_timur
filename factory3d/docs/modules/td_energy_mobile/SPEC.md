@@ -297,8 +297,8 @@ access_td_energy_round_item_admin,td.energy.round.item admin,model_td_energy_rou
 
 | code | title | hint | source | norm | unit | node |
 |---|---|---|---|---|---|---|
-| `t1` | T1: огляд, температура масла | — | `signal:energy/transformers/T1/temp_c` | `max` 85 | °C | `T1` |
-| `t2` | T2: огляд, температура масла | — | `signal:energy/transformers/T2/temp_c` | `max` 85 | °C | `T2` |
+| `t1` | T1: огляд, температура олії | — | `signal:energy/transformers/T1/temp_c` | `max` 85 | °C | `T1` |
+| `t2` | T2: огляд, температура олії | — | `signal:energy/transformers/T2/temp_c` | `max` 85 | °C | `T2` |
 | `swb` | ГРЩ SWB-1: нагрів з'єднань | тепловізор, точки Q1, Q2, QS | — | `none` | — | `SWB-1` |
 | `pfc` | Компенсація PFC-1 і PFC-2 | ступені, контактори, запобіжники | — | `none` | — | `PFC-1` |
 | `dgu` | ДГУ: паливо, підігрів, акумулятор | — | `pult:kpis.generation.genset.fuel_pct` | `min` 60 | % | `ATS-1` |
@@ -345,7 +345,7 @@ access_td_energy_round_item_admin,td.energy.round.item admin,model_td_energy_rou
   "round": {"id": 412, "title": "Обхід ТП і ГРЩ · зміна 2", "state": "in_progress", "slot": "Зміна 2", "due_local": "23:00",
             "performer": {"id": 7, "name": "Іваненко О.", "is_me": true},
             "done_count": 2, "total_count": 6, "progress_pct": 33, "can_edit": true, "can_finish": false, "finish_blocked": "залишилось 4",
-            "items": [{"id": 3011, "code": "t1", "title": "T1: огляд, температура масла", "hint": "норма до 85 °C · зараз 58 °C",
+            "items": [{"id": 3011, "code": "t1", "title": "T1: огляд, температура олії", "hint": "норма до 85 °C · зараз 58 °C",
                        "done": true, "result": "ok", "value_text": "58 °C", "comment": "", "node_code": "T1", "can_3d": true},
                       {"id": 3013, "code": "swb", "title": "ГРЩ SWB-1: нагрів з'єднань", "hint": "тепловізор, точки Q1, Q2, QS",
                        "done": false, "result": "pending", "value_text": "", "comment": "", "node_code": "SWB-1", "can_3d": true}]},

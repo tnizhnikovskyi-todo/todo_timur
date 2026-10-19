@@ -27,7 +27,7 @@
         <field name="template_id" ref="round_tpl_tp_grsh"/>
         <field name="sequence">10</field>
         <field name="code">t1</field>
-        <field name="title">T1: огляд, температура масла</field>
+        <field name="title">T1: огляд, температура олії</field>
         <field name="source">signal:energy/transformers/T1/temp_c</field>
         <field name="norm_kind">max</field>
         <field name="norm_max">85</field>
@@ -38,7 +38,7 @@
         <field name="template_id" ref="round_tpl_tp_grsh"/>
         <field name="sequence">20</field>
         <field name="code">t2</field>
-        <field name="title">T2: огляд, температура масла</field>
+        <field name="title">T2: огляд, температура олії</field>
         <field name="source">signal:energy/transformers/T2/temp_c</field>
         <field name="norm_kind">max</field>
         <field name="norm_max">85</field>
