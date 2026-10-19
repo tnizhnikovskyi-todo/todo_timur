@@ -12,6 +12,7 @@
 * час — ``freezegun.freeze_time``.
 """
 
+import contextlib
 import html
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -123,10 +124,8 @@ class TdGensetW2Case(TdGensetCase):
     def _install_client_shim(self):
         client = self.env["td.genset.relay.client"]
         before = len(self.relay.calls)
-        try:
+        with contextlib.suppress(Exception):  # реалізація W1 могла відповісти винятком; важливо, чи був HTTP
             client._request("GET", "/status")
-        except Exception:  # noqa: BLE001 — реалізація W1 могла відповісти винятком; важливо, чи був HTTP
-            pass
         if len(self.relay.calls) > before:
             del self.relay.calls[before:]
             return
@@ -732,7 +731,7 @@ class TestW2Commands(TdGensetW2Case):
         start = datetime(2026, 10, 7, 11, 0)
         with freeze_time(start) as frozen:
             self.push_state(ts=start - timedelta(seconds=40), controller_mode="auto")
-            wizard, action = self.confirm_wizard("mains_close_open")
+            wizard, _action = self.confirm_wizard("mains_close_open")
             self.assertFalse(wizard.target_breaker_closed)
             self.assertIn("Генератор не живить об'єкт: живлення зникне повністю.", wizard.warning_text)
             self.assertTrue(wizard.confirm_required)

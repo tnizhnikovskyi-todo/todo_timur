@@ -7,6 +7,7 @@
 У ``catchup_mode`` події створюються заднім числом, тривоги й сповіщення — ні (ФВ-3, А.7).
 """
 
+import itertools
 from collections import deque
 from datetime import datetime, timedelta
 
@@ -252,7 +253,7 @@ class TdGensetEvent(models.Model):
         }
         for row in rows:
             if prev and (row["ts"] - prev["ts"]) > timedelta(minutes=GAP_MIN):
-                minutes = int(round((row["ts"] - prev["ts"]).total_seconds() / 60.0))
+                minutes = round((row["ts"] - prev["ts"]).total_seconds() / 60.0)
                 self._open(
                     genset,
                     "gap",
@@ -552,7 +553,7 @@ class TdGensetEvent(models.Model):
         powers = [item["active_power"] for item in rows if item["active_power"] is not None]
         fuel_rows = [item for item in rows if item["fuel_liters"] is not None]
         statuses = [item["genset_status"] for item in rows if item["genset_status"] is not None]
-        attempts = 1 + sum(1 for before, after in zip(statuses, statuses[1:]) if before == "3" and after == "4")
+        attempts = 1 + sum(1 for before, after in itertools.pairwise(statuses) if before == "3" and after == "4")
         crank_volts = [
             item["battery_v"] for item in rows if item["genset_status"] == "3" and item["battery_v"] is not None
         ]
@@ -913,7 +914,7 @@ def signed_liters(value):
 
 def fmt_duration(env, hours):
     """Тривалість у годинах → «1 год 56 хв» / «25 хв»."""
-    minutes = int(round((hours or 0.0) * 60))
+    minutes = round((hours or 0.0) * 60)
     if minutes >= 60:
         return env._("%(hours)s год %(minutes)s хв", hours=minutes // 60, minutes=minutes % 60)
     return env._("%s хв", minutes)

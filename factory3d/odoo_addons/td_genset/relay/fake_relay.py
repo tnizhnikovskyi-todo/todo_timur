@@ -76,6 +76,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import itertools
+
 from genset_model import GensetModel, SimError, load_profile
 
 SIM_PREFIX = "/sim/v1"
@@ -836,7 +838,7 @@ def raw_image(values):
         val = values.get(key)
         if val is None:
             return NO_DATA_RAW
-        raw = int(round(float(val) * scale))
+        raw = round(float(val) * scale)
         return raw & 0xFFFF if signed else max(0, min(raw, 0xFFFF))
 
     def u32(key):
@@ -966,14 +968,14 @@ class Relay:
         self.sim_token = sim_token or ""
         self.tz, self.preset = tz, preset
         self.hostids = list(hostids)
-        self.defaults = dict(
-            snapshot_sec=float(snapshot_sec),
-            time_scale=float(time_scale),
-            commands_enabled=bool(commands_enabled),
-            version=version,
-            noise=noise,
-            seed=seed,
-        )
+        self.defaults = {
+            "snapshot_sec": float(snapshot_sec),
+            "time_scale": float(time_scale),
+            "commands_enabled": bool(commands_enabled),
+            "version": version,
+            "noise": noise,
+            "seed": seed,
+        }
         self.stop_event = threading.Event()
         self.clock_offset = float(clock_offset)  # сдвиг часов эмулятора, с; reset его не трогает
         self._reset(full=True)
@@ -1035,7 +1037,7 @@ class Relay:
         while not self.stop_event.wait(period):
             try:
                 self.tick()
-            except Exception:  # pragma: no cover — не роняем фон
+            except Exception:  # noqa: BLE001  # pragma: no cover — не роняем фон
                 traceback.print_exc()
 
     def tick(self):
@@ -1869,7 +1871,7 @@ class RelayHandler(BaseHTTPRequestHandler):
                 raise ApiError(404, "not found")
         except ApiError as exc:
             status, payload = exc.status, exc.payload
-        except Exception:
+        except Exception:  # noqa: BLE001 — любая ошибка обработчика → 500, сервер не падает
             traceback.print_exc()
             status, payload = 500, {"error": "internal error"}
         self._send(status, payload, method)
@@ -1887,7 +1889,7 @@ class RelayHandler(BaseHTTPRequestHandler):
             return 200, relay.sim_v1(method, path, query, body)
         except SimError as exc:
             return exc.status, {"detail": exc.detail}
-        except Exception:
+        except Exception:  # noqa: BLE001 — любая ошибка обработчика → 500, сервер не падает
             traceback.print_exc()
             return 500, {"detail": "internal error"}
 
@@ -2023,8 +2025,8 @@ def selftest():
 
     def cmd_final(cid):
         return wait(
-            lambda: (lambda c: c if c["status"] not in ("queued", "sent") else None)(
-                call("GET", base + "/commands/%d" % cid)[1]
+            lambda: (
+                c if (c := call("GET", base + "/commands/%d" % cid)[1])["status"] not in ("queued", "sent") else None
             ),
             "command %d final" % cid,
         )
@@ -2108,7 +2110,7 @@ def selftest():
         wait(lambda: latest()["values"]["controller_mode"] == "manual", "режим manual в снимке")
         c2 = cmd_final(call("POST", base + "/commands", {"command": "auto"})[1]["id"])
         check(c2["frame"] == "00050003FF007DEB", "кадр auto = 00050003FF007DEB")
-        lt = wait(lambda: (lambda x: x if x["values"]["controller_mode"] == "auto" else None)(latest()), "auto")
+        lt = wait(lambda: x if (x := latest())["values"]["controller_mode"] == "auto" else None, "auto")
         check(lt["reason"] == "change" and lt["time_utc"] >= c2["done_utc"], "смена режима → снимок change")
 
         sim(link=False)
@@ -2138,7 +2140,9 @@ def selftest():
         for cid in ids:
             cmd_final(cid)
         done = [call("GET", base + "/commands/%d" % cid)[1] for cid in ids]
-        check(all(b["sent"] - a["done"] >= 2.0 / 20 * 0.9 for a, b in zip(done, done[1:])), "пауза между командами")
+        check(
+            all(b["sent"] - a["done"] >= 2.0 / 20 * 0.9 for a, b in itertools.pairwise(done)), "пауза между командами"
+        )
 
         sim(no_exec=True)
         c = cmd_final(call("POST", base + "/commands", {"command": "manual"})[1]["id"])
@@ -2159,7 +2163,7 @@ def selftest():
         wait(lambda: latest()["values"]["controller_mode"] == "manual", "manual")
         start_id = latest()["id"]
         cmd_final(call("POST", base + "/commands", {"command": "start"})[1]["id"])
-        lt = wait(lambda: (lambda x: x if x["values"]["genset_status"] == 9 else None)(latest()), "Normal Running")
+        lt = wait(lambda: x if (x := latest())["values"]["genset_status"] == 9 else None, "Normal Running")
         check(
             lt["values"]["gen_on_load"] and not lt["values"]["mains_on_load"] and lt["values"]["speed"] > 0,
             "start → 9, gen_on_load, speed > 0",
@@ -2172,7 +2176,7 @@ def selftest():
         )
         stop_id = latest()["id"]
         cmd_final(call("POST", base + "/commands", {"command": "stop"})[1]["id"])
-        lt = wait(lambda: (lambda x: x if x["values"]["genset_status"] == 0 else None)(latest()), "Standby")
+        lt = wait(lambda: x if (x := latest())["values"]["genset_status"] == 0 else None, "Standby")
         seq = [r["values"]["genset_status"] for r in call("GET", base + "/readings?since=%d" % stop_id)[1]["readings"]]
         dedup = [s for i, s in enumerate(seq) if i == 0 or s != seq[i - 1]]
         check(
@@ -2187,13 +2191,13 @@ def selftest():
         cmd_final(call("POST", base + "/commands", {"command": "auto"})[1]["id"])
         wait(lambda: latest()["values"]["controller_mode"] == "auto", "auto")
         sim(mains_normal=False)
-        lt = wait(lambda: (lambda x: x if x["values"]["genset_status"] == 9 else None)(latest()), "автопуск")
+        lt = wait(lambda: x if (x := latest())["values"]["genset_status"] == 9 else None, "автопуск")
         check(
             lt["values"]["gen_on_load"] and lt["values"]["mains_blackout"] and not lt["values"]["mains_normal"],
             "auto + нет сети → автопуск на нагрузку",
         )
         sim(mains_normal=True)
-        lt = wait(lambda: (lambda x: x if x["values"]["genset_status"] == 0 else None)(latest()), "возврат")
+        lt = wait(lambda: x if (x := latest())["values"]["genset_status"] == 0 else None, "возврат")
         check(lt["values"]["mains_on_load"] and not lt["values"]["gen_on_load"], "сеть вернулась → останов")
 
         n_cmds = len(call("GET", base + "/commands?since=0&limit=2000")[1]["commands"])
@@ -2217,7 +2221,7 @@ def selftest():
         )
         sim(mains_normal=True, crank_failure=True)
         cmd_final(call("POST", base + "/commands", {"command": "start"})[1]["id"])
-        lt = wait(lambda: (lambda x: x if x["values"]["crank_failure"] else None)(latest()), "crank failure")
+        lt = wait(lambda: x if (x := latest())["values"]["crank_failure"] else None, "crank failure")
         check(lt["values"]["common_shutdown"] and lt["values"]["genset_status"] == 0, "неудачный пуск → авария")
         sim(set={"battery_v": 23.5, "oil_pressure": None}, fuel_level=40)
         v = latest()["values"] if sim(snapshot=True) else None
@@ -2239,7 +2243,7 @@ def selftest():
         check(
             len(new) >= 50
             and new[-1]["ts"] - ts0 >= 59
-            and all(b["ts"] >= a["ts"] for a, b in zip(new, new[1:]))
+            and all(b["ts"] >= a["ts"] for a, b in itertools.pairwise(new))
             and "interval" in {r["reason"] for r in new},
             "advance: плановые снимки за прожитую минуту, ts по часам",
         )
@@ -2309,7 +2313,7 @@ def selftest():
         sim(restart=True, no_reply=False)
         c = call("GET", base + "/commands/%d" % c["id"])[1]
         check(c["status"] == "failed" and c["error"] == "relay restarted", "relay restarted")
-        lt = wait(lambda: (lambda x: x if x["reason"] == "first" and x["id"] > lt["id"] else None)(latest()), "first")
+        lt = wait(lambda: x if (x := latest())["reason"] == "first" and x["id"] > lt["id"] else None, "first")
         check(call("GET", base + "/status")[1]["relay"]["uptime_s"] <= 2, "uptime после перезапуска")
 
         off3 = call("GET", root + "/_sim", tok=None)[1]["clock_offset"]

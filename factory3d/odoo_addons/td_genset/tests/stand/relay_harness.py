@@ -294,7 +294,9 @@ def spawn_relay(
     last_error = ""
     for _attempt in range(3):
         port = free_port()
-        log_file = tempfile.NamedTemporaryFile(prefix="td_genset_stand_relay_", suffix=".log", delete=False)
+        log_file = tempfile.NamedTemporaryFile(  # noqa: SIM115 — живе, поки працює процес релея; закриває викликач
+            prefix="td_genset_stand_relay_", suffix=".log", delete=False
+        )
         args = [
             sys.executable,
             "-B",

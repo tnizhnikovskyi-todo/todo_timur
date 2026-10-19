@@ -32,7 +32,7 @@ def kyiv_localize(date, float_time):
     ``AmbiguousTimeError`` (осінній) → перша година (``is_dst=True``). ``float_time`` 24.0 → 00:00 наступного дня.
     Тож кожна межа вікна має рівно один UTC-момент на добу — повторна година не дає других переходів.
     """
-    minutes = int(round((float_time or 0.0) * 60))
+    minutes = round((float_time or 0.0) * 60)
     day = date + timedelta(days=minutes // (24 * 60))
     minutes %= 24 * 60
     naive = datetime.combine(day, time(minutes // 60, minutes % 60))

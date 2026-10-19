@@ -460,5 +460,5 @@ class TestW3SecurityRpc(TdGensetCase, HttpCase):
             self.assertEqual(state["is_tech"], login == "td_user_t")
             self.assertEqual(set(state["buttons"]), {"auto", "manual", "start", "stop", "test"})
         # приватні методи через RPC недоступні
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017 — RPC повертає Fault/AccessError залежно від транспорту
             self._call("td_user_t", "td.genset", "_td_pult_access", [[genset_id]])

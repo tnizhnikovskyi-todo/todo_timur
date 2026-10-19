@@ -116,7 +116,7 @@ class TestF01Auth(SimBase):
     def test_without_or_wrong_token(self):
         self.assertEqual(self.stand.get("/sim/v1/state", token=None)[0], 401)
         self.assertEqual(self.stand.get("/sim/v1/state", token="wrong")[0], 401)
-        status, data = self.stand.get("/sim/v1/state", token=None)
+        _status, data = self.stand.get("/sim/v1/state", token=None)
         self.assertIn("detail", data)
         self.assertEqual(self.stand.api("/status")[0], 200)
 
@@ -183,7 +183,7 @@ class TestF03Amf(SimBase):
         took = self._blackout()
         self.assertTrue(29 <= took <= 32, took)
         s = self.stand
-        status, data = s.post("/sim/v1/mains", {"available": True})
+        status, _data = s.post("/sim/v1/mains", {"available": True})
         self.assertEqual(status, 200)
         back = s.wait_state("standby", limit=80)
         self.assertIsNotNone(back)
@@ -368,9 +368,9 @@ class TestProfiles(unittest.TestCase):
         stand = Stand(profile="office", sim_token=SIM_TOKEN)
         self.addCleanup(stand.close)
         self.assertEqual(stand.get("/sim/v1/state")[0], 404)
-        status, data = stand.api("/status")
+        status, _data = stand.api("/status")
         self.assertEqual(status, 200)
-        status, data = stand.call("POST", "/_sim", {"mains_normal": False}, token=API_TOKEN)
+        status, _data = stand.call("POST", "/_sim", {"mains_normal": False}, token=API_TOKEN)
         self.assertEqual(status, 200)
 
     def test_token_not_in_logs(self):

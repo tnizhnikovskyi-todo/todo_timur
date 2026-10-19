@@ -3,6 +3,7 @@
 ``td.genset.notify.level`` — ТР 2.3.8, 2.3.9; SPEC 5.8, 5.9, 9.
 """
 
+import itertools
 from datetime import timedelta
 
 from markupsafe import Markup
@@ -383,5 +384,5 @@ class TdGensetNotifyLevel(models.Model):
             if levels and levels[0].delay_min != 0:
                 raise ValidationError(_("Перший рівень ланцюжка сповіщається одразу (0 хв)."))
             delays = levels.mapped("delay_min")
-            if any(later < earlier for earlier, later in zip(delays, delays[1:])):
+            if any(later < earlier for earlier, later in itertools.pairwise(delays)):
                 raise ValidationError(_("Затримка рівнів не може зменшуватися за порядком ланцюжка."))

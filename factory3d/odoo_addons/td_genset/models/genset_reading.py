@@ -1414,7 +1414,7 @@ def convert_value(value, field_type):
         if field_type == "float":
             return float(value)
         if field_type == "integer":
-            return int(round(float(value)))
+            return round(float(value))
         if field_type == "char":
             return str(value)
         if field_type == "selection":

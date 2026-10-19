@@ -321,7 +321,7 @@ def raw_image(values):
         val = values.get(key)
         if val is None:
             return NO_DATA_RAW
-        raw = int(round(float(val) * scale))
+        raw = round(float(val) * scale)
         return raw & 0xFFFF if signed else max(0, min(raw, 0xFFFF))
 
     def u32(key):

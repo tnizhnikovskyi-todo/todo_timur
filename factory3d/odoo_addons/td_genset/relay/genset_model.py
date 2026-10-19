@@ -5,6 +5,7 @@
 `set_load`, `fault`, `clear`, `set_fuel`, `set_time`, `reset`, `events_json`; помилки — `SimError(status, detail)`.
 """
 
+import itertools
 import json
 import logging
 import math
@@ -83,7 +84,7 @@ def get_tz(name):
         from zoneinfo import ZoneInfo
 
         return ZoneInfo(name)
-    except Exception:  # немає бази зон
+    except (ImportError, KeyError, ValueError, OSError):  # немає бази зон (ZoneInfoNotFoundError ⊂ KeyError)
         return timezone(timedelta(hours=3)) if name == "Europe/Kyiv" else timezone.utc
 
 
@@ -154,7 +155,7 @@ class GensetModel:
         if load_pct <= xs[0]:
             slope = (pts[xs[1]] - pts[xs[0]]) / (xs[1] - xs[0])
             return max(0.0, pts[xs[0]] + slope * (load_pct - xs[0]))
-        for lo, hi in zip(xs, xs[1:]):
+        for lo, hi in itertools.pairwise(xs):
             if lo <= load_pct <= hi:
                 return pts[lo] + (pts[hi] - pts[lo]) * (load_pct - lo) / (hi - lo)
         return pts[xs[-1]]
@@ -195,7 +196,7 @@ class GensetModel:
         """Просунути модель на dt симуляційних секунд (внутрішні кроки ≤ 0.5 с)."""
         if dt <= 0:
             return
-        n = min(MAX_SUBSTEPS, max(1, int(math.ceil(dt / SUBSTEP_S))))
+        n = min(MAX_SUBSTEPS, max(1, math.ceil(dt / SUBSTEP_S)))
         for _ in range(n):
             self._step(dt / n)
 
@@ -242,7 +243,7 @@ class GensetModel:
         self.coolant_c += (target - self.coolant_c) * (1.0 - math.exp(-dt / float(sens["coolant_tau_s"])))
         if running:
             self.oil_bar = max(0.0, float(sens["oil_run_bar"]) + self._noise(0.1))
-            self.rpm = int(round(float(sens["rpm_run"]) + self._noise(5)))
+            self.rpm = round(float(sens["rpm_run"]) + self._noise(5))
             self.charger_v = float(sens["charger_v"])
             self.batt_v = float(sens["batt_v"]) + 0.1 + self._noise(0.05)
         else:

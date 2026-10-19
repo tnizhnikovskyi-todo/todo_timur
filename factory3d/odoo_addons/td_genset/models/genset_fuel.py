@@ -13,6 +13,7 @@
 * ТО за мотогодинами — ``_compute_maint``, ``_check_maintenance``; обладнання — ``_ensure_equipment``.
 """
 
+import itertools
 import logging
 from datetime import date, timedelta
 
@@ -118,7 +119,7 @@ def fmt_signed(value, digits=None):
 
 def plural(count, forms):
     """Форма слова за числом: ``forms = (одна, дві–чотири, п'ять)`` — 1 каністра, 2 каністри, 5 каністр."""
-    number = abs(int(round(count or 0)))
+    number = abs(round(count or 0))
     if number % 10 == 1 and number % 100 != 11:
         return forms[0]
     if 2 <= number % 10 <= 4 and not 12 <= number % 100 <= 14:
@@ -141,7 +142,7 @@ def interpolate_liters(points, ohm):
         liters = points[-1][1]
     else:
         liters = points[-1][1]
-        for (ohm_a, liters_a), (ohm_b, liters_b) in zip(points, points[1:]):
+        for (ohm_a, liters_a), (ohm_b, liters_b) in itertools.pairwise(points):
             if ohm_a <= ohm <= ohm_b:
                 liters = liters_a + (ohm - ohm_a) * (liters_b - liters_a) / (ohm_b - ohm_a)
                 break
@@ -206,7 +207,7 @@ class TdGensetStorageLocation(models.Model):
             .search([("location_id", "in", self.ids)])
         )
         for location in self:
-            own = canisters.filtered(lambda canister: canister.location_id == location)
+            own = canisters.filtered(lambda canister, loc=location: canister.location_id == loc)
             if own.filtered("active"):
                 raise UserError(_("У «%(name)s» є каністри — спершу перемістіть їх.", name=location.name))
             if own:
@@ -900,7 +901,8 @@ class TdGensetFuelCalibration(models.Model):
         for genset in self.mapped("genset_id"):
             points = self.sudo().search([("genset_id", "=", genset.id)], order="ohm, id")
             steps = [
-                float_compare(right.liters, left.liters, precision_digits=2) for left, right in zip(points, points[1:])
+                float_compare(right.liters, left.liters, precision_digits=2)
+                for left, right in itertools.pairwise(points)
             ]
             if steps and not (all(step > 0 for step in steps) or all(step < 0 for step in steps)):
                 raise ValidationError(
@@ -1203,7 +1205,7 @@ class TdGensetFuel(models.Model):
                     genset.fuel_recompute_next_id = before_id
                 done += processed
                 remaining += genset._recompute_liters_remaining()
-            except Exception as error:  # cron не кидає винятків назовні (А.7)
+            except Exception as error:  # noqa: BLE001 — cron не кидає винятків назовні (А.7)
                 _logger.warning("td_genset: перерахунок літрів генератора %s зупинено: %s", genset.id, error)
                 genset.fuel_recompute_next_id = 0
         self.env["ir.cron"]._commit_progress(done, remaining=remaining)

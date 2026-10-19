@@ -239,7 +239,7 @@ class TestStandScheduler(TdGensetStandCase):
                 "time_end": 8.8,
             }
         )
-        with self.assertRaises(Exception), self.env.cr.savepoint(), mute_logger("odoo.sql_db"):
+        with self.assertRaises(Exception), self.env.cr.savepoint(), mute_logger("odoo.sql_db"):  # noqa: B017 — SQL-обмеження: тип винятку залежить від шляху flush
             Exception_.create({"genset_id": self.genset.id, "date": self.monday, "action": "skip"})
             self.env.flush_all()
         self.add_window(9.0, 10.0)

@@ -147,8 +147,10 @@ SPEC_METHODS = {
     "td.genset.command": {
         "_enqueue": (
             "genset_command",
-            "(self, genset, command, source, requested_by, batch_key=None, "
-            "late_transition_at=None, target_breaker_closed=None)",
+            (
+                "(self, genset, command, source, requested_by, batch_key=None, "
+                "late_transition_at=None, target_breaker_closed=None)"
+            ),
         ),
         "_enqueue_batch": ("genset_command", "(self, genset, commands, source, requested_by, late_transition_at=None)"),
         "_cron_process_commands": ("genset_command", "(self)"),
@@ -355,7 +357,7 @@ class TestW0Smoke(TdGensetCase):
         self.assertEqual(reading.fuel_source, "pct")
         self.assertAlmostEqual(reading.run_hours_total, 10.5)
         self.assertIn("new_key", reading.values_extra_text)
-        with self.assertRaises(Exception), mute_logger("odoo.sql_db"), self.env.cr.savepoint():
+        with self.assertRaises(Exception), mute_logger("odoo.sql_db"), self.env.cr.savepoint():  # noqa: B017 — SQL-обмеження: тип винятку залежить від шляху flush
             reading_model.create({"genset_id": self.genset.id, "relay_id": 1, "ts": datetime(2026, 10, 7, 12, 1)})
 
     def test_w0_schedule_and_kyiv(self):

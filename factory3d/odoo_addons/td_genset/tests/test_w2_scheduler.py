@@ -38,7 +38,7 @@ class TestW2Scheduler(TdGensetW2Case):
             self.run_scheduler()
             if commands:
                 self.run_commands()
-            for command in self.commands().filtered(lambda record: record.id not in before):
+            for command in self.commands().filtered(lambda record, seen=before: record.id not in seen):
                 created.append((kyiv_hhmm(moment), command.command, command.source, command.state))
             moment += timedelta(minutes=step)
         return created

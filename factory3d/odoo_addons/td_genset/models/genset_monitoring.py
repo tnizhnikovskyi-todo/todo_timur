@@ -418,9 +418,7 @@ class TdGensetMonitoring(models.Model):
         if not version or version_tuple(version) < RAW_VERSION:
             return True
         values = self[:1].last_values_json
-        if isinstance(values, dict) and values and not any(key in values for key in OHM_KEYS):
-            return True
-        return False
+        return bool(isinstance(values, dict) and values and not any(key in values for key in OHM_KEYS))
 
     def _apply_reading(self, reading):
         """Копіює стан останнього знімка в поля генератора (2.16): режим, стан, ``is_running``,
@@ -543,7 +541,7 @@ class TdGensetMonitoring(models.Model):
                         [("genset_id", "=", genset.id), ("event_type", "=", "link"), ("date_end", "=", False)]
                     )
                     no_data_since = min(events.mapped("date_start")) if events else lost_since
-                    minutes = int(round((now - no_data_since).total_seconds() / 60.0)) if no_data_since else 0
+                    minutes = round((now - no_data_since).total_seconds() / 60.0) if no_data_since else 0
                     text = _("Зв'язок відновлено після %s хв без даних.", minutes)
                     for event in events:
                         event_model._close(event, now, summary=text)
@@ -595,7 +593,7 @@ class TdGensetMonitoring(models.Model):
                 days = 0
                 if first and last:
                     span = fields.Datetime.to_datetime(last) - fields.Datetime.to_datetime(first)
-                    days = int(round(span.total_seconds() / 86400.0))
+                    days = round(span.total_seconds() / 86400.0)
             genset._message_log(
                 body=_(
                     "Догнано історію: %(days)s днів, %(readings)s знімків, %(events)s подій.",

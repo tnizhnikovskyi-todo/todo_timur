@@ -514,7 +514,6 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             }
             console.log("test successful");
         """
-                % {}
             ),
             login="td_user_t",
         )
