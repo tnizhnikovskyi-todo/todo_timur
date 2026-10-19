@@ -207,7 +207,7 @@ class TestVisitorPresence(VisitorCase):
     def _enter_cut(self):
         self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'),
                   self.prow(2, '2026-10-12T03:53:00.00Z', 4102, 'TSTB2', tna='1'))
-        self.emp_b._f3d_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
+        self.emp_b._td_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
         self.emp_c.sudo().td_home_zone_id = self.z['Z-CUT']
         return self._visitor(state='on_site', present=True, zone_id=self.z['Z-CUT'].id,
                              arrived_at=datetime(2026, 10, 12, 3, 55))

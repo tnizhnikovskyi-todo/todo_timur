@@ -6,9 +6,9 @@ class F3dZone(models.Model):
 
     td_people_now = fields.Integer(string='Людей зараз', compute='_compute_f3d_people')
     td_people_employee_ids = fields.Many2many('hr.employee', compute='_compute_f3d_people')
-    # W3: td_people_visitor_ids (Many2many td.access.visitor) і розширення _f3d_people_visitors()
+    # W3: td_people_visitor_ids (Many2many td.access.visitor) і розширення _td_people_visitors()
 
-    def _f3d_people_visitors(self):
+    def _td_people_visitors(self):
         """{zone_id: [visitor ids]} — перекривається в W3 (відвідувачі `present` у зоні)."""
         return {}
 
@@ -19,7 +19,7 @@ class F3dZone(models.Model):
         for emp in employees:
             by_zone.setdefault(emp.td_access_zone_id.id, self.env['hr.employee'])
             by_zone[emp.td_access_zone_id.id] |= emp
-        visitors = self._f3d_people_visitors()
+        visitors = self._td_people_visitors()
         for zone in self:
             emps = by_zone.get(zone.id, self.env['hr.employee'])
             zone.td_people_employee_ids = emps

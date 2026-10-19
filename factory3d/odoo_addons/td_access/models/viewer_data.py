@@ -14,7 +14,7 @@ class F3dAccessViewerData(models.AbstractModel):
     _description = 'СКУД: агрегати для переглядача'
 
     @api.model
-    def _f3d_viewer_data(self, start, with_names=False):
+    def _td_viewer_data(self, start, with_names=False):
         """Дані розділу `access` за добу, що починається в `start` (naive UTC)."""
         env = self.sudo().env
         end = start + timedelta(hours=24)

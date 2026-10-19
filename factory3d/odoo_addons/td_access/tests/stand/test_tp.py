@@ -126,7 +126,7 @@ def test_tp01_avalanche(odoo, sim, server_id, bs_http):
 
 # ---------------------------------------------------------------------------------------------- ТП-03
 def test_tp03_provider_and_people_now(odoo, server_id):
-    """130 000 подій у таблиці: `_f3d_viewer_collect` ≤ 200 мс, `td_people_now` 45 зон ≤ 50 мс, Index Scan по ts."""
+    """130 000 подій у таблиці: `_td_viewer_collect` ≤ 200 мс, `td_people_now` 45 зон ≤ 50 мс, Index Scan по ts."""
     res = shell_perf("collect")
     report("03", res)
     assert res["events_total"] >= 130_000

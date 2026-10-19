@@ -25,7 +25,7 @@ class HrEmployee(models.Model):
     td_access_link_ids = fields.One2many(
         'td.access.user.link', 'employee_id', string='Користувачі BioStar', groups=SECURITY)
 
-    def _f3d_access_set(self, vals, event=None):
+    def _td_access_set(self, vals, event=None):
         """Записати присутність/зону (sudo); зміна present/zone -> шина (R-12 крок 6)."""
         vals = dict(vals)
         if event is not None:
@@ -42,11 +42,11 @@ class HrEmployee(models.Model):
             if collector is not None:
                 collector.setdefault('hr.employee', set()).update(codes)
             else:
-                self.env['td.access.event']._f3d_bus('hr.employee', codes)
+                self.env['td.access.event']._td_bus('hr.employee', codes)
         return changed
 
     @api.model
-    def _f3d_access_public_presence(self, codes=None):
+    def _td_access_public_presence(self, codes=None):
         """Публічна присутність для провайдера (A-21): без raw_user_id, імен і карток."""
         domain = [('td_code', '!=', False), ('active', '=', True)]
         if codes:

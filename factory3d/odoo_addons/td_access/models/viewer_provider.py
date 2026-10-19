@@ -33,14 +33,14 @@ def _last_event(last):
 class F3dViewerProviderAccess(models.AbstractModel):
     _name = 'td.viewer.provider.access'       # БЕЗ _inherit: td_viewer3d не є залежністю (A-19)
     _description = '3D: СКУД — люди, двері, зчитувачі'
-    _f3d_sequence = 170
-    _f3d_sections = ('access',)
-    _f3d_group = 'td_factory3d.group_td_user'
+    _td_sequence = 170
+    _td_sections = ('access',)
+    _td_group = 'td_factory3d.group_td_user'
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return list(BUS_MODELS)
 
-    def _f3d_day_start(self, ctx):
+    def _td_day_start(self, ctx):
         """Початок «сьогодні» (naive UTC) за `ctx['today']` (доба за Києвом)."""
         today = ctx.get('today')
         if today:
@@ -48,11 +48,11 @@ class F3dViewerProviderAccess(models.AbstractModel):
             return local_day_start_utc(datetime.combine(day.date(), time(12)))
         return local_day_start_utc(ctx.get('now') or fields.Datetime.now())
 
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         """R-12 кроки 1–5."""
         ctx = ctx or {}
         is_sec = self.env.user.has_group(SECURITY)
-        pres = self.env['hr.employee']._f3d_access_public_presence()
+        pres = self.env['hr.employee']._td_access_public_presence()
         # крок 2: працівники, що вже є у payload (чужі записи не створюються)
         for code, rec in (payload.get('employees') or {}).items():
             info = pres.get(code)
@@ -62,7 +62,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
             rec['zone'] = info['zone']
             rec['zone_since'] = _loc(info['zone_since'])
             rec['last_event'] = _last_event(info['last_event'])
-        data = self.env['td.access.viewer.data']._f3d_viewer_data(self._f3d_day_start(ctx), with_names=is_sec)
+        data = self.env['td.access.viewer.data']._td_viewer_data(self._td_day_start(ctx), with_names=is_sec)
         zones = {code: n for code, n in data['zones'].items() if n}
         # крок 3
         for code, rec in (payload.get('zones') or {}).items():
@@ -83,14 +83,14 @@ class F3dViewerProviderAccess(models.AbstractModel):
             'zones': zones,
             'people': {code: {'present': bool(i['present']), 'zone': i['zone'], 'zone_since': _loc(i['zone_since']),
                               'last_event': _last_event(i['last_event'])} for code, i in pres.items()},
-            'visitors': [self._f3d_visitor_item(v, is_sec) for v in data['visitors']],
+            'visitors': [self._td_visitor_item(v, is_sec) for v in data['visitors']],
             'readers': {r['code']: {
                 'name': r['name'], 'zone': r['zone'], 'x': r['x'], 'y': r['y'], 'status': r['status'],
                 'last_event': {'ts': _loc(r['last_event_ts']), 'code': r['last_event_code'],
-                               'type': self._f3d_code_type(r['last_event_code'])} if r['last_event_ts'] else None,
+                               'type': self._td_code_type(r['last_event_code'])} if r['last_event_ts'] else None,
             } for r in data['readers']},
             'doors': {d['code']: {k: v for k, v in d.items() if k != 'code'} for d in data['doors']},
-            'cards': self._f3d_cards(data, server, is_sec),
+            'cards': self._td_cards(data, server, is_sec),
             'last_events': [{
                 'ts': _loc(e['ts']), 'door': e['door'], 'device': e['device'], 'direction': e['direction'],
                 'type': e['type'], 'code': e['code'], 'person': e['person']} for e in data['last_events']],
@@ -105,18 +105,18 @@ class F3dViewerProviderAccess(models.AbstractModel):
         return payload
 
     @staticmethod
-    def _f3d_visitor_item(visitor, is_sec):
+    def _td_visitor_item(visitor, is_sec):
         item = {'code': 'V-%d' % visitor['id'], 'zone': visitor['zone'], 'since': _loc(visitor['since'])}
         if is_sec:
             item['name'] = visitor['name']
         return item
 
     @staticmethod
-    def _f3d_code_type(code):
+    def _td_code_type(code):
         return classify(code)['event_type']
 
     @staticmethod
-    def _f3d_cards(data, server, is_sec):
+    def _td_cards(data, server, is_sec):
         employees_n = data['employees_on_site']
         visitors_n = len(data['visitors'])
         poll = _loc(server['last_poll_at'])[11:] if server and server['last_poll_at'] else '—'
@@ -139,7 +139,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
                                 ['Останній доступ', text]]},
         }
 
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """R-12 п. 7: дельта шини; власний розділ — цілком, чужі розділи — лише доповнення."""
         ctx = ctx or {}
         changes = ctx.get('changes') or {}
@@ -151,7 +151,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
             'zones': {z: {} for z in self.env['td.zone'].search([]).mapped('td_code')},
             'infra': {'cards': {'TURNSTILES': {}, 'ACCESS': {}}},
         }
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         patch['access'] = tmp['access']
         for key in ('employees', 'zones', 'infra'):
             if tmp[key]:
@@ -163,15 +163,15 @@ class F3dAccessVisitorBus(models.Model):
     """Зміни присутності відвідувача -> шина переглядача (R-12 крок 6)."""
     _inherit = 'td.access.visitor'
 
-    def _f3d_presence_set(self, vals):
-        changed = super()._f3d_presence_set(vals)
+    def _td_presence_set(self, vals):
+        changed = super()._td_presence_set(vals)
         if changed:
             collector = self.env.context.get('f3d_bus_collector')
             codes = {'V-%d' % self.id}
             if collector is not None:
                 collector.setdefault('td.access.visitor', set()).update(codes)
             else:
-                self.env['td.access.event']._f3d_bus('td.access.visitor', codes)
+                self.env['td.access.event']._td_bus('td.access.visitor', codes)
         return changed
 
 

@@ -85,7 +85,7 @@ class F3dAccessUserLink(models.Model):
             vals['match'] = 'none'
 
     # ------------------------------------------------------------------ R-03
-    def _f3d_rematch(self):
+    def _td_rematch(self):
         """R-03 кроки 1–6 для зв'язків; повертає self."""
         Employee = self.env['hr.employee'].sudo()
         for link in self.sudo():
@@ -131,20 +131,20 @@ class F3dAccessUserLink(models.Model):
             lambda e: e.td_code.replace('-', '') == uid)
 
     @api.model
-    def _f3d_match_employee(self, biostar_user_id, server=None):
+    def _td_match_employee(self, biostar_user_id, server=None):
         """R-03: знайти або створити зв'язок (server, user) і зіставити з працівником; повертає зв'язок."""
         server = server or self.env['td.access.server'].sudo().search([('active', '=', True)], limit=1)
         link = self.sudo().with_context(active_test=False).search(
             [('server_id', '=', server.id), ('biostar_user_id', '=', biostar_user_id)], limit=1)
         if not link:
             link = self.sudo().create({'server_id': server.id, 'biostar_user_id': biostar_user_id})
-        link._f3d_rematch()
+        link._td_rematch()
         return link
 
     def action_rematch(self):
         if not self.env.su and not self.env.user.has_group('td_access.group_td_access_admin'):
             raise AccessError("Підбирати працівників може лише адміністратор СКУД.")
-        self.filtered(lambda r: r.match in ('none', 'barcode', 'alias', 'code'))._f3d_rematch()
+        self.filtered(lambda r: r.match in ('none', 'barcode', 'alias', 'code'))._td_rematch()
         return True
 
     def action_open_events(self):

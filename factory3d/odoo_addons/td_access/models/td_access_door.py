@@ -94,7 +94,7 @@ class F3dAccessDoor(models.Model):
                 raise AccessError("Охорона може лише зняти тривогу дверей.")
         return super().write(vals)
 
-    def _f3d_publish_change(self):
+    def _td_publish_change(self):
         """Шина переглядача ('td.access.door', коди, 'state'), R-12 крок 6; у пакеті подій — через збирач."""
         codes = {c for c in self.sudo().mapped('code') if c}
         if not codes:
@@ -103,9 +103,9 @@ class F3dAccessDoor(models.Model):
         if collector is not None:
             collector.setdefault('td.access.door', set()).update(codes)
         else:
-            self.env['td.access.event']._f3d_bus('td.access.door', codes)
+            self.env['td.access.event']._td_bus('td.access.door', codes)
 
-    def _f3d_set_state(self, state, ts, alarm=None, reason=None):
+    def _td_set_state(self, state, ts, alarm=None, reason=None):
         """R-10: застосувати подію стану дверей; повертає двері, у яких щось змінилося."""
         changed = self.browse()
         for door in self.sudo():
@@ -124,7 +124,7 @@ class F3dAccessDoor(models.Model):
             if vals:
                 door.write(vals)
         if changed:
-            changed._f3d_publish_change()
+            changed._td_publish_change()
         return changed
 
     def action_f3d_show(self):
@@ -140,5 +140,5 @@ class F3dAccessDoor(models.Model):
         if not self.env.su and not self.env.user.has_group('td_access.group_td_access_security'):
             raise AccessError("Знімати тривогу може лише охорона.")
         self.sudo().write({'alarm': False, 'alarm_reason': False})
-        self._f3d_publish_change()
+        self._td_publish_change()
         return True

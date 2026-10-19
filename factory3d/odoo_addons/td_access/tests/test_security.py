@@ -78,7 +78,7 @@ class TestSecurity(AccessCase):
             self.emp_a.with_user(self.user_security).read(['td_access_last_event_id'])
         with self.assertRaises(AccessError):
             self.emp_a.with_user(self.user_security).read(['td_access_card_ids'])
-        pres = self.env['hr.employee']._f3d_access_public_presence(['OP-TST-A'])
+        pres = self.env['hr.employee']._td_access_public_presence(['OP-TST-A'])
         self.assertEqual(set(pres['OP-TST-A']), {'present', 'zone', 'zone_since', 'last_event'})
 
     def test_card_rules(self):  # AC-63

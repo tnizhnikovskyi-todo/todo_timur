@@ -63,7 +63,7 @@ class TestPresence(AccessCase):
         self._enter(1)
         self._enter(2, 'TSTB2')
         self.emp_c.sudo().td_home_zone_id = self.z['Z-CUT']
-        self.emp_b._f3d_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
+        self.emp_b._td_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
         zone = self.z['Z-CUT']
         self.assertEqual(zone.td_people_now, 2)
         self.assertEqual(zone.td_people_employee_ids, self.emp_a | self.emp_b)
@@ -73,7 +73,7 @@ class TestPresence(AccessCase):
     def test_presence_view_rows(self):
         self._enter(1)
         self._enter(2, 'TSTB2')
-        self.emp_b._f3d_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
+        self.emp_b._td_access_set({'td_access_zone_id': self.z['Z-CUT'].id})
         Presence = self.env['td.access.presence']
         ids = (self.emp_a | self.emp_b | self.emp_c).ids
         rows = Presence.with_user(self.user_security).search_read([('employee_id', 'in', ids)])
@@ -111,7 +111,7 @@ class TestPresence(AccessCase):
 
     def test_drill(self):
         self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'))
-        with patch.object(F3dAccessEvent, '_f3d_drill_active', return_value=True):
+        with patch.object(F3dAccessEvent, '_td_drill_active', return_value=True):
             out = self.feed(self.prow(2, '2026-10-12T09:00:00.00Z', 4102, 'TSTA1', tna='2'))
             self.assertEqual(out.attendance_action, 'drill')
             att = self.attendances(self.emp_a)
@@ -126,12 +126,12 @@ class TestPresence(AccessCase):
         self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'))
         source = self.env['td.fire.passage.source.access']
         at = datetime(2026, 10, 12, 7, 0)
-        self.assertEqual(source._f3d_on_site(at), [{'employee_id': self.emp_a.id,
+        self.assertEqual(source._td_on_site(at), [{'employee_id': self.emp_a.id,
                                                     'since': datetime(2026, 10, 12, 3, 52), 'point': 'TURN-1'}])
-        rows = source._f3d_passages(datetime(2026, 10, 12, 3, 0), at)
+        rows = source._td_passages(datetime(2026, 10, 12, 3, 0), at)
         self.assertEqual(rows, [{'employee_id': self.emp_a.id, 'ts': datetime(2026, 10, 12, 3, 52),
                                  'point': 'TURN-1', 'direction': 'in'}])
-        self.assertFalse(source._f3d_drill_active(at))
+        self.assertFalse(source._td_drill_active(at))
 
     def test_housekeeping(self):
         now = datetime(2026, 10, 12, 10, 0)

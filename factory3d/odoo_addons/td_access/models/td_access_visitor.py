@@ -123,23 +123,23 @@ class F3dAccessVisitor(models.Model):
         for vals in vals_list:
             if vals.get('date_from') and not vals.get('date_to'):
                 vals['date_to'] = fields.Datetime.to_datetime(vals['date_from']) + timedelta(hours=hours)
-            self._f3d_check_user_owner(vals.get('biostar_user_id'), vals.get('server_id') or
+            self._td_check_user_owner(vals.get('biostar_user_id'), vals.get('server_id') or
                                        self._default_server_id())
         records = super().create(vals_list)
-        records.filtered('biostar_user_id')._f3d_sync_link()
+        records.filtered('biostar_user_id')._td_sync_link()
         return records
 
     def write(self, vals):
         if 'biostar_user_id' in vals:
             for rec in self:
-                self._f3d_check_user_owner(vals['biostar_user_id'], vals.get('server_id') or rec.server_id.id)
+                self._td_check_user_owner(vals['biostar_user_id'], vals.get('server_id') or rec.server_id.id)
         res = super().write(vals)
         if 'biostar_user_id' in vals:
-            self._f3d_sync_link()
+            self._td_sync_link()
         return res
 
     @api.model
-    def _f3d_check_user_owner(self, user_id, server_id):
+    def _td_check_user_owner(self, user_id, server_id):
         if not user_id or not server_id:
             return
         link = self.env['td.access.user.link'].sudo().with_context(active_test=False).search(
@@ -147,7 +147,7 @@ class F3dAccessVisitor(models.Model):
         if link.employee_id:
             raise ValidationError("Користувач BioStar %s належить працівнику %s." % (user_id, link.employee_id.name))
 
-    def _f3d_sync_link(self):
+    def _td_sync_link(self):
         """R-14 крок 2: зв'язок (server, biostar_user_id) -> відвідувач, match='visitor'."""
         Link = self.env['td.access.user.link'].sudo().with_context(active_test=False)
         for rec in self.sudo():
@@ -185,11 +185,11 @@ class F3dAccessVisitor(models.Model):
                 raise UserError("Очікувати можна лише чернетку візиту.")
         for rec in self:
             rec.write({'state': 'expected'})
-            rec._f3d_push_user()
-            rec._f3d_assign_card()
+            rec._td_push_user()
+            rec._td_assign_card()
         return True
 
-    def _f3d_assign_card(self):
+    def _td_assign_card(self):
         """Картка з пулу (або обрана вручну) -> видана відвідувачу."""
         self.ensure_one()
         Card = self.env['td.access.card'].sudo()
@@ -232,7 +232,7 @@ class F3dAccessVisitor(models.Model):
             if rec.state not in ('left', 'expected', 'on_site'):
                 raise UserError("Закрити можна лише візит, що очікується, триває або завершився.")
         for rec in self:
-            rec._f3d_close({'state': 'closed'})
+            rec._td_close({'state': 'closed'})
         return True
 
     def action_cancel(self):
@@ -241,10 +241,10 @@ class F3dAccessVisitor(models.Model):
             if rec.state not in ('draft', 'expected'):
                 raise UserError("Скасувати можна лише чернетку або очікуваний візит.")
         for rec in self:
-            rec._f3d_close({'state': 'cancelled'})
+            rec._td_close({'state': 'cancelled'})
         return True
 
-    def _f3d_close(self, vals):
+    def _td_close(self, vals):
         """Спільна частина закриття/скасування: присутність знімається, картка повертається."""
         self.ensure_one()
         vals = dict(vals, present=False, zone_id=False, zone_since=False, zone_door_id=False)
@@ -269,7 +269,7 @@ class F3dAccessVisitor(models.Model):
         return rec
 
     # ------------------------------------------------------------------ користувач BioStar (R-14 крок 2)
-    def _f3d_push_user(self):
+    def _td_push_user(self):
         for rec in self.sudo():
             if not P.get_flag(self.env, 'write_enabled'):
                 if rec.sync_state != 'synced':
@@ -277,10 +277,10 @@ class F3dAccessVisitor(models.Model):
                 continue
             if rec.biostar_user_id and rec.sync_state == 'local':
                 continue  # користувач уже створений у BioStar вручну
-            rec._f3d_create_user()
+            rec._td_create_user()
         return True
 
-    def _f3d_create_user(self):
+    def _td_create_user(self):
         self.ensure_one()
         if not self.biostar_user_id:
             self.biostar_user_id = P.get_str(self.env, 'visitor_user_prefix', 'V-') + str(self.id)
@@ -310,10 +310,10 @@ class F3dAccessVisitor(models.Model):
         self.sudo().search([
             ('state', 'in', ('expected', 'on_site')),
             '|', ('sync_state', 'in', ('pending', 'error')),
-            '&', ('sync_state', '=', 'local'), ('biostar_user_id', '=', False)], limit=100)._f3d_push_user()
+            '&', ('sync_state', '=', 'local'), ('biostar_user_id', '=', False)], limit=100)._td_push_user()
 
     # ------------------------------------------------------------------ присутність (R-14, R-17)
-    def _f3d_presence_set(self, vals):
+    def _td_presence_set(self, vals):
         """Записати присутність/зону; True, якщо щось змінилось."""
         self.ensure_one()
         diff = {}
@@ -344,7 +344,7 @@ class F3dAccessEvent(models.Model):
 
     _f3d_access_event_visitor_ts_idx = models.Index('(visitor_id, ts)')
 
-    def _f3d_visitor_pass(self, visitor):
+    def _td_visitor_pass(self, visitor):
         """R-14 кроки 3–4: стан і зона відвідувача за проходом; відміток hr.attendance немає."""
         self.ensure_one()
         res = {'attendance_action': 'not_employee'}
@@ -388,12 +388,12 @@ class F3dAccessEvent(models.Model):
             res['error_message'] = "Відвідувач у стані «%s»: прохід лише зафіксовано" % self.env[
                 'td.access.visitor']._state_label(visitor)
         else:
-            res['presence_changed'] = visitor._f3d_presence_set(upd)
+            res['presence_changed'] = visitor._td_presence_set(upd)
             visitor.sudo().write({'last_event_id': self.id})
         return res
 
     @api.model
-    def _f3d_on_site_visitors(self, ts, cids, hours):
+    def _td_on_site_visitors(self, ts, cids, hours):
         self.flush_model()
         self.env['td.access.visitor'].flush_model()
         cr = self.env.cr
@@ -416,7 +416,7 @@ class F3dAccessEvent(models.Model):
         return self.env['td.access.visitor'].sudo().browse(sorted(ids))
 
     @api.model
-    def _f3d_dwell_visitors(self, now, collector):
+    def _td_dwell_visitors(self, now, collector):
         """R-17 для відвідувачів: повернення з технічного приміщення в зону `zone_from_id` дверей."""
         visitors = self.env['td.access.visitor'].sudo().search(
             [('present', '=', True), ('zone_door_id', '!=', False)])
@@ -424,10 +424,10 @@ class F3dAccessEvent(models.Model):
             door = visitor.zone_door_id
             if door.dwell_min > 0 and visitor.zone_since and visitor.zone_since + timedelta(
                     minutes=door.dwell_min) <= now:
-                visitor._f3d_presence_set({'zone_id': door.zone_from_id.id, 'zone_since': now, 'zone_door_id': False})
+                visitor._td_presence_set({'zone_id': door.zone_from_id.id, 'zone_since': now, 'zone_door_id': False})
 
     @api.model
-    def _f3d_housekeeping_visitors(self, now, keep_days):
+    def _td_housekeeping_visitors(self, now, keep_days):
         """R-20 кроки 3, 5, 6: закриття прострочених візитів, відв'язка карток, видалення старих візитів."""
         Visitor = self.env['td.access.visitor'].sudo()
         expired = Visitor.search([('state', 'in', ('expected', 'on_site', 'left')), ('date_to', '<', now - GRACE)])
@@ -435,7 +435,7 @@ class F3dAccessEvent(models.Model):
             vals = {'state': 'closed'}
             if visitor.state in ('expected', 'on_site'):
                 vals['overdue'] = True
-            visitor._f3d_close(vals)
+            visitor._td_close(vals)
             visitor.message_post(body="Закрито автоматично: строк візиту минув")
         cutoff = now - timedelta(days=keep_days)
         cards = self.env['td.access.card'].sudo().search([
@@ -452,7 +452,7 @@ class F3dZone(models.Model):
 
     td_people_visitor_ids = fields.Many2many('td.access.visitor', compute='_compute_f3d_people')
 
-    def _f3d_people_visitors(self):
+    def _td_people_visitors(self):
         by_zone = {}
         for visitor in self.env['td.access.visitor'].sudo().search(
                 [('present', '=', True), ('state', '=', 'on_site'), ('zone_id', 'in', self.ids)]):
@@ -461,7 +461,7 @@ class F3dZone(models.Model):
 
     def _compute_f3d_people(self):
         super()._compute_f3d_people()
-        visitors = self._f3d_people_visitors()
+        visitors = self._td_people_visitors()
         for zone in self:
             zone.td_people_visitor_ids = self.env['td.access.visitor'].sudo().browse(visitors.get(zone.id, []))
 

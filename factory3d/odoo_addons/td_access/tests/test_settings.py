@@ -97,12 +97,12 @@ class TestSettings(AccessCase):
 
     def test_telemetry_publish(self):  # AC-53
         fake_signal = MagicMock()
-        fake_signal._f3d_ingest.return_value = {'accepted': 4, 'rejected': []}
-        with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal):
+        fake_signal._td_ingest.return_value = {'accepted': 4, 'rejected': []}
+        with patch.object(F3dAccessTelemetry, '_td_signal_model', return_value=fake_signal):
             self.poll('2026-10-12 04:00:00', FakeBioStar(events=self._three_events()))
-        fake_signal._f3d_ingest.assert_called_once()
-        readings = fake_signal._f3d_ingest.call_args.args[0]
-        self.assertEqual(fake_signal._f3d_ingest.call_args.kwargs, {'src': 'module'})
+        fake_signal._td_ingest.assert_called_once()
+        readings = fake_signal._td_ingest.call_args.args[0]
+        self.assertEqual(fake_signal._td_ingest.call_args.kwargs, {'src': 'module'})
         self.assertEqual({r['code'] for r in readings}, {
             'access/readers/ACR-IN/last_event', 'access/readers/ACR-ELEC/last_event',
             'access/turnstiles/TURNSTILES/on_site', 'access/events'})
@@ -114,21 +114,21 @@ class TestSettings(AccessCase):
 
     def test_telemetry_off(self):  # AC-53
         fake_signal = MagicMock()
-        with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal):
+        with patch.object(F3dAccessTelemetry, '_td_signal_model', return_value=fake_signal):
             P.set_param(self.env, 'publish_signals', 'False')
             self.poll('2026-10-12 04:00:00', FakeBioStar(events=self._three_events()))
             P.set_param(self.env, 'publish_signals', 'True')
             self.poll('2026-10-12 04:00:00', FakeBioStar(events=[]))
-        fake_signal._f3d_ingest.assert_not_called()
-        with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=None):
+        fake_signal._td_ingest.assert_not_called()
+        with patch.object(F3dAccessTelemetry, '_td_signal_model', return_value=None):
             self.poll('2026-10-12 04:10:00', FakeBioStar(events=[self.prow(9, '2026-10-12T04:05:00.00Z', 4102,
                                                                            'TSTA1', tna='2')]))
-        self.assertIsNone(self.env['td.access.telemetry']._f3d_publish(self.server, self.env['td.access.event']))
+        self.assertIsNone(self.env['td.access.telemetry']._td_publish(self.server, self.env['td.access.event']))
 
     def test_telemetry_failure_isolated(self):  # R-18
         fake_signal = MagicMock()
-        fake_signal._f3d_ingest.side_effect = RuntimeError('boom')
-        with patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal), \
+        fake_signal._td_ingest.side_effect = RuntimeError('boom')
+        with patch.object(F3dAccessTelemetry, '_td_signal_model', return_value=fake_signal), \
                 self.assertLogs('odoo.addons.td_access.models.td_access_server', 'WARNING'):
             res = self.poll('2026-10-12 04:00:00', FakeBioStar(events=self._three_events()))
         self.assertEqual(res['new'], 3)

@@ -145,16 +145,16 @@ class TestCodeValidation(ServerCase):
         from datetime import datetime
         door = self.door_elec
         t = datetime(2026, 10, 12, 3, 52, 10)
-        door._f3d_set_state('unlocked', t)
-        door._f3d_set_state('forced', t.replace(second=12), alarm=True, reason='forced')
+        door._td_set_state('unlocked', t)
+        door._td_set_state('forced', t.replace(second=12), alarm=True, reason='forced')
         self.assertEqual((door.state, door.alarm, door.alarm_reason), ('forced', True, 'forced'))
-        door._f3d_set_state('open', t.replace(second=5))  # запізніла — ігнорується
+        door._td_set_state('open', t.replace(second=5))  # запізніла — ігнорується
         self.assertEqual(door.state, 'forced')
-        door._f3d_set_state('closed', t.replace(second=20))
+        door._td_set_state('closed', t.replace(second=20))
         self.assertEqual((door.state, door.alarm), ('closed', False))
-        door._f3d_set_state(None, t.replace(second=30), alarm=True, reason='fire')
+        door._td_set_state(None, t.replace(second=30), alarm=True, reason='fire')
         self.assertEqual((door.state, door.alarm_reason), ('closed', 'fire'))
-        door._f3d_set_state('closed', t.replace(second=40))
+        door._td_set_state('closed', t.replace(second=40))
         self.assertTrue(door.alarm)  # пожежну знімає лише охорона
         door.with_user(self.user_security).action_ack_alarm()
         self.assertFalse(door.alarm)
@@ -195,7 +195,7 @@ class TestPoll(ServerCase):
         self.poll('2026-10-12 07:01:30', fake)
         self.assertEqual(len(self._events()), 4)
         self.assertEqual((self.server.last_poll_new, self.server.last_poll_rows), (0, 4))
-        res = self.env['td.access.event']._f3d_ingest_rows(self.server, fake.events)
+        res = self.env['td.access.event']._td_ingest_rows(self.server, fake.events)
         self.assertEqual((res['created'], res['duplicates'], res['invalid']), (0, 4, 0))
         with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.env.cr.savepoint():
             self.env['td.access.event'].create({

@@ -236,10 +236,10 @@ class F3dAccessServer(models.Model):
         finally:
             self._save_session(client)
         event = self.env['td.access.event']
-        res = event._f3d_ingest_rows(self, rows_all)
+        res = event._td_ingest_rows(self, rows_all)
         pending = event.search(
             [('server_id', '=', self.id), ('process_state', '=', 'new')], order='ts, id', limit=10000)
-        pending._f3d_process()
+        pending._td_process()
         out = {'rows': len(rows_all), 'new': res.get('created', 0), 'processed': len(pending), 'more': more,
                'duplicates': res.get('duplicates', 0), 'invalid': res.get('invalid', 0)}
         return out, rows_all, res
@@ -266,7 +266,7 @@ class F3dAccessServer(models.Model):
         self._mark_ok()
         self.sudo().write({'last_poll_at': now, 'last_poll_rows': res['rows'], 'last_poll_new': res['new'],
                            'last_poll_more': res['more']})
-        self._f3d_after_poll(ingest)
+        self._td_after_poll(ingest)
         return res
 
     def _move_cursor(self, rows_all, now):
@@ -284,14 +284,14 @@ class F3dAccessServer(models.Model):
         if not self.last_event_ts or new > self.last_event_ts:
             self.sudo().write({'last_event_ts': new, 'last_event_biostar_id': best_id})
 
-    def _f3d_after_poll(self, ingest_result):
+    def _td_after_poll(self, ingest_result):
         """R-18: сигнали телеметрії за новими подіями; збій не зупиняє опитування."""
         records = (ingest_result or {}).get('records')
         if not records:
             return None
         try:
             with self.env.cr.savepoint():
-                result = self.env['td.access.telemetry']._f3d_publish(self, records)
+                result = self.env['td.access.telemetry']._td_publish(self, records)
             for item in (result or {}).get('rejected', ()):
                 _logger.debug("СКУД: сигнал телеметрії відхилено: %s", item)
             return result
@@ -420,7 +420,7 @@ class F3dAccessServer(models.Model):
                 existing[uid] = link
                 res['created'] += 1
             if link.match == 'none':
-                link._f3d_rematch()
+                link._td_rematch()
             if link.match == 'none':
                 res['unlinked'] += 1
             else:

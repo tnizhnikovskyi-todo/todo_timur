@@ -29,7 +29,7 @@ class HrAttendance(models.Model):
     td_closed_by_rule = fields.Boolean(string='Закрито правилом (без виходу)', readonly=True, default=False,
                                         index=True)
 
-    def _f3d_rule_end(self):
+    def _td_rule_end(self):
         """R-07 кроки 1–4: (час виходу, пояснення) для відкритої відмітки."""
         self.ensure_one()
         emp = self.employee_id.sudo()
@@ -51,17 +51,17 @@ class HrAttendance(models.Model):
         fallback = P.get_int(self.env, 'stale_close_fallback_min', 60, 1, 1440)
         return self.check_in + timedelta(minutes=fallback), 'вхід + %s хв' % fallback
 
-    def _f3d_close_by_rule(self):
+    def _td_close_by_rule(self):
         """R-07: закрити відкриті відмітки без виходу; оновити присутність (крок 6)."""
         for att in self.sudo():
             if att.check_out:
                 continue
-            check_out, why = att._f3d_rule_end()
+            check_out, why = att._td_rule_end()
             att.write({'check_out': check_out, 'out_mode': 'technical', 'td_closed_by_rule': True})
             att.message_post(body="Закрито правилом СКУД: немає проходу на вихід; вихід = %s." % why)
             emp = att.employee_id
             if emp.td_access_present and (not emp.td_access_last_in or emp.td_access_last_in <= check_out):
-                emp._f3d_access_set({'td_access_present': False, 'td_access_zone_id': False,
+                emp._td_access_set({'td_access_present': False, 'td_access_zone_id': False,
                                      'td_access_zone_since': False, 'td_access_zone_door_id': False})
         return True
 

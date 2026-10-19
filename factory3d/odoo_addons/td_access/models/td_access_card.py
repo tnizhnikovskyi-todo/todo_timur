@@ -109,7 +109,7 @@ class F3dAccessCard(models.Model):
             if card.holder_type == 'pool':
                 raise UserError("Спершу оберіть, кому видається картка.")
         self.write({'state': 'active', 'issued_at': fields.Datetime.now(), 'returned_at': False})
-        self._f3d_queue('issue')
+        self._td_queue('issue')
         return True
 
     def action_block(self):
@@ -120,7 +120,7 @@ class F3dAccessCard(models.Model):
             if not card.block_reason:
                 raise UserError("Вкажіть причину блокування.")
         self.write({'state': 'blocked', 'blocked_at': fields.Datetime.now()})
-        self._f3d_queue('block')
+        self._td_queue('block')
         return True
 
     def action_unblock(self):
@@ -129,7 +129,7 @@ class F3dAccessCard(models.Model):
             if card.state != 'blocked':
                 raise UserError("Розблокувати можна лише заблоковану картку.")
         self.write({'state': 'active', 'block_reason': False})
-        self._f3d_queue('unblock')
+        self._td_queue('unblock')
         return True
 
     def action_return(self):
@@ -142,7 +142,7 @@ class F3dAccessCard(models.Model):
             if card.holder_type == 'visitor':
                 vals['holder_type'] = 'pool'
             card.write(vals)
-        self._f3d_queue('return')
+        self._td_queue('return')
         return True
 
     def action_mark_lost(self):
@@ -151,23 +151,23 @@ class F3dAccessCard(models.Model):
             if card.state not in ('active', 'blocked'):
                 raise UserError("Втраченою можна позначити лише видану або заблоковану картку.")
         self.write({'state': 'lost', 'block_reason': 'Втрачена'})
-        self._f3d_queue('block')
+        self._td_queue('block')
         return True
 
     # ------------------------------------------------------------------ запис у BioStar (R-13)
-    def _f3d_queue(self, op):
+    def _td_queue(self, op):
         label = dict(OPS)[op]
         write_enabled = P.get_flag(self.env, 'write_enabled')
         for card in self:
             if write_enabled:
                 card.write({'pending_op': op, 'sync_state': 'pending', 'sync_attempts': 0, 'sync_error': False})
-                card._f3d_push()
+                card._td_push()
             else:
                 card.write({'pending_op': op, 'sync_state': 'local'})
                 card.message_post(body="Запис у BioStar вимкнено стоп-краном. Виконайте операцію «%s» у BioStar "
                                        "вручну і натисніть «Позначити синхронізованим»." % label)
 
-    def _f3d_owner(self):
+    def _td_owner(self):
         """(user_id BioStar, власник) картки: працівник через зв'язок, відвідувач через своє поле."""
         self.ensure_one()
         if self.employee_id:
@@ -178,10 +178,10 @@ class F3dAccessCard(models.Model):
             return self.visitor_id.biostar_user_id or False, ('visitor_id', self.visitor_id)
         return False, None
 
-    def _f3d_cards_payload(self, op):
+    def _td_cards_payload(self, op):
         """Повний список карток власника з BioStar-id (API-08); `return` — без цієї картки."""
         self.ensure_one()
-        _user, owner = self._f3d_owner()
+        _user, owner = self._td_owner()
         cards = self.browse()
         if owner:
             cards = self.sudo().search([
@@ -192,18 +192,18 @@ class F3dAccessCard(models.Model):
         return [{'id': c.biostar_card_id, 'is_blocked': 'false' if c.state == 'active' else 'true'}
                 for c in cards.sorted('id') if c.biostar_card_id]
 
-    def _f3d_push(self):
+    def _td_push(self):
         """R-13 кроки 2–5 (sudo): записати чергову операцію в BioStar."""
         for card in self.sudo().filtered(lambda c: c.sync_state in ('pending', 'error') and c.pending_op):
-            card._f3d_push_one()
+            card._td_push_one()
         return True
 
-    def _f3d_push_one(self):
+    def _td_push_one(self):
         self.ensure_one()
         op = self.pending_op
-        user_id, _owner = self._f3d_owner()
+        user_id, _owner = self._td_owner()
         if not user_id:
-            return self._f3d_fail("У власника картки немає користувача BioStar.")
+            return self._td_fail("У власника картки немає користувача BioStar.")
         server = self.server_id
         client = server._get_client()
         try:
@@ -211,14 +211,14 @@ class F3dAccessCard(models.Model):
                 # API-07 не ідемпотентний: отриманий id записуємо одразу й більше не перезаписуємо
                 self.biostar_card_id = client.create_card(self.number, CARD_TYPE_ID[self.card_type])
             elif op != 'issue' and not self.biostar_card_id:
-                return self._f3d_fail("Картку не записано в BioStar: видайте її під стоп-краном або позначте "
+                return self._td_fail("Картку не записано в BioStar: видайте її під стоп-краном або позначте "
                                       "синхронізованою вручну.")
-            client.update_user_cards(user_id, self._f3d_cards_payload(op))
+            client.update_user_cards(user_id, self._td_cards_payload(op))
         except BioStarWriteDisabled:
             self.write({'sync_state': 'local'})
             return False
         except BioStarError as exc:
-            return self._f3d_fail(str(exc))
+            return self._td_fail(str(exc))
         finally:
             server._save_session(client)
         label = dict(OPS)[op]
@@ -227,7 +227,7 @@ class F3dAccessCard(models.Model):
         self.message_post(body="Записано в BioStar: %s" % label)
         return True
 
-    def _f3d_fail(self, text):
+    def _td_fail(self, text):
         self.ensure_one()
         self.write({'sync_state': 'error', 'sync_error': text[:255], 'sync_attempts': self.sync_attempts + 1})
         self.message_post(body="Помилка запису в BioStar: %s" % text)
@@ -239,7 +239,7 @@ class F3dAccessCard(models.Model):
             raise UserError("Запис у BioStar вимкнено стоп-краном td.access.write_enabled.")
         todo = self.filtered(lambda c: c.sync_state in ('error', 'local'))
         todo.write({'sync_state': 'pending'})
-        todo._f3d_push()
+        todo._td_push()
         return True
 
     def action_mark_synced(self):
@@ -257,7 +257,7 @@ class F3dAccessCard(models.Model):
             return
         attempts = P.get_int(self.env, 'card_sync_max_attempts', 10, 1, 1000)
         self.sudo().search([('sync_state', 'in', ('pending', 'error')), ('sync_attempts', '<', attempts)],
-                           limit=100)._f3d_push()
+                           limit=100)._td_push()
 
 
 class HrEmployee(models.Model):

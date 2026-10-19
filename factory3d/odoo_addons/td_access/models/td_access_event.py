@@ -93,7 +93,7 @@ class F3dAccessEvent(models.Model):
 
     # ------------------------------------------------------------------ приймання рядків (R-11 крок 5)
     @api.model
-    def _f3d_parse_row(self, server, row, cache=None):
+    def _td_parse_row(self, server, row, cache=None):
         """Рядок API-06 -> vals події; невалідний рядок -> ValueError."""
         row_id = str(row.get('id') or '')
         if not P.BSID_RE.match(row_id):
@@ -111,7 +111,7 @@ class F3dAccessEvent(models.Model):
         raw_door = str(door_raw.get('id') or '')
         raw_user = str((row.get('user_id') or {}).get('user_id') or '')
         if cache is None:
-            cache = self._f3d_ref_cache(server)
+            cache = self._td_ref_cache(server)
         device = cache['devices'].get(raw_device)
         door = cache['doors'].get(raw_door) if raw_door else None
         if not door and device:
@@ -134,7 +134,7 @@ class F3dAccessEvent(models.Model):
         return vals
 
     @api.model
-    def _f3d_ref_cache(self, server):
+    def _td_ref_cache(self, server):
         devices = self.env['td.access.device'].sudo().search([('server_id', '=', server.id)])
         doors = self.env['td.access.door'].sudo().search([('server_id', '=', server.id)])
         by_device = {}
@@ -146,14 +146,14 @@ class F3dAccessEvent(models.Model):
                 'by_device': by_device, 'keep_raw': P.get_flag(self.env, 'keep_raw')}
 
     @api.model
-    def _f3d_ingest_rows(self, server, rows):
+    def _td_ingest_rows(self, server, rows):
         """Зберегти рядки; -> {'created', 'duplicates', 'invalid', 'records'}."""
         server = server.sudo()
-        cache = self._f3d_ref_cache(server)
+        cache = self._td_ref_cache(server)
         parsed, seen, duplicates, invalid = [], set(), 0, 0
         for row in rows:
             try:
-                vals = self._f3d_parse_row(server, row, cache)
+                vals = self._td_parse_row(server, row, cache)
             except (ValueError, KeyError, TypeError, AttributeError, IndexError) as exc:
                 invalid += 1
                 _logger.warning("СКУД: невалідний рядок події id=%s: %s", row.get('id') if isinstance(row, dict)
@@ -178,7 +178,7 @@ class F3dAccessEvent(models.Model):
         return {'created': len(records), 'duplicates': duplicates, 'invalid': invalid, 'records': records}
 
     # ------------------------------------------------------------------ обробка (R-02…R-10)
-    def _f3d_process(self, force=False):
+    def _td_process(self, force=False):
         """Обробити події у порядку (ts, id); кожна — у savepoint; помилка -> process_state='error'."""
         collector = {}
         events = self.sudo().with_context(f3d_bus_collector=collector)
@@ -192,20 +192,20 @@ class F3dAccessEvent(models.Model):
         for ev in events:
             try:
                 with self.env.cr.savepoint():
-                    ev._f3d_process_one(params)
+                    ev._td_process_one(params)
             except Exception as exc:  # noqa: BLE001 - будь-яка помилка події ізолюється
                 _logger.error("СКУД: помилка обробки події %s: %s", ev.biostar_id, exc, exc_info=True)
                 ev.write({'process_state': 'error', 'error_message': str(exc)[:255]})
         for model, codes in collector.items():
-            self._f3d_bus(model, codes)
+            self._td_bus(model, codes)
 
-    def _f3d_link_and_door(self, vals):
+    def _td_link_and_door(self, vals):
         """R-03 (кроки 1) і R-02/копії з дверей (крок 2) -> vals події."""
         self.ensure_one()
         server = self.server_id
         link = self.link_id
         if self.raw_user_id and (not link or link.match == 'none'):
-            link = self.env['td.access.user.link']._f3d_match_employee(self.raw_user_id, server)
+            link = self.env['td.access.user.link']._td_match_employee(self.raw_user_id, server)
         employee = link.employee_id if link else self.env['hr.employee']
         visitor = link['visitor_id'] if link and 'visitor_id' in link._fields else False
         vals['link_id'] = link.id if link else False
@@ -233,7 +233,7 @@ class F3dAccessEvent(models.Model):
         vals['direction'] = direction if direction in ('in', 'out') else 'none'
         return employee, visitor
 
-    def _f3d_door_state(self):
+    def _td_door_state(self):
         """R-10 для подій door/alarm."""
         self.ensure_one()
         cls = classify(self.code)
@@ -249,15 +249,15 @@ class F3dAccessEvent(models.Model):
             state = None
         if not state and not reason:
             return
-        doors._f3d_set_state(state, self.ts, alarm=True if reason else None, reason=reason or None)
+        doors._td_set_state(state, self.ts, alarm=True if reason else None, reason=reason or None)
 
-    def _f3d_process_one(self, params):
+    def _td_process_one(self, params):
         """Конвеєр R-04 для однієї події."""
         self.ensure_one()
         now = fields.Datetime.now()
         vals = {'attendance_action': 'none', 'error_message': False, 'presence_changed': False,
                 'apb_suspect': False, 'zone_violation': False}
-        employee, visitor = self._f3d_link_and_door(vals)
+        employee, visitor = self._td_link_and_door(vals)
         self.write(dict(vals))
         # крок 3: стан пристрою
         device = self.device_id
@@ -265,14 +265,14 @@ class F3dAccessEvent(models.Model):
             device.sudo().write({'last_event_ts': self.ts, 'last_event_code': self.code})
         # крок 4
         if self.event_type in ('door', 'alarm'):
-            self._f3d_door_state()
+            self._td_door_state()
         if self.event_type != 'pass':
-            return self._f3d_finish(vals)
+            return self._td_finish(vals)
         # крок 5
         if not employee:
             if visitor:
-                vals.update(self._f3d_visitor_pass(visitor))
-            return self._f3d_finish(vals)
+                vals.update(self._td_visitor_pass(visitor))
+            return self._td_finish(vals)
         # крок 6
         if self.ts > now:
             vals['attendance_action'] = 'future'
@@ -282,7 +282,7 @@ class F3dAccessEvent(models.Model):
         last = employee.td_access_last_event_id
         if last and last != self and last.ts > self.ts:
             vals['attendance_action'] = 'late'
-            return self._f3d_finish(vals)
+            return self._td_finish(vals)
         tz = employee._get_tz()
         Attendance = self.env['hr.attendance'].sudo()
         open_att = Attendance.browse()
@@ -291,7 +291,7 @@ class F3dAccessEvent(models.Model):
             open_att = Attendance.search(
                 [('employee_id', '=', employee.id), ('check_out', '=', False)], order='check_in desc', limit=1)
             if (open_att and params['stale'] and self.ts - open_att.check_in > timedelta(hours=params['max_shift'])):
-                open_att._f3d_close_by_rule()
+                open_att._td_close_by_rule()
                 open_att = Attendance.browse()
         # крок 9
         was_present = employee.td_access_present
@@ -301,27 +301,27 @@ class F3dAccessEvent(models.Model):
         attendance = Attendance.browse()
         if self.is_perimeter:
             if vals['direction'] == 'in':
-                attendance = self._f3d_perimeter_in(employee, open_att, was_present, same_day, params, vals)
+                attendance = self._td_perimeter_in(employee, open_att, was_present, same_day, params, vals)
             elif vals['direction'] == 'out':
-                attendance = self._f3d_perimeter_out(open_att, vals)
+                attendance = self._td_perimeter_out(open_att, vals)
         if attendance:
             vals['attendance_id'] = attendance.id
         # крок 11
-        self._f3d_presence(employee, was_present, same_day, vals)
-        return self._f3d_finish(vals)
+        self._td_presence(employee, was_present, same_day, vals)
+        return self._td_finish(vals)
 
-    def _f3d_finish(self, vals):
+    def _td_finish(self, vals):
         vals['process_state'] = 'done'
         self.write(vals)
 
-    def _f3d_visitor_pass(self, visitor):
+    def _td_visitor_pass(self, visitor):
         """Прохід відвідувача (R-14 кроки 3–4) — розширюється в W3; тут лише журнал."""
         return {'attendance_action': 'not_employee'}
 
-    def _f3d_perimeter_in(self, employee, open_att, was_present, same_day, params, vals):
+    def _td_perimeter_in(self, employee, open_att, was_present, same_day, params, vals):
         Attendance = self.env['hr.attendance'].sudo()
         device = self.device_id
-        if self._f3d_drill_active(self.ts):
+        if self._td_drill_active(self.ts):
             vals['attendance_action'] = 'drill'
             return Attendance.browse()
         if open_att:
@@ -337,7 +337,7 @@ class F3dAccessEvent(models.Model):
                     open_att.write({'td_in_event_id': self.id, 'td_in_device_id': device.id})
                 vals['attendance_action'] = 'attached'
             return open_att
-        merged = self._f3d_try_merge(employee, params['merge_gap'])
+        merged = self._td_try_merge(employee, params['merge_gap'])
         if merged:
             vals['attendance_action'] = 'merged'
             return merged
@@ -348,7 +348,7 @@ class F3dAccessEvent(models.Model):
             'employee_id': employee.id, 'check_in': self.ts, 'in_mode': 'biostar',
             'td_in_event_id': self.id, 'td_in_device_id': device.id})
 
-    def _f3d_try_merge(self, employee, merge_gap):
+    def _td_try_merge(self, employee, merge_gap):
         """R-06: повернути закриту біостар-відмітку, якщо вихід був менше за merge_gap хв тому."""
         if merge_gap <= 0:
             return self.env['hr.attendance']
@@ -364,9 +364,9 @@ class F3dAccessEvent(models.Model):
             return last
         return self.env['hr.attendance']
 
-    def _f3d_perimeter_out(self, open_att, vals):
+    def _td_perimeter_out(self, open_att, vals):
         Attendance = self.env['hr.attendance'].sudo()
-        if self._f3d_drill_active(self.ts):
+        if self._td_drill_active(self.ts):
             vals['attendance_action'] = 'drill'
             return Attendance.browse()
         if not open_att:
@@ -381,7 +381,7 @@ class F3dAccessEvent(models.Model):
         vals['attendance_action'] = 'checked_out'
         return open_att
 
-    def _f3d_presence(self, employee, was_present, same_day, vals):
+    def _td_presence(self, employee, was_present, same_day, vals):
         """R-08: присутність і зона працівника за графом дверей."""
         door, ts, direction = self.door_id, self.ts, vals['direction']
         home = employee.td_home_zone_id
@@ -411,13 +411,13 @@ class F3dAccessEvent(models.Model):
             zone = home or door.zone_from_id
             upd = {'td_access_present': True, 'td_access_zone_id': zone.id, 'td_access_zone_since': ts,
                    'td_access_zone_door_id': False}
-        changed = self._f3d_diff(employee, upd)
+        changed = self._td_diff(employee, upd)
         vals['presence_changed'] = bool(changed)
         upd['td_access_last_event_id'] = self.id
-        employee._f3d_access_set(upd)
+        employee._td_access_set(upd)
 
     @staticmethod
-    def _f3d_diff(employee, upd):
+    def _td_diff(employee, upd):
         diff = {}
         for name, value in upd.items():
             current = employee[name]
@@ -430,12 +430,12 @@ class F3dAccessEvent(models.Model):
     def action_reprocess(self):
         self._check_admin()
         todo = self.sudo().filtered(lambda e: e.process_state in ('new', 'error'))
-        todo._f3d_process(force=True)
+        todo._td_process(force=True)
         for ev in (self.sudo() - todo).filtered(lambda e: not e.attendance_id):
-            ev._f3d_process(force=True)
+            ev._td_process(force=True)
         for ev in (self.sudo() - todo).filtered('attendance_id'):
             vals = {}
-            ev._f3d_link_and_door(vals)
+            ev._td_link_and_door(vals)
             ev.write(vals)
         return True
 
@@ -469,10 +469,10 @@ class F3dAccessEvent(models.Model):
                                   AND ev.is_perimeter AND ev.event_type = 'pass')""", {'ts': ts, 'cids': cids})
         ids |= {r[0] for r in self.env.cr.fetchall()}
         return {'employees': self.env['hr.employee'].sudo().browse(sorted(ids)),
-                'visitors': self._f3d_on_site_visitors(ts, cids, hours), 'ts': ts}
+                'visitors': self._td_on_site_visitors(ts, cids, hours), 'ts': ts}
 
     @api.model
-    def _f3d_on_site_visitors(self, ts, cids, hours):
+    def _td_on_site_visitors(self, ts, cids, hours):
         """Відвідувачі на території о `ts` — розширюється в W3."""
         return self.env['hr.employee'].browse() if 'td.access.visitor' not in self.env \
             else self.env['td.access.visitor'].browse()
@@ -487,21 +487,21 @@ class F3dAccessEvent(models.Model):
         return self.search(domain, order='ts, id')
 
     @api.model
-    def _f3d_drill_active(self, ts):
+    def _td_drill_active(self, ts):
         """CA-09: навчальна тривога активна о `ts` (контракт до td_fire_safety)."""
-        if 'td.fire.drill' not in self.env or not hasattr(self.env['td.fire.drill'], '_f3d_is_active_at'):
+        if 'td.fire.drill' not in self.env or not hasattr(self.env['td.fire.drill'], '_td_is_active_at'):
             return False
-        return bool(self.env['td.fire.drill'].sudo()._f3d_is_active_at(ts))
+        return bool(self.env['td.fire.drill'].sudo()._td_is_active_at(ts))
 
     @api.model
-    def _f3d_last_events(self, limit=20):
+    def _td_last_events(self, limit=20):
         return self.sudo().search_read(
             [('event_type', 'in', ('pass', 'denied', 'fail', 'door', 'alarm'))],
             ['ts', 'door_id', 'device_id', 'direction', 'event_type', 'code', 'employee_id'],
             order='ts desc, id desc', limit=limit)
 
     @api.model
-    def _f3d_bus(self, model, codes):
+    def _td_bus(self, model, codes):
         """R-12 крок 6: сповістити переглядач; окремий метод — тести його підміняють."""
         if not codes or 'td.viewer.event' not in self.env:
             return
@@ -533,20 +533,20 @@ class F3dAccessEvent(models.Model):
             door = emp.td_access_zone_door_id
             if door.dwell_min > 0 and emp.td_access_zone_since \
                     and emp.td_access_zone_since + timedelta(minutes=door.dwell_min) <= now:
-                emp._f3d_access_set({
+                emp._td_access_set({
                     'td_access_zone_id': (emp.td_home_zone_id or door.zone_from_id).id,
                     'td_access_zone_since': now, 'td_access_zone_door_id': False})
-        self._f3d_dwell_visitors(now, collector)
+        self._td_dwell_visitors(now, collector)
         for model, codes in collector.items():
-            self._f3d_bus(model, codes)
+            self._td_bus(model, codes)
 
     @api.model
-    def _f3d_dwell_visitors(self, now, collector):
+    def _td_dwell_visitors(self, now, collector):
         """R-17 для відвідувачів — розширюється в W3."""
         return None
 
     @api.model
-    def _f3d_housekeeping_visitors(self, now, keep_days):
+    def _td_housekeeping_visitors(self, now, keep_days):
         """R-20 кроки 3, 5, 6 (відвідувачі й картки) — розширюється в W3."""
         return None
 
@@ -557,11 +557,11 @@ class F3dAccessEvent(models.Model):
         keep_days = P.get_int(self.env, 'keep_days', 90, 1, 3650)
         steps = [
             ('ротація подій', lambda: self._gc(keep_days)),
-            ('закриття відміток', lambda: self._f3d_close_stale_attendances(now)),
-            ('відвідувачі й картки', lambda: self._f3d_housekeeping_visitors(now, keep_days)),
+            ('закриття відміток', lambda: self._td_close_stale_attendances(now)),
+            ('відвідувачі й картки', lambda: self._td_housekeeping_visitors(now, keep_days)),
         ]
         if P.get_flag(self.env, 'read_enabled'):
-            steps.append(('перевірка вікна', lambda: self._f3d_recheck_window(now)))
+            steps.append(('перевірка вікна', lambda: self._td_recheck_window(now)))
         for name, step in steps:
             try:
                 with self.env.cr.savepoint():
@@ -570,7 +570,7 @@ class F3dAccessEvent(models.Model):
                 _logger.error("СКУД: господарство, крок «%s» не виконано", name, exc_info=True)
 
     @api.model
-    def _f3d_close_stale_attendances(self, now):
+    def _td_close_stale_attendances(self, now):
         """R-20 крок 2 (R-07 б)."""
         if not P.get_flag(self.env, 'stale_close_enabled'):
             return 0
@@ -582,11 +582,11 @@ class F3dAccessEvent(models.Model):
              ('check_in', '<', now - max_shift)])
         todo = open_atts.filtered(
             lambda a: local_date(a.check_in, a.employee_id._get_tz()) < local_date(now, a.employee_id._get_tz()))
-        todo._f3d_close_by_rule()
+        todo._td_close_by_rule()
         return len(todo)
 
     @api.model
-    def _f3d_recheck_window(self, now):
+    def _td_recheck_window(self, now):
         """R-20 крок 4: повторне опитування вікна recheck_hours для кожного активного сервера."""
         hours = P.get_int(self.env, 'recheck_hours', 24, 1, 168)
         for server in self.env['td.access.server'].sudo().search([('active', '=', True)]):

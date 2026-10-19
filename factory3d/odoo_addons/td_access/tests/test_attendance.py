@@ -42,7 +42,7 @@ class TestAttendance(AccessCase):
         self.assertEqual((dup.attendance_action, dup.apb_suspect, dup.attendance_id), ('duplicate', True, att))
         # ручна відмітка, людина вже на території, вхід за межами dup_window_min -> duplicate
         manual = self._open_manual(self.emp_b, '2026-10-12 03:52:00')
-        self.emp_b._f3d_access_set({'td_access_present': True, 'td_access_last_in': '2026-10-12 03:52:00'})
+        self.emp_b._td_access_set({'td_access_present': True, 'td_access_last_in': '2026-10-12 03:52:00'})
         ev = self.feed(self.prow(3, '2026-10-12T04:20:00.00Z', 4102, 'TSTB2', tna='1'))
         self.assertEqual((ev.attendance_action, ev.apb_suspect), ('duplicate', True))
         self.assertEqual(self.attendances(self.emp_b), manual)
@@ -87,7 +87,7 @@ class TestAttendance(AccessCase):
         atts = []
         for emp, check_in, _out in cases:
             atts.append(self._open_manual(emp, check_in))
-            emp._f3d_access_set({'td_access_present': True, 'td_access_last_in': check_in})
+            emp._td_access_set({'td_access_present': True, 'td_access_last_in': check_in})
         with self.patch_client(FakeBioStar()), freeze_time('2026-10-28 02:00:00'):
             self.env['td.access.event']._cron_housekeeping()
         for (emp, _in, out), att in zip(cases, atts, strict=True):

@@ -193,8 +193,8 @@ class AccessCase(TransactionCase):
         """Зберегти й обробити рядки без опитування (час `at` — «зараз»); -> створені події."""
         Event = self.env['td.access.event']
         with freeze_time(at):
-            res = Event._f3d_ingest_rows(self.server, list(rows))
-            res['records']._f3d_process()
+            res = Event._td_ingest_rows(self.server, list(rows))
+            res['records']._td_process()
         return res['records']
 
     def attendances(self, employee):

@@ -74,7 +74,7 @@ if MODE == "collect":
     with ctx_mgr:
         for _ in range(7):
             t0 = time.perf_counter()
-            provider._f3d_viewer_collect(json.loads(json.dumps(payload_)), {"now": now, "today": now.strftime("%Y-%m-%d")})
+            provider._td_viewer_collect(json.loads(json.dumps(payload_)), {"now": now, "today": now.strftime("%Y-%m-%d")})
             times.append((time.perf_counter() - t0) * 1000)
     out["collect_ms"] = [round(x, 1) for x in times]
     zones = env["td.zone"].search([])
