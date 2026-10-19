@@ -7476,6 +7476,35 @@ function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.4, d = 
   }
   return out;
 }
+var GRID_COLUMN_HALF = 0.2;
+var gridId = (x, y) => `grid:${rnd2(x, 2)}:${rnd2(y, 2)}`;
+function gridNodes(site, explicit = []) {
+  const b = site && site.building || {};
+  const cg = site && site.column_grid || {};
+  const sx = cg.step_x || 0;
+  const sy = cg.step_y || 0;
+  const out = [];
+  if (sx > 1 && sy > 1 && b.length && b.width) {
+    const xs = [];
+    const ys = [];
+    for (let x = sx; x < b.length - 0.01; x += sx) {
+      xs.push(x);
+    }
+    for (let y = sy; y < b.width - 0.01; y += sy) {
+      ys.push(y);
+    }
+    if (xs.length * ys.length < 2e3) {
+      for (const x of xs) {
+        for (const y of ys) {
+          if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+            out.push([x, y]);
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
 function obstacleRects(layers, site) {
   const out = [];
   const explicit = [];
@@ -7500,28 +7529,8 @@ function obstacleRects(layers, site) {
       }
     }
   }
-  const b = site && site.building || {};
-  const cg = site && site.column_grid || {};
-  const sx = cg.step_x || 0;
-  const sy = cg.step_y || 0;
-  if (sx > 1 && sy > 1 && b.length && b.width) {
-    const xs = [];
-    const ys = [];
-    for (let x = sx; x < b.length - 0.01; x += sx) {
-      xs.push(x);
-    }
-    for (let y = sy; y < b.width - 0.01; y += sy) {
-      ys.push(y);
-    }
-    if (xs.length * ys.length < 2e3) {
-      for (const x of xs) {
-        for (const y of ys) {
-          if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
-            out.push({ x0: rnd2(x - 0.2), y0: rnd2(y - 0.2), x1: rnd2(x + 0.2), y1: rnd2(y + 0.2), kind: "column", id: `grid:${rnd2(x, 2)}:${rnd2(y, 2)}`, name: "", grid: true });
-          }
-        }
-      }
-    }
+  for (const [x, y] of gridNodes(site, explicit)) {
+    out.push({ x0: rnd2(x - GRID_COLUMN_HALF), y0: rnd2(y - GRID_COLUMN_HALF), x1: rnd2(x + GRID_COLUMN_HALF), y1: rnd2(y + GRID_COLUMN_HALF), kind: "column", id: gridId(x, y), name: "", grid: true });
   }
   return out;
 }
@@ -7788,7 +7797,11 @@ var setSiteProvider = (fn) => {
 var siteOf = (scene) => {
   const st4 = (scene._state || {}).site || {};
   const cur = siteProvider() || {};
-  return { sprinkler_height: st4.sprinkler_height ?? cur.sprinkler_height ?? 0, aisle_tech: st4.aisle_tech !== void 0 ? st4.aisle_tech : cur.aisle_tech ?? null };
+  return {
+    sprinkler_height: st4.sprinkler_height ?? cur.sprinkler_height ?? 0,
+    aisle_tech: st4.aisle_tech !== void 0 ? st4.aisle_tech : cur.aisle_tech ?? null,
+    column_grid: st4.column_grid ?? cur.column_grid ?? null
+  };
 };
 var zonesOf = (scene) => {
   if (!scene._s5Zones) {
@@ -7825,7 +7838,13 @@ var objKey3 = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
 function checkInside(scene, config, eps) {
   const sev = config.mode;
   const contour2 = contourPolygon(scene);
-  const obstacles = buildingItems(scene).filter((it) => OBSTACLE_KINDS.includes(it.kind)).map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)) }));
+  const items2 = buildingItems(scene).filter((it) => OBSTACLE_KINDS.includes(it.kind));
+  const obstacles = items2.map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)), what: OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "") }));
+  const grid = { building: scene.building, column_grid: siteOf(scene).column_grid };
+  for (const [x, y] of gridNodes(grid, items2.filter((it) => it.kind === "column"))) {
+    const obb = makeObb(x, y, GRID_COLUMN_HALF, GRID_COLUMN_HALF, 0);
+    obstacles.push({ it: { id: gridId(x, y) }, obb, box: obbAabb(obb), what: `${OBSTACLE_ACCUSATIVE.column} сітки (${f2(x)}; ${f2(y)})` });
+  }
   const issues = [];
   for (const obj of scene.objects()) {
     const layer = scene.layers.get(obj.layer_id) || {};
@@ -7837,9 +7856,8 @@ function checkInside(scene, config, eps) {
       issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: поза контуром будівлі`, k, "contour"));
     }
     const box = obbAabb(obj.obb);
-    for (const { it, obb, box: ib } of obstacles) {
+    for (const { it, obb, box: ib, what } of obstacles) {
       if (aabbOverlap(box, ib, eps) && satPenetration(obj.obb, obb) > eps) {
-        const what = OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "");
         issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: перетинає ${what}`, k, String(it.id)));
       }
     }
