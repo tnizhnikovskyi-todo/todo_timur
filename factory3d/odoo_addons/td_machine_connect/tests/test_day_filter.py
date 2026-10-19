@@ -1,6 +1,6 @@
 """Y-2: фільтри «Сьогодні»/«Цей тиждень»/«Цей місяць» зміни OEE — київська доба сервера, а не `context_today()` браузера."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from freezegun import freeze_time
