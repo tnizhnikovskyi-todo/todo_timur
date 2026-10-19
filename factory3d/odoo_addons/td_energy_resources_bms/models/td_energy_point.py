@@ -1,5 +1,7 @@
 """Міст: розширення `td.energy.point` (M-B1, R-B1): зв'язок з установкою BMS і `_td_bind_extra` — теплові точки й
-лічильники з `td_bms` (ідемпотентно за `(ресурс, код)`; змінені вручну поля наявних записів не перезаписуються)."""
+лічильники з `td_bms` (ідемпотентно за `(ресурс, код)`; змінені вручну поля наявних записів не перезаписуються, окрім
+`estimate_params["state_invert"]` точки `DOCK`, що стежить за `invert_di` воріт, поки точка привʼязана до їхнього
+сигналу)."""
 
 import logging
 
@@ -21,7 +23,8 @@ class TdEnergyPoint(models.Model):
     def _td_bind_extra(self):
         """R-B1: точки `heat` (`HEAT-BOILER`, `HEAT-CHP`, `RV-ALL`, `AHU-1`, `OFFICE`, `DOCK` — лише якщо знайдено
         сигнал воріт) і лічильники `HM-*`; без `td.bms.heat.balance` компанії — `{}`; інакше `{"points", "meters"}`
-        (скільки створено)."""
+        (скільки створено). `DOCK`: `estimate_params["state_invert"]` = `invert_di` воріт (NC: 0 = відкрито); для
+        наявної точки оновлюється лише цей ключ і лише якщо `state_signal_id` досі сигнал цих воріт."""
         stats = dict(super()._td_bind_extra() or {})
         env = self.env(su=True, context=dict(self.env.context, tracking_disable=True))
         balance = heat.balance(env)
@@ -31,7 +34,7 @@ class TdEnergyPoint(models.Model):
         units = env["td.bms.hvac.unit"].search([])
         rv_units = units.filtered(lambda u: u.code.startswith("RV-"))
         ahu = units.filtered(lambda u: u.code == "AHU-1")[:1]
-        gate_signal = find_dock_signal(env)
+        gate_signal, gate_invert = find_dock(env)
         points = [
             ("HEAT-BOILER", "Котли (тепло)", "source", 10, {}),
             ("HEAT-CHP", "КГУ (тепло)", "source", 20, {}),
@@ -50,7 +53,7 @@ class TdEnergyPoint(models.Model):
                         "estimate_method": "gate_loss", "state_signal_id": gate_signal.id,
                         "estimate_params": {
                             "loss_kw_per_k": heat.DOCK_LOSS_K, "t_out_signal": OUTDOOR_SIGNAL,
-                            "t_in": balance.t_in_set,
+                            "t_in": balance.t_in_set, "state_invert": gate_invert,
                         },
                     },
                 ),
@@ -67,6 +70,8 @@ class TdEnergyPoint(models.Model):
                     dict(vals, resource_id=resource.id, code=code, name=name, kind=kind, sequence=sequence)
                 )
                 created_points += 1
+            elif code == "DOCK" and gate_signal:
+                sync_state_invert(point, gate_signal, gate_invert)
             by_code[code] = point
         flows = {
             "HM-BOILER": ("HEAT-BOILER", "Тепло: котельня (BMS)", balance.boiler_heat_signal_id),
@@ -105,14 +110,36 @@ class TdEnergyPoint(models.Model):
         return stats
 
 
-def find_dock_signal(env):
-    """Q-08: сигнал відкриття воріт відвантаження (`td.yard.gate`, схід, `out`/`both`) або порожній набір (`td_yard`
-    не встановлено або сигналу немає — точка `DOCK` не створюється)."""
+def find_dock(env, company=None):
+    """Q-08: ворота відвантаження компанії (`td.yard.gate`, схід, `out`/`both`, активні; `company` — за замовчуванням
+    `env.company`, як у точок і балансу) → `(сигнал «стріла відкрита», invert_di)`. `(порожній набір, False)` —
+    `td_yard` не встановлено або сигналу немає (точка `DOCK` не створюється)."""
     if "td.yard.gate" not in env:
-        return env["td.signal"]
+        return env["td.signal"], False
+    company = company or env.company
     gate = env["td.yard.gate"].search(
-        [("state_signal_id", "!=", False), ("side", "=", "east"), ("direction", "in", ("out", "both"))],
+        [
+            ("state_signal_id", "!=", False), ("side", "=", "east"), ("direction", "in", ("out", "both")),
+            ("company_id", "=", company.id),
+        ],
         order="sequence, id",
         limit=1,
-    )
-    return gate.state_signal_id
+    )  # fmt: skip
+    return gate.state_signal_id, bool(gate.invert_di)
+
+
+def find_dock_signal(env, company=None):
+    """Q-08: сигнал відкриття воріт відвантаження компанії або порожній набір (див. `find_dock`)."""
+    return find_dock(env, company)[0]
+
+
+def sync_state_invert(point, signal, invert):
+    """Привести `estimate_params["state_invert"]` точки до `invert_di` воріт. Лише якщо точка досі привʼязана до
+    `signal` (інший сигнал — ручна зміна, не чіпаємо); решта параметрів не змінюється; відсутній ключ = `False`.
+    Повертає `True`, якщо записано."""
+    params = dict(point.estimate_params or {})
+    if point.state_signal_id != signal or bool(params.get("state_invert")) == bool(invert):
+        return False
+    params["state_invert"] = bool(invert)
+    point.estimate_params = params
+    return True

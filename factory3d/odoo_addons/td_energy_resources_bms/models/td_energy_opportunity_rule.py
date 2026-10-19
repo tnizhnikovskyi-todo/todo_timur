@@ -191,7 +191,8 @@ class TdEnergyOpportunityRule(models.Model):
         days_with_data = {dates.local_day(ts) for ts, _v in state if win.lo <= ts < win.hi}
         if len(days_with_data) < common.MIN_DAYS:
             return []
-        spans = [(a, b) for a, b in heat.openings(state) if win.lo <= a < win.hi]
+        invert = bool((point.estimate_params or {}).get("state_invert"))  # NC-контакт воріт: 0 = відкрито
+        spans = [(a, b) for a, b in heat.openings(state, invert=invert) if win.lo <= a < win.hi]
         long_s = params["long_open_min"] * 60.0
         n_days = len(days_with_data)
         long_per_day = sum(1 for a, b in spans if (b - a).total_seconds() >= long_s) / n_days

@@ -16,7 +16,7 @@ Key features
 * Usage summary, savings reserves and detectors
 * Energy Resources screen and Excel export
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",

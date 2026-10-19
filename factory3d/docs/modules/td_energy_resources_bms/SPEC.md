@@ -1,6 +1,6 @@
 # td_energy_resources_bms — специфікація (міст «Енергоресурси — Будівля»)
 
-Версія 0.2 · 19.10.2026 (v0.1 — 18.10.2026, Частина II `W3_SPEC.md`) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) · статус: збудовано (гілка `claude/td-energy-w4`).
+Версія 0.3 · 19.10.2026 (v0.1 — 18.10.2026, Частина II `W3_SPEC.md`) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) · статус: збудовано (гілка `claude/td-energy-w4`).
 Ядро — [../td_energy_resources/SPEC.md](../td_energy_resources/SPEC.md) (Частина I: M-01…M-11, V-01…V-13, API-01…API-10, R-01…R-25, AC-01…AC-64, A-01…A-16, Q-01…Q-08); хуки ядра, які перекриває міст: `td.energy.point._td_bind_extra`, `td.energy.res.dashboard._td_heat_kpis|_td_heat_list|_td_heat_chart_note`, `td.energy.res.interval._td_backfill_extra`, методи детекторів `td.energy.opportunity.rule._td_detect_<code>`. Нумерація мосту має префікс `B` (M-B1, UI-B1, R-B1…R-B5, AC-B01…AC-B10, A-B1…A-B2, Q-B1); поза таблицями ID пишеться з модулем: `td_energy_resources_bms R-B2`.
 Мова: проза — українською, рядки інтерфейсу — українські.
 
@@ -10,7 +10,7 @@
 
 ```
 odoo_addons/td_energy_resources_bms/              B
-├── __manifest__.py                               (менеджер) version 19.0.1.0.0; depends [td_energy_resources, td_bms]; auto_install True
+├── __manifest__.py                               (менеджер) version 19.0.1.0.1; depends [td_energy_resources, td_bms]; auto_install True
 ├── __init__.py                                   (менеджер)
 ├── hooks.py                                      B  post_init_hook → env["td.energy.point"]._td_bind_extra()
 ├── models/
@@ -55,9 +55,9 @@ odoo_addons/td_energy_resources_bms/              B
 
 `_td_bind_extra()`:
 1. `balance = env["td.bms.heat.balance"].search([("company_id", "=", env.company.id)], limit=1)`; немає — вихід (`{}`).
-2. Точки `heat`: `HEAT-BOILER` (`source`; сигнал `balance.boiler_heat_signal_id`), `HEAT-CHP` (`source`; `balance.chp_heat_signal_id`), споживачі `RV-ALL` (`hvac_ref='RV-*'`), `AHU-1` (`hvac_unit_id` за `code='AHU-1'`), `OFFICE` (залишок), `DOCK` — лише якщо знайдено сигнал відкриття воріт: `env.get("td.yard.gate")` → перший шлагбаум/ворота зі `state_signal_id` і `direction` відвантаження (`side='east'`), інакше точка не створюється (Q-08).
-3. Лічильники: `HM-BOILER`, `HM-CHP` (`flow_integrate`, один сигнал); `HM-RV` (`flow_integrate`, `flow_signal_ids` = `heat_signal_id` усіх `td.bms.hvac.unit` із `code like 'RV-%'`); `HM-AHU1` (`heat_signal_id` установки `AHU-1`); `HM-DOCK` (`estimate`, `gate_loss`: `loss_kw_per_k=3,5`, `t_out_signal=ventilation/totals/outdoor_c`, `t_in` = `balance.t_in_set`); `HM-OFFICE` (`estimate`, `residual` `{"from": ["HEAT-BOILER","HEAT-CHP"]}`).
-4. Ідемпотентність за `(resource, code)`; змінені вручну поля наявних записів не перезаписуються.
+2. Точки `heat`: `HEAT-BOILER` (`source`; сигнал `balance.boiler_heat_signal_id`), `HEAT-CHP` (`source`; `balance.chp_heat_signal_id`), споживачі `RV-ALL` (`hvac_ref='RV-*'`), `AHU-1` (`hvac_unit_id` за `code='AHU-1'`), `OFFICE` (залишок), `DOCK` — лише якщо знайдено сигнал відкриття воріт: `find_dock(env)` → перший шлагбаум/ворота `td.yard.gate` **компанії точки** (`company_id = env.company`, як у `td.bms.heat.balance` і самих точок; `td.yard.gate.company_id` обов'язкове) зі `state_signal_id`, `side='east'`, `direction ∈ {out, both}`, активні, за `sequence, id`; інакше точка не створюється (Q-08). Разом із сигналом береться `invert_di` цих воріт (контакт NC: 0 = відкрито, `td_yard` трактує так само) і зберігається в `DOCK.estimate_params['state_invert']` (`bool`; відсутній ключ = `False`).
+3. Лічильники: `HM-BOILER`, `HM-CHP` (`flow_integrate`, один сигнал); `HM-RV` (`flow_integrate`, `flow_signal_ids` = `heat_signal_id` усіх `td.bms.hvac.unit` із `code like 'RV-%'`); `HM-AHU1` (`heat_signal_id` установки `AHU-1`); `HM-DOCK` (`estimate`, `gate_loss`: `loss_kw_per_k=3,5`, `t_out_signal=ventilation/totals/outdoor_c`, `t_in` = `balance.t_in_set`, `state_invert` = `invert_di` воріт; ядро R-04 п. 4 рахує `open_frac` як частку слота зі станом `< 0,5` при `state_invert`); `HM-OFFICE` (`estimate`, `residual` `{"from": ["HEAT-BOILER","HEAT-CHP"]}`).
+4. Ідемпотентність за `(resource, code)`; змінені вручну поля наявних записів не перезаписуються. Єдиний виняток — ключ `state_invert` у `estimate_params` наявної `DOCK`: повторна привʼязка приводить його до `invert_di` воріт (зміна контакту NO↔NC в `td_yard` підхоплюється без перестворення точки), але лише поки `DOCK.state_signal_id` — сигнал цих воріт (ручна привʼязка до іншого сигналу не чіпається) і лише цей ключ (`loss_kw_per_k`, `t_in`, `t_out_signal` лишаються); ручне значення `state_invert` для сигналу воріт перезаписується, бо джерело істини — `invert_di`.
 Очікувані кількості на демо-БД: точок тепла 5 (без `DOCK`) або 6; лічильників 5 або 6; `HM-RV` — 25 сигналів.
 
 ### R-B2 Теплові KPI й список (FR-B2)
@@ -92,7 +92,7 @@ odoo_addons/td_energy_resources_bms/              B
 Фікстура: `η_mean = 0,632`, `eta_norm = 0,70`, `airflow 32 000`, `T_in − T_out = 11,4`, `run_hours = 80`, `price_heat = 2,0722` → `loss_kw = 0,068 × 0,34 × 32 000 × 11,4/1 000 = 8,43`; `qty_window = 674,7`; `est_qty_month = 2 921,6 кВт·год`; `est_saving = 6 054 ₴`.
 
 **`dock_gates`** (тепло; потребує точку `DOCK`): параметри `long_open_min=10`, `min_events_day=3`, `open_norm_min_day=20`, `lookback_days=7`, `min_saving_uah=500`; дія `link` на `td_yard.action_td_yard_gate` («Показати у «Дворі»»), якщо `td_yard` встановлено, інакше запасна.
-1. За сирими показаннями `state_signal` точки: «відкриття» — безперервні інтервали `≥ 0,5`; `long` — тривалістю `≥ long_open_min`; середня кількість `long` на добу `< min_events_day` → `[]`.
+1. За сирими показаннями `state_signal` точки: «відкриття» — безперервні інтервали `≥ 0,5` (`< 0,5` при `estimate_params['state_invert']`, `heat.openings(..., invert=True)`); `long` — тривалістю `≥ long_open_min`; середня кількість `long` на добу `< min_events_day` → `[]`.
 2. `open_min_day` = середній сумарний час відкриття на добу; `excess_h = max(0, open_min_day − open_norm_min_day)/60` на добу.
 3. `loss_kw_per_k × ΔT_mean = loss_kw` (середня різниця температур вікна); `qty_window = loss_kw × excess_h × L`; `est_qty_month = qty_window × K_month`; `price_heat` — R-02 п. 3.
 Фікстура: `long = 4/доба`, `open_min_day = 52`, `norm 20`, `loss_kw_per_k = 3,5`, `ΔT = 11`, `L = 7`, `price_heat = 2,0722` → `excess_h = 0,5333`; `loss_kw = 38,5`; `qty_window = 38,5 × 0,5333 × 7 = 143,7`; `est_qty_month = 622,3 кВт·год`; `est_saving = 1 290 ₴`.
@@ -105,7 +105,7 @@ odoo_addons/td_energy_resources_bms/              B
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
-| AC-B01 | FR-B1 | Given `td_bms` із `td.bms.heat.balance` і 26 установками (RV + AHU-1); When встановлення моста; Then точки `HEAT-BOILER`, `HEAT-CHP`, `RV-ALL`, `AHU-1`, `OFFICE` (+ `DOCK` за наявності сигналу воріт) і лічильники `HM-*` створено; `HM-RV.flow_signal_ids` = 25 сигналів; повторний `_td_bind_extra` — без дублів і без перезапису ручних правок | UT |
+| AC-B01 | FR-B1 | Given `td_bms` із `td.bms.heat.balance` і 26 установками (RV + AHU-1); When встановлення моста; Then точки `HEAT-BOILER`, `HEAT-CHP`, `RV-ALL`, `AHU-1`, `OFFICE` (+ `DOCK` за наявності сигналу воріт) і лічильники `HM-*` створено; `HM-RV.flow_signal_ids` = 25 сигналів; повторний `_td_bind_extra` — без дублів і без перезапису ручних правок (окрім `DOCK.estimate_params['state_invert']`, що слідує за `td.yard.gate.invert_di`; ворота іншої компанії в `DOCK` не потрапляють) | UT |
 | AC-B02 | FR-B1 | Given міст установлено до/після `td_bms` (порядок встановлення обох модулів); Then результат однаковий (`auto_install` спрацьовує при появі другого) | UT + DEPLOY_TEST |
 | AC-B03 | FR-B2 | Given фікстура (`boiler_heat 390`, `RV 228`, `AHU 74`, `DOCK 46`); Then `power.value=390`, note «подача 70 °C · зворот 52 °C»; список: `RV-ALL 228`, `AHU-1 74`, `DOCK 46`, `OFFICE 42` | UT |
 | AC-B04 | FR-B2 | Given фікстура R-B3 (32 000 м³/год, 74 кВт, 21,0/18,4/7,0); Then `recovery.value=63` (63,2), tone `bad`, `quality='estimated'`, note «норма ≥ 70 %» (+ « · фільтр брудний» при ΔP 280 Па); `T_in − T_out < 5` → `null`, `η ∉ [0,1]` → `null` | UT |
@@ -134,4 +134,4 @@ odoo_addons/td_energy_resources_bms/              B
 |---|---|---|
 | 18.10.2026 | 0.1 | Перша редакція — Частина II `build/energy/W3_SPEC.md` (хвиля W3, воркер B) |
 | 19.10.2026 | 0.2 | Виокремлено в самостійний SPEC, переклад українською; у збірці міст містить також `models/td_energy_res_interval.py` (гак `_td_backfill_extra`, R-B5) і `hooks.py` (`post_init_hook` → `_td_bind_extra`); `neutralize.sql` порожній; відхилення збірки W3, що стосуються ядра (AI:7 для `equipment/BOILER/gas_m3h`, n 1206…1215, сценарії S-21…S-23, `limit_kind`, `meter_ids` у V-04, серверна дія «Запустити зараз», V-11, `refresh_registry`), — у [../td_energy_resources/SPEC.md](../td_energy_resources/SPEC.md), «Журнал змін документа» |
-
+| 19.10.2026 | 0.3 | Виправлення дефекту оцінки втрат через ворота з NC-контактом (`invert_di=True`): `find_dock(env)` повертає `(сигнал, invert_di)` і фільтрує ворота за компанією; `DOCK.estimate_params['state_invert']` зберігається при привʼязці й синхронізується повторною привʼязкою (R-B1 п. 2, 4); детектор `dock_gates` враховує інверсію (R-B4); R-04 п. 4 ядра — `open_frac` з інверсією, Q-08. Тести `test_bind_dock_state_invert`, `test_bind_dock_legacy_params_without_invert`, `test_dock_loss_nc_gate_end_to_end`, `test_yard_gate_company_filter`, `test_yard_gate_nc_invert_follows_invert_di`; версія моста `19.0.1.0.1` |

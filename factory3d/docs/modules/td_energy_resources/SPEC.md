@@ -1,6 +1,6 @@
 # td_energy_resources — специфікація (W3 «Енергоресурси»: ядро ресурсів; міст до BMS — `td_energy_resources_bms`)
 
-Версія 0.2 · 19.10.2026 (v0.1 — 18.10.2026) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) (далі ARCH: FR-01…FR-24 і FR-B1…FR-B3, A-01…A-16, Q-01…Q-08) · статус: збудовано (гілка `claude/td-energy-w4`); відхилення збірки — у «Журналі змін документа» в кінці файлу.
+Версія 0.3 · 19.10.2026 (v0.1 — 18.10.2026) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) (далі ARCH: FR-01…FR-24 і FR-B1…FR-B3, A-01…A-16, Q-01…Q-08) · статус: збудовано (гілка `claude/td-energy-w4`); відхилення збірки — у «Журналі змін документа» в кінці файлу.
 Вхід: `build/energy/GAP.md` (E-01…E-11, §4, §5.3, RS-01…RS-15), макет `Resources.dc.html`; контракти W1: `W1_SPEC.md` (M-26 `td.energy.advice.actions[]` = C-32, API-05, R-27, R-33, R-36, UI-10) і код `td_energy` на гілці `claude/factory3d-build` (`d14d13c`, W1 реалізовано).
 Спирається на: `docs/ARCHITECTURE.md` §3 (граф), §5 (конвенції), §6.4 (телеметрія), D-18 (необов'язкові зв'язки через `env.get` і міст `auto_install`); `td_energy` (M-01…M-28, R-04, R-15, `tools/counter.py`, `tools/backfill.py`); `td_telemetry` (`td.signal`, `td.reading`, `td.reading.hour`, CT-10); `td_bms` (`td.bms.heat.balance`, `td.bms.hvac.unit`); `td_iot_sim` і `services/iot_sim`.
 Мова: проза — українською (`docs/DOC_STANDARD.md`), рядки інтерфейсу, `string=` полів і тексти помилок — українські (як у W1 і в макеті).
@@ -724,7 +724,7 @@ access_td_energy_opportunity_admin,td.energy.opportunity admin,model_td_energy_o
 1. **`load_share`** (`node_id`, `rate_nominal`): `run_kw = node.p_inst_kw × node.load_factor` (за замовчуванням 0,75), `idle_kw = node.p_inst_kw × node.idle_factor` (0,05); `kw = kw_avg` рядка `td.energy.interval` (`role='consumer'`, цей вузол, цей слот); `active = clamp((kw − idle_kw)/(run_kw − idle_kw), 0, 1)`; `rate = rate_nominal × active`. Приклад: EDGE-1 (`p_inst 67,5`: `run 50,625`, `idle 3,375`), `kw_avg = 41` → `active = 0,796` → `rate = 3,0 × 0,796 = 2,39 м³/хв`.
 2. **`schedule`**: `rate = params.rate`, якщо локальний день тижня ∈ `params.weekdays` і `params.from_h ≤ local_hour(ts_start) < params.to_h`, інакше 0. Приклад: `CANTEEN` газ, вівторок 09:30 → 1,0 м³/год.
 3. **`residual`**: `rate = max(0, Σ rate(params.from) − Σ rate(siblings))`, де `siblings` = решта `consumer`-точок того самого ресурсу з тим самим `parent_id`, що в даної (зокрема оцінені); будь-який потрібний слот `missing` → `missing`. Приклад (вода): `WATER-MAIN 2,1`, `BOILER 0,0125`, `CANTEEN 0,22`, `SPRAY-1 0,3` → `SOCIAL = 2,1 − 0,5325 = 1,5675 м³/год`.
-4. **`gate_loss`** (`state_signal_id`, `params.loss_kw_per_k`, `params.t_in_signal`/`t_out_signal`, за замовчуванням `t_in = 18,0`, `t_out = ventilation/totals/outdoor_c`): `open_frac` = частка слота, коли `state_signal ≥ 0,5` (ступінчасте утримання); `ΔT = max(0, t_in − t_out)`; `rate_kw = loss_kw_per_k × ΔT × open_frac`. Приклад: `loss_kw_per_k = 3,5`, `open_frac = 0,5`, `ΔT = 11` → `19,25 кВт`. Потрібні «сирі» показання (зберігаються 30 діб); старші — `missing`.
+4. **`gate_loss`** (`state_signal_id`, `params.loss_kw_per_k`, `params.t_in_signal`/`t_out_signal`, за замовчуванням `t_in = 18,0`, `t_out = ventilation/totals/outdoor_c`): `open_frac` = частка слота, коли `state_signal ≥ 0,5` (ступінчасте утримання), а при `params.state_invert = true` (ворота з NC-контактом, `td.yard.gate.invert_di`; 0 = відкрито) — коли `state_signal < 0,5`, тобто `open_frac` NC-воріт при протилежному сигналі збігається з NO-воротами (слот без показань лишається `missing`); `ΔT = max(0, t_in − t_out)`; `rate_kw = loss_kw_per_k × ΔT × open_frac`. Приклад: `loss_kw_per_k = 3,5`, `open_frac = 0,5`, `ΔT = 11` → `19,25 кВт`. Потрібні «сирі» показання (зберігаються 30 діб); старші — `missing`.
 
 ### R-05 Порядок побудови слота, крон, ротація (FR-05)
 
@@ -1124,7 +1124,7 @@ access_td_energy_opportunity_admin,td.energy.opportunity admin,model_td_energy_o
 | Q-05 | Джерело цін газу й води (договір, індексація) | бухгалтерія | ручна таблиця `td.energy.price` із датами | ціни демо 19,80 і 60,00 |
 | Q-06 | Чи допустимий новий HTTP-маршрут `/td/energy/resources/export` (раніше блок обходився ORM) | менеджер | так (автентифікований GET, перевірка групи) | реалізовано (A-10) |
 | Q-07 | Власник сигналу `air/setpoint_bar` | менеджер W2 | W2 (уставка й команди компресора) | параметр `air_setpoint_bar`, читання сигналу, якщо з'явиться |
-| Q-08 | Сигнал відкриття доквих воріт (`td.yard.gate` — шлагбауми) | замовник | датчик відкриття воріт відвантаження в BMS/Yard | точка `DOCK` і правило `dock_gates` активні лише за наявності сигналу |
+| Q-08 | Сигнал відкриття доквих воріт (`td.yard.gate` — шлагбауми) | замовник | датчик відкриття воріт відвантаження в BMS/Yard | точка `DOCK` і правило `dock_gates` активні лише за наявності сигналу; ворота беруться лише компанії точки (`td.yard.gate.company_id`), інверсія контакту `invert_di` зберігається в `DOCK.estimate_params['state_invert']` і враховується оцінкою `gate_loss` та правилом `dock_gates` (міст, R-B1) |
 
 ### Рішення автора (A-01…A-16)
 
@@ -1155,6 +1155,7 @@ access_td_energy_opportunity_admin,td.energy.opportunity admin,model_td_energy_o
 |---|---|---|
 | 18.10.2026 | 0.1 | Перша редакція — Частина I `build/energy/W3_SPEC.md` (хвиля W3) |
 | 19.10.2026 | 0.2 | Перенесено до `docs/modules/td_energy_resources/`, переклад українською (технічні імена, ID, код, JSON — без змін); Частина II (міст) — у [../td_energy_resources_bms/SPEC.md](../td_energy_resources_bms/SPEC.md); внесено відхилення збірки (нижче) |
+| 19.10.2026 | 0.3 | R-04 п. 4 `gate_loss`: параметр `state_invert` (NC-контакт воріт) — `open_frac` рахується за станом `< 0,5` (`estimate.open_fraction(..., invert=True)`); Q-08: фільтр воріт за компанією й збереження `invert_di` (міст, R-B1); версія `19.0.1.0.1` |
 
 ### Рішення й відхилення, прийняті при збірці W3
 
@@ -1165,4 +1166,3 @@ access_td_energy_opportunity_admin,td.energy.opportunity admin,model_td_energy_o
 5. **`limit_kind` має підпис «Вид ліміту»**; значення: `none` «Без ліміту», `fixed` «Фіксований», `tariff_contract` «Договірна потужність» (M-01).
 6. **V-04: `meter_count` замінено на `meter_ids`** (віджет `many2many_tags`); поле `meter_count` (compute) лишається в M-01 для smart-кнопки ресурсу.
 7. **«Запустити зараз» (V-08)** — не кнопка `type="object"`, а `type="action"` на серверну дію `action_td_energy_opportunity_rule_run`: `action_run` повертає словник статистики (API-05), серверна дія загортає його у сповіщення.
-

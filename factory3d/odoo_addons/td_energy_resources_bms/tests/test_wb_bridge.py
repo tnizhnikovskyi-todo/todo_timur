@@ -14,7 +14,7 @@ from odoo.addons.td_energy.tools.dates import to_local
 from odoo.addons.td_energy_resources.tests.common import NOW, SLOT, TAGS, TestW3Common
 from odoo.addons.td_energy_resources.tools import shifts
 
-from ..models.td_energy_point import find_dock_signal
+from ..models.td_energy_point import find_dock, find_dock_signal
 from ..tools import heat
 
 POINT_MODULE = "odoo.addons.td_energy_resources_bms.models.td_energy_point"
@@ -71,11 +71,12 @@ class TestWbBridge(TestW3Common):
             record[field] = self.Signal.search([("code", "=", code)], limit=1) or self.signal(code, unit=unit)
         return record[field]
 
-    def bind(self, with_dock=False):
-        """`_td_bind_extra` з підміною пошуку воріт: фікстура `test/yard/gate_open` або порожній набір (воріт немає)."""
+    def bind(self, with_dock=False, invert=False):
+        """`_td_bind_extra` з підміною пошуку воріт: фікстура `test/yard/gate_open` (`invert` — NC-контакт, `invert_di`)
+        або порожній набір (воріт немає)."""
         self.env.flush_all()
         gate_signal = self.dock_signal() if with_dock else self.Signal
-        with patch(POINT_MODULE + ".find_dock_signal", return_value=gate_signal):
+        with patch(POINT_MODULE + ".find_dock", return_value=(gate_signal, invert)):
             return self.Point._td_bind_extra()
 
     def feed_signal(self, signal, value):
@@ -144,6 +145,50 @@ class TestWbBridge(TestW3Common):
         meter = self.Meter.search([("code", "=", "HM-DOCK")])
         self.assertEqual((meter.mode, meter.point_id), ("estimate", dock))
         self.assertEqual(self.bind(with_dock=True), {"points": 0, "meters": 0})
+        self.assertIs(dock.estimate_params["state_invert"], False)  # NO-контакт: інверсії немає
+
+    def dock_point(self):
+        return self.Point.search([("code", "=", "DOCK"), ("resource_id.code", "=", "heat")])
+
+    def test_bind_dock_state_invert(self):  # AC-B01, Q-08: інверсія NC-воріт зберігається й слідує за invert_di
+        self.assertEqual(self.bind(with_dock=True, invert=True)["points"], 1)
+        dock = self.dock_point()
+        self.assertIs(dock.estimate_params["state_invert"], True)
+        self.assertEqual(dock.estimate_params["loss_kw_per_k"], 3.5)
+        dock.estimate_params = dict(dock.estimate_params, loss_kw_per_k=4.2)  # ручна правка іншого параметра
+        self.assertEqual(self.bind(with_dock=True, invert=True), {"points": 0, "meters": 0})  # без змін — ідемпотентно
+        self.assertEqual((dock.estimate_params["state_invert"], dock.estimate_params["loss_kw_per_k"]), (True, 4.2))
+        self.bind(with_dock=True, invert=False)  # `invert_di` воріт змінили → параметр оновлено
+        self.assertEqual((dock.estimate_params["state_invert"], dock.estimate_params["loss_kw_per_k"]), (False, 4.2))
+        self.bind(with_dock=True, invert=True)  # та сама точка, без дублів
+        self.assertIs(dock.estimate_params["state_invert"], True)
+        self.assertEqual(len(self.dock_point()), 1)
+        other = self.signal("test/yard/gate_other", unit="")
+        dock.state_signal_id = other  # точку вручну привʼязали до іншого сигналу — інверсію не чіпаємо
+        self.bind(with_dock=True, invert=False)
+        self.assertEqual((dock.state_signal_id, dock.estimate_params["state_invert"]), (other, True))
+
+    def test_bind_dock_legacy_params_without_invert(self):  # точка з попередньої версії (без ключа): NO — без запису
+        self.bind(with_dock=True)
+        dock = self.dock_point()
+        dock.estimate_params = {"loss_kw_per_k": 3.5, "t_out_signal": OUTDOOR, "t_in": 18.0}
+        self.bind(with_dock=True)
+        self.assertNotIn("state_invert", dock.estimate_params)  # відсутній ключ = False, зайвого запису немає
+        self.bind(with_dock=True, invert=True)
+        self.assertIs(dock.estimate_params["state_invert"], True)
+
+    def test_dock_loss_nc_gate_end_to_end(self):  # R-04 п. 4: NC-ворота через міст → оцінка HM-DOCK як у NO
+        self.bind(with_dock=True, invert=True)
+        dock = self.dock_point()
+        t0 = datetime(2026, 10, 17, 6, 0)
+        gate, out = dock.state_signal_id, self.Signal.search([("code", "=", OUTDOOR)], limit=1)
+        self.feed(gate, [(t0 - timedelta(seconds=60), 1.0), (t0 + timedelta(seconds=225), 0.0)])  # NC: відкрито 75 %
+        self.feed(out, [(t0 - timedelta(seconds=300), 7.0), (t0 + timedelta(seconds=600), 7.0)])
+        meter = self.Meter.search([("code", "=", "HM-DOCK")])
+        self.build(meter, now=t0 + SLOT)
+        row = [r for r in self.rows(meter) if r[0] == t0][0]
+        self.assertAlmostEqual(row[2], 3.5 * (dock.estimate_params["t_in"] - 7.0) * 0.75, places=2)
+        self.assertEqual(row[6], "estimated")
 
     def test_bind_without_balance_or_yard(self):  # AC-B01
         with patch.object(heat, "balance", return_value=self.env["td.bms.heat.balance"]):
@@ -152,6 +197,7 @@ class TestWbBridge(TestW3Common):
         self.assertFalse(self.heat_points().filtered(lambda p: p.code == "DOCK"))
         self.assertFalse(self.Meter.search([("code", "=", "HM-DOCK")]))
         self.assertFalse(find_dock_signal({"td.signal": self.Signal}))  # середовище без td.yard.gate (td_yard немає)
+        self.assertEqual(find_dock({"td.signal": self.Signal}), (self.Signal, False))
 
     def test_install_order_state(self):  # AC-B02: auto_install, залежності, результат після установки
         module = self.env["ir.module.module"].search([("name", "=", "td_energy_resources_bms")])
@@ -209,6 +255,38 @@ class TestWbBridge(TestW3Common):
         self.assertEqual(find_dock_signal(self.env), real)  # лишається GATE-E (sequence 20)
         make("T-E-BOTH", "east", "both", "d")
         self.assertEqual(find_dock_signal(self.env), signals["d"])  # sequence 1 < 20
+
+    def test_yard_gate_company_filter(self):  # Q-08: ворота іншої компанії не потрапляють у DOCK цієї
+        Gate = self.yard_gate_model()
+        real = self.env.ref("td_yard.gate_e")
+        other = self.env["res.company"].create({"name": "T-Інша компанія"})
+        foreign = self.signal("test/yard/gate_foreign", unit="")
+        Gate.create(
+            dict(td_code="T-E-FOREIGN", name="T-E-FOREIGN", side="east", direction="out", sequence=1,
+                 state_signal_id=foreign.id, company_id=other.id, invert_di=True)
+        )  # fmt: skip
+        self.assertEqual(
+            find_dock(self.env), (real.state_signal_id, bool(real.invert_di))
+        )  # sequence 1 < 20 — не береться
+        self.assertEqual(find_dock(self.env, other), (foreign, True))  # а для своєї компанії — береться
+        self.assertEqual(
+            find_dock(self.env, self.env["res.company"].create({"name": "T-Порожня"})), (self.Signal, False)
+        )
+        self.assertEqual(self.Point._td_bind_extra()["points"], 1)
+        self.assertEqual(self.dock_point().state_signal_id, real.state_signal_id)
+
+    def test_yard_gate_nc_invert_follows_invert_di(self):  # R-B1: `DOCK.state_invert` = `td.yard.gate.invert_di`
+        self.yard_gate_model()
+        gate = self.env.ref("td_yard.gate_e")
+        gate.invert_di = True
+        self.assertEqual(find_dock(self.env), (gate.state_signal_id, True))
+        self.assertEqual(self.Point._td_bind_extra()["points"], 1)  # без підміни: ворота td_yard
+        dock = self.dock_point()
+        self.assertIs(dock.estimate_params["state_invert"], True)
+        gate.invert_di = False  # монтажник виправив контакт → повторна привʼязка оновлює параметр
+        self.assertEqual(self.Point._td_bind_extra(), {"points": 0, "meters": 0})
+        self.assertIs(dock.estimate_params["state_invert"], False)
+        self.assertEqual(len(self.dock_point()), 1)
 
     # --- AC-B03, AC-B05: KPI й список «Тепло»
     def fx_heat_screen(self):
@@ -431,27 +509,31 @@ class TestWbBridge(TestW3Common):
         self.assertEqual(self.rule("ahu_recuperation")._td_detect_ahu_recuperation(NOW), [])
 
     # --- AC-B08: dock_gates
-    def make_dock(self):
+    def make_dock(self, invert=False):
         heat_res = self.resource("heat")
         signal = self.signal("test/yard/gate_open", unit="")
         return self.Point.create(
             {
                 "resource_id": heat_res.id, "code": "DOCK", "name": "Втрати через ворота", "kind": "consumer",
                 "estimate_method": "gate_loss", "state_signal_id": signal.id,
-                "estimate_params": {"loss_kw_per_k": 3.5, "t_out_signal": OUTDOOR, "t_in": 18.0},
+                "estimate_params": {
+                    "loss_kw_per_k": 3.5, "t_out_signal": OUTDOOR, "t_in": 18.0, "state_invert": invert,
+                },
             }
         )  # fmt: skip
 
     def fx_gates(self, spans_min=(12, 12, 12, 16)):
-        """Щодоби відкриття воріт тривалістю `spans_min` (хв) о 09:00, 11:00, 13:00, 15:00; зовні 7 °C."""
+        """Щодоби відкриття воріт тривалістю `spans_min` (хв) о 09:00, 11:00, 13:00, 15:00; зовні 7 °C. Для точки з
+        `state_invert` (NC) сигнал протилежний: 0 — відкрито, 1 — закрито."""
         point = self.Point.search([("code", "=", "DOCK"), ("resource_id.code", "=", "heat")])
+        invert = bool(point.estimate_params.get("state_invert"))
         out = self.Signal.search([("code", "=", OUTDOOR)])
         for day in (date(2026, 10, 10) + timedelta(days=n) for n in range(7)):
             d0 = dates.local_day_bounds(day)[0]
             points = []
             for k, minutes in enumerate(spans_min):
                 t = d0 + timedelta(hours=9 + 2 * k)
-                points += [(t, 1.0), (t + timedelta(minutes=minutes), 0.0)]
+                points += [(t, 0.0 if invert else 1.0), (t + timedelta(minutes=minutes), 1.0 if invert else 0.0)]
             self.feed(point.state_signal_id, points)
             self.feed(out, [(d0 + timedelta(hours=1), 7.0), (d0 + timedelta(hours=13), 7.0)])
         self.env.flush_all()
@@ -477,6 +559,15 @@ class TestWbBridge(TestW3Common):
         self.assertEqual(opp.resource_id.code, "heat")
         first = self.env["td.energy.opportunity"].get_list("heat")["items"][0]["actions"][0]
         self.assertEqual(first["code"], "yard_gates" if yard else "open")
+
+    def test_dock_gates_nc_contact(self):  # AC-B08: NC-ворота (`state_invert`, сигнал протилежний) — та сама знахідка
+        self.make_dock(invert=True)
+        self.fx_gates()
+        found = self.rule("dock_gates")._td_detect_dock_gates(NOW)
+        self.assertEqual(len(found), 1)
+        ev = found[0]["evidence"]
+        self.assertEqual((ev["long_per_day"], ev["open_min_day"], ev["dt"], ev["loss_kw"]), (4.0, 52.0, 11.0, 38.5))
+        self.assertAlmostEqual(found[0]["est_saving_month"], 1290.0, delta=1)
 
     def test_dock_gates_negative(self):  # AC-B08: довгих відкриттів < 3 на добу
         self.make_dock()
@@ -504,6 +595,8 @@ class TestWbBridge(TestW3Common):
         self.assertEqual(
             spans[1][1], t0 + timedelta(hours=1, minutes=5) + timedelta(seconds=heat.HOLD_S)
         )  # не закрите — обрізається
+        inv = [(ts, 1.0 - v) for ts, v in pts]  # NC-контакт: протилежні значення дають ті самі відкриття
+        self.assertEqual(heat.openings(inv, invert=True), spans)
 
     # --- AC-B09: backfill тепла
     def sums(self, code):

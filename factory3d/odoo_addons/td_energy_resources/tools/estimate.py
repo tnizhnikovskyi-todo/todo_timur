@@ -49,9 +49,10 @@ def residual(source_rates, sibling_rates):
     return max(0.0, sum(source_rates) - sum(sibling_rates))
 
 
-def open_fraction(points, t0, t1, threshold=0.5):
-    """Частка слота `[t0, t1)`, коли стан ≥ `threshold` (ступінчасте утримання). `points` — `[(ts, value)]`
-    відсортовані; значення до першого показання невідоме — береться перше. `None` — показань немає зовсім."""
+def open_fraction(points, t0, t1, threshold=0.5, invert=False):
+    """Частка слота `[t0, t1)`, коли стан ≥ `threshold` (ступінчасте утримання); `invert=True` (контакт NC: 0 —
+    активний стан) — коли стан < `threshold`. `points` — `[(ts, value)]` відсортовані; значення до першого показання
+    невідоме — береться перше. `None` — показань немає зовсім."""
     pts = sorted((t, v) for t, v in points if v is not None)
     if not pts:
         return None
@@ -68,7 +69,7 @@ def open_fraction(points, t0, t1, threshold=0.5):
         for t, v in pts:
             if t <= a:
                 value = v
-        if value >= threshold:
+        if (value >= threshold) != invert:
             opened += (b - a).total_seconds()
     return opened / span if span else 0.0
 

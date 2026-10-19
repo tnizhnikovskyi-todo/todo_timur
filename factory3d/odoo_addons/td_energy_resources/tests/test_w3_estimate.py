@@ -100,3 +100,35 @@ class TestW3Estimate(TestW3Common):
         self.assertAlmostEqual(row[2], 19.25, places=2)
         self.assertEqual(row[6], "estimated")
         self.assertEqual([r for r in self.rows(meter) if r[0] == T0 - 6 * SLOT][0][6], "missing")  # немає показань
+
+    def test_gate_loss_nc_contact(
+        self,
+    ):  # AC-15: NC-ворота (`state_invert`) дають ту саму оцінку, що NO, при протилежному сигналі
+        no_pts = [(T0 - 60 * S, 0.0), (T0 + 225 * S, 1.0)]  # відкрито 675 з 900 с → 0,75
+        nc_pts = [(T0 - 60 * S, 1.0), (T0 + 225 * S, 0.0)]  # той самий стан воріт, контакт NC: 0 = відкрито
+        self.assertAlmostEqual(estimate.open_fraction(no_pts, T0, T0 + SLOT), 0.75, places=3)
+        self.assertAlmostEqual(estimate.open_fraction(nc_pts, T0, T0 + SLOT, invert=True), 0.75, places=3)
+        self.assertAlmostEqual(estimate.open_fraction(nc_pts, T0, T0 + SLOT), 0.25, places=3)  # без інверсії — навпаки
+        self.assertIsNone(estimate.open_fraction([], T0, T0 + SLOT, invert=True))
+        t_out = self.signal("energy/t3/outdoor_nc_c", "gauge", "°C")
+        self.feed(t_out, [(T0 - 300 * S, 7.0), (T0 + 600 * S, 7.0)])
+        meters = {}
+        for key, pts, invert in (("no", no_pts, False), ("nc", nc_pts, True), ("ncraw", nc_pts, False)):
+            state = self.signal("energy/t3/gate_state_%s" % key, "state", False)
+            self.feed(state, pts)
+            params = {"loss_kw_per_k": 3.5, "t_out_signal": t_out.code}
+            if invert:
+                params["state_invert"] = True
+            point = self.point(
+                "T-DOCK-%s" % key.upper(), "heat", state_signal_id=state.id, estimate_method="gate_loss",
+                estimate_params=params,
+            )  # fmt: skip
+            meters[key] = self.meter("T-DOCK-%s" % key.upper(), point, "estimate")
+        self.build(meters["no"] | meters["nc"] | meters["ncraw"], now=T0 + SLOT)
+        rates = {k: [r for r in self.rows(m) if r[0] == T0][0] for k, m in meters.items()}
+        self.assertAlmostEqual(rates["no"][2], 3.5 * 11.0 * 0.75, places=2)
+        self.assertAlmostEqual(rates["nc"][2], rates["no"][2], places=6)
+        self.assertEqual((rates["nc"][6], rates["nc"][1]), (rates["no"][6], rates["no"][1]))
+        self.assertAlmostEqual(rates["ncraw"][2], 3.5 * 11.0 * 0.25, places=2)  # NC без `state_invert` — давній дефект
+        # NC: «немає показань» лишається missing (інверсія не вигадує стан)
+        self.assertEqual([r for r in self.rows(meters["nc"]) if r[0] == T0 - 6 * SLOT][0][6], "missing")

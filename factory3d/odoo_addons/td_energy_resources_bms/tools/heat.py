@@ -206,13 +206,14 @@ def grid_between(lo, hi, step_s=300):
     return out
 
 
-def openings(points, hold_s=HOLD_S, threshold=0.5):
-    """Відкриття воріт: неперервні інтервали зі значенням `≥ threshold` → `[(start, end)]`. Розрив між показаннями понад
-    `hold_s` або незакрите відкриття обрізається `hold_s` після останнього показання."""
+def openings(points, hold_s=HOLD_S, threshold=0.5, invert=False):
+    """Відкриття воріт: неперервні інтервали зі значенням `≥ threshold` (`invert=True`, контакт NC, — `< threshold`) →
+    `[(start, end)]`. Розрив між показаннями понад `hold_s` або незакрите відкриття обрізається `hold_s` після
+    останнього показання."""
     out, start, last = [], None, None
     hold = timedelta(seconds=hold_s)
     for ts, value in points:
-        if value >= threshold:
+        if (value >= threshold) != invert:
             if start is None:
                 start = ts
             elif last is not None and ts - last > hold:

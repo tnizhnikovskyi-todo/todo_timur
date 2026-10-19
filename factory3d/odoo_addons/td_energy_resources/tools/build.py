@@ -378,10 +378,11 @@ class SlotBuilder:
         t_out = load_points(self.env, t_out_sig, slots[0] - gap, slots[-1] + SLOT + gap) if t_out_sig else []
         t_in = float(params.get("t_in", estimate.DEFAULT_T_IN))
         loss = float(params.get("loss_kw_per_k", 0.0))
+        invert = bool(params.get("state_invert"))  # NC-контакт воріт (`td.yard.gate.invert_di`): 0 = відкрито
         out = []
         for t0 in slots:
             t1 = t0 + SLOT
-            frac = estimate.open_fraction(window_points(state, t0 - 6 * gap, t1), t0, t1)
+            frac = estimate.open_fraction(window_points(state, t0 - 6 * gap, t1), t0, t1, invert=invert)
             near = window_points(t_out, t0 - gap, t1 + gap)
             temp = sum(v for _t, v in near) / len(near) if near else None
             if not window_points(state, t0, t1) and not window_points(state, t0 - 6 * gap, t0):

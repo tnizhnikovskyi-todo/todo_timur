@@ -14,7 +14,7 @@ Key features
 * Temperature and heat-recovery KPIs
 * Three savings-reserve detectors
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
