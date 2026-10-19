@@ -99,20 +99,20 @@ openpyxl, CSV — UTF-8/Windows-1251). Прототип: усе локально
 *Контур* (`regionOf(шар)` → `{x0, y0, x1, y1, poly?}`): `bounds` шару — масив точок `[[x, y], …]` (≥ 3), інакше контур шару `building` / габарит площадки (`contourOf`); для многокутника
 зона має лежати цілком усередині (`obbInsidePolygon`, відступ 0,5 м), виріз обходиться. Колони `column_grid` обходяться, поки це можливо: якщо з ними зони не вміщаються,
 а без них вміщаються (крок сітки менший за зону), розкладка йде без колон сітки (`layoutAroundBuilding` → `gridIgnored`, у повідомленні названо крок); стіни, офіс, зарядка й явні
-колони дотримуються завжди. Не вміщається й без колон сітки — нічого не змінюється, причина називає перешкоди і крок сітки. Так само розкладає й `structure.js` (імпорт структури).
+колони дотримуються завжди. Ряд, що після такої розкладки став на колону сітки, показує перевірка `inside` (вона бачить ті самі вузли, `gridNodes`; `19.0.1.4.1`). Не вміщається й без колон сітки — нічого не змінюється, причина називає перешкоди і крок сітки. Так само розкладає й `structure.js` (імпорт структури).
 
 ## Слайс S5 «Будівля, документи, майстер» (F15, F16, F18, N-06, N-07)
 
 | Файл | Що |
 |---|---|
-| `building_core.js` | чисте ядро без DOM: об'єкти будівлі (`newItem`, `itemToApi`, `columnGrid`, `contourWalls`), контур (`contourOf`, `isSimplePolygon`, `nearestEdge`), проходи (вузли графа, `moveAisle`), прив'язка, техніка складу (`TECHS`, `parseTech`), перевірки `inside` / `aisle_width` / `height`, `obstacleRects`; дзеркало — `services/building.py`, `services/checks_building.py` (золота фікстура `fixtures/s5_golden.json`) |
+| `building_core.js` | чисте ядро без DOM: об'єкти будівлі (`newItem`, `itemToApi`, `columnGrid`, `contourWalls`), контур (`contourOf`, `isSimplePolygon`, `nearestEdge`), проходи (вузли графа, `moveAisle`), прив'язка, техніка складу (`TECHS`, `parseTech`), перевірки `inside` / `aisle_width` / `height`, `obstacleRects` і `gridNodes` (вузли колон `site.column_grid`: їх бачать і авторозкладка, і `inside` — серйозність як в явної колони); дзеркало — `services/building.py`, `services/checks_building.py` (золота фікстура `fixtures/s5_golden.json`) |
 | `building.js` · `building_ui.js` · `building_3d.js` | реєстрація перевірок і `E.buildingObstacles`; режим «Будівля» (контур, колони, стіни, ворота, док, двері, офіс, зарядка, проходи, лінійка й рулетка, техніка, висоти); 3D будівлі (instancing колон, лінія спринклерів) |
 | `spec.js` · `plan_doc.js` · `docs_ui.js` | документи (F15): специфікація стелажів (рами, балки, полиці, стійки, консолі, зв'язки; CSV локально, XLSX/PDF — сервер) і план складу (SVG/PNG локально, PDF — вектором на сервері); область документа (зона/ряд) |
 | `wizard.js` | майстер «З нуля» (F16): Будівля → Зони → Ряди → Адресація → Перевірки → План змін; вкладка лівої панелі, кожен крок — звичайна зміна; стан майстра — `site.wizard_state` |
 
 *Формат `items`* (шар `building`, R-22; API-04 пише їх у `td.layer.items`, ≤ 5000): `{id, kind: column|wall|gate|dock|door|office|charger, name, x, y, w, d, rot (°), [th] (стіна), [h],
 location_uid (лише gate/dock — «Пов'язати з локацією»)}`; усе — прямокутники (OBB): центр `(x, y)`, довжина `w` уздовж осі `rot`, глибина `d`. Контур — `layer.bounds` шару `building`;
-проходи — осьові прямокутники `layer.aisles`. Поля площадки: `building {length, width, height}`, `column_grid {step_x, step_y}`, `sprinkler_height`, `aisle_tech`
+проходи — осьові прямокутники `layer.aisles`. Поля площадки: `building {length, width, height}`, `column_grid {step_x, step_y}` (колони 0,4×0,4 м у вузлах — не `items`; `inside` рахує їх перешкодами, як і явні колони; живі перевірки беруть сітку з `S.site` через `setSiteProvider`, сервер — із `checks_state().site.column_grid`), `sprinkler_height`, `aisle_tech`
 (`ключ` або `ключ:мін_м`; зона має власне `tech`) — усе входить у знімок скасування (`undo.js`: Ctrl+Z відкочує габарит, висоти й техніку, відновлення викликає
 `E.saveSiteProps` / `adapter.saveSite`).
 
