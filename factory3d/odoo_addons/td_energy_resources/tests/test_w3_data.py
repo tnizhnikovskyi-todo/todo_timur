@@ -192,15 +192,15 @@ class TestW3Data(TestW3Common):
         self.assertNotIn(meter, backfill.Plan(self.env).meters)
         self.assertFalse(meter.e_import_signal_id)
         before = self.Event.search_count([("kind", "=", "meter")])
-        self.env["td.energy.meter"].search([("active", "=", True)])._f3d_update_state()  # як cron_td_energy_live
+        self.env["td.energy.meter"].search([("active", "=", True)])._td_update_state()  # як cron_td_energy_live
         self.assertEqual(self.Event.search_count([("kind", "=", "meter"), ("code", "=", "T-M20")]), 0)
         self.assertEqual(meter.data_state, "no_data")
         self.assertGreaterEqual(self.Event.search_count([("kind", "=", "meter")]), before)
         self.fresh("energy/t3/gas_total2", 100.0)
-        meter._f3d_update_state()
+        meter._td_update_state()
         self.assertEqual(meter.data_state, "ok")
         self.stale("energy/t3/gas_total2", minutes=33)
-        meter._f3d_update_state()
+        meter._td_update_state()
         self.assertEqual(meter.data_state, "stale")
         self.assertEqual(self.Event.search_count([("kind", "=", "meter"), ("code", "=", "T-M20")]), 0)  # A-14
         self.assertEqual(self.env["td.energy.interval"].search_count([("meter_id", "=", meter.id)]), 0)

@@ -256,7 +256,7 @@ class TestW3Detectors(TestW3Common):
 
     # --- AC-38: react_section
     def fill_react(self, cos=0.85, p_kw=125.0, q_kvar=68.75, limit=0.40, rate=0.24):
-        tariff = self.env["td.energy.tariff"]._f3d_tariff_at(NOW)
+        tariff = self.env["td.energy.tariff"]._td_tariff_at(NOW)
         tariff.write({"tg_phi_limit": limit, "react_rate": rate})
         step = timedelta(minutes=15)
         grid = [LO - step + step * i for i in range(96 * DAYS + 3)]
@@ -306,7 +306,7 @@ class TestW3Detectors(TestW3Common):
 
     # --- AC-39: pv_export
     def fill_pv(self, export_price=2.0):
-        tariff = self.env["td.energy.tariff"]._f3d_tariff_at(NOW)
+        tariff = self.env["td.energy.tariff"]._td_tariff_at(NOW)
         tariff.export_price = export_price
         big = {self.slots()[i] for i in (200, 201, 202, 203)}  # 4 слоти по 29,5 кВт·год (118 кВт ≥ 10)
         self.fill_el("PM-Q1", lambda ts, local, shift: (10.0, 29.5 if ts in big else 0.5, 8.4))
@@ -324,7 +324,7 @@ class TestW3Detectors(TestW3Common):
     def test_pv_export_negative(self):  # AC-39: buy ≤ export
         self.fill_pv(export_price=8.4)
         self.assertEqual(self.detect(pv_export, "pv_export"), [])
-        self.env["td.energy.tariff"]._f3d_tariff_at(NOW).export_price = 9.0
+        self.env["td.energy.tariff"]._td_tariff_at(NOW).export_price = 9.0
         self.assertEqual(self.detect(pv_export, "pv_export"), [])
 
     # --- AC-62: сценарій air_leak

@@ -27,7 +27,7 @@ def detect(env, rule, now):
     if total <= 0:
         return []
     buy = common.weighted(sum(w for _e, w in export), total)
-    tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
+    tariff = env["td.energy.tariff"].sudo()._td_tariff_at(now)
     export_price = tariff.export_price if tariff else 0.0
     diff = buy - export_price
     if diff <= 0:

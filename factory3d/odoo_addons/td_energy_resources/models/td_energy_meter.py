@@ -2,7 +2,7 @@
 
 `node_id` перестає бути обов'язковим; у неелектричних лічильників немає `e_import_signal_id`, тому електричні розрахунки
 `td_energy` (`_cron_build`, `backfill.Plan`, баланс) їх не бачать. Перевизначено `role`, `model`, `company_id`,
-`_f3d_update_state` — їх перебирає `cron_td_energy_live` для всіх лічильників (R8, AC-05).
+`_td_update_state` — їх перебирає `cron_td_energy_live` для всіх лічильників (R8, AC-05).
 """
 
 from datetime import timedelta
@@ -115,10 +115,10 @@ class TdEnergyMeter(models.Model):
         return super().write(vals)
 
     # --- стан даних (R8): cron_td_energy_live викликає для всіх лічильників -----------------------------
-    def _f3d_update_state(self):
+    def _td_update_state(self):
         electric = self.filtered(lambda m: not m.resource_id or m.resource_id.code == "el")
         if electric:
-            super(TdEnergyMeter, electric)._f3d_update_state()
+            super(TdEnergyMeter, electric)._td_update_state()
         resource = self - electric
         if resource:
             resource._td_update_resource_state()

@@ -493,7 +493,7 @@ class Screen:
 
     @cached_property
     def tariff(self):
-        return self.sudo["td.energy.tariff"]._f3d_tariff_at(self.now)
+        return self.sudo["td.energy.tariff"]._td_tariff_at(self.now)
 
     @cached_property
     def contract_kw(self):
@@ -684,7 +684,7 @@ class Screen:
         contract, warn = self.contract_kw, (tariff.peak_warn_pct if tariff else 90.0)
         kw = el["grid_kw"]
         pct = kw / contract * 100 if kw is not None and contract else None
-        price = self.sudo["td.energy.tariff"]._f3d_price_at(self.now, tariff=tariff)[1] if self.cost else None
+        price = self.sudo["td.energy.tariff"]._td_price_at(self.now, tariff=tariff)[1] if self.cost else None
         gen, load = el["gen"], el["load"]
 
         def share(part):

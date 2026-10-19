@@ -50,7 +50,7 @@ def _actions(env, section):
 
 def detect(env, rule, now):
     params = common.rule_params(rule)
-    tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
+    tariff = env["td.energy.tariff"].sudo()._td_tariff_at(now)
     if not tariff or tariff.tg_phi_limit <= 0 or tariff.react_rate <= 0:
         raise common.DetectorNote(NO_TARIFF)
     win = common.Window(env, rule, now)
