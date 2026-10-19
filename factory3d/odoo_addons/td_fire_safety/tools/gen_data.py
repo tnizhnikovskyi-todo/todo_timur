@@ -12,7 +12,6 @@ import argparse
 import csv
 import io
 import json
-import math
 import os
 import sys
 from xml.sax.saxutils import escape

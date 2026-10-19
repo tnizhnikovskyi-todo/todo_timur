@@ -1,10 +1,9 @@
 import uuid
 from datetime import timedelta, timezone
 
-from psycopg2 import IntegrityError
-
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError
+from psycopg2 import IntegrityError
 
 from ..tools.dates import local
 from ..tools.etypes import ETYPE_TABLE, ETYPES, KINDS

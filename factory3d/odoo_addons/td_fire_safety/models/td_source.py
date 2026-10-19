@@ -1,4 +1,4 @@
-from odoo import fields, models, api
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 READONLY_MSG = "Джерело пожежної сигналізації працює лише на читання (рішення D-07). Увімкнути запис неможливо."

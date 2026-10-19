@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from unittest import mock
 
 from freezegun import freeze_time
-
 from odoo.tests import TransactionCase, new_test_user
 
 EQUIPMENT_CODES = ('FACP-1', 'FA-CUT', 'FA-EB', 'FA-CNC', 'FA-FAC', 'SPARK-1', 'SMOKE-CTRL', 'SPRINKLERS')

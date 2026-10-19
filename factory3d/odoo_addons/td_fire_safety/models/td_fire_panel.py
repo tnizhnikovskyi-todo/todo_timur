@@ -3,7 +3,7 @@ import math
 from datetime import timedelta
 
 from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 
 from ..tools import geometry
 from .td_fire_system import SHORT_LABEL, SYS_LABEL

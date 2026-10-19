@@ -4,8 +4,8 @@ import time
 from datetime import timedelta
 
 from odoo import Command, api, fields, models
-from odoo.modules import module as odoo_module
 from odoo.exceptions import UserError, ValidationError
+from odoo.modules import module as odoo_module
 
 from ..tools import dates
 from .td_fire_panel import fire_notify

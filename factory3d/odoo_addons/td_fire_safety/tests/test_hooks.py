@@ -2,8 +2,8 @@
 import json
 
 from odoo.addons.td_telemetry.tools.address import validate_address, validate_params
-from odoo.tools import file_path
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import file_path
 
 from .common import FireCase
 

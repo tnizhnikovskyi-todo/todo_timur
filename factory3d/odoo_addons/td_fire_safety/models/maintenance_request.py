@@ -4,7 +4,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import html_escape
 
-
 _LINK_KINDS = ("fault", "dust", "spark", "smoke", "sprinkler", "loop")
 
 

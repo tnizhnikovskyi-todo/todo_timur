@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest import mock
 
 from freezegun import freeze_time
-
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import tagged
 

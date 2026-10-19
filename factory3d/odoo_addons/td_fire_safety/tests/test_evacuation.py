@@ -2,11 +2,10 @@
 from contextlib import contextmanager
 from unittest import mock
 
-from psycopg2 import IntegrityError
-
 from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.tools import mute_logger
+from psycopg2 import IntegrityError
 
 MOD = 'td_fire_safety'
 # R-09: потрібна кількість люків за зонами

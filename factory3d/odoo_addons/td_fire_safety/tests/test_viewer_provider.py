@@ -1,9 +1,8 @@
 """AC-55…AC-57, AC-59 (+AC-22 ``totals.state``): payload `fire` і `evacuation` без переглядача (R-20, R-21)."""
 import json
 
-from odoo.tests import tagged
-
 from odoo.addons.td_fire_safety.tools.payload import build_evacuation, build_fire
+from odoo.tests import tagged
 
 from .common import FireCase
 
