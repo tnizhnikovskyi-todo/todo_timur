@@ -90,7 +90,7 @@ class TdCollabController(http.Controller):
                 raise UserError("Активний варіант видалити не можна: спершу перемкніться на інший.")
             if siblings <= 1 and not variant.is_training:
                 raise UserError("Єдиний варіант видалити не можна.")
-            variant.with_context(f3d_force_unlink=True).unlink()
+            variant.unlink()
         else:
             variant.f3d_end_training(keep=bool(keep))
         return {} if op == 'delete' else {'id': variant.id}

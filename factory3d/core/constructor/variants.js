@@ -60,14 +60,18 @@ export function liveList() {
     return s.list.map((v) => (v.id === s.active_id ? { ...v, metrics: { ...live, ops: S.site ? S.site.draft_changes || 0 : v.metrics.ops } } : v));
 }
 
-export async function refreshVariants({ render = true } = {}) {
+export async function refreshVariants({ render = true, quiet = false } = {}) {
     if (!can("variants") || !E.adapter || !S.site) {
         return null;
     }
     try {
         pack(await E.adapter.variants({ op: "list" }));
     } catch (e) {
-        toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+        if (quiet) {
+            console.warn("variants:", e);
+        } else {
+            toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+        }
         return null;
     }
     if (render) {
@@ -83,7 +87,11 @@ async function call(req, { reload = false } = {}) {
     }
     busy = true;
     try {
-        await E.flushNow?.(); // незбережене не губиться: спершу чернетка йде на сервер
+        const saved = await E.flushNow?.(); // незбережене не губиться: спершу чернетка йде на сервер
+        if (saved && saved.ok === false) {
+            toast(t("Не вдалося зберегти зміни: перехід не виконано."), "err");
+            return null;
+        }
         const res = await E.adapter.variants({ ...req, metrics: variantMetrics() });
         pack(res);
         if (res.reload || reload) {
@@ -379,7 +387,7 @@ async function offerCleanup() {
 E.lifecycle.mount.add(() => {
     ensureStyle();
     watchPublish();
-    refreshVariants().then(offerCleanup);
+    refreshVariants({ quiet: true }).then(offerCleanup);
 });
 E.lifecycle.unmount.add(() => {
     pubWatch?.disconnect();
@@ -400,7 +408,7 @@ addEn({
     "Активний варіант: «{name}». Ваша чернетка збережена в попередньому.": "Active variant: “{name}”. Your draft is kept in the previous one.",
     "Зміни навчальної копії залишено як звичайний варіант.": "The training copy changes were kept as a regular variant.",
     "Навчальну копію скасовано: чернетка повернулась до попереднього варіанта.": "Training copy cancelled: the draft is back to the previous variant.",
-    "Вкажіть назву варіанта.": "Enter a variant name.", "Не вдалося завантажити варіанти.": "Could not load the variants.",
+    "Вкажіть назву варіанта.": "Enter a variant name.", "Не вдалося зберегти зміни: перехід не виконано.": "Could not save the changes: the switch was not made.", "Не вдалося завантажити варіанти.": "Could not load the variants.",
     "Видалити варіант «{name}»?": "Delete the variant “{name}”?",
     "Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються.": "The variant snapshot will be deleted for good. The active variant and Odoo are not changed.",
     "Варіантами керує менеджер конструктора.": "Variants are managed by the constructor manager.", "Активний варіант видалити не можна": "The active variant cannot be deleted",

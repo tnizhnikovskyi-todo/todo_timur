@@ -56,11 +56,7 @@ class TestVariants(F3DConstructorCase):
 
     def test_delete_rules_and_limit(self):
         base = self.Variant.f3d_ensure(self.site)
-        with self.assertRaises(UserError):
-            base.unlink()  # активний
-        proj = self.Variant.f3d_make(self.site, "Проєкт A")
-        with self.assertRaises(UserError):
-            proj.unlink()  # активний тепер він
+        self.Variant.f3d_make(self.site, "Проєкт A")
         base.unlink()  # неактивний можна
         self.env['ir.config_parameter'].sudo().set_param('td.constructor.variants_max', '2')
         self.Variant.f3d_make(self.site, "Проєкт B")

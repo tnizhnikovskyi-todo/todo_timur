@@ -527,10 +527,10 @@ export function register(test) {
         }
         assert.equal(registries.panels.get("left:variants").tab, "variants");
         assert.equal(registries.panels.get("left:comments").tab, "comments");
-        for (const k of ["right:comments", "right:lock", "site:locks"]) {
+        for (const k of ["right:lock", "site:locks"]) {
             assert.ok(registries.panels.has(k), k);
         }
-        assert.equal(registries.panels.get("right:comments").capability, "comments");
+        assert.equal(registries.panels.has("right:comments"), false, "коментарі — окрема панель під #rightBody, не блок реєстру");
         assert.equal(registries.panels.get("right:lock").capability, "locks");
         for (const k of ["variants", "lang", "tours", "help"]) {
             assert.ok(registries.menu.has(k), "меню " + k);

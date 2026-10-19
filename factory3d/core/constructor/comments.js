@@ -245,10 +245,7 @@ function renderBlocks() {
     for (const fn of listeners) {
         fn();
     }
-    const box = $("#s6Comments");
-    if (box && box.isConnected) {
-        keepForm(box, () => renderRightInto(box));
-    }
+    renderDock({ keep: true });
     const typing = document.activeElement && $("#s6CmList")?.contains(document.activeElement) && document.activeElement.tagName === "INPUT" && document.activeElement.type === "search";
     if (S.ui.leftTab === "comments" && !typing) {
         renderTab();
@@ -265,20 +262,58 @@ function renderRightInto(box) {
         threadNode(target)
     );
 }
-registries.panels.add(
-    "right:comments",
-    {
-        area: "right",
-        capability: "comments",
-        render(root) {
-            const box = h("div", { class: "sec", id: "s6Comments" });
-            root.append(box);
-            loadUsers().then(() => box.isConnected && renderRightInto(box));
-            renderRightInto(box);
-        },
-    },
-    { sequence: 85, force: true }
-);
+/* Блок коментарів — окрема панель під властивостями (`#s6RightDock` в `#right`), а не частина `#rightBody`: поля властивостей лишаються
+   «лише для читання» поза правами, а коментувати можна завжди (F13-04, F14-03). Перемальовується, коли змінюється вибір (спостерігач за
+   `#rightBody`), мова чи список коментарів; набране в формі при цьому не губиться. */
+let dockKey = "";
+let dockObs = null;
+let dockRaf = 0;
+function dockBox() {
+    const aside = $("#right");
+    if (!aside) {
+        return null;
+    }
+    let dock = aside.querySelector("#s6RightDock");
+    if (!dock) {
+        dock = h("div", { class: "s6-dock", id: "s6RightDock" }, h("div", { id: "s6Comments" }));
+        aside.append(dock);
+    }
+    return dock;
+}
+function renderDock({ keep = false } = {}) {
+    const dock = dockBox();
+    if (!dock) {
+        return;
+    }
+    dock.hidden = !can("comments");
+    if (dock.hidden) {
+        return;
+    }
+    const box = dock.querySelector("#s6Comments");
+    const target = targetOfSelection();
+    const key = keyOf(target.kind, target.uid);
+    const fresh = key !== dockKey || !box.childElementCount;
+    if (!fresh && !keep) {
+        return;
+    }
+    dockKey = key;
+    if (fresh) {
+        renderRightInto(box);
+    } else {
+        keepForm(box, () => renderRightInto(box));
+    }
+}
+function watchRight() {
+    const body = $("#rightBody");
+    dockObs?.disconnect();
+    if (body && typeof MutationObserver !== "undefined") {
+        dockObs = new MutationObserver(() => {
+            cancelAnimationFrame(dockRaf);
+            dockRaf = requestAnimationFrame(() => renderDock());
+        });
+        dockObs.observe(body, { childList: true, subtree: true });
+    }
+}
 
 /* ---------- вкладка «Коментарі»: список з фільтрами (F13-03) ---------- */
 const cellMemo = new Map(); // id місця → {sig, cells}
@@ -478,6 +513,10 @@ function placeBadges() {
 E.lifecycle.mount.add(() => {
     ensureStyle();
     addFrameHook("comments", placeBadges);
+    dockKey = "";
+    loadUsers().then(() => renderDock({ keep: true }));
+    renderDock();
+    watchRight();
     const s = st();
     clearInterval(s.timer);
     refreshComments();
@@ -488,12 +527,16 @@ E.lifecycle.mount.add(() => {
     }, POLL_MS);
 });
 E.lifecycle.unmount.add(() => {
+    dockObs?.disconnect();
+    dockObs = null;
+    cancelAnimationFrame(dockRaf);
     clearInterval(st().timer);
     cellMemo.clear();
     cellHome.clear();
 });
 onLang(() => {
     drawBadges();
+    renderDock({ keep: true });
 });
 
 Object.assign(E, { refreshComments, openThread, addComment, gotoTarget, commentsTarget: targetOfSelection });

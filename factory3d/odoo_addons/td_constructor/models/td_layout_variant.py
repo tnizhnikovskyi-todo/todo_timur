@@ -102,10 +102,8 @@ class TdLayoutVariant(models.Model):
         return records
 
     def unlink(self):
-        if not self.env.context.get('f3d_force_unlink'):
-            for variant in self:
-                if variant.site_id.active_variant_id == variant:
-                    raise UserError("Активний варіант видалити не можна: спершу перемкніться на інший.")
+        """Видалення активного варіанта очищає посилання на нього (ondelete=set null); `f3d_ensure` потім бере перший
+        робочий. Заборона «активний не видаляється» діє в API-21 (редактор), а не тут: так працює й список Odoo."""
         return super().unlink()  # вкладення знімка (res_model/res_id) Odoo видаляє разом із записом
 
     # --- API-21: операції (викликає контролер; права — менеджер) ---------------------------------------
@@ -213,7 +211,7 @@ class TdLayoutVariant(models.Model):
             if not origin:
                 raise UserError("Немає варіанта, до якого повернутися.")
             origin.f3d_activate()
-        self.sudo().with_context(f3d_force_unlink=True).unlink()
+        self.sudo().unlink()
         return origin
 
     # --- подання ----------------------------------------------------------------------------------------------

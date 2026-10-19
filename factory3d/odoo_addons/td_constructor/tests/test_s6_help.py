@@ -2,12 +2,18 @@ import re
 from pathlib import Path
 
 from odoo.tests import tagged
+from odoo.tools.translate import PoFileReader
 
 from .common import PASSWORD, F3DConstructorHttpCase
 
 MODULE = Path(__file__).resolve().parents[1]
 CORE_TOPICS = MODULE.parents[1] / 'core' / 'constructor' / 'help_topics.js'
 TOUR_DEFS = MODULE.parents[1] / 'core' / 'constructor' / 'tour_defs.js'
+
+
+def po_terms(name):
+    with open(MODULE / 'i18n' / name, 'rb') as fh:
+        return {(row['src'], row['value']) for row in PoFileReader(fh)}
 
 
 def js_topics():
@@ -65,3 +71,21 @@ class TestHelp(F3DConstructorHttpCase):
     def test_help_requires_login(self):
         res = self.url_open('/f3d/constructor/help', allow_redirects=False)
         self.assertIn(res.status_code, (303, 401, 403))
+
+    def test_po_files_uk_and_en(self):
+        """Q7: переклади модуля — `i18n/en.po` (усі терміни англійською) і `uk.po` (терміни-джерела як є)."""
+        pot = {src for src, _value in po_terms('td_constructor.pot')}
+        en, uk = po_terms('en.po'), po_terms('uk.po')
+        self.assertGreater(len(pot), 500)
+        self.assertEqual({src for src, _v in en}, pot, "en.po покриває всі терміни .pot")
+        self.assertEqual({src for src, _v in uk}, pot)
+        self.assertFalse([src for src, value in en if not value], "кожен термін в en.po перекладено")
+        cyr = re.compile('[А-Яа-яІіЇїЄє]')
+        untranslated = [src for src, value in en if cyr.search(src) and src == value]
+        self.assertFalse(untranslated, "українські терміни в en.po не лишилися без перекладу: %s" % untranslated[:3])
+        self.assertIn(("Варіанти планування", "Layout variants"), en)
+        self.assertIn(("Коментарі", "Comments"), en)
+        self.assertIn(("Блокування зон", "Zone locks"), en)
+        self.assertTrue(
+            all(value == src for src, value in uk if cyr.search(src)), "uk.po не змінює українські терміни-джерела"
+        )

@@ -77,7 +77,7 @@ export const TOURS = [
         desc: P("Майстер: контур, колони, зони, перші ряди.", "The wizard: outline, columns, zones, first rows."),
         steps: [
             { sel: "#btnNewSite", kind: "read", title: P("Нова площадка", "A new site"), text: P("«Нова площадка» створює порожню площадку; майстер «З нуля» проведе через контур, колони, зони й перші ряди.", "“New site” creates an empty site; the “From scratch” wizard guides you through outline, columns, zones and first rows.") },
-            { sel: MENU("wizard"), kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
+            { sel: [TAB("wizard"), "#menu-wizard", "#menuMore summary"], kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
             { sel: MENU("autolayout"), kind: "read", title: P("Авторозкладка", "Auto-layout"), text: P("Після зон запропонує розкласти стелажі за ширинами проходів і технікою.", "After the zones it proposes laying out racks by aisle widths and handling equipment.") },
         ],
     },
@@ -137,7 +137,7 @@ export const TOURS = [
         title: P("Документи", "Documents"),
         desc: P("Специфікація стелажів, план, експорт.", "Rack specification, plan, export."),
         steps: [
-            { sel: MENU("docs"), kind: "read", title: P("Документи", "Documents"), text: P("Специфікація стелажів, план площадки (SVG/PDF) і таблиці до XLSX.", "Rack specification, site plan (SVG/PDF) and tables to XLSX.") },
+            { sel: ["#menu-spec", "#menu-planDoc", "#menuMore summary"], kind: "read", title: P("Документи", "Documents"), text: P("«Ще → Специфікація стелажів…» і «План (PDF, PNG)…»: документи будуються з поточної чернетки; таблиці відкриваються в Excel.", "“More → Rack specification…” and “Plan (PDF, PNG)…”: documents are built from the current draft; tables open in Excel.") },
             { sel: MENU("exportLocations"), kind: "read", title: P("Експорт таблиць", "Table export"), text: P("Той самий файл можна відкрити в Excel, виправити й імпортувати назад.", "The same file can be opened in Excel, fixed and imported back.") },
             { sel: ["#btnHistory"], kind: "read", title: P("Документ версії", "A version document"), text: P("Знімок версії можна завантажити й порівняти зі схемою.", "A version snapshot can be downloaded and compared with the plan.") },
         ],

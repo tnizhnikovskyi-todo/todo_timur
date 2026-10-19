@@ -20956,6 +20956,8 @@ var CSS4 = `
 .s6-cmp th:first-child,.s6-cmp td:first-child{text-align:left}
 .s6-cmp .pos{color:#15803d}.s6-cmp .neg{color:#b91c1c}
 #ltabs{flex-wrap:wrap}
+.s6-dock{flex:none;max-height:46%;overflow:auto;border-top:1px solid var(--line);padding:8px 12px 10px;background:var(--surface)}
+.s6-dock[hidden]{display:none}
 .s6-train{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:4;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px);box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .s6-train[hidden]{display:none}
 .s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
@@ -21685,14 +21687,18 @@ function liveList() {
   const live = variantMetrics();
   return s.list.map((v) => v.id === s.active_id ? { ...v, metrics: { ...live, ops: S.site ? S.site.draft_changes || 0 : v.metrics.ops } } : v);
 }
-async function refreshVariants({ render: render2 = true } = {}) {
+async function refreshVariants({ render: render2 = true, quiet = false } = {}) {
   if (!can("variants") || !E.adapter || !S.site) {
     return null;
   }
   try {
     pack(await E.adapter.variants({ op: "list" }));
   } catch (e) {
-    toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+    if (quiet) {
+      console.warn("variants:", e);
+    } else {
+      toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+    }
     return null;
   }
   if (render2) {
@@ -21707,7 +21713,11 @@ async function call2(req, { reload: reload2 = false } = {}) {
   }
   busy2 = true;
   try {
-    await E.flushNow?.();
+    const saved2 = await E.flushNow?.();
+    if (saved2 && saved2.ok === false) {
+      toast(t("Не вдалося зберегти зміни: перехід не виконано."), "err");
+      return null;
+    }
     const res = await E.adapter.variants({ ...req, metrics: variantMetrics() });
     pack(res);
     if (res.reload || reload2) {
@@ -21988,7 +21998,7 @@ async function offerCleanup() {
 E.lifecycle.mount.add(() => {
   ensureStyle4();
   watchPublish();
-  refreshVariants().then(offerCleanup);
+  refreshVariants({ quiet: true }).then(offerCleanup);
 });
 E.lifecycle.unmount.add(() => {
   pubWatch?.disconnect();
@@ -22031,6 +22041,7 @@ addEn({
   "Зміни навчальної копії залишено як звичайний варіант.": "The training copy changes were kept as a regular variant.",
   "Навчальну копію скасовано: чернетка повернулась до попереднього варіанта.": "Training copy cancelled: the draft is back to the previous variant.",
   "Вкажіть назву варіанта.": "Enter a variant name.",
+  "Не вдалося зберегти зміни: перехід не виконано.": "Could not save the changes: the switch was not made.",
   "Не вдалося завантажити варіанти.": "Could not load the variants.",
   "Видалити варіант «{name}»?": "Delete the variant “{name}”?",
   "Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються.": "The variant snapshot will be deleted for good. The active variant and Odoo are not changed.",
@@ -22254,10 +22265,7 @@ function renderBlocks() {
   for (const fn of listeners) {
     fn();
   }
-  const box = $("#s6Comments");
-  if (box && box.isConnected) {
-    keepForm(box, () => renderRightInto(box));
-  }
+  renderDock({ keep: true });
   const typing = document.activeElement && $("#s6CmList")?.contains(document.activeElement) && document.activeElement.tagName === "INPUT" && document.activeElement.type === "search";
   if (S.ui.leftTab === "comments" && !typing) {
     renderTab3();
@@ -22272,20 +22280,55 @@ function renderRightInto(box) {
     threadNode(target)
   );
 }
-registries.panels.add(
-  "right:comments",
-  {
-    area: "right",
-    capability: "comments",
-    render(root) {
-      const box = h("div", { class: "sec", id: "s6Comments" });
-      root.append(box);
-      loadUsers().then(() => box.isConnected && renderRightInto(box));
-      renderRightInto(box);
-    }
-  },
-  { sequence: 85, force: true }
-);
+var dockKey = "";
+var dockObs = null;
+var dockRaf = 0;
+function dockBox() {
+  const aside = $("#right");
+  if (!aside) {
+    return null;
+  }
+  let dock = aside.querySelector("#s6RightDock");
+  if (!dock) {
+    dock = h("div", { class: "s6-dock", id: "s6RightDock" }, h("div", { id: "s6Comments" }));
+    aside.append(dock);
+  }
+  return dock;
+}
+function renderDock({ keep = false } = {}) {
+  const dock = dockBox();
+  if (!dock) {
+    return;
+  }
+  dock.hidden = !can("comments");
+  if (dock.hidden) {
+    return;
+  }
+  const box = dock.querySelector("#s6Comments");
+  const target = targetOfSelection();
+  const key = keyOf(target.kind, target.uid);
+  const fresh = key !== dockKey || !box.childElementCount;
+  if (!fresh && !keep) {
+    return;
+  }
+  dockKey = key;
+  if (fresh) {
+    renderRightInto(box);
+  } else {
+    keepForm(box, () => renderRightInto(box));
+  }
+}
+function watchRight() {
+  const body = $("#rightBody");
+  dockObs?.disconnect();
+  if (body && typeof MutationObserver !== "undefined") {
+    dockObs = new MutationObserver(() => {
+      cancelAnimationFrame(dockRaf);
+      dockRaf = requestAnimationFrame(() => renderDock());
+    });
+    dockObs.observe(body, { childList: true, subtree: true });
+  }
+}
 var cellMemo = /* @__PURE__ */ new Map();
 var cellHome = /* @__PURE__ */ new Map();
 function slotCells(slot) {
@@ -22481,6 +22524,10 @@ function placeBadges() {
 E.lifecycle.mount.add(() => {
   ensureStyle4();
   addFrameHook("comments", placeBadges);
+  dockKey = "";
+  loadUsers().then(() => renderDock({ keep: true }));
+  renderDock();
+  watchRight();
   const s = st2();
   clearInterval(s.timer);
   refreshComments();
@@ -22491,12 +22538,16 @@ E.lifecycle.mount.add(() => {
   }, POLL_MS);
 });
 E.lifecycle.unmount.add(() => {
+  dockObs?.disconnect();
+  dockObs = null;
+  cancelAnimationFrame(dockRaf);
   clearInterval(st2().timer);
   cellMemo.clear();
   cellHome.clear();
 });
 onLang(() => {
   drawBadges();
+  renderDock({ keep: true });
 });
 Object.assign(E, { refreshComments, openThread, addComment, gotoTarget, commentsTarget: targetOfSelection });
 addEn({
@@ -22659,7 +22710,7 @@ async function onSelect(ref2) {
       release(other);
     }
   }
-  E.renderRight?.();
+  refreshBlocks();
 }
 async function heartbeat() {
   const s = st3();
@@ -22711,6 +22762,15 @@ function bannerFor(rec) {
   }
   return h("div", { class: "note " + (l.mine ? "" : "lock"), id: "s6LockBanner", "data-mine": l.mine ? "1" : "0", style: { marginBottom: "8px" } }, l.mine ? t("Зона заблокована за вами до {time}: інші не зможуть її правити.", { time: clock(l.expires_at) }) : t("{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.", { busy: busyText(l) }));
 }
+function lockListNode() {
+  const list = st3().list;
+  return h(
+    "div",
+    { class: "sec", id: "s6LockList" },
+    h("h3", null, t("Блокування зон")),
+    list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf2(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
+  );
+}
 registries.panels.add(
   "right:lock",
   {
@@ -22726,35 +22786,31 @@ registries.panels.add(
   },
   { sequence: 2, force: true }
 );
-registries.panels.add(
-  "site:locks",
-  {
-    area: "site",
-    capability: "locks",
-    render(root) {
-      const list = st3().list;
-      root.append(
-        h(
-          "div",
-          { class: "sec", id: "s6LockList" },
-          h("h3", null, t("Блокування зон")),
-          list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf2(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
-        )
-      );
-    }
-  },
-  { sequence: 60, force: true }
-);
-function renderBlocks2() {
+registries.panels.add("site:locks", { area: "site", capability: "locks", render: (root) => root.append(lockListNode()) }, { sequence: 60, force: true });
+function refreshBlocks() {
   if (typeof document === "undefined") {
     return;
   }
-  const a = document.activeElement;
-  const typing = a && $("#rightBody")?.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-  if (!typing && ($("#s6LockBanner") || $("#s6LockList") || S.sel)) {
-    E.renderRight?.();
+  const body = $("#rightBody");
+  if (!body || !can("locks")) {
+    return;
+  }
+  const rec = S.sel && recOfRef(S.sel);
+  const old = $("#s6LockBanner");
+  const next = bannerFor(rec);
+  if (old && next) {
+    old.replaceWith(next);
+  } else if (old) {
+    old.remove();
+  } else if (next) {
+    body.prepend(next);
+  }
+  const list = $("#s6LockList");
+  if (list) {
+    list.replaceWith(lockListNode());
   }
 }
+var renderBlocks2 = refreshBlocks;
 var origSelect2 = E.selectObj;
 E.selectObj = function selectObjLocks(ref2, ...rest) {
   const r = origSelect2.call(this, ref2, ...rest);
@@ -22914,7 +22970,7 @@ var TOURS = [
     desc: P("Майстер: контур, колони, зони, перші ряди.", "The wizard: outline, columns, zones, first rows."),
     steps: [
       { sel: "#btnNewSite", kind: "read", title: P("Нова площадка", "A new site"), text: P("«Нова площадка» створює порожню площадку; майстер «З нуля» проведе через контур, колони, зони й перші ряди.", "“New site” creates an empty site; the “From scratch” wizard guides you through outline, columns, zones and first rows.") },
-      { sel: MENU("wizard"), kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
+      { sel: [TAB("wizard"), "#menu-wizard", "#menuMore summary"], kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
       { sel: MENU("autolayout"), kind: "read", title: P("Авторозкладка", "Auto-layout"), text: P("Після зон запропонує розкласти стелажі за ширинами проходів і технікою.", "After the zones it proposes laying out racks by aisle widths and handling equipment.") }
     ]
   },
@@ -22974,7 +23030,7 @@ var TOURS = [
     title: P("Документи", "Documents"),
     desc: P("Специфікація стелажів, план, експорт.", "Rack specification, plan, export."),
     steps: [
-      { sel: MENU("docs"), kind: "read", title: P("Документи", "Documents"), text: P("Специфікація стелажів, план площадки (SVG/PDF) і таблиці до XLSX.", "Rack specification, site plan (SVG/PDF) and tables to XLSX.") },
+      { sel: ["#menu-spec", "#menu-planDoc", "#menuMore summary"], kind: "read", title: P("Документи", "Documents"), text: P("«Ще → Специфікація стелажів…» і «План (PDF, PNG)…»: документи будуються з поточної чернетки; таблиці відкриваються в Excel.", "“More → Rack specification…” and “Plan (PDF, PNG)…”: documents are built from the current draft; tables open in Excel.") },
       { sel: MENU("exportLocations"), kind: "read", title: P("Експорт таблиць", "Table export"), text: P("Той самий файл можна відкрити в Excel, виправити й імпортувати назад.", "The same file can be opened in Excel, fixed and imported back.") },
       { sel: ["#btnHistory"], kind: "read", title: P("Документ версії", "A version document"), text: P("Знімок версії можна завантажити й порівняти зі схемою.", "A version snapshot can be downloaded and compared with the plan.") }
     ]

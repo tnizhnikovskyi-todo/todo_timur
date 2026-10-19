@@ -145,7 +145,7 @@ export async function onSelect(ref) {
             release(other);
         }
     }
-    E.renderRight?.();
+    refreshBlocks();
 }
 
 async function heartbeat() {
@@ -203,6 +203,16 @@ function bannerFor(rec) {
     return h("div", { class: "note " + (l.mine ? "" : "lock"), id: "s6LockBanner", "data-mine": l.mine ? "1" : "0", style: { marginBottom: "8px" } }, l.mine ? t("Зона заблокована за вами до {time}: інші не зможуть її правити.", { time: clock(l.expires_at) }) : t("{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.", { busy: busyText(l) }));
 }
 
+function lockListNode() {
+    const list = st().list;
+    return h(
+        "div",
+        { class: "sec", id: "s6LockList" },
+        h("h3", null, t("Блокування зон")),
+        list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
+    );
+}
+
 registries.panels.add(
     "right:lock",
     {
@@ -218,36 +228,33 @@ registries.panels.add(
     },
     { sequence: 2, force: true }
 );
-registries.panels.add(
-    "site:locks",
-    {
-        area: "site",
-        capability: "locks",
-        render(root) {
-            const list = st().list;
-            root.append(
-                h(
-                    "div",
-                    { class: "sec", id: "s6LockList" },
-                    h("h3", null, t("Блокування зон")),
-                    list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
-                )
-            );
-        },
-    },
-    { sequence: 60, force: true }
-);
+registries.panels.add("site:locks", { area: "site", capability: "locks", render: (root) => root.append(lockListNode()) }, { sequence: 60, force: true });
 
-function renderBlocks() {
+/** Банер зони й список блокувань оновлюються на місці — права панель не перемальовується (це збило б введення в полях). */
+function refreshBlocks() {
     if (typeof document === "undefined") {
         return;
     }
-    const a = document.activeElement;
-    const typing = a && $("#rightBody")?.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-    if (!typing && ($("#s6LockBanner") || $("#s6LockList") || S.sel)) {
-        E.renderRight?.();
+    const body = $("#rightBody");
+    if (!body || !can("locks")) {
+        return;
+    }
+    const rec = S.sel && recOfRef(S.sel);
+    const old = $("#s6LockBanner");
+    const next = bannerFor(rec);
+    if (old && next) {
+        old.replaceWith(next);
+    } else if (old) {
+        old.remove();
+    } else if (next) {
+        body.prepend(next);
+    }
+    const list = $("#s6LockList");
+    if (list) {
+        list.replaceWith(lockListNode());
     }
 }
+const renderBlocks = refreshBlocks;
 
 /* ---------- підключення до редактора ---------- */
 const origSelect = E.selectObj;

@@ -5,7 +5,7 @@
          Файл створює скрипт з help_topics.js: правити тексти в JS і перегенерувати. Також: вигляди `td.comment` (виконавець, чат,
          пошук) і `td.layout.variant` поверх скелета td_collab_views.xml, меню «Інструкція». -->
     <template id="td_help_page" name="Інструкція конструктора">
-        <t t-call="web.layout">
+        <t t-call="web.layout" t-translation="off">
             <t t-set="title"><t t-if="en">Constructor help</t><t t-else="">Інструкція конструктора</t></t>
             <t t-set="head">
                 <style>
@@ -20,7 +20,7 @@
                     .td-help .lang { float: right; font-size: 13px; }
                 </style>
             </t>
-            <div class="td-help" t-att-lang="'en' if en else 'uk'">
+            <div class="td-help" t-translation="off" t-att-lang="'en' if en else 'uk'">
                 <div class="lang">
                     <a href="?lang=uk">Українська</a> · <a href="?lang=en">English</a>
                 </div>

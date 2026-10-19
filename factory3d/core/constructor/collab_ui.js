@@ -32,6 +32,8 @@ const CSS = `
 .s6-cmp th:first-child,.s6-cmp td:first-child{text-align:left}
 .s6-cmp .pos{color:#15803d}.s6-cmp .neg{color:#b91c1c}
 #ltabs{flex-wrap:wrap}
+.s6-dock{flex:none;max-height:46%;overflow:auto;border-top:1px solid var(--line);padding:8px 12px 10px;background:var(--surface)}
+.s6-dock[hidden]{display:none}
 .s6-train{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:4;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px);box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .s6-train[hidden]{display:none}
 .s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
