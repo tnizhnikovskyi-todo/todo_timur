@@ -132,7 +132,7 @@ odoo_addons/td_constructor/
 │   ├── td_comment.py                    [S6] M-22     td_zone_lock.py      [S6] M-23
 │   ├── td_draft_mixin.py                [W0-B/S6] M-24 (аренда зони)
 │   └── td_site.py, td_layer.py, td_slot.py, stock_location.py, td_layout_version.py, td_term.py, td_check_config.py (+)   M-25…M-30
-├── services/                            чисті Python-модулі (ORM — лише state.py, snapshot.py, publish.py, capacity.py, putaway.py, metrics.py, odoo_sync.py)
+├── services/                            чисті Python-модулі; ORM використовують лише state.py, snapshot.py, publish.py, capacity.py, putaway.py, metrics.py, odoo_sync.py, а також render_docs.py (режим `{site_id}`) і labels.py (параметр `labels_max`)
 │   ├── registry.py                      [W0-B] R-41: CHECKS, PLAN_BUILDERS, SNAPSHOT_SECTIONS, RENDERERS
 │   ├── schemas.py, state.py             R-22 (схеми JSON), стан площадки для API-03/перевірок/плану
 │   ├── addr.py [S1] R-25 · cells.py (+) [S1] R-26 · capacity.py [S2] R-28, R-29 · putaway.py [S2] R-30 · publish.py (+) [S2] R-31, R-32
@@ -1149,7 +1149,7 @@ rights: {is_manager, roles:[technologist|storekeeper|engineer|manager], editable
 
 Це алгоритми редактора: вони пишуть у БД лише звичайними правками (API-04) або через уже описані API; серверних дублів немає. Тести — `tools/test_core_s*.mjs`, HOOT `static/tests/editor/s*.test.js`, Playwright `build/constructor/proto/test_s*.js` (§13.6).
 
-- **Скасування й повтор (F09-01, `undo.js`):** знімок стану після кожної зміни (шари, місця, розміщення, правила `S.site.rules`, поля площадки: адресація, габарит, крок колон, висоти, техніка); ≤ 100 кроків і ≤ 30 МБ; підпис кроку `E.undoLabel`/`E.commit({label})`;
+- **Скасування й повтор (F09-01, `undo.js`):** знімок стану після кожної зміни (шари, місця, розміщення, правила `S.site.rules`, поля площадки: адресація, габарит, крок колон, висоти, техніка); ≤ 100 кроків і ≤ 30 млн символів знімків; підпис кроку `E.undoLabel`/`E.commit({label})`;
   Ctrl+Z, Ctrl+Shift+Z / Ctrl+Y, кнопки ↶ ↷; відновлення — звичайний `E.commit`, тож адаптер сам ставить `create/write/unlink`; зміну адресації відновлює `saveAddr`, габарит і крок колон — `E.saveSiteProps`, висоту спринклерів і техніку — `adapter.saveSite`.
 - **Мультивиділення й інструменти (F09-02…05, 08…10):** `S.multi`; Ctrl+клік, рамка Shift у «Плані»; групове перетягування зі збереженням взаємного положення; `R` повертає ряди; Ctrl+D дублює (ярус — зверху, стелаж — у кінці ряду, ряд — зі наступним номером `R3→R7`, місце на підлозі — зі наступним кодом, зона — «копія»);
   Ctrl+C/V — у виділений об'єкт, якщо підходить, інакше в найближчий придатний рівень, інакше поруч (копія тієї самої конструкції, місця нові й порожні); масив N×M, масове створення в зоні; вирівнювання (лівий/правий/верх/низ/центр X/Y), розподіл (≥ 3), групування в нову зону й розгрупування (коди не змінюються).
