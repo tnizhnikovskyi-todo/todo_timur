@@ -249,6 +249,37 @@ class TestW4Report(TestW4Common):
         self.assertLess(text.index("Резерв 0"), text.index("Резерв 1"))
         self.assertIn("15 500", text)
 
+    def test_ac46_rounds_block_with_mobile(self):
+        """R-19: блок «Обходи» — лише коли встановлено `td_energy_mobile` (контракт C-08, `td.energy.round`)."""
+        if "td.energy.round" not in self.env:
+            self.skipTest("td_energy_mobile не встановлено: блок «Обходи» пропускається")
+        self._calendar_two_shifts()
+        friday = self._shift_fixture()
+        done = self.env["td.energy.round"].create(
+            {
+                "slot_name": "Зміна 2",
+                "date": friday,
+                "starts_at": self._local(friday, 16),
+                "due_at": self._local(friday, 17),
+                "state": "done",
+                "performer_id": self.u_eng.id,
+            }
+        )
+        # обхід іншої зміни (ранок) у вікно не потрапляє
+        self.env["td.energy.round"].create(
+            {
+                "slot_name": "Зміна 1",
+                "date": friday,
+                "starts_at": self._local(friday, 8),
+                "due_at": self._local(friday, 9),
+            }
+        )
+        text = _text(self._render(self.u_cost, SHIFT, self._wizard(self.u_cost, "shift")))
+        self.assertIn("Обходи", text)
+        self.assertIn(done.name, text)
+        self.assertIn(self.u_eng.name, text)
+        self.assertNotIn("Зміна 1 ·", text.split("Обходи", 1)[1].split("Найбільші резерви", 1)[0])
+
     def test_ac46_shift_report_without_cost(self):
         self._calendar_two_shifts()
         self._shift_fixture()
