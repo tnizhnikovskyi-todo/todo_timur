@@ -199,9 +199,7 @@ class TestW4Report(TestW4Common):
         for back in range(1, 5):
             self._fill("PM-QF-1", friday - timedelta(days=back), 10.0, slots=range(64, 92))
         ts = self._local(friday, 17, 10)
-        self.Event._td_log(
-            "warn", "threshold", "SAW-1", "Тест: перевищення порогу.", ts=ts, title="Перевищення порогу"
-        )
+        self.Event._td_log("warn", "threshold", "SAW-1", "Тест: перевищення порогу.", ts=ts, title="Перевищення порогу")
         self.Event._td_log("info", "peak", "SAW-1", "Тест: інформація.", ts=ts + timedelta(minutes=5))
         # поза вікном зміни — не враховується
         self.Event._td_log("bad", "threshold", "SAW-1", "Тест: ранок.", ts=self._local(friday, 9))
