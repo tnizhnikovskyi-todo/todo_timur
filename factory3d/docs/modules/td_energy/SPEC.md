@@ -2459,3 +2459,11 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 
 ID зберігають нумерацію W1_SPEC (продовження цього документа: FR-30+, M-21+, V-22+, API-05+, R-24+, AC-93+). Після приймання W1 менеджер за потреби розкладає розділи в цей файл; до того дійсна редакція у `build/energy/`.
 Заморожені JSON-контракти для фронтенду й моків: `odoo_addons/td_energy/static/tests/fixtures/contracts.json` (зміни — лише через менеджера).
+
+## Продовження: хвилі W2–W4 енергетики
+
+Розширення `td_energy` винесено в окремі модулі, кожен зі своїми `ARCHITECTURE.md` і `SPEC.md` (ID і рішення модульні, у «Журналі змін документа» кожного файлу — відхилення збірки):
+
+- W2 — [td_energy_control](../td_energy_control/SPEC.md) (керування: сценарії, команди, плагін збирача `td_collector_energy`) і міст [td_energy_viewer3d](../td_energy_viewer3d/SPEC.md) («Енергетика в 3D»);
+- W3 — [td_energy_resources](../td_energy_resources/SPEC.md) (газ, повітря, тепло, тарифи, резерви) і міст [td_energy_resources_bms](../td_energy_resources_bms/SPEC.md);
+- W4 — [td_energy_analytics](../td_energy_analytics/SPEC.md) (аналітика, модель бази ISO 50001, звіти) і [td_energy_mobile](../td_energy_mobile/SPEC.md) (вкладка «Обхід»).

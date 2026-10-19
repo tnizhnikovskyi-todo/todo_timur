@@ -469,3 +469,11 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 
 **Рішення про розміщення.** `build/energy/W1_ARCH.md` (37 КБ) підключено за посиланням, не злито: розділи 0 і 2 — структура файлів і об'єкти, розд. 2.1 — контракти C-30…C-37, розд. 6 — план збирання (воркери W1-A «бекенд», W1-B «фронтенд», W1-C «міст і емулятор»). Рішення автора A-23…A-37 — `build/energy/W1_SPEC.md`, розд. 15.
 Каркас W1 (маніфест, порожні файли, `__init__`, ACL, контракти JSON) створено комітом «scaffold:» гілки `claude/td-energy-w1`; воркери не змінюють `__manifest__.py`, `models/__init__.py`, `wizard/__init__.py`, `tests/__init__.py`, `security/ir.model.access.csv` без погодження.
+
+## Продовження: хвилі W2–W4 енергетики
+
+Технічні рішення розширень `td_energy` (ID і рішення модульні; відхилення збірки — у «Журналі змін документа» кожного файлу):
+
+- W2 — [td_energy_control](../td_energy_control/ARCHITECTURE.md) (керування: сценарії, команди, плагін збирача `td_collector_energy`) і міст [td_energy_viewer3d](../td_energy_viewer3d/ARCHITECTURE.md) («Енергетика в 3D»);
+- W3 — [td_energy_resources](../td_energy_resources/ARCHITECTURE.md) (газ, повітря, тепло, тарифи, резерви) і міст [td_energy_resources_bms](../td_energy_resources_bms/ARCHITECTURE.md);
+- W4 — [td_energy_analytics](../td_energy_analytics/ARCHITECTURE.md) (аналітика, модель бази ISO 50001, звіти) і [td_energy_mobile](../td_energy_mobile/ARCHITECTURE.md) (вкладка «Обхід»).

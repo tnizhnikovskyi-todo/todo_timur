@@ -1,8 +1,9 @@
 # td-collector-energy
 
 Плагін збирача `energy_ctl` (джерело `ENERGY-CTL`): цикл автоматики енергетики (6 сценаріїв) і виконавець інтентів
-оператора. Специфікація — `factory3d/build/energy/W2_SPEC.md` §8.1, правила R-41…R-53, R-60; контракти (заморожені) —
-`factory3d/odoo_addons/td_energy_control/contracts/` (C-38…C-47).
+оператора. Специфікація — [`td_energy_control/SPEC.md`](../../../docs/modules/td_energy_control/SPEC.md) §8.1, правила
+R-41…R-53, R-60; технічне рішення — [`td_energy_control/ARCHITECTURE.md`](../../../docs/modules/td_energy_control/ARCHITECTURE.md);
+контракти (заморожені) — `factory3d/odoo_addons/td_energy_control/contracts/` (C-38…C-47).
 
 ## Склад
 
@@ -27,6 +28,18 @@
 export_kw,pv_now}` збирач не опитує: їх рахує сам плагін за формулами блоку `derived` API-24 (`derived.py`: `sum` з `k`,
 `min` терма, `clamp_min`, `zero_if`; `ge`) із `LiveCache`. Терм відсутній або старший за `max_age_s` → вхід відсутній
 (fail-closed), невідома операція → вхід відсутній і попередження в журнал.
+
+**Дистанційне перемикання (D-46).** Прапор `flags.remote_switching_enabled` з API-24 (параметр Odoo
+`td.energy_control.remote_switching_enabled`, за замовчуванням `False`; на demo/стенді `True`) вмикає інтенти `qs_close`,
+`qs_open`, `chp_start`, `bess_discharge` (`intents.REMOTE_GATED`). Поки прапор вимкнено, `executor` відмовляє зі станом
+`rejected` і причиною «Дистанційне перемикання вимкнено: td.energy_control.remote_switching_enabled»; `genset_test` — не
+інтент збирача, його блокує Odoo. Інші інтенти (заряд/зупинка BESS, `chp_stop`, сцени BMS, уставка повітря) не зачіпаються.
+
+**Пожежна тривога й нічний режим (D-48, D-49).** `fire_state = alarm` не переводить рушій у `hold`: режим лишається `auto`,
+блокується запис лише ресурсів `vent` і `light` (R-44 п.8; сценарій `night` повідомляє `warn`). Сценарій `night` не потребує
+входу `remote` (цілі BMS ідуть не через контролер ГРЩ); критичний вхід `remote` лишився лише в `pfc`. Параметр
+`verify_timeout_s` (30 с; Odoo `td.energy_control.verify_timeout_s`, `Config.verify_timeout_s`, також у відповіді API-17
+`prepare`) — очікування підтвердження пристроєм читанням назад.
 
 ## Тести
 
