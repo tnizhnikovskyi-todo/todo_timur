@@ -153,7 +153,7 @@ class TestConfigApi(TestControlCommon, HttpCase):
         for code, val in values.items():
             self._fresh(code, val)
         Live = self.env["td.energy.node"]
-        snap = Live._f3d_live_snapshot()
+        snap = Live._td_live_snapshot()
         get = values.get
         ev = self.evaluate
         self.assertEqual(snap["stale_feeders"], 0)

@@ -167,7 +167,7 @@ class TdEnergyAdvice(models.Model):
         enabled, p = self._td_scenario("chp")
         if enabled:
             return []
-        _zone, price = env["td.energy.tariff"].sudo()._f3d_price_at(now)
+        _zone, price = env["td.energy.tariff"].sudo()._td_price_at(now)
         cost = p["gas_price_uah_m3"] * p["gas_m3_per_kwh"]
         if not price or price - cost < 2 * p["price_margin_uah_kwh"]:
             return []

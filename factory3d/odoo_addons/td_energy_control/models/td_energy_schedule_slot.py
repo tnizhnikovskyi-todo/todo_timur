@@ -168,7 +168,7 @@ class TdEnergyScheduleSlot(models.Model):
             for f, t, mode, label in nb[res]:
                 bars[res].append((f, t, mode, label, 0.0, "scenario"))
         if chp_enabled:
-            tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(dates.to_utc(_noon(day)))
+            tariff = env["td.energy.tariff"].sudo()._td_tariff_at(dates.to_utc(_noon(day)))
             zones = [
                 {"from": z.hour_from, "to": z.hour_to, "price": z.price}
                 for z in (tariff.zone_ids if tariff else [])

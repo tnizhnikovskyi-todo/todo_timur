@@ -95,7 +95,7 @@ class TdEnergyScenario(models.Model):
     def _td_plant(self):
         """Заводські числа для чипів: договірна потужність, ціль cos φ, крок PFC."""
         env = self.env
-        tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(dates.now_utc(env))
+        tariff = env["td.energy.tariff"].sudo()._td_tariff_at(dates.now_utc(env))
         node = env["td.energy.node"].sudo().search([("code", "=", "PFC-1")], limit=1)
         return {
             "contract_kw": tariff.contract_kw if tariff else 800.0,

@@ -28,7 +28,7 @@ def etag(cfg):
 def plant(env):
     """Заводські константи: договірна потужність, СЕС, BESS, ДГУ, КГУ, номінал QS (SPEC 7.3 `plant`)."""
     now = dates.now_utc(env)
-    tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
+    tariff = env["td.energy.tariff"].sudo()._td_tariff_at(now)
     nodes = {n.code: n for n in env["td.energy.node"].sudo().search([("code", "in", ["GENSET", "CHP", "QS"])])}
     interlock = env["td.energy.interlock"].sudo().search([("code", "=", "bess_reserve_kept")], limit=1)
     peak = env["td.energy.scenario"].sudo().search([("code", "=", "peak")], limit=1)
@@ -162,7 +162,7 @@ def build(env):
         }
         for s in env["td.energy.schedule.slot"].search([("executes", "=", True), ("active", "=", True)])
     ]
-    tariff = env["td.energy.tariff"]._f3d_tariff_at(now)
+    tariff = env["td.energy.tariff"]._td_tariff_at(now)
     zones = [
         {"from": z.hour_from, "to": z.hour_to, "price": z.price}
         for z in (tariff.zone_ids.sorted("sequence") if tariff else [])
