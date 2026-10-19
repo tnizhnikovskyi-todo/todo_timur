@@ -11,7 +11,6 @@ from datetime import date, datetime, timedelta
 
 import pytz
 import requests
-
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger

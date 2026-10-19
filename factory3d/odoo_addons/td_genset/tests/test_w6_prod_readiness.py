@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 from lxml import etree
-
 from odoo import Command, fields
 from odoo.exceptions import AccessError, UserError
 from odoo.modules.module import get_manifest

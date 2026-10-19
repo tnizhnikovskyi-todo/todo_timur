@@ -8,7 +8,6 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 from freezegun import freeze_time
-
 from odoo.tests import tagged
 
 from .common import TdGensetCase, snapshot

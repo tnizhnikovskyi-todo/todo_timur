@@ -10,7 +10,6 @@
 from datetime import timedelta
 
 import pytz
-
 from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger

@@ -14,7 +14,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import pytz
-
 from odoo import api, fields, models
 from odoo.fields import Domain
 from odoo.tools import SQL, sql
@@ -857,7 +856,7 @@ class TdGensetReading(models.Model):
         """
         slots = tuple(slot for slot in (slots or ()) if slot)
         if not slots:
-            return None
+            return
         self.flush_model(['genset_id', 'slot_15', 'ts', 'is_journal'])
         self.env.cr.execute(SQL("""
             UPDATE td_genset_reading r
@@ -871,7 +870,7 @@ class TdGensetReading(models.Model):
                AND r.is_journal IS DISTINCT FROM (r.id = last.id)
         """, genset=genset.id, slots=slots))
         self.invalidate_model(['is_journal'])
-        return None
+        return
 
     # ------------------------------------------------------------------ чистка (W1)
     @api.model
@@ -886,9 +885,9 @@ class TdGensetReading(models.Model):
                 deleted = self._td_delete_old_readings()
         except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
             _logger.warning('td_genset: чистка знімків не вдалася: %s', exc)
-            return None
+            return
         self.env['ir.cron']._commit_progress(deleted, remaining=1 if deleted >= CLEANUP_BATCH else 0)
-        return None
+        return
 
     @api.model
     def _td_delete_old_readings(self):

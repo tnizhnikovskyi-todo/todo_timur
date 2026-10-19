@@ -27,14 +27,14 @@ import os
 import secrets
 import unittest
 from contextlib import contextmanager
-from datetime import datetime, time as dtime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from datetime import time as dtime
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 import freezegun
 import pytz
 import requests
-
 from odoo import fields
 from odoo.tools import SQL, html2plaintext
 
@@ -131,7 +131,7 @@ class TdGensetStandCase(TdGensetCase):
 
     def clock_start_utc(self):
         """Момент старту годинника для ``relay_mode = 'own'`` (naive UTC) або ``None`` — «зараз»."""
-        return None
+        return
 
     # ------------------------------------------------------------------ тест
     def setUp(self):

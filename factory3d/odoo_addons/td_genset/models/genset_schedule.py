@@ -5,7 +5,6 @@ SPEC 5.6, 5.7, 9. Модульна функція ``kyiv_localize`` — межі
 from datetime import datetime, time, timedelta
 
 import pytz
-
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 

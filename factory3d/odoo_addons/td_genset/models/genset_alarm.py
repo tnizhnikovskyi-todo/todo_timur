@@ -9,7 +9,6 @@ import logging
 from datetime import timedelta
 
 from markupsafe import Markup
-
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tools import SQL
@@ -404,7 +403,7 @@ class TdGensetAlarm(models.Model):
         genset = genset.sudo()
         alarms = self.sudo().search([('genset_id', '=', genset.id), ('code', '=', code), ('state', '!=', 'cleared')])
         if not alarms:
-            return None
+            return
         now = fields.Datetime.now()
         alarms.write({'state': 'cleared', 'date_cleared': now, 'next_escalation_at': False,
                       'followers_notify_at': False})
@@ -417,7 +416,7 @@ class TdGensetAlarm(models.Model):
             else:
                 genset.message_post(body=Markup('<p>%s</p>') % text, subtype_xmlid='td_genset.mt_alarm')
             genset._notify_bus('alarm', {'alarm_id': alarm.id, 'state': 'cleared', 'note': alarm.name})
-        return None
+        return
 
     def _td_schedule_refuel_activity(self):
         """Активність «Долити паливо» відповідальному за генератор (одна відкрита на генератор, AC-63)."""
@@ -496,7 +495,6 @@ class TdGensetAlarm(models.Model):
             except Exception as exc:  # noqa: BLE001
                 log_failure(_logger, self.env, 'followers:%s' % alarm.id, type(exc).__name__,
                             'td_genset: сповіщення підписників про тривогу %s не вдалося: %s', alarm.id, exc)
-        return None
 
     def _td_escalate_step(self, config, now):
         """Один крок ескалації для однієї тривоги (див. ``_cron_escalate``)."""
@@ -563,7 +561,7 @@ class TdGensetAlarm(models.Model):
         genset = genset.sudo()
         reading = genset.last_reading_id
         if not reading:
-            return None
+            return
         event_model = self.env['td.genset.event']
         row = event_model._td_rows(reading)[0]
         codes = dict(genset.open_alarm_codes or {})
@@ -575,7 +573,7 @@ class TdGensetAlarm(models.Model):
         for code in set(stale.mapped('code')) - set(active) - unknown:
             self._clear(genset, code)
         self._td_apply_state_alarms(genset, row, genset.last_values_json)
-        return None
+        return
 
 
 # --------------------------------------------------------------------------- допоміжні функції

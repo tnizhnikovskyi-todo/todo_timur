@@ -172,7 +172,6 @@ class TdGensetEvent(models.Model):
         :param readings: нові знімки ``td.genset.reading`` (будь-який порядок).
         """
         self._td_process(genset, readings)
-        return None
 
     def _td_process(self, genset, readings):
         """Реалізація ``_process_readings``; повертає статистику ``{'events': N, 'refuel': bool}``."""
@@ -289,11 +288,11 @@ class TdGensetEvent(models.Model):
     def _close(self, event, date_end, **vals):
         """Закриває подію: ``date_end``, атрибути (``energy_kwh``, ``peak_kw``, ``fuel_delta_l``, ``summary`` …)."""
         if not event:
-            return None
+            return
         values = {'date_end': date_end}
         values.update(vals)
         event.sudo().write(values)
-        return None
+        return
 
     # ------------------------------------------------------------------ відключення мережі
     def _td_rule_outage(self, genset, row, state, catchup):
@@ -602,7 +601,6 @@ class TdGensetEvent(models.Model):
                 cur = self._td_rows(cur)[0] if cur else None
             if prev and cur:
                 self._td_external_from_rows(genset, prev, cur)
-        return None
 
     def _td_external_from_rows(self, genset, prev, cur):
         mode_from, mode_to = prev['controller_mode'], cur['controller_mode']

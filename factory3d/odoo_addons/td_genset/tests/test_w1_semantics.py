@@ -7,7 +7,6 @@ set_status, run_pull/run_commands/run_scheduler). Імена тестів — ``
 from datetime import datetime, timedelta
 
 from freezegun import freeze_time
-
 from odoo.tests import tagged
 
 from .common import TdGensetCase, snapshot

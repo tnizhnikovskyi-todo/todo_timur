@@ -4,7 +4,6 @@ AC-31, AC-32, AC-33, AC-36."""
 from datetime import timedelta
 
 from freezegun import freeze_time
-
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import tagged
 

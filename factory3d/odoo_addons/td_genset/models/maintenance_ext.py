@@ -88,4 +88,3 @@ class MaintenanceRequest(models.Model):
                 'мотогодин%(due)s.', name=request.name, hours=fmt_num(genset.run_hours_total, 1),
                 next=fmt_num(info['next_hours']), due=due))
             genset._notify_bus('status')
-        return None

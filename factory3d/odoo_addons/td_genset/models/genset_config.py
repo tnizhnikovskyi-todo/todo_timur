@@ -5,7 +5,6 @@
 from datetime import timedelta
 
 from markupsafe import Markup
-
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 

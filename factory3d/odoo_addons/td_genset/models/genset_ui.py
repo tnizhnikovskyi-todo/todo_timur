@@ -11,13 +11,20 @@
 from datetime import timedelta
 
 from markupsafe import Markup, escape
-
 from odoo import _, api, fields, models
 from odoo.tools.misc import formatLang
 from odoo.tools.translate import LazyTranslate
 
-from .genset import CONTROL_SOURCES, CONTROLLER_MODES, FEED_SOURCES, FUEL_SOURCES, GENSET_STAGES, GENSET_STATUS, \
-    LINK_STATES, TEST_MODES
+from .genset import (
+    CONTROL_SOURCES,
+    CONTROLLER_MODES,
+    FEED_SOURCES,
+    FUEL_SOURCES,
+    GENSET_STAGES,
+    GENSET_STATUS,
+    LINK_STATES,
+    TEST_MODES,
+)
 
 PULT_BUTTONS = ('auto', 'manual', 'start', 'stop', 'test')
 KPI_FIELDS = (

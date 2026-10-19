@@ -10,9 +10,8 @@ import json
 from datetime import datetime
 
 from lxml import etree
-
-from odoo.fields import Command
 from odoo.exceptions import AccessError, UserError
+from odoo.fields import Command
 from odoo.tests import HttpCase, tagged
 from odoo.tools import mute_logger
 

@@ -7,7 +7,6 @@
 from dateutil.relativedelta import relativedelta
 from freezegun import freeze_time
 from lxml import etree
-
 from odoo import fields
 from odoo.tests import tagged
 

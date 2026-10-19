@@ -7,7 +7,6 @@ set_status, run_pull/run_commands/run_scheduler). Імена тестів — ``
 from datetime import date, datetime, timedelta, timezone
 
 from freezegun import freeze_time
-
 from odoo.tests import tagged
 
 from ..models.genset_reading import slot_start, utc_to_kyiv
@@ -84,7 +83,7 @@ class TestW1JournalSlots(TdGensetCase):
         """AC-08, AC-46: забір cron позначає журнальні; за пропуск без знімків записів журналу немає."""
         now = datetime(2026, 10, 7, 12, 0)
         with freeze_time(now):
-            for minute in list(range(0, 30)) + list(range(70, 90)):
+            for minute in list(range(30)) + list(range(70, 90)):
                 self.push_reading(snapshot(), ts=now - timedelta(minutes=90 - minute))
             self.run_pull()
         journal = self.env['td.genset.reading'].search([('genset_id', '=', self.genset.id), ('is_journal', '=', True)])

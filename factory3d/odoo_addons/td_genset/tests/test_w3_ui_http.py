@@ -8,9 +8,8 @@ import json
 from datetime import timedelta
 
 from lxml import etree
-
-from odoo.fields import Command
 from odoo import fields
+from odoo.fields import Command
 from odoo.tests import HttpCase, tagged
 from odoo.tools.safe_eval import safe_eval
 
@@ -418,7 +417,7 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
                 }
             }
             console.log("test successful");
-        """ % {'id': self.genset.id}), login='td_user_t')
+        """ % {}), login='td_user_t')
 
     # ------------------------------------------------------------------ подання: синтаксис 18.0, вкладки, дії
     def test_views_odoo18_and_actions(self):

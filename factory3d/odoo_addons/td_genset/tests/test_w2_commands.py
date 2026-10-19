@@ -18,14 +18,19 @@ from unittest.mock import patch
 
 import requests
 from freezegun import freeze_time
-
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 
 from ..models.genset_schedule import kyiv_localize
-from ..models.relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled,
-                                   RelayNotFound, RelayUnavailable)
+from ..models.relay_client import (
+    RelayAuthError,
+    RelayBadRequest,
+    RelayBusy,
+    RelayCommandsDisabled,
+    RelayNotFound,
+    RelayUnavailable,
+)
 from .common import TdGensetCase, snapshot
 
 

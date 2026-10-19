@@ -18,4 +18,4 @@ from . import test_w4_fuel
 from . import test_w4_maintenance
 from . import test_w6_prod_readiness
 # Стендові тести W5 (tests/stand/test_w5_stand_*.py, тег td_genset_stand) — підхоплюються автоматично.
-from .stand import *  # noqa: F401,F403
+from .stand import *

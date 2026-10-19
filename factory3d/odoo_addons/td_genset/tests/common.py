@@ -33,7 +33,6 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 import requests
-
 from odoo.fields import Command
 from odoo.tests import TransactionCase
 

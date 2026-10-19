@@ -10,7 +10,6 @@ from datetime import datetime, time, timedelta
 
 import pytz
 from markupsafe import Markup
-
 from odoo import _, api, fields, models
 from odoo.tools import SQL
 
@@ -58,13 +57,13 @@ class TdGensetMonitoring(models.Model):
         try:
             gensets = self.search([('relay_enabled', '=', True), ('relay_hostid', '!=', False)])
             if not gensets:
-                return None
+                return
             client = self.env['td.genset.relay.client']
             try:
                 status = client.status()
             except RelayError as exc:
                 gensets._td_relay_failed(exc)
-                return None
+                return
             for genset in gensets:
                 if not genset._td_try_lock():
                     continue
@@ -100,7 +99,7 @@ class TdGensetMonitoring(models.Model):
             log_recovered(_logger, self.env, 'pull', 'td_genset: забір показань знову працює')
         finally:
             self.env['ir.cron']._commit_progress(done, remaining=remaining)
-        return None
+        return
 
     def _td_try_lock(self):
         """``SELECT … FOR NO KEY UPDATE SKIP LOCKED``: другий воркер пропускає зайнятий генератор (А.7)."""
@@ -203,7 +202,6 @@ class TdGensetMonitoring(models.Model):
                     genset, cloud=device.get('cloud_commands_seen') or [])
             if 'relay_commands_enabled' in changed or 'relay_commands_ready' in changed:
                 genset._notify_bus('status')
-        return None
 
     def _check_relay_health(self, status):
         """2.8.7: ``registers_known``/``coils_known`` = 0 → тривога ``relay_health`` (тех.); формат команд ще не
@@ -226,7 +224,6 @@ class TdGensetMonitoring(models.Model):
                                    _('Ретранслятор ще не вивчив формат команд.'), tech=True)
             else:
                 alarm_model._clear(genset, 'relay_cmd_format')
-        return None
 
     # ------------------------------------------------------------------ сторінка /readings
     def _pull_readings_page(self, client):
@@ -344,10 +341,10 @@ class TdGensetMonitoring(models.Model):
         """
         self.ensure_one()
         if not reading:
-            return None
+            return
         genset = self.sudo()
         if genset.last_reading_id and genset.last_reading_id.relay_id > reading.relay_id:
-            return None
+            return
         values = self.env.context.get('td_genset_values')
         if values is None:
             values = genset._td_values_from_reading(reading)
@@ -373,7 +370,7 @@ class TdGensetMonitoring(models.Model):
                         'td_genset: %s: перевірка ТО не вдалася: %s', genset.name, exc)
         if not genset.catchup_mode:
             genset._notify_bus('reading', {'reading_id': reading.id})
-        return None
+        return
 
     def _td_values_from_reading(self, reading):
         """``values`` зі збереженого знімка (для ``last_values_json``, коли payload недоступний)."""
@@ -455,7 +452,6 @@ class TdGensetMonitoring(models.Model):
                 alarm_model._raise(genset, 'link_lost', 'crit', _("Немає зв'язку з модулем"),
                                    _("Немає зв'язку з модулем з %(time)s (%(minutes)s хв). Пульт недоступний.",
                                      time=hhmm(genset.link_changed_at), minutes=minutes))
-        return None
 
     # ------------------------------------------------------------------ догон (А.7)
     def _finish_catchup(self, summary):
@@ -481,7 +477,6 @@ class TdGensetMonitoring(models.Model):
             genset._message_log(body=_('Догнано історію: %(days)s днів, %(readings)s знімків, %(events)s подій.',
                                        days=days, readings=summary.get('readings', 0),
                                        events=summary.get('events', 0)))
-        return None
 
     # ------------------------------------------------------------------ інформаційні повідомлення (2.8.2, 2.8.5)
     def _td_post_info(self, body):

@@ -65,7 +65,6 @@ import json
 import logging
 import os
 import random
-import socket
 import sys
 import threading
 import time
@@ -76,7 +75,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from genset_model import GensetModel, SimError, load_profile  # noqa: E402
+from genset_model import GensetModel, SimError, load_profile
 
 SIM_PREFIX = "/sim/v1"
 LOG = logging.getLogger("fake_relay")

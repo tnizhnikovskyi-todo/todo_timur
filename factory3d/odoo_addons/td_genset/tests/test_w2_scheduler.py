@@ -4,11 +4,10 @@ AC-28, AC-29, AC-30, AC-34, AC-35, AC-37."""
 from datetime import date, datetime, timedelta
 
 from freezegun import freeze_time
-from psycopg2 import IntegrityError
-
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
+from psycopg2 import IntegrityError
 
 from ..models.genset_schedule import kyiv_hhmm, to_kyiv
 from .test_w2_commands import TdGensetW2Case, kyiv

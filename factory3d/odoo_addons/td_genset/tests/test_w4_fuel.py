@@ -11,12 +11,11 @@ from unittest.mock import patch
 
 from freezegun import freeze_time
 from lxml import etree
-from psycopg2 import IntegrityError
-
 from odoo import Command, fields
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
+from psycopg2 import IntegrityError
 
 from ..models import genset_fuel
 from ..models.genset_fuel import fmt_num, kyiv_hhmm

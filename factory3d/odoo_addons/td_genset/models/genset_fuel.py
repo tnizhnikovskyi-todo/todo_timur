@@ -17,7 +17,6 @@ from datetime import date, timedelta
 
 import pytz
 from dateutil.relativedelta import relativedelta
-
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import SQL, float_compare, float_is_zero, float_round, split_every
@@ -676,7 +675,6 @@ class TdGensetRefuel(models.Model):
             if not refuels.search_count([('genset_id', '=', genset.id), ('sensor_state', '=', 'unconfirmed')],
                                         limit=1):
                 alarms._clear(genset, 'refuel_unconfirmed', note=_('Заправку підтверджено датчиком рівня.'))
-        return None
 
     def _match_level_event(self, event):
         """Зв'язати запис з подією «Заправка»: рівні до/після, ΔL і стан звірки; нотатка в чатер генератора."""
@@ -850,7 +848,7 @@ class TdGensetFuel(models.Model):
         gensets = (self or self.search([])).sudo()
         canisters = self.env['td.genset.canister'].sudo()
         if not gensets or not canisters.with_context(active_test=False).search_count([], limit=1):
-            return None
+            return
         stock = float_round(sum(canisters.search([]).mapped('liters')), precision_digits=1)
         config = self.env['td.genset.config'].sudo().get()
         minimum = config.fuel_min_stock_l if config else 0.0
@@ -871,7 +869,7 @@ class TdGensetFuel(models.Model):
             elif not low and active:
                 alarms._clear(genset, 'fuel_stock_low',
                               note=_('Запас у каністрах %(stock)s L — у нормі.', stock=fmt_num(stock)))
-        return None
+        return
 
     # ================================================================== калібрування датчика (ФВ-31, AC-69)
     def _fuel_calibration_points(self):
@@ -1092,7 +1090,6 @@ class TdGensetFuel(models.Model):
                     changes['maintenance_team_id'] = genset._maint_team().id
             if changes:
                 equipment.write(changes)
-        return None
 
     @api.depends('run_hours_total', 'maint_first_hours', 'maint_interval_hours', 'maint_interval_months',
                  'commissioning_date', 'equipment_id', 'equipment_id.maintenance_ids.stage_id',
@@ -1222,7 +1219,6 @@ class TdGensetFuel(models.Model):
                            'стадією «виконано».', request=request.name),
                     user_id=genset.user_id.id)
             genset._notify_bus('status')
-        return None
 
     def _create_maintenance_request(self, info, config, today):
         """Превентивна заявка ТО (ТР 2.3.12): обладнання генератора, команда «Генератори», виконавець —

@@ -8,8 +8,14 @@ import logging
 
 from odoo.tests import tagged
 
-from ..models.relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled, RelayNotFound,
-                                   RelayUnavailable)
+from ..models.relay_client import (
+    RelayAuthError,
+    RelayBadRequest,
+    RelayBusy,
+    RelayCommandsDisabled,
+    RelayNotFound,
+    RelayUnavailable,
+)
 from .common import BASE_URL, HOSTID, TOKEN, TdGensetCase, snapshot
 
 

@@ -70,7 +70,6 @@ class TdGensetScheduler(models.Model):
             else:
                 log_recovered(_logger, self.env, 'scheduler:%s' % label,
                               'td_genset: scheduler side check works again: %s', label)
-        return None
 
     def _td_lock_row(self):
         """``SELECT … FOR NO KEY UPDATE SKIP LOCKED`` рядка генератора: зайнятий іншим воркером — пропустити."""
@@ -246,7 +245,6 @@ class TdGensetScheduler(models.Model):
             commands._enqueue_target(genset, ['manual', 'stop'], source, requested_by, reason)
         genset.control_source = 'schedule'
         genset._notify_bus('schedule')
-        return None
 
     # ------------------------------------------------------------------ таймер «Робота поза графіком»
     def _timer_check_allowed(self):
@@ -290,7 +288,6 @@ class TdGensetScheduler(models.Model):
                    user=user.name),
             subtype_xmlid='td_genset.mt_command')
         genset._notify_bus('timer', {'timer_end': fields.Datetime.to_string(end)})
-        return None
 
     def _timer_extend(self, minutes, user):
         """Подовження таймера на ``minutes`` без зупинки — не далі ``now + 24 год`` (інакше ``UserError``
@@ -322,7 +319,6 @@ class TdGensetScheduler(models.Model):
                                    end=kyiv_hhmm(new_end)),
                             subtype_xmlid='td_genset.mt_command')
         genset._notify_bus('timer', {'timer_end': fields.Datetime.to_string(new_end)})
-        return None
 
     def _timer_stop(self, user):
         """Зупинка таймера: ``timer_end = NULL``, ``_follow_schedule('timer')`` (у вікні — нічого, якщо вже Авто;
@@ -345,7 +341,6 @@ class TdGensetScheduler(models.Model):
         if not genset.test_end:
             genset._follow_schedule('timer', requested_by=user)
         genset._notify_bus('timer', {'timer_end': False})
-        return None
 
     def _timer_expire(self):
         """Кінець таймера (А.6 п. 6): ``timer_end = NULL``, чатер «Таймер завершився.», ``_follow_schedule``."""
@@ -414,7 +409,6 @@ class TdGensetScheduler(models.Model):
             text = '%s %s' % (text, timer_note)
         genset.message_post(body=text, subtype_xmlid='td_genset.mt_command')
         genset._notify_bus('test', {'test_end': fields.Datetime.to_string(test_end), 'test_mode': mode})
-        return None
 
     def _test_finish(self):
         """Кінець тесту (А.6 п. 7): таймер на паузі → ``timer_end = now + paused_left``, ``control_source='timer'``,
@@ -426,7 +420,7 @@ class TdGensetScheduler(models.Model):
         self.ensure_one()
         genset = self.sudo()
         if not genset.test_end:
-            return None
+            return
         now = fields.Datetime.now()
         minutes = self.env['td.genset.config'].sudo().get().test_minutes or 3
         paused = genset.test_timer_paused_left
@@ -445,7 +439,7 @@ class TdGensetScheduler(models.Model):
                                    minutes=minutes, label=label),
                             subtype_xmlid='td_genset.mt_command')
         genset._notify_bus('test', {'test_end': False})
-        return None
+        return
 
     def _test_end_early(self, command):
         """«Авто» або «Стоп» з пульта під час тесту завершують тест раніше; таймер з паузи повертається."""

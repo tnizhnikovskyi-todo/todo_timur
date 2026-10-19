@@ -18,9 +18,16 @@ from odoo.tools import SQL
 
 from .genset_reading import derive_running
 from .genset_schedule import kyiv_hhmm
+from .relay_client import (
+    RelayAuthError,
+    RelayBadRequest,
+    RelayBusy,
+    RelayCommandsDisabled,
+    RelayError,
+    RelayNotFound,
+    RelayUnavailable,
+)
 from .td_logging import log_failure, log_recovered
-from .relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled, RelayError,
-                           RelayNotFound, RelayUnavailable)
 
 _logger = logging.getLogger(__name__)
 
@@ -475,7 +482,7 @@ class TdGensetCommand(models.Model):
         except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7); повтор — WARNING раз (td_logging)
             log_failure(_logger, self.env, 'commands:select', type(exc).__name__,
                         'td_genset: command selection failed', exc_info=True)
-            return None
+            return
         for command in self.sudo().browse(command_ids):
             command._process_due()
         try:
@@ -483,7 +490,7 @@ class TdGensetCommand(models.Model):
         except Exception as exc:  # noqa: BLE001
             log_failure(_logger, self.env, 'commands:trigger', type(exc).__name__,
                         'td_genset: command cron trigger failed', exc_info=True)
-        return None
+        return
 
     @api.model
     def _lock_due_ids(self, now):
@@ -541,7 +548,6 @@ class TdGensetCommand(models.Model):
         }.get(self.state)
         if handler:
             handler(fields.Datetime.now())
-        return None
 
     # ------------------------------------------------------------------ стани
     def _step_queued(self, now):
