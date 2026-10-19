@@ -50,9 +50,7 @@ class TestEnergyDayFilter(F3DEnergyCase):
             self.assertEqual(at.search(base + [("is_yesterday", "=", True)]), rows[1], now)
             self.assertEqual(at.search(base + [("is_last_7d", "=", True)]), last_7d, now)
             self.assertEqual(at.search(base + [("is_last_7d", "=", False)]), rows[-1] | rows[8], now)
-            self.assertEqual(
-                [at.browse(rows[b].id).is_today for b in (1, 0, -1)], [False, True, False], now
-            )
+            self.assertEqual([at.browse(rows[b].id).is_today for b in (1, 0, -1)], [False, True, False], now)
             all_rows.unlink()
 
     def test_search_views_do_not_use_browser_date(self):

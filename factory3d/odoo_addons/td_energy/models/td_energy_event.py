@@ -81,9 +81,7 @@ class F3dEnergyEvent(models.Model):
     )
     acked_by = fields.Many2one("res.users", string="Підтвердив", ondelete="set null", readonly=True)
     acked_at = fields.Datetime(string="Підтверджено", readonly=True)
-    assigned_user_id = fields.Many2one(
-        "res.users", string="Виконавець", ondelete="set null", index=True, readonly=True
-    )
+    assigned_user_id = fields.Many2one("res.users", string="Виконавець", ondelete="set null", index=True, readonly=True)
     taken_at = fields.Datetime(string="Взято в роботу", readonly=True)
     resolved_at = fields.Datetime(string="Вирішено", readonly=True)
     request_id = fields.Many2one("maintenance.request", string="Заявка ТО", compute="_compute_request_id")
@@ -280,9 +278,7 @@ class F3dEnergyEvent(models.Model):
         step = node.pfc_step_kvar or 50  # W1 D-09: крок ступеня — параметр вузла (за замовчуванням 35 квар)
         n = abs(diff) // step
         if n == 1:
-            action = (
-                "увімкнено ще один ступінь %d квар" % step if diff > 0 else "вимкнено ступінь %d квар" % step
-            )
+            action = "увімкнено ще один ступінь %d квар" % step if diff > 0 else "вимкнено ступінь %d квар" % step
         else:
             word = "ступені" if n in (2, 3, 4) else "ступенів"
             action = "%s %d %s (%d квар)" % ("увімкнено" if diff > 0 else "вимкнено", n, word, abs(diff))

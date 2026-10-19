@@ -172,9 +172,7 @@ SELECT (SELECT count(*) FROM ir_config_parameter WHERE key IN ('td.energy.read_e
     assert res.returncode == 0, res.stderr[-400:]
     last = [ln for ln in res.stdout.splitlines() if ln.count(",") == 2][-1]
     assert last == "0,0,0", last
-    expect_fault(
-        lambda: users["tb_energy"].k("td.energy.node", "action_td_energy_rebind"), "доступ", "access", "адмін"
-    )
+    expect_fault(lambda: users["tb_energy"].k("td.energy.node", "action_td_energy_rebind"), "доступ", "access", "адмін")
     assert users["tb_f3d_admin"].k("td.energy.node", "action_td_energy_rebind") is not None
 
 

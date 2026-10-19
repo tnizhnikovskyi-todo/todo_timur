@@ -10,9 +10,7 @@ ENERGY_PREFIXES = ("energy/", "infra/pv/", "infra/bess/", "infra/chp/", "infra/a
 BAD_STATUS = ("stale", "unknown")
 SQRT3_U = math.sqrt(3) * 380.0  # AC-64: 12,18 кВт / 0,84 → 22 А (макет рахує за 380 В)
 
-SOURCE = (
-    "Лічильники PowerLogic PM5560 на вводах, фідерах і споживачах → Modbus TCP → колектор → Odoo (td_energy)"
-)
+SOURCE = "Лічильники PowerLogic PM5560 на вводах, фідерах і споживачах → Modbus TCP → колектор → Odoo (td_energy)"
 NOTE_ADD = "Енергія на МО — за лічильниками; «оцінка» — за паспортом і журналом часу."
 COUPLER_NOTE = (
     "Розімкнений: секції живляться кожна від свого трансформатора. "

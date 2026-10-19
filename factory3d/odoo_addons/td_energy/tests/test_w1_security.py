@@ -106,9 +106,7 @@ class TestW1Security(TestW1Common):
             self.env["td.energy.dashboard"].with_user(self.u_view).get_pult(parts=[])["meta"]["refresh_s"], 45
         )
         for k in range(5):
-            self.Event._td_log(
-                "warn", "meter", "PM-%d" % k, "Подія %d. Текст." % k, ts=self.now - timedelta(minutes=k)
-            )
+            self.Event._td_log("warn", "meter", "PM-%d" % k, "Подія %d. Текст." % k, ts=self.now - timedelta(minutes=k))
         items = self.env["td.energy.dashboard"].with_user(self.u_view).get_alarms()["items"]
         self.assertEqual(len(items), 3)
         values = self.env["res.config.settings"].default_get(["td_energy_cos_phi_warn", "td_energy_load_warn_pct"])

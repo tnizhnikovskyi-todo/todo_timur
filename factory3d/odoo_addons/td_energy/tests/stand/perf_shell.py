@@ -212,9 +212,7 @@ elif MODE in ("tp05", "tp06"):
     if MODE == "tp05":
         # Усі 2,6 М рядків старші за межу: планувальник слушно обирає Seq Scan (LIMIT 50000 без вибірковості).
         # Index Scan за ts_start перевіряємо на вибірковому предикаті (найстаріші 7 діб ≈ 1 % таблиці).
-        cr.execute(
-            "EXPLAIN SELECT id FROM td_energy_interval WHERE ts_start < now() - interval '400 days' LIMIT 50000"
-        )
+        cr.execute("EXPLAIN SELECT id FROM td_energy_interval WHERE ts_start < now() - interval '400 days' LIMIT 50000")
         out["plan_full"] = " | ".join(r[0].strip() for r in cr.fetchall())[:160]
         cr.execute("""EXPLAIN SELECT id FROM td_energy_interval
                       WHERE ts_start < (SELECT min(ts_start) + interval '7 days' FROM td_energy_interval) LIMIT 50000""")

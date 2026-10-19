@@ -44,9 +44,7 @@ def test_tk01_install(odoo, stand_ready):
     report = json.loads(odoo.get_param("td.energy.install_report") or "{}")
     assert report.get("state") in ("done", "partial"), report
     srcs = energy_sources(odoo)
-    sigs = odoo.k(
-        "td.signal", "search_count", [("source_id", "in", [s["id"] for s in srcs]), ("address", "!=", False)]
-    )
+    sigs = odoo.k("td.signal", "search_count", [("source_id", "in", [s["id"] for s in srcs]), ("address", "!=", False)])
     tk_report("01", {"report": report, "sources": len(srcs), "signals": sigs})
     assert len(srcs) == 68
     assert sigs == 220

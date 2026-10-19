@@ -257,8 +257,12 @@ class F3dEnergyNode(models.Model):
         counts = {}
         if self.ids:
             since = fields.Datetime.now() - timedelta(days=365)
-            groups = self.env["td.energy.event"].sudo()._read_group(
-                [("kind", "=", "trip"), ("node_id", "in", self.ids), ("ts", ">=", since)], ["node_id"], ["__count"]
+            groups = (
+                self.env["td.energy.event"]
+                .sudo()
+                ._read_group(
+                    [("kind", "=", "trip"), ("node_id", "in", self.ids), ("ts", ">=", since)], ["node_id"], ["__count"]
+                )
             )
             counts = {node.id: n for node, n in groups}
         for rec in self:

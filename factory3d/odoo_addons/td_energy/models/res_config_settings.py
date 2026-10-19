@@ -22,9 +22,7 @@ class ResConfigSettings(models.TransientModel):
         string="Аналітичні рядки енергії", config_parameter=P + "analytic_enabled"
     )
     td_energy_balance_tol_pct = fields.Float(string="Допуск небалансу, %", config_parameter=P + "balance_tol_pct")
-    td_energy_balance_tol_kwh = fields.Float(
-        string="Допуск небалансу, кВт·год", config_parameter=P + "balance_tol_kwh"
-    )
+    td_energy_balance_tol_kwh = fields.Float(string="Допуск небалансу, кВт·год", config_parameter=P + "balance_tol_kwh")
     td_energy_gap_alarm_min = fields.Integer(
         string="Пропуск даних до тривоги, хв", config_parameter=P + "gap_alarm_min"
     )

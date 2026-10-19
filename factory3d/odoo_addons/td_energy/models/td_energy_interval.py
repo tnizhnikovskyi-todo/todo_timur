@@ -76,9 +76,7 @@ class F3dEnergyInterval(models.Model):
         if not param_bool(self.env, "read_enabled"):
             return 0
         now = dates.now_utc(self.env)
-        meters = (
-            self.env["td.energy.meter"].sudo().search([("active", "=", True), ("e_import_signal_id", "!=", False)])
-        )
+        meters = self.env["td.energy.meter"].sudo().search([("active", "=", True), ("e_import_signal_id", "!=", False)])
         total = 0
         for meter in meters:
             try:
