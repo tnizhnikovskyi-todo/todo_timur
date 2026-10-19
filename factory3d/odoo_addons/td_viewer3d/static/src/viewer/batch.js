@@ -221,10 +221,13 @@ export function createBatcher(env) {
         dirty.clear();
     }
 
-    /** Повний обхід усіх проксі (опитування, після stock_load/розкладки). true — склад пакетів змінився. */
-    function sync() {
+    /** Повний обхід усіх проксі (опитування, після stock_load/розкладки). true — склад пакетів змінився.
+     * Світові матриці не оновлюються (`scene.updateMatrixWorld()` коштує ≈ 6 мс на 6 тис. вузлів і так виконується в кожному
+     * кадрі `renderer.render`): зсув, якого ще не бачив рендер, `touch(root)` (paint) ловить одразу, опитування — після кадру.
+     * `{ matrices: true }` оновлює їх примусово. */
+    function sync({ matrices = false } = {}) {
         if (disposed || !recs.length) { return false; }
-        scene.updateMatrixWorld();
+        if (matrices) { scene.updateMatrixWorld(); }
         let changed = false;
         for (const r of recs) { if (evalRec(r)) { changed = true; } }
         flush();

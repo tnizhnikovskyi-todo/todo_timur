@@ -3288,7 +3288,7 @@ const clock = new THREE.Clock();
 // зміни), пакетування змінило склад пакетів; блимання ламп статусу й пульсація маркерів — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
 // страховка від пропущеної інвалідації. Нульовий рендерер (тести), `opts.onDemand === false` і `?f3d_ondemand=0` малюють кожен виток, як раніше.
 const onDemand = opts.onDemand ?? (!nullR && perfFlag("ondemand") !== "0"); // `opts.onDemand: true` вмикає й для нульового рендерера (тести)
-const IDLE_MS = 400, AMBIENT_MS = 80, POLL_MS = 100;
+const IDLE_MS = 400, AMBIENT_MS = 80, POLL_MS = 250;
 let lastDraw = 0, lastPoll = 0, drawn = 0;
 let ambient = false; // у сцені є об'єкти, що змінюються самі по собі (маркери енергетики пульсують в onBeforeRender)
 renderer.setAnimationLoop(() => {
