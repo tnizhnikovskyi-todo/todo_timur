@@ -404,6 +404,7 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
 
 /* ---------- 10. слайс S4 «Структура з Odoo, файли» (tools/test_core_s4.mjs) ---------- */
 (await import("./test_core_s4.mjs")).register(test);
+(await import("./test_core_s6.mjs")).register(test); // S6 «Спільна робота й навчання»
 
 for (const [name, fn] of tests) {
     try {

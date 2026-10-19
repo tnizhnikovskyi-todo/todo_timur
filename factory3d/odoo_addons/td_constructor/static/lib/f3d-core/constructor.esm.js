@@ -402,22 +402,22 @@ function distPointSegment(px, py, p1, p2) {
   if (l2 === 0) {
     return Math.hypot(px - x1, py - y1);
   }
-  const t = Math.max(0, Math.min(1, ((px - x1) * vx + (py - y1) * vy) / l2));
-  return Math.hypot(px - (x1 + t * vx), py - (y1 + t * vy));
+  const t2 = Math.max(0, Math.min(1, ((px - x1) * vx + (py - y1) * vy) / l2));
+  return Math.hypot(px - (x1 + t2 * vx), py - (y1 + t2 * vy));
 }
-function polygonContains(poly, point, eps = 1e-3) {
+function polygonContains(poly2, point, eps = 1e-3) {
   const [px, py] = point;
-  const n = poly.length;
+  const n = poly2.length;
   for (let i = 0; i < n; i++) {
-    if (distPointSegment(px, py, poly[i], poly[(i + 1) % n]) <= eps) {
+    if (distPointSegment(px, py, poly2[i], poly2[(i + 1) % n]) <= eps) {
       return true;
     }
   }
   let inside = false;
   let j = n - 1;
   for (let i = 0; i < n; i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
+    const [xi, yi] = poly2[i];
+    const [xj, yj] = poly2[j];
     if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
       inside = !inside;
     }
@@ -441,17 +441,17 @@ function segmentsCross(p1, p2, q1, q2, eps = 1e-3) {
   }
   return d1 * d2 < 0 && e1 * e2 < 0;
 }
-function obbInsidePolygon(obb, poly, eps = 1e-3) {
+function obbInsidePolygon(obb, poly2, eps = 1e-3) {
   const cs = obbCorners(obb);
-  if (!cs.every((c) => polygonContains(poly, c, eps))) {
+  if (!cs.every((c) => polygonContains(poly2, c, eps))) {
     return false;
   }
-  const n = poly.length;
+  const n = poly2.length;
   for (let i = 0; i < 4; i++) {
     const c1 = cs[i];
     const c2 = cs[(i + 1) % 4];
     for (let j = 0; j < n; j++) {
-      if (segmentsCross(c1, c2, poly[j], poly[(j + 1) % n], eps)) {
+      if (segmentsCross(c1, c2, poly2[j], poly2[(j + 1) % n], eps)) {
         return false;
       }
     }
@@ -807,9 +807,9 @@ function effectiveAddr(...levels) {
 }
 function slotPolygon(slot) {
   const params = slot.params || {};
-  const poly = params.polygon || slot.polygon;
-  if (poly && poly.length >= 3) {
-    return poly.map((p) => [Number(p[0]), Number(p[1])]);
+  const poly2 = params.polygon || slot.polygon;
+  if (poly2 && poly2.length >= 3) {
+    return poly2.map((p) => [Number(p[0]), Number(p[1])]);
   }
   const { length, width: width2 } = params;
   if (!length || !width2) {
@@ -827,17 +827,17 @@ function slotPolygon(slot) {
     [-length / 2, width2 / 2]
   ].map(([px, py]) => [cx + px * cos - py * sin, cy + px * sin + py * cos]);
 }
-function polyArea(poly) {
+function polyArea(poly2) {
   let total = 0;
-  poly.forEach(([x1, y1], i) => {
-    const [x2, y2] = poly[(i + 1) % poly.length];
+  poly2.forEach(([x1, y1], i) => {
+    const [x2, y2] = poly2[(i + 1) % poly2.length];
     total += x1 * y2 - x2 * y1;
   });
   return Math.abs(total) / 2;
 }
-function center(slot, poly) {
-  if (poly) {
-    return [poly.reduce((a, p) => a + p[0], 0) / poly.length, poly.reduce((a, p) => a + p[1], 0) / poly.length];
+function center(slot, poly2) {
+  if (poly2) {
+    return [poly2.reduce((a, p) => a + p[0], 0) / poly2.length, poly2.reduce((a, p) => a + p[1], 0) / poly2.length];
   }
   return [slot.x || 0, slot.y || 0];
 }
@@ -882,9 +882,9 @@ function addressContext(slots, siteAddr = null, siteDepthMode = "level") {
   for (const layerSlots of byLayer2.values()) {
     const zones = [];
     for (const s of layerSlots) {
-      const poly = s.template === "zone" ? slotPolygon(s) : null;
-      if (poly) {
-        zones.push({ slot: s, poly, area: polyArea(poly) });
+      const poly2 = s.template === "zone" ? slotPolygon(s) : null;
+      if (poly2) {
+        zones.push({ slot: s, poly: poly2, area: polyArea(poly2) });
       }
     }
     const zoneFrom = site.row_from || "up";
@@ -1230,9 +1230,9 @@ function footprint(template, params) {
 function slotObb(template, params, x, y, rot2) {
   const { l, w } = footprint(template, params);
   if (template === "zone") {
-    const poly = normalizeParams(template, params).polygon;
-    const xs = poly.map((q) => q[0]);
-    const ys = poly.map((q) => q[1]);
+    const poly2 = normalizeParams(template, params).polygon;
+    const xs = poly2.map((q) => q[0]);
+    const ys = poly2.map((q) => q[1]);
     return makeObb((Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...ys) + Math.min(...ys)) / 2, l / 2, w / 2, 0);
   }
   return makeObb(x, y, l / 2, w / 2, rot2);
@@ -1841,12 +1841,12 @@ var ROOT = { el: null };
 var $ = (s, r) => (r || ROOT.el)?.querySelector(s) || null;
 var $$ = (s, r) => Array.from((r || ROOT.el)?.querySelectorAll(s) || []);
 var K = (...a) => a.flat(Infinity).filter((x) => x != null && x !== false);
-function h(tag, attrs, ...kids) {
+function h(tag, attrs2, ...kids) {
   const el = document.createElement(tag);
   let val;
-  if (attrs) {
-    for (const k in attrs) {
-      const v = attrs[k];
+  if (attrs2) {
+    for (const k in attrs2) {
+      const v = attrs2[k];
       if (v == null || v === false) {
         continue;
       }
@@ -1895,12 +1895,12 @@ var rad = (a) => a * Math.PI / 180;
 var pad2 = (n) => String(n).padStart(2, "0");
 var clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 var debounce = (fn, ms) => {
-  let t;
+  let t2;
   const f = (...a) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...a), ms);
+    clearTimeout(t2);
+    t2 = setTimeout(() => fn(...a), ms);
   };
-  f.cancel = () => clearTimeout(t);
+  f.cancel = () => clearTimeout(t2);
   return f;
 };
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1929,13 +1929,13 @@ function toast(msg, kind) {
   if (!box) {
     return null;
   }
-  const t = h("div", { class: "ftoast" + (kind ? " " + kind : "") }, msg);
-  box.append(t);
+  const t2 = h("div", { class: "ftoast" + (kind ? " " + kind : "") }, msg);
+  box.append(t2);
   while (box.children.length > 3) {
     box.firstChild.remove();
   }
-  setTimeout(() => t.remove(), kind === "err" || kind === "warn" ? 5200 : 3200);
-  return t;
+  setTimeout(() => t2.remove(), kind === "err" || kind === "warn" ? 5200 : 3200);
+  return t2;
 }
 
 // core/constructor/state.js
@@ -2058,7 +2058,7 @@ var elevOf = (layerId) => (layerOf(layerId) || { elevation: 0 }).elevation;
 var objKey = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
 var recOfRef = (ref2) => ref2.kind === "placement" ? S.pIdx.get(ref2.id) : S.sIdx.get(ref2.id);
 var snapStep = (rec) => (layerOf(rec.layer_id) || { grid_step: 0.5 }).grid_step || 0.5;
-var snapV = (v, st) => rnd(Math.round(v / st) * st, 4);
+var snapV = (v, st4) => rnd(Math.round(v / st4) * st4, 4);
 var isLayerVisible = (ly) => !V.hidden.has(ly.id);
 var selRefs = () => S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : [];
 var selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
@@ -2104,13 +2104,13 @@ var myRoleNames = () => {
 // core/constructor/dialogs.js
 function openDialog(o) {
   const dlg = h("dialog", { class: o.cls || "" });
-  const close = (r) => {
+  const close2 = (r) => {
     dlg.returnValue = r || "";
     dlg.close();
   };
   dlg.append(
     ...K(
-      h("div", { class: "dh" }, h("h2", null, o.title), h("button", { class: "xbtn", type: "button", "aria-label": "Закрити", onclick: () => close("") }, ic("x"))),
+      h("div", { class: "dh" }, h("h2", null, o.title), h("button", { class: "xbtn", type: "button", "aria-label": "Закрити", onclick: () => close2("") }, ic("x"))),
       h("div", { class: "db" }, o.body),
       o.actions && o.actions.length ? h(
         "div",
@@ -2126,7 +2126,7 @@ function openDialog(o) {
               onclick: async () => {
                 const r = a.onClick ? await a.onClick(dlg) : void 0;
                 if (r !== false) {
-                  close(a.value || "ok");
+                  close2(a.value || "ok");
                 }
               }
             },
@@ -2144,12 +2144,12 @@ function openDialog(o) {
   });
   dlg.addEventListener("click", (e) => {
     if (e.target === dlg && o.light) {
-      close("");
+      close2("");
     }
   });
   ($("#app") || document.body).append(dlg);
   dlg.showModal();
-  dlg.close2 = close;
+  dlg.close2 = close2;
   return dlg;
 }
 function confirmBox(o) {
@@ -2179,7 +2179,7 @@ function openNewSite() {
   const l = dim(60, "Довжина", "newSiteL");
   const w = dim(30, "Ширина", "newSiteW");
   const hh = dim(8, "Висота", "newSiteH");
-  const lab = (t, el) => h("label", { class: "fld" }, h("span", null, t), el);
+  const lab = (t2, el) => h("label", { class: "fld" }, h("span", null, t2), el);
   openDialog({
     title: "Нова площадка",
     cls: "narrow",
@@ -2398,12 +2398,12 @@ function renderStatusBlock(root, { rec }) {
   if (!rec || !S.sel) {
     return;
   }
-  const st = objStatus(S.sel.kind, rec);
+  const st4 = objStatus(S.sel.kind, rec);
   const acc = access();
   const btn = h("button", { class: "fbtn sm", type: "button", id: "btnSaveObj", "data-title": "Записати чергу змін у чернетку негайно", onclick: saveAll }, "Зберегти");
-  btn.disabled = st !== "unsaved" || !acc.design;
-  btn.title = !acc.design ? accessHint("design") : st === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
-  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st }, STATUS_LABELS[st]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn)));
+  btn.disabled = st4 !== "unsaved" || !acc.design;
+  btn.title = !acc.design ? accessHint("design") : st4 === "unsaved" ? "Записати чергу змін у чернетку негайно" : "Усе вже збережено";
+  root.append(h("div", { class: "sec", id: "statusBlock" }, h("h3", null, "Статус"), h("div", { class: "frow wrap" }, h("span", { class: "tag s3-status", "data-status": st4 }, STATUS_LABELS[st4]), h("span", { class: "tag", title: "Рівень доступу" }, acc.name), btn)));
 }
 registries.panels.add("right:status", { area: "right", render: renderStatusBlock }, { sequence: 80, force: true });
 function openHotkeys() {
@@ -2499,7 +2499,7 @@ function selectEl(opts2, value, onChange, dis, label) {
   const el = h(
     "select",
     { disabled: dis, "aria-label": label },
-    opts2.map(([v, t]) => h("option", { value: v, selected: String(v) === String(value) }, t))
+    opts2.map(([v, t2]) => h("option", { value: v, selected: String(v) === String(value) }, t2))
   );
   el.addEventListener("change", () => onChange(el.value));
   return el;
@@ -2508,7 +2508,7 @@ function checkGroup(opts2, vals, onChange, dis) {
   return h(
     "div",
     { class: "checks" },
-    opts2.map(([v, t]) => {
+    opts2.map(([v, t2]) => {
       const cb = h("input", { type: "checkbox", checked: vals.includes(v), disabled: dis });
       cb.addEventListener("change", () => {
         const cur = new Set(vals);
@@ -2519,7 +2519,7 @@ function checkGroup(opts2, vals, onChange, dis) {
         }
         onChange([...cur]);
       });
-      return h("label", null, cb, t);
+      return h("label", null, cb, t2);
     })
   );
 }
@@ -3552,9 +3552,9 @@ function renderSaveState() {
   renderNotice();
 }
 var curTheme = () => {
-  const t = (host.themeTarget || ROOT.el)?.dataset.theme;
-  if (t === "dark" || t === "light") {
-    return t;
+  const t2 = (host.themeTarget || ROOT.el)?.dataset.theme;
+  if (t2 === "dark" || t2 === "light") {
+    return t2;
   }
   return host.themeAuto && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 };
@@ -3574,28 +3574,28 @@ function updateTabs() {
   const m = $("#app").dataset.mtab;
   $$("#mtabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mtab === m)));
 }
-function setLeftTab(t) {
-  S.ui.leftTab = t;
-  $("#app").dataset.mtab = t;
+function setLeftTab(t2) {
+  S.ui.leftTab = t2;
+  $("#app").dataset.mtab = t2;
   renderLeft();
   updateTabs();
 }
-function setMTab(t) {
-  if (t === "props") {
+function setMTab(t2) {
+  if (t2 === "props") {
     $("#app").dataset.mtab = "props";
     updateTabs();
     E.renderRight();
   } else {
-    setLeftTab(t);
+    setLeftTab(t2);
   }
 }
 var leftPanels = () => registries.panels.getEntries().filter(([, p]) => p.area === "left");
 function renderLeft() {
   const root = $("#leftBody");
   root.replaceChildren();
-  const found = leftPanels().find(([, p]) => p.tab === S.ui.leftTab) || leftPanels()[0];
-  if (found) {
-    found[1].render(root);
+  const found2 = leftPanels().find(([, p]) => p.tab === S.ui.leftTab) || leftPanels()[0];
+  if (found2) {
+    found2[1].render(root);
   }
 }
 function ensureTabs() {
@@ -3836,7 +3836,7 @@ function renderLayerForm() {
         ),
         "м"
       ),
-      fld("Допустимі типи місць", checkGroup(Object.entries(TPL).map(([k, t]) => [k, t.name]), ly.slot_types, (v) => layerEdit(() => {
+      fld("Допустимі типи місць", checkGroup(Object.entries(TPL).map(([k, t2]) => [k, t2.name]), ly.slot_types, (v) => layerEdit(() => {
         ly.slot_types = v;
       }), dis)),
       fld(
@@ -3884,8 +3884,8 @@ function renderLayerForm() {
     h("div", { class: "h3" }, "Проходи шару"),
     h("div", null, rectRows(ly.aisles, ly.aisles)),
     h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
-      const t = E.camTarget(), w = ly.aisle_width || 2.5;
-      layerEdit(() => ly.aisles.push({ id: uid("ai_"), name: "Прохід " + (ly.aisles.length + 1), x0: rnd(t.x - 6), y0: rnd(t.y - w / 2), x1: rnd(t.x + 6), y1: rnd(t.y + w / 2) }));
+      const t2 = E.camTarget(), w = ly.aisle_width || 2.5;
+      layerEdit(() => ly.aisles.push({ id: uid("ai_"), name: "Прохід " + (ly.aisles.length + 1), x0: rnd(t2.x - 6), y0: rnd(t2.y - w / 2), x1: rnd(t2.x + 6), y1: rnd(t2.y + w / 2) }));
       renderLayerForm();
     } }, ic("plus"), "Прохід")
   );
@@ -3898,13 +3898,13 @@ function renderLayerForm() {
       "div",
       { class: "frow wrap" },
       h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
-        const t = E.camTarget();
-        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "path", name: "Пожежний прохід " + (paths.length + 1), x0: rnd(t.x - 6), y0: rnd(t.y - 0.6), x1: rnd(t.x + 6), y1: rnd(t.y + 0.6) }));
+        const t2 = E.camTarget();
+        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "path", name: "Пожежний прохід " + (paths.length + 1), x0: rnd(t2.x - 6), y0: rnd(t2.y - 0.6), x1: rnd(t2.x + 6), y1: rnd(t2.y + 0.6) }));
         renderLayerForm();
       } }, ic("plus"), "Прохід"),
       h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
-        const t = E.camTarget();
-        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "exit", name: "Вихід " + (exits.length + 1), x0: rnd(t.x - 1), y0: 0, x1: rnd(t.x + 1), y1: 2.5 }));
+        const t2 = E.camTarget();
+        layerEdit(() => fireAll.push({ id: uid("fp_"), kind: "exit", name: "Вихід " + (exits.length + 1), x0: rnd(t2.x - 1), y0: 0, x1: rnd(t2.x + 1), y1: 2.5 }));
         renderLayerForm();
       } }, ic("plus"), "Вихід")
     )
@@ -3938,8 +3938,8 @@ function renderLayerForm() {
       )
     ) : h("div", { class: "small muted" }, "Точок немає."),
     h("button", { class: "fbtn sm", type: "button", disabled: disC, onclick: () => {
-      const t = E.camTarget();
-      layerEdit(() => ut.push({ id: uid("u"), kind: "electric", name: "", x: rnd(t.x, 1), y: rnd(t.y, 1) }));
+      const t2 = E.camTarget();
+      layerEdit(() => ut.push({ id: uid("u"), kind: "electric", name: "", x: rnd(t2.x, 1), y: rnd(t2.y, 1) }));
       renderLayerForm();
     } }, ic("plus"), "Точка")
   );
@@ -3951,9 +3951,9 @@ function renderLayerForm() {
       return;
     }
     layerEdit(() => {
-      const t = ly.sequence;
+      const t2 = ly.sequence;
       ly.sequence = o.sequence;
-      o.sequence = t;
+      o.sequence = t2;
       if (ly.sequence === o.sequence) {
         ly.sequence += d;
       }
@@ -4007,7 +4007,7 @@ function renderSlotsTab(root) {
     h(
       "div",
       { class: "fcol" },
-      fld("Шаблон", selectEl(Object.entries(TPL).map(([k, t]) => [k, t.name]), T.template, (v) => {
+      fld("Шаблон", selectEl(Object.entries(TPL).map(([k, t2]) => [k, t2.name]), T.template, (v) => {
         T.template = v;
         T.params = defaultParams(v);
         T.prefix = TPL[v].prefix;
@@ -4182,12 +4182,12 @@ function renderVTools() {
   );
 }
 function renderStamp() {
-  const st = $("#stamp");
-  if (!st || !S.site) {
+  const st4 = $("#stamp");
+  if (!st4 || !S.site) {
     return;
   }
   const ly = layerOf(S.ui.layer);
-  st.replaceChildren(
+  st4.replaceChildren(
     ...K(
       h("div", null, "Площадка"),
       h("div", { class: "mono" }, S.site.name.length > 22 ? S.site.name.slice(0, 21) + "…" : S.site.name),
@@ -4917,7 +4917,7 @@ function addPlacementAt(variantId, x, y, snap) {
     toastLock(ly);
     return;
   }
-  const st = ly.grid_step || 0.5;
+  const st4 = ly.grid_step || 0.5;
   const cat = (passportOf(variantId) || {}).category;
   const pre = CODE_PREFIX[cat] || "EQ";
   let n = 1;
@@ -4932,8 +4932,8 @@ function addPlacementAt(variantId, x, y, snap) {
     variant_id: v.id,
     slot_id: null,
     cell_code: null,
-    x: snap ? snapV(x, st) : x,
-    y: snap ? snapV(y, st) : y,
+    x: snap ? snapV(x, st4) : x,
+    y: snap ? snapV(y, st4) : y,
     rotation: 0,
     code: pre + "-" + pad2(n),
     name: v.name,
@@ -4953,9 +4953,9 @@ function addPlacementAt(variantId, x, y, snap) {
   }
   S.sel = { kind: "placement", id: pl.id };
   E.commit({});
-  const st2 = S.issues.byKey.get("p:" + pl.id);
-  if (st2) {
-    toast(st2.items[0].msg, "warn");
+  const st22 = S.issues.byKey.get("p:" + pl.id);
+  if (st22) {
+    toast(st22.items[0].msg, "warn");
   }
 }
 function addSlotAt(spec, x, y) {
@@ -4994,10 +4994,10 @@ function nudge(dx, dy) {
     return;
   }
   const kind = S.sel.kind;
-  const st = ly.grid_step || 0.5;
+  const st4 = ly.grid_step || 0.5;
   beginEdit(kind, rec);
-  rec.x = rnd(rec.x + dx * st, 4);
-  rec.y = rnd(rec.y + dy * st, 4);
+  rec.x = rnd(rec.x + dx * st4, 4);
+  rec.y = rnd(rec.y + dy * st4, 4);
   liveEdit();
   endEdit();
   syncPropsValues();
@@ -5376,8 +5376,8 @@ function camTarget() {
   if (!V.ok) {
     return { x: S.site.building.length / 2, y: S.site.building.width / 2 };
   }
-  const t = V.controls.target;
-  return { x: t.x, y: -t.z };
+  const t2 = V.controls.target;
+  return { x: t2.x, y: -t2.z };
 }
 var FONT = '"Arial Narrow", "Roboto Condensed", system-ui, sans-serif';
 function makeLabel(text, h0, max, color, flatW) {
@@ -5483,16 +5483,16 @@ function dispose(root) {
 }
 var genericCategory = (cat) => cat === "cabinet" ? "panel" : cat || "other";
 function variantBody(cat, v, norm, ghost) {
-  const L2 = v.length / 1e3;
-  const W = v.width / 1e3;
+  const L3 = v.length / 1e3;
+  const W2 = v.width / 1e3;
   const H = v.height / 1e3;
   if (norm) {
-    return modelBody(norm, L2, H, W, ghost);
+    return modelBody(norm, L3, H, W2, ghost);
   }
   const ang = FRONT_ANGLE[v.front_side || "s"];
   const swap = ang === 90 || ang === 270;
   const g3 = new THREE.Group();
-  const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W : L2, w: swap ? L2 : W, h: H }, THREE);
+  const b = host.buildGenericModel(genericCategory(cat), { l: swap ? W2 : L3, w: swap ? L3 : W2, h: H }, THREE);
   if (ghost) {
     b.traverse((c) => {
       if (c.isMesh) {
@@ -5502,14 +5502,14 @@ function variantBody(cat, v, norm, ghost) {
   }
   b.rotation.y = rad(ang);
   g3.add(b);
-  g3.add(boxEdge(L2, H, W, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
+  g3.add(boxEdge(L3, H, W2, 0, H / 2, 0, ghost ? V.mat.edgeGhost : V.mat.edge));
   return g3;
 }
-function modelBody(m, L2, H, W, ghost) {
+function modelBody(m, L3, H, W2, ghost) {
   const g3 = new THREE.Group();
   const o = m.obj.clone(true);
   const sz = m.size;
-  o.scale.set(L2 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W / Math.max(sz.z, 1e-6));
+  o.scale.set(L3 / Math.max(sz.x, 1e-6), H / Math.max(sz.y, 1e-6), W2 / Math.max(sz.z, 1e-6));
   if (ghost) {
     o.traverse((c) => {
       if (c.isMesh) {
@@ -5703,8 +5703,8 @@ function buildSlotView(s, opts2) {
     root.add(view.fillSel);
     view.fill = view.fillSel;
     view.foot = null;
-    const t = s.params.title || s.code_prefix;
-    const lb = makeLabel(t, clamp(Math.min(d.W * 0.3, d.L * 0.2), 0.8, 2.4), 420, null, d.L * 0.92);
+    const t2 = s.params.title || s.code_prefix;
+    const lb = makeLabel(t2, clamp(Math.min(d.W * 0.3, d.L * 0.2), 0.8, 2.4), 420, null, d.L * 0.92);
     lb.position.set(0, 0.03, 0);
     root.add(lb);
     view.label = lb;
@@ -5818,7 +5818,7 @@ function boundsBox(ly) {
 function buildDecor(ly) {
   const g3 = new THREE.Group();
   const own = [];
-  const active = ly.id === S.ui.layer;
+  const active2 = ly.id === S.ui.layer;
   const el = ly.elevation;
   const bp = boundsBox(ly);
   const add = (o, ownGeo) => {
@@ -5829,7 +5829,7 @@ function buildDecor(ly) {
     return o;
   };
   const col = new THREE.Color(ly.color);
-  if (active) {
+  if (active2) {
     const ds = gridStepDisplay(ly.grid_step || 1, Math.max(bp.x1 - bp.x0, bp.y1 - bp.y0));
     const mj = [];
     const mn = [];
@@ -5852,19 +5852,19 @@ function buildDecor(ly) {
     }
   }
   const outline = (yv) => {
-    const poly = ly.bounds && ly.bounds.length >= 3 ? ly.bounds : [
+    const poly2 = ly.bounds && ly.bounds.length >= 3 ? ly.bounds : [
       [bp.x0, bp.y0],
       [bp.x1, bp.y0],
       [bp.x1, bp.y1],
       [bp.x0, bp.y1]
     ];
-    return lineGeo(poly.flatMap(([x, y]) => [x, yv, -y]));
+    return lineGeo(poly2.flatMap(([x, y]) => [x, yv, -y]));
   };
   if (el > 0.01) {
-    const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active ? 0.06 : 0.015, depthWrite: false, side: THREE.DoubleSide });
+    const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active2 ? 0.06 : 0.015, depthWrite: false, side: THREE.DoubleSide });
     own.push(vm);
     g3.add(planeMesh(bp.x1 - bp.x0, bp.y1 - bp.y0, (bp.x0 + bp.x1) / 2, el, -(bp.y0 + bp.y1) / 2, vm));
-    const lm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: active ? 0.9 : 0.45 });
+    const lm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: active2 ? 0.9 : 0.45 });
     own.push(lm);
     add(new THREE.LineLoop(outline(el), lm), 1);
     const vl = [];
@@ -5884,16 +5884,16 @@ function buildDecor(ly) {
     ol.computeLineDistances();
     add(ol, 1);
   }
-  const zone2 = (x0, y0, x1, y1, color, op, lab) => {
-    const fm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: active ? op : op * 0.4, depthWrite: false, side: THREE.DoubleSide });
+  const zone2 = (x0, y0, x1, y1, color, op2, lab) => {
+    const fm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: active2 ? op2 : op2 * 0.4, depthWrite: false, side: THREE.DoubleSide });
     own.push(fm);
     g3.add(planeMesh(Math.abs(x1 - x0), Math.abs(y1 - y0), (x0 + x1) / 2, el + 0.018, -(y0 + y1) / 2, fm));
-    const lm = new THREE.LineDashedMaterial({ color, dashSize: 0.4, gapSize: 0.25, transparent: true, opacity: active ? 0.9 : 0.35 });
+    const lm = new THREE.LineDashedMaterial({ color, dashSize: 0.4, gapSize: 0.25, transparent: true, opacity: active2 ? 0.9 : 0.35 });
     own.push(lm);
     const ol = new THREE.LineLoop(lineGeo([x0, el + 0.02, -y0, x1, el + 0.02, -y0, x1, el + 0.02, -y1, x0, el + 0.02, -y1]), lm);
     ol.computeLineDistances();
     add(ol, 1);
-    if (lab && active) {
+    if (lab && active2) {
       const lb = makeLabel(lab, 0.7, 70, color);
       lb.position.set((x0 + x1) / 2, el + 0.4, -(y0 + y1) / 2);
       g3.add(lb);
@@ -6104,8 +6104,8 @@ function updateVisual() {
   const recolor = V.colorSig !== sig;
   V.colorSig = sig;
   for (const [key, v] of V.views) {
-    const st = S.issues.byKey.get(key);
-    const lvl = st ? st.level : "normal";
+    const st4 = S.issues.byKey.get(key);
+    const lvl = st4 ? st4.level : "normal";
     const isSel = keys.has(key);
     const unsaved = S.unsaved.has(key);
     if (v.foot) {
@@ -6280,11 +6280,11 @@ function pickCandidates(e) {
     if (!ly || !isLayerVisible(ly)) {
       continue;
     }
-    const active = view.layerId === S.ui.layer;
-    if (!active && (view.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
+    const active2 = view.layerId === S.ui.layer;
+    if (!active2 && (view.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
       continue;
     }
-    const tier = active ? 0 : canEditLayer(ly) ? 1 : 2;
+    const tier = active2 ? 0 : canEditLayer(ly) ? 1 : 2;
     out.push({ ref: ref2, view, hit: h0, tier, area: view.g.L * view.g.W, kind: view.kind === "placement" ? 0 : 1 });
   }
   out.sort((a, b) => a.tier - b.tier || a.area - b.area || a.kind - b.kind || a.hit.distance - b.hit.distance);
@@ -6308,7 +6308,7 @@ var rafLive = /* @__PURE__ */ (() => {
 })();
 function initPointer() {
   const cv = V.canvas;
-  const listeners = {
+  const listeners2 = {
     pointerdown: onDown,
     pointermove: onMove,
     pointerup: onUp,
@@ -6334,8 +6334,8 @@ function initPointer() {
       }
     }
   };
-  for (const [t, fn] of Object.entries(listeners)) {
-    cv.addEventListener(t, fn);
+  for (const [t2, fn] of Object.entries(listeners2)) {
+    cv.addEventListener(t2, fn);
   }
 }
 function onDown(e) {
@@ -6473,9 +6473,9 @@ function onMove(e) {
   if (!pp) {
     return;
   }
-  const st = e.altKey ? 0.01 : snapStep(d.rec);
-  d.rec.x = snapV(d.start.x + (pp.x - d.pt0.x), st);
-  d.rec.y = snapV(d.start.y + (pp.y - d.pt0.y), st);
+  const st4 = e.altKey ? 0.01 : snapStep(d.rec);
+  d.rec.x = snapV(d.start.x + (pp.x - d.pt0.x), st4);
+  d.rec.y = snapV(d.start.y + (pp.y - d.pt0.y), st4);
   const view = V.views.get(d.key);
   if (view) {
     poseView(view, d.rec);
@@ -6596,7 +6596,7 @@ function finishMove(d) {
     S.issues = after;
     updateVisual();
   }
-  const first = items.map((it) => S.issues.byKey.get(it.key)).find((st) => st && st.level !== "block");
+  const first = items.map((it) => S.issues.byKey.get(it.key)).find((st4) => st4 && st4.level !== "block");
   if (first) {
     toast(first.items[0].msg, "warn");
   }
@@ -6677,13 +6677,13 @@ function assignSlot(pl) {
     return;
   }
   const g3 = pGeom(pl, v);
-  let found = null;
+  let found2 = null;
   for (const s of S.slots) {
     if (s.template === "machine_spot" && s.layer_id === pl.layer_id && polygonContains(sGeom(s).poly, [g3.cx, g3.cy], 1e-6)) {
-      found = s;
+      found2 = s;
     }
   }
-  pl.slot_id = found ? found.id : null;
+  pl.slot_id = found2 ? found2.id : null;
 }
 function startPlacing(spec) {
   cancelModes();
@@ -6723,40 +6723,40 @@ function startPlacing(spec) {
   E.renderVTools();
 }
 function movePlacing(e) {
-  const P = V.placing;
-  if (!P) {
+  const P2 = V.placing;
+  if (!P2) {
     return;
   }
-  const ly = layerOf(P.rec.layer_id);
+  const ly = layerOf(P2.rec.layer_id);
   const pt = floorPoint(e, ly.elevation);
   if (!pt) {
     return;
   }
-  const st = e.altKey ? 0.01 : ly.grid_step || 0.5;
-  P.rec.x = snapV(pt.x, st);
-  P.rec.y = snapV(pt.y, st);
-  poseView(P.view, P.rec);
+  const st4 = e.altKey ? 0.01 : ly.grid_step || 0.5;
+  P2.rec.x = snapV(pt.x, st4);
+  P2.rec.y = snapV(pt.y, st4);
+  poseView(P2.view, P2.rec);
   liveGhost();
 }
 function liveGhost() {
-  const P = V.placing;
-  if (!P) {
+  const P2 = V.placing;
+  if (!P2) {
     return;
   }
-  const isSlot = !!P.rec.template;
+  const isSlot = !!P2.rec.template;
   const arr = isSlot ? S.slots : S.placements;
   const idx = isSlot ? S.sIdx : S.pIdx;
-  arr.push(P.rec);
-  idx.set("tmp", P.rec);
+  arr.push(P2.rec);
+  idx.set("tmp", P2.rec);
   const res = runLive();
   arr.pop();
   idx.delete("tmp");
   const key = (isSlot ? "s:" : "p:") + "tmp";
-  const st = res.byKey.get(key);
-  const lvl = st ? st.level : "normal";
-  P.lvl = lvl;
-  P.issues = st ? st.items : [];
-  const v = P.view;
+  const st4 = res.byKey.get(key);
+  const lvl = st4 ? st4.level : "normal";
+  P2.lvl = lvl;
+  P2.issues = st4 ? st4.items : [];
+  const v = P2.view;
   if (v.foot) {
     v.foot.material = V.mat.dash[lvl] || V.mat.dash.normal;
   }
@@ -6767,18 +6767,18 @@ function liveGhost() {
   requestRender();
 }
 function placeClick(keep) {
-  const P = V.placing;
-  if (!P) {
+  const P2 = V.placing;
+  if (!P2) {
     return;
   }
-  if (P.lvl === "block") {
-    toast("Заблоковано: " + P.issues.find((i) => i.level === "block").msg, "err");
+  if (P2.lvl === "block") {
+    toast("Заблоковано: " + P2.issues.find((i) => i.level === "block").msg, "err");
     return;
   }
-  if (P.kind === "placement") {
-    E.addPlacementAt(P.spec.variantId, P.rec.x, P.rec.y, false);
+  if (P2.kind === "placement") {
+    E.addPlacementAt(P2.spec.variantId, P2.rec.x, P2.rec.y, false);
   } else {
-    E.addSlotAt(P.spec, P.rec.x, P.rec.y);
+    E.addSlotAt(P2.spec, P2.rec.x, P2.rec.y);
   }
   if (!keep) {
     cancelModes();
@@ -6893,21 +6893,21 @@ function commit(o) {
   E.renderAll();
   scheduleSave();
 }
-function applyLoaded(st, keep) {
-  S.site = st.site;
-  S.layers = st.layers;
-  S.slots = st.slots;
-  S.placements = st.placements;
-  S.catalog = st.catalog;
-  S.settings = st.settings;
-  S.versions = st.versions;
-  S.rights = st.rights;
-  S.app.active = st.site.id;
-  const entry = S.app.sites.find((s) => s.id === st.site.id);
+function applyLoaded(st4, keep) {
+  S.site = st4.site;
+  S.layers = st4.layers;
+  S.slots = st4.slots;
+  S.placements = st4.placements;
+  S.catalog = st4.catalog;
+  S.settings = st4.settings;
+  S.versions = st4.versions;
+  S.rights = st4.rights;
+  S.app.active = st4.site.id;
+  const entry = S.app.sites.find((s) => s.id === st4.site.id);
   if (entry) {
-    entry.name = st.site.name;
+    entry.name = st4.site.name;
   }
-  ctx.adapter.autosaveMs = st.site.settings?.autosave_ms ?? 1500;
+  ctx.adapter.autosaveMs = st4.site.settings?.autosave_ms ?? 1500;
   reindex();
   S.sel = keep?.sel && (keep.sel.kind === "slot" ? S.sIdx : S.pIdx).has(keep.sel.id) ? keep.sel : null;
   S.multi = [];
@@ -6941,11 +6941,11 @@ async function afterSiteLoad(keep) {
   await Promise.all([loadVariantModels(), E.loadUnderlays()]);
 }
 async function openSite(id, keep) {
-  const st = await ctx.adapter.load(id);
+  const st4 = await ctx.adapter.load(id);
   if (!ctx) {
     return;
   }
-  applyLoaded(st, keep);
+  applyLoaded(st4, keep);
   lsSet(host.siteKey, String(id));
   await afterSiteLoad(keep);
 }
@@ -7071,11 +7071,11 @@ async function loadVariantModels() {
   }
 }
 var themeEl = () => host.themeTarget || ROOT.el;
-function applyTheme(t) {
-  themeEl().dataset.theme = t;
-  lsSet(host.themeKey, t);
-  host.onTheme?.(t);
-  V.theme = t;
+function applyTheme(t2) {
+  themeEl().dataset.theme = t2;
+  lsSet(host.themeKey, t2);
+  host.onTheme?.(t2);
+  V.theme = t2;
   if (V.ok) {
     E.recolorMats();
     E.syncScene(true);
@@ -7135,8 +7135,8 @@ function onKey(e) {
   if (!ctx || !ROOT.el || !ROOT.el.isConnected) {
     return;
   }
-  const t = e.target;
-  const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
+  const t2 = e.target;
+  const typing = t2 && (t2.tagName === "INPUT" || t2.tagName === "TEXTAREA" || t2.tagName === "SELECT");
   if ($("dialog[open]") || document.querySelector(".modal.show, .o_dialog")) {
     return;
   }
@@ -7387,11 +7387,11 @@ var rectOf = (a) => ({
   y0: Math.min(a.y0, a.y1),
   y1: Math.max(a.y0, a.y1)
 });
-function polygonToRect(poly) {
-  if (!poly || poly.length !== 4) {
+function polygonToRect(poly2) {
+  if (!poly2 || poly2.length !== 4) {
     return null;
   }
-  const [p0, p1, p2, p3] = poly;
+  const [p0, p1, p2, p3] = poly2;
   const ex2 = p1[0] - p0[0];
   const ey = p1[1] - p0[1];
   const fx = p2[0] - p1[0];
@@ -7528,10 +7528,10 @@ var replenishToApi = (r) => ({
   max_qty: r.max_qty || 0,
   deleted: !!r.deleted
 });
-function attachRules(st, rules) {
+function attachRules(st4, rules) {
   const r = rules || {};
-  Object.defineProperty(st.site, "rules", { value: { putaway: (r.putaway || []).map(putawayFromApi), replenish: (r.replenish || []).map(replenishFromApi) }, writable: true, configurable: true, enumerable: false });
-  return st;
+  Object.defineProperty(st4.site, "rules", { value: { putaway: (r.putaway || []).map(putawayFromApi), replenish: (r.replenish || []).map(replenishFromApi) }, writable: true, configurable: true, enumerable: false });
+  return st4;
 }
 function slotFromApi(s, layerUid) {
   const rec = {
@@ -7561,11 +7561,11 @@ function slotFromApi(s, layerUid) {
     depth_mode: s.depth_mode || null
   };
   if (s.template === "zone") {
-    const poly = rec.params.polygon || [];
-    const rc = polygonToRect(poly);
+    const poly2 = rec.params.polygon || [];
+    const rc = polygonToRect(poly2);
     const old = rec.params;
-    const xs = poly.map((p) => p[0]);
-    const ys = poly.map((p) => p[1]);
+    const xs = poly2.map((p) => p[0]);
+    const ys = poly2.map((p) => p[1]);
     if (rc) {
       rec.x = rnd(rc.cx, 6);
       rec.y = rnd(rc.cy, 6);
@@ -7577,7 +7577,7 @@ function slotFromApi(s, layerUid) {
       rec.rotation = 0;
       rec.params = { length: Math.max(...xs) - Math.min(...xs), width: Math.max(...ys) - Math.min(...ys) };
       rec.locked = true;
-      rec.polygon = clone(poly);
+      rec.polygon = clone(poly2);
     }
     rec.params.title = s.note || old.title || s.code_prefix;
     rec.params.color = old.color || null;
@@ -7799,6 +7799,7 @@ var OdooAdapter = class extends BaseAdapter {
     this.siteId = null;
     Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true });
     Object.assign(this.capabilities, { odoo_import: true, files: true });
+    Object.assign(this.capabilities, { variants: true, comments: true, locks: true, ...o.capabilities || {} });
     this.groupIds = {};
     this._seq = 0;
     this._resetTracking();
@@ -7846,16 +7847,16 @@ var OdooAdapter = class extends BaseAdapter {
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
-    const st = attachRules(normalizeLoaded(res), res.rules);
-    this.reset(id, st);
-    return st;
+    const st4 = attachRules(normalizeLoaded(res), res.rules);
+    this.reset(id, st4);
+    return st4;
   }
   /** Запам'ятовує серверні id/etag і «тіньовий» знімок сутностей стану. */
-  reset(siteId, st) {
+  reset(siteId, st4) {
     this._resetTracking();
     this.siteId = siteId;
     const groupIds = {};
-    for (const l of st.layers) {
+    for (const l of st4.layers) {
       this._bind("td.layer", l.id, l.rid, l.etag);
       for (const g3 of l.edit_groups || []) {
         if (g3.role) {
@@ -7864,24 +7865,24 @@ var OdooAdapter = class extends BaseAdapter {
       }
     }
     this.groupIds = { ...this.groupIds, ...groupIds };
-    for (const s of st.slots) {
+    for (const s of st4.slots) {
       this._bind("td.slot", s.id, s.rid, s.etag);
     }
-    for (const p of st.placements) {
+    for (const p of st4.placements) {
       this._bind("td.placement", p.id, p.rid, p.etag);
     }
-    for (const [check, c] of Object.entries(st.settings.checks)) {
+    for (const [check, c] of Object.entries(st4.settings.checks)) {
       if (c.id != null) {
         this._bind("td.check.config", check, c.id, null);
       }
     }
-    for (const r of st.site.rules?.putaway || []) {
+    for (const r of st4.site.rules?.putaway || []) {
       this._bind("td.putaway.rule", r.id, r.rid, r.etag);
     }
-    for (const r of st.site.rules?.replenish || []) {
+    for (const r of st4.site.rules?.replenish || []) {
       this._bind("td.replenish.rule", r.id, r.rid, r.etag);
     }
-    this._snapshot(st);
+    this._snapshot(st4);
     this._setStatus("saved");
   }
   _bind(model, uid2, rid, etag) {
@@ -7894,27 +7895,27 @@ var OdooAdapter = class extends BaseAdapter {
       this.etags.set(key, etag);
     }
   }
-  _snapshot(st) {
+  _snapshot(st4) {
     this.shadow.clear();
-    for (const e of this._entities(st)) {
+    for (const e of this._entities(st4)) {
       this.shadow.set(e.key, JSON.stringify(e.vals));
     }
   }
-  _entities(st) {
+  _entities(st4) {
     const out = [];
-    for (const l of st.layers) {
+    for (const l of st4.layers) {
       out.push({ model: "td.layer", uid: l.id, key: "td.layer:" + l.id, vals: layerToApi(l, this.groupIds) });
     }
-    for (const s of st.slots) {
+    for (const s of st4.slots) {
       out.push({ model: "td.slot", uid: s.id, key: "td.slot:" + s.id, vals: slotToApi(s) });
     }
-    for (const p of st.placements) {
+    for (const p of st4.placements) {
       out.push({ model: "td.placement", uid: p.id, key: "td.placement:" + p.id, vals: placementToApi(p) });
     }
-    for (const r of st.site?.rules?.putaway || []) {
+    for (const r of st4.site?.rules?.putaway || []) {
       out.push({ model: "td.putaway.rule", uid: r.id, key: "td.putaway.rule:" + r.id, vals: putawayToApi(r) });
     }
-    for (const r of st.site?.rules?.replenish || []) {
+    for (const r of st4.site?.rules?.replenish || []) {
       out.push({ model: "td.replenish.rule", uid: r.id, key: "td.replenish.rule:" + r.id, vals: replenishToApi(r) });
     }
     return out;
@@ -7926,27 +7927,27 @@ var OdooAdapter = class extends BaseAdapter {
    * Автозбереження спрацьовує через `autosaveMs`.
    * @param {{model: string, op: 'create'|'write'|'unlink', uid?: string, id?: number, etag?: string, vals?: object}} op
    */
-  queue(op) {
-    const { model } = op;
-    const uid2 = op.uid ?? op.tmp;
-    const key = `${model}:${uid2 ?? "#" + op.id}`;
-    if (op.id != null && uid2 == null) {
-      this._bind(model, `#${op.id}`, op.id, op.etag);
+  queue(op2) {
+    const { model } = op2;
+    const uid2 = op2.uid ?? op2.tmp;
+    const key = `${model}:${uid2 ?? "#" + op2.id}`;
+    if (op2.id != null && uid2 == null) {
+      this._bind(model, `#${op2.id}`, op2.id, op2.etag);
     }
     const cur = this.pending.get(key);
-    if (op.op === "create") {
-      this.pending.set(key, { model, kind: "create", uid: uid2, vals: { ...op.vals }, seq: this._seq++ });
-    } else if (op.op === "write") {
+    if (op2.op === "create") {
+      this.pending.set(key, { model, kind: "create", uid: uid2, vals: { ...op2.vals }, seq: this._seq++ });
+    } else if (op2.op === "write") {
       if (cur && (cur.kind === "create" || cur.kind === "write")) {
-        Object.assign(cur.vals, op.vals);
+        Object.assign(cur.vals, op2.vals);
       } else if (!cur) {
-        this.pending.set(key, { model, kind: "write", uid: uid2, id: op.id, etag: op.etag, vals: { ...op.vals }, seq: this._seq++ });
+        this.pending.set(key, { model, kind: "write", uid: uid2, id: op2.id, etag: op2.etag, vals: { ...op2.vals }, seq: this._seq++ });
       }
-    } else if (op.op === "unlink") {
+    } else if (op2.op === "unlink") {
       if (cur && cur.kind === "create") {
         this.pending.delete(key);
       } else {
-        this.pending.set(key, { model, kind: "unlink", uid: uid2, id: op.id, etag: cur?.etag ?? op.etag, seq: this._seq++ });
+        this.pending.set(key, { model, kind: "unlink", uid: uid2, id: op2.id, etag: cur?.etag ?? op2.etag, seq: this._seq++ });
       }
     }
     if (this.pending.size) {
@@ -7955,18 +7956,18 @@ var OdooAdapter = class extends BaseAdapter {
     }
   }
   /** Контракт: порівнює стан із відомим серверу й ставить зміни в чергу; `now` — відправити негайно. */
-  save(st, { now = false } = {}) {
-    this.sync(st);
+  save(st4, { now = false } = {}) {
+    this.sync(st4);
     return now ? this.flush() : void 0;
   }
   /**
    * Порівнює стан редактора (шари, місця, розміщення) з тим, що вже знає сервер, і ставить у чергу create/write/unlink
    * (write — лише змінені поля). Повертає кількість поставлених операцій.
    */
-  sync(st) {
+  sync(st4) {
     let n = 0;
     const seen = /* @__PURE__ */ new Set();
-    for (const e of this._entities(st)) {
+    for (const e of this._entities(st4)) {
       seen.add(e.key);
       const before = this.shadow.get(e.key);
       if (before === void 0) {
@@ -8048,15 +8049,15 @@ var OdooAdapter = class extends BaseAdapter {
         continue;
       }
       const etag = this.etags.get(key) ?? e.etag;
-      let op;
+      let op2;
       if (e.kind === "create") {
-        op = { model: e.model, op: "create", tmp: e.uid, vals: this._resolve(e.vals) };
+        op2 = { model: e.model, op: "create", tmp: e.uid, vals: this._resolve(e.vals) };
       } else if (e.kind === "write") {
-        op = { model: e.model, op: "write", id, ...etag ? { etag } : {}, vals: this._resolve(e.vals) };
+        op2 = { model: e.model, op: "write", id, ...etag ? { etag } : {}, vals: this._resolve(e.vals) };
       } else {
-        op = { model: e.model, op: "unlink", id, ...etag ? { etag } : {} };
+        op2 = { model: e.model, op: "unlink", id, ...etag ? { etag } : {} };
       }
-      batch.push({ key, entry: e, op });
+      batch.push({ key, entry: e, op: op2 });
     }
     for (const b of batch) {
       this.pending.delete(b.key);
@@ -8288,6 +8289,37 @@ var OdooAdapter = class extends BaseAdapter {
     }
     return res;
   }
+  /**
+   * Спільна робота й версії (S6): API-21 `/variants`, API-22 `/comments`, API-23 `/locks`, API-24 `/version/view|checkpoint`. Усі повертають
+   * відповідь сервера або кидають StoreError(code, message) з усіма полями відповіді (`locks`, `lock` у `locked`).
+   * `variants({op: list|create|activate|rename|delete|end_training, id?, name?, metrics?, training?, activate?, keep?})`
+   *   → {variants: [{id, name, is_training, active, origin_id, base_version, metrics, by, at}], active_id, training_id, max, can_edit, reload?};
+   * `comments({op: list|create|update|resolve|delete|assignees, id?, vals?, text?, resolved?})` → {comments: [...], at} / {users, me};
+   * `locks({op: list|acquire|release, zone_uid?})` → {locks: [{zone_uid, user, mine, expires_at}], ttl, heartbeat, now};
+   * `versions({op: list|view|checkpoint|note, version_id?, note?})` → {versions} / {version, view} / {version}.
+   */
+  async _collab(route, req) {
+    const res = await this._call(route, { site_id: this.siteId, ...req });
+    if (!res.ok) {
+      throw new StoreError(res.code, res.message, res);
+    }
+    return res;
+  }
+  async variants(req) {
+    return await this._collab("/f3d/constructor/variants", req);
+  }
+  async comments(req) {
+    return await this._collab("/f3d/constructor/comments", req);
+  }
+  async locks(req) {
+    return await this._collab("/f3d/constructor/locks", req);
+  }
+  async versions({ op: op2 = "list", ...req } = {}) {
+    if (op2 === "list" || op2 === "view") {
+      return await this._collab("/f3d/constructor/version/view", req);
+    }
+    return await this._collab("/f3d/constructor/version/checkpoint", { op: op2 === "checkpoint" ? "create" : op2, ...req });
+  }
   /** Пошук «де лежить» (API-14 `/stock/find`): `{q, mode}` → {hits: [{code, items: [{product, ref, qty, lot, package}]}]}. */
   async find({ q, mode = "any" } = {}) {
     const res = await this._call("/f3d/constructor/stock/find", { site_id: this.siteId, q, mode });
@@ -8443,8 +8475,8 @@ var OdooAdapter = class extends BaseAdapter {
    * parent, parent_id, usage, barcode, qty, active}], truncated, next}}; `{op: "sync"}` → те саме + {diff: {appeared, disappeared, renamed, moved},
    * baseline: "created"|"existing"}; `{op: "baseline"}` — база порівняння (`site.odoo_baseline_id`) стає нинішньою стрічкою.
    */
-  async locations({ op = "feed", ...rest } = {}) {
-    const res = await this._call("/f3d/constructor/odoo/locations", { site_id: this.siteId, op, ...rest });
+  async locations({ op: op2 = "feed", ...rest } = {}) {
+    const res = await this._call("/f3d/constructor/odoo/locations", { site_id: this.siteId, op: op2, ...rest });
     if (!res.ok) {
       throw new StoreError(res.code, res.message);
     }
@@ -8840,29 +8872,29 @@ function fromAddr(addr, depthMode) {
     depth_mode: depthMode || ""
   };
 }
-function toAddr(st, { site = false, zone: zone2 = false, row = false } = {}) {
+function toAddr(st4, { site = false, zone: zone2 = false, row = false } = {}) {
   let out = {};
-  if (st.mode === "own") {
-    out = { ...st.addr };
-  } else if (st.mode === "legacy" && !site) {
+  if (st4.mode === "own") {
+    out = { ...st4.addr };
+  } else if (st4.mode === "legacy" && !site) {
     out = { legacy: true };
   }
-  if (zone2 && st.zone_code) {
-    out.zone_code = st.zone_code;
+  if (zone2 && st4.zone_code) {
+    out.zone_code = st4.zone_code;
   }
-  if (row && st.row_no) {
-    out.row_no = st.row_no;
+  if (row && st4.row_no) {
+    out.row_no = st4.row_no;
   }
   return normalizeAddr(out);
 }
 function addrEditor(o) {
-  const { st, dis } = o;
+  const { st: st4, dis } = o;
   const box = h("div", { class: "fcol", "data-role": "addr-editor" });
   const change = () => {
     let err = null;
     try {
-      if (st.mode === "own") {
-        normalizeAddr(st.addr);
+      if (st4.mode === "own") {
+        normalizeAddr(st4.addr);
       }
     } catch (e) {
       if (!(e instanceof AddrError)) {
@@ -8872,7 +8904,7 @@ function addrEditor(o) {
     }
     o.onChange(err);
   };
-  const draw = () => {
+  const draw3 = () => {
     const modes = [
       ...o.mode === "site" ? [] : [["inherit", "Успадкувати"]],
       ["legacy", "Як зараз (ПРЕФІКС-B01-L1)"],
@@ -8881,23 +8913,23 @@ function addrEditor(o) {
     const kids = [
       fld(
         o.mode === "site" ? "Адресація кодів" : "Власні налаштування",
-        selectEl(modes, st.mode, (v) => {
-          st.mode = v;
-          draw();
+        selectEl(modes, st4.mode, (v) => {
+          st4.mode = v;
+          draw3();
           change();
         }, dis, "Режим адресації")
       )
     ];
-    if (st.mode === "own") {
-      const a = st.addr;
+    if (st4.mode === "own") {
+      const a = st4.addr;
       const presetKeys = Object.keys(PRESETS).filter((k) => k !== "legacy");
       kids.push(
         fld(
           "Пресет шаблону",
           selectEl([["", "—"], ...presetKeys.map((k) => [k, PRESET_LABELS[k]])], "", (v) => {
             if (v) {
-              st.addr = normalizeAddr(PRESETS[v]);
-              draw();
+              st4.addr = normalizeAddr(PRESETS[v]);
+              draw3();
               change();
             }
           }, dis, "Пресет шаблону")
@@ -8944,7 +8976,7 @@ function addrEditor(o) {
               if (v === "alpha" && a.seg[k].start < 1) {
                 a.seg[k].start = 1;
               }
-              draw();
+              draw3();
               change();
             }, dis, SEG_LABELS[k] + ": вид")),
             fld("Ширина", numInput({ value: a.seg[k].width, dis, min: 1, max: 8, step: 1, int: true, label: SEG_LABELS[k] + ": ширина", set: (v) => {
@@ -8960,29 +8992,29 @@ function addrEditor(o) {
       );
     }
     if (o.mode === "zone") {
-      kids.push(fld("Код зони замість номера", textInput({ value: st.zone_code, dis, label: "Код зони", f: "addr-zone-code", set: (v) => {
-        st.zone_code = v.trim();
+      kids.push(fld("Код зони замість номера", textInput({ value: st4.zone_code, dis, label: "Код зони", f: "addr-zone-code", set: (v) => {
+        st4.zone_code = v.trim();
         change();
       } }), "до 8 символів"));
     }
     if (o.mode === "slot" && o.row) {
-      kids.push(fld("Закріплений номер", numInput({ value: st.row_no, dis, min: 1, max: 9999, step: 1, int: true, label: "Номер ряду", set: (v) => {
-        st.row_no = v;
+      kids.push(fld("Закріплений номер", numInput({ value: st4.row_no, dis, min: 1, max: 9999, step: 1, int: true, label: "Номер ряду", set: (v) => {
+        st4.row_no = v;
         change();
       } }), "порожньо — за геометрією"));
     }
     kids.push(
       fld(
         "Остання локація в Odoo",
-        selectEl([["", o.mode === "site" ? "Ярус" : "Як у зони / площадки"], ...opts(DEPTH_MODES, DIR_LABELS.depth_mode).filter(([k]) => o.mode !== "site" || k !== "level")], st.depth_mode || "", (v) => {
-          st.depth_mode = v;
+        selectEl([["", o.mode === "site" ? "Ярус" : "Як у зони / площадки"], ...opts(DEPTH_MODES, DIR_LABELS.depth_mode).filter(([k]) => o.mode !== "site" || k !== "level")], st4.depth_mode || "", (v) => {
+          st4.depth_mode = v;
           change();
         }, dis, "Глибина локацій")
       )
     );
     box.replaceChildren(...K(kids));
   };
-  draw();
+  draw3();
   return box;
 }
 var hasConflicts = (pv) => Object.keys(pv.conflicts).length > 0 || pv.too_long.length > 0;
@@ -9031,20 +9063,20 @@ function previewBlock(compute) {
 }
 function renderSiteBlock(root) {
   const dis = !(S.app.mode === "edit" && (S.rights.is_manager || (S.rights.roles || []).length));
-  const st = fromAddr(S.site.addr, S.site.depth_mode);
-  if (st.mode === "inherit") {
-    st.mode = "legacy";
+  const st4 = fromAddr(S.site.addr, S.site.depth_mode);
+  if (st4.mode === "inherit") {
+    st4.mode = "legacy";
   }
   let tree = S.site.loc_tree || "flat";
   let renumber = "new";
-  const hypo = () => ({ siteAddr: toAddr(st, { site: true }), siteDepth: st.depth_mode || "level" });
+  const hypo = () => ({ siteAddr: toAddr(st4, { site: true }), siteDepth: st4.depth_mode || "level" });
   const pvBox = previewBlock(() => previewScene(hypo()));
   const apply = h("button", { class: "fbtn primary", type: "button", id: "btnAddrApply", disabled: dis, onclick: () => applySite() }, "Застосувати");
   const upd = (err) => {
     apply.disabled = dis || !pvBox.render(err);
   };
   async function applySite() {
-    const vals = { addr: toAddr(st, { site: true }), depth_mode: st.depth_mode || "level", loc_tree: tree };
+    const vals = { addr: toAddr(st4, { site: true }), depth_mode: st4.depth_mode || "level", loc_tree: tree };
     const res = await E.runDialog("addr.applySite", { vals, renumber });
     if (res && res.ok) {
       toast(res.pinned ? `Адресацію застосовано; закріплено номерів: ${res.pinned}.` : "Адресацію застосовано.");
@@ -9060,7 +9092,7 @@ function renderSiteBlock(root) {
         h(
           "div",
           { class: "fcol" },
-          addrEditor({ st, mode: "site", dis, onChange: upd }),
+          addrEditor({ st: st4, mode: "site", dis, onChange: upd }),
           fld("Ієрархія локацій в Odoo", selectEl(opts(LOC_TREES, DIR_LABELS.loc_tree), tree, (v) => {
             tree = v;
           }, dis || !canManage(), "Ієрархія локацій")),
@@ -9083,16 +9115,16 @@ function renderSlotBlock(root, { rec }) {
   const ly = layerOf(rec.layer_id);
   const dis = !canEditLayer(ly) || !!rec.locked;
   const zone2 = rec.template === "zone";
-  const st = fromAddr(rec.addr, rec.depth_mode);
-  const draftAddr = () => toAddr(st, { zone: zone2, row: !zone2 });
-  const patch = (s) => s.id === rec.id ? { ...s, addr: draftAddr(), depth_mode: st.depth_mode || null } : null;
+  const st4 = fromAddr(rec.addr, rec.depth_mode);
+  const draftAddr = () => toAddr(st4, { zone: zone2, row: !zone2 });
+  const patch = (s) => s.id === rec.id ? { ...s, addr: draftAddr(), depth_mode: st4.depth_mode || null } : null;
   const pvBox = previewBlock(() => previewScene({ patch }));
   const apply = h("button", { class: "fbtn primary", type: "button", id: "btnAddrSlotApply", disabled: dis, onclick: () => applySlot() }, "Застосувати");
   const upd = (err) => {
     apply.disabled = dis || !pvBox.render(err);
   };
   async function applySlot() {
-    const res = await E.runDialog("addr.applySlot", { id: rec.id, addr: draftAddr(), depth_mode: st.depth_mode || null });
+    const res = await E.runDialog("addr.applySlot", { id: rec.id, addr: draftAddr(), depth_mode: st4.depth_mode || null });
     if (res && res.ok) {
       toast("Адресацію місця застосовано.");
     }
@@ -9111,7 +9143,7 @@ function renderSlotBlock(root, { rec }) {
         h(
           "div",
           { class: "fcol" },
-          addrEditor({ st, mode: zone2 ? "zone" : "slot", row: !zone2 && isRowSlot(rec), dis, onChange: upd }),
+          addrEditor({ st: st4, mode: zone2 ? "zone" : "slot", row: !zone2 && isRowSlot(rec), dis, onChange: upd }),
           pvBox.box,
           h(
             "div",
@@ -9379,14 +9411,14 @@ var CATALOG = ROWS.map(([ref2, name, group, template, shape, relevance, locKind,
 }));
 function allTypes(lib4) {
   const server = lib4 && lib4.types || [];
-  const codes = new Set(server.map((t) => t.code));
-  return [...server, ...CATALOG.filter((t) => !codes.has(t.code))];
+  const codes = new Set(server.map((t2) => t2.code));
+  return [...server, ...CATALOG.filter((t2) => !codes.has(t2.code))];
 }
 function typeOf(typeId, lib4) {
   if (typeId == null || typeId === "") {
     return null;
   }
-  return allTypes(lib4).find((t) => String(t.id) === String(typeId) || t.code === typeId) || null;
+  return allTypes(lib4).find((t2) => String(t2.id) === String(typeId) || t2.code === typeId) || null;
 }
 function startParams(type) {
   const p = { ...type.params || {} };
@@ -9404,14 +9436,14 @@ function startParams(type) {
 function filterTypes(types2, { q = "", group = "", minRelevance = 0 } = {}) {
   const needle = q.trim().toLowerCase();
   return types2.filter(
-    (t) => (!group || t.group === group) && t.relevance >= minRelevance && (!needle || [t.name, t.ref, t.code, t.description].some((x) => (x || "").toLowerCase().includes(needle)))
+    (t2) => (!group || t2.group === group) && t2.relevance >= minRelevance && (!needle || [t2.name, t2.ref, t2.code, t2.description].some((x) => (x || "").toLowerCase().includes(needle)))
   );
 }
 function customCopy(type, name) {
   const code = "c_" + newUid().slice(0, 10);
   return { ...JSON.parse(JSON.stringify(type)), id: code, code, ref: null, name: name || `${type.name} (копія)`, is_custom: true, relevance: type.relevance };
 }
-var isBuildingType = (t) => !t.template;
+var isBuildingType = (t2) => !t2.template;
 
 // core/constructor/types_ui.js
 var KINDS_LABEL = { stack: "Стос", area: "Майданчик", kit: "Візок / етажерка", bin: "Комірка (bin)", shelf: "Полиця", pallet_cell: "Комірка палети" };
@@ -9619,131 +9651,131 @@ async function openCatalog(adapter, args = {}) {
     await refreshLibrary(adapter);
   } catch {
   }
-  const st = { q: "", group: "", minRel: 1, sel: args.code || null, params: null, plan: false, zone: "", count: 4 };
+  const st4 = { q: "", group: "", minRel: 1, sel: args.code || null, params: null, plan: false, zone: "", count: 4 };
   const body = h("div", { class: "fcol", id: "catalogBody" });
   const grid = h("div", { id: "catalogGrid", style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "8px", alignContent: "start", overflow: "auto", maxHeight: "60vh", flex: "1 1 60%" } });
   const detail = h("div", { id: "catalogDetail", class: "fcol", style: { flex: "1 1 40%", minWidth: "260px", overflow: "auto", maxHeight: "60vh" } });
   const dlg = openDialog({ title: "Каталог типів місць", cls: "wide", body, actions: [{ label: "Закрити", value: "close" }] });
-  const choose = (t) => {
-    st.sel = t.code;
-    st.params = isBuildingType(t) ? {} : paramsForType(t);
-    st.plan = false;
-    draw();
+  const choose = (t2) => {
+    st4.sel = t2.code;
+    st4.params = isBuildingType(t2) ? {} : paramsForType(t2);
+    st4.plan = false;
+    draw3();
   };
-  const draw = () => {
+  const draw3 = () => {
     const all = types();
-    const list = filterTypes(all, { q: st.q, group: st.group, minRelevance: st.minRel });
+    const list = filterTypes(all, { q: st4.q, group: st4.group, minRelevance: st4.minRel });
     grid.replaceChildren(
       ...K(
         list.length ? null : h("div", { class: "empty", style: { gridColumn: "1 / -1" } }, "Типів за цим фільтром немає."),
         list.map(
-          (t2) => h(
+          (t3) => h(
             "div",
-            { class: "it" + (t2.code === st.sel ? " sel" : ""), role: "button", tabindex: 0, "data-type": t2.code, style: { border: "1px solid var(--line)", padding: "6px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "4px", background: t2.code === st.sel ? "var(--accent-soft)" : "" }, onclick: () => choose(t2), onkeydown: (e) => {
+            { class: "it" + (t3.code === st4.sel ? " sel" : ""), role: "button", tabindex: 0, "data-type": t3.code, style: { border: "1px solid var(--line)", padding: "6px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "4px", background: t3.code === st4.sel ? "var(--accent-soft)" : "" }, onclick: () => choose(t3), onkeydown: (e) => {
               if (e.key === "Enter") {
-                choose(t2);
+                choose(t3);
               }
             } },
-            h("div", { html: typeSvg(t2, 160, 90), style: { color: "var(--ink2)" } }),
-            h("div", { class: "frow" }, h("b", null, t2.ref || "★"), h("span", { class: "grow" }), h("span", { title: RELEVANCE_LABEL[t2.relevance] }, RELEVANCE_MARK[t2.relevance])),
-            h("div", { class: "small" }, t2.name)
+            h("div", { html: typeSvg(t3, 160, 90), style: { color: "var(--ink2)" } }),
+            h("div", { class: "frow" }, h("b", null, t3.ref || "★"), h("span", { class: "grow" }), h("span", { title: RELEVANCE_LABEL[t3.relevance] }, RELEVANCE_MARK[t3.relevance])),
+            h("div", { class: "small" }, t3.name)
           )
         )
       )
     );
-    const t = st.sel && all.find((x) => x.code === st.sel);
-    detail.replaceChildren(...K(t ? detailOf(t) : h("div", { class: "empty" }, "Оберіть тип: праворуч з'являться опис, параметри й дії.")));
+    const t2 = st4.sel && all.find((x) => x.code === st4.sel);
+    detail.replaceChildren(...K(t2 ? detailOf(t2) : h("div", { class: "empty" }, "Оберіть тип: праворуч з'являться опис, параметри й дії.")));
   };
-  function detailOf(t) {
-    const building = isBuildingType(t);
+  function detailOf(t2) {
+    const building = isBuildingType(t2);
     const dis = false;
-    const fp = !building ? footprint(t.template, st.params) : null;
+    const fp = !building ? footprint(t2.template, st4.params) : null;
     const zones = S.slots.filter((s) => s.template === "zone" && s.layer_id === S.ui.layer);
     const canWrite = canWriteLibrary();
     return [
-      h("div", { html: typeSvg(t, 280, 150), style: { color: "var(--ink2)", alignSelf: "center" } }),
-      h("h3", { class: "h3" }, `${t.ref || "Власний"} · ${t.name}`),
-      h("div", { class: "frow wrap" }, h("span", { class: "tag" }, GROUPS[t.group] || t.group), h("span", { class: "tag" }, building ? "об'єкт будівлі" : SLOT_TEMPLATES[t.template].label), h("span", { class: "tag" }, `${RELEVANCE_MARK[t.relevance]} ${RELEVANCE_LABEL[t.relevance]}`), t.loc_kind ? h("span", { class: "tag" }, KINDS_LABEL[t.loc_kind] || t.loc_kind) : null),
-      h("div", { class: "small", "data-role": "type-desc" }, t.description || ""),
+      h("div", { html: typeSvg(t2, 280, 150), style: { color: "var(--ink2)", alignSelf: "center" } }),
+      h("h3", { class: "h3" }, `${t2.ref || "Власний"} · ${t2.name}`),
+      h("div", { class: "frow wrap" }, h("span", { class: "tag" }, GROUPS[t2.group] || t2.group), h("span", { class: "tag" }, building ? "об'єкт будівлі" : SLOT_TEMPLATES[t2.template].label), h("span", { class: "tag" }, `${RELEVANCE_MARK[t2.relevance]} ${RELEVANCE_LABEL[t2.relevance]}`), t2.loc_kind ? h("span", { class: "tag" }, KINDS_LABEL[t2.loc_kind] || t2.loc_kind) : null),
+      h("div", { class: "small", "data-role": "type-desc" }, t2.description || ""),
       building ? h("div", { class: "note" }, "Ворота й доки — об'єкти будівлі (layer.items): їх додають у режимі «Будівля»; тут — лише довідка.") : K(
         h("div", { class: "small muted" }, `Габарит: ${fmt(fp.l, 2)} × ${fmt(fp.w, 2)} м`),
-        paramFields(t.template, st.params, { dis, onChange: () => {
-          draw2();
+        paramFields(t2.template, st4.params, { dis, onChange: () => {
+          draw22();
         } }),
-        optFields(t.template, st.params, { dis, onChange: () => {
-          draw2();
+        optFields(t2.template, st4.params, { dis, onChange: () => {
+          draw22();
         } }),
-        st.plan ? h(
+        st4.plan ? h(
           "div",
           { class: "note", id: "planBox" },
           h(
             "div",
             { class: "grid2" },
-            fld("Зона", selectEl([["", "Вільна частина шару"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st.zone, (v) => {
-              st.zone = v;
+            fld("Зона", selectEl([["", "Вільна частина шару"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st4.zone, (v) => {
+              st4.zone = v;
             }, false, "Зона")),
-            fld("Кількість", numInput({ value: st.count, min: 1, max: 200, step: 1, int: true, label: "Кількість", f: "plan-count", set: (v) => {
-              st.count = v;
+            fld("Кількість", numInput({ value: st4.count, min: 1, max: 200, step: 1, int: true, label: "Кількість", f: "plan-count", set: (v) => {
+              st4.count = v;
             } }))
           ),
           h(
             "div",
             { class: "frow", style: { marginTop: "6px" } },
             h("button", { class: "fbtn primary", type: "button", id: "btnPlanGo", onclick: () => {
-              if (placeTypeOnPlan(t, st.params, st.zone, st.count)) {
+              if (placeTypeOnPlan(t2, st4.params, st4.zone, st4.count)) {
                 dlg.close2("ok");
               }
             } }, "Додати"),
             h("button", { class: "fbtn", type: "button", onclick: () => {
-              st.plan = false;
-              draw();
+              st4.plan = false;
+              draw3();
             } }, "Скасувати")
           )
         ) : h(
           "div",
           { class: "frow wrap" },
           h("button", { class: "fbtn primary", type: "button", id: "btnAddToProject", onclick: () => {
-            if (placeTypeOnScene(t, st.params)) {
+            if (placeTypeOnScene(t2, st4.params)) {
               dlg.close2("ok");
             }
           } }, "Додати в проєкт"),
           h("button", { class: "fbtn", type: "button", id: "btnAddToPlan", onclick: () => {
-            st.plan = true;
-            draw();
+            st4.plan = true;
+            draw3();
           } }, "Додати на план")
         )
       ),
       h(
         "div",
         { class: "frow wrap" },
-        !building && !t.is_custom ? h("button", { class: "fbtn sm", type: "button", id: "btnToLibrary", disabled: !canWrite, title: canWrite ? "Власна копія типу в бібліотеці (каталог не змінюється)" : "Бібліотеку пише проєктувальник", onclick: () => saveCopy(t) }, "У бібліотеку") : null,
-        t.is_custom ? h("button", { class: "fbtn sm danger", type: "button", id: "btnTypeDelete", disabled: !canDeleteLibrary(), title: canDeleteLibrary() ? "" : "Видаляє менеджер", onclick: () => removeType(t) }, ic("trash"), "Видалити з бібліотеки") : null
+        !building && !t2.is_custom ? h("button", { class: "fbtn sm", type: "button", id: "btnToLibrary", disabled: !canWrite, title: canWrite ? "Власна копія типу в бібліотеці (каталог не змінюється)" : "Бібліотеку пише проєктувальник", onclick: () => saveCopy(t2) }, "У бібліотеку") : null,
+        t2.is_custom ? h("button", { class: "fbtn sm danger", type: "button", id: "btnTypeDelete", disabled: !canDeleteLibrary(), title: canDeleteLibrary() ? "" : "Видаляє менеджер", onclick: () => removeType(t2) }, ic("trash"), "Видалити з бібліотеки") : null
       )
     ];
   }
-  const draw2 = () => {
-    const t = types().find((x) => x.code === st.sel);
-    if (t) {
-      detail.replaceChildren(...K(detailOf(t)));
+  const draw22 = () => {
+    const t2 = types().find((x) => x.code === st4.sel);
+    if (t2) {
+      detail.replaceChildren(...K(detailOf(t2)));
     }
   };
-  async function saveCopy(t) {
+  async function saveCopy(t2) {
     try {
-      const cp = customCopy(t, st.params && t.template ? `${t.name} (мій)` : null);
-      cp.params = { ...clone(t.params || {}), ...clone(st.params || {}) };
+      const cp = customCopy(t2, st4.params && t2.template ? `${t2.name} (мій)` : null);
+      cp.params = { ...clone(t2.params || {}), ...clone(st4.params || {}) };
       const rec = await saveRecord(adapter, "type", { code: cp.code, name: cp.name, description: cp.description, group: cp.group, template: cp.template, shape: cp.shape, params: cp.params, relevance: cp.relevance, loc_kind: cp.loc_kind, is_custom: true });
       toast(`Тип «${rec.name}» збережено в бібліотеці.`);
-      st.sel = rec.code;
-      draw();
+      st4.sel = rec.code;
+      draw3();
     } catch (e) {
       toast(e.message || "Не вдалося зберегти тип у бібліотеці.", "err");
     }
   }
-  async function removeType(t) {
+  async function removeType(t2) {
     try {
-      await deleteRecord(adapter, "type", t.id);
-      st.sel = null;
-      draw();
+      await deleteRecord(adapter, "type", t2.id);
+      st4.sel = null;
+      draw3();
       toast("Тип видалено з бібліотеки.");
     } catch (e) {
       toast(e.message || "Не вдалося видалити тип.", "err");
@@ -9755,15 +9787,15 @@ async function openCatalog(adapter, args = {}) {
         "div",
         { class: "frow wrap" },
         h("input", { type: "search", placeholder: "Пошук типу…", "aria-label": "Пошук типу", id: "catalogSearch", style: { flex: "1 1 200px" }, oninput: (e) => {
-          st.q = e.target.value;
+          st4.q = e.target.value;
           drawGrid();
         } }),
-        selectEl([["", "Усі групи"], ...Object.entries(GROUPS)], st.group, (v) => {
-          st.group = v;
+        selectEl([["", "Усі групи"], ...Object.entries(GROUPS)], st4.group, (v) => {
+          st4.group = v;
           drawGrid();
         }, false, "Група"),
-        h("label", { class: "frow", style: { gap: "6px" } }, h("input", { type: "checkbox", id: "catalogRel", checked: st.minRel > 0, onchange: (e) => {
-          st.minRel = e.target.checked ? 1 : 0;
+        h("label", { class: "frow", style: { gap: "6px" } }, h("input", { type: "checkbox", id: "catalogRel", checked: st4.minRel > 0, onchange: (e) => {
+          st4.minRel = e.target.checked ? 1 : 0;
           drawGrid();
         } }), "Лише ті, що є на меблевій фабриці (● ○)")
       ),
@@ -9771,17 +9803,17 @@ async function openCatalog(adapter, args = {}) {
     )
   );
   const drawGrid = () => {
-    const list = filterTypes(types(), { q: st.q, group: st.group, minRelevance: st.minRel });
-    if (st.sel && !list.find((t) => t.code === st.sel)) {
-      st.sel = null;
+    const list = filterTypes(types(), { q: st4.q, group: st4.group, minRelevance: st4.minRel });
+    if (st4.sel && !list.find((t2) => t2.code === st4.sel)) {
+      st4.sel = null;
     }
-    draw();
+    draw3();
   };
-  const first = args.code && types().find((t) => t.code === args.code);
+  const first = args.code && types().find((t2) => t2.code === args.code);
   if (first) {
     choose(first);
   } else {
-    draw();
+    draw3();
   }
   return await new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
 }
@@ -9793,7 +9825,7 @@ function renderTypeBlock(root, { rec }) {
   }
   const ly = layerOf(rec.layer_id);
   const dis = !canEditLayer(ly) || !!rec.locked;
-  const opts2 = types().filter((t) => t.template === rec.template);
+  const opts2 = types().filter((t2) => t2.template === rec.template);
   const cur = typeOf(rec.type_id, lib());
   const ed = { begin: () => E.beginEdit("slot", rec), end: () => E.endEdit() };
   const note = h("div", { class: "small muted", "data-role": "type-note" });
@@ -9828,9 +9860,9 @@ function renderTypeBlock(root, { rec }) {
         h(
           "div",
           { class: "fcol" },
-          fld("Тип місця", selectEl([["", "— не задано —"], ...opts2.map((t) => [t.id, `${t.ref ? t.ref + " · " : ""}${t.name}`])], rec.type_id ?? "", (v) => {
+          fld("Тип місця", selectEl([["", "— не задано —"], ...opts2.map((t2) => [t2.id, `${t2.ref ? t2.ref + " · " : ""}${t2.name}`])], rec.type_id ?? "", (v) => {
             E.beginEdit("slot", rec);
-            const picked = opts2.find((t) => String(t.id) === v);
+            const picked = opts2.find((t2) => String(t2.id) === v);
             rec.type_id = picked ? picked.id : null;
             E.liveEdit();
             E.endEdit();
@@ -9852,42 +9884,42 @@ function usedTypes() {
     if (s.type_id == null) {
       continue;
     }
-    const t = typeOf(s.type_id, lib());
-    if (t) {
-      rows.set(t.code, { type: t, slots: [...rows.get(t.code)?.slots || [], s] });
+    const t2 = typeOf(s.type_id, lib());
+    if (t2) {
+      rows.set(t2.code, { type: t2, slots: [...rows.get(t2.code)?.slots || [], s] });
     }
   }
   for (const code of S.ui.projectTypes || []) {
-    const t = types().find((x) => x.code === code);
-    if (t && !rows.has(code)) {
-      rows.set(code, { type: t, slots: [] });
+    const t2 = types().find((x) => x.code === code);
+    if (t2 && !rows.has(code)) {
+      rows.set(code, { type: t2, slots: [] });
     }
   }
-  for (const t of lib().types.filter((x) => x.is_custom)) {
-    if (!rows.has(t.code)) {
-      rows.set(t.code, { type: t, slots: [] });
+  for (const t2 of lib().types.filter((x) => x.is_custom)) {
+    if (!rows.has(t2.code)) {
+      rows.set(t2.code, { type: t2, slots: [] });
     }
   }
   return [...rows.values()];
 }
 function openResize(row) {
-  const t = row.type;
-  const keys = SIZE_KEYS[t.template] || [];
-  const base2 = row.slots[0] ? row.slots[0].params : paramsForType(t);
-  const vals = Object.fromEntries(keys.map((k) => [k, getp(base2, k) ?? getp(defaultParams(t.template), k)]));
+  const t2 = row.type;
+  const keys = SIZE_KEYS[t2.template] || [];
+  const base2 = row.slots[0] ? row.slots[0].params : paramsForType(t2);
+  const vals = Object.fromEntries(keys.map((k) => [k, getp(base2, k) ?? getp(defaultParams(t2.template), k)]));
   const body = h(
     "div",
     { class: "fcol" },
-    h("div", { class: "small muted" }, `Нові розміри застосуються до всіх місць типу «${t.name}» (${fmtInt(row.slots.length)}); комірки перебудуються.`),
+    h("div", { class: "small muted" }, `Нові розміри застосуються до всіх місць типу «${t2.name}» (${fmtInt(row.slots.length)}); комірки перебудуються.`),
     h("div", { class: "grid2" }, keys.map((k) => {
-      const [min, max, , kind] = SLOT_TEMPLATES[t.template].params[k];
+      const [min, max, , kind] = SLOT_TEMPLATES[t2.template].params[k];
       return fld(PARAM_UI[k] || k, numInput({ value: vals[k], min, max: max ?? 1e3, step: kind === "int" ? 1 : 0.05, label: PARAM_UI[k] || k, f: "size-" + k, set: (v) => {
         vals[k] = v;
       } }), "м");
     }))
   );
   openDialog({
-    title: `Розмір типу: ${t.ref || t.name}`,
+    title: `Розмір типу: ${t2.ref || t2.name}`,
     cls: "narrow",
     body,
     actions: [
@@ -9903,7 +9935,7 @@ function openResize(row) {
             }
           }
           if (!row.slots.length) {
-            t.params = { ...t.params || {}, ...vals };
+            t2.params = { ...t2.params || {}, ...vals };
           }
           E.commit({});
           toast(`Перебудовано місць: ${row.slots.length}.`);
@@ -10104,8 +10136,8 @@ function presetFromSlots(slots, name, lib4 = libraryState()) {
   return { name, kind: "group", type_id: null, data: normalizePresetData("group", { slots: slots.map((s) => specOf(s, origin, lib4)) }) };
 }
 var typeIdOf = (spec, lib4) => {
-  const t = spec.type_code && allTypes(lib4).find((x) => x.code === spec.type_code);
-  return t ? t.id : null;
+  const t2 = spec.type_code && allTypes(lib4).find((x) => x.code === spec.type_code);
+  return t2 ? t2.id : null;
 };
 function insertSection(preset, row, n = 1) {
   const spec = preset.data.slot;
@@ -10131,7 +10163,7 @@ function plansFromPreset(preset, { zoneId = "", count = 1, lib: lib4 = librarySt
   const ly = layerOf(S.ui.layer);
   const used = new Set(S.slots.map((s) => s.code_prefix));
   const makePrefix = (spec2) => {
-    const type = spec2.type_code && allTypes(lib4).find((t) => t.code === spec2.type_code);
+    const type = spec2.type_code && allTypes(lib4).find((t2) => t2.code === spec2.type_code);
     const base2 = spec2.prefix && !used.has(spec2.prefix) ? spec2.prefix : nextPrefix(type || { ref: spec2.template === "pallet_rack" ? "R" : spec2.template.slice(0, 3) }, used);
     used.add(base2);
     return base2;
@@ -10160,9 +10192,9 @@ function openSave(adapter, { id }) {
   if (!slot) {
     return void 0;
   }
-  const isZone = slot.template === "zone";
-  const draft = { name: slot.code_prefix, kind: isZone ? "group" : "row" };
-  const kinds = isZone ? [["group", "Виділене: зона з вмістом"]] : [["row", "Ряд"], ...COUNT_KEY[slot.template] ? [["section", "Секція"]] : []];
+  const isZone2 = slot.template === "zone";
+  const draft = { name: slot.code_prefix, kind: isZone2 ? "group" : "row" };
+  const kinds = isZone2 ? [["group", "Виділене: зона з вмістом"]] : [["row", "Ряд"], ...COUNT_KEY[slot.template] ? [["section", "Секція"]] : []];
   const dlg = openDialog({
     title: "Зберегти як шаблон",
     cls: "narrow",
@@ -10189,8 +10221,8 @@ function openSave(adapter, { id }) {
             return false;
           }
           try {
-            const inside = isZone ? S.slots.filter((s) => s.id !== slot.id && s.layer_id === slot.layer_id && s.template !== "zone" && inZone(slot, s)) : [];
-            const vals = isZone ? presetFromSlots(inside, draft.name.trim()) : presetFromSlot(slot, draft.kind, draft.name.trim());
+            const inside = isZone2 ? S.slots.filter((s) => s.id !== slot.id && s.layer_id === slot.layer_id && s.template !== "zone" && inZone(slot, s)) : [];
+            const vals = isZone2 ? presetFromSlots(inside, draft.name.trim()) : presetFromSlot(slot, draft.kind, draft.name.trim());
             const rec = await saveRecord(adapter, "preset", vals);
             toast(`Шаблон «${rec.name}» збережено в бібліотеці.`);
             return true;
@@ -10215,29 +10247,29 @@ async function openInsert(adapter, { id }) {
     toast("Шар не редагується вами.", "warn");
     return void 0;
   }
-  const isZone = !!target && target.template === "zone";
-  const fits = (p) => isZone ? p.kind === "row" || p.kind === "group" : !!target && p.kind === "section" && p.data.slot.template === target.template;
+  const isZone2 = !!target && target.template === "zone";
+  const fits = (p) => isZone2 ? p.kind === "row" || p.kind === "group" : !!target && p.kind === "section" && p.data.slot.template === target.template;
   const list = lib2().presets.filter(fits);
   const draft = { id: list[0] ? list[0].id : null, count: 1 };
   const listBox = h("div", { class: "rowlist", id: "presetList" });
-  const draw = () => {
+  const draw3 = () => {
     listBox.replaceChildren(
       ...K(
         list.length ? list.map((p) => h("div", { class: "it" + (String(p.id) === String(draft.id) ? " sel" : ""), role: "button", tabindex: 0, "data-preset": p.id, onclick: () => {
           draft.id = p.id;
-          draw();
+          draw3();
         } }, h("span", { class: "t" }, p.name), h("span", { class: "tag" }, PRESET_KINDS[p.kind] || p.kind))) : h("div", { class: "empty" }, "Підходящих шаблонів у бібліотеці немає.")
       )
     );
   };
-  draw();
+  draw3();
   const dlg = openDialog({
     title: "Вставити з шаблону",
     cls: "narrow",
     body: h(
       "div",
       { class: "fcol" },
-      h("div", { class: "small muted" }, isZone ? "Ряд вставляється ×N у зону; «Виділене» — одним блоком у зону." : "Секція додається в кінець вибраного ряду."),
+      h("div", { class: "small muted" }, isZone2 ? "Ряд вставляється ×N у зону; «Виділене» — одним блоком у зону." : "Секція додається в кінець вибраного ряду."),
       listBox,
       fld("Кількість (рядів чи секцій)", numInput({ value: draft.count, min: 1, max: 100, step: 1, int: true, label: "Кількість", f: "preset-count", set: (v) => {
         draft.count = v;
@@ -10298,7 +10330,7 @@ async function openLibrary(adapter) {
     } catch (e) {
       toast(e.message || "Не вдалося виконати дію.", "err");
     }
-    draw();
+    draw3();
   };
   function rename(p) {
     const draft = { name: p.name };
@@ -10320,11 +10352,11 @@ async function openLibrary(adapter) {
       ]
     });
   }
-  function draw() {
+  function draw3() {
     const l = lib2();
     const canW = canWriteLibrary();
     const canD = canDeleteLibrary();
-    const customTypes = l.types.filter((t) => t.is_custom);
+    const customTypes = l.types.filter((t2) => t2.is_custom);
     body.replaceChildren(
       ...K(
         h("h3", { class: "h3" }, `Шаблони · ${l.presets.length}`),
@@ -10344,20 +10376,20 @@ async function openLibrary(adapter) {
         customTypes.length ? h(
           "div",
           { class: "rowlist", id: "libTypes" },
-          customTypes.map((t) => h(
+          customTypes.map((t2) => h(
             "div",
-            { class: "it", "data-type": t.code },
-            h("span", { class: "t" }, t.name),
-            h("span", { class: "tag" }, SLOT_TEMPLATES[t.template] ? SLOT_TEMPLATES[t.template].label.split(" ")[0] : "тип"),
-            h("button", { class: "fbtn sm icon", type: "button", title: "Відкрити в каталозі", "aria-label": "Відкрити в каталозі", onclick: () => E.runDialog("catalog", { code: t.code }) }, ic("plus")),
-            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити тип", disabled: !canD, onclick: () => guard3(() => deleteRecord(adapter, "type", t.id)) }, ic("trash"))
+            { class: "it", "data-type": t2.code },
+            h("span", { class: "t" }, t2.name),
+            h("span", { class: "tag" }, SLOT_TEMPLATES[t2.template] ? SLOT_TEMPLATES[t2.template].label.split(" ")[0] : "тип"),
+            h("button", { class: "fbtn sm icon", type: "button", title: "Відкрити в каталозі", "aria-label": "Відкрити в каталозі", onclick: () => E.runDialog("catalog", { code: t2.code }) }, ic("plus")),
+            h("button", { class: "fbtn sm icon danger", type: "button", title: canD ? "Видалити з бібліотеки" : "Видаляє менеджер", "aria-label": "Видалити тип", disabled: !canD, onclick: () => guard3(() => deleteRecord(adapter, "type", t2.id)) }, ic("trash"))
           ))
         ) : h("div", { class: "empty" }, "Власних типів немає: «У бібліотеку» в каталозі типів робить копію типу."),
         h("div", { class: "small muted" }, "Бібліотека спільна для всіх проєктів компанії; правка типу чи шаблону в проєкті бібліотеку не змінює.")
       )
     );
   }
-  draw();
+  draw3();
   const dlg = openDialog({ title: "Бібліотека", cls: "wide", body, actions: [{ label: "Закрити", value: "close" }] });
   return new Promise((res) => dlg.addEventListener("close", () => res(dlg.returnValue)));
 }
@@ -10498,9 +10530,12 @@ function zonePoly(z) {
 function zonesOf(slots = S.slots) {
   return slots.filter((s) => s.template === "zone").map((zone2) => ({ zone: zone2, poly: zone2.params.polygon || zonePoly(zone2) }));
 }
-var polyArea2 = (poly) => Math.abs(poly.reduce((a, [x1, y1], i) => a + (x1 * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * y1), 0)) / 2;
+var polyArea2 = (poly2) => Math.abs(poly2.reduce((a, [x1, y1], i) => a + (x1 * poly2[(i + 1) % poly2.length][1] - poly2[(i + 1) % poly2.length][0] * y1), 0)) / 2;
 function zoneChainAt(zones, x, y) {
-  return zones.filter(({ poly }) => polygonContains(poly, [x, y])).sort((a, b) => polyArea2(a.poly) - polyArea2(b.poly)).map(({ zone: zone2 }) => zone2);
+  return zones.filter(({ poly: poly2 }) => polygonContains(poly2, [x, y])).sort((a, b) => polyArea2(a.poly) - polyArea2(b.poly)).map(({ zone: zone2 }) => zone2);
+}
+function zoneAt(zones, x, y) {
+  return zoneChainAt(zones, x, y)[0] || null;
 }
 function inheritedField(slot, field, zone2) {
   const has = (v) => v != null && v !== "" && !(Array.isArray(v) && !v.length);
@@ -10607,9 +10642,9 @@ function codeConflictIssues(scene, config, eps = 1e-3, data = cache2) {
   const owner = /* @__PURE__ */ new Map();
   for (const slot of scene.slots.values()) {
     for (const [code] of scene.slotCells(slot)) {
-      const st = data.codes[code];
-      if (st && st.state === "busy") {
-        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `${code}: ${st.reason}`, slot.id));
+      const st4 = data.codes[code];
+      if (st4 && st4.state === "busy") {
+        out.push(issue2("code_conflict", config.mode, slot.layer_id, [code], `${code}: ${st4.reason}`, slot.id));
       }
       if (owner.has(code) && owner.get(code) !== slot.id) {
         const first = scene.slots.get(owner.get(code));
@@ -10844,7 +10879,7 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     return void 0;
   }
   const { lines } = plan;
-  const st = { view: "all", scope: "" };
+  const st4 = { view: "all", scope: "" };
   const first = plan.first;
   const blocks = plan.issues.filter((i) => i.severity === "block");
   const warns = plan.issues.filter((i) => i.severity === "warn");
@@ -10862,7 +10897,7 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     const changed = countOf((l) => ["move", "rename", "attrs", "update"].includes(l.kind) && l.res !== "replenish" && l.res !== "putaway");
     const removed = countOf((l) => l.kind === "archive" && l.res !== "replenish" && l.res !== "putaway");
     const rules = countOf((l) => l.res === "replenish" || l.res === "putaway");
-    const row = (n, t, x) => h("div", { class: "sumrow" }, h("div", { class: "n" }, fmtInt(n)), h("div", null, h("div", null, t), h("div", { class: "x" }, x)));
+    const row = (n, t2, x) => h("div", { class: "sumrow" }, h("div", { class: "n" }, fmtInt(n)), h("div", null, h("div", null, t2), h("div", { class: "x" }, x)));
     summaryBox.replaceChildren(
       ...K(
         h("div", { class: "lbl" }, "Буде створено в Odoo" + (first ? " (перша публікація площадки)" : "")),
@@ -10878,8 +10913,8 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     const counts = viewCounts(lines);
     chips.replaceChildren(
       ...VIEWS.filter((v) => v.id === "all" || counts[v.id]).map(
-        (v) => h("button", { class: "fbtn sm" + (st.view === v.id ? " primary" : ""), type: "button", "data-view": v.id, "aria-pressed": String(st.view === v.id), onclick: () => {
-          st.view = v.id;
+        (v) => h("button", { class: "fbtn sm" + (st4.view === v.id ? " primary" : ""), type: "button", "data-view": v.id, "aria-pressed": String(st4.view === v.id), onclick: () => {
+          st4.view = v.id;
           refresh();
         } }, `${v.label} · ${fmtInt(counts[v.id])}`)
       )
@@ -10904,7 +10939,7 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     h("span", { class: "small" }, lineText(l), l.blocked ? h("span", { class: "fbadge b", style: { marginLeft: "6px" } }, l.blocked_reason || "застосувати не можна") : flagLabels(l).map((f) => h("span", { class: "fbadge w", style: { marginLeft: "6px" } }, f)))
   );
   const renderTable = () => {
-    const shown = filterLines(lines, st.view, st.scope);
+    const shown = filterLines(lines, st4.view, st4.scope);
     table.replaceChildren(
       ...K(
         shown.length ? shown.slice(0, MAX_ROWS).map(lineRow) : h("div", { class: "note", style: { margin: "8px" } }, "У цьому виді немає рядків."),
@@ -10925,8 +10960,8 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     renderTable();
     refreshSummary();
   };
-  const scopeSel = plan.scopes && plan.scopes.length ? selectEl([["", "Усі зони й ряди"], ...plan.scopes.map((s) => [s.uid, `${s.name} (${s.n})`])], st.scope, (v) => {
-    st.scope = v;
+  const scopeSel = plan.scopes && plan.scopes.length ? selectEl([["", "Усі зони й ряди"], ...plan.scopes.map((s) => [s.uid, `${s.name} (${s.n})`])], st4.scope, (v) => {
+    st4.scope = v;
     refresh();
   }, false, "Зона або ряд") : null;
   const toolbar = h(
@@ -10934,8 +10969,8 @@ async function openPlanDialog({ adapter, onClose } = {}) {
     { class: "frow", style: { gap: "6px", flexWrap: "wrap", alignItems: "center" } },
     scopeSel ? fld("Зона або ряд", scopeSel) : null,
     scopeSel ? h("button", { class: "fbtn sm", type: "button", id: "planScopeOnly", onclick: () => {
-      if (st.scope) {
-        selectScope(lines, st.scope);
+      if (st4.scope) {
+        selectScope(lines, st4.scope);
         refresh();
       }
     } }, "Лише обране") : null,
@@ -11231,9 +11266,9 @@ function renderSlotBlock2(root, { rec }) {
   if (!rec || rec.template === "machine_spot") {
     return;
   }
-  const isZone = rec.template === "zone";
-  const cells = isZone ? [] : cellsAbs(rec, (layerOf(rec.layer_id) || {}).elevation || 0);
-  if (!isZone && !cells.length) {
+  const isZone2 = rec.template === "zone";
+  const cells = isZone2 ? [] : cellsAbs(rec, (layerOf(rec.layer_id) || {}).elevation || 0);
+  if (!isZone2 && !cells.length) {
     return;
   }
   ensureLib();
@@ -11241,7 +11276,7 @@ function renderSlotBlock2(root, { rec }) {
   const ly = layerOf(rec.layer_id);
   const dis = !canEditLayer(ly) || !!rec.locked;
   const zones = zonesOf();
-  const home = isZone ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
+  const home = isZone2 ? zoneChainAt(zones, rec.x, rec.y).filter((z) => z !== rec) : zoneChainAt(zones, rec.x, rec.y);
   const cat = inheritedField(rec, "storage_category_id", home);
   const strat = inheritedField(rec, "removal_strategy_id", home);
   const edit = (fn2) => (v) => {
@@ -11256,7 +11291,7 @@ function renderSlotBlock2(root, { rec }) {
   const fn = functionOf(rec.function_id);
   const first = cells[0];
   const info = first ? cellLimit(rec, first, categoryOf(cat.value)) : null;
-  const sumScope = isZone ? capacitySummary(S.slots.filter((s) => s !== rec), { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories, zone: rec }) : capacitySummary([rec], { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories });
+  const sumScope = isZone2 ? capacitySummary(S.slots.filter((s) => s !== rec), { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories, zone: rec }) : capacitySummary([rec], { loads: Object.keys(cache2.loads).length || cache2.demo ? cache2.loads : null, categories: lib3.categories });
   root.append(
     ...K(
       h(
@@ -11266,7 +11301,7 @@ function renderSlotBlock2(root, { rec }) {
         h(
           "div",
           { class: "fcol" },
-          isZone ? [
+          isZone2 ? [
             fld("Функція зони", selectEl([["", "— не задано —"], ...lib3.functions.map((f) => [f.id, f.name])], rec.function_id ?? "", (v) => {
               edit((x) => {
                 rec.function_id = conv(x);
@@ -11312,12 +11347,12 @@ function renderSlotBlock2(root, { rec }) {
           fld("Стратегія списання", selectEl(stratOpts, rec.removal_strategy_id ?? "", edit((v) => {
             rec.removal_strategy_id = conv(v);
           }), dis || !can("storage"), "Стратегія списання")),
-          isZone ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => {
+          isZone2 ? null : flagField("Тип локацій комірок", USAGE_OPTS, flagValue(rec, cells, "usage"), edit((v) => {
             if (v !== "~") {
               setFlag(rec, cells, "usage", v || null);
             }
           }), dis, "usage"),
-          isZone ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => {
+          isZone2 ? null : flagField("Місце поповнення", REPLENISH_OPTS, flagValue(rec, cells, "replenish_location"), edit((v) => {
             if (v !== "~") {
               setFlag(rec, cells, "replenish_location", v === "" ? null : v === "1");
             }
@@ -11326,7 +11361,7 @@ function renderSlotBlock2(root, { rec }) {
           h(
             "div",
             { class: "small muted", "data-role": "slot-summary" },
-            `${isZone ? "Усередині зони" : "У місці"}: комірок ${fmtInt(sumScope.cells)} · палетомісць ${fmtInt(sumScope.places)} · площа ${fmt(sumScope.area, 1)} м² · об'єм ${fmt(sumScope.volume, 1)} м³ · сума макс. ваги ${fmtInt(sumScope.maxWeight)} кг · з категорією ${fmtInt(sumScope.withCategory)}` + (sumScope.fill != null ? ` · зайнято ${fmtInt(sumScope.occupied)} / вільно ${fmtInt(sumScope.free)} (${fmt(sumScope.fill * 100, 0)}%)${cache2.demo ? " · демо" : ""}` : "")
+            `${isZone2 ? "Усередині зони" : "У місці"}: комірок ${fmtInt(sumScope.cells)} · палетомісць ${fmtInt(sumScope.places)} · площа ${fmt(sumScope.area, 1)} м² · об'єм ${fmt(sumScope.volume, 1)} м³ · сума макс. ваги ${fmtInt(sumScope.maxWeight)} кг · з категорією ${fmtInt(sumScope.withCategory)}` + (sumScope.fill != null ? ` · зайнято ${fmtInt(sumScope.occupied)} / вільно ${fmtInt(sumScope.free)} (${fmt(sumScope.fill * 100, 0)}%)${cache2.demo ? " · демо" : ""}` : "")
           ),
           !can("storage") ? h("div", { class: "small muted" }, "Категорії й стратегії в цьому хості недоступні.") : null
         )
@@ -11584,8 +11619,8 @@ function codeField({ value, label, onPick, dis }) {
   const input = h("input", { type: "text", value: value || "", "aria-label": label, disabled: dis, "data-code-input": "1", autocomplete: "off", placeholder: "Код комірки, напр. AA-R1-B01-L1" });
   const list = h("div", { class: "lookup", style: { display: "flex", flexDirection: "column", gap: "2px", maxHeight: "140px", overflow: "auto" } });
   const find = () => {
-    const t = input.value.trim().toLowerCase();
-    const rows = t ? allCells().filter((c) => c.code.toLowerCase().includes(t)).slice(0, 30) : [];
+    const t2 = input.value.trim().toLowerCase();
+    const rows = t2 ? allCells().filter((c) => c.code.toLowerCase().includes(t2)).slice(0, 30) : [];
     list.replaceChildren(...rows.map((c) => h("button", { class: "fbtn sm", type: "button", style: { textAlign: "left" }, onclick: () => {
       input.value = c.code;
       list.replaceChildren();
@@ -11780,7 +11815,7 @@ async function openRules({ tab = "putaway" } = {}) {
   await loadLib();
   await prefetchNames(adapter);
   await refreshCaches(["fit"]);
-  const st = { tab };
+  const st4 = { tab };
   const body = h("div", { class: "fcol", "data-role": "rules" });
   const dis = !canEditRules();
   const rules = rulesState();
@@ -11795,7 +11830,7 @@ async function openRules({ tab = "putaway" } = {}) {
     save();
     render2();
   };
-  const restore2 = (rule) => {
+  const restore3 = (rule) => {
     rule.deleted = false;
     save();
     render2();
@@ -11821,7 +11856,7 @@ async function openRules({ tab = "putaway" } = {}) {
             toast("Ціль правила підсвічено.");
             render2();
           }, disabled: !r.out_code }, "Підсвітити"),
-          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore2(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore3(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
             if (await openPutawayForm(r, false)) {
               render2();
             }
@@ -11844,7 +11879,7 @@ async function openRules({ tab = "putaway" } = {}) {
         h(
           "div",
           { class: "frow", style: { gap: "4px" } },
-          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore2(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
+          r.deleted ? h("button", { class: "fbtn sm", type: "button", "data-act": "restore", disabled: dis, onclick: () => restore3(r) }, "Повернути") : [h("button", { class: "fbtn sm", type: "button", "data-act": "edit", disabled: dis, onclick: async () => {
             if (await openReplenishForm(r, false)) {
               render2();
             }
@@ -11860,12 +11895,12 @@ async function openRules({ tab = "putaway" } = {}) {
         h(
           "div",
           { class: "frow", style: { gap: "6px" } },
-          h("button", { class: "fbtn sm" + (st.tab === "putaway" ? " primary" : ""), type: "button", "data-tab": "putaway", onclick: () => {
-            st.tab = "putaway";
+          h("button", { class: "fbtn sm" + (st4.tab === "putaway" ? " primary" : ""), type: "button", "data-tab": "putaway", onclick: () => {
+            st4.tab = "putaway";
             render2();
           } }, `Розміщення · ${rules.putaway.filter((r) => !r.deleted).length}`),
-          h("button", { class: "fbtn sm" + (st.tab === "replenish" ? " primary" : ""), type: "button", "data-tab": "replenish", onclick: () => {
-            st.tab = "replenish";
+          h("button", { class: "fbtn sm" + (st4.tab === "replenish" ? " primary" : ""), type: "button", "data-tab": "replenish", onclick: () => {
+            st4.tab = "replenish";
             render2();
           } }, `Поповнення min/max · ${rules.replenish.filter((r) => !r.deleted).length}`),
           h("span", { style: { flex: 1 } }),
@@ -11874,14 +11909,14 @@ async function openRules({ tab = "putaway" } = {}) {
             render2();
           } }, "Зняти підсвітку") : null
         ),
-        st.tab === "putaway" ? putawayRows() : replenishRows(),
+        st4.tab === "putaway" ? putawayRows() : replenishRows(),
         dis ? h("div", { class: "note lock" }, "Правила пише проєктувальник або менеджер у режимі редагування.") : h("button", { class: "fbtn sm", type: "button", id: "btnNewRule", onclick: async () => {
-          const ok = st.tab === "putaway" ? await openPutawayForm(newPutawayRule(), true) : await openReplenishForm(newReplenishRule(), true);
+          const ok = st4.tab === "putaway" ? await openPutawayForm(newPutawayRule(), true) : await openReplenishForm(newReplenishRule(), true);
           if (ok) {
             render2();
           }
-        } }, st.tab === "putaway" ? "Нове правило розміщення" : "Нове правило поповнення"),
-        st.tab === "putaway" && can("putaway") ? whereBox() : null
+        } }, st4.tab === "putaway" ? "Нове правило розміщення" : "Нове правило поповнення"),
+        st4.tab === "putaway" && can("putaway") ? whereBox() : null
       )
     );
   }
@@ -11936,8 +11971,8 @@ function renderRulesInto(root, { rec }) {
   let hits;
   let own;
   if (rec.template === "zone") {
-    const poly = (zones.find((z) => z.zone === rec) || {}).poly;
-    const inside = new Set(poly ? S.slots.flatMap((s) => cellsAbs(s)).filter((c) => polygonContains(poly, [c.x, c.y])).map((c) => c.code) : []);
+    const poly2 = (zones.find((z) => z.zone === rec) || {}).poly;
+    const inside = new Set(poly2 ? S.slots.flatMap((s) => cellsAbs(s)).filter((c) => polygonContains(poly2, [c.x, c.y])).map((c) => c.code) : []);
     hits = rules.putaway.filter((r) => !r.deleted && inside.has(r.out_code)).map((rule) => ({ rule, codes: [rule.out_code] }));
     own = [...inside];
   } else {
@@ -12478,11 +12513,11 @@ function copySel() {
 }
 function targetLayer() {
   const accepts = (ly) => ly && canEditLayer(ly) && clip.items.every((it) => it.kind === "slot" ? ly.slot_types.includes(it.rec.template) : ly.kind !== "building");
-  const active = layerOf(S.ui.layer);
-  if (accepts(active)) {
-    return active;
+  const active2 = layerOf(S.ui.layer);
+  if (accepts(active2)) {
+    return active2;
   }
-  const base2 = active ? active.elevation : 0;
+  const base2 = active2 ? active2.elevation : 0;
   return S.layers.filter(accepts).sort((a, b) => Math.abs(a.elevation - base2) - Math.abs(b.elevation - base2))[0] || null;
 }
 function pasteClip() {
@@ -12867,35 +12902,35 @@ function bulkCreate(o) {
 }
 function previewSvg(lay) {
   const r = lay.region;
-  const W = 320;
-  const k = W / Math.max(r.l, 1);
+  const W2 = 320;
+  const k = W2 / Math.max(r.l, 1);
   const Hh = Math.max(40, r.w * k);
   const rects = lay.rows.map((row) => {
     const u = ((row.x - r.cx) * Math.cos(-r.rot * Math.PI / 180) - (row.y - r.cy) * Math.sin(-r.rot * Math.PI / 180)) * k;
     const v = ((row.x - r.cx) * Math.sin(-r.rot * Math.PI / 180) + (row.y - r.cy) * Math.cos(-r.rot * Math.PI / 180)) * k;
-    return `<rect x="${(W / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
+    return `<rect x="${(W2 / 2 + u - lay.fp.l * k / 2).toFixed(1)}" y="${(Hh / 2 - v - lay.fp.w * k / 2).toFixed(1)}" width="${(lay.fp.l * k).toFixed(1)}" height="${(lay.fp.w * k).toFixed(1)}" fill="var(--accent-soft)" stroke="var(--accent)"/>`;
   }).join("");
-  return `<svg viewBox="0 0 ${W} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
+  return `<svg viewBox="0 0 ${W2} ${Hh.toFixed(0)}" width="100%" style="max-height:200px;border:1px solid var(--line);background:var(--surface2)"><rect x="0.5" y="0.5" width="${W2 - 1}" height="${(Hh - 1).toFixed(0)}" fill="none" stroke="var(--ink3)" stroke-dasharray="4 3"/>${rects}</svg>`;
 }
 function openBulk() {
   const ly = layerOf(S.ui.layer);
   const zones = S.slots.filter((s) => s.template === "zone" && s.layer_id === S.ui.layer);
   const sel = selectedItems();
-  const st = { template: BULK_TEMPLATES.find((t) => ly && ly.slot_types.includes(t)) || "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: ly && ly.aisle_width || 3, orient: "h", zoneId: sel.length === 1 && sel[0].rec.template === "zone" ? sel[0].rec.id : zones[0]?.id || "" };
+  const st4 = { template: BULK_TEMPLATES.find((t2) => ly && ly.slot_types.includes(t2)) || "pallet_rack", rows: 4, sections: 6, levels: 3, aisle: ly && ly.aisle_width || 3, orient: "h", zoneId: sel.length === 1 && sel[0].rec.template === "zone" ? sel[0].rec.id : zones[0]?.id || "" };
   const prev = h("div", { id: "bulkPreview" });
   const info = h("div", { class: "small muted", id: "bulkInfo" });
-  const draw = () => {
-    const lay = bulkLayout({ ...st, vertical: st.orient === "v" });
+  const draw3 = () => {
+    const lay = bulkLayout({ ...st4, vertical: st4.orient === "v" });
     prev.innerHTML = previewSvg(lay);
-    info.textContent = `Рядів: ${lay.rows.length} із ${st.rows} · комірок: ${lay.cells} · габарит ряду ${fmt(lay.fp.l, 1)}×${fmt(lay.fp.w, 1)} м`;
+    info.textContent = `Рядів: ${lay.rows.length} із ${st4.rows} · комірок: ${lay.cells} · габарит ряду ${fmt(lay.fp.l, 1)}×${fmt(lay.fp.w, 1)} м`;
   };
   const num4 = (key, label, min, max, step = 1) => {
-    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+    const el = h("input", { type: "number", min, max, step, value: st4[key], "aria-label": label, "data-s3": key });
     el.addEventListener("input", () => {
       const v = parseFloat(el.value);
       if (isFinite(v) && v >= min && v <= max) {
-        st[key] = v;
-        draw();
+        st4[key] = v;
+        draw3();
       }
     });
     return fld(label, el);
@@ -12903,22 +12938,22 @@ function openBulk() {
   const body = h(
     "div",
     { class: "fcol", id: "bulkBody" },
-    h("div", { class: "grid2" }, fld("Тип місця", selectEl(BULK_TEMPLATES.filter((t) => ly && ly.slot_types.includes(t)).map((t) => [t, SLOT_TEMPLATES[t].label || t]), st.template, (v) => {
-      st.template = v;
-      draw();
-    }, false, "Тип місця")), fld("Зона", selectEl([["", "Вся будівля"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st.zoneId, (v) => {
-      st.zoneId = v;
-      draw();
+    h("div", { class: "grid2" }, fld("Тип місця", selectEl(BULK_TEMPLATES.filter((t2) => ly && ly.slot_types.includes(t2)).map((t2) => [t2, SLOT_TEMPLATES[t2].label || t2]), st4.template, (v) => {
+      st4.template = v;
+      draw3();
+    }, false, "Тип місця")), fld("Зона", selectEl([["", "Вся будівля"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], st4.zoneId, (v) => {
+      st4.zoneId = v;
+      draw3();
     }, false, "Зона"))),
     h("div", { class: "grid3" }, num4("rows", "Рядів", 1, 60), num4("sections", "Секцій у ряду", 1, 60), num4("levels", "Ярусів", 1, 12)),
-    h("div", { class: "grid2" }, num4("aisle", "Прохід між рядами, м", 0, 12, 0.1), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], st.orient, (v) => {
-      st.orient = v;
-      draw();
+    h("div", { class: "grid2" }, num4("aisle", "Прохід між рядами, м", 0, 12, 0.1), fld("Орієнтація", selectEl([["h", "Уздовж зони"], ["v", "Упоперек"]], st4.orient, (v) => {
+      st4.orient = v;
+      draw3();
     }, false, "Орієнтація"))),
     prev,
     info
   );
-  draw();
+  draw3();
   openDialog({
     title: "Масове створення",
     cls: "narrow",
@@ -12930,7 +12965,7 @@ function openBulk() {
         cls: "primary",
         id: "btnBulkGo",
         onClick: () => {
-          const n = bulkCreate({ ...st, vertical: st.orient === "v" });
+          const n = bulkCreate({ ...st4, vertical: st4.orient === "v" });
           return n ? void 0 : false;
         }
       }
@@ -12944,13 +12979,13 @@ function openArray() {
     return;
   }
   const b = groupBox(items);
-  const st = { nx: 3, ny: 2, dx: rnd(b[2] - b[0] + 0.3, 2), dy: rnd(b[3] - b[1] + 0.3, 2) };
+  const st4 = { nx: 3, ny: 2, dx: rnd(b[2] - b[0] + 0.3, 2), dy: rnd(b[3] - b[1] + 0.3, 2) };
   const num4 = (key, label, min, max, step = 1) => {
-    const el = h("input", { type: "number", min, max, step, value: st[key], "aria-label": label, "data-s3": key });
+    const el = h("input", { type: "number", min, max, step, value: st4[key], "aria-label": label, "data-s3": key });
     el.addEventListener("input", () => {
       const v = parseFloat(el.value);
       if (isFinite(v)) {
-        st[key] = v;
+        st4[key] = v;
       }
     });
     return fld(label, el);
@@ -12961,7 +12996,7 @@ function openArray() {
     body: h("div", { class: "fcol", id: "arrayBody" }, h("div", { class: "grid2" }, num4("nx", "Копій по X (N)", 1, 50), num4("ny", "Копій по Y (M)", 1, 50)), h("div", { class: "grid2" }, num4("dx", "Крок X, м", -500, 500, 0.05), num4("dy", "Крок Y, м", -500, 500, 0.05)), h("div", { class: "small muted" }, "Копії — того ж типу, з наступними кодами; заблоковані перевірками пропускаються.")),
     actions: [
       { label: "Скасувати", value: "no" },
-      { label: "Створити", cls: "primary", id: "btnArrayGo", onClick: () => arrayCopies({ nx: Math.round(st.nx), ny: Math.round(st.ny), dx: st.dx, dy: st.dy }) ? void 0 : false }
+      { label: "Створити", cls: "primary", id: "btnArrayGo", onClick: () => arrayCopies({ nx: Math.round(st4.nx), ny: Math.round(st4.ny), dx: st4.dx, dy: st4.dy }) ? void 0 : false }
     ]
   });
 }
@@ -13100,7 +13135,7 @@ function renderMultiPanel() {
       "div",
       { class: "sec" },
       h("h3", null, "Вирівнювання"),
-      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t]) => btn(t, () => alignSel(k), { id: "btnAlign-" + k }))),
+      h("div", { class: "frow wrap", id: "alignBox" }, Object.entries(ALIGN_LABELS).map(([k, t2]) => btn(t2, () => alignSel(k), { id: "btnAlign-" + k }))),
       h("div", { class: "frow wrap" }, btn("Розподілити по X", () => distributeSel("x"), { id: "btnDistX", dis: items.length < 3 }), btn("Розподілити по Y", () => distributeSel("y"), { id: "btnDistY", dis: items.length < 3 }))
     ),
     h(
@@ -13217,10 +13252,10 @@ function code128Values(text) {
     set = "B";
   }
   while (i < s.length) {
-    const run = digitRun(s, i);
+    const run2 = digitRun(s, i);
     if (set === "B") {
-      if (run >= 6 || run >= 4 && i + run === s.length) {
-        if (run % 2) {
+      if (run2 >= 6 || run2 >= 4 && i + run2 === s.length) {
+        if (run2 % 2) {
           out.push(s.charCodeAt(i) - 32);
           i++;
         }
@@ -13231,7 +13266,7 @@ function code128Values(text) {
       out.push(s.charCodeAt(i) - 32);
       i++;
     } else {
-      if (run >= 2) {
+      if (run2 >= 2) {
         out.push(Number(s.slice(i, i + 2)));
         i += 2;
       } else {
@@ -13514,15 +13549,15 @@ var Matrix = class {
     let result = 0;
     const runs = (line) => {
       let p = 0;
-      let run = 1;
+      let run2 = 1;
       for (let i = 1; i <= line.length; i++) {
         if (i < line.length && line[i] === line[i - 1]) {
-          run++;
+          run2++;
         } else {
-          if (run >= 5) {
-            p += 3 + (run - 5);
+          if (run2 >= 5) {
+            p += 3 + (run2 - 5);
           }
-          run = 1;
+          run2 = 1;
         }
       }
       return p;
@@ -13629,13 +13664,13 @@ var defaultSpec = () => ({
   dpi: 203
 });
 var slotsInside = (zone2) => {
-  const poly = sGeom(zone2).poly;
-  return S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && polygonContains(poly, [s.x, s.y]));
+  const poly2 = sGeom(zone2).poly;
+  return S.slots.filter((s) => s.id !== zone2.id && s.template !== "zone" && s.layer_id === zone2.layer_id && polygonContains(poly2, [s.x, s.y]));
 };
 var isApplied = (s) => s.rid != null || !!E.adapter?.baseMap?.has?.("s:" + s.id);
 var isNewOrRenumbered = (s) => {
-  const st = E.objStatus ? E.objStatus("slot", s) : "new";
-  return st === "new" || st === "unsaved";
+  const st4 = E.objStatus ? E.objStatus("slot", s) : "new";
+  return st4 === "new" || st4 === "unsaved";
 };
 function scopeSlots(spec) {
   const sel = selRefs().filter((r) => r.kind === "slot").map((r) => S.sIdx.get(r.id)).filter(Boolean);
@@ -13682,7 +13717,7 @@ function collectCells(spec) {
   return out;
 }
 var TR = { а: "a", б: "b", в: "v", г: "h", ґ: "g", д: "d", е: "e", є: "ie", ж: "zh", з: "z", и: "y", і: "i", ї: "i", й: "i", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ь: "", ю: "iu", я: "ia", ы: "y", э: "e", ё: "io", ъ: "" };
-var translit = (t) => String(t).split("").map((ch) => {
+var translit = (t2) => String(t2).split("").map((ch) => {
   const lo = ch.toLowerCase();
   if (!(lo in TR)) {
     return ch;
@@ -13713,8 +13748,8 @@ function buildItems(cells, spec) {
       lines.push(fix2(parts.join(" · ")));
     }
     if (spec.show.type) {
-      const t = typeOf(slot.type_id, libraryState());
-      lines.push(fix2(t ? t.name : slot.template));
+      const t2 = typeOf(slot.type_id, libraryState());
+      lines.push(fix2(t2 ? t2.name : slot.template));
     }
     let arrow = null;
     if (spec.arrows !== "none" && cell.level != null) {
@@ -13728,8 +13763,8 @@ function buildItems(cells, spec) {
   });
 }
 function pageGeometry(spec) {
-  const L2 = LAYOUTS[spec.layout] || LAYOUTS.custom;
-  const lab = spec.layout === "custom" ? { w: Number(spec.custom.w) || 70, h: Number(spec.custom.h) || 36 } : { w: L2.w, h: L2.h };
+  const L3 = LAYOUTS[spec.layout] || LAYOUTS.custom;
+  const lab = spec.layout === "custom" ? { w: Number(spec.custom.w) || 70, h: Number(spec.custom.h) || 36 } : { w: L3.w, h: L3.h };
   const page = spec.layout === "100x150" ? { w: 100, h: 150 } : { w: 210, h: 297 };
   const gx = Number(spec.gap.x) || 0;
   const gy = Number(spec.gap.y) || 0;
@@ -13755,7 +13790,7 @@ function paginate(items, spec) {
   }
   return pages.map((p) => p || []);
 }
-var esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+var esc = (t2) => String(t2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 var num3 = (v) => Number(v.toFixed(3));
 function barsSvg(code, x, y, w, hh) {
   const c = code128(code);
@@ -13812,13 +13847,13 @@ function labelSvg(item, spec, w, hh) {
     const tw = w - tx - m;
     const fs = Math.min(hh * 0.24, tw / (item.code.length * 0.56));
     out += `<text x="${num3(tx)}" y="${num3(hh / 2 - (extra ? lineH * 0.2 : 0) + fs * 0.35)}" font-family="DejaVu Sans, Arial, sans-serif" font-weight="700" font-size="${num3(fs)}" textLength="${num3(Math.min(tw, item.code.length * fs * 0.62))}" lengthAdjust="spacingAndGlyphs">${esc(item.code)}</text>`;
-    item.lines.forEach((t, i) => {
-      out += `<text x="${num3(tx)}" y="${num3(hh / 2 + fs * 0.35 + lineH * (i + 1) * 0.95)}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t)}</text>`;
+    item.lines.forEach((t2, i) => {
+      out += `<text x="${num3(tx)}" y="${num3(hh / 2 + fs * 0.35 + lineH * (i + 1) * 0.95)}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t2)}</text>`;
     });
   } else {
     const top = m + extra * lineH;
-    item.lines.forEach((t, i) => {
-      out += `<text x="${num3(m)}" y="${num3(m + lineH * (i + 0.8))}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t)}</text>`;
+    item.lines.forEach((t2, i) => {
+      out += `<text x="${num3(m)}" y="${num3(m + lineH * (i + 0.8))}" font-family="DejaVu Sans, Arial, sans-serif" font-size="${num3(lineH * 0.8)}">${esc(t2)}</text>`;
     });
     const fs = Math.min(hh * 0.26, (w - 2 * m) / (item.code.length * 0.6));
     const bh = Math.max(4, hh - top - fs * 1.25 - m);
@@ -13859,7 +13894,7 @@ var dots = (mm, dpi) => Math.round(mm * dpi / 25.4);
 function toZpl(items, spec) {
   const dpi = Number(spec.dpi) === 300 ? 300 : 203;
   const g3 = pageGeometry(spec);
-  const W = dots(g3.label.w, dpi);
+  const W2 = dots(g3.label.w, dpi);
   const H = dots(g3.label.h, dpi);
   const m = dots(Math.min(2.2, g3.label.w * 0.04), dpi);
   const warnings = /* @__PURE__ */ new Set();
@@ -13870,12 +13905,12 @@ function toZpl(items, spec) {
       warnings.add(`Код «${item.code}» містить не-ASCII: Code128 не підходить, використано QR.`);
     }
     const lineDots = dots(3.2, dpi);
-    let z = `^XA^CI28^PW${W}^LL${H}^LH0,0
+    let z = `^XA^CI28^PW${W2}^LL${H}^LH0,0
 `;
-    const textFs = Math.min(Math.round(H * 0.22), Math.round((W - 2 * m) / (item.code.length * 0.62)));
+    const textFs = Math.min(Math.round(H * 0.22), Math.round((W2 - 2 * m) / (item.code.length * 0.62)));
     if (kind === "qr") {
       const q = qr(item.code, { ecc: "M" });
-      const side2 = Math.min(H - 2 * m, Math.round(W * 0.46));
+      const side2 = Math.min(H - 2 * m, Math.round(W2 * 0.46));
       const mag = Math.max(1, Math.min(10, Math.floor(side2 / (q.size + 8))));
       if (mag < 2) {
         warnings.add(`Дрібний QR: модуль ${mag} точк. при ${dpi} dpi (треба ≥ 2) — збільшіть етикетку.`);
@@ -13886,30 +13921,30 @@ function toZpl(items, spec) {
       const tx = m + (q.size + 8) * mag;
       z += `^FO${tx},${Math.round(H / 2 - textFs / 2)}^A0N,${textFs},${textFs}^FD${item.code}^FS
 `;
-      item.lines.forEach((t, i) => {
-        z += `^FO${tx},${Math.round(H / 2 + textFs / 2 + lineDots * i)}^A0N,${lineDots},${lineDots}^FD${t}^FS
+      item.lines.forEach((t2, i) => {
+        z += `^FO${tx},${Math.round(H / 2 + textFs / 2 + lineDots * i)}^A0N,${lineDots},${lineDots}^FD${t2}^FS
 `;
       });
     } else {
       const c = code128(item.code);
-      const modW = Math.max(1, Math.floor((W - 2 * m) / (c.width + 20)));
+      const modW = Math.max(1, Math.floor((W2 - 2 * m) / (c.width + 20)));
       if (modW < 2) {
         warnings.add(`Дрібний штрихкод «${item.code}»: модуль ${modW} точк. при ${dpi} dpi (треба ≥ 2) — збільште етикетку чи оберіть QR.`);
       }
       const top = m + item.lines.length * lineDots;
-      item.lines.forEach((t, i) => {
-        z += `^FO${m},${m + lineDots * i}^A0N,${lineDots},${lineDots}^FD${t}^FS
+      item.lines.forEach((t2, i) => {
+        z += `^FO${m},${m + lineDots * i}^A0N,${lineDots},${lineDots}^FD${t2}^FS
 `;
       });
       const bh = Math.max(20, H - top - textFs - 2 * m);
-      z += `^BY${modW},3,${bh}^FO${Math.round((W - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
+      z += `^BY${modW},3,${bh}^FO${Math.round((W2 - c.width * modW) / 2)},${top}^BCN,${bh},N,N,N,A^FD${item.code}^FS
 `;
-      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W - 2 * m},1,0,C^FD${item.code}^FS
+      z += `^FO${m},${top + bh + Math.round(m / 2)}^A0N,${textFs},${textFs}^FB${W2 - 2 * m},1,0,C^FD${item.code}^FS
 `;
     }
     if (item.arrow) {
       const s = Math.round(H * 0.26);
-      const ax = W - m - s;
+      const ax = W2 - m - s;
       z += `^FO${ax + Math.round(s * 0.35)},${m + Math.round(s * 0.4)}^GB${Math.round(s * 0.3)},${Math.round(s * 0.6)},${Math.round(s * 0.3)}^FS
 `;
       z += `^FO${ax},${m}^GD${s},${Math.round(s * 0.5)},3,B,${item.arrow === "up" ? "R" : "L"}^FS
@@ -13998,7 +14033,7 @@ async function openLabels(adapter, args = {}) {
     return fld(label, el);
   };
   const mg = () => spec.margin || { l: 0, t: 0, r: 0, b: 0 };
-  const draw = () => {
+  const draw3 = () => {
     const custom = spec.layout === "custom";
     body.replaceChildren(
       ...K([
@@ -14008,7 +14043,7 @@ async function openLabels(adapter, args = {}) {
           fld("Що друкувати", selectEl(Object.entries(SCOPES), spec.scope, (v) => {
             spec.scope = v;
             recompute();
-            draw();
+            draw3();
           }, false, "Що друкувати")),
           spec.scope === "zone" ? fld("Зона", selectEl([["", "—"], ...zones.map((z) => [z.id, z.params.title || z.code_prefix])], spec.zoneId, (v) => set("zoneId", v), false, "Зона")) : spec.scope === "row" ? fld("Ряд", selectEl([["", "—"], ...racks.map((z) => [z.id, z.code_prefix])], spec.rowId, (v) => set("rowId", v), false, "Ряд")) : spec.scope === "tier" ? numF("Ярус знизу", "tier", () => spec.tier, 1, 12) : h("div")
         ),
@@ -14029,7 +14064,7 @@ async function openLabels(adapter, args = {}) {
         h("div", { class: "grid2" }, fld("Розкладка", selectEl(Object.entries(LAYOUTS).map(([k, v]) => [k, v.name]), spec.layout, (v) => {
           spec.layout = v;
           recompute();
-          draw();
+          draw3();
         }, false, "Розкладка")), numF("Пропустити перші", "skip", () => spec.skip, 0, 500)),
         custom ? h("div", { class: "grid2" }, numF("Ширина, мм", "custom.w", () => spec.custom.w, 10, 300), numF("Висота, мм", "custom.h", () => spec.custom.h, 10, 300)) : null,
         h(
@@ -14093,7 +14128,7 @@ async function openLabels(adapter, args = {}) {
       }
     ]
   });
-  draw();
+  draw3();
   const pdf = document.getElementById("btnLabelsPdf");
   if (pdf && !can("render")) {
     pdf.title = "PDF формує сервер Odoo («на сервері»); у цьому режимі доступні ZPL і PNG.";
@@ -14153,10 +14188,10 @@ async function loadStock({ force = false, codes = null, quiet = false } = {}) {
       Object.assign(all.codes, res.codes);
       all.truncated = res.truncated;
     }
-    const st = applyStock(all, { merge: !!codes });
+    const st4 = applyStock(all, { merge: !!codes });
     E.recolorCells?.();
     E.renderHeat?.();
-    return st;
+    return st4;
   } catch (e) {
     if (!quiet) {
       toast(e.message || "Не вдалося прочитати залишки.", "err");
@@ -14341,12 +14376,12 @@ async function restoreMetric() {
   }
 }
 async function refreshStock() {
-  const st = await loadStock({ force: true });
-  if (st) {
+  const st4 = await loadStock({ force: true });
+  if (st4) {
     E.recolorCells?.();
     renderHeat();
   }
-  return st;
+  return st4;
 }
 function renderHeat() {
   const sel = $("#s3Metric");
@@ -14355,7 +14390,7 @@ function renderHeat() {
     return;
   }
   const avail = can("stock");
-  sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t]) => h("option", { value: k, selected: S.ui.metric === k }, t)));
+  sel.replaceChildren(h("option", { value: "" }, "Показник: звичайний"), ...Object.entries(METRIC_LABELS).map(([k, t2]) => h("option", { value: k, selected: S.ui.metric === k }, t2)));
   const key = DEFS[S.ui.metric] ? S.ui.metric : "";
   sel.value = key;
   sel.disabled = !avail;
@@ -14627,10 +14662,10 @@ function ensureStyle() {
   if (!root || root.querySelector("#" + STYLE_ID)) {
     return;
   }
-  const st = document.createElement("style");
-  st.id = STYLE_ID;
-  st.textContent = CSS;
-  root.prepend(st);
+  const st4 = document.createElement("style");
+  st4.id = STYLE_ID;
+  st4.textContent = CSS;
+  root.prepend(st4);
 }
 function applyMobile() {
   const app = $("#app");
@@ -14742,7 +14777,7 @@ function ensureDom() {
   }
   const legend = $("#legend");
   if (legend && !$("#s3Keys")) {
-    const k = (t) => h("kbd", null, t);
+    const k = (t2) => h("kbd", null, t2);
     legend.prepend(h("div", { id: "s3Keys" }, k("Ctrl+Z"), "/", k("Y"), " скасувати · ", k("Ctrl+D"), " дублювати · ", k("Ctrl+C"), "/", k("V"), " копіювати · ", k("Ctrl+клік"), " виділення · ", k("Shift+рамка"), " у «Плані» · ", k("/"), " пошук"));
   }
   if (!$("#s3Access")) {
@@ -14751,12 +14786,12 @@ function ensureDom() {
   if (!$("#s3Mbar")) {
     const inp = h("input", { type: "search", id: "s3mSearch", placeholder: "Код місця, напр. PLT-01A", "aria-label": "Пошук місця", autocomplete: "off", enterkeyhint: "go" });
     const list = h("div", { class: "s3-mlist", id: "s3mList", hidden: true });
-    const draw = () => {
+    const draw3 = () => {
       const { hits } = E.findCodes(inp.value, 8);
       list.hidden = !inp.value;
       list.replaceChildren(...hits.map((x) => h("button", { class: "s3-item", type: "button", onclick: () => (E.gotoHit(x), list.hidden = true, inp.blur()) }, h("b", null, x.code), h("span", { class: "small muted" }, x.kind === "cell" ? "комірка" : x.kind === "placement" ? "обладнання" : "місце"))));
     };
-    inp.addEventListener("input", draw);
+    inp.addEventListener("input", draw3);
     inp.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -14767,7 +14802,7 @@ function ensureDom() {
           list.hidden = true;
           inp.blur();
         } else {
-          draw();
+          draw3();
         }
       }
     });
@@ -14817,13 +14852,13 @@ function renderUndoButtons() {
   if (!u) {
     return;
   }
-  const st = E.undoState();
+  const st4 = E.undoState();
   const acc = E.access?.() || { design: true };
   const r = $("#s3Redo");
-  u.disabled = !st.canUndo || !acc.design;
-  r.disabled = !st.canRedo || !acc.design;
-  u.title = !acc.design ? E.accessHint("design") : st.canUndo ? `Скасувати: ${st.undoLabel} (Ctrl+Z)` : "Немає що скасувати";
-  r.title = !acc.design ? E.accessHint("design") : st.canRedo ? `Повторити: ${st.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
+  u.disabled = !st4.canUndo || !acc.design;
+  r.disabled = !st4.canRedo || !acc.design;
+  u.title = !acc.design ? E.accessHint("design") : st4.canUndo ? `Скасувати: ${st4.undoLabel} (Ctrl+Z)` : "Немає що скасувати";
+  r.title = !acc.design ? E.accessHint("design") : st4.canRedo ? `Повторити: ${st4.redoLabel} (Ctrl+Shift+Z)` : "Немає що повторити";
 }
 var onRootClick = (e) => {
   const more = $("#menuMore");
@@ -14874,12 +14909,12 @@ var pct = (v) => v == null ? "—" : Math.round(v * 100) + " %";
 var day = (iso) => iso ? String(iso).slice(0, 10) : "—";
 function cardNode(slot, cell) {
   const root = h("div", { class: "s3-card", id: "s3Card", "data-code": cell.code });
-  const draw = () => {
+  const draw3 = () => {
     const e = stockOf(cell.code);
     const d = e && e.detail || null;
     const ly = layerOf(slot.layer_id);
     const type = typeOf(slot.type_id, libraryState());
-    const fill = e ? e.fill : null;
+    const fill2 = e ? e.fill : null;
     root.replaceChildren(
       ...K(
         h("div", { class: "frow wrap" }, h("h3", { style: { margin: 0, flex: "1" } }, cell.code), h("span", { class: "tag" }, type ? type.name : (SLOT_TEMPLATES[slot.template] || {}).label || slot.template), ly ? h("span", { class: "tag" }, ly.name) : null),
@@ -14899,10 +14934,10 @@ function cardNode(slot, cell) {
           e && e.age_days != null && e.qty ? h("span", null, "Вік запасу") : null,
           e && e.age_days != null && e.qty ? h("span", null, `${e.age_days} дн.`) : null
         ),
-        fill != null ? h("div", null, h("div", { class: "small" }, `Заповненість: ${pct(fill)}`), h("div", { class: "s3-bar" }, h("i", { style: { width: Math.min(100, Math.round(fill * 100)) + "%" } }))) : null,
+        fill2 != null ? h("div", null, h("div", { class: "small" }, `Заповненість: ${pct(fill2)}`), h("div", { class: "s3-bar" }, h("i", { style: { width: Math.min(100, Math.round(fill2 * 100)) + "%" } }))) : null,
         !e && can("stock") ? h("div", { class: "small muted" }, S.stock ? "Нова комірка: даних Odoo ще немає." : "Залишки не завантажено (оберіть «Показник» чи «Оновити дані»).") : null,
         e && S.stock && S.stock.demo ? h("div", { class: "small" }, h("span", { class: "tag s3-demo" }, "демо"), " значення синтетичні") : null,
-        d && d.rows && d.rows.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Залишки"), h("table", null, h("thead", null, h("tr", null, ["Товар", "К-сть", "Резерв", "Партія", "Вік"].map((t) => h("th", null, t)))), h("tbody", null, d.rows.map((r) => h("tr", null, h("td", null, r.product || r.ref || "—"), h("td", null, String(r.qty ?? "")), h("td", null, String(r.reserved ?? "")), h("td", null, r.lot || "—"), h("td", null, r.age_days != null ? r.age_days + " дн." : day(r.in_date))))))) : null,
+        d && d.rows && d.rows.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Залишки"), h("table", null, h("thead", null, h("tr", null, ["Товар", "К-сть", "Резерв", "Партія", "Вік"].map((t2) => h("th", null, t2)))), h("tbody", null, d.rows.map((r) => h("tr", null, h("td", null, r.product || r.ref || "—"), h("td", null, String(r.qty ?? "")), h("td", null, String(r.reserved ?? "")), h("td", null, r.lot || "—"), h("td", null, r.age_days != null ? r.age_days + " дн." : day(r.in_date))))))) : null,
         d && d.rules && d.rules.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, "Правила розміщення"), h("ul", { class: "small", style: { margin: 0, paddingLeft: "16px" } }, d.rules.map((r) => h("li", null, typeof r === "string" ? r : r.label || r.name)))) : null,
         d && d.moves && d.moves.length ? h("div", null, h("h4", { class: "small", style: { margin: "6px 0 2px" } }, `Рух за ${S.stock && S.stock.days || 90} днів`), h("table", null, h("tbody", null, d.moves.slice(0, 10).map((m) => h("tr", null, h("td", null, day(m.date)), h("td", null, m.product || ""), h("td", null, String(m.qty ?? "")), h("td", { class: "small muted" }, [m.from, m.to].filter(Boolean).join(" → "))))))) : null,
         h(
@@ -14914,11 +14949,11 @@ function cardNode(slot, cell) {
       )
     );
   };
-  draw();
+  draw3();
   if (can("stock")) {
     loadDetail(cell.code).then(() => {
       if (root.isConnected || $("#s3CardOv:not([hidden])")) {
-        draw();
+        draw3();
       }
     });
   }
@@ -15005,12 +15040,12 @@ function tokenizeMask(mask) {
     throw new Error("У масці немає жодної частини ({ряд}, {секція}, {ярус} …).");
   }
   const seen = /* @__PURE__ */ new Set();
-  for (const t of toks) {
-    if (t.t === "part") {
-      if (seen.has(t.key)) {
-        throw new Error(`Частина {${PART_LABELS[t.key]}} повторюється в масці.`);
+  for (const t2 of toks) {
+    if (t2.t === "part") {
+      if (seen.has(t2.key)) {
+        throw new Error(`Частина {${PART_LABELS[t2.key]}} повторюється в масці.`);
       }
-      seen.add(t.key);
+      seen.add(t2.key);
     }
   }
   return toks;
@@ -15061,15 +15096,15 @@ function compileRule(rule) {
     } else {
       out.tokens = tokenizeMask(rule.mask);
       let src = "";
-      for (const t of out.tokens) {
-        if (t.t === "lit") {
-          src += esc2(t.text);
-        } else if (t.t === "any") {
+      for (const t2 of out.tokens) {
+        if (t2.t === "lit") {
+          src += esc2(t2.text);
+        } else if (t2.t === "any") {
           src += ".*?";
         } else {
-          const sp = partSpec(t.key, t.mod);
-          out.kinds[t.key] = sp;
-          src += `(?<${t.key}>${sp.src})`;
+          const sp = partSpec(t2.key, t2.mod);
+          out.kinds[t2.key] = sp;
+          src += `(?<${t2.key}>${sp.src})`;
         }
       }
       out.re = new RegExp(`^${src}$`, "i");
@@ -15207,18 +15242,18 @@ var lex = (code) => [...code.matchAll(new RegExp(`[${LETTER}]+|[0-9]+|[^${LETTER
 var NUM_ORDER = { 1: ["bay"], 2: ["bay", "level"], 3: ["row", "bay", "level"], 4: ["zone", "row", "bay", "level"] };
 function maskCandidates(code) {
   const toks = lex(code);
-  const nums = toks.filter((t) => t.t === "num");
+  const nums = toks.filter((t2) => t2.t === "num");
   const names = NUM_ORDER[Math.min(nums.length, 4)];
   if (!names) {
     return [];
   }
   const build = (keys, firstAlpha) => {
     let i = 0;
-    return toks.map((t, j) => {
-      if (t.t === "sep") {
-        return t.text;
+    return toks.map((t2, j) => {
+      if (t2.t === "sep") {
+        return t2.text;
       }
-      if (t.t === "num") {
+      if (t2.t === "num") {
         const key = keys[i++];
         return key ? `{${PART_LABELS[key]}}` : "*";
       }
@@ -15226,7 +15261,7 @@ function maskCandidates(code) {
       if (j === 0 && firstAlpha && !glued) {
         return firstAlpha;
       }
-      return glued || /^[A-Za-z]$/.test(t.text) ? t.text : "*";
+      return glued || /^[A-Za-z]$/.test(t2.text) ? t2.text : "*";
     }).join("");
   };
   const out = [];
@@ -15249,7 +15284,7 @@ function guessMasks(codes, { limit = 5, sample = 40 } = {}) {
   for (const mask of cands) {
     const cr = compileRule({ mask });
     if (cr.ok) {
-      rows.push({ mask, matched: codes.reduce((n, c) => n + (matchRule(cr, c) ? 1 : 0), 0), total: codes.length, parts: cr.tokens.filter((t) => t.t === "part").length, order: rows.length });
+      rows.push({ mask, matched: codes.reduce((n, c) => n + (matchRule(cr, c) ? 1 : 0), 0), total: codes.length, parts: cr.tokens.filter((t2) => t2.t === "part").length, order: rows.length });
     }
   }
   rows.sort((a, b) => b.matched - a.matched || b.parts - a.parts || a.order - b.order);
@@ -15302,15 +15337,15 @@ var ruleSeq = 0;
 var newRule = (mask = "") => ({ id: `r${Date.now().toString(36)}${ruleSeq++}`, mode: "mask", mask, type: "auto", enabled: true });
 var codeOf = (i) => typeof i === "string" ? i : i.code;
 function openParseCodes({ items = null } = {}) {
-  const st = { rules: siteRules().rules.map((r) => ({ ...r })), items: items || (E.trayCodes ? E.trayCodes() : []) };
+  const st4 = { rules: siteRules().rules.map((r) => ({ ...r })), items: items || (E.trayCodes ? E.trayCodes() : []) };
   const stats = h("div", { class: "small", id: "pcStats" });
   const bad = h("div", { class: "small", id: "pcUnparsed" });
   const rowsBox = h("div", { class: "fcol", id: "pcRules" });
   const guessBox = h("div", { class: "small", id: "pcGuess" });
-  const parser = () => makeParser({ rules: st.rules, addr: S.site?.addr || null });
+  const parser = () => makeParser({ rules: st4.rules, addr: S.site?.addr || null });
   const refresh = () => {
     const p = parser();
-    const a = analyzeCodes(st.items, p);
+    const a = analyzeCodes(st4.items, p);
     stats.textContent = `З ${a.total} місць розібрано ${a.parsed}` + (p.errors.length ? ` · правил із помилкою: ${p.errors.length}` : "");
     const ex2 = a.unparsed.slice(0, 8).map((u) => u.code);
     bad.replaceChildren(h("b", null, `Не розпізнано: ${a.unparsed.length}`), ex2.length ? h("div", { class: "mono small", id: "pcExamples" }, ex2.join(" · ") + (a.unparsed.length > ex2.length ? " …" : "")) : h("span", null, " — усе розібрано"));
@@ -15319,7 +15354,7 @@ function openParseCodes({ items = null } = {}) {
   const render2 = () => {
     const p = refresh();
     rowsBox.replaceChildren(
-      ...st.rules.map((r, i) => {
+      ...st4.rules.map((r, i) => {
         const key = r.mode === "regex" ? "regex" : "mask";
         const input = h("input", { type: "text", value: r[key] || "", placeholder: key === "regex" ? "^(?<row>\\d+)-(?<bay>\\d+)-(?<level>\\d+)$" : "{ряд}-{секція}-{ярус}", "aria-label": "Маска", class: "pc-mask" });
         input.addEventListener("input", () => {
@@ -15327,13 +15362,13 @@ function openParseCodes({ items = null } = {}) {
           refresh();
         });
         const sel = (opts2, val, on, label) => {
-          const s = h("select", { "aria-label": label }, opts2.map(([v, t]) => h("option", { value: v, selected: v === val }, t)));
+          const s = h("select", { "aria-label": label }, opts2.map(([v, t2]) => h("option", { value: v, selected: v === val }, t2)));
           s.addEventListener("change", () => on(s.value));
           return s;
         };
         const move = (d) => {
-          if (st.rules[i + d]) {
-            [st.rules[i], st.rules[i + d]] = [st.rules[i + d], st.rules[i]];
+          if (st4.rules[i + d]) {
+            [st4.rules[i], st4.rules[i + d]] = [st4.rules[i + d], st4.rules[i]];
             render2();
           }
         };
@@ -15350,13 +15385,13 @@ function openParseCodes({ items = null } = {}) {
             render2();
           }, "Режим"),
           input,
-          sel(RULE_TYPES.map((t) => [t, TYPE_LABELS[t]]), r.type || "auto", (v) => {
+          sel(RULE_TYPES.map((t2) => [t2, TYPE_LABELS[t2]]), r.type || "auto", (v) => {
             r.type = v;
           }, "Тип місця"),
           h("button", { class: "fbtn sm", type: "button", title: "Вище", "aria-label": "Вище", onclick: () => move(-1) }, "↑"),
           h("button", { class: "fbtn sm", type: "button", title: "Нижче", "aria-label": "Нижче", onclick: () => move(1) }, "↓"),
           h("button", { class: "fbtn sm danger", type: "button", title: "Видалити правило", "aria-label": "Видалити правило", onclick: () => {
-            st.rules.splice(i, 1);
+            st4.rules.splice(i, 1);
             render2();
           } }, "×"),
           cr && !cr.ok ? h("div", { class: "small err", style: { flexBasis: "100%" } }, cr.error) : null
@@ -15365,11 +15400,11 @@ function openParseCodes({ items = null } = {}) {
     );
   };
   const guess = () => {
-    const rest = analyzeCodes(st.items, parser()).unparsed.map((u) => u.code);
-    const rows = guessMasks(rest.length ? rest : st.items.map(codeOf));
+    const rest = analyzeCodes(st4.items, parser()).unparsed.map((u) => u.code);
+    const rows = guessMasks(rest.length ? rest : st4.items.map(codeOf));
     guessBox.replaceChildren(
       ...rows.length ? rows.map((g3) => h("div", { class: "frow" }, h("span", { class: "mono" }, g3.mask), h("span", { class: "muted" }, `${g3.matched} із ${g3.total}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
-        st.rules.push(newRule(g3.mask));
+        st4.rules.push(newRule(g3.mask));
         render2();
       } }, "Додати"))) : [h("span", { class: "muted" }, "Не вдалося підібрати маску за зразками.")]
     );
@@ -15380,7 +15415,7 @@ function openParseCodes({ items = null } = {}) {
     h("div", { class: "small muted" }, "Частини: {ряд} {секція} {ярус} {зона} {позиція} {префікс}; {x:a} — літери, {x:A-D} — діапазон літер, {x:1-5} — діапазон чисел, * — будь-який текст. Порядок = пріоритет; далі діє адресація площадки й «ПРЕФІКС-B01-L1»."),
     rowsBox,
     h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "pcAdd", onclick: () => {
-      st.rules.push(newRule());
+      st4.rules.push(newRule());
       render2();
     } }, "+ Правило"), h("button", { class: "fbtn sm", type: "button", id: "pcGuessBtn", onclick: guess }, "Підібрати маску за зразками")),
     guessBox,
@@ -15406,7 +15441,7 @@ function openParseCodes({ items = null } = {}) {
               return false;
             }
             try {
-              saved2 = normalizeRules({ ...S.site?.parse_rules || {}, rules: st.rules });
+              saved2 = normalizeRules({ ...S.site?.parse_rules || {}, rules: st4.rules });
               await saveRules(saved2);
             } catch (e) {
               saved2 = null;
@@ -15427,7 +15462,7 @@ Object.assign(E, { siteParser, normalizeParseRules: normalizeRules, saveParseRul
 // core/constructor/autolayout.js
 var EPS = 1e-6;
 var ZONE_MAX = 150;
-var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t) => SLOT_TEMPLATES[t].cells);
+var CELL_TEMPLATES = Object.keys(SLOT_TEMPLATES).filter((t2) => SLOT_TEMPLATES[t2].cells);
 var isBlockSlot = (s) => CELL_TEMPLATES.includes(s.template);
 var natural = (a, b) => String(a).localeCompare(String(b), "uk", { numeric: true });
 var ceilTo = (v, step) => Math.ceil(v / step - EPS) * step;
@@ -15493,10 +15528,10 @@ function layoutLines(blocks, { aisle = 3, gap = 0.5, margin = 0.5, maxL = Infini
     col.lines.push(ln);
     col.len = Math.max(col.len, ln.len);
   }
-  const L2 = cols.reduce((s, c) => s + c.len, 0) + Math.max(0, cols.length - 1) * aisle + 2 * margin;
-  const W = Math.max(0, ...cols.map((c) => c.depth)) + 2 * margin;
-  if (L2 > maxL + EPS || W > maxW + EPS) {
-    return { ok: false, need: { l: L2, w: W }, reason: `потрібно ${fmt(L2, 1)}×${fmt(W, 1)} м` };
+  const L3 = cols.reduce((s, c) => s + c.len, 0) + Math.max(0, cols.length - 1) * aisle + 2 * margin;
+  const W2 = Math.max(0, ...cols.map((c) => c.depth)) + 2 * margin;
+  if (L3 > maxL + EPS || W2 > maxW + EPS) {
+    return { ok: false, need: { l: L3, w: W2 }, reason: `потрібно ${fmt(L3, 1)}×${fmt(W2, 1)} м` };
   }
   const pos = /* @__PURE__ */ new Map();
   let u0 = margin;
@@ -15505,14 +15540,14 @@ function layoutLines(blocks, { aisle = 3, gap = 0.5, margin = 0.5, maxL = Infini
     for (const ln of c.lines) {
       let u = u0;
       for (const b of ln.blocks) {
-        pos.set(b.id, { u: u + b.l / 2 - L2 / 2, v: v0 + ln.depth / 2 - W / 2 });
+        pos.set(b.id, { u: u + b.l / 2 - L3 / 2, v: v0 + ln.depth / 2 - W2 / 2 });
         u += b.l + gap;
       }
       v0 += ln.depth + aisle;
     }
     u0 += c.len + aisle;
   }
-  return { ok: true, l: L2, w: W, pos };
+  return { ok: true, l: L3, w: W2, pos };
 }
 var overlap = (a, b) => a[0] < b[2] - EPS && b[0] < a[2] - EPS && a[1] < b[3] - EPS && b[1] < a[3] - EPS;
 function packRects(items, region, obstacles = [], { gap = 1, margin = 0.5 } = {}) {
@@ -15658,8 +15693,8 @@ function pinBeforeMove(slots) {
     }
   }
   for (const z of S.slots.filter((x) => x.template === "zone" && !safeNormalize(x.addr).zone_code)) {
-    const poly = slotPolygon(z);
-    const hit = poly && slots.find((s) => zones.has(s.id) && polygonContains(poly, [s.x, s.y]));
+    const poly2 = slotPolygon(z);
+    const hit = poly2 && slots.find((s) => zones.has(s.id) && polygonContains(poly2, [s.x, s.y]));
     if (hit) {
       const { zone: zone2, spec } = zones.get(hit.id);
       const code = typeof zone2 === "string" ? zone2 : formatValue(spec, zone2);
@@ -15880,11 +15915,11 @@ var tailNumber = (name) => {
 };
 var ownAddr = (siteAddr) => !!(siteAddr && siteAddr.tpl);
 function deriveAddr(cr, rawByKey, { levelAsBay = false } = {}) {
-  if (!cr || !cr.tokens || cr.tokens.some((t) => t.t === "any")) {
+  if (!cr || !cr.tokens || cr.tokens.some((t2) => t2.t === "any")) {
     return null;
   }
-  const keyOf = (k) => levelAsBay && k === "level" ? "bay" : k;
-  const lits = cr.tokens.filter((t) => t.t === "lit").map((t) => t.text);
+  const keyOf2 = (k) => levelAsBay && k === "level" ? "bay" : k;
+  const lits = cr.tokens.filter((t2) => t2.t === "lit").map((t2) => t2.text);
   const counts = {};
   for (const ch of lits.join("")) {
     if ("-._/#:".includes(ch)) {
@@ -15893,12 +15928,12 @@ function deriveAddr(cr, rawByKey, { levelAsBay = false } = {}) {
   }
   const sep = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "-";
   const words = [""];
-  for (const t of cr.tokens) {
-    if (t.t === "part") {
-      words[words.length - 1] += `{${keyOf(t.key)}}`;
+  for (const t2 of cr.tokens) {
+    if (t2.t === "part") {
+      words[words.length - 1] += `{${keyOf2(t2.key)}}`;
       continue;
     }
-    t.text.split(sep).forEach((piece, i) => {
+    t2.text.split(sep).forEach((piece, i) => {
       if (i) {
         words.push("");
       }
@@ -15910,7 +15945,7 @@ function deriveAddr(cr, rawByKey, { levelAsBay = false } = {}) {
   }
   const seg = {};
   for (const [key0, spec] of Object.entries(cr.kinds)) {
-    const key = keyOf(key0);
+    const key = keyOf2(key0);
     if (key === "prefix") {
       continue;
     }
@@ -16223,7 +16258,7 @@ function commitStructure(plan, { label = "Імпорт структури", layo
     return { ok: false, reason: ly ? lockHint(ly) : "Немає шару для місць." };
   }
   const need = [...new Set(plan.slots.map((s) => s.template).concat(plan.zones.size ? ["zone"] : []))];
-  const miss = need.filter((t) => !ly.slot_types.includes(t));
+  const miss = need.filter((t2) => !ly.slot_types.includes(t2));
   if (miss.length && !canManage()) {
     return { ok: false, reason: `Шар «${ly.name}» не допускає типи місць: ${miss.join(", ")}. Дозвіл змінює менеджер.` };
   }
@@ -16296,18 +16331,18 @@ function commitStructure(plan, { label = "Імпорт структури", layo
     ly.slot_types.push(...miss);
   }
   if (growBuilding && rects.length && S.site.building) {
-    const L2 = Math.ceil(Math.max(...rects.map((r) => r.x + r.l / 2)) + 2);
-    const W = Math.ceil(Math.max(...rects.map((r) => r.y + r.w / 2)) + 2);
+    const L3 = Math.ceil(Math.max(...rects.map((r) => r.x + r.l / 2)) + 2);
+    const W2 = Math.ceil(Math.max(...rects.map((r) => r.y + r.w / 2)) + 2);
     const b = S.site.building;
-    if (L2 > b.length || W > b.width) {
-      Object.assign(b, { length: Math.max(L2, b.length), width: Math.max(W, b.width) });
+    if (L3 > b.length || W2 > b.width) {
+      Object.assign(b, { length: Math.max(L3, b.length), width: Math.max(W2, b.width) });
       E.saveSiteProps?.();
     }
   }
   keptZones.forEach((z) => S.slots.push(z));
   kept.forEach((k) => S.slots.push(k.rec));
-  const have = new Set((keepTray ? S.site.parse_rules?.tray || [] : []).map((t) => t.code));
-  E.setTray?.([...keepTray ? S.site.parse_rules?.tray || [] : [], ...tray.filter((t) => !have.has(t.code))]);
+  const have = new Set((keepTray ? S.site.parse_rules?.tray || [] : []).map((t2) => t2.code));
+  E.setTray?.([...keepTray ? S.site.parse_rules?.tray || [] : [], ...tray.filter((t2) => !have.has(t2.code))]);
   const cellsN = kept.reduce((n, k) => n + k.spec.items.length, 0);
   E.undoLabel?.(`${label}: ${fmtInt(cellsN)} місць`);
   E.commit({});
@@ -16340,7 +16375,7 @@ function trayItems() {
     return [];
   }
   const have = projectCodes();
-  return stored.filter((t) => !have.has(t.code));
+  return stored.filter((t2) => !have.has(t2.code));
 }
 function setTray(list, { persist = true } = {}) {
   if (!S.site) {
@@ -16359,15 +16394,15 @@ function setTray(list, { persist = true } = {}) {
   updateTabLabel();
 }
 function trayCodes() {
-  return [.../* @__PURE__ */ new Set([...trayItems().map((t) => t.code), ...projectCodes()])];
+  return [.../* @__PURE__ */ new Set([...trayItems().map((t2) => t2.code), ...projectCodes()])];
 }
 var zonesOnLayer = (layerId) => S.slots.filter((s) => s.template === "zone" && s.layer_id === layerId && slotPolygon(s));
-var zoneAt = (layerId, x, y) => {
+var zoneAt2 = (layerId, x, y) => {
   let best = null;
   for (const z of zonesOnLayer(layerId)) {
-    const poly = slotPolygon(z);
+    const poly2 = slotPolygon(z);
     const area = (z.params.length || 1) * (z.params.width || 1);
-    if (polygonContains(poly, [x, y]) && (!best || area < best.area)) {
+    if (polygonContains(poly2, [x, y]) && (!best || area < best.area)) {
       best = { z, area };
     }
   }
@@ -16381,13 +16416,13 @@ function freePositions(layerId, n, { zone: zone2 = null, point = null } = {}) {
   const out = [];
   const free = (x2, y2) => {
     const box = [x2 - fl / 2, y2 - fw / 2, x2 + fl / 2, y2 + fw / 2];
-    return !taken.some((t) => overlaps(box, t)) && !out.some((o) => overlaps(box, [o.x - fl / 2, o.y - fw / 2, o.x + fl / 2, o.y + fw / 2]));
+    return !taken.some((t2) => overlaps(box, t2)) && !out.some((o) => overlaps(box, [o.x - fl / 2, o.y - fw / 2, o.x + fl / 2, o.y + fw / 2]));
   };
   if (zone2) {
     const rot2 = (zone2.rotation || 0) * Math.PI / 180;
-    const [L2, W] = [zone2.params.length, zone2.params.width];
-    for (let v = -W / 2 + 0.5 + fw / 2; v <= W / 2 - 0.5 - fw / 2 + 1e-6 && out.length < n; v += fw + gap) {
-      for (let u = -L2 / 2 + 0.5 + fl / 2; u <= L2 / 2 - 0.5 - fl / 2 + 1e-6 && out.length < n; u += fl + gap) {
+    const [L3, W2] = [zone2.params.length, zone2.params.width];
+    for (let v = -W2 / 2 + 0.5 + fw / 2; v <= W2 / 2 - 0.5 - fw / 2 + 1e-6 && out.length < n; v += fw + gap) {
+      for (let u = -L3 / 2 + 0.5 + fl / 2; u <= L3 / 2 - 0.5 - fl / 2 + 1e-6 && out.length < n; u += fl + gap) {
         const x2 = zone2.x + u * Math.cos(rot2) - v * Math.sin(rot2);
         const y2 = zone2.y + u * Math.sin(rot2) + v * Math.cos(rot2);
         if (free(x2, y2)) {
@@ -16431,7 +16466,7 @@ function placeFromTray(items, { zoneId = null, point = null } = {}) {
     return { ok: false, placed: 0, reason: "Шар не допускає місця на підлозі." };
   }
   const used = new Set(S.slots.map((s) => s.code_prefix));
-  const ok = items.filter((t) => PREFIX_RE2.test(t.code) && t.code.length <= 22 && !used.has(t.code));
+  const ok = items.filter((t2) => PREFIX_RE2.test(t2.code) && t2.code.length <= 22 && !used.has(t2.code));
   const bad = items.length - ok.length;
   if (!ok.length) {
     const why = items.length === 1 ? REASONS[items[0].reason === "dup" ? "dup" : "bad_code"] : "Коди не підходять для місць: великі латинські літери, цифри й дефіси, до 22 символів.";
@@ -16447,10 +16482,10 @@ function placeFromTray(items, { zoneId = null, point = null } = {}) {
   }
   const siteOwn = !!safeNormalize(S.site.addr).tpl;
   E.undoRecord?.();
-  ok.slice(0, n).forEach((t, i) => {
-    const s = { id: newUid(), rid: null, etag: null, layer_id: ly.id, template: "floor_spot", code_prefix: t.code, x: pos[i].x, y: pos[i].y, rotation: pos[i].rotation, params: { ...SPOT }, overrides: {}, parent_location_id: null };
-    if (t.name && t.name !== t.code) {
-      s.overrides[t.code] = { name: t.name };
+  ok.slice(0, n).forEach((t2, i) => {
+    const s = { id: newUid(), rid: null, etag: null, layer_id: ly.id, template: "floor_spot", code_prefix: t2.code, x: pos[i].x, y: pos[i].y, rotation: pos[i].rotation, params: { ...SPOT }, overrides: {}, parent_location_id: null };
+    if (t2.name && t2.name !== t2.code) {
+      s.overrides[t2.code] = { name: t2.name };
     }
     if (siteOwn) {
       s.addr = { legacy: true };
@@ -16483,7 +16518,7 @@ function openPlaceDialog(items) {
 function renderTrayTab(root) {
   const all = trayItems();
   const q = filterText.trim().toLowerCase();
-  const list = q ? all.filter((t) => `${t.code} ${t.name} ${t.parent}`.toLowerCase().includes(q)) : all;
+  const list = q ? all.filter((t2) => `${t2.code} ${t2.name} ${t2.parent}`.toLowerCase().includes(q)) : all;
   const more = (S.site?.parse_rules || {}).tray_more || 0;
   const input = h("input", { type: "search", value: filterText, placeholder: "Фільтр за кодом чи назвою", "aria-label": "Фільтр лотка", id: "trayFilter" });
   input.addEventListener("input", () => {
@@ -16492,12 +16527,12 @@ function renderTrayTab(root) {
     $("#trayFilter")?.focus();
   });
   const rows = list.slice(0, SHOWN).map(
-    (t) => h(
+    (t2) => h(
       "div",
-      { class: "tray-row", draggable: "true", "data-code": t.code, title: REASONS[t.reason] || "" },
-      h("div", { class: "tray-main" }, h("span", { class: "mono tray-code" }, t.code), t.name && t.name !== t.code ? h("span", { class: "small muted" }, ` ${t.name}`) : null),
-      h("div", { class: "small muted" }, REASONS[t.reason] || t.reason || ""),
-      h("button", { class: "fbtn sm", type: "button", "data-act": "place", onclick: () => openPlaceDialog([t]) }, "Розмістити в…")
+      { class: "tray-row", draggable: "true", "data-code": t2.code, title: REASONS[t2.reason] || "" },
+      h("div", { class: "tray-main" }, h("span", { class: "mono tray-code" }, t2.code), t2.name && t2.name !== t2.code ? h("span", { class: "small muted" }, ` ${t2.name}`) : null),
+      h("div", { class: "small muted" }, REASONS[t2.reason] || t2.reason || ""),
+      h("button", { class: "fbtn sm", type: "button", "data-act": "place", onclick: () => openPlaceDialog([t2]) }, "Розмістити в…")
     )
   );
   for (const r of rows) {
@@ -16570,10 +16605,10 @@ var CSS2 = `
 function ensureStyle2() {
   const root = ROOT.el;
   if (root && !root.querySelector("#" + STYLE_ID2)) {
-    const st = document.createElement("style");
-    st.id = STYLE_ID2;
-    st.textContent = CSS2;
-    root.prepend(st);
+    const st4 = document.createElement("style");
+    st4.id = STYLE_ID2;
+    st4.textContent = CSS2;
+    root.prepend(st4);
   }
 }
 var bound = null;
@@ -16595,10 +16630,10 @@ function onMount2() {
       return;
     }
     e.preventDefault();
-    const item = trayItems().find((t) => t.code === text.slice(9));
+    const item = trayItems().find((t2) => t2.code === text.slice(9));
     const p = E.floorPoint?.(e, elevOf(S.ui.layer));
     if (item && p) {
-      const z = zoneAt(S.ui.layer, p.x, p.y);
+      const z = zoneAt2(S.ui.layer, p.x, p.y);
       placeFromTray([item], z ? { zoneId: z.id } : { point: p });
     }
   };
@@ -16847,15 +16882,15 @@ async function readXlsx(bytes, { sheet = 0 } = {}) {
     for (const cm of (rm[2] || "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
       const ref2 = attr(cm[1], "r");
       const idx = ref2 ? colIndex(ref2) : row.length;
-      const t = attr(cm[1], "t");
+      const t2 = attr(cm[1], "t");
       const inner = cm[2] || "";
       const v = /<v>([\s\S]*?)<\/v>/.exec(inner);
       let val = "";
-      if (t === "inlineStr") {
+      if (t2 === "inlineStr") {
         val = textOf(inner);
       } else if (v) {
         const raw = xmlUnesc(v[1]);
-        val = t === "s" ? sst[parseInt(raw, 10)] ?? "" : t === "b" ? raw === "1" : t === "str" || t === "e" ? raw : raw.trim() === "" ? "" : Number(raw);
+        val = t2 === "s" ? sst[parseInt(raw, 10)] ?? "" : t2 === "b" ? raw === "1" : t2 === "str" || t2 === "e" ? raw : raw.trim() === "" ? "" : Number(raw);
         if (typeof val === "number" && Number.isNaN(val)) {
           val = raw;
         }
@@ -17105,50 +17140,50 @@ function openImport({ file = null } = {}) {
   if (!S.site) {
     return void 0;
   }
-  const st = { source: null, label: "", table: null, map: {}, locs: [], stats: null, plan: null, mode: canManage() ? "new" : "current", projName: "", layout: true, extra: [], busy: false, error: "", suggestions: [] };
+  const st4 = { source: null, label: "", table: null, map: {}, locs: [], stats: null, plan: null, mode: canManage() ? "new" : "current", projName: "", layout: true, extra: [], busy: false, error: "", suggestions: [] };
   const box = h("div", { class: "fcol", id: "impBody" });
   const mapBox = h("div", { class: "fcol", id: "impMap" });
   const sumBox = h("div", { class: "fcol", id: "impSummary" });
   const optBox = h("div", { class: "fcol", id: "impOpts" });
   let goBtn = null;
-  const rulesNow = () => [...siteRules().rules, ...st.extra];
-  const existing = () => st.mode === "new" ? { existingCodes: /* @__PURE__ */ new Set(), existingPrefixes: /* @__PURE__ */ new Set() } : { existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((x) => x.code_prefix)) };
+  const rulesNow = () => [...siteRules().rules, ...st4.extra];
+  const existing = () => st4.mode === "new" ? { existingCodes: /* @__PURE__ */ new Set(), existingPrefixes: /* @__PURE__ */ new Set() } : { existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((x) => x.code_prefix)) };
   const rankSuggestions = (list) => {
     const base2 = { siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() };
     const scored = list.map((g3) => {
-      const p = planStructure(st.locs, { ...base2, parser: makeParser({ rules: [...rulesNow(), { id: "probe", mask: g3.mask }], addr: S.site.addr || null }) });
+      const p = planStructure(st4.locs, { ...base2, parser: makeParser({ rules: [...rulesNow(), { id: "probe", mask: g3.mask }], addr: S.site.addr || null }) });
       return { ...g3, placed: p.slots.filter((x) => x.template !== "floor_spot").reduce((n, x) => n + x.items.length, 0) };
     });
     return scored.filter((g3) => g3.placed > 0).sort((a, b) => b.placed - a.placed || b.matched - a.matched).slice(0, 3);
   };
   const recompute = () => {
-    st.suggestions = [];
-    if (st.table) {
-      const body = st.table.rows.slice(1);
-      const r = rowsToLocations(body, st.map);
-      st.locs = r.locs;
-      st.stats = r.stats;
+    st4.suggestions = [];
+    if (st4.table) {
+      const body = st4.table.rows.slice(1);
+      const r = rowsToLocations(body, st4.map);
+      st4.locs = r.locs;
+      st4.stats = r.stats;
     }
-    if (!st.locs.length) {
-      st.plan = null;
+    if (!st4.locs.length) {
+      st4.plan = null;
       return;
     }
     const parser = makeParser({ rules: rulesNow(), addr: S.site.addr || null });
-    if (st.source !== "odoo") {
-      st.warehouses = null;
+    if (st4.source !== "odoo") {
+      st4.warehouses = null;
     }
-    st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() });
-    const un = st.plan.stats.unparsedCodes;
-    if (un.length && un.length >= 0.3 * Math.max(1, st.plan.stats.cells)) {
-      st.suggestions = rankSuggestions(guessMasks(un, { limit: 5 }));
+    st4.plan = planStructure(st4.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", ...existing() });
+    const un = st4.plan.stats.unparsedCodes;
+    if (un.length && un.length >= 0.3 * Math.max(1, st4.plan.stats.cells)) {
+      st4.suggestions = rankSuggestions(guessMasks(un, { limit: 5 }));
     }
   };
   const setTable = async (table, label) => {
-    st.source = "file";
-    st.table = table;
-    st.label = label;
-    st.map = autoMap(table.rows[0] || []);
-    st.projName = st.projName || label.replace(/\.[^.]+$/, "");
+    st4.source = "file";
+    st4.table = table;
+    st4.label = label;
+    st4.map = autoMap(table.rows[0] || []);
+    st4.projName = st4.projName || label.replace(/\.[^.]+$/, "");
     recompute();
     render2();
   };
@@ -17159,28 +17194,28 @@ function openImport({ file = null } = {}) {
       if (!table.rows.length) {
         throw new Error("Файл порожній.");
       }
-      st.error = "";
+      st4.error = "";
       await setTable(table, f.name);
     } catch (e) {
-      st.error = e.message || String(e);
+      st4.error = e.message || String(e);
       render2();
     }
   };
   const loadOdoo = async () => {
     try {
       const r = await E.adapter.locations({ op: "feed" });
-      st.source = "odoo";
-      st.table = null;
-      st.label = `Odoo: ${r.feed.warehouse?.name || r.feed.root || "склад"}${r.demo || r.feed.demo ? " (приклад)" : ""}`;
-      st.locs = r.feed.locations.map(feedLoc);
-      st.stats = { rows: st.locs.length, locations: st.locs.length, stockRows: st.locs.filter((l) => l.qty > 0).length, skippedEmpty: 0 };
-      st.projName = st.projName || r.feed.warehouse?.name || "Склад з Odoo";
-      st.error = r.feed.truncated ? "Стрічка обрізана: перші " + fmtInt(st.locs.length) + " локацій." : "";
-      st.warehouses = r.feed.warehouse ? [r.feed.warehouse.code || r.feed.warehouse.name] : null;
+      st4.source = "odoo";
+      st4.table = null;
+      st4.label = `Odoo: ${r.feed.warehouse?.name || r.feed.root || "склад"}${r.demo || r.feed.demo ? " (приклад)" : ""}`;
+      st4.locs = r.feed.locations.map(feedLoc);
+      st4.stats = { rows: st4.locs.length, locations: st4.locs.length, stockRows: st4.locs.filter((l) => l.qty > 0).length, skippedEmpty: 0 };
+      st4.projName = st4.projName || r.feed.warehouse?.name || "Склад з Odoo";
+      st4.error = r.feed.truncated ? "Стрічка обрізана: перші " + fmtInt(st4.locs.length) + " локацій." : "";
+      st4.warehouses = r.feed.warehouse ? [r.feed.warehouse.code || r.feed.warehouse.name] : null;
       recompute();
       render2();
     } catch (e) {
-      st.error = e.message || String(e);
+      st4.error = e.message || String(e);
       render2();
     }
   };
@@ -17193,16 +17228,16 @@ function openImport({ file = null } = {}) {
       e.preventDefault();
       e.dataTransfer.files[0] && loadFile(e.dataTransfer.files[0]);
     });
-    const header = st.table ? st.table.rows[0] || [] : [];
+    const header = st4.table ? st4.table.rows[0] || [] : [];
     mapBox.replaceChildren(
-      ...st.table ? [
-        h("div", { class: "small muted" }, `Файл: ${st.label} · ${st.table.format === "xlsx" ? `аркуш «${st.table.sheet}»` : `${st.table.encoding}, роздільник ${st.table.delimiter === "	" ? "табуляція" : st.table.delimiter}`} · рядків: ${fmtInt(st.table.rows.length - 1)}`),
+      ...st4.table ? [
+        h("div", { class: "small muted" }, `Файл: ${st4.label} · ${st4.table.format === "xlsx" ? `аркуш «${st4.table.sheet}»` : `${st4.table.encoding}, роздільник ${st4.table.delimiter === "	" ? "табуляція" : st4.table.delimiter}`} · рядків: ${fmtInt(st4.table.rows.length - 1)}`),
         h(
           "div",
           { class: "grid3", id: "impMapGrid" },
           FIELDS.map(
-            (f) => fld(f.label, selectEl([["", "— немає —"], ...header.map((x, i) => [String(i), String(x || `Колонка ${i + 1}`)])], f.key in st.map ? String(st.map[f.key]) : "", (v) => {
-              v === "" ? delete st.map[f.key] : st.map[f.key] = Number(v);
+            (f) => fld(f.label, selectEl([["", "— немає —"], ...header.map((x, i) => [String(i), String(x || `Колонка ${i + 1}`)])], f.key in st4.map ? String(st4.map[f.key]) : "", (v) => {
+              v === "" ? delete st4.map[f.key] : st4.map[f.key] = Number(v);
               recompute();
               renderSummary();
             }, false, f.label))
@@ -17210,35 +17245,35 @@ function openImport({ file = null } = {}) {
         )
       ] : []
     );
-    box.replaceChildren(...K(drop, st.error ? h("div", { class: "note lock", id: "impError" }, st.error) : null, mapBox, sumBox, optBox));
+    box.replaceChildren(...K(drop, st4.error ? h("div", { class: "note lock", id: "impError" }, st4.error) : null, mapBox, sumBox, optBox));
     renderSummary();
     renderOpts();
   };
   const renderSummary = () => {
-    const p = st.plan;
-    const need = st.table && !("name" in st.map) && !("complete_name" in st.map);
+    const p = st4.plan;
+    const need = st4.table && !("name" in st4.map) && !("complete_name" in st4.map);
     sumBox.replaceChildren(
       ...K(need ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")] : p ? [
-        h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt((st.warehouses || p.stats.warehouses).length)}${(st.warehouses || p.stats.warehouses).length ? ` (${(st.warehouses || p.stats.warehouses).slice(0, 4).join(", ")})` : ""}`))),
+        h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st4.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt((st4.warehouses || p.stats.warehouses).length)}${(st4.warehouses || p.stats.warehouses).length ? ` (${(st4.warehouses || p.stats.warehouses).slice(0, 4).join(", ")})` : ""}`))),
         p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
         h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
         ...reasonRows(p),
-        ...st.suggestions.map((g3) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g3.mask), h("span", { class: "muted small" }, `розібрано ${g3.matched} із ${g3.total}, рядами стане ${g3.placed}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
-          st.extra.push({ id: `s${st.extra.length + 1}`, mode: "mask", mask: g3.mask, type: "auto", enabled: true });
+        ...st4.suggestions.map((g3) => h("div", { class: "frow", "data-role": "suggest" }, h("span", { class: "small" }, "Підібрано маску:"), h("span", { class: "mono" }, g3.mask), h("span", { class: "muted small" }, `розібрано ${g3.matched} із ${g3.total}, рядами стане ${g3.placed}`), h("button", { class: "fbtn sm", type: "button", "data-mask": g3.mask, onclick: () => {
+          st4.extra.push({ id: `s${st4.extra.length + 1}`, mode: "mask", mask: g3.mask, type: "auto", enabled: true });
           recompute();
           renderSummary();
         } }, "Застосувати"))),
-        st.extra.length ? h("div", { class: "small muted" }, `Додані правила (збережуться з імпортом): ${st.extra.map((r) => r.mask).join(" · ")}`) : null
+        st4.extra.length ? h("div", { class: "small muted" }, `Додані правила (збережуться з імпортом): ${st4.extra.map((r) => r.mask).join(" · ")}`) : null
       ] : [h("div", { class: "small muted" }, "Оберіть файл CSV чи XLSX або прочитайте структуру складу з Odoo.")])
     );
     if (goBtn) {
-      goBtn.disabled = !p || st.busy || need || !(p.slots.length || p.tray.length);
+      goBtn.disabled = !p || st4.busy || need || !(p.slots.length || p.tray.length);
     }
   };
   const reasonRows = (p) => {
     const by = {};
-    for (const t of p.tray) {
-      (by[t.reason] ||= []).push(t.code);
+    for (const t2 of p.tray) {
+      (by[t2.reason] ||= []).push(t2.code);
     }
     return Object.entries(by).map(([k, codes]) => h("div", { class: "small muted", "data-role": "reason", "data-reason": k }, `${fmtInt(codes.length)} — ${REASONS[k] || k}: ${codes.slice(0, 3).join(", ")}${codes.length > 3 ? " …" : ""}`));
   };
@@ -17248,50 +17283,50 @@ function openImport({ file = null } = {}) {
       h(
         "div",
         { class: "fcol" },
-        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st.mode === "new", disabled: !mgr, onchange: () => {
-          st.mode = "new";
+        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impNew", checked: st4.mode === "new", disabled: !mgr, onchange: () => {
+          st4.mode = "new";
           recompute();
           renderSummary();
           renderOpts();
         } }), "Створити новий проєкт «з файлу»", mgr ? null : h("span", { class: "small muted" }, " (лише менеджер)")),
-        st.mode === "new" ? fld("Назва проєкту", h("input", { type: "text", id: "impName", value: st.projName, "aria-label": "Назва проєкту", oninput: (e) => {
-          st.projName = e.target.value;
+        st4.mode === "new" ? fld("Назва проєкту", h("input", { type: "text", id: "impName", value: st4.projName, "aria-label": "Назва проєкту", oninput: (e) => {
+          st4.projName = e.target.value;
         } })) : null,
-        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st.mode === "current", onchange: () => {
-          st.mode = "current";
+        h("label", { class: "frow" }, h("input", { type: "radio", name: "impMode", id: "impCurrent", checked: st4.mode === "current", onchange: () => {
+          st4.mode = "current";
           recompute();
           renderSummary();
           renderOpts();
         } }), `Додати в поточний проєкт «${S.site.name}»`),
-        h("label", { class: "frow" }, h("input", { type: "checkbox", id: "impLayout", checked: st.layout, onchange: (e) => {
-          st.layout = e.target.checked;
+        h("label", { class: "frow" }, h("input", { type: "checkbox", id: "impLayout", checked: st4.layout, onchange: (e) => {
+          st4.layout = e.target.checked;
         } }), "Розкласти автоматично (зони по горизонталі, ряди вглиб)"),
-        h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "impRules", onclick: () => E.runDialog("parseCodes", { items: st.locs.map((l) => l.code) }) }, "Правила розбору…"))
+        h("div", { class: "frow" }, h("button", { class: "fbtn sm", type: "button", id: "impRules", onclick: () => E.runDialog("parseCodes", { items: st4.locs.map((l) => l.code) }) }, "Правила розбору…"))
       )
     );
   };
   const apply = async () => {
-    if (!st.plan || st.busy) {
+    if (!st4.plan || st4.busy) {
       return false;
     }
-    st.busy = true;
+    st4.busy = true;
     goBtn.disabled = true;
     try {
       const rules = normalizeRules({ rules: rulesNow() }).rules;
       let res;
-      if (st.mode === "new") {
+      if (st4.mode === "new") {
         const code = `IMP${Date.now().toString(36).toUpperCase().slice(-9)}`;
-        if (!await E.createSite({ name: st.projName.trim() || "Імпорт", code })) {
+        if (!await E.createSite({ name: st4.projName.trim() || "Імпорт", code })) {
           return false;
         }
         S.site.parse_rules = normalizeRules({ rules });
-        res = E.importLocations(st.locs, { label: "Імпорт структури", layout: st.layout, growBuilding: true, parseRules: rules });
+        res = E.importLocations(st4.locs, { label: "Імпорт структури", layout: st4.layout, growBuilding: true, parseRules: rules });
         await saveRules(S.site.parse_rules);
       } else {
-        if (st.extra.length) {
+        if (st4.extra.length) {
           await saveRules(normalizeRules({ ...S.site.parse_rules || {}, rules }));
         }
-        res = E.importLocations(st.locs, { label: "Імпорт структури", layout: st.layout, parseRules: rules });
+        res = E.importLocations(st4.locs, { label: "Імпорт структури", layout: st4.layout, parseRules: rules });
       }
       if (!res.ok) {
         toast(res.reason || "Імпорт не виконано.", "warn");
@@ -17304,7 +17339,7 @@ function openImport({ file = null } = {}) {
       toast(e.message || "Не вдалося імпортувати.", "err");
       return false;
     } finally {
-      st.busy = false;
+      st4.busy = false;
     }
   };
   render2();
@@ -17358,20 +17393,20 @@ function openExport() {
   if (!S.site) {
     return void 0;
   }
-  const st = { scope: "all", format: "xlsx", zones: false };
+  const st4 = { scope: "all", format: "xlsx", zones: false };
   const info = h("div", { class: "small muted", id: "expInfo" });
   info.textContent = `Місць у проєкті: ${fmtInt(S.slots.reduce((n, sl) => n + cellsOf(sl).filter((c) => !c.disabled).length, 0))}.`;
   const body = h(
     "div",
     { class: "fcol", id: "expBody" },
-    fld("Що експортувати", selectEl([["all", "Усі місця"], ...can("odoo_import") ? [["changed", "Нові й змінені відносно Odoo (з недостаючими батьками)"]] : []], st.scope, (v) => {
-      st.scope = v;
+    fld("Що експортувати", selectEl([["all", "Усі місця"], ...can("odoo_import") ? [["changed", "Нові й змінені відносно Odoo (з недостаючими батьками)"]] : []], st4.scope, (v) => {
+      st4.scope = v;
     }, false, "Що експортувати")),
-    fld("Формат", selectEl([["xlsx", "XLSX"], ["csv", "CSV (UTF-8, кома)"]], st.format, (v) => {
-      st.format = v;
+    fld("Формат", selectEl([["xlsx", "XLSX"], ["csv", "CSV (UTF-8, кома)"]], st4.format, (v) => {
+      st4.format = v;
     }, false, "Формат")),
     h("label", { class: "frow" }, h("input", { type: "checkbox", id: "expZones", onchange: (e) => {
-      st.zones = e.target.checked;
+      st4.zones = e.target.checked;
     } }), "Зони як батьківські локації (для перенесення структури в інший проєкт)"),
     info,
     h("div", { class: "small muted" }, "Формат імпорту Odoo: name, location_id (повне ім'я батька), usage, barcode, posx/posy/posz. Файл створюється в браузері й нікуди не надсилається.")
@@ -17388,16 +17423,16 @@ function openExport() {
         id: "expGo",
         onClick: async () => {
           try {
-            let locs = projectLocations({ zones: st.zones });
-            if (st.scope === "changed") {
+            let locs = projectLocations({ zones: st4.zones });
+            if (st4.scope === "changed") {
               const r = await E.adapter.locations({ op: "feed" });
               locs = changedLocations(locs, r.feed.locations.map(feedLoc));
-            } else if (st.zones) {
+            } else if (st4.zones) {
               locs = withParents(locs, /* @__PURE__ */ new Set([projectRoot()]));
             }
             const rows = locationsToRows(locs);
             const base2 = S.site.code || S.site.name;
-            if (st.format === "csv") {
+            if (st4.format === "csv") {
               saveBlob(fileName(base2, "csv"), toCsv2(rows), "text/csv;charset=utf-8");
             } else {
               saveBlob(fileName(base2, "xlsx"), await writeXlsx(rows, { sheet: "Локації" }), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -17427,7 +17462,7 @@ var GROUPS2 = [
   ["moved", "Інший батько в Odoo", "батька запам'ятовано для місця на підлозі"]
 ];
 var ownerOf = (code) => S.slots.find((s) => s.template !== "zone" && cellsOf(s).some((c) => c.code === code));
-function relevantDiff(diff, have = projectCodes(), trayCodes2 = new Set(E.trayItems?.().map((t) => t.code) || [])) {
+function relevantDiff(diff, have = projectCodes(), trayCodes2 = new Set(E.trayItems?.().map((t2) => t2.code) || [])) {
   const known = (c) => have.has(c) || trayCodes2.has(c);
   return {
     appeared: (diff.appeared || []).map(feedLoc).filter((l) => l.usage === "internal" && !known(l.code)),
@@ -17438,7 +17473,7 @@ function relevantDiff(diff, have = projectCodes(), trayCodes2 = new Set(E.trayIt
 }
 function applyAccepted(items) {
   const tray = [...S.site.parse_rules?.tray || []];
-  const stored = new Set(tray.map((t) => t.code));
+  const stored = new Set(tray.map((t2) => t2.code));
   let changed = 0;
   E.undoRecord?.();
   const drop = /* @__PURE__ */ new Set();
@@ -17466,9 +17501,9 @@ function applyAccepted(items) {
         s.overrides = { ...s.overrides || {}, [item.code]: { ...(s.overrides || {})[item.code] || {}, name: item.new } };
         changed++;
       }
-      const t = tray.find((x) => x.code === item.code);
-      if (t) {
-        t.name = item.new;
+      const t2 = tray.find((x) => x.code === item.code);
+      if (t2) {
+        t2.name = item.new;
       }
     } else if (group === "moved") {
       const s = ownerOf(item.code);
@@ -17478,7 +17513,7 @@ function applyAccepted(items) {
       }
     }
   }
-  E.setTray?.(tray.filter((t) => !drop.has(t.code)));
+  E.setTray?.(tray.filter((t2) => !drop.has(t2.code)));
   if (changed) {
     E.undoLabel?.("Оновлення з Odoo");
     E.commit({});
@@ -17511,19 +17546,19 @@ async function openSync() {
     return void 0;
   }
   const pick = /* @__PURE__ */ new Map();
-  const keyOf = (g3, i) => `${g3}:${i}`;
+  const keyOf2 = (g3, i) => `${g3}:${i}`;
   for (const [g3] of GROUPS2) {
-    diff[g3].forEach((_x, i) => pick.set(keyOf(g3, i), "odoo"));
+    diff[g3].forEach((_x, i) => pick.set(keyOf2(g3, i), "odoo"));
   }
   const list = h("div", { class: "fcol", id: "syncList" });
   const sum = h("div", { class: "small muted", id: "syncSum" });
-  const draw = () => {
+  const draw3 = () => {
     sum.textContent = `Прийняти з Odoo: ${[...pick.values()].filter((v) => v === "odoo").length} із ${total}`;
     list.replaceChildren(
       ...K(GROUPS2.filter(([g3]) => diff[g3].length).flatMap(([g3, title, hint]) => [
         h("h4", { style: { margin: "8px 0 2px" } }, `${title}: ${fmtInt(diff[g3].length)}`, h("span", { class: "small muted" }, ` — ${hint}`)),
         ...diff[g3].slice(0, 200).map((it, i) => {
-          const k = keyOf(g3, i);
+          const k = keyOf2(g3, i);
           const text = g3 === "renamed" ? `${it.code}: «${it.old}» → «${it.new}»` : g3 === "moved" ? `${it.code}: ${it.old_parent} → ${it.new_parent}` : `${it.code}${it.name && it.name !== it.code ? ` — ${it.name}` : ""}`;
           const sel = h("select", { "aria-label": text, "data-key": k }, h("option", { value: "odoo", selected: pick.get(k) === "odoo" }, "Прийняти з Odoo"), h("option", { value: "mine", selected: pick.get(k) === "mine" }, "Залишити моє"));
           sel.addEventListener("change", () => {
@@ -17536,12 +17571,12 @@ async function openSync() {
       ]))
     );
   };
-  draw();
+  draw3();
   const setAll = (v) => {
     for (const k of pick.keys()) {
       pick.set(k, v);
     }
-    draw();
+    draw3();
   };
   return new Promise((resolve) => {
     openDialog({
@@ -17558,7 +17593,7 @@ async function openSync() {
           onClick: async () => {
             const items = [];
             for (const [g3] of GROUPS2) {
-              diff[g3].forEach((item, i) => pick.get(keyOf(g3, i)) === "odoo" && items.push({ group: g3, item }));
+              diff[g3].forEach((item, i) => pick.get(keyOf2(g3, i)) === "odoo" && items.push({ group: g3, item }));
             }
             try {
               const res = applyAccepted(items);
@@ -17578,6 +17613,2971 @@ async function openSync() {
 registries.dialogs.add("syncOdoo", () => openSync(), { force: true });
 registries.menu.add("syncOdoo", { area: "more", label: "Оновити з Odoo", icon: "hist", capability: "odoo_import", sequence: 58, run: () => E.runDialog("syncOdoo"), disabled: () => !S.site || !can("odoo_import") }, { sequence: 58, force: true });
 Object.assign(E, { openSync, applySyncChoices: applyAccepted });
+
+// core/constructor/collab_ui.js
+var STYLE_ID3 = "f3d-s6-style";
+var CSS3 = `
+.s6-layer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.s6-badge{position:absolute;left:0;top:0;pointer-events:auto;cursor:pointer;min-width:22px;height:22px;padding:0 6px;border-radius:11px;border:2px solid var(--surface);color:#fff;font:600 12px/18px var(--sans,system-ui);text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translate(-50%,-100%)}
+.s6-badge[data-tone="note"]{background:#2563eb}
+.s6-badge[data-tone="task"]{background:#ea8a1a}
+.s6-badge[data-tone="done"]{background:#8b8b8b}
+.s6-badge:hover,.s6-badge:focus-visible{outline:2px solid var(--ink);z-index:3}
+.s6-lockb{position:absolute;left:0;top:0;pointer-events:auto;padding:1px 7px;border-radius:3px;border:1px solid var(--surface);color:#fff;font:600 11px/17px var(--sans,system-ui);white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3);transform:translate(-50%,-50%)}
+.s6-lockb[data-mine="1"]{background:#15803d}
+.s6-lockb[data-mine="0"]{background:#b91c1c}
+.s6-panel{display:flex;flex-direction:column;gap:6px}
+.s6-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.s6-row.sp{justify-content:space-between}
+.s6-item{border:1px solid var(--line2,var(--line));background:var(--surface);padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.s6-item[data-active="1"]{border-color:var(--accent);background:var(--accent-soft)}
+.s6-item.res{opacity:.7}
+.s6-tag{display:inline-block;border:1px solid var(--line);padding:0 5px;font-size:11px;color:var(--ink2);background:var(--surface2,var(--surface))}
+.s6-tag.ok{border-color:var(--accent);color:var(--accent)}
+.s6-tag.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.s6-muted{color:var(--ink2);font-size:12px}
+.s6-text{white-space:pre-wrap;word-break:break-word;font-size:13px}
+.s6-cmp{width:100%;border-collapse:collapse;font-size:12px}
+.s6-cmp th,.s6-cmp td{border-bottom:1px solid var(--line2,var(--line));padding:3px 5px;text-align:right}
+.s6-cmp th:first-child,.s6-cmp td:first-child{text-align:left}
+.s6-cmp .pos{color:#15803d}.s6-cmp .neg{color:#b91c1c}
+#ltabs{flex-wrap:wrap}
+.s6-train{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:4;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);padding:6px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px);box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.s6-train[hidden]{display:none}
+.s6-crumbs{position:absolute;left:8px;top:44px;z-index:3;display:flex;gap:2px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);padding:2px 4px;font-size:12px;max-width:calc(100% - 200px)}
+.s6-crumbs[hidden]{display:none}
+.s6-crumbs button{border:0;background:transparent;padding:2px 5px;cursor:pointer;color:var(--ink);font:inherit}
+.s6-crumbs button:hover{background:var(--accent-soft)}
+.s6-crumbs button[aria-current="true"]{font-weight:700}
+.s6-crumbs .sep{color:var(--ink2)}
+.s6-pick{position:absolute;left:8px;top:76px;z-index:3;display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);padding:2px 6px;font-size:12px}
+.s6-pick select{min-height:24px;font-size:12px}
+.s6-mini{position:absolute;right:8px;top:44px;z-index:3;border:1px solid var(--ink);background:var(--surface);padding:2px}
+.s6-mini canvas{display:block;cursor:crosshair}
+.s6-mini[hidden]{display:none}
+.s6-tour-dim{position:absolute;inset:0;z-index:50;pointer-events:auto;background:transparent}
+.s6-tour-hole{position:fixed;z-index:51;border:2px solid var(--accent);border-radius:3px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;transition:all .15s}
+.s6-tour-card{position:fixed;z-index:52;width:min(340px,calc(100% - 16px));background:var(--surface);color:var(--ink);border:1px solid var(--ink);box-shadow:0 8px 28px rgba(0,0,0,.4);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.s6-tour-card h3{margin:0;font-size:14px}
+.s6-tour-card .body{font-size:13px;line-height:1.45}
+.s6-tour-card .kind{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.s6-help{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;min-height:320px;max-height:60vh}
+.s6-help nav{overflow:auto;border:1px solid var(--line2,var(--line));display:flex;flex-direction:column}
+.s6-help nav button{border:0;border-bottom:1px solid var(--line2,var(--line));background:var(--surface);text-align:left;padding:6px 8px;cursor:pointer;font-size:12px;color:var(--ink)}
+.s6-help nav button[aria-current="true"]{background:var(--accent-soft);font-weight:700}
+.s6-help article{overflow:auto;font-size:13px;line-height:1.5;padding-right:4px}
+.s6-plan{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.s6-plan svg{width:100%;height:auto;border:1px solid var(--line);background:var(--surface)}
+@media (max-width:768px){.s6-help{grid-template-columns:1fr}.s6-crumbs{top:6px;max-width:calc(100% - 12px)}.s6-pick,.s6-mini,.s6-train{display:none}}
+`;
+function ensureStyle3() {
+  const root = ROOT.el;
+  if (!root || root.querySelector("#" + STYLE_ID3)) {
+    return;
+  }
+  const st4 = document.createElement("style");
+  st4.id = STYLE_ID3;
+  st4.textContent = CSS3;
+  root.prepend(st4);
+}
+var centerEl = () => ROOT.el?.querySelector(".center") || null;
+function layerEl(id, tag = "div") {
+  const c = centerEl();
+  if (!c) {
+    return null;
+  }
+  let el = c.querySelector("#" + id);
+  if (!el) {
+    el = document.createElement(tag);
+    el.id = id;
+    el.className = "s6-layer";
+    c.append(el);
+  }
+  return el;
+}
+function project(x, y, z = 0) {
+  const host2 = ROOT.el?.querySelector("#vp");
+  if (!V.ok || !V.camera || !host2 || !THREE.Vector3) {
+    return { x: 0, y: 0, ok: false };
+  }
+  const w = host2.clientWidth;
+  const hh = host2.clientHeight;
+  const p = new THREE.Vector3(x, z, -y).project(V.camera);
+  const sx = (p.x * 0.5 + 0.5) * w;
+  const sy = (-p.y * 0.5 + 0.5) * hh;
+  return { x: sx, y: sy, ok: p.z > -1 && p.z < 1 && sx > -20 && sx < w + 20 && sy > -20 && sy < hh + 20 };
+}
+var hooks = /* @__PURE__ */ new Map();
+function addFrameHook(key, fn, { pre = false } = {}) {
+  hooks.set(key, { fn, pre });
+  installRenderHook();
+}
+function installRenderHook() {
+  const r = V.renderer;
+  if (!r || r.__s6) {
+    return;
+  }
+  const orig = r.render.bind(r);
+  const run2 = (pre) => {
+    for (const [key, hook] of hooks) {
+      if (hook.pre === pre) {
+        try {
+          hook.fn();
+        } catch (e) {
+          console.error(`S6 кадр «${key}»:`, e);
+        }
+      }
+    }
+  };
+  r.render = function renderS6(scene, camera) {
+    run2(true);
+    orig(scene, camera);
+    run2(false);
+  };
+  r.__s6 = true;
+}
+var redrawOverlays = () => E.requestRender?.();
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  installRenderHook();
+  redrawOverlays();
+});
+E.lifecycle.unmount.add(() => hooks.clear());
+
+// core/constructor/i18n.js
+var LANGS = { uk: "Українська", en: "English" };
+var KEY = "f3d_constructor_lang";
+var EN = /* @__PURE__ */ new Map();
+var PATTERNS = [];
+var lang = null;
+var subs = /* @__PURE__ */ new Set();
+var lsGet3 = (k) => {
+  try {
+    return globalThis.localStorage ? globalThis.localStorage.getItem(k) : null;
+  } catch {
+    return null;
+  }
+};
+var lsSet3 = (k, v) => {
+  try {
+    globalThis.localStorage?.setItem(k, v);
+  } catch {
+  }
+};
+function detectLang() {
+  const saved2 = lsGet3(KEY);
+  if (saved2 === "uk" || saved2 === "en") {
+    return saved2;
+  }
+  const from = String(host.lang || globalThis.document?.documentElement?.lang || "").toLowerCase();
+  return from.startsWith("en") ? "en" : "uk";
+}
+var getLang = () => lang ||= detectLang();
+function addEn(map) {
+  for (const [uk, en] of Object.entries(map)) {
+    EN.set(uk, en);
+  }
+}
+function addPattern(re, fn) {
+  PATTERNS.push([re, fn]);
+}
+var fill = (s, p) => p ? String(s).replace(/\{(\w+)\}/g, (m, k) => p[k] == null ? m : p[k]) : String(s);
+function t(key, params) {
+  return fill(getLang() === "en" && EN.has(key) ? EN.get(key) : key, params);
+}
+function enOf(text) {
+  if (EN.has(text)) {
+    return EN.get(text);
+  }
+  for (const [re, fn] of PATTERNS) {
+    const m = re.exec(text);
+    if (m) {
+      return fn(...m.slice(1));
+    }
+  }
+  return null;
+}
+function setLang(next, { persist = true } = {}) {
+  if (!LANGS[next] || next === getLang()) {
+    return;
+  }
+  lang = next;
+  if (persist) {
+    lsSet3(KEY, next);
+  }
+  if (ROOT.el) {
+    ROOT.el.lang = next;
+  }
+  for (const fn of subs) {
+    fn(next);
+  }
+  if (ROOT.el) {
+    E.renderAll?.();
+    translateTree(ROOT.el);
+  }
+}
+var onLang = (fn) => (subs.add(fn), () => subs.delete(fn));
+var ATTRS = ["title", "placeholder", "aria-label", "alt"];
+var SKIP = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
+var OBS = { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS };
+var texts = /* @__PURE__ */ new Map();
+var attrs = /* @__PURE__ */ new Map();
+var observer = null;
+var pending = false;
+function translateText(node) {
+  const rec = texts.get(node);
+  if (rec && node.data === rec.shown) {
+    return;
+  }
+  texts.delete(node);
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(node.data);
+  const en = m[2] ? enOf(m[2]) : null;
+  if (en != null) {
+    const shown = m[1] + en + m[3];
+    texts.set(node, { orig: node.data, shown });
+    node.data = shown;
+  }
+}
+function translateAttrs(el) {
+  let map = attrs.get(el);
+  for (const a of ATTRS) {
+    if (!el.hasAttribute(a)) {
+      continue;
+    }
+    const cur = el.getAttribute(a);
+    const rec = map && map.get(a);
+    if (rec && cur === rec.shown) {
+      continue;
+    }
+    map?.delete(a);
+    const en = cur ? enOf(cur.trim()) : null;
+    if (en != null) {
+      if (!map) {
+        map = /* @__PURE__ */ new Map();
+        attrs.set(el, map);
+      }
+      map.set(a, { orig: cur, shown: en });
+      el.setAttribute(a, en);
+    }
+  }
+}
+function translateTree(rootEl) {
+  if (!rootEl || typeof document === "undefined") {
+    return;
+  }
+  if (getLang() !== "en") {
+    restore2();
+    return;
+  }
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  for (let n = walker.currentNode; n; n = walker.nextNode()) {
+    if (n.nodeType === 3) {
+      if (!SKIP.has(n.parentNode?.tagName)) {
+        translateText(n);
+      }
+    } else {
+      translateAttrs(n);
+    }
+  }
+}
+function restore2() {
+  for (const [node, rec] of texts) {
+    if (node.data === rec.shown) {
+      node.data = rec.orig;
+    }
+  }
+  texts.clear();
+  for (const [el, map] of attrs) {
+    for (const [a, rec] of map) {
+      if (el.getAttribute(a) === rec.shown) {
+        el.setAttribute(a, rec.orig);
+      }
+    }
+  }
+  attrs.clear();
+}
+function startObserver() {
+  if (observer || typeof MutationObserver === "undefined" || !ROOT.el) {
+    return;
+  }
+  observer = new MutationObserver(() => {
+    if (pending || getLang() !== "en") {
+      return;
+    }
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      if (!observer) {
+        return;
+      }
+      observer.disconnect();
+      translateTree(ROOT.el);
+      if (ROOT.el) {
+        observer.observe(ROOT.el, OBS);
+      }
+    });
+  });
+  observer.observe(ROOT.el, OBS);
+}
+E.lifecycle.mount.add(() => {
+  if (ROOT.el) {
+    ROOT.el.lang = getLang();
+  }
+  startObserver();
+  translateTree(ROOT.el);
+});
+E.lifecycle.unmount.add(() => {
+  observer?.disconnect();
+  observer = null;
+  texts.clear();
+  attrs.clear();
+  pending = false;
+});
+registries.menu.add(
+  "lang",
+  {
+    area: "top",
+    get label() {
+      return getLang() === "uk" ? "EN" : "UK";
+    },
+    cls: "s6-lang",
+    run: () => setLang(getLang() === "uk" ? "en" : "uk")
+  },
+  { sequence: 95, force: true }
+);
+addEn({
+  // шапка й вкладки
+  "Конструктор": "Constructor",
+  "Площадка": "Site",
+  "Нова площадка": "New site",
+  "Роль": "Role",
+  "Режим": "Mode",
+  "Ваша роль": "Your role",
+  "Перегляд": "View",
+  "Редагування": "Edit",
+  "Проєктування": "Design",
+  "Застосування": "Apply",
+  "Менеджер (своя роль)": "Manager (own role)",
+  "Опублікувати": "Publish",
+  "Історія версій": "Version history",
+  "Історія": "History",
+  "Тема": "Theme",
+  "Шари": "Layers",
+  "Місця": "Places",
+  "Каталог": "Catalog",
+  "Об’єкт": "Object",
+  "Ліва панель": "Left panel",
+  "Властивості": "Properties",
+  "3D-сцена": "3D scene",
+  "Пошук": "Search",
+  "Лоток": "Tray",
+  "Типи": "Types",
+  "Збережено": "Saved",
+  "Зберігаємо…": "Saving…",
+  "Помилка збереження": "Save error",
+  "Чернетка · без змін": "Draft · no changes",
+  "Ще ▾": "More ▾",
+  "Зберегти все": "Save all",
+  "Застосувати": "Apply",
+  // сцена
+  "План": "Plan",
+  "Вписати": "Fit",
+  "Лінійка": "Ruler",
+  "Підписи": "Labels",
+  "Показник": "Metric",
+  "електрика": "electricity",
+  "повітря": "air",
+  "аспірація": "aspiration",
+  "прохід": "aisle",
+  "пожежна зона": "fire zone",
+  "попередження": "warning",
+  "заборона": "forbidden",
+  "Будівля": "Building",
+  "Шар": "Layer",
+  "Відмітка": "Elevation",
+  "Сітка": "Grid",
+  "Курсор": "Cursor",
+  // меню «Ще» й загальні кнопки
+  "Імпорт локацій…": "Import locations…",
+  "Експорт локацій…": "Export locations…",
+  "Авторозкладка площадки": "Auto-layout of the site",
+  "Бібліотека": "Library",
+  "Етикетки…": "Labels…",
+  "Масове створення…": "Bulk create…",
+  "Масив копій…": "Array of copies…",
+  "Категорії зберігання": "Storage categories",
+  "Правила розміщення": "Putaway rules",
+  "Журнал публікацій": "Publication log",
+  "Розбір кодів…": "Parse codes…",
+  "Оновити з Odoo": "Update from Odoo",
+  "Скинути до даних Odoo": "Reset to Odoo data",
+  "Гарячі клавіші": "Hotkeys",
+  "Закрити": "Close",
+  "Скасувати": "Cancel",
+  "Створити": "Create",
+  "Зберегти": "Save",
+  "Видалити": "Delete",
+  "Так": "Yes",
+  "Ні": "No",
+  "Назва": "Name",
+  "Код": "Code",
+  "Опис": "Description",
+  "Усе": "All",
+  "Пізніше": "Later",
+  "Додати": "Add",
+  "Перейменувати": "Rename",
+  "Копіювати": "Copy",
+  "Вставити": "Paste",
+  "Повернути": "Restore",
+  "Відкрити в Odoo": "Open in Odoo",
+  // діалоги ядра
+  "Назва площадки": "Site name",
+  "Повернути чернетку": "Restore draft",
+  "активна": "active",
+  "без нотатки": "no note",
+  "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
+  "Перевірка на сервері": "Server check",
+  "усе гаразд": "all good",
+  "Запис змінив інший користувач": "Another user changed the record",
+  "Взяти серверне": "Take the server version",
+  "Залишити моє": "Keep mine",
+  "Видалити об’єкт?": "Delete the object?",
+  "Видалити шар?": "Delete the layer?",
+  // права панель
+  "Картка місця": "Place card",
+  "Місць": "Places",
+  "Макс. навантаження": "Max load",
+  "Категорія": "Category",
+  "Етикетка…": "Label…",
+  "Залишки": "Stock",
+  "Правила": "Rules",
+  "Перевірки": "Checks",
+  "Довжина": "Length",
+  "Ширина": "Width",
+  "Висота": "Height",
+  "Крок колон X": "Column step X",
+  "Крок колон Y": "Column step Y",
+  "Адресація кодів": "Code addressing",
+  "Поворот": "Rotation",
+  "Рівень доступу": "Access level",
+  "Оновити дані": "Refresh data",
+  "Перейти до місця": "Go to a place",
+  "Де лежить": "Where is it",
+  "Не розміщено": "Not placed",
+  "Імпорт": "Import",
+  "Експорт": "Export",
+  "Імпорт структури": "Import structure"
+});
+addPattern(/^Чернетка · змінено (\d+)$/, (n) => `Draft · ${n} changed`);
+addPattern(/^Чернетка · (\d+)$/, (n) => `Draft · ${n}`);
+addPattern(/^Виділено: (\d+)\.?$/, (n) => `Selected: ${n}`);
+addPattern(/^Активна версія: (.+)$/, (v) => `Active version: ${v}`);
+addPattern(/^Шар «(.+)» редагує (.+)$/, (a, b) => `Layer “${a}” is edited by ${b}`);
+addPattern(/^Створено місце «(.+)»: (\d+) комірок\.$/, (p, n) => `Created place “${p}”: ${n} cells.`);
+addPattern(/^Режим перегляду: правка вимкнена\. Увімкніть «Редагування»\.$/, () => "View mode: editing is off. Turn on “Edit”.");
+Object.assign(E, { t, setLang, getLang, onLang });
+
+// core/constructor/versions_ui.js
+var hasVersions = () => !!E.adapter && typeof E.adapter.versions === "function";
+var KIND = { publish: "публікація", checkpoint: "контрольна точка" };
+async function loadList() {
+  if (hasVersions()) {
+    try {
+      return (await E.adapter.versions({ op: "list" })).versions;
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  return [...S.versions].sort((a, b) => b.n - a.n).map((v) => ({ ...v, kind: v.kind || "publish", is_active: !!S.site.active_version && v.n === S.site.active_version.n, has_snapshot: false }));
+}
+var NS = "http://www.w3.org/2000/svg";
+var svgEl = (tag, attrs2, ...kids) => {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs2 || {})) {
+    el.setAttribute(k, v);
+  }
+  el.append(...kids);
+  return el;
+};
+var polyPts = (pts) => pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+function planSvg(view) {
+  const b = view.site && view.site.building || { length: 100, width: 60 };
+  const L3 = b.length || 100;
+  const W2 = b.width || 60;
+  const layer = new Map(view.layers.map((l) => [l.id, l]));
+  const g3 = svgEl("g", { transform: `translate(0 ${W2}) scale(1 -1)`, "stroke-linejoin": "round" });
+  g3.append(svgEl("rect", { x: 0, y: 0, width: L3, height: W2, fill: "none", stroke: "currentColor", "stroke-width": Math.max(L3, W2) / 400 }));
+  const stroke = Math.max(L3, W2) / 900;
+  for (const s of view.slots) {
+    const ly = layer.get(s.layer_id);
+    if (!ly || ly.visible === false || ly.kind === "building") {
+      continue;
+    }
+    let pts = null;
+    if (s.template === "zone" && s.params && s.params.polygon) {
+      pts = s.params.polygon;
+    } else {
+      try {
+        pts = obbCorners(slotObb(s.template, s.params || {}, s.x, s.y, s.rotation || 0));
+      } catch {
+        pts = null;
+      }
+    }
+    if (pts) {
+      const zone2 = s.template === "zone";
+      g3.append(svgEl("polygon", { points: polyPts(pts), fill: ly.color || "#888", "fill-opacity": zone2 ? 0.08 : 0.55, stroke: ly.color || "#888", "stroke-width": stroke }));
+    }
+  }
+  for (const p of view.placements) {
+    const ly = layer.get(p.layer_id);
+    const v = variantOf(p.variant_id);
+    if (!ly || ly.visible === false || !v) {
+      continue;
+    }
+    try {
+      g3.append(svgEl("polygon", { points: polyPts(obbCorners(placementObb(v, p.x, p.y, p.rotation || 0))), fill: ly.color || "#557", "fill-opacity": 0.8, stroke: "currentColor", "stroke-width": stroke }));
+    } catch {
+    }
+  }
+  return svgEl("svg", { viewBox: `-2 -2 ${L3 + 4} ${W2 + 4}`, role: "img", "aria-label": t("Схема площадки") }, g3);
+}
+var currentView = () => ({ site: { building: S.site.building }, layers: S.layers, slots: S.slots, placements: S.placements });
+function metricsOf(view) {
+  return E.variantMetrics ? E.variantMetrics(view.slots, view.slots) : null;
+}
+async function openView(v) {
+  let res;
+  try {
+    res = await E.adapter.versions({ op: "view", version_id: v.id });
+  } catch (e) {
+    toast(e.message || String(e), "err");
+    return;
+  }
+  const was = res.view;
+  const now = currentView();
+  const a = metricsOf(was);
+  const b = metricsOf(now);
+  const rows = [
+    ["cells", "Місць (комірок)", 0],
+    ["places", "Палетомісць", 0],
+    ["area", "Площа підлоги, м²", 1],
+    ["volume", "Об’єм місць, м³", 1],
+    ["max_weight", "Ємність, кг", 0]
+  ];
+  const cell = (x, d) => x == null ? "—" : d ? fmt(x, d) : fmtInt(x);
+  openDialog({
+    title: t("Версія v{n}: перегляд", { n: v.n }),
+    cls: "wide",
+    body: h(
+      "div",
+      { class: "s6-panel", id: "s6VerView" },
+      h("div", { class: "s6-muted" }, t("Лише читання: чернетка не змінюється. Ліворуч — версія, праворуч — поточна чернетка.")),
+      h("div", { class: "s6-plan" }, h("div", null, h("b", null, `v${v.n}`), planSvg(was)), h("div", null, h("b", null, t("Чернетка")), planSvg(now))),
+      h(
+        "table",
+        { class: "s6-cmp" },
+        h("thead", null, h("tr", null, h("th", null, t("Показник")), h("th", null, `v${v.n}`), h("th", null, t("Чернетка")), h("th", null, "Δ"))),
+        h(
+          "tbody",
+          null,
+          rows.map(
+            ([k, label, d]) => h("tr", { "data-key": k }, h("td", null, t(label)), h("td", null, cell(a && a[k], d)), h("td", null, cell(b && b[k], d)), h("td", null, a && b ? (b[k] - a[k] > 0 ? "+" : "") + cell(b[k] - a[k], d) : "—"))
+          )
+        )
+      )
+    ),
+    actions: [{ label: t("Закрити") }]
+  });
+}
+function askNote({ title, value = "", ok = t("Зберегти") }) {
+  return new Promise((res) => {
+    const input = h("input", { type: "text", value, maxlength: 200, id: "s6VerNote", "aria-label": t("Нотатка") });
+    let out = null;
+    openDialog({
+      title,
+      cls: "narrow",
+      body: h("label", { class: "fld" }, h("span", null, t("Нотатка")), input),
+      actions: [{ label: t("Скасувати") }, { label: ok, cls: "primary", id: "s6VerNoteOk", onClick: () => {
+        out = input.value.trim();
+      } }],
+      onClose: () => res(out)
+    });
+    input.focus();
+  });
+}
+async function openHistory2() {
+  ensureStyle3();
+  const body = h("div", { class: "s6-panel", id: "s6History" });
+  const dlg = openDialog({ title: t("Історія версій"), cls: "narrow", body, actions: [{ label: t("Закрити") }] });
+  const manager = canManage();
+  const design2 = E.access ? E.access().design : true;
+  const render2 = async () => {
+    const list = await loadList();
+    body.replaceChildren(
+      ...K(
+        h("div", { class: "s6-muted" }, t("Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.")),
+        hasVersions() ? h("div", { class: "s6-row" }, h("button", { class: "fbtn sm", type: "button", id: "s6VerCheckpoint", disabled: !design2, title: design2 ? "" : E.accessHint?.("design") || "", onclick: onCheckpoint }, t("Зберегти контрольну точку…")), h("span", { class: "s6-muted" }, t("Зберігається останніх {n} точок.", { n: 50 }))) : null,
+        list.length ? list.map(
+          (v) => h(
+            "div",
+            { class: "s6-item", "data-version": v.id, "data-kind": v.kind },
+            h("div", { class: "s6-row sp" }, h("b", null, "v" + v.n), h("span", { class: "s6-row" }, h("span", { class: "s6-tag" + (v.kind === "checkpoint" ? " warn" : "") }, t(KIND[v.kind] || KIND.publish)), v.is_active ? h("span", { class: "s6-tag ok" }, t("активна")) : null)),
+            h("div", { class: "small" }, fmtDate(v.published_at) + (v.by ? " · " + v.by : "")),
+            h("div", { class: "small", "data-role": "note" }, v.note || t("без нотатки")),
+            v.counts && v.counts.cells != null ? h("div", { class: "small muted mono" }, `${v.counts.layers} ${t("шарів")} · ${v.counts.slots} ${t("місць")} · ${v.counts.cells} ${t("комірок")} · ${v.counts.placements} ${t("обл.")}`) : null,
+            h(
+              "div",
+              { class: "s6-row" },
+              hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "view", onclick: () => openView(v) }, t("Переглянути")) : null,
+              hasVersions() ? h("button", { class: "fbtn sm", type: "button", "data-act": "note", disabled: !manager, title: manager ? "" : t("Нотатку змінює менеджер у режимі редагування"), onclick: () => onNote(v) }, t("Нотатка")) : null,
+              h("button", { class: "fbtn sm", type: "button", "data-version": v.id, "data-act": "restore", disabled: !manager, title: manager ? "" : t("Повертає Менеджер у режимі редагування"), onclick: () => onRestore(v) }, t("Відновити"))
+            )
+          )
+        ) : h("div", { class: "empty" }, t("Версій ще немає. Натисніть «Опублікувати»."))
+      )
+    );
+  };
+  async function onCheckpoint() {
+    const note = await askNote({ title: t("Контрольна точка"), ok: t("Зберегти") });
+    if (note == null) {
+      return;
+    }
+    try {
+      await E.flushNow?.();
+      await E.adapter.versions({ op: "checkpoint", note });
+      toast(t("Контрольну точку збережено."));
+      await render2();
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  async function onNote(v) {
+    const note = await askNote({ title: t("Нотатка до v{n}", { n: v.n }), value: v.note || "" });
+    if (note == null) {
+      return;
+    }
+    try {
+      await E.adapter.versions({ op: "note", version_id: v.id, note });
+      await render2();
+    } catch (e) {
+      toast(e.message || String(e), "err");
+    }
+  }
+  async function onRestore(v) {
+    const ok = await confirmBox({ title: t("Відновити чернетку з v{n}?", { n: v.n }), text: t("Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою."), ok: t("Відновити"), danger: true });
+    if (!ok) {
+      return;
+    }
+    try {
+      await E.flushNow?.();
+      if (hasVersions()) {
+        await E.adapter.versions({ op: "checkpoint", note: t("Автокопія перед відновленням v{n}", { n: v.n }) });
+      }
+    } catch (e) {
+      toast(t("Не вдалося зберегти автокопію: {m}", { m: e.message || String(e) }), "err");
+      return;
+    }
+    await E.restoreVersion(v.id, v.n);
+    dlg.close2("");
+  }
+  await render2();
+}
+E.openHistory = openHistory2;
+registries.dialogs.add("history", () => openHistory2(), { force: true });
+addEn({
+  "Історія версій": "Version history",
+  "Схема площадки": "Site plan",
+  "Версія v{n}: перегляд": "Version v{n}: view",
+  "Чернетка": "Draft",
+  "Лише читання: чернетка не змінюється. Ліворуч — версія, праворуч — поточна чернетка.": "Read-only: the draft is not changed. Left — the version, right — the current draft.",
+  "Показник": "Metric",
+  "Місць (комірок)": "Places (cells)",
+  "Палетомісць": "Pallet places",
+  "Площа підлоги, м²": "Floor area, m²",
+  "Об’єм місць, м³": "Places volume, m³",
+  "Ємність, кг": "Capacity, kg",
+  "Закрити": "Close",
+  "Нотатка": "Note",
+  "Зберегти": "Save",
+  "Скасувати": "Cancel",
+  "публікація": "publication",
+  "контрольна точка": "checkpoint",
+  "активна": "active",
+  "без нотатки": "no note",
+  "шарів": "layers",
+  "місць": "places",
+  "комірок": "cells",
+  "обл.": "equip.",
+  "Переглянути": "View",
+  "Відновити": "Restore",
+  "Зберегти контрольну точку…": "Save a checkpoint…",
+  "Контрольна точка": "Checkpoint",
+  "Зберігається останніх {n} точок.": "The last {n} checkpoints are kept.",
+  "Контрольну точку збережено.": "Checkpoint saved.",
+  "Нотатка до v{n}": "Note for v{n}",
+  "Нотатку змінює менеджер у режимі редагування": "The note is changed by a manager in edit mode",
+  "Повертає Менеджер у режимі редагування": "Restored by a Manager in edit mode",
+  "Версій ще немає. Натисніть «Опублікувати».": "No versions yet. Press “Publish”.",
+  "Повернення змінює чернетку; записи Odoo не змінюються, доки ви не опублікуєте нову версію. Перед поверненням поточна чернетка зберігається окремою контрольною точкою.": "Restoring changes the draft; Odoo records stay as they are until you publish a new version. Before restoring, the current draft is saved as a separate checkpoint.",
+  "Відновити чернетку з v{n}?": "Restore the draft from v{n}?",
+  "Поточна чернетка буде замінена знімком версії; перед цим вона збережеться окремою контрольною точкою.": "The current draft will be replaced by the version snapshot; it is saved as a checkpoint first.",
+  "Автокопія перед відновленням v{n}": "Auto-copy before restoring v{n}",
+  "Не вдалося зберегти автокопію: {m}": "Could not save the auto-copy: {m}"
+});
+
+// core/constructor/variants.js
+var METRIC_ROWS = [
+  { key: "cells", label: "Місць (комірок)", digits: 0 },
+  { key: "places", label: "Палетомісць", digits: 0 },
+  { key: "area", label: "Площа підлоги, м²", digits: 1 },
+  { key: "volume", label: "Об’єм місць, м³", digits: 1 },
+  { key: "max_weight", label: "Ємність, кг", digits: 0 },
+  { key: "ops", label: "Операцій плану", digits: 0 }
+];
+function variantMetrics(slots = S.slots, all = S.slots) {
+  const sum = capacitySummary(slots, { categories: lib3.categories || [], allSlots: all });
+  return { cells: sum.cells, places: sum.places, area: sum.area, volume: sum.volume, max_weight: sum.maxWeight };
+}
+function compareMetrics(a, b) {
+  return METRIC_ROWS.map(({ key, label, digits }) => {
+    const x = a && typeof a[key] === "number" ? a[key] : null;
+    const y = b && typeof b[key] === "number" ? b[key] : null;
+    return { key, label, digits, a: x, b: y, diff: x != null && y != null ? Math.round((y - x) * 1e3) / 1e3 : null };
+  });
+}
+var st = () => S.variants ||= { list: [], active_id: null, training_id: null, max: 12, can_edit: false, loaded: false, cmp: [null, null] };
+var activeVariant = () => st().list.find((v) => v.id === st().active_id) || null;
+var trainingVariant = () => st().list.find((v) => v.is_training) || null;
+var busy = false;
+function pack(res) {
+  const s = st();
+  s.list = res.variants || [];
+  s.active_id = res.active_id;
+  s.training_id = res.training_id || null;
+  s.max = res.max || 12;
+  s.can_edit = !!res.can_edit;
+  s.loaded = true;
+  return s;
+}
+function liveList() {
+  const s = st();
+  const live = variantMetrics();
+  return s.list.map((v) => v.id === s.active_id ? { ...v, metrics: { ...live, ops: S.site ? S.site.draft_changes || 0 : v.metrics.ops } } : v);
+}
+async function refreshVariants({ render: render2 = true } = {}) {
+  if (!can("variants") || !E.adapter || !S.site) {
+    return null;
+  }
+  try {
+    pack(await E.adapter.variants({ op: "list" }));
+  } catch (e) {
+    toast(e.message || t("Не вдалося завантажити варіанти."), "err");
+    return null;
+  }
+  if (render2) {
+    renderVariantsUi();
+  }
+  return st();
+}
+var errText = (e) => e?.message || String(e);
+async function call2(req, { reload: reload2 = false } = {}) {
+  if (busy) {
+    return null;
+  }
+  busy = true;
+  try {
+    await E.flushNow?.();
+    const res = await E.adapter.variants({ ...req, metrics: variantMetrics() });
+    pack(res);
+    if (res.reload || reload2) {
+      E.undoReset?.();
+      await E.reload();
+    }
+    renderVariantsUi();
+    E.renderAll?.();
+    return res;
+  } catch (e) {
+    toast(errText(e), "err");
+    await refreshVariants();
+    return null;
+  } finally {
+    busy = false;
+  }
+}
+var createVariant = async (name, { training = false, activate = true } = {}) => {
+  const res = await call2({ op: "create", name, training, activate });
+  if (res) {
+    toast(training ? t("Створено навчальну копію.") : t("Створено варіант «{name}».", { name }));
+  }
+  return res;
+};
+async function activateVariant(id) {
+  const v = st().list.find((x) => x.id === id);
+  const res = await call2({ op: "activate", id });
+  if (res && v) {
+    toast(t("Активний варіант: «{name}». Ваша чернетка збережена в попередньому.", { name: v.name }));
+  }
+  return res;
+}
+var renameVariant = (id, name) => call2({ op: "rename", id, name });
+var deleteVariant = (id) => call2({ op: "delete", id });
+async function endTraining(keep) {
+  const v = trainingVariant();
+  if (!v) {
+    return null;
+  }
+  const res = await call2({ op: "end_training", id: v.id, keep: !!keep });
+  if (res) {
+    toast(keep ? t("Зміни навчальної копії залишено як звичайний варіант.") : t("Навчальну копію скасовано: чернетка повернулась до попереднього варіанта."));
+  }
+  return res;
+}
+function askName({ title, value = "", ok = t("Зберегти") }) {
+  return new Promise((res) => {
+    const input = h("input", { type: "text", value, maxlength: 60, id: "s6VarName", "aria-label": t("Назва варіанта") });
+    let out = null;
+    const dlg = openDialog({
+      title,
+      cls: "narrow",
+      body: h("label", { class: "fld" }, h("span", null, t("Назва")), input),
+      actions: [
+        { label: t("Скасувати") },
+        {
+          label: ok,
+          cls: "primary",
+          id: "s6VarOk",
+          onClick: () => {
+            if (!input.value.trim()) {
+              toast(t("Вкажіть назву варіанта."), "warn");
+              return false;
+            }
+            out = input.value.trim();
+            return void 0;
+          }
+        }
+      ],
+      onClose: () => res(out)
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        $("#s6VarOk", dlg)?.click();
+      }
+    });
+    input.focus();
+    input.select();
+  });
+}
+var nextName = () => {
+  const names = new Set(st().list.map((v) => v.name.toLowerCase()));
+  for (let i = 0; i < 26; i++) {
+    const n = t("Проєкт {n}", { n: String.fromCharCode(65 + i) });
+    if (!names.has(n.toLowerCase())) {
+      return n;
+    }
+  }
+  return t("Проєкт {n}", { n: st().list.length + 1 });
+};
+async function onCreate() {
+  const name = await askName({ title: t("Створити варіант з поточного"), value: nextName(), ok: t("Створити") });
+  if (name) {
+    await createVariant(name);
+  }
+}
+async function onRename(v) {
+  const name = await askName({ title: t("Перейменувати варіант"), value: v.name });
+  if (name && name !== v.name) {
+    await renameVariant(v.id, name);
+  }
+}
+async function onDelete(v) {
+  const ok = await confirmBox({ title: t("Видалити варіант «{name}»?", { name: v.name }), text: t("Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються."), ok: t("Видалити"), danger: true });
+  if (ok) {
+    await deleteVariant(v.id);
+  }
+}
+var fmtMetric = (v, digits) => v == null ? "—" : digits ? fmt(v, digits) : fmtInt(v);
+function compareBlock(list) {
+  const s = st();
+  const others = list.filter((v) => v.id !== s.active_id);
+  if (list.length < 2) {
+    return h("div", { class: "s6-muted" }, t("Для порівняння потрібні щонайменше два варіанти."));
+  }
+  let [ia, ib] = s.cmp;
+  ia = list.some((v) => v.id === ia) ? ia : s.active_id;
+  ib = list.some((v) => v.id === ib && v.id !== ia) ? ib : (others[0] || list.find((v) => v.id !== ia)).id;
+  s.cmp = [ia, ib];
+  const sel = (cur, which) => h(
+    "select",
+    { "aria-label": which ? t("Варіант B") : t("Варіант A"), "data-cmp": which ? "b" : "a", onchange: (e) => {
+      s.cmp[which] = Number(e.target.value);
+      renderTab();
+    } },
+    list.map((v) => h("option", { value: v.id, selected: v.id === cur }, v.name + (v.id === s.active_id ? " ●" : "")))
+  );
+  const va = list.find((v) => v.id === ia);
+  const vb = list.find((v) => v.id === ib);
+  const rows = compareMetrics(va.metrics, vb.metrics);
+  return h(
+    "div",
+    { class: "s6-panel", id: "s6VarCmp" },
+    h("div", { class: "s6-row" }, sel(ia, 0), h("span", null, "→"), sel(ib, 1)),
+    h(
+      "table",
+      { class: "s6-cmp" },
+      h("thead", null, h("tr", null, h("th", null, t("Показник")), h("th", null, va.name), h("th", null, vb.name), h("th", null, "Δ"))),
+      h(
+        "tbody",
+        null,
+        rows.map(
+          (r) => h(
+            "tr",
+            { "data-key": r.key },
+            h("td", null, t(r.label)),
+            h("td", null, fmtMetric(r.a, r.digits)),
+            h("td", null, fmtMetric(r.b, r.digits)),
+            h("td", { class: r.diff ? r.diff > 0 ? "pos" : "neg" : "" }, r.diff == null ? "—" : (r.diff > 0 ? "+" : "") + fmtMetric(r.diff, r.digits))
+          )
+        )
+      )
+    ),
+    h("div", { class: "s6-muted" }, t("Цифри неактивного варіанта — на момент, коли з нього перейшли; операції плану — відносно діючої версії."))
+  );
+}
+function renderTab(root) {
+  root = root || $("#leftBody");
+  if (!root || S.ui.leftTab !== "variants") {
+    return;
+  }
+  root.replaceChildren();
+  const s = st();
+  if (!can("variants")) {
+    root.append(h("div", { class: "sec" }, h("div", { class: "empty" }, t("Варіанти недоступні в цьому режимі."))));
+    return;
+  }
+  const list = liveList();
+  const design2 = E.access?.().design !== false;
+  const canEdit = s.can_edit && design2;
+  const hint = !s.can_edit ? t("Варіантами керує менеджер конструктора.") : !design2 ? E.accessHint?.("design") || "" : "";
+  const real = list.filter((v) => !v.is_training);
+  const items = list.map(
+    (v) => h(
+      "div",
+      { class: "s6-item", "data-id": v.id, "data-active": v.id === s.active_id ? "1" : "0" },
+      h(
+        "div",
+        { class: "s6-row sp" },
+        h("b", null, v.name),
+        h("span", { class: "s6-row" }, v.id === s.active_id ? h("span", { class: "s6-tag ok" }, t("активний")) : null, v.is_training ? h("span", { class: "s6-tag warn" }, t("навчальна копія")) : null)
+      ),
+      h("div", { class: "s6-muted" }, [`${t("Місць")}: ${fmtMetric(v.metrics.cells, 0)}`, `${t("палетомісць")}: ${fmtMetric(v.metrics.places, 0)}`, v.at ? fmtDate(v.at) : ""].filter(Boolean).join(" · ")),
+      h(
+        "div",
+        { class: "s6-row" },
+        h("button", { class: "fbtn sm", type: "button", "data-act": "activate", disabled: !canEdit || v.id === s.active_id, title: hint, onclick: () => activateVariant(v.id) }, t("Зробити активним")),
+        h("button", { class: "fbtn sm", type: "button", "data-act": "rename", disabled: !canEdit, title: hint, onclick: () => onRename(v) }, t("Перейменувати")),
+        h("button", { class: "fbtn sm", type: "button", "data-act": "delete", disabled: !canEdit || v.id === s.active_id || !v.is_training && real.length <= 1, title: v.id === s.active_id ? t("Активний варіант видалити не можна") : hint, onclick: () => onDelete(v) }, t("Видалити"))
+      )
+    )
+  );
+  root.append(
+    ...K(
+      h(
+        "div",
+        { class: "sec", id: "s6Variants" },
+        h("h3", null, t("Варіанти планування"), h("button", { class: "fbtn sm", type: "button", id: "s6VarCreate", disabled: !canEdit || real.length >= s.max, title: hint || (real.length >= s.max ? t("Не більше {n} варіантів", { n: s.max }) : ""), onclick: onCreate }, t("Створити з поточного"))),
+        h("div", { class: "s6-muted" }, t("{n} з {max}. У застосуванні й публікації бере участь лише активний варіант; чернетка кожного зберігається при переході.", { n: real.length, max: s.max })),
+        hint ? h("div", { class: "note lock", style: { margin: "6px 0" } }, hint) : null,
+        h("div", { class: "s6-panel", id: "s6VarList" }, items)
+      ),
+      h("div", { class: "sec" }, h("h3", null, t("Порівняння двох варіантів")), compareBlock(list))
+    )
+  );
+}
+registries.panels.add("left:variants", { area: "left", tab: "variants", label: "Варіанти", render: (root) => (refreshVariants({ render: false }).then(() => renderTab(root)), renderTab(root)) }, { sequence: 45, force: true });
+registries.menu.add(
+  "variants",
+  {
+    area: "top",
+    capability: "variants",
+    get label() {
+      const v = activeVariant();
+      return v ? `${t("Варіант")}: ${v.name}` : t("Варіанти");
+    },
+    run: () => E.setLeftTab("variants")
+  },
+  { sequence: 12, force: true }
+);
+function renderTrainBar() {
+  const c = centerEl();
+  if (!c) {
+    return;
+  }
+  let bar = c.querySelector("#s6Train");
+  const v = trainingVariant();
+  const on = !!v && v.id === st().active_id && can("variants");
+  if (!bar) {
+    bar = h("div", { class: "s6-train", id: "s6Train", hidden: true });
+    c.append(bar);
+  }
+  bar.hidden = !on;
+  if (!on) {
+    bar.replaceChildren();
+    return;
+  }
+  bar.replaceChildren(
+    h("b", null, t("Навчальна копія")),
+    h("span", null, t("Зміни не потрапляють у робочий варіант.")),
+    h("button", { class: "fbtn sm primary", type: "button", id: "s6TrainKeep", onclick: () => endTraining(true) }, t("Залишити зміни")),
+    h("button", { class: "fbtn sm", type: "button", id: "s6TrainCancel", onclick: () => endTraining(false) }, t("Скасувати"))
+  );
+}
+function renderVariantsUi() {
+  renderTab();
+  renderTrainBar();
+  E.renderMenu?.();
+  const pub = $("#btnPublish");
+  const training = trainingVariant() && trainingVariant().id === st().active_id;
+  if (pub && training) {
+    pub.disabled = true;
+    pub.title = t("Навчальна копія не публікується в Odoo");
+  }
+}
+async function offerCleanup() {
+  const v = trainingVariant();
+  if (!v || S.ui.tourRunning) {
+    return;
+  }
+  const clean = await confirmBox({ title: t("Знайдено навчальну копію"), text: t("Попередній тур не завершено. Прибрати навчальну копію й повернутися до робочого варіанта?"), ok: t("Прибрати"), cancel: t("Залишити") });
+  if (clean) {
+    await endTraining(false);
+  }
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  refreshVariants().then(offerCleanup);
+});
+Object.assign(E, { variantMetrics, refreshVariants, createVariant, activateVariant, endTraining, renderVariantsUi });
+addEn({
+  "Варіанти": "Variants",
+  "Варіант": "Variant",
+  "Варіанти планування": "Layout variants",
+  "Створити з поточного": "Create from current",
+  "Створити варіант з поточного": "Create a variant from the current one",
+  "Перейменувати варіант": "Rename the variant",
+  "Назва варіанта": "Variant name",
+  "Зробити активним": "Make active",
+  "активний": "active",
+  "навчальна копія": "training copy",
+  "Навчальна копія": "Training copy",
+  "Проєкт {n}": "Project {n}",
+  "Порівняння двох варіантів": "Compare two variants",
+  "Варіант A": "Variant A",
+  "Варіант B": "Variant B",
+  "Показник": "Metric",
+  "Місць (комірок)": "Places (cells)",
+  "Палетомісць": "Pallet places",
+  "палетомісць": "pallet places",
+  "Площа підлоги, м²": "Floor area, m²",
+  "Об’єм місць, м³": "Places volume, m³",
+  "Ємність, кг": "Capacity, kg",
+  "Операцій плану": "Plan operations",
+  "Місць": "Places",
+  "Видалити": "Delete",
+  "Скасувати": "Cancel",
+  "Створити": "Create",
+  "Зберегти": "Save",
+  "Назва": "Name",
+  "Створено навчальну копію.": "Training copy created.",
+  "Створено варіант «{name}».": "Variant “{name}” created.",
+  "Активний варіант: «{name}». Ваша чернетка збережена в попередньому.": "Active variant: “{name}”. Your draft is kept in the previous one.",
+  "Зміни навчальної копії залишено як звичайний варіант.": "The training copy changes were kept as a regular variant.",
+  "Навчальну копію скасовано: чернетка повернулась до попереднього варіанта.": "Training copy cancelled: the draft is back to the previous variant.",
+  "Вкажіть назву варіанта.": "Enter a variant name.",
+  "Не вдалося завантажити варіанти.": "Could not load the variants.",
+  "Видалити варіант «{name}»?": "Delete the variant “{name}”?",
+  "Знімок варіанта буде видалено без відновлення. Активний варіант і Odoo не змінюються.": "The variant snapshot will be deleted for good. The active variant and Odoo are not changed.",
+  "Варіантами керує менеджер конструктора.": "Variants are managed by the constructor manager.",
+  "Активний варіант видалити не можна": "The active variant cannot be deleted",
+  "Не більше {n} варіантів": "No more than {n} variants",
+  "{n} з {max}. У застосуванні й публікації бере участь лише активний варіант; чернетка кожного зберігається при переході.": "{n} of {max}. Only the active variant takes part in apply and publish; each draft is saved when you switch.",
+  "Для порівняння потрібні щонайменше два варіанти.": "Comparison needs at least two variants.",
+  "Цифри неактивного варіанта — на момент, коли з нього перейшли; операції плану — відносно діючої версії.": "Figures of an inactive variant are as of the moment you left it; plan operations are relative to the active version.",
+  "Варіанти недоступні в цьому режимі.": "Variants are not available in this mode.",
+  "Зміни не потрапляють у робочий варіант.": "Changes do not reach the working variant.",
+  "Залишити зміни": "Keep changes",
+  "Навчальна копія не публікується в Odoo": "The training copy is not published to Odoo",
+  "Знайдено навчальну копію": "A training copy was found",
+  "Попередній тур не завершено. Прибрати навчальну копію й повернутися до робочого варіанта?": "The previous tour was not finished. Remove the training copy and return to the working variant?",
+  "Прибрати": "Remove",
+  "Залишити": "Keep"
+});
+
+// core/constructor/comments.js
+var POLL_MS = 15e3;
+var KINDS2 = { note: "Коментар", task: "Задача" };
+var TARGET_NAMES = { site: "Площадка", layer: "Шар", slot: "Місце", cell: "Комірка", placement: "Розміщення", item: "Об’єкт будівлі" };
+var keyOf = (kind, uid2) => `${kind}:${uid2}`;
+function toneOf(list) {
+  if (list.some((c) => c.kind === "task" && c.state === "open")) {
+    return "task";
+  }
+  return list.some((c) => c.state === "open") ? "note" : "done";
+}
+function groupByTarget(list) {
+  const m = /* @__PURE__ */ new Map();
+  for (const c of list) {
+    const k = keyOf(c.target_kind, c.target_uid);
+    if (!m.has(k)) {
+      m.set(k, []);
+    }
+    m.get(k).push(c);
+  }
+  return m;
+}
+function filterComments(list, f = {}, target = null) {
+  const q = String(f.q || "").trim().toLowerCase();
+  return list.filter((c) => {
+    if (f.state && f.state !== "all" && c.state !== f.state) {
+      return false;
+    }
+    if (f.kind && f.kind !== "all" && c.kind !== f.kind) {
+      return false;
+    }
+    if (f.only && target && !(c.target_kind === target.kind && c.target_uid === target.uid)) {
+      return false;
+    }
+    return !q || [c.text, c.target_label, c.author].some((x) => String(x || "").toLowerCase().includes(q));
+  });
+}
+function targetOfSelection() {
+  const rec = S.sel && recOfRef(S.sel);
+  if (rec && S.sel.kind === "placement") {
+    return { kind: "placement", uid: rec.id, label: rec.code || rec.name || rec.id };
+  }
+  if (rec) {
+    if (S.selCell) {
+      return { kind: "cell", uid: S.selCell, label: S.selCell };
+    }
+    return { kind: "slot", uid: rec.id, label: rec.params && rec.params.title || rec.code_prefix || rec.id };
+  }
+  return { kind: "site", uid: S.site ? String(S.site.id) : "", label: S.site ? S.site.name : "" };
+}
+var st2 = () => S.comments ||= { list: [], at: null, loaded: false, users: [], me: null, filter: { state: "open", kind: "all", q: "", only: false }, timer: 0 };
+function setList(res) {
+  const s = st2();
+  s.list = res.comments || [];
+  s.at = res.at || null;
+  s.loaded = true;
+  drawBadges();
+  renderBlocks();
+}
+async function refreshComments() {
+  if (!can("comments") || !E.adapter || !S.site) {
+    return;
+  }
+  try {
+    setList(await E.adapter.comments({ op: "list" }));
+  } catch (e) {
+    console.warn("comments:", e);
+  }
+}
+async function loadUsers() {
+  const s = st2();
+  if (s.users.length || !can("comments")) {
+    return;
+  }
+  try {
+    const res = await E.adapter.comments({ op: "assignees" });
+    s.users = res.users || [];
+    s.me = res.me;
+  } catch {
+  }
+}
+async function op(req, okMsg) {
+  try {
+    const res = await E.adapter.comments(req);
+    setList(res);
+    if (okMsg) {
+      toast(okMsg);
+    }
+    return res;
+  } catch (e) {
+    toast(e.message || String(e), "err");
+    await refreshComments();
+    return null;
+  }
+}
+var addComment = (target, { text, kind = "note", assignee_id = null }) => op({ op: "create", vals: { target_kind: target.kind, target_uid: target.uid, target_label: target.label, text, kind, assignee_id } }, kind === "task" ? t("Задачу додано.") : t("Коментар додано."));
+var resolveComment = (id, resolved = true) => op({ op: "resolve", id, resolved });
+var removeComment = (id) => op({ op: "delete", id });
+var fmtWhen = (c) => `${c.author || ""} · ${c.at ? fmtDate(c.at) : ""}`;
+function commentItem(c) {
+  return h(
+    "div",
+    { class: "s6-item" + (c.state === "resolved" ? " res" : ""), "data-id": c.id, "data-kind": c.kind, "data-state": c.state },
+    h("div", { class: "s6-row sp" }, h("span", { class: "s6-muted" }, fmtWhen(c)), h("span", { class: "s6-row" }, h("span", { class: "s6-tag" + (c.kind === "task" ? " warn" : "") }, t(KINDS2[c.kind])), c.state === "resolved" ? h("span", { class: "s6-tag ok" }, t("вирішено")) : null)),
+    h("div", { class: "s6-text" }, c.text),
+    c.assignee ? h("div", { class: "s6-muted" }, `${t("Виконавець")}: ${c.assignee}`) : null,
+    c.state === "resolved" && c.resolved_by ? h("div", { class: "s6-muted" }, `${t("Вирішив")}: ${c.resolved_by}${c.resolved_at ? ", " + fmtDate(c.resolved_at) : ""}`) : null,
+    h(
+      "div",
+      { class: "s6-row" },
+      c.can_resolve ? h("button", { class: "fbtn sm", type: "button", "data-act": "resolve", onclick: () => resolveComment(c.id, c.state !== "resolved") }, c.state === "resolved" ? t("Відкрити знову") : t("Вирішено")) : null,
+      c.can_delete ? h(
+        "button",
+        {
+          class: "fbtn sm",
+          type: "button",
+          "data-act": "delete",
+          onclick: async () => {
+            if (await confirmBox({ title: t("Видалити коментар?"), text: c.text.slice(0, 120), ok: t("Видалити"), danger: true })) {
+              removeComment(c.id);
+            }
+          }
+        },
+        t("Видалити")
+      ) : null
+    )
+  );
+}
+function threadNode(target, { onChange } = {}) {
+  const s = st2();
+  const list = s.list.filter((c) => c.target_kind === target.kind && c.target_uid === target.uid).sort((a, b) => a.state === b.state ? b.id - a.id : a.state === "open" ? -1 : 1);
+  const text = h("textarea", { rows: 3, maxlength: 4e3, placeholder: t("Нотатка або задача «перевірити на місці»"), "aria-label": t("Текст коментаря"), id: "s6CmText" });
+  const kind = h("select", { "aria-label": t("Вид"), id: "s6CmKind" }, h("option", { value: "note" }, t("Коментар")), h("option", { value: "task" }, t("Задача")));
+  const who = h("select", { "aria-label": t("Виконавець"), id: "s6CmWho", hidden: true }, h("option", { value: "" }, t("— без виконавця —")), s.users.map((u) => h("option", { value: u.id }, u.name)));
+  kind.addEventListener("change", () => {
+    who.hidden = kind.value !== "task" || !s.users.length;
+  });
+  const add = h(
+    "button",
+    {
+      class: "fbtn sm primary",
+      type: "button",
+      id: "s6CmAdd",
+      onclick: async () => {
+        const body = text.value.trim();
+        if (!body) {
+          toast(t("Введіть текст коментаря."), "warn");
+          return;
+        }
+        add.disabled = true;
+        const res = await addComment(target, { text: body, kind: kind.value, assignee_id: who.value ? Number(who.value) : null });
+        add.disabled = false;
+        if (res) {
+          text.value = "";
+          onChange?.();
+        }
+      }
+    },
+    t("Додати")
+  );
+  return h(
+    "div",
+    { class: "s6-panel", "data-target": keyOf(target.kind, target.uid) },
+    list.length ? list.map(commentItem) : h("div", { class: "s6-muted" }, t("Коментарів ще немає.")),
+    h("div", { class: "s6-panel" }, text, h("div", { class: "s6-row" }, kind, who, add))
+  );
+}
+function keepForm(box, draw3) {
+  const old = box.querySelector("#s6CmText");
+  const keep = old ? { v: old.value, k: box.querySelector("#s6CmKind").value, w: box.querySelector("#s6CmWho")?.value, f: document.activeElement === old } : null;
+  draw3();
+  const now = keep && box.querySelector("#s6CmText");
+  if (now) {
+    now.value = keep.v;
+    const kind = box.querySelector("#s6CmKind");
+    kind.value = keep.k;
+    kind.dispatchEvent(new Event("change"));
+    const who = box.querySelector("#s6CmWho");
+    if (who && keep.w) {
+      who.value = keep.w;
+    }
+    if (keep.f) {
+      now.focus();
+    }
+  }
+}
+async function openThread(target) {
+  ensureStyle3();
+  await loadUsers();
+  const body = h("div", { id: "s6Thread" });
+  const draw3 = () => body.replaceChildren(threadNode(target));
+  draw3();
+  const off = subscribe(() => body.isConnected && keepForm(body, draw3));
+  openDialog({ title: `${t(TARGET_NAMES[target.kind] || "Об’єкт")}: ${target.label || target.uid}`, cls: "narrow", body, actions: [{ label: t("Закрити") }], onClose: off });
+}
+var listeners = /* @__PURE__ */ new Set();
+var subscribe = (fn) => (listeners.add(fn), () => listeners.delete(fn));
+function renderBlocks() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  for (const fn of listeners) {
+    fn();
+  }
+  const box = $("#s6Comments");
+  if (box && box.isConnected) {
+    keepForm(box, () => renderRightInto(box));
+  }
+  const typing = document.activeElement && $("#s6CmList")?.contains(document.activeElement) && document.activeElement.tagName === "INPUT" && document.activeElement.type === "search";
+  if (S.ui.leftTab === "comments" && !typing) {
+    renderTab2();
+  }
+}
+function renderRightInto(box) {
+  const target = targetOfSelection();
+  const n = st2().list.filter((c) => c.target_kind === target.kind && c.target_uid === target.uid && c.state === "open").length;
+  box.replaceChildren(
+    h("h3", null, t("Коментарі"), n ? h("span", { class: "s6-tag warn", style: { marginLeft: "8px" } }, String(n)) : null),
+    h("div", { class: "s6-muted" }, `${t(TARGET_NAMES[target.kind])}: ${target.label || "—"}`),
+    threadNode(target)
+  );
+}
+registries.panels.add(
+  "right:comments",
+  {
+    area: "right",
+    capability: "comments",
+    render(root) {
+      const box = h("div", { class: "sec", id: "s6Comments" });
+      root.append(box);
+      loadUsers().then(() => box.isConnected && renderRightInto(box));
+      renderRightInto(box);
+    }
+  },
+  { sequence: 85, force: true }
+);
+var cellMemo = /* @__PURE__ */ new Map();
+var cellHome = /* @__PURE__ */ new Map();
+function slotCells(slot) {
+  const sig = [slot.x, slot.y, slot.rotation, JSON.stringify(slot.params), JSON.stringify(slot.overrides || {}), slot.code_prefix, elevOf(slot.layer_id)].join("|");
+  const hit = cellMemo.get(slot.id);
+  if (hit && hit.sig === sig) {
+    return hit.cells;
+  }
+  const cells = cellsAbs(slot, elevOf(slot.layer_id));
+  cellMemo.set(slot.id, { sig, cells });
+  return cells;
+}
+function cellAnchor(code) {
+  const make = (slot, cell2) => ({ x: cell2.x, y: cell2.y, z: cell2.z0 + cell2.h, layer: slot.layer_id, slot: slot.id });
+  const home = S.sIdx.get(cellHome.get(code));
+  const cell = home && slotCells(home).find((c) => c.code === code);
+  if (cell) {
+    return make(home, cell);
+  }
+  for (const slot of S.slots) {
+    const c = slotCells(slot).find((x) => x.code === code);
+    if (c) {
+      cellHome.set(code, slot.id);
+      return make(slot, c);
+    }
+  }
+  return null;
+}
+function anchorFor(kind, uid2) {
+  const B2 = S.site && S.site.building;
+  if (kind === "site") {
+    return B2 ? { x: B2.length / 2, y: 0, z: B2.height || 8 } : null;
+  }
+  if (kind === "layer") {
+    const ly = layerOf(uid2);
+    const pts = ly && ly.bounds && ly.bounds.length ? ly.bounds : null;
+    return ly && pts ? { x: pts.reduce((a, p) => a + p[0], 0) / pts.length, y: pts.reduce((a, p) => a + p[1], 0) / pts.length, z: ly.elevation || 0 } : B2 ? { x: B2.length / 2, y: B2.width / 2, z: ly && ly.elevation || 0 } : null;
+  }
+  if (kind === "slot" || kind === "placement") {
+    const rec = (kind === "slot" ? S.sIdx : S.pIdx).get(uid2);
+    if (!rec) {
+      return null;
+    }
+    const view = V.views && V.views.get((kind === "slot" ? "s:" : "p:") + uid2);
+    return { x: rec.x, y: rec.y, z: elevOf(rec.layer_id) + (view && view.H || 1.5), layer: rec.layer_id };
+  }
+  if (kind === "cell") {
+    return cellAnchor(uid2);
+  }
+  if (kind === "item") {
+    for (const ly of S.layers) {
+      const it = (ly.items || []).find((i) => String(i.id ?? i.uid) === uid2);
+      if (it && it.x != null) {
+        return { x: it.x, y: it.y ?? 0, z: (ly.elevation || 0) + (it.height || it.h || 1), layer: ly.id };
+      }
+    }
+  }
+  return null;
+}
+function gotoTarget(c) {
+  const kind = c.target_kind;
+  const uid2 = c.target_uid;
+  if (kind === "site") {
+    E.selectObj(null);
+    return;
+  }
+  if (kind === "layer") {
+    if (layerOf(uid2)) {
+      E.setActiveLayer(uid2);
+    }
+    return;
+  }
+  const a = anchorFor(kind, uid2);
+  if (!a) {
+    toast(t("Об’єкта вже немає в цій чернетці."), "warn");
+    return;
+  }
+  if (kind === "slot" || kind === "placement") {
+    E.selectObj({ kind, id: uid2 });
+  } else if (kind === "cell" && a.slot) {
+    E.selectObj({ kind: "slot", id: a.slot });
+    S.selCell = uid2;
+    E.updateVisual?.();
+    E.renderRight?.();
+  } else if (a.layer) {
+    E.setActiveLayer(a.layer);
+  }
+  E.focusOn?.(a.x, a.y);
+}
+function renderTab2(root) {
+  root = root || $("#leftBody");
+  if (!root || S.ui.leftTab !== "comments") {
+    return;
+  }
+  const s = st2();
+  root.replaceChildren();
+  if (!can("comments")) {
+    root.append(h("div", { class: "sec" }, h("div", { class: "empty" }, t("Коментарі недоступні в цьому режимі."))));
+    return;
+  }
+  const f = s.filter;
+  const target = targetOfSelection();
+  const rows = filterComments(s.list, f, target);
+  const redraw = () => renderTab2();
+  const sel = (key, opts2, label) => h("select", { "aria-label": label, "data-f": key, onchange: (e) => {
+    f[key] = e.target.value;
+    redraw();
+  } }, opts2.map(([v, l]) => h("option", { value: v, selected: f[key] === v }, l)));
+  root.append(
+    h(
+      "div",
+      { class: "sec", id: "s6CmList" },
+      h("h3", null, t("Коментарі й задачі"), h("button", { class: "fbtn sm", type: "button", id: "s6CmRefresh", onclick: () => refreshComments() }, t("Оновити"))),
+      h(
+        "div",
+        { class: "s6-row" },
+        sel("state", [["open", t("Відкриті")], ["resolved", t("Вирішені")], ["all", t("Усі")]], t("Статус")),
+        sel("kind", [["all", t("Усі види")], ["note", t("Коментарі")], ["task", t("Задачі")]], t("Вид"))
+      ),
+      h("div", { class: "s6-row" }, h("input", { type: "search", value: f.q, placeholder: t("Пошук у тексті"), "aria-label": t("Пошук у тексті"), id: "s6CmQ", style: { flex: "1" }, oninput: (e) => {
+        f.q = e.target.value;
+        clearTimeout(s.qt);
+        s.qt = setTimeout(redraw, 200);
+      } })),
+      h("label", { class: "s6-row" }, h("input", { type: "checkbox", id: "s6CmOnly", checked: f.only, onchange: (e) => {
+        f.only = e.target.checked;
+        redraw();
+      } }), t("Лише цей об’єкт: {label}", { label: target.label || "—" })),
+      h(
+        "div",
+        { class: "s6-panel", id: "s6CmRows" },
+        rows.length ? rows.map(
+          (c) => h(
+            "div",
+            { class: "s6-item" + (c.state === "resolved" ? " res" : ""), "data-id": c.id, style: { cursor: "pointer" }, tabindex: 0, role: "button", onclick: () => gotoTarget(c), onkeydown: (e) => e.key === "Enter" && gotoTarget(c) },
+            h("div", { class: "s6-row sp" }, h("b", null, `${t(TARGET_NAMES[c.target_kind] || "")}: ${c.target_label || c.target_uid || "—"}`), h("span", { class: "s6-tag" + (c.kind === "task" ? " warn" : "") }, t(KINDS2[c.kind]))),
+            h("div", { class: "s6-text" }, c.text.length > 160 ? c.text.slice(0, 157) + "…" : c.text),
+            h("div", { class: "s6-muted" }, fmtWhen(c) + (c.state === "resolved" ? " · " + t("вирішено") : ""))
+          )
+        ) : h("div", { class: "empty" }, s.loaded ? t("Нічого не знайдено.") : t("Завантаження…"))
+      )
+    )
+  );
+}
+registries.panels.add("left:comments", { area: "left", tab: "comments", label: "Коментарі", render: (root) => (refreshComments(), renderTab2(root)) }, { sequence: 47, force: true });
+function drawBadges() {
+  const layer = layerEl("s6Badges");
+  if (!layer) {
+    return;
+  }
+  const groups = groupByTarget(can("comments") ? st2().list : []);
+  const have = new Map([...layer.children].map((el) => [el.dataset.key, el]));
+  for (const [key, list] of groups) {
+    let el = have.get(key);
+    if (!el) {
+      const [kind, ...rest] = key.split(":");
+      const uid2 = rest.join(":");
+      el = h("button", { class: "s6-badge", type: "button", "data-key": key, onclick: () => openThread({ kind, uid: uid2, label: list[0].target_label || uid2 }) });
+      layer.append(el);
+    }
+    have.delete(key);
+    el.dataset.tone = toneOf(list);
+    el.textContent = String(list.length);
+    const open = list.filter((c) => c.state === "open").length;
+    el.title = `${list[0].target_label || list[0].target_uid}: ${list.length} (${t("відкритих")}: ${open})`;
+    el.setAttribute("aria-label", el.title);
+  }
+  for (const el of have.values()) {
+    el.remove();
+  }
+  placeBadges();
+  redrawOverlays();
+}
+var hiddenByView = (kind, uid2) => E.objVisible ? !E.objVisible(kind, uid2) : false;
+function placeBadges() {
+  const layer = $("#s6Badges");
+  if (!layer || !V.ok) {
+    return;
+  }
+  for (const el of layer.children) {
+    const [kind, ...rest] = el.dataset.key.split(":");
+    const uid2 = rest.join(":");
+    const a = anchorFor(kind, uid2);
+    const hide = !a || a.layer && V.hidden && V.hidden.has(a.layer) || hiddenByView(a.slot ? "slot" : kind, a.slot || uid2);
+    const p = hide ? { ok: false } : project(a.x, a.y, a.z);
+    el.hidden = !p.ok;
+    if (p.ok) {
+      el.style.left = Math.round(p.x) + "px";
+      el.style.top = Math.round(p.y) + "px";
+    }
+  }
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  addFrameHook("comments", placeBadges);
+  const s = st2();
+  clearInterval(s.timer);
+  refreshComments();
+  s.timer = setInterval(() => {
+    if (!document.hidden) {
+      refreshComments();
+    }
+  }, POLL_MS);
+});
+E.lifecycle.unmount.add(() => {
+  clearInterval(st2().timer);
+  cellMemo.clear();
+  cellHome.clear();
+});
+onLang(() => {
+  drawBadges();
+});
+Object.assign(E, { refreshComments, openThread, addComment, gotoTarget, commentsTarget: targetOfSelection });
+addEn({
+  "Коментар": "Comment",
+  "Задача": "Task",
+  "Площадка": "Site",
+  "Шар": "Layer",
+  "Місце": "Place",
+  "Комірка": "Cell",
+  "Розміщення": "Placement",
+  "Об’єкт будівлі": "Building object",
+  "Об’єкт": "Object",
+  "Коментарі": "Comments",
+  "Коментарі й задачі": "Comments and tasks",
+  "Оновити": "Refresh",
+  "вирішено": "resolved",
+  "Виконавець": "Assignee",
+  "Вирішив": "Resolved by",
+  "Вирішено": "Resolve",
+  "Відкрити знову": "Reopen",
+  "Видалити": "Delete",
+  "Видалити коментар?": "Delete the comment?",
+  "Нотатка або задача «перевірити на місці»": "A note or a “check on site” task",
+  "Текст коментаря": "Comment text",
+  "Вид": "Kind",
+  "— без виконавця —": "— no assignee —",
+  "Додати": "Add",
+  "Введіть текст коментаря.": "Enter the comment text.",
+  "Коментарів ще немає.": "No comments yet.",
+  "Закрити": "Close",
+  "Задачу додано.": "Task added.",
+  "Коментар додано.": "Comment added.",
+  "Об’єкта вже немає в цій чернетці.": "The object is no longer in this draft.",
+  "Коментарі недоступні в цьому режимі.": "Comments are not available in this mode.",
+  "Відкриті": "Open",
+  "Вирішені": "Resolved",
+  "Усі": "All",
+  "Усі види": "All kinds",
+  "Коментарі ": "Comments ",
+  "Задачі": "Tasks",
+  "Статус": "Status",
+  "Пошук у тексті": "Search in text",
+  "Лише цей об’єкт: {label}": "Only this object: {label}",
+  "Нічого не знайдено.": "Nothing found.",
+  "Завантаження…": "Loading…",
+  "відкритих": "open"
+});
+
+// core/constructor/locks.js
+var POLL_MS2 = 15e3;
+var st3 = () => S.locks ||= { list: [], ttl: 300, heartbeat: 60, held: /* @__PURE__ */ new Map(), poll: 0, beat: 0, warned: "" };
+function zoneKeyOf(rec, slots = S.slots) {
+  if (!rec) {
+    return null;
+  }
+  if (rec.template === "zone") {
+    return rec.id;
+  }
+  const zone2 = zoneAt(zonesOf(slots), rec.x, rec.y);
+  return zone2 ? zone2.id : rec.id;
+}
+function clock(iso) {
+  try {
+    return new Date(String(iso).includes("T") ? iso : String(iso).replace(" ", "T") + "Z").toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return String(iso || "");
+  }
+}
+var lockOf = (uid2) => st3().list.find((l) => l.zone_uid === uid2) || null;
+function labelOf2(uid2) {
+  const s = S.sIdx.get(uid2);
+  if (s) {
+    return s.params && s.params.title || s.code_prefix || uid2;
+  }
+  const p = S.pIdx.get(uid2);
+  return p ? p.code || p.name || uid2 : uid2;
+}
+var busyText = (l) => t("Зону «{zone}» редагує {user} до {time}.", { zone: labelOf2(l.zone_uid), user: l.user, time: clock(l.expires_at) });
+var active = () => can("locks") && !!S.site && S.app.mode === "edit" && E.access?.().design !== false && !E.isMobile?.();
+function setList2(res) {
+  const s = st3();
+  s.list = res.locks || [];
+  s.ttl = res.ttl || s.ttl;
+  s.heartbeat = res.heartbeat || s.heartbeat;
+  for (const key of [...s.held.keys()]) {
+    if (!s.list.some((l) => l.zone_uid === key && l.mine)) {
+      s.held.delete(key);
+    }
+  }
+  const sig = JSON.stringify(s.list.map((l) => [l.zone_uid, l.user, l.mine]));
+  drawBadges2();
+  if (sig !== s.sig) {
+    s.sig = sig;
+    renderBlocks2();
+  }
+}
+async function refreshLocks() {
+  if (!can("locks") || !E.adapter || !S.site) {
+    return;
+  }
+  try {
+    setList2(await E.adapter.locks({ op: "list" }));
+  } catch (e) {
+    console.warn("locks:", e);
+  }
+}
+async function acquire(key, { quiet = false } = {}) {
+  if (!key) {
+    return true;
+  }
+  try {
+    setList2(await E.adapter.locks({ op: "acquire", zone_uid: key }));
+    st3().held.set(key, Date.now());
+    return true;
+  } catch (e) {
+    if (e.code === "locked" && e.lock) {
+      if (e.locks) {
+        setList2({ locks: e.locks });
+      }
+      if (!quiet) {
+        toast(e.message || busyText(e.lock), "warn");
+      }
+    } else if (!quiet) {
+      toast(e.message || String(e), "err");
+    }
+    return false;
+  }
+}
+async function release(key = null) {
+  const s = st3();
+  try {
+    if (key) {
+      s.held.delete(key);
+    } else {
+      s.held.clear();
+    }
+    if (can("locks") && E.adapter) {
+      setList2(await E.adapter.locks(key ? { op: "release", zone_uid: key } : { op: "release" }));
+    }
+  } catch (e) {
+    console.warn("locks release:", e);
+  }
+}
+async function onSelect(ref2) {
+  const s = st3();
+  if (!ref2 || !active()) {
+    return;
+  }
+  const rec = recOfRef(ref2);
+  const key = zoneKeyOf(rec);
+  if (!key) {
+    return;
+  }
+  const mine = s.held.has(key);
+  if (!mine || Date.now() - s.held.get(key) > s.heartbeat * 1e3 / 2) {
+    await acquire(key);
+  }
+  for (const other of [...s.held.keys()]) {
+    if (other !== key && !(E.adapter && E.adapter.dirty)) {
+      release(other);
+    }
+  }
+  E.renderRight?.();
+}
+async function heartbeat() {
+  const s = st3();
+  if (!active()) {
+    if (s.held.size) {
+      release();
+    }
+    return;
+  }
+  for (const key of [...s.held.keys()]) {
+    await acquire(key, { quiet: true });
+  }
+}
+function drawBadges2() {
+  const layer = layerEl("s6Locks");
+  if (!layer || !can("locks")) {
+    return;
+  }
+  const s = st3();
+  layer.replaceChildren(
+    ...s.list.map((l) => {
+      const el = h("span", { class: "s6-lockb", "data-uid": l.zone_uid, "data-mine": l.mine ? "1" : "0", title: l.mine ? t("Зона заблокована за вами до {time}", { time: clock(l.expires_at) }) : busyText(l) }, ic("lock"), " " + (l.mine ? t("Ви") : l.user));
+      return el;
+    })
+  );
+  placeBadges2();
+}
+function placeBadges2() {
+  const layer = $("#s6Locks");
+  if (!layer || !V.ok) {
+    return;
+  }
+  for (const el of layer.children) {
+    const uid2 = el.dataset.uid;
+    const a = S.sIdx.has(uid2) ? anchorFor("slot", uid2) : S.pIdx.has(uid2) ? anchorFor("placement", uid2) : null;
+    const p = a && !(a.layer && V.hidden && V.hidden.has(a.layer)) ? project(a.x, a.y, a.z) : { ok: false };
+    el.hidden = !p.ok;
+    if (p.ok) {
+      el.style.left = Math.round(p.x) + "px";
+      el.style.top = Math.round(p.y) + "px";
+    }
+  }
+}
+function bannerFor(rec) {
+  const key = rec && zoneKeyOf(rec);
+  const l = key && lockOf(key);
+  if (!l) {
+    return null;
+  }
+  return h("div", { class: "note " + (l.mine ? "" : "lock"), id: "s6LockBanner", "data-mine": l.mine ? "1" : "0", style: { marginBottom: "8px" } }, l.mine ? t("Зона заблокована за вами до {time}: інші не зможуть її правити.", { time: clock(l.expires_at) }) : t("{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.", { busy: busyText(l) }));
+}
+registries.panels.add(
+  "right:lock",
+  {
+    area: "right",
+    capability: "locks",
+    sequence: 2,
+    render(root, { rec }) {
+      const b = bannerFor(rec);
+      if (b) {
+        root.prepend(b);
+      }
+    }
+  },
+  { sequence: 2, force: true }
+);
+registries.panels.add(
+  "site:locks",
+  {
+    area: "site",
+    capability: "locks",
+    render(root) {
+      const list = st3().list;
+      root.append(
+        h(
+          "div",
+          { class: "sec", id: "s6LockList" },
+          h("h3", null, t("Блокування зон")),
+          list.length ? list.map((l) => h("div", { class: "s6-muted", "data-mine": l.mine ? "1" : "0" }, `${labelOf2(l.zone_uid)} — ${l.mine ? t("Ви") : l.user}, ${t("до")} ${clock(l.expires_at)}`)) : h("div", { class: "s6-muted" }, t("Зон, зайнятих для правки, немає."))
+        )
+      );
+    }
+  },
+  { sequence: 60, force: true }
+);
+function renderBlocks2() {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const a = document.activeElement;
+  const typing = a && $("#rightBody")?.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  if (!typing && ($("#s6LockBanner") || $("#s6LockList") || S.sel)) {
+    E.renderRight?.();
+  }
+}
+var origSelect2 = E.selectObj;
+E.selectObj = function selectObjLocks(ref2, ...rest) {
+  const r = origSelect2.call(this, ref2, ...rest);
+  onSelect(ref2);
+  return r;
+};
+var origAll = E.renderAll;
+E.renderAll = function renderAllLocks(...args) {
+  const r = origAll.apply(this, args);
+  if (!active() && st3().held.size) {
+    release();
+  }
+  return r;
+};
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  const s = st3();
+  clearInterval(s.poll);
+  clearInterval(s.beat);
+  if (!can("locks")) {
+    return;
+  }
+  addFrameHook("locks", placeBadges2);
+  refreshLocks();
+  s.poll = setInterval(() => !document.hidden && refreshLocks(), POLL_MS2);
+  s.beat = setInterval(heartbeat, Math.max(5, s.heartbeat) * 1e3);
+});
+E.lifecycle.unmount.add(() => {
+  const s = st3();
+  clearInterval(s.poll);
+  clearInterval(s.beat);
+  if (s.held.size && E.adapter && can("locks")) {
+    release();
+  }
+});
+Object.assign(E, { refreshLocks, acquireZone: acquire, releaseZone: release, zoneKeyOf });
+addEn({
+  "Зону «{zone}» редагує {user} до {time}.": "Zone “{zone}” is being edited by {user} until {time}.",
+  "Зона заблокована за вами до {time}": "The zone is locked by you until {time}",
+  "Ви": "You",
+  "Зона заблокована за вами до {time}: інші не зможуть її правити.": "The zone is locked by you until {time}: others cannot edit it.",
+  "{busy} Ваші правки тут буде відхилено; дивитися, виділяти й коментувати можна.": "{busy} Your edits here will be rejected; you can still view, select and comment.",
+  "Блокування зон": "Zone locks",
+  "до": "until",
+  "Зон, зайнятих для правки, немає.": "No zones are being edited."
+});
+
+// core/constructor/help_topics.js
+var TOPICS = [
+  ["start", ["Початок роботи", "Getting started"], ["Конструктор — це 3D-редактор розкладки складу й виробництва. Зліва шари, місця й каталог, посередині сцена, праворуч властивості вибраного. Зміни йдуть у чернетку й зберігаються самі; в Odoo вони потрапляють лише після публікації.\nНовачкові допоможе «Тур новачка» (меню «Ще → Тури»).", "The constructor is a 3D editor of the warehouse and production layout. Layers, places and the catalog are on the left, the scene in the middle, properties of the selection on the right. Changes go to the draft and are saved automatically; they reach Odoo only after publishing.\nThe “Beginner tour” (menu “More → Tours”) helps newcomers."]],
+  ["view", ["Вікно й камера", "The window and the camera"], ["Кнопки «3D» і «План» перемикають вигляд, «Вписати» показує все. Колесо — масштаб, права кнопка — панорама, ліва — обертання. «Підписи» вмикають підписи об'єктів, «Лінійка» (M) міряє відстань.", "“3D” and “Plan” switch the view, “Fit” shows everything. Wheel — zoom, right button — pan, left — rotate. “Labels” turns object labels on, “Ruler” (M) measures distance."]],
+  ["levels", ["Рівні й навігація", "Levels and navigation"], ["Рядок над сценою показує рівні: склад › зона › ряд › стелаж › ярус. Клацніть рівень — решта сховається, камера наїде на нього. «↓» заглиблює до виділеного, «↑» піднімає на рівень, «⟲» скидає. Клавіша U — рівень вище.", "The bar above the scene shows the levels: warehouse › zone › row › bay › tier. Click a level — the rest hides and the camera zooms in. “↓” drills down to the selection, “↑” goes a level up, “⟲” resets. Key U — level up."]],
+  ["minimap", ["Мініатюра плану", "The minimap"], ["У куті сцени — мініатюра з контуром, зонами й об'єктами. Червона рамка — те, що видно на екрані; клік чи перетягування по мініатюрі переносить камеру. Кнопка «Мініатюра» ховає її.", "A minimap with the outline, zones and objects sits in the scene corner. The red frame is what is on screen; click or drag on it to move the camera. The “Minimap” button hides it."]],
+  ["select", ["Виділення", "Selection"], ["Клік по об'єкту виділяє його. «Клік виділяє» під рівнями вибирає, що саме: місце, стелаж, ряд чи зону; повторний клік по тому самому піднімає вибір на рівень вище (місце → стелаж → ряд → зона → склад).", "A click selects an object. “Click selects” under the levels chooses what exactly: a place, bay, row or zone; a repeated click on the same object goes a level up (place → bay → row → zone → warehouse)."]],
+  ["multi", ["Кілька об'єктів і копіювання", "Several objects and copying"], ["Ctrl+клік додає до виділення, Shift+рамка в «Плані» виділяє область. Для групи — спільні властивості, вирівнювання, розподіл. Ctrl+D дублює, Ctrl+C/Ctrl+V копіює й вставляє, «Масив копій…» розкладає N×M.", "Ctrl+click adds to the selection, Shift+box in Plan selects an area. A group has common properties, alignment and distribution. Ctrl+D duplicates, Ctrl+C/Ctrl+V copies and pastes, “Array of copies…” lays out N×M."]],
+  ["undo", ["Скасування й повтор", "Undo and redo"], ["Ctrl+Z скасовує останню зміну, Ctrl+Shift+Z чи Ctrl+Y повертає. Кнопки ↶ ↷ у шапці сцени. Історія спільна для всіх змін сеансу, у тому числі адресації й правил.", "Ctrl+Z undoes the last change, Ctrl+Shift+Z or Ctrl+Y redoes it. Buttons ↶ ↷ are on the scene header. The history is shared by all session changes, including addressing and rules."]],
+  ["layers", ["Шари й видимість", "Layers and visibility"], ["Шар — окремий набір об'єктів із відміткою висоти, кроком сітки й правилами: хто редагує, які типи місць дозволені. Око вмикає видимість лише для вас, активний шар завжди видно.", "A layer is a separate set of objects with an elevation, grid step and rules: who edits, which place types are allowed. The eye toggles visibility for you only; the active layer is always visible."]],
+  ["racks", ["Стелажі й місця", "Racks and places"], ["Вкладка «Місця» — шаблони: палетний стелаж, полиці, консолі, місця на підлозі, зони. Місце дає комірки з кодами; параметри (пролети, яруси, габарит, навантаження) змінюються праворуч і відразу видні на сцені.", "The “Places” tab holds templates: pallet rack, shelves, cantilevers, floor spots, zones. A place yields cells with codes; parameters (bays, tiers, size, load) change on the right and show on the scene at once."]],
+  ["catalog", ["Каталог типів і параметри", "The type catalog and parameters"], ["Каталог — 50 типів місць: стелажі, площі, стопки, шафи, огородження. Кожен тип має форму, параметри й вид локації в Odoo. Типи можна додавати й змінювати; змінений тип застосовується до місць цього типу.", "The catalog has 50 place types: racks, areas, stacks, cabinets, fences. Each type has a shape, parameters and an Odoo location kind. Types can be added and changed; a changed type applies to places of that type."]],
+  ["presets", ["Шаблони й бібліотека", "Templates and library"], ["Виділене можна зберегти як шаблон і вставити в інший проєкт. «Бібліотека» показує збережені типи й шаблони; видаляє менеджер.", "A selection can be saved as a template and inserted into another project. The “Library” shows saved types and templates; a manager deletes them."]],
+  ["zones", ["Зони й проходи", "Zones and aisles"], ["Зона — контур, у межах якого діють спільні налаштування: категорія зберігання, функція, атрибути, температура. Об'єкти всередині успадковують їх. Проходи й пожежні зони задаються на шарі.", "A zone is an outline within which common settings apply: storage category, function, attributes, temperature. Objects inside inherit them. Aisles and fire zones are set on the layer."]],
+  ["address", ["Адресація", "Addressing"], ["Маска коду, напр. «{зона}-{ряд}-{секція}-{ярус}», задає імена комірок і локацій Odoo. Опубліковані коди за замовчуванням закріплені; перенумерація всіх — лише менеджер, із попередженням про нові етикетки.", "A code mask such as “{zone}-{row}-{bay}-{tier}” sets cell and Odoo location names. Published codes are pinned by default; renumbering all is for a manager only, with a warning about new labels."]],
+  ["capacity", ["Ємність, категорії та атрибути", "Capacity, categories and attributes"], ["Ємність комірки — палетомісця й максимальна вага; категорія зберігання задає, що й скільки можна класти. Зведення ємності є для ряду, зони й складу. Дані категорій беруться з Odoo.", "A cell capacity is pallet places and maximum weight; the storage category defines what and how much can be put. Capacity summaries exist for a row, a zone and the warehouse. Category data comes from Odoo."]],
+  ["putaway", ["Правила розміщення", "Putaway rules"], ["Правило каже, куди покласти товар чи категорію, і задає min/max поповнення. Правила — частина чернетки й потрапляють в Odoo лише публікацією; перевірка «чи вміститься» попереджає про переповнення.", "A rule says where to put a product or category and sets min/max replenishment. Rules are part of the draft and reach Odoo only by publishing; the “does it fit” check warns about overflow."]],
+  ["checks", ["Перевірки моделі", "Model checks"], ["Перетини, вихід за контур, проходи, висота до стелі, вага проти навантаження, конфлікти кодів. Заборона блокує дію, попередження лише повідомляє; режим кожної перевірки налаштовується.", "Overlaps, outside the outline, aisles, ceiling height, weight against load, code conflicts. A block stops the action, a warning only informs; each check's mode is configurable."]],
+  ["building", ["План будівлі та проходи", "The building plan and aisles"], ["Контур будівлі, колони, стіни, двері й проходи задаються в режимі «Будівля». Від них залежать перевірки виходу за контур, вузького проходу й висоти.", "The building outline, columns, walls, doors and aisles are set in “Building” mode. Checks for leaving the outline, a narrow aisle and height depend on them."]],
+  ["scratch", ["Майстер «З нуля»", "The “From scratch” wizard"], ["Для нової площадки майстер веде крок за кроком: контур, колони, зони, перші ряди. Кроки зберігаються — можна припинити й повернутися.", "For a new site the wizard leads step by step: outline, columns, zones, first rows. Steps are saved — you can stop and come back."]],
+  ["autolayout", ["Авторозкладка", "Auto-layout"], ["Алгоритм розкладає стелажі в зоні за ширинами проходів і технікою. Результат — звичайні місця, їх можна правити; скасування — Ctrl+Z.", "The algorithm lays out racks in a zone by aisle widths and handling equipment. The result is ordinary places you can edit; undo with Ctrl+Z."]],
+  ["parse", ["Розбір кодів і лоток", "Code parsing and the tray"], ["Коди з Odoo розкладаються за маскою на зону, ряд, секцію й ярус. Нерозпізнані потрапляють у лоток «Не розміщено», звідки їх можна перетягнути на сцену.", "Odoo codes are split by a mask into zone, row, bay and tier. Unrecognised ones go to the “Not placed” tray, from where they can be dragged onto the scene."]],
+  ["import", ["Файли: імпорт і експорт", "Files: import and export"], ["Імпорт XLSX/CSV (кодування cp1251 і розділювач «;» розпізнаються) і структури складу з Odoo; експорт у CSV/XLSX «туди й назад». Перед створенням показується попередній перегляд.", "Import of XLSX/CSV (cp1251 and the “;” separator are recognised) and of the warehouse structure from Odoo; export to CSV/XLSX “there and back”. A preview is shown before creating."]],
+  ["odoo", ["Структура з Odoo і розбіжності", "Structure from Odoo and differences"], ["«Оновити з Odoo» порівнює модель із поточними локаціями й показує розбіжності; кожну можна прийняти чи відхилити. Створені в Odoo без залишків можна відкотити.", "“Update from Odoo” compares the model with current locations and shows differences; each can be accepted or rejected. Records created in Odoo without stock can be rolled back."]],
+  ["find", ["Пошук і перехід по коду", "Search and go to a code"], ["Клавіша «/» чи Ctrl+K відкриває «Перейти до місця»: код або штрихкод, камера наїжджає на комірку. «Де лежить» шукає за товаром, партією чи упаковкою.", "Key “/” or Ctrl+K opens “Go to a place”: a code or barcode, the camera zooms to the cell. “Where is it” searches by product, lot or package."]],
+  ["heat", ["Показники й теплові карти", "Metrics and heat maps"], ["«Показник» фарбує комірки за заповненістю, віком запасу, рухом і min/max. Легенда показує кількість комірок у класах. У прототипі дані демонстраційні, позначені «демо».", "“Metric” paints cells by fill, stock age, movement and min/max. The legend shows cell counts per class. In the prototype the data is a demo, marked “demo”."]],
+  ["labels", ["Етикетки", "Labels"], ["Етикетки комірок: вибір (ряд, зона, виділення), вміст (код, штрихкод Code128, QR), розкладка аркуша. Формати: PDF (на сервері), ZPL, CSV і PNG (у браузері).", "Cell labels: selection (row, zone, selection), content (code, Code128 barcode, QR), sheet layout. Formats: PDF (on the server), ZPL, CSV and PNG (in the browser)."]],
+  ["docs", ["Документи", "Documents"], ["Специфікація стелажів, план площадки й таблиці. Документи будуються з поточної чернетки; таблиці відкриваються в Excel.", "Rack specification, site plan and tables. Documents are built from the current draft; tables open in Excel."]],
+  ["save", ["Збереження й чернетка", "Saving and the draft"], ["Зміни зберігаються автоматично; об'єкти з незбереженими змінами позначені бірюзовим. «Зберегти все» записує негайно, «Скинути до даних Odoo» повертає об'єкти до стану Odoo.", "Changes are saved automatically; objects with unsaved changes are marked teal. “Save all” writes at once, “Reset to Odoo data” returns objects to the Odoo state."]],
+  ["publish", ["Застосування в Odoo", "Applying to Odoo"], ["«Опублікувати» показує план змін: що створиться, перейменується, архівується. Лише після підтвердження виконується одна транзакція; створене можна відкотити, поки воно без залишків. Застосовується тільки активний варіант.", "“Publish” shows the plan of changes: what will be created, renamed, archived. Only after confirmation one transaction runs; created records can be rolled back while they have no stock. Only the active variant is applied."]],
+  ["history", ["Історія версій", "Version history"], ["Останні 50 версій і контрольних точок із нотатками. «Переглянути» показує схему й цифри поряд із поточним станом, «Відновити» повертає чернетку (поточна спершу зберігається окремою контрольною точкою).", "The last 50 versions and checkpoints with notes. “View” shows the plan and figures next to the current state, “Restore” returns the draft (the current one is first saved as a separate checkpoint)."]],
+  ["variants", ["Варіанти планування", "Layout variants"], ["«Як є», «Проєкт A/B…» — до 12 на площадку. «Створити з поточного» копіює чернетку, «Зробити активним» перемикає, не втрачаючи правок. Порівняння: місць, палетомісць, площа підлоги, об'єм, ємність, операції плану.", "“As is”, “Project A/B…” — up to 12 per site. “Create from current” copies the draft, “Make active” switches without losing edits. Comparison: places, pallet places, floor area, volume, capacity, plan operations."]],
+  ["comments", ["Коментарі на об'єктах", "Comments on objects"], ["Нотатка чи задача «перевірити на місці» на складі, шарі, місці, комірці чи розміщенні. Значок на сцені: синій — нотатка, помаранчевий — відкрита задача, сірий — усе вирішено. Читають і пишуть усі, вирішує автор чи «Проєктування». У Odoo задача з виконавцем стає його завданням.", "A note or a “check on site” task on the warehouse, layer, place, cell or placement. Scene badge: blue — a note, orange — an open task, grey — all resolved. Everyone reads and writes, the author or “Design” resolves. In Odoo a task with an assignee becomes their activity."]],
+  ["locks", ["Блокування зон", "Zone locks"], ["Вибір об'єкта в режимі редагування бере його зону на 5 хвилин (продовження раз на хвилину, зняття при виході). Чужу зону видно за червоним значком; правки там відхиляються повідомленням «хто й до котрої». Дивитися, виділяти й коментувати можна.", "Selecting an object in edit mode takes its zone for 5 minutes (renewed every minute, released on exit). Someone else's zone shows a red badge; edits there are rejected with a “who and until when” message. Viewing, selecting and commenting are allowed."]],
+  ["tours", ["Тури й навчальна копія", "Tours and the training copy"], ["«Ще → Тури»: тур новачка й 11 тематичних; посилання виду #tour-rack запускає тур одразу. Тур, що змінює дані, йде в «навчальній копії» — тимчасовому варіанті; в кінці — «Залишити зміни» або «Скасувати». На телефоні недоступно.", "“More → Tours”: the beginner tour and 11 thematic ones; a link like #tour-rack starts a tour at once. A tour that changes data runs in a “training copy” — a temporary variant; at the end — “Keep changes” or “Cancel”. Not available on a phone."]],
+  ["phone", ["Робота з телефона", "Working from a phone"], ["На телефоні — перегляд і пошук: панелі висувні, картка місця на весь екран, правка вимкнена. Мініатюра й тури недоступні.", "On a phone — viewing and search: panels slide in, the place card is full screen, editing is off. The minimap and tours are not available."]],
+  ["roles", ["Ролі й права", "Roles and rights"], ["«Перегляд» — читати й коментувати; «Проєктування» — правити об'єкти своїх шарів; «Застосування» — публікувати. Менеджер може подивитися на редактор очима іншої ролі. Недоступні кнопки неактивні з підказкою.", "“View” — read and comment; “Design” — edit objects of your layers; “Apply” — publish. A manager can see the editor through another role's eyes. Unavailable buttons are disabled with a hint."]],
+  ["hotkeys", ["Гарячі клавіші", "Hotkeys"], ["Ctrl+Z / Ctrl+Y — скасувати / повторити; Ctrl+D, Ctrl+C, Ctrl+V — дублювати, копіювати, вставити; Del — видалити; Alt+R — повернути; M — лінійка; «/» чи Ctrl+K — пошук; U — рівень вище; Esc — скасувати. Повний список — «Ще → Гарячі клавіші».", "Ctrl+Z / Ctrl+Y — undo / redo; Ctrl+D, Ctrl+C, Ctrl+V — duplicate, copy, paste; Del — delete; Alt+R — rotate; M — ruler; “/” or Ctrl+K — search; U — level up; Esc — cancel. The full list is under “More → Hotkeys”."]]
+];
+var TOPIC_BY_ID = Object.fromEntries(TOPICS.map((tp) => [tp[0], tp]));
+
+// core/constructor/tour_defs.js
+var P = (uk, en) => [uk, en];
+var TAB = (tab) => `#ltabs button[data-tab="${tab}"]`;
+var MENU = (key) => [`#menu-${key}`, "#menuMore summary", "#menuExtra"];
+var TOURS = [
+  {
+    id: "welcome",
+    title: P("Тур новачка", "Beginner tour"),
+    desc: P("13 кроків: план, рівні, виділення, мініатюра, перехід по коду, правка, каталог, перевірки, застосування, інструкція.", "13 steps: plan, levels, selection, minimap, go to code, editing, catalog, checks, applying, help."),
+    steps: [
+      { sel: "#vp", kind: "read", title: P("Сцена: 3D і «План»", "The scene: 3D and Plan"), text: P("Тут модель складу. Колесо — масштаб, права кнопка — панорама, ліва — обертання. Кнопки «3D» і «План» зверху перемикають вигляд.", "This is the warehouse model. Wheel — zoom, right button — pan, left — rotate. The “3D” and “Plan” buttons on top switch the view.") },
+      { sel: "#s6Crumbs", kind: "read", title: P("Рівні: склад › зона › ряд › стелаж › ярус", "Levels: warehouse › zone › row › bay › tier"), text: P("Вибраний рівень ховає решту, а камера наїжджає на нього. «↓» заглиблює до виділеного, «↑» піднімає, «⟲» скидає.", "A chosen level hides the rest and the camera zooms in. “↓” drills down to the selection, “↑” goes up, “⟲” resets.") },
+      { sel: TAB("layers"), kind: "do", act: { tab: "layers" }, title: P("Шари", "Layers"), text: P("Відкрийте вкладку «Шари»: у ній видимість, відмітка й правила редагування кожного шару.", "Open the “Layers” tab: visibility, elevation and edit rules of each layer.") },
+      { sel: "#vp", kind: "do", act: { select: "*" }, title: P("Виділення", "Selection"), text: P("Клацніть по ряду чи місцю на сцені: праворуч з'являться властивості. «Клік виділяє» під рівнями вибирає: місце, стелаж, ряд або зону; повторний клік піднімає вибір вище.", "Click a row or a place on the scene: properties appear on the right. “Click selects” under the levels picks a place, bay, row or zone; a repeated click goes one level up.") },
+      { sel: "#s6Mini", kind: "read", title: P("Мініатюра плану", "Minimap"), text: P("Червона рамка — те, що видно на екрані. Клацніть чи потягніть по мініатюрі, щоб перенести камеру.", "The red frame is what is on screen. Click or drag the minimap to move the camera.") },
+      { sel: TAB("search"), kind: "do", act: { search: true }, title: P("Перехід по коду", "Go to a code"), text: P("Вкладка «Пошук»: введіть код або штрихкод місця — камера перейде до нього. Швидко: клавіша «/».", "The “Search” tab: type a place code or barcode and the camera goes there. Quick key: “/”.") },
+      { sel: "#modeSeg", kind: "read", title: P("Перегляд і редагування", "View and edit"), text: P("«Редагування» вмикає правку об'єктів. Права визначає ваша роль; недоступні кнопки неактивні з підказкою.", "“Edit” turns on object editing. Your role defines your rights; unavailable buttons are disabled with a hint.") },
+      { sel: TAB("catalog"), kind: "read", title: P("Каталог", "Catalog"), text: P("Каталог обладнання й типів місць: 50 типів, параметри, 3D-моделі. Звідси об'єкти потрапляють на сцену.", "The equipment and place-type catalog: 50 types, parameters, 3D models. Objects reach the scene from here.") },
+      { sel: ["#checksBlock", "#rightBody"], kind: "read", title: P("Перевірки", "Checks"), text: P("Модель перевіряється під час правки: перетини, вихід за контур, проходи, висота, вага. Заборона блокує дію, попередження лише повідомляє.", "The model is checked while editing: overlaps, outside the outline, aisles, height, weight. A block stops the action, a warning only informs.") },
+      { sel: "#draftChip", kind: "read", title: P("Чернетка", "Draft"), text: P("Зміни живуть у чернетці й зберігаються автоматично. Чип показує, скільки об'єктів змінено проти діючої версії.", "Changes live in the draft and are saved automatically. The chip shows how many objects differ from the active version.") },
+      { sel: "#btnPublish", kind: "read", title: P("Застосування в Odoo", "Applying to Odoo"), text: P("«Опублікувати» показує план змін у Odoo; лише після підтвердження створюються й оновлюються локації. Публікує менеджер.", "“Publish” shows the plan of changes in Odoo; locations are created and updated only after confirmation. Done by a manager.") },
+      { sel: "#btnHistory", kind: "read", title: P("Історія версій", "Version history"), text: P("Версії й контрольні точки: «Переглянути» порівняє схему з поточною, «Відновити» поверне чернетку (поточна збережеться окремо).", "Versions and checkpoints: “View” compares the plan with the current one, “Restore” returns the draft (the current one is saved separately).") },
+      { sel: ["#menu-help", "#menu-lang", "#menuExtra"], kind: "read", title: P("Інструкція, тури, мова", "Help, tours, language"), text: P("Меню «Ще» містить «Інструкцію» (36 тем) і «Тури». Кнопка «UK/EN» перемикає мову інтерфейсу й підказок.", "The “More” menu holds “Help” (36 topics) and “Tours”. The “UK/EN” button switches the language of the interface and hints.") }
+    ]
+  },
+  {
+    id: "basic",
+    title: P("Основи роботи", "The basics"),
+    desc: P("Камера, виділення, скасування, збереження.", "Camera, selection, undo, saving."),
+    steps: [
+      { sel: "#vtools", kind: "read", title: P("Інструменти сцени", "Scene tools"), text: P("«3D»/«План», «Вписати», «Лінійка», «Підписи». Лінійка (клавіша M) міряє відстань між двома точками.", "“3D”/“Plan”, “Fit”, “Ruler”, “Labels”. The ruler (key M) measures the distance between two points.") },
+      { sel: "#vp", kind: "do", act: { select: "*" }, title: P("Виділіть об'єкт", "Select an object"), text: P("Клацніть по об'єкту. Ctrl+клік додає до виділення, Shift+рамка в «Плані» виділяє кілька.", "Click an object. Ctrl+click adds to the selection, Shift+box in Plan selects several.") },
+      { sel: "#modeSeg", kind: "do", act: { mode: "edit" }, title: P("Режим редагування", "Edit mode"), text: P("Увімкніть «Редагування»: тепер об'єкти можна переміщувати, повертати (Alt+R), видаляти (Del).", "Turn on “Edit”: now objects can be moved, rotated (Alt+R), deleted (Del).") },
+      { sel: ".s3-undo, #btnUndo, #vtools", kind: "read", title: P("Скасування й повтор", "Undo and redo"), text: P("Ctrl+Z скасовує, Ctrl+Shift+Z чи Ctrl+Y повторює; історія спільна для всіх змін у цьому сеансі.", "Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes; the history is shared by all changes in this session.") },
+      { sel: ["#menu-saveAll", "#storeTag"], kind: "read", title: P("Збереження", "Saving"), text: P("Зміни зберігаються самі. Бірюзові позначки «не збережено» зникають після запису; «Зберегти все» робить це негайно.", "Changes are saved by themselves. Teal “unsaved” marks vanish after saving; “Save all” does it at once.") },
+      { sel: "#vp", kind: "read", title: P("Гарячі клавіші", "Hotkeys"), text: P("Повний список — у меню «Ще → Гарячі клавіші».", "The full list is under “More → Hotkeys”.") }
+    ]
+  },
+  {
+    id: "rack",
+    mutates: true,
+    title: P("Стелаж: від порожнього місця до комірок", "A rack: from empty floor to cells"),
+    desc: P("Тур змінює дані — у навчальній копії: поставити стелаж, змінити яруси, побачити комірки й перевірки.", "This tour changes data — in a training copy: place a rack, change tiers, see cells and checks."),
+    steps: [
+      { sel: "#modeSeg", kind: "do", act: { mode: "edit" }, title: P("Режим редагування", "Edit mode"), text: P("Для цього туру потрібне «Редагування».", "This tour needs “Edit”.") },
+      { sel: TAB("slots"), kind: "do", act: { tab: "slots" }, title: P("Місця", "Places"), text: P("Вкладка «Місця» містить шаблони: палетний стелаж, полиці, консолі, місця на підлозі.", "The “Places” tab holds templates: pallet rack, shelves, cantilevers, floor spots.") },
+      { sel: "#vp", kind: "do", act: { rack: true }, title: P("Поставте стелаж", "Place a rack"), text: P("Натисніть «Палетний стелаж» і клацніть на сцені. «Показати мені» ставить стелаж у центрі виду.", "Press “Pallet rack” and click the scene. “Show me” places a rack at the view centre.") },
+      { sel: "#rightBody", kind: "read", title: P("Властивості ряду", "Row properties"), text: P("Праворуч — габарит, пролети, яруси, навантаження, префікс коду. Усе змінюється одразу на сцені.", "On the right — size, bays, tiers, load, code prefix. Everything changes on the scene at once.") },
+      { sel: "#rightBody", kind: "do", act: { levels: 3 }, title: P("Змініть число ярусів", "Change the number of tiers"), text: P("Поставте «Ярусів» = 3. «Показати мені» робить це за вас.", "Set “Tiers” = 3. “Show me” does it for you.") },
+      { sel: ["#cellsBox", "#rightBody"], kind: "read", title: P("Комірки й коди", "Cells and codes"), text: P("Кожне місце дає комірки з кодами за правилом адресації. У Odoo вони стануть локаціями після публікації.", "Each place gives cells with codes by the addressing rule. They become Odoo locations after publishing.") },
+      { sel: ["#checksBlock", "#rightBody"], kind: "read", title: P("Перевірки", "Checks"), text: P("Перевірки одразу показують, чи вміщується стелаж у контур і чи не перетинає сусідів.", "Checks immediately show whether the rack fits the outline and does not overlap neighbours.") },
+      { sel: "#draftChip", kind: "read", title: P("Лічильник чернетки", "Draft counter"), text: P("Чернетка змінена; опублікувати змінене можна лише з робочого варіанта, а не з навчальної копії.", "The draft is changed; changes can be published only from a working variant, not from a training copy.") }
+    ]
+  },
+  {
+    id: "import",
+    title: P("Імпорт і експорт", "Import and export"),
+    desc: P("Структура з Odoo, файли XLSX/CSV, експорт.", "Structure from Odoo, XLSX/CSV files, export."),
+    steps: [
+      { sel: MENU("importLocations"), kind: "do", act: { open: true }, title: P("«Імпорт локацій…»", "“Import locations…”"), text: P("Відкрийте «Ще» й оберіть «Імпорт локацій…»: джерело — файл XLSX/CSV або структура складу з Odoo.", "Open “More” and choose “Import locations…”: the source is an XLSX/CSV file or the warehouse structure from Odoo.") },
+      { sel: MENU("parseCodes"), kind: "read", title: P("Розбір кодів", "Code parsing"), text: P("Коди з Odoo розкладаються за маскою на зону, ряд, секцію й ярус; нерозпізнані йдуть у лоток «Не розміщено».", "Odoo codes are split by a mask into zone, row, bay and tier; unrecognised ones go to the “Not placed” tray.") },
+      { sel: TAB("tray"), kind: "read", title: P("Лоток «Не розміщено»", "The “Not placed” tray"), text: P("Звідти місця тягнуться на сцену або розкладаються автоматично.", "Places are dragged from there onto the scene or laid out automatically.") },
+      { sel: MENU("exportLocations"), kind: "read", title: P("Експорт", "Export"), text: P("Експорт у CSV/XLSX «туди й назад»: файл можна виправити в Excel й імпортувати знову.", "Export to CSV/XLSX “there and back”: edit the file in Excel and import it again.") }
+    ]
+  },
+  {
+    id: "scratch",
+    title: P("Склад «з нуля»", "A warehouse from scratch"),
+    desc: P("Майстер: контур, колони, зони, перші ряди.", "The wizard: outline, columns, zones, first rows."),
+    steps: [
+      { sel: "#btnNewSite", kind: "read", title: P("Нова площадка", "A new site"), text: P("«Нова площадка» створює порожню площадку; майстер «З нуля» проведе через контур, колони, зони й перші ряди.", "“New site” creates an empty site; the “From scratch” wizard guides you through outline, columns, zones and first rows.") },
+      { sel: MENU("wizard"), kind: "read", title: P("Майстер «З нуля»", "The “From scratch” wizard"), text: P("Кроки майстра зберігаються, тож можна припинити й повернутися пізніше.", "The wizard steps are saved, so you can stop and come back later.") },
+      { sel: MENU("autolayout"), kind: "read", title: P("Авторозкладка", "Auto-layout"), text: P("Після зон запропонує розкласти стелажі за ширинами проходів і технікою.", "After the zones it proposes laying out racks by aisle widths and handling equipment.") }
+    ]
+  },
+  {
+    id: "address",
+    title: P("Адресація кодів", "Code addressing"),
+    desc: P("Як формуються коди комірок і локацій Odoo.", "How cell codes and Odoo locations are built."),
+    steps: [
+      { sel: "#vp", kind: "do", act: { select: null }, title: P("Властивості площадки", "Site properties"), text: P("Зніміть виділення (Esc): праворуч — властивості площадки, серед них «Адресація кодів».", "Clear the selection (Esc): the site properties are on the right, including “Code addressing”.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Маска коду", "The code mask"), text: P("Маска, напр. «{зона}-{ряд}-{секція}-{ярус}», задає імена комірок і штрихкоди локацій.", "A mask like “{zone}-{row}-{bay}-{tier}” sets cell names and location barcodes.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Перенумерація", "Renumbering"), text: P("Опубліковані коди за замовчуванням не змінюються; перенумерація всіх — лише менеджер, із попередженням про нові етикетки.", "Published codes stay by default; renumbering all is for a manager only, with a warning about new labels.") }
+    ]
+  },
+  {
+    id: "putaway",
+    title: P("Правила розміщення", "Putaway rules"),
+    desc: P("Куди Odoo кладе товар і що пополняти.", "Where Odoo puts goods and what to replenish."),
+    steps: [
+      { sel: MENU("rules"), kind: "do", act: { open: true }, title: P("Правила розміщення", "Putaway rules"), text: P("«Ще → Правила розміщення»: товар чи категорія → куди покласти; тут же min/max поповнення.", "“More → Putaway rules”: product or category → where to put; min/max replenishment too.") },
+      { sel: ["#rightBody"], kind: "read", title: P("Місткість і категорії", "Capacity and categories"), text: P("Категорії зберігання й ємність комірки впливають на перевірку «чи вміститься».", "Storage categories and cell capacity feed the “does it fit” check.") },
+      { sel: ["#btnPublish"], kind: "read", title: P("У Odoo — лише публікацією", "In Odoo — by publishing only"), text: P("Правила потрапляють в Odoo так само, як локації: план, підтвердження, одна транзакція з відкатом.", "Rules reach Odoo like locations: plan, confirmation, one transaction with rollback.") }
+    ]
+  },
+  {
+    id: "apply",
+    title: P("Застосування в Odoo", "Applying to Odoo"),
+    desc: P("План змін, підтвердження, журнал і відкат.", "Plan of changes, confirmation, log and rollback."),
+    steps: [
+      { sel: "#btnPublish", kind: "read", title: P("План", "The plan"), text: P("«Опублікувати» будує план: що створиться, перейменується, архівується; блокувальні проблеми видно одразу.", "“Publish” builds the plan: what will be created, renamed, archived; blocking issues show at once.") },
+      { sel: "#s6Variants, #menu-variants", kind: "read", title: P("Лише активний варіант", "Only the active variant"), text: P("Застосовується завжди активний варіант; навчальна копія не публікується.", "The active variant is always the one applied; a training copy is never published.") },
+      { sel: MENU("planLog"), kind: "read", title: P("Журнал і відкат", "Log and rollback"), text: P("«Журнал публікацій» показує операції; відкат можливий, поки створене не використано.", "The “Publication log” shows operations; rollback is possible while created records are unused.") },
+      { sel: "#btnHistory", kind: "read", title: P("Версії", "Versions"), text: P("Кожне застосування — нова версія зі знімком; до неї можна повернути чернетку.", "Each applying is a new version with a snapshot; the draft can be returned to it.") }
+    ]
+  },
+  {
+    id: "find",
+    title: P("Пошук і залишки", "Search and stock"),
+    desc: P("Код, штрихкод, товар; теплові карти.", "Code, barcode, product; heat maps."),
+    steps: [
+      { sel: TAB("search"), kind: "do", act: { search: true }, title: P("Вкладка «Пошук»", "The “Search” tab"), text: P("Відкрийте «Пошук»: «Перейти до місця» за кодом або штрихкодом і «Де лежить» за товаром.", "Open “Search”: “Go to a place” by code or barcode and “Where is it” by product.") },
+      { sel: ["#s3Goto", "#leftBody"], kind: "read", title: P("Перехід по коду", "Go to a code"), text: P("Введіть код (напр. PLT-01A) і Enter: камера наїде на місце, відкриється картка із залишками.", "Type a code (e.g. PLT-01A) and Enter: the camera zooms in and the card with stock opens.") },
+      { sel: ["#s3Metric", ".s3-tools"], kind: "read", title: P("Показник", "Metric"), text: P("«Показник» фарбує комірки за заповненістю, віком запасу чи рухом; легенда показує кількість у класах.", "“Metric” paints cells by fill, stock age or movement; the legend shows counts per class.") }
+    ]
+  },
+  {
+    id: "labels",
+    title: P("Етикетки", "Labels"),
+    desc: P("Вибір комірок, розкладка аркуша, ZPL, PDF.", "Cell selection, sheet layout, ZPL, PDF."),
+    steps: [
+      { sel: MENU("labels"), kind: "do", act: { open: true }, title: P("«Етикетки…»", "“Labels…”"), text: P("Оберіть комірки (ряд, зона, виділення), вміст (код, штрихкод, QR) і розкладку аркуша.", "Choose cells (row, zone, selection), content (code, barcode, QR) and the sheet layout.") },
+      { sel: ["#rightBody"], kind: "read", title: P("З картки ряду", "From the row card"), text: P("Блок «Етикетки» у властивостях ряду друкує його комірки одним кліком.", "The “Labels” block in the row properties prints its cells in one click.") },
+      { sel: MENU("labels"), kind: "read", title: P("Формати", "Formats"), text: P("PDF формує сервер; ZPL, CSV і PNG — у браузері.", "The server builds PDF; ZPL, CSV and PNG are built in the browser.") }
+    ]
+  },
+  {
+    id: "docs",
+    title: P("Документи", "Documents"),
+    desc: P("Специфікація стелажів, план, експорт.", "Rack specification, plan, export."),
+    steps: [
+      { sel: MENU("docs"), kind: "read", title: P("Документи", "Documents"), text: P("Специфікація стелажів, план площадки (SVG/PDF) і таблиці до XLSX.", "Rack specification, site plan (SVG/PDF) and tables to XLSX.") },
+      { sel: MENU("exportLocations"), kind: "read", title: P("Експорт таблиць", "Table export"), text: P("Той самий файл можна відкрити в Excel, виправити й імпортувати назад.", "The same file can be opened in Excel, fixed and imported back.") },
+      { sel: ["#btnHistory"], kind: "read", title: P("Документ версії", "A version document"), text: P("Знімок версії можна завантажити й порівняти зі схемою.", "A version snapshot can be downloaded and compared with the plan.") }
+    ]
+  },
+  {
+    id: "team",
+    title: P("Командна робота", "Teamwork"),
+    desc: P("Варіанти, коментарі й задачі, блокування зон.", "Variants, comments and tasks, zone locks."),
+    steps: [
+      { sel: TAB("variants"), kind: "do", act: { variants: true }, title: P("Варіанти планування", "Layout variants"), text: P("Вкладка «Варіанти»: «Як є» і «Проєкт A/B…». «Створити з поточного» копіює чернетку; «Зробити активним» перемикає, не втрачаючи правок.", "The “Variants” tab: “As is” and “Project A/B…”. “Create from current” copies the draft; “Make active” switches without losing edits.") },
+      { sel: ["#s6VarCmp", "#leftBody"], kind: "read", title: P("Порівняння", "Comparison"), text: P("Два варіанти поряд: місць, палетомісць, площа підлоги, об'єм, ємність, операції плану й різниця.", "Two variants side by side: places, pallet places, floor area, volume, capacity, plan operations and the difference.") },
+      { sel: TAB("comments"), kind: "do", act: { comments: true }, title: P("Коментарі й задачі", "Comments and tasks"), text: P("Вкладка «Коментарі»: список із фільтрами; значки на сцені — синій нотатка, помаранчевий відкрита задача, сірий усе вирішено.", "The “Comments” tab: a list with filters; scene badges — blue a note, orange an open task, grey all resolved.") },
+      { sel: ["#s6Comments", "#rightBody"], kind: "read", title: P("Додати коментар", "Add a comment"), text: P("Виділіть об'єкт і додайте нотатку або задачу «перевірити на місці». У Odoo задача з виконавцем стає його завданням.", "Select an object and add a note or a “check on site” task. In Odoo a task with an assignee becomes their activity.") },
+      { sel: ["#s6LockList", "#rightBody"], kind: "read", title: P("Блокування зон", "Zone locks"), text: P("Вибір об'єкта в режимі редагування бере його зону на 5 хвилин. Червоний значок — зона зайнята іншим, зелений — вами.", "Selecting an object in edit mode takes its zone for 5 minutes. A red badge — the zone is held by someone else, green — by you.") }
+    ]
+  }
+];
+var TOUR_BY_ID = Object.fromEntries(TOURS.map((tr) => [tr.id, tr]));
+
+// core/constructor/tours.js
+var L2 = (pair) => Array.isArray(pair) ? pair[getLang() === "en" ? 1 : 0] : pair;
+var DONE_KEY = (id) => `f3d_tour_done:${id}`;
+var INVITE_KEY = "f3d_tour_invite";
+var lsGet4 = (k) => {
+  try {
+    return globalThis.localStorage ? globalThis.localStorage.getItem(k) : null;
+  } catch {
+    return null;
+  }
+};
+var lsSet4 = (k, v) => {
+  try {
+    globalThis.localStorage?.setItem(k, v);
+  } catch {
+  }
+};
+var tourDone = (id) => lsGet4(DONE_KEY(id)) === "1";
+var TOUR_PREFIX = "TOUR-R1";
+var slotByPrefix = (p) => S.slots.find((s) => s.code_prefix === p);
+var firstSlot = () => S.slots.find((s) => s.template !== "zone" && E.objVisible?.("slot", s.id) !== false);
+async function showAct(act) {
+  if (!act) {
+    return;
+  }
+  if (act.tab) {
+    E.setLeftTab(act.tab);
+  } else if (act.mode) {
+    S.app.mode = act.mode;
+    S.edit = null;
+    E.cancelModes?.();
+    E.renderAll();
+  } else if (act.select !== void 0) {
+    const rec = act.select === "*" ? firstSlot() : act.select ? slotByPrefix(act.select) : null;
+    E.selectObj(rec ? { kind: "slot", id: rec.id } : null);
+    if (rec) {
+      E.focusOn?.(rec.x, rec.y);
+    }
+  } else if (act.rack) {
+    if (!slotByPrefix(TOUR_PREFIX)) {
+      const c = E.camTarget ? E.camTarget() : { x: 10, y: 10 };
+      E.addSlotAt({ kind: "slot", template: "pallet_rack", prefix: TOUR_PREFIX, params: defaultParams("pallet_rack") }, Math.round(c.x), Math.round(c.y));
+    }
+  } else if (act.levels) {
+    const s = slotByPrefix(TOUR_PREFIX);
+    if (s) {
+      s.params = { ...s.params, levels: act.levels };
+      E.selectObj({ kind: "slot", id: s.id });
+      E.commit({ label: t("Яруси: {n}", { n: act.levels }) });
+    }
+  } else if (act.search) {
+    E.setLeftTab("search");
+  } else if (act.variants) {
+    E.setLeftTab("variants");
+  } else if (act.comments) {
+    E.setLeftTab("comments");
+  } else if (act.open) {
+    const more = $("#menuMore");
+    if (more) {
+      more.open = true;
+    }
+  }
+}
+function actDone(act) {
+  if (!act) {
+    return true;
+  }
+  if (act.tab || act.search || act.variants || act.comments) {
+    return S.ui.leftTab === (act.tab || act.search && "search" || act.variants && "variants" || "comments");
+  }
+  if (act.mode) {
+    return S.app.mode === act.mode;
+  }
+  if (act.select !== void 0) {
+    return act.select === null ? !S.sel : !!S.sel;
+  }
+  if (act.rack) {
+    return !!slotByPrefix(TOUR_PREFIX);
+  }
+  if (act.levels) {
+    const s = slotByPrefix(TOUR_PREFIX);
+    return !!s && Number(s.params.levels) === act.levels;
+  }
+  if (act.open) {
+    const more = $("#menuMore");
+    return !!more && more.open;
+  }
+  return false;
+}
+var run = { tour: null, i: 0, training: false, timer: 0, onKey: null };
+function S_flag(on) {
+  if (S.ui) {
+    S.ui.tourRunning = on;
+  }
+}
+var tourState = () => ({ id: run.tour && run.tour.id, step: run.i, training: run.training });
+var found = (sel) => {
+  const list = Array.isArray(sel) ? sel : sel ? [sel] : [];
+  for (const s of list) {
+    const el = $(s) || ROOT.el?.querySelector(s);
+    if (el && (el.offsetParent !== null || el.getClientRects().length)) {
+      return el;
+    }
+  }
+  return null;
+};
+function overlay() {
+  const root = $("#app") || ROOT.el;
+  let hole = root.querySelector("#s6TourHole");
+  let card = root.querySelector("#s6TourCard");
+  if (!hole) {
+    hole = h("div", { class: "s6-tour-hole", id: "s6TourHole", hidden: true });
+    card = h("div", { class: "s6-tour-card", id: "s6TourCard", role: "dialog", "aria-live": "polite" });
+    root.append(hole, card);
+  }
+  return { hole, card };
+}
+function place(card, hole, el) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (!el) {
+    hole.hidden = true;
+    card.style.left = Math.max(8, (vw - card.offsetWidth) / 2) + "px";
+    card.style.top = Math.max(8, (vh - card.offsetHeight) / 3) + "px";
+    return;
+  }
+  const r = el.getBoundingClientRect();
+  hole.hidden = false;
+  Object.assign(hole.style, { left: r.left - 3 + "px", top: r.top - 3 + "px", width: r.width + 6 + "px", height: r.height + 6 + "px" });
+  const cw = card.offsetWidth || 340;
+  const ch = card.offsetHeight || 160;
+  let top = r.bottom + 10;
+  if (top + ch > vh - 8) {
+    top = r.top - ch - 10;
+  }
+  if (top < 8) {
+    top = Math.min(vh - ch - 8, Math.max(8, r.top + 12));
+  }
+  let left = Math.min(Math.max(8, r.left), vw - cw - 8);
+  if (top > r.top - ch && top < r.bottom && left < r.right && left + cw > r.left) {
+    left = Math.min(vw - cw - 8, r.right + 10);
+  }
+  Object.assign(card.style, { left: Math.max(8, left) + "px", top: Math.max(8, top) + "px" });
+}
+function stepNode(tour, i) {
+  const step = tour.steps[i];
+  const last = i === tour.steps.length - 1;
+  const done = step.kind === "do" ? actDone(step.act) : false;
+  return h(
+    "div",
+    { style: { display: "contents" } },
+    h("div", { class: "kind" }, `${t("Крок")} ${i + 1} / ${tour.steps.length} · ${step.kind === "do" ? t("дія") : t("прочитати")}${done ? " · ✓" : ""}`),
+    h("h3", null, L2(step.title)),
+    h("div", { class: "body" }, L2(step.text)),
+    h(
+      "div",
+      { class: "s6-row sp" },
+      h("button", { class: "fbtn sm", type: "button", id: "s6TourPrev", disabled: i === 0, onclick: () => go(i - 1) }, "← " + t("Назад")),
+      step.kind === "do" && step.act ? h("button", { class: "fbtn sm", type: "button", id: "s6TourShow", onclick: async () => {
+        await showAct(step.act);
+        draw();
+      } }, t("Показати мені")) : null,
+      h("button", { class: "fbtn sm primary", type: "button", id: "s6TourNext", onclick: () => last ? finish() : go(i + 1) }, last ? t("Завершити") : t("Далі") + " →")
+    ),
+    h("div", { class: "s6-row sp" }, h("span", { class: "s6-muted" }, "← → Esc"), h("button", { class: "fbtn sm", type: "button", id: "s6TourClose", onclick: () => close(false) }, t("Закрити")))
+  );
+}
+function draw() {
+  if (!run.tour) {
+    return;
+  }
+  const { hole, card } = overlay();
+  const step = run.tour.steps[run.i];
+  card.replaceChildren(stepNode(run.tour, run.i));
+  const el = found(step.sel);
+  el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  place(card, hole, el);
+  requestAnimationFrame(() => run.tour && place(card, hole, found(step.sel)));
+}
+function go(i) {
+  if (!run.tour) {
+    return;
+  }
+  run.i = Math.max(0, Math.min(run.tour.steps.length - 1, i));
+  draw();
+}
+function removeOverlay() {
+  for (const id of ["s6TourHole", "s6TourCard"]) {
+    $("#" + id)?.remove();
+  }
+}
+async function endTraining2() {
+  if (!run.training) {
+    return;
+  }
+  run.training = false;
+  const keep = await confirmBox({ title: t("Навчальна копія"), text: t("Залишити зміни туру як звичайний варіант чи скасувати їх і повернутися до робочого варіанта?"), ok: t("Залишити зміни"), cancel: t("Скасувати") });
+  await E.endTraining(!!keep);
+}
+async function close(completed) {
+  if (!run.tour) {
+    return;
+  }
+  const tour = run.tour;
+  clearInterval(run.timer);
+  document.removeEventListener("keydown", run.onKey, true);
+  run.tour = null;
+  S_flag(false);
+  removeOverlay();
+  if (completed) {
+    lsSet4(DONE_KEY(tour.id), "1");
+    toast(t("Тур «{name}» пройдено.", { name: L2(tour.title) }));
+  }
+  await endTraining2();
+}
+var finish = () => close(true);
+function onKey2(e) {
+  if (!run.tour || $("dialog[open]")) {
+    return;
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    close(false);
+  } else if (e.key === "ArrowRight") {
+    e.preventDefault();
+    e.stopPropagation();
+    run.i < run.tour.steps.length - 1 ? go(run.i + 1) : finish();
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+    e.stopPropagation();
+    go(run.i - 1);
+  }
+}
+function tourBlocker(tour) {
+  if (E.isMobile?.()) {
+    return t("На телефоні тури недоступні.");
+  }
+  if (tour.mutates) {
+    if (!can("variants")) {
+      return t("Цей тур змінює дані й потребує «навчальної копії», якої тут немає.");
+    }
+    if (!S.rights.is_manager) {
+      return t("Цей тур змінює дані й іде в «навчальній копії»: її створює менеджер конструктора.");
+    }
+  }
+  return null;
+}
+async function startTour(id, { from = 0 } = {}) {
+  const tour = TOUR_BY_ID[id];
+  if (!tour || !ROOT.el) {
+    return false;
+  }
+  if (run.tour) {
+    await close(false);
+  }
+  const why = tourBlocker(tour);
+  if (why) {
+    toast(why, "warn");
+    return false;
+  }
+  ensureStyle3();
+  if (tour.mutates) {
+    const v = E.refreshVariants ? await E.refreshVariants({ render: false }) : null;
+    const active2 = v && v.list.find((x) => x.id === v.active_id);
+    if (!(active2 && active2.is_training)) {
+      const res = await E.createVariant(t("Навчальна копія"), { training: true });
+      if (!res) {
+        return false;
+      }
+    }
+    run.training = true;
+    S.app.mode = "edit";
+    E.renderAll();
+  }
+  run.tour = tour;
+  S_flag(true);
+  run.onKey = onKey2;
+  document.addEventListener("keydown", run.onKey, true);
+  clearInterval(run.timer);
+  run.timer = setInterval(() => run.tour && draw(), 700);
+  go(from);
+  return true;
+}
+var stopTour = () => close(false);
+function openTours() {
+  ensureStyle3();
+  const rows = TOURS.map((tr) => {
+    const why = tourBlocker(tr);
+    return h(
+      "div",
+      { class: "s6-item", "data-tour": tr.id },
+      h("div", { class: "s6-row sp" }, h("b", null, L2(tr.title)), h("span", { class: "s6-row" }, tr.mutates ? h("span", { class: "s6-tag warn" }, t("навчальна копія")) : null, tourDone(tr.id) ? h("span", { class: "s6-tag ok" }, t("пройдено")) : null)),
+      h("div", { class: "s6-muted" }, L2(tr.desc)),
+      h("div", { class: "s6-row" }, h("button", { class: "fbtn sm primary", type: "button", "data-act": "start", disabled: !!why, title: why || "", onclick: () => {
+        dlg.close2("");
+        startTour(tr.id);
+      } }, t("Почати")), h("span", { class: "s6-muted" }, `#tour-${tr.id} · ${tr.steps.length} ${t("кроків")}`))
+    );
+  });
+  const dlg = openDialog({ title: t("Тури"), cls: "narrow", body: h("div", { class: "s6-panel", id: "s6Tours" }, rows), actions: [{ label: t("Закрити") }] });
+  return dlg;
+}
+function openHelp(topicId) {
+  ensureStyle3();
+  let cur = TOPICS.find((tp) => tp[0] === topicId) || TOPICS[0];
+  const nav = h("nav", { "aria-label": t("Теми") });
+  const art = h("article", { id: "s6HelpBody" });
+  const draw22 = () => {
+    nav.replaceChildren(...TOPICS.map((tp) => h("button", { type: "button", "data-topic": tp[0], "aria-current": String(tp === cur), onclick: () => {
+      cur = tp;
+      draw22();
+    } }, L2(tp[1]))));
+    art.replaceChildren(h("h3", null, L2(cur[1])), ...L2(cur[2]).split("\n").map((p) => h("p", null, p)));
+  };
+  draw22();
+  return openDialog({ title: t("Інструкція"), cls: "wide", body: h("div", { class: "s6-help", id: "s6Help" }, nav, art), actions: [{ label: t("← До моделі"), id: "s6HelpBack" }] });
+}
+registries.dialogs.add("tours", () => openTours(), { force: true });
+registries.dialogs.add("help", (a) => openHelp(a && a.topic), { force: true });
+registries.menu.add("tours", { area: "more", label: "Тури", icon: "tag", sequence: 85, run: () => E.runDialog("tours") }, { sequence: 85, force: true });
+registries.menu.add("help", { area: "more", label: "Інструкція", icon: "tag", sequence: 86, run: () => E.runDialog("help") }, { sequence: 86, force: true });
+function invite() {
+  if (E.isMobile?.() || run.tour || tourDone("welcome") || lsGet4(INVITE_KEY) === "1" || globalThis.navigator?.webdriver || E.host?.autoTour === false) {
+    return;
+  }
+  const root = $("#app");
+  if (!root || root.querySelector("#s6TourInvite")) {
+    return;
+  }
+  const box = h(
+    "div",
+    { class: "s6-tour-card", id: "s6TourInvite", style: { right: "12px", bottom: "12px", left: "auto", top: "auto", position: "fixed" } },
+    h("h3", null, t("Вітаємо в конструкторі")),
+    h("div", { class: "body" }, t("Пройти короткий тур новачка (13 кроків)? Його завжди можна знайти в меню «Ще → Тури».")),
+    h("div", { class: "s6-row sp" }, h("button", { class: "fbtn sm", type: "button", id: "s6InviteNo", onclick: () => {
+      lsSet4(INVITE_KEY, "1");
+      box.remove();
+    } }, t("Не показувати")), h("button", { class: "fbtn sm primary", type: "button", id: "s6InviteYes", onclick: () => {
+      box.remove();
+      startTour("welcome");
+    } }, t("Пройти тур")))
+  );
+  root.append(box);
+}
+function fromHash() {
+  const m = /^#tour-([a-z]+)$/.exec(globalThis.location?.hash || "");
+  if (m && TOUR_BY_ID[m[1]]) {
+    startTour(m[1]);
+    return true;
+  }
+  return false;
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  S_flag(false);
+  if (!fromHash()) {
+    setTimeout(invite, 600);
+  }
+  globalThis.addEventListener?.("hashchange", fromHash);
+});
+E.lifecycle.unmount.add(() => {
+  clearInterval(run.timer);
+  if (run.onKey) {
+    document.removeEventListener("keydown", run.onKey, true);
+  }
+  run.tour = null;
+  run.training = false;
+  globalThis.removeEventListener?.("hashchange", fromHash);
+});
+onLang(() => {
+  if (run.tour) {
+    draw();
+  }
+});
+Object.assign(E, { startTour, stopTour, openTours, openHelp, tourState });
+addEn({
+  "Крок": "Step",
+  "дія": "action",
+  "прочитати": "read",
+  "Назад": "Back",
+  "Показати мені": "Show me",
+  "Завершити": "Finish",
+  "Далі": "Next",
+  "Закрити": "Close",
+  "Навчальна копія": "Training copy",
+  "Залишити зміни": "Keep changes",
+  "Скасувати": "Cancel",
+  "Залишити зміни туру як звичайний варіант чи скасувати їх і повернутися до робочого варіанта?": "Keep the tour changes as a regular variant or cancel them and return to the working variant?",
+  "Тур «{name}» пройдено.": "Tour “{name}” completed.",
+  "На телефоні тури недоступні.": "Tours are not available on a phone.",
+  "Цей тур змінює дані й потребує «навчальної копії», якої тут немає.": "This tour changes data and needs a “training copy”, which is not available here.",
+  "Цей тур змінює дані й іде в «навчальній копії»: її створює менеджер конструктора.": "This tour changes data and runs in a “training copy”: the constructor manager creates it.",
+  "навчальна копія": "training copy",
+  "пройдено": "completed",
+  "Почати": "Start",
+  "кроків": "steps",
+  "Тури": "Tours",
+  "Теми": "Topics",
+  "Інструкція": "Help",
+  "← До моделі": "← Back to the model",
+  "Вітаємо в конструкторі": "Welcome to the constructor",
+  "Пройти короткий тур новачка (13 кроків)? Його завжди можна знайти в меню «Ще → Тури».": "Take the short beginner tour (13 steps)? You can always find it under “More → Tours”.",
+  "Не показувати": "Do not show",
+  "Пройти тур": "Take the tour",
+  "Яруси: {n}": "Tiers: {n}"
+});
+
+// core/constructor/minimap.js
+var W = 168;
+var MAXH = 120;
+var FAR = 400;
+function viewFootprint(camera) {
+  if (!camera || !THREE.Vector3) {
+    return null;
+  }
+  const o = camera.position.clone();
+  const pts = [];
+  for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const d = new THREE.Vector3(nx, ny, 0.5).unproject(camera).sub(o).normalize();
+    let k = d.y < -1e-4 ? -o.y / d.y : FAR;
+    k = Math.min(Math.max(k, 0), FAR);
+    pts.push([o.x + d.x * k, -(o.z + d.z * k)]);
+  }
+  return pts;
+}
+function miniScale(B2, maxW = W, maxH = MAXH) {
+  const k = Math.min(maxW / (B2.length || 1), maxH / (B2.width || 1));
+  return { k, w: Math.round(B2.length * k), h: Math.round(B2.width * k) };
+}
+var miniToWorld = (px, py, B2, sc) => ({ x: Math.max(0, Math.min(B2.length, px / sc.k)), y: Math.max(0, Math.min(B2.width, (sc.h - py) / sc.k)) });
+var canvas = null;
+var drag = false;
+function ensureMini() {
+  const c = centerEl();
+  if (!c) {
+    return null;
+  }
+  let box = c.querySelector("#s6Mini");
+  if (!box) {
+    canvas = h("canvas", { width: W, height: 90, id: "s6MiniCanvas", "aria-label": t("Мініатюра плану: клік переносить камеру"), role: "img" });
+    box = h("div", { class: "s6-mini", id: "s6Mini", title: t("Мініатюра плану: клік переносить камеру") }, canvas);
+    const move = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const B2 = S.site.building;
+      const sc = miniScale(B2);
+      const p = miniToWorld((e.clientX - r.left) / r.width * canvas.width, (e.clientY - r.top) / r.height * canvas.height, B2, sc);
+      E.focusOn?.(p.x, p.y);
+    };
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = true;
+      canvas.setPointerCapture?.(e.pointerId);
+      move(e);
+    });
+    canvas.addEventListener("pointermove", (e) => drag && move(e));
+    canvas.addEventListener("pointerup", () => drag = false);
+    canvas.addEventListener("pointercancel", () => drag = false);
+    c.append(box);
+  }
+  canvas = box.querySelector("canvas");
+  return box;
+}
+var css = (name, fallback) => (getComputedStyle(ROOTEL()).getPropertyValue(name) || fallback).trim() || fallback;
+var ROOTEL = () => centerEl() || document.body;
+function poly(g3, pts, X, Y, fill2) {
+  if (!pts || pts.length < 3) {
+    return false;
+  }
+  g3.beginPath();
+  pts.forEach(([x, y], i) => i ? g3.lineTo(X(x), Y(y)) : g3.moveTo(X(x), Y(y)));
+  g3.closePath();
+  if (fill2) {
+    g3.fill();
+  }
+  return true;
+}
+function draw2() {
+  const box = $("#s6Mini");
+  if (!box || !S.site || box.hidden) {
+    return;
+  }
+  const B2 = S.site.building;
+  const sc = miniScale(B2);
+  if (canvas.width !== sc.w || canvas.height !== sc.h) {
+    canvas.width = sc.w;
+    canvas.height = sc.h;
+  }
+  const g3 = canvas.getContext("2d");
+  const ink = css("--ink", "#1f2933");
+  g3.clearRect(0, 0, sc.w, sc.h);
+  g3.fillStyle = css("--surface2", "#f2f4f6");
+  g3.fillRect(0, 0, sc.w, sc.h);
+  const X = (x) => x * sc.k;
+  const Y = (y) => sc.h - y * sc.k;
+  const layers = new Map(S.layers.map((l) => [l.id, l]));
+  for (const s of S.slots) {
+    const ly = layers.get(s.layer_id);
+    if (!ly || V.hidden && V.hidden.has(ly.id) || ly.kind === "building") {
+      continue;
+    }
+    if (E.objVisible && !E.objVisible("slot", s.id)) {
+      continue;
+    }
+    g3.fillStyle = ly.color || "#888";
+    if (s.template === "zone") {
+      g3.globalAlpha = 0.12;
+      poly(g3, s.params && s.params.polygon, X, Y, true);
+      g3.globalAlpha = 1;
+      continue;
+    }
+    let pts = null;
+    try {
+      pts = obbCorners(slotObb(s.template, s.params || {}, s.x, s.y, s.rotation || 0));
+    } catch {
+      pts = null;
+    }
+    poly(g3, pts, X, Y, true);
+  }
+  for (const p of S.placements) {
+    const ly = layers.get(p.layer_id);
+    if (!ly || V.hidden && V.hidden.has(ly.id) || E.objVisible && !E.objVisible("placement", p.id)) {
+      continue;
+    }
+    g3.fillStyle = ly.color || "#557";
+    const v = variantOf(p.variant_id);
+    let pts = null;
+    try {
+      pts = v ? obbCorners(placementObb(v, p.x, p.y, p.rotation || 0)) : null;
+    } catch {
+      pts = null;
+    }
+    if (!poly(g3, pts, X, Y, true)) {
+      g3.fillRect(X(p.x) - 1.5, Y(p.y) - 1.5, 3, 3);
+    }
+  }
+  g3.strokeStyle = ink;
+  g3.lineWidth = 1;
+  g3.strokeRect(0.5, 0.5, sc.w - 1, sc.h - 1);
+  const sel = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).get(S.sel.id);
+  if (sel) {
+    g3.strokeStyle = css("--accent", "#0e7c86");
+    g3.lineWidth = 2;
+    g3.strokeRect(X(sel.x) - 4, Y(sel.y) - 4, 8, 8);
+  }
+  const fp = V.ok && viewFootprint(V.camera);
+  if (fp) {
+    g3.strokeStyle = "#e11d48";
+    g3.lineWidth = 1.5;
+    g3.beginPath();
+    fp.forEach(([x, y], i) => i ? g3.lineTo(X(x), Y(y)) : g3.moveTo(X(x), Y(y)));
+    g3.closePath();
+    g3.stroke();
+  }
+}
+function renderMini() {
+  const box = ensureMini();
+  if (box) {
+    box.hidden = S.ui.minimap === false;
+    draw2();
+  }
+}
+function toggleMini(on = S.ui.minimap === false) {
+  S.ui.minimap = !!on;
+  renderMini();
+}
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  ensureMini();
+  addFrameHook("minimap", draw2);
+  renderMini();
+  E.requestRender?.();
+});
+E.lifecycle.unmount.add(() => {
+  canvas = null;
+  drag = false;
+});
+Object.assign(E, { renderMini, toggleMini, miniViewFootprint: viewFootprint });
+addEn({ "Мініатюра плану: клік переносить камеру": "Minimap: click to move the camera", "Мініатюра": "Minimap" });
+
+// core/constructor/levels.js
+var PICKS = [
+  ["cell", "Місце"],
+  ["bay", "Стелаж"],
+  ["row", "Ряд"],
+  ["zone", "Зона"]
+];
+var UP = { cell: "bay", bay: "row", row: "zone", zone: "site" };
+var isZone = (s) => !!s && s.template === "zone";
+var zoneOfRec = (rec) => rec && !isZone(rec) ? zoneAt(zonesOf(S.slots), rec.x, rec.y) : null;
+function normalizeFocus(f) {
+  if (!f) {
+    return null;
+  }
+  const out = { zone: null, row: null, bay: null, level: null };
+  const row = f.row && S.sIdx.get(f.row);
+  if (row && !isZone(row)) {
+    out.row = row.id;
+    const z = zoneOfRec(row);
+    out.zone = z ? z.id : null;
+    if (f.bay != null) {
+      out.bay = Number(f.bay);
+      if (f.level != null) {
+        out.level = Number(f.level);
+      }
+    }
+  } else if (f.zone && isZone(S.sIdx.get(f.zone))) {
+    out.zone = f.zone;
+  }
+  return out.zone || out.row ? out : null;
+}
+var memo2 = { rec: null, sig: "", poly: null };
+function zonePoly2(id) {
+  const z = S.sIdx.get(id);
+  if (!z) {
+    return null;
+  }
+  const sig = [z.x, z.y, z.rotation, z.params].join("|");
+  if (memo2.rec === z && memo2.sig === sig) {
+    return memo2.poly;
+  }
+  const hit = zonesOf([z])[0];
+  memo2 = { rec: z, sig, poly: hit ? hit.poly : null };
+  return memo2.poly;
+}
+function objVisible(kind, id) {
+  const f = S.ui && S.ui.focus;
+  if (!f || kind !== "slot" && kind !== "placement") {
+    return true;
+  }
+  if (f.row) {
+    return kind === "slot" && (id === f.row || id === f.zone);
+  }
+  if (id === f.zone) {
+    return true;
+  }
+  const rec = (kind === "slot" ? S.sIdx : S.pIdx).get(id);
+  const poly2 = f.zone && zonePoly2(f.zone);
+  return !rec || !poly2 || polygonContains(poly2, [rec.x, rec.y]);
+}
+function focusCodes(f = S.ui.focus) {
+  const row = f && f.row && S.sIdx.get(f.row);
+  if (!row || f.bay == null) {
+    return /* @__PURE__ */ new Set();
+  }
+  return new Set(cellsOf(row).filter((c) => !c.disabled && c.index === f.bay && (f.level == null || c.level === f.level)).map((c) => c.code));
+}
+function crumbsOf(f = S.ui.focus) {
+  const out = [{ key: "site", label: S.site && S.site.name || "WH", focus: null }];
+  const zone2 = f && f.zone && S.sIdx.get(f.zone);
+  const row = f && f.row && S.sIdx.get(f.row);
+  if (zone2) {
+    out.push({ key: "zone", label: zone2.params && zone2.params.title || zone2.code_prefix || t("Зона"), focus: { zone: zone2.id } });
+  }
+  if (row) {
+    out.push({ key: "row", label: row.code_prefix || t("Ряд"), focus: { zone: f.zone, row: row.id } });
+    if (f.bay != null) {
+      out.push({ key: "bay", label: `${t("Стелаж")} ${f.bay}`, focus: { zone: f.zone, row: row.id, bay: f.bay } });
+      if (f.level != null) {
+        out.push({ key: "level", label: `${t("Ярус")} ${f.level}`, focus: { ...f } });
+      }
+    }
+  }
+  return out;
+}
+function boundsOf(f) {
+  let pts = [];
+  const row = f.row && S.sIdx.get(f.row);
+  if (row && f.bay != null) {
+    const codes = focusCodes(f);
+    pts = cellsOf(row).filter((c) => codes.has(c.code)).flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]);
+  }
+  if (!pts.length && row) {
+    const cells = cellsOf(row);
+    pts = cells.length ? cells.flatMap((c) => [[c.x - c.l / 2, c.y - c.w / 2], [c.x + c.l / 2, c.y + c.w / 2]]) : [[row.x - 2, row.y - 2], [row.x + 2, row.y + 2]];
+  }
+  if (!pts.length && f.zone) {
+    pts = zonePoly2(f.zone) || [];
+  }
+  if (!pts.length) {
+    return null;
+  }
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0, 2) };
+}
+var clearLevelHl = () => {
+  if (S.hl && S.hl.kind === "level") {
+    E.setHighlight?.(null);
+  }
+};
+function applyHighlight() {
+  const codes = focusCodes();
+  if (codes.size) {
+    E.setHighlight?.(codes, "level");
+  } else {
+    clearLevelHl();
+  }
+}
+function setFocus(f, { camera = true } = {}) {
+  S.ui.focus = normalizeFocus(f);
+  S.ui.selBay = null;
+  applyHighlight();
+  const b = S.ui.focus && boundsOf(S.ui.focus);
+  if (camera) {
+    if (b) {
+      E.focusOn?.(b.x, b.y, Math.min(400, Math.max(8, b.size * 1.9 + 4)));
+    } else if (V.ok) {
+      E.setView?.(V.camMode || "iso");
+    }
+  }
+  renderNav();
+  E.requestRender?.();
+}
+function levelUp() {
+  const f = S.ui.focus;
+  if (!f) {
+    return false;
+  }
+  const n = { ...f };
+  if (n.level != null) {
+    n.level = null;
+  } else if (n.bay != null) {
+    n.bay = null;
+  } else if (n.row) {
+    n.row = null;
+  } else {
+    n.zone = null;
+  }
+  setFocus(n);
+  return true;
+}
+function resetFocus() {
+  setFocus(null);
+}
+function drill() {
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    toast(t("Спершу виділіть зону, ряд або місце."), "warn");
+    return false;
+  }
+  const f = S.ui.focus || {};
+  if (S.sel.kind === "placement" || isZone(rec)) {
+    const z = isZone(rec) ? rec : zoneOfRec(rec);
+    setFocus(z ? { zone: z.id } : null);
+    return !!z;
+  }
+  const zone2 = zoneOfRec(rec);
+  const cell = S.selCell && cellsOf(rec).find((c) => c.code === S.selCell);
+  if (!f.zone && !f.row && zone2) {
+    setFocus({ zone: zone2.id });
+  } else if (f.row !== rec.id) {
+    setFocus({ zone: zone2 ? zone2.id : null, row: rec.id });
+  } else if (f.bay == null) {
+    setFocus({ ...f, bay: cell ? cell.index : S.ui.selBay && S.ui.selBay.index || 1 });
+  } else if (f.level == null) {
+    setFocus({ ...f, level: cell ? cell.level : 1 });
+  } else {
+    return false;
+  }
+  return true;
+}
+var curLevel = (rec, hadCell) => isZone(rec) ? "zone" : hadCell ? "cell" : S.ui.selBay ? "bay" : "row";
+function applyPick(level, hadCell) {
+  const rec = S.sel && recOfRef(S.sel);
+  if (!rec) {
+    return;
+  }
+  const ex2 = S.sel.kind === "slot" ? S.selCell || hadCell : null;
+  S.ui.selLevel = level;
+  if (level === "site") {
+    E.selectObj(null);
+    return;
+  }
+  if (level === "zone") {
+    const z = isZone(rec) ? rec : zoneOfRec(rec);
+    if (z && z.id !== rec.id) {
+      E.selectObj({ kind: "slot", id: z.id });
+    } else if (!z) {
+      applyPick("row", hadCell);
+      return;
+    }
+  } else if (level === "bay" && S.sel.kind === "slot" && !isZone(rec)) {
+    const cell = ex2 && cellsOf(rec).find((c) => c.code === ex2);
+    if (cell) {
+      S.selCell = null;
+      S.ui.selBay = { slot: rec.id, index: cell.index };
+      E.setHighlight?.(new Set(cellsOf(rec).filter((c) => !c.disabled && c.index === cell.index).map((c) => c.code)), "level");
+    } else {
+      applyPick("row", hadCell);
+      return;
+    }
+  } else if (level === "row") {
+    S.selCell = null;
+    S.ui.selBay = null;
+    clearLevelHl();
+  } else if (level === "cell") {
+    S.ui.selBay = null;
+    clearLevelHl();
+  }
+  E.updateVisual?.();
+  E.renderCellsBox?.();
+  E.renderRight?.();
+  renderNav();
+}
+function bindCanvas() {
+  const cv = V.canvas;
+  if (!cv || cv.__s6click) {
+    return;
+  }
+  cv.__s6click = true;
+  let pre = null;
+  cv.addEventListener(
+    "pointerdown",
+    (e) => {
+      pre = e.button === 0 || e.pointerType !== "mouse" ? { x: e.clientX, y: e.clientY, sel: S.sel ? { ...S.sel } : null, cell: S.selCell, multi: S.multi.length } : null;
+    },
+    true
+  );
+  cv.addEventListener("pointerup", (e) => {
+    const p = pre;
+    pre = null;
+    if (!p || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 5 || e.ctrlKey || e.metaKey || e.shiftKey) {
+      return;
+    }
+    setTimeout(() => {
+      if (!S.sel || S.multi.length > 1 || S.app.mode !== "view" && S.app.mode !== "edit") {
+        return;
+      }
+      const rec = recOfRef(S.sel);
+      const pick = S.ui.pick || "cell";
+      const same4 = !!p.sel && p.sel.kind === S.sel.kind && p.sel.id === S.sel.id;
+      if (same4) {
+        applyPick(UP[curLevel(rec, !!p.cell)], !!p.cell);
+      } else if (pick !== "cell" || S.selCell) {
+        applyPick(pick, !!S.selCell);
+      }
+    }, 0);
+  });
+}
+function renderNav() {
+  const c = centerEl();
+  if (!c) {
+    return;
+  }
+  let bar = c.querySelector("#s6Crumbs");
+  if (!bar) {
+    bar = h("div", { class: "s6-crumbs", id: "s6Crumbs", role: "navigation", "aria-label": t("Рівні") });
+    c.append(bar);
+  }
+  let pick = c.querySelector("#s6Pick");
+  if (!pick) {
+    pick = h("div", { class: "s6-pick", id: "s6Pick" });
+    c.append(pick);
+  }
+  const crumbs = crumbsOf();
+  bar.replaceChildren(
+    ...K(
+      crumbs.map((cr, i) => [i ? h("span", { class: "sep" }, "›") : null, h("button", { type: "button", "data-level": cr.key, "aria-current": i === crumbs.length - 1 ? "true" : "false", onclick: () => setFocus(cr.focus) }, cr.label)]),
+      h("button", { type: "button", id: "s6Down", title: t("Заглибитись до виділеного"), "aria-label": t("Заглибитись до виділеного"), onclick: drill }, "↓"),
+      h("button", { type: "button", id: "s6Up", title: t("Рівень вище"), "aria-label": t("Рівень вище"), disabled: !S.ui.focus, onclick: levelUp }, "↑"),
+      h("button", { type: "button", id: "s6Reset", title: t("Скинути рівні"), "aria-label": t("Скинути рівні"), disabled: !S.ui.focus, onclick: resetFocus }, "⟲")
+    )
+  );
+  pick.replaceChildren(
+    h("label", { for: "s6PickSel" }, t("Клік виділяє")),
+    h("select", { id: "s6PickSel", "aria-label": t("Клік виділяє"), onchange: (e) => {
+      S.ui.pick = e.target.value;
+    } }, PICKS.map(([v, l]) => h("option", { value: v, selected: (S.ui.pick || "cell") === v }, t(l)))),
+    h("button", { class: "fbtn sm", type: "button", id: "s6MiniToggle", "aria-pressed": String(S.ui.minimap !== false), title: t("Показати чи сховати мініатюру плану"), onclick: () => {
+      E.toggleMini?.();
+      renderNav();
+    } }, t("Мініатюра"))
+  );
+}
+registries.hotkeys.add("levels.up", { code: "KeyU", label: "U — рівень вище", run: (e) => levelUp() ? e.preventDefault() : false }, { sequence: 60, force: true });
+var origSelect3 = E.selectObj;
+E.selectObj = function selectObjLevels(ref2, ...rest) {
+  S.ui.selBay = null;
+  const r = origSelect3.call(this, ref2, ...rest);
+  if (!(S.ui.focus && S.ui.focus.bay != null)) {
+    clearLevelHl();
+  }
+  return r;
+};
+E.lifecycle.mount.add(() => {
+  ensureStyle3();
+  S.ui.focus = null;
+  S.ui.pick = S.ui.pick || "cell";
+  addFrameHook(
+    "levels",
+    () => {
+      const f = S.ui.focus;
+      for (const [key, view] of V.views) {
+        const kind = key[0] === "s" ? "slot" : key[0] === "p" ? "placement" : null;
+        if (kind && view.root) {
+          view.root.visible = !f || objVisible(kind, key.slice(2));
+        }
+      }
+    },
+    { pre: true }
+  );
+  bindCanvas();
+  renderNav();
+});
+Object.assign(E, { setFocus, levelUp, resetFocus, drillToSelection: drill, objVisible, renderNav, applyPick });
+addEn({
+  "Місце": "Place",
+  "Стелаж": "Bay",
+  "Ряд": "Row",
+  "Зона": "Zone",
+  "Ярус": "Tier",
+  "Рівні": "Levels",
+  "Клік виділяє": "Click selects",
+  "Заглибитись до виділеного": "Drill down to the selection",
+  "Рівень вище": "Level up",
+  "Скинути рівні": "Reset levels",
+  "Мініатюра": "Minimap",
+  "Показати чи сховати мініатюру плану": "Show or hide the minimap",
+  "Спершу виділіть зону, ряд або місце.": "Select a zone, row or place first.",
+  "U — рівень вище": "U — level up"
+});
 export {
   BaseAdapter,
   CAPABILITY_NAMES,

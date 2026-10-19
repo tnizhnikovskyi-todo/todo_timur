@@ -472,6 +472,7 @@ export class OdooAdapter extends BaseAdapter {
         this.siteId = null;
         Object.assign(this.capabilities, { storage: true, putaway: true, rollback: true }); // S2: API-12, API-15, API-18
         Object.assign(this.capabilities, { odoo_import: true, files: true }); // S4: API-16 (стрічка локацій), API-20 (розбір XLSX/CSV на сервері)
+        Object.assign(this.capabilities, { variants: true, comments: true, locks: true, ...(o.capabilities || {}) }); // S6: API-21 варіанти, API-22 коментарі, API-23 блокування зон
         this.groupIds = {};
         this._seq = 0;
         this._resetTracking();
@@ -997,6 +998,42 @@ export class OdooAdapter extends BaseAdapter {
             throw new StoreError(res.code, res.message);
         }
         return res;
+    }
+
+    /**
+     * Спільна робота й версії (S6): API-21 `/variants`, API-22 `/comments`, API-23 `/locks`, API-24 `/version/view|checkpoint`. Усі повертають
+     * відповідь сервера або кидають StoreError(code, message) з усіма полями відповіді (`locks`, `lock` у `locked`).
+     * `variants({op: list|create|activate|rename|delete|end_training, id?, name?, metrics?, training?, activate?, keep?})`
+     *   → {variants: [{id, name, is_training, active, origin_id, base_version, metrics, by, at}], active_id, training_id, max, can_edit, reload?};
+     * `comments({op: list|create|update|resolve|delete|assignees, id?, vals?, text?, resolved?})` → {comments: [...], at} / {users, me};
+     * `locks({op: list|acquire|release, zone_uid?})` → {locks: [{zone_uid, user, mine, expires_at}], ttl, heartbeat, now};
+     * `versions({op: list|view|checkpoint|note, version_id?, note?})` → {versions} / {version, view} / {version}.
+     */
+    async _collab(route, req) {
+        const res = await this._call(route, { site_id: this.siteId, ...req });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message, res);
+        }
+        return res;
+    }
+
+    async variants(req) {
+        return await this._collab("/f3d/constructor/variants", req);
+    }
+
+    async comments(req) {
+        return await this._collab("/f3d/constructor/comments", req);
+    }
+
+    async locks(req) {
+        return await this._collab("/f3d/constructor/locks", req);
+    }
+
+    async versions({ op = "list", ...req } = {}) {
+        if (op === "list" || op === "view") {
+            return await this._collab("/f3d/constructor/version/view", req);
+        }
+        return await this._collab("/f3d/constructor/version/checkpoint", { op: op === "checkpoint" ? "create" : op, ...req });
     }
 
     /** Пошук «де лежить» (API-14 `/stock/find`): `{q, mode}` → {hits: [{code, items: [{product, ref, qty, lot, package}]}]}. */

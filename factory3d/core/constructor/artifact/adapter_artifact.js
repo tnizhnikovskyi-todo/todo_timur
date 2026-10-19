@@ -9,6 +9,7 @@ import { clone } from "../util.js";
 import { SEED_REV, buildEmptySite, buildSample, fromProto, makeSnapshot, versionFromProto } from "./sample.js";
 import { demoFind, demoStockState } from "./demo_stock.js";
 import { diffFeeds, sampleFeed } from "./sample_locations.js";
+import { collabArtifact } from "./collab_artifact.js";
 import { createFiles, createStorage } from "./storage.js";
 
 const FULL = "sample_full";
@@ -82,6 +83,7 @@ export class ArtifactAdapter extends BaseAdapter {
         this.baseMap = null;
         Object.assign(this.capabilities, { stock: true }); // S3: демо-залишки з позначкою «демо» (F07-08)
         Object.assign(this.capabilities, { odoo_import: true }); // S4: файл-приклад структури складу («Odoo» прототипа), XLSX/CSV читає ядро
+        Object.assign(this.capabilities, { variants: true, comments: true, locks: false }); // S6: варіанти й коментарі в браузері; блокування зон без сервера не емулюються
     }
 
     get userName() {
@@ -658,3 +660,5 @@ export class ArtifactAdapter extends BaseAdapter {
         return null;
     }
 }
+
+Object.assign(ArtifactAdapter.prototype, collabArtifact); // S6: variants / comments / locks / versions (artifact/collab_artifact.js)
