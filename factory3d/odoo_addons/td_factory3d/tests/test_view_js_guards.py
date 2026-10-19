@@ -1,10 +1,12 @@
 """Статичні вартові виглядів (QA меню 16.10.2026): клієнтські вирази не повинні містити Python-конструкцій.
 
-* канбан `t-*`: Odoo 19 (OWL) компілює їх як JS — `x in ('a','b')` дає TypeError, `True/False/None`, `not`, `not in` не існують;
+* канбан `t-*`: Odoo 19 (OWL) компілює їх як JS — `x in ('a','b')` дає TypeError, `True/False/None`, `not`, `not in` не
+існують;
 * домени/контексти фільтрів обчислює py.js: `datetime.time.min/max` він не знає (OwlError у «Відвідувачі»);
 * домен не вміє порівнювати поле з полем: `('ws_qty', '<', 'min_qty')` порівнює з рядком (ValueError у search_count).
 * `oe_stat_button` лише на <button>: <div> з icon Odoo 19 не оформлює (ні іконки, ні рамки — «Ворота» у зоні);
-* віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у debug).
+* віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у
+debug).
 Перевіряються усі встановлені модулі td_* разом із td_genset (у прогоні «Run A» — всі 18 модулів).
 """
 
@@ -104,8 +106,8 @@ class TestViewJsGuards(TransactionCase):
                         for field, op, rhs in _ORDER_LEAF.findall(value):
                             if field.split(".")[0] in Model._fields and rhs in Model._fields:
                                 problems.append(
-                                    "%s: домен порівнює поле з полем ('%s' %s '%s'); потрібне булеве поле з _search/store"
-                                    % (label, field, op, rhs)
+                                    "%s: домен порівнює поле з полем ('%s' %s '%s'); потрібне булеве поле з "
+                                    "_search/store" % (label, field, op, rhs)
                                 )
         self.assertFalse(problems, "Домени, які клієнт або ORM не обчислять:\n" + "\n".join(problems))
 
