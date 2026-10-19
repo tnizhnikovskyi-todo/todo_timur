@@ -1,13 +1,15 @@
 """Стрічка локацій Odoo й розбіжності з базою порівняння (F10, F02-09, F02-12; API-16).
 
-Нейтральна стрічка (`locations_feed`) — локації складу площадки з усіма вкладеними (типи internal і view), їхні назви, батьки, штрихкоди й
-сума залишків; ядро JS (`core/constructor/structure.js`) будує з неї зони, ряди й місця за правилами розбору кодів (`site.parse_rules`).
-База порівняння — вкладення `site.odoo_baseline_id` (стрічка на момент останнього «Оновити з Odoo»); `diff_feeds` дає розбіжності
-з'явилося / зникло / перейменовано / інший батько (дзеркало `diffFeeds` у `core/constructor/artifact/sample_locations.js`).
+Нейтральна стрічка (`locations_feed`) — локації складу площадки з усіма вкладеними (типи internal і view), їхні
+назви, батьки, штрихкоди й сума залишків; ядро JS (`core/constructor/structure.js`) будує з неї зони, ряди й місця за
+правилами розбору кодів (`site.parse_rules`). База порівняння — вкладення `site.odoo_baseline_id` (стрічка на момент
+останнього «Оновити з Odoo»); `diff_feeds` дає розбіжності з'явилося / зникло / перейменовано / інший батько
+(дзеркало `diffFeeds` у `core/constructor/artifact/sample_locations.js`).
 
-Схема `site.parse_rules` (R-22): `{v: 1, rules: [{id, mode: mask|regex, mask|regex, type, enabled}], tray: [{code, name, parent, usage,
-reason}], tray_more}` — правила розбору кодів і лоток «Не розміщено»; `normalize_parse_rules` її перевіряє (дзеркало `normalizeRules` у
-`parse_codes.js`). Читання локацій і залишків іде від імені сервера (`sudo`) після перевірки групи «Перегляд» у контролері."""
+Схема `site.parse_rules` (R-22): `{v: 1, rules: [{id, mode: mask|regex, mask|regex, type, enabled}], tray: [{code,
+name, parent, usage, reason}], tray_more}` — правила розбору кодів і лоток «Не розміщено»; `normalize_parse_rules` її
+перевіряє (дзеркало `normalizeRules` у `parse_codes.js`). Читання локацій і залишків іде від імені сервера (`sudo`)
+після перевірки групи «Перегляд» у контролері."""
 
 import base64
 import json
@@ -23,9 +25,9 @@ TRAY_MAX = 5000
 TEXT_MAX = 160
 RULE_TYPES = ('auto', 'pallet_rack', 'shelf', 'cantilever', 'floor_stack', 'floor_spot')
 PART_NAMES = {
-    'зона', 'zone', 'ряд', 'row', 'aisle', 'секція', 'секция', 'bay', 'section', 'ярус', 'level', 'tier', 'позиція', 'позиция',
-    'pos', 'position', 'префікс', 'префикс', 'prefix',
-}  # fmt: skip
+    *('зона', 'zone', 'ряд', 'row', 'aisle', 'секція', 'секция', 'bay', 'section'),
+    *('ярус', 'level', 'tier', 'позиція', 'позиция', 'pos', 'position', 'префікс', 'префикс', 'prefix'),
+}
 USAGES = ('internal', 'view')
 BASELINE_NAME = 'td_constructor_odoo_baseline.json'
 
@@ -111,8 +113,10 @@ def normalize_parse_rules(value):
 
 # --- стрічка ------------------------------------------------------------------------------------------
 def warehouse_and_root(env, site, warehouse_id=None):
-    """(склад, коренева локація стрічки): вказаний склад, інакше склад площадки (`warehouse_id`, склад батьківської локації), інакше
-    перший склад компанії. Корінь — батьківська локація площадки (якщо вона в цьому складі), інакше `lot_stock_id`, інакше вигляд складу."""
+    """(склад, коренева локація стрічки): вказаний склад, інакше склад площадки (`warehouse_id`, склад батьківської
+    локації), інакше
+    перший склад компанії. Корінь — батьківська локація площадки (якщо вона в цьому складі), інакше `lot_stock_id`,
+    інакше вигляд складу."""
     Warehouse = env['stock.warehouse'].sudo()
     warehouse = Warehouse.browse(int(warehouse_id)) if warehouse_id else Warehouse
     if warehouse_id and not warehouse.exists():
@@ -121,7 +125,9 @@ def warehouse_and_root(env, site, warehouse_id=None):
     if not warehouse:
         warehouse = site.warehouse_id.sudo() or (parent.warehouse_id if parent else Warehouse)
     if not warehouse:
-        warehouse = Warehouse.search([('company_id', '=', site.company_id.id)], limit=1) or Warehouse.search([], limit=1)
+        warehouse = Warehouse.search([('company_id', '=', site.company_id.id)], limit=1) or Warehouse.search(
+            [], limit=1
+        )
     if not warehouse:
         raise UserError("У Odoo немає складів: структуру прочитати нема з чого.")
     if parent and parent.warehouse_id == warehouse:
@@ -132,7 +138,8 @@ def warehouse_and_root(env, site, warehouse_id=None):
 
 
 def locations_feed(env, site, warehouse_id=None, offset=0, limit=FEED_BATCH):
-    """Нейтральна стрічка (API-16 `feed`): {root, warehouse, warehouses, locations, truncated, next}; локація — {id, code, name, parent,
+    """Нейтральна стрічка (API-16 `feed`): {root, warehouse, warehouses, locations, truncated, next}; локація — {id,
+    code, name, parent,
     parent_id, usage, barcode, qty, active}. `code` = td_code | штрихкод | ім'я (код місця в конструкторі)."""
     warehouse, root = warehouse_and_root(env, site, warehouse_id)
     Location = env['stock.location'].sudo()
@@ -144,7 +151,9 @@ def locations_feed(env, site, warehouse_id=None, offset=0, limit=FEED_BATCH):
     qty = {}
     if records:
         for location, total_qty in (
-            env['stock.quant'].sudo()._read_group([('location_id', 'in', records.ids), ('quantity', '>', 0)], ['location_id'], ['quantity:sum'])
+            env['stock.quant']
+            .sudo()
+            ._read_group([('location_id', 'in', records.ids), ('quantity', '>', 0)], ['location_id'], ['quantity:sum'])
         ):
             qty[location.id] = total_qty
     rows = []
@@ -188,7 +197,8 @@ def full_feed(env, site, warehouse_id=None):
 
 # --- розбіжності --------------------------------------------------------------------------------------
 def diff_feeds(old, new):
-    """Розбіжності двох стрічок: ключ — `id` (він є в обох), інакше код. Зміна коду за того самого id — «зникло» + «з'явилося»; зміна назви
+    """Розбіжності двох стрічок: ключ — `id` (він є в обох), інакше код. Зміна коду за того самого id — «зникло» +
+    «з'явилося»; зміна назви
     за того самого коду — «перейменовано»; іншого батька — «перенесено». Неактивні вважаються відсутніми."""
 
     def key(loc):
@@ -206,7 +216,9 @@ def diff_feeds(old, new):
             out['appeared'].append(cur)
         else:
             if was['name'] != cur['name']:
-                out['renamed'].append({'id': cur.get('id'), 'code': cur['code'], 'old': was['name'], 'new': cur['name']})
+                out['renamed'].append(
+                    {'id': cur.get('id'), 'code': cur['code'], 'old': was['name'], 'new': cur['name']}
+                )
             if (was.get('parent') or '') != (cur.get('parent') or ''):
                 out['moved'].append(
                     {
@@ -236,20 +248,33 @@ def load_baseline(site):
         rows = json.loads(base64.b64decode(attachment.datas))
     except ValueError:
         return None
-    return [dict(zip(_FIELDS, row)) | {'active': True} for row in rows]
+    return [dict(zip(_FIELDS, row, strict=False)) | {'active': True} for row in rows]
 
 
 def save_baseline(site, locations):
     """База порівняння := поточна стрічка (компактно: [id, code, name, parent])."""
     site = site.sudo()
-    payload = json.dumps([[loc.get(f) for f in _FIELDS] for loc in locations], ensure_ascii=False, separators=(',', ':'))
+    payload = json.dumps(
+        [[loc.get(f) for f in _FIELDS] for loc in locations], ensure_ascii=False, separators=(',', ':')
+    )
     data = base64.b64encode(payload.encode())
     attachment = site.odoo_baseline_id
     if attachment:
         attachment.write({'datas': data})
     else:
-        attachment = site.env['ir.attachment'].sudo().create(
-            {'name': BASELINE_NAME, 'datas': data, 'res_model': 'td.site', 'res_id': site.id, 'type': 'binary', 'mimetype': 'application/json'}
+        attachment = (
+            site.env['ir.attachment']
+            .sudo()
+            .create(
+                {
+                    'name': BASELINE_NAME,
+                    'datas': data,
+                    'res_model': 'td.site',
+                    'res_id': site.id,
+                    'type': 'binary',
+                    'mimetype': 'application/json',
+                }
+            )
         )
         site.write({'odoo_baseline_id': attachment.id})
     return fields.Datetime.now()
@@ -257,12 +282,17 @@ def save_baseline(site, locations):
 
 def sync(env, site, warehouse_id=None):
     """«Оновити з Odoo» (F02-12): читає стрічку, порівнює з базою; бази ще немає — створює її (розбіжностей немає).
-    Повертає {feed (без списку локацій), diff, baseline: 'created'|'existing'}; базу після вибору користувача оновлює `save_baseline`."""
+    Повертає {feed (без списку локацій), diff, baseline: 'created'|'existing'}; базу після вибору користувача оновлює
+    `save_baseline`."""
     feed = full_feed(env, site, warehouse_id)
     base = load_baseline(site)
     summary = {k: v for k, v in feed.items() if k != 'locations'}
     summary['count'] = len(feed['locations'])
     if base is None:
         save_baseline(site, feed['locations'])
-        return {'feed': summary, 'diff': {'appeared': [], 'disappeared': [], 'renamed': [], 'moved': []}, 'baseline': 'created'}
+        return {
+            'feed': summary,
+            'diff': {'appeared': [], 'disappeared': [], 'renamed': [], 'moved': []},
+            'baseline': 'created',
+        }
     return {'feed': summary, 'diff': diff_feeds(base, feed['locations']), 'baseline': 'existing'}

@@ -1,14 +1,17 @@
-"""API-16, API-20 (+ маршрут правил розбору): структура складу з Odoo, розбір таблиць, правила й лоток (F10, F11, F02-09/12).
+"""API-16, API-20 (+ маршрут правил розбору): структура складу з Odoo, розбір таблиць, правила й лоток (F10, F11,
+F02-09/12).
 
-Правила як у API-01…10: JSON-RPC, auth user, відповідь `{ok: true, …}` або `{ok: false, code, message}` (HTTP 200). Читає група «Перегляд»
-(`group_td_user`; читання локацій і залишків — від імені сервера, `services/odoo_sync.py`); базу порівняння й правила розбору пише менеджер
-чи проєктувальник із правом на шар площадки (як `/site/addr`).
+Правила як у API-01…10: JSON-RPC, auth user, відповідь `{ok: true, …}` або `{ok: false, code, message}` (HTTP 200).
+Читає група «Перегляд» (`group_td_user`; читання локацій і залишків — від імені сервера, `services/odoo_sync.py`);
+базу порівняння й правила розбору пише менеджер чи проєктувальник із правом на шар площадки (як `/site/addr`).
 
-* API-16 `/odoo/locations` `{site_id, op, warehouse_id?, offset?, limit?}`: `feed` (за замовчуванням) → `{feed: {root, warehouse, locations,
-  total, truncated, next}}`; `sync` → `{feed (без локацій), diff: {appeared, disappeared, renamed, moved}, baseline: created|existing}`;
-  `baseline` — база порівняння стає нинішньою стрічкою.
-* API-20 `/parse/table` `{site_id?, filename, content (base64), sheet?}` → `{format, encoding?, delimiter?, sheets?, sheet?, rows, truncated}`.
-* `/odoo/rules` `{site_id, parse_rules}` — запис `site.parse_rules` (правила розбору кодів і лоток «Не розміщено», схема R-22)."""
+* API-16 `/odoo/locations` `{site_id, op, warehouse_id?, offset?, limit?}`: `feed` (за замовчуванням) → `{feed:
+  {root, warehouse, locations, total, truncated, next}}`; `sync` → `{feed (без локацій), diff: {appeared,
+  disappeared, renamed, moved}, baseline: created|existing}`; `baseline` — база порівняння стає нинішньою стрічкою.
+* API-20 `/parse/table` `{site_id?, filename, content (base64), sheet?}` → `{format, encoding?, delimiter?, sheets?,
+  sheet?, rows, truncated}`.
+* `/odoo/rules` `{site_id, parse_rules}` — запис `site.parse_rules` (правила розбору кодів і лоток «Не розміщено»,
+  схема R-22)."""
 
 from psycopg2 import IntegrityError
 
@@ -25,13 +28,18 @@ OPS = ('feed', 'sync', 'baseline')
 
 class TdOdooImportController(http.Controller):
     def _site(self, env, site_id, write=False):
-        """Площадка для читання (група «Перегляд») чи запису (менеджер або проєктувальник шару) або готова відповідь-помилка."""
+        """Площадка для читання (група «Перегляд») чи запису (менеджер або проєктувальник шару) або готова відповідь-
+        помилка."""
         if not env.user.has_group(GROUP_VIEW):
             return None, fail('rights', "Структуру складу читає група «Перегляд» конструктора.")
         site = find_site(env, site_id)
         if not site:
             return None, fail('not_found', "Площадку не знайдено.")
-        if write and not is_manager(env) and not any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids):
+        if (
+            write
+            and not is_manager(env)
+            and not any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+        ):
             return None, fail('rights', "Змінює менеджер чи проєктувальник із правом на шар площадки.")
         return site, None
 

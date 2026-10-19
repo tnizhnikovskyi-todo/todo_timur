@@ -42,7 +42,7 @@ export async function readFileTable(bytes, filename, opts = {}) {
 }
 
 /** Запис стрічки адаптера (API-16) → локація; `code` = td_code | штрихкод | ім'я. */
-export const feedLoc = (r) => ({ id: r.id ?? null, code: r.code || r.barcode || r.name, name: r.name, parent: r.parent || "", usage: r.usage || "internal", barcode: r.barcode || "", qty: Number(r.qty) || 0, active: r.active !== false });
+export const feedLoc = (r) => ({ id: r.id ?? null, code: r.code || r.barcode || r.name, name: r.name, parent: r.parent || "", parent_id: r.parent_id ?? null, usage: r.usage || "internal", barcode: r.barcode || "", qty: Number(r.qty) || 0, active: r.active !== false });
 
 /* ---------- імпорт ---------- */
 export function openImport({ file = null } = {}) {
@@ -70,6 +70,9 @@ export function openImport({ file = null } = {}) {
             return;
         }
         const parser = makeParser({ rules: rulesNow(), addr: S.site.addr || null });
+        if (st.source !== "odoo") {
+            st.warehouses = null;
+        }
         st.plan = planStructure(st.locs, { parser, siteAddr: safeNormalize(S.site.addr), depthMode: S.site.depth_mode || "level", existingCodes: projectCodes(), existingPrefixes: new Set(S.slots.map((s) => s.code_prefix)) });
         const un = st.plan.stats.unparsedCodes; // без правила (навіть якщо стали місцями на підлозі в зоні-родителі)
         if (un.length && un.length >= 0.3 * Math.max(1, st.plan.stats.cells)) {
@@ -110,6 +113,7 @@ export function openImport({ file = null } = {}) {
             st.stats = { rows: st.locs.length, locations: st.locs.length, stockRows: st.locs.filter((l) => l.qty > 0).length, skippedEmpty: 0 };
             st.projName = st.projName || r.feed.warehouse?.name || "Склад з Odoo";
             st.error = r.feed.truncated ? "Стрічка обрізана: перші " + fmtInt(st.locs.length) + " локацій." : "";
+            st.warehouses = r.feed.warehouse ? [r.feed.warehouse.code || r.feed.warehouse.name] : null;
             recompute();
             render();
         } catch (e) {
@@ -157,7 +161,7 @@ export function openImport({ file = null } = {}) {
                 ? [h("div", { class: "note lock" }, "Вкажіть колонку з назвою локації («Назва» або «Повна назва локації»).")]
                 : p
                   ? [
-                        h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt(p.stats.warehouses.length)}${p.stats.warehouses.length ? ` (${p.stats.warehouses.slice(0, 4).join(", ")})` : ""}`))),
+                        h("div", { class: "sumrow" }, h("div", { class: "n", id: "impCells" }, fmtInt(p.stats.cells)), h("div", null, "місць (локацій без вкладених)", h("div", { class: "x" }, `рядків структури: ${fmtInt(p.stats.structure)} · залишків: ${fmtInt(st.stats.stockRows || p.stats.stock_qty)} · складів: ${fmtInt((st.warehouses || p.stats.warehouses).length)}${(st.warehouses || p.stats.warehouses).length ? ` (${(st.warehouses || p.stats.warehouses).slice(0, 4).join(", ")})` : ""}`))),
                         p.stats.skipped_usage ? h("div", { class: "small muted" }, `Нескладські типи пропущено: ${fmtInt(p.stats.skipped_usage)}`) : null,
                         h("div", { class: "small", id: "impParsed" }, `Буде створено: зон ${fmtInt(p.zones.size)}, рядів ${fmtInt(p.stats.racks)}, місць на підлозі ${fmtInt(p.stats.spots)} · У лоток «Не розміщено»: ${fmtInt(p.tray.length)}${p.stats.known ? ` · уже в проєкті: ${fmtInt(p.stats.known)}` : ""}`),
                         ...reasonRows(p),
@@ -281,9 +285,10 @@ export function projectLocations({ zones = false } = {}) {
 /** Нові й змінені відносно стрічки Odoo (код відсутній у стрічці або назва/батько інші) + недостаючі батьки. */
 export function changedLocations(all, feed) {
     const byCode = new Map(feed.map((l) => [l.code, l]));
+    // батька не порівнюємо: повна назва view-локації в Odoo скидає шлях, тож рядки батьків із файла й з Odoo не збігаються
     const changed = all.filter((l) => {
         const f = byCode.get(l.code);
-        return !f || f.name !== l.name || f.parent !== l.parent;
+        return !f || f.name !== l.name;
     });
     return withParents(changed, new Set(feed.map(fullName)));
 }

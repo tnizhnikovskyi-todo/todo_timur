@@ -2,8 +2,10 @@
 
     python3 factory3d/odoo_addons/td_constructor/tests/golden_s4.py --write   # перегенерувати fixtures/s4_python.xlsx
 
-`static/tests/fixtures/s4_python.xlsx` пише ЦЕЙ файл (xlsxwriter: спільні рядки, числа, булеві, два аркуші); `node tools/test_core_s4.mjs`
-перевіряє, що ядро його читає. Зворотний бік — `s4_roundtrip.xlsx` пише ядро (`node tools/test_core_s4.mjs --write-fixture`), а
+`static/tests/fixtures/s4_python.xlsx` пише ЦЕЙ файл (xlsxwriter: спільні рядки, числа, булеві, два аркуші); `node
+tools/test_core_s4.mjs`
+перевіряє, що ядро його читає. Зворотний бік — `s4_roundtrip.xlsx` пише ядро (`node tools/test_core_s4.mjs --write-
+fixture`), а
 `test_s4_tabular.py` читає його сервісом `services/tabular.py` (openpyxl)."""
 
 import datetime

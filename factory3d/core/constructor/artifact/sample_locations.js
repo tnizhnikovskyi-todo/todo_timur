@@ -9,12 +9,13 @@ const pad = (n, w = 2) => String(n).padStart(w, "0");
 export function sampleFeed() {
     const locations = [];
     let id = 100;
+    const ids = new Map(); // повне ім'я → id (parent_id, як у стрічці Odoo)
     const add = (name, parent, usage = "internal", extra = {}) => {
-        locations.push({ id: ++id, code: extra.barcode || name, name, parent, parent_id: null, usage, barcode: extra.barcode || "", qty: extra.qty || 0, active: true });
+        locations.push({ id: ++id, code: extra.barcode || name, name, parent, parent_id: ids.get(parent) ?? null, usage, barcode: extra.barcode || "", qty: extra.qty || 0, active: true });
+        ids.set(parent ? `${parent}/${name}` : name, id);
         return id;
     };
-    add("WH", "", "view");
-    add("Stock", "WH", "view");
+    add("Stock", "WH", "view"); // корінь стрічки (батьківська локація площадки): його батька «WH» у стрічці немає, як в API-16
     const zones = [
         ["A", 3, 6, 3],
         ["B", 2, 8, 2],

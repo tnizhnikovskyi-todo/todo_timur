@@ -34,3 +34,6 @@ from . import test_s1_library
 from . import test_s3_labels
 from . import test_s3_stock
 from . import test_s3_core_node
+from . import test_s4_tabular
+from . import test_s4_sync
+from . import test_s4_core_node

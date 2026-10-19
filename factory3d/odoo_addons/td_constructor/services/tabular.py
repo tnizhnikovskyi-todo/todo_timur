@@ -2,12 +2,14 @@
 
 Чисті функції без ORM (їх перевіряють без бази); рендерер `table_xlsx` реєструється внизу файла (`RENDERERS`).
 
-* `parse_table(filename, content, sheet=0)` → `{format, encoding?, delimiter?, sheets?, sheet?, rows, truncated}`: XLSX читає
-  `openpyxl` (read-only, `data_only`: значення формул — як їх бачить Excel), CSV — UTF-8 (з BOM чи без) або Windows-1251, роздільник
-  кома / крапка з комою / табуляція за першим рядком. Рядки — списки значень (str | int | float | bool), порожня клітинка — `""`;
-  формат збігається з тим, що віддає ядро JS (`core/constructor/tabular_core.js`), тож «туди-назад» без втрат.
+* `parse_table(filename, content, sheet=0)` → `{format, encoding?, delimiter?, sheets?, sheet?, rows, truncated}`:
+  XLSX читає `openpyxl` (read-only, `data_only`: значення формул — як їх бачить Excel), CSV — UTF-8 (з BOM чи без)
+  або Windows-1251, роздільник кома / крапка з комою / табуляція за першим рядком. Рядки — списки значень (str | int
+  | float | bool), порожня клітинка — `""`; формат збігається з тим, що віддає ядро JS
+  (`core/constructor/tabular_core.js`), тож «туди-назад» без втрат.
 * `table_xlsx(rows, sheet)` → байти XLSX (`xlsxwriter`): рядки лишаються рядками (нулі на початку), числа — числами.
-* Файл більший за `MAX_BYTES` або таблиця більша за `MAX_ROWS` рядків відхиляються: `ValidationError` (код `validation`)."""
+* Файл більший за `MAX_BYTES` або таблиця більша за `MAX_ROWS` рядків відхиляються: `ValidationError` (код
+  `validation`)."""
 
 import base64
 import binascii
@@ -38,7 +40,8 @@ def decode_bytes(content):
 
 
 def detect_delimiter(text):
-    """Роздільник за першим рядком (поза лапками): кома, крапка з комою або табуляція; рівність — першою кома (як у JS)."""
+    """Роздільник за першим рядком (поза лапками): кома, крапка з комою або табуляція; рівність — першою кома (як у
+    JS)."""
     first = re.split(r'\r\n|\n|\r', text, maxsplit=1)[0]
     best, most = ',', -1
     for delim in DELIMITERS:

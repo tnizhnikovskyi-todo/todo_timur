@@ -188,7 +188,19 @@ export function planStructure(locs, o = {}) {
         }
         return zones.get(key);
     };
+    // контейнери між коренем стрічки й локацією: за id батьків (стрічка Odoo; повна назва view-локації в Odoo скидає шлях, тож за назвами не можна),
+    // інакше — за повним ім'ям батька (файл)
+    const byId = new Map(usable.filter((l) => l.id != null).map((l) => [l.id, l]));
     const below = (l) => {
+        if (l.parent_id != null && byId.has(l.parent_id)) {
+            const names = [];
+            let cur = byId.get(l.parent_id);
+            while (cur && cur.parent_id != null && byId.has(cur.parent_id)) {
+                names.unshift(cur.name);
+                cur = byId.get(cur.parent_id);
+            }
+            return names;
+        }
         const p = segs(l.parent);
         return rootSegs.length && rootSegs.every((s, i) => p[i] === s) ? p.slice(rootSegs.length) : p.slice(Math.min(1, p.length));
     };
@@ -247,7 +259,7 @@ export function planStructure(locs, o = {}) {
         } else if (parts.prefix != null) {
             rowKey = `x:${String(parts.prefix).toUpperCase()}`;
         } else if (holder) {
-            rowKey = `c:${segs(loc.parent).join("/")}`;
+            rowKey = `c:${loc.parent_id ?? segs(loc.parent).join("/")}`;
             rowVal = tailNumber(holder);
         } else {
             rowKey = "none";
