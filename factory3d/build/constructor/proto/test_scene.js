@@ -9,7 +9,7 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('PASS', n, d !== undefine
   const { browser, page, errors } = await launch();
   await open(page);
   const size = fs.statSync(__dirname + '/index.html').size;
-  ok('розмір сторінки < 611 КБ (збірка F3D_PROTO_MINIFY=1: 531 КБ + 15 % запасу)', size < 611 * 1024, Math.round(size / 1024) + ' КБ');
+  ok('розмір сторінки < 802 КБ (збірка F3D_PROTO_MINIFY=1 після S1…S5: 697 КБ + 15 % запасу; було 531 КБ у хвилі 1)', size < 802 * 1024, Math.round(size / 1024) + ' КБ');
   const st = await page.evaluate((codes) => {
     const S = __f3d.S, covered = new Set();
     for (const p of S.placements) covered.add(p.code);
