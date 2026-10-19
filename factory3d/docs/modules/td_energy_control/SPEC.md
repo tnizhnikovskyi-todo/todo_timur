@@ -144,20 +144,7 @@ odoo_addons/td_energy_control/
     ├── test_ui.py, test_hoot.py          B  (HttpCase: клієнтська дія й меню; hoot-набір за зразком `td_energy/tests/test_w1_hoot.py`)
     └── stand/test_tk_control.py          A  ТК-19…ТК-28 (pytest проти стенда)
 
-odoo_addons/td_energy_viewer3d/            D  міст 3D (розд. 8.4), auto_install
-├── __manifest__.py, __init__.py          (менеджер)
-├── models/{__init__.py, viewer_provider.py, td_energy_node.py, res_config_settings.py}   D  M-41, M-42
-├── tools/{__init__.py, layer.py}                    D  R-57
-├── static/src/layer/{energy_layer.js, markers.js, colors.js, links.js, energy_layer.scss}   D  UI-23…UI-27
-├── static/tests/hoot/*.test.js                      D
-├── views/{td_energy_viewer3d_views.xml}             D  V-46 (налаштування шару), V-47 (серверна дія й меню)
-└── tests/{test_layer_payload.py, test_delta.py, test_kiosk.py, test_deeplink.py, test_hoot.py}   D
-
-odoo_addons/td_viewer3d/                   D  лише зазначені файли (розд. 8.4: VX-01…VX-05)
-├── static/src/viewer/core.js                        D  мінімальні адитивні вставки (≤ 90 рядків)
-├── static/src/action/viewer_action.js               D  `opts.onOpenAction`
-├── static/tests/hoot/extension_energy.test.js       D  AC-278…AC-281
-└── tests/test_r26_extension.py                      D
+odoo_addons/td_energy_viewer3d/            D  міст 3D → [../td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §0 (разом із файлами `td_viewer3d` для VX-01…VX-05)
 
 odoo_addons/td_genset_factory3d/adapters/td_genset.py     A  +ADP-12 (розд. 8.3), tests/test_adp12.py   A
 
@@ -202,7 +189,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | `params_text` | Text | compute/inverse (JSON, як `td.command.payload_text`), лише для форми адміністратора |
 | `config_version` | Integer | readonly: значення `td.energy.control.state.config_version` на момент останньої зміни `enabled`/`params` |
 | `applied` | Boolean | compute (не зберігається): `state.applied_version >= config_version` |
-| `engine_state` | Selection | `unknown`/«Немає даних» (default), `off`/«Вимкнено», `armed`/«Чергування», `active`/«Активний», `warn`/«Збій»; readonly; пишет API-25 |
+| `engine_state` | Selection | `unknown`/«Немає даних» (default), `off`/«Вимкнено», `armed`/«Чергування», `active`/«Активний», `warn`/«Збій»; readonly; пише API-25 |
 | `engine_facts` | Json | readonly: числа від рушія (`margin_kw`, `bess_kw`, `export_kw`, `reason`, `next_run`, …) |
 | `engine_ts` | Datetime | readonly: час останнього звіту рушія |
 | `state_signal_id` | Many2one `td.signal` | readonly, `energy_control/auto/<code>/state` |
@@ -237,7 +224,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | | `light_scene_number`, `light_scene_day_number` | int 1…16 | 1, 2 | номери `td.bms.light.scene.number` (черговий/робочий) |
 | | `heat_setpoint_c` | float 5…30 | 16.0 | запис у `sp_night_signal_id` установок |
 | `backup` | `genset_capacity_kw` | float 50…5000 | 507 | `p_inst_kw` вузла `GENSET` |
-| | `critical_kw` | float 0…5000 | 180 | справочно: «критичні 180 кВт» |
+| | `critical_kw` | float 0…5000 | 180 | довідково: «критичні 180 кВт» |
 | | `restore_delay_s` | int 30…1800 | 120 | стабільна мережа перед відновленням |
 | `chp` | `min_run_h` | float 0.5…24 | 2.0 | «мін. робота 2 год» |
 | | `min_off_min` | int 0…240 | 30 | |
@@ -408,13 +395,9 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 
 Поля `td_energy_control_*` з `config_parameter` для параметрів розд. 5.1 (групи: «Запобіжники», «Підтвердження», «Виконання», «Автоматика»). `set_values`: зміна `write_enabled`/`automation_enabled` — лише адміністратор (`td_factory3d.group_td_admin`), пише запис журналу `td.energy.action` `origin='config'`, `kind_code='switch_flag'`, і `state.bump()`.
 
-### M-41 `td.viewer.provider.energy_layer` — провайдер шару «Енергетика в 3D» (`td_energy_viewer3d`; FR-62, R-57)
+### M-41, M-42 — міст 3D (`td_energy_viewer3d`)
 
-`_name = "td.viewer.provider.energy_layer"` (`AbstractModel`, **без** `_inherit` моделей переглядача — duck typing, `docs/ARCHITECTURE.md` §6.7, `td_viewer3d` M-01), `_f3d_sequence = 101` (після `td.viewer.provider.energy` 100), `_f3d_sections = ("energy",)`, `_f3d_group = "td_factory3d.group_td_user"` (як у `td.viewer.provider.energy`; кіоск-користувач теж бачить розфарбовування; `card` — лише для `group_td_energy_user` і не в кіоску). Методи: `_f3d_viewer_collect(payload, ctx)` → `deep_merge(payload.setdefault("energy", {}), {"layer": tools.layer.build(env, ctx)})`; `_f3d_viewer_delta(patch, ctx)` → якщо `ctx["changes"]` містить `td.energy` або сигнали з префіксами W1 `ENERGY_PREFIXES` — `deep_merge(patch.setdefault("energy", {}), {"layer": layer})`, інакше нічого; `_f3d_viewer_bus_models()` → `["td.signal", "td.energy"]`. `from odoo.addons.td_viewer3d.tools.payload import deep_merge` — імпорт усередині методів (як `td_energy` R-18).
-
-### M-42 `td.energy.node` і `res.config.settings` (міст 3D) — розширення (V-46, V-47, R-58)
-
-`td.energy.node.action_td_open_3d(code=None)` (`api.model`; група `group_td_energy_user`): повертає `ir.actions.client` `tag="f3d_viewer.action"` з параметрами R-58 (шари, режим `td_energy`, `code`). Параметри `td.energy_viewer3d.layers` (JSON-список ключів шарів GLB для «Відкрити в 3D», default `["building","zones","line","facade","energy","backup","roofdeck"]`), `td.energy_viewer3d.marker_limit` (int, default 40), `td.energy_viewer3d.show_markers` (bool, default True).
+M-41 `td.viewer.provider.energy_layer` і M-42 (`td.energy.node`, `res.config.settings`) перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §2 (єдина нумерація W2; FR-62, R-57, V-46, V-47, R-58).
 
 ## 3. Представлення й меню
 
@@ -423,7 +406,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | ID | XML-id (`td_energy_control.`, міст — `td_energy_viewer3d.`) | Тип / модель | Структура |
 |---|---|---|---|
 | V-35 | `action_td_energy_control` | `ir.actions.client`, `tag="td_energy_control.control"`, `name="Керування енергетикою заводу"` | відкриває UI-12 |
-| V-36 | `view_td_energy_control_state_form`, `action_td_energy_control_state` | form `td.energy.control.state` (readonly) | поля: `engine_mode`, `engine_reason`, `connected`, `heartbeat_at`, `config_version`, `applied_version`, `config_etag`, `last_state_at`, `last_config_pull_at`, `collector_id`, `engine_info` (Text JSON); кнопка «Опублікувати конфігурацію» (`bump`, администратор) |
+| V-36 | `view_td_energy_control_state_form`, `action_td_energy_control_state` | form `td.energy.control.state` (readonly) | поля: `engine_mode`, `engine_reason`, `connected`, `heartbeat_at`, `config_version`, `applied_version`, `config_etag`, `last_state_at`, `last_config_pull_at`, `collector_id`, `engine_info` (Text JSON); кнопка «Опублікувати конфігурацію» (`bump`, адміністратор) |
 | V-37 | `view_td_energy_scenario_list` / `_form`, `action_td_energy_scenario` | list/form `td.energy.scenario` | list: `sequence` (handle), `name`, `enabled` (badge), `engine_state` (badge: `active` success, `armed` info, `warn` warning, `off` muted), `applied` (boolean), `engine_ts`; form (readonly для всіх, крім `params_text` адміністратора): `description`, `params_text`, `engine_facts` (Text JSON), `config_version`, `state_signal_id`; без кнопок увімкнення (увімкнення — екран «Керування», клас B) |
 | V-38 | `view_td_energy_shed_item_list` / `_form`, `action_td_energy_shed_item` | list (editable="bottom", `group_td_energy_chief`) / form | list: `sequence` (handle), `name`, `node_id`, `action`, `param_value`, `condition`, `condition_value`, `kw_reducible`, `p_now_kw` (readonly), `signal_id`, `active`, `how` (readonly); для не-chief — без редагування |
 | V-39 | `view_td_energy_command_kind_list` / `_form`, `action_td_energy_command_kind` | list/form | list: `sequence`, `code`, `name`, `cls` (badge A/B), `executor`, `resource`, `tile`, `available`; form: усі поля, `params_schema`/`checks` — Text JSON; редагування — адміністратор |
@@ -433,8 +416,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | V-43 | `view_td_command_form_td_energy_control` | form `td.command` (зміна) | поле `energy_action_id` у групі «Керування» (`invisible="not energy_action_id"`) |
 | V-44 | `res_config_settings_view_form_td_energy_control` | `res.config.settings` (зміна) | у блоці `app name="td_energy"` розділ «Керування»: «Запобіжники» (`write_enabled`, `automation_enabled`; лише адміністратор, підказка про 5 запобіжників), «Підтвердження» (`confirm_ttl_s`, `second_ttl_s`, `undo_window_min`), «Виконання» (`command_ttl_s`, `exec_timeout_s`, `step_timeout_s`, `verify_timeout_s`, `apply_timeout_s`), «Автоматика» (`engine_tick_s`, `config_poll_s`, `stale_hold_s`, `min_write_interval_s`, `max_writes_per_min`, `shed_restore_step_s`), «Рекомендації» (`export_advice_min`) |
 | V-45 | `views/menus.xml` | `ir.ui.menu` | таблиця 3.3 |
-| V-46 | `res_config_settings_view_form_td_energy_viewer3d` | `res.config.settings` (зміна, міст) | блок «Енергетика в 3D»: `td_energy_viewer3d_layers` (Text JSON), `…_marker_limit`, `…_show_markers` |
-| V-47 | `action_td_energy_3d` | `ir.actions.server` (код: `action = env["td.energy.node"].action_td_open_3d()`) | меню «Енергетика в 3D» |
+| V-46, V-47 | `td_energy_viewer3d.…` | налаштування шару й серверна дія «Енергетика в 3D» | Перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §3 (V-46: блок налаштувань `td_energy_viewer3d_layers`, `…_marker_limit`, `…_show_markers`; V-47: дія `action_td_energy_3d` і меню) |
 
 ### 3.2 Клієнтські компоненти (OWL) UI-12…UI-28
 
@@ -454,7 +436,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | UI-21 | `ControlAdviceHandler` | Реєструє `registry.category("td_energy.advice_handlers").add("control", handler)`: `handler({action, advice, component})` викликає `prepare(command_kind, params, {advice_id})` і показує `ConfirmDialog`; після `done` повертає `true` (Пульт перечитує `advice`, `alarms`); для `act.code='undo'` — `undo(action_id)` (R-55 п.4) |
 | UI-22 | `NodeActions` | Реєструє `registry.category("td_energy.node_actions").add("td_energy_control", {match, actions})`: для вузла `QS` — «Увімкнути QS…» (`qs_close`) або «Вимкнути QS…» (`qs_open`) за `sld_state`; для `BESS` — «Зарядити 50 кВт» (`bess_charge`) або «Зупинити заряд» (`bess_stop`) за станом; дії з `get_node_actions(code)` (API-27) і стилем `o_td_en_btn--teal` (D-38) |
 | UI-28 | `DoneBanner` | Варіант банера Пульта `advice.state==='done'` (зелений, іконка «пташка», текст `title` жирним + `text`, кнопка «Скасувати»; без «Пізніше»): класи `o_td_en_advice--done` у `pult.xml`, стиль у `control.scss` |
-| UI-23…UI-27 | `td_energy_viewer3d` | Описані в розд. 8.4.3 (`EnergyLayerExtension`, `StateColors`, `AlarmMarkers`, `NodeBlock`, `ViewerLinks`) |
+| UI-23…UI-27 | `td_energy_viewer3d` | Описані в [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §8.4.3 (`EnergyLayerExtension`, `StateColors`, `AlarmMarkers`, `NodeBlock`, `ViewerLinks`) |
 
 ### 3.3 Меню (`views/menus.xml`)
 
@@ -857,6 +839,7 @@ services/collector_plugins/td_collector_energy/
 │   ├── plugin.py             EnergyCtlPlugin: validate/connect/subscribe/call/health/disconnect
 │   ├── config.py             завантаження API-24 (ETag, кеш, перевірка схеми, диф версій), клас Config (frozen dataclass)
 │   ├── inputs.py             Inputs: знімок живих значень з ctx.live зі свіжістю; похідні (прогноз 15 хв, ковзні вікна)
+│   ├── derived.py            похідні входи за блоком `derived` API-24 (D-47): `sum` (з `min` терма, `clamp_min`, `zero_if`) і `ge`; терм відсутній/несвіжий → вхід відсутній
 │   ├── engine.py             Engine: цикл, режими off/hold/auto, арбітраж ресурсів, перекриття (override)
 │   ├── actuator.py           Actuator: запис «лише за зміни», мін. інтервал, запобіжник частоти, зворотне читання
 │   ├── scenarios/{__init__,common,peak,selfcons,pfc,night,backup,chp}.py   чисті функції step(...) за R-45…R-50
@@ -922,51 +905,8 @@ services/collector_plugins/td_collector_energy/
 
 ### 8.4 «Енергетика в 3D»: міст `td_energy_viewer3d` і розширення `td_viewer3d` (власник D; FR-62…FR-65, FR-70, C-44, C-45)
 
-**Рішення (A-52).** Шар — **окремий міст-модуль** `td_energy_viewer3d` (`depends`: `td_energy`, `td_viewer3d`; `auto_install: True`; LGPL-3), за зразком `td_constructor_viewer3d`: Python-провайдер (duck typing, контракт `td_viewer3d` M-01) віддає **адитивний** ключ `energy.layer` у payload (`meta.schema` лишається `"1.1"`: ключ вкладений у розділ `energy`, клієнт без моста його ігнорує), JS-розширення малює шар у ядрі переглядача. Обґрунтування: `td_energy` не залежить від `td_viewer3d`, а JS-імпорт `@td_viewer3d/viewer/core` у `td_energy` зламав би бандл без переглядача; наявний провайдер `td.viewer.provider.energy` (seq 100) не змінюється. Ядро переглядача для цього отримує мінімальні адитивні точки розширення (**VX-01…VX-05**, `td_viewer3d` R-26); без розширень поведінка ядра не змінюється.
+Розділ перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §8 зі збереженням нумерації 8.4.1…8.4.4: рішення A-52 (окремий міст-модуль `td_energy_viewer3d`, `auto_install`), розширення ядра `td_viewer3d` R-26 (VX-01…VX-05, 8.4.1), payload `energy.layer` (8.4.2), клієнт UI-23…UI-27 (8.4.3), «Відкрити в 3D» (8.4.4).
 
-#### 8.4.1 `td_viewer3d` R-26: розширення ядра (VX-01…VX-05; FR-70; AC-278…AC-281)
-
-Розширює R-25 (`registerViewerExtension(ext)`): в `ext` з'являються **необов'язкові** члени (відсутній — нічого не робить; виключення розширення логується й не ламає ядро та інші розширення):
-
-| ID | Член `ext` | Контракт |
-|---|---|---|
-| VX-01 | `colorModes: [{key, label, legend}]` | ядро додає радіокнопки в групу «Розфарбування» (`name="cmode"`, значення `key`, підпис `label`), зберігає `colorMode`; `getState().mode` повертає `key`; `applyParams({mode})` приймає ключі розширень |
-| VX-02 | `modeColor(mode, root, D) → THREE.Color \| null` | викликається з `modeColor(root)` ядра, коли `colorMode` — ключ розширення; `null` — без підсвічування; результат змішується як у вбудованих режимів (`paint`, коефіцієнт 0,45) |
-| VX-03 | `applyData(api, D, info)` | `api` — як у R-25; `info = {reason: "load"\|"patch"\|"snapshot"\|"now", keys: Set<string>}`; викликається після `setData`, після кожного `applyPatch` із непорожнім патчем і після повернення «Зараз»/знімка; ядро після виклику запускає `repaintAll()`, якщо `colorMode` — режим розширення |
-| VX-04 | `cardBlocks(code, D, api) → string[]` | список HTML-фрагментів, які ядро додає в кінець картки вибраного об'єкта (після `energyHtml`); екранування — відповідальність розширення (`esc`); порожній масив — нічого |
-| VX-05 | `onAction(api, action, arg, el)` і `api.openAction(action) → boolean` | елементи з `data-ext="<id>:<action>:<arg>"` у картці/панелі делегуються розширенню з `id`; `api.openAction(act)` викликає `opts.onOpenAction(act)` (`viewer_action.js`: `this.action.doAction(act)`); у режимі кіоска `opts.onOpenAction` не задано → `false` |
-
-Також `api` розширюється полями `select(code)`, `focusOn(obj)`, `codeRoot(code)` (існують) і `labelsRoot` (контейнер міток) — без змін поведінки. Файли: `td_viewer3d/static/src/viewer/core.js` (вставки ≤ 90 рядків), `static/src/action/viewer_action.js` (`onOpenAction`), тести `static/tests/hoot/extension_energy.test.js`, `tests/test_r26_extension.py`. Обмеження: `rjsmin` — без вкладених шаблонних літералів у змінюваних місцях; `dist/viewer` не оновлюється.
-
-#### 8.4.2 Payload `energy.layer` (R-57; M-41)
-
-```json
-{"layer":{"schema":1,"thresholds":{"warn_pct":80,"alarm_pct":100},
-  "nodes":[{"code":"BW-2","scene":"BW-2","kind":"line","name":"ШР-2","state":"ok","load":0.30,"i_a":192,"p_kw":124.0,"rating_a":630,
-            "card":true,"alarms":0,"worst":null,"title":null},
-           {"code":"C2","scene":"CABLES","kind":"line","name":"C2","state":"alarm","load":null,"i_a":null,"p_kw":128.0,"rating_a":null,
-            "card":true,"alarms":1,"worst":"bad","title":"Лічильник PM-QF-C2 не на зв'язку"}],
-  "alarms":[{"id":212,"node":"C2","scene":"CABLES","level":"bad","title":"Лічильник PM-QF-C2 не на зв'язку","time":"13:47","state":"active"}],
-  "summary":{"alarm":1,"warn":2,"gen":1,"off":3}}}
-```
-
-Правила: `nodes` — вузли `sld_show=True` (W1 R-26; ≈ 21) видів `line`, `transformer`, `cell` (feeder/cable/incomer/coupler/pfc), `generator`, `storage`, `ats`, `section`; `state` = `td.energy.node.sld_state` (`ok|warn|alarm|off|gen`, **та сама логіка й пороги `td.energy.load_warn_pct/_alarm_pct`, що в Пульті**); `load` — частка 0…∞ (`p_now / номінал`, W1 R-26) або `null`; `scene` — код об'єкта сцени: `equipment_id.td_code`, інакше `node.code`; для кабельних ліній `C1`, `C2` — `CABLES` (єдиний об'єкт сцени; стан об'єкта = найгірший серед вузлів з тим самим `scene`); `scene=null`, якщо коду немає серед відомих кодів сцени (множина з `ctx["static"]` — `model_static.json` `td_viewer3d`: `energy.lines|transformers|cells`, `equipment`, `zones`; воркер D бере наявний завантажувач статики `td_viewer3d.tools.payload`; якщо множину отримати неможливо — `scene = equipment.td_code or node.code` без перевірки, A-53) — вузол лишається в списку (картка доступна), але не розфарбовується й не має маркера; `alarms[]` — відкриті `td.energy.event` (`state in ('active','acked')`, `level in ('warn','bad')`, `node_id`), ≤ `marker_limit` (40), сортування `bad` → `warn`, далі за часом; `title` ≤ 80 символів; `time` — Київ `HH:MM`; `card` — `false` у кіоску й без групи; ключі вартості та імена користувачів (`acked_by`, `assigned_user_id`) **не віддаються**; для `ctx["kiosk"]` — `title` без технічних деталей діагностики. Розмір `layer` ≤ 12 КБ, побудова ≤ 150 мс (ТП-11). Дельта (`_f3d_viewer_delta`) — **повна заміна** `layer` (списки замінюються цілком за `deep_merge`).
-
-#### 8.4.3 Клієнт моста (UI-23…UI-27)
-
-`registerViewerExtension({colorModes, modeColor, applyData, cardBlocks, onAction})` у `static/src/layer/energy_layer.js`:
-
-| ID | Компонент | Поведінка |
-|---|---|---|
-| UI-23 | `EnergyLayerExtension` | Тримає `state = {byScene: Map, alarms, version}` з `D.energy.layer`; `applyData` оновлює карту й маркери (лише якщо `info.keys` містить `energy`); без `D.energy.layer` (старий сервер) — розширення неактивне, режим не показується |
-| UI-24 | `StateColors` | Режим `td_energy` «Електромережа: стан вузлів» (легенда: «норма», «увага ≥ {warn_pct} %», «тривога ≥ {alarm_pct} % / немає даних», «генерує/працює», «вимкнено/резерв»); `modeColor`: `ok` → `C_OK` (`#27ae60`), `warn` → `C_WARN` (`#f39c12`), `alarm` → `C_BAD` (`#e74c3c`), `gen` → бурштиновий (`#b45309`), `off` → сірий (`#9ca3af`); кодування не лише кольором: у картці — текстовий чип стану |
-| UI-25 | `AlarmMarkers` | Для кожного запису `alarms[]` зі `scene` — спрайт (канва 64 × 64: коло `--bad`/`--warn`, знак «!») над найвищою точкою `codeRoot(scene)` (`Box3`), `renderOrder` вищий за сцену, масштаб сталий у пікселях; пульсація (`reduceMotion` вимикає); клік по маркеру — `api.select(scene)`; підказка `title` + час; ≤ `marker_limit`; зняття/перебудова при `applyData`; `dispose` геометрії/текстур; прихований, коли `show_markers=false` або шар `energy` вимкнений |
-| UI-26 | `NodeBlock` | `cardBlocks(code)`: блок «Енергетика»: чип стану («Норма», «Увага», «Тривога», «Генерує», «Вимкнено»), `P {p_kw} кВт`, `{i_a} А · {load%}` (якщо є), перелік тривог вузла (≤ 3) і кнопка «Відкрити картку вузла» (`data-ext="td_energy:open_card:<node code>"`) — лише якщо `card=true` і дозволено `openAction` (не кіоск); `onAction` → `api.openAction({type:"ir.actions.client",tag:"td_energy.node_card",name:<code>,params:{code}})` (V-23 W1) |
-| UI-27 | `ViewerLinks` | Реєструє `registry.category("td_energy.viewer_links").add("default", {open})`, де `open({code})` викликає `orm.call("td.energy.node","action_td_open_3d",[code\|\|null])` і `action.doAction(result)`; без модуля `td_viewer3d` запис не реєструється (міст `auto_install` не встановлюється) |
-
-#### 8.4.4 «Відкрити в 3D» і підсвічування вузла (R-58; FR-64)
-
-`td.energy.node.action_td_open_3d(code=None)` повертає `{"type":"ir.actions.client","tag":"f3d_viewer.action","name":"Завод 3D","target":"current","params":{"layers":<td.energy_viewer3d.layers>,"mode":"td_energy","tab":"energy","code":<scene|null>,"td_energy_node":<code|null>}}`: `code` вузла перетворюється на `scene` за правилами 8.4.2; невідомий `code` → `UserError("Вузол %s не знайдено.")`; вузол без `scene` → `params.code = null` і повідомлення-попередження в клієнті «Для вузла {code} немає об'єкта в 3D; відкрито шар «Енергетика»». Переглядач (`applyParams`): `layers` → `mode` → `tab` → `code` (`select(ensureCode(code))` + `focusOn`); вибраний вузол отримує жовту обвідку ядра (`C_SEL`) і блок UI-26; маркер вибраного вузла пульсує. Точки входу в Odoo: (1) Пульт, «Відкрити в 3D» (UI-01 W1) → `viewerLinks.default.open({})`; (2) панель вузла схеми й картка вузла, «Показати в 3D» → `open({code})`; (3) мобільний «Де це в 3D» → `open({code})`; (4) меню «Енергетика в 3D» (V-47). Назад: у картці переглядача (UI-26) — «Відкрити картку вузла»; з картки — крихти W1.
 
 ## 9. Алгоритми й правила
 
@@ -1076,7 +1016,7 @@ services/collector_plugins/td_collector_energy/
 | `self` | «Очікування · експорт {export_kw} кВт» | «Активний · заряд BESS {bess_kw} кВт» або «Обмеження СЕС {pv_limit_pct} %» | «Збій: {reason}» |
 | `pfc` | — | «Активний · cos φ {cos1} / {cos2}» | «Збій: {fault}» (напр. «PFC-2 ступінь 3»; з `engine_facts.fault` або W1 `fault_step`) |
 | `night` | «Наступний запуск о {from}» | «Активний до {to}» | «Збій: {reason}» (напр. «немає цілей BMS») |
-| `backup` | «Готовий · паливо {fuel_pct} %» (`fuel_pct` — W1 `_td_genset_summary`; без него «Готовий») | «Мережі немає · скинуто {shed_n}» | «Збій: {reason}» |
+| `backup` | «Готовий · паливо {fuel_pct} %» (`fuel_pct` — W1 `_td_genset_summary`; без нього «Готовий») | «Мережі немає · скинуто {shed_n}» | «Збій: {reason}» |
 | `chp` | «Очікує вигідної ціни» | «Працює · {chp_kw} кВт» | «Збій: {reason}» |
 
 ### R-44 Рушій автоматики: цикл, режими, входи, арбітраж (FR-56, FR-57; C-39, C-40)
@@ -1234,11 +1174,11 @@ services/collector_plugins/td_collector_energy/
 
 ### R-57 Шар «Енергетика в 3D»: правила payload
 
-Описано в розд. 8.4.2 (структура `energy.layer`, стани, вибір `scene`, маркери, кіоск, розмір). Додатково: `thresholds` беруться з `td.energy.load_warn_pct/_alarm_pct` (W1 §5.1), тому колір вузла в 3D збігається з Пультом (AC-284); провайдер не пише в БД і працює з правами користувача (`_f3d_group`), читання вузлів/подій — `sudo()` лише на читання з відсіканням полів за описом.
+Перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §9 (R-57) і §8.4.2.
 
 ### R-58 «Відкрити в 3D» і підсвічування вузла
 
-Описано в розд. 8.4.4 (`action_td_open_3d`, параметри `f3d_viewer.action`, порядок `applyParams`, точки входу).
+Перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §9 (R-58) і §8.4.4.
 
 ### R-59 Емулятор: реакції моделей
 
@@ -1317,7 +1257,7 @@ services/collector_plugins/td_collector_energy/
 | AC-159 | FR-46 | Given чиста установка; Then `td.energy.scenario` має рівно 6 записів `peak,self,pfc,night,backup,chp`; `enabled`: peak, pfc, night, backup — `True`, self, chp — `False`; `description` рівно як у макеті (5.2); `create`/`unlink` не-адміністратором → `AccessError` | UT |
 | AC-160 | FR-46 | Given `scenario.params`; When `limit_kw=50`, або `night.from="25:00"`, або невідомий ключ, або `days=[0,8]`; Then `ValidationError` «Сценарій {name}: параметр {key} — …»; значення за замовчуванням — валідні для всіх 6 сценаріїв | UT |
 | AC-161 | FR-47 | Given `engine_state='armed'`, `facts.margin_kw=402` для `peak`; When `_td_state_text()`; Then «Чергування · запас 402 кВт», `state_kind='arm'`; `enabled=False` → «Вимкнено», `off`; `pfc` `warn` із `fault="PFC-2 ступінь 3"` → «Збій: PFC-2 ступінь 3», `warn`; `night` `armed` із `next_run="23:00"` → «Наступний запуск о 23:00»; `self` `active`, `bess_kw=26` → «Активний · заряд BESS 26 кВт»; `backup` `armed` `fuel_pct=78` → «Готовий · паливо 78 %»; немає звіту ≥ `2·heartbeat_stale_s` → «Немає даних від рушія» | UT |
-| AC-162 | FR-47 | Given сид; Then `chips()` воспроизводит макет: peak «уставка 760 кВт · 95 %», «прогноз 15 хв»; self «експорт ≤ 20 кВт», «BESS до 95 %»; pfc «ціль cos φ 0,95», «крок 35 квар»; night «23:00–06:30», «RoofVent 30 %», «16 °C»; backup «АВР → ДГУ», «критичні 180 кВт»; chp «мін. робота 2 год», «ціна газу 19,80 ₴/м³» | UT |
+| AC-162 | FR-47 | Given сид; Then `chips()` відтворює макет: peak «уставка 760 кВт · 95 %», «прогноз 15 хв»; self «експорт ≤ 20 кВт», «BESS до 95 %»; pfc «ціль cos φ 0,95», «крок 35 квар»; night «23:00–06:30», «RoofVent 30 %», «16 °C»; backup «АВР → ДГУ», «критичні 180 кВт»; chp «мін. робота 2 год», «ціна газу 19,80 ₴/м³» | UT |
 | AC-163 | FR-47, FR-53 | Given manager; When `scenario.write({'enabled': True})` без контексту дії → `AccessError`; When `prepare('scenario_toggle', {scenario:'peak', enabled:False})` + `confirm` (chief) → `enabled=False`, `config_version` = поточна версія стану, `changed_by`; зворотна зміна через `undo` | UT |
 | AC-164 | FR-57 | Given `state`; When двічі `bump()` (також два паралельні UPDATE) → +2 без дублів; зміна `scenario.params`, `shed.item.sequence`, `interlock.params`, слота `executes`, `td.energy.cos_phi_target` → `config_version` зростає; зміна `engine_facts`/`engine_ts` — ні | UT |
 | AC-165 | FR-58 | Given сигнал `module='energy_control'`; When код `fire/panel/x`, `workcenters/SAW-1/x`, `access/x`, або джерело `module='fire_safety'`; Then `ValidationError` «Сигнал {code}: керування цією системою заборонене.»; `module='energy'` + `write_enabled=True` → `ValidationError` (W1 AC-81 діє) | UT |
@@ -1325,7 +1265,7 @@ services/collector_plugins/td_collector_energy/
 | AC-167 | FR-57 | Given конфіг; Then `etag` не залежить від `server_time`/порядку ключів; зміна `limit_kw` змінює `etag`; розмір відповіді на демо-даних (6 сценаріїв, 5 скидань, ≤ 40 слотів, 25 RoofVent) ≤ 64 КБ | UT |
 | AC-168 | FR-47 | Given `td_bms` із 25 установками `roofvent` (`mode_signal_id`, `sp_night_signal_id`) і групами освітлення; Then `bms.night.vent` має 25 елементів із `mode_signal`, `bms.night.light` — групи зі `scene_signal`, `aisle=true` лише для `fixture_kind='highbay_rack'`; `light_break` не містить `aisle`-груп; відсутні сигнали → порожні масиви | UT |
 | AC-169 | FR-57 | Given `scenario_toggle` виконано; When до `POST state` → `applied=False` (чип «Очікує застосування»); після `POST state` з `config_version_applied ≥ config_version` → `applied=True`; `state.applied_version` не зменшується | UT |
-| AC-170 | FR-51 | Given `get_control().engine`; Then heartbeat свежий + `mode=auto` → `level='ok'`, `label="Контролер ГРЩ і збирач на зв'язку · HH:MM"`; `mode=hold` → `warn`; heartbeat старше `heartbeat_stale_s` → `bad`, «Збирач не на зв'язку · {вік}»; `automation_enabled=False` → `warn`, «автоматику призупинено» | UT |
+| AC-170 | FR-51 | Given `get_control().engine`; Then heartbeat свіжий + `mode=auto` → `level='ok'`, `label="Контролер ГРЩ і збирач на зв'язку · HH:MM"`; `mode=hold` → `warn`; heartbeat старший за `heartbeat_stale_s` → `bad`, «Збирач не на зв'язку · {вік}»; `automation_enabled=False` → `warn`, «автоматику призупинено» | UT |
 
 ### 12.2 Пріоритети скидання — AC-171…AC-176
 
@@ -1343,7 +1283,7 @@ services/collector_plugins/td_collector_energy/
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
 | AC-177 | FR-49 | Given сид; Then 16 видів; 8 `tile=True` у порядку макета (qs_close, bess_charge, bess_discharge, chp_start, genset_test, light_break, vent_eco, air_setpoint); клас A — bess_charge, bess_stop, light_break, light_restore, vent_eco, vent_restore; решта B; `executor/resource/checks` за 5.3 | UT |
-| AC-178 | FR-49, FR-53 | Given `get_control().commands`; Then 8 плиток с `label/sub` макета («Заряд BESS 50 кВт» / «до 16:00 або 95 %», «Освітлення цеху · сценарій «Перерва»» / «50 % на 30 хв», …); user → `enabled=False`, `disabled_reason` «Немає прав: потрібна роль «Енергетик»»; `write_enabled=False` → `enabled=False` для `intent`/`genset` | UT |
+| AC-178 | FR-49, FR-53 | Given `get_control().commands`; Then 8 плиток із `label/sub` макета («Заряд BESS 50 кВт» / «до 16:00 або 95 %», «Освітлення цеху · сценарій «Перерва»» / «50 % на 30 хв», …); user → `enabled=False`, `disabled_reason` «Немає прав: потрібна роль «Енергетик»»; `write_enabled=False` → `enabled=False` для `intent`/`genset` | UT |
 | AC-179 | FR-50 | Given manager; When `prepare('qs_close')`; Then ключі відповіді 7.2, `ttl_s=60`, `checks` у порядку виду, `needs_second=True` (chief → `False`), токен ≥ 32 символів; у БД лише `token_hash` (sha256), токена немає | UT |
 | AC-180 | FR-50 | Given `prepare`; When повтор ≤ 5 с тим самим користувачем/`kind`/`params`; Then той самий `action_id`, новий токен, старий недійсний; після 5 с — новий запис | UT |
 | AC-181 | FR-49 | Given `bess_charge`; When `power_kw=500`, або `until` у минулому, або `soc_limit_pct=40`; Then `ValidationError`/`UserError` («параметр … поза межами 1…100 кВт») | UT |
@@ -1352,14 +1292,14 @@ services/collector_plugins/td_collector_energy/
 | AC-184 | FR-53 | Given клас B; When manager `confirm` → `awaiting_second`, `second_expires_at ≈ now+600`, `td.command` немає; chief → одразу `queued` | UT |
 | AC-185 | FR-53 | Given `awaiting_second`; When той самий користувач → `UserError`; інший manager → `queued`, `second_by`; view-only → `AccessError`; іншому chief дозволено; після `second_expires_at` → `expired` | UT |
 | AC-186 | FR-53 | Given `awaiting_second`; Then `mail.activity` ≤ 10 manager-ам, окрім ініціатора; закривається при виконанні/спливанні; `get_control().pending` показує дію лише manager-ам, `can_confirm_second=False` для ініціатора | UT |
-| AC-187 | FR-50 | Given действие на ресурс `bess` в `queued/sent/executing`; When `confirm` нового действия на `bess`; Then оно `blocked` «Для ресурсу «bess» уже виконується дія …» | UT |
+| AC-187 | FR-50 | Given дія на ресурс `bess` у `queued/sent/executing`; When `confirm` нової дії на `bess`; Then вона `blocked` «Для ресурсу «bess» уже виконується дія …» | UT |
 | AC-188 | FR-55 | Given `td.command`; When стан `sent` → дія `sent`; `done` з `result_data.accepted=true` → `executing`; `done` з `accepted=false,state=blocked` → `blocked`; `state=rejected` → `failed`; `failed` → `failed`; `expired` → `expired`; `cancelled` → `cancelled` | UT |
 | AC-189 | FR-55 | Given API-25 `actions[]`; When `done` → `finished_at`, `result_text`, `bus` `action`; дія з `advice_id` → `advice.state='done'`; повтор того самого стану — без ефекту; стан «назад» → `rejected: already_final`; дія `expired` + звіт `done` за `idem` → `done` | UT |
 | AC-190 | FR-47, FR-57 | Given `scenario_toggle`; When `confirm`; Then одразу `done`, `config_version` збільшено, `applied=False`, `result_text` «збережено, очікує збирач»; після звіту збирача — «виконано» | UT |
 | AC-191 | FR-50 | Given `cancel(token)`; Then `prepared` → `cancelled`; повтор ідемпотентний; `queued` → `td.command` `cancelled` і дія `cancelled`; `executing` → `UserError` | UT |
 | AC-192 | FR-58 | Given `td.energy_control.write_enabled=False`; When `prepare('qs_close')` → `UserError` «Керування вимкнено…»; When `write_enabled=True`, але `write_enabled` джерела `ENERGY-CTL`/сигналу `False` → `confirm` дає `blocked` «Запис вимкнено: …», `td.command` не створена | UT |
 | AC-193 | FR-55 | Given `td.command.create` з `origin='energy'`; When поза модулем (без контексту й `energy_action_id`) → `UserError`; без групи менеджера телеметрії й не `sudo` → `AccessError` (наявне правило) | UT |
-| AC-194 | FR-66 | Given без моста `td_genset_factory3d`; Then `genset_test.available=False`, причина «Не встановлено міст td_genset_factory3d», `prepare` → `UserError`; с мостом — `available=True` | UT |
+| AC-194 | FR-66 | Given без моста `td_genset_factory3d`; Then `genset_test.available=False`, причина «Не встановлено міст td_genset_factory3d», `prepare` → `UserError`; з мостом — `available=True` | UT |
 | AC-309 | FR-58 | Given `td.energy_control.remote_switching_enabled=False` (D-46); When `prepare` для `qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test`; Then `UserError` «Дистанційне перемикання вимкнено: td.energy_control.remote_switching_enabled…»; ті самі дії, підготовлені до вимкнення прапора, не проходять `confirm`/`confirm_second`; `get_control().commands[]` для них `enabled=false` з причиною; `bess_charge`, `bess_stop`, `chp_stop`, `light_*`, `vent_*`, `air_setpoint`, `scenario_*`, `shed_reorder` не зачеплені | UT |
 | AC-310 | FR-58 | Given прапор `True`; Then `prepare('qs_close')` проходить як в AC-177…AC-194; `API-24 flags.remote_switching_enabled` дорівнює значенню параметра й змінює ETag; `neutralize.sql` і нове встановлення без demo дають `False`; demo-дані й `_td_enable_stand` дають `True` | UT |
 
@@ -1375,7 +1315,7 @@ services/collector_plugins/td_collector_energy/
 | AC-200 | FR-51 | Given комбінації `hard/fail_closed/state`; Then `blocked` за R-41 п.3: `hard`+`fail` → блок; `hard`+`unknown`+`fail_closed` → блок; `hard`+`unknown`+`¬fail_closed` → не блок; м'яка `fail` → не блок; `where='collector'` → `unknown` «перевіряє збирач» без блоку | UT |
 | AC-201 | FR-51 | Given сигнал із `last_ts` старшим за `max(3·period_s, 60 с)` або `status='stale'`; Then значення `None` → `unknown` | UT |
 | AC-202 | FR-51 | Given `td.energy.interlock`; When `code` невідомий → `ValidationError`; `params` змінює не-адмін → `AccessError`; адмін → запис `interlock_param` у журналі й `bump()` | UT |
-| AC-203 | FR-51 | Given `lock=0`; When `prepare('qs_close')` → `blocked=True`, `blocked_reason` «Блокування паралельної роботи T1 і T2 від АВР — не виконано»; `confirm` → действие `blocked`, `td.command` не создана | UT |
+| AC-203 | FR-51 | Given `lock=0`; When `prepare('qs_close')` → `blocked=True`, `blocked_reason` «Блокування паралельної роботи T1 і T2 від АВР — не виконано»; `confirm` → дія `blocked`, `td.command` не створена | UT |
 | AC-204 | FR-51 | Given `light_break`; When lux-сигналів немає → `aisle_lux_ge='unknown'`, `blocked=False`; `fire/panel/state=alarm` → `no_fire_alarm='fail'`, `blocked=True` | UT |
 
 ### 12.5 Журнал і скасування — AC-205…AC-210
@@ -1473,7 +1413,7 @@ services/collector_plugins/td_collector_energy/
 |---|---|---|---|
 | AC-259 | FR-55 | When `call()` валідного інтента → `accepted=true` ≤ 1 с; `v≠1`, невідомий `kind`, `params` поза межами, `expires_at` у минулому → `rejected` із причиною; дубль `idem` → `duplicate:true`; ресурс зайнятий → `rejected: busy: bess` | UT-PY |
 | AC-260 | FR-55 | Given fake `write_signal/read_signal`; Then для кожного з 12 видів інтентів послідовність записів і верифікація відповідають таблиці R-42 п.3 | UT-PY |
-| AC-261 | FR-55 | `qs_close`: `qs_ack=2` → `failed` «Контролер відмовив: блокування»; `qs_state=closed` ≤ 10 с → `done`; `qs_state` не изменился → `failed` | UT-PY |
+| AC-261 | FR-55 | `qs_close`: `qs_ack=2` → `failed` «Контролер відмовив: блокування»; `qs_state=closed` ≤ 10 с → `done`; `qs_state` не змінився → `failed` | UT-PY |
 | AC-262 | FR-55 | `bess_charge`: `valid_s` = секунди до `until` (Київ; максимум 43 200), `until ≤ now` → `rejected`; невдала верифікація → fail-safe `bess_mode=0`; м'яка перевірка `bess_kw` → примітка в `result` | UT-PY |
 | AC-263 | FR-55 | When помилка запису → 1 повтор; друга → `failed` + fail-safe; `exec_timeout_s` (60) → `failed`; тайм-аут верифікації → `failed` | UT-PY |
 | AC-264 | FR-58 | Given `lock=0` → `blocked` без жодного запису; `remote=0` → `blocked`; код із `DENY_PREFIXES` або поза конфігом → `WriteRefused` + подія `interlock` | UT-PY |
@@ -1493,34 +1433,18 @@ services/collector_plugins/td_collector_energy/
 | AC-273 | FR-59 | `shed/<CODE>/limit_pct` зменшує `consumer_p` пропорційно; `pv/limit_pct` зменшує `p_kw` інверторів; `shed/valid_s` → 0 повертає всі ліміти й `pv/limit_pct` до 100 | UT-PY |
 | AC-274 | FR-59, FR-67 | Сценарії `peak_load {extra_kw}`, `export_demo {export_kw}` (експорт рівно `export_kw`, BESS авто 0 кВт), `ctl_local`, `chp_no_gas`; `POST /sim/v1/reset` повертає значення за замовчуванням (R-59 п.3) | UT-PY |
 
-### 12.14 Міст ДГУ, розширення переглядача — AC-275…AC-281
+### 12.14 Міст ДГУ — AC-275…AC-277 (розширення переглядача R-26, AC-278…AC-281, — [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §12.1)
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
 | AC-275 | FR-69 | Given `td_genset_factory3d`; When `start_test(gen,'idle',user)`; Then викликається `_test_start('idle', user)` під `sudo`, відповідь `{accepted, minutes, test_end, ref}`; `mode='load'` → `UserError` «Лише тест без навантаження»; `UserError` `td_genset` («Тест уже йде.») пробрасується | UT |
 | AC-276 | FR-69 | When `test_facts(gen)`; Then `fuel_pct`, `running`, `test_running`, `island`, `coolant_c`; без знімка — `None` без виключень | UT |
 | AC-277 | FR-66, FR-69 | Given міст; When `genset_test` (manager + друге підтвердження або chief); Then `done` з `ref` на `td.genset`, `result_text` «Тест ДГУ прийнято td_genset: N хв»; «Тест уже йде.» → `blocked`; перевірки `genset_fuel`, `genset_heater`, `genset_idle`, `no_island` у діалозі | UT |
-| AC-278 | FR-65, FR-70 | Given розширення з `colorModes`/`modeColor` (VX-01/02); Then радіо в групі «Розфарбування», `applyParams({mode})` вмикає режим, `modeColor` фарбує, `getState().mode` = ключ; виключення розширення логується, ядро й інші розширення працюють; без розширення режими не змінюються | UT-JS |
-| AC-279 | FR-65, FR-70 | Given VX-03; Then `applyData(api, D, info)` після `load/patch/snapshot/now` з `info.keys`; для режиму розширення після виклику `repaintAll()` | UT-JS |
-| AC-280 | FR-65, FR-70 | Given VX-04/05; Then `cardBlocks` додаються в картку; клік по `data-ext` → `onAction`; `api.openAction` → `opts.onOpenAction`; у кіоску → `false` (`api.canOpenAction` = `!!opts.onOpenAction`) | UT-JS |
-| AC-281 | FR-65, FR-70 | Given регресія; Then `td_constructor_viewer3d` (`applyLayout`) і AC-01…AC-67 переглядача зелені; `registerViewerExtension` без нових членів працює як раніше | UT |
 
 ### 12.15 «Енергетика в 3D» — AC-282…AC-293
 
-| AC | FR | Given / When / Then | Тип |
-|---|---|---|---|
-| AC-282 | FR-62 | Given демо-БД; When `td.viewer.provider.energy_layer._f3d_viewer_collect`; Then `energy.layer` за схемою 8.4.2 (≈ 21 вузол, `thresholds` 80/100, `alarms`); `meta.schema` лишається `"1.1"`; `_f3d_sequence=101`; користувач без `td_factory3d.group_td_user` — розділ `denied` | UT |
-| AC-283 | FR-62 | Then `scene` = `equipment.td_code` або `node.code`; `C1`,`C2` → `CABLES`; невідомий код → `scene=null` (вузол у списку, без маркера); стан об'єкта сцени = найгірший серед вузлів з тим самим `scene` | UT |
-| AC-284 | FR-62 | Given приклад 14:20 (W1 R-26); Then `state` збігається з `td.energy.node.sld_state` і Пультом: `C2` alarm, `PFC-2` warn, `PV-INV` gen, `CHP` off, `ATS-1` off, `QS` off, `T2` ok; пороги змінюються разом із `td.energy.load_*_pct` | UT |
-| AC-285 | FR-62 | Then `alarms[]` — лише `active/acked`, `warn\|bad`, ≤ `marker_limit`, `bad` першими, `title ≤ 80`; немає `acked_by`/користувачів/вартості | UT |
-| AC-286 | FR-62 | Given зміна `td.energy` або енергетичного `td.signal`; When `_f3d_viewer_delta`; Then `patch.energy.layer` — повна заміна (списки не конкатенуються); інші зміни — без `layer` | UT |
-| AC-287 | FR-62 | Given `ctx.kiosk`; Then розфарбування й `alarms` є, `card=false`, `title` без технічних деталей діагностики; користувач без `group_td_energy_user` (не кіоск) — теж `card=false` | UT |
-| AC-288 | FR-62 | Given `StateColors`; When `modeColor('td_energy', root)`; Then `ok`→зелений, `warn`→жовтий, `alarm`→червоний, `gen`→бурштиновий, `off`→сірий; невідомий `scene` → `null`; легенда містить пороги | UT-JS |
-| AC-289 | FR-62 | Given `AlarmMarkers`; Then спрайти для `alarms[]` зі `scene` у `codeRoot`, ≤ ліміту; знімаються/`dispose` при оновленні й вимиканні шару; `reduceMotion` вимикає пульсацію; клік → `api.select(scene)` | UT-JS |
-| AC-290 | FR-63 | Given `NodeBlock`; Then чип стану, `P`, струм/%, ≤ 3 тривоги, кнопка «Відкрити картку вузла» лише при `card` і наявності `openAction`; клік → `openAction` `td_energy.node_card` з `params.code` | UT-JS |
-| AC-291 | FR-64 | When `action_td_open_3d('BW-2')`; Then `f3d_viewer.action` з `layers` (параметр), `mode='td_energy'`, `tab='energy'`, `code='BW-2'`; вузол без об'єкта в сцені (приклад у тесті: `BW-4` з `equipment_id.td_code`, якого немає в сцені; `PFC-2` **є** в сцені, тож `scene` не порожній) → `code=null`, `td_energy_node='BW-4'`; невідомий код → `UserError`; без `code` — лише шар | UT |
-| AC-292 | FR-64 | Given td_energy client (§3.4 п.1); Then «Відкрити в 3D» і «Показати в 3D» (Пульт, панель вузла, картка, мобільний) використовують `viewerLinks.default`; без моста — шлях W1/сповіщення; ключ `layer` виправлено на `layers` | UT-JS |
-| AC-293 | FR-62…FR-64 | Given стенд (ТК-28); When «Відкрити в 3D» → режим «Електромережа: стан вузлів», маркер на `C2`; клік по ШР-2 → блок «Енергетика» → «Відкрити картку вузла» відкриває `td_energy.node_card`; «Показати в 3D» для `BW-2` підсвічує вузол; зміна стану (сценарій емулятора) оновлює колір і маркери ≤ 10 с; скріншоти | TC/MAN |
+AC-282…AC-293 перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §12.2 (єдина нумерація W2).
+
 
 ### 12.16 Екран «Керування» (UI) і правки клієнта td_energy — AC-294…AC-303
 
@@ -1607,7 +1531,7 @@ services/collector_plugins/td_collector_energy/
 | `services/iot_sim/tests/unit/test_swbctl.py` | AC-269 |
 | `services/iot_sim/tests/unit/test_control_models.py` | AC-270…AC-274 |
 
-**Міст 3D і переглядач (D)**: `td_energy_viewer3d/tests/{test_layer_payload.py::TestLayerPayload (AC-282…AC-285), test_delta.py::TestDelta (AC-286), test_kiosk.py::TestKiosk (AC-287), test_deeplink.py::TestDeepLink (AC-291), test_hoot.py::TestEnergyLayerHoot (AC-288…AC-290)}`; `td_viewer3d/static/tests/hoot/extension_energy.test.js` (AC-278…AC-280); `td_viewer3d/tests/test_r26_extension.py` і повний прогін `/td_viewer3d` + `/td_constructor_viewer3d` (AC-281).
+**Міст 3D і переглядач (D)**: тести `td_energy_viewer3d` і `td_viewer3d` (AC-278…AC-293) — [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §13.1.
 
 ### 13.2 Стендові сценарії ТК-19…ТК-28 (`td_energy_control/tests/stand/test_tk_control.py` + Playwright)
 
@@ -1624,7 +1548,7 @@ services/collector_plugins/td_collector_energy/
 | ТК-25 | Нічний режим (AC-307а) | `POST /sim/v1/time` → 22:59, потім 23:00; потім 06:30 | о 23:00 цілі BMS отримали `VEL`/черговий сценарій/16 °C, журнал «Вентиляція · нічний режим»; о 06:30 — день (`VE`), «RoofVent 25 шт. → 100 %»; чип «Наступний запуск о 23:00» ↔ «Активний до 06:30» |
 | ТК-26 | Резервне живлення (AC-307б) | `mains_loss` (сценарій W0), після — відновлення | `backup` `active`, неважливі навантаження скинуті, критичні лишилися; після відновлення + `restore_delay_s` — повернені; чип «Мережі немає · скинуто N» → «Готовий · паливо 78 %» |
 | ТК-27 | Відмови (AC-308) | зупинити збирач; запустити; зупинити Odoo на 5 хв; вимкнути `write_enabled` посеред виконання | сторожові таймери повертають BESS/скидання ≤ 60 с; чип «Збирач не на зв'язку», подія `CTRL-HEARTBEAT`; автономія за кешем; після рестарту володіння відновлено; решта кроків скасована |
-| ТК-28 | 3D (AC-293) | Пульт → «Відкрити в 3D»; клік по ШР-2; «Відкрити картку вузла»; Пульт → вузол `BW-2` → «Показати в 3D»; змінити стан (`pfc_step_fault`/відключення лічильника) | режим «Електромережа: стан вузлів», маркери за тривогами, блок «Енергетика», перехід у картку, підсвічування вузла; колір/маркер оновлюються ≤ 10 с; кіоск без картки |
+| ТК-28 | 3D (AC-293) | див. [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §13.2 | — |
 
 ### 13.3 Тести безпеки (ТБ-11…ТБ-15)
 
@@ -1637,7 +1561,7 @@ services/collector_plugins/td_collector_energy/
 ### 13.4 Тести продуктивності (ТП-10…ТП-12)
 
 - ТП-10: `get_control` ≤ 400 мс і ≤ 40 SQL, `prepare`/`confirm` ≤ 300 мс, API-24 ≤ 200 мс, API-25 (100 дій + 200 подій) ≤ 300 мс (R-64).
-- ТП-11: `energy.layer` ≤ 12 КБ, побудова ≤ 150 мс на 123 вузлах; дельта ≤ 100 мс; клієнт — ≤ 40 маркерів без падіння нижче 30 кадр/с на планшеті (MAN).
+- ТП-11 (`energy.layer`, 3D) — [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §13.4.
 - ТП-12: тік рушія ≤ 50 мс p95 на 1000 тіків; пам'ять ≤ 60 МБ за 1 год із `FakeOdoo`; записів у пристрої ≤ 30/хв; `Store` ≤ 1 МБ.
 
 ### 13.5 DEPLOY_TEST (новий `docs/modules/td_energy_control/DEPLOY_TEST.md`)
@@ -1678,8 +1602,6 @@ services/collector_plugins/td_collector_energy/
 | A-49 | Двокроковий потік `prepare → confirm` з токеном (TTL 60 с), `confirm` ідемпотентний; діалог показує перевірки з Odoo | Діалог макета; захист від подвійних кліків |
 | A-50 | Дії `config` застосовуються в Odoo одразу, «застосованість» — за `applied_version` збирача; чип «Очікує застосування» | Істину про виконання дає збирач (D-20) |
 | A-51 | Журнал = `td.energy.action` + події W1; скасування — окрема дія в межах `undo_window_min`; **при деінсталяції дані модуля видаляються разом із ним, архівних таблиць немає (D-45, рішення менеджера)** (R-66) | Єдиний бізнес-журнал (GAP CT-14); права за класом; поведінка як у будь-якого модуля Odoo |
-| A-52 | Шар 3D — міст `td_energy_viewer3d` + адитивні VX-01…VX-05 у `td_viewer3d`; ключ `energy.layer` не змінює `meta.schema` | `td_energy` не залежить від `td_viewer3d`; зразок `td_constructor_viewer3d` |
-| A-53 | `scene` вузла = `equipment.td_code` або `node.code`; `C1`/`C2` → `CABLES` (найгірший стан); маркери малює клієнт | Модель сцени має один об'єкт кабелів |
 | A-54 | Нічний режим — режими BMS `VEL`/`VE` і `sp_night`; «30 %» — довідковий текст | Що вміє `td_bms` (D-40) |
 | A-55 | Емулятор: скидання через `consumer_p` у `meter.py`; `export_demo`, `peak_load`; ручний режим PFC вимикає ступені | Відтворюваність макета на стенді |
 | A-56 | Обмеження СЕС (`pv/limit_pct`) ділить сторожовий таймер зі скиданням (`shed/valid_s`) | Менше регістрів; однакова семантика fail-safe |
@@ -1694,4 +1616,4 @@ services/collector_plugins/td_collector_energy/
 | A-65 | (реалізація A) `never_shed` API-24 = критичні вузли без активного рядка пріоритетів + константа `NEVER_SHED_CODES` (`EF-ELEC`, `EF-CHG`, `DUST-1`); `shed.item` без сигналу обмеження не створюється (сигнали є лише в 5 вузлів таблиці 5.5) | Збирач пише лише в сигнали, перелічені в конфігу (R-60 п.2 б) |
 | A-66 | (реалізація A) План дня (R-54 п.7): слоти `genset` режиму `test` не будуються — `adapters.schedule_info` віддає текстові вікна, а не тест-слоти; рядок «ДГУ» розкладу порожній | ADP-06 не містить структурованих вікон; рядок лишається у виводі (6 рядків, AC-211) |
 | A-67 | (реалізація A) Номер дії — `ir.sequence` `td.energy.action` (`seq_action`, `ACT/%(y)s/#####`), `idem = sha1("<id>:<kind_code>")`; для подій автоматики `idem = event_id` (≤ 40 символів) | Єдина унікальність `idem` (частковий `UNIQUE`) і дедуплікація подій |
-| X-93 | (`td_viewer3d`) VX-01…VX-05 адитивні; ядро не залежить від `td_energy`; без розширень поведінка не змінюється | Сумісність із `td_constructor_viewer3d` |
+| A-52, A-53, X-93 | (міст 3D) | Перенесено до [td_energy_viewer3d/SPEC.md](../td_energy_viewer3d/SPEC.md) §15 (рішення про шар 3D, вибір `scene`, адитивність VX-01…VX-05) | Єдина нумерація W2 |
