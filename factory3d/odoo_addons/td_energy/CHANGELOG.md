@@ -21,6 +21,18 @@
   `td.energy.outage._td_ats_open` (`critical_kw`).
 - Тести: послідовні вікна з якорем + повтор вставляє 0; збій `_td_after_build` не ламає транзакцію.
 
+## 19.0.1.1.2 — шафа вводу КГУ QF-CHP на секції 2
+- `td.energy.node.cell_type` + `generator` («Ввід генератора»): автомат вводу генератора на секцію шин. Вузол `QF-CHP` (`cell`, секція 2,
+  ГРЩ `SWB-1`, 1600 А — 800 кВт / (√3 · 0,4 кВ · 0,95) ≈ 1215 А, ряд 1250/1600, `sequence=105`); `CHP` живиться від `QF-CHP`, а не від `SEC-2`.
+- Схема Пульту: `QF-CHP` (1214, 192) над шиною секції 2, КГУ — над шафою (1214, 84), ребра `SEC-2 → QF-CHP → CHP`; `edgePath` вміє ребро
+  «дитина над батьком»; 22 вузли на схемі. Стан шафи = стан КГУ, блок «P кВт», факти R-29 (`tools/sld.py`).
+- Картка вузла `QF-CHP`: шлях, чіп «Генерує», `kpis`/`chart`/`meter` за вимірюваннями КГУ (`infra/totals/chp_kw`, `TEDOM-1`);
+  `energy.cells` (payload 3D): тип `generator`, `rating_a`, `generator`, `p_now`, `i_now`. Баланс секцій `S2` за лініями — без змін.
+- Генератор `tools/gen_energy_data.py` випускає `QF-CHP`; `energy_nodes.csv` — 124 рядки.
+- Міграція `19.0.1.1.2` (`hooks._migrate_chp_cell`, ідемпотентна): створює `QF-CHP`, перевішує `CHP` (лише з `SEC-2`), зсуває блок КГУ на
+  схемі (лише зі старого місця), довантажує геометрію `QF-CHP`; правки користувача не перезаписуються.
+- Тести: `tests/test_chp_cell.py`, `test_payload.py::test_generator_cell`; hoot `sld.test.js` (ребро над батьком).
+
 ## Unreleased
 - W4 (C-02): хук `td.energy.dashboard._td_report_action()` (у базі `None`; значення задає `td_energy_analytics`); `get_pult`:
   `meta.report_action` і `capabilities.report = bool(хук)`; кнопка «Звіт за зміну» Пульту відкриває `meta.report_action`

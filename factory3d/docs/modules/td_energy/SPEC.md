@@ -204,7 +204,7 @@ class F3dEnergyNode(models.Model):
 | `sequence` | Integer | `default=10` (шафи ГРЩ — 10…110 зліва направо, `SWB_CELLS` макета) |
 | `active` | Boolean | `default=True` |
 | `kind` | Selection `KINDS` | `req`, `idx`, `string="Вид"`, `tracking=True` |
-| `cell_type` | Selection | `[('incomer','Ввідна'),('feeder','Фідер шинопроводу'),('cable','Кабельні фідери'),('coupler','Секційний вимикач'),('pfc','Компенсація')]`, `string="Тип шафи"` |
+| `cell_type` | Selection | `[('incomer','Ввідна'),('feeder','Фідер шинопроводу'),('cable','Кабельні фідери'),('coupler','Секційний вимикач'),('pfc','Компенсація'),('generator','Ввід генератора')]`, `string="Тип шафи"`; `generator` (19.0.1.1.2) — автомат вводу генератора на секцію шин (`QF-CHP`): його дитина — вузол-генератор, показники беруться з вимірювань генератора (`infra/totals/chp_kw`), власних сигналів і лічильників немає |
 | `line_kind` | Selection | `[('busway','Шинопровід'),('cable','Кабелі')]`, `string="Тип лінії"` |
 | `gen_kind` | Selection | `[('pv_inverters','СЕС: група інверторів'),('pv_inverter','Інвертор СЕС'),('pv_field','Поле модулів СЕС'),('chp','Когенерація'),('genset','Дизель-генератор')]`, `string="Тип генерації"` |
 | `parent_id` | Many2one `td.energy.node` | `string="Живиться від"`, `ondelete="restrict"`, `idx` (A-16) |
@@ -885,7 +885,7 @@ access_td_energy_recompute_wizard_manager,td.energy.recompute.wizard manager,mod
 список unit id і адреси — зашиті таблиці Додатків A і D (з iot_sim §8.4.1, §8.7, §8.9 і виправлень A-06). Пише
 детерміновано (сортування як у Додатках, без часових міток):
 
-**`energy_nodes.csv`** (123 рядки, порядок Додатка B): `code,name,kind,cell_type,line_kind,gen_kind,parent,cabinet,peer,
+**`energy_nodes.csv`** (124 рядки, порядок Додатка B): `code,name,kind,cell_type,line_kind,gen_kind,parent,cabinet,peer,
 section,sequence,equipment,workcenter,rating_a,rating_kva,rating_kvar,voltage_kv,p_inst_kw,p_inst_source,load_factor,
 idle_factor,cos_phi,is_critical,alloc_role,pool,group,unit,note`. Порожня колонка = не задано. Шафи: `cabinet=SWB-1`,
 `sequence` 10…110; `QS`: `parent=SEC-1`, `peer=SEC-2`; `ATS-1`: `parent=SWB-1`; `GENSET`: `parent=ATS-1`.
@@ -1352,12 +1352,13 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
    `chp_kw`, `export_kw`, `bess_kw` (R-06), новий `contract_kw` (опційний ключ).
 3. `transformers` T1/T2: `name`, `rating_kva`, `section`, `p_kw` (1 знак), `s_kva` (ціле), `load` (3 знаки), `i_a`
    (ціле), `temp_c` (1 знак), `cos_phi` (2 знаки), `incomer` (`Q1`/`Q2`).
-4. `cells` — 11 шаф за `sequence`: `name`, `type` (= `cell_type`), `section` (`null` для QS), `feeds` (incomer — код
+4. `cells` — 12 шаф за `sequence` (11 + `QF-CHP`, 19.0.1.1.2): `name`, `type` (= `cell_type`), `section` (`null` для QS), `feeds` (incomer — код
    трансформатора-батька; feeder/cable — код лінії; інакше `null`); incomer: `i_now`, `p_now`, `rating_a`, `state`
    (`closed`→`"on"`, `open`→`"off"`, `tripped`→`"tripped"`, немає сигналу → `"on"`); coupler: `rating_a`, `state` `"off"`,
    `note` «Розімкнений: секції живляться кожна від свого трансформатора. АВР замкне його, якщо зникне напруга на одному з
    вводів.»; pfc: `rating_kvar`, `q_now` (R-06), `steps` «50 + 3 × 100 квар», `cos_before`, `cos_after` секції;
-   feeder/cable: `line`, `i_now`, `p_now`, `rating_a`, `state`.
+   feeder/cable: `line`, `i_now`, `p_now`, `rating_a`, `state`; generator (`QF-CHP`): `rating_a`, `generator` (код вузла-генератора,
+   `CHP`), `p_now` (= `infra/totals/chp_kw`, без значення — немає вимірювання), `i_now` (= `P·1000/(√3·380·cos φ)`, cos φ вузла 0,95).
 5. `lines` — 6: `kind` (`busway`/`cable` — як макет), `name`, `cell`, `rating_a`, `consumers` (коди), `p_inst`, `p_now`,
    `cos_phi`, `i_now`, `load`.
 6. `consumers` — 49: `name`, `feeder` (код шафи), `bus` (код шинопроводу або `null`), `p_inst`, `p_now` (округлення
@@ -1813,12 +1814,12 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | `onoff` | `{"0":"off","1":"on"}` | `["off","on"]` | — |
 | `ats_source` | `{"0":"under","1":"present","2":"available"}` | `["under","present","available"]` | — |
 
-## Додаток B. Вузли мережі (`data/energy_nodes.csv`, 123 рядки, з `plant/energy.py`, `plant/infra.py`)
+## Додаток B. Вузли мережі (`data/energy_nodes.csv`, 124 рядки, з `plant/energy.py`, `plant/infra.py`; 19.0.1.1.2: +`QF-CHP`)
 
 Колонки: вид/тип шафи; батько (`parent`); обладнання (`equipment`, код `search_f3d`); РЦ; номінал; `p_inst_kw`;
 `load_factor`; `idle_factor`; `cos_phi`; `p_inst_source`; роль у розподілі · пул; критичний; unit id стенда. Секції:
 вузли під `SEC-1` (через предків) — `section=1`, під `SEC-2` — 2; `QS` — 0 (з'єднує, `peer=SEC-2`); шафи —
-`cabinet=SWB-1`, `sequence` 10, 20 (`Q1`), …, 110 (`PFC-2`) у порядку `SWB_CELLS`; `RM6-1`, `GRID-10KV` —
+`cabinet=SWB-1`, `sequence` 10, 20 (`Q1`), …, 110 (`PFC-2`) у порядку `SWB_CELLS`, `QF-CHP` (ввід КГУ, 19.0.1.1.2) — 105 (між `Q2` і `PFC-2`); `RM6-1`, `GRID-10KV` —
 `voltage_kv=10`; `note`, `group` — з макета (`consumers()[code].note/group`).
 
 | № | Код | Вид | Живиться від | Обладнання | РЦ | Номінал | P вст., кВт | kf | idle | cos φ | Джерело | Роль · пул | Крит. | unit |
@@ -1841,6 +1842,7 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | 16 | `QF-4` | cell/feeder | SEC-2 | QF-4 | — | 630 А | — | — | — | — | — | — | — | — |
 | 17 | `QF-C2` | cell/cable | SEC-2 | QF-C2 | — | 400 А | — | — | — | — | — | — | — | — |
 | 18 | `PFC-2` | cell/pfc | SEC-2 | PFC-2 | — | 350 квар | — | — | — | — | — | — | — | — |
+| 24а | `QF-CHP` | cell/generator | SEC-2 | — | — | 1600 А | — | — | — | 0,95 | — | — | — | — |
 | 19 | `BW-1` | line/busway | QF-1 | BW-1 | — | 630 А | — | — | — | — | — | — | так | — |
 | 20 | `BW-2` | line/busway | QF-2 | BW-2 | — | 630 А | — | — | — | — | — | — | — | — |
 | 21 | `BW-3` | line/busway | QF-3 | BW-3 | — | 630 А | — | — | — | — | — | — | — | — |
@@ -1942,7 +1944,7 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | 117 | `PV-INV-7` | generator/pv_inverter | PV-INV | PV-INV | — | — | 115 | — | — | — | — | — | — | 67 |
 | 118 | `PV-INV-8` | generator/pv_inverter | PV-INV | PV-INV | — | — | 115 | — | — | — | — | — | — | 68 |
 | 119 | `PV-ROOF` | generator/pv_field | PV-INV | PV-ROOF | — | — | 900 | — | — | — | — | — | — | — |
-| 120 | `CHP` | generator/chp | SEC-2 | CHP | — | — | 800 | — | — | — | — | — | — | 72 |
+| 120 | `CHP` | generator/chp | QF-CHP | CHP | — | — | 800 | — | — | — | — | — | — | 72 |
 | 121 | `BESS` | storage | SEC-2 | BESS | — | — | 200 | — | — | — | — | — | — | 69 |
 | 122 | `ATS-1` | ats | SWB-1 | ATS-1 | — | — | — | — | — | — | — | — | — | 71 |
 | 123 | `GENSET` | generator/genset | ATS-1 | GENSET | — | — | 507 | — | — | — | — | — | — | — |
@@ -2467,3 +2469,29 @@ ID зберігають нумерацію W1_SPEC (продовження ць�
 - W2 — [td_energy_control](../td_energy_control/SPEC.md) (керування: сценарії, команди, плагін збирача `td_collector_energy`) і міст [td_energy_viewer3d](../td_energy_viewer3d/SPEC.md) («Енергетика в 3D»);
 - W3 — [td_energy_resources](../td_energy_resources/SPEC.md) (газ, повітря, тепло, тарифи, резерви) і міст [td_energy_resources_bms](../td_energy_resources_bms/SPEC.md);
 - W4 — [td_energy_analytics](../td_energy_analytics/SPEC.md) (аналітика, модель бази ISO 50001, звіти) і [td_energy_mobile](../td_energy_mobile/SPEC.md) (вкладка «Обхід»).
+
+---
+
+## Шафа вводу КГУ `QF-CHP` (19.0.1.1.2)
+
+КГУ TEDOM Quanto D800 (вузол `CHP`, `generator/chp`) раніше підключалась прямо до секції шин 2. Тепер вона живиться через
+автомат — вузол `QF-CHP` (`cell`, `cell_type='generator'`, `parent=SEC-2`, `cabinet=SWB-1`, `section=2`, `sequence=105`,
+`rating_a=1600`, `cos_phi=0,95`); `CHP.parent = QF-CHP`. Номінал: 800 кВт / (√3 · 0,4 кВ · 0,95) ≈ 1215 А → з ряду 1250/1600 —
+1600 А (1250 А не лишає запасу). Лічильник і сигнали лишаються на `CHP` (`TEDOM-1`, `infra/totals/chp_kw`), шафа власних не має.
+
+| Місце | Що змінено |
+|---|---|
+| `tools/sld.py` (`Snap`) | `generator_of/generator_power/generator_current` (P — `infra/totals/chp_kw`, I = P/(√3·380·cos φ)); стан шафи = стан її генератора (`gen`/`alarm`/`off`, події вузла — вище); блок: «<P> кВт»; факти R-29: «Ввід … на секцію шин 2», «Номінал 1600 А», «Видає P кВт · ≈ I А»; `load_pct` = I / `rating_a` |
+| Схема Пульту | `data/sld_layout.csv`: `QF-CHP` box (1214, 192, 88×64) — над шиною секції 2; `CHP` перенесено на (1214, 84), тобто над шафою; ребра `SEC-2 → QF-CHP → CHP`; `edgePath` (JS) вміє ребро «дитина над батьком» (від верху батька до низу дитини) — зміна лише для box→box, де дитина вища за батька. Схема: 22 вузли (було 21) |
+| Картка вузла (`NodeCard`) | `QF-CHP`: шлях `SWB-1 → SEC-2 → QF-CHP`, чіп «Генерує»/«Не генерує»/«Тривога», `kpis` (струм/потужність/енергія/пік), `chart` і `meter` — за лічильником КГУ (`TEDOM-1`); без `taps`/`protection` |
+| Баланс секцій (D-47) | Секція `S2` рахується за лініями (`kind='line'`) і не змінюється: ні шафа, ні КГУ не додаються до `energy/sections/S2/p_kw` вдруге й не губляться; баланс лічильників (`td.energy.balance`) бере КГУ за роллю `generation` лічильника `TEDOM-1`, шафа типу `generator` у перевірку вводів/фідерів не входить |
+| `viewer_provider` (`energy.cells`) | `QF-CHP`: `type='generator'`, `rating_a`, `generator`, `p_now`, `i_now`; у картці ГРЩ (`td_viewer3d`, `core.js`) — рядки «Підключено / Номінал / Потужність», у таблиці шаф — потужність КГУ |
+| 3D-шар (`td_energy_viewer3d`) | `QF-CHP` — вузол шару (`kind=cell`), `p_kw/i_a/load/rating_a` з картки; `scene` лише якщо код є в сцені |
+| W2 | Команди `chp_start/chp_stop` адресовані вузлу `CHP` (`_td_node_for`) — без змін |
+| Міграція | `migrations/19.0.1.1.2/post-migration.py` → `hooks._migrate_chp_cell` (ідемпотентна): створює `QF-CHP`, якщо немає; `CHP` перевішує лише якщо досі під `SEC-2`; блок `CHP` на схемі зсуває лише з старого місця (1214, 192); потім `_load_sld_layout` (геометрія `QF-CHP`) |
+
+## Журнал змін документа
+
+| Дата | Версія модуля | Зміна |
+|---|---|---|
+| 19.10.2026 | 19.0.1.1.2 | Шафа вводу КГУ `QF-CHP` (`cell_type='generator'`) на секції 2 ГРЩ; `CHP` живиться від неї; `energy_nodes.csv` 124 рядки (було 123), `sld_layout.csv` — `QF-CHP` і `CHP` (22 вузли на схемі); `energy.cells` 12 шаф; Додаток B, M-01 (`cell_type`) оновлено. У `build/energy/W1_SPEC.md` AC-103 («123 вузли, 21 блок схеми») застаріло: тепер 124 і 22 |

@@ -418,7 +418,8 @@ access_td_energy_ticket_wizard_manager,td.energy.ticket.wizard manager,model_td_
 | Q2 | label | 1002 | 266 | 0 | 0 | Q2 · 1600 А | |
 | QS | switch | 636 | 289 | 48 | 24 | QS | |
 | PV-INV | box | 1110 | 192 | 88 | 64 | СЕС |  |
-| CHP | box | 1214 | 192 | 88 | 64 | КГУ |  |
+| QF-CHP | box | 1214 | 192 | 88 | 64 | QF-CHP |  |
+| CHP | box | 1214 | 84 | 88 | 64 | КГУ |  |
 | PFC-1 | box | 50 | 336 | 120 | 84 | PFC-1 |  |
 | BW-3 | box | 190 | 336 | 120 | 84 | ШР-3 |  |
 | BW-2 | box | 330 | 336 | 120 | 84 | ШР-2 |  |
@@ -793,7 +794,7 @@ access_td_energy_ticket_wizard_manager,td.energy.ticket.wizard manager,model_td_
 | AC-100 | FR-36 | Given база з 3 подіями до міграції (`title IS NULL`, `warn`, `info`, `bad`); When `post-migration` 19.0.1.1.0 двічі; Then `title/detail` за R-24, `warn/bad → resolved` (`resolved_at=ts`), `info → na`; друга міграція нічого не змінює | UT |
 | AC-101 | FR-33 | Given 10 викликів `tools.bus.tick('alarm')` за 3 с; When commit; Then до `bus.bus` пішло **1** повідомлення `td_energy/update` з `kinds=['alarm']`; після 5 с наступний `tick('kpi')` → друге повідомлення; payload без ключів `cost`, `price`, `kwh`, значень сигналів | UT |
 | AC-102 | FR-33 | Given `td.energy.event.create(warn)`, `action_ack`, `action_take`, зміна стану плану відключення; Then кожна дія додає вид у тік (`alarm`/`state`) | UT |
-| AC-103 | FR-33 | Given `data/sld_layout.csv`; When `_load_sld_layout(env)` на БД із 123 вузлами; Then рівно 21 вузол `sld_show=True`; `GRID-10KV`: `(580, 24, 160, 44)`, `T1`: `(230, 192, 200, 64)`, `SEC-1`: `shape='bar'`, `(40, 298, 590, 6)`; користувач змінив `sld_x` вузла `BW-2` → повторне завантаження його не перезаписує; відсутній код → warning, без винятку | UT |
+| AC-103 | FR-33 | Given `data/sld_layout.csv`; When `_load_sld_layout(env)` на БД із 124 вузлами; Then рівно 22 вузли `sld_show=True` (19.0.1.1.2: +`QF-CHP`); `GRID-10KV`: `(580, 24, 160, 44)`, `T1`: `(230, 192, 200, 64)`, `SEC-1`: `shape='bar'`, `(40, 298, 590, 6)`; користувач змінив `sld_x` вузла `BW-2` → повторне завантаження його не перезаписує; відсутній код → warning, без винятку | UT |
 | AC-104 | FR-33 | Given фікстура сигналів; When `tools.sld.states(...)`; Then: `QS=closed → ok`, `open → off`; `PV pv_now=309 → gen`, `0 → off`; `CHP state=stop → off`, `running → gen`; `ATS position=2 → off`, `3 → gen`; лічильник C2 `stale` → `alarm`; `PFC-2` cos 0,88 → `warn`, cos 0,86 → `warn`, cos `< 0,90` → `alarm`; `fault_step=3` → `warn`; `T1` завантаження 85 % → `warn`, 101 % → `alarm`, 50 % → `ok` | UT |
 | AC-105 | FR-33 | Given `BESS` `bess_kw=+50` і `−50` → `gen`; `0` → `ok`; `state=fault` → `alarm` | UT |
 | AC-106 | FR-33 | Given пара вузлів і шина; When `sld.js: edgePath(parent, child)`; Then для `bar` над вузлом — вертикаль від `bar.y+bar.h` до `child.y` на `x=child.x+child.w/2` (затиснуто в межі шини); для `box→box` — ламана з `y_mid=(P.y+P.h+N.y)/2` (приклад RM6-1 → T1: `M660 144 V168 H330 V192`) | UT-JS |
