@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import requests
-
 from odoo import fields
 from odoo.exceptions import UserError
 from odoo.tests import tagged

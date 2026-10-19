@@ -7,7 +7,6 @@ Odoo викликає `post_init_hook` лише при першому встан
 import logging
 
 from odoo import SUPERUSER_ID, api
-
 from odoo.addons.td_iot_sim.hooks import post_init_hook
 
 _logger = logging.getLogger(__name__)

@@ -2,7 +2,6 @@ import logging
 import re
 
 import requests
-
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 

@@ -6,7 +6,6 @@
 import logging
 
 from odoo import SUPERUSER_ID, api
-
 from odoo.addons.td_iot_sim.hooks import refresh_registry
 
 _logger = logging.getLogger(__name__)
