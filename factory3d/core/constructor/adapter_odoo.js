@@ -3,6 +3,7 @@
 // (id = стабільний `uid` сутності, серверний id — `rid`); сюди ж належить відображення «API-03 → стан редактора» і назад
 // (`toApi`). Odoo-залежності не імпортуються: `rpc`, `orm`, `action` та завантажувач 3D-моделей передає хост.
 import { BaseAdapter, StoreError, newUid } from "./adapter.js";
+import { itemsToApi } from "./building_core.js";
 import { clone, rnd } from "./util.js";
 
 export { StoreError, newUid };
@@ -113,6 +114,7 @@ export function layerFromApi(l) {
         aisles: (l.aisles || []).map(rectOf),
         fire_paths: (l.fire_paths || []).map(rectOf),
         utilities: clone(l.utilities || []),
+        items: clone(l.items || []), // S5: об'єкти будівлі (F18)
         underlay: underlayFromApi(l.underlay),
     };
 }
@@ -208,6 +210,7 @@ export function slotFromApi(s, layerUid) {
         type_id: s.type_id ?? null,
         addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : null,
         depth_mode: s.depth_mode || null,
+        tech: s.tech || null, // S5 (N-06): техніка зони; null — як у складу
     };
     if (s.template === "zone") {
         // зона на сервері — полігон у світових координатах (x=y=0); редактор показує прямокутник
@@ -302,6 +305,10 @@ export function normalizeLoaded(data) {
             addr: clone(site.addr || {}),
             loc_tree: site.loc_tree || "flat",
             depth_mode: site.depth_mode || "level",
+            // S5: висота спринклерів, техніка складу (N-06) і стан майстра «З нуля» (F16)
+            sprinkler_height: site.sprinkler_height || 0,
+            aisle_tech: site.aisle_tech || null,
+            wizard_state: clone(site.wizard_state || {}),
             parse_rules: clone(site.parse_rules || {}), // S4: правила розбору кодів і лоток «Не розміщено» (F10)
         },
         layers,
@@ -372,6 +379,7 @@ export function layerToApi(l, groupIds = {}) {
             z: rnd(u.z || 0, 4),
         })),
         allowed_slot_types: [...(l.slot_types || [])],
+        items: itemsToApi(l.items), // S5: об'єкти будівлі (R-22)
     };
     if (l.underlay) {
         vals.underlay_params = { ...l.underlay.params };
@@ -403,6 +411,7 @@ export function slotToApi(s) {
         type_id: s.type_id ?? null,
         addr: s.addr && Object.keys(s.addr).length ? clone(s.addr) : {},
         depth_mode: s.depth_mode || null,
+        tech: s.tech || false, // S5 (N-06): техніка зони
     };
     if (s.template === "zone") {
         const title = s.params.title;
@@ -960,6 +969,10 @@ export class OdooAdapter extends BaseAdapter {
             Object.assign(out, { column_step_x_m: out.column_grid.step_x, column_step_y_m: out.column_grid.step_y });
             delete out.column_grid;
         }
+        if ("sprinkler_height" in out) {
+            out.sprinkler_height_m = out.sprinkler_height; // S5: висота спринклерів
+            delete out.sprinkler_height;
+        }
         await this.orm.write("td.site", [this.siteId], out);
     }
 
@@ -973,6 +986,26 @@ export class OdooAdapter extends BaseAdapter {
             throw new StoreError(res.code, res.message);
         }
         return { pinned: res.pinned, reload: true };
+    }
+
+    /** Склади Odoo для вибору в майстрі «З нуля» (S5, F16-01): склад не створюється, лише вибирається → [{id, name, code}]. */
+    async warehouses() {
+        if (!this.orm) {
+            return [];
+        }
+        return await this.orm.searchRead("stock.warehouse", [], ["name", "code"], { order: "name", limit: 200 });
+    }
+
+    /**
+     * Стан майстра «З нуля» (S5, F16-04): значення форм і створене — свій маршрут `/site/wizard` (API-04 і ORM площадку не пишуть для
+     * проєктувальника); `state` — довільний Json до 256 КБ.
+     */
+    async saveWizard(state) {
+        const res = await this._call("/f3d/constructor/site/wizard", { site_id: this.siteId, state });
+        if (!res.ok) {
+            throw new StoreError(res.code, res.message);
+        }
+        return { reload: false };
     }
 
     /**

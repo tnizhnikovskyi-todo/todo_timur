@@ -46,7 +46,7 @@ export function mapOf(src) {
             m.set("v:" + v.id, JSON.stringify(v));
         }
     }
-    m.set("site", JSON.stringify([src.site.name, src.site.building, src.site.column_grid]));
+    m.set("site", JSON.stringify([src.site.name, src.site.building, src.site.column_grid, src.site.sprinkler_height || 0, src.site.aisle_tech || null]));
     m.set("cfg", JSON.stringify([src.settings.checks, src.settings.reach_n]));
     const rules = src.site.rules; // S2: правила розміщення й поповнення — частина чернетки (порожній набір = немає)
     m.set("rules", JSON.stringify(rules && ((rules.putaway || []).length || (rules.replenish || []).length) ? rules : null));
@@ -341,6 +341,12 @@ export class ArtifactAdapter extends BaseAdapter {
 
     async saveSite() {
         this.save(this.getState());
+    }
+
+    /** Стан майстра «З нуля» (S5): `site.wizard_state` лежить у документі площадки й записується разом із ним. */
+    async saveWizard() {
+        this.save(this.getState(), { now: true });
+        return { reload: false };
     }
 
     /** Адресація площадки (S1): поля лежать у S.site і записуються разом із документом площадки; перенумерацію виконує ядро. */

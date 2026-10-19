@@ -28,8 +28,9 @@ class TestRegistryHooks(F3DConstructorCase):
         state = st.checks_state(self.site)
         configs = [{'check': 'inside', 'enabled': True, 'mode': 'warn', 'params': {'x': 1}}]
         before = checks.run_checks(state, configs)
-        self.assertEqual(before, [])  # реєстр порожній: ключ без перевірки ігнорується, як і раніше
-        CHECKS.register('inside', probe)
+        self.assertEqual(before, [])  # на площадці без місць справжня перевірка `inside` (S5) нічого не знаходить
+        original = CHECKS.get('inside')  # S5 зареєстрував справжню перевірку: проба тимчасово її заміняє
+        CHECKS.register('inside', probe, replace=True)
         CHECKS.register('fits', builtin_override)
         try:
             fits = {'check': 'fits', 'enabled': True, 'mode': 'block', 'params': {}}
@@ -41,7 +42,7 @@ class TestRegistryHooks(F3DConstructorCase):
             checks.run_checks(state, [])
             self.assertEqual(calls, [])  # вимкнена або неналаштована — не викликається
         finally:
-            CHECKS.unregister('inside')
+            CHECKS.register('inside', original, sequence=100, replace=True)
             CHECKS.unregister('fits')
         self.assertEqual(checks.run_checks(state, configs), before)
 
@@ -100,32 +101,34 @@ class TestRegistryHooksApi(F3DConstructorHttpCase):
         self.authenticate(self.u_manager.login, PASSWORD)
         res = self.rpc('/f3d/constructor/validate', site_id=self.site.id)
         self.assertEqual(res['summary'], {'block': 0, 'warn': 0})
-        CHECKS.register('inside', probe)
+        original = CHECKS.get('inside')
+        CHECKS.register('inside', probe, replace=True)
         try:
             res = self.rpc('/f3d/constructor/validate', site_id=self.site.id)
         finally:
-            CHECKS.unregister('inside')
+            CHECKS.register('inside', original, sequence=100, replace=True)
         self.assertEqual(res['summary'], {'block': 1, 'warn': 0})
         self.assertEqual(res['issues'][0]['codes'], ['A1'])
 
     def test_render_dispatches_to_registered_renderer(self):
         self.authenticate(self.u_plain.login, PASSWORD)
-        self.assertEqual(self.rpc('/f3d/constructor/render/plan_pdf', scale=1)['code'], 'not_implemented')
+        self.assertEqual(self.rpc('/f3d/constructor/render/plan_pdf', scale=1)['code'], 'validation')  # рендерер S5
 
         def renderer(env, payload):
             if payload.get('scale') == 0:
                 raise UserError("Масштаб має бути додатним.")
             return 'plan.pdf', 'application/pdf', b'%PDF-W0B ' + str(payload).encode()
 
-        RENDERERS.register('plan_pdf', renderer)
+        original = RENDERERS.get('plan_pdf')
+        RENDERERS.register('plan_pdf', renderer, replace=True)
         try:
             res = self.rpc('/f3d/constructor/render/plan_pdf', scale=2)
             bad = self.rpc('/f3d/constructor/render/plan_pdf', scale=0)
             other = self.rpc('/f3d/constructor/render/spec_pdf')
         finally:
-            RENDERERS.unregister('plan_pdf')
+            RENDERERS.register('plan_pdf', original, sequence=30, replace=True)
         self.assertTrue(res['ok'], res)
         self.assertEqual((res['filename'], res['mimetype']), ('plan.pdf', 'application/pdf'))
         self.assertEqual(base64.b64decode(res['content']), b"%PDF-W0B {'scale': 2}")
         self.assertEqual((bad['ok'], bad['code']), (False, 'validation'))
-        self.assertEqual(other['code'], 'not_implemented')  # інші ключі — як і раніше
+        self.assertEqual(other['code'], 'validation')  # інші ключі — власні рендерери (spec_pdf без таблиць)

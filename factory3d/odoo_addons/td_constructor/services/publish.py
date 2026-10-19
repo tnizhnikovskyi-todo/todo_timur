@@ -24,7 +24,7 @@ from psycopg2 import errors as pg_errors
 from odoo import Command, fields
 from odoo.exceptions import UserError
 
-from . import addr as addr_mod, cells as cells_mod, geometry as geo, snapshot, state as state_mod
+from . import addr as addr_mod, cells as cells_mod, geometry as geo, odoo_sync, snapshot, state as state_mod
 from .registry import CHECKS, PLAN_BUILDERS
 from .schemas import SCENE_ROLE_PREFIX
 
@@ -1073,6 +1073,17 @@ def _check_preconditions(site, plan):
         raise PublishError('no_changes', "Немає змін для публікації")
 
 
+def _refresh_baseline(site):
+    """S4: після публікації база порівняння «Оновити з Odoo» (`site.odoo_baseline_id`, F02-12) = нинішня стрічка локацій
+    складу. Без цього створене й змінене самою публікацією показувалося б як «з'явилося / перейменовано в Odoo», а
+    експорт «нові й змінені» тягнув би його знову. Помилка бази публікацію не скасовує (окрема точка збереження)."""
+    try:
+        with site.env.cr.savepoint():
+            odoo_sync.save_baseline(site, odoo_sync.full_feed(site.env, site)['locations'])
+    except Exception:  # noqa: BLE001 - база порівняння не варта відкату публікації
+        _logger.warning("Площадка %s: базу порівняння після публікації не оновлено", site.id, exc_info=True)
+
+
 def apply_plan(site, plan, archive_keys=(), note='', excluded=(), scope=None):
     """R-12 п. 6: застосувати план у транзакції; повертає
     `{'version', 'created', 'updated', 'archived', 'warnings', 'ops', 'skipped'}`.
@@ -1080,6 +1091,7 @@ def apply_plan(site, plan, archive_keys=(), note='', excluded=(), scope=None):
     `archive_keys` — множина `(res_model, code)` або голих кодів позначених пропозицій архівації (blocked ігноруються).
     `excluded` — множина `(res_model, code)` або `(res_model, code, kind)` знятих у майстрі рядків (пропускаються).
     `scope` — uid місць/зон: застосувати лише їхні рядки (F02-03); потрібні батьки додаються самі.
+    Після успіху база порівняння S4 оновлюється нинішньою стрічкою локацій (`_refresh_baseline`).
     Будь-який неочікуваний виняток відкочує все (`PublishError('rollback')`).
     """
     _check_preconditions(site, plan)
@@ -1092,6 +1104,7 @@ def apply_plan(site, plan, archive_keys=(), note='', excluded=(), scope=None):
             _lock_site(env, site)
             result = _apply(site, plan, chosen, note, scope)
             result['skipped'] = skipped
+            _refresh_baseline(site)
             return result
     except (PublishError, UserError):
         env.invalidate_all()

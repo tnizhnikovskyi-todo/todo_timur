@@ -2,11 +2,14 @@
 // з обходом перешкод) і `layoutPlan`; застосування — `autoLayoutZone` / `autoLayoutSite`: ОДНА звичайна зміна стану (E.commit з підписом),
 // тож `Ctrl+Z` повертає все одним кроком. Номери рядів і коди зон перед рухом закріплюються (S1), щоб коди комірок не залежали від геометрії.
 // Не вміщається — нічого не змінюється, а в повідомленні сказано, скільки місця потрібно. Перешкоди: проходи, пожежні шляхи й об'єкти
-// шару (layer.items: колони, стіни, офіс — S5), розміщення шару; контур — межі шару, інакше будівля.
+// шару (layer.items), розміщення шару і об'єкти будівлі (S5: колони, стіни, офіс, зарядка з шарів `building` і колони за `column_grid`;
+// `E.buildingObstacles()` = `obstacleRects(S.layers, S.site)`; колони `column_grid` обходяться, поки це можливо). Контур — `bounds` шару (масив точок ≥ 3), інакше контур будівлі
+// (`contourOf(шар building, site.building)`): осьовий прямокутник або многокутник (зона має лежати цілком усередині, обходячи вирізи).
 import { contextOf, rowNumberOf } from "./addr.js";
 import { formatValue, safeNormalize, slotPolygon } from "./addr_core.js";
+import { contourBbox, contourOf, isRectContour, obstacleRects } from "./building_core.js";
 import { SLOT_TEMPLATES, footprint } from "./cells.js";
-import { polygonContains } from "./geometry.js";
+import { obbInsidePolygon, polygonContains, rectObb, satPenetration } from "./geometry.js";
 import { pGeom, sGeom } from "./live.js";
 import { registries } from "./registry.js";
 import { canEditLayer, toastLock } from "./roles.js";
@@ -113,42 +116,66 @@ export function layoutLines(blocks, { aisle = 3, gap = 0.5, margin = 0.5, maxL =
 }
 
 const overlap = (a, b) => a[0] < b[2] - EPS && b[0] < a[2] - EPS && a[1] < b[3] - EPS && b[1] < a[3] - EPS;
+/** Перетин осьового прямокутника з перешкодою: перешкода з `.obb` (повернута не на кратний 90°) — за справжньою формою (SAT). */
+const hitBy = (box, o) => overlap(box, o) && (!o.obb || satPenetration(rectObb(box[0], box[1], box[2], box[3]), o.obb) > EPS);
+const SCAN_STEP = 0.5; // крок пошуку вільного місця: поряд із похилою перешкодою чи ребром многокутника
 
 /**
- * Зони в контурі «полицями» (зліва направо, далі наступна полиця): items — [{id, l, w}]; region — {x0, y0, x1, y1} або null (без обмеження
- * вправо); obstacles — [[x0, y0, x1, y1]]. → {ok, pos: Map(id → {x, y}) центри} або {ok: false, reason, need}.
+ * Зони в контурі «полицями» (зліва направо, далі наступна полиця): items — [{id, l, w}]; region — {x0, y0, x1, y1, poly?} або null (без
+ * обмеження вправо), `poly` — многокутник контуру (зона має лежати всередині нього з відступом `margin`); obstacles — [[x0, y0, x1, y1]]
+ * (+ `.obb` для похилих). Полиця, на якій перешкоди не лишили місця, пропускається вниз. → {ok, pos: Map(id → {x, y}) центри} або
+ * {ok: false, reason, need}.
  */
 export function packRects(items, region, obstacles = [], { gap = 1, margin = 0.5 } = {}) {
     const x0 = region ? region.x0 + margin : margin;
     const x1 = region ? region.x1 - margin : Infinity;
     const y0 = region ? region.y0 + margin : margin;
     const y1 = region ? region.y1 - margin : Infinity;
+    const poly = region && region.poly && region.poly.length >= 3 ? region.poly : null;
     const pos = new Map();
     let x = x0;
     let y = y0;
     let shelfH = 0;
+    let blocked = false; // на поточній полиці перешкода чи виріз контуру вже посунули зону
+    let everBlocked = false;
+    let guard = 0;
     for (const it of items) {
-        let guard = 0;
+        if (it.l > x1 - x0 + EPS) {
+            return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
+        }
         for (;;) {
-            if (++guard > 5000) {
+            if (++guard > 400000) {
                 return { ok: false, reason: "не вдалося знайти місце для зон", need: null };
             }
             if (x + it.l > x1 + EPS) {
-                if (shelfH === 0) {
+                if (shelfH === 0 && !blocked) {
                     return { ok: false, reason: `зона «${it.title || it.id}» ${fmt(it.l, 1)}×${fmt(it.w, 1)} м ширша за контур`, need: { l: it.l + 2 * margin, w: it.w } };
                 }
                 x = x0;
-                y += shelfH + gap;
+                y += shelfH > 0 ? shelfH + gap : SCAN_STEP;
                 shelfH = 0;
+                blocked = false;
                 continue;
             }
             if (y + it.w > y1 + EPS) {
-                return { ok: false, reason: `зона «${it.title || it.id}» не вміщається в контур (бракує глибини)`, need: { l: it.l + 2 * margin, w: y + it.w - y0 + margin } };
+                return {
+                    ok: false,
+                    reason: everBlocked
+                        ? `зона «${it.title || it.id}» не вміщається в контур: перешкоди (колони, стіни, офіс) і вирізи контуру не лишають місця`
+                        : `зона «${it.title || it.id}» не вміщається в контур (бракує глибини)`,
+                    need: { l: it.l + 2 * margin, w: y + it.w - y0 + margin },
+                };
             }
             const box = [x, y, x + it.l, y + it.w];
-            const hit = obstacles.find((o) => overlap(box, o));
+            if (poly && !obbInsidePolygon(rectObb(box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin), poly)) {
+                blocked = everBlocked = true;
+                x += SCAN_STEP;
+                continue;
+            }
+            const hit = obstacles.find((o) => hitBy(box, o));
             if (hit) {
-                x = hit[2] + gap;
+                blocked = everBlocked = true;
+                x = hit.obb ? x + SCAN_STEP : hit[2] + gap;
                 continue;
             }
             pos.set(it.id, { x: x + it.l / 2, y: y + it.w / 2 });
@@ -223,14 +250,23 @@ const rectOfItem = (it) => {
     const w = it.w ?? it.length ?? it.l;
     const d = it.d ?? it.depth ?? it.width;
     if ([it.x, it.y, w, d].every(Number.isFinite)) {
-        return [it.x - w / 2, it.y - d / 2, it.x + w / 2, it.y + d / 2];
+        const a = ((it.rot || 0) * Math.PI) / 180; // повернутий об'єкт — описаний прямокутник
+        const ex = (Math.abs(Math.cos(a)) * w + Math.abs(Math.sin(a)) * d) / 2;
+        const ey = (Math.abs(Math.sin(a)) * w + Math.abs(Math.cos(a)) * d) / 2;
+        return [it.x - ex, it.y - ey, it.x + ex, it.y + ey];
     }
     return null;
 };
 
-/** Перешкоди шару: проходи, пожежні шляхи, об'єкти шару (layer.items: колони, стіни, офіс), розміщення шару і місця під верстати. */
-export function layerObstacles(ly) {
-    const out = [];
+/** Перешкоди будівлі (S5) як масиви [x0, y0, x1, y1] (+ `.obb` для похилих): `E.buildingObstacles()` або `obstacleRects(S.layers, S.site)`; `grid: false` — без колон `column_grid`. */
+function buildingRects({ grid = true } = {}) {
+    const list = E.buildingObstacles ? E.buildingObstacles() : obstacleRects(S.layers, S.site);
+    return list.filter((r) => grid || !r.grid).map((r) => Object.assign([r.x0, r.y0, r.x1, r.y1], r.obb ? { obb: r.obb } : {}));
+}
+
+/** Перешкоди шару: проходи, пожежні шляхи, об'єкти шару (layer.items), об'єкти будівлі (колони, стіни, офіс, зарядка, колони сітки; `grid: false` — без колон сітки), розміщення шару і місця під верстати. */
+export function layerObstacles(ly, { grid = true } = {}) {
+    const out = buildingRects({ grid });
     for (const r of [...(ly.aisles || []), ...(ly.fire_paths || []), ...(ly.items || [])]) {
         const b = rectOfItem(r);
         if (b) {
@@ -251,14 +287,44 @@ export function layerObstacles(ly) {
     return out;
 }
 
-/** Контур: межі шару, інакше будівля. */
+/**
+ * Контур розкладки: `bounds` шару (масив точок ≥ 3), інакше контур будівлі — `contourOf(шар building, site.building)`. → {x0, y0, x1, y1, poly?}
+ * (описаний прямокутник; `poly` — лише для контуру, що не є осьовим прямокутником) або null, якщо контуру немає (габарит площадки порожній).
+ */
 export function regionOf(ly) {
-    const b = ly && ly.bounds && [ly.bounds.x0, ly.bounds.y0, ly.bounds.x1, ly.bounds.y1].every(Number.isFinite) ? ly.bounds : null;
-    if (b) {
-        return { x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 };
+    const own = ly && ly.bounds;
+    if (own && !Array.isArray(own) && [own.x0, own.y0, own.x1, own.y1].every(Number.isFinite)) {
+        return { x0: own.x0, y0: own.y0, x1: own.x1, y1: own.y1 }; // старий вигляд {x0, y0, x1, y1}
     }
-    const bl = S.site && S.site.building;
-    return bl && bl.length > 0 && bl.width > 0 ? { x0: 0, y0: 0, x1: bl.length, y1: bl.width } : null;
+    const bl = (S.layers || []).find((l) => l.kind === "building");
+    const pts = Array.isArray(own) && own.length >= 3 ? own.map((p) => [p[0], p[1]]) : S.site ? contourOf(bl || null, S.site.building) : null;
+    if (!pts || pts.length < 3 || !pts.flat().every(Number.isFinite)) {
+        return null;
+    }
+    const b = contourBbox(pts);
+    if (!(b.x1 - b.x0 > 0 && b.y1 - b.y0 > 0)) {
+        return null;
+    }
+    return isRectContour(pts) ? b : { ...b, poly: pts };
+}
+
+/**
+ * `layoutPlan` у контурі шару з перешкодами шару й будівлі; `args` — аргументи `layoutPlan` без `obstacles`, `extra` — додаткові перешкоди.
+ * Колони `column_grid` — лише крок сітки (стіни й явні колони — справжні об'єкти): за кроку менше за зону жодна зона між ними не стане,
+ * тож якщо з ними не вмістилось, а без них вміщається — розкладка йде без колон сітки (`gridIgnored: true`), решту перешкод дотримано.
+ */
+export function layoutAroundBuilding(ly, args, extra = []) {
+    const full = layerObstacles(ly);
+    const plan = layoutPlan({ ...args, obstacles: [...full, ...extra] });
+    if (plan.ok) {
+        return plan;
+    }
+    const lean = layerObstacles(ly, { grid: false });
+    if (lean.length === full.length) {
+        return plan;
+    }
+    const alt = layoutPlan({ ...args, obstacles: [...lean, ...extra] });
+    return alt.ok ? { ...alt, gridIgnored: true } : plan;
 }
 
 /** Закріплює номери рядів і коди зон (S1) без кроку історії: після руху коди комірок не залежать від геометрії. */
@@ -404,16 +470,18 @@ export function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes
     }
     const sorted = [...free].sort((a, b) => a.slot.x - b.slot.x || a.slot.y - b.slot.y || natural(a.slot.code_prefix, b.slot.code_prefix));
     const lineOf = (s) => (s.addr?.row_no ? `r${s.addr.row_no}` : s.id);
-    const plan = layoutPlan({
+    const args = {
         zones: sorted.map((z) => ({ id: z.slot.id, title: z.slot.params.title || z.slot.code_prefix, blocks: orderBlocks(own.get(z.slot.id)).map((s) => ({ ...blockOf(s), line: lineOf(s) })), fixed: fixedSizes || !own.get(z.slot.id).length ? { l: z.slot.params.length, w: z.slot.params.width } : null })),
         orphans: orderBlocks(orphans).map((s) => ({ ...blockOf(s), line: lineOf(s) })),
         region: regionOf(ly),
-        obstacles: [...layerObstacles(ly), ...lockedBoxes],
         aisle: ly.aisle_width || 3,
         step: ly.grid_step || 0.5,
-    });
+    };
+    const plan = layoutAroundBuilding(ly, args, lockedBoxes);
     if (!plan.ok) {
-        const reason = `Не вміщається: ${plan.reason}. Нічого не змінено.`;
+        const cg = (S.site && S.site.column_grid) || {};
+        const hint = /перешкоди/.test(plan.reason) && cg.step_x > 1 && cg.step_y > 1 ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) теж вважаються перешкодами: збільште крок або задайте 0.` : "";
+        const reason = `Не вміщається: ${plan.reason}.${hint} Нічого не змінено.`;
         quiet || toast(reason, "warn");
         return { ok: false, reason, need: plan.need };
     }
@@ -432,8 +500,9 @@ export function autoLayoutSite({ layerId = S.ui.layer, quiet = false, fixedSizes
     }
     E.undoLabel?.("Авторозкладка площадки");
     E.commit({});
-    quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.`);
-    return { ok: true, zones: free.length, blocks: plan.blocks.size };
+    const cg = (S.site && S.site.column_grid) || {};
+    quiet || toast(`Розкладено: зон ${free.length}, рядів ${plan.blocks.size}.` + (plan.gridIgnored ? ` Колони сітки (крок ${fmt(cg.step_x, 1)}×${fmt(cg.step_y, 1)} м) не обійдено: зони більші за крок.` : ""));
+    return { ok: true, zones: free.length, blocks: plan.blocks.size, gridIgnored: !!plan.gridIgnored };
 }
 
 /* ---------- панелі, меню ---------- */
@@ -459,7 +528,7 @@ function renderSiteBlock(root) {
             "div",
             { class: "sec", id: "autoSite" },
             h("h3", null, "Авторозкладка"),
-            h("div", { class: "small muted" }, "Зони по горизонталі в контурі шару (обходячи проходи, пожежні шляхи й об'єкти), ряди — вглиб. Скасовується одним Ctrl+Z."),
+            h("div", { class: "small muted" }, "Зони по горизонталі в контурі шару чи будівлі (обходячи проходи, пожежні шляхи, колони, стіни, офіс), ряди — вглиб. Скасовується одним Ctrl+Z."),
             h("div", { class: "frow" }, h("button", { class: "fbtn", type: "button", id: "btnAutoSite", disabled: !ly || !canEditLayer(ly), onclick: () => autoLayoutSite() }, "Розкласти автоматично"))
         )
     );

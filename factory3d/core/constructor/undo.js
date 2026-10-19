@@ -1,9 +1,10 @@
 // Скасування й повтор (F09-01; MERGE.md §4.2 «Undo/redo над чергою змін») — слайс S3.
 // Спільний механізм стану: після кожної зміни (commit, жива правка, scheduleSave → syncNow) `undoRecord()` порівнює знімок стану
-// (шари, місця, розміщення, правила розміщення й поповнення S2 + адресація площадки) з попереднім; змінилося — у стек іде новий крок із підписом дії (явний `E.undoLabel()`
+// (шари, місця, розміщення, правила розміщення й поповнення S2 + поля площадки: адресація S1, габарит, висоти й техніка складу S5) з попереднім; змінилося — у стек іде новий крок із підписом дії (явний `E.undoLabel()`
 // чи виведений з різниці). Відновлення знімка — це звичайна зміна стану (`E.commit`): адаптер сам порівнює стан зі своїм і ставить у
 // чергу create / write / unlink, тож скасовуються лише ще не застосовані в Odoo зміни (публікація й перезавантаження стеку не зберігають).
-// Правки S1 (адресація площадки `saveAddr`) входять у знімок як `site` і відновлюються викликом адаптера.
+// Правки площадки входять у знімок як `site` і відновлюються викликом адаптера: адресація S1 — `saveAddr`; габарит і крок колон S5 —
+// `E.saveSiteProps` (назва, building, column_grid); висота до спринклерів і техніка складу — `adapter.saveSite({sprinkler_height, aisle_tech})`.
 import { registries } from "./registry.js";
 import { E, S, reindex } from "./state.js";
 import { toast } from "./util.js";
@@ -14,7 +15,27 @@ const MAX_CHARS = 30e6;
 const COALESCE_MS = 1200;
 
 const strip = (k, v) => (k === "rid" || k === "etag" ? undefined : v);
-const siteVals = () => ({ addr: S.site?.addr ?? null, depth_mode: S.site?.depth_mode ?? null, loc_tree: S.site?.loc_tree ?? null });
+const ADDR_FIELDS = ["addr", "depth_mode", "loc_tree"]; // S1: зберігає адаптер (`saveAddr`)
+const BUILDING_FIELDS = ["building", "column_grid"]; // S5: габарит L×W×H і крок колон (`E.saveSiteProps`)
+const EXTRA_FIELDS = ["sprinkler_height", "aisle_tech"]; // S5: висота до спринклерів, техніка складу (`adapter.saveSite`)
+const pick = (o, keys) => Object.fromEntries(keys.map((k) => [k, o?.[k] ?? null]));
+const siteVals = () => {
+    const b = S.site?.building;
+    const cg = S.site?.column_grid;
+    return {
+        ...pick(S.site, ADDR_FIELDS),
+        building: b ? { length: b.length ?? null, width: b.width ?? null, height: b.height ?? null } : null,
+        column_grid: cg ? { step_x: cg.step_x ?? null, step_y: cg.step_y ?? null } : null,
+        sprinkler_height: S.site?.sprinkler_height ?? null,
+        aisle_tech: S.site?.aisle_tech ?? null,
+    };
+};
+const SITE_LABELS = [
+    [ADDR_FIELDS, "Адресація площадки"],
+    [BUILDING_FIELDS, "Габарит площадки"],
+    [["sprinkler_height"], "Висота до спринклерів"],
+    [["aisle_tech"], "Техніка складу"],
+];
 
 const rulesOf = () => (S.site && S.site.rules) || {};
 
@@ -44,7 +65,8 @@ function changedFields(a, b) {
 
 /** Різниця двох знімків (розібраних): {added, removed, changed: [{kind, id, rec, fields}], site}. */
 export function diffSnapshots(a, b) {
-    const out = { added: [], removed: [], changed: [], site: !same(a.site, b.site) };
+    const out = { added: [], removed: [], changed: [], site: !same(a.site, b.site), siteFields: [] };
+    out.siteFields = [...new Set([...Object.keys(a.site || {}), ...Object.keys(b.site || {})])].filter((k) => !same((a.site || {})[k], (b.site || {})[k]));
     for (const kind of KINDS) {
         const ma = new Map((a[kind] || []).map((r) => [r.id, r]));
         const mb = new Map((b[kind] || []).map((r) => [r.id, r]));
@@ -79,7 +101,8 @@ const MOVE = ["x", "y"];
 export function labelOf(d) {
     const n = d.added.length + d.removed.length + d.changed.length;
     if (!n && d.site) {
-        return "Адресація площадки";
+        const hit = SITE_LABELS.filter(([keys]) => keys.some((k) => (d.siteFields || ADDR_FIELDS).includes(k)));
+        return hit.length === 1 ? hit[0][1] : "Параметри площадки";
     }
     if (d.added.length && !d.removed.length && !d.changed.length) {
         return d.added.length === 1 ? `Додано: ${nameOf(d.added[0])}` : `Додано об’єктів: ${d.added.length}`;
@@ -220,7 +243,14 @@ function restore(data, prevData) {
         S.site.rules = { ...rules, putaway: carry(rules.putaway || [], next.putaway || []), replenish: carry(rules.replenish || [], next.replenish || []) };
     }
     if (d.site && S.site) {
-        Object.assign(S.site, next.site);
+        const { building, column_grid: grid, ...flat } = next.site;
+        Object.assign(S.site, flat);
+        if (building) {
+            S.site.building = { ...S.site.building, ...building };
+        }
+        if (grid) {
+            S.site.column_grid = { ...S.site.column_grid, ...grid };
+        }
     }
     S.multi = [];
     S.selCell = null;
@@ -229,7 +259,25 @@ function restore(data, prevData) {
     const touched = [...d.changed, ...d.added].filter((e) => e.kind === "slots" || e.kind === "placements");
     const keep = S.sel && (S.sel.kind === "slot" ? S.sIdx : S.pIdx).has(S.sel.id) ? S.sel : null;
     S.sel = touched.length ? { kind: touched[0].kind === "slots" ? "slot" : "placement", id: touched[0].id } : keep;
-    return { changedSite: d.site, site: next.site };
+    return { changedSite: d.site, site: next.site, siteFields: d.siteFields };
+}
+
+/** Відновлені поля площадки йдуть в адаптер так само, як при ручній правці (адресація, габарит, висоти й техніка складу). */
+async function saveSiteChanges(site, fields) {
+    const has = (keys) => keys.some((k) => fields.includes(k));
+    if (has(EXTRA_FIELDS) && E.adapter?.saveSite) {
+        await E.adapter.saveSite({ sprinkler_height: S.site.sprinkler_height || 0, aisle_tech: S.site.aisle_tech || null });
+    }
+    if (has(BUILDING_FIELDS)) {
+        E.saveSiteProps?.();
+    }
+    if (has(ADDR_FIELDS) && E.adapter?.saveAddr) {
+        await E.adapter.saveAddr(pick(site, ADDR_FIELDS), { renumber: "new" });
+        if (E.adapter.serverRenumber) {
+            await E.flushNow();
+            await E.reload();
+        }
+    }
 }
 
 async function goto(i, verb) {
@@ -242,16 +290,12 @@ async function goto(i, verb) {
         if (E.adapter?.dirty) {
             await E.flushNow(); // скасоване видалення має створюватися після того, як його unlink досяг сервера
         }
-        const { changedSite, site } = restore(to.data, from.data);
+        const { changedSite, site, siteFields } = restore(to.data, from.data);
         H.idx = i;
         E.commit({});
         to.data = H.cur = snapshot(); // commit міг нормалізувати записи (напр. закріпити номери): крок = фактичний стан
-        if (changedSite && E.adapter?.saveAddr) {
-            await E.adapter.saveAddr(site, { renumber: "new" });
-            if (E.adapter.serverRenumber) {
-                await E.flushNow();
-                await E.reload();
-            }
+        if (changedSite) {
+            await saveSiteChanges(site, siteFields);
         }
         toast(`${verb}: ${label}`);
     } catch (e) {

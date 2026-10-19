@@ -37,6 +37,10 @@ from . import test_s3_core_node
 from . import test_s4_tabular
 from . import test_s4_sync
 from . import test_s4_core_node
+from . import test_s5_checks
+from . import test_s5_docs
+from . import test_s5_wizard
+from . import test_s5_core_node
 from . import test_s6_collab
 from . import test_s6_help
 from . import test_s6_tours

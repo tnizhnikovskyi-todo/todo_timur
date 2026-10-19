@@ -502,6 +502,105 @@ export function register(test) {
         assert.deepEqual([...allCodes(S, cellsOf)].sort(), before, "коди після розкладки площадки");
     });
 
+    test("S4 авторозкладка + будівля (S5): зони обходять колону, похилу стіну, офіс і колони сітки з шару building; контур-многокутник; не вміщається — нічого не змінюється", async () => {
+        const b = await boot();
+        const { S, E } = b;
+        const ly = emptyStorage(b, { building: { length: 60, width: 30 } });
+        const { newItem, obstacleRects } = await load("building_core.js");
+        const { satPenetration, rectObb, obbInsidePolygon, makeObb } = await load("geometry.js");
+        const { layerObstacles, regionOf } = await load("autolayout.js");
+        S.site.column_grid = { step_x: 0, step_y: 0 };
+        const bl = S.layers.find((l) => l.kind === "building");
+        Object.assign(bl, { items: [], bounds: null, aisles: [], fire_paths: [] });
+        const mk = (id, x, y, l, w) => ({ id, rid: null, etag: null, layer_id: ly.id, template: "zone", code_prefix: id.toUpperCase(), x, y, rotation: 0, params: { length: l, width: w, title: id, color: "#9fb7c9" }, overrides: {}, parent_location_id: null });
+        const addZones = () => {
+            S.slots = [mk("za", 5, 5, 10, 10), mk("zb", 15, 5, 10, 10), mk("zc", 25, 5, 10, 10)];
+            b.reindex();
+        };
+        const boxOf = (z) => [z.x - z.params.length / 2, z.y - z.params.width / 2, z.x + z.params.length / 2, z.y + z.params.width / 2];
+        // колона в нижньому лівому кутку, діагональна стіна, офіс: розкладка їх обходить (пересічень немає)
+        bl.items = [newItem("column", "c1", 6.5, 5), newItem("wall", "w1", 30, 15, { w: 20, th: 0.3, d: 0.3, rot: 45 }), newItem("office", "o1", 45, 25, { w: 12, d: 8 })];
+        addZones();
+        assert.ok(layerObstacles(ly).length >= 3, "перешкоди будівлі потрапляють у перешкоди шару");
+        const r = E.autoLayoutSite({ quiet: true });
+        assert.ok(r.ok, r.reason);
+        const wallObb = makeObb(30, 15, 10, 0.15, 45);
+        for (const z of S.slots) {
+            const box = boxOf(z);
+            assert.ok(!(box[0] < 6.7 && box[2] > 6.3 && box[1] < 5.2 && box[3] > 4.8), `${z.id} не накриває колону`);
+            assert.ok(satPenetration(rectObb(...box), wallObb) <= 1e-6, `${z.id} не перетинає похилу стіну`);
+            assert.ok(!(box[0] < 51 && box[2] > 39 && box[1] < 29 && box[3] > 21), `${z.id} не перетинає офіс`);
+        }
+        const xs = S.slots.map((z) => z.x);
+        assert.ok(xs.some((x, i) => x !== [5, 15, 25][i]), "зони зрушено");
+        // колони column_grid теж перешкоди: за кроку 12 м зони 10×12 стають між колонами
+        bl.items = [];
+        S.site.column_grid = { step_x: 12, step_y: 12 };
+        S.slots = [mk("za", 5, 5, 10, 12), mk("zb", 15, 5, 10, 12), mk("zc", 25, 5, 10, 12)];
+        b.reindex();
+        const grid = E.autoLayoutSite({ quiet: true });
+        assert.ok(grid.ok && !grid.gridIgnored, grid.reason);
+        const cols = obstacleRects(S.layers, S.site).filter((r) => r.grid);
+        assert.ok(cols.length >= 6);
+        for (const z of S.slots) {
+            const box = boxOf(z);
+            assert.ok(!cols.some((c) => box[0] < c.x1 - 1e-6 && c.x0 < box[2] - 1e-6 && box[1] < c.y1 - 1e-6 && c.y0 < box[3] - 1e-6), `${z.id} не накриває колони сітки`);
+        }
+        assert.notDeepEqual(S.slots.map((z) => z.x), [5, 15, 25], "зони зрушено з колон сітки");
+        // крок сітки менший за зону: зони все одно розкладаються (без колон сітки), решта перешкод дотримана
+        S.site.column_grid = { step_x: 6, step_y: 6 };
+        S.slots = [mk("za", 5, 5, 10, 10), mk("zb", 15, 5, 10, 10)];
+        b.reindex();
+        bl.items = [newItem("column", "c1", 6.5, 5)];
+        const lean = E.autoLayoutSite({ quiet: true });
+        assert.ok(lean.ok && lean.gridIgnored, "колони сітки не обійдено, бо зона більша за крок: " + lean.reason);
+        for (const z of S.slots) {
+            const box = boxOf(z);
+            assert.ok(!(box[0] < 6.7 && box[2] > 6.3 && box[1] < 5.2 && box[3] > 4.8), `${z.id} не накриває явну колону`);
+        }
+        // не вміщається — нічого не змінюється, причина називає перешкоди й крок сітки
+        bl.items = [];
+        S.slots = [mk("za", 5, 5, 25, 16), mk("zb", 35, 5, 25, 16), mk("zc", 45, 20, 25, 16)];
+        b.reindex();
+        const snap = JSON.stringify(S.slots);
+        const no = E.autoLayoutSite({ quiet: true });
+        assert.equal(no.ok, false);
+        assert.match(no.reason, /перешкоди/);
+        assert.match(no.reason, /Колони сітки \(крок 6,0×6,0 м\)/);
+        assert.equal(JSON.stringify(S.slots), snap, "нічого не змінено");
+        // контур — многокутник (Г-подібний, bounds шару building): зони лише всередині, виріз обійдено
+        S.site.column_grid = { step_x: 0, step_y: 0 };
+        const L = [[0, 0], [40, 0], [40, 15], [20, 15], [20, 30], [0, 30]];
+        bl.bounds = L;
+        const reg = regionOf(ly);
+        assert.deepEqual([reg.x0, reg.y0, reg.x1, reg.y1], [0, 0, 40, 30]);
+        assert.deepEqual(reg.poly, L, "многокутник передано в розкладку");
+        S.slots = [mk("za", 5, 5, 15, 12), mk("zb", 25, 5, 15, 12), mk("zc", 35, 25, 15, 12)];
+        b.reindex();
+        const poly = E.autoLayoutSite({ quiet: true });
+        assert.ok(poly.ok, poly.reason);
+        for (const z of S.slots) {
+            assert.ok(obbInsidePolygon(rectObb(...boxOf(z)), L), `${z.id} усередині контуру`);
+        }
+        const zc = S.sIdx.get("zc");
+        assert.ok(zc.x < 20 && zc.y > 13, `третя зона не влізла вправо — лягла в лівий стовп Г: (${zc.x}; ${zc.y})`);
+        S.slots.push(mk("zd", 30, 25, 15, 12));
+        b.reindex();
+        const before = JSON.stringify(S.slots);
+        const four = E.autoLayoutSite({ quiet: true });
+        assert.equal(four.ok, false, "четверта зона у виріз не лізе");
+        assert.equal(JSON.stringify(S.slots), before);
+        // власний контур шару (масив точок) має пріоритет над будівлею; прямокутник — без poly
+        ly.bounds = [[0, 0], [30, 0], [30, 20], [0, 20]];
+        const own = regionOf(ly);
+        assert.deepEqual([own.x1, own.y1, own.poly], [30, 20, undefined]);
+        ly.bounds = null;
+        bl.bounds = null;
+        assert.deepEqual(regionOf(ly), { x0: 0, y0: 0, x1: 60, y1: 30 }, "без контуру — габарит площадки");
+        S.site.building = { length: 0, width: 0, height: 8 };
+        assert.equal(regionOf(ly), null, "порожній габарит і немає контуру — без обмеження");
+    });
+
     /* ---------- F10-04: лоток ---------- */
     test("S4 лоток: розміщення на зону — місце на підлозі з точним кодом; Ctrl+Z повертає запис у лоток; код не за правилами місця — відмова", async () => {
         const b = await boot();

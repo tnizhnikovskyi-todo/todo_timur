@@ -406,6 +406,9 @@ test("збірка модуля static/lib/f3d-core/constructor.esm.js свіж�
 (await import("./test_core_s4.mjs")).register(test);
 (await import("./test_core_s6.mjs")).register(test); // S6 «Спільна робота й навчання»
 
+/* ---------- 11. слайс S5 «Будівля, майстер, документи» (tools/test_core_s5.mjs) ---------- */
+(await import("./test_core_s5.mjs")).register(test);
+
 for (const [name, fn] of tests) {
     try {
         await fn();
