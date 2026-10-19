@@ -1,0 +1,31 @@
+# Спільний конфіг ruff для factory3d/{odoo_addons,services,tools}.
+#
+# Діє для каталогів без власного конфіга: ruff бере найближчий ruff.toml/pyproject.toml з секцією [tool.ruff]
+# вгору по дереву, тож модулі з власним `ruff.toml` (select = E, F, W, B) і пакети служб (collector, плагіни)
+# керуються ними, а решта (td_genset, td_fire_safety, td_iot_sim, td_viewer3d_sale, test_td_*, services/iot_sim,
+# tools/) — цим файлом: стандартний набір правил ruff + повний E/W + сортування імпортів, довжина рядка 120
+# (SPEC: «ruff check, довжина рядка 120»). Перевірка: `ruff check factory3d/odoo_addons factory3d/services
+# factory3d/tools` і `ruff format --check` по тих самих каталогах мають давати 0.
+line-length = 120
+target-version = "py310"  # Odoo 19: Python ≥ 3.10
+
+[lint]
+extend-select = ["E", "W", "I"]
+ignore = [
+    # `_("… %s") % x` — основна форма в Odoo: переклад шукає літерал у gettext, f-рядок його ламає;
+    # так само логування (`_logger.info("… %s", x)`) і SQL-шаблони `%s`.
+    "UP031",
+    # Odoo зберігає дату й час як naive UTC (fields.Datetime, `datetime.utcnow()`/`strptime` без tz);
+    # aware-datetime ламає порівняння з ORM і писання в БД. Усі DTZ-правила суперечать цій конвенції.
+    "DTZ",
+    # Атрибути класу моделі Odoo (`_inherit = [...]`, `_order`, `_rec_names_search`, `_depends`) — списки/словники
+    # за конвенцією Odoo; ORM копіює їх у реєстр, а не мутує спільний атрибут.
+    "RUF012",
+]
+
+[lint.per-file-ignores]
+# `from . import models, wizard` — реєстрація підмодулів, а не «зайві» імпорти (F401); порядок рядків — порядок
+# завантаження класів моделей (базова модель має бути визначена раніше за розширення `_inherit`), тож не сортуємо (I001)
+"__init__.py" = ["F401", "I001"]
+# маніфест — голий dict за конвенцією Odoo (B018); довгі описи й списки data (E501)
+"__manifest__.py" = ["B018", "E501"]
