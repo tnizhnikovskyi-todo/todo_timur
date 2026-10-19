@@ -1,4 +1,5 @@
 """Провайдер `layout`: payload за версією з переміщеним, новим, прибраним і заміненим; права; шина; GLB кіоска."""
+
 import json
 from datetime import timedelta
 from unittest.mock import patch
@@ -28,11 +29,22 @@ class LayoutBase(TransactionCase):
         cls.Slot = env["td.slot"]
         cls.prod_layer = cls.site.layer_ids.filtered(lambda layer: layer.kind == "production")[:1]
         cls.generic = env["td.equipment.variant"].search([("passport_id.role", "=", "generic_machine")], limit=1)
-        cls.user_f3d = env["res.users"].with_context(no_reset_password=True).create(
-            {"name": "f3d_lv", "login": "f3d_lv", "group_ids": [(6, 0, [
-                env.ref("base.group_user").id, env.ref("td_factory3d.group_td_user").id])]})
-        cls.user_nobody = env["res.users"].with_context(no_reset_password=True).create(
-            {"name": "f3d_nolv", "login": "f3d_nolv", "group_ids": [(6, 0, [env.ref("base.group_user").id])]})
+        cls.user_f3d = (
+            env["res.users"]
+            .with_context(no_reset_password=True)
+            .create(
+                {
+                    "name": "f3d_lv",
+                    "login": "f3d_lv",
+                    "group_ids": [(6, 0, [env.ref("base.group_user").id, env.ref("td_factory3d.group_td_user").id])],
+                }
+            )
+        )
+        cls.user_nobody = (
+            env["res.users"]
+            .with_context(no_reset_password=True)
+            .create({"name": "f3d_nolv", "login": "f3d_nolv", "group_ids": [(6, 0, [env.ref("base.group_user").id])]})
+        )
 
     def placement(self, code):
         rec = self.Placement.search([("site_id", "=", self.site.id), ("code", "=", code)])
@@ -54,7 +66,6 @@ class LayoutBase(TransactionCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor_viewer")
 class TestLayoutPayload(LayoutBase):
-
     def test_provider_registered(self):
         provider = {p._name: p for p in get_providers(self.env)}["td.viewer.provider.layout"]
         self.assertEqual((provider._td_sequence, provider._td_sections), (180, ("layout",)))
@@ -73,9 +84,17 @@ class TestLayoutPayload(LayoutBase):
     def test_moved_added_hidden_replaced(self):
         """CNC-2 на 3 м, новий верстат із каталогу, FG-R5 на 5 ярусів, PACK-2 прибрано."""
         self.placement("CNC-2").x_m += 3.0
-        self.Placement.create({
-            "layer_id": self.prod_layer.id, "variant_id": self.generic.id, "code": "NEWM-1", "name": "Новий верстат",
-            "x_m": 100.0, "y_m": 40.0, "rotation": 90})
+        self.Placement.create(
+            {
+                "layer_id": self.prod_layer.id,
+                "variant_id": self.generic.id,
+                "code": "NEWM-1",
+                "name": "Новий верстат",
+                "x_m": 100.0,
+                "y_m": 40.0,
+                "rotation": 90,
+            }
+        )
         fg5 = self.slot("FG-R5")
         fg5.params = dict(fg5.params, levels=5)
         self.placement("PACK-2").unlink()
@@ -97,11 +116,13 @@ class TestLayoutPayload(LayoutBase):
         rack = added["FG-R5"]
         self.assertEqual((rack["kind"], rack["template"], rack["rot"]), ("slot", "pallet_rack", 90.0))
         self.assertEqual(len(rack["cells"]), 90)
-        self.assertEqual({c["code"] for c in rack["cells"]} & {"FG-R5-B01-L5", "FG-R5-B18-L5"},
-                         {"FG-R5-B01-L5", "FG-R5-B18-L5"})
+        self.assertEqual(
+            {c["code"] for c in rack["cells"]} & {"FG-R5-B01-L5", "FG-R5-B18-L5"}, {"FG-R5-B01-L5", "FG-R5-B18-L5"}
+        )
         cell = next(c for c in rack["cells"] if c["code"] == "FG-R5-B01-L3")
         self.assertEqual(
-            (cell["lz"], cell["h"], cell["w"], cell["d"], cell["kind"]), (3.8, 1.9, 2.7, 1.1, "pallet_cell"))
+            (cell["lz"], cell["h"], cell["w"], cell["d"], cell["kind"]), (3.8, 1.9, 2.7, 1.1, "pallet_cell")
+        )
         self.assertEqual(lay["replaced"], ["FG-R5"])
         self.assertEqual(lay["frames"]["FG-R5"]["x"], 134.2)
         self.assertEqual(lay["frames"]["FG-R5"]["y"], 27.3)
@@ -174,9 +195,16 @@ class TestLayoutPayload(LayoutBase):
 
     def test_model_url_for_variant_with_glb(self):
         self.generic._td_set_model(glb=("m.glb", make_glb()), status="ok")
-        self.Placement.create({
-            "layer_id": self.prod_layer.id, "variant_id": self.generic.id, "code": "NEWM-2", "name": "З моделлю",
-            "x_m": 100.0, "y_m": 30.0})
+        self.Placement.create(
+            {
+                "layer_id": self.prod_layer.id,
+                "variant_id": self.generic.id,
+                "code": "NEWM-2",
+                "name": "З моделлю",
+                "x_m": 100.0,
+                "y_m": 30.0,
+            }
+        )
         self.publish()
         entry = {e["code"]: e for e in self.layout()["added"]}["NEWM-2"]
         self.assertEqual(entry["model_url"], "/f3d/constructor/model/%d/glb" % self.generic.id)
@@ -193,8 +221,9 @@ class TestLayoutPayload(LayoutBase):
         self.assertEqual(data["meta"]["sections"]["layout"], "live")
         self.assertIn("CNC-2", data["layout"]["moved"])
         # кіоск: той самий payload
-        kiosk = PayloadBuilder(self.env(user=self.env.ref("td_viewer3d.user_kiosk")), kiosk=True,
-                               sections=["layout"]).build()
+        kiosk = PayloadBuilder(
+            self.env(user=self.env.ref("td_viewer3d.user_kiosk")), kiosk=True, sections=["layout"]
+        ).build()
         self.assertEqual(kiosk["layout"], data["layout"])
 
     def test_kiosk_silent_without_read_access(self):
@@ -229,8 +258,9 @@ class TestLayoutPayload(LayoutBase):
     def test_delta_after_version_removed_clears_layout(self):
         """Версію видалено (адмін): дельта несе `layout = null`, клієнт скидає розкладку до бази."""
         since = fields.Datetime.now() - timedelta(seconds=1)
-        delta = DeltaBuilder(self.env(user=self.user_f3d), since=since,
-                             changes={"td.layout.version": {self.site.code}}).build()
+        delta = DeltaBuilder(
+            self.env(user=self.user_f3d), since=since, changes={"td.layout.version": {self.site.code}}
+        ).build()
         self.assertIn("layout", delta["patch"])
         self.assertIsNone(delta["patch"]["layout"])
 

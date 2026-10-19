@@ -8,6 +8,7 @@
 Формат (bridge SPEC R-01):
 `{site, version, base_version, moved, added, hidden, replaced, frames}`.
 """
+
 import json
 import logging
 
@@ -99,7 +100,13 @@ def _variants(env, snaps):
 
 def _slot_cells(slot, x, y, rot, elevation):
     return cells_svc.generate_cells(
-        slot["template"], slot["code_prefix"], x, y, rot, slot.get("params") or {}, slot.get("overrides") or {},
+        slot["template"],
+        slot["code_prefix"],
+        x,
+        y,
+        rot,
+        slot.get("params") or {},
+        slot.get("overrides") or {},
         elevation,
     )
 

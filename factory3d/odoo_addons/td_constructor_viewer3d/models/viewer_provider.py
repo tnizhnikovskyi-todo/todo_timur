@@ -1,4 +1,5 @@
 """Провайдер переглядача `layout` (180): опублікована розкладка конструктора (PHASE2_VIEWER, bridge R-01)."""
+
 from odoo import api, models
 
 from ..tools import layout as layout_tools
