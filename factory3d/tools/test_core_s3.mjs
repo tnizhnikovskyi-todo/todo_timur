@@ -205,6 +205,65 @@ export function register(test) {
         ad.saveAddr = origSave;
     });
 
+    test("S3 undo: поля площадки S5 — габарит, висота, крок колон, спринклери, техніка складу — скасовуються й повторюються, адаптер отримує значення", async () => {
+        const b = await boot();
+        const { S, E, ad } = b;
+        scene(b, [rack("ra", "RA", 40, 10)]);
+        const saved = [];
+        const origSite = ad.saveSite;
+        ad.saveSite = async (vals) => {
+            saved.push(vals);
+        };
+        let props = 0;
+        const origProps = E.saveSiteProps;
+        E.saveSiteProps = () => {
+            props++;
+        };
+        const orig = { building: { ...S.site.building }, column_grid: { ...S.site.column_grid }, sprinkler_height: S.site.sprinkler_height, aisle_tech: S.site.aisle_tech };
+        const was = orig.building;
+        const grid = orig.column_grid;
+        E.undoReset();
+        S.site.building.length = was.length + 10;
+        S.site.building.height = 9;
+        E.undoRecord();
+        assert.equal(E.undoState().undoLabel, "Габарит площадки");
+        S.site.sprinkler_height = 6.5;
+        E.undoRecord();
+        assert.equal(E.undoState().undoLabel, "Висота до спринклерів");
+        S.site.aisle_tech = "reach:2.8";
+        E.undoRecord();
+        assert.equal(E.undoState().undoLabel, "Техніка складу");
+        S.site.column_grid.step_x = 8;
+        S.site.column_grid.step_y = 10;
+        E.undoRecord();
+        assert.equal(S.hist.stack.length, 5, "чотири кроки + початок");
+        await E.undo();
+        assert.deepEqual([S.site.column_grid.step_x, S.site.column_grid.step_y], [grid.step_x, grid.step_y], "крок колон відкотився");
+        assert.equal(props, 1, "габарит і крок колон іде через E.saveSiteProps");
+        await E.undo();
+        assert.equal(S.site.aisle_tech ?? null, null, "техніка складу повернута");
+        assert.deepEqual(saved.at(-1), { sprinkler_height: 6.5, aisle_tech: null }, "адаптер отримав поточні значення");
+        await E.undo();
+        assert.equal(S.site.sprinkler_height || 0, 0, "висота до спринклерів повернута");
+        assert.deepEqual(saved.at(-1), { sprinkler_height: 0, aisle_tech: null });
+        await E.undo();
+        assert.deepEqual(S.site.building, was, "габарит повернуто (довжина, ширина, висота)");
+        assert.equal(props, 2);
+        await E.redo();
+        assert.deepEqual([S.site.building.length, S.site.building.height], [was.length + 10, 9], "повтор: габарит");
+        await E.redo();
+        await E.redo();
+        assert.equal(S.site.aisle_tech, "reach:2.8");
+        assert.deepEqual(saved.at(-1), { sprinkler_height: 6.5, aisle_tech: "reach:2.8" });
+        await E.redo();
+        assert.deepEqual([S.site.column_grid.step_x, S.site.column_grid.step_y], [8, 10]);
+        // стан для наступних тестів
+        Object.assign(S.site, { building: { ...was }, column_grid: { ...grid }, sprinkler_height: orig.sprinkler_height, aisle_tech: orig.aisle_tech });
+        E.undoReset();
+        ad.saveSite = origSite;
+        E.saveSiteProps = origProps;
+    });
+
     /* ---------- інструменти правки ---------- */
     test("S3 інструменти: наступний код (R3 → R7), копія нова й порожня, ярус/секція, масив, вирівнювання, розподіл, поворот групи", async () => {
         const b = await boot();
