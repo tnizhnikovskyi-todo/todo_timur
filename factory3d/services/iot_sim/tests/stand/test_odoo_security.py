@@ -89,7 +89,10 @@ def test_tb10_neutralize_sql_on_copy():
     """neutralize.sql на копії бази: крони неактивні, кнопки → UserError «не налаштовано»."""
     env = {**os.environ, "F3D_TEST_INSTALL": "td_iot_sim", "ODOO_HTTP_INTERFACE": "127.0.0.1"}
     db, port = "f3d_w6n", "18070"
-    run = lambda *a, **kw: subprocess.run(a, env=env, check=True, capture_output=True, text=True, **kw)
+
+    def run(*a, **kw):
+        return subprocess.run(a, env=env, check=True, capture_output=True, text=True, **kw)
+
     subprocess.run([str(TOOLS / "serve.sh"), "stop", db], env=env, check=False, capture_output=True)
     subprocess.run([str(TOOLS / "drop_db.sh"), db], env=env, check=False, capture_output=True)
     run(str(TOOLS / "new_db.sh"), db)

@@ -215,7 +215,10 @@ class Builder:
         base = f"ventilation/units/{c}"
         d = DeviceDef(inst, c, vendor, model)
         P = d.points.append
-        n = lambda leaf, default=0.0: lambda: self.num(f"{base}/{leaf}", default)
+
+        def n(leaf, default=0.0):
+            return lambda: self.num(f"{base}/{leaf}", default)
+
         ekey = f"bacnet.{c}.enable"
 
         def enabled() -> bool:

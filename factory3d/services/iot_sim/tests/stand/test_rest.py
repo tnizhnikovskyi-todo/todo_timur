@@ -116,7 +116,7 @@ def test_tb03_injections(api):
     assert api.post("/scenario/shift; DROP/start", {"params": {}}).status_code == 404
     assert api.get("/status").status_code == 200  # сервіс живий
     log = docker("logs", "iot_sim-iot_sim-1", check=False)
-    assert "Traceback" not in "\n".join(l for l in log.splitlines() if "Unhandled" in l or "ASGI" in l)
+    assert "Traceback" not in "\n".join(ln for ln in log.splitlines() if "Unhandled" in ln or "ASGI" in ln)
 
 
 def test_tb06_no_secrets_in_logs(env_get):
