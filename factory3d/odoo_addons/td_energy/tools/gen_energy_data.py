@@ -179,6 +179,12 @@ def build_nodes(plant):
     for c in energy.SWB_CELLS:
         if c[3] != "incomer":
             cell_row(c[0])
+    # ввід КГУ (cell_type=generator) — лише модель енергетики: у `plant.energy.SWB_CELLS` (3D-макет) такої шафи немає;
+    # автомат 1600 А з ряду 1250/1600: 800 кВт / (√3 · 0,4 кВ · 0,95) ≈ 1215 А; послідовність між Q2 і PFC-2
+    add(code="QF-CHP", name="Ввід КГУ · TEDOM Quanto D800", kind="cell", cell_type="generator", parent="SEC-2",
+        cabinet="SWB-1", section=2, sequence=105, rating_a=1600, cos_phi=0.95,
+        note="Автомат вводу КГУ на секцію шин 2: 800 кВт, cos φ 0,95 → ≈ 1215 А при 0,4 кВ; номінал з ряду 1250/1600 "
+             "(1250 А — без запасу).")  # fmt: skip
     for b in energy.BUSWAYS:
         section[b["code"]] = section[b["feeder"]]
         add(code=b["code"], name=b["name"], kind="line", line_kind="busway", parent=b["feeder"], equipment=b["code"],
@@ -222,7 +228,7 @@ def build_nodes(plant):
             parent="PV-INV", section=2, equipment="PV-INV", p_inst_kw=115, unit=60 + k)  # fmt: skip
     add(code="PV-ROOF", name="Поле СЕС (дах)", kind="generator", gen_kind="pv_field", parent="PV-INV", section=2,
         equipment="PV-ROOF", p_inst_kw=900)  # fmt: skip
-    add(code="CHP", name="КГУ TEDOM Quanto D800", kind="generator", gen_kind="chp", parent="SEC-2", section=2,
+    add(code="CHP", name="КГУ TEDOM Quanto D800", kind="generator", gen_kind="chp", parent="QF-CHP", section=2,
         equipment="CHP", p_inst_kw=800, unit=72)  # fmt: skip
     add(code="BESS", name="Накопичувач Huawei LUNA2000", kind="storage", parent="SEC-2", section=2, equipment="BESS",
         p_inst_kw=200, unit=69)  # fmt: skip

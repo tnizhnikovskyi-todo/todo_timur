@@ -41,7 +41,7 @@ class TestChpCell(TestW1Common):
         self.assertEqual(self.Node.search([("id", "child_of", cell.id)]), cell | chp)
         # номінал автомата за рядом 1250/1600: 800 кВт / (√3 · 0,4 кВ · 0,95) ≈ 1215 А — запас лишається лише в 1600 А
         i_nom = chp.p_inst_kw * 1000 / (SQRT3 * 400 * 0.95)
-        self.assertEqual(round(i_nom), 1216)
+        self.assertEqual(round(i_nom), 1215)
         self.assertEqual(cell.rating_a, 1600)
         self.assertGreater(cell.rating_a, i_nom * 1.25)
         seq = {n.code: n.sequence for n in self.Node.search([("kind", "=", "cell")])}
@@ -60,7 +60,8 @@ class TestChpCell(TestW1Common):
     def test_sld_layout_and_edges(self):
         snap = self.snap()
         shown = [r for r in snap.sld_rows() if r["sld_shape"] in ("box", "bar", "switch") and r["sld_w"] and r["sld_h"]]
-        self.assertEqual(len(shown), 22)
+        self.assertEqual(len(snap.sld_rows()), 22)  # 21 + QF-CHP
+        self.assertEqual(len(shown), 20)  # без двох підписів-міток Q1, Q2
         by = snap.by_code
         qf, chp = by["QF-CHP"], by["CHP"]
         self.assertEqual((qf["sld_shape"], qf["sld_x"], qf["sld_y"]), ("box", 1214, 192))
@@ -145,12 +146,15 @@ class TestChpCell(TestW1Common):
         self.fixture_grid()
         sections = lambda: self.Node._td_live_snapshot()["totals"]["sections"]  # noqa: E731
         base = sections()
-        lines = {2: ("BW-1", "BW-4", "C2")}
         self.run_chp(700.0)
         with_chp = sections()
         self.assertEqual(with_chp[2]["p"], base[2]["p"])  # секція рахується за лініями, КГУ не додається вдруге
         self.assertEqual(with_chp[1]["p"], base[1]["p"])
-        expected = sum(self.env["td.energy.node"].search([("code", "in", lines[2])]).mapped("p_now"))
+        snap_values = self.snap()
+        expected = sum(
+            snap_values.v("energy/lines/%s/p_now" % c) or 0.0 for c in ("BW-1", "BW-4", "C2")
+        )  # лінії секції 2
+        self.assertEqual(expected, 96.0)
         self.assertEqual(with_chp[2]["p"], expected)
         snap = self.Node._td_live_snapshot()
         self.assertEqual(snap["chp_kw"], 700.0)  # потужність КГУ в знімку — з вимірювання, не з ячейки
