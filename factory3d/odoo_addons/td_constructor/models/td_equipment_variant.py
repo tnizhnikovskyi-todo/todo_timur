@@ -474,9 +474,7 @@ class F3dEquipmentVariant(models.Model):
     def action_clear_model(self):
         """Скидає вкладення й метадані; право — технолог/менеджер (ACL запису варіанта)."""
         for rec in self:
-            if not self.env.su and not self.env.user.has_group(
-                'td_constructor.group_td_constructor_technologist'
-            ):
+            if not self.env.su and not self.env.user.has_group('td_constructor.group_td_constructor_technologist'):
                 raise AccessError("Видаляти модель може технолог або менеджер конструктора.")
             old = rec.model_original_id | rec.model_glb_id
             rec.with_context(f3d_model_write=True).write(

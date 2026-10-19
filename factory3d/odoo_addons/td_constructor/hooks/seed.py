@@ -89,9 +89,7 @@ def normalize_seed(data):
 
 
 def seed_exists(env, data):
-    return (
-        env['td.site'].with_context(active_test=False).search([('seed_key', '=', data['meta']['seed_key'])], limit=1)
-    )
+    return env['td.site'].with_context(active_test=False).search([('seed_key', '=', data['meta']['seed_key'])], limit=1)
 
 
 def _ref_group(env, role):

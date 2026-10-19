@@ -157,10 +157,7 @@ class TestPublish(F3DConstructorCase):
         wizard.line_ids.filtered(lambda r: r.code == 'AR-R1-B01-L1').selected = True
         wizard.action_confirm()
         self.assertFalse(
-            self.env['stock.location']
-            .with_context(active_test=False)
-            .search([('td_code', '=', 'AR-R1-B01-L1')])
-            .active
+            self.env['stock.location'].with_context(active_test=False).search([('td_code', '=', 'AR-R1-B01-L1')]).active
         )
         self.assertTrue(self.env['stock.location'].search([('td_code', '=', 'AR-R1-B02-L1')]).active)
         self.assertTrue(

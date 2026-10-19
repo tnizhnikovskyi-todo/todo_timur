@@ -21,13 +21,30 @@ NEW_MODELS = [
 # MERGE.md §3.3: нові поля наявних моделей
 EXTENDED_FIELDS = {
     'td.site': [
-        'warehouse_id', 'addr', 'loc_tree', 'depth_mode', 'sprinkler_height_m', 'aisle_tech', 'parse_rules',
-        'active_variant_id', 'wizard_state', 'odoo_baseline_id', 'publish_copy_ack',
+        'warehouse_id',
+        'addr',
+        'loc_tree',
+        'depth_mode',
+        'sprinkler_height_m',
+        'aisle_tech',
+        'parse_rules',
+        'active_variant_id',
+        'wizard_state',
+        'odoo_baseline_id',
+        'publish_copy_ack',
     ],  # fmt: skip
     'td.layer': ['items'],
     'td.slot': [
-        'type_id', 'storage_category_id', 'removal_strategy_id', 'function_id', 'attr_ids', 'temp_min_c', 'temp_max_c',
-        'tech', 'addr', 'depth_mode',
+        'type_id',
+        'storage_category_id',
+        'removal_strategy_id',
+        'function_id',
+        'attr_ids',
+        'temp_min_c',
+        'temp_max_c',
+        'tech',
+        'addr',
+        'depth_mode',
     ],  # fmt: skip
     'stock.location': ['td_row', 'td_bay', 'td_level', 'td_pos'],
     'td.layout.version': ['kind', 'variant_id', 'rolled_back_at', 'rolled_back_by_id', 'op_ids', 'metrics'],
@@ -37,27 +54,77 @@ EXTENDED_FIELDS = {
 # MERGE.md §3.4: поля нових моделей
 NEW_FIELDS = {
     'td.slot.type': [
-        'code', 'ref', 'name', 'description', 'group', 'template', 'shape', 'params', 'relevance', 'loc_kind',
-        'is_custom', 'company_id', 'sequence', 'active',
+        'code',
+        'ref',
+        'name',
+        'description',
+        'group',
+        'template',
+        'shape',
+        'params',
+        'relevance',
+        'loc_kind',
+        'is_custom',
+        'company_id',
+        'sequence',
+        'active',
     ],  # fmt: skip
     'td.slot.preset': ['name', 'type_id', 'kind', 'data', 'company_id', 'active'],
     'td.putaway.rule': [
-        'site_id', 'uid', 'product_id', 'category_id', 'package_type_ids', 'in_location_id', 'out_code',
-        'out_location_id', 'sublocation', 'storage_category_id', 'sequence', 'odoo_rule_id', 'deleted', 'company_id',
+        'site_id',
+        'uid',
+        'product_id',
+        'category_id',
+        'package_type_ids',
+        'in_location_id',
+        'out_code',
+        'out_location_id',
+        'sublocation',
+        'storage_category_id',
+        'sequence',
+        'odoo_rule_id',
+        'deleted',
+        'company_id',
         'active',
     ],  # fmt: skip
     'td.replenish.rule': [
-        'site_id', 'uid', 'product_id', 'cell_code', 'location_id', 'min_qty', 'max_qty', 'odoo_orderpoint_id',
-        'deleted', 'company_id', 'active',
+        'site_id',
+        'uid',
+        'product_id',
+        'cell_code',
+        'location_id',
+        'min_qty',
+        'max_qty',
+        'odoo_orderpoint_id',
+        'deleted',
+        'company_id',
+        'active',
     ],  # fmt: skip
     'td.publish.op': ['version_id', 'seq', 'op', 'res_model', 'res_id', 'code', 'before', 'after', 'rolled_back'],
     'td.layout.variant': [
-        'site_id', 'name', 'sequence', 'snapshot_id', 'base_version_id', 'is_training', 'metrics', 'company_id',
+        'site_id',
+        'name',
+        'sequence',
+        'snapshot_id',
+        'base_version_id',
+        'is_training',
+        'metrics',
+        'company_id',
         'active',
     ],  # fmt: skip
     'td.comment': [
-        'site_id', 'target_kind', 'target_uid', 'target_label', 'kind', 'state', 'text', 'author_id', 'resolved_by_id',
-        'resolved_at', 'company_id', 'active',
+        'site_id',
+        'target_kind',
+        'target_uid',
+        'target_label',
+        'kind',
+        'state',
+        'text',
+        'author_id',
+        'resolved_by_id',
+        'resolved_at',
+        'company_id',
+        'active',
     ],  # fmt: skip
     'td.zone.lock': ['site_id', 'zone_uid', 'user_id', 'expires_at', 'company_id'],
 }
@@ -203,9 +270,7 @@ class TestSkeletonModels(F3DConstructorCase):
         )
         self.assertEqual((lock.user_id, lock.company_id), (env.user, self.company))
         with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():  # одна оренда на зону
-            env['td.zone.lock'].create(
-                {'site_id': site.id, 'zone_uid': slot.uid, 'expires_at': fields.Datetime.now()}
-            )
+            env['td.zone.lock'].create({'site_id': site.id, 'zone_uid': slot.uid, 'expires_at': fields.Datetime.now()})
 
     def test_variant_removal_cleans_links(self):
         variant = self.env['td.layout.variant'].create({'site_id': self.site.id, 'name': "Тимчасовий"})

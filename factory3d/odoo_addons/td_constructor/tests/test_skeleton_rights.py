@@ -42,8 +42,12 @@ class TestSkeletonRights(F3DConstructorCase):
                 self.assertEqual(got, expected[role], "%s / %s" % (model, role))
 
     def test_outsider_has_no_access(self):
-        outsider = self.env['res.users'].with_context(no_reset_password=True).create(
-            {'name': "Без ролей", 'login': 'td_outsider', 'password': 'td_outsider_pw', 'group_ids': [(6, 0, [])]}
+        outsider = (
+            self.env['res.users']
+            .with_context(no_reset_password=True)
+            .create(
+                {'name': "Без ролей", 'login': 'td_outsider', 'password': 'td_outsider_pw', 'group_ids': [(6, 0, [])]}
+            )
         )
         for model in MATRIX:
             self.assertFalse(self.env[model].with_user(outsider).has_access('read'), model)

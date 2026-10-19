@@ -319,9 +319,7 @@ def _slot_ext_vals(env, site, item, terms):
     attrs = [terms[('zone_attr', key)] for key in item.get('attrs') or [] if ('zone_attr', key) in terms]
     return {
         'type_id': _by_ref(env['td.slot.type'], item.get('type'), 'code', company).id or False,
-        'storage_category_id': _by_ref(
-            env['stock.storage.category'], item.get('storage_category'), 'name', company
-        ).id
+        'storage_category_id': _by_ref(env['stock.storage.category'], item.get('storage_category'), 'name', company).id
         or False,
         'removal_strategy_id': _by_ref(env['product.removal'], item.get('removal_strategy'), 'method', company).id
         or False,

@@ -354,9 +354,7 @@ class F3dSlot(models.Model):
         for slot, strict in zip(self, strict_keys, strict=False):
             if not slot.overrides:
                 continue
-            codes = set(
-                cells_mod.template_codes(slot.template, slot.params, slot.code_prefix, slot._td_addr_context())
-            )
+            codes = set(cells_mod.template_codes(slot.template, slot.params, slot.code_prefix, slot._td_addr_context()))
             unknown = [code for code in slot.overrides if code not in codes]
             if not unknown:
                 continue

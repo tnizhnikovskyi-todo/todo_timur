@@ -56,9 +56,7 @@ class TestSiteLayer(F3DConstructorCase):
                 'color': '#112233',
                 'opacity': 0.4,
                 'bounds': [[0, 0], [10, 0], [10, 10], [0, 10]],
-                'edit_group_ids': [
-                    Command.set([self.env.ref('td_constructor.group_td_constructor_storekeeper').id])
-                ],
+                'edit_group_ids': [Command.set([self.env.ref('td_constructor.group_td_constructor_storekeeper').id])],
                 'allowed_slot_type_ids': [Command.set(self.env['td.term'].search([('key', '=', 'pallet_rack')]).ids)],
             }
         )

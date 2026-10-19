@@ -46,9 +46,7 @@ def link_existing(env, site):
     has_wc_field = 'workcenter_id' in Equipment._fields
     for placement in env['td.placement'].search([('site_id', '=', site.id)]):
         code = placement.code
-        eq = Equipment.search([('td_code', '=', code)], limit=1) or Equipment.search(
-            [('td_alias', '=', code)], limit=1
-        )
+        eq = Equipment.search([('td_code', '=', code)], limit=1) or Equipment.search([('td_alias', '=', code)], limit=1)
         if eq and not (eq.td_site_id and eq.td_site_id != site):
             vals = {}
             if eq.td_site_id != site:
