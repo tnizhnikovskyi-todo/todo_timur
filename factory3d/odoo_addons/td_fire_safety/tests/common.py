@@ -114,7 +114,10 @@ class FireCase(TransactionCase):
                     "decimals": 1,
                     "create_request": True,
                     "write_enabled": False,
-                    "alarm_title": "Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}",
+                    "alarm_title": (
+                        "Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % "
+                        "при нормі до {threshold}"
+                    ),
                 }
             )
         cls.dust_signal = sig

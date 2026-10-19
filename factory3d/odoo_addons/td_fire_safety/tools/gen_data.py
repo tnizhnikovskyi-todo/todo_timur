@@ -4,7 +4,8 @@
     python3 odoo_addons/td_fire_safety/tools/gen_data.py [--root .] [--out odoo_addons/td_fire_safety/data]
 
 Читає: plant/fire.py, plant/infra.py, plant/evacuation.py, plant/layout.py, plant/odoo_rpc.py (slug),
-plant/evac_routes.json, plant/fire_rules.json, plant/evac_rules.json, dist/odoo_demo.json (fire.groups, evacuation.drill_steps).
+plant/evac_routes.json, plant/fire_rules.json, plant/evac_rules.json, dist/odoo_demo.json (fire.groups,
+evacuation.drill_steps).
 Пише детерміновано (сортування за макетом, без часових міток, перенос рядка \\n, числа — round(v, 2) без зайвих нулів).
 Самоперевірки кидають SystemExit(2) з текстом.
 """
