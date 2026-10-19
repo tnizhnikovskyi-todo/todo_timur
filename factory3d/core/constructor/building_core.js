@@ -130,7 +130,8 @@ export function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.
 /**
  * Перешкоди будівлі як осьові прямокутники для авторозкладки (S4): колони, стіни, офіс, зарядка з `layer.items` шарів `building`
  * (повернуті — описаним прямокутником) і колони за `site.column_grid` (як їх малює сцена: 0,4 × 0,4 м у вузлах сітки; сітка
- * не дублює явні колони в тих самих точках). Результат: [{x0, y0, x1, y1, kind, id, name, grid?}].
+ * не дублює явні колони в тих самих точках). Результат: [{x0, y0, x1, y1, kind, id, name, grid?, obb?}]; `obb` — лише для об'єктів,
+ * повернутих не на кратний 90° кут (там описаний прямокутник грубіший за сам об'єкт).
  */
 export function obstacleRects(layers, site) {
     const out = [];
@@ -143,8 +144,14 @@ export function obstacleRects(layers, site) {
             if (!OBSTACLE_KINDS.includes(it.kind)) {
                 continue;
             }
-            const [x0, y0, x1, y1] = obbAabb(itemObb(it));
-            out.push({ x0: rnd(x0) + 0, y0: rnd(y0) + 0, x1: rnd(x1) + 0, y1: rnd(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" });
+            const obb = itemObb(it);
+            const [x0, y0, x1, y1] = obbAabb(obb);
+            const rect = { x0: rnd(x0) + 0, y0: rnd(y0) + 0, x1: rnd(x1) + 0, y1: rnd(y1) + 0, kind: it.kind, id: it.id, name: it.name || "" };
+            const k = ((obb.rot % 90) + 90) % 90;
+            if (k > 1e-6 && k < 90 - 1e-6) {
+                rect.obb = obb; // повернутий не на кратний 90° — справжній прямокутник (діагональна стіна не має перекривати пів контуру)
+            }
+            out.push(rect);
             if (it.kind === "column") {
                 explicit.push(it);
             }
