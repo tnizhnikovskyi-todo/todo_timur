@@ -488,7 +488,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 | `cron_td_energy_daily` | Енергетика: добові факти | 15 хв | `td.energy.daily._cron_daily` | перерахунок сьогоднішньої доби; вчорашньої — поки місцева година < `daily_close_h` або немає рядка `plant`; дозбір до `catchup_days` діб без рядка `plant` (R-02) | ≤ 3 с на добу, ≤ 20 с сумарно |
 | `cron_td_energy_drivers` | Енергетика: драйвери | 1 доба, `nextcall` 02:10 Київ | `td.energy.driver._cron_values` | значення драйверів за вчора й пропуски останніх `catchup_days` (R-03) | ≤ 10 с |
 | `cron_td_energy_enpi` | Енергетика: EnPI | 1 доба, `nextcall` 02:30 Київ | `td.energy.enpi._cron_enpi` | EnPI за вчора й пропуски за кожною затвердженою базою (R-05) | ≤ 10 с |
-| `cron_td_energy_analytics_rotate` | Енергетика: ротація аналітики | 1 сут, `nextcall` 03:20 Киев | `td.energy.daily._cron_rotate` | удалить `daily`, `enpi`, `driver.value` старше `td.energy.keep_interval_days` | ≤ 30 с |
+| `cron_td_energy_analytics_rotate` | Енергетика: ротація аналітики | 1 доба, `nextcall` 03:20 Київ | `td.energy.daily._cron_rotate` | видалити `daily`, `enpi`, `driver.value` старші за `td.energy.keep_interval_days` | ≤ 30 с |
 
 ## 7. HTTP/JSON API
 
@@ -508,7 +508,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 | API-10 | `td.energy.baseline.action_fit()` / `action_approve()` / `action_archive()` (на записі) | → `True` | `UserError` (R-04), `AccessError` |
 | API-11 | `td.energy.budget.action_approve()`, `get_status(month=None, resource_code=None)` | → `True` / `dict` (R-06) | `AccessError`, `UserError` |
 | API-12 | `td.energy.report.wizard.create_and_print(kind, period=None, shift_name=None)` | → `ir.actions.report` (dict) | `AccessError`, `UserError("Невідомий вид звіту: %s.")` |
-| API-13 | `td.energy.daily._td_build_days(days)` / `action_rebuild(date_from, date_to)` | → `{"days": n, "rows": n, "seconds": f}` | `AccessError`; диапазон > 400 → `UserError("Не більше 400 діб.")` |
+| API-13 | `td.energy.daily._td_build_days(days)` / `action_rebuild(date_from, date_to)` | → `{"days": n, "rows": n, "seconds": f}` | `AccessError`; діапазон > 400 → `UserError("Не більше 400 діб.")` |
 | API-14 | `td.energy.analytics._td_seed_demo(days=400, seed=20261018, purge=False, with_mo=True, with_baseline=True, with_budget=True)` | → статистика R-20 (лише `env.is_superuser()` або `td_factory3d.group_td_admin`) | `AccessError("Генерувати демо-дані може лише адміністратор.")` |
 | API-15 | `td.energy.driver.value.get_series(driver_code, day_from, day_to)` | → `{iso_day: value}` | |
 
@@ -654,7 +654,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 - «Інші» — сумарний рядок за межами ліміту (`top_equipment`, `top_mo`), без питомого.
 - Заголовки: `area` — «Ділянка» / «кВт·год/м²»; `eq` — «Обладнання» / «кВт·год/мотогод»; `mo` — «Замовлення» / «кВт·год/шт» (якщо всі МО в одній ОВ — «кВт·год/{ОВ}»); `prod` — «Продукт» / «кВт·год/од.»; `shift` — «Зміна» / «кВт·год/м²».
 
-### R-11 Срез «Ділянки»
+### R-11 Зріз «Ділянки»
 
 `kwh = Σ daily.node.qty`, `cost = Σ daily.node.cost` за `area_id` за вікно; `spec = kwh / Σ plate_m2(вікно)` для ділянок з `spec_driver_id` (`plate_m2`), інакше `null`. Рядок «Без ділянки» — за ненульової суми. Приклад: `CUT: 26 100 / 38 400 = 0,68`; `LIGHT_OFFICE` — «—».
 
@@ -666,7 +666,7 @@ access_td_energy_budget_chief,td.energy.budget chief,model_td_energy_budget,td_e
 
 З `td.energy.alloc` за вікно (`day`) з `production_id`: **МО** — `kwh = Σ kwh`, `cost = Σ cost`, `qty = production.qty_produced or product_qty`, `spec = kwh/qty`; ім'я «{mo.name} · {product} × {qty:g}»; ліміт `top_mo`. **Продукти** — групування за `alloc.product_id`: `kwh`, `cost`; `spec = Σ kwh / Σ qty` **різних** МО продукту у вікні (МО, що перетинають межу вікна, враховуються повністю — припущення A-14). Приклад: `WH/MO/00391`, `kwh 2 470`, `qty 60` → `41,17`.
 
-### R-14 Срез «Зміни»
+### R-14 Зріз «Зміни»
 
 Три рядки з `daily.plant`: «{Зміна 1} · {HH:MM}–{HH:MM}», «{Зміна 2} · …», «Ночі й вихідні · без виробництва» (назви й час — R-21 W3). `kwh = Σ shift1_qty / shift2_qty / off_qty`, `cost = Σ cost_s1 / cost_s2 / cost_off`; `spec` змін — `kwh / Σ plate_s1 (plate_s2)`; для «Ночі й вихідні» `spec_text = "база {avg_kw} кВт"`, `avg_kw = off_qty / off_hours` (`off_hours` — кількість годин вікна поза змінами за календарем).
 
