@@ -281,7 +281,7 @@ class TestW1Dashboard(TestW1Common):
         mobile = self.Dash.with_user(self.u_eng).get_mobile(None)
         self.assertTrue({"state", "alarms", "scheme"} <= set(mobile))
         self.assertLessEqual(len(json.dumps(mobile)), 20 * 1024)
-        # порядок — за положенням на схемі (y, x): КГУ (19.0.1.1.2) тепер над шафою QF-CHP, у верхньому ряду після вводу 10 кВ
+        # порядок — за положенням на схемі (y, x): КГУ (19.0.1.1.2) над шафою QF-CHP — у верхньому ряду після вводу
         self.assertEqual([r["code"] for r in mobile["scheme"]][:4], ["GRID-10KV", "CHP", "T1", "T2"])
         self.assertNotIn(
             "QF-CHP", [r["code"] for r in mobile["scheme"]]
