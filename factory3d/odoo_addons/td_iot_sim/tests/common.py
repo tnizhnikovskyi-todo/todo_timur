@@ -2,9 +2,9 @@ from unittest import mock
 
 from odoo.tests import TransactionCase, new_test_user
 
-TAG_ARGS = ('post_install', '-at_install', 'f3d', 'f3d_iot_sim')
-SIM_URL = 'http://sim.test:8090'
-SIM_TOKEN = 'secret-sim-token'
+TAG_ARGS = ("post_install", "-at_install", "f3d", "f3d_iot_sim")
+SIM_URL = "http://sim.test:8090"
+SIM_TOKEN = "secret-sim-token"
 
 
 class FakeResponse:
@@ -22,36 +22,46 @@ class SimCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        base_user = 'base.group_user'
+        base_user = "base.group_user"
         cls.user_reader = new_test_user(
-            cls.env, login='f3d_sim_reader', groups=f'{base_user},td_factory3d.group_td_user')
+            cls.env, login="f3d_sim_reader", groups=f"{base_user},td_factory3d.group_td_user"
+        )
         cls.user_manager = new_test_user(
-            cls.env, login='f3d_sim_manager', groups=f'{base_user},td_factory3d.group_td_manager')
+            cls.env, login="f3d_sim_manager", groups=f"{base_user},td_factory3d.group_td_manager"
+        )
         cls.user_admin = new_test_user(
-            cls.env, login='f3d_sim_admin', groups=f'{base_user},td_factory3d.group_td_admin')
+            cls.env, login="f3d_sim_admin", groups=f"{base_user},td_factory3d.group_td_admin"
+        )
 
     def setUp(self):
         super().setUp()
         self.responses = {}  # (METHOD, '/path') -> (status, json) | Exception
         self.calls = []
-        patcher = mock.patch('requests.Session.request', side_effect=self._fake_request)
+        patcher = mock.patch("requests.Session.request", side_effect=self._fake_request)
         self.request_mock = patcher.start()
         self.addCleanup(patcher.stop)
-        self.set_params(url=SIM_URL, token=SIM_TOKEN, read_enabled='True', write_enabled='True',
-                        level0_enabled='True', level0_after_min='5')
-        self.panel = self.env['td.sim.panel'].get_panel()
+        self.set_params(
+            url=SIM_URL,
+            token=SIM_TOKEN,
+            read_enabled="True",
+            write_enabled="True",
+            level0_enabled="True",
+            level0_after_min="5",
+        )
+        self.panel = self.env["td.sim.panel"].get_panel()
 
     def set_params(self, **kwargs):
         for key, value in kwargs.items():
-            self.env['ir.config_parameter'].sudo().set_param('td.iot_sim.' + key, value)
+            self.env["ir.config_parameter"].sudo().set_param("td.iot_sim." + key, value)
 
     def respond(self, method, path, status=200, data=None):
         self.responses[(method, path)] = (status, data)
 
     def _fake_request(self, method, url, **kwargs):
-        path = url.split('/sim/v1', 1)[1]
-        self.calls.append({'method': method, 'path': path, 'json': kwargs.get('json'),
-                           'headers': kwargs.get('headers') or {}})
+        path = url.split("/sim/v1", 1)[1]
+        self.calls.append(
+            {"method": method, "path": path, "json": kwargs.get("json"), "headers": kwargs.get("headers") or {}}
+        )
         item = self.responses.get((method, path), (200, {}))
         if isinstance(item, Exception):
             raise item
@@ -61,5 +71,5 @@ class SimCase(TransactionCase):
         return FakeResponse(status, data)
 
     def make_device(self, code, **vals):
-        vals.setdefault('name', code)
-        return self.env['td.sim.device'].create(dict(vals, code=code))
+        vals.setdefault("name", code)
+        return self.env["td.sim.device"].create(dict(vals, code=code))

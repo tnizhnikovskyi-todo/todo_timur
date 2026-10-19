@@ -4,6 +4,7 @@ Odoo викликає `post_init_hook` лише при першому встан
 тож на базі з прототипом `-u` лишав порожні реєстр пристроїв і каталог сигналів. Тут виконуються ті самі кроки 1–7;
 вони ідемпотентні (ключі `code`), тому повторний запуск на базі, де реєстр уже наповнено, дублікатів не створює.
 """
+
 import logging
 
 from odoo import SUPERUSER_ID, api
@@ -14,10 +15,14 @@ _logger = logging.getLogger(__name__)
 
 def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
-    devices = env['td.sim.device'].sudo().search_count([])
-    signals = env['td.sim.signal'].sudo().search_count([])
+    devices = env["td.sim.device"].sudo().search_count([])
+    signals = env["td.sim.signal"].sudo().search_count([])
     post_init_hook(env)
     _logger.info(
         "td_iot_sim: post-migrate з %s: пристроїв %d → %d, сигналів %d → %d",
-        version, devices, env['td.sim.device'].sudo().search_count([]),
-        signals, env['td.sim.signal'].sudo().search_count([]))
+        version,
+        devices,
+        env["td.sim.device"].sudo().search_count([]),
+        signals,
+        env["td.sim.signal"].sudo().search_count([]),
+    )

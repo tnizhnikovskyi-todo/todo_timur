@@ -3,6 +3,7 @@
 Ті самі кроки реєстру, що й `post_init_hook` (без перерахунку `read_enabled`); вони ідемпотентні: `params` пишуться лише
 порожні, пристрої й сигнали за ключем `code` не дублюються.
 """
+
 import logging
 
 from odoo import SUPERUSER_ID, api
@@ -13,8 +14,12 @@ _logger = logging.getLogger(__name__)
 
 def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
-    Device = env['td.sim.device'].sudo()
-    before = Device.search_count([('params', '!=', False)])
+    Device = env["td.sim.device"].sudo()
+    before = Device.search_count([("params", "!=", False)])
     refresh_registry(env)
-    _logger.info("td_iot_sim: post-migrate з %s: пристроїв із params %d → %d",
-                 version, before, Device.search_count([('params', '!=', False)]))
+    _logger.info(
+        "td_iot_sim: post-migrate з %s: пристроїв із params %d → %d",
+        version,
+        before,
+        Device.search_count([("params", "!=", False)]),
+    )
