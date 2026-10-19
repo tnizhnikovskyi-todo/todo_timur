@@ -415,11 +415,13 @@ POST → queued ──▶ sent ──▶ done      модуль відповів
 ```python
 import requests
 
+
 def _api(env):
     icp = env["ir.config_parameter"].sudo()
     base = icp.get_param("smartgen.relay_url", "https://gen-relay.todo.ltd/api/v1")
     headers = {"Authorization": f"Bearer {icp.get_param('smartgen.relay_token')}"}
     return base, headers
+
 
 def pull_readings(env):
     base, headers = _api(env)
@@ -434,7 +436,7 @@ def pull_readings(env):
             ...  # створити запис, якщо запису з relay_id == rd["id"] ще немає
         since = page["next_since"]
         icp.set_param("smartgen.readings_cursor", str(since))
-        env.cr.commit()                    # курсор і записи — в одній транзакції
+        env.cr.commit()  # курсор і записи — в одній транзакції
         if len(page["readings"]) < 500:
             break
 ```
@@ -454,33 +456,43 @@ def pull_readings(env):
 ```python
 import time, requests
 
-EXPECT = {"auto": "auto", "manual": "manual", "test": "test"}   # лише режими; stop/start перевіряти за genset_status (7.1, 8.4)
+EXPECT = {
+    "auto": "auto",
+    "manual": "manual",
+    "test": "test",
+}  # лише режими; stop/start перевіряти за genset_status (7.1, 8.4)
+
 
 def send_and_verify(env, command, who, source, deadline_s=600):
     base, headers = _api(env)
     started = time.time()
     while time.time() - started < deadline_s:
-        r = requests.post(f"{base}/commands", json={"command": command, "requested_by": who, "source": source},
-                          headers=headers, timeout=20)
+        r = requests.post(
+            f"{base}/commands",
+            json={"command": command, "requested_by": who, "source": source},
+            headers=headers,
+            timeout=20,
+        )
         if r.status_code == 403:
             return "disabled", r.json()["error"]
         if r.status_code in (409, 502, 503, 504) or r.status_code >= 500:
-            time.sleep(20); continue                       # модуль перепідключається — повторити
+            time.sleep(20)
+            continue  # модуль перепідключається — повторити
         r.raise_for_status()
         cid = r.json()["id"]
         cmd = r.json()
-        for _ in range(20):                                # ~40 с на фінальний статус
+        for _ in range(20):  # ~40 с на фінальний статус
             time.sleep(2)
             cmd = requests.get(f"{base}/commands/{cid}", headers=headers, timeout=20).json()
             if cmd["status"] not in ("queued", "sent"):
                 break
         if cmd["status"] == "done":
-            for _ in range(12):                            # до 60 с на підтвердження режиму
+            for _ in range(12):  # до 60 с на підтвердження режиму
                 time.sleep(5)
                 lt = requests.get(f"{base}/latest", headers=headers, timeout=20).json()
                 if lt["time_utc"] >= cmd["done_utc"] and lt["values"].get("controller_mode") == EXPECT.get(command):
                     return "confirmed", cid
-        time.sleep(30)                                     # failed / timeout / режим не той — повторити
+        time.sleep(30)  # failed / timeout / режим не той — повторити
     return "alarm", "режим не підтвердився за 10 хв"
 ```
 

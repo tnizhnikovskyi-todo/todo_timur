@@ -5,15 +5,16 @@
 поточний користувач має право читання; інакше канал відкидається (за зразком ``mail`` для
 ``discuss.channel_<id>``).
 """
+
 import re
 
 from odoo import models
 
-CHANNEL_RE = re.compile(r'^td_genset_(\d+)$')
+CHANNEL_RE = re.compile(r"^td_genset_(\d+)$")
 
 
 class IrWebsocket(models.AbstractModel):
-    _inherit = 'ir.websocket'
+    _inherit = "ir.websocket"
 
     def _build_bus_channel_list(self, channels):
         channels, gensets = self._td_genset_bus_channels(channels)
@@ -28,8 +29,8 @@ class IrWebsocket(models.AbstractModel):
                 genset_ids.append(int(match.group(1)))
             else:
                 other.append(channel)
-        gensets = self.env['td.genset']
+        gensets = self.env["td.genset"]
         if genset_ids and self.env.uid and not self.env.user._is_public():
             gensets = gensets.browse(genset_ids).exists()
-            gensets = gensets.filtered(lambda genset: genset.has_access('read'))
+            gensets = gensets.filtered(lambda genset: genset.has_access("read"))
         return other, gensets

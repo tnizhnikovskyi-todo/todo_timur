@@ -22,6 +22,7 @@ Cron-методи викликаються напряму: ``pull()`` → ``td.g
 ``td.genset._cron_scheduler``. Налаштування стенду (ТР «Інструкція», передумови; BUILD_PLAN W5): повтор
 непідтвердженої команди 1/3 хв, тест 3 хв, зв'язок 3/10 хв, пороги палива 10 L, бак 145 L.
 """
+
 import logging
 import os
 import secrets
@@ -42,30 +43,30 @@ from ...models.td_logging import reset_log_state
 from ..common import TdGensetCase
 from .relay_harness import SimClient, StandError, StandTimeout, is_loopback_url, spawn_relay, wait_until
 
-KYIV = pytz.timezone('Europe/Kyiv')
-STAND_URL_ENV = 'TD_GENSET_STAND_URL'
-STAND_TOKEN_ENV = 'TD_GENSET_STAND_TOKEN'
-STAND_SIM_ENV = 'TD_GENSET_STAND_SIM'
-SCHEDULE_REQUESTED_BY = 'Odoo: розклад'
-OPEN_COMMAND_STATES = ('queued_odoo', 'to_send', 'sent', 'awaiting', 'retry', 'waiting_link')
+KYIV = pytz.timezone("Europe/Kyiv")
+STAND_URL_ENV = "TD_GENSET_STAND_URL"
+STAND_TOKEN_ENV = "TD_GENSET_STAND_TOKEN"
+STAND_SIM_ENV = "TD_GENSET_STAND_SIM"
+SCHEDULE_REQUESTED_BY = "Odoo: розклад"
+OPEN_COMMAND_STATES = ("queued_odoo", "to_send", "sent", "awaiting", "retry", "waiting_link")
 STAND_CONFIG = {
-    'retry_every_min': 1,
-    'retry_window_min': 3,
-    'test_minutes': 3,
-    'missed_transition_policy': 'until_next',
-    'late_retry_every_min': 5,
-    'link_lost_min': 3,
-    'link_alarm_min': 10,
-    'relay_unavailable_alarm_min': 10,
-    'raw_regs_mode': 'auto',
-    'refuel_threshold_l': 10.0,
-    'drain_threshold_l': 10.0,
-    'drain_window_min': 60,
-    'low_fuel_pct': 20,
-    'catchup_summary': True,
+    "retry_every_min": 1,
+    "retry_window_min": 3,
+    "test_minutes": 3,
+    "missed_transition_policy": "until_next",
+    "late_retry_every_min": 5,
+    "link_lost_min": 3,
+    "link_alarm_min": 10,
+    "relay_unavailable_alarm_min": 10,
+    "raw_regs_mode": "auto",
+    "refuel_threshold_l": 10.0,
+    "drain_threshold_l": 10.0,
+    "drain_window_min": 60,
+    "low_fuel_pct": 20,
+    "catchup_summary": True,
     # Стенд без каністр: мінімальний запас 0 L, щоб «Запас у каністрах нижчий за мінімальний» (fuel_stock_low) не
     # змішувався з тривогами сценаріїв; так само ТО (мотогодини емулятора 34+ > «Перше ТО 30») — див. setUpClass.
-    'fuel_min_stock_l': 0.0,
+    "fuel_min_stock_l": 0.0,
 }
 
 
@@ -107,8 +108,8 @@ class TdGensetStandCase(TdGensetCase):
     """База стендових тестів (успадковує користувачів, ланцюжок і генератор «Стенд» з ``TdGensetCase``,
     але БЕЗ ``RelayMock``: усі запити модуля йдуть на емулятор)."""
 
-    relay_mode = 'env'
-    relay_version = '1.1.3'
+    relay_mode = "env"
+    relay_version = "1.1.3"
     snapshot_sec = 10
     time_scale = 20
 
@@ -118,16 +119,18 @@ class TdGensetStandCase(TdGensetCase):
         url = os.environ.get(STAND_URL_ENV)
         token = os.environ.get(STAND_TOKEN_ENV)
         if not url or not token:
-            raise unittest.SkipTest('Стендові тести: не задано %s / %s (запуск — smartgen/tools/odoo/'
-                                    'run_stand_tests.sh <база>)' % (STAND_URL_ENV, STAND_TOKEN_ENV))
+            raise unittest.SkipTest(
+                "Стендові тести: не задано %s / %s (запуск — smartgen/tools/odoo/"
+                "run_stand_tests.sh <база>)" % (STAND_URL_ENV, STAND_TOKEN_ENV)
+            )
         if not is_loopback_url(url):
-            raise unittest.SkipTest('Стендові тести працюють лише з локальним емулятором (127.0.0.1), не з %s' % url)
+            raise unittest.SkipTest("Стендові тести працюють лише з локальним емулятором (127.0.0.1), не з %s" % url)
         super().setUpClass()
-        cls.stand_url = url.rstrip('/')
+        cls.stand_url = url.rstrip("/")
         cls.stand_token = token
-        cls.stand_sim_url = os.environ.get(STAND_SIM_ENV) or (cls.stand_url + '/_sim')
+        cls.stand_sim_url = os.environ.get(STAND_SIM_ENV) or (cls.stand_url + "/_sim")
         cls.config.write(STAND_CONFIG)
-        cls.genset.write({'maint_first_hours': 1000})
+        cls.genset.write({"maint_first_hours": 1000})
 
     def clock_start_utc(self):
         """Момент старту годинника для ``relay_mode = 'own'`` (naive UTC) або ``None`` — «зараз»."""
@@ -141,36 +144,45 @@ class TdGensetStandCase(TdGensetCase):
         self.relay_process = None
         self._freezer = None
         self._clock = None
-        if self.relay_mode == 'own':
+        if self.relay_mode == "own":
             self._setup_own_relay()
         else:
             self._setup_env_relay()
-        icp = self.env['ir.config_parameter'].sudo()
-        icp.set_param('td_genset.relay_url', self.relay.api_url)
-        icp.set_param('td_genset.relay_token', self.relay.token)
-        icp.set_param('td_genset.http_timeout', '5')
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_param("td_genset.relay_url", self.relay.api_url)
+        icp.set_param("td_genset.relay_token", self.relay.token)
+        icp.set_param("td_genset.http_timeout", "5")
         self.relay.wait_first_reading()
-        hostid = self.relay.device()['hostid']
+        hostid = self.relay.device()["hostid"]
         if self.genset.relay_hostid != hostid:
             self.genset.relay_hostid = hostid
 
     def _setup_env_relay(self):
         self.relay = SimClient(self.stand_url, self.stand_token, sim_url=self.stand_sim_url)
         if not self.relay.has_sim():
-            self.skipTest('Стенд без службового /_sim (потрібен smartgen/tools/fake_relay.py)')
-        self.relay.sim(reset=True, snapshot_sec=self.snapshot_sec, time_scale=self.time_scale, noise=False,
-                       version=self.relay_version)
+            self.skipTest("Стенд без службового /_sim (потрібен smartgen/tools/fake_relay.py)")
+        self.relay.sim(
+            reset=True,
+            snapshot_sec=self.snapshot_sec,
+            time_scale=self.time_scale,
+            noise=False,
+            version=self.relay_version,
+        )
 
     def _setup_own_relay(self):
         start = self.clock_start_utc()
         real_now = datetime.now(timezone.utc).replace(tzinfo=None)
         offset = (start - real_now).total_seconds() if start else 0.0
         try:
-            self.relay_process = spawn_relay('stand-own-%s' % secrets.token_hex(8), version=self.relay_version,
-                                             snapshot_sec=self.snapshot_sec, time_scale=self.time_scale,
-                                             clock_offset=offset)
+            self.relay_process = spawn_relay(
+                "stand-own-%s" % secrets.token_hex(8),
+                version=self.relay_version,
+                snapshot_sec=self.snapshot_sec,
+                time_scale=self.time_scale,
+                clock_offset=offset,
+            )
         except FileNotFoundError as exc:
-            self.skipTest('Немає емулятора %s (власний екземпляр для керованого годинника)' % exc)
+            self.skipTest("Немає емулятора %s (власний екземпляр для керованого годинника)" % exc)
         self.addCleanup(self.relay_process.stop)
         self.relay = self.relay_process.client
         self._start_clock(real_now + timedelta(seconds=offset))
@@ -192,7 +204,7 @@ class TdGensetStandCase(TdGensetCase):
     def advance(self, minutes=0, seconds=0):
         """Зсунути вперед обидва годинники — емулятора і Odoo (лише ``relay_mode = 'own'``)."""
         delta = minutes * 60 + seconds
-        assert self.relay_mode == 'own', 'advance(): керований годинник є лише у власного емулятора'
+        assert self.relay_mode == "own", "advance(): керований годинник є лише у власного емулятора"
         self._shift_clock(delta)
         self.relay.advance(delta)
 
@@ -215,27 +227,27 @@ class TdGensetStandCase(TdGensetCase):
     # ------------------------------------------------------------------ cron
     def pull(self, max_runs=12):
         """``_cron_pull_readings`` до вичерпання (курсор і кількість знімків не змінюються) → знімки генератора."""
-        Reading = self.env['td.genset.reading']
+        Reading = self.env["td.genset.reading"]
         last = None
         for _ in range(max_runs):
-            self.env['td.genset']._cron_pull_readings()
+            self.env["td.genset"]._cron_pull_readings()
             self.env.invalidate_all()
-            state = (self.genset.readings_cursor, Reading.search_count([('genset_id', '=', self.genset.id)]))
+            state = (self.genset.readings_cursor, Reading.search_count([("genset_id", "=", self.genset.id)]))
             if state == last:
                 break
             last = state
         return self.odoo_readings()
 
     def run_commands(self):
-        self.env['td.genset.command']._cron_process_commands()
+        self.env["td.genset.command"]._cron_process_commands()
         self.env.invalidate_all()
 
     def run_scheduler(self):
-        self.env['td.genset']._cron_scheduler()
+        self.env["td.genset"]._cron_scheduler()
         self.env.invalidate_all()
 
     def link_on(self):
-        return self.relay.device_state()['link']
+        return self.relay.device_state()["link"]
 
     def snapshot(self):
         """Знімок «зараз» на емуляторі (лише коли модуль на зв'язку) → id останнього знімка."""
@@ -261,7 +273,7 @@ class TdGensetStandCase(TdGensetCase):
             self.run_commands()
             if all(cmd.state in final_states for cmd in commands):
                 return commands
-            for cmd in commands.filtered('relay_cmd_id'):
+            for cmd in commands.filtered("relay_cmd_id"):
                 self.relay.wait_command_final(cmd.relay_cmd_id, timeout=3, raise_on_timeout=False)
             self.tick(scheduler=scheduler, commands=False)
         self.run_commands()
@@ -269,63 +281,73 @@ class TdGensetStandCase(TdGensetCase):
 
     # ------------------------------------------------------------------ дані Odoo
     def odoo_readings(self):
-        return self.env['td.genset.reading'].search([('genset_id', '=', self.genset.id)], order='relay_id')
+        return self.env["td.genset.reading"].search([("genset_id", "=", self.genset.id)], order="relay_id")
 
     def genset_commands(self, **domain):
-        dom = [('genset_id', '=', self.genset.id)] + [(key, '=', value) for key, value in domain.items()]
-        return self.env['td.genset.command'].search(dom, order='id')
+        dom = [("genset_id", "=", self.genset.id)] + [(key, "=", value) for key, value in domain.items()]
+        return self.env["td.genset.command"].search(dom, order="id")
 
     def alarms(self, code=None, active=True):
-        domain = [('genset_id', '=', self.genset.id)]
+        domain = [("genset_id", "=", self.genset.id)]
         if code:
-            domain.append(('code', '=', code))
+            domain.append(("code", "=", code))
         if active:
-            domain.append(('state', '!=', 'cleared'))
-        return self.env['td.genset.alarm'].search(domain, order='id')
+            domain.append(("state", "!=", "cleared"))
+        return self.env["td.genset.alarm"].search(domain, order="id")
 
     def events(self, event_type=None):
-        domain = [('genset_id', '=', self.genset.id)]
+        domain = [("genset_id", "=", self.genset.id)]
         if event_type:
-            domain.append(('event_type', '=', event_type))
-        return self.env['td.genset.event'].search(domain, order='date_start, id')
+            domain.append(("event_type", "=", event_type))
+        return self.env["td.genset.event"].search(domain, order="date_start, id")
 
     def chatter_texts(self, record=None):
         record = record or self.genset
-        return [html2plaintext(body or '') for body in record.message_ids.mapped('body')]
+        return [html2plaintext(body or "") for body in record.message_ids.mapped("body")]
 
     def assertChatterContains(self, text, record=None):
         texts = self.chatter_texts(record)
-        self.assertTrue(any(text in body for body in texts),
-                        'У чатері немає «%s»; є: %s' % (text, ' | '.join(texts[:10])))
+        self.assertTrue(
+            any(text in body for body in texts), "У чатері немає «%s»; є: %s" % (text, " | ".join(texts[:10]))
+        )
 
     def column_is_null(self, record, column):
         """Значення колонки в базі — NULL («немає даних», SPEC 4), а не 0/False."""
         self.env.flush_all()
-        self.env.cr.execute(SQL('SELECT %s IS NULL FROM %s WHERE id = %s',
-                                SQL.identifier(column), SQL.identifier(record._table), record.id))
+        self.env.cr.execute(
+            SQL(
+                "SELECT %s IS NULL FROM %s WHERE id = %s",
+                SQL.identifier(column),
+                SQL.identifier(record._table),
+                record.id,
+            )
+        )
         return self.env.cr.fetchone()[0]
 
     # ------------------------------------------------------------------ дії користувачів
     def press(self, command, user=None, test_mode=None):
         """Кнопка пульта через майстер підтвердження (як у формі) → нові команди генератора."""
         before = self.genset_commands()
-        vals = {'genset_id': self.genset.id, 'command': command}
+        vals = {"genset_id": self.genset.id, "command": command}
         if test_mode:
-            vals['test_mode'] = test_mode
-        wizard = self.env['td.genset.command.wizard'].with_user(user or self.user_t).create(vals)
+            vals["test_mode"] = test_mode
+        wizard = self.env["td.genset.command.wizard"].with_user(user or self.user_t).create(vals)
         wizard.action_confirm()
         self.env.invalidate_all()
         return self.genset_commands() - before
 
-    def enqueue(self, command, source='schedule', requested_by=SCHEDULE_REQUESTED_BY, **kwargs):
+    def enqueue(self, command, source="schedule", requested_by=SCHEDULE_REQUESTED_BY, **kwargs):
         """Команда через єдину точку створення ``_enqueue`` (як планувальник) → запис команди."""
-        cmd = self.env['td.genset.command']._enqueue(self.genset, command, source, requested_by, **kwargs)
+        cmd = self.env["td.genset.command"]._enqueue(self.genset, command, source, requested_by, **kwargs)
         self.env.invalidate_all()
         return cmd
 
     def start_timer(self, hours, minutes, user=None):
-        wizard = self.env['td.genset.timer.wizard'].with_user(user or self.user_s).create({
-            'genset_id': self.genset.id, 'hours': hours, 'minutes': minutes})
+        wizard = (
+            self.env["td.genset.timer.wizard"]
+            .with_user(user or self.user_s)
+            .create({"genset_id": self.genset.id, "hours": hours, "minutes": minutes})
+        )
         result = wizard.action_confirm()
         self.env.invalidate_all()
         return result
@@ -334,19 +356,19 @@ class TdGensetStandCase(TdGensetCase):
     def prepare_mode(self, mode):
         """Режим контролера до підключення Odoo (оператор стенду, в обхід Odoo) і курсор знімків генератора —
         на останньому знімку (історія підготовки не потрапляє в Odoo як «керування не з Odoo»)."""
-        if self.relay.values().get('controller_mode') != mode:
+        if self.relay.values().get("controller_mode") != mode:
             cmd = self.relay.post_command(mode)
-            self.relay.wait_command_final(cmd['id'])
+            self.relay.wait_command_final(cmd["id"])
             self.relay.wait_mode(mode)
         last_id = self.relay.snapshot()
-        self.genset.sudo().write({'readings_cursor': last_id - 1})
+        self.genset.sudo().write({"readings_cursor": last_id - 1})
 
     def wait_relay(self, predicate, message, timeout=6.0):
         return self.relay.wait_values(predicate, timeout, message)
 
-    def relay_commands(self, source_prefix='odoo:'):
+    def relay_commands(self, source_prefix="odoo:"):
         """Команди на ретрансляторі, надіслані Odoo (``source`` з префіксом ``odoo:``)."""
-        return [cmd for cmd in self.relay.commands() if (cmd.get('source') or '').startswith(source_prefix)]
+        return [cmd for cmd in self.relay.commands() if (cmd.get("source") or "").startswith(source_prefix)]
 
     # ------------------------------------------------------------------ спостереження за HTTP і логами
     @contextmanager
@@ -357,30 +379,30 @@ class TdGensetStandCase(TdGensetCase):
         original = requests.Session.request
 
         def request(session, method, url, *args, **kwargs):
-            params = dict(kwargs.get('params') or (args[0] if args and isinstance(args[0], dict) else {}) or {})
+            params = dict(kwargs.get("params") or (args[0] if args and isinstance(args[0], dict) else {}) or {})
             for key, values in parse_qs(urlsplit(url).query).items():
                 params.setdefault(key, values[-1])
-            call = {'method': (method or 'GET').upper(), 'path': urlsplit(url).path, 'params': params}
+            call = {"method": (method or "GET").upper(), "path": urlsplit(url).path, "params": params}
             calls.append(call)
             if fail and fail(call, calls):
-                raise requests.exceptions.ConnectionError('stand: штучна мережева помилка')
+                raise requests.exceptions.ConnectionError("stand: штучна мережева помилка")
             return original(session, method, url, *args, **kwargs)
 
-        with patch.object(requests.Session, 'request', request):
+        with patch.object(requests.Session, "request", request):
             yield calls
 
     @staticmethod
     def readings_calls(calls):
-        return [call for call in calls if call['method'] == 'GET' and call['path'].endswith('/readings')]
+        return [call for call in calls if call["method"] == "GET" and call["path"].endswith("/readings")]
 
     @staticmethod
     def is_raw(call):
-        return str(call['params'].get('raw', '')).lower() in ('1', 'true', 'yes')
+        return str(call["params"].get("raw", "")).lower() in ("1", "true", "yes")
 
     @contextmanager
     def capture_logs(self, *names):
         """Усі записи логерів модуля (DEBUG) і HTTP-бібліотек — для перевірки, що токена в логах немає (AC-57)."""
-        names = names or ('odoo.addons.td_genset', 'urllib3', 'requests')
+        names = names or ("odoo.addons.td_genset", "urllib3", "requests")
         records = []
 
         class Collector(logging.Handler):
@@ -405,7 +427,18 @@ class TdGensetStandCase(TdGensetCase):
 
 
 __all__ = [
-    'KYIV', 'OPEN_COMMAND_STATES', 'SCHEDULE_REQUESTED_BY', 'STAND_CONFIG', 'StandError', 'StandTimeout',
-    'TdGensetStandCase', 'float_time', 'kyiv_to_utc', 'kyiv_weekday', 'next_weekday_kyiv', 'tomorrow_kyiv',
-    'utc_naive', 'wait_until',
+    "KYIV",
+    "OPEN_COMMAND_STATES",
+    "SCHEDULE_REQUESTED_BY",
+    "STAND_CONFIG",
+    "StandError",
+    "StandTimeout",
+    "TdGensetStandCase",
+    "float_time",
+    "kyiv_to_utc",
+    "kyiv_weekday",
+    "next_weekday_kyiv",
+    "tomorrow_kyiv",
+    "utc_naive",
+    "wait_until",
 ]

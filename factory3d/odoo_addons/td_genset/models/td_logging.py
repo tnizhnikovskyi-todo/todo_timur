@@ -9,6 +9,7 @@
 кілька процесів cron (``workers`` > 0) дають не більше одного WARNING на процес. Час — ``fields.Datetime.now()``
 (у тестах діє ``freezegun``).
 """
+
 import logging
 import threading
 from datetime import timedelta
@@ -17,7 +18,7 @@ from odoo import fields
 
 REMIND_EVERY = timedelta(hours=1)
 _LOCK = threading.Lock()
-_STATE = {}          # (dbname, key) → {'signature', 'since', 'logged_at', 'count'}
+_STATE = {}  # (dbname, key) → {'signature', 'since', 'logged_at', 'count'}
 
 
 def log_failure(logger, env, key, signature, msg, *args, exc_info=False):
@@ -28,20 +29,20 @@ def log_failure(logger, env, key, signature, msg, *args, exc_info=False):
     """
     now = fields.Datetime.now()
     slot = (env.cr.dbname, key)
-    suffix, extra = '', ()
+    suffix, extra = "", ()
     with _LOCK:
         state = _STATE.get(slot)
-        if state is None or state['signature'] != signature:
-            since = state['since'] if state else now
-            _STATE[slot] = {'signature': signature, 'since': since, 'logged_at': now, 'count': 1}
+        if state is None or state["signature"] != signature:
+            since = state["since"] if state else now
+            _STATE[slot] = {"signature": signature, "since": since, "logged_at": now, "count": 1}
             level = logging.WARNING
         else:
-            state['count'] += 1
-            if now - state['logged_at'] >= REMIND_EVERY:
-                state['logged_at'] = now
+            state["count"] += 1
+            if now - state["logged_at"] >= REMIND_EVERY:
+                state["logged_at"] = now
                 level = logging.WARNING
-                suffix = ' (триває %d хв, повторів: %d)'
-                extra = (int((now - state['since']).total_seconds() // 60), state['count'])
+                suffix = " (триває %d хв, повторів: %d)"
+                extra = (int((now - state["since"]).total_seconds() // 60), state["count"])
             else:
                 level = logging.DEBUG
     logger.log(level, msg + suffix, *(args + extra), exc_info=exc_info if level >= logging.WARNING else False)
@@ -59,8 +60,8 @@ def log_recovered(logger, env, key, msg, *args):
         state = _STATE.pop(slot, None)
     if state is None:
         return False
-    minutes = int((fields.Datetime.now() - state['since']).total_seconds() // 60)
-    logger.info(msg + ' — після %d хв помилок (повторів: %d)', *(args + (minutes, state['count'])))
+    minutes = int((fields.Datetime.now() - state["since"]).total_seconds() // 60)
+    logger.info(msg + " — після %d хв помилок (повторів: %d)", *(args + (minutes, state["count"])))
     return True
 
 

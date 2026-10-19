@@ -6,6 +6,6 @@ import pkgutil
 
 __all__ = []
 for _module_info in pkgutil.iter_modules(__path__):
-    if _module_info.name.startswith('test_w5_stand_'):
-        globals()[_module_info.name] = importlib.import_module('%s.%s' % (__name__, _module_info.name))
+    if _module_info.name.startswith("test_w5_stand_"):
+        globals()[_module_info.name] = importlib.import_module("%s.%s" % (__name__, _module_info.name))
         __all__.append(_module_info.name)

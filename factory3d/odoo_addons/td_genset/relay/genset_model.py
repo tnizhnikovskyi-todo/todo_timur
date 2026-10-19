@@ -4,6 +4,7 @@
 Публічний REST-шар (/sim/v1/*, API-F-01…API-F-09) викликає методи `state_json`, `set_mains`, `set_remote_start`,
 `set_load`, `fault`, `clear`, `set_fuel`, `set_time`, `reset`, `events_json`; помилки — `SimError(status, detail)`.
 """
+
 import json
 import logging
 import math
@@ -13,12 +14,22 @@ import time
 from datetime import datetime, timedelta, timezone
 
 PROFILES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
-STATE_CODES = {"standby": 1, "mains_abnormal": 2, "starting": 3, "safety_on": 4, "warming": 5, "running": 6,
-               "loaded": 7, "cooling": 8, "stopping": 9, "alarm_shutdown": 10}
+STATE_CODES = {
+    "standby": 1,
+    "mains_abnormal": 2,
+    "starting": 3,
+    "safety_on": 4,
+    "warming": 5,
+    "running": 6,
+    "loaded": 7,
+    "cooling": 8,
+    "stopping": 9,
+    "alarm_shutdown": 10,
+}
 MODES = ("stop", "manual", "auto", "test")
-SUBSTEP_S = 0.5               # максимальний внутрішній крок, с
+SUBSTEP_S = 0.5  # максимальний внутрішній крок, с
 MAX_SUBSTEPS = 2000
-TEST_S = 180.0                # «тест 3 хв» (ТР 1.2)
+TEST_S = 180.0  # «тест 3 хв» (ТР 1.2)
 OVER_SPEED_RPM = 1725
 # код тривоги → (назва, серйозність, одиниця)
 ALARM_DEFS = {
@@ -34,8 +45,16 @@ ALARM_DEFS = {
     "over_current": ("Genset Over Current", "warning", "kW"),
     "comm_lost": ("Comm Lost", "info", None),
 }
-FAULT_CODES = ("low_oil_pressure", "high_temp", "low_fuel", "start_fail", "batt_low", "comm_lost", "over_speed",
-               "emergency_stop")
+FAULT_CODES = (
+    "low_oil_pressure",
+    "high_temp",
+    "low_fuel",
+    "start_fail",
+    "batt_low",
+    "comm_lost",
+    "over_speed",
+    "emergency_stop",
+)
 LOG = logging.getLogger("genset_model")
 LOG.addHandler(logging.NullHandler())
 
@@ -62,8 +81,9 @@ def get_tz(name):
     """Часова зона RELAY_TZ; без бази tzdata Europe/Kyiv → фіксований +03:00."""
     try:
         from zoneinfo import ZoneInfo
+
         return ZoneInfo(name)
-    except Exception:                                      # немає бази зон
+    except Exception:  # немає бази зон
         return timezone(timedelta(hours=3)) if name == "Europe/Kyiv" else timezone.utc
 
 
@@ -91,8 +111,19 @@ class GensetModel:
         return datetime.fromtimestamp(self.sim_ts if ts is None else ts, self.tz).isoformat(timespec="seconds")
 
     def _log(self, level, msg, event=None):
-        LOG.log(level, msg, extra={"sim": {"state": self.state, "mode": self.mode, "p_kw": round(self.p_kw, 1),
-                                           "fuel_l": round(self.fuel_l, 2), "event": event}})
+        LOG.log(
+            level,
+            msg,
+            extra={
+                "sim": {
+                    "state": self.state,
+                    "mode": self.mode,
+                    "p_kw": round(self.p_kw, 1),
+                    "fuel_l": round(self.fuel_l, 2),
+                    "event": event,
+                }
+            },
+        )
 
     @property
     def tank_l(self):
@@ -178,7 +209,7 @@ class GensetModel:
                     self.mode = "auto"
             if self.timer_name:
                 self.timer_left -= dt
-        for _ in range(20):                                    # ланцюжок нульових таймерів
+        for _ in range(20):  # ланцюжок нульових таймерів
             if not (self.timer_name and self.timer_left <= 0):
                 break
             name, self._over = self.timer_name, self.timer_left
@@ -247,7 +278,7 @@ class GensetModel:
             self.sub = None
             self._set_state("safety_on")
             self._timer("safety_on_s", t["safety_on_s"])
-        elif name == "crank_s":                                # невдала прокрутка (start_fail)
+        elif name == "crank_s":  # невдала прокрутка (start_fail)
             self.engine = "stopped"
             self.attempt += 1
             if self.attempt < int(t["start_times"]):
@@ -301,7 +332,7 @@ class GensetModel:
         self.attempt, self.sub, self.engine = 0, "delay", "stopped"
         self.load_explicit = False
         if reason == "amf":
-            self.breaker = "none"                              # мережу відкрито
+            self.breaker = "none"  # мережу відкрито
         self._set_state("starting")
         self._timer("start_delay_s", self.timers["start_delay_s"])
 
@@ -321,7 +352,7 @@ class GensetModel:
             self.cool_phase = "cool"
             self._timer("cooling_s", self.timers["cooling_s"])
         else:
-            self.breaker, self.cool_phase = "none", "transfer"      # реле генератора відкрито
+            self.breaker, self.cool_phase = "none", "transfer"  # реле генератора відкрито
             self._timer("transfer_s", self.timers["transfer_s"])
 
     def _begin_stopping(self):
@@ -377,7 +408,7 @@ class GensetModel:
         elif st in ("safety_on", "warming"):
             if self.mode == "stop":
                 self._begin_stopping()
-        else:                                                  # running / loaded
+        else:  # running / loaded
             self._run_logic()
 
     def _run_logic(self):
@@ -425,11 +456,19 @@ class GensetModel:
         self.alarms[code] = {"name": name, "severity": severity, "since": self.iso(), "forced": forced}
         if severity != "info":
             self.event_seq += 1
-            self.events.append({
-                "id": self.event_seq, "ts": self.iso(), "code": code, "severity": severity, "name": name,
-                "value": None if value is None else round(float(value), 2), "unit": unit,
-                "threshold": None if threshold is None else round(float(threshold), 2),
-                "text": "%s (%s)" % (name, severity)})
+            self.events.append(
+                {
+                    "id": self.event_seq,
+                    "ts": self.iso(),
+                    "code": code,
+                    "severity": severity,
+                    "name": name,
+                    "value": None if value is None else round(float(value), 2),
+                    "unit": unit,
+                    "threshold": None if threshold is None else round(float(threshold), 2),
+                    "text": "%s (%s)" % (name, severity),
+                }
+            )
             self._log(logging.WARNING, "alarm %s" % name, event=code)
         if severity == "shutdown":
             self._shutdown()
@@ -459,8 +498,11 @@ class GensetModel:
             self._natural("over_current", False)
 
     def alarm_list(self, with_info=False):
-        return [{"code": c, "name": a["name"], "severity": a["severity"], "since": a["since"]}
-                for c, a in self.alarms.items() if with_info or a["severity"] != "info"]
+        return [
+            {"code": c, "name": a["name"], "severity": a["severity"], "since": a["since"]}
+            for c, a in self.alarms.items()
+            if with_info or a["severity"] != "info"
+        ]
 
     @property
     def comm_lost(self):
@@ -477,18 +519,39 @@ class GensetModel:
         amps = self.p_kw * 1000.0 / (math.sqrt(3) * float(self.profile["sensors"]["u_v"]) * pf)
         levels = [a["severity"] for a in self.alarms.values()]
         return {
-            "profile": self.profile["profile"], "sim_time": self.iso(), "factor": float(factor), "mode": self.mode,
-            "state": self.state, "state_code": STATE_CODES[self.state], "engine": self.engine,
-            "mains_ok": self.mains_ok, "gen_ok": gen_ok, "breaker": self.breaker, "remote_start": self.remote_start,
-            "p_kw": round(self.p_kw, 1), "load_pct": round(self.load_pct(), 1), "u_v": round(self.u_v, 1),
-            "f_hz": round(self.f_hz, 1), "i_a": round(amps, 1), "pf": pf, "kwh": round(self.kwh, 2),
-            "fuel_l": round(self.fuel_l, 2), "fuel_pct": round(self.fuel_pct(), 2),
+            "profile": self.profile["profile"],
+            "sim_time": self.iso(),
+            "factor": float(factor),
+            "mode": self.mode,
+            "state": self.state,
+            "state_code": STATE_CODES[self.state],
+            "engine": self.engine,
+            "mains_ok": self.mains_ok,
+            "gen_ok": gen_ok,
+            "breaker": self.breaker,
+            "remote_start": self.remote_start,
+            "p_kw": round(self.p_kw, 1),
+            "load_pct": round(self.load_pct(), 1),
+            "u_v": round(self.u_v, 1),
+            "f_hz": round(self.f_hz, 1),
+            "i_a": round(amps, 1),
+            "pf": pf,
+            "kwh": round(self.kwh, 2),
+            "fuel_l": round(self.fuel_l, 2),
+            "fuel_pct": round(self.fuel_pct(), 2),
             "fuel_lph": round(self.fuel_lph(self.load_pct()), 1) if self.engine == "running" else 0.0,
-            "hours": round(self.hours, 3), "starts": self.starts, "coolant_c": round(self.coolant_c, 1),
-            "oil_bar": round(self.oil_bar, 1), "batt_v": round(self.batt_v, 1),
-            "charger_v": round(self.charger_v, 1), "rpm": self.rpm, "alarms": self.alarm_list(),
+            "hours": round(self.hours, 3),
+            "starts": self.starts,
+            "coolant_c": round(self.coolant_c, 1),
+            "oil_bar": round(self.oil_bar, 1),
+            "batt_v": round(self.batt_v, 1),
+            "charger_v": round(self.charger_v, 1),
+            "rpm": self.rpm,
+            "alarms": self.alarm_list(),
             "alarm_level": 2 if "shutdown" in levels else (1 if "warning" in levels else 0),
-            "timers": self.timers_info(), "last_test": self.last_test}
+            "timers": self.timers_info(),
+            "last_test": self.last_test,
+        }
 
     def set_mains(self, available, u_v=None, f_hz=None):
         if not isinstance(available, bool):
@@ -588,7 +651,7 @@ class GensetModel:
         return factor, {"factor": factor if factor is not None else float(current_factor), "sim_time": self.iso()}
 
     def events_json(self, since=0, limit=500):
-        items = [e for e in self.events if e["id"] > since][:max(0, limit)]
+        items = [e for e in self.events if e["id"] > since][: max(0, limit)]
         return {"items": items, "next": items[-1]["id"] if items else since}
 
     # ------------------------------------------------------------------ пульт (команди relay_api.md)

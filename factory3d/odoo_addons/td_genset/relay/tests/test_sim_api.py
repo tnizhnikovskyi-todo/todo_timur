@@ -3,6 +3,7 @@
 Без Odoo: сервер поднимается на свободном порту, время «прожигается» через /_sim {"advance": N}.
 Запуск: cd relay && python -m pytest -q tests   (или python -m unittest discover -s tests)
 """
+
 import json
 import os
 import sys
@@ -25,8 +26,15 @@ class Stand:
     """Сервер fake_relay в потоке + мини-клиент."""
 
     def __init__(self, profile="d700", sim_token=SIM_TOKEN, **kwargs):
-        self.relay = fake_relay.Relay(API_TOKEN, [fake_relay.DEFAULT_HOSTID], snapshot_sec=60, noise=False,
-                                      profile=profile, sim_token=sim_token, **kwargs)
+        self.relay = fake_relay.Relay(
+            API_TOKEN,
+            [fake_relay.DEFAULT_HOSTID],
+            snapshot_sec=60,
+            noise=False,
+            profile=profile,
+            sim_token=sim_token,
+            **kwargs,
+        )
         self.server = fake_relay.make_server(self.relay, "127.0.0.1", 0, quiet=True)
         self.base = "http://127.0.0.1:%d" % self.server.server_address[1]
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
