@@ -15,8 +15,8 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor). Эмулятор поднима
 | 1. Новая БД `odoo`, модули `td_*` установлены (RENAME.md §7) | менеджер | — |
 | 2. Токены и параметры в Odoo | менеджер | `stand_odoo_setup.py setup > td-stand.secrets` |
 | 3. Передать файл `td-stand.secrets` клиенту (два значения, не хранить в git и чатах) | менеджер | — |
-| 4. Проверка без изменений | клиент | `sudo TD_SECRETS_FILE=/root/td-stand.secrets bash /mnt/f3d-addons/factory3d/tools/server/install_stand.sh --check` |
-| 5. Установка | клиент | `sudo TD_SECRETS_FILE=/root/td-stand.secrets bash /mnt/f3d-addons/factory3d/tools/server/install_stand.sh` |
+| 4. Проверка без изменений | клиент | `sudo TD_SECRETS_FILE=/root/td-stand.secrets bash <клон>/factory3d/tools/server/install_stand.sh --check` |
+| 5. Установка | клиент | `sudo TD_SECRETS_FILE=/root/td-stand.secrets bash <клон>/factory3d/tools/server/install_stand.sh` |
 | 6. История за 90 дней (через ≥ 5 минут после п. 5) | менеджер | `stand_odoo_setup.py backfill` |
 
 После установки файл с токенами можно удалить: значения лежат в `/etc/td-stand/*.env` (0640 root:td-stand).
@@ -30,14 +30,26 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor). Эмулятор поднима
 
 Токены можно передать иначе: переменные `TD_COLLECTOR_TOKEN` / `TD_SIM_API_TOKEN`, файлы `TD_COLLECTOR_TOKEN_FILE` /
 `TD_SIM_API_TOKEN_FILE` (в файле только значение). Повторный запуск без токенов берёт значения из `/etc/td-stand/*.env`.
-Обновление кода стенда: `git pull` в `/mnt/f3d-addons`, затем снова `install_stand.sh` (пересоберёт venv, если изменились
+Обновление кода стенда: `git pull` в git-клоне (на timur-o19demo — `/opt/timur-o19/timur-o19e/git/todo_timur`), затем снова `install_stand.sh` (пересоберёт venv, если изменились
 исходники `factory3d/services`, и перезапустит изменившиеся службы). Новые токены: менеджер делает `setup --rotate`,
 клиент запускает установку с новым файлом.
 
 Переменные: `TD_REPO` (git-клон, по умолчанию тот, где лежит скрипт), `TD_ODOO_URL` (`http://127.0.0.1:8069`),
-`TD_COLLECTOR_CODE` (`COL-MAIN`), `TD_PUSH_PORT` (8080), `TD_PYTHON`, `TD_IP_FILTER=0` (не ограничивать сеть служб),
+`TD_COLLECTOR_CODE` (`COL-MAIN`), `TD_PUSH_PORT` (8080), `TD_SIM_PORT_BIOSTAR_HTTP` (HTTP-порт эмулятора BioStar,
+8081; пишется в `iot-sim.env` как `SIM_PORT_BIOSTAR_HTTP`; Odoo и сборщик ходят в BioStar по HTTPS 8443, им менять
+нечего), `TD_PYTHON`, `TD_IP_FILTER=0` (не ограничивать сеть служб),
 `TD_HARDEN=0` (без песочницы systemd: нужен, если в `journalctl` у службы `status=226/NAMESPACE`, например в LXC),
 `--no-mqtt` (не ставить брокер).
+
+**timur-o19demo** (Odoo в Docker, опубликован на хосте как 127.0.0.1:8094; 127.0.0.1:8081 занят ретранслятором SmartGen,
+его не трогаем; клон — `/opt/timur-o19/timur-o19e/git/todo_timur`, пути `/mnt/f3d-addons` на хосте нет):
+
+    sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
+        bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
+
+Затем та же команда без `--check`. Обращение Odoo → эмулятор (`td.iot_sim.url`, сценарии и сбои из пульта) из контейнера
+в сети bridge не попадёт на `127.0.0.1:8090` хоста: нужен адрес хоста со стороны контейнера (шлюз сети Docker) и
+`TD_IP_FILTER=0` (иначе службы принимают только localhost). Сбор показаний это не затрагивает.
 
 ## Что ставится
 
@@ -52,7 +64,7 @@ bacnet_ip, helvarnet, sics, opcua, rest_vendor). Эмулятор поднима
 | брокер MQTT: пакет `mosquitto`, `listener 1883 127.0.0.1`, пользователи `sim`, `collector` | `/etc/mosquitto/conf.d/td-stand.conf`, `/etc/mosquitto/td-stand.passwd` |
 
 Порты (всё на loopback, обе службы ещё и ограничены `IPAddressDeny=any` + `IPAddressAllow=localhost`, если Odoo на этом
-же сервере): эмулятор TCP 502 (Modbus, через `CAP_NET_BIND_SERVICE`), 4001, 4840, 8081, 8082, 8083, 8090, 8443, 50000,
+же сервере): эмулятор TCP 502 (Modbus, через `CAP_NET_BIND_SERVICE`), 4001, 4840, 8081 (`TD_SIM_PORT_BIOSTAR_HTTP`), 8082, 8083, 8090, 8443, 50000,
 UDP 47808, 50001; сборщик TCP 8080 (HTTP push), 9108 (health, метрики), UDP 127.0.0.2:47808 (BACnet, чтобы не
 конфликтовать с эмулятором на 127.0.0.1:47808). Если порт занят чужим процессом, `--check` и установка остановятся с
 перечнем процессов. Секреты стенда (OPC UA, woodStore, MQTT, LPR и т. д.) генерируются при первой установке и дальше

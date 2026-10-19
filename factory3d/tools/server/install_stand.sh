@@ -25,9 +25,13 @@
 #   файл TD_SECRETS_FILE (строки KEY=VALUE, по умолчанию /etc/td-stand/secrets.env, если есть);
 #   значение, уже записанное в /etc/td-stand/*.env прошлым запуском.
 #
-# Переменные (значения по умолчанию подходят для timur-o19demo): TD_REPO, TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON,
-#   TD_USER, TD_PUSH_PORT, TD_IP_FILTER (0 — не ограничивать сеть служб), TD_HARDEN (0 — без песочницы systemd),
-#   TD_ROOT (всё в подкаталог, для проверки без системы).
+# Переменные (значения по умолчанию подходят для timur-o19demo): TD_REPO (по умолчанию — клон, в котором лежит этот
+#   скрипт), TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON, TD_USER, TD_PUSH_PORT, TD_SIM_PORT_BIOSTAR_HTTP (HTTP-порт
+#   эмулятора BioStar, по умолчанию 8081; пишется в iot-sim.env как SIM_PORT_BIOSTAR_HTTP), TD_IP_FILTER (0 — не
+#   ограничивать сеть служб), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
+# Пример (Odoo в Docker на 8094, порт 8081 занят ретранслятором SmartGen):
+#   sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
+#       bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
 # Режимы проверки: --no-system — не трогать пользователей, apt, systemd, mosquitto (файлы пишутся под TD_ROOT).
 set -euo pipefail
 umask 022
@@ -70,7 +74,8 @@ SECRETS_FILE="${TD_SECRETS_FILE:-/etc/td-stand/secrets.env}"
 HOSTS_NAMES="iot-sim mosquitto collector"
 MQ_CONF="${TD_MOSQUITTO_CONF:-/etc/mosquitto/conf.d/td-stand.conf}"
 MQ_PASSWD="${TD_MOSQUITTO_PASSWD:-/etc/mosquitto/td-stand.passwd}"
-PORTS_SIM_TCP="502 4001 4840 8081 8082 8083 8090 8443 50000"
+BIOSTAR_HTTP_PORT="${TD_SIM_PORT_BIOSTAR_HTTP:-8081}"   # 8081 на timur-o19demo занят ретранслятором SmartGen → 8181
+PORTS_SIM_TCP="502 4001 4840 $BIOSTAR_HTTP_PORT 8082 8083 8090 8443 50000"
 PUSH_PORT="${TD_PUSH_PORT:-8080}"
 PORTS_COL_TCP="$PUSH_PORT 9108"
 RECIPE=2                                             # версия способа установки: меняется — venv пересобираются
@@ -84,6 +89,11 @@ plan() { printf '   БУДЕТ    %s\n' "$*"; }
 warn() { printf '   ВНИМАНИЕ %s\n' "$*" >&2; WARNS=$((WARNS + 1)); }
 block() { printf '   ПРЕПЯТСТВИЕ %s\n' "$*" >&2; BLOCKERS=$((BLOCKERS + 1)); }
 die() { printf '%s  ОШИБКА: %s\n' "$(date +%H:%M:%S)" "$*" >&2; exit 1; }
+[[ "$BIOSTAR_HTTP_PORT" =~ ^[0-9]+$ ]] && ((BIOSTAR_HTTP_PORT >= 1 && BIOSTAR_HTTP_PORT <= 65535)) \
+    || die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT: нужен номер порта 1…65535"
+case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 " in
+    *" $BIOSTAR_HTTP_PORT "*) die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT совпадает с другим портом стенда" ;;
+esac
 have() { command -v "$1" >/dev/null 2>&1; }
 real() { [[ $CHECK -eq 0 ]]; }                       # true, когда реально меняем систему
 sysctl_on() { [[ $NO_SYSTEM -eq 0 ]] && have systemctl && [[ -d /run/systemd/system ]]; }
@@ -383,6 +393,7 @@ SIM_API_TOKEN=$SIM_TOKEN
 SIM_MODE=scenario
 SIM_LOG_LEVEL=INFO
 SIM_CATALOG_SOURCE=local
+SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT
 SIM_CATALOG_DIR=$PREFIX/iot-sim/catalog
 SIM_STATE_DIR=$STATE/sim/state
 SIM_OPCUA_CERT_DIR=$STATE/sim/certs
