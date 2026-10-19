@@ -1,4 +1,5 @@
 """pytest for check_apps.py: run `pytest factory3d/tools/apps -q` (stdlib + pytest, no Odoo, no network)."""
+
 import json
 import struct
 import sys
@@ -26,14 +27,28 @@ def make_png(path, w, h):
         return c + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
     raw = b"".join(b"\x00" + b"\x20\x40\x80" * w for _ in range(h))
-    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
-                     + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw))
+        + chunk(b"IEND", b"")
+    )
 
 
 def manifest_text(**over):
-    m = {"name": "Demo App", "version": "19.0.1.0.0", "summary": "A demo summary", "description": "Demo.",
-         "author": "ToDo", "website": "https://todo.ltd", "support": "support@todo.ltd", "license": "LGPL-3",
-         "category": "Manufacturing", "depends": ["base"], "images": ["static/description/banner.png"]}
+    m = {
+        "name": "Demo App",
+        "version": "19.0.1.0.0",
+        "summary": "A demo summary",
+        "description": "Demo.",
+        "author": "ToDo",
+        "website": "https://todo.ltd",
+        "support": "support@todo.ltd",
+        "license": "LGPL-3",
+        "category": "Manufacturing",
+        "depends": ["base"],
+        "images": ["static/description/banner.png"],
+    }
     m.update(over)
     for k in [k for k, v in m.items() if v is ...]:
         del m[k]
@@ -159,18 +174,21 @@ def test_index_html_missing(env):
     assert "html.missing" in codes(run(env)["td_demo"])
 
 
-@pytest.mark.parametrize("snippet,code", [
-    ("<script>alert(1)</script>", "html.script"),
-    ('<p onclick="x()">t</p>', "html.script"),
-    ("<style>p{}</style>", "html.tag"),
-    ("<iframe src='x.png'></iframe>", "html.tag"),
-    ('<img src="https://example.com/a.png" alt="x"/>', "html.url"),
-    ('<a href="https://example.com">x</a>', "html.url"),
-    ('<a href="javascript:alert(1)">x</a>', "html.url"),
-    ('<img src="missing.png" alt="x"/>', "html.local"),
-    ('<p style="background:url(a.png)">x</p>', "html.style"),
-    ("<p>Опис українською</p>", "html.language"),
-])
+@pytest.mark.parametrize(
+    "snippet,code",
+    [
+        ("<script>alert(1)</script>", "html.script"),
+        ('<p onclick="x()">t</p>', "html.script"),
+        ("<style>p{}</style>", "html.tag"),
+        ("<iframe src='x.png'></iframe>", "html.tag"),
+        ('<img src="https://example.com/a.png" alt="x"/>', "html.url"),
+        ('<a href="https://example.com">x</a>', "html.url"),
+        ('<a href="javascript:alert(1)">x</a>', "html.url"),
+        ('<img src="missing.png" alt="x"/>', "html.local"),
+        ('<p style="background:url(a.png)">x</p>', "html.style"),
+        ("<p>Опис українською</p>", "html.language"),
+    ],
+)
 def test_index_html_forbidden_content(env, snippet, code):
     make_module(env[1], html=GOOD_HTML + snippet)
     assert code in codes(run(env)["td_demo"])
@@ -248,9 +266,19 @@ def test_duplicate_names_and_tests_are_skipped(env):
 
 
 def test_manifest_files_must_exist(env):
-    d = make_module(env[1], data=["views/a.xml"], demo=["demo/d.xml"],
-                    assets={"web.assets_backend": ["td_demo/static/src/*.js", ("remove", "td_demo/static/src/x.js"),
-                                                   ("include", "web._assets_helpers"), "web/static/lib/y.js"]})
+    d = make_module(
+        env[1],
+        data=["views/a.xml"],
+        demo=["demo/d.xml"],
+        assets={
+            "web.assets_backend": [
+                "td_demo/static/src/*.js",
+                ("remove", "td_demo/static/src/x.js"),
+                ("include", "web._assets_helpers"),
+                "web/static/lib/y.js",
+            ]
+        },
+    )
     r = run(env)["td_demo"]
     msgs = " | ".join(m for _, m in r.errors)
     assert "views/a.xml" in msgs and "demo/d.xml" in msgs and "td_demo/static/src/x.js" in msgs
@@ -277,8 +305,16 @@ def test_image_info_gif_jpeg(tmp_path):
     gif.write_bytes(b"GIF89a" + struct.pack("<HH", 30, 20) + b"\x00" * 10)
     assert ca.image_info(gif) == ("gif", 30, 20)
     jpg = tmp_path / "a.jpg"
-    jpg.write_bytes(b"\xff\xd8\xff\xe0" + struct.pack(">H", 4) + b"\x00\x00" + b"\xff\xc0" + struct.pack(">H", 11)
-                    + b"\x08" + struct.pack(">HH", 50, 70) + b"\x03\x00\x00")
+    jpg.write_bytes(
+        b"\xff\xd8\xff\xe0"
+        + struct.pack(">H", 4)
+        + b"\x00\x00"
+        + b"\xff\xc0"
+        + struct.pack(">H", 11)
+        + b"\x08"
+        + struct.pack(">HH", 50, 70)
+        + b"\x03\x00\x00"
+    )
     assert ca.image_info(jpg) == ("jpeg", 70, 50)
     assert ca.image_info(tmp_path / "a.gif") is not None
     (tmp_path / "x.png").write_bytes(b"junk")
@@ -324,12 +360,14 @@ def test_export_script_flat_layout(tmp_path):
     """export_apps.sh: module in the root, dependency closure, no tests/pyc/internal docs, check passes."""
     import shutil
     import subprocess
+
     script = Path(__file__).resolve().parent / "export_apps.sh"
     if not ca.DEFAULT_ADDONS.is_dir() or not shutil.which("tar") or not shutil.which("bash"):
         pytest.skip("odoo_addons/tar/bash not available")
     out = tmp_path / "out"
-    cp = subprocess.run(["bash", str(script), str(out), "--modules", "td_viewer3d_sale"],
-                        capture_output=True, text=True)
+    cp = subprocess.run(
+        ["bash", str(script), str(out), "--modules", "td_viewer3d_sale"], capture_output=True, text=True
+    )
     assert cp.returncode == 0, cp.stdout + cp.stderr
     assert sorted(p.name for p in out.iterdir() if p.is_dir()) == ["td_factory3d", "td_viewer3d", "td_viewer3d_sale"]
     assert (out / "README.md").is_file() and (out / "td_viewer3d_sale" / "__manifest__.py").is_file()
@@ -337,8 +375,9 @@ def test_export_script_flat_layout(tmp_path):
     assert not list(out.glob("*/*.md")) and (out / "td_viewer3d" / "static" / "description" / "banner.png").is_file()
     again = subprocess.run(["bash", str(script), str(out)], capture_output=True, text=True)
     assert again.returncode == 2 and "--force" in again.stderr  # refuses a non-empty directory
-    skip = subprocess.run(["bash", str(script), str(tmp_path / "noee"), "--skip-ee", "--no-check"],
-                          capture_output=True, text=True)
+    skip = subprocess.run(
+        ["bash", str(script), str(tmp_path / "noee"), "--skip-ee", "--no-check"], capture_output=True, text=True
+    )
     assert skip.returncode == 0, skip.stderr
     names = {p.name for p in (tmp_path / "noee").iterdir() if p.is_dir()}
     assert "td_yard_gantt" not in names and "td_yard" in names and "test_td_viewer3d" not in names

@@ -17,6 +17,7 @@ Usage: check_apps.py [ADDONS_DIR] [-m MODULE ...] [--ce-addons DIR ...] [--catal
                      [--include-tests] [--ignore CODE,...] [--strict] [--quiet] [--json]
 Exit code: 0 - no errors, 1 - errors (or warnings with --strict), 2 - usage problem.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,8 +35,19 @@ DEFAULT_ADDONS = HERE.parents[1] / "odoo_addons"
 DEFAULT_CATALOG = HERE / "apps_catalog.json"
 DEFAULT_CE_DIRS = ["/home/user/odoo19/addons", "/home/user/odoo19/odoo/addons"]
 
-REQUIRED_KEYS = ("name", "version", "summary", "description", "author", "website", "support", "license",
-                 "category", "depends", "images")
+REQUIRED_KEYS = (
+    "name",
+    "version",
+    "summary",
+    "description",
+    "author",
+    "website",
+    "support",
+    "license",
+    "category",
+    "depends",
+    "images",
+)
 NAME_MAX = 25
 VERSION_RE = re.compile(r"^19\.0\.\d+\.\d+\.\d+$")
 CYRILLIC_RE = re.compile("[Ѐ-ӿ]")
@@ -56,14 +68,175 @@ MAX_IMAGE_BYTES = 1024 * 1024
 
 # Enterprise modules of Odoo 19 that are certainly not in Community (used when Community sources are unavailable;
 # when they are available, "not in Community" is the primary criterion).
-KNOWN_ENTERPRISE = frozenset(["account_accountant", "account_asset", "account_budget", "account_reports", "account_online_synchronization", "approvals", "appointment", "documents", "documents_sign", "hr_appraisal", "hr_payroll", "hr_referral", "helpdesk", "industry_fsm", "industry_fsm_sale", "iot", "knowledge", "marketing_automation", "mrp_maintenance", "mrp_mps", "mrp_plm", "mrp_workorder", "mrp_workorder_hr", "planning", "project_enterprise", "quality", "quality_control", "quality_mrp", "quality_mrp_workorder", "sale_renting", "sale_subscription", "sign", "social", "spreadsheet_dashboard_edition", "stock_barcode", "timesheet_grid", "voip", "web_cohort", "web_dashboard", "web_gantt", "web_map", "web_studio", "whatsapp", "worksheet"])
+KNOWN_ENTERPRISE = frozenset(
+    [
+        "account_accountant",
+        "account_asset",
+        "account_budget",
+        "account_reports",
+        "account_online_synchronization",
+        "approvals",
+        "appointment",
+        "documents",
+        "documents_sign",
+        "hr_appraisal",
+        "hr_payroll",
+        "hr_referral",
+        "helpdesk",
+        "industry_fsm",
+        "industry_fsm_sale",
+        "iot",
+        "knowledge",
+        "marketing_automation",
+        "mrp_maintenance",
+        "mrp_mps",
+        "mrp_plm",
+        "mrp_workorder",
+        "mrp_workorder_hr",
+        "planning",
+        "project_enterprise",
+        "quality",
+        "quality_control",
+        "quality_mrp",
+        "quality_mrp_workorder",
+        "sale_renting",
+        "sale_subscription",
+        "sign",
+        "social",
+        "spreadsheet_dashboard_edition",
+        "stock_barcode",
+        "timesheet_grid",
+        "voip",
+        "web_cohort",
+        "web_dashboard",
+        "web_gantt",
+        "web_map",
+        "web_studio",
+        "whatsapp",
+        "worksheet",
+    ]
+)
 
 # Odoo html sanitizer tag/attribute set (odoo.tools.mail), minus everything that can run code or load resources.
-ALLOWED_TAGS = frozenset(["a", "abbr", "acronym", "address", "article", "aside", "b", "big", "blockquote", "br", "caption", "center", "cite", "code", "col", "colgroup", "dd", "del", "dfn", "div", "dl", "dt", "em", "figcaption", "figure", "font", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "i", "img", "ins", "kbd", "li", "main", "mark", "nav", "ol", "p", "pre", "q", "s", "samp", "section", "small", "span", "strike", "strong", "sub", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "tt", "u", "ul", "var"])
-ALLOWED_ATTRS = frozenset(["class", "style", "id", "href", "src", "alt", "title", "width", "height", "colspan", "rowspan", "align", "valign", "border", "cellpadding", "cellspacing", "target", "rel", "name", "lang", "dir", "color", "face", "size", "bgcolor"])
-ALLOWED_STYLE_PROPS = ("color", "background", "font", "margin", "padding", "border", "text-align", "line-height",
-                       "text-decoration", "vertical-align", "width", "height", "max-width", "display")
-YOUTUBE_RE = re.compile(r"^https://(www\.)?youtube(-nocookie)?\.com/(watch\?v=|embed/)[\w-]+$|^https://youtu\.be/[\w-]+$")
+ALLOWED_TAGS = frozenset(
+    [
+        "a",
+        "abbr",
+        "acronym",
+        "address",
+        "article",
+        "aside",
+        "b",
+        "big",
+        "blockquote",
+        "br",
+        "caption",
+        "center",
+        "cite",
+        "code",
+        "col",
+        "colgroup",
+        "dd",
+        "del",
+        "dfn",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "figcaption",
+        "figure",
+        "font",
+        "footer",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "hr",
+        "i",
+        "img",
+        "ins",
+        "kbd",
+        "li",
+        "main",
+        "mark",
+        "nav",
+        "ol",
+        "p",
+        "pre",
+        "q",
+        "s",
+        "samp",
+        "section",
+        "small",
+        "span",
+        "strike",
+        "strong",
+        "sub",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "tr",
+        "tt",
+        "u",
+        "ul",
+        "var",
+    ]
+)
+ALLOWED_ATTRS = frozenset(
+    [
+        "class",
+        "style",
+        "id",
+        "href",
+        "src",
+        "alt",
+        "title",
+        "width",
+        "height",
+        "colspan",
+        "rowspan",
+        "align",
+        "valign",
+        "border",
+        "cellpadding",
+        "cellspacing",
+        "target",
+        "rel",
+        "name",
+        "lang",
+        "dir",
+        "color",
+        "face",
+        "size",
+        "bgcolor",
+    ]
+)
+ALLOWED_STYLE_PROPS = (
+    "color",
+    "background",
+    "font",
+    "margin",
+    "padding",
+    "border",
+    "text-align",
+    "line-height",
+    "text-decoration",
+    "vertical-align",
+    "width",
+    "height",
+    "max-width",
+    "display",
+)
+YOUTUBE_RE = re.compile(
+    r"^https://(www\.)?youtube(-nocookie)?\.com/(watch\?v=|embed/)[\w-]+$|^https://youtu\.be/[\w-]+$"
+)
 TEAMS_RE = re.compile(r"^https://teams\.microsoft\.com/")
 IMG_EXT = {".png", ".gif", ".jpg", ".jpeg"}
 
@@ -208,7 +381,9 @@ def check_index(res: Result, mdir: Path):
                 for decl in filter(None, (d.strip() for d in value.split(";"))):
                     prop = decl.split(":", 1)[0].strip().lower()
                     if not prop.startswith(ALLOWED_STYLE_PROPS):
-                        once("html.style", f"style property '{prop}' is not allowed (use Bootstrap classes)", error=False)
+                        once(
+                            "html.style", f"style property '{prop}' is not allowed (use Bootstrap classes)", error=False
+                        )
             if name in ("src", "href"):
                 v = value.strip()
                 low = v.lower()
@@ -268,7 +443,9 @@ def check_files(res: Result, mdir: Path, manifest: dict, all_manifests: dict):
 
 
 # ------------------------------------------------------------------------------------------------ per module
-def check_module(mdir: Path, manifest: dict, all_manifests: dict, catalog: dict, ce_modules, closure_ee, chain) -> Result:
+def check_module(
+    mdir: Path, manifest: dict, all_manifests: dict, catalog: dict, ce_modules, closure_ee, chain
+) -> Result:
     res = Result()
     name = mdir.name
     for key in REQUIRED_KEYS:
@@ -387,11 +564,16 @@ def check_module(mdir: Path, manifest: dict, all_manifests: dict, catalog: dict,
         declared = "ce"
     if closure_ee:
         if declared == "ce":
-            res.err("dep.enterprise", "declared Community, but depends on Enterprise/non-Community: " + "; ".join(chain))
+            res.err(
+                "dep.enterprise", "declared Community, but depends on Enterprise/non-Community: " + "; ".join(chain)
+            )
     elif declared == "ee":
         res.warn("edition.stale", "declared Enterprise, but no Enterprise dependency was found")
     if ce_modules is None:
-        res.warn("dep.unverified", "Community sources not found; dependencies checked against the built-in Enterprise list only")
+        res.warn(
+            "dep.unverified",
+            "Community sources not found; dependencies checked against the built-in Enterprise list only",
+        )
     return res
 
 
@@ -408,7 +590,9 @@ def enterprise_chains(all_manifests: dict, ce_modules) -> dict[str, list[str]]:
                         seen.add(dep)
                         stack.append((dep, path + [dep]))
                 elif classify(dep, ce_modules) in ("ee", "unknown"):
-                    chains.append(" -> ".join(path + [dep]) + ("" if classify(dep, ce_modules) == "ee" else " (not in Community)"))
+                    chains.append(
+                        " -> ".join(path + [dep]) + ("" if classify(dep, ce_modules) == "ee" else " (not in Community)")
+                    )
         out[start] = sorted(set(chains))
     return out
 
@@ -449,8 +633,12 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Offline Odoo Apps readiness check for td_* addons.")
     ap.add_argument("addons_dir", nargs="?", default=str(DEFAULT_ADDONS))
     ap.add_argument("-m", "--module", action="append", default=[])
-    ap.add_argument("--ce-addons", action="append", default=None,
-                    help="Odoo Community addons dir(s); default: $ODOO_CE_ADDONS or /home/user/odoo19/addons")
+    ap.add_argument(
+        "--ce-addons",
+        action="append",
+        default=None,
+        help="Odoo Community addons dir(s); default: $ODOO_CE_ADDONS or /home/user/odoo19/addons",
+    )
     ap.add_argument("--catalog", default=None)
     ap.add_argument("--include-tests", action="store_true", help="also check test_* modules")
     ap.add_argument("--ignore", default="", help="comma-separated issue codes to ignore, e.g. i18n.pot")
@@ -470,8 +658,13 @@ def main(argv=None) -> int:
         r.errors = [e for e in r.errors if e[0] not in ignore]
         r.warnings = [w for w in r.warnings if w[0] not in ignore]
     if a.json:
-        print(json.dumps({m: {"errors": r.errors, "warnings": r.warnings} for m, r in results.items()},
-                         ensure_ascii=False, indent=1))
+        print(
+            json.dumps(
+                {m: {"errors": r.errors, "warnings": r.warnings} for m, r in results.items()},
+                ensure_ascii=False,
+                indent=1,
+            )
+        )
     else:
         width = max([len(m) for m in results] + [6])
         print(f"{'module':<{width}}  ed  errors  warnings  status")

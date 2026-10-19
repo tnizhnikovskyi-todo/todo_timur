@@ -118,8 +118,12 @@ def ensure_collector(odoo: Odoo, code: str, rotate: bool) -> str | None:
     """Коллектор + токен. Токен возвращается только если выдан сейчас (в Odoo хранится sha256)."""
     if not odoo.model_exists("td.collector"):
         die("в базе нет модели td.collector: установите модуль td_telemetry")
-    rows = odoo.search_read("td.collector", [("code", "=", code)], ["id", "active", "token_set_at", "token_hint"],
-                            context={"active_test": False})
+    rows = odoo.search_read(
+        "td.collector",
+        [("code", "=", code)],
+        ["id", "active", "token_set_at", "token_hint"],
+        context={"active_test": False},
+    )
     if rows:
         rec = rows[0]
         cid = rec["id"]
@@ -131,8 +135,10 @@ def ensure_collector(odoo: Odoo, code: str, rotate: bool) -> str | None:
         rec = {"token_set_at": False, "token_hint": False}
         info(f"коллектор {code}: создан (id {cid})")
     if rec.get("token_set_at") and not rotate:
-        info(f"токен коллектора {code} уже выдан (последние символы …{rec.get('token_hint') or '?'}): новый не выпускаю. "
-             "Потеряли значение, а сборщик ещё не подключён — повторите с --rotate (прежний токен перестанет работать).")
+        info(
+            f"токен коллектора {code} уже выдан (последние символы …{rec.get('token_hint') or '?'}): новый не выпускаю. "
+            "Потеряли значение, а сборщик ещё не подключён — повторите с --rotate (прежний токен перестанет работать)."
+        )
         return None
     action = odoo.call("td.collector", "action_generate_token", [cid])
     token = ((action or {}).get("context") or {}).get("default_token")
@@ -150,8 +156,12 @@ def ensure_params(odoo: Odoo, sim_token: str | None) -> str:
     if not token:
         token = secrets.token_hex(24)
         info("токен API эмулятора сгенерирован")
-    want = {"td.iot_sim.url": sim_url, "td.iot_sim.token": token, "td.iot_sim.read_enabled": "True",
-            "td.iot_sim.write_enabled": write_sim}
+    want = {
+        "td.iot_sim.url": sim_url,
+        "td.iot_sim.token": token,
+        "td.iot_sim.read_enabled": "True",
+        "td.iot_sim.write_enabled": write_sim,
+    }
     for mod in FLAG_MODULES:  # только уже существующие ключи: не плодим параметры модулей, которых нет в базе
         for flag, value in (("read_enabled", "True"), ("write_enabled", "False")):
             key = f"td.{mod}.{flag}"
@@ -165,15 +175,19 @@ def ensure_params(odoo: Odoo, sim_token: str | None) -> str:
     info("параметры: " + (", ".join(changed) if changed else "уже в нужном состоянии"))
     env = odoo.param("td.base.environment")
     if env != "test":
-        info(f"ВНИМАНИЕ: td.base.environment = {env!r} (на тестовом сервере ожидается 'test'; хук td_telemetry включает "
-             "чтение только в нём). Скрипт это не меняет.")
+        info(
+            f"ВНИМАНИЕ: td.base.environment = {env!r} (на тестовом сервере ожидается 'test'; хук td_telemetry включает "
+            "чтение только в нём). Скрипт это не меняет."
+        )
     ensure_http_push(odoo)
     return token
 
 
 def ensure_http_push(odoo: Odoo) -> None:
     """params источника HTTP-PUSH (приёмник LPR): маршрут, разрешённые отправители, имена секретов (не значения)."""
-    rows = odoo.search_read("td.source", [("code", "=", HTTP_PUSH_CODE)], ["id", "params"], context={"active_test": False})
+    rows = odoo.search_read(
+        "td.source", [("code", "=", HTTP_PUSH_CODE)], ["id", "params"], context={"active_test": False}
+    )
     if not rows:
         info(f"источник {HTTP_PUSH_CODE} не найден (td_telemetry не загрузил данные стенда?): params пропущены")
         return
@@ -196,8 +210,10 @@ def cmd_setup(odoo: Odoo, args: argparse.Namespace) -> None:
     if col_token:
         print(f"TD_COLLECTOR_TOKEN={col_token}")
     print(f"TD_SIM_API_TOKEN={sim_token}")
-    info("готово. Дальше: клиент запускает install_stand.sh с этими строками (TD_SECRETS_FILE), "
-         "через >= 5 минут — команда backfill.")
+    info(
+        "готово. Дальше: клиент запускает install_stand.sh с этими строками (TD_SECRETS_FILE), "
+        "через >= 5 минут — команда backfill."
+    )
 
 
 def cmd_params(odoo: Odoo, args: argparse.Namespace) -> None:
@@ -217,20 +233,37 @@ def cmd_backfill(odoo: Odoo, args: argparse.Namespace) -> None:
     if not args.force and not args.purge:
         n = odoo.call("td.reading", "search_count", [("src", "=", "collector")])
         if not n:
-            die("в базе ещё нет показаний от сборщика: R-36 требует, чтобы стенд проработал >= 5 минут "
-                "(повторите позже или добавьте --force)", 3)
+            die(
+                "в базе ещё нет показаний от сборщика: R-36 требует, чтобы стенд проработал >= 5 минут "
+                "(повторите позже или добавьте --force)",
+                3,
+            )
         first = odoo.search_read("td.reading", [("src", "=", "collector")], ["ts"], order="ts asc", limit=1)[0]["ts"]
         age = dt.datetime.now(dt.timezone.utc) - dt.datetime.strptime(first, "%Y-%m-%d %H:%M:%S").replace(
-            tzinfo=dt.timezone.utc)
+            tzinfo=dt.timezone.utc
+        )
         if age < dt.timedelta(minutes=5):
-            die(f"первое показание сборщика пришло {int(age.total_seconds())} с назад, нужно >= 300 с "
-                "(иначе на стыке истории и живых данных будут пропуски; --force обходит проверку)", 3)
+            die(
+                f"первое показание сборщика пришло {int(age.total_seconds())} с назад, нужно >= 300 с "
+                "(иначе на стыке истории и живых данных будут пропуски; --force обходит проверку)",
+                3,
+            )
     model_id = odoo.call("ir.model", "search", [("model", "=", "td.energy.interval")], limit=1)[0]
     code = BACKFILL_CODE % {"days": args.days, "seed": args.seed, "purge": bool(args.purge)}
-    act = odoo.call("ir.actions.server", "create", {
-        "name": "td-stand: backfill истории (временное, удаляется)", "model_id": model_id, "state": "code", "code": code})
+    act = odoo.call(
+        "ir.actions.server",
+        "create",
+        {
+            "name": "td-stand: backfill истории (временное, удаляется)",
+            "model_id": model_id,
+            "state": "code",
+            "code": code,
+        },
+    )
     try:
-        info(f"запускаю _td_backfill(days={args.days}, seed={args.seed}, purge={bool(args.purge)}): до нескольких минут")
+        info(
+            f"запускаю _td_backfill(days={args.days}, seed={args.seed}, purge={bool(args.purge)}): до нескольких минут"
+        )
         result = odoo.call("ir.actions.server", "run", [act])
     finally:
         odoo.call("ir.actions.server", "unlink", [act])
@@ -246,27 +279,48 @@ def cmd_status(odoo: Odoo, args: argparse.Namespace) -> None:
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     five = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
     print(f"Odoo {odoo.url} db={odoo.db} uid={odoo.uid}, UTC сейчас {now}")
-    col = odoo.search_read("td.collector", [("code", "=", code)],
-                           ["state", "last_seen", "last_push_at", "version", "buffer_rows", "token_hint", "token_set_at"],
-                           context={"active_test": False})
+    col = odoo.search_read(
+        "td.collector",
+        [("code", "=", code)],
+        ["state", "last_seen", "last_push_at", "version", "buffer_rows", "token_hint", "token_set_at"],
+        context={"active_test": False},
+    )
     print("коллектор:", col[0] if col else "НЕТ записи " + code)
     for state in ("online", "offline", "error", "disabled", "unknown"):
         n = odoo.call("td.source", "search_count", [("state", "=", state)])
         if n:
             print(f"источников {state}: {n}")
-    print("сигналов всего:", odoo.call("td.signal", "search_count", []),
-          "| обновлено за 5 мин:", odoo.call("td.signal", "search_count", [("last_ts", ">=", five)]))
-    print("показаний от сборщика за 5 мин:",
-          odoo.call("td.reading", "search_count", [("src", "=", "collector"), ("received_at", ">=", five)]))
-    last = odoo.search_read("td.signal", [("last_ts", "!=", False)], ["code", "last_value", "last_ts"], order="last_ts desc",
-                            limit=3)
+    print(
+        "сигналов всего:",
+        odoo.call("td.signal", "search_count", []),
+        "| обновлено за 5 мин:",
+        odoo.call("td.signal", "search_count", [("last_ts", ">=", five)]),
+    )
+    print(
+        "показаний от сборщика за 5 мин:",
+        odoo.call("td.reading", "search_count", [("src", "=", "collector"), ("received_at", ">=", five)]),
+    )
+    last = odoo.search_read(
+        "td.signal", [("last_ts", "!=", False)], ["code", "last_value", "last_ts"], order="last_ts desc", limit=3
+    )
     for s in last:
         print("  последний:", s["code"], s["last_value"], s["last_ts"])
     if odoo.model_exists("td.energy.interval"):
-        print("энергетика: интервалов", odoo.call("td.energy.interval", "search_count", []),
-              "| из них backfill", odoo.call("td.energy.interval", "search_count", [("is_backfill", "=", True)]))
-    for key in ("td.base.environment", "td.iot_sim.url", "td.iot_sim.read_enabled", "td.iot_sim.write_enabled",
-                "td.telemetry.read_enabled", "td.telemetry.write_enabled", "td.energy.read_enabled"):
+        print(
+            "энергетика: интервалов",
+            odoo.call("td.energy.interval", "search_count", []),
+            "| из них backfill",
+            odoo.call("td.energy.interval", "search_count", [("is_backfill", "=", True)]),
+        )
+    for key in (
+        "td.base.environment",
+        "td.iot_sim.url",
+        "td.iot_sim.read_enabled",
+        "td.iot_sim.write_enabled",
+        "td.telemetry.read_enabled",
+        "td.telemetry.write_enabled",
+        "td.energy.read_enabled",
+    ):
         print(f"  {key} = {odoo.param(key) or '(пусто)'}")
     print("  td.iot_sim.token:", "задан" if odoo.param("td.iot_sim.token") else "НЕ задан")
 

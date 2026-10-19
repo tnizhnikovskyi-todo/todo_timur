@@ -13,6 +13,7 @@ Usage:
   gen_apps_content.py [--addons DIR] [--only td_a,td_b] [--skip manifest,html,images]
 The script is idempotent. Pillow is required for images (--skip images to run without it).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -88,8 +89,8 @@ def patch_manifest(path: Path, entry: dict, defaults: dict) -> bool:
         if key in keys:
             if replace_existing:
                 s, e = entry_range(key)
-                tail = lines[e - 1].encode("utf8")[keys[key][1].end_col_offset:].decode("utf8")
-                comment = tail[tail.index("#"):] if "#" in tail else ""
+                tail = lines[e - 1].encode("utf8")[keys[key][1].end_col_offset :].decode("utf8")
+                comment = tail[tail.index("#") :] if "#" in tail else ""
                 nl = list(new_lines)
                 if comment:
                     nl[-1] += "  " + comment
@@ -115,7 +116,7 @@ def patch_manifest(path: Path, entry: dict, defaults: dict) -> bool:
         ops.append((after + 1, after, nl))  # empty range -> pure insertion after line `after`
     new = lines[:]
     for s, e, nl in sorted(ops, key=lambda o: (o[0], o[1]), reverse=True):
-        new[s - 1:e] = nl
+        new[s - 1 : e] = nl
     out = "\n".join(new)
     parsed = load_manifest(out)
     assert parsed["name"] == entry["name"] and parsed["summary"] == entry["summary"], path
@@ -157,8 +158,10 @@ def render_index(mod: str, entry: dict, manifest: dict, catalog: dict, addons: P
     has_ui = (addons / mod / "views").is_dir() or (addons / mod / "static" / "src").is_dir()
     if has_ui:
         has_en = any((addons / mod / "i18n").glob("en*.po")) if (addons / mod / "i18n").is_dir() else False
-        req.append("Interface language: Ukrainian" + (" and English." if has_en else
-                   "; an English translation is not included yet."))
+        req.append(
+            "Interface language: Ukrainian"
+            + (" and English." if has_en else "; an English translation is not included yet.")
+        )
     shot = ""
     if entry.get("shot"):
         s = entry["shot"]
@@ -166,8 +169,8 @@ def render_index(mod: str, entry: dict, manifest: dict, catalog: dict, addons: P
 <section class="oe_container">
     <div class="oe_row oe_spaced">
         <h3 class="oe_slogan">Screenshot</h3>
-        <img class="img img-fluid oe_picture oe_screenshot" src="{esc(s['name'])}" alt="{esc(s['caption'])}"/>
-        <p class="text-muted">{esc(s['caption'])}</p>
+        <img class="img img-fluid oe_picture oe_screenshot" src="{esc(s["name"])}" alt="{esc(s["caption"])}"/>
+        <p class="text-muted">{esc(s["caption"])}</p>
     </div>
 </section>
 """
@@ -175,8 +178,8 @@ def render_index(mod: str, entry: dict, manifest: dict, catalog: dict, addons: P
     intro = "\n".join(f"        <p>{esc(p)}</p>" for p in entry["intro"])
     return f"""<section class="oe_container">
     <div class="oe_row oe_spaced">
-        <h2 class="oe_slogan">{esc(entry['name'])}</h2>
-        <h3 class="oe_slogan">{esc(entry['summary'])}</h3>
+        <h2 class="oe_slogan">{esc(entry["name"])}</h2>
+        <h3 class="oe_slogan">{esc(entry["summary"])}</h3>
     </div>
 </section>
 
@@ -191,7 +194,7 @@ def render_index(mod: str, entry: dict, manifest: dict, catalog: dict, addons: P
     <div class="oe_row">
         <h3>Key features</h3>
         <ul>
-{_li(esc(f) for f in entry['features'])}
+{_li(esc(f) for f in entry["features"])}
         </ul>
     </div>
 </section>
@@ -218,7 +221,10 @@ def render_index(mod: str, entry: dict, manifest: dict, catalog: dict, addons: P
 # --------------------------------------------------------------------------------------------- images
 def _font(size: int, bold: bool = True):
     from PIL import ImageFont
-    names = ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf"] if bold else ["DejaVuSans.ttf", "LiberationSans-Regular.ttf"]
+
+    names = (
+        ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf"] if bold else ["DejaVuSans.ttf", "LiberationSans-Regular.ttf"]
+    )
     for d in FONT_DIRS:
         for n in names:
             p = Path(d) / n
@@ -243,11 +249,12 @@ def _wrap(draw, text, font, max_w):
 
 def _hex(c):
     c = c.lstrip("#")
-    return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(c[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def make_icon(path: Path, entry: dict):
     from PIL import Image, ImageDraw
+
     S = 4
     w, h = ICON_SIZE
     im = Image.new("RGBA", (w * S, h * S), (0, 0, 0, 0))
@@ -264,6 +271,7 @@ def make_icon(path: Path, entry: dict):
         d.rounded_rectangle([bx, by, w * S - 10 * S, h * S - 10 * S], radius=6 * S, fill=(255, 255, 255, 235))
         d.text(((bx + w * S - 10 * S) / 2, (by + h * S - 10 * S) / 2), "EE", font=bf, fill=col + (255,), anchor="mm")
     from PIL.PngImagePlugin import PngInfo
+
     meta = PngInfo()
     meta.add_text(GENERATED_MARK, "1")
     im.resize(ICON_SIZE, Image.LANCZOS).save(path, optimize=True, pnginfo=meta)
@@ -271,6 +279,7 @@ def make_icon(path: Path, entry: dict):
 
 def make_banner(path: Path, entry: dict):
     from PIL import Image, ImageDraw
+
     w, h = BANNER_SIZE
     col = _hex(entry["color"])
     im = Image.new("RGB", (w, h), col)
@@ -304,6 +313,7 @@ def make_banner(path: Path, entry: dict):
 def is_placeholder(path: Path) -> bool:
     """True for a missing/broken icon, a flat stub (<=3 colors) or an icon generated by this script."""
     from PIL import Image
+
     try:
         raw = Image.open(path)
         if GENERATED_MARK in raw.info:
@@ -316,6 +326,7 @@ def is_placeholder(path: Path) -> bool:
 
 def ensure_icon(path: Path, entry: dict) -> str:
     from PIL import Image
+
     if not path.exists() or is_placeholder(path):
         make_icon(path, entry)
         return "generated"
@@ -328,6 +339,7 @@ def ensure_icon(path: Path, entry: dict) -> str:
 
 def make_shot(dst: Path, shot: dict):
     from PIL import Image
+
     im = Image.open(REPO / shot["src"]).convert("RGB")
     if shot.get("crop"):
         im = im.crop(tuple(shot["crop"]))
