@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+  <!-- W3 «Енергоресурси» (SPEC §8.1): сценарії S-21…S-23 емулятора; duration_s = 0 — до зупинки. Файл окремий від td_sim_scenario.xml (W1/W2). -->
+  <record id="scenario_air_leak" model="td.sim.scenario">
+    <field name="code">air_leak</field>
+    <field name="name">Витік стисненого повітря</field>
+    <field name="group">energy</field>
+    <field name="sequence">210</field>
+    <field name="duration_s">0</field>
+    <field name="description"><![CDATA[<p>Додатковий витік стисненого повітря leak_extra (м³/хв, за замовчуванням 3,0) у магістралі AIR-MAIN: нічна витрата росте з 1,6 до 4,6 м³/хв (для правила «Витоки стисненого повітря»). Працює до зупинки.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'leak_extra': {'type': 'number', 'minimum': 0, 'maximum': 20}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'leak_extra': 3.0}"/>
+  </record>
+  <record id="scenario_gas_overuse" model="td.sim.scenario">
+    <field name="code">gas_overuse</field>
+    <field name="name">Перевитрата газу</field>
+    <field name="group">energy</field>
+    <field name="sequence">220</field>
+    <field name="duration_s">0</field>
+    <field name="description"><![CDATA[<p>Додаткова витрата газу extra_m3h (м³/год, за замовчуванням 45) у корректорі GAS-MAIN: разом з котельнею (≈ 41 м³/год) перевищує ліміт 80 м³/год. Працює до зупинки.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'extra_m3h': {'type': 'number', 'minimum': 0, 'maximum': 500}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'extra_m3h': 45.0}"/>
+  </record>
+  <record id="scenario_water_leak" model="td.sim.scenario">
+    <field name="code">water_leak</field>
+    <field name="name">Нічний витік води</field>
+    <field name="group">energy</field>
+    <field name="sequence">230</field>
+    <field name="duration_s">0</field>
+    <field name="description"><![CDATA[<p>Додаткова витрата води extra_m3h (м³/год, за замовчуванням 0,5) на вводі водомірного вузла WATER у нічний час (23:00–06:30). Працює до зупинки.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'extra_m3h': {'type': 'number', 'minimum': 0, 'maximum': 20}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'extra_m3h': 0.5}"/>
+  </record>
+</odoo>

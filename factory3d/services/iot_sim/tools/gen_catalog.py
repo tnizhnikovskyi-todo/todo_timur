@@ -23,7 +23,7 @@ ODOO_CSV = FACTORY3D / "odoo_addons/td_iot_sim/data/td_sim_signal.csv"
 
 COLUMNS = ["n", "code", "device", "protocol", "address", "dtype", "unit", "scale",
            "nominal", "thresholds", "model", "status"]
-EXPECTED_ROWS = 1205
+EXPECTED_ROWS = 1215
 ROW_RE = re.compile(r"^\| (\d+) \|")
 # Додаток A: сигнали `infra/pv/PV-INV-n/*` прив'язані до похідних пристроїв PV-INV-n (§5.3 п. 3), а в signals.csv
 # колонка `device` для них лишається `PV-INV` (див. примітку до Додатка A).

@@ -1,6 +1,6 @@
 {
     "name": "Емулятор обладнання",
-    "version": "19.0.2.0.3",
+    "version": "19.0.2.0.4",
     "summary": "Пульт емулятора обладнання factory3d: реєстр пристроїв, каталог сигналів, сценарії, рівень 0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
@@ -20,6 +20,7 @@
         "data/ir_sequence.xml",
         "data/level0.xml",
         "data/td_sim_scenario.xml",
+        "data/td_sim_scenario_resources.xml",
         "data/ir_cron.xml",
         "views/sim_panel_views.xml",
         "views/sim_device_views.xml",
