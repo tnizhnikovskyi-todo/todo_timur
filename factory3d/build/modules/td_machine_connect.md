@@ -27,15 +27,15 @@
   Мост `td_machine_connect_mrp_workorder` (auto_install) — минимальный, не тестирован (нет Enterprise).
   Тесты, требующие полей Enterprise, — с пропуском. — `models/mrp_workorder.py`, `models/td_machine_wo.py`
 - DEC-2: AC-58 требует ключ запобіжника telemetry в тексте ошибки, а telemetry его не пишет — проверки module/source/signal
-  продублированы в `_f3d_mc_create_command` до `create`; telemetry не менялся. — `models/td_command.py`
+  продублированы в `_td_mc_create_command` до `create`; telemetry не менялся. — `models/td_command.py`
 - DEC-3: Odoo 19 не принимает `target='inline'` у act_window — `action_td_mc_settings` без target. — `views/menus.xml`
-- DEC-4: push-маршрут `mc_woodstore/status` → `td.gantry.job._f3d_apply_status` (SPEC не называет владельца). — `models/push_handler.py`
+- DEC-4: push-маршрут `mc_woodstore/status` → `td.gantry.job._td_apply_status` (SPEC не называет владельца). — `models/push_handler.py`
 - Тесты гонять с `F3D_TEST_INSTALL=td_machine_connect` (иначе ставится мост base_mrp_maintenance без Enterprise).
 - DEC-5: kanban V-01 в Odoo 19 не берёт dotted-поля — вместо `current_downtime_id.loss_id` показан сам простой,
   цвет OEE — фиксированные пороги 0.75/0.5 вместо `oee_color`. — `views/td_machine_views.xml`
 - DEC-6: пізні показання (`ts < state_since`) пропускают state/mode/alarm/job, счётчик обрабатывается; показания
   с одним `ts` — один переход (AC-03). — `models/td_machine.py`
-- DEC-7: дефект в td_telemetry `push_handler._f3d_handler_models` — `registry.descendants` в Odoo 19 возвращает
+- DEC-7: дефект в td_telemetry `push_handler._td_handler_models` — `registry.descendants` в Odoo 19 возвращает
   имена, а не классы; push-события не маршрутизировались никуда. Исправлено в telemetry (229/229 зелёные), коммит dfab530.
   Обходы `patch.object` в тестах W2/W5 безвредны.
 - DEC-8: AC-13 (простой 1,5 хв «лишається») противоречит R-05 п.4 (micro_stop_s=120 → удаление). Реализовано по R-05,
@@ -53,11 +53,11 @@
 - DEC-13: API-01 отдаёт карту в состояниях `exported` и `optimizing` (409 для прочих) — `action_send_optimizer` сразу
   ставит `optimizing`, по букве SPEC колектор всегда получал бы 409; 413 — при >5000 строк карты или теле >1 МБ;
   тайм-аут оптимизации 30 хв — от `optimizing_since` (запасной — `write_date`). — `controllers/cutmap.py`, `models/td_cut_map.py`
-- DEC-11 (доп.): push_handler `mc_cutopt` — `map` необязателен, карта через `td.cut.map._f3d_find_for_event(map, job_id)`. — `models/push_handler.py`
+- DEC-11 (доп.): push_handler `mc_cutopt` — `map` необязателен, карта через `td.cut.map._td_find_for_event(map, job_id)`. — `models/push_handler.py`
 - DEC-14: автостарт (DEC-1 в CE) — R-09 п.4(б) упрощён: «сегодня» = начало локального дня, а не первый интервал ППЧ;
   работник записи = `wo.td_employee_id`, иначе работник пользователя; ответственный активности «нет задания» —
   `equipment.technician_user_id`, иначе admin (у `mrp.workcenter` в CE нет technician). `td.machine` получил
-  `mail.activity.mixin`. `_f3d_close_timers` режет `date_end` до `ts` всегда (AC-11). — `models/td_machine_wo.py`
+  `mail.activity.mixin`. `_td_close_timers` режет `date_end` до `ts` всегда (AC-11). — `models/td_machine_wo.py`
 - DEC-15: неполная партия снимает `active_workorder_id`, автостарт пропускает WO с `td_partial_hold`; отложенная
   микрозупинка считается «не working» для завершения I/O по `finish_idle_s`. — `models/td_machine_wo.py`
 - DEC-16: права — `group_td_manager` получил rw/c на `res.config.settings` (иначе меню настроек невидимо, AC-89;

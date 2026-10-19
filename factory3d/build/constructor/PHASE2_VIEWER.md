@@ -9,8 +9,8 @@
   W1 (бэкенд конструктора) и мост не правят файлы друг друга.
 - **Провайдер `td.viewer.provider.layout`.**
   - Duck-typing контракт провайдеров viewer, R-01 п. 3: образец — `td_fire_safety_viewer3d/models/viewer_provider.py`.
-  - `_f3d_viewer_collect` кладёт в payload `/f3d/viewer/data` ключ `layout` (схема 1.x аддитивна, X-24).
-  - `_f3d_viewer_bus_models` = `td.layout.version` (+ `td.site`): после публикации клиенты получают дельту.
+  - `_td_viewer_collect` кладёт в payload `/f3d/viewer/data` ключ `layout` (схема 1.x аддитивна, X-24).
+  - `_td_viewer_bus_models` = `td.layout.version` (+ `td.site`): после публикации клиенты получают дельту.
 - **Источник.** Активная (опубликованная) версия площадки. Сравниваем её с базой (baseline), то есть с тем, что запечено в GLB. База — снимок импорта seed (у W1: hooks seed/link/baseline). Ключ — код объекта: `td_code` размещения, префикс места и коды ячеек.
 - **Формат `layout`:**
   - `site`, `version`, `base_version`;

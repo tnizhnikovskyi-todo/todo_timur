@@ -30,7 +30,7 @@
 - DEC-11: положение ATyS по значению: 2 = pos_I (мережа), 3 = pos_II (генератор); АВР несвежий (>15 с) при живых вводах — отключение закрывается (R-14 п.7) с `return_s=0` — `models/td_energy_outage.py`
 - DEC-12: сверка с мостом genset — только при `mode` auto/remote, событие не чаще раза в сутки; заявка на ATS-1 при FAIL START — штатным порогом сигнала — `models/td_energy_outage.py`
 - DEC-13: R-08 п.1 кандидаты WO с `date_finished ≥ d0` дополнительно ограничены `date_start < end` (иначе тянутся все плановые); idle-строки — для всех прямых узлов с лічильником — `models/td_energy_alloc.py`
-- DEC-14: без `td_machine_connect` R-08 п.2 (машинные интервалы) — обёртка `_f3d_machine_intervals`, контракт CM-03 с machine_connect не проверен — `models/td_energy_alloc.py`
+- DEC-14: без `td_machine_connect` R-08 п.2 (машинные интервалы) — обёртка `_td_machine_intervals`, контракт CM-03 с machine_connect не проверен — `models/td_energy_alloc.py`
 - DEC-15: `consumers.i_now` считается при 380 В (R-16 п.6 говорит 400 В; AC-64 12,18 кВт / 0,84 = 22 А сходится только при 380) — правка SPEC — `tools/payload.py`
 - DEC-16: `infra.totals` всегда содержит `shed_kw` (0 без отключения) и `bess_mode` — их требует AC-59, в списке R-17 их нет — `tools/payload.py`
 - DEC-17: цена тарифа и `contract_kw` в payload читаются через sudo (только чтение; group_td_user тарифы не читает); настройки (res.config.settings) — только base.group_system, f3d_admin без system их не открывает (по §5 ARCH admin входит в system) — `tools/payload.py`, `models/res_config_settings.py`

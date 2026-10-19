@@ -42,14 +42,14 @@
 
 | ID | Елемент макета | С | Що є (файл:рядок) | Чого бракує / джерело і розрахунок |
 |---|---|---|---|---|
-| PU-01 | Перемикач періоду Зараз / Зміна / Доба / Місяць | E | `EN/models/f3d_energy_interval.py:271` (`_f3d_shift_kwh`), `:372` (`_f3d_day_profile`), поля `day`,`hour_local` (`:42-43`) | Один серверний метод `td.energy.dashboard.get_data(period)`. «Місяць: пік 742 кВт» = max Σ слотів вводів за місяць (≤ 2 880 рядків `_read_group`). |
+| PU-01 | Перемикач періоду Зараз / Зміна / Доба / Місяць | E | `EN/models/f3d_energy_interval.py:271` (`_td_shift_kwh`), `:372` (`_td_day_profile`), поля `day`,`hour_local` (`:42-43`) | Один серверний метод `td.energy.dashboard.get_data(period)`. «Місяць: пік 742 кВт» = max Σ слотів вводів за місяць (≤ 2 880 рядків `_read_group`). |
 | PU-02 | Індикатор «Живі дані · 14:20» | E | `TL/models/f3d_collector.py:34-37` (`last_seen`,`state`), `TL/controllers/telemetry.py:206` (health) | Вік останнього пакета колектора; поріг stale — з колектора. |
 | PU-03 | «Відкрити в 3D» / «Показати в 3D» (шар «Енергетика») | E | `EN/models/f3d_energy_node.py:254` (`action_f3d_show`), провайдер `EN/models/viewer_provider.py:10-31`, `EN/tools/payload.py:162` | Перевірити контракт viewer (передача шару/коду вузла). |
-| PU-04 | «Звіт за зміну» | M | — | qweb-звіт: енергія за зміну (`_f3d_shift_kwh`), пік, події, МО (`f3d.energy.alloc`). W4 разом зі звітом керівництву. |
+| PU-04 | «Звіт за зміну» | M | — | qweb-звіт: енергія за зміну (`_td_shift_kwh`), пік, події, МО (`f3d.energy.alloc`). W4 разом зі звітом керівництву. |
 | PU-05 | KPI «З мережі зараз», % договірної, запас | E | сигнал `infra/totals/grid_kw` (R-06 п.6, `SPEC:1125`), `contract_kw` `EN/models/f3d_energy_tariff.py:32` | % = grid/contract; запас = contract − grid. |
 | PU-06 | KPI «Споживання заводу», частка СЕС | E | `energy/totals/p_now`, `infra/totals/pv_now` (R-06 п.3,5, `SPEC:1119,1123`) | pv_share = pv_now / p_now. |
-| PU-07 | KPI енергія за період, ₴, тариф | E | R-15 п.2 (`SPEC:1332`), `EN/models/f3d_energy_tariff.py:107` (`_f3d_price_at`) | Гроші лише для `group_f3d_energy_cost` (`EN/models/f3d_energy_interval.py:50-51`). |
-| PU-08 | KPI «Пік 15 хв», час, % договірної | E | `EN/models/f3d_energy_interval.py:329` (`_f3d_peak_event`), R-15 п.3 (`SPEC:1334`) | — |
+| PU-07 | KPI енергія за період, ₴, тариф | E | R-15 п.2 (`SPEC:1332`), `EN/models/f3d_energy_tariff.py:107` (`_td_price_at`) | Гроші лише для `group_f3d_energy_cost` (`EN/models/f3d_energy_interval.py:50-51`). |
+| PU-08 | KPI «Пік 15 хв», час, % договірної | E | `EN/models/f3d_energy_interval.py:329` (`_td_peak_event`), R-15 п.3 (`SPEC:1334`) | — |
 | PU-09 | KPI «Власна генерація» (СЕС, BESS %, ДГУ резерв) | P | R-06 п.5 (`pv_now`, `bess_soc`, `bess_mode`), ДГУ: `GB/models/genset_link.py:129` (`_compute_live`: `online`,`state_label`) | Паливо/тест ДГУ — з моста через адаптер `GB/adapters/td_genset.py`; експортувати в dashboard. |
 | PU-10 | KPI cos φ заводу + «Секція 2: 0,88 нижче 0,92» | P | `energy/totals/cos_phi` (R-06 п.3); пороги 0,95/0,90 у `EN/data/energy_signals.csv` | cos φ по секціях лише в пам'яті (`cos_after_s`, `SPEC:1118`) — не пишеться. Додати сигнали `energy/sections/S{1,2}/cos_phi`. Норма 0,92 (текст макета) ≠ 0,95 (уставка PFC) ≠ 0,95/0,90 (сигнал) — Q-09. |
 | PU-11 | Банер-рекомендація (експорт СЕС 26 кВт через T2, QS вимкнено) | M | дані є: `p_kw` T2 < 0 (R-06 п.4), стан QS у `cells` (R-16 п.4, `SPEC:1355`) | Rule-based `td.energy.advice` (правило «експорт > N кВт й QS=off»), стани open/snoozed/done. |
@@ -58,7 +58,7 @@
 | PU-14 | Вибір вузла: панель фактів, «Відкрити картку вузла», «Показати в 3D» | P | факти з сигналів вузла (R-06), `action_view_meters/intervals` (`EN/models/f3d_energy_node.py:224-244`) | Шаблони «фактів» за видом вузла; перехід у картку (ND); кнопки QS/BESS — W2. |
 | PU-15 | «Профіль доби · 15 хв»: споживання, з мережі, СЕС, договірна, прогноз | P | `load15_kw`,`grid15_kw` (R-15 п.3-4, `SPEC:1334-1336`), СЕС — інтервали ролі `generation`, `typical[h]` (`EN/models/f3d_energy_interval.py:405`, R-15 п.5) | Прогноз = типовий день за днем тижня (годинний→15 хв); СЕС — крива за кліматичною моделлю; поле `profile15` у dashboard API. |
 | PU-16 | Прогноз до кінця доби, експорт сьогодні, небаланс за годину | P | `kwh_export` (`EN/models/f3d_energy_interval.py:47`), `EN/models/f3d_energy_balance.py:20` (`diff_pct`, R-07) | Прогноз = факт + Σ typical по залишку доби. |
-| PU-17 | «Тривоги й події» (рівень, час, заголовок, деталі) | P | `EN/models/f3d_energy_event.py:21-47` (level info/warn/bad, kind, `text`), `_f3d_log` `:51` | Немає розбиття `title`/`detail` і життєвого циклу активна→підтверджена→вирішена. |
+| PU-17 | «Тривоги й події» (рівень, час, заголовок, деталі) | P | `EN/models/f3d_energy_event.py:21-47` (level info/warn/bad, kind, `text`), `_td_log` `:51` | Немає розбиття `title`/`detail` і життєвого циклу активна→підтверджена→вирішена. |
 | PU-18 | «Підтвердити» / «Підтверджено вами о…» | M | — | Поля `state`, `acked_by`, `acked_at`, `resolved_at` + `action_ack` на `td.energy.event`. |
 | PU-19 | Діагностика лічильника (шлюз, адреса, останній пакет, RS-485) | P | `EN/models/f3d_energy_meter.py:73-88` (`data_state`,`data_state_since`), `TL/models/f3d_source.py:86-88` (`last_ok`,`last_error`), `source.params` | Скласти текст із source+meter; «оцінка за балансом секції» — `quality='interpolated'`/R-07. |
 | PU-20 | Дії по тривозі («Відкрити заявку ТО», «Зарядити BESS») | P | заявка з порога: `EN/models/maintenance_request.py:5-20`, `f3d_signal_id` | Кнопка → заявка; BESS — W2. |
@@ -82,7 +82,7 @@
 | ND-04 | «Створити заявку ТО» + діалог (обладнання, тип, опис, команда, пріоритет) | E | `maintenance.request` (`maintenance_type`, `maintenance_team_id`, `priority`), `node.equipment_id` (`EN/models/f3d_energy_node.py:76`) | Обгортка-wizard з префілом. На демо-БД `equipment_linked=0` — спершу прив'язка даних (`action_f3d_energy_rebind`, `:261`). |
 | ND-05 | KPI «Струм зараз» (А, % від 630, по фазах) | E | `energy/lines/L/i_now`, `load` (R-06 п.1, `SPEC:1113`), `i_a/i_b/i_c` шафи (`EN/data/energy_signals.csv`) | — |
 | ND-06 | KPI «Потужність» (кВт, встановлена, cos φ) | E | `p_inst_kw` (`EN/models/f3d_energy_node.py:84`), `energy/lines/L/p_now`,`cos_phi` | — |
-| ND-07 | KPI «Енергія сьогодні», ₴, к-сть замовлень | E | `_f3d_kwh_by_code` (`EN/models/f3d_energy_node.py:212`, API-02 `SPEC:991`), alloc за РЦ підвузлів | К-сть МО — distinct `production_id` за добу. |
+| ND-07 | KPI «Енергія сьогодні», ₴, к-сть замовлень | E | `_td_kwh_by_code` (`EN/models/f3d_energy_node.py:212`, API-02 `SPEC:991`), alloc за РЦ підвузлів | К-сть МО — distinct `production_id` за добу. |
 | ND-08 | KPI «Максимум доби» (А, час, поріг 80 %) | P | `kw_avg` (`EN/models/f3d_energy_interval.py:48`), `f3d.reading.hour` (TL), `warn_high` сигналу | Пік струму = max за добу з `reading.hour` або kW/(√3·U·cos φ) з 15-хв; новий метод. |
 | ND-09 | KPI «Простій під напругою» (2,4 кВт) | P | `idle_factor` (`EN/models/f3d_energy_node.py:90`), `alloc.kind='idle'`, статус споживача `EN/tools/payload.py:148` | Live-сума `p_now` споживачів у статусі idle. |
 | ND-10 | Графік «Струм за добу · 15 хв» з порогами | P | інтервали (`kw_avg`) або `f3d.reading` | Перерахунок кВт→А; пороги з сигналу. |
@@ -159,7 +159,7 @@
 | AN-16 | Розріз: обладнання (кВт·год, ₴, частка, кВт·год/мотогод) | E | інтервали споживачів, `alloc.minutes` (`EN/models/f3d_energy_alloc.py:41`) | — |
 | AN-17 | Розріз: замовлення (кВт·год/шт) | E | `alloc.production_id` (`:34`), `f3d_energy_unit_cost` (`EN/models/mrp_production.py:28`) | кВт·год/шт = kwh / `qty_produced`. |
 | AN-18 | Розріз: продукти | P | alloc → `production_id.product_id` | Stored related `product_id` на alloc. |
-| AN-19 | Розріз: зміни (1, 2, ночі й вихідні) | P | `kwh_shift` R-11, `shift_calendar_id` (`EN/models/res_config_settings.py:35`), `_f3d_shift_hours` (`EN/models/f3d_energy_interval.py:256`) | Групування за `hour_local`/днем тижня за календарем змін. |
+| AN-19 | Розріз: зміни (1, 2, ночі й вихідні) | P | `kwh_shift` R-11, `shift_calendar_id` (`EN/models/res_config_settings.py:35`), `_td_shift_hours` (`EN/models/f3d_energy_interval.py:256`) | Групування за `hour_local`/днем тижня за календарем змін. |
 | AN-20 | Колонка «До бази» за зрізами | M | — | Коефіцієнт зрізу відносно бази (спрощено). |
 | AN-21 | Деталізація зрізу (профіль, події, обладнання) | P | `action_view_intervals` (`EN/models/f3d_energy_node.py:234`) | Action з доменом зрізу. |
 | AN-22 | «Резерви економії» (8): ₴/міс, «у плані», дія | M | — | `td.energy.opportunity` (5.3). |

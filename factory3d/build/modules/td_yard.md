@@ -23,7 +23,7 @@
 - DEC-3: W2 ∥ W3 в worktree; запись весов — в `data/td_yard_scale_data.xml` (W3), а не в `td_yard_gate_data.xml` (W2),
   чтобы не конфликтовать; `td_yard_signals.csv` сливает лидер. — `data/`
 - DEC-4: W5 добавил record rules по компании для 6 моделей (§4.3; без них AC-69 падал). — `security/td_yard_security.xml`
-- DEC-5: AC-48 проверяется моком (_f3d_yard_safe не вызывается для чужих кодов), а не счётчиком запросов. — `tests/test_migration.py`
-- DEC-6: sudo() вне §4.4: sequence в visit.create, driver в onchange, action_leave/picking_ids (чтение), действия ворот, провайдер viewer, kpp_data, мастера walkin/reject — все после `_f3d_yard_require` или только чтение; нужна правка §4.4 SPEC. — models/*
+- DEC-5: AC-48 проверяется моком (_td_yard_safe не вызывается для чужих кодов), а не счётчиком запросов. — `tests/test_migration.py`
+- DEC-6: sudo() вне §4.4: sequence в visit.create, driver в onchange, action_leave/picking_ids (чтение), действия ворот, провайдер viewer, kpp_data, мастера walkin/reject — все после `_td_yard_require` или только чтение; нужна правка §4.4 SPEC. — models/*
 - DEC-7: AC-60 — среднее длительностей только по рейсам с нужными метками (float пишет 0.0 вместо NULL). — `models/td_yard_visit_kpp.py`
 - DEC-8: res.config.settings в Odoo 19 не принимает target='inline' — убран; отчёт миграции вложен по шагам. — `views/res_config_settings_views.xml`, `hooks/migrate.py`

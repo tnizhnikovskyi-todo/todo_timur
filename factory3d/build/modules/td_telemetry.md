@@ -22,7 +22,7 @@
   полные тексты §4.1/§4.3/§6/§3 лежат в `*.full` (access.csv, security_rules.xml, ir_cron.xml, menus.xml), лидер переносит при приёмке W1–W4.
 - DEC-2: `NotSupported` временно определён в `collector/plugins/base.py`, W5 переносит в ядро. — `collector/plugins/base.py`
 - DEC-3: `td.collector/source/signal.code` без `size` — длину проверяет constraint (AC-02/AC-08 ждут ValidationError). — `models/td_*.py`
-- DEC-4: `maintenance.equipment.td_meter_signal_id` — заглушка в конце `models/td_signal.py` (W2 переопределяет); `_open_request`/`_on_request_closed` (R-05/R-06) реализованы в `td.signal`. CT-11 (`_f3d_import_sim_*`) — за W4.
+- DEC-4: `maintenance.equipment.td_meter_signal_id` — заглушка в конце `models/td_signal.py` (W2 переопределяет); `_open_request`/`_on_request_closed` (R-05/R-06) реализованы в `td.signal`. CT-11 (`_td_import_sim_*`) — за W4.
 - DEC-5: показания `kind='event'` сохраняются всегда, без учёта `store_period_s`. — `tools/ingest.py`
 - DEC-6: `SourcePlugin` без `@abstractmethod`; ошибка инициализации плагина → Health `plugin init failed` (Registry). `load_plugins` — в `core/registry.py`; entry points плагинов — за W6. — `collector/core/registry.py`
 - DEC-7: «Запустити міграцію» в настройках вызывает `hooks.run_level0_migration(env)`; до W4 — UserError. — `models/res_config_settings.py`

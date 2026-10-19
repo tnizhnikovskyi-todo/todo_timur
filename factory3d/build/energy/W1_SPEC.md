@@ -7,7 +7,7 @@
 
 ## Умовні позначення, діапазони ID, відхилення від макета
 
-**Імена (E-09).** Усе — у td-іменах: модулі `td_energy`, `td_genset_factory3d`, `td_telemetry`, `td_bms`, `td_viewer3d`, `td_factory3d`, `td_iot_sim`; моделі `td.*`; поля стандартних моделей `td_*`; методи `_f3d_*` → `_td_*`; групи `td_factory3d.group_td_user|manager|admin`; корінь меню `td_factory3d.menu_td_root`. Маршрути `/f3d/*` і **коди сигналів не змінюються**. Ключі `ir.config_parameter` нових параметрів — `td.energy.<param>` (A-23, припущення). Посилання «поточний файл» (рядок) дано на гілку `claude/factory3d-build`.
+**Імена (E-09).** Усе — у td-іменах: модулі `td_energy`, `td_genset_factory3d`, `td_telemetry`, `td_bms`, `td_viewer3d`, `td_factory3d`, `td_iot_sim`; моделі `td.*`; поля стандартних моделей `td_*`; методи `_td_*` → `_td_*`; групи `td_factory3d.group_td_user|manager|admin`; корінь меню `td_factory3d.menu_td_root`. Маршрути `/f3d/*` і **коди сигналів не змінюються**. Ключі `ir.config_parameter` нових параметрів — `td.energy.<param>` (A-23, припущення). Посилання «поточний файл» (рядок) дано на гілку `claude/factory3d-build`.
 
 **Діапазони ID.** Нумерація продовжує існуючі документи; між модулями ID **перетинаються за номерами**, тому поза таблицями ID завжди з модулем: `td_energy M-21`, `td_genset_factory3d M-10`.
 
@@ -400,7 +400,7 @@ access_td_energy_ticket_wizard_manager,td.energy.ticket.wizard manager,model_td_
 | `td.energy.verify_warn_days` | `30` | за скільки днів нагадувати про повірку |
 | `td.energy.pv_kwp` | `920` | потужність СЕС для відсотка «% піку» і backfill |
 
-`res.config.settings` (розширення, V-32): поля `td_energy_*` з `config_parameter`; `set_values` для `cos_phi_warn/alarm` викликає `_td_apply_cos_thresholds()` — записує `warn_low`/`alarm_low` (і `warn_low_on=True`, `alarm_low_on=True`) у сигнали `energy/totals/cos_phi`, `energy/sections/S1/cos_phi`, `energy/sections/S2/cos_phi` (патерн `_f3d_apply_contract_thresholds`, `EN/models/f3d_energy_tariff.py:118`). Валідація: `alarm < warn ≤ target ≤ 1` інакше `ValidationError("Пороги cos φ: тривога < попередження ≤ ціль ≤ 1.")`.
+`res.config.settings` (розширення, V-32): поля `td_energy_*` з `config_parameter`; `set_values` для `cos_phi_warn/alarm` викликає `_td_apply_cos_thresholds()` — записує `warn_low`/`alarm_low` (і `warn_low_on=True`, `alarm_low_on=True`) у сигнали `energy/totals/cos_phi`, `energy/sections/S1/cos_phi`, `energy/sections/S2/cos_phi` (патерн `_td_apply_contract_thresholds`, `EN/models/f3d_energy_tariff.py:118`). Валідація: `alarm < warn ≤ target ≤ 1` інакше `ValidationError("Пороги cos φ: тривога < попередження ≤ ціль ≤ 1.")`.
 
 ### 5.2 `data/sld_layout.csv` (з геометрії `geo` у `Main.dc.html`, полотно 1320 × 452)
 
