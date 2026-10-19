@@ -12,83 +12,93 @@ class F3DCase(TransactionCase):
         super().setUpClass()
         env = cls.env
         cls.company = env.company
-        cls.wh = env['stock.warehouse'].search([('company_id', '=', cls.company.id)], limit=1)
+        cls.wh = env["stock.warehouse"].search([("company_id", "=", cls.company.id)], limit=1)
 
-        base_user = 'base.group_user'
-        cls.user_reader = new_test_user(
-            env, login='f3d_reader', groups=f'{base_user},td_factory3d.group_td_user')
-        cls.user_manager = new_test_user(
-            env, login='f3d_manager', groups=f'{base_user},td_factory3d.group_td_manager')
-        cls.user_stock_mgr = new_test_user(
-            env, login='f3d_stock_mgr', groups=f'{base_user},stock.group_stock_manager')
-        cls.user_admin = new_test_user(
-            env, login='f3d_admin', groups=f'{base_user},td_factory3d.group_td_admin')
+        base_user = "base.group_user"
+        cls.user_reader = new_test_user(env, login="f3d_reader", groups=f"{base_user},td_factory3d.group_td_user")
+        cls.user_manager = new_test_user(env, login="f3d_manager", groups=f"{base_user},td_factory3d.group_td_manager")
+        cls.user_stock_mgr = new_test_user(env, login="f3d_stock_mgr", groups=f"{base_user},stock.group_stock_manager")
+        cls.user_admin = new_test_user(env, login="f3d_admin", groups=f"{base_user},td_factory3d.group_td_admin")
 
-        Categ = env['product.category']
-        cls.categ_boards = Categ.create({'name': 'Плитні матеріали'})
-        cls.categ_hdf = Categ.create({'name': 'ХДФ', 'parent_id': cls.categ_boards.id})
-        cls.categ_edge = Categ.create({'name': 'Крайка'})
+        Categ = env["product.category"]
+        cls.categ_boards = Categ.create({"name": "Плитні матеріали"})
+        cls.categ_hdf = Categ.create({"name": "ХДФ", "parent_id": cls.categ_boards.id})
+        cls.categ_edge = Categ.create({"name": "Крайка"})
 
-        Loc = env['stock.location']
+        Loc = env["stock.location"]
         parent = cls.wh.view_location_id
-        cls.loc_in = Loc.create({'name': 'Вхід-Т', 'usage': 'internal', 'location_id': parent.id})
-        cls.dock_w1 = Loc.create({'name': 'Док-Т-W1', 'usage': 'internal',
-                                  'location_id': parent.id, 'barcode': 'UNLOAD-T1'})
-        cls.dock_e1 = Loc.create({'name': 'Док-Т-E1', 'usage': 'internal',
-                                  'location_id': parent.id, 'barcode': 'DOCK-TE1'})
+        cls.loc_in = Loc.create({"name": "Вхід-Т", "usage": "internal", "location_id": parent.id})
+        cls.dock_w1 = Loc.create(
+            {"name": "Док-Т-W1", "usage": "internal", "location_id": parent.id, "barcode": "UNLOAD-T1"}
+        )
+        cls.dock_e1 = Loc.create(
+            {"name": "Док-Т-E1", "usage": "internal", "location_id": parent.id, "barcode": "DOCK-TE1"}
+        )
 
-        cls.wc = env['mrp.workcenter'].create({'name': 'Пила-Т', 'code': 'SAW-T'})
-        cls.eq = env['maintenance.equipment'].create({'name': 'Пила-Т', 'serial_no': 'SAW-T'})
-        cls.emp = env['hr.employee'].create({'name': 'Оператор-Т', 'barcode': 'OPSAWT'})
+        cls.wc = env["mrp.workcenter"].create({"name": "Пила-Т", "code": "SAW-T"})
+        cls.eq = env["maintenance.equipment"].create({"name": "Пила-Т", "serial_no": "SAW-T"})
+        cls.emp = env["hr.employee"].create({"name": "Оператор-Т", "barcode": "OPSAWT"})
 
     # --- хелперы (модели td.* появляются в следующих воркерах) ---
     def make_zone(self, code, polygon=None, **vals):
-        vals.setdefault('name', f'Зона {code}')
-        vals.setdefault('zone_type', 'storage')
-        vals['td_code'] = code
+        vals.setdefault("name", f"Зона {code}")
+        vals.setdefault("zone_type", "storage")
+        vals["td_code"] = code
         if polygon is not None:
-            vals['polygon_text'] = polygon
-        return self.env['td.zone'].create(vals)
+            vals["polygon_text"] = polygon
+        return self.env["td.zone"].create(vals)
 
     def make_dock(self, loc, side, no, x, y):
-        loc.write({'td_kind': 'dock', 'td_side': side, 'td_dock_no': no,
-                   'td_x': x, 'td_y': y})
+        loc.write({"td_kind": "dock", "td_side": side, "td_dock_no": no, "td_x": x, "td_y": y})
         return loc
 
     def make_batch(self, pickings, dock=None, **vals):
-        vals['picking_ids'] = [(6, 0, pickings.ids)]
+        vals["picking_ids"] = [(6, 0, pickings.ids)]
         if dock:
-            vals['dock_id'] = dock.id
-        return self.env['stock.picking.batch'].create(vals)
+            vals["dock_id"] = dock.id
+        return self.env["stock.picking.batch"].create(vals)
 
-    def make_picking(self, ptype, products, state='draft'):
-        picking = self.env['stock.picking'].create({
-            'picking_type_id': ptype.id,
-            'location_id': ptype.default_location_src_id.id,
-            'location_dest_id': ptype.default_location_dest_id.id,
-            'move_ids': [(0, 0, {
-                'product_id': p.id, 'product_uom_qty': 1, 'product_uom': p.uom_id.id,
-                'location_id': ptype.default_location_src_id.id,
-                'location_dest_id': ptype.default_location_dest_id.id,
-            }) for p in products],
-        })
-        if state == 'confirmed':
+    def make_picking(self, ptype, products, state="draft"):
+        picking = self.env["stock.picking"].create(
+            {
+                "picking_type_id": ptype.id,
+                "location_id": ptype.default_location_src_id.id,
+                "location_dest_id": ptype.default_location_dest_id.id,
+                "move_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "product_id": p.id,
+                            "product_uom_qty": 1,
+                            "product_uom": p.uom_id.id,
+                            "location_id": ptype.default_location_src_id.id,
+                            "location_dest_id": ptype.default_location_dest_id.id,
+                        },
+                    )
+                    for p in products
+                ],
+            }
+        )
+        if state == "confirmed":
             picking.action_confirm()
         return picking
 
     @contextmanager
     def viewer_installed(self, flag):
         from odoo.addons.td_factory3d.models.td_scene_mixin import F3dSceneMixin
-        with mock.patch.object(F3dSceneMixin, '_td_viewer_installed', return_value=flag):
+
+        with mock.patch.object(F3dSceneMixin, "_td_viewer_installed", return_value=flag):
             yield
 
     @contextmanager
     def with_data_file(self, name, rows):
         from odoo.addons.td_factory3d import hooks
-        with mock.patch.object(hooks, 'read_data_file', create=True,
-                               side_effect=lambda n, *a, **k: rows if n == name else []):
+
+        with mock.patch.object(
+            hooks, "read_data_file", create=True, side_effect=lambda n, *a, **k: rows if n == name else []
+        ):
             yield
 
     def snapshot_moves(self, pickings):
-        return sorted(pickings.move_ids.mapped(
-            lambda m: (m.id, m.product_id.id, m.product_uom_qty, m.state)))
+        return sorted(pickings.move_ids.mapped(lambda m: (m.id, m.product_id.id, m.product_uom_qty, m.state)))

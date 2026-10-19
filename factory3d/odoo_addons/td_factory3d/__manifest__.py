@@ -23,8 +23,7 @@ Key features
     "website": "https://todo.ltd",
     "support": "support@todo.ltd",
     "license": "LGPL-3",
-    "depends": ["stock", "stock_picking_batch", "stock_fleet", "fleet", "mrp", "maintenance",
-                "hr", "web"],
+    "depends": ["stock", "stock_picking_batch", "stock_fleet", "fleet", "mrp", "maintenance", "hr", "web"],
     "images": ["static/description/banner.png"],
     "data": [
         "security/td_security.xml",

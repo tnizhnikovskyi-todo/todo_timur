@@ -7,6 +7,7 @@
 * віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у debug).
 Перевіряються усі встановлені модулі td_* разом із td_genset (у прогоні «Run A» — всі 18 модулів).
 """
+
 import ast
 import re
 
@@ -16,30 +17,47 @@ from odoo.tests import TransactionCase, tagged
 
 _STR = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
 _JS_PYISMS = (
-    (re.compile(r"\bin\s*[(\[]"), "Python `in (...)`/`in [...]` (у JS `x in 'рядок'` -> TypeError; є `[...].includes(x)`)"),
+    (
+        re.compile(r"\bin\s*[(\[]"),
+        "Python `in (...)`/`in [...]` (у JS `x in 'рядок'` -> TypeError; є `[...].includes(x)`)",
+    ),
     (re.compile(r"\bnot\s+in\b"), "Python `not in`"),
     (re.compile(r"\b(?:True|False|None)\b"), "Python True/False/None (у JS: true/false/null)"),
     (re.compile(r"(?<![\w.$!])not\s"), "Python `not` (у JS: `!`)"),
 )
-_T_SKIP = {"t-name", "t-call", "t-set", "t-as", "t-key", "t-slot", "t-translation", "t-ref", "t-inherit", "t-inherit-mode"}
+_T_SKIP = {
+    "t-name",
+    "t-call",
+    "t-set",
+    "t-as",
+    "t-key",
+    "t-slot",
+    "t-translation",
+    "t-ref",
+    "t-inherit",
+    "t-inherit-mode",
+}
 _ATTF = re.compile(r"(?:#|\$)\{(.*?)\}|\{\{(.*?)\}\}")
 _TIME_MINMAX = re.compile(r"\btime\.(?:min|max)\b|\bdate(?:time)?\.(?:min|max)\b")
 _ACE_MODES = {"javascript", "xml", "qweb", "scss", "python"}  # web/static/src/core/code_editor/code_editor.js
 _ORDER_LEAF = re.compile(r"\(\s*'([\w.]+)'\s*,\s*'(<|>|<=|>=)'\s*,\s*'([a-z_][a-z_0-9]*)'\s*\)")
 
 
-@tagged('post_install', '-at_install', 'f3d', 'f3d_base')
+@tagged("post_install", "-at_install", "f3d", "f3d_base")
 class TestViewJsGuards(TransactionCase):
-
     def _td_views(self):
-        modules = self.env['ir.module.module'].search([('state', '=', 'installed')]).filtered(
-            lambda m: m.name.startswith('td_')).mapped('name')
-        data = self.env['ir.model.data'].search([('model', '=', 'ir.ui.view'), ('module', 'in', modules)])
-        return self.env['ir.ui.view'].browse(data.mapped('res_id')).exists().filtered(lambda v: v.type != 'qweb')
+        modules = (
+            self.env["ir.module.module"]
+            .search([("state", "=", "installed")])
+            .filtered(lambda m: m.name.startswith("td_"))
+            .mapped("name")
+        )
+        data = self.env["ir.model.data"].search([("model", "=", "ir.ui.view"), ("module", "in", modules)])
+        return self.env["ir.ui.view"].browse(data.mapped("res_id")).exists().filtered(lambda v: v.type != "qweb")
 
     @staticmethod
     def _arch(view):
-        return etree.fromstring((view.arch_db or '<data/>').encode())
+        return etree.fromstring((view.arch_db or "<data/>").encode())
 
     def test_kanban_template_expressions_are_js(self):
         problems = []
@@ -50,9 +68,9 @@ class TestViewJsGuards(TransactionCase):
                 if not isinstance(el.tag, str):
                     continue
                 for attr, value in el.attrib.items():
-                    if not attr.startswith('t-') or attr in _T_SKIP:
+                    if not attr.startswith("t-") or attr in _T_SKIP:
                         continue
-                    if attr.startswith('t-attf-'):
+                    if attr.startswith("t-attf-"):
                         exprs = [m.group(1) or m.group(2) for m in _ATTF.finditer(value)]
                     else:
                         exprs = [value]
@@ -60,7 +78,9 @@ class TestViewJsGuards(TransactionCase):
                         stripped = _STR.sub("''", expr)
                         for regex, message in _JS_PYISMS:
                             if regex.search(stripped):
-                                problems.append("%s: <%s %s=%r>: %s" % (view.xml_id or view.name, el.tag, attr, expr, message))
+                                problems.append(
+                                    "%s: <%s %s=%r>: %s" % (view.xml_id or view.name, el.tag, attr, expr, message)
+                                )
         self.assertFalse(problems, "Python-конструкції у JS-виразах шаблонів:\n" + "\n".join(problems))
 
     def test_filter_domains_are_client_safe(self):
@@ -68,40 +88,55 @@ class TestViewJsGuards(TransactionCase):
         for view in self._td_views():
             Model = self.env.get(view.model) if view.model else None
             for el in self._arch(view).iter():
-                if not isinstance(el.tag, str) or el.tag not in ('filter', 'field'):
+                if not isinstance(el.tag, str) or el.tag not in ("filter", "field"):
                     continue
-                for attr in ('domain', 'filter_domain', 'context'):
+                for attr in ("domain", "filter_domain", "context"):
                     value = el.get(attr)
                     if not value:
                         continue
-                    label = "%s: <%s %s>" % (view.xml_id or view.name, el.tag, el.get('name') or el.get('string') or '')
+                    label = "%s: <%s %s>" % (view.xml_id or view.name, el.tag, el.get("name") or el.get("string") or "")
                     if _TIME_MINMAX.search(value):
-                        problems.append("%s: %s не підтримується JS-обчислювачем (datetime.time(0, 0, 0)/(23, 59, 59))" % (label, attr))
-                    if Model is not None and el.tag == 'filter' and attr == 'domain':
+                        problems.append(
+                            "%s: %s не підтримується JS-обчислювачем (datetime.time(0, 0, 0)/(23, 59, 59))"
+                            % (label, attr)
+                        )
+                    if Model is not None and el.tag == "filter" and attr == "domain":
                         for field, op, rhs in _ORDER_LEAF.findall(value):
-                            if field.split('.')[0] in Model._fields and rhs in Model._fields:
-                                problems.append("%s: домен порівнює поле з полем ('%s' %s '%s'); потрібне булеве поле з _search/store"
-                                                % (label, field, op, rhs))
+                            if field.split(".")[0] in Model._fields and rhs in Model._fields:
+                                problems.append(
+                                    "%s: домен порівнює поле з полем ('%s' %s '%s'); потрібне булеве поле з _search/store"
+                                    % (label, field, op, rhs)
+                                )
         self.assertFalse(problems, "Домени, які клієнт або ORM не обчислять:\n" + "\n".join(problems))
 
     def test_code_editor_modes(self):
         problems = []
         for view in self._td_views():
-            for el in self._arch(view).iter('field'):
-                if el.get('widget') not in ('ace', 'code') or not el.get('options'):
+            for el in self._arch(view).iter("field"):
+                if el.get("widget") not in ("ace", "code") or not el.get("options"):
                     continue
                 try:
-                    mode = ast.literal_eval(el.get('options')).get('mode')
+                    mode = ast.literal_eval(el.get("options")).get("mode")
                 except (ValueError, SyntaxError):
                     continue
                 if mode and mode not in _ACE_MODES:
-                    problems.append("%s: <field %s widget=%s> mode=%r" % (view.xml_id or view.name, el.get('name'), el.get('widget'), mode))
+                    problems.append(
+                        "%s: <field %s widget=%s> mode=%r"
+                        % (view.xml_id or view.name, el.get("name"), el.get("widget"), mode)
+                    )
         self.assertFalse(problems, "Режим CodeEditor поза %s:\n%s" % (sorted(_ACE_MODES), "\n".join(problems)))
 
     def test_stat_buttons_are_buttons(self):
         problems = []
         for view in self._td_views():
             for el in self._arch(view).iter():
-                if isinstance(el.tag, str) and el.tag != 'button' and 'oe_stat_button' in (el.get('class') or '').split():
-                    problems.append("%s: <%s class=%r name=%r>" % (view.xml_id or view.name, el.tag, el.get('class'), el.get('name')))
+                if (
+                    isinstance(el.tag, str)
+                    and el.tag != "button"
+                    and "oe_stat_button" in (el.get("class") or "").split()
+                ):
+                    problems.append(
+                        "%s: <%s class=%r name=%r>"
+                        % (view.xml_id or view.name, el.tag, el.get("class"), el.get("name"))
+                    )
         self.assertFalse(problems, "oe_stat_button не на <button> (Odoo 19 не оформлює):\n" + "\n".join(problems))

@@ -1,4 +1,5 @@
 """Хуки установки/видалення td_factory3d (SPEC §5.3, §5.4)."""
+
 import json
 import logging
 
@@ -6,11 +7,11 @@ from odoo import fields
 
 from . import batches, codes, docks, passports, x_fields, zones
 
-_logger = logging.getLogger('odoo.addons.td_factory3d.hooks')
+_logger = logging.getLogger("odoo.addons.td_factory3d.hooks")
 
-PARAM_STATE = 'td.base.migration_state'
-PARAM_REPORT = 'td.base.migration_report'
-PARAM_RERUN = 'td.base.migration_rerun_report'
+PARAM_STATE = "td.base.migration_state"
+PARAM_REPORT = "td.base.migration_report"
+PARAM_RERUN = "td.base.migration_rerun_report"
 
 
 def _step(report, name, func, env, *args):
@@ -26,27 +27,27 @@ def write_report(env, report):
     Повтор на вже виконаній міграції (стан done/partial, нічого мігрувати) не псує стан і
     оригінальний звіт установки (AC-30): результат повтору пишеться окремо в PARAM_RERUN.
     """
-    migrate = report.get('batches.migrate') or {}
-    drop = report.get('x_fields.drop_demo') or {}
-    verify = report.get('batches.verify') or {}
-    keep = env['ir.config_parameter'].sudo().get_param('td.base.keep_x_fields') == 'True'
-    params = env['ir.config_parameter'].sudo()
+    migrate = report.get("batches.migrate") or {}
+    drop = report.get("x_fields.drop_demo") or {}
+    verify = report.get("batches.verify") or {}
+    keep = env["ir.config_parameter"].sudo().get_param("td.base.keep_x_fields") == "True"
+    params = env["ir.config_parameter"].sudo()
     previous = params.get_param(PARAM_STATE)
-    if migrate.get('skipped') and previous in ('done', 'partial'):
-        report['migration_state'] = previous
-        report['batches_created'] = 0
-        report['ts'] = fields.Datetime.to_string(fields.Datetime.now())
+    if migrate.get("skipped") and previous in ("done", "partial"):
+        report["migration_state"] = previous
+        report["batches_created"] = 0
+        report["ts"] = fields.Datetime.to_string(fields.Datetime.now())
         params.set_param(PARAM_RERUN, json.dumps(report, ensure_ascii=False, default=str))
         _logger.info("Крок 11: повтор міграції, migration_state=%s збережено", previous)
         return previous
-    if migrate.get('skipped'):
-        state = 'skipped'
-    elif verify.get('mismatches') or drop.get('blocked_views') or keep:
-        state = 'partial'
+    if migrate.get("skipped"):
+        state = "skipped"
+    elif verify.get("mismatches") or drop.get("blocked_views") or keep:
+        state = "partial"
     else:
-        state = 'done'
-    report['migration_state'] = state
-    report['ts'] = fields.Datetime.to_string(fields.Datetime.now())
+        state = "done"
+    report["migration_state"] = state
+    report["ts"] = fields.Datetime.to_string(fields.Datetime.now())
     params.set_param(PARAM_STATE, state)
     params.set_param(PARAM_REPORT, json.dumps(report, ensure_ascii=False, default=str))
     _logger.info("Крок 11: migration_state=%s", state)
@@ -56,18 +57,18 @@ def write_report(env, report):
 def run_all(env):
     """Виконати кроки 1–11 і записати звіт; повертає словник звіту."""
     report = {}
-    _step(report, 'docks.register', docks.register, env)
-    _step(report, 'codes.locations', codes.locations, env)
-    _step(report, 'codes.workcenters', codes.workcenters, env)
-    _step(report, 'codes.employees', codes.employees, env)
-    _step(report, 'codes.equipment', codes.equipment, env)
-    _step(report, 'passports.link', passports.link, env)
-    _step(report, 'zones.bind', zones.bind, env)
-    _step(report, 'batches.migrate', batches.migrate, env)
-    verify = {'mismatches': [], 'moves_changed': 0}
-    if not report['batches.migrate'].get('skipped'):
-        verify = _step(report, 'batches.verify', batches.verify, env)
-    _step(report, 'x_fields.drop_demo', x_fields.drop_demo, env, verify['mismatches'])
+    _step(report, "docks.register", docks.register, env)
+    _step(report, "codes.locations", codes.locations, env)
+    _step(report, "codes.workcenters", codes.workcenters, env)
+    _step(report, "codes.employees", codes.employees, env)
+    _step(report, "codes.equipment", codes.equipment, env)
+    _step(report, "passports.link", passports.link, env)
+    _step(report, "zones.bind", zones.bind, env)
+    _step(report, "batches.migrate", batches.migrate, env)
+    verify = {"mismatches": [], "moves_changed": 0}
+    if not report["batches.migrate"].get("skipped"):
+        verify = _step(report, "batches.verify", batches.verify, env)
+    _step(report, "x_fields.drop_demo", x_fields.drop_demo, env, verify["mismatches"])
     write_report(env, report)
     return report
 
@@ -80,4 +81,4 @@ def uninstall_hook(env):
     """§5.4: відновити x_* (якщо дозволено параметром), потім прибрати параметри td.base.*."""
     res = x_fields.restore_on_uninstall(env)
     _logger.info("uninstall: %s", res)
-    env['ir.config_parameter'].sudo().search([('key', '=like', 'td.base.%')]).unlink()
+    env["ir.config_parameter"].sudo().search([("key", "=like", "td.base.%")]).unlink()
