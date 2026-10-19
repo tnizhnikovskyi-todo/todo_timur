@@ -10,9 +10,7 @@ class F3DBmsCase(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user_reader = new_test_user(cls.env, "bms_reader", groups="base.group_user,td_factory3d.group_td_user")
-        cls.user_operator = new_test_user(
-            cls.env, "bms_oper", groups="base.group_user,td_bms.group_td_bms_operator"
-        )
+        cls.user_operator = new_test_user(cls.env, "bms_oper", groups="base.group_user,td_bms.group_td_bms_operator")
         cls.user_manager = new_test_user(cls.env, "bms_mgr", groups="base.group_user,td_factory3d.group_td_manager")
         cls.user_admin = new_test_user(cls.env, "bms_admin", groups="base.group_user,td_factory3d.group_td_admin")
 

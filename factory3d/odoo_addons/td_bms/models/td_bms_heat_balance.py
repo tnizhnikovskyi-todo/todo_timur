@@ -194,9 +194,7 @@ class F3dBmsHeatBalance(models.Model):
 
     # --- проєктний розрахунок ---
     def action_recompute(self):
-        units = [
-            {"kind": u.kind, "airflow_nom": u.airflow_nom} for u in self.env["td.bms.hvac.unit"].sudo().search([])
-        ]
+        units = [{"kind": u.kind, "airflow_nom": u.airflow_nom} for u in self.env["td.bms.hvac.unit"].sudo().search([])]
         for rec in self:
             res = heat.design_balance(rec._params(), units)
             lines = [Command.clear()] + [Command.create(line) for line in res["lines"]]

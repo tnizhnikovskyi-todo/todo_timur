@@ -411,9 +411,7 @@ class F3dBmsCheck(models.AbstractModel):
             if zones is None:
                 zones = self._object_zones()
             kind, obj_code = rules.object_of(sig.code)
-            model = {"group": "td.bms.light.group", "unit": "td.bms.hvac.unit", "panel": "td.bms.light.panel"}.get(
-                kind
-            )
+            model = {"group": "td.bms.light.group", "unit": "td.bms.hvac.unit", "panel": "td.bms.light.panel"}.get(kind)
             if sig.kind == "state":
                 value, threshold = (req.td_value, req.td_threshold) if req else (0.0, 0.0)
             else:

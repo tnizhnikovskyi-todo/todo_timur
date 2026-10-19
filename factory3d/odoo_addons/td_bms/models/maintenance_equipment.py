@@ -25,9 +25,7 @@ class MaintenanceEquipment(models.Model):
                         res = "%s:%d" % (key, obj.id)
                         break
                 if not res:
-                    bal = (
-                        self.env["td.bms.heat.balance"].sudo().search([("boiler_equipment_id", "=", rec.id)], limit=1)
-                    )
+                    bal = self.env["td.bms.heat.balance"].sudo().search([("boiler_equipment_id", "=", rec.id)], limit=1)
                     res = "balance:%d" % bal.id if bal else False
             rec.td_bms_object = res
 

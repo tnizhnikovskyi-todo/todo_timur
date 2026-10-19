@@ -169,9 +169,7 @@ def derived_source(env):
     else:
         src = Source.create({**vals, "code": DERIVED_CODE, "read_enabled": _read_param(env), "write_enabled": False})
         created = 1
-    env["ir.model.data"]._update_xmlids(
-        [{"xml_id": "td_bms.source_bms_derived", "record": src, "noupdate": True}]
-    )
+    env["ir.model.data"]._update_xmlids([{"xml_id": "td_bms.source_bms_derived", "record": src, "noupdate": True}])
     return {"created": created}
 
 

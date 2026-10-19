@@ -148,6 +148,7 @@ def test_tb07_neutralize():
         "(SELECT count(*) FROM td_source WHERE module='bms' AND (read_enabled OR write_enabled)),"
         "(SELECT count(*) FROM ir_cron WHERE cron_name LIKE 'Будівля%%' AND active)"
     )
+
     def pg(sql):
         return subprocess.run(
             ["psql", "-h", "127.0.0.1", "-U", "odoo", "-At", "-d", db, "-c", sql], capture_output=True, text=True
