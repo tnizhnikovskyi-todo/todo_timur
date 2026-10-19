@@ -45,7 +45,7 @@ class LayerCase(TestW1Common):
 
     def layer(self, user=None, **ctx):
         payload = {}
-        self.provider(user)._f3d_viewer_collect(payload, dict({"kiosk": False, "changes": {}}, **ctx))
+        self.provider(user)._td_viewer_collect(payload, dict({"kiosk": False, "changes": {}}, **ctx))
         return payload["energy"]["layer"]
 
     def node(self, layer, code):

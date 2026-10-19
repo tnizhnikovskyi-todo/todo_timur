@@ -9,7 +9,7 @@ from .common import TAGS, LayerCase
 class TestDelta(LayerCase):
     def delta_layer(self, changes, user=None):
         patch = {}
-        self.provider(user)._f3d_viewer_delta(patch, {"kiosk": False, "changes": changes})
+        self.provider(user)._td_viewer_delta(patch, {"kiosk": False, "changes": changes})
         return patch.get("energy", {}).get("layer")
 
     def test_delta_on_energy_changes(self):  # AC-286

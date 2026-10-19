@@ -37,10 +37,10 @@ class TestLayerPayload(LayerCase):
 
     def test_provider_contract_and_denied(self):  # AC-282
         provider = self.env["td.viewer.provider.energy_layer"]
-        self.assertEqual(provider._f3d_sequence, 101)
-        self.assertEqual(provider._f3d_sections, ("energy",))
-        self.assertEqual(provider._f3d_group, "td_factory3d.group_td_user")
-        self.assertEqual(provider._f3d_viewer_bus_models(), ["td.signal", "td.energy"])
+        self.assertEqual(provider._td_sequence, 101)
+        self.assertEqual(provider._td_sections, ("energy",))
+        self.assertEqual(provider._td_group, "td_factory3d.group_td_user")
+        self.assertEqual(provider._td_viewer_bus_models(), ["td.signal", "td.energy"])
         res = self.payload(self.u_viewer, full=True)
         self.assertEqual(res["meta"]["schema"], "1.1")  # схема не змінилась: ключ аддитивний
         self.assertEqual(res["meta"]["sections"]["energy"], "live")
