@@ -28,6 +28,18 @@ class F3dSignal(models.Model):
             if forbidden:
                 raise ValidationError("Сигнал %s модуля «Будівля» не керується (ARCH §1.4)." % code)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """R-15: `td_energy` (КГУ) і `fire_safety` можуть встановитися після `td_bms` — їхні сигнали з
+        `hooks.BALANCE_OPTIONAL` привʼязуються до порожніх полів теплового балансу в момент створення."""
+        recs = super().create(vals_list)
+        from .. import hooks  # noqa: PLC0415 — hooks імпортує models
+
+        wanted = recs.filtered(lambda r: r.code in hooks.BALANCE_OPTIONAL.values())
+        if wanted and "td.bms.heat.balance" in self.env:
+            self.env["td.bms.heat.balance"]._td_bms_link_optional(wanted)
+        return recs
+
     @api.model
     def _td_ingest(self, readings, src="module", collector=None):
         """R-20: після прийому показань груп/установок оновити `off_since`/`low_since`/… (ізольовано)."""

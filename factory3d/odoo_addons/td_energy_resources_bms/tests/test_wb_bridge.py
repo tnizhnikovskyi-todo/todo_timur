@@ -100,7 +100,8 @@ class TestWbBridge(TestW3Common):
     def test_bind_points_and_meters(self):  # AC-B01
         codes = set(self.heat_points().mapped("code"))
         self.assertEqual(codes, BASE_POINTS)  # DOCK — лише з сигналом воріт (setUpClass прибрав той, що з td_yard)
-        self.assertEqual({m.code for m in self.heat_meters()}, {"HM-BOILER", "HM-RV", "HM-AHU1", "HM-OFFICE"})
+        # HM-CHP: баланс BMS отримав сигнал тепла КГУ незалежно від порядку встановлення td_bms / td_energy
+        self.assertEqual({m.code for m in self.heat_meters()}, {"HM-BOILER", "HM-CHP", "HM-RV", "HM-AHU1", "HM-OFFICE"})
         self.assertEqual(len(self.units), 29)
         points = {p.code: p for p in self.heat_points()}
         self.assertEqual((points["HEAT-BOILER"].kind, points["HEAT-CHP"].kind), ("source", "source"))
@@ -116,13 +117,52 @@ class TestWbBridge(TestW3Common):
         self.assertEqual(meters["HM-RV"].flow_signal_ids, rv_signals)
         self.assertEqual(len(rv_signals), 25)
         self.assertEqual(meters["HM-BOILER"].flow_signal_ids, self.balance.boiler_heat_signal_id)
+        self.assertEqual(meters["HM-CHP"].flow_signal_ids.mapped("code"), ["infra/chp/heat_kw"])
+        self.assertEqual(meters["HM-CHP"].flow_signal_ids, self.balance.chp_heat_signal_id)
+        self.assertEqual((meters["HM-CHP"].point_id.code, meters["HM-CHP"].point_id.kind), ("HEAT-CHP", "source"))
         self.assertEqual(meters["HM-AHU1"].flow_signal_ids, self.ahu.heat_signal_id)
         self.assertEqual((meters["HM-OFFICE"].mode, meters["HM-RV"].mode), ("estimate", "flow_integrate"))
         self.assertTrue(all(m.role == "resource" and m.resource_id.code == "heat" for m in meters.values()))
 
+    def test_chp_heat_source_migration(self):  # міграція 19.0.1.0.2: стара база без сигналу КГУ у балансі → HM-CHP
+        meter = self.Meter.search([("code", "=", "HM-CHP")])
+        self.assertTrue(meter)
+        meter.unlink()  # стан бази до міграції: баланс без сигналу тепла КГУ, лічильника немає
+        self.balance.chp_heat_signal_id = False
+        self.assertEqual(self.bind(), {"points": 0, "meters": 0})  # немає сигналу — лічильник пропущено
+        self.assertFalse(self.Meter.search([("code", "=", "HM-CHP")]))
+        self.balance._td_bms_link_optional()  # те саме робить міграція td_bms / моста
+        self.assertEqual(self.balance.chp_heat_signal_id.code, "infra/chp/heat_kw")
+        self.assertEqual(self.bind(), {"points": 0, "meters": 1})
+        meter = self.Meter.search([("code", "=", "HM-CHP")])
+        self.assertEqual(
+            (meter.point_id.code, meter.point_id.kind, meter.mode), ("HEAT-CHP", "source", "flow_integrate")
+        )
+        self.assertEqual(meter.flow_signal_ids, self.balance.chp_heat_signal_id)
+        self.assertEqual(self.bind(), {"points": 0, "meters": 0})  # ідемпотентно
+
+    def test_chp_heat_is_production_not_consumption(self):  # тепло КГУ — надходження (виробіток), не споживання
+        self.bind(with_dock=True)
+        sources = self.Point.search([("resource_id.code", "=", "heat"), ("kind", "=", "source")])
+        self.assertEqual(set(sources.mapped("code")), {"HEAT-BOILER", "HEAT-CHP"})
+        consumers = self.Point.search([("resource_id.code", "=", "heat"), ("kind", "=", "consumer")])
+        self.assertNotIn("HEAT-CHP", consumers.mapped("code"))
+        office = self.Point.search([("resource_id.code", "=", "heat"), ("code", "=", "OFFICE")])
+        self.assertEqual(office.estimate_params, {"from": ["HEAT-BOILER", "HEAT-CHP"]})  # залишок = джерела − виміряні
+        self.ResInterval._td_backfill(days=1, until=datetime(2026, 10, 17, 0, 0), seed=20261018)
+        self.env.flush_all()
+        self.env.cr.execute(
+            "SELECT u.flow, COUNT(*) FROM td_energy_usage u JOIN td_energy_meter m ON m.id = u.meter_id"
+            " WHERE m.code = 'HM-CHP' GROUP BY u.flow"
+        )
+        flows = dict(self.env.cr.fetchall())
+        self.assertEqual(set(flows), {"supply"})  # ніколи не `branch`: у гілках споживання тепла КГУ немає
+        self.assertGreater(flows["supply"], 0)
+
     def test_bind_idempotent_keeps_manual_edits(self):  # AC-B01
-        self.chp_signal()
-        self.assertEqual(self.bind(), {"points": 0, "meters": 1})  # з'явився сигнал КГУ → лічильник HM-CHP
+        self.assertEqual(
+            self.bind(), {"points": 0, "meters": 0}
+        )  # HM-CHP уже є (сигнал КГУ привʼязано при встановленні)
         self.assertEqual(len(self.heat_meters()), 5)
         self.Point.search([("code", "=", "RV-ALL")]).name = "Мої RV"
         self.Meter.search([("code", "=", "HM-RV")]).write({"name": "Мій лічильник", "max_rate": 999.0})

@@ -241,6 +241,31 @@ class F3dBmsHeatBalance(models.Model):
             rec = self.sudo().create({"company_id": self.env.company.id}).with_env(self.env)
         return rec
 
+    @api.model
+    def _td_bms_link_optional(self, signals=None):
+        """Сигнали інших модулів (`hooks.BALANCE_OPTIONAL`: КГУ — тепло й електрична потужність, мережа, пожежа) у
+        порожні поля балансу компанії. Модуль, що власне сигнал, може встановитися після `td_bms` (тоді `post_init_hook`
+        його не бачить): викликається при створенні таких сигналів (`td.signal.create`) і з міграції. Заповнює лише
+        порожні поля — привʼязку, змінену вручну, не чіпає. `signals` — обмежити набір сигналів; повертає записане."""
+        from .. import hooks  # noqa: PLC0415 — hooks імпортує models
+
+        codes = hooks.BALANCE_OPTIONAL
+        pool = (
+            signals
+            if signals is not None
+            else self.env["td.signal"].sudo().search([("code", "in", list(codes.values()))])
+        )
+        by_code = {s.code: s for s in pool.sudo() if s.code in codes.values()}
+        written = {}
+        if not by_code:
+            return written
+        for balance in self.sudo().with_context(active_test=False, tracking_disable=True).search([]):
+            vals = {f: by_code[c].id for f, c in codes.items() if c in by_code and not balance[f]}
+            if vals:
+                balance.write(vals)
+                written[balance.id] = sorted(vals)
+        return written
+
     # --- живий баланс ---
     def _td_bms_live(self):
         """R-15, R-16: словник живих значень (поля `LIVE_FIELDS` + `need`, `boil`) для огляду, провайдера й крона."""

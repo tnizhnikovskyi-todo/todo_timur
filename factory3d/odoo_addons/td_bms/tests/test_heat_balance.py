@@ -141,3 +141,65 @@ class TestLive(F3DBmsHvacMixin, F3DBmsCase):
         self.env["td.bms.heat.balance"].sudo().search([]).unlink()
         b = self.env["td.bms.heat.balance"]._td_bms_get()
         self.assertEqual(b.total_kw, 753)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_bms")
+class TestChpHeatSource(F3DBmsHvacMixin, F3DBmsCase):
+    """Тепло КГУ в тепловому балансі: сигнали `infra/chp/heat_kw` / `infra/totals/chp_kw` привʼязуються незалежно від
+    порядку встановлення `td_bms` і `td_energy` (R-15); зупинена КГУ дає 0."""
+
+    HEAT, EL = "infra/chp/heat_kw", "infra/totals/chp_kw"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._setup_hvac_fixtures()
+
+    def new_signals(self, heat_kw=0.0, el_kw=0.0):
+        """Сигнали КГУ створюються після балансу (як `td_energy`, що ставиться після `td_bms`); поля балансу порожні."""
+        self.balance.sudo().write({"chp_heat_signal_id": False, "chp_el_signal_id": False})
+        return (
+            self.make_signal(self.HEAT, heat_kw, unit="кВт"),
+            self.make_signal(self.EL, el_kw, unit="кВт"),
+        )
+
+    def test_late_signals_are_linked_on_create(self):
+        heat_sig, el_sig = self.new_signals()
+        b = self.balance.sudo()
+        self.assertEqual((b.chp_heat_signal_id, b.chp_el_signal_id), (heat_sig, el_sig))
+
+    def test_manual_link_is_kept(self):
+        self.new_signals()
+        other = self.make_signal("test/chp_heat_alt", 5.0)
+        b = self.balance.sudo()
+        b.chp_heat_signal_id = other
+        self.make_signal(self.HEAT, 7.0)  # сигнал із кодом з BALANCE_OPTIONAL: привʼязку, змінену вручну, не чіпаємо
+        self.assertEqual(b.chp_heat_signal_id, other)
+
+    def test_link_optional_is_idempotent(self):  # міграція 19.0.1.0.1
+        heat_sig, el_sig = self.new_signals()
+        b = self.balance.sudo()
+        b.write({"chp_heat_signal_id": False, "chp_el_signal_id": False})
+        written = self.env["td.bms.heat.balance"]._td_bms_link_optional()
+        self.assertTrue({"chp_heat_signal_id", "chp_el_signal_id"} <= set(written[b.id]))
+        self.assertEqual((b.chp_heat_signal_id, b.chp_el_signal_id), (heat_sig, el_sig))
+        self.assertEqual(self.env["td.bms.heat.balance"]._td_bms_link_optional(), {})
+
+    def test_chp_heat_in_live_balance(self):
+        heat_sig, el_sig = self.new_signals(heat_kw=0.0, el_kw=0.0)
+        b = self.balance
+        live = b._td_bms_live()  # КГУ зупинено: сигнал тепла = 0 → у балансі 0, не проєктні 497
+        self.assertEqual((live["chp_heat_now_kw"], live["chp_source"]), (0.0, "signal"))
+        self.assertEqual(live["boil"], live["need"])  # усе тепло — від котлів
+        heat_sig.sudo().write({"last_value": 700.0})
+        el_sig.sudo().write({"last_value": 800.0})
+        live = b._td_bms_live()  # КГУ працює: тепло КГУ вичитається з потреби
+        self.assertEqual((live["chp_heat_now_kw"], live["chp_source"]), (700.0, "signal"))
+        self.assertAlmostEqual(live["boil"], max(0.0, live["need"] - 700.0))
+        self.assertEqual(b.sudo().chp_heat_now_kw, 700.0)
+        heat_sig.sudo().write({"status": "stale"})  # немає сигналу тепла — за електричною потужністю (R-15 п. 2)
+        live = b._td_bms_live()
+        self.assertEqual((live["chp_heat_now_kw"], live["chp_source"]), (856.0, "calc"))
+        el_sig.sudo().write({"last_value": 0.0})  # зупинена КГУ без сигналу тепла: 0, а не проєктні 497
+        live = b._td_bms_live()
+        self.assertEqual((live["chp_heat_now_kw"], live["chp_source"]), (0, "calc"))
