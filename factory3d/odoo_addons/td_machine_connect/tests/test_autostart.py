@@ -88,10 +88,10 @@ class TestAutostart(F3DMachineCase):
         self.assertEqual(len(self.acts(m, summary)), 1)
         self.assertEqual(wo.state, "ready")
         with at("10:00:05"):
-            m._f3d_autostart(kt("10:00"), text="WO99999")
+            m._td_autostart(kt("10:00"), text="WO99999")
         self.assertEqual(len(self.acts(m, summary)), 1)
         with at("10:01:05"):
-            m._f3d_autostart(kt("10:01"), text=job(other))
+            m._td_autostart(kt("10:01"), text=job(other))
         self.assertEqual(other.state, "ready")
         self.assertEqual(len(self.acts(m, "Завдання верстата «%s» не знайдено в Odoo" % job(other))), 1)
         self.assertFalse(m.active_workorder_id)
@@ -100,12 +100,12 @@ class TestAutostart(F3DMachineCase):
         """AC-29: той самий пакет двічі й ще раз з новим `ts` → один таймер, один виклик старту."""
         m, wo = self.m_ua, self.wo_of(self.wc_ua)
         model = type(self.env["td.machine"])
-        orig = model._f3d_start_wo
-        with mock.patch.object(model, "_f3d_start_wo", autospec=True, side_effect=orig) as start:
+        orig = model._td_start_wo
+        with mock.patch.object(model, "_td_start_wo", autospec=True, side_effect=orig) as start:
             self.work(m, "09:55", job=job(wo))
             self.work(m, "09:55", job=job(wo))
             self.work(m, "09:56", job=job(wo))
-            m._f3d_autostart(kt("09:57"), text=job(wo))
+            m._td_autostart(kt("09:57"), text=job(wo))
         self.assertEqual(start.call_count, 1)
         self.assertEqual(len(wo.time_ids.filtered(lambda t: not t.date_end)), 1)
         self.assertEqual(len(wo.time_ids), 1)
@@ -135,13 +135,13 @@ class TestAutostart(F3DMachineCase):
         model = type(m)
         ua, saw, io, x = self.emp_ua, self.emp_saw, self.emp_io, self.emp_x
         m.employee_id = io
-        self.assertEqual(m._f3d_pick_employee(wo), ua)  # (в) OP-UA-T
-        with mock.patch.object(model, "_f3d_wc_employees", return_value=saw | x):
-            self.assertEqual(m._f3d_pick_employee(wo), saw)  # (в), (г) недозволені → (ґ)
+        self.assertEqual(m._td_pick_employee(wo), ua)  # (в) OP-UA-T
+        with mock.patch.object(model, "_td_wc_employees", return_value=saw | x):
+            self.assertEqual(m._td_pick_employee(wo), saw)  # (в), (г) недозволені → (ґ)
             m.employee_id = x
-            self.assertEqual(m._f3d_pick_employee(wo), x)  # (г)
-        with mock.patch.object(model, "_f3d_wc_employees", return_value=ua | x):
-            self.assertEqual(m._f3d_pick_employee(wo), ua)  # (в) краще за (г)
+            self.assertEqual(m._td_pick_employee(wo), x)  # (г)
+        with mock.patch.object(model, "_td_wc_employees", return_value=ua | x):
+            self.assertEqual(m._td_pick_employee(wo), ua)  # (в) краще за (г)
         record = (
             self.env["mrp.workcenter.productivity"]
             .sudo()
@@ -157,14 +157,14 @@ class TestAutostart(F3DMachineCase):
             )
         )
         wo.td_employee_id = saw
-        self.assertEqual(m._f3d_pick_employee(wo), saw)  # (б) працівник сьогоднішнього запису
-        with mock.patch.object(model, "_f3d_wc_employees", return_value=ua | x):
-            self.assertEqual(m._f3d_pick_employee(wo), ua)  # (б) недозволений → (в)
+        self.assertEqual(m._td_pick_employee(wo), saw)  # (б) працівник сьогоднішнього запису
+        with mock.patch.object(model, "_td_wc_employees", return_value=ua | x):
+            self.assertEqual(m._td_pick_employee(wo), ua)  # (б) недозволений → (в)
         wo.td_employee_id = False
         record.unlink()
         m.employee_id = False
         with mock.patch.object(type(self.env["hr.employee"]), "search_f3d", return_value=self.env["hr.employee"]):
-            self.assertFalse(m._f3d_pick_employee(wo))  # (д)
+            self.assertFalse(m._td_pick_employee(wo))  # (д)
 
     def test_employee_fields_enterprise(self):
         """AC-31 (Enterprise): недозволений OP-код пропускається за `wc.employee_ids` (лише з `mrp_workorder`)."""
@@ -172,7 +172,7 @@ class TestAutostart(F3DMachineCase):
             self.skipTest("немає mrp.workcenter.employee_ids (Enterprise mrp_workorder)")
         self.wc_ua.employee_ids = self.emp_saw | self.emp_x
         wo = self.wo_of(self.wc_ua)
-        self.assertEqual(self.m_ua._f3d_pick_employee(wo), self.emp_saw)
+        self.assertEqual(self.m_ua._td_pick_employee(wo), self.emp_saw)
 
     def test_disabled(self):
         """AC-32: автостарт вимкнено — завдання не стартувало; `read_enabled=False` — стан не змінюється."""

@@ -24,12 +24,12 @@ class F3dCommand(models.Model):
 
     # --- створення команд модулем (X-93: не в tools/commands.py) -------------------------------------
     @api.model
-    def _f3d_mc_payload_supported(self):
+    def _td_mc_payload_supported(self):
         """Чи є в telemetry поле `payload` (19.0.1.1.0, CR-01); без нього — запасна текстова граматика."""
         return "payload" in self._fields
 
     @api.model
-    def _f3d_mc_create_command(self, signal, op, fields, links=None):
+    def _td_mc_create_command(self, signal, op, fields, links=None):
         """Створює команду на пристрій для сигналу `signal`: операція `op`, поля `fields` (R-21), зв'язки `links`."""
         if not param_bool(self.env, "write_enabled"):
             raise UserError(_("Запис на пристрої вимкнено: td.machine_connect.write_enabled."))
@@ -44,7 +44,7 @@ class F3dCommand(models.Model):
             payload = cmd_tools.build_payload(kind, op, **fields)
         except ValueError as e:
             raise UserError(_("Команда «%s» не відповідає формату: %s", op, e)) from e
-        if self._f3d_mc_payload_supported():
+        if self._td_mc_payload_supported():
             vals = {"payload": payload, "text": cmd_tools.cmd_label(kind, payload)}
         else:
             try:
@@ -77,29 +77,29 @@ class F3dCommand(models.Model):
             reacting = self.filtered(lambda c: c.origin == "machine_connect" and c.state != vals["state"])
         res = super().write(vals)
         if reacting:
-            reacting._f3d_mc_on_result()
+            reacting._td_mc_on_result()
         return res
 
-    def _f3d_mc_result_text(self):
+    def _td_mc_result_text(self):
         self.ensure_one()
         if self.result_data:
             return json.dumps(self.result_data, ensure_ascii=False, sort_keys=True)
         return self.result or self.error or ""
 
-    def _f3d_mc_on_result(self):
-        """Команда завершилась (`done`/`failed`/`expired`/`cancelled`): повідомити власника (`_f3d_on_command`)."""
+    def _td_mc_on_result(self):
+        """Команда завершилась (`done`/`failed`/`expired`/`cancelled`): повідомити власника (`_td_on_command`)."""
         for cmd in self:
-            if cmd.td_gantry_job_id and hasattr(cmd.td_gantry_job_id, "_f3d_on_command"):
-                cmd.td_gantry_job_id._f3d_on_command(cmd)  # R-16 п. 3
-            if cmd.td_cut_map_id and hasattr(cmd.td_cut_map_id, "_f3d_on_command"):
-                cmd.td_cut_map_id._f3d_on_command(cmd)  # R-20 п. 2
+            if cmd.td_gantry_job_id and hasattr(cmd.td_gantry_job_id, "_td_on_command"):
+                cmd.td_gantry_job_id._td_on_command(cmd)  # R-16 п. 3
+            if cmd.td_cut_map_id and hasattr(cmd.td_cut_map_id, "_td_on_command"):
+                cmd.td_cut_map_id._td_on_command(cmd)  # R-20 п. 2
             if cmd.td_machine_id:
                 cmd.td_machine_id.message_post(
                     body=_(
                         "Команда %s: %s %s",
                         cmd.text or "",
                         dict(cmd._fields["state"].selection).get(cmd.state, cmd.state),
-                        cmd._f3d_mc_result_text() if cmd.state == "done" else (cmd.error or ""),
+                        cmd._td_mc_result_text() if cmd.state == "done" else (cmd.error or ""),
                     ),
                     subtype_xmlid="mail.mt_note",
                 )

@@ -124,7 +124,7 @@ class F3dDowntime(models.Model):
             rec.has_loss_tool = has
 
     # --- причина, підтвердження (M-03) ---------------------------------------------------------------
-    def _f3d_reason_rights(self):
+    def _td_reason_rights(self):
         """Права й `src` за замовчуванням: `(is_manager)`; `AccessError` без `mrp.group_mrp_user`."""
         user = self.env.user
         if not (self.env.su or user.has_group("mrp.group_mrp_user")):
@@ -135,14 +135,14 @@ class F3dDowntime(models.Model):
         return is_manager
 
     def action_set_reason(self, loss_id, employee_id=None, source=None):
-        is_manager = self._f3d_reason_rights()
+        is_manager = self._td_reason_rights()
         loss = self.env["mrp.workcenter.productivity.loss"].browse(loss_id).exists()
         if not loss or loss.sudo().loss_type not in ("availability", "quality"):
             raise UserError(_("Причина має бути втратою доступності або якості."))
         src = source or ("master" if is_manager else "operator")
         employee = self.env["hr.employee"].browse(employee_id).exists() if employee_id else self.env["hr.employee"]
         for rec in self:
-            rec._f3d_apply_reason(loss, src, employee)
+            rec._td_apply_reason(loss, src, employee)
             rec.sudo().with_context(f3d_mc_internal=True).write(
                 {"reason_state": "confirmed" if src == "master" else "to_confirm"}
             )
@@ -176,7 +176,7 @@ class F3dDowntime(models.Model):
         loss = self.env.ref(self.env.context["f3d_loss_xmlid"])
         return self.action_set_reason(loss.id)
 
-    def _f3d_apply_reason(self, loss, source, employee=None):
+    def _td_apply_reason(self, loss, source, employee=None):
         """Записати причину простою; машинні записи журналу часу отримують ту саму причину."""
         who = dict(self._fields["reason_source"]._description_selection(self.env)).get(source, source)
         for rec in self:
@@ -192,7 +192,7 @@ class F3dDowntime(models.Model):
             rec.sudo().productivity_ids.filtered("td_auto").write({"loss_id": loss.id})
             rec.sudo().message_post(body=_("Причина: %(loss)s (%(who)s)", loss=loss.sudo().name, who=who))
 
-    def _f3d_set_hint(self, loss, text, event, apply):
+    def _td_set_hint(self, loss, text, event, apply):
         """R-07: підказка (і причина, якщо `apply` і причину ще не вказав оператор/майстер)."""
         self.ensure_one()
         self.sudo().with_context(f3d_mc_internal=True).write(
@@ -201,10 +201,10 @@ class F3dDowntime(models.Model):
         if event:
             event.sudo().write({"downtime_id": self.id})
         if apply and self.reason_source in ("auto", "hint"):
-            self._f3d_apply_reason(loss, "hint")
+            self._td_apply_reason(loss, "hint")
             self.sudo().with_context(f3d_mc_internal=True).write({"reason_state": "to_confirm"})
 
-    def _f3d_close(self, ts):
+    def _td_close(self, ts):
         """R-05 п. 4: закрити простій переходом о `ts` (коротку не аварію — видалити)."""
         for dt in self.sudo():
             if dt.date_end:
@@ -213,7 +213,7 @@ class F3dDowntime(models.Model):
             end = max(ts, dt.date_start)
             wc = dt.workcenter_id
             ppt_min = ppt.total_min(ppt.ppt_intervals(self.env, wc, dt.date_start, end))
-            tech = machine._f3d_tech_env()
+            tech = machine._td_tech_env()
             recs = dt.productivity_ids
             operator = [(r.date_start, r.date_end or end) for r in recs if not r.td_auto]
             for rec in recs.filtered(lambda r: not r.date_end):
@@ -232,12 +232,12 @@ class F3dDowntime(models.Model):
             for start, stop in ppt.minus([(dt.date_start, end)], operator):
                 if (stop - start).total_seconds() < 60 * 1.0:
                     continue
-                machine._f3d_create_machine_record(dt, start, desc, date_end=stop, workorder=wo)
+                machine._td_create_machine_record(dt, start, desc, date_end=stop, workorder=wo)
         return True
 
     def write(self, vals):
         if "loss_id" in vals and not self.env.context.get("f3d_mc_internal"):
-            self._f3d_reason_rights()
+            self._td_reason_rights()
         return super().write(vals)
 
     def unlink(self):

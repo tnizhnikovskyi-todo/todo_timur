@@ -23,10 +23,10 @@ FEED_PAYLOAD = {
 class TestGantryJob(F3DMachineCase):
     def setUp(self):
         super().setUp()
-        # telemetry `_f3d_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
+        # telemetry `_td_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
         patcher = patch.object(
             type(self.env["td.push.handler"]),
-            "_f3d_handler_models",
+            "_td_handler_models",
             lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
@@ -48,8 +48,8 @@ class TestGantryJob(F3DMachineCase):
         return self.Job.create({**vals, **kw})
 
     def test_from_production_no_dup(self):
-        job = self.Job._f3d_from_production(self.mo)
-        self.assertEqual(self.Job._f3d_from_production(self.mo), job)
+        job = self.Job._td_from_production(self.mo)
+        self.assertEqual(self.Job._td_from_production(self.mo), job)
         self.assertEqual(self.Job.search_count([("production_id", "=", self.mo.id)]), 1)
         self.assertEqual((job.type, job.state, job.origin), ("feed", "draft", "odoo"))
         self.assertEqual((job.stack_id, job.lot_id, job.sheets), (self.stack_t1, self.lot_l1, 4))
@@ -57,17 +57,17 @@ class TestGantryJob(F3DMachineCase):
         self.assertEqual(job.external_ref, "WH/MO/T0001")
         mo2 = self.make_mo(self.wc_cnc, comps=((self.board, 0.5),))
         with self.assertRaises(UserError):
-            self.Job._f3d_from_production(mo2)
+            self.Job._td_from_production(mo2)
         job.state = "done"
         with self.assertRaises(UserError):  # плити вже подано
-            self.Job._f3d_from_production(self.mo)
+            self.Job._td_from_production(self.mo)
 
     def test_stack_product_mismatch(self):
         with self.assertRaises(ValidationError):
             self._job(product_id=self.board2.id)
 
     def test_send_payload(self):
-        job = self.Job._f3d_from_production(self.mo)
+        job = self.Job._td_from_production(self.mo)
         job.action_send()
         self.assertEqual(job.state, "to_send")
         self.gantry_tick("10:31")
@@ -149,19 +149,19 @@ class TestGantryJob(F3DMachineCase):
 
     def test_consume_move_lines(self):
         self.env["stock.quant"]._update_available_quantity(self.board, self.loc_t2, 10, lot_id=self.lot_l2)
-        self.stack_t2._f3d_refresh()
+        self.stack_t2._td_refresh()
         self.assertEqual(self.stack_t2.odoo_lot_id, self.lot_l2)
         move = self.mo.move_raw_ids.filtered(lambda m: m.product_id == self.board)
         self.assertEqual(move.move_line_ids.location_id, self.loc_t1)  # резерв рядка був у PLT-T1
         log = [{"id": "s%d" % i, "ts": "2026-10-12T07:00:00Z", "stack": "PLT-T2", "lot": "L2"} for i in range(4)]
         job = self._job(state="done", done=4, sheet_log=log)
-        job._f3d_consume()
+        job._td_consume()
         lines = move.move_line_ids
         t2 = lines.filtered(lambda ml: ml.location_id == self.loc_t2)
         self.assertEqual((sum(t2.mapped("quantity")), t2.picked, t2.lot_id), (4, True, self.lot_l2))
         self.assertEqual(sum(lines.filtered(lambda ml: ml.location_id == self.loc_t1).mapped("quantity")), 0)
         self.assertEqual(job.consumed_qty, 4)
         before = (len(move.move_line_ids), sum(move.move_line_ids.mapped("quantity")))
-        job._f3d_consume()
+        job._td_consume()
         self.assertEqual((len(move.move_line_ids), sum(move.move_line_ids.mapped("quantity"))), before)
         self.assertEqual(job.consumed_qty, 4)

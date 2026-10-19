@@ -69,7 +69,7 @@ class TestMigrationClean(F3DMachineCase):
         self.assertEqual(rep["state"], "done")
         stored = json.loads(self._icp().get_param(hooks.REPORT_KEY))
         self.assertEqual(stored["state"], "done")
-        self.assertEqual(self.env["td.machine"]._f3d_run_migration()["params"]["type"], "info")
+        self.assertEqual(self.env["td.machine"]._td_run_migration()["params"]["type"], "info")
 
     def test_installed_signals(self):
         """Сигнали модуля (207), створені хуком установки: `origin='module'`, xml-id, `machine_state` не видно в 3D."""
@@ -121,7 +121,7 @@ class TestMigrationClean(F3DMachineCase):
         self.assertEqual(m2.sig_pieces_id.address["addr"], 12)  # HR = 4·3
         self.assertEqual(m2.sig_state_id.source_id, self.src_io)
         self.assertTrue(self.env.ref("td_machine_connect.sig_workcenters_mig_1_state"))
-        self.assertEqual(self.env["td.machine"]._f3d_code_map().get("workcenters/MIG-1/state"), (m1.id, "state"))
+        self.assertEqual(self.env["td.machine"]._td_code_map().get("workcenters/MIG-1/state"), (m1.id, "state"))
 
     def test_bind_existing(self):
         """Наявний сигнал чужого модуля: лише `source_id`, `address`, `period_s`…; `module`/`origin` без змін."""
@@ -293,9 +293,9 @@ class TestMigrationClean(F3DMachineCase):
         with self.assertRaises(AccessError):
             hooks.run_migration(self.env(user=self.user_f3d_manager))
         with self.assertRaises(AccessError):
-            self.env["td.machine"].with_user(self.user_f3d_manager)._f3d_run_migration()
+            self.env["td.machine"].with_user(self.user_f3d_manager)._td_run_migration()
         with machines_csv([]):
-            self.env["td.machine"].with_user(self.user_f3d_admin)._f3d_run_migration()
+            self.env["td.machine"].with_user(self.user_f3d_admin)._td_run_migration()
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")

@@ -180,7 +180,7 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         m = self.m_ua
         dt = self._fault(m)
         # «Поломка» вже підказана автоматично; повернути «Не вказано» для перевірки
-        dt._f3d_apply_reason(self.env.ref("td_machine_connect.loss_unknown"), "auto")
+        dt._td_apply_reason(self.env.ref("td_machine_connect.loss_unknown"), "auto")
         with self.assertRaises(UserError):
             dt.with_user(self.user_mrp_manager).action_confirm()
         with self.assertRaises(AccessError):

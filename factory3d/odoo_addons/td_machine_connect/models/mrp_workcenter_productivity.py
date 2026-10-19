@@ -33,10 +33,10 @@ class MrpWorkcenterProductivity(models.Model):
             return records
         for rec in records:
             if rec.loss_type in ("availability", "quality") and not rec.workorder_id:
-                rec._f3d_merge_downtime()
+                rec._td_merge_downtime()
         return records
 
-    def _f3d_merge_downtime(self):
+    def _td_merge_downtime(self):
         """R-06 п. 1–2: запис оператора/майстра зливається з відкритим простоєм верстата РЦ."""
         self.ensure_one()
         machine = self.workcenter_id.sudo().td_machine_ids.filtered("active")[:1]
@@ -50,8 +50,8 @@ class MrpWorkcenterProductivity(models.Model):
             return
         self.sudo().write({"td_downtime_id": dt.id})
         for mrec in dt.productivity_ids.filtered(lambda r: r.td_auto and not r.date_end and r.id != self.id):
-            mrec.with_env(machine._f3d_tech_env()).write({"date_end": max(self.date_start, mrec.date_start)})
-        dt._f3d_apply_reason(self.loss_id, source, self.env.user.employee_id)
+            mrec.with_env(machine._td_tech_env()).write({"date_end": max(self.date_start, mrec.date_start)})
+        dt._td_apply_reason(self.loss_id, source, self.env.user.employee_id)
         dt.with_context(f3d_mc_internal=True).write({"reason_state": "confirmed" if master else "to_confirm"})
 
 

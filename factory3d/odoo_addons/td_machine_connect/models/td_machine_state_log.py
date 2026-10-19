@@ -63,10 +63,10 @@ class F3dMachineStateLog(models.Model):
                 local(rec.date_end, "%H:%M") or "…",
             )
 
-    def _f3d_is_admin(self):
+    def _td_is_admin(self):
         return self.env.su or self.env.user.has_group("td_factory3d.group_td_admin")
 
-    def _f3d_close(self, ts):
+    def _td_close(self, ts):
         """R-04 п. 3: закрити інтервал, порахувати плановий час і хвилини завдання; повторно — нічого."""
         for rec in self:
             if rec.date_end:
@@ -81,12 +81,12 @@ class F3dMachineStateLog(models.Model):
                 wo.write({field: wo[field] + minutes})
 
     def write(self, vals):
-        if {"state", "date_start", "machine_id"} & set(vals) and not self._f3d_is_admin():
+        if {"state", "date_start", "machine_id"} & set(vals) and not self._td_is_admin():
             raise AccessError(_("Журнал станів змінює лише адміністратор."))
         return super().write(vals)
 
     def unlink(self):
-        if not self._f3d_is_admin():
+        if not self._td_is_admin():
             raise AccessError(_("Журнал станів видаляє лише адміністратор."))
         return super().unlink()
 

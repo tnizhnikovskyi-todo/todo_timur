@@ -30,7 +30,7 @@ class F3dCutMapController(http.Controller):
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
         collector = request.env["td.collector"].sudo()._authenticate(token) if token and len(token) <= 256 else None
         # AC-67: токен колектора іншого (не власника джерела команд оптимізатора) → 401
-        if not collector or collector != request.env["td.cut.map"].sudo()._f3d_export_collector():
+        if not collector or collector != request.env["td.cut.map"].sudo()._td_export_collector():
             return _error(401, "unauthorized", "Невірний токен колектора")
         t = request.httprequest.headers.get(EXPORT_TOKEN_HEADER, "").strip()
         if not TOKEN_RE.match(t):
@@ -38,14 +38,14 @@ class F3dCutMapController(http.Controller):
         env = request.env(user=SUPERUSER_ID, context=dict(request.env.context, tz="UTC"))
         CutMap = env["td.cut.map"]
         try:
-            cut_map = CutMap._f3d_check_export_token(map_id, t)
+            cut_map = CutMap._td_check_export_token(map_id, t)
         except CutExportError as e:
             return _error(e.status, e.code, e.message)
         if env["td.cut.map.line"].search_count([("map_id", "=", cut_map.id)]) > MAX_EXPORT_LINES:
             cut_map.write({"state": "error", "error": "Забагато деталей для однієї карти", "export_token_hash": False})
             return _error(413, "too_large", "Забагато деталей для однієї карти")
         csv_text = (
-            cut_map.csv_attachment_id.raw.decode("utf-8") if cut_map.csv_attachment_id else cut_map._f3d_csv_text()
+            cut_map.csv_attachment_id.raw.decode("utf-8") if cut_map.csv_attachment_id else cut_map._td_csv_text()
         )
         body = {
             "map": cut_map.name,

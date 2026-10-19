@@ -31,10 +31,10 @@ class TestApiExport(F3DMachineHttpCase):
                 "edge_left": "EB-T",
             }
         )
-        self.map = self.env["td.cut.map"]._f3d_create_for(self.mo, "main")
+        self.map = self.env["td.cut.map"]._td_create_for(self.mo, "main")
         self.map.mode = "manual"
         self.map.action_export()
-        self.t = self.map.sudo()._f3d_new_export_token()
+        self.t = self.map.sudo()._td_new_export_token()
 
     def _get(self, map_id=None, t="default", token="default", query=""):
         """`t` — одноразовий токен у заголовку `X-F3D-Token` (DEC-20); `None` — без заголовка."""

@@ -11,10 +11,10 @@ from .test_downtime import DowntimeMixin
 @tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")
 class TestHints(DowntimeMixin, F3DMachineCase):
     def ev(self, *args, **kw):
-        """EV-01 як від плагіна. Обхід дефекту telemetry: `_f3d_handler_models` не знаходить обробників
+        """EV-01 як від плагіна. Обхід дефекту telemetry: `_td_handler_models` не знаходить обробників
         (`registry.descendants` повертає імена, а не класи) — підставляємо обробник модуля."""
         handler = type(self.env["td.push.handler"])
-        with patch.object(handler, "_f3d_handler_models", lambda self, route: ["td.push.handler.machine_connect"]):
+        with patch.object(handler, "_td_handler_models", lambda self, route: ["td.push.handler.machine_connect"]):
             return self.ev_ua(*args, **kw)
 
     def _assert_e0421(self, m, dt):

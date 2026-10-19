@@ -78,7 +78,7 @@ def _machine_node(env, machine):
 def _gantry_node(env):
     """R-25 п. 2: стан порталу з `gantry_status` і активного завдання."""
     Job = env["td.gantry.job"]
-    status = Job._f3d_gantry_status()
+    status = Job._td_gantry_status()
     job = Job.search([("state", "=", "active")], order="started, id", limit=1)
     return {
         "state": status.get("state"),

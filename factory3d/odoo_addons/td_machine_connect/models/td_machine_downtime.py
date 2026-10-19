@@ -30,33 +30,33 @@ def _parse_event_time(value):
 class F3dMachineDowntime(models.Model):
     """M-01 (`_inherit = "td.machine"`): простої, підказки, заявки ТО (R-05…R-08).
 
-    Гачки `_f3d_after_commit`, `_f3d_tick_extra`, `_f3d_apply_event` перевизначені через `super()` першим.
+    Гачки `_td_after_commit`, `_td_tick_extra`, `_td_apply_event` перевизначені через `super()` першим.
     """
 
     _inherit = "td.machine"
 
     # --- гачки --------------------------------------------------------------------------------------
-    def _f3d_after_commit(self, old, new, ts):
+    def _td_after_commit(self, old, new, ts):
         """R-05 п. 1–4, R-08 п. 2: закрити поточний простій, відкрити новий для `new in DOWN_STATES`."""
-        super()._f3d_after_commit(old, new, ts)
+        super()._td_after_commit(old, new, ts)
         for rec in self:
-            rec._f3d_close_downtime(ts)
+            rec._td_close_downtime(ts)
             if new in DOWN_STATES:
-                rec._f3d_open_downtime(new, ts)
+                rec._td_open_downtime(new, ts)
 
-    def _f3d_tick_extra(self, now):
+    def _td_tick_extra(self, now):
         """R-05 п. 6 (межа робочого дня), R-06 п. 3 і 5."""
-        super()._f3d_tick_extra(now)
+        super()._td_tick_extra(now)
         for rec in self:
-            rec._f3d_day_boundary(now)
-            rec._f3d_reopen_after_boundary(now)
-            rec._f3d_close_operator_records(now)
-            rec._f3d_reopen_fault_record(now)
+            rec._td_day_boundary(now)
+            rec._td_reopen_after_boundary(now)
+            rec._td_close_operator_records(now)
+            rec._td_reopen_fault_record(now)
 
     @api.model
-    def _f3d_apply_event(self, payload):
+    def _td_apply_event(self, payload):
         """EV-01: журнал подій, показання `event`, підказка причини (R-07 п. 1), заявка ТО (R-08 п. 3)."""
-        machine = super()._f3d_apply_event(payload)
+        machine = super()._td_apply_event(payload)
         machine = machine.sudo()
         Event = self.env["td.machine.event"].sudo()
         source = str(payload.get("source") or "")
@@ -101,7 +101,7 @@ class F3dMachineDowntime(models.Model):
                 self.env["td.signal"]
                 .sudo()
                 .with_context(f3d_mc_internal=True)
-                ._f3d_ingest(
+                ._td_ingest(
                     [
                         {
                             "code": machine.sig_event_id.code,
@@ -122,11 +122,11 @@ class F3dMachineDowntime(models.Model):
             ).filtered(lambda e: e.kind == "alarm")
             previous.write({"active": False})
             return machine
-        machine._f3d_event_hint(event)
+        machine._td_event_hint(event)
         return machine
 
     # --- R-07: підказки -----------------------------------------------------------------------------
-    def _f3d_event_hint(self, event):
+    def _td_event_hint(self, event):
         """R-07 п. 1: подія після початку простою → підказка (і причина, якщо `auto_apply`)."""
         self.ensure_one()
         dt = self.current_downtime_id.sudo()
@@ -136,13 +136,13 @@ class F3dMachineDowntime(models.Model):
             return
         if dt.date_start < event.ts - timedelta(seconds=EVENT_WINDOW_S):
             return
-        loss, text, ev = self._f3d_event_loss(event)
+        loss, text, ev = self._td_event_loss(event)
         if not loss:
             return
-        dt._f3d_set_hint(loss, text, ev, self._f3d_hint_applies("fault", ev))
-        self._f3d_post_request_event(dt)
+        dt._td_set_hint(loss, text, ev, self._td_hint_applies("fault", ev))
+        self._td_post_request_event(dt)
 
-    def _f3d_event_loss(self, event):
+    def _td_event_loss(self, event):
         """`(loss, hint_text, event)` події за довідником (категорія ≥ 4 без повідомлення → «Поломка»)."""
         message = event.message_rec_id
         loss = message.loss_id
@@ -151,14 +151,14 @@ class F3dMachineDowntime(models.Model):
         text = ("%s %s" % (event.message_id or "", event.text or "")).strip()
         return loss, text, event
 
-    def _f3d_hint_applies(self, kind, event):
+    def _td_hint_applies(self, kind, event):
         """Чи ставиться підказка причиною автоматично (R-07 п. 1, 3, 4; п. 5 — ні)."""
         if event:
             message = event.message_rec_id
             return message.auto_apply if message else int(event.category) >= 4
         return kind in ("setup", "fault")
 
-    def _f3d_hint(self, kind, ts):
+    def _td_hint(self, kind, ts):
         """R-07 п. 2–6: `(loss, hint_text, event)` для простою, що відкривається о `ts`."""
         self.ensure_one()
         Loss = self.env["mrp.workcenter.productivity.loss"]
@@ -176,7 +176,7 @@ class F3dMachineDowntime(models.Model):
         )
         if events:
             best = max(events, key=lambda e: (int(e.category), e.ts))
-            loss, text, ev = self._f3d_event_loss(best)
+            loss, text, ev = self._td_event_loss(best)
             if loss:
                 return loss, text, ev
         if kind == "setup":
@@ -196,12 +196,12 @@ class F3dMachineDowntime(models.Model):
         return Loss.browse(), "", self.env["td.machine.event"]
 
     # --- R-05: простій і записи журналу часу --------------------------------------------------------
-    def _f3d_open_downtime(self, kind, ts):
+    def _td_open_downtime(self, kind, ts):
         """R-05 п. 1–2, R-07, R-08 п. 2: відкрити простій (`kind` ∈ DOWN_STATES)."""
         self.ensure_one()
         Downtime = self.env["td.downtime"].sudo()
         if Downtime.search_count([("machine_id", "=", self.id), ("date_end", "=", False)]):
-            self._f3d_close_downtime(ts)
+            self._td_close_downtime(ts)
         wo = self.active_workorder_id
         dt = Downtime.create(
             {
@@ -215,20 +215,20 @@ class F3dMachineDowntime(models.Model):
             }
         )
         self.with_context(tracking_disable=True).write({"current_downtime_id": dt.id})
-        loss, text, event = self._f3d_hint(kind, ts)
-        operator_rec = self._f3d_bind_operator_record(dt)
+        loss, text, event = self._td_hint(kind, ts)
+        operator_rec = self._td_bind_operator_record(dt)
         if loss:
-            dt._f3d_set_hint(loss, text, event, self._f3d_hint_applies(kind, event))
+            dt._td_set_hint(loss, text, event, self._td_hint_applies(kind, event))
         if kind == "fault":
-            close_timers = getattr(self, "_f3d_close_timers", None)
+            close_timers = getattr(self, "_td_close_timers", None)
             if close_timers:
                 close_timers(ts)
             if not operator_rec:
-                self._f3d_create_machine_record(dt, ts, dt.hint_text or "Аварія верстата")
-        self._f3d_link_request(dt, ts)
+                self._td_create_machine_record(dt, ts, dt.hint_text or "Аварія верстата")
+        self._td_link_request(dt, ts)
         return dt
 
-    def _f3d_bind_operator_record(self, dt):
+    def _td_bind_operator_record(self, dt):
         """R-05 п. 1: відкритий запис втрати оператора без завдання → прив'язати, причина стає причиною простою."""
         rec = (
             self.env["mrp.workcenter.productivity"]
@@ -249,11 +249,11 @@ class F3dMachineDowntime(models.Model):
             return rec
         rec.write({"td_downtime_id": dt.id})
         master = rec.td_source == "master"
-        dt._f3d_apply_reason(rec.loss_id, "master" if master else "operator", dt.employee_id)
+        dt._td_apply_reason(rec.loss_id, "master" if master else "operator", dt.employee_id)
         dt.sudo().with_context(f3d_mc_internal=True).write({"reason_state": "confirmed" if master else "to_confirm"})
         return rec
 
-    def _f3d_create_machine_record(self, dt, ts, description, date_end=None, workorder=None, loss=None):
+    def _td_create_machine_record(self, dt, ts, description, date_end=None, workorder=None, loss=None):
         """Запис журналу часу верстата (R-05) у технічному середовищі."""
         vals = {
             "workcenter_id": self.workcenter_id.id,
@@ -270,19 +270,19 @@ class F3dMachineDowntime(models.Model):
             vals["workorder_id"] = workorder.id
         if dt.employee_id and "employee_id" in self.env["mrp.workcenter.productivity"]._fields:
             vals["employee_id"] = dt.employee_id.id
-        return self._f3d_tech_env()["mrp.workcenter.productivity"].create(vals)
+        return self._td_tech_env()["mrp.workcenter.productivity"].create(vals)
 
-    def _f3d_close_downtime(self, ts):
+    def _td_close_downtime(self, ts):
         """R-05 п. 4: закрити відкриті простої верстата переходом о `ts`."""
         self.ensure_one()
         downtimes = self.env["td.downtime"].sudo().search([("machine_id", "=", self.id), ("date_end", "=", False)])
         for dt in downtimes:
-            dt._f3d_close(ts)
+            dt._td_close(ts)
         if self.current_downtime_id:
             self.with_context(tracking_disable=True).write({"current_downtime_id": False})
         return True
 
-    def _f3d_link_request(self, dt, ts):
+    def _td_link_request(self, dt, ts):
         """R-08 п. 2: відкрита заявка ТО з тривоги верстата → простій `fault`."""
         if dt.state_kind != "fault" or not self.sig_alarm_id or dt.maintenance_request_id:
             return
@@ -304,9 +304,9 @@ class F3dMachineDowntime(models.Model):
         free = cands - taken
         if free:
             dt.write({"maintenance_request_id": free[0].id})
-            self._f3d_post_request_event(dt)
+            self._td_post_request_event(dt)
 
-    def _f3d_post_request_event(self, dt):
+    def _td_post_request_event(self, dt):
         """R-08 п. 1, 3: «Подія верстата: <hint_text> (<час Київ>)» у заявку."""
         req = dt.maintenance_request_id.sudo()
         if not req or not dt.hint_text:
@@ -316,47 +316,47 @@ class F3dMachineDowntime(models.Model):
         req.message_post(body="Подія верстата: %s (%s)" % (dt.hint_text, local_t))
 
     # --- R-05 п. 6: межа робочого дня ---------------------------------------------------------------
-    def _f3d_tz(self, wc):
+    def _td_tz(self, wc):
         cal = wc.resource_calendar_id or wc.company_id.resource_calendar_id
         return ZoneInfo(cal.tz) if cal and cal.tz else KYIV
 
-    def _f3d_is_day_end(self, wc, end, tz):
+    def _td_is_day_end(self, wc, end, tz):
         """Чи є `end` кінцем останнього інтервалу планового часу локального дня."""
         local_day = (end - timedelta(seconds=1)).replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).date()
         midnight = datetime.combine(local_day + timedelta(days=1), time.min, tz)
         limit = midnight.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
         return not ppt.ppt_intervals(self.env, wc, end, limit)
 
-    def _f3d_next_ppt_start(self, wc, after):
+    def _td_next_ppt_start(self, wc, after):
         ivs = ppt.ppt_intervals(self.env, wc, after, after + timedelta(days=10))
         return ivs[0][0] if ivs else None
 
-    def _f3d_day_boundary(self, now):
+    def _td_day_boundary(self, now):
         """Межа дня: закрити простій `idle/setup/off` о кінці планового часу, відкрити новий наступного дня."""
         self.ensure_one()
         wc = self.workcenter_id.sudo()
-        tz = self._f3d_tz(wc)
+        tz = self._td_tz(wc)
         for _i in range(BOUNDARY_ROUNDS):
             dt = self.current_downtime_id.sudo()
             if not dt or dt.date_end or dt.state_kind == "fault":
                 return
             end = None
             for _s, e in ppt.ppt_intervals(self.env, wc, dt.date_start, now):
-                if e <= now and self._f3d_is_day_end(wc, e, tz):
+                if e <= now and self._td_is_day_end(wc, e, tz):
                     end = e
                     break
             if not end:
                 return
             kind = dt.state_kind
-            self._f3d_close_downtime(end)
+            self._td_close_downtime(end)
             if self.state != kind:
                 return
-            nxt = self._f3d_next_ppt_start(wc, end)
+            nxt = self._td_next_ppt_start(wc, end)
             if not nxt or nxt > now:
                 return
-            self._f3d_open_downtime(kind, nxt)
+            self._td_open_downtime(kind, nxt)
 
-    def _f3d_reopen_after_boundary(self, now):
+    def _td_reopen_after_boundary(self, now):
         """Стан не змінився після закриття на межі дня → новий простій з початку наступного інтервалу."""
         self.ensure_one()
         if self.state not in ("idle", "setup", "off") or self.current_downtime_id:
@@ -365,13 +365,13 @@ class F3dMachineDowntime(models.Model):
         if not last or not last.date_end or last.state_kind != self.state or last.date_end < self.state_since:
             return
         wc = self.workcenter_id.sudo()
-        nxt = self._f3d_next_ppt_start(wc, last.date_end)
+        nxt = self._td_next_ppt_start(wc, last.date_end)
         if nxt and nxt <= now:
-            self._f3d_open_downtime(self.state, nxt)
-            self._f3d_day_boundary(now)
+            self._td_open_downtime(self.state, nxt)
+            self._td_day_boundary(now)
 
     # --- R-06 п. 3 і 5 -------------------------------------------------------------------------------
-    def _f3d_close_operator_records(self, now):
+    def _td_close_operator_records(self, now):
         """Верстат працює ≥ `micro_stop_s` після створення запису оператора → закрити запис (п. 3)."""
         self.ensure_one()
         if self.state != "working" or self.pending_state or not self.state_since:
@@ -393,9 +393,9 @@ class F3dMachineDowntime(models.Model):
         for rec in recs:
             if now >= max(rec.date_start, self.state_since) + timedelta(seconds=self.micro_stop_s):
                 desc = (rec.description or "") + " (закрито: верстат працює)"
-                rec.with_env(self._f3d_tech_env()).write({"date_end": now, "description": desc.strip()})
+                rec.with_env(self._td_tech_env()).write({"date_end": now, "description": desc.strip()})
 
-    def _f3d_reopen_fault_record(self, now):
+    def _td_reopen_fault_record(self, now):
         """Оператор «Розблокував» під час аварії: відкрити новий машинний запис «Аварія триває» (п. 5)."""
         self.ensure_one()
         dt = self.current_downtime_id.sudo()
@@ -404,4 +404,4 @@ class F3dMachineDowntime(models.Model):
         if dt.productivity_ids.filtered(lambda r: not r.date_end):
             return
         loss = dt.loss_id
-        self._f3d_create_machine_record(dt, now, "Аварія триває", loss=loss)
+        self._td_create_machine_record(dt, now, "Аварія триває", loss=loss)

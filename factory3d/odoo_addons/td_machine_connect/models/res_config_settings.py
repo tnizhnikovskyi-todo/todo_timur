@@ -89,7 +89,7 @@ class ResConfigSettings(models.TransientModel):
         for rec in self:
             rec.td_mc_migration_state = state
 
-    def _f3d_mc_current(self, fname):
+    def _td_mc_current(self, fname):
         """Поточне збережене значення поля налаштувань (за `config_parameter`) у типі поля."""
         field = self._fields[fname]
         raw = self.env["ir.config_parameter"].sudo().get_param(field.config_parameter)
@@ -106,7 +106,7 @@ class ResConfigSettings(models.TransientModel):
         is_admin = self.env.su or self.env.user.has_group("td_factory3d.group_td_admin")
         for rec in self:
             changed = [f for f in rec._fields if f.startswith("td_mc_") and f != "td_mc_migration_state"
-                       and rec[f] != rec._f3d_mc_current(f)]  # fmt: skip
+                       and rec[f] != rec._td_mc_current(f)]  # fmt: skip
             if not is_admin and any(f in ADMIN_FIELDS for f in changed):
                 raise AccessError(_("Стоп-крани змінює лише адміністратор «Завод 3D»."))
             for fname in changed:
@@ -129,4 +129,4 @@ class ResConfigSettings(models.TransientModel):
         """Кнопка «Повторити міграцію демо-даних» (лише `group_td_admin`)."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
             raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
-        return self.env["td.machine"]._f3d_run_migration()
+        return self.env["td.machine"]._td_run_migration()

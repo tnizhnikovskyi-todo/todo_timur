@@ -170,7 +170,7 @@ class F3dCutMap(models.Model):
 
     # --- R-19: створення з МО ------------------------------------------------------------------------
     @api.model
-    def _f3d_plate_move(self, production, role):
+    def _td_plate_move(self, production, role):
         """Сировинний рух плити МО для ролі `main` (≥ 8 мм) / `back` (< 8 мм); найбільша кількість."""
         moves = production.move_raw_ids.filtered(
             lambda m: m.state not in ("done", "cancel") and m.product_id.td_sheet_length_mm > 0
@@ -182,20 +182,20 @@ class F3dCutMap(models.Model):
         return moves.sorted("product_uom_qty", reverse=True)[:1]
 
     @api.model
-    def _f3d_create_for(self, production, material_role="main"):
+    def _td_create_for(self, production, material_role="main"):
         production = production.sudo()
         role_label = dict(MATERIAL_ROLES).get(material_role, material_role)
         if production.state in ("done", "cancel"):
             raise UserError(_("МО %s завершено або скасовано.", production.name))
         if material_role not in ("main", "back"):
             raise UserError(_("Роль «%s» не підтримується для створення карти.", role_label))
-        move = self._f3d_plate_move(production, material_role)
+        move = self._td_plate_move(production, material_role)
         if not move:
             raise UserError(_("У МО %s немає плити для ролі «%s».", production.name, role_label))
         if not production.bom_id:
             raise UserError(_("У МО %s немає специфікації.", production.name))
         plate = move.product_id
-        parts = self._f3d_parts_for(production.bom_id, material_role, plate)
+        parts = self._td_parts_for(production.bom_id, material_role, plate)
         if not parts:
             raise UserError(
                 _(
@@ -227,7 +227,7 @@ class F3dCutMap(models.Model):
         return rec
 
     @api.model
-    def _f3d_parts_for(self, bom, role, plate):
+    def _td_parts_for(self, bom, role, plate):
         parts = self.env["td.cut.part"].sudo().search([("bom_id", "=", bom.id), ("active", "=", True)])
         return parts.filtered(
             lambda p: p.material_role == role or (p.material_role == "product" and p.material_product_id == plate)
@@ -240,7 +240,7 @@ class F3dCutMap(models.Model):
             production = rec.production_id.sudo()
             if not production.bom_id:
                 raise UserError(_("У МО %s немає специфікації.", production.name))
-            parts = self._f3d_parts_for(production.bom_id, rec.material_role, rec.material_product_id)
+            parts = self._td_parts_for(production.bom_id, rec.material_role, rec.material_product_id)
             if not parts:
                 raise UserError(
                     _(
@@ -276,7 +276,7 @@ class F3dCutMap(models.Model):
         return True
 
     # --- вкладення -----------------------------------------------------------------------------------
-    def _f3d_attach(self, name, mimetype, data):
+    def _td_attach(self, name, mimetype, data):
         self.ensure_one()
         return (
             self.env["ir.attachment"]
@@ -284,7 +284,7 @@ class F3dCutMap(models.Model):
             .create({"name": name, "mimetype": mimetype, "raw": data, "res_model": self._name, "res_id": self.id})
         )
 
-    def _f3d_csv_text(self):
+    def _td_csv_text(self):
         self.ensure_one()
         code = self.material_product_id.default_code
         if not code:
@@ -313,9 +313,9 @@ class F3dCutMap(models.Model):
                 raise UserError(_("Карта %s не в чернетці.", rec.name))
             if not rec.line_ids:
                 raise UserError(_("У карті %s немає деталей.", rec.name))
-            data = rec._f3d_csv_text().encode("utf-8")
+            data = rec._td_csv_text().encode("utf-8")
             old = rec.csv_attachment_id
-            att = rec._f3d_attach("%s_parts.csv" % rec.name, "text/csv", data)
+            att = rec._td_attach("%s_parts.csv" % rec.name, "text/csv", data)
             rec.write({"csv_attachment_id": att.id, "state": "exported", "error": False})
             old.sudo().unlink()
             if rec.mode == "collector":
@@ -344,7 +344,7 @@ class F3dCutMap(models.Model):
         }
 
     # --- токен API-01 --------------------------------------------------------------------------------
-    def _f3d_new_export_token(self):
+    def _td_new_export_token(self):
         self.ensure_one()
         token = secrets.token_hex(8)
         ttl = int(param(self.env, "export_token_ttl_s", "600"))
@@ -357,7 +357,7 @@ class F3dCutMap(models.Model):
         return token
 
     @api.model
-    def _f3d_check_export_token(self, map_id, t):
+    def _td_check_export_token(self, map_id, t):
         rec = self.sudo().browse(map_id).exists()
         if not rec:
             raise CutExportError(404, "not_found", "Карту розкрою не знайдено")
@@ -372,23 +372,23 @@ class F3dCutMap(models.Model):
 
     # --- R-20: оптимізація, план, випуск -------------------------------------------------------------
     @api.model
-    def _f3d_export_collector(self):
+    def _td_export_collector(self):
         """API-01 п. 1 / AC-67: колектор, якому дозволено забирати список деталей, — власник джерела сигналу
         команд CMD-03 (`equipment/CUTOPT/cmd`): саме йому йде команда `upload` з токеном експорту."""
         sig = self.env["td.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
         return sig.collector_id
 
     @api.model
-    def _f3d_cutopt_signal(self):
+    def _td_cutopt_signal(self):
         sig = self.env["td.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
         if not sig:
             raise UserError(_("Не знайдено сигнал %s.", CUTOPT_CMD_CODE))
         return sig
 
-    def _f3d_command(self, op, cmd_fields):
+    def _td_command(self, op, cmd_fields):
         self.ensure_one()
-        return self.env["td.command"]._f3d_mc_create_command(
-            self._f3d_cutopt_signal(), op, cmd_fields, {"td_cut_map_id": self.id}
+        return self.env["td.command"]._td_mc_create_command(
+            self._td_cutopt_signal(), op, cmd_fields, {"td_cut_map_id": self.id}
         )
 
     def action_send_optimizer(self):
@@ -400,18 +400,18 @@ class F3dCutMap(models.Model):
             if not rec.csv_attachment_id:
                 raise UserError(_("Спочатку експортуйте карту %s.", rec.name))
             with self.env.cr.savepoint():
-                token = rec._f3d_new_export_token()
-                rec._f3d_command("upload", {"map": rec.id, "token": token})
+                token = rec._td_new_export_token()
+                rec._td_command("upload", {"map": rec.id, "token": token})
                 rec.sudo().write({"state": "optimizing", "error": False})
         return True
 
-    def _f3d_set_error(self, text):
+    def _td_set_error(self, text):
         self.ensure_one()
         self.sudo().write(
             {"state": "error", "error": (text or _("Помилка оптимізатора"))[:512], "export_token_hash": False}
         )
 
-    def _f3d_on_command(self, cmd):
+    def _td_on_command(self, cmd):
         """R-20 п. 2, 5: результат команди CMD-03."""
         self.ensure_one()
         rec = self.sudo()
@@ -433,7 +433,7 @@ class F3dCutMap(models.Model):
                 job_id = data.get("job_id") or (words[0] if words else "")
                 rec.write({"ext_job_id": job_id[:32] if job_id else rec.ext_job_id, "error": False})
             elif failed:
-                rec._f3d_set_error(reason)
+                rec._td_set_error(reason)
         elif op == "release":
             if cmd.state == "done":
                 vals = {"job_order_id": data.get("job_order_id") or rec.ext_job_id}
@@ -441,12 +441,12 @@ class F3dCutMap(models.Model):
                     vals.update(state="released", released_at=fields.Datetime.now(), error=False)
                 rec.write(vals)
             elif failed and rec.state == "planned":
-                rec._f3d_set_error(reason)
+                rec._td_set_error(reason)
         elif failed:
             rec.message_post(body=_("Команда %s: %s", cmd.text or op or "", reason), subtype_xmlid="mail.mt_note")
 
     @api.model
-    def _f3d_find_for_event(self, map_name, job_id):
+    def _td_find_for_event(self, map_name, job_id):
         """Карта для події EV-03: за номером `map`, інакше (колектор після рестарту) за `ext_job_id`."""
         if map_name:
             domain = [("name", "=", map_name)]
@@ -456,7 +456,7 @@ class F3dCutMap(models.Model):
             return self.browse()
         return self.sudo().search(domain, limit=1)
 
-    def _f3d_apply_job(self, job):
+    def _td_apply_job(self, job):
         """EV-03 `job` (R-20 п. 2)."""
         self.ensure_one()
         rec = self.sudo()
@@ -496,7 +496,7 @@ class F3dCutMap(models.Model):
             rec.write(vals)
         return True
 
-    def _f3d_apply_plan(self, plan):
+    def _td_apply_plan(self, plan):
         """EV-03 `plan` і M-25 (R-20 п. 3). Невалідний план -> `ValueError`, стан не змінюється."""
         self.ensure_one()
         plan = cutcsv.parse_plan(plan)
@@ -506,7 +506,7 @@ class F3dCutMap(models.Model):
             return False
         old = rec.plan_attachment_id
         data = json.dumps(plan, ensure_ascii=False, sort_keys=True).encode("utf-8")
-        att = rec._f3d_attach("%s_plan.json" % rec.name, "application/json", data)
+        att = rec._td_attach("%s_plan.json" % rec.name, "application/json", data)
         vals = {
             "plan_json": plan,
             "plan_sheets": plan["total_sheets"],
@@ -521,11 +521,11 @@ class F3dCutMap(models.Model):
             vals["plan_est_min"] = plan["est_min"]
         rec.write(vals)
         old.sudo().unlink()
-        rec._f3d_check_plan_counts(plan)
-        rec._f3d_request_mpr()
+        rec._td_check_plan_counts(plan)
+        rec._td_request_mpr()
         return True
 
-    def _f3d_check_plan_counts(self, plan):
+    def _td_check_plan_counts(self, plan):
         self.ensure_one()
         placed = cutcsv.plan_counts(plan)
         wanted = {ln.part_code: ln.qty for ln in self.line_ids}
@@ -537,7 +537,7 @@ class F3dCutMap(models.Model):
         if diff:
             self.message_post(body=_("План не відповідає карті: %s", ", ".join(diff)), subtype_xmlid="mail.mt_note")
 
-    def _f3d_request_mpr(self):
+    def _td_request_mpr(self):
         """R-20 п. 3: для рядків із програмою на РЦ ЧПК (`NEST-1`) — CMD-03 `mpr`, по одному."""
         self.ensure_one()
         if self.mode != "collector" or not self.ext_job_id or self.workcenter_id.td_code != "NEST-1":
@@ -545,7 +545,7 @@ class F3dCutMap(models.Model):
         for line in self.line_ids.filtered("program"):
             try:
                 with self.env.cr.savepoint():
-                    self._f3d_command("mpr", {"job": self.ext_job_id, "part": line.part_code})
+                    self._td_command("mpr", {"job": self.ext_job_id, "part": line.part_code})
             except UserError as e:
                 _logger.warning("Карта %s: команду mpr не створено: %s", self.name, e)
                 self.message_post(
@@ -553,7 +553,7 @@ class F3dCutMap(models.Model):
                 )
                 return
 
-    def _f3d_apply_mpr(self, part, text):
+    def _td_apply_mpr(self, part, text):
         """EV-03 `mpr` (R-20 п. 3)."""
         self.ensure_one()
         rec = self.sudo()
@@ -564,7 +564,7 @@ class F3dCutMap(models.Model):
         if len(data) > MPR_MAX_BYTES:
             raise ValueError("mpr: текст більший за 200 КБ")
         old = line.mpr_attachment_id
-        att = rec._f3d_attach("%s.mpr" % part, "text/plain", data)
+        att = rec._td_attach("%s.mpr" % part, "text/plain", data)
         line.write({"mpr_attachment_id": att.id})
         rec.write({"mpr_attachment_ids": [(4, att.id)]})
         if old:
@@ -611,7 +611,7 @@ class F3dCutMap(models.Model):
             machine = rec.workcenter_id.td_code
             if not machine:
                 raise UserError(_("У карти %s не визначено верстат (завдання розкрою).", rec.name))
-            rec._f3d_command("release", {"job": rec.ext_job_id, "machine": machine, "priority": 5})
+            rec._td_command("release", {"job": rec.ext_job_id, "machine": machine, "priority": 5})
         return True
 
     def action_cancel(self):
@@ -655,24 +655,24 @@ class F3dCutMap(models.Model):
         for rec in maps:
             try:
                 with self.env.cr.savepoint():
-                    rec._f3d_cron_step(now)
+                    rec._td_cron_step(now)
             except Exception:
                 _logger.exception("Карта %s: помилка кроку", rec.name)
         return True
 
-    def _f3d_cron_step(self, now):
+    def _td_cron_step(self, now):
         self.ensure_one()
         if self.state == "optimizing":
             since = self.optimizing_since or self.write_date
             if since and since < now - timedelta(minutes=OPTIMIZE_TIMEOUT_MIN):
-                self._f3d_set_error(_("Оптимізатор не відповів 30 хв"))
+                self._td_set_error(_("Оптимізатор не відповів 30 хв"))
                 return
             horizon = now - timedelta(seconds=STATUS_MIN_INTERVAL_S)
             fresh = self.command_ids.filtered(lambda c: c.state in ("queued", "sent") and c.create_date > horizon)
             if self.ext_job_id and not fresh and self.mode == "collector" and param_bool(self.env, "write_enabled"):
                 try:
                     with self.env.cr.savepoint():
-                        self._f3d_command("status", {"job": self.ext_job_id})
+                        self._td_command("status", {"job": self.ext_job_id})
                 except UserError as e:
                     _logger.info("Карта %s: статус не запрошено: %s", self.name, e)
         elif self.state in ("released", "running"):

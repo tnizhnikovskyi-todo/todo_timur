@@ -129,22 +129,22 @@ class F3dGantryJob(models.Model):
 
     # --- допоміжне ------------------------------------------------------------------------------------
     @api.model
-    def _f3d_equipment(self):
+    def _td_equipment(self):
         return self.env["maintenance.equipment"].sudo().search_f3d("GANTRY-1")
 
     @api.model
-    def _f3d_post_equipment(self, text):
-        eq = self._f3d_equipment()
+    def _td_post_equipment(self, text):
+        eq = self._td_equipment()
         if eq:
             eq.message_post(body=text, subtype_xmlid="mail.mt_note")
 
     @api.model
-    def _f3d_notify_equipment(self):
+    def _td_notify_equipment(self):
         if "td.viewer.event" in self.env:
             self.env["td.viewer.event"]._notify("maintenance.equipment", ["GANTRY-1"], "state")
 
     @api.model
-    def _f3d_gantry_status(self):
+    def _td_gantry_status(self):
         raw = self.env["ir.config_parameter"].sudo().get_param("td.machine_connect.gantry_status", "{}")
         try:
             data = json.loads(raw or "{}")
@@ -153,7 +153,7 @@ class F3dGantryJob(models.Model):
         return data if isinstance(data, dict) else {}
 
     @api.model
-    def _f3d_set_gantry_status(self, data):
+    def _td_set_gantry_status(self, data):
         self.env["ir.config_parameter"].sudo().set_param(
             "td.machine_connect.gantry_status", json.dumps(data, ensure_ascii=False, sort_keys=True)
         )
@@ -189,7 +189,7 @@ class F3dGantryJob(models.Model):
             if not rec.ws_id:
                 raise UserError(_("Завдання ще не прийняте порталом: скасування неможливе."))
             try:
-                cmd = self.env["td.command"]._f3d_mc_create_command(
+                cmd = self.env["td.command"]._td_mc_create_command(
                     gantry_cmd_signal(self.env), "cancel", {"id": rec.ws_id}, {"td_gantry_job_id": rec.id}
                 )
             except UserError as e:
@@ -199,7 +199,7 @@ class F3dGantryJob(models.Model):
 
     # --- R-16 п. 1: створення з МО --------------------------------------------------------------------
     @api.model
-    def _f3d_from_production(self, production, workorder=None, cut_map=None, sheets=None):
+    def _td_from_production(self, production, workorder=None, cut_map=None, sheets=None):
         targets = self.env["td.gantry.stack"].GANTRY_TARGETS
         production = production.sudo()
         wo = (
@@ -255,7 +255,7 @@ class F3dGantryJob(models.Model):
         )
 
     # --- R-16 п. 2: відправка -------------------------------------------------------------------------
-    def _f3d_send(self):
+    def _td_send(self):
         """`to_send` -> CMD-02 `feed`. Запис вимкнено: лишається `to_send` з текстом у `error`."""
         signal = gantry_cmd_signal(self.env)
         for rec in self.filtered(lambda r: r.state == "to_send"):
@@ -269,7 +269,7 @@ class F3dGantryJob(models.Model):
             }
             try:
                 with self.env.cr.savepoint():
-                    cmd = self.env["td.command"]._f3d_mc_create_command(
+                    cmd = self.env["td.command"]._td_mc_create_command(
                         signal, "feed", fields_, {"td_gantry_job_id": rec.id}
                     )
             except UserError as e:
@@ -284,7 +284,7 @@ class F3dGantryJob(models.Model):
             rec.sudo().write({"state": "sent", "command_id": cmd.id, "error": False})
 
     # --- R-16 п. 3: результат команди -----------------------------------------------------------------
-    def _f3d_on_command(self, cmd):
+    def _td_on_command(self, cmd):
         self.ensure_one()
         job = self.sudo()
         if cmd == job.cancel_command_id:
@@ -317,11 +317,11 @@ class F3dGantryJob(models.Model):
         else:
             job.write({"state": "error", "error": _("Команду скасовано")})
         if job.state == "done":
-            job._f3d_consume()
+            job._td_consume()
 
     # --- R-23 п. 4 / R-16 п. 4: дзеркало woodStore ----------------------------------------------------
     @api.model
-    def _f3d_ws_vals(self, item):
+    def _td_ws_vals(self, item):
         """Значення завдання за об'єктом API-24."""
         env = self.env
         vals = {}
@@ -361,16 +361,16 @@ class F3dGantryJob(models.Model):
         return vals
 
     @api.model
-    def _f3d_apply_ws(self, items, ts=None):
+    def _td_apply_ws(self, items, ts=None):
         n = 0
         for item in items or []:
             ws_id = item.get("id")
             if not ws_id:
                 continue
             job = self.sudo().search([("ws_id", "=", ws_id)], limit=1)
-            vals = self._f3d_ws_vals(item)
+            vals = self._td_ws_vals(item)
             if not job:
-                job = self._f3d_adopt(ws_id, item, vals)
+                job = self._td_adopt(ws_id, item, vals)
             new_state = WS_STATES.get(item.get("state"))
             if new_state and not (job.state in TERMINAL and job.state != new_state):
                 vals["state"] = new_state
@@ -391,14 +391,14 @@ class F3dGantryJob(models.Model):
                 if changed:
                     job.write(changed)
             if job.production_id and not job.cut_map_id:
-                job._f3d_link_cut_map()
+                job._td_link_cut_map()
             if job.state == "done":
-                job._f3d_consume()
+                job._td_consume()
             n += 1
         return n
 
     @api.model
-    def _f3d_adopt(self, ws_id, item, vals):
+    def _td_adopt(self, ws_id, item, vals):
         """Подія з новим `ws_id`: це може бути наше `sent` завдання, чия команда ще не повернула результат."""
         ref = item.get("external_ref")
         if not ref:
@@ -417,7 +417,7 @@ class F3dGantryJob(models.Model):
             cand.ws_id = ws_id
         return cand
 
-    def _f3d_link_cut_map(self):
+    def _td_link_cut_map(self):
         for rec in self:
             cut_map = (
                 self.env["td.cut.map"]
@@ -436,38 +436,38 @@ class F3dGantryJob(models.Model):
                 rec.cut_map_id = cut_map
 
     @api.model
-    def _f3d_apply_events(self, items):
+    def _td_apply_events(self, items):
         status = None
         for item in items or []:
             kind = item.get("type")
             ts = parse_ts(item.get("ts")) or fields.Datetime.now()
             job = self.sudo().search([("ws_id", "=", item.get("job"))], limit=1) if item.get("job") else self.browse()
             if kind == "sheet_placed" and job:
-                job._f3d_on_sheet(item, ts)
+                job._td_on_sheet(item, ts)
             elif kind == "job_started" and job and job.state in ("sent", "queued"):
                 job.write({"state": "active", "started": job.started or ts})
             elif kind == "job_finished" and job and job.state not in TERMINAL:
                 job.write({"state": "done", "finished": ts, "done": max(job.done, len(job.sheet_log or []))})
-                job._f3d_consume()
+                job._td_consume()
             elif kind == "stack_empty":
                 stack = self.env["td.gantry.stack"].sudo().search([("code", "=", item.get("stack"))], limit=1)
                 if stack:
-                    stack._f3d_refresh()
+                    stack._td_refresh()
                     stack.message_post(body=_("Стос порожній за даними порталу."), subtype_xmlid="mail.mt_note")
             elif kind == "alarm":
-                self._f3d_post_equipment(_("Тривога порталу: %s", item.get("message") or ""))
+                self._td_post_equipment(_("Тривога порталу: %s", item.get("message") or ""))
             elif kind in ("aisle_opened", "aisle_closed"):
-                status = status if status is not None else self._f3d_gantry_status()
+                status = status if status is not None else self._td_gantry_status()
                 m = re.search(r"\d+", str(item.get("aisle") or item.get("message") or item.get("stack") or ""))
                 if m:
                     aisles = set(status.get("aisles_open") or [])
                     (aisles.add if kind == "aisle_opened" else aisles.discard)(int(m.group()))
                     status["aisles_open"] = sorted(aisles)
         if status is not None:
-            self._f3d_set_gantry_status(status)
+            self._td_set_gantry_status(status)
         return len(items or [])
 
-    def _f3d_on_sheet(self, item, ts):
+    def _td_on_sheet(self, item, ts):
         self.ensure_one()
         log = list(self.sheet_log or [])
         if any(e.get("id") == item.get("id") for e in log):
@@ -482,8 +482,8 @@ class F3dGantryJob(models.Model):
 
     # --- R-23 п. 2: статус порталу --------------------------------------------------------------------
     @api.model
-    def _f3d_apply_status(self, status, ts=None):
-        old = self._f3d_gantry_status()
+    def _td_apply_status(self, status, ts=None):
+        old = self._td_gantry_status()
         aisles = status.get("aisles") or []
         opened = [a.get("no", i + 1) for i, a in enumerate(aisles) if a.get("gate_open")]
         alarms = [
@@ -502,16 +502,16 @@ class F3dGantryJob(models.Model):
         if {k: v for k, v in old.items() if k != "ts"} == new:
             return False
         new["ts"] = status.get("ts") or (ts.isoformat() if hasattr(ts, "isoformat") else ts)
-        self._f3d_set_gantry_status(new)
+        self._td_set_gantry_status(new)
         for text in alarms:
             if text not in (old.get("alarms") or []):
-                self._f3d_post_equipment(_("Тривога порталу: %s", text))
-        self._f3d_notify_equipment()
+                self._td_post_equipment(_("Тривога порталу: %s", text))
+        self._td_notify_equipment()
         return True
 
     # --- R-17: списання плити в МО --------------------------------------------------------------------
-    def _f3d_consume(self):
-        tech = self.env["td.machine"]._f3d_tech_env()
+    def _td_consume(self):
+        tech = self.env["td.machine"]._td_tech_env()
         for rec in self:
             prod = rec.production_id
             if rec.type != "feed" or not rec.product_id or not prod or prod.state not in MO_LIVE:
@@ -543,7 +543,7 @@ class F3dGantryJob(models.Model):
                 with self.env.cr.savepoint():
                     tmove = move.with_env(tech)
                     for (loc_id, lot_id), k in groups.items():
-                        rec._f3d_consume_group(tmove, loc_id, lot_id, k)
+                        rec._td_consume_group(tmove, loc_id, lot_id, k)
                     if sum(tmove.move_line_ids.filtered("picked").mapped("quantity")) >= tmove.product_uom_qty:
                         tmove.picked = True
             except UserError as e:
@@ -553,7 +553,7 @@ class F3dGantryJob(models.Model):
                 continue
             rec.sudo().consumed_qty = rec.consumed_qty + sum(groups.values())
 
-    def _f3d_consume_group(self, move, loc_id, lot_id, k):
+    def _td_consume_group(self, move, loc_id, lot_id, k):
         """Перенести `k` листів у рядок руху `(location, lot)`, зменшивши незібрані рядки інших локацій."""
         Line = move.move_line_ids
         same = Line.filtered(
@@ -599,7 +599,7 @@ class F3dGantryJob(models.Model):
         for stack in sudo.env["td.gantry.stack"].search([], limit=CRON_STACKS_LIMIT):
             try:
                 with self.env.cr.savepoint():
-                    stack._f3d_refresh()
+                    stack._td_refresh()
             except Exception:
                 _logger.exception("Звірка стосу %s не вдалася", stack.code)
         # команди, стан яких змінено не через ORM (A-14)
@@ -609,27 +609,27 @@ class F3dGantryJob(models.Model):
         ):
             try:
                 with self.env.cr.savepoint():
-                    job._f3d_on_command(job.command_id)
+                    job._td_on_command(job.command_id)
             except Exception:
                 _logger.exception("Результат команди завдання %s не оброблено", job.name)
         if param_bool(self.env, "gantry_auto_feed"):
-            sudo._f3d_auto_feed()
+            sudo._td_auto_feed()
         for job in sudo.search([("state", "=", "to_send")], limit=CRON_JOBS_LIMIT):
             try:
                 with self.env.cr.savepoint():
-                    job._f3d_send()
+                    job._td_send()
             except Exception:
                 _logger.exception("Відправка завдання %s не вдалася", job.name)
-        sudo._f3d_check_idle()
+        sudo._td_check_idle()
         try:
             with self.env.cr.savepoint():
-                sudo.env["td.gantry.stack"]._f3d_cron_replenish()
+                sudo.env["td.gantry.stack"]._td_cron_replenish()
         except Exception:
             _logger.exception("Поповнення стосів не вдалося")
         return True
 
     @api.model
-    def _f3d_auto_feed(self):
+    def _td_auto_feed(self):
         """R-16 п. 1: перше завдання черги кожного верстата порталу -> завдання `to_send`."""
         targets = self.env["td.gantry.stack"].GANTRY_TARGETS
         for wc in self.env["mrp.workcenter"].search([("td_code", "in", list(targets))]):
@@ -641,13 +641,13 @@ class F3dGantryJob(models.Model):
                 continue
             try:
                 with self.env.cr.savepoint():
-                    job = self._f3d_from_production(wo.production_id, workorder=wo)
+                    job = self._td_from_production(wo.production_id, workorder=wo)
                     job.write({"state": "to_send"})
             except UserError as e:
                 _logger.info("Автоподача %s пропущена: %s", wo.production_id.name, e)
 
     @api.model
-    def _f3d_check_idle(self):
+    def _td_check_idle(self):
         """R-16 п. 5: `active` без змін > 30 хв -> один запис у чатері."""
         limit = fields.Datetime.now() - timedelta(minutes=IDLE_MIN)
         text = _("Завдання порталу без руху 30 хв")

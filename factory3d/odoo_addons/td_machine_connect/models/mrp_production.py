@@ -30,9 +30,9 @@ class MrpProduction(models.Model):
         CutMap = self.env["td.cut.map"]
         maps = CutMap
         for role in ("main", "back"):
-            if role == "back" and not CutMap._f3d_plate_move(self.sudo(), role):
+            if role == "back" and not CutMap._td_plate_move(self.sudo(), role):
                 continue
-            maps |= CutMap._f3d_create_for(self, role)
+            maps |= CutMap._td_create_for(self, role)
         action = {"type": "ir.actions.act_window", "name": _("Карти розкрою"), "res_model": "td.cut.map"}
         if len(maps) == 1:
             return {**action, "view_mode": "form", "res_id": maps.id}
@@ -52,7 +52,7 @@ class MrpProduction(models.Model):
     def action_f3d_feed_gantry(self):
         """R-16 п. 1: завдання порталу з МО; відкриває його форму."""
         self.ensure_one()
-        job = self.env["td.gantry.job"]._f3d_from_production(self)
+        job = self.env["td.gantry.job"]._td_from_production(self)
         return {
             "type": "ir.actions.act_window",
             "name": _("Завдання порталу"),

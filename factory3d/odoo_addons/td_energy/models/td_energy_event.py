@@ -144,7 +144,7 @@ class F3dEnergyEvent(models.Model):
         detail=None,
     ):  # fmt: skip
         """M-09: подія; `dedup_min > 0` і є така сама (kind, code, text) за останні хвилини — не створювати.
-        W1 (API-03): `title`/`detail` — явні (інакше R-24); тік шини `alarm` — у `create`. SPEC-ім'я — `_td_log`."""
+        W1 (API-03): `title`/`detail` — явні (інакше R-24); тік шини `alarm` — у `create`."""
         if self.env.context.get("td_backfill_mute"):  # R-36: розрахунок історії не створює подій
             return self.browse()
         ts = ts or dates.now_utc(self.env)
@@ -171,8 +171,6 @@ class F3dEnergyEvent(models.Model):
         if "td.viewer.event" in self.env:
             self.env["td.viewer.event"]._notify("td.energy", [code] if code else [], "signal")
         return rec
-
-    _td_log = _f3d_log  # ім'я з W1_SPEC (A-23); існуючі виклики — `_f3d_log`
 
     # --- R-13 п. 1–2: події за зміною показань ---------------------------------------------------------
     @api.model

@@ -58,7 +58,7 @@ class TestOee(F3DMachineCase):
         return wo
 
     def oee_of(self, m):
-        return m._f3d_oee(kt("07:00"), kt("10:30"))
+        return m._td_oee(kt("07:00"), kt("10:30"))
 
     def test_saw1_macket(self):
         wait, tool, unknown = (
@@ -151,7 +151,7 @@ class TestOee(F3DMachineCase):
         Log.create(
             {"machine_id": self.m_saw.id, "state": "working", "date_start": kt("07:30"), "date_end": kt("11:30")}
         )
-        res = self.m_saw._f3d_oee(kt("07:00"), kt("15:30"))
+        res = self.m_saw._td_oee(kt("07:00"), kt("15:30"))
         self.assertAlmostEqual(res["ppt_min"], 450, 3)
         self.assertAlmostEqual(res["nodata_min"], 30, 3)
         self.assertAlmostEqual(res["coverage"], 0.9375, 4)
@@ -169,7 +169,7 @@ class TestOee(F3DMachineCase):
                 "loss_id": self.loss("Перерва", planned=True).id,
             }
         )
-        res = self.m_saw._f3d_oee(kt("07:00"), kt("10:30"))
+        res = self.m_saw._td_oee(kt("07:00"), kt("10:30"))
         self.assertAlmostEqual(res["planned_stop_min"], 20, 3)
         self.assertAlmostEqual(res["ppt_min"], 190, 3)
         self.assertEqual(res["losses"], [])
@@ -193,7 +193,7 @@ class TestOee(F3DMachineCase):
                 "date_end": kt("09:30"),
             }
         )
-        res = self.m_cnc._f3d_oee(kt("07:00"), kt("10:30"))
+        res = self.m_cnc._td_oee(kt("07:00"), kt("10:30"))
         self.assertEqual(res["source"], "timelog")
         self.assertAlmostEqual(res["run_min"], 120, 3)
         self.assertAlmostEqual(res["fault_min"], 30, 3)
@@ -208,18 +208,18 @@ class TestOee(F3DMachineCase):
             {"workcenter_id": wc.id, "loss_id": productive.id, "date_start": kt("06:36", D0 - timedelta(days=3))}
         )
         self.assertFalse(old.date_end)
-        res = self.m_cnc._f3d_oee(kt("07:00"), kt("10:30"))
+        res = self.m_cnc._td_oee(kt("07:00"), kt("10:30"))
         self.assertEqual(res["source"], "timelog")
         self.assertAlmostEqual(res["run_min"], 0, 3)
         self.assertAlmostEqual(res["availability"], 0, 3)
         # відкритий запис, що почався незадовго до початку вікна, рахується від початку вікна
         Prod.create({"workcenter_id": wc.id, "loss_id": productive.id, "date_start": kt("06:30")})
-        res = self.m_cnc._f3d_oee(kt("07:00"), kt("10:30"))
+        res = self.m_cnc._td_oee(kt("07:00"), kt("10:30"))
         self.assertAlmostEqual(res["run_min"], res["ppt_min"], 3)
         self.assertGreater(res["run_min"], 0)
         # закритий запис, що почався до вікна, обрізається до вікна
         old.write({"date_end": kt("08:00")})
-        res = self.m_cnc._f3d_oee(kt("07:00"), kt("08:00"))
+        res = self.m_cnc._td_oee(kt("07:00"), kt("08:00"))
         self.assertAlmostEqual(res["run_min"], 60, 3)
 
     def test_cron_open_close_rotate(self):

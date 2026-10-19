@@ -41,7 +41,7 @@ class F3dMachineMessage(models.Model):
                 raise ValidationError(_("Код повідомлення: латиниця й цифри, ≤ 15, необов'язкова * у кінці."))
 
     @api.model
-    def _f3d_match(self, message_id):
+    def _td_match(self, message_id):
         """Точний збіг активного запису, інакше найдовший префікс із `*`; порожньо — запису немає."""
         if not message_id:
             return self.browse()

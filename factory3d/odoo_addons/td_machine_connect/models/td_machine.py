@@ -211,7 +211,7 @@ class F3dMachine(models.Model):
                 raise ValidationError(_("Позиція в модулі I/O: 0…4."))
 
     # --- запис ---------------------------------------------------------------------------------------
-    def _f3d_clear_map_cache(self, vals):
+    def _td_clear_map_cache(self, vals):
         if any(k in vals for k in SIG_FIELDS) or "active" in vals or "read_enabled" in vals:
             self.env.registry.clear_cache()
 
@@ -219,12 +219,12 @@ class F3dMachine(models.Model):
     def create(self, vals_list):
         records = super().create(vals_list)
         for vals in vals_list:
-            records._f3d_clear_map_cache(vals)
+            records._td_clear_map_cache(vals)
         return records
 
     def write(self, vals):
         res = super().write(vals)
-        self._f3d_clear_map_cache(vals)
+        self._td_clear_map_cache(vals)
         return res
 
     def unlink(self):
@@ -235,7 +235,7 @@ class F3dMachine(models.Model):
     # --- довідник сигналів ---------------------------------------------------------------------------
     @api.model
     @tools.ormcache()
-    def _f3d_code_map(self):
+    def _td_code_map(self):
         """`{signal_code: (machine_id, role)}` для активних верстатів (ролі SIG_ROLES)."""
         res = {}
         fnames = ["sig_%s_id" % r for r in SIG_ROLES]
@@ -250,40 +250,40 @@ class F3dMachine(models.Model):
         return res
 
     # --- гачки між файлами (W1 викликає, W2/W3 перевизначають через super()) -------------------------
-    def _f3d_after_commit(self, old, new, ts):
+    def _td_after_commit(self, old, new, ts):
         """Після фіксації переходу стану (R-04 п. 4). Тут порожній."""
 
-    def _f3d_tick_extra(self, now):
+    def _td_tick_extra(self, now):
         """Частина `_cron_tick` для кожного верстата з `read_enabled`. Тут порожній."""
 
-    def _f3d_on_count(self, delta, ts):
+    def _td_on_count(self, delta, ts):
         """Після R-11 п. 1–3 (приріст лічильника). Тут порожній."""
 
-    def _f3d_on_job(self, text, ts):
+    def _td_on_job(self, text, ts):
         """Зміна `raw_job`. Базова реалізація пише `raw_job`."""
         for rec in self:
             if rec.raw_job != text:
                 rec.raw_job = text
 
     @api.model
-    def _f3d_apply_event(self, payload):
+    def _td_apply_event(self, payload):
         """EV-01 (M-21). Базова частина: знайти верстат за `machine`; решта — у файлах W2/W3."""
         machine = self.sudo().search([("code", "=", payload.get("machine"))], limit=1)
         if not machine:
             raise ValueError("mc_opcua: machine %s" % payload.get("machine"))
         return machine
 
-    def _f3d_tech_env(self):
+    def _td_tech_env(self):
         """Середовище технічного користувача (R-00: автоматичні зміни стандартних моделей)."""
         user = self.env.ref("td_machine_connect.user_td_machine")
         return self.env(user=user.id, su=False, context=dict(self.env.context, tz="Europe/Kyiv", f3d_mc_auto=True))
 
     # --- диспетчер показань (R-04 п. 0) --------------------------------------------------------------
     @api.model
-    def _f3d_dispatch(self, readings, src):
-        """Вхід із M-18: показання → верстати → `_f3d_apply`. Синхронний; помилка верстата не поширюється."""
+    def _td_dispatch(self, readings, src):
+        """Вхід із M-18: показання → верстати → `_td_apply`. Синхронний; помилка верстата не поширюється."""
         stats = {"machines": 0, "transitions": 0, "autostarts": 0, "finished": 0, "errors": []}
-        code_map = self._f3d_code_map()
+        code_map = self._td_code_map()
         groups = {}
         for r in readings:
             entry = code_map.get(r.get("code"))
@@ -300,28 +300,28 @@ class F3dMachine(models.Model):
                     "q": r.get("q") or "good",
                 }
             )
-        # DEC-19: єдиний порядок блокування рядків — за id (push, такт і `_f3d_mark_nodata` не блокують навхрест)
+        # DEC-19: єдиний порядок блокування рядків — за id (push, такт і `_td_mark_nodata` не блокують навхрест)
         machines = self.sudo().browse(sorted(groups)).exists().filtered(lambda m: m.active and m.read_enabled)
         machines = machines.with_context(f3d_mc_stats=stats)
         for machine in machines:
             try:
                 with self.env.cr.savepoint():
-                    machine._f3d_lock()
-                    machine._f3d_apply(groups[machine.id])
+                    machine._td_lock()
+                    machine._td_apply(groups[machine.id])
                 stats["machines"] += 1
             except Exception:
                 _logger.exception("td.machine %s: помилка обробки показань", machine.code)
                 stats["errors"].append(machine.code)
         return stats
 
-    def _f3d_lock(self):
+    def _td_lock(self):
         """Блокування рядків верстатів до зміни стану (R-04 п. 0, R-09 п. 7) і свіжий стан після блокування."""
         if self.ids:
             self.env.cr.execute("SELECT id FROM td_machine WHERE id IN %s ORDER BY id FOR UPDATE", (tuple(self.ids),))
             self.invalidate_recordset()
 
-    def _f3d_lock_skip_locked(self):
-        """DEC-19: як `_f3d_lock`, але без очікування: рядки, зайняті іншою транзакцією (push), пропускаються.
+    def _td_lock_skip_locked(self):
+        """DEC-19: як `_td_lock`, але без очікування: рядки, зайняті іншою транзакцією (push), пропускаються.
 
         Повертає підмножину `self`, яку вдалося заблокувати (за зростанням id), зі свіжим станом із бази.
         """
@@ -333,13 +333,13 @@ class F3dMachine(models.Model):
         self.invalidate_recordset()
         return self.browse(locked)
 
-    def _f3d_stat(self, key, n=1):
-        """Лічильник для результату `_f3d_dispatch` (W3 рахує `autostarts`, `finished`)."""
+    def _td_stat(self, key, n=1):
+        """Лічильник для результату `_td_dispatch` (W3 рахує `autostarts`, `finished`)."""
         stats = self.env.context.get("f3d_mc_stats")
         if stats is not None:
             stats[key] = stats.get(key, 0) + n
 
-    def _f3d_apply(self, items):
+    def _td_apply(self, items):
         """R-04 п. 1: показання одного верстата (`role`, `ts`, `text`, `value`, `q`) → raw_*, стан, лічильник."""
         self.ensure_one()
         items = sorted(items, key=lambda it: (it["ts"], ROLE_ORDER.get(it["role"], 9)))
@@ -382,30 +382,30 @@ class F3dMachine(models.Model):
                 self.write(vals)
                 raw["bad"] = raw["state"] is None
                 new = normalize(self.protocol, raw, key=self.code, now=ts)
-                self._f3d_on_raw_state(new, ts)
+                self._td_on_raw_state(new, ts)
                 raw_ts = max(raw_ts, ts) if raw_ts else ts
             for it in group:
                 if it["role"] == "job" and not late and it["q"] != "bad" and it["text"] is not None:
                     if it["text"] != job:
                         job = it["text"]
                         dirty = True
-                        self._f3d_on_job(job, ts)
+                        self._td_on_job(job, ts)
                     raw_ts = max(raw_ts, ts) if raw_ts else ts
                 elif it["role"] == "pieces" and it["value"] is not None and it["q"] != "bad":
                     dirty = dirty or it["value"] != self.pieces_last
-                    self._f3d_count(it["value"], ts)
+                    self._td_count(it["value"], ts)
                     raw_ts = max(raw_ts, ts) if raw_ts else ts
         if raw_ts != self.raw_ts and (
-            dirty or before != (self.state, self.pending_state) or self._f3d_heartbeat_due(self.raw_ts, raw_ts)
+            dirty or before != (self.state, self.pending_state) or self._td_heartbeat_due(self.raw_ts, raw_ts)
         ):
             self.write({"raw_ts": raw_ts})
 
     @staticmethod
-    def _f3d_heartbeat_due(stored, new):
+    def _td_heartbeat_due(stored, new):
         """DEC-19: чи минуло `HEARTBEAT_S` від збереженої мітки (порожня мітка — пишемо одразу)."""
         return not stored or abs((new - stored).total_seconds()) >= HEARTBEAT_S
 
-    def _f3d_on_raw_state(self, new, ts):
+    def _td_on_raw_state(self, new, ts):
         """R-02: мікрозупинки й момент фіксації стану."""
         self.ensure_one()
         if self.state_since and ts < self.state_since:
@@ -416,7 +416,7 @@ class F3dMachine(models.Model):
                 self.write({"pending_state": False, "pending_since": False})
             return
         if new in ("working", "fault", "off", "nodata"):
-            self._f3d_commit_state(new, ts)
+            self._td_commit_state(new, ts)
             return
         # new in (idle, setup)
         if self.state == "working" and self.micro_stop_s > 0:
@@ -426,11 +426,11 @@ class F3dMachine(models.Model):
             elif self.pending_state != new:
                 self.write({"pending_state": new})
             if ts >= since + timedelta(seconds=self.micro_stop_s):
-                self._f3d_commit_state(new, since)
+                self._td_commit_state(new, since)
         else:
-            self._f3d_commit_state(new, ts)
+            self._td_commit_state(new, ts)
 
-    def _f3d_commit_state(self, new, ts, cause="machine"):
+    def _td_commit_state(self, new, ts, cause="machine"):
         """R-04 п. 2–6: закрити інтервал, відкрити новий, гачки (простій, автостарт…), сигнал, шина."""
         self.ensure_one()
         if new == self.state:
@@ -440,7 +440,7 @@ class F3dMachine(models.Model):
         old = self.state
         Log = self.env["td.machine.state.log"].sudo()
         if self.current_log_id:
-            self.current_log_id._f3d_close(ts)
+            self.current_log_id._td_close(ts)
             self.current_log_id.flush_recordset()
         wo = self.active_workorder_id
         mode = self.raw_mode or "alarm=%d" % bool(self.raw_alarm)
@@ -465,38 +465,38 @@ class F3dMachine(models.Model):
                 "pending_since": False,
             }
         )
-        self._f3d_stat("transitions")
-        self._f3d_after_commit(old, new, ts)
-        self._f3d_emit_state(ts)
-        self._f3d_notify()
+        self._td_stat("transitions")
+        self._td_after_commit(old, new, ts)
+        self._td_emit_state(ts)
+        self._td_notify()
         return True
 
-    def _f3d_mark_nodata(self, ts, reason):
+    def _td_mark_nodata(self, ts, reason):
         """R-03: сигнал стану `stale` → `nodata` (причина — у лог)."""
         for rec in self.sudo().exists().filtered(lambda m: m.active and m.read_enabled).sorted("id"):
             if not param_bool(rec.env, "read_enabled", env_default(rec.env)):
                 continue
             with rec.env.cr.savepoint():
-                rec._f3d_lock()
+                rec._td_lock()
                 _logger.info("td.machine %s: nodata (%s)", rec.code, reason)
-                rec._f3d_commit_state("nodata", ts, cause="system")
+                rec._td_commit_state("nodata", ts, cause="system")
 
-    def _f3d_emit_state(self, ts):
+    def _td_emit_state(self, ts):
         """Обчислений стан → сигнал `machine_state` (CT-10)."""
         self.ensure_one()
         sig = self.sig_machine_state_id
         if not sig:
             return
-        self.env["td.signal"].sudo().with_context(f3d_mc_internal=True)._f3d_ingest(
+        self.env["td.signal"].sudo().with_context(f3d_mc_internal=True)._td_ingest(
             [{"code": sig.code, "ts": ts, "text": self.state, "q": "good"}], src="module"
         )
 
-    def _f3d_notify(self, kinds=("state",)):
+    def _td_notify(self, kinds=("state",)):
         if "td.viewer.event" in self.env:
             self.env["td.viewer.event"]._notify("mrp.workcenter", self.mapped("code"), "state")
 
-    def _f3d_count(self, value, ts):
-        """R-11 п. 1–3: приріст лічильника; далі гачок `_f3d_on_count`."""
+    def _td_count(self, value, ts):
+        """R-11 п. 1–3: приріст лічильника; далі гачок `_td_on_count`."""
         self.ensure_one()
         delta = 0.0
         if self.pieces_ts or self.pieces_last:
@@ -511,12 +511,12 @@ class F3dMachine(models.Model):
                 _logger.warning("td.machine %s: стрибок лічильника %s → %s", self.code, self.pieces_last, value)
                 delta = 0.0
         vals = {"pieces_last": value}
-        if value != self.pieces_last or self._f3d_heartbeat_due(self.pieces_ts, ts):
+        if value != self.pieces_last or self._td_heartbeat_due(self.pieces_ts, ts):
             vals["pieces_ts"] = ts  # мітка без зміни лічильника — не частіше за HEARTBEAT_S (DEC-19)
         self.write(vals)
         if delta and self.current_log_id:
             self.current_log_id.pieces += delta
-        self._f3d_on_count(delta, ts)
+        self._td_on_count(delta, ts)
 
     # --- дії (кнопки) --------------------------------------------------------------------------------
     def action_test_connection(self):
@@ -539,7 +539,7 @@ class F3dMachine(models.Model):
             "params": {"title": self.display_name, "message": message, "type": "info", "sticky": False},
         }
 
-    def _f3d_act_window(self, model, name, view_mode="list,form"):
+    def _td_act_window(self, model, name, view_mode="list,form"):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
@@ -551,13 +551,13 @@ class F3dMachine(models.Model):
         }
 
     def action_view_logs(self):
-        return self._f3d_act_window("td.machine.state.log", _("Журнал станів"), "list,graph,pivot")
+        return self._td_act_window("td.machine.state.log", _("Журнал станів"), "list,graph,pivot")
 
     def action_view_downtimes(self):
-        return self._f3d_act_window("td.downtime", _("Простої"), "list,kanban,form,graph,pivot")
+        return self._td_act_window("td.downtime", _("Простої"), "list,kanban,form,graph,pivot")
 
     def action_view_oee(self):
-        return self._f3d_act_window("td.oee.shift", _("OEE"), "list,pivot,graph,form")
+        return self._td_act_window("td.oee.shift", _("OEE"), "list,pivot,graph,form")
 
     def action_open_workcenter(self):
         self.ensure_one()
@@ -583,15 +583,15 @@ class F3dMachine(models.Model):
         now = fields.Datetime.now()
         for rec in self:
             rec = rec.sudo()
-            rec._f3d_lock()
-            rec._f3d_commit_state("nodata", now, cause="system")
+            rec._td_lock()
+            rec._td_commit_state("nodata", now, cause="system")
             rec.message_post(body=_("Стан скинуто адміністратором"))
         return True
 
     # --- крон ----------------------------------------------------------------------------------------
     @api.model
     def _cron_tick(self):
-        """Щохвилини: стан MC-DERIVED, відкладені переходи (R-02 п. 4), `_f3d_tick_extra` для кожного верстата."""
+        """Щохвилини: стан MC-DERIVED, відкладені переходи (R-02 п. 4), `_td_tick_extra` для кожного верстата."""
         enabled = param_bool(self.env, "read_enabled", env_default(self.env))
         source = self.env.ref("td_machine_connect.source_mc_derived", raise_if_not_found=False)
         if source:
@@ -611,7 +611,7 @@ class F3dMachine(models.Model):
                 _logger.warning("td.machine: такт перевищив %s с, решту верстатів пропущено", TICK_BUDGET_S)
                 break
             batch = Machine.browse(ids[pos : pos + TICK_BATCH])
-            locked = batch._f3d_lock_skip_locked()
+            locked = batch._td_lock_skip_locked()
             skipped += len(batch) - len(locked)
             for machine in locked:
                 try:
@@ -619,8 +619,8 @@ class F3dMachine(models.Model):
                         if machine.pending_state and machine.pending_since:
                             limit = machine.pending_since + timedelta(seconds=machine.micro_stop_s + PENDING_SLACK_S)
                             if now >= limit:
-                                machine._f3d_commit_state(machine.pending_state, machine.pending_since)
-                        machine._f3d_tick_extra(now)
+                                machine._td_commit_state(machine.pending_state, machine.pending_since)
+                        machine._td_tick_extra(now)
                 except Exception:
                     _logger.exception("td.machine %s: помилка такту", machine.code)
             if not modules.module.current_test:  # у тестах commit курсора заборонено
@@ -632,7 +632,7 @@ class F3dMachine(models.Model):
         return True
 
     @api.model
-    def _f3d_run_migration(self):
+    def _td_run_migration(self):
         """Серверна дія «Повторити міграцію» (W8). Каркас: звіт `skipped`."""
         from .. import hooks
 

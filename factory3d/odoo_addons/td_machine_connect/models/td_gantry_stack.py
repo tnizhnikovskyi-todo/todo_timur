@@ -125,7 +125,7 @@ class F3dGantryStack(models.Model):
             rec.below_min = bool(rec.orderpoint_id) and rec.ws_qty < rec.orderpoint_id.product_min_qty
 
     # --- R-15: звірка стосу ---------------------------------------------------------------------------
-    def _f3d_odoo_side(self):
+    def _td_odoo_side(self):
         """Кванти локації: (qty, товар з найбільшою к-стю, його партія з найбільшою к-стю)."""
         self.ensure_one()
         quants = self.env["stock.quant"].sudo().search([("location_id", "=", self.location_id.id)])
@@ -139,7 +139,7 @@ class F3dGantryStack(models.Model):
         lot = max(by_lot, key=by_lot.get) if by_lot else self.env["stock.lot"]
         return qty, product, lot
 
-    def _f3d_fed_unconsumed(self):
+    def _td_fed_unconsumed(self):
         self.ensure_one()
         jobs = (
             self.env["td.gantry.job"]
@@ -156,7 +156,7 @@ class F3dGantryStack(models.Model):
         )
         return float(sum(jobs.mapped("done")))
 
-    def _f3d_activity_domain(self):
+    def _td_activity_domain(self):
         self.ensure_one()
         return [
             ("res_model", "=", "td.gantry.stack"),
@@ -164,22 +164,22 @@ class F3dGantryStack(models.Model):
             ("summary", "=like", "Стос %s:%%" % self.code),
         ]
 
-    def _f3d_open_activity(self, text):
+    def _td_open_activity(self, text):
         """Одна відкрита діяльність на стос (R-15 п. 4)."""
         self.ensure_one()
-        if not self.env["mail.activity"].sudo().search_count(self._f3d_activity_domain()):
+        if not self.env["mail.activity"].sudo().search_count(self._td_activity_domain()):
             self.sudo().activity_schedule(
                 "mail.mail_activity_data_todo", summary=text[:64], note=text, user_id=activity_user(self.env).id
             )
 
-    def _f3d_refresh(self):
+    def _td_refresh(self):
         """R-15 п. 1–5. Без `write`, якщо нічого не змінилось."""
         now = fields.Datetime.now()
         tol = float(param(self.env, "stack_diff_tolerance", "0") or 0)
         confirm = int(param(self.env, "stack_diff_confirm_min", "10") or 10)
         for rec in self:
-            odoo_qty, product, lot = rec._f3d_odoo_side()
-            fed = rec._f3d_fed_unconsumed()
+            odoo_qty, product, lot = rec._td_odoo_side()
+            fed = rec._td_fed_unconsumed()
             expected = odoo_qty - fed
             diff = rec.ws_qty - expected
             vals = {
@@ -225,16 +225,16 @@ class F3dGantryStack(models.Model):
             if changed:
                 rec.write(changed)
             if text:
-                rec._f3d_open_activity(text)
+                rec._td_open_activity(text)
             elif state == "ok":
-                found = self.env["mail.activity"].sudo().search(rec._f3d_activity_domain())
+                found = self.env["mail.activity"].sudo().search(rec._td_activity_domain())
                 if found:
                     found.action_feedback(feedback=_("Збігається"))
         return True
 
     # --- R-23 п. 3: події woodStore -------------------------------------------------------------------
     @api.model
-    def _f3d_apply_ws(self, items, ts=None):
+    def _td_apply_ws(self, items, ts=None):
         now = fields.Datetime.now()
         stacks = self.sudo().search([])
         by_code = {s.code: s for s in stacks}
@@ -256,11 +256,11 @@ class F3dGantryStack(models.Model):
             changed["ws_seen"] = now
             rec.write(changed)
             touched |= rec
-        touched._f3d_refresh()
+        touched._td_refresh()
         count = len(stacks.filtered(lambda s: s.ws_qty > 0))
         sig = self.env["td.signal"].sudo().search([("code", "=", GANTRY_STACKS_CODE)], limit=1)
         if sig:
-            self.env["td.signal"].sudo().with_context(f3d_mc_internal=True)._f3d_ingest(
+            self.env["td.signal"].sudo().with_context(f3d_mc_internal=True)._td_ingest(
                 [{"code": sig.code, "ts": now, "value": count, "q": "good"}], src="module"
             )
         if touched and "td.viewer.event" in self.env:
@@ -311,17 +311,17 @@ class F3dGantryStack(models.Model):
                 ),
                 subtype_xmlid="mail.mt_note",
             )
-            rec._f3d_refresh()
+            rec._td_refresh()
         return True
 
     def action_fix_portal(self):
         """R-15 п. 6б: CMD-02 `stack` (потребує запису)."""
         check_stock_manager(self.env)
         for rec in self:
-            rec._f3d_push_stack_cmd()
+            rec._td_push_stack_cmd()
         return True
 
-    def _f3d_push_stack_cmd(self):
+    def _td_push_stack_cmd(self):
         self.ensure_one()
         product = self.odoo_product_id or self.ws_product_id
         if not product.default_code:
@@ -332,9 +332,9 @@ class F3dGantryStack(models.Model):
             "product": product.default_code,
             "lot": self.odoo_lot_id.name or None,
         }
-        return self.env["td.command"]._f3d_mc_create_command(gantry_cmd_signal(self.env), "stack", fields_)
+        return self.env["td.command"]._td_mc_create_command(gantry_cmd_signal(self.env), "stack", fields_)
 
-    def _f3d_replenish(self):
+    def _td_replenish(self):
         """R-18 п. 2: стандартне поповнення за правилом."""
         self.ensure_one()
         if not self.orderpoint_id:
@@ -346,11 +346,11 @@ class F3dGantryStack(models.Model):
     def action_replenish(self):
         res = True
         for rec in self:
-            res = rec._f3d_replenish()
+            res = rec._td_replenish()
         return res if isinstance(res, dict) else True
 
     @api.model
-    def _f3d_cron_replenish(self):
+    def _td_cron_replenish(self):
         """R-18 п. 1 (лише при `gantry_auto_replenish`)."""
         if not param_bool(self.env, "gantry_auto_replenish"):
             return
@@ -368,18 +368,18 @@ class F3dGantryStack(models.Model):
                 continue
             try:
                 with self.env.cr.savepoint():
-                    rec._f3d_replenish()
+                    rec._td_replenish()
             except Exception:
                 _logger.exception("Поповнення стосу %s не вдалося", rec.code)
                 rec.replenish_at = now
 
-    def _f3d_after_arrival(self, picking=None):
+    def _td_after_arrival(self, picking=None):
         """R-18 п. 3: листи прийшли в стос — оновити стос у woodStore (команда або діяльність)."""
         for rec in self:
-            rec._f3d_refresh()
+            rec._td_refresh()
             try:
                 with self.env.cr.savepoint():
-                    rec._f3d_push_stack_cmd()
+                    rec._td_push_stack_cmd()
             except UserError:
                 product = rec.odoo_product_id.default_code or ""
                 text = _("Оновіть стос %s у woodStore: %d арк. %s", rec.code, int(rec.expected_qty), product)

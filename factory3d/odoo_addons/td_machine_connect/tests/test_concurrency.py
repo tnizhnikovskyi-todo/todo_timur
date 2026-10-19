@@ -41,10 +41,10 @@ class _SqlSpy:
 @tagged(*TAGS)
 class TestPushOrder(F3DMachineCase):
     def test_dispatch_locks_machines_in_id_order(self):
-        """Push блокує верстати за зростанням id незалежно від порядку показань — як крон і `_f3d_mark_nodata`."""
+        """Push блокує верстати за зростанням id незалежно від порядку показань — як крон і `_td_mark_nodata`."""
         ids = []
         Machine = self.registry["td.machine"]
-        orig = Machine._f3d_lock
+        orig = Machine._td_lock
 
         def lock(rec):
             ids.extend(rec.ids)
@@ -56,7 +56,7 @@ class TestPushOrder(F3DMachineCase):
             + self.ua(self.m_ua, "10:00:00", state="READY")
         )
         self.assertGreater(self.m_io.id, self.m_ua.id)
-        with patch.object(Machine, "_f3d_lock", lock):
+        with patch.object(Machine, "_td_lock", lock):
             self.feed(readings)
         self.assertEqual(ids, sorted((self.m_ua | self.m_saw | self.m_io).ids))
 
@@ -100,13 +100,13 @@ class TestTickOrder(F3DMachineCase):
         expected = self.env["td.machine"].search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
         self.assertGreaterEqual(len(expected), 3)
         seen = []
-        orig = Machine._f3d_tick_extra
+        orig = Machine._td_tick_extra
 
         def spy_tick(rec, now):
             seen.extend(rec.ids)
             return orig(rec, now)
 
-        with patch(MODEL + ".TICK_BATCH", 2), patch.object(Machine, "_f3d_tick_extra", spy_tick), _SqlSpy() as sql:
+        with patch(MODEL + ".TICK_BATCH", 2), patch.object(Machine, "_td_tick_extra", spy_tick), _SqlSpy() as sql:
             self.tick("10:30:30")
         self.assertEqual(seen, expected)
         locks = sql.like("from td_machine", "for update")
@@ -152,14 +152,14 @@ class TestTickSkipLocked(TransactionCase):
         """`_cron_tick` на окремому з'єднанні; повертає (id оброблених верстатів, тривалість, с)."""
         Machine = self.registry["td.machine"]
         seen = []
-        orig = Machine._f3d_tick_extra
+        orig = Machine._td_tick_extra
 
         def spy(rec, now):
             seen.extend(rec.ids)
             return orig(rec, now)
 
         started = time.monotonic()
-        with patch.object(Machine, "_f3d_tick_extra", spy), self.db.cursor() as cr:
+        with patch.object(Machine, "_td_tick_extra", spy), self.db.cursor() as cr:
             cr.execute("SET lock_timeout = '3s'")  # без SKIP LOCKED тест впав би помилкою, а не завис
             api.Environment(cr, SUPERUSER_ID, {})["td.machine"]._cron_tick()
             cr.execute("RESET lock_timeout")

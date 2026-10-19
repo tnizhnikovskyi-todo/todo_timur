@@ -50,7 +50,7 @@ class TestCutMap(F3DMachineCase):
         super().setUp()
         patcher = patch.object(
             type(self.env["td.push.handler"]),
-            "_f3d_handler_models",
+            "_td_handler_models",
             lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
@@ -73,7 +73,7 @@ class TestCutMap(F3DMachineCase):
         return wiz.action_import()
 
     def _map(self, mode="collector"):
-        rec = self.Map._f3d_create_for(self.mo, "main")
+        rec = self.Map._td_create_for(self.mo, "main")
         rec.mode = mode
         return rec
 
@@ -121,7 +121,7 @@ class TestCutMap(F3DMachineCase):
         with self.assertRaises(ValidationError), self.cr.savepoint():
             rec.action_build_lines()
         with self.assertRaises(UserError):  # ролі back немає деталей
-            self.Map._f3d_create_for(self.make_mo(self.wc_saw, comps=((self.board, 1), (self.hdf, 1))), "back")
+            self.Map._td_create_for(self.make_mo(self.wc_saw, comps=((self.board, 1), (self.hdf, 1))), "back")
 
     def test_export_csv(self):
         rec = self._exported_map()
@@ -156,7 +156,7 @@ class TestCutMap(F3DMachineCase):
         self.cmd_done(self._cmds(rec, "upload"), data={"job_id": "cj-00077", "state": "optimizing", "eta_s": 5})
         self.assertEqual(rec.ext_job_id, "cj-00077")
         # події після рестарту колектора: map порожній — карта за job_id
-        self.assertEqual(self.Map._f3d_find_for_event(False, "cj-00077"), rec)
+        self.assertEqual(self.Map._td_find_for_event(False, "cj-00077"), rec)
         self.push_event("mc_cutopt", {"kind": "plan", "source": SRC, "map": rec.name, "job_id": "cj-00077",
                                       "plan": plan_json()}, SRC)  # fmt: skip
         self.push_event("mc_cutopt", {"kind": "mpr", "source": SRC, "map": rec.name, "job_id": "cj-00077",
@@ -169,11 +169,11 @@ class TestCutMap(F3DMachineCase):
         self.assertFalse(rec.message_ids.filtered(lambda m: "не відповідає" in (m.body or "")))
         bad = plan_json(total=0)
         with self.assertRaises(ValueError):
-            rec._f3d_apply_plan(bad)
-        rec._f3d_apply_plan(plan_json(parts=27))
+            rec._td_apply_plan(bad)
+        rec._td_apply_plan(plan_json(parts=27))
         self.assertTrue(rec.message_ids.filtered(lambda m: "P001 28 → 27" in (m.body or "")))
         # job: planned -> підсумок; error
-        rec._f3d_apply_job({"job_id": "cj-00077", "state": "error", "error": "збій"})
+        rec._td_apply_job({"job_id": "cj-00077", "state": "error", "error": "збій"})
         self.assertEqual((rec.state, rec.error), ("error", "збій"))
 
     def test_optimizing_timeout_and_status_poll(self):
@@ -211,7 +211,7 @@ class TestCutMap(F3DMachineCase):
     def test_release_and_manual_plan(self):
         rec = self._exported_map()
         self.cmd_done(self._cmds(rec, "upload"), data={"job_id": "cj-00077", "state": "optimizing", "eta_s": 5})
-        rec._f3d_apply_plan(plan_json())
+        rec._td_apply_plan(plan_json())
         rec.action_release()
         cmd = self._cmds(rec, "release")
         self.assertEqual(cmd.payload, {"op": "release", "job": "cj-00077", "machine": "SAW-T", "priority": 5})

@@ -18,10 +18,10 @@ SRC = "REST-WOODSTORE-T"
 class TestGantryStack(F3DMachineCase):
     def setUp(self):
         super().setUp()
-        # telemetry `_f3d_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
+        # telemetry `_td_handler_models` чекає класи від `registry.descendants`, а в 19.0 це імена: 0 обробників
         patcher = patch.object(
             type(self.env["td.push.handler"]),
-            "_f3d_handler_models",
+            "_td_handler_models",
             lambda _self, route: ["td.push.handler.machine_connect"] if route.startswith("mc_") else [],
         )
         patcher.start()
@@ -45,19 +45,19 @@ class TestGantryStack(F3DMachineCase):
     def _make_diff(self):
         """ws_qty=36 -> `pending` о 10:30, `diff` о 10:41."""
         self.stack_t1.write({"ws_qty": 36})
-        self.stack_t1._f3d_refresh()
+        self.stack_t1._td_refresh()
         self.assertEqual(self.stack_t1.state, "pending")
         self.stack_t1.ws_seen = self.kt("10:36")
         with self.at("10:41"):
-            self.stack_t1._f3d_refresh()
+            self.stack_t1._td_refresh()
 
     def test_fed_unconsumed(self):
-        self.stack_t1._f3d_refresh()
+        self.stack_t1._td_refresh()
         s = self.stack_t1
         self.assertEqual((s.odoo_qty, s.fed_unconsumed, s.expected_qty, s.diff), (45, 7, 38, 0))
         self.assertEqual((s.state, s.odoo_product_id, s.odoo_lot_id), ("ok", self.board, self.lot_l1))
         self.mo.state = "done"  # МО закрито: подані листи вже списані з квантів
-        s._f3d_refresh()
+        s._td_refresh()
         self.assertEqual(s.fed_unconsumed, 0)
 
     def test_pending_then_diff(self):
@@ -76,14 +76,14 @@ class TestGantryStack(F3DMachineCase):
         s.ws_qty = 38
         s.ws_seen = self.kt("10:44")
         with self.at("10:45"):
-            s._f3d_refresh()
+            s._td_refresh()
         self.assertEqual((s.state, s.diff_since), ("ok", False))
         self.assertFalse(self.acts(s))
 
     def test_product_mismatch(self):
         s = self.stack_t1
         s.ws_product = "DSP16-SON"
-        s._f3d_refresh()
+        s._td_refresh()
         self.assertEqual(s.state, "diff")
         self.assertEqual(len(self.acts(s)), 1)
         self.assertIn("DSP16-SON", self.acts(s).summary)
@@ -91,7 +91,7 @@ class TestGantryStack(F3DMachineCase):
     def test_unknown_when_stale(self):
         s = self.stack_t1
         with self.at("10:50"):
-            s._f3d_refresh()
+            s._td_refresh()
         self.assertEqual(s.state, "unknown")
 
     def test_status_event(self):

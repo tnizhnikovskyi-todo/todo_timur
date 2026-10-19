@@ -118,7 +118,7 @@ class F3dOeeShift(models.Model):
             rec.oee_color = "good" if rec.oee >= good else "warn" if rec.oee >= warn else "bad"
 
     @api.model
-    def _f3d_compute(self, machine, day, close=False):
+    def _td_compute(self, machine, day, close=False):
         """R-14: upsert запису `(machine, day)`; порожній набір — вихідний або зміна ще не почалась."""
         machine = machine.sudo()
         a, b = _day_bounds(day)
@@ -130,7 +130,7 @@ class F3dOeeShift(models.Model):
         if now <= t0 and not close:
             return self.browse()
         finished = close or now >= t_end
-        res = machine._f3d_oee(t0, t_end if finished else now)
+        res = machine._td_oee(t0, t_end if finished else now)
         vals = {k: v for k, v in res.items() if k in self._fields}
         vals.update(
             date_start=t0,
@@ -156,21 +156,21 @@ class F3dOeeShift(models.Model):
         for machine in machines:
             try:
                 with self.env.cr.savepoint():
-                    self._f3d_cron_machine(machine, today)
+                    self._td_cron_machine(machine, today)
             except Exception:
                 _logger.exception("OEE: помилка розрахунку верстата %s", machine.code)
         return True
 
     @api.model
-    def _f3d_cron_machine(self, machine, today):
+    def _td_cron_machine(self, machine, today):
         yesterday = self.sudo().search(
             [("machine_id", "=", machine.id), ("date", "=", today - timedelta(days=1)), ("state", "=", "open")], limit=1
         )
         if yesterday:
-            self._f3d_compute(machine, yesterday.date, close=True)
+            self._td_compute(machine, yesterday.date, close=True)
         rec = self.sudo().search([("machine_id", "=", machine.id), ("date", "=", today)], limit=1)
         if not rec or rec.state != "closed":
-            rec = self._f3d_compute(machine, today)
+            rec = self._td_compute(machine, today)
         if rec:
             machine.write({"oee_shift_id": rec.id})
 
@@ -178,7 +178,7 @@ class F3dOeeShift(models.Model):
         if not (self.env.is_superuser() or self.env.user.has_group("td_factory3d.group_td_manager")):
             raise AccessError(_("Перерахувати OEE може лише менеджер."))
         for rec in self.sudo():
-            self._f3d_compute(rec.machine_id, rec.date, close=rec.state == "closed")
+            self._td_compute(rec.machine_id, rec.date, close=rec.state == "closed")
         return True
 
     def action_oee_period(self):
@@ -212,7 +212,7 @@ class F3dMachineOee(models.Model):
 
     # --- R-28: інтервали для енергії -----------------------------------------------------------------
     @api.model
-    def _f3d_log_domain(self, date_from, date_to):
+    def _td_log_domain(self, date_from, date_to):
         domain = []
         if date_to:
             domain.append(("date_start", "<", date_to))
@@ -221,7 +221,7 @@ class F3dMachineOee(models.Model):
         return domain
 
     @api.model
-    def _f3d_clipped(self, log, date_from, date_to, now):
+    def _td_clipped(self, log, date_from, date_to, now):
         start, end = log.date_start, log.date_end or now
         if date_from:
             start = max(start, date_from)
@@ -230,33 +230,33 @@ class F3dMachineOee(models.Model):
         return start, end
 
     @api.model
-    def _f3d_wo_intervals(self, workorders, date_from=None, date_to=None):
+    def _td_wo_intervals(self, workorders, date_from=None, date_to=None):
         """R-28 п. 1: `{wo_id: [(start, end, state), …]}` для `working`/`setup`, UTC naive."""
         now = fields.Datetime.now()
         domain = [("state", "in", ("working", "setup")), ("workorder_id", "in", workorders.ids)]
-        logs = self.env["td.machine.state.log"].sudo().search(domain + self._f3d_log_domain(date_from, date_to))
+        logs = self.env["td.machine.state.log"].sudo().search(domain + self._td_log_domain(date_from, date_to))
         res = {}
         for log in logs.sorted("date_start"):
-            start, end = self._f3d_clipped(log, date_from, date_to, now)
+            start, end = self._td_clipped(log, date_from, date_to, now)
             if end > start:
                 res.setdefault(log.workorder_id.id, []).append((start, end, log.state))
         return res
 
     @api.model
-    def _f3d_wc_intervals(self, workcenter, date_from, date_to):
+    def _td_wc_intervals(self, workcenter, date_from, date_to):
         """R-28 п. 2: `[(start, end, state, wo_id | False), …]` усіх станів РЦ."""
         now = fields.Datetime.now()
-        domain = [("workcenter_id", "=", workcenter.id)] + self._f3d_log_domain(date_from, date_to)
+        domain = [("workcenter_id", "=", workcenter.id)] + self._td_log_domain(date_from, date_to)
         res = []
         for log in self.env["td.machine.state.log"].sudo().search(domain).sorted("date_start"):
-            start, end = self._f3d_clipped(log, date_from, date_to, now)
+            start, end = self._td_clipped(log, date_from, date_to, now)
             if end > start:
                 res.append((start, end, log.state, log.workorder_id.id or False))
         return res
 
     # --- R-13: OEE за фактом -------------------------------------------------------------------------
     @api.model
-    def _f3d_cycle(self, wo):
+    def _td_cycle(self, wo):
         """Ідеальний цикл завдання, хв/шт (R-13 п. 5)."""
         wc, op = wo.workcenter_id, wo.operation_id
         if op:
@@ -265,7 +265,7 @@ class F3dMachineOee(models.Model):
             return op.time_cycle_manual / cap * 100.0 / (wc.time_efficiency or 100.0)
         return wo.duration_expected / wo.qty_production if wo.qty_production else 0.0
 
-    def _f3d_oee(self, t0, t1):
+    def _td_oee(self, t0, t1):
         """R-13: показники OEE верстата за `[t0, t1)` (naive UTC) — словник полів `td.oee.shift` + `source`."""
         self.ensure_one()
         wc = self.workcenter_id.sudo()
@@ -292,7 +292,7 @@ class F3dMachineOee(models.Model):
             else:
                 losses.setdefault(dt.loss_id, []).extend(iv)
         inp["losses"] = [(loss.id, loss.name, ivs) for loss, ivs in losses.items()]
-        logs = env["td.machine.state.log"].sudo().search([("machine_id", "=", self.id)] + self._f3d_log_domain(t0, t1))
+        logs = env["td.machine.state.log"].sudo().search([("machine_id", "=", self.id)] + self._td_log_domain(t0, t1))
         wos = env["mrp.workorder"]
         if logs:
             source = "machine"
@@ -315,15 +315,15 @@ class F3dMachineOee(models.Model):
             inp.update(buckets)
         else:
             source = "timelog"
-            wos = self._f3d_timelog_inputs(inp, wc, t0, t1)
+            wos = self._td_timelog_inputs(inp, wc, t0, t1)
         for wo in wos.sudo():
-            inp["cycles"][wo.id] = self._f3d_cycle(wo)
-        inp["bad"] = self._f3d_bad(wc, t0, t1)
+            inp["cycles"][wo.id] = self._td_cycle(wo)
+        inp["bad"] = self._td_bad(wc, t0, t1)
         res = oee.compute_oee(inp, float(param(env, "coverage_min", "0.95")))
         res["source"] = source
         return res
 
-    def _f3d_timelog_inputs(self, inp, wc, t0, t1):
+    def _td_timelog_inputs(self, inp, wc, t0, t1):
         """R-13 п. 9: джерело — журнал часу Odoo; повертає завдання, завершені у вікні."""
         env = self.env
         setup_ids = {
@@ -378,7 +378,7 @@ class F3dMachineOee(models.Model):
             inp["pieces"][wo.id] = wo.qty_produced
         return wos
 
-    def _f3d_bad(self, wc, t0, t1):
+    def _td_bad(self, wc, t0, t1):
         """Брак за вікно: `stock.scrap` у стані `done` завдань РЦ (товар — виріб МО)."""
         scraps = (
             self.env["stock.scrap"]

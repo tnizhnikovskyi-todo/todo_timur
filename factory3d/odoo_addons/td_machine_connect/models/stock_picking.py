@@ -19,8 +19,8 @@ class StockPicking(models.Model):
             src = Stack.search([("location_id", "in", lines.location_id.ids)]) - dest
             try:
                 with self.env.cr.savepoint():
-                    src._f3d_refresh()
-                    dest._f3d_after_arrival(picking)
+                    src._td_refresh()
+                    dest._td_after_arrival(picking)
             except Exception:
                 _logger.exception("Стоси порталу для %s не оновлено", picking.name)
         return res

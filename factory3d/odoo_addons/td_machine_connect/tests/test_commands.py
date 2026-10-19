@@ -161,7 +161,7 @@ class TestCommands(F3DMachineCase):
         self.enable_write()
         Cmd = self.env["td.command"]
         fields = {"job": "WO00013", "qty": 14, "ref": "WH/MO/00233", "priority": 5}
-        cmd = Cmd._f3d_mc_create_command(self.sig_ua_cmd, "Store", fields, {"td_machine_id": self.m_ua.id})
+        cmd = Cmd._td_mc_create_command(self.sig_ua_cmd, "Store", fields, {"td_machine_id": self.m_ua.id})
         self.assertEqual(cmd.origin, "machine_connect")
         self.assertEqual(cmd.td_machine_id, self.m_ua)
         self.assertEqual(cmd.payload, {"method": "Store", **fields})
@@ -183,20 +183,20 @@ class TestCommands(F3DMachineCase):
                 self.enable_write()
                 turn_off()
                 with self.assertRaises(UserError) as cm:
-                    Cmd._f3d_mc_create_command(self.sig_ua_cmd, "Store", fields)
+                    Cmd._td_mc_create_command(self.sig_ua_cmd, "Store", fields)
                 self.assertIn(key, str(cm.exception))
         self.enable_write()
         self.assertEqual(Cmd.search_count([]), before)
         with self.assertRaisesRegex(UserError, "не відповідає формату"):
-            Cmd._f3d_mc_create_command(self.sig_g_cmd, "feed", {**GANTRY_FEED, "product": "DSP16 ANT"})
+            Cmd._td_mc_create_command(self.sig_g_cmd, "feed", {**GANTRY_FEED, "product": "DSP16 ANT"})
         with self.assertRaisesRegex(UserError, "не є сигналом команд верстатів"):
-            Cmd._f3d_mc_create_command(self.sig_ua_state, "Store", fields)
+            Cmd._td_mc_create_command(self.sig_ua_state, "Store", fields)
         self.assertEqual(Cmd.search_count([]), before)
 
     def test_payload_and_label(self):
         """AC-102: payload без змін, довідковий text — 63 символи + «…»."""
         self.enable_write()
-        cmd = self.env["td.command"]._f3d_mc_create_command(self.sig_g_cmd, "feed", LONG_FEED)
+        cmd = self.env["td.command"]._td_mc_create_command(self.sig_g_cmd, "feed", LONG_FEED)
         self.assertEqual(cmd.payload, {"op": "feed", **LONG_FEED})
         self.assertEqual(len(cmd.text), 64)
         self.assertTrue(cmd.text.endswith("…"))
@@ -206,12 +206,12 @@ class TestCommands(F3DMachineCase):
         """AC-102: telemetry без payload → запасний текст; довгий текст — UserError; результат без result_data."""
         self.enable_write()
         Cmd = self.env["td.command"]
-        with patch.object(type(Cmd), "_f3d_mc_payload_supported", return_value=False):
+        with patch.object(type(Cmd), "_td_mc_payload_supported", return_value=False):
             with self.assertRaisesRegex(UserError, "length: 66 > 64"):
-                Cmd._f3d_mc_create_command(self.sig_g_cmd, "feed", LONG_FEED)
+                Cmd._td_mc_create_command(self.sig_g_cmd, "feed", LONG_FEED)
             self.assertFalse(Cmd.search([("origin", "=", "machine_connect")]))
             fields = {**LONG_FEED, "product": "BOARD-T"}
-            cmd = Cmd._f3d_mc_create_command(self.sig_g_cmd, "feed", fields)
+            cmd = Cmd._td_mc_create_command(self.sig_g_cmd, "feed", fields)
         self.assertEqual(cmd.text, "feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001")
         self.assertFalse(cmd.payload)
         self.cmd_done(cmd, "wj-00412")
@@ -222,7 +222,7 @@ class TestCommands(F3DMachineCase):
     def test_result_reaction(self):
         """M-20: результат команди верстата — запис у чатері; без власників команда спокійно завершується."""
         self.enable_write()
-        cmd = self.env["td.command"]._f3d_mc_create_command(
+        cmd = self.env["td.command"]._td_mc_create_command(
             self.sig_ua_cmd,
             "Store",
             {"job": "WO00013", "qty": 14, "ref": "WH/MO/00233", "priority": 5},

@@ -68,7 +68,7 @@ class MrpWorkorder(models.Model):
         if self.state not in ("ready", "blocked"):
             raise UserError(_("Завдання %s уже в роботі або завершене.", self.display_name))
         machine = self.workcenter_id.sudo().td_machine_ids[:1]
-        cmd = self.env["td.command"]._f3d_mc_create_command(
+        cmd = self.env["td.command"]._td_mc_create_command(
             machine.sig_job_cmd_id,
             "Store",
             {

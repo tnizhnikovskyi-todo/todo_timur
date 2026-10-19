@@ -44,4 +44,4 @@ class F3dMachineEvent(models.Model):
     def _compute_message_rec(self):
         Message = self.env["td.machine.message"]
         for rec in self:
-            rec.message_rec_id = Message._f3d_match(rec.message_id)
+            rec.message_rec_id = Message._td_match(rec.message_id)

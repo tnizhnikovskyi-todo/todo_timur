@@ -5,7 +5,7 @@
         <field name="name">Повторити міграцію (верстати)</field>
         <field name="model_id" ref="model_td_machine"/>
         <field name="state">code</field>
-        <field name="code">action = env['td.machine']._f3d_run_migration()</field>
+        <field name="code">action = env['td.machine']._td_run_migration()</field>
         <field name="group_ids" eval="[(4, ref('td_factory3d.group_td_admin'))]"/>
     </record>
     <record id="action_td_downtime_confirm" model="ir.actions.server">

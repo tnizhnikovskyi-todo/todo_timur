@@ -67,11 +67,11 @@ class TestViewerProvider(F3DMachineCase):
         )
         self.m_cnc.write({"state": "fault", "state_since": self.kt("09:42"), "current_downtime_id": down.id})
         job_model = self.env["td.gantry.job"]
-        job_model._f3d_set_gantry_status(
+        job_model._td_set_gantry_status(
             {"state": "moving", "aisles_open": [2], "alarms": ["Вакуум"], "vacuum_kpa": 71}
         )
         self.stack_t1.write({"ws_qty": 40, "ws_seen": self.kt("10:29")})
-        self.stack_t1._f3d_refresh()
+        self.stack_t1._td_refresh()
         self.job = job_model.create(
             {
                 "state": "active",
@@ -105,7 +105,7 @@ class TestViewerProvider(F3DMachineCase):
         mo = self._setup_live()
         payload = self._payload()
         payload["productions"] = [{"name": mo.name, "supply": {"x": 1}}, {"name": "WH/MO/NO-SUPPLY"}]
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         saw = payload["workcenters"]["SAW-T"]
         self.assertEqual(
             {k: saw[k] for k in ("machine_state", "state_since", "link", "online", "oee", "availability", "performance",
@@ -149,45 +149,45 @@ class TestViewerProvider(F3DMachineCase):
 
     def test_no_oee_keeps_input(self):
         payload = self._payload()
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         saw, cnc = payload["workcenters"]["SAW-T"], payload["workcenters"]["CNC-T"]
         self.assertEqual((saw["oee"], cnc["oee"]), (0.1, 0.2))
         self.assertEqual(saw["status"], "idle")  # nodata: статус провайдера production
         self.assertFalse(saw["online"])
         self.assertEqual(saw["pieces_shift"], 0)
         self.m_cnc.state = "fault"
-        self.provider._f3d_viewer_collect(payload, {})
+        self.provider._td_viewer_collect(payload, {})
         self.assertEqual(payload["workcenters"]["CNC-T"]["status"], "stop")
         self.assertNotIn("downtime", payload["workcenters"]["CNC-T"])
         for empty in ({}, {"workcenters": None}, {"productions": "x", "locations": []}):
-            self.provider._f3d_viewer_collect(empty, {})
-        self.assertEqual(self.provider._f3d_viewer_collect({}, {}), None)
+            self.provider._td_viewer_collect(empty, {})
+        self.assertEqual(self.provider._td_viewer_collect({}, {}), None)
 
     def test_as_user(self):
         """Провайдер працює від користувача запиту (`group_td_user`)."""
         self._setup_live()
         payload = self._payload()
-        self.env["td.viewer.provider.machines"].with_user(self.user_f3d)._f3d_viewer_collect(payload, {})
+        self.env["td.viewer.provider.machines"].with_user(self.user_f3d)._td_viewer_collect(payload, {})
         self.assertEqual(payload["workcenters"]["SAW-T"]["machine_state"], "working")
         self.assertEqual(payload["equipment"]["GANTRY-1"]["gantry"]["state"], "moving")
 
     def test_bus_and_delta(self):
-        self.assertEqual(self.provider._f3d_sequence, 75)
-        self.assertEqual(self.provider._f3d_group, "td_factory3d.group_td_user")
-        self.assertEqual(self.provider._f3d_sections, ())
+        self.assertEqual(self.provider._td_sequence, 75)
+        self.assertEqual(self.provider._td_group, "td_factory3d.group_td_user")
+        self.assertEqual(self.provider._td_sections, ())
         self.assertEqual(
-            self.provider._f3d_viewer_bus_models(),
+            self.provider._td_viewer_bus_models(),
             ["mrp.workcenter", "stock.location", "maintenance.equipment", "mrp.production"],
         )
         self.assertFalse(self.provider._inherit and "td.viewer.provider" in str(self.provider._inherit))
         self._setup_live()
         patch_ = {"workcenters": {"SAW-T": {"code": "SAW-T", "status": "idle"}}}
-        self.provider._f3d_viewer_delta(patch_, {})
+        self.provider._td_viewer_delta(patch_, {})
         self.assertEqual(set(patch_), {"workcenters"})
         self.assertEqual(set(patch_["workcenters"]), {"SAW-T"})
         self.assertEqual(patch_["workcenters"]["SAW-T"]["machine_state"], "working")
         empty = {}
-        self.provider._f3d_viewer_delta(empty, {})
+        self.provider._td_viewer_delta(empty, {})
         self.assertEqual(empty, {})
 
     def test_notify(self):
@@ -195,5 +195,5 @@ class TestViewerProvider(F3DMachineCase):
             self.skipTest("td_viewer3d не встановлено")
         Event = type(self.env["td.viewer.event"])
         with patch.object(Event, "_notify") as notify:
-            self.m_saw._f3d_notify()
+            self.m_saw._td_notify()
         notify.assert_called_once_with("mrp.workcenter", ["SAW-T"], "state")

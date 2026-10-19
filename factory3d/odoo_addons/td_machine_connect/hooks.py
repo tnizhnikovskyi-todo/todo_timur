@@ -370,7 +370,7 @@ def stacks(env):
             op = env["stock.warehouse.orderpoint"].search([("location_id", "=", loc.id)], limit=1)
             if op:
                 stack.orderpoint_id = op
-        stack._f3d_refresh()
+        stack._td_refresh()
         res["stacks"] += 1
         res["orderpoints_linked"] += bool(stack.orderpoint_id)
     return res

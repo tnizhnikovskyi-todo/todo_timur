@@ -407,7 +407,7 @@ class F3DMachineMixin(F3DTelemetryMixin):
             "headers": {},
             "payload": payload,
         }
-        return self.env["td.push.event"].sudo()._f3d_receive([ev], self.col)
+        return self.env["td.push.event"].sudo()._td_receive([ev], self.col)
 
     def ev_ua(self, m, message_id, category, text, t, kind="alarm", active=True):
         payload = {

@@ -36,5 +36,5 @@ class F3dCutPlanImportWizard(models.TransientModel):
             plan = cutcsv.parse_plan(data)
         except ValueError as e:
             raise UserError(_("Файл плану: %s", e)) from e
-        cut_map._f3d_apply_plan(plan)
+        cut_map._td_apply_plan(plan)
         return {"type": "ir.actions.act_window_close"}
