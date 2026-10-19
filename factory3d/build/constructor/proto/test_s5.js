@@ -205,6 +205,126 @@ async function t_3d(page, errors) {
   ok('3D будівлі: група зі стінами/контуром і лінією спринклерів у сцені', g.ok && g.kinds.filter((k) => k === 'loop').length >= 3, JSON.stringify(g));
 }
 
+
+async function t_wizard(page, errors) {
+  await blank(page, 'S5W');
+  await page.evaluate(() => __f3d.E.setLeftTab('wizard'));
+  await page.click('#btnWizStart');
+  await page.waitForSelector('#wizSteps');
+  const s0 = await page.evaluate(() => ({ steps: document.querySelectorAll('#wizSteps button').length, step: __f3d.S.site.wizard_state.step }));
+  ok('майстер: 6 кроків, початок на кроці «Будівля»', s0.steps === 6 && s0.step === 0, JSON.stringify(s0));
+  // крок 1: застосувати (контур 60×30, колони сіткою 6×6, стіни по контуру)
+  await page.click('[data-w="walls"]');
+  await page.click('#btnWizApply');
+  await page.waitForTimeout(250);
+  const b = await page.evaluate(() => { const l = __f3d.S.layers.find((x) => x.kind === 'building'); return { bounds: l.bounds, cols: l.items.filter((i) => i.kind === 'column').length, walls: l.items.filter((i) => i.kind === 'wall').length, created: __f3d.S.site.wizard_state.created.items.length }; });
+  ok('крок «Будівля»: контур-прямокутник, колони сіткою (9×4), 4 стіни, створене записано у стан', b.bounds && b.bounds.length === 4 && b.cols === 36 && b.walls === 4 && b.created === 40, JSON.stringify(b));
+  // повторне «Застосувати» заміщує створене кроком, а не дублює
+  await page.click('#btnWizApply');
+  await page.waitForTimeout(200);
+  ok('повторне «Застосувати» замінює створене (без дублів)', (await page.evaluate(() => __f3d.S.layers.find((x) => x.kind === 'building').items.length)) === 40);
+  // крок 2: зони рівно
+  await page.click('#btnWizNext');
+  await page.waitForTimeout(150);
+  await page.click('#btnWizEven');
+  await page.waitForTimeout(150);
+  const zf = await page.evaluate(() => __f3d.S.site.wizard_state.form.zones.length);
+  ok('«Розкласти рівно»: дві зони у формі', zf === 2, String(zf));
+  await page.click('#btnWizApply');
+  await page.waitForTimeout(250);
+  const z = await page.evaluate(() => ({ zones: __f3d.S.slots.filter((s) => s.template === 'zone').length, fn: __f3d.S.slots.filter((s) => s.template === 'zone').map((s) => s.function_id) }));
+  ok('крок «Зони»: створено дві зони з функцією', z.zones === 2 && z.fn.every((f) => f != null), JSON.stringify(z));
+  // крок 3: ряди
+  await page.click('#btnWizNext');
+  await page.waitForTimeout(150);
+  await page.click('#btnWizApply');
+  await page.waitForTimeout(300);
+  const r = await page.evaluate(() => ({ racks: __f3d.S.slots.filter((s) => s.template === 'pallet_rack').length, created: __f3d.S.site.wizard_state.created.rows.length }));
+  ok('крок «Ряди»: створено ряди в обох зонах', r.racks >= 4 && r.racks === r.created, JSON.stringify(r));
+  // undo/redo правки майстра: один крок скасування = «Застосувати» кроку
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  const u = await page.evaluate(() => __f3d.S.slots.filter((s) => s.template === 'pallet_rack').length);
+  ok('Ctrl+Z скасовує крок «Ряди» (рядів немає)', u === 0, String(u));
+  await page.keyboard.press('Control+Shift+Z');
+  await page.waitForTimeout(300);
+  ok('Ctrl+Shift+Z повертає ряди кроку', (await page.evaluate(() => __f3d.S.slots.filter((s) => s.template === 'pallet_rack').length)) === r.racks);
+  await page.click('#btnWizApply');
+  await page.waitForTimeout(250);
+  ok('повторне «Застосувати» рядів замінює створене (без дублів)', (await page.evaluate(() => __f3d.S.slots.filter((s) => s.template === 'pallet_rack').length)) === r.racks);
+  // крок 4–6
+  await page.click('#btnWizNext');
+  await page.waitForSelector('#addrSite');
+  ok('крок «Адресація»: блок адресації площадки', true);
+  await page.click('#btnWizNext');
+  await page.waitForSelector('#wizIssues');
+  const nextOk = await page.evaluate(() => document.getElementById('btnWizNext').disabled);
+  ok('крок «Перевірки»: без помилок «Далі» відкрито', nextOk === false);
+  // помилка (заборона): стелаж поза будівлею закриває «Далі»
+  await page.evaluate(() => {
+    const { S, E } = __f3d;
+    const ly = S.layers.find((l) => l.kind === 'storage');
+    S.slots.push({ id: 'out', rid: null, etag: null, layer_id: ly.id, template: 'pallet_rack', code_prefix: 'OUT', x: 200, y: 200, rotation: 0, params: { bays: 3, levels: 3, bay_width: 2.7, depth: 1.1, level_height: 1.5 }, overrides: {}, parent_location_id: null });
+    E.commit({});
+    E.renderAll();
+  });
+  await page.waitForTimeout(200);
+  const blocked = await page.evaluate(() => ({ dis: document.getElementById('btnWizNext').disabled, txt: document.getElementById('wizIssues').textContent }));
+  ok('при помилці перевірки «Далі» закрито', blocked.dis === true && /Помилок/.test(blocked.txt), JSON.stringify(blocked));
+  await page.evaluate(() => { const { S, E } = __f3d; S.slots = S.slots.filter((s) => s.id !== 'out'); E.commit({}); E.renderAll(); });
+  await page.waitForTimeout(200);
+  await page.click('#btnWizNext');
+  await page.waitForSelector('#wizSummary');
+  const sm = await page.evaluate(() => document.getElementById('wizSummary').textContent + '|' + !!document.getElementById('btnWizPublish'));
+  ok('крок «План змін»: зведення створеного, кнопки застосування', /зон 2/.test(sm) && /true$/.test(sm), sm);
+  await page.click('#btnWizFinish');
+  await page.waitForTimeout(150);
+  ok('«Завершити майстер»: стан позначено завершеним, вкладка «Шари»', await page.evaluate(() => __f3d.S.site.wizard_state.done === true && __f3d.S.ui.leftTab === 'layers'));
+  // стан переживає перезавантаження
+  await flush(page);
+  await page.waitForTimeout(900);
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.dataset.ready === '1', null, { timeout: 30000 });
+  await page.waitForTimeout(800);
+  const st = await page.evaluate(() => ({ name: __f3d.S.site.name, done: __f3d.S.site.wizard_state && __f3d.S.site.wizard_state.done, zones: __f3d.S.site.wizard_state && __f3d.S.site.wizard_state.created.zones.length }));
+  ok('стан майстра зберігається в проєкті (після перезавантаження)', st.name === 'S5W' && st.done === true && st.zones === 2, JSON.stringify(st));
+}
+
+async function t_docs(page, errors) {
+  // специфікація (на площадці майстра є ряди)
+  await page.evaluate(() => __f3d.E.runDialog('spec'));
+  await page.waitForSelector('#specTable table');
+  const sp = await page.evaluate(() => ({ sum: document.getElementById('specSummary').textContent, rows: document.querySelectorAll('#specTable tbody tr').length, scopes: document.querySelectorAll('#specBody select')[0].options.length }));
+  ok('специфікація: підсумок і таблиця за типорозмірами, області (склад і зони)', /Стелажів: \d+/.test(sp.sum) && sp.rows > 0 && sp.scopes >= 3, JSON.stringify(sp));
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnSpecCsv')]);
+  const csv = fs.readFileSync(await dl.path(), 'utf8');
+  ok('специфікація: CSV з BOM, роздільник «;», рядки «Рама», «Балка»', csv.startsWith('﻿') && csv.includes(';') && /Рама/.test(csv) && /Балка/.test(csv), csv.slice(0, 100));
+  await page.click('#btnSpecPdf');
+  await page.waitForTimeout(200);
+  ok('специфікація: PDF у прототипі — «на сервері» (повідомлення)', /сервер/i.test(await page.evaluate(() => document.getElementById('toast').textContent)));
+  await page.evaluate(() => { const d = document.querySelector('dialog[open]'); d && d.close(); });
+  // план
+  await page.evaluate(() => __f3d.E.runDialog('planDoc'));
+  await page.waitForSelector('#planPrev svg');
+  const pl = await page.evaluate(() => { const svg = document.querySelector('#planPrev svg'); return { poly: svg.querySelectorAll('polygon').length, texts: [...svg.querySelectorAll('text')].map((t) => t.textContent), info: document.getElementById('planInfo').textContent }; });
+  ok('план: SVG з контуром, колонами, рядами й підписами, штамп і масштаб', pl.poly > 40 && pl.texts.some((t) => /^R\d-\d$/.test(t)) && pl.texts.some((t) => /Масштаб 1:\d+/.test(t)) && pl.texts.includes('Проєкт') && pl.texts.some((t) => /\d+(\.\d+)? м$/.test(t)), JSON.stringify(pl).slice(0, 300));
+  const a3 = await page.evaluate(() => document.querySelector('#planPrev svg').getAttribute('viewBox'));
+  await page.evaluate(() => { const sel = document.querySelectorAll('#planBody select'); sel[1].value = 'A4'; sel[1].dispatchEvent(new Event('change')); sel[2].value = 'portrait'; sel[2].dispatchEvent(new Event('change')); });
+  await page.waitForTimeout(150);
+  const a4 = await page.evaluate(() => document.querySelector('#planPrev svg').getAttribute('viewBox'));
+  ok('план: формат A3 альбомна (420×297) → A4 книжкова (210×297)', a3 === '0 0 420 297' && a4 === '0 0 210 297', a3 + ' → ' + a4);
+  const [svg] = await Promise.all([page.waitForEvent('download'), page.click('#btnPlanSvg')]);
+  ok('план: SVG-файл', /<svg/.test(fs.readFileSync(await svg.path(), 'utf8')));
+  const [png] = await Promise.all([page.waitForEvent('download'), page.click('#btnPlanPng')]);
+  const pngBuf = fs.readFileSync(await png.path());
+  ok('план: PNG 3200 px (сигнатура PNG, ширина)', pngBuf.slice(1, 4).toString() === 'PNG' && pngBuf.readUInt32BE(16) === 3200, String(pngBuf.length));
+  await page.click('#btnPlanPdf');
+  await page.waitForTimeout(200);
+  ok('план: PDF у прототипі — «на сервері»', /сервер/i.test(await page.evaluate(() => document.getElementById('toast').textContent)));
+  await page.evaluate(() => { const d = document.querySelector('dialog[open]'); d && d.close(); });
+}
+
 (async () => {
   const { browser, page, errors } = await launch();
   try {
@@ -214,6 +334,8 @@ async function t_3d(page, errors) {
     await t_items(page, errors);
     await t_checks(page, errors);
     await t_3d(page, errors);
+    await t_wizard(page, errors);
+    await t_docs(page, errors);
   } catch (e) {
     ok('виняток сценарію', false, e.stack || String(e));
   }

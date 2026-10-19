@@ -121,6 +121,48 @@ export function register(test) {
         assert.ok(c.isSimplePolygon(sq) && !c.isSimplePolygon([[0, 0], [10, 10], [10, 0], [0, 10]]));
         assert.deepEqual(c.contourOf(null, { length: 6, width: 4 }), [[0, 0], [6, 0], [6, 4], [0, 4]]);
     });
+
+    test("S5 специфікація стелажів: рами, балки, полиці, стійки, консолі, зв'язки, стяжки збігаються з Python (золота фікстура)", async () => {
+        await load("index.js");
+        const { buildSpec, specTables } = await load("spec.js");
+        const g = golden().spec;
+        const spec = buildSpec(g.slots);
+        assert.deepEqual(spec.summary, g.spec.summary);
+        assert.deepEqual(spec.totals, g.spec.totals);
+        assert.deepEqual(spec.types, g.spec.types);
+        assert.deepEqual(spec.pairs, g.spec.pairs);
+        assert.deepEqual(spec.racks, g.spec.racks);
+        assert.deepEqual(specTables(spec), g.tables);
+        // формули з інструкції: палетний ряд — рам = секцій + 1, балок = секцій × ярусів × 2; двосторонній — по кожному боку
+        const r1 = spec.racks.find((r) => r.code === "R1");
+        assert.deepEqual(r1.lines.filter((l) => l.key === "frame" || l.key === "beam").map((l) => [l.key, l.qty]), [["frame", 5], ["beam", 24]]);
+        const r3 = spec.racks.find((r) => r.code === "R3");
+        assert.deepEqual(r3.lines.filter((l) => l.key === "frame" || l.key === "beam" || l.key === "tie").map((l) => [l.key, l.qty]), [["frame", 6], ["beam", 40], ["tie", 3]]);
+        assert.equal(spec.racks.find((r) => r.code === "R1").zone, "Зона А");
+        assert.equal(spec.racks.find((r) => r.code === "R4").zone, "");
+        assert.ok(!spec.racks.some((r) => r.code === "F1"), "напільні місця — не стелажі");
+    });
+
+    test("S5 специфікація: CSV (BOM, «;»), порожня область, таблиці перегляду", async () => {
+        const { buildSpec, specTables } = await load("spec.js");
+        const { tableCsv } = await load("docs_ui.js");
+        const empty = buildSpec([]);
+        assert.equal(empty.summary.racks, 0);
+        assert.equal(specTables(empty)[1].rows.length, 0);
+        const csv = tableCsv({ columns: ["А", "Б;В"], rows: [["x", 1.5], ["a\"b", null]] });
+        assert.ok(csv.startsWith("\ufeff") && csv.includes('"Б;В"') && csv.includes("1,5") && csv.includes('"a""b"'));
+    });
+
+    test("S5 майстер: «Розкласти рівно» ділить область уздовж довшої сторони з проміжком", async () => {
+        await load("index.js");
+        const { evenZones } = await load("wizard.js");
+        const z = evenZones(3, { x0: 1, y0: 1, x1: 59, y1: 29 }, 1);
+        assert.equal(z.length, 3);
+        assert.deepEqual(z[0], { x0: 1, x1: 19.67, y0: 1, y1: 29 });
+        assert.ok(z[1].x0 - z[0].x1 > 0.99 && z[1].x0 - z[0].x1 < 1.01);
+        const v = evenZones(2, { x0: 0, y0: 0, x1: 10, y1: 40 }, 2);
+        assert.deepEqual(v, [{ y0: 0, y1: 19, x0: 0, x1: 10 }, { y0: 21, y1: 40, x0: 0, x1: 10 }]);
+    });
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
