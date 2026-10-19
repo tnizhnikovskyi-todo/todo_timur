@@ -41,12 +41,21 @@ class TestOeeDayFilter(F3DMachineCase):
                 rows = {d: Shift.create({"machine_id": self.m_saw.id, "date": d, "source": "machine"}) for d in days}
                 all_rows = Shift.browse([r.id for r in rows.values()])
                 base = [("id", "in", all_rows.ids)]
-                pick = lambda pred: all_rows.filtered(lambda r: pred(r.date))  # noqa: E731
+
+                def pick(pred, rows=all_rows):
+                    return rows.filtered(lambda row: pred(row.date))
+
                 self.assertEqual(Shift.search(base + [("is_today", "=", True)]), rows[today], now)
                 self.assertEqual(Shift.search(base + [("is_today", "!=", True)]), all_rows - rows[today], now)
-                self.assertEqual(Shift.search(base + [("is_this_week", "=", True)]), pick(lambda d: d >= week), now)
-                self.assertEqual(Shift.search(base + [("is_this_week", "=", False)]), pick(lambda d: d < week), now)
-                self.assertEqual(Shift.search(base + [("is_this_month", "=", True)]), pick(lambda d: d >= month), now)
+                self.assertEqual(
+                    Shift.search(base + [("is_this_week", "=", True)]), pick(lambda d, week=week: d >= week), now
+                )
+                self.assertEqual(
+                    Shift.search(base + [("is_this_week", "=", False)]), pick(lambda d, week=week: d < week), now
+                )
+                self.assertEqual(
+                    Shift.search(base + [("is_this_month", "=", True)]), pick(lambda d, month=month: d >= month), now
+                )
                 self.assertEqual(sorted(all_rows.filtered("is_today").mapped("date")), [today], now)
                 all_rows.unlink()
 
