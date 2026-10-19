@@ -90,7 +90,8 @@ class F3dGantryStack(models.Model):
         store=True,
         index=True,
         string="Нижче мінімуму",
-        help="Є правило поповнення, і кількість у порталі менша за його мінімум (домен не вміє порівнювати поле з полем).",
+        help="Є правило поповнення, і кількість у порталі менша за його мінімум (домен не вміє порівнювати поле з "
+        "полем).",
     )
     job_ids = fields.One2many("td.gantry.job", "stack_id", string="Завдання")
     note = fields.Text()
