@@ -7,11 +7,17 @@ SYS_LABEL = {"spark": "Іскрогасіння", "smoke": "Димовидале
 
 # R-13 п. 8: короткий підпис (systems_text)
 SHORT_LABEL = {
-    ("spark", "ok"): "норма", ("spark", "active"): "спрацювання", ("spark", "fault"): "несправність",
+    ("spark", "ok"): "норма",
+    ("spark", "active"): "спрацювання",
+    ("spark", "fault"): "несправність",
     ("spark", "unknown"): "немає даних",
-    ("smoke", "ok"): "норма", ("smoke", "active"): "спрацювання", ("smoke", "fault"): "несправність",
-    ("smoke", "battery"): "від АКБ", ("smoke", "unknown"): "немає даних",
-    ("sprinkler", "ok"): "очікування", ("sprinkler", "low_pressure"): "низький тиск",
+    ("smoke", "ok"): "норма",
+    ("smoke", "active"): "спрацювання",
+    ("smoke", "fault"): "несправність",
+    ("smoke", "battery"): "від АКБ",
+    ("smoke", "unknown"): "немає даних",
+    ("sprinkler", "ok"): "очікування",
+    ("sprinkler", "low_pressure"): "низький тиск",
     ("sprinkler", "unknown"): "немає даних",
 }
 
@@ -27,7 +33,8 @@ class F3dFireSystem(models.Model):
     name = fields.Char(size=128, required=True)
     sequence = fields.Integer(default=10)
     system_type = fields.Selection(
-        [("spark", "Іскрогасіння"), ("smoke", "Димовидалення"), ("sprinkler", "Спринклери")], required=True)
+        [("spark", "Іскрогасіння"), ("smoke", "Димовидалення"), ("sprinkler", "Спринклери")], required=True
+    )
     panel_id = fields.Many2one("td.fire.panel", required=True, ondelete="cascade")
     equipment_id = fields.Many2one("maintenance.equipment", ondelete="set null")
     vents_equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання люків", ondelete="set null")
@@ -42,9 +49,19 @@ class F3dFireSystem(models.Model):
     pressure_bar = fields.Float(related="pressure_signal_id.last_value", string="Тиск, бар")
     pressure_min_bar = fields.Float(related="pressure_signal_id.alarm_low", string="Мінімум, бар")
     state = fields.Selection(
-        [("unknown", "Невідомо"), ("ok", "Норма"), ("active", "Спрацювання"), ("fault", "Несправність"),
-         ("battery", "Від акумуляторів"), ("low_pressure", "Низький тиск")],
-        default="unknown", readonly=True, index=True, tracking=True)
+        [
+            ("unknown", "Невідомо"),
+            ("ok", "Норма"),
+            ("active", "Спрацювання"),
+            ("fault", "Несправність"),
+            ("battery", "Від акумуляторів"),
+            ("low_pressure", "Низький тиск"),
+        ],
+        default="unknown",
+        readonly=True,
+        index=True,
+        tracking=True,
+    )
     state_text = fields.Char(compute="_compute_state_text")
     state_ts = fields.Datetime(readonly=True)
     stale = fields.Boolean(readonly=True)
@@ -85,7 +102,9 @@ class F3dFireSystem(models.Model):
         for rec in self:
             rec.panels_needed = (
                 math.ceil(rec.vent_count * rec.drive_current_a / rec.panel_current_a - 1e-9)
-                if rec.panel_current_a else 0)
+                if rec.panel_current_a
+                else 0
+            )
             rec.vent_area_m2 = rec.vent_count * aa
 
     @api.depends("state", "system_type", "count_today", "pressure_bar", "pressure_min_bar", "signal_water_id.last_text")
@@ -104,13 +123,18 @@ class F3dFireSystem(models.Model):
                     if rec.signal_water_id.last_text == "low":
                         text += " — немає тиску води"
             elif t == "smoke":
-                text = {"ok": "Клапани закриті, живлення від мережі", "active": "Клапани відкриті",
-                        "fault": "Несправність щита D+H",
-                        "battery": "Живлення від акумуляторів (резерв 72 год)"}.get(s, "Немає даних")
+                text = {
+                    "ok": "Клапани закриті, живлення від мережі",
+                    "active": "Клапани відкриті",
+                    "fault": "Несправність щита D+H",
+                    "battery": "Живлення від акумуляторів (резерв 72 год)",
+                }.get(s, "Немає даних")
             else:
                 if s == "low_pressure":
                     text = "Спринклерна система: тиск %s бар нижче норми %s бар" % (
-                        _fmt(rec.pressure_bar), _fmt(rec.pressure_min_bar))
+                        _fmt(rec.pressure_bar),
+                        _fmt(rec.pressure_min_bar),
+                    )
                 else:
                     text = "Спринклерна система в режимі очікування"
             rec.state_text = text
@@ -135,26 +159,39 @@ class F3dFireSystem(models.Model):
         self.write(vals)
         if etype:
             self.env["td.fire.event"]._log(
-                etype, self.code, ts, text or self.state_text, system_id=self.id, panel_id=self.panel_id.id)
+                etype, self.code, ts, text or self.state_text, system_id=self.id, panel_id=self.panel_id.id
+            )
         from .td_fire_panel import fire_notify
+
         fire_notify(self.env, "td.fire.panel", [self.panel_id.code], "state")
 
     def action_f3d_show(self):
         self.ensure_one()
         if not self.equipment_id:
             from odoo.exceptions import UserError
+
             raise UserError("Система не прив'язана до обладнання зі сцени.")
         return self.equipment_id.action_f3d_show()
 
     def action_view_devices(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": "Пристрої системи", "res_model": "td.fire.device",
-                "view_mode": "list,form", "domain": [("system_id", "=", self.id)]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Пристрої системи",
+            "res_model": "td.fire.device",
+            "view_mode": "list,form",
+            "domain": [("system_id", "=", self.id)],
+        }
 
     def action_view_events(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": "Події системи", "res_model": "td.fire.event",
-                "view_mode": "list,form,graph", "domain": [("system_id", "=", self.id)]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Події системи",
+            "res_model": "td.fire.event",
+            "view_mode": "list,form,graph",
+            "domain": [("system_id", "=", self.id)],
+        }
 
 
 def _fmt(value):

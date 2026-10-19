@@ -7,11 +7,16 @@ from ..tools import sanitize, states
 
 ADDRESS_RE = re.compile(r"\b[0-4]\.[A-Z0-9-]{2,8}\.[0-9]{2}\b")
 OBJECT_ALIASES = {
-    "life-safety-zone": "LSZ", "life-safety-point": "LSP", "binary-input": "BI", "binary-value": "BV",
-    "analog-value": "AV", "multi-state-value": "MSV", "positive-integer-value": "PIV"}
+    "life-safety-zone": "LSZ",
+    "life-safety-point": "LSP",
+    "binary-input": "BI",
+    "binary-value": "BV",
+    "analog-value": "AV",
+    "multi-state-value": "MSV",
+    "positive-integer-value": "PIV",
+}
 REQUIRED = (("device", int), ("object", str), ("instance", int), ("event_type", str), ("ts", str))
-BACK_TO_NORMAL = {"alarm": "reset", "prealarm": "reset", "fault": "fault_ok", "disabled": "enabled",
-                  "test": "test_end"}
+BACK_TO_NORMAL = {"alarm": "reset", "prealarm": "reset", "fault": "fault_ok", "disabled": "enabled", "test": "test_end"}
 
 
 class F3dPushHandlerFire(models.AbstractModel):
@@ -45,9 +50,14 @@ class F3dPushHandlerFire(models.AbstractModel):
         obj = OBJECT_ALIASES.get(obj.lower(), obj.upper())
         text = sanitize.clean_text(payload.get("message_text") or "", 500)
         return {
-            "device": payload["device"], "object": obj, "instance": payload["instance"], "ts": ts,
-            "from": str(payload.get("from_state") or "")[:32], "to": str(payload.get("to_state") or "")[:32],
-            "text": text}
+            "device": payload["device"],
+            "object": obj,
+            "instance": payload["instance"],
+            "ts": ts,
+            "from": str(payload.get("from_state") or "")[:32],
+            "to": str(payload.get("to_state") or "")[:32],
+            "text": text,
+        }
 
     def _td_handle_push(self, route, event):
         if route != "bacnet_event":
@@ -56,7 +66,7 @@ class F3dPushHandlerFire(models.AbstractModel):
         env = self.env
         Event = env["td.fire.event"].sudo()
         panel = env["td.fire.panel"].sudo().search([], limit=1)
-        device_no = ((panel.source_id.params or {}).get("device") if panel.source_id else None)
+        device_no = (panel.source_id.params or {}).get("device") if panel.source_id else None
         if device_no is not None and device_no != data["device"]:
             return None  # X-44: чужий device instance, DEBUG
         code = panel.code or "FACP-1"
@@ -82,10 +92,16 @@ class F3dPushHandlerFire(models.AbstractModel):
         if match:
             found_dev = env["td.fire.device"].sudo().search([("address", "=", match.group(0))], limit=1)
         if etype:
-            existing = Event.search([
-                ("etype", "=", etype), ("object_code", "=", code),
-                ("ts", ">=", ts - timedelta(seconds=5)), ("ts", "<=", ts + timedelta(seconds=5))],
-                order="ts desc, id desc", limit=1)
+            existing = Event.search(
+                [
+                    ("etype", "=", etype),
+                    ("object_code", "=", code),
+                    ("ts", ">=", ts - timedelta(seconds=5)),
+                    ("ts", "<=", ts + timedelta(seconds=5)),
+                ],
+                order="ts desc, id desc",
+                limit=1,
+            )
             if existing:
                 vals = {}
                 if message:
@@ -98,8 +114,17 @@ class F3dPushHandlerFire(models.AbstractModel):
         text = "BACnet: %s" % (message or "%s:%s %s → %s" % (obj, inst, data["from"], data["to"]))
         if found_dev:
             links["device_id"] = found_dev.id
-        ev = Event._log("bacnet", code, ts, text, source="bacnet", message_text=message or False,
-                        raw_from=data["from"] or False, raw_to=data["to"] or False, **links)
+        ev = Event._log(
+            "bacnet",
+            code,
+            ts,
+            text,
+            source="bacnet",
+            message_text=message or False,
+            raw_from=data["from"] or False,
+            raw_to=data["to"] or False,
+            **links,
+        )
         return ev.id
 
     @api.model

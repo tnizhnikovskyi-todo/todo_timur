@@ -1,4 +1,5 @@
 """Геометрія пожежної безпеки (SPEC R-02, R-03, R-04): сітки покриття, відстані. Чисті функції, без ORM."""
+
 import math
 
 INF_GAP = 9999.0  # значення «розрив необмежений» (немає пристроїв), що зберігається в Float-полі
@@ -68,8 +69,12 @@ def plant_grid_gap(points, length, width, step=2.0):
 def site_bounds(env):
     """Територія CB-12: (x0, y0, x1, y1) із параметрів td.base.site_*."""
     get = env["ir.config_parameter"].sudo().get_param
-    return (float(get("td.base.site_x0_m", -32)), float(get("td.base.site_y0_m", -30)),
-            float(get("td.base.site_x1_m", 182)), float(get("td.base.site_y1_m", 100)))
+    return (
+        float(get("td.base.site_x0_m", -32)),
+        float(get("td.base.site_y0_m", -30)),
+        float(get("td.base.site_x1_m", 182)),
+        float(get("td.base.site_y1_m", 100)),
+    )
 
 
 def plant_size(env):

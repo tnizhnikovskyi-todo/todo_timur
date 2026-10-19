@@ -11,8 +11,14 @@ from ..tools.sanitize import clean_text
 
 LINKS = ("panel", "loop", "zone", "device", "system", "drill", "signal", "request")
 EXTRA = ("message_text", "raw_from", "raw_to", "note", "in_drill", "user_id", "scene_code")
-GROUP_SCENE = {"mcp": "FA-MCP", "sounder": "FA-SND", "flame": "FA-FLAME", "spark_detector": "SPARK-1",
-               "spark_nozzle": "SPARK-1", "smoke_vent": "SMOKE-VENTS"}
+GROUP_SCENE = {
+    "mcp": "FA-MCP",
+    "sounder": "FA-SND",
+    "flame": "FA-FLAME",
+    "spark_detector": "SPARK-1",
+    "spark_nozzle": "SPARK-1",
+    "smoke_vent": "SMOKE-VENTS",
+}
 LEVEL_TO_PAYLOAD = {"info": "info", "warn": "warn", "alarm": "bad"}
 WRITABLE = {"ack", "ack_user_id", "ack_ts", "note"}
 
@@ -28,7 +34,8 @@ class F3dFireEvent(models.Model):
     etype = fields.Selection(ETYPES, string="Тип", required=True, index=True)
     kind = fields.Selection(KINDS, compute="_compute_kind", store=True, index=True)
     level = fields.Selection(
-        [("info", "Інформація"), ("warn", "Попередження"), ("alarm", "Тривога")], required=True, index=True)
+        [("info", "Інформація"), ("warn", "Попередження"), ("alarm", "Тривога")], required=True, index=True
+    )
     object_code = fields.Char(string="Об'єкт", size=32, required=True, index=True, default="FACP-1")
     scene_code = fields.Char(string="Код у 3D", size=32)
     panel_id = fields.Many2one("td.fire.panel", ondelete="set null", index=True)
@@ -44,8 +51,18 @@ class F3dFireEvent(models.Model):
     text = fields.Char(string="Подія", size=500, required=True)
     message_text = fields.Char(string="Текст приладу", size=500)
     source = fields.Selection(
-        [("signal", "Сигнал"), ("bacnet", "Повідомлення BACnet"), ("cron", "Звірка"), ("drill", "Навчання"),
-         ("manual", "Вручну"), ("demo", "Демо"), ("system", "Модуль")], required=True, default="signal")
+        [
+            ("signal", "Сигнал"),
+            ("bacnet", "Повідомлення BACnet"),
+            ("cron", "Звірка"),
+            ("drill", "Навчання"),
+            ("manual", "Вручну"),
+            ("demo", "Демо"),
+            ("system", "Модуль"),
+        ],
+        required=True,
+        default="signal",
+    )
     dedup_key = fields.Char(size=96, required=True, index=True, copy=False)
     in_drill = fields.Boolean(string="Під час навчання")
     ack_required = fields.Boolean(compute="_compute_ack_required")
@@ -78,9 +95,11 @@ class F3dFireEvent(models.Model):
     @api.model
     def _scene_code(self, vals):
         env = self.env
-        device, zone, system = (env["td.fire.device"].browse(vals.get("device_id")),
-                                env["td.fire.zone"].browse(vals.get("zone_id")),
-                                env["td.fire.system"].browse(vals.get("system_id")))
+        device, zone, system = (
+            env["td.fire.device"].browse(vals.get("device_id")),
+            env["td.fire.zone"].browse(vals.get("zone_id")),
+            env["td.fire.system"].browse(vals.get("system_id")),
+        )
         if device:
             if device.type in GROUP_SCENE:
                 return GROUP_SCENE[device.type]
@@ -94,8 +113,10 @@ class F3dFireEvent(models.Model):
             zone = getattr(drill, "zone_id", False)
             return zone.code if zone and "code" in zone._fields else False
         if vals.get("loop_id") or vals.get("panel_id"):
-            panel = env["td.fire.panel"].browse(vals.get("panel_id")) or env["td.fire.loop"].browse(
-                vals["loop_id"]).panel_id
+            panel = (
+                env["td.fire.panel"].browse(vals.get("panel_id"))
+                or env["td.fire.loop"].browse(vals["loop_id"]).panel_id
+            )
             return panel.code
         return False
 
@@ -120,20 +141,30 @@ class F3dFireEvent(models.Model):
             raise TypeError("_log: невідомі аргументи %s" % sorted(links))
         existing = self.search([("dedup_key", "=", key)], limit=1)
         if existing:
-            fill = {name: vals[name] for name in ("message_text", "request_id")
-                    if vals.get(name) and not existing[name]}
+            fill = {
+                name: vals[name] for name in ("message_text", "request_id") if vals.get(name) and not existing[name]
+            }
             if fill:
                 existing.write(fill)
             return existing
         vals["in_drill"] = vals.get("in_drill") or (
-            "td.fire.drill" in self.env and bool(self.env["td.fire.drill"].search_count(
-                [("state", "=", "running")])))
+            "td.fire.drill" in self.env and bool(self.env["td.fire.drill"].search_count([("state", "=", "running")]))
+        )
         vals["scene_code"] = vals.get("scene_code") or self._scene_code(vals)
         if vals.get("message_text"):
             vals["message_text"] = clean_text(vals["message_text"], 500)
         vals.setdefault("user_id", self.env.ref("base.user_root").id)
-        vals.update({"etype": etype, "level": level, "object_code": object_code, "ts": ts,
-                     "text": clean_text(text, 500) or etype, "source": source, "dedup_key": key})
+        vals.update(
+            {
+                "etype": etype,
+                "level": level,
+                "object_code": object_code,
+                "ts": ts,
+                "text": clean_text(text, 500) or etype,
+                "source": source,
+                "dedup_key": key,
+            }
+        )
         try:
             with self.env.cr.savepoint():
                 return self.create(vals)
@@ -152,8 +183,12 @@ class F3dFireEvent(models.Model):
                     vals.setdefault("level", "info")
                     vals.setdefault("source", "manual")
                 ts = fields.Datetime.to_datetime(vals.get("ts")) or fields.Datetime.now()
-                if (vals.get("etype") != "manual" or vals.get("level") != "info"
-                        or vals.get("source") != "manual" or ts > limit):
+                if (
+                    vals.get("etype") != "manual"
+                    or vals.get("level") != "info"
+                    or vals.get("source") != "manual"
+                    or ts > limit
+                ):
                     raise AccessError("Користувач може додати лише коментар до журналу (тип «Коментар»).")
         for vals in vals_list:
             if vals.get("etype") == "manual" and not vals.get("dedup_key"):
@@ -187,8 +222,13 @@ class F3dFireEvent(models.Model):
         for name in ("device_id", "zone_id", "system_id", "drill_id", "loop_id", "panel_id"):
             target = self[name]
             if target:
-                return {"type": "ir.actions.act_window", "res_model": target._name, "res_id": target.id,
-                        "view_mode": "form", "target": "current"}
+                return {
+                    "type": "ir.actions.act_window",
+                    "res_model": target._name,
+                    "res_id": target.id,
+                    "view_mode": "form",
+                    "target": "current",
+                }
         raise UserError("Подія не прив'язана до жодного об'єкта.")
 
     def action_f3d_show(self):
@@ -201,5 +241,9 @@ class F3dFireEvent(models.Model):
 
     def _payload_item(self):
         self.ensure_one()
-        return {"time": local(self.ts), "level": LEVEL_TO_PAYLOAD[self.level],
-                "code": self.scene_code or self.object_code, "text": self.text}
+        return {
+            "time": local(self.ts),
+            "level": LEVEL_TO_PAYLOAD[self.level],
+            "code": self.scene_code or self.object_code,
+            "text": self.text,
+        }

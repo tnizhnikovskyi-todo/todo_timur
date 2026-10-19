@@ -1,4 +1,5 @@
 """Навчальна пожежна тривога (SPEC M-11…M-11f, R-15…R-18, §10.4)."""
+
 import logging
 import time
 from datetime import timedelta
@@ -13,10 +14,16 @@ from .td_fire_panel import fire_notify
 _logger = logging.getLogger(__name__)
 
 AUTO_KEYS = [
-    ("none", "Вручну"), ("detector", "Тривога/тест зони на приладі"), ("sounders", "Оповіщувачі увімкнено"),
-    ("brigade", "Передача на пульт"), ("ventilation", "Вентиляцію зупинено"),
-    ("smoke", "Клапани димовидалення відкрито"), ("doors", "Двері розблоковано"),
-    ("evacuation", "Перший вихід людей"), ("machines", "Верстати зони зупинено")]
+    ("none", "Вручну"),
+    ("detector", "Тривога/тест зони на приладі"),
+    ("sounders", "Оповіщувачі увімкнено"),
+    ("brigade", "Передача на пульт"),
+    ("ventilation", "Вентиляцію зупинено"),
+    ("smoke", "Клапани димовидалення відкрито"),
+    ("doors", "Двері розблоковано"),
+    ("evacuation", "Перший вихід людей"),
+    ("machines", "Верстати зони зупинено"),
+]
 RESULTS = [("ok", "Пройдено"), ("remarks", "Пройдено із зауваженнями"), ("failed", "Не пройдено")]
 SOURCE_MAP = {"hr_attendance": "attendance", "access": "access"}
 LEAD = timedelta(seconds=60)
@@ -42,23 +49,45 @@ class F3dFireDrill(models.Model):
     title = fields.Char(string="Назва", size=128, required=True, default="Навчальна пожежна тривога")
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company, index=True)
     state = fields.Selection(
-        [("draft", "Чернетка"), ("planned", "Заплановано"), ("running", "Триває"),
-         ("evaluating", "Оцінювання"), ("done", "Завершено"), ("cancelled", "Скасовано")],
-        string="Стан", default="draft", required=True, index=True, tracking=True)
+        [
+            ("draft", "Чернетка"),
+            ("planned", "Заплановано"),
+            ("running", "Триває"),
+            ("evaluating", "Оцінювання"),
+            ("done", "Завершено"),
+            ("cancelled", "Скасовано"),
+        ],
+        string="Стан",
+        default="draft",
+        required=True,
+        index=True,
+        tracking=True,
+    )
     origin = fields.Selection(
         [("manual", "Вручну"), ("panel", "З приладу (тест)"), ("demo", "Демо")],
-        string="Походження", default="manual", required=True, readonly=True)
+        string="Походження",
+        default="manual",
+        required=True,
+        readonly=True,
+    )
     mode = fields.Selection(
         [("sim", "Емулятор"), ("panel_test", "Тест приладу"), ("tabletop", "Настільне")],
-        string="Режим", required=True, default="panel_test", tracking=True)
+        string="Режим",
+        required=True,
+        default="panel_test",
+        tracking=True,
+    )
     planned_ts = fields.Datetime(string="Заплановано на", tracking=True)
-    zone_id = fields.Many2one("td.fire.zone", string="Зона пожежі", required=True, ondelete="restrict",
-                              tracking=True)
+    zone_id = fields.Many2one("td.fire.zone", string="Зона пожежі", required=True, ondelete="restrict", tracking=True)
     device_id = fields.Many2one(
-        "td.fire.device", string="Сповіщувач", ondelete="set null",
-        domain="[('zone_id', '=', zone_id), ('is_detector', '=', True)]")
-    template_id = fields.Many2one("td.fire.drill.template", string="Шаблон", ondelete="set null",
-                                  default=lambda self: self._default_template())
+        "td.fire.device",
+        string="Сповіщувач",
+        ondelete="set null",
+        domain="[('zone_id', '=', zone_id), ('is_detector', '=', True)]",
+    )
+    template_id = fields.Many2one(
+        "td.fire.drill.template", string="Шаблон", ondelete="set null", default=lambda self: self._default_template()
+    )
     responsible_id = fields.Many2one("res.users", string="Відповідальний", default=lambda self: self.env.user)
     start_ts = fields.Datetime(string="Початок", readonly=True)
     end_ts = fields.Datetime(string="Завершення", readonly=True)
@@ -69,26 +98,35 @@ class F3dFireDrill(models.Model):
     real_alarm = fields.Boolean(string="Справжня тривога під час навчання", readonly=True)
     step_ids = fields.One2many("td.fire.drill.step", "drill_id", string="Кроки", copy=True)
     person_ids = fields.One2many(
-        "td.fire.drill.person", "drill_id", string="Люди", copy=False,
-        groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user")
+        "td.fire.drill.person",
+        "drill_id",
+        string="Люди",
+        copy=False,
+        groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user",
+    )
     event_ids = fields.One2many("td.fire.event", "drill_id", string="Події", readonly=True)
     steps_done = fields.Integer(compute="_compute_steps", store=True)
     steps_total = fields.Integer(compute="_compute_steps", store=True)
     on_site_count = fields.Integer(string="На об'єкті", compute="_compute_people", store=True, compute_sudo=True)
     evacuated_count = fields.Integer(string="Вийшли", compute="_compute_people", store=True, compute_sudo=True)
-    present_count = fields.Integer(string="Є на перекличці", compute="_compute_people", store=True,
-                                   compute_sudo=True)
+    present_count = fields.Integer(string="Є на перекличці", compute="_compute_people", store=True, compute_sudo=True)
     missing_count = fields.Integer(string="Не знайдено", compute="_compute_people", store=True, compute_sudo=True)
     evac_time_s = fields.Integer(string="Час евакуації, с", readonly=True)
-    evac_pct = fields.Float(string="Евакуовано, %", compute="_compute_people", store=True, compute_sudo=True,
-                            digits=(5, 1))
+    evac_pct = fields.Float(
+        string="Евакуовано, %", compute="_compute_people", store=True, compute_sudo=True, digits=(5, 1)
+    )
     time_limit_s = fields.Integer(string="Норматив часу, с", default=lambda self: self._default_time_limit())
     data_quality = fields.Selection(
-        [("full", "Повні"), ("partial", "Неповні")], string="Якість даних", compute="_compute_people",
-        store=True, compute_sudo=True)
+        [("full", "Повні"), ("partial", "Неповні")],
+        string="Якість даних",
+        compute="_compute_people",
+        store=True,
+        compute_sudo=True,
+    )
     passage_source = fields.Char(string="Джерело проходів", size=32, readonly=True)
-    result_suggested = fields.Selection(RESULTS, string="Запропонований результат",
-                                        compute="_compute_result_suggested", store=True)
+    result_suggested = fields.Selection(
+        RESULTS, string="Запропонований результат", compute="_compute_result_suggested", store=True
+    )
     result = fields.Selection(RESULTS, string="Результат", tracking=True)
     conclusions = fields.Text(string="Висновки")
     remarks = fields.Text(string="Зауваження й заходи")
@@ -148,16 +186,28 @@ class F3dFireDrill(models.Model):
             rec.evac_pct = round((evacuated + present) / on_site * 100.0, 1) if on_site else 100.0
             rec.data_quality = "partial" if (present + missing > 0 or on_site == 0) else "full"
 
-    @api.depends("state", "missing_count", "evac_time_s", "time_limit_s", "data_quality", "real_alarm",
-                 "steps_done", "steps_total")
+    @api.depends(
+        "state",
+        "missing_count",
+        "evac_time_s",
+        "time_limit_s",
+        "data_quality",
+        "real_alarm",
+        "steps_done",
+        "steps_total",
+    )
     def _compute_result_suggested(self):
         for rec in self:
             if rec.state not in ("evaluating", "done"):
                 rec.result_suggested = False
             elif rec.missing_count > 0:
                 rec.result_suggested = "failed"
-            elif (rec.evac_time_s > rec.time_limit_s or rec.data_quality == "partial" or rec.real_alarm
-                  or rec.steps_done < rec.steps_total):
+            elif (
+                rec.evac_time_s > rec.time_limit_s
+                or rec.data_quality == "partial"
+                or rec.real_alarm
+                or rec.steps_done < rec.steps_total
+            ):
                 rec.result_suggested = "remarks"
             else:
                 rec.result_suggested = "ok"
@@ -185,8 +235,7 @@ class F3dFireDrill(models.Model):
     def _check_device_zone(self):
         for rec in self:
             if rec.device_id and rec.device_id.zone_id != rec.zone_id:
-                raise ValidationError("Сповіщувач %s не належить зоні %s." % (
-                    rec.device_id.address, rec.zone_id.code))
+                raise ValidationError("Сповіщувач %s не належить зоні %s." % (rec.device_id.address, rec.zone_id.code))
 
     @api.constrains("state")
     def _check_single_running(self):
@@ -219,8 +268,7 @@ class F3dFireDrill(models.Model):
     def _fill_steps(self):
         """Кроки з шаблона (A-29): плейсхолдери {detector}, {zone}, {sounders}; невідомі лишаються як є."""
         for rec in self:
-            sounders = self.env["td.fire.device"].sudo().search_count(
-                [("type", "=", "sounder"), ("active", "=", True)])
+            sounders = self.env["td.fire.device"].sudo().search_count([("type", "=", "sounder"), ("active", "=", True)])
             ctx = _SafeDict(detector=rec.device_id.address or "—", zone=rec.zone_id.name, sounders=sounders)
             commands = [Command.clear()]
             for step in rec.template_id.sudo().step_ids:
@@ -228,9 +276,17 @@ class F3dFireDrill(models.Model):
                     text = step.text.format_map(ctx)
                 except (ValueError, IndexError, KeyError, AttributeError):
                     text = step.text
-                commands.append(Command.create({
-                    "sequence": step.sequence, "t_plan_s": step.t_plan_s, "who": step.who, "text": text,
-                    "auto_key": step.auto_key}))
+                commands.append(
+                    Command.create(
+                        {
+                            "sequence": step.sequence,
+                            "t_plan_s": step.t_plan_s,
+                            "who": step.who,
+                            "text": text,
+                            "auto_key": step.auto_key,
+                        }
+                    )
+                )
             rec.write({"step_ids": commands})
 
     # --- переходи ----------------------------------------------------------------------------------------
@@ -241,8 +297,17 @@ class F3dFireDrill(models.Model):
     def _log_event(self, etype, text, ts, key=None, **extra):
         self.ensure_one()
         return self.env["td.fire.event"]._log(
-            etype, self.zone_id.code, ts, text, source="drill", key=key or "%s:%s" % (etype, self.name),
-            zone_id=self.zone_id.id, device_id=self.device_id.id or False, drill_id=self.id, **extra)
+            etype,
+            self.zone_id.code,
+            ts,
+            text,
+            source="drill",
+            key=key or "%s:%s" % (etype, self.name),
+            zone_id=self.zone_id.id,
+            device_id=self.device_id.id or False,
+            drill_id=self.id,
+            **extra,
+        )
 
     def action_plan(self):
         for rec in self:
@@ -261,8 +326,9 @@ class F3dFireDrill(models.Model):
                 raise UserError("Почати можна лише чернетку або заплановане навчання.")
             if not rec.zone_id:
                 raise UserError("Вкажіть зону пожежі.")
-            other = self.sudo().search([("state", "=", "running"), ("company_id", "=", rec.company_id.id),
-                                        ("id", "!=", rec.id)], limit=1)
+            other = self.sudo().search(
+                [("state", "=", "running"), ("company_id", "=", rec.company_id.id), ("id", "!=", rec.id)], limit=1
+            )
             if other:
                 raise UserError("Уже триває навчання %s." % other.name)
             start = fields.Datetime.to_datetime(ts) or fields.Datetime.now()
@@ -282,15 +348,29 @@ class F3dFireDrill(models.Model):
                 if emp in seen or emp not in employees:
                     continue
                 seen.add(emp)
-                lines.append(Command.create({
-                    "seq": len(lines) + 1, "employee_id": emp, "since": person["since"], "source": person_source}))
-            rec.sudo().write({"state": "running", "start_ts": start, "end_ts": False, "evac_time_s": 0,
-                              "passage_source": key, "person_ids": [Command.clear()] + lines})
+                lines.append(
+                    Command.create(
+                        {"seq": len(lines) + 1, "employee_id": emp, "since": person["since"], "source": person_source}
+                    )
+                )
+            rec.sudo().write(
+                {
+                    "state": "running",
+                    "start_ts": start,
+                    "end_ts": False,
+                    "evac_time_s": 0,
+                    "passage_source": key,
+                    "person_ids": [Command.clear()] + lines,
+                }
+            )
             if not rec.step_ids:
                 rec._fill_steps()
             rec.step_ids.sudo().write({"done": False, "done_ts": False, "t_fact_s": 0, "done_by": False})
-            rec._log_event("drill_start", "Навчання %s розпочато (%s), зона %s, на об'єкті %d" % (
-                rec.name, source, rec.zone_id.code, len(lines)), start)
+            rec._log_event(
+                "drill_start",
+                "Навчання %s розпочато (%s), зона %s, на об'єкті %d" % (rec.name, source, rec.zone_id.code, len(lines)),
+                start,
+            )
             rec.message_post(body="Почато о %s, на об'єкті %d" % (dates.local(start, "%H:%M:%S"), len(lines)))
             rec._notify_state()
         return True
@@ -316,11 +396,16 @@ class F3dFireDrill(models.Model):
             rec._auto_steps()
             exits = rec.sudo().person_ids.filtered("exit_ts").mapped("exit_s")
             rec.sudo().write({"evac_time_s": max(exits) if exits else 0, "state": "evaluating"})
-            rec._log_event("drill_end", "Навчання %s завершено, вийшли %d з %d" % (
-                rec.name, rec.evacuated_count, rec.on_site_count), end)
+            rec._log_event(
+                "drill_end",
+                "Навчання %s завершено, вийшли %d з %d" % (rec.name, rec.evacuated_count, rec.on_site_count),
+                end,
+            )
             rec._sim_stop_if_any()
-            rec.message_post(body="Завершено о %s, вийшли %d з %d, час евакуації %d с" % (
-                dates.local(end, "%H:%M:%S"), rec.evacuated_count, rec.on_site_count, rec.evac_time_s))
+            rec.message_post(
+                body="Завершено о %s, вийшли %d з %d, час евакуації %d с"
+                % (dates.local(end, "%H:%M:%S"), rec.evacuated_count, rec.on_site_count, rec.evac_time_s)
+            )
             rec._notify_state()
         return True
 
@@ -333,8 +418,7 @@ class F3dFireDrill(models.Model):
         self.ensure_one()
         if self.state != "evaluating":
             raise UserError("Перекличка — після завершення навчання.")
-        action = self.env["ir.actions.act_window"]._for_xml_id(
-            "td_fire_safety.action_td_fire_drill_rollcall")
+        action = self.env["ir.actions.act_window"]._for_xml_id("td_fire_safety.action_td_fire_drill_rollcall")
         action["context"] = {"default_drill_id": self.id}
         return action
 
@@ -369,8 +453,16 @@ class F3dFireDrill(models.Model):
                 raise UserError("У чернетку можна повернути лише скасоване навчання.")
             rec.sudo().person_ids.unlink()
             rec.step_ids.sudo().write({"done": False, "done_ts": False, "t_fact_s": 0, "done_by": False})
-            rec.sudo().write({"state": "draft", "start_ts": False, "end_ts": False, "evac_time_s": 0,
-                              "real_alarm": False, "passage_source": False})
+            rec.sudo().write(
+                {
+                    "state": "draft",
+                    "start_ts": False,
+                    "end_ts": False,
+                    "evac_time_s": 0,
+                    "real_alarm": False,
+                    "passage_source": False,
+                }
+            )
         return True
 
     def action_print(self):
@@ -428,10 +520,14 @@ class F3dFireDrill(models.Model):
             exits = self.sudo().person_ids.filtered("exit_ts").mapped("exit_ts")
             return min(exits) if exits else False
         if key == "ventilation":
-            signals = env["td.signal"].sudo().search(
-                [("code", "=like", "ventilation/units/%/mode"), ("source_id", "!=", False)])
-            if signals and all(s.last_text in ("ST", "Off") and s.last_ts and s.last_ts >= self.start_ts
-                               for s in signals):
+            signals = (
+                env["td.signal"]
+                .sudo()
+                .search([("code", "=like", "ventilation/units/%/mode"), ("source_id", "!=", False)])
+            )
+            if signals and all(
+                s.last_text in ("ST", "Off") and s.last_ts and s.last_ts >= self.start_ts for s in signals
+            ):
                 return max(signals.mapped("last_ts"))
             return False
         if key == "doors":
@@ -465,8 +561,9 @@ class F3dFireDrill(models.Model):
         for step in self.step_ids.sudo().filtered(lambda s: not s.done and s.auto_key != "none"):
             done_ts = self._auto_done_ts(step.auto_key, now)
             if done_ts:
-                step.write({"done": True, "done_ts": done_ts, "t_fact_s": _seconds(done_ts - self.start_ts),
-                            "done_by": "auto"})
+                step.write(
+                    {"done": True, "done_ts": done_ts, "t_fact_s": _seconds(done_ts - self.start_ts), "done_by": "auto"}
+                )
                 changed = True
         return changed
 
@@ -478,11 +575,18 @@ class F3dFireDrill(models.Model):
             return False
         panel = zone.panel_id
         if panel.state not in ("normal", "unknown") or any(
-                z.state not in ("normal", "unknown") for z in panel.zone_ids):
+            z.state not in ("normal", "unknown") for z in panel.zone_ids
+        ):
             return False
-        ends = self.env["td.fire.event"].sudo().search(
-            [("etype", "in", ("test_end", "reset")), ("zone_id", "=", zone.id),
-             ("ts", ">=", self.start_ts - LEAD)], order="ts desc, id desc", limit=1)
+        ends = (
+            self.env["td.fire.event"]
+            .sudo()
+            .search(
+                [("etype", "in", ("test_end", "reset")), ("zone_id", "=", zone.id), ("ts", ">=", self.start_ts - LEAD)],
+                order="ts desc, id desc",
+                limit=1,
+            )
+        )
         if not ends or (now - ends.ts).total_seconds() < self._param("drill_auto_stop_s", 120):
             return False
         return ends.ts
@@ -528,9 +632,19 @@ class F3dFireDrill(models.Model):
     @api.model
     def _td_is_active_at(self, ts):
         """CF-06 (для td_access): чи йшло навчання в момент ts (UTC naive)."""
-        return self.sudo().search_count([
-            ("start_ts", "!=", False), ("start_ts", "<=", ts), "|", ("end_ts", "=", False), ("end_ts", ">=", ts),
-            ("state", "in", ("running", "evaluating", "done", "cancelled"))]) > 0
+        return (
+            self.sudo().search_count(
+                [
+                    ("start_ts", "!=", False),
+                    ("start_ts", "<=", ts),
+                    "|",
+                    ("end_ts", "=", False),
+                    ("end_ts", ">=", ts),
+                    ("state", "in", ("running", "evaluating", "done", "cancelled")),
+                ]
+            )
+            > 0
+        )
 
     @api.model
     def _match_test_alarm(self, zone, device, ts, real=False):
@@ -543,8 +657,11 @@ class F3dFireDrill(models.Model):
             if running:
                 running.real_alarm = True
                 running._log_event(
-                    "drill_real_alarm", "Під час навчання %s прилад показав справжню тривогу (зона %s)" % (
-                        running.name, zone.code), ts, key="drill_real_alarm:%s" % running.name)
+                    "drill_real_alarm",
+                    "Під час навчання %s прилад показав справжню тривогу (зона %s)" % (running.name, zone.code),
+                    ts,
+                    key="drill_real_alarm:%s" % running.name,
+                )
                 running.message_post(body="Під час навчання прилад показав справжню тривогу: зона %s." % zone.code)
             return running
         if running:
@@ -552,8 +669,14 @@ class F3dFireDrill(models.Model):
                 running.device_id = device
             return running
         window = timedelta(minutes=self._param("drill_match_window_min", 30))
-        planned = Drill.search([("state", "=", "planned"), ("company_id", "=", company.id),
-                                ("planned_ts", ">=", ts - window), ("planned_ts", "<=", ts + window)])
+        planned = Drill.search(
+            [
+                ("state", "=", "planned"),
+                ("company_id", "=", company.id),
+                ("planned_ts", ">=", ts - window),
+                ("planned_ts", "<=", ts + window),
+            ]
+        )
         if planned:
             drill = planned.sorted(lambda d: (d.zone_id != zone, abs((d.planned_ts - ts).total_seconds())))[0]
             if drill.zone_id != zone:
@@ -564,13 +687,24 @@ class F3dFireDrill(models.Model):
             return drill
         if not self._param("drill_auto_create", True):
             return Drill.browse()
-        drill = Drill.create({
-            "title": "Тест приладу: %s" % zone.name, "origin": "panel", "mode": "panel_test", "zone_id": zone.id,
-            "device_id": device.id if device and device.zone_id == zone else False, "planned_ts": ts,
-            "company_id": company.id})
+        drill = Drill.create(
+            {
+                "title": "Тест приладу: %s" % zone.name,
+                "origin": "panel",
+                "mode": "panel_test",
+                "zone_id": zone.id,
+                "device_id": device.id if device and device.zone_id == zone else False,
+                "planned_ts": ts,
+                "company_id": company.id,
+            }
+        )
         drill.action_start(ts, source="panel")
-        drill._log_event("drill_auto", "Навчання %s створено автоматично за тестом приладу" % drill.name, ts,
-                         key="drill_auto:%s" % drill.name)
+        drill._log_event(
+            "drill_auto",
+            "Навчання %s створено автоматично за тестом приладу" % drill.name,
+            ts,
+            key="drill_auto:%s" % drill.name,
+        )
         return drill
 
 
@@ -608,8 +742,9 @@ class F3dFireDrillStep(models.Model):
             if rec.drill_id.state not in ("running", "evaluating"):
                 raise UserError("Відмітити крок можна лише під час навчання або оцінювання.")
             start = rec.drill_id.start_ts
-            rec.write({"done": True, "done_ts": now, "t_fact_s": _seconds(now - start) if start else 0,
-                       "done_by": "manual"})
+            rec.write(
+                {"done": True, "done_ts": now, "t_fact_s": _seconds(now - start) if start else 0, "done_by": "manual"}
+            )
         return True
 
     def action_undo(self):
@@ -630,24 +765,31 @@ class F3dFireDrillPerson(models.Model):
     employee_id = fields.Many2one("hr.employee", ondelete="set null", index=True)
     since = fields.Datetime(string="На об'єкті з")
     source = fields.Selection(
-        [("attendance", "Відмітки"), ("access", "СКУД"), ("manual", "Вручну"), ("demo", "Демо")], required=True)
+        [("attendance", "Відмітки"), ("access", "СКУД"), ("manual", "Вручну"), ("demo", "Демо")], required=True
+    )
     exit_ts = fields.Datetime(string="Вийшов о")
     exit_point = fields.Char(string="Де вийшов", size=64)
     exit_s = fields.Integer(string="Вийшов через, с", compute="_compute_exit_s", store=True)
     rollcall = fields.Selection(
-        [("na", "—"), ("present", "Присутній на місці збору"), ("absent", "Відсутній")], default="na")
+        [("na", "—"), ("present", "Присутній на місці збору"), ("absent", "Відсутній")], default="na"
+    )
     status = fields.Selection(
-        [("on_site", "На об'єкті"), ("evacuated", "Вийшов"), ("present", "Є на перекличці"),
-         ("missing", "Не знайдено")], compute="_compute_status", store=True)
+        [
+            ("on_site", "На об'єкті"),
+            ("evacuated", "Вийшов"),
+            ("present", "Є на перекличці"),
+            ("missing", "Не знайдено"),
+        ],
+        compute="_compute_status",
+        store=True,
+    )
 
-    _f3d_fire_person_uniq = models.Constraint(
-        "UNIQUE(drill_id, employee_id)", "Працівник уже є в списку навчання.")
+    _f3d_fire_person_uniq = models.Constraint("UNIQUE(drill_id, employee_id)", "Працівник уже є в списку навчання.")
 
     @api.depends("exit_ts", "drill_id.start_ts")
     def _compute_exit_s(self):
         for rec in self:
-            rec.exit_s = _seconds(rec.exit_ts - rec.drill_id.start_ts) if rec.exit_ts and rec.drill_id.start_ts \
-                else 0
+            rec.exit_s = _seconds(rec.exit_ts - rec.drill_id.start_ts) if rec.exit_ts and rec.drill_id.start_ts else 0
 
     @api.depends("exit_ts", "rollcall", "drill_id.state")
     def _compute_status(self):

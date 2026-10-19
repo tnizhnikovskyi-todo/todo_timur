@@ -3,6 +3,7 @@
 `FireSync(env).run(codes=None, full=False)` викликається з `td.signal._td_ingest` (коди змін) і крона (`full=True`).
 Усе читається з БД (`search_read`), стани пишуть методи моделей (`_set_state`, `_set_dust`) — вони ж ведуть журнал.
 """
+
 import logging
 
 from odoo import fields
@@ -12,12 +13,24 @@ from . import states
 _logger = logging.getLogger(__name__)
 
 SIGNAL_FIELDS = ["code", "last_value", "last_text", "last_ts", "status", "last_quality"]
-PANEL_ROLES = (("state", "signal_state_id"), ("system", "signal_system_id"), ("alarms", "signal_alarms_id"),
-               ("faults", "signal_faults_id"), ("disabled", "signal_disabled_id"),
-               ("sounders", "signal_sounders_id"), ("brigade", "signal_brigade_id"))
-SYSTEM_ROLES = (("state", "signal_state_id"), ("active", "signal_active_id"), ("fault", "signal_fault_id"),
-                ("water", "signal_water_id"), ("battery", "signal_battery_id"), ("count", "signal_count_id"),
-                ("pressure", "pressure_signal_id"))
+PANEL_ROLES = (
+    ("state", "signal_state_id"),
+    ("system", "signal_system_id"),
+    ("alarms", "signal_alarms_id"),
+    ("faults", "signal_faults_id"),
+    ("disabled", "signal_disabled_id"),
+    ("sounders", "signal_sounders_id"),
+    ("brigade", "signal_brigade_id"),
+)
+SYSTEM_ROLES = (
+    ("state", "signal_state_id"),
+    ("active", "signal_active_id"),
+    ("fault", "signal_fault_id"),
+    ("water", "signal_water_id"),
+    ("battery", "signal_battery_id"),
+    ("count", "signal_count_id"),
+    ("pressure", "pressure_signal_id"),
+)
 
 
 def _fmt(value):
@@ -25,7 +38,6 @@ def _fmt(value):
 
 
 class FireSync:
-
     def __init__(self, env):
         self.env = env(su=True)
         self.rows = {}
@@ -39,8 +51,9 @@ class FireSync:
     @staticmethod
     def fresh(row):
         """Показання придатне для зміни стану: є значення, не `stale`/`unknown`, якість не `bad`."""
-        return bool(row and row["last_ts"] and row["status"] not in ("stale", "unknown")
-                    and row["last_quality"] != "bad")
+        return bool(
+            row and row["last_ts"] and row["status"] not in ("stale", "unknown") and row["last_quality"] != "bad"
+        )
 
     def hit(self, *signals):
         if self.affected is None:
@@ -49,7 +62,8 @@ class FireSync:
 
     def _prev_on(self, system, on_type, off_type):
         ev = self.env["td.fire.event"].search(
-            [("system_id", "=", system.id), ("etype", "in", (on_type, off_type))], order="ts desc, id desc", limit=1)
+            [("system_id", "=", system.id), ("etype", "in", (on_type, off_type))], order="ts desc, id desc", limit=1
+        )
         return bool(ev) and ev.etype == on_type
 
     # --- запуск -------------------------------------------------------------------------------------------
@@ -69,20 +83,34 @@ class FireSync:
         loops = panels.loop_ids
         zones = env["td.fire.zone"].search([("panel_id", "in", panels.ids)])
         devices = env["td.fire.device"].search(
-            [("panel_id", "in", panels.ids), "|", ("state_signal_id", "!=", False), ("dust_signal_id", "!=", False)])
+            [("panel_id", "in", panels.ids), "|", ("state_signal_id", "!=", False), ("dust_signal_id", "!=", False)]
+        )
         systems = env["td.fire.system"].search([("panel_id", "in", panels.ids)])
         signals = env["td.signal"]
         for panel in panels:
-            signals |= panel.mapped(lambda p: p.signal_state_id | p.signal_system_id | p.signal_alarms_id
-                                    | p.signal_faults_id | p.signal_disabled_id | p.signal_sounders_id
-                                    | p.signal_brigade_id)
+            signals |= panel.mapped(
+                lambda p: (
+                    p.signal_state_id
+                    | p.signal_system_id
+                    | p.signal_alarms_id
+                    | p.signal_faults_id
+                    | p.signal_disabled_id
+                    | p.signal_sounders_id
+                    | p.signal_brigade_id
+                )
+            )
         signals |= loops.signal_id | zones.signal_id | devices.state_signal_id | devices.dust_signal_id
         for system in systems:
-            signals |= system.signal_state_id | system.signal_active_id | system.signal_fault_id \
-                | system.signal_water_id | system.signal_battery_id | system.signal_count_id \
+            signals |= (
+                system.signal_state_id
+                | system.signal_active_id
+                | system.signal_fault_id
+                | system.signal_water_id
+                | system.signal_battery_id
+                | system.signal_count_id
                 | system.pressure_signal_id
-        rows = env["td.signal"].with_context(active_test=False).search_read(
-            [("id", "in", signals.ids)], SIGNAL_FIELDS)
+            )
+        rows = env["td.signal"].with_context(active_test=False).search_read([("id", "in", signals.ids)], SIGNAL_FIELDS)
         self.rows = {r["id"]: r for r in rows}
         if codes:
             self.affected = {r["id"] for r in rows if r["code"] in set(codes)}
@@ -102,9 +130,9 @@ class FireSync:
             if full or self._comm_hit(panel, loops, zones):
                 self._comm(panel, loops, zones, now)
         # заявку telemetry створює до звірки, тож подію журналу (R-22 п. 1) прив'язуємо тут
-        env["maintenance.request"].search([
-            ("td_signal_id", "in", list(self.rows)), ("td_fire_event_id", "=", False),
-            ("stage_id.done", "=", False)])._td_fire_link_events()
+        env["maintenance.request"].search(
+            [("td_signal_id", "in", list(self.rows)), ("td_fire_event_id", "=", False), ("stage_id.done", "=", False)]
+        )._td_fire_link_events()
         return {"signals": n_signals, "changed": self.changed, "events": Event.search_count([]) - events0}
 
     # --- пристрої (R-11, R-13 п. 1) -----------------------------------------------------------------------
@@ -116,8 +144,13 @@ class FireSync:
                 device._set_state(states.device_state(text), text, row["last_ts"])
                 self.changed += 1
         row = self.row(device.dust_signal_id)
-        if row and self.hit(device.dust_signal_id) and self.fresh(row) and row["last_value"] is not None \
-                and (not device.dust_ts or row["last_ts"] > device.dust_ts):
+        if (
+            row
+            and self.hit(device.dust_signal_id)
+            and self.fresh(row)
+            and row["last_value"] is not None
+            and (not device.dust_ts or row["last_ts"] > device.dust_ts)
+        ):
             device._set_dust(row["last_value"], row["last_ts"])
             self.changed += 1
 
@@ -178,22 +211,28 @@ class FireSync:
         ts_all = [r["last_ts"] for r in roles.values() if self.fresh(r)]
         ts = max(ts_all)
         for role, fname, on_type, off_type in (
-                ("sounders", "sounders_active", "sounders_on", "sounders_off"),
-                ("brigade", "brigade_transmitted", "brigade_on", "brigade_off")):
+            ("sounders", "sounders_active", "sounders_on", "sounders_off"),
+            ("brigade", "brigade_transmitted", "brigade_on", "brigade_off"),
+        ):
             r = roles[role]
             if not self.fresh(r):
                 continue
-            on = (r["last_text"] == "on")
+            on = r["last_text"] == "on"
             if on != panel[fname]:
                 vals[fname] = on
                 if on_type == "sounders_on":
-                    n = self.env["td.fire.device"].search_count(
-                        [("panel_id", "=", panel.id), ("type", "=", "sounder")])
+                    n = self.env["td.fire.device"].search_count([("panel_id", "=", panel.id), ("type", "=", "sounder")])
                     text = "Оповіщувачі увімкнено (%d шт.)" % n if on else "Оповіщувачі вимкнено"
                 else:
                     text = "Сигнал «Пожежа» передано на пульт ДСНС" if on else "Передачу на пульт завершено"
-                Event._log(on_type if on else off_type, panel.code, r["last_ts"], text, panel_id=panel.id,
-                           signal_id=panel[dict(PANEL_ROLES)[role]].id)
+                Event._log(
+                    on_type if on else off_type,
+                    panel.code,
+                    r["last_ts"],
+                    text,
+                    panel_id=panel.id,
+                    signal_id=panel[dict(PANEL_ROLES)[role]].id,
+                )
         s0 = s1 = None
         t0 = None
         r0 = roles["state"]
@@ -243,12 +282,21 @@ class FireSync:
         if all(r["status"] == "stale" for r in present):
             if not system.stale:
                 system.write({"stale": True})
-                ts = max(r["last_ts"] for r in present if r["last_ts"]) if any(r["last_ts"] for r in present) \
+                ts = (
+                    max(r["last_ts"] for r in present if r["last_ts"])
+                    if any(r["last_ts"] for r in present)
                     else fields.Datetime.now()
+                )
                 system._set_state("unknown", ts)
-                Event._log("comm_lost", system.code, fields.Datetime.now(),
-                           "Немає даних від модуля вводу %s: %s" % (source, system.code), level="warn",
-                           system_id=system.id, panel_id=panel.id)
+                Event._log(
+                    "comm_lost",
+                    system.code,
+                    fields.Datetime.now(),
+                    "Немає даних від модуля вводу %s: %s" % (source, system.code),
+                    level="warn",
+                    system_id=system.id,
+                    panel_id=panel.id,
+                )
                 self.changed += 1
             return
         fresh = {k: r for k, r in roles.items() if self.fresh(r)}
@@ -257,9 +305,14 @@ class FireSync:
         ts = max(r["last_ts"] for r in fresh.values())
         if system.stale:
             system.write({"stale": False})
-            Event._log("comm_restored", system.code, ts,
-                       "Дані модуля вводу %s відновлено: %s" % (source, system.code), system_id=system.id,
-                       panel_id=panel.id)
+            Event._log(
+                "comm_restored",
+                system.code,
+                ts,
+                "Дані модуля вводу %s відновлено: %s" % (source, system.code),
+                system_id=system.id,
+                panel_id=panel.id,
+            )
             self.changed += 1
 
         def on(role, text="on"):
@@ -272,20 +325,29 @@ class FireSync:
         if system.system_type == "spark":
             fault_on, water_low = on("fault"), on("water", "low")
             if "fault" in fresh and fault_on != self._prev_on(system, "spark_fault", "spark_fault_ok"):
-                log("spark_fault" if fault_on else "spark_fault_ok",
-                    "Несправність іскрогасіння %s" % system.code if fault_on
-                    else "Іскрогасіння %s: несправність усунено" % system.code)
+                log(
+                    "spark_fault" if fault_on else "spark_fault_ok",
+                    "Несправність іскрогасіння %s" % system.code
+                    if fault_on
+                    else "Іскрогасіння %s: несправність усунено" % system.code,
+                )
             if "water" in fresh and water_low != self._prev_on(system, "spark_water_low", "spark_water_ok"):
-                log("spark_water_low" if water_low else "spark_water_ok",
-                    "Іскрогасіння %s: немає тиску води гасіння" % system.code if water_low
-                    else "Іскрогасіння %s: тиск води в нормі" % system.code)
+                log(
+                    "spark_water_low" if water_low else "spark_water_ok",
+                    "Іскрогасіння %s: немає тиску води гасіння" % system.code
+                    if water_low
+                    else "Іскрогасіння %s: тиск води в нормі" % system.code,
+                )
             r = fresh.get("count")
             if r and r["last_value"] is not None:
                 c = int(round(r["last_value"]))
                 if c != system.count_today:
                     if c > system.count_today:
-                        log("spark", "Іскрогасіння: іскру виявлено на магістралі аспірації (%d шт.), "
-                                     "гасіння спрацювало; за добу — %d." % (c - system.count_today, c))
+                        log(
+                            "spark",
+                            "Іскрогасіння: іскру виявлено на магістралі аспірації (%d шт.), "
+                            "гасіння спрацювало; за добу — %d." % (c - system.count_today, c),
+                        )
                     system.write({"count_today": c, "count_ts": r["last_ts"]})
                     self.changed += 1
             if fault_on or water_low:
@@ -297,17 +359,26 @@ class FireSync:
         else:  # smoke
             opened, fault_on, battery = on("state", "open"), on("fault", "fault"), on("battery", "battery")
             if "state" in fresh and opened != self._prev_on(system, "smoke_open", "smoke_closed"):
-                log("smoke_open" if opened else "smoke_closed",
-                    "Димовидалення: клапани відкрито (%d шт.)" % system.vent_count if opened
-                    else "Димовидалення: клапани закрито")
+                log(
+                    "smoke_open" if opened else "smoke_closed",
+                    "Димовидалення: клапани відкрито (%d шт.)" % system.vent_count
+                    if opened
+                    else "Димовидалення: клапани закрито",
+                )
             if "fault" in fresh and fault_on != self._prev_on(system, "smoke_fault", "smoke_fault_ok"):
-                log("smoke_fault" if fault_on else "smoke_fault_ok",
-                    "Несправність щита димовидалення %s" % system.code if fault_on
-                    else "Щит димовидалення: несправність усунено")
+                log(
+                    "smoke_fault" if fault_on else "smoke_fault_ok",
+                    "Несправність щита димовидалення %s" % system.code
+                    if fault_on
+                    else "Щит димовидалення: несправність усунено",
+                )
             if "battery" in fresh and battery != self._prev_on(system, "smoke_battery", "smoke_mains"):
-                log("smoke_battery" if battery else "smoke_mains",
-                    "Щит димовидалення %s працює від акумуляторів" % system.code if battery
-                    else "Щит димовидалення: живлення від мережі відновлено")
+                log(
+                    "smoke_battery" if battery else "smoke_mains",
+                    "Щит димовидалення %s працює від акумуляторів" % system.code
+                    if battery
+                    else "Щит димовидалення: живлення від мережі відновлено",
+                )
             new = "fault" if fault_on else "battery" if battery else "active" if opened else "ok"
         if new != system.state or not system.state_ts:
             system._set_state(new, ts)
@@ -330,20 +401,34 @@ class FireSync:
         p = _fmt(row["last_value"]) if row else ""
         Event = self.env["td.fire.event"]
         if new == "low_pressure":
-            Event._log("sprinkler_low", system.code, ts,
-                       "Спринклерна система: тиск %s бар нижче норми %s бар" % (p, _fmt(sig.alarm_low)),
-                       system_id=system.id, panel_id=system.panel_id.id)
+            Event._log(
+                "sprinkler_low",
+                system.code,
+                ts,
+                "Спринклерна система: тиск %s бар нижче норми %s бар" % (p, _fmt(sig.alarm_low)),
+                system_id=system.id,
+                panel_id=system.panel_id.id,
+            )
         elif new == "ok" and old == "low_pressure":
-            Event._log("sprinkler_ok", system.code, ts, "Спринклерна система: тиск у нормі (%s бар)" % p,
-                       system_id=system.id, panel_id=system.panel_id.id)
+            Event._log(
+                "sprinkler_ok",
+                system.code,
+                ts,
+                "Спринклерна система: тиск у нормі (%s бар)" % p,
+                system_id=system.id,
+                panel_id=system.panel_id.id,
+            )
 
     # --- зв'язок (R-12) -----------------------------------------------------------------------------------
     def _comm_signals(self, panel, loops, zones):
         sigs = self.env["td.signal"]
         for _role, field in PANEL_ROLES:
             sigs |= panel[field]
-        return sigs | loops.filtered(lambda x: x.panel_id == panel).signal_id \
+        return (
+            sigs
+            | loops.filtered(lambda x: x.panel_id == panel).signal_id
             | zones.filtered(lambda z: z.panel_id == panel).signal_id
+        )
 
     def _comm_hit(self, panel, loops, zones):
         return self.hit(*self._comm_signals(panel, loops, zones))

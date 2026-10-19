@@ -10,13 +10,12 @@ _LINK_KINDS = ("fault", "dust", "spark", "smoke", "sprinkler", "loop")
 class MaintenanceRequest(models.Model):
     _inherit = "maintenance.request"
 
-    td_fire_event_id = fields.Many2one(
-        "td.fire.event", string="Подія пожежної безпеки", ondelete="set null")
-    td_fire_zone_id = fields.Many2one(
-        "td.fire.zone", string="Зона сигналізації", ondelete="set null", index=True)
+    td_fire_event_id = fields.Many2one("td.fire.event", string="Подія пожежної безпеки", ondelete="set null")
+    td_fire_zone_id = fields.Many2one("td.fire.zone", string="Зона сигналізації", ondelete="set null", index=True)
     td_fire_device_id = fields.Many2one("td.fire.device", string="Пристрій", ondelete="set null")
     td_origin = fields.Selection(
-        selection_add=[("fire_comm", "Немає зв'язку з пожежним приладом")], ondelete={"fire_comm": "set null"})
+        selection_add=[("fire_comm", "Немає зв'язку з пожежним приладом")], ondelete={"fire_comm": "set null"}
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -46,10 +45,10 @@ class MaintenanceRequest(models.Model):
             sig = rec.td_signal_id
             if not sig or rec.td_fire_zone_id or rec.td_fire_device_id:
                 continue
-            device = Device.search(
-                ["|", ("dust_signal_id", "=", sig.id), ("state_signal_id", "=", sig.id)], limit=1)
+            device = Device.search(["|", ("dust_signal_id", "=", sig.id), ("state_signal_id", "=", sig.id)], limit=1)
             zone = device.zone_id or Zone.search(
-                ["|", ("signal_id", "=", sig.id), ("dust_signal_id", "=", sig.id)], limit=1)
+                ["|", ("signal_id", "=", sig.id), ("dust_signal_id", "=", sig.id)], limit=1
+            )
             if not (device or zone) and sig.module != "fire_safety":
                 continue
             vals = {}
@@ -60,7 +59,10 @@ class MaintenanceRequest(models.Model):
             line = "Пожежна безпека: зона %s" % ("%s (%s)" % (zone.code, zone.name) if zone else "—")
             if device:
                 line += ", пристрій %s%s, BACnet LSP %s" % (
-                    device.address, (" " + device.note) if device.note else "", device.lsp_instance)
+                    device.address,
+                    (" " + device.note) if device.note else "",
+                    device.lsp_instance,
+                )
             line += "."
             vals["description"] = "%s<p>%s</p>" % (rec.description or "", html_escape(line))
             rec.write(vals)
@@ -77,9 +79,17 @@ class MaintenanceRequest(models.Model):
                 continue
             dom = [("signal_id", "=", rec.td_signal_id.id)]
             if rec.td_fire_device_id or rec.td_fire_zone_id:
-                dom = ["|"] + dom + ["&", ("kind", "in", _LINK_KINDS),
-                                     ("device_id", "=", rec.td_fire_device_id.id)
-                                     if rec.td_fire_device_id else ("zone_id", "=", rec.td_fire_zone_id.id)]
+                dom = (
+                    ["|"]
+                    + dom
+                    + [
+                        "&",
+                        ("kind", "in", _LINK_KINDS),
+                        ("device_id", "=", rec.td_fire_device_id.id)
+                        if rec.td_fire_device_id
+                        else ("zone_id", "=", rec.td_fire_zone_id.id),
+                    ]
+                )
             event = Event.search(dom + [("ts", ">=", since)], order="ts desc, id desc", limit=1)
             if event:
                 rec.td_fire_event_id = event
@@ -90,5 +100,9 @@ class MaintenanceRequest(models.Model):
         self.ensure_one()
         if not self.td_fire_zone_id:
             raise UserError(_("Заявка не пов'язана із зоною сигналізації."))
-        return {"type": "ir.actions.act_window", "res_model": "td.fire.zone", "view_mode": "form",
-                "res_id": self.td_fire_zone_id.id}
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "td.fire.zone",
+            "view_mode": "form",
+            "res_id": self.td_fire_zone_id.id,
+        }

@@ -1,4 +1,5 @@
 """Хук джерел проходів людей (SPEC M-12, M-12a): джерело — будь-яка модель з префіксом td.fire.passage.source."""
+
 from datetime import timedelta
 
 from odoo import api, models
@@ -31,7 +32,7 @@ class F3dFirePassageSource(models.AbstractModel):
 
     @api.model
     def _td_source_key(self, model):
-        return getattr(model, "_td_key", None) or model._name[len(self.PREFIX):]
+        return getattr(model, "_td_key", None) or model._name[len(self.PREFIX) :]
 
     @api.model
     def _td_people_at(self, model, at):
@@ -41,7 +42,10 @@ class F3dFirePassageSource(models.AbstractModel):
         for passage in sorted(model._td_passages(at - timedelta(hours=24), at), key=lambda p: p["ts"]):
             if passage["direction"] == "in":
                 last[passage["employee_id"]] = {
-                    "employee_id": passage["employee_id"], "since": passage["ts"], "point": passage["point"]}
+                    "employee_id": passage["employee_id"],
+                    "since": passage["ts"],
+                    "point": passage["point"],
+                }
             else:
                 last.pop(passage["employee_id"], None)
         return list(last.values())
@@ -59,17 +63,28 @@ class F3dFirePassageSourceHrAttendance(models.AbstractModel):
         return True
 
     def _td_on_site(self, at):
-        attendances = self.env["hr.attendance"].sudo().search(
-            [("check_in", "<=", at), "|", ("check_out", "=", False), ("check_out", ">", at)],
-            order="check_in, id")
+        attendances = (
+            self.env["hr.attendance"]
+            .sudo()
+            .search(
+                [("check_in", "<=", at), "|", ("check_out", "=", False), ("check_out", ">", at)], order="check_in, id"
+            )
+        )
         people = {}
         for att in attendances:
-            people.setdefault(att.employee_id.id, {
-                "employee_id": att.employee_id.id, "since": att.check_in, "point": "Відмітка входу"})
+            people.setdefault(
+                att.employee_id.id,
+                {"employee_id": att.employee_id.id, "since": att.check_in, "point": "Відмітка входу"},
+            )
         return list(people.values())
 
     def _td_passages(self, start, end):
-        attendances = self.env["hr.attendance"].sudo().search(
-            [("check_out", ">=", start), ("check_out", "<=", end)], order="check_out")
-        return [{"employee_id": att.employee_id.id, "ts": att.check_out, "point": "Відмітка виходу",
-                 "direction": "out"} for att in attendances]
+        attendances = (
+            self.env["hr.attendance"]
+            .sudo()
+            .search([("check_out", ">=", start), ("check_out", "<=", end)], order="check_out")
+        )
+        return [
+            {"employee_id": att.employee_id.id, "ts": att.check_out, "point": "Відмітка виходу", "direction": "out"}
+            for att in attendances
+        ]

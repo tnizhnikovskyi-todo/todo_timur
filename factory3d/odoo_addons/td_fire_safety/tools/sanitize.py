@@ -1,4 +1,5 @@
 """Очищення текстів журналу (SPEC R-14 п. 4)."""
+
 import re
 
 _CTRL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")

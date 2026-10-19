@@ -39,18 +39,18 @@ Requirements and notes
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/mail_activity_type.xml",
-        "data/td.fire.norm.csv",               # M-08
-        "data/td_fire_panel.xml",              # M-01, M-02
-        "data/td.fire.zone.csv",               # M-03
-        "data/td_fire_system.xml",             # M-06
-        "data/td.fire.smoke.zone.csv",         # M-07
-        "data/td.fire.device.csv",             # M-04
-        "data/td.fire.exit.csv",                 # M-09
-        "data/td_fire_route.xml",               # M-10
-        "data/td_fire_drill_template.xml",     # M-11c, M-11e
-        "data/td_source_data.xml",              # поле td_fire_readonly на td.source (M-15)
-        "data/td_signal_data.xml",              # M-01…M-06 (signal_*), M-15
-        "data/ir_cron.xml",                      # panel, drill
+        "data/td.fire.norm.csv",  # M-08
+        "data/td_fire_panel.xml",  # M-01, M-02
+        "data/td.fire.zone.csv",  # M-03
+        "data/td_fire_system.xml",  # M-06
+        "data/td.fire.smoke.zone.csv",  # M-07
+        "data/td.fire.device.csv",  # M-04
+        "data/td.fire.exit.csv",  # M-09
+        "data/td_fire_route.xml",  # M-10
+        "data/td_fire_drill_template.xml",  # M-11c, M-11e
+        "data/td_source_data.xml",  # поле td_fire_readonly на td.source (M-15)
+        "data/td_signal_data.xml",  # M-01…M-06 (signal_*), M-15
+        "data/ir_cron.xml",  # panel, drill
         "views/td_fire_norm_views.xml",
         "views/td_fire_panel_views.xml",
         "views/td_fire_zone_views.xml",

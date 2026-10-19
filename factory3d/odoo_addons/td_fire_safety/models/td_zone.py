@@ -32,5 +32,10 @@ class F3dZone(models.Model):
 
     def action_view_fire_zones(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": "Зони сигналізації", "res_model": "td.fire.zone",
-                "view_mode": "kanban,list,form", "domain": [("zone_id", "=", self.id)]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Зони сигналізації",
+            "res_model": "td.fire.zone",
+            "view_mode": "kanban,list,form",
+            "domain": [("zone_id", "=", self.id)],
+        }

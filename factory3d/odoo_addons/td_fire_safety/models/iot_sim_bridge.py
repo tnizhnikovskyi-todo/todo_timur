@@ -1,4 +1,5 @@
 """Міст до td_iot_sim (FR-23, A-34): без залежності від модуля, лише виклики self.env[...] за наявності."""
+
 from odoo import models
 from odoo.exceptions import AccessError, UserError
 
@@ -16,8 +17,12 @@ class F3dFireDrillSimBridge(models.Model):
         if not scenario:
             raise UserError("У пульті емулятора немає сценарію fire_drill.")
         detector = self.device_id.address or self.zone_id.device_ids.filtered("is_detector")[:1].address
-        params = {"zone": self.zone_id.code, "detector": detector, "real": False,
-                  "duration_s": self._param("drill_sim_duration_s", 300)}
+        params = {
+            "zone": self.zone_id.code,
+            "detector": detector,
+            "real": False,
+            "duration_s": self._param("drill_sim_duration_s", 300),
+        }
         return self._td_sim_create_run(scenario, params)
 
     def _td_sim_create_run(self, scenario, params):

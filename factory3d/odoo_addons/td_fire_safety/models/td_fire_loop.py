@@ -21,13 +21,15 @@ class F3dFireLoop(models.Model):
     device_count = fields.Integer(compute="_compute_device_counts", store=True)
     signal_id = fields.Many2one("td.signal", string="Сигнал несправності (BV)", ondelete="set null")
     state = fields.Selection(
-        [("unknown", "Невідомо"), ("ok", "Норма"), ("fault", "Несправність")], default="unknown", readonly=True)
+        [("unknown", "Невідомо"), ("ok", "Норма"), ("fault", "Несправність")], default="unknown", readonly=True
+    )
     fault_since = fields.Datetime(readonly=True)
     request_id = fields.Many2one("maintenance.request", related="signal_id.maintenance_request_id", readonly=True)
     device_ids = fields.One2many("td.fire.device", "loop_id")
 
     _f3d_fire_loop_number_uniq = models.Constraint(
-        "UNIQUE(panel_id, number)", "Номер шлейфу має бути унікальним у межах приладу")
+        "UNIQUE(panel_id, number)", "Номер шлейфу має бути унікальним у межах приладу"
+    )
 
     @api.constrains("number")
     def _check_number(self):
@@ -61,13 +63,25 @@ class F3dFireLoop(models.Model):
             rec.write(vals)
             Event = self.env["td.fire.event"]
             if new == "fault":
-                Event._log("loop_fault", "%s/L%d" % (rec.panel_id.code, rec.number), ts,
-                           "Несправність шлейфу %d приладу %s" % (rec.number, rec.panel_id.code),
-                           loop_id=rec.id, panel_id=rec.panel_id.id, signal_id=rec.signal_id.id)
+                Event._log(
+                    "loop_fault",
+                    "%s/L%d" % (rec.panel_id.code, rec.number),
+                    ts,
+                    "Несправність шлейфу %d приладу %s" % (rec.number, rec.panel_id.code),
+                    loop_id=rec.id,
+                    panel_id=rec.panel_id.id,
+                    signal_id=rec.signal_id.id,
+                )
             elif old == "fault":
-                Event._log("loop_ok", "%s/L%d" % (rec.panel_id.code, rec.number), ts,
-                           "Шлейф %d: несправність усунено" % rec.number,
-                           loop_id=rec.id, panel_id=rec.panel_id.id, signal_id=rec.signal_id.id)
+                Event._log(
+                    "loop_ok",
+                    "%s/L%d" % (rec.panel_id.code, rec.number),
+                    ts,
+                    "Шлейф %d: несправність усунено" % rec.number,
+                    loop_id=rec.id,
+                    panel_id=rec.panel_id.id,
+                    signal_id=rec.signal_id.id,
+                )
 
     @api.model
     def loop_of(self, x):

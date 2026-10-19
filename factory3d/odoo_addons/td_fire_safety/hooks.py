@@ -65,13 +65,22 @@ def _link(env):
     zones = env_su["td.fire.zone"].search([])
     for zone in zones:
         put(zone, "equipment_id", zone.code)
-    kind_code = {"mcp": "FA-MCP", "sounder": "FA-SND", "flame": "FA-FLAME", "spark_detector": "SPARK-1",
-                 "spark_nozzle": "SPARK-1", "smoke_vent": "SMOKE-VENTS"}
+    kind_code = {
+        "mcp": "FA-MCP",
+        "sounder": "FA-SND",
+        "flame": "FA-FLAME",
+        "spark_detector": "SPARK-1",
+        "spark_nozzle": "SPARK-1",
+        "smoke_vent": "SMOKE-VENTS",
+    }
     for dev in env_su["td.fire.device"].with_context(active_test=False).search([]):
         put(dev, "equipment_id", kind_code.get(dev.type) or dev.zone_id.code or "FA-MCP")
     for system in env_su["td.fire.system"].with_context(active_test=False).search([]):
-        put(system, "equipment_id", {"spark": "SPARK-1", "smoke": "SMOKE-CTRL", "sprinkler": "SPRINKLERS"}[
-            system.system_type])
+        put(
+            system,
+            "equipment_id",
+            {"spark": "SPARK-1", "smoke": "SMOKE-CTRL", "sprinkler": "SPRINKLERS"}[system.system_type],
+        )
         if system.system_type == "smoke":
             put(system, "vents_equipment_id", "SMOKE-VENTS")
         if system.system_type == "sprinkler":
@@ -81,8 +90,11 @@ def _link(env):
     if "equipment_id" in env_su["td.fire.exit"]._fields:
         for exit_ in env_su["td.fire.exit"].with_context(active_test=False).search([]):
             put(exit_, "equipment_id", "EXITS")
-    for signal in env_su["td.signal"].with_context(active_test=False).search(
-            [("module", "=", "fire_safety"), ("code", "like", "fire/%")]):
+    for signal in (
+        env_su["td.signal"]
+        .with_context(active_test=False)
+        .search([("module", "=", "fire_safety"), ("code", "like", "fire/%")])
+    ):
         code = _signal_equipment_code(signal.code)
         if code:
             put(signal, "equipment_id", code)
@@ -90,12 +102,16 @@ def _link(env):
         _logger.warning("Обладнання не знайдено (%d): %s", len(stats["missing"]), ", ".join(sorted(stats["missing"])))
     pressure = env_su["td.fire.system"].search([("system_type", "=", "sprinkler")], limit=1).pressure_signal_id
     return {
-        "linked": len(stats["linked"]), "missing": len(stats["missing"]),
-        "devices_linked": env_su["td.fire.device"].with_context(active_test=False).search_count(
-            [("equipment_id", "!=", False)]),
-        "signals_linked": env_su["td.signal"].with_context(active_test=False).search_count(
-            [("module", "=", "fire_safety"), ("code", "like", "fire/%"), ("equipment_id", "!=", False)]),
-        "pressure_signal": bool(pressure)}
+        "linked": len(stats["linked"]),
+        "missing": len(stats["missing"]),
+        "devices_linked": env_su["td.fire.device"]
+        .with_context(active_test=False)
+        .search_count([("equipment_id", "!=", False)]),
+        "signals_linked": env_su["td.signal"]
+        .with_context(active_test=False)
+        .search_count([("module", "=", "fire_safety"), ("code", "like", "fire/%"), ("equipment_id", "!=", False)]),
+        "pressure_signal": bool(pressure),
+    }
 
 
 DUST_CODE = "fire/groups/FA-FAC/dust"
@@ -108,11 +124,21 @@ def _dust(env):
     vals = {
         "source_id": env_su.ref(MODULE + ".source_bacnet_facp_1").id,
         "address": {"object": "PIV", "instance": 21607, "mode": "poll"},
-        "period_s": 600, "store_period_s": 3600, "module": "fire_safety", "kind": "gauge", "unit": "%",
-        "warn_high": 80, "warn_high_on": True, "alarm_high": 90, "alarm_high_on": True, "hysteresis": 1.8,
-        "decimals": 1, "write_enabled": False,
+        "period_s": 600,
+        "store_period_s": 3600,
+        "module": "fire_safety",
+        "kind": "gauge",
+        "unit": "%",
+        "warn_high": 80,
+        "warn_high_on": True,
+        "alarm_high": 90,
+        "alarm_high_on": True,
+        "hysteresis": 1.8,
+        "decimals": 1,
+        "write_enabled": False,
         "alarm_title": "Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до "
-                       "{threshold}"}
+        "{threshold}",
+    }
     equipment = env_su["maintenance.equipment"].search([("td_code", "=", "FA-FAC")], limit=1)
     if equipment:
         vals["equipment_id"] = equipment.id
@@ -122,8 +148,9 @@ def _dust(env):
         mode = "reused"
     else:
         # без xml-id: сигнал переживає деінсталяцію (X-16)
-        sig = Signal.create(dict(vals, code=DUST_CODE, name="Запиленість сповіщувача 2.FAC.07", origin="module",
-                                 create_request=True))
+        sig = Signal.create(
+            dict(vals, code=DUST_CODE, name="Запиленість сповіщувача 2.FAC.07", origin="module", create_request=True)
+        )
         mode = "created"
     zone = env_su.ref(MODULE + ".fire_zone_fa_fac")
     device = env_su.ref(MODULE + ".dev_2_fac_07")
@@ -143,15 +170,46 @@ def _requests_link(env):
 
 
 DEMO_EVENTS = (
-    ("demo:1", datetime(2026, 10, 12, 5, 47), "spark", "warn", "SPARK-1", "SPARK-1", {"system": "system_spark_1"},
-     "Іскрогасіння: іскру виявлено на магістралі аспірації над лінією A, гасіння 0,6 с, лінію не зупиняли."),
-    ("demo:2", datetime(2026, 10, 12, 6, 58), "dust_warn", "warn", "2.FAC.07", "FA-FAC",
-     {"zone": "fire_zone_fa_fac", "device": "dev_2_fac_07"},
-     "Попередження про запиленість: сповіщувач 2.FAC.07 (дільниця фасадів, шліфування)."),
-    ("demo:3", datetime(2026, 10, 12, 4, 0), "info", "info", "FACP-1", "FACP-1", {"panel": "panel_facp_1"},
-     "Щотижнева перевірка оповіщувачів: усі 4 шлейфи — норма."),
-    ("demo:4", datetime(2026, 10, 11, 20, 10), "info", "info", "SPARK-1", "SPARK-1", {"system": "system_spark_1"},
-     "Самотест іскрогасіння: датчики й клапан гасіння — норма."),
+    (
+        "demo:1",
+        datetime(2026, 10, 12, 5, 47),
+        "spark",
+        "warn",
+        "SPARK-1",
+        "SPARK-1",
+        {"system": "system_spark_1"},
+        "Іскрогасіння: іскру виявлено на магістралі аспірації над лінією A, гасіння 0,6 с, лінію не зупиняли.",
+    ),
+    (
+        "demo:2",
+        datetime(2026, 10, 12, 6, 58),
+        "dust_warn",
+        "warn",
+        "2.FAC.07",
+        "FA-FAC",
+        {"zone": "fire_zone_fa_fac", "device": "dev_2_fac_07"},
+        "Попередження про запиленість: сповіщувач 2.FAC.07 (дільниця фасадів, шліфування).",
+    ),
+    (
+        "demo:3",
+        datetime(2026, 10, 12, 4, 0),
+        "info",
+        "info",
+        "FACP-1",
+        "FACP-1",
+        {"panel": "panel_facp_1"},
+        "Щотижнева перевірка оповіщувачів: усі 4 шлейфи — норма.",
+    ),
+    (
+        "demo:4",
+        datetime(2026, 10, 11, 20, 10),
+        "info",
+        "info",
+        "SPARK-1",
+        "SPARK-1",
+        {"system": "system_spark_1"},
+        "Самотест іскрогасіння: датчики й клапан гасіння — норма.",
+    ),
 )
 
 
@@ -163,8 +221,7 @@ def _events_demo(env):
         if Event.search_count([("dedup_key", "=", key)]):
             continue
         kwargs = {name: env.ref("%s.%s" % (MODULE, xml_id)) for name, xml_id in links.items()}
-        Event._log(etype, object_code, ts, text, level=level, source="demo", key=key, scene_code=scene_code,
-                   **kwargs)
+        Event._log(etype, object_code, ts, text, level=level, source="demo", key=key, scene_code=scene_code, **kwargs)
         created += 1
     return {"events_demo": created}
 
@@ -177,21 +234,54 @@ def _drills_demo(env):
     start = datetime(2026, 9, 30, 7, 0, 0)
     employees = env["hr.employee"].sudo().search([("td_code", "!=", False)], order="td_code, id")
     total = len(employees)
-    people = [(0, 0, {
-        "seq": k, "employee_id": emp.id, "since": start - timedelta(hours=3), "source": "demo",
-        "exit_ts": start + timedelta(seconds=round(240 * k / total)), "exit_point": "Демо"})
-        for k, emp in enumerate(employees, 1)]
-    drill = Drill.create({
-        "title": "Навчальна тривога — демо (Присадка)", "origin": "demo", "mode": "tabletop",
-        "zone_id": env.ref(MODULE + ".fire_zone_fa_cnc").id, "device_id": env.ref(MODULE + ".dev_2_cnc_05").id,
-        "planned_ts": start, "start_ts": start, "end_ts": start + timedelta(seconds=300), "state": "done",
-        "result": "ok", "conclusions": "Демо-запис: показує структуру протоколу навчання.",
-        "passage_source": "demo", "evac_time_s": 240, "person_ids": people})
+    people = [
+        (
+            0,
+            0,
+            {
+                "seq": k,
+                "employee_id": emp.id,
+                "since": start - timedelta(hours=3),
+                "source": "demo",
+                "exit_ts": start + timedelta(seconds=round(240 * k / total)),
+                "exit_point": "Демо",
+            },
+        )
+        for k, emp in enumerate(employees, 1)
+    ]
+    drill = Drill.create(
+        {
+            "title": "Навчальна тривога — демо (Присадка)",
+            "origin": "demo",
+            "mode": "tabletop",
+            "zone_id": env.ref(MODULE + ".fire_zone_fa_cnc").id,
+            "device_id": env.ref(MODULE + ".dev_2_cnc_05").id,
+            "planned_ts": start,
+            "start_ts": start,
+            "end_ts": start + timedelta(seconds=300),
+            "state": "done",
+            "result": "ok",
+            "conclusions": "Демо-запис: показує структуру протоколу навчання.",
+            "passage_source": "demo",
+            "evac_time_s": 240,
+            "person_ids": people,
+        }
+    )
     for step in drill.step_ids:
-        step.write({"done": True, "t_fact_s": step.t_plan_s, "done_by": "auto",
-                    "done_ts": start + timedelta(seconds=step.t_plan_s)})
-    return {"drills_demo": 1, "drill_people": total, "drill_evac_time_s": drill.evac_time_s,
-            "drill_evac_pct": drill.evac_pct}
+        step.write(
+            {
+                "done": True,
+                "t_fact_s": step.t_plan_s,
+                "done_by": "auto",
+                "done_ts": start + timedelta(seconds=step.t_plan_s),
+            }
+        )
+    return {
+        "drills_demo": 1,
+        "drill_people": total,
+        "drill_evac_time_s": drill.evac_time_s,
+        "drill_evac_pct": drill.evac_pct,
+    }
 
 
 def _sync_first(env):
@@ -207,9 +297,14 @@ def compliance(env):
     if not panel:
         return {}
     panel.action_recompute_compliance()
-    return {"zones_ok": panel.compliance_zones_ok, "mcp_max_m": panel.compliance_mcp_max_m,
-            "routes_ok": panel.compliance_routes_ok, "exits_ok": panel.compliance_exits_ok,
-            "smoke_ok": panel.compliance_smoke_ok, "missing_zones": panel.compliance_missing_zones or False}
+    return {
+        "zones_ok": panel.compliance_zones_ok,
+        "mcp_max_m": panel.compliance_mcp_max_m,
+        "routes_ok": panel.compliance_routes_ok,
+        "exits_ok": panel.compliance_exits_ok,
+        "smoke_ok": panel.compliance_smoke_ok,
+        "missing_zones": panel.compliance_missing_zones or False,
+    }
 
 
 def _report_write(env, report):
@@ -234,8 +329,14 @@ report = SimpleNamespace(write=_report_write)
 def run_all(env):
     """Виконує кроки 1–9; повертає звіт. Кроки 1–6 — виняток відкочує установку, 7–8 — у savepoint."""
     result = {}
-    for name, func in (("params", params), ("link", _link), ("dust", _dust), ("requests", _requests_link),
-                       ("events", _events_demo), ("drills", _drills_demo)):
+    for name, func in (
+        ("params", params),
+        ("link", _link),
+        ("dust", _dust),
+        ("requests", _requests_link),
+        ("events", _events_demo),
+        ("drills", _drills_demo),
+    ):
         part = func(env)
         _logger.info("Крок %s: %s", name, part)
         result.update(part)
@@ -262,8 +363,9 @@ def uninstall_hook(env):
     """§5.5: сигнал запиленості відв'язується від джерела, параметри `td.fire_safety.*` видаляються."""
     _logger.warning(
         "Видаляються журнал подій (%d) і навчання (%d) пожежної безпеки; експортуйте протоколи (інструкція 4.6)",
-        env["td.fire.event"].sudo().search_count([]), env["td.fire.drill"].sudo().with_context(
-            active_test=False).search_count([]))
+        env["td.fire.event"].sudo().search_count([]),
+        env["td.fire.drill"].sudo().with_context(active_test=False).search_count([]),
+    )
     sig = env["td.signal"].sudo().with_context(active_test=False).search([("code", "=", DUST_CODE)], limit=1)
     if sig:
         sig.write({"source_id": False, "address": {}})

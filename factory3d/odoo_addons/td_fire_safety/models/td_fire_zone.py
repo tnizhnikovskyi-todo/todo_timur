@@ -42,7 +42,8 @@ class F3dFireZone(models.Model):
     loop_id = fields.Many2one("td.fire.loop", string="Шлейф", required=True, ondelete="restrict")
     zone_id = fields.Many2one("td.zone", string="Зона цеху", required=True, ondelete="restrict", index=True)
     equipment_id = fields.Many2one(
-        "maintenance.equipment", string="Обладнання (група сповіщувачів)", ondelete="set null")
+        "maintenance.equipment", string="Обладнання (група сповіщувачів)", ondelete="set null"
+    )
     lsz_instance = fields.Integer(string="BACnet LSZ instance", required=True)
     ordinal = fields.Integer(related="lsz_instance")
     kind = fields.Selection(KINDS, required=True)
@@ -64,7 +65,10 @@ class F3dFireZone(models.Model):
     cover_ok = fields.Boolean(readonly=True)
     compliance = fields.Selection(
         [("na", "Не перевірено"), ("ok", "Відповідає"), ("warn", "Зауваження"), ("fail", "Не відповідає")],
-        default="na", readonly=True, index=True)
+        default="na",
+        readonly=True,
+        index=True,
+    )
     compliance_note = fields.Text(readonly=True)
     signal_id = fields.Many2one("td.signal", string="Сигнал стану (LSZ)", ondelete="set null")
     dust_signal_id = fields.Many2one("td.signal", string="Сигнал запиленості зони", ondelete="set null")
@@ -83,7 +87,8 @@ class F3dFireZone(models.Model):
 
     _f3d_fire_zone_code_uniq = models.Constraint("UNIQUE(code)", "Код групи має бути унікальним.")
     _f3d_fire_zone_lsz_uniq = models.Constraint(
-        "UNIQUE(panel_id, lsz_instance)", "BACnet LSZ instance має бути унікальним у межах приладу.")
+        "UNIQUE(panel_id, lsz_instance)", "BACnet LSZ instance має бути унікальним у межах приладу."
+    )
 
     # --- обмеження ----------------------------------------------------------------------------------------
     @api.constrains("code")
@@ -96,8 +101,14 @@ class F3dFireZone(models.Model):
     def _check_rect(self):
         sx0, sy0, sx1, sy1 = geometry.site_bounds(self.env)
         for rec in self:
-            if not (rec.x0 < rec.x1 and rec.y0 < rec.y1
-                    and sx0 <= rec.x0 and rec.x1 <= sx1 and sy0 <= rec.y0 and rec.y1 <= sy1):
+            if not (
+                rec.x0 < rec.x1
+                and rec.y0 < rec.y1
+                and sx0 <= rec.x0
+                and rec.x1 <= sx1
+                and sy0 <= rec.y0
+                and rec.y1 <= sy1
+            ):
                 raise ValidationError("Контур виявлення %s: некоректний прямокутник" % rec.code)
 
     @api.constrains("spacing_m", "wall_m")
@@ -120,8 +131,11 @@ class F3dFireZone(models.Model):
     def _all_detectors(self):
         """Детектори зони, включно з архівними."""
         self.ensure_one()
-        return self.env["td.fire.device"].with_context(active_test=False).search(
-            [("zone_id", "=", self.id), ("is_detector", "=", True)])
+        return (
+            self.env["td.fire.device"]
+            .with_context(active_test=False)
+            .search([("zone_id", "=", self.id), ("is_detector", "=", True)])
+        )
 
     def _floors(self):
         """Висоти поверхів зони — різні `z` сповіщувачів, включно з архівними (мінімум один поверх)."""
@@ -137,11 +151,19 @@ class F3dFireZone(models.Model):
     @api.depends("device_ids.type", "device_ids.active")
     def _compute_detector_count(self):
         for rec in self:
-            rec.detector_count = len(rec.device_ids.filtered(
-                lambda d: d.active and d.type in ("smoke", "multi", "heat")))
+            rec.detector_count = len(
+                rec.device_ids.filtered(lambda d: d.active and d.type in ("smoke", "multi", "heat"))
+            )
 
-    @api.depends("device_ids.dust_state", "device_ids.dust_pct", "device_ids.state", "device_ids.reliability",
-                 "device_ids.raw_state", "device_ids.note", "device_ids.active")
+    @api.depends(
+        "device_ids.dust_state",
+        "device_ids.dust_pct",
+        "device_ids.state",
+        "device_ids.reliability",
+        "device_ids.raw_state",
+        "device_ids.note",
+        "device_ids.active",
+    )
     def _compute_warn(self):
         Norm = self.env["td.fire.norm"]
         alarm_pct = self.env["td.fire.panel"]._get_param("dust_alarm_pct", 90.0)
@@ -171,14 +193,21 @@ class F3dFireZone(models.Model):
             loc = (" " + worst.note) if worst.note else ""
             pct = math.floor(worst.dust_pct)
             if rank == 4:
-                rec.warning = ("Сповіщувач %s%s: запиленість камери %d %% — очистити до кінця зміни, інакше "
-                               "прилад переведе його в несправність." % (worst.address, loc, pct))
+                rec.warning = (
+                    "Сповіщувач %s%s: запиленість камери %d %% — очистити до кінця зміни, інакше "
+                    "прилад переведе його в несправність." % (worst.address, loc, pct)
+                )
             elif rank == 5:
-                rec.warning = ("Сповіщувач %s%s: запиленість камери %d %% понад %d %% — потрібне очищення "
-                               "(заявка ТО)." % (worst.address, loc, pct, alarm_pct))
+                rec.warning = (
+                    "Сповіщувач %s%s: запиленість камери %d %% понад %d %% — потрібне очищення "
+                    "(заявка ТО)." % (worst.address, loc, pct, alarm_pct)
+                )
             elif rank == 3:
                 rec.warning = "Пристрій %s%s: несправність (%s)." % (
-                    worst.address, loc, worst.raw_state or worst.reliability)
+                    worst.address,
+                    loc,
+                    worst.raw_state or worst.reliability,
+                )
             elif rank == 2:
                 rec.warning = "Пристрій %s%s: вимкнено на приладі." % (worst.address, loc)
             else:
@@ -193,8 +222,9 @@ class F3dFireZone(models.Model):
             conds = []
             if has_zone:
                 conds.append([("td_fire_zone_id", "=", rec.id)])
-            signals = (rec.signal_id | rec.dust_signal_id | rec.device_ids.state_signal_id
-                       | rec.device_ids.dust_signal_id).ids
+            signals = (
+                rec.signal_id | rec.dust_signal_id | rec.device_ids.state_signal_id | rec.device_ids.dust_signal_id
+            ).ids
             if has_signal and signals:
                 conds.append([("td_signal_id", "in", signals)])
             request = Request.browse()
@@ -212,8 +242,7 @@ class F3dFireZone(models.Model):
     def _compute_event_count(self):
         since = fields.Datetime.now() - timedelta(days=30)
         for rec in self:
-            rec.event_count = self.env["td.fire.event"].search_count(
-                [("zone_id", "=", rec.id), ("ts", ">=", since)])
+            rec.event_count = self.env["td.fire.event"].search_count([("zone_id", "=", rec.id), ("ts", ">=", since)])
 
     # --- відповідність (R-01, R-02) -----------------------------------------------------------------------
     def _step(self):
@@ -239,8 +268,14 @@ class F3dFireZone(models.Model):
         for rec in self:
             s, missing = rec._step()
             if s is None:
-                rec.write({"n_required": 0, "n_ok": False, "compliance": "na",
-                           "compliance_note": "Норма %s не задана" % missing})
+                rec.write(
+                    {
+                        "n_required": 0,
+                        "n_ok": False,
+                        "compliance": "na",
+                        "compliance_note": "Норма %s не задана" % missing,
+                    }
+                )
                 continue
             nx = max(1, math.ceil((rec.x1 - rec.x0) / s - 1e-9))
             ny = max(1, math.ceil((rec.y1 - rec.y0) / s - 1e-9))
@@ -258,8 +293,7 @@ class F3dFireZone(models.Model):
             detectors = rec._all_detectors()
             by_floor = []
             for z in rec._floors():
-                by_floor.append([(d.x, d.y) for d in detectors if d.active and round(d.z, 2) == z]
-                                if detectors else [])
+                by_floor.append([(d.x, d.y) for d in detectors if d.active and round(d.z, 2) == z] if detectors else [])
             gap, pt = geometry.coverage_gap(by_floor, rec.x0, rec.y0, rec.x1, rec.y1)
             infinite = gap == math.inf
             gap_v = geometry.INF_GAP if infinite else round(gap, 2)
@@ -273,18 +307,39 @@ class F3dFireZone(models.Model):
             nx = max(1, math.ceil((rec.x1 - rec.x0) / s - 1e-9))
             ny = max(1, math.ceil((rec.y1 - rec.y0) / s - 1e-9))
             gap_text = "—" if infinite else gap_v
-            note = ("Потрібно %d (%d×%d при кроці %s м), є %d. Покриття: найбільший розрив %s м у точці %s "
-                    "при радіусі %s м + допуск %s м." % (
-                        rec.n_required, nx, ny, round(s, 2), rec.detector_count, gap_text,
-                        geometry.fmt_point(*pt), round(r, 2), tol))
-            rec.write({"cover_max_gap_m": gap_v, "cover_point": "" if infinite else geometry.fmt_point(*pt),
-                       "cover_ok": cover_ok, "compliance": compliance, "compliance_note": note})
+            note = (
+                "Потрібно %d (%d×%d при кроці %s м), є %d. Покриття: найбільший розрив %s м у точці %s "
+                "при радіусі %s м + допуск %s м."
+                % (
+                    rec.n_required,
+                    nx,
+                    ny,
+                    round(s, 2),
+                    rec.detector_count,
+                    gap_text,
+                    geometry.fmt_point(*pt),
+                    round(r, 2),
+                    tol,
+                )
+            )
+            rec.write(
+                {
+                    "cover_max_gap_m": gap_v,
+                    "cover_point": "" if infinite else geometry.fmt_point(*pt),
+                    "cover_ok": cover_ok,
+                    "compliance": compliance,
+                    "compliance_note": note,
+                }
+            )
 
     def action_recompute(self):
         self._compute_required()
         self._compute_coverage()
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"title": "Пожежна безпека", "message": "Зону перераховано.", "type": "success"}}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {"title": "Пожежна безпека", "message": "Зону перераховано.", "type": "success"},
+        }
 
     # --- стан ---------------------------------------------------------------------------------------------
     def _set_state(self, new_state, raw, ts, device=None):
@@ -303,15 +358,26 @@ class F3dFireZone(models.Model):
         if entry:
             etype, template = entry
             text = template.format(
-                z="%s (%s)" % (self.code, self.name), raw=raw or "",
-                dd=(", сповіщувач %s" % device.address) if device else "")
+                z="%s (%s)" % (self.code, self.name),
+                raw=raw or "",
+                dd=(", сповіщувач %s" % device.address) if device else "",
+            )
             self.env["td.fire.event"]._log(
-                etype, self.code, ts, text, zone_id=self.id, device_id=device.id if device else False,
-                panel_id=self.panel_id.id)
+                etype,
+                self.code,
+                ts,
+                text,
+                zone_id=self.id,
+                device_id=device.id if device else False,
+                panel_id=self.panel_id.id,
+            )
         if new_state in ("alarm", "prealarm"):
             self.panel_id._notify_alarm(self, device)
-        if new_state in ("test", "alarm") and "td.fire.drill" in self.env \
-                and hasattr(self.env["td.fire.drill"], "_match_test_alarm"):
+        if (
+            new_state in ("test", "alarm")
+            and "td.fire.drill" in self.env
+            and hasattr(self.env["td.fire.drill"], "_match_test_alarm")
+        ):
             self.env["td.fire.drill"]._match_test_alarm(self, device, ts, real=(new_state == "alarm"))
         fire_notify(self.env, "td.fire.zone", [self.code], "state")
         if self.zone_id.td_code:
@@ -325,8 +391,13 @@ class F3dFireZone(models.Model):
         return self.zone_id.action_f3d_show()
 
     def _act_window(self, model, name, domain):
-        return {"type": "ir.actions.act_window", "name": name, "res_model": model, "view_mode": "list,form",
-                "domain": domain}
+        return {
+            "type": "ir.actions.act_window",
+            "name": name,
+            "res_model": model,
+            "view_mode": "list,form",
+            "domain": domain,
+        }
 
     def action_view_devices(self):
         self.ensure_one()
@@ -340,8 +411,12 @@ class F3dFireZone(models.Model):
         self.ensure_one()
         if not self.maintenance_request_id:
             raise UserError("Для зони немає відкритих заявок ТО.")
-        return {"type": "ir.actions.act_window", "res_model": "maintenance.request", "view_mode": "form",
-                "res_id": self.maintenance_request_id.id}
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "maintenance.request",
+            "view_mode": "form",
+            "res_id": self.maintenance_request_id.id,
+        }
 
     def action_create_device_signals(self):
         return self.device_ids.action_create_signals()

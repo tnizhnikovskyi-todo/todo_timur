@@ -15,8 +15,16 @@ class F3dFireNorm(models.Model):
     key = fields.Char(string="Ключ", size=48, required=True, index=True)
     name = fields.Char(string="Назва", size=128, required=True)
     group = fields.Selection(
-        [("detection", "Виявлення"), ("alerting", "Оповіщення"), ("evacuation", "Евакуація"),
-         ("smoke", "Димовидалення"), ("other", "Інше")], required=True, default="other")
+        [
+            ("detection", "Виявлення"),
+            ("alerting", "Оповіщення"),
+            ("evacuation", "Евакуація"),
+            ("smoke", "Димовидалення"),
+            ("other", "Інше"),
+        ],
+        required=True,
+        default="other",
+    )
     sequence = fields.Integer(default=10)
     value = fields.Float(string="Значення", digits=(12, 3))
     value_set = fields.Boolean(string="Значення задано", default=False)

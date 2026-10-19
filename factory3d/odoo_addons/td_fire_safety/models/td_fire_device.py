@@ -12,13 +12,27 @@ _logger = logging.getLogger(__name__)
 
 ADDRESS_RE = re.compile(r"^[0-4]\.[A-Z0-9-]{2,8}\.[0-9]{2}$")
 TYPES = [
-    ("smoke", "Димовий оптичний"), ("multi", "Оптико-тепловий"), ("heat", "Тепловий"), ("mcp", "Ручний"),
-    ("sounder", "Оповіщувач"), ("flame", "Полум'я"), ("spark_detector", "Датчик іскор"),
-    ("spark_nozzle", "Форсунка гасіння"), ("smoke_vent", "Люк димовидалення")]
+    ("smoke", "Димовий оптичний"),
+    ("multi", "Оптико-тепловий"),
+    ("heat", "Тепловий"),
+    ("mcp", "Ручний"),
+    ("sounder", "Оповіщувач"),
+    ("flame", "Полум'я"),
+    ("spark_detector", "Датчик іскор"),
+    ("spark_nozzle", "Форсунка гасіння"),
+    ("smoke_vent", "Люк димовидалення"),
+]
 TYPE_NAME = {
-    "smoke": "Сповіщувач", "multi": "Сповіщувач", "heat": "Сповіщувач", "mcp": "Ручний сповіщувач",
-    "sounder": "Оповіщувач", "flame": "Сповіщувач полум'я", "spark_detector": "Датчик іскор",
-    "spark_nozzle": "Форсунка гасіння", "smoke_vent": "Люк димовидалення"}
+    "smoke": "Сповіщувач",
+    "multi": "Сповіщувач",
+    "heat": "Сповіщувач",
+    "mcp": "Ручний сповіщувач",
+    "sounder": "Оповіщувач",
+    "flame": "Сповіщувач полум'я",
+    "spark_detector": "Датчик іскор",
+    "spark_nozzle": "Форсунка гасіння",
+    "smoke_vent": "Люк димовидалення",
+}
 DETECTORS = ("smoke", "multi", "heat")
 CNET = ("smoke", "multi", "heat", "mcp", "sounder", "flame")
 OFF_LOOP = ("spark_detector", "spark_nozzle", "smoke_vent")
@@ -51,13 +65,32 @@ class F3dFireDevice(models.Model):
     y = fields.Float(digits=(8, 2), required=True)
     z = fields.Float(digits=(8, 2), default=0.0)
     side = fields.Selection(
-        [("W", "Захід"), ("E", "Схід"), ("S", "Південь"), ("N", "Північ"), ("P", "Стійка"), ("X", "Вісь X"),
-         ("Y", "Вісь Y")])
+        [
+            ("W", "Захід"),
+            ("E", "Схід"),
+            ("S", "Південь"),
+            ("N", "Північ"),
+            ("P", "Стійка"),
+            ("X", "Вісь X"),
+            ("Y", "Вісь Y"),
+        ]
+    )
     heading_deg = fields.Float(digits=(6, 1))
     state = fields.Selection(
-        [("unknown", "Невідомо"), ("normal", "Норма"), ("prealarm", "Передтривога"), ("alarm", "Тривога"),
-         ("fault", "Несправність"), ("disabled", "Вимкнено"), ("test", "Тест"), ("active", "Активний")],
-        default="unknown", readonly=True, index=True)
+        [
+            ("unknown", "Невідомо"),
+            ("normal", "Норма"),
+            ("prealarm", "Передтривога"),
+            ("alarm", "Тривога"),
+            ("fault", "Несправність"),
+            ("disabled", "Вимкнено"),
+            ("test", "Тест"),
+            ("active", "Активний"),
+        ],
+        default="unknown",
+        readonly=True,
+        index=True,
+    )
     raw_state = fields.Char(size=32, readonly=True)
     reliability = fields.Char(size=32, readonly=True)
     state_ts = fields.Datetime(readonly=True)
@@ -65,7 +98,9 @@ class F3dFireDevice(models.Model):
     dust_ts = fields.Datetime(readonly=True)
     dust_state = fields.Selection(
         [("na", "—"), ("ok", "Норма"), ("warn", "Попередження"), ("alarm", "Очистити")],
-        compute="_compute_dust_state", store=True)
+        compute="_compute_dust_state",
+        store=True,
+    )
     monitor = fields.Boolean(string="Окремі сигнали", default=False, groups="td_factory3d.group_td_manager")
     state_signal_id = fields.Many2one("td.signal", string="Сигнал стану (LSP)", ondelete="set null")
     dust_signal_id = fields.Many2one("td.signal", string="Сигнал запиленості (PIV)", ondelete="set null")
@@ -76,7 +111,8 @@ class F3dFireDevice(models.Model):
 
     _f3d_fire_device_address_uniq = models.Constraint("UNIQUE(address)", "Адреса пристрою має бути унікальною.")
     _f3d_fire_device_lsp_uniq = models.UniqueIndex(
-        "(lsp_instance) WHERE lsp_instance > 0", "BACnet LSP instance має бути унікальним.")
+        "(lsp_instance) WHERE lsp_instance > 0", "BACnet LSP instance має бути унікальним."
+    )
 
     # --- compute ------------------------------------------------------------------------------------------
     @api.depends("type", "address")
@@ -141,7 +177,8 @@ class F3dFireDevice(models.Model):
         for rec in self:
             if not rec.address or not ADDRESS_RE.match(rec.address):
                 raise ValidationError(
-                    "Адреса пристрою: <шлейф>.<ЗОНА>.<nn>, напр. 2.FAC.07 (отримано %s)" % rec.address)
+                    "Адреса пристрою: <шлейф>.<ЗОНА>.<nn>, напр. 2.FAC.07 (отримано %s)" % rec.address
+                )
             if rec.type in CNET:
                 expected = rec.loop_id.number if rec.loop_id else None
             else:
@@ -205,8 +242,14 @@ class F3dFireDevice(models.Model):
         if etype in ("fault", "fault_ok", "disabled", "enabled") or not zone:
             text = "%s: %s" % (self.name, text)
         self.env["td.fire.event"]._log(
-            etype, self.address, ts, text, device_id=self.id, zone_id=zone.id if zone else False,
-            panel_id=self.panel_id.id if self.panel_id else False)
+            etype,
+            self.address,
+            ts,
+            text,
+            device_id=self.id,
+            zone_id=zone.id if zone else False,
+            panel_id=self.panel_id.id if self.panel_id else False,
+        )
 
     def _set_dust(self, pct, ts, log=True):
         self.ensure_one()
@@ -236,8 +279,15 @@ class F3dFireDevice(models.Model):
         else:
             text = "Сповіщувач %s: запиленість %d %% — у нормі" % (self.address, floor)
         self.env["td.fire.event"]._log(
-            etype, self.address, ts, text, device_id=self.id, zone_id=zone.id if zone else False,
-            panel_id=self.panel_id.id if self.panel_id else False, signal_id=self.dust_signal_id.id)
+            etype,
+            self.address,
+            ts,
+            text,
+            device_id=self.id,
+            zone_id=zone.id if zone else False,
+            panel_id=self.panel_id.id if self.panel_id else False,
+            signal_id=self.dust_signal_id.id,
+        )
 
     # --- сигнали (A-02) -----------------------------------------------------------------------------------
     def action_create_signals(self):
@@ -255,14 +305,25 @@ class F3dFireDevice(models.Model):
                 if sig:
                     sig.active = True
                 else:
-                    sig = Signal.create({
-                        "code": code, "name": "%s: стан" % dev.name, "kind": "state", "unit": "",
-                        "equipment_id": dev.equipment_id.id, "source_id": source.id,
-                        "address": {"object": "LSP", "instance": dev.lsp_instance, "mode": "poll"},
-                        "period_s": 10, "store_period_s": 3600, "viewer_visible": False,
-                        "module": "fire_safety", "origin": "module", "write_enabled": False,
-                        "alarm_states": FAULT_STATES,
-                        "alarm_title": "Несправність пристрою %s (%s): стан {text}" % (dev.address, zone_name)})
+                    sig = Signal.create(
+                        {
+                            "code": code,
+                            "name": "%s: стан" % dev.name,
+                            "kind": "state",
+                            "unit": "",
+                            "equipment_id": dev.equipment_id.id,
+                            "source_id": source.id,
+                            "address": {"object": "LSP", "instance": dev.lsp_instance, "mode": "poll"},
+                            "period_s": 10,
+                            "store_period_s": 3600,
+                            "viewer_visible": False,
+                            "module": "fire_safety",
+                            "origin": "module",
+                            "write_enabled": False,
+                            "alarm_states": FAULT_STATES,
+                            "alarm_title": "Несправність пристрою %s (%s): стан {text}" % (dev.address, zone_name),
+                        }
+                    )
                     created += 1
                 dev.state_signal_id = sig
             if dev.is_detector and not dev.dust_signal_id:
@@ -271,23 +332,46 @@ class F3dFireDevice(models.Model):
                 if sig:
                     sig.active = True
                 else:
-                    sig = Signal.create({
-                        "code": code, "name": "%s: запиленість" % dev.name, "kind": "gauge", "unit": "%",
-                        "equipment_id": dev.equipment_id.id, "source_id": source.id,
-                        "address": {"object": "PIV", "instance": dev.lsp_instance, "mode": "poll"},
-                        "period_s": 600, "store_period_s": 3600, "decimals": 1, "hysteresis": 1.8,
-                        "warn_high_on": True, "alarm_high_on": True,
-                        "warn_high": warn_pct, "alarm_high": alarm_pct,
-                        "viewer_visible": False, "module": "fire_safety", "origin": "module",
-                        "write_enabled": False,
-                        "alarm_title": ("Очистити сповіщувач %s (%s): запиленість {value} %% при нормі до "
-                                        "{threshold}" % (dev.address, zone_name))})
+                    sig = Signal.create(
+                        {
+                            "code": code,
+                            "name": "%s: запиленість" % dev.name,
+                            "kind": "gauge",
+                            "unit": "%",
+                            "equipment_id": dev.equipment_id.id,
+                            "source_id": source.id,
+                            "address": {"object": "PIV", "instance": dev.lsp_instance, "mode": "poll"},
+                            "period_s": 600,
+                            "store_period_s": 3600,
+                            "decimals": 1,
+                            "hysteresis": 1.8,
+                            "warn_high_on": True,
+                            "alarm_high_on": True,
+                            "warn_high": warn_pct,
+                            "alarm_high": alarm_pct,
+                            "viewer_visible": False,
+                            "module": "fire_safety",
+                            "origin": "module",
+                            "write_enabled": False,
+                            "alarm_title": (
+                                "Очистити сповіщувач %s (%s): запиленість {value} %% при нормі до "
+                                "{threshold}" % (dev.address, zone_name)
+                            ),
+                        }
+                    )
                     created += 1
                 dev.dust_signal_id = sig
             dev.sudo().monitor = True
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"title": "Пожежна безпека", "message": "Створено сигналів: %d" % created,
-                           "type": "success", "sticky": False}}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": "Пожежна безпека",
+                "message": "Створено сигналів: %d" % created,
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
     def action_remove_signals(self):
         for dev in self:

@@ -26,8 +26,9 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
         self.ensure_one()
         if not self.source_id:
             return self.env["td.signal"]
-        return self.env["td.signal"].sudo().with_context(active_test=False).search(
-            [("source_id", "=", self.source_id.id)])
+        return (
+            self.env["td.signal"].sudo().with_context(active_test=False).search([("source_id", "=", self.source_id.id)])
+        )
 
     @api.depends("panel_id", "panel_id.source_id")
     def _compute_counts(self):
@@ -65,12 +66,21 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
         source.write(vals)
         for sig in explicit:
             sig.write({"address": dict(sig.address, device=new)})
-        panel.message_post(body="BACnet device змінено: %d → %d (джерело %s), сигналів %d, з явною адресою %d" % (
-            old, new, code, count_all, count_explicit))
+        panel.message_post(
+            body="BACnet device змінено: %d → %d (джерело %s), сигналів %d, з явною адресою %d"
+            % (old, new, code, count_all, count_explicit)
+        )
         return self._notify("BACnet device змінено: %d → %d" % (old, new), "success")
 
     @staticmethod
     def _notify(message, kind):
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"title": "Пожежна безпека", "message": message, "type": kind, "next": {
-                    "type": "ir.actions.act_window_close"}}}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": "Пожежна безпека",
+                "message": message,
+                "type": kind,
+                "next": {"type": "ir.actions.act_window_close"},
+            },
+        }
