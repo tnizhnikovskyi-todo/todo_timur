@@ -54,9 +54,7 @@ class TdEnergyEnpi(models.Model):
         actual = enpi_tools.actual_series(cr, resource, scope, area_id, days[0], days[-1])
         series = enpi_tools.driver_series(cr, driver_ids, days[0], days[-1])
         coefs = [line.coef for line in baseline.line_ids.sorted("sequence")]
-        rows = enpi_tools.enpi_rows(
-            baseline.id, baseline.const_per_day, coefs, driver_ids, codes, actual, series, days
-        )
+        rows = enpi_tools.enpi_rows(baseline.id, baseline.const_per_day, coefs, driver_ids, codes, actual, series, days)
         if rows:
             cr.execute_values(enpi_tools.ENPI_UPSERT_SQL, rows, page_size=1000)
         self.invalidate_model()

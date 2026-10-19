@@ -162,6 +162,7 @@ class TestW4Kpis(TestW4Common):
 
     def test_dashboard_part_error_is_isolated(self):
         self._daily(TODAY, qty=100.0)
+        self._daily(TODAY, scope="node", node="SAW-1", qty=100.0)
         with patch.object(heatmap_tools, "build_heatmap", side_effect=RuntimeError("boom")):
             data = self.Api.get_dashboard("m", "area", ["kpis", "heatmap", "stack"])
         self.assertEqual(data["heatmap"], {"error": "boom"})
