@@ -240,8 +240,9 @@ class TestLocalSource(SourceCase):
         # базова реалізація (telemetry) повертає []; модулі-розширення (td_genset, td_energy…) дописують
         # свої типи через super(), тому перевіряємо саме її, а не результат усього ланцюжка
         Source = self.env["td.source"]
-        base_impl = next(vars(c)["_td_local_types"] for c in reversed(type(Source).__mro__)
-                         if "_td_local_types" in vars(c))
+        base_impl = next(
+            vars(c)["_td_local_types"] for c in reversed(type(Source).__mro__) if "_td_local_types" in vars(c)
+        )
         self.assertEqual(base_impl(Source), [])
         self.assertEqual(address_tools.validate_params("td_genset", {}), ["type: невідомий тип джерела «td_genset»"])
 

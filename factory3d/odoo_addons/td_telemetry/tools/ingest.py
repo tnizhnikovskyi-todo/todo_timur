@@ -375,9 +375,7 @@ class Ingester:
     def _check_duplicates(self):
         pairs = list({p for p in self.maybe_dup})
         for k in range(0, len(pairs), 500):
-            self.cr.execute(
-                "SELECT count(*) FROM td_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k : k + 500]),)
-            )
+            self.cr.execute("SELECT count(*) FROM td_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k : k + 500]),))
             self.duplicates += self.cr.fetchone()[0]
 
     # --- завершення: last_*, статуси, заявки, ТО, шина -----------------------------------------------

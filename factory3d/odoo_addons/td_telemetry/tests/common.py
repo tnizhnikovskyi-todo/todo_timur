@@ -67,9 +67,7 @@ class F3DTelemetryMixin:
             "f3dt_mech",
             groups="base.group_user," + base + "group_td_user,maintenance.group_equipment_manager",
         )
-        cls.user_manager = new_test_user(
-            cls.env, "f3dt_manager", groups="base.group_user," + base + "group_td_manager"
-        )
+        cls.user_manager = new_test_user(cls.env, "f3dt_manager", groups="base.group_user," + base + "group_td_manager")
         cls.user_admin = new_test_user(cls.env, "f3dt_admin", groups="base.group_user," + base + "group_td_admin")
         for attr, (name, code, with_team) in EQUIPMENT.items():
             vals = {"name": name, "td_code": code}

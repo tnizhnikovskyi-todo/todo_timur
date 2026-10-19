@@ -69,9 +69,7 @@ class TestLevel0(Level0Mixin, F3DTelemetryCase):
         self.assertEqual(report["state"], "done")
         self.assertEqual(report["by_module"], {"bms": 1, "fire_safety": 1, "telemetry": 3, "energy": 2})
         self.assertEqual(
-            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))[
-                "state"
-            ],
+            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))["state"],
             "done",
         )
         rv = self.sig("ventilation/units/RV-05-T/filter_dp_pa")
@@ -95,9 +93,7 @@ class TestLevel0(Level0Mixin, F3DTelemetryCase):
         self.assertEqual((state.last_text, state.origin, state.source_id.code), ("charging", "catalog", "MB-T-U70"))
         self.assertEqual(state.equipment_id, self.eq_flc1)
         self.assertEqual(self.env.ref("td_telemetry.sig_ventilation_units_rv_05_t_filter_dp_pa"), rv)
-        readings = self.env["td.reading"].search(
-            [("signal_id", "in", self.sig("equipment/FL-T/battery").ids + rv.ids)]
-        )
+        readings = self.env["td.reading"].search([("signal_id", "in", self.sig("equipment/FL-T/battery").ids + rv.ids)])
         for reading in readings:
             self.assertEqual((reading.src, reading.quality), ("sim_data", "good"))
         x_read = self.l0["readings"][0]
@@ -145,9 +141,7 @@ class TestRerunPartial(Level0Mixin, F3DTelemetryCase):
         self.assertEqual(self.env.cr.fetchone()[0], 7)
         self.assertNotIn("requests_linked", report)
         self.assertEqual(
-            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))[
-                "state"
-            ],
+            json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated"))["state"],
             "partial",
         )
 
@@ -305,9 +299,7 @@ class TestNoDropOnMismatch(DropMixin, F3DTelemetryCase):
 class TestCleanDb(F3DTelemetryCase):
     def test_clean_install_state(self):
         """AC-56: результат post_init_hook на чистій базі (без рівня 0 й обладнання макета)."""
-        state = json.loads(
-            self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated") or "{}"
-        )
+        state = json.loads(self.env["ir.config_parameter"].sudo().get_param("td.telemetry.level0_migrated") or "{}")
         if state.get("state") != "skipped":
             self.skipTest("база не чиста: міграція рівня 0 виконувалась")
         Signal = self.env["td.signal"].with_context(active_test=False)
