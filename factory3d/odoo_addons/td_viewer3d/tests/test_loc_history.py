@@ -258,7 +258,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
             "productions": [{"name": "WH/MO/00001", "supply": {"note": None, "steps": [
                 {"code": "A", "doc": known.name, "note": "у стелаж (%s), контроль QC/00001." % pick.name}]}}],
         }
-        self.env["td.viewer.provider.chains"]._f3d_doc_states(payload)
+        self.env["td.viewer.provider.chains"]._td_doc_states(payload)
         # known і QC/00001 є в payload — клієнт бере стан звідти; fallback лише для відсутніх
         self.assertEqual(payload["productions"][0]["supply"]["docs"],
                          {pick.name: {"kind": "picking", "state": "done"}})

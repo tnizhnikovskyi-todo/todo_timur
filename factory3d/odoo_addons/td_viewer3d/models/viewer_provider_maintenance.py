@@ -25,16 +25,16 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних maintenance"
 
-    _f3d_sequence = 50
-    _f3d_sections = ("equipment", "maintenance_requests")
-    _f3d_group = "base.group_user"
+    _td_sequence = 50
+    _td_sections = ("equipment", "maintenance_requests")
+    _td_group = "base.group_user"
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["maintenance.equipment", "maintenance.request"]
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         if not payload_tools.access_ok(env, "maintenance.equipment"):
             return
@@ -57,7 +57,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
                 if r.maintenance_type == "preventive" and (r.schedule_date or r.request_date):
                     day = r.schedule_date.date() if r.schedule_date else r.request_date
                     next_prev[r.equipment_id.id] = min(day, next_prev.get(r.equipment_id.id, day))
-            recurring = self._f3d_recurring_next()
+            recurring = self._td_recurring_next()
         today = fields.Date.to_date(ctx["today"])
 
         passport_ok = payload_tools.access_ok(env, "td.equipment.passport")
@@ -84,7 +84,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
             if eq.id in open_by_eq:
                 rec["maintenance_request"] = open_by_eq[eq.id]
                 rec["maintenance_request_id"] = open_id_by_eq[eq.id]
-            elif nxt and (due := self._f3d_due(nxt, today)):
+            elif nxt and (due := self._td_due(nxt, today)):
                 rec["maintenance_due"] = due  # планова дата настала, відкритої заявки немає → «Запланувати ТО»
             if eq.id in tasks:
                 rec["current_task"] = tasks[eq.id]
@@ -93,10 +93,10 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
                     rec[k] = static_eq[code][k]
             equipment.setdefault(code, {}).update(rec)
 
-        payload["maintenance_requests"] = [self._f3d_request_rec(r, ctx["now"], ctx["today"]) for r in requests]
+        payload["maintenance_requests"] = [self._td_request_rec(r, ctx["now"], ctx["today"]) for r in requests]
 
     @api.model
-    def _f3d_request_rec(self, r, now, today):
+    def _td_request_rec(self, r, now, today):
         """Запис `maintenance_requests[]` (A.9). `res_id`, `done`, `equipment_name`, `overdue_days` — R-22:
         назва заявки не унікальна («Планове ТО» у всіх), тож клієнт знаходить заявку за `res_id`."""
         done = bool(r.stage_id.done)
@@ -115,7 +115,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         return rec
 
     @staticmethod
-    def _f3d_due(day, today):
+    def _td_due(day, today):
         """R-22: `overdue` — планова дата минула, `soon` — не пізніше DUE_SOON_DAYS днів, інакше None."""
         if isinstance(day, datetime):
             day = day.date()
@@ -123,7 +123,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         return "overdue" if left < 0 else "soon" if left <= DUE_SOON_DAYS else None
 
     @api.model
-    def _f3d_recurring_next(self, equipment=None):
+    def _td_recurring_next(self, equipment=None):
         """{equipment.id: дата} — наступна профілактика за останньою закритою повторюваною заявкою.
         В Odoo 19 у обладнання немає `next_action_date`; Odoo сама копіює повторювану заявку під час закриття,
         тож запис є лише тоді, коли копію прибрали або вона вже закрита. Без `equipment` — усе обладнання з кодом."""
@@ -146,14 +146,14 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         return out
 
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """Заявки й обладнання з кодів."""
         changes = ctx.get("changes") or {}
         sel = set(ctx.get("codes") or ())
         for model in ("maintenance.equipment", "maintenance.request"):
             sel |= set(changes.get(model) or ())
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         reqs = [r for r in tmp.get("maintenance_requests") or [] if r["id"] in sel or r["equipment"] in sel]
         eq_sel = sel | {r["equipment"] for r in reqs}
         part = {"maintenance_requests": reqs,
@@ -163,7 +163,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
             payload_tools.deep_merge(patch, part)
 
     @api.model
-    def _f3d_plan_maintenance(self, code=None, equipment_id=None):
+    def _td_plan_maintenance(self, code=None, equipment_id=None):
         """API-11 / R-22: заявка планового ТО на обладнання. ORM — з правами користувача запиту, без sudo.
         Ідемпотентно: відкрита профілактична заявка повертається замість дубліката (`created: false`)."""
         env = self.env
@@ -187,7 +187,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
             if not team:
                 return plan_error(400, "no_team", "Немає команди обслуговування: створіть її в розділі «Обслуговування».")
             nxt = eq.next_action_date if "next_action_date" in eq._fields else False
-            nxt = nxt or self._f3d_recurring_next(eq).get(eq.id)
+            nxt = nxt or self._td_recurring_next(eq).get(eq.id)
             vals = {"name": f"Планове ТО · {eq.name}", "equipment_id": eq.id, "maintenance_type": "preventive",
                     "schedule_date": dates.utc(f"{nxt} 08:00") if nxt else now.replace(second=0),
                     "request_date": fields.Date.to_date(today), "maintenance_team_id": team}
@@ -204,5 +204,5 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         eq_patch = {"maintenance_request": req.name, "maintenance_request_id": req.id, "maintenance_due": None}
         if req.schedule_date:
             eq_patch["next_maintenance"] = dates.local(req.schedule_date)[:10]
-        return {"ok": True, "created": created, "request": self._f3d_request_rec(req, now, today),
+        return {"ok": True, "created": created, "request": self._td_request_rec(req, now, today),
                 "equipment": {eq.td_code: eq_patch}}

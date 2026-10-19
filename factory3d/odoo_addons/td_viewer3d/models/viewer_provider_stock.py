@@ -18,17 +18,17 @@ class F3dViewerProviderStock(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних stock"
 
-    _f3d_sequence = 20
-    _f3d_sections = ("products", "locations")
-    _f3d_group = "stock.group_stock_user"
+    _td_sequence = 20
+    _td_sections = ("products", "locations")
+    _td_group = "stock.group_stock_user"
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["stock.quant", "stock.move.line", "stock.location"]
 
     # ------------------------------------------------------------------ collect
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         if not all(payload_tools.access_ok(env, m) for m in
                    ("product.product", "stock.location", "stock.quant", "stock.move.line")):
@@ -227,14 +227,14 @@ class F3dViewerProviderStock(models.AbstractModel):
 
     # ------------------------------------------------------------------ delta
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """R-14: локації з кодів і з подій stock.quant / stock.move.line / stock.location."""
         changes = ctx.get("changes") or {}
         sel = set(ctx.get("codes") or ())
         for model in ("stock.quant", "stock.move.line", "stock.location"):
             sel |= set(changes.get(model) or ())
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         part = {"locations": {c: v for c, v in (tmp.get("locations") or {}).items() if c in sel}}
         if part["locations"]:
             payload_tools.deep_merge(patch, part)

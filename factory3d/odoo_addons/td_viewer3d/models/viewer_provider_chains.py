@@ -21,12 +21,12 @@ class F3dViewerProviderChains(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: постачальник — ланцюжки й зони"
 
-    _f3d_sequence = 70
-    _f3d_sections = ("sheet_chain", "ship_chain", "material_paths", "full_cycle_mo", "zones")
-    _f3d_group = "mrp.group_mrp_user"
+    _td_sequence = 70
+    _td_sections = ("sheet_chain", "ship_chain", "material_paths", "full_cycle_mo", "zones")
+    _td_group = "mrp.group_mrp_user"
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         sections = ctx.get("sections")
         status = sections if isinstance(sections, dict) else {}
@@ -40,13 +40,13 @@ class F3dViewerProviderChains(models.AbstractModel):
             payload["full_cycle_mo"] = productions[0]["name"] if productions else None
         else:
             payload.update(chains_tools.compute(payload))
-            self._f3d_doc_states(payload)
+            self._td_doc_states(payload)
         if isinstance(sections, dict):
             sections["chains"] = "partial" if partial else "live"
-        self._f3d_chains_zones(payload, ctx)
+        self._td_chains_zones(payload, ctx)
 
     @api.model
-    def _f3d_doc_states(self, payload):
+    def _td_doc_states(self, payload):
         """R-23: стани документів, названих у кроках `productions[].supply|delivery` (`doc`, `note`), яких немає в
         `pickings` / `quality_checks` / `productions` payload (напр. внутрішнє переміщення `WH/INT/00061` з нотатки
         контролю): `supply.docs` / `delivery.docs` = {назва: {kind, state}}. Один пакетний запит на модель."""
@@ -66,7 +66,7 @@ class F3dViewerProviderChains(models.AbstractModel):
                 blk["docs"] = {n: found[n] for n in sorted(names) if n in found}
 
     @api.model
-    def _f3d_chains_zones(self, payload, ctx):
+    def _td_chains_zones(self, payload, ctx):
         """R-13 (X-29): живі поля всіх активних `td.zone`, злиті глибоко зі статичним записом."""
         env = self.env
         if not payload_tools.access_ok(env, "td.zone"):
@@ -108,7 +108,7 @@ class F3dViewerProviderChains(models.AbstractModel):
                 zones[code] = rec
 
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """R-14 п. 5: зміна МО/переміщення — chains-ключі цілком і supply/delivery/components змінених МО."""
         env = self.env
         changes = ctx.get("changes") or {}
@@ -121,14 +121,14 @@ class F3dViewerProviderChains(models.AbstractModel):
             if name not in env:
                 continue
             prov = env[name]
-            grp = getattr(prov, "_f3d_group", None)
+            grp = getattr(prov, "_td_group", None)
             if grp and not payload_tools.group_ok(env, grp):
                 continue
-            prov._f3d_viewer_collect(tmp, full_ctx)
+            prov._td_viewer_collect(tmp, full_ctx)
         if any(k not in tmp for k in NEEDED) or not env.user.has_group("stock.group_stock_user"):
             return
         patch.update(copy.deepcopy(chains_tools.compute(tmp)))
-        self._f3d_doc_states(tmp)
+        self._td_doc_states(tmp)
         fresh = {m["name"]: m for m in tmp["productions"]}
         for rec in patch.get("productions") or []:
             src = fresh.get(rec.get("name"))

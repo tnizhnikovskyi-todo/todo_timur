@@ -14,16 +14,16 @@ class F3dViewerProviderPeople(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних people"
 
-    _f3d_sequence = 60
-    _f3d_sections = ("employees",)
-    _f3d_group = "base.group_user"
+    _td_sequence = 60
+    _td_sections = ("employees",)
+    _td_group = "base.group_user"
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["hr.employee", "mrp.workorder", "hr.attendance"]
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         if not payload_tools.access_ok(env, "hr.employee.public"):
             return
@@ -91,14 +91,14 @@ class F3dViewerProviderPeople(models.AbstractModel):
         return set(att.employee_id.ids)
 
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """Співробітники `OP-*` з кодів центрів і за прямими кодами."""
         changes = ctx.get("changes") or {}
         sel = set(ctx.get("codes") or ())
         for model in ("hr.employee", "mrp.workorder", "hr.attendance"):
             sel |= set(changes.get(model) or ())
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         part = {c: v for c, v in (tmp.get("employees") or {}).items()
                 if c in sel or v.get("workcenter") in sel or c.replace("OP-", "", 1) in sel}
         if part:

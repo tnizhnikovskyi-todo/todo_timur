@@ -33,17 +33,17 @@ class F3dViewerProviderProduction(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних production"
 
-    _f3d_sequence = 30
-    _f3d_sections = ("workcenters", "productions", "workorders")
-    _f3d_group = "mrp.group_mrp_user"
+    _td_sequence = 30
+    _td_sections = ("workcenters", "productions", "workorders")
+    _td_group = "mrp.group_mrp_user"
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["mrp.production", "mrp.workorder", "mrp.workcenter", "mrp.workcenter.productivity"]
 
     # ------------------------------------------------------------------ collect
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         if not all(payload_tools.access_ok(env, m) for m in (
                 "mrp.workcenter", "mrp.production", "mrp.workorder", "mrp.workcenter.productivity")):
@@ -291,7 +291,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
 
     # ------------------------------------------------------------------ delta (R-14)
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """Завдання з кодів `WO*`, їхні МО, МО з кодів, центри з кодів і центри цих завдань."""
         changes = ctx.get("changes") or {}
         sel = set(ctx.get("codes") or ())
@@ -306,7 +306,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                     or env["mrp.production"].search_count([("name", "in", names)], limit=1)):
                 return
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         wos = tmp.get("workorders") or {}
         mo_names = {w["production"] for k, w in wos.items() if k in sel}
         mo_names |= {c for c in sel if not WO_RE.match(c)}

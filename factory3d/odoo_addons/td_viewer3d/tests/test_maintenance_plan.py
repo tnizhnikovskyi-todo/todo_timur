@@ -254,7 +254,7 @@ class TestMaintenancePlanApi(MaintenanceFixtures, HttpCase, F3dViewerBase):
 
     def test_kiosk_context_refused_in_model(self):
         for env in (self.env(user=self.user_kiosk), self.env(user=self.user_maint, context={"kiosk": True})):
-            res = env[PROVIDER]._f3d_plan_maintenance(code="TST-SAW-2")
+            res = env[PROVIDER]._td_plan_maintenance(code="TST-SAW-2")
             self._assert_error(res, 403, "kiosk")
         self.assertFalse(self._open_prev(self.equipment))
 

@@ -45,17 +45,17 @@ class F3dViewerProviderLogistics(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних logistics"
 
-    _f3d_sequence = 40
-    _f3d_sections = ("pickings", "docks", "sale_orders", "purchase_orders")
-    _f3d_group = "stock.group_stock_user"
+    _td_sequence = 40
+    _td_sections = ("pickings", "docks", "sale_orders", "purchase_orders")
+    _td_group = "stock.group_stock_user"
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["stock.picking", "stock.move", "stock.picking.batch", "sale.order", "purchase.order"]
 
     # ------------------------------------------------------------------ collect
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         pickings = self._pickings(ctx)
         payload["pickings"] = pickings
@@ -273,14 +273,14 @@ class F3dViewerProviderLogistics(models.AbstractModel):
 
     # ------------------------------------------------------------------ delta (R-14)
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """Переміщення з назв у кодах і з `dock` у кодах, `docks` цілком, замовлення за назвами."""
         changes = ctx.get("changes") or {}
         sel = set(ctx.get("codes") or ())
         for model in ("stock.picking", "stock.move", "stock.picking.batch", "sale.order", "purchase.order"):
             sel |= set(changes.get(model) or ())
         tmp = {}
-        self._f3d_viewer_collect(tmp, ctx)
+        self._td_viewer_collect(tmp, ctx)
         part = {"docks": tmp.get("docks") or {}}
         for key in ("pickings", "sale_orders", "purchase_orders"):
             part[key] = [r for r in tmp.get(key) or [] if r["name"] in sel or r.get("dock") in sel]

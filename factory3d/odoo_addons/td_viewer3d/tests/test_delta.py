@@ -96,8 +96,8 @@ class TestDelta(F3dViewerBase):
     def test_opt_key_null(self):
         """Зниклий opt-ключ -> null у патчі."""
         cls = type(self.env[ZZ + "test"])
-        self.patch(cls, "_f3d_sections", ("zones", "workorders"))
-        self.patch(cls, "_f3d_viewer_collect",
+        self.patch(cls, "_td_sections", ("zones", "workorders"))
+        self.patch(cls, "_td_viewer_collect",
                    lambda this, payload, ctx: payload.setdefault("workorders", {}).update(
                        {"WO00001": {"state": "done", "workcenter": "SAW-1"}}))
         wo = self._delta({"mrp.workorder": {"WO00001"}})["patch"]["workorders"]["WO00001"]
@@ -121,7 +121,7 @@ class TestDelta(F3dViewerBase):
     def test_delta_too_large(self):
         cls = type(self.env[ZZ + "test"])
         big = {"k%d" % i: "x" * 100 for i in range(3000)}
-        self.patch(cls, "_f3d_viewer_collect", lambda this, payload, ctx: payload.update({"zones": big}))
+        self.patch(cls, "_td_viewer_collect", lambda this, payload, ctx: payload.update({"zones": big}))
         with self.assertLogs(LOGGER, level="WARNING"):
             res = self._delta({"x": {"A"}})
         self.assertIn({"provider": ZZ + "test", "error": "DeltaTooLarge"}, res["patch"]["meta"]["errors"])

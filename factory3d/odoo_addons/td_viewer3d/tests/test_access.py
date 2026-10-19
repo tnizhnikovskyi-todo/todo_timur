@@ -22,12 +22,12 @@ class TestAccess(F3dViewerBase):
             raise unittest.SkipTest("test_td_viewer3d не встановлено")
         seen = []
         cls = type(self.env[ZZ_TEST])
-        orig = cls._f3d_viewer_collect
+        orig = cls._td_viewer_collect
 
         def wrapper(this, payload, ctx):
             seen.append(ctx)
             return orig(this, payload, ctx)
-        self.patch(cls, "_f3d_viewer_collect", wrapper)
+        self.patch(cls, "_td_viewer_collect", wrapper)
         return seen
 
     def test_nobody_gets_denied(self):

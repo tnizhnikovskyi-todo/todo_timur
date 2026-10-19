@@ -32,8 +32,8 @@ class TestSignalsMocked(F3dViewerBase):
         ctx = {"sections": {}, "changes": {}}
         env = self.env(user=user or self.user_f3d)
         with patch.object(sig, "SIGNAL_MODEL", "res.partner"), \
-                patch.object(type(env[PROV]), "_f3d_signal_rows", lambda s, codes=None: rows):
-            env[PROV]._f3d_viewer_collect(payload, ctx)
+                patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows):
+            env[PROV]._td_viewer_collect(payload, ctx)
         return payload, ctx
 
     def test_paths_applied(self):
@@ -80,7 +80,7 @@ class TestSignalsMocked(F3dViewerBase):
         payload = _payload()
         ctx = {"sections": {}}
         with patch.object(sig, "SIGNAL_MODEL", "x_f3d_nonexistent"):
-            self.env[PROV]._f3d_viewer_collect(payload, ctx)
+            self.env[PROV]._td_viewer_collect(payload, ctx)
         self.assertEqual(ctx["sections"]["signals"], "missing")
         self.assertNotIn("iot", payload["meta"])
         self.assertEqual(payload["energy"]["consumers"]["SAW-1"]["p_now"], 0.0)
@@ -91,13 +91,13 @@ class TestSignalsMocked(F3dViewerBase):
         patch_ = {}
         ctx = {"changes": {"res.partner": {"energy/consumers/SAW-1/p_now"}}}
         with patch.object(sig, "SIGNAL_MODEL", "res.partner"), \
-                patch.object(type(env[PROV]), "_f3d_signal_rows", lambda s, codes=None: rows):
-            env[PROV]._f3d_viewer_delta(patch_, ctx)
+                patch.object(type(env[PROV]), "_td_signal_rows", lambda s, codes=None: rows):
+            env[PROV]._td_viewer_delta(patch_, ctx)
         self.assertEqual(patch_["signals"], [{"path": "energy/consumers/SAW-1/p_now", "value": 13.1}])
         self.assertEqual(patch_["meta"]["iot"]["signals"], 1)
 
     def test_registered(self):
-        self.assertEqual(self.env[PROV]._f3d_sequence, 90)
+        self.assertEqual(self.env[PROV]._td_sequence, 90)
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")

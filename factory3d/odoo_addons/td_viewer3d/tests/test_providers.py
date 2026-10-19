@@ -33,7 +33,7 @@ class TestProviders(F3dViewerBase):
         """Розділи, які обслуговує хоч один зареєстрований провайдер (крім `exclude`): очікування
         «static/error» не мають залежати від того, які модулі з провайдерами (access, fire_safety…) встановлено."""
         return {s for p in get_providers(self.env) if p._name not in exclude
-                for s in getattr(p, "_f3d_sections", ())}
+                for s in getattr(p, "_td_sections", ())}
 
     def _patch_zz_fail_section(self):
         """Переносить zz_fail на статичний розділ без «живого» провайдера й повертає його назву
@@ -43,32 +43,32 @@ class TestProviders(F3dViewerBase):
         self.assertTrue(free, "немає статичного розділу без провайдера для перевірки zz_fail")
         section = free[0]
         cls = type(self.env[ZZ + "fail"])
-        self.patch(cls, "_f3d_sections", (section,))
+        self.patch(cls, "_td_sections", (section,))
 
         def collect(this, payload, ctx):
             if this.env.context.get("zz_fail"):
                 payload.setdefault(section, {})["partial"] = True  # частковий запис, який має відкотитись
                 raise ValueError("boom")
-        self.patch(cls, "_f3d_viewer_collect", collect)
+        self.patch(cls, "_td_viewer_collect", collect)
         return section
 
     def _record_calls(self):
         calls = []
         for p in get_providers(self.env):
             cls = type(p)
-            orig = cls._f3d_viewer_collect
+            orig = cls._td_viewer_collect
 
             def wrapper(this, payload, ctx, orig=orig, name=p._name):
                 calls.append(name)
                 return orig(this, payload, ctx)
-            self.patch(cls, "_f3d_viewer_collect", wrapper)
+            self.patch(cls, "_td_viewer_collect", wrapper)
         return calls
 
     def test_order_and_sections(self):
         """AC-12."""
         names = [p._name for p in get_providers(self.env)]
         self.assertEqual(names[0], ZZ + "test")
-        seqs = [getattr(p, "_f3d_sequence", 1000) for p in get_providers(self.env)]
+        seqs = [getattr(p, "_td_sequence", 1000) for p in get_providers(self.env)]
         self.assertEqual(seqs, sorted(seqs))
         calls = self._record_calls()
         data = self._builder().build()
@@ -99,15 +99,15 @@ class TestProviders(F3dViewerBase):
 
     def test_group_denied(self):
         cls = type(self.env[ZZ + "duck"])
-        self.patch(cls, "_f3d_group", "td_viewer3d.no_such_group")
+        self.patch(cls, "_td_group", "td_viewer3d.no_such_group")
         data = self._builder().build()
         self.assertEqual(data["meta"]["sections"]["zz_duck"], "denied")
         # інші провайдери «infra» (energy, genset…) виконуються після zz_duck і перекривають статус; перевіряємо
         # відмову за кількома розділами лише тоді, коли пізніших провайдерів цього розділу немає
         duck = self.env[ZZ + "duck"]
-        key = (getattr(duck, "_f3d_sequence", 1000), duck._name)
+        key = (getattr(duck, "_td_sequence", 1000), duck._name)
         later = [p._name for p in get_providers(self.env)
-                 if (getattr(p, "_f3d_sequence", 1000), p._name) > key and "infra" in getattr(p, "_f3d_sections", ())]
+                 if (getattr(p, "_td_sequence", 1000), p._name) > key and "infra" in getattr(p, "_td_sections", ())]
         if not later:
             self.assertEqual(data["meta"]["sections"]["infra"], "denied")
         self.assertNotIn("zz_duck", data)
@@ -120,17 +120,17 @@ class TestProviders(F3dViewerBase):
 
     def test_provider_without_collect_skipped(self):
         cls = type(self.env[ZZ + "test"])
-        self.patch(cls, "_f3d_viewer_collect", None)
+        self.patch(cls, "_td_viewer_collect", None)
         with self.assertLogs("odoo.addons.td_viewer3d.tools.payload", level="WARNING") as cm:
             data = self._builder().build()
-        self.assertTrue(any("без _f3d_viewer_collect" in m for m in cm.output))
+        self.assertTrue(any("без _td_viewer_collect" in m for m in cm.output))
         self.assertNotIn("Z-TEST", data.get("zones", {}))  # розділ zones тепер живий (chains M-01g)
 
     def test_duck_typed_provider_getattr(self):
         """AC-57."""
         duck = self.env[ZZ + "duck"]
         self.assertNotIn("td.viewer.provider", type(duck)._inherit)
-        self.assertFalse(hasattr(duck, "_f3d_viewer_delta"))
+        self.assertFalse(hasattr(duck, "_td_viewer_delta"))
         calls = self._record_calls()
         data = self._builder().build()
         self.assertIn(ZZ + "duck", calls)
@@ -158,7 +158,7 @@ class TestProviders(F3dViewerBase):
 
     def test_abstract_defaults(self):
         base = self.env["td.viewer.provider"]
-        self.assertEqual(base._f3d_sequence, 1000)
-        self.assertEqual(base._f3d_sections, ())
-        self.assertEqual(base._f3d_viewer_bus_models(), [])
-        self.assertEqual(base._f3d_providers()[0]._name, ZZ + "test")
+        self.assertEqual(base._td_sequence, 1000)
+        self.assertEqual(base._td_sections, ())
+        self.assertEqual(base._td_viewer_bus_models(), [])
+        self.assertEqual(base._td_providers()[0]._name, ZZ + "test")

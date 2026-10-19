@@ -145,13 +145,13 @@ class TestChainsProvider(F3dViewerBase):
     def _collect(self, user, payload):
         env = self.env(user=user)
         ctx = {"sections": {}, "static": static_data.load(), "changes": {}, "codes": None}
-        env["td.viewer.provider.chains"]._f3d_viewer_collect(payload, ctx)
+        env["td.viewer.provider.chains"]._td_viewer_collect(payload, ctx)
         return ctx
 
     def test_registered(self):
         prov = self.env["td.viewer.provider.chains"]
-        self.assertEqual(prov._f3d_sequence, 70)
-        self.assertIn("sheet_chain", prov._f3d_sections)
+        self.assertEqual(prov._td_sequence, 70)
+        self.assertIn("sheet_chain", prov._td_sections)
 
     def test_collect_fixture(self):
         _ref, data = _fixture()

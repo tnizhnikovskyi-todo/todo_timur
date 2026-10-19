@@ -88,15 +88,15 @@ def group_ok(env, xmlid):
 def get_providers(env):
     """Duck-typing (X-22): усі моделі реєстру з префіксом імені, незалежно від `_inherit`."""
     names = [n for n in env.registry if n.startswith(PROVIDER_PREFIX)]
-    return sorted((env[n] for n in names), key=lambda m: (getattr(m, "_f3d_sequence", 1000), m._name))
+    return sorted((env[n] for n in names), key=lambda m: (getattr(m, "_td_sequence", 1000), m._name))
 
 
 def default_delta(provider, patch, ctx):
     """Дельта за замовчуванням (R-14 п. 5): collect у тимчасовий dict і deep_merge розділів провайдера."""
-    collect = getattr(provider, "_f3d_viewer_collect", None)
+    collect = getattr(provider, "_td_viewer_collect", None)
     if collect is None:
         return
-    secs = tuple(getattr(provider, "_f3d_sections", ()))
+    secs = tuple(getattr(provider, "_td_sections", ()))
     tmp = {}
     collect(tmp, ctx)
     part = {k: tmp[k] for k in secs if k in tmp}
@@ -180,8 +180,8 @@ class _Base:
 
     @staticmethod
     def _info(p):
-        return (tuple(getattr(p, "_f3d_sections", ())),
-                getattr(p, "_f3d_group", DEFAULT_GROUP))
+        return (tuple(getattr(p, "_td_sections", ())),
+                getattr(p, "_td_group", DEFAULT_GROUP))
 
     def _call(self, p, func, target, secs, errors):
         """Виклик у savepoint; при помилці розділи провайдера відновлюються. True — успіх."""
@@ -265,9 +265,9 @@ class PayloadBuilder(_Base):
         payload.setdefault("infra", {}).setdefault("totals", {})
 
         for p in get_providers(env):
-            collect = getattr(p, "_f3d_viewer_collect", None)
+            collect = getattr(p, "_td_viewer_collect", None)
             if collect is None:
-                _logger.warning("провайдер %s без _f3d_viewer_collect", p._name)
+                _logger.warning("провайдер %s без _td_viewer_collect", p._name)
                 continue
             secs, grp = self._info(p)
             if self.sections is not None and not (set(secs) & self.sections):
@@ -340,14 +340,14 @@ class DeltaBuilder(_Base):
         ctx = self._ctx(now, {}, codes=codes, changes=changes, delta=True)
         failed = set()
         for p in get_providers(env):
-            collect = getattr(p, "_f3d_viewer_collect", None)
+            collect = getattr(p, "_td_viewer_collect", None)
             if collect is None:
-                _logger.warning("провайдер %s без _f3d_viewer_collect", p._name)
+                _logger.warning("провайдер %s без _td_viewer_collect", p._name)
                 continue
             secs, grp = self._info(p)
             if not self._group_ok(grp):
                 continue
-            delta = getattr(p, "_f3d_viewer_delta", None)
+            delta = getattr(p, "_td_viewer_delta", None)
 
             def run(target, p=p, delta=delta):
                 if delta is None:
@@ -408,7 +408,7 @@ def _resolve_group(env, codes):
     """R-16 п. 5: об'єкт сцени без власного запису (стелаж, група) -> записи його дочірніх кодів (комірок): перша за
     порядком домішки модель, у якій знайшлось хоч щось. {model, res_id: None, res_ids, display_name, kind, count}."""
     codes = list(dict.fromkeys(codes))[:RESOLVE_GROUP_MAX]
-    for model in env["td.scene.mixin"]._f3d_resolve_order:
+    for model in env["td.scene.mixin"]._td_resolve_order:
         if not codes or model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
             continue
         recs = env[model].search(["|", ("td_code", "in", codes), ("td_alias", "in", codes)],
@@ -442,7 +442,7 @@ def resolve(env, code=None, name=None, codes=None):
             if wo:
                 return _found(wo, "document")
         mixin = env["td.scene.mixin"]
-        for model in mixin._f3d_resolve_order:
+        for model in mixin._td_resolve_order:
             if model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
                 continue
             rec = env[model].search_f3d(code)

@@ -45,19 +45,19 @@ class F3dViewerProviderSignals(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: постачальник — сигнали імітації"
 
-    _f3d_sequence = 90
-    _f3d_sections = ()
-    _f3d_group = payload_tools.DEFAULT_GROUP
+    _td_sequence = 90
+    _td_sections = ()
+    _td_group = payload_tools.DEFAULT_GROUP
 
     @api.model
-    def _f3d_signal_rows(self, codes=None):
+    def _td_signal_rows(self, codes=None):
         domain = [("x_active", "=", True), ("x_code", "!=", False)]
         if codes is not None:
             domain.append(("x_code", "in", list(codes)))
         return payload_tools.read(self.env, SIGNAL_MODEL, domain, SIGNAL_FIELDS)
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         sections = ctx.get("sections")
         if SIGNAL_MODEL not in self.env:
             if isinstance(sections, dict):
@@ -67,7 +67,7 @@ class F3dViewerProviderSignals(models.AbstractModel):
             if isinstance(sections, dict):
                 sections["signals"] = "denied"
             return
-        rows = self._f3d_signal_rows()
+        rows = self._td_signal_rows()
         apply_signals(payload, rows)
         totals = (payload.get("infra") or {}).get("totals") or {}
         energy_totals = (payload.get("energy") or {}).get("totals")
@@ -81,13 +81,13 @@ class F3dViewerProviderSignals(models.AbstractModel):
             sections["signals"] = "live"
 
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """R-14 п. 5: `patch.signals = [{path, value}]` для шляхів із `codes` + `meta.iot`."""
         changes = ctx.get("changes") or {}
         if SIGNAL_MODEL not in self.env or SIGNAL_MODEL not in changes \
                 or not payload_tools.access_ok(self.env, SIGNAL_MODEL):
             return
         codes = set(changes[SIGNAL_MODEL])
-        rows = self._f3d_signal_rows(codes) if codes else []
+        rows = self._td_signal_rows(codes) if codes else []
         patch["signals"] = [{"path": r["x_code"], "value": signal_value(r)} for r in rows]
-        patch.setdefault("meta", {})["iot"] = iot_meta(self._f3d_signal_rows())
+        patch.setdefault("meta", {})["iot"] = iot_meta(self._td_signal_rows())

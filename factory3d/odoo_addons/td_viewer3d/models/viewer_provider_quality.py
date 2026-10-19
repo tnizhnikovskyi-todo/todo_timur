@@ -15,15 +15,15 @@ class F3dViewerProviderQuality(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: провайдер даних quality"
 
-    _f3d_sequence = 45
-    _f3d_sections = ("quality_checks",)
+    _td_sequence = 45
+    _td_sections = ("quality_checks",)
 
     @api.model
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["quality.check"]
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         env = self.env
         if not payload_tools.access_ok(env, "quality.check"):
             payload["quality_checks"] = []
@@ -62,9 +62,9 @@ class F3dViewerProviderQuality(models.AbstractModel):
         payload["quality_checks"] = out
 
     @api.model
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         """Цілком, якщо є події quality.check."""
         if (ctx.get("changes") or {}).get("quality.check"):
             tmp = {}
-            self._f3d_viewer_collect(tmp, ctx)
+            self._td_viewer_collect(tmp, ctx)
             payload_tools.deep_merge(patch, {"quality_checks": tmp.get("quality_checks") or []})

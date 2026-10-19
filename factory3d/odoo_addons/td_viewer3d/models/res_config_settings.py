@@ -46,7 +46,7 @@ class ResConfigSettings(models.TransientModel):
         for rec in self:
             rec.td_kiosk_url = "%s/f3d/kiosk/%s" % (base.rstrip("/"), token) if admin and token else ""
 
-    def _f3d_validate(self):
+    def _td_validate(self):
         def bad(label, expect):
             raise ValidationError(_("Невірне значення %(field)s: очікується %(expect)s", field=label, expect=expect))
 
@@ -61,7 +61,7 @@ class ResConfigSettings(models.TransientModel):
                 bad(_("Демо-годинник"), _("YYYY-MM-DD HH:MM або порожньо"))
 
     def set_values(self):
-        self._f3d_validate()
+        self._td_validate()
         res = super().set_values()
         params = self.env["ir.config_parameter"].sudo()
         for rec in self:

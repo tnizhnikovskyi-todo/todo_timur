@@ -247,7 +247,7 @@ class F3dViewerController(http.Controller):
         if equipment_id is not None and (isinstance(equipment_id, bool) or not isinstance(equipment_id, int)
                                          or not 0 < equipment_id < 2 ** 31):
             return plan_error(400, "bad_request", "Невалідний параметр: equipment_id")
-        return request.env["td.viewer.provider.maintenance"]._f3d_plan_maintenance(
+        return request.env["td.viewer.provider.maintenance"]._td_plan_maintenance(
             code=code, equipment_id=equipment_id)
 
     # --- знімки (API-05, API-06) -------------------------------------------
