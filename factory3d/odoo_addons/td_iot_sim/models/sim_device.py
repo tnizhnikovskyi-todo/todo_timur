@@ -98,8 +98,8 @@ class F3dSimDevice(models.Model):
         for rec in self:
             if not CODE_RE.match(rec.code or ""):
                 raise ValidationError(
-                    "Код пристрою «%s» не відповідає формату A-Z, 0-9, «-», «.» (до 32 символів, першим — літера або цифра)"
-                    % rec.code
+                    "Код пристрою «%s» не відповідає формату A-Z, 0-9, «-», «.» (до 32 символів, першим — літера або "
+                    "цифра)" % rec.code
                 )
 
     @api.constrains("unit_id")
