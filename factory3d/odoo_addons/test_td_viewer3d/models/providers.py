@@ -10,11 +10,11 @@ class ZzTestProvider(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: тестовий провайдер zz_test"
 
-    _f3d_sequence = 5
-    _f3d_sections = ("zones",)
+    _td_sequence = 5
+    _td_sections = ("zones",)
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         deep_merge(payload.setdefault("zones", {}), {"Z-TEST": {"name": "Тестова зона", "locations": []}})
 
 
@@ -25,11 +25,11 @@ class ZzFailProvider(models.AbstractModel):
     _inherit = "td.viewer.provider"
     _description = "3D: тестовий провайдер zz_fail"
 
-    _f3d_sequence = 6
-    _f3d_sections = ("fire",)
+    _td_sequence = 6
+    _td_sections = ("fire",)
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         enabled = self.env.context.get("zz_fail") or self.env["ir.config_parameter"].sudo().get_param(
             "td.test.zz_fail")
         if enabled:
@@ -38,15 +38,15 @@ class ZzFailProvider(models.AbstractModel):
 
 
 class ZzDuckProvider(models.AbstractModel):
-    """Спосіб (б): за префіксом імені, без `_inherit`; без `_f3d_viewer_delta` і `_f3d_viewer_bus_models`."""
+    """Спосіб (б): за префіксом імені, без `_inherit`; без `_td_viewer_delta` і `_td_viewer_bus_models`."""
     _name = "td.viewer.provider.zz_duck"
     _description = "3D: тестовий провайдер zz_duck (duck-typing)"
 
-    _f3d_sequence = 152
-    _f3d_sections = ("infra", "zz_duck")
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 152
+    _td_sections = ("infra", "zz_duck")
+    _td_group = "td_factory3d.group_td_user"
 
     @api.model
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         deep_merge(payload.setdefault("infra", {}), {"cards": {"ZZ-DUCK": {"rows": [["Тест", "так"]]}}})
         payload["zz_duck"] = {"ok": True}
