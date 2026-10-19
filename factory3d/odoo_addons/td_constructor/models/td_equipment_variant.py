@@ -206,13 +206,13 @@ class F3dEquipmentVariant(models.Model):
                 if 'create_equipment' not in vals and (passport.role or '').startswith(SCENE_ROLE_PREFIX):
                     vals['create_equipment'] = False
             if 'utilities' in vals:
-                vals['utilities'] = self._f3d_normalize_utilities(vals['utilities'])
+                vals['utilities'] = self._td_normalize_utilities(vals['utilities'])
             prepared.append(vals)
         return super().create(prepared)
 
     def write(self, vals):
         if 'utilities' in vals:
-            vals = dict(vals, utilities=self._f3d_normalize_utilities(vals['utilities']))
+            vals = dict(vals, utilities=self._td_normalize_utilities(vals['utilities']))
         if not self.env.su and not self.env.context.get('f3d_model_write') and set(vals) & set(MODEL_FIELDS):
             raise AccessError("Поля 3D-моделі змінюються лише через завантаження моделі.")
         return super().write(vals)
@@ -227,7 +227,7 @@ class F3dEquipmentVariant(models.Model):
         return res
 
     @api.model
-    def _f3d_normalize_utilities(self, value):
+    def _td_normalize_utilities(self, value):
         try:
             return schemas.normalize_variant_utilities(value)
         except schemas.SchemaError as exc:
@@ -274,11 +274,11 @@ class F3dEquipmentVariant(models.Model):
                 raise ValidationError("Для статусу «Готово» потрібен файл GLB.")
 
     # --- геометрія й навантаження ----------------------------------------------------------------------
-    def _f3d_effective_floor_load(self):
+    def _td_effective_floor_load(self):
         self.ensure_one()
         return self.floor_load_kn_m2
 
-    def _f3d_local_geometry(self):
+    def _td_local_geometry(self):
         """Геометричний опис варіанта у форматі API-03 `catalog[].variants[]` (мм), без полів моделі й etag."""
         self.ensure_one()
         return {
@@ -302,12 +302,12 @@ class F3dEquipmentVariant(models.Model):
             'power_kw': self.power_kw,
             'panel': self.panel or '',
             'weight_kg': self.weight_kg,
-            'floor_load': self._f3d_effective_floor_load(),
+            'floor_load': self._td_effective_floor_load(),
             'create_workcenter': self.create_workcenter,
         }
 
     # --- 3D-модель (R-18, R-19, R-20) ------------------------------------------------------------------
-    def _f3d_params(self):
+    def _td_params(self):
         get = self.env['ir.config_parameter'].sudo().get_param
         try:
             max_mb = float(get('td.constructor.max_model_mb', 20) or 20)
@@ -319,7 +319,7 @@ class F3dEquipmentVariant(models.Model):
             max_tri = 50000
         return max_mb, max_tri, get('td.constructor.convert_server_enabled', 'True') == 'True'
 
-    def _f3d_new_attachment(self, file_name, raw, mimetype=None):
+    def _td_new_attachment(self, file_name, raw, mimetype=None):
         file_name = os.path.basename(file_name or 'model')[:200] or 'model'
         return (
             self.env['ir.attachment']
@@ -335,7 +335,7 @@ class F3dEquipmentVariant(models.Model):
             )
         )
 
-    def _f3d_set_model(self, original=None, glb=None, meta=None, status='ok', message=''):
+    def _td_set_model(self, original=None, glb=None, meta=None, status='ok', message=''):
         """Єдина точка запису полів моделі (R-18).
 
         `original`, `glb` — `(ім'я файла, bytes)` або None («без змін»). `meta` — довідкові дані клієнта: серверні
@@ -344,7 +344,7 @@ class F3dEquipmentVariant(models.Model):
         Помилки — `F3dModelError(code, message)`: too_large, unsupported_format, bad_glb; нічого не зберігається.
         """
         self.ensure_one()
-        max_mb, max_tri, _enabled = self._f3d_params()
+        max_mb, max_tri, _enabled = self._td_params()
         limit = int(max_mb * 1048576)
         too_large = F3dModelError('too_large', "Файл більший за %g МБ" % max_mb)
         meta = meta if isinstance(meta, dict) else {}
@@ -409,10 +409,10 @@ class F3dEquipmentVariant(models.Model):
         vals = {'model_status': status, 'model_meta': new_meta}
         if original:
             old |= self.model_original_id
-            vals['model_original_id'] = self._f3d_new_attachment(orig_name, orig_raw).id
+            vals['model_original_id'] = self._td_new_attachment(orig_name, orig_raw).id
         if glb:
             old |= self.model_glb_id
-            vals['model_glb_id'] = self._f3d_new_attachment(glb_name, glb_raw, 'model/gltf-binary').id
+            vals['model_glb_id'] = self._td_new_attachment(glb_name, glb_raw, 'model/gltf-binary').id
         elif original:
             old |= self.model_glb_id
             vals['model_glb_id'] = False  # нове джерело без GLB: старий превью недійсний
@@ -420,12 +420,12 @@ class F3dEquipmentVariant(models.Model):
         old.sudo().unlink()
         return {'model_status': self.model_status, 'model_meta': self.model_meta}
 
-    def _f3d_convert_model(self):
+    def _td_convert_model(self):
         """R-20: серверне перетворення STEP/IGES/IFC; не кидає винятків, повертає `{'ok', 'status', 'message'}`."""
         self.ensure_one()
         meta = dict(self.model_meta or {})
         ext = (meta.get('format') or model_extension(self.model_original_id.name)).lower()
-        _max_mb, _max_tri, enabled = self._f3d_params()
+        _max_mb, _max_tri, enabled = self._td_params()
 
         def pending(message):
             self.with_context(f3d_model_write=True).write(
@@ -455,7 +455,7 @@ class F3dEquipmentVariant(models.Model):
                 with open(out_path, 'rb') as handle:
                     glb_raw = handle.read()
             base = os.path.splitext(meta.get('file_name') or 'model')[0]
-            result = self._f3d_set_model(
+            result = self._td_set_model(
                 glb=("%s.glb" % base, glb_raw),
                 meta=dict(meta, converted_by='server'),
                 status='ok',
@@ -487,7 +487,7 @@ class F3dEquipmentVariant(models.Model):
 
     def action_retry_convert(self):
         self.ensure_one()
-        result = self._f3d_convert_model()
+        result = self._td_convert_model()
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

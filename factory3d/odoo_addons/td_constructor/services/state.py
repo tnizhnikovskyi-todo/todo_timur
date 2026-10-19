@@ -204,7 +204,7 @@ def rules_state(site):
 
 
 def variant_dict(variant):
-    data = variant._f3d_local_geometry()
+    data = variant._td_local_geometry()
     model = None
     if variant.model_status != 'none':
         meta = variant.model_meta or {}
@@ -247,7 +247,7 @@ def checks_state(site):
         'layers': layer_data,
         'slots': [slot_dict(s) for s in slots],
         'placements': [placement_dict(p) for p in placements],
-        'variants': [variant._f3d_local_geometry() for variant in variants],
+        'variants': [variant._td_local_geometry() for variant in variants],
     }
 
 

@@ -19,7 +19,7 @@ def link_existing(env, site):
     slots = env['td.slot'].search([('site_id', '=', site.id)])
     wanted = {}
     for slot in slots:
-        for cell in slot._f3d_cells():
+        for cell in slot._td_cells():
             wanted.setdefault(cell['code'], slot)
     if wanted:
         codes = list(wanted)

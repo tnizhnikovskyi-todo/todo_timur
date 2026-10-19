@@ -30,7 +30,7 @@ class TdOdooImportController(http.Controller):
     @staticmethod
     def _can_write(env, site):
         """Менеджер чи проєктувальник із правом на шар площадки (як `/site/addr`)."""
-        return is_manager(env) or any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+        return is_manager(env) or any(env['td.layer']._td_can_edit_layer(layer) for layer in site.layer_ids)
 
     def _site(self, env, site_id, write=False):
         """Площадка для читання (група «Перегляд») чи запису (менеджер або проєктувальник шару) або готова відповідь-
@@ -43,7 +43,7 @@ class TdOdooImportController(http.Controller):
         if (
             write
             and not is_manager(env)
-            and not any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+            and not any(env['td.layer']._td_can_edit_layer(layer) for layer in site.layer_ids)
         ):
             return None, fail('rights', "Змінює менеджер чи проєктувальник із правом на шар площадки.")
         return site, None
@@ -96,7 +96,7 @@ class TdOdooImportController(http.Controller):
             rules = odoo_sync.normalize_parse_rules(parse_rules)
             with env.cr.savepoint():
                 site.sudo().write({'parse_rules': rules})
-                site._f3d_touch(1)
+                site._td_touch(1)
                 env.flush_all()
         except (AccessError, UserError, ValidationError, IntegrityError) as exc:
             env.invalidate_all()

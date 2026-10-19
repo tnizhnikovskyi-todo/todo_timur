@@ -98,7 +98,7 @@
 - Перевірки `fits`, `collide`, `service_free`, `aisles_free`, `load`, `utility_reach`, `fire` (OBB + SAT), золоті фікстури
   паритету з JS.
 - Майстер публікації (збіг за `td_code`/`barcode`, без видалень, пропозиції архівації), знімки версій, відновлення чернетки.
-- API-01…API-10: JSON-RPC, завантаження й віддача 3D-моделей; хук `_f3d_convert_model()` для STEP/IGES/IFC.
+- API-01…API-10: JSON-RPC, завантаження й віддача 3D-моделей; хук `_td_convert_model()` для STEP/IGES/IFC.
 - Ролі технолог/комірник/інженер/менеджер, правила `ir.rule` + серверна перевірка шару.
 - Seed «Меблеве підприємство» зі зв'язуванням наявних записів за кодом (`post_init_hook`).
 - Шаблони комірок: додаткові параметри `index_digits`, `code_style` (`pallet_rack`), `loc_kind` (`shelf`) — щоб коди й види

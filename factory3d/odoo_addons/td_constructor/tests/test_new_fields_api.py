@@ -101,7 +101,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
                     'model': 'td.layer',
                     'op': 'write',
                     'id': layer.id,
-                    'etag': layer._f3d_etag(),
+                    'etag': layer._td_etag(),
                     'vals': {'items': self.items},
                 },
                 {
@@ -188,7 +188,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
                     'model': 'td.putaway.rule',
                     'op': 'write',
                     'id': rule.id,
-                    'etag': rule._f3d_etag(),
+                    'etag': rule._td_etag(),
                     'vals': {'deleted': True},
                 }
             ],
@@ -220,7 +220,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
             return self.rpc(
                 '/f3d/constructor/save',
                 site_id=self.site.id,
-                ops=[{'model': model, 'op': 'write', 'id': record.id, 'etag': record._f3d_etag(), 'vals': vals}],
+                ops=[{'model': model, 'op': 'write', 'id': record.id, 'etag': record._td_etag(), 'vals': vals}],
             )
 
         self.assertEqual(write({'type_id': 999999})['code'], 'validation')
@@ -251,7 +251,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
                     'model': 'td.layer',
                     'op': 'write',
                     'id': layer.id,
-                    'etag': layer._f3d_etag(),
+                    'etag': layer._td_etag(),
                     'vals': {'items': self.items},
                 }
             ],
@@ -267,7 +267,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
                     'model': 'td.layer',
                     'op': 'write',
                     'id': layer.id,
-                    'etag': layer._f3d_etag(),
+                    'etag': layer._td_etag(),
                     'vals': {'name': "Інше"},
                 }
             ],
@@ -282,7 +282,7 @@ class TestNewFieldsApi(NewFieldsMixin, F3DConstructorHttpCase):
                     'model': 'td.layer',
                     'op': 'write',
                     'id': foreign.id,
-                    'etag': foreign._f3d_etag(),
+                    'etag': foreign._td_etag(),
                     'vals': {'items': []},
                 }
             ],

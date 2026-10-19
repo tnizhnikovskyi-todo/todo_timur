@@ -49,7 +49,7 @@ class TestSceneSeed(F3DConstructorCase):
         covered = set(self.env['td.placement'].search([('site_id', '=', self.site.id)]).mapped('code'))
         covered |= set(slots.mapped('code_prefix'))
         for slot in slots:
-            covered |= {cell['code'] for cell in slot._f3d_cells()}
+            covered |= {cell['code'] for cell in slot._td_cells()}
         missing = [
             code for code in self.inventory['objects'] if code not in covered and FRAME_ALIAS.get(code) not in covered
         ]
@@ -92,7 +92,7 @@ class TestSceneSeed(F3DConstructorCase):
     def test_exact_cells_have_the_object_code(self):
         slot = self.env['td.slot'].search([('site_id', '=', self.site.id), ('code_prefix', '=', 'UNLOAD-3')])
         self.assertTrue(slot, "UNLOAD-3 має бути в сіді (етап 2 його ховає)")
-        self.assertEqual([cell['code'] for cell in slot._f3d_cells()], ['UNLOAD-3'])
+        self.assertEqual([cell['code'] for cell in slot._td_cells()], ['UNLOAD-3'])
 
     def test_people_and_vehicles_are_dynamic(self):
         expected = {c for c, o in self.inventory['objects'].items() if o['kind'] in ('person', 'vehicle')}

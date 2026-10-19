@@ -45,20 +45,20 @@ class TdLayoutVariant(models.Model):
 
     # --- параметри й права -------------------------------------------------------------------------------
     @api.model
-    def _f3d_max(self):
+    def _td_max(self):
         try:
             return max(1, int(self.env['ir.config_parameter'].sudo().get_param('td.constructor.variants_max', 12)))
         except (TypeError, ValueError):
             return 12
 
     @api.model
-    def _f3d_assert_manager(self):
+    def _td_assert_manager(self):
         """Варіантами керує менеджер (MERGE.md §3.5): чернетка спільна, перемикання підмінює її для всіх."""
         if not (self.env.su or self.env.user.has_group(MANAGER_XMLID)):
             raise AccessError("Варіантами планування керує лише менеджер конструктора.")
 
     @api.model
-    def _f3d_clean_metrics(self, metrics):
+    def _td_clean_metrics(self, metrics):
         out = {}
         for key in METRIC_KEYS:
             value = (metrics or {}).get(key)
@@ -67,7 +67,7 @@ class TdLayoutVariant(models.Model):
         return out
 
     # --- знімки ---------------------------------------------------------------------------------------------
-    def _f3d_write_snapshot(self, metrics=None):
+    def _td_write_snapshot(self, metrics=None):
         """Записує знімок ПОТОЧНОЇ чернетки площадки у варіанти (R-14) і базову версію; `metrics` — цифри ядра."""
         from ..services import snapshot
 
@@ -90,7 +90,7 @@ class TdLayoutVariant(models.Model):
                 )
             vals = {'base_version_id': site.draft_base_version_id.id or False}
             if metrics is not None:
-                vals['metrics'] = dict(variant.metrics or {}, **self._f3d_clean_metrics(metrics))
+                vals['metrics'] = dict(variant.metrics or {}, **self._td_clean_metrics(metrics))
             variant.write(vals)
         return True
 
@@ -98,7 +98,7 @@ class TdLayoutVariant(models.Model):
     def create(self, vals_list):
         records = super().create(vals_list)
         # створений без знімка (наприклад, у списку Odoo): «з поточного» — знімок чернетки
-        records.filtered(lambda v: not v.snapshot_id)._f3d_write_snapshot()
+        records.filtered(lambda v: not v.snapshot_id)._td_write_snapshot()
         return records
 
     def unlink(self):
@@ -124,7 +124,7 @@ class TdLayoutVariant(models.Model):
     @api.model
     def f3d_make(self, site, name, training=False, activate=True, metrics=None):
         """«Створити з поточного»: новий варіант = копія чернетки; за `activate` робота триває в ньому."""
-        self._f3d_assert_manager()
+        self._td_assert_manager()
         site = site.sudo()
         name = (name or '').strip()
         if not name:
@@ -135,8 +135,8 @@ class TdLayoutVariant(models.Model):
             if Variant.search_count([('site_id', '=', site.id), ('is_training', '=', True)]):
                 raise UserError("Навчальна копія вже існує: завершіть або скасуйте її.")
         else:
-            if Variant.search_count([('site_id', '=', site.id), ('is_training', '=', False)]) >= self._f3d_max():
-                raise UserError("Не більше %d варіантів на площадку." % self._f3d_max())
+            if Variant.search_count([('site_id', '=', site.id), ('is_training', '=', False)]) >= self._td_max():
+                raise UserError("Не більше %d варіантів на площадку." % self._td_max())
             if Variant.search_count([('site_id', '=', site.id), ('is_training', '=', False), ('name', '=ilike', name)]):
                 raise UserError("Варіант «%s» уже існує." % name)
         last = Variant.search([('site_id', '=', site.id)], order='sequence desc, id desc', limit=1)
@@ -150,18 +150,18 @@ class TdLayoutVariant(models.Model):
             }
         )
         if metrics is not None:
-            variant.metrics = self._f3d_clean_metrics(metrics)
+            variant.metrics = self._td_clean_metrics(metrics)
         if activate:
-            current._f3d_write_snapshot(metrics)  # поточна гілка лишається знімком у попередньому варіанті
+            current._td_write_snapshot(metrics)  # поточна гілка лишається знімком у попередньому варіанті
             site.active_variant_id = variant
-            variant._f3d_write_snapshot(metrics)
+            variant._td_write_snapshot(metrics)
         return variant
 
     def f3d_activate(self, metrics=None):
         """Зробити варіант активним: знімок поточної гілки → відновлення вибраної (чернетка не втрачається)."""
         from ..services import snapshot
 
-        self._f3d_assert_manager()
+        self._td_assert_manager()
         self.ensure_one()
         site = self.site_id.sudo()
         current = self.f3d_ensure(site)
@@ -171,7 +171,7 @@ class TdLayoutVariant(models.Model):
             raise UserError("У варіанта «%s» немає знімка." % self.name)
         target = snapshot.load_snapshot(self)
         with self.env.cr.savepoint():
-            current._f3d_write_snapshot(metrics)
+            current._td_write_snapshot(metrics)
             snapshot.apply_snapshot(site, target)
             active = site.active_version_id
             base = self.base_version_id if self.base_version_id.exists() else active
@@ -193,14 +193,14 @@ class TdLayoutVariant(models.Model):
     def f3d_end_training(self, keep=False):
         """Кінець навчальної копії (F19-04): «Залишити зміни» робить її звичайним варіантом, «Скасувати» повертає
         роботу у варіант-джерело й видаляє копію."""
-        self._f3d_assert_manager()
+        self._td_assert_manager()
         self.ensure_one()
         if not self.is_training:
             raise UserError("Це не навчальна копія.")
         site = self.site_id.sudo()
         if keep:
             self.sudo().write({'is_training': False})
-            self.sudo()._f3d_write_snapshot()
+            self.sudo()._td_write_snapshot()
             return self
         origin = self.origin_id if self.origin_id.exists() else self.browse()
         if not origin:

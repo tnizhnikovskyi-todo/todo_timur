@@ -61,16 +61,16 @@ class F3dPlacement(models.Model):
     )
 
     # --- геометрія (R-02) -------------------------------------------------------------------------------
-    def _f3d_obb(self):
+    def _td_obb(self):
         self.ensure_one()
-        return geo.placement_obb(self.variant_id._f3d_local_geometry(), self.x_m, self.y_m, self.rotation)
+        return geo.placement_obb(self.variant_id._td_local_geometry(), self.x_m, self.y_m, self.rotation)
 
-    def _f3d_service_obb(self):
+    def _td_service_obb(self):
         self.ensure_one()
-        return geo.service_obb(self.variant_id._f3d_local_geometry(), self.x_m, self.y_m, self.rotation)
+        return geo.service_obb(self.variant_id._td_local_geometry(), self.x_m, self.y_m, self.rotation)
 
     # --- R-22 / R-11 -----------------------------------------------------------------------------------
-    def _f3d_normalize_vals(self, vals):
+    def _td_normalize_vals(self, vals):
         for key, limit in (('code', 32), ('cell_code', 32)):  # Char(size) мовчки обрізає — перевіряємо до запису
             if isinstance(vals.get(key), str) and len(vals[key]) > limit:
                 raise ValidationError("Поле «%s» довше за %d символів." % (self._fields[key].string, limit))
@@ -81,18 +81,18 @@ class F3dPlacement(models.Model):
         return vals
 
     @api.model
-    def _f3d_check_create(self, vals_list):
+    def _td_check_create(self, vals_list):
         layers = self.env['td.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
-        self._f3d_assert_layers(layers)
+        self._td_assert_layers(layers)
 
-    def _f3d_check_write(self, vals):
+    def _td_check_write(self, vals):
         layers = self.mapped('layer_id')
         if vals.get('layer_id'):
             layers |= self.env['td.layer'].browse(vals['layer_id'])
-        self._f3d_assert_layers(layers)
+        self._td_assert_layers(layers)
 
-    def _f3d_check_unlink(self):
-        self._f3d_assert_layers(self.mapped('layer_id'))
+    def _td_check_unlink(self):
+        self._td_assert_layers(self.mapped('layer_id'))
 
     # --- constraints -----------------------------------------------------------------------------------
     @api.constrains('code')
@@ -118,7 +118,7 @@ class F3dPlacement(models.Model):
             if rec.cell_code:
                 if not rec.slot_id:
                     raise ValidationError("Комірку %s задано без місця." % rec.cell_code)
-                if rec.cell_code not in {c['code'] for c in rec.slot_id._f3d_cells()}:
+                if rec.cell_code not in {c['code'] for c in rec.slot_id._td_cells()}:
                     raise ValidationError("Комірки %s немає в місці %s." % (rec.cell_code, rec.slot_id.code_prefix))
 
     @api.constrains('x_m', 'y_m', 'rotation')

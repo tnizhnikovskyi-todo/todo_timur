@@ -22,7 +22,7 @@ class TdWizardController(http.Controller):
         site = find_site(env, site_id)
         if not site:
             return fail('not_found', "Площадку не знайдено.")
-        if not is_manager(env) and not any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids):
+        if not is_manager(env) and not any(env['td.layer']._td_can_edit_layer(layer) for layer in site.layer_ids):
             return fail('rights', "Майстер «З нуля» доступний менеджеру чи проєктувальнику із правом на шар площадки.")
         if state is None:
             return {'ok': True, 'wizard_state': site.wizard_state or {}}

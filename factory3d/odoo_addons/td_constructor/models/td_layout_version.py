@@ -82,7 +82,7 @@ class F3dLayoutVersion(models.Model):
         from ..services import publish
 
         self.ensure_one()
-        self.site_id._f3d_check_rights_manager()
+        self.site_id._td_check_rights_manager()
         result = publish.rollback_version(self.site_id, self)
         return {
             'type': 'ir.actions.client',
@@ -110,7 +110,7 @@ class F3dLayoutVersion(models.Model):
     def action_restore_draft(self):
         """R-14: повернути чернетку до версії (менеджер)."""
         self.ensure_one()
-        self.site_id._f3d_check_rights_manager()
+        self.site_id._td_check_rights_manager()
         from ..services import snapshot
 
         snapshot.restore_draft(self)

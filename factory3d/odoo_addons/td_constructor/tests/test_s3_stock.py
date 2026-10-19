@@ -139,7 +139,7 @@ class TestS3StockState(StockFixture, F3DConstructorCase):
     def test_fill_uses_s2_capacity_service(self):
         """Вага й ліміт комірки — від сервісу ємності S2: max_load_kg комірки місця (а не лише категорія локації)."""
         slot = self.make_slot(prefix='TQ-R1', max_load_kg=500)
-        code = slot._f3d_cells()[0]['code']
+        code = slot._td_cells()[0]['code']
         loc = self.env['stock.location'].create(
             {
                 'name': code,

@@ -23,8 +23,8 @@ class TestS6Tours(F3DConstructorHttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.tour_mgr = cls._f3d_user('tour_mgr', ['manager'])
-        cls.tour_store = cls._f3d_user('tour_store', ['storekeeper'])
+        cls.tour_mgr = cls._td_user('tour_mgr', ['manager'])
+        cls.tour_store = cls._td_user('tour_store', ['storekeeper'])
         for user in (cls.tour_mgr, cls.tour_store):
             user.password = user.login  # start_tour входить із паролем = логіну
         cls.rack = cls.make_slot(cls, prefix='TQ-TOUR')

@@ -99,7 +99,7 @@ class TestVariantModelApi(F3DConstructorHttpCase):
                 handle.write(glb)
 
         with patch.dict(convert.CONVERTERS, {'step': (lambda: True, run)}):
-            result = self.variant._f3d_convert_model()
+            result = self.variant._td_convert_model()
         self.assertTrue(result['ok'], result)
         self.assertEqual(self.variant.model_status, 'ok')
         self.assertEqual(self.variant.model_meta['converted_by'], 'server')
@@ -116,18 +116,18 @@ class TestVariantModelApi(F3DConstructorHttpCase):
         # вимкнений серверний конвертер
         self.env['ir.config_parameter'].sudo().set_param('td.constructor.convert_server_enabled', 'False')
         self.variant.invalidate_recordset()
-        result = self.variant._f3d_convert_model()
+        result = self.variant._td_convert_model()
         self.assertEqual((result['ok'], result['status']), (False, 'pending_conversion'))
         self.assertIn("вимкнено", result['message'])
 
     def test_converter_failure_gives_error_status(self):
-        self.variant._f3d_set_model(original=('p.step', b'x'), meta={}, status='pending_conversion')
+        self.variant._td_set_model(original=('p.step', b'x'), meta={}, status='pending_conversion')
 
         def boom(in_path, out_path, timeout):
             raise RuntimeError("зламано")
 
         with patch.dict(convert.CONVERTERS, {'step': (lambda: True, boom)}):
-            result = self.variant._f3d_convert_model()
+            result = self.variant._td_convert_model()
         self.assertEqual((result['ok'], result['status']), (False, 'error'))
         self.assertEqual(self.variant.model_status, 'error')
         self.assertIn("зламано", self.variant.model_meta['message'])

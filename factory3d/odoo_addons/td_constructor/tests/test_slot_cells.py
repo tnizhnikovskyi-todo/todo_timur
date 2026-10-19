@@ -106,7 +106,7 @@ class TestSlotCellsOrm(F3DConstructorCase):
         self.assertEqual(slot.cell_count, 72)
         slot.write({'overrides': {'TQ-R1-B02-L1': {'disabled': True}, 'TQ-R1-B03-L1': {'max_load_kg': 1500}}})
         self.assertEqual(slot.cell_count, 71)
-        cells = {c['code']: c for c in slot._f3d_cells()}
+        cells = {c['code']: c for c in slot._td_cells()}
         self.assertNotIn('TQ-R1-B02-L1', cells)
         self.assertEqual(cells['TQ-R1-B03-L1']['max_load_kg'], 1500)
         with self.assertRaises(ValidationError) as ctx:

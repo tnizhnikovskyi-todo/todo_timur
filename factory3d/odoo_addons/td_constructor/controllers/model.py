@@ -49,7 +49,7 @@ class F3dModelController(http.Controller):
             variant.check_access('write')
         except AccessError as exc:
             return _error('rights', str(exc))
-        max_mb, _tri, _enabled = variant._f3d_params()
+        max_mb, _tri, _enabled = variant._td_params()
         limit = int(max_mb * 1048576)
         files = {}
         for key, storage in (('original', original), ('glb', glb)):
@@ -75,7 +75,7 @@ class F3dModelController(http.Controller):
         try:
             with env.cr.savepoint():
                 if ext in SERVER_CONVERT_FORMATS:
-                    variant._f3d_set_model(
+                    variant._td_set_model(
                         original=files['original'],
                         glb=files.get('glb'),
                         meta=client_meta,
@@ -83,7 +83,7 @@ class F3dModelController(http.Controller):
                         message="" if 'glb' in files else "Очікує перетворення",
                     )
                     if 'glb' not in files:
-                        variant._f3d_convert_model()
+                        variant._td_convert_model()
                 else:
                     glb_file = files.get('glb') or ((name, raw) if ext == 'glb' else None)
                     if glb_file is None and ext in ('gltf', 'obj', 'mtl', 'fbx', 'stl', '3mf', 'dae'):
@@ -91,7 +91,7 @@ class F3dModelController(http.Controller):
                             'bad_glb',
                             "Потрібен GLB, створений у браузері: перетворення цього формату виконується у віджеті.",
                         )
-                    variant._f3d_set_model(original=files['original'], glb=glb_file, meta=client_meta, status='ok')
+                    variant._td_set_model(original=files['original'], glb=glb_file, meta=client_meta, status='ok')
         except F3dModelError as exc:
             env.invalidate_all()
             return _error(exc.code, str(exc))

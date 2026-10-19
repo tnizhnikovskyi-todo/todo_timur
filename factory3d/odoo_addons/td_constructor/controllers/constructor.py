@@ -204,7 +204,7 @@ class F3dConstructorController(http.Controller):
         result = []
         for site in env['td.site'].search([]):
             version = site.active_version_id
-            can_edit = manager or any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
+            can_edit = manager or any(env['td.layer']._td_can_edit_layer(layer) for layer in site.layer_ids)
             result.append(
                 {
                     'id': site.id,
@@ -339,7 +339,7 @@ class F3dConstructorController(http.Controller):
             'rights': {
                 'is_manager': manager,
                 'roles': roles,
-                'editable_layer_ids': [layer.id for layer in layers if Layer._f3d_can_edit_layer(layer)],
+                'editable_layer_ids': [layer.id for layer in layers if Layer._td_can_edit_layer(layer)],
                 'can_publish': manager and params(env)['publish_enabled'],
                 'can_edit_catalog': env.user.has_group(ROLE_GROUPS['technologist']),
             },
@@ -380,7 +380,7 @@ class F3dConstructorController(http.Controller):
         etags = {}
         for (model, rid), rec in touched.items():
             if rec.exists():
-                etags['%s:%d' % (model, rid)] = rec._f3d_etag()
+                etags['%s:%d' % (model, rid)] = rec._td_etag()
         return {
             'ok': True,
             'rev': site.draft_rev,
@@ -480,8 +480,8 @@ class F3dConstructorController(http.Controller):
         if not rec or rec.site_id != site:
             raise _OpError('not_found', "Запис не знайдено.")
         etag = op.get('etag')
-        if etag is not None and etag != rec._f3d_etag():
-            current = DICT_FUNCS[model](rec) if model in DICT_FUNCS else {'id': rec.id, 'etag': rec._f3d_etag()}
+        if etag is not None and etag != rec._td_etag():
+            current = DICT_FUNCS[model](rec) if model in DICT_FUNCS else {'id': rec.id, 'etag': rec._td_etag()}
             raise _OpError('conflict', "Запис змінено іншим користувачем.", current=current)
         if kind == 'write':
             rec.write(self._prepare_vals(site, model, op.get('vals') or {}, id_map, False))
@@ -516,8 +516,8 @@ class F3dConstructorController(http.Controller):
         if not site.has_changes and not [line for line in plan['lines'] if line['kind'] in ('create', 'update')]:
             return fail('no_changes', "Немає змін для публікації")
         wizard = env['td.publish.wizard'].create({'site_id': site.id})
-        wizard._f3d_rebuild(plan)
-        return {'ok': True, 'action': wizard._f3d_action(from_editor=True), 'summary': publish.summary(plan)}
+        wizard._td_rebuild(plan)
+        return {'ok': True, 'action': wizard._td_action(from_editor=True), 'summary': publish.summary(plan)}
 
     # --- API-07 -------------------------------------------------------------------------------------
     @http.route('/f3d/constructor/publish', type='jsonrpc', auth='user', methods=['POST'])

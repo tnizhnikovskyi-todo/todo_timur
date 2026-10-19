@@ -64,7 +64,7 @@ class TestCatalog(F3DConstructorCase):
         slot.type_id = r02
         self.assertEqual(slot.type_id.ref, 'R02')
         self.assertEqual(slot.footprint_w_m, 2.2)  # deep=2: глибина секції — дві палети
-        self.assertEqual(slot._f3d_cells()[0]['capacity'], 6.0)
+        self.assertEqual(slot._td_cells()[0]['capacity'], 6.0)
         with self.assertRaises(ValidationError):
             slot.type_id = self.env['td.slot.type'].search([('code', '=', 'r11')])  # інший генератор
         with self.assertRaises(ValidationError):
@@ -75,7 +75,7 @@ class TestCatalog(F3DConstructorCase):
     def test_floor_spot_generator(self):
         spot = self.make_slot(prefix='BF-IN', template='floor_spot', length=6.0, width=4.0, height=0.1, loc_kind='area')
         self.assertEqual((spot.cell_count, spot.footprint_l_m, spot.footprint_w_m), (1, 6.0, 4.0))
-        cell = spot._f3d_cells()[0]
+        cell = spot._td_cells()[0]
         self.assertEqual((cell['code'], cell['kind'], cell['l'], cell['w']), ('BF-IN', 'area', 6.0, 4.0))
         with self.assertRaises(ValidationError):
             self.make_slot(prefix='BF-X', template='floor_spot', length=0.0)

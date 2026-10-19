@@ -185,7 +185,7 @@ def site_cell_limits(site):
     zones = pub._zones(site)
     out = {}
     for slot in site.env['td.slot'].search([('site_id', '=', site.id), ('layer_id.active', '=', True)]):
-        for cell in slot._f3d_cells():
+        for cell in slot._td_cells():
             limit = cell['max_load_kg'] or 0.0
             if not limit:
                 cat = pub.inherited('storage_category_id', slot, pub.zone_chain(zones, cell['x'], cell['y']))

@@ -30,7 +30,7 @@ class StockLocation(models.Model):
                 raise ValidationError("Номери адреси локації (ряд, секція, ярус, позиція) не можуть бути від'ємними.")
 
     @api.model
-    def _f3d_address_vals(self, code, parts, addr=None, loc_tree='flat'):
+    def _td_address_vals(self, code, parts, addr=None, loc_tree='flat'):
         """Поля локації за кодом комірки й значеннями сегментів (F01-05, F01-11).
 
         Повертає {name, barcode, td_row, td_bay, td_level, td_pos}.

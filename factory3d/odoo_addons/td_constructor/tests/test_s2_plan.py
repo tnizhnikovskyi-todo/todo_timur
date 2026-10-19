@@ -212,7 +212,7 @@ class TestS2Plan(F3DConstructorCase):
         creates = self.lines(plan, 'create')
         parent = next(ln for ln in creates if ln['extra'].get('virtual'))
         cells = [ln for ln in creates if not ln['extra'].get('virtual')]
-        ctx = slot._f3d_addr_context()
+        ctx = slot._td_addr_context()
         expected = addr_mod.render_code(
             ctx['addr'], {'prefix': slot.code_prefix, 'zone': ctx['zone'], 'row': ctx['row']}
         )

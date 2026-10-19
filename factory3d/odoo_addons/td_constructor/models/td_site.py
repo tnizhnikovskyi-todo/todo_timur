@@ -172,7 +172,7 @@ class F3dSite(models.Model):
                 raise ValidationError("Адресація площадки: %s" % exc) from None
 
     @api.model
-    def _f3d_normalize_addr_vals(self, vals):
+    def _td_normalize_addr_vals(self, vals):
         """R-22: `addr` площадки → нормалізований вигляд (хибне → ValidationError)."""
         if 'addr' in vals:
             try:
@@ -184,13 +184,13 @@ class F3dSite(models.Model):
     # --- create / службові -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
-        sites = super().create([self._f3d_normalize_addr_vals(vals) for vals in vals_list])
-        sites._f3d_init_checks()
+        sites = super().create([self._td_normalize_addr_vals(vals) for vals in vals_list])
+        sites._td_init_checks()
         if self.env.context.get('f3d_blank'):
-            sites._f3d_init_blank()
+            sites._td_init_blank()
         return sites
 
-    def _f3d_init_checks(self):
+    def _td_init_checks(self):
         """R-04: 7 рядків td.check.config (ідемпотентно)."""
         Config = self.env['td.check.config'].sudo().with_context(f3d_no_touch=True)
         for site in self:
@@ -210,7 +210,7 @@ class F3dSite(models.Model):
             if vals:
                 Config.create(vals)
 
-    def _f3d_init_blank(self):
+    def _td_init_blank(self):
         """R-23: 5 базових шарів порожньої площадки (ідемпотентно: лише якщо шарів ще немає)."""
         Layer = self.env['td.layer'].sudo().with_context(f3d_no_touch=True)
         Term = self.env['td.term']
@@ -253,41 +253,41 @@ class F3dSite(models.Model):
                 )
 
     def write(self, vals):
-        vals = self._f3d_normalize_addr_vals(vals)
+        vals = self._td_normalize_addr_vals(vals)
         renumber = bool({'addr', 'depth_mode'} & set(vals)) and not self.env.context.get('f3d_no_renumber')
         Slot = self.env['td.slot']
-        old_codes = Slot._f3d_codes_map(self) if renumber else None
-        Slot._f3d_addr_memo_clear()
+        old_codes = Slot._td_codes_map(self) if renumber else None
+        Slot._td_addr_memo_clear()
         try:
             res = super().write(vals)
         finally:
-            Slot._f3d_addr_memo_clear()
+            Slot._td_addr_memo_clear()
         if renumber:
-            Slot._f3d_renumber(old_codes)
+            Slot._td_renumber(old_codes)
         return res
 
-    def _f3d_published_slot_uids(self):
+    def _td_published_slot_uids(self):
         """uid місць площадки, що вже мають локації Odoo (опубліковані)."""
         self.ensure_one()
         locations = self.env['stock.location'].sudo().with_context(active_test=False)
         return set(locations.search([('td_site_id', '=', self.id), ('td_slot_uid', '!=', False)]).mapped('td_slot_uid'))
 
-    def _f3d_apply_addr(self, vals, renumber='new'):
+    def _td_apply_addr(self, vals, renumber='new'):
         """Записує адресацію площадки (F01-03, F01-06): `vals` — {addr, loc_tree, depth_mode}; права перевіряє виклик.
 
         `renumber='new'` (Q2, за замовчуванням): місця з уже опублікованими локаціями й без власних налаштувань
         «закріплюють» поточну адресацію й номер ряду (їхні коди не змінюються), нові беруть нову; `'all'` — зняти
         закріплення й перенумерувати все за геометрією. Ручні правки комірок і розміщення йдуть за кодами."""
         self.ensure_one()
-        vals = self._f3d_normalize_addr_vals({k: v for k, v in vals.items() if k in ('addr', 'loc_tree', 'depth_mode')})
+        vals = self._td_normalize_addr_vals({k: v for k, v in vals.items() if k in ('addr', 'loc_tree', 'depth_mode')})
         if not vals:
             return {'pinned': 0}
         Slot = self.env['td.slot'].sudo().with_context(f3d_no_renumber=True)
         pinned = 0
         if {'addr', 'depth_mode'} & set(vals):
-            Slot._f3d_addr_memo_clear()
-            contexts = Slot._f3d_addr_contexts(self)
-            published = self._f3d_published_slot_uids() if renumber == 'new' else set()
+            Slot._td_addr_memo_clear()
+            contexts = Slot._td_addr_contexts(self)
+            published = self._td_published_slot_uids() if renumber == 'new' else set()
             for slot in Slot.search([('site_id', '=', self.id), ('template', '!=', 'zone')]):
                 own = addr_mod.safe_normalize(slot.addr)
                 if addr_mod.is_own(own):
@@ -310,7 +310,7 @@ class F3dSite(models.Model):
         self.sudo().write(site_vals)
         return {'pinned': pinned}
 
-    def _f3d_touch(self, n=1):
+    def _td_touch(self, n=1):
         """R-21: лічильник чернетки без зміни write_date площадки."""
         ids = [rid for rid in self.ids if rid]
         if not ids:
@@ -321,7 +321,7 @@ class F3dSite(models.Model):
         )
         self.invalidate_recordset(['draft_rev', 'draft_changes', 'has_changes'])
 
-    def _f3d_check_rights_manager(self):
+    def _td_check_rights_manager(self):
         if not (self.env.su or self.env.user.has_group('td_constructor.group_td_constructor_manager')):
             raise AccessError("Лише менеджер конструктора може виконати цю дію.")
 
@@ -338,24 +338,24 @@ class F3dSite(models.Model):
     def action_publish_wizard(self):
         """Створює майстер публікації (M-08); план будується в `wizard.td_publish_wizard`."""
         self.ensure_one()
-        self._f3d_check_rights_manager()
+        self._td_check_rights_manager()
         wizard = self.env['td.publish.wizard'].create({'site_id': self.id})
-        wizard._f3d_rebuild()
-        return wizard._f3d_action()
+        wizard._td_rebuild()
+        return wizard._td_action()
 
     def action_open_layers(self):
-        return self._f3d_action_list('td.layer', "Шари")
+        return self._td_action_list('td.layer', "Шари")
 
     def action_open_slots(self):
-        return self._f3d_action_list('td.slot', "Місця")
+        return self._td_action_list('td.slot', "Місця")
 
     def action_open_placements(self):
-        return self._f3d_action_list('td.placement', "Розміщення")
+        return self._td_action_list('td.placement', "Розміщення")
 
     def action_open_versions(self):
-        return self._f3d_action_list('td.layout.version', "Версії планування")
+        return self._td_action_list('td.layout.version', "Версії планування")
 
-    def _f3d_action_list(self, model, name):
+    def _td_action_list(self, model, name):
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',

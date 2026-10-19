@@ -232,7 +232,7 @@ class TestComments(F3DConstructorHttpCase):
         self.assertEqual(reopened['comments'][0]['state'], 'open')
 
     def test_other_viewer_cannot_resolve_or_delete(self):
-        extra = self._f3d_user('f3d_plain2', [])
+        extra = self._td_user('f3d_plain2', [])
         cid = self.add(self.u_plain)['comments'][0]['id']
         row = self.call(extra, op='list')['comments'][0]
         self.assertEqual((row['can_resolve'], row['can_delete']), (False, False))
@@ -286,7 +286,7 @@ class TestComments(F3DConstructorHttpCase):
 
     def test_update_only_author_or_designer(self):
         cid = self.add(self.u_plain)['comments'][0]['id']
-        extra = self._f3d_user('f3d_plain3', [])
+        extra = self._td_user('f3d_plain3', [])
         self.assertEqual(self.call(extra, op='update', id=cid, text='зламав')['code'], 'rights')
         self.assertTrue(self.call(self.u_plain, op='update', id=cid, text='мій')['ok'])
 
@@ -377,7 +377,7 @@ class TestZoneLocks(F3DConstructorHttpCase):
                     'model': 'td.slot',
                     'op': 'write',
                     'id': self.rack.id,
-                    'etag': self.rack._f3d_etag(),
+                    'etag': self.rack._td_etag(),
                     'vals': {'x_m': 24.0},
                 }
             ],

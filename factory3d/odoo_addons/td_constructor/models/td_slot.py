@@ -120,7 +120,7 @@ class F3dSlot(models.Model):
     def _compute_cells(self):
         for slot in self:
             try:
-                ctx = slot._f3d_addr_context() if isinstance(slot.id, int) else None
+                ctx = slot._td_addr_context() if isinstance(slot.id, int) else None
                 slot.cell_count = cells_mod.count_cells(
                     slot.template, slot.code_prefix or '', slot.params, slot.overrides, ctx
                 )
@@ -129,7 +129,7 @@ class F3dSlot(models.Model):
                 slot.cell_count, slot.footprint_l_m, slot.footprint_w_m = 0, 0.0, 0.0
 
     # --- адресація (F01): контекст місця, коди комірок, перенумерація ----------------------------------
-    def _f3d_addr_dict(self):
+    def _td_addr_dict(self):
         """Вхід `addr.address_context`: словник місця."""
         self.ensure_one()
         return {
@@ -147,39 +147,39 @@ class F3dSlot(models.Model):
         }
 
     @api.model
-    def _f3d_addr_contexts(self, site):
+    def _td_addr_contexts(self, site):
         """{uid: контекст адресації} активних місць площадки; кеш у курсорі (скидається в create/write/unlink)."""
         memo = self.env.cr.cache.setdefault('f3d_addr_memo', {})
         key = (site.id, site.addr and str(site.addr), site.depth_mode)
         if key not in memo:
             slots = self.sudo().search([('site_id', '=', site.id)])
             memo[key] = addr_mod.address_context(
-                [slot._f3d_addr_dict() for slot in slots], site.addr or {}, site.depth_mode or 'level'
+                [slot._td_addr_dict() for slot in slots], site.addr or {}, site.depth_mode or 'level'
             )
         return memo[key]
 
     @api.model
-    def _f3d_addr_memo_clear(self):
+    def _td_addr_memo_clear(self):
         self.env.cr.cache.pop('f3d_addr_memo', None)
 
-    def _f3d_recompute_counts(self):
+    def _td_recompute_counts(self):
         """Місця залежать від зон (адресація, глибина): після зміни зони `cell_count` інших місць перераховується."""
         sites = self.mapped('site_id')
         if sites:
             others = self.sudo().search([('site_id', 'in', sites.ids), ('template', '!=', 'zone')]) - self
             self.env.add_to_compute(self._fields['cell_count'], others)
 
-    def _f3d_addr_context(self):
+    def _td_addr_context(self):
         """Контекст адресації місця для `cells.generate_cells`; None — коди legacy і ярус як остання локація."""
         self.ensure_one()
         if not isinstance(self.id, int) or not self.site_id:
             return None
-        ctx = self._f3d_addr_contexts(self.site_id).get(self.uid)
+        ctx = self._td_addr_contexts(self.site_id).get(self.uid)
         if ctx and (ctx['addr'] or ctx['depth_mode'] == 'cell'):
             return ctx
         return None
 
-    def _f3d_cells(self):
+    def _td_cells(self):
         """Комірки місця на льоту (R-01); у БД не зберігаються (DEC-15)."""
         self.ensure_one()
         return cells_mod.generate_cells(
@@ -191,16 +191,16 @@ class F3dSlot(models.Model):
             self.params,
             self.overrides,
             self.layer_id.elevation_m,
-            self._f3d_addr_context(),
+            self._td_addr_context(),
         )
 
     @api.model
-    def _f3d_codes_map(self, sites):
+    def _td_codes_map(self, sites):
         """{slot.id: [коди комірок]} усіх місць площадок (до перевизначень) — для перенумерації."""
         out = {}
         for site in sites:
             slots = self.sudo().search([('site_id', '=', site.id), ('template', '!=', 'zone')])
-            contexts = self._f3d_addr_contexts(site)
+            contexts = self._td_addr_contexts(site)
             for slot in slots:
                 ctx = contexts.get(slot.uid)
                 try:
@@ -215,14 +215,14 @@ class F3dSlot(models.Model):
         return out
 
     @api.model
-    def _f3d_renumber(self, old_codes):
+    def _td_renumber(self, old_codes):
         """Після зміни адресації переносить ручні правки комірок (`overrides`) і розміщення (`cell_code`) на нові коди.
 
-        `old_codes` — результат `_f3d_codes_map` до зміни. Зіставлення за порядком комірок; якщо їх число змінилось
+        `old_codes` — результат `_td_codes_map` до зміни. Зіставлення за порядком комірок; якщо їх число змінилось
         (глибина «комірка»), ключі без пари відкидаються з `overrides`, а розміщення лишаються без змін."""
         slots = self.sudo().browse(list(old_codes)).exists()
-        self._f3d_addr_memo_clear()
-        new_codes = self._f3d_codes_map(slots.mapped('site_id'))
+        self._td_addr_memo_clear()
+        new_codes = self._td_codes_map(slots.mapped('site_id'))
         Placement = self.env['td.placement'].sudo()
         for slot in slots:
             old, new = old_codes[slot.id], new_codes.get(slot.id) or []
@@ -238,7 +238,7 @@ class F3dSlot(models.Model):
                 if mapping[placement.cell_code] != placement.cell_code:
                     placement.cell_code = mapping[placement.cell_code]
 
-    def _f3d_footprint_obb(self):
+    def _td_footprint_obb(self):
         self.ensure_one()
         return cells_mod.slot_obb(self.template, self.params, self.x_m, self.y_m, self.rotation)
 
@@ -249,7 +249,7 @@ class F3dSlot(models.Model):
                 slot.cells_html = False
                 continue
             try:
-                cells = slot._f3d_cells()
+                cells = slot._td_cells()
             except cells_mod.CellsError as exc:
                 slot.cells_html = "<p>%s</p>" % escape(str(exc))
                 continue
@@ -264,7 +264,7 @@ class F3dSlot(models.Model):
             )
 
     # --- R-22 / R-11 -----------------------------------------------------------------------------------
-    def _f3d_normalize_vals(self, vals):
+    def _td_normalize_vals(self, vals):
         if isinstance(vals.get('code_prefix'), str) and len(vals['code_prefix']) > cells_mod.PREFIX_MAX_LEN:
             raise ValidationError("Префікс довший за %d символів." % cells_mod.PREFIX_MAX_LEN)
         if 'rotation' in vals and isinstance(vals['rotation'], (int, float)) and not isinstance(vals['rotation'], bool):
@@ -288,41 +288,41 @@ class F3dSlot(models.Model):
         return vals
 
     @api.model
-    def _f3d_check_create(self, vals_list):
+    def _td_check_create(self, vals_list):
         layers = self.env['td.layer'].browse([v['layer_id'] for v in vals_list if v.get('layer_id')])
-        self._f3d_assert_layers(layers)
+        self._td_assert_layers(layers)
 
-    def _f3d_check_write(self, vals):
+    def _td_check_write(self, vals):
         layers = self.mapped('layer_id')
         if vals.get('layer_id'):
             layers |= self.env['td.layer'].browse(vals['layer_id'])
-        self._f3d_assert_layers(layers)
+        self._td_assert_layers(layers)
 
-    def _f3d_check_unlink(self):
-        self._f3d_assert_layers(self.mapped('layer_id'))
+    def _td_check_unlink(self):
+        self._td_assert_layers(self.mapped('layer_id'))
 
     @api.model_create_multi
     def create(self, vals_list):
-        self._f3d_addr_memo_clear()
+        self._td_addr_memo_clear()
         try:
             slots = super().create(vals_list)
         finally:
-            self._f3d_addr_memo_clear()
+            self._td_addr_memo_clear()
         if any(slot.template == 'zone' for slot in slots):
-            slots._f3d_recompute_counts()
-        slots._f3d_validate_overrides(strict_keys=[bool(v.get('overrides')) for v in vals_list])
+            slots._td_recompute_counts()
+        slots._td_validate_overrides(strict_keys=[bool(v.get('overrides')) for v in vals_list])
         return slots
 
     def write(self, vals):
         renumber = bool({'addr', 'depth_mode'} & set(vals)) and not self.env.context.get('f3d_no_renumber')
-        old_codes = self._f3d_codes_map(self.mapped('site_id')) if renumber else None
-        self._f3d_addr_memo_clear()
+        old_codes = self._td_codes_map(self.mapped('site_id')) if renumber else None
+        self._td_addr_memo_clear()
         try:
             res = super().write(vals)
         finally:
-            self._f3d_addr_memo_clear()
+            self._td_addr_memo_clear()
         if renumber:
-            self._f3d_renumber(old_codes)
+            self._td_renumber(old_codes)
         if any(slot.template == 'zone' for slot in self) and {
             'addr',
             'depth_mode',
@@ -331,31 +331,31 @@ class F3dSlot(models.Model):
             'rotation',
             'params',
         } & set(vals):
-            self._f3d_recompute_counts()
+            self._td_recompute_counts()
         if {'template', 'params', 'code_prefix', 'overrides'} & set(vals):
-            self._f3d_validate_overrides(strict_keys=['overrides' in vals] * len(self))
+            self._td_validate_overrides(strict_keys=['overrides' in vals] * len(self))
         return res
 
     def unlink(self):
         zones = self.filtered(lambda slot: slot.template == 'zone')
         sites = zones.mapped('site_id')
-        self._f3d_addr_memo_clear()
+        self._td_addr_memo_clear()
         try:
             res = super().unlink()
         finally:
-            self._f3d_addr_memo_clear()
+            self._td_addr_memo_clear()
         if sites:
             self.env.add_to_compute(self._fields['cell_count'], self.sudo().search([('site_id', 'in', sites.ids)]))
         return res
 
-    def _f3d_validate_overrides(self, strict_keys):
+    def _td_validate_overrides(self, strict_keys):
         """AC-13: ключ `overrides`, що не відповідає комірці шаблону, — ValidationError «Комірки X немає в шаблоні.»;
         якщо `overrides` не передавали (змінились параметри), недійсні ключі мовчки відкидаються."""
         for slot, strict in zip(self, strict_keys, strict=False):
             if not slot.overrides:
                 continue
             codes = set(
-                cells_mod.template_codes(slot.template, slot.params, slot.code_prefix, slot._f3d_addr_context())
+                cells_mod.template_codes(slot.template, slot.params, slot.code_prefix, slot._td_addr_context())
             )
             unknown = [code for code in slot.overrides if code not in codes]
             if not unknown:

@@ -184,7 +184,7 @@ class TestApi(F3DConstructorHttpCase):
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': slot._f3d_etag(), 'vals': {'x_m': 12.5}}],
+            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': slot._td_etag(), 'vals': {'x_m': 12.5}}],
         )
         self.assertTrue(res['ok'], res)
         self.assertEqual(slot.x_m, 12.5)
@@ -273,7 +273,7 @@ class TestApi(F3DConstructorHttpCase):
         self.assertTrue(res['ok'], res)
         self.assertEqual(self.env['td.placement'].browse(res['id_map']['b']).slot_id.id, res['id_map']['a'])
         # конфлікт: другий клієнт шле write зі старим etag
-        old_etag = slot._f3d_etag()
+        old_etag = slot._td_etag()
         self.bump_write_date('td.slot', slot.id)  # «перший клієнт уже зберіг»
         res = self.rpc(
             '/f3d/constructor/save',
@@ -311,7 +311,7 @@ class TestApi(F3DConstructorHttpCase):
         res = self.rpc(
             '/f3d/constructor/save',
             site_id=self.site.id,
-            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': fresh._f3d_etag(), 'vals': {'x_m': 31.0}}],
+            ops=[{'model': 'td.slot', 'op': 'write', 'id': slot.id, 'etag': fresh._td_etag(), 'vals': {'x_m': 31.0}}],
         )
         self.assertTrue(res['ok'], res)
 

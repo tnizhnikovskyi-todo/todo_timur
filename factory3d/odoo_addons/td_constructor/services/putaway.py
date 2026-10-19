@@ -77,7 +77,7 @@ def rule_fit_inputs(site):
     factors = capacity.unit_factors(env)
     scene_codes = set()
     for slot in env['td.slot'].search([('site_id', '=', site.id), ('layer_id.active', '=', True)]):
-        scene_codes.update(c['code'] for c in slot._f3d_cells())
+        scene_codes.update(c['code'] for c in slot._td_cells())
     out = []
     for rule in env['td.putaway.rule'].search([('site_id', '=', site.id), ('deleted', '=', False)]):
         code = rule.out_code or (rule.out_location_id.td_code if rule.out_location_id else '')

@@ -113,7 +113,7 @@ class TdZoneLock(models.Model):
 
     # --- зона об'єкта ----------------------------------------------------------------------------------------
     @api.model
-    def _f3d_zone_polys(self, site):
+    def _td_zone_polys(self, site):
         """Зони площадки `[(uid, назва, многокутник, площа)]`: свій многокутник або прямокутник `length × width`."""
         out = []
         slots = (
@@ -142,7 +142,7 @@ class TdZoneLock(models.Model):
         return out
 
     @api.model
-    def _f3d_zone_at(self, zones, x, y):
+    def _td_zone_at(self, zones, x, y):
         """uid найменшої зони, що містить точку, або None."""
         hit = [(area, uid) for uid, _name, poly, area in zones if geo.polygon_contains(poly, (x, y))]
         return min(hit)[1] if hit else None
@@ -159,7 +159,7 @@ class TdZoneLock(models.Model):
             if vals and ('x_m' in vals or 'y_m' in vals):
                 points.append((vals.get('x_m', rec.x_m), vals.get('y_m', rec.y_m)))
             spots += [(rec.site_id.id, x, y, rec.uid or None, is_zone) for x, y in points]
-        self._f3d_assert_spots(spots)
+        self._td_assert_spots(spots)
 
     @api.model
     def f3d_assert_create(self, model, vals_list):
@@ -177,10 +177,10 @@ class TdZoneLock(models.Model):
             )
             for vals in vals_list
         ]
-        self._f3d_assert_spots(spots)
+        self._td_assert_spots(spots)
 
     @api.model
-    def _f3d_assert_spots(self, spots):
+    def _td_assert_spots(self, spots):
         """`spots`: `[(site_id, x, y, uid|None, is_zone)]`; AccessError «Зону … редагує … до …»."""
         by_site = {}
         for site_id, x, y, uid, is_zone in spots:
@@ -197,12 +197,12 @@ class TdZoneLock(models.Model):
             if not foreign:
                 continue
             by_zone = {lock.zone_uid: lock for lock in foreign}
-            zones = self._f3d_zone_polys(self.env['td.site'].sudo().browse(site_id))
+            zones = self._td_zone_polys(self.env['td.site'].sudo().browse(site_id))
             names = {uid: name for uid, name, _poly, _area in zones}
             for x, y, uid, is_zone in items:
-                for key in [uid] if is_zone else [self._f3d_zone_at(zones, x, y), uid]:
+                for key in [uid] if is_zone else [self._td_zone_at(zones, x, y), uid]:
                     if key and key in by_zone:
-                        raise AccessError(self._f3d_busy_message(by_zone[key], names.get(key)))
+                        raise AccessError(self._td_busy_message(by_zone[key], names.get(key)))
 
     @api.model
     def f3d_label(self, site, uid):
@@ -214,6 +214,6 @@ class TdZoneLock(models.Model):
         return placement.code or uid
 
     @api.model
-    def _f3d_busy_message(self, lock, name=None):
+    def _td_busy_message(self, lock, name=None):
         until = fields.Datetime.context_timestamp(self, lock.expires_at).strftime('%H:%M')
         return "Зону «%s» редагує %s до %s." % (name or lock.zone_uid, lock.user_id.name, until)

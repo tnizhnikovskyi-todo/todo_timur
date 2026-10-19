@@ -108,7 +108,7 @@ class TdLibraryController(http.Controller):
         if not site:
             return fail('not_found', "Площадку не знайдено.")
         manager = is_manager(env)
-        if not manager and not any(env['td.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids):
+        if not manager and not any(env['td.layer']._td_can_edit_layer(layer) for layer in site.layer_ids):
             return fail('rights', "Адресацію площадки змінює менеджер чи проєктувальник із правом на шар площадки.")
         if renumber not in RENUMBER_MODES:
             return fail('validation', "renumber: очікується new або all.")
@@ -126,7 +126,7 @@ class TdLibraryController(http.Controller):
             vals['loc_tree'] = loc_tree
         if not vals:
             return fail('validation', "Немає полів для запису: addr, depth_mode, loc_tree.")
-        published = site._f3d_published_slot_uids()
+        published = site._td_published_slot_uids()
         if not manager and published and (renumber == 'all' or vals.get('loc_tree', site.loc_tree) != site.loc_tree):
             return fail(
                 'rights',
@@ -135,8 +135,8 @@ class TdLibraryController(http.Controller):
             )
         try:
             with env.cr.savepoint():
-                result = site._f3d_apply_addr(vals, renumber)
-                site._f3d_touch(1)
+                result = site._td_apply_addr(vals, renumber)
+                site._td_touch(1)
                 env.flush_all()
         except (AccessError, ValidationError, UserError, IntegrityError) as exc:
             env.invalidate_all()

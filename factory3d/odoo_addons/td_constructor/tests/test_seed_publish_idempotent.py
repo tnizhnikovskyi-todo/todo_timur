@@ -90,7 +90,7 @@ class TestSeedPublishIdempotent(SeedPublishCase):
         gate = self.env['stock.location'].search([('td_alias', '=', 'UNLOAD-3')])
         self.assertEqual((gate.td_code, gate.td_site_id), ('DOCK-W3', self.seed_site))
         waste = self.env['td.slot'].search([('site_id', '=', self.seed_site.id), ('code_prefix', '=', 'WASTE')])
-        self.assertEqual(waste._f3d_cells(), [])
+        self.assertEqual(waste._td_cells(), [])
 
     def test_plain_db_publish_then_plan_is_empty(self):
         """База без демо-даних: план — лише створення (без оновлень, архівацій, заборон); після публікації порожній."""

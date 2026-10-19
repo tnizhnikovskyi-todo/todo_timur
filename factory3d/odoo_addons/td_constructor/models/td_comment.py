@@ -65,17 +65,17 @@ class TdComment(models.Model):
 
     # --- права (F13-04) ------------------------------------------------------------------------------------
     @api.model
-    def _f3d_is_designer(self, user=None):
+    def _td_is_designer(self, user=None):
         user = user or self.env.user
         return self.env.su or any(user.has_group(xmlid) for xmlid in DESIGN_XMLIDS)
 
-    def _f3d_can_resolve(self):
+    def _td_can_resolve(self):
         self.ensure_one()
-        return self._f3d_is_designer() or self.author_id == self.env.user
+        return self._td_is_designer() or self.author_id == self.env.user
 
-    def _f3d_can_delete(self):
+    def _td_can_delete(self):
         self.ensure_one()
-        return self._f3d_is_designer() or self.author_id == self.env.user
+        return self._td_is_designer() or self.author_id == self.env.user
 
     # --- API-22 -----------------------------------------------------------------------------------------------
     @api.model
@@ -115,10 +115,10 @@ class TdComment(models.Model):
                 }
             )
         )
-        comment._f3d_sync_activity()
+        comment._td_sync_activity()
         return comment
 
-    def _f3d_sync_activity(self):
+    def _td_sync_activity(self):
         """Задача з виконавцем — завдання `mail.activity`; вирішена або не задача — завдань немає."""
         for comment in self.sudo():
             wanted = comment.kind == 'task' and comment.state == 'open' and comment.assignee_id
@@ -137,18 +137,18 @@ class TdComment(models.Model):
 
     def f3d_set_text(self, text):
         self.ensure_one()
-        if not (self.author_id == self.env.user or self._f3d_is_designer()):
+        if not (self.author_id == self.env.user or self._td_is_designer()):
             raise AccessError("Змінити коментар може автор або «Проєктування».")
         text = (text or '').strip()
         if not text:
             raise UserError("Введіть текст коментаря.")
         self.sudo().write({'text': text[:TEXT_MAX]})
-        self._f3d_sync_activity()
+        self._td_sync_activity()
 
     def f3d_resolve(self, resolved=True):
         """Вирішити (або відкрити знову); завдання виконавця закривається."""
         self.ensure_one()
-        if not self._f3d_can_resolve():
+        if not self._td_can_resolve():
             raise AccessError("Вирішує автор або «Проєктування».")
         record = self.sudo()
         if resolved:
@@ -161,12 +161,12 @@ class TdComment(models.Model):
             )
         else:
             record.write({'state': 'open', 'resolved_by_id': False, 'resolved_at': False})
-            record._f3d_sync_activity()
+            record._td_sync_activity()
         return self
 
     def f3d_remove(self):
         self.ensure_one()
-        if not self._f3d_can_delete():
+        if not self._td_can_delete():
             raise AccessError("Видаляє автор або «Проєктування».")
         self.sudo().unlink()
 
@@ -188,6 +188,6 @@ class TdComment(models.Model):
             'at': fields.Datetime.to_string(self.create_date) if self.create_date else '',
             'resolved_by': self.resolved_by_id.name or '',
             'resolved_at': fields.Datetime.to_string(self.resolved_at) if self.resolved_at else '',
-            'can_resolve': self._f3d_can_resolve(),
-            'can_delete': self._f3d_can_delete(),
+            'can_resolve': self._td_can_resolve(),
+            'can_delete': self._td_can_delete(),
         }

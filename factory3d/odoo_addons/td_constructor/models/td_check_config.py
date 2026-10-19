@@ -38,21 +38,21 @@ class F3dCheckConfig(models.Model):
 
     _f3d_check_uniq = models.Constraint('UNIQUE(site_id, check_key)', "Перевірка вже налаштована для площадки.")
 
-    def _f3d_normalize_vals(self, vals):
+    def _td_normalize_vals(self, vals):
         if 'params' in vals:
             key = vals.get('check_key') or (self[:1].check_key if self else None)
             vals['params'] = schemas.normalize_check_params(key, vals['params'])
         return vals
 
     @api.model
-    def _f3d_check_create(self, vals_list):
-        self._f3d_assert_manager("Налаштовувати перевірки")
+    def _td_check_create(self, vals_list):
+        self._td_assert_manager("Налаштовувати перевірки")
 
-    def _f3d_check_write(self, vals):
-        self._f3d_assert_manager("Налаштовувати перевірки")
+    def _td_check_write(self, vals):
+        self._td_assert_manager("Налаштовувати перевірки")
 
-    def _f3d_check_unlink(self):
-        self._f3d_assert_manager("Налаштовувати перевірки")
+    def _td_check_unlink(self):
+        self._td_assert_manager("Налаштовувати перевірки")
 
     @api.constrains('params', 'check_key')
     def _check_params(self):

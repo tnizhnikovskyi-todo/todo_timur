@@ -331,17 +331,17 @@ class TestAddrModels(F3DConstructorCase):
 
     def test_site_addr_changes_codes_and_remaps_overrides_and_placements(self):
         slot = self.storage_rack('AD-2', 10, 5)
-        self.assertEqual([c['code'] for c in slot._f3d_cells()][:2], ['AD-2-B01-L1', 'AD-2-B01-L2'])
+        self.assertEqual([c['code'] for c in slot._td_cells()][:2], ['AD-2-B01-L1', 'AD-2-B01-L2'])
         slot.overrides = {'AD-2-B02-L2': {'capacity': 9.0}, 'AD-2-B01-L1': {'disabled': True}}
         placement = self.make_placement(kind='storage', code='PL-1', slot_id=slot.id, cell_code='AD-2-B02-L2')
         self.assertEqual(slot.cell_count, 3)
-        self.site._f3d_apply_addr({'addr': {'tpl': '{row} {bay} {level}', 'sep': '.'}}, renumber='all')
-        codes = [c['code'] for c in slot._f3d_cells()]
+        self.site._td_apply_addr({'addr': {'tpl': '{row} {bay} {level}', 'sep': '.'}}, renumber='all')
+        codes = [c['code'] for c in slot._td_cells()]
         self.assertEqual(codes, ['01.01.2', '01.02.1', '01.02.2'])  # перша комірка вимкнена
         self.assertEqual(slot.overrides, {'01.02.2': {'capacity': 9.0}, '01.01.1': {'disabled': True}})
         self.assertEqual(placement.cell_code, '01.02.2')
         self.assertEqual(slot.cell_count, 3)
-        self.site._f3d_apply_addr({'addr': {}}, renumber='all')  # назад до legacy
+        self.site._td_apply_addr({'addr': {}}, renumber='all')  # назад до legacy
         self.assertEqual(placement.cell_code, 'AD-2-B02-L2')
         self.assertIn('AD-2-B01-L1', slot.overrides)
 
@@ -359,10 +359,10 @@ class TestAddrModels(F3DConstructorCase):
         self.assertEqual(slot.cell_count, 4)
         zone.write({'addr': {'tpl': '{zone} {row} {bay} {level} {pos}', 'zone_code': 'W'}, 'depth_mode': 'cell'})
         self.assertEqual(slot.cell_count, 8)
-        self.assertEqual([c['code'] for c in slot._f3d_cells()][:2], ['W-01-01-1-1', 'W-01-01-1-2'])
+        self.assertEqual([c['code'] for c in slot._td_cells()][:2], ['W-01-01-1-1', 'W-01-01-1-2'])
         slot.addr = {'legacy': True}  # власне «як зараз» перебиває зону
         self.assertEqual(
-            [c['code'] for c in slot._f3d_cells()][:2], ['AD-3-B01-L1-1', 'AD-3-B01-L1-2']
+            [c['code'] for c in slot._td_cells()][:2], ['AD-3-B01-L1-1', 'AD-3-B01-L1-2']
         )  # глибина — від зони
         slot.depth_mode = 'level'
         self.assertEqual(slot.cell_count, 4)
@@ -379,15 +379,15 @@ class TestAddrModels(F3DConstructorCase):
                 'td_slot_uid': old.uid,
             }
         )
-        result = self.site._f3d_apply_addr({'addr': {'tpl': '{row} {bay} {level}', 'sep': '.'}}, renumber='new')
+        result = self.site._td_apply_addr({'addr': {'tpl': '{row} {bay} {level}', 'sep': '.'}}, renumber='new')
         self.assertEqual(result['pinned'], 1)
         self.assertEqual(
             old.addr.get('legacy'), True
         )  # опублікований: лишився зі старими кодами (legacy) і закріпленим номером
         self.assertEqual(old.addr['row_no'], 1)
-        self.assertEqual([c['code'] for c in old._f3d_cells()][0], 'AD-4-B01-L1')
+        self.assertEqual([c['code'] for c in old._td_cells()][0], 'AD-4-B01-L1')
         self.assertEqual(
-            [c['code'] for c in new._f3d_cells()][0], '02.01.1'
+            [c['code'] for c in new._td_cells()][0], '02.01.1'
         )  # новий: за шаблоном, наступний вільний номер
 
     def test_stock_location_address_helpers(self):
@@ -397,7 +397,7 @@ class TestAddrModels(F3DConstructorCase):
         self.assertEqual((loc.td_row, loc.td_bay, loc.td_level, loc.td_pos), (1, 2, 3, 4))
         with self.assertRaises(ValidationError):
             loc.td_row = -1
-        vals = self.env['stock.location']._f3d_address_vals('A-01-02-3', {'row': 1, 'bay': 2, 'level': 3})
+        vals = self.env['stock.location']._td_address_vals('A-01-02-3', {'row': 1, 'bay': 2, 'level': 3})
         self.assertEqual((vals['name'], vals['barcode'], vals['td_bay']), ('A-01-02-3', 'A-01-02-3', 2))
 
 

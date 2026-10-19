@@ -103,12 +103,12 @@ class TdSlotType(models.Model):
 
     # --- права (§3.5): каталог змінює менеджер, свої типи — проєктувальники, видаляє менеджер -------------
     @api.model
-    def _f3d_is_manager(self):
+    def _td_is_manager(self):
         return self.env.su or self.env.user.has_group(MANAGER_XMLID)
 
     @api.model_create_multi
     def create(self, vals_list):
-        if not self._f3d_is_manager():
+        if not self._td_is_manager():
             out = []
             for vals in vals_list:
                 if vals.get('is_custom') is False or vals.get('company_id') is False:
@@ -118,7 +118,7 @@ class TdSlotType(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        if not self._f3d_is_manager():
+        if not self._td_is_manager():
             if any(not rec.is_custom or not rec.company_id for rec in self):
                 raise AccessError("Тип каталогу змінює лише менеджер конструктора.")
             if vals.get('is_custom') is False or ('company_id' in vals and not vals['company_id']):
@@ -126,6 +126,6 @@ class TdSlotType(models.Model):
         return super().write(vals)
 
     def unlink(self):
-        if not self._f3d_is_manager():
+        if not self._td_is_manager():
             raise AccessError("Видаляти типи з бібліотеки може лише менеджер конструктора.")
         return super().unlink()

@@ -29,7 +29,7 @@ class TdSlotPreset(models.Model):
 
     # --- R-22: data пресету -----------------------------------------------------------------------------
     @api.model
-    def _f3d_normalize_spec(self, spec):
+    def _td_normalize_spec(self, spec):
         """Spec місця пресету: {template, params, rotation, type_code?, prefix?, dx?, dy?, addr?}."""
         if not isinstance(spec, dict) or spec.get('template') not in PRESET_TEMPLATES:
             raise ValidationError("Пресет: невідомий або непридатний генератор місця.")
@@ -58,7 +58,7 @@ class TdSlotPreset(models.Model):
         return out
 
     @api.model
-    def _f3d_normalize_data(self, kind, data):
+    def _td_normalize_data(self, kind, data):
         if not isinstance(data, dict):
             raise ValidationError("Дані пресету мають бути об'єктом.")
         try:
@@ -69,8 +69,8 @@ class TdSlotPreset(models.Model):
             slots = data.get('slots')
             if not isinstance(slots, list) or not 1 <= len(slots) <= MAX_GROUP:
                 raise ValidationError("Пресет «Виділене»: від 1 до %d місць." % MAX_GROUP)
-            return {'slots': [self._f3d_normalize_spec(spec) for spec in slots]}
-        spec = self._f3d_normalize_spec(data.get('slot'))
+            return {'slots': [self._td_normalize_spec(spec) for spec in slots]}
+        spec = self._td_normalize_spec(data.get('slot'))
         if kind == 'section' and spec['template'] not in COUNT_KEYS:
             raise ValidationError("Секцією може бути лише стелаж чи штабель.")
         return {'slot': spec}
@@ -78,7 +78,7 @@ class TdSlotPreset(models.Model):
     @api.constrains('kind', 'data')
     def _check_data(self):
         for rec in self:
-            if rec.data is not None and rec.data != self._f3d_normalize_data(rec.kind, rec.data):
+            if rec.data is not None and rec.data != self._td_normalize_data(rec.kind, rec.data):
                 raise ValidationError("Пресет «%s»: дані не в нормалізованому вигляді." % rec.name)
 
     @api.model_create_multi
@@ -86,7 +86,7 @@ class TdSlotPreset(models.Model):
         out = []
         for vals in vals_list:
             vals = dict(vals)
-            vals['data'] = self._f3d_normalize_data(vals.get('kind') or 'row', vals.get('data') or {})
+            vals['data'] = self._td_normalize_data(vals.get('kind') or 'row', vals.get('data') or {})
             out.append(vals)
         return super().create(out)
 
@@ -94,7 +94,7 @@ class TdSlotPreset(models.Model):
         if 'data' in vals or 'kind' in vals:
             for rec in self:
                 vals = dict(
-                    vals, data=self._f3d_normalize_data(vals.get('kind', rec.kind), vals.get('data', rec.data) or {})
+                    vals, data=self._td_normalize_data(vals.get('kind', rec.kind), vals.get('data', rec.data) or {})
                 )
         return super().write(vals)
 

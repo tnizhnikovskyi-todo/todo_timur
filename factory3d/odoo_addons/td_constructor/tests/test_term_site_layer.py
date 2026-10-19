@@ -89,7 +89,7 @@ class TestSiteLayer(F3DConstructorCase):
                 'params': {'sections': 2, 'shelves': 3, 'cell_w': 0.9, 'cell_d': 0.4, 'cell_h': 0.4},
             }
         )
-        cells = {c['code']: c for c in slot._f3d_cells()}
+        cells = {c['code']: c for c in slot._td_cells()}
         self.assertAlmostEqual(cells['ANT-S1-S01-L1']['z0'], 3.6)
         self.assertAlmostEqual(cells['ANT-S1-S01-L3']['z0'], 3.6 + 2 * 0.4)
 

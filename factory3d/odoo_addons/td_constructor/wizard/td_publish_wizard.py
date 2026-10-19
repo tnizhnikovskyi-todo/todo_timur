@@ -103,7 +103,7 @@ class F3dPublishWizard(models.TransientModel):
                 [('site_id', '=', wiz.site_id.id), ('uid', 'in', list(uids - {False, ''}))]
             )
 
-    def _f3d_rebuild(self, plan=None):
+    def _td_rebuild(self, plan=None):
         """Побудувати план публікації (R-12) і заповнити рядки та зауваження; в Odoo нічого не змінює."""
         for wiz in self:
             plan = plan or publish.build_plan(wiz.site_id)
@@ -152,7 +152,7 @@ class F3dPublishWizard(models.TransientModel):
             )
         return True
 
-    def _f3d_action(self, from_editor=False):
+    def _td_action(self, from_editor=False):
         """Діалог майстра; `from_editor` — відкрито з клієнтської дії: після публікації лишаємось у редакторі."""
         self.ensure_one()
         action = {
@@ -172,7 +172,7 @@ class F3dPublishWizard(models.TransientModel):
         """R-12: перевірка «чернетка не змінилась», перерахунок плану, застосування, версія."""
         self.ensure_one()
         site = self.site_id
-        site._f3d_check_rights_manager()
+        site._td_check_rights_manager()
         if self.state != 'preview':
             raise UserError("Розкладку вже опубліковано.")
         if self.draft_rev != site.draft_rev:
@@ -211,7 +211,7 @@ class F3dPublishWizard(models.TransientModel):
             'target': 'current',
         }
 
-    def _f3d_reopen(self):
+    def _td_reopen(self):
         return {
             'type': 'ir.actions.act_window',
             'res_model': self._name,
@@ -226,13 +226,13 @@ class F3dPublishWizard(models.TransientModel):
         """«Вибрати все»: усі незаблоковані рядки створення/змін позначено (пропозиції архівації не чіпаємо)."""
         self.ensure_one()
         self.line_ids.filtered(lambda r: r.kind != 'archive').write({'selected': True})
-        return self._f3d_reopen()
+        return self._td_reopen()
 
     def action_select_none(self):
         """«Зняти все»: жодного рядка створення/змін не позначено."""
         self.ensure_one()
         self.line_ids.filtered(lambda r: r.kind != 'archive').write({'selected': False})
-        return self._f3d_reopen()
+        return self._td_reopen()
 
     def action_select_scope(self):
         """«Лише обране»: позначено рядки зони чи ряду (`scope_id`); потрібні батьки додасть застосування."""
@@ -242,7 +242,7 @@ class F3dPublishWizard(models.TransientModel):
         uid = self.scope_slot_id.uid
         for line in self.line_ids.filtered(lambda r: r.kind != 'archive'):
             line.selected = uid in (line.scope_uid, line.zone_uid)
-        return self._f3d_reopen()
+        return self._td_reopen()
 
     def action_open_log(self):
         """Журнал публікацій площадки (версії з операціями; відкат — на формі версії)."""

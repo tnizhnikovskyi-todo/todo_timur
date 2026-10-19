@@ -272,7 +272,7 @@ def _group_by(records, field):
 
 def cell_addr(slot):
     """Повна адресація місця (S1), що дала коди його комірок, або None (legacy-коди чи `code_style = exact`)."""
-    ctx = slot._f3d_addr_context()
+    ctx = slot._td_addr_context()
     if ctx and ctx.get('addr') and (slot.params or {}).get('code_style') != 'exact':
         return ctx
     return None
@@ -363,7 +363,7 @@ def _restorable_ids(site, model=LOCATION):
 def _desired_cells(site, slots, zones, issues):
     desired = {}
     for slot in slots:
-        cells = slot._f3d_cells()
+        cells = slot._td_cells()
         if not cells:
             continue
         ctx = cell_addr(slot)

@@ -127,7 +127,7 @@ class F3dLayer(models.Model):
             layer.placement_count = placements.get(layer, 0)
 
     def _compute_is_manager(self):
-        is_manager = self._f3d_is_manager()
+        is_manager = self._td_is_manager()
         for layer in self:
             layer.is_manager = is_manager
 
@@ -167,7 +167,7 @@ class F3dLayer(models.Model):
                 raise ValidationError("Лише ролі конструктора.")
 
     # --- R-22 / R-11 -----------------------------------------------------------------------------------
-    def _f3d_normalize_vals(self, vals):
+    def _td_normalize_vals(self, vals):
         if 'bounds' in vals:
             vals['bounds'] = schemas.normalize_bounds(vals['bounds']) or None
         if 'aisles' in vals:
@@ -183,11 +183,11 @@ class F3dLayer(models.Model):
         return vals
 
     @api.model
-    def _f3d_check_create(self, vals_list):
-        self._f3d_assert_manager("Створювати шари")
+    def _td_check_create(self, vals_list):
+        self._td_assert_manager("Створювати шари")
 
-    def _f3d_check_write(self, vals):
-        if self.env.su or self._f3d_is_manager():
+    def _td_check_write(self, vals):
+        if self.env.su or self._td_is_manager():
             return
         foreign = set(vals) - LAYER_CONTENT_FIELDS
         if foreign:
@@ -195,10 +195,10 @@ class F3dLayer(models.Model):
                 "Змінювати налаштування шару (%s) може лише менеджер конструктора."
                 % ", ".join(self._fields[name].string or name for name in sorted(foreign) if name in self._fields)
             )
-        self._f3d_assert_layers(self)
+        self._td_assert_layers(self)
 
-    def _f3d_check_unlink(self):
-        self._f3d_assert_manager("Видаляти шари")
+    def _td_check_unlink(self):
+        self._td_assert_manager("Видаляти шари")
         for layer in self:
             slots = self.env['td.slot'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
             placements = (

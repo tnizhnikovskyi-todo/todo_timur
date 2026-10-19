@@ -57,14 +57,14 @@ class F3DConstructorMixin:
     Також локації й паспорт із варіантом."""
 
     @classmethod
-    def _f3d_setup(cls):
+    def _td_setup(cls):
         env = cls.env
         cls.company = env.company
-        cls.u_manager = cls._f3d_user('f3d_manager', ['manager'])
-        cls.u_tech = cls._f3d_user('f3d_tech', ['technologist'])
-        cls.u_store = cls._f3d_user('f3d_store', ['storekeeper'])
-        cls.u_eng = cls._f3d_user('f3d_eng', ['engineer'])
-        cls.u_plain = cls._f3d_user('f3d_plain', [])
+        cls.u_manager = cls._td_user('f3d_manager', ['manager'])
+        cls.u_tech = cls._td_user('f3d_tech', ['technologist'])
+        cls.u_store = cls._td_user('f3d_store', ['storekeeper'])
+        cls.u_eng = cls._td_user('f3d_eng', ['engineer'])
+        cls.u_plain = cls._td_user('f3d_plain', [])
         cls.site = env['td.site'].with_context(f3d_blank=True).create({'name': "Тестова площадка", 'code': 'TST'})
         cls.layers = {layer.kind: layer for layer in cls.site.layer_ids}
         cls.wh_stock = env['stock.location'].search([('complete_name', '=', 'WH/Stock')], limit=1)
@@ -89,7 +89,7 @@ class F3DConstructorMixin:
         )
 
     @classmethod
-    def _f3d_user(cls, login, roles):
+    def _td_user(cls, login, roles):
         groups = [cls.env.ref('base.group_user').id, cls.env.ref('td_factory3d.group_td_user').id]
         groups += [cls.env.ref(GROUP % role).id for role in roles]
         return (
@@ -163,14 +163,14 @@ class F3DConstructorCase(F3DConstructorMixin, TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls._f3d_setup()
+        cls._td_setup()
 
 
 class F3DConstructorHttpCase(F3DConstructorMixin, HttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls._f3d_setup()
+        cls._td_setup()
 
     def rpc(self, route, **params):
         return self.make_jsonrpc_request(route, params)

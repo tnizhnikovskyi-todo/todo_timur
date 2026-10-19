@@ -308,7 +308,7 @@ class TestPublish(F3DConstructorCase):
         """Майстер з редактора: дія з `views` і прапорцем; після підтвердження — сповіщення й закриття діалогу."""
         self.rack('ED-R1', bays=1, levels=1)
         wizard = self.wizard()
-        action = wizard._f3d_action(from_editor=True)
+        action = wizard._td_action(from_editor=True)
         self.assertEqual(action['views'], [(False, 'form')])
         self.assertTrue(action['context']['f3d_from_editor'])
         res = wizard.with_context(f3d_from_editor=True).action_confirm()

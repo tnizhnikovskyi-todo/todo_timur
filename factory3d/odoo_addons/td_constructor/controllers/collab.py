@@ -67,7 +67,7 @@ class TdCollabController(http.Controller):
         variant = Variant.sudo().browse(_int(rec_id)).exists()
         if not variant or variant.site_id != site:
             return fail('not_found', "Варіант не знайдено.")
-        Variant._f3d_assert_manager()
+        Variant._td_assert_manager()
         if op == 'activate':
             variant.f3d_activate(metrics)
         elif op == 'rename':
@@ -114,7 +114,7 @@ class TdCollabController(http.Controller):
             'variants': out,
             'active_id': active.id,
             'training_id': next((v['id'] for v in out if v['is_training']), None),
-            'max': Variant._f3d_max(),
+            'max': Variant._td_max(),
             'can_edit': is_manager(env),
             'id': id,
             'reload': reload,
@@ -194,7 +194,7 @@ class TdCollabController(http.Controller):
                 if not ok:
                     return fail(
                         'locked',
-                        Lock._f3d_busy_message(lock, Lock.f3d_label(site, zone_uid)),
+                        Lock._td_busy_message(lock, Lock.f3d_label(site, zone_uid)),
                         lock=extra['lock'],
                         **self._lock_state(env, site, Lock),
                     )
