@@ -94,14 +94,14 @@ class F3dBmsLightPanel(models.Model):
         Signal = self.env["td.signal"].sudo()
         for rec in self:
             groups = rec.group_ids
-            vals = [g._f3d_live_values() for g in groups]
+            vals = [g._td_live_values() for g in groups]
             meter = Signal.search([("code", "=", rec.meter_code)], limit=1) if rec.meter_code else Signal
             if meter and lighting.is_live(meter.status):
                 rec.p_now_kw, rec.p_source = meter.last_value, "meter"
             elif any(v["power_live"] for v in vals):
                 rec.p_now_kw, rec.p_source = round(sum(v["p_now_kw"] for v in vals), 1), "dali"
             else:
-                rec.p_now_kw = round(sum(g._f3d_design_p_now() for g in groups), 1)
+                rec.p_now_kw = round(sum(g._td_design_p_now() for g in groups), 1)
                 rec.p_source = "design"
             sig = rec.state_signal_id.sudo()
             src = rec.source_id.sudo()

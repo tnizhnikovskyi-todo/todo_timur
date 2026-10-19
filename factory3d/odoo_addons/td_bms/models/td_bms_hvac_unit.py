@@ -254,13 +254,13 @@ class F3dBmsHvacUnit(models.Model):
 
     # --- живі значення ---
     @api.model
-    def _f3d_bms_static_units(self):
+    def _td_bms_static_units(self):
         """Статика макета `ventilation.units[code]` (R-12); ключі — як у payload R-27. Підміняється розділом
         провайдера/тестом через контекст `f3d_bms_static_units`."""
         return self.env.context.get("f3d_bms_static_units") or {}
 
     @api.model
-    def _f3d_bms_env_params(self):
+    def _td_bms_env_params(self):
         """(t_set, t_out) для формул R-13: уставка балансу й живий зовнішній (інакше 9,0)."""
         bal = self.env["td.bms.heat.balance"].sudo().search([("company_id", "=", self.env.company.id)], limit=1)
         t_set = bal.t_in_set if bal else 18.0
@@ -272,8 +272,8 @@ class F3dBmsHvacUnit(models.Model):
         return self.env["td.signal"].browse([self[f].id for f, _l in SIGNAL_FIELDS if self[f]])
 
     def _compute_live(self):
-        static_all = self._f3d_bms_static_units()
-        t_set, t_out = self._f3d_bms_env_params()
+        static_all = self._td_bms_static_units()
+        t_set, t_out = self._td_bms_env_params()
         for rec in self:
             vals = rec.sudo()._live_values(static_all.get(rec.code) or {}, t_set, t_out)
             for name in LIVE_FIELDS:
@@ -460,7 +460,7 @@ class F3dBmsHvacUnit(models.Model):
         }
 
     @api.model
-    def _f3d_bms_heat_now(self):
+    def _td_bms_heat_now(self):
         """CH-03: {code: heat_kw} для дахових установок і AHU."""
         units = self.sudo().search([("kind", "in", ("roofvent", "ahu"))])
         return {u.code: u.heat_kw for u in units}

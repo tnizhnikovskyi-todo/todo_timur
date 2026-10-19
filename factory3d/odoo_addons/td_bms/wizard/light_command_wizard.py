@@ -21,7 +21,7 @@ class F3dBmsLightCommandWizard(models.TransientModel):
     note = fields.Char(string="Примітка", size=256)
 
     @api.model
-    def _f3d_bms_check_operator(self):
+    def _td_bms_check_operator(self):
         common.check_operator(self.env)
 
     def _validate(self):
@@ -37,7 +37,7 @@ class F3dBmsLightCommandWizard(models.TransientModel):
 
     def action_apply(self):
         self.ensure_one()
-        self._f3d_bms_check_operator()
+        self._td_bms_check_operator()
         common.check_switches(self.env)
         field = "scene_signal_id" if self.action == "scene" else "level_signal_id"
         groups = self.group_ids.sudo()

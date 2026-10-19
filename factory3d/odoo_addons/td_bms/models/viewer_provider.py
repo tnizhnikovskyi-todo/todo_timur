@@ -29,40 +29,40 @@ def _touched(ctx, prefixes):
 class F3dViewerProviderLighting(models.AbstractModel):
     _name = "td.viewer.provider.lighting"
     _description = "3D: освітлення"
-    _f3d_sequence = 110
-    _f3d_sections = ("lighting",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 110
+    _td_sections = ("lighting",)
+    _td_group = "td_factory3d.group_td_user"
 
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         static = (ctx.get("static") or {}).get("lighting") or {}
         payload["lighting"] = payload_tools.build_lighting(self.env, ctx, payload.get("lighting") or static)
 
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         if _touched(ctx, LIGHTING_PREFIXES):
             tmp = {}
-            self._f3d_viewer_collect(tmp, ctx)
+            self._td_viewer_collect(tmp, ctx)
             patch["lighting"] = tmp["lighting"]
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return list(BUS_MODELS)
 
 
 class F3dViewerProviderVentilation(models.AbstractModel):
     _name = "td.viewer.provider.ventilation"
     _description = "3D: вентиляція й опалення"
-    _f3d_sequence = 120
-    _f3d_sections = ("ventilation",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 120
+    _td_sections = ("ventilation",)
+    _td_group = "td_factory3d.group_td_user"
 
-    def _f3d_viewer_collect(self, payload, ctx):
+    def _td_viewer_collect(self, payload, ctx):
         static = (ctx.get("static") or {}).get("ventilation") or {}
         payload["ventilation"] = payload_tools.build_ventilation(self.env, ctx, payload.get("ventilation") or static)
 
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         if _touched(ctx, VENTILATION_PREFIXES):
             tmp = {}
-            self._f3d_viewer_collect(tmp, ctx)
+            self._td_viewer_collect(tmp, ctx)
             patch["ventilation"] = tmp["ventilation"]
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return list(BUS_MODELS)

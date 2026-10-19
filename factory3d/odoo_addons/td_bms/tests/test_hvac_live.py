@@ -130,13 +130,13 @@ class TestState(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual((rv5.heat_kw, rv5.heating_valve), (8.1, 0.12))
 
     def test_heat_now_contract(self):
-        res = self.env["td.bms.hvac.unit"]._f3d_bms_heat_now()
+        res = self.env["td.bms.hvac.unit"]._td_bms_heat_now()
         self.assertEqual(len(res), 26)
         self.assertNotIn("EF-ELEC", res)
         self.assertIn("AHU-1", res)
         static = {code: {"heat_kw": 322 / 26} for code in res}
         self.env.invalidate_all()
-        res = self.env["td.bms.hvac.unit"].with_context(f3d_bms_static_units=static)._f3d_bms_heat_now()
+        res = self.env["td.bms.hvac.unit"].with_context(f3d_bms_static_units=static)._td_bms_heat_now()
         self.assertAlmostEqual(sum(res.values()), 322, delta=0.5)
 
     def test_command_refused_for_fans(self):

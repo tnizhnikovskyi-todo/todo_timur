@@ -40,7 +40,7 @@ class TestViewerProvider(F3DBmsCase):
     def test_lighting_static_equal_demo(self):
         """AC-42."""
         payload = {}
-        self.light._f3d_viewer_collect(payload, self._ctx())
+        self.light._td_viewer_collect(payload, self._ctx())
         lighting = payload["lighting"]
         demo = self.demo["lighting"]
         self.assertEqual(len(lighting["groups"]), 32)
@@ -61,7 +61,7 @@ class TestViewerProvider(F3DBmsCase):
     def test_ventilation_static_equal_demo(self):
         """AC-17, AC-43."""
         payload = {}
-        self.vent._f3d_viewer_collect(payload, self._ctx())
+        self.vent._td_viewer_collect(payload, self._ctx())
         vent = payload["ventilation"]
         demo = self.demo["ventilation"]
         self.assertEqual(len(vent["units"]), 29)
@@ -136,7 +136,7 @@ class TestViewerProvider(F3DBmsCase):
 
     def _vent(self, ctx=None):
         payload = {}
-        self.vent._f3d_viewer_collect(payload, ctx or self._ctx())
+        self.vent._td_viewer_collect(payload, ctx or self._ctx())
         return payload["ventilation"]
 
     def test_live_values(self):
@@ -158,7 +158,7 @@ class TestViewerProvider(F3DBmsCase):
             sig.sudo().write({**vals, "last_ts": now, "status": "ok"})
         env.invalidate_all()
         payload = {}
-        self.light._f3d_viewer_collect(payload, self._ctx())
+        self.light._td_viewer_collect(payload, self._ctx())
         cut = payload["lighting"]["groups"]["LT-CUT"]
         self.assertEqual((cut["level"], cut["e_now"], cut["faults"], cut["faulty"]), (0.6, 305, 1, "1.2.1.5"))
         rv5 = self._vent()["units"]["RV-05"]
@@ -168,21 +168,21 @@ class TestViewerProvider(F3DBmsCase):
     def test_delta(self):
         """AC-45."""
         patch = {}
-        self.light._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
-        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
+        self.light._td_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
+        self.vent._td_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/COMPRESSOR/pressure_bar"}}))
         self.assertEqual(patch, {})
         ctx = self._ctx(changes={"td.signal": {"lighting/groups/LT-CUT/level"}})
-        self.light._f3d_viewer_delta(patch, ctx)
-        self.vent._f3d_viewer_delta(patch, ctx)
+        self.light._td_viewer_delta(patch, ctx)
+        self.vent._td_viewer_delta(patch, ctx)
         self.assertEqual(list(patch), ["lighting"])
         self.assertEqual(len(patch["lighting"]["groups"]), 32)
         patch = {}
         ctx = self._ctx(changes={"td.bms": {"RV-05"}})
-        self.light._f3d_viewer_delta(patch, ctx)
-        self.vent._f3d_viewer_delta(patch, ctx)
+        self.light._td_viewer_delta(patch, ctx)
+        self.vent._td_viewer_delta(patch, ctx)
         self.assertEqual(set(patch), {"lighting", "ventilation"})
         patch = {}
-        self.vent._f3d_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/BOILER/state"}}))
+        self.vent._td_viewer_delta(patch, self._ctx(changes={"td.signal": {"equipment/BOILER/state"}}))
         self.assertEqual(list(patch), ["ventilation"])
 
     def test_contract(self):
@@ -190,14 +190,14 @@ class TestViewerProvider(F3DBmsCase):
             model = self.env[name]
             self.assertTrue(model._name.startswith("td.viewer.provider."))
             self.assertNotIn("td.viewer.provider", model._inherit)
-            self.assertEqual(model._f3d_viewer_bus_models(), ["td.signal", "td.bms"])
-        self.assertEqual((self.light._f3d_sequence, self.vent._f3d_sequence), (110, 120))
+            self.assertEqual(model._td_viewer_bus_models(), ["td.signal", "td.bms"])
+        self.assertEqual((self.light._td_sequence, self.vent._td_sequence), (110, 120))
 
     def test_no_access_keeps_static(self):
         user = new_test_user(self.env, "bms_nogroup", groups="base.group_user")
         payload = {"lighting": {"groups": {"X": {"n": 1}}}}
-        self.light.with_user(user)._f3d_viewer_collect(payload, self._ctx())
+        self.light.with_user(user)._td_viewer_collect(payload, self._ctx())
         self.assertEqual(payload["lighting"], {"groups": {"X": {"n": 1}}})
         payload = {}
-        self.vent.with_user(user)._f3d_viewer_collect(payload, self._ctx())
+        self.vent.with_user(user)._td_viewer_collect(payload, self._ctx())
         self.assertEqual(payload["ventilation"], self.static["ventilation"])

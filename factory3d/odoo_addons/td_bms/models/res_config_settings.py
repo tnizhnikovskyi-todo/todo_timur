@@ -56,7 +56,7 @@ class ResConfigSettings(models.TransientModel):
         for rec in self:
             rec.td_bms_install_state = state
 
-    def _f3d_bms_check_ranges(self):
+    def _td_bms_check_ranges(self):
         def bad(label):
             raise ValidationError("Налаштування «Будівля»: %s поза допустимими межами." % label)
 
@@ -85,7 +85,7 @@ class ResConfigSettings(models.TransientModel):
         old_read = icp.get_param(P + "read_enabled") in ("True", "true", "1")
         old_write = icp.get_param(P + "write_enabled") in ("True", "true", "1")
         is_admin = self.env.user.has_group(ADMIN)
-        self._f3d_bms_check_ranges()
+        self._td_bms_check_ranges()
         if not is_admin and any(rec.sudo().td_bms_write_enabled != old_write for rec in self):
             raise AccessError("Керування будівлею вмикає лише адміністратор «Завод 3D».")
         super().set_values()

@@ -126,7 +126,7 @@ class TestContracts(LiveCase):
     def test_light_power(self):
         self.ingest(self.cut_sig["p_now"], 3.4)
         self.ingest(self.cut_sig["level"], 100)
-        res = self.env["td.bms.light.group"]._f3d_bms_light_power()
+        res = self.env["td.bms.light.group"]._td_bms_light_power()
         self.assertEqual(
             res["LT-CUT"], {"zone": "Z-CUT", "panel": "LP-2", "p_now_kw": 3.4, "p_inst_kw": 3.4, "level_pct": 100.0}
         )
@@ -135,7 +135,7 @@ class TestContracts(LiveCase):
         Hour = self.env["td.reading.hour"]
         for i, v in enumerate((3.4, 3.4, 1.7)):
             Hour.create({"signal_id": self.cut_sig["p_now"].id, "hour": datetime(2026, 1, 1, i), "v_avg": v})
-        res = self.env["td.bms.light.group"]._f3d_bms_kwh(datetime(2026, 1, 1), datetime(2026, 1, 2))
+        res = self.env["td.bms.light.group"]._td_bms_kwh(datetime(2026, 1, 1), datetime(2026, 1, 2))
         self.assertEqual(res["LT-CUT"], 8.5)
         self.assertEqual(res["LT-EB"], 0.0)
 

@@ -449,7 +449,7 @@ def write_flags(env, enabled=None):
 
 # --- крок 8 ----------------------------------------------------------------------------------------------
 def recompute(env):
-    balance = env(su=True)["td.bms.heat.balance"]._f3d_bms_get()
+    balance = env(su=True)["td.bms.heat.balance"]._td_bms_get()
     balance.action_recompute()
     return {"total_kw": balance.total_kw}
 

@@ -197,12 +197,12 @@ class F3dBmsLightGroup(models.Model):
         for rec in self:
             rec.td_is_manager = manager
 
-    def _f3d_design_p_now(self):
+    def _td_design_p_now(self):
         """Проєктна потужність зараз: n · W · level_design (R-05 п. 6)."""
         self.ensure_one()
         return round(self.n_fixtures * self.watt * self.level_design / 1000.0, 2)
 
-    def _f3d_live_values(self):
+    def _td_live_values(self):
         """R-05: живі значення групи (словник; використовується й щитом)."""
         self.ensure_one()
         sig = {name: self[name].sudo() for name in SIGNAL_FIELDS}
@@ -258,7 +258,7 @@ class F3dBmsLightGroup(models.Model):
     )
     def _compute_live(self):
         for rec in self:
-            v = rec._f3d_live_values()
+            v = rec._td_live_values()
             rec.level_pct = v["level_pct"]
             rec.level_source = v["level_source"]
             rec.e_now = v["e_now"]
@@ -278,7 +278,7 @@ class F3dBmsLightGroup(models.Model):
         values = [value] if isinstance(value, str) or not hasattr(value, "__iter__") else list(value)
         positive = operator in ("=", "in")
         recs = self.sudo().with_context(active_test=False).search([])
-        ids = [r.id for r in recs if (r._f3d_live_values()["deviation"] in values) == positive]
+        ids = [r.id for r in recs if (r._td_live_values()["deviation"] in values) == positive]
         return [("id", "in", ids)]
 
     def _compute_requests(self):
@@ -304,7 +304,7 @@ class F3dBmsLightGroup(models.Model):
     # --- дії ------------------------------------------------------------------------------------------
     def action_open_command(self):
         self.ensure_one()
-        self.env["td.bms.light.command.wizard"]._f3d_bms_check_operator()
+        self.env["td.bms.light.command.wizard"]._td_bms_check_operator()
         return {
             "type": "ir.actions.act_window",
             "name": "Керування освітленням",
@@ -353,11 +353,11 @@ class F3dBmsLightGroup(models.Model):
 
     # --- контракти ------------------------------------------------------------------------------------
     @api.model
-    def _f3d_bms_light_power(self):
+    def _td_bms_light_power(self):
         """CH-03: {code: {zone, panel, p_now_kw, p_inst_kw, level_pct}} для активних груп."""
         res = {}
         for g in self.search([]):
-            v = g._f3d_live_values()
+            v = g._td_live_values()
             res[g.code] = {
                 "zone": g.zone_code,
                 "panel": g.panel_id.code,
@@ -368,7 +368,7 @@ class F3dBmsLightGroup(models.Model):
         return res
 
     @api.model
-    def _f3d_bms_kwh(self, date_from, date_to):
+    def _td_bms_kwh(self, date_from, date_to):
         """CH-03: кВт·год за [date_from, date_to) з годинних агрегатів сигналу потужності."""
         groups = self.search([])
         sig_ids = groups.power_signal_id.ids

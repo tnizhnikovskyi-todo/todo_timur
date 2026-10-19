@@ -26,7 +26,7 @@ class F3dBmsCheck(models.AbstractModel):
 
     # --- параметри й контекст ----------------------------------------------------------------------
     @api.model
-    def _f3d_params(self):
+    def _td_params(self):
         icp = self.env["ir.config_parameter"].sudo()
 
         def num(key, default):
@@ -72,7 +72,7 @@ class F3dBmsCheck(models.AbstractModel):
         mains_lost = bool(mains and rules.is_live(mains.status) and mains.last_value == 0)
         fire_active = bool(fire and rules.is_live(fire.status) and fire.last_text in ("alarm", "test"))
         if not fire_active and "td.fire.drill" in self.env:
-            fire_active = bool(self.env["td.fire.drill"].sudo()._f3d_is_active_at(now))
+            fire_active = bool(self.env["td.fire.drill"].sudo()._td_is_active_at(now))
         return mains_lost, fire_active
 
     # --- «з якого часу» (R-20) -----------------------------------------------------------------------
@@ -135,10 +135,10 @@ class F3dBmsCheck(models.AbstractModel):
             unit.with_context(tracking_disable=True, mail_notrack=True).write(vals)
 
     @api.model
-    def _f3d_bms_on_ingest(self, codes):
-        """R-20: хук після `_f3d_ingest` — час початку умов за `last_ts` показань."""
+    def _td_bms_on_ingest(self, codes):
+        """R-20: хук після `_td_ingest` — час початку умов за `last_ts` показань."""
         now = fields.Datetime.now()
-        params = self._f3d_params()
+        params = self._td_params()
         mains_lost, fire_active = self._suppression(now)
         parts = [c.split("/") for c in codes]
         groups = {p[2] for p in parts if p[0] == "lighting" and p[-1] == "level"}
@@ -162,7 +162,7 @@ class F3dBmsCheck(models.AbstractModel):
     def _cron_check(self):
         """§6: один прогін перевірок (кожну хвилину)."""
         env = self.sudo()
-        params = env._f3d_params()
+        params = env._td_params()
         if not params["read_enabled"]:
             return False
         now = fields.Datetime.now()
@@ -276,7 +276,7 @@ class F3dBmsCheck(models.AbstractModel):
         balance = self.env["td.bms.heat.balance"].search([], limit=1)
         if balance and balance.check_signal_id:
             n_live = len(units.filtered(lambda u: u.heat_signal_id and rules.is_live(u.heat_signal_id.status)))
-            deficit = balance._f3d_bms_live()["deficit_kw"]
+            deficit = balance._td_bms_live()["deficit_kw"]
             text, since = rules.heat_check(
                 live=bool(units) and n_live * 2 >= len(units),
                 deficit=deficit,
@@ -291,7 +291,7 @@ class F3dBmsCheck(models.AbstractModel):
 
         readings = [r for r in readings if r]
         if readings:
-            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(readings, src="module")
+            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._td_ingest(readings, src="module")
         self._enrich_requests(now, params, cache)
         self._journal(now)
 
@@ -363,7 +363,7 @@ class F3dBmsCheck(models.AbstractModel):
             b = self.env["td.bms.heat.balance"].search([], limit=1)
             if not b:
                 return None
-            live = b._f3d_bms_live()
+            live = b._td_bms_live()
             return titles.heat_deficit(
                 live["deficit_kw"],
                 live["heat_need_kw"],
@@ -394,7 +394,7 @@ class F3dBmsCheck(models.AbstractModel):
         zones = None
         for sig in alarmed:
             req = sig.maintenance_request_id
-            cfg = sig._f3d_cfg()
+            cfg = sig._td_cfg()
             threshold, rel = thresholds.breach_info(cfg, sig.last_value) if sig.kind != "state" else (None, "")
             ep = by_signal.get(sig.id)
             if ep:

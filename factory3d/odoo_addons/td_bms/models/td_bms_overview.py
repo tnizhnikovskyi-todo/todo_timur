@@ -141,8 +141,8 @@ class F3dBmsOverview(models.AbstractModel):
     def _heat(self):
         if not self._can_read("td.bms.heat.balance"):
             return {"live": {}, "data": {}}
-        bal = self.env["td.bms.heat.balance"]._f3d_bms_get()
-        live = bal._f3d_bms_live()
+        bal = self.env["td.bms.heat.balance"]._td_bms_get()
+        live = bal._td_bms_live()
         data = {k: live[k] for k in HEAT_KEYS}
         data["design"] = {
             "total": bal.total_kw,

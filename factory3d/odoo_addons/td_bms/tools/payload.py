@@ -133,7 +133,7 @@ def build_ventilation(env, ctx, static):
     try:
         units = {}
         order = []
-        t_set, t_out = Unit._f3d_bms_env_params()
+        t_set, t_out = Unit._td_bms_env_params()
         for u in Unit.search([("active", "=", True)], order="sequence, code"):
             # значення беруться зі словника R-12, а не з полів: поля округлені за `digits`
             v = u.sudo()._live_values(static_units.get(u.code) or {}, t_set, t_out)
@@ -181,8 +181,8 @@ def build_ventilation(env, ctx, static):
             order.append(u.code)
         for code, rec in static_units.items():
             units.setdefault(code, rec)
-        bal = env[HEAT_BALANCE].with_context(f3d_bms_static_units=static_units)._f3d_bms_get()
-        live = bal._f3d_bms_live()
+        bal = env[HEAT_BALANCE].with_context(f3d_bms_static_units=static_units)._td_bms_get()
+        live = bal._td_bms_live()
     finally:
         Unit.invalidate_model()
     ventilation = dict(static)

@@ -12,5 +12,5 @@ class F3dSource(models.Model):
     )
 
     @api.model
-    def _f3d_local_types(self):
-        return super()._f3d_local_types() + ["f3d_bms"]
+    def _td_local_types(self):
+        return super()._td_local_types() + ["f3d_bms"]

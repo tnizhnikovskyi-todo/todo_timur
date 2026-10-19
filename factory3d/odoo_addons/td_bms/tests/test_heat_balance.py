@@ -126,7 +126,7 @@ class TestLive(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual(heat.live_balance(918, 497, P)["calc"], 2)
 
     def test_live_model(self):
-        live = self.balance._f3d_bms_live()
+        live = self.balance._td_bms_live()
         self.assertEqual(live["chp_source"], "design")
         self.assertEqual(live["chp_heat_now_kw"], 497)
         self.assertFalse(live["boiler_state"])
@@ -134,10 +134,10 @@ class TestLive(F3DBmsHvacMixin, F3DBmsCase):
         self.assertEqual(self.balance.sudo().chp_source, "design")
         sig = self.make_signal("equipment/BOILER/state", text="fault", kind="state")
         self.balance.boiler_state_signal_id = sig
-        live = self.balance._f3d_bms_live()
+        live = self.balance._td_bms_live()
         self.assertEqual((live["boiler_state"], live["boilers_on"]), ("fault", 0))
 
     def test_get_creates(self):
         self.env["td.bms.heat.balance"].sudo().search([]).unlink()
-        b = self.env["td.bms.heat.balance"]._f3d_bms_get()
+        b = self.env["td.bms.heat.balance"]._td_bms_get()
         self.assertEqual(b.total_kw, 753)

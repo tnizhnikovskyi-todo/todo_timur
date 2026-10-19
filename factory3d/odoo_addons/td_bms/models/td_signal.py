@@ -29,9 +29,9 @@ class F3dSignal(models.Model):
                 raise ValidationError("Сигнал %s модуля «Будівля» не керується (ARCH §1.4)." % code)
 
     @api.model
-    def _f3d_ingest(self, readings, src="module", collector=None):
+    def _td_ingest(self, readings, src="module", collector=None):
         """R-20: після прийому показань груп/установок оновити `off_since`/`low_since`/… (ізольовано)."""
-        res = super()._f3d_ingest(readings, src=src, collector=collector)
+        res = super()._td_ingest(readings, src=src, collector=collector)
         if self.env.context.get("f3d_bms_internal"):
             return res
         codes = [
@@ -44,7 +44,7 @@ class F3dSignal(models.Model):
             return res
         try:
             with self.env.cr.savepoint():
-                self.env["td.bms.check"].sudo()._f3d_bms_on_ingest(codes)
+                self.env["td.bms.check"].sudo()._td_bms_on_ingest(codes)
         except Exception:
             _logger.exception("bms after ingest")
         return res

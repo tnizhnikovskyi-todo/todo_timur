@@ -166,7 +166,7 @@ class TestLightRules(RulesCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_bms")
 class TestIngestHook(RulesCase):
-    CHECK = "odoo.addons.td_bms.models.td_bms_check.F3dBmsCheck._f3d_bms_on_ingest"
+    CHECK = "odoo.addons.td_bms.models.td_bms_check.F3dBmsCheck._td_bms_on_ingest"
 
     def test_since_from_reading_ts(self):
         with freeze_time(at(7, 30)):
@@ -180,7 +180,7 @@ class TestIngestHook(RulesCase):
 
     def test_internal_context_skips(self):
         with freeze_time(at(7, 30)), mock.patch(self.CHECK) as hook:
-            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._f3d_ingest(
+            self.env["td.signal"].with_context(f3d_bms_internal=True).sudo()._td_ingest(
                 [{"code": self.level.code, "ts": at(7, 1), "value": 0.0}], src="module"
             )
             hook.assert_not_called()
@@ -209,7 +209,7 @@ class TestDerivedSource(RulesCase):
     def test_local_source(self):
         self.assertEqual(self.derived.type, "f3d_bms")
         self.assertFalse(self.derived.collector_id)
-        self.assertIn("f3d_bms", self.env["td.source"]._f3d_local_types())
+        self.assertIn("f3d_bms", self.env["td.source"]._td_local_types())
 
     def test_not_stale_by_telemetry(self):
         self.push(self.level.code, at(7, 0), 100)
@@ -225,7 +225,7 @@ class TestDerivedSource(RulesCase):
             res = (
                 self.env["td.signal"]
                 .sudo()
-                ._f3d_ingest(
+                ._td_ingest(
                     [{"code": self.check_sig.code, "ts": at(7, 1), "text": "норма"}], src="collector", collector=col
                 )
             )

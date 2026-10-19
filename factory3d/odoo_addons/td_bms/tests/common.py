@@ -108,7 +108,7 @@ class F3DBmsLightCase(F3DBmsCase):
         cls._ingest_n = getattr(cls, "_ingest_n", 0) + 1  # ts строго зростає: повтор тієї ж секунди відкидається
         ts = fields.Datetime.now() - timedelta(minutes=10) + timedelta(seconds=cls._ingest_n)
         item = {"code": sig.code, "ts": ts, "value": value, "text": text, "q": "good"}
-        res = cls.env["td.signal"].sudo()._f3d_ingest([{k: v for k, v in item.items() if v is not None}], src="module")
+        res = cls.env["td.signal"].sudo()._td_ingest([{k: v for k, v in item.items() if v is not None}], src="module")
         cls.env.invalidate_all()
         return res
 
@@ -190,7 +190,7 @@ class F3DBmsHvacMixin:
                 "required_m3h": 158.4,
             }
         )
-        cls.balance = cls.env["td.bms.heat.balance"]._f3d_bms_get()
+        cls.balance = cls.env["td.bms.heat.balance"]._td_bms_get()
         cls.balance.action_recompute()
 
     @classmethod
@@ -264,7 +264,7 @@ class F3DBmsRulesMixin:
             item["value"] = value
         if text is not None:
             item["text"] = text
-        res = cls.env["td.signal"].sudo()._f3d_ingest([item], src="module")
+        res = cls.env["td.signal"].sudo()._td_ingest([item], src="module")
         cls.env.invalidate_all()
         return res
 

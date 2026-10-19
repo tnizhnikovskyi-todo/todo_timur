@@ -237,14 +237,14 @@ class F3dBmsHeatBalance(models.Model):
         return True
 
     @api.model
-    def _f3d_bms_get(self):
+    def _td_bms_get(self):
         rec = self.search([("company_id", "=", self.env.company.id)], limit=1)
         if not rec:
             rec = self.sudo().create({"company_id": self.env.company.id}).with_env(self.env)
         return rec
 
     # --- живий баланс ---
-    def _f3d_bms_live(self):
+    def _td_bms_live(self):
         """R-15, R-16: словник живих значень (поля `LIVE_FIELDS` + `need`, `boil`) для огляду, провайдера й крона."""
         self.ensure_one()
         p = self._params()
@@ -253,7 +253,7 @@ class F3dBmsHeatBalance(models.Model):
             return sig.last_value if _is_live(sig) else None
 
         outdoor = val(self.outdoor_signal_id)
-        need = sum(self.env["td.bms.hvac.unit"]._f3d_bms_heat_now().values())
+        need = sum(self.env["td.bms.hvac.unit"]._td_bms_heat_now().values())
         chp, source = heat.chp_heat(val(self.chp_el_signal_id), p, val(self.chp_heat_signal_id))
         state_sig = self.boiler_state_signal_id
         state_text = state_sig.last_text if _is_live(state_sig) else None
@@ -284,7 +284,7 @@ class F3dBmsHeatBalance(models.Model):
 
     def _compute_live(self):
         for rec in self:
-            live = rec.sudo()._f3d_bms_live()
+            live = rec.sudo()._td_bms_live()
             for name in LIVE_FIELDS:
                 rec[name] = live[name]
 
