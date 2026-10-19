@@ -49,12 +49,13 @@ function groupKey(o, cx, cz) {
 }
 
 /**
- * @param {object} env { THREE, scene, cell } — `cell`: розмір клітинки плану, м (0 — без поділу; клітинки зберігають
- *   відсікання за пірамідою видимості для наближених видів).
+ * @param {object} env { THREE, scene, cell } — `cell`: розмір клітинки плану, м. За замовчуванням 0 — без поділу: найменше
+ *   draw-викликів (≈ 260 пакетів на всю модель проти ≈ 620 з клітинкою 40 м); клітинки лише трохи економлять трикутники
+ *   на наближених видах (відсікання за пірамідою видимості), але множать виклики в загальному вигляді.
  */
 export function createBatcher(env) {
     const { THREE, scene } = env;
-    const cell = env.cell ?? 40;
+    const cell = env.cell ?? 0;
     const batches = [];
     const recs = [];
     const recOf = new Map(); // проксі-меш -> запис
@@ -166,16 +167,6 @@ export function createBatcher(env) {
         return n;
     }
 
-    function hide(r) {
-        r.b.idx.fill(0, r.i0, r.i0 + r.in);
-        r.b.dirtyIdx = true;
-        dirty.add(r.b);
-    }
-    function show(r) {
-        r.b.idx.set(r.b.orig.subarray(r.i0, r.i0 + r.in), r.i0);
-        r.b.dirtyIdx = true;
-        dirty.add(r.b);
-    }
     function recolor(r, c) {
         const col = r.b.col;
         for (let i = r.v0 * 3, e = (r.v0 + r.vn) * 3; i < e; i += 3) { col[i] = c.r; col[i + 1] = c.g; col[i + 2] = c.b; }
@@ -204,13 +195,26 @@ export function createBatcher(env) {
         if (c.r !== r.cr || c.g !== r.cg || c.b !== r.cb) { recolor(r, c); }
         if (ok === r.cold) { return false; }
         r.cold = ok;
-        if (ok) { show(r); } else { hide(r); }
+        r.b.dirtyIdx = true;
+        dirty.add(r.b);
         coldDirty = true;
         return true;
     }
+    /** Індекси пакета — лише «холодні» проксі підряд (без вироджених трикутників); решта діапазону не малюється. */
+    function compact(b) {
+        let w = 0;
+        for (const r of b.recs) {
+            if (!r.cold) { continue; }
+            b.idx.set(b.orig.subarray(r.i0, r.i0 + r.in), w);
+            w += r.in;
+        }
+        b.geom.setDrawRange(0, w);
+        b.geom.index.needsUpdate = true;
+        b.mesh.visible = w > 0;
+    }
     function flush() {
         for (const b of dirty) {
-            if (b.dirtyIdx) { b.geom.index.needsUpdate = true; b.dirtyIdx = false; }
+            if (b.dirtyIdx) { compact(b); b.dirtyIdx = false; }
             if (b.dirtyCol) { b.geom.attributes.color.needsUpdate = true; b.dirtyCol = false; }
         }
         dirty.clear();

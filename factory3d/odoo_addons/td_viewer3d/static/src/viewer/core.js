@@ -332,7 +332,9 @@ const labelRenderer = new CSS2DRenderer({ element: $(".o_f3d_labels") });
 const scene = new THREE.Scene();
 // PERF: статичні меші частин моделі малюються пакетами (batch.js); `opts.batch === false` вимикає (порівняння, відладка)
 const NO_BATCH = { add: () => 0, sync: () => false, touch: () => false, beforeRender() {}, afterRender() {}, stats: () => ({ batches: 0, eligible: 0, cold: 0, solo: 0 }), dispose() {}, batches: [], isBatched: () => false };
-const batcher = opts.batch === false ? NO_BATCH : createBatcher({ THREE, scene, cell: opts.batchCell });
+// ручне вимкнення для порівняння й відладки: `?f3d_batch=0` / `?f3d_ondemand=0` в URL (кіоск) або localStorage `f3d.batch` / `f3d.ondemand` = "0"
+const perfFlag = (k) => { try { return new URLSearchParams(window.location.search).get("f3d_" + k) ?? storage?.getItem("f3d." + k); } catch { return null; } };
+const batcher = opts.batch === false || perfFlag("batch") === "0" ? NO_BATCH : createBatcher({ THREE, scene, cell: (perfFlag("cell") ?? opts.batchCell) == null ? undefined : Number(perfFlag("cell") ?? opts.batchCell) });
 // PERF: рендер за потребою (див. «цикл»): `invalidate()` — кадр треба перемалювати; працює лише з WebGL-рендерером
 let needDraw = true;
 function invalidate() { needDraw = true; }
@@ -3284,7 +3286,7 @@ const clock = new THREE.Clock();
 // (paint, шари, дані, розмір, клік/клавіша в інтерфейсі), працює анімація (маршрут замовлення, частинки, пожежа, програвання
 // зміни), пакетування змінило склад пакетів; блимання ламп статусу — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
 // страховка від пропущеної інвалідації. Нульовий рендерер (тести) і `opts.onDemand === false` малюють кожен виток, як раніше.
-const onDemand = !nullR && opts.onDemand !== false;
+const onDemand = !nullR && opts.onDemand !== false && perfFlag("ondemand") !== "0";
 const IDLE_MS = 400, LAMP_MS = 80, POLL_MS = 100;
 let lastDraw = 0, lastPoll = 0, drawn = 0;
 renderer.setAnimationLoop(() => {
