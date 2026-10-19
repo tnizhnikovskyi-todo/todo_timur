@@ -3,12 +3,14 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from odoo import Command
 from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
-from ..services import odoo_sync
+from ..services import odoo_sync, publish
 from .common import PASSWORD, F3DConstructorCase, F3DConstructorHttpCase
 
 FACTORY3D = Path(__file__).resolve().parents[3]
@@ -279,6 +281,51 @@ class TestS4Feed(StructureFixture, F3DConstructorCase):
         self.assertEqual(
             sorted(res2['zones']), ['Буфер', 'Зона A'], "без шаблону BUF-1 — місце на підлозі в зоні-родителі «Буфер»"
         )
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_constructor", "f3d_s4")
+class TestS4PublishBaseline(F3DConstructorCase):
+    """Інтеграція S2 → S4: успішна публікація оновлює базу порівняння «Оновити з Odoo», тож створене нею не «з'являється»."""
+
+    EMPTY = {'appeared': [], 'disappeared': [], 'renamed': [], 'moved': []}
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env['ir.config_parameter'].sudo().set_param('td.constructor.publish_enabled', 'True')
+
+    def publish(self, **kw):
+        plan = publish.build_plan(self.site)
+        return publish.apply_plan(self.site.with_user(self.u_manager), plan, (), '', **kw)
+
+    def test_publish_refreshes_baseline(self):
+        self.assertEqual(odoo_sync.sync(self.env, self.site)['baseline'], 'created')
+        self.make_slot(prefix='PB-R1', bays=2, levels=1)
+        result = self.publish()
+        self.assertEqual(sorted(c['code'] for c in result['created']), ['PB-R1-B01-L1', 'PB-R1-B02-L1'])
+        codes = {row['code'] for row in odoo_sync.full_feed(self.env, self.site)['locations']}
+        self.assertLessEqual({'PB-R1-B01-L1', 'PB-R1-B02-L1'}, codes, "публікація створила локації в стрічці")
+        out = odoo_sync.sync(self.env, self.site)
+        self.assertEqual(out['baseline'], 'existing')
+        self.assertEqual(out['diff'], self.EMPTY, "створене публікацією не є розбіжністю з Odoo (експорт «нові й змінені» порожній)")
+        # перейменування в проєкті → публікація → знову без розбіжностей
+        slot = self.env['td.slot'].search([('code_prefix', '=', 'PB-R1')])
+        slot.overrides = {'PB-R1-B01-L1': {'name': 'Перша'}}
+        self.publish()
+        self.assertEqual(odoo_sync.sync(self.env, self.site)['diff'], self.EMPTY)
+
+    def test_publish_creates_missing_baseline_and_keeps_publishing_on_feed_error(self):
+        self.assertFalse(self.site.odoo_baseline_id)
+        self.make_slot(prefix='PB-R2', bays=1, levels=1)
+        self.publish()
+        self.assertTrue(self.site.odoo_baseline_id, "бази ще не було — публікація створює її")
+        self.make_slot(prefix='PB-R3', bays=1, levels=1, x=40.0)
+        with patch.object(odoo_sync, 'full_feed', side_effect=UserError("склад не знайдено")), mute_logger(
+            'odoo.addons.td_constructor.services.publish'
+        ):
+            result = self.publish()
+        self.assertEqual([c['code'] for c in result['created']], ['PB-R3-B01-L1'], "помилка бази не скасовує публікацію")
+        self.assertTrue(self.env['stock.location'].search([('td_code', '=', 'PB-R3-B01-L1')]))
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor", "f3d_s4")
