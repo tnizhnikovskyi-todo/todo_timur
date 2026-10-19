@@ -399,3 +399,19 @@ test("on-demand: вибір об'єкта запускає кадр", async () =
     const { viewer } = await calm();
     expect(await framesAfter(viewer, () => viewer.select("SAW-1"))).toBeGreaterThan(0);
 });
+
+test("on-demand: об'єкт, що анімується сам (userData.f3dAnimated / extPick — пульсація маркерів), дає кадри частіше за «пульс» спокою", async () => {
+    const T = await three();
+    const { viewer } = await calm("none");
+    let n = viewer.core.drawn;
+    await advanceTime(1000);
+    const idle = viewer.core.drawn - n;
+    const marker = new T.Object3D();
+    marker.userData.extPick = true;
+    viewer.scene.add(marker);
+    await advanceTime(300); // опитування (100 мс) помічає об'єкт
+    n = viewer.core.drawn;
+    await advanceTime(1000);
+    expect(viewer.core.drawn - n).toBeGreaterThan(idle + 3);
+    marker.removeFromParent();
+});

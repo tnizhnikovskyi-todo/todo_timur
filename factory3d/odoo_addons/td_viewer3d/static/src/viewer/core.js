@@ -3284,11 +3284,12 @@ const clock = new THREE.Clock();
 // PERF: рендер за потребою. Кадр без змін (камера стоїть, нічого не рухається) не перемальовується: холостий перегляд і
 // кіоск не палять GPU. Перемальовуємо, коли: камера рухалась (`controls` change, tween), хтось викликав `invalidate()`
 // (paint, шари, дані, розмір, клік/клавіша в інтерфейсі), працює анімація (маршрут замовлення, частинки, пожежа, програвання
-// зміни), пакетування змінило склад пакетів; блимання ламп статусу — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
+// зміни), пакетування змінило склад пакетів; блимання ламп статусу й пульсація маркерів — не частіше ~12 к/с; плюс «пульс» раз на IDLE_MS —
 // страховка від пропущеної інвалідації. Нульовий рендерер (тести), `opts.onDemand === false` і `?f3d_ondemand=0` малюють кожен виток, як раніше.
 const onDemand = opts.onDemand ?? (!nullR && perfFlag("ondemand") !== "0"); // `opts.onDemand: true` вмикає й для нульового рендерера (тести)
-const IDLE_MS = 400, LAMP_MS = 80, POLL_MS = 100;
+const IDLE_MS = 400, AMBIENT_MS = 80, POLL_MS = 100;
 let lastDraw = 0, lastPoll = 0, drawn = 0;
+let ambient = false; // у сцені є об'єкти, що змінюються самі по собі (маркери енергетики пульсують в onBeforeRender)
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const now = performance.now();
@@ -3338,8 +3339,12 @@ renderer.setAnimationLoop(() => {
   if (now - lastPoll >= POLL_MS) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
     lastPoll = now;
     if (batcher.sync()) { needDraw = true; }
+    if (onDemand) { // `userData.f3dAnimated` — прапорець для будь-якого об'єкта, що анімується сам (спрайти з `extPick` вважаються такими)
+      ambient = false;
+      scene.traverse((o) => { if (o.visible && (o.userData.extPick || o.userData.f3dAnimated)) { ambient = true; } });
+    }
   }
-  if (onDemand && !needDraw && !live && !(lampsMoved && now - lastDraw >= LAMP_MS) && now - lastDraw < IDLE_MS) {return;}
+  if (onDemand && !needDraw && !live && !((lampsMoved || ambient) && now - lastDraw >= AMBIENT_MS) && now - lastDraw < IDLE_MS) {return;}
   needDraw = false;
   lastDraw = now;
   drawn++;
