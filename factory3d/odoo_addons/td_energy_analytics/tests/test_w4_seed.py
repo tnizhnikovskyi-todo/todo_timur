@@ -35,9 +35,8 @@ class TestW4Seed(TestW4Common):
         self.assertEqual(
             set(stats), {"days", "products", "mos", "workorders", "alloc_rows", "baselines", "budgets", "seconds"}
         )
-        self.assertEqual(
-            (stats["days"], stats["products"], stats["baselines"]), (DAYS, 5, 1 + int(stats["baselines"] > 1))
-        )
+        self.assertEqual((stats["days"], stats["products"], stats["baselines"]), (DAYS, 5, 1))
+        self.assertLessEqual(stats["seconds"], 240.0, "ТП-04: 90 діб ≤ 4 хв")
         yesterday = TODAY - timedelta(days=1)
         first = yesterday - timedelta(days=DAYS - 1)
         # драйвери: plate_m2 за всі доби, у робочі дні > 0
