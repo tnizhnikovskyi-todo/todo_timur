@@ -192,8 +192,8 @@ test("raycast: стандартний Raycaster потрапляє в прокс
     const b = createBatcher({ THREE: T, scene });
     b.add(host);
     const hits = new T.Raycaster(new T.Vector3(0, 5, 0), new T.Vector3(0, -1, 0)).intersectObjects(scene.children, true);
-    expect(hits.length).toBe(1);
-    expect(hits[0].object).toBe(a1);
+    expect(hits.length).toBeGreaterThan(0); // двосторонній матеріал: верхня й нижня грані куба
+    expect(hits.every((h) => h.object === a1)).toBe(true);
 });
 
 test("dispose: пакети прибрано, проксі видимі", async () => {
@@ -265,8 +265,10 @@ test("core: вибір (Raycaster) дає ті самі коди з пакету
     const T = await three();
     const codes = ["SAW-1", "CNC-2", "EDGE-1", "FG-R1-B01-L4", "PLT-01A", "FUR-R1-S01-L1"];
     const a = await mountViewer({ model: "core" });
+    await a.viewer.partsReady(); // фонові частини моделі (будівля, стелажі) мають бути однаково завантажені в обох запусках
     const withBatch = codes.map((c) => pickAbove(T, a.viewer, c));
     const b = await mountViewer({ model: "core", viewerOpts: { batch: false } });
+    await b.viewer.partsReady();
     const without = codes.map((c) => pickAbove(T, b.viewer, c));
     expect(withBatch).toEqual(without);
     expect(withBatch.filter(Boolean).length).toBeGreaterThan(2);
@@ -280,7 +282,7 @@ test("core: режим «OEE» і вибір виводять меші об'єк
     expect(was.length).toBeGreaterThan(0);
     viewer.setMode("oee");
     expect(was.every((m) => !bt.isBatched(m))).toBe(true);
-    expect(was[0].material.emissiveIntensity).toBeCloseTo(0.45, 5);
+    expect(was[0].material.emissiveIntensity).toBeCloseTo(0.45, { digits: 5 });
     viewer.setMode("none");
     expect(was.every((m) => bt.isBatched(m))).toBe(true);
     viewer.select("SAW-1");
@@ -309,7 +311,8 @@ test("core: з живими залишками схований stock_load ва�
     viewer.scene.traverse((o) => {
         if (o.isMesh && bt.isBatched(o)) {
             let shown = o.material.visible !== false;
-            for (let p = o; p; p = p.parent) { shown = shown && p.visible; }
+            // до вузла шару: вимкнений шар ховає пакет разом із вузлом, а не проксі
+            for (let p = o; p && !p.name.startsWith("LAYER_"); p = p.parent) { shown = shown && p.visible; }
             if (!shown) { bad++; }
         }
     });
@@ -363,25 +366,36 @@ test("on-demand: у спокої кадр не малюється щовитка
     expect(viewer.core.drawn).toBeGreaterThan(d1);
 });
 
-test("on-demand: рух камери, зміна шару й вибір запускають кадр; без змін — тиша", async () => {
-    const { viewer } = await mountViewer({ model: "core", viewerOpts: { onDemand: true } });
+/** Змонтувати з рендером за потребою й дочекатись спокою (початкові інвалідації відпрацювали). */
+async function calm(model = "core") {
+    const m = await mountViewer({ model, viewerOpts: { onDemand: true } });
     await advanceTime(600);
-    const base = () => viewer.core.drawn;
-    // стан спокою: лампи можуть блимати, тож порівнюємо зі «звичайним» вікном, а не з нулем
-    let n = base();
-    await advanceTime(120);
-    const idleStep = base() - n;
-    n = base();
-    viewer.core.camera.position.x += 5;
-    viewer.core.controls.update(); // змінена камера кидає "change" → invalidate
-    await advanceTime(120);
-    expect(base() - n).toBeGreaterThan(idleStep - 1);
-    n = base();
-    viewer.setLayer("line", false);
-    await advanceTime(120);
-    expect(base() - n).toBeGreaterThan(0);
-    n = base();
-    viewer.select("SAW-1");
-    await advanceTime(120);
-    expect(base() - n).toBeGreaterThan(0);
+    m.viewer.core.invalidate();
+    await advanceTime(300);
+    return m;
+}
+const framesAfter = async (viewer, trigger) => {
+    const n = viewer.core.drawn;
+    trigger();
+    await advanceTime(250);
+    return viewer.core.drawn - n;
+};
+
+test("on-demand: рух камери запускає кадр", async () => {
+    const { viewer } = await calm();
+    const frames = await framesAfter(viewer, () => {
+        viewer.core.camera.position.x += 5;
+        viewer.core.controls.update(); // змінена камера кидає "change" → invalidate
+    });
+    expect(frames).toBeGreaterThan(0);
+});
+
+test("on-demand: зміна шару запускає кадр", async () => {
+    const { viewer } = await calm();
+    expect(await framesAfter(viewer, () => viewer.setLayer("line", false))).toBeGreaterThan(0);
+});
+
+test("on-demand: вибір об'єкта запускає кадр", async () => {
+    const { viewer } = await calm();
+    expect(await framesAfter(viewer, () => viewer.select("SAW-1"))).toBeGreaterThan(0);
 });
