@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import check_apps as ca  # noqa: E402
+import check_apps as ca
 
 GOOD_HTML = """<section class="oe_container"><div class="oe_row"><h2 class="oe_slogan">Demo</h2></div></section>
 <section class="oe_container"><h3>Features</h3><ul><li>One</li></ul></section>

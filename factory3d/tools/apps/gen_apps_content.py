@@ -19,8 +19,6 @@ import argparse
 import ast
 import html
 import json
-import os
-import re
 import sys
 from pathlib import Path
 

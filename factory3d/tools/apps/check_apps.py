@@ -56,25 +56,11 @@ MAX_IMAGE_BYTES = 1024 * 1024
 
 # Enterprise modules of Odoo 19 that are certainly not in Community (used when Community sources are unavailable;
 # when they are available, "not in Community" is the primary criterion).
-KNOWN_ENTERPRISE = frozenset("""
-account_accountant account_asset account_budget account_reports account_online_synchronization approvals
-appointment documents documents_sign hr_appraisal hr_payroll hr_referral helpdesk industry_fsm industry_fsm_sale
-iot knowledge marketing_automation mrp_maintenance mrp_mps mrp_plm mrp_workorder mrp_workorder_hr
-planning project_enterprise quality quality_control quality_mrp quality_mrp_workorder sale_renting
-sale_subscription sign social spreadsheet_dashboard_edition stock_barcode timesheet_grid voip web_cohort
-web_dashboard web_gantt web_map web_studio whatsapp worksheet
-""".split())
+KNOWN_ENTERPRISE = frozenset(["account_accountant", "account_asset", "account_budget", "account_reports", "account_online_synchronization", "approvals", "appointment", "documents", "documents_sign", "hr_appraisal", "hr_payroll", "hr_referral", "helpdesk", "industry_fsm", "industry_fsm_sale", "iot", "knowledge", "marketing_automation", "mrp_maintenance", "mrp_mps", "mrp_plm", "mrp_workorder", "mrp_workorder_hr", "planning", "project_enterprise", "quality", "quality_control", "quality_mrp", "quality_mrp_workorder", "sale_renting", "sale_subscription", "sign", "social", "spreadsheet_dashboard_edition", "stock_barcode", "timesheet_grid", "voip", "web_cohort", "web_dashboard", "web_gantt", "web_map", "web_studio", "whatsapp", "worksheet"])
 
 # Odoo html sanitizer tag/attribute set (odoo.tools.mail), minus everything that can run code or load resources.
-ALLOWED_TAGS = frozenset("""
-a abbr acronym address article aside b big blockquote br caption center cite code col colgroup dd del dfn div dl dt
-em figcaption figure font footer h1 h2 h3 h4 h5 h6 header hr i img ins kbd li main mark nav ol p pre q s samp
-section small span strike strong sub sup table tbody td tfoot th thead tr tt u ul var
-""".split())
-ALLOWED_ATTRS = frozenset("""
-class style id href src alt title width height colspan rowspan align valign border cellpadding cellspacing
-target rel name lang dir color face size bgcolor
-""".split())
+ALLOWED_TAGS = frozenset(["a", "abbr", "acronym", "address", "article", "aside", "b", "big", "blockquote", "br", "caption", "center", "cite", "code", "col", "colgroup", "dd", "del", "dfn", "div", "dl", "dt", "em", "figcaption", "figure", "font", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "i", "img", "ins", "kbd", "li", "main", "mark", "nav", "ol", "p", "pre", "q", "s", "samp", "section", "small", "span", "strike", "strong", "sub", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "tt", "u", "ul", "var"])
+ALLOWED_ATTRS = frozenset(["class", "style", "id", "href", "src", "alt", "title", "width", "height", "colspan", "rowspan", "align", "valign", "border", "cellpadding", "cellspacing", "target", "rel", "name", "lang", "dir", "color", "face", "size", "bgcolor"])
 ALLOWED_STYLE_PROPS = ("color", "background", "font", "margin", "padding", "border", "text-align", "line-height",
                        "text-decoration", "vertical-align", "width", "height", "max-width", "display")
 YOUTUBE_RE = re.compile(r"^https://(www\.)?youtube(-nocookie)?\.com/(watch\?v=|embed/)[\w-]+$|^https://youtu\.be/[\w-]+$")
