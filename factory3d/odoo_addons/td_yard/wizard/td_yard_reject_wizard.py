@@ -1,6 +1,6 @@
 from odoo import fields, models
 
-from ..models.td_yard_visit import GRP_SEC, _f3d_yard_require
+from ..models.td_yard_visit import GRP_SEC, _td_yard_require
 
 
 class F3dYardRejectWizard(models.TransientModel):
@@ -22,7 +22,7 @@ class F3dYardRejectWizard(models.TransientModel):
 
     def action_confirm(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         text = "%s: %s" % (dict(self.REASONS)[self.reason_code], self.reason)
         if self.visit_id:
             self.visit_id._do_reject(text)

@@ -204,7 +204,7 @@ class TestYardSecurity(YardFlowCase):
         with self.assertLogs(logger, level="INFO") as cm:
             logging.getLogger(logger).info(marker)
             event = lpr_event(1, imageArray=[image])
-            self.env["td.yard.lpr.event"].sudo()._f3d_from_push(event)
+            self.env["td.yard.lpr.event"].sudo()._td_from_push(event)
             visit.sudo().message_post(body="тест")
             self.env["td.yard.visit"]._cron_gc()
         text = "\n".join(cm.output)

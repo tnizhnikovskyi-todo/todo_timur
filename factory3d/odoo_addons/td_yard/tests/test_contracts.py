@@ -43,8 +43,8 @@ class TestYardContracts(TransactionCase):
     """AC-78: контракти з суміжними модулями (CY-01…CY-08)."""
 
     def test_signal_ingest(self):
-        self.assertTrue(callable(self.env["td.signal"]._f3d_ingest))
-        params = inspect.signature(self.env["td.signal"]._f3d_ingest).parameters
+        self.assertTrue(callable(self.env["td.signal"]._td_ingest))
+        params = inspect.signature(self.env["td.signal"]._td_ingest).parameters
         self.assertTrue({"readings", "src", "collector"} <= set(params))
 
     def test_command_fields(self):
@@ -53,8 +53,8 @@ class TestYardContracts(TransactionCase):
             self.assertIn(name, fields_)
 
     def test_push_handler_routes(self):
-        self.assertIn("lpr", self.env["td.push.handler.yard"]._f3d_push_routes)
-        self.assertTrue(hasattr(self.env["td.push.handler"], "_f3d_push_routes"))
+        self.assertIn("lpr", self.env["td.push.handler.yard"]._td_push_routes)
+        self.assertTrue(hasattr(self.env["td.push.handler"], "_td_push_routes"))
 
     def test_batch_fields(self):
         for name in ("dock_id", "end_date", "td_code"):

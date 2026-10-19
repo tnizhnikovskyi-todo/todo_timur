@@ -9,7 +9,7 @@ from odoo.addons.td_telemetry.tools.ingest import parse_ts
 
 from ..tools import params as P
 from ..tools import tz
-from .td_yard_visit import GRP_SEC, GRP_STOCK, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, GRP_STOCK, _td_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class F3dYardScale(models.Model):
     _description = "Двір: автоваги"
     _order = "td_code"
     _rec_name = "name"
-    _f3d_kind = "equipment"
+    _td_kind = "equipment"
 
     td_code = fields.Char(required=True, size=32)
     name = fields.Char(string="Назва", required=True, size=64)
@@ -71,8 +71,8 @@ class F3dYardScale(models.Model):
 
     # ------------------------------------------------------------------ показання (M-13)
     @api.model
-    def _f3d_yard_dispatch_scales(self, readings):
-        """Показання `yard/scale/*` з td.signal._f3d_ingest -> scale._f3d_yard_on_readings."""
+    def _td_yard_dispatch_scales(self, readings):
+        """Показання `yard/scale/*` з td.signal._td_ingest -> scale._td_yard_on_readings."""
         scales = self.sudo().search([("active", "=", True)])
         mapping = {}
         for scale in scales:
@@ -92,9 +92,9 @@ class F3dYardScale(models.Model):
             groups.setdefault(scale.id, (scale, []))[1].append((role, ts, value, r.get("q") or "good"))
         for scale, items in groups.values():
             items.sort(key=lambda it: it[1])
-            scale._f3d_yard_on_readings(items)
+            scale._td_yard_on_readings(items)
 
-    def _f3d_yard_on_readings(self, items):
+    def _td_yard_on_readings(self, items):
         """R-10, R-11: items = [(role, ts, value, q)], ts — naive UTC."""
         self.ensure_one()
         self.env.cr.execute("SELECT id FROM td_yard_scale WHERE id = %s FOR UPDATE", [self.id])
@@ -104,9 +104,9 @@ class F3dYardScale(models.Model):
             by_ts.setdefault(ts, {})[role] = (value, q)
         now = fields.Datetime.now()
         for ts in sorted(by_ts):
-            self._f3d_yard_on_group(ts, by_ts[ts], now)
+            self._td_yard_on_group(ts, by_ts[ts], now)
 
-    def _f3d_yard_on_group(self, ts, group, now):
+    def _td_yard_on_group(self, ts, group, now):
         wv, wq = group.get("weight", (None, "bad"))
         if wv is None or wq == "bad" or wv > self.max_kg:
             return  # R-10: ігнорується, стан і last_* не змінюються
@@ -122,12 +122,12 @@ class F3dYardScale(models.Model):
         enabled = P.get_bool(self.env, "read_enabled") and P.get_bool(self.env, "scale_auto_capture")
         capture = None
         if enabled and self.auto_capture:
-            capture = self._f3d_yard_step(ts, wv, stable, now, vals, "idle" if was_offline else self.capture_state)
+            capture = self._td_yard_step(ts, wv, stable, now, vals, "idle" if was_offline else self.capture_state)
         self.sudo().with_context(tracking_disable=True).write(vals)
         if capture is not None:
-            self._f3d_yard_capture(capture, ts)
+            self._td_yard_capture(capture, ts)
 
-    def _f3d_yard_step(self, ts, w, stable, now, vals, state):
+    def _td_yard_step(self, ts, w, stable, now, vals, state):
         """Автомат R-11 п. 2–4; повертає вагу захоплення або None; зміни — у vals."""
         fresh = ts >= now - timedelta(seconds=P.get_int(self.env, "weigh_max_age_s"))
         if w < self.min_kg:
@@ -147,14 +147,14 @@ class F3dYardScale(models.Model):
             vals.update(capture_state="settling", candidate_kg=0.0, candidate_ts=False)
         return None
 
-    def _f3d_yard_capture(self, weight, ts):
+    def _td_yard_capture(self, weight, ts):
         """R-11 п. 5: призначення зважування рейсу в момент захоплення."""
         self.ensure_one()
         Visit = self.env["td.yard.visit"].sudo()
         base = [("weighing_policy", "=", "in_out"), ("company_id", "=", self.company_id.id)]
 
         def has(visit, kind):
-            return visit._f3d_yard_has_weighing(kind)
+            return visit._td_yard_has_weighing(kind)
 
         def out_pending(visit):
             return has(visit, "in") and not has(visit, "out")
@@ -185,7 +185,7 @@ class F3dYardScale(models.Model):
     def action_capture(self, visit=None):
         """Захоплення поточного показання кнопкою «Зважити» (R-10)."""
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC, GRP_STOCK)
+        _td_yard_require(self.env, GRP_SEC, GRP_STOCK)
         now = fields.Datetime.now()
         age = P.get_int(self.env, "weigh_max_age_s")
         if not (
@@ -203,14 +203,14 @@ class F3dYardScale(models.Model):
             "source": "auto",
         }
         if visit:
-            kind = "out" if visit._f3d_yard_has_weighing("in") else "in"
+            kind = "out" if visit._td_yard_has_weighing("in") else "in"
             vals.update(visit_id=visit.id, kind=kind)
             return self.env["td.yard.weighing"].create(vals)
-        weighing = self._f3d_yard_capture(self.last_weight_kg, self.last_ts)
+        weighing = self._td_yard_capture(self.last_weight_kg, self.last_ts)
         weighing.write({"user_id": self.env.user.id})
         return weighing
 
-    def _f3d_yard_refresh_offline(self):
+    def _td_yard_refresh_offline(self):
         """R-16 п. 6 (викликає крон двору): ваги offline без свіжих даних; свіже показання повертає idle."""
         now = fields.Datetime.now()
         limit = now - timedelta(seconds=3 * P.get_int(self.env, "weigh_max_age_s"))
@@ -219,11 +219,11 @@ class F3dYardScale(models.Model):
             dead = bool(sig and sig.status in ("stale", "unknown")) or bool(scale.last_ts and scale.last_ts < limit)
             if dead and scale.capture_state != "offline":
                 scale.sudo().with_context(tracking_disable=True).write({"capture_state": "offline"})
-                scale._f3d_yard_notify()
+                scale._td_yard_notify()
             elif not dead and scale.capture_state == "offline":
                 scale.sudo().with_context(tracking_disable=True).write({"capture_state": "idle"})
-                scale._f3d_yard_notify()
+                scale._td_yard_notify()
 
-    def _f3d_yard_notify(self):
+    def _td_yard_notify(self):
         """R-21: сповіщення шини (реалізує W4)."""
         return True

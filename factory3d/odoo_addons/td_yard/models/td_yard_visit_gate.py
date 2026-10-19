@@ -19,7 +19,7 @@ class F3dYardVisit(models.Model):
 
     # ------------------------------------------------------------------ R-08 п. 6–7
     @api.model
-    def _f3d_yard_candidates(self, direction, ts):
+    def _td_yard_candidates(self, direction, ts):
         """Рейси, що можуть збігатися за напрямком (без вікна за часом)."""
         if direction == "out":
             return self.search([("state", "in", OUT_STATES)])
@@ -27,10 +27,10 @@ class F3dYardVisit(models.Model):
         return self.search(["|", ("state", "in", IN_STATES), "&", ("state", "=", "draft"), ("day", "=", today)])
 
     @api.model
-    def _f3d_yard_find_by_plate(self, plate_norm, direction, ts):
+    def _td_yard_find_by_plate(self, plate_norm, direction, ts):
         """Кандидати за нормалізованим номером; порядок: |planned_start − ts|, потім id."""
         window = P.get_int(self.env, "lpr_match_window_h") * 3600
-        found = self._f3d_yard_candidates(direction, ts).filtered(lambda v: v.plate_norm == plate_norm)
+        found = self._td_yard_candidates(direction, ts).filtered(lambda v: v.plate_norm == plate_norm)
         if direction == "in":
             found = found.filtered(
                 lambda v: (
@@ -44,24 +44,24 @@ class F3dYardVisit(models.Model):
         return found.sorted(key)
 
     @api.model
-    def _f3d_yard_find_by_docs(self, tokens, direction, ts):
+    def _td_yard_find_by_docs(self, tokens, direction, ts):
         tokens = set(tokens)
-        return self._f3d_yard_candidates(direction, ts).filtered(
+        return self._td_yard_candidates(direction, ts).filtered(
             lambda v: v.batch_id and (v.batch_id.name in tokens or tokens & set(v.batch_id.picking_ids.mapped("name")))
         )
 
     # ------------------------------------------------------------------ хук пропуску (W1 action_admit)
-    def _f3d_yard_admit_gate(self, open_gate=True):
+    def _td_yard_admit_gate(self, open_gate=True):
         self.ensure_one()
-        gate = self.gate_in_id or self._f3d_yard_default_gate()
+        gate = self.gate_in_id or self._td_yard_default_gate()
         if not gate:
             return None
         gate = gate.sudo()
         if not open_gate:
-            gate._f3d_yard_count_permit(self)
+            gate._td_yard_count_permit(self)
             return None
         if not P.get_bool(self.env, "write_enabled"):
-            gate._f3d_yard_count_permit(self)
+            gate._td_yard_count_permit(self)
             return ("warning", "Команди на шлагбаум вимкнено — відкрийте шлагбаум з пульта CAME.")
         try:
             # ручна команда від імені користувача: права GRP_SEC перевіряє action_admit

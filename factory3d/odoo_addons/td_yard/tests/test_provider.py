@@ -17,7 +17,7 @@ class TestYardProvider(GateCase):
 
     def _collect(self, payload=None, **ctx):
         payload = {} if payload is None else payload
-        self.provider._f3d_viewer_collect(payload, dict(self.ctx, **ctx))
+        self.provider._td_viewer_collect(payload, dict(self.ctx, **ctx))
         return payload
 
     def _visit_at(self, plate, state, dock=None, **vals):
@@ -28,14 +28,14 @@ class TestYardProvider(GateCase):
 
     def test_registry(self):  # AC-65
         provider = self.env[PROVIDER]
-        self.assertEqual(provider._f3d_sequence, 160)
-        self.assertEqual(provider._f3d_sections, ("yard",))
-        self.assertEqual(provider._f3d_group, "td_factory3d.group_td_user")
-        self.assertEqual(provider._f3d_viewer_bus_models(), ["td.yard.visit", "td.yard.gate", "td.yard.scale"])
+        self.assertEqual(provider._td_sequence, 160)
+        self.assertEqual(provider._td_sections, ("yard",))
+        self.assertEqual(provider._td_group, "td_factory3d.group_td_user")
+        self.assertEqual(provider._td_viewer_bus_models(), ["td.yard.visit", "td.yard.gate", "td.yard.scale"])
         patch_ = {}
-        provider._f3d_viewer_delta(patch_, {"changes": {}})
+        provider._td_viewer_delta(patch_, {"changes": {}})
         self.assertEqual(patch_, {})
-        provider._f3d_viewer_delta(patch_, {"user": self.user_guard, "changes": {"td.yard.visit": {"YV/1"}}})
+        provider._td_viewer_delta(patch_, {"user": self.user_guard, "changes": {"td.yard.visit": {"YV/1"}}})
         self.assertIn("yard", patch_)
 
     def test_collect_sections_and_positions(self):  # AC-62
@@ -110,7 +110,7 @@ class TestYardProvider(GateCase):
             "cards": {"GENSET": {"rows": [["Стан", "резерв"]]}, "GATE-W": {"title": "КПП"}},
         }
         patch_ = {"infra": infra}
-        self.provider._f3d_viewer_delta(patch_, dict(self.ctx, changes={"td.yard.gate": {"GATE-W"}}))
+        self.provider._td_viewer_delta(patch_, dict(self.ctx, changes={"td.yard.gate": {"GATE-W"}}))
         self.assertIs(patch_["infra"], infra)
         self.assertEqual(infra["totals"], {"genset_kw": 348})
         self.assertEqual(infra["cards"]["GENSET"], {"rows": [["Стан", "резерв"]]})

@@ -48,7 +48,7 @@ class TestYardScale(YardFlowCase):
         return self._force(visit, state)
 
     def _ingest(self, base, specs):
-        """specs: [(секунди від base, вага, 'S'|'D'|None, якість)] -> td.signal._f3d_ingest."""
+        """specs: [(секунди від base, вага, 'S'|'D'|None, якість)] -> td.signal._td_ingest."""
         readings = []
         for spec in specs:
             off, weight, status = spec[:3]
@@ -57,7 +57,7 @@ class TestYardScale(YardFlowCase):
             readings.append({"code": WCODE, "ts": iso, "value": weight, "q": quality})
             if status:
                 readings.append({"code": SCODE, "ts": iso, "value": 1.0 if status == "S" else 0.0})
-        return self.env["td.signal"]._f3d_ingest(readings, src="module")
+        return self.env["td.signal"]._td_ingest(readings, src="module")
 
     def _autos(self):
         return self.env["td.yard.weighing"].search([("source", "=", "auto"), ("scale_id", "=", self.scale.id)])
@@ -90,7 +90,7 @@ class TestYardScale(YardFlowCase):
         self.assertEqual(picking.td_weight_check, "deviation")
         summary = "Відхилення нетто"
         self.assertEqual(len(picking.activity_ids.filtered(lambda a: a.summary == summary)), 1)
-        visit._f3d_yard_write_pickings()
+        visit._td_yard_write_pickings()
         self.assertEqual(len(picking.activity_ids.filtered(lambda a: a.summary == summary)), 1)
         w_in.action_void()
         self._weigh(visit, "in", 25300.0)
@@ -150,15 +150,15 @@ class TestYardScale(YardFlowCase):
         with self.assertRaisesRegex(UserError, "введіть вагу вручну"):
             self.scale.action_capture()
         self.scale.weight_signal_id.status = "stale"
-        self.scale._f3d_yard_refresh_offline()
+        self.scale._td_yard_refresh_offline()
         self.assertEqual(self.scale.capture_state, "offline")
         self.scale.weight_signal_id.status = "ok"
-        self.scale._f3d_yard_refresh_offline()
+        self.scale._td_yard_refresh_offline()
         self.assertEqual(self.scale.capture_state, "idle")
 
     def test_capture_button_and_manual_form(self):
         visit = self._on_site(state="queued")
-        action = visit._f3d_yard_do_weigh()  # немає показань -> ручна форма
+        action = visit._td_yard_do_weigh()  # немає показань -> ручна форма
         self.assertEqual((action["res_model"], action["context"]["default_kind"]), ("td.yard.weighing", "in"))
         now = fields.Datetime.now()
         self.scale.write({"last_weight_kg": 25200.0, "last_stable": True, "last_ts": now})

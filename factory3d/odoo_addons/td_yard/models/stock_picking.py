@@ -21,9 +21,9 @@ class StockPicking(models.Model):
     @api.depends("move_ids.product_qty", "move_ids.quantity", "move_ids.product_id.weight", "state")
     def _compute_f3d_expected(self):
         for picking in self:
-            picking.td_expected_weight_kg = picking._f3d_expected_kg()[0]
+            picking.td_expected_weight_kg = picking._td_expected_kg()[0]
 
-    def _f3d_expected_kg(self):
+    def _td_expected_kg(self):
         """(маса документа, кг; чи є еталон — усі рухи мають product.weight > 0) — R-12 п. 2."""
         self.ensure_one()
         kgm = self.env.ref("uom.product_uom_kgm")
@@ -73,7 +73,7 @@ class StockPicking(models.Model):
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
 
-    def _f3d_yard_auto_start(self):
+    def _td_yard_auto_start(self):
         if self.env.context.get("f3d_yard_no_auto"):
             return
         for line in self.filtered(lambda ml: ml.quantity > 0 and ml.picking_id.batch_id):
@@ -85,11 +85,11 @@ class StockMoveLine(models.Model):
     def create(self, vals_list):
         lines = super().create(vals_list)
         if any((vals.get("quantity") or 0) > 0 for vals in vals_list):
-            lines._f3d_yard_auto_start()
+            lines._td_yard_auto_start()
         return lines
 
     def write(self, vals):
         res = super().write(vals)
         if "quantity" in vals and (vals["quantity"] or 0) > 0:
-            self._f3d_yard_auto_start()
+            self._td_yard_auto_start()
         return res

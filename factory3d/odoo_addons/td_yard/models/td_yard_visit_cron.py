@@ -79,7 +79,7 @@ class F3dYardVisitCron(models.Model):
                     "tailgate_today": 0,
                 }
             )
-        gates._f3d_yard_notify()
+        gates._td_yard_notify()
         return True
 
     @api.model

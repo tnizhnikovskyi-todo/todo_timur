@@ -71,8 +71,8 @@ class TestYardMigration(YardFlowCase):
         Signal = self.env["td.signal"]
         sig = Signal.create({"code": "other/x/y", "name": "T", "kind": "gauge", "create_request": False})
         readings = [{"code": sig.code, "ts": "2026-10-12T10:00:00Z", "value": float(i)} for i in range(3)]
-        with patch.object(type(Signal), "_f3d_yard_safe") as safe:
-            Signal._f3d_ingest(readings, src="module")
+        with patch.object(type(Signal), "_td_yard_safe") as safe:
+            Signal._td_ingest(readings, src="module")
         safe.assert_not_called()
 
     # ------------------------------------------------------------------ AC-72 (крок 0)

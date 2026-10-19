@@ -3,7 +3,7 @@ from datetime import timedelta
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
-from .td_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _td_yard_require
 
 KIND_LABELS = {"in": "В'їзд", "out": "Виїзд", "check": "Контрольне"}
 
@@ -126,10 +126,10 @@ class F3dYardWeighing(models.Model):
                 if not vals.get("picking_id") and visit.batch_id.picking_ids:
                     vals["picking_id"] = visit.batch_id.picking_ids.sorted("name")[:1].id
         records = super().create(vals_list)
-        records._f3d_yard_apply()
+        records._td_yard_apply()
         return records
 
-    def _f3d_yard_apply(self):
+    def _td_yard_apply(self):
         """Наслідки призначеного зважування для рейсу, документів і ваг (M-05)."""
         for rec in self:
             visit = rec.visit_id.sudo()
@@ -140,12 +140,12 @@ class F3dYardWeighing(models.Model):
                     visit._set_state("weighed", ts=rec.ts)
                     if not visit.handling_end_at:
                         visit.write({"handling_end_at": rec.ts})
-                visit._f3d_yard_write_pickings()
-            rec.scale_id._f3d_yard_notify()
+                visit._td_yard_write_pickings()
+            rec.scale_id._td_yard_notify()
 
     # ------------------------------------------------------------------ дії
     def action_assign(self, visit_id, kind=None):
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         visit = self.env["td.yard.visit"].browse(visit_id).exists()
         if not visit:
             raise UserError("Оберіть рейс.")
@@ -153,13 +153,13 @@ class F3dYardWeighing(models.Model):
             if rec.state != "unassigned":
                 raise UserError("Призначити можна лише непризначене зважування.")
             if not kind:
-                kind = "out" if visit._f3d_yard_has_weighing("in") else "in"
+                kind = "out" if visit._td_yard_has_weighing("in") else "in"
             vals = {"visit_id": visit.id, "kind": kind, "state": "assigned", "plate": visit.plate}
             picking = visit.sudo().batch_id.picking_ids.sorted("name")[:1]
             if picking:
                 vals["picking_id"] = picking.id
             rec.write(vals)
-        self._f3d_yard_apply()
+        self._td_yard_apply()
         return True
 
     def action_assign_selected(self):
@@ -169,12 +169,12 @@ class F3dYardWeighing(models.Model):
         return self.action_assign(self.visit_id.id, self.kind)
 
     def action_void(self):
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         for rec in self:
             rec.write({"state": "void"})
             visit = rec.visit_id.sudo()
             if visit:
                 visit.message_post(body="Анульовано зважування %s" % rec.name)
-                visit._f3d_yard_write_pickings()
-            rec.scale_id._f3d_yard_notify()
+                visit._td_yard_write_pickings()
+            rec.scale_id._td_yard_notify()
         return True

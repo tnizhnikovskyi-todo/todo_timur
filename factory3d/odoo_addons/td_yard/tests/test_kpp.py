@@ -154,8 +154,8 @@ class TestYardKpp(GateCase):
         self.env.cr.precommit.run()
         with patch.object(type(bus), "_sendone") as sendone:
             for _i in range(10):
-                visit._f3d_yard_notify()
-                self.gate_w._f3d_yard_notify()
+                visit._td_yard_notify()
+                self.gate_w._td_yard_notify()
             self.env.cr.precommit.run()
         calls = [c.args for c in sendone.call_args_list]
         self.assertEqual(sorted(a[2]["model"] for a in calls), ["td.yard.gate", "td.yard.visit"])
@@ -165,15 +165,15 @@ class TestYardKpp(GateCase):
         ev = MagicMock()
         visit = self._arrived("АА1234КТ", book=False)
         Visit = type(self.env["td.yard.visit"])
-        with patch.object(Visit, "_f3d_yard_viewer_event", return_value=ev):
+        with patch.object(Visit, "_td_yard_viewer_event", return_value=ev):
             with freeze(at(12, 50)):
                 visit.action_admit(open_gate=False)
             ev._notify.assert_any_call("td.yard.visit", [visit.name, visit.scene_code, visit.dock_code], "doc")
             ev.reset_mock()
-            self.gate_w._f3d_yard_notify()
+            self.gate_w._td_yard_notify()
             ev._notify.assert_called_once_with("td.yard.gate", ["GATE-W"], "state")
             ev.reset_mock()
-            self.env.ref("td_yard.scale_truck")._f3d_yard_notify()
+            self.env.ref("td_yard.scale_truck")._td_yard_notify()
             ev._notify.assert_called_once_with("td.yard.scale", ["TRUCK-SCALE"], "state")
 
     def test_no_show_cron(self):  # R-19 п. 2

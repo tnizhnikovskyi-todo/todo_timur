@@ -8,7 +8,7 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import params as P
 from ..tools import tz
-from .td_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _td_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class F3dYardGate(models.Model):
     _order = "sequence, td_code"
     _rec_name = "name"
     _rec_names_search = ["name", "td_code", "camera_code"]
-    _f3d_kind = "other"
+    _td_kind = "other"
     STATES = [
         ("closed", "Закритий"),
         ("open", "Відкритий"),
@@ -124,12 +124,12 @@ class F3dYardGate(models.Model):
 
     def _compute_can_command(self):
         for gate in self:
-            reason = gate.sudo()._f3d_yard_check("open", "manual", fields.Datetime.now())
+            reason = gate.sudo()._td_yard_check("open", "manual", fields.Datetime.now())
             gate.command_block_reason = reason or False
             gate.can_command = not reason and (self.env.su or self.env.user.has_group(GRP_SEC))
 
     # ------------------------------------------------------------------ R-15
-    def _f3d_yard_check(self, kind, reason, now):
+    def _td_yard_check(self, kind, reason, now):
         """R-15 п. 3–7: текст першої невдалої перевірки або None."""
         self.ensure_one()
         gate = self.sudo()
@@ -180,7 +180,7 @@ class F3dYardGate(models.Model):
         if kind not in KINDS:
             raise ValueError("Невідома команда шлагбаума: %r" % kind)
         if reason == "manual":
-            _f3d_yard_require(self.env, GRP_SEC)
+            _td_yard_require(self.env, GRP_SEC)
         elif reason in AUTO_REASONS:
             if not self.env.su:
                 raise AccessError("Автоматичні команди створює лише система.")
@@ -189,7 +189,7 @@ class F3dYardGate(models.Model):
         gate = self.sudo()
         self.env.cr.execute("SELECT id FROM td_yard_gate WHERE id = %s FOR UPDATE", [gate.id])
         now = fields.Datetime.now()
-        error = gate._f3d_yard_check(kind, reason, now)
+        error = gate._td_yard_check(kind, reason, now)
         if error:
             raise UserError(error)
         visit = visit.sudo() if visit else None
@@ -222,12 +222,12 @@ class F3dYardGate(models.Model):
             vals["hold_until"] = False
         gate.write(vals)
         if kind == "open":
-            gate._f3d_yard_count_permit(visit)
+            gate._td_yard_count_permit(visit)
         text = "Команда «%s» %s (#%s) · %s" % (KIND_LABELS[kind], gate.td_code, cmd.id, CMD_STATE_LABELS[cmd.state])
         gate.message_post(body=text)
         if visit:
             visit.message_post(body=text)
-        gate._f3d_yard_notify()
+        gate._td_yard_notify()
         return cmd
 
     def _notify_sent(self):
@@ -260,21 +260,21 @@ class F3dYardGate(models.Model):
 
     def action_opened_manually(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         gate = self.sudo()
-        gate._f3d_yard_count_permit(gate.pending_visit_id or None)
+        gate._td_yard_count_permit(gate.pending_visit_id or None)
         gate.last_error = False
         gate.message_post(body="Відкрито з пульта CAME (%s)" % self.env.user.name)
-        gate._f3d_yard_refresh_state()
+        gate._td_yard_refresh_state()
         return True
 
     def action_reset_error(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         gate = self.sudo()
         gate.write({"last_error": False, "open_cmd_id": False})
         gate.activity_unlink(["mail.mail_activity_data_warning"])
-        gate._f3d_yard_refresh_state()
+        gate._td_yard_refresh_state()
         return True
 
     def action_view_commands(self):
@@ -287,20 +287,20 @@ class F3dYardGate(models.Model):
             "domain": [("td_yard_gate_id", "=", self.id)],
         }
 
-    def _f3d_yard_count_permit(self, visit=None):
+    def _td_yard_count_permit(self, visit=None):
         for gate in self.sudo():
             vals = {"admitted_today": gate.admitted_today + 1}
             if visit:
                 vals["pending_visit_id"] = visit.id
             gate.write(vals)
 
-    def _f3d_yard_notify(self):
+    def _td_yard_notify(self):
         """R-21: сповіщення шини (реалізує W4); у W2 — нічого."""
         return True
 
     # ------------------------------------------------------------------ авто-відкриття (R-15 п. 10–11)
     @api.model
-    def _f3d_yard_event_note(self, event, text, alert=None):
+    def _td_yard_event_note(self, event, text, alert=None):
         if not event:
             return
         vals = {"note": ("%s; %s" % (event.note, text) if event.note else text)[:256]}
@@ -308,13 +308,13 @@ class F3dYardGate(models.Model):
             vals["kpp_alert"] = alert
         event.sudo().write(vals)
 
-    def _f3d_yard_auto_open(self, visit, event=None):
+    def _td_yard_auto_open(self, visit, event=None):
         self.ensure_one()
         gate = self.sudo()
         visit = visit.sudo()
         now = fields.Datetime.now()
         outbound = bool(event and event.direction == "out")
-        note = self._f3d_yard_event_note
+        note = self._td_yard_event_note
         if gate.mode != "auto":
             return note(event, "Ворота в ручному режимі", None)
         if not P.get_bool(self.env, "write_enabled"):
@@ -357,7 +357,7 @@ class F3dYardGate(models.Model):
         return True
 
     # ------------------------------------------------------------------ R-17
-    def _f3d_yard_on_readings(self, items):
+    def _td_yard_on_readings(self, items):
         """items = [(role, ts, value, q)]; обробка за зростанням ts."""
         self.ensure_one()
         gate = self.sudo()
@@ -380,14 +380,14 @@ class F3dYardGate(models.Model):
             elif role == "photocell":
                 gate.photocell_blocked = (v >= 0.5) != gate.invert_di
             elif role == "passes":
-                gate._f3d_yard_on_passes(int(v), ts)
+                gate._td_yard_on_passes(int(v), ts)
             elif role == "state":
                 if (v >= 0.5) != gate.invert_di and gate.state not in ("open", "held"):
                     opened_ts = ts
-        gate._f3d_yard_refresh_state(opened_ts=opened_ts)
+        gate._td_yard_refresh_state(opened_ts=opened_ts)
         return True
 
-    def _f3d_yard_on_passes(self, v, ts):
+    def _td_yard_on_passes(self, v, ts):
         if v < self.passes_day_start:
             self.passes_day_start = 0
         prev = self.passes_today
@@ -397,11 +397,11 @@ class F3dYardGate(models.Model):
             vals["tailgate_today"] = self.tailgate_today + today - max(prev, self.admitted_today)
             vals["last_tailgate_at"] = ts
             self.message_post(body="Проїзд без дозволу: проїздів %s, дозволів %s" % (today, self.admitted_today))
-            self._f3d_yard_notify()
+            self._td_yard_notify()
         self.write(vals)
 
     # ------------------------------------------------------------------ R-16
-    def _f3d_yard_is_open(self, now):
+    def _td_yard_is_open(self, now):
         """Стріла відкрита за свіжим сигналом стану (з урахуванням invert_di) або None, якщо стан невідомий."""
         self.ensure_one()
         sig = self.state_signal_id
@@ -410,13 +410,13 @@ class F3dYardGate(models.Model):
             return None
         return (sig.last_value >= 0.5) != self.invert_di
 
-    def _f3d_yard_refresh_state(self, now=None, opened_ts=None):
+    def _td_yard_refresh_state(self, now=None, opened_ts=None):
         now = now or fields.Datetime.now()
         for gate in self.sudo():
-            gate._f3d_yard_refresh_one(now, opened_ts)
+            gate._td_yard_refresh_one(now, opened_ts)
         return True
 
-    def _f3d_yard_refresh_one(self, now, opened_ts):
+    def _td_yard_refresh_one(self, now, opened_ts):
         self.ensure_one()
         # 1. контроль команди «відкрити»
         cmd = self.open_cmd_id
@@ -432,7 +432,7 @@ class F3dYardGate(models.Model):
                 self.open_cmd_id = False
             elif cmd.state == "done":
                 done_at = cmd.done_at or now
-                if (self.opened_at and self.opened_at >= done_at - timedelta(seconds=1)) or self._f3d_yard_is_open(now):
+                if (self.opened_at and self.opened_at >= done_at - timedelta(seconds=1)) or self._td_yard_is_open(now):
                     self.open_cmd_id = False
                 elif (now - done_at).total_seconds() > P.get_int(self.env, "open_timeout_s"):
                     self.write(
@@ -452,7 +452,7 @@ class F3dYardGate(models.Model):
             self.hold_until = False
             self.message_post(body="Утримання знято за часом (%s хв)" % P.get_int(self.env, "hold_max_min"))
         # 3. стан
-        is_open = self._f3d_yard_is_open(now)
+        is_open = self._td_yard_is_open(now)
         if self.last_error:
             new = "error"
         elif is_open is None:
@@ -472,11 +472,11 @@ class F3dYardGate(models.Model):
                 vals["opened_at"] = opened_ts or now
             self.write(vals)
             if new == "error":
-                self._f3d_yard_on_error()
-            self._f3d_yard_notify()
+                self._td_yard_on_error()
+            self._td_yard_notify()
         return True
 
-    def _f3d_yard_on_error(self):
+    def _td_yard_on_error(self):
         self.message_post(body="Помилка воріт: %s" % self.last_error)
         if not self.responsible_id:
             return
@@ -495,7 +495,7 @@ class F3dYardGate(models.Model):
         for gate in self.sudo().search([]):
             try:
                 with self.env.cr.savepoint():
-                    gate._f3d_yard_refresh_state()
+                    gate._td_yard_refresh_state()
             except Exception:
                 _logger.exception("f3d_yard: оновлення стану воріт %s", gate.td_code)
         return True

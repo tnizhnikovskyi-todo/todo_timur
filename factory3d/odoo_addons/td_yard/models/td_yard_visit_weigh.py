@@ -18,23 +18,23 @@ class F3dYardVisit(models.Model):
     @api.model
     def _cron_queue(self):
         res = super()._cron_queue()
-        self.env["td.yard.scale"].sudo().search([("active", "=", True)])._f3d_yard_refresh_offline()  # R-16 п. 6
+        self.env["td.yard.scale"].sudo().search([("active", "=", True)])._td_yard_refresh_offline()  # R-16 п. 6
         return res
 
-    def _f3d_yard_write_pickings(self, net=None):
+    def _td_yard_write_pickings(self, net=None):
         """Без чинних зважувань документи не звіряються: скидання, без відхилення й активності."""
         self.ensure_one()
         if net is None and self.weight_check == "none":
             for picking in self.batch_id.picking_ids.filtered(lambda p: p.state != "cancel").sudo():
                 picking.write({"td_net_weight_kg": 0.0, "td_weight_check": "none", "td_weight_deviation_pct": 0.0})
             return
-        return super()._f3d_yard_write_pickings(net=net)
+        return super()._td_yard_write_pickings(net=net)
 
-    def _f3d_yard_do_weigh(self):
+    def _td_yard_do_weigh(self):
         """«Зважити»: захоплення свіжого показання ваг або форма ручного вводу (FR-28)."""
         self.ensure_one()
         scale = self.env["td.yard.scale"].search([("company_id", "=", self.company_id.id)], limit=1)
-        kind = "out" if self._f3d_yard_has_weighing("in") else "in"
+        kind = "out" if self._td_yard_has_weighing("in") else "in"
         if scale and scale.capture_state != "offline":
             try:
                 weighing = scale.action_capture(visit=self)
@@ -77,8 +77,8 @@ class F3dYardGate(models.Model):
     scale_id = fields.Many2one("td.yard.scale", string="Автоваги", ondelete="set null")
 
     @api.model
-    def _f3d_yard_dispatch(self, readings):
-        """Показання `yard/gates/*` (M-13) -> gate._f3d_yard_on_readings."""
+    def _td_yard_dispatch(self, readings):
+        """Показання `yard/gates/*` (M-13) -> gate._td_yard_on_readings."""
         by_code = {}
         for gate in self.sudo().search([("active", "=", True)]):
             for role in self.ROLES:
@@ -96,4 +96,4 @@ class F3dYardGate(models.Model):
             gate, role = target
             groups.setdefault(gate.id, (gate, []))[1].append((role, ts, value, r.get("q") or "good"))
         for gate, items in groups.values():
-            gate._f3d_yard_on_readings(items)
+            gate._td_yard_on_readings(items)

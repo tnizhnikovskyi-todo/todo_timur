@@ -14,7 +14,7 @@ GRP_STOCK = "stock.group_stock_user"
 FINAL_STATES = ("left", "rejected", "cancelled")
 
 
-def _f3d_yard_require(env, *xmlids):
+def _td_yard_require(env, *xmlids):
     """Пропускає суперкористувача (env.su) і членів будь-якої з груп; інакше AccessError."""
     if env.su or any(env.user.has_group(x) for x in xmlids):
         return
@@ -289,7 +289,7 @@ class F3dYardVisit(models.Model):
         """Фільтр «Сьогодні»: київська доба сервера, а не `context_today()` браузера (Y-2)."""
         return tz.today_domain(operator, value, fields.Datetime.now())
 
-    def _f3d_yard_weighings(self):
+    def _td_yard_weighings(self):
         """Чинні (assigned) зважування рейсу; без моделі ваг (W3) — порожньо."""
         self.ensure_one()
         if "weighing_ids" not in self._fields:
@@ -309,10 +309,10 @@ class F3dYardVisit(models.Model):
             pickings = visit.batch_id.picking_ids.filtered(lambda p: p.state != "cancel")
             expected, has_ref = 0.0, bool(pickings)
             for picking in pickings:
-                exp, ref = picking._f3d_expected_kg()
+                exp, ref = picking._td_expected_kg()
                 expected += exp
                 has_ref = has_ref and ref
-            weighings = visit._f3d_yard_weighings()
+            weighings = visit._td_yard_weighings()
             last = {}
             for kind in ("in", "out"):
                 of_kind = weighings.filtered(lambda w, k=kind: w.kind == k).sorted("ts")
@@ -390,7 +390,7 @@ class F3dYardVisit(models.Model):
                 side = "east" if vals.get("visit_type") == "outgoing" else "west"
                 vals["weighing_policy"] = P.get_str(self.env, "weighing_policy_" + side)
         visits = super().create(vals_list)
-        visits._f3d_yard_notify()
+        visits._td_yard_notify()
         return visits
 
     def write(self, vals):
@@ -405,7 +405,7 @@ class F3dYardVisit(models.Model):
                     raise UserError("Тип і пакет змінюються лише до пропуску фури.")
         res = super().write(vals)
         if {"plate", "batch_id", "priority"} & set(vals):
-            self._f3d_yard_notify()
+            self._td_yard_notify()
         return res
 
     def unlink(self):
@@ -440,27 +440,27 @@ class F3dYardVisit(models.Model):
         self.sudo().message_post(
             body="Стан: %s → %s (%s)%s" % (labels[old], labels[new], tz.local_hm(ts), (" · " + note) if note else "")
         )
-        self._f3d_yard_notify()
+        self._td_yard_notify()
         return True
 
     def action_plan(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         if not self.booking_id:
             raise UserError("Спершу підтвердіть бронювання воріт.")
         return self._set_state("planned")
 
     def action_arrive(self, ts=None, gate=None, event=None):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         if gate is None and "td.yard.gate" in self.env:
-            gate = self._f3d_yard_default_gate()
+            gate = self._td_yard_default_gate()
         self._set_state("arrived", ts=ts, gate=gate)
         if event:
             event.sudo().write({"visit_id": self.id, "match_state": "matched"})
         return True
 
-    def _f3d_yard_default_gate(self):
+    def _td_yard_default_gate(self):
         """КПП в'їзду для сторони рейсу (GATE-W за замовчуванням); модель воріт — W2."""
         Gate = self.env["td.yard.gate"].sudo()
         domain = [("direction", "in", ("in", "both"))]
@@ -470,15 +470,15 @@ class F3dYardVisit(models.Model):
                 return gates
         return Gate.search(domain, limit=1)
 
-    def _f3d_yard_admit_gate(self, open_gate=True):
+    def _td_yard_admit_gate(self, open_gate=True):
         """Хук W2: команда шлагбауму при пропуску. Повертає (тип, повідомлення) або None."""
         return None
 
     def action_admit(self, open_gate=True):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         self._set_state("queued")
-        result = self._f3d_yard_admit_gate(open_gate) or ("success", "Фуру %s пропущено" % (self.plate or self.name))
+        result = self._td_yard_admit_gate(open_gate) or ("success", "Фуру %s пропущено" % (self.plate or self.name))
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
@@ -492,7 +492,7 @@ class F3dYardVisit(models.Model):
 
     def action_call_to_dock(self, dock=None):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         if self.state != "queued":
             raise UserError("Викликати на ворота можна лише фуру в черзі.")
         now = fields.Datetime.now()
@@ -502,11 +502,11 @@ class F3dYardVisit(models.Model):
                 raise UserError("Рейс заброньовано на %s." % (self.booking_id.dock_id.td_code or dock.name))
             dock = self.booking_id.dock_id
         else:
-            dock = dock or self._f3d_yard_pick_dock()
+            dock = dock or self._td_yard_pick_dock()
             if not dock:
                 side_label = dict(self._fields["side"].selection)[self.side]
                 raise UserError("Немає вільних воріт на стороні «%s»." % side_label)
-        busy = self._f3d_yard_dock_busy(dock, now, now + slot, exclude=self)
+        busy = self._td_yard_dock_busy(dock, now, now + slot, exclude=self)
         if busy:
             raise UserError("Ворота %s зайняті рейсом %s." % (dock.td_code or dock.name, busy.name))
         if not self.booking_id:
@@ -533,35 +533,35 @@ class F3dYardVisit(models.Model):
     def action_start_handling(self, auto=False):
         self.ensure_one()
         if not auto:
-            _f3d_yard_require(self.env, GRP_SEC, GRP_STOCK)
+            _td_yard_require(self.env, GRP_SEC, GRP_STOCK)
         note = "автоматично: почато приймання/відвантаження в документі" if auto else None
         return self._set_state("handling", note=note)
 
     def action_end_handling(self, auto=False):
         self.ensure_one()
         if not auto:
-            _f3d_yard_require(self.env, GRP_SEC, GRP_STOCK)
+            _td_yard_require(self.env, GRP_SEC, GRP_STOCK)
         if self.state != "handling":
             raise UserError("Завершити операцію можна лише у стані «Операція».")
         if not self.handling_end_at:
             self.sudo().write({"handling_end_at": fields.Datetime.now()})
             self.sudo().message_post(body="Операцію завершено%s" % (" (автоматично)" if auto else ""))
         if P.get_bool(self.env, "auto_call_next") and self.dock_id:
-            self._f3d_yard_call_next(self.dock_id)
+            self._td_yard_call_next(self.dock_id)
         return True
 
-    def _f3d_yard_do_weigh(self):
+    def _td_yard_do_weigh(self):
         """Хук W3: зважування (захоплення з ваг або форма ручного вводу)."""
         raise UserError("Модуль автоваг не встановлено.")
 
     def action_weigh(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC, GRP_STOCK)
+        _td_yard_require(self.env, GRP_SEC, GRP_STOCK)
         if self.state not in ("queued", "at_dock", "handling"):
             raise UserError("Зважити можна фуру в черзі, біля воріт або в операції.")
-        return self._f3d_yard_do_weigh()
+        return self._td_yard_do_weigh()
 
-    def _f3d_yard_has_weighing(self, kind):
+    def _td_yard_has_weighing(self, kind):
         self.ensure_one()
         if "weighing_ids" not in self._fields:
             return False
@@ -569,22 +569,22 @@ class F3dYardVisit(models.Model):
 
     def action_leave(self, ts=None, note=None):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         ts = ts or fields.Datetime.now()
         dock = self.dock_id
         self._set_state("left", ts=ts, note=note)
-        if self.weighing_policy == "in_out" and not self._f3d_yard_has_weighing("out"):
+        if self.weighing_policy == "in_out" and not self._td_yard_has_weighing("out"):
             self.sudo().message_post(body="Виїзд без зважування на виїзді")
         unfinished = self.sudo().batch_id.picking_ids.filtered(lambda p: p.state not in ("done", "cancel"))
         if unfinished:
             self.sudo().message_post(body="Документи не завершені: %s" % ", ".join(unfinished.mapped("name")))
         if P.get_bool(self.env, "auto_call_next") and dock:
-            self._f3d_yard_call_next(dock)
+            self._td_yard_call_next(dock)
         return True
 
     def action_reject_wizard(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         return {
             "type": "ir.actions.act_window",
             "name": "Відхилити рейс",
@@ -607,7 +607,7 @@ class F3dYardVisit(models.Model):
 
     def action_cancel(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         if self.state not in ("draft", "planned"):
             raise UserError("Скасувати можна лише рейс у стані «Чернетка» або «Заплановано».")
         self._set_state("cancelled")
@@ -616,7 +616,7 @@ class F3dYardVisit(models.Model):
 
     def action_draft(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         return self._set_state("draft")
 
     def action_show_3d(self):
@@ -651,7 +651,7 @@ class F3dYardVisit(models.Model):
 
     # ------------------------------------------------------------------ черга й ворота (R-05)
     @api.model
-    def _f3d_yard_queue(self, side, dock=None):
+    def _td_yard_queue(self, side, dock=None):
         now = fields.Datetime.now()
         window = now + timedelta(minutes=P.get_int(self.env, "queue_slot_window_min"))
         visits = self.search([("state", "=", "queued"), ("side", "=", side)])
@@ -669,7 +669,7 @@ class F3dYardVisit(models.Model):
         return visits.sorted(key=key)
 
     @api.model
-    def _f3d_yard_dock_busy(self, dock, start, end, exclude=None):
+    def _td_yard_dock_busy(self, dock, start, end, exclude=None):
         """Рейс (або бронювання без рейсу), що займає ворота на [start, end); порожньо — вільні."""
         exclude_id = exclude.id if exclude else False
         domain = [("state", "in", ("at_dock", "handling")), ("dock_id", "=", dock.id)]
@@ -698,7 +698,7 @@ class F3dYardVisit(models.Model):
                 return visit
         return self.browse()
 
-    def _f3d_yard_category_warning(self, dock):
+    def _td_yard_category_warning(self, dock):
         """R-04: попередження, якщо категорії товарів рейсу не підходять воротам."""
         self.ensure_one()
         allowed = dock.td_accepts
@@ -716,7 +716,7 @@ class F3dYardVisit(models.Model):
             ", ".join(bad.mapped("name")),
         )
 
-    def _f3d_yard_pick_dock(self):
+    def _td_yard_pick_dock(self):
         self.ensure_one()
         now = fields.Datetime.now()
         end = now + timedelta(minutes=P.get_int(self.env, "slot_default_min"))
@@ -730,31 +730,31 @@ class F3dYardVisit(models.Model):
         type_docks = self.batch_id.picking_type_id.dock_ids
         if type_docks:
             docks &= type_docks
-        docks = docks.sorted(key=lambda d: (bool(self._f3d_yard_category_warning(d)), d.td_dock_no, d.id))
+        docks = docks.sorted(key=lambda d: (bool(self._td_yard_category_warning(d)), d.td_dock_no, d.id))
         for dock in docks:
-            if not self._f3d_yard_dock_busy(dock, now, end, exclude=self):
+            if not self._td_yard_dock_busy(dock, now, end, exclude=self):
                 return dock
         return self.env["stock.location"]
 
     @api.model
-    def _f3d_yard_call_next(self, dock):
+    def _td_yard_call_next(self, dock):
         now = fields.Datetime.now()
         end = now + timedelta(minutes=P.get_int(self.env, "slot_default_min"))
-        for visit in self._f3d_yard_queue(dock.td_side, dock):
-            if not self._f3d_yard_dock_busy(dock, now, end, exclude=visit):
+        for visit in self._td_yard_queue(dock.td_side, dock):
+            if not self._td_yard_dock_busy(dock, now, end, exclude=visit):
                 visit.sudo().action_call_to_dock(dock)
                 return visit
         return False
 
     # ------------------------------------------------------------------ вага документів (R-12 п. 5)
-    def _f3d_yard_write_pickings(self, net=None):
+    def _td_yard_write_pickings(self, net=None):
         """Розподіляє нетто рейсу по документах пакета й виставляє звірку (sudo)."""
         self.ensure_one()
         net = self.net_kg if net is None else net
         pickings = self.batch_id.picking_ids.filtered(lambda p: p.state != "cancel").sorted("name")
         if not pickings:
             return
-        expected = {p.id: p._f3d_expected_kg() for p in pickings}
+        expected = {p.id: p._td_expected_kg() for p in pickings}
         total = sum(e for e, _r in expected.values())
         pct = P.get_float(self.env, "net_tolerance_pct")
         min_kg = P.get_float(self.env, "net_tolerance_kg")
@@ -781,9 +781,9 @@ class F3dYardVisit(models.Model):
                 vals["shipping_weight"] = kgm._compute_quantity(share, weight_uom)
             picking.write(vals)
             if check == "deviation":
-                self._f3d_yard_deviation_activity(picking, share, exp, dev, tol)
+                self._td_yard_deviation_activity(picking, share, exp, dev, tol)
 
-    def _f3d_yard_deviation_activity(self, picking, net, expected, dev, tol):
+    def _td_yard_deviation_activity(self, picking, net, expected, dev, tol):
         summary = "Відхилення нетто"
         user = picking.user_id or picking.batch_id.user_id
         if not user:
@@ -799,10 +799,10 @@ class F3dYardVisit(models.Model):
         )
 
     # ------------------------------------------------------------------ хуки W4
-    def _f3d_yard_notify(self):
+    def _td_yard_notify(self):
         """R-21: сповіщення шини (реалізує W4); у W1 — нічого."""
         return True
 
     @api.model
-    def _f3d_yard_viewer_event(self):
+    def _td_yard_viewer_event(self):
         return self.env["td.viewer.event"].sudo() if "td.viewer.event" in self.env else None

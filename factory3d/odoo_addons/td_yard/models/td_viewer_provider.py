@@ -38,12 +38,12 @@ def _deep_merge(target, source):
 class F3dViewerProviderYard(models.AbstractModel):
     _name = "td.viewer.provider.yard"  # без _inherit: viewer R-01 п. 3 шукає за префіксом імені
     _description = "3D: двір (фури, КПП, ваги)"
-    _f3d_sequence = 160
-    _f3d_sections = ("yard",)
-    _f3d_group = "td_factory3d.group_td_user"
+    _td_sequence = 160
+    _td_sections = ("yard",)
+    _td_group = "td_factory3d.group_td_user"
 
     # ------------------------------------------------------------------ контекст
-    def _f3d_ctx(self, ctx):
+    def _td_ctx(self, ctx):
         user = ctx.get("user")
         if isinstance(user, int):
             user = self.env["res.users"].browse(user)
@@ -62,8 +62,8 @@ class F3dViewerProviderYard(models.AbstractModel):
         }
 
     # ------------------------------------------------------------------ збирання
-    def _f3d_viewer_collect(self, payload, ctx):
-        c = self._f3d_ctx(ctx)
+    def _td_viewer_collect(self, payload, ctx):
+        c = self._td_ctx(ctx)
         env = self.env
         Gate, Scale = env["td.yard.gate"].sudo(), env["td.yard.scale"].sudo()
         gates = Gate.search([("active", "=", True), ("company_id", "in", c["companies"].ids)])
@@ -71,23 +71,23 @@ class F3dViewerProviderYard(models.AbstractModel):
         scale = scales[:1]
         payload["yard"] = {
             "updated": c["now_local"],
-            "gates": {g.td_code: self._f3d_gate_node(g, c) for g in gates},
-            "scale": {s.td_code: self._f3d_scale_node(s, c) for s in scales},
+            "gates": {g.td_code: self._td_gate_node(g, c) for g in gates},
+            "scale": {s.td_code: self._td_scale_node(s, c) for s in scales},
             "trucks": [],
             "queue": {"west": [], "east": []},
             "kpp": {"west": [], "east": []},
             "stats": {},
         }
         yard = payload["yard"]
-        yard["trucks"], yard["queue"], yard["kpp"] = self._f3d_trucks(c, gates, scale)
-        yard["stats"] = self._f3d_stats(c)
+        yard["trucks"], yard["queue"], yard["kpp"] = self._td_trucks(c, gates, scale)
+        yard["stats"] = self._td_stats(c)
         cards = (payload.get("infra") or {}).get("cards") if isinstance(payload.get("infra"), dict) else None
         if isinstance(cards, dict):
-            for code, rows in self._f3d_card_rows(c, gates, scales).items():
+            for code, rows in self._td_card_rows(c, gates, scales).items():
                 if isinstance(cards.get(code), dict):
                     cards[code]["rows"] = rows
 
-    def _f3d_gate_node(self, gate, c):
+    def _td_gate_node(self, gate, c):
         return {
             "name": gate.name,
             "state": gate.state,
@@ -102,7 +102,7 @@ class F3dViewerProviderYard(models.AbstractModel):
             "y": gate.pos_y,
         }
 
-    def _f3d_scale_node(self, scale, c):
+    def _td_scale_node(self, scale, c):
         last = scale.last_weighing_id
         return {
             "weight_kg": scale.last_weight_kg if scale.capture_state != "offline" else None,
@@ -123,7 +123,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         }
 
     # ------------------------------------------------------------------ фури (Додаток B)
-    def _f3d_trucks(self, c, gates, scale):
+    def _td_trucks(self, c, gates, scale):
         Visit = self.env["td.yard.visit"].sudo()
         now = c["now"]
         dwell = timedelta(seconds=P.get_int(self.env, "scale_dwell_s"))
@@ -133,7 +133,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         arrived_pos = {}
         slots = {}
         for v in arrived:
-            gate = v.gate_in_id or v._f3d_yard_default_gate()
+            gate = v.gate_in_id or v._td_yard_default_gate()
             k = slots.get(gate.id, 0)
             slots[gate.id] = k + 1
             kpp[v.side if v.side in kpp else "west"].append(v.name)
@@ -141,7 +141,7 @@ class F3dViewerProviderYard(models.AbstractModel):
                 arrived_pos[v.id] = (gate.pos_x + ARRIVED_DX[k], gate.pos_y + 8.0, 90)
         queue, queue_pos = {"west": [], "east": []}, {}
         for side in ("west", "east"):
-            for k, v in enumerate(Visit._f3d_yard_queue(side).filtered(lambda v: v.id in visits.ids)):
+            for k, v in enumerate(Visit._td_yard_queue(side).filtered(lambda v: v.id in visits.ids)):
                 queue[side].append(v.name)
                 if k <= 3:
                     queue_pos[v.id] = ((WEST_QUEUE_X if side == "west" else EAST_QUEUE_X), 9.0 + 16.0 * k, 90)
@@ -149,7 +149,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         out_gates = self.env["td.yard.gate"].sudo().search([("direction", "in", ("out", "both"))])
         trucks = []
         for v in visits.sorted(key=lambda v: (v.arrived_at or now, v.id)):
-            pos = self._f3d_truck_pos(v, now, dwell, arrived_pos, queue_pos, scale_pos, out_gates)
+            pos = self._td_truck_pos(v, now, dwell, arrived_pos, queue_pos, scale_pos, out_gates)
             x, y, rz = pos if pos else (None, None, None)
             zone = self.env["td.zone"].sudo().zone_at(x, y) if x is not None else None
             trucks.append(
@@ -175,7 +175,7 @@ class F3dViewerProviderYard(models.AbstractModel):
             )
         return trucks, queue, kpp
 
-    def _f3d_truck_pos(self, v, now, dwell, arrived_pos, queue_pos, scale_pos, out_gates):
+    def _td_truck_pos(self, v, now, dwell, arrived_pos, queue_pos, scale_pos, out_gates):
         if v.state in ("at_dock", "handling"):
             dock = v.dock_id
             if not dock:
@@ -186,7 +186,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         if v.state == "arrived":
             return arrived_pos.get(v.id)
         if v.state == "queued":
-            last_in = v._f3d_yard_weighings().filtered(lambda w: w.kind == "in")
+            last_in = v._td_yard_weighings().filtered(lambda w: w.kind == "in")
             if scale_pos and last_in and max(last_in.mapped("ts")) + dwell >= now:
                 return scale_pos
             return queue_pos.get(v.id)
@@ -199,7 +199,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         return None
 
     # ------------------------------------------------------------------ статистика
-    def _f3d_stats(self, c):
+    def _td_stats(self, c):
         env = self.env
         Visit = env["td.yard.visit"].sudo()
         start, end = tz.day_bounds_utc(tz.local_day(c["now"]))
@@ -227,7 +227,7 @@ class F3dViewerProviderYard(models.AbstractModel):
         }
 
     # ------------------------------------------------------------------ infra.cards (R-20 п. 6)
-    def _f3d_card_rows(self, c, gates, scales):
+    def _td_card_rows(self, c, gates, scales):
         rows = {}
         for gate in gates:
             state_label = dict(gate._fields["state"].selection).get(gate.state, "").lower()
@@ -273,28 +273,28 @@ class F3dViewerProviderYard(models.AbstractModel):
         return rows
 
     # ------------------------------------------------------------------ дельта (R-20 п. 7)
-    def _f3d_viewer_delta(self, patch, ctx):
+    def _td_viewer_delta(self, patch, ctx):
         changes = ctx.get("changes") or {}
         if not any(m in changes for m in ("td.yard.visit", "td.yard.gate", "td.yard.scale")):
             return
         full = {}
-        self._f3d_viewer_collect(full, ctx)
+        self._td_viewer_collect(full, ctx)
         patch["yard"] = full["yard"]
         try:
             from odoo.addons.td_viewer3d.tools.payload import deep_merge
         except ImportError:  # viewer не встановлено: провайдера ніхто не викликає, лише тести
             deep_merge = _deep_merge
-        c = self._f3d_ctx(ctx)
+        c = self._td_ctx(ctx)
         gates = (
             self.env["td.yard.gate"].sudo().search([("active", "=", True), ("company_id", "in", c["companies"].ids)])
         )
         scales = (
             self.env["td.yard.scale"].sudo().search([("active", "=", True), ("company_id", "in", c["companies"].ids)])
         )
-        rows = self._f3d_card_rows(c, gates, scales)
+        rows = self._td_card_rows(c, gates, scales)
         cards = {code: {"rows": rows[code]} for code in CARD_CODES if code in rows}
         if cards:
             deep_merge(patch.setdefault("infra", {}), {"cards": cards})
 
-    def _f3d_viewer_bus_models(self):
+    def _td_viewer_bus_models(self):
         return ["td.yard.visit", "td.yard.gate", "td.yard.scale"]

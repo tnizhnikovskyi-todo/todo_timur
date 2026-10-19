@@ -12,7 +12,7 @@ from odoo.exceptions import UserError
 from ..tools import params as P
 from ..tools import plate as plate_tools
 from ..tools import tz
-from .td_yard_visit import GRP_SEC, _f3d_yard_require
+from .td_yard_visit import GRP_SEC, _td_yard_require
 
 _logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class F3dYardLprEvent(models.Model):
 
     # ------------------------------------------------------------------ R-07
     @api.model
-    def _f3d_from_push(self, event):
+    def _td_from_push(self, event):
         payload = event.get("payload")
         if not isinstance(payload, dict):
             _logger.warning("f3d_yard: подія LPR %s без тіла-словника", event.get("event_id"))
@@ -110,7 +110,7 @@ class F3dYardLprEvent(models.Model):
         if existing:
             return existing
         notes = []
-        ts, reason = self._f3d_lpr_ts(payload, now)
+        ts, reason = self._td_lpr_ts(payload, now)
         if reason:
             notes.append("Час камери відкинуто (%s) — узято час прийому" % reason)
             ts = now
@@ -156,14 +156,14 @@ class F3dYardLprEvent(models.Model):
             return self.create(vals)
         prev = None
         if state == "lost":
-            prev = self._f3d_lpr_previous(camera_code, car_id, ts, timedelta(hours=2), lost=True)
+            prev = self._td_lpr_previous(camera_code, car_id, ts, timedelta(hours=2), lost=True)
             if prev:
-                prev._f3d_lpr_on_lost(ts)
+                prev._td_lpr_on_lost(ts)
                 return prev
             vals.update(match_state="ignored", kpp_alert=False)
             return self.create(vals)
         if state == "update":
-            prev = self._f3d_lpr_previous(camera_code, car_id, ts, timedelta(minutes=30))
+            prev = self._td_lpr_previous(camera_code, car_id, ts, timedelta(minutes=30))
             if prev:
                 if confidence > prev.confidence and (plate_unicode or plate_raw):
                     prev.write(
@@ -173,23 +173,23 @@ class F3dYardLprEvent(models.Model):
                         }
                     )
                     if prev.match_state in OPEN_MATCH:
-                        prev._f3d_match()
+                        prev._td_match()
                 return prev
         rec = self.create(vals)
         if P.get_bool(self.env, "lpr_store_images"):
-            rec._f3d_lpr_store_image(payload)
+            rec._td_lpr_store_image(payload)
         uri = payload.get("imagesURI")
         uri = uri[0] if isinstance(uri, list) and uri else None
         if isinstance(uri, str) and re.match(r"^https?://", uri) and len(uri) <= 512:
             rec.image_url = uri
         if rec.plate_norm and plate_tools.is_valid_norm(rec.plate_norm):
             gate.sudo().write({"last_plate": plate_unicode or plate_raw, "last_plate_at": ts})
-        rec._f3d_match()
-        rec._f3d_yard_notify()
+        rec._td_match()
+        rec._td_yard_notify()
         return rec
 
     @api.model
-    def _f3d_lpr_ts(self, payload, now):
+    def _td_lpr_ts(self, payload, now):
         """(ts, причина відкидання) за правилом telemetry R-22."""
         ts = tz.parse_axis_ts(payload.get("capture_timestamp"))
         if ts is None:
@@ -202,7 +202,7 @@ class F3dYardLprEvent(models.Model):
         return ts, None
 
     @api.model
-    def _f3d_lpr_previous(self, camera_code, car_id, ts, delta, lost=False):
+    def _td_lpr_previous(self, camera_code, car_id, ts, delta, lost=False):
         if not car_id:
             return self.browse()
         domain = [
@@ -213,7 +213,7 @@ class F3dYardLprEvent(models.Model):
         ]
         return self.search(domain, order="ts desc, id desc", limit=1)
 
-    def _f3d_lpr_on_lost(self, ts):
+    def _td_lpr_on_lost(self, ts):
         self.ensure_one()
         self.lost_at = ts
         if self.kpp_alert and self.match_state in OPEN_MATCH:
@@ -228,7 +228,7 @@ class F3dYardLprEvent(models.Model):
         ):
             visit.sudo().action_leave(ts, note="виїзд за камерою %s" % self.camera_code)
 
-    def _f3d_lpr_store_image(self, payload):
+    def _td_lpr_store_image(self, payload):
         self.ensure_one()
         data = payload.get("imageArray")
         while isinstance(data, (list, dict)):
@@ -245,12 +245,12 @@ class F3dYardLprEvent(models.Model):
         try:
             raw = base64.b64decode(DATA_URI_RE.sub("", data), validate=True)
         except (binascii.Error, ValueError):
-            return self._f3d_yard_event_add_note("Знімок відхилено: формат")
+            return self._td_yard_event_add_note("Знімок відхилено: формат")
         if len(raw) > P.get_int(self.env, "lpr_image_max_kb") * 1024:
-            return self._f3d_yard_event_add_note("Знімок відхилено: розмір")
+            return self._td_yard_event_add_note("Знімок відхилено: розмір")
         found = next(((m, e) for m, e, sig in IMAGE_SIGNATURES if raw.startswith(sig)), None)
         if not found:
-            return self._f3d_yard_event_add_note("Знімок відхилено: формат")
+            return self._td_yard_event_add_note("Знімок відхилено: формат")
         mimetype, ext = found
         att = (
             self.env["ir.attachment"]
@@ -268,45 +268,45 @@ class F3dYardLprEvent(models.Model):
         )
         self.image_attachment_id = att.id
 
-    def _f3d_join_note(self, text):
+    def _td_join_note(self, text):
         """Додає пояснення до наявного (без дублювання)."""
         if not self.note or text in self.note:
             return text if not self.note else self.note
         return ("%s; %s" % (self.note, text))[:256]
 
-    def _f3d_yard_event_add_note(self, text):
-        self.note = self._f3d_join_note(text)
+    def _td_yard_event_add_note(self, text):
+        self.note = self._td_join_note(text)
 
-    def _f3d_yard_notify(self):
+    def _td_yard_notify(self):
         """R-21: сповіщення шини (реалізує W4); у W2 — нічого."""
         return True
 
     # ------------------------------------------------------------------ R-08
-    def _f3d_match(self):
+    def _td_match(self):
         for event in self:
-            event._f3d_match_one()
+            event._td_match_one()
         return True
 
-    def _f3d_match_one(self):
+    def _td_match_one(self):
         self.ensure_one()
         if not plate_tools.is_valid_norm(self.plate_norm):
             return self.write(
-                {"match_state": "low_confidence", "note": self._f3d_join_note("Номер не розпізнано"), "kpp_alert": True}
+                {"match_state": "low_confidence", "note": self._td_join_note("Номер не розпізнано"), "kpp_alert": True}
             )
         min_conf = P.get_float(self.env, "lpr_min_confidence")
         if self.confidence < min_conf:
             return self.write(
                 {
                     "match_state": "low_confidence",
-                    "note": self._f3d_join_note("Довіра %.2f < %.2f" % (self.confidence, min_conf)),
+                    "note": self._td_join_note("Довіра %.2f < %.2f" % (self.confidence, min_conf)),
                     "kpp_alert": True,
                 }
             )
         Visit = self.env["td.yard.visit"].sudo()
         direction = self.direction if self.direction in ("in", "out") else "in"
-        found = Visit._f3d_yard_find_by_plate(self.plate_norm, direction, self.ts)
+        found = Visit._td_yard_find_by_plate(self.plate_norm, direction, self.ts)
         tokens = DOC_RE.findall(self.plate_list_description or "")
-        doc_visits = Visit._f3d_yard_find_by_docs(tokens, direction, self.ts) if tokens else Visit
+        doc_visits = Visit._td_yard_find_by_docs(tokens, direction, self.ts) if tokens else Visit
         visit, note, alert = Visit, False, False
         if len(found) == 1:
             visit = found
@@ -330,33 +330,33 @@ class F3dYardLprEvent(models.Model):
                 {
                     "match_state": "unmatched",
                     "kpp_alert": True,
-                    "note": self._f3d_join_note(
+                    "note": self._td_join_note(
                         "Фура виїжджає без рейсу" if direction == "out" else "Номер не знайдено серед рейсів"
                     ),
                 }
             )
         vals = {"visit_id": visit.id, "match_state": "matched", "kpp_alert": alert}
         if note:
-            vals["note"] = self._f3d_join_note(note)
+            vals["note"] = self._td_join_note(note)
         self.write(vals)
         gate = self.gate_id
         if direction == "in":
             if visit.state in ("draft", "planned"):
                 visit.action_arrive(self.ts, gate, self)
             else:
-                self._f3d_yard_event_add_note("Повторне розпізнавання")
+                self._td_yard_event_add_note("Повторне розпізнавання")
             if not self.kpp_alert and gate:
-                gate._f3d_yard_auto_open(visit, self)
+                gate._td_yard_auto_open(visit, self)
         else:
             visit.write({"gate_out_id": gate.id})
             if not self.kpp_alert and gate:
-                gate._f3d_yard_auto_open(visit, self)
+                gate._td_yard_auto_open(visit, self)
         return True
 
     # ------------------------------------------------------------------ дії охорони
     def action_walk_in(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         if self.match_state not in OPEN_MATCH or self.direction == "out":
             raise UserError("Рейс без броні можна створити лише для нерозпізнаного в'їзду.")
         return {
@@ -370,7 +370,7 @@ class F3dYardLprEvent(models.Model):
 
     def action_link_visit(self, visit_id):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         Visit = self.env["td.yard.visit"]
         visit = visit_id if isinstance(visit_id, models.BaseModel) else Visit.browse(visit_id)
         outbound = self.direction == "out"
@@ -398,7 +398,7 @@ class F3dYardLprEvent(models.Model):
         return True
 
     def action_dismiss(self):
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         for event in self:
             vals = {"kpp_alert": False, "handled_by": self.env.uid, "handled_at": fields.Datetime.now()}
             if event.match_state in OPEN_MATCH:
@@ -408,7 +408,7 @@ class F3dYardLprEvent(models.Model):
 
     def action_reject(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         return {
             "type": "ir.actions.act_window",
             "name": "Відхилити",

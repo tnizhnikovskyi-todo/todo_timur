@@ -99,7 +99,7 @@ class GateCase(YardFlowCase):
         return self.sigs[(gate.td_code, role)]
 
     def put(self, gate, role, value, ts, status="ok"):
-        """Показання сигналу воріт (як після telemetry _f3d_ingest)."""
+        """Показання сигналу воріт (як після telemetry _td_ingest)."""
         self.sig(gate, role).sudo().write({"last_value": float(value), "last_ts": ts, "status": status})
 
     def cmds(self, gate=None):
@@ -107,8 +107,8 @@ class GateCase(YardFlowCase):
 
     def push(self, event):
         """Подія LPR через обробник маршруту (як у telemetry M-11)."""
-        return self.env["td.push.handler.yard"]._f3d_handle_push("lpr", event)
+        return self.env["td.push.handler.yard"]._td_handle_push("lpr", event)
 
     def recv(self, event):
         """Те саме, але повертає запис події."""
-        return self.env["td.yard.lpr.event"].sudo()._f3d_from_push(event)
+        return self.env["td.yard.lpr.event"].sudo()._td_from_push(event)

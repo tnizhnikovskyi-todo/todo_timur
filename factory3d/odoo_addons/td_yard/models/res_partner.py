@@ -30,14 +30,14 @@ class ResPartner(models.Model):
                     "Держномер «%s»: лише літери, цифри, пробіл і дефіс, 2–16 символів." % partner.td_default_plate
                 )
 
-    def _f3d_visit_domain(self):
+    def _td_visit_domain(self):
         self.ensure_one()
         return ["|", "|", ("partner_id", "=", self.id), ("carrier_id", "=", self.id), ("driver_id", "=", self.id)]
 
     def _compute_f3d_visit_count(self):
         Visit = self.env["td.yard.visit"].sudo()
         for partner in self:
-            partner.td_visit_count = Visit.search_count(partner._f3d_visit_domain()) if partner.id else 0
+            partner.td_visit_count = Visit.search_count(partner._td_visit_domain()) if partner.id else 0
 
     def action_f3d_view_visits(self):
         self.ensure_one()
@@ -46,5 +46,5 @@ class ResPartner(models.Model):
             "name": "Рейси",
             "res_model": "td.yard.visit",
             "view_mode": "list,form",
-            "domain": self._f3d_visit_domain(),
+            "domain": self._td_visit_domain(),
         }

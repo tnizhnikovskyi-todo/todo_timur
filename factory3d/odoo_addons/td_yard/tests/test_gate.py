@@ -25,22 +25,22 @@ class TestYardGate(GateCase):
         gate = self.gate_w
         with freeze(T):
             self.put(gate, "state", 1, T)
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "open")
             gate.invert_di = True
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "closed")
             gate.invert_di = False
             self.put(gate, "state", 1, T, status="stale")
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "unknown")
             self.put(gate, "state", 1, T)
             gate.last_error = "помилка"
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "error")
             gate.last_error = False
             self.env["ir.config_parameter"].sudo().set_param("td.yard.read_enabled", "False")
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "unknown")
 
     def _done_open_cmd(self, gate, done_at):
@@ -67,7 +67,7 @@ class TestYardGate(GateCase):
             self._done_open_cmd(gate, T)
         with freeze(T + timedelta(seconds=4)):
             self.put(gate, "state", 1, T + timedelta(seconds=4))
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
         self.assertEqual(gate.state, "open")
         self.assertFalse(gate.last_error)
         self.assertFalse(gate.open_cmd_id)
@@ -77,7 +77,7 @@ class TestYardGate(GateCase):
             self._done_open_cmd(gate, T + timedelta(minutes=5))
         with freeze(T + timedelta(minutes=5, seconds=11)):
             self.put(gate, "state", 0, T + timedelta(minutes=5, seconds=10))
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
         self.assertEqual(gate.state, "error")
         self.assertIn("Немає підтвердження відкриття за 10 с", gate.last_error)
         self.assertTrue(gate.activity_ids.filtered(lambda a: a.user_id == self.user_guard))
@@ -90,7 +90,7 @@ class TestYardGate(GateCase):
             cmd.write({"state": "expired"})
             self.put(gate, "state", 0, T + timedelta(minutes=10))
         with freeze(T + timedelta(minutes=10, seconds=1)):
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
         self.assertEqual(gate.state, "error")
         self.assertIn("не виконано", gate.last_error)
 
@@ -100,7 +100,7 @@ class TestYardGate(GateCase):
             self.put(gate, "state", 1, T)
             gate.with_user(self.user_guard).action_hold()
             self.assertEqual(gate.hold_until, T + timedelta(minutes=30))
-            gate._f3d_yard_refresh_state()
+            gate._td_yard_refresh_state()
             self.assertEqual(gate.state, "held")
         later = T + timedelta(minutes=31)
         with freeze(later):
@@ -127,22 +127,22 @@ class TestYardGate(GateCase):
         with freeze(T):
             visit.with_user(self.user_guard).action_admit(open_gate=False)
         self.assertEqual(gate.admitted_today, 1)
-        gate._f3d_yard_on_readings([("passes", T, 8, 1)])
+        gate._td_yard_on_readings([("passes", T, 8, 1)])
         self.assertEqual((gate.passes_today, gate.tailgate_today), (1, 0))
-        gate._f3d_yard_on_readings([("passes", T + timedelta(seconds=10), 9, 1)])
+        gate._td_yard_on_readings([("passes", T + timedelta(seconds=10), 9, 1)])
         self.assertEqual((gate.passes_today, gate.tailgate_today), (2, 1))
         self.assertTrue(any("Проїзд без дозволу" in (m.body or "") for m in gate.message_ids))
         # антипрохід вимкнено
         self.env["ir.config_parameter"].sudo().set_param("td.yard.antipassback", "False")
         gate.write({"passes_day_start": 7, "admitted_today": 0, "passes_today": 0, "tailgate_today": 0})
-        gate._f3d_yard_on_readings([("passes", T, 8, 1), ("passes", T, 9, 1)])
+        gate._td_yard_on_readings([("passes", T, 8, 1), ("passes", T, 9, 1)])
         self.assertEqual(gate.tailgate_today, 0)
 
     def test_loop_exit(self):  # AC-40
         for gate, expected in ((self.gate_e, "left"), (self.gate_w, "weighed")):
             visit = self._force(self._visit(plate="АА2222КТ"), "weighed")
             gate.write({"pending_visit_id": visit.id, "loop_occupied": False})
-            gate._f3d_yard_on_readings([("loop", T, 1, 1), ("loop", T + timedelta(seconds=5), 0, 1)])
+            gate._td_yard_on_readings([("loop", T, 1, 1), ("loop", T + timedelta(seconds=5), 0, 1)])
             self.assertEqual(visit.state, expected)
             self.assertFalse(gate.pending_visit_id)
             self.assertFalse(gate.loop_occupied)

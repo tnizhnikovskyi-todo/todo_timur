@@ -3,7 +3,7 @@
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..models.td_yard_visit import GRP_DISP, GRP_SEC, _f3d_yard_require
+from ..models.td_yard_visit import GRP_DISP, GRP_SEC, _td_yard_require
 from ..tools import params as P
 from ..tools import tz
 
@@ -72,7 +72,7 @@ class F3dYardWalkinWizard(models.TransientModel):
 
     def action_create(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_SEC)
+        _td_yard_require(self.env, GRP_SEC)
         if not (self.env.su or self.env.user.has_group(GRP_DISP)):
             if not P.get_bool(self.env, "walk_in_allowed"):
                 raise UserError("Рейси без броні створює лише диспетчер.")

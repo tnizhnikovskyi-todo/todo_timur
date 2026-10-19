@@ -34,5 +34,5 @@ class F3dCommand(models.Model):
         if old:
             gates = self.filtered(lambda c: c.td_yard_gate_id and c.state != old[c.id]).mapped("td_yard_gate_id")
             if gates:
-                gates.sudo()._f3d_yard_refresh_state()
+                gates.sudo()._td_yard_refresh_state()
         return res

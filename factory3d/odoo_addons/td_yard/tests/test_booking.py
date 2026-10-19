@@ -129,9 +129,9 @@ class TestYardBooking(YardFlowCase):
         t, v1, v2, v3, v4 = self._queue_fixture()
         Visit = self.env["td.yard.visit"]
         with freeze(t):
-            self.assertEqual(Visit._f3d_yard_queue("west"), v4 + v2 + v1 + v3)
-            self.assertEqual(Visit._f3d_yard_queue("west", self.dock_t2), v4 + v2 + v1)
-            called = Visit._f3d_yard_call_next(self.dock_t2)
+            self.assertEqual(Visit._td_yard_queue("west"), v4 + v2 + v1 + v3)
+            self.assertEqual(Visit._td_yard_queue("west", self.dock_t2), v4 + v2 + v1)
+            called = Visit._td_yard_call_next(self.dock_t2)
             self.assertEqual(called, v2)
             self.assertEqual((v2.state, v4.state), ("at_dock", "queued"))
             self.assertEqual(v2.dock_id, self.dock_t2)

@@ -7,9 +7,9 @@ class F3dPushHandlerYard(models.AbstractModel):
     _name = "td.push.handler.yard"
     _inherit = "td.push.handler"
     _description = "Двір: обробник подій LPR"
-    _f3d_push_routes = ("lpr",)
+    _td_push_routes = ("lpr",)
 
-    def _f3d_handle_push(self, route, event):
+    def _td_handle_push(self, route, event):
         if route != "lpr":
             return
-        self.env["td.yard.lpr.event"].sudo()._f3d_from_push(event)
+        self.env["td.yard.lpr.event"].sudo()._td_from_push(event)

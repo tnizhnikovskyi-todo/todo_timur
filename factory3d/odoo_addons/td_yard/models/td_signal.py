@@ -11,8 +11,8 @@ class F3dSignal(models.Model):
     _inherit = "td.signal"
 
     @api.model
-    def _f3d_ingest(self, readings, src="module", collector=None):
-        res = super()._f3d_ingest(readings, src=src, collector=collector)
+    def _td_ingest(self, readings, src="module", collector=None):
+        res = super()._td_ingest(readings, src=src, collector=collector)
         if not isinstance(readings, list):
             return res
         bad = {x.get("i") for x in (res or {}).get("rejected", [])}
@@ -28,12 +28,12 @@ class F3dSignal(models.Model):
         scales = [r for r in yard if r["code"].startswith("yard/scale/")]
         gates = [r for r in yard if r["code"].startswith("yard/gates/")]
         if scales:
-            self._f3d_yard_safe(lambda: self.env["td.yard.scale"].sudo()._f3d_yard_dispatch_scales(scales))
+            self._td_yard_safe(lambda: self.env["td.yard.scale"].sudo()._td_yard_dispatch_scales(scales))
         if gates and "td.yard.gate" in self.env:
-            self._f3d_yard_safe(lambda: self.env["td.yard.gate"].sudo()._f3d_yard_dispatch(gates))
+            self._td_yard_safe(lambda: self.env["td.yard.gate"].sudo()._td_yard_dispatch(gates))
         return res
 
-    def _f3d_yard_safe(self, func):
+    def _td_yard_safe(self, func):
         try:
             with self.env.cr.savepoint():
                 func()

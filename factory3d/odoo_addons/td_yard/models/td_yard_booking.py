@@ -5,7 +5,7 @@ from odoo.exceptions import UserError, ValidationError
 
 from ..tools import params as P
 from ..tools import tz
-from .td_yard_visit import GRP_DISP, _f3d_yard_require
+from .td_yard_visit import GRP_DISP, _td_yard_require
 
 
 def _hhmm(hours):
@@ -132,11 +132,11 @@ class F3dYardBooking(models.Model):
             else:
                 rec.color = 0
 
-    def _f3d_yard_expected_side(self):
+    def _td_yard_expected_side(self):
         self.ensure_one()
         return "east" if self.visit_id.visit_type == "outgoing" else "west"
 
-    def _f3d_yard_others(self, state):
+    def _td_yard_others(self, state):
         self.ensure_one()
         return self.search(
             [
@@ -146,7 +146,7 @@ class F3dYardBooking(models.Model):
             ]
         )
 
-    def _f3d_yard_calendar_issues(self):
+    def _td_yard_calendar_issues(self):
         """R-03 п. 6: повідомлення про слот поза зміною (порожній список — усе гаразд)."""
         self.ensure_one()
         calendar_id = P.get_int(self.env, "calendar_id")
@@ -172,10 +172,10 @@ class F3dYardBooking(models.Model):
         for rec in self:
             lines = []
             if rec.dock_id and rec.slot_start and rec.slot_end and rec.state != "cancelled":
-                for other in rec._f3d_yard_others("requested"):
+                for other in rec._td_yard_others("requested"):
                     if other.slot_start < rec.slot_end and rec.slot_start < other.slot_end:
                         lines.append("Перетин із запитом %s" % other.name)
-                for other in rec._f3d_yard_others("confirmed"):
+                for other in rec._td_yard_others("confirmed"):
                     if other.slot_end <= rec.slot_start:
                         gap = (rec.slot_start - other.slot_end).total_seconds() / 60
                     elif other.slot_start >= rec.slot_end:
@@ -184,9 +184,9 @@ class F3dYardBooking(models.Model):
                         continue
                     if 0 <= gap < turnaround:
                         lines.append("Між слотами %s хв (буфер %s хв): %s" % (int(gap), turnaround, other.name))
-                lines += rec._f3d_yard_calendar_issues()
+                lines += rec._td_yard_calendar_issues()
                 if rec.visit_id:
-                    text = rec.visit_id._f3d_yard_category_warning(rec.dock_id)
+                    text = rec.visit_id._td_yard_category_warning(rec.dock_id)
                     if text:
                         lines.append(text)
             rec.warning = "\n".join(lines) or False
@@ -195,7 +195,7 @@ class F3dYardBooking(models.Model):
     @api.constrains("dock_id", "slot_start", "slot_end", "state")
     def _check_overlap(self):
         for rec in self.filtered(lambda r: r.state == "confirmed"):
-            clash = self._f3d_yard_overlaps(rec.dock_id, rec.slot_start, rec.slot_end, exclude_ids=rec.ids)[:1]
+            clash = self._td_yard_overlaps(rec.dock_id, rec.slot_start, rec.slot_end, exclude_ids=rec.ids)[:1]
             if clash:
                 raise ValidationError(
                     "Ворота %s уже заброньовані: %s (%s–%s)."
@@ -211,7 +211,7 @@ class F3dYardBooking(models.Model):
     def _check_dock_side(self):
         labels = dict(self.env["stock.location"]._fields["td_side"].selection)
         for rec in self.filtered("visit_id"):
-            expected = rec._f3d_yard_expected_side()
+            expected = rec._td_yard_expected_side()
             if rec.dock_id.td_side != expected:
                 raise ValidationError(
                     "Ворота %s на стороні «%s», а рейс — «%s»."
@@ -239,7 +239,7 @@ class F3dYardBooking(models.Model):
         if not P.get_bool(self.env, "enforce_calendar"):
             return
         for rec in self.filtered(lambda r: r.state == "confirmed"):
-            issues = rec._f3d_yard_calendar_issues()
+            issues = rec._td_yard_calendar_issues()
             if issues:
                 raise ValidationError("\n".join(issues))
 
@@ -253,12 +253,12 @@ class F3dYardBooking(models.Model):
         res = super().write(vals)
         if {"dock_id", "slot_start", "slot_end"} & set(vals) and not self.env.context.get("f3d_yard_sync"):
             self.filtered(lambda r: r.state == "confirmed")._sync_batch()
-        self.visit_id._f3d_yard_notify()
+        self.visit_id._td_yard_notify()
         return res
 
     # ------------------------------------------------------------------ actions
     def action_confirm(self):
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         for rec in self.filtered(lambda r: r.state == "requested"):
             self.env.cr.execute("SELECT id FROM stock_location WHERE id = %s FOR UPDATE", [rec.dock_id.id])
             rec.state = "confirmed"
@@ -271,7 +271,7 @@ class F3dYardBooking(models.Model):
         return True
 
     def action_cancel(self):
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         for rec in self.filtered(lambda r: r.state in ("requested", "confirmed")):
             rec.state = "cancelled"
             visit = rec.visit_id.sudo()
@@ -280,7 +280,7 @@ class F3dYardBooking(models.Model):
         return True
 
     def action_reset(self):
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         if self.filtered(lambda r: r.state != "cancelled"):
             raise UserError("Повернути в запит можна лише скасоване бронювання.")
         self.state = "requested"
@@ -303,7 +303,7 @@ class F3dYardBooking(models.Model):
                 batch.sudo().with_context(f3d_yard_sync=True).write(vals)
 
     @api.model
-    def _f3d_yard_overlaps(self, dock, start, end, exclude_ids=()):
+    def _td_yard_overlaps(self, dock, start, end, exclude_ids=()):
         return self.search(
             [
                 ("dock_id", "=", dock.id),

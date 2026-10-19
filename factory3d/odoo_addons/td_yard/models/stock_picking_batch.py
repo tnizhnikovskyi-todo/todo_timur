@@ -4,7 +4,7 @@ from odoo import api, fields, models
 from odoo.exceptions import UserError
 
 from ..tools import params as P
-from .td_yard_visit import FINAL_STATES, GRP_DISP, _f3d_yard_require
+from .td_yard_visit import FINAL_STATES, GRP_DISP, _td_yard_require
 
 
 class StockPickingBatch(models.Model):
@@ -39,7 +39,7 @@ class StockPickingBatch(models.Model):
         for batch in self:
             batch.td_visit_count = len(batch.td_visit_ids)
 
-    def _f3d_visit_form_action(self, visit):
+    def _td_visit_form_action(self, visit):
         return {
             "type": "ir.actions.act_window",
             "name": "Рейс",
@@ -50,9 +50,9 @@ class StockPickingBatch(models.Model):
 
     def action_f3d_create_visit(self):
         self.ensure_one()
-        _f3d_yard_require(self.env, GRP_DISP)
+        _td_yard_require(self.env, GRP_DISP)
         if self.td_visit_id and self.td_visit_id.state not in FINAL_STATES:
-            return self._f3d_visit_form_action(self.td_visit_id)
+            return self._td_visit_form_action(self.td_visit_id)
         if self.picking_type_code not in ("incoming", "outgoing"):
             raise UserError("Рейс створюється лише для пакетів приймання або відвантаження.")
         carrier = self.picking_ids.carrier_id[:1]
@@ -77,7 +77,7 @@ class StockPickingBatch(models.Model):
                     "company_id": visit.company_id.id,
                 }
             )
-        return self._f3d_visit_form_action(visit)
+        return self._td_visit_form_action(visit)
 
     def action_f3d_open_visits(self):
         self.ensure_one()

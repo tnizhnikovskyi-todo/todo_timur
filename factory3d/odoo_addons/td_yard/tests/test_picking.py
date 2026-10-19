@@ -26,16 +26,16 @@ class TestYardPicking(YardFlowCase):
         picking = batch.picking_ids
         picking.user_id = self.env.user
         visit = self._visit(batch_id=batch.id)
-        visit._f3d_yard_write_pickings(net=11520.0)
+        visit._td_yard_write_pickings(net=11520.0)
         self.assertEqual((picking.td_weight_check, picking.td_weight_deviation_pct), ("deviation", 2.86))
-        visit._f3d_yard_write_pickings(net=11520.0)
+        visit._td_yard_write_pickings(net=11520.0)
         acts = picking.activity_ids.filtered(lambda a: a.summary == "Відхилення нетто")
         self.assertEqual(len(acts), 1)
-        visit._f3d_yard_write_pickings(net=11300.0)
+        visit._td_yard_write_pickings(net=11300.0)
         self.assertEqual((picking.td_weight_check, picking.td_weight_deviation_pct), ("ok", 0.89))
         small = self._batch(lines=((6600, None),), product=self._product("T Один", 1.0, self.categ_hdf))
         v_small = self._visit(batch_id=small.id)
-        v_small._f3d_yard_write_pickings(net=6750.0)
+        v_small._td_yard_write_pickings(net=6750.0)
         self.assertEqual(
             (small.picking_ids.td_weight_check, small.picking_ids.td_weight_deviation_pct), ("deviation", 2.27)
         )
@@ -43,7 +43,7 @@ class TestYardPicking(YardFlowCase):
     def test_no_reference_and_shipping(self):  # AC-19
         batch = self._batch(code="outgoing", lines=((10, self.product_nw),))
         visit = self._visit(visit_type="outgoing", batch_id=batch.id)
-        visit._f3d_yard_write_pickings(net=7380.0)
+        visit._td_yard_write_pickings(net=7380.0)
         picking = batch.picking_ids
         self.assertEqual(picking.td_weight_check, "no_reference")
         self.assertEqual(picking.shipping_weight, 7380.0)
@@ -54,7 +54,7 @@ class TestYardPicking(YardFlowCase):
         second = self._batch(lines=((4000, prod),))
         second.picking_ids.write({"batch_id": batch.id})
         visit = self._visit(batch_id=batch.id)
-        visit._f3d_yard_write_pickings(net=12300.0)
+        visit._td_yard_write_pickings(net=12300.0)
         self.assertEqual(sorted(batch.picking_ids.mapped("td_net_weight_kg")), [4100.0, 8200.0])
 
     def test_auto_handling(self):  # AC-20
