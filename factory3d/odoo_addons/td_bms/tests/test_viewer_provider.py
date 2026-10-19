@@ -110,7 +110,7 @@ class TestViewerProvider(F3DBmsCase):
         self.assertNotEqual(first.id, second.id)
         self.env.invalidate_all()
         got = self._vent()["units"]
-        for unit, req in zip(units, (first, second)):
+        for unit, req in zip(units, (first, second), strict=False):
             self.assertEqual(
                 (got[unit.code]["maintenance_request"], got[unit.code]["maintenance_request_id"]),
                 (req.name, req.id),
