@@ -4,7 +4,7 @@ from odoo import Command
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 
-from ..services import building, rack_spec, state as state_mod
+from ..services import building, publish, rack_spec, state as state_mod
 from ..services.schemas import SchemaError
 from . import golden_s5
 from .common import F3DConstructorCase
@@ -109,6 +109,31 @@ class TestS5Building(F3DConstructorCase):
         row = self.env['td.check.config'].search([('site_id', '=', self.site.id), ('check_key', '=', 'inside')])
         row.enabled = False
         self.assertEqual(self.issues('inside'), [])
+
+    def test_inside_column_grid(self):
+        """Колони `site.column_grid` (не items) — перешкоди `inside`, як для авторозкладки; block зупиняє публікацію."""
+        self.site.write({'column_step_x_m': 6.0, 'column_step_y_m': 6.0})
+        self.layers['building'].items = [self.item('col', 'column', 24.0, 12.0, w=0.4, d=0.4, name='К-1')]
+        self.make_slot(prefix='GN', x=12.0, y=6.0, bays=2)  # у вузлі сітки (12; 6)
+        self.make_slot(prefix='GF', x=12.0, y=9.0, bays=2)  # між рядами колон: без перетину
+        self.make_slot(prefix='GE', x=24.0, y=12.0, bays=2)  # під явною колоною: одне зауваження, не два
+        self.make_slot(prefix='GR', x=30.0, y=18.0, rotation=90, bays=2)  # повернутий стелаж на вузлі (30; 18)
+        self.enable('inside', mode='block')
+        self.assertEqual(
+            self.issues('inside'), [(('GE',), 'block'), (('GN',), 'block'), (('GR',), 'block')], "вузли сітки видно"
+        )
+        messages = {i['codes'][0]: i['message'] for i in state_mod.run_site_checks(self.site) if i['check'] == 'inside'}
+        self.assertEqual(messages['GN'], "GN: перетинає колону сітки (12.00; 6.00)")
+        self.assertEqual(messages['GE'], "GE: перетинає колону «К-1»")
+        plan = publish.build_plan(self.site)
+        self.assertEqual(sorted(i['codes'][0] for i in plan['issues'] if i['check'] == 'inside'), ['GE', 'GN', 'GR'])
+        with self.assertRaises(publish.PublishError) as ctx:  # R-04: block зупиняє публікацію
+            publish.apply_plan(self.site.with_user(self.u_manager), plan, (), '')
+        self.assertEqual(ctx.exception.code, 'blocked')
+        self.enable('inside', mode='warn')
+        self.assertEqual({sev for _codes, sev in self.issues('inside')}, {'warn'})
+        self.site.write({'column_step_x_m': 20.0, 'column_step_y_m': 20.0})  # вузли (20; 20), (40; 20): стелажі вільні
+        self.assertEqual(self.issues('inside'), [(('GE',), 'warn')], "крок сітки змінює вузли; явна колона лишається")
 
     def test_aisle_width_by_site_and_zone_tech(self):
         self.layers['building'].aisles = [

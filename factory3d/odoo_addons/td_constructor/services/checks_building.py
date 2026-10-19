@@ -4,7 +4,7 @@
 
 * `inside` — місця й обладнання шарів зі списку `INSIDE_KINDS` лежать усередині контуру будівлі (`bounds` шару
   `building`, інакше габарит площадки) і не перетинають колони, стіни, офіс, зарядку техніки (ворота, док, двері —
-  прорізи).
+  прорізи) та колони сітки `site.column_grid` (0,4 × 0,4 м у вузлах, як бачить авторозкладка; `grid_nodes`).
 * `aisle_width` — мінімальна ширина за технікою (`site.aisle_tech`, `slot.tech` зони; N-06): проходи шарів (`aisles`,
   ширина = менша сторона) і проїзди між рядами стелажів (зазор між лицьовими сторонами; зазор до 0,6 м — «спина до
   спини», не проїзд).
@@ -17,6 +17,7 @@ import math
 from . import geometry as geo
 from .building import (
     ANGLE_TOLERANCE_DEG,
+    GRID_COLUMN_HALF,
     INSIDE_KINDS,
     MAX_NEED_M,
     MIN_FACE_OVERLAP_M,
@@ -27,6 +28,7 @@ from .building import (
     SPRINKLER_CLEARANCE_M,
     building_items,
     contour_polygon,
+    grid_nodes,
     item_obb,
     slot_height,
     tech_at,
@@ -50,11 +52,21 @@ def _layer(scene, layer_id):
 def check_inside(scene, config, eps):
     sev = config['mode']
     contour = contour_polygon(scene)
+    items = [item for item in building_items(scene) if item.get('kind') in OBSTACLE_KINDS]
     obstacles = [
-        (item, item_obb(item), geo.obb_aabb(item_obb(item)))
-        for item in building_items(scene)
-        if item.get('kind') in OBSTACLE_KINDS
+        (
+            item_obb(item),
+            geo.obb_aabb(item_obb(item)),
+            OBSTACLE_ACCUSATIVE[item['kind']] + (" «%s»" % item['name'] if item.get('name') else ""),
+        )
+        for item in items
     ]
+    # колони сітки `site.column_grid` — ті самі вузли, що бачить авторозкладка (`obstacleRects`); не items, тож окремо
+    grid = {'building': scene.building, 'column_grid': (scene._state.get('site') or {}).get('column_grid')}
+    for x, y in grid_nodes(grid, [item for item in items if item['kind'] == 'column']):
+        obb = geo.make_obb(x, y, GRID_COLUMN_HALF, GRID_COLUMN_HALF, 0.0)
+        what = "%s сітки (%s; %s)" % (OBSTACLE_ACCUSATIVE['column'], _fix2(x), _fix2(y))
+        obstacles.append((obb, geo.obb_aabb(obb), what))
     issues = []
     for obj in scene.objects():
         layer = _layer(scene, obj['layer_id'])
@@ -65,9 +77,8 @@ def check_inside(scene, config, eps):
                 _issue('inside', sev, obj['layer_id'], [obj['code']], "%s: поза контуром будівлі" % obj['code'])
             )
         box = geo.obb_aabb(obj['obb'])
-        for item, obb, item_box in obstacles:
+        for obb, item_box, what in obstacles:
             if geo.aabb_overlap(box, item_box, eps) and geo.sat_penetration(obj['obb'], obb) > eps:
-                what = OBSTACLE_ACCUSATIVE[item['kind']] + (" «%s»" % item['name'] if item.get('name') else "")
                 issues.append(
                     _issue('inside', sev, obj['layer_id'], [obj['code']], "%s: перетинає %s" % (obj['code'], what))
                 )

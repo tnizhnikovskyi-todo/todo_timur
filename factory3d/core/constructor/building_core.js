@@ -127,6 +127,42 @@ export function columnGrid({ x0, y0, nx, ny, sx, sy, existing = [], idOf, w = 0.
     return out;
 }
 
+/** Колона сітки (`site.column_grid`) — квадрат 0,4 × 0,4 м у вузлі: пів-сторона, м. */
+export const GRID_COLUMN_HALF = 0.2;
+const gridId = (x, y) => `grid:${rnd(x, 2)}:${rnd(y, 2)}`;
+
+/**
+ * Вузли колон сітки `site.column_grid` у межах `site.building`: [[x, y], …] (вузли, зайняті явними колонами `explicit` ближче 5 см, пропущено).
+ * Єдине джерело для `obstacleRects` (авторозкладка) і `checkInside` (перевірка): обидва бачать ті самі колони. Дзеркало — `building.grid_nodes`.
+ */
+export function gridNodes(site, explicit = []) {
+    const b = (site && site.building) || {};
+    const cg = (site && site.column_grid) || {};
+    const sx = cg.step_x || 0;
+    const sy = cg.step_y || 0;
+    const out = [];
+    if (sx > 1 && sy > 1 && b.length && b.width) {
+        const xs = [];
+        const ys = [];
+        for (let x = sx; x < b.length - 0.01; x += sx) {
+            xs.push(x);
+        }
+        for (let y = sy; y < b.width - 0.01; y += sy) {
+            ys.push(y);
+        }
+        if (xs.length * ys.length < 2000) {
+            for (const x of xs) {
+                for (const y of ys) {
+                    if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
+                        out.push([x, y]);
+                    }
+                }
+            }
+        }
+    }
+    return out;
+}
+
 /**
  * Перешкоди будівлі як осьові прямокутники для авторозкладки (S4): колони, стіни, офіс, зарядка з `layer.items` шарів `building`
  * (повернуті — описаним прямокутником) і колони за `site.column_grid` (як їх малює сцена: 0,4 × 0,4 м у вузлах сітки; сітка
@@ -157,28 +193,8 @@ export function obstacleRects(layers, site) {
             }
         }
     }
-    const b = (site && site.building) || {};
-    const cg = (site && site.column_grid) || {};
-    const sx = cg.step_x || 0;
-    const sy = cg.step_y || 0;
-    if (sx > 1 && sy > 1 && b.length && b.width) {
-        const xs = [];
-        const ys = [];
-        for (let x = sx; x < b.length - 0.01; x += sx) {
-            xs.push(x);
-        }
-        for (let y = sy; y < b.width - 0.01; y += sy) {
-            ys.push(y);
-        }
-        if (xs.length * ys.length < 2000) {
-            for (const x of xs) {
-                for (const y of ys) {
-                    if (!explicit.some((c) => Math.hypot(c.x - x, c.y - y) < 0.05)) {
-                        out.push({ x0: rnd(x - 0.2), y0: rnd(y - 0.2), x1: rnd(x + 0.2), y1: rnd(y + 0.2), kind: "column", id: `grid:${rnd(x, 2)}:${rnd(y, 2)}`, name: "", grid: true });
-                    }
-                }
-            }
-        }
+    for (const [x, y] of gridNodes(site, explicit)) {
+        out.push({ x0: rnd(x - GRID_COLUMN_HALF), y0: rnd(y - GRID_COLUMN_HALF), x1: rnd(x + GRID_COLUMN_HALF), y1: rnd(y + GRID_COLUMN_HALF), kind: "column", id: gridId(x, y), name: "", grid: true });
     }
     return out;
 }
@@ -491,7 +507,11 @@ export const setSiteProvider = (fn) => {
 const siteOf = (scene) => {
     const st = (scene._state || {}).site || {};
     const cur = siteProvider() || {};
-    return { sprinkler_height: st.sprinkler_height ?? cur.sprinkler_height ?? 0, aisle_tech: st.aisle_tech !== undefined ? st.aisle_tech : cur.aisle_tech ?? null };
+    return {
+        sprinkler_height: st.sprinkler_height ?? cur.sprinkler_height ?? 0,
+        aisle_tech: st.aisle_tech !== undefined ? st.aisle_tech : cur.aisle_tech ?? null,
+        column_grid: st.column_grid ?? cur.column_grid ?? null,
+    };
 };
 
 const zonesOf = (scene) => {
@@ -532,9 +552,14 @@ const objKey = (kind, id) => (kind === "placement" ? "p:" : "s:") + id;
 export function checkInside(scene, config, eps) {
     const sev = config.mode;
     const contour = contourPolygon(scene);
-    const obstacles = buildingItems(scene)
-        .filter((it) => OBSTACLE_KINDS.includes(it.kind))
-        .map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)) }));
+    const items = buildingItems(scene).filter((it) => OBSTACLE_KINDS.includes(it.kind));
+    const obstacles = items.map((it) => ({ it, obb: itemObb(it), box: obbAabb(itemObb(it)), what: OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "") }));
+    // колони сітки `site.column_grid` — ті самі вузли, що бачить авторозкладка (`obstacleRects`); не items, тож окремо
+    const grid = { building: scene.building, column_grid: siteOf(scene).column_grid };
+    for (const [x, y] of gridNodes(grid, items.filter((it) => it.kind === "column"))) {
+        const obb = makeObb(x, y, GRID_COLUMN_HALF, GRID_COLUMN_HALF, 0);
+        obstacles.push({ it: { id: gridId(x, y) }, obb, box: obbAabb(obb), what: `${OBSTACLE_ACCUSATIVE.column} сітки (${f2(x)}; ${f2(y)})` });
+    }
     const issues = [];
     for (const obj of scene.objects()) {
         const layer = scene.layers.get(obj.layer_id) || {};
@@ -546,9 +571,8 @@ export function checkInside(scene, config, eps) {
             issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: поза контуром будівлі`, k, "contour"));
         }
         const box = obbAabb(obj.obb);
-        for (const { it, obb, box: ib } of obstacles) {
+        for (const { it, obb, box: ib, what } of obstacles) {
             if (aabbOverlap(box, ib, eps) && satPenetration(obj.obb, obb) > eps) {
-                const what = OBSTACLE_ACCUSATIVE[it.kind] + (it.name ? ` «${it.name}»` : "");
                 issues.push(issue("inside", sev, obj.layer_id, [obj.code], `${obj.code}: перетинає ${what}`, k, String(it.id)));
             }
         }

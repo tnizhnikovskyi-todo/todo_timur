@@ -119,13 +119,16 @@ def _zone(sid, title, x0, y0, x1, y1, tech=None):
     )
 
 
-def _state(layers, slots, placements=(), height=8.0, sprinkler=6.0, tech='reach'):
+def _state(layers, slots, placements=(), height=8.0, sprinkler=6.0, tech='reach', grid=None):
+    site = {
+        'building': {'length': 60.0, 'width': 30.0, 'height': height},
+        'sprinkler_height': sprinkler,
+        'aisle_tech': tech,
+    }
+    if grid is not None:  # без ключа — «сітка не задана» (старі сцени еталона)
+        site['column_grid'] = dict(grid)
     return {
-        'site': {
-            'building': {'length': 60.0, 'width': 30.0, 'height': height},
-            'sprinkler_height': sprinkler,
-            'aisle_tech': tech,
-        },
+        'site': site,
         'layers': layers,
         'slots': slots,
         'placements': list(placements),
@@ -242,6 +245,48 @@ def scenes():
                 ],
             ),
             _cfg('inside', mode='warn'),
+        )
+    )
+    # 2а. колони сітки `site.column_grid` (не items): стелаж у вузлі сітки, під 90°, під явною колоною (без дубля),
+    # біля колони без дотику; шар двору не перевіряється; крок 0 (сітки немає) — лише явна колона
+    grid_slots = [
+        _slot(1, 'pallet_rack', 'GN', 12, 6, params=RACK2),
+        _slot(2, 'pallet_rack', 'GFREE', 12, 9, params=RACK2),
+        _slot(3, 'pallet_rack', 'GEXP', 24, 12, params=RACK2),
+        _slot(4, 'pallet_rack', 'GROT', 30, 18, rot=90, params=RACK2),
+        _slot(5, 'pallet_rack', 'GNEAR', 36, 6.9, params=RACK2),
+        _slot(6, 'floor_stack', 'GYARD', 12, 12, params={'rows': 1, 'cols': 1}, layer_id=3),
+    ]
+    grid_layers = [
+        _layer(1, 'building', "Будівля", items=[_item('c1', 'column', 24, 12, name='К-1')]),
+        _layer(2, 'storage', "Склади"),
+        _layer(3, 'yard', "Двір"),
+    ]
+    grid_placement = {
+        'id': 1,
+        'layer_id': 2,
+        'variant_id': 1,
+        'slot_id': None,
+        'cell_code': None,
+        'code': 'M-GRID',
+        'name': 'm',
+        'x': 42.0,
+        'y': 24.0,
+        'rotation': 0,
+        'dynamic': False,
+    }
+    out.append(
+        (
+            'inside_grid',
+            _state(grid_layers, grid_slots, [grid_placement], grid={'step_x': 6.0, 'step_y': 6.0}),
+            _cfg('inside'),
+        )
+    )
+    out.append(
+        (
+            'inside_grid_off',
+            _state(grid_layers, grid_slots, [grid_placement], grid={'step_x': 0.0, 'step_y': 0.0}),
+            _cfg('inside'),
         )
     )
     # 3. ширина проходів за технікою складу й зон (N-06)

@@ -226,6 +226,47 @@ async function t_autolayout(page, errors) {
   ok('четверта зона не вміщається: «Нічого не змінено», стан той самий', /Нічого не змінено/.test(t) && (await page.evaluate(() => JSON.stringify(__f3d.S.slots))) === snap4 && snap !== snap4, t);
 }
 
+/** Авторозкладка S4 з `gridIgnored` (зона більша за крок сітки) ставить ряд на колону `column_grid` — перевірка `inside` її показує (R-37 п. 2, Q-19). */
+async function t_grid_check(page, errors) {
+  await blank(page, 'S5G');
+  await page.evaluate(() => {
+    const { S, E } = __f3d;
+    const ly = S.layers.find((l) => l.kind === 'storage');
+    for (const t of ['zone', 'pallet_rack']) if (!ly.slot_types.includes(t)) ly.slot_types.push(t);
+    S.ui.layer = ly.id;
+    S.site.column_grid = { step_x: 6, step_y: 6 };
+    const rack = { bays: 2, levels: 3, bay_width: 2.7, depth: 1.1, level_height: 1.5 };
+    const slot = (id, template, x, y, params) => ({ id, rid: null, etag: null, layer_id: ly.id, template, code_prefix: id.toUpperCase(), x, y, rotation: 0, params, overrides: {}, parent_location_id: null });
+    S.slots = [slot('zg', 'zone', 15, 10, { length: 20, width: 12, title: 'zg', color: '#9fb7c9' }), slot('ra', 'pallet_rack', 10, 7, { ...rack }), slot('rb', 'pallet_rack', 10, 10, { ...rack }), slot('rc', 'pallet_rack', 10, 13, { ...rack })];
+    S.settings.checks.inside = { ...(S.settings.checks.inside || {}), enabled: true, mode: 'block', params: {} };
+    E.commit({});
+    E.undoReset();
+  });
+  const inside = () => page.evaluate(() => __f3d.S.issues.list.filter((i) => i.check === 'inside').map((i) => ({ codes: i.codes.join('+'), severity: i.severity, msg: i.message })));
+  const before = await inside();
+  ok('inside до авторозкладки: ряди між колонами сітки (крок 6 м) — зауважень немає', before.length === 0, JSON.stringify(before));
+  await page.evaluate(() => { document.getElementById('menuMore').open = true; });
+  await page.click('#menu-autolayout');
+  await page.waitForTimeout(400);
+  const toast = (await page.textContent('#toast').catch(() => '')) || '';
+  ok('авторозкладка: зона 20×12 не стає між колонами сітки — колони не обійдено (gridIgnored), у повідомленні крок сітки', /Розкладено: зон 1, рядів 3\. Колони сітки \(крок 6,0×6,0 м\) не обійдено/.test(toast), toast);
+  const res = await page.evaluate(() => {
+    const { S, E, core } = __f3d;
+    const g = core.geometry;
+    const racks = S.slots.filter((s) => s.template === 'pallet_rack');
+    const cols = E.buildingObstacles().filter((r) => r.grid);
+    const onGrid = racks.filter((s) => { const o = g.makeObb(s.x, s.y, 2.7, 0.55, 0); return cols.some((c) => g.satPenetration(o, g.rectObb(c.x0, c.y0, c.x1, c.y1)) > 1e-3); }).map((s) => s.code_prefix);
+    return { onGrid, cols: cols.length };
+  });
+  ok('після розкладки ряд стоїть на колоні сітки (сценарій осмислений)', res.onGrid.length >= 1 && res.cols > 0, JSON.stringify(res));
+  const after = await inside();
+  ok('inside показує колону сітки для кожного ряду на ній, severity = режим перевірки (block)', after.length === res.onGrid.length && after.every((i) => i.severity === 'block' && /колону сітки \(\d+\.\d\d; \d+\.\d\d\)/.test(i.msg)) && after.map((i) => i.codes).sort().join() === res.onGrid.slice().sort().join(), JSON.stringify({ after, res }));
+  // колони сітки нема (крок 0) — зауваження зникає: перевірка читає ту саму сітку, що й авторозкладка
+  await page.evaluate(() => { const { S, E } = __f3d; S.site.column_grid = { step_x: 0, step_y: 0 }; E.commit({}); });
+  await page.waitForTimeout(200);
+  ok('крок сітки 0 — колон немає, зауваження зникає', (await inside()).length === 0);
+}
+
 async function t_checks(page, errors) {
   await blank(page, 'S5K');
   await page.evaluate(() => {
@@ -411,6 +452,7 @@ async function t_docs(page, errors) {
     await t_contour(page, errors);
     await t_items(page, errors);
     await t_autolayout(page, errors);
+    await t_grid_check(page, errors);
     await t_checks(page, errors);
     await t_3d(page, errors);
     await t_wizard(page, errors);
