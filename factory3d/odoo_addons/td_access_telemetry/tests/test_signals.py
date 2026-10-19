@@ -40,7 +40,7 @@ class TestAccessSignals(AccessCase):
             self.assertFalse(sig.source_id)
 
     def test_ensure_idempotent(self):
-        self.assertEqual(self.env['td.access.telemetry']._f3d_ensure_signals(), {'created': 0, 'existing': 7})
+        self.assertEqual(self.env['td.access.telemetry']._td_ensure_signals(), {'created': 0, 'existing': 7})
 
     def test_new_device_signal(self):
         self.env['td.access.device'].sudo().create({
@@ -49,7 +49,7 @@ class TestAccessSignals(AccessCase):
 
     def test_ingest_accepted(self):
         now = Datetime.now()
-        res = self.env['td.signal'].sudo()._f3d_ingest(
+        res = self.env['td.signal'].sudo()._td_ingest(
             [{'code': 'access/turnstiles/TURNSTILES/on_site', 'ts': now, 'value': 35.0, 'q': 'good'}], src='module')
         self.assertEqual(res['accepted'], 1)
         self.assertEqual(res['rejected'], [])
