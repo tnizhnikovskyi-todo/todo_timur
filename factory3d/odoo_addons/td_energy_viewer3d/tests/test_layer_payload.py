@@ -80,6 +80,26 @@ class TestLayerPayload(LayerCase):
         known = layer_tools.scene_codes({"static": {"energy": {"lines": {"A": 1}}, "equipment": {"B": 1}}})
         self.assertTrue({"A", "B", "CABLES", "PV-INV"} <= known)
 
+    def test_chp_cell(self):  # QF-CHP: шафа вводу КГУ — вузол шару; P/I/номінал з вимірювань КГУ, стан як у КГУ
+        layer = self.layer()
+        cell = self.node(layer, "QF-CHP")
+        self.assertEqual((cell["kind"], cell["name"], cell["state"], cell["rating_a"]), ("cell", "QF-CHP", "off", 1600))
+        self.assertTrue(cell["card"])
+        self.assertIn(cell["scene"], (None, "QF-CHP"))  # у сцені цієї шафи може не бути — вузол усе одно в шарі
+        self.assertEqual((cell["p_kw"], cell["i_a"], cell["load"]), (None, None, None))  # КГУ без вимірювання
+        self.fresh("infra/chp/state", 2.0, "running")
+        self.fresh("infra/totals/chp_kw", 400.0)
+        layer = self.layer()
+        cell, chp = self.node(layer, "QF-CHP"), self.node(layer, "CHP")
+        self.assertEqual((cell["state"], chp["state"]), ("gen", "gen"))
+        self.assertEqual((cell["p_kw"], chp["p_kw"]), (400.0, 400.0))  # одне вимірювання на шафу й КГУ — без задвоєння
+        self.assertEqual((cell["i_a"], cell["load"], cell["rating_a"]), (640, 0.4, 1600))
+        self.fresh("infra/chp/state", 3.0, "fault")
+        self.assertEqual(self.node(self.layer(), "QF-CHP")["state"], "alarm")
+        self.assertEqual(
+            self.node(self.layer(), "QF-CHP")["state"], self.Node.search([("code", "=", "QF-CHP")]).sld_state
+        )
+
     def test_states_match_pult(self):  # AC-284
         layer = self.layer()
         expected = {
