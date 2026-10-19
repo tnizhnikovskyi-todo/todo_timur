@@ -4,8 +4,8 @@ from .common import PASSWORD, F3DConstructorHttpCase
 
 # MERGE.md §3.5: API-11…API-24 -> маршрути; тіло порожнє, відповідь — заглушка W0-B
 # API-11 реалізовано слайсом S1 (controllers/library.py, тести test_s1_library.py): маршрут зареєстровано один раз
-# API-12, API-15, API-17, API-18 реалізував S2 (тести — tests/test_s2_*.py), API-13/14/19 labels_pdf — S3 (test_s3_*.py),
-# API-16, API-20 і 19 table_xlsx — S4 (test_s4_*.py)
+# API-12, API-15, API-17, API-18 реалізував S2 (тести — test_s2_*.py), API-13/14/19 labels_pdf — S3 (test_s3_*.py),
+# API-16, API-20 і API-19 table_xlsx — S4 (test_s4_*.py)
 IMPLEMENTED_ROUTES = [
     ('API-11', '/f3d/constructor/library'),
     ('API-13', '/f3d/constructor/stock/state'),
