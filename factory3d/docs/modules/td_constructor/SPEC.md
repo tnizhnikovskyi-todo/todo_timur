@@ -797,6 +797,36 @@ SQL: `UNIQUE(term_type, key)`. Дані — `data/td_term_data.xml` (12 запи
 
 Дія майстра `action_f3d_publish_wizard` — `target='new'`, створюється з `site.action_publish_wizard()`.
 
+### 3.1 Представлення й меню злиття (V-14…V-18; хвилі 1–2)
+
+Усі нові форми — без `attrs`; списки — `<list>`; редактор (`f3d_constructor`) лишається основним інтерфейсом, ці форми — службові (CD-03: точні числа правляться й тут). Файли: `views/td_slot_type_views.xml` (V-14), `td_putaway_views.xml` (V-15…V-16),
+`td_collab_views.xml` і `td_help.xml` (V-17…V-18); `wizard/td_publish_wizard_views.xml` і `views/td_layout_version_views.xml` розширено (V-08, V-07). Представлення **площадки, шару, місця, паспорта, варіанта** не змінювалися: нові поля M-25…M-27 редагуються
+в редакторі й у формах-JSON, а в формах V-01…V-03 не виводяться.
+
+| V | XML-id (суфікси `view_td_…`) | Тип / модель | Структура |
+|---|---|---|---|
+| V-14 | `slot_type_list`, `slot_type_form`, `slot_type_search`, `slot_preset_list`, `slot_preset_form` | `td.slot.type`, `td.slot.preset` | Список типів (`sequence` handle, `ref`, `name`, `code`, `group`, `template`, `relevance`, `loc_kind` hide, `is_custom`, `company_id` у мультикомпанії); форма — групи «Основне» (`name`, `code`, `ref`, `group`, `template`, `shape`) і «Каталог» (`relevance`, `loc_kind`, `is_custom`, `company_id`, `sequence`, `active`) + `description`; пошук: `name/code/ref`, фільтри «Власні», «Є на фабриці» (`relevance >= 1`), «Архівні», групування за групою й генератором. Пресети: список `name`, `kind`, `type_id`; форма — ті самі + `active`. Дані `params`/`data` у формах не виводяться (редагуються в редакторі, R-22) |
+| V-15 | `putaway_rule_list`, `putaway_rule_form` | `td.putaway.rule` | Список: `site_id`, `sequence` (handle), `product_id`, `category_id`, `in_location_id`, `out_code`, `out_location_id`, `storage_category_id` (hide), `deleted`; форма: «Умова» (`site_id`, `product_id`, `category_id`, `package_type_ids` tags, `storage_category_id`) і «Призначення» (`in_location_id`, `out_code`, `out_location_id`, `sublocation`, `sequence`, `deleted`, `odoo_rule_id`, `active`) |
+| V-16 | `replenish_rule_list/_form`, `publish_op_list/_form` | `td.replenish.rule`, `td.publish.op` | Правила: `site_id`, `cell_code`, `location_id`, `product_id`, `min_qty`, `max_qty`, `deleted`, `odoo_orderpoint_id`. Журнал публікацій — **лише читання**: `version_id`, `seq`, `op`, `res_model`, `code`, `res_id`, `rolled_back` (та `before`/`after` у формі) |
+| V-17 | `layout_variant_list/_form` (+ `_s6`), `comment_list/_form/_search` (+ `_s6`), `zone_lock_list` | `td.layout.variant`, `td.comment`, `td.zone.lock` | Варіанти: `site_id`, `sequence`, `name`, `base_version_id`, `is_training`, `is_current`, `origin_id`, `snapshot_id`. Коментарі: список `site_id`, `kind`, `state`, `target_kind`, `target_label`, `text`, `author_id`, `assignee_id`, `activity_ids` (`list_activity`); форма — + `chatter` (обговорення `mail.thread`); пошук: фільтри «Відкриті», «Вирішені», «Задачі», «Коментарі», «Мої задачі», групування за площадкою/видом/станом. Блокування — список `site_id`, `zone_uid`, `user_id`, `expires_at` |
+| V-18 | `td_help_page` (QWeb), `action_td_help` | сторінка `/f3d/constructor/help` | `ir.actions.act_url` (`target='new'`) → GET `/f3d/constructor/help?lang=uk|en` (API: §7.1). 36 тем UK/EN — **той самий текст, що `core/constructor/help_topics.js`**; зіставлення тем перевіряє `tests/test_s6_help.py` (AC-129) |
+| V-08+ | `publish_wizard_form` (розширення) | `td.publish.wizard` | Вкладки «Створення», «Перенесення», «Перейменування», «Атрибути, правила, обладнання» (за `kind`) замість однієї «Буде створено / оновлено»; лічильники «Перенесено · Перейменовано · Атрибути й обладнання · Без змін · Застосувати не можна»; поле «Зона або ряд» (`scope_slot_id`) і кнопки «Лише обране», «Вибрати все», «Зняти все»; нагадування про копію БД (`copy_reminder`, `copy_ack`); кнопка «Журнал публікацій» (`action_open_log`) |
+| V-07+ | `layout_version_form_ops` | inherit `td.layout.version` форма | Кнопка «Відкотити публікацію» (`action_rollback`, `invisible` без `can_rollback`), банер «Публікацію відкочено …» / «Відкат недоступний: `rollback_reason`», вкладка «Операції в Odoo» (`op_ids`: `seq`, `op`, `res_model`, `code`, `before`, `after`, `rolled_back`) |
+
+Меню (`views/td_menus.xml`; `groups=td_factory3d.group_td_user`, якщо не сказано; батько — `menu_td_constructor_plan`, якщо не сказано):
+
+| XML-id | Назва | sequence | Дія |
+|---|---|---|---|
+| `menu_td_slot_type` | Типи місць | 50 | `action_td_slot_type` (`list,form`) |
+| `menu_td_slot_preset` | Пресети місць | 55 | `action_td_slot_preset` |
+| `menu_td_putaway_rule` | Правила розміщення | 60 | `action_td_putaway_rule` |
+| `menu_td_replenish_rule` | Правила поповнення | 65 | `action_td_replenish_rule` |
+| `menu_td_publish_op` | Журнал публікацій | 70 | `action_td_publish_op` |
+| `menu_td_layout_variant` | Варіанти планування | 80 | `action_td_layout_variant` |
+| `menu_td_comment` | Коментарі | 85 | `action_td_comment` («Коментарі конструктора») |
+| `menu_td_zone_lock` | Блокування зон | 15 | `action_td_zone_lock` (`list`), батько `td_factory3d.menu_td_config`, `groups=group_td_constructor_manager` |
+| `menu_td_constructor_help` | Інструкція конструктора | 16 | `action_td_help` (`ir.actions.act_url`), батько `td_factory3d.menu_td_root` |
+
 ## 4. Права
 
 ### 4.1 `security/ir.model.access.csv` (повністю)
@@ -867,6 +897,24 @@ access_td_publish_wizard_issue_m,td.publish.wizard.issue manager,model_td_publis
 Правила ORM — перший бар'єр; другий — `_f3d_check_edit()` у `create/write/unlink` slot/placement/layer (пропускається при `env.su`; тексти уніфіковані): `AccessError("Шар «%s» редагує %s.")`. Публікація, відновлення версії, створення площадки, зміна `edit_group_ids`, `check.config` — лише `has_group('group_td_constructor_manager')`.
 Сервіс публікації працює під `sudo()` + `with_company(site.company_id)` лише всередині `services.publish.apply_plan` **після** явної перевірки групи менеджера й стоп-крана `publish_enabled` (DEC-11, DEC-17); збереження чернетки (API-04) виконується від імені користувача **без** `sudo`.
 
+### 4.5 Доповнення: права моделей злиття (хвилі 1–2)
+
+Нові рядки `security/ir.model.access.csv` (скорочення груп — як у §4.1; `U` = `td_factory3d.group_td_user`; `PT`, `PS`, `PE`, `PM` — `group_td_constructor_technologist/storekeeper/engineer/manager`; `A` = `td_factory3d.group_td_admin`; колонки `read,write,create,unlink`):
+
+| Модель | U | PT / PS / PE | PM | A | Примітка |
+|---|---|---|---|---|---|
+| `td.slot.type` | 1,0,0,0 | 1,1,1,0 | 1,1,1,1 | — | проєктувальники створюють лише власні типи (M-16); id `access_td_slot_type_{u,t,s,e,m}` |
+| `td.slot.preset` | 1,0,0,0 | 1,1,1,0 | 1,1,1,1 | — | видаляє лише менеджер (перевірка в `unlink`); `access_td_slot_preset_{u,t,s,e,m}` |
+| `td.putaway.rule`, `td.replenish.rule` | 1,0,0,0 | 1,1,1,1 | 1,1,1,1 | — | `access_td_putaway_rule_*`, `access_td_replenish_rule_*` |
+| `td.publish.op` | 1,0,0,0 | — | — | 1,1,0,1 | пише лише сервіс публікації (`sudo`); `access_td_publish_op_{u,a}` |
+| `td.layout.variant` | 1,0,0,0 | — | 1,1,1,1 | — | керує менеджер (R-40); `access_td_layout_variant_{u,m}` |
+| `td.comment` | 1,0,0,0 | 1,1,1,1 | 1,1,1,1 | — | додає й вирішує через API-22 (`f3d_add` під `sudo` після перевірки групи `U`); `access_td_comment_{u,t,s,e,m}` |
+| `td.zone.lock` | 1,0,0,0 | 1,1,1,1 | 1,1,1,1 | — | пише API-23 (під `sudo` з перевіркою ролі); `access_td_zone_lock_{u,t,s,e,m}` |
+
+Record rules (глобальні, `perm_*` усі): `rule_td_slot_type_company`, `rule_td_slot_preset_company`, `rule_td_putaway_rule_company`, `rule_td_replenish_rule_company`, `rule_td_layout_variant_company`, `rule_td_comment_company`, `rule_td_zone_lock_company` —
+`['|', ('company_id','=',False), ('company_id','in',company_ids)]`; `rule_td_publish_op_company` — `[('version_id.company_id','in',company_ids)]`. Права на шар (R-11) на правила, коментарі, варіанти й оренди **не поширюються** (шару в них немає); їхні обмеження — у M-18…M-23.
+Серверні бар'єри понад ACL: типи/пресети (`AccessError` у `create/write/unlink`), варіанти (`_f3d_assert_manager`), коментарі (автор або «Проєктування»), оренди (R-39), `td.layer.items` (лише вміст шару — M-26).
+
 ## 5. Дані
 
 ### 5.1 XML-дані й параметри
@@ -922,9 +970,20 @@ access_td_publish_wizard_issue_m,td.publish.wizard.issue manager,model_td_publis
 
 Видаляє лише власні `ir.config_parameter` `td.constructor.*`. Записи `stock.location`/`maintenance.equipment`/`mrp.workcenter`, створені публікацією, **не видаляються** (стовпці `td_site_id` зникають разом із моделлю); знімки версій (`ir.attachment`) лишаються.
 
+### 5.4 Дані хвиль 1–2
+
+- `data/td_slot_type_data.xml` (`noupdate="0"`): `term_slot_type_floor_spot` (`td.term` `slot_type`, `sequence=55`) і **50** `td.slot.type` з xml-id `slot_type_<code>` (`r01`, …): за групами 20 `rack`, 5 `floor`, 8 `special`, 12 `zone`, 5 `mobile`; за важливістю 16 × «●»
+  (`relevance=2`), 19 × «○» (`1`), 15 × «—» (`0`). Файл **генерується** з `core/constructor/types_data.js` (Q9 CD-31: засіяти всі 50, показувати ●/○); його відповідність ядру перевіряє `tools/test_core_s1.mjs` (AC-103).
+- `data/td_term_data.xml`: додано 10 `zone_function` і 4 `zone_attr` (M-30) у блоці `noupdate="1"` (назви й кольори, змінені користувачем, оновлення модуля не перезаписує); xml-id — `term_zone_function_<key>`, `term_zone_attr_<key>`.
+- `data/params.xml` (`noupdate="1"`) — додано: `td.constructor.lock_ttl_s=300`, `lock_heartbeat_s=60`, `variants_max=12`, `versions_keep=50`, `stock_days=90` (період залишків/ABC, CD-31 Q8), `labels_max=5000` (макс. етикеток у PDF, F05). Таблиця налаштувань — ARCH §3.
+- Міграції (`migrations/`, ідемпотентні): `19.0.1.0.1/post-migrate.py` (`seed.resync_site`: порожній план незміненого сіда), `19.0.1.2.0/post-migrate.py` (тип `floor_spot` додається в `allowed_slot_type_ids` наявних шарів «Склади»; чернетка не позначається зміненою),
+  `19.0.1.3.0/pre-migrate.py` (прив'язка наявних термінів зони до xml-id до завантаження даних; самі терміни не змінюються). Міграція `post_migration` MERGE §3.6 (`type_id` за `template`, `addr=legacy`, `loc_tree='flat'`, `warehouse_id`) **не потрібна**: усі нові поля мають
+  безпечні значення за замовчуванням (порожній `addr` = `legacy`, `loc_tree='flat'`), а `warehouse_id` порожній, доки його не вкаже користувач (AC-140).
+- `uninstall_hook` — без змін: бізнес-записи Odoo не видаляються (§5.3); нові моделі видаляються разом із модулем (ORM).
+
 ## 6. Крони й фонові процеси
 
-Немає. Конвертація STEP/IGES/IFC (R-20) — синхронна при завантаженні (API-09) із таймаутом `convert_timeout_s=60`; довші — статус `pending_conversion` і ручний запуск кнопкою «Спробувати перетворити» (`variant.action_retry_convert()`, технолог/менеджер). Окремий cron не створюється (Q-02).
+Немає. Конвертація STEP/IGES/IFC (R-20) — синхронна при завантаженні (API-09) із таймаутом `convert_timeout_s=60`; довші — статус `pending_conversion` і ручний запуск кнопкою «Спробувати перетворити» (`variant.action_retry_convert()`, технолог/менеджер). Окремий cron не створюється (Q-02). Хвилі 1–2 кронів теж не додають: прострочені оренди зон прибирає `td.zone.lock.f3d_purge` при кожному зверненні до API-23 (M-23), контрольні точки понад `versions_keep` — при створенні нової (API-24); публікації не видаляються ніколи.
 
 ## 7. HTTP/JSON API
 
