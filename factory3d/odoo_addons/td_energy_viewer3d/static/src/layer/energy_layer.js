@@ -1,7 +1,7 @@
 /** @odoo-module **/
 // UI-23 EnergyLayerExtension (SPEC 8.4.3): розширення «Переглядача» — шар «Енергетика в 3D».
 // Реєструється в ядрі `registerViewerExtension` (R-26): режим розфарбування (UI-24), маркери тривог (UI-25),
-// блок «Енергетика» в картці (UI-26). Без `D.energy.layer` (старий сервер) розширення неактивне, режим схований.
+// блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06). Без `D.energy.layer` (старий сервер) шар неактивний, режим схований (кнопка «Відкрити пульт» від шару не залежить).
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
@@ -13,6 +13,10 @@ import { AlarmMarkers } from "./markers";
 export const EXT_ID = "td_energy";
 const MAX_CARD_ALARMS = 3;
 const LEVEL_TEXT = { bad: "Тривога", warn: "Увага" };
+/** Дія Пульту енергетика (`td_energy`, V-22): за xml-id — з `context` і назвою з запису, як з головного меню. */
+export const PULT_ACTION = "td_energy.action_td_energy_pult";
+/** Об'єкти сцени з кнопкою «Відкрити пульт» у картці: АРМ енергетика і ГРЩ (КГУ — код `CHP` — додати сюди пізніше). */
+export const PULT_CODES = new Set(["EMS-1", "SWB-1"]);
 
 /** Блок «Енергетика» однієї картки вузла (UI-26); `canOpen` — є `card` і дозволено `openAction` (не киоск). */
 export function nodeBlockHtml(node, layer, canOpen) {
@@ -106,10 +110,20 @@ export class EnergyLayerExtension {
         return nodes.map((n) => nodeBlockHtml(n, layer, !!api?.canOpenAction));
     }
 
-    /** VX-05: «Відкрити картку вузла» → клієнтська дія W1 `td_energy.node_card`. */
+    /** VX-06: основна кнопка «Відкрити пульт» у верхньому ряду картки `PULT_CODES`; у кіоску (`!canOpenAction`) її немає. */
+    cardActions(code, D, api) {
+        if (!PULT_CODES.has(code) || !api?.canOpenAction) {
+            return [];
+        }
+        return [{ id: "open_pult", label: "Відкрити пульт", primary: true }];
+    }
+
+    /** VX-05: «Відкрити картку вузла» → клієнтська дія W1 `td_energy.node_card`; VX-06: «Відкрити пульт» → `PULT_ACTION`. */
     onAction(api, action, arg) {
         if (action === "open_card" && arg) {
             api.openAction({ type: "ir.actions.client", tag: "td_energy.node_card", name: arg, params: { code: arg } });
+        } else if (action === "open_pult") {
+            api.openAction(PULT_ACTION);
         }
     }
 

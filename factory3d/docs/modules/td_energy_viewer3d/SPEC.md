@@ -1,12 +1,12 @@
 # td_energy_viewer3d — специфікація (міст «Енергетика в 3D»)
 
 Версія 0.2 · 19.10.2026 (v0.1 — 18.10.2026, у складі W2) · стандарт `docs/DOC_STANDARD.md` · технічне рішення: [ARCHITECTURE.md](ARCHITECTURE.md) · статус: збудовано (гілка `claude/td-energy-w4`).
-Міст `td_energy` ↔ `td_viewer3d` (`auto_install`): шар «Енергетика в 3D» — розфарбування вузлів схеми Пульту за станом, маркери тривог, блок «Енергетика» в картці об'єкта сцени, перехід «Відкрити в 3D» з підсвічуванням вузла. Модуль збудовано в хвилі W2 разом із `td_energy_control`, тому **нумерація ID продовжує W2 і єдина з [../td_energy_control/SPEC.md](../td_energy_control/SPEC.md)**: M-41, M-42, V-46, V-47, UI-23…UI-27, R-57, R-58, R-26 (VX-01…VX-05, розширення ядра `td_viewer3d`), AC-278…AC-293, ТК-28, ТП-11, A-52, A-53, X-93. Вимоги FR-62…FR-65, FR-70 і контракти C-44, C-45 — [../td_energy_control/ARCHITECTURE.md](../td_energy_control/ARCHITECTURE.md) §1.3 і §2.1. Відхилення від макета (D-37) — у `td_energy_control/SPEC.md`, «Відхилення від макета».
+Міст `td_energy` ↔ `td_viewer3d` (`auto_install`): шар «Енергетика в 3D» — розфарбування вузлів схеми Пульту за станом, маркери тривог, блок «Енергетика» в картці об'єкта сцени, перехід «Відкрити в 3D» з підсвічуванням вузла. Модуль збудовано в хвилі W2 разом із `td_energy_control`, тому **нумерація ID продовжує W2 і єдина з [../td_energy_control/SPEC.md](../td_energy_control/SPEC.md)**: M-41, M-42, V-46, V-47, UI-23…UI-27, R-57, R-58, R-26 (VX-01…VX-06, розширення ядра `td_viewer3d`), AC-278…AC-293, ТК-28, ТП-11, A-52, A-53, X-93. Вимоги FR-62…FR-65, FR-70 і контракти C-44, C-45 — [../td_energy_control/ARCHITECTURE.md](../td_energy_control/ARCHITECTURE.md) §1.3 і §2.1. Відхилення від макета (D-37) — у `td_energy_control/SPEC.md`, «Відхилення від макета».
 Спирається на: `td_viewer3d` (M-01 контракт провайдера, R-25 `registerViewerExtension`), `td_energy` (W1 R-26 стан вузлів схеми `sld_state`, клієнтські реєстри `td_energy.viewer_links`, `td_energy.node_card`), `td_constructor_viewer3d` (зразок моста), `docs/ARCHITECTURE.md` §6.7. Безпека: шар лише читає, нічого не керує.
 
 ## 0. Дерево файлів модуля
 
-Власник — **D** (план збирання W2, ARCH §6.1). Файли без літери — менеджер (каркас). Окрім самого модуля, воркер D змінює лише зазначені файли `td_viewer3d` (VX-01…VX-05); `td_energy_control` і `td_energy` цим модулем не змінюються (клієнтські правки `td_energy` — власність B, `td_energy_control/SPEC.md` §3.4).
+Власник — **D** (план збирання W2, ARCH §6.1). Файли без літери — менеджер (каркас). Окрім самого модуля, воркер D змінює лише зазначені файли `td_viewer3d` (VX-01…VX-06); `td_energy_control` і `td_energy` цим модулем не змінюються (клієнтські правки `td_energy` — власність B, `td_energy_control/SPEC.md` §3.4).
 
 ```
 odoo_addons/td_energy_viewer3d/            D  міст 3D (розд. 8.4), auto_install
@@ -18,7 +18,7 @@ odoo_addons/td_energy_viewer3d/            D  міст 3D (розд. 8.4), auto_
 ├── views/{td_energy_viewer3d_views.xml}             D  V-46 (налаштування шару), V-47 (серверна дія й меню)
 └── tests/{test_layer_payload.py, test_delta.py, test_kiosk.py, test_deeplink.py, test_hoot.py}   D
 
-odoo_addons/td_viewer3d/                   D  лише зазначені файли (розд. 8.4: VX-01…VX-05)
+odoo_addons/td_viewer3d/                   D  лише зазначені файли (розд. 8.4: VX-01…VX-06)
 ├── static/src/viewer/core.js                        D  мінімальні адитивні вставки (≤ 90 рядків)
 ├── static/src/action/viewer_action.js               D  `opts.onOpenAction`
 ├── static/tests/hoot/extension_energy.test.js       D  AC-278…AC-281
@@ -79,9 +79,9 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ### 8.4 «Енергетика в 3D»: міст `td_energy_viewer3d` і розширення `td_viewer3d` (власник D; FR-62…FR-65, FR-70, C-44, C-45)
 
-**Рішення (A-52).** Шар — **окремий міст-модуль** `td_energy_viewer3d` (`depends`: `td_energy`, `td_viewer3d`; `auto_install: True`; LGPL-3), за зразком `td_constructor_viewer3d`: Python-провайдер (duck typing, контракт `td_viewer3d` M-01) віддає **адитивний** ключ `energy.layer` у payload (`meta.schema` лишається `"1.1"`: ключ вкладений у розділ `energy`, клієнт без моста його ігнорує), JS-розширення малює шар у ядрі переглядача. Обґрунтування: `td_energy` не залежить від `td_viewer3d`, а JS-імпорт `@td_viewer3d/viewer/core` у `td_energy` зламав би бандл без переглядача; наявний провайдер `td.viewer.provider.energy` (seq 100) не змінюється. Ядро переглядача для цього отримує мінімальні адитивні точки розширення (**VX-01…VX-05**, `td_viewer3d` R-26); без розширень поведінка ядра не змінюється.
+**Рішення (A-52).** Шар — **окремий міст-модуль** `td_energy_viewer3d` (`depends`: `td_energy`, `td_viewer3d`; `auto_install: True`; LGPL-3), за зразком `td_constructor_viewer3d`: Python-провайдер (duck typing, контракт `td_viewer3d` M-01) віддає **адитивний** ключ `energy.layer` у payload (`meta.schema` лишається `"1.1"`: ключ вкладений у розділ `energy`, клієнт без моста його ігнорує), JS-розширення малює шар у ядрі переглядача. Обґрунтування: `td_energy` не залежить від `td_viewer3d`, а JS-імпорт `@td_viewer3d/viewer/core` у `td_energy` зламав би бандл без переглядача; наявний провайдер `td.viewer.provider.energy` (seq 100) не змінюється. Ядро переглядача для цього отримує мінімальні адитивні точки розширення (**VX-01…VX-06**, `td_viewer3d` R-26); без розширень поведінка ядра не змінюється.
 
-#### 8.4.1 `td_viewer3d` R-26: розширення ядра (VX-01…VX-05; FR-70; AC-278…AC-281)
+#### 8.4.1 `td_viewer3d` R-26: розширення ядра (VX-01…VX-06; FR-70; AC-278…AC-281)
 
 Розширює R-25 (`registerViewerExtension(ext)`): в `ext` з'являються **необов'язкові** члени (відсутній — нічого не робить; виключення розширення логується й не ламає ядро та інші розширення):
 
@@ -92,6 +92,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 | VX-03 | `applyData(api, D, info)` | `api` — як у R-25; `info = {reason: "load"\|"patch"\|"snapshot"\|"now", keys: Set<string>}`; викликається після `setData`, після кожного `applyPatch` із непорожнім патчем і після повернення «Зараз»/знімка; ядро після виклику запускає `repaintAll()`, якщо `colorMode` — режим розширення |
 | VX-04 | `cardBlocks(code, D, api) → string[]` | список HTML-фрагментів, які ядро додає в кінець картки вибраного об'єкта (після `energyHtml`); екранування — відповідальність розширення (`esc`); порожній масив — нічого |
 | VX-05 | `onAction(api, action, arg, el)` і `api.openAction(action) → boolean` | елементи з `data-ext="<id>:<action>:<arg>"` у картці/панелі делегуються розширенню з `id`; `api.openAction(act)` викликає `opts.onOpenAction(act)` (`viewer_action.js`: `this.action.doAction(act)`); у режимі кіоска `opts.onOpenAction` не задано → `false`; геттер `api.canOpenAction` (`!!opts.onOpenAction`) дозволяє розширенню не показувати кнопки дій, коли їх неможливо виконати |
+| VX-06 | `cardActions(code, D, api) → [{id, label, primary?}]` | кнопки розширення у **верхньому** ряду дій картки (`.o_f3d_actions-top`, між «Закрити» і «Відкрити в Odoo»: основна дія лишається в першому рядку, «Відкрити в Odoo» — вторинна): ядро малює `<button class="o_f3d_btn[ o_f3d_btn-primary]" data-ext="<ext.id>:<id>">label</button>` (`label` екранує ядро; `primary` — акцентна заливка `--f3d-accent`; `id` без двокрапки); клік → `onAction(api, id, "", el)` (VX-05). `D` може бути `null`; ядро не знає, чия кнопка. Помилка розширення логується, елемент без `id`/`label` і не-масив пропускаються (як у `cardBlocks`). Кнопки, що потребують `openAction`, розширення не віддає, коли `api.canOpenAction` = `false` (кіоск) |
 
 Також `api` розширюється полями `select(code)`, `focusOn(obj)`, `codeRoot(code)` (існують) і `labelsRoot` (контейнер міток) — без змін поведінки. Файли: `td_viewer3d/static/src/viewer/core.js` (вставки ≤ 90 рядків), `static/src/action/viewer_action.js` (`onOpenAction`), тести `static/tests/hoot/extension_energy.test.js`, `tests/test_r26_extension.py`. Обмеження: `rjsmin` — без вкладених шаблонних літералів у змінюваних місцях; `dist/viewer` не оновлюється.
 
@@ -118,7 +119,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 | UI-23 | `EnergyLayerExtension` | Тримає `state = {byScene: Map, alarms, version}` з `D.energy.layer`; `applyData` оновлює карту й маркери (лише якщо `info.keys` містить `energy`); без `D.energy.layer` (старий сервер) — розширення неактивне, режим не показується (`colorModes[].hidden = !layer`, VX-01) |
 | UI-24 | `StateColors` | Режим `td_energy` «Електромережа: стан вузлів» (легенда: «норма», «увага ≥ {warn_pct} %», «тривога ≥ {alarm_pct} % / немає даних», «генерує/працює», «вимкнено/резерв»); `modeColor`: `ok` → `C_OK` (`#27ae60`), `warn` → `C_WARN` (`#f39c12`), `alarm` → `C_BAD` (`#e74c3c`), `gen` → бурштиновий (`#b45309`), `off` → сірий (`#9ca3af`); кодування не лише кольором: у картці — текстовий чип стану |
 | UI-25 | `AlarmMarkers` | Для кожного запису `alarms[]` зі `scene` — спрайт (канва 64 × 64: коло `--bad`/`--warn`, знак «!») над найвищою точкою `codeRoot(scene)` (`Box3`), `renderOrder` вищий за сцену, масштаб сталий у пікселях; пульсація (`reduceMotion` вимикає); клік по маркеру — `api.select(scene)`; підказка `title` + час зберігається в `userData.tooltip` спрайта, але **підказку при наведенні в збірці не реалізовано** (ядро не показує tooltip; див. «Журнал змін документа»); ≤ `marker_limit`; зняття/перебудова при `applyData`; `dispose` геометрії/текстур; прихований, коли `show_markers=false` або шар `energy` вимкнений |
-| UI-26 | `NodeBlock` | `cardBlocks(code)`: блок «Енергетика»: чип стану («Норма», «Увага», «Тривога», «Генерує», «Вимкнено»), `P {p_kw} кВт`, `{i_a} А · {load%}` (якщо є), перелік тривог вузла (≤ 3) і кнопка «Відкрити картку вузла» (`data-ext="td_energy:open_card:<node code>"`) — лише якщо `card=true` і дозволено `openAction` (`api.canOpenAction`, не кіоск); `onAction` → `api.openAction({type:"ir.actions.client",tag:"td_energy.node_card",name:<code>,params:{code}})` (V-23 W1) |
+| UI-26 | `NodeBlock` | `cardBlocks(code)`: блок «Енергетика»: чип стану («Норма», «Увага», «Тривога», «Генерує», «Вимкнено»), `P {p_kw} кВт`, `{i_a} А · {load%}` (якщо є), перелік тривог вузла (≤ 3) і кнопка «Відкрити картку вузла» (`data-ext="td_energy:open_card:<node code>"`) — лише якщо `card=true` і дозволено `openAction` (`api.canOpenAction`, не кіоск); `onAction` → `api.openAction({type:"ir.actions.client",tag:"td_energy.node_card",name:<code>,params:{code}})` (V-23 W1); **«Відкрити пульт» (VX-06):** `cardActions(code, D, api)` повертає `[{id:"open_pult", label:"Відкрити пульт", primary:true}]` для кодів сцени з константи `PULT_CODES` (`energy_layer.js`: `EMS-1` АРМ енергетика, `SWB-1` ГРЩ; КГУ — код `CHP` — додати в ту саму константу), лише коли `api.canOpenAction` (не кіоск); від `D.energy.layer` не залежить; `onAction(…, "open_pult")` → `api.openAction("td_energy.action_td_energy_pult")` — дія Пульту (V-22, `td_energy.pult`) за xml-id, тож `context` і назва ті самі, що з головного меню; відкривається вперед (хлібні крихти → «Завод 3D»), «назад» повертає в 3D. «Відкрити в Odoo» лишається звичайною (вторинною) кнопкою ряду |
 | UI-27 | `ViewerLinks` | Реєструє `registry.category("td_energy.viewer_links").add("default", {open})`, де `open({code})` викликає `orm.call("td.energy.node","action_td_open_3d",[code\|\|null])` і `action.doAction(result)`; без модуля `td_viewer3d` запис не реєструється (міст `auto_install` не встановлюється) |
 
 #### 8.4.4 «Відкрити в 3D» і підсвічування вузла (R-58; FR-64)
@@ -156,7 +157,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 |---|---|---|---|
 | AC-278 | FR-65, FR-70 | Given розширення з `colorModes`/`modeColor` (VX-01/02); Then радіо в групі «Розфарбування», `applyParams({mode})` вмикає режим, `modeColor` фарбує, `getState().mode` = ключ; виключення розширення логується, ядро й інші розширення працюють; без розширення режими не змінюються | UT-JS |
 | AC-279 | FR-65, FR-70 | Given VX-03; Then `applyData(api, D, info)` після `load/patch/snapshot/now` з `info.keys`; для режиму розширення після виклику `repaintAll()` | UT-JS |
-| AC-280 | FR-65, FR-70 | Given VX-04/05; Then `cardBlocks` додаються в картку; клік по `data-ext` → `onAction`; `api.openAction` → `opts.onOpenAction`; у кіоску → `false` (`api.canOpenAction` = `!!opts.onOpenAction`) | UT-JS |
+| AC-280 | FR-65, FR-70 | Given VX-04/05/06; Then `cardBlocks` додаються в картку; `cardActions` — кнопки у верхньому ряду (`primary` → `o_f3d_btn-primary`, клік → `onAction(api, id, "")`, помилки/сміття ізольовано, у кіоску міст кнопку не віддає: «Відкрити пульт» лише для `EMS-1`/`SWB-1`, клік → `api.openAction("td_energy.action_td_energy_pult")`); клік по `data-ext` → `onAction`; `api.openAction` → `opts.onOpenAction`; у кіоску → `false` (`api.canOpenAction` = `!!opts.onOpenAction`) | UT-JS |
 | AC-281 | FR-65, FR-70 | Given регресія; Then `td_constructor_viewer3d` (`applyLayout`) і AC-01…AC-67 переглядача зелені; `registerViewerExtension` без нових членів працює як раніше | UT |
 
 ### 12.2 «Енергетика в 3D» — AC-282…AC-293
@@ -180,7 +181,7 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 ### 13.1 Юніт-тести
 
-**Міст 3D і переглядач (D)**: `td_energy_viewer3d/tests/{test_layer_payload.py::TestLayerPayload (AC-282…AC-285), test_delta.py::TestDelta (AC-286), test_kiosk.py::TestKiosk (AC-287), test_deeplink.py::TestDeepLink (AC-291), test_hoot.py::TestEnergyLayerHoot (AC-288…AC-290)}`; `td_viewer3d/static/tests/hoot/extension_energy.test.js` (AC-278…AC-280); `td_viewer3d/tests/test_r26_extension.py` і повний прогін `/td_viewer3d` + `/td_constructor_viewer3d` (AC-281).
+**Міст 3D і переглядач (D)**: `td_energy_viewer3d/tests/{test_layer_payload.py::TestLayerPayload (AC-282…AC-285), test_delta.py::TestDelta (AC-286), test_kiosk.py::TestKiosk (AC-287), test_deeplink.py::TestDeepLink (AC-291), test_hoot.py::TestEnergyLayerHoot (AC-288…AC-290, VX-06 — `pult.test.js`)}`; `td_viewer3d/static/tests/hoot/extension_energy.test.js` (AC-278…AC-280); `td_viewer3d/tests/test_r26_extension.py` і повний прогін `/td_viewer3d` + `/td_constructor_viewer3d` (AC-281).
 
 Команда: `F3D_TEST_INSTALL=td_energy,td_viewer3d,td_energy_viewer3d factory3d/tools/odoo/run_tests.sh <db> /td_energy_viewer3d` (Python + hoot `TestEnergyLayerHoot`); регресія переглядача — `F3D_TEST_INSTALL=td_factory3d,td_viewer3d,test_td_viewer3d,td_constructor,td_constructor_viewer3d factory3d/tools/odoo/run_tests.sh <db> /td_viewer3d` і `/td_constructor_viewer3d`.
 
@@ -210,9 +211,9 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 
 | ID | Рішення | Обґрунтування |
 |---|---|---|
-| A-52 | Шар 3D — міст `td_energy_viewer3d` + адитивні VX-01…VX-05 у `td_viewer3d`; ключ `energy.layer` не змінює `meta.schema` | `td_energy` не залежить від `td_viewer3d`; зразок `td_constructor_viewer3d` |
+| A-52 | Шар 3D — міст `td_energy_viewer3d` + адитивні VX-01…VX-06 у `td_viewer3d`; ключ `energy.layer` не змінює `meta.schema` | `td_energy` не залежить від `td_viewer3d`; зразок `td_constructor_viewer3d` |
 | A-53 | `scene` вузла = `equipment.td_code` або `node.code`; `C1`/`C2` → `CABLES` (найгірший стан); маркери малює клієнт | Модель сцени має один об'єкт кабелів |
-| X-93 | (`td_viewer3d`) VX-01…VX-05 адитивні; ядро не залежить від `td_energy`; без розширень поведінка не змінюється | Сумісність із `td_constructor_viewer3d` |
+| X-93 | (`td_viewer3d`) VX-01…VX-06 адитивні; ядро не залежить від `td_energy`; без розширень поведінка не змінюється | Сумісність із `td_constructor_viewer3d` |
 
 ## Журнал змін документа
 
@@ -220,3 +221,4 @@ odoo_addons/td_viewer3d/                   D  лише зазначені фай
 |---|---|---|
 | 18.10.2026 | 0.1 | Розділ 8.4 і пов'язані ID у складі `W2_SPEC.md` (хвиля W2, воркер D) |
 | 19.10.2026 | 0.2 | Виокремлено в окремий SPEC моста; переклад українською; додано рішення збірки: ключ `show_markers` (параметр `td.energy_viewer3d.show_markers`, `layer.show_markers`), прапор `colorModes[].hidden` (VX-01), геттер `api.canOpenAction` (VX-05); виправлено очікування AC-291 (`PFC-2` є в сцені, тест — вузол `BW-4` з `equipment_id.td_code` поза сценою); **не реалізовано:** підказка маркера при наведенні (`userData.tooltip` готовий, ядро tooltip не показує); слоти «тест ДГУ» в розкладі — у `td_energy_control` (R-54 п.7, A-66) |
+| 19.10.2026 | 0.3 | VX-06 `cardActions` (кнопки розширень у верхньому ряду картки) і основна кнопка «Відкрити пульт» для `EMS-1`/`SWB-1` (`PULT_CODES`; КГУ — `CHP` — додати пізніше); `td_viewer3d` 19.0.1.0.1, `td_energy_viewer3d` 19.0.1.0.1 |
