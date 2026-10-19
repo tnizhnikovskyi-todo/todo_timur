@@ -1,16 +1,34 @@
 {
-    "name": "Енергетика — Керування",
-    "summary": "Сценарії автоматики, пріоритети скидання, ручні команди з блокуваннями й підтвердженням, "
-    "розклад і журнал",
-    "description": "Керування електропостачанням і енергоспоживанням заводу: 6 сценаріїв автоматики (виконує збирач), "
-    "ручні команди класів A/B з блокуваннями, підтвердженням і другим підтвердженням, розклад, журнал і скасування. "
-    "Не керує системами безпеки (пожежна автоматика, евакуаційне освітлення, захист людей).",
+    "name": "Energy Control",
+    "summary": "Automation scenarios, load-shedding priorities, manual commands with interlocks and confirmation, schedule, journal",
+    "description": """
+Energy Control
+==============
+
+Control of power supply and energy consumption of the plant: automation scenarios, load-shedding priorities and manual commands, each with interlocks, confirmation and a journal.
+
+Key features
+------------
+
+* Six automation scenarios executed by the collector
+* Load-shedding priorities
+* Manual commands of classes A and B with interlocks, confirmation and, where required, a second confirmation
+* Schedule, journal and cancellation of commands
+
+Requirements and notes
+----------------------
+
+* Scenarios are executed by the Factory 3D collector service, which is not part of this module.
+* The module does not control safety systems (fire automation, emergency lighting, protection of people).
+""",
     "version": "19.0.1.0.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "depends": ["td_energy", "td_telemetry", "td_bms"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/td_energy_control_security.xml",  # A
         "security/ir.model.access.csv",  # A

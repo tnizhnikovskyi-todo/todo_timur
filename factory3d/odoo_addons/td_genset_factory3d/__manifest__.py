@@ -1,11 +1,28 @@
 {
-    "name": "Генератори — Завод 3D",
-    "summary": "Зв'язка генератора td_genset з моделлю заводу: телеметрія, заявки ТО, картка в 3D, баланс при блекауті",
+    "name": "Generator Factory Bridge",
+    "summary": "Link of Generators with the factory model: telemetry, maintenance requests, 3D card, blackout balance",
+    "description": """
+Generator Factory Bridge
+========================
+
+Bridge between Generators and the Factory 3D suite: telemetry, energy, maintenance and a 3D card for every generator.
+
+Key features
+------------
+
+* Generator signals in telemetry
+* Maintenance requests for generators
+* Generator card in the 3D viewer (optional)
+* Power balance during a blackout in Factory Energy
+""",
     "version": "19.0.1.1.0",
     "author": "ToDo",
+    "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",
     "depends": ["td_genset", "td_factory3d", "td_telemetry", "td_energy"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/ir.model.access.csv",
         "security/td_genset_factory3d_security.xml",  # W1 (C): implied_ids «Енергетик» → td_genset.group_user

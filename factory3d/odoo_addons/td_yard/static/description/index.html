@@ -1,0 +1,49 @@
+<section class="oe_container">
+    <div class="oe_row oe_spaced">
+        <h2 class="oe_slogan">Yard Management</h2>
+        <h3 class="oe_slogan">Plant yard: third-party truck trips, gate booking, license plate recognition, barriers, truck scales</h3>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>Manages the plant yard: visiting trucks, gate booking, number plate recognition, barriers and weighbridges, with a dispatcher board and a checkpoint screen.</p>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>Trips of third-party trucks and gate booking</li>
+            <li>License plate recognition events (Axis LPV)</li>
+            <li>Barrier commands (CAME) sent through telemetry, with safety switches</li>
+            <li>Truck scales (SICS protocol, Mettler Toledo)</li>
+            <li>Dispatcher board and a checkpoint (gatehouse) screen</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Factory 3D suite modules: Factory 3D Core (<code>td_factory3d</code>), Factory 3D Telemetry (<code>td_telemetry</code>).</li>
+            <li>Odoo modules: <code>stock_picking_batch</code>, <code>stock_fleet</code>, <code>delivery</code>, <code>stock_delivery</code>, <code>mail</code>, <code>bus</code>.</li>
+            <li>Device events and commands go through the Factory 3D collector service (yard plugin), which is not part of this module.</li>
+            <li>Processing of events and sending of barrier commands are disabled by default.</li>
+            <li>The Gantt view of gate bookings is provided by the separate bridge Yard Gantt, which requires Odoo Enterprise.</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
+    </div>
+</section>

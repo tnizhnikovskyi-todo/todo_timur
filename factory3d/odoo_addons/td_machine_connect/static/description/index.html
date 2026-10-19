@@ -1,0 +1,50 @@
+<section class="oe_container">
+    <div class="oe_row oe_spaced">
+        <h2 class="oe_slogan">Machine Connect</h2>
+        <h3 class="oe_slogan">Machine states to time log: auto start, downtime reasons, OEE, STORETEQ portal, cutting maps</h3>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>Connects woodworking machines to Manufacturing. Machine states become a state and downtime journal, work orders start, pause and finish automatically, and OEE is calculated from actual data.</p>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>States of HOMAG machines (OPC UA, OPC 40550-1) and of machines without an interface (I/O modules)</li>
+            <li>State and downtime journal with downtime reasons</li>
+            <li>Automatic start, pause and finish of work orders, with the operator stored on the work order</li>
+            <li>OEE from actual data</li>
+            <li>HOMAG STORETEQ P-500 portal warehouse: stacks versus stock, portal jobs from manufacturing orders</li>
+            <li>Cutting maps and CNC programs attached to manufacturing orders</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Factory 3D suite modules: Factory 3D Telemetry (<code>td_telemetry</code>).</li>
+            <li>Odoo modules: <code>mrp</code>, <code>hr</code>, <code>stock</code>, <code>maintenance</code>.</li>
+            <li>Machine data comes from a separate collector service with the opcua and rest_vendor plugins. The collector is not part of this module.</li>
+            <li>Automatic start and writing to machines are disabled by default and enabled by system parameters.</li>
+            <li>Works with Odoo Community; the Enterprise mrp_workorder module is not required.</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
+    </div>
+</section>

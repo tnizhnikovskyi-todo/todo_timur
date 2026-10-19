@@ -1,0 +1,48 @@
+<section class="oe_container">
+    <div class="oe_row oe_spaced">
+        <h2 class="oe_slogan">Factory 3D Telemetry</h2>
+        <h3 class="oe_slogan">Data acquisition backbone: sources, signals and readings from equipment, thresholds to maintenance requests</h3>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>Common data-collection backbone of the Factory 3D suite. Equipment signals are received through an HTTP API, stored as readings, and used for alarms and maintenance planning.</p>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>Collectors, sources, signals, readings and hourly aggregates</li>
+            <li>HTTP push API (/f3d/telemetry/*) with rate limits and retention settings</li>
+            <li>Thresholds that create maintenance requests</li>
+            <li>Meter-based maintenance (preventive requests by counter value)</li>
+            <li>Command log for writing to devices, guarded by safety switches that are off by default</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Factory 3D suite modules: Factory 3D Core (<code>td_factory3d</code>).</li>
+            <li>Odoo modules: <code>maintenance</code>, <code>mail</code>, <code>web</code>.</li>
+            <li>Readings are delivered by a separate collector service (Modbus TCP, MQTT, HTTP push and BACnet/IP plugins). The collector is not part of this module and runs on the customer site.</li>
+            <li>Reading and writing are controlled by system parameters; writing to devices is disabled by default.</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
+    </div>
+</section>

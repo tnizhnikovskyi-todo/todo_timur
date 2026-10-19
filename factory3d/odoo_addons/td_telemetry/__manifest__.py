@@ -1,15 +1,35 @@
 {
-    "name": "Телеметрія",
-    "summary": "Джерела, сигнали, показання з обладнання; пороги → заявки ТО; ТО за лічильником; API колектора",
-    "description": "Спільний хребет збору даних factory3d: td.collector, td.source, td.signal, td.reading, "
-    "td.reading.hour, td.command; ендпоінти /f3d/telemetry/*; плагіни колектора modbus_tcp, mqtt, "
-    "http_push, bacnet_ip (services/collector); міграція рівня 0 td_iot_sim.",
+    "name": "Factory 3D Telemetry",
+    "summary": "Data acquisition backbone: sources, signals and readings from equipment, thresholds to maintenance requests",
+    "description": """
+Factory 3D Telemetry
+====================
+
+Common data-collection backbone of the Factory 3D suite. Equipment signals are received through an HTTP API, stored as readings, and used for alarms and maintenance planning.
+
+Key features
+------------
+
+* Collectors, sources, signals, readings and hourly aggregates
+* HTTP push API (/f3d/telemetry/*) with rate limits and retention settings
+* Thresholds that create maintenance requests
+* Meter-based maintenance (preventive requests by counter value)
+* Command log for writing to devices, guarded by safety switches that are off by default
+
+Requirements and notes
+----------------------
+
+* Readings are delivered by a separate collector service (Modbus TCP, MQTT, HTTP push and BACnet/IP plugins). The collector is not part of this module and runs on the customer site.
+* Reading and writing are controlled by system parameters; writing to devices is disabled by default.
+""",
     "version": "19.0.1.1.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "depends": ["td_factory3d", "maintenance", "mail", "web"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",

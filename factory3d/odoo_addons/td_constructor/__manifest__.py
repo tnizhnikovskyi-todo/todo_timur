@@ -1,19 +1,35 @@
 # ruff: noqa: B018
 {
-    "name": "Конструктор",
-    "summary": "Конструктор розкладки заводу: площадки, шари, місця зі стелажів-шаблонів, каталог варіантів "
-    "обладнання з 3D, "
-    "перевірки, публікація в Odoo",
-    "description": "3D-редактор розкладки (шари з відмітками, сітка, шаблони стелажів → комірки, "
-    "розстановка обладнання "
-    "з перевірками), каталог варіантів на паспортах обладнання з 3D-моделлю, чернетка → публікація "
-    "з підтвердженням і історією версій.",
+    "name": "Factory 3D Constructor",
+    "summary": "Factory layout constructor: sites, layers, rack templates, equipment variants with 3D, checks, publishing",
+    "description": """
+Factory 3D Constructor
+======================
+
+A 3D layout editor for the factory floor. Plan the plant layer by layer, place racks and equipment, run layout checks, and publish a confirmed version to Odoo.
+
+Key features
+------------
+
+* Sites and layers with elevation marks and a grid
+* Rack templates that generate storage cells (locations) automatically
+* Catalog of equipment variants kept on equipment passports, each with a 3D model
+* Placement checks while arranging equipment
+* Draft, then publication with confirmation and a version history
+
+Requirements and notes
+----------------------
+
+* The editor bundle is included in the module; no external build step or CDN is needed.
+""",
     "version": "19.0.1.4.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "depends": ["td_factory3d", "td_viewer3d", "stock", "maintenance", "mrp"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/td_constructor_security.xml",
         "security/ir.model.access.csv",

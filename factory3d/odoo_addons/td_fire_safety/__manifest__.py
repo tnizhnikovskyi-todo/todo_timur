@@ -1,12 +1,34 @@
 {
-    "name": "Пожежна безпека",
-    "summary": "Пожежна сигналізація (лише читання), іскрогасіння, димовидалення, евакуація за нормами, навчальні тривоги",
+    "name": "Fire Safety",
+    "summary": "Fire alarm (read-only), spark extinguishing, smoke removal, evacuation by norms, training alarms",
+    "description": """
+Fire Safety
+===========
+
+Brings fire safety systems of the plant into Odoo. The fire alarm is read-only: the module never writes to the panel and never creates device commands.
+
+Key features
+------------
+
+* Fire alarm panel monitoring (read-only)
+* Spark extinguishing, smoke removal and sprinklers
+* Evacuation by norms
+* Training alarms
+
+Requirements and notes
+----------------------
+
+* Data comes from the Factory 3D collector service, which is not part of this module.
+* The module is a monitoring and documentation tool; it does not replace certified fire protection equipment.
+""",
     "version": "19.0.1.0.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "depends": ["td_telemetry", "hr_attendance"],
+    "images": ["static/description/banner.png"],
     # W0-скелет (DEC-1): моделей модуля ще немає, тому активні лише файли без залежності від моделей.
     # Повний порядок SPEC §1 — у закоментованих рядках; лідер розкоментовує їх по мірі появи моделей W1…W4
     # (порядок істотний: норми → прилад/шлейфи → зони → системи → димові зони → пристрої → виходи → маршрути →

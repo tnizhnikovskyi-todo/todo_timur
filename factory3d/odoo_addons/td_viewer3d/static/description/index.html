@@ -1,60 +1,47 @@
 <section class="oe_container">
     <div class="oe_row oe_spaced">
-        <h2 class="oe_slogan">Завод 3D: переглядач</h2>
-        <h3 class="oe_slogan">Цех, склад і виробництво в тривимірній моделі — з живими даними Odoo</h3>
+        <h2 class="oe_slogan">Factory 3D Viewer</h2>
+        <h3 class="oe_slogan">3D viewer of the factory inside Odoo: live ORM data, Show in 3D, state journal, shop-floor kiosk</h3>
     </div>
 </section>
 
 <section class="oe_container">
-    <h3>Показати в 3D</h3>
-    <p><i>Майстер, комірник, механік.</i></p>
-    <ol>
-        <li>Відкрийте форму МО, переміщення, робочого центру, місця зберігання, обладнання, співробітника, зони або замовлення клієнта.</li>
-        <li>У шапці натисніть «Показати в 3D».</li>
-        <li>Переглядач відкриється з вибраним об'єктом або маршрутом документа; у картці праворуч — ті самі дані, що на формі.</li>
-        <li>Кнопка «← Назад» у Odoo повертає на форму.</li>
-    </ol>
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>Displays the plant, warehouse and production in an interactive 3D scene right inside Odoo 19. Objects in the scene are colored and labelled from live Odoo data, so the scene always shows the current state of stock, manufacturing, maintenance, people and logistics.</p>
+        <p>The 3D engine and the sample models are bundled with the module; no internet access or CDN is required.</p>
+    </div>
+</section>
 
-    <h3>З 3D у форму Odoo</h3>
-    <p><i>Усі користувачі.</i></p>
-    <ol>
-        <li>Клацніть по об'єкту в сцені або по рядку в панелі.</li>
-        <li>У картці натисніть «Відкрити в Odoo».</li>
-        <li>Якщо запису в базі немає (інженерний об'єкт без моделі), з'явиться повідомлення, переглядач лишається відкритим.</li>
-    </ol>
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>Show in 3D: a button on manufacturing orders, transfers, work centers, locations, equipment, employees and zones opens the viewer on the selected object or on the document route</li>
+            <li>Open in Odoo: click an object in the scene to open its form</li>
+            <li>State journal with snapshots and shift replay with a time slider</li>
+            <li>Kiosk screen for a shop-floor tablet, opened by a token URL without a login</li>
+            <li>Cycle check that reports gaps in the receiving-to-shipping chain, and a demo-data wizard for test servers</li>
+        </ul>
+    </div>
+</section>
 
-    <h3>Екран у цеху</h3>
-    <p><i>Адміністратор, один раз на екран.</i></p>
-    <ol>
-        <li>Завод 3D → Налаштування → Налаштування переглядача → скопіюйте «URL кіоска».</li>
-        <li>Додайте потрібні параметри: <code>?tab=production&amp;mode=oee</code> (дільниця), <code>?tab=overview&amp;layers=prod</code>
-            (диспетчерська), <code>&amp;lite=1</code> для планшета.</li>
-        <li>На планшеті відкрийте URL у Chrome і «Додати на головний екран» або закріпіть у Samsung Knox Kiosk.</li>
-        <li>Якщо токен скомпрометовано — «Новий токен кіоска»; старі адреси перестануть працювати одразу, оновіть URL на екранах.</li>
-    </ol>
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Factory 3D suite modules: Factory 3D Core (<code>td_factory3d</code>).</li>
+            <li>Odoo modules: <code>bus</code>, <code>web</code>.</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
 
-    <h3>Програвання зміни</h3>
-    <p><i>Менеджер, майстер.</i></p>
-    <ol>
-        <li>У переглядачі натисніть ▶ або тягніть повзунок 07:00–15:30.</li>
-        <li>Якщо на цей день є знімки (Завод 3D → Журнал станів), повзунок показує реальні стани на той час; якщо ні — план за датами завдань (позначка «план» біля часу).</li>
-        <li>«Зараз» повертає до живих даних.</li>
-    </ol>
-
-    <h3>Перевірка циклу</h3>
-    <p><i>Менеджер.</i></p>
-    <ol>
-        <li>Завод 3D → Перевірка циклу → «Запустити».</li>
-        <li>«Цикл замкнений» — усе гаразд; інакше список проблем, кожен рядок відкриває документ або об'єкт.</li>
-        <li>Типові причини: приймання без воріт (немає пакетного переміщення з доком), відвантаження з рядками, що не збігаються із замовленням, компонент МО без шляху (немає приймання цього товару).</li>
-    </ol>
-
-    <h3>Демо-дані на тестовому сервері</h3>
-    <p><i>Адміністратор.</i></p>
-    <ol>
-        <li>Переконайтесь, що це не прод (у налаштуваннях «Заливка демо дозволена» увімкнена лише на тесті).</li>
-        <li>Завод 3D → Демо-дані → «Запустити всі кроки» (або оберіть кроки).</li>
-        <li>Майстер працює у фоні 10–20 хв; прогрес і лог — у тому ж вікні («Оновити»).</li>
-        <li>Повторний запуск нічого не дублює.</li>
-    </ol>
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
+    </div>
 </section>

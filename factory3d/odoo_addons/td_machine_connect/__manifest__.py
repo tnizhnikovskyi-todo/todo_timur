@@ -1,18 +1,38 @@
 {
-    "name": "Верстати",
-    "summary": "Стани верстатів → журнал часу, автостарт, простої з причинами, OEE; портал STORETEQ; карти розкрою",
-    "description": "Підключення верстатів HOMAG (OPC UA, OPC 40550-1) і верстатів без інтерфейсу (I/O ADAM): "
-    "нормалізовані "
-    "стани, журнал станів і простоїв, автостарт/пауза/завершення робочих завдань, OEE за фактом; портальний "
-    "склад плит HOMAG STORETEQ P-500 (стоси ↔ залишки, завдання порталу з МО); карти розкрою й програми "
-    "ЧПК з МО. Плагіни колектора opcua і rest_vendor — services/collector_plugins/machine_connect.",
+    "name": "Machine Connect",
+    "summary": "Machine states to time log: auto start, downtime reasons, OEE, STORETEQ portal, cutting maps",
+    "description": """
+Machine Connect
+===============
+
+Connects woodworking machines to Manufacturing. Machine states become a state and downtime journal, work orders start, pause and finish automatically, and OEE is calculated from actual data.
+
+Key features
+------------
+
+* States of HOMAG machines (OPC UA, OPC 40550-1) and of machines without an interface (I/O modules)
+* State and downtime journal with downtime reasons
+* Automatic start, pause and finish of work orders, with the operator stored on the work order
+* OEE from actual data
+* HOMAG STORETEQ P-500 portal warehouse: stacks versus stock, portal jobs from manufacturing orders
+* Cutting maps and CNC programs attached to manufacturing orders
+
+Requirements and notes
+----------------------
+
+* Machine data comes from a separate collector service with the opcua and rest_vendor plugins. The collector is not part of this module.
+* Automatic start and writing to machines are disabled by default and enabled by system parameters.
+* Works with Odoo Community; the Enterprise mrp_workorder module is not required.
+""",
     "version": "19.0.1.0.1",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     # DEC-1/ENV-3: mrp_workorder (Enterprise) у середовищі немає; mrp, hr, stock, maintenance — явно (CE).
     "depends": ["td_telemetry", "mrp", "hr", "stock", "maintenance"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",

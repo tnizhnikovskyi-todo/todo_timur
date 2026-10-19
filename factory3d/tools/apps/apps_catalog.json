@@ -1,0 +1,605 @@
+{
+  "_comment": "Source of truth for Odoo Apps listing content (English). Used by gen_apps_content.py (manifest keys, static/description/index.html, banner.png, generated icons) and check_apps.py (declared edition). edition: ce = must work on Odoo Community (no Enterprise module in the dependency closure), ee = requires Odoo Enterprise. role: core | product | addon | bridge | ee_bridge | tool. publish: standalone | dependency | ee_only | optional.",
+  "defaults": {
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "support": "support@todo.ltd"
+  },
+  "modules": {
+    "td_factory3d": {
+      "name": "Factory 3D Core",
+      "summary": "Base of the Factory 3D suite: scene codes, shop-floor zones, dock gates, equipment passports, access groups",
+      "intro": [
+        "Foundation module of the Factory 3D suite for Odoo 19. It links standard Odoo records (locations, work centers, equipment, employees, vehicles) to objects of the 3D factory model and prepares the data that the other suite modules build on."
+      ],
+      "features": [
+        "Scene-code mixin (td.scene.mixin): a stable code that ties an Odoo record to an object in the 3D model",
+        "Shop-floor zones (td.zone) for grouping locations, work centers and equipment",
+        "Warehouse gates modelled as docks, with trucks and vehicles on top of standard Fleet and Inventory",
+        "Equipment passports on maintenance equipment",
+        "Security groups Factory 3D User, Manager and Administrator used by all suite modules"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "core",
+      "publish": "standalone",
+      "color": "#2b5aa0",
+      "mono": "F3"
+    },
+    "td_viewer3d": {
+      "name": "Factory 3D Viewer",
+      "summary": "3D viewer of the factory inside Odoo: live ORM data, Show in 3D, state journal, shop-floor kiosk",
+      "intro": [
+        "Displays the plant, warehouse and production in an interactive 3D scene right inside Odoo 19. Objects in the scene are colored and labelled from live Odoo data, so the scene always shows the current state of stock, manufacturing, maintenance, people and logistics.",
+        "The 3D engine and the sample models are bundled with the module; no internet access or CDN is required."
+      ],
+      "features": [
+        "Show in 3D: a button on manufacturing orders, transfers, work centers, locations, equipment, employees and zones opens the viewer on the selected object or on the document route",
+        "Open in Odoo: click an object in the scene to open its form",
+        "State journal with snapshots and shift replay with a time slider",
+        "Kiosk screen for a shop-floor tablet, opened by a token URL without a login",
+        "Cycle check that reports gaps in the receiving-to-shipping chain, and a demo-data wizard for test servers"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#6f42c1",
+      "mono": "3D"
+    },
+    "td_viewer3d_sale": {
+      "name": "Factory 3D Viewer Sales",
+      "summary": "Show in 3D button on sales orders (bridge between the 3D viewer and Sales)",
+      "intro": [
+        "Small bridge between Factory 3D Viewer and Sales. It is installed automatically when both are present."
+      ],
+      "features": [
+        "Adds the Show in 3D button to the sales order form",
+        "Opens the 3D viewer for the selected order"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#6f42c1",
+      "mono": "3S"
+    },
+    "td_constructor": {
+      "name": "Factory 3D Constructor",
+      "summary": "Factory layout constructor: sites, layers, rack templates, equipment variants with 3D, checks, publishing",
+      "intro": [
+        "A 3D layout editor for the factory floor. Plan the plant layer by layer, place racks and equipment, run layout checks, and publish a confirmed version to Odoo."
+      ],
+      "features": [
+        "Sites and layers with elevation marks and a grid",
+        "Rack templates that generate storage cells (locations) automatically",
+        "Catalog of equipment variants kept on equipment passports, each with a 3D model",
+        "Placement checks while arranging equipment",
+        "Draft, then publication with confirmation and a version history"
+      ],
+      "notes": [
+        "The editor bundle is included in the module; no external build step or CDN is needed."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#2c3e50",
+      "mono": "CT"
+    },
+    "td_constructor_viewer3d": {
+      "name": "Constructor 3D Bridge",
+      "summary": "Viewer provider layout: shows the layout published in the Constructor on top of the 3D model",
+      "intro": [
+        "Bridge between Factory 3D Constructor and Factory 3D Viewer, installed automatically when both are present."
+      ],
+      "features": [
+        "The viewer shows the layout published in the Constructor",
+        "Moved, added and removed objects are highlighted relative to the model"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#6f42c1",
+      "mono": "C3"
+    },
+    "td_telemetry": {
+      "name": "Factory 3D Telemetry",
+      "summary": "Data acquisition backbone: sources, signals and readings from equipment, thresholds to maintenance requests",
+      "intro": [
+        "Common data-collection backbone of the Factory 3D suite. Equipment signals are received through an HTTP API, stored as readings, and used for alarms and maintenance planning."
+      ],
+      "features": [
+        "Collectors, sources, signals, readings and hourly aggregates",
+        "HTTP push API (/f3d/telemetry/*) with rate limits and retention settings",
+        "Thresholds that create maintenance requests",
+        "Meter-based maintenance (preventive requests by counter value)",
+        "Command log for writing to devices, guarded by safety switches that are off by default"
+      ],
+      "notes": [
+        "Readings are delivered by a separate collector service (Modbus TCP, MQTT, HTTP push and BACnet/IP plugins). The collector is not part of this module and runs on the customer site.",
+        "Reading and writing are controlled by system parameters; writing to devices is disabled by default."
+      ],
+      "edition": "ce",
+      "role": "core",
+      "publish": "standalone",
+      "color": "#0e8a8a",
+      "mono": "TL"
+    },
+    "td_telemetry_viewer3d": {
+      "name": "Telemetry 3D Bridge",
+      "summary": "Viewer provider: telemetry signal values in the 3D viewer payload",
+      "intro": [
+        "Bridge between Factory 3D Telemetry and the 3D viewer, installed automatically when both are present. It adds no models, data or menus."
+      ],
+      "features": [
+        "Adds the values of telemetry signals to the viewer payload",
+        "Signal values become visible on the 3D objects they belong to"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#0e8a8a",
+      "mono": "T3"
+    },
+    "td_machine_connect": {
+      "name": "Machine Connect",
+      "summary": "Machine states to time log: auto start, downtime reasons, OEE, STORETEQ portal, cutting maps",
+      "intro": [
+        "Connects woodworking machines to Manufacturing. Machine states become a state and downtime journal, work orders start, pause and finish automatically, and OEE is calculated from actual data."
+      ],
+      "features": [
+        "States of HOMAG machines (OPC UA, OPC 40550-1) and of machines without an interface (I/O modules)",
+        "State and downtime journal with downtime reasons",
+        "Automatic start, pause and finish of work orders, with the operator stored on the work order",
+        "OEE from actual data",
+        "HOMAG STORETEQ P-500 portal warehouse: stacks versus stock, portal jobs from manufacturing orders",
+        "Cutting maps and CNC programs attached to manufacturing orders"
+      ],
+      "notes": [
+        "Machine data comes from a separate collector service with the opcua and rest_vendor plugins. The collector is not part of this module.",
+        "Automatic start and writing to machines are disabled by default and enabled by system parameters.",
+        "Works with Odoo Community; the Enterprise mrp_workorder module is not required."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#0e8a8a",
+      "mono": "MC"
+    },
+    "td_machine_connect_mrp_workorder": {
+      "name": "Machine Connect Workorder",
+      "summary": "Auto start/stop with the employees of Enterprise mrp_workorder (start_employee/stop_employee)",
+      "intro": [
+        "Bridge between Machine Connect and the Odoo Enterprise Manufacturing Work Orders app (mrp_workorder). It is installed automatically when both are present.",
+        "The module contains no code of its own: the Machine Connect core already uses the work center employees through duck typing, so the bridge only declares the dependency."
+      ],
+      "features": [
+        "Machine auto start and stop work with the employees of mrp_workorder",
+        "Uses start_employee and stop_employee of Enterprise work orders"
+      ],
+      "notes": [
+        "Requires Odoo Enterprise: depends on mrp_workorder."
+      ],
+      "edition": "ee",
+      "edition_reason": "depends on mrp_workorder (Enterprise)",
+      "role": "ee_bridge",
+      "publish": "ee_only",
+      "color": "#0e8a8a",
+      "mono": "MW"
+    },
+    "td_iot_sim": {
+      "name": "Equipment Simulator",
+      "summary": "Console of the factory equipment simulator: device registry, signal catalog, scenarios, level 0",
+      "intro": [
+        "Control panel for the Factory 3D equipment simulator. It lets you demonstrate and test the suite without real hardware: simulated devices produce signals, and scenarios replay typical situations."
+      ],
+      "features": [
+        "Registry of simulated devices and a catalog of signals",
+        "Scenarios and runs with an event journal",
+        "Simulator panel",
+        "Level 0: simulated signals on work centers and maintenance equipment"
+      ],
+      "notes": [
+        "The simulator service itself runs outside Odoo and is not part of this module.",
+        "Intended for demos, training and testing, not for production data."
+      ],
+      "edition": "ce",
+      "role": "tool",
+      "publish": "optional",
+      "color": "#0e8a8a",
+      "mono": "SM"
+    },
+    "td_yard": {
+      "name": "Yard Management",
+      "summary": "Plant yard: third-party truck trips, gate booking, license plate recognition, barriers, truck scales",
+      "intro": [
+        "Manages the plant yard: visiting trucks, gate booking, number plate recognition, barriers and weighbridges, with a dispatcher board and a checkpoint screen."
+      ],
+      "features": [
+        "Trips of third-party trucks and gate booking",
+        "License plate recognition events (Axis LPV)",
+        "Barrier commands (CAME) sent through telemetry, with safety switches",
+        "Truck scales (SICS protocol, Mettler Toledo)",
+        "Dispatcher board and a checkpoint (gatehouse) screen"
+      ],
+      "notes": [
+        "Device events and commands go through the Factory 3D collector service (yard plugin), which is not part of this module.",
+        "Processing of events and sending of barrier commands are disabled by default.",
+        "The Gantt view of gate bookings is provided by the separate bridge Yard Gantt, which requires Odoo Enterprise."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#8d5a2b",
+      "mono": "YD"
+    },
+    "td_yard_gantt": {
+      "name": "Yard Gantt",
+      "summary": "Gantt view of gate bookings (requires web_gantt, Odoo Enterprise)",
+      "intro": [
+        "Adds a Gantt view to the gate bookings of Yard Management. It is installed automatically when Yard Management and the Enterprise web_gantt module are present."
+      ],
+      "features": [
+        "Gantt view of gate bookings by gate and time"
+      ],
+      "notes": [
+        "Requires Odoo Enterprise: depends on web_gantt."
+      ],
+      "edition": "ee",
+      "edition_reason": "depends on web_gantt (Enterprise)",
+      "role": "ee_bridge",
+      "publish": "ee_only",
+      "color": "#8d5a2b",
+      "mono": "YG"
+    },
+    "td_access": {
+      "name": "Factory Access Control",
+      "summary": "Suprema BioStar 2: attendance check-ins, cards, turnstiles, visitors, people by zone",
+      "intro": [
+        "Polls the REST API of a Suprema BioStar 2 access control server and brings its data into Odoo: an event journal, attendance records for perimeter passes, presence and zones of people, door status, cards and visitors."
+      ],
+      "features": [
+        "Event journal of passes and door events",
+        "Check-ins and check-outs in Attendances created from perimeter passes",
+        "Presence and zone of every person, and door status",
+        "Cards and visitors, managed under a write safety switch"
+      ],
+      "notes": [
+        "Connects to the customer's own BioStar 2 server; the password is entered by an administrator in the settings. No data is sent to the module vendor.",
+        "Writing to BioStar 2 is disabled by default."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#455a64",
+      "mono": "AC"
+    },
+    "td_access_telemetry": {
+      "name": "Access Telemetry Bridge",
+      "summary": "Seven access/* access-control signals in telemetry",
+      "intro": [
+        "Bridge between Factory Access Control and Factory 3D Telemetry, installed automatically when both are present."
+      ],
+      "features": [
+        "Publishes seven access control signals as telemetry signals"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#455a64",
+      "mono": "AT"
+    },
+    "td_bms": {
+      "name": "Building Management",
+      "summary": "Lighting groups by norms, DALI/HelvarNet, rooftop units and boiler room (BACnet), heat balance, deviations",
+      "intro": [
+        "Building management for the plant: lighting, ventilation and heating, with a heat balance and a deviation journal that creates maintenance requests."
+      ],
+      "features": [
+        "Lighting norms, panels and lighting groups (DALI, HelvarNet)",
+        "Ventilation and heating units and the boiler room (BACnet)",
+        "Heat balance of the workshop",
+        "Deviation journal; deviations create maintenance requests",
+        "Building overview and 3D viewer providers for lighting and ventilation"
+      ],
+      "notes": [
+        "Device data comes from the Factory 3D collector service (HelvarNet and BACnet plugins), which is not part of this module.",
+        "Writing to building systems is disabled by default."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#2e7d32",
+      "mono": "BM"
+    },
+    "td_energy": {
+      "name": "Factory Energy",
+      "summary": "Power supply scheme, PM5560 meters, 15-minute profile, kWh and cost per work order, tariffs, demand limit",
+      "intro": [
+        "Electric energy management for a manufacturing plant. Models the power supply hierarchy, collects meter readings through telemetry, and allocates energy and cost to work orders and manufacturing orders."
+      ],
+      "features": [
+        "Hierarchy: infeed, transformer, main switchboard, busway, consumer",
+        "Power meters (PM5560) on top of Factory 3D Telemetry, 15-minute profile and balance",
+        "Energy allocation to work orders and manufacturing order costing (kWh and cost)",
+        "Solar plant, battery storage, cogeneration unit and automatic transfer switch (ATS), grid outage handling",
+        "Tariffs and a demand (power) limit"
+      ],
+      "notes": [
+        "Meter data comes from the Factory 3D collector service, which is not part of this module."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#e08a00",
+      "mono": "EN"
+    },
+    "td_energy_analytics": {
+      "name": "Energy Analytics",
+      "summary": "Daily facts, drivers, ISO 50001 baseline and EnPI, budget, breakdowns, savings reserves, management reports",
+      "intro": [
+        "Analytics on top of Factory Energy and Energy Resources: normalization drivers, ISO 50001 baseline model and indicators, an energy budget, breakdowns and a heat map, with PDF reports for management and for a shift."
+      ],
+      "features": [
+        "Sections, normalization drivers (board area in m2, degree-days) and daily facts",
+        "ISO 50001 baseline model (regression) and EnPI",
+        "Energy budget",
+        "Breakdowns by section, equipment, order, product and shift; heat map",
+        "Analytics screen, PDF Management report and Shift report"
+      ],
+      "notes": [
+        "PDF reports use the standard Odoo wkhtmltopdf setup."
+      ],
+      "edition": "ce",
+      "role": "addon",
+      "publish": "standalone",
+      "color": "#e08a00",
+      "mono": "EA",
+      "shot": {
+        "src": "factory3d/build/energy/shots/w4b/analytics_1440.png",
+        "crop": [
+          0,
+          0,
+          1440,
+          900
+        ],
+        "width": 1000,
+        "name": "screenshot_analytics.png",
+        "caption": "Analytics screen"
+      }
+    },
+    "td_energy_control": {
+      "name": "Energy Control",
+      "summary": "Automation scenarios, load-shedding priorities, manual commands with interlocks and confirmation, schedule, journal",
+      "intro": [
+        "Control of power supply and energy consumption of the plant: automation scenarios, load-shedding priorities and manual commands, each with interlocks, confirmation and a journal."
+      ],
+      "features": [
+        "Six automation scenarios executed by the collector",
+        "Load-shedding priorities",
+        "Manual commands of classes A and B with interlocks, confirmation and, where required, a second confirmation",
+        "Schedule, journal and cancellation of commands"
+      ],
+      "notes": [
+        "Scenarios are executed by the Factory 3D collector service, which is not part of this module.",
+        "The module does not control safety systems (fire automation, emergency lighting, protection of people)."
+      ],
+      "edition": "ce",
+      "role": "addon",
+      "publish": "standalone",
+      "color": "#e08a00",
+      "mono": "EC",
+      "shot": {
+        "src": "factory3d/build/energy/shots/w2b/dialog_1440.png",
+        "crop": [
+          0,
+          0,
+          1440,
+          900
+        ],
+        "width": 1000,
+        "name": "screenshot_control.png",
+        "caption": "Manual command with interlock check and confirmation"
+      }
+    },
+    "td_energy_mobile": {
+      "name": "Energy Rounds Mobile",
+      "summary": "Mobile screen of the energy duty officer: Rounds tab with checklists, round journal, deviation events",
+      "intro": [
+        "Adds a Rounds tab to the mobile screen of the duty energy engineer: checklists for substations and switchboards, a round journal and events for deviations."
+      ],
+      "features": [
+        "Round templates with slots by schedule",
+        "Checking items with the signal value shown next to the norm",
+        "Finishing a round writes a journal entry and events for deviations",
+        "Scheduled actions that open and close rounds"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "addon",
+      "publish": "standalone",
+      "color": "#e08a00",
+      "mono": "EM",
+      "shot": {
+        "src": "factory3d/build/energy/shots/w4c/mobile_4_round.png",
+        "crop": null,
+        "width": 390,
+        "name": "screenshot_round.png",
+        "caption": "Rounds tab on a phone"
+      }
+    },
+    "td_energy_resources": {
+      "name": "Energy Resources",
+      "summary": "Gas, heat, compressed air and water: meters of any resource, 15-minute series, cost, savings reserves",
+      "intro": [
+        "Extends Factory Energy to non-electric resources: gas, heat, compressed air and water, with prices, metering points, meters and savings reserves."
+      ],
+      "features": [
+        "Resource catalog, prices, metering points and meters",
+        "15-minute intervals: meter value, flow integral and estimate",
+        "Reactive energy",
+        "Usage summary, savings reserves and detectors",
+        "Energy Resources screen and Excel export"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "addon",
+      "publish": "standalone",
+      "color": "#e08a00",
+      "mono": "ER",
+      "shot": {
+        "src": "factory3d/build/energy/shots/w3c/desktop-1440-gas.png",
+        "crop": [
+          0,
+          0,
+          1440,
+          900
+        ],
+        "width": 1000,
+        "name": "screenshot_resources.png",
+        "caption": "Energy Resources screen (gas)"
+      }
+    },
+    "td_energy_resources_bms": {
+      "name": "Energy Resources BMS",
+      "summary": "Bridge of Energy Resources and Building Management: heat points and meters from BMS, KPIs, three detectors",
+      "intro": [
+        "Bridge between Energy Resources and Building Management, installed automatically when both are present."
+      ],
+      "features": [
+        "Heat points and meters created from the building management system",
+        "Temperature and heat-recovery KPIs",
+        "Three savings-reserve detectors"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#e08a00",
+      "mono": "RB"
+    },
+    "td_energy_viewer3d": {
+      "name": "Energy 3D Layer",
+      "summary": "Energy in 3D layer: node coloring by state, alarm markers, node card, jump from the console",
+      "intro": [
+        "Adds an Energy layer to the 3D viewer. It creates no data of its own; removing the module removes the layer."
+      ],
+      "features": [
+        "Nodes of the power scheme colored by state",
+        "Alarm markers in the scene",
+        "Node card with live values",
+        "Jump from the Energy console to the 3D scene"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#e08a00",
+      "mono": "E3"
+    },
+    "td_fire_safety": {
+      "name": "Fire Safety",
+      "summary": "Fire alarm (read-only), spark extinguishing, smoke removal, evacuation by norms, training alarms",
+      "intro": [
+        "Brings fire safety systems of the plant into Odoo. The fire alarm is read-only: the module never writes to the panel and never creates device commands."
+      ],
+      "features": [
+        "Fire alarm panel monitoring (read-only)",
+        "Spark extinguishing, smoke removal and sprinklers",
+        "Evacuation by norms",
+        "Training alarms"
+      ],
+      "notes": [
+        "Data comes from the Factory 3D collector service, which is not part of this module.",
+        "The module is a monitoring and documentation tool; it does not replace certified fire protection equipment."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#c0392b",
+      "mono": "FS"
+    },
+    "td_fire_safety_viewer3d": {
+      "name": "Fire Safety 3D Bridge",
+      "summary": "Viewer providers: fire and evacuation sections",
+      "intro": [
+        "Bridge between Fire Safety and the 3D viewer, installed automatically when both are present. It adds no models of its own."
+      ],
+      "features": [
+        "Fire section in the 3D viewer",
+        "Evacuation section in the 3D viewer"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#c0392b",
+      "mono": "F3"
+    },
+    "td_genset": {
+      "name": "Generators",
+      "summary": "Monitoring and control of SmartGen HGM6120N generators through a relay",
+      "intro": [
+        "Monitoring and control of generator sets with the SmartGen HGM6120N controller through a relay service. Current state, event and alarm journals, a control console with command confirmation, fuel accounting and maintenance by engine hours."
+      ],
+      "features": [
+        "Current state and a journal of readings",
+        "Events and alarms with escalation",
+        "Control console with confirmation of commands by snapshots, schedule, timer and test",
+        "Fuel: canisters, refuelling, sensor calibration",
+        "Maintenance by engine hours through the standard Maintenance app"
+      ],
+      "notes": [
+        "Requires a SmartGen relay service reachable over HTTP. The relay is operated separately and is not part of this module.",
+        "The relay address and token are entered by an administrator and removed when the module is uninstalled."
+      ],
+      "edition": "ce",
+      "role": "product",
+      "publish": "standalone",
+      "color": "#017e84",
+      "mono": "GS"
+    },
+    "td_genset_factory3d": {
+      "name": "Generator Factory Bridge",
+      "summary": "Link of Generators with the factory model: telemetry, maintenance requests, 3D card, blackout balance",
+      "intro": [
+        "Bridge between Generators and the Factory 3D suite: telemetry, energy, maintenance and a 3D card for every generator."
+      ],
+      "features": [
+        "Generator signals in telemetry",
+        "Maintenance requests for generators",
+        "Generator card in the 3D viewer (optional)",
+        "Power balance during a blackout in Factory Energy"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#017e84",
+      "mono": "GF"
+    },
+    "td_factory3d_mrp_maintenance": {
+      "name": "MRP Maintenance Bridge",
+      "summary": "Fills maintenance.equipment.workcenter_id by matching td_code with the work center",
+      "intro": [
+        "Bridge between Factory 3D Core and the Odoo Enterprise mrp_maintenance module, installed automatically when both are present.",
+        "On installation it fills empty work center links of maintenance equipment by matching the td_code of the equipment with the td_code of the work center."
+      ],
+      "features": [
+        "Fills maintenance.equipment.workcenter_id by matching td_code"
+      ],
+      "notes": [
+        "Requires Odoo Enterprise: depends on mrp_maintenance."
+      ],
+      "edition": "ee",
+      "edition_reason": "depends on mrp_maintenance (Enterprise)",
+      "role": "ee_bridge",
+      "publish": "ee_only",
+      "color": "#2b5aa0",
+      "mono": "MM"
+    }
+  }
+}

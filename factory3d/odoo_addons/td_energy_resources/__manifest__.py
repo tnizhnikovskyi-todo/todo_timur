@@ -1,17 +1,30 @@
 {
-    "name": "Енергоресурси",
-    "summary": "Газ, тепло, стиснене повітря, вода: лічильники будь-якого ресурсу, 15-хв ряд, вартість, "
-    "резерви економії, екран «Енергоресурси»",
-    "description": "Довідник ресурсів, ціни, точки обліку й лічильники газу, тепла, повітря й води поверх td_energy; "
-    "15-хвилинні інтервали (лічильник, інтеграл витрати, оцінка), реактивна енергія, зведення використання, "
-    "резерви економії й детектори, екран «Енергоресурси», експорт у Excel.",
+    "name": "Energy Resources",
+    "summary": "Gas, heat, compressed air and water: meters of any resource, 15-minute series, cost, savings reserves",
+    "description": """
+Energy Resources
+================
+
+Extends Factory Energy to non-electric resources: gas, heat, compressed air and water, with prices, metering points, meters and savings reserves.
+
+Key features
+------------
+
+* Resource catalog, prices, metering points and meters
+* 15-minute intervals: meter value, flow integral and estimate
+* Reactive energy
+* Usage summary, savings reserves and detectors
+* Energy Resources screen and Excel export
+""",
     "version": "19.0.1.0.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     # D-18: td_bms, td_yard, td_genset — не залежності (тепло з BMS — міст td_energy_resources_bms)
     "depends": ["td_energy"],
+    "images": ["static/description/banner.png"],
     "external_dependencies": {"python": ["xlsxwriter"]},
     "data": [
         "security/td_energy_resources_security.xml",  # W3-A: record rules (SPEC 4.3)

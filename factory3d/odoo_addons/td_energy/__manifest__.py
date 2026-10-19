@@ -1,16 +1,35 @@
 {
-    "name": "Енергетика",
-    "summary": "Схема електропостачання, лічильники PM5560, 15-хв профіль, баланс, кВт·год і вартість на завдання й МО, "
-    "СЕС, накопичувач, КГУ, АВР, тарифи, ліміт потужності",
-    "description": "Ієрархія ввід → трансформатор → ГРЩ → шинопровід → споживач; лічильники поверх td_telemetry; "
-    "розподіл енергії на робочі завдання й собівартість МО; відключення мережі й АВР; провайдери 3D.",
+    "name": "Factory Energy",
+    "summary": "Power supply scheme, PM5560 meters, 15-minute profile, kWh and cost per work order, tariffs, demand limit",
+    "description": """
+Factory Energy
+==============
+
+Electric energy management for a manufacturing plant. Models the power supply hierarchy, collects meter readings through telemetry, and allocates energy and cost to work orders and manufacturing orders.
+
+Key features
+------------
+
+* Hierarchy: infeed, transformer, main switchboard, busway, consumer
+* Power meters (PM5560) on top of Factory 3D Telemetry, 15-minute profile and balance
+* Energy allocation to work orders and manufacturing order costing (kWh and cost)
+* Solar plant, battery storage, cogeneration unit and automatic transfer switch (ATS), grid outage handling
+* Tariffs and a demand (power) limit
+
+Requirements and notes
+----------------------
+
+* Meter data comes from the Factory 3D collector service, which is not part of this module.
+""",
     "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     # ENV-2: `mrp_workorder` (Enterprise) прибрано з depends — його немає в середовищі (factory3d/build/ENV_DECISIONS.md)
     "depends": ["td_telemetry", "mrp_account", "analytic", "web_hierarchy"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/td_energy_security.xml",
         "security/ir.model.access.csv",

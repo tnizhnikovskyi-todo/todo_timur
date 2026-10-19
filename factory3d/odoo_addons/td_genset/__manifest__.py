@@ -1,20 +1,36 @@
 # Part of td_genset (ToDo). See README.md.
 {
-    'name': 'Генератори',
-    'summary': 'Моніторинг і керування генератором SmartGen HGM6120N через ретранслятор',
+    'name': 'Generators',
+    'summary': 'Monitoring and control of SmartGen HGM6120N generators through a relay',
     'description': """
-Генератори (SmartGen HGM6120N через ретранслятор)
-=================================================
-Поточний стан і журнал показань, події, тривоги з ескалацією, пульт з підтвердженням
-команд за знімками, розклад/таймер/тест, паливо (каністри, заправки, калібрування датчика)
-і ТО за мотогодинами через стандартний модуль «Обслуговування».
+Generators
+==========
+
+Monitoring and control of generator sets with the SmartGen HGM6120N controller through a relay service. Current state, event and alarm journals, a control console with command confirmation, fuel accounting and maintenance by engine hours.
+
+Key features
+------------
+
+* Current state and a journal of readings
+* Events and alarms with escalation
+* Control console with confirmation of commands by snapshots, schedule, timer and test
+* Fuel: canisters, refuelling, sensor calibration
+* Maintenance by engine hours through the standard Maintenance app
+
+Requirements and notes
+----------------------
+
+* Requires a SmartGen relay service reachable over HTTP. The relay is operated separately and is not part of this module.
+* The relay address and token are entered by an administrator and removed when the module is uninstalled.
 """,
     'version': '19.0.1.0.0',
     'category': 'Generators',
     'author': 'ToDo',
     'website': 'https://todo.ltd',
+    'support': 'support@todo.ltd',
     'license': 'OPL-1',
     'depends': ['base', 'mail', 'bus', 'web', 'maintenance'],
+    'images': ['static/description/banner.png'],
     'external_dependencies': {'python': ['requests', 'pytz']},
     'data': [
         # security

@@ -1,17 +1,35 @@
 {
-    "name": "Аналітика енергетики",
-    "summary": "Добові факти, драйвери, база ISO 50001 й EnPI, бюджет, розрізи, резерви економії, екран «Аналітика», "
-    "звіти для керівництва й за зміну",
-    "description": "Аналітика заводу поверх td_energy і td_energy_resources: ділянки, драйвери нормалізації (м² плит, градусо-доби), "
-    "добові факти, модель бази ISO 50001 (регресія) і EnPI, бюджет енергії, розрізи (ділянки, обладнання, замовлення, "
-    "продукти, зміни), теплокарта, екран «Аналітика», PDF «Звіт для керівництва» й «Звіт за зміну».",
+    "name": "Energy Analytics",
+    "summary": "Daily facts, drivers, ISO 50001 baseline and EnPI, budget, breakdowns, savings reserves, management reports",
+    "description": """
+Energy Analytics
+================
+
+Analytics on top of Factory Energy and Energy Resources: normalization drivers, ISO 50001 baseline model and indicators, an energy budget, breakdowns and a heat map, with PDF reports for management and for a shift.
+
+Key features
+------------
+
+* Sections, normalization drivers (board area in m2, degree-days) and daily facts
+* ISO 50001 baseline model (regression) and EnPI
+* Energy budget
+* Breakdowns by section, equipment, order, product and shift; heat map
+* Analytics screen, PDF Management report and Shift report
+
+Requirements and notes
+----------------------
+
+* PDF reports use the standard Odoo wkhtmltopdf setup.
+""",
     "version": "19.0.1.0.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     # W4 SPEC розд. 1: td_energy_resources — жорстка залежність («усі ресурси»); mrp_account тягне mrp, stock_account, maintenance
     "depends": ["td_energy", "td_energy_resources", "mrp_account"],
+    "images": ["static/description/banner.png"],
     "external_dependencies": {"python": []},  # для PDF потрібен системний wkhtmltopdf (штатний для Odoo)
     "data": [
         "security/td_energy_analytics_security.xml",  # W4-A: record rules (SPEC 4.3)

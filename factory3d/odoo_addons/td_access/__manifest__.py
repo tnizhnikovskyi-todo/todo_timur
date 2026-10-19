@@ -1,15 +1,35 @@
 # ruff: noqa: B018
 {
-    "name": "Доступ",
-    "summary": "Suprema BioStar 2: відмітки в Відвідуванні, картки, турнікети, відвідувачі, люди по зонах",
-    "description": "Опитування REST BioStar 2 з Odoo (P-10): журнал подій, відмітки hr.attendance за проходами "
-                   "периметра, присутність і зона людей, стан дверей, картки й відвідувачі під стоп-краном запису.",
+    "name": "Factory Access Control",
+    "summary": "Suprema BioStar 2: attendance check-ins, cards, turnstiles, visitors, people by zone",
+    "description": """
+Factory Access Control
+======================
+
+Polls the REST API of a Suprema BioStar 2 access control server and brings its data into Odoo: an event journal, attendance records for perimeter passes, presence and zones of people, door status, cards and visitors.
+
+Key features
+------------
+
+* Event journal of passes and door events
+* Check-ins and check-outs in Attendances created from perimeter passes
+* Presence and zone of every person, and door status
+* Cards and visitors, managed under a write safety switch
+
+Requirements and notes
+----------------------
+
+* Connects to the customer's own BioStar 2 server; the password is entered by an administrator in the settings. No data is sent to the module vendor.
+* Writing to BioStar 2 is disabled by default.
+""",
     "version": "19.0.1.0.0",
     "category": "Human Resources/Attendances",
     "author": "ToDo",
     "website": "https://todo.ltd",
+    "support": "support@todo.ltd",
     "license": "LGPL-3",
     "depends": ["td_factory3d", "hr_attendance", "mail"],
+    "images": ["static/description/banner.png"],
     "data": [
         "security/td_access_security.xml",
         "security/ir.model.access.csv",
