@@ -139,6 +139,37 @@ export function register(test) {
         assert.equal(obstacleRects(layers, { building: { length: 20, width: 14 }, column_grid: { step_x: 0, step_y: 0 } }).filter((x) => x.grid).length, 0);
     });
 
+    test("S5 inside бачить колони сітки column_grid як авторозкладка (obstacleRects): ті самі вузли, без дубля явної колони, severity = режим", async () => {
+        await load("index.js");
+        const { runChecks } = await load("checks.js");
+        const core = await load("building_core.js");
+        const { S } = await load("state.js");
+        const g = golden();
+        const sc = g.scenes.find((x) => x.name === "inside_grid");
+        const msgs = (state, configs) => runChecks(state, configs, g.meta.eps_m).map((i) => i.message);
+        assert.deepEqual(msgs(sc.state, sc.configs), [
+            "M-GRID: перетинає колону сітки (42.00; 24.00)",
+            "GN: перетинає колону сітки (12.00; 6.00)",
+            "GEXP: перетинає колону «К-1»",
+            "GROT: перетинає колону сітки (30.00; 18.00)",
+        ]);
+        const warn = runChecks(sc.state, sc.configs.map((c) => ({ ...c, mode: "warn" })), g.meta.eps_m);
+        assert.ok(warn.length === 4 && warn.every((i) => i.severity === "warn"), "та сама серйозність, що й у явної колони (режим перевірки)");
+        // вузли ті самі, що в obstacleRects: колона сітки на місці явної пропущена, id збігаються з ключами зауважень
+        const rects = core.obstacleRects([...sc.state.layers], sc.state.site).filter((r) => r.grid);
+        assert.ok(rects.some((r) => r.id === "grid:12:6") && !rects.some((r) => r.id === "grid:24:12"));
+        assert.deepEqual(msgs({ ...sc.state, site: { ...sc.state.site, column_grid: { step_x: 0, step_y: 0 } } }, sc.configs), ["GEXP: перетинає колону «К-1»"], "крок 0 — сітки немає");
+        // живі перевірки редактора не мають column_grid у state.site: його дає провайдер площадки (S.site)
+        const bare = { ...sc.state, site: { building: sc.state.site.building } };
+        assert.deepEqual(msgs(bare, sc.configs), ["GEXP: перетинає колону «К-1»"]);
+        core.setSiteProvider(() => ({ column_grid: { step_x: 6, step_y: 6 } }));
+        try {
+            assert.equal(msgs(bare, sc.configs).length, 4);
+        } finally {
+            core.setSiteProvider(() => S.site); // як у building.js
+        }
+    });
+
     test("S5 специфікація стелажів: рами, балки, полиці, стійки, консолі, зв'язки, стяжки збігаються з Python (золота фікстура)", async () => {
         await load("index.js");
         const { buildSpec, specTables } = await load("spec.js");

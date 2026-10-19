@@ -238,6 +238,7 @@ def checks_state(site):
                 'width': site.building_width_m,
                 'height': site.building_height_m,
             },
+            'column_grid': {'step_x': site.column_step_x_m, 'step_y': site.column_step_y_m},
             'sprinkler_height': site.sprinkler_height_m,
             'aisle_tech': site.aisle_tech or None,
             'addr': site.addr or None,

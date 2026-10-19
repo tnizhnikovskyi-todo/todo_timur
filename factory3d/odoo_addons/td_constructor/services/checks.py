@@ -3,7 +3,8 @@
 Вхід — словник стану у форматі API-03 `load` (метри для шарів/місць/розміщень, мм для варіантів):
 
     state = {
-      'site': {'building': {'length', 'width', 'height'}, 'sprinkler_height', 'aisle_tech'},
+      'site': {'building': {'length', 'width', 'height'}, 'column_grid': {'step_x', 'step_y'}, 'sprinkler_height',
+               'aisle_tech'},
       'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities, items}],
       'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides, type_id, function_id, tech,
                  addr, …}],

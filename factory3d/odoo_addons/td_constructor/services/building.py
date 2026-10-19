@@ -44,6 +44,7 @@ ITEM_DEFAULT_SIZE = {
 MAX_ITEMS = 5000
 MAX_COORD = 10000.0
 MAX_SIZE = 1000.0
+GRID_COLUMN_HALF = 0.2  # колона сітки — квадрат 0,4 × 0,4 м у вузлі
 
 # N-06: техніка складу й мінімальна ширина проїзду, м (значення можна змінити числом: `ключ:мін_м`)
 TECHS = {
@@ -172,6 +173,34 @@ def contour_polygon(scene):
 
 def building_items(scene):
     return [it for layer in scene.layers.values() if layer.get('kind') == 'building' for it in layer.get('items') or []]
+
+
+def grid_nodes(site, explicit=()):
+    """Вузли колон сітки `site.column_grid` у межах `site.building`: [(x, y), …]; вузли, зайняті явними колонами
+    `explicit` (`items` kind=column) ближче 5 см, пропущено. Дзеркало `gridNodes` ядра: ті самі вузли бачить
+    авторозкладка (`obstacleRects`) і перевірка `inside`."""
+    building = (site or {}).get('building') or {}
+    grid = (site or {}).get('column_grid') or {}
+    step_x = grid.get('step_x') or 0
+    step_y = grid.get('step_y') or 0
+    out = []
+    length, width = building.get('length'), building.get('width')
+    if step_x > 1 and step_y > 1 and length and width:
+        xs, ys = [], []
+        x = step_x
+        while x < length - 0.01:
+            xs.append(x)
+            x += step_x
+        y = step_y
+        while y < width - 0.01:
+            ys.append(y)
+            y += step_y
+        if len(xs) * len(ys) < 2000:
+            for x in xs:
+                for y in ys:
+                    if not any(math.hypot(c['x'] - x, c['y'] - y) < 0.05 for c in explicit):
+                        out.append((x, y))
+    return out
 
 
 # --- техніка (N-06) ----------------------------------------------------------------------------------------------

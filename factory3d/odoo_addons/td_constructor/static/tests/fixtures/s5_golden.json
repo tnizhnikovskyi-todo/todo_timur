@@ -631,6 +631,501 @@
    ]
   },
   {
+   "name": "inside_grid",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach",
+     "column_grid": {
+      "step_x": 6.0,
+      "step_y": 6.0
+     }
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": [
+       {
+        "id": "c1",
+        "kind": "column",
+        "name": "К-1",
+        "x": 24,
+        "y": 12,
+        "w": 0.4,
+        "d": 0.4,
+        "rot": 0
+       }
+      ]
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 3,
+      "name": "Двір",
+      "kind": "yard",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GN",
+      "x": 12,
+      "y": 6,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GFREE",
+      "x": 12,
+      "y": 9,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GEXP",
+      "x": 24,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GROT",
+      "x": 30,
+      "y": 18,
+      "rotation": 90,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GNEAR",
+      "x": 36,
+      "y": 6.9,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 6,
+      "uid": "u6",
+      "layer_id": 3,
+      "template": "floor_stack",
+      "code_prefix": "GYARD",
+      "x": 12,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "rows": 1,
+       "cols": 1
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [
+     {
+      "id": 1,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-GRID",
+      "name": "m",
+      "x": 42.0,
+      "y": 24.0,
+      "rotation": 0,
+      "dynamic": false
+     }
+    ],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "inside",
+     "enabled": true,
+     "mode": "block",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "M-GRID"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "GN"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "GEXP"
+     ]
+    },
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "GROT"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "inside_grid_off",
+   "state": {
+    "site": {
+     "building": {
+      "length": 60.0,
+      "width": 30.0,
+      "height": 8.0
+     },
+     "sprinkler_height": 6.0,
+     "aisle_tech": "reach",
+     "column_grid": {
+      "step_x": 0.0,
+      "step_y": 0.0
+     }
+    },
+    "layers": [
+     {
+      "id": 1,
+      "name": "Будівля",
+      "kind": "building",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": [
+       {
+        "id": "c1",
+        "kind": "column",
+        "name": "К-1",
+        "x": 24,
+        "y": 12,
+        "w": 0.4,
+        "d": 0.4,
+        "rot": 0
+       }
+      ]
+     },
+     {
+      "id": 2,
+      "name": "Склади",
+      "kind": "storage",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     },
+     {
+      "id": 3,
+      "name": "Двір",
+      "kind": "yard",
+      "elevation": 0.0,
+      "max_floor_load": 0.0,
+      "bounds": null,
+      "slot_types": [],
+      "aisles": [],
+      "fire_paths": [],
+      "utilities": [],
+      "items": []
+     }
+    ],
+    "slots": [
+     {
+      "id": 1,
+      "uid": "u1",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GN",
+      "x": 12,
+      "y": 6,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 2,
+      "uid": "u2",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GFREE",
+      "x": 12,
+      "y": 9,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 3,
+      "uid": "u3",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GEXP",
+      "x": 24,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 4,
+      "uid": "u4",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GROT",
+      "x": 30,
+      "y": 18,
+      "rotation": 90,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 5,
+      "uid": "u5",
+      "layer_id": 2,
+      "template": "pallet_rack",
+      "code_prefix": "GNEAR",
+      "x": 36,
+      "y": 6.9,
+      "rotation": 0,
+      "params": {
+       "bays": 2,
+       "levels": 3,
+       "bay_width": 2.7,
+       "depth": 1.1,
+       "level_height": 1.5
+      },
+      "overrides": {},
+      "tech": null
+     },
+     {
+      "id": 6,
+      "uid": "u6",
+      "layer_id": 3,
+      "template": "floor_stack",
+      "code_prefix": "GYARD",
+      "x": 12,
+      "y": 12,
+      "rotation": 0,
+      "params": {
+       "rows": 1,
+       "cols": 1
+      },
+      "overrides": {},
+      "tech": null
+     }
+    ],
+    "placements": [
+     {
+      "id": 1,
+      "layer_id": 2,
+      "variant_id": 1,
+      "slot_id": null,
+      "cell_code": null,
+      "code": "M-GRID",
+      "name": "m",
+      "x": 42.0,
+      "y": 24.0,
+      "rotation": 0,
+      "dynamic": false
+     }
+    ],
+    "variants": [
+     {
+      "id": 1,
+      "length": 2000,
+      "width": 1000,
+      "height": 1500,
+      "service": {
+       "front": 0,
+       "back": 0,
+       "left": 0,
+       "right": 0
+      },
+      "rotations": "any",
+      "layer_kinds": [],
+      "slot_types": [],
+      "utilities": [],
+      "weight_kg": 0,
+      "floor_load": 0,
+      "anchor": "center",
+      "front_side": "s"
+     }
+    ]
+   },
+   "configs": [
+    {
+     "check": "inside",
+     "enabled": true,
+     "mode": "block",
+     "params": {}
+    }
+   ],
+   "expected": [
+    {
+     "check": "inside",
+     "severity": "block",
+     "codes": [
+      "GEXP"
+     ]
+    }
+   ]
+  },
+  {
    "name": "aisle_width_aisles",
    "state": {
     "site": {
