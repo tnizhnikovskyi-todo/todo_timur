@@ -56,10 +56,10 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
       <span class="o_f3d_live"></span><b>Odoo</b><span class="o_f3d_odoo-state">підключення…</span><span class="o_f3d_muted o_f3d_odoo-time"></span>
     </button>
     <div class="o_f3d_panel o_f3d_shift o_f3d_shift" role="group" aria-label="Програвання зміни">
-      <button class="o_f3d_btn o_f3d_shift-play" aria-label="Програти зміну">▶</button>
-      <input class="o_f3d_shift-t" type="range" min="420" max="930" step="5" value="630" aria-label="Час зміни">
+      <button class="o_f3d_btn o_f3d_shift-play" aria-label="Програти зміну" disabled>▶</button>
+      <input class="o_f3d_shift-t" type="range" min="420" max="930" step="5" value="630" aria-label="Час зміни" disabled>
       <span class="o_f3d_mono o_f3d_shift-l">зараз</span><span class="o_f3d_mono o_f3d_snap-tag" title="Програвання за знімками стану" hidden>знімки</span>
-      <button class="o_f3d_btn o_f3d_shift-now">Зараз</button>
+      <button class="o_f3d_btn o_f3d_shift-now" disabled>Зараз</button>
     </div>
     <button class="o_f3d_btn o_f3d_toggle-side" aria-expanded="false">Види і шари</button>
   </header>
@@ -1358,7 +1358,7 @@ function buildBatches(mos) {
   }
 }
 function prodSimMove(t) {
-  if (!prodOv.sim || t == null) {return;}
+  if (!prodOv.sim || t == null || !D) {return;}
   for (const tr of prodOv.tracks) {
     const pos = trackAt(tr, t);
     tr.u = pos.u;
@@ -1519,8 +1519,13 @@ function indexData() {
   idx.truck = new Map(D.pickings.filter((p) => p.truck).map((p) => [p.truck, p.name]));
 }
 
+// повзунок зміни, ▶ і «Зараз» працюють лише з даними: до першого setData вони вимкнені (D ще null)
+function syncShiftEnabled() {
+  for (const sel of [".o_f3d_shift-t", ".o_f3d_shift-play", ".o_f3d_shift-now"]) {$(sel).disabled = !D;}
+}
 function setData(d, first) {
   D = d;
+  syncShiftEnabled();
   indexData();
   applyLayout(); // R-25: розкладка конструктора — до syncMachineLabels і stockLoad.sync
   simBase = Date.parse(D.meta.now.replace(" ", "T"));
@@ -2112,7 +2117,7 @@ function renderProduction() {
     }).join("")}</ul>`;
 }
 function showMO(name) {
-  const mo = idx.mo.get(name);
+  const mo = D && idx.mo?.get(name);
   if (!mo) {return;}
   select(null);
   openView({ type: "mo", name });
@@ -2254,7 +2259,7 @@ function renderLogistics() {
     <div class="o_f3d_sub">Комплектація компонентів</div><ul class="o_f3d_rows">${by("pick_components").map(pickRow).join("")}</ul>`;
 }
 function showPicking(name) {
-  const p = idx.pick.get(name);
+  const p = D && idx.pick?.get(name);
   if (!p) {return;}
   select(null);
   openView({ type: "picking", name });
@@ -3048,6 +3053,7 @@ function scheduleWOs() {
   for (const c of Object.values(D.energy?.consumers || {})) {c._p0 = c.p_now;}
 }
 function applySimTime(min) {
+  if (!D) {return;} // дані ще не завантажені (або вже знесено)
   if (min != null) {ensurePlayback();}
   if (playbackMode === "snapshots" && snapList.length && snapshotTime(min)) {
     $(".o_f3d_shift-l").textContent = hhmm(min);
@@ -3084,8 +3090,8 @@ function applySimTime(min) {
   if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) {drawProdOverlay();}
   flowUpdate(min);
 }
-$(".o_f3d_shift-t").oninput = (e) => applySimTime(+e.target.value);
-$(".o_f3d_shift-now").onclick = () => { stopShift(); applySimTime(null); };
+$(".o_f3d_shift-t").oninput = (e) => { if (D) {applySimTime(+e.target.value);} };
+$(".o_f3d_shift-now").onclick = () => { if (!D) {return;} stopShift(); applySimTime(null); };
 const SHIFT_STEP_MS = reduceMotion ? 600 : 250;
 let simCont = null; // крок таймера і коли він стався — для плавного руху між кроками
 function simMinutes() {
@@ -3274,11 +3280,11 @@ on(window, "resize", () => { if (!$(".o_f3d_flow").hidden && flow.built) { flowR
 
 function stopShift() { clearInterval(shiftTimer); shiftTimer = null; $(".o_f3d_shift-play").textContent = "▶"; $(".o_f3d_shift-play").setAttribute("aria-label", "Програти зміну"); }
 $(".o_f3d_shift-play").onclick = () => {
+  if (!D) {return;} // до завантаження даних ▶ вимкнений; страховка від програмного click()
   if (shiftTimer) {return stopShift();}
   let m = simOverride ?? 420;
   if (m >= 930) {m = 420;}
   $(".o_f3d_shift-play").textContent = "❚❚"; $(".o_f3d_shift-play").setAttribute("aria-label", "Пауза");
-  if (!D) {return;}
   applySimTime(m);
   simCont = { m, at: performance.now() };
   if (!prodOv.on) {setProdOverlay(true);} // потік видно згори: план цеху з маршрутами замовлень

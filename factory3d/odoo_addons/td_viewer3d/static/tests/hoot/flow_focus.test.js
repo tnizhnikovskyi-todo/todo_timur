@@ -132,3 +132,32 @@ describe("«Потік зміни»: лише активні в сцені", () 
         }
     });
 });
+
+describe("повзунок зміни до завантаження даних", () => {
+    test("input, ▶ і «Зараз» до setData нічого не роблять і не кидають помилок; після завантаження працюють", async () => {
+        const { viewer, el } = await mountViewer({ model: "none", skipLoad: true });
+        const slider = q(el, ".o_f3d_shift-t");
+        const play = q(el, ".o_f3d_shift-play");
+        const now = q(el, ".o_f3d_shift-now");
+        expect(slider.disabled).toBe(true);
+        expect(play.disabled).toBe(true);
+        expect(now.disabled).toBe(true);
+        slider.value = "600";
+        slider.dispatchEvent(new Event("input", { bubbles: true })); // раніше: TypeError ... reading 'meta' at applySimTime
+        play.click();
+        now.click();
+        viewer.setSimTime(600);
+        expect(viewer.getState().simMinutes).toBe(null);
+        expect(q(el, ".o_f3d_flow").hidden).toBe(true);
+        expect(play.textContent).toBe("▶");
+
+        await viewer.load();
+        expect(slider.disabled).toBe(false);
+        expect(play.disabled).toBe(false);
+        expect(now.disabled).toBe(false);
+        slider.value = "600";
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+        expect(viewer.getState().simMinutes).toBe(600);
+        expect(q(el, ".o_f3d_flow").hidden).toBe(false);
+    });
+});

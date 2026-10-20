@@ -18,7 +18,7 @@ Key features
 * Kiosk screen for a shop-floor tablet, opened by a token URL without a login
 * Cycle check that reports gaps in the receiving-to-shipping chain, and a demo-data wizard for test servers
 """,
-    "version": "19.0.1.0.3",
+    "version": "19.0.1.0.4",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Manufacturing",

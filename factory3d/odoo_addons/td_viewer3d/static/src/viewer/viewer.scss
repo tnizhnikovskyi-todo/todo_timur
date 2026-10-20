@@ -62,6 +62,8 @@
   cursor: pointer; transition: border-color .15s, background .15s;
 }
 .o_f3d_viewer .o_f3d_btn:hover { border-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_btn:disabled, .o_f3d_viewer .o_f3d_shift-t:disabled { opacity: 0.45; cursor: default; }
+.o_f3d_viewer .o_f3d_btn:disabled:hover { border-color: var(--f3d-line); }
 /* головна дія картки (VX-06 `primary`): акцентна заливка */
 .o_f3d_viewer .o_f3d_btn.o_f3d_btn-primary { background: var(--f3d-accent); border-color: var(--f3d-accent); color: var(--f3d-accent-fg); font-weight: 600; }
 .o_f3d_viewer .o_f3d_btn.o_f3d_btn-primary:hover { filter: brightness(1.08); }
