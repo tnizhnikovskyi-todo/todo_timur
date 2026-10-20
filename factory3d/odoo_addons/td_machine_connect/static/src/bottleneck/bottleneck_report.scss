@@ -1,0 +1,21 @@
+.o_td_bottleneck {
+    .o_td_bn_bar {
+        display: inline-block;
+        width: 90px;
+        height: 8px;
+        margin-right: 8px;
+        border-radius: 4px;
+        background: var(--border-color, #dee2e6);
+        vertical-align: middle;
+        overflow: hidden;
+    }
+
+    .o_td_bn_bar_fill {
+        height: 100%;
+        background: var(--primary, #714b67);
+    }
+
+    .o_td_bn_row_bottleneck .o_td_bn_bar_fill {
+        background: var(--danger, #dc3545);
+    }
+}

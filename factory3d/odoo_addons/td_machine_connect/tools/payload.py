@@ -1,11 +1,13 @@
 """Побудова фрагментів payload переглядача (R-25, M-22). Без імпорту моделей viewer: працює з `env` і словниками."""
 
+import logging
 from datetime import timezone
 
 from odoo import fields
 
 from ..models.td_machine import KYIV, local
 
+_logger = logging.getLogger(__name__)
 GANTRY = "GANTRY-1"
 STATUS = {"fault": "stop", "working": "work"}
 ACTIVE_JOB = ("queued", "active")
@@ -77,6 +79,19 @@ def _machine_node(env, machine, costs=None):
     return node
 
 
+def _add_flow(env, nodes):
+    """R-30 п. 5: `flow` (показники ділянки, вузьке місце) у вузли верстатів; збій аналітики не ламає payload."""
+    try:
+        with env.cr.savepoint():
+            flows = env["td.bottleneck"].sudo()._td_flow_nodes()
+    except Exception:
+        _logger.exception("machine_connect: flow вузького місця не пораховано")
+        return
+    for code, node in nodes.items():
+        if code in flows:
+            node["flow"] = flows[code]
+
+
 def _gantry_node(env):
     """R-25 п. 2: стан порталу з `gantry_status` і активного завдання."""
     Job = env["td.gantry.job"]
@@ -120,6 +135,7 @@ def build_machines(env, ctx, payload=None):
             Downtime._td_cost_by_workcenter() if not (ctx or {}).get("kiosk") and Downtime._td_cost_can_see() else None
         )
         out["workcenters"] = {m.code: _machine_node(env, m, costs) for m in machines}
+        _add_flow(env, out["workcenters"])
     if GANTRY in _nodes(payload.get("equipment"), "code") or full:
         out["equipment"] = {GANTRY: {"gantry": _gantry_node(env)}}
     plt = [c for c in _nodes(payload.get("locations"), "code") if c.startswith("PLT-")]

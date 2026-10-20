@@ -14,6 +14,7 @@ Key features
 * State and downtime journal with downtime reasons
 * Automatic start, pause and finish of work orders, with the operator stored on the work order
 * OEE from actual data
+* Plant bottleneck analytics: utilisation, queue, waiting time and output per section, the constraining section and a what-if hint
 * HOMAG STORETEQ P-500 portal warehouse: stacks versus stock, portal jobs from manufacturing orders
 * Cutting maps and CNC programs attached to manufacturing orders
 
@@ -24,7 +25,7 @@ Requirements and notes
 * Automatic start and writing to machines are disabled by default and enabled by system parameters.
 * Works with Odoo Community; the Enterprise mrp_workorder module is not required.
 """,
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.2.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -48,6 +49,7 @@ Requirements and notes
         "views/td_machine_views.xml",
         "views/td_machine_state_log_views.xml",
         "views/td_downtime_views.xml",
+        "views/td_bottleneck_views.xml",
         "views/td_machine_event_views.xml",
         "views/td_gantry_views.xml",
         "views/mrp_workcenter_views.xml",
@@ -63,6 +65,7 @@ Requirements and notes
     "assets": {
         "web.assets_backend": [
             "td_machine_connect/static/src/views/**/*",
+            "td_machine_connect/static/src/bottleneck/**/*",
         ],
         "web.assets_tests": [
             "td_machine_connect/static/tests/tours/*.js",

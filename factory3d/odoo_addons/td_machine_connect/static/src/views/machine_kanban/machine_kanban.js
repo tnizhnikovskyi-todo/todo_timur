@@ -1,6 +1,7 @@
 /** @odoo-module */
 // DT-2: «Огляд верстатів» (kanban td.machine) із плиткою «Простої за місяць: N ₴, з них без причини: M ₴».
 // Дані — `td.downtime.td_cost_tile()` (лише менеджер «Завод 3D»; інакше `false` і плитки немає).
+// R-30: поруч плитка «Вузьке місце: <ділянка>, черга N» — `td.bottleneck.td_tile()` (немає вузького місця — плитки немає).
 import { Component, onWillStart, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -40,9 +41,31 @@ export class DowntimeCostTile extends Component {
     }
 }
 
+export class BottleneckTile extends Component {
+    static template = "td_machine_connect.BottleneckTile";
+    static props = {};
+
+    setup() {
+        this.orm = useService("orm");
+        this.action = useService("action");
+        this.state = useState({ tile: false });
+        onWillStart(async () => {
+            try {
+                this.state.tile = await this.orm.call("td.bottleneck", "td_tile", []);
+            } catch {
+                this.state.tile = false; // плитка — довідкова: збій не ламає огляд
+            }
+        });
+    }
+
+    openAnalysis() {
+        this.action.doAction("td_machine_connect.action_td_bottleneck");
+    }
+}
+
 export class MachineKanbanRenderer extends KanbanRenderer {
     static template = "td_machine_connect.MachineKanbanRenderer";
-    static components = { ...KanbanRenderer.components, DowntimeCostTile };
+    static components = { ...KanbanRenderer.components, DowntimeCostTile, BottleneckTile };
 }
 
 registry.category("views").add("td_machine_kanban", { ...kanbanView, Renderer: MachineKanbanRenderer });

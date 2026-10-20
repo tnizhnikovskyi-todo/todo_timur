@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_machine_connect.BottleneckReport">
+        <div class="o_action o_td_bottleneck overflow-auto p-3">
+            <div class="o_td_bn_controls d-flex flex-wrap align-items-center gap-3 mb-3">
+                <h3 class="m-0">Вузьке місце заводу</h3>
+                <div class="btn-group o_td_bn_periods" role="group">
+                    <t t-foreach="periods" t-as="p" t-key="p[0]">
+                        <button type="button" class="btn btn-outline-primary"
+                                t-att-class="{ active: state.period === p[0] }"
+                                t-att-data-period="p[0]" t-on-click="() => this.setPeriod(p[0])">
+                            <t t-out="p[1]"/>
+                        </button>
+                    </t>
+                </div>
+                <select class="form-select w-auto o_td_bn_group" t-on-change="setGroup">
+                    <t t-foreach="groups" t-as="g" t-key="g[0]">
+                        <option t-att-value="g[0]" t-att-selected="state.group_by === g[0]"><t t-out="g[1]"/></option>
+                    </t>
+                </select>
+                <label class="d-flex align-items-center gap-2 m-0">
+                    <span>Що якщо, +%</span>
+                    <input type="number" min="0" max="500" step="5" class="form-control o_td_bn_boost"
+                           style="width: 6rem" t-att-value="state.boost" t-on-change="setBoost"/>
+                </label>
+                <span t-if="state.data" class="text-muted o_td_bn_window">
+                    Вікно: <t t-out="state.data.date_from"/> – <t t-out="state.data.date_to"/>
+                </span>
+            </div>
+            <t t-if="state.data">
+                <t t-set="d" t-value="state.data"/>
+                <div t-if="d.bottleneck" class="alert o_td_bn_banner"
+                     t-att-class="['load', 'low'].includes(d.verdict) ? 'alert-warning' : 'alert-danger'">
+                    <b>Вузьке місце:</b>&#160;<b class="o_td_bn_name" t-out="d.bottleneck.name"/>,
+                    завантаження <b t-out="pct(d.bottleneck.load)"/>,
+                    черга <b t-out="d.bottleneck.queue"/>
+                    <t t-if="d.bottleneck.queue_delta"> (<t t-out="delta(d.bottleneck.queue_delta)"/>)</t>,
+                    очікування <b t-out="num(d.bottleneck.wait_min, 0)"/> хв
+                    <span class="text-muted">— <t t-out="d.verdict_label"/></span>
+                </div>
+                <div t-else="" class="alert alert-secondary o_td_bn_banner">
+                    Вузьке місце не виявлено: у вибраному вікні немає ділянок із завантаженням від
+                    <t t-out="pct(d.load_min)"/>.
+                </div>
+                <div t-if="d.hint" class="alert alert-info o_td_bn_hint">
+                    <b>Що якщо:</b> <t t-out="d.hint"/>
+                </div>
+                <table class="table table-sm table-hover o_td_bn_table">
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Ділянка</th>
+                            <th class="text-end">Завантаження</th>
+                            <th class="text-end">Черга</th>
+                            <th class="text-end">Очікування, хв</th>
+                            <th class="text-end">Випуск</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="d.rows" t-as="r" t-key="r.key">
+                            <tr t-att-class="r.bottleneck ? 'table-danger o_td_bn_row_bottleneck' : 'o_td_bn_row'">
+                                <td t-out="r.rank"/>
+                                <td>
+                                    <t t-out="r.name"/>
+                                    <span t-if="r.bottleneck" class="badge text-bg-danger ms-2">Вузьке місце</span>
+                                </td>
+                                <td class="text-end o_td_bn_load">
+                                    <div class="o_td_bn_bar" t-if="r.load !== null">
+                                        <div class="o_td_bn_bar_fill" t-attf-style="width: {{ Math.round(r.load * 100) }}%"/>
+                                    </div>
+                                    <span t-out="pct(r.load)"/>
+                                </td>
+                                <td class="text-end">
+                                    <b t-out="r.queue"/>
+                                    <span t-if="r.queue_delta" class="text-muted ms-1" t-out="delta(r.queue_delta)"/>
+                                </td>
+                                <td class="text-end" t-out="num(r.wait_min, 0)"/>
+                                <td class="text-end"><t t-out="num(r.output, 0)"/> <span class="text-muted">(<t t-out="r.done"/> зав.)</span></td>
+                            </tr>
+                        </t>
+                        <tr t-if="!d.rows.length">
+                            <td colspan="6" class="text-muted text-center">Немає даних за вибраний період.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small m-0">
+                    Завантаження — робота / доступний час верстатів ділянки (журнал станів, а без нього журнал часу). Черга — завдання,
+                    у яких попередня операція завершена, а ця ще не почата; стрілка — зміна черги за вікно. Випуск — кількість виробів у
+                    завданнях, завершених у вікні. Вузьке місце — найбільш завантажена ділянка з чергою, що росте.
+                </p>
+            </t>
+        </div>
+    </t>
+</templates>

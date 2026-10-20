@@ -6,6 +6,7 @@ from . import td_downtime
 from . import td_machine_event
 from . import td_machine_message
 from . import td_oee_shift
+from . import td_bottleneck
 from . import td_gantry_stack
 from . import td_gantry_job
 from . import td_cut_part

@@ -84,6 +84,8 @@
               action="action_td_downtime"/>
     <menuitem id="menu_td_mc_downtime_cost" name="Простої в ₴" parent="menu_td_mc_root" sequence="22" groups="td_factory3d.group_td_manager"
               action="action_td_downtime_cost"/>
+    <menuitem id="menu_td_mc_bottleneck" name="Вузьке місце" parent="menu_td_mc_root" sequence="25" groups="td_factory3d.group_td_user"
+              action="action_td_bottleneck"/>
     <menuitem id="menu_td_mc_downtime_tablet" name="Простої без причини" parent="menu_td_mc_root" sequence="21" groups="mrp.group_mrp_user"
               action="action_td_downtime_tablet"/>
     <menuitem id="menu_td_mc_oee" name="OEE" parent="menu_td_mc_root" sequence="30" groups="td_factory3d.group_td_user"

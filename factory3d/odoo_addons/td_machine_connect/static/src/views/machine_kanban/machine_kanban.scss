@@ -22,3 +22,34 @@
         color: var(--text-muted, #6c757d);
     }
 }
+
+.o_td_tiles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.o_td_bottleneck_tile {
+    display: inline-block;
+    align-self: flex-start;
+    margin: 12px 16px 4px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 8px;
+    background: var(--o-view-background-color, #fff);
+    font-size: 1.1rem;
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--primary, #714b67);
+    }
+
+    .o_td_bn_title,
+    .o_td_bn_sub {
+        margin-right: 0.35em;
+    }
+
+    .o_td_bn_sub {
+        color: var(--text-muted, #6c757d);
+    }
+}

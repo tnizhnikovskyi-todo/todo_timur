@@ -11,12 +11,26 @@
         </div>
     </t>
 
+    <t t-name="td_machine_connect.BottleneckTile">
+        <div t-if="state.tile" class="o_td_bottleneck_tile" role="button" tabindex="0"
+             title="Відкрити аналітику «Вузьке місце»" t-on-click="openAnalysis">
+            <span class="o_td_bn_title">Вузьке місце:</span>
+            <b class="o_td_bn_station" t-out="state.tile.name"/>,
+            <span class="o_td_bn_sub">черга</span>
+            <b class="o_td_bn_queue" t-att-class="state.tile.queue ? 'text-danger' : ''" t-out="state.tile.queue"/>
+            <span t-if="['load', 'low'].includes(state.tile.verdict)" class="o_td_bn_sub ms-2">(імовірне)</span>
+        </div>
+    </t>
+
     <t t-name="td_machine_connect.MachineKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
         <xpath expr="//div[hasclass('o_kanban_renderer')]" position="attributes">
             <attribute name="class" add="h-auto" separator=" "/>
         </xpath>
         <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
-            <DowntimeCostTile/>
+            <div class="o_td_tiles">
+                <DowntimeCostTile/>
+                <BottleneckTile/>
+            </div>
         </xpath>
     </t>
 </templates>
