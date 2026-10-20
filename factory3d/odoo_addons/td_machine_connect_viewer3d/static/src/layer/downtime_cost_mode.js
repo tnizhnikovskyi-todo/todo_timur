@@ -46,7 +46,7 @@ export function legendHtml(D) {
         "<span class=\"o_f3d_swatch\" style=\"background:var(--f3d-warn)\"></span><span>" + pct(BAND.WARN) + "–" + pct(BAND.BAD) +
         " %</span>" +
         "<span class=\"o_f3d_swatch\" style=\"background:var(--f3d-ok)\"></span><span>до " + pct(BAND.WARN) + " % · без простоїв</span>" +
-        "<span class=\"o_f3d_muted\">Простої за місяць у гривнях; найбільша сума — " + nf.format(max) + " ₴</span>";
+        "<span class=\"o_f3d_muted\" style=\"grid-column:1 / -1\">Простої за місяць у гривнях; найбільша сума — " + nf.format(max) + "\u00a0₴</span>";
 }
 
 export class DowntimeCostExtension {

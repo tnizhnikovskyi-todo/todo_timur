@@ -13,6 +13,11 @@
         border-color: var(--primary, #714b67);
     }
 
+    .o_td_dc_title,
+    .o_td_dc_sub {
+        margin-right: 0.35em;
+    }
+
     .o_td_dc_sub {
         color: var(--text-muted, #6c757d);
     }
