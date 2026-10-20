@@ -2231,7 +2231,7 @@ AC: **AC-104** вартість = тривалість × ставка, валю
 `td_machine_connect_viewer3d/tests/test_payload.py`); **AC-109** демо-ставки лише для порожніх, ідемпотентно (`TestDemoRates`); **AC-110** режим «Простої, ₴»: радіо, колір, легенда, дельта
 (HOOT `td_machine_connect_viewer3d/static/tests/hoot/downtime_cost.test.js`).
 
-### R-30 Вузьке місце заводу (BN-1…BN-7, FR-38; вау-функція №16; версія 19.0.1.2.0)
+### R-30 Вузьке місце заводу (BN-1…BN-8, FR-38; вау-функція №16; версія 19.0.1.2.1)
 
 Система сама знаходить ділянку, що обмежує випуск (логіка теорії обмежень), і показує її в аналітиці, плитці «Огляду верстатів» і в 3D.
 Розрахунок — чисті функції `tools/bottleneck.py` (без ORM, юніт-тести `tests/test_bottleneck.py`); збір даних — `td.bottleneck` (`AbstractModel`, `models/td_bottleneck.py`).
@@ -2259,12 +2259,16 @@ AC: **AC-104** вартість = тривалість × ставка, валю
 5. **Аналітика й плитка (BN-5).** Клієнтська дія `action_td_bottleneck` (`static/src/bottleneck/*`, V-34), меню `menu_td_mc_bottleneck` («Вузьке місце», `menu_td_mc_root`, seq 25, `group_td_user`): кнопки періоду, вибір «Ділянки / Робочі центри»,
    поле «Що якщо, +%», виділене вузьке місце (смуга з показниками й вердиктом), підказка, рейтинг (завантаження, черга зі стрілкою зміни, очікування, випуск). Дані — `td.bottleneck.td_report(period, group_by, boost_pct)` (лише `group_td_user`, інакше `AccessError`).
    Плитка «Вузьке місце: <ділянка>, черга N» (+ «(імовірне)» для `load`/`low`) над картками «Огляду верстатів» поруч із плиткою простоїв: `td.bottleneck.td_tile()` (період `day`; без вузького місця або без `group_td_user` — `False`, плитки немає); клік відкриває аналітику.
-6. **Payload (BN-6).** `workcenters[code].flow` (R-25 `_machine_node`-етап, `tools/payload._add_flow`) для верстатів ділянок із рейтингу: `station`, `key`, `load`, `queue`, `queue_delta`, `wait_min`, `output`, `rank`, `bottleneck`, `period`;
+6. **Payload (BN-6).** `workcenters[code].flow` (`tools/payload.apply_flow`, викликає провайдер R-25 після `apply_machines`) для верстатів ділянок із рейтингу: `station`, `key`, `load`, `queue`, `queue_delta`, `wait_min`, `output`, `rank`, `bottleneck`, `period`;
    для верстатів ділянки-вузького місця ще `verdict`, `hint`, `codes` (верстати ділянки), `prev` (верстати найчастішої попередньої ділянки за маршрутами). Показники не фінансові — є й у кіоску. Збій розрахунку лише логується, payload віддається без `flow`.
-   Дельта додає `flow` лише вузлам, що є в патчі (як решта R-25 п. 7).
+   Дельта (R-25 п. 7) несе зведення `flow` усіх верстатів ділянок із рейтингу, а не лише вузлів патча (воно мале): зміна вузького місця чи черги торкається й вузлів, яких у патчі немає,
+   тож клієнт знімає стару стопку й ставить нову; вузол без патча створюється з одним ключем `flow` (клієнт зливає дельту глибоко).
 7. **3D (BN-7).** Міст `td_machine_connect_viewer3d` (19.0.1.1.0): розширення `registerViewerExtension` (R-26, VX-03, VX-04) `static/src/layer/bottleneck_layer.js`: червона стопка коробок на підлозі перед вузьким місцем (з боку `prev`, інакше з боку −X), висота за черзі (не більше 12 коробок),
    табличка з числом; блок «Вузьке місце · <ділянка>» у картці верстата (вердикт, завантаження, черга, очікування, випуск, рейтинг; у вузького місця — підказка «Що якщо»). Шар «Замовлення в роботі» й `core.js` не змінювались; без `flow` розширення неактивне.
-8. **Демо-перевірка.** На демо-даних (МО WH/MO/00231–00262, демо-годинник 12.10.2026 10:30) завантаження ділянок 11–37 %, черга лише в «Розкрій» (2 непочаті перші операції МО 00246, 00254, +2 за вікно): вердикт `low`, кандидат — «Розкрій»
+8. **Кеш (BN-8).** `td.bottleneck._td_analyze` без явної дати кешується (`tools.ormcache`): ключ — компанія, період, групування, відсоток, 60-секундна корзина реального часу (`CACHE_S`) і демо-годинник; payload, дельти,
+   плитка й звіт з однаковими параметрами рахують розрахунок не частіше за раз на 60 с (≈0,3 с на демо). Кеш скидається лише часом: скидання за змінами завдань і журналу станів — це скидання всього кешу `default` реєстру з сигналом
+   усім воркерам, воно дорожче за розрахунок. Результат кешу — лише для читання.
+9. **Демо-перевірка.** На демо-даних (МО WH/MO/00231–00262, демо-годинник 12.10.2026 10:30) завантаження ділянок 11–37 %, черга лише в «Розкрій» (2 непочаті перші операції МО 00246, 00254, +2 за вікно): вердикт `low`, кандидат — «Розкрій»
    (завантаження 37 %, очікування 4 хв). Демо вироджене для ТОС: кожне МО має лише одне завдання «в роботі», решта «заблоковані» попередньою операцією, а журнал часу демо охоплює лише ранок 12.10 (частина ще до початку календарної зміни).
    Результат не підганяється: вузького місця з вердиктом `growing` демо не дає.
 
@@ -2273,8 +2277,10 @@ AC: **AC-111** завантаження = робота / доступний ча
 **AC-113** очікування й випуск (`test_wait_average`, `test_output_is_quantity_finished_in_window`); **AC-114** вибір вузького місця: найбільш завантажена з чергою, що росте; `queue`/`load`/`low`/немає (`test_growing_queue_beats_higher_load`, `test_bottleneck_is_busiest_station_with_growing_queue`,
 `test_low_load_with_queue_is_low_verdict_candidate`, `test_no_data_no_bottleneck`); **AC-115** «що якщо»: приріст, обмеження наступною ділянкою, спільні ділянки, підказка з X за умовчанням 20 (`test_what_if_*`, `test_line_capacity_shares_station_between_routes`, `test_what_if_hint_on_scenario`);
 **AC-116** аналітика, плитка, права, демо-годинник і тур `td_machine_connect_bottleneck` (`test_report_and_tile`, `test_report_and_tile_need_factory_user`, `test_demo_clock_is_now`, `TestBottleneckTour`); **AC-117** `workcenters[code].flow` у payload, кіоск, дельта, `prev`
-(`test_flow_nodes_in_payload`, `test_flow_delta_only_for_nodes_in_patch`, `test_flow_prev_is_main_upstream_station`; міст — `td_machine_connect_viewer3d/tests/test_payload.py`, `TestBottleneckFlowPayload`); **AC-118** 3D: стопка (висота, бік `prev`, ліміт, дельта), блок картки
-(HOOT `td_machine_connect_viewer3d/static/tests/hoot/bottleneck.test.js`, BN1…BN6).
+(`test_flow_nodes_in_payload`, `test_flow_delta_carries_full_summary`, `test_flow_delta_without_queue_has_no_bottleneck_marks`, `test_flow_prev_is_main_upstream_station`; міст — `td_machine_connect_viewer3d/tests/test_payload.py`, `TestBottleneckFlowPayload`); **AC-118** 3D: стопка (висота, бік `prev`, ліміт, дельта), блок картки
+(HOOT `td_machine_connect_viewer3d/static/tests/hoot/bottleneck.test.js`, BN1…BN7, зокрема BN7: вузьке місце переїхало з А на Б — у А стопки немає);
+**AC-119** кеш розрахунку: два виклики поспіль — один розрахунок, нова 60-секундна корзина, компанія й демо-годинник у ключі, явна дата без кешу
+(`test_analysis_is_cached_for_a_minute`, `test_cache_key_has_company_and_demo_clock`).
 
 ## 10. Стани й переходи
 

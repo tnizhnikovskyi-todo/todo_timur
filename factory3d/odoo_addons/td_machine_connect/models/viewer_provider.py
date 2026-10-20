@@ -18,10 +18,12 @@ class F3dViewerProviderMachines(models.AbstractModel):
     def _td_viewer_collect(self, payload, ctx):
         """R-25 п. 1–6: доповнює `workcenters`, `equipment`, `locations`, `productions`, `sheet_chain` на місці."""
         payload_tools.apply_machines(payload, payload_tools.build_machines(self.env, ctx, payload))
+        payload_tools.apply_flow(self.env, payload, full=True)  # R-30 п. 6
 
     def _td_viewer_delta(self, patch, ctx):
-        """R-25 п. 7: ті самі п. 1–5 лише для вузлів, що є в `patch`."""
+        """R-25 п. 7: ті самі п. 1–5 лише для вузлів `patch`; `flow` (R-30 п. 6) — зведенням для всіх верстатів."""
         payload_tools.apply_machines(patch, payload_tools.build_machines(self.env, ctx, patch))
+        payload_tools.apply_flow(self.env, patch, full=False)
 
     def _td_viewer_bus_models(self):
         return ["mrp.workcenter", "stock.location", "maintenance.equipment", "mrp.production"]

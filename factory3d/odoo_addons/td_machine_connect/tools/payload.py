@@ -79,17 +79,39 @@ def _machine_node(env, machine, costs=None):
     return node
 
 
-def _add_flow(env, nodes):
-    """R-30 п. 5: `flow` (показники ділянки, вузьке місце) у вузли верстатів; збій аналітики не ламає payload."""
+def apply_flow(env, payload, full):
+    """R-30 п. 6: `flow` (показники ділянки, вузьке місце) у вузли верстатів `payload`; збій аналітики не ламає payload.
+
+    Повний payload (`full`) — вузлам, що вже є. Дельта — зведення `flow` усіх верстатів ділянок із рейтингу, а не лише
+    вузлів патча: воно мале, а зміна вузького місця чи черги торкається й вузлів, яких у патчі немає (стара стопка
+    знімається, нова ставиться); вузол без патча створюється з одним ключем `flow` (клієнт зливає глибоко).
+    """
     try:
         with env.cr.savepoint():
             flows = env["td.bottleneck"].sudo()._td_flow_nodes()
     except Exception:
         _logger.exception("machine_connect: flow вузького місця не пораховано")
         return
-    for code, node in nodes.items():
-        if code in flows:
-            node["flow"] = flows[code]
+    nodes = payload.get("workcenters")
+    if full:
+        for code, node in _nodes(nodes, "code").items():
+            if code in flows:
+                node["flow"] = flows[code]
+    elif flows and isinstance(nodes, dict):
+        for code, flow in flows.items():
+            if isinstance(nodes.get(code), dict):
+                nodes[code]["flow"] = flow
+            else:
+                nodes[code] = {"flow": flow}
+    elif flows and nodes is None:
+        payload["workcenters"] = {code: {"flow": flow} for code, flow in flows.items()}
+    elif flows and isinstance(nodes, list):
+        known = {n.get("code"): n for n in nodes if isinstance(n, dict)}
+        for code, flow in flows.items():
+            if code in known:
+                known[code]["flow"] = flow
+            else:
+                nodes.append({"code": code, "flow": flow})
 
 
 def _gantry_node(env):
@@ -135,7 +157,6 @@ def build_machines(env, ctx, payload=None):
             Downtime._td_cost_by_workcenter() if not (ctx or {}).get("kiosk") and Downtime._td_cost_can_see() else None
         )
         out["workcenters"] = {m.code: _machine_node(env, m, costs) for m in machines}
-        _add_flow(env, out["workcenters"])
     if GANTRY in _nodes(payload.get("equipment"), "code") or full:
         out["equipment"] = {GANTRY: {"gantry": _gantry_node(env)}}
     plt = [c for c in _nodes(payload.get("locations"), "code") if c.startswith("PLT-")]

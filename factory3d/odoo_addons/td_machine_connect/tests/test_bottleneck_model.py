@@ -1,10 +1,12 @@
-"""AC-111…AC-117: вузьке місце заводу (R-30) на моделях: показники з `mrp.workorder` і журналів, ділянки за мітками РЦ,
+"""AC-111…AC-119: вузьке місце заводу (R-30) на моделях: показники з `mrp.workorder` і журналів, ділянки за мітками РЦ,
 аналітика `td_report`, плитка `td_tile`, вузли `flow` у payload переглядача, тур."""
+
+from unittest.mock import patch
 
 from odoo.exceptions import AccessError
 from odoo.tests import tagged
 
-from .common import F3DMachineCase, F3DMachineHttpCase
+from .common import F3DMachineCase, F3DMachineHttpCase, at
 
 
 class BottleneckMixin:
@@ -56,6 +58,7 @@ class BottleneckMixin:
         return mo_a, mo_b, mo_c
 
     def analyze(self, period="day", group_by="workcenter", boost=20.0):
+        self.env.registry.clear_cache()  # кеш 60 с не повинен ховати зміни даних між викликами в одному тесті
         return self.env["td.bottleneck"]._td_analyze(period, group_by, boost)
 
     def by_name(self, res):
@@ -164,6 +167,45 @@ class TestBottleneckModel(BottleneckMixin, F3DMachineCase):
         icp.set_param("td.viewer.demo_clock", "")
         self.assertEqual(Model._td_now(), self.kt("10:30"))
 
+    # --- AC-119: кеш розрахунку (60 с) ----------------------------------------------------------------------------
+    def test_analysis_is_cached_for_a_minute(self):
+        """Два виклики поспіль — один розрахунок; плитка й payload ділять його зі звітом; нова хвилина — новий."""
+        self.scenario()
+        model = self.env["td.bottleneck"]
+        cls = type(model)
+        with patch.object(cls, "_td_collect", autospec=True, side_effect=cls._td_collect) as collect:
+            first = model._td_analyze()
+            self.assertIs(model._td_analyze(), first)
+            self.assertEqual(collect.call_count, 1)
+            model.td_tile()
+            model._td_flow_nodes()
+            self.assertEqual(collect.call_count, 1)  # той самий період і групування
+            model._td_analyze("week")
+            self.assertEqual(collect.call_count, 2)  # інший ключ
+            model._td_analyze(date_to=self.kt("10:30"))  # явна дата — без кешу
+            model._td_analyze(date_to=self.kt("10:30"))
+            self.assertEqual(collect.call_count, 4)
+            with at("10:30:59"):
+                model._td_analyze()
+            self.assertEqual(collect.call_count, 4)  # та сама 60-секундна корзина
+            with at("10:31:00"):
+                model._td_analyze()
+            self.assertEqual(collect.call_count, 5)
+
+    def test_cache_key_has_company_and_demo_clock(self):
+        model = self.env["td.bottleneck"]
+        cls = type(model)
+        company2 = self.env["res.company"].create({"name": "C2 (кеш)"})
+        with patch.object(cls, "_td_collect", autospec=True, side_effect=cls._td_collect) as collect:
+            model._td_analyze()
+            model.with_company(company2)._td_analyze()
+            self.assertEqual(collect.call_count, 2)
+            self.env["ir.config_parameter"].sudo().set_param("td.viewer.demo_clock", "2026-10-11 09:00")
+            model._td_analyze()
+            self.assertEqual(collect.call_count, 3)
+            model._td_analyze()
+            self.assertEqual(collect.call_count, 3)
+
     # --- AC-116: аналітика і плитка ---------------------------------------------------------------------
     def test_report_and_tile(self):
         self.scenario()
@@ -212,12 +254,30 @@ class TestBottleneckModel(BottleneckMixin, F3DMachineCase):
         provider._td_viewer_collect(kiosk, {"kiosk": True})  # показники не фінансові: є й у кіоску
         self.assertIn("flow", kiosk["workcenters"]["SAW-T"])
 
-    def test_flow_delta_only_for_nodes_in_patch(self):
+    def test_flow_delta_carries_full_summary(self):
+        """Дельта несе зведення `flow` усіх верстатів ділянок, не лише вузлів патча: клієнт знімає стару стопку."""
         self.scenario()
+        provider = self.env["td.viewer.provider.machines"]
+        patch = self._payload("CNC-T")
+        provider._td_viewer_delta(patch, {})
+        everyone = {"SAW-T", "CNC-T", "UA-T", "IO-T"}
+        self.assertEqual(set(patch["workcenters"]), everyone)
+        self.assertEqual(patch["workcenters"]["CNC-T"]["code"], "CNC-T")  # вузол патча не втрачає своїх полів
+        self.assertEqual(set(patch["workcenters"]["SAW-T"]), {"flow"})  # вузол без патча — лише `flow`
+        self.assertTrue(patch["workcenters"]["SAW-T"]["flow"]["bottleneck"])
+        self.assertFalse(patch["workcenters"]["CNC-T"]["flow"]["bottleneck"])
+        only_prod = {"productions": {"WH/MO/1": {}}}  # змінилось лише МО: зведення все одно їде
+        provider._td_viewer_delta(only_prod, {})
+        self.assertEqual(set(only_prod["workcenters"]), everyone)
+
+    def test_flow_delta_without_queue_has_no_bottleneck_marks(self):
+        """Без даних і черги верстати ділянок усе одно дістають показники (завантаження 0), але без вузького місця."""
         patch = self._payload("CNC-T")
         self.env["td.viewer.provider.machines"]._td_viewer_delta(patch, {})
-        self.assertEqual(set(patch["workcenters"]), {"CNC-T"})
-        self.assertIn("flow", patch["workcenters"]["CNC-T"])
+        flows = [node["flow"] for node in patch["workcenters"].values()]
+        self.assertTrue(flows)
+        self.assertEqual({f["bottleneck"] for f in flows}, {False})
+        self.assertEqual({f["queue"] for f in flows}, {0})
 
     def test_flow_prev_is_main_upstream_station(self):
         """Вузьке місце — UA-T (зайнята всю зміну, МО A чекає з 09:00); перед нею за маршрутом — Присадка (CNC-T)."""

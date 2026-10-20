@@ -182,11 +182,15 @@ class TestViewerProvider(F3DMachineCase):
         patch_ = {"workcenters": {"SAW-T": {"code": "SAW-T", "status": "idle"}}}
         self.provider._td_viewer_delta(patch_, {})
         self.assertEqual(set(patch_), {"workcenters"})
-        self.assertEqual(set(patch_["workcenters"]), {"SAW-T"})
         self.assertEqual(patch_["workcenters"]["SAW-T"]["machine_state"], "working")
+        # R-30 п. 6: решта верстатів у дельті — лише зведення `flow` (живі поля R-25 — тільки вузлам патча)
+        others = {code: node for code, node in patch_["workcenters"].items() if code != "SAW-T"}
+        self.assertTrue(others)
+        self.assertTrue(all(set(node) == {"flow"} for node in others.values()))
         empty = {}
         self.provider._td_viewer_delta(empty, {})
-        self.assertEqual(empty, {})
+        self.assertEqual(set(empty), {"workcenters"})
+        self.assertTrue(all(set(node) == {"flow"} for node in empty["workcenters"].values()))
 
     def test_notify(self):
         if "td.viewer.event" not in self.env:

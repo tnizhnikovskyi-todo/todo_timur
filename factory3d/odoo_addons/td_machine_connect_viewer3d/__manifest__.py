@@ -15,7 +15,7 @@ Key features
 * Visible only to Factory 3D managers and hidden on shop-floor kiosk screens
 * Plant bottleneck: a red stack of waiting orders in front of the constraining section (height by queue length) and a metrics block in the machine card
 """,
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.1.1",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, tools
 from odoo.exceptions import AccessError
 
 from ..tools import bottleneck as bn
@@ -19,6 +19,7 @@ DEMO_CLOCK = "td.viewer.demo_clock"  # демо-годинник «Перегл�
 CLOCK_RE = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
 GROUPS = ("area", "workcenter")
 DEFAULT_PERIOD = "day"
+CACHE_S = 60  # розрахунок кешується на таку корзину часу (с); дельти переглядача не рахують його щоразу
 VERDICT_LABELS = {
     "growing": "черга росте",
     "queue": "є черга",
@@ -49,8 +50,8 @@ class TdBottleneck(models.AbstractModel):
 
     # --- час, станції ------------------------------------------------------------------------------
     @api.model
-    def _td_now(self):
-        """«Зараз» аналітики: демо-годинник `td.viewer.demo_clock` (якщо заданий і валідний), інакше реальний час."""
+    def _td_demo_clock(self):
+        """Демо-годинник `td.viewer.demo_clock` (час за Києвом) як naive UTC, якщо заданий і валідний, інакше `None`."""
         clock = self.env["ir.config_parameter"].sudo().get_param(DEMO_CLOCK)
         if clock and CLOCK_RE.match(clock):
             try:
@@ -58,7 +59,12 @@ class TdBottleneck(models.AbstractModel):
                 return naive.replace(tzinfo=KYIV).astimezone(timezone.utc).replace(tzinfo=None)
             except ValueError:
                 _logger.warning("%s невалідний (%r): ігнорується", DEMO_CLOCK, clock)
-        return fields.Datetime.now()
+        return None
+
+    @api.model
+    def _td_now(self):
+        """«Зараз» аналітики: демо-годинник (лише демо-бази), інакше реальний час."""
+        return self._td_demo_clock() or fields.Datetime.now()
 
     @api.model
     def _td_station_of(self, workcenter, group_by):
@@ -169,12 +175,31 @@ class TdBottleneck(models.AbstractModel):
     # --- розрахунок й відповіді --------------------------------------------------------------------------
     @api.model
     def _td_analyze(self, period=DEFAULT_PERIOD, group_by="area", boost_pct=bn.BOOST_DEFAULT, date_to=None):
-        """Повний розрахунок (`tools.bottleneck.analyze`) + `period`, `group_by`, `date_from`, `date_to`, `stations`."""
+        """Повний розрахунок (`tools.bottleneck.analyze`) + `period`, `group_by`, `date_from`, `date_to`, `stations`.
+
+        Без `date_to` результат кешується: ключ — компанія, період, групування, відсоток, 60-секундна корзина
+        реального часу й демо-годинник. Кеш скидається лише часом (до 60 с): скидання за змінами завдань і журналу
+        станів — це скидання всього кешу `default` реєстру з сигналом усім воркерам, а воно дорожче за розрахунок.
+        Результат лише для читання: він спільний для всіх викликів корзини.
+        """
         period = period if period in bn.PERIODS else DEFAULT_PERIOD
         group_by = group_by if group_by in GROUPS else "area"
-        t0, t1 = bn.period_window(period, date_to or self._td_now())
+        boost = float(boost_pct)
+        if date_to is not None:
+            return self._td_analyze_raw(period, group_by, boost, date_to)
+        bucket = int(fields.Datetime.now().replace(tzinfo=timezone.utc).timestamp() // CACHE_S)
+        return self._td_analyze_cached(self.env.company.id, period, group_by, boost, bucket, self._td_demo_clock())
+
+    @api.model
+    @tools.ormcache("company_id", "period", "group_by", "boost", "bucket", "clock")
+    def _td_analyze_cached(self, company_id, period, group_by, boost, bucket, clock):
+        return self.with_company(company_id)._td_analyze_raw(period, group_by, boost, clock or fields.Datetime.now())
+
+    @api.model
+    def _td_analyze_raw(self, period, group_by, boost, date_to):
+        t0, t1 = bn.period_window(period, date_to)
         stations, orders = self._td_collect(t0, t1, group_by)
-        res = bn.analyze(stations, orders, t0, t1, boost_pct)
+        res = bn.analyze(stations, orders, t0, t1, boost)
         res.update(period=period, group_by=group_by, date_from=t0, date_to=t1, stations=stations)
         return res
 

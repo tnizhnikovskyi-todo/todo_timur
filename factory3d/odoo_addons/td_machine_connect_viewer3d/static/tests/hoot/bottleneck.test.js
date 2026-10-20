@@ -133,3 +133,46 @@ test("BN6 картка верстата в 3D показує блок «Вузь
     viewer.select("SAW-2");
     expect(text(q(el, ".o_f3d_cardbody")).includes("Вузьке місце ·")).toBe(false); // у SAW-2 немає flow
 });
+
+test("BN7 дельта із зведенням flow: вузьке місце переїхало з А на Б — у А стопки немає, у Б вона одна", async () => {
+    const A = { station: "Розкрій", key: "area:1", codes: ["SAW-1", "SAW-2"] };
+    const B = { station: "Присадка", key: "area:2", codes: ["CNC-2"] };
+    const { viewer } = await mountViewer({
+        model: "core",
+        mutate: withFlow({
+            "SAW-1": flow({ ...A, queue: 3 }),
+            "SAW-2": flow({ ...A, queue: 3 }),
+            "CNC-2": flow({ ...B, queue: 4, bottleneck: false, rank: 2, verdict: undefined, hint: undefined }),
+        }),
+    });
+    const before = stackOf(viewer);
+    expect(boxes(before).length).toBe(3);
+    const nearA = (g) => Math.min(center(viewer, "SAW-1").distanceTo(g.position), center(viewer, "SAW-2").distanceTo(g.position));
+    expect(nearA(before) < center(viewer, "CNC-2").distanceTo(before.position)).toBe(true);
+    // зведення всіх вузлів ділянок: так сервер відповідає в дельті, навіть якщо в патчі лише МО
+    viewer.applyPatch({
+        workcenters: {
+            "SAW-1": { flow: flow({ ...A, queue: 0, bottleneck: false, rank: 2 }) },
+            "SAW-2": { flow: flow({ ...A, queue: 0, bottleneck: false, rank: 2 }) },
+            "CNC-2": { flow: flow({ ...B, queue: 5, prev: ["SAW-1", "SAW-2"], rank: 1 }) },
+        },
+    });
+    expect(viewer.D.workcenters["SAW-1"].flow.bottleneck).toBe(false);
+    const stacks = viewer.scene.children.filter((c) => c.name === STACK_NAME);
+    expect(stacks.length).toBe(1); // старої стопки біля А немає
+    expect(stacks[0]).not.toBe(before);
+    expect(boxes(stacks[0]).length).toBe(5);
+    expect(center(viewer, "CNC-2").distanceTo(stacks[0].position) < nearA(stacks[0])).toBe(true);
+    // і назад: вузьке місце повернулось до А
+    viewer.applyPatch({
+        workcenters: {
+            "SAW-1": { flow: flow({ ...A, queue: 2 }) },
+            "SAW-2": { flow: flow({ ...A, queue: 2 }) },
+            "CNC-2": { flow: flow({ ...B, queue: 5, bottleneck: false, rank: 2 }) },
+        },
+    });
+    const back = viewer.scene.children.filter((c) => c.name === STACK_NAME);
+    expect(back.length).toBe(1);
+    expect(boxes(back[0]).length).toBe(2);
+    expect(nearA(back[0]) < center(viewer, "CNC-2").distanceTo(back[0].position)).toBe(true);
+});
