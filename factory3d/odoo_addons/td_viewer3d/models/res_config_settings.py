@@ -8,6 +8,7 @@ from odoo.exceptions import AccessError, ValidationError
 
 PREFIX = "td.viewer."
 HOURS_RE = re.compile(r"^\d\d:\d\d-\d\d:\d\d$")
+WALL_SLIDES_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}(,[a-z][a-z0-9_]{0,31})*$")
 CLOCK_RE = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
 BOOL_FIELDS = {"td_kiosk_enabled": "kiosk_enabled", "td_bus_enabled": "bus_enabled", "td_demo_enabled": "demo_enabled"}
 
@@ -36,6 +37,13 @@ class ResConfigSettings(models.TransientModel):
     td_kiosk_refresh_s = fields.Integer(
         string="Оновлення кіоска, с", config_parameter=PREFIX + "kiosk_refresh_s", default=15
     )
+    td_wall_slide_s = fields.Integer(string="Слайд «стіни», с", config_parameter=PREFIX + "wall_slide_s", default=20)
+    td_wall_slides = fields.Char(
+        string="Слайди «стіни»",
+        config_parameter=PREFIX + "wall_slides",
+        default="overview,kpi,events,orders",
+        help="Ключі через кому в порядку показу: overview (3D), kpi, events, orders; модулі можуть додавати свої.",
+    )
     td_bus_enabled = fields.Boolean(string="Живі оновлення (шина)", config_parameter=PREFIX + "bus_enabled")
     td_demo_enabled = fields.Boolean(string="Демо-режим", config_parameter=PREFIX + "demo_enabled")
     td_demo_clock = fields.Char(string="Демо-годинник", config_parameter=PREFIX + "demo_clock")
@@ -46,6 +54,7 @@ class ResConfigSettings(models.TransientModel):
         default="auto",
     )
     td_kiosk_url = fields.Char(string="Адреса кіоска", compute="_compute_f3d_kiosk_url", readonly=True)
+    td_wall_url = fields.Char(string="Адреса «стіни»", compute="_compute_f3d_kiosk_url", readonly=True)
 
     @api.depends_context("uid")
     def _compute_f3d_kiosk_url(self):
@@ -55,6 +64,7 @@ class ResConfigSettings(models.TransientModel):
         token = params.get_param(PREFIX + "kiosk_token")
         for rec in self:
             rec.td_kiosk_url = "%s/f3d/kiosk/%s" % (base.rstrip("/"), token) if admin and token else ""
+            rec.td_wall_url = rec.td_kiosk_url + "?wall=1" if rec.td_kiosk_url else ""
 
     def _td_validate(self):
         def bad(label, expect):
@@ -65,6 +75,10 @@ class ResConfigSettings(models.TransientModel):
                 bad(_("Період знімків"), _("ціле від 5 до 60"))
             if not 5 <= rec.td_kiosk_refresh_s <= 120:
                 bad(_("Оновлення кіоска"), _("ціле від 5 до 120"))
+            if not 5 <= rec.td_wall_slide_s <= 300:
+                bad(_("Слайд «стіни»"), _("ціле від 5 до 300 с"))
+            if not WALL_SLIDES_RE.match(rec.td_wall_slides or ""):
+                bad(_("Слайди «стіни»"), _("ключі латиницею через кому, наприклад overview,kpi,events,orders"))
             if rec.td_snapshot_hours and not HOURS_RE.match(rec.td_snapshot_hours):
                 bad(_("Вікно знімків"), _("HH:MM-HH:MM або порожньо"))
             if rec.td_demo_clock and not CLOCK_RE.match(rec.td_demo_clock):

@@ -743,7 +743,8 @@ readonly). `action_td_cycle_check`: form, `target="new"`.
 `td_event_keep_hours`), «Живі оновлення» (`td_bus_enabled`, `td_delta_debounce_ms`),
 «Кіоск» (`td_kiosk_enabled`, `td_kiosk_refresh_s`, `td_kiosk_url` readonly з кнопкою «Копіювати»
 (widget `CopyClipboardChar`), кнопка «Новий токен кіоска» `action_td_new_kiosk_token` з `confirm="Старі
-адреси кіосків перестануть працювати. Продовжити?"`), «Планшети» (`td_lite_default`), «Демо» (`td_demo_enabled`,
+адреси кіосків перестануть працювати. Продовжити?"`), «Екран планірки («стіна»)» (`td_wall_slide_s`, `td_wall_slides`, `td_wall_url` readonly,
+R-27), «Планшети» (`td_lite_default`), «Демо» (`td_demo_enabled`,
 `td_demo_clock`, попередження «Лише для тестового сервера»).
 
 ## 4. Права
@@ -1689,7 +1690,37 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 двокрапки. Помилка `cardActions` логується й не ламає картку та інші розширення; елемент без `id` або `label` і не-масив пропускаються;
 `D` може бути `null`. Розширення саме не віддає кнопок, що потребують `api.openAction`, коли `api.canOpenAction` = `false` (кіоск).
 Ядро не знає, що це за кнопки: перший споживач — міст `td_energy_viewer3d` («Відкрити пульт» у картках `EMS-1` / `SWB-1`).
+Інші споживачі VX-01…VX-03: міст `td_machine_connect_viewer3d` — режим розфарбування «Простої, ₴» (`workcenters[code].downtime_cost`; td_machine_connect SPEC R-29, DT-5).
 Тест: `static/tests/hoot/extension_energy.test.js` (`VX06`), `tests/test_r26_extension.py`.
+
+### R-27 Екран планірки «стіна» (WL-1…WL-6; вау-функція №26; версія 19.0.1.1.0; точка розширення VX-07)
+
+Повноекранний плейлист слайдів з автопрокруткою для телевізора на планірці. Це режим сторінки кіоска (§8.6), а не окрема сторінка.
+
+1. **Вхід (WL-2).** Той самий кіоск: `GET /f3d/kiosk/<token>?wall=1` (API-08), токен і технічний користувач `user_kiosk` (група `group_td_kiosk`) — без нових маршрутів і прав;
+   дані — API-09 (`/data`, `/delta`, ...), тобто кіоскові (без вартості замовлень і службових полів). `_page_params` приймає `wall=1` і `theme=dark|light`; `page()` підставляє в `data-params`
+   `wall = {slide_s, slides, theme}` з параметрів `td.viewer.wall_slide_s` (5…300 с, умовчання 20) і `td.viewer.wall_slides` (ключі через кому, умовчання `overview,kpi,events,orders`;
+   некоректні значення — умовчання). Без `wall=1` ключа `wall` у params немає. Адреса для телевізора — `td_wall_url` у налаштуваннях (лише адміністратор): адреса кіоска + `?wall=1`.
+2. **Налаштування (WL-3).** `res.config.settings`: `td_wall_slide_s` (ціле 5…300), `td_wall_slides` (`^[a-z][a-z0-9_]{0,31}(,[a-z][a-z0-9_]{0,31})*$`; порядок = порядок показу;
+   невідомі ключі клієнт пропускає), `td_wall_url`; валідація в `_td_validate`; V-15, блок «Екран планірки («стіна»)».
+3. **Клієнт (WL-1; `static/src/viewer/wall.js`, `static/src/kiosk/kiosk.js`, стилі — `kiosk.scss`).** `kiosk.js`: за `params.wall` ставить `data-theme` (за умовчанням `dark`) **до** створення ядра і після
+   `load()` запускає `new F3dWall(viewer, el, params.wall).start()`. `F3dWall`: клас `o_f3d_wall-on` на корені, панелі переглядача сховані CSS, поверх — оверлей `.o_f3d_wall`
+   (шапка з годинником Києва, тіло слайда, крапки й смуга прогресу), слайди змінюються через `slide_s` с по колу; HTML-слайд перемальовується раз на 5 с за свіжими `D` (кіосковий `/delta`).
+   Без інтерактиву (WL-5): `inert` на корені, `controls.enabled = false`, `keydown` поглинається в capture-фазі (крім Ctrl/Alt/Meta-комбінацій і F1–F12), курсор сховано; `stop()` повертає все назад.
+   Тест-режим: `?f3d_test=1` (нульовий рендерер) або `?debug=1` виставляє `window.odoo.f3dWall` (разом з `odoo.f3d` ядра). `core.js` не змінювався: камера — `viewer.core.controls`, дані — `viewer.D`, вид — `viewer.goView(0)`.
+4. **Вбудовані слайди (WL-4).** `overview` — 3D «Загальний вигляд» і повільний політ (`controls.autoRotate`, `autoRotateSpeed = 0,6`; вимикається при виході зі слайда); `kpi` — ті самі чотири плитки,
+   що в панелі «Огляд → Показники» (`overviewKpis(D)` дублює формули `renderOverview`; hoot порівнює їх з панеллю); `events` — «Аварії та події»: до 8 рядків за пріоритетом (пожежна сигналізація,
+   зупинені верстати — найдовші першими, брак, МО без компонентів, заявки ТО, простої, ТО обладнання), порожньо — «Аварій і подій немає»; `orders` — виробничі замовлення на сьогодні (у роботі або з початком/терміном
+   сьогодні): план = `qty`, факт = `round(qty × progress)`, смуга виконання, статус, термін, підсумок; до 9 рядків. Вся тема — токени `--f3d-*`, шрифт `clamp(22px, 1.7vw, 44px)`.
+5. **VX-07 — слайди інших модулів (WL-6).** Реєстр `registry.category("f3d_wall_slides")` (`@web/core/registry`; залежності від `td_viewer3d` в імпорті не потрібно): модуль додає
+   `registry.category("f3d_wall_slides").add(key, {key, label, scene?, hidden?(ctx), render(ctx) → string (HTML), enter?(ctx), leave?(ctx)}, {sequence})`; `ctx = {viewer, D, el, esc, nf, pct, wall}`.
+   У плейлист слайд потрапляє, якщо його `key` є в `td_wall_slides`; `scene: true` — прозорий слайд над 3D (без `render`); `hidden(ctx) → true` пропускає слайд (немає даних); помилка `render` показує
+   «Слайд недоступний», помилка `enter`/`leave`/`hidden` логується — плейлист живе далі. HTML екранує сам слайд (`esc`). Для кіоска JS слайда додається в бандл `td_viewer3d.assets_kiosk`.
+   Приклад на потім: слайд «Енергетика» в `td_energy_viewer3d` (сьогодні не реалізовано).
+
+AC: **AC-68** `?wall=1` дає `params.wall` з налаштувань, без нього — ні; сміття в параметрах → умовчання; токен/вимкнений кіоск → 404 (`TestWallPage`); **AC-69** налаштування й валідація, адреса лише адміну
+(`TestWallSettings`); **AC-70** браузер: «стіна» без навігації Odoo, `inert`, темна тема, перший слайд 3D, далі KPI (`test_wall_browser`); **AC-71** HOOT: плейлист і тривалість, набір слайдів,
+KPI = панель, події, замовлення, VX-07, відсутність інтерактиву, оновлення за дельтою (`static/tests/hoot/wall.test.js`).
 
 ## 10. Стани й переходи
 
@@ -1807,6 +1838,10 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
 | AC-65 | R-04, M-01a (X-14) | `PLT-04C` з `td_loc_kind='stack'`, `td_capacity=60`; `KIT-01` з порожнім `td_loc_kind` і `td_capacity=0` | `/data` | `locations["PLT-04C"]`: `kind="stack"`, `capacity=60`; після `td_capacity=80` → `capacity=80`, `fill` перераховано; `KIT-01`: `kind`, `capacity` — зі статики (`"kit"`, `null`); grep `td_kind_loc` у `models/`, `tools/` — 0 збігів | UT |
 | AC-66 | M-01f, §4.4 (X-09) | `user_mrp_only` (без `hr.group_hr_user`), співробітник `OP-SAW-1` | `/data` | `employees["OP-SAW-1"]` = `{name, job, department, shift, workcenter, current_workorder}` без `AccessError`; `search_read` провайдера `people` викликано на `hr.employee.public` (`patch.object`), не на `hr.employee`; `sudo` не викликався (AC-14) | UT |
 | AC-67 | M-10, §4.3 (X-19) | модуль встановлено | читання груп | `group_td_kiosk.privilege_id` = `td_viewer3d.privilege_td_viewer`; його `category_id` = `td_factory3d.module_category_factory3d`, `sequence=10`; група кіоска не в `td_factory3d.privilege_td`; `implied_ids` = 4 групи §4.3 | UT |
+| AC-68 | R-27 (WL-2) | `kiosk_enabled`, токен | `GET /f3d/kiosk/<token>?wall=1[&theme=light]` | `data-params.wall = {slide_s, slides, theme}` з `td.viewer.wall_slide_s/wall_slides` (умовчання 20 і `overview,kpi,events,orders`); без `wall=1` ключа немає; некоректні значення → умовчання; неправильний токен/вимкнений кіоск → 404 | HttpCase (`TestWallPage`) |
+| AC-69 | R-27 (WL-3) | налаштування | `td_wall_slide_s` 4/301, `td_wall_slides` порожній/`Overview`/`a;b`/`a,,b`; адреса | `ValidationError`; коректні значення проходять; `td_wall_url` = кіоск + `?wall=1` лише адміністратору | UT (`TestWallSettings`) |
+| AC-70 | R-27 (WL-1, WL-5) | сторінка `?wall=1&f3d_test=1` | браузер | `.o_f3d_wall`, без навігації Odoo, `inert`, `data-theme="dark"`, перший слайд `overview`, після `next()` — `kpi` з 4 плитками | JT (`test_wall_browser`) |
+| AC-71 | R-27 (WL-1…WL-6, VX-07) | HOOT-фікстури | `F3dWall` над переглядачем / підставним `D` | плейлист по колу, тривалість і набір слайдів з налаштувань, KPI = панель, події, замовлення план/факт, слайд з реєстру `f3d_wall_slides`, збій слайда не ламає плейлист, без інтерактиву, оновлення слайда | HOOT (`wall.test.js`) |
 
 (AC-34 навмисно немає — об'єднано з AC-33.)
 

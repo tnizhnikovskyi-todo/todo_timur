@@ -28,6 +28,12 @@
     <record id="param_lite_default" model="ir.config_parameter">
         <field name="key">td.viewer.lite_default</field><field name="value">auto</field>
     </record>
+    <record id="param_wall_slide_s" model="ir.config_parameter">
+        <field name="key">td.viewer.wall_slide_s</field><field name="value">20</field>
+    </record>
+    <record id="param_wall_slides" model="ir.config_parameter">
+        <field name="key">td.viewer.wall_slides</field><field name="value">overview,kpi,events,orders</field>
+    </record>
     <record id="param_signal_bus_ts" model="ir.config_parameter">
         <field name="key">td.viewer.signal_bus_ts</field><field name="value"></field>
     </record>

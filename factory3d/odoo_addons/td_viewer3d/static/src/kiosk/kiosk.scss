@@ -10,3 +10,288 @@ body.o_f3d_kiosk {
         inset: 0;
     }
 }
+
+// Режим «стіна» (R-27, `?wall=1`): екран планірки на телевізор — без інтерактиву, великий шрифт, темна тема за умовчанням.
+// Панелі переглядача сховані, поверх 3D лежить плейлист слайдів (`wall.js`).
+.o_f3d_viewer.o_f3d_wall-on {
+    cursor: none;
+    user-select: none;
+
+    .o_f3d_bar,
+    .o_f3d_side,
+    .o_f3d_card,
+    .o_f3d_edge,
+    .o_f3d_help,
+    .o_f3d_flow {
+        display: none !important;
+    }
+
+    .o_f3d_wall {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        pointer-events: none;
+        color: var(--f3d-fg);
+        font-family: var(--f3d-f-body);
+        font-size: clamp(22px, 1.7vw, 44px);
+        line-height: 1.3;
+        background: var(--f3d-bg);
+
+        // слайд зі сценою: 3D видно крізь оверлей, шапка й низ — напівпрозорі
+        &.o_f3d_wall-scene {
+            background: transparent;
+
+            .o_f3d_wall-head,
+            .o_f3d_wall-foot {
+                background: rgba(18, 23, 28, 0.55);
+                backdrop-filter: blur(6px);
+            }
+        }
+    }
+
+    .o_f3d_wall-head {
+        display: flex;
+        align-items: baseline;
+        gap: 1.2em;
+        padding: 0.6em 1.4em;
+        border-bottom: 2px solid var(--f3d-accent);
+    }
+    .o_f3d_wall-brand {
+        font: 700 1.1em var(--f3d-f-display);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--f3d-accent);
+    }
+    .o_f3d_wall-title {
+        flex: 1;
+        font: 600 1.25em var(--f3d-f-display);
+    }
+    .o_f3d_wall-clock {
+        font: 600 1.25em var(--f3d-f-mono);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .o_f3d_wall-body {
+        flex: 1;
+        min-height: 0;
+        padding: 1em 1.4em;
+        overflow: hidden;
+        animation: o_f3d_wall_in 0.6s ease;
+    }
+
+    .o_f3d_wall-foot {
+        display: flex;
+        align-items: center;
+        gap: 1em;
+        padding: 0.5em 1.4em;
+    }
+    .o_f3d_wall-dots {
+        display: flex;
+        gap: 0.5em;
+
+        i {
+            width: 0.7em;
+            height: 0.7em;
+            border-radius: 50%;
+            background: var(--f3d-line);
+
+            &.o_f3d_wall-cur {
+                background: var(--f3d-accent);
+            }
+        }
+    }
+    .o_f3d_wall-progress {
+        flex: 1;
+        height: 0.3em;
+        background: var(--f3d-line);
+        border-radius: 0.15em;
+        overflow: hidden;
+
+        i {
+            display: block;
+            height: 100%;
+            background: var(--f3d-accent);
+            transform-origin: left;
+            animation: o_f3d_wall_progress linear forwards;
+        }
+    }
+
+    // KPI
+    .o_f3d_wall-kpis {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.2em;
+        height: 100%;
+    }
+    .o_f3d_wall-kpi {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 1.2em;
+        border: 1px solid var(--f3d-line);
+        border-left: 0.35em solid var(--f3d-idle);
+        border-radius: 0.5em;
+        background: var(--f3d-panel-solid);
+
+        b {
+            font: 700 3.2em/1.1 var(--f3d-f-display);
+            font-variant-numeric: tabular-nums;
+        }
+        span {
+            color: var(--f3d-muted);
+            font-size: 1.1em;
+        }
+        &.o_f3d_wall-kpi-ok {
+            border-left-color: var(--f3d-ok);
+        }
+        &.o_f3d_wall-kpi-warn {
+            border-left-color: var(--f3d-warn);
+        }
+        &.o_f3d_wall-kpi-bad {
+            border-left-color: var(--f3d-bad);
+        }
+    }
+
+    // Аварії та події
+    .o_f3d_wall-events {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+    }
+    .o_f3d_wall-ev {
+        display: grid;
+        grid-template-columns: 1em minmax(0, 1.2fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 0.8em;
+        padding: 0.45em 0.8em;
+        border: 1px solid var(--f3d-line);
+        border-radius: 0.4em;
+        background: var(--f3d-panel-solid);
+
+        i {
+            width: 0.8em;
+            height: 0.8em;
+            border-radius: 50%;
+            background: var(--f3d-idle);
+        }
+        b {
+            font-weight: 600;
+        }
+        span {
+            color: var(--f3d-muted);
+        }
+        &.o_f3d_wall-bad i {
+            background: var(--f3d-bad);
+        }
+        &.o_f3d_wall-warn i {
+            background: var(--f3d-warn);
+        }
+    }
+
+    // Замовлення на сьогодні
+    .o_f3d_wall-table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th {
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.8em;
+            color: var(--f3d-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.2em 0.6em;
+        }
+        td {
+            padding: 0.4em 0.6em;
+            border-top: 1px solid var(--f3d-line);
+        }
+        tfoot td {
+            border-top: 2px solid var(--f3d-accent);
+            font-weight: 600;
+        }
+        .o_f3d_wall-num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .o_f3d_wall-name {
+            font-family: var(--f3d-f-mono);
+            white-space: nowrap;
+        }
+    }
+    .o_f3d_wall-prog {
+        display: flex;
+        align-items: center;
+        gap: 0.6em;
+        min-width: 9em;
+
+        span {
+            font-variant-numeric: tabular-nums;
+            min-width: 2.6em;
+            text-align: right;
+        }
+    }
+    .o_f3d_wall-bar {
+        flex: 1;
+        height: 0.5em;
+        background: var(--f3d-line);
+        border-radius: 0.25em;
+        overflow: hidden;
+
+        i {
+            display: block;
+            height: 100%;
+            background: var(--f3d-ok);
+        }
+    }
+    .o_f3d_wall-table .o_f3d_pill {
+        font-size: 0.7em;
+        padding: 0.15em 0.7em;
+    }
+    .o_f3d_wall-more {
+        margin-top: 0.4em;
+        color: var(--f3d-muted);
+    }
+
+    .o_f3d_wall-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6em;
+        height: 100%;
+        font: 600 1.6em var(--f3d-f-display);
+        color: var(--f3d-muted);
+    }
+    .o_f3d_wall-okdot {
+        width: 0.9em;
+        height: 0.9em;
+        border-radius: 50%;
+        background: var(--f3d-ok);
+    }
+}
+
+@keyframes o_f3d_wall_in {
+    from {
+        opacity: 0;
+        transform: translateY(1.5%);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes o_f3d_wall_progress {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}

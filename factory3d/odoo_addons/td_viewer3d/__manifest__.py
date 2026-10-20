@@ -16,9 +16,10 @@ Key features
 * Open in Odoo: click an object in the scene to open its form
 * State journal with snapshots and shift replay with a time slider
 * Kiosk screen for a shop-floor tablet, opened by a token URL without a login
+* Briefing wall mode for a TV: a full-screen slide playlist (3D fly-around, KPI tiles, alarms and events, today's orders) on the same kiosk URL
 * Cycle check that reports gaps in the receiving-to-shipping chain, and a demo-data wizard for test servers
 """,
-    "version": "19.0.1.0.4",
+    "version": "19.0.1.1.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Manufacturing",

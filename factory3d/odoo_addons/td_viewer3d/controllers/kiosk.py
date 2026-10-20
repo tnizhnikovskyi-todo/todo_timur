@@ -23,6 +23,10 @@ RATE_LIMIT = 10  # запитів
 RATE_WINDOW_S = 1.0  # за вікно
 MAX_TRACKED_IPS = 2048
 TAB_RE = re.compile(r"^[a-z_]{1,32}$")
+WALL_THEMES = ("dark", "light")
+WALL_KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+WALL_SLIDES = ("overview", "kpi", "events", "orders")  # умовчання, якщо параметр порожній
+WALL_SLIDE_S = 20
 LAYERS_RE = re.compile(r"^[A-Za-z0-9_,\-]{1,200}$")
 _hits = {}  # ip -> deque міток часу
 _hits_lock = threading.Lock()
@@ -97,7 +101,25 @@ class F3dKioskController(http.Controller):
             params["lite"] = kw["lite"] if kw["lite"] == "auto" else int(kw["lite"])
         if (kw.get("refresh") or "").isdigit() and 1 <= int(kw["refresh"]) <= 3600:
             params["refresh"] = int(kw["refresh"])
+        if kw.get("wall") == "1":
+            params["wall"] = True  # конфігурацію «стіни» підставляє `page()` з налаштувань
+            if kw.get("theme") in WALL_THEMES:
+                params["theme"] = kw["theme"]
         return params
+
+    @staticmethod
+    def _wall_config(theme=None):
+        """Налаштування «стіни» (R-27): тривалість слайда, с, і ключі слайдів за порядком показу."""
+        params = request.env["ir.config_parameter"].sudo()
+        try:
+            slide_s = int(params.get_param(PREFIX + "wall_slide_s") or WALL_SLIDE_S)
+        except ValueError:
+            slide_s = WALL_SLIDE_S
+        if not 5 <= slide_s <= 300:
+            slide_s = WALL_SLIDE_S
+        raw = params.get_param(PREFIX + "wall_slides") or ""
+        slides = [key for key in raw.replace(" ", "").split(",") if WALL_KEY_RE.match(key)] or list(WALL_SLIDES)
+        return {"slide_s": slide_s, "slides": slides, "theme": theme or "dark"}
 
     # --- API-08 ------------------------------------------------------------
 
@@ -114,9 +136,12 @@ class F3dKioskController(http.Controller):
     def page(self, token, **kw):
         if not self._token_ok(token):
             return _not_found()
+        params = self._page_params(kw)
+        if params.get("wall"):
+            params["wall"] = self._wall_config(params.pop("theme", None))
         values = {
             "token": token,
-            "params": self._page_params(kw),
+            "params": params,
             "session_info_json": Markup(
                 json.dumps({"db": request.db, "lang": "uk_UA", "user_context": {"tz": "Europe/Kyiv"}})
             ),

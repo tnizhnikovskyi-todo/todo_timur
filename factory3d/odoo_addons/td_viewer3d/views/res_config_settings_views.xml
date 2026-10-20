@@ -47,6 +47,19 @@
                             </div>
                         </setting>
                     </block>
+                    <block title="Екран планірки («стіна»)" name="f3d_viewer_wall">
+                        <setting string="Слайди й тривалість" help="Екран на телевізор: адреса кіоска з ?wall=1, слайди змінюються самі">
+                            <div class="content-group">
+                                <label for="td_wall_slide_s"/> <field name="td_wall_slide_s"/>
+                            </div>
+                            <div class="content-group mt8">
+                                <label for="td_wall_slides"/> <field name="td_wall_slides"/>
+                            </div>
+                            <div class="content-group mt8">
+                                <field name="td_wall_url" widget="CopyClipboardChar" readonly="1"/>
+                            </div>
+                        </setting>
+                    </block>
                     <block title="Планшети" name="f3d_viewer_lite">
                         <setting string="Спрощений режим" help="Для слабких пристроїв">
                             <field name="td_lite_default"/>
