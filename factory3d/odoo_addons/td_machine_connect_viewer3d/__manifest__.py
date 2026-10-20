@@ -1,6 +1,6 @@
 {
     "name": "Machine Connect 3D",
-    "summary": "Downtime cost in 3D: machine coloring by downtime cost for the month",
+    "summary": "Machine Connect in 3D: downtime cost coloring and the plant bottleneck (queue stack and card block)",
     "description": """
 Machine Connect 3D
 ==================
@@ -13,8 +13,9 @@ Key features
 * "Downtime, cost" color mode next to the OEE mode
 * Legend with the largest monthly loss
 * Visible only to Factory 3D managers and hidden on shop-floor kiosk screens
+* Plant bottleneck: a red stack of waiting orders in front of the constraining section (height by queue length) and a metrics block in the machine card
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
