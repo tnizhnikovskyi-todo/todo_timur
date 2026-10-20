@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-01: смарт-кнопка «Собівартість: факт N ₴ · маржа M %» у замовленні продажу (R-07). -->
+    <record id="view_order_form_td_cost" model="ir.ui.view">
+        <field name="name">sale.order.form.td.cost</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_td_sale_cost" type="object" class="oe_stat_button" icon="fa-calculator"
+                        invisible="not td_cost_label"
+                        groups="sales_team.group_sale_manager,td_factory3d.group_td_manager">
+                    <field name="td_cost_level" invisible="1"/>
+                    <div class="o_field_widget o_stat_info">
+                        <field name="td_cost_label" class="o_stat_text"
+                               decoration-success="td_cost_level == 'ok'"
+                               decoration-warning="td_cost_level == 'warn'"
+                               decoration-danger="td_cost_level == 'alert'"/>
+                    </div>
+                </button>
+            </div>
+        </field>
+    </record>
+
+    <!-- V-03: колонки «Маржа план / факт» у списку замовлень (за замовчуванням сховані, рахуються лише коли показані). -->
+    <record id="view_order_tree_td_cost" model="ir.ui.view">
+        <field name="name">sale.order.list.td.cost</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <field name="amount_total" position="after">
+                <field name="td_margin_plan_pct" optional="hide" string="Маржа план, %"
+                       groups="sales_team.group_sale_manager,td_factory3d.group_td_manager"/>
+                <field name="td_margin_fact_pct" optional="hide" string="Маржа факт, %"
+                       decoration-success="td_cost_level == 'ok'"
+                       decoration-warning="td_cost_level == 'warn'"
+                       decoration-danger="td_cost_level == 'alert'"
+                       groups="sales_team.group_sale_manager,td_factory3d.group_td_manager"/>
+                <field name="td_cost_level" column_invisible="1"
+                       groups="sales_team.group_sale_manager,td_factory3d.group_td_manager"/>
+            </field>
+        </field>
+    </record>
+</odoo>

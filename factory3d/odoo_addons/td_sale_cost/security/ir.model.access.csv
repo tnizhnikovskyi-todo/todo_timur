@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_sale_cost_sale_manager,td.sale.cost sale manager,model_td_sale_cost,sales_team.group_sale_manager,1,1,1,1
+access_td_sale_cost_td_manager,td.sale.cost td manager,model_td_sale_cost,td_factory3d.group_td_manager,1,1,1,1
+access_td_sale_cost_line_sale_manager,td.sale.cost.line sale manager,model_td_sale_cost_line,sales_team.group_sale_manager,1,1,1,1
+access_td_sale_cost_line_td_manager,td.sale.cost.line td manager,model_td_sale_cost_line,td_factory3d.group_td_manager,1,1,1,1

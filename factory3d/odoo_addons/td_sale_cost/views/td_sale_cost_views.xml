@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-02: форма «Собівартість замовлення» — підсумки, розбивка за статтями й за МО (R-07). -->
+    <record id="view_td_sale_cost_form" model="ir.ui.view">
+        <field name="name">td.sale.cost.form</field>
+        <field name="model">td.sale.cost</field>
+        <field name="arch" type="xml">
+            <form string="Собівартість замовлення" create="0" edit="0" delete="0" duplicate="0">
+                <header>
+                    <button name="action_refresh" type="object" string="Оновити" class="btn-primary" icon="fa-refresh"/>
+                    <button name="action_open_order" type="object" string="До замовлення"/>
+                </header>
+                <sheet>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="has_dev" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="order_id" options="{'no_open': True}"/></h1>
+                        <div class="text-muted">
+                            Розраховано <field name="calc_at"/> · МО: <field name="mo_count"/> ·
+                            виконання <field name="progress_pct"/> %
+                        </div>
+                    </div>
+                    <group>
+                        <group string="Собівартість">
+                            <field name="price"/>
+                            <field name="plan_cost"/>
+                            <field name="plan_now_cost"/>
+                            <field name="fact_cost" class="fw-bold"/>
+                            <field name="forecast_cost"/>
+                            <field name="dev_pct" invisible="not has_dev"
+                                   decoration-success="level == 'ok'" decoration-warning="level == 'warn'"
+                                   decoration-danger="level == 'alert'" class="fw-bold"/>
+                            <field name="level" widget="badge" decoration-success="level == 'ok'"
+                                   decoration-warning="level == 'warn'" decoration-danger="level == 'alert'"/>
+                        </group>
+                        <group string="Маржа до ціни замовлення">
+                            <field name="margin_plan"/>
+                            <field name="margin_plan_pct"/>
+                            <field name="margin_fact" class="fw-bold"/>
+                            <field name="margin_fact_pct" class="fw-bold"/>
+                            <field name="margin_forecast"/>
+                            <field name="margin_forecast_pct"/>
+                        </group>
+                    </group>
+                    <group string="За статтями">
+                        <field name="article_line_ids" nolabel="1" colspan="2">
+                                <list create="0" edit="0" delete="0"
+                                      decoration-danger="level == 'alert'" decoration-warning="level == 'warn'"
+                                      decoration-success="level == 'ok'" decoration-muted="not has_fact">
+                                    <field name="name"/>
+                                    <field name="has_fact" column_invisible="1"/>
+                                    <field name="has_plan" column_invisible="1"/>
+                                    <field name="has_dev" column_invisible="1"/>
+                                    <field name="plan" sum="Разом" invisible="not has_plan"/>
+                                    <field name="plan_now" sum="Разом" invisible="not has_plan"/>
+                                    <field name="fact" sum="Разом" invisible="not has_fact"/>
+                                    <field name="deviation" sum="Разом" invisible="not has_fact"/>
+                                    <field name="dev_pct" invisible="not has_dev"/>
+                                    <field name="level" widget="badge" decoration-success="level == 'ok'"
+                                           decoration-warning="level == 'warn'" decoration-danger="level == 'alert'"/>
+                                    <field name="note"/>
+                                </list>
+                        </field>
+                    </group>
+                    <group string="За виробничими замовленнями (МО)">
+                        <field name="mo_line_ids" nolabel="1" colspan="2">
+                                <list create="0" edit="0" delete="0"
+                                      decoration-danger="level == 'alert'" decoration-warning="level == 'warn'"
+                                      decoration-success="level == 'ok'">
+                                    <field name="production_id" width="130px"/>
+                                    <field name="mo_state" widget="badge"/>
+                                    <field name="progress_pct"/>
+                                    <field name="has_dev" column_invisible="1"/>
+                                    <field name="fact_machine" sum="Разом" string="Верстати"/>
+                                    <field name="fact_energy" sum="Разом" string="Енергія"/>
+                                    <field name="fact_material" sum="Разом" string="Матеріали"/>
+                                    <field name="fact_waste" sum="Разом" string="Відходи"/>
+                                    <field name="plan" sum="Разом"/>
+                                    <field name="plan_now" sum="Разом"/>
+                                    <field name="fact" sum="Разом"/>
+                                    <field name="dev_pct" invisible="not has_dev"/>
+                                    <field name="level" widget="badge" decoration-success="level == 'ok'"
+                                           decoration-warning="level == 'warn'" decoration-danger="level == 'alert'"/>
+                                </list>
+                        </field>
+                    </group>
+                    <group string="Дані й припущення">
+                        <field name="warnings" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
