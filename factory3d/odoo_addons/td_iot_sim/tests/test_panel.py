@@ -114,11 +114,14 @@ class TestPanel(SimCase):
 
     def test_menu_under_base_root(self):
         root = self.env.ref("td_iot_sim.menu_td_sim_root")
-        self.assertEqual(root.parent_id, self.env.ref("td_factory3d.menu_td_root"))
-        self.assertEqual(root.sequence, 90)
+        data = self.env.ref("td_factory3d.menu_td_data")
+        self.assertEqual(root.parent_id, data)
+        self.assertEqual(root.sequence, 40)
+        # «Рівень 0» — не під «Емулятор» (це був би 4-й рівень), а розділом поруч у «Дані»
         level0 = self.env.ref("td_iot_sim.menu_iot_root")
-        self.assertEqual(level0.parent_id, root)
-        self.assertEqual(level0.sequence, 9)
+        self.assertEqual(level0.parent_id, data)
+        self.assertEqual(level0.sequence, 45)
+        self.assertEqual(level0.name, "Емулятор: рівень 0 (без сервісу)")
         settings = self.env.ref("td_iot_sim.menu_td_sim_settings")
         self.assertEqual(settings.parent_id, self.env.ref("td_factory3d.menu_td_config"))
         self.assertEqual(settings.sequence, 90)

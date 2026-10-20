@@ -71,16 +71,22 @@ class TestInstall(F3dViewerBase):
 
     def test_menu_sequences(self):  # AC-64
         root = self.env.ref("td_factory3d.menu_td_root")
-        expected = {"menu_td_viewer": 10, "menu_td_journal": 12, "menu_td_cycle_check": 14, "menu_td_demo": 16}
-        for xmlid, seq in expected.items():
+        data = self.env.ref("td_factory3d.menu_td_data")
+        # верхній рядок: «Переглядач» у корені, решта — розділи й пункти групи «Дані»
+        expected = {
+            "menu_td_viewer": (root, 10),
+            "menu_td_journal": (data, 30),
+            "menu_td_demo": (data, 50),
+            "menu_td_cycle_check": (data, 60),
+        }
+        for xmlid, (parent, seq) in expected.items():
             menu = self._menu(xmlid)
             if not menu:
                 continue  # додається разом з дією іншого воркера
-            self.assertEqual(menu.parent_id, root, xmlid)
+            self.assertEqual(menu.parent_id, parent, xmlid)
             self.assertEqual(menu.sequence, seq, xmlid)
-        for menu in root.child_id:
-            if menu.get_external_id().get(menu.id, "").startswith("td_viewer3d."):
-                self.assertTrue(10 <= menu.sequence <= 19, menu.name)
+        for xmlid in ("menu_td_snapshots", "menu_td_events"):
+            self.assertEqual(self._menu(xmlid).parent_id, self._menu("menu_td_journal"), xmlid)
         settings = self._menu("menu_td_settings")
         if settings:
             self.assertEqual(settings.parent_id, self.env.ref("td_factory3d.menu_td_config"))

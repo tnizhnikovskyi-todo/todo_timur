@@ -22,7 +22,7 @@ Requirements and notes
 * Connects to the customer's own BioStar 2 server; the password is entered by an administrator in the settings. No data is sent to the module vendor.
 * Writing to BioStar 2 is disabled by default.
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Human Resources/Attendances",
     "author": "ToDo",
     "website": "https://todo.ltd",

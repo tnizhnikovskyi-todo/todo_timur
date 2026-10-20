@@ -543,7 +543,9 @@ class HrEmployeePublic(models.Model):
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
 | `menu_td_root` | Завод 3D | — | 75 | `group_td_user` | — |
-| `menu_td_plant` | Завод | `menu_td_root` | 20 | `group_td_user` | — |
+| `menu_td_safety` | Будівля і безпека | `menu_td_root` | 55 | — (група без дії; видна, якщо видно хоч одного нащадка) | — |
+| `menu_td_data` | Дані | `menu_td_root` | 80 | — (те саме) | — |
+| `menu_td_plant` | Завод | `menu_td_data` | 10 | `group_td_user` | — |
 | `menu_td_zone` | Зони | `menu_td_plant` | 10 | `group_td_user` | `action_td_zone` (`td.zone`, views kanban,list,form; `context={'search_default_group_zone_type':1}`) |
 | `menu_td_dock` | Ворота | `menu_td_plant` | 20 | `group_td_user` | `action_td_dock` (`stock.location`, list,form; `domain=[('td_kind','=','dock')]`, `context={'default_td_kind':'dock','default_usage':'internal'}`) |
 | `menu_td_equipment` | Обладнання зі сцени | `menu_td_plant` | 30 | `group_td_user` | `action_td_equipment` (`maintenance.equipment`, list,form; `domain=[('td_code','!=',False)]`, `context={'search_default_group_td_zone':1}`) |
@@ -554,9 +556,15 @@ class HrEmployeePublic(models.Model):
 | `menu_td_config_params` | Параметри системи | `menu_td_config` | 95 | `group_td_admin` | `action_td_config_parameter` (`ir.config_parameter`, list,form; `domain=[('key','=like','td.%')]`) |
 | `menu_td_config_migration` | Повторити міграцію демо-даних | `menu_td_config` | 96 | `group_td_admin` | `ir.actions.server` `action_td_run_migration`: `model_id=model_td_scene_mixin`, `state='code'`, `code="action = env['td.scene.mixin'].f3d_run_migration()"` (у `data/td_actions.xml`) |
 
-Зарезервовані sequence під `menu_td_root` для інших модулів: 10 viewer, 30 telemetry,
-40 machine_connect, 50 energy, 55 genset (міст `td_genset_factory3d`, `td_genset`), 60 yard, 70 access, 80 bms,
-85 fire_safety, 90 iot_sim (X-32). Base займає 20 (`menu_td_plant`) і 99 (`menu_td_config`).
+Верхній рядок «Завод 3D» — 8 пунктів (sequence): 10 Переглядач (viewer), 40 Верстати (machine_connect), 50 Енергетика
+(energy), 55 Будівля і безпека (`menu_td_safety`), 60 Двір (yard), 70 Планування (constructor; його перші пункти —
+«Конструктор» і «Інструкція конструктора»), 80 Дані (`menu_td_data`), 99 Налаштування (`menu_td_config`). Групи
+`menu_td_safety` і `menu_td_data` без дії й без `groups` оголошує base; дочірні модулі переносять свої пункти в них,
+змінюючи лише `parent` і `sequence`: у «Будівля і безпека» — розділи 10 Будівля (bms), 20 Вентиляція й опалення (bms),
+30 Освітлення (bms), 40 Пожежна безпека (fire_safety), 50 Евакуація (fire_safety), 60 Доступ (access); у «Дані» — 10 Завод
+(base), 20 Телеметрія, 30 Журнал станів (viewer), 40 Емулятор і 45 «Емулятор: рівень 0 (без сервісу)» (iot_sim),
+50 Демо-дані, 60 Перевірка циклу (viewer). Глибина — пункт рядка → розділ → пункт (без 4-го рівня): розділи, що були б
+вкладеними, лежать плоско в групі.
 
 Правило налаштувань модулів (X-32): пункт «Налаштування <модуля>» (дія `res.config.settings` модуля або підменю
 його параметрів) ставиться під `td_factory3d.menu_td_config` з `sequence` = резерв модуля з переліку вище
@@ -988,7 +996,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'td.base.environment';
 | ТК | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|
 | ТК-01 Установка | `odoo-bin -d <copy> -i td_factory3d --stop-after-init`; лог рівня INFO | без ERROR/WARNING (крім відомих Odoo); у лозі рядки кроків 1–11 із кількостями §5.3; `migration_state='done'` | лог; Налаштування → Технічні → Параметри системи → `td.base.*` |
-| ТК-02 Коди й зони | SQL/UI: `SELECT td_kind,count(*) FROM stock_location WHERE td_code IS NOT NULL GROUP BY 1` → `location 682`, `dock 14`; `mrp_workcenter` 35; `hr_employee` 35; `maintenance_equipment` 210 (серійники навантажувачів `FL-4369`… мають код `FL-1`…); `td_zone` 45 (11 `outdoor`, kanban показує їх окремою групою); `SELECT td_loc_kind,count(*) FROM stock_location WHERE td_loc_kind IS NOT NULL GROUP BY 1` → `pallet_cell 360, bin 144, stack 123, shelf 24, kit 20, area 18`; `td_capacity > 0` → 654 (AC-54); `td_zone` 34; лічильники зон за AC-19 | кількості точні; Завод 3D → Завод → Зони: kanban 34 карток із площами; `Z-SHEETS` → 123 місця, 0 РЦ; `Z-CUT` → 6 РЦ | меню «Завод 3D», форми зон |
+| ТК-02 Коди й зони | SQL/UI: `SELECT td_kind,count(*) FROM stock_location WHERE td_code IS NOT NULL GROUP BY 1` → `location 682`, `dock 14`; `mrp_workcenter` 35; `hr_employee` 35; `maintenance_equipment` 210 (серійники навантажувачів `FL-4369`… мають код `FL-1`…); `td_zone` 45 (11 `outdoor`, kanban показує їх окремою групою); `SELECT td_loc_kind,count(*) FROM stock_location WHERE td_loc_kind IS NOT NULL GROUP BY 1` → `pallet_cell 360, bin 144, stack 123, shelf 24, kit 20, area 18`; `td_capacity > 0` → 654 (AC-54); `td_zone` 34; лічильники зон за AC-19 | кількості точні; Завод 3D → Дані → Завод → Зони: kanban 34 карток із площами; `Z-SHEETS` → 123 місця, 0 РЦ; `Z-CUT` → 6 РЦ | меню «Завод 3D», форми зон |
 | ТК-03 Пакети й поля x_* | порівняти `S1` з новим станом: кожен рядок із `x_dock` → `batch_id` непорожній і `batch.dock_id.td_code == x_dock`; `S2` == поточний знімок рухів; `S4` незмінний; `stock_picking_batch` 24 рядки; `ir_model_fields` без `x_dock/x_truck/x_vehicle` для `stock.picking`; `ir_ui_view` без `view_picking_form_dock` | 0 розбіжностей; пакети `BATCH/IN/00001…3`, `BATCH/OUT/00004…6` з `td_code`; 15 нових пакетів із доком, 3 з технікою; стани `done` для 6 пакетів | Склад → Операції → Пакетні переміщення (список із колонками «Фура», «Техніка»); форма `WH/IN/00128`: «Ворота WH/Вхід/Ворота 1», «Фура TRUCK-IN-1» |
 | ТК-04 Інтерфейс | (1) Обслуговування → Обладнання → `SAW-1` → вкладка «Паспорт»: HOMAG, SAWTEQ S-310…, 14 параметрів, 4 джерела, «Одиниць під паспортом» 2; «Показати в 3D» → жовте повідомлення (viewer не встановлений). (2) Склад → Конфігурація → Місця зберігання → `WH/Вхід/Ворота 4` → «Завод 3D»: Ворота, Захід, № 4, «Фурнітура», X 0, Y 35; «Типи операцій» = Receipts. (3) Новий пакет типу Receipts: поле «Док» пропонує 7 західних воріт; вибрати `Ворота 1`, додати документ із крайкою → попередження «Ворота DOCK-W1 приймають: Плитні матеріали…». (4) Працівники → Олег Мельник (OPSAW1) → «Завод 3D»: `OP-SAW-1`. (5) Комірник (користувач лише `stock.group_stock_user`) бачить меню «Завод 3D», вкладки, але поле «Код сцени» readonly | усе як описано, без traceback | UI |
 | ТК-05 Повтор і деінсталяція | (1) Завод 3D → Налаштування → «Повторити міграцію демо-даних» (адміністратор) → звіт `batches_created: 0`, кількості незмінні. (2) Деінсталювати модуль → `SELECT x_dock,x_truck,x_vehicle FROM stock_picking` дорівнює `S1`; `stock_picking_batch` 24 (лишаються); `td_zone`, `td_equipment_passport` таблиць немає; `S3`, `S5` незмінні. (3) Повторна установка → ТК-01…ТК-03 знову зелені (пакети вже є → `batches_created: 0`, звірка 0) | як описано | SQL, Застосунки |

@@ -29,7 +29,7 @@ SEC, ADM, FADM = (
 )
 HR = "hr_attendance.group_hr_attendance_user"
 MENUS = [  # xml-id, батько, sequence, групи
-    ("menu_td_access", "td_factory3d.menu_td_root", 70, {SEC}),
+    ("menu_td_access", "td_factory3d.menu_td_safety", 60, {SEC}),
     ("menu_td_access_presence", "menu_td_access", 10, {SEC}),
     ("menu_td_access_event", "menu_td_access", 20, {SEC}),
     ("menu_td_access_visitor", "menu_td_access", 30, {SEC}),
@@ -144,7 +144,7 @@ class TestSecurity(AccessCase):
                 self.assertEqual(menu.parent_id, self._ref(parent))
                 self.assertEqual(menu.sequence, seq)
                 self.assertEqual(set(menu.group_ids.get_external_id().values()), groups)
-        self.assertEqual(self._ref("menu_td_access").sequence, 70)
+        self.assertEqual(self._ref("menu_td_access").sequence, 60)
 
     def test_views_arch(self):  # AC-66
         admin = self.env.ref("base.user_admin")

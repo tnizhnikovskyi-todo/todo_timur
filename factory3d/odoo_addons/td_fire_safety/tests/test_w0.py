@@ -55,11 +55,12 @@ class TestW0Skeleton(TransactionCase):
 
     def test_menus(self):
         root = self.env.ref("td_fire_safety.menu_td_fire_root")
-        self.assertEqual(root.parent_id, self.env.ref("td_factory3d.menu_td_root"))
-        self.assertEqual(root.sequence, 85)
-        for xmlid, parent in (("menu_td_fire_evac", root), ("menu_td_fire_config", root)):
+        safety = self.env.ref("td_factory3d.menu_td_safety")
+        self.assertEqual(root.parent_id, safety)
+        self.assertEqual(root.sequence, 40)
+        evac = self.env.ref("td_fire_safety.menu_td_fire_evac")
+        self.assertEqual((evac.parent_id, evac.sequence), (safety, 50))
+        for xmlid in ("menu_td_fire_template", "menu_td_fire_loop"):
             menu = self.env.ref("td_fire_safety." + xmlid)
-            self.assertEqual(menu.parent_id, parent, xmlid)
-        self.assertIn(
-            self.env.ref("td_factory3d.group_td_manager"), self.env.ref("td_fire_safety.menu_td_fire_config").group_ids
-        )
+            self.assertEqual(menu.parent_id, root, xmlid)
+            self.assertIn(self.env.ref("td_factory3d.group_td_manager"), menu.group_ids, xmlid)

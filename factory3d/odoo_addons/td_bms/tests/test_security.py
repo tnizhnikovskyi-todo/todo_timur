@@ -60,13 +60,14 @@ class TestRights(F3DBmsCase):
 
     def test_menus(self):
         expected = {
-            "menu_td_bms": ("td_factory3d.menu_td_root", 80),
+            # розділи плоско в «Будівля і безпека» (td_factory3d): пункт рядка → розділ → пункт
+            "menu_td_bms": ("td_factory3d.menu_td_safety", 10),
             "menu_td_bms_overview": ("menu_td_bms", 10),
-            "menu_td_bms_lighting": ("menu_td_bms", 20),
+            "menu_td_bms_lighting": ("td_factory3d.menu_td_safety", 30),
             "menu_td_bms_light_group": ("menu_td_bms_lighting", 10),
             "menu_td_bms_light_panel": ("menu_td_bms_lighting", 20),
             "menu_td_bms_light_norm": ("menu_td_bms_lighting", 30),
-            "menu_td_bms_hvac": ("menu_td_bms", 30),
+            "menu_td_bms_hvac": ("td_factory3d.menu_td_safety", 20),
             "menu_td_bms_hvac_unit": ("menu_td_bms_hvac", 10),
             "menu_td_bms_heat_balance": ("menu_td_bms_hvac", 20),
             "menu_td_bms_deviation": ("menu_td_bms", 40),

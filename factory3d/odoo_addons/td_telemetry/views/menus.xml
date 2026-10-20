@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 (V-22). Замінює views/menus.xml після появи дій (action_* у views/*.xml, що йдуть раніше). -->
 <odoo>
-    <menuitem id="menu_td_telemetry" name="Телеметрія" parent="td_factory3d.menu_td_root" sequence="30"
+    <menuitem id="menu_td_telemetry" name="Телеметрія" parent="td_factory3d.menu_td_data" sequence="20"
               groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_telemetry_overview" name="Огляд" parent="menu_td_telemetry" sequence="10"
               action="action_td_source_overview" groups="td_factory3d.group_td_user"/>

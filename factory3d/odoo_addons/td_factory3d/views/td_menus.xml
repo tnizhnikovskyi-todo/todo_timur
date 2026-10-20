@@ -11,7 +11,11 @@
     <menuitem id="menu_td_root" name="Завод 3D" sequence="75"
               web_icon="td_factory3d,static/src/img/app_icon.png"
               groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_plant" name="Завод" parent="menu_td_root" sequence="20"
+    <!-- Верхній рядок: 8 пунктів. Групи без дії й без groups: Odoo показує їх, лише якщо видно хоч одного нащадка
+         (_visible_menu_ids), тож без встановлених модулів порожньої групи немає. Рівні: пункт рядка → розділ → пункт. -->
+    <menuitem id="menu_td_safety" name="Будівля і безпека" parent="menu_td_root" sequence="55"/>
+    <menuitem id="menu_td_data" name="Дані" parent="menu_td_root" sequence="80"/>
+    <menuitem id="menu_td_plant" name="Завод" parent="menu_td_data" sequence="10"
               groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_zone" name="Зони" parent="menu_td_plant" sequence="10"
               action="action_td_zone" groups="group_td_user"/>

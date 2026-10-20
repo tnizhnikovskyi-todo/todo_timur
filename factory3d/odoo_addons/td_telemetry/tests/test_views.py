@@ -136,7 +136,7 @@ class TestMenus(F3DTelemetryCase):
 
     def test_menu_tree(self):
         root = self.env.ref("td_telemetry.menu_td_telemetry")
-        self.assertEqual((root.parent_id, root.sequence), (self.env.ref("td_factory3d.menu_td_root"), 30))
+        self.assertEqual((root.parent_id, root.sequence), (self.env.ref("td_factory3d.menu_td_data"), 20))
         self.assertIn(self.env.ref("td_factory3d.group_td_user"), root.group_ids)
         for xmlid, (sequence, group) in self.CHILDREN.items():
             with self.subTest(menu=xmlid):

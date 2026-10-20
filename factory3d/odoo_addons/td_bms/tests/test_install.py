@@ -33,7 +33,7 @@ class TestBmsInstall(F3DBmsCase):
 
     def test_menus(self):
         root = self.env.ref("td_bms.menu_td_bms")
-        self.assertEqual(root.parent_id, self.env.ref("td_factory3d.menu_td_root"))
-        self.assertEqual(root.sequence, 80)
+        self.assertEqual(root.parent_id, self.env.ref("td_factory3d.menu_td_safety"))
+        self.assertEqual(root.sequence, 10)
         cfg = self.env.ref("td_bms.menu_td_bms_config")
         self.assertEqual(cfg.parent_id, self.env.ref("td_factory3d.menu_td_config"))

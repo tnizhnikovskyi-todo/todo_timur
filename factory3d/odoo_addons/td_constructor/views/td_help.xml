@@ -401,8 +401,7 @@
         <field name="url">/f3d/constructor/help</field>
         <field name="target">new</field>
     </record>
-    <menuitem id="menu_td_constructor_help" name="Інструкція конструктора" parent="td_factory3d.menu_td_root"
-              sequence="16" action="action_td_help" groups="td_factory3d.group_td_user"/>
+    <!-- Пункт меню «Інструкція конструктора» (menu_td_constructor_help) оголошено в views/td_menus.xml -->
 
     <!-- td.comment: виконавець, завдання mail.activity, обговорення (chatter), фільтри -->
     <record id="view_td_comment_form_s6" model="ir.ui.view">
