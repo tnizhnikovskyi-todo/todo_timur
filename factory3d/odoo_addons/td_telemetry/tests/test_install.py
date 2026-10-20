@@ -8,8 +8,8 @@ class TestInstall(TransactionCase):
     def test_root_menu(self):
         menu = self.env.ref("td_telemetry.menu_td_telemetry")
         self.assertEqual(menu.name, "Телеметрія")
-        self.assertEqual(menu.parent_id, self.env.ref("td_factory3d.menu_td_root"))
-        self.assertEqual(menu.sequence, 30)
+        self.assertEqual(menu.parent_id, self.env.ref("td_factory3d.menu_td_data"))
+        self.assertEqual(menu.sequence, 20)
         self.assertIn(self.env.ref("td_factory3d.group_td_user"), menu.group_ids)
 
     def test_params(self):

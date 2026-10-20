@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_td_access" name="Доступ" parent="td_factory3d.menu_td_root" sequence="70"
+    <menuitem id="menu_td_access" name="Доступ" parent="td_factory3d.menu_td_safety" sequence="60"
               groups="group_td_access_security"/>
     <menuitem id="menu_td_access_presence" name="Люди по зонах" parent="menu_td_access" sequence="10"
               groups="group_td_access_security" action="action_td_access_presence"/>

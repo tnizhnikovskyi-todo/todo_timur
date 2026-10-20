@@ -2,12 +2,12 @@
 <odoo>
     <!-- SPEC §3 (V-00). W0: корінь і контейнери; пункти з діями — нижче в коментарі, розкоментувати, коли з'являться
          відповідні ir.actions (action_f3d_fire_*) у views/*.xml. У фінальному манифесті menus.xml — останній. -->
-    <menuitem id="menu_td_fire_root" name="Пожежна безпека" parent="td_factory3d.menu_td_root" sequence="85"
+    <!-- «Пожежна безпека» і «Евакуація» — розділи 2-го рівня в «Будівля і безпека» (td_factory3d). Контейнер
+         «Налаштування» прибрано (був би 4-м рівнем): «Шаблони навчань» і «Шлейфи» лежать у «Пожежна безпека». -->
+    <menuitem id="menu_td_fire_root" name="Пожежна безпека" parent="td_factory3d.menu_td_safety" sequence="40"
               groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_fire_evac" name="Евакуація" parent="menu_td_fire_root" sequence="60"
+    <menuitem id="menu_td_fire_evac" name="Евакуація" parent="td_factory3d.menu_td_safety" sequence="50"
               groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_fire_config" name="Налаштування" parent="menu_td_fire_root" sequence="90"
-              groups="td_factory3d.group_td_manager"/>
 
     <menuitem id="menu_td_fire_exit" name="Виходи" parent="menu_td_fire_evac" sequence="10" action="action_td_fire_exit" groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_fire_route" name="Маршрути" parent="menu_td_fire_evac" sequence="20" action="action_td_fire_route" groups="td_factory3d.group_td_user"/>
@@ -22,8 +22,8 @@
     <menuitem id="menu_td_fire_norm" name="Норми" parent="menu_td_fire_root" sequence="80" action="action_td_fire_norm" groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_fire_settings" name="Налаштування пожежної безпеки" parent="td_factory3d.menu_td_config" sequence="85" action="action_td_fire_settings" groups="td_factory3d.group_td_manager"/>
     <menuitem id="menu_td_fire_maint_requests" name="Заявки пожежної безпеки" parent="maintenance.menu_m_request" sequence="50" action="action_td_fire_maint_requests" groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_fire_loop" name="Шлейфи" parent="menu_td_fire_config" sequence="20" action="action_td_fire_loop" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_fire_loop" name="Шлейфи" parent="menu_td_fire_root" sequence="95" action="action_td_fire_loop" groups="td_factory3d.group_td_manager"/>
 
     <menuitem id="menu_td_fire_drill" name="Навчальні тривоги" parent="menu_td_fire_root" sequence="70" action="action_td_fire_drill" groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_fire_template" name="Шаблони навчань" parent="menu_td_fire_config" sequence="10" action="action_td_fire_drill_template" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_fire_template" name="Шаблони навчань" parent="menu_td_fire_root" sequence="90" action="action_td_fire_drill_template" groups="td_factory3d.group_td_manager"/>
 </odoo>

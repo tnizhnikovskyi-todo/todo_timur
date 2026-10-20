@@ -1,6 +1,6 @@
 {
     "name": "Equipment Simulator",
-    "version": "19.0.2.0.4",
+    "version": "19.0.2.0.5",
     "summary": "Console of the factory equipment simulator: device registry, signal catalog, scenarios, level 0",
     "description": """
 Equipment Simulator

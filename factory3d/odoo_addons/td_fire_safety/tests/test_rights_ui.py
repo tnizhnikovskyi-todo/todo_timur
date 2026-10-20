@@ -7,6 +7,7 @@ from .common import FireCase
 
 U, M = "td_factory3d.group_td_user", "td_factory3d.group_td_manager"
 ROOT = "td_fire_safety.menu_td_fire_root"
+SAFETY = "td_factory3d.menu_td_safety"  # «Будівля і безпека»: «Пожежна безпека» й «Евакуація» — її розділи
 # (xml-id меню, батько, sequence, група, xml-id дії, модель)
 MENUS = [
     ("menu_td_fire_overview", ROOT, 10, U, "action_td_fire_overview", "td.fire.panel"),
@@ -14,16 +15,15 @@ MENUS = [
     ("menu_td_fire_device", ROOT, 30, U, "action_td_fire_device", "td.fire.device"),
     ("menu_td_fire_event", ROOT, 40, U, "action_td_fire_event", "td.fire.event"),
     ("menu_td_fire_system", ROOT, 50, U, "action_td_fire_system", "td.fire.system"),
-    ("menu_td_fire_evac", ROOT, 60, U, None, None),
+    ("menu_td_fire_evac", SAFETY, 50, U, None, None),
     ("menu_td_fire_exit", "menu_td_fire_evac", 10, U, "action_td_fire_exit", "td.fire.exit"),
     ("menu_td_fire_route", "menu_td_fire_evac", 20, U, "action_td_fire_route", "td.fire.route"),
     ("menu_td_fire_smoke_zone", "menu_td_fire_evac", 30, U, "action_td_fire_smoke_zone", "td.fire.smoke.zone"),
     ("menu_td_fire_evac_report", "menu_td_fire_evac", 40, U, "action_td_fire_evac_report", None),
     ("menu_td_fire_drill", ROOT, 70, U, "action_td_fire_drill", "td.fire.drill"),
     ("menu_td_fire_norm", ROOT, 80, U, "action_td_fire_norm", "td.fire.norm"),
-    ("menu_td_fire_config", ROOT, 90, M, None, None),
-    ("menu_td_fire_template", "menu_td_fire_config", 10, M, "action_td_fire_drill_template", "td.fire.drill.template"),
-    ("menu_td_fire_loop", "menu_td_fire_config", 20, M, "action_td_fire_loop", "td.fire.loop"),
+    ("menu_td_fire_template", ROOT, 90, M, "action_td_fire_drill_template", "td.fire.drill.template"),
+    ("menu_td_fire_loop", ROOT, 95, M, "action_td_fire_loop", "td.fire.loop"),
 ]
 SETTINGS = {
     "td_fire_read_enabled": True,
@@ -50,7 +50,7 @@ class TestMenusRights(FireCase):
 
     def test_menus(self):
         root = self.env.ref(ROOT)
-        self.assertEqual((root.parent_id, root.sequence), (self.env.ref("td_factory3d.menu_td_root"), 85))
+        self.assertEqual((root.parent_id, root.sequence), (self.env.ref(SAFETY), 40))
         self.assertEqual(root.group_ids, self.env.ref(U))
         for name, parent, seq, group, action, model in MENUS:
             menu = self.env.ref(self.xid(name))
@@ -74,19 +74,12 @@ class TestMenusRights(FireCase):
         self.assertEqual(
             (settings.action, action.res_model, action.target), (action, "res.config.settings", "current")
         )  # 'inline' у Odoo 19 немає
+        # контейнер «Налаштування» прибрано (4-й рівень): «Шаблони навчань» і «Шлейфи» лежать у «Пожежна безпека»
+        self.assertFalse(self.env.ref("td_fire_safety.menu_td_fire_config", raise_if_not_found=False))
         children = self.env["ir.ui.menu"].search([("parent_id", "=", root.id)]) | self.env["ir.ui.menu"].search(
-            [
-                (
-                    "parent_id",
-                    "in",
-                    (
-                        self.env.ref("td_fire_safety.menu_td_fire_evac")
-                        | self.env.ref("td_fire_safety.menu_td_fire_config")
-                    ).ids,
-                )
-            ]
+            [("parent_id", "=", self.env.ref("td_fire_safety.menu_td_fire_evac").id)]
         )
-        self.assertEqual(len(children), 15)
+        self.assertEqual(len(children), 13)
 
     def test_acl_matrix(self):
         drill_group = "td_fire_safety.group_td_fire_drill"

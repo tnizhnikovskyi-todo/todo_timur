@@ -41,9 +41,7 @@ class TestMigration(TransactionCase):
         self.assertEqual(self.env["td.sim.signal"].search_count([]), signals)
         self.assertEqual(self.env["td.sim.device"].search_count([]), devices)
         self.assertTrue(self.env.ref("td_iot_sim.cron_iot_sim"))
-        self.assertEqual(
-            self.env.ref("td_iot_sim.menu_iot_root").parent_id, self.env.ref("td_iot_sim.menu_td_sim_root")
-        )
+        self.assertEqual(self.env.ref("td_iot_sim.menu_iot_root").parent_id, self.env.ref("td_factory3d.menu_td_data"))
 
     def test_pre_migrate_runs(self):
         path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "migrations", "19.0.2.0.0", "pre-migrate.py")

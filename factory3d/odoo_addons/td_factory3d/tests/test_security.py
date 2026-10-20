@@ -7,7 +7,9 @@ from .common import F3DCase
 
 MENUS = {  # xml-id: (sequence, parent, group)
     "menu_td_root": (75, None, "group_td_user"),
-    "menu_td_plant": (20, "menu_td_root", "group_td_user"),
+    "menu_td_safety": (55, "menu_td_root", None),  # групи без дії й без groups: видно, якщо видно нащадка
+    "menu_td_data": (80, "menu_td_root", None),
+    "menu_td_plant": (10, "menu_td_data", "group_td_user"),
     "menu_td_zone": (10, "menu_td_plant", "group_td_user"),
     "menu_td_dock": (20, "menu_td_plant", "group_td_user"),
     "menu_td_equipment": (30, "menu_td_plant", "group_td_user"),
@@ -40,7 +42,33 @@ class TestGroups(F3DCase):
             self.assertEqual(
                 menu.parent_id, self.env.ref("td_factory3d." + parent) if parent else self.env["ir.ui.menu"], xmlid
             )
-            self.assertEqual(menu.group_ids, self.env.ref("td_factory3d." + group), xmlid)
+            self.assertEqual(
+                menu.group_ids, self.env.ref("td_factory3d." + group) if group else self.env["res.groups"], xmlid
+            )
+
+    def test_top_row_groups(self):  # верхній рядок «Завод 3D»: ≤ 8 пунктів у заданому порядку
+        top = (
+            "Переглядач",
+            "Верстати",
+            "Енергетика",
+            "Будівля і безпека",
+            "Двір",
+            "Планування",
+            "Дані",
+            "Налаштування",
+        )
+        root = self.env.ref("td_factory3d.menu_td_root")
+        names = root.child_id.sorted("sequence").mapped("name")
+        self.assertEqual(names, [n for n in top if n in names])
+        Menu = self.env["ir.ui.menu"]
+        data = self.env.ref("td_factory3d.menu_td_data")
+        self.assertIn(data.id, Menu.with_user(self.user_reader)._visible_menu_ids())
+        for user in (self.user_reader, self.user_manager):
+            visible = Menu.with_user(user)._visible_menu_ids()
+            for xmlid in ("menu_td_safety", "menu_td_data"):
+                menu = self.env.ref("td_factory3d." + xmlid)
+                # група видна тоді й лише тоді, коли видно хоч одного нащадка (порожня група не лишається)
+                self.assertEqual(menu.id in visible, any(c.id in visible for c in menu.child_id), xmlid)
 
     def test_access_reader_manager(self):  # AC-42
         zone = self.make_zone("ACC-1")

@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- V-13, DEC-01, DEC-19: меню під «Завод 3D» (sequence 12 і 14 — запит до каркаса) -->
-    <menuitem id="menu_td_constructor" name="Конструктор" parent="td_factory3d.menu_td_root" sequence="12"
-              action="action_td_constructor" groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_constructor_plan" name="Планування" parent="td_factory3d.menu_td_root" sequence="14"
+    <menuitem id="menu_td_constructor_plan" name="Планування" parent="td_factory3d.menu_td_root" sequence="70"
               groups="td_factory3d.group_td_user"/>
+    <!-- «Конструктор» й «Інструкція» — перші пункти «Планування» (верхній рядок: 8 пунктів) -->
+    <menuitem id="menu_td_constructor" name="Конструктор" parent="menu_td_constructor_plan" sequence="1"
+              action="action_td_constructor" groups="td_factory3d.group_td_user"/>
+    <menuitem id="menu_td_constructor_help" name="Інструкція конструктора" parent="menu_td_constructor_plan"
+              sequence="2" action="action_td_help" groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_site" name="Площадки" parent="menu_td_constructor_plan" sequence="10"
               action="action_td_site" groups="td_factory3d.group_td_user"/>
     <menuitem id="menu_td_layer" name="Шари" parent="menu_td_constructor_plan" sequence="20"

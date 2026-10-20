@@ -27,7 +27,7 @@ class TestAccessInstall(AccessCase):
     def test_menu(self):
         menu = self.env.ref("td_access.menu_td_access")
         self.assertEqual(menu.name, "Доступ")
-        self.assertEqual(menu.parent_id, self.env.ref("td_factory3d.menu_td_root"))
+        self.assertEqual(menu.parent_id, self.env.ref("td_factory3d.menu_td_safety"))
 
     def test_network_blocked(self):
         import requests

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <menuitem id="menu_td_sim_root" name="Емулятор" parent="td_factory3d.menu_td_root" sequence="90"
+  <menuitem id="menu_td_sim_root" name="Емулятор" parent="td_factory3d.menu_td_data" sequence="40"
             groups="td_factory3d.group_td_user"/>
   <menuitem id="menu_td_sim_panel" name="Пульт" parent="menu_td_sim_root" sequence="1"
             action="action_td_sim_panel" groups="td_factory3d.group_td_user"/>
@@ -15,11 +15,12 @@
   <menuitem id="menu_td_sim_events" name="Події" parent="menu_td_sim_root" sequence="6"
             action="action_td_sim_event" groups="td_factory3d.group_td_user"/>
 
-  <!-- Рівень 0: успадковане меню переноситься під «Емулятор» (SPEC §3.14, level0.xml) -->
+  <!-- Рівень 0: успадковане меню переноситься в «Дані» поруч з «Емулятор» (SPEC §3.14, level0.xml): під самим
+       «Емулятор» воно дало б 4-й рівень (пункт рядка → розділ → розділ → пункт), тому назва містить «Емулятор». -->
   <record id="menu_iot_root" model="ir.ui.menu">
-    <field name="name">Рівень 0 (без сервісу)</field>
-    <field name="parent_id" ref="menu_td_sim_root"/>
-    <field name="sequence">9</field>
+    <field name="name">Емулятор: рівень 0 (без сервісу)</field>
+    <field name="parent_id" ref="td_factory3d.menu_td_data"/>
+    <field name="sequence">45</field>
     <field name="group_ids" eval="[(6, 0, [ref('td_factory3d.group_td_admin')])]"/>
   </record>
 

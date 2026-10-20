@@ -3,7 +3,7 @@
     <!-- Пункти «Перевірка циклу» і «Демо-дані» (V-01) додаються разом із їхніми діями. -->
     <menuitem id="menu_td_viewer" name="Переглядач" parent="td_factory3d.menu_td_root" sequence="10"
               action="action_td_viewer" groups="td_factory3d.group_td_user"/>
-    <menuitem id="menu_td_journal" name="Журнал станів" parent="td_factory3d.menu_td_root" sequence="12"
+    <menuitem id="menu_td_journal" name="Журнал станів" parent="td_factory3d.menu_td_data" sequence="30"
               groups="td_factory3d.group_td_manager"/>
     <menuitem id="menu_td_snapshots" name="Знімки" parent="menu_td_journal" sequence="1"
               action="action_td_viewer_snapshot" groups="td_factory3d.group_td_manager"/>
@@ -11,8 +11,8 @@
               action="action_td_viewer_event" groups="td_factory3d.group_td_manager"/>
     <menuitem id="menu_td_settings" name="Налаштування переглядача" parent="td_factory3d.menu_td_config"
               sequence="10" action="action_td_config_settings" groups="td_factory3d.group_td_admin"/>
-    <menuitem id="menu_td_cycle_check" name="Перевірка циклу" parent="td_factory3d.menu_td_root"
-              sequence="14" action="action_td_cycle_check" groups="td_factory3d.group_td_manager"/>
-    <menuitem id="menu_td_demo" name="Демо-дані" parent="td_factory3d.menu_td_root" sequence="16"
+    <menuitem id="menu_td_cycle_check" name="Перевірка циклу" parent="td_factory3d.menu_td_data"
+              sequence="60" action="action_td_cycle_check" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_demo" name="Демо-дані" parent="td_factory3d.menu_td_data" sequence="50"
               action="action_td_demo_wizard" groups="td_factory3d.group_td_admin"/>
 </odoo>

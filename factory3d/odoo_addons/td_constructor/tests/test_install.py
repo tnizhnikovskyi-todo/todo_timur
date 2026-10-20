@@ -15,8 +15,15 @@ class TestInstall(TransactionCase):
         plan = env.ref('td_constructor.menu_td_constructor_plan')
         main = env.ref('td_constructor.menu_td_constructor')
         root = env.ref('td_factory3d.menu_td_root')
-        self.assertEqual((main.sequence, plan.sequence), (12, 14))
-        self.assertEqual((main.parent_id, plan.parent_id), (root, root))
+        help_menu = env.ref('td_constructor.menu_td_constructor_help')
+        self.assertEqual(plan.sequence, 70)
+        self.assertEqual(plan.parent_id, root)
+        # «Конструктор» й «Інструкція» — перші пункти «Планування»
+        self.assertEqual((main.parent_id, main.sequence), (plan, 1))
+        self.assertEqual((help_menu.parent_id, help_menu.sequence), (plan, 2))
+        self.assertLess(
+            max(main.sequence, help_menu.sequence), min((plan.child_id - main - help_menu).mapped('sequence'))
+        )
         self.assertEqual(env.ref('td_constructor.action_td_constructor').tag, 'f3d_constructor')
 
     def test_uninstall_hook_keeps_business_records(self):
