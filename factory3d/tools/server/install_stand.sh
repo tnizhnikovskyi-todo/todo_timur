@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Постоянный «стенд» на тестовом сервере (решение E-11): эмулятор оборудования iot_sim + сборщик сигналов
-# (collector и плагины) как службы systemd. Эмулятор отдаёт данные по протоколам, сборщик читает их и шлёт в Odoo.
+# (collector и плагины) + имитатор ретранслятора SmartGen (fake_relay, профиль D700) как службы systemd. Эмулятор отдаёт
+# данные по протоколам, сборщик читает их и шлёт в Odoo; Odoo (td_genset) сам опрашивает имитатор ретранслятора.
 #
 #   sudo TD_SECRETS_FILE=/root/td-stand.secrets bash install_stand.sh            # установить / обновить
 #   sudo bash install_stand.sh --check                                           # только показать план, ничего не менять
@@ -15,13 +16,17 @@
 #      (или файла), остальные секреты стенда генерируются один раз и дальше не меняются; в репозитории секретов нет;
 #   4. псевдонимы iot-sim, mosquitto, collector -> 127.0.0.1 в /etc/hosts (блок «# BEGIN td-stand»);
 #   5. брокер MQTT: пакет mosquitto, слушает только 127.0.0.1:1883, пользователи sim и collector (--no-mqtt — пропустить);
-#   6. службы td-iot-sim.service и td-collector.service: Restart=always, пользователь td-stand, журнал в journald,
-#      лимиты памяти/CPU/процессов, доступ в сеть только к loopback (если Odoo на этой машине);
-#   7. enable --now и печать состояния.
+#   6. имитатор ретранслятора td_genset/relay/fake_relay.py (профиль D700): venv-relay, код в /opt/td-stand/genset-relay,
+#      /etc/td-stand/genset-relay.env (токены API и /sim/v1 генерируются один раз), порт TD_SIM_PORT_GENSET_RELAY
+#      (по умолчанию 8087; НЕ 8081: там настоящий ретранслятор SmartGen). iot_sim получает его URL и токен для сценариев
+#      blackout и genset_test (--no-relay — пропустить);
+#   7. службы td-iot-sim.service, td-collector.service и td-genset-relay.service: Restart=always, пользователь td-stand,
+#      журнал в journald, лимиты памяти/CPU/процессов, доступ в сеть только к loopback (и к TD_IP_ALLOW);
+#   8. enable --now и печать состояния.
 #
 # Секреты, которые выдаёт менеджер (stand_odoo_setup.py печатает их один раз), в порядке приоритета:
-#   переменная окружения TD_COLLECTOR_TOKEN / TD_SIM_API_TOKEN;
-#   файл TD_COLLECTOR_TOKEN_FILE / TD_SIM_API_TOKEN_FILE (в файле только значение);
+#   переменная окружения TD_COLLECTOR_TOKEN / TD_SIM_API_TOKEN / TD_RELAY_API_TOKEN / TD_RELAY_SIM_TOKEN;
+#   файл TD_COLLECTOR_TOKEN_FILE / TD_SIM_API_TOKEN_FILE / TD_RELAY_API_TOKEN_FILE / TD_RELAY_SIM_TOKEN_FILE (только значение);
 #   файл TD_SECRETS_FILE (строки KEY=VALUE, по умолчанию /etc/td-stand/secrets.env, если есть);
 #   значение, уже записанное в /etc/td-stand/*.env прошлым запуском.
 #
@@ -29,16 +34,20 @@
 #   скрипт), TD_ODOO_URL, TD_ODOO_SERVICE, TD_PYTHON, TD_USER, TD_PUSH_PORT, TD_SIM_PORT_BIOSTAR_HTTP (HTTP-порт
 #   эмулятора BioStar, по умолчанию 8081; пишется в iot-sim.env как SIM_PORT_BIOSTAR_HTTP), TD_IP_FILTER (0 — не
 #   ограничивать сеть служб), TD_IP_ALLOW (доп. сети в фильтр служб, например 172.16.0.0/12 — чтобы Odoo из
-#   контейнера Docker достучался до эмулятора; через пробел), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
+#   контейнера Docker достучался до эмулятора и имитатора ретранслятора; через пробел), TD_SIM_PORT_GENSET_RELAY (порт
+#   имитатора ретранслятора, по умолчанию 8087), TD_GENSET_RELAY_HOSTID (hostid имитатора; по умолчанию не совпадает с
+#   hostid настоящего модуля), TD_HARDEN (0 — без песочницы systemd), TD_ROOT (всё в подкаталог, для проверки без системы).
 # Пример (Odoo в Docker на 8094, порт 8081 занят ретранслятором SmartGen):
 #   sudo TD_SECRETS_FILE=/root/td-stand.secrets TD_ODOO_URL=http://127.0.0.1:8094 TD_SIM_PORT_BIOSTAR_HTTP=8181 \
 #       bash /opt/timur-o19/timur-o19e/git/todo_timur/factory3d/tools/server/install_stand.sh --check
+# Токены имитатора ретранслятора (TD_RELAY_API_TOKEN для Odoo, TD_RELAY_SIM_TOKEN для /sim/v1) обычно выдаёт менеджер:
+#   stand_odoo_setup.py genset --token-file td-stand.secrets (дописывает строки KEY=VALUE); без них скрипт генерирует свои.
 # Режимы проверки: --no-system — не трогать пользователей, apt, systemd, mosquitto (файлы пишутся под TD_ROOT).
 set -euo pipefail
 umask 022
 
 # ---------------------------------------------------------------- аргументы
-CHECK=0 UNINSTALL=0 PURGE=0 STATUS_ONLY=0 NO_MQTT=0 NO_SYSTEM=0
+CHECK=0 UNINSTALL=0 PURGE=0 STATUS_ONLY=0 NO_MQTT=0 NO_SYSTEM=0 NO_RELAY=0
 usage() { sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'; }
 for arg in "$@"; do
     case "$arg" in
@@ -48,6 +57,7 @@ for arg in "$@"; do
         --status) STATUS_ONLY=1 ;;
         --no-mqtt) NO_MQTT=1 ;;
         --no-system) NO_SYSTEM=1 ;;
+        --no-relay) NO_RELAY=1 ;;
         -h | --help) usage; exit 0 ;;
         *) echo "Неизвестный аргумент: $arg (см. --help)" >&2; exit 2 ;;
     esac
@@ -77,6 +87,9 @@ HOSTS_NAMES="iot-sim mosquitto collector"
 MQ_CONF="${TD_MOSQUITTO_CONF:-/etc/mosquitto/conf.d/td-stand.conf}"
 MQ_PASSWD="${TD_MOSQUITTO_PASSWD:-/etc/mosquitto/td-stand.passwd}"
 BIOSTAR_HTTP_PORT="${TD_SIM_PORT_BIOSTAR_HTTP:-8081}"   # 8081 на timur-o19demo занят ретранслятором SmartGen → 8181
+GENSET_RELAY_PORT="${TD_SIM_PORT_GENSET_RELAY:-8087}"   # имитатор ретранслятора SmartGen; 8081 занят настоящим → не он
+# hostid имитатора намеренно не равен hostid настоящего модуля: при ошибочном адресе Odoo получит 404 «unknown hostid»
+GENSET_RELAY_HOSTID="${TD_GENSET_RELAY_HOSTID:-53494D47454E534554443730}"
 PORTS_SIM_TCP="502 4001 4840 $BIOSTAR_HTTP_PORT 8082 8083 8090 8443 50000"
 PUSH_PORT="${TD_PUSH_PORT:-8080}"
 PORTS_COL_TCP="$PUSH_PORT 9108"
@@ -84,6 +97,9 @@ RECIPE=3                                             # версия способ
 COL_PLUGINS="f3d_collector_bms f3d_collector_yard machine_connect td_collector_energy"   # плагины сборщика (W2: energy_ctl)
 SIM_ENV="$ETC/iot-sim.env"
 COL_ENV="$ETC/collector.env"
+RELAY_ENV="$ETC/genset-relay.env"
+RELAY_SRC="$TD_REPO/factory3d/odoo_addons/td_genset/relay"   # fake_relay.py, genset_model.py, profiles/ (только stdlib + tzdata)
+R_API_TOKEN="" R_SIM_TOKEN=""
 
 WARNS=0 BLOCKERS=0
 log() { printf '%s  %s\n' "$(date +%H:%M:%S)" "$*"; }
@@ -101,6 +117,14 @@ done
 case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 " in
     *" $BIOSTAR_HTTP_PORT "*) die "TD_SIM_PORT_BIOSTAR_HTTP=$BIOSTAR_HTTP_PORT совпадает с другим портом стенда" ;;
 esac
+[[ "$GENSET_RELAY_PORT" =~ ^[0-9]+$ ]] && ((GENSET_RELAY_PORT >= 1 && GENSET_RELAY_PORT <= 65535)) \
+    || die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT: нужен номер порта 1…65535"
+case " 502 4001 4840 8082 8083 8090 8443 50000 $PUSH_PORT 9108 $BIOSTAR_HTTP_PORT " in
+    *" $GENSET_RELAY_PORT "*) die "TD_SIM_PORT_GENSET_RELAY=$GENSET_RELAY_PORT совпадает с другим портом стенда" ;;
+esac
+[[ "$GENSET_RELAY_PORT" != 8081 ]] ||
+    die "TD_SIM_PORT_GENSET_RELAY=8081: на timur-o19demo этот порт занят настоящим ретранслятором SmartGen, возьмите другой (по умолчанию 8087)"
+[[ "$GENSET_RELAY_HOSTID" =~ ^[0-9A-Za-z]{1,24}$ ]] || die "TD_GENSET_RELAY_HOSTID: до 24 символов A-Z a-z 0-9"
 have() { command -v "$1" >/dev/null 2>&1; }
 real() { [[ $CHECK -eq 0 ]]; }                       # true, когда реально меняем систему
 sysctl_on() { [[ $NO_SYSTEM -eq 0 ]] && have systemctl && [[ -d /run/systemd/system ]]; }
@@ -180,22 +204,25 @@ busy_ports() {
 }
 
 check_ports() {
-    local sim_active="" col_active="" lines
+    local sim_active="" col_active="" rel_active="" lines
     if ! have ss; then warn "нет утилиты ss (пакет iproute2): занятость портов не проверена"; return 0; fi
     if sysctl_on; then
         if systemctl is-active -q td-iot-sim.service 2>/dev/null; then sim_active=1; fi
         if systemctl is-active -q td-collector.service 2>/dev/null; then col_active=1; fi
+        if systemctl is-active -q td-genset-relay.service 2>/dev/null; then rel_active=1; fi
     fi
-    if [[ -n "$sim_active" && -n "$col_active" ]]; then ok "порты стенда заняты нашими службами (они уже работают)"; return 0; fi
+    [[ $NO_RELAY -eq 0 ]] || rel_active=1               # имитатор не нужен: его порт не проверяем
+    if [[ -n "$sim_active" && -n "$col_active" && -n "$rel_active" ]]; then ok "порты стенда заняты нашими службами (они уже работают)"; return 0; fi
     lines=""
     # shellcheck disable=SC2086  # списки портов разбиваются по словам намеренно
     if [[ -z "$sim_active" ]]; then lines="$(busy_ports tcp $PORTS_SIM_TCP; busy_ports udp 47808 50001)"; fi
     # shellcheck disable=SC2086
     if [[ -z "$col_active" ]]; then lines="$lines$(busy_ports tcp $PORTS_COL_TCP)"; fi
+    if [[ -z "$rel_active" ]]; then lines="$lines$(busy_ports tcp "$GENSET_RELAY_PORT")"; fi
     if [[ -n "$lines" ]]; then
         block "порты стенда заняты другими процессами: $(printf '%s' "$lines" | tr '\n' ' ')"
     else
-        ok "порты стенда свободны (TCP $PORTS_SIM_TCP $PORTS_COL_TCP, UDP 47808 50001)"
+        ok "порты стенда свободны (TCP $PORTS_SIM_TCP $PORTS_COL_TCP$([[ $NO_RELAY -eq 1 ]] || printf ' %s' "$GENSET_RELAY_PORT"), UDP 47808 50001)"
     fi
 }
 
@@ -224,6 +251,23 @@ odoo_probe() {
     fi
 }
 
+# relay_tokens — токены имитатора ретранслятора: API (Bearer для Odoo, relay_api.md) и SIM (Bearer для /sim/v1, его же
+# получает iot_sim). Приоритет как у остальных секретов; иначе генерируются один раз.
+relay_tokens() {
+    local name key var val
+    for name in TD_RELAY_API_TOKEN:RELAY_API_TOKEN:R_API_TOKEN TD_RELAY_SIM_TOKEN:RELAY_SIM_TOKEN:R_SIM_TOKEN; do
+        IFS=: read -r name key var <<<"$name"
+        val="$(secret_in "$name" "$RELAY_ENV" "$key")"
+        if [[ -z "$val" ]]; then
+            warn "$name не задан: будет сгенерирован локально (Odoo получит токен командой stand_odoo_setup.py genset --token-file с копией $RELAY_ENV)"
+            val="$(real && rand || echo '<будет сгенерирован>')"
+        elif ! valid_secret "$val"; then
+            block "$name некорректен (32-256 символов A-Z a-z 0-9 . _ ~ + / = -)"
+        fi
+        printf -v "$var" '%s' "$val"
+    done
+}
+
 preflight() {
     log "проверка окружения"
     [[ $EUID -eq 0 ]] || if real; then die "запустите через sudo"; else warn "запущено не от root: часть проверок (секреты, порты процессов) неполная"; fi
@@ -234,6 +278,8 @@ preflight() {
     elif ! sysctl_on; then block "systemd не найден (/run/systemd/system)"; fi
     [[ -d "$SERVICES/iot_sim" && -d "$SERVICES/collector" && -d "$SERVICES/collector_plugins" ]] ||
         block "нет $SERVICES/{iot_sim,collector,collector_plugins}: задайте TD_REPO (git-клон репозитория)"
+    [[ $NO_RELAY -eq 1 || ( -f "$RELAY_SRC/fake_relay.py" && -f "$RELAY_SRC/genset_model.py" && -f "$RELAY_SRC/profiles/d700.json" ) ]] ||
+        block "нет $RELAY_SRC/{fake_relay.py,genset_model.py,profiles/d700.json}: задайте TD_REPO или --no-relay"
     PY="$(find_python)" || { PY=""; block "нужен Python >= 3.12 (python3.12/3.13): задайте TD_PYTHON=/путь/к/python3.12"; }
     [[ -z "$PY" ]] || ok "Python: $PY ($("$PY" -c 'import sys; print(sys.version.split()[0])'))"
     have curl || block "нет curl"
@@ -256,6 +302,7 @@ preflight() {
     elif [[ "$SIM_TOKEN" != "<"* ]] && ! valid_secret "$SIM_TOKEN"; then
         block "TD_SIM_API_TOKEN некорректен (32-256 символов A-Z a-z 0-9 . _ ~ + / = -)"
     fi
+    [[ $NO_RELAY -eq 1 ]] || relay_tokens
     local url_re='^https?://[][A-Za-z0-9._:-]+(/[^[:space:]]*)?$'
     [[ "$ODOO_URL" =~ $url_re ]] || block "TD_ODOO_URL «$ODOO_URL» некорректен"
     check_ports
@@ -330,6 +377,18 @@ sim_install() {
     find "$PREFIX/iot-sim" -name __pycache__ -prune -exec rm -rf {} +
 }
 
+# Имитатор ретранслятора: код лежит в td_genset/relay (stdlib; из pip нужен только tzdata для RELAY_TZ), venv отдельный,
+# чтобы не смешивать с зависимостями эмулятора и сборщика.
+relay_install() {
+    local v=$1 tmp=$2
+    filtered_reqs "$RELAY_SRC/requirements.txt" >"$tmp/req-relay.txt"
+    "$v/bin/pip" install -q --disable-pip-version-check -r "$tmp/req-relay.txt"
+    rm -rf "$PREFIX/genset-relay"
+    mkdir -p "$PREFIX/genset-relay"
+    cp -a "$RELAY_SRC/fake_relay.py" "$RELAY_SRC/genset_model.py" "$RELAY_SRC/profiles" "$PREFIX/genset-relay/"
+    find "$PREFIX/genset-relay" -name __pycache__ -prune -exec rm -rf {} +
+}
+
 collector_install() {
     local v=$1 tmp=$2 p
     {
@@ -347,7 +406,7 @@ collector_install() {
     done
 }
 
-build_one() { # build_one КЛЮЧ(sim|collector) ВЕНВ ХЭШ-ПАПКИ...
+build_one() { # build_one КЛЮЧ(sim|collector|relay) ВЕНВ ХЭШ-ПАПКИ... (пути — от $SERVICES)
     local key=$1 v=$2 stamp want have_ tmp; shift 2
     stamp="$PREFIX/.stamp-$key"
     want="$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])')-r$RECIPE-$(src_hash "$@")"
@@ -359,23 +418,31 @@ build_one() { # build_one КЛЮЧ(sim|collector) ВЕНВ ХЭШ-ПАПКИ...
     ensure_venv "$v"
     if ! "${key}_install" "$v" "$tmp"; then rm -rf "$tmp"; die "pip не смог установить пакеты в $v (нет доступа к PyPI?)"; fi
     rm -rf "$tmp"
-    chmod -R go+rX "$v" "$PREFIX/iot-sim" 2>/dev/null || true
+    chmod -R go+rX "$v" "$PREFIX/iot-sim" "$PREFIX/genset-relay" 2>/dev/null || true
     printf '%s\n' "$want" >"$stamp"
     ok "$v готов ($want)"
-    case "$key" in sim) CHANGED_SIM=1 ;; collector) CHANGED_COL=1 ;; esac
+    case "$key" in sim) CHANGED_SIM=1 ;; collector) CHANGED_COL=1 ;; relay) CHANGED_RELAY=1 ;; esac
 }
 
 ensure_venvs() {
-    CHANGED_SIM=${CHANGED_SIM:-0} CHANGED_COL=${CHANGED_COL:-0}
+    CHANGED_SIM=${CHANGED_SIM:-0} CHANGED_COL=${CHANGED_COL:-0} CHANGED_RELAY=${CHANGED_RELAY:-0}
     [[ -n "${PY:-}" ]] || return 0
     real && mkdir -p "$PREFIX"
     build_one sim "$PREFIX/venv-sim" iot_sim
     build_one collector "$PREFIX/venv-collector" collector collector_plugins
+    [[ $NO_RELAY -eq 1 ]] || build_one relay "$PREFIX/venv-relay" ../odoo_addons/td_genset/relay
     if real && [[ $NO_SYSTEM -eq 0 ]]; then chown -R root:root "$PREFIX"; fi
     if real; then printf '%s\n' "$(git_ rev-parse --short HEAD 2>/dev/null || echo unknown) $(date -u +%FT%TZ)" >"$PREFIX/VERSION"; fi
 }
 
 # ---------------------------------------------------------------- env-файлы
+# relay_sim_lines — адрес и токен имитатора ретранслятора для iot_sim (сценарии blackout и genset_test ходят в /sim/v1).
+# Без --no-relay эмулятор говорит с ним по loopback (127.0.0.1 есть в SIM_ALLOW_OUTBOUND по умолчанию).
+relay_sim_lines() {
+    [[ $NO_RELAY -eq 0 ]] || return 0
+    printf 'SIM_GENSET_RELAY_URL=http://127.0.0.1:%s\nSIM_GENSET_RELAY_TOKEN=%s\n' "$GENSET_RELAY_PORT" "$R_SIM_TOKEN"
+}
+
 write_envs() {
     local s_opcua s_wood s_jobs s_bio s_mq_sim s_mq_col s_lpr_sec s_lpr_tok
     g() {
@@ -411,8 +478,26 @@ SIM_OPCUA_PASS=$s_opcua
 SIM_MQTT_URL=mqtt://sim:$s_mq_sim@mosquitto:1883
 SIM_LPR_PUSH_URL=http://collector:$PUSH_PORT/f3d/lpr/$s_lpr_sec
 SIM_LPR_PUSH_TOKEN=$s_lpr_tok
+$(relay_sim_lines)
 EOF
     [[ "$PUT" == same ]] || CHANGED_SIM=1
+    if [[ $NO_RELAY -eq 0 ]]; then
+        put_file "$RELAY_ENV" 640 root "$SVC_USER" <<EOF
+# Создано install_stand.sh: ИМИТАТОР ретранслятора SmartGen HGM6120N (td_genset/relay/fake_relay.py, профиль D700), не настоящий.
+# Токены сгенерированы один раз (или выданы менеджером). Свои переопределения — в genset-relay.local.env (не трогается).
+RELAY_HOST=0.0.0.0
+RELAY_PORT=$GENSET_RELAY_PORT
+RELAY_PROFILE=d700
+RELAY_API_TOKEN=$R_API_TOKEN
+RELAY_SIM_TOKEN=$R_SIM_TOKEN
+RELAY_HOSTID=$GENSET_RELAY_HOSTID
+RELAY_ID_BASE=epoch
+RELAY_TIME_FACTOR=1
+RELAY_TZ=Europe/Kyiv
+RELAY_LOG_LEVEL=INFO
+EOF
+        [[ "$PUT" == same ]] || CHANGED_RELAY=1
+    fi
     put_file "$COL_ENV" 640 root "$SVC_USER" <<EOF
 # Создано install_stand.sh. Токен выдаёт Odoo (stand_odoo_setup.py). Свои переопределения — в collector.local.env.
 F3D_ODOO_URL=$ODOO_URL
@@ -602,6 +687,35 @@ WantedBy=multi-user.target
 EOF
 }
 
+unit_relay() {
+    cat <<EOF
+# Создано install_stand.sh. Править через drop-in: systemctl edit td-genset-relay
+[Unit]
+StartLimitIntervalSec=0
+Description=TD stand: имитатор ретранслятора SmartGen HGM6120N (fake_relay, профиль D700)
+Documentation=file://$TD_REPO/factory3d/tools/server/STAND.md
+After=network.target
+
+[Service]
+Type=simple
+$(unit_common)
+EnvironmentFile=$RELAY_ENV
+EnvironmentFile=-$ETC/genset-relay.local.env
+WorkingDirectory=$PREFIX/genset-relay
+ExecStart=$PREFIX/venv-relay/bin/python $PREFIX/genset-relay/fake_relay.py --quiet --hostid \${RELAY_HOSTID}
+SyslogIdentifier=td-genset-relay
+CapabilityBoundingSet=
+MemoryHigh=128M
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=64
+$(ip_filter_lines 1)
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
 unit_collector() {
     local lo=0; is_loopback_url && lo=1
     cat <<EOF
@@ -639,31 +753,54 @@ install_units() {
     [[ "$PUT" == same ]] || { reload=1; CHANGED_SIM=1; }
     put_file "$UNIT_DIR/td-collector.service" 644 root root < <(unit_collector)
     [[ "$PUT" == same ]] || { reload=1; CHANGED_COL=1; }
+    if [[ $NO_RELAY -eq 0 ]]; then
+        put_file "$UNIT_DIR/td-genset-relay.service" 644 root root < <(unit_relay)
+        [[ "$PUT" == same ]] || { reload=1; CHANGED_RELAY=1; }
+        [[ "$IP_FILTER" == 1 ]] ||
+            warn "TD_IP_FILTER=0: имитатор ретранслятора слушает 0.0.0.0:$GENSET_RELAY_PORT без сетевого фильтра (защищают только токены)"
+    fi
     is_loopback_url || warn "Odoo не на loopback ($ODOO_URL): сетевой фильтр сборщика отключён, у эмулятора остаётся только loopback"
     if sysctl_on && real && [[ $reload -eq 1 ]]; then systemctl daemon-reload; fi
 }
 
 start_units() {
-    if ! sysctl_on; then plan "enable --now td-iot-sim td-collector (systemd недоступен/--no-system: пропущено)"; return 0; fi
-    if ! real; then plan "systemctl enable --now td-iot-sim td-collector (restart, если изменились код/env/unit)"; return 0; fi
-    systemctl enable td-iot-sim.service td-collector.service >/dev/null 2>&1
+    local relay_unit=""; [[ $NO_RELAY -eq 1 ]] || relay_unit="td-genset-relay.service"
+    if ! sysctl_on; then plan "enable --now td-iot-sim td-collector ${relay_unit%.service} (systemd недоступен/--no-system: пропущено)"; return 0; fi
+    if ! real; then plan "systemctl enable --now td-iot-sim td-collector ${relay_unit%.service} (restart, если изменились код/env/unit)"; return 0; fi
+    systemctl enable td-iot-sim.service td-collector.service $relay_unit >/dev/null 2>&1
     if [[ ${CHANGED_SIM:-0} -eq 1 ]] && systemctl is-active -q td-iot-sim.service; then systemctl restart td-iot-sim.service; else systemctl start td-iot-sim.service; fi
     if [[ ${CHANGED_COL:-0} -eq 1 ]] && systemctl is-active -q td-collector.service; then systemctl restart td-collector.service; else systemctl start td-collector.service; fi
+    if [[ -n "$relay_unit" ]]; then
+        # перезапуск имитатора обнуляет его журнал показаний (id с 1): рестартуем только при изменении кода, env или unit
+        if [[ ${CHANGED_RELAY:-0} -eq 1 ]] && systemctl is-active -q "$relay_unit"; then systemctl restart "$relay_unit"; else systemctl start "$relay_unit"; fi
+    fi
     ok "службы включены и запущены"
 }
 
+# relay_get ПУТЬ — GET к имитатору ретранслятора с Bearer SIM-токеном из его env-файла (токен не попадает в аргументы curl).
+relay_get() {
+    local tok; tok="$(env_get "$RELAY_ENV" RELAY_SIM_TOKEN)"
+    [[ -n "$tok" ]] || return 1
+    curl -fsS --max-time 4 -K - "http://127.0.0.1:$GENSET_RELAY_PORT$1" <<<"header = \"Authorization: Bearer $tok\"" 2>/dev/null
+}
+
+relay_up() { local b; b="$(relay_get /sim/v1/state || true)"; [[ "$b" == *'"profile"'*'"D700"'* ]]; }
+
 wait_health() {
     if ! sysctl_on || ! real; then return 0; fi
-    local sim=0 col=0
+    local sim=0 col=0 rel=0
+    [[ $NO_RELAY -eq 0 ]] || rel=1
     log "жду готовности служб (до 90 с)"
     for _ in $(seq 1 45); do
         if [[ $sim -eq 0 ]] && curl -fsS --max-time 3 http://127.0.0.1:8090/sim/v1/health >/dev/null 2>&1; then sim=1; fi
         if [[ $col -eq 0 ]] && curl -fsS --max-time 3 http://127.0.0.1:9108/health >/dev/null 2>&1; then col=1; fi
-        if [[ $sim -eq 1 && $col -eq 1 ]]; then break; fi
+        if [[ $rel -eq 0 ]] && relay_up; then rel=1; fi
+        if [[ $sim -eq 1 && $col -eq 1 && $rel -eq 1 ]]; then break; fi
         sleep 2
     done
     [[ $sim -eq 1 ]] || warn "эмулятор не ответил на :8090 (journalctl -u td-iot-sim -n 50; при status=226/NAMESPACE — TD_HARDEN=0)"
     [[ $col -eq 1 ]] || warn "сборщик не ответил на :9108 (journalctl -u td-collector -n 50; при status=226/NAMESPACE — TD_HARDEN=0)"
+    [[ $rel -eq 1 ]] || warn "имитатор ретранслятора не ответил на :$GENSET_RELAY_PORT/sim/v1/state (journalctl -u td-genset-relay -n 50; при status=226/NAMESPACE — TD_HARDEN=0)"
 }
 
 # ---------------------------------------------------------------- состояние
@@ -671,8 +808,8 @@ show_status() {
     local u v tok body
     log "состояние стенда"
     if sysctl_on; then
-        for u in td-iot-sim td-collector mosquitto; do
-            printf '   %-14s active=%-10s enabled=%-9s перезапусков=%s память=%s\n' "$u" \
+        for u in td-iot-sim td-collector td-genset-relay mosquitto; do
+            printf '   %-16s active=%-10s enabled=%-9s перезапусков=%s память=%s\n' "$u" \
                 "$(systemctl is-active "$u" 2>/dev/null || true)" "$(systemctl is-enabled "$u" 2>/dev/null || true)" \
                 "$(systemctl show -p NRestarts --value "$u" 2>/dev/null || echo ?)" \
                 "$(systemctl show -p MemoryCurrent --value "$u" 2>/dev/null | awk '{ if ($1 ~ /^[0-9]+$/) printf "%d МБ", $1 / 1048576; else print "?" }')"
@@ -684,6 +821,10 @@ show_status() {
     printf '   эмулятор  :8090/sim/v1/health  %s\n' "${v:-не отвечает}"
     v="$(curl -fsS --max-time 4 http://127.0.0.1:9108/health 2>/dev/null | cut -c1-160 || true)"
     printf '   сборщик   :9108/health         %s\n' "${v:-не отвечает}"
+    if [[ $NO_RELAY -eq 0 ]]; then
+        v="$(relay_get /sim/v1/state | cut -c1-160 || true)"
+        printf '   ретранслятор (имитатор) :%s/sim/v1/state  %s\n' "$GENSET_RELAY_PORT" "${v:-не отвечает (или нет прав на $RELAY_ENV)}"
+    fi
     printf '   Odoo      %s/web/health      %s\n' "$ODOO_URL" "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 4 "$ODOO_URL/web/health" 2>/dev/null || echo нет)"
     tok="$(env_get "$COL_ENV" F3D_COLLECTOR_TOKEN)"
     if [[ -n "$tok" ]]; then
@@ -691,7 +832,7 @@ show_status() {
         printf '   Odoo /f3d/telemetry/health (с токеном): %s\n' "${body:-нет ответа}"
     fi
     if sysctl_on; then
-        for u in td-iot-sim td-collector; do
+        for u in td-iot-sim td-collector td-genset-relay; do
             printf '   --- journalctl -u %s (последние 3)\n' "$u"
             journalctl -u "$u" -n 3 --no-pager -o cat 2>/dev/null | cut -c1-200 | sed 's/^/   /' || true
         done
@@ -704,14 +845,14 @@ do_uninstall() {
     log "удаление стенда (Odoo и БД не затрагиваются)"
     if sysctl_on; then
         local u
-        for u in td-collector.service td-iot-sim.service; do
+        for u in td-collector.service td-iot-sim.service td-genset-relay.service; do
             if systemctl cat "$u" >/dev/null 2>&1; then
                 if real; then systemctl disable --now "$u" >/dev/null 2>&1 || true; ok "остановлена и отключена $u"; else plan "остановить и отключить $u"; fi
             fi
         done
     fi
     local f
-    for f in "$UNIT_DIR/td-iot-sim.service" "$UNIT_DIR/td-collector.service"; do
+    for f in "$UNIT_DIR/td-iot-sim.service" "$UNIT_DIR/td-collector.service" "$UNIT_DIR/td-genset-relay.service"; do
         [[ -e "$f" ]] || continue
         if real; then rm -f "$f"; ok "удалён $f"; else plan "удалить $f"; fi
     done
@@ -741,7 +882,7 @@ main() {
     fi
     preflight
     if [[ $BLOCKERS -gt 0 ]] && real; then die "есть препятствия ($BLOCKERS), установка не начата. Исправьте и запустите снова."; fi
-    CHANGED_SIM=0 CHANGED_COL=0
+    CHANGED_SIM=0 CHANGED_COL=0 CHANGED_RELAY=0
     log "пользователь и каталоги"; ensure_user; ensure_dirs
     log "venv и код из $SERVICES (ревизия $(git_ rev-parse --short HEAD 2>/dev/null || echo '?'))"; ensure_venvs
     log "env-файлы"; MQ_SIM_PW="" MQ_COL_PW=""; write_envs

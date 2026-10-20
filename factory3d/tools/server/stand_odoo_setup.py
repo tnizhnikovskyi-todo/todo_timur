@@ -9,6 +9,7 @@
     python3 stand_odoo_setup.py status                     # состояние без секретов
     python3 stand_odoo_setup.py backfill                   # через >= 5 мин после запуска стенда (электрика + ресурсы)
     python3 stand_odoo_setup.py seed                       # затем демо-данные аналитики W4
+    python3 stand_odoo_setup.py genset --token-file td-stand.secrets   # «живой» генератор td_genset (имитатор)
 
 Команды:
   setup     коллектор COL-MAIN (создать/включить), токен сборщика (если ещё не выдан или --rotate), токен API эмулятора,
@@ -19,11 +20,18 @@
   backfill  td.energy.interval._td_backfill(days=90) (R-36). Метод приватный, по RPC его вызвать нельзя, поэтому
             скрипт создаёт временное серверное действие, запускает и удаляет его. Опции --days, --seed, --purge,
             --force.
+  genset    генератор td_genset + имитатор ретранслятора SmartGen (fake_relay, профиль D700; ставит install_stand.sh):
+            td.genset с профилем D700 и адресом имитатора (--relay-url, по умолчанию шлюз сети compose :8087), токен API
+            из файла --token-file (нет в файле: генерируется и дописывается; в вывод не печатается), связка
+            td.genset3d.link с 3D-объектом и узлом энергосети GENSET, крони td_genset включены. Идемпотентно, ничего не
+            удаляет; на адрес настоящего ретранслятора SmartGen (порт 8081, *.todo.ltd) не подключает.
+            Опции --relay-url, --token-file, --hostid, --wait, --force.
   status    состояние коллектора, источников, свежих показаний и истории.
 
 Переменные: ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD (обязательны); TD_COLLECTOR_CODE (COL-MAIN), TD_SIM_URL
 (http://127.0.0.1:8090: адрес эмулятора, как его видит Odoo), TD_SIM_API_TOKEN (задать свой вместо генерации),
-TD_SIM_WRITE_ENABLED (1/0, по умолчанию 1: сценарии и сбои из пульта Odoo), TD_RPC_TIMEOUT (с, 1800).
+TD_SIM_WRITE_ENABLED (1/0, по умолчанию 1: сценарии и сбои из пульта Odoo), TD_RPC_TIMEOUT (с, 1800); для genset ещё
+TD_RELAY_URL, TD_RELAY_TOKEN_FILE, TD_SIM_PORT_GENSET_RELAY (8087), TD_GENSET_RELAY_HOSTID.
 Пароль и токены в аргументах командной строки не передаются и в stderr не печатаются.
 """
 
@@ -32,8 +40,11 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import os
+import re
 import secrets
 import sys
+import time
+import urllib.parse
 import xmlrpc.client
 
 COLLECTOR_NAME = "Основной коллектор (стенд)"
@@ -103,6 +114,14 @@ class Odoo:
         except xmlrpc.client.Fault as e:
             msg = (e.faultString or "").strip().splitlines()
             die(f"{model}.{method}: {msg[-1] if msg else e.faultCode}")
+
+    def soft(self, model: str, method: str, *args, **kwargs):  # type: ignore[no-untyped-def]
+        """Как call, но без завершения скрипта: (True, результат) или (False, последняя строка ошибки)."""
+        try:
+            return True, self._object.execute_kw(self.db, self.uid, self._password, model, method, list(args), kwargs)
+        except xmlrpc.client.Fault as e:
+            msg = (e.faultString or "").strip().splitlines()
+            return False, msg[-1] if msg else str(e.faultCode)
 
     def search_read(self, model, domain, fields, **kw):  # type: ignore[no-untyped-def]
         return self.call(model, "search_read", domain, fields, **kw)
@@ -399,6 +418,331 @@ def cmd_status(odoo: Odoo, args: argparse.Namespace) -> None:
     print("  td.iot_sim.token:", "задан" if odoo.param("td.iot_sim.token") else "НЕ задан")
 
 
+# --------------------------------------------------------------------------------------------- genset
+# Живой генератор: td_genset опрашивает ИМИТАТОР ретранслятора SmartGen (td_genset/relay/fake_relay.py, профиль D700),
+# его ставит install_stand.sh (служба td-genset-relay, порт TD_SIM_PORT_GENSET_RELAY, по умолчанию 8087). Настоящий
+# ретранслятор SmartGen (127.0.0.1:8081 на хосте, gen-relay.todo.ltd) этой командой не используется и не настраивается.
+RELAY_API_PREFIX = "/api/v1"
+REAL_RELAY_PORT = 8081  # на timur-o19demo занят настоящим ретранслятором чужой системы
+DEFAULT_RELAY_HOST = "172.18.0.1"  # шлюз compose-сети timur-o19demo: так контейнер Odoo видит хост (как td.iot_sim.url)
+DEFAULT_RELAY_HOSTID = "53494D47454E534554443730"  # как в install_stand.sh (TD_GENSET_RELAY_HOSTID), не hostid модуля
+GENSET_NAME = "ДГУ D700 (стенд, имитатор ретранслятора)"
+GENSET_CRONS = (
+    ("td_genset", "cron_pull_readings"),
+    ("td_genset", "cron_commands"),
+    ("td_genset", "cron_scheduler"),
+    ("td_genset", "cron_cleanup"),
+    ("td_genset_factory3d", "cron_td_genset_publish"),
+    ("td_genset_factory3d", "cron_td_genset_events"),
+    ("td_genset_factory3d", "cron_td_genset_service"),
+)
+SECRET_RE = re.compile(r"^[A-Za-z0-9._~+/=-]{32,256}$")  # как valid_secret в install_stand.sh
+TOKEN_KEYS = {"api": ("TD_RELAY_API_TOKEN", "RELAY_API_TOKEN"), "sim": ("TD_RELAY_SIM_TOKEN", "RELAY_SIM_TOKEN")}
+GENSET_FIELDS = [
+    "link_state",
+    "last_reading_at",
+    "genset_status",
+    "controller_mode",
+    "active_power",
+    "fuel_level",
+    "fuel_liters",
+    "readings_cursor",
+    "relay_last_reading_id",
+]
+LINK_FIELDS = ["td_genset_ref", "profile_id", "source_id", "publish_enabled", "active"]
+PROFILE_FIELDS = ["id", "kw_prp", "tank_l"]
+FRESH_S = 150  # показание считается свежим, если не старше (снимок раз в 60 с + крон раз в 60 с)
+
+
+def default_relay_url() -> str:
+    port = os.environ.get("TD_SIM_PORT_GENSET_RELAY", "8087")
+    sim = urllib.parse.urlsplit(os.environ["TD_SIM_URL"]) if os.environ.get("TD_SIM_URL") else None
+    host = (sim.hostname if sim else None) or DEFAULT_RELAY_HOST
+    return f"http://{host}:{port}"
+
+
+def normalize_relay_url(raw: str) -> str:
+    """Базовый адрес API (…/api/v1) и защита от адреса настоящего ретранслятора SmartGen."""
+    url = raw.strip().rstrip("/")
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        die(f"--relay-url {raw!r}: нужен адрес вида http://172.18.0.1:8087", 2)
+    host = parts.hostname.lower()
+    if parts.port == REAL_RELAY_PORT or host == "todo.ltd" or host.endswith(".todo.ltd"):
+        die(
+            f"--relay-url {raw!r}: это адрес настоящего ретранслятора SmartGen "
+            f"(порт {REAL_RELAY_PORT} или *.todo.ltd). "
+            "Odoo к нему не подключаем: укажите адрес имитатора (install_stand.sh, по умолчанию порт 8087)",
+            2,
+        )
+    if not parts.path.rstrip("/").endswith(RELAY_API_PREFIX):
+        url += RELAY_API_PREFIX
+    return url
+
+
+def _read_kv(text: str) -> dict[str, str]:
+    """Файл секретов: строки KEY=VALUE (кавычки и «export » срезаются) или одно голое значение (токен API)."""
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    out: dict[str, str] = {}
+    for ln in lines:
+        if "=" in ln:
+            key, _, val = ln.removeprefix("export ").partition("=")
+            out[key.strip()] = val.strip().strip("'\"")
+    if len(lines) == 1 and "=" not in lines[0]:
+        out["TD_RELAY_API_TOKEN"] = lines[0]
+    return out
+
+
+def load_relay_tokens(path: str) -> str:
+    """Токен API ретранслятора (его же Odoo шлёт Bearer-ом) из файла.
+
+    Если токенов в файле нет, выдаёт API и SIM и дописывает их в файл (0600): тот же файл уходит на хост как
+    TD_SECRETS_FILE для install_stand.sh. Значения нигде не печатаются.
+    """
+    text = ""
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    kv = _read_kv(text)
+    found = {kind: next((kv[k] for k in keys if kv.get(k)), "") for kind, keys in TOKEN_KEYS.items()}
+    for kind, val in found.items():
+        if val and not SECRET_RE.match(val):
+            die(f"токен {TOKEN_KEYS[kind][0]} в {path} некорректен (32-256 символов A-Za-z0-9 . _ ~ + / = -)")
+    missing = [kind for kind, val in found.items() if not val]
+    if missing:
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
+            if text and not text.endswith("\n"):
+                f.write("\n")
+            for kind in missing:
+                found[kind] = secrets.token_urlsafe(32)
+                f.write(f"{TOKEN_KEYS[kind][0]}={found[kind]}\n")
+        names = ", ".join(TOKEN_KEYS[kind][0] for kind in missing)
+        info(
+            f"токены имитатора ретранслятора ({names}) выданы и дописаны в {path} (значения не печатаю). "
+            "Передайте этот файл на хост как TD_SECRETS_FILE для install_stand.sh."
+        )
+    if os.stat(path).st_mode & 0o077:
+        info(f"ВНИМАНИЕ: {path} доступен группе и остальным (chmod 600)")
+    return found["api"]
+
+
+def _first(odoo: Odoo, model: str, domain: list, fields: list[str]) -> dict | None:
+    rows = odoo.search_read(model, domain, fields, limit=1, context={"active_test": False})
+    return rows[0] if rows else None
+
+
+def _label(odoo: Odoo, field: str, value: str) -> str:
+    """Подпись значения поля-выбора td.genset («0» -> «Очікування»)."""
+    sel = odoo.call("td.genset", "fields_get", [field], attributes=["selection"]).get(field, {}).get("selection") or []
+    return dict(sel).get(value) or str(value)
+
+
+def _msg(res: object) -> str:
+    """Текст display_notification из ответа кнопки."""
+    params = res.get("params") if isinstance(res, dict) else None
+    return str((params or {}).get("message", ""))[:300]
+
+
+def ensure_genset_params(odoo: Odoo, url: str, token: str, force: bool) -> None:
+    cur = odoo.param("td_genset.relay_url")
+    if cur and cur.rstrip("/") != url and not force:
+        die(
+            f"td_genset.relay_url уже задан ({cur}), а запрошен {url}. Не перезаписываю без --force "
+            "(убедитесь, что прежний адрес не нужен)"
+        )
+    want = {
+        "td_genset.relay_url": url,
+        "td_genset.relay_token": token,
+        "td.genset.read_enabled": "True",
+        "td.genset.requests_enabled": "True",
+    }
+    if not odoo.call("ir.config_parameter", "search_count", [("key", "=", "td.genset.write_enabled")]):
+        want["td.genset.write_enabled"] = "False"  # запись в устройства не включаем
+    changed = [key for key, value in want.items() if odoo.param(key) != value]
+    for key in changed:
+        odoo.set_param(key, want[key])
+    shown = ", ".join(key if "token" not in key else "relay_token (значение не печатаю)" for key in changed)
+    info("параметры td_genset: " + (shown or "уже в нужном состоянии"))
+    env = odoo.param("td.base.environment")
+    if env != "test":
+        info(f"ВНИМАНИЕ: td.base.environment = {env!r} (ожидается 'test'); скрипт это не меняет.")
+
+
+def ensure_genset(odoo: Odoo, hostid: str, name: str, profile: dict | None) -> int:
+    """td.genset (ДГУ D700) с hostid имитатора: создать или привести к профилю. Ключ поиска — relay_hostid."""
+    ctrl = _first(odoo, "td.genset.controller.model", [("code", "=", "hgm6120n")], ["id"])
+    if not ctrl:
+        die("в td_genset нет модели контроллера HGM6120N (td.genset.controller.model, code=hgm6120n)")
+    vals = {
+        "relay_hostid": hostid,
+        "relay_enabled": True,
+        "controller_model_id": ctrl["id"],
+        "power_kw": profile["kw_prp"] if profile else 507.0,
+        "tank_volume_l": profile["tank_l"] if profile else 610.0,
+        "active": True,
+    }
+    rec = _first(odoo, "td.genset", [("relay_hostid", "=", hostid)], list(vals))
+    if rec:
+        rec["controller_model_id"] = (rec["controller_model_id"] or [False])[0]
+        diff = {key: value for key, value in vals.items() if rec[key] != value}
+        if diff:
+            odoo.call("td.genset", "write", [rec["id"]], diff)
+        info(f"td.genset id={rec['id']}: " + (f"обновлено {', '.join(diff)}" if diff else "уже в нужном состоянии"))
+        return rec["id"]
+    vals.update(
+        name=name,
+        address="Производственная площадка (стенд)",
+        relay_note="ИМИТАТОР ретранслятора SmartGen HGM6120N (td_genset/relay/fake_relay.py, D700), не настоящий.",
+    )
+    gid = odoo.call("td.genset", "create", vals)
+    info(f"td.genset создан (id {gid}): {name}")
+    return gid
+
+
+def ensure_link(odoo: Odoo, gid: int, eq: dict, profile: dict | None) -> str:
+    """td.genset3d.link: генератор td_genset <-> 3D-объект eq (maintenance.equipment, td_code GENSET) + профиль D700."""
+    ref = f"td.genset,{gid}"
+    link = _first(odoo, "td.genset3d.link", [("equipment_id", "=", eq["id"])], LINK_FIELDS)
+    other = _first(odoo, "td.genset3d.link", [("td_genset_ref", "=", ref)], ["equipment_id"])
+    if other and (not link or other["id"] != link["id"]):
+        info(f"ВНИМАНИЕ: генератор уже связан с другим 3D-объектом ({other['equipment_id'][1]}); связку не трогаю")
+        return f"id {other['id']} (другой объект)"
+    source = _first(odoo, "td.source", [("code", "=", "GENSET-RELAY")], ["id"])
+    vals = {"td_genset_ref": ref, "publish_enabled": True, "active": True}
+    if profile:
+        vals["profile_id"] = profile["id"]
+    if source:
+        vals["source_id"] = source["id"]
+    if not link:
+        link_id = odoo.call("td.genset3d.link", "create", {"equipment_id": eq["id"], **vals})
+        info(f"связка td.genset3d.link создана (id {link_id}): {eq['name']}")
+        return f"id {link_id} ({eq['name']})"
+    cur = {key: (value[0] if isinstance(value, list) else value) for key, value in link.items()}
+    diff = {key: value for key, value in vals.items() if cur[key] != value and not (key == "source_id" and cur[key])}
+    if diff:
+        odoo.call("td.genset3d.link", "write", [link["id"]], diff)
+    info(f"связка id={link['id']}: " + (f"обновлено {', '.join(diff)}" if diff else "уже в нужном состоянии"))
+    return f"id {link['id']} ({eq['name']})"
+
+
+def ensure_genset3d(odoo: Odoo, gid: int, profile: dict | None) -> tuple[str, str]:
+    """Профиль D700, связка с 3D-объектом и узлом энергосети GENSET. Возвращает описания связки и узла для вывода."""
+    if not odoo.model_exists("td.genset3d.link"):
+        info("модуля td_genset_factory3d нет: связка с 3D и узлом энергосети пропущена")
+        return "нет (нет td_genset_factory3d)", "нет"
+    if profile:
+        ok, res = odoo.soft("td.genset3d.profile", "action_apply_to_td", [profile["id"]])
+        info("профиль D700 применён к td_genset" if ok else f"профиль D700: action_apply_to_td не выполнен ({res})")
+    node = None
+    if odoo.model_exists("td.energy.node"):
+        node = _first(odoo, "td.energy.node", [("code", "=", "GENSET")], ["equipment_id", "kind", "gen_kind"])
+    eq = _first(odoo, "maintenance.equipment", [("td_code", "=", "GENSET")], ["name"])
+    if not eq and node and node["equipment_id"]:
+        eq = {"id": node["equipment_id"][0], "name": node["equipment_id"][1]}
+    if not eq:
+        info("ВНИМАНИЕ: нет 3D-объекта (maintenance.equipment с td_code=GENSET): связка не создана")
+        return "нет (нет 3D-объекта GENSET)", "нет"
+    link = ensure_link(odoo, gid, eq, profile)
+    if not node:
+        info("ВНИМАНИЕ: в энергосети нет узла GENSET (td_energy)")
+        return link, "нет"
+    if not node["equipment_id"]:
+        odoo.call("td.energy.node", "write", [node["id"]], {"equipment_id": eq["id"]})
+        info("узел энергосети GENSET связан с 3D-объектом")
+    elif node["equipment_id"][0] != eq["id"]:
+        info(f"ВНИМАНИЕ: узел GENSET уже связан с {node['equipment_id'][1]}; не меняю")
+    return link, f"GENSET ({node['gen_kind'] or node['kind']}) -> {eq['name']}"
+
+
+def enable_genset_crons(odoo: Odoo) -> int:
+    """Включает крони td_genset и td_genset_factory3d (только active=True, ничего не создаёт и не удаляет)."""
+    ids = []
+    for module, name in GENSET_CRONS:
+        domain = [("module", "=", module), ("name", "=", name), ("model", "=", "ir.cron")]
+        row = _first(odoo, "ir.model.data", domain, ["res_id"])
+        if row:
+            ids.append(row["res_id"])
+    crons = []
+    if ids:
+        crons = odoo.search_read("ir.cron", [("id", "in", ids)], ["active"], context={"active_test": False})
+    off = [cron["id"] for cron in crons if not cron["active"]]
+    if off:
+        odoo.call("ir.cron", "write", off, {"active": True})
+    info(f"крони генератора: найдено {len(crons)} из {len(GENSET_CRONS)}, включено сейчас {len(off)}")
+    return len(crons)
+
+
+def _age_s(stamp: str | bool) -> float | None:
+    """Возраст UTC-метки Odoo («ГГГГ-ММ-ДД ЧЧ:ММ:СС») в секундах."""
+    if not stamp:
+        return None
+    then = dt.datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S").replace(tzinfo=dt.timezone.utc)
+    return (dt.datetime.now(dt.timezone.utc) - then).total_seconds()
+
+
+def wait_genset_readings(odoo: Odoo, gid: int, wait_s: int) -> dict:
+    """Просит Odoo опросить имитатор сейчас (кнопки «Проверить связь», «Обновить данные») и ждёт свежее показание
+    (не старше FRESH_S: имитатор снимает показания раз в минуту, крон Odoo читает раз в минуту)."""
+    ok, res = odoo.soft("td.genset", "action_check_relay", [gid])
+    info("проверка связи: " + (_msg(res) if ok else f"не выполнена ({res})"))
+    odoo.soft("td.genset", "action_refresh", [gid])
+    deadline = time.monotonic() + wait_s
+    while True:
+        rec = odoo.search_read("td.genset", [("id", "=", gid)], GENSET_FIELDS, context={"active_test": False})[0]
+        age = _age_s(rec["last_reading_at"])
+        if (age is not None and age <= FRESH_S) or time.monotonic() >= deadline:
+            return rec
+        time.sleep(5)
+
+
+def cmd_genset(odoo: Odoo, args: argparse.Namespace) -> None:
+    if not odoo.model_exists("td.genset"):
+        die("в базе нет td.genset: установите модуль td_genset")
+    if not args.token_file:
+        die(
+            "не задан файл токена: --token-file ФАЙЛ (или TD_RELAY_TOKEN_FILE). Если токенов в нём нет, они будут "
+            "выданы и дописаны; тот же файл передают на хост как TD_SECRETS_FILE (install_stand.sh)",
+            2,
+        )
+    url = normalize_relay_url(args.relay_url or os.environ.get("TD_RELAY_URL") or default_relay_url())
+    token = load_relay_tokens(args.token_file)
+    ensure_genset_params(odoo, url, token, args.force)
+    profile = None
+    if odoo.model_exists("td.genset3d.profile"):
+        profile = _first(odoo, "td.genset3d.profile", [("code", "=", "D700")], PROFILE_FIELDS)
+    gid = ensure_genset(odoo, args.hostid, args.name, profile)
+    link, node = ensure_genset3d(odoo, gid, profile)
+    n_cron = enable_genset_crons(odoo)
+    rec = wait_genset_readings(odoo, gid, args.wait)
+    if rec["last_reading_at"] and link.startswith("id "):
+        link_id = int(link.split()[1])
+        ok, res = odoo.soft("td.genset3d.link", "action_check", [link_id])
+        info("публикация в телеметрию: " + (_msg(res) if ok else f"не выполнена ({res})"))
+    print(f"genset: td.genset id={gid}, имитатор {url} (hostid {args.hostid}), профиль D700, крони {n_cron}")
+    print(f"genset: связка 3D: {link}; узел энергосети: {node}")
+    if not rec["last_reading_at"]:
+        print(
+            f"genset: показаний пока нет (связь {rec['link_state']}): Odoo не достучался до имитатора. Если "
+            "install_stand.sh на хосте ещё не запускали с этими токенами, это нормально: повторите команду после "
+            "установки (она идемпотентна)."
+        )
+        return
+    age = _age_s(rec["last_reading_at"])
+    stale = f" [СТАРОЕ: {int(age // 60)} мин назад, новых нет]" if age is not None and age > FRESH_S else ""
+    print(
+        f"genset: показание {rec['last_reading_at']} UTC{stale}: связь {rec['link_state']}, "
+        f"режим {rec['controller_mode']}, "
+        f"состояние {_label(odoo, 'genset_status', rec['genset_status'])}, {rec['active_power']:.1f} кВт, "
+        f"топливо {rec['fuel_level']:.1f} % ({rec['fuel_liters']:.0f} л)"
+    )
+    if rec["relay_last_reading_id"] and rec["readings_cursor"] > rec["relay_last_reading_id"]:
+        info(
+            f"ВНИМАНИЕ: курсор Odoo ({rec['readings_cursor']}) опережает журнал имитатора "
+            f"({rec['relay_last_reading_id']}): имитатор перезапускался (журнал в памяти), см. STAND.md."
+        )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Odoo-сторона постоянного стенда (токен, параметры, backfill)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -420,6 +764,22 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=20261018)
     p.set_defaults(fn=cmd_seed)
     sub.add_parser("status", help="состояние без секретов").set_defaults(fn=cmd_status)
+    p = sub.add_parser("genset", help="живой генератор td_genset + имитатор ретранслятора (fake_relay D700)")
+    p.add_argument("--relay-url", help="адрес имитатора для контейнера Odoo (по умолчанию http://172.18.0.1:8087)")
+    p.add_argument(
+        "--token-file",
+        default=os.environ.get("TD_RELAY_TOKEN_FILE"),
+        help="файл с токеном API (KEY=VALUE или одно значение); токенов нет: выдать и дописать",
+    )
+    p.add_argument(
+        "--hostid",
+        default=os.environ.get("TD_GENSET_RELAY_HOSTID", DEFAULT_RELAY_HOSTID),
+        help="hostid имитатора (как в install_stand.sh)",
+    )
+    p.add_argument("--name", default=GENSET_NAME, help="название нового td.genset")
+    p.add_argument("--force", action="store_true", help="перезаписать уже заданный td_genset.relay_url")
+    p.add_argument("--wait", type=int, default=90, help="сколько секунд ждать первое показание (90)")
+    p.set_defaults(fn=cmd_genset)
     args = ap.parse_args()
     if not 1 <= getattr(args, "days", 1) <= 400:
         die("--days: 1..400", 2)

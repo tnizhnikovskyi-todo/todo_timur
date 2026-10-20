@@ -282,6 +282,18 @@ class TestF06EventsReset(SimBase):
         self.assertEqual(s.post("/sim/v1/reset", {"preset": "bogus"})[0], 422)
         self.assertEqual(s.post("/sim/v1/reset", {"profile": "office"})[0], 422)
 
+    def test_id_base(self):
+        """RELAY_ID_BASE: id снимков идут от id_base + 1 (после перезапуска id не откатываются ниже курсора Odoo)."""
+        self.assertEqual(self.stand.relay.id_base, 0)
+        stand = Stand(id_base=1_700_000_000)
+        self.addCleanup(stand.close)
+        stand.relay.tick()  # первый снимок модуля
+        status, data = stand.api("/readings?since=0&limit=5")
+        self.assertEqual(status, 200, data)
+        self.assertTrue(data["readings"])
+        self.assertEqual(data["readings"][0]["id"], 1_700_000_001)
+        self.assertEqual(stand.relay.command_id, 1_700_000_000)
+
     def test_fuel_and_time(self):
         s = self.stand
         self.assertEqual(s.post("/sim/v1/fuel", {"add_liters": 50})[1], {"fuel_l": 550.2, "fuel_pct": 90.2})

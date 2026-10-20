@@ -12,6 +12,7 @@ no-store) и моделирует генератор (HGM6120N): режимы, �
     python3 fake_relay.py --port 8081 --token dev-token-0123456789abcdefghij --hostid 3130373031334717003D002E
     python3 fake_relay.py --port 8081 --clock-offset -3600   # часы эмулятора на час позади реальных
     python3 fake_relay.py --selftest          # прогон сценария на свободном порту → SELF-TEST PASSED
+    RELAY_ID_BASE=epoch python3 fake_relay.py   # id снимков от секунд Unix: перезапуск не «ослепляет» Odoo
 
 В Odoo (dev): smartgen.relay_url = http://127.0.0.1:8081/api/v1, smartgen.relay_token = <токен>.
 
@@ -960,8 +961,10 @@ class Relay:
         sim_token="",
         tz="Europe/Kyiv",
         preset=None,
+        id_base=0,
     ):
         self.lock = threading.RLock()
+        self.id_base = int(id_base)  # id снимков, сырых сообщений и команд начинаются с id_base + 1 (по умолчанию с 1)
         self.token = token
         self.profile = str(profile).lower()
         self.profile_data = load_profile(self.profile) if self.profile == "d700" else None
@@ -998,7 +1001,7 @@ class Relay:
             h: Device(h, d["noise"], d["seed"] + i, self._new_genset(d, i)) for i, h in enumerate(self.hostids)
         }
         self.readings, self.raw, self.commands = [], [], []
-        self.reading_id = self.raw_id = self.command_id = 0
+        self.reading_id = self.raw_id = self.command_id = self.id_base
         self.conn_id = 7
 
     def _new_genset(self, d, index):
@@ -2354,6 +2357,12 @@ def main(argv=None):
     ap.add_argument("--snapshot-sec", type=float, default=60.0, help="интервал плановых снимков, с (реальные)")
     ap.add_argument("--hostid", action="append", help="hostid модуля (можно несколько раз)")
     ap.add_argument(
+        "--id-base",
+        default=env("RELAY_ID_BASE", "0"),
+        help="с какого числа начинать id снимков и команд (env RELAY_ID_BASE; число или epoch = секунды Unix на "
+        "старте): журнал в памяти, id после перезапуска не должны откатываться ниже курсора Odoo (td_genset)",
+    )
+    ap.add_argument(
         "--time-scale",
         type=float,
         default=float(env("RELAY_TIME_FACTOR", "1.0")),
@@ -2383,6 +2392,16 @@ def main(argv=None):
     if args.profile == "d700" and not 0.1 <= args.time_scale <= 60:
         print("RELAY_TIME_FACTOR must be within 0.1…60", file=sys.stderr)
         return 1
+    if str(args.id_base).lower() == "epoch":
+        # монотонно между запусками: за секунду набегает не больше одного снимка на модуль
+        args.id_base = int(time.time())
+    try:
+        args.id_base = int(args.id_base)
+        if args.id_base < 0:
+            raise ValueError
+    except ValueError:
+        print("RELAY_ID_BASE must be a non-negative integer or 'epoch'", file=sys.stderr)
+        return 1
     relay = Relay(
         args.token,
         args.hostid or [DEFAULT_HOSTID],
@@ -2397,6 +2416,7 @@ def main(argv=None):
         sim_token=sim_token,
         tz=env("RELAY_TZ", "Europe/Kyiv"),
         preset=env("RELAY_TIMER_PRESET") or None,
+        id_base=args.id_base,
     )
     try:
         server = make_server(relay, args.host, args.port, quiet=args.quiet)
