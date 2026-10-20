@@ -5,7 +5,7 @@
         <field name="name">td.machine.kanban</field>
         <field name="model">td.machine</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="zone_id" class="o_kanban_small_column" records_draggable="0" quick_create="0"
+            <kanban js_class="td_machine_kanban" default_group_by="zone_id" class="o_kanban_small_column" records_draggable="0" quick_create="0"
                     highlight_color="color" group_create="0" create="0">
                 <field name="color"/>
                 <field name="protocol"/>

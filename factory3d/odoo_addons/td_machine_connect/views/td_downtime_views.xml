@@ -10,6 +10,7 @@
                 <field name="date_start"/>
                 <field name="date_end"/>
                 <field name="duration_live" sum="Разом" widget="float_time"/>
+                <field name="cost" sum="Разом" optional="hide" groups="td_factory3d.group_td_manager"/>
                 <field name="state_kind"/>
                 <field name="loss_id" options="{'no_create': True}"/>
                 <field name="hint_loss_id"/>
@@ -160,6 +161,8 @@
                 <field name="workorder_id"/>
                 <filter name="today" string="Сьогодні"
                         domain="[('date_start', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter name="this_month" string="Цей місяць"
+                        domain="[('date_start', '&gt;=', (context_today()).strftime('%Y-%m-01 00:00:00'))]"/>
                 <filter name="open" string="Триває" domain="[('is_open', '=', True)]"/>
                 <filter name="to_classify" string="Без причини" domain="[('reason_state', '=', 'to_classify')]"/>
                 <filter name="not_confirmed" string="Не підтверджено" domain="[('reason_state', '!=', 'confirmed')]"/>
@@ -167,11 +170,81 @@
                 <filter name="demo" string="Демо" domain="[('reason_source', '=', 'demo')]"/>
                 <group>
                     <filter name="group_wc" string="Робочий центр" context="{'group_by': 'workcenter_id'}"/>
+                    <filter name="group_shift" string="Зміна" context="{'group_by': 'shift_date:day'}"/>
                     <filter name="group_loss" string="Причина" context="{'group_by': 'loss_id'}"/>
                     <filter name="group_kind" string="Стан" context="{'group_by': 'state_kind'}"/>
                     <filter name="group_day" string="День" context="{'group_by': 'date_start:day'}"/>
                 </group>
             </search>
         </field>
+    </record>
+
+    <!-- V-31: «Простої в ₴» — Парето за причиною (за сумою, спадання), зрізи за верстатом і зміною (DT-2) -->
+    <record id="view_td_downtime_cost_graph" model="ir.ui.view">
+        <field name="name">td.downtime.cost.graph</field>
+        <field name="model">td.downtime</field>
+        <field name="arch" type="xml">
+            <graph string="Парето простоїв у гривнях" type="bar" order="DESC">
+                <field name="loss_id" type="row"/>
+                <field name="cost" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_downtime_cost_pivot" model="ir.ui.view">
+        <field name="name">td.downtime.cost.pivot</field>
+        <field name="model">td.downtime</field>
+        <field name="arch" type="xml">
+            <pivot string="Простої в ₴" sample="1">
+                <field name="workcenter_id" type="row"/>
+                <field name="shift_date" interval="day" type="col"/>
+                <field name="cost" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_downtime_cost_list" model="ir.ui.view">
+        <field name="name">td.downtime.cost.list</field>
+        <field name="model">td.downtime</field>
+        <field name="arch" type="xml">
+            <list string="Простої в ₴" create="0" edit="0" default_order="cost desc">
+                <field name="code"/>
+                <field name="shift_date"/>
+                <field name="loss_id"/>
+                <field name="duration_live" sum="Разом" widget="float_time"/>
+                <field name="cost" sum="Разом"/>
+                <field name="reason_state" widget="badge"
+                       decoration-danger="reason_state == 'to_classify'"
+                       decoration-warning="reason_state == 'to_confirm'"
+                       decoration-success="reason_state == 'confirmed'"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_td_downtime_cost" model="ir.actions.act_window">
+        <field name="name">Простої в ₴</field>
+        <field name="res_model">td.downtime</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="view_td_downtime_search"/>
+        <field name="context">{'search_default_this_month': 1, 'search_default_group_loss': 1}</field>
+    </record>
+    <record id="action_td_downtime_cost_graph" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">graph</field>
+        <field name="view_id" ref="view_td_downtime_cost_graph"/>
+        <field name="act_window_id" ref="action_td_downtime_cost"/>
+    </record>
+    <record id="action_td_downtime_cost_pivot" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">pivot</field>
+        <field name="view_id" ref="view_td_downtime_cost_pivot"/>
+        <field name="act_window_id" ref="action_td_downtime_cost"/>
+    </record>
+    <record id="action_td_downtime_cost_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_td_downtime_cost_list"/>
+        <field name="act_window_id" ref="action_td_downtime_cost"/>
     </record>
 </odoo>

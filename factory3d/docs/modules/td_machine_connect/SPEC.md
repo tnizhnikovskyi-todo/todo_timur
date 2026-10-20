@@ -2201,6 +2201,36 @@ EV-03 `job` (`state="released"`) → результат `{"job_id", "state", "jo
 Приклад: WO00013 → `[(06:55:00, 07:25:48, "working")]` UTC → `td_run_min = 30,8`; при `p_now ≈ 12,18 кВт` (iot_sim R-02)
 energy отримає ≈ 6,25 кВт·год.
 
+### R-29 Простої в гривнях (DT-1…DT-5, FR-37; вау-функція №17; версія 19.0.1.1.0)
+
+1. **Вартість (DT-1).** `td.downtime.cost` — `Monetary`, `store=True`, `compute` залежить від `duration_min`, `workcenter_id.costs_hour`, `currency_id`:
+   `cost = duration_min / 60 × workcenter_id.costs_hour`, у валюті компанії верстата (`currency_id` = `company_id.currency_id`), округлення валютою.
+   Зміна `costs_hour` РЦ перераховує вартість усіх його простоїв (стандартний перерахунок збережених полів, без крону). Відкритий простій має `cost = 0`
+   до закриття; `cost_live` (не зберігається) рахує його наживо. `shift_date` (`Date`, `store`, індекс) — київська доба `date_start` = `td.oee.shift.date`
+   («зміна» в модулі — одна доба на верстат, R-14); служить зрізом аналітики.
+2. **Аналітика «Простої в ₴» (DT-2, V-32).** Дія `action_td_downtime_cost` (`td.downtime`; `graph,pivot,list`; контекст `search_default_this_month`,
+   `search_default_group_loss`), меню `menu_td_mc_downtime_cost` («Простої в ₴», `menu_td_mc_root`, seq 22 — поруч із «Простої», `group_td_manager`).
+   Графік — Парето за `loss_id`: `type="bar" order="DESC"` за мірою `cost` (сума за спаданням); зведена — рядки `workcenter_id` (верстат), стовпці `shift_date:day`
+   (зміна); у пошуку: «Цей місяць», групування «Робочий центр» і «Зміна». У списку простоїв `cost` — `optional="hide"`, `group_td_manager`.
+3. **Плитка «Огляд верстатів» (DT-2, V-33).** kanban V-01 має `js_class="td_machine_kanban"`: `MachineKanbanRenderer` додає над картками `DowntimeCostTile`
+   — «Простої за місяць: N ₴, з них без причини: M ₴» (символ і розташування — за валютою компанії); дані — `td.downtime.td_cost_tile()` (`@api.model`): сума за поточний
+   місяць за київським часом (закриті за `cost` + відкриті наживо); «без причини» — `reason_state = 'to_classify'`; без `group_td_manager` повертає `False` (плитки немає).
+   Клік відкриває V-32. Файли: `static/src/views/machine_kanban/*`, тур `td_machine_connect_cost_tile`.
+4. **Payload (DT-3).** `workcenters[code].downtime_cost` (float, сума за місяць у валюті компанії) додає R-25 `_machine_node` лише якщо запит не з кіоска і користувач — менеджер
+   «Завод 3D» (за аналогією з `energy_cost`, X-25); інакше ключа немає. Значення оновлюється разом із вузлом верстата (повний payload і дельта вузла).
+5. **Демо-ставки (DT-4).** `hooks.demo_rates(env)` (крок `run_migration` після `demo_journal`, лічильник звіту `rates_set`; `migrations/19.0.1.1.0/post-migrate.py` для вже
+   встановлених демо-баз): для РЦ верстатів з `mc_machines.csv`, у яких `costs_hour = 0`, задає ставку за префіксом коду (`RATES`, умовчання `RATE_DEFAULT`); ненульові ставки не чіпає;
+   працює лише в демо-базі (є простої `reason_source = 'demo'` або записи журналу `td_source = 'demo'`); ідемпотентний.
+6. **3D (DT-5).** Міст `td_machine_connect_viewer3d` (`depends: td_machine_connect, td_viewer3d`, `auto_install`): JS-розширення `registerViewerExtension` (td_viewer3d R-26, VX-01…VX-03)
+   додає режим розфарбування «Простої, ₴» (`td_downtime_cost`) після «OEE верстатів»: колір верстата за часткою від найбільшої суми (від 60 % — червоний, 25–60 % — жовтий,
+   менше — зелений); без `downtime_cost` у payload (кіоск, не менеджер) пункт схований. Ядро `core.js` не змінювалось.
+
+AC: **AC-104** вартість = тривалість × ставка, валюта компанії, `shift_date` київський (`test_cost_is_duration_times_rate`, `test_shift_date_is_kyiv_local`); **AC-105** зміна ставки перераховує
+`cost` (`test_recompute_on_rate_change`); **AC-106** Парето за сумою спадає, графік `order="DESC"`, зрізи за верстатом і зміною (`test_pareto_sorted_by_sum`); **AC-107** плитка: місяць, «без причини»,
+відкриті наживо, лише менеджер (`test_tile_*`) і тур `td_machine_connect_cost_tile`; **AC-108** `downtime_cost` у payload лише менеджеру і не в кіоску (`test_payload_downtime_cost`; міст —
+`td_machine_connect_viewer3d/tests/test_payload.py`); **AC-109** демо-ставки лише для порожніх, ідемпотентно (`TestDemoRates`); **AC-110** режим «Простої, ₴»: радіо, колір, легенда, дельта
+(HOOT `td_machine_connect_viewer3d/static/tests/hoot/downtime_cost.test.js`).
+
 ## 10. Стани й переходи
 
 ### 10.1 Верстат (`td.machine.state`, CM-02)

@@ -24,7 +24,7 @@ Requirements and notes
 * Automatic start and writing to machines are disabled by default and enabled by system parameters.
 * Works with Odoo Community; the Enterprise mrp_workorder module is not required.
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -60,6 +60,14 @@ Requirements and notes
         "views/res_config_settings_views.xml",
         "views/menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "td_machine_connect/static/src/views/**/*",
+        ],
+        "web.assets_tests": [
+            "td_machine_connect/static/tests/tours/*.js",
+        ],
+    },
     "demo": [],
     "post_init_hook": "post_init_hook",
     "uninstall_hook": "uninstall_hook",

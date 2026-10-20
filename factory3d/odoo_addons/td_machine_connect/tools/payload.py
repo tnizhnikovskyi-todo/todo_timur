@@ -34,8 +34,8 @@ def _shift_start(machine):
     return midnight.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def _machine_node(env, machine):
-    """R-25 п. 1: живі поля одного верстата."""
+def _machine_node(env, machine, costs=None):
+    """R-25 п. 1: живі поля одного верстата; `costs` — `{workcenter_id: сума}` простоїв за місяць (DT-3) або `None`."""
     node = {
         "machine_state": machine.state,
         "link": machine.protocol,
@@ -67,6 +67,8 @@ def _machine_node(env, machine):
         [("machine_id", "=", machine.id), ("date_start", ">=", _shift_start(machine))]
     )
     node["pieces_shift"] = int(sum(logs.mapped("pieces")))
+    if costs is not None:
+        node["downtime_cost"] = round(costs.get(machine.workcenter_id.id, 0.0), 2)
     wo = machine.active_workorder_id
     if wo:
         node["counted"] = _num(wo.td_qty_counted)
@@ -112,7 +114,12 @@ def build_machines(env, ctx, payload=None):
         [("active", "=", True), ("code", "in", list(wcs))] if not full else [("active", "=", True)]
     )
     if machines:
-        out["workcenters"] = {m.code: _machine_node(env, m) for m in machines}
+        # DT-3: вартість простоїв — управлінські дані: лише менеджеру «Завод 3D» і не в кіоску (як `energy_cost`, X-25)
+        Downtime = env["td.downtime"]
+        costs = (
+            Downtime._td_cost_by_workcenter() if not (ctx or {}).get("kiosk") and Downtime._td_cost_can_see() else None
+        )
+        out["workcenters"] = {m.code: _machine_node(env, m, costs) for m in machines}
     if GANTRY in _nodes(payload.get("equipment"), "code") or full:
         out["equipment"] = {GANTRY: {"gantry": _gantry_node(env)}}
     plt = [c for c in _nodes(payload.get("locations"), "code") if c.startswith("PLT-")]

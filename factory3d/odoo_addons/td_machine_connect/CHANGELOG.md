@@ -1,5 +1,12 @@
 # Changelog
 
+## 19.0.1.1.0
+- Простої в гривнях (вау №17, SPEC R-29): `td.downtime.cost` (збережене, тривалість × `mrp.workcenter.costs_hour`, валюта компанії, перерахунок
+  при зміні ставки), `shift_date`, `cost_live`; аналітика «Простої в ₴» (Парето за причиною за сумою, зрізи за верстатом і зміною; меню поруч із «Простої»);
+  плитка «Простої за місяць: N ₴, з них без причини: M ₴» в «Огляді верстатів» (kanban `js_class="td_machine_kanban"`); ключ payload
+  `workcenters[code].downtime_cost` (лише менеджеру «Завод 3D», не в кіоску); демо-ставки `costs_hour` лише для порожніх (`hooks.demo_rates`,
+  post-migrate `19.0.1.1.0`). 3D-режим «Простої, ₴» — новий міст `td_machine_connect_viewer3d` (auto_install).
+
 ## Unreleased
 - Стоси порталу: фільтр «Нижче мінімуму» — збережене обчислюване `below_min` (є правило поповнення і `ws_qty < мін`) замість домену
   `[('ws_qty', '<', 'min_qty')]`, що порівнював поле з рядком і падав у `search_count` (ValueError).

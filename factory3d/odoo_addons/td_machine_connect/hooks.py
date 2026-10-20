@@ -132,6 +132,34 @@ COUNTERS = (
     "downtimes_created",
     "downtimes_open",
     "requests_linked",
+    "rates_set",
+)
+
+# DT-4: орієнтовні ставки демо-РЦ (грн/год) за префіксом коду верстата; решта — `RATE_DEFAULT`.
+RATE_DEFAULT = 400.0
+RATES = (
+    ("SAW", 900.0),
+    ("VSAW", 700.0),
+    ("NEST", 1100.0),
+    ("CNC", 1000.0),
+    ("EDGE", 850.0),
+    ("BORE", 750.0),
+    ("DOWEL", 650.0),
+    ("SORT", 500.0),
+    ("ASMLINE", 600.0),
+    ("SLIDE", 550.0),
+    ("SAND", 450.0),
+    ("PRESS", 800.0),
+    ("GLUE", 500.0),
+    ("SPRAY", 650.0),
+    ("AUTOSPRAY", 750.0),
+    ("DRY", 300.0),
+    ("UV", 600.0),
+    ("HINGE", 550.0),
+    ("BOX", 450.0),
+    ("PACKLINE", 500.0),
+    ("PACK", 350.0),
+    ("ASM", 400.0),
 )
 
 
@@ -454,6 +482,30 @@ def demo_journal(env, install_ts):
     return res
 
 
+def demo_rates(env):
+    """DT-4: задати правдоподібні `costs_hour` демо-РЦ верстатів з `mc_machines.csv`, де ставка 0 (інші не чіпає).
+
+    Лише в демо-базі (є записи журналу/простої з позначкою `demo`): на бойовій базі нульова ставка — свідомий вибір.
+    Ідемпотентна: другий запуск нічого не змінює. Повертає `{"rates_set": N}`.
+    """
+    env = env(su=True)
+    is_demo = env["td.downtime"].search_count([("reason_source", "=", "demo")], limit=1) or env[
+        "mrp.workcenter.productivity"
+    ].search_count([("td_source", "=", "demo")], limit=1)
+    if not is_demo:
+        return {"rates_set": 0}
+    rates = dict(RATES)
+    count = 0
+    for row in _csv_rows(env, "mc_machines"):
+        wc = env["mrp.workcenter"].search_f3d(row["code"])
+        if not wc or wc.costs_hour:
+            continue
+        prefix = row["code"].rsplit("-", 1)[0]
+        wc.costs_hour = rates.get(prefix, RATE_DEFAULT)
+        count += 1
+    return {"rates_set": count}
+
+
 # --- крок 7 + керування -------------------------------------------------------------------------------------
 def report(env, rep):
     """§5.3 крок 7: `migration_report` = JSON усіх лічильників."""
@@ -487,6 +539,7 @@ def run_migration(env):
     try:
         with env.cr.savepoint():
             rep.update(demo_journal(env, install_ts))
+            rep.update(demo_rates(env))
     except Exception:
         _logger.exception("machine_connect: крок demo_journal не виконано")
         state = "partial"

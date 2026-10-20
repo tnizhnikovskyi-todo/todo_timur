@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_machine_connect.DowntimeCostTile">
+        <div t-if="state.tile" class="o_td_downtime_cost_tile" role="button" tabindex="0"
+             title="Відкрити аналітику «Простої в ₴»" t-on-click="openAnalysis">
+            <span class="o_td_dc_title">Простої за місяць:</span>
+            <b class="o_td_dc_total" t-out="fmt(state.tile.total)"/>,
+            <span class="o_td_dc_sub">з них без причини:</span>
+            <b class="o_td_dc_noreason" t-att-class="state.tile.no_reason ? 'text-danger' : ''"
+               t-out="fmt(state.tile.no_reason)"/>
+        </div>
+    </t>
+
+    <t t-name="td_machine_connect.MachineKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="attributes">
+            <attribute name="class" add="h-auto" separator=" "/>
+        </xpath>
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <DowntimeCostTile/>
+        </xpath>
+    </t>
+</templates>

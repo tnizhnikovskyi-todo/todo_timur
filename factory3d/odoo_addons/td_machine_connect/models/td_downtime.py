@@ -1,10 +1,11 @@
 import logging
+from datetime import timezone
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
 from ..tools import ppt
-from .td_machine import local
+from .td_machine import KYIV, local
 
 _logger = logging.getLogger(__name__)
 
@@ -81,6 +82,23 @@ class F3dDowntime(models.Model):
     maintenance_request_id = fields.Many2one("maintenance.request", string="Заявка ТО", ondelete="set null")
     note = fields.Text(string="Примітка")
     has_loss_tool = fields.Boolean(compute="_compute_has_loss_tool")
+    # Простої в гривнях (DT-1): тривалість × ставка РЦ (`mrp.workcenter.costs_hour`) у валюті компанії верстата.
+    currency_id = fields.Many2one("res.currency", related="company_id.currency_id", string="Валюта")
+    cost = fields.Monetary(
+        compute="_compute_cost",
+        store=True,
+        currency_field="currency_id",
+        string="Вартість простою",
+        help="Тривалість простою (год) × ставка робочого центра за годину. Відкритий простій — 0 до закриття.",
+    )
+    cost_live = fields.Monetary(compute="_compute_cost_live", currency_field="currency_id", string="Вартість (поточна)")
+    shift_date = fields.Date(
+        compute="_compute_shift_date",
+        store=True,
+        index=True,
+        string="Зміна (дата)",
+        help="Дата зміни за київським часом: та сама, що `Дата зміни` в OEE (одна зміна — одна доба).",
+    )
 
     _f3d_downtime_dates = models.Constraint(
         "CHECK(date_end IS NULL OR date_end >= date_start)", "Кінець простою раніше за початок."
@@ -117,10 +135,87 @@ class F3dDowntime(models.Model):
             else:
                 rec.duration_live = (now - rec.date_start).total_seconds() / 60
 
+    @api.depends("duration_min", "workcenter_id.costs_hour", "currency_id")
+    def _compute_cost(self):
+        for rec in self:
+            cost = rec.duration_min / 60.0 * rec.workcenter_id.sudo().costs_hour
+            rec.cost = rec.currency_id.round(cost) if rec.currency_id else cost
+
+    @api.depends("date_start", "date_end", "duration_min", "workcenter_id.costs_hour", "currency_id")
+    def _compute_cost_live(self):
+        now = fields.Datetime.now()
+        for rec in self:
+            if rec.date_end or not rec.date_start:
+                rec.cost_live = rec.cost
+                continue
+            cost = (now - rec.date_start).total_seconds() / 3600.0 * rec.workcenter_id.sudo().costs_hour
+            rec.cost_live = rec.currency_id.round(cost) if rec.currency_id else cost
+
+    @api.depends("date_start")
+    def _compute_shift_date(self):
+        for rec in self:
+            rec.shift_date = (
+                rec.date_start.replace(tzinfo=timezone.utc).astimezone(KYIV).date() if rec.date_start else False
+            )
+
     def _compute_has_loss_tool(self):
         has = bool(self.env.ref("factory3d.loss_tool", raise_if_not_found=False))
         for rec in self:
             rec.has_loss_tool = has
+
+    # --- вартість простоїв (DT-1) ---------------------------------------------------------------------
+    @api.model
+    def _td_month_start(self):
+        """Початок поточного місяця за київським часом як naive UTC (межа «за місяць» плитки й 3D)."""
+        now = fields.Datetime.now().replace(tzinfo=timezone.utc).astimezone(KYIV)
+        first = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return first.astimezone(timezone.utc).replace(tzinfo=None)
+
+    @api.model
+    def _td_cost_can_see(self):
+        return bool(self.env.su or self.env.user.has_group("td_factory3d.group_td_manager"))
+
+    @api.model
+    def _td_cost_by_workcenter(self, since=None, company=None):
+        """`{workcenter_id: сума}` простоїв з `since` (умовчання — місяць): закриті за `cost`, відкриті наживо."""
+        domain = [
+            ("date_start", ">=", since or self._td_month_start()),
+            ("company_id", "=", (company or self.env.company).id),
+        ]
+        Downtime = self.sudo()
+        res = {}
+        for wc, total in Downtime._read_group(domain + [("date_end", "!=", False)], ["workcenter_id"], ["cost:sum"]):
+            res[wc.id] = total or 0.0
+        for rec in Downtime.search(domain + [("date_end", "=", False)]):
+            res[rec.workcenter_id.id] = res.get(rec.workcenter_id.id, 0.0) + rec.cost_live
+        return res
+
+    @api.model
+    def _td_cost_sum(self, domain):
+        """Сума вартості за доменом: закриті простої — за `cost`, відкриті — наживо (`cost_live`)."""
+        Downtime = self.sudo()
+        closed = Downtime._read_group(domain + [("date_end", "!=", False)], [], ["cost:sum"])[0][0] or 0.0
+        return closed + sum(Downtime.search(domain + [("date_end", "=", False)]).mapped("cost_live"))
+
+    @api.model
+    def td_cost_tile(self):
+        """Плитка «Огляд верстатів» (DT-2): простої за поточний місяць у валюті компанії і з них — без причини.
+
+        `False` без групи менеджера «Завод 3D» (вартість — управлінські дані): плитка не показується.
+        """
+        if not self._td_cost_can_see():
+            return False
+        company = self.env.company
+        domain = [("date_start", ">=", self._td_month_start()), ("company_id", "=", company.id)]
+        currency = company.currency_id
+        return {
+            "total": currency.round(self._td_cost_sum(domain)),
+            "no_reason": currency.round(self._td_cost_sum(domain + [("reason_state", "=", "to_classify")])),
+            "currency_id": currency.id,
+            "symbol": currency.symbol,
+            "position": currency.position,
+            "decimals": currency.decimal_places,
+        }
 
     # --- причина, підтвердження (M-03) ---------------------------------------------------------------
     def _td_reason_rights(self):

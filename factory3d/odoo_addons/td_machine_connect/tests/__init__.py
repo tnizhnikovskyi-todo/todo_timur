@@ -20,3 +20,4 @@ from . import test_hooks
 from . import test_concurrency
 from . import test_day_filter  # Y-2
 from . import test_store_period  # ST-1
+from . import test_downtime_cost  # DT-1…DT-4
