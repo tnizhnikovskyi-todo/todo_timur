@@ -282,6 +282,10 @@
 .o_f3d_viewer .o_f3d_fl-head b { font: 600 14px/1.2 var(--f3d-f-display); letter-spacing: 0.01em; }
 .o_f3d_viewer .o_f3d_fl-head .o_f3d_mono { color: var(--f3d-muted); }
 .o_f3d_viewer .o_f3d_fl-head .o_f3d_flow-time { color: var(--f3d-fg); font-weight: 500; }
+.o_f3d_viewer .o_f3d_fl-mode { display: inline-flex; gap: 0; }
+.o_f3d_viewer .o_f3d_fl-m { padding: 2px 8px; font-size: 11px; border-radius: 0; }
+.o_f3d_viewer .o_f3d_fl-m:first-child { border-radius: 4px 0 0 4px; } .o_f3d_viewer .o_f3d_fl-m:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
+.o_f3d_viewer .o_f3d_fl-m[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
 .o_f3d_viewer .o_f3d_fl-key { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--f3d-muted); flex-wrap: wrap; }
 .o_f3d_viewer .o_f3d_fl-key i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
 .o_f3d_viewer .o_f3d_fl-key .o_f3d_tri { width: 0; height: 0; border: 5px solid transparent; border-top: 8px solid #2f80c0; border-bottom: 0; }

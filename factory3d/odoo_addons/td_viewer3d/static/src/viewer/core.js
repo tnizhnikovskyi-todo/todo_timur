@@ -16,6 +16,7 @@ import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
 import { createStockLoad, liveLine } from "./stock_load.js";
 import { createBatcher } from "./batch.js";
+import { activeOrders as pickActive, batchActive, legAlpha } from "./flow_focus.js";
 
 const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 
@@ -64,7 +65,8 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
   </header>
 
   <section class="o_f3d_panel o_f3d_flow" hidden aria-label="Потік зміни">
-    <div class="o_f3d_fl-head"><b>Потік зміни</b><span class="o_f3d_mono o_f3d_flow-time"></span><span class="o_f3d_mono o_f3d_flow-sum"></span>
+    <div class="o_f3d_fl-head"><b>Потік зміни</b><span class="o_f3d_mono o_f3d_flow-time"></span><span class="o_f3d_mono o_f3d_flow-sum"></span><span class="o_f3d_mono o_f3d_flow-n"></span>
+      <span class="o_f3d_fl-mode" role="group" aria-label="Маршрути замовлень у сцені"><button type="button" class="o_f3d_btn o_f3d_fl-m" data-mode="active" aria-pressed="true" title="У сцені лише замовлення в роботі чи в русі">Лише активні</button><button type="button" class="o_f3d_btn o_f3d_fl-m" data-mode="all" aria-pressed="false" title="Маршрути всіх замовлень дня">Усі маршрути</button></span>
       <span class="o_f3d_fl-key"><span><i class="o_f3d_tri"></i>фура з матеріалами</span><span><i class="o_f3d_dot2"></i>склад → цех</span>
         <span><i class="o_f3d_tri o_f3d_up"></i>фура клієнта</span><span>смуга — операція, колір — замовлення</span></span></div>
     <svg class="o_f3d_flow-svg" role="img" aria-label="Операції замовлень і переміщення матеріалів за часом зміни"></svg>
@@ -1070,6 +1072,7 @@ function prodFocus(name) {
       else {o.traverse((x) => { if (x.material) { x.material.transparent = true; x.material.opacity = (x.userData.op0 ??= x.material.opacity) * k; } });}
     }
   });
+  prodRefocus(); // вибране замовлення лишається в сцені, навіть якщо за правилом «активних» воно чекає
 }
 const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожежна безпека", "ІТ і Odoo", "Територія й охорона"]);
 const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
@@ -1077,6 +1080,9 @@ function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 36
 function clearProdOverlay() {
   for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) {o.geometry?.dispose();} }
   prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
+  prodOv.tracks = []; prodOv.batches = []; prodOv.nShown = null;
+  const n = $(".o_f3d_flow-n");
+  if (n) {n.textContent = "";}
 }
 // місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
 function cyclePosition(wos, at, firstOut, lastIn) {
@@ -1100,7 +1106,7 @@ function drawProdOverlay() {
       if (!c.path || !c.to || c.product === mo.supply?.product) {continue;}
       const codes = [...c.path.map((st) => st.code), c.to];
       const key = c.kind + "|" + codes.join();
-      const e = mats.get(key) || { kind: c.kind, codes, mos: new Set() };
+      const e = mats.get(key) || { kind: c.kind, codes, mos: new Set(), key };
       e.mos.add(mo.name);
       mats.set(key, e);
     }
@@ -1122,6 +1128,7 @@ function drawProdOverlay() {
       new THREE.MeshBasicMaterial({ color: MAT_COLOR[e.kind] ?? 0x888888, transparent: true, opacity: 0.7 }));
     m.userData.isPulse = true;
     m.userData.mos = e.mos;
+    m.userData.key = e.key;
     scene.add(m); prodOv.objs.push(m); matObjs.push(m);
     if (sim) {continue;} // у програванні матеріал їде партіями у свій час — див. buildBatches
     const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
@@ -1152,29 +1159,36 @@ function drawProdOverlay() {
     prodOv.color.set(mo.name, "#" + col.getHexString());
     const mine = [];
     prodOv.byMo.set(mo.name, mine);
-    const add = (o) => { o.traverse((x) => { x.userData.isPulse = true; }); scene.add(o); prodOv.objs.push(o); mine.push(o); };
+    const add = (o) => { o.traverse((x) => { x.userData.isPulse = true; }); scene.add(o); prodOv.objs.push(o); mine.push(o); return o; };
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
-    add(new THREE.Mesh(tubeG(curve, pts.length * 20, 0.2, 6, false),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 })));
+    // лінія маршруту з кольором і прозорістю у вершинах: пройдена частина тьмяніє без перебудови геометрії
+    const tubeGeo = tubeG(curve, pts.length * 20, 0.2, 6, false);
+    const shade = tubeShade(tubeGeo, curve, pts.length, col);
+    const lines = [add(new THREE.Mesh(tubeGeo,
+      new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.75 })))]; // усе, що ховається разом із маршрутом
     const pointMat = new THREE.MeshBasicMaterial({ color: col.clone().lerp(new THREE.Color(0xffffff), 0.45) });
     pts.forEach((p, j) => { // точки складів і приймання/відвантаження
       if (stage[j] === "op" || j === 0 || j === pts.length - 1) {return;}
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), pointMat);
       m.position.copy(p);
-      add(m);
+      lines.push(add(m));
     });
     const start = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshBasicMaterial({ color: col }));
     start.position.copy(pts[0]);
     const end = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 12), new THREE.MeshBasicMaterial({ color: col }));
     end.position.copy(pts[pts.length - 1]);
-    add(start); add(end);
+    lines.push(add(start), add(end));
     const fg = codes.findIndex((c, j) => j >= firstOut && /^FG-/.test(c));
     const track = { mo, wos, at, lastIn, firstOut, fg: fg > 0 ? fg : firstOut, n: pts.length, curve,
       out: mo.delivery?.picking ? dayMin(idx.pick.get(mo.delivery.picking)?.scheduled_date) : null };
+    track.model = { // для чистого правила «активних» (flow_focus.js)
+      name: mo.name, out: track.out, tail: !(track.firstOut >= track.n - 1 && track.fg >= track.n - 1),
+      ops: wos.map((w) => ({ s: woMin(w, "_s"), f: woMin(w, "_f") })),
+    };
     const pos = cyclePosition(wos, at, firstOut, lastIn);
     const p = curve.getPoint(Math.min(1, Math.max(0, pos.u / (pts.length - 1))));
     const blocked = !!pos.w?.blocked && pos.w.state === "progress";
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col }));
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col.clone() }));
     const ring = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 12),
       new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
     dot.add(ring);
@@ -1190,11 +1204,85 @@ function drawProdOverlay() {
     const tag = new CSS2DObject(el);
     tag.position.copy(dot.position);
     add(tag);
-    Object.assign(track, { dot, ring, tag, el, col: "#" + col.getHexString() });
+    Object.assign(track, { dot, ring, tag, el, lines, shade, u: pos.u, col, dimCol: col.clone().lerp(DIM_DOT, 0.65) });
     prodOv.tracks.push(track);
   });
-  if (sim) { buildBatches(mos); prodSimMove(simMinutes() ?? simOverride); }
+  prodOv.nShown = null;
+  if (sim) { buildBatches(mos); prodSimMove(simMinutes() ?? simOverride); } else {prodLiveFocus();}
   if (prodOv.focus) {prodFocus(prodOv.focus);}
+}
+// ---- «Лише активні»: у сцені маршрути тільки тих замовлень і партій, що зараз у роботі чи в русі (правило — flow_focus.js)
+const DIM_DOT = new THREE.Color(0x8a9299);
+let flowOnlyActive = true; // перемикач у шапці стрічки; «Усі маршрути» — маршрути всіх замовлень, як раніше
+// колір вершин лінії маршруту (rgba) і індекс точки маршруту для кожного кільця труби
+function tubeShade(geo, curve, n, col) {
+  const { tubularSegments: ts, radialSegments: rs } = geo.parameters;
+  const arr = new Float32Array(geo.attributes.position.count * 4);
+  for (let i = 0; i < arr.length; i += 4) { arr[i] = col.r; arr[i + 1] = col.g; arr[i + 2] = col.b; arr[i + 3] = 1; }
+  const attr = new THREE.BufferAttribute(arr, 4);
+  attr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute("color", attr);
+  const ringU = new Float32Array(ts + 1);
+  for (let i = 0; i <= ts; i++) {ringU[i] = curve.getUtoTmapping(i / ts) * (n - 1);}
+  return { attr, ringU, stride: (rs + 1) * 4 };
+}
+function trackShade(tr, seg) {
+  const { attr, ringU, stride } = tr.shade;
+  for (let i = 0; i < ringU.length; i++) {
+    const a = legAlpha(ringU[i], seg);
+    for (let j = i * stride + 3; j < (i + 1) * stride; j += 4) {attr.array[j] = a;}
+  }
+  attr.needsUpdate = true;
+}
+// активні замовлення о хвилині t; у живому режимі додатково — ті, у кого зараз реально йде операція (стан «У роботі»)
+function activeOrders(t, live = false) {
+  const act = pickActive((prodOv.tracks || []).map((tr) => tr.model), t);
+  if (live) {for (const tr of prodOv.tracks) { if (tr.wos.some((w) => w.state === "progress")) {act.add(tr.mo.name);} }}
+  return act;
+}
+// видимість лише перемиканням visible / розміру на вже створених об'єктах; повертає true, якщо щось змінилось
+function prodApplyFocus(t, sim, batchKeys) {
+  const tracks = prodOv.tracks || [];
+  const only = !sim || flowOnlyActive; // живий режим — завжди за правилом
+  const act = only ? activeOrders(t, !sim) : null;
+  const f = prodOv.focus;
+  let n = 0, changed = false;
+  for (const tr of tracks) {
+    const on = !act || act.has(tr.mo.name) || tr.mo.name === f;
+    n += on;
+    if (tr.on !== on) {
+      tr.on = on; tr.seg = undefined; changed = true;
+      for (const o of tr.lines) {o.visible = on;}
+      tr.tag.visible = on; tr.ring.visible = on;
+      tr.dot.scale.setScalar(on ? 1 : 0.35); // ждучий — маленька приглушена точка без лінії й підпису
+      tr.dot.material.color.copy(on ? tr.col : tr.dimCol);
+    }
+    if (on) {
+      const seg = only ? Math.max(0, Math.floor(tr.u)) : null;
+      if (tr.seg !== seg) { tr.seg = seg; trackShade(tr, seg); changed = true; }
+    }
+  }
+  for (const m of prodOv.mats || []) {
+    const u = m.userData;
+    const on = !only || (f && u.mos.has(f)) || (sim ? batchKeys?.has(u.key) : [...u.mos].some((x) => act.has(x)));
+    if (m.visible !== !!on) { m.visible = !!on; changed = true; }
+  }
+  if (prodOv.nShown !== (sim ? n : -1)) {
+    prodOv.nShown = sim ? n : -1;
+    const el = $(".o_f3d_flow-n");
+    if (el) {el.textContent = sim ? `у сцені ${n} ${plural(n, "замовлення", "замовлення", "замовлень")}` : "";}
+  }
+  return changed;
+}
+function prodLiveFocus() {
+  if (!prodOv.on || prodOv.sim || !prodOv.tracks?.length || !D) {return false;}
+  const ch = prodApplyFocus((simNow().getTime() - dayStart()) / 60000, false);
+  if (ch) {invalidate();}
+  return ch;
+}
+function prodRefocus() {
+  if (!prodOv.on || !prodOv.tracks?.length) {return;}
+  if (prodOv.sim) {prodSimMove(simMinutes() ?? simOverride);} else {prodLiveFocus();}
 }
 
 // ---------------------------------------------------------------- рух за часом зміни (поки грає таймер)
@@ -1237,12 +1325,12 @@ function codesCurve(codes) {
 }
 const BATCH_GEO = new THREE.BoxGeometry(1.1, 0.7, 1.1);
 const batchMat = new Map();
-function addBatch(codes, kind, w0, w1, mos, label) {
+function addBatch(codes, kind, w0, w1, mos, label, key) {
   const curve = codesCurve(codes);
   if (!curve || w1 <= w0) {return;}
   if (!batchMat.has(kind)) {batchMat.set(kind, new THREE.MeshBasicMaterial({ color: MAT_COLOR[kind] ?? 0x888888 }));}
   const m = new THREE.Mesh(BATCH_GEO, batchMat.get(kind));
-  m.userData = { isPulse: true, curve, w0, w1, mos, label };
+  m.userData = { isPulse: true, curve, w0, w1, mos, label, key };
   m.visible = false;
   scene.add(m); prodOv.objs.push(m); prodOv.batches.push(m);
 }
@@ -1255,16 +1343,17 @@ function buildBatches(mos) {
       const codes = c.path.map((st) => st.code);
       let s = codes.findIndex((x) => !IN_CODE.test(x));
       if (s < 0) {s = codes.length - 1;}
+      const key = c.kind + "|" + [...codes, c.to].join(); // той самий ключ, що в лінії матеріалу (drawProdOverlay)
       const rc = c.receipt && idx.pick.get(c.receipt);
       if (rc && !inSeen.has(rc.name) && s > 0) { // приймання: фура → склад, раз на документ
         inSeen.add(rc.name);
         const m0 = dayMin(rc.scheduled_date);
-        if (m0 != null) {addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name);}
+        if (m0 != null) {addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name, key);}
       }
       if (c.product === mo.supply?.product) {continue;} // плиту везе сама мітка замовлення
       const w = wos.find((x) => x.workcenter === c.to) || wos[0];
       const ws = woMin(w, "_s");
-      addBatch([...codes.slice(s), c.to], c.kind, ws - 25, ws, new Set([mo.name]), mo.name);
+      addBatch([...codes.slice(s), c.to], c.kind, ws - 25, ws, new Set([mo.name]), mo.name, key);
     }
   }
 }
@@ -1272,6 +1361,7 @@ function prodSimMove(t) {
   if (!prodOv.sim || t == null) {return;}
   for (const tr of prodOv.tracks) {
     const pos = trackAt(tr, t);
+    tr.u = pos.u;
     const p = tr.curve.getPoint(clamp01(pos.u / Math.max(1, tr.n - 1)));
     tr.dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
     tr.tag.position.copy(tr.dot.position);
@@ -1282,13 +1372,14 @@ function prodSimMove(t) {
       tr.el.title = `${tr.mo.name} · ${tr.mo.product_name} × ${tr.mo.qty} — ${pos.ph}` + (tr.mo.delivery ? ` → ${tr.mo.delivery.partner}` : "");
     }
   }
-  const f = prodOv.focus;
+  const f = prodOv.focus, keys = new Set();
   for (const b of prodOv.batches) {
     const d = b.userData;
-    const on = t >= d.w0 && t <= d.w1 && (!f || !d.mos || d.mos.has(f));
+    const on = batchActive(d, t) && (!f || !d.mos || d.mos.has(f));
     b.visible = on;
-    if (on) {b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0))));}
+    if (on) { b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0)))); keys.add(d.key); }
   }
+  if (prodApplyFocus(t, true, keys)) {invalidate();}
 }
 // у шарі замовлень довгі назви зон приймання й відвантаження перекривають фури — лишаємо «Ворота N»
 function shortDoorLabels(on) {
@@ -3160,6 +3251,17 @@ function flowUpdate(min) {
     <button class="o_f3d_lnk o_f3d_t" data-go="${e.pick ? ("pick:" + (esc(e.pick))) : ("mo:" + (esc(e.mo)))}">${esc(e.text)}</button></li>`).join("");
   flowCursor(simMinutes() ?? t);
 }
+// «Лише активні / Усі маршрути»: перемикач у шапці стрічки (за замовчуванням — лише активні)
+$(".o_f3d_fl-mode").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode]");
+  if (!b) {return;}
+  flowOnlyActive = b.dataset.mode === "active";
+  syncFlowMode();
+  prodRefocus();
+});
+function syncFlowMode() {
+  $(".o_f3d_fl-mode").querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.mode === "active") === flowOnlyActive)));
+}
 // клік по смузі, події чи рядку стрічки — та сама картка, що й у правій панелі
 $(".o_f3d_flow").addEventListener("click", (e) => {
   const a = e.target.closest("[data-go]");
@@ -3355,6 +3457,7 @@ renderer.setAnimationLoop(() => {
   }
   const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
   if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) {prodSimMove(sm);} live = true; }
+  else if (prodOv.on && !prodOv.sim && now - (prodOv.liveAt ?? 0) > 15000) { prodOv.liveAt = now; prodLiveFocus(); } // живий режим: набір «активних» зсувається з часом
   const pace = paceNow();
   if (pace - lastPoll >= POLL_MS || pace < lastPoll) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
     lastPoll = pace;
@@ -3447,7 +3550,8 @@ function destroy() {
 
 return {
   get D() { return D; }, get idx() { return idx; }, items, stockLoad, batcher, invalidate, get drawn() { return drawn; }, layers, scene, camera, controls, renderer, labels, lamps, hl,
-  get prodOv() { return prodOv; }, get drill() { return drill; }, lite, coreReady, partsReady: () => bgReady,
+  get prodOv() { return prodOv; }, get drill() { return drill; }, activeOrders,
+  get flowOnlyActive() { return flowOnlyActive; }, lite, coreReady, partsReady: () => bgReady,
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,
   playShift, stopShift, setPlaybackMode, setLite, loadPart, getState, destroy, branchParticles, buildLabels,
