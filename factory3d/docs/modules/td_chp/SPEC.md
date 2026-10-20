@@ -27,10 +27,10 @@
 ## 0. Дерево файлів `odoo_addons/td_chp/`
 
 ```
-__manifest__.py __init__.py hooks.py neutralize.sql ruff.toml README.md CHANGELOG.md
+__manifest__.py __init__.py hooks.py ruff.toml README.md CHANGELOG.md
 models/ td_chp_{unit,event,command,maintenance_rule,pult}.py td_signal.py td_source.py td_command.py res_config_settings.py
 tools/  signals.py kpi.py interlocks.py alarms.py bus.py trend.py command_flow.py gen_chp_signals.py
-controllers/main.py   data/ {ir_config_parameter,td_chp_unit,td_chp_maintenance_rule,ir_sequence,ir_cron}.xml chp_signals.json
+controllers/main.py   data/ {ir_config_parameter,td_chp_unit,td_chp_maintenance_rule,ir_sequence,ir_cron}.xml chp_signals.json neutralize.sql
 security/ ir.model.access.csv td_chp_security.xml   views/ td_chp_{unit,event,command,maintenance,signal}_views.xml
          res_config_settings_views.xml td_chp_actions.xml td_chp_menus.xml
 static/lib/three/{three.min.js,OrbitControls.js,LICENSE,README.md}   static/description/{icon.png,banner.png,index.html}
@@ -271,7 +271,7 @@ cyl/<id>/plug_h|40864+i|u16|1|год||60|W≥3200 A≥3800|.plug (наробіт
 
 ## 6. Крони
 `cron_td_chp_expire` (1 хв, `td.chp.command._cron_expire`): `prepared` після `token_expires_at` і `awaiting_second` після `second_expires_at` → `expired`; `queued/sent/executing` після `started_at+verify_timeout_s` → `failed` («Контролер не підтвердив команду за N с»). `cron_td_chp_stale` (1 хв, R-01). `cron_td_chp_maintenance` (15 хв, R-10). `cron_td_chp_gc` (1 доба). Усі no-op при `read_enabled=False`.
-**R-15 `neutralize.sql`:** `active=false` для 4 кронів; `td.chp.write_enabled` і `td.chp.remote_switching_enabled` = `False`; `write_enabled=false` у сигналах і джерелі `module='chp'`.
+**R-15 `data/neutralize.sql`** (шлях, який читає `odoo-bin neutralize`): `active=false` для 4 кронів; `td.chp.write_enabled` і `td.chp.remote_switching_enabled` = `False`; `write_enabled=false` у сигналах і джерелі `module='chp'`.
 
 ## 7. HTTP/JSON API
 Маршрути `type="jsonrpc"`, `auth="user"`, POST; логіка в `td.chp.pult` (M-06), контролер лише викликає метод від імені сесії. Помилки — `AccessError`/`UserError`/`ValidationError` українською; відповідь ≤ 64 КБ.

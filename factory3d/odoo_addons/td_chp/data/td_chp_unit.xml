@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §5.2: джерело CHP-U72 і агрегат КГУ-1; 230 сигналів створює post_init_hook (R-14) із chp_signals.json -->
+<odoo noupdate="1">
+    <record id="source_chp_u72" model="td.source">
+        <field name="code">CHP-U72</field>
+        <field name="name">КГУ-1: контролер TEDOM (Modbus, unit 72)</field>
+        <field name="type">modbus_tcp</field>
+        <field name="module">chp</field>
+        <field name="collector_id" ref="td_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 72, "timeout_s": 3, "retries": 2, "max_block": 125, "gap_max": 8}'/>
+    </record>
+    <record id="unit_chp" model="td.chp.unit">
+        <field name="name">КГУ-1 · TEDOM · 800 кВт</field>
+        <field name="code">CHP</field>
+        <field name="source_id" ref="source_chp_u72"/>
+    </record>
+</odoo>

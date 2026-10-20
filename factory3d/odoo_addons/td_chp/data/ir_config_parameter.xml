@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §5.1: параметри td.chp.* (стоп-крани й TTL); noupdate — правки адміністратора зберігаються -->
+<odoo noupdate="1">
+    <record id="param_read_enabled" model="ir.config_parameter">
+        <field name="key">td.chp.read_enabled</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_write_enabled" model="ir.config_parameter">
+        <field name="key">td.chp.write_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_remote_switching_enabled" model="ir.config_parameter">
+        <field name="key">td.chp.remote_switching_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_confirm_ttl_s" model="ir.config_parameter">
+        <field name="key">td.chp.confirm_ttl_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_second_ttl_s" model="ir.config_parameter">
+        <field name="key">td.chp.second_ttl_s</field>
+        <field name="value">600</field>
+    </record>
+    <record id="param_verify_timeout_s" model="ir.config_parameter">
+        <field name="key">td.chp.verify_timeout_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_command_ttl_s" model="ir.config_parameter">
+        <field name="key">td.chp.command_ttl_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_stale_s" model="ir.config_parameter">
+        <field name="key">td.chp.stale_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_event_keep_days" model="ir.config_parameter">
+        <field name="key">td.chp.event_keep_days</field>
+        <field name="value">365</field>
+    </record>
+    <record id="param_bus_throttle_s" model="ir.config_parameter">
+        <field name="key">td.chp.bus_throttle_s</field>
+        <field name="value">1</field>
+    </record>
+</odoo>
