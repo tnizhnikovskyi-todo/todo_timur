@@ -2,13 +2,17 @@
 // UI-23 EnergyLayerExtension (SPEC 8.4.3): розширення «Переглядача» — шар «Енергетика в 3D».
 // Реєструється в ядрі `registerViewerExtension` (R-26): режим розфарбування (UI-24), маркери тривог (UI-25),
 // блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06, за `layer.can_pult`). Без `D.energy.layer` (старий сервер) розширення неактивне, режим схований.
+// R-59: лічильник ₴ у «Потоці зміни» (`api.flowSlot`) і розфарбування «Споживання» за часом програвання (`simPower`) — з добових серій (`day_series.js`).
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
 import {
     MODE_KEY, MODE_LABEL, chipHtml, createStateColors, layerOf, legendHtml, nodesByScene, stateColor,
 } from "./colors";
+import { dayOf, daySeries, powerAt } from "./day_series";
 import { AlarmMarkers } from "./markers";
+import { ShiftMeter } from "./shift_meter";
+import "./wall_slide"; // слайд «Енергія» екрана планірки (VX-07)
 
 export const EXT_ID = "td_energy";
 const MAX_CARD_ALARMS = 3;
@@ -57,6 +61,7 @@ export class EnergyLayerExtension {
         this.mode = { key: MODE_KEY, label: MODE_LABEL, legend: (D) => legendHtml(layerOf(D)), hidden: true };
         this.colorModes = [this.mode];
         this.states = new WeakMap(); // api.scene → { markers, version, layer }
+        this.meters = new WeakMap(); // api → ShiftMeter (лічильник ₴ у «Потоці зміни», R-59)
         this.THREE = null;
         this.colors = null;
     }
@@ -80,6 +85,7 @@ export class EnergyLayerExtension {
 
     /** VX-03 (UI-23): карта вузлів і маркери; перебудова лише коли змінилась секція `energy` (або повне завантаження). */
     applyData(api, D, info) {
+        this.attachMeter(api, D);
         if (api.THREE !== this.THREE) {
             this.THREE = api.THREE;
             this.colors = createStateColors(api.THREE);
@@ -98,6 +104,22 @@ export class EnergyLayerExtension {
         st.layer = layer;
         st.version += 1;
         st.markers.sync(layer.alarms, { enabled: layer.show_markers !== false });
+    }
+
+    /** R-59: лічильник у шапці «Потоку зміни»; серії доби вантажаться один раз уперед (кеш клієнта), далі — за потреби. */
+    attachMeter(api, D) {
+        if (!D?.energy || this.meters.has(api)) {
+            return;
+        }
+        const meter = new ShiftMeter(api);
+        this.meters.set(api, meter);
+        meter.series();
+    }
+
+    /** VX-09 (R-59): потужність споживачів у хвилину `min` з добових серій — ядро кладе її замість типового профілю. */
+    simPower(min, D, api) {
+        const series = api ? daySeries(api.client, dayOf(D)) : null;
+        return series ? powerAt(series, min) : null;
     }
 
     /** VX-04 (UI-26): блоки «Енергетика» вузлів, що відповідають об'єкту сцени `code`. */
@@ -132,6 +154,8 @@ export class EnergyLayerExtension {
 
     /** Зняти маркери всіх екземплярів (тести; у ядрі екземпляр знищується разом зі сценою). */
     disposeAll(api) {
+        this.meters.get(api)?.dispose();
+        this.meters.delete(api);
         const st = this.states.get(api.scene);
         st?.markers.dispose();
         this.states.delete(api.scene);

@@ -5,3 +5,65 @@
     .o_td_en_alarms { margin-top: 6px; font-size: 12px; }
     .o_td_en_alarms li { padding: 2px 0; }
 }
+
+// R-59: лічильник «Енергія з початку доби» у шапці стрічки «Потік зміни» (слот `api.flowSlot`, VX-09)
+.o_f3d_viewer .o_f3d_fl-head .o_td_en_meter {
+    color: var(--f3d-fg);
+    margin-left: auto;
+    padding: 1px 8px;
+    border: 1px solid var(--f3d-accent);
+    border-radius: 10px;
+    background: var(--f3d-accent-soft);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    b { font-weight: 700; }
+}
+.o_f3d_viewer .o_f3d_fl-head .o_td_en_meter + .o_f3d_fl-mode { margin-left: 0; }
+
+// R-59: слайд «Енергія» екрана планірки (VX-07); плитки — ті самі `o_f3d_wall-kpi`, що в слайді «Показники»
+.o_f3d_viewer.o_f3d_wall-on .o_td_en_wall {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8em;
+    height: 100%;
+
+    .o_td_en_wall-kpis {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8em;
+        flex: 1;
+        min-height: 0;
+    }
+    .o_f3d_wall-kpi {
+        padding: 0.3em 1.2em;
+
+        b { font-size: 2.6em; }
+    }
+    .o_td_en_wall-h {
+        color: var(--f3d-muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .o_td_en_wall-top {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4em;
+
+        li {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) 8em minmax(0, 1.5fr);
+            align-items: center;
+            gap: 0.8em;
+            padding: 0.35em 0.8em;
+            border: 1px solid var(--f3d-line);
+            border-radius: 0.4em;
+            background: var(--f3d-panel-solid);
+        }
+        li span { text-align: right; font-variant-numeric: tabular-nums; }
+    }
+}

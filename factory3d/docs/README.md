@@ -41,7 +41,7 @@
 | 14 | `td_energy_analytics` (W4, енергетика: аналітика, модель бази ISO 50001, звіти; вау №6 «Що якщо» — R-23) | 3 | [v0.2, 377 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.3, 1054 р.](modules/td_energy_analytics/SPEC.md) |
 | 15 | `td_energy_mobile` (W4, енергетика: вкладка «Обхід» мобільного екрана) | 3 | [v0.2, 377 р. (спільне з № 14)](modules/td_energy_mobile/ARCHITECTURE.md) | [v0.2, 493 р.](modules/td_energy_mobile/SPEC.md) |
 | 16 | `td_energy_control` (W2, енергетика: керування, плагін збирача `td_collector_energy`) | 3 | [v0.2, 336 р.](modules/td_energy_control/ARCHITECTURE.md) | [v0.2, 1 639 р.](modules/td_energy_control/SPEC.md) |
-| 17 | `td_energy_viewer3d` (W2, міст «Енергетика в 3D» → «Переглядач») | 3 | [v0.2, 129 р.](modules/td_energy_viewer3d/ARCHITECTURE.md) | [v0.2, 222 р.](modules/td_energy_viewer3d/SPEC.md) |
+| 17 | `td_energy_viewer3d` (W2, міст «Енергетика в 3D» → «Переглядач») | 3 | [v0.2, 129 р.](modules/td_energy_viewer3d/ARCHITECTURE.md) | [v0.5, 279 р.](modules/td_energy_viewer3d/SPEC.md) |
 | 18 | `td_energy_resources` (W3, енергетика: газ, повітря, тепло, тарифи, резерви) | 3 | [v0.2, 336 р.](modules/td_energy_resources/ARCHITECTURE.md) | [v0.2, 1 167 р.](modules/td_energy_resources/SPEC.md) |
 | 19 | `td_energy_resources_bms` (W3, міст «Енергоресурси — Будівля») | 3 | [v0.2, 114 р.](modules/td_energy_resources_bms/ARCHITECTURE.md) | [v0.2, 136 р.](modules/td_energy_resources_bms/SPEC.md) |
 | 20 | `td_sale_cost` (вау №25, міст «Собівартість замовлення наживо»: смарт-кнопка в замовленні продажу, план/факт за МО, верстати, енергія, матеріали) | 7 | [v0.1, 30 р.](modules/td_sale_cost/ARCHITECTURE.md) | [v0.1, 67 р.](modules/td_sale_cost/SPEC.md) |
