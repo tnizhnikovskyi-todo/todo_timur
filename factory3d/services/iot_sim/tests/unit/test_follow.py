@@ -330,3 +330,24 @@ async def test_forwarder_keeps_queue_on_failure_and_batches(world):
     assert await fw.flush() == 0 and len(fw.queue) == 250
     state["ok"] = True
     assert await fw.flush() == 250 and state["sizes"] == [100, 100, 50]
+
+
+async def test_two_shift_calendar_gives_two_windows(follow, world):
+    """Календар Odoo з двома змінами (07:00–15:30, 15:30–23:00): ``shifts`` — два вікна; календар — 07–23."""
+    follow._apply_shift(
+        [{"dayofweek": d, "hour_from": a, "hour_to": b} for d in range(5) for a, b in ((7.0, 15.5), (15.5, 23.0))]
+    )
+    cal = world.shift
+    assert [(a.strftime("%H:%M"), b.strftime("%H:%M")) for a, b in cal.shifts] == [
+        ("07:00", "15:30"),
+        ("15:30", "23:00"),
+    ]
+    assert (cal.start.hour, cal.end.hour) == (7, 23) and cal.workdays == (0, 1, 2, 3, 4)
+
+
+async def test_lunch_break_is_one_shift(follow, world):
+    """08–12 і 13–17 (обід) — одна зміна, а не дві."""
+    follow._apply_shift(
+        [{"dayofweek": d, "hour_from": a, "hour_to": b} for d in range(5) for a, b in ((8, 12), (13, 17))]
+    )
+    assert [(a.hour, b.hour) for a, b in world.shift.shifts] == [(8, 17)]

@@ -25,6 +25,7 @@ from typing import Any
 from iot_sim.core.registry import SignalSpec
 
 TABLES = ("h", "c", "d")
+METER_FIRST = "energy/cells/"  # при збігу адреси регістр віддає сигнал шафи (лічильник вводу), а не трансформатора
 
 
 class ModbusError(Exception):
@@ -236,11 +237,18 @@ class Ctx:
         return None if dev is None else dev.model
 
     def sig_at(self, unit: int, pdu: int, fc: int = 3) -> Any:
-        """Сигнал каталогу за (unit, fc, початковий PDU) — перший у порядку каталогу, або ``None``."""
+        """Сигнал каталогу за (unit, fc, початковий PDU) — перший у порядку каталогу, або ``None``.
+
+        Колізія адрес: каталог має дві пари сигналів на одному регістрі PM5560 u1/u2 (``energy/transformers/T*/p_kw`` і
+        ``i_a`` — старий «макет» — та ``energy/cells/Q*/p_now``, ``i_now``). Регістр — це лічильник вводу, тож
+        перевагу має сигнал шафи ``energy/cells/``: інакше Odoo читає P вводу без СЕС/КГУ/BESS."""
         if self._by_addr is None:
             self._by_addr = {}
             for sp in signal_specs(self.world):
-                self._by_addr.setdefault(sp.modbus[:3], self.world.signals[sp.code])  # type: ignore[index]
+                key = sp.modbus[:3]  # type: ignore[index]
+                held = self._by_addr.get(key)
+                if held is None or (sp.code.startswith(METER_FIRST) and not held.code.startswith(METER_FIRST)):
+                    self._by_addr[key] = self.world.signals[sp.code]
         return self._by_addr.get((unit, fc, pdu))
 
     def sig_num(self, unit: int, pdu: int, default: float = 0.0) -> float:

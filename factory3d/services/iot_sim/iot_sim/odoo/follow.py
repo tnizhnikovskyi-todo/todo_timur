@@ -92,6 +92,28 @@ def _hm(h: float) -> dtime:
     return dtime(min(int(h), 23), round((h - int(h)) * 60) % 60)
 
 
+LUNCH_MAX_H = 1.5  # перерва між інтервалами календаря до 1,5 год — обід усередині однієї зміни
+SHIFT_MIN_H = 6.0  # інтервали «впритул» — окремі зміни, лише якщо кожен триває не менше 6 год
+
+
+def shift_windows(ref: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Інтервали робочого дня календаря (``hour_from``, ``hour_to``) -> вікна змін.
+
+    ``08–12`` + ``13–17`` — одна зміна (обід); ``07:00–15:30`` + ``15:30–23:00`` — дві зміни (передача зміни впритул).
+    """
+    out: list[tuple[float, float]] = []
+    for a, b in sorted(ref):
+        if out:
+            pa, pb = out[-1]
+            gap = a - pb
+            touching_shifts = gap <= 0 and (pb - pa) >= SHIFT_MIN_H and (b - a) >= SHIFT_MIN_H
+            if (0 < gap <= LUNCH_MAX_H) or (gap <= 0 and not touching_shifts):
+                out[-1] = (pa, max(pb, b))
+                continue
+        out.append((a, b))
+    return out
+
+
 class FollowOdoo:
     def __init__(
         self,
@@ -301,6 +323,7 @@ class FollowOdoo:
         cal = self.world.shift
         cal.workdays = tuple(days)
         cal.start, cal.end = _hm(ref[0][0]), _hm(ref[-1][1])
+        cal.shifts = tuple((_hm(a), _hm(b)) for a, b in shift_windows(ref))
         if len(ref) > 1:
             cal.lunch_from, cal.lunch_to = _hm(ref[0][1]), _hm(ref[1][0])
 

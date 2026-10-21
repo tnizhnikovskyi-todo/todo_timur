@@ -109,3 +109,29 @@ async def test_all_meter_units_respond(modbus):
         assert not (await hr(modbus, u, 3059, 2)).isError()
     for u in (9, 10, 60):
         assert (await hr(modbus, u, 3059, 2)).exception_code == 0x0B
+
+
+async def test_incomer_registers_carry_net_power_with_chp(modbus, world):
+    """Регресія: u1/u2 PDU 3059 — потужність вводу Q1/Q2 (з СЕС/КГУ), а не навантаження секції (T1/T2 p_kw мають ту ж
+    адресу в каталозі). КГУ запущено: Odoo бачить імпорт, зменшений на його потужність."""
+    from iot_sim.models.meter import ALL_CONSUMERS
+
+    for c in ALL_CONSUMERS:
+        world.force(f"energy/consumers/{c}/p_now", 0.0, hold_s=3600)
+    world.force("energy/consumers/GANTRY-1/p_now", 300.0, hold_s=3600)  # секція 1
+    world.force("energy/consumers/SAW-1/p_now", 326.0, hold_s=3600)  # секція 2
+    world.force("infra/totals/pv_now", 0.0, hold_s=3600)
+    world.set_flag("bess_auto_idle", True)
+    world.advance(10)
+    q1 = f32((await hr(modbus, 1, 3059, 2)).registers)
+    q2 = f32((await hr(modbus, 2, 3059, 2)).registers)
+    assert (q1, q2) == (pytest.approx(300.0), pytest.approx(326.0))  # КГУ в резерві
+    world.set_flag("chp_run", True)
+    world.advance(100)
+    chp = world.signals["infra/totals/chp_kw"].value
+    assert chp > 300
+    q1 = f32((await hr(modbus, 1, 3059, 2)).registers)
+    q2 = f32((await hr(modbus, 2, 3059, 2)).registers)
+    assert q1 == pytest.approx(300.0) and q2 == pytest.approx(326.0 - chp, abs=0.01)
+    assert q2 == pytest.approx(world.signals["energy/cells/Q2/p_now"].value, abs=0.01)
+    assert q1 + q2 == pytest.approx(626.0 - chp, abs=0.01)
