@@ -55,7 +55,7 @@
     </record>
     <record id="param_drill_3d_keep_min" model="ir.config_parameter">
         <field name="key">td.fire_safety.drill_3d_keep_min</field>
-        <field name="value">60</field>
+        <field name="value">10</field>
     </record>
     <record id="param_alert_group_xmlid" model="ir.config_parameter">
         <field name="key">td.fire_safety.alert_group_xmlid</field>

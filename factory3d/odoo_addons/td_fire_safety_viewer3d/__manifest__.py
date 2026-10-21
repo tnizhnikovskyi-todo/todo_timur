@@ -14,7 +14,7 @@ Key features
 * Evacuation section in the 3D viewer
 * Live evacuation in 3D: running arrows along the evacuation routes, highlighted exits, translucent smoke volumes, blocked ventilation and smoke hatches, people dots moving to the exits by access control passages, the "people in the building" plate and the stuck person highlighted
 """,
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.1.1",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",
     "website": "https://todo.ltd",

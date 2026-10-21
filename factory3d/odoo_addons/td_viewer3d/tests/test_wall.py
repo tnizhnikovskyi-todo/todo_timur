@@ -4,7 +4,7 @@ import html
 import json
 import re
 
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import HttpCase, tagged
 
 from odoo.addons.td_viewer3d.controllers import kiosk as kiosk_ctrl
@@ -68,6 +68,58 @@ class TestWallSettings(F3dViewerBase):
         self.assertFalse(manager.td_wall_url)
         with self.assertRaises(AccessError):
             manager.action_td_new_kiosk_token()
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_viewer")
+class TestWallOpen(F3dViewerBase):
+    """Пункт меню «Екран планірки (стіна)» і кнопка «Відкрити стіну»: act_url у новій вкладці, лише адміністратор."""
+
+    def setUp(self):
+        super().setUp()
+        self.set_param("kiosk_enabled", "True")
+        self.token = self.env["ir.config_parameter"].sudo().get_param("td.viewer.kiosk_token")
+
+    def test_admin_gets_act_url(self):
+        action = self.env["res.config.settings"].with_user(self.user_admin).action_td_open_wall()
+        self.assertEqual(action["type"], "ir.actions.act_url")
+        self.assertEqual(action["target"], "new")
+        self.assertTrue(action["url"].endswith("/f3d/kiosk/%s?wall=1" % self.token), action["url"])
+        settings = self.env["res.config.settings"].with_user(self.user_admin).new({})
+        self.assertEqual(action["url"], settings.td_wall_url)
+
+    def test_server_action_and_menu(self):
+        server = self.env.ref("td_viewer3d.action_td_open_wall")
+        self.assertEqual(server.model_id.model, "res.config.settings")
+        menu = self.env.ref("td_viewer3d.menu_td_wall")
+        self.assertEqual(menu.name, "Екран планірки (стіна)")
+        self.assertEqual(menu.parent_id, self.env.ref("td_factory3d.menu_td_config"))
+        self.assertEqual(menu.group_ids, self.env.ref("td_factory3d.group_td_admin"))
+        self.assertEqual(menu.action, server)
+        self.assertEqual(server.group_ids, self.env.ref("td_factory3d.group_td_admin"))
+        # серверна дія виконується як дія користувача: адміністратор «3D Завод» отримує act_url
+        result = server.with_user(self.user_admin).sudo(False).with_context(active_model="res.config.settings").run()
+        self.assertEqual((result["type"], result["target"]), ("ir.actions.act_url", "new"))
+        self.assertTrue(result["url"].endswith("?wall=1"))
+        for user in (self.user_manager, self.user_f3d):
+            with self.assertRaises(AccessError, msg=user.login):
+                server.with_user(user).sudo(False).with_context(active_model="res.config.settings").run()
+
+    def test_not_admin_denied(self):
+        for user in (self.user_manager, self.user_f3d, self.user_nobody):
+            with self.assertRaises(AccessError, msg=user.login):
+                self.env["res.config.settings"].with_user(user).action_td_open_wall()
+
+    def test_kiosk_disabled(self):
+        self.set_param("kiosk_enabled", "False")
+        with self.assertRaises(UserError) as ctx:
+            self.env["res.config.settings"].with_user(self.user_admin).action_td_open_wall()
+        self.assertIn("Кіоск увімкнено", str(ctx.exception))
+
+    def test_no_token(self):
+        self.env["ir.config_parameter"].sudo().set_param("td.viewer.kiosk_token", False)
+        with self.assertRaises(UserError) as ctx:
+            self.env["res.config.settings"].with_user(self.user_admin).action_td_open_wall()
+        self.assertIn("Новий токен кіоска", str(ctx.exception))
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")

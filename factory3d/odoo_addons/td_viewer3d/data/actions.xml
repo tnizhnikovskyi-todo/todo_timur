@@ -11,4 +11,11 @@
         <field name="state">code</field>
         <field name="code">action = model.action_td_new_kiosk_token()</field>
     </record>
+    <record id="action_td_open_wall" model="ir.actions.server">
+        <field name="name">Екран планірки (стіна)</field>
+        <field name="model_id" ref="base.model_res_config_settings"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_td_open_wall()</field>
+        <field name="group_ids" eval="[(4, ref('td_factory3d.group_td_admin'))]"/>
+    </record>
 </odoo>

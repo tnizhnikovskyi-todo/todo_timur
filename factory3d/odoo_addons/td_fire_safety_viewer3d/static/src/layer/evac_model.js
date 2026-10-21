@@ -9,16 +9,21 @@ export const EXT_ID = "td_fire_evac";
 export const WALK_MPS = 1.3; // м/с — швидкість ходьби, за якою людина «стартує» так, щоб дійти до виходу в момент проходу
 export const PENDING_CAP = 0.6; // частка шляху, далі якої людина без події проходу не просувається
 export const REPLAY_TAIL_S = 90; // у «Потоці зміни» після кінця навчання кадр ще показується стільки секунд
+export const KEEP_AFTER_END_S = 600; // у живому режимі після кінця евакуації (стадія «оцінювання») плашка й люди лишаються не довше
+export const CLOSED_STATES = ["done", "cancelled"]; // закрите чи скасоване навчання в 3D не показується ніколи
 export const WALL_Y = 0.6; // м, коридор уздовж стіни для людей, що йдуть не своїм виходом
 export const SMOKE_TOP = 9.5; // м, стеля цеху
 const KYIV = "Europe/Kyiv";
 
 const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: KYIV, hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-/** Живий стан тривоги з payload або `null` (немає навчання й справжньої тривоги, або старий сервер без ключа). */
+/**
+ * Живий стан тривоги з payload або `null` (немає навчання й справжньої тривоги, або старий сервер без ключа).
+ * Закрите (`done`) і скасоване (`cancelled`) навчання не показується, навіть якщо старий сервер його ще віддає.
+ */
 export function liveOf(D) {
     const live = D?.evacuation?.live;
-    return live && live.start_ms != null ? live : null;
+    return live && live.start_ms != null && !CLOSED_STATES.includes(live.state) ? live : null;
 }
 
 /** Секунд від київської півночі для епохи в мс (повзунок «Потоку зміни» теж у київських хвилинах доби). */
@@ -36,7 +41,7 @@ export const spanS = (live) => (live.end_ms != null ? (live.end_ms - live.start_
 
 /**
  * Секунд від тривоги на «зараз»: живий режим — годинник сервера з payload (`now_ms`) + час, що минув після його отримання
- * (`perfNow − recvPerf`); після завершення навчання кадр завмирає на кінці. «Потік зміни» (`simMin` — київська хвилина доби
+ * (`perfNow − recvPerf`); після завершення навчання кадр завмирає на кінці й зникає через `KEEP_AFTER_END_S` (10 хв). «Потік зміни» (`simMin` — київська хвилина доби
  * з `api.simMinutes()`, VX-08) — відтворення того самого навчання за часом доби. `null` — нема що показувати.
  */
 export function elapsedAt(live, { perfNow = 0, recvPerf = 0, simMin = null } = {}) {
@@ -48,7 +53,11 @@ export function elapsedAt(live, { perfNow = 0, recvPerf = 0, simMin = null } = {
         const e = simMin * 60 - kyivSecondsOfDay(live.start_ms);
         return e < 0 || (span != null && e > span + REPLAY_TAIL_S) ? null : e;
     }
-    const raw = (live.now_ms - live.start_ms) / 1000 + (perfNow - recvPerf) / 1000;
+    const serverNow = live.now_ms + (perfNow - recvPerf);
+    if (span != null && (serverNow - live.end_ms) / 1000 > KEEP_AFTER_END_S) {
+        return null; // навчання давно завершилось і ще не закрите: плашку й людей прибираємо
+    }
+    const raw = (serverNow - live.start_ms) / 1000;
     return span != null ? Math.min(raw, span) : Math.max(0, raw);
 }
 
@@ -163,10 +172,14 @@ export function countsAt(live, routes, exits, e) {
     return { total, inside, out: total - inside, byZone, stuck, wrong };
 }
 
-/** Коди вентиляційних установок, зупинених (заблокованих) пожежною автоматикою: будь-який стан, крім `on`. */
+/**
+ * Коди вентиляційних установок, зупинених пожежним блокуванням (тривога чи навчання): сигнал перевірки td_bms дає
+ * `deviation === "fire"` («зупинено пожежною сигналізацією»), і установка справді не працює. Вимкнені за розкладом
+ * (`off_hours`), у режимі очікування, у несправності чи без даних — не блокування.
+ */
 export function blockedUnits(D) {
     return Object.entries(D?.ventilation?.units || {})
-        .filter(([, u]) => u && u.state && u.state !== "on")
+        .filter(([, u]) => u && u.deviation === "fire" && u.state !== "on")
         .map(([code]) => code)
         .sort();
 }

@@ -58,6 +58,10 @@
                             <div class="content-group mt8">
                                 <field name="td_wall_url" widget="CopyClipboardChar" readonly="1"/>
                             </div>
+                            <div class="mt8">
+                                <button name="action_td_open_wall" type="object" class="btn-link"
+                                        string="Відкрити стіну" icon="oi-arrow-right"/>
+                            </div>
                         </setting>
                     </block>
                     <block title="Планшети" name="f3d_viewer_lite">

@@ -4,7 +4,7 @@ import re
 import secrets
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 PREFIX = "td.viewer."
 HOURS_RE = re.compile(r"^\d\d:\d\d-\d\d:\d\d$")
@@ -56,15 +56,23 @@ class ResConfigSettings(models.TransientModel):
     td_kiosk_url = fields.Char(string="Адреса кіоска", compute="_compute_f3d_kiosk_url", readonly=True)
     td_wall_url = fields.Char(string="Адреса «стіни»", compute="_compute_f3d_kiosk_url", readonly=True)
 
+    def _td_kiosk_url(self, wall=False):
+        """Адреса кіоска (з `?wall=1` для «стіни»); порожньо, якщо користувач не адміністратор «3D Завод» або токена немає."""
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
+            return ""
+        params = self.env["ir.config_parameter"].sudo()
+        token = params.get_param(PREFIX + "kiosk_token")
+        if not token:
+            return ""
+        url = "%s/f3d/kiosk/%s" % ((params.get_param("web.base.url") or "").rstrip("/"), token)
+        return url + "?wall=1" if wall else url
+
     @api.depends_context("uid")
     def _compute_f3d_kiosk_url(self):
-        admin = self.env.user.has_group("td_factory3d.group_td_admin")
-        params = self.env["ir.config_parameter"].sudo()
-        base = params.get_param("web.base.url") or ""
-        token = params.get_param(PREFIX + "kiosk_token")
+        kiosk_url, wall_url = self._td_kiosk_url(), self._td_kiosk_url(wall=True)
         for rec in self:
-            rec.td_kiosk_url = "%s/f3d/kiosk/%s" % (base.rstrip("/"), token) if admin and token else ""
-            rec.td_wall_url = rec.td_kiosk_url + "?wall=1" if rec.td_kiosk_url else ""
+            rec.td_kiosk_url = kiosk_url
+            rec.td_wall_url = wall_url
 
     def _td_validate(self):
         def bad(label, expect):
@@ -102,3 +110,25 @@ class ResConfigSettings(models.TransientModel):
             raise AccessError(_("Новий токен кіоска може згенерувати лише адміністратор «3D Завод»."))
         self.env["ir.config_parameter"].sudo().set_param(PREFIX + "kiosk_token", secrets.token_hex(16))
         return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_td_open_wall(self):
+        """Відкриває екран планірки («стіну») у новій вкладці: меню «Екран планірки (стіна)» і кнопка в налаштуваннях."""
+        if not self.env.user.has_group("td_factory3d.group_td_admin"):
+            raise AccessError(_("Відкрити «стіну» може лише адміністратор «3D Завод»."))
+        params = self.env["ir.config_parameter"].sudo()
+        if (params.get_param(PREFIX + "kiosk_enabled") or "").lower() not in ("true", "1"):
+            raise UserError(
+                _(
+                    "Кіоск вимкнено, тож «стіна» не відкриється. Увімкніть «Кіоск увімкнено» "
+                    "в Налаштування → Налаштування переглядача → Кіоск, збережіть і спробуйте ще раз."
+                )
+            )
+        url = self._td_kiosk_url(wall=True)
+        if not url:
+            raise UserError(
+                _(
+                    "Токена кіоска немає. Натисніть «Новий токен кіоска» "
+                    "в Налаштування → Налаштування переглядача → Кіоск і спробуйте ще раз."
+                )
+            )
+        return {"type": "ir.actions.act_url", "url": url, "target": "new"}

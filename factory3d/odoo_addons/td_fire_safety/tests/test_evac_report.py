@@ -184,16 +184,36 @@ class TestEvacReport(FireCase):
         self.assertTrue(live["smoke"])  # контур FA-CNC перетинає димову зону
 
     def test_live_kept_after_stop_then_dropped(self):
+        """Після кінця евакуації `evaluating` тримається в 3D не довше 10 хв (параметр 60 теж обрізається до 10)."""
         _ = self.people_list
         drill = self.run_drill([self.out(self.emps[0], 40, "EX-S3")])
-        with freeze_time(self.at(121 + 30 * 60)):
+        with freeze_time(self.at(120 + 9 * 60)):
             live = payload.build_evacuation(self.env)["live"]
         self.assertEqual((live["state"], live["end_ms"] - live["start_ms"]), ("evaluating", 120_000))
         self.assertEqual(live["people"][0]["out_exit"], "EX-S3")
         self.assertEqual(live["people"][0]["wrong"], False)
-        with freeze_time(self.at(120 + 61 * 60)):
+        with freeze_time(self.at(120 + 11 * 60)):
+            self.assertIsNone(payload.build_evacuation(self.env)["live"])
+        self.env["ir.config_parameter"].sudo().set_param("td.fire_safety.drill_3d_keep_min", "60")
+        with freeze_time(self.at(120 + 9 * 60)):
+            self.assertEqual(payload.build_evacuation(self.env)["live"]["state"], "evaluating")
+        with freeze_time(self.at(120 + 11 * 60)):
             self.assertIsNone(payload.build_evacuation(self.env)["live"])
         drill.sudo().state = "cancelled"
+
+    def test_live_closed_or_cancelled_not_shown(self):
+        """Закрите (`done`) і скасоване навчання в 3D не показується, навіть одразу після завершення."""
+        _ = self.people_list
+        drill = self.run_drill([self.out(self.emps[0], 40, "EX-S3")])
+        with freeze_time(self.at(130)):
+            self.assertEqual(payload.build_evacuation(self.env)["live"]["state"], "evaluating")
+            drill.sudo().write({"result": "ok", "conclusions": "Висновки"})
+            drill.action_close()
+            self.assertEqual(drill.state, "done")
+            self.assertIsNone(payload.build_evacuation(self.env)["live"])
+        drill.sudo().state = "cancelled"
+        with freeze_time(self.at(135)):
+            self.assertIsNone(payload.build_evacuation(self.env)["live"])
 
     def test_live_none_without_drill_or_alarm(self):
         with freeze_time(self.at(0)):

@@ -11,6 +11,8 @@
               action="action_td_viewer_event" groups="td_factory3d.group_td_manager"/>
     <menuitem id="menu_td_settings" name="Налаштування переглядача" parent="td_factory3d.menu_td_config"
               sequence="10" action="action_td_config_settings" groups="td_factory3d.group_td_admin"/>
+    <menuitem id="menu_td_wall" name="Екран планірки (стіна)" parent="td_factory3d.menu_td_config"
+              sequence="11" action="action_td_open_wall" groups="td_factory3d.group_td_admin"/>
     <menuitem id="menu_td_cycle_check" name="Перевірка циклу" parent="td_factory3d.menu_td_data"
               sequence="60" action="action_td_cycle_check" groups="td_factory3d.group_td_manager"/>
     <menuitem id="menu_td_demo" name="Демо-дані" parent="td_factory3d.menu_td_data" sequence="50"

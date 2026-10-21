@@ -5,7 +5,7 @@ import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import { GROUP_NAME, evacExtension } from "@td_fire_safety_viewer3d/layer/evac_layer";
 import {
-    PENDING_CAP, blockedUnits, countsAt, elapsedAt, jitter, kyivSecondsOfDay, liveOf, mmss, personAt, personPath, pathLength, pointAt, smokeAt,
+    KEEP_AFTER_END_S, PENDING_CAP, blockedUnits, countsAt, elapsedAt, jitter, kyivSecondsOfDay, liveOf, mmss, personAt, personPath, pathLength, pointAt, smokeAt,
     spanS, ventsOpen,
 } from "@td_fire_safety_viewer3d/layer/evac_model";
 
@@ -53,6 +53,9 @@ test("EV1 годинник: живий режим (сервер + час із о
     const ended = live({ end_ms: START + 120000 });
     expect(spanS(ended)).toBe(120);
     expect(elapsedAt(ended, { perfNow: 99999, recvPerf: 0 })).toBe(120); // після кінця кадр завмирає
+    expect(KEEP_AFTER_END_S).toBe(600);
+    expect(elapsedAt(ended, { perfNow: 584000, recvPerf: 0 })).toBe(120); // з кінця минуло 9 хв 59 с — ще показуємо
+    expect(elapsedAt(ended, { perfNow: 586000, recvPerf: 0 })).toBe(null); // понад 10 хв після кінця — плашку прибираємо
     expect(kyivSecondsOfDay(START)).toBe(36000);
     expect(elapsedAt(live(), { simMin: 601 })).toBe(60); // 10:01 → хвилина від тривоги
     expect(elapsedAt(live(), { simMin: 599 })).toBe(null); // ще не почалось
@@ -129,9 +132,25 @@ test("EV5 лічильники: у будівлі, вийшли, по зонах
     expect(countsAt(l, routes, exits, 100).stuck).toEqual([]);
 });
 
-test("EV6 заблокована вентиляція, відкриті люки, дим", () => {
-    const D = { ventilation: { units: { "RV-01": { state: "on" }, "RV-02": { state: "off" }, "AHU-1": { state: "fault" } } } };
-    expect(blockedUnits(D)).toEqual(["AHU-1", "RV-02"]);
+test("EV6 заблокована вентиляція (лише пожежне блокування), відкриті люки, дим", () => {
+    const D = {
+        ventilation: {
+            units: {
+                "RV-01": { state: "on", deviation: "none" }, // працює
+                "RV-02": { state: "off", deviation: "off_hours" }, // вимкнена за розкладом уночі — не блокування
+                "RV-03": { state: "off", deviation: "fire" }, // зупинена пожежною автоматикою
+                "RV-04": { state: "on", deviation: "fire" }, // позначка «fire» ще не оновилась, але установка вже працює
+                "AHU-1": { state: "standby", deviation: "fire" },
+                "EF-CMP": { state: "standby" }, // немає сигналу перевірки (вентилятор): не блокування
+                "EF-CHG": { state: "fault", deviation: "none" }, // несправність — не пожежа
+            },
+        },
+    };
+    expect(blockedUnits(D)).toEqual(["AHU-1", "RV-03"]);
+    // уночі всі 26 установок вимкнені за розкладом — лічильник нульовий
+    const night = { ventilation: { units: Object.fromEntries(Array.from({ length: 26 }, (_, i) => ["RV-" + (i + 1), { state: "off", deviation: "off_hours" }])) } };
+    expect(blockedUnits(night)).toEqual([]);
+    expect(blockedUnits({ ventilation: { units: { "RV-01": { state: "off" } } } })).toEqual([]); // старий сервер без `deviation`
     expect(blockedUnits({})).toEqual([]);
     expect(ventsOpen({ fire: { systems: { "SMOKE-CTRL": { vents_open: true } } } })).toBe(true);
     expect(ventsOpen({})).toBe(false);
@@ -142,6 +161,10 @@ test("EV6 заблокована вентиляція, відкриті люки
     expect(liveOf({ evacuation: { live: live() } }).name).toBe("DRILL/2026/0001");
     expect(liveOf({ evacuation: {} })).toBe(null); // старий сервер: ключа live немає
     expect(liveOf(null)).toBe(null);
+    expect(liveOf({ evacuation: { live: live({ state: "evaluating", end_ms: START + 120000 }) } }).state).toBe("evaluating");
+    expect(liveOf({ evacuation: { live: live({ state: "done", end_ms: START + 151000 }) } })).toBe(null); // закрите навчання
+    expect(liveOf({ evacuation: { live: live({ state: "cancelled", end_ms: START + 30000 }) } })).toBe(null);
+    expect(liveOf({ evacuation: { live: live({ mode: "alarm", state: "running", name: "" }) } }).mode).toBe("alarm");
 });
 
 test("EV7 у сцені: стрічки маршрутів, виходи, дим, точки людей; плашка «у будівлі N людей · 02:15 від тривоги»", async () => {
@@ -201,6 +224,9 @@ test("EV10 заблокована вентиляція й відкриті лю�
         mutate: (fx) => {
             fx.data.evacuation.live = live();
             fx.data.ventilation.units["RV-01"].state = "off";
+            fx.data.ventilation.units["RV-01"].deviation = "fire";
+            fx.data.ventilation.units["RV-02"].state = "off"; // вимкнена за розкладом — не блокування
+            fx.data.ventilation.units["RV-02"].deviation = "off_hours";
             fx.data.fire.systems = { "SMOKE-CTRL": { state: "active", text: "Активна", vents_open: true } };
         },
     });
@@ -216,9 +242,50 @@ test("EV10 заблокована вентиляція й відкриті лю�
     evacExtension.applyLayout(api); // ядро викликає після довантаження частини
     const st = evacExtension.stateOf(api);
     const kinds = st.marks.reduce((acc, m) => ({ ...acc, [m.kind]: (acc[m.kind] || 0) + 1 }), {});
-    expect(kinds.vent).toBe(1); // лише RV-01 зупинено, RV-02 працює
+    expect(kinds.vent).toBe(1); // лише RV-01 зупинено пожежним блокуванням, RV-02 вимкнена за розкладом
     expect(kinds.hatch).toBe(2);
     expect(st.marks.find((m) => m.code === "RV-01").box.visible).toBe(true);
     expect(st.marks.find((m) => m.code === "SV-02").kind).toBe("hatch");
-    expect(text(q(api.labelsRoot.parentElement, ".o_td_ev_plate"))).toMatch(/Вентиляція заблокована: \d+ · люки димовидалення відкриті/);
+    expect(text(q(api.labelsRoot.parentElement, ".o_td_ev_plate"))).toMatch(/Вентиляція заблокована: 1 · люки димовидалення відкриті/);
+});
+
+test("EV11 «Вентиляція заблокована» лічить лише зупинені пожежним блокуванням, а не вимкнені за розкладом", async () => {
+    const { el, api } = await mountEvac({
+        mutate: (fx) => {
+            fx.data.evacuation.live = live();
+            for (const u of Object.values(fx.data.ventilation.units)) {
+                u.state = "off";
+                u.deviation = "off_hours"; // вночі за розкладом
+            }
+        },
+    });
+    expect(text(q(el, ".o_td_ev_plate"))).not.toMatch(/Вентиляція заблокована/);
+    api.D.ventilation.units["RV-03"].deviation = "fire";
+    api.D.ventilation.units["AHU-1"].deviation = "fire";
+    evacExtension.applyData(api, api.D);
+    expect(text(q(el, ".o_td_ev_plate"))).toMatch(/Вентиляція заблокована: 2/);
+});
+
+test("EV12 закрите навчання не показується; навчання в оцінюванні — лише 10 хв після кінця евакуації", async () => {
+    const { el, api } = await mountEvac();
+    const show = (over) => {
+        api.D.evacuation.live = live(over);
+        evacExtension.applyData(api, api.D);
+    };
+    // done: «завершено · … у будівлі 0 людей · 02:31 від тривоги» не з'являється навіть зі старого сервера
+    show({ state: "done", end_ms: START + 151000 });
+    expect(api.scene.getObjectByName(GROUP_NAME)).toBe(undefined);
+    expect(q(el, ".o_td_ev_plate")).toBe(null);
+    show({ state: "cancelled", end_ms: START + 30000 });
+    expect(api.scene.getObjectByName(GROUP_NAME)).toBe(undefined);
+    expect(q(el, ".o_td_ev_plate")).toBe(null);
+    // evaluating, з кінця евакуації 1 хв — плашка «завершено» є
+    show({ state: "evaluating", end_ms: START + 120000, now_ms: START + 180000 });
+    expect(evacExtension.stateOf(api).group.visible).toBe(true);
+    expect(q(el, ".o_td_ev_plate").hidden).toBe(false);
+    expect(text(q(el, ".o_td_ev_plate"))).toMatch(/завершено/);
+    // evaluating, з кінця евакуації понад 10 хв — група й плашка сховані
+    show({ state: "evaluating", end_ms: START + 120000, now_ms: START + 120000 + 601000 });
+    expect(evacExtension.stateOf(api).group.visible).toBe(false);
+    expect(q(el, ".o_td_ev_plate").hidden).toBe(true);
 });

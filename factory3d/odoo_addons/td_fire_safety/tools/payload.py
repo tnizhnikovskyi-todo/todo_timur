@@ -26,6 +26,7 @@ RULE_KEYS = (
 )
 SYSTEM_CODES = ("SPARK-1", "SMOKE-CTRL", "SPRINKLERS")
 STATE_PASS = ("alarm", "prealarm", "fault", "disabled", "test")
+LIVE_KEEP_MAX_MIN = 10  # R-21a: після кінця евакуації 3D тримає навчання `evaluating` не довше (хв), `done`/`cancelled` — ніколи
 
 
 class _SafeDict(dict):
@@ -183,18 +184,19 @@ def _smoke_for(env, fire_zones):
 def build_live(env, ctx=None):
     """R-21a: ключ `live` розділу `evacuation` — живий стан тривоги для 3D або `None`.
 
-    `mode='drill'` — навчання `running` (або `evaluating`/`done`, що завершилось не раніше `drill_3d_keep_min` хв тому):
-    люди навчання безособово; `mode='alarm'` — справжня тривога (зона приладу в `alarm`/`prealarm`, навчання немає):
-    лише зона, дим і час, лічильники людей клієнт бере з розділу `access`.
+    `mode='drill'` — навчання `running` (або `evaluating`, що завершилось не раніше `drill_3d_keep_min` хв тому, але не
+    більше `LIVE_KEEP_MAX_MIN`): люди навчання безособово; закрите (`done`) і скасоване навчання в 3D не показується;
+    `mode='alarm'` — справжня тривога (зона приладу в `alarm`/`prealarm`, навчання немає): лише зона, дим і час,
+    лічильники людей клієнт бере з розділу `access`.
     """
     Drill, Zone = env["td.fire.drill"], env["td.fire.zone"]
     now = fields.Datetime.now()
     panel_param = env["td.fire.panel"]._get_param
     drill = Drill.search([("state", "=", "running")], limit=1)
     if not drill:
-        keep = panel_param("drill_3d_keep_min", 60)
+        keep = min(panel_param("drill_3d_keep_min", LIVE_KEEP_MAX_MIN), LIVE_KEEP_MAX_MIN)
         drill = Drill.search(
-            [("state", "in", ("evaluating", "done")), ("end_ts", ">=", now - timedelta(minutes=keep))],
+            [("state", "=", "evaluating"), ("end_ts", ">=", now - timedelta(minutes=keep))],
             order="end_ts desc, id desc",
             limit=1,
         )
