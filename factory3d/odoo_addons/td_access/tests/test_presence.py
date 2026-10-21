@@ -135,7 +135,14 @@ class TestPresence(AccessCase):
         at = datetime(2026, 10, 12, 7, 0)
         self.assertEqual(
             source._td_on_site(at),
-            [{"employee_id": self.emp_a.id, "since": datetime(2026, 10, 12, 3, 52), "point": "TURN-1"}],
+            [
+                {
+                    "employee_id": self.emp_a.id,
+                    "since": datetime(2026, 10, 12, 3, 52),
+                    "point": "TURN-1",
+                    "zone": "Z-CUT",
+                }
+            ],
         )
         rows = source._td_passages(datetime(2026, 10, 12, 3, 0), at)
         self.assertEqual(

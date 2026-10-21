@@ -24,6 +24,7 @@ AUTO_KEYS = [
     ("evacuation", "Перший вихід людей"),
     ("machines", "Верстати зони зупинено"),
 ]
+SIM_EVAC_SCENARIO = "fire_evacuation"
 RESULTS = [("ok", "Пройдено"), ("remarks", "Пройдено із зауваженнями"), ("failed", "Не пройдено")]
 SOURCE_MAP = {"hr_attendance": "attendance", "access": "access"}
 LEAD = timedelta(seconds=60)
@@ -105,13 +106,33 @@ class F3dFireDrill(models.Model):
         groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user",
     )
     event_ids = fields.One2many("td.fire.event", "drill_id", string="Події", readonly=True)
+    zone_ids = fields.One2many(
+        "td.fire.drill.zone", "drill_id", string="Підсумок по зонах", compute="_compute_zone_ids", compute_sudo=True
+    )
+    wrong_person_ids = fields.Many2many(
+        "td.fire.drill.person",
+        string="Не своїм виходом",
+        compute="_compute_report_people",
+        groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user",
+    )
+    missing_person_ids = fields.Many2many(
+        "td.fire.drill.person",
+        string="Не відмітились",
+        compute="_compute_report_people",
+        groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user",
+    )
+    sim_evac_available = fields.Boolean(compute="_compute_sim_available")
     steps_done = fields.Integer(compute="_compute_steps", store=True)
     steps_total = fields.Integer(compute="_compute_steps", store=True)
     on_site_count = fields.Integer(string="На об'єкті", compute="_compute_people", store=True, compute_sudo=True)
     evacuated_count = fields.Integer(string="Вийшли", compute="_compute_people", store=True, compute_sudo=True)
     present_count = fields.Integer(string="Є на перекличці", compute="_compute_people", store=True, compute_sudo=True)
     missing_count = fields.Integer(string="Не знайдено", compute="_compute_people", store=True, compute_sudo=True)
+    wrong_exit_count = fields.Integer(
+        string="Вийшли не своїм виходом", compute="_compute_people", store=True, compute_sudo=True
+    )
     evac_time_s = fields.Integer(string="Час евакуації, с", readonly=True)
+    evac_in_norm = fields.Boolean(string="У межах нормативу", compute="_compute_evac_in_norm", store=True)
     evac_pct = fields.Float(
         string="Евакуовано, %", compute="_compute_people", store=True, compute_sudo=True, digits=(5, 1)
     )
@@ -164,8 +185,12 @@ class F3dFireDrill(models.Model):
 
     def _compute_sim_available(self):
         available = "td.sim.run" in self.env
+        evac = available and bool(
+            self.env["td.sim.scenario"].sudo().search_count([("code", "=", SIM_EVAC_SCENARIO)], limit=1)
+        )
         for rec in self:
             rec.sim_available = available
+            rec.sim_evac_available = evac
 
     @api.depends("step_ids.done")
     def _compute_steps(self):
@@ -173,7 +198,7 @@ class F3dFireDrill(models.Model):
             rec.steps_total = len(rec.step_ids)
             rec.steps_done = len(rec.step_ids.filtered("done"))
 
-    @api.depends("person_ids.status")
+    @api.depends("person_ids.status", "person_ids.wrong_exit")
     def _compute_people(self):
         for rec in self:
             persons = rec.person_ids
@@ -183,12 +208,41 @@ class F3dFireDrill(models.Model):
             missing = len(persons.filtered(lambda p: p.status == "missing"))
             rec.on_site_count, rec.evacuated_count = on_site, evacuated
             rec.present_count, rec.missing_count = present, missing
+            rec.wrong_exit_count = len(persons.filtered("wrong_exit"))
             rec.evac_pct = round((evacuated + present) / on_site * 100.0, 1) if on_site else 100.0
             rec.data_quality = "partial" if (present + missing > 0 or on_site == 0) else "full"
+
+    @api.depends("evac_time_s", "time_limit_s")
+    def _compute_evac_in_norm(self):
+        for rec in self:
+            rec.evac_in_norm = rec.evac_time_s <= rec.time_limit_s
+
+    @api.depends(
+        "time_limit_s",
+        "person_ids.zone_id",
+        "person_ids.status",
+        "person_ids.wrong_exit",
+        "person_ids.exit_s",
+        "person_ids.exit_ts",
+        "person_ids.exit_id",
+        "person_ids.assigned_exit_id",
+    )
+    def _compute_zone_ids(self):
+        """M-11g: рядки підсумку по зонах — запит над людьми навчання (кеш скидається разом із людьми)."""
+        Zone = self.env["td.fire.drill.zone"]
+        for rec in self:
+            rec.zone_ids = Zone.search([("drill_id", "=", rec.id)]) if rec.id else Zone
+
+    @api.depends("person_ids.wrong_exit", "person_ids.status")
+    def _compute_report_people(self):
+        for rec in self:
+            rec.wrong_person_ids = rec.person_ids.filtered("wrong_exit")
+            rec.missing_person_ids = rec.person_ids.filtered(lambda p: p.status == "missing")
 
     @api.depends(
         "state",
         "missing_count",
+        "wrong_exit_count",
         "evac_time_s",
         "time_limit_s",
         "data_quality",
@@ -204,6 +258,7 @@ class F3dFireDrill(models.Model):
                 rec.result_suggested = "failed"
             elif (
                 rec.evac_time_s > rec.time_limit_s
+                or rec.wrong_exit_count > 0
                 or rec.data_quality == "partial"
                 or rec.real_alarm
                 or rec.steps_done < rec.steps_total
@@ -343,16 +398,17 @@ class F3dFireDrill(models.Model):
             employees = set(self.env["hr.employee"].sudo().browse([p["employee_id"] for p in people]).exists().ids)
             person_source = SOURCE_MAP.get(key, "manual")
             lines, seen = [], set()
+            zones = rec._zones_by_code(people)
             for person in people:
                 emp = person["employee_id"]
                 if emp in seen or emp not in employees:
                     continue
                 seen.add(emp)
-                lines.append(
-                    Command.create(
-                        {"seq": len(lines) + 1, "employee_id": emp, "since": person["since"], "source": person_source}
-                    )
-                )
+                vals = {"seq": len(lines) + 1, "employee_id": emp, "since": person["since"], "source": person_source}
+                zone, route = zones.get(person.get("zone")) or (self.env["td.zone"], self.env["td.fire.route"])
+                if zone:
+                    vals.update({"zone_id": zone.id, "route_id": route.id, "assigned_exit_id": route.exit_id.id})
+                lines.append(Command.create(vals))
             rec.sudo().write(
                 {
                     "state": "running",
@@ -375,11 +431,36 @@ class F3dFireDrill(models.Model):
             rec._notify_state()
         return True
 
+    @api.model
+    def _zones_by_code(self, people):
+        """Зона сцени (`td.zone` за кодом із джерела проходів) і її маршрут: {код зони: (зона, маршрут)}."""
+        codes = {p.get("zone") for p in people if p.get("zone")}
+        if not codes:
+            return {}
+        zones = self.env["td.zone"].sudo().search([("td_code", "in", list(codes))])
+        routes = {r.zone_id.id: r for r in self.env["td.fire.route"].sudo().search([("zone_id", "in", zones.ids)])}
+        return {z.td_code: (z, routes.get(z.id, self.env["td.fire.route"])) for z in zones}
+
     def action_start_sim(self):
         for rec in self:
             if rec.mode != "sim" or not rec.sim_available:
                 raise UserError("Модуль емулятора не встановлено.")
             run = rec._td_sim_start()
+            rec.sim_run_ref = run.name
+            if run.state == "failed":
+                raise UserError("Емулятор не запустив сценарій: %s" % run.message)
+            rec.action_start(source="sim")
+        return True
+
+    def action_start_evac_sim(self):
+        """R-16c: навчання з евакуацією на емуляторі: сценарій `fire_evacuation` веде людей до виходів через СКУД."""
+        for rec in self:
+            if not rec.sim_available or not rec.sim_evac_available:
+                raise UserError("У пульті емулятора немає сценарію %s." % SIM_EVAC_SCENARIO)
+            if rec.state not in ("draft", "planned"):
+                raise UserError("Почати можна лише чернетку або заплановане навчання.")
+            rec.mode = "sim"
+            run = rec._td_sim_start(SIM_EVAC_SCENARIO)
             rec.sim_run_ref = run.name
             if run.state == "failed":
                 raise UserError("Емулятор не запустив сценарій: %s" % run.message)
@@ -402,12 +483,23 @@ class F3dFireDrill(models.Model):
                 end,
             )
             rec._sim_stop_if_any()
+            released = rec._td_release_locks()
             rec.message_post(
                 body="Завершено о %s, вийшли %d з %d, час евакуації %d с"
                 % (dates.local(end, "%H:%M:%S"), rec.evacuated_count, rec.on_site_count, rec.evac_time_s)
             )
+            if released:
+                rec.message_post(body="Зняті блокування тривоги: %d." % released)
             rec._notify_state()
         return True
+
+    def _td_release_locks(self):
+        """R-16b: після навчання знімає блокування, які лишив каскад тривоги (двері, пожежна тривога дверей).
+
+        Базова реалізація нічого не робить і повертає 0; міст із СКУД (`td_fire_safety_access`) перевизначає її.
+        Метод ідемпотентний; повертає кількість знятих блокувань.
+        """
+        return 0
 
     def _sim_stop_if_any(self):
         self.ensure_one()
@@ -431,6 +523,7 @@ class F3dFireDrill(models.Model):
             if not rec.conclusions:
                 raise UserError("Заповніть висновки.")
             rec.state = "done"
+            rec._td_release_locks()
             rec.message_post(body="Навчання закрито, результат: %s" % dict(RESULTS)[rec.result])
         return True
 
@@ -439,10 +532,13 @@ class F3dFireDrill(models.Model):
             if rec.state not in ("draft", "planned", "running"):
                 raise UserError("Скасувати можна лише чернетку, заплановане або навчання, що триває.")
             vals = {"state": "cancelled"}
-            if rec.state == "running":
+            was_running = rec.state == "running"
+            if was_running:
                 vals["end_ts"] = fields.Datetime.now()
                 rec._sim_stop_if_any()
             rec.sudo().write(vals)
+            if was_running:
+                rec._td_release_locks()
             rec.message_post(body="Навчання скасовано.")
             rec._notify_state()
         return True
@@ -767,8 +863,15 @@ class F3dFireDrillPerson(models.Model):
     source = fields.Selection(
         [("attendance", "Відмітки"), ("access", "СКУД"), ("manual", "Вручну"), ("demo", "Демо")], required=True
     )
+    zone_id = fields.Many2one("td.zone", string="Зона на початку", ondelete="set null", index=True)
+    route_id = fields.Many2one("td.fire.route", string="Маршрут", ondelete="set null")
+    assigned_exit_id = fields.Many2one("td.fire.exit", string="Призначений вихід", ondelete="set null")
     exit_ts = fields.Datetime(string="Вийшов о")
     exit_point = fields.Char(string="Де вийшов", size=64)
+    exit_id = fields.Many2one(
+        "td.fire.exit", string="Вихід, яким вийшов", compute="_compute_exit", store=True, ondelete="set null"
+    )
+    wrong_exit = fields.Boolean(string="Не свій вихід", compute="_compute_exit", store=True)
     exit_s = fields.Integer(string="Вийшов через, с", compute="_compute_exit_s", store=True)
     rollcall = fields.Selection(
         [("na", "—"), ("present", "Присутній на місці збору"), ("absent", "Відсутній")], default="na"
@@ -785,6 +888,13 @@ class F3dFireDrillPerson(models.Model):
     )
 
     _f3d_fire_person_uniq = models.Constraint("UNIQUE(drill_id, employee_id)", "Працівник уже є в списку навчання.")
+
+    @api.depends("exit_point", "assigned_exit_id")
+    def _compute_exit(self):
+        Exit = self.env["td.fire.exit"].sudo()
+        for rec in self:
+            rec.exit_id = Exit._td_by_point(rec.exit_point)
+            rec.wrong_exit = bool(rec.exit_id and rec.assigned_exit_id and rec.exit_id != rec.assigned_exit_id)
 
     @api.depends("exit_ts", "drill_id.start_ts")
     def _compute_exit_s(self):

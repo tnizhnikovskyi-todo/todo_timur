@@ -126,6 +126,7 @@ odoo_addons/td_fire_safety/
     ├── test_evacuation.py               AC-33…AC-40 (R-05…R-09, звіт)
     ├── test_drill.py                    AC-41…AC-52, AC-78 (R-15…R-18)
     ├── test_passage_source.py           AC-53, AC-54, AC-75 (CF-02, CF-06; потребує test_td_fire_safety)
+    ├── test_evac_report.py              AC-81…AC-87 (M-09 point_code, M-11b, M-11g, R-16a…R-16d, R-21a; потребує test_td_fire_safety)
     ├── test_viewer_provider.py          AC-55…AC-57, AC-59 (R-20, R-21 — функції tools/payload без viewer)
     ├── test_hooks.py                    AC-01…AC-04, AC-60…AC-62, AC-69, AC-76 (§5.3–§5.5, перерахунок)
     ├── test_rights_ui.py                AC-63…AC-65 (меню, права, налаштування)
@@ -141,13 +142,30 @@ odoo_addons/td_fire_safety/
 
 ```
 odoo_addons/td_fire_safety_viewer3d/
-├── __manifest__.py                     name «Завод 3D: Пожежна безпека — 3D», version 19.0.1.0.0, depends
-│                                       [td_fire_safety, td_viewer3d], data [], auto_install True, LGPL-3
+├── __manifest__.py                     name «Завод 3D: Пожежна безпека — 3D», version 19.0.1.1.0, depends
+│                                       [td_fire_safety, td_viewer3d], data [], assets (backend, kiosk, unit_tests), auto_install True, LGPL-3
 ├── __init__.py
 ├── models/__init__.py
 ├── models/viewer_provider.py            td.viewer.provider.fire (130), td.viewer.provider.evacuation (140)
-└── tests/test_provider.py              AC-58 (PayloadBuilder + DeltaBuilder viewer із провайдерами модуля)
+├── static/src/layer/evac_model.js       чиста модель «Евакуація в 3D» (R-21b): годинник, шлях і положення людини, лічильники
+├── static/src/layer/evac_layer.js       розширення ядра R-26 (VX-03 applyData, VX-08 simMinutes/onSimTime/invalidate): стрічки,
+│                                       виходи, дим, підсвітка, точки людей, плашка; `registerViewerExtension`, ядро не змінено
+├── static/src/layer/evac_layer.scss     плашка «у будівлі N людей · 02:15 від тривоги»
+├── static/tests/hoot/evac.test.js       AC-87 (hoot: модель EV1…EV6, сцена EV7…EV10)
+└── tests/test_provider.py, test_hoot.py AC-58 (PayloadBuilder + DeltaBuilder viewer із провайдерами модуля); запуск hoot
 ```
+
+### 0.2a Міст-модуль `odoo_addons/td_fire_safety_access` (вау №8; auto_install)
+
+```
+odoo_addons/td_fire_safety_access/
+├── __manifest__.py                     version 19.0.1.0.0, depends [td_fire_safety, td_access], auto_install True, LGPL-3
+├── data/td_access_exit_doors.xml       11 дверей аварійних виходів EX-S1…EX-N4 у td.access.door: `code` = код виходу, `biostar_id` 11…21
+│                                       (як `doors` у catalog/evac_routes.json емулятора), периметр, зони як у TURN-1, noupdate
+├── models/td_fire_drill.py             `_td_release_locks` (R-16b): двері, змінені під час навчання → `locked`, пожежна тривога дверей знімається
+└── tests/test_bridge.py                AC-86, AC-88
+```
+Без `td_access` міст не ставиться, а `td_fire_safety` працює як раніше (`_td_release_locks` повертає 0).
 
 ### 0.3 Тестовий модуль `odoo_addons/test_td_fire_safety` (лише для тестів, не ставиться на прод)
 
@@ -185,6 +203,7 @@ odoo_addons/test_td_fire_safety/
         "data/td_fire_smoke_zone.csv",
         "data/td_fire_device.csv",
         "data/td_fire_exit.csv",
+        "data/td_fire_exit_points.xml",  # point_code (EX-IN → TURN-1), вау №8
         "data/td_fire_route.xml",
         "data/td_fire_drill_template.xml",
         "data/td_source_data.xml",
@@ -683,6 +702,7 @@ class F3dFireEvent(models.Model):
 | `side` | Selection | `[('S','Південна стіна'),('N','Північна стіна'),('W','Західна стіна'),('E','Східна стіна')]`, `required` |
 | `width_m` | Float | `digits=(4,2)`, `default=1.2`, `string="Ширина у просвіті, м"` (`evacuation.DOOR_W`; паспорт `exit_door` Hörmann STU) |
 | `equipment_id` | Many2one `maintenance.equipment` | `ondelete='set null'` (хук: `EXITS`) |
+| `point_code` | Char(32) | `index`, `string="Точка проходу СКУД"`: код дверей/турнікета СКУД, через які люди виходять цим виходом; порожньо — збігається з `code`. Data: `EX-IN` → `TURN-1` (`data/td_fire_exit_points.xml`) |
 | `route_ids` | One2many `td.fire.route` `exit_id` | |
 | `route_count` | Integer | `compute` |
 | `nearest_exit_m` | Float | `readonly`, `digits=(8,1)`, `string="До найближчого іншого виходу, м"` (R-06, довідково: EX-S4 і EX-IN — 7,4) |
@@ -695,7 +715,9 @@ class F3dFireEvent(models.Model):
 `@api.constrains('x','y')`: точка на зовнішній стіні: `|y| ≤ 0.5` або `|y − plant_width_m| ≤ 0.5` або `|x| ≤ 0.5`
 або `|x − plant_length_m| ≤ 0.5`, і `0 ≤ x ≤ plant_length_m`, `0 ≤ y ≤ plant_width_m` → інакше
 `ValidationError("Вихід %s має лежати на зовнішній стіні будівлі.")`. `@api.constrains('width_m')`: `> 0`.
-Методи: `_recompute()` (R-06, R-07), `action_f3d_show()` → `equipment_id.action_f3d_show()` (3D-об'єкт `EXITS`).
+Методи: `_recompute()` (R-06, R-07), `action_f3d_show()` → `equipment_id.action_f3d_show()` (3D-об'єкт `EXITS`),
+`@api.model _td_by_point(point)` (R-16a) — вихід за точкою проходу: спершу `point_code = point`, інакше `point_code` порожній і `code = point`;
+порожнє/невідоме (`"Відмітка виходу"`) → порожній набір.
 
 ### M-10 `td.fire.route` — маршрут евакуації (FR-08, A-05, A-25)
 
@@ -759,6 +781,11 @@ class F3dFireDrill(models.Model):
 | `person_ids` | One2many `td.fire.drill.person` `drill_id` | `groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user"`, `copy=False` (FR-24) |
 | `event_ids` | One2many `td.fire.event` `drill_id` | readonly |
 | `steps_done`, `steps_total` | Integer | `compute`, `store=True`, `@api.depends('step_ids.done')` |
+| `wrong_exit_count` | Integer | `compute="_compute_people"`, `store=True`, `compute_sudo=True`, `@api.depends('person_ids.wrong_exit')`: людей із `wrong_exit` (R-16a) |
+| `evac_in_norm` | Boolean | `compute`, `store=True`: `evac_time_s <= time_limit_s` (норматив і факт, R-16d) |
+| `zone_ids` | One2many `td.fire.drill.zone` `drill_id` | `compute`, `compute_sudo=True`, `@api.depends` від полів людей (кеш скидається разом із людьми): підсумок по зонах (M-11g) |
+| `wrong_person_ids`, `missing_person_ids` | Many2many `td.fire.drill.person` | `compute`, `groups` як у `person_ids`: «не своїм виходом» і «не відмітились» (R-16d) |
+| `sim_evac_available` | Boolean | `compute`: `'td.sim.run' in env` і є сценарій `fire_evacuation` у `td.sim.scenario` |
 | `on_site_count`, `evacuated_count`, `present_count`, `missing_count` | Integer | `compute="_compute_people"`, `store=True`, `compute_sudo=True`, `@api.depends('person_ids.status')`: усього / `evacuated` / `present` (перекличка) / `missing` |
 | `evac_time_s` | Integer | `readonly`, `string="Час евакуації, с"` (R-16 п. 4) |
 | `evac_pct` | Float | `compute`, `store=True`, `digits=(5,1)`: `(evacuated + present) / on_site · 100`; `on_site = 0` → `100.0` |
@@ -786,8 +813,10 @@ class F3dFireDrill(models.Model):
 | `_fill_steps(self)` | `step_ids = [Command.clear()] + [Command.create({sequence, t_plan_s, who, text: render(text), auto_key})]` для кроків шаблону; `render` — `str.format_map` з `{'detector': device_id.address or "—", 'zone': zone_id.name, 'sounders': кількість активних `sounder`}` (A-29); невідомий плейсхолдер → лишається як є |
 | `action_plan(self)` | `draft → planned` |
 | `action_start(self, ts=None, source='manual')` | `draft/planned → running`; R-15 |
+| `action_start_evac_sim(self)` | R-16c: `sim_available` і `sim_evac_available`, інакше `UserError("У пульті емулятора немає сценарію fire_evacuation.")`; `draft/planned`; `mode='sim'`; `run = self._td_sim_start('fire_evacuation')`; далі як `action_start_sim` |
+| `_td_release_locks(self) -> int` | R-16b: після `action_stop`, `action_cancel` (було `running`) і `action_close` знімає блокування, які лишив каскад тривоги; база нічого не робить і повертає 0 (міст `td_fire_safety_access` перевизначає); ідемпотентний; кількість знятих → чаттер «Зняті блокування тривоги: N.» |
 | `action_start_sim(self)` | лише `mode='sim'` і `sim_available`, інакше `UserError("Модуль емулятора не встановлено.")`; `run = self._td_sim_start()` (iot_sim bridge, A-34); `sim_run_ref = run.name`; `run.state == 'failed'` → `UserError("Емулятор не запустив сценарій: %s" % run.message)`; далі `action_start(source='sim')` |
-| `action_stop(self, ts=None)` | `running → evaluating`; R-16 п. 4–6; якщо `sim_run_ref` і `sim_available` → `_td_sim_stop()` (помилка емулятора — лише чаттер, не виняток) |
+| `action_stop(self, ts=None)` | `running → evaluating`; R-16 п. 4–6; якщо `sim_run_ref` і `sim_available` → `_td_sim_stop()` (помилка емулятора — лише чаттер, не виняток); потім `_td_release_locks()` (R-16b) |
 | `action_rollcall(self)` | лише `evaluating`; повертає дію майстра M-11d (`context={'default_drill_id': id}`) |
 | `action_close(self)` | `evaluating → done`; без `result` → `UserError("Оберіть результат навчання.")`; без `conclusions` → `UserError("Заповніть висновки.")`; подія `drill_end` уже записана при `action_stop` |
 | `action_cancel(self)` | `draft/planned/running → cancelled`; для `running` — як `action_stop` без розрахунків, `end_ts=now` |
@@ -798,7 +827,7 @@ class F3dFireDrill(models.Model):
 | `@api.model _cron_tick(self)` | `drills = search([('state','=','running')])`; порожньо → вихід; інакше до `5` ітерацій: `drills._tick()`, `self.env.cr.commit()` (поза тестами: `not self.env.registry.in_test_mode()`), `time.sleep(10)`, `drills = drills.exists().filtered(lambda d: d.state == 'running')`; у тестовому режимі — одна ітерація без `sleep`/`commit` |
 | `@api.model _td_is_active_at(self, ts) -> bool` | CF-06 (для `td_access` CA-09): `ts` — UTC naive `datetime`; `True`, якщо `self.sudo().search_count([('start_ts','!=',False), ('start_ts','<=',ts), '|', ('end_ts','=',False), ('end_ts','>=',ts), ('state','in',('running','evaluating','done','cancelled'))]) > 0` (будь-яка компанія; навчання в `draft`/`planned` не рахуються). Приклад: навчання 10:00:00–10:05:30 → `ts` 10:03 → `True`; 10:06 → `False`; `running` без `end_ts`, старт 10:00 → будь-який `ts ≥ 10:00` → `True`; `ts` до старту → `False` |
 | `@api.model _match_test_alarm(self, zone, device, ts, real=False)` | R-18 |
-| `_td_sim_start(self) -> record` / `_td_sim_stop(self)` | iot_sim bridge (FR-23, A-34), `models/iot_sim_bridge.py` |
+| `_td_sim_start(self, code='fire_drill') -> record` / `_td_sim_stop(self)` | iot_sim bridge (FR-23, A-34), `models/iot_sim_bridge.py`; `code` — сценарій емулятора: `fire_drill` (лише каскад) або `fire_evacuation` (каскад + люди через СКУД, R-16c) |
 | `unlink(self)` | лише `draft`/`cancelled` → інакше `UserError("Видалити можна лише чернетку або скасоване навчання.")` |
 
 ### M-11a `td.fire.drill.step` — крок навчання
@@ -835,13 +864,37 @@ class F3dFireDrill(models.Model):
 | `employee_id` | Many2one `hr.employee` | `ondelete='set null'`, `index` (на тестовій копії `neutralize.sql` ставить NULL) |
 | `since` | Datetime | `string="На об'єкті з"` |
 | `source` | Selection | `[('attendance','Відмітки'),('access','СКУД'),('manual','Вручну'),('demo','Демо')]`, `required` |
+| `zone_id` | Many2one `td.zone` | `ondelete='set null'`, `index`, `string="Зона на початку"`: зона сцени людини на старті — ключ `zone` (код `td_code`) із джерела проходів (M-12); немає ключа — порожньо |
+| `route_id` | Many2one `td.fire.route` | `ondelete='set null'`: маршрут зони (`route.zone_id = zone_id`) |
+| `assigned_exit_id` | Many2one `td.fire.exit` | `ondelete='set null'`, `string="Призначений вихід"` = `route_id.exit_id` |
 | `exit_ts` | Datetime | `string="Вийшов о"` |
 | `exit_point` | Char(64) | `string="Де вийшов"` (`TURN-1`, «Відмітка виходу», код дверей) |
+| `exit_id` | Many2one `td.fire.exit` | `compute`, `store=True`, `@api.depends('exit_point')`: `td.fire.exit._td_by_point(exit_point)` (R-16a) |
+| `wrong_exit` | Boolean | `compute`, `store=True`: `exit_id` і `assigned_exit_id` задані та різні (R-16a) |
 | `exit_s` | Integer | `compute`, `store=True`: `exit_ts − drill.start_ts`, с (порожньо без виходу) |
 | `rollcall` | Selection | `[('na','—'),('present','Присутній на місці збору'),('absent','Відсутній')]`, `default='na'` |
 | `status` | Selection | `[('on_site','На об\'єкті'),('evacuated','Вийшов'),('present','Є на перекличці'),('missing','Не знайдено')]`, `compute`, `store=True`, `@api.depends('exit_ts','rollcall','drill_id.state')`: `exit_ts` → `evacuated`; `rollcall='present'` → `present`; `drill.state in ('draft','planned','running')` → `on_site`; інакше `missing` |
 
 `_f3d_fire_person_uniq = models.Constraint("UNIQUE(drill_id, employee_id)", "Працівник уже є в списку навчання.")`.
+
+### M-11g `td.fire.drill.zone` — підсумок навчання по зонах (R-16d)
+
+`_name = "td.fire.drill.zone"`, `_description = "Навчальна тривога: підсумок по зоні"`, `_auto = False`, `_order = "drill_id, evac_time_s desc, zone_id"`.
+Запит `_table_query` (Odoo 19; `_depends` на поля людей, `td.fire.drill.time_limit_s`, `td.fire.exit.code` — ORM скидає зміни в БД перед читанням) —
+групування `td_fire_drill_person` за `(drill_id, zone_id)`; людей без зони — один рядок із `zone_id` порожнім.
+
+| Поле | Тип | Значення |
+|---|---|---|
+| `drill_id`, `zone_id` | Many2one `td.fire.drill`, `td.zone` | ключ групи |
+| `people` | Integer | людей у групі на старті |
+| `evacuated`, `present`, `missing` | Integer | за `status` людини |
+| `wrong_exit` | Integer | людей із `wrong_exit` |
+| `first_exit_s`, `evac_time_s` | Integer | `min`/`max` `exit_s` серед тих, хто вийшов (0, якщо ніхто) — час евакуації зони |
+| `norm_s` | Integer | `drill.time_limit_s` |
+| `in_norm` | Boolean | `evac_time_s <= norm_s` і `missing = 0` |
+| `assigned_exits`, `actual_exits` | Char | коди призначених виходів і виходів, якими вийшли (через кому) |
+
+Права: читання `group_td_user` (агрегати без особистих даних), запису немає (§4.1).
 
 ### M-11c `td.fire.drill.template` і M-11e `td.fire.drill.template.step` — шаблон навчання
 
@@ -896,7 +949,7 @@ class F3dFirePassageSource(models.AbstractModel):
 | Метод джерела | Вхід → вихід | Обов'язковий |
 |---|---|---|
 | `_td_passages(self, start, end) -> list[dict]` | UTC naive → `[{"employee_id": int, "ts": datetime, "point": str, "direction": "out"\|"in"}]` | так (за ним модель визнається джерелом) |
-| `_td_on_site(self, at) -> list[dict]` | UTC naive → `[{"employee_id": int, "since": datetime, "point": str}]` | ні (немає — список людей на старті будується з `_td_passages(at − 24 год, at)`: останній прохід `in` без пізнішого `out`) |
+| `_td_on_site(self, at) -> list[dict]` | UTC naive → `[{"employee_id": int, "since": datetime, "point": str, "zone": str \| None}]`; `zone` необов'язковий — код `td.zone` (`td_code`) людини на `at`; немає — зона невідома (R-15 п. 3, R-16a) | ні (немає — список людей на старті будується з `_td_passages(at − 24 год, at)`: останній прохід `in` без пізнішого `out`) |
 | `_td_available(self) -> bool` | — | ні (немає — джерело доступне) |
 | атрибути `_td_priority` (int, немає → 1000), `_td_key` (str, немає → суфікс імені після префікса: `access`) | — | ні |
 
@@ -1080,10 +1133,10 @@ Device instance задається **лише** в `params.device` джерел�
 ### iot_sim bridge (`models/iot_sim_bridge.py`, FR-23, A-34)
 
 Методи `td.fire.drill` (без `_inherit` чужих моделей — лише виклики `self.env[...]` за наявності):
-- `_td_sim_start(self) -> td.sim.run`: `ensure_one()`; користувач поза `group_td_fire_drill` → `AccessError`;
+- `_td_sim_start(self, code='fire_drill') -> td.sim.run`: `ensure_one()`; користувач поза `group_td_fire_drill` → `AccessError`;
   `'td.sim.run' not in self.env` → `UserError("Модуль емулятора не встановлено.")`;
-  `scenario = env['td.sim.scenario'].sudo().search([('code','=','fire_drill')], limit=1)` → немає →
-  `UserError("У пульті емулятора немає сценарію fire_drill.")`; `params = {"zone": zone_id.code, "detector":
+  `scenario = env['td.sim.scenario'].sudo().search([('code','=',code)], limit=1)` → немає →
+  `UserError("У пульті емулятора немає сценарію %s." % code)`; `params = {"zone": zone_id.code, "detector":
   device_id.address or zone_id.device_ids.filtered('is_detector')[:1].address, "real": False, "duration_s":
   _get_param('drill_sim_duration_s', 300)}`; `return self._td_sim_create_run(scenario, params)`, де
   `_td_sim_create_run(self, scenario, params)` = `env['td.sim.run'].sudo()._create_and_start(scenario, params)` (окремий
@@ -1219,6 +1272,7 @@ access_td_fire_drill_template_step_user,td.fire.drill.template.step user,model_t
 access_td_fire_drill_template_step_manager,td.fire.drill.template.step manager,model_td_fire_drill_template_step,td_factory3d.group_td_manager,1,1,1,1
 access_td_fire_drill_rollcall_wizard_drill,td.fire.drill.rollcall.wizard drill,model_td_fire_drill_rollcall_wizard,td_fire_safety.group_td_fire_drill,1,1,1,1
 access_td_fire_drill_rollcall_line_drill,td.fire.drill.rollcall.line drill,model_td_fire_drill_rollcall_line,td_fire_safety.group_td_fire_drill,1,1,1,1
+access_td_fire_drill_zone_user,td.fire.drill.zone user,model_td_fire_drill_zone,td_factory3d.group_td_user,1,0,0,0
 access_td_fire_bacnet_device_wizard_admin,td.fire.bacnet.device.wizard admin,model_td_fire_bacnet_device_wizard,td_factory3d.group_td_admin,1,1,1,1
 ```
 
@@ -1289,6 +1343,8 @@ maintenance).
 | `drill_match_window_min` | `30` | `param_drill_match_window_min` | R-18 |
 | `drill_auto_stop_s` | `120` | `param_drill_auto_stop_s` | R-16 п. 7 |
 | `drill_sim_duration_s` | `300` | `param_drill_sim_duration_s` | FR-23 |
+| `drill_stuck_after_s` | `120` | `param_drill_stuck_after_s` | R-21a: після скількох секунд без виходу людина «застрягла» (3D) |
+| `drill_3d_keep_min` | `60` | `param_drill_3d_keep_min` | R-21a: скільки хвилин після завершення навчання 3D показує його кінцевий стан |
 | `alert_group_xmlid` | `td_factory3d.group_td_user` | `param_alert_group_xmlid` | FR-11 |
 | `team_id` | `` (порожньо) | `param_team_id` | хук: id «Служба головного механіка» (демо 2), інакше порожньо (Q-02) |
 | `viewer_devices` | `False` | `param_viewer_devices` | R-20 |
@@ -1443,6 +1499,29 @@ telemetry §8.8 і перелік маршрутів API-05); інші ключ�
 `ValueError("bacnet_event: <поле>")` (telemetry пише в `td.push.event.error`, відповідь API-05 лишається 200);
 `device` ≠ `params['device']` джерела панелі (`panel.source_id`, X-44) → подія ігнорується з DEBUG. Ідемпотентність — `event_id`
 telemetry + `dedup_key` журналу. Ліміти — API-05 telemetry (≤ 100 подій, ≤ 1 МБ).
+
+### R-21a Ключ `live` розділу `evacuation` (`tools/payload.build_live`, вау №8)
+
+Останній ключ `evacuation`: `null` або живий стан тривоги для 3D (безособово; рядки людей читаються з `sudo`):
+- навчання `running`, інакше `evaluating`/`done` із `end_ts` не раніше `drill_3d_keep_min` (60) хв тому → `mode='drill'`: `name`, `state`,
+  `zone` (код пожежної зони), `zone_code` (код `td.zone`), `origin` (центр контуру), `start_ms`/`end_ms` (epoch мс UTC, `end_ms` — `null`, поки триває),
+  `now_ms` (годинник сервера), `limit_s`, `stuck_after_s` (параметр `drill_stuck_after_s`, 120), `total`, `smoke` (димові зони, що перетинають контур
+  зони: `{code, x0, y0, x1, y1}`), `people` — `[{n, zone, exit, out_ms, out_exit, wrong}]` (№, зона старту, призначений вихід, час і код фактичного виходу);
+- інакше зона приладу в `alarm`/`prealarm` → `mode='alarm'`: ті самі ключі без людей (`people = []`, `total = 0`), `start_ms` — остання подія `alarm`/`prealarm` зони;
+- інакше `null`. Розмір `evacuation` ≤ 25 КБ (AC-85).
+
+### R-21b Евакуація в 3D (JS-розширення ядра `td_fire_safety_viewer3d`, вау №8)
+
+Розширення `td_fire_evac` (`registerViewerExtension`, ядро `core.js` не змінюється; хуки R-26: `applyData` VX-03, `simMinutes`/`onSimTime`/`invalidate` VX-08).
+Без `live` нічого не малює. Малює: бігучі стрілки вздовж маршрутів до виходів (маршрут зони пожежі — помаранчевий, зони без людей — приглушені);
+виходи з пульсацією, лічильник вийшовших біля виходу; дим — напівпрозорий об'єм над димовими зонами (шар росте від стелі з часом); коробки-підсвітка навколо
+зупинених установок вентиляції (`D.ventilation.units[*].state ≠ 'on'`) і люків `SV-nn`, коли `SMOKE-CTRL` активна; точки людей: шлях — маршрут зони, у момент
+проходу СКУД (`out_ms`) точка рівно в дверях (інтерполяція шляхом із ходьбою 1,3 м/с; про прохід дізнаються із запізненням — тоді добігає за ~2 с),
+не вийшла — не далі за 60 % шляху; не своїм виходом — помаранчева, шлях уздовж стіни; застрягла (не вийшла за `stuck_after_s` або навчання завершилось) —
+червона пульсуюча з підписом «№n · зона · застряг»; лічильники людей біля зон; плашка: «Навчальна тривога …», «у будівлі N людей · 02:15 від тривоги»,
+вийшли X з Y, норматив, чипи зон (`Z-CNC 3` … `0 ✓`), «Застряг: …», «Не своїм виходом: …», «Вентиляція заблокована: n · люки димовидалення відкриті».
+Справжня тривога (`mode='alarm'`): людей у сцені немає, лічильники беруться з `D.access` (`on_site.total`, `zones`) і йдуть до нуля наживо.
+«Потік зміни»: годинник — `api.simMinutes()` (київська хвилина доби) відносно початку навчання, кадр показується від старту до кінця + 90 с.
 
 ### API-02 Розділи `fire` і `evacuation` payload переглядача (вихід, viewer API-02/API-03, CF-01)
 
@@ -1773,7 +1852,8 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
 2. `start_ts = ts or now`; `state='running'`; `steps` порожні → `_fill_steps()`; усі кроки `done=False`, `t_fact_s=0`.
 3. `base = env['td.fire.passage.source']`; `src = base._td_get_source()`; `passage_source = base._td_source_key(src)`;
    люди = `base._td_people_at(src, start_ts)`, сортування `(since, employee_id)`; `person_ids` = рядки `seq` 1…n, `source`
-   (`attendance` для `hr_attendance`, `access` для `access`, інакше `manual`), `since`.
+   (`attendance` для `hr_attendance`, `access` для `access`, інакше `manual`), `since`; ключ `zone` джерела (код `td.zone`) → `zone_id`,
+   `route_id` (маршрут цієї зони, M-10) і `assigned_exit_id = route_id.exit_id` (R-16a); немає ключа або зони/маршруту — порожньо.
 4. Подія `drill_start`; чаттер «Почато о {HH:MM:SS}, на об'єкті {n}»; шина `_notify('td.fire.drill', [name], 'state')`.
 5. Приклад (юніт-тест): відмітки `hr.attendance` — 3 відкриті з `check_in` до старту, 1 закрита до старту, 1 з
    `check_in` після старту → `on_site_count = 3`. Демо-копія: 35.
@@ -1789,13 +1869,46 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
    (немає — 0); `state='evaluating'`; подія `drill_end`.
 5. `evac_pct = (evacuated + present)/on_site·100`, `on_site = 0` → 100,0.
 6. `result_suggested` (для `evaluating`/`done`): `failed`, якщо `missing_count > 0`; `remarks`, якщо
-   `evac_time_s > time_limit_s` або `data_quality='partial'` або `real_alarm` або `steps_done < steps_total`; інакше `ok`.
+   `evac_time_s > time_limit_s` або `wrong_exit_count > 0` або `data_quality='partial'` або `real_alarm` або `steps_done < steps_total`; інакше `ok`.
    Приклад: 3 людини, 2 вийшли через турнікет за 95 і 140 с, третій — на перекличці → `evac_time_s 140`,
    `evac_pct 100,0`, `partial` → `remarks`; без переклички → `missing 1` → `failed`.
 7. Авто-стоп (у `_tick`, крім `mode='tabletop'`): була подія `test`/`alarm`/`prealarm` зони навчання з
    `ts ≥ start_ts − 60 с`, зараз усі зони панелі в `normal`/`unknown` і панель `normal`, і від останньої події
    `test_end`/`reset` цієї зони минуло ≥ `P('drill_auto_stop_s')` (120 с) → `action_stop(ts = час тієї події)`.
    Емулятор S-07 (`duration_s` 300): тест 0…300 с, повернення до 330 с → авто-стоп після 450 с, `end_ts` ≈ 330 с.
+
+### R-16a Вихід за точкою проходу, не свій вихід (M-09 `point_code`, M-11b)
+
+1. `exit_point` людини — код точки проходу джерела (`TURN-1`, `EX-S3`, «Відмітка виходу»); `exit_id = td.fire.exit._td_by_point(exit_point)`:
+   спершу вихід із `point_code = exit_point`, інакше вихід без `point_code` з `code = exit_point` (`TURN-1` → `EX-IN`, `EX-S3` → `EX-S3`,
+   «Відмітка виходу» → порожньо).
+2. `assigned_exit_id` — вихід маршруту зони людини на старті (R-15 п. 3). `wrong_exit = exit_id ∧ assigned_exit_id ∧ exit_id ≠ assigned_exit_id`
+   (немає зони, маршруту або виходу — не рахується). Приклад: Z-CNC → `EX-S3`; вийшов через двері `EX-S4` → `wrong_exit`; через `EX-S3` — ні;
+   Z-ASM → `EX-IN`, вийшов через турнікет `TURN-1` — свій вихід.
+3. `drill.wrong_exit_count` — кількість `wrong_exit`; впливає на `result_suggested` (п. 6 R-16).
+
+### R-16b Зняття блокувань після навчання (`_td_release_locks`)
+
+Каскад тривоги (емулятор S-07/S-24, реальна автоматика) розблоковує двері й ставить їм пожежну тривогу; після навчання стенд не лишається заблокованим.
+`action_stop`, `action_cancel` (з `running`) і `action_close` викликають `_td_release_locks()`; база повертає 0. Міст `td_fire_safety_access`:
+для дверей СКУД з `state ∈ (unlocked, open)` і `state_ts ≥ start_ts − 60 с` (змінені під час навчання) → `state='locked'`, `state_ts = max(now, state_ts)`
+(запізнілі події каскаду, старші за стан, ігноруються за access R-10); пожежна тривога дверей (`alarm ∧ alarm_reason='fire'`) знімається, якщо
+`real_alarm = False` (справжню тривогу підтверджує охорона); двері, не змінені навчанням, не чіпаються; шина `td.access.door`; повертає кількість дверей зі змінами.
+Емулятор (iot_sim S-24) окремо відкочує каскад, повертає людей і зачиняє двері (R-16c).
+
+### R-16c Навчання з евакуацією на емуляторі (FR-23)
+
+Кнопка «Запустити тривогу з евакуацією» (`action_start_evac_sim`, форма навчання; видима за `sim_evac_available`) створює запуск сценарію
+`fire_evacuation` (iot_sim S-24; те саме `params`, що й `fire_drill`) і стартує навчання. Сценарій: каскад `fire_drill` + люди з СКУД
+(усі, хто на об'єкті) ідуть своїм маршрутом до виходу й проходять через двері виходу (`EX-IN` → турнікет `TURN-1`, `EX-*` → двері `td_fire_safety_access`
+з `biostar_id` 11…21); частина (`wrong_exit_pct`, не менше однієї) — не своїм виходом (найближчий інший), `stuck` людей із пожежної зони не виходять
+(у звіті — «не відмітились»); після `duration_s` каскад відкочується за 30 с, люди повертаються турнікетом, двері зачиняються на замок (20736).
+
+### R-16d Звіт евакуації (M-11g, форма «Звіт евакуації», протокол розділ 4)
+
+Норматив і факт: `time_limit_s` / `evac_time_s` (`evac_in_norm`); по зонах — M-11g (час зони = `max(exit_s)` тих, хто вийшов; зона в нормативі, якщо
+час ≤ норми й ніхто не пропав); «вийшли не своїм виходом» — люди з `wrong_exit` (призначений вихід, маршрут, фактичний вихід); «не відмітились» —
+люди зі `status='missing'`. Прізвища — лише `print_names` і групи `group_td_fire_drill`/`hr.group_hr_user`; у протоколі без прізвищ — № людини.
 
 ### R-17 Автовідмітка кроків
 
@@ -2097,6 +2210,14 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-76 | FR-01, FR-20, §5.3, Додаток B (X-16, X-17, X-37, X-44) | Given чиста база; When модуль встановлено; Then джерело xml-id `source_bacnet_facp_1` має `code='BAC-200-FACP-1'`, `params` = `{"host": "iot-sim", "port": 47808, "device": 200, "network": 2, "read_only": true, "timeout_s": 5, "rpm": true, "rpm_max": 50}`, `validate_params('bacnet_ip', params) == []` (telemetry `tools/address.py`); 46 сигналів джерела `B` (Додаток B № 1–44, 53–54; № 45–52 — ADAM `M`): жоден `address` не містить ключа `device`, `validate_address('bacnet_ip', address) == []`, `address['object'] ∈ {LSZ, MSV, BV, PIV}` (LSZ — № 1–34, 53–54, MSV — № 35, PIV — № 36–38, BV — № 39–44), жодного `AV`/`BI`; усі 54 сигнали data — `origin='module'`; сигнал запиленості (`dust_signal=created`) — `origin='module'`, `address == {"object": "PIV", "instance": 21607, "mode": "poll"}`; установка не дає `ValidationError` telemetry M-02/M-03 | UT |
 | AC-77 | M-01 `action_set_bacnet_device`, M-19 (X-44, X-17) | Given `A`; `panel.action_set_bacnet_device()` → контекст майстра `default_old_instance=200`; `signal_count=45` (44 data + запиленість; + сигнали `monitor`, якщо є), `explicit_count=0`; додати фікстуру — сигнал джерела з явним `address={"device": 200, "object": "LSP", "instance": 21201}`; When `new_instance=1234`, `action_apply()`; Then `BAC-1234-FACP-1` (той самий запис, xml-id `source_bacnet_facp_1`) з `params['device']=1234` і незмінними `host`, `port`, `network`, `read_only`; адреси сигналів без `device` не змінено; фіксований сигнал — `address['device']=1234`; чаттер панелі містить «BACnet device змінено: 200 → 1234 (джерело BAC-1234-FACP-1)»; `new_instance=4194303` → `ValidationError`; `M` → `AccessError`; панель без `source_id` → `UserError`; `new_instance == old_instance` → нічого не змінено | UT |
 | AC-78 | FR-13, R-17 `machines` (X-12, machine_connect CM-02) | Given навчання `running` (`start_ts=T0`) у зоні, чия `td.zone` має РЦ `wc1`, `wc2` (фікстури) і сигнали `workcenters/<wc1.td_code>/machine_state`, `…/<wc2.td_code>/machine_state` (`kind='state'`, `states` = 6 значень CM-02); When `wc1` → `fault` о `T0+20`, `wc2` має `idle` з `last_ts = T0−600`; Then після `_tick` крок `machines` `done`, `done_by='auto'`, `t_fact_s=20`; When `wc1` → `working`; Then крок (у новому навчанні) не відмічено; `nodata` → не відмічено; лише сирий `workcenters/<wc1.td_code>/state` з `last_text='ERROR'` без `…/machine_state` → не відмічено; обидва `idle` до старту → `t_fact_s=0` | UT |
+| AC-81 | M-09 `point_code`, R-16a | Given дані модуля; Then `_td_by_point('TURN-1')` = `EX-IN`, `_td_by_point('EX-S3')` = `EX-S3`, `_td_by_point('Відмітка виходу')`, `''`, `False` — порожньо | UT `test_evac_report.py::test_exit_by_point` |
+| AC-82 | R-15 п. 3, M-11b | Given джерело повертає людей із `zone` (`Z-CNC`, `Z-CUT`, `Z-CNC`, без зони); When `action_start`; Then `zone_id` = зони, `route_id` = `EVAC-CNC`, `assigned_exit_id` = `EX-S3`, `EX-S2`, `EX-S3`, у четвертого порожньо | UT `test_zone_route_assigned_exit_at_start` |
+| AC-83 | R-16a, R-16d, M-11g | Given четверо; перший вийшов через `EX-S3` (свій) о +40 с, другий через `EX-S4` (маршрут `EX-S2`) о +55 с, двоє не вийшли; When `action_stop`; Then `wrong_exit_count = 1`, `evac_time_s = 55`, `evac_in_norm`, `result_suggested = failed`; `zone_ids`: Z-CNC (2/1/1, `first_exit_s 40`, `in_norm = False`), Z-CUT (`wrong_exit 1`, `EX-S2` → `EX-S4`, `in_norm`), без зони (1/0/1); `wrong_person_ids`/`missing_person_ids` — 1 і 2; лише `wrong_exit` без «не відмітились» → `remarks`; норматив 30 с → `evac_in_norm = False` | UT `test_report_wrong_exit_and_missing`, `test_wrong_exit_alone_gives_remarks`, `test_over_norm` |
+| AC-84 | R-16d, V-21 | Given навчання з AC-83; When протокол; Then розділ «4. Звіт евакуації», 3 рядки `f3d-drill-zone`, 1 `f3d-drill-wrong`, 2 `f3d-drill-missing`, прізвищ немає без `print_names`, з ним — є | UT `test_protocol_sections` |
+| AC-85 | R-21a | Given навчання `running` о +60 с (перший вийшов о +40 с); Then `live.mode='drill'`, `now_ms − start_ms = 60000`, `total 4`, `limit_s 300`, `stuck_after_s 120`, `smoke` непорожній, у `people[0]` рівно ключі `n, zone, exit, out_ms, out_exit, wrong` (без особистих даних), `out_ms = start_ms + 40000`; після `action_stop` `live` лишається (`state='evaluating'`, `end_ms`), через 61 хв — `null`; без навчання й тривоги — `null`; зона в `alarm` → `mode='alarm'` без людей; `evacuation` < 25 КБ | UT `test_live_payload_drill`, `test_live_kept_after_stop_then_dropped`, `test_live_none_without_drill_or_alarm`, `test_live_real_alarm`, `test_evacuation_section_size` |
+| AC-86 | R-16b, R-16c | Given навчання; When `action_stop`/`action_close`/`action_cancel` (з `running`); Then `_td_release_locks` викликано; чаттер «Зняті блокування тривоги: N»; міст: двері після каскаду (20480 + 26368) стають `locked` без тривоги, справжню тривогу (`real_alarm`) не знято, двері, не змінені навчанням, не чіпаються, запізніла 20480 стану не повертає; `action_start_evac_sim` без `td.sim.scenario fire_evacuation` → `UserError`, з ним — `_td_sim_create_run(scenario fire_evacuation, params.zone = FA-CNC)`, `mode='sim'`, `running` | UT `test_release_locks_called_on_stop_cancel_close`, `test_start_evac_sim_*`; `td_fire_safety_access/tests/test_bridge.py::test_release_*` |
+| AC-87 | R-21b | Given `evacuation.live` (4 людини, 1 димова зона); Then hoot EV1…EV10: годинник (живий/кінець/«Потік зміни»), шлях і положення людини (прихід у двері рівно в `out_ms`, без телепортів, `PENDING_CAP`, «застряг»), лічильники, заблокована вентиляція й люки, у сцені 32 стрічки/12 виходів/дим/4 точки, плашка «у будівлі N людей · MM:SS від тривоги», `mode='alarm'` із `D.access`, без `live` — нічого не малюється | HOOT `td_fire_safety_viewer3d/static/tests/hoot/evac.test.js` |
+| AC-88 | M-12, td_access M-16, R-16a | Given СКУД: двоє працівників зайшли турнікетом (Z-CUT і Z-ASM); навчання стартує з джерелом `access`; When перший вийшов дверима `EX-S2` (свій), другий — `EX-S1` (не свій, маршрут Z-ASM → `EX-IN`); Then `exit_point` = коди дверей, `wrong_exit` лише в другого, `zone_ids` Z-CUT → (`EX-S2`, `EX-S2`), Z-ASM → (`EX-IN`, `EX-S1`, 1); вихід через турнікет `TURN-1` — свій вихід `EX-IN`; 11 дверей `EX-*` з `biostar_id` 11…21 у СКУД, периметр; прохід дверима виходу — `direction='out'` | UT `td_fire_safety_access/tests/test_bridge.py::test_wrong_exit_end_to_end`, `test_staff_exit_via_turnstile_is_own_exit`, `test_exit_doors_in_access`, `test_exit_door_pass_is_out_on_perimeter` |
 
 ## 13. План тестування (для Opus)
 
@@ -2153,6 +2274,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | `::TestSmokeZones`, `::TestData`, `::TestReport`, `::TestPlantZone` | `test_need_table`, `test_vent_archived`, `test_area_fail`, `test_exit_route_data`, `test_path_validation`, `test_report_html`, `test_zone_fields`, `test_route_show_3d` | AC-36…AC-40 | `report._render_qweb_html(...)` | таблиця R-09; підрядки HTML; поля M-13; `params.code` |
 | `test_drill.py::TestDrill` | `test_name_and_steps`, `test_transitions`, `test_start_people`, `test_passages_rollcall_result`, `test_auto_steps`, `test_match_planned`, `test_auto_create`, `test_no_auto_create`, `test_real_alarm`, `test_auto_stop`, `test_tabletop_no_auto_stop`, `test_sim_bridge`, `test_privacy`, `test_report_drill`, `test_cron_tick`, `test_auto_step_machines` | AC-41…AC-52, AC-78 | `make_att`, `freeze_time`, події через `_log` (для R-17), `patch.object(type(env['td.fire.drill']), '_td_sim_create_run')` | значення AC; `result_suggested`; `t_fact_s`; параметри виклику емулятора |
 | `test_passage_source.py::TestSources` | `test_hr_attendance`, `test_prefix_source_without_inherit`, `test_people_from_passages`, `test_unavailable_falls_back`, `test_access_if_installed` (`skipUnless('td.fire.passage.source.access' in env)`), `test_is_active_at` | AC-53, AC-54, AC-75 | тестовий модуль §0.3; `with_context(f3d_test_passage_source=True, f3d_test_passages=[…])` | ключ джерела; люди; `exit_ts`; булеві значення CF-06 |
+| `test_evac_report.py::TestEvacReport` | `test_exit_by_point`, `test_zone_route_assigned_exit_at_start`, `test_report_wrong_exit_and_missing`, `test_wrong_exit_alone_gives_remarks`, `test_over_norm`, `test_protocol_sections`, `test_live_payload_drill`, `test_live_kept_after_stop_then_dropped`, `test_live_none_without_drill_or_alarm`, `test_live_real_alarm`, `test_evacuation_section_size`, `test_release_locks_called_on_stop_cancel_close`, `test_start_evac_sim_unavailable`, `test_start_evac_sim_bridge` (`skip`, якщо iot_sim не встановлено) |
 | `test_viewer_provider.py::TestPayload` | `test_fire_structure`, `test_group_states`, `test_evacuation_structure`, `test_devices_and_disabled` | AC-55…AC-57, AC-59 | `tools.payload.build_fire/build_evacuation(env, ctx)` (`ctx = {"now": T0}`) | ключі, порядок, значення; `json.dumps` |
 | `test_rights_ui.py::TestMenusRights` | `test_menus`, `test_acl_matrix`, `test_settings` | AC-63…AC-65 | `with_user(...)`; `env['res.config.settings'].create({...}).execute()` | меню/дії; `AccessError`; параметри й пороги сигналів |
 | `td_fire_safety_viewer3d/tests/test_provider.py::TestProvider` | `test_registered_and_live`, `test_bus_and_delta` | AC-58 | viewer `PayloadBuilder`, `DeltaBuilder` | `meta.sections`, `td.viewer.event`, `patch.fire` |

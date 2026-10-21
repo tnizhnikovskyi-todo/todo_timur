@@ -41,3 +41,4 @@ access_td_fire_drill_template_step_user,td.fire.drill.template.step user,model_t
 access_td_fire_drill_template_step_manager,td.fire.drill.template.step manager,model_td_fire_drill_template_step,td_factory3d.group_td_manager,1,1,1,1
 access_td_fire_drill_rollcall_wizard_drill,td.fire.drill.rollcall.wizard drill,model_td_fire_drill_rollcall_wizard,td_fire_safety.group_td_fire_drill,1,1,1,1
 access_td_fire_drill_rollcall_line_drill,td.fire.drill.rollcall.line drill,model_td_fire_drill_rollcall_line,td_fire_safety.group_td_fire_drill,1,1,1,1
+access_td_fire_drill_zone_user,td.fire.drill.zone user,model_td_fire_drill_zone,td_factory3d.group_td_user,1,0,0,0

@@ -34,6 +34,7 @@ MIN_PARAMS = {
     "air_leak": {},
     "gas_overuse": {},
     "water_leak": {},
+    "fire_evacuation": {},
 }
 
 
@@ -51,8 +52,8 @@ def states(world, run):
     return [e.payload["state"] for e in world.events.since(0, kind="scenario")[0] if e.run_id == run.id]
 
 
-def test_registry_of_23(runner):
-    assert len(SCENARIOS) == 23 and set(MIN_PARAMS) == set(runner.scenarios)
+def test_registry_of_24(runner):
+    assert len(SCENARIOS) == 24 and set(MIN_PARAMS) == set(runner.scenarios)
     lst = runner.list()
     assert [x["name"] for x in lst][:3] == ["shift", "machine_fault", "blackout"]
     by = {x["name"]: x for x in lst}

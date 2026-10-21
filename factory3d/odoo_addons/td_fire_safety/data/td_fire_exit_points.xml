@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- M-09 point_code: вхід персоналу EX-IN — турнікет прохідної TURN-1 (СКУД); інші виходи — за збігом кодів (R-16a) -->
+    <record id="exit_ex_in" model="td.fire.exit">
+        <field name="point_code">TURN-1</field>
+    </record>
+</odoo>

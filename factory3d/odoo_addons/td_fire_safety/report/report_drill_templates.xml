@@ -44,12 +44,71 @@
                             <tr><td>Є на перекличці</td><td t-out="o.present_count"/></tr>
                             <tr><td>Не знайдено</td><td t-out="o.missing_count"/></tr>
                             <tr><td>Час евакуації</td><td><span t-out="o.evac_time_s"/> с (норматив <span t-out="o.time_limit_s"/> с)</td></tr>
+                            <tr><td>Вийшли не своїм виходом</td><td t-out="o.wrong_exit_count"/></tr>
                             <tr><td>Евакуйовано</td><td><span t-out="'%.1f' % o.evac_pct"/> %</td></tr>
                             <tr><td>Якість даних</td><td t-out="dict(o._fields['data_quality'].selection).get(o.data_quality)"/></tr>
                             <tr><td>Джерело проходів</td><td t-out="o.passage_source or '—'"/></tr>
                         </table>
 
-                        <h3>4. Список людей</h3>
+                        <h3>4. Звіт евакуації</h3>
+                        <p class="f3d-drill-norm">
+                            Норматив <strong><span t-out="o.time_limit_s"/> с</strong>, факт <strong><span t-out="o.evac_time_s"/> с</strong>:
+                            <span t-if="o.evac_in_norm">у межах нормативу</span><span t-else="">норматив перевищено на <span t-out="o.evac_time_s - o.time_limit_s"/> с</span>.
+                        </p>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Зона</th><th>Було</th><th>Вийшли</th><th>Не відмітились</th><th>Перший вихід, с</th><th>Час зони, с</th><th>Призначений вихід</th><th>Вийшли через</th><th>Не своїм</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.sudo().zone_ids" t-as="z" class="f3d-drill-zone">
+                                    <td t-out="z.zone_id.name or 'Зону не визначено'"/>
+                                    <td t-out="z.people"/>
+                                    <td t-out="z.evacuated"/>
+                                    <td t-out="z.missing"/>
+                                    <td t-out="z.first_exit_s"/>
+                                    <td t-out="z.evac_time_s"/>
+                                    <td t-out="z.assigned_exits or '—'"/>
+                                    <td t-out="z.actual_exits or '—'"/>
+                                    <td t-out="z.wrong_exit"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <t t-set="wrong" t-value="o.sudo().person_ids.filtered('wrong_exit')"/>
+                        <t t-set="lost" t-value="o.sudo().person_ids.filtered(lambda p: p.status == 'missing')"/>
+                        <h4>Вийшли не своїм виходом (за маршрутом зони): <span t-out="len(wrong)"/></h4>
+                        <table t-if="wrong" class="table table-sm">
+                            <thead>
+                                <tr><th>№</th><th t-if="o.print_names">ПІБ</th><th>Зона</th><th>Маршрут</th><th>Призначений вихід</th><th>Вийшов через</th><th>Вийшов через, с</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="wrong" t-as="p" class="f3d-drill-wrong">
+                                    <td t-out="p.seq"/>
+                                    <td t-if="o.print_names" t-out="p.employee_id.name or '—'"/>
+                                    <td t-out="p.zone_id.name or '—'"/>
+                                    <td t-out="p.route_id.name or '—'"/>
+                                    <td t-out="p.assigned_exit_id.code or '—'"/>
+                                    <td t-out="p.exit_id.code or '—'"/>
+                                    <td t-out="p.exit_s"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <h4>Не відмітились (не вийшли й не на перекличці): <span t-out="len(lost)"/></h4>
+                        <table t-if="lost" class="table table-sm">
+                            <thead>
+                                <tr><th>№</th><th t-if="o.print_names">ПІБ</th><th>Зона</th><th>Призначений вихід</th><th>На об'єкті з</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="lost" t-as="p" class="f3d-drill-missing">
+                                    <td t-out="p.seq"/>
+                                    <td t-if="o.print_names" t-out="p.employee_id.name or '—'"/>
+                                    <td t-out="p.zone_id.name or '—'"/>
+                                    <td t-out="p.assigned_exit_id.code or '—'"/>
+                                    <td><span t-if="p.since" t-out="p.since" t-options="opt"/><span t-else="">—</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>5. Список людей</h3>
                         <t t-if="o.print_names">
                             <table class="table table-sm">
                                 <thead>
@@ -69,16 +128,16 @@
                         <p t-else="">Персональний список не друкується</p>
 
                         <t t-if="o.real_alarm">
-                            <h3>5. Справжня тривога</h3>
+                            <h3>6. Справжня тривога</h3>
                             <p>Під час навчання прилад показав справжню тривогу.</p>
                         </t>
 
-                        <h3>6. Результат</h3>
+                        <h3>7. Результат</h3>
                         <p>Результат: <strong t-out="dict(o._fields['result'].selection).get(o.result) or '—'"/></p>
                         <p>Висновки: <span t-out="o.conclusions or '—'"/></p>
                         <p>Зауваження й заходи: <span t-out="o.remarks or '—'"/></p>
 
-                        <h3>7. Підписи</h3>
+                        <h3>8. Підписи</h3>
                         <p>Відповідальний: ____________________ / <span t-out="o.responsible_id.name"/> /</p>
                         <p>Інженер з пожежної безпеки: ____________________</p>
                     </div>

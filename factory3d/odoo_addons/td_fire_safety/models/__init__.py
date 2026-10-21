@@ -10,6 +10,7 @@ from . import td_fire_smoke_zone  # W3 (device.smoke_zone_id, system.smoke_zone_
 from . import td_fire_exit  # W3
 from . import td_fire_route  # W3 (td.zone.td_evac_route_id)
 from . import td_fire_drill  # W4 (event.drill_id)
+from . import td_fire_drill_zone  # M-11g: SQL-представлення над td.fire.drill.person
 from . import passage_source
 from . import td_zone
 from . import maintenance_request

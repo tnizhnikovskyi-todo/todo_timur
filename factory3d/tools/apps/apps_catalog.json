@@ -524,13 +524,14 @@
     },
     "td_fire_safety_viewer3d": {
       "name": "Fire Safety 3D Bridge",
-      "summary": "Viewer providers: fire and evacuation sections",
+      "summary": "Viewer providers: fire and evacuation sections; live evacuation in 3D",
       "intro": [
         "Bridge between Fire Safety and the 3D viewer, installed automatically when both are present. It adds no models of its own."
       ],
       "features": [
         "Fire section in the 3D viewer",
-        "Evacuation section in the 3D viewer"
+        "Evacuation section in the 3D viewer",
+        "Live evacuation in 3D: running arrows along the evacuation routes, highlighted exits, translucent smoke volumes, blocked ventilation and smoke hatches, people dots moving to the exits by access control passages, the \"people in the building\" plate and the stuck person highlighted"
       ],
       "notes": [],
       "edition": "ce",
@@ -600,6 +601,23 @@
       "publish": "ee_only",
       "color": "#2b5aa0",
       "mono": "MM"
+    },
+    "td_fire_safety_access": {
+      "name": "Fire Safety Access Bridge",
+      "summary": "Evacuation doors in the access control system and release of drill locks",
+      "intro": [
+        "Bridge between Fire Safety and Access Control, installed automatically when both are present. It adds no models of its own."
+      ],
+      "features": [
+        "Emergency exit doors EX-* in the access control system, so that every person who leaves through an exit is seen: the drill report shows who left by an exit other than the one assigned to their zone route",
+        "After a training alarm ends, the locks left by the alarm cascade are released: doors unlocked by the alarm are locked again and the fire alarm of the doors is acknowledged (a real alarm is never touched)"
+      ],
+      "notes": [],
+      "edition": "ce",
+      "role": "bridge",
+      "publish": "dependency",
+      "color": "#c0392b",
+      "mono": "FA"
     }
   }
 }

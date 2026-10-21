@@ -996,3 +996,6 @@ class ScenarioRunner:
             run.state = "stopped"
             self.runs[rid] = run
             self._emit(run, "stopped", f"Сценарій {run.name}: stopped (рестарт сервісу)")
+
+
+from iot_sim.core import scenarios_evac  # noqa: E402, F401  (S-24 fire_evacuation додає себе в SCENARIOS)

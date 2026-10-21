@@ -1,8 +1,14 @@
 """Розділи `fire` і `evacuation` payload переглядача (SPEC R-20, R-21, API-02, Додаток C).
 
 Без залежності від td_viewer3d: функції викликає міст-модуль M-17 і тести основного модуля.
-Читання — від імені користувача запиту (без sudo); персональних даних навчань у payload немає (лише кількості).
+Читання — від імені користувача запиту (без sudo); персональних даних навчань у payload немає: ключ `live` (R-21a)
+містить людей лише як безособові рядки (№, зона, виходи, час проходу) — рядки людей читаються з sudo.
 """
+
+import calendar
+from datetime import timedelta
+
+from odoo import fields
 
 from .dates import local
 
@@ -156,6 +162,98 @@ def _render_steps(steps, drill_ctx):
     return out
 
 
+def _ms(dt):
+    """UTC naive datetime → epoch у мілісекундах; порожнє → None."""
+    if not dt:
+        return None
+    return calendar.timegm(dt.timetuple()) * 1000 + dt.microsecond // 1000
+
+
+def _smoke_for(env, fire_zones):
+    """Димові зони, що перетинають контур пожежної зони (R-21a): де в 3D зависає дим."""
+    out = []
+    for smoke in env["td.fire.smoke.zone"].search([], order="code"):
+        for zone in fire_zones:
+            if smoke.x0 < zone.x1 and zone.x0 < smoke.x1 and smoke.y0 < zone.y1 and zone.y0 < smoke.y1:
+                out.append({"code": smoke.code, "x0": smoke.x0, "y0": smoke.y0, "x1": smoke.x1, "y1": smoke.y1})
+                break
+    return out
+
+
+def build_live(env, ctx=None):
+    """R-21a: ключ `live` розділу `evacuation` — живий стан тривоги для 3D або `None`.
+
+    `mode='drill'` — навчання `running` (або `evaluating`/`done`, що завершилось не раніше `drill_3d_keep_min` хв тому):
+    люди навчання безособово; `mode='alarm'` — справжня тривога (зона приладу в `alarm`/`prealarm`, навчання немає):
+    лише зона, дим і час, лічильники людей клієнт бере з розділу `access`.
+    """
+    Drill, Zone = env["td.fire.drill"], env["td.fire.zone"]
+    now = fields.Datetime.now()
+    panel_param = env["td.fire.panel"]._get_param
+    drill = Drill.search([("state", "=", "running")], limit=1)
+    if not drill:
+        keep = panel_param("drill_3d_keep_min", 60)
+        drill = Drill.search(
+            [("state", "in", ("evaluating", "done")), ("end_ts", ">=", now - timedelta(minutes=keep))],
+            order="end_ts desc, id desc",
+            limit=1,
+        )
+    live = {"now_ms": _ms(now), "stuck_after_s": panel_param("drill_stuck_after_s", 120)}
+    if drill:
+        zone = drill.zone_id
+        live.update(
+            {
+                "mode": "drill",
+                "name": drill.name,
+                "state": drill.state,
+                "zone": zone.code,
+                "zone_code": zone.zone_id.td_code or "",
+                "origin": [round((zone.x0 + zone.x1) / 2, 2), round((zone.y0 + zone.y1) / 2, 2)],
+                "start_ms": _ms(drill.start_ts),
+                "end_ms": _ms(drill.end_ts),
+                "limit_s": drill.time_limit_s,
+                "total": drill.on_site_count,
+                "smoke": _smoke_for(env, zone),
+                "people": [
+                    {
+                        "n": p.seq,
+                        "zone": p.zone_id.td_code or None,
+                        "exit": p.assigned_exit_id.code or None,
+                        "out_ms": _ms(p.exit_ts),
+                        "out_exit": p.exit_id.code or None,
+                        "wrong": bool(p.wrong_exit),
+                    }
+                    for p in drill.sudo().person_ids.sorted("seq")
+                ],
+            }
+        )
+        return live
+    alarm = Zone.search([("state", "in", ("alarm", "prealarm"))], order="state_ts, id")
+    if not alarm:
+        return None
+    first = alarm[0]
+    since = env["td.fire.event"].search(
+        [("etype", "in", ("alarm", "prealarm")), ("zone_id", "=", first.id)], order="ts desc, id desc", limit=1
+    )
+    live.update(
+        {
+            "mode": "alarm",
+            "name": "",
+            "state": "running",
+            "zone": first.code,
+            "zone_code": first.zone_id.td_code or "",
+            "origin": [round((first.x0 + first.x1) / 2, 2), round((first.y0 + first.y1) / 2, 2)],
+            "start_ms": _ms(since.ts or first.state_ts or now),
+            "end_ms": None,
+            "limit_s": panel_param("drill_time_limit_s", 300),
+            "total": 0,
+            "smoke": _smoke_for(env, alarm),
+            "people": [],
+        }
+    )
+    return live
+
+
 def build_evacuation(env, ctx=None):
     """R-21: розділ `evacuation`; порядок ключів — viewer A.13 + `drill_active`, `compliance`."""
     Norm = env["td.fire.norm"]
@@ -223,4 +321,5 @@ def build_evacuation(env, ctx=None):
             "smoke_ok": panel.compliance_smoke_ok,
             "smoke_total": panel.compliance_smoke_total,
         },
+        "live": build_live(env, ctx),
     }

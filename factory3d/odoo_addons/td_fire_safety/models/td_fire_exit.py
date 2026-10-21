@@ -31,6 +31,13 @@ class F3dFireExit(models.Model):
     side = fields.Selection(SIDES, string="Стіна", required=True)
     width_m = fields.Float(string="Ширина у просвіті, м", digits=(4, 2), default=1.2)
     equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null")
+    point_code = fields.Char(
+        string="Точка проходу СКУД",
+        size=32,
+        index=True,
+        help="Код дверей або турнікета СКУД, через які люди виходять цим виходом (`exit_point` людини навчання). "
+        "Порожньо — точка збігається з кодом виходу.",
+    )
     route_ids = fields.One2many("td.fire.route", "exit_id", string="Маршрути")
     route_count = fields.Integer(string="Маршрутів", compute="_compute_route_count")
     nearest_exit_m = fields.Float(string="До найближчого іншого виходу, м", digits=(8, 1), readonly=True)
@@ -73,6 +80,16 @@ class F3dFireExit(models.Model):
         for rec in self:
             if rec.width_m <= 0:
                 raise ValidationError("Ширина виходу %s має бути більшою за 0." % rec.code)
+
+    @api.model
+    def _td_by_point(self, point):
+        """R-16a: вихід за точкою проходу СКУД (`point_code`, інакше `code`); порожній набір, якщо не знайдено."""
+        point = (point or "").strip()
+        if not point:
+            return self.browse()
+        return self.search([("point_code", "=", point)], limit=1) or self.search(
+            [("point_code", "=", False), ("code", "=", point)], limit=1
+        )
 
     @api.model
     def _dispersal_summary(self):

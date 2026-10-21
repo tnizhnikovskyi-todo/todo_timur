@@ -7,7 +7,7 @@ from .common import TAG_ARGS, SimCase
 @tagged(*TAG_ARGS)
 class TestScenarioRun(SimCase):
     def test_scenarios_loaded(self):
-        self.assertEqual(self.env["td.sim.scenario"].search_count([]), 23)
+        self.assertEqual(self.env["td.sim.scenario"].search_count([]), 24)
 
     def test_run_wizard_creates_run(self):
         scenario = self.env.ref("td_iot_sim.scenario_filter_clogged")

@@ -1,6 +1,6 @@
 {
     "name": "Equipment Simulator",
-    "version": "19.0.2.0.5",
+    "version": "19.0.2.1.0",
     "summary": "Console of the factory equipment simulator: device registry, signal catalog, scenarios, level 0",
     "description": """
 Equipment Simulator
@@ -43,6 +43,7 @@ Requirements and notes
         "data/level0.xml",
         "data/td_sim_scenario.xml",
         "data/td_sim_scenario_resources.xml",
+        "data/td_sim_scenario_evac.xml",
         "data/ir_cron.xml",
         "views/sim_panel_views.xml",
         "views/sim_device_views.xml",

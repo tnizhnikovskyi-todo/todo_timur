@@ -1,5 +1,11 @@
 # Changelog — iot_sim
 
+## Unreleased: пожежна евакуація (вау №8 «Евакуація в 3D»)
+- Сценарій S-24 `fire_evacuation` (`iot_sim/core/scenarios_evac.py`, реєструється рядком імпорту в кінці `scenarios.py`): каскад `fire_drill` + люди з СКУД ідуть своїм маршрутом
+  до виходів і проходять через двері виходів (подія BioStar на `ACR-IN`, `tna_key=2`, `door_id` виходу: турнікет `1` або аварійні двері `11…21`); частина людей — не своїм виходом
+  (`wrong_exit_pct`), `stuck` людей із зони пожежі не виходять («застряглі»); після `duration_s` каскад відкочується, люди повертаються турнікетом, двері зачиняються на замок
+  (20736), зупинка робить те саме негайно. Каталог `catalog/evac_routes.json` (генератор `tools/gen_evac_catalog.py`). Тести `tests/unit/test_scenario_evac.py`; реєстр — 24 сценарії.
+
 ## Unreleased: портал STORETEQ (вау №19)
 - Авто-завдання порталу: `protocols/woodstore_auto.py` — РЦ розкрою (SAW-1…3, NEST-1) у WORKING без завдання в черзі отримує `feed` на 2…5 листів із `external_ref` = МО активного завдання РЦ
   (REST woodStore раніше віддавав лише завдання від Odoo); `GET /status` показує фази `moving/picking/placing`. `SIM_WOODSTORE_AUTOFEED=0` вимикає. Тести: `tests/protocols/test_woodstore_auto.py`.

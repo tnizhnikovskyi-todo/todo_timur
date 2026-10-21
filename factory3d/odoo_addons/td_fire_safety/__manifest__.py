@@ -21,7 +21,7 @@ Requirements and notes
 * Data comes from the Factory 3D collector service, which is not part of this module.
 * The module is a monitoring and documentation tool; it does not replace certified fire protection equipment.
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.1.0",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Maintenance",
@@ -46,6 +46,7 @@ Requirements and notes
         "data/td.fire.smoke.zone.csv",  # M-07
         "data/td.fire.device.csv",  # M-04
         "data/td.fire.exit.csv",  # M-09
+        "data/td_fire_exit_points.xml",  # M-09 point_code (EX-IN -> TURN-1)
         "data/td_fire_route.xml",  # M-10
         "data/td_fire_drill_template.xml",  # M-11c, M-11e
         "data/td_source_data.xml",  # поле td_fire_readonly на td.source (M-15)

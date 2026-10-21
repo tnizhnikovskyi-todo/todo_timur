@@ -23,7 +23,13 @@ class F3dFirePassageSourceAccess(models.AbstractModel):
                 limit=1,
             )
             out.append(
-                {"employee_id": emp.id, "since": last.ts or emp.td_access_last_in, "point": last.door_id.code or ""}
+                {
+                    "employee_id": emp.id,
+                    "since": last.ts or emp.td_access_last_in,
+                    "point": last.door_id.code or "",
+                    # необов'язковий ключ контракту CF-02: зона сцени людини на момент `at` (за присутністю СКУД)
+                    "zone": emp.sudo().td_access_zone_id.td_code or None,
+                }
             )
         return out
 

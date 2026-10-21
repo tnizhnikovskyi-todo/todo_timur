@@ -1535,6 +1535,42 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 Усі сценарії пишуть події `scenario` (`started`, `progress` з `payload.step`, `done|stopped|failed`); `result` для S-06: `{"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1", "unloaded_pct": 100}`; для S-07: `{"alarm_latency_s": 0, "sounders_s": 3, "vent_stop_s": 6, "doors_s": 12}`.
 
+### 9.3a Сценарій S-24 `fire_evacuation` — пожежна евакуація (вау №8 «Евакуація в 3D»)
+
+Рядок S-24: `fire_evacuation`, група `safety`, `duration_s` default 300. Параметри (поверх загальних): ті самі `zone` (enum FA-*, default FA-CNC), `detector`, `real`,
+що й S-07, плюс `stuck` (int 0…3, default 1 — «застряглих»), `wrong_exit_pct` (int 0…100, default 15 — частка людей, що йдуть не своїм виходом), `speed_mps`
+(number 0,5…2,5, default 1,3), `return_people` (bool, default true). Конфлікти — як S-07 (`zone:<FA-*>`, групи `safety`/`bms`). Код — `iot_sim/core/scenarios_evac.py`
+(файл окремий; у `scenarios.py` лише рядок імпорту в кінці), каталог — `catalog/evac_routes.json` (`tools/gen_evac_catalog.py`: виходи й маршрути з `plant/evac_routes.json`,
+оператор `OP-<РЦ>` → зона його РЦ, `OP-W1…W7` — домашні зони СКУД, `doors` — код виходу → `door_id` BioStar).
+
+**R-S24-1 Хто йде.** Люди з журналу СКУД (`AccessCtl`): останній прохід `ACR-IN` з `tna_key` 1/2 — вхід (`people_on_site`). Нікого немає — сценарій проходить каскад
+і завершується з `result.people = 0`.
+
+**R-S24-2 План (`plan_evacuation`, детермінований за `det(code)`).** Зона людини — з каталогу; маршрут = маршрут зони (`exit`, `length`, `path`); невідома зона →
+`EX-IN`, 40 м. `stuck` людей — ті, хто найменше за `det(code+"#stuck")` серед людей **у зоні пожежі** (`FA-X` → `Z-X`; немає — серед усіх): не виходять взагалі.
+`wrong_exit_pct` % решти (за `det(code+"#wrong")`, але не менше однієї, якщо відсоток > 0) йдуть найближчим іншим виходом: довжина `= відстань до виходу × 1,3 + 3 м`.
+Момент проходу: `3 + 5 + det(code+"#react") mod 20` с реакції + `довжина / (speed_mps × (0,85…1,15))`; черга біля виходу — не частіше за одного на 1,2 с.
+
+**R-S24-3 Хід.** Каскад S-07 (прапор `fire_drill`: 0 с `alarm`, 3 `sounders`, 6 `vent_stop`, 9 `dampers`, 12 `doors`, 20 `machines`) плюс прапор `evacuation`
+(`zone`, `t0`, `people`, `stuck`, `wrong_exit`; знімається `cleanup`). О 12 с — 20480 «двері розблоковано» на дверях аварійних виходів (`door_id` 11…21). У момент проходу —
+подія BioStar: пристрій `ACR-IN`, код 4102/4867 (`verify_code`), `tna_key=2`, `door_id` виходу (`EX-IN` → турнікет `1`, `EX-S1…EX-N4` → `11…21`). Кроки журналу запуску:
+`evac_first`, `evac_done`, `stuck` («Застряг: <код> у зоні <зона>»).
+
+**R-S24-4 Відкат (стенд не лишається заблокованим).** На `duration_s` (не раніше за останній прохід + 5 с): `fire_drill.phase = restoring` (відкат каскаду за 30 с, S-07), якщо
+`return_people` — люди, що вийшли, повертаються турнікетом (`tna_key=1`, `door_id=1`) за 3…28 с, потім 20736 «двері зачинено на замок» на всіх дверях (1–5 і 11…21).
+Зупинка (`stop`) робить те саме негайно (повернення й замки з поточним часом). `result`: `{people, evacuated, stuck[], wrong_exit[], last_exit_s, exits{код: кількість}, returned}`.
+Той, хто «застряг», лишається в СКУД на об'єкті (у навчанні Odoo — «не відмітився»).
+
+**Критерії S-24.**
+
+| ID | Given / When / Then | Тест |
+|---|---|---|
+| AC-S24-1 | `catalog/evac_routes.json`: 12 виходів, 32 маршрути, 35 операторів, `doors` EX-IN→1, EX-S1→11 …; кожна зона оператора має маршрут; `gen_evac_catalog.py --check` = 0 | `test_scenario_evac.py::test_catalog_complete` |
+| AC-S24-2 | 35 людей на об'єкті о 10:30, `zone=FA-CNC`: рівно 1 застряглий (із `Z-CNC`), ≥ 1 не своїм виходом (`exit ≠ assigned`), решта — своїм; черга біля виходу ≥ 1,2 с; усі виходять до 120 с; план однаковий при повторі; `stuck=0, wrong_exit_pct=0` — нікого особливого; `stuck=3` — 3 | `test_plan_stuck_wrong_and_queue`, `test_plan_params` |
+| AC-S24-3 | `start('fire_evacuation', zone=FA-CNC, duration_s=150)`: прапори `fire_drill`/`evacuation`; через 100 с частина вийшла; після завершення `done`, `flags == {}`; 34 події `tna_key=2` (по одній на людину, крім застряглого) на дверях ∈ {1, 11…21}; 34 повернення `tna_key=1`; 20480 на 11…21 і 20736 на 1–5 та 11…21, замки після повернень; кроки `alarm…machines`, `stuck`, `restoring`, `doors_locked` | `test_run_evacuates_and_restores` |
+| AC-S24-4 | `stop` через 40 с: `stopped`, `flags == {}`, 20736 на дверях 1–5, хто вийшов — повернувся | `test_stop_restores_at_once` |
+| AC-S24-5 | порожній `world.people` — `result.people = 0`; невалідні `stuck` 4, `wrong_exit_pct` 101, `speed_mps` 0,1, `zone` `cnc`, зайвий ключ — 422; реєстр = 24 сценарії | `test_nobody_on_site`, `test_params_validation`, `test_scenarios.py::test_registry_of_24` |
+
 ### 9.4 Прискорення часу
 
 `factor` ∈ [0,1; 60]. Усі інтеграли (R-03, R-06, R-07, R-16, R-21) рахуються по `dt_sim`, тому значення за sim-добу не залежать від `factor`. Хвилинний шум R-00 прив'язаний до sim-хвилин (при `factor=60` — 60 нових `r` на реальну секунду). Протокольні позначки часу (`SourceTimestamp`, BACnet `time-stamp`, BioStar `datetime`, MQTT `ts`, LPR `datetime`) — `sim_now`. Push-частоти протоколів — у реальному часі (не частіше 1 с), тож при `factor=60` споживач бачить «стрибки» на 60 с — це очікувано і задокументовано для споживачів (ТК-14). `follow_odoo` → `factor=1` (A-12).

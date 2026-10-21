@@ -68,10 +68,13 @@ class TestHooks(AccessCase):
         total = self.make_demo_like()
         self.assertEqual(total, 35)
         report = hooks.run_all(self.env)
+        bridge_doors = (
+            self.env["td.access.door"].sudo().search_count([("code", "=like", "EX-%")])
+        )  # td_fire_safety_access
         for key, value in dict(
             servers=1,
             devices=5,
-            doors=5,
+            doors=5 + bridge_doors,
             equipment_bound=5,
             links=35,
             home_zones=35,

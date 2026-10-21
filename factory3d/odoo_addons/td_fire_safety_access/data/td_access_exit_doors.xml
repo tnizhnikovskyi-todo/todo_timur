@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Двері аварійних виходів EX-* у СКУД: код дверей = код виходу td.fire.exit, biostar_id 11…21 (як catalog/evac_routes.json
+         емулятора, doors). Вхід персоналу EX-IN — турнікет TURN-1 (td.fire.exit.point_code). Напрямок проходу — `tna_key=2` на
+         ACR-IN (вихід). Периметр: проходи створюють і закривають відмітки, а під час навчання не закривають (R-05). -->
+    <record id="door_ex_s1" model="td.access.door">
+        <field name="code">EX-S1</field>
+        <field name="name">Аварійний вихід EX-S1 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">11</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_s2" model="td.access.door">
+        <field name="code">EX-S2</field>
+        <field name="name">Аварійний вихід EX-S2 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">12</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_s3" model="td.access.door">
+        <field name="code">EX-S3</field>
+        <field name="name">Аварійний вихід EX-S3 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">13</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_s4" model="td.access.door">
+        <field name="code">EX-S4</field>
+        <field name="name">Аварійний вихід EX-S4 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">14</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_s5" model="td.access.door">
+        <field name="code">EX-S5</field>
+        <field name="name">Аварійний вихід EX-S5 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">15</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_s6" model="td.access.door">
+        <field name="code">EX-S6</field>
+        <field name="name">Аварійний вихід EX-S6 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">16</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_n1" model="td.access.door">
+        <field name="code">EX-N1</field>
+        <field name="name">Аварійний вихід EX-N1 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">17</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_n2" model="td.access.door">
+        <field name="code">EX-N2</field>
+        <field name="name">Аварійний вихід EX-N2 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">18</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_n3" model="td.access.door">
+        <field name="code">EX-N3</field>
+        <field name="name">Аварійний вихід EX-N3 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">19</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_n5" model="td.access.door">
+        <field name="code">EX-N5</field>
+        <field name="name">Аварійний вихід EX-N5 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">20</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_ex_n4" model="td.access.door">
+        <field name="code">EX-N4</field>
+        <field name="name">Аварійний вихід EX-N4 (СКУД)</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="td_access.server_biostar_sim"/>
+        <field name="biostar_id">21</field>
+        <field name="zone_from_id" ref="td_factory3d.zone_z_kpp"/>
+        <field name="zone_to_id" ref="td_factory3d.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+</odoo>

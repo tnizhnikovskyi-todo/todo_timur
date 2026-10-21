@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+  <!-- Вау №8 «Евакуація в 3D»: сценарій S-24 емулятора. Файл окремий від td_sim_scenario.xml (S-01…S-20) і td_sim_scenario_resources.xml (S-21…S-23). -->
+  <record id="scenario_fire_evacuation" model="td.sim.scenario">
+    <field name="code">fire_evacuation</field>
+    <field name="name">Пожежна евакуація (навчання)</field>
+    <field name="group">safety</field>
+    <field name="sequence">75</field>
+    <field name="duration_s">300</field>
+    <field name="description"><![CDATA[<p>Каскад пожежної тривоги (як «Пожежне навчання»: сирени, стоп вентиляції, клапани димовидалення, двері, верстати ERROR) плюс люди: усі, хто на об'єкті за СКУД, йдуть своїм маршрутом до виходу й проходять через двері виходу (турнікет TURN-1 або двері EX-*). Частина людей (wrong_exit_pct) іде не своїм виходом, stuck людей із зони пожежі не виходять взагалі («застряглі»). Після закінчення блокування знімаються: каскад відкочується за 30 с, люди повертаються турнікетом, двері зачиняються на замок.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'zone': {'type': 'string'}, 'detector': {'type': 'string'}, 'real': {'type': 'boolean'}, 'stuck': {'type': 'integer', 'minimum': 0, 'maximum': 3}, 'wrong_exit_pct': {'type': 'integer', 'minimum': 0, 'maximum': 100}, 'speed_mps': {'type': 'number', 'minimum': 0.5, 'maximum': 2.5}, 'return_people': {'type': 'boolean'}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'zone': 'FA-CNC', 'real': False, 'stuck': 1, 'wrong_exit_pct': 15, 'return_people': True}"/>
+  </record>
+</odoo>

@@ -7,15 +7,16 @@ from odoo.exceptions import AccessError, UserError
 class F3dFireDrillSimBridge(models.Model):
     _inherit = "td.fire.drill"
 
-    def _td_sim_start(self):
+    def _td_sim_start(self, code="fire_drill"):
+        """`code`: сценарій емулятора — `fire_drill` (лише каскад) або `fire_evacuation` (каскад + люди через СКУД)."""
         self.ensure_one()
         if not self.env.su and not self.env.user.has_group("td_fire_safety.group_td_fire_drill"):
             raise AccessError("Запускати емулятор навчання можуть лише користувачі групи «Навчальні тривоги».")
         if "td.sim.run" not in self.env:
             raise UserError("Модуль емулятора не встановлено.")
-        scenario = self.env["td.sim.scenario"].sudo().search([("code", "=", "fire_drill")], limit=1)
+        scenario = self.env["td.sim.scenario"].sudo().search([("code", "=", code)], limit=1)
         if not scenario:
-            raise UserError("У пульті емулятора немає сценарію fire_drill.")
+            raise UserError("У пульті емулятора немає сценарію %s." % code)
         detector = self.device_id.address or self.zone_id.device_ids.filtered("is_detector")[:1].address
         params = {
             "zone": self.zone_id.code,

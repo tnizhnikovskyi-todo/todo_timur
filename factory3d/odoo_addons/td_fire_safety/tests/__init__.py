@@ -14,3 +14,4 @@ from . import test_passage_source
 from . import test_hooks
 from . import test_viewer_provider
 from . import test_rights_ui
+from . import test_evac_report

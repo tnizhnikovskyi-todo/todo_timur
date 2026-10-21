@@ -69,6 +69,10 @@
                             invisible="state not in ('draft', 'planned') or mode == 'sim'"/>
                     <button name="action_start_sim" string="Запустити на емуляторі" type="object" class="btn-primary"
                             invisible="state not in ('draft', 'planned') or mode != 'sim' or not sim_available"/>
+                    <button name="action_start_evac_sim" string="Запустити тривогу з евакуацією" type="object"
+                            class="btn-primary" icon="fa-bell"
+                            invisible="state not in ('draft', 'planned') or not sim_evac_available"
+                            confirm="Запустити сценарій евакуації на емуляторі? Люди побіжать до виходів, один «застрягне»."/>
                     <button name="action_stop" string="Завершити" type="object" class="btn-danger"
                             invisible="state != 'running'"/>
                     <button name="action_rollcall" string="Перекличка" type="object" invisible="state != 'evaluating'"/>
@@ -108,6 +112,7 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="sim_run_ref" invisible="not sim_run_ref"/>
                             <field name="sim_available" invisible="1"/>
+                            <field name="sim_evac_available" invisible="1"/>
                             <field name="real_alarm" invisible="1"/>
                         </group>
                         <group string="Результат">
@@ -120,6 +125,8 @@
                             <field name="evacuated_count"/>
                             <field name="present_count"/>
                             <field name="missing_count"/>
+                            <field name="wrong_exit_count"/>
+                            <field name="evac_in_norm" invisible="1"/>
                             <field name="evac_pct"/>
                             <field name="data_quality"/>
                             <field name="passage_source"/>
@@ -160,9 +167,72 @@
                                     <field name="exit_ts"/>
                                     <field name="exit_s"/>
                                     <field name="exit_point"/>
+                                    <field name="zone_id" optional="show"/>
+                                    <field name="assigned_exit_id" optional="show"/>
+                                    <field name="exit_id" optional="show"/>
+                                    <field name="wrong_exit" optional="show" decoration-danger="wrong_exit"/>
                                     <field name="rollcall"/>
                                     <field name="status" widget="badge" decoration-success="status == 'evacuated'"
                                            decoration-info="status == 'present'" decoration-danger="status == 'missing'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Звіт евакуації" name="evac_report"
+                              invisible="state not in ('running', 'evaluating', 'done')">
+                            <group>
+                                <group string="Норматив і факт">
+                                    <field name="time_limit_s" string="Норматив, с" readonly="1"/>
+                                    <field name="evac_time_s" string="Факт, с" readonly="1"
+                                           decoration-danger="not evac_in_norm" decoration-success="evac_in_norm"/>
+                                    <field name="evac_pct" readonly="1"/>
+                                </group>
+                                <group string="Відхилення">
+                                    <field name="wrong_exit_count" readonly="1"
+                                           decoration-danger="wrong_exit_count &gt; 0"/>
+                                    <field name="missing_count" readonly="1" decoration-danger="missing_count &gt; 0"/>
+                                    <field name="passage_source" readonly="1"/>
+                                </group>
+                            </group>
+                            <separator string="Час евакуації по зонах"/>
+                            <field name="zone_ids" readonly="1">
+                                <list decoration-danger="not in_norm">
+                                    <field name="zone_id"/>
+                                    <field name="people"/>
+                                    <field name="evacuated"/>
+                                    <field name="missing" decoration-danger="missing &gt; 0"/>
+                                    <field name="first_exit_s"/>
+                                    <field name="evac_time_s"/>
+                                    <field name="norm_s"/>
+                                    <field name="in_norm" widget="boolean"/>
+                                    <field name="assigned_exits"/>
+                                    <field name="actual_exits"/>
+                                    <field name="wrong_exit" decoration-danger="wrong_exit &gt; 0"/>
+                                </list>
+                            </field>
+                            <separator string="Вийшли не своїм виходом (за призначеним виходом маршруту зони)"
+                                       groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user"/>
+                            <field name="wrong_person_ids" readonly="1"
+                                   groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user">
+                                <list>
+                                    <field name="seq"/>
+                                    <field name="employee_id"/>
+                                    <field name="zone_id"/>
+                                    <field name="route_id"/>
+                                    <field name="assigned_exit_id"/>
+                                    <field name="exit_id"/>
+                                    <field name="exit_s"/>
+                                </list>
+                            </field>
+                            <separator string="Не відмітились (не вийшли й не на перекличці)"
+                                       groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user"/>
+                            <field name="missing_person_ids" readonly="1"
+                                   groups="td_fire_safety.group_td_fire_drill,hr.group_hr_user">
+                                <list decoration-danger="1">
+                                    <field name="seq"/>
+                                    <field name="employee_id"/>
+                                    <field name="zone_id"/>
+                                    <field name="assigned_exit_id"/>
+                                    <field name="since"/>
                                 </list>
                             </field>
                         </page>

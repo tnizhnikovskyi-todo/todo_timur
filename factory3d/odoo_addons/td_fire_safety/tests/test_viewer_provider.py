@@ -48,6 +48,7 @@ EVAC_KEYS = [
     "drill_steps",
     "drill_active",
     "compliance",
+    "live",
 ]
 DUST = "fire/groups/FA-FAC/dust"
 
@@ -150,6 +151,7 @@ class TestPayload(FireCase):
         self.assertTrue(data["norm_alt_ref"])
         self.assertEqual(len(data["drill_steps"]), 8)
         self.assertIsNone(data["drill_active"])
+        self.assertIsNone(data["live"])  # R-21a: ні навчання, ні справжньої тривоги
         self.assertEqual(
             (data["drill_origin"], data["drill_zone"], data["drill_detector"]), ("FA-CNC", "Присадка", "2.CNC.05")
         )

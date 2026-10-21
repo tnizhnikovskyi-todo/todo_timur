@@ -49,6 +49,14 @@
         <field name="key">td.fire_safety.drill_sim_duration_s</field>
         <field name="value">300</field>
     </record>
+    <record id="param_drill_stuck_after_s" model="ir.config_parameter">
+        <field name="key">td.fire_safety.drill_stuck_after_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_drill_3d_keep_min" model="ir.config_parameter">
+        <field name="key">td.fire_safety.drill_3d_keep_min</field>
+        <field name="value">60</field>
+    </record>
     <record id="param_alert_group_xmlid" model="ir.config_parameter">
         <field name="key">td.fire_safety.alert_group_xmlid</field>
         <field name="value">td_factory3d.group_td_user</field>

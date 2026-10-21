@@ -1,0 +1,139 @@
+// Евакуація в 3D (вау №8): плашка «у будівлі N людей · 02:15 від тривоги» над сценою.
+.o_f3d_viewer {
+    .o_td_ev_plate {
+        position: absolute;
+        z-index: 3;
+        top: var(--f3d-edge-top, 82px);
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 340px;
+        max-width: 560px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--f3d-panel, rgba(250, 251, 252, 0.92));
+        border: 2px solid var(--f3d-bad, #d63a2b);
+        box-shadow: 0 6px 24px rgba(214, 58, 43, 0.28);
+        color: var(--f3d-fg, #1d2833);
+        font-size: 13px;
+        pointer-events: none;
+
+        &[hidden] {
+            display: none;
+        }
+    }
+
+    .o_td_ev_head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .o_td_ev_badge {
+        background: var(--f3d-bad, #d63a2b);
+        color: #fff;
+        border-radius: 4px;
+        padding: 1px 7px;
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        animation: o_td_ev_blink 1s steps(2, start) infinite;
+    }
+
+    .o_td_ev_zone {
+        margin-left: auto;
+        color: var(--f3d-muted, #5d6b78);
+    }
+
+    .o_td_ev_main {
+        margin-top: 6px;
+        font-size: 17px;
+    }
+
+    .o_td_ev_n,
+    .o_td_ev_t {
+        font-size: 22px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .o_td_ev_bar {
+        height: 6px;
+        margin: 6px 0 4px;
+        background: var(--f3d-line, #cfd7de);
+        border-radius: 3px;
+        overflow: hidden;
+
+        > i {
+            display: block;
+            height: 100%;
+            background: var(--f3d-ok, #1e9e57);
+        }
+    }
+
+    .o_td_ev_sub,
+    .o_td_ev_sys {
+        color: var(--f3d-muted, #5d6b78);
+        font-size: 12px;
+    }
+
+    .o_td_ev_bad {
+        color: var(--f3d-bad, #d63a2b);
+        font-weight: 700;
+    }
+
+    .o_td_ev_zones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    .o_td_ev_chip {
+        border-radius: 10px;
+        padding: 1px 8px;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        border: 1px solid var(--f3d-line, #cfd7de);
+    }
+
+    .o_td_ev_chip_on {
+        background: rgba(214, 58, 43, 0.14);
+        border-color: var(--f3d-bad, #d63a2b);
+        color: var(--f3d-bad, #d63a2b);
+        font-weight: 700;
+    }
+
+    .o_td_ev_chip_ok {
+        background: rgba(30, 158, 87, 0.12);
+        border-color: var(--f3d-ok, #1e9e57);
+        color: var(--f3d-ok, #1e9e57);
+    }
+
+    .o_td_ev_stuck {
+        margin-top: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: var(--f3d-bad, #d63a2b);
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .o_td_ev_wrong {
+        margin-top: 4px;
+        color: var(--f3d-warn, #d98a00);
+        font-weight: 600;
+        font-size: 12px;
+    }
+}
+
+@keyframes o_td_ev_blink {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_f3d_viewer .o_td_ev_badge {
+        animation: none;
+    }
+}

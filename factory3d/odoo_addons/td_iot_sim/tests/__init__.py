@@ -7,3 +7,4 @@ from . import test_api_devices
 from . import test_security
 from . import test_migration
 from . import test_registry_fix  # S-2, S-3
+from . import test_scenario_evac

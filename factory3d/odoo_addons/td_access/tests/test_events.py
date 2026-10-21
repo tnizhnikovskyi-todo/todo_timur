@@ -123,7 +123,9 @@ class TestJournal(AccessCase):
         row = self.make_row(1, "2026-10-12T09:00:00.00Z", 26368, device="5390001", door=None)
         self.feed(row)
         doors = self.env["td.access.door"].search([("server_id", "=", self.server.id)])
-        self.assertEqual(len(doors), 5)
+        # 5 дверей емулятора; міст td_fire_safety_access додає двері аварійних виходів EX-* (теж у тривозі)
+        self.assertGreaterEqual(len(doors), 5)
+        self.assertTrue({"TURN-1", "DOOR-ELEC", "DOOR-CHG", "DOOR-PAINT", "DOOR-SRV"} <= set(doors.mapped("code")))
         self.assertTrue(all(d.alarm and d.alarm_reason == "fire" for d in doors))
 
     def test_ack_alarm_rights(self):

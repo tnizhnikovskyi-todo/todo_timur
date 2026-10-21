@@ -852,12 +852,14 @@ class F3dFirePassageSourceAccess(models.AbstractModel):
 
 | Метод | Вихід | Алгоритм |
 |---|---|---|
-| `_td_on_site(self, at)` | `list[dict(employee_id: int, since: datetime, point: str)]` | `res = env['td.access.event'].f3d_on_site_at(at)`; для кожного працівника: `since` = його останній вхід периметра ≤ `at`, `point` = `door_id.code` цього входу |
+| `_td_on_site(self, at)` | `list[dict(employee_id: int, since: datetime, point: str, zone: str \| None)]` | `res = env['td.access.event'].f3d_on_site_at(at)`; для кожного працівника: `since` = його останній вхід периметра ≤ `at`, `point` = `door_id.code` цього входу, `zone` = `td_access_zone_id.td_code` (необов'язковий ключ CF-02: зона людини на `at` за присутністю; `td_fire_safety` зберігає її в людині навчання й порівнює вихід за маршрутом зони з фактичним — fire R-16a; вау №8) |
 | `_td_passages(self, start, end)` | `list[dict(employee_id, ts, point, direction)]` | `f3d_passes_between(start, end, door_codes=None)` з `is_perimeter=True`, лише `employee_id`; `point = door_id.code` |
 | `_td_drill_active(self, ts)` | `bool` | делегує `td.access.event._td_drill_active(ts)` |
 
 `td_fire_safety` (CF-02) обирає джерело з найменшим `_td_priority` серед моделей реєстру з префіксом
 `td.fire.passage.source.` (Q-13).
+
+Двері аварійних виходів (`EX-S1…EX-N4`, `biostar_id` 11…21, периметр) створює міст `td_fire_safety_access` (fire SPEC §0.2a); `_td_passages` повертає їхні проходи з `point` = код дверей = код виходу, а вхід персоналу `EX-IN` — турнікет `TURN-1` (fire M-09 `point_code`). Емулятор S-24 шле такі проходи на пристрої `ACR-IN` з `tna_key=2` і `door_id` виходу; 5 пристроїв і 5 дверей API-04/05 не змінюються.
 
 ### M-17 Міст `td_access_telemetry` — 7 сигналів СКУД (FR-15, X-33)
 

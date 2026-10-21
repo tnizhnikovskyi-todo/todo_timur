@@ -73,6 +73,7 @@ CE-джерела беруться з `$ODOO_CE_ADDONS` або `/home/user/odoo1
 | `td_energy_viewer3d` | Energy 3D Layer | Шар «Енергетика в 3D» | CE | W (i18n) | місток |
 | `td_fire_safety` | Fire Safety | Пожежна сигналізація (лише читання), іскрогасіння, димовидалення, евакуація | CE | W (i18n) | окремо |
 | `td_fire_safety_viewer3d` | Fire Safety 3D Bridge | Розділи fire і evacuation у переглядачі | CE | W (i18n) | місток |
+| `td_fire_safety_access` | Fire Safety Access Bridge | Двері виходів у СКУД і зняття блокувань після навчання | CE | W (i18n) | місток |
 | `td_genset` | Generators | Генератори SmartGen HGM6120N через ретранслятор (OPL-1, application) | CE | W (i18n, немає LICENSE) | окремо (незалежний від набору) |
 | `td_genset_factory3d` | Generator Factory Bridge | Зв'язка генератора з моделлю заводу (телеметрія, ТО, 3D, блекаут) | CE | W (i18n, LGPL→OPL) | місток |
 | `td_factory3d_mrp_maintenance` | MRP Maintenance Bridge | Заповнює `maintenance.equipment.workcenter_id` за `td_code` | **EE** (`mrp_maintenance`) | W (i18n) | лише EE |
@@ -89,7 +90,7 @@ CE-джерела беруться з `$ODOO_CE_ADDONS` або `/home/user/odoo1
 2. **Лише як залежності, безкоштовні:** `td_factory3d`, `td_telemetry` (за FAQ Apps: залежність від неопублікованого
    додатку можлива, якщо базовий безкоштовний; ціна покупця = ціна додатку + ціни залежностей).
 3. **Містки `auto_install` (8):** `td_viewer3d_sale`, `td_constructor_viewer3d`, `td_telemetry_viewer3d`,
-   `td_energy_viewer3d`, `td_fire_safety_viewer3d`, `td_access_telemetry`, `td_energy_resources_bms`, `td_genset_factory3d`.
+   `td_energy_viewer3d`, `td_fire_safety_viewer3d`, `td_fire_safety_access`, `td_access_telemetry`, `td_energy_resources_bms`, `td_genset_factory3d`.
    Їх **треба публікувати** (безкоштовно, можна з категорією Hidden): вони не є залежністю основних модулів, тож покупець
    не отримає їх разом із ними, а без містка не з'являється шар/зв'язка.
 4. **Лише для Enterprise (3):** `td_factory3d_mrp_maintenance`, `td_machine_connect_mrp_workorder`, `td_yard_gantt` —
