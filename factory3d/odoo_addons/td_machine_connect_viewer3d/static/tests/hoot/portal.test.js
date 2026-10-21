@@ -6,7 +6,7 @@ import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import { LAYER_NAME, portalExtension } from "@td_machine_connect_viewer3d/layer/portal_layer";
 import {
     CYCLE_S, activeJobAt, carrying, decorColor, doneAt, entriesOf, hms, jobChainHtml, machineCardHtml, nextJobAt, phaseOf,
-    poseAt, poseLapse, portalCardHtml, portalOf, shortName, stackCardHtml, stackNodeOf, stackQtyAt, windowsOf,
+    poseAt, poseLapse, portalCardHtml, portalOf, shortName, stackCardHtml, stackNodeOf, stackQtyAt, tableSheetsAt, windowsOf,
 } from "@td_machine_connect_viewer3d/layer/portal_model";
 
 describe.current.tags("desktop");
@@ -76,20 +76,21 @@ test("PT1 залишок стосу на t: показання порталу ±
 test("PT2 вікна руху й поза порталу: до стосу → захоплення → до верстата → кладемо → очікує; без телепортів", () => {
     const P = portal();
     expect(poseAt(P, 30000).kind).toBe("idle");
-    expect(poseAt(P, 30000).from).toBe(null); // початкове положення
+    expect(poseAt(P, 30000).from).toEqual({ target: null, k: 1 }); // парковка
     // лист 34900: вікно 34873…34900
     expect(poseAt(P, 34880)).toMatchObject({ kind: "toStack", stack: "PLT-04C", target: "SAW-1", job: "ПОРТ/00001" });
     expect(poseAt(P, 34880).p > 0.5).toBe(true);
     expect(poseAt(P, 34887).kind).toBe("pick");
     expect(poseAt(P, 34893).kind).toBe("toTarget");
     expect(poseAt(P, 34899).kind).toBe("place");
-    // між листами портал чекає біля верстата, де лишив лист; наступний рух їде звідти
-    expect(poseAt(P, 34950)).toMatchObject({ kind: "idle", from: "SAW-1" });
-    expect(poseAt(P, 34975)).toMatchObject({ kind: "toStack", from: "SAW-1" });
+    // після кладення порожня рама їде на парковку, далі стоїть запарковано; наступний рух рушає звідти (положення неперервне)
+    expect(poseAt(P, 34905)).toMatchObject({ kind: "return", from: { target: "SAW-1", k: 0.5 } });
+    expect(poseAt(P, 34950)).toMatchObject({ kind: "idle", from: { target: "SAW-1", k: 1 } });
+    expect(poseAt(P, 34975)).toMatchObject({ kind: "toStack", from: { target: "SAW-1", k: 1 } });
     // активне J2: лист 35940 покладено, наступний очікується за ~період (60 с): вікно 35973…36000
     expect(poseAt(P, 35985)).toMatchObject({ kind: "pick", job: "ПОРТ/00002", target: "SAW-2", pending: true });
-    expect(poseAt(P, 35950)).toMatchObject({ kind: "idle", from: "SAW-2" }); // перший лист J2 щойно поклали на SAW-2
-    expect(poseAt(P, 36100).kind).toBe("idle"); // даних немає: портал стоїть
+    expect(poseAt(P, 35945)).toMatchObject({ kind: "return", from: { target: "SAW-2", k: 0.5 } }); // перший лист J2 щойно поклали на SAW-2
+    expect(poseAt(P, 36100).kind).toBe("idle"); // даних немає: портал запарковано
     // фази без розривів: кожна частка циклу дає фазу, p ∈ [0,1], сума часток 1
     let last = null;
     for (let i = 0; i <= 100; i++) {
@@ -130,9 +131,31 @@ test("PT3 завдання без журналу листів: часи рівн
 test("PT4 швидке програвання: поза за власним темпом активного завдання, цикл верстат → стос → верстат", () => {
     const P = portal();
     const a = poseLapse(P, 34950, 0.1);
-    expect(a).toMatchObject({ kind: "toStack", job: "ПОРТ/00001", stack: "PLT-04C", target: "SAW-1", from: "SAW-1" });
+    expect(a).toMatchObject({ kind: "toStack", job: "ПОРТ/00001", stack: "PLT-04C", target: "SAW-1", from: { target: "SAW-1", k: 0 }, lapse: true });
     expect(poseLapse(P, 34950, 0.6).kind).toBe("toTarget");
     expect(poseLapse(P, 35500, 0.6).kind).toBe("idle"); // активного немає — за вікнами
+});
+
+test("PT4b листи на столах пил: ляг у момент відпускання, лежить, поки пила не забере (час або наступний лист), у швидкому програванні — за циклом", () => {
+    const P = portal();
+    const on = (t) => tableSheetsAt(P, t).map((x) => x.target + ":" + x.job);
+    expect(on(34890)).toEqual([]); // лист ще несуть
+    expect(on(34899)).toEqual(["SAW-1:ПОРТ/00001"]); // відпустили (друга половина фази кладення)
+    expect(on(34950)).toEqual(["SAW-1:ПОРТ/00001"]); // лежить, поки наступний лист того ж столу їде
+    expect(on(34990)).toEqual(["SAW-1:ПОРТ/00001"]);
+    expect(on(35150)).toEqual(["SAW-1:ПОРТ/00001"]); // останній лист завдання: до HOLD_S після кладення (35100 + 100 = 35200)
+    expect(on(35200)).toEqual([]); // пила забрала
+    expect(on(36050)).toEqual(["SAW-2:ПОРТ/00002"]); // очікуваний лист J2 ляже на SAW-2 о 36000
+    // у стіл не лягає лист, який ще везуть, а старий забирають до укладання нового
+    const t2 = 34973 + 27 * 0.945; // відпускання другого листа на той самий стіл
+    expect(on(t2 - 2)).toEqual(["SAW-1:ПОРТ/00001"]); // перший ще лежить
+    expect(on(t2 - 0.5)).toEqual([]); // пила забрала його секундою раніше за відпускання другого
+    expect(on(t2 + 1)).toEqual(["SAW-1:ПОРТ/00001"]); // тепер лежить другий
+    const lap = { lapse: true, target: "SAW-1", job: "J", stack: "PLT-04C" };
+    expect(tableSheetsAt(P, 0, { ...lap, kind: "place", p: 0.7 }).length).toBe(1);
+    expect(tableSheetsAt(P, 0, { ...lap, kind: "toStack", p: 0.2 }).length).toBe(1);
+    expect(tableSheetsAt(P, 0, { ...lap, kind: "toTarget", p: 0.5 }).length).toBe(0);
+    expect(tableSheetsAt(P, 0, { ...lap, kind: "pick", p: 0.8 }).length).toBe(0);
 });
 
 test("PT5 дрібниці: колір декору, підпис матеріалу, час", () => {
@@ -270,6 +293,98 @@ test("PT8b підписка onSimTime: крок повзунка ловитьс�
     const t = st.t;
     viewer.setSimTime(500);
     expect(st.t).toBe(t);
+});
+
+/** Усі видимі листи сцени: висить під рамою (верх листа = низ рами, по центру) або лежить на опорі (низ листа = верх стола). */
+function sheetsOf(api, st) {
+    const T = api.THREE;
+    api.scene.updateMatrixWorld(true); // положення щойно змінені тіком: матриці предків оновлюються лише при кадрі
+    const out = [];
+    const car = st.carriage;
+    if (car.sheet.visible) {
+        const b = new T.Box3().setFromObject(car.sheet);
+        out.push({ kind: "frame", gap: b.max.y - st.shown.y, dx: (b.min.x + b.max.x) / 2 - st.shown.x, dz: (b.min.z + b.max.z) / 2 - st.shown.z, h: b.max.y - b.min.y });
+    }
+    for (const [code, m] of st.tables) {
+        if (m.visible) {
+            const b = new T.Box3().setFromObject(m);
+            out.push({ kind: "table", code, gap: b.min.y - portalExtension.targetPoint(api, st, code).top, h: b.max.y - b.min.y });
+        }
+    }
+    return out;
+}
+
+test("PT11 інваріант: кожен видимий лист або висить під вакуумною рамою, або лежить на опорі; порожня рама їде безпечно й паркується", async () => {
+    const { viewer, api } = await mountPortal();
+    const st = portalExtension.stateOf(api);
+    const T = api.THREE;
+    const seen = { frame: 0, table: 0, empty: 0 };
+    const top = () => Math.max(...[...st.stacks.values()].map((s) => s.plates.position.y + s.plates.scale.y / 2));
+    const check = (label) => {
+        api.scene.updateMatrixWorld(true);
+        const car = st.carriage;
+        const sheets = sheetsOf(api, st);
+        for (const s of sheets) {
+            expect(Math.abs(s.gap) <= 0.01).toBe(true); // ± 1 см
+            expect(s.h > 0.009 && s.h < 0.03).toBe(true); // 16…18 мм, як у стопок
+            seen[s.kind]++;
+            if (s.kind === "frame") {
+                expect(Math.abs(s.dx) <= 0.01 && Math.abs(s.dz) <= 0.01).toBe(true);
+            }
+        }
+        const kind = st.pose.kind;
+        if (["toStack", "return", "idle"].includes(kind) || (kind === "pick" && st.pose.p < 0.5) || (kind === "place" && st.pose.p >= 0.5)) {
+            expect(car.sheet.visible).toBe(false); // порожня рама
+            seen.empty++;
+        }
+        if (kind === "toTarget") {
+            expect(car.sheet.visible).toBe(true);
+            expect(st.shown.y - 0.02 >= top() + 0.3).toBe(true); // переїзд лише над найвищим стосом із запасом
+        }
+        if (kind === "idle") {
+            expect(Math.abs(st.shown.x - st.geo.home.x) < 0.01 && Math.abs(st.shown.z - st.geo.home.z) < 0.01).toBe(true); // запарковано
+            expect(Math.abs(st.shown.y - st.geo.up) < 0.01).toBe(true);
+        }
+        // траверса (плита над присосками) висить на візку над рамою, а не лишається в повітрі
+        const plate = car.lift.getObjectByName("td_portal_traverse");
+        if (plate) {
+            const b = new T.Box3().setFromObject(plate);
+            expect(Math.abs((b.min.x + b.max.x) / 2 - st.shown.x) < 0.01).toBe(true);
+            expect(b.min.y - st.shown.y > 0.05 && b.min.y - st.shown.y < 0.3).toBe(true);
+        }
+        return label;
+    };
+    // «Потік зміни»: щодві секунди через усе вікно першого листа, паузу, друге вікно й повернення на парковку
+    for (let t = 34860; t <= 35120; t += 2) {
+        portalExtension.setTime(api, { t });
+        portalExtension.tick(api, performance.now(), "snap");
+        check("replay " + t);
+    }
+    // вікно очікуваного листа відкритого завдання (J2) і лист, що ляже на SAW-2
+    for (let t = 35960; t <= 36080; t += 2) {
+        portalExtension.setTime(api, { t });
+        portalExtension.tick(api, performance.now(), "snap");
+        check("pending " + t);
+    }
+    // година простою: запарковано
+    portalExtension.setTime(api, { t: 30000 });
+    portalExtension.tick(api, performance.now(), "snap");
+    check("parked");
+    expect(st.pose.kind).toBe("idle");
+    portalExtension.setTime(api, null);
+    // живий режим: годинник сервера йде вперед, у кінці — вікно очікуваного листа J2
+    const base = st.clock.anchorMs;
+    for (let k = -3; k <= 60; k++) {
+        portalExtension.tick(api, base + k * 1000 + 5000, "snap");
+        check("live " + k);
+    }
+    // і лист із повзунка (ціла хвилина), як у «Потоці зміни»
+    viewer.setSimTime(10 * 60 + 29);
+    portalExtension.tick(api, performance.now(), "snap");
+    check("slider");
+    expect(seen.frame > 10).toBe(true);
+    expect(seen.table > 10).toBe(true);
+    expect(seen.empty > 10).toBe(true);
 });
 
 test("PT9 дельта: нова кількість листів міняє висоту стосу; без вузла порталу шар зникає, запечені плити повертаються", async () => {

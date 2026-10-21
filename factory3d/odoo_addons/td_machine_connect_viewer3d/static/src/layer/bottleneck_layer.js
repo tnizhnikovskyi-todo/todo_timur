@@ -3,6 +3,8 @@
 // (висота за кількістю), і блок з показниками в картці верстата. Дані — `workcenters[code].flow` (дає провайдер `td_machine_connect`):
 // показники ділянки, а для вузького місця ще `codes` (верстати ділянки), `prev` (верстати перед нею) і `hint`.
 // Шар «Замовлення в роботі» ядра не чіпається й не дублюється: стопка живе у власній групі сцени, поза режимами розфарбування.
+// Стопка стоїть на підлозі біля входу верстата ділянки (з боку попередньої ділянки), над нею бейдж із числом і підпис «Вузьке місце · черга N»
+// (стиль підписів верстатів); наведення показує метрики, клік відкриває картку верстата-входу з блоком «Вузьке місце».
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import { esc, nf } from "@td_viewer3d/viewer/format";
@@ -12,7 +14,8 @@ export const STACK_NAME = "td_bottleneck_stack";
 /** Найбільше «коробок» у стопці (далі висота не росте, а кількість видно на табличці). */
 export const MAX_BOXES = 12;
 const BOX = { w: 1.3, h: 0.22, d: 0.9, gap: 0.04 };
-const GAP = 1.2; // м від краю ділянки до центра стопки
+const GAP = 0.9; // м від краю верстата-входу до центра стопки (півглибини стопки 0,45 + запас)
+const PROBABLE = new Set(["load", "low"]); // вердикти, коли вузьке місце «імовірне, не виражене»
 const RED = "#e74c3c";
 const VERDICT_TEXT = {
     growing: "черга росте",
@@ -41,6 +44,52 @@ export function bottleneckOf(D) {
 export function boxCount(queue) {
     const n = Math.round(Number(queue) || 0);
     return Math.max(0, Math.min(MAX_BOXES, n));
+}
+
+/** Підпис біля бейджа: «Вузьке місце · черга N»; для невираженого вузького місця (`load`, `low`) — «Ймовірне вузьке місце · черга N». */
+export function labelText(info) {
+    const n = Math.round(Number(info?.queue) || 0);
+    return (PROBABLE.has(info?.verdict) ? "Ймовірне вузьке місце" : "Вузьке місце") + " · черга " + n;
+}
+
+/** Підказка при наведенні: ділянка, завантаження, черга, очікування, «що якщо». */
+export function hoverText(info) {
+    const pctOf = (v) => (typeof v === "number" ? Math.round(v * 100) + " %" : "—");
+    const parts = [
+        info.station,
+        "завантаження " + pctOf(info.load),
+        "черга " + nf.format(info.queue || 0) + (info.queue_delta ? " (" + (info.queue_delta > 0 ? "↑ +" : "↓ −") + Math.abs(info.queue_delta) + ")" : ""),
+        "очікування " + (typeof info.wait_min === "number" ? nf.format(Math.round(info.wait_min)) + " хв" : "—"),
+    ];
+    return parts.join(" · ") + (info.hint ? ". Що якщо: " + info.hint : "");
+}
+
+/**
+ * Де ставити стопку: на підлозі біля входу верстата ділянки. `machines` — `[{code, box}]` (Box3 верстатів ділянки), `prevCenter` —
+ * центр попередньої ділянки або `null`. Вхід — верстат, найближчий до попередньої ділянки (без неї — найзахідніший), сторона —
+ * та, що дивиться на попередню ділянку (без неї — −X); стопка — по центру цієї сторони, на `GAP` від краю, а не посеред проходу.
+ */
+export function entrySpot(T, machines, prevCenter) {
+    const centerOf = (m) => m.box.getCenter(new T.Vector3());
+    let pick = machines[0];
+    let dir = new T.Vector3(-1, 0, 0);
+    if (prevCenter) {
+        pick = machines.reduce((a, m) => (centerOf(m).distanceTo(prevCenter) < centerOf(a).distanceTo(prevCenter) ? m : a));
+        const d = prevCenter.clone().sub(centerOf(pick));
+        d.y = 0;
+        if (d.lengthSq() > 1e-6) {
+            dir = d.normalize();
+        }
+    } else {
+        pick = machines.reduce((a, m) => (m.box.min.x < a.box.min.x ? m : a));
+    }
+    const c = centerOf(pick);
+    const b = pick.box;
+    const alongX = Math.abs(dir.x) >= Math.abs(dir.z);
+    const sign = Math.sign(alongX ? dir.x : dir.z) || -1;
+    const x = alongX ? (sign > 0 ? b.max.x + GAP : b.min.x - GAP) : c.x;
+    const z = alongX ? c.z : sign > 0 ? b.max.z + GAP : b.min.z - GAP;
+    return { code: pick.code, x, y: b.min.y, z, dir: alongX ? new T.Vector3(sign, 0, 0) : new T.Vector3(0, 0, sign) };
 }
 
 const pct = (v) => (typeof v === "number" ? Math.round(v * 100) + " %" : "—");
@@ -139,46 +188,57 @@ export class BottleneckExtension {
         return box;
     }
 
-    /** Стопка перед ділянкою: з боку попередньої ділянки (`prev`), на підлозі; `force` — перебудувати й за тим самим складом. */
+    /** Підпис у стилі підписів верстатів (CSS2D з класами ядра); клас `CSS2DObject` береться в наявних підписів ядра. */
+    _label(api, info, entry) {
+        const Css2d = (api.labels || []).find((l) => l.lbl?.isCSS2DObject)?.lbl.constructor;
+        if (!Css2d) {
+            return null;
+        }
+        const el = document.createElement("div");
+        el.className = "o_f3d_lbl o_f3d_mach o_td_bn_label";
+        el.innerHTML = "<span class=\"o_f3d_st\" style=\"background:var(--f3d-bad)\"></span>" + esc(labelText(info));
+        el.title = hoverText(info);
+        el.dataset.station = info.key || "";
+        el.style.pointerEvents = "auto"; // підпис клікабельний: відкриває картку верстата-входу з метриками вузького місця
+        el.style.cursor = "pointer";
+        el.style.translate = "calc(50% + 24px) 0"; // праворуч від бейджа
+        el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            api.select(entry);
+        });
+        return new Css2d(el);
+    }
+
+    /** Стопка на підлозі біля входу верстата ділянки (див. `entrySpot`); `force` — перебудувати й за тим самим складом. */
     sync(api, D, force = false) {
         const T = api.THREE;
         this.THREE = T;
         const st = this.stateOf(api);
         const info = bottleneckOf(D);
         const n = info ? boxCount(info.queue) : 0;
-        const roots = info ? (info.codes || [info.code]).filter((c) => api.items.get(c)) : [];
-        if (!info || n === 0 || !roots.length) {
+        const codes = info ? (info.codes || [info.code]).filter((c) => api.items.get(c)) : [];
+        if (!info || n === 0 || !codes.length) {
             this.clear(api);
             return;
         }
-        const sig = [n, info.queue, roots.join(","), (info.prev || []).join(",")].join("|");
+        const machines = codes.map((code) => ({ code, box: this._box(T, [code], api) })).filter((m) => !m.box.isEmpty());
+        if (!machines.length) {
+            return;
+        }
+        const prev = this._box(T, info.prev, api);
+        const spot = entrySpot(T, machines, prev.isEmpty() ? null : prev.getCenter(new T.Vector3()));
+        const sig = [n, info.queue, labelText(info), hoverText(info), spot.code, spot.x.toFixed(2), spot.z.toFixed(2)].join("|");
         if (!force && st.group && st.sig === sig) {
             return;
         }
         this.clear(api);
-        const own = this._box(T, roots, api);
-        if (own.isEmpty()) {
-            return;
-        }
-        const center = own.getCenter(new T.Vector3());
-        const size = own.getSize(new T.Vector3());
-        const prev = this._box(T, info.prev, api);
-        const dir = new T.Vector3(-1, 0, 0); // без попередньої ділянки — з боку -X
-        if (!prev.isEmpty()) {
-            const d = center.clone().sub(prev.getCenter(new T.Vector3()));
-            d.y = 0;
-            if (d.lengthSq() > 1e-6) {
-                dir.copy(d.normalize().negate()); // у бік попередньої ділянки: звідки приходять завдання
-            }
-        }
-        const reach = (Math.abs(dir.x) * size.x + Math.abs(dir.z) * size.z) / 2 + GAP;
         if (!st.geometry) {
             st.geometry = new T.BoxGeometry(BOX.w, BOX.h, BOX.d);
             st.material = new T.MeshStandardMaterial({ color: RED, emissive: "#5a1410", roughness: 0.6, metalness: 0.05 });
         }
         const group = new T.Group();
         group.name = STACK_NAME;
-        group.userData = { bottleneckStack: true, queue: info.queue, station: info.station };
+        group.userData = { bottleneckStack: true, queue: info.queue, station: info.station, entry: spot.code, label: labelText(info) };
         for (let i = 0; i < n; i++) {
             const mesh = new T.Mesh(st.geometry, st.material);
             const jitter = ((i * 37) % 11) - 5;
@@ -187,13 +247,20 @@ export class BottleneckExtension {
             mesh.castShadow = true;
             group.add(mesh);
         }
-        const label = new T.Sprite(new T.SpriteMaterial({ map: numberTexture(T, info.queue), transparent: true, depthTest: false }));
-        label.name = STACK_NAME + "_label";
-        label.scale.set(1.4, 1.4, 1);
-        label.position.set(0, n * (BOX.h + BOX.gap) + 0.9, 0);
-        label.renderOrder = 999;
-        group.add(label);
-        group.position.set(center.x + dir.x * reach, own.min.y, center.z + dir.z * reach);
+        const top = n * (BOX.h + BOX.gap) + 0.7;
+        const badge = new T.Sprite(new T.SpriteMaterial({ map: numberTexture(T, info.queue), transparent: true, depthTest: false }));
+        badge.name = STACK_NAME + "_label";
+        badge.scale.set(1.0, 1.0, 1);
+        badge.position.set(0, top, 0);
+        badge.renderOrder = 999;
+        group.add(badge);
+        const label = this._label(api, info, spot.code);
+        if (label) {
+            label.name = STACK_NAME + "_text";
+            label.position.set(0, top, 0);
+            group.add(label);
+        }
+        group.position.set(spot.x, spot.y, spot.z);
         api.scene.add(group);
         st.group = group;
         st.sig = sig;
