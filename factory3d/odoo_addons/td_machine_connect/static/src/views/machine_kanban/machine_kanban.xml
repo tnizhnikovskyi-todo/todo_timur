@@ -22,6 +22,17 @@
         </div>
     </t>
 
+    <t t-name="td_machine_connect.GantryTile">
+        <div t-if="state.tile" class="o_td_gantry_tile" role="button" tabindex="0"
+             title="Відкрити завдання порталу" t-on-click="openJobs">
+            <span class="o_td_gt_title">Портал:</span>
+            <b class="o_td_gt_jobs" t-out="state.tile.jobs"/>
+            <span class="o_td_gt_sub" t-out="word"/>
+            <span class="o_td_gt_sub">сьогодні, відходи розкрою</span>
+            <b class="o_td_gt_waste" t-out="waste"/>
+        </div>
+    </t>
+
     <t t-name="td_machine_connect.MachineKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
         <xpath expr="//div[hasclass('o_kanban_renderer')]" position="attributes">
             <attribute name="class" add="h-auto" separator=" "/>
@@ -30,6 +41,7 @@
             <div class="o_td_tiles">
                 <DowntimeCostTile/>
                 <BottleneckTile/>
+                <GantryTile/>
             </div>
         </xpath>
     </t>

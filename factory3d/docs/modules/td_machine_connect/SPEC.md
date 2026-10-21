@@ -27,6 +27,7 @@ Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: 
 Зміни: 15.10.2026 — DEC-19 (ТП-01): `_cron_tick` — id-порядок, пачки по 10 з commit, `FOR UPDATE SKIP LOCKED`; push блокує верстати за id; `raw_ts`/`pieces_ts` без інших змін — не частіше за раз на 30 с (§6 `cron_td_mc_tick`, R-04).
 Зміни: 15.10.2026 — DEC-20 (ТБ-03): одноразовий токен API-01 — у заголовку `X-F3D-Token`, не в query `t` (§7 API-01, §8 `cutopt`, AC-66, AC-67, ТБ-03).
 Зміни: 16.10.2026 — QA-фікси: API-01 п. 1 (M-1, AC-67) — Bearer приймається лише від колектора-власника джерела команд оптимізатора `equipment/CUTOPT/cmd` (REST-CUTOPT), токен іншого колектора → `401`; Додаток C.2 — `store_period_s = 300` для `io_state`, `io_alarm`, `ua_state`, `ua_mode`, `ua_alarm`, `ua_job`, `g_state`, `g_job` (зміни стану пишуться негайно, прорідження лише незмінних повторів).
+Зміни: 20.10.2026 — вау-функція №19 «Портальний склад плит у 3D наживо» (R-31, AC-120…AC-126; 19.0.1.3.0): вузли `equipment.GANTRY-1.portal` і `locations[PLT-*].portal`, плитка «Портал», демо-історія порталу, міст 19.0.1.2.0; емулятор — авто-`feed` за РЦ у WORKING (td_iot_sim R-18).
 
 Позначення: UT — `odoo.tests.TransactionCase`; HT — `HttpCase`; CT — pytest пакета плагінів із фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -62,7 +63,8 @@ odoo_addons/td_machine_connect/
 │   ├── td_machine_message.py       M-05
 │   ├── td_oee_shift.py             M-06 (+ R-14 крон)
 │   ├── td_gantry_stack.py          M-07 (R-15, R-18)
-│   ├── td_gantry_job.py            M-08 (R-16, R-17)
+│   ├── td_gantry_job.py            M-08 (R-16, R-17; _td_notify_portal — R-31 п. 8)
+│   ├── td_portal.py                R-31: td.portal (AbstractModel) — вузли payload порталу й стосів, плитка «Портал»
 │   ├── td_cut_part.py              M-09
 │   ├── td_cut_map.py               M-10, M-11 (R-19, R-20)
 │   ├── mrp_workcenter.py            M-12
@@ -95,7 +97,9 @@ odoo_addons/td_machine_connect/
 │   ├── oee.py                       compute_oee(inputs: dict) -> dict — R-13 (чиста функція)
 │   ├── commands.py                  build_payload / check_payload / cmd_label / result_text / build_cmd / parse_cmd — R-21 (payload CR-01 і запасна текстова граматика; чисті функції без `env` і без імпортів Odoo; той самий модуль копіюється в пакет плагінів, AC-80)
 │   ├── cutcsv.py                    build_parts_csv(lines) -> str / parse_plan(json) -> dict — R-19, R-20, Додаток D
-│   ├── payload.py                   build_machines(env, ctx) -> dict — фрагмент payload переглядача (M-22, R-25)
+│   ├── payload.py                   build_machines(env, ctx) -> dict — фрагмент payload переглядача (M-22, R-25; R-31 вузли порталу)
+│   ├── portal.py                    day_start / to_sec / waste_weighted — R-31 (чисті функції)
+│   ├── demo_portal.py               demo_gantry(env) — R-31 п. 8: демо-історія порталу (завдання, карти розкрою, показання стосів)
 │   └── gen_mc_data.py               генератор data/mc_machines.csv і data/mc_signals.csv з Додатка A iot_sim (Odoo його не вантажить)
 ├── security/
 │   ├── security.xml                 record rules §4.3
@@ -149,6 +153,7 @@ odoo_addons/td_machine_connect/
     ├── test_viewer_provider.py      AC-86…AC-88
     ├── test_security.py             AC-89…AC-91
     ├── test_hooks.py                AC-92
+    ├── test_portal.py               AC-120…AC-124 (R-31)
     └── stand/                       ТК-01…ТК-16, ТП-01…ТП-04 (pytest -m stand; Odoo цей пакет не імпортує):
                                      conftest.py, helpers.py, test_tk01_install.py … test_tk16_shift_end.py,
                                      load_machines.py (ТП-01), data/parts_BR-K4.csv (Q-04)
@@ -2281,6 +2286,57 @@ AC: **AC-111** завантаження = робота / доступний ча
 (HOOT `td_machine_connect_viewer3d/static/tests/hoot/bottleneck.test.js`, BN1…BN7, зокрема BN7: вузьке місце переїхало з А на Б — у А стопки немає);
 **AC-119** кеш розрахунку: два виклики поспіль — один розрахунок, нова 60-секундна корзина, компанія й демо-годинник у ключі, явна дата без кешу
 (`test_analysis_is_cached_for_a_minute`, `test_cache_key_has_company_and_demo_clock`).
+
+### R-31 Портальний склад плит у 3D наживо (PT-1…PT-8, FR-39; вау-функція №19; версія 19.0.1.3.0)
+
+Висота стосів під порталом береться з даних, портал рухається за часом завдань, у картках видно ланцюжок лист → завдання → карта розкрою → МО.
+Збір даних — `td.portal` (`AbstractModel`, `models/td_portal.py`), чисті функції — `tools/portal.py`; 3D — міст `td_machine_connect_viewer3d` (`static/src/layer/portal_model.js`, `portal_layer.js`).
+
+1. **Звідки дані (PT-1).** Портал STORETEQ P-500 — це REST «woodStore API v1» (P-03, §8.5; інтерфейс закритий, Q-02, ПРИПУЩЕННЯ), а не OPC UA: `GET /stacks` (`qty`, `product`, `lot`, `updated`) →
+   `td.gantry.stack` (R-15, R-23 п. 3), `GET /jobs` і `GET /events` (`job_started`, `sheet_placed` зі стосом, `job_finished`; `external_ref` = назва МО) → `td.gantry.job` з `sheet_log` (R-16 п. 4, R-23 п. 4).
+   Ланцюжок існує в даних: лист (запис `sheet_log`: час, стос, партія) → завдання (`stack_id`, `target_workcenter_id`) → карта розкрою (`cut_map_id`, інакше остання не скасована карта МО; відходи `plan_waste_pct`)
+   → МО (`production_id`, `external_ref`). Без стенда (демо-база) його будує демо-крок п. 8, на стенді — емулятор (п. 9).
+2. **Вузол `equipment["GANTRY-1"].portal` (PT-2).** `{"day": "РРРР-ММ-ДД", "now": секунди київської доби, "cycle_s": 27, "jobs": [...], "today": {"jobs", "sheets", "waste_pct"}}`. «Зараз» — демо-годинник
+   `td.viewer.demo_clock` (як R-30), інакше реальний час. `jobs` — завдання подачі (`type='feed'`) за київську добу: відкриті (`sent/queued/active`) і завершені з початку доби, не пізніші за «зараз», ≤ 60 (`JOBS_MAX`), за початком.
+   Вузол завдання: `id` (номер `ПОРТ/…`), `ws`, `state`, `stack` (код стосу; порожній — перший зі `log`), `target` (код верстата), `sheets`, `done`, `product`, `name`, `lot`, `ref`, `mo`, `mo_product`, `origin` (документ-джерело МО),
+   `s`/`e` (старт/фініш, секунди доби або `null`), `log` — `[[секунди, код стосу], …]` листів доби до «зараз» (≤ 30 останніх), `cut` — `{name, state, sheets, waste_pct}` (`waste_pct` лише для карт у станах
+   `planned/released/running/done` з планом; для чернетки й без плану — `null`, а не 0). Завдання, яке за даними закінчилось після «зараз» (демо-годинник), віддається активним з `done` за журналом. `today.waste_pct` —
+   середньозважене за листами завдань відходів їхніх карт (`tools/portal.waste_weighted`); немає жодної карти з планом — `null` («—»).
+3. **Вузол `locations[PLT-*].portal` (PT-3).** Для кожного стосу (повний payload — усі `td.gantry.stack`, дельта — лише вузли патча): `{"qty", "upd", "src", "capacity", "thickness", "product", "name", "lot", "next"}`. `qty` — листів за показанням порталу
+   (`ws_qty`, `src="portal"`), а без даних порталу — залишок Odoo (`odoo_qty`, `src="odoo"`); `upd` — час показання (`ws_updated`, секунди доби, не пізніше за «зараз») або `null` («зараз»); `thickness` — `td_thickness_mm`
+   плити стосу; `next` — активне, інакше найпріоритетніше відкрите завдання стосу (`job`, `state`, `target`, `sheets`, `done`, `ref`). Збій розрахунку лише логується (savepoint), payload віддається без вузлів порталу.
+   Існуючі ключі R-25 п. 2–3 (`gantry`) не змінюються. Вузли є і в кіоску: це не фінансові дані; провайдер, як і раніше, лише для `group_td_user`.
+4. **Залишок на момент t і рух (PT-4, клієнт).** Залишок стосу на `t` = показання `qty` на момент `upd` (немає — «зараз») мінус листи зі `log` усіх завдань у `(upd, t]` плюс листи в `(t, upd]` (`stackQtyAt`) — тож у «Потоці зміни» стоси
+   худнуть за часом, а запізнення показання (портал віддає стоси раз на 30 с) не дає зайвого листа. Вікно руху листа — останні `cycle_s` (27) с перед його кладенням (або від попереднього кладення, якщо проміжок коротший); у ньому
+   портал виконує фази в частках 0,37 / 0,15 / 0,37 / 0,11: їде до стосу, бере лист (вакуум), везе до верстата, кладе (td_iot_sim R-18); між вікнами чекає біля верстата, де поклав. Для активного завдання додається вікно наступного листа
+   (очікуване кладення = останнє + типовий період за журналом, 27…300 с). Лист у «руках» — із стосу вже знятий (на 1 нижче). Поза порталу — чиста функція `poseAt(P, t)`; у «живому» режимі `t` = `portal.now` + час, що минув;
+   у «Потоці зміни» — повзунок зміни (`api.simMinutes()` ядра, якщо є, інакше підпис повзунка `.o_f3d_shift-l`). При швидкому програванні (понад 8× реального часу) вікна по секундах миготіли б, тому цикл «верстат → стос → верстат»
+   активного завдання йде з власним темпом (6 с, `poseLapse`). Без телепортів: положення візка наближається до цілі зі згладжуванням і межею швидкості 18 м/с.
+5. **3D (PT-5).** Міст `td_machine_connect_viewer3d` 19.0.1.2.0, розширення `registerViewerExtension` (R-26, VX-03, VX-04, VX-05), група сцени `td_portal_layer`: на кожен стос — паралелепіпед з висотою `листи × товщина`
+   (смуга на бічних гранях — один лист на тайл) кольору декору плити, табличка «матеріал · N арк.»; запечені плити стосу (`stack_*_1/2`) і запечений візок порталу (`GANTRY-1_5…10`) ховаються — замість них рухомий міст, візок, щогла,
+   вакуумна рама (тією ж геометрією, що й запечені) і лист кольору плити. Клік по плитах проходить до запеченого піддона: вибирається стос. Без вузла `portal` (старий сервер, портала немає) розширення неактивне, а запечені
+   деталі повертаються. Ядро `core.js` не змінювалось; перемальовування за потребою підтримує подія `input` у корені в'ювера (`invalidate` ядра) і прапорець `userData.f3dAnimated` листа.
+6. **Картки (PT-6, VX-04, VX-05).** Стос: матеріал і код, залишок і висота на `t` («15 арк. з 60 · висота 240 мм»), джерело (показання порталу / Odoo), партія, наступне завдання. Портал: стан («Везе лист до верстата»), «Завдань N · листів M»,
+   «Відходи розкрою X %», активне завдання і ще до 4 завдань; кожне завдання — три рядки: **Лист** (`лист k з n · стос → верстат · матеріал`), **Карта розкрою** (`КР/… · відходи X %`), **Замовлення** (`WH/MO/… · виріб`);
+   стос і верстат у рядку — посилання (`data-ext="td_machine_connect_portal:select:<код>"`) вибирають об'єкт у 3D. Верстат-ціль (SAW-1…3, NEST-1): блок «Портал · подача на <код>» із завданням (активне або останнє).
+7. **Плитка «Портал: N завдань сьогодні, відходи розкрою X %» (PT-7).** `td.portal.td_tile()` (`@api.model`, лише `group_td_user`, інакше `False`; `False` також, якщо немає ні стосів, ні завдань порталу) → `{jobs, sheets, waste_pct}`;
+   OWL-компонент `GantryTile` у `td_machine_kanban` поруч із плитками простоїв і вузького місця (V-33); «завдання/завдань» за українським множинним; відходи `—`, якщо немає карт з планом; клік відкриває «Завдання порталу».
+8. **Шина й демо (PT-8).** Хід завдання оновлює 3D дельтою: `_td_apply_events` (`job_started`, `sheet_placed`, `job_finished`) і `_td_apply_ws` шлють `maintenance.equipment`/`GANTRY-1` і `stock.location` для стосів, з яких брали лист
+   (`td.gantry.job._td_notify_portal`; коалесценція — td_viewer3d R-15). Демо: `tools/demo_portal.demo_gantry(env)` (крок `run_migration` після `demo_rates`, лічильники звіту `gantry_jobs`, `cut_maps`; `migrations/19.0.1.3.0/post-migrate.py`;
+   лише демо-база без жодного завдання порталу, ідемпотентний) для кожного завдання розкрою МО в роботі (SAW-1…3, NEST-1) створює завдання подачі по кожному стосу й партії резерву сировини (`origin='odoo'`, МО, карта), завдання йдуть по черзі
+   (портал один; початок за 5 хв до операції, 70…109 с на лист за назвою МО), останнє завдання МО в роботі — активне на «зараз» (останній лист 25 с тому), МО «готове» — у черзі; карта розкрою на МО — `released` з відходами 6,0…14,9 %
+   (детерміновано за назвою МО); показання кожного стосу з залишком: `ws_qty` = Odoo − подане в МО, що не закриті (R-15 п. 2), `ws_updated` = час останнього листа зі стосу.
+9. **Емулятор (td_iot_sim R-18).** REST woodStore стенда раніше віддавав лише завдання, створені Odoo (`POST /jobs`, `/jobs` API-33), а модель порталу `models/gantry.py` ставила `feed` у пам'ять, не показуючи їх по REST, тож без ручної команди
+   в Odoo завдань порталу не було. `protocols/woodstore_auto.py` (`AutoFeed`) додає: кожен РЦ розкрою (SAW-1…3, NEST-1) у WORKING без завдання порталу в черзі отримує `feed` на 2…5 листів із `external_ref` = `order` активного завдання РЦ
+   (назва МО), плита — з наявних стосів (детерміновано за МО), пріоритет 3 (команда Odoo з 5 обганяє), не більше 12 листів на МО; `GET /status` віддає фази `moving/picking/placing` (цикл 27 с наприкінці періоду листа, 10:4:10:3).
+   `SIM_WOODSTORE_AUTOFEED=0` вимикає. Подія `sheet_placed` несе стос — звідси `sheet_log` і залишок стосу.
+
+AC: **AC-120** вузол порталу: ланцюжок лист → завдання → карта розкрою (відходи) → МО, секунди доби, зведення «сьогодні», майбутнє за демо-годинником приховано, `waste_pct` лише для запланованих карт (`TestPortalNodes.test_equipment_node_chain_and_today`,
+`test_node_hides_future_and_clips_log_to_now`, `test_cut_waste_only_for_planned_maps`, `test_job_without_mo_has_no_cut`, `TestPortalPure`); **AC-121** вузол стосу: показання/Odoo, товщина, наступне завдання (`test_stack_nodes_portal_and_odoo_sources`,
+`test_next_job_prefers_active_then_priority`); **AC-122** payload: повний, дельта лише для вузлів патча, кіоск, збій не ламає (`test_payload_collect_and_delta_carry_portal`, `test_portal_failure_does_not_break_payload`; міст —
+`td_machine_connect_viewer3d/tests/test_payload.py`, `TestPortalPayload`); **AC-123** плитка: підрахунок, відходи, права, порожній портал (`test_tile_*`), `jobsWord` і тур; **AC-124** демо-історія й шина: завдання по черзі без накладання, карти, показання
+стосів `ok`, ідемпотентність, `_notify` при ході завдання (`TestDemoGantry`, `test_events_notify_equipment_and_stacks`); **AC-125** 3D: залишок на `t`, вікна й фази руху, без телепортів, висота стосу, запечені деталі ховаються й повертаються,
+картки, дельта (HOOT `td_machine_connect_viewer3d/static/tests/hoot/portal.test.js`, PT1…PT10); **AC-126** емулятор: авто-завдання за РЦ у WORKING з МО, фази `status`, обмеження на МО, вимкнення (`services/iot_sim/tests/protocols/test_woodstore_auto.py`).
 
 ## 10. Стани й переходи
 

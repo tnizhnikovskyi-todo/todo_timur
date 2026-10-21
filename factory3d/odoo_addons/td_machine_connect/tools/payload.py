@@ -174,6 +174,7 @@ def build_machines(env, ctx, payload=None):
             }
             for s in stacks
         }
+    _portal(env, out, None if full else plt, GANTRY in out.get("equipment", {}))
     prods = _nodes(payload.get("productions"), "name")
     if prods:
         out["productions"] = _productions(env, prods)
@@ -183,6 +184,25 @@ def build_machines(env, ctx, payload=None):
             "stock": "портал: %d завд. · %d арк." % (len(jobs), sum(max(j.sheets - j.done, 0) for j in jobs))
         }
     return out
+
+
+def _portal(env, out, codes, with_equipment):
+    """R-31: `equipment.GANTRY-1.portal` (завдання доби, ланцюжок до МО) і `locations[PLT-*].portal` (стоси для 3D).
+
+    Збій розрахунку лише логується: решта payload віддається без портальних вузлів (3D-шар неактивний).
+    """
+    try:
+        with env.cr.savepoint():
+            portal = env["td.portal"]
+            now = portal._td_now()
+            equipment = portal._td_equipment_node(now) if with_equipment else None
+            stacks = portal._td_stack_nodes(codes, now)
+        if equipment is not None:
+            out.setdefault("equipment", {}).setdefault(GANTRY, {})["portal"] = equipment
+        for code, node in stacks.items():
+            out.setdefault("locations", {}).setdefault(code, {})["portal"] = node
+    except Exception:  # необов'язковий шар 3D не повинен ламати payload
+        _logger.exception("machine_connect: вузли порталу (R-31) не пораховано")
 
 
 def _productions(env, prods):

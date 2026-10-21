@@ -14,6 +14,12 @@
     F3D_TEST_INSTALL=td_machine_connect \
         factory3d/tools/odoo/run_tests.sh <db> /td_machine_connect
 
+## Портал у 3D і плитка «Портал»
+
+`td.portal` (SPEC R-31) віддає провайдеру переглядача вузли `equipment.GANTRY-1.portal` (завдання порталу за добу з ланцюжком лист → карта розкрою → МО) і
+`locations[PLT-*].portal` (стоси: залишок, товщина листа, наступне завдання); плитка «Портал: N завдань сьогодні, відходи розкрою X %» — в «Огляді верстатів».
+3D — міст `td_machine_connect_viewer3d`. На демо-базі `hooks.run_migration` (крок `demo_gantry`) будує демо-історію порталу з резерву сировини МО розкрою.
+
 ## Параметри (`ir.config_parameter`, `td.machine_connect.*`, noupdate)
 
 Стоп-крани (за замовчуванням вимкнено): `read_enabled` (хук: `True` у `test`), `auto_start_enabled`, `write_enabled`,

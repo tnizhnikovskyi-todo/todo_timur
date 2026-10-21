@@ -144,6 +144,14 @@ class F3dGantryJob(models.Model):
             self.env["td.viewer.event"]._notify("maintenance.equipment", ["GANTRY-1"], "state")
 
     @api.model
+    def _td_notify_portal(self, stack_codes=()):
+        """R-31 п. 8: хід завдання (старт, лист, фініш) оновлює в 3D портал і стоси, з яких брали лист."""
+        self._td_notify_equipment()
+        codes = sorted({c for c in stack_codes if c})
+        if codes and "td.viewer.event" in self.env:
+            self.env["td.viewer.event"]._notify("stock.location", codes, "stock")
+
+    @api.model
     def _td_gantry_status(self):
         raw = self.env["ir.config_parameter"].sudo().get_param("td.machine_connect.gantry_status", "{}")
         try:
@@ -393,6 +401,8 @@ class F3dGantryJob(models.Model):
             if job.state == "done":
                 job._td_consume()
             n += 1
+        if n:
+            self._td_notify_portal()
         return n
 
     @api.model
@@ -436,8 +446,12 @@ class F3dGantryJob(models.Model):
     @api.model
     def _td_apply_events(self, items):
         status = None
+        progress, stacks = False, set()
         for item in items or []:
             kind = item.get("type")
+            if kind in ("sheet_placed", "job_started", "job_finished"):
+                progress = True
+                stacks.add(item.get("stack"))
             ts = parse_ts(item.get("ts")) or fields.Datetime.now()
             job = self.sudo().search([("ws_id", "=", item.get("job"))], limit=1) if item.get("job") else self.browse()
             if kind == "sheet_placed" and job:
@@ -463,6 +477,8 @@ class F3dGantryJob(models.Model):
                     status["aisles_open"] = sorted(aisles)
         if status is not None:
             self._td_set_gantry_status(status)
+        if progress:
+            self._td_notify_portal(stacks)
         return len(items or [])
 
     def _td_on_sheet(self, item, ts):

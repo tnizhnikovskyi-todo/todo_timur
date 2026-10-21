@@ -9,6 +9,7 @@ from . import td_oee_shift
 from . import td_bottleneck
 from . import td_gantry_stack
 from . import td_gantry_job
+from . import td_portal
 from . import td_cut_part
 from . import td_cut_map
 from . import mrp_workcenter

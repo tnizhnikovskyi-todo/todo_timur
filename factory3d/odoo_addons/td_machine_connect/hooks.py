@@ -11,6 +11,8 @@ from odoo import fields
 from odoo.exceptions import AccessError
 from odoo.tools import file_open
 
+from .tools.demo_portal import demo_gantry
+
 _logger = logging.getLogger(__name__)
 
 MODULE = "td_machine_connect"
@@ -133,6 +135,8 @@ COUNTERS = (
     "downtimes_open",
     "requests_linked",
     "rates_set",
+    "gantry_jobs",
+    "cut_maps",
 )
 
 # DT-4: орієнтовні ставки демо-РЦ (грн/год) за префіксом коду верстата; решта — `RATE_DEFAULT`.
@@ -540,6 +544,7 @@ def run_migration(env):
         with env.cr.savepoint():
             rep.update(demo_journal(env, install_ts))
             rep.update(demo_rates(env))
+            rep.update(demo_gantry(env))
     except Exception:
         _logger.exception("machine_connect: крок demo_journal не виконано")
         state = "partial"
