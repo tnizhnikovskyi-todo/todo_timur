@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DB-07: корінь «Когенерація» ховається, поки встановлено міст (пункти живуть у «Енергетика → Генерація й резерв»);
+     uninstall_hook повертає active=True. noupdate="0": `-u td_chp` перезаписує menu_td_chp_root (menuitem active=True), але
+     `-u` td_chp оновлює й залежний міст, тож приховування застосовується знову. -->
+<odoo noupdate="0">
+    <record id="td_chp.menu_td_chp_root" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>
