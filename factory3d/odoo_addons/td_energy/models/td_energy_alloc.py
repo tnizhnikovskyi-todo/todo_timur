@@ -139,16 +139,42 @@ class F3dEnergyAlloc(models.Model):
         """R-08 п. 2: `{wo_id: [(s, e), …]}` — інтервали роботи завдань у `[d0, end)`."""
         machine = self._td_machine_intervals(wos, d0, end) or {}
         machine_wcs = {w.workcenter_id.id for w in wos if w.id in machine}
+        working = {}  # {wc_id: інтервали роботи РЦ за журналом станів | None — журналу в добі немає}
         result = {}
         for wo in wos:
+            time_ivs = [(p.date_start, p.date_end or end) for p in wo.time_ids if p.date_start]
             if wo.id in machine or wo.workcenter_id.id in machine_wcs:
                 raw = [(s, e) for s, e, _state in machine.get(wo.id, ())]
+                if not raw:  # журнал станів не прив'язав завдання до себе — див. `_td_unlinked_intervals`
+                    raw = self._td_unlinked_intervals(wo.workcenter_id, time_ivs, working, d0, end)
             else:
-                raw = [(p.date_start, p.date_end or end) for p in wo.time_ids if p.date_start]
+                raw = time_ivs
             ivs = alloc_tools.merge(piece for piece in (alloc_tools.clip(s, e, d0, end) for s, e in raw) if piece)
             if ivs:
                 result[wo.id] = ivs
         return result
+
+    @api.model
+    def _td_machine_wc_working(self, workcenter, d0, end):
+        """CM-03 (обгортка): об'єднані інтервали `working`/`setup` усіх станів РЦ у `[d0, end)` за журналом верстата;
+        `None` — модуля `td_machine_connect` немає або журнал станів РЦ у добі порожній."""
+        if "td.machine" not in self.env:
+            return None
+        logs = self.env["td.machine"].sudo()._td_wc_intervals(workcenter, d0, end)
+        if not logs:
+            return None
+        return alloc_tools.merge((s, e) for s, e, state, _wo in logs if state in ("working", "setup"))
+
+    @api.model
+    def _td_unlinked_intervals(self, workcenter, time_ivs, working, d0, end):
+        """Інтервали завдання на РЦ із верстатом, коли журнал станів не прив'язав жодного інтервалу до нього
+        (`workorder_id` порожній: верстат «working» ще до старту завдання, або завдання запущене без `td.machine`, як
+        у «Живому виробництві»). Це інтервали журналу часу завдання, у яких верстат справді працював; без журналу
+        станів РЦ у добі — журнал часу як є. Раніше такі завдання лишалися без прямої й спільної енергії."""
+        if workcenter.id not in working:
+            working[workcenter.id] = self._td_machine_wc_working(workcenter, d0, end)
+        ivs = working[workcenter.id]
+        return time_ivs if ivs is None else alloc_tools.intersect(time_ivs, ivs)
 
     # --- розподіл діб --------------------------------------------------------------------------------
     @api.model

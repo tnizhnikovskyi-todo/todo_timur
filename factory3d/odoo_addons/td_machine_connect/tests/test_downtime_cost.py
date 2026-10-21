@@ -15,13 +15,14 @@ class CostMixin:
     def down(self, machine, start, end, loss="mrp.block_reason1", state="to_confirm", day=None, kind="fault"):
         """Закритий простій `start`–`end` (час за Києвом) із причиною `loss`; `end=None` — відкритий."""
         day = day or self.D0
+        loss_id = loss.id if hasattr(loss, "id") else self.env.ref(loss).id
         return self.env["td.downtime"].create(
             {
                 "machine_id": machine.id,
                 "date_start": kt(start, day),
                 "date_end": kt(end, day) if end else False,
                 "state_kind": kind,
-                "loss_id": self.env.ref(loss).id,
+                "loss_id": loss_id,
                 "reason_state": state,
             }
         )
@@ -46,7 +47,7 @@ class TestDowntimeCost(CostMixin, F3DMachineCase):
         """DT-1: зміна ставки РЦ перераховує збережену вартість усіх його простоїв."""
         self.wc_cnc.costs_hour = 600.0
         a = self.down(self.m_cnc, "09:00", "09:30")
-        b = self.down(self.m_cnc, "11:00", "12:00", loss="mrp.block_reason2", kind="setup")
+        b = self.down(self.m_cnc, "13:00", "14:00", loss="mrp.block_reason2", kind="setup")
         other = self.down(self.m_ua, "09:00", "10:00")
         self.assertEqual((a.cost, b.cost, other.cost), (300.0, 600.0, 0.0))
         self.wc_cnc.costs_hour = 1200.0
@@ -64,6 +65,58 @@ class TestDowntimeCost(CostMixin, F3DMachineCase):
         dt.write({"date_end": kt("10:00")})
         self.assertEqual((dt.cost, dt.cost_live), (600.0, 600.0))
 
+    def test_cost_clipped_to_planned_time(self):
+        """Лише плановий час: календар тесту 07:00–11:30 і 12:00–15:30; обід, ніч і вихідні не рахуються."""
+        self.wc_cnc.costs_hour = 600.0
+        inside = self.down(self.m_cnc, "11:00", "12:30")  # 30 хв до обіду + 30 хв після; обід 11:30–12:00 — ні
+        self.assertEqual(inside.duration_min, 90.0)
+        self.assertEqual((inside.cost, inside.planned_cost), (600.0, 0.0))
+        outside = self.down(self.m_cnc, "16:00", "18:00", loss="mrp.block_reason2", kind="setup")
+        self.assertEqual(outside.cost, 0.0)
+        weekend = self.env["td.downtime"].create(
+            {
+                "machine_id": self.m_cnc.id,
+                "date_start": kt("14:00", self.D0.replace(day=9)),  # п'ятниця
+                "date_end": kt("08:00"),  # понеділок
+                "state_kind": "fault",
+                "loss_id": self.env.ref("mrp.block_reason1").id,
+            }
+        )
+        self.assertAlmostEqual(weekend.duration_min / 60.0, 66.0)
+        self.assertEqual(weekend.cost, 1500.0)  # 14:00–15:30 (1,5 год) + 07:00–08:00 (1 год) = 2,5 год × 600
+
+    def test_end_change_recomputes_cost_and_ppt_min(self):
+        """Скорочення простою (зміна `date_end`) перераховує вартість і `ppt_min`."""
+        self.wc_cnc.costs_hour = 600.0
+        dt = self.down(self.m_cnc, "08:00", "15:00")  # 08:00–11:30 і 12:00–15:00 = 6,5 год
+        self.assertEqual(dt.cost, 3900.0)
+        dt.write({"date_end": kt("10:00")})
+        self.assertEqual((dt.cost, dt.ppt_min), (1200.0, 120.0))
+
+    def test_planned_reason_not_a_loss(self):
+        """Планова причина («Перерва») у втрату не входить: `cost` = 0, ₴ окремо в `planned_cost`."""
+        self.wc_cnc.costs_hour = 600.0
+        brk = self.env["mrp.workcenter.productivity.loss"].create(
+            {"name": "Перерва (тест)", "loss_id": self.env.ref("mrp.category_availability").id, "td_planned": True}
+        )
+        pause = self.down(self.m_cnc, "09:00", "09:30", loss=brk, kind="idle")
+        self.assertEqual((pause.cost, pause.planned_cost), (0.0, 300.0))
+        real = self.down(self.m_cnc, "10:00", "10:30", loss="mrp.block_reason1")
+        self.assertEqual((real.cost, real.planned_cost), (300.0, 0.0))
+        totals = self.env["td.downtime"]._read_group([], [], ["cost:sum", "planned_cost:sum"])
+        self.assertEqual(totals, [(300.0, 300.0)])
+        pause.loss_id = self.env.ref("mrp.block_reason0")  # причину змінили на непланову — стала втратою
+        self.assertEqual((pause.cost, pause.planned_cost), (300.0, 0.0))
+
+    def test_open_downtime_live_cost_planned_time_only(self):
+        """Відкритий простій наживо: лише плановий час (обід не рахується), планова причина — 0."""
+        self.wc_cnc.costs_hour = 600.0
+        with at("12:30"):
+            dt = self.down(self.m_cnc, "11:00", None)
+            self.assertEqual(dt.cost, 0.0)
+            dt.invalidate_recordset(["cost_live"])
+            self.assertEqual(dt.cost_live, 600.0)  # 11:00–11:30 + 12:00–12:30
+
     def test_shift_date_is_kyiv_local(self):
         """Зміна = київська доба: 01:30 за Києвом (22:30 UTC попередньої доби) — вже наступна дата."""
         dt = self.down(self.m_cnc, "01:30", "02:00")
@@ -77,7 +130,7 @@ class TestDowntimeCost(CostMixin, F3DMachineCase):
         self.down(self.m_cnc, "08:00", "08:30", loss="mrp.block_reason2", kind="setup")  # 300
         self.down(self.m_cnc, "09:00", "11:00", loss="mrp.block_reason1")  # 1200
         self.down(self.m_ua, "09:00", "10:00", loss="mrp.block_reason0", kind="idle")  # 300
-        self.down(self.m_ua, "11:00", "12:00", loss="mrp.block_reason0", kind="idle")  # 300
+        self.down(self.m_ua, "13:00", "14:00", loss="mrp.block_reason0", kind="idle")  # 300
         Downtime = self.env["td.downtime"]
         rows = Downtime._read_group([], ["loss_id"], ["cost:sum"], order="cost:sum desc")
         sums = [(loss.id, total) for loss, total in rows]

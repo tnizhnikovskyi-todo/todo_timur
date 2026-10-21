@@ -89,7 +89,16 @@ class F3dDowntime(models.Model):
         store=True,
         currency_field="currency_id",
         string="Вартість простою",
-        help="Тривалість простою (год) × ставка робочого центра за годину. Відкритий простій — 0 до закриття.",
+        help="Втрата в гривнях: час простою в плановому часі РЦ (календар зміни, без відсутностей) (год) × ставка "
+        "робочого центра за годину. Планова причина («Перерва») — не втрата: її ₴ у «Планові, ₴». "
+        "Відкритий простій — 0 до закриття.",
+    )
+    planned_cost = fields.Monetary(
+        compute="_compute_cost",
+        store=True,
+        currency_field="currency_id",
+        string="Планові (перерва), ₴",
+        help="Те саме, що «Вартість простою», але для планової причини (`td_planned`): окремо, у втрату не входить.",
     )
     cost_live = fields.Monetary(compute="_compute_cost_live", currency_field="currency_id", string="Вартість (поточна)")
     shift_date = fields.Date(
@@ -135,20 +144,66 @@ class F3dDowntime(models.Model):
             else:
                 rec.duration_live = (now - rec.date_start).total_seconds() / 60
 
-    @api.depends("duration_min", "workcenter_id.costs_hour", "currency_id")
-    def _compute_cost(self):
-        for rec in self:
-            cost = rec.duration_min / 60.0 * rec.workcenter_id.sudo().costs_hour
-            rec.cost = rec.currency_id.round(cost) if rec.currency_id else cost
+    # --- вартість: лише плановий час РЦ (DT-1) -----------------------------------------------------------
+    @api.model
+    def _td_ppt_cache(self, recs, now=None):
+        """`{wc_id: (календар є, інтервали планового часу)}` одним викликом календаря на РЦ за вікно всіх `recs`."""
+        windows = {}
+        for rec in recs:
+            if not rec.date_start or not rec.workcenter_id:
+                continue
+            end = rec.date_end or now or rec.date_start
+            lo, hi = windows.get(rec.workcenter_id.id, (rec.date_start, end))
+            windows[rec.workcenter_id.id] = (min(lo, rec.date_start), max(hi, end))
+        cache = {}
+        for wc in recs.workcenter_id.sudo().filtered(lambda w: w.id in windows):
+            lo, hi = windows[wc.id]
+            has_calendar = bool(wc.resource_calendar_id or wc.company_id.resource_calendar_id)
+            cache[wc.id] = (has_calendar, ppt.ppt_intervals(self.env, wc, lo, hi))
+        return cache
 
-    @api.depends("date_start", "date_end", "duration_min", "workcenter_id.costs_hour", "currency_id")
+    def _td_ppt_minutes(self, cache, end=None):
+        """Хвилини простою в плановому часі РЦ (`ppt_intervals`): відсутності й позазмінний час не рахуються.
+        РЦ без календаря — вся тривалість (планового часу немає як поняття)."""
+        self.ensure_one()
+        end = end or self.date_end
+        if not self.date_start or not end or end <= self.date_start:
+            return 0.0
+        has_calendar, ivs = cache.get(self.workcenter_id.id, (False, []))
+        if not has_calendar:
+            return (end - self.date_start).total_seconds() / 60.0
+        return ppt.total_min(ppt.clip(ivs, self.date_start, end))
+
+    @api.depends(
+        "date_start",
+        "date_end",
+        "loss_id.td_planned",
+        "workcenter_id.costs_hour",
+        "workcenter_id.resource_calendar_id",
+        "currency_id",
+    )
+    def _compute_cost(self):
+        cache = self._td_ppt_cache(self)
+        for rec in self:
+            minutes = rec._td_ppt_minutes(cache) if rec.date_end else 0.0
+            amount = minutes / 60.0 * rec.workcenter_id.sudo().costs_hour
+            if rec.currency_id:
+                amount = rec.currency_id.round(amount)
+            planned = rec.loss_id.sudo().td_planned
+            rec.cost = 0.0 if planned else amount
+            rec.planned_cost = amount if planned else 0.0
+
+    @api.depends("date_start", "date_end", "cost", "loss_id.td_planned", "workcenter_id.costs_hour", "currency_id")
     def _compute_cost_live(self):
         now = fields.Datetime.now()
+        open_recs = self.filtered(lambda r: not r.date_end and r.date_start)
+        cache = self._td_ppt_cache(open_recs, now)
         for rec in self:
             if rec.date_end or not rec.date_start:
                 rec.cost_live = rec.cost
                 continue
-            cost = (now - rec.date_start).total_seconds() / 3600.0 * rec.workcenter_id.sudo().costs_hour
+            minutes = 0.0 if rec.loss_id.sudo().td_planned else rec._td_ppt_minutes(cache, now)
+            cost = minutes / 60.0 * rec.workcenter_id.sudo().costs_hour
             rec.cost_live = rec.currency_id.round(cost) if rec.currency_id else cost
 
     @api.depends("date_start")
@@ -332,7 +387,19 @@ class F3dDowntime(models.Model):
     def write(self, vals):
         if "loss_id" in vals and not self.env.context.get("f3d_mc_internal"):
             self._td_reason_rights()
-        return super().write(vals)
+        res = super().write(vals)
+        if ("date_end" in vals or "date_start" in vals) and "ppt_min" not in vals:
+            self._td_sync_ppt_min()
+        return res
+
+    def _td_sync_ppt_min(self):
+        """`ppt_min` (хвилини в плановому часі) лишається узгодженим із межами закритого простою, коли їх змінюють."""
+        recs = self.sudo().filtered("date_end")
+        cache = self._td_ppt_cache(recs)
+        for rec in recs:
+            minutes = round(rec._td_ppt_minutes(cache), 1)
+            if rec.ppt_min != minutes:
+                rec.with_context(f3d_mc_internal=True, tracking_disable=True).write({"ppt_min": minutes})
 
     def unlink(self):
         if not (self.env.su or self.env.user.has_group("td_factory3d.group_td_admin")):
