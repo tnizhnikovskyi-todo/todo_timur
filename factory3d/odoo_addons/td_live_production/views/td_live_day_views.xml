@@ -53,7 +53,22 @@
                         </group>
                     </group>
                     <field name="note"/>
+                    <field name="generated" invisible="1"/>
+                    <div class="alert alert-info" role="alert" invisible="generated">
+                        План доби ще генерується у фоні (фаза: <field name="gen_phase" class="oe_inline"/>,
+                        <field name="gen_done" class="oe_inline"/>). Диспетчер не чіпає її МО, поки план не готовий.
+                    </div>
                     <notebook>
+                        <page string="Фонові задачі" name="jobs">
+                            <field name="job_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="progress_text"/>
+                                    <field name="heartbeat"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Плановані простої" name="downtimes">
                             <field name="downtime_ids">
                                 <list>
@@ -79,6 +94,70 @@
         <field name="res_model">td.live.day</field>
         <field name="view_mode">list,form</field>
     </record>
+
+    <record id="view_td_live_job_list" model="ir.ui.view">
+        <field name="name">td.live.job.list</field>
+        <field name="model">td.live.job</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0" decoration-danger="state == 'failed'" decoration-info="state in ('queued', 'running')">
+                <field name="name"/>
+                <field name="state" widget="badge"/>
+                <field name="progress_text"/>
+                <field name="date_start" optional="show"/>
+                <field name="date_end" optional="show"/>
+                <field name="heartbeat" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_live_job_form" model="ir.ui.view">
+        <field name="name">td.live.job.form</field>
+        <field name="model">td.live.job</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0" edit="0">
+                <header>
+                    <button name="action_cancel_queue" type="object" string="Скасувати"
+                            invisible="state not in ('queued', 'running')" groups="td_factory3d.group_td_manager"/>
+                    <field name="state" widget="statusbar" statusbar_visible="queued,running,done"/>
+                </header>
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <group>
+                            <field name="kind"/>
+                            <field name="day_date"/>
+                            <field name="day_id"/>
+                            <field name="phase"/>
+                            <field name="then_start"/>
+                        </group>
+                        <group>
+                            <field name="total"/>
+                            <field name="done_count"/>
+                            <field name="failed_count"/>
+                            <field name="skipped_count"/>
+                            <field name="heartbeat"/>
+                        </group>
+                    </group>
+                    <field name="progress_text"/>
+                    <field name="error" invisible="not error"/>
+                    <group string="Службове" groups="td_factory3d.group_td_admin">
+                        <field name="reasons"/>
+                        <field name="stats"/>
+                        <field name="queue"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_live_job" model="ir.actions.act_window">
+        <field name="name">Живе виробництво: фонові задачі</field>
+        <field name="res_model">td.live.job</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_td_live_job" name="Фонові задачі живого виробництва" parent="mrp.menu_mrp_root" sequence="96"
+              action="action_td_live_job" groups="td_factory3d.group_td_user"/>
 
     <menuitem id="menu_td_live_day" name="Живе виробництво" parent="mrp.menu_mrp_root" sequence="95"
               action="action_td_live_day" groups="td_factory3d.group_td_user"/>

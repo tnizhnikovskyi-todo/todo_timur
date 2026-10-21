@@ -25,11 +25,16 @@
                                     string="Підготувати демо-компанію"/>
                         </setting>
                         <setting string="Перший запуск і минуле"
-                                 help="План на поточну добу з урахуванням часу, що минув; завершення МО минулих діб за датами планів (нічого не видаляється).">
+                                 help="Важкі дії виконуються у фоні: кнопка одразу повертає «запущено у фоні», прогрес видно нижче. Генерація — це план на добу, а для сьогодні ще й доганяння того, що за планом мало закінчитись; «Догнати минуле» завершує МО минулих діб датами планів (нічого не видаляється).">
                             <button name="action_td_live_generate_today" type="object" class="btn-secondary"
                                     string="Згенерувати сьогодні"/>
+                            <button name="action_td_live_generate_tomorrow" type="object" class="btn-secondary ms-2"
+                                    string="Згенерувати завтра"/>
                             <button name="action_td_live_catch_up" type="object" class="btn-secondary ms-2"
                                     string="Догнати минуле"/>
+                        </setting>
+                        <setting string="Фонові задачі" help="Останні задачі: прогрес («закрито N з M», причини невдач) і підсумок. Оновіть сторінку.">
+                            <field name="td_live_jobs" readonly="1" nolabel="1" widget="text"/>
                         </setting>
                     </block>
                     <block title="Параметри" name="td_live_params">

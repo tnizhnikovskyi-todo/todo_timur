@@ -37,6 +37,16 @@ class TdLiveDay(models.Model):
     )
     spill_min = fields.Float(string="Переноситься на наступну зміну, хв", digits=(9, 0), readonly=True)
     note = fields.Text(string="Підсумок генерації", readonly=True)
+    generated = fields.Boolean(
+        string="План готовий",
+        default=True,
+        readonly=True,
+        help="Доба генерується частинами у фоні; диспетчер не чіпає МО доби, поки план не готовий.",
+    )
+    gen_phase = fields.Char(string="Фаза генерації", readonly=True)
+    gen_done = fields.Integer(string="Зроблено у фазі", readonly=True)
+    plan_json = fields.Text(string="План (службове)", readonly=True, copy=False)
+    job_ids = fields.One2many("td.live.job", "day_id", string="Фонові задачі", readonly=True)
 
     _td_live_day_uniq = models.Constraint("UNIQUE(date, company_id)", "Для цієї доби вже є план живого виробництва.")
 

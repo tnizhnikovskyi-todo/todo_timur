@@ -9,7 +9,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
 
 from ..tools import clock, planner, pricing
 
@@ -22,6 +21,7 @@ NOW_KEY = "td_live_now"  # ключ контексту: «зараз» (naive UT
 HOT_DEFAULT = "Присадка"
 BACKLOG_FREE_DAYS = 1.5  # доба-черга на верстатах, до якої замовлень не зменшуємо
 BACKLOG_SPAN_DAYS = 3.0  # на скільки діб понад це кількість замовлень падає до чверті
+TICK_BUDGET_S = 40.0  # секунд на такт: ліміт крона на сервері ~120 с, подія закриття МО — кілька секунд
 TICK_EVENTS = 150  # подій на такт крона: довга пауза доганяється за кілька тактів
 LINES_RANGE = (2, 3)  # рядків (МО) у замовленні
 OVERLOAD = 1.5  # гарячі верстати вважаються «повними» на 150 % зміни (див. `planner.plan_orders`)
@@ -159,111 +159,6 @@ class TdLiveEngine(models.AbstractModel):
 
     # --- генерація доби (LP-02) -------------------------------------------------------------------------
     @api.model
-    def td_generate_today(self):
-        """Перший запуск: план на поточну добу й одразу доганяння: що за планом мало закінчитись — закрито."""
-        now = self._td_now()
-        day = self.td_generate_day(self._td_today(now))
-        res = self.td_dispatch(now=now, force=True)
-        return _(
-            "%(day)s: замовлень %(so)s, МО %(mo)s. Диспетчер: стартувало нарядів %(started)s, завершено %(finished)s, "
-            "закрито МО %(mos)s, відвантажено %(ship)s. %(note)s",
-            day=day.date,
-            so=day.order_count,
-            mo=day.production_count,
-            started=res["started"],
-            finished=res["finished"],
-            mos=res["closed"],
-            ship=res["shipped"],
-            note=day.note or "",
-        )
-
-    @api.model
-    def td_generate_day(self, day=None):
-        """План доби `day` (київська дата; за замовчуванням сьогодні): замовлення, МО, розклад нарядів, простої.
-
-        Ідемпотентно: для доби, що вже має план, повертає його без змін.
-        """
-        self = self.sudo()
-        env = self.env
-        company = env.company
-        now = self._td_now()
-        day = day or self._td_today(now)
-        Day = env["td.live.day"]
-        existing = Day.search([("date", "=", day), ("company_id", "=", company.id)], limit=1)
-        if existing:
-            return existing
-        fixed = (
-            self.td_sequences_ahead()
-        )  # демо-імена попереду послідовностей: без цього — «Референс має бути унікальним»
-        params = self._td_params()
-        templates = self._td_templates()
-        if not templates["customers"] or not templates["products"]:
-            raise UserError(
-                _(
-                    "Немає шаблонів: потрібні підтверджені замовлення клієнтів і вироби зі специфікаціями, що мають "
-                    "операції (маршрут). Завантажте демо-набір factory3d."
-                )
-            )
-        shift = params["shift"]
-        shift_min = clock.shift_minutes(shift)
-        wc_ids = {op["wc"] for p in templates["products"] for v in p["variants"] for op in v["ops"]}
-        hot = self._td_hot_workcenters(wc_ids, params["hot_section"])
-        seed = int(day.strftime("%Y%m%d"))
-        release = planner.shift_release(day, shift)
-        orders_n, backlog_days = self._td_throttle(params["orders"], release)
-        plan = planner.plan_orders(
-            templates,
-            orders_n,
-            seed,
-            shift_min,
-            hot,
-            OVERLOAD,
-            params["hot_factor"] if hot else 1.0,
-            LINES_RANGE,
-        )
-        rec = Day.create({"date": day, "company_id": company.id})
-        mos_for_plan = env["mrp.production"]
-        revenue = cost_total = 0.0
-        for n, order in enumerate(plan["orders"]):
-            so, mos, rev, cost = self._td_create_order(
-                rec, order, n, release, hot, params["hot_factor"] if hot else 1.0
-            )
-            revenue += rev
-            cost_total += cost
-            mos_for_plan |= mos
-        sched = self._td_schedule(mos_for_plan, release, shift, params["workdays"], hot, params["hot_factor"])
-        rec.downtime_ids = [(0, 0, vals) for vals in self._td_plan_downtimes(sched, params["downtime_share"], seed)]
-        hot_load = 0.0
-        if hot:
-            machines = len(hot)
-            minutes = sum(m for wc, m in sched["load"].items() if wc in hot)
-            hot_load = minutes / (machines * shift_min) * 100.0
-        rec.write(
-            {
-                "revenue": revenue,
-                "cost_plan": cost_total,
-                "margin_plan_pct": pricing.margin_pct(revenue, cost_total),
-                "hot_section": params["hot_section"] if hot else False,
-                "hot_load_pct": hot_load,
-                "spill_min": sched["spill"],
-                "note": _(
-                    "План: %(n)s замовлень, %(m)s МО, %(d)s простоїв.%(throttle)s%(seq)s",
-                    n=len(plan["orders"]),
-                    m=len(mos_for_plan),
-                    d=len(rec.downtime_ids),
-                    seq=_(" Послідовності підсунуто: %s.", ", ".join("%s %s→%s" % f for f in fixed)) if fixed else "",
-                    throttle=(
-                        _(" Черга верстатів %(days).1f доби: замовлень менше, ніж у налаштуваннях (%(cfg)s).")
-                        % {"days": backlog_days, "cfg": params["orders"]}
-                        if orders_n < params["orders"]
-                        else ""
-                    ),
-                ),
-            }
-        )
-        return rec
-
-    @api.model
     def _td_throttle(self, orders, release):
         """Запобіжник: якщо верстати вже завантажені на понад 1,5 доби вперед, замовлень на добу менше (до чверті).
 
@@ -317,39 +212,6 @@ class TdLiveEngine(models.AbstractModel):
             mo.action_confirm()
             mos |= mo
         return so, mos, sum(c[1] for c in costs), sum(c[0] for c in costs)
-
-    @api.model
-    def _td_schedule(self, mos, release, shift, workdays, hot, hot_factor):
-        """Розклад нарядів МО дня: хвилини (ділянка гарячих верстатів × складність), кінцева потужність РЦ."""
-        env = self.env
-        wc_free = self._td_wc_free(mos)
-        ops_wc, items = {}, []
-        for mo in mos:
-            ops = []
-            for wo in mo.workorder_ids.filtered(lambda w: w.state != "cancel").sorted("id"):
-                minutes = wo.duration_expected or 1.0
-                if wo.workcenter_id.id in hot:
-                    minutes = round(minutes * hot_factor, 1)
-                    wo.duration_expected = minutes
-                ops.append({"id": wo.id, "wc": wo.workcenter_id.id, "minutes": minutes})
-                ops_wc[wo.id] = wo.workcenter_id.id
-            items.append({"id": mo.id, "release": release, "ops": ops})
-        plan = planner.schedule(items, shift, workdays, wc_free)
-        Wo = env["mrp.workorder"]
-        for wo_id, (start, end) in plan.items():
-            self._td_wo_dates(Wo.browse(wo_id), start, end)
-        for mo in mos:
-            starts = [plan[w.id][0] for w in mo.workorder_ids if w.id in plan]
-            ends = [plan[w.id][1] for w in mo.workorder_ids if w.id in plan]
-            if starts:
-                mo.with_context(force_date=True).write({"date_start": min(starts), "date_finished": max(ends)})
-        day_end = clock.shift_window(clock.local_date(release), shift)[1]
-        return {
-            "plan": plan,
-            "ops_wc": ops_wc,
-            "load": planner.utilisation(plan, ops_wc, 1.0),
-            "spill": planner.spill_minutes(plan, day_end),
-        }
 
     @api.model
     def _td_wc_free(self, new_mos):
@@ -412,7 +274,34 @@ class TdLiveEngine(models.AbstractModel):
 
     @api.model
     def td_start(self):
-        """«Запустити живе виробництво»: вимикач, обидва крони, демо-годинник вимкнено (реальний «зараз»)."""
+        """«Запустити живе виробництво». Є готовий план на сьогодні — вмикає одразу; немає — ставить у фон «догнати
+        минуле» (якщо є старі відкриті МО) і генерацію доби, а запуск (вимикач, крони, демо-годинник) відбувається
+        сам після їх завершення: без плану диспетчеру нічого вести, а застиглі МО минулих діб показувалися б наживо."""
+        env = self.sudo().env
+        today = self._td_today()
+        ready = env["td.live.day"].search_count(
+            [("date", "=", today), ("company_id", "=", env.company.id), ("generated", "=", True)]
+        )
+        if ready:
+            return self.td_activate()
+        Job = env["td.live.job"]
+        steps = []
+        today_start = clock.shift_window(today, (0.0, 24.0))[0]
+        past, _skipped = self._td_catch_up_candidates(today_start)
+        if past:
+            Job.td_enqueue("catch_up")
+            steps.append(_("догнати минуле (%s МО)", len(past)))
+        Job.td_enqueue("generate_day", day=today, then_start=True)
+        steps.append(_("згенерувати план на %s", today))
+        return _(
+            "Плану на сьогодні ще немає. У фоні: %s. Живе виробництво запуститься саме після їх завершення; прогрес у "
+            "блоці «Фонові задачі» цього екрана. Диспетчер і демо-годинник поки не чіпаю.",
+            " → ".join(steps),
+        )
+
+    @api.model
+    def td_activate(self):
+        """Власне запуск: вимикач, обидва крони, демо-годинник вимкнено (реальний «зараз»)."""
         env = self.sudo().env
         icp = env["ir.config_parameter"]
         icp.set_param(PREFIX + "enabled", "True")
@@ -436,6 +325,9 @@ class TdLiveEngine(models.AbstractModel):
         for cron in self._td_crons():
             if cron:
                 cron.sudo().active = False
+        env["td.live.job"].search([("state", "in", ("queued", "running")), ("then_start", "=", True)]).write(
+            {"then_start": False}
+        )
         backup = icp.get_param(CLOCK_BACKUP)
         note = ""
         if backup:
@@ -443,6 +335,25 @@ class TdLiveEngine(models.AbstractModel):
             icp.set_param(CLOCK_BACKUP, False)
             note = _(" Демо-годинник повернуто: %s.", backup)
         return _("Живе виробництво зупинено: крони вимкнено.%s", note)
+
+    @api.model
+    def td_queue_catch_up(self):
+        """Кнопка «Догнати минуле»: лише ставить задачу у фон."""
+        job, status = self.env["td.live.job"].td_enqueue("catch_up")
+        if status == "active":
+            return _("Догнати минуле вже виконується у фоні: %s", job.progress_text)
+        return _("Догнати минуле запущено у фоні. Прогрес і підсумок — у блоці «Фонові задачі» цього екрана.")
+
+    @api.model
+    def td_queue_generate(self, offset=0):
+        """Кнопки «Згенерувати сьогодні» (`offset = 0`) і «Згенерувати завтра» (`1`): лише ставлять задачу у фон."""
+        day = self._td_today() + timedelta(days=offset)
+        job, status = self.env["td.live.job"].td_enqueue("generate_day", day=day)
+        if status == "exists":
+            return _("План на %s вже є.", day)
+        if status == "active":
+            return _("Генерація доби %(day)s вже виконується у фоні: %(progress)s", day=day, progress=job.progress_text)
+        return _("Генерацію доби %s запущено у фоні. Прогрес і підсумок — у блоці «Фонові задачі» цього екрана.", day)
 
     @api.model
     def _td_schedule_night(self):
@@ -460,18 +371,18 @@ class TdLiveEngine(models.AbstractModel):
 
     @api.model
     def _cron_td_live_nightly(self):
-        """Крон 02:00: план на завтра (і на сьогодні, якщо стенд стояв), потім наступний запуск о 02:00."""
-        params = self._td_params()
+        """Крон 02:00: ставить у фон генерацію доби на сьогодні (якщо стенд стояв) і на завтра, переставляє себе."""
         try:
-            if params["enabled"]:
+            if self._td_params()["enabled"]:
                 today = self._td_today()
-                self.td_generate_day(today)
-                self.td_generate_day(today + timedelta(days=1))
+                Job = self.env["td.live.job"]
+                Job.td_enqueue("generate_day", day=today)
+                Job.td_enqueue("generate_day", day=today + timedelta(days=1))
         finally:
             self._td_schedule_night()
 
     @api.model
     def _cron_td_live_tick(self):
-        """Крон щохвилини: такт диспетчера."""
+        """Крон щохвилини: такт диспетчера в межах часу й кількості подій."""
         if self._td_params()["enabled"]:
-            self.td_dispatch(limit=TICK_EVENTS)
+            self.td_dispatch(limit=TICK_EVENTS, budget_s=TICK_BUDGET_S)
