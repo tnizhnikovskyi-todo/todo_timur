@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-02: паспорт агрегата -->
+<odoo>
+    <record id="view_td_chp_unit_list" model="ir.ui.view">
+        <field name="name">td.chp.unit.list</field>
+        <field name="model">td.chp.unit</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="p_nom_kw"/>
+                <field name="source_id"/>
+                <field name="equipment_id"/>
+                <field name="is_assumption" widget="boolean"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_chp_unit_form" model="ir.ui.view">
+        <field name="name">td.chp.unit.form</field>
+        <field name="model">td.chp.unit</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open_pult" type="object" string="Відкрити пульт" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not is_assumption">
+                        Паспорт: типова комплектація (допущення)
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="КГУ-1 · TEDOM · 800 кВт"/></h1>
+                    </div>
+                    <notebook>
+                        <page string="Паспорт" name="passport">
+                            <group>
+                                <group string="Установка">
+                                    <field name="code"/>
+                                    <field name="equipment_id"/>
+                                    <field name="manufacturer"/>
+                                    <field name="model"/>
+                                    <field name="engine"/>
+                                    <field name="fuel"/>
+                                    <field name="cylinders"/>
+                                    <field name="is_assumption"/>
+                                    <field name="active"/>
+                                    <field name="company_id" groups="base.group_multi_company"/>
+                                </group>
+                                <group string="Номінальні значення">
+                                    <field name="p_nom_kw"/>
+                                    <field name="u_nom_v"/>
+                                    <field name="f_nom_hz"/>
+                                    <field name="rpm_nom"/>
+                                    <field name="i_nom_a"/>
+                                    <field name="lhv_kwh_m3"/>
+                                    <field name="co2_kg_m3"/>
+                                </group>
+                            </group>
+                            <field name="note" placeholder="Примітка"/>
+                        </page>
+                        <page string="Пороги й блокування" name="thresholds">
+                            <group>
+                                <group string="Газ, тепло, АКБ">
+                                    <field name="gas_min_bar"/>
+                                    <field name="gas_warn_bar"/>
+                                    <field name="ret_set_c"/>
+                                    <field name="jacket_warn_c"/>
+                                    <field name="jacket_max_c"/>
+                                    <field name="bat_min_v"/>
+                                    <field name="oil_min_pct"/>
+                                </group>
+                                <group string="Безпека, викиди, циліндри">
+                                    <field name="lel_warn_pct"/>
+                                    <field name="lel_alarm_pct"/>
+                                    <field name="nox_limit"/>
+                                    <field name="co_limit"/>
+                                    <field name="cyl_dev_warn_k"/>
+                                    <field name="cyl_dev_alarm_k"/>
+                                    <field name="knock_warn"/>
+                                    <field name="knock_alarm"/>
+                                    <field name="plug_interval_h"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Джерело й карта" name="source">
+                            <group>
+                                <field name="source_id"/>
+                                <field name="state_code" readonly="1"/>
+                                <field name="state_ts" readonly="1"/>
+                            </group>
+                            <div class="d-flex gap-2">
+                                <button name="action_open_map" type="object" string="Відкрити карту регістрів"
+                                        groups="td_factory3d.group_td_manager"/>
+                                <button name="action_reset_map" type="object" string="Відновити типову карту"
+                                        groups="td_factory3d.group_td_manager"
+                                        confirm="Адреси, типи, множники, одиниці, періоди й пороги сигналів КГУ буде перезаписано типовими значеннями. Продовжити?"/>
+                            </div>
+                        </page>
+                        <page string="ТО" name="maintenance">
+                            <field name="rule_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="every_h"/>
+                                    <field name="last_h"/>
+                                    <field name="left_h"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'ok'"
+                                           decoration-warning="state == 'soon'" decoration-danger="state == 'overdue'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_chp_unit" model="ir.actions.act_window">
+        <field name="name">Паспорт КГУ</field>
+        <field name="res_model">td.chp.unit</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

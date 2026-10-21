@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-08: меню «Когенерація» (останнім у data) -->
+<odoo>
+    <menuitem id="menu_td_chp_root" name="Когенерація" sequence="55" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_td_chp_pult" name="Пульт КГУ" parent="menu_td_chp_root" sequence="10"
+              action="action_td_chp_pult" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_td_chp_event" name="Журнал подій" parent="menu_td_chp_root" sequence="20"
+              action="action_td_chp_event" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_td_chp_command" name="Команди" parent="menu_td_chp_root" sequence="30"
+              action="action_td_chp_command" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_td_chp_rule" name="ТО" parent="menu_td_chp_root" sequence="40"
+              action="action_td_chp_rule" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_td_chp_unit" name="Паспорт" parent="menu_td_chp_root" sequence="50"
+              action="action_td_chp_unit" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_chp_signal" name="Карта регістрів" parent="menu_td_chp_root" sequence="60"
+              action="action_td_chp_signal" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_td_chp_settings" name="Налаштування" parent="menu_td_chp_root" sequence="70"
+              action="action_td_chp_settings" groups="td_factory3d.group_td_admin"/>
+</odoo>

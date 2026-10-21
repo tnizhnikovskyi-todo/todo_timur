@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="0">
-  <!-- 20 сценаріїв: S-01…S-15 (SPEC §9.3), S-16 pfc_step_fault (W1 «Енергетика», §8.1) і S-17…S-20 (W2 «Керування», §8.2: peak_load, export_demo, ctl_local, chp_no_gas); схеми можуть оновлюватись. -->
+  <!-- 26 сценаріїв: S-01…S-15 (SPEC §9.3), S-16 pfc_step_fault (W1 «Енергетика», §8.1), S-17…S-20 (W2 «Керування», §8.2: peak_load, export_demo, ctl_local, chp_no_gas) і S-25…S-30 (td_chp §8: аварії КГУ); S-21…S-23 — td_sim_scenario_resources.xml, S-24 — td_sim_scenario_evac.xml; схеми можуть оновлюватись. -->
   <record id="scenario_shift" model="td.sim.scenario">
     <field name="code">shift</field>
     <field name="name">Робоча зміна</field>
@@ -200,5 +200,65 @@
     <field name="description"><![CDATA[<p>Тиск газу КГУ нижче мінімуму (gas_bar, за замовчуванням 0,80 бар): команда пуску відхиляється контролером (chp/ack=2). Після зупинки тиск 2,10 бар.</p>]]></field>
     <field name="params_schema" eval="{'type': 'object', 'properties': {'gas_bar': {'type': 'number', 'minimum': 0, 'maximum': 1.4}, 'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
     <field name="params_default" eval="{'gas_bar': 0.8, 'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_overheat" model="td.sim.scenario">
+    <field name="code">chp_overheat</field>
+    <field name="name">КГУ: перегрів ОЖ</field>
+    <field name="group">energy</field>
+    <field name="sequence">240</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Температура охолоджувальної рідини двигуна КГУ росте до 107 °C (прапор chp_temp_fault): захист спрацьовує при ≥ 97 °C — аварія 112, газові клапани закриті, QF-CHP відключено. Скидання — командою «Скинути» на пульті КГУ після зупинки сценарію.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_hot_return" model="td.sim.scenario">
+    <field name="code">chp_hot_return</field>
+    <field name="name">КГУ: гаряча зворотка</field>
+    <field name="group">energy</field>
+    <field name="sequence">250</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Температура зворотки опалення росте до 84 °C (chp_ret_fault): клапан відводить тепло на градирню, потужність знижується, далі — аварія 113 «Висока температура зворотки». Скидання — з пульта КГУ після зупинки сценарію.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_gas_leak" model="td.sim.scenario">
+    <field name="code">chp_gas_leak</field>
+    <field name="name">КГУ: загазованість</field>
+    <field name="group">energy</field>
+    <field name="sequence">260</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Загазованість у контейнері КГУ росте до 32 % НКПР (chp_gas_leak): вентиляція на максимум, при ≥ 20 % — аварія 114, пуск заблоковано. Скидання — з пульта КГУ після зупинки сценарію.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_fire" model="td.sim.scenario">
+    <field name="code">chp_fire</field>
+    <field name="name">КГУ: пожежа</field>
+    <field name="group">energy</field>
+    <field name="sequence">270</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Пожежна сигналізація в контейнері КГУ (chp_fire): аварія 115, вентиляція зупинена, через 3 с — автоматичне гасіння. Скидання — з пульта КГУ після зупинки сценарію.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_rocof" model="td.sim.scenario">
+    <field name="code">chp_rocof</field>
+    <field name="name">КГУ: спрацював ROCOF</field>
+    <field name="group">energy</field>
+    <field name="sequence">280</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Спрацював захист ROCOF / векторний зсув (chp_rocof: df/dt = 2,4 Гц/с, Δφ = 14°): QF-CHP відключено, КГУ зупиняється без аварії (alarm/trip = 2), автоматичного перезапуску немає. Після зупинки сценарію пуск знову дозволений.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
+  </record>
+  <record id="scenario_chp_no_permit" model="td.sim.scenario">
+    <field name="code">chp_no_permit</field>
+    <field name="name">КГУ: знято дозвіл</field>
+    <field name="group">energy</field>
+    <field name="sequence">290</field>
+    <field name="duration_s">600</field>
+    <field name="description"><![CDATA[<p>Знято «Дозвіл КГУ» (chp_permit = 0): працюючий КГУ контрольовано зупиняється (alarm/trip = 3), пуск відхиляється контролером (chp/ack = 2, причина 1). Після зупинки сценарію дозвіл відновлюється.</p>]]></field>
+    <field name="params_schema" eval="{'type': 'object', 'properties': {'duration_s': {'type': 'integer', 'minimum': 0}, 'note': {'type': 'string'}}, 'additionalProperties': True}"/>
+    <field name="params_default" eval="{'duration_s': 600}"/>
   </record>
 </odoo>

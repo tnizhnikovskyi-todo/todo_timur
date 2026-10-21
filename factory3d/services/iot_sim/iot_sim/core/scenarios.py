@@ -1,7 +1,8 @@
 """Рушій сценаріїв S-01…S-15 (SPEC §8.15, §9.3, §10 «Запуск сценарію»), S-16 ``pfc_step_fault`` (W1 §8.1) і S-17…S-20
-(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``) і S-21…S-23 (W3 §8.1: ``air_leak``,
+(W2 §8.2: ``peak_load``, ``export_demo``, ``ctl_local``, ``chp_no_gas``), S-21…S-23 (W3 §8.1: ``air_leak``,
 ``gas_overuse``,
-``water_leak`` — ресурсні сценарії, ``duration_s = 0`` — до зупинки).
+``water_leak`` — ресурсні сценарії, ``duration_s = 0`` — до зупинки) і S-25…S-30 (td_chp §8: аварії КГУ
+``chp_overheat``…``chp_no_permit``; S-24 — ``scenarios_evac``).
 
 ``ScenarioRunner(world).start(name, params, run_ref)`` (потрібен запущений asyncio-цикл):
 валідація pydantic (``ScenarioParamsError`` -> 422), режим і конфлікти (``ScenarioConflict`` -> 409),
@@ -371,6 +372,12 @@ class ChpNoGasParams(BaseParams):
 
     duration_s: int = Field(600, ge=0)
     gas_bar: float = Field(0.80, ge=0, le=1.4)
+
+
+class ChpFaultParams(BaseParams):
+    """W3 td_chp §8 (S-25…S-30): аварії КГУ — лише тривалість (за замовчуванням 600 с)."""
+
+    duration_s: int = Field(600, ge=0)
 
 
 class AirLeakParams(BaseParams):
@@ -821,6 +828,66 @@ class ChpNoGas(Scenario):
         ctx.step("chp_no_gas", f"Тиск газу КГУ {p.gas_bar:g} бар", gas_bar=p.gas_bar)
 
 
+class ChpFault(Scenario):
+    """W3 td_chp §8 п. 7 (S-25…S-30): аварія КГУ прапором світу (модель ``chp``); відкат повертає прапор."""
+
+    group = "energy"
+    Params = ChpFaultParams
+    flag: ClassVar[str]
+    value: ClassVar[Any] = 1
+    text: ClassVar[str]
+
+    def conflicts(self, p: Any) -> Any:
+        return {f"chp:{self.flag}"}
+
+    async def apply(self, ctx: Any, p: Any) -> None:
+        ctx.flag(self.flag, self.value)
+        ctx.step(self.name, self.text)
+
+
+class ChpOverheat(ChpFault):
+    """S-25: ``chp_temp_fault`` — ціль ``eng/t_jacket_out`` 107 °C → аварія 112."""
+
+    name, title_uk, flag, text = "chp_overheat", "КГУ: перегрів ОЖ", "chp_temp_fault", "Перегрів ОЖ КГУ → аварія 112"
+
+
+class ChpHotReturn(ChpFault):
+    """S-26: ``chp_ret_fault`` — ``ht/t_ret_raw`` → 84 °C: зниження потужності, далі аварія 113."""
+
+    name, title_uk, flag = "chp_hot_return", "КГУ: гаряча зворотка", "chp_ret_fault"
+    text = "Гаряча зворотка опалення → зниження потужності, аварія 113"
+
+
+class ChpGasLeak(ChpFault):
+    """S-27: ``chp_gas_leak`` — ``safe/lel`` → 32 % НКПР: аварія 114."""
+
+    name, title_uk, flag, text = (
+        "chp_gas_leak",
+        "КГУ: загазованість",
+        "chp_gas_leak",
+        "Загазованість контейнера → аварія 114",
+    )
+
+
+class ChpFire(ChpFault):
+    """S-28: ``chp_fire`` — пожежа в контейнері: аварія 115, гасіння через 3 с."""
+
+    name, title_uk, flag, text = "chp_fire", "КГУ: пожежа", "chp_fire", "Пожежа в контейнері КГУ → аварія 115"
+
+
+class ChpRocof(ChpFault):
+    """S-29: ``chp_rocof`` — спрацював ROCOF: зупинка без аварії (``alarm/trip = 2``)."""
+
+    name, title_uk, flag, text = "chp_rocof", "КГУ: спрацював ROCOF", "chp_rocof", "Спрацював ROCOF → зупинка (trip 2)"
+
+
+class ChpNoPermit(ChpFault):
+    """S-30: ``chp_permit = 0`` — знято дозвіл КГУ: контрольована зупинка (``alarm/trip = 3``) або відмова пуску."""
+
+    name, title_uk, flag, value = "chp_no_permit", "КГУ: знято дозвіл", "chp_permit", 0
+    text = "Знято дозвіл КГУ → зупинка (trip 3) або відмова пуску"
+
+
 class AirLeak(Scenario):
     """W3 §8.1 (S-21): ``air_leak = leak_extra`` — модель ``air`` додає витік до витрати магістралі (ніч: 1,6 → 4,6
     м³/хв)."""
@@ -999,3 +1066,6 @@ class ScenarioRunner:
 
 
 from iot_sim.core import scenarios_evac  # noqa: E402, F401  (S-24 fire_evacuation додає себе в SCENARIOS)
+
+# S-25…S-30: аварії КГУ (після S-24 у реєстрі)
+SCENARIOS.extend([ChpOverheat, ChpHotReturn, ChpGasLeak, ChpFire, ChpRocof, ChpNoPermit])

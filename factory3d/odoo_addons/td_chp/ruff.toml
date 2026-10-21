@@ -1,0 +1,10 @@
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "B"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"__manifest__.py" = ["B018", "E501"]
+# дослівна копія карти SPEC §5.2 у рядку-константі
+"tools/gen_chp_signals.py" = ["E501"]

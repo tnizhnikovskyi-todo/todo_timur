@@ -1,7 +1,7 @@
 /** @odoo-module **/
 // UI-23 EnergyLayerExtension (SPEC 8.4.3): розширення «Переглядача» — шар «Енергетика в 3D».
 // Реєструється в ядрі `registerViewerExtension` (R-26): режим розфарбування (UI-24), маркери тривог (UI-25),
-// блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06, за `layer.can_pult`). Без `D.energy.layer` (старий сервер) розширення неактивне, режим схований.
+// блок «Енергетика» в картці (UI-26), кнопка «Відкрити пульт» (VX-06, за `layer.can_pult`; в картці КГУ — «Відкрити пульт КГУ», за `layer.can_chp_pult`). Без `D.energy.layer` (старий сервер) розширення неактивне, режим схований.
 // R-59: лічильник ₴ у «Потоці зміни» (`api.flowSlot`) і розфарбування «Споживання» за часом програвання (`simPower`) — з добових серій (`day_series.js`).
 // УВАГА (rjsmin): без вкладених шаблонних літералів у `${...}` — рядки склеєно конкатенацією.
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
@@ -19,8 +19,16 @@ const MAX_CARD_ALARMS = 3;
 const LEVEL_TEXT = { bad: "Тривога", warn: "Увага" };
 /** Дія Пульту енергетика (`td_energy`, V-22): за xml-id — з `context` і назвою з запису, як з головного меню. */
 export const PULT_ACTION = "td_energy.action_td_energy_pult";
-/** Об'єкти сцени з кнопкою «Відкрити пульт» у картці: АРМ енергетика і ГРЩ (КГУ — код `CHP` — додати сюди пізніше). */
-export const PULT_CODES = new Set(["EMS-1", "SWB-1"]);
+/** Дія пульта КГУ (`td_chp`, міст `td_chp_factory3d`, VX-06): кнопка в картці `CHP`, коли сервер дозволив (`layer.can_chp_pult`). */
+export const CHP_PULT_ACTION = "td_chp.action_td_chp_pult";
+/** Кнопки пульта в картках: код об'єкта сцени → кнопка, дія й ключ дозволу в `energy.layer` (VX-06). */
+export const PULT_BUTTONS = new Map([
+    ["EMS-1", { id: "open_pult", label: "Відкрити пульт", action: PULT_ACTION, flag: "can_pult" }],
+    ["SWB-1", { id: "open_pult", label: "Відкрити пульт", action: PULT_ACTION, flag: "can_pult" }],
+    ["CHP", { id: "open_chp_pult", label: "Відкрити пульт КГУ", action: CHP_PULT_ACTION, flag: "can_chp_pult" }],
+]);
+/** Об'єкти сцени з кнопкою «Відкрити пульт»: АРМ енергетика, ГРЩ і КГУ. */
+export const PULT_CODES = new Set(PULT_BUTTONS.keys());
 
 /** Блок «Енергетика» однієї картки вузла (UI-26); `canOpen` — є `card` і дозволено `openAction` (не киоск). */
 export function nodeBlockHtml(node, layer, canOpen) {
@@ -133,14 +141,16 @@ export class EnergyLayerExtension {
     }
 
     /**
-     * VX-06: основна кнопка «Відкрити пульт» у верхньому ряду картки `PULT_CODES`. Лише коли сервер дозволив (`layer.can_pult`:
-     * група `td_energy.group_td_energy_user` або вища, не киоск) і `api.canOpenAction`; без шару (старий сервер) кнопки немає.
+     * VX-06: основна кнопка «Відкрити пульт» (для `CHP` — «Відкрити пульт КГУ») у верхньому ряду картки `PULT_CODES`. Лише коли сервер
+     * дозволив (`layer.can_pult`: група `td_energy.group_td_energy_user` або вища, не киоск; для КГУ — `layer.can_chp_pult`: ще й
+     * встановлено `td_chp` і є група `td_chp.group_td_chp_user`) і `api.canOpenAction`; без шару (старий сервер) кнопки немає.
      */
     cardActions(code, D, api) {
-        if (!PULT_CODES.has(code) || !api?.canOpenAction || layerOf(D)?.can_pult !== true) {
+        const btn = PULT_BUTTONS.get(code);
+        if (!btn || !api?.canOpenAction || layerOf(D)?.[btn.flag] !== true) {
             return [];
         }
-        return [{ id: "open_pult", label: "Відкрити пульт", primary: true }];
+        return [{ id: btn.id, label: btn.label, primary: true }];
     }
 
     /** VX-05: «Відкрити картку вузла» → клієнтська дія W1 `td_energy.node_card`; VX-06: «Відкрити пульт» → `PULT_ACTION`. */
@@ -149,6 +159,8 @@ export class EnergyLayerExtension {
             api.openAction({ type: "ir.actions.client", tag: "td_energy.node_card", name: arg, params: { code: arg } });
         } else if (action === "open_pult") {
             api.openAction(PULT_ACTION);
+        } else if (action === "open_chp_pult") {
+            api.openAction(CHP_PULT_ACTION);
         }
     }
 

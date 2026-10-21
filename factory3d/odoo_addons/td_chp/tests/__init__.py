@@ -1,0 +1,15 @@
+from . import (
+    test_command_flow,
+    test_command_verify,
+    test_events,
+    test_hoot,
+    test_install,
+    test_interlocks,
+    test_kpi,
+    test_maintenance,
+    test_routes,
+    test_signal_map,
+    test_sim,
+    test_state_api,
+    test_trend_journal,
+)

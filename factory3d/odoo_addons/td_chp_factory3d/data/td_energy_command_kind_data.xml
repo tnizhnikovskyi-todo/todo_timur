@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D-15: 7 видів команд КГУ моста в td_energy_control (клас А — одне підтвердження, без другої особи; `chp_start` і
+     `chp_stop` уже є в td_energy_control). Виконавець `chp` додає цей модуль (models/td_energy_action.py): запис у
+     chp/ctl/* через td.command і верифікація за chp/ctl/ack або значенням цілі. Без плитки на екрані «Керування»:
+     команди йдуть із Пульта КГУ. Блокування R-07 td_chp діють у мосту (preflight), тому `checks` порожні. -->
+<odoo>
+    <record id="kind_chp_estop" model="td.energy.command.kind">
+        <field name="code">chp_estop</field>
+        <field name="name">Аварійний стоп КГУ</field>
+        <field name="sub_template">негайна зупинка без охолодження</field>
+        <field name="sequence">46</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Аварійний стоп КГУ?</field>
+        <field name="confirm_text">Негайна зупинка КГУ без охолодження: газові клапани закриваються, QF-CHP відключається, контур аварійного стопу розмикається. Скидання — командою «Скинути аварію».</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_reset" model="td.energy.command.kind">
+        <field name="code">chp_reset</field>
+        <field name="name">Скидання аварії КГУ</field>
+        <field name="sub_template">агрегат → Резерв</field>
+        <field name="sequence">47</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Скинути аварію КГУ?</field>
+        <field name="confirm_text">Аварію КГУ буде скинуто, контур аварійного стопу замкнеться, агрегат перейде в «Резерв». Скидання можливе лише коли причину усунуто.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_set_mode" model="td.energy.command.kind">
+        <field name="code">chp_set_mode</field>
+        <field name="name">Режим КГУ: {mode_label}</field>
+        <field name="sub_template">уставка режиму роботи</field>
+        <field name="sequence">48</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[{'name': 'mode', 'label': 'Режим', 'type': 'enum', 'min': None, 'max': None, 'default': 'heat', 'unit': '', 'choices': ['heat', 'el', 'peak', 'manual']}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Змінити режим КГУ?</field>
+        <field name="confirm_text">Режим роботи КГУ: {mode_label}.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_set_setpoint" model="td.energy.command.kind">
+        <field name="code">chp_set_setpoint</field>
+        <field name="name">Уставка P КГУ: {sp_text} %</field>
+        <field name="sub_template">діє лише в режимі «Ручний»</field>
+        <field name="sequence">49</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[{'name': 'sp_pct', 'label': 'Уставка P', 'type': 'float', 'min': 50, 'max': 100, 'default': 80, 'unit': '%', 'choices': None}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Змінити уставку потужності КГУ?</field>
+        <field name="confirm_text">Уставка навантаження: {sp_text} % (діє лише в режимі «Ручний»).</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_set_cos" model="td.energy.command.kind">
+        <field name="code">chp_set_cos</field>
+        <field name="name">Уставка cos φ КГУ: {cos_text}</field>
+        <field name="sub_template">крок 0,01</field>
+        <field name="sequence">50</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[{'name': 'cos', 'label': 'cos φ', 'type': 'float', 'min': 0.9, 'max': 1.0, 'default': 0.98, 'unit': '', 'choices': None}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Змінити уставку cos φ КГУ?</field>
+        <field name="confirm_text">Уставка cos φ: {cos_text}.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_set_heat_dir" model="td.energy.command.kind">
+        <field name="code">chp_set_heat_dir</field>
+        <field name="name">Напрямок тепла КГУ: {dir_label}</field>
+        <field name="sub_template">котельня або градирня</field>
+        <field name="sequence">51</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[{'name': 'dir', 'label': 'Напрямок тепла', 'type': 'enum', 'min': None, 'max': None, 'default': 'auto', 'unit': '', 'choices': ['auto', 'boiler', 'cooler']}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Змінити напрямок тепла КГУ?</field>
+        <field name="confirm_text">Напрямок тепла: {dir_label}.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+    <record id="kind_chp_set_bypass" model="td.energy.command.kind">
+        <field name="code">chp_set_bypass</field>
+        <field name="name">Заслінка вихлопу КГУ: {bypass_label}</field>
+        <field name="sub_template">ТО вихлопних газів або обхід</field>
+        <field name="sequence">52</field>
+        <field name="tile" eval="False"/>
+        <field name="cls">A</field>
+        <field name="executor">chp</field>
+        <field name="resource">chp</field>
+        <field name="params_schema" eval="[{'name': 'mode', 'label': 'Заслінка', 'type': 'enum', 'min': None, 'max': None, 'default': 'auto', 'unit': '', 'choices': ['auto', 'ht', 'bypass']}]"/>
+        <field name="checks" eval="[]"/>
+        <field name="confirm_title">Змінити положення заслінки вихлопу КГУ?</field>
+        <field name="confirm_text">Заслінка вихлопу: {bypass_label}.</field>
+        <field name="remote_gated" eval="False"/>
+    </record>
+</odoo>

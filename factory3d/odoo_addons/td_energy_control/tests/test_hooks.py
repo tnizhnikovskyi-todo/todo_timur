@@ -14,7 +14,8 @@ class TestHooks(TestControlCommon):
             "sources": env["td.source"].sudo().search_count([("module", "=", "energy_control")]),
             "signals": env["td.signal"].sudo().search_count([("module", "=", "energy_control")]),
             "scenarios": env["td.energy.scenario"].search_count([]),
-            "kinds": env["td.energy.command.kind"].search_count([]),
+            # без видів моста td_chp_factory3d (виконавець `chp`)
+            "kinds": env["td.energy.command.kind"].search_count([("executor", "!=", "chp")]),
             "interlocks": env["td.energy.interlock"].search_count([]),
             "shed": env["td.energy.shed.item"].search_count([]),
             "state": env["td.energy.control.state"].search_count([]),

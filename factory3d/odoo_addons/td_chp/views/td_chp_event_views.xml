@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-03: журнал подій і аварій -->
+<odoo>
+    <record id="view_td_chp_event_list" model="ir.ui.view">
+        <field name="name">td.chp.event.list</field>
+        <field name="model">td.chp.event</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false" decoration-danger="level == 'alarm'"
+                  decoration-warning="level == 'warn'" decoration-muted="level == 'info'">
+                <header>
+                    <button name="action_ack_selected" type="object" string="Квитувати вибране"
+                            groups="td_chp.group_td_chp_operator"/>
+                </header>
+                <field name="ts"/>
+                <field name="level" widget="badge" decoration-muted="level == 'info'"
+                       decoration-warning="level == 'warn'" decoration-danger="level == 'alarm'"/>
+                <field name="kind"/>
+                <field name="text"/>
+                <field name="ack_state" widget="badge" decoration-danger="ack_state == 'new'"
+                       decoration-success="ack_state == 'acked'" decoration-muted="ack_state == 'none'"/>
+                <field name="unit_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_chp_event_search" model="ir.ui.view">
+        <field name="name">td.chp.event.search</field>
+        <field name="model">td.chp.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="text"/>
+                <field name="code"/>
+                <filter name="not_acked" string="Не квитовані" domain="[('ack_state', '=', 'new')]"/>
+                <filter name="alarms" string="Аварії" domain="[('level', '=', 'alarm')]"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0)).strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <group>
+                    <filter name="group_level" string="Рівень" context="{'group_by': 'level'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_chp_event" model="ir.actions.act_window">
+        <field name="name">Журнал подій КГУ</field>
+        <field name="res_model">td.chp.event</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_td_chp_event_search"/>
+    </record>
+</odoo>

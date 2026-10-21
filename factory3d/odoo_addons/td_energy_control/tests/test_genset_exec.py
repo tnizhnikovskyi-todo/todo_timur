@@ -43,6 +43,8 @@ class TestGensetExec(TestControlCommon):
                 self.ctl(self.u_chief).prepare("genset_test")
 
     def test_genset_flow(self):  # AC-277
+        if "td.genset.config" not in self.env:
+            self.skipTest("Потрібен td_genset: текст діалогу бере хвилини тесту з td.genset.config")
         with patch.object(genset_link, "adapter", return_value=self.fake_adapter()):
             prep = self.ctl(self.u_en1).prepare("genset_test")
             codes = [c["code"] for c in prep["checks"]]
@@ -57,6 +59,8 @@ class TestGensetExec(TestControlCommon):
             self.assertFalse(act.command_id)
 
     def test_genset_error_blocks(self):
+        if "td.genset.config" not in self.env:
+            self.skipTest("Потрібен td_genset: текст діалогу бере хвилини тесту з td.genset.config")
         err = UserError("Тест уже йде.")
         with patch.object(genset_link, "adapter", return_value=self.fake_adapter(start=err)):
             act = self.run_action("genset_test", user=self.u_chief)

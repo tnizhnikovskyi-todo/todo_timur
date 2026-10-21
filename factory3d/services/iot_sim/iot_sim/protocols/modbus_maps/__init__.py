@@ -230,6 +230,11 @@ class Ctx:
         sig = self.world.signals.get(code)
         return default if sig is None else sig.value
 
+    def model(self, device: str) -> Any:
+        """Модель пристрою світу за кодом (``Ctx.model("CHP")``) або ``None``."""
+        dev = self.world.devices.get(device)
+        return None if dev is None else dev.model
+
     def sig_at(self, unit: int, pdu: int, fc: int = 3) -> Any:
         """Сигнал каталогу за (unit, fc, початковий PDU) — перший у порядку каталогу, або ``None``."""
         if self._by_addr is None:

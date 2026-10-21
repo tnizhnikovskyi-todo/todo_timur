@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-05: ТО за наробітком -->
+<odoo>
+    <record id="view_td_chp_rule_list" model="ir.ui.view">
+        <field name="name">td.chp.maintenance.rule.list</field>
+        <field name="model">td.chp.maintenance.rule</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="state == 'overdue'" decoration-warning="state == 'soon'">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="every_h"/>
+                <field name="last_h"/>
+                <field name="hours"/>
+                <field name="left_h"/>
+                <field name="progress" widget="progressbar"/>
+                <field name="state" widget="badge" decoration-success="state == 'ok'"
+                       decoration-warning="state == 'soon'" decoration-danger="state == 'overdue'"/>
+                <field name="request_id" optional="show"/>
+                <button name="action_td_done" type="object" string="ТО виконано" icon="fa-check"
+                        groups="td_chp.group_td_chp_operator"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_chp_rule_form" model="ir.ui.view">
+        <field name="name">td.chp.maintenance.rule.form</field>
+        <field name="model">td.chp.maintenance.rule</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_td_done" type="object" string="ТО виконано" class="btn-primary"
+                            groups="td_chp.group_td_chp_operator"/>
+                    <field name="state" widget="statusbar" statusbar_visible="ok,soon,overdue"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="unit_id"/>
+                            <field name="name"/>
+                            <field name="every_h"/>
+                            <field name="last_h"/>
+                            <field name="lead_pct"/>
+                        </group>
+                        <group>
+                            <field name="hours"/>
+                            <field name="left_h"/>
+                            <field name="progress" widget="progressbar"/>
+                            <field name="request_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_chp_rule" model="ir.actions.act_window">
+        <field name="name">ТО КГУ за наробітком</field>
+        <field name="res_model">td.chp.maintenance.rule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

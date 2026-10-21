@@ -7,7 +7,16 @@ from .common import TAG_ARGS, SimCase
 @tagged(*TAG_ARGS)
 class TestScenarioRun(SimCase):
     def test_scenarios_loaded(self):
-        self.assertEqual(self.env["td.sim.scenario"].search_count([]), 24)
+        self.assertEqual(self.env["td.sim.scenario"].search_count([]), 30)
+
+    def test_chp_scenarios_loaded(self):
+        """S-25…S-30 (td_chp §8): шість аварій КГУ, група energy, 600 с."""
+        codes = ("chp_overheat", "chp_hot_return", "chp_gas_leak", "chp_fire", "chp_rocof", "chp_no_permit")
+        found = self.env["td.sim.scenario"].search([("code", "in", codes)], order="sequence")
+        self.assertEqual(found.mapped("code"), list(codes))
+        self.assertEqual(set(found.mapped("group")), {"energy"})
+        self.assertEqual(set(found.mapped("duration_s")), {600})
+        self.assertTrue(all(s.params_schema["properties"].get("duration_s") for s in found))
 
     def test_run_wizard_creates_run(self):
         scenario = self.env.ref("td_iot_sim.scenario_filter_clogged")

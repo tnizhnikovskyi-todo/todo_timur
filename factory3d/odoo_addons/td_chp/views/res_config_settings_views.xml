@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-07: блок «Когенерація» у налаштуваннях (адміністратор) -->
+<odoo>
+    <record id="res_config_settings_view_form_td_chp" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.chp</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="47"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Когенерація" string="Когенерація" name="td_chp" groups="td_factory3d.group_td_admin">
+                    <block title="Стоп-крани" name="td_chp_switches">
+                        <setting string="Читання КГУ" help="Стоп-кран читання: вимикає події, ТО й крони КГУ">
+                            <field name="td_chp_read_enabled"/>
+                        </setting>
+                        <setting string="Керування КГУ" help="Запис команд у контролер (запобіжник модуля)">
+                            <field name="td_chp_write_enabled"/>
+                        </setting>
+                        <setting string="Дистанційний пуск"
+                                 help="Дозвіл дистанційного пуску за регламентом об'єкта; зупинка від нього не залежить">
+                            <field name="td_chp_remote_switching_enabled"/>
+                        </setting>
+                    </block>
+                    <block title="Підтвердження й виконання" name="td_chp_timeouts">
+                        <setting string="Строки, с">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_confirm_ttl_s"/>
+                                    <field name="td_chp_confirm_ttl_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_second_ttl_s"/>
+                                    <field name="td_chp_second_ttl_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_command_ttl_s"/>
+                                    <field name="td_chp_command_ttl_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_verify_timeout_s"/>
+                                    <field name="td_chp_verify_timeout_s"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Дані й журнал" name="td_chp_data">
+                        <setting string="Свіжість і зберігання">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_stale_s"/>
+                                    <field name="td_chp_stale_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_event_keep_days"/>
+                                    <field name="td_chp_event_keep_days"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_chp_bus_throttle_s"/>
+                                    <field name="td_chp_bus_throttle_s"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_td_chp_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування КГУ</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module': 'td_chp'}</field>
+    </record>
+</odoo>

@@ -1,0 +1,47 @@
+<section class="oe_container">
+    <div class="oe_row oe_spaced">
+        <h2 class="oe_slogan">Cogeneration Unit Console</h2>
+        <h3 class="oe_slogan">Operator console for a gas cogeneration unit (CHP): live state, 3D model, mimic diagram, interlocks, commands, journal</h3>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>What it does</h3>
+        <p>A control-room screen for a TEDOM-type gas CHP unit. It reads the controller registers through the Factory 3D telemetry platform and shows the unit as a 3D model and as a layered mimic diagram, with KPI tiles, a 24-hour / 1-hour trend, cylinder diagnostics and an event journal with acknowledgement.</p>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Key features</h3>
+        <ul>
+            <li>3D model (37 nodes in 8 systems) and a six-layer mimic diagram with cross-layer links</li>
+            <li>14 KPI tiles, trend for 24 h / 1 h, 16-cylinder diagnostics, maintenance by engine hours</li>
+            <li>Start, stop, emergency stop, reset and set-point commands with interlocks, two-person confirmation and a journal</li>
+            <li>Light and dark themes, works on a phone; without WebGL the 3D view is replaced by a placeholder</li>
+            <li>The 3D library (three.js r147) is bundled and loaded only when the console is opened</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Requirements</h3>
+        <ul>
+            <li>Works on <b>Odoo 19 Community</b> and Enterprise; no Enterprise module is required.</li>
+            <li>Factory 3D suite modules: Factory 3D (<code>td_factory3d</code>) and Factory 3D Telemetry (<code>td_telemetry</code>).</li>
+            <li>The register map is a typical assumption and must be adjusted to the actual controller; the module does not replace the controller's own protections.</li>
+            <li>Writing to the controller is off by default (<code>td.chp.write_enabled</code>).</li>
+            <li>Interface language: Ukrainian; an English translation is not included yet.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="oe_row">
+        <h3>Support</h3>
+        <p>Part of the Factory 3D suite for Odoo 19. Questions and support requests:
+            <a href="mailto:support@todo.ltd">support@todo.ltd</a></p>
+    </div>
+</section>
