@@ -12,7 +12,8 @@
 import {
     esc, nf, pct, plural, pill, barW, bar, cx, KIND, MACHINE_STATUS, BIN_STATE, WO_STATE, MO_STATE, PICK_STATE, docPill,
 } from "./format.js";
-import { detectLite, liteSettings } from "./lite.js";
+import { detectLite, liteSettings, movePixelRatio } from "./lite.js";
+import { estimateLabelSize, labelClass, labelLimits, layoutLabels, LABEL_PRIO, splitLabel } from "./labels.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
 import { createStockLoad, liveLine } from "./stock_load.js";
 import { createBatcher } from "./batch.js";
@@ -339,6 +340,7 @@ const scene = new THREE.Scene();
 const NO_BATCH = { add: () => 0, sync: () => false, touch: () => false, beforeRender() {}, afterRender() {}, stats: () => ({ batches: 0, eligible: 0, cold: 0, solo: 0 }), dispose() {}, batches: [], isBatched: () => false };
 // ручне вимкнення для порівняння й відладки: `?f3d_batch=0` / `?f3d_ondemand=0` в URL (кіоск) або localStorage `f3d.batch` / `f3d.ondemand` = "0"
 const perfFlag = (k) => { try { return new URLSearchParams(window.location.search).get("f3d_" + k) ?? storage?.getItem("f3d." + k); } catch { return null; } };
+const perfRatio = () => { const v = Number(perfFlag("pr")); return v >= 0.5 && v <= 3 ? v : null; }; // ручний масштаб буфера кадру: `?f3d_pr=1` / localStorage `f3d.pr`
 const batcher = opts.batch === false || perfFlag("batch") === "0" ? NO_BATCH : createBatcher({ THREE, scene, cell: (perfFlag("cell") ?? opts.batchCell) == null ? undefined : Number(perfFlag("cell") ?? opts.batchCell) });
 // PERF: рендер за потребою (див. «цикл»): `invalidate()` — кадр треба перемалювати; працює лише з WebGL-рендерером
 let needDraw = true;
@@ -352,6 +354,9 @@ controls.minDistance = 2;
 controls.maxDistance = 440;
 controls.screenSpacePanning = false;
 controls.addEventListener("change", invalidate);
+// користувач узявся за камеру (ЛКМ/ПКМ/колесо/дотик) — нижча якість кадру, поки рухається; autoRotate «стіни» сюди не потрапляє (подія `start` лише від користувача)
+controls.addEventListener("start", () => { view.drag = true; });
+controls.addEventListener("end", () => { view.drag = false; view.until = paceNow() + 450; }); // 450 мс — згасання інерції (damping)
 
 if (LS.environment && !nullR) {
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -390,8 +395,25 @@ const themeObs = new MutationObserver(applyTheme);
 themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-bs-theme", "data-color-scheme", "class"] });
 themeObs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
+// якість під рух: у спокої — повний масштаб буфера кадру (`LS.pixelRatio`: повний режим — MSAA і min(dpr, 2), lite на десктопі — надвибірка ≥ 1,5),
+// під час обертання, зуму й прольоту камери — нижчий (`movePixelRatio`); після зупинки (450 мс згасання) кадр перемальовується повністю.
+// Автооблітання «стіни» (`controls.autoRotate`) рухом не вважається: на телевізорі сглаживання лишається повним.
+const coarsePointer = matchMedia("(pointer: coarse)").matches;
+const view = { w: 0, h: 0, rest: 1, moving: false, now: 1, until: 0, drag: false };
+function setPixelRatio() {
+  const r = view.moving ? movePixelRatio(view.rest) : view.rest;
+  if (r === view.now && renderer.getPixelRatio?.() === r) {return;}
+  view.now = r;
+  renderer.setPixelRatio(r);
+  renderer.setSize(view.w, view.h);
+  invalidate();
+}
 function resize() {
   const { clientWidth: w, clientHeight: h } = stage;
+  view.w = w; view.h = h;
+  view.rest = perfRatio() ?? LS.pixelRatio(window.devicePixelRatio, { w, h, coarse: coarsePointer });
+  renderer.setPixelRatio(view.moving ? movePixelRatio(view.rest) : view.rest);
+  view.now = renderer.getPixelRatio?.() ?? view.rest;
   renderer.setSize(w, h);
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
@@ -503,6 +525,14 @@ for (const p of MANIFEST.parts) {
 for (const l of MANIFEST.layers) {layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: l.key !== "roofdeck" });}
 let modelReady;
 const modelLoaded = new Promise((res) => { modelReady = res; });
+// заливки зон і розмітка лежать на 1–2 см над підлогою й асфальтом: зсув у буфері глибини до камери (polygonOffset) і порядок малювання
+// прибирають мерехтіння (z-fighting) на великих відстанях; розмітка — над заливкою. Такі меші не пакетуються (batchable: polygonOffset, renderOrder) — їх ≈ 70.
+function zoneDepth(o, kind) {
+  const mark = o.material.name === "marking";
+  if (kind !== "zone" && !mark) {return;}
+  Object.assign(o.material, { polygonOffset: true, polygonOffsetFactor: mark ? -3 : -2, polygonOffsetUnits: mark ? -6 : -3 });
+  o.renderOrder = mark ? 2 : 1;
+}
 function onPart(gltf) {
   const root = gltf.scene;
   const fresh = [];
@@ -520,6 +550,7 @@ function onPart(gltf) {
       o.material.envMapIntensity = LS.envMapIntensity;
       const r = codeRoot(o);
       const kind = r?.userData.kind;
+      zoneDepth(o, kind);
       o.castShadow = LS.shadows && !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
       o.receiveShadow = LS.shadows && !o.material.transparent;
       if (u.role === "status") {lamps.push(o);}
@@ -826,17 +857,28 @@ $(".o_f3d_opt-ceiling").onchange = (e) => setCeiling(e.target.checked);
 syncCeilingUi();
 
 // ---------------------------------------------------------------- підписи
+// Клас підпису (зона > ділянка > ворота > об'єкт, labels.js) задає пріоритет і відстані показу; перекриті на екрані підписи нижчого пріоритету
+// ховаються (до наведення), довші за ~26 символів назви ламаються на два рядки, чим далі камера, тим менший бюджет підписів (R-29).
 const labels = [];
 function addLabel(obj, html, cls, yOffset) {
   const el = document.createElement("div");
   el.className = cx("lbl " + cls);
   el.innerHTML = html;
+  const parts = breakLabel(el, cls);
   const box = new THREE.Box3().setFromObject(obj);
   const c = box.getCenter(new THREE.Vector3());
   const lbl = new CSS2DObject(el);
   lbl.position.set(c.x, (cls === "zone" ? 0.05 : box.max.y) + yOffset, c.z);
   scene.add(lbl);
-  labels.push({ lbl, obj, cls });
+  labels.push({ lbl, obj, cls, lines: parts.length, chars: Math.max(...parts.map((t) => t.length)) });
+}
+// остання текстова ділянка підпису (після крапки статусу) — у два рядки через <br>
+function breakLabel(el, cls) {
+  const t = [...el.childNodes].reverse().find((n) => n.nodeType === 3);
+  if (!t) {return [""];}
+  const parts = splitLabel(t.nodeValue, cls === "zone" ? 30 : 26);
+  if (parts.length > 1) { t.nodeValue = parts[0]; t.after(document.createElement("br"), document.createTextNode(parts[1])); }
+  return parts;
 }
 function buildLabels(objs = [...items.values()]) {
   for (const obj of objs) {
@@ -849,14 +891,56 @@ function buildLabels(objs = [...items.values()]) {
   }
 }
 const tmpV = new THREE.Vector3();
-function syncLabels() {
+let labelsAt = -1e9, labelsStale = false;
+// розмір підпису на екрані: виміряний у DOM (поки підпис показано), до першого виміру — оцінка за довжиною тексту
+function labelSize(e) {
+  const el = e.lbl.element;
+  const len = el.textContent.length;
+  if (e.w === undefined || e.len !== len) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (w > 0 && h > 0) { e.w = w; e.h = h; e.len = len; }
+  }
+  if (e.w !== undefined) {return [e.w, e.h];}
+  const z = e.cls === "zone";
+  const est = estimateLabelSize(e.chars ?? len, { zone: z, lines: e.lines ?? 1 });
+  return [est.w, est.h];
+}
+function labelKind(e) {
+  if (e.kind === undefined) {
+    const u = e.obj.userData || {};
+    const r = zoneRects.get(u.code);
+    e.kind = labelClass({ cls: e.cls === "zone" ? "zone" : "object", code: u.code, area: r ? (r[2] - r[0]) * (r[3] - r[1]) : 0, outdoor: !!u.outdoor });
+  }
+  return e.kind;
+}
+// `throttle` — виклик із циклу кадрів: не частіше за 100 мс (рішення про показ не мусить мінятися щокадру; позиції оновлює CSS2DRenderer)
+function syncLabels(throttle = false) {
+  const t = paceNow();
+  if (throttle && t >= labelsAt && t - labelsAt < 100) { labelsStale = true; return; } // хвіст: опитування (POLL_MS) перемалює кадр і перерахує ще раз
+  labelsAt = t;
+  labelsStale = false;
+  camera.updateMatrixWorld(); // обернена матриця камери актуальна навіть до `renderer.render` цього кадру
   const on = $(".o_f3d_opt-labels").checked;
   const dist = camera.position.distanceTo(controls.target);
   const busy = hl.markers.length > 0;
-  for (const { lbl, obj, cls } of labels) {
-    const near = cls === "zone" ? dist > 18 : LS.lite ? obj === selected : camera.position.distanceTo(lbl.getWorldPosition(tmpV)) < 70;
-    lbl.visible = on && near && !busy && isShown(obj);
+  const lim = labelLimits(dist);
+  const cands = [];
+  for (const e of labels) {
+    const { lbl, obj } = e;
+    lbl.visible = false;
+    if (!on || busy || !isShown(obj)) {continue;}
+    const force = obj === selected || obj === hovered; // вибраний і наведений — завжди, поверх усіх
+    const kind = labelKind(e);
+    lbl.getWorldPosition(tmpV);
+    const d = camera.position.distanceTo(tmpV);
+    if (!force && !(kind === "object" ? lim.object && !LS.lite && d < 70 : lim[kind] || (kind === "gate" && prodOv.on))) {continue;} // шар замовлень: «Ворота N» — з будь-якої відстані
+    tmpV.project(camera);
+    if (tmpV.z > 1) {continue;} // за камерою
+    const [w, h] = labelSize(e);
+    cands.push({ e, id: e, prio: LABEL_PRIO[kind], x: (tmpV.x * 0.5 + 0.5) * view.w, y: (-tmpV.y * 0.5 + 0.5) * view.h, w, h, d, force });
   }
+  const shown = layoutLabels(cands, { width: view.w, height: view.h, budget: prodOv.on ? Math.max(lim.budget, 22) : lim.budget });
+  for (const c of cands) {c.e.lbl.visible = shown.has(c.id);}
 }
 // ---------------------------------------------------------------- точка розширення (R-25)
 function dropLabels(objs) {
@@ -990,7 +1074,7 @@ function extAction(el) {
   const ext = [...EXTENSIONS].find((x) => x.id === id);
   if (ext && typeof ext.onAction === "function") {extTry(() => ext.onAction(extApi, act, rest.join(":"), el));}
 }
-$(".o_f3d_opt-labels").onchange = syncLabels;
+$(".o_f3d_opt-labels").onchange = () => syncLabels();
 $(".o_f3d_opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
 
 // ---------------------------------------------------------------- точка, що біжить маршрутом вибраного замовлення
@@ -1185,7 +1269,7 @@ const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожеж
 const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
 function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
 function clearProdOverlay() {
-  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) {o.geometry?.dispose();} }
+  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO && o.geometry !== MARK_DISC) {o.geometry?.dispose();} }
   prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
   prodOv.tracks = []; prodOv.batches = []; prodOv.nShown = null;
   const n = $(".o_f3d_flow-n");
@@ -1200,6 +1284,8 @@ function cyclePosition(wos, at, firstOut, lastIn) {
   if (done === wos.length - 1) {return { u: firstOut, w: null, phase: "запаковано — на шляху до клієнта" };}
   return { u: at[done] + (at[done + 1] - at[done]) * 0.5, w: wos[done + 1], phase: `до ${wos[done + 1].name}` };
 }
+const MARK_DISC = new THREE.CylinderGeometry(0.4, 0.4, 0.16, 28);
+const MARK_RIM = new THREE.CylinderGeometry(0.58, 0.58, 0.14, 28);
 function drawProdOverlay() {
   clearProdOverlay();
   if (!prodOv.on || !D) {return;}
@@ -1295,11 +1381,13 @@ function drawProdOverlay() {
     const pos = cyclePosition(wos, at, firstOut, lastIn);
     const p = curve.getPoint(Math.min(1, Math.max(0, pos.u / (pts.length - 1))));
     const blocked = !!pos.w?.blocked && pos.w.state === "progress";
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col.clone() }));
-    const ring = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 12),
-      new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
+    // маркер замовлення: невеликий диск кольору замовлення з суцільним світлим ободком (у «зупинці» — червоним), без напівпрозорих «хмар»;
+    // сидить на верстаті чи біля підлоги: лінія маршруту йде на 1–1,5 м над верхом об'єкта, маркер — на 0,5 м нижче неї, а не висить кулею
+    const dot = new THREE.Mesh(MARK_DISC, new THREE.MeshBasicMaterial({ color: col.clone() }));
+    const ring = new THREE.Mesh(MARK_RIM, new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff }));
+    ring.position.y = -0.03;
     dot.add(ring);
-    dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    dot.position.set(p.x, Math.max(0.2, p.y - 1.0), p.z);
     add(dot); prodOv.dots.push(ring);
     const el = document.createElement("div");
     el.className = cx("mo-tag" + (blocked ? " bad" : ""));
@@ -1470,7 +1558,7 @@ function prodSimMove(t) {
     const pos = trackAt(tr, t);
     tr.u = pos.u;
     const p = tr.curve.getPoint(clamp01(pos.u / Math.max(1, tr.n - 1)));
-    tr.dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    tr.dot.position.set(p.x, Math.max(0.2, p.y - 1.0), p.z);
     tr.tag.position.copy(tr.dot.position);
     const bad = !!pos.w?.blocked && t >= (simBase - dayStart()) / 60000;
     if (tr.bad !== bad) { tr.bad = bad; tr.ring.material.color.set(bad ? 0xd63a2b : 0xffffff); tr.el.classList.toggle(cx("bad"), bad); }
@@ -1577,6 +1665,7 @@ renderer.domElement.addEventListener("pointermove", (e) => {
   hovered = o;
   paint(prev); paint(o);
   renderer.domElement.style.cursor = o ? "pointer" : "";
+  invalidate(); // підпис наведеного об'єкта з'являється, навіть якщо його перекриває вищий пріоритет
 });
 on(window, "keydown", (e) => {
   if (e.target?.closest?.("input, textarea")) {return;}
@@ -1866,7 +1955,9 @@ function syncOutdoorZones() {
     const geo = new THREE.ShapeGeometry(shape);
     geo.rotateX(-Math.PI / 2);
     const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-      color: z.color ? new THREE.Color(z.color) : 0x8aa0b0, transparent: true, opacity: 0.28, side: THREE.DoubleSide }));
+      color: z.color ? new THREE.Color(z.color) : 0x8aa0b0, transparent: true, opacity: 0.28, side: THREE.DoubleSide,
+      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }));
+    mesh.renderOrder = 1;
     const grp = new THREE.Group();
     grp.position.y = z.is_roof ? 9 : 0.06;
     grp.add(mesh);
@@ -3523,6 +3614,12 @@ $(".o_f3d_toggle-side").onclick = () => {
 };
 
 // ---------------------------------------------------------------- цикл
+// ближня площина камери росте з відстанню до цілі (0,3 м впритул → до 2,5 м здалеку): при near = 0,3 крок буфера глибини на 330 м ≈ 2 см, і заливки
+// зон (на 1 см над підлогою) й розмітка мерехтять; при near = 2,5 крок ≈ 2,6 мм. Поблизу near лишається 0,3, тож нічого не «зрізається».
+function fitNear() {
+  const near = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) / 120, 0.3, 2.5);
+  if (Math.abs(near - camera.near) > camera.near * 0.08) { camera.near = near; camera.updateProjectionMatrix(); }
+}
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clock = new THREE.Clock();
 // PERF: рендер за потребою. Кадр без змін (камера стоїть, нічого не рухається) не перемальовується: холостий перегляд і
@@ -3547,6 +3644,8 @@ renderer.setAnimationLoop(() => {
     live = true;
   }
   controls.update(); // змінена камера кидає "change" → invalidate()
+  const moving = view.drag || !!tween || paceNow() < view.until;
+  if (moving !== view.moving) { view.moving = moving; setPixelRatio(); }
   const blink = 0.5 + 0.5 * Math.sin(now / 220);
   let lampsMoved = false;
   for (const l of lamps) {
@@ -3569,8 +3668,8 @@ renderer.setAnimationLoop(() => {
     if (hl.parts.length) { moveParticles(hl.parts, dt); live = true; }
   }
   if (prodOv.dots.length && !reduceMotion) {
-    const s = 1 + 0.25 * Math.sin(now / 260);
-    for (const r of prodOv.dots) {r.scale.setScalar(s);}
+    const s = 1 + 0.12 * Math.sin(now / 260); // ободок ледь «дихає» у площині, товщина лишається
+    for (const r of prodOv.dots) {r.scale.set(s, 1, s);}
     live = true;
   }
   if (drill.on) {
@@ -3585,7 +3684,7 @@ renderer.setAnimationLoop(() => {
   const pace = paceNow();
   if (pace - lastPoll >= POLL_MS || pace < lastPoll) { // стан проксі-мешів: зміни, яких не бачили paint/stock_load (розкладка, ховання, колір)
     lastPoll = pace;
-    if (batcher.sync()) { needDraw = true; }
+    if (batcher.sync() || labelsStale) { needDraw = true; }
     if (onDemand) { // `userData.f3dAnimated` — прапорець для будь-якого об'єкта, що анімується сам (спрайти з `extPick` вважаються такими)
       ambient = false;
       scene.traverse((o) => { if (o.visible && (o.userData.extPick || o.userData.f3dAnimated)) { ambient = true; } });
@@ -3596,7 +3695,8 @@ renderer.setAnimationLoop(() => {
   needDraw = false;
   lastDraw = pace;
   drawn++;
-  syncLabels();
+  fitNear();
+  syncLabels(true);
   batcher.beforeRender();
   try { renderer.render(scene, camera); } finally { batcher.afterRender(); }
   labelRenderer.render(scene, camera);
