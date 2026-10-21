@@ -2189,6 +2189,7 @@ function renderPanel(soft = false) {
   else if (panel.type === "mo") {renderMO(panel.name);}
   else if (panel.type === "product") {renderProduct(panel.code);}
   else if (panel.type === "picking") {renderPicking(panel.name);}
+  else if (panel.type === "doc") {renderDoc();}
   else if (panel.type === "line") {renderLine(panel.code);}
   else if (panel.type === "drill") {renderDrill();}
   if (soft) {b.scrollTop = top;}
@@ -2379,7 +2380,7 @@ function renderProduction() {
 }
 function showMO(name) {
   const mo = D && idx.mo?.get(name);
-  if (!mo) {return;}
+  if (!mo) {return D ? showOffline("mo", name) : undefined;} // виконане, скасоване, старе, майбутнє: з сервера (API-13)
   select(null);
   openView({ type: "mo", name });
   if (prodOv.on) {prodFocus(name);}
@@ -2521,7 +2522,7 @@ function renderLogistics() {
 }
 function showPicking(name) {
   const p = D && idx.pick?.get(name);
-  if (!p) {return;}
+  if (!p) {return D ? showOffline("picking", name) : undefined;}
   select(null);
   openView({ type: "picking", name });
   const e = [];
@@ -2559,6 +2560,78 @@ function showPicking(name) {
     e.push({ code: p.location_dest, html: p.type === "putaway" ? "у стелаж" : "під портал", cls: "done" });
   }
   highlight(e);
+}
+// МО чи переміщення поза живим payload (виконане, скасоване, старе, майбутнє): маршрут з сервера (API-13) показуємо так само,
+// як showMO / showPicking — підсвіт верстатів чи комірок по порядку й картка з назвою та станом; тост — спокійний `info`
+let offDoc = null;
+const DOC_WORD = {
+  mo: { done: "виконано", cancel: "скасовано", progress: "у роботі", confirmed: "підтверджено", draft: "у чернетці" },
+  picking: { done: "виконано", cancel: "скасовано", assigned: "готове", waiting: "очікує", confirmed: "очікує", draft: "у чернетці" },
+};
+const DOC_EMPTY = {
+  no_workorders: "ще без операцій — у 3D підсвічувати нічого",
+  no_codes: "має операції, але їхні верстати не позначені в 3D",
+  no_locations: "не торкається комірок 3D",
+};
+const LOC_ROLE = { from: ["звідси", "hl"], dock: ["ворота", "prog"], to: ["сюди", "done"] };
+const ddmm = (s) => (s ? s.slice(8, 10) + "." + s.slice(5, 7) : "");
+async function showOffline(kind, name) {
+  let r = null;
+  try { r = await client.docRoute(kind === "mo" ? { mo: name } : { picking: name }); } catch { r = null; }
+  if (destroyed || !D) {return;}
+  if (r?.reason === "kiosk" || r?.reason === "static") {notify("Маршрут " + name + " недоступний у цьому режимі", "info"); return;}
+  if (!r || ["not_found", "forbidden", "bad_request"].includes(r.reason)) { // не «немає в даних», а справжня помилка: рядка немає в базі чи немає прав
+    notify(r?.reason === "forbidden" ? "Немає прав на перегляд " + name : "Документа " + name + " немає в базі", "warning");
+    return;
+  }
+  select(null);
+  offDoc = r;
+  openView({ type: "doc", name });
+  const seen = new Set();
+  const route = kind === "mo"
+    ? r.steps.filter((s) => s.code).map((s) => ({ code: s.code, html: s.sequence + (s.state === "progress" ? " · у роботі" : ""),
+      cls: s.state === "done" ? "done" : s.state === "progress" ? "prog" : "pend" }))
+    : r.locations.map((l) => {
+      const [label, cls] = LOC_ROLE[l.role] || ["", "hl"];
+      const first = !seen.has(l.role);
+      seen.add(l.role);
+      return { code: l.code, html: first ? label : null, cls };
+    });
+  const word = DOC_WORD[r.kind]?.[r.state] || r.state;
+  notify(r.reason ? (name + " (" + word + ") " + DOC_EMPTY[r.reason])
+    : (name + " " + word + (r.state === "done" && r.date ? (" " + ddmm(r.date)) : "") + " — показано його маршрут"), "info");
+  await Promise.all(route.map((e) => ensureCode(e.code)));
+  if (destroyed || panel.type !== "doc" || panel.name !== name) {return;}
+  highlight(route.filter((e) => items.has(e.code)), { path: true });
+}
+function renderDoc() {
+  const d = offDoc;
+  if (!d) {return;}
+  const mo = d.kind === "mo";
+  const muted = (t) => "<br><span style=\"color:var(--f3d-muted)\">" + esc(t) + "</span>";
+  const rows = mo
+    ? d.steps.map((s) => "<tr" + (s.code ? (" class=\"o_f3d_click\" data-go=\"obj:" + esc(s.code) + "\"") : "") + "><td>" + s.sequence + "</td><td>" + esc(s.name)
+      + muted(D.workcenters[s.code]?.name || s.workcenter) + "</td><td>" + pill(s.state === "cancel" ? ["idle", "Скасовано"] : WO_STATE[s.state] || ["idle", s.state])
+      + "</td><td class=\"o_f3d_n\">" + ((s.date_finished || s.date_start) ? dayHm(s.date_finished || s.date_start) : "—") + "</td></tr>").join("")
+    : d.locations.map((l) => "<tr class=\"o_f3d_click\" data-go=\"obj:" + esc(l.code) + "\"><td>" + esc((LOC_ROLE[l.role] || [""])[0]) + "</td><td>" + esc(l.name) + muted(l.code) + "</td></tr>").join("");
+  const kv = mo
+    ? "<dt>Виріб</dt><dd>" + esc(d.product_name) + " × " + d.qty + " " + esc(d.uom) + "</dd>"
+      + "<dt>Стан</dt><dd>" + docPill("production", d.state) + "</dd>"
+      + (d.origin ? "<dt>Джерело</dt><dd>" + docify(d.origin) + "</dd>" : "")
+      + (d.date_start ? "<dt>Старт</dt><dd>" + dayHm(d.date_start) + "</dd>" : "")
+      + (d.date_finished ? "<dt>Завершено</dt><dd>" + dayHm(d.date_finished) + "</dd>" : "")
+    : (d.partner ? "<dt>Партнер</dt><dd>" + esc(d.partner) + "</dd>" : "")
+      + (d.origin ? "<dt>Документ</dt><dd>" + docify(d.origin) + "</dd>" : "")
+      + "<dt>Стан</dt><dd>" + docPill("picking", d.state) + "</dd>"
+      + (d.date ? "<dt>Дата</dt><dd>" + dayHm(d.date) + "</dd>" : "");
+  body().innerHTML = backBtn()
+    + "<div class=\"o_f3d_kind\">" + (mo ? "Виробниче замовлення · mrp.production" : esc(PICK_KIND[d.type] || d.picking_type) + " · stock.picking") + "</div>"
+    + "<h3>" + esc(d.name) + "</h3>" + openLink(d.name)
+    + "<div class=\"o_f3d_code\">поза живими даними переглядача · маршрут з бази</div>"
+    + "<dl class=\"o_f3d_kv\">" + kv + "</dl>"
+    + "<div class=\"o_f3d_sub\">" + (mo ? "Робочі завдання" : "Комірки в 3D") + "</div>"
+    + (d.reason ? "<div class=\"o_f3d_note\">" + esc(d.name) + " " + DOC_EMPTY[d.reason] + ".</div>"
+      : "<table class=\"o_f3d_tbl\">" + rows + "</table>");
 }
 // ланцюжок плит: крок — підсвітити його об'єкти; all — шлях від фури до пили з номерами кроків
 async function showMatPath(i) {
@@ -3812,13 +3885,9 @@ async function applyParams(p = {}) {
   if (p.tab) {openTab(p.tab);}
   if (p.snapshot) {await loadSnapshotById(+p.snapshot); if (destroyed) {return;}}
   soLabel = p.so || null;
-  if (p.mo) {
-    if (idx.mo?.has(p.mo)) {showMO(p.mo);}
-    else {notify(`Об'єкта ${p.mo} немає в даних`, "warning");}
-  } else if (p.picking) {
-    if (idx.pick?.has(p.picking)) {showPicking(p.picking);}
-    else {notify(`Об'єкта ${p.picking} немає в даних`, "warning");}
-  } else if (p.code) {
+  if (p.mo) {await showMO(p.mo); if (destroyed) {return;}}
+  else if (p.picking) {await showPicking(p.picking); if (destroyed) {return;}}
+  else if (p.code) {
     const o = await ensureCode(p.code);
     if (destroyed) {return;}
     if (o) { select(o); focusOn(o); } else {notify(`Об'єкта ${p.code} немає в моделі`, "warning");}

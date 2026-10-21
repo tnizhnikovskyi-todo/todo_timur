@@ -19,7 +19,7 @@ Key features
 * Briefing wall mode for a TV: a full-screen slide playlist (3D fly-around, KPI tiles, alarms and events, today's orders) on the same kiosk URL
 * Cycle check that reports gaps in the receiving-to-shipping chain, and a demo-data wizard for test servers
 """,
-    "version": "19.0.1.1.8",
+    "version": "19.0.1.1.9",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Manufacturing",

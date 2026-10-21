@@ -26,3 +26,4 @@ from . import test_loc_history  # API-12, R-23, R-24
 from . import test_maintenance_plan  # API-11, R-22
 from . import test_r26_extension  # W2-D: VX-01…VX-05
 from . import test_wall  # R-27: «стіна»
+from . import test_doc_route  # API-13: «Показати в 3D» з виконаного/скасованого документа

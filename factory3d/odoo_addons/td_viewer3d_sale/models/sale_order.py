@@ -16,27 +16,40 @@ class SaleOrder(models.Model):
             domain = ["|", ("procurement_group_id", "=", group.id)] + domain
         return self.env["mrp.production"].search(domain, order="date_start asc, id asc")
 
-    def _td_pickings(self):
+    def _td_pickings(self, cancelled=False):
         self.ensure_one()
-        domain = [("origin", "=", self.name), ("state", "!=", "cancel")]
+        domain = [("origin", "=", self.name)]
         group = self.procurement_group_id if "procurement_group_id" in self._fields else False
         if group:
-            domain = ["&", ("state", "!=", "cancel"), "|", ("group_id", "=", group.id), ("origin", "=", self.name)]
+            domain = ["|", ("group_id", "=", group.id)] + domain
+        if not cancelled:
+            domain = [("state", "!=", "cancel")] + domain
         return self.env["stock.picking"].search(domain, order="id asc")
 
     def _compute_f3d_has_3d(self):
         for rec in self:
-            rec.td_has_3d = bool(rec.id and (rec._td_productions() or rec._td_pickings()))
+            rec.td_has_3d = bool(rec.id and (rec._td_productions() or rec._td_pickings(cancelled=True)))
+
+    def _td_pick_production(self):
+        """МО для показу: перше «живе» (не виконане й не скасоване, за date_start), інакше найновіше (виконані
+        перед скасованими). Виконане чи скасоване поза payload переглядача: клієнт бере його маршрут із сервера (API-13)."""
+        productions = self._td_productions()
+        live = productions.filtered(lambda m: m.state not in ("done", "cancel"))
+        if live:
+            return live[0]
+        key = lambda m: (m.state != "cancel", m.date_finished or m.date_start or m.create_date, m.id)  # noqa: E731
+        return productions.sorted(key)[-1:]
 
     def action_f3d_show(self):
-        """M-08: МО замовлення (перше за date_start) -> params.mo; інакше відвантаження -> params.picking."""
+        """M-08: МО замовлення -> params.mo (перше «живе», інакше найновіше); інакше відвантаження -> params.picking
+        (перше непроскасоване, інакше найновіше скасоване)."""
         self.ensure_one()
-        productions = self._td_productions()
-        if productions:
-            params = {"mo": productions[0].name, "so": self.name}
+        production = self._td_pick_production()
+        if production:
+            params = {"mo": production.name, "so": self.name}
         else:
-            pickings = self._td_pickings()
-            if not pickings:
+            picking = self._td_pickings()[:1] or self._td_pickings(cancelled=True)[-1:]
+            if not picking:
                 raise UserError(_("Для замовлення ще немає виробничих замовлень чи відвантажень"))
-            params = {"picking": pickings[0].name, "so": self.name}
+            params = {"picking": picking.name, "so": self.name}
         return {"type": "ir.actions.client", "tag": "f3d_viewer.action", "name": "3D: " + self.name, "params": params}

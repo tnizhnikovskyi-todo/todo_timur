@@ -403,6 +403,28 @@ export class DataClient {
         return doc.result;
     }
 
+    /**
+     * API-13: маршрут МО чи переміщення, якого немає в живому payload (виконане, скасоване, старе, майбутнє):
+     * `POST /doc_route` (jsonrpc) з `{ mo }` або `{ picking }`. Відповідь — `{ kind, name, reason, ... }`, `reason: null` — маршрут є.
+     * Збій запиту — виняток; кіоск запит не шле.
+     */
+    async docRoute({ mo, picking }) {
+        if (this.kiosk) {
+            return { reason: "kiosk" };
+        }
+        const r = await this.fetch(`${this.base}/doc_route`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: mo ? { mo } : { picking } }),
+        });
+        const doc = await r.json().catch(() => null);
+        if (!r.ok || doc?.error || !doc?.result) {
+            throw new Error(`/doc_route: ${r.status}`);
+        }
+        return doc.result;
+    }
+
     async snapshots(date) {
         const r = await this._json("/snapshots", { query: date ? { date } : {} });
         return r.json();
@@ -467,6 +489,10 @@ export class FileClient extends DataClient {
 
     async locHistory() {
         return null;
+    }
+
+    async docRoute() {
+        return { reason: "static" };
     }
 
     async snapshots() {

@@ -13,7 +13,7 @@ Key features
 * Adds the Show in 3D button to the sales order form
 * Opens the 3D viewer for the selected order
 """,
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "author": "ToDo",
     "license": "LGPL-3",
     "category": "Manufacturing/Manufacturing",

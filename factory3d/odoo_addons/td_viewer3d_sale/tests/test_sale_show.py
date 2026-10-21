@@ -51,6 +51,37 @@ class TestSaleShow(TransactionCase):
         self.assertEqual(act["tag"], "f3d_viewer.action")
         self.assertEqual(act["params"], {"mo": earlier.name, "so": self.so.name})
 
+    def _mo(self, **vals):
+        vals.setdefault("date_start", "2026-10-12 10:00:00")
+        mo = self.env["mrp.production"].create(
+            {"product_id": self.product.id, "product_qty": 1, "origin": self.so.name, **vals}
+        )
+        self.so.invalidate_recordset()
+        return mo
+
+    def test_first_live_mo_wins_over_done(self):
+        """Кілька МО: перше «живе» (за date_start), навіть якщо виконане новіше чи старіше."""
+        done = self._mo(date_start="2026-10-01 10:00:00")
+        done.write({"state": "done", "date_finished": "2026-10-06 12:00:00"})
+        live_late = self._mo(date_start="2026-10-14 10:00:00")
+        live_early = self._mo(date_start="2026-10-12 10:00:00")
+        self.assertEqual(live_early.state, "draft")
+        self.assertEqual(self.so.action_f3d_show()["params"], {"mo": live_early.name, "so": self.so.name})
+        self.assertNotEqual(live_late, live_early)
+
+    def test_latest_mo_when_none_live(self):
+        """Усі МО виконані чи скасовані: найновіше непроскасоване, а коли всі скасовані — найновіше скасоване."""
+        old = self._mo(date_start="2026-10-01 10:00:00")
+        old.write({"state": "done", "date_finished": "2026-10-03 12:00:00"})
+        recent = self._mo(date_start="2026-10-02 10:00:00")
+        recent.write({"state": "done", "date_finished": "2026-10-06 12:00:00"})
+        cancelled = self._mo(date_start="2026-10-09 10:00:00")
+        cancelled.write({"state": "cancel"})
+        self.assertEqual(self.so.action_f3d_show()["params"]["mo"], recent.name)
+        recent.write({"state": "cancel", "date_finished": "2026-10-06 12:00:00"})
+        old.write({"state": "cancel", "date_finished": "2026-10-03 12:00:00"})
+        self.assertEqual(self.so.action_f3d_show()["params"]["mo"], cancelled.name)
+
     def test_picking_fallback(self):
         ptype = (
             self.env["stock.picking.type"].with_context(active_test=False).search([("code", "=", "outgoing")], limit=1)
@@ -68,6 +99,10 @@ class TestSaleShow(TransactionCase):
         self.so.invalidate_recordset()
         self.assertTrue(self.so.td_has_3d)
         self.assertEqual(self.so.action_f3d_show()["params"], {"picking": picking.name, "so": self.so.name})
+        picking.action_cancel()  # лишились самі скасовані: показуємо найновіше, а не помилку
+        self.so.invalidate_recordset()
+        self.assertTrue(self.so.td_has_3d)
+        self.assertEqual(self.so.action_f3d_show()["params"], {"picking": cancelled.name, "so": self.so.name})
 
     def test_button_in_view(self):
         """V-09: кнопка в шапці з групою group_td_user; без групи — вилучена з arch."""
