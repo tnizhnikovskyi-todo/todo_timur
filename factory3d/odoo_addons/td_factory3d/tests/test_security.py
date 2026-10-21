@@ -33,7 +33,7 @@ class TestGroups(F3DCase):
         self.assertIn(user, ref("stock.group_stock_user").implied_ids)
         self.assertIn(user, ref("mrp.group_mrp_user").implied_ids)
         self.assertEqual(user.privilege_id, ref("td_factory3d.privilege_td"))
-        self.assertEqual(user.privilege_id.name, "Завод 3D")
+        self.assertEqual(user.privilege_id.name, "3D Завод")
 
     def test_menus(self):  # AC-44
         for xmlid, (seq, parent, group) in MENUS.items():
@@ -46,7 +46,7 @@ class TestGroups(F3DCase):
                 menu.group_ids, self.env.ref("td_factory3d." + group) if group else self.env["res.groups"], xmlid
             )
 
-    def test_top_row_groups(self):  # верхній рядок «Завод 3D»: ≤ 8 пунктів у заданому порядку
+    def test_top_row_groups(self):  # верхній рядок «3D Завод»: ≤ 8 пунктів у заданому порядку
         top = (
             "Переглядач",
             "Верстати",

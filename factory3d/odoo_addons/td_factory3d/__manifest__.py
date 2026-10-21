@@ -17,7 +17,7 @@ Key features
 * Equipment passports on maintenance equipment
 * Security groups Factory 3D User, Manager and Administrator used by all suite modules
 """,
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

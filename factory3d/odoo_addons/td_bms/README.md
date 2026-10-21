@@ -1,4 +1,4 @@
-# td_bms — Завод 3D: будівля
+# td_bms — 3D Завод: будівля
 
 Освітлення (норми, щити, групи DALI/HelvarNet), вентиляція й опалення (BACnet), тепловий баланс, журнал відхилень.
 Специфікація: `factory3d/docs/modules/td_bms/SPEC.md`. Залежності: `td_telemetry`, `web`.

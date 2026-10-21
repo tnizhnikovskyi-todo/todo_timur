@@ -462,7 +462,7 @@ class F3dSignal(models.Model):
     def f3d_run_migration(self):
         """Дія «Повторити міграцію рівня 0» (§5.3): лише `group_td_admin`."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
+            raise AccessError(_("Запускати міграцію може лише адміністратор «3D Завод»."))
         from .. import hooks  # noqa: PLC0415
 
         data = hooks.run_migration(self.sudo().env)

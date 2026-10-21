@@ -36,7 +36,7 @@ class TestCycleCheckPure(BaseCase):
 class TestCycleCheck(F3dViewerCase):
     def setUp(self):
         super().setUp()
-        # payload будується з правами користувача: адміністратору «Завод 3D» потрібен ще й доступ до складу/МО
+        # payload будується з правами користувача: адміністратору «3D Завод» потрібен ще й доступ до складу/МО
         self.user_admin.group_ids = [
             (4, self.env.ref("stock.group_stock_user").id),
             (4, self.env.ref("mrp.group_mrp_user").id),

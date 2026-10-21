@@ -577,7 +577,7 @@ class F3dMachine(models.Model):
 
     def action_reset_state(self):
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError(_("Скинути стан верстата може лише адміністратор «Завод 3D»."))
+            raise AccessError(_("Скинути стан верстата може лише адміністратор «3D Завод»."))
         now = fields.Datetime.now()
         for rec in self:
             rec = rec.sudo()

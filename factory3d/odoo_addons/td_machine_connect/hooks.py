@@ -529,7 +529,7 @@ def _previous_install_ts(env):
 def run_migration(env):
     """Кроки 0–7 (§5.3); ідемпотентна. Повертає звіт (`state`: `done` | `partial` | `skipped`)."""
     if not env.su and not env.user.has_group("td_factory3d.group_td_admin"):
-        raise AccessError("Запускати міграцію може лише адміністратор «Завод 3D».")
+        raise AccessError("Запускати міграцію може лише адміністратор «3D Завод».")
     env = env(su=True)
     # Позначка «до установки»: перший запуск — зараз; повтор (кнопка) — той самий момент (записи модуля не стають demo).
     install_ts = _previous_install_ts(env) or fields.Datetime.now()

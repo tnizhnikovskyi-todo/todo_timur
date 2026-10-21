@@ -55,7 +55,7 @@ class TdSaleCost(models.TransientModel):
     def _td_check_access(self):
         if not self.env.su and not self.env.user.has_group("td_factory3d.group_td_manager"):
             if not self.env.user.has_group("sales_team.group_sale_manager"):
-                raise AccessError(_("Собівартість замовлень бачать керівник продажів і менеджер «Завод 3D»."))
+                raise AccessError(_("Собівартість замовлень бачать керівник продажів і менеджер «3D Завод»."))
 
     @api.model
     def _td_open(self, order):

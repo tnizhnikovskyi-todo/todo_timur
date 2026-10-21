@@ -99,6 +99,6 @@ class ResConfigSettings(models.TransientModel):
 
     def action_td_new_kiosk_token(self):
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError(_("Новий токен кіоска може згенерувати лише адміністратор «Завод 3D»."))
+            raise AccessError(_("Новий токен кіоска може згенерувати лише адміністратор «3D Завод»."))
         self.env["ir.config_parameter"].sudo().set_param(PREFIX + "kiosk_token", secrets.token_hex(16))
         return {"type": "ir.actions.client", "tag": "reload"}

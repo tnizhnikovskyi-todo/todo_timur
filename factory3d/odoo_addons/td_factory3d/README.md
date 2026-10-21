@@ -1,13 +1,13 @@
 # td_factory3d
 
 Ядро factory3d (Odoo 19): домішка `td.scene.mixin` (коди сцени), зони цеху `td.zone`, ворота як доки,
-паспорти обладнання, групи прав «Завод 3D», міграція демо-полів `x_dock/x_truck/x_vehicle` у пакети.
+паспорти обладнання, групи прав «3D Завод», міграція демо-полів `x_dock/x_truck/x_vehicle` у пакети.
 
 ## Установка
 `odoo-bin -d <db> -i td_factory3d`. Після установки `post_init_hook` виконує кроки 1–11 (SPEC §5.3):
 коди локацій/РЦ/працівників/обладнання, прив'язка паспортів і зон, міграція x_* у `stock.picking.batch`,
 звірка, видалення демо-полів. Результат: `td.base.migration_state` (`skipped`/`partial`/`done`) і
-`migration_report` (JSON). Повтор: «Завод 3D → Налаштування → Повторити міграцію демо-даних» (адміністратор).
+`migration_report` (JSON). Повтор: «3D Завод → Налаштування → Повторити міграцію демо-даних» (адміністратор).
 
 ## Параметри (`td.base.*`)
 `environment`, `plant_length_m/width_m/height_m`, `site_x0_m/y0_m/x1_m/y1_m`, `keep_x_fields` (True — не видаляти

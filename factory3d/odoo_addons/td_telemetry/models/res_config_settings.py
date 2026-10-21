@@ -76,7 +76,7 @@ class ResConfigSettings(models.TransientModel):
 
     def action_td_run_migration(self):
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise UserError(_("Лише для адміністратора Завод 3D."))
+            raise UserError(_("Лише для адміністратора 3D Завод."))
         try:
             from .. import hooks  # noqa: PLC0415
         except ImportError:

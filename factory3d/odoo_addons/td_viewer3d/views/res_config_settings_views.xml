@@ -7,7 +7,7 @@
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Завод 3D" string="Завод 3D" name="td_viewer3d"
+                <app data-string="3D Завод" string="3D Завод" name="td_viewer3d"
                      groups="td_factory3d.group_td_admin">
                     <block title="Журнал станів" name="f3d_viewer_journal">
                         <setting string="Період знімків" help="Хвилини між плановими знімками (5…60)">

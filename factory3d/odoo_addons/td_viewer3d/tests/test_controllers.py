@@ -170,7 +170,7 @@ class TestControllers(HttpCase, F3dViewerBase):
 
         if not _has_demo_data(self.env):
             raise unittest.SkipTest("потрібна демо-база: на порожній payload неповний")
-        # payload будується з правами користувача: менеджеру «Завод 3D» потрібен ще й доступ до складу/МО
+        # payload будується з правами користувача: менеджеру «3D Завод» потрібен ще й доступ до складу/МО
         self.user_manager.group_ids = [
             (4, self.env.ref("stock.group_stock_user").id),
             (4, self.env.ref("mrp.group_mrp_user").id),

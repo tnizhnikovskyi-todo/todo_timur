@@ -8,7 +8,7 @@
         <field name="domain">[('key', '=like', 'td.%')]</field>
     </record>
 
-    <menuitem id="menu_td_root" name="Завод 3D" sequence="75"
+    <menuitem id="menu_td_root" name="3D Завод" sequence="75"
               web_icon="td_factory3d,static/src/img/app_icon.png"
               groups="td_factory3d.group_td_user"/>
     <!-- Верхній рядок: 8 пунктів. Групи без дії й без groups: Odoo показує їх, лише якщо видно хоч одного нащадка

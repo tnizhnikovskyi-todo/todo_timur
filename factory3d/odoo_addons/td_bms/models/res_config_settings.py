@@ -87,7 +87,7 @@ class ResConfigSettings(models.TransientModel):
         is_admin = self.env.user.has_group(ADMIN)
         self._td_bms_check_ranges()
         if not is_admin and any(rec.sudo().td_bms_write_enabled != old_write for rec in self):
-            raise AccessError("Керування будівлею вмикає лише адміністратор «Завод 3D».")
+            raise AccessError("Керування будівлею вмикає лише адміністратор «3D Завод».")
         super().set_values()
         from .. import hooks  # noqa: PLC0415
 

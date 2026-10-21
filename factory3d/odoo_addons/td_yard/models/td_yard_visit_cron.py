@@ -84,9 +84,9 @@ class F3dYardVisitCron(models.Model):
 
     @api.model
     def f3d_yard_run_migration(self):
-        """Серверна дія V-34: повторити міграцію двору (лише адміністратор «Завод 3D»)."""
+        """Серверна дія V-34: повторити міграцію двору (лише адміністратор «3D Завод»)."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError("Повторити міграцію може лише адміністратор «Завод 3D».")
+            raise AccessError("Повторити міграцію може лише адміністратор «3D Завод».")
         from ..hooks import run_all
 
         report = run_all(self.env)

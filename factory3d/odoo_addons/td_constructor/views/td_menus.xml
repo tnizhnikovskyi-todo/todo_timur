@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- V-13, DEC-01, DEC-19: меню під «Завод 3D» (sequence 12 і 14 — запит до каркаса) -->
+    <!-- V-13, DEC-01, DEC-19: меню під «3D Завод» (sequence 12 і 14 — запит до каркаса) -->
     <menuitem id="menu_td_constructor_plan" name="Планування" parent="td_factory3d.menu_td_root" sequence="70"
               groups="td_factory3d.group_td_user"/>
     <!-- «Конструктор» й «Інструкція» — перші пункти «Планування» (верхній рядок: 8 пунктів) -->

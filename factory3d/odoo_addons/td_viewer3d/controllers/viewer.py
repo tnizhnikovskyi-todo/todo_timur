@@ -54,7 +54,7 @@ def bad_request(message="Невалідний параметр"):
     return error("bad_request", message, 400)
 
 
-def forbidden(message="Немає доступу до переглядача «Завод 3D»"):
+def forbidden(message="Немає доступу до переглядача «3D Завод»"):
     return error("forbidden", message, 403)
 
 
@@ -224,10 +224,10 @@ class F3dViewerController(http.Controller):
     def cycle_check(self, as_user=None, **kw):
         env = request.env
         if not env.user.has_group(GROUP_MANAGER):
-            raise AccessError("Перевірка циклу доступна лише менеджеру «Завод 3D».")
+            raise AccessError("Перевірка циклу доступна лише менеджеру «3D Завод».")
         if as_user:
             if not env.user.has_group(GROUP_ADMIN):
-                raise AccessError("Вказати іншого користувача може лише адміністратор «Завод 3D».")
+                raise AccessError("Вказати іншого користувача може лише адміністратор «3D Завод».")
             env = env(user=int(as_user))
         data = payload_tools.PayloadBuilder(env, full=True).build()
         for key in ("pickings", "sale_orders", "quality_checks", "productions"):
@@ -246,7 +246,7 @@ class F3dViewerController(http.Controller):
         if request.env.user.has_group(GROUP_KIOSK):
             return plan_error(403, "kiosk", "Екран цеху не може створювати заявки на обслуговування.")
         if not self._allowed():
-            return plan_error(403, "forbidden", "Немає доступу до переглядача «Завод 3D»")
+            return plan_error(403, "forbidden", "Немає доступу до переглядача «3D Завод»")
         if (code is None) == (equipment_id is None):
             return plan_error(400, "bad_request", "Потрібен рівно один параметр: code або equipment_id")
         if code is not None and not (isinstance(code, str) and CODE_RE.match(code)):

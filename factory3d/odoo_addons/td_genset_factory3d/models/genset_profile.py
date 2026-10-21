@@ -207,7 +207,7 @@ class F3dGensetProfile(models.Model):
     def action_apply_to_td(self):
         self.ensure_one()
         if not self.env.user.has_group("td_factory3d.group_td_manager"):
-            raise AccessError(_("Записувати в td_genset може лише менеджер «Завод 3D»."))
+            raise AccessError(_("Записувати в td_genset може лише менеджер «3D Завод»."))
         done = skipped = 0
         for link in self.env["td.genset3d.link"].search([("profile_id", "=", self.id)]):
             if td.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75):
