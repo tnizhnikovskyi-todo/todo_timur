@@ -1,5 +1,11 @@
 # Changelog
 
+## 19.0.1.2.0
+- VX-06: кнопка «Відкрити пульт КГУ» в 3D-картці `CHP` (міст `td_chp_factory3d`, DB-08; SPEC td_chp_factory3d §8). `PULT_CODES` → `PULT_BUTTONS` (`EMS-1`, `SWB-1`, `CHP`: код → кнопка, дія, ключ дозволу), `PULT_CODES` лишається
+  (`new Set(PULT_BUTTONS.keys())`); `CHP_PULT_ACTION = "td_chp.action_td_chp_pult"`; `onAction("open_chp_pult")` → `api.openAction(CHP_PULT_ACTION)`. Кнопки EMS-1/SWB-1 і вау №5 («Потік зміни», слайд «Енергія») без змін.
+- `energy.layer.can_chp_pult` (`tools/layer.py`): `can_pult` і є `td_chp` (`td.chp.pult`) і група `td_chp.group_td_chp_user`; без `td_chp` — `false`; `layer.schema` / `meta.schema` не змінюються, старий клієнт ключ ігнорує.
+- Тести: `TestLayerPayload.test_can_chp_pult_by_group_and_module`, оновлений набір ключів шару; HOOT `pult.test.js` — `PULT_CODES` = {CHP, EMS-1, SWB-1}, кнопка КГУ лише при `can_chp_pult`, EMS-1/SWB-1 без змін.
+
 ## 19.0.1.1.0
 - Вау №5 «Лічильник ₴ на енергію в «Потоці зміни»» (SPEC td_energy_viewer3d R-59, AC-294…AC-300). Добові серії енергії одним запитом на добу — `GET /f3d/viewer/energy/day` і `GET /f3d/kiosk/<token>/energy/day` (96 слотів по 15 хв: вводи — кВт·год, експорт, вартість зони тарифу; власна генерація; кВт споживачів; підсумки доби збігаються з `td.energy.daily` аналітики), кеш на клієнті.
 - У шапці стрічки «Потік зміни» під час програвання: «Енергія з початку доби: N ₴ · M кВт·год» — за 15-хв інтервалами вводів × тариф зони, усередині інтервалу лінійно до хвилини t, біжить за дробовою хвилиною «▶».

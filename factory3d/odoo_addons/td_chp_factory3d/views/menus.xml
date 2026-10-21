@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-B2: пункти КГУ в «Енергетика → Генерація й резерв» (td_energy.menu_td_energy_generation); корінь td_chp сховано
+     (data/td_chp_factory3d_menu_hide.xml). «Команди» td_chp не переносяться: команди КГУ — у журналі «Керування» Енергетики. -->
+<odoo>
+    <menuitem id="menu_chp_pult" name="Пульт КГУ" parent="td_energy.menu_td_energy_generation" sequence="25"
+              action="td_chp.action_td_chp_pult" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_chp_event" name="Події КГУ" parent="td_energy.menu_td_energy_generation" sequence="26"
+              action="td_chp.action_td_chp_event" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_chp_rule" name="ТО КГУ" parent="td_energy.menu_td_energy_generation" sequence="27"
+              action="td_chp.action_td_chp_rule" groups="td_chp.group_td_chp_user"/>
+    <menuitem id="menu_chp_unit" name="Паспорт КГУ" parent="td_energy.menu_td_energy_generation" sequence="28"
+              action="td_chp.action_td_chp_unit" groups="td_factory3d.group_td_manager"/>
+    <menuitem id="menu_chp_signal" name="Карта регістрів КГУ" parent="td_energy.menu_td_energy_generation" sequence="29"
+              action="td_chp.action_td_chp_signal" groups="td_factory3d.group_td_manager"/>
+    <!-- «Налаштування» td_chp (адмін) лишається під td_factory3d.menu_td_config -->
+    <menuitem id="menu_chp_settings" name="Налаштування КГУ" parent="td_factory3d.menu_td_config" sequence="56"
+              action="td_chp.action_td_chp_settings" groups="td_factory3d.group_td_admin"/>
+</odoo>

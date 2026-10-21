@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DB-06: групи енергетики автоматично дають права в пульті КГУ. «Енергетик» ⊃ «КГУ: енергетик» (команди з пульта йдуть
+     у td_energy_control, тож без ролі енергетика вони недоступні), «Головний енергетик» ⊃ «КГУ: головний енергетик». -->
+<odoo>
+    <record id="td_energy.group_td_energy_user" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('td_chp.group_td_chp_user'))]"/>
+    </record>
+    <record id="td_energy.group_td_energy_manager" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('td_chp.group_td_chp_operator'))]"/>
+    </record>
+    <record id="td_energy.group_td_energy_chief" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('td_chp.group_td_chp_chief'))]"/>
+    </record>
+</odoo>

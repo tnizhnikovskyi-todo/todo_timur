@@ -80,7 +80,7 @@
 
 ### 2.4 Інтеграції
 - **Modbus TCP u72** (P-07), блоки ≤ 125 регістрів, `gap_max 8`; ≈ 10 запитів на цикл; `period_s` 2…60 с (SPEC §5.2). Недоступність → `stale`, подія `comm`, команди блокуються (крім аварійного стопу).
-- **td_energy_control** (лише міст): `td.energy.control.prepare/confirm/confirm_second/cancel/get_action` (API-17…22), види `chp_start`/`chp_stop`.
+- **td_energy_control** (лише міст, D-15): `td.energy.control.prepare/confirm/confirm_second/cancel/get_action` (API-17…22), **усі 9 видів** — `chp_start`/`chp_stop` та 7 видів моста (`chp_estop`, `chp_reset`, `chp_set_*`, виконавець `chp`).
 - **td_iot_sim** (необов'язково): `td.sim.scenario`, `td.sim.run.wizard`; REST `/sim/v1` — лише через Odoo-пульт сценаріїв.
 
 ### 2.5 Потік даних від пристрою до екрана
@@ -117,7 +117,7 @@
 6. **ТО.** «ТО» показує залишок мотогодин; при 15 % до строку створюється заявка; після виконання — кнопка «ТО виконано».
 
 ## 5. Ризики й відкриті питання
-Питання (SPEC §15): **Q-01** Apps і важкі залежності (рекомендація: публікувати платформу разом); **Q-02** реальний контролер (типова карта, правка даних); **Q-03** види команд у td_energy_control (ні); **Q-04** V16/інтервали ТО (допущення).
+Питання (SPEC §15): **Q-01** Apps і важкі залежності (рекомендація: публікувати платформу разом); **Q-02** реальний контролер (типова карта, правка даних); **Q-03** види команд у td_energy_control (так, але лише через міст, D-15: усі 9 видів — `chp_start`/`chp_stop` уже є, решту 7 реєструє міст; без мосту — `td.chp.command`); **Q-04** V16/інтервали ТО (допущення).
 Ризики: (1) мокап → реальність: частина регістрів (крутний момент, детонація, пробій) на справжньому контролері може бути недоступна — пульт показує «—», сигнал можна вимкнути; (2) `examples/js` three r147 застаріли (видалені з r148) — версію зафіксовано, оновлення — окремим завданням; (3) навантаження колектора: 230 сигналів, ≈ 10 блоків — перевірити на стенді (ТП); (4) розбіжність емулятор ↔ карта — AC-26 (JSON-ідентичність); (5) режим `ctl/mode=4` лише в емуляторі — пульт показує його як «Профіль макета»; (6) автоматика td_energy_control може пускати/зупиняти КГУ паралельно з оператором — арбітраж у td_energy_control (R-44), пульт показує фактичний стан.
 
 ## 6. План збирання агентами
@@ -126,9 +126,9 @@
 
 | Воркер | Файли, які змінює (виключно) | Розділи SPEC | Здає |
 |---|---|---|---|
-| **W1 — бекенд `td_chp`** | `odoo_addons/td_chp/`: `__manifest__.py`, `__init__.py`, `hooks.py`, `neutralize.sql`, `ruff.toml`, `README.md`, `CHANGELOG.md`, `models/`, `tools/`, `controllers/`, `data/`, `security/`, `views/`, `tests/**` (крім `tests/test_hoot.py`); у першому коміті — заглушки чужих файлів: `tests/test_hoot.py`, `static/src/pult/pult.js` (реєструє tag `td_chp.pult` порожнім компонентом), `static/tests/fixtures/state.json` | §0–§2, §4–§7, §9–§11, §13.1, AC-01…20, 26 | M-01…M-07, V-01…V-08 (дія V-01 — лише `ir.actions.client`), API-01…07, R-01…R-12, R-14, R-15, 4 крони, `chp_signals.json` (230 сигналів), тести |
+| **W1 — бекенд `td_chp`** | `odoo_addons/td_chp/`: `__manifest__.py`, `__init__.py`, `hooks.py`, `neutralize.sql`, `ruff.toml`, `README.md`, `CHANGELOG.md`, `models/`, `tools/`, `controllers/`, `data/`, `security/`, `views/`, `tests/**` (крім `tests/test_hoot.py`); у першому коміті — заглушки чужих файлів: `tests/test_hoot.py`, `static/src/pult/pult.js` (реєструє tag `td_chp.pult` порожнім компонентом), `static/tests/fixtures/state.json` | §0–§2, §4–§7, §9–§11, §13.1, AC-01…20, 26 | M-01…M-07, V-01…V-08 (дія V-01 — лише `ir.actions.client`), API-01…07, R-01…R-12, R-14, R-15, 4 крони, `chp_signals.json` (230 сигналів), хуки C-chp-03 моста (`_td_route`, `_td_dispatch`, `_td_command_rows`, `_td_pending_rows`, `_td_flags`; D-15), тести |
 | **W2 — клієнт «Пульт КГУ»** | `odoo_addons/td_chp/static/**` (`lib/three`, `src/pult`, `tests/hoot`, `tests/fixtures`, `description`), `odoo_addons/td_chp/tests/test_hoot.py` | §3 (UI-01…UI-09), §7 (DTO), R-05 (`S.hl`), D-10, §11, AC-21…23 | порт мокапу: `pult.js/xml/scss`, `store.js`, `scene3d.js`, `scheme.js`, `nodes.js`, `trend.js`, `diag.js`, `cmd_panel.js`; three r147 + `OrbitControls.js` + `LICENSE` (з `cdn.jsdelivr.net/npm/three@0.147.0`, розміри 607 784 і 26 660 Б); Hoot-тести |
-| **W3 — емулятор і міст** | `services/iot_sim/iot_sim/models/chp.py`, `protocols/modbus_maps/{tedom.py,__init__.py}`, `core/scenarios.py`, `catalog/chp_registers.json`, `tests/unit/test_chp_full.py`, `test_chp_map.py`, `CHANGELOG.md`; `odoo_addons/td_iot_sim/data/td_sim_scenario.xml`; **весь** `odoo_addons/td_chp_factory3d/`; адитивні правки `td_energy_viewer3d`: `static/src/layer/energy_layer.js`, `tools/layer.py`, `static/tests/hoot/pult.test.js`, `tests/test_layer_payload.py` (≤ 40 рядків) і рядок VX-06 у `docs/modules/td_energy_viewer3d/SPEC.md` | SPEC td_chp §8, §5.2, R-05–R-07, R-13, AC-24, 25, 27; SPEC td_chp_factory3d повністю | модель `chp` із повною картою; S-24…S-29; міст B01–B10 |
+| **W3 — емулятор і міст** | `services/iot_sim/iot_sim/models/chp.py`, `protocols/modbus_maps/{tedom.py,__init__.py}`, `core/scenarios.py`, `catalog/chp_registers.json`, `tests/unit/test_chp_full.py`, `test_chp_map.py`, `CHANGELOG.md`; `odoo_addons/td_iot_sim/data/td_sim_scenario.xml`; **весь** `odoo_addons/td_chp_factory3d/`; адитивні правки `td_energy_viewer3d`: `static/src/layer/energy_layer.js`, `tools/layer.py`, `static/tests/hoot/pult.test.js`, `tests/test_layer_payload.py` (≤ 40 рядків) і рядок VX-06 у `docs/modules/td_energy_viewer3d/SPEC.md` | SPEC td_chp §8, §5.2, R-05–R-07, R-13, AC-24, 25, 27; SPEC td_chp_factory3d повністю | модель `chp` із повною картою; S-25…S-30 (S-24 — `fire_evacuation`); міст B01–B10 (усі 9 видів команд через td_energy_control, D-15) |
 
 **Команди тестів.**
 - W1: `F3D_TEST_INSTALL=td_chp factory3d/tools/odoo/run_tests.sh td_chp_w1 /td_chp` (усе, окрім Hoot).
