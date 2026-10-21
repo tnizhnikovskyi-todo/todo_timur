@@ -6,7 +6,7 @@ R-07 td_chp діють до й після викликів td_energy_control (RB
 """
 
 from odoo import _, api, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 from odoo.addons.td_chp.tools import command_flow as flow, interlocks
 from odoo.addons.td_chp.tools.signals import Snapshot, iso
@@ -17,6 +17,10 @@ G_ENERGY_MANAGER = "td_energy.group_td_energy_manager"
 REF_PREFIX = "energy:"
 WARN_STATES = ("failed", "blocked", "expired")
 NOT_YOURS = "Команду не знайдено."
+NEED_ENERGY_ROLE = (
+    "Для команд КГУ потрібна роль Енергетика: ваш обліковий запис має лише доступ оператора КГУ. "
+    "Попросіть адміністратора додати групу «Енергетика: енергетик»."
+)
 
 
 class TdChpPult(models.AbstractModel):
@@ -42,9 +46,11 @@ class TdChpPult(models.AbstractModel):
         if op == "prepare":
             if self._td_route(kind) is None:
                 return super()._td_dispatch(op, unit, kind=kind, params=params, ref=ref, token=token)
+            self._td_require_energy_role()
             return self._td_energy_prepare(unit, kind, params)
         if ref.startswith("chp:"):
             return super()._td_dispatch(op, unit, kind=kind, params=params, ref=ref, token=token)
+        self._td_require_energy_role()
         action = self._td_energy_action(ref)
         control = self.env["td.energy.control"]
         if op == "get":
@@ -106,6 +112,12 @@ class TdChpPult(models.AbstractModel):
         return rows
 
     # --- допоміжні --------------------------------------------------------------------------------------------------
+    @api.model
+    def _td_require_energy_role(self):
+        """DB-06: команди йдуть у td_energy_control; без ролі «Енергетик» — зрозуміла відмова (права не розширено)."""
+        if not self.env.user.has_group(G_ENERGY_MANAGER):
+            raise AccessError(_(NEED_ENERGY_ROLE))
+
     @api.model
     def _td_preflight(self, unit, kind):
         """Блокування R-07 td_chp маршрутизованого виду (без `rsw` і `write_enabled`): `(checks, blocked, reason)`."""

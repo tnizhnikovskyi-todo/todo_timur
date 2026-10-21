@@ -10,6 +10,7 @@ from .common import TAGS, ChpCase
 class TestCommandFlow(ChpCase):
     def setUp(self):
         super().setUp()
+        self.skip_if_bridge()
         self.idle()
 
     def cmd(self, user, op, **kw):

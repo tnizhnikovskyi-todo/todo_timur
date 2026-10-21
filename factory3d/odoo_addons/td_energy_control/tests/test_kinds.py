@@ -24,7 +24,7 @@ CLASS_A = {"bess_charge", "bess_stop", "light_break", "light_restore", "vent_eco
 @tagged(*TAGS)
 class TestKinds(TestControlCommon):
     def test_seed(self):  # AC-177
-        kinds_ = self.Kind.search([])
+        kinds_ = self.Kind.search([("executor", "!=", "chp")])
         self.assertEqual(len(kinds_), 16)
         self.assertEqual(self.Kind.search([("tile", "=", True)]).mapped("code"), TILES)
         for k in kinds_:
@@ -61,6 +61,8 @@ class TestKinds(TestControlCommon):
         self.assertEqual(k.normalize({}), {"power_kw": 50.0, "until": "16:00", "soc_limit_pct": 95.0})
 
     def test_genset_availability(self):  # AC-194
+        if genset_link.adapter(self.env) is None:
+            self.skipTest("Потрібен міст td_genset_factory3d (ADP-12)")
         k = self.Kind.search([("code", "=", "genset_test")])
         self.assertTrue(k.available)
         with patch.object(genset_link, "adapter", return_value=None):

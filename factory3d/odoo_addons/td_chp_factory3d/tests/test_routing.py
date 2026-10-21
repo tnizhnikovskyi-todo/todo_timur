@@ -229,11 +229,15 @@ class TestRouting(BridgeCase):
         self.assertEqual(self.env["td.command"].sudo().search_count([("energy_action_id", "=", prep["action_id"])]), 1)
 
     def test_chp_operator_without_energy_role_cannot_command(self):
-        with self.assertRaises(AccessError):
+        with self.assertRaisesRegex(AccessError, "Для команд КГУ потрібна роль Енергетика"):
             self.prepare("estop", user=self.u_op1)
-        with self.assertRaises(AccessError):
+        with self.assertRaises(AccessError):  # `u_user` без ролі оператора КГУ — відмова самого td_chp
             self.prepare("estop", user=self.u_user)
-        self.assertEqual(self.actions(), self.Action)
+        prep = self.prepare("set_cos", {"cos": 0.97})  # посилання на чужу/наявну дію теж не відкриває команд без ролі
+        for op in ("confirm", "cancel", "get"):
+            with self.assertRaisesRegex(AccessError, "роль Енергетика"):
+                self.pult(self.u_op1).command(op, ref=prep["ref"], token=prep["token"])
+        self.assertEqual(self.actions(), self.Action.browse(prep["action_id"]))
 
     def test_foreign_ref_token_and_garbage(self):
         prep = self.prepare("set_cos", {"cos": 0.97})

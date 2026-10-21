@@ -36,6 +36,7 @@ class TestTrendJournal(ChpCase):
             self.pult(self.u_user).get_trend(range_h=6)
 
     def test_journal_merge_and_pagination(self):
+        self.skip_if_bridge()  # журнал команд з мостом — `td.energy.action`
         self.idle()
         base = utc_now().replace(microsecond=0) - timedelta(hours=1)
         for i in range(6):

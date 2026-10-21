@@ -9,6 +9,7 @@ from .common import TAGS, ChpCase
 class TestCommandVerify(ChpCase):
     def setUp(self):
         super().setUp()
+        self.skip_if_bridge()
         self.idle()
 
     def queued(self, kind="start", params=None):

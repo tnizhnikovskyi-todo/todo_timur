@@ -49,6 +49,7 @@ class TestRoutes(ChpHttpCase):
             self.assertIn("AccessError", self.error_name(self.rpc(path, **kw)), path)
 
     def test_operator_and_manager(self):
+        self.skip_if_bridge()  # команди — через td_energy_control (потрібна роль «Енергетик»)
         self.idle()
         self.authenticate("chp_op1", "chp_op1")
         self.assertEqual(self.rpc("/td_chp/ack")["result"], {"acked": 0})
@@ -73,25 +74,30 @@ class TestBusAndAccess(ChpCase):
     def sendone(self):
         return patch.object(self.registry["bus.bus"], "_sendone")
 
+    @staticmethod
+    def chp_sends(sendone):
+        """Повідомлення каналу `td_chp` (інші модулі — td_energy у БД з мостом — пишуть у ту саму шину)."""
+        return [c for c in sendone.call_args_list if c.args[0] == "td_chp"]
+
     def test_bus_throttle(self):  # AC-20
         bus.reset()
         with self.sendone() as sendone:
             self.idle()
             self.env.cr.precommit.run()
-            self.assertEqual(sendone.call_count, 1)
-            channel, mtype, payload = sendone.call_args.args
+            self.assertEqual(len(self.chp_sends(sendone)), 1)
+            channel, mtype, payload = self.chp_sends(sendone)[-1].args
             self.assertEqual((channel, mtype), ("td_chp", "td_chp/update"))
             self.assertIn("state", payload["kinds"])
             self.assertNotIn("ts", payload)  # повідомлення без даних
             self.put({"ctl/state": 1})  # у межах throttle — окремого повідомлення немає
             self.env.cr.precommit.run()
-            self.assertEqual(sendone.call_count, 1)
+            self.assertEqual(len(self.chp_sends(sendone)), 1)
             self.assertIn("state", bus._STATE[self.env.cr.dbname]["pending"])
         bus.reset()
         with self.sendone() as sendone:
             self.put({"ctl/state": 2})
             self.env.cr.precommit.run()
-            self.assertEqual(sendone.call_count, 1)
+            self.assertEqual(len(self.chp_sends(sendone)), 1)
 
     def test_bus_failure_swallowed(self):  # AC-20
         bus.reset()
@@ -103,6 +109,7 @@ class TestBusAndAccess(ChpCase):
         self.assertEqual(self.Signal.search([("code", "=", "chp/gas/p_in")]).last_value, 2.1)  # ingest відпрацював
 
     def test_bus_kinds_for_commands_and_events(self):
+        self.skip_if_bridge()
         bus.reset()
         self.idle()
         self.env.cr.precommit.run()
@@ -116,6 +123,7 @@ class TestBusAndAccess(ChpCase):
             self.assertIn("journal", kinds)
 
     def test_access_matrix(self):  # AC-18
+        self.skip_if_bridge()  # групи Енергетики містять групи КГУ (DB-06)
         for fn, user in (
             (lambda p: p.get_state(), self.u_plain),
             (lambda p: p.get_trend(), self.u_plain),

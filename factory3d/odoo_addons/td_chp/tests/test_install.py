@@ -10,6 +10,7 @@ from .common import TAGS, ChpCase
 @tagged(*TAGS)
 class TestInstall(ChpCase):
     def test_install(self):  # AC-01
+        self.skip_if_bridge()  # міст переносить сигнали на джерело Енергетики (MB-U72-CHP)
         self.assertEqual(self.unit.code, "CHP")
         self.assertEqual(self.source.code, "CHP-U72")
         self.assertEqual(self.source.module, "chp")

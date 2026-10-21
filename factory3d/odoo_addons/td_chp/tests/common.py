@@ -40,7 +40,19 @@ def utc_now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def bridge_installed(env):
+    """Встановлено міст `td_chp_factory3d`: команди КГУ живуть у `td.energy.action` (D-15), а не в `td.chp.command`."""
+    return bool(
+        env["ir.module.module"].sudo().search_count([("name", "=", "td_chp_factory3d"), ("state", "=", "installed")])
+    )
+
+
 class ChpBase:
+    def skip_if_bridge(self):
+        """Тести автономного td_chp (команди `td.chp.command`, власне джерело, прапори) — не для БД із мостом (D-15)."""
+        if bridge_installed(self.env):
+            self.skipTest("Встановлено міст td_chp_factory3d (D-15): це покривають тести моста")
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

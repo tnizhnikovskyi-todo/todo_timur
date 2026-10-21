@@ -11,6 +11,7 @@ from .common import TAGS, ChpCase
 @tagged(*TAGS)
 class TestStateApi(ChpCase):
     def test_dto(self):  # AC-04
+        self.skip_if_bridge()  # з мостом інші caps і перелік умов пуску
         self.idle()
         self.put({"gas/flow": 109.0, "gen/p_kw": 400.0, "ht/q_total": 497.0, "eng/rpm": 1500.0, "cyl/A1/t": 470.0})
         dto = self.pult(self.u_user).get_state()
@@ -84,6 +85,7 @@ class TestStateApi(ChpCase):
         self.assertFalse(self.events(kind="comm"))
 
     def test_fixture_matches_dto(self):  # контракт C-chp-02: фікстура клієнта = форма DTO
+        self.skip_if_bridge()  # фікстура описує форму DTO автономного td_chp
         with file_open("td_chp/static/tests/fixtures/state.json", "rb") as fh:
             fixture = json.loads(fh.read().decode("utf-8"))
         self.idle()

@@ -41,6 +41,7 @@ class TestInterlocks(ChpCase):
         self.assertEqual(interlocks.CHECKS["gas_pressure"](self.unit, {"gas/p_in": 2.1})[1], "зараз 2,1 бар")
 
     def test_start_list_and_stale(self):
+        self.skip_if_bridge()  # умова `rsw` береться з td_energy_control
         self.idle()
         checks = interlocks.build_checks(self.unit, "start", Snapshot(self.env))
         self.assertEqual([c["code"] for c in checks], START_CODES)
