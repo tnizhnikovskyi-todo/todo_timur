@@ -35,6 +35,7 @@ from iot_sim.core.clock import MAX_FACTOR, MIN_FACTOR
 from iot_sim.core.events import CursorGone
 from iot_sim.core.scenarios import ScenarioError, ScenarioParamsError, ScenarioRunner
 from iot_sim.core.world import World
+from iot_sim.protocols.machine_targets_api import register_machine_targets
 
 EXPECTED_PROTOCOLS = ("opcua", "modbus", "bacnet", "mqtt", "helvarnet", "biostar", "woodstore", "jobs", "sics", "lpr")
 TICK_LATE_S = 3.0
@@ -624,5 +625,7 @@ def create_app(
     @app.get("/sim/v1/catalog/devices.json", dependencies=[Depends(read_auth)])
     def catalog_devices() -> list[dict[str, Any]]:
         return [_device(c) for c in sorted(W().devices)]
+
+    register_machine_targets(app, W, read_auth, write_auth)  # C-LP-01: цілі станів верстатів від Odoo
 
     return app

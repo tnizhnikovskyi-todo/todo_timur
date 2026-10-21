@@ -1,5 +1,15 @@
 # Changelog — td_iot_sim
 
+## 19.0.2.2.0 — цілі станів верстатів для демо «Живе виробництво» (контракт C-LP-01)
+
+Оновлення: `-u` модуля. Схеми й дані не змінюються, міграційних скриптів немає.
+
+- `td.sim.device._td_push_machine_targets(targets)` (`@api.model`): `POST <td.iot_sim.url>/api/v1/machines/targets` з токеном SIM API; `targets` — список
+  `{"code": <td.machine.code>, "state": "working"|"idle"|"down", "reason", "until": <ISO UTC або datetime>}`; повертає `{"ok": n, "unknown": [коди]}`.
+  Таймаут 5 с; без адреси, зі стоп-краном `write_enabled`, при помилці зв'язку, HTTP не 2xx чи не-JSON — `{"ok": 0, "unknown": []}` і `warning` у лог
+  (без винятків, без токена в логу, без `td.sim.event` на кожен виклик). Викликає `td_live_production`; сервіс — `services/iot_sim` (API-50).
+- Тест `tests/test_machine_targets.py` (підміна `requests.Session.request`): тіло, токен, URL, таймаут, `datetime` → ISO UTC, усі шляхи без винятків.
+
 ## 19.0.2.1.0 — сценарій S-24 «Пожежна евакуація (навчання)» (вау №8 «Евакуація в 3D»)
 
 Оновлення: `-u` модуля. Схеми не змінюються, міграційних скриптів немає; пульт емулятора отримує 24-й сценарій.

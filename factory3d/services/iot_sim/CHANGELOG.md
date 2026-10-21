@@ -1,5 +1,15 @@
 # Changelog — iot_sim
 
+## Unreleased: живе виробництво — цілі станів верстатів від Odoo (контракт C-LP-01)
+- `POST /api/v1/machines/targets` (дубль `/sim/v1/machines/targets`; `core/machine_targets.py`, `protocols/machine_targets_api.py`, у `control_api.py` лише рядки реєстрації):
+  список `{"code", "state": "working|idle|down", "reason", "until"}` (або `{"targets": [...]}`), токен SIM API як у решти керувальних маршрутів (401/403/423); відповідь
+  `{"ok", "unknown", "expired"}`; `GET` тих самих шляхів — чинні цілі з залишком, станом і потужністю верстата (для налагодження). Сховище — `world.flags["machine_targets"]`
+  (у знімку; `reset` очищає). `until` — реальний час UTC (не sim-час); `until` у минулому знімає ціль; після `until` — автономна поведінка.
+- Модель `machine`/`io_machine`: при цілі стан береться з неї (`working` → WORKING, `idle` → READY, `down` → ERROR з повідомленням за `reason`: E0421/A0201/E0430/A0202/E0440,
+  інше — E0400), навантаження за R-02 (номінал із шумом / холостий хід / 0) і через `p_now` — лінії щитів, лічильники, компресор; фізичні збої, блекаут і `fire_drill` первинні;
+  синтетичні `SIM-…` завдання при цілі не створюються. Зміна цілі — подія (`payload.target`). Без цілі поведінка не змінилась. Відповідність кодів: `td.machine.code` = код
+  пристрою (35 з 35, таблиця не потрібна). Тести: `tests/unit/test_machine_targets.py`, `tests/protocols/test_machine_targets_api.py` (у т. ч. OPC UA).
+
 ## Unreleased: пожежна евакуація (вау №8 «Евакуація в 3D»)
 - Сценарій S-24 `fire_evacuation` (`iot_sim/core/scenarios_evac.py`, реєструється рядком імпорту в кінці `scenarios.py`): каскад `fire_drill` + люди з СКУД ідуть своїм маршрутом
   до виходів і проходять через двері виходів (подія BioStar на `ACR-IN`, `tna_key=2`, `door_id` виходу: турнікет `1` або аварійні двері `11…21`); частина людей — не своїм виходом

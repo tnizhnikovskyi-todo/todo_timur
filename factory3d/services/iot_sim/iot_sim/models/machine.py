@@ -10,6 +10,8 @@
   (планувальник S-01, R-17); завершене завдання лишається ``Ended/Completed`` до початку зміни.
 * ``world.workcenters[code]`` — ``{"working_state": "blocked"|…}`` (Odoo ``mrp.workcenter``).
 * ``world.flags["shift"]`` (S-01): ``speed`` множить темп завдань і лічильник деталей.
+* ``world.flags["machine_targets"]`` (C-LP-01, ``core/machine_targets.py``): ціль від Odoo ``working|idle|down``
+  до ``until``; поки діє — стан РЦ береться з неї (R-LP-02), без цілі — автономна поведінка вище.
 
 ``kwh_total``/``kwh_shift`` споживача веде ``meter`` (R-03); тут лише ``p_now``.
 Публічні атрибути для протоколів: ``flags`` (прапори §7.7), ``current_state``, ``values``
@@ -24,6 +26,7 @@ import re
 from datetime import date
 from typing import Any
 
+from iot_sim.core.machine_targets import Target, active_target
 from iot_sim.models import register_model
 from iot_sim.models.base import Model
 from iot_sim.models.facp import drill_view, zone_of_machine
@@ -141,6 +144,9 @@ class Machine(Model):
         self.msg_id = ""
         self.fault_msg: tuple[str, str, str, str] | None = None
         self.mode = MODE_SLEEP
+        self.target: Target | None = None  # чинна ціль від Odoo (C-LP-01) цього тіку
+        self.tgt_key: tuple[str, str] | None = None  # (state, reason) останньої обробленої цілі
+        self.target_msg = ""  # MessageId цілі ``down`` (сигнал event)
 
     # --- прапори значення сигналів (P-01: Boolean/enum; P-02: біти) ---------------------
     def flag_value(self, b: bool) -> Any:
@@ -251,17 +257,22 @@ class Machine(Model):
         if in_shift and key != self.shift_key:
             self._new_shift()
         self.shift_key = key
+        tgt = self.target = active_target(w, code)
         wc = w.workcenters.get(code, {})
         blackout = w.flags.get("blackout")
         power = not (isinstance(blackout, dict) and blackout.get("phase") == "outage") and self.device.fault != "power"
         blocked = wc.get("working_state") == "blocked" or bool(wc.get("blocked"))  # follow_odoo: blocked
+        blocked = blocked and tgt is None  # ціль від Odoo первинна (R-LP-02)
         view = drill_view(w)
         ext_emergency = bool(view and view["steps"]["machines"] and view["zone"] == zone_of_machine(self.zone))
         error = (self.device.fault not in (None, "comm")) or blocked or not power or ext_emergency
-        self._plan(in_shift, error)
-        task = self.active_job() is not None
+        error = error or (tgt is not None and tgt.state == "down")
+        if tgt is None:  # синтетичні завдання планувальника не плутаються з цілями Odoo
+            self._plan(in_shift, error)
+        task = tgt.state == "working" if tgt is not None else self.active_job() is not None
+        self._track_target(tgt)
         f = self.flags
-        f["MachineOn"] = in_shift or task
+        f["MachineOn"] = tgt is not None or in_shift or task
         f["MachineInitialized"] = f["MachineOn"]
         f["PowerPresent"] = power
         f["Calibrated"] = True
@@ -270,7 +281,7 @@ class Machine(Model):
         f["Error"] = error
         f["Alarm"] = error
         f["RecipeInRun"] = task and not error
-        f["EnergySaving"] = not in_shift and not task
+        f["EnergySaving"] = tgt is None and not in_shift and not task
         cs = compute_state(
             f["MachineOn"], f["MachineInitialized"], f["EnergySaving"], f["Error"], f["Calibrated"], f["RecipeInRun"]
         )
@@ -325,9 +336,46 @@ class Machine(Model):
         self.set("alarm", self.flag_value(self.flags["Alarm"]))
         self.set("pieces_out", int(self.relative["PiecesOut"]))
         job = self.active_job() or next((j for j in self.my_jobs() if j.get("state") == "ready"), None)
+        if self.target is not None and job is not None and job.get("origin") == "sim":
+            job = None
         jid = job_order_id(job) if job else ""
         self.set("job", jid or "")
-        self.set("event", self.msg_id)
+        self.set("event", self.msg_id or self.target_msg)
+
+    # --- ціль від Odoo (C-LP-01, R-LP-03) ------------------------------------------------
+    def _track_target(self, tgt: Target | None) -> None:
+        """Подія при зміні цілі: ``down`` — alarm/fault за ``reason`` (як ``fault``, R-15), решта — info."""
+        key = None if tgt is None else (tgt.state, tgt.reason or "")
+        if key == self.tgt_key:
+            return
+        prev, self.tgt_key = self.tgt_key, key
+        code, ev = self.device.code, self.world.events
+        self.target_msg = ""
+        if tgt is not None and tgt.state == "down":
+            mid, cat, name, text = MESSAGES.get(tgt.reason or "", MESSAGES["generic"])
+            self.target_msg = mid
+            tail = f" ({tgt.reason})" if tgt.reason and tgt.reason not in MESSAGES else ""
+            ev.emit(
+                "alarm" if cat == "ALARM" else "fault",
+                f"{code}: {text}{tail}",
+                device=code,
+                payload={
+                    "message_id": mid,
+                    "category": cat,
+                    "message_name": name,
+                    "reason": tgt.reason,
+                    "target": True,
+                },
+            )
+        elif tgt is not None:
+            ev.emit(
+                "info",
+                f"{code}: за ціллю Odoo — {tgt.state}" + (f" ({tgt.reason})" if tgt.reason else ""),
+                device=code,
+                payload={"target": True, "state": tgt.state, "reason": tgt.reason},
+            )
+        elif prev is not None:
+            ev.emit("info", f"{code}: ціль Odoo знято, автономна поведінка", device=code, payload={"target": False})
 
     # --- збої (R-15) --------------------------------------------------------------------
     def on_fault(self, reason: str, **kw: Any) -> None:
@@ -354,6 +402,8 @@ class Machine(Model):
             "values": self.values,
             "relative": self.relative,
             "msg_id": self.msg_id,
+            "tgt": list(self.tgt_key) if self.tgt_key else None,
+            "target_msg": self.target_msg,
             "shift_key": [self.shift_key[0].isoformat(), self.shift_key[1]] if self.shift_key else None,
         }
 
@@ -362,5 +412,8 @@ class Machine(Model):
         self.values.update(d.get("values", {}))
         self.relative.update(d.get("relative", {}))
         self.msg_id = d.get("msg_id", "")
+        tk = d.get("tgt")
+        self.tgt_key = (str(tk[0]), str(tk[1])) if tk else None
+        self.target_msg = d.get("target_msg", "")
         sk = d.get("shift_key")  # без цього після рестарту «нова зміна» обнуляла б Relative* (AC-48)
         self.shift_key = (date.fromisoformat(sk[0]), bool(sk[1])) if sk else None

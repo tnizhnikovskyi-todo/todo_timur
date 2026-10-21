@@ -14,6 +14,8 @@
 Зміни: 14.10.2026 — R-04: поріг тривоги температури трансформатора 140 °C (відповідь № 24).
 Зміни: 20.10.2026 — вау №19 «Портальний склад плит у 3D наживо»: R-18 і §8.5 — авто-`feed` за РЦ розкрою у WORKING з `external_ref` = МО й фази руху в `GET /status` (AC-75; td_machine_connect R-31).
 
+Зміни: 21.10.2026 — «Живе виробництво» (L2, контракт C-LP-01 build/live/PLAN.md): API-50 `POST/GET /api/v1/machines/targets` (цілі станів верстатів від Odoo до `until`), §9.3b (R-LP-1…R-LP-5, AC-LP-1…AC-LP-8): стан, навантаження й події верстата за ціллю, без цілі — R-14…R-17; §2.2 `td.sim.device._td_push_machine_targets`; відповідність кодів: `td.machine.code` = код пристрою емулятора (35 з 35).
+
 Контракти, на які спирається документ: `docs/ARCHITECTURE.md` §5 (конвенції імен сигналів, стоп-крани, права), §6.1–6.3 (`td.scene.mixin.td_code`, `td.zone`, ворота-`stock.location`, паспорт `maintenance.equipment.f3d_*`), §6.6 (протокольна матриця P-01…P-13, REST `/sim/v1/*`, режими `scenario`/`follow_odoo`), §6.7 (шляхи даних переглядача), §6.8 (заявки ТО), рішення D-01, D-05…D-09, D-13, D-20 (адреси Modbus — PDU за вендором, ADAM — молодше слово першим), D-21 (ATyS p — Annexe III), D-23 (AMF — варіант A); реєстр `docs/CONSISTENCY.md` (X-xx); рішення автора A-01…A-12 (`ARCHITECTURE.md` §7).
 
 Що цей документ **віддає** іншим модулям (посилатися за ідентифікаторами `td_iot_sim <ID>`): протокольні карти **P-01…P-12** (§8.3–§8.14), каталог сигналів **Додаток A** (1 168 рядків: 1 017 веде емулятор, 151 ведуть модулі-власники — X-34, X-35, X-76; № 1 167–1 168 — зони `FA-SOC`, `FA-OFFICE`, № 12г), **API-01…API-03** (Odoo), **API-10…API-19** (`/sim/v1`), **API-20…API-27** (woodStore), **API-30…API-34** (`/jobs`), **API-40…API-46** (BioStar 2), схема MQTT P-06 (§8.8), формат LPR і SICS (§8.13), правила R-01…R-30 (§9), сценарії S-01…S-15 (§9.3).
@@ -50,6 +52,7 @@ services/iot_sim/
 │   │   ├── rng.py                  детермінований шум (seed, код сигналу) — R-00
 │   │   ├── registry.py             Device, Signal, Catalog; завантаження API-01 / devices.yaml / signals.csv
 │   │   ├── world.py                World: зміна, завдання, фури, люди, баланс енергії, події, знімок
+│   │   ├── machine_targets.py      цілі станів верстатів від Odoo (C-LP-01): сховище з `until`, `active_target`, `apply_targets` — §9.3b
 │   │   ├── events.py               Event, EventBus (кільце 10 000), типи подій (§8.2.4)
 │   │   ├── scenarios.py            ScenarioRunner: реєстр S-01…S-15, запуск/зупинка/параметри
 │   │   └── snapshot.py             збереження/відновлення state/snapshot.json
@@ -90,7 +93,8 @@ services/iot_sim/
 │   │   ├── jobs_api.py             P-04 (FastAPI) — §8.6
 │   │   ├── lpr_push.py             P-11 (httpx POST) — §8.13.2
 │   │   ├── sics_server.py          P-11 (asyncio TCP) — §8.13.3
-│   │   └── control_api.py          REST /sim/v1 (FastAPI) — §7.2
+│   │   ├── control_api.py          REST /sim/v1 (FastAPI) — §7.2
+│   │   └── machine_targets_api.py  POST/GET /api/v1/machines/targets (API-50), реєструється з control_api — §7.2
 │   ├── odoo/
 │   │   ├── devices_client.py       GET /f3d/sim/devices (API-01), POST /f3d/sim/events (API-03)
 │   │   └── follow.py               режим follow_odoo: XML-RPC лише читання (§8.9.10)
@@ -98,9 +102,9 @@ services/iot_sim/
 ├── state/                          snapshot.json (volume)
 └── tests/
     ├── unit/                       test_rng.py, test_clock.py, test_models_*.py, test_world.py, test_scenarios.py, test_registry.py,
-    │                               test_lighting_layout.py, test_outbound_guard.py
+    │                               test_lighting_layout.py, test_outbound_guard.py, test_machine_targets.py
     ├── protocols/                  test_opcua.py, test_modbus_*.py, test_bacnet.py, test_helvarnet.py, test_mqtt.py,
-    │                               test_biostar.py, test_woodstore.py, test_jobs.py, test_sics.py, test_lpr.py, test_control_api.py
+    │                               test_biostar.py, test_woodstore.py, test_jobs.py, test_sics.py, test_lpr.py, test_control_api.py, test_machine_targets_api.py
     ├── stand/                      ТК-01…ТК-17 проти compose (pytest -m stand)
     ├── data/                       parts_48.csv (AC-43), bms_dali_devices.csv (копія bms Додаток A.1, AC-65)
     └── conftest.py                 фікстури: world(seed), running servers (порти з SIM_TEST_PORT_BASE)
@@ -299,6 +303,8 @@ odoo_addons/td_iot_sim/
 | `model` | Char | related `equipment_id.td_model`, readonly |
 
 Методи: `action_fault()` → відкриває M-10 з `default_device_id`; `action_clear()`: `write_enabled`; `POST /device/{code}/clear`; `state="ok"`, `fault_reason=False`; `message_post`. `_set_fault(reason, note)`: `write_enabled`; `POST /device/{code}/fault {"reason": reason, "note": note}`; `state="fault"`. `action_open_signals()`. `name_get` → `"{code} — {name}"`.
+
+**`_td_push_machine_targets(targets)` (`@api.model`, контракт C-LP-01).** `targets` — список `{"code": <td.machine.code>, "state": "working"|"idle"|"down", "reason": <str|None>, "until": <ISO UTC або datetime>}`. Шле `POST <td.iot_sim.url>/api/v1/machines/targets` (API-50) з тілом-списком, заголовком `Authorization: Bearer <td.iot_sim.token>` і таймаутом 5 с (не `td.iot_sim.timeout_s`); `datetime` → `YYYY-MM-DDTHH:MM:SSZ` (наївний UTC Odoo), вхідний список не змінюється. Повертає `{"ok": n, "unknown": [коди]}` — з відповіді емулятора. **Без винятків**: порожній список, не задана адреса, стоп-кран `write_enabled` вимкнено, помилка зв'язку/таймаут, відповідь не 2xx чи не JSON → `{"ok": 0, "unknown": []}` (для зв'язку/HTTP/JSON — `warning` у лог без токена; для решти — `info`/мовчки), тож виклик із крону диспетчера `td_live_production` не падає без емулятора. Подія `td.sim.event(kind="command")` не пишеться (виклик щохвилини). Тест: `tests/test_machine_targets.py` (підміна `requests.Session.request`).
 
 ### 2.3 M-03 `td.sim.signal` — каталог сигналів
 
@@ -663,6 +669,7 @@ UPDATE td_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 | API-17 | `POST /reset`; `POST /stop-all`; `POST /resume` | reset: `{"keep_time": true, "seed": 20261012}` | `{"ok": true, "sim_now": "…"}` | `reset` зупиняє всі запуски, відновлює початковий стан каталогу (номінали), не чіпає конфіг; `stop-all` = стоп-кран (значення заморожуються, 423 на команди), `resume` знімає |
 | API-18 | `GET /health`; `GET /metrics` | — | health: `{"status": "ok|degraded|locked", "protocols": {…}, "uptime_s"}`; metrics: Prometheus text (`iot_sim_signal_value{code=…}`, `iot_sim_tick_seconds`, `iot_sim_protocol_up{proto=…}`, `iot_sim_events_total{kind=…}`) | без токена, лише з мережі `f3d_sim` |
 | API-19 | `GET /events` | — | `{"items": [{"id": "e-…", "ts", "kind", "device", "run_id", "message", "payload"}], "next": "e-…"}` з `?since=<id>`, `?kind=`, `?device=`, `?limit=500` | кільцевий буфер 10 000 |
+| API-50 | `POST /api/v1/machines/targets`; `GET /api/v1/machines/targets` (дублі: `/sim/v1/machines/targets`) | POST: список `[{"code": "SAW-1", "state": "working\|idle\|down", "reason": "…"\|null, "until": "2026-10-21T08:15:00Z"}]` або `{"targets": [...]}` (≤ 500) | POST: `{"ok": n, "unknown": ["…"], "expired": ["…"]}`; GET: `{"count": n, "items": [{"code", "state", "reason", "until", "remaining_s", "set_at", "machine_state": "WORKING", "p_now_kw"}]}` | контракт C-LP-01 («Живе виробництво»); токен і коди помилок — як у решти керувальних маршрутів (`write`: 401/403/423; GET — 401); `state` ∉ {working, idle, down}, відсутній/невалідний `until`, відсутній `code`, понад 500 цілей — 422 на весь запит; невідомий код і код пристрою не-верстата (напр. `GANTRY-1`) — у `unknown`, решта діє; `until` ≤ реального «зараз» знімає чинну ціль (у `expired`); `until` без зони — UTC. Опис — §9.3b |
 | — | `POST /lpr-sink` | JSON Axis (§8.13.2) | `{"received": true}` | заглушка приймача LPR для фази 1; складає у `events` як `kind=info, device=CAM-xx` |
 | — | `GET /catalog/signals.csv`, `GET /catalog/devices.json` | — | файли каталогу (для `td_telemetry` і тестів) | токен |
 
@@ -1571,6 +1578,35 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | AC-S24-4 | `stop` через 40 с: `stopped`, `flags == {}`, 20736 на дверях 1–5, хто вийшов — повернувся | `test_stop_restores_at_once` |
 | AC-S24-5 | порожній `world.people` — `result.people = 0`; невалідні `stuck` 4, `wrong_exit_pct` 101, `speed_mps` 0,1, `zone` `cnc`, зайвий ключ — 422; реєстр = 24 сценарії | `test_nobody_on_site`, `test_params_validation`, `test_scenarios.py::test_registry_of_24` |
 
+### 9.3b Живе виробництво: цілі станів верстатів від Odoo (C-LP-01, API-50)
+
+`td_live_production` (демо-модуль «Демо: живе виробництво») через `td_iot_sim` (§2.2 `_td_push_machine_targets`) шле емулятору, у якому стані має бути кожен верстат: `working` (операція йде), `idle` (простій без аварії), `down` (простій з причиною). Код — `iot_sim/core/machine_targets.py` + `iot_sim/protocols/machine_targets_api.py`; у `machine.py` лише вилучення цілі в `tick` і подія при її зміні.
+
+**R-LP-1 Відповідність кодів.** `td.machine.code` (= `mrp.workcenter.td_code`) збігається з кодом пристрою емулятора: усі 35 верстатів `mc_machines.csv` td_machine_connect — пристрої з драйвером `machine`/`io_machine`, зайвих верстатів в емуляторі немає (таблиця відповідності не потрібна; `tests/unit/test_machine_targets.py::test_codes_match_odoo_machine_catalog`). Інші пристрої (`GANTRY-1`, енергетика тощо) цілей не приймають — код у `unknown`.
+
+**R-LP-2 Стан за ціллю.** Поки ціль діє, `tick` верстата бере стан із неї, а не з зміни/завдань: `working` → `MachineOn`, `RecipeInRun` → `CurrentState = WORKING` (R-14), лічильник деталей іде (R-16); `idle` → `READY` (`RecipeInRun = False`, `EnergySaving = False`, у т. ч. поза зміною); `down` → `Error = Alarm = True` → `ERROR`, DI «аварія» (P-02). Первинні перед ціллю лише фізичні причини — `fault(...)`, `blackout` без живлення, `fire_drill` `machines`: вони дають `ERROR` попри `working`/`idle`. `working_state = blocked` з `follow_odoo` при цілі ігнорується (ціль — від Odoo, тож узгоджена з простоями). Синтетичні завдання планувальника (R-17) при цілі не створюються й не просуваються; сигнал `job` не показує `SIM-…` (завдання Odoo `WO…` показується як завжди).
+
+**R-LP-3 Навантаження й енергія.** Потужність — R-02 за станом: `working` → `nominal·(1 + noise·r)`, `idle` → `rate·(1 + 0,05·r)` (холостий хід), `down` → 0. Лінії щитів/ввідні лічильники (`energy/lines/*`, Q1/Q2), `kwh_total/kwh_shift`, компресор, пилосос і портал рахуються з `p_now`/станів споживачів (R-03, R-18 та правила їхніх моделей), тож ідуть за цілями без додаткових правил.
+
+**R-LP-4 Події й сигнали збирача.** Сигнали `workcenters/<C>/{state,mode,alarm,pieces_out,job,event}`, що читає збирач td_machine_connect (OPC UA/Modbus), виставляються в тому ж тіку, що побачив ціль (≤ `SIM_TICK_MS`, 1 с), OPC UA публікує їх у тому ж циклі (`publishing_interval_ms` 1 с). Зміна цілі (не повтор того ж `state`+`reason`) породжує подію: `down` — `fault`/`alarm` з `message_id` за `reason` (`spindle` → E0421, `emergency` → A0201, `power` → E0430, `sensor` → A0202, `loop` → E0440; інше — E0400 «Загальна помилка», `reason` у `payload` і в тексті), сигнал `event` = цей MessageId, поки діє `down`; `working`/`idle` і зняття цілі — `info`. Усі події `payload.target = true` (зняття — `false`).
+
+**R-LP-5 Термін дії й сховище.** Ціль діє до `until` або до наступного оновлення цього коду (ціль іншого коду не зачіпається); `until` — **реальний** (настінний) час UTC, як його бачить Odoo, і звіряється з реальним годинником сервісу, а не з sim-часом (`POST /time` його не зсуває); `until` без зони — UTC; `until` у минулому знімає чинну ціль. Після `until` верстат повертається до автономної поведінки (R-14…R-17) і отримує `info` «ціль знято»; запис прибирається ліниво (при читанні). Сховище — `world.flags["machine_targets"]`: у знімку (переживає рестарт; повторних подій не буде — `get_state` моделі зберігає `tgt`), `reset` (API-17) його очищає. Без жодної цілі поведінка емулятора не змінюється.
+
+**Затримка цілі до Odoo.** Емулятор: ≤ 1 с (тік) + ≤ 1 с (публікація OPC UA); збирач: пакет іде в Odoo не пізніше ніж через `push_interval_s` = 5 с; перехід `td.machine` у простій/аварію підтверджується після `micro_stop_s` (120 с за замовчуванням) — мікрозупинки td_machine_connect R-02.
+
+**Критерії.**
+
+| ID | Given / When / Then | Тест |
+|---|---|---|
+| AC-LP-1 | Без цілей `SAW-1` WORKING (12,18 кВт), `SAW-3` READY (простій), `GET /api/v1/machines/targets` → `count = 0` | `test_machine_targets.py::test_no_target_keeps_autonomous_behaviour` |
+| AC-LP-2 | `POST` `SAW-3 working`, `SAW-1 idle`, `SAW-2 down(spindle)`, `NOPE-1 idle`; When 1 тік; Then `state` = 3 / 2 / 4, `p_now` = nominal / rate / 0, `SAW-2/alarm = true`, `event = E0421`; відповідь `{"ok": 3, "unknown": ["NOPE-1"]}` | `test_machine_targets_api.py::test_post_list_body_and_signals_after_one_tick`, `test_machine_targets.py::test_working_idle_down_follow_target` |
+| AC-LP-3 | `until` = +30 с, `down`; When спливло 35 с; Then `WORKING`, `p_now` = nominal, ціль зникла з GET, подія «ціль знято»; `until` у минулому → `expired`, ціль знято; зсув `POST /time` на +3 доби не скидає ціль | `test_until_expiry_returns_to_autonomous`, `test_until_in_the_past_removes_target`, `test_until_uses_real_time_not_sim_time` |
+| AC-LP-4 | Лінія `energy/lines/BW-1/p_now` і `i_now`: `SAW-1` working → down → idle → working дає `base`, `base − 12,18`, `base − 12,18 + rate`, `base`; `kwh_total` за 0,5 год `down` не росте, за 0,5 год `working` +6,09 кВт·год | `test_energy_aggregates_follow_targets`, `test_kwh_integrates_target_power` |
+| AC-LP-5 | OPC UA після `POST` і одного тіку: `CurrentState`/`Flags.Alarm`/`PowerActive`/`RecipeInRun` збігаються з цілями (`SAW-1 down` → 4/true/0, `SAW-3 working` → 3, `SAW-2 idle` → 2/false) | `test_machine_targets_api.py::test_opcua_collector_view_matches_target` |
+| AC-LP-6 | `fault(spindle)` при цілі `working` → `ERROR`; `clear` → `WORKING`; `blocked` з Odoo при цілі ігнорується; ціль `idle` ховає `SIM-…` у `job`; `io_machine`: `idle` → DI run = 0, `down` → DI fault = 1 | `test_physical_fault_beats_working_target`, `test_blocked_workcenter_ignored_when_target_present`, `test_idle_target_suppresses_synthetic_jobs`, `test_io_machine_bits_follow_target` |
+| AC-LP-7 | Без токена — 401; `SIM_READONLY_API=1` — 403 на POST (GET 200); після `stop-all` — 423 на POST; `state=broken`, без `until`, `until="завтра"`, без `code`, 501 ціль — 422 і сховище порожнє; `until` без зони = UTC, `+03:00` враховується; `/sim/v1/machines/targets` — той самий обробник; `reset` очищає цілі | `test_machine_targets_api.py` |
+| AC-LP-8 | Усі 35 кодів `mc_machines.csv` td_machine_connect — пристрої `machine`/`io_machine` емулятора, приймаються одним `POST` (`ok = 35`, `unknown = []`); Odoo-клієнт: тіло/токен/URL/таймаут 5 с, `{"ok": 0, "unknown": []}` без винятків при помилці зв'язку, HTTP ≠ 2xx, не-JSON, стоп-крані `write_enabled`, без URL, порожньому списку | `test_codes_match_odoo_machine_catalog`; `odoo_addons/td_iot_sim/tests/test_machine_targets.py` |
+
 ### 9.4 Прискорення часу
 
 `factor` ∈ [0,1; 60]. Усі інтеграли (R-03, R-06, R-07, R-16, R-21) рахуються по `dt_sim`, тому значення за sim-добу не залежать від `factor`. Хвилинний шум R-00 прив'язаний до sim-хвилин (при `factor=60` — 60 нових `r` на реальну секунду). Протокольні позначки часу (`SourceTimestamp`, BACnet `time-stamp`, BioStar `datetime`, MQTT `ts`, LPR `datetime`) — `sim_now`. Push-частоти протоколів — у реальному часі (не частіше 1 с), тож при `factor=60` споживач бачить «стрибки» на 60 с — це очікувано і задокументовано для споживачів (ТК-14). `follow_odoo` → `factor=1` (A-12).
@@ -1711,6 +1747,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | `test_clock.py` | `test_factor_monotonic`, `test_set_time`, `test_dst_transition` | `FakeRealTime` | `now()` росте на `dt·factor`; `set()` не ламає монотонність UTC; 25.10.2026 03:00 локальний повтор без дублів хвилинних кроків | AC-06, §11 |
 | `test_models_noise.py` | `test_noise_formula`, `test_noise_threshold_alarm` | сигнал compressor | значення за R-01 з точністю 1e-9; `alarm=below, threshold=6.0` → `status=alarm` при 5,99 | AC-04 |
 | `test_models_machine.py` | `test_state_logic_table` (параметризований 32 комбінації прапорів), `test_power_by_state`, `test_pieces_counter`, `test_fault_clear`, `test_job_order_id_format`, `test_completed_job_stays_in_list` | `machine("SAW-1")`, фейкові WO з Odoo (id 13) і синтетичні | `CurrentState` за таблицею §7.7 стандарту; `p_now` R-02; `pieces_out` за 15 хв = 6; після `fault(spindle)` → ERROR, подія `E0421`; `clear` → WORKING, якщо завдання; `JobOrderID == "WO00013"`, синтетичне `SIM-00001`; після `done` елемент у списку зі станом `Ended/Completed` до зміни (X-38) | AC-07, AC-19, AC-63 |
+| `test_machine_targets.py` | `test_working_idle_down_follow_target`, `test_until_expiry_returns_to_autonomous`, `test_until_uses_real_time_not_sim_time`, `test_energy_aggregates_follow_targets`, `test_snapshot_roundtrip_keeps_targets_and_events_not_repeated`, `test_codes_match_odoo_machine_catalog` | `world`, `apply_targets` | §9.3b R-LP-1…R-LP-5: стан, потужність, події, `until`, знімок, 35 кодів | AC-LP-1…AC-LP-4, AC-LP-6, AC-LP-8 |
 | `test_models_mobile.py` | `test_drain_cycle`, `test_route_to_charge`, `test_hours_only_when_busy` | `mobile("FL-2")`, зони з `zones.json` | R-05 межі 20/95, швидкість зарядки 0,6 %/хв; точка (x,y) у полігоні Z-CHG; `hours` не росте в `charging` | AC-08 |
 | `test_models_drift.py` | `test_drift_rate`, `test_reset_on_maintenance_closed` | `roofvent("RV-05")` | +0,05·(1+0,5r)/хв; `maintenance_closed` → 120 | AC-09 |
 | `test_models_boiler.py` | `test_level_refill`, `test_boilers_on_logic` | | R-10 | AC-10 |
