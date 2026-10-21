@@ -22,7 +22,7 @@ Requirements and notes
 * Compatible with the automatic start and stop of Machine Connect: starting and finishing are idempotent.
 * Cron jobs are disabled by default; the button "Start live production" in Settings enables them.
 """,
-    "version": "19.0.1.0.2",
+    "version": "19.0.1.0.4",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",
@@ -31,6 +31,7 @@ Requirements and notes
     "depends": ["mrp", "sale_mrp", "td_factory3d", "td_machine_connect"],
     "data": [
         "security/ir.model.access.csv",
+        "data/mrp_loss_data.xml",
         "data/ir_cron.xml",
         "views/td_live_day_views.xml",
         "views/res_config_settings_views.xml",

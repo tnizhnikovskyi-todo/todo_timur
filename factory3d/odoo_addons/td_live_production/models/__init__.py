@@ -1,4 +1,5 @@
 from . import td_live_day
+from . import td_machine
 from . import res_config_settings
 from . import td_live_job
 from . import td_live_engine
