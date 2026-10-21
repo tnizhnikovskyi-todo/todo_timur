@@ -263,6 +263,13 @@
 .o_f3d_viewer .o_f3d_toggle-ceiling[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
 .o_f3d_viewer .o_f3d_toggle-ceiling[aria-pressed="false"] { opacity: 0.85; text-decoration: line-through; text-decoration-thickness: 1px; }
 .o_f3d_viewer .o_f3d_layer.o_f3d_ceil-opt small { display: block; font-weight: 400; color: var(--f3d-muted); font-size: 11px; }
+/* «Маршрути: поточні / усі / сховати» — тримач із трьох кнопок (як «Лише активні / Усі маршрути» у стрічці) */
+.o_f3d_viewer .o_f3d_routes { display: flex; align-items: center; gap: 0; margin: 0 0 8px; font-size: 12px; }
+.o_f3d_viewer .o_f3d_routes .o_f3d_muted { color: var(--f3d-muted); margin-right: 8px; }
+.o_f3d_viewer .o_f3d_rt { padding: 2px 9px; font-size: 11.5px; border-radius: 0; }
+.o_f3d_viewer .o_f3d_rt:nth-of-type(1) { border-radius: 4px 0 0 4px; } .o_f3d_viewer .o_f3d_rt:last-child { border-radius: 0 4px 4px 0; }
+.o_f3d_viewer .o_f3d_rt + .o_f3d_rt { margin-left: -1px; }
+.o_f3d_viewer .o_f3d_rt[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
 .o_f3d_viewer .o_f3d_prod-legend { font-size: 11.5px; color: var(--f3d-muted); margin: -2px 0 8px; line-height: 1.6; }
 .o_f3d_viewer .o_f3d_prod-legend span { white-space: nowrap; margin-right: 6px; }
 .o_f3d_viewer .o_f3d_prod-legend i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }

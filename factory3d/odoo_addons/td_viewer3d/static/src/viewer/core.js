@@ -97,6 +97,12 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
         <span><i style="background:#2f80c0"></i>плита, ХДФ</span><span><i style="background:#8e44ad"></i>фурнітура</span>
         <span><i style="background:#e67e22"></i>крайка</span><span><i style="background:#16a085"></i>ЛФМ, плівка</span>
         <span><i style="background:#7f8c8d"></i>пакування</span> · товща лінія — більше замовлень</div>
+      <div class="o_f3d_routes" role="group" aria-label="Маршрути замовлень у сцені">
+        <span class="o_f3d_muted">Маршрути:</span>
+        <button type="button" class="o_f3d_btn o_f3d_rt" data-routes="cur" aria-pressed="true" title="У живому режимі: маркер замовлення й тонка лінія поточної та наступної ділянки; повний маршрут — при наведенні на номер чи виборі замовлення">поточні</button>
+        <button type="button" class="o_f3d_btn o_f3d_rt" data-routes="all" aria-pressed="false" title="Повні маршрути всіх замовлень у роботі й лінії матеріалів">усі</button>
+        <button type="button" class="o_f3d_btn o_f3d_rt" data-routes="none" aria-pressed="false" title="Лише маркери замовлень; маршрут показується при наведенні чи виборі">сховати</button>
+      </div>
       <div class="o_f3d_layers o_f3d_layers"></div>
       <div class="o_f3d_row-btns" style="margin-top:8px">
         <button class="o_f3d_btn o_f3d_all-on">Усі</button>
@@ -254,6 +260,7 @@ export class F3dViewer {
     setMode(m) { return this._c.setMode(m); }
     setLayer(k, on) { return this._c.setLayer(k, on); }
     setCeiling(show, persist) { return this._c.setCeiling(show, persist); }
+    setRoutesMode(mode, persist) { return this._c.setRoutesMode(mode, persist); }
     setProdOverlay(on) { return this._c.setProdOverlay(on); }
     goView(v) { return this._c.goView(v); }
     setSimTime(m) { return this._c.setSimTime(m); }
@@ -1160,13 +1167,14 @@ function topOf(obj) {
 const MAT_COLOR = { "плита": 0x2f80c0, "фурнітура": 0x8e44ad, "крайка": 0xe67e22, "ЛФМ": 0x16a085,
   "плівка ПВХ": 0x16a085, "пакування": 0x7f8c8d };
 // точки, що біжать гілкою матеріалу: кількість — від числа замовлень, швидкість ~ 5 м/с у масштабі плану
-const PART_GEO = new THREE.SphereGeometry(0.32, 10, 8);
+// партія матеріалу в дорозі — невеликий непрозорий ящик кольору матеріалу (раніше — кулі, у шарі замовлень до r = 0,77)
+const PART_GEO = new THREE.BoxGeometry(0.5, 0.34, 0.5);
 function branchParticles(curve, color, n, sink, tag, size = 1) {
   n = LS.particles(n);
   const len = curve.getLength();
   const out = [];
   for (let j = 0; j < n; j++) {
-    const p = new THREE.Mesh(PART_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+    const p = new THREE.Mesh(PART_GEO, new THREE.MeshBasicMaterial({ color }));
     p.userData = { isPulse: true, curve, len, u: j / n, v: 4.5 + (j % 3) * 0.6, mos: tag };
     p.scale.setScalar(size);
     p.position.copy(curve.getPointAt(p.userData.u));
@@ -1248,7 +1256,31 @@ function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
 // ---------------------------------------------------------------- шар «Замовлення в роботі»
 // маршрут кожного замовлення в роботі (верстати в порядку операцій) і точка там, де воно зараз:
 // на верстаті поточної операції або посередині переходу між завершеною й наступною
-const prodOv = { on: false, objs: [], dots: [], color: new Map(), byMo: new Map(), focus: null, saved: null };
+const prodOv = { on: false, objs: [], dots: [], color: new Map(), byMo: new Map(), focus: null, hover: null, saved: null };
+// «Маршрути» (живий режим): cur — маркер і тонка лінія поточної та наступної ділянки; all — повні маршрути й лінії матеріалів; none — лише маркери.
+// Повний маршрут замовлення показується при наведенні на його номер і при виборі (prodOv.hover / focus). «Потік зміни» живе за своїм перемикачем «Лише активні».
+const ROUTES = ["cur", "all", "none"];
+const routesSaved = () => { try { return storage?.getItem("f3d.routes"); } catch { return null; } };
+let routesMode = ROUTES.includes(routesSaved()) ? routesSaved() : "cur";
+function syncRoutesUi() {
+  root.querySelectorAll(".o_f3d_rt").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.routes === routesMode)));
+}
+function setRoutesMode(m, persist = true) {
+  if (!ROUTES.includes(m)) {return;}
+  routesMode = m;
+  syncRoutesUi();
+  if (persist) {store("f3d.routes", m);}
+  prodRefocus(); // лише видимість наявних об'єктів, геометрія не перебудовується
+  invalidate();
+}
+root.querySelectorAll(".o_f3d_rt").forEach((b) => { b.onclick = () => setRoutesMode(b.dataset.routes); });
+syncRoutesUi();
+function prodHover(name) {
+  if (prodOv.hover === name) {return;}
+  prodOv.hover = name;
+  prodRefocus();
+  invalidate();
+}
 // вибране замовлення — яскраво, решта маршрутів притухає
 function prodFocus(name) {
   prodOv.focus = name;
@@ -1269,9 +1301,9 @@ const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожеж
 const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
 function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
 function clearProdOverlay() {
-  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO && o.geometry !== MARK_DISC) {o.geometry?.dispose();} }
+  for (const o of prodOv.objs) { scene.remove(o); if (!SHARED_GEO.has(o.geometry)) {o.geometry?.dispose();} }
   prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
-  prodOv.tracks = []; prodOv.batches = []; prodOv.nShown = null;
+  prodOv.tracks = []; prodOv.batches = []; prodOv.nShown = null; prodOv.hover = null;
   const n = $(".o_f3d_flow-n");
   if (n) {n.textContent = "";}
 }
@@ -1286,6 +1318,9 @@ function cyclePosition(wos, at, firstOut, lastIn) {
 }
 const MARK_DISC = new THREE.CylinderGeometry(0.4, 0.4, 0.16, 28);
 const MARK_RIM = new THREE.CylinderGeometry(0.58, 0.58, 0.14, 28);
+const STAGE_GEO = new THREE.CylinderGeometry(0.28, 0.28, 0.08, 18); // склад / приймання / відвантаження на маршруті
+const START_GEO = new THREE.BoxGeometry(0.5, 0.36, 0.5);            // початок: ящик з плитами на фурі
+const END_GEO = new THREE.ConeGeometry(0.38, 0.75, 12);             // кінець: фура клієнта
 function drawProdOverlay() {
   clearProdOverlay();
   if (!prodOv.on || !D) {return;}
@@ -1315,7 +1350,8 @@ function drawProdOverlay() {
       if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) {pts.push(p);}
     });
     if (pts.length < 2) {continue;}
-    const r = 0.07 + 0.025 * Math.min(e.mos.size, 6);
+    const r = (0.07 + 0.025 * Math.min(e.mos.size, 6)) * 0.6; // на 40 % тонші, ніж було
+
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
     const m = new THREE.Mesh(tubeG(curve, pts.length * 16, r, 5, false),
       new THREE.MeshBasicMaterial({ color: MAT_COLOR[e.kind] ?? 0x888888, transparent: true, opacity: 0.7 }));
@@ -1324,7 +1360,7 @@ function drawProdOverlay() {
     m.userData.key = e.key;
     scene.add(m); prodOv.objs.push(m); matObjs.push(m);
     if (sim) {continue;} // у програванні матеріал їде партіями у свій час — див. buildBatches
-    const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
+    const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 1.3);
     matObjs.push(...parts); prodOv.parts.push(...parts);
   }
   prodOv.mats = matObjs;
@@ -1355,24 +1391,29 @@ function drawProdOverlay() {
     const add = (o) => { o.traverse((x) => { x.userData.isPulse = true; }); scene.add(o); prodOv.objs.push(o); mine.push(o); return o; };
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
     // лінія маршруту з кольором і прозорістю у вершинах: пройдена частина тьмяніє без перебудови геометрії
-    const tubeGeo = tubeG(curve, pts.length * 20, 0.2, 6, false);
+    const tubeGeo = tubeG(curve, pts.length * 20, 0.12, 6, false); // повний маршрут — на 40 % тонший, ніж було (r 0,2)
     const shade = tubeShade(tubeGeo, curve, pts.length, col);
     const lines = [add(new THREE.Mesh(tubeGeo,
-      new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.75 })))]; // усе, що ховається разом із маршрутом
+      new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.75 })))]; // усе, що ховається разом із повним маршрутом
+    // тонка лінія «поточних»: той самий шлях, r 0,07; прозора поза поточною й наступною ділянками (колір вершин, без перебудови)
+    const thinGeo = tubeG(curve, pts.length * 20, 0.07, 5, false);
+    const thinShade = tubeShade(thinGeo, curve, pts.length, col);
+    const thin = add(new THREE.Mesh(thinGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false })));
+    thin.visible = false;
     const pointMat = new THREE.MeshBasicMaterial({ color: col.clone().lerp(new THREE.Color(0xffffff), 0.45) });
-    pts.forEach((p, j) => { // точки складів і приймання/відвантаження
+    pts.forEach((p, j) => { // точки складів і приймання/відвантаження — малі плоскі диски, не кулі
       if (stage[j] === "op" || j === 0 || j === pts.length - 1) {return;}
-      const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), pointMat);
+      const m = new THREE.Mesh(STAGE_GEO, pointMat);
       m.position.copy(p);
       lines.push(add(m));
     });
-    const start = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshBasicMaterial({ color: col }));
+    const start = new THREE.Mesh(START_GEO, new THREE.MeshBasicMaterial({ color: col }));
     start.position.copy(pts[0]);
-    const end = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 12), new THREE.MeshBasicMaterial({ color: col }));
+    const end = new THREE.Mesh(END_GEO, new THREE.MeshBasicMaterial({ color: col }));
     end.position.copy(pts[pts.length - 1]);
     lines.push(add(start), add(end));
     const fg = codes.findIndex((c, j) => j >= firstOut && /^FG-/.test(c));
-    const track = { mo, wos, at, lastIn, firstOut, fg: fg > 0 ? fg : firstOut, n: pts.length, curve,
+    const track = { mo, wos, at, lastIn, firstOut, fg: fg > 0 ? fg : firstOut, n: pts.length, curve, thin, thinShade,
       out: mo.delivery?.picking ? dayMin(idx.pick.get(mo.delivery.picking)?.scheduled_date) : null };
     track.model = { // для чистого правила «активних» (flow_focus.js)
       name: mo.name, out: track.out, tail: !(track.firstOut >= track.n - 1 && track.fg >= track.n - 1),
@@ -1396,6 +1437,8 @@ function drawProdOverlay() {
     el.title = `${mo.name} · ${mo.product_name} × ${mo.qty} — ${pos.phase}${blocked ? " · зупинка" : ""}`
       + (mo.delivery ? ` → ${mo.delivery.partner}` : "");
     el.addEventListener("click", (e) => { e.stopPropagation(); showMO(mo.name); });
+    el.addEventListener("mouseenter", () => prodHover(mo.name)); // повний маршрут замовлення — поки курсор на номері
+    el.addEventListener("mouseleave", () => prodHover(null));
     const tag = new CSS2DObject(el);
     tag.position.copy(dot.position);
     add(tag);
@@ -1421,10 +1464,11 @@ function tubeShade(geo, curve, n, col) {
   for (let i = 0; i <= ts; i++) {ringU[i] = curve.getUtoTmapping(i / ts) * (n - 1);}
   return { attr, ringU, stride: (rs + 1) * 4 };
 }
-function trackShade(tr, seg) {
-  const { attr, ringU, stride } = tr.shade;
+// thin: тонка лінія видима лише на поточній і наступній ділянках (індекси точок seg…seg + 2), решта прозора
+function trackShade(tr, seg, thin = false) {
+  const { attr, ringU, stride } = thin ? tr.thinShade : tr.shade;
   for (let i = 0; i < ringU.length; i++) {
-    const a = legAlpha(ringU[i], seg);
+    const a = thin ? (ringU[i] >= seg && ringU[i] <= seg + 2 ? 1 : 0) : legAlpha(ringU[i], seg);
     for (let j = i * stride + 3; j < (i + 1) * stride; j += 4) {attr.array[j] = a;}
   }
   attr.needsUpdate = true;
@@ -1436,30 +1480,36 @@ function activeOrders(t, live = false) {
   return act;
 }
 // видимість лише перемиканням visible / розміру на вже створених об'єктах; повертає true, якщо щось змінилось
+// стан замовлення vs: off — чекає (маленька приглушена точка), F — повний маршрут, T — маркер і тонка лінія поточної та наступної ділянки, M — лише маркер
 function prodApplyFocus(t, sim, batchKeys) {
   const tracks = prodOv.tracks || [];
   const only = !sim || flowOnlyActive; // живий режим — завжди за правилом
   const act = only ? activeOrders(t, !sim) : null;
-  const f = prodOv.focus;
+  const f = prodOv.focus, hv = prodOv.hover;
   let n = 0, changed = false;
   for (const tr of tracks) {
-    const on = !act || act.has(tr.mo.name) || tr.mo.name === f;
+    const name = tr.mo.name;
+    const on = !act || act.has(name) || name === f;
     n += on;
-    if (tr.on !== on) {
-      tr.on = on; tr.seg = undefined; changed = true;
-      for (const o of tr.lines) {o.visible = on;}
+    const vs = !on ? "off" : sim || name === f || name === hv || routesMode === "all" ? "F" : routesMode === "cur" ? "T" : "M";
+    if (tr.vs !== vs) {
+      tr.vs = vs; tr.on = on; tr.seg = undefined; changed = true;
+      for (const o of tr.lines) {o.visible = vs === "F";}
+      tr.thin.visible = vs === "T";
       tr.tag.visible = on; tr.ring.visible = on;
       tr.dot.scale.setScalar(on ? 1 : 0.35); // ждучий — маленька приглушена точка без лінії й підпису
       tr.dot.material.color.copy(on ? tr.col : tr.dimCol);
     }
-    if (on) {
-      const seg = only ? Math.max(0, Math.floor(tr.u)) : null;
-      if (tr.seg !== seg) { tr.seg = seg; trackShade(tr, seg); changed = true; }
+    if (vs === "F" || vs === "T") {
+      const seg = vs === "T" || only ? Math.max(0, Math.floor(tr.u)) : null;
+      if (tr.seg !== seg) { tr.seg = seg; trackShade(tr, seg, vs === "T"); changed = true; }
     }
   }
   for (const m of prodOv.mats || []) {
     const u = m.userData;
-    const on = !only || (f && u.mos.has(f)) || (sim ? batchKeys?.has(u.key) : [...u.mos].some((x) => act.has(x)));
+    const picked = (f && u.mos.has(f)) || (hv && u.mos.has(hv));
+    // лінії матеріалів: у «поточних» лише вибраного замовлення, у «усіх» — активних; у «Потоці зміни» — за правилом «Лише активні» й партіями
+    const on = sim ? !only || picked || batchKeys?.has(u.key) : picked || (routesMode === "all" && [...u.mos].some((x) => act.has(x)));
     if (m.visible !== !!on) { m.visible = !!on; changed = true; }
   }
   if (prodOv.nShown !== (sim ? n : -1)) {
@@ -1518,7 +1568,8 @@ function codesCurve(codes) {
   });
   return pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
 }
-const BATCH_GEO = new THREE.BoxGeometry(1.1, 0.7, 1.1);
+const BATCH_GEO = new THREE.BoxGeometry(0.6, 0.42, 0.6); // партія матеріалу в дорозі — невеликий ящик (було 1,1 × 0,7 × 1,1)
+const SHARED_GEO = new Set([PART_GEO, MARK_DISC, MARK_RIM, STAGE_GEO, START_GEO, END_GEO, BATCH_GEO]); // спільні геометрії шару замовлень: clearProdOverlay їх не звільняє
 const batchMat = new Map();
 function addBatch(codes, kind, w0, w1, mos, label, key) {
   const curve = codesCurve(codes);
@@ -3728,6 +3779,7 @@ function getState() {
     clientState: client?.state ?? null,
     ui: { side: ui.side, card: ui.card, collapsed: [...ui.secs] },
     ceiling: { shown: !ceil.hidden, nodes: ceil.nodes.size, y: ceil.y },
+    routes: routesMode,
   };
 }
 async function applyParams(p = {}) {
@@ -3781,7 +3833,7 @@ return {
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,
   playShift, stopShift, setPlaybackMode, setLite, loadPart, getState, destroy, branchParticles, buildLabels,
-  syncLabels, banner, mergeD: mergeData, setCeiling, ceil, ceilingWhy,
+  syncLabels, banner, mergeD: mergeData, setCeiling, ceil, ceilingWhy, setRoutesMode, prodHover,
 };
 
 }
