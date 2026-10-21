@@ -75,6 +75,8 @@ class TestInstall(BridgeCase):
         self.assertNotIn(
             self.env.ref("td_chp.group_td_chp_operator"), self.env.ref("td_energy.group_td_energy_manager").implied_ids
         )
+        for code in ("chp_start", "chp_stop"):  # без мосту види td_energy_control знову ідуть інтентом збирача
+            self.assertEqual(self.env["td.energy.command.kind"].search([("code", "=", code)]).executor, "intent")
         hooks.post_init(self.env)  # повторне встановлення відновлює злиття
         self.assertEqual(self.unit.source_id.code, "MB-U72-CHP")
 
@@ -85,7 +87,10 @@ class TestInstall(BridgeCase):
             self.assertEqual((kind.cls, kind.executor, kind.resource, kind.tile), (cls, "chp", "chp", False), code)
             self.assertFalse(kind.remote_gated, code)
             self.assertFalse(kind.checks, code)
-        self.assertEqual(Kind.search([("code", "=", "chp_start")]).cls, "B")
-        self.assertEqual(Kind.search([("code", "=", "chp_stop")]).cls, "B")
+        for code in ("chp_start", "chp_stop"):  # клас B лишається, виконавець — `chp` (запис у chp/ctl/cmd, не інтент)
+            kind = Kind.search([("code", "=", code)])
+            self.assertEqual((kind.cls, kind.executor, kind.resource), ("B", "chp", "chp"), code)
+        self.assertTrue(Kind.search([("code", "=", "chp_start")]).checks)  # перевірки td_energy_control збережено
+        self.assertTrue(Kind.search([("code", "=", "chp_start")]).remote_gated)
         self.assertIn("chp", dict(Kind._fields["executor"].selection))
         self.assertEqual(Kind.search([("code", "=", "chp_set_cos")]).params_schema[0]["name"], "cos")

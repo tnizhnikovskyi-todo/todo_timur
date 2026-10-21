@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- D-15: 7 видів команд КГУ моста в td_energy_control (клас А — одне підтвердження, без другої особи; `chp_start` і
-     `chp_stop` уже є в td_energy_control). Виконавець `chp` додає цей модуль (models/td_energy_action.py): запис у
-     chp/ctl/* через td.command і верифікація за chp/ctl/ack або значенням цілі. Без плитки на екрані «Керування»:
-     команди йдуть із Пульта КГУ. Блокування R-07 td_chp діють у мосту (preflight), тому `checks` порожні. -->
+<!-- D-15: 7 видів команд КГУ моста в td_energy_control (клас А — одне підтвердження, без другої особи). Виконавець `chp`
+     додає цей модуль (models/td_energy_action.py): запис у chp/ctl/* через td.command і верифікація за chp/ctl/ack або
+     значенням цілі. Без плитки на екрані «Керування»: команди йдуть із Пульта КГУ. Блокування R-07 td_chp діють у мосту
+     (preflight), тому `checks` порожні.
+     `chp_start` і `chp_stop` уже є в td_energy_control (клас B, 2/2, `checks` лишаються): з мостом їх виконавець — `chp`
+     (запис 1/2 у chp/ctl/cmd, Modbus u72), а не `intent` збирача енергетики, який пише у вікно ГРЩ energy_control/chp/cmd.
+     Назад (`intent`) виконавця повертає uninstall_hook. -->
 <odoo>
+    <record id="td_energy_control.kind_chp_start" model="td.energy.command.kind">
+        <field name="executor">chp</field>
+    </record>
+    <record id="td_energy_control.kind_chp_stop" model="td.energy.command.kind">
+        <field name="executor">chp</field>
+    </record>
     <record id="kind_chp_estop" model="td.energy.command.kind">
         <field name="code">chp_estop</field>
         <field name="name">Аварійний стоп КГУ</field>

@@ -14,6 +14,8 @@ RUNNING = {"ctl/state": 2, "ctl/mode": 3, "eng/rpm": 1500}  # агрегат у 
 class BridgeCase(ChpBase, TestControlCommon):
     """Користувачі td_energy_control (`u_en1`, `u_en2`, `u_view`), `e_chief` і td_chp (`u_op1`, `u_user`: лише КГУ)."""
 
+    bridge_executor = True  # `chp_start`/`chp_stop` — виконавець `chp` (дані моста), як у проді
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

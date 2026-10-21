@@ -35,10 +35,16 @@ class TestControlCommon(TransactionCase):
 
     now = NOW
 
+    bridge_executor = False  # True — тести моста td_chp_factory3d: `chp_start`/`chp_stop` лишаються з виконавцем `chp`
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, f3d_now=cls.now, tracking_disable=True))
+        if not cls.bridge_executor:  # міст КГУ (auto_install) підміняє виконавця; ядро перевіряємо з інтентом збирача
+            cls.env["td.energy.command.kind"].sudo().search(
+                [("code", "in", ("chp_start", "chp_stop")), ("executor", "=", "chp")]
+            ).write({"executor": "intent"})
         cls.Action = cls.env["td.energy.action"]
         cls.Kind = cls.env["td.energy.command.kind"]
         cls.Scenario = cls.env["td.energy.scenario"]
