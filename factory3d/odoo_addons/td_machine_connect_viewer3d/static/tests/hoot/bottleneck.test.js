@@ -3,7 +3,7 @@
 import { describe, expect, test } from "@odoo/hoot";
 import { mountViewer } from "@td_viewer3d/../tests/hoot/helpers";
 import {
-    MAX_BOXES, STACK_NAME, bottleneckExtension, bottleneckOf, boxCount, cardHtml, flowOf,
+    MAX_BOXES, STACK_NAME, bottleneckExtension, bottleneckOf, boxCount, cardHtml, entrySpot, flowOf, hoverText, labelText,
 } from "@td_machine_connect_viewer3d/layer/bottleneck_layer";
 
 describe.current.tags("desktop");
@@ -175,4 +175,69 @@ test("BN7 дельта із зведенням flow: вузьке місце п�
     expect(back.length).toBe(1);
     expect(boxes(back[0]).length).toBe(2);
     expect(nearA(back[0]) < center(viewer, "CNC-2").distanceTo(back[0].position)).toBe(true);
+});
+
+const labelOf = (viewer) => stackOf(viewer)?.getObjectByName(STACK_NAME + "_text")?.element;
+
+test("BN8 підпис біля бейджа: «Вузьке місце · черга N», при невираженому вузькому місці — «Ймовірне …»; змінюється з вердиктом у дельті", async () => {
+    const { viewer } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ queue: 4 }) }) });
+    const el = labelOf(viewer);
+    expect(text(el)).toBe("Вузьке місце · черга 4");
+    expect(el.className.includes("o_f3d_lbl")).toBe(true); // стиль підписів верстатів
+    expect(labelText({ queue: 2, verdict: "low" })).toBe("Ймовірне вузьке місце · черга 2");
+    expect(labelText({ queue: 2, verdict: "load" })).toBe("Ймовірне вузьке місце · черга 2");
+    expect(labelText({ queue: 2.4, verdict: "queue" })).toBe("Вузьке місце · черга 2");
+    expect(labelText({ queue: 2, verdict: "growing" })).toBe("Вузьке місце · черга 2");
+    viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "low" } } } });
+    expect(text(labelOf(viewer))).toBe("Ймовірне вузьке місце · черга 4");
+    viewer.applyPatch({ workcenters: { "SAW-1": { flow: { verdict: "growing", queue: 7 } } } });
+    expect(text(labelOf(viewer))).toBe("Вузьке місце · черга 7");
+    expect(viewer.scene.children.filter((c) => c.name === STACK_NAME).length).toBe(1); // підпис старої стопки не лишився
+});
+
+test("BN9 стопка стоїть на підлозі біля входу верстата ділянки, а не посеред проходу; бейдж над нею", async () => {
+    const { viewer } = await mountViewer({
+        model: "core",
+        mutate: withFlow({ "CNC-2": flow({ queue: 3, codes: ["CNC-2", "CNC-1"], prev: ["SAW-1"], station: "Присадка" }) }),
+    });
+    const group = stackOf(viewer);
+    const T = bottleneckExtension.THREE;
+    const boxOf = (code) => new T.Box3().setFromObject(viewer.items.get(code));
+    const entry = group.userData.entry;
+    expect(["CNC-2", "CNC-1"].includes(entry)).toBe(true);
+    const b = boxOf(entry);
+    const grown = b.clone().expandByScalar(1.3); // «біля входу»: не далі ~1 м від краю верстата
+    const p = group.position;
+    expect(grown.containsPoint(new T.Vector3(p.x, b.min.y + 0.1, p.z))).toBe(true);
+    expect(b.containsPoint(new T.Vector3(p.x, b.min.y + 0.1, p.z))).toBe(false); // не всередині верстата
+    expect(Math.abs(p.y - b.min.y) < 1e-6).toBe(true); // на підлозі верстата
+    // сторона, що дивиться на попередню ділянку (SAW-1)
+    const prev = boxOf("SAW-1").getCenter(new T.Vector3());
+    const own = b.getCenter(new T.Vector3());
+    expect((prev.x - own.x) * (p.x - own.x) + (prev.z - own.z) * (p.z - own.z) > 0).toBe(true);
+    // бейдж і підпис — над самою стопкою (в її групі, по центру)
+    const badge = group.getObjectByName(STACK_NAME + "_label");
+    expect(badge.position.x).toBe(0);
+    expect(badge.position.y > Math.max(...boxes(group).map((m) => m.position.y))).toBe(true);
+    expect(group.getObjectByName(STACK_NAME + "_text").position.y).toBe(badge.position.y);
+    // чиста функція: без попередньої ділянки — найзахідніший верстат, сторона −X, по центру сторони
+    const m = [{ code: "A", box: new T.Box3(new T.Vector3(10, 0, 0), new T.Vector3(14, 2, 4)) }, { code: "B", box: new T.Box3(new T.Vector3(20, 0, 0), new T.Vector3(24, 2, 4)) }];
+    const spot = entrySpot(T, m, null);
+    expect([spot.code, spot.x, spot.y, spot.z]).toEqual(["A", 9.1, 0, 2]);
+    expect(entrySpot(T, m, new T.Vector3(30, 0, 2))).toMatchObject({ code: "B", x: 24.9, z: 2 }); // попередня ділянка праворуч — сторона +X
+    expect(entrySpot(T, m, new T.Vector3(22, 0, -20))).toMatchObject({ code: "B", x: 22, z: -0.9 }); // знизу — сторона −Z
+});
+
+test("BN10 наведення показує метрики, клік по підпису відкриває картку верстата-входу з блоком «Вузьке місце» і підказкою «що якщо»", async () => {
+    const { viewer, el } = await mountViewer({ model: "core", mutate: withFlow({ "SAW-1": flow({ queue: 5, load: 0.923, queue_delta: 2, wait_min: 34.4 }) }) });
+    const label = labelOf(viewer);
+    for (const part of ["Розкрій", "завантаження 92 %", "черга 5 (↑ +2)", "очікування 34 хв", "Що якщо: +20 % потужності на Розкрій"]) {
+        expect(label.title.includes(part)).toBe(true);
+    }
+    expect(hoverText(flow({ queue: 0, queue_delta: 0, load: null, wait_min: null, hint: undefined }))).toBe("Розкрій · завантаження — · черга 0 · очікування —");
+    label.click();
+    expect(viewer.getState().selected).toBe(stackOf(viewer).userData.entry);
+    const card = text(q(el, ".o_f3d_cardbody"));
+    expect(card.includes("Вузьке місце · Розкрій")).toBe(true);
+    expect(card.includes("Що якщо: +20 % потужності")).toBe(true);
 });

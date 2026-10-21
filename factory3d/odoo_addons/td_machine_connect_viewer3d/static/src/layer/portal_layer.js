@@ -10,18 +10,22 @@
 import { registerViewerExtension } from "@td_viewer3d/viewer/core";
 import {
     CYCLE_S, GANTRY, activeJobAt, carrying, decorColor, machineCardHtml, poseAt, poseLapse, portalCardHtml, portalOf, shortName,
-    stackCardHtml, stackNodeOf, stackQtyAt, MIN_THICKNESS_MM,
+    stackCardHtml, stackNodeOf, stackQtyAt, tableSheetsAt, MIN_THICKNESS_MM,
 } from "@td_machine_connect_viewer3d/layer/portal_model";
 
 export const EXT_ID = "td_machine_connect_portal";
 export const LAYER_NAME = "td_portal_layer";
-const SHEET_T = 0.016; // м, товщина листа в рухомому листі
+const SHEET_T = 0.016; // м, товщина листа за умовчанням (за стосом: td_thickness_mm)
+const SHEET_W = 2.8; // м, лист 2800 × 2070 (як запечені плити стосів)
+const SHEET_D = 2.07;
 const PALLET_H = 0.1;
 const LAPSE_RATE = 8; // швидше за 8× реального часу — «прискорене» програвання (рух за власним темпом)
 const LAPSE_CYCLE_MS = 6000; // повний цикл «верстат → стос → верстат» у прискореному програванні
-const MAX_SPEED = 18; // м/с — межа швидкості згладжування (різка зміна цілі не телепортує, а прискорено їде)
-const TABLE_Y = 1.15; // м, висота підйомного столу верстата, на який кладуть лист
-const FEED_DX = 1.4; // м від краю верстата до точки кладення (портал заходить колією над стіл)
+const MAX_SPEED = 18; // м/с — межа швидкості візка (різка зміна цілі не телепортує, а прискорено їде)
+const FEED_DX = 2.9; // м від краю верстата до центру листа на приймальному столі (лист 2,8 м лежить на столі, не вилазить за колію)
+const TABLE_FALLBACK = 0.9; // м, верх столу, якщо його не видно променем зверху
+const TABLE_MAX = 1.6; // м, вище — це не стіл, а конструкція верстата
+const SAFE_MARGIN = 0.5; // м, запас над найвищим стосом і столом на безпечній висоті переїзду
 const STATIC_PARTS = /^GANTRY-1_(5|6|7|8|9|10)$/; // запечені міст, візок, траверса й лист: замінюємо рухомими
 const BAKED_PLATES = /^stack_\d+_\d+_(1|2)$/; // запечені плити стосу (висота «на момент збирання моделі»)
 const DEFAULTS = {
@@ -44,6 +48,45 @@ export function replayMinutes(api) {
 
 function boxOf(T, obj) {
     return obj ? new T.Box3().setFromObject(obj) : null;
+}
+
+/**
+ * Розділити геометрію запеченого меша за світовою висотою: трикутники, усі вершини яких вище `y`, і решта. Запечена
+ * `GANTRY-1_6` — це верхня балка моста (y 6,7…7,5) разом із траверсою (плита 2,6 × 1,8 м на y 2,7…2,8) в одному меші: балка
+ * мусить їхати з мостом, а траверса — з візком і рамою; раніше траверса лишалась у повітрі й виглядала плитою, що висить сама.
+ */
+export function splitByHeight(T, mesh, y) {
+    const g = mesh.geometry;
+    const pos = g.attributes.position;
+    const idx = g.index;
+    const tris = (idx ? idx.count : pos.count) / 3;
+    const v = new T.Vector3();
+    const hi = [];
+    const lo = [];
+    const at = (n) => (idx ? idx.getX(n) : n);
+    const wy = (i) => v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).y;
+    for (let t = 0; t < tris; t++) {
+        const a = at(t * 3);
+        const b = at(t * 3 + 1);
+        const c = at(t * 3 + 2);
+        (Math.min(wy(a), wy(b), wy(c)) > y ? hi : lo).push(a, b, c);
+    }
+    const make = (list) => {
+        const n = new T.BufferGeometry();
+        for (const [k, attr] of Object.entries(g.attributes)) {
+            n.setAttribute(k, attr); // атрибути спільні з запеченою геометрією: самі їх не звільняємо
+        }
+        n.setIndex(list);
+        // межі лише за вершинами цієї частини (за атрибутом вони охопили б усю запечену геометрію)
+        const box = new T.Box3();
+        for (const i of list) {
+            box.expandByPoint(v.fromBufferAttribute(pos, i));
+        }
+        n.boundingBox = box;
+        n.boundingSphere = box.getBoundingSphere(new T.Sphere());
+        return n;
+    };
+    return [make(hi), make(lo)];
 }
 
 function textTexture(T, color) {
@@ -119,7 +162,7 @@ export class PortalExtension {
             st = {
                 group: null, stacks: new Map(), geo: null, carriage: null, hidden: new Set(), cur: null, raf: 0, last: 0, own: [],
                 clock: { anchorSec: 0, anchorMs: 0, P: null, min: null, minMs: 0, rate: 0, changeMs: 0 },
-                t: null, pose: null, override: null, off: null, texStripe: null, geometry: null,
+                t: null, pose: null, override: null, off: null, tables: new Map(), travelY: 0, texStripe: null, geometry: null,
             };
             this.states.set(api.scene, st);
         }
@@ -149,6 +192,7 @@ export class PortalExtension {
         st.group = null;
         st.stacks.clear();
         st.carriage = null;
+        st.tables.clear();
         st.geo = null;
         st.cur = null;
     }
@@ -247,22 +291,58 @@ export class PortalExtension {
         return geo;
     }
 
-    /** Точка кладення листа на верстат-ціль (над підйомним столом із боку порталу); невідомий верстат — початкове положення. */
+    /**
+     * Точка кладення листа на верстат-ціль: `{x, z, top}` — центр листа над приймальним столом пили (з боку порталу, у межах колії
+     * моста) і верх опори там (промінь зверху вниз по меших верстата: стіл разом із запеченою пачкою на ньому); невідомий верстат — парковка.
+     */
     targetPoint(api, st, code) {
         const geo = st.geo;
         let pt = geo.targets.get(code);
         if (!pt) {
             const root = code ? api.items.get(code) : null;
             if (!root) {
-                return geo.home;
+                return { ...geo.home, top: TABLE_FALLBACK };
             }
             const T = api.THREE;
             const b = boxOf(T, root);
-            const reach = geo.reach ? Math.min(b.min.x + FEED_DX, geo.reach.x1 - 0.8) : b.min.x + FEED_DX;
-            pt = { x: reach, z: b.getCenter(new T.Vector3()).z };
+            const x = Math.min(b.min.x + FEED_DX, geo.reach ? geo.reach.x1 - 0.1 : Infinity);
+            const z = b.getCenter(new T.Vector3()).z;
+            const meshes = [];
+            root.traverse((o) => {
+                if (o.isMesh && o.visible) {
+                    meshes.push(o);
+                }
+            });
+            // верх опори — медіана променів по площі листа: тонкі поручні й планки верстата на лист не впливають
+            const ray = new T.Raycaster();
+            const ys = [];
+            for (const dx of [-0.8, 0, 0.8]) {
+                for (const dz of [-0.6, 0, 0.6]) {
+                    ray.set(new T.Vector3(x + dx, b.max.y + 2, z + dz), new T.Vector3(0, -1, 0));
+                    const hit = ray.intersectObjects(meshes, false)[0];
+                    if (hit && hit.point.y < TABLE_MAX) {
+                        ys.push(hit.point.y);
+                    }
+                }
+            }
+            ys.sort((a, c) => a - c);
+            pt = { x, z, top: ys.length ? ys[Math.floor(ys.length / 2)] : TABLE_FALLBACK };
             geo.targets.set(code, pt);
         }
         return pt;
+    }
+
+    /** Безпечна висота переїзду (низ рами з листом): вища за найвищий можливий стос і стіл + запас, не нижча за запечену. */
+    travelY(api, st) {
+        let top = 0;
+        for (const [code, g] of st.geo.stacks) {
+            const node = stackNodeOf(api.D, code);
+            top = Math.max(top, g.y0 + ((node?.capacity || 60) * (node?.thickness || MIN_THICKNESS_MM)) / 1000);
+        }
+        for (const code of new Set((portalOf(api.D)?.jobs || []).map((j) => j.target).filter(Boolean))) {
+            top = Math.max(top, this.targetPoint(api, st, code).top);
+        }
+        return Math.max(st.geo.up, top + SHEET_T + SAFE_MARGIN);
     }
 
     build(api, st, T) {
@@ -354,7 +434,25 @@ export class PortalExtension {
         const lift = new T.Group();
         lift.name = "td_portal_lift";
         const deck = baked("deck", { sx: DEFAULTS.bridge.sx, sy: 0.7, sz: 1.2, y: DEFAULTS.bridge.y + 0.2 });
-        const girder = baked("girder", { sx: DEFAULTS.bridge.sx, sy: DEFAULTS.bridge.sy, sz: DEFAULTS.bridge.sz, y: DEFAULTS.bridge.y });
+        const gp = geo.parts.girder;
+        let girder;
+        let plate = null; // траверса: їде з візком і рамою, а не з мостом
+        if (gp) {
+            const [hi, lo] = splitByHeight(T, gp.obj, 4.5);
+            const from = (g) => {
+                const m = new T.Mesh(g, gp.obj.material);
+                m.matrixAutoUpdate = false;
+                m.matrix.copy(gp.obj.matrixWorld);
+                m.castShadow = true;
+                m.raycast = () => {};
+                return m;
+            };
+            girder = from(hi);
+            plate = from(lo);
+            plate.name = "td_portal_traverse";
+        } else {
+            girder = baked("girder", { sx: DEFAULTS.bridge.sx, sy: DEFAULTS.bridge.sy, sz: DEFAULTS.bridge.sz, y: DEFAULTS.bridge.y });
+        }
         const head = baked("head", { sx: DEFAULTS.head.sx, sy: DEFAULTS.head.sy, sz: DEFAULTS.head.sz, y: 2.95 });
         const frame = baked("frame", { sx: DEFAULTS.frame.sx, sy: DEFAULTS.frame.sy, sz: DEFAULTS.frame.sz, y: 2.65 });
         const mp = geo.parts.mast;
@@ -362,16 +460,20 @@ export class PortalExtension {
         mast.scale.set(mp ? mp.s.x : DEFAULTS.mast.sx, 1, mp ? mp.s.z : DEFAULTS.mast.sz);
         mast.castShadow = true;
         mast.raycast = () => {};
+        const up = geo.up; // низ вакуумної рами (присоски) у спокої
         const sheetMat = own(new T.MeshStandardMaterial({ color: "#eceae3", roughness: 0.6, metalness: 0.02 }));
         const sheet = new T.Mesh(st.geometry, sheetMat);
-        const sheetSize = geo.parts.sheet?.s || { x: 2.8, z: 2.07 };
-        sheet.scale.set(sheetSize.x, SHEET_T, sheetSize.z);
+        sheet.scale.set(SHEET_W, SHEET_T, SHEET_D);
+        sheet.position.set(home.x, up - SHEET_T / 2, home.z); // верх листа = низ рами; рухається разом з рамою (дочірній `lift`)
         sheet.castShadow = true;
         sheet.raycast = () => {};
         sheet.visible = false;
         sheet.userData.f3dAnimated = true; // ядро перемальовує сцену, поки візок несе лист (userData.f3dAnimated)
-        lift.add(head, frame);
-        trolley.add(mast, lift, sheet);
+        lift.add(head, frame, sheet);
+        if (plate) {
+            lift.add(plate);
+        }
+        trolley.add(mast, lift);
         bridge.add(deck, girder, trolley);
         const rest = {
             mastX: mp ? mp.c.x : home.x,
@@ -528,48 +630,74 @@ export class PortalExtension {
         return changed;
     }
 
-    /** Координати візка для пози: `{x, z, y, sheet}` (y — низ вакуумної рами). */
+    /** Лист на приймальному столі верстата `code` (мешів по одному на верстат, створюються за потребою). */
+    tableMesh(T, st, code) {
+        let m = st.tables.get(code);
+        if (!m) {
+            const mat = new T.MeshStandardMaterial({ color: "#eceae3", roughness: 0.6, metalness: 0.02 });
+            st.own.push(mat);
+            m = new T.Mesh(st.geometry, mat);
+            m.castShadow = true;
+            m.receiveShadow = true;
+            m.raycast = () => {};
+            m.name = "td_portal_table_sheet_" + code;
+            m.visible = false;
+            st.group.add(m);
+            st.tables.set(code, m);
+        }
+        return m;
+    }
+
+    /** Висота (м) і розмір листа за вузлом стосу: товщина — `td_thickness_mm`, габарит — як у плит стосу. */
+    sheetDims(api, st, stackCode) {
+        const node = stackCode ? stackNodeOf(api.D, stackCode) : null;
+        const g = stackCode ? st.geo.stacks.get(stackCode) : null;
+        return { t: (node?.thickness || MIN_THICKNESS_MM) / 1000, w: g ? g.w : SHEET_W, d: g ? g.d : SHEET_D };
+    }
+
+    /**
+     * Координати рами для пози: `{x, z, y, sheet}` — `y` — низ вакуумної рами. Лист є лише в двох станах: висить під рамою
+     * (`sheet`) або лежить на опорі (верх стосу — частина стосу; стіл пили — `tableSheets`). Порожня рама їде на безпечній висоті.
+     */
     coordsOf(api, st, pose) {
         const geo = st.geo;
         const home = geo.home;
-        const upY = st.carriage.rest.up;
-        const point = (code) => this.targetPoint(api, st, code);
-        const from = pose.from ? point(pose.from) : home;
-        const stack = pose.stack ? geo.stacks.get(pose.stack) : null;
-        const target = pose.target ? point(pose.target) : null;
-        const node = pose.stack ? stackNodeOf(api.D, pose.stack) : null;
-        const thick = (node?.thickness || MIN_THICKNESS_MM) / 1000;
-        const base = stack ? stack.y0 + stackQtyAt(node, portalOf(api.D), pose.stack, st.t) * thick : 0; // верх стосу з листом
-        const pickY = Math.max(base, 0.2);
-        const placeY = TABLE_Y + SHEET_T + 0.02;
+        const upY = st.travelY;
+        const point = (code) => (code ? this.targetPoint(api, st, code) : home);
         const mix = (a, b, e) => ({ x: lerp(a.x, b.x, e), z: lerp(a.z, b.z, e) });
+        const f = pose.from || { target: null, k: 1 };
+        const fromPt = mix(point(f.target), home, ease(f.k));
+        const stack = pose.stack ? geo.stacks.get(pose.stack) : null;
+        const table = pose.target ? point(pose.target) : null;
+        const dims = this.sheetDims(api, st, pose.stack);
+        const node = pose.stack ? stackNodeOf(api.D, pose.stack) : null;
+        const topWith = stack ? stack.y0 + stackQtyAt(node, portalOf(api.D), pose.stack, st.t) * dims.t : 0; // верх стосу разом із листом, що беруть
         const p = pose.p ?? 0;
+        const dip = (y) => (p < 0.5 ? lerp(upY, y, ease(p * 2)) : lerp(y, upY, ease((p - 0.5) * 2))); // вниз до опори й назад
         switch (pose.kind) {
             case "toStack":
                 if (stack) {
-                    return { ...mix(from, stack, ease(p)), y: upY, sheet: false };
+                    return { ...mix(fromPt, stack, ease(p)), y: upY, sheet: false };
                 }
                 break;
             case "pick":
                 if (stack) {
-                    const y = p < 0.5 ? lerp(upY, pickY, ease(p * 2)) : lerp(pickY, upY, ease((p - 0.5) * 2));
-                    return { x: stack.x, z: stack.z, y, sheet: p >= 0.5 };
+                    return { x: stack.x, z: stack.z, y: dip(topWith), sheet: p >= 0.5, dims };
                 }
                 break;
             case "toTarget":
-                if (stack && target) {
-                    return { ...mix(stack, target, ease(p)), y: upY, sheet: true };
+                if (stack && table) {
+                    return { ...mix(stack, table, ease(p)), y: upY, sheet: true, dims };
                 }
                 break;
             case "place":
-                if (target) {
-                    const y = p < 0.5 ? lerp(upY, placeY, ease(p * 2)) : lerp(placeY, upY, ease((p - 0.5) * 2));
-                    return { x: target.x, z: target.z, y, sheet: p < 0.5 };
+                if (table) {
+                    return { x: table.x, z: table.z, y: dip(table.top + dims.t), sheet: p < 0.5, dims };
                 }
                 break;
             default:
         }
-        return { x: from.x, z: from.z, y: upY, sheet: false };
+        return { ...fromPt, y: upY, sheet: false };
     }
 
     updateCarriage(api, st, P, pose, dt, force) {
@@ -577,22 +705,28 @@ export class PortalExtension {
         if (!car) {
             return 0;
         }
+        st.travelY = this.travelY(api, st);
         const tgt = this.coordsOf(api, st, pose);
         let cur = st.cur;
         if (!cur || force === "snap") {
             cur = st.cur = { x: tgt.x, z: tgt.z, y: tgt.y };
         } else {
-            // згладжування: швидка зміна цілі стає швидким рухом, а не стрибком
-            const k = 1 - Math.exp(-dt / 0.06);
+            // межа швидкості: плавний рух іде точно за позою, а різка зміна цілі (перемотка) — швидким, але не миттєвим проїздом
+            const dx = tgt.x - cur.x;
+            const dz = tgt.z - cur.z;
+            const dy = tgt.y - cur.y;
+            const dist = Math.hypot(dx, dz, dy);
             const maxStep = MAX_SPEED * dt;
-            for (const key of ["x", "z", "y"]) {
-                const d = (tgt[key] - cur[key]) * k;
-                cur[key] += Math.abs(d) > maxStep ? Math.sign(d) * maxStep : d;
-            }
+            const k = dist > maxStep ? maxStep / dist : 1;
+            cur.x += dx * k;
+            cur.z += dz * k;
+            cur.y += dy * k;
         }
+        const tables = new Map(tableSheetsAt(P, st.t, pose).map((s) => [s.target, s]));
+        const tableKey = [...tables.values()].map((s) => s.target + s.job).join("|");
         const moved = Math.abs(cur.x - (st.shown?.x ?? 1e9)) + Math.abs(cur.z - (st.shown?.z ?? 1e9)) + Math.abs(cur.y - (st.shown?.y ?? 1e9)) > 0.002;
         const sheetOn = tgt.sheet;
-        if (!moved && st.shown?.sheet === sheetOn && st.shown?.job === pose.job) {
+        if (!moved && st.shown?.sheet === sheetOn && st.shown?.job === pose.job && st.shown?.tables === tableKey) {
             return 0;
         }
         const home = st.geo.home;
@@ -604,13 +738,29 @@ export class PortalExtension {
         const mastBottom = r.mastBottom + dy;
         car.mast.scale.y = Math.max(0.2, r.mastTop - mastBottom);
         car.mast.position.set(r.mastX, (r.mastTop + mastBottom) / 2, r.mastZ);
+        const job = (P.jobs || []).find((j) => j.id === pose.job);
         car.sheet.visible = sheetOn;
-        car.sheet.position.set(home.x, cur.y - SHEET_T / 2, home.z);
         if (sheetOn) {
-            const job = (P.jobs || []).find((j) => j.id === pose.job);
+            const d = tgt.dims;
+            car.sheet.scale.set(d.w, d.t, d.d);
+            car.sheet.position.set(home.x, r.up - d.t / 2, home.z); // верх листа = низ рами
             car.sheet.material.color.set(decorColor(job?.product, job?.name));
         }
-        st.shown = { x: cur.x, z: cur.z, y: cur.y, sheet: sheetOn, job: pose.job };
+        // листи на столах пил: лежать на опорі (верх столу) до моменту, коли пила їх забере
+        for (const [code, m] of st.tables) {
+            m.visible = tables.has(code);
+        }
+        for (const [code, s] of tables) {
+            const m = this.tableMesh(api.THREE, st, code);
+            const pt = this.targetPoint(api, st, code);
+            const sj = (P.jobs || []).find((j) => j.id === s.job);
+            const d = this.sheetDims(api, st, s.stack);
+            m.scale.set(d.w, d.t, d.d);
+            m.position.set(pt.x, pt.top + d.t / 2, pt.z); // низ листа = верх опори
+            m.material.color.set(decorColor(sj?.product, sj?.name));
+            m.visible = true;
+        }
+        st.shown = { x: cur.x, z: cur.z, y: cur.y, sheet: sheetOn, job: pose.job, tables: tableKey };
         return 1;
     }
 

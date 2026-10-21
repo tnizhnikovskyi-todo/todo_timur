@@ -18,6 +18,7 @@ export const PHASE_TEXT = {
     pick: "Бере лист",
     toTarget: "Везе лист до верстата",
     place: "Кладе лист",
+    return: "Повертається на парковку",
 };
 const STATE_TEXT = { active: "виконується", queued: "у черзі", sent: "надіслано", done: "виконано" };
 
@@ -261,26 +262,35 @@ export function phaseOf(f) {
 export const carrying = (pose) =>
     (pose.kind === "pick" && pose.p >= 0.5) || pose.kind === "toTarget" || (pose.kind === "place" && pose.p < 0.5);
 
+/** Скільки секунд порожня рама їде з верстата на парковку після кладення листа (далі стоїть запарковано). */
+export const RETURN_S = 10;
+/** Скільки секунд лист лежить на приймальному столі, поки пила його не забере (якщо наступний лист не ляже раніше): близько періоду подачі. */
+export const HOLD_S = 100;
+
+/** Положення рами, з якого починається рух: `{target, k}` — між верстатом (k=0) і парковкою (k=1); `target: null` — парковка. */
+const parkedFrom = (last, x) => (last ? { target: last.target, k: Math.min(1, Math.max(0, (x - last.w1) / RETURN_S)) } : { target: null, k: 1 });
+
 /**
- * Поза порталу на момент `t` за вікнами руху: `{kind, p, job, stack, target, from}`; `from` — верстат, де портал
- * лишив останній лист (звідти він їде до наступного стосу), або `null` (початкове положення). Поза вікнами — `idle`.
+ * Поза порталу на момент `t` за вікнами руху: `{kind, p, job, stack, target, from}`. Фази вікна: `toStack`, `pick`, `toTarget`,
+ * `place`; поза вікнами — `return` (порожня рама їде з верстата на парковку, `p` — частка шляху) і `idle` (запарковано).
+ * `from` — звідки рушає рама: `{target, k}` (верстат, де поклали останній лист, і частка шляху до парковки) — тож між
+ * вікнами положення неперервне, без стрибків.
  */
 export function poseAt(P, t, cycle = CYCLE_S) {
     let cur = null;
-    let last = null;
-    for (const w of windowsOf(P, cycle)) {
-        if (w.w0 <= t && t < w.w1) {
-            if (!cur || w.w0 >= cur.w0) {
-                cur = w;
-            }
-        } else if (w.w1 <= t && !w.pending && (!last || w.w1 >= last.w1)) {
-            last = w;
+    const wins = windowsOf(P, cycle);
+    for (const w of wins) {
+        if (w.w0 <= t && t < w.w1 && (!cur || w.w0 >= cur.w0)) {
+            cur = w;
         }
     }
-    const from = last ? last.target : null;
+    const endedBefore = (x) => wins.reduce((last, w) => (w.w1 <= x && w !== cur && (!last || w.w1 >= last.w1) ? w : last), null);
     if (!cur) {
-        return { kind: "idle", p: 0, job: last?.job || null, stack: null, target: null, from };
+        const last = endedBefore(t);
+        const from = parkedFrom(last, t);
+        return { kind: from.k < 1 ? "return" : "idle", p: from.k, job: last?.job || null, stack: null, target: null, from };
     }
+    const from = parkedFrom(endedBefore(cur.w0), cur.w0);
     return { ...phaseOf((t - cur.w0) / Math.max(1e-6, cur.w1 - cur.w0)), job: cur.job, stack: cur.stack, target: cur.target, from, pending: cur.pending };
 }
 
@@ -294,7 +304,35 @@ export function poseLapse(P, t, f) {
         return poseAt(P, t);
     }
     const next = entriesOf(job, P.now).find((e) => e.t > t);
-    return { ...phaseOf(f), job: job.id, stack: next?.stack || job.stack || "", target: job.target, from: job.target, pending: false };
+    return { ...phaseOf(f), job: job.id, stack: next?.stack || job.stack || "", target: job.target, from: { target: job.target, k: 0 }, pending: false, lapse: true };
+}
+
+/** Момент відпускання листа у вікні (друга половина фази `place`) — з нього лист лежить на столі. */
+const releaseAt = (w) => w.w0 + (w.w1 - w.w0) * (1 - PHASES[3][1] / 2);
+
+/**
+ * Листи на приймальних столах пил на момент `t`: `[{target, job, stack}]`, не більше одного на верстат. Лист лягає на стіл у
+ * момент відпускання і лежить, поки пила його не забере: через `HOLD_S` с або до початку укладання наступного листа на цей стіл.
+ * У швидкому програванні (`pose.lapse`) — за циклом: з відпускання до наступного захоплення.
+ */
+export function tableSheetsAt(P, t, pose) {
+    if (pose?.lapse) {
+        const on = (pose.kind === "place" && pose.p >= 0.5) || pose.kind === "toStack" || (pose.kind === "pick" && pose.p < 0.5);
+        return on && pose.target ? [{ target: pose.target, job: pose.job, stack: pose.stack }] : [];
+    }
+    const wins = windowsOf(P);
+    const out = new Map();
+    for (const w of wins) {
+        if (!w.target || releaseAt(w) > t) {
+            continue;
+        }
+        const next = wins.find((n) => n !== w && n.target === w.target && n.w0 > w.w0 && n.w1 > w.w1);
+        const takeAt = Math.min(w.w1 + HOLD_S, next ? releaseAt(next) - 1 : Infinity);
+        if (t < takeAt && (!out.get(w.target) || out.get(w.target).w1 < w.w1)) {
+            out.set(w.target, w);
+        }
+    }
+    return [...out.values()].map((w) => ({ target: w.target, job: w.job, stack: w.stack }));
 }
 
 // ---------------------------------------------------------------- блоки картки (VX-04)
