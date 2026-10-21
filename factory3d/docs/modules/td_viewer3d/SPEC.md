@@ -530,7 +530,7 @@ SQL-constraint: `CHECK (size_kb >= 0)`. Методи:
 
 - `default_get` — створює 35 рядків `step_ids` (усі `selected`), `enabled` з параметра.
 - `action_run(self)` — якщо `not enabled` → `UserError("Заливка демо вимкнена на цій базі
-  (td.viewer.demo_enabled). Увімкніть у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
+  (td.viewer.demo_enabled). Увімкніть у 3D Завод → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
   якщо крон уже `active` з `state='running'` → `UserError("Заливка вже виконується")`; записує
   `demo_clock` у параметр; `state='queued'`, зберігає обрані кроки в параметр
   `td.viewer.demo_queue` (JSON: `{wizard_id, steps:[...]}`), вмикає крон «3D: заливка демо»
@@ -705,7 +705,7 @@ V-08, V-11, V-12, V-14) — viewer другої кнопки в ті самі ф
   `invisible="state in ('queued','running') or not enabled"`, `class="btn-primary"`), «Оновити»
   (`action_refresh`), «Усі кроки»/«Жодного» (`action_select_all`/`action_select_none`, `invisible="state != 'draft'"`);
 - `alert` (`role="alert"`, клас `alert-danger`, `invisible="enabled"`): «Заливка демо вимкнена на цій
-  базі. Увімкніть «Заливка демо дозволена» у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
+  базі. Увімкніть «Заливка демо дозволена» у 3D Завод → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
 - група: `demo_clock`, `progress` (widget `progressbar`), `current_step`, `new_records`;
 - `step_ids` list editable bottom: `sequence` (handle), `selected` (boolean_toggle), `label`, `name`
   (readonly), `state` (badge: `todo` сірий, `running` синій, `done` зелений, `skipped` жовтий, `error`
@@ -1876,7 +1876,7 @@ AC: **AC-78** за умовчанням «поточні»: кожне замо�
 
 | ID | FR | Given | When | Then | Тип |
 |---|---|---|---|---|---|
-| AC-01 | FR-01 | модуль встановлено, користувач у `group_td_user` | відкриває меню «Завод 3D → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
+| AC-01 | FR-01 | модуль встановлено, користувач у `group_td_user` | відкриває меню «3D Завод → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
 | AC-02 | FR-02 | дія з `params={"code":"SAW-1","tab":"production","mode":"oee"}` | `applyParams` | `getState()` = `{selected:"SAW-1", tab:"production", mode:"oee"}`; з `code:"NOPE"` — повідомлення `warning`, `selected=null`, дія відкрита | JT |
 | AC-03 | FR-03 | бандл `static/lib/three/three-bundle.esm.js` у модулі | `mount()` | жодного запиту на хост поза `window.location.origin` (перехоплення `fetch`/`import` у HOOT); `THREE.REVISION === "160"` | JT |
 | AC-04 | FR-04 | `GET /td_viewer3d/static/model/parts/core.glb` | перший і повторний запит з `If-None-Match` | 200 з `ETag`, потім 304; `manifest.parts[0].file` містить `?v=` з 12 hex | HT |
