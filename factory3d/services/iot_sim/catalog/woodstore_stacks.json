@@ -1,0 +1,194 @@
+{
+ "_comment": "Початкові стоси порталу STORETEQ для REST woodStore (P-03): 27 місць PLT-01A…PLT-09C (9 рядів × 3 колонки), 23 з листами — залишки демо-бази Odoo (td_viewer3d/static/data/demo_payload.json, locations[PLT-*].quants), щоб коди стосів, товари й партії стенда збігалися з Odoo (td_machine_connect R-15).",
+ "stacks": [
+  {
+   "id": "PLT-01A",
+   "product": null,
+   "lot": null,
+   "qty": 0,
+   "max": 60
+  },
+  {
+   "id": "PLT-01B",
+   "product": "DSP16-WNG",
+   "lot": "DSP16-WNG-2610-114",
+   "qty": 45,
+   "max": 60
+  },
+  {
+   "id": "PLT-01C",
+   "product": "HDF3-WHT",
+   "lot": "HDF3-WHT-2611-128",
+   "qty": 25,
+   "max": 60
+  },
+  {
+   "id": "PLT-02A",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2610-101",
+   "qty": 25,
+   "max": 60
+  },
+  {
+   "id": "PLT-02B",
+   "product": "DSP16-WHT",
+   "lot": "DSP16-WHT-2611-115",
+   "qty": 60,
+   "max": 60
+  },
+  {
+   "id": "PLT-02C",
+   "product": "DSP18-CON",
+   "lot": "DSP18-CON-2612-129",
+   "qty": 10,
+   "max": 60
+  },
+  {
+   "id": "PLT-03A",
+   "product": "DSP16-WNG",
+   "lot": "DSP16-WNG-2611-102",
+   "qty": 40,
+   "max": 60
+  },
+  {
+   "id": "PLT-03B",
+   "product": "HDF3-WHT",
+   "lot": "HDF3-WHT-2612-116",
+   "qty": 20,
+   "max": 60
+  },
+  {
+   "id": "PLT-03C",
+   "product": "DSP16-ANT",
+   "lot": "DSP16-ANT-2613-130",
+   "qty": 55,
+   "max": 60
+  },
+  {
+   "id": "PLT-04A",
+   "product": "DSP16-WHT",
+   "lot": "DSP16-WHT-2612-103",
+   "qty": 55,
+   "max": 60
+  },
+  {
+   "id": "PLT-04B",
+   "product": null,
+   "lot": null,
+   "qty": 0,
+   "max": 60
+  },
+  {
+   "id": "PLT-04C",
+   "product": "DSP16-SON",
+   "lot": "DSP16-SON-2609-131",
+   "qty": 15,
+   "max": 60
+  },
+  {
+   "id": "PLT-05A",
+   "product": "HDF3-WHT",
+   "lot": "HDF3-WHT-2613-104",
+   "qty": 15,
+   "max": 60
+  },
+  {
+   "id": "PLT-05B",
+   "product": "DSP16-ANT",
+   "lot": "DSP16-ANT-2609-118",
+   "qty": 50,
+   "max": 60
+  },
+  {
+   "id": "PLT-05C",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2610-132",
+   "qty": 30,
+   "max": 60
+  },
+  {
+   "id": "PLT-06A",
+   "product": "DSP18-CON",
+   "lot": "DSP18-CON-2609-105",
+   "qty": 10,
+   "max": 60
+  },
+  {
+   "id": "PLT-06B",
+   "product": "DSP16-SON",
+   "lot": "DSP16-SON-2610-119",
+   "qty": 10,
+   "max": 60
+  },
+  {
+   "id": "PLT-06C",
+   "product": "DSP16-WNG",
+   "lot": "DSP16-WNG-2611-133",
+   "qty": 45,
+   "max": 60
+  },
+  {
+   "id": "PLT-07A",
+   "product": "DSP16-ANT",
+   "lot": "DSP16-ANT-2610-106",
+   "qty": 45,
+   "max": 60
+  },
+  {
+   "id": "PLT-07B",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2611-120",
+   "qty": 25,
+   "max": 60
+  },
+  {
+   "id": "PLT-07C",
+   "product": null,
+   "lot": null,
+   "qty": 0,
+   "max": 60
+  },
+  {
+   "id": "PLT-08A",
+   "product": null,
+   "lot": null,
+   "qty": 0,
+   "max": 60
+  },
+  {
+   "id": "PLT-08B",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2612-121",
+   "qty": 40,
+   "max": 60
+  },
+  {
+   "id": "PLT-08C",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2613-135",
+   "qty": 20,
+   "max": 60
+  },
+  {
+   "id": "PLT-09A",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2612-108",
+   "qty": 20,
+   "max": 60
+  },
+  {
+   "id": "PLT-09B",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2613-122",
+   "qty": 55,
+   "max": 60
+  },
+  {
+   "id": "PLT-09C",
+   "product": "MDF18-RAW",
+   "lot": "MDF18-RAW-2609-136",
+   "qty": 35,
+   "max": 60
+  }
+ ]
+}

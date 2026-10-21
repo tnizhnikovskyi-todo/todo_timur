@@ -5,7 +5,8 @@
 1 лист кожні ``sheet_period_s`` sim-секунд і зменшує ``qty`` стосу (R-18). Стан для моделі порталу:
 ``world.flags["woodstore"] = {"state", "current_job"}``. Нові завдання від ``/jobs`` (API-33)
 надходять через ``world.post("woodstore_jobs", {...})`` (поля як у POST /jobs).
-Режим ``follow_odoo`` (авто-``feed`` за РЦ у роботі) — НЕ реалізовано (ПРИПУЩЕННЯ).
+Авто-``feed`` за РЦ розкрою у WORKING (``external_ref`` = МО активного завдання РЦ) і фази руху порталу в
+``GET /status`` — ``protocols/woodstore_auto.py`` (вау №19, R-18); вимикається ``SIM_WOODSTORE_AUTOFEED=0``.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from pydantic import BaseModel
 
 from iot_sim.core.world import World
 from iot_sim.protocols.base import ProtocolServer
+from iot_sim.protocols.woodstore_auto import AutoFeed, default_stacks, phase_state
 
 log = logging.getLogger("iot_sim.woodstore")
 
@@ -110,7 +112,14 @@ def api_key_dep(expected: str) -> Any:
 class WoodStore:
     """Модель сховища: стоси, завдання, події."""
 
-    def __init__(self, world: World, *, sheet_period_s: float = 60.0, demo_json: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        *,
+        sheet_period_s: float = 60.0,
+        demo_json: str | Path | None = None,
+        auto_feed: bool | None = None,
+    ) -> None:
         self.world = world
         self.sheet_period_s = sheet_period_s
         self.stacks: dict[str, dict[str, Any]] = {}
@@ -121,6 +130,7 @@ class WoodStore:
         self._next_sheet_at: float | None = None
         self.cycles_total = 184210
         self.cycles_today = 0
+        self.auto = AutoFeed(self, TARGETS, auto_feed)
         self._seed(demo_json)
         world.on_tick(self.on_tick)
 
@@ -133,7 +143,23 @@ class WoodStore:
                 for k, v in json.loads(Path(demo_json).read_text("utf-8")).get("locations", {}).items()
                 if k.startswith("PLT-")
             }
-        for i in range(36):
+        catalog = [] if locs else default_stacks()  # стенд: ті самі 27 стосів, що в Odoo (``woodstore_auto``)
+        for c in catalog:
+            sid = c["id"]
+            qty = int(c.get("qty") or 0)
+            self.stacks[sid] = {
+                "id": sid,
+                "row": int(sid[4:6]),
+                "col": ord(sid[6]) - 64,
+                "product": c.get("product") if qty else None,
+                "lot": c.get("lot") if qty else None,
+                "qty": qty,
+                "max": int(c.get("max") or 60),
+                "reserved": 0,
+                "locked": False,
+                "updated": self.world.now().isoformat(),
+            }
+        for i in range(0 if catalog else 36):
             row, col = i // 6 + 1, i % 6 + 1
             sid = f"PLT-{row:02d}{chr(64 + col)}"
             src = locs.get(sid, {})
@@ -245,6 +271,7 @@ class WoodStore:
         for item in w.drain("woodstore_jobs"):
             with contextlib.suppress(ApiError):
                 self.create_job(item)
+        self.auto.on_tick(w)
         epoch = w.clock.epoch()
         job = self.active()
         if job is None:
@@ -286,7 +313,9 @@ class WoodStore:
             return "error"
         if any(a["gate_open"] for a in self.aisles()):
             return "blocked"
-        return "placing" if self.active() else "idle"
+        if self.active() is None or self._next_sheet_at is None:
+            return "idle"
+        return phase_state(self.world.clock.epoch() - (self._next_sheet_at - self.sheet_period_s), self.sheet_period_s)
 
     def status(self) -> dict[str, Any]:
         sig = self.world.signals
@@ -396,9 +425,10 @@ class WoodStoreApi(ProtocolServer):
         apikey: str = "",
         sheet_period_s: float = 60.0,
         demo_json: str | Path | None = None,
+        auto_feed: bool | None = None,
     ) -> None:
         self.world, self.port, self.host = world, port, host
-        self.store = WoodStore(world, sheet_period_s=sheet_period_s, demo_json=demo_json)
+        self.store = WoodStore(world, sheet_period_s=sheet_period_s, demo_json=demo_json, auto_feed=auto_feed)
         self.app = create_app(self.store, apikey)
         self._runner = UvicornRunner(self.app, host, port)
 

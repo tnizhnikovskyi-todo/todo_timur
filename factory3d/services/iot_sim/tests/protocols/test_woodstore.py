@@ -9,7 +9,7 @@ KEY = {"X-Api-Key": "k-wood"}
 
 @pytest.fixture
 async def api(world, port):
-    srv = WoodStoreApi(world, port=port, host="127.0.0.1", apikey="k-wood", sheet_period_s=10)
+    srv = WoodStoreApi(world, port=port, host="127.0.0.1", apikey="k-wood", sheet_period_s=10, auto_feed=False)
     await srv.start()
     async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}/api/v1", headers=KEY) as c:
         c.srv = srv
@@ -44,10 +44,10 @@ async def test_patch_stack(api):
 
 
 async def test_feed_job_lifecycle(api, world):
-    stack = (await api.get("/stacks/PLT-01A")).json()
+    stack = (await api.get("/stacks/PLT-01B")).json()
     r = await api.post(
         "/jobs",
-        json={"type": "feed", "source": "PLT-01A", "target": "SAW-1", "sheets": 2, "external_ref": "WH/MO/00231"},
+        json={"type": "feed", "source": "PLT-01B", "target": "SAW-1", "sheets": 2, "external_ref": "WH/MO/00231"},
     )
     assert r.status_code == 201
     job = r.json()
@@ -58,14 +58,14 @@ async def test_feed_job_lifecycle(api, world):
     world.advance(25)
     done = (await api.get(f"/jobs/{job['id']}")).json()
     assert done["state"] == "done" and done["done"] == 2
-    assert (await api.get("/stacks/PLT-01A")).json()["qty"] == stack["qty"] - 2
+    assert (await api.get("/stacks/PLT-01B")).json()["qty"] == stack["qty"] - 2
     types = [e["type"] for e in (await api.get("/events")).json()]
     assert "job_started" in types and "sheet_placed" in types and "job_finished" in types
     assert len((await api.get("/jobs", params={"state": "done"})).json()) == 1
 
 
 async def test_job_conflicts_and_cancel(api, world):
-    r = await api.post("/jobs", json={"type": "feed", "source": "PLT-01A", "target": "SAW-1", "sheets": 500})
+    r = await api.post("/jobs", json={"type": "feed", "source": "PLT-01B", "target": "SAW-1", "sheets": 500})
     assert r.status_code == 409 and r.json()["error"]["code"] == "CONFLICT"
     r = await api.post("/jobs", json={"type": "feed", "target": "XXX", "sheets": 1})
     assert r.status_code == 422
