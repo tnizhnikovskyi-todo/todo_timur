@@ -1,5 +1,23 @@
 # Changelog — iot_sim
 
+## Unreleased: повний емулятор КГУ TEDOM (модуль td_chp, SPEC td_chp §8)
+- Модель `chp` (`iot_sim/models/chp.py`) переписана за мокапом `build/chp/mockup/b_sim.js`: штатно резерв; пуск — 9 кроків за R-13 (60 с, масштаб `chp_start_s/60`,
+  «Попередній підігрів» 1,5 с при `t_jacket_out ≥ 55`), робота, охолодження 60 с; аварії 111…116 (тиск газу, перегрів ОЖ, гаряча зворотка зі зниженням потужності,
+  загазованість 20 %, пожежа з гасінням через 3 с, аварійний стоп), зупинки без аварії `alarm/trip` 1…3 (мережа S2 при `chp_island=false`, ROCOF, зняття дозволу);
+  16 циліндрів (A5 +27 К, `plug_h` 3560), ТО/газ/НТ/вихлоп/повітря/безпека/лічильники — 230 регістрів нової карти в інженерних одиницях (`Chp.regs`).
+  Режими `ctl/mode` 0…3 за мокапом, **4 (за замовчуванням)** — старий профіль день/ніч: P ≈ 400/800 кВт, тепло/газ 497/109 і 856/199 рівно; сигнали `infra/chp/*`,
+  `infra/totals/chp_kw` і дублі `chp/gen/p_kw`, `chp/ht/q_total`, `chp/gas/flow` ненульові лише в `state = 2` (як і раніше). Старі прапори `chp_run`, `chp_cmd`, `chp_ack`,
+  `chp_permit`, `gas_bar`, `ctl_remote`, `chp_start_s` і вікно u73 230–233 працюють без змін; `chp/cmd` стоп у резерві — як і раніше `ack = 1`.
+- Modbus u72 (`protocols/modbus_maps/tedom.py`): регістри 40000–40007, 40010–40015, 40020 без змін; решта 226 — з `catalog/chp_registers.json` (байт-в-байт копія
+  `td_chp/data/chp_signals.json`, перевіряє `test_chp_map.py` і AC-26 у td_chp): `u16/i16/u32` за `scale`, запис `W/RW` (`ctl/cmd` 40900, `ctl/mode`, `sp_pct`, `cos_set`,
+  `heat_dir`, `bypass_mode`) — `Chp.post_command`/`Chp.write_reg`; `write_accept=false` — виняток 4, значення поза межами — 3, місцевий режим — запис ігнорується,
+  команда → `ack=2`, `ack_reason=3`. Нова команда скидає `ctl/ack` у 0; результат — не пізніше наступного тіку. Причини відмови `ctl/ack_reason` — R-06 (1…13).
+  `Ctx.model(device)` у `modbus_maps/__init__.py`.
+- Сценарії S-25…S-30 (група `energy`, 600 с): `chp_overheat`, `chp_hot_return`, `chp_gas_leak`, `chp_fire`, `chp_rocof`, `chp_no_permit` — прапори `chp_temp_fault`,
+  `chp_ret_fault`, `chp_gas_leak`, `chp_fire`, `chp_rocof`, `chp_permit = 0`; відкат повертає прапори (аварію скидає лише `ctl/cmd = 4`). Реєстр — 30 сценаріїв.
+- Тести: `tests/unit/test_chp_full.py` (AC-25, AC-27, режими, команди), `tests/unit/test_chp_map.py` (AC-24, AC-26 у частині копії карти); лічильники реєстра → 30
+  (`test_scenarios.py`, `test_control_api.py`). `test_catalog.py` і `catalog/signals.csv` без змін.
+
 ## Unreleased: живе виробництво — цілі станів верстатів від Odoo (контракт C-LP-01)
 - `POST /api/v1/machines/targets` (дубль `/sim/v1/machines/targets`; `core/machine_targets.py`, `protocols/machine_targets_api.py`, у `control_api.py` лише рядки реєстрації):
   список `{"code", "state": "working|idle|down", "reason", "until"}` (або `{"targets": [...]}`), токен SIM API як у решти керувальних маршрутів (401/403/423); відповідь
