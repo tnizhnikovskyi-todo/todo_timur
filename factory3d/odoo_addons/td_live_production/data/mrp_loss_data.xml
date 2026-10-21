@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Причина простою «Немає завдання»: верстат у зміні без наряду. Це втрата доступності (входить у ₴ й OEE), не плановий простій. -->
+<odoo noupdate="1">
+    <record id="loss_no_task" model="mrp.workcenter.productivity.loss">
+        <field name="name">Немає завдання</field>
+        <field name="loss_id" ref="mrp.category_availability"/>
+        <field name="manual" eval="True"/>
+        <field name="sequence">90</field>
+    </record>
+</odoo>

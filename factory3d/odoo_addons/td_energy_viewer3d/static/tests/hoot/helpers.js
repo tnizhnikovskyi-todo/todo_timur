@@ -63,3 +63,37 @@ export function firstMesh(root) {
     });
     return mesh;
 }
+
+/**
+ * Добові серії `GET …/energy/day` (SPEC R-59): вводи 07:00–10:00 (слоти 28…39) по 50 кВт·год, зонний тариф: напівпік 8,4 до 08:00, пік 12,6 (1,5×) далі;
+ * СЕС 10 кВт·год на слот; споживач SAW-1: 5 кВт (07:00), 15 кВт (08:00), 35 кВт (09:00); решта споживачів ШР-1 — по 20 кВт. `cost: false` — без вартості.
+ */
+export function makeSeries({ cost = true } = {}) {
+    const z = () => new Array(96).fill(0);
+    const kwh = z();
+    const price = z();
+    const gen = z();
+    const saw = z();
+    const bw = z();
+    for (let s = 28; s < 40; s++) {
+        kwh[s] = 50;
+        price[s] = s < 32 ? 8.4 : 12.6;
+        gen[s] = 10;
+        saw[s] = s < 32 ? 5 : s < 36 ? 15 : 35;
+        bw[s] = 20;
+    }
+    const costs = kwh.map((v, i) => Math.round(v * price[i] * 100) / 100);
+    const sum = (a) => a.reduce((x, y) => x + y, 0);
+    const grid = { kwh, export: z() };
+    if (cost) {
+        grid.cost = costs;
+    }
+    const totals = { kwh: sum(kwh), export_kwh: 0, gen_kwh: sum(gen), peak_kw: 200, peak_slot: 28 };
+    if (cost) {
+        totals.cost = sum(costs);
+    }
+    return {
+        schema: 1, day: "2026-10-12", slot_min: 15, built_to: 39, contract_kw: 800, cost,
+        grid, gen: { kwh: gen }, consumers: { "SAW-1": saw, "SAW-2": bw, "EDGE-1": bw, "EDGE-2": bw, "CNC-1": bw, "CNC-2": bw, "SORT-1": bw }, totals,
+    };
+}

@@ -24,7 +24,7 @@ const THREE_URL = "/td_viewer3d/static/lib/three/three-bundle.esm.js";
 // після завантаження моделі, на кожній повній дельті й зміні розкладки — ДО `stockLoad.sync`, щоб вантаж за залишками
 // ліг у вже зсунуті комірки. Без зареєстрованих розширень і без `D.layout` ядро працює як раніше.
 const EXTENSIONS = new Set();
-/** `ext = { id, applyLayout(api, layout, fresh), colorModes, modeColor, applyData, cardBlocks, cardActions, onAction }`; усе, крім `id`
+/** `ext = { id, applyLayout(api, layout, fresh), colorModes, modeColor, applyData, cardBlocks, cardActions, onAction, simPower }`; усе, крім `id`
  * (потрібен для `data-ext`), необов'язкове (R-26, VX-01…VX-06, див. блок «розширення ядра» нижче); `layout` — `D.layout`
  * або null; повертає функцію зняття. */
 export function registerViewerExtension(ext) {
@@ -66,7 +66,7 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
   </header>
 
   <section class="o_f3d_panel o_f3d_flow" hidden aria-label="Потік зміни">
-    <div class="o_f3d_fl-head"><b>Потік зміни</b><span class="o_f3d_mono o_f3d_flow-time"></span><span class="o_f3d_mono o_f3d_flow-sum"></span><span class="o_f3d_mono o_f3d_flow-n"></span>
+    <div class="o_f3d_fl-head"><b>Потік зміни</b><span class="o_f3d_mono o_f3d_flow-time"></span><span class="o_f3d_mono o_f3d_flow-sum"></span><span class="o_f3d_mono o_f3d_flow-n"></span><span class="o_f3d_mono o_f3d_flow-ext"></span>
       <span class="o_f3d_fl-mode" role="group" aria-label="Маршрути замовлень у сцені"><button type="button" class="o_f3d_btn o_f3d_fl-m" data-mode="active" aria-pressed="true" title="У сцені лише замовлення в роботі чи в русі">Лише активні</button><button type="button" class="o_f3d_btn o_f3d_fl-m" data-mode="all" aria-pressed="false" title="Маршрути всіх замовлень дня">Усі маршрути</button></span>
       <span class="o_f3d_fl-key"><span><i class="o_f3d_tri"></i>фура з матеріалами</span><span><i class="o_f3d_dot2"></i>склад → цех</span>
         <span><i class="o_f3d_tri o_f3d_up"></i>фура клієнта</span><span>смуга — операція, колір — замовлення</span></span></div>
@@ -882,6 +882,8 @@ const extApi = {
   refreshSelection, isShown, paint, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows,
   invalidate, simMinutes: () => simMinutes(), // VX-08: кадр за потребою; хвилина «Потоку зміни» (null — живий режим)
   onSimTime(cb) { simListeners.add(cb); return () => simListeners.delete(cb); },
+  get flowSlot() { return $(".o_f3d_flow-ext"); }, // VX-09: порожній слот у шапці «Потоку зміни» для бейджів розширень (видно лише під час програвання)
+  resim() { if (simOverride != null) {applySimTime(simOverride);} }, // VX-09: повторити поточну хвилину (розширення дочекалось своїх даних)
   codeRoot: (x) => (typeof x === "string" ? items.get(x) ?? null : codeRoot(x)),
   select: (o, a) => { const r = typeof o === "string" ? items.get(o) : o; if (r !== undefined) {select(r, a);} },
   focusOn: (o) => { const r = typeof o === "string" ? items.get(o) : o; if (r) {focusOn(r);} },
@@ -892,6 +894,25 @@ const extApi = {
 const simListeners = new Set(); // VX-08: підписники `api.onSimTime(cb)` — cb(хвилина | null) після кожної зміни часу «Потоку зміни»
 function emitSimTime(min) {
   for (const cb of simListeners) {extTry(() => cb(min));}
+}
+// VX-09: `ext.simPower(min, D, api) → {код споживача: кВт} | null` — потужність споживачів у хвилину `min` замість типового профілю
+// (`c.p_now` береться як є, без «дихання» `energyTick`; лінії й трансформатори перераховує `energyTick`)
+function extSimPower(min) {
+  for (const ext of EXTENSIONS) {
+    if (typeof ext.simPower !== "function") {continue;}
+    const kw = extTry(() => ext.simPower(min, D, extApi), null);
+    for (const [code, v] of Object.entries(kw || {})) {
+      const c = D.energy.consumers[code];
+      if (c && Number.isFinite(v)) { c.base = v; c.p_now = v; c.i_now = Math.round((v * 1000) / (Math.sqrt(3) * 400 * (c.cos_phi || 0.9))); c._pin = true; }
+    }
+  }
+}
+// у програванні перефарбовуємо лише об'єкти енергетики (споживачі, лінії, трансформатори), а не всю сцену
+function repaintEnergy() {
+  const e = D?.energy;
+  for (const grp of [e?.consumers, e?.lines, e?.transformers]) {
+    for (const code of Object.keys(grp || {})) { const r = items.get(code); if (r) {paint(r);} }
+  }
 }
 function applyLayout(fresh) {
   for (const ext of EXTENSIONS) {
@@ -2807,7 +2828,7 @@ function energyTick() {
   const e = D.energy;
   if (!e) {return;}
   for (const c of Object.values(e.consumers)) {
-    if (c.status !== "work") {continue;}
+    if (c.status !== "work" || c._pin) {continue;} // `_pin` (VX-09): потужність з серій розширення — без «дихання»
     c.base ??= c.p_now;
     c.p_now = Math.round(c.base * (0.94 + Math.random() * 0.12) * 10) / 10;
     c.i_now = Math.round((c.p_now * 1000) / (Math.sqrt(3) * 400 * c.cos_phi));
@@ -3168,7 +3189,12 @@ function applySimTime(min) {
   if (D.energy) {
     const h = min == null ? 10 : Math.min(23, Math.floor(min / 60));
     const k = D.energy.typical[h] / D.energy.typical[10];
-    for (const c of Object.values(D.energy.consumers)) {if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }}
+    for (const c of Object.values(D.energy.consumers)) {
+      if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }
+      else if (c._pin) { delete c.base; delete c.p_now; delete c.i_now; } // живої потужності не було: після програвання знову порожньо
+      c._pin = false;
+    }
+    if (min != null) {extSimPower(min);}
     energyTick();
   }
   $(".o_f3d_shift-l").textContent = min == null ? "зараз" : hhmm(min);
@@ -3179,6 +3205,7 @@ function applySimTime(min) {
   // у програванні шар будується раз, далі мітки рухаються щокадру; перебудова — лише при зміні режиму
   if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) {drawProdOverlay();}
   flowUpdate(min);
+  if (colorMode === "power") {repaintEnergy();} // VX-09: режим «Споживання» іде за часом програвання
   emitSimTime(min);
 }
 $(".o_f3d_shift-t").oninput = (e) => { if (D) {applySimTime(+e.target.value);} };

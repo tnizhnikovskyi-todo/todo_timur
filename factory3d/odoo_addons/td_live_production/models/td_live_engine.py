@@ -33,6 +33,7 @@ DOWNTIME_LOSS = {  # ключ причини планувальника → (XML
     "material": ("mrp.block_reason0", "Очікування матеріалу"),
     "break": ("factory3d.loss_break", "Перерва"),
     "fault": ("mrp.block_reason1", "Поломка"),
+    "no_task": ("td_live_production.loss_no_task", "Немає завдання"),
 }
 
 

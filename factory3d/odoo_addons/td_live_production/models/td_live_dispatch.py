@@ -9,7 +9,7 @@ Enterprise `mrp_workorder` чи без нього), не стартує вдру
 import logging
 import time
 from collections import Counter
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 from psycopg2 import errors as pg_errors
 
@@ -129,10 +129,16 @@ class TdLiveEngine(models.AbstractModel):
         live_dts = Live.search(
             ["|", ("state", "=", "active"), "&", ("state", "=", "planned"), ("plan_start", "<=", now)]
         )
-        if not mos and not live_dts:
+        # диспетчер увімкнено — ціль має КОЖЕН верстат демо, навіть коли роботи немає (тоді всі «Немає завдання»)
+        machines = self._td_machine_wcs() if params["enabled"] else None
+        if mos or live_dts:
+            state = self._td_snapshot(mos, live_dts)
+            events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
+        elif machines is not None:
+            state = after = {"wos": {}, "mos": {}, "sos": {}, "dts": {}}
+            events = []
+        else:
             return res
-        state = self._td_snapshot(mos, live_dts)
-        events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
         failed = set()
         started = time.monotonic()
         processed = 0
@@ -146,8 +152,15 @@ class TdLiveEngine(models.AbstractModel):
         if res["pending"]:
             _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний виклик", res["pending"])
             return res
-        targets = dispatch.machine_targets(after, now)
+        calendar = self._td_plan_calendar(machines, now) if machines is not None else None
+        targets = dispatch.machine_targets(
+            after, now, machines=machines, shift=params["shift"], workdays=params["workdays"], calendar=calendar
+        )
         res["targets"] = targets
+        if machines is not None:
+            self._td_label_machines(
+                targets, now
+            )  # причини простоїв — ДО цілей: машинний шар підхопить їх при відкритті
         res["pushed"] = self._td_push_targets(targets)
         return res
 
@@ -404,6 +417,7 @@ class TdLiveEngine(models.AbstractModel):
         залежностей: через ORM кожен запис тягне ~100 запитів (правила поповнення), а на сервері це секунда."""
         if not moves:
             return
+        self.env.flush_all()  # відкладені записи ORM (дата «зараз» від `_action_done`) інакше затруть наш UPDATE
         cr = self.env.cr
         t = t.replace(microsecond=0)  # як ORM для Datetime: без мікросекунд
         cr.execute("UPDATE stock_move SET date = %s WHERE id IN %s", (t, tuple(moves.ids)))
@@ -490,6 +504,84 @@ class TdLiveEngine(models.AbstractModel):
         live.write({"state": "done", "date_end": t})
 
     # --- емулятор (C-LP-01) ---------------------------------------------------------------------------
+    @api.model
+    def _td_machine_wcs(self):
+        """РЦ усіх верстатів демо (`td.machine` з кодом РЦ): кожен має отримувати ціль у кожен такт."""
+        machines = self.env["td.machine"].sudo().search([("active", "=", True)])
+        return sorted(set(machines.workcenter_id.filtered("td_code").ids))
+
+    @api.model
+    def _td_plan_calendar(self, wc_ids, now, horizon_h=36):
+        """Плановий час РЦ на найближчі `horizon_h` год: `{id РЦ: [(початок, кінець)]}` за календарем РЦ (інакше
+        компанії) — тим самим, що рахує `td_machine_connect` для OEE й ₴. Календарі групуються: запит на календар."""
+        env = self.env
+        by_cal = {}
+        for wc in env["mrp.workcenter"].sudo().browse(wc_ids):
+            cal = wc.resource_calendar_id or wc.company_id.resource_calendar_id
+            if cal:
+                by_cal.setdefault(cal, env["mrp.workcenter"])
+                by_cal[cal] |= wc
+        start = now.replace(tzinfo=timezone.utc)
+        end = (now + timedelta(hours=horizon_h)).replace(tzinfo=timezone.utc)
+        res = {}
+        for cal, wcs in by_cal.items():
+            data = cal._work_intervals_batch(start, end, resources=wcs.resource_id)
+            for wc in wcs:
+                res[wc.id] = ppt.union(
+                    (s.astimezone(timezone.utc).replace(tzinfo=None), e.astimezone(timezone.utc).replace(tzinfo=None))
+                    for s, e, _meta in data[wc.resource_id.id]
+                )
+        return res
+
+    @api.model
+    def _td_target_label(self, target, losses):
+        """`(причина простою, поза зміною)` для цілі: що машинний шар має записати, коли верстат стане в цей стан."""
+        kind = target.get("kind")
+        if kind == "no_task":
+            return self._td_loss("no_task"), False
+        if kind == "off":
+            return self.env["mrp.workcenter.productivity.loss"], True
+        if kind == "downtime":
+            return losses.get(target.get("dt"), self.env["mrp.workcenter.productivity.loss"]), False
+        return self.env["mrp.workcenter.productivity.loss"], False
+
+    @api.model
+    def _td_label_machines(self, targets, now):
+        """Мітки верстатам для машинного шару (`td_live_loss_id`, `td_live_off`) і дозаповнення вже відкритих простоїв.
+
+        Пишуться лише зміни (раз на пару хвилин, не щотакту: рядки `td.machine` оновлює ще й крон верстатів). Простій,
+        який машинний шар встиг відкрити до мітки (гонка першого такту), отримує причину тут: без «Потребує причини».
+        """
+        env = self.env
+        Machine = env["td.machine"].sudo()
+        machines = {m.workcenter_id.id: m for m in Machine.search([("active", "=", True)])}
+        live_ids = [t["dt"] for t in targets if t.get("kind") == "downtime" and t.get("dt")]
+        losses = {live.id: live.loss_id for live in env["td.live.downtime"].browse(live_ids)}
+        labels = {}
+        for target in targets:
+            machine = machines.get(target["wc"])
+            if not machine:
+                continue
+            loss, off = self._td_target_label(target, losses)
+            labels[machine.id] = (loss, off)
+            if machine.td_live_loss_id != loss or machine.td_live_off != off:
+                machine.with_context(tracking_disable=True).write({"td_live_loss_id": loss.id, "td_live_off": off})
+        no_task = self._td_loss("no_task")
+        opened = env["td.downtime"].sudo().search([("date_end", "=", False), ("machine_id", "in", list(labels))])
+        for dt in opened:
+            loss, off = labels[dt.machine_id.id]
+            unclassified = dt.reason_state == "to_classify" and dt.reason_source == "auto"
+            if off:
+                # поза календарем зміни (кінець дня, обід, вихідні) «очікування» — не втрата: закриваємо о кінці
+                # планового часу (або видаляємо, якщо воно ціле поза ним); новий машинний шар відкриє сам
+                # з початку наступного інтервалу
+                if dt.state_kind == "idle" and (unclassified or dt.loss_id == no_task):
+                    ends = [e for _s, e in ppt.ppt_intervals(env, dt.workcenter_id, dt.date_start, now) if e <= now]
+                    dt.machine_id._td_close_downtime(max(ends) if ends else now)
+            elif loss and unclassified and dt.state_kind in ("idle", "setup", "fault"):
+                dt._td_apply_reason(loss, "demo")
+                dt.with_context(f3d_mc_internal=True, tracking_disable=True).write({"reason_state": "confirmed"})
+
     @api.model
     def _td_sim_device(self):
         """Модель емулятора, якщо `td_iot_sim` стоїть і вміє приймати цілі; інакше `None`."""

@@ -187,5 +187,66 @@ test("VX08 api.simMinutes / api.onSimTime / api.invalidate: хвилина «П�
     const d0 = viewer.core.drawn;
     api.invalidate();
     await advanceTime(120);
+    for (let i = 0; i < 30 && viewer.core.drawn <= d0; i++) {
+        await advanceTime(120); // під навантаженням (CI, паралельні прогони) кадр приходить не на першому кроці
+    }
     expect(viewer.core.drawn).toBeGreaterThan(d0);
+});
+
+test("VX09 api.flowSlot / ext.simPower / api.resim: слот шапки «Потоку зміни», потужність споживачів з даних розширення, повтор хвилини", async () => {
+    const errors = [];
+    const orig = console.error;
+    console.error = (...a) => errors.push(a);
+    after(() => { console.error = orig; });
+    const box = {};
+    const calls = [];
+    let kw = { "SAW-1": 5, "NO-SUCH": 99, "SAW-2": "x" }; // невідомий код і не-число ігноруються
+    after(registerViewerExtension({
+        id: "vx09",
+        applyLayout(api) { box.api = api; },
+        simPower(min, D, api) { calls.push([min, api === box.api]); return kw; },
+    }));
+    after(registerViewerExtension({ id: "vx09bad", simPower() { throw new Error("simPower boom"); } })); // збій не ламає ядро й сусіда
+    const { viewer } = await mountViewer({ model: "core", viewerOpts: { onDemand: true, now: () => Date.now() } });
+    const api = box.api;
+    // 1. слот у шапці стрічки
+    const slot = api.flowSlot;
+    expect(slot.classList.contains("o_f3d_flow-ext")).toBe(true);
+    expect(slot.closest(".o_f3d_fl-head")).not.toBe(null);
+    expect(slot.closest(".o_f3d_flow")).not.toBe(null);
+    // 2. потужність із розширення: p_now береться як є й не «дихає»; лінії й трансформатори перераховано
+    const c = () => viewer.D.energy.consumers["SAW-1"];
+    const live = c().p_now;
+    viewer.setSimTime(480);
+    expect(calls[0]).toEqual([480, true]);
+    expect(c().p_now).toBe(5);
+    expect(c()._pin).toBe(true);
+    expect(c().i_now).toBeGreaterThan(0);
+    expect(viewer.D.energy.consumers["NO-SUCH"]).toBe(undefined);
+    expect(typeof viewer.D.energy.consumers["SAW-2"].p_now).toBe("number"); // «x» не прийнято
+    expect(errors.some((a) => String(a[0]?.message || a[0]).includes("simPower boom"))).toBe(true);
+    viewer.setSimTime(485);
+    expect(c().p_now).toBe(5); // повтор без «дихання»
+    // 3. режим «Споживання» перефарбовує об'єкти за часом програвання
+    const emissive = () => { let h = null; viewer.items.get("SAW-1").traverse((o) => { if (h == null && o.isMesh && o.material?.emissive) { h = o.material.emissive.getHexString(); } }); return h; };
+    viewer.setMode("power");
+    viewer.setSimTime(490);
+    const green = emissive();
+    kw = { "SAW-1": 35 };
+    viewer.setSimTime(495);
+    expect(c().p_now).toBe(35);
+    expect(emissive()).not.toBe(green); // 5 кВт (зелений) → 35 кВт (червоний)
+    // 4. resim: повторити поточну хвилину — підписники бачать її ще раз; у живому режимі нічого
+    const seen = [];
+    api.onSimTime((m) => seen.push(m));
+    api.resim();
+    expect(seen).toEqual([495]);
+    // 5. «Зараз»: pin знято, simPower не викликається
+    const n = calls.length;
+    viewer.setSimTime(null);
+    expect(c()._pin).toBe(false);
+    expect(calls.length).toBe(n);
+    expect(Math.abs(c().p_now - live)).toBeLessThan(live * 0.07 + 0.2);
+    api.resim();
+    expect(seen).toEqual([495, null]); // лише «Зараз» від setSimTime(null); resim у живому режимі нічого не шле
 });

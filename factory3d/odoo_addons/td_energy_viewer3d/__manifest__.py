@@ -14,8 +14,9 @@ Key features
 * Alarm markers in the scene
 * Node card with live values
 * Jump from the Energy console to the 3D scene
+* Running energy counter (UAH and kWh since midnight) in the shift flow strip, 3D power coloring that follows the shift playback time, an Energy slide for the briefing wall
 """,
-    "version": "19.0.1.0.2",
+    "version": "19.0.1.1.0",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

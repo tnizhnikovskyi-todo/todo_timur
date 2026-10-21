@@ -26,6 +26,18 @@ class ResConfigSettings(models.TransientModel):
     # Boolean із типовим «увімкнено» не зберігається через `config_parameter` (False видаляє параметр і форма знову
     # показує типове) — читаємо й пишемо рядком вручну.
     td_energy_viewer3d_show_markers = fields.Boolean(string="Маркери тривог на моделі", default=True)
+    td_energy_viewer3d_kiosk_cost = fields.Boolean(
+        string="Вартість енергії в киоску й на «стіні»",
+        config_parameter=P + "kiosk_cost",
+        help="Типово вимкнено: киоск не бачить вартості (AC-65). Увімкнення додає ₴ у лічильник «Потоку зміни» "
+        "і на слайд «Енергія» екрана планірки для всіх, хто має токен киоска.",
+    )
+    # R-59: ключ слайда екрана планірки — у підказці набору `td.viewer.wall_slides`
+    # (сам параметр і його валідація — у td_viewer3d)
+    td_wall_slides = fields.Char(
+        help="Ключі через кому в порядку показу: overview (3D), kpi, events, orders, "
+        "energy (Енергія, td_energy_viewer3d); модулі можуть додавати свої.",
+    )
 
     @api.constrains("td_energy_viewer3d_layers", "td_energy_viewer3d_marker_limit")
     def _check_td_energy_viewer3d(self):

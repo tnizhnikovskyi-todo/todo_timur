@@ -20,6 +20,10 @@
                                 <field name="td_energy_viewer3d_marker_limit"/></div>
                         </div>
                     </setting>
+                    <setting string="Вартість у киоску й на «стіні»"
+                             help="Слайд «Енергія» (ключ energy у «Слайди стіни») і лічильник ₴ у киоску показують вартість, лише якщо це ввімкнено">
+                        <field name="td_energy_viewer3d_kiosk_cost"/>
+                    </setting>
                 </block>
             </xpath>
         </field>
