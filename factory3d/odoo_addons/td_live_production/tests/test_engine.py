@@ -3,6 +3,8 @@
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
+from psycopg2 import errors as pg_errors
+
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
@@ -474,6 +476,105 @@ class TestLive(TransactionCase):
         self.assertTrue(first.time_ids)  # журнал часу лишився
         again = self.at(60).td_catch_up()  # ідемпотентно
         self.assertIn("закрито МО 0", again)
+
+    # --- сервер: послідовності, працівник Enterprise, контроль якості, причини невдач ---------------------
+    def test_generation_with_names_ahead_of_sequences(self):
+        """Імена документів попереду послідовностей (демо створювало їх явно): генерація не падає на унікальності."""
+        env, company = self.env, self.env.company
+        mo_type = env["stock.picking.type"].search(
+            [("code", "=", "mrp_operation"), ("company_id", "=", company.id)], limit=1
+        )
+        out_type = env["stock.picking.type"].search(
+            [("code", "=", "outgoing"), ("company_id", "=", company.id)], limit=1
+        )
+        mo_seq, out_seq = mo_type.sequence_id, out_type.sequence_id
+        so_seq = env["ir.sequence"].search([("code", "=", "sale.order")], limit=1)
+        prefix, _suffix = mo_seq._get_prefix_suffix()
+
+        def name(n):
+            return "%s%0*d" % (prefix, mo_seq.padding, n)
+
+        for n in (1, 40):  # зайняті «демо» номери
+            env["mrp.production"].create(
+                {"product_id": self.fg.id, "product_qty": 1, "bom_id": self.boms["A"].id, "name": name(n)}
+            )
+        for seq in (mo_seq, out_seq, so_seq):
+            seq.number_next_actual = 1
+        fixed = self.engine.td_sequences_ahead()
+        self.assertTrue(fixed)
+        self.assertEqual(mo_seq.number_next_actual, 41)
+        self.assertGreater(so_seq.number_next_actual, 1)  # S00001 — шаблонне замовлення
+        self.assertGreater(out_seq.number_next_actual, 1)  # відвантаження шаблонного замовлення
+        self.assertEqual(self.engine.td_sequences_ahead(), [])  # ідемпотентно
+        for seq in (mo_seq, out_seq, so_seq):
+            seq.number_next_actual = 1
+        day = self.generate()  # сама підсуває послідовності
+        names = day.production_ids.mapped("name")
+        self.assertEqual(len(set(names)), len(names))
+        self.assertFalse({name(1), name(40)} & set(names))
+        self.assertIn("Послідовності", day.note)
+
+    def test_employee_fallback_for_work_centers_without_operators(self):
+        """Enterprise не стартує наряд без працівника: на РЦ без операторів береться запасний; у CE — не потрібен."""
+        wo = self.generate().production_ids.workorder_ids[:1]
+        machine = self.engine._td_machine_of(wo)
+        employee = self.env["hr.employee"].create({"name": "Оператор запасний (тест)"})
+        no_emp = patch.object(type(machine), "_td_pick_employee", return_value=self.env["hr.employee"])
+        with no_emp:
+            self.assertFalse(self.engine._td_employee(wo, machine))  # CE: `start_employee` немає
+            with patch.object(type(wo), "start_employee", create=True):
+                got = self.engine._td_employee(wo, machine)
+        self.assertTrue(got)
+        self.assertTrue(got == self.env.user.employee_id or got == employee or got.exists())
+        assigned = self.env["hr.employee"].create({"name": "Оператор РЦ (тест)"})
+        with patch.object(type(machine), "_td_pick_employee", return_value=assigned):
+            with patch.object(type(wo), "start_employee", create=True):
+                self.assertEqual(self.engine._td_employee(wo, machine), assigned)  # призначений має перевагу
+
+    def test_quality_checks_passed_by_standard_do_pass(self):
+        mo = self.generate().production_ids[:1]
+        check = MagicMock(title="Контроль збирання")
+        with patch.object(type(self.engine), "_td_quality_checks", return_value=[check]) as found:
+            self.assertEqual(self.engine._td_pass_quality(production=mo), ["Контроль збирання"])
+        check.do_pass.assert_called_once_with()
+        domain = found.call_args.args[0]
+        self.assertIn(("production_id", "in", mo.ids), domain)
+        self.assertIn(("quality_state", "=", "none"), domain)
+        self.assertEqual(self.engine._td_pass_quality(), [])  # немає ні МО, ні наряду
+        self.assertEqual(self.engine._td_pass_quality(production=mo), [])  # `quality` не встановлено: нічого
+
+    def test_catch_up_reports_top_reasons_and_notes_mo(self):
+        past = T0 - timedelta(days=9)
+        mos = [self.make_old_mo(past + mins(k))[1] for k in range(4)]
+        orig = type(self.engine)._td_catch_up_mo
+        errors = {
+            mos[0].id: UserError("Вам досі потрібно перевірити якість!"),
+            mos[1].id: UserError("Вам досі потрібно перевірити якість!"),
+            mos[2].id: pg_errors.SerializationFailure("could not serialize access"),
+        }
+
+        def fake(engine, mo, wos):
+            if mo.id in errors:
+                raise errors[mo.id]
+            return orig(engine, mo, wos)
+
+        with patch.object(type(self.engine), "_td_catch_up_mo", new=fake):
+            msg = self.at(60).td_catch_up()
+        self.assertIn("закрито МО 1", msg)
+        self.assertIn("не вдалось 3", msg)
+        self.assertIn("Вам досі потрібно перевірити якість! — 2", msg)
+        self.assertIn("конкурентне оновлення даних", msg)
+        self.assertEqual(mos[3].state, "done")
+        self.assertEqual([m.state for m in mos[:3]], ["confirmed"] * 3)  # невдалі лишились як були
+        notes = mos[0].message_ids.mapped("body")
+        self.assertTrue(any("Догнати минуле не вдалось" in str(n) for n in notes))
+
+    def test_concurrency_error_is_not_swallowed_by_tick(self):
+        """Конкурентне оновлення піднімається: Odoo повторить запит, крон — наступний такт, крок не губиться."""
+        self.generate()
+        with patch.object(type(self.engine), "_td_wo_start", side_effect=pg_errors.SerializationFailure("x")):
+            with self.assertRaises(pg_errors.SerializationFailure):
+                self.at(5).td_dispatch()
 
     # --- LP-07: підготовка компанії ----------------------------------------------------------------------
     def test_prepare_company(self):

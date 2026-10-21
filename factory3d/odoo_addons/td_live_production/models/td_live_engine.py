@@ -192,6 +192,9 @@ class TdLiveEngine(models.AbstractModel):
         existing = Day.search([("date", "=", day), ("company_id", "=", company.id)], limit=1)
         if existing:
             return existing
+        fixed = (
+            self.td_sequences_ahead()
+        )  # демо-імена попереду послідовностей: без цього — «Референс має бути унікальним»
         params = self._td_params()
         templates = self._td_templates()
         if not templates["customers"] or not templates["products"]:
@@ -244,10 +247,11 @@ class TdLiveEngine(models.AbstractModel):
                 "hot_load_pct": hot_load,
                 "spill_min": sched["spill"],
                 "note": _(
-                    "План: %(n)s замовлень, %(m)s МО, %(d)s простоїв.%(throttle)s",
+                    "План: %(n)s замовлень, %(m)s МО, %(d)s простоїв.%(throttle)s%(seq)s",
                     n=len(plan["orders"]),
                     m=len(mos_for_plan),
                     d=len(rec.downtime_ids),
+                    seq=_(" Послідовності підсунуто: %s.", ", ".join("%s %s→%s" % f for f in fixed)) if fixed else "",
                     throttle=(
                         _(" Черга верстатів %(days).1f доби: замовлень менше, ніж у налаштуваннях (%(cfg)s).")
                         % {"days": backlog_days, "cfg": params["orders"]}
