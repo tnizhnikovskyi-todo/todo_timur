@@ -187,3 +187,114 @@ def test_fire_drill_doors_once(world, ctl):
         world.step(1)
     assert sum(1 for e in ctl.events if e["code"] == 26368) == 1
     assert sum(1 for e in ctl.events if e["code"] == 20480 and e["door_id"] == 3) >= 1
+
+
+# --- дві зміни: бригади A (07:00–15:30) і B (15:30–23:00) ------------------------------------------------------
+def _set_time(world, hh: int, mm: int = 0) -> None:
+    world.clock.set(datetime(2026, 10, 12, hh, mm))
+    world.advance(10)
+
+
+def _inside(ctl) -> set[str]:
+    """Хто в будівлі за журналом ACR-IN: останній прохід — вхід (``tna_key`` 1)."""
+    last = {}
+    for e in sorted((e for e in ctl.events if e["device"] == "ACR-IN" and e["user_id"]), key=lambda e: e["id"]):
+        last[e["user_id"]] = e["tna_key"]
+    return {u for u, k in last.items() if k == "1"}
+
+
+def _crew_times(ctl, people):
+    """{barcode: (хв входу, хв виходу)} за розкладом доби."""
+    out: dict[str, list[int]] = {}
+    for _ts, it in ctl.schedule:
+        if it["device"] == "ACR-IN" and it["tna"]:
+            t = it["when"].astimezone(KYIV)
+            out.setdefault(it["user"]["barcode"], [0, 0])[0 if it["tna"] == "1" else 1] = t.hour * 60 + t.minute
+    return out
+
+
+@pytest.fixture
+def two_shifts(world, people):
+    from datetime import time
+
+    world.shift.shifts = ((time(7, 0), time(15, 30)), (time(15, 30), time(23, 0)))
+    world.shift.end = time(23, 0)
+    world.people = people
+    world.clock.set(datetime(2026, 10, 12, 5, 0))
+    world.step(1)
+    return world.devices["ACCESS"].model.ctl
+
+
+def test_two_shifts_split_into_crews(world, people, two_shifts):
+    ctl = two_shifts
+    times = _crew_times(ctl, people)
+    crew_b = {b for b, (t_in, _t_out) in times.items() if t_in >= 15 * 60}
+    assert len(times) == 35 and len(crew_b) == 35 // 2  # про половину людей — бригада B
+    duty = {c.replace("-", "") for c in ("OP-W1", "OP-W2", "OP-W3", "OP-W5", "OP-W7")}
+    assert not duty & crew_b  # чергові ролі — бригада A
+    for p in people:
+        key, m = p["code"], det(p["code"]) % 20
+        t_in, t_out = times[p["barcode"]]
+        if p["barcode"] in crew_b:
+            assert (t_in, t_out) == (15 * 60 + 10 + m, 23 * 60 + m)
+        else:
+            assert (t_in, t_out) == (6 * 60 + 40 + m, 15 * 60 + 30 + m)
+        assert key  # ключ людини — code
+
+
+@pytest.mark.parametrize(
+    ("hh", "mm"),
+    [(10, 0), (15, 40), (16, 0), (23, 30)],
+)
+def test_two_shifts_who_is_inside(world, people, two_shifts, hh, mm):
+    ctl = two_shifts
+    _set_time(world, hh, mm)
+    times = _crew_times(ctl, people)
+    now = hh * 60 + mm
+    expected = {b for b, (t_in, t_out) in times.items() if t_in <= now < t_out}
+    inside = _inside(ctl)
+    assert inside == expected
+    assert ctl.on_site == len(inside) == world.signals["access/turnstiles/TURNSTILES/on_site"].value
+    crew_b = {b for b, (t_in, _o) in times.items() if t_in >= 15 * 60}
+    if (hh, mm) == (10, 0):
+        assert inside and not inside & crew_b and len(inside) == 35 - len(crew_b)  # лише бригада A
+    elif (hh, mm) == (15, 40):
+        assert crew_b <= inside and inside - crew_b  # B повністю + ті з A, хто ще не вийшов (det mod 20 > 10)
+        assert len(inside) > len(crew_b)
+    elif (hh, mm) == (16, 0):
+        assert inside == crew_b  # A вийшла до 15:50
+    else:
+        assert inside == set() and ctl.on_site == 0  # B вийшла до 23:20
+
+
+def test_two_shifts_evacuation_takes_everyone_inside(world, people, two_shifts):
+    from iot_sim.core.scenarios_evac import FireEvacuationParams, people_on_site, plan_evacuation
+
+    ctl = two_shifts
+    _set_time(world, 15, 50)
+    inside = _inside(ctl)
+    assert len(inside) >= 17  # на 15:50 — уся бригада B
+    on_site = people_on_site(world)
+    assert {p["barcode"] for p in on_site} == inside
+    plan = plan_evacuation(on_site, FireEvacuationParams(stuck=0, wrong_exit_pct=0))
+    assert {r["barcode"] for r in plan} == inside
+
+
+def test_one_shift_unchanged(world, people):
+    """Без списку змін (одна зміна 07:00–15:30): усі в A — вхід 06:40…07:00, вихід 15:30…15:50, як раніше."""
+    world.people = people
+    world.clock.set(datetime(2026, 10, 12, 5, 0))
+    world.step(1)
+    ctl = world.devices["ACCESS"].model.ctl
+    times = _crew_times(ctl, people)
+    assert len(times) == 35
+    for p in people:
+        m = det(p["code"]) % 20
+        assert times[p["barcode"]] == [6 * 60 + 40 + m, 15 * 60 + 30 + m]
+    for hh, mm, n in ((10, 0, 35), (15, 40, None), (16, 0, 0), (23, 30, 0)):
+        _set_time(world, hh, mm)
+        inside = _inside(ctl)
+        if n is not None:
+            assert len(inside) == n
+        else:  # 15:40: частина вже вийшла (det mod 20 ≤ 10), решта ще в будівлі
+            assert 0 < len(inside) < 35

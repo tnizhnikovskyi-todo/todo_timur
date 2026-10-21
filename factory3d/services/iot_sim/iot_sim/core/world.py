@@ -139,6 +139,8 @@ class ShiftCalendar:
     lunch_from: time = time(11, 30)
     lunch_to: time = time(12, 0)
     workdays: tuple[int, ...] = (0, 1, 2, 3, 4)
+    # вікна окремих змін (Odoo: кілька змін у календарі); порожньо — одна зміна ``start``–``end`` (СКУД: бригади)
+    shifts: tuple[tuple[time, time], ...] = ()
 
     def in_shift(self, dt: datetime) -> bool:
         return dt.weekday() in self.workdays and self.start <= dt.time() < self.end

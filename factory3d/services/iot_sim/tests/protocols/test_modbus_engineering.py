@@ -141,6 +141,6 @@ async def test_tedom_registers(modbus, world):
 
 async def test_bit_exact_float_roundtrip_f32(modbus, world):
     world.force("energy/cells/Q2/p_now", -39.0, hold_s=600)
-    world.force("energy/transformers/T2/p_kw", -39.0, hold_s=600)
+    world.force("energy/transformers/T2/p_kw", 555.0, hold_s=600)  # той самий PDU 3059: регістр віддає Q2, не T2
     regs = (await hr(modbus, 2, 3059, 2)).registers
     assert struct.unpack(">f", struct.pack(">HH", *regs))[0] == pytest.approx(-39.0)

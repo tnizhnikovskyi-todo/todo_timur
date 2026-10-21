@@ -5,12 +5,15 @@ from types import SimpleNamespace
 
 import pytest
 from iot_sim.models.pv import (
+    P_PEAK,
     ST_BLACKOUT,
     ST_NIGHT,
     ST_ON,
     ST_START,
+    day_cloud_factor,
     season_factor,
     sun_factor,
+    weather_factor,
 )
 
 
@@ -110,6 +113,7 @@ def test_season_october_profile(world):
 
 
 def test_october_day_peak_below_summer(world):
+    world.settings = SimpleNamespace(pv_weather=False)  # ясне небо
     peak = {}
     for day in (datetime(2026, 10, 16), datetime(2026, 6, 19)):
         best = 0.0
@@ -121,3 +125,68 @@ def test_october_day_peak_below_summer(world):
     assert 400 <= peak[10] <= 640  # жовтень: ≈ 0,75·765 ± шум
     assert peak[6] > 650  # літо: майже повна потужність
     assert peak[10] < 0.85 * peak[6]
+
+
+# --- погода: хмарність і реальна добова вироблена енергія ----------------------------------------------------------
+def _clear_kw(world) -> float:
+    return min(920.0, P_PEAK * sun_factor(world) * season_factor(world) * 0.96)
+
+
+def test_sun_times_kyiv_22_oct(world):
+    """Схід ≈ 07:30, захід ≈ 17:54 (EEST) 22.10.2026; о 15:40 сонце ≈ 0,63 від полудня."""
+    lit = []
+    for minute in range(24 * 60):
+        world.clock.set(datetime(2026, 10, 22, minute // 60, minute % 60))
+        if sun_factor(world) > 0:
+            lit.append(minute)
+    assert 7 * 60 + 25 <= lit[0] <= 7 * 60 + 36 and 17 * 60 + 48 <= lit[-1] <= 17 * 60 + 58
+    world.clock.set(datetime(2026, 10, 22, 15, 40))
+    assert sun_factor(world) == pytest.approx(0.63, abs=0.03)
+
+
+def test_weather_factor_deterministic_and_bounded(world):
+    world.clock.set(datetime(2026, 10, 22, 12, 0))
+    a = weather_factor(world)
+    assert a == weather_factor(world) and 0.05 <= a <= 1.0
+    days = {day_cloud_factor(datetime(2026, 10, d).date()) for d in range(1, 29)}
+    assert len(days) > 20 and 0.1 <= min(days) and max(days) <= 0.8  # доби різні, але ряд відтворюваний
+    world.clock.set(datetime(2026, 10, 22, 12, 30))
+    assert abs(weather_factor(world) - a) < 0.1  # хмари змінюються повільно (інтерполяція погодинних значень)
+    world.settings = SimpleNamespace(pv_weather=False)
+    assert weather_factor(world) == 1.0
+    world.settings = SimpleNamespace(sun_model="parabola")
+    assert weather_factor(world) == 1.0  # макет: без погоди
+
+
+def test_daily_energy_is_realistic_for_late_october(world):
+    """З 22.10 на 30 діб: 1,5…2,2 кВт·год/кВт_п/добу в середньому (ясне небо дало б ≈ 3,9); окремі доби — від майже 0
+    до майже ясних, але не вище за ясне небо."""
+    from datetime import timedelta
+
+    per_day, clear_day = [], []
+    for i in range(30):
+        d = datetime(2026, 10, 22) + timedelta(days=i)
+        kwh = clear = 0.0
+        for minute in range(0, 24 * 60, 5):
+            world.clock.set(d.replace(hour=minute // 60, minute=minute % 60))
+            kwh += _clear_kw(world) * weather_factor(world) * 5 / 60
+            clear += _clear_kw(world) * 5 / 60
+        per_day.append(kwh / P_PEAK)
+        clear_day.append(clear / P_PEAK)
+    mean = sum(per_day) / len(per_day)
+    assert 1.5 <= mean <= 2.2, mean
+    assert 3.3 <= sum(clear_day) / len(clear_day) <= 4.2  # ясне небо — для порівняння
+    assert all(c <= k + 1e-9 for c, k in zip(per_day, clear_day, strict=True)) and max(per_day) - min(per_day) > 1.0
+
+
+def test_pv_model_follows_weather(world):
+    """15:40 22.10: потужність моделі = ясне небо · погода (шум до −16 %); ``pv_cf`` лишається окремим множником."""
+    world.clock.set(datetime(2026, 10, 22, 15, 40))
+    world.step(10)
+    expected = _clear_kw(world) / 0.96 * weather_factor(world)
+    assert expected * 0.83 <= _total(world) <= expected * 1.02  # шум 0,92 + 0,08·r ∈ [0,84; 1,0)
+    assert _total(world) < _clear_kw(world)  # хмарно: нижче за ясне небо
+    before = _total(world)
+    world.set_flag("pv_cf", 0.5)
+    world.step(10)
+    assert _total(world) == pytest.approx(0.5 * before, rel=0.1)

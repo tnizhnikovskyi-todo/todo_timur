@@ -10,7 +10,8 @@
 очікуванні
 (0 кВт), тож у робочу добу імпорт ``Q1 + Q2`` додатний, як у макеті; ``bess_shave_kw = 0`` — розряд на будь-який дефіцит
 (R-13 макета). Острів (``blackout``): ``grid = export = 0``; до переключення ATyS у II розряд
-``−min(200, P_crit)`` (лише при ``SOC > 10``), після — 0. ``grid_kw``/``export_kw`` належать пристрою
+``−min(200, max(0, P_crit − chp − pv))`` (лише дефіцит після КГУ; при ``SOC > 10``), після — 0.
+``grid_kw``/``export_kw`` належать пристрою
 ``EMS-1`` (пасивний) — пишемо їх за повним кодом сигналу.
 
 W2 (SPEC §8.2, R-59): режими контролера (прапор ``bess_mode``): ``0`` авто (вище; ``bess_auto_idle`` → 0 кВт),
@@ -78,7 +79,8 @@ class Bess(Model):
         if island(w):
             crit = p_crit(w)
             switched = get(w, ATS_POSITION, 2) == 3
-            bess = 0.0 if switched or soc <= SOC_MIN else -min(BESS_KW_MAX, crit)
+            need = max(0.0, crit - float(get(w, "infra/totals/chp_kw")) - float(get(w, "infra/totals/pv_now")))
+            bess = 0.0 if switched or soc <= SOC_MIN else -min(BESS_KW_MAX, need)
             return bess, 0.0, 0.0
         load = total_load(w)
         gen = gen_kw(w)
