@@ -19,6 +19,9 @@ from . import clock
 from .noise import NOISE_PCT, noisy_minutes
 
 SHIP_DELAY_MIN = 20
+HORIZON_MIN = 15  # `until` цілі не далі за стільки хвилин від тику: цілі оновлюються щохвилини й не закінчуються
+IDLE_REASON = "Немає завдання"
+OFF_REASON = "Поза зміною"
 TARGET_PAD_MIN = 2  # запас `until` понад плановий кінець стану (C-LP-01: `until` у минулому знімає ціль)
 MAX_EVENTS = 20000
 # порядок подій з однаковим часом: завершення, закінчення простою, МО, початок простою, початок наряду, відвантаження
@@ -128,32 +131,76 @@ def _apply(st, busy, free_at, t, kind, ident, events, pct):
         sos[ident]["shipped"] = True
 
 
-def machine_targets(state, now, pad_min=TARGET_PAD_MIN, pct=NOISE_PCT):
+def machine_targets(
+    state,
+    now,
+    pad_min=TARGET_PAD_MIN,
+    pct=NOISE_PCT,
+    machines=None,
+    shift=None,
+    workdays="0123456",
+    horizon_min=HORIZON_MIN,
+):
     """Цілі верстатам для емулятора (C-LP-01) за станом ПІСЛЯ `simulate`: `[{"wc", "state", "reason", "until"}]`.
 
-    Наряд у роботі → `working`; активний простій → `idle` (налагодження, очікування) або `down` (лише аварія) із
-    причиною. `until` = очікуваний кінець стану + `pad_min` хв запасу (не раніше `now`): емулятор знімає ціль, коли
-    `until` минув, а тик оновлює цілі щохвилини. Верстати без роботи й без простою цілі не отримують (емулятор
-    поводиться як зазвичай).
+    Пріоритет: наряд у роботі → `working`; активний простій → `idle` (налагодження, очікування) або `down` (лише
+    аварія) із причиною; інакше верстат без роботи → `idle` «Немає завдання», а поза зміною → `idle` «Поза зміною».
+    `machines` — усі верстати демо (id РЦ): ціль отримує КОЖЕН, інакше емулятор веде «вільні» верстати сам і майже всі
+    вони «працюють», що не збігається з планом. Без `machines` — лише зайняті (старий режим).
+
+    `until` = найближча зміна стану за планом + `pad_min` хв запасу (емулятор знімає ціль, коли `until` минув), але не
+    пізніше `now + horizon_min`: тик оновлює цілі щохвилини, тож вони не закінчуються.
     """
     pad = timedelta(minutes=pad_min)
-    targets = []
+    cap = now + timedelta(minutes=horizon_min)
+
+    def until(change):
+        return min(max(change, now) + pad, cap)
+
+    by_wc = {}
     for wid, wo in state["wos"].items():
         if wo["state"] == "progress" and wo["start"]:
             end = wo["start"] + timedelta(minutes=actual_minutes(wid, wo["minutes"], pct))
-            targets.append({"wc": wo["wc"], "state": "working", "reason": None, "until": max(end, now) + pad})
+            by_wc.setdefault(wo["wc"], {"wc": wo["wc"], "state": "working", "reason": None, "until": until(end)})
     for dt in state["dts"].values():
-        if dt["state"] == "active" and dt["start"]:
+        if dt["state"] == "active" and dt["start"] and dt["wc"] not in by_wc:
             end = dt["start"] + timedelta(minutes=dt["minutes"])
-            targets.append(
-                {
-                    "wc": dt["wc"],
-                    "state": "down" if dt["kind"] == "fault" else "idle",
-                    "reason": dt["reason"],
-                    "until": max(end, now) + pad,
-                }
-            )
-    return targets
+            by_wc[dt["wc"]] = {
+                "wc": dt["wc"],
+                "state": "down" if dt["kind"] == "fault" else "idle",
+                "reason": dt["reason"],
+                "until": until(end),
+            }
+    if machines is not None:
+        in_shift = shift is not None and clock.in_shift(now, shift, workdays)
+        for wc in machines:
+            if wc in by_wc:
+                continue
+            change = _next_change(state, wc, now, shift, workdays, in_shift)
+            by_wc[wc] = {
+                "wc": wc,
+                "state": "idle",
+                "reason": IDLE_REASON if in_shift or shift is None else OFF_REASON,
+                "until": until(change),
+            }
+    return [by_wc[wc] for wc in sorted(by_wc)]
+
+
+def _next_change(state, wc, now, shift, workdays, in_shift):
+    """Коли за планом зміниться стан вільного верстата: межа зміни, плановий старт його наряду чи простою."""
+    changes = []
+    if shift is not None:
+        if in_shift:
+            changes.append(clock.shift_window(clock.local_date(now), shift)[1])
+        else:
+            changes.append(clock.next_shift_start(now, shift, workdays))
+    for wo in state["wos"].values():
+        if wo["wc"] == wc and wo["state"] not in ("done", "progress") and wo["plan_start"] and wo["plan_start"] > now:
+            changes.append(wo["plan_start"])
+    for dt in state["dts"].values():
+        if dt["wc"] == wc and dt["state"] == "planned" and dt["plan_start"] > now:
+            changes.append(dt["plan_start"])
+    return min(changes) if changes else now + timedelta(minutes=HORIZON_MIN)
 
 
 def catchup_chain(wos, floor=None):

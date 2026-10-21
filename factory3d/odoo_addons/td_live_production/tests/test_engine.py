@@ -594,6 +594,60 @@ class TestLive(TransactionCase):
             with self.assertRaises(pg_errors.SerializationFailure):
                 self.at(5).td_dispatch()
 
+    # --- C-LP-01: ціль кожному верстату ---------------------------------------------------------------------
+    def add_machines(self, n):
+        """Довести кількість верстатів демо до 35: окремі РЦ з `td_code` і `td.machine`."""
+        env = self.env
+        total = env["td.machine"].search_count([("active", "=", True)])
+        for i in range(max(0, n - total)):
+            wc = env["mrp.workcenter"].create({"name": "Верстат демо %02d" % i, "td_code": "DEMO-%02d" % i})
+            env["td.machine"].create({"workcenter_id": wc.id, "protocol": "manual"})
+        return env["td.machine"].search_count([("active", "=", True)])
+
+    def test_every_machine_gets_a_target_each_tick(self):
+        """3 активні наряди й 35 верстатів: у емулятор іде 35 цілей, у 32 — `idle` «Немає завдання»."""
+        self.assertEqual(self.add_machines(35), 35)
+        day = self.generate()
+        mos = day.production_ids.sorted("id")
+        for mo, name in ((mos[0], "EDGE-T"), (mos[1], "ASM-T")):  # два наряди вже в роботі на різних верстатах
+            wo = mo.workorder_ids.filtered(lambda w, name=name: w.workcenter_id.td_code == name)
+            self.assertTrue(self.engine._td_wo_start(wo, T0))
+        fake = self.fake_sim()
+        with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
+            self.at(0).td_dispatch()  # перший наряд на SAW-T стартує тактом
+        payload = fake._td_push_machine_targets.call_args.args[0]
+        self.assertEqual(len(payload), 35)
+        self.assertEqual(len({t["code"] for t in payload}), 35)
+        states = [t["state"] for t in payload]
+        self.assertEqual((states.count("working"), states.count("idle")), (3, 32))
+        for tg in payload:
+            if tg["state"] == "idle":
+                self.assertEqual(tg["reason"], "Немає завдання")
+            self.assertRegex(tg["until"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+
+    def test_targets_pushed_even_without_any_work_when_enabled(self):
+        """Диспетчер увімкнено, а роботи немає: кожному верстату ціль «Немає завдання», а не «нічого не слати»."""
+        total = self.add_machines(35)
+        fake = self.fake_sim()
+        with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
+            self.at(5).td_dispatch()
+        payload = fake._td_push_machine_targets.call_args.args[0]
+        self.assertEqual(len(payload), total)
+        self.assertEqual({t["state"] for t in payload}, {"idle"})
+        # поза зміною — «Поза зміною»
+        fake.reset_mock()
+        with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
+            self.at(60 * 12).td_dispatch()  # 17:00 Київ
+        self.assertEqual({t["reason"] for t in fake._td_push_machine_targets.call_args.args[0]}, {"Поза зміною"})
+
+    def test_disabled_dispatcher_does_not_push_idle_targets(self):
+        self.add_machines(35)
+        self.env["ir.config_parameter"].sudo().set_param(P + "enabled", "False")
+        fake = self.fake_sim()
+        with patch.object(type(self.engine), "_td_sim_device", return_value=fake):
+            self.at(5).td_dispatch(force=True)  # задачі «Згенерувати»/«Догнати» не гасять верстати до запуску
+        fake._td_push_machine_targets.assert_not_called()
+
     # --- фонові задачі: кнопки лише ставлять у чергу, виконавець працює порціями ----------------------------
     def test_generate_button_queues_and_runs_in_portions(self):
         Job = self.env["td.live.job"]

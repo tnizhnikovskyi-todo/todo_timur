@@ -276,7 +276,7 @@ class TestDispatch(BaseCase):
         target = targets[0]
         self.assertEqual((target["wc"], target["state"], target["reason"]), (1, "working", None))
         end = T0 + mins(dispatch.actual_minutes(1, 60.0))
-        self.assertEqual(target["until"], end + mins(dispatch.TARGET_PAD_MIN))
+        self.assertEqual(target["until"], min(end + mins(dispatch.TARGET_PAD_MIN), now + mins(dispatch.HORIZON_MIN)))
 
     def test_machine_targets_downtime_kinds(self):
         after = chain_state()
@@ -306,7 +306,54 @@ class TestDispatch(BaseCase):
         got = {t["wc"]: t for t in dispatch.machine_targets(after, now)}
         self.assertEqual((got[5]["state"], got[5]["reason"]), ("idle", "Налагодження"))  # наладка — не аварія
         self.assertEqual((got[6]["state"], got[6]["reason"]), ("down", "Поломка"))
-        self.assertEqual(got[5]["until"], T0 + mins(32))
+        self.assertEqual(got[5]["until"], now + mins(dispatch.HORIZON_MIN))  # кінець за 30 хв, але не далі 15 хв
+
+    def test_targets_for_every_machine(self):
+        """35 верстатів, 3 активні наряди: 35 цілей, 3 `working` і 32 `idle` «Немає завдання»."""
+        state = {"wos": {}, "mos": {}, "sos": {}, "dts": {}}
+        for wc in (1, 2, 3):
+            state["wos"][wc] = {
+                "mo": wc,
+                "wc": wc,
+                "state": "progress",
+                "plan_start": None,
+                "minutes": 60.0,
+                "start": T0,
+                "end": None,
+            }
+            state["mos"][wc] = {"wos": [wc], "so": None, "done_at": None}
+        now = T0 + mins(5)
+        targets = dispatch.machine_targets(state, now, machines=list(range(1, 36)), shift=SHIFT)
+        self.assertEqual(len(targets), 35)
+        working = [t for t in targets if t["state"] == "working"]
+        idle = [t for t in targets if t["state"] == "idle"]
+        self.assertEqual((len(working), len(idle)), (3, 32))
+        self.assertEqual({t["reason"] for t in idle}, {dispatch.IDLE_REASON})
+        self.assertTrue(all(now < t["until"] <= now + mins(dispatch.HORIZON_MIN) for t in targets))
+        # без `machines` — старий режим: лише зайняті
+        self.assertEqual(len(dispatch.machine_targets(state, now)), 3)
+
+    def test_targets_off_shift_and_next_change(self):
+        state = {"wos": {}, "mos": {}, "sos": {}, "dts": {}}
+        night = datetime(2026, 10, 21, 13, 0)  # 16:00 Київ: зміна скінчилась
+        off = dispatch.machine_targets(state, night, machines=[1, 2], shift=SHIFT)
+        self.assertEqual({t["reason"] for t in off}, {dispatch.OFF_REASON})
+        self.assertTrue(all(t["state"] == "idle" for t in off))
+        # у зміні: найближча зміна — плановий старт наряду цього верстата (+2 хв запасу), а не 15 хв
+        state["wos"][7] = {
+            "mo": 7,
+            "wc": 20,
+            "state": "ready",
+            "plan_start": T0 + mins(8),
+            "minutes": 30.0,
+            "start": None,
+            "end": None,
+        }
+        state["mos"][7] = {"wos": [7], "so": None, "done_at": None}
+        got = {t["wc"]: t for t in dispatch.machine_targets(state, T0 + mins(1), machines=[20, 21], shift=SHIFT)}
+        self.assertEqual(got[20]["until"], T0 + mins(8 + dispatch.TARGET_PAD_MIN))
+        self.assertEqual(got[21]["until"], T0 + mins(1 + dispatch.HORIZON_MIN))
+        self.assertEqual(got[20]["reason"], dispatch.IDLE_REASON)
 
     def test_catchup_chain(self):
         wos = [

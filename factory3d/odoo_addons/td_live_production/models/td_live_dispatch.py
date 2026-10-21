@@ -129,10 +129,16 @@ class TdLiveEngine(models.AbstractModel):
         live_dts = Live.search(
             ["|", ("state", "=", "active"), "&", ("state", "=", "planned"), ("plan_start", "<=", now)]
         )
-        if not mos and not live_dts:
+        # диспетчер увімкнено — ціль має КОЖЕН верстат демо, навіть коли роботи немає (тоді всі «Немає завдання»)
+        machines = self._td_machine_wcs() if params["enabled"] else None
+        if mos or live_dts:
+            state = self._td_snapshot(mos, live_dts)
+            events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
+        elif machines is not None:
+            state = after = {"wos": {}, "mos": {}, "sos": {}, "dts": {}}
+            events = []
+        else:
             return res
-        state = self._td_snapshot(mos, live_dts)
-        events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
         failed = set()
         started = time.monotonic()
         processed = 0
@@ -146,7 +152,9 @@ class TdLiveEngine(models.AbstractModel):
         if res["pending"]:
             _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний виклик", res["pending"])
             return res
-        targets = dispatch.machine_targets(after, now)
+        targets = dispatch.machine_targets(
+            after, now, machines=machines, shift=params["shift"], workdays=params["workdays"]
+        )
         res["targets"] = targets
         res["pushed"] = self._td_push_targets(targets)
         return res
@@ -404,6 +412,7 @@ class TdLiveEngine(models.AbstractModel):
         залежностей: через ORM кожен запис тягне ~100 запитів (правила поповнення), а на сервері це секунда."""
         if not moves:
             return
+        self.env.flush_all()  # відкладені записи ORM (дата «зараз» від `_action_done`) інакше затруть наш UPDATE
         cr = self.env.cr
         t = t.replace(microsecond=0)  # як ORM для Datetime: без мікросекунд
         cr.execute("UPDATE stock_move SET date = %s WHERE id IN %s", (t, tuple(moves.ids)))
@@ -490,6 +499,12 @@ class TdLiveEngine(models.AbstractModel):
         live.write({"state": "done", "date_end": t})
 
     # --- емулятор (C-LP-01) ---------------------------------------------------------------------------
+    @api.model
+    def _td_machine_wcs(self):
+        """РЦ усіх верстатів демо (`td.machine` з кодом РЦ): кожен має отримувати ціль у кожен такт."""
+        machines = self.env["td.machine"].sudo().search([("active", "=", True)])
+        return sorted(set(machines.workcenter_id.filtered("td_code").ids))
+
     @api.model
     def _td_sim_device(self):
         """Модель емулятора, якщо `td_iot_sim` стоїть і вміє приймати цілі; інакше `None`."""
