@@ -165,6 +165,26 @@ class TdLiveEngine(models.AbstractModel):
         return wo.workcenter_id.sudo().td_machine_ids.filtered("active")[:1]
 
     @api.model
+    def _td_unblock(self, wo, t):
+        """Верстат «заблоковано» відкритими записами втрат (старі простої демо, залишки): закрити їх о `t`, як це
+        робить автостарт верстата (`_td_unblock_wc`) — інакше Odoo не дає запустити наряд."""
+        timers = (
+            self.env["mrp.workcenter.productivity"]
+            .sudo()
+            .search(
+                [
+                    ("workcenter_id", "=", wo.workcenter_id.id),
+                    ("date_end", "=", False),
+                    ("loss_id.loss_type", "in", ("availability", "quality")),
+                    ("date_start", "<=", t),
+                ]
+            )
+        )
+        if timers:
+            timers.write({"date_end": t})
+            wo.workcenter_id.invalidate_recordset(["working_state"])
+
+    @api.model
     def _td_wo_dates(self, wo, start, end):
         """Дати наряду дослівно: без `bypass_duration_calculation` Odoo перераховує кінець за календарем РЦ."""
         wo.sudo().with_context(bypass_duration_calculation=True).write({"date_start": start, "date_finished": end})
@@ -183,6 +203,7 @@ class TdLiveEngine(models.AbstractModel):
             for o in wo.production_id.workorder_ids - wo
             if o.state not in ("done", "cancel") and o.date_start and o.date_finished
         }
+        self._td_unblock(wo, t)
         if machine:
             emp = machine._td_pick_employee(wo)
             machine._td_start_at(wo, emp, t)

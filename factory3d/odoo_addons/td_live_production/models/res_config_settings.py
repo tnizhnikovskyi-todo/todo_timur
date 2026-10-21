@@ -11,8 +11,9 @@ class ResConfigSettings(models.TransientModel):
 
     td_live_enabled = fields.Boolean(
         string="Живе виробництво увімкнено",
-        config_parameter=PREFIX + "enabled",
-        help="Головний вимикач: без нього крони диспетчера й планувальника нічого не роблять.",
+        compute="_compute_td_live_enabled",
+        help="Статус головного вимикача (`td.live_production.enabled`). Міняється кнопками «Запустити» і «Зупинити»: "
+        "це не поле налаштувань, щоб збереження форми не перезаписало вимикач застарілим значенням.",
     )
     td_live_orders = fields.Integer(string="Замовлень на добу", config_parameter=PREFIX + "orders_per_day", default=8)
     td_live_shift_start = fields.Float(string="Початок зміни", config_parameter=PREFIX + "shift_start", default=7.0)
@@ -32,7 +33,7 @@ class ResConfigSettings(models.TransientModel):
     td_live_hot_factor = fields.Float(
         string="Складність операцій ділянки, ×",
         config_parameter=PREFIX + "hot_factor",
-        default=2.5,
+        default=3.5,
         help="У стільки разів довшими плануються операції перевантаженої ділянки: звідси черга для «Вузького місця».",
     )
     td_live_downtime_pct = fields.Float(
@@ -41,6 +42,11 @@ class ResConfigSettings(models.TransientModel):
         default=6.0,
         help="Середня частка робочого часу верстатів, що йде на простої з причинами.",
     )
+
+    def _compute_td_live_enabled(self):
+        enabled = self.env["ir.config_parameter"].sudo().get_param(PREFIX + "enabled") == "True"
+        for rec in self:
+            rec.td_live_enabled = enabled
 
     @api.constrains("td_live_orders", "td_live_shift_start", "td_live_shift_end", "td_live_downtime_pct")
     def _check_td_live(self):

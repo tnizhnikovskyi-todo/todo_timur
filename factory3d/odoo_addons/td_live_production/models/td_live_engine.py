@@ -61,7 +61,7 @@ class TdLiveEngine(models.AbstractModel):
             "shift": shift,
             "workdays": icp.get_param(PREFIX + "workdays") or "0123456",
             "hot_section": self._td_hot_name(icp.get_param(PREFIX + "hot_section")),
-            "hot_factor": max(1.0, get("hot_factor", 2.5)),
+            "hot_factor": max(1.0, get("hot_factor", 3.5)),
             "downtime_share": min(max(get("downtime_pct", 6.0), 0.0), 60.0) / 100.0,
         }
 
@@ -141,16 +141,20 @@ class TdLiveEngine(models.AbstractModel):
 
     # --- ціни -------------------------------------------------------------------------------------------
     @api.model
-    def _td_bom_unit_cost(self, bom):
-        """Планова собівартість одиниці виробу: компоненти × `standard_price` + хвилини операцій × ставка РЦ."""
+    def _td_line_cost(self, bom, qty, hot=(), factor=1.0):
+        """Планова собівартість `qty` одиниць виробу: компоненти × `standard_price` + тривалість операцій
+        (налагодження РЦ + штуки × хвилини на штуку, для гарячих РЦ × `factor`) × ставка РЦ — як plan у td_sale_cost."""
         company = self.env.company
-        qty = bom.product_qty or 1.0
+        base = bom.product_qty or 1.0
         cost = 0.0
         for line in bom.bom_line_ids:
             price = line.product_id.with_company(company).standard_price
-            cost += line.product_qty / qty * line.product_uom_id._compute_quantity(1.0, line.product_id.uom_id) * price
+            per_unit = line.product_qty / base * line.product_uom_id._compute_quantity(1.0, line.product_id.uom_id)
+            cost += qty * per_unit * price
         for op in bom.operation_ids:
-            cost += op.time_cycle / 60.0 * op.workcenter_id.costs_hour / qty
+            wc = op.workcenter_id
+            minutes = (wc.time_start + wc.time_stop + qty * op.time_cycle) * (factor if wc.id in hot else 1.0)
+            cost += minutes / 60.0 * wc.costs_hour
         return cost
 
     # --- генерація доби (LP-02) -------------------------------------------------------------------------
@@ -218,7 +222,9 @@ class TdLiveEngine(models.AbstractModel):
         mos_for_plan = env["mrp.production"]
         revenue = cost_total = 0.0
         for n, order in enumerate(plan["orders"]):
-            so, mos, rev, cost = self._td_create_order(rec, order, n, release)
+            so, mos, rev, cost = self._td_create_order(
+                rec, order, n, release, hot, params["hot_factor"] if hot else 1.0
+            )
             revenue += rev
             cost_total += cost
             mos_for_plan |= mos
@@ -267,7 +273,7 @@ class TdLiveEngine(models.AbstractModel):
         return max(1, int(round(orders * share))), backlog
 
     @api.model
-    def _td_create_order(self, day_rec, order, n, release):
+    def _td_create_order(self, day_rec, order, n, release, hot=(), hot_factor=1.0):
         """Замовлення продажу `order` із МО по рядках. Повертає `(замовлення, МО, виручка, собівартість)`."""
         env = self.env
         Bom = env["mrp.bom"]
@@ -275,7 +281,7 @@ class TdLiveEngine(models.AbstractModel):
         for i, ln in enumerate(order["lines"]):
             bom = Bom.browse(ln["bom_id"])
             product = env["product.product"].browse(ln["product_id"])
-            unit_cost = self._td_bom_unit_cost(bom)
+            unit_cost = self._td_line_cost(bom, ln["qty"], hot, hot_factor) / ln["qty"]
             price = pricing.order_price(product.lst_price, unit_cost, "%s:%s:%s" % (day_rec.date, n, i))
             lines.append((0, 0, {"product_id": product.id, "product_uom_qty": ln["qty"], "price_unit": price}))
             costs.append((ln["qty"] * unit_cost, ln["qty"] * price))

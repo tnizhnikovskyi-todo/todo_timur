@@ -12,7 +12,7 @@
                     <block title="Керування" name="td_live_control">
                         <setting string="Живе виробництво"
                                  help="Вмикає такт диспетчера (щохвилини) і план на завтра (02:00 Київ), вимикає демо-годинник.">
-                            <field name="td_live_enabled"/>
+                            <field name="td_live_enabled" readonly="1"/>
                             <div class="content-group mt8">
                                 <button name="action_td_live_start" type="object" class="btn-primary"
                                         string="Запустити живе виробництво"/>

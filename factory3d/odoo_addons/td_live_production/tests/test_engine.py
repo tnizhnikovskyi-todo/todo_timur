@@ -40,7 +40,13 @@ class TestLive(TransactionCase):
 
         def wc(name, code, tags=()):
             return WC.create(
-                {"name": name, "td_code": code, "time_efficiency": 100, "tag_ids": [(6, 0, [t.id for t in tags])]}
+                {
+                    "name": name,
+                    "td_code": code,
+                    "time_efficiency": 100,
+                    "costs_hour": 600.0,
+                    "tag_ids": [(6, 0, [t.id for t in tags])],
+                }
             )
 
         cls.wcs = {
@@ -170,7 +176,9 @@ class TestLive(TransactionCase):
         self.assertEqual(self.board.standard_price, 0.0)  # без LP-07 собівартість дошки нульова: маржа з решти
         for so in day.order_ids:
             for line in so.order_line:
-                unit_cost = self.engine._td_bom_unit_cost(self.boms["A"])
+                qty = line.product_uom_qty
+                hot = {self.wcs["CNC-T1"].id, self.wcs["CNC-T2"].id}
+                unit_cost = self.engine._td_line_cost(self.boms["A"], qty, hot, 2.5) / qty
                 self.assertTrue(25.0 <= pricing.margin_pct(line.price_unit, unit_cost) <= 40.0)
 
     def test_hot_section_default_and_off(self):
@@ -269,6 +277,23 @@ class TestLive(TransactionCase):
         # повторний тик — нічого нового (ідемпотентність)
         again = self.at(600).td_dispatch()
         self.assertEqual((again["started"], again["finished"], again["closed"], again["shipped"]), (0, 0, 0, 0))
+
+    def test_start_unblocks_work_center_with_stale_loss(self):
+        """Верстат заблоковано старим відкритим записом втрат (як у демо) — диспетчер його закриває й стартує наряд."""
+        saw = self.wcs["SAW-T"]
+        stale = self.env["mrp.workcenter.productivity"].create(
+            {
+                "workcenter_id": saw.id,
+                "loss_id": self.env.ref("mrp.block_reason0").id,
+                "date_start": T0 - timedelta(days=9),
+            }
+        )
+        self.assertEqual(saw.working_state, "blocked")
+        self.generate()
+        self.at(1).td_dispatch()
+        self.assertTrue(stale.date_end)
+        self.assertLessEqual(stale.date_end, T0 + mins(1))
+        self.assertTrue(self.env["mrp.workorder"].search([("workcenter_id", "=", saw.id), ("state", "=", "progress")]))
 
     def test_tick_event_limit_catches_up_in_parts(self):
         day = self.generate()
@@ -371,6 +396,22 @@ class TestLive(TransactionCase):
         self.assertEqual(icp.get_param(P + "enabled"), "False")
         self.assertEqual(icp.get_param("td.viewer.demo_clock"), "2026-10-12 10:30")
         self.assertFalse(self.env.ref("td_live_production.cron_td_live_tick").active)
+
+    def test_settings_buttons_and_save(self):
+        """Кнопки налаштувань повертають повідомлення, а збереження форми не скидає вимикач і зберігає параметри."""
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_param(P + "enabled", "False")
+        Settings = self.env["res.config.settings"]
+        action = Settings.create({}).action_td_live_start()
+        self.assertEqual(action["tag"], "display_notification")
+        self.assertTrue(Settings.create({}).td_live_enabled)
+        stale = Settings.create({"td_live_orders": 5, "td_live_hot_factor": 3.0})
+        stale.execute()  # форма відкрита до запуску: застаріле значення вимикача не має його скинути
+        self.assertEqual(icp.get_param(P + "enabled"), "True")
+        self.assertEqual(icp.get_param(P + "orders_per_day"), "5")
+        self.assertEqual(self.engine._td_params()["hot_factor"], 3.0)
+        self.assertEqual(Settings.create({}).action_td_live_stop()["tag"], "display_notification")
+        self.assertEqual(icp.get_param(P + "enabled"), "False")
 
     def test_stop_deactivates_crons(self):
         self.engine.td_stop()
