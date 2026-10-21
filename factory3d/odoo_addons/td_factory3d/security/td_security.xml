@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="module_category_factory3d" model="ir.module.category">
-        <field name="name">Завод 3D</field>
+        <field name="name">3D Завод</field>
         <field name="sequence">60</field>
     </record>
     <record id="privilege_td" model="res.groups.privilege">
-        <field name="name">Завод 3D</field>
+        <field name="name">3D Завод</field>
         <field name="category_id" ref="module_category_factory3d"/>
         <field name="sequence">10</field>
     </record>

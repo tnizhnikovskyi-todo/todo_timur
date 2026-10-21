@@ -38,6 +38,6 @@ class MrpWorkcenter(models.Model):
             action["res_id"] = self.td_machine_id.id
         else:
             if not self.env.user.has_group("td_factory3d.group_td_manager"):
-                raise AccessError(_("Запис підключення верстата створює менеджер «Завод 3D»."))
+                raise AccessError(_("Запис підключення верстата створює менеджер «3D Завод»."))
             action["context"] = {"default_workcenter_id": self.id}
         return action

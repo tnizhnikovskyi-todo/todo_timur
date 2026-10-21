@@ -15,7 +15,7 @@ Key features
 * Generator card in the 3D viewer (optional)
 * Power balance during a blackout in Factory Energy
 """,
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.1.1",
     "author": "ToDo",
     "website": "https://todo.ltd",
     "support": "support@todo.ltd",

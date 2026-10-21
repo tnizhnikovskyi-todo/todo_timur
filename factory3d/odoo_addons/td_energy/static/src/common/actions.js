@@ -125,7 +125,7 @@ export function useEnergyActions() {
                 await action.doAction({
                     type: "ir.actions.client",
                     tag: VIEWER_TAG,
-                    name: "Завод 3D",
+                    name: "3D Завод",
                     target: "current",
                     params: { layers: ["energy"] },
                 });

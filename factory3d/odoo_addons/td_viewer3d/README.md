@@ -12,7 +12,7 @@
 ## Параметри (`td.viewer.*`)
 `snapshot_minutes`, `snapshot_hours`, `snapshot_keep_days`, `event_keep_hours`, `delta_debounce_ms`, `kiosk_enabled`,
 `kiosk_refresh_s`, `kiosk_token`, `bus_enabled`, `lite_default`, `demo_enabled`, `demo_clock`; службові: `signal_bus_ts`,
-`demo_queue`, `demo_state`. Налаштування: Завод 3D → Налаштування → Налаштування переглядача.
+`demo_queue`, `demo_state`. Налаштування: 3D Завод → Налаштування → Налаштування переглядача.
 
 ## Крони
 `3D: знімок стану` (10 хв), `3D: ротація журналу станів` (щодня), `3D: сигнали імітації в шину` і `3D: заливка демо`

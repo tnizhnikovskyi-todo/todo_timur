@@ -22,7 +22,7 @@ Requirements and notes
 
 * The editor bundle is included in the module; no external build step or CDN is needed.
 """,
-    "version": "19.0.1.4.2",
+    "version": "19.0.1.4.3",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

@@ -116,7 +116,7 @@ class TestDowntimeCost(CostMixin, F3DMachineCase):
         self.assertEqual((tile["total"], tile["no_reason"]), (600.0, 600.0))
 
     def test_tile_only_for_manager(self):
-        """Вартість — для менеджера «Завод 3D»; звичайний користувач плитки не отримує."""
+        """Вартість — для менеджера «3D Завод»; звичайний користувач плитки не отримує."""
         self.assertFalse(self.env["td.downtime"].with_user(self.user_f3d).td_cost_tile())
         self.assertTrue(self.env["td.downtime"].with_user(self.user_f3d_manager).td_cost_tile())
 

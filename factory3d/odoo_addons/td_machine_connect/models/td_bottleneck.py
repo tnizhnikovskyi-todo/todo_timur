@@ -211,7 +211,7 @@ class TdBottleneck(models.AbstractModel):
     def td_report(self, period=DEFAULT_PERIOD, group_by="area", boost_pct=bn.BOOST_DEFAULT):
         """Аналітика «Вузьке місце» (R-30 п. 2): рейтинг ділянок, вузьке місце, «що якщо». Лише `group_td_user`."""
         if not self._td_can_see():
-            raise AccessError(_("Аналітика «Вузьке місце» доступна користувачам «Завод 3D»."))
+            raise AccessError(_("Аналітика «Вузьке місце» доступна користувачам «3D Завод»."))
         try:
             boost = min(max(float(boost_pct), 0.0), 500.0)
         except (TypeError, ValueError):

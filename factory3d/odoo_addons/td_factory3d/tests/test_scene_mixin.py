@@ -109,7 +109,7 @@ class TestShow(SceneCase):
                 {
                     "type": "ir.actions.client",
                     "tag": "f3d_viewer.action",
-                    "name": "Завод 3D",
+                    "name": "3D Завод",
                     "target": "current",
                     "params": {
                         "code": "SAW-9",

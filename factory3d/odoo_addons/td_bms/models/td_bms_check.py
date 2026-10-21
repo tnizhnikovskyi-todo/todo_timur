@@ -445,7 +445,7 @@ class F3dBmsCheck(models.AbstractModel):
     @api.model
     def f3d_bms_reinstall_data(self):
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError("Повторну установку даних будівлі виконує лише адміністратор «Завод 3D».")
+            raise AccessError("Повторну установку даних будівлі виконує лише адміністратор «3D Завод».")
         from .. import hooks  # noqa: PLC0415
 
         data = hooks.run_install(self.sudo().env)

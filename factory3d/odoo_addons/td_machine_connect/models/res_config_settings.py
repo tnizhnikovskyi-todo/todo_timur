@@ -108,7 +108,7 @@ class ResConfigSettings(models.TransientModel):
             changed = [f for f in rec._fields if f.startswith("td_mc_") and f != "td_mc_migration_state"
                        and rec[f] != rec._td_mc_current(f)]  # fmt: skip
             if not is_admin and any(f in ADMIN_FIELDS for f in changed):
-                raise AccessError(_("Стоп-крани змінює лише адміністратор «Завод 3D»."))
+                raise AccessError(_("Стоп-крани змінює лише адміністратор «3D Завод»."))
             for fname in changed:
                 lo, hi = BOUNDS.get(fname, (None, None))
                 value = rec[fname]
@@ -128,5 +128,5 @@ class ResConfigSettings(models.TransientModel):
     def action_td_mc_run_migration(self):
         """Кнопка «Повторити міграцію демо-даних» (лише `group_td_admin`)."""
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
+            raise AccessError(_("Запускати міграцію може лише адміністратор «3D Завод»."))
         return self.env["td.machine"]._td_run_migration()

@@ -166,7 +166,7 @@ class F3dGensetLink(models.Model):
             eq = rec.equipment_id
             if not eq.td_code:
                 raise ValidationError(
-                    _("Обладнання не має коду сцени (td_code). Заповніть «Завод 3D → Код сцени» в base.")
+                    _("Обладнання не має коду сцени (td_code). Заповніть «3D Завод → Код сцени» в base.")
                 )
             role = eq.td_passport_id.role
             if role != "genset":
@@ -506,7 +506,7 @@ class F3dGensetLink(models.Model):
     def action_check(self):
         self.ensure_one()
         if not self.env.user.has_group("td_factory3d.group_td_manager"):
-            raise AccessError(_("Перевірку зв'язки може виконати лише менеджер «Завод 3D»."))
+            raise AccessError(_("Перевірку зв'язки може виконати лише менеджер «3D Завод»."))
         if not self._read_enabled():
             raise UserError(_("Публікацію вимкнено стоп-краном td.genset.read_enabled"))
         # виняток із ACL: менеджер вже перевірений вище, запис показань — права telemetry (SPEC §4.1)

@@ -13,7 +13,7 @@
                 </header>
             </xpath>
             <xpath expr="//notebook" position="inside">
-                <page name="f3d" string="Завод 3D">
+                <page name="f3d" string="3D Завод">
                     <group name="f3d_scene" string="Код сцени">
                         <field name="td_is_manager" invisible="1"/>
                         <field name="td_viewer_available" invisible="1"/>

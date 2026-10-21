@@ -4,7 +4,7 @@
 
 Оновлення: `-u` модуля, сторінку браузера оновити. Схеми й дані не змінюються, міграційних скриптів немає.
 
-- `menu_td_telemetry`: батько `td_factory3d.menu_td_data`, seq 20 (було: корінь «Завод 3D», seq 30).
+- `menu_td_telemetry`: батько `td_factory3d.menu_td_data`, seq 20 (було: корінь «3D Завод», seq 30).
 
 ## Unreleased
 - Фікс T-5: `_apply_status` не стирає `last_error` при невідомому `state`; для gauge/counter зайвий `text` у показанні

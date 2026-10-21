@@ -46,7 +46,7 @@ class F3dFireBacnetDeviceWizard(models.TransientModel):
     def action_apply(self):
         self.ensure_one()
         if not self.env.user.has_group("td_factory3d.group_td_admin"):
-            raise AccessError("Змінювати BACnet device instance може лише адміністратор Завод 3D.")
+            raise AccessError("Змінювати BACnet device instance може лише адміністратор 3D Завод.")
         panel = self.panel_id
         source = panel.source_id.sudo()
         if not source:

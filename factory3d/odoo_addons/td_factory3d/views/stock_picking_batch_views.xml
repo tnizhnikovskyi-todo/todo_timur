@@ -16,7 +16,7 @@
                 </div>
             </xpath>
             <xpath expr="//page[@name='page_transfers']" position="after">
-                <page name="f3d" string="Завод 3D">
+                <page name="f3d" string="3D Завод">
                     <field name="td_is_manager" invisible="1"/>
                     <field name="td_viewer_available" invisible="1"/>
                     <group name="f3d_scene" string="Код сцени">

@@ -25,7 +25,7 @@ class TdEnergyNode(models.Model):
         return {
             "type": "ir.actions.client",
             "tag": "f3d_viewer.action",
-            "name": _("Завод 3D"),
+            "name": _("3D Завод"),
             "target": "current",
             "params": {
                 "layers": layer_tools.params(self.env)["layers"],
