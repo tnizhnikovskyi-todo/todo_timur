@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Обидва крони вимкнені: вмикає кнопка «Запустити живе виробництво» (LP-06). nextcall нічного крона ставить код. -->
+<odoo noupdate="1">
+    <record id="cron_td_live_tick" model="ir.cron">
+        <field name="name">Живе виробництво: такт диспетчера</field>
+        <field name="model_id" ref="model_td_live_engine"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_td_live_tick()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="False"/>
+    </record>
+    <record id="cron_td_live_nightly" model="ir.cron">
+        <field name="name">Живе виробництво: план на завтра (02:00 Київ)</field>
+        <field name="model_id" ref="model_td_live_engine"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_td_live_nightly()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_td_live_day_list" model="ir.ui.view">
+        <field name="name">td.live.day.list</field>
+        <field name="model">td.live.day</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="date"/>
+                <field name="state" widget="badge" decoration-info="state == 'planned'"
+                       decoration-warning="state == 'running'" decoration-success="state == 'done'"/>
+                <field name="order_count"/>
+                <field name="production_count"/>
+                <field name="revenue" sum="Разом"/>
+                <field name="margin_plan_pct"/>
+                <field name="hot_section"/>
+                <field name="hot_load_pct"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_live_day_form" model="ir.ui.view">
+        <field name="name">td.live.day.form</field>
+        <field name="model">td.live.day</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0" edit="0">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="planned,running,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
+                            <field name="order_count" widget="statinfo" string="Замовлення"/>
+                        </button>
+                        <button name="action_open_productions" type="object" class="oe_stat_button" icon="fa-cogs">
+                            <field name="production_count" widget="statinfo" string="МО"/>
+                        </button>
+                    </div>
+                    <h1><field name="date"/></h1>
+                    <group>
+                        <group>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="revenue"/>
+                            <field name="cost_plan"/>
+                            <field name="margin_plan_pct"/>
+                        </group>
+                        <group>
+                            <field name="hot_section"/>
+                            <field name="hot_load_pct"/>
+                            <field name="spill_min"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <field name="note"/>
+                    <notebook>
+                        <page string="Плановані простої" name="downtimes">
+                            <field name="downtime_ids">
+                                <list>
+                                    <field name="plan_start"/>
+                                    <field name="workcenter_id"/>
+                                    <field name="loss_id"/>
+                                    <field name="kind"/>
+                                    <field name="minutes"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="date_start" optional="show"/>
+                                    <field name="date_end" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_live_day" model="ir.actions.act_window">
+        <field name="name">Живе виробництво: доби</field>
+        <field name="res_model">td.live.day</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_td_live_day" name="Живе виробництво" parent="mrp.menu_mrp_root" sequence="95"
+              action="action_td_live_day" groups="td_factory3d.group_td_user"/>
+</odoo>

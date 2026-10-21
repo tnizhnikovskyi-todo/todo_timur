@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_live_day_user,td.live.day user,model_td_live_day,td_factory3d.group_td_user,1,0,0,0
+access_td_live_day_manager,td.live.day manager,model_td_live_day,td_factory3d.group_td_manager,1,1,1,1
+access_td_live_downtime_user,td.live.downtime user,model_td_live_downtime,td_factory3d.group_td_user,1,0,0,0
+access_td_live_downtime_manager,td.live.downtime manager,model_td_live_downtime,td_factory3d.group_td_manager,1,1,1,1

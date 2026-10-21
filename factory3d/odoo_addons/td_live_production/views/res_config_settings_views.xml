@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_td_live" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.live</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="42"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Живе виробництво" string="Живе виробництво" name="td_live_production"
+                     groups="td_factory3d.group_td_admin">
+                    <block title="Керування" name="td_live_control">
+                        <setting string="Живе виробництво"
+                                 help="Вмикає такт диспетчера (щохвилини) і план на завтра (02:00 Київ), вимикає демо-годинник.">
+                            <field name="td_live_enabled"/>
+                            <div class="content-group mt8">
+                                <button name="action_td_live_start" type="object" class="btn-primary"
+                                        string="Запустити живе виробництво"/>
+                                <button name="action_td_live_stop" type="object" class="btn-secondary ms-2"
+                                        string="Зупинити"/>
+                            </div>
+                        </setting>
+                        <setting string="Підготовка" help="Назва, валюта ₴, собівартість, зонний тариф, «Що якщо». Ідемпотентно.">
+                            <button name="action_td_live_prepare" type="object" class="btn-secondary"
+                                    string="Підготувати демо-компанію"/>
+                        </setting>
+                        <setting string="Перший запуск і минуле"
+                                 help="План на поточну добу з урахуванням часу, що минув; завершення МО минулих діб за датами планів (нічого не видаляється).">
+                            <button name="action_td_live_generate_today" type="object" class="btn-secondary"
+                                    string="Згенерувати сьогодні"/>
+                            <button name="action_td_live_catch_up" type="object" class="btn-secondary ms-2"
+                                    string="Догнати минуле"/>
+                        </setting>
+                    </block>
+                    <block title="Параметри" name="td_live_params">
+                        <setting string="Замовлень на добу">
+                            <field name="td_live_orders"/>
+                        </setting>
+                        <setting string="Зміна" help="Години доби за Києвом">
+                            <field name="td_live_shift_start" widget="float_time"/> —
+                            <field name="td_live_shift_end" widget="float_time"/>
+                        </setting>
+                        <setting string="Робочі дні" help="Цифри днів тижня, 0 — понеділок">
+                            <field name="td_live_workdays"/>
+                        </setting>
+                        <setting string="Перевантажена ділянка" help="Мітка-дільниця верстатів; порожньо — без перевантаження">
+                            <field name="td_live_hot_section"/>
+                            <div class="content-group mt8">
+                                <label for="td_live_hot_factor"/> <field name="td_live_hot_factor"/>
+                            </div>
+                        </setting>
+                        <setting string="Частка простоїв, %">
+                            <field name="td_live_downtime_pct"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
