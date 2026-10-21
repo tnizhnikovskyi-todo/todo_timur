@@ -99,6 +99,8 @@ class F3dKioskController(http.Controller):
                 params[key] = value
         if kw.get("lite") in ("0", "1", "auto"):
             params["lite"] = kw["lite"] if kw["lite"] == "auto" else int(kw["lite"])
+        if kw.get("ceiling") in ("0", "1"):
+            params["ceiling"] = int(kw["ceiling"])  # 1 — показати стелю, 0 — сховати (у «стіні» за умовчанням сховано)
         if (kw.get("refresh") or "").isdigit() and 1 <= int(kw["refresh"]) <= 3600:
             params["refresh"] = int(kw["refresh"])
         if kw.get("wall") == "1":

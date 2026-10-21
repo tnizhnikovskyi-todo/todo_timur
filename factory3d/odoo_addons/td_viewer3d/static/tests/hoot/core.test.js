@@ -668,11 +668,11 @@ test("theme (AC-09): темна тема змінює фон сцени", async 
     delete document.documentElement.dataset.theme;
 });
 
-test("lite (AC-30): тіні вимкнені, pixelRatio=1, без environment, 1 частинка, лише core+engineering", async () => {
+test("lite (AC-30): тіні вимкнені, pixelRatio=1,5 на десктопі (надвибірка замість MSAA), без environment, 1 частинка, лише core+engineering", async () => {
     const { viewer, el } = await mountViewer({ model: "core", lite: 1 });
     expect(viewer.getState().lite).toBe(true);
     expect(viewer.renderer.shadowMap.enabled).toBe(false);
-    expect(viewer.renderer.getPixelRatio()).toBe(1);
+    expect(viewer.renderer.getPixelRatio()).toBe(1.5);
     expect(viewer.scene.environment).toBe(null);
     expect(q(el, ".o_f3d_opt-shadows").closest("label").hidden).toBe(true);
     const sink = [];

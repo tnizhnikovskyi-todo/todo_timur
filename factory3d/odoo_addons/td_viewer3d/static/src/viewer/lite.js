@@ -36,12 +36,37 @@ export function detectLite({ lite = "auto", kiosk = false, params = {}, storage 
     return false;
 }
 
+const LITE_SUPERSAMPLE = 1.5; // lite на десктопі: надвибірка замість MSAA (одне сглажування «в лоб», без додаткового проходу)
+const LITE_PIXELS = 5e6; // стеля пікселів буфера кадру: 1920×1080 × 1,5² ≈ 4,7 МП; на 4K надвибірки вже немає
+const MOVE_RATIO = 1.25; // під час обертання/прольоту камери: не вище цього, в спокої — повне значення
+
+/**
+ * Масштаб буфера кадру в спокої. Повний режим: `min(dpr, 2)` (згладжування — MSAA, `antialias`). Lite: на планшеті (грубий вказівник) 1,
+ * на десктопі `max(dpr, 1,5)` (щоб краї не «драбинкою» без MSAA), але не більше, ніж вкладається в `LITE_PIXELS` при розмірі полотна `w × h`.
+ */
+export function restPixelRatio(lite, dpr, { w = 0, h = 0, coarse = false } = {}) {
+    dpr = dpr || 1;
+    if (!lite) {
+        return Math.min(dpr, 2);
+    }
+    if (coarse) {
+        return 1;
+    }
+    const cap = w > 0 && h > 0 ? Math.sqrt(LITE_PIXELS / (w * h)) : Infinity;
+    return Math.max(1, Math.min(Math.max(dpr, LITE_SUPERSAMPLE), 2, cap));
+}
+
+/** Масштаб буфера кадру під час обертання, зуму й прольоту камери: нижча якість (рух однаково розмазує краї), у спокої — `rest`. */
+export function movePixelRatio(rest) {
+    return Math.max(1, Math.min(rest, MOVE_RATIO));
+}
+
 /** Таблиця §8.4: повний режим / lite. */
 export function liteSettings(lite) {
     return {
         lite,
         antialias: !lite,
-        pixelRatio: (dpr) => (lite ? 1 : Math.min(dpr || 1, 2)),
+        pixelRatio: (dpr, size) => restPixelRatio(lite, dpr, size),
         shadows: !lite,
         shadowMap: lite ? 1024 : 4096,
         environment: !lite,
