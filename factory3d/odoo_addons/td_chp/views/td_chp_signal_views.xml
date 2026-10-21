@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-06: карта регістрів КГУ — редагований список сигналів module='chp' (менеджер) -->
+<odoo>
+    <record id="view_td_chp_signal_list" model="ir.ui.view">
+        <field name="name">td.signal.list.chp</field>
+        <field name="model">td.signal</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="false" delete="false" default_order="sequence, code">
+                <field name="code" readonly="1"/>
+                <field name="name"/>
+                <field name="unit"/>
+                <field name="address_text"/>
+                <field name="period_s"/>
+                <field name="decimals"/>
+                <field name="warn_low_on"/>
+                <field name="warn_low"/>
+                <field name="warn_high_on"/>
+                <field name="warn_high"/>
+                <field name="alarm_low_on"/>
+                <field name="alarm_low"/>
+                <field name="alarm_high_on"/>
+                <field name="alarm_high"/>
+                <field name="write_enabled"/>
+                <field name="create_request"/>
+                <field name="status" widget="badge" readonly="1" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_td_chp_signal" model="ir.actions.act_window">
+        <field name="name">Карта регістрів КГУ</field>
+        <field name="res_model">td.signal</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('module', '=', 'chp')]</field>
+        <field name="context">{'default_module': 'chp'}</field>
+        <field name="view_ids"
+               eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('view_td_chp_signal_list')}), (0, 0, {'view_mode': 'form'})]"/>
+    </record>
+</odoo>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC M-04 (b_sim.js:765): інтервали ТО за наробітком; допущення Q-04 -->
+<odoo noupdate="1">
+    <record id="rule_to2000" model="td.chp.maintenance.rule">
+        <field name="unit_id" ref="unit_chp"/>
+        <field name="name">Планове ТО (кожні 2 000 мотогод)</field>
+        <field name="every_h">2000</field>
+        <field name="last_h">17000</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="rule_oil" model="td.chp.maintenance.rule">
+        <field name="unit_id" ref="unit_chp"/>
+        <field name="name">Заміна моторного масла</field>
+        <field name="every_h">1000</field>
+        <field name="last_h">17900</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="rule_plugs" model="td.chp.maintenance.rule">
+        <field name="unit_id" ref="unit_chp"/>
+        <field name="name">Свічки запалювання</field>
+        <field name="every_h">4000</field>
+        <field name="last_h">16000</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="rule_air_filter" model="td.chp.maintenance.rule">
+        <field name="unit_id" ref="unit_chp"/>
+        <field name="name">Повітряний фільтр</field>
+        <field name="every_h">2000</field>
+        <field name="last_h">17600</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="rule_catalyst" model="td.chp.maintenance.rule">
+        <field name="unit_id" ref="unit_chp"/>
+        <field name="name">Огляд каталізатора</field>
+        <field name="every_h">8000</field>
+        <field name="last_h">16000</field>
+        <field name="sequence">50</field>
+    </record>
+</odoo>

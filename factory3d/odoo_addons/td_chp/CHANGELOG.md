@@ -1,0 +1,11 @@
+# Changelog — td_chp
+
+## 19.0.1.0.0
+
+* Перша версія: бекенд пульта КГУ.
+* Моделі: паспорт агрегата (`td.chp.unit`), журнал подій і аварій (`td.chp.event`), команди (`td.chp.command`),
+  правила ТО за наробітком (`td.chp.maintenance.rule`); розширення `td.signal`, `td.source`, `td.command`.
+* Карта 230 сигналів `chp/…` (`data/chp_signals.json`) із редагуванням у Odoo й відновленням типової.
+* API-01…07 (`/td_chp/*`): стан, тренд, журнал, квитування, команди, ТО, імітація; шина `td_chp/update`.
+* Блокування R-07, команди класів А/Б із 2/2 і верифікацією за `chp/ctl/ack`, 4 крони, `neutralize.sql`.
+* Хуки для мосту `td_chp_factory3d` (D-15): `_td_route`, `_td_dispatch`, `_td_command_rows`, `_td_pending_rows`, `_td_flags`.

@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_td_chp_unit_user,td.chp.unit user,model_td_chp_unit,td_chp.group_td_chp_user,1,0,0,0
+access_td_chp_unit_manager,td.chp.unit manager,model_td_chp_unit,td_factory3d.group_td_manager,1,1,0,0
+access_td_chp_unit_admin,td.chp.unit admin,model_td_chp_unit,td_factory3d.group_td_admin,1,1,1,1
+access_td_chp_event_user,td.chp.event user,model_td_chp_event,td_chp.group_td_chp_user,1,0,0,0
+access_td_chp_event_admin,td.chp.event admin,model_td_chp_event,td_factory3d.group_td_admin,1,0,0,1
+access_td_chp_command_user,td.chp.command user,model_td_chp_command,td_chp.group_td_chp_user,1,0,0,0
+access_td_chp_command_admin,td.chp.command admin,model_td_chp_command,td_factory3d.group_td_admin,1,0,0,1
+access_td_chp_rule_user,td.chp.maintenance.rule user,model_td_chp_maintenance_rule,td_chp.group_td_chp_user,1,0,0,0
+access_td_chp_rule_operator,td.chp.maintenance.rule operator,model_td_chp_maintenance_rule,td_chp.group_td_chp_operator,1,1,0,0
+access_td_chp_rule_manager,td.chp.maintenance.rule manager,model_td_chp_maintenance_rule,td_factory3d.group_td_manager,1,1,1,1
