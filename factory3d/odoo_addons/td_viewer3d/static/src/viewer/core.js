@@ -61,6 +61,7 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
       <span class="o_f3d_mono o_f3d_shift-l">зараз</span><span class="o_f3d_mono o_f3d_snap-tag" title="Програвання за знімками стану" hidden>знімки</span>
       <button class="o_f3d_btn o_f3d_shift-now" disabled>Зараз</button>
     </div>
+    <button class="o_f3d_btn o_f3d_toggle-ceiling" type="button" aria-pressed="true" title="Стеля: кровля, світильники, лотки, труби й датчики під стелею ( C )">Стеля</button>
     <button class="o_f3d_btn o_f3d_toggle-side" aria-expanded="false">Види і шари</button>
   </header>
 
@@ -105,6 +106,7 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
     <div class="o_f3d_sec" data-fold="show">
       <h2 class="o_f3d_fold-h"><button class="o_f3d_fold-t" type="button" aria-expanded="true">Показ</button></h2>
       <div class="o_f3d_layers">
+        <label class="o_f3d_layer o_f3d_ceil-opt"><input class="o_f3d_opt-ceiling" type="checkbox" checked><span>Стеля<small>кровля, світильники, лотки, труби, датчики під стелею; станки, стелажі й люди лишаються · клавіша C</small></span></label>
         <label class="o_f3d_layer"><input class="o_f3d_opt-labels" type="checkbox" checked><span>Підписи</span></label>
         <label class="o_f3d_layer"><input class="o_f3d_opt-motion" type="checkbox" checked><span>Анімація маршруту замовлення</span></label>
         <label class="o_f3d_layer"><input class="o_f3d_opt-shadows" type="checkbox" checked><span>Тіні</span></label>
@@ -130,7 +132,7 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
 
   <div class="o_f3d_panel o_f3d_help">
     <span><b>ЛКМ</b> обертати</span><span><b>ПКМ</b> зсув</span><span><b>Коліщатко</b> масштаб</span>
-    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>[</b> <b>]</b> панелі · <b>Esc</b> скинути</span>
+    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>[</b> <b>]</b> панелі · <b>C</b> стеля · <b>Esc</b> скинути</span>
   </div>`;
 
 /** Нульовий рендерер (§8.7): без GPU; `setAnimationLoop(fn)` викликає fn кожні 100 мс. */
@@ -250,6 +252,7 @@ export class F3dViewer {
     stopDrill() { return this._c.stopDrill(); }
     setMode(m) { return this._c.setMode(m); }
     setLayer(k, on) { return this._c.setLayer(k, on); }
+    setCeiling(show, persist) { return this._c.setCeiling(show, persist); }
     setProdOverlay(on) { return this._c.setProdOverlay(on); }
     goView(v) { return this._c.goView(v); }
     setSimTime(m) { return this._c.setSimTime(m); }
@@ -523,6 +526,7 @@ function onPart(gltf) {
     }
   });
   scene.add(root);
+  classifyCeiling(root); // до зсуву розкладкою й пакетування: габарити — за положенням у моделі
   if (D?.layout) {applyLayout(fresh);} // частина, що приїхала після даних: зсув/ховання до підписів і вантажу
   buildLabels(fresh);
   stockLoad.sync(fresh.map((o) => o.userData.code));
@@ -725,6 +729,10 @@ function buildLayersUI() {
 }
 // перехід до об'єкта з вимкненого шару — шар вмикаємо
 function showLayerOf(o) {
+  if (ceil.hidden) { // перехід до потолочного об'єкта (світильник, сповіщувач, ферма) повертає стелю на час сеансу
+    if (o.userData?.device && !o.visible) {setCeiling(true, false);}
+    else {for (let n = o; n; n = n.parent) { if (ceil.nodes.has(n)) { setCeiling(true, false); break; } }}
+  }
   if (o.userData?.device) {setLayer("fire", true);}
   if (o.userData?.outdoor) {setLayer(o.userData.roof ? "roofdeck" : "territory", true);}
   for (let n = o; n; n = n.parent) {if (n.userData?.layer && n.name.startsWith("LAYER_")) {setLayer(n.userData.layer, true);}}
@@ -744,6 +752,78 @@ $(".o_f3d_all-on").onclick = () => layers.forEach((_, k) => setLayer(k, k !== "r
 $(".o_f3d_all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
 // будівля, верстати й усі інженерні мережі — без складів, транспорту й людей
 $(".o_f3d_eng-only").onclick = () => layers.forEach((l, k) => setLayer(k, ["building", "zones", "line", "facade"].includes(k) || l.group === "Інженерні мережі"));
+
+// ---------------------------------------------------------------- стеля (потолочний шар)
+// «Стеля» ховає все, що висить над цехом: кровлю й ферми, світильники, шинопроводи й кабельні лотки, вентиляцію, спринклери, труби під
+// стелею, димові завіси, Wi-Fi і сповіщувачі. Станки, стелажі (навіть високі), портал складу плит, люди, фури, підписи й маркери лишаються.
+// Правило (ceilingWhy): 1) явні винятки — щити на стіні, ручні сповіщувачі, сирени, ППК — видимі завжди; 2) явні категорії: шари
+// roof / roofdeck / lighting / ventilation / sprinklers, види lighting / hvac, коди об'єднаних меш-магістралей, де 85–100 % геометрії
+// вище порога, а нижня точка — лише спуски до обладнання; 3) решта — за габаритами: нижня точка об'єкта вище порога (opts.ceilingY, 3,5 м).
+// Складські види (комірки, стелажі, візки, верстати, люди, техніка, ворота, зони) за габаритами не оцінюються: верхня комірка стелажа
+// висить на 5–7 м, але стоїть на підлозі. Одиниця — прямий нащадок вузла шару (`LAYER_*`), тож видимість шару й стелі не конфліктують.
+const CEIL_LAYERS = new Set(["roof", "roofdeck", "lighting", "ventilation", "sprinklers"]);
+const CEIL_KINDS = new Set(["lighting", "hvac"]);
+const CEIL_CODES = /^(BW-\d+|CABLES|AIR-RING|DUST-\d+|HEAT-NET|SPARK-1|LPS|FA-[A-Z0-9-]+)$/; // шинопроводи, лотки, пневмо, аспірація, тепломережа, іскрогасіння, блискавкозахист, сповіщувачі
+const CEIL_KEEP = /^(LP-\d+|FACP-1|FA-MCP|FA-SND)$/; // щити освітлення, ППК, ручні сповіщувачі й сирени — на стіні, на людському рівні
+const CEIL_FLOOR_KINDS = new Set(["stock", "bin", "rack", "kit", "machine", "person", "vehicle", "dock", "zone"]);
+const ceilSaved = () => { try { return storage?.getItem("f3d.ceiling"); } catch { return null; } };
+const ceil = {
+  y: Number(opts.ceilingY) > 0 ? Number(opts.ceilingY) : 3.5, // поріг нижньої точки, м
+  hidden: !!opts.params?.wall || ceilSaved() === "off",       // «стіна» — без стелі за умовчанням, решта — як було збережено
+  nodes: new Map(),                                           // вузол → причина: layer | kind | code | height
+};
+const ceilBox = new THREE.Box3();
+/** Причина, чому об'єкт шару `layerKey` потолочний, або null (лишається в сцені). */
+function ceilingWhy(layerKey, o) {
+  const u = o.userData || {};
+  const code = u.code || "";
+  if (CEIL_KEEP.test(code)) {return null;}
+  if (CEIL_LAYERS.has(layerKey)) {return "layer";}
+  if (CEIL_KINDS.has(u.kind)) {return "kind";}
+  if (CEIL_CODES.test(code)) {return "code";}
+  if (CEIL_FLOOR_KINDS.has(u.kind)) {return null;}
+  return ceilBox.setFromObject(o).min.y >= ceil.y ? "height" : null;
+}
+/** Класифікувати щойно завантажену частину моделі; нові потолочні вузли одразу ховаються, якщо «Стелю» вимкнено. */
+function classifyCeiling(partRoot) {
+  for (const ln of partRoot.children) {
+    const key = ln.userData?.layer;
+    if (!key) {continue;}
+    for (const o of ln.children) {
+      const why = ceilingWhy(key, o);
+      if (!why) {continue;}
+      ceil.nodes.set(o, why);
+      if (ceil.hidden) {o.visible = false;}
+    }
+  }
+}
+// маркери пожежних пристроїв (шар «Пожежна сигналізація») — підвісні сповіщувачі ховаємо разом зі стелею, але не в тривозі
+function syncCeilingMarkers() {
+  for (const m of fireDev.group.children) {
+    m.visible = !(ceil.hidden && m.position.y >= ceil.y && (m.userData.state ?? "ok") === "ok");
+  }
+}
+function syncCeilingUi() {
+  const b = $(".o_f3d_toggle-ceiling");
+  b.setAttribute("aria-pressed", String(!ceil.hidden));
+  b.title = (ceil.hidden ? "Показати стелю" : "Сховати стелю") + ": кровля, світильники, лотки, труби й датчики під стелею ( C )";
+  $(".o_f3d_opt-ceiling").checked = !ceil.hidden;
+}
+/** Показати (true) чи сховати (false) стелю; `persist` — запам'ятати вибір (localStorage `f3d.ceiling`: on | off). */
+function setCeiling(show, persist = true) {
+  ceil.hidden = !show;
+  for (const o of ceil.nodes.keys()) {o.visible = !!show;}
+  syncCeilingMarkers();
+  syncOutdoorZones();
+  syncCeilingUi();
+  if (persist) {store("f3d.ceiling", show ? "on" : "off");}
+  if (selected && !isShown(selected)) {select(null);}
+  batcher.sync(); // проксі-меші пакетів дізнаються про зміну одразу, а не з опитуванням
+  invalidate();
+}
+$(".o_f3d_toggle-ceiling").onclick = () => setCeiling(ceil.hidden);
+$(".o_f3d_opt-ceiling").onchange = (e) => setCeiling(e.target.checked);
+syncCeilingUi();
 
 // ---------------------------------------------------------------- підписи
 const labels = [];
@@ -1486,6 +1566,8 @@ on(window, "keydown", (e) => {
     const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
     if (v) {goView(v);}
   }
+  // C — стеля (за кодом клавіші: розкладка може бути й українською)
+  if (e.code === "KeyC" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {setCeiling(ceil.hidden);}
   // [ і ] — згорнути/розгорнути ліву й праву панелі (за кодом клавіші: розкладка може бути й українською)
   if (!e.ctrlKey && !e.metaKey && !e.altKey && !matchMedia("(max-width: 760px)").matches) {
     if (e.code === "BracketLeft") {setPanel("side", !ui.side);}
@@ -1735,13 +1817,14 @@ function syncFireDevices() {
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8),
         new THREE.MeshStandardMaterial({ color: FIRE_COLOR[d.state] ?? FIRE_COLOR.ok }));
       m.position.copy(b2t([d.x, d.y, d.z]));
-      m.userData = { code: addr, kind: "fire", label: `${addr} · ${d.type}`, device: true };
+      m.userData = { code: addr, kind: "fire", label: `${addr} · ${d.type}`, device: true, state: d.state };
       fireDev.group.add(m);
       items.set(addr, m);
       fireDev.codes.push(addr);
     }
   }
   fireDev.group.visible = !!dev && !!layers.get("fire")?.want;
+  syncCeilingMarkers();
 }
 function deviceHtml(addr) {
   const d = D?.fire?.devices?.[addr];
@@ -1776,7 +1859,7 @@ function syncOutdoorZones() {
     paint(grp);
   }
   for (const { grp, roof } of outdoor.codes.values()) {
-    grp.visible = roof ? !!layers.get("roofdeck")?.want : (layers.has("territory") ? !!layers.get("territory").want : true);
+    grp.visible = roof ? !!layers.get("roofdeck")?.want && !ceil.hidden : (layers.has("territory") ? !!layers.get("territory").want : true);
   }
 }
 
@@ -3517,6 +3600,7 @@ function getState() {
     drill: { on: drill.on, t: drill.on ? Math.floor((performance.now() - drill.t0) / 1000) : 0 },
     clientState: client?.state ?? null,
     ui: { side: ui.side, card: ui.card, collapsed: [...ui.secs] },
+    ceiling: { shown: !ceil.hidden, nodes: ceil.nodes.size, y: ceil.y },
   };
 }
 async function applyParams(p = {}) {
@@ -3527,6 +3611,7 @@ async function applyParams(p = {}) {
       layers.forEach((_, k) => setLayer(k, keys.has(k)));
     }
   }
+  if (p.ceiling != null) {setCeiling(String(p.ceiling) === "1" || p.ceiling === true, false);}
   if (p.mode) {setMode(p.mode);}
   if (p.tab) {openTab(p.tab);}
   if (p.snapshot) {await loadSnapshotById(+p.snapshot); if (destroyed) {return;}}
@@ -3569,7 +3654,7 @@ return {
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,
   playShift, stopShift, setPlaybackMode, setLite, loadPart, getState, destroy, branchParticles, buildLabels,
-  syncLabels, banner, mergeD: mergeData,
+  syncLabels, banner, mergeD: mergeData, setCeiling, ceil, ceilingWhy,
 };
 
 }

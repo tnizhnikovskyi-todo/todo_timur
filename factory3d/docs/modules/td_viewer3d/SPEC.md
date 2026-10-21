@@ -21,6 +21,7 @@ X-28 (клієнт: навчальна тривога, стани й прист�
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-02, Q-05.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: A.13 `fire.groups` 33 → 35, `fire.totals.detectors` 212 → 222; `passports` 205 → 207 (A.0, A.14); обладнання демо-бази 208 → 210 (M-04 крок 29, §5.4 крок 2: `FA-SOC`, `FA-OFFICE` з `manifest.parts[].codes` резолвляться в нове обладнання).
 Зміни: 21.10.2026 — VX-08 (R-26): `api.simMinutes()`, `api.onSimTime(cb)`, `api.invalidate()` для розширень ядра (19.0.1.1.1).
+Зміни: 21.10.2026 — кнопка «Стеля» (R-28, V-16, AC-72/AC-73): потолочний шар ховається одним перемикачем, клавіша `C`, `localStorage` `f3d.ceiling`, у «стіні» схований за умовчанням, URL-параметр кіоска `ceiling=0|1` (19.0.1.1.3).
 
 Позначення: UT — юніт-тест (`odoo.tests`), HT — HttpCase/тур, JT — HOOT-тест клієнта, MAN — ручна
 перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -748,6 +749,15 @@ readonly). `action_td_cycle_check`: form, `target="new"`.
 R-27), «Планшети» (`td_lite_default`), «Демо» (`td_demo_enabled`,
 `td_demo_clock`, попередження «Лише для тестового сервера»).
 
+### V-16 Кнопка «Стеля» (`static/src/viewer/core.js`, `viewer.scss`)
+
+Два зв'язані елементи керування, один стан (R-28):
+
+- кнопка-перемикач `button.o_f3d_toggle-ceiling` «Стеля» у верхній панелі (`header.o_f3d_bar`) поруч із «Види і шари», `aria-pressed="true"` — стеля
+  показана (за умовчанням), `"false"` — сховано (кнопка тьмяніє й закреслена); `title` — «Показати/Сховати стелю: … ( C )»;
+- пункт `input.o_f3d_opt-ceiling` «Стеля» першим у секції «Показ» панелі «Види і шари» (підказка: що ховається; «станки, стелажі й люди лишаються · клавіша C»);
+- підказка внизу екрана доповнена «C стеля».
+
 ## 4. Права
 
 ### 4.1 `security/ir.model.access.csv` (повністю)
@@ -1091,10 +1101,11 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 | `applyPatch(patch)` | R-14 крок 7: глибоке злиття `patch` у `D` (`deepMerge`, X-23), елементи списків за `name`/`id`, `removed`, сигнали за шляхами, `updateLive()`, `paint` змінених кодів, перебудова overlay лише для змінених МО, автостарт/автостоп навчання (п. 10 нижче), `renderPanel(true)` якщо відкритий об'єкт/документ у `patch` |
 | `select(obj \| code \| null, {keepHighlight})`, `ensureCode(code)`, `focusOn(obj)` | як у макеті (рядки 577–579, 1229–1243, 666) |
 | `openTab(tab)`, `showMO(name)`, `showPicking(name)`, `showProduct(code)`, `showLine(code)`, `showChain(v)`, `showMatPath(i)`, `startDrill()`, `stopDrill()` | як у макеті (`openTab` 1390, `showMO` 1538, `showPicking` 1706, `showProduct` 1646, `showLine` 2060, `showChain` 1755, `showMatPath` 1748, `startDrill` 2561) |
+| `setCeiling(show, persist = true)` | кнопка «Стеля» (R-28, V-16): `true` — стеля показана, `false` — сховано; `persist` — запам'ятати вибір в `localStorage` |
 | `setMode(mode)`, `setLayer(key, on)`, `setProdOverlay(on)`, `goView(nameOrIndex)` | режими кольору (794–835), шари (670–741), шар замовлень (1190–1213), види (634–646) |
 | `setSimTime(min \| null)`, `playShift()`, `stopShift()`, `setPlaybackMode("plan" \| "snapshots")` | R3/R4 (2316–2537) + R-17 |
 | `setLite(on)` | §8.4 |
-| `getState()` | `{tab, panel, selected, mode, layers:{}, simMinutes, lite, live, playbackMode}` — для турів і тестів |
+| `getState()` | `{tab, panel, selected, mode, layers:{}, simMinutes, lite, live, playbackMode, ceiling:{shown, nodes, y}}` — для турів і тестів |
 | `destroy()` | відписка, `renderer.setAnimationLoop(null)`, `dispose()` геометрій/матеріалів, зняття слухачів `resize/keydown` |
 | `D`, `idx`, `items`, `layers` | дані, індекси (`indexData` 1287–1303), об'єкти сцени, шари — лише читання |
 
@@ -1116,13 +1127,13 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 5. `three` — `const { THREE, OrbitControls, GLTFLoader, CSS2DRenderer, CSS2DObject, RoomEnvironment } =
    await import(opts.threeUrl ?? "/td_viewer3d/static/lib/three/three-bundle.esm.js")` у `mount()`;
    у статичній сторінці `dist/` той самий файл лежить поруч (`three-bundle.esm.js`).
-6. `localStorage` (ключі `f3d.lite`, `f3d.layers`, `f3d.tab`) — лише зручності, усі читання в `try/catch`.
+6. `localStorage` (ключі `f3d.lite`, `f3d.layers`, `f3d.tab`, `f3d.ceiling` = `on|off`) — лише зручності, усі читання в `try/catch`.
 7. Теми: `viewer.scss` визначає `--f3d-*` токени від змінних Odoo (`--o-view-background-color`, `$o-brand-primary`)
    і темний варіант під селектором темної теми Odoo 19 Enterprise (клас на `body`; розробник бере його з
    `web_enterprise/static/src/webclient/*.scss`; тест AC-09 перевіряє через `data-theme="dark"` на `html`);
    ядро слухає `MutationObserver` на `document.documentElement` (`data-theme`), `prefers-color-scheme`, як у
    макеті (480–483), і зміну класу `body`.
-8. Клавіші 1–9, 0, Esc обробляються лише коли фокус у переглядачі (`el.contains(document.activeElement) ||
+8. Клавіші 1–9, 0, Esc, `C` (стеля; за кодом клавіші `KeyC`, без Ctrl/Alt/Meta/Shift) обробляються лише коли фокус у переглядачі (`el.contains(document.activeElement) ||
    document.activeElement === document.body`), щоб не ламати гарячі клавіші Odoo.
 9. Розділ «Енергія» та інші статичні розділи рендеряться лише якщо розділ є в `D` (макет уже так робить:
    `if (!e) …`), тому відсутність модулів фаз 2–5 не ламає панель.
@@ -1730,6 +1741,34 @@ AC: **AC-68** `?wall=1` дає `params.wall` з налаштувань, без �
 (`TestWallSettings`); **AC-70** браузер: «стіна» без навігації Odoo, `inert`, темна тема, перший слайд 3D, далі KPI (`test_wall_browser`); **AC-71** HOOT: плейлист і тривалість, набір слайдів,
 KPI = панель, події, замовлення, VX-07, відсутність інтерактиву, оновлення за дельтою (`static/tests/hoot/wall.test.js`).
 
+### R-28 Кнопка «Стеля» — потолочний шар (19.0.1.1.3)
+
+Перемикач ховає **весь потолочний шар** одним кліком, щоб цех було видно згори; усе, що стоїть на підлозі, лишається. Працює в живому режимі, під «Потоком зміни»,
+у кіоску й у «стіні».
+
+1. **Що ховається.** Кровля й ферми (`roof`, `roofdeck`: `Ферми`, `ROOF-DECK`, `PV-ROOF`), світильники (шар `lighting`, вид `lighting`: `LT-*`, `EMERGENCY`), вентиляція й теплова
+   мережа (шар `ventilation`, вид `hvac`: `RV-*`, `AHU-1`, `EF-*`, `HEAT-NET`), спринклери (`SPRINKLERS`), шинопроводи й кабельні лотки (`BW-1…4`, `CABLES`), пневмомагістраль
+   (`AIR-RING`), аспірація (`DUST-1`), іскрогасіння (`SPARK-1`), блискавкозахист (`LPS`), сповіщувачі під стелею (`FA-<зона>`), димові завіси й клапани, Wi-Fi (`WIFI`).
+   Маркери пожежних пристроїв (`fire.devices`) вище порога ховаються, поки стан `ok`; пристрій у тривозі лишається. Зона `Z-ROOF` показується лише з шаром `roofdeck` і лише зі стелею.
+2. **Що лишається.** Станки, стелажі (навіть високі: верхні комірки на 5–7 м), портал складу плит `GANTRY-1` з колонами й мостом, `BOARD-RACKS`, комірки, візки, ворота, люди, фури,
+   колони, стіни, перегородки, офіс, підписи, маркери й оверлеї (шар замовлень, маршрути, мітки «Потоку зміни»).
+3. **Правило класифікації** (`ceilingWhy(layerKey, node)`, одиниця — прямий нащадок вузла шару `LAYER_*`, обчислюється при завантаженні частини моделі; порядок):
+   а) явні винятки видимі завжди — `LP-*` (щити освітлення на стіні), `FACP-1`, `FA-MCP` (ручні), `FA-SND` (сирени);
+   б) явні категорії — шари `roof/roofdeck/lighting/ventilation/sprinklers`, види `lighting`/`hvac`, коди об'єднаних меш-магістралей (`BW-n`, `CABLES`, `AIR-RING`, `DUST-n`, `HEAT-NET`,
+   `SPARK-1`, `LPS`, `FA-*`), де 85–100 % геометрії вище порога, а нижня точка — лише спуски до обладнання;
+   в) складські види (`stock`, `bin`, `rack`, `kit`, `machine`, `person`, `vehicle`, `dock`, `zone`) — не ховаються;
+   г) решта — за габаритами: нижня точка bbox ≥ `ceilingY` (параметр `opts.ceilingY`, за умовчанням 3,5 м) → потолочний. Об'єкт на підлозі не ховається, хоч би який високий.
+4. **Реалізація.** Потолочні вузли ховаються через `node.visible` (шари не чіпаються, `batcher.sync()` одразу), тож перемикач шару й стелі не конфліктують; нова частина моделі
+   (`fire`, `engineering`…) класифікується при завантаженні й ховається, якщо стелю вимкнено. Перехід до схованого об'єкта (`showLayerOf`: картка, «Показати в 3D») повертає стелю на
+   час сеансу без запису вибору. Ховання скидає вибір схованого об'єкта.
+5. **Стан.** За умовчанням стеля показана. Вибір запам'ятовується в `localStorage["f3d.ceiling"]` = `on|off` (читання й запис у `try/catch`). У «стіні» (`params.wall`) за умовчанням
+   сховано, збережений вибір ігнорується. Кіоск приймає `?ceiling=1|0` (`_page_params`; `applyParams({ceiling})`, без запису вибору). Клавіша `C`.
+6. **Тести.** `static/tests/hoot/ceiling.test.js`: класифікація реальної моделі, перемикання й відновлення, UI, збереження, «стіна», кіоск і «Потік зміни», маркери пристроїв, правило габаритів
+   на синтетичних об'єктах.
+
+AC: **AC-72** кнопка/пункт/клавіша `C` перемикають стелю: потолочні вузли `visible=false`, напільні (портал, стелажі, верхні комірки, щити `LP-*`) лишаються, повернення відновлює, шари не змінюються;
+**AC-73** вибір зберігається, «стіна» стартує без стелі, `?ceiling` і оверлеї «Потоку зміни» (`ceiling.test.js`).
+
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи / джерело |
@@ -1850,6 +1889,8 @@ KPI = панель, події, замовлення, VX-07, відсутніс�
 | AC-69 | R-27 (WL-3) | налаштування | `td_wall_slide_s` 4/301, `td_wall_slides` порожній/`Overview`/`a;b`/`a,,b`; адреса | `ValidationError`; коректні значення проходять; `td_wall_url` = кіоск + `?wall=1` лише адміністратору | UT (`TestWallSettings`) |
 | AC-70 | R-27 (WL-1, WL-5) | сторінка `?wall=1&f3d_test=1` | браузер | `.o_f3d_wall`, без навігації Odoo, `inert`, `data-theme="dark"`, перший слайд `overview`, після `next()` — `kpi` з 4 плитками | JT (`test_wall_browser`) |
 | AC-71 | R-27 (WL-1…WL-6, VX-07) | HOOT-фікстури | `F3dWall` над переглядачем / підставним `D` | плейлист по колу, тривалість і набір слайдів з налаштувань, KPI = панель, події, замовлення план/факт, слайд з реєстру `f3d_wall_slides`, збій слайда не ламає плейлист, без інтерактиву, оновлення слайда | HOOT (`wall.test.js`) |
+| AC-72 | R-28, V-16 | модель `core` з усіма частинами | `setCeiling(false)`, кнопка «Стеля», пункт «Показ», клавіша `C` | потолочні вузли (ферми, дах, `LT-*`, `RV-*`, `SPRINKLERS`, `BW-n`, `FA-<зона>`, `WIFI`…) `visible=false`, `GANTRY-1`, `BOARD-RACKS`, верхні комірки `FG-R1-B01-L4`, `FACP-1`, `LP-1`, верстати, люди лишаються; шари не змінюються; `setCeiling(true)` відновлює; `ceilingWhy` за габаритами: нижня точка ≥ 3,5 м → потолочний, високий об'єкт на підлозі — ні | HOOT (`ceiling.test.js`) |
+| AC-73 | R-28 | `storage`, `params.wall`, `fire.devices`, шар замовлень | вибір, перезавантаження, «стіна», `applyParams({ceiling})`, «Потік зміни» | `f3d.ceiling` = `on/off`, нова сесія й пізні частини дотримуються вибору; пошкоджене сховище не ламає; «стіна» без стелі навіть за збереженим `on`; `?ceiling` не пише в сховище; оверлеї шару замовлень не змінюються; маркер сповіщувача під стелею схований, у тривозі — ні | HOOT (`ceiling.test.js`) |
 
 (AC-34 навмисно немає — об'єднано з AC-33.)
 
