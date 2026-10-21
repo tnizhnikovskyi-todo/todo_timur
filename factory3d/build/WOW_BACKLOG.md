@@ -47,3 +47,8 @@
 - Сервер 21.10: емулятор оновлено колегою до d4b6202 (КГУ 230/230 сигналів живі); за дозволом користувача ввімкнено
   td.energy_control.write_enabled і remote_switching_enabled (automation_enabled = False); генератор Odoo → fake relay :8087.
   Відкрите: джерело SICS-TRUCK-SCALE у error з 09:53 UTC (не на маршруті) — розібрати в нічній перевірці.
+- 21.10 вечір (виступ 22.10 о 15:40): календар id 2 + «Зміна 2» 15:30–23:00 (attendance 26–30); td.live_production.shift_end=23,
+  shift_start=12, orders_per_day=24 (≈14/35 верстатів зайняті о 15:40); ранок 22.10 07:00–12:00 — глобальна відсутність «Поза зміною».
+  **ПІСЛЯ ВИСТУПУ повернути:** shift_start → 7 (або видалити), orders_per_day → 8, відсутність 22.10 прибрати (з дозволу користувача).
+- Деплой 6dc679f: «Показати в 3D» для будь-яких МО (td_viewer3d 1.1.9), Пуск/Стоп КГУ через міст chp (td_chp_factory3d 1.1.0).
+  Колезі: F3D_WRITE_ENABLED=1 у /etc/td-stand/collector.local.env + restart td-collector (інакше команди не доходять до обладнання).
