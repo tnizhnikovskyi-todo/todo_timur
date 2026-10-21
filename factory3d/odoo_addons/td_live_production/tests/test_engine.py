@@ -122,6 +122,18 @@ class TestLive(TransactionCase):
     def at(self, minutes):
         return self.engine.with_context(td_live_now=T0 + mins(minutes))
 
+    def run_jobs(self, now=None, limit=300):
+        """Запуски крона-виконавця з нульовим бюджетом: одна порція за запуск. Повертає кількість запусків."""
+        self.env["ir.config_parameter"].sudo().set_param(P + "job_budget_s", "0")
+        eng = self.engine.with_context(td_live_now=now or T0 - mins(120))
+        Job = self.env["td.live.job"]
+        calls = 0
+        with patch.object(type(Job), "_td_wake"):
+            while Job.search_count([("state", "in", ("queued", "running"))]) and calls < limit:
+                Job.with_context(**eng.env.context)._cron_td_live_jobs()
+                calls += 1
+        return calls
+
     def generate(self):
         return self.engine.with_context(td_live_now=T0 - mins(120)).td_generate_day(DAY)
 
@@ -385,7 +397,8 @@ class TestLive(TransactionCase):
         icp = self.env["ir.config_parameter"].sudo()
         icp.set_param("td.viewer.demo_clock", "2026-10-12 10:30")
         icp.set_param(P + "enabled", "False")
-        msg = self.engine.td_start()
+        self.generate()  # план на сьогодні (DAY) готовий: запуск одразу
+        msg = self.at(0).td_start()
         self.assertIn("запущено", msg)
         self.assertEqual(icp.get_param(P + "enabled"), "True")
         self.assertFalse(icp.get_param("td.viewer.demo_clock"))
@@ -403,7 +416,8 @@ class TestLive(TransactionCase):
         """Кнопки налаштувань повертають повідомлення, а збереження форми не скидає вимикач і зберігає параметри."""
         icp = self.env["ir.config_parameter"].sudo()
         icp.set_param(P + "enabled", "False")
-        Settings = self.env["res.config.settings"]
+        self.generate()
+        Settings = self.env["res.config.settings"].with_context(td_live_now=T0)
         action = Settings.create({}).action_td_live_start()
         self.assertEqual(action["tag"], "display_notification")
         self.assertTrue(Settings.create({}).td_live_enabled)
@@ -420,10 +434,14 @@ class TestLive(TransactionCase):
         self.assertFalse(self.env.ref("td_live_production.cron_td_live_tick").active)
         self.assertFalse(self.env.ref("td_live_production.cron_td_live_nightly").active)
 
-    def test_nightly_generates_tomorrow(self):
+    def test_nightly_queues_generation_of_today_and_tomorrow(self):
         with patch.object(type(self.engine), "_td_now", return_value=T0 - mins(300)):
-            self.engine._cron_td_live_nightly()
-        days = self.env["td.live.day"].search([]).mapped("date")
+            with patch.object(type(self.env["td.live.job"]), "_td_wake"):
+                self.engine._cron_td_live_nightly()
+        jobs = self.env["td.live.job"].search([("kind", "=", "generate_day")])
+        self.assertEqual(sorted(jobs.mapped("day_date")), [DAY, DAY + timedelta(days=1)])
+        self.run_jobs()
+        days = self.env["td.live.day"].search([("generated", "=", True)]).mapped("date")
         self.assertIn(DAY, days)
         self.assertIn(DAY + timedelta(days=1), days)
 
@@ -575,6 +593,186 @@ class TestLive(TransactionCase):
         with patch.object(type(self.engine), "_td_wo_start", side_effect=pg_errors.SerializationFailure("x")):
             with self.assertRaises(pg_errors.SerializationFailure):
                 self.at(5).td_dispatch()
+
+    # --- фонові задачі: кнопки лише ставлять у чергу, виконавець працює порціями ----------------------------
+    def test_generate_button_queues_and_runs_in_portions(self):
+        Job = self.env["td.live.job"]
+        eng = self.engine.with_context(td_live_now=T0 - mins(120))
+        with patch.object(type(Job), "_td_wake") as wake:
+            msg = eng.td_queue_generate(0)
+            again = eng.td_queue_generate(0)  # повторне натискання під час роботи
+        self.assertIn("у фоні", msg)
+        self.assertIn("вже виконується", again)
+        wake.assert_called_once()  # виконавця розбуджено один раз
+        job = Job.search([("kind", "=", "generate_day")])
+        self.assertEqual(len(job), 1)  # без дубля
+        self.assertEqual(job.state, "queued")
+        self.assertFalse(self.env["td.live.day"].search([("date", "=", DAY)]))  # кнопка нічого важкого не робить
+        self.env["ir.config_parameter"].sudo().set_param(P + "job_budget_s", "0")
+        with patch.object(type(Job), "_td_wake"):
+            Job.with_context(td_live_now=T0 - mins(120))._cron_td_live_jobs()  # одна порція
+        job.invalidate_recordset()
+        self.assertEqual(job.state, "running")
+        day = self.env["td.live.day"].search([("date", "=", DAY)])
+        self.assertTrue(day)
+        self.assertFalse(day.generated)  # план ще не готовий
+        self.assertIn("замовлення", job.progress_text)
+        # диспетчер не чіпає МО доби, поки план не готовий
+        self.assertEqual(self.at(600).td_dispatch()["started"], 0)
+        calls = self.run_jobs()
+        self.assertGreater(calls, 4)  # кілька порцій, а не одна важка транзакція
+        job.invalidate_recordset()
+        self.assertEqual(job.state, "done")
+        self.assertTrue(day.generated)
+        self.assertEqual(day.order_count, 2)
+        self.assertIn("Доба", job.message)
+        self.assertEqual(job.day_id, day)
+        self.assertEqual(self.engine.with_context(td_live_now=T0 - mins(120)).td_queue_generate(0)[:6], "План н")
+        self.assertIn(job, day.job_ids)
+
+    def test_generate_job_dispatches_elapsed_time_for_today(self):
+        """Генерація сьогоднішньої доби у фоні доганяє мине час: наряди, що за планом мали закінчитись, закриті."""
+        eng = self.engine.with_context(td_live_now=T0 + mins(180))
+        with patch.object(type(self.env["td.live.job"]), "_td_wake"):
+            eng.td_queue_generate(0)
+        self.run_jobs(now=T0 + mins(180))
+        day = self.env["td.live.day"].search([("date", "=", DAY)])
+        self.assertTrue(day.generated)
+        self.assertTrue(day.production_ids.workorder_ids.filtered(lambda w: w.state == "done"))
+        job = day.job_ids
+        self.assertIn("Диспетчер", job.message)
+
+    def test_catch_up_job_reports_progress_and_top_reasons(self):
+        past = T0 - timedelta(days=9)
+        mos = [self.make_old_mo(past + mins(k))[1] for k in range(4)]
+        orig = type(self.engine)._td_catch_up_mo
+        errors = {
+            mos[0].id: UserError("Вам досі потрібно перевірити якість!"),
+            mos[1].id: UserError("Вам досі потрібно перевірити якість!"),
+            mos[2].id: UserError("Вам потрібно зв’язати користувача зі співробітником"),
+        }
+
+        def fake(engine, mo, wos):
+            if mo.id in errors:
+                raise errors[mo.id]
+            return orig(engine, mo, wos)
+
+        Job = self.env["td.live.job"]
+        with patch.object(type(Job), "_td_wake"):
+            self.assertIn("у фоні", self.at(60).td_queue_catch_up())
+            self.assertIn("вже виконується", self.at(60).td_queue_catch_up())
+        self.assertEqual(Job.search_count([("kind", "=", "catch_up")]), 1)
+        job = Job.search([("kind", "=", "catch_up")])
+        with patch.object(type(self.engine), "_td_catch_up_mo", new=fake):
+            self.run_jobs(now=T0 + mins(60))
+        job.invalidate_recordset()
+        self.assertEqual(job.state, "done")
+        self.assertEqual((job.done_count, job.failed_count), (1, 3))
+        self.assertGreaterEqual(job.total, 4)
+        self.assertIn("закрито 1 з", job.message)
+        self.assertIn("Вам досі потрібно перевірити якість! — 2", job.message)
+        self.assertEqual(job.top_reasons().count(" — "), 2)  # топ-3 → тут дві різні причини
+        self.assertEqual(mos[3].state, "done")
+        self.assertEqual([m.state for m in mos[:3]], ["confirmed"] * 3)
+        self.assertTrue(any("Догнати минуле не вдалось" in str(n) for n in mos[0].message_ids.mapped("body")))
+
+    def test_catch_up_requeues_item_on_conflicts(self):
+        job = self.env["td.live.job"].create({"kind": "catch_up", "phase": "mos", "total": 2, "state": "running"})
+        job.queue = "[[11, 0], [12, 0]]"
+        job._td_on_conflict()
+        self.assertEqual(job._json("queue", []), [[12, 0], [11, 1]])  # відкладено в кінець
+        job.queue = "[[11, 1]]"
+        job._td_on_conflict()
+        self.assertEqual(job._json("queue", []), [[11, 2]])
+        job._td_on_conflict()  # третя поразка: МО вважається невдалою
+        self.assertEqual(job.state, "done")  # черга порожня
+        self.assertEqual(job.failed_count, 1)
+        self.assertIn("конкурентне оновлення", job.top_reasons())
+
+    def test_job_error_marks_failed_not_loops(self):
+        Job = self.env["td.live.job"]
+        with patch.object(type(Job), "_td_wake"):
+            self.engine.with_context(td_live_now=T0).td_queue_generate(0)
+        with patch.object(type(self.engine), "_td_gen_plan", side_effect=UserError("Немає шаблонів")):
+            self.run_jobs(now=T0, limit=5)
+        job = Job.search([("kind", "=", "generate_day")])
+        self.assertEqual(job.state, "failed")
+        self.assertIn("Немає шаблонів", job.error)
+        self.assertIn("помилка", job.progress_text)
+
+    def test_start_without_plan_chains_jobs_and_activates_after(self):
+        """«Запустити» без плану на сьогодні не вмикає диспетчер: у фоні догнати минуле → план → запуск."""
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_param("td.viewer.demo_clock", "2026-10-12 10:30")
+        icp.set_param(P + "enabled", "False")
+        self.make_old_mo(T0 - timedelta(days=9))
+        Job = self.env["td.live.job"]
+        with patch.object(type(Job), "_td_wake"):
+            msg = self.at(0).td_start()
+        self.assertIn("Плану на сьогодні ще немає", msg)
+        self.assertEqual(icp.get_param(P + "enabled"), "False")
+        self.assertEqual(icp.get_param("td.viewer.demo_clock"), "2026-10-12 10:30")  # годинник поки не чіпаємо
+        self.assertFalse(self.env.ref("td_live_production.cron_td_live_tick").active)
+        kinds = Job.search([], order="id").mapped("kind")
+        self.assertEqual(kinds, ["catch_up", "generate_day"])
+        status = self.env["res.config.settings"].create({}).td_live_jobs  # блок «Фонові задачі» у налаштуваннях
+        self.assertIn("Згенерувати добу", status)
+        self.assertIn("Догнати минуле", status)
+        self.run_jobs(now=T0 - mins(120))
+        self.assertEqual(icp.get_param(P + "enabled"), "True")  # запуск після завершення задач
+        self.assertFalse(icp.get_param("td.viewer.demo_clock"))
+        self.assertTrue(self.env.ref("td_live_production.cron_td_live_tick").active)
+        self.assertTrue(self.env["td.live.day"].search([("date", "=", DAY), ("generated", "=", True)]))
+
+    def test_stop_cancels_pending_start(self):
+        Job = self.env["td.live.job"]
+        with patch.object(type(Job), "_td_wake"):
+            self.at(0).td_start()
+        job = Job.search([("kind", "=", "generate_day")])
+        self.assertTrue(job.then_start)
+        self.at(0).td_stop()
+        self.assertFalse(job.then_start)
+
+    def test_dispatch_budget_returns_pending_and_applied(self):
+        day = self.generate()
+        res = self.at(600).td_dispatch(budget_s=0)  # бюджет вичерпано одразу: нічого не виконано, усе в черзі
+        self.assertEqual((res["applied"], res["started"]), (0, 0))
+        self.assertGreater(res["pending"], 0)
+        self.assertEqual(res["pushed"], {})
+        done = self.at(600).td_dispatch()
+        self.assertEqual(done["pending"], 0)
+        self.assertEqual(day.state, "done")
+
+    def test_catch_up_does_not_touch_live_machine_rows(self):
+        """Історія не чіпає стан верстата: менше блокувань і конфліктів із кроном верстатів."""
+        past = T0 - timedelta(days=9)
+        _so, mo = self.make_old_mo(past)
+        machines = mo.workorder_ids.workcenter_id.td_machine_ids
+        before = {m.id: (m.write_date, m.active_workorder_id.id) for m in machines}
+        self.at(60).td_catch_up()
+        self.assertEqual(mo.state, "done")
+        self.assertEqual({m.id: (m.write_date, m.active_workorder_id.id) for m in machines}, before)
+        for move in mo.move_raw_ids | mo.move_finished_ids:
+            self.assertEqual(move.date, mo.date_finished)  # дати рухів — момент закриття МО
+        lines = (mo.move_raw_ids | mo.move_finished_ids).move_line_ids
+        self.assertTrue(lines)
+        self.assertEqual({line.date for line in lines}, {mo.date_finished})
+
+    def test_zonal_tariff_starts_yesterday_and_shifts_existing(self):
+        """Зонний тариф з учорашньої доби; створений раніше «з сьогодні» зсувається (потрібен td_energy)."""
+        if "td.energy.tariff" not in self.env:
+            self.skipTest("td_energy не встановлено")
+        company = self.env.company
+        Tariff = self.env["td.energy.tariff"]
+        today = self.engine._td_today()
+        yesterday = today - timedelta(days=1)
+        self.engine._td_prepare_tariff(company)
+        zonal = Tariff.search([("name", "=", "Зонний тариф (демо-підприємство)")])
+        self.assertEqual(zonal.date_from, yesterday)
+        zonal.date_from = today  # як на сервері до виправлення
+        self.assertIn("зсунуто", self.engine._td_prepare_tariff(company))
+        self.assertEqual(zonal.date_from, yesterday)
+        self.assertEqual(self.engine._td_prepare_tariff(company), "")
 
     # --- LP-07: підготовка компанії ----------------------------------------------------------------------
     def test_prepare_company(self):

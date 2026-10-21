@@ -138,21 +138,41 @@ class TdLiveEngine(models.AbstractModel):
 
     @api.model
     def _td_prepare_tariff(self, company):
-        """Зонний тариф td_energy з поточної доби; чинний закривається вчорашнім днем. Немає td_energy — пропуск."""
+        """Зонний тариф td_energy з УЧОРАШНЬОЇ доби (базовий період «Що якщо» закінчується вчора й має мати нічну зону);
+        чинний плоский закривається за день до того. Тариф, створений раніше «з сьогодні», зсувається на вчора.
+        Немає td_energy — пропуск."""
         if "td.energy.tariff" not in self.env:
             return ""
         Tariff = self.env["td.energy.tariff"]
-        if Tariff.search_count([("name", "=", TARIFF_NAME), ("company_id", "=", company.id)]):
-            return ""
         today = self._td_today()
+        start = today - timedelta(days=1)
+        named = Tariff.search([("name", "=", TARIFF_NAME), ("company_id", "=", company.id)], limit=1)
+        if named:
+            if named.date_from <= start:
+                return ""
+            prev = Tariff.search(
+                [
+                    ("company_id", "=", company.id),
+                    ("id", "!=", named.id),
+                    ("active", "=", True),
+                    ("date_to", "=", named.date_from - timedelta(days=1)),
+                    ("date_from", "<", start),
+                ],
+                limit=1,
+            )
+            if not prev:
+                return ""
+            prev.write({"date_to": start - timedelta(days=1)})
+            named.write({"date_from": start})
+            return _("Зонний тариф зсунуто на %s (щоб «Що якщо» бачило нічну зону).", start)
         current = Tariff.search(
             [
                 ("company_id", "=", company.id),
                 ("active", "=", True),
-                ("date_from", "<=", today),
+                ("date_from", "<=", start),
                 "|",
                 ("date_to", "=", False),
-                ("date_to", ">=", today),
+                ("date_to", ">=", start),
             ],
             order="date_from desc",
         )
@@ -161,8 +181,8 @@ class TdLiveEngine(models.AbstractModel):
             zone = old.zone_ids[:1]
             if zone and len(old.zone_ids) == 1:
                 base = zone.price or base
-            if old.date_from < today:
-                old.write({"date_to": today - timedelta(days=1)})
+            if old.date_from < start:
+                old.write({"date_to": start - timedelta(days=1)})
             else:
                 old.write({"active": False})
         Tariff.create(
@@ -170,20 +190,47 @@ class TdLiveEngine(models.AbstractModel):
                 "name": TARIFF_NAME,
                 "company_id": company.id,
                 "currency_id": company.currency_id.id,
-                "date_from": today,
+                "date_from": start,
                 "contract_kw": current[:1].contract_kw or 800,
                 "zone_ids": [(0, 0, row) for row in tariff.zone_rows(base)],
             }
         )
-        return _("Зонний тариф з %(day)s: ніч 0,5× / напівпік 1,0× / пік 1,5× від %(base)s ₴.", day=today, base=base)
+        return _("Зонний тариф з %(day)s: ніч 0,5× / напівпік 1,0× / пік 1,5× від %(base)s ₴.", day=start, base=base)
 
     @api.model
     def _td_prepare_whatif(self):
-        """Демо-сценарії «Що якщо» td_energy_analytics (у них своя ідемпотентність)."""
+        """Демо-сценарії «Що якщо» td_energy_analytics (у них своя ідемпотентність). Причини пропуску сценарію
+        беруться з журналу самого сида: інакше «створено 1» не пояснює, чому не 2."""
         if "td.energy.whatif" not in self.env:
             return ""
         model = self.env["td.energy.whatif"]
         if not hasattr(model, "_td_seed_demo"):
             return ""
-        n = model._td_seed_demo()
-        return _("Сценарії «Що якщо»: створено %s.", n) if n else ""
+        logger = logging.getLogger("odoo.addons.td_energy_analytics.models.td_energy_whatif")
+        handler = _Capture()
+        level = logger.level
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        try:
+            n = model._td_seed_demo()
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+        skipped = [m.split("пропущено", 1)[-1].strip(": .") for m in handler.messages if "пропущено" in m]
+        parts = []
+        if n:
+            parts.append(_("Сценарії «Що якщо»: створено %s.", n))
+        if skipped:
+            parts.append(_("Сценарії «Що якщо» пропущено: %s.", "; ".join(skipped)))
+        return " ".join(parts)
+
+
+class _Capture(logging.Handler):
+    """Збирає повідомлення журналу на час одного виклику."""
+
+    def __init__(self):
+        super().__init__(logging.INFO)
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())

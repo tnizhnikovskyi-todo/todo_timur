@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Обидва крони вимкнені: вмикає кнопка «Запустити живе виробництво» (LP-06). nextcall нічного крона ставить код. -->
+<!-- Крони диспетчера й нічного плану вимкнені: вмикає кнопка «Запустити живе виробництво» (LP-06). nextcall нічного крона ставить код. -->
 <odoo noupdate="1">
     <record id="cron_td_live_tick" model="ir.cron">
         <field name="name">Живе виробництво: такт диспетчера</field>
@@ -20,5 +20,16 @@
         <field name="interval_type">days</field>
         <field name="user_id" ref="base.user_root"/>
         <field name="active" eval="False"/>
+    </record>
+    <!-- Виконавець фонових задач: порожній, поки задач немає (резервний запуск раз на 10 хв; будиться ir.cron._trigger). -->
+    <record id="cron_td_live_jobs" model="ir.cron">
+        <field name="name">Живе виробництво: фонові задачі</field>
+        <field name="model_id" ref="model_td_live_job"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_td_live_jobs()</field>
+        <field name="interval_number">10</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
     </record>
 </odoo>

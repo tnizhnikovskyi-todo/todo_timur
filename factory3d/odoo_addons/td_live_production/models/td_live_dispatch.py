@@ -7,6 +7,7 @@ Enterprise `mrp_workorder` чи без нього), не стартує вдру
 """
 
 import logging
+import time
 from collections import Counter
 from datetime import timedelta
 
@@ -25,6 +26,7 @@ SHIP_STATES = ("done", "cancel")
 CONCURRENCY = (pg_errors.SerializationFailure, pg_errors.LockNotAvailable, pg_errors.DeadlockDetected)
 CATCH_UP_TRIES = 3  # спроб на МО при конкурентному оновленні (крон верстатів пише ті самі рядки)
 WARN_EVERY = timedelta(hours=1)
+LIVE_WINDOW = timedelta(minutes=10)  # подія старша за це — «історія»: стан верстата (td.machine) не чіпаємо
 _LAST_WARN = {}  # база → коли востаннє писали про недоступний емулятор (одне попередження на годину)
 
 
@@ -34,14 +36,16 @@ class TdLiveEngine(models.AbstractModel):
     # --- стан із бази ---------------------------------------------------------------------------------
     @api.model
     def _td_scope(self):
-        """Керовані МО: відкриті й ті, чиє замовлення ще не відвантажено. `(МО, замовлення до відвантаження)`."""
+        """Керовані МО (доби з готовим планом): відкриті й ті, чиє замовлення ще не відвантажено."""
         env = self.env
         Picking = env["stock.picking"]
-        pending = Picking.search([("sale_id.td_live_day_id", "!=", False), ("state", "not in", SHIP_STATES)]).sale_id
+        ready = [("td_live_day_id.generated", "=", True)]
+        pending = Picking.search([("sale_id.td_live_day_id.generated", "=", True), ("state", "not in", SHIP_STATES)])
+        pending = pending.sale_id
         MO = env["mrp.production"]
-        mos = MO.search([("td_live_day_id", "!=", False), ("state", "not in", ("done", "cancel"))])
+        mos = MO.search(ready + [("state", "not in", ("done", "cancel"))])
         if pending:
-            mos |= MO.search([("origin", "in", pending.mapped("name")), ("td_live_day_id", "!=", False)])
+            mos |= MO.search(ready + [("origin", "in", pending.mapped("name"))])
         return mos, pending
 
     @api.model
@@ -97,14 +101,25 @@ class TdLiveEngine(models.AbstractModel):
 
     # --- такт -----------------------------------------------------------------------------------------
     @api.model
-    def td_dispatch(self, now=None, force=False, limit=None):
-        """Такт диспетчера: події до `now`, цілі верстатам. Повертає лічильники й цілі.
+    def td_dispatch(self, now=None, force=False, limit=None, budget_s=None):
+        """Такт диспетчера: події до `now`, цілі верстатам. Повертає лічильники, `applied` (виконано подій), `pending`
+        (подій лишилось) і цілі.
 
-        `limit` — не більше стільки подій за виклик (крон після довгої паузи доганяє частинами, не вичерпуючи ліміт
-        часу); решту подасть наступний такт, бо стан береться з бази. Тоді цілі верстатам не надсилаються.
+        `limit` і `budget_s` (секунди) обмежують порцію: крон і фонова задача доганяють довгу паузу частинами, не
+        вичерпуючи ліміт часу; решту подасть наступний виклик, бо стан береться з бази. Тоді цілі верстатам не шлються.
         """
         self = self.sudo()
-        res = {"started": 0, "finished": 0, "closed": 0, "shipped": 0, "downtimes": 0, "targets": [], "pushed": {}}
+        res = {
+            "started": 0,
+            "finished": 0,
+            "closed": 0,
+            "shipped": 0,
+            "downtimes": 0,
+            "applied": 0,
+            "pending": 0,
+            "targets": [],
+            "pushed": {},
+        }
         if not (force or self._td_params()["enabled"]):
             return res
         now = now or self._td_now()
@@ -119,10 +134,17 @@ class TdLiveEngine(models.AbstractModel):
         state = self._td_snapshot(mos, live_dts)
         events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
         failed = set()
-        for ev in events[:limit]:
-            self._td_apply_event(ev, state, failed, res)
-        if limit and len(events) > limit:
-            _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний такт", len(events) - limit)
+        started = time.monotonic()
+        processed = 0
+        for ev in events:
+            if (limit and processed >= limit) or (budget_s is not None and time.monotonic() - started >= budget_s):
+                break
+            processed += 1
+            if self._td_apply_event(ev, state, failed, res, live=(now - ev["t"]) <= LIVE_WINDOW):
+                res["applied"] += 1
+        res["pending"] = len(events) - processed
+        if res["pending"]:
+            _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний виклик", res["pending"])
             return res
         targets = dispatch.machine_targets(after, now)
         res["targets"] = targets
@@ -130,7 +152,7 @@ class TdLiveEngine(models.AbstractModel):
         return res
 
     @api.model
-    def _td_apply_event(self, ev, state, failed, res):
+    def _td_apply_event(self, ev, state, failed, res, live=True):
         """Один крок у savepoint. `failed` — ключі, чиї залежні кроки цього такту пропускаються."""
         env = self.env
         kind, ident, t = ev["kind"], ev["id"], ev["t"]
@@ -146,9 +168,9 @@ class TdLiveEngine(models.AbstractModel):
         try:
             with env.cr.savepoint():
                 if kind == "wo_start":
-                    res["started"] += bool(self._td_wo_start(env["mrp.workorder"].browse(ident), t))
+                    res["started"] += bool(self._td_wo_start(env["mrp.workorder"].browse(ident), t, live))
                 elif kind == "wo_finish":
-                    res["finished"] += bool(self._td_wo_finish(env["mrp.workorder"].browse(ident), t))
+                    res["finished"] += bool(self._td_wo_finish(env["mrp.workorder"].browse(ident), t, live))
                 elif kind == "mo_done":
                     res["closed"] += bool(self._td_mo_close(env["mrp.production"].browse(ident), t))
                 elif kind == "ship":
@@ -244,8 +266,12 @@ class TdLiveEngine(models.AbstractModel):
         wo.sudo().with_context(bypass_duration_calculation=True).write({"date_start": start, "date_finished": end})
 
     @api.model
-    def _td_wo_start(self, wo, t):
-        """Старт наряду з датою `t`. Ідемпотентно: уже в роботі або з відкритим таймером — нічого не робить."""
+    def _td_wo_start(self, wo, t, live=True):
+        """Старт наряду з датою `t`. Ідемпотентно: уже в роботі або з відкритим таймером — нічого не робить.
+
+        `live = False` (історія: «Догнати минуле», доганяння давніх подій) — стан верстата `td.machine` не чіпається:
+        менше рядків під блокуванням (їх оновлює крон верстатів) і менше конфліктів.
+        """
         wo = wo.sudo()
         if wo.state in ("done", "cancel", "progress") or self._td_open_timers(wo):
             return False
@@ -261,7 +287,8 @@ class TdLiveEngine(models.AbstractModel):
         emp = self._td_employee(wo, machine)
         if machine:
             machine._td_start_at(wo, emp, t)
-            machine._td_set_active(wo, emp)
+            if live:
+                machine._td_set_active(wo, emp)
         elif emp and hasattr(wo, "start_employee"):
             wo.start_employee(emp.id)
         else:
@@ -282,13 +309,13 @@ class TdLiveEngine(models.AbstractModel):
         return True
 
     @api.model
-    def _td_wo_finish(self, wo, t):
+    def _td_wo_finish(self, wo, t, live=True):
         """Завершення наряду о `t`. Ідемпотентно: завершений (у т. ч. автостопом верстата) пропускається."""
         wo = wo.sudo()
         if wo.state in ("done", "cancel"):
             return False
         if wo.state != "progress" and not self._td_open_timers(wo):
-            self._td_wo_start(wo, min(t, wo.date_start or t))
+            self._td_wo_start(wo, min(t, wo.date_start or t), live)
         timers = self._td_open_timers(wo)
         self._td_note_quality(wo.production_id, self._td_pass_quality(wo=wo))
         wo.write({"qty_produced": wo.qty_production})
@@ -300,7 +327,7 @@ class TdLiveEngine(models.AbstractModel):
             timer.sudo().write({"date_end": max(t, timer.date_start)})
         self._td_wo_dates(wo, wo.date_start, t)
         machine = self._td_machine_of(wo)
-        if machine and machine.active_workorder_id == wo:
+        if live and machine and machine.active_workorder_id == wo:
             machine.with_context(tracking_disable=True).write({"active_workorder_id": False, "wo_paused": False})
         return True
 
@@ -367,11 +394,22 @@ class TdLiveEngine(models.AbstractModel):
         mo.invalidate_recordset(["state"])
         if mo.state != "done":
             raise UserError(_("МО %s не закрилось (стан %s).", mo.name, mo.state))
-        mo.with_context(force_date=True).write({"date_finished": t})
-        moves = mo.move_raw_ids | mo.move_finished_ids
-        moves.write({"date": t})
-        moves.move_line_ids.write({"date": t})
+        mo.with_context(force_date=True).write({"date_finished": t})  # дати готових рухів виробу пише сама МО
+        self._td_stamp_moves(mo.move_raw_ids | mo.move_finished_ids, t)
         return True
+
+    @api.model
+    def _td_stamp_moves(self, moves, t):
+        """Дата виконаних рухів і їхніх рядків — момент `t`, а не «зараз». Прямий UPDATE двох колонок без обчислюваних
+        залежностей: через ORM кожен запис тягне ~100 запитів (правила поповнення), а на сервері це секунда."""
+        if not moves:
+            return
+        cr = self.env.cr
+        t = t.replace(microsecond=0)  # як ORM для Datetime: без мікросекунд
+        cr.execute("UPDATE stock_move SET date = %s WHERE id IN %s", (t, tuple(moves.ids)))
+        cr.execute("UPDATE stock_move_line SET date = %s WHERE move_id IN %s", (t, tuple(moves.ids)))
+        moves.invalidate_recordset(["date"])
+        moves.move_line_ids.invalidate_recordset(["date"])
 
     @api.model
     def _td_ship(self, so, t):
@@ -497,23 +535,26 @@ class TdLiveEngine(models.AbstractModel):
     # --- догнати минуле (LP-04) -------------------------------------------------------------------------
     @api.model
     def td_catch_up(self):
-        """Завершити датами планів МО й наряди минулих діб, що досі «в роботі»; відвантажити їхні замовлення.
+        """Синхронне «Догнати минуле» (тести, консоль): те саме, що робить фонова задача, але в одному виклику.
 
-        Нічого не видаляє. Керовані МО (згенеровані модулем) доганяє диспетчер, решту — цей прохід. Кожна МО —
-        окрема транзакція зі savepoint: невдала МО лишається як була, а причина — в її чаттері й у повідомленні
-        (топ-3 причини з кількістю). Конкурентне оновлення (крон верстатів) повторюється до `CATCH_UP_TRIES` разів.
+        Кнопка налаштувань ставить цю роботу у фон (`td.live.job`). Кожна МО — окрема транзакція зі savepoint: невдала
+        лишається як була, причина — в її чаттері й у зведенні (топ-3 причини з кількістю).
         """
         self = self.sudo()
-        env = self.env
         now = self._td_now()
-        managed = self.td_dispatch(now=now, force=True)
-        self._td_commit()
+        managed = {"started": 0, "finished": 0, "closed": 0, "shipped": 0}
+        while True:
+            res = self.td_dispatch(now=now, force=True, budget_s=20.0)
+            for key in managed:
+                managed[key] += res[key]
+            self._td_commit()
+            if not (res["pending"] and res["applied"]):
+                break
         today_start = clock.shift_window(clock.local_date(now), (0.0, 24.0))[0]
-        MO = env["mrp.production"]
-        old = MO.search([("td_live_day_id", "=", False), ("state", "in", ("confirmed", "progress", "to_close"))])
-        closed = skipped = 0
+        past, skipped = self._td_catch_up_candidates(today_start)
+        closed = 0
         reasons = Counter()
-        for mo_id in old.ids:
+        for mo_id in past:
             verdict, reason = self._td_catch_up_one(mo_id, today_start)
             if verdict == "done":
                 closed += 1
@@ -525,8 +566,8 @@ class TdLiveEngine(models.AbstractModel):
         top = "; ".join("%s — %s" % (text, n) for text, n in reasons.most_common(3))
         return _(
             "Догнати минуле: закрито МО %(closed)s (не вдалось %(failed)s, пропущено %(skipped)s).%(why)s "
-            "Згенеровані МО: "
-            "стартувало нарядів %(started)s, завершено %(finished)s, закрито МО %(mos)s, відвантажено %(ship)s.",
+            "Згенеровані МО: стартувало нарядів %(started)s, завершено %(finished)s, закрито МО %(mos)s, "
+            "відвантажено %(ship)s.",
             closed=closed,
             failed=failed,
             skipped=skipped,
@@ -538,14 +579,14 @@ class TdLiveEngine(models.AbstractModel):
         )
 
     @api.model
-    def _td_in_test(self):
-        return bool(modules.module.current_test)
-
-    @api.model
     def _td_commit(self):
-        """Фіксація проміжного результату довгої кнопки (у тестах транзакцію веде тестовий курсор: без фіксації)."""
+        """Фіксація проміжного результату (у тестах транзакцію веде тестовий курсор: без фіксації)."""
         if not self._td_in_test():
             self.env.cr.commit()
+
+    @api.model
+    def _td_in_test(self):
+        return bool(modules.module.current_test)
 
     @api.model
     def _td_reason(self, exc):
@@ -555,39 +596,63 @@ class TdLiveEngine(models.AbstractModel):
         return text[:100]
 
     @api.model
-    def _td_catch_up_one(self, mo_id, today_start):
-        """Одна МО «Догнати минуле»: `("done"|"skipped"|"failed", причина)`. Фіксує результат; невдачу пише в чаттер."""
+    def _td_catch_up_candidates(self, today_start):
+        """`(id МО з усіма плановими датами раніше за сьогодні, кількість пропущених)` серед відкритих МО без позначки
+        модуля. МО без жодної дати й МО на сьогодні й далі пропускаються."""
+        MO = self.env["mrp.production"]
+        old = MO.search([("td_live_day_id", "=", False), ("state", "in", ("confirmed", "progress", "to_close"))])
+        past, skipped = [], 0
+        for mo in old:
+            ends = [w.date_finished or w.date_start for w in mo.workorder_ids if w.state != "cancel"]
+            ends = [e for e in ends if e]
+            last = max(ends) if ends else (mo.date_finished or mo.date_start)
+            if last and last < today_start:
+                past.append(mo.id)
+            else:
+                skipped += 1
+        return past, skipped
+
+    @api.model
+    def _td_catch_up_unit(self, mo_id, today_start):
+        """Одна МО «Догнати минуле» без фіксації: `("done"|"skipped"|"failed", причина)`. Невдача відкочує лише цю МО
+        (savepoint) і пишеться в її чаттер; конкурентне оновлення піднімається — повтор у новій транзакції."""
         env = self.env
+        mo = env["mrp.production"].browse(mo_id)
+        try:
+            with env.cr.savepoint():
+                wos = mo.workorder_ids.filtered(lambda w: w.state != "cancel").sorted("id")
+                ends = [w.date_finished or w.date_start for w in wos if (w.date_finished or w.date_start)]
+                last = max(ends) if ends else (mo.date_finished or mo.date_start)
+                if not last or last >= today_start:
+                    return "skipped", None
+                end = self._td_catch_up_mo(mo, wos)
+                if not end:
+                    return "skipped", None
+                self._td_ship_ready(mo, end)
+            return "done", None
+        except CONCURRENCY:
+            raise
+        except Exception as exc:  # noqa: BLE001 — одна МО не зупиняє решту
+            _logger.warning("td_live_production: догнати %s: %s", mo.name, exc)
+            mo.sudo().message_post(
+                body=_("Догнати минуле не вдалось: %s", str(exc.args[0] if exc.args else exc)[:500]),
+                subtype_xmlid="mail.mt_note",
+            )
+            return "failed", self._td_reason(exc)
+
+    @api.model
+    def _td_catch_up_one(self, mo_id, today_start):
+        """`_td_catch_up_unit` із фіксацією й повтором у новій транзакції при конкурентному оновленні (синхронно)."""
         for attempt in range(CATCH_UP_TRIES):
-            mo = env["mrp.production"].browse(mo_id)
             try:
-                with env.cr.savepoint():
-                    wos = mo.workorder_ids.filtered(lambda w: w.state != "cancel").sorted("id")
-                    ends = [w.date_finished or w.date_start for w in wos if (w.date_finished or w.date_start)]
-                    last = max(ends) if ends else (mo.date_finished or mo.date_start)
-                    if not last or last >= today_start:
-                        return "skipped", None
-                    end = self._td_catch_up_mo(mo, wos)
-                    if not end:
-                        return "skipped", None
-                    self._td_ship_ready(mo, end)
+                verdict, reason = self._td_catch_up_unit(mo_id, today_start)
                 self._td_commit()
-                return "done", None
+                return verdict, reason
             except CONCURRENCY as exc:
                 if self._td_in_test() or attempt == CATCH_UP_TRIES - 1:
-                    reason = _("конкурентне оновлення даних (спробуйте ще раз)")
-                    _logger.warning("td_live_production: догнати %s: %s", mo.name, exc.__class__.__name__)
-                    return "failed", reason
-                env.cr.rollback()  # нова транзакція — свіжий знімок; крон верстатів уже зафіксував свої зміни
-            except Exception as exc:  # noqa: BLE001 — одна МО не зупиняє решту
-                reason = self._td_reason(exc)
-                _logger.warning("td_live_production: догнати %s: %s", mo.name, exc)
-                mo.sudo().message_post(
-                    body=_("Догнати минуле не вдалось: %s", str(exc.args[0] if exc.args else exc)[:500]),
-                    subtype_xmlid="mail.mt_note",
-                )
-                self._td_commit()
-                return "failed", reason
+                    _logger.warning("td_live_production: догнати #%s: %s", mo_id, exc.__class__.__name__)
+                    return "failed", _("конкурентне оновлення даних (спробуйте ще раз)")
+                self.env.cr.rollback()  # нова транзакція — свіжий знімок
         return "failed", _("конкурентне оновлення даних (спробуйте ще раз)")
 
     @api.model
@@ -612,8 +677,8 @@ class TdLiveEngine(models.AbstractModel):
         end = max(done_ends) if done_ends else None
         for wo_id, start, finish in chain:
             wo = self.env["mrp.workorder"].browse(wo_id)
-            self._td_wo_start(wo, start)
-            self._td_wo_finish(wo, finish)
+            self._td_wo_start(wo, start, live=False)
+            self._td_wo_finish(wo, finish, live=False)
             end = finish
         if end and self._td_mo_close(mo, end):
             return end

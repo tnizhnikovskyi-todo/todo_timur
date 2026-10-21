@@ -15,6 +15,11 @@ class ResConfigSettings(models.TransientModel):
         help="Статус головного вимикача (`td.live_production.enabled`). Міняється кнопками «Запустити» і «Зупинити»: "
         "це не поле налаштувань, щоб збереження форми не перезаписало вимикач застарілим значенням.",
     )
+    td_live_jobs = fields.Text(
+        string="Фонові задачі",
+        compute="_compute_td_live_jobs",
+        help="Останні фонові задачі: прогрес і підсумок. Оновіть сторінку, щоб побачити поточний стан.",
+    )
     td_live_orders = fields.Integer(string="Замовлень на добу", config_parameter=PREFIX + "orders_per_day", default=8)
     td_live_shift_start = fields.Float(string="Початок зміни", config_parameter=PREFIX + "shift_start", default=7.0)
     td_live_shift_end = fields.Float(string="Кінець зміни", config_parameter=PREFIX + "shift_end", default=15.5)
@@ -42,6 +47,11 @@ class ResConfigSettings(models.TransientModel):
         default=6.0,
         help="Середня частка робочого часу верстатів, що йде на простої з причинами.",
     )
+
+    def _compute_td_live_jobs(self):
+        text = self.env["td.live.job"].td_status_text()
+        for rec in self:
+            rec.td_live_jobs = text
 
     def _compute_td_live_enabled(self):
         enabled = self.env["ir.config_parameter"].sudo().get_param(PREFIX + "enabled") == "True"
@@ -71,12 +81,16 @@ class ResConfigSettings(models.TransientModel):
         return self._td_live_notify(self.env["td.live.engine"].td_prepare_company())
 
     def action_td_live_generate_today(self):
-        """Згенерувати сьогодні: план на поточну добу з урахуванням уже минулого часу."""
-        return self._td_live_notify(self.env["td.live.engine"].td_generate_today())
+        """Згенерувати сьогодні: план на поточну добу й диспетчер, у фоні (повертається одразу)."""
+        return self._td_live_notify(self.env["td.live.engine"].td_queue_generate(0))
+
+    def action_td_live_generate_tomorrow(self):
+        """Згенерувати завтра: план на наступну добу, у фоні."""
+        return self._td_live_notify(self.env["td.live.engine"].td_queue_generate(1))
 
     def action_td_live_catch_up(self):
-        """LP-04: завершити МО й наряди минулих діб датами їхніх планів."""
-        return self._td_live_notify(self.env["td.live.engine"].td_catch_up())
+        """LP-04: завершити МО й наряди минулих діб датами їхніх планів, у фоні."""
+        return self._td_live_notify(self.env["td.live.engine"].td_queue_catch_up())
 
     def action_td_live_start(self):
         """LP-06: запустити живе виробництво (крони, вимкнути демо-годинник)."""
