@@ -1,0 +1,293 @@
+<templates xml:space="preserve">
+<t t-name="td_chp.Pult">
+<div class="o_td_chp_pult" t-ref="root">
+<div class="app" id="app">
+
+<header class="card hdr" id="hdr">
+  <span class="sr" id="state-live" role="status" aria-live="polite"></span>
+  <div class="hdr-brand">
+    <h1 id="hdr-name">Пульт КГУ</h1>
+    <p class="sub" id="hdr-sub">Когенераційна установка · газопоршневий агрегат у контейнері · шина S2 ГРЩ, ввід QF-CHP</p>
+    <span class="passport" id="passport" hidden="hidden">Паспорт: типова комплектація (допущення)</span>
+  </div>
+  <div class="plaque" id="plaque" data-st="run">
+    <span class="pl-k">Стан КГУ · u72 = <span id="pl-code">—</span></span>
+    <span class="pl-v" id="pl-name">Робота</span>
+    <span class="pl-s" id="pl-sub">—</span>
+  </div>
+  <div class="hdr-meta">
+    <div class="meta-row"><span class="k">Режим</span><span class="v" id="hdr-mode">—</span></div>
+    <div class="meta-row"><span class="k">Час</span><span class="v mono" id="hdr-time">--:--:--</span></div>
+    <div class="meta-btns">
+      <button class="btn sm" id="btn-theme" type="button">Тема: авто</button>
+      <button class="btn sm ghost" id="btn-demo-jump" type="button" hidden="hidden">До імітації</button>
+    </div>
+  </div>
+  <ul class="perm" id="perm" aria-label="Дозволи та умови пуску">
+    <li id="perm-permit" class="ok"><i class="dot"></i><span class="t">Дозвіл КГУ (chp_permit)</span></li>
+    <li id="perm-gas" class="ok"><i class="dot"></i><span class="t">Тиск газу</span></li>
+    <li id="perm-remote" class="ok"><i class="dot"></i><span class="t">Дистанційне (ctl_remote)</span></li>
+    <li id="perm-rsw" class="ok"><i class="dot"></i><span class="t">Дист. перемикання дозволені</span></li>
+    <li id="perm-grid" class="ok"><i class="dot"></i><span class="t">Мережа S2 наявна</span></li>
+  </ul>
+</header>
+
+<div class="banner" id="banner" role="alert" hidden="hidden"></div>
+
+<div class="tabs" role="tablist" aria-label="Розділи пульта">
+  <button type="button" role="tab" id="tab-main" aria-selected="true" aria-controls="panel-main">Пульт</button>
+  <button type="button" role="tab" id="tab-diag" aria-selected="false" aria-controls="panel-diag" tabindex="-1">Діагностика<i class="tdot" id="tab-dot" hidden="hidden"></i></button>
+</div>
+
+<main class="grid" id="panel-main" role="tabpanel" aria-labelledby="tab-main">
+
+<section class="card c-model" aria-labelledby="h-model">
+  <div class="card-h"><h2 id="h-model">3D-модель КГУ-1</h2><span class="hint">контейнер ≈ 12 × 2,5 × 2,9 м · 37 вузлів · клік по вузлу — параметри</span></div>
+  <div class="model-body">
+    <div class="cv-col">
+        <div class="sys-seg" id="sys-seg" role="group" aria-label="Система: підсвітка у 3D і фільтр вузлів"></div>
+        <div class="cv-bar">
+      <div class="seg" role="group" aria-label="Корпус контейнера" id="shell-seg">
+        <button type="button" data-shell="solid" aria-pressed="false">Суцільний</button>
+        <button type="button" data-shell="glass" aria-pressed="false">Прозорий</button>
+        <button type="button" data-shell="cut" aria-pressed="true">Розріз</button>
+      </div>
+      <button class="btn sm" id="btn-reset-view" type="button">Скинути вид</button>
+    </div>
+    <div class="cv-wrap" id="cv-wrap">
+      <canvas id="cv" role="img" aria-label="3D-модель контейнерної КГУ: двигун, генератор, газова рампа, теплообмінники, труба, сухі градирні на даху"></canvas>
+      <div class="cv-hint">Обертання — ліва кнопка · масштаб — колесо · зсув — права кнопка</div>
+      <div class="cv-fallback" id="cv-fallback" hidden="hidden"><b>3D недоступне</b><span id="cv-fb-msg">Не вдалося завантажити three.js або ініціалізувати WebGL. Решта пульта працює, параметри вузлів доступні зі списку.</span></div>
+    </div>
+    </div>
+    <aside class="node-card" aria-label="Параметри вузла" id="node-card">
+      <div class="nodes" id="nodes" role="group" aria-label="Вузли КГУ"></div>
+      <div id="node-detail"></div>
+    </aside>
+  </div>
+</section>
+
+<section class="card c-control" aria-labelledby="h-ctl">
+  <div class="card-h"><h2 id="h-ctl">Керування</h2><span class="hint" id="ctl-hint">Команди з пульта: клас Б</span></div>
+  <div class="cmd">
+    <button class="btn pri" id="btn-start" type="button">Пуск</button>
+    <button class="btn" id="btn-stop" type="button">Стоп</button>
+    <button class="btn danger" id="btn-estop" type="button">Аварійний стоп</button>
+    <button class="btn" id="btn-reset" type="button" hidden="hidden">Скинути аварію</button>
+  </div>
+  <div class="msg" id="cmd-msg" role="status" aria-live="polite"></div>
+
+  <div class="panel il" id="il" hidden="hidden">
+    <div class="il-head" id="il-head"></div>
+    <ul id="il-list"></ul>
+  </div>
+
+  <div class="panel" id="clsb" hidden="hidden" role="group" aria-labelledby="clsb-t">
+    <div class="t" id="clsb-t">Команда класу Б</div>
+    <p class="note" id="clsb-p"></p>
+    <div class="chips"><span class="chip" id="cb-c1">1/2 · енергетик</span><span class="chip" id="cb-c2">2/2 · головний енергетик</span></div>
+    <div class="btnrow">
+      <button class="btn pri" id="btn-cb1" type="button">Підтвердити (1/2)</button>
+      <button class="btn" id="btn-cbx" type="button">Скасувати</button>
+    </div>
+  </div>
+
+  <div class="panel" id="cla" hidden="hidden" role="group" aria-labelledby="cla-t">
+    <div class="t" id="cla-t">Команда класу А</div>
+    <p class="note" id="cla-p"></p>
+    <div class="btnrow">
+      <button class="btn pri" id="btn-ca-yes" type="button">Виконати</button>
+      <button class="btn" id="btn-ca-no" type="button">Скасувати</button>
+    </div>
+  </div>
+
+  <div id="pend-list"></div>
+
+  <div class="panel alarm" id="es-confirm" hidden="hidden" role="group" aria-labelledby="es-t">
+    <div class="t" id="es-t">Аварійний стоп КГУ</div>
+    <p class="note" id="es-p">Негайне закриття газових клапанів і відключення QF-CHP без охолодження. Підтвердити?</p>
+    <div class="btnrow">
+      <button class="btn danger" id="btn-es-yes" type="button">Так, аварійний стоп</button>
+      <button class="btn" id="btn-es-no" type="button">Скасувати</button>
+    </div>
+  </div>
+
+  <div class="panel" id="seq" hidden="hidden" aria-live="off">
+    <div class="t" id="seq-t">Пуск КГУ</div>
+    <div class="seq-grid">
+      <div style="display:grid;gap:8px;align-content:start">
+        <ol class="steps" id="seq-steps"></ol>
+        <div class="bar" aria-hidden="true"><i id="seq-bar"></i></div>
+        <div class="note" id="seq-note"></div>
+      </div>
+      <div class="sync" id="sync-box">
+        <svg viewBox="0 0 150 150" role="img" aria-label="Синхроноскоп" id="sync-svg">
+          <circle cx="75" cy="75" r="66" fill="var(--surface)" stroke="var(--line-strong)" stroke-width="2"/>
+          <path id="sync-win" d="" fill="var(--st-run-bg)" stroke="var(--st-run)" stroke-width="1.5"/>
+          <g id="sync-ticks" stroke="var(--text-3)" stroke-width="1.5"></g>
+          <text x="75" y="31" text-anchor="middle" font-size="10" fill="var(--text-3)" font-family="var(--f-head)">0°</text>
+          <text x="26" y="82" text-anchor="middle" font-size="9" fill="var(--text-3)" font-family="var(--f-head)">повільно</text>
+          <text x="124" y="82" text-anchor="middle" font-size="9" fill="var(--text-3)" font-family="var(--f-head)">швидко</text>
+          <g id="sync-needle"><line x1="75" y1="75" x2="75" y2="20" stroke="var(--text)" stroke-width="3" stroke-linecap="round"/><polygon points="75,14 70,26 80,26" fill="var(--text)"/></g>
+          <circle cx="75" cy="75" r="5" fill="var(--text)"/>
+        </svg>
+        <div class="sync-state" id="sync-st">Очікування</div>
+        <div class="rd"><span>ΔU <b id="sy-du">—</b></span><span>Δf <b id="sy-df">—</b></span><span>Δφ <b id="sy-dp">—</b></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="cool-box" hidden="hidden">
+    <div class="t">Охолодження двигуна без навантаження</div>
+    <div class="cool-big" id="cool-t">60 с</div>
+    <div class="bar" aria-hidden="true"><i id="cool-bar"></i></div>
+    <div class="note">Після завершення — стан «Резерв».</div>
+  </div>
+
+  <div class="field">
+    <label for="sel-mode">Режим роботи</label>
+    <select id="sel-mode">
+      <option value="heat" selected="selected">За тепловим графіком</option>
+      <option value="el">За електричним графіком</option>
+      <option value="peak">Зрізання піку</option>
+      <option value="manual">Ручний</option>
+    </select>
+    <div class="note" id="mode-info"></div>
+  </div>
+  <div class="field">
+    <label for="rng-sp">Уставка навантаження (лише в «Ручний»)</label>
+    <div class="sp-row"><input type="range" id="rng-sp" min="50" max="100" step="1" value="80" disabled="disabled"/><output for="rng-sp" id="out-sp">—</output></div>
+    <div class="note" id="sp-note">Діапазон 50–100 %</div>
+  </div>
+  <div class="field">
+    <label for="rng-cos">Уставка cos φ (АРН генератора)</label>
+    <div class="sp-row"><input type="range" id="rng-cos" min="0.90" max="1.00" step="0.01" value="0.98"/><output for="rng-cos" id="out-cos">—</output></div>
+    <div class="note">Реактивна потужність Q = P·tg φ, індуктивна</div>
+  </div>
+  <div class="field">
+    <label for="sel-heat">Напрямок тепла</label>
+    <select id="sel-heat">
+      <option value="auto" selected="selected">Авто (котельня, надлишок на градирню)</option>
+      <option value="boiler">Котельня</option>
+      <option value="cooler">Градирня (dump radiator)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="sel-byp">Заслінка вихлопу</label>
+    <select id="sel-byp">
+      <option value="auto" selected="selected">Авто (на ТО при роботі)</option>
+      <option value="ht">На ТО вихлопних газів</option>
+      <option value="bypass">В обхід ТО (скидання в трубу)</option>
+    </select>
+    <div class="note" id="ret-note">Захист зворотки: вище уставки — зниження потужності, далі аварійний останов.</div>
+  </div>
+</section>
+
+<section class="card c-scheme" aria-labelledby="h-scheme">
+  <div class="card-h"><h2 id="h-scheme">Мнемосхема</h2><span class="hint">шари за системами</span></div>
+  <div class="seg wrap" id="scheme-tabs" role="group" aria-label="Шар мнемосхеми" style="margin-bottom:8px"></div>
+  <div class="scroll-x" tabindex="0" role="region" aria-label="Мнемосхема (прокручується)">
+  
+  <div id="scheme-layers"></div>
+  </div>
+  <div class="svg-note" aria-label="Умовні позначення труб">
+    <span><i class="sw" style="background:var(--pipe-gas)"></i>горючий газ (жовтий)</span>
+    <span><i class="sw" style="background:var(--pipe-sup)"></i>вода: подача і між ТО (гріється)</span>
+    <span><i class="sw" style="background:var(--pipe-ret)"></i>вода: зворотка</span>
+    <span><i class="sw" style="background:var(--pipe-exh)"></i>вихлоп (сірий)</span>
+    <span><i class="sw" style="background:var(--pipe-lt)"></i>вода НТ</span>
+    <span><i class="sw" style="background:var(--pipe-oil)"></i>масло (коричневий)</span>
+    <span><i class="sw" style="background:var(--pipe-air)"></i>повітря (синій)</span>
+    <span><i class="sw" style="background:var(--pipe-fire)"></i>гасіння (червоний)</span>
+    <span><i class="sw" style="background:var(--text-2);height:3px"></i>електрика</span>
+    <span>▶ «→ шар»: перехід на інший шар (клік)</span>
+  </div>
+</section>
+
+<section class="card c-kpi" aria-labelledby="h-kpi">
+  <div class="card-h"><h2 id="h-kpi">Показники</h2><span class="hint">оновлення раз на секунду</span></div>
+  <div class="kpi">
+    <div class="tile"><span class="l">P ел.</span><span class="val"><span data-b="pel">—</span><small>кВт</small></span><span class="s" data-b="pel_s">—</span></div>
+    <div class="tile"><span class="l">P тепл.</span><span class="val"><span data-b="qth">—</span><small>кВт</small></span><span class="s" data-b="qth_s">—</span></div>
+    <div class="tile"><span class="l">Газ</span><span class="val"><span data-b="gas">—</span><small>м³/год</small></span><span class="s" data-b="gas_s">—</span></div>
+    <div class="tile"><span class="l">ККД загальний</span><span class="val"><span data-b="etat">—</span><small>%</small></span><span class="s" data-b="eta_s">—</span></div>
+    <div class="tile"><span class="l">ККД ел.</span><span class="val"><span data-b="etae">—</span><small>%</small></span><span class="s" data-b="etae_s">за LHV</span></div>
+    <div class="tile"><span class="l">ККД тепл.</span><span class="val"><span data-b="etah">—</span><small>%</small></span><span class="s">утилізація ОЖ + вихлоп</span></div>
+    <div class="tile"><span class="l">Напрацювання сьогодні, ел.</span><span class="val"><span data-b="e_day">—</span><small>кВт·год</small></span><span class="s" data-b="e_day_s">—</span></div>
+    <div class="tile"><span class="l">Напрацювання сьогодні, тепло</span><span class="val"><span data-b="q_day">—</span><small>Гкал</small></span><span class="s" data-b="q_day_s">—</span></div>
+    <div class="tile"><span class="l">Моточаси</span><span class="val"><span data-b="mh">—</span><small>год</small></span><span class="s" data-b="to_s">—</span></div>
+    <div class="tile"><span class="l">cos φ · реактивна Q</span><span class="val"><span data-b="cos">—</span><small></small></span><span class="s" data-b="q_s">—</span></div>
+    <div class="tile"><span class="l">Викиди NOx</span><span class="val"><span data-b="nox">—</span><small>мг/нм³</small></span><span class="s" data-b="nox_s">—</span></div>
+    <div class="tile"><span class="l">Лічильник тепла (вироблено)</span><span class="val sm"><span data-b="hm">—</span><small>Гкал</small></span><span class="s" data-b="hm_s">—</span></div>
+    <div class="tile"><span class="l">Лічильник ел. енергії TEDOM-1</span><span class="val sm"><span data-b="em">—</span><small>кВт·год</small></span><span class="s" data-b="em_s">—</span></div>
+    <div class="tile"><span class="l">CO₂ (оцінка)</span><span class="val"><span data-b="co2">—</span><small>кг/год</small></span><span class="s" data-b="co2_s">—</span></div>
+  </div>
+</section>
+
+<section class="card c-trend" aria-labelledby="h-trend">
+  <div class="card-h">
+    <h2 id="h-trend">Тренд</h2>
+    <div class="trend-tools">
+      <div class="seg" role="group" aria-label="Діапазон тренду" id="trend-seg">
+        <button type="button" data-range="24" aria-pressed="true">24 год</button>
+        <button type="button" data-range="1" aria-pressed="false">1 год</button>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--ser-el)"></i>P ел., кВт</span>
+    <span><i style="background:var(--ser-th)"></i>P тепл., кВт</span>
+    <span><i style="background:var(--ser-gas)"></i>Газ, м³/год (права шкала)</span>
+  </div>
+  <div id="trend-wrap"><svg id="trend" role="img" aria-label="Тренд P ел., P тепл. і витрати газу"></svg></div>
+  <div class="readout" id="trend-ro">Наведіть вказівник на графік, щоб побачити значення.</div>
+</section>
+
+<section class="card c-journal" aria-labelledby="h-jr">
+  <div class="card-h"><h2 id="h-jr">Журнал подій і аварій</h2>
+    <button class="btn sm" id="btn-ack" type="button">Квитувати</button></div>
+  <ol class="jr" id="jr"></ol>
+  <div class="btnrow" style="margin-top:8px"><button class="btn sm" id="btn-jr-more" type="button" hidden="hidden">Показати ще</button></div>
+</section>
+
+<section class="card c-to" aria-labelledby="h-to">
+  <div class="card-h"><h2 id="h-to">Технічне обслуговування</h2><span class="hint">допущення: інтервали TEDOM орієнтовні</span></div>
+  <div class="to-list" id="to-list"></div>
+</section>
+
+<details class="card c-demo" id="demo" hidden="hidden">
+  <summary><span class="tag-demo">ДЕМО</span><span>Імітація подій (не є частиною пульта)</span></summary>
+  <div class="demo-body">
+    <div class="demo-grid" id="demo-grid"></div>
+    <p class="note">Сценарії td_iot_sim (емулятор КГУ). «Скасувати імітацію» зупиняє всі активні сценарії КГУ.</p>
+  </div>
+</details>
+
+</main>
+
+<div class="diag" id="panel-diag" role="tabpanel" aria-labelledby="tab-diag" hidden="hidden">
+  <section class="card" aria-labelledby="h-cyl">
+    <div class="card-h"><h2 id="h-cyl">Циліндри двигуна V16 (2 × 8)</h2><span class="hint" id="diag-sum">—</span></div>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Таблиця циліндрів (прокручується)">
+      <table class="dt" id="cyl-table">
+        <thead><tr><th>Цил.</th><th>t вихлопу, °C</th><th>Δ від середнього, К</th><th>Детонація, од.</th><th>Пробій, кВ</th><th>Іскра, мс</th><th>Свічка</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:8px" id="diag-note">Відхилення від середнього — попередження й аварія за порогами паспорта; детонація — за порогами паспорта.</p>
+  </section>
+  <section class="card" aria-labelledby="h-aux">
+    <div class="card-h"><h2 id="h-aux">Допоміжні системи</h2><span class="hint" id="aux-sum">—</span></div>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Допоміжні системи (прокручується)">
+      <table class="dt" id="aux-table" style="min-width:480px">
+        <thead><tr><th>Система</th><th>Стан</th><th>Параметри</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</div>
+
+</div>
+</t>
+</templates>
