@@ -1645,7 +1645,7 @@ function shortDoorLabels(on) {
     el.innerHTML = on ? `Ворота ${m[2]}` : el.dataset.full;
   }
 }
-async function setProdOverlay(on) {
+async function setProdOverlay(on, { keepCamera = false } = {}) {
   if (prodOv.on === on) {return;}
   prodOv.on = on;
   $(".o_f3d_opt-prod").checked = on;
@@ -1656,8 +1656,9 @@ async function setProdOverlay(on) {
     prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
     layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) {setLayer(k, false);} });
     select(null); clearHighlight();
-    // увесь майданчик від КПП приймання до вагової й КПП відвантаження — між лівою й правою панелями
-    goView({ name: "План згори", target: [89, 31, 0], pos: [89, 30.9, 330] });
+    // увесь майданчик від КПП приймання до вагової й КПП відвантаження — між лівою й правою панелями;
+    // з ▶ «Потоку зміни» камера лишається, де була (keepCamera)
+    if (!keepCamera) {goView({ name: "План згори", target: [89, 31, 0], pos: [89, 30.9, 330] });}
     await modelLoaded;
     drawProdOverlay();
     openTab("production");
@@ -3555,7 +3556,7 @@ $(".o_f3d_shift-play").onclick = () => {
   $(".o_f3d_shift-play").textContent = "❚❚"; $(".o_f3d_shift-play").setAttribute("aria-label", "Пауза");
   applySimTime(m);
   simCont = { m, at: performance.now() };
-  if (!prodOv.on) {setProdOverlay(true);} // потік видно згори: план цеху з маршрутами замовлень
+  if (!prodOv.on) {setProdOverlay(true, { keepCamera: true });} // маршрути замовлень; камера не стрибає
   shiftTimer = setInterval(() => {
     m += 5; applySimTime(m); simCont = { m, at: performance.now() };
     if (m >= 930) {stopShift();}
