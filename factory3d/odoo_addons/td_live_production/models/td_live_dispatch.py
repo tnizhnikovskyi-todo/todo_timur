@@ -92,8 +92,12 @@ class TdLiveEngine(models.AbstractModel):
 
     # --- такт -----------------------------------------------------------------------------------------
     @api.model
-    def td_dispatch(self, now=None, force=False):
-        """Такт диспетчера: події до `now`, цілі верстатам. Повертає лічильники й цілі."""
+    def td_dispatch(self, now=None, force=False, limit=None):
+        """Такт диспетчера: події до `now`, цілі верстатам. Повертає лічильники й цілі.
+
+        `limit` — не більше стільки подій за виклик (крон після довгої паузи доганяє частинами, не вичерпуючи ліміт
+        часу); решту подасть наступний такт, бо стан береться з бази. Тоді цілі верстатам не надсилаються.
+        """
         self = self.sudo()
         res = {"started": 0, "finished": 0, "closed": 0, "shipped": 0, "downtimes": 0, "targets": [], "pushed": {}}
         if not (force or self._td_params()["enabled"]):
@@ -110,8 +114,11 @@ class TdLiveEngine(models.AbstractModel):
         state = self._td_snapshot(mos, live_dts)
         events, after = dispatch.simulate(state, now, params["shift"], params["workdays"])
         failed = set()
-        for ev in events:
+        for ev in events[:limit]:
             self._td_apply_event(ev, state, failed, res)
+        if limit and len(events) > limit:
+            _logger.info("td_live_production: у черзі ще %s подій, продовжить наступний такт", len(events) - limit)
+            return res
         targets = dispatch.machine_targets(after, now)
         res["targets"] = targets
         res["pushed"] = self._td_push_targets(targets)

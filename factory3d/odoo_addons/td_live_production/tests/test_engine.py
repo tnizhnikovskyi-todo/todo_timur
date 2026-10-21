@@ -173,6 +173,25 @@ class TestLive(TransactionCase):
                 unit_cost = self.engine._td_bom_unit_cost(self.boms["A"])
                 self.assertTrue(25.0 <= pricing.margin_pct(line.price_unit, unit_cost) <= 40.0)
 
+    def test_hot_section_default_and_off(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_param(P + "hot_section", False)  # параметр не заданий: за замовчуванням «Присадка»
+        self.assertEqual(self.generate().hot_section, "Присадка")
+        icp.set_param(P + "hot_section", "-")
+        self.assertEqual(self.engine._td_params()["hot_section"], "")
+        icp.set_param(P + "hot_section", "Розкрій")
+        self.assertEqual(self.engine._td_params()["hot_section"], "Розкрій")
+
+    def test_throttle_when_backlog_grows(self):
+        self.generate()
+        next_release = clock.shift_window(DAY + timedelta(days=1), SHIFT)[0]
+        self.assertEqual(self.engine._td_throttle(8, next_release)[0], 8)  # черга менша за 1,5 доби
+        long_ago = clock.shift_window(DAY - timedelta(days=6), SHIFT)[0]
+        orders, backlog = self.engine._td_throttle(8, long_ago)
+        self.assertTrue(1 <= orders < 8, orders)
+        self.assertGreater(backlog, 5)
+        self.assertEqual(self.engine._td_throttle(1, long_ago)[0], 1)
+
     def test_no_templates_message(self):
         self.template_so.action_cancel()
         with self.assertRaisesRegex(UserError, "Немає шаблонів"):
@@ -250,6 +269,18 @@ class TestLive(TransactionCase):
         # повторний тик — нічого нового (ідемпотентність)
         again = self.at(600).td_dispatch()
         self.assertEqual((again["started"], again["finished"], again["closed"], again["shipped"]), (0, 0, 0, 0))
+
+    def test_tick_event_limit_catches_up_in_parts(self):
+        day = self.generate()
+        first = self.at(600).td_dispatch(limit=3)
+        self.assertLessEqual(first["started"] + first["finished"] + first["closed"] + first["shipped"], 3)
+        self.assertEqual(first["pushed"], {})  # частковий такт цілі не надсилає
+        for _i in range(200):
+            self.at(600).td_dispatch(limit=20)
+            if day.state == "done" and all(p.state == "done" for o in day.order_ids for p in o.picking_ids):
+                break
+        self.assertEqual(day.state, "done")
+        self.assertTrue(all(p.state == "done" for o in day.order_ids for p in o.picking_ids))
 
     def test_tick_catch_up_equals_minute_ticks(self):
         """Один тик після паузи дає ті самі часи, що й тики щохвилини."""

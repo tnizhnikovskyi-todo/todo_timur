@@ -27,7 +27,7 @@ class ResConfigSettings(models.TransientModel):
         string="Перевантажена ділянка",
         config_parameter=PREFIX + "hot_section",
         default="Присадка",
-        help="Назва мітки-дільниці верстатів (`mrp.workcenter.tag`). Порожньо — без навмисного перевантаження.",
+        help="Назва мітки-дільниці верстатів (`mrp.workcenter.tag`). Порожньо — «Присадка»; «-» — без перевантаження.",
     )
     td_live_hot_factor = fields.Float(
         string="Складність операцій ділянки, ×",

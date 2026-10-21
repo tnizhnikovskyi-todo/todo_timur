@@ -19,6 +19,10 @@ PREFIX = "td.live_production."
 DEMO_CLOCK = "td.viewer.demo_clock"
 CLOCK_BACKUP = PREFIX + "demo_clock_backup"
 NOW_KEY = "td_live_now"  # ключ контексту: «зараз» (naive UTC `datetime` або рядок) для тестів і «віртуального» часу
+HOT_DEFAULT = "Присадка"
+BACKLOG_FREE_DAYS = 1.5  # доба-черга на верстатах, до якої замовлень не зменшуємо
+BACKLOG_SPAN_DAYS = 3.0  # на скільки діб понад це кількість замовлень падає до чверті
+TICK_EVENTS = 150  # подій на такт крона: довга пауза доганяється за кілька тактів
 LINES_RANGE = (2, 3)  # рядків (МО) у замовленні
 OVERLOAD = 1.5  # гарячі верстати вважаються «повними» на 150 % зміни (див. `planner.plan_orders`)
 CRON_TICK = "td_live_production.cron_td_live_tick"
@@ -56,10 +60,16 @@ class TdLiveEngine(models.AbstractModel):
             "orders": max(0, get("orders_per_day", 8, int)),
             "shift": shift,
             "workdays": icp.get_param(PREFIX + "workdays") or "0123456",
-            "hot_section": icp.get_param(PREFIX + "hot_section") or "",
+            "hot_section": self._td_hot_name(icp.get_param(PREFIX + "hot_section")),
             "hot_factor": max(1.0, get("hot_factor", 2.5)),
             "downtime_share": min(max(get("downtime_pct", 6.0), 0.0), 60.0) / 100.0,
         }
+
+    @api.model
+    def _td_hot_name(self, raw):
+        """Перевантажена ділянка: порожньо — «Присадка» за замовчуванням, «-» — вимкнено."""
+        raw = (raw or "").strip()
+        return "" if raw == "-" else (raw or HOT_DEFAULT)
 
     @api.model
     def _td_now(self):
@@ -192,9 +202,11 @@ class TdLiveEngine(models.AbstractModel):
         wc_ids = {op["wc"] for p in templates["products"] for v in p["variants"] for op in v["ops"]}
         hot = self._td_hot_workcenters(wc_ids, params["hot_section"])
         seed = int(day.strftime("%Y%m%d"))
+        release = planner.shift_release(day, shift)
+        orders_n, backlog_days = self._td_throttle(params["orders"], release)
         plan = planner.plan_orders(
             templates,
-            params["orders"],
+            orders_n,
             seed,
             shift_min,
             hot,
@@ -202,7 +214,6 @@ class TdLiveEngine(models.AbstractModel):
             params["hot_factor"] if hot else 1.0,
             LINES_RANGE,
         )
-        release = planner.shift_release(day, shift)
         rec = Day.create({"date": day, "company_id": company.id})
         mos_for_plan = env["mrp.production"]
         revenue = cost_total = 0.0
@@ -227,14 +238,33 @@ class TdLiveEngine(models.AbstractModel):
                 "hot_load_pct": hot_load,
                 "spill_min": sched["spill"],
                 "note": _(
-                    "План: %(n)s замовлень, %(m)s МО, %(d)s простоїв.",
+                    "План: %(n)s замовлень, %(m)s МО, %(d)s простоїв.%(throttle)s",
                     n=len(plan["orders"]),
                     m=len(mos_for_plan),
                     d=len(rec.downtime_ids),
+                    throttle=(
+                        _(" Черга верстатів %(days).1f доби: замовлень менше, ніж у налаштуваннях (%(cfg)s).")
+                        % {"days": backlog_days, "cfg": params["orders"]}
+                        if orders_n < params["orders"]
+                        else ""
+                    ),
                 ),
             }
         )
         return rec
+
+    @api.model
+    def _td_throttle(self, orders, release):
+        """Запобіжник: якщо верстати вже завантажені на понад 1,5 доби вперед, замовлень на добу менше (до чверті).
+
+        Інакше перевантажена ділянка накопичувала б чергу без кінця. Повертає `(замовлень, доби черги)`.
+        """
+        free = self._td_wc_free(self.env["mrp.production"])
+        backlog = max(((t - release).total_seconds() / 86400.0 for t in free.values()), default=0.0)
+        if orders <= 1 or backlog <= BACKLOG_FREE_DAYS:
+            return orders, backlog
+        share = max(0.25, 1.0 - (backlog - BACKLOG_FREE_DAYS) / BACKLOG_SPAN_DAYS * 0.75)
+        return max(1, int(round(orders * share))), backlog
 
     @api.model
     def _td_create_order(self, day_rec, order, n, release):
@@ -434,4 +464,4 @@ class TdLiveEngine(models.AbstractModel):
     def _cron_td_live_tick(self):
         """Крон щохвилини: такт диспетчера."""
         if self._td_params()["enabled"]:
-            self.td_dispatch()
+            self.td_dispatch(limit=TICK_EVENTS)
