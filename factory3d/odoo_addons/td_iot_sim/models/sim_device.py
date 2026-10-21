@@ -1,7 +1,12 @@
+import logging
 import re
+from datetime import datetime, timezone
 
+import requests
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 PROTOCOLS = [("P-%02d" % n, "P-%02d" % n) for n in range(1, 14)] + [("none", "Пасивний / власник — модуль")]
 DRIVERS = [
@@ -36,6 +41,8 @@ DRIVERS = [
 # I/O-модулі ADAM: на одному unit id живуть кілька пристроїв (різні канали, params)
 SHARED_UNIT_DRIVERS = ("modbus_adam6050", "modbus_adam6060", "modbus_adam6017", "modbus_adam6015")
 CODE_RE = re.compile(r"^[A-Z0-9][A-Z0-9\-\.]{0,31}$")
+TARGETS_PATH = "/api/v1/machines/targets"  # C-LP-01: той самий застосунок і токен, що й /sim/v1
+TARGETS_TIMEOUT_S = 5
 
 
 class F3dSimDevice(models.Model):
@@ -190,3 +197,50 @@ class F3dSimDevice(models.Model):
             "view_mode": "list,form",
             "domain": [("device_id", "=", self.id)],
         }
+
+    # --- цілі станів верстатів (контракт C-LP-01, «Живе виробництво») ---
+    @api.model
+    def _td_push_machine_targets(self, targets):
+        """Надіслати емулятору цільові стани верстатів: `POST <td.iot_sim.url>/api/v1/machines/targets`.
+
+        `targets` — список `{"code": <td.machine.code>, "state": "working"|"idle"|"down", "reason": <str|None>,
+        "until": <ISO UTC або datetime>}`; емулятор тримає верстат у цьому стані до `until` або до наступного
+        оновлення. Повертає `{"ok": n, "unknown": [коди]}`. Без адреси, зі стоп-краном `write_enabled`, без зв'язку
+        чи при відповіді не 2xx — тихо `{"ok": 0, "unknown": []}` (warning у лог, без виняткового виходу):
+        виклик із крону диспетчера не повинен падати, коли емулятора немає.
+        """
+        fail = {"ok": 0, "unknown": []}
+        items = [self._td_target_item(t) for t in targets or []]
+        if not items:
+            return fail
+        base = (self._sim_param("url") or "").strip().rstrip("/")
+        if not base or not self._sim_flag("write_enabled"):
+            _logger.info("td_iot_sim: цілі верстатів не надіслано (адресу не задано або команди вимкнено)")
+            return fail
+        try:
+            resp = requests.Session().request(
+                "POST", base + TARGETS_PATH, headers=self._sim_headers(), json=items, timeout=TARGETS_TIMEOUT_S
+            )
+        except requests.RequestException as exc:
+            _logger.warning("td_iot_sim: емулятор недоступний, цілі верстатів не надіслано: %s", exc.__class__.__name__)
+            return fail
+        if not 200 <= resp.status_code < 300:
+            _logger.warning("td_iot_sim: емулятор відхилив цілі верстатів: HTTP %s", resp.status_code)
+            return fail
+        try:
+            data = resp.json()
+            return {"ok": int(data.get("ok") or 0), "unknown": [str(c) for c in data.get("unknown") or []]}
+        except (ValueError, TypeError, AttributeError):
+            _logger.warning("td_iot_sim: незрозуміла відповідь емулятора на цілі верстатів")
+            return fail
+
+    @api.model
+    def _td_target_item(self, target):
+        item = dict(target)
+        until = item.get("until")
+        if isinstance(until, datetime):  # Odoo Datetime — наївний UTC
+            if until.tzinfo is not None:
+                until = until.astimezone(timezone.utc).replace(tzinfo=None)
+            item["until"] = until.strftime("%Y-%m-%dT%H:%M:%SZ")
+        item.setdefault("reason", None)
+        return item
