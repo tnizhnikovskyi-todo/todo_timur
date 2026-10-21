@@ -27,6 +27,7 @@ export function makeCmdPanel({ root, store, onChange }) {
     let busy = false;
     let track = null; // {ref, label, t0, timer}
     let msgKey = "";
+    let pendingKind = ""; // вид команди, що готується (prepare у польоті): елемент керування не скидаємо до значення зі сховища
     let dragging = ""; // повзунок рухають, діалог ще не відкрито: показуємо проміжне значення
 
     function setMsg(text, kind) {
@@ -136,9 +137,13 @@ export function makeCmdPanel({ root, store, onChange }) {
 
     async function begin(type, kind, params, ctl) {
         if (busy) {
+            if (ctl && ctl.restore) {
+                ctl.restore();
+            }
             return null;
         }
         busy = true;
+        pendingKind = type === "A" ? kind : "";
         try {
             await closeDialog(true);
             ilShow = false;
@@ -181,6 +186,7 @@ export function makeCmdPanel({ root, store, onChange }) {
             return prep;
         } finally {
             busy = false;
+            pendingKind = "";
         }
     }
 
@@ -218,6 +224,14 @@ export function makeCmdPanel({ root, store, onChange }) {
             notify();
             return;
         }
+        const failed = ["blocked", "expired", "cancelled"].includes(res.state);
+        if (!failed) {
+            // стеження стартує ДО закриття діалогу: елемент керування лишається з обраним значенням до оновлення DTO
+            setMsg(d.prep.title + ": " + (res.message || res.state_label || "команду прийнято") + ".", "");
+            startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s, d.kind);
+            clearDlg();
+            return;
+        }
         clearDlg();
         if (res.state === "blocked") {
             const reason = res.blocked_reason || res.message || "команду заблоковано";
@@ -240,8 +254,6 @@ export function makeCmdPanel({ root, store, onChange }) {
             }
             return;
         }
-        setMsg(d.prep.title + ": " + (res.message || res.state_label || "команду прийнято") + ".", "");
-        startTrack(d.ref, d.prep.title, d.prep.verify_timeout_s, d.kind);
     }
 
     /* ---------- відстеження виконання (`get` до фінального стану) ---------- */
@@ -443,7 +455,7 @@ export function makeCmdPanel({ root, store, onChange }) {
         setc("#rng-cos", dis, ctlWhy);
         setc("#rng-sp", dis || !man, !man ? "Уставка діє лише в режимі «Ручний»" : ctlWhy);
         // значення елементів — із сховища, поки їх не змінює відкритий діалог
-        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : "";
+        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : pendingKind;
         const sync = (id, kind, val) => {
             const el = q(id);
             if (touched === kind || document.activeElement === el) {
@@ -570,7 +582,7 @@ export function makeCmdPanel({ root, store, onChange }) {
     function renderFields() {
         const th = store.th;
         const pn = store.unit.p_nom_kw || 800;
-        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : "";
+        const touched = dlg && dlg.type === "A" ? dlg.kind : track ? track.kind : pendingKind;
         const sp = touched === "set_setpoint" || dragging === "sp" ? Number(q("#rng-sp").value) : S.setpoint;
         setText(q("#out-sp"), fmt(sp, 0) + " % · " + fmt((pn * sp) / 100, 0) + " кВт");
         setText(q("#sp-note"), "Діапазон 50–100 % від " + fmt(pn, 0) + " кВт · діє лише в режимі «Ручний»");

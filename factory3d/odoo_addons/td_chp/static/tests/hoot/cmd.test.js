@@ -4,6 +4,7 @@
 // стоп, картка «Очікує другого підтвердження» для іншого користувача, права, «Скинути аварію».
 import { describe, expect, test } from "@odoo/hoot";
 import { click, queryAll, queryOne, queryText, select } from "@odoo/hoot-dom";
+import { advanceTime } from "@odoo/hoot-mock";
 import { defineMailModels } from "@mail/../tests/mail_test_helpers";
 import { clone, mockChp, mountPult, prepareDto, reserveState, settle } from "./helpers";
 import { STATE } from "./state_fixture";
@@ -132,8 +133,10 @@ test("зміна режиму відкриває діалог класу А; д�
     expect(queryOne("#clsb").hidden).toBe(true);
     expect(queryText("#cla-p")).toMatch(/Режим роботи: Ручний\./);
     expect(queryText("#btn-ca-yes")).toBe("Виконати");
-    // до confirm значення пульта не змінилось
+    // до confirm значення пульта не змінилось, а елемент показує обране значення, а не скидається опитуванням
     expect(queryText("#hdr-mode")).toBe("За тепловим графіком");
+    await advanceTime(1500);
+    expect(queryOne("#sel-mode").value).toBe("manual");
     expect(queryOne("#rng-sp").disabled).toBe(true);
     expect(ctx.calls.cmd.filter((c) => c.op === "confirm").length).toBe(0);
     await click("#btn-ca-yes");
@@ -141,6 +144,9 @@ test("зміна режиму відкриває діалог класу А; д�
     expect(ctx.calls.cmd.find((c) => c.op === "confirm")).toEqual({ op: "confirm", unit: null, ref: "chp:20", token: "tok-mode" });
     expect(queryOne("#cla").hidden).toBe(true);
     expect(queryText("#hdr-mode")).toBe("За тепловим графіком");
+    // поки команда виконується, елемент керування лишається з обраним значенням (до оновлення DTO)
+    await advanceTime(1500);
+    expect(queryOne("#sel-mode").value).toBe("manual");
 });
 
 test("«Скасувати» діалог класу А: команда скасована, елемент повертається до значення зі сховища", async () => {
